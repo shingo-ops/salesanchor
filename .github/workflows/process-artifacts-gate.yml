@@ -7,7 +7,12 @@ name: Process Artifacts Gate
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, edited]
     branches: [main, develop]
+
+concurrency:
+  group: process-artifacts-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   gate:
@@ -37,3 +42,6 @@ jobs:
           HEAD_REF: ${{ github.event.pull_request.head.ref }}
           BASE_REF: ${{ github.event.pull_request.base.ref }}
         run: node scripts/check-process-artifacts.js
+
+      - name: Check canonical doc heading duplicates
+        run: bash scripts/check-doc-heading-duplicates.sh

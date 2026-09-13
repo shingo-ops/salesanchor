@@ -50,8 +50,11 @@ async def _ensure_foreign_schema(admin_engine) -> None:
                 temperature VARCHAR(20),
                 response_speed VARCHAR(20),
                 assigned_to INTEGER,
-                converted_deal_id INTEGER,
+                status VARCHAR(50) NOT NULL DEFAULT 'lead',
                 monthly_forecast NUMERIC(15, 2),
+                amount NUMERIC(15, 2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
@@ -80,8 +83,11 @@ async def _ensure_work_schema(admin_engine) -> None:
                 temperature VARCHAR(20),
                 response_speed VARCHAR(20),
                 assigned_to INTEGER,
-                converted_deal_id INTEGER,
+                status VARCHAR(50) NOT NULL DEFAULT 'lead',
                 monthly_forecast NUMERIC(15, 2),
+                amount NUMERIC(15, 2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
@@ -138,13 +144,13 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 text("""
                     INSERT INTO tenant_006_w2_attr.leads (
                         tenant_id, customer_name, channel_type, country, sales_form,
-                        temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
+                        temperature, response_speed, assigned_to, status, monthly_forecast, created_at
                     )
                     VALUES
-                        (:tenant_id, 'RLS-Lead-1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, 1001, 100, NOW()),
-                        (:tenant_id, 'RLS-Lead-2', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, NULL, 300, NOW()),
-                        (:tenant_id, 'RLS-Lead-3', 'cold_call', 'US', NULL, 'Cold', '3日超', :uid, NULL, NULL, NOW()),
-                        (:tenant_id, 'RLS-Lead-4', 'messenger', 'CA', 'online', 'Warm', '3日以内', :other_uid, NULL, 900, NOW())
+                        (:tenant_id, 'RLS-Lead-1', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, 'existing_customer', 100, NOW()),
+                        (:tenant_id, 'RLS-Lead-2', 'instagram', 'JP', 'physical_store', 'Hot', '24h以内', :uid, 'lead', 300, NOW()),
+                        (:tenant_id, 'RLS-Lead-3', 'cold_call', 'US', NULL, 'Cold', '3日超', :uid, 'lead', NULL, NOW()),
+                        (:tenant_id, 'RLS-Lead-4', 'messenger', 'CA', 'online', 'Warm', '3日以内', :other_uid, 'lead', 900, NOW())
                     RETURNING id
                 """),
                 {
@@ -217,11 +223,11 @@ async def test_conversion_by_attribute_rls_team_and_mine_under_tenant_006():
                 text("""
                     INSERT INTO tenant_998_w2_attr.leads (
                         tenant_id, customer_name, channel_type, country, sales_form,
-                        temperature, response_speed, assigned_to, converted_deal_id, monthly_forecast, created_at
+                        temperature, response_speed, assigned_to, status, monthly_forecast, created_at
                     )
                     VALUES (
                         998, 'RLS-Other-Lead', 'messenger', 'CA', 'online',
-                        'Warm', '3日以内', :other_uid, 2001, 9999, NOW()
+                        'Warm', '3日以内', :other_uid, 'lead', 9999, NOW()
                     )
                     RETURNING id
                 """),

@@ -23,7 +23,6 @@ Mock 戦略:
 from __future__ import annotations
 
 import json
-import os
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -32,12 +31,11 @@ import pytest
 from app.services import inventory_parser_llm
 from app.services.inventory_parser_llm import (
     LLMConfigError,
-    LLMParseError,
     LLMParsedItem,
+    LLMParseError,
     LLMParseResult,
     parse_with_gemini,
 )
-
 
 # ---------------------------------------------------------------------------
 # Helpers: 偽 Gemini response のファクトリ
@@ -351,15 +349,24 @@ class TestPromptAndSchema:
         assert "items" in schema["properties"]
 
     @pytest.mark.asyncio
-    async def test_uses_gemini_2_5_flash_by_default(self) -> None:
+    async def test_uses_gemini_3_1_flash_lite_by_default(self) -> None:
         response = _make_fake_response(json_payload={"items": []})
         genai = _install_fake_genai_module(response)
-        await parse_with_gemini(
+        result = await parse_with_gemini(
             unparsed_lines=[{"line_no": 1, "raw_line": "x"}],
             knowledge_snapshot=[],
         )
         kwargs = genai.GenerativeModel.call_args.kwargs
-        assert kwargs.get("model_name") == "gemini-2.5-flash"
+        assert kwargs.get("model_name") == "gemini-3.1-flash-lite"
+
+        from decimal import Decimal
+
+        from app.services.llm_budget import calculate_cost
+
+        assert result.model == "gemini-3.1-flash-lite"
+        assert calculate_cost(1_000_000, 0, model=result.model) == Decimal("0.25")
+        assert calculate_cost(0, 1_000_000, model=result.model) == Decimal("1.50")
+        assert calculate_cost(1_000_000, 1_000_000, model=result.model) == Decimal("1.75")
 
     @pytest.mark.asyncio
     async def test_knowledge_snapshot_top30_included(self) -> None:
@@ -587,7 +594,7 @@ class TestHybridParseInventoryMessage:
             UnparsedLine,
             parse_inventory_message,
         )
-        from app.services.inventory_parser_llm import LLMParsedItem, LLMParseResult
+        from app.services.inventory_parser_llm import LLMParsedItem
         from app.services.llm_budget import BudgetStatus
 
         db = AsyncMock()
@@ -636,7 +643,7 @@ class TestHybridParseInventoryMessage:
                     ],
                     input_tokens=1200,
                     output_tokens=350,
-                    model="gemini-2.5-flash",
+                    model="gemini-3.1-flash-lite",
                 )
             ),
         ):

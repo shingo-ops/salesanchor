@@ -1,0 +1,11 @@
+route:
+  receiver: discord-server-alerts
+  group_by: ["alertname", "job", "instance"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+receivers:
+  - name: discord-server-alerts
+    discord_configs:
+      - webhook_url_file: /etc/alertmanager/secrets/discord-webhook
+        send_resolved: true

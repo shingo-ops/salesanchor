@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 226" role="img" aria-label="入金確認の流れと監査記録">
+<style>
+/* PLACEHOLDER TOKENS: 値のみ親 images/ の実値へ置換。構造は不変。 */
+svg{--font:'Hiragino Sans','Noto Sans JP',sans-serif;--text:#2C2C2A;--sub:#5F5E5A;--acc-s:#534AB7;--acc-f:#EEEDFE;--acc-t:#3C3489;--bd:#D3D1C7;--bd2:#888780;--surf:#F1EFE8;}
+text{font-family:var(--font);fill:var(--text);}
+.sub{fill:var(--sub);}
+.acc{fill:var(--acc-f);stroke:var(--acc-s);stroke-width:0.5;}
+.acct{fill:var(--acc-t);}
+.gray{fill:var(--surf);stroke:var(--bd2);stroke-width:0.5;}
+.dash{fill:none;stroke:var(--bd2);stroke-width:0.5;stroke-dasharray:5 5;}
+</style>
+<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="var(--bd2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>
+
+<rect class="acc" x="30" y="40" width="176" height="60" rx="10"/>
+<text x="118" y="66" font-size="14" class="acct" text-anchor="middle">入金確認</text>
+<text x="118" y="86" font-size="12" class="acct" text-anchor="middle">手動ボタン</text>
+<line x1="208" y1="70" x2="242" y2="70" stroke="var(--bd2)" stroke-width="1" marker-end="url(#ar)"/>
+
+<rect class="gray" x="245" y="40" width="200" height="60" rx="10"/>
+<text x="345" y="66" font-size="14" text-anchor="middle">確認ポップアップ</text>
+<text x="345" y="86" font-size="12" class="sub" text-anchor="middle">入金を確認しましたか？</text>
+<line x1="447" y1="70" x2="481" y2="70" stroke="var(--bd2)" stroke-width="1" marker-end="url(#ar)"/>
+
+<rect class="acc" x="484" y="40" width="176" height="60" rx="10"/>
+<text x="572" y="66" font-size="14" class="acct" text-anchor="middle">仕入れ対応中へ</text>
+<text x="572" y="86" font-size="12" class="acct" text-anchor="middle">ステータス自動更新</text>
+
+<rect class="dash" x="30" y="140" width="630" height="62" rx="10"/>
+<text x="52" y="164" font-size="14">すべての更新に記録</text>
+<text x="52" y="186" font-size="12" class="sub">テナント内のどのユーザーが・いつ押したか（タイムスタンプ）／PayPalは自動＝確認元も記録</text>
+</svg>

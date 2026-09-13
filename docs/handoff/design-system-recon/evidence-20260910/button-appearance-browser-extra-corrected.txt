@@ -1,0 +1,53 @@
+{
+  "status": "PASS",
+  "aliases": [
+    {
+      "stage": "before",
+      "dark": false,
+      "values": {
+        "bg-primary": "rgb(245, 247, 250)",
+        "tooltip-text": "rgb(255, 255, 255)",
+        "calendar-today-text": "rgb(255, 255, 255)",
+        "link": "rgb(30, 58, 138)"
+      }
+    },
+    {
+      "stage": "before",
+      "dark": true,
+      "values": {
+        "bg-primary": "rgb(15, 23, 42)",
+        "tooltip-text": "rgb(15, 23, 42)",
+        "calendar-today-text": "rgb(15, 23, 42)",
+        "link": "rgb(123, 174, 224)"
+      }
+    },
+    {
+      "stage": "after",
+      "dark": false,
+      "values": {
+        "bg-primary": "rgb(245, 247, 250)",
+        "tooltip-text": "rgb(255, 255, 255)",
+        "calendar-today-text": "rgb(255, 255, 255)",
+        "link": "rgb(30, 58, 138)"
+      }
+    },
+    {
+      "stage": "after",
+      "dark": true,
+      "values": {
+        "bg-primary": "rgb(15, 23, 42)",
+        "tooltip-text": "rgb(15, 23, 42)",
+        "calendar-today-text": "rgb(15, 23, 42)",
+        "link": "rgb(123, 174, 224)"
+      }
+    }
+  ],
+  "loading": 12,
+  "focus": 72,
+  "reducedMotion": {
+    "animation": "none",
+    "busy": "true",
+    "text": "Save"
+  },
+  "errors": []
+}

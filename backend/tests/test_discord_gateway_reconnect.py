@@ -14,21 +14,17 @@ import discord
 import pytest
 
 from app.discord_gateway.client import run_gateway
-from app.discord_gateway.config import TenantBotConfig
+from app.discord_gateway.config import SingleBotConfig
 
 
-def _make_tenant() -> TenantBotConfig:
-    return TenantBotConfig(
-        tenant_id=1,
-        tenant_code="test-tenant",
-        bot_token="TEST_TOKEN",
-    )
+def _make_config() -> SingleBotConfig:
+    return SingleBotConfig(bot_token="TEST_TOKEN")
 
 
 @pytest.mark.asyncio
 async def test_run_gateway_uses_reconnect_false():
     """client.start は reconnect=False で呼ばれること（無制限再接続防止）。"""
-    tenant = _make_tenant()
+    config = _make_config()
     started_with: list[dict] = []
 
     async def fake_start(token, *, reconnect):
@@ -42,7 +38,7 @@ async def test_run_gateway_uses_reconnect_false():
 
     with patch("app.discord_gateway.client.JarvisDiscordClient", return_value=mock_client):
         with pytest.raises(asyncio.CancelledError):
-            await run_gateway(tenant)
+            await run_gateway(config)
 
     assert len(started_with) == 1
     assert started_with[0]["reconnect"] is False, "reconnect=True は短時間多接続を引き起こすため禁止"
@@ -51,7 +47,7 @@ async def test_run_gateway_uses_reconnect_false():
 @pytest.mark.asyncio
 async def test_run_gateway_normal_exit_sleeps_before_reconnect():
     """正常切断（else ブランチ）でも asyncio.sleep を挟んでから再接続すること。"""
-    tenant = _make_tenant()
+    config = _make_config()
     call_count = 0
     sleep_calls: list[float] = []
 
@@ -72,7 +68,7 @@ async def test_run_gateway_normal_exit_sleeps_before_reconnect():
     with patch("app.discord_gateway.client.JarvisDiscordClient", return_value=mock_client):
         with patch("asyncio.sleep", side_effect=fake_sleep):
             with pytest.raises(asyncio.CancelledError):
-                await run_gateway(tenant)
+                await run_gateway(config)
 
     assert len(sleep_calls) >= 1, "正常切断後もスリープなしで即再接続してはならない"
     assert sleep_calls[0] > 0
@@ -81,7 +77,7 @@ async def test_run_gateway_normal_exit_sleeps_before_reconnect():
 @pytest.mark.asyncio
 async def test_run_gateway_login_failure_raises_immediately():
     """LoginFailure は再試行せず即座に re-raise すること。"""
-    tenant = _make_tenant()
+    config = _make_config()
 
     async def fake_start(token, *, reconnect):
         raise discord.LoginFailure("invalid token")
@@ -92,7 +88,7 @@ async def test_run_gateway_login_failure_raises_immediately():
 
     with patch("app.discord_gateway.client.JarvisDiscordClient", return_value=mock_client):
         with pytest.raises(discord.LoginFailure):
-            await run_gateway(tenant)
+            await run_gateway(config)
 
 
 @pytest.mark.asyncio
@@ -100,7 +96,7 @@ async def test_run_gateway_stops_after_max_reconnect_attempts():
     """例外が _MAX_RECONNECT_ATTEMPTS 回続いたら RuntimeError を raise すること。"""
     from app.discord_gateway.client import _MAX_RECONNECT_ATTEMPTS
 
-    tenant = _make_tenant()
+    config = _make_config()
     call_count = 0
 
     async def fake_start(token, *, reconnect):
@@ -115,6 +111,6 @@ async def test_run_gateway_stops_after_max_reconnect_attempts():
     with patch("app.discord_gateway.client.JarvisDiscordClient", return_value=mock_client):
         with patch("asyncio.sleep", new_callable=AsyncMock):
             with pytest.raises(RuntimeError, match="max reconnect attempts"):
-                await run_gateway(tenant)
+                await run_gateway(config)
 
     assert call_count == _MAX_RECONNECT_ATTEMPTS

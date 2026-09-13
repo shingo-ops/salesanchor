@@ -9,6 +9,11 @@ global:
 rule_files:
   - "alert_rules.yml"
 
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ["alertmanager:9093"]
+
 scrape_configs:
   # Prometheus 自身のメトリクス
   - job_name: "prometheus"
@@ -23,20 +28,6 @@ scrape_configs:
         labels:
           instance: "mgmt-vps"
       - targets: ["host-gateway:19100"]
-        labels:
-          instance: "app-vps"
-
-  # PostgreSQL Exporter（DB接続数・クエリ統計）
-  - job_name: "postgres-exporter"
-    static_configs:
-      - targets: ["host-gateway:19187"]
-        labels:
-          instance: "app-vps"
-
-  # Nginx Exporter（リクエスト数・ステータスコード）
-  - job_name: "nginx-exporter"
-    static_configs:
-      - targets: ["host-gateway:19113"]
         labels:
           instance: "app-vps"
 
@@ -80,12 +71,8 @@ scrape_configs:
   #   static_configs:
   #     - targets: ["cadvisor:8080"]
 
-  # Redis Exporter（Redisキャッシュメトリクス）ADR-079
-  - job_name: "redis-exporter"
-    static_configs:
-      - targets: ["host-gateway:19121"]
-        labels:
-          instance: "app-vps"
+  # heavy-exporters（postgres-exporter / nginx-exporter / redis-exporter）は profiles(heavy-exporters) で隔離。
+  # deploy.yml:602 の全量 up でも起動しない（明示指定時のみ起動）。
 
   # Uptime Kuma（死活監視メトリクス）
   # v2.x は Basic 認証が必要。パスワードはコンテナ内シークレットファイルで管理

@@ -38,7 +38,6 @@ class QuoteItemInput(BaseModel):
 
 class QuoteCreate(BaseModel):
     """見積登録リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
-    deal_id: int | None = Field(default=None, ge=1)
     company_id: int = Field(ge=1, description="会社ID")
     contact_id: int = Field(ge=1, description="担当者ID")
     currency: str = Field(default="JPY", max_length=10)
@@ -90,7 +89,7 @@ class QuoteResponse(BaseModel):
     """
     id: int
     quote_code: str | None
-    deal_id: int | None
+    lead_id: int | None
     company_id: int
     contact_id: int | None
     currency: str

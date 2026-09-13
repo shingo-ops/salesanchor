@@ -1,0 +1,33 @@
+<svg width="420" height="480" viewBox="0 0 420 480" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="420" height="480" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="60" y="20" width="340" height="440" rx="10" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="80" y="52" font-size="16" font-weight="600" fill="#2c2c2a">アカウント</text>
+  <text x="386" y="52" font-size="16" fill="#888780" text-anchor="end">&#10005;</text>
+
+  <circle cx="100" cy="90" r="22" fill="#e6f1fb"/>
+  <text x="100" y="97" font-size="16" font-weight="600" fill="#0c447c" text-anchor="middle">田</text>
+  <text x="132" y="86" font-size="13" font-weight="600" fill="#2c2c2a">田中 太郎</text>
+  <text x="132" y="104" font-size="11" fill="#5f5e5a">tanaka@salesanchor.jp</text>
+
+  <rect x="80" y="128" width="300" height="46" rx="8" fill="#f1efe8"/>
+  <text x="92" y="146" font-size="10" fill="#888780">所属テナント</text>
+  <text x="92" y="164" font-size="12" fill="#2c2c2a">合同会社 Sales Anchor</text>
+
+  <rect x="80" y="188" width="300" height="36" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="230" y="210" font-size="12" fill="#2c2c2a" text-anchor="middle">アカウント設定</text>
+
+  <line x1="80" y1="242" x2="380" y2="242" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="80" y="270" font-size="12" fill="#2c2c2a">ダークモード</text>
+  <rect x="330" y="258" width="36" height="20" rx="10" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <circle cx="340" cy="268" r="7" fill="#888780"/>
+
+  <text x="80" y="300" font-size="12" fill="#2c2c2a">表示言語</text>
+  <text x="380" y="300" font-size="11" fill="#5f5e5a" text-anchor="end">日本語 &#9660;</text>
+
+  <line x1="80" y1="322" x2="380" y2="322" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="80" y="350" font-size="12" fill="#c4432f">サインアウト</text>
+</svg>

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="300" viewBox="0 0 520 300" font-family="sans-serif">
+<rect width="520" height="300" fill="#FFFFFF"/>
+<text x="20" y="18" font-size="11" fill="#9AA3AE">暫定To-Be（正本は sales-management テーマ）</text>
+<rect x="20" y="28" width="480" height="256" rx="14" fill="#FFFFFF" stroke="#D8DCE1"/>
+<circle cx="52" cy="62" r="16" fill="#F0F1F3"/>
+<text x="52" y="67" font-size="12" fill="#6B7480" text-anchor="middle">山</text>
+<text x="80" y="58" font-size="14" font-weight="600" fill="#1F2933">山田貿易</text>
+<rect x="80" y="66" width="66" height="18" rx="9" fill="#E6F4F1"/>
+<text x="113" y="79" font-size="11" fill="#1D6A5E" text-anchor="middle">未商談化</text>
+<text x="40" y="112" font-size="13" font-weight="600" fill="#4A5560">営業担当を選ぶ</text>
+<rect x="40" y="122" width="440" height="128" rx="8" fill="#FFFFFF" stroke="#D8DCE1"/>
+<text x="56" y="146" font-size="13" fill="#1F2933">田中</text>
+<text x="464" y="146" font-size="11" fill="#6B7480" text-anchor="end">オーナー</text>
+<line x1="40" y1="154" x2="480" y2="154" stroke="#EDEFF2"/>
+<text x="56" y="178" font-size="13" fill="#1F2933">佐藤</text>
+<text x="464" y="178" font-size="11" fill="#6B7480" text-anchor="end">マネージャー</text>
+<line x1="40" y1="186" x2="480" y2="186" stroke="#EDEFF2"/>
+<rect x="40" y="186" width="440" height="32" fill="#E6F4F1"/>
+<text x="56" y="206" font-size="13" font-weight="600" fill="#1D6A5E">(選択) 鈴木</text>
+<text x="464" y="206" font-size="11" fill="#1D6A5E" text-anchor="end">営業担当</text>
+<line x1="40" y1="218" x2="480" y2="218" stroke="#EDEFF2"/>
+<text x="56" y="238" font-size="13" fill="#1F2933">山本</text>
+<text x="464" y="238" font-size="11" fill="#6B7480" text-anchor="end">営業担当</text>
+</svg>

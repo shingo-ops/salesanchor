@@ -6,10 +6,13 @@
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable
 
+import httpx
 from sqlalchemy import text
 from sqlalchemy.exc import ProgrammingError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +33,83 @@ class TicketChannelLead:
 
 def _schema(tenant_id: int) -> str:
     return f"tenant_{tenant_id:03d}"
+
+
+_ATTACHMENT_ROOT = os.environ.get("ATTACHMENT_ROOT", "/data/attachments")
+_DOWNLOAD_TIMEOUT_SEC = 30.0
+
+
+async def _save_attachment_to_disk(
+    *,
+    tenant_id: int,
+    lead_id: int,
+    message_id: str,
+    url: str,
+    filename: str | None,
+) -> tuple[str | None, int | None, str | None]:
+    """添付の実体をダウンロードして自社ディスクへ保存する。
+
+    Discord CDN の署名付きURLは約24時間で失効し、元投稿が削除されると
+    実体も消えるため、受信時に自社側へ保存する（attachment-storage テーマ）。
+
+    戻り値は (相対パス, バイト数, content_type)。
+    失敗した場合は (None, None, None) を返し、受信処理は止めない。
+    画像が取れなくても本文は受信箱に残すべきであるため。
+    """
+    schema = _schema(tenant_id)
+    ext = ""
+    if filename and "." in filename:
+        ext = "." + filename.rsplit(".", 1)[1][:10]
+    rel_path = f"{schema}/lead_{lead_id}/{message_id}{ext}"
+    abs_path = Path(_ATTACHMENT_ROOT) / rel_path
+
+    try:
+        async with httpx.AsyncClient(timeout=_DOWNLOAD_TIMEOUT_SEC) as client:
+            response = await client.get(url)
+        if response.status_code != 200:
+            logger.warning(
+                "[attachment-save] ダウンロード失敗 tenant=%s lead=%s msg=%s status=%s",
+                tenant_id, lead_id, message_id, response.status_code,
+            )
+            return None, None, None
+
+        abs_path.parent.mkdir(parents=True, exist_ok=True)
+        abs_path.write_bytes(response.content)
+        content_type = response.headers.get("content-type")
+        logger.info(
+            "[attachment-save] 保存完了 tenant=%s lead=%s msg=%s bytes=%d path=%s",
+            tenant_id, lead_id, message_id, len(response.content), rel_path,
+        )
+        return rel_path, len(response.content), content_type
+    except Exception:
+        logger.warning(
+            "[attachment-save] 保存失敗 tenant=%s lead=%s msg=%s",
+            tenant_id, lead_id, message_id, exc_info=True,
+        )
+        return None, None, None
+
+
+def _extract_first_attachment(message: Any) -> tuple[str | None, str | None]:
+    """Discord メッセージから最初の添付の URL と種別を取り出す。
+
+    添付が無ければ (None, None)。
+    種別は content_type の先頭語から image / video / audio / file に丸める。
+    Meta 経路（webhook.py）の attachment_url / attachment_type と同じ意味で使う。
+    """
+    attachments = getattr(message, "attachments", None) or []
+    if not attachments:
+        return None, None
+    first = attachments[0]
+    url = getattr(first, "url", None)
+    if not url:
+        return None, None
+    content_type = getattr(first, "content_type", None) or ""
+    head = content_type.split("/")[0]
+    if head in ("image", "video", "audio"):
+        kind = head
+    else:
+        kind = "file"
+    return str(url), kind
 
 
 async def _lookup_ticket_channel_lead(
@@ -130,14 +210,18 @@ async def process_ticket_channel_message(
             )
             return True
 
+        attachment_url, attachment_type = _extract_first_attachment(message)
+
         schema = _schema(tenant_id)
         insert_sql = text(f"""
             INSERT INTO {schema}.meta_messages
                 (tenant_id, lead_id, platform, sender_id, sender_name,
-                 message_text, direction, message_id, created_at, original_language)
+                 message_text, direction, message_id, created_at, original_language,
+                 attachment_url, attachment_type)
             VALUES
                 (:tenant_id, :lead_id, 'discord', :sender_id, :sender_name,
-                 :message_text, 'inbound', :message_id, :created_at, :original_language)
+                 :message_text, 'inbound', :message_id, :created_at, :original_language,
+                 :attachment_url, :attachment_type)
             ON CONFLICT (message_id) WHERE message_id IS NOT NULL
             DO NOTHING
             RETURNING id
@@ -151,6 +235,8 @@ async def process_ticket_channel_message(
             "message_id": message_id,
             "created_at": received_at,
             "original_language": infer_original_language(message_text),
+            "attachment_url": attachment_url,
+            "attachment_type": attachment_type,
         }
 
         result = await db.execute(insert_sql, insert_params)
@@ -165,6 +251,76 @@ async def process_ticket_channel_message(
                 message_id,
             )
             return True
+
+        if attachment_url:
+            original_filename = None
+            attachments = getattr(message, "attachments", None) or []
+            if attachments:
+                original_filename = getattr(attachments[0], "filename", None)
+
+            saved_path, saved_size, saved_type = await _save_attachment_to_disk(
+                tenant_id=tenant_id,
+                lead_id=lead.lead_id,
+                message_id=message_id,
+                url=attachment_url,
+                filename=original_filename,
+            )
+            if saved_path is not None and saved_size is not None:
+                try:
+                    result_la = await db.execute(
+                        text(f"""
+                            INSERT INTO {schema}.lead_attachments
+                                (tenant_id, lead_id, message_id, platform,
+                                 file_path, file_size, content_type, original_filename)
+                            VALUES
+                                (:tenant_id, :lead_id, :message_id, 'discord',
+                                 :file_path, :file_size, :content_type, :original_filename)
+                            ON CONFLICT (message_id) DO NOTHING
+                                RETURNING id
+                        """),
+                        {
+                            "tenant_id": tenant_id,
+                            "lead_id": lead.lead_id,
+                            "message_id": message_id,
+                            "file_path": saved_path,
+                            "file_size": saved_size,
+                            "content_type": saved_type,
+                            "original_filename": original_filename,
+                        },
+                    )
+                    attachment_row = result_la.first()
+                    if attachment_row is not None:
+                        attachment_id = int(attachment_row[0])
+                        # API_BASE（/api/v1）はクライアント側が付ける。
+                        # ここで付けると frontend の api.getBlob で二重になる
+                        # （2026-09-02 に /api/v1/api/v1/... で 404 を実測）。
+                        serve_url = (
+                            f"/leads/{lead.lead_id}"
+                            f"/attachments/{attachment_id}"
+                        )
+                        await db.execute(
+                            text(f"""
+                                UPDATE {schema}.meta_messages
+                                   SET attachment_url = :url
+                                 WHERE message_id = :message_id
+                                   AND tenant_id = :tenant_id
+                            """),
+                            {
+                                "url": serve_url,
+                                "message_id": message_id,
+                                "tenant_id": tenant_id,
+                            },
+                        )
+                        logger.info(
+                            "[attachment-save] 配信URL設定 tenant=%s lead=%s id=%s url=%s",
+                            tenant_id, lead.lead_id, attachment_id, serve_url,
+                        )
+                    await db.commit()
+                except Exception:
+                    logger.warning(
+                        "[attachment-save] 台帳記録失敗 tenant=%s lead=%s msg=%s",
+                        tenant_id, lead.lead_id, message_id, exc_info=True,
+                    )
 
         if message_text.strip():
             enqueue_inbound_translation(

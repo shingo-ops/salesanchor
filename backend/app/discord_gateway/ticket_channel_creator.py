@@ -29,7 +29,7 @@ from app.auth.dependencies import set_tenant_context
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_WELCOME = "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+_DEFAULT_WELCOME = "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
 
 
 @dataclass(frozen=True)
@@ -171,6 +171,44 @@ def _channel_name_for(member: discord.Member) -> str:
     return f"ticket-{safe_name}-{user_suffix}"
 
 
+async def _hide_ticket_start(
+    guild: discord.Guild,
+    config: dict,
+    member: discord.Member,
+    tenant_id: int,
+) -> None:
+    """チケット発行後、本人にticket-startを非表示にする（1人1チケット徹底）。
+
+    失敗してもチケット発行自体は妨げない。
+    """
+    ticket_start_id = config.get("ticket_button_channel_id")
+    if not ticket_start_id:
+        return
+    ticket_start_ch = guild.get_channel(int(ticket_start_id))
+    if not isinstance(ticket_start_ch, discord.TextChannel):
+        logger.warning(
+            "[ticket] ticket_start channel not found id=%s tenant=%d",
+            ticket_start_id,
+            tenant_id,
+        )
+        return
+    try:
+        await ticket_start_ch.set_permissions(member, view_channel=False)
+        logger.info(
+            "[ticket] ticket-start hidden for user=%s ch=%s tenant=%d",
+            member.id,
+            ticket_start_id,
+            tenant_id,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning(
+            "[ticket] ticket-start hide failed user=%s ch=%s: %s",
+            member.id,
+            ticket_start_id,
+            exc,
+        )
+
+
 async def get_or_create_ticket_channel(
     guild: discord.Guild,
     config: dict,
@@ -215,6 +253,7 @@ async def get_or_create_ticket_channel(
                 discord_user_id,
                 tenant_id,
             )
+            await _hide_ticket_start(guild, config, member, tenant_id)
             return ch
         # チャンネルが削除済みの場合は再作成へ
         logger.warning(
@@ -340,4 +379,5 @@ async def get_or_create_ticket_channel(
             )
         await session.commit()
 
+    await _hide_ticket_start(guild, config, member, tenant_id)
     return new_channel

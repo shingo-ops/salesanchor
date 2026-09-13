@@ -13,23 +13,15 @@
   - conftest のデフォルト close_reasons シード（id=1〜6）を利用
 """
 import pytest
-import pytest_asyncio
+from sqlalchemy import text
 
 
 pytestmark = pytest.mark.asyncio
 
 
-async def _create_deal(client) -> int:
-    company_res = await client.post("/api/v1/companies", json={"name": "理由テスト株式会社"})
-    company_id = company_res.json()["id"]
-    contact_res = await client.post("/api/v1/contacts", json={
-        "company_id": company_id, "name": "担当者", "email": "test-cr@example.com",
-    })
-    contact_id = contact_res.json()["id"]
-    deal_res = await client.post("/api/v1/deals", json={
-        "company_id": company_id, "contact_id": contact_id, "title": "理由テスト商談",
-    })
-    return deal_res.json()["id"]
+async def _create_lead(client) -> int:
+    from tests.helpers_txn import create_lead
+    return await create_lead(client, "理由テストリード")
 
 
 class TestCloseReasonsAPI:
@@ -112,31 +104,31 @@ class TestCloseReasonsAPI:
 
 
 class TestDealCloseReasons:
-    """PATCH /deals/{id} — won/lost 遷移時の close_reasons 登録"""
+    """PATCH /leads/{id} — lost 遷移時の close_reasons 登録"""
 
-    async def test_won_transition_requires_close_reasons(self, client):
-        """won 遷移時に close_reasons なしは 422"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
-            "status": "won",
+    async def test_lost_transition_requires_close_reasons(self, client):
+        """lost 遷移時に close_reasons なしは 422"""
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "status": "lost",
             "close_reason_memo": "メモあり",
         })
         assert res.status_code == 422
 
-    async def test_won_transition_requires_memo(self, client):
-        """won 遷移時に close_reason_memo なしは 422"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
-            "status": "won",
+    async def test_lost_transition_requires_memo(self, client):
+        """lost 遷移時に close_reason_memo なしは 422"""
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "status": "lost",
             "close_reasons": [{"reason_id": 1, "is_primary": True}],
         })
         assert res.status_code == 422
 
-    async def test_won_transition_requires_exactly_one_primary(self, client):
-        """主因0件は 422"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
-            "status": "won",
+    async def test_lost_transition_requires_exactly_one_primary(self, client):
+        """主因1件でなければ 422"""
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "status": "lost",
             "close_reason_memo": "メモ",
             "close_reasons": [
                 {"reason_id": 1, "is_primary": False},
@@ -145,11 +137,11 @@ class TestDealCloseReasons:
         })
         assert res.status_code == 422
 
-    async def test_won_transition_success(self, client):
-        """won 遷移: close_reasons + memo 付きで成功"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
-            "status": "won",
+    async def test_lost_transition_success(self, client, db_session):
+        """lost 遷移: close_reasons + memo 付きで成功"""
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
+            "status": "lost",
             "close_reason_memo": "在庫が揃っていた",
             "close_reasons": [
                 {"reason_id": 1, "is_primary": True},
@@ -158,28 +150,31 @@ class TestDealCloseReasons:
         })
         assert res.status_code == 200
         data = res.json()
-        assert data["status"] == "won"
-        assert data["close_reason_memo"] == "在庫が揃っていた"
-        assert data["closed_at"] is not None
-
-    async def test_lost_transition_success(self, client):
-        """lost 遷移: close_reasons + memo 付きで成功"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
-            "status": "lost",
-            "close_reason_memo": "価格が折り合わなかった",
-            "close_reasons": [{"reason_id": 4, "is_primary": True}],
-        })
-        assert res.status_code == 200
-        assert res.json()["status"] == "lost"
-        assert res.json()["closed_at"] is not None
+        assert data["status"] == "lost"
+        lead_row = (await db_session.execute(
+            text("SELECT status FROM leads WHERE id = :lid"),
+            {"lid": lead_id},
+        )).mappings().first()
+        assert lead_row and lead_row["status"] == "lost"
+        reason_rows = (await db_session.execute(
+            text("""
+                SELECT lead_id, reason_id, is_primary
+                  FROM deal_close_reasons
+                 WHERE lead_id = :lid
+                 ORDER BY reason_id
+            """),
+            {"lid": lead_id},
+        )).mappings().all()
+        assert len(reason_rows) == 2
+        assert all(r["lead_id"] == lead_id for r in reason_rows)
+        assert [r["reason_id"] for r in reason_rows] == [1, 2]
+        assert [r["is_primary"] for r in reason_rows] == [1, 0]
 
     async def test_non_closing_transition_no_close_reasons_required(self, client):
         """open → negotiating は close_reasons 不要"""
-        deal_id = await _create_deal(client)
-        res = await client.patch(f"/api/v1/deals/{deal_id}", json={
+        lead_id = await _create_lead(client)
+        res = await client.patch(f"/api/v1/leads/{lead_id}", json={
             "status": "negotiating",
         })
         assert res.status_code == 200
         assert res.json()["status"] == "negotiating"
-        assert res.json()["closed_at"] is None

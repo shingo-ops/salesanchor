@@ -1,0 +1,26 @@
+<svg width="480" height="400" viewBox="0 0 480 400" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="480" height="400" fill="#2c2c2a" opacity="0.35"/>
+  <rect x="60" y="30" width="360" height="340" rx="10" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="84" y="64" font-size="14" font-weight="600" fill="#2c2c2a">&#128200; インセンティブを追加</text>
+
+  <text x="84" y="92" font-size="10" fill="#888780">発生条件</text>
+  <rect x="84" y="98" width="312" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="94" y="115" font-size="11" fill="#2c2c2a">成約時 &#9660;</text>
+
+  <text x="84" y="146" font-size="10" fill="#888780">基準となる指標</text>
+  <rect x="84" y="152" width="90" height="28" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="1"/>
+  <text x="129" y="170" font-size="11" fill="#0c447c" text-anchor="middle">売上</text>
+  <rect x="182" y="152" width="90" height="28" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="227" y="170" font-size="11" fill="#5f5e5a" text-anchor="middle">利益</text>
+
+  <text x="84" y="204" font-size="10" fill="#888780">還元率</text>
+  <rect x="84" y="210" width="80" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="94" y="227" font-size="11" fill="#2c2c2a">1</text>
+  <text x="172" y="227" font-size="11" fill="#5f5e5a">%</text>
+
+  <rect x="84" y="290" width="90" height="28" rx="6" fill="#378add"/>
+  <text x="129" y="308" font-size="11" fill="#ffffff" text-anchor="middle">追加する</text>
+  <rect x="182" y="290" width="90" height="28" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="227" y="308" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>

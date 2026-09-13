@@ -1,0 +1,334 @@
+
+> salesanchor-frontend@1.0.0 test:coverage
+> vitest run --config vitest.unit.config.ts --project unit --coverage
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend
+      Coverage enabled with v8
+
+
+ Test Files  22 passed (22)
+      Tests  189 passed (189)
+   Start at  17:05:09
+   Duration  29.80s (transform 9.35s, setup 1.92s, import 37.09s, tests 23.76s, environment 68.23s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    5.91 |     7.02 |     4.2 |    5.71 |
+ src               |       0 |        0 |       0 |       0 |
+  App.tsx          |       0 |        0 |       0 |       0 | 107-130
+ src/api           |       0 |        0 |       0 |       0 |
+  closeReasons.ts  |       0 |        0 |       0 |       0 | 13-14
+  funnel.ts        |       0 |        0 |       0 |       0 | 23-218
+ src/components    |   16.25 |    21.59 |   17.62 |   17.14 |
+  Badge.tsx        |     100 |    88.88 |     100 |     100 | 56
+  Button.tsx       |     100 |    97.22 |     100 |     100 | 67
+  Card.tsx         |       0 |        0 |       0 |       0 | 34-41
+  ...eCombobox.tsx |       0 |        0 |       0 |       0 | 32-183
+  ...sionPanel.tsx |       0 |        0 |       0 |       0 | 21-232
+  ...tSelector.tsx |       0 |        0 |       0 |       0 | 48-227
+  ConfirmModal.tsx |       0 |        0 |       0 |       0 | 26-29
+  ...annelForm.tsx |       0 |        0 |       0 |       0 | 47-325
+  ...nnelLinks.tsx |       0 |        0 |       0 |       0 | 28-58
+  ...yCombobox.tsx |       0 |        0 |       0 |       0 | 31-182
+  DataTable.tsx    |   34.04 |    45.34 |   41.17 |   36.84 | ...03,249-265,289
+  DesktopShell.tsx |   62.79 |    40.17 |   32.35 |   64.55 | ...39-141,246-496
+  Drawer.tsx       |       0 |        0 |       0 |       0 | 40-196
+  EmptyState.tsx   |     100 |    63.63 |     100 |     100 | 43,49-56
+  FeatureGate.tsx  |       0 |        0 |       0 |       0 | 23-29
+  ...RateModal.tsx |   85.71 |    69.04 |      70 |   85.71 | ...34,182-199,245
+  ...StatusBar.tsx |   84.31 |    68.18 |   85.71 |   84.78 | 75-80,104-105
+  HeaderButton.tsx |     100 |       50 |     100 |     100 | 53-55
+  ...oryPicker.tsx |       0 |        0 |       0 |       0 | 71-306
+  ...SearchBar.tsx |       0 |        0 |       0 |       0 | 84-416
+  ...panyModal.tsx |       0 |        0 |       0 |       0 | 45-320
+  ...tactModal.tsx |       0 |        0 |       0 |       0 | 45-317
+  ...LeadModal.tsx |       0 |        0 |       0 |       0 | 40-304
+  MobileShell.tsx  |   84.09 |    75.47 |   72.22 |   83.33 | 202-228,303-306
+  Modal.tsx        |   55.55 |    34.21 |   84.61 |      64 | ...6,73-75,89-103
+  NavDropdown.tsx  |       0 |        0 |       0 |       0 | 24-49
+  ...cialPanel.tsx |       0 |        0 |       0 |       0 | 48-240
+  PageLayout.tsx   |     100 |       60 |     100 |     100 | 35-36,42-46
+  ...coreBadge.tsx |     100 |    83.33 |     100 |     100 | 75
+  ...eOverride.tsx |       0 |        0 |       0 |       0 | 23-104
+  ...ctedRoute.tsx |       0 |        0 |       0 |       0 | 10-22
+  ...tailPanel.tsx |       0 |        0 |       0 |       0 | 63-441
+  Select.tsx       |     100 |     61.9 |     100 |     100 | ...,94-96,107-128
+  ...tailPanel.tsx |       0 |        0 |       0 |       0 | 85-550
+  SubMenu.tsx      |    90.9 |    68.75 |     100 |     100 | ...88,102,108-114
+  Tabs.tsx         |       0 |        0 |       0 |       0 | 56-88
+  TextField.tsx    |     100 |       56 |     100 |     100 | 44-46,57-70
+  Textarea.tsx     |       0 |        0 |       0 |       0 | 38-51
+ ...onents/loading |   19.31 |    24.71 |     8.1 |   22.85 |
+  Drawer.tsx       |       0 |        0 |       0 |       0 | 17-26
+  EmptyState.tsx   |       0 |        0 |       0 |       0 | 15
+  Modal.tsx        |       0 |        0 |       0 |       0 | 18-27
+  ProgressBar.tsx  |   11.11 |        0 |       0 |    12.5 | 21-46
+  Skeleton.tsx     |    9.09 |        0 |       0 |      10 | 21-65
+  SplashScreen.tsx |       0 |      100 |       0 |       0 | 14
+  Toast.tsx        |   17.64 |        0 |       0 |   22.22 | 16-25,30-38,52-63
+  icons.tsx        |      50 |      100 |      50 |      50 | 12
+ src/config        |       0 |      100 |     100 |       0 |
+  routeTitles.ts   |       0 |      100 |     100 |       0 | 13
+ src/constants     |    84.4 |    11.11 |      40 |   85.18 |
+  countries.ts     |       0 |      100 |       0 |       0 | 20-215
+  iconSizes.ts     |       0 |      100 |     100 |       0 | 5
+  icons.tsx        |   87.25 |    11.11 |      50 |   88.11 | 316-345,411
+ src/contexts      |       0 |        0 |       0 |       0 |
+  AuthContext.tsx  |       0 |        0 |       0 |       0 | 24-105
+  ...leContext.tsx |       0 |        0 |       0 |       0 | 33-86
+  ThemeContext.tsx |       0 |        0 |       0 |       0 | 38-117
+  ...fsContext.tsx |       0 |        0 |       0 |       0 | 40-169
+ ...tures/schedule |       0 |        0 |       0 |       0 |
+  ...ars.config.ts |       0 |        0 |       0 |       0 | 19-83
+ ...nalysis-review |       0 |        0 |       0 |       0 |
+  ...icsDrawer.tsx |       0 |        0 |       0 |       0 | 31-270
+  ...omparison.tsx |       0 |        0 |       0 |       0 | 10-23
+  ...terDrawer.tsx |       0 |        0 |       0 |       0 | 61-523
+  ...ceRawPane.tsx |       0 |        0 |       0 |       0 | 8-30
+  ...etailView.tsx |       0 |        0 |       0 |       0 | 9-118
+  ...alityList.tsx |       0 |        0 |       0 |       0 | 22-64
+  reviewIssues.ts  |       0 |        0 |       0 |       0 | 4-30
+  ...Navigation.ts |       0 |        0 |       0 |       0 | 4-19
+  ...ierQuality.ts |       0 |      100 |       0 |       0 | 37
+ ...iew/components |       0 |      100 |       0 |       0 |
+  DataList.tsx     |       0 |      100 |       0 |       0 | 7-8
+  StatusBadge.tsx  |       0 |      100 |       0 |       0 | 6
+ ...g-distribution |       0 |        0 |       0 |       0 |
+  ...onPreview.tsx |       0 |        0 |       0 |       0 | 20-177
+  ...argetForm.tsx |       0 |        0 |       0 |       0 | 16-241
+  ...argetList.tsx |       0 |        0 |       0 |       0 | 31-277
+  ...Workspace.tsx |       0 |        0 |       0 |       0 | 26-89
+  ...ibutionApi.ts |       0 |      100 |       0 |       0 | 95-123
+ ...-import-review |       0 |        0 |       0 |       0 |
+  ...ewSection.tsx |       0 |        0 |       0 |       0 | 49-378
+ ...mport-workflow |   87.31 |    84.06 |   53.57 |   88.17 |
+  ...flowPanel.tsx |    75.8 |    80.76 |   38.88 |   79.06 | 24-25,29-30,70-81
+  ...orkflowApi.ts |      50 |      100 |       0 |      50 | 63,70
+  ...rtWorkflow.ts |     100 |     92.3 |     100 |     100 | 44-46,58
+ ...product-import |   79.56 |    77.21 |   88.23 |   84.31 |
+  ...portPanel.tsx |   86.48 |       85 |      90 |     100 | 21-23,30-43,57-60
+  ...rtPreview.tsx |    87.5 |    81.81 |   83.33 |   85.71 | 21
+  ...rtMessages.ts |   27.27 |     12.5 |     100 |   22.22 | 13-29
+ src/hooks         |   23.62 |     2.94 |   35.29 |   23.07 |
+  useFeatures.ts   |       0 |        0 |       0 |       0 | 20-45
+  useInboxSSE.ts   |       0 |      100 |       0 |       0 | 14
+  usePageTitle.ts  |       0 |        0 |       0 |       0 | 17-20
+  ...ermissions.ts |     100 |       50 |     100 |     100 | 29
+  ...cordDrawer.ts |       0 |      100 |       0 |       0 | 41-59
+  useSSE.ts        |       0 |        0 |       0 |       0 | 12-106
+  useSuperAdmin.ts |       0 |        0 |       0 |       0 | 20-42
+ src/lib           |   10.09 |    11.61 |    5.08 |    10.2 |
+  api.ts           |    8.73 |        0 |       0 |   10.11 | ...67-191,195-206
+  firebase-auth.ts |       0 |        0 |       0 |       0 | 27-187
+  firebase.ts      |       0 |        0 |       0 |       0 | 18-67
+  messages.ts      |   21.21 |    34.48 |   14.28 |   17.24 | 151-344
+  staffProfile.ts  |       0 |      100 |       0 |       0 | 14
+ ...rybook-mocks__ |       0 |      100 |       0 |       0 |
+  firebase-app.ts  |       0 |      100 |       0 |       0 | 4-6
+  firebase-auth.ts |       0 |      100 |       0 |       0 | 4-21
+ src/mocks         |       0 |      100 |     100 |       0 |
+  ...elFixtures.ts |       0 |      100 |     100 |       0 | 7-172
+ ...count-settings |       0 |        0 |       0 |       0 |
+  ...tingsPage.tsx |       0 |      100 |       0 |       0 | 8
+  ...esSection.tsx |       0 |        0 |       0 |       0 | 8-41
+  ...leSection.tsx |       0 |        0 |       0 |       0 | 21-68
+  ...tySection.tsx |       0 |        0 |       0 |       0 | 14-56
+ src/pages/admin   |       0 |        0 |       0 |       0 |
+  AdminHubPage.tsx |       0 |        0 |       0 |       0 | 21-69
+  ...stersPage.tsx |       0 |        0 |       0 |       0 | 24-126
+  ...ouncePage.tsx |       0 |        0 |       0 |       0 | 16-99
+  ...onfigPage.tsx |       0 |        0 |       0 |       0 | 50-528
+  ...ilityPage.tsx |       0 |        0 |       0 |       0 | 39-162
+  ...olicyPage.tsx |       0 |        0 |       0 |       0 | 43-142
+  ...ofilePage.tsx |       0 |        0 |       0 |       0 | 47-131
+ ...pages/archives |       0 |        0 |       0 |       0 |
+  ArchivesPage.tsx |       0 |        0 |       0 |       0 | 12-70
+ src/pages/badges  |       0 |        0 |       0 |       0 |
+  BadgesPage.tsx   |       0 |        0 |       0 |       0 | 13-94
+ src/pages/bots    |       0 |        0 |       0 |       0 |
+  BotEditPage.tsx  |       0 |        0 |       0 |       0 | 26-91
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 34-93
+  BotsPage.tsx     |       0 |        0 |       0 |       0 | 59-350
+ src/pages/buddy   |       0 |        0 |       0 |       0 |
+  BuddyPage.tsx    |       0 |        0 |       0 |       0 | 13-95
+ ...pages/channels |       0 |        0 |       0 |       0 |
+  ChannelsPage.tsx |       0 |        0 |       0 |       0 | 63-644
+ ...es/coming-soon |       0 |        0 |       0 |       0 |
+  ...gSoonPage.tsx |       0 |        0 |       0 |       0 | 20-21
+ ...ssion-settings |       0 |        0 |       0 |       0 |
+  ...tingsPage.tsx |       0 |        0 |       0 |       0 | 52-315
+ ...es/commissions |       0 |        0 |       0 |       0 |
+  ...sionsPage.tsx |       0 |        0 |       0 |       0 | 52-256
+ ...ages/companies |       0 |        0 |       0 |       0 |
+  ...aniesPage.tsx |       0 |        0 |       0 |       0 | 27-591
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 25-66
+ ...company-detail |       0 |        0 |       0 |       0 |
+  ...ressModal.tsx |       0 |        0 |       0 |       0 | 30-148
+  ...ressesTab.tsx |       0 |        0 |       0 |       0 | 28-87
+  ...yBasicTab.tsx |       0 |        0 |       0 |       0 | 30-138
+  ...annelsTab.tsx |       0 |        0 |       0 |       0 | 25-32
+  ...ntactsTab.tsx |       0 |        0 |       0 |       0 | 46-257
+  ...nvLogsTab.tsx |       0 |        0 |       0 |       0 | 38-101
+  ...etailPage.tsx |       0 |        0 |       0 |       0 | 31-262
+  ...iscordTab.tsx |       0 |        0 |       0 |       0 | 28-81
+  ...tail.types.ts |       0 |        0 |       0 |       0 | 5-209
+  ...panyDetail.ts |       0 |        0 |       0 |       0 | 19-304
+ ...pages/contacts |       0 |        0 |       0 |       0 |
+  ...tEditPage.tsx |       0 |        0 |       0 |       0 | 52-209
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 33-86
+  ContactsPage.tsx |       0 |        0 |       0 |       0 | 75-435
+ src/pages/crm     |       0 |        0 |       0 |       0 |
+  ...erHubPage.tsx |       0 |        0 |       0 |       0 | 26-68
+ ...ages/dashboard |       0 |        0 |       0 |       0 |
+  ...boardPage.tsx |       0 |        0 |       0 |       0 | 42-692
+  ...owUpsPage.tsx |       0 |        0 |       0 |       0 | 31-187
+  ...LeadsPage.tsx |       0 |        0 |       0 |       0 | 25-146
+  ...asonsPage.tsx |       0 |        0 |       0 |       0 | 16-92
+  ...venuePage.tsx |       0 |        0 |       0 |       0 | 14-60
+  ...elSection.tsx |       0 |        0 |       0 |       0 | 29-540
+  ...tsSection.tsx |       0 |        0 |       0 |       0 | 15-470
+  ...orSection.tsx |       0 |        0 |       0 |       0 | 11-441
+ ...design-preview |       0 |        0 |       0 |       0 |
+  ...eviewPage.tsx |       0 |        0 |       0 |       0 | 22-77
+ ...eview/sections |       0 |        0 |       0 |       0 |
+  BadgeSection.tsx |       0 |      100 |       0 |       0 | 10-19
+  ...onSection.tsx |       0 |      100 |       0 |       0 | 11-29
+  CardSection.tsx  |       0 |        0 |       0 |       0 | 9-68
+  ...leSection.tsx |       0 |        0 |       0 |       0 | 19-148
+  ...teSection.tsx |       0 |      100 |       0 |       0 | 12
+  FormSection.tsx  |       0 |      100 |       0 |       0 | 10-17
+  ModalSection.tsx |       0 |      100 |       0 |       0 | 9-110
+  ...usSection.tsx |       0 |      100 |       0 |       0 | 12-100
+  ...nuSection.tsx |       0 |      100 |       0 |       0 | 10-44
+  TabsSection.tsx  |       0 |      100 |       0 |       0 | 10-38
+  TokenSection.tsx |       0 |      100 |       0 |       0 | 7-49
+  _shared.tsx      |       0 |        0 |       0 |       0 | 8-31
+  registry.ts      |       0 |      100 |     100 |       0 | 32
+ .../design-system |       0 |        0 |       0 |       0 |
+  ...ystemPage.tsx |       0 |        0 |       0 |       0 | 13-447
+ src/pages/erp     |       0 |        0 |       0 |       0 |
+  ERPPage.tsx      |       0 |        0 |       0 |       0 | 14-113
+ ...s/goal-setting |       0 |        0 |       0 |       0 |
+  ...ttingPage.tsx |       0 |        0 |       0 |       0 | 21-756
+ src/pages/inbox   |       0 |        0 |       0 |       0 |
+  ...ationList.tsx |       0 |        0 |       0 |       0 | 53-212
+  ...artePanel.tsx |       0 |        0 |       0 |       0 | 73-850
+  ...ageThread.tsx |       0 |        0 |       0 |       0 | 68-748
+  InboxPage.tsx    |       0 |        0 |       0 |       0 | 28-228
+  ...fileModal.tsx |       0 |        0 |       0 |       0 | 60-265
+  ...ingsModal.tsx |       0 |        0 |       0 |       0 | 20-84
+  ...rdSection.tsx |       0 |        0 |       0 |       0 | 26-193
+  ...onPreview.tsx |       0 |        0 |       0 |       0 | 35-150
+  ...ltiSelect.tsx |       0 |        0 |       0 |       0 | 27-153
+  inbox.types.ts   |       0 |        0 |       0 |       0 | 12-184
+  useInboxState.ts |       0 |        0 |       0 |       0 | 159-819
+ ...s/integrations |       0 |        0 |       0 |       0 |
+  ...ntialForm.tsx |       0 |        0 |       0 |       0 | 20-126
+  ...ationPage.tsx |       0 |        0 |       0 |       0 | 36-324
+  ...GuidePage.tsx |       0 |        0 |       0 |       0 | 19-45
+  ...etupGuide.tsx |       0 |        0 |       0 |       0 | 27-546
+  ...dationTab.tsx |       0 |        0 |       0 |       0 | 42-360
+  ...ationPage.tsx |       0 |        0 |       0 |       0 | 32-166
+  ...ationPage.tsx |       0 |        0 |       0 |       0 | 38-165
+ ...ages/inventory |       0 |        0 |       0 |       0 |
+  ...lterPanel.tsx |       0 |        0 |       0 |       0 | 84-298
+  ...ntoryPage.tsx |       0 |        0 |       0 |       0 | 54-608
+  ...ntoryPage.tsx |       0 |        0 |       0 |       0 | 40-267
+ ...invoice-create |       0 |        0 |       0 |       0 |
+  ...reatePage.tsx |       0 |        0 |       0 |       0 | 56-434
+ ...invoice-detail |       0 |        0 |       0 |       0 |
+  ...etailPage.tsx |       0 |        0 |       0 |       0 | 103-311
+ ...pages/invoices |       0 |        0 |       0 |       0 |
+  InvoicesPage.tsx |       0 |        0 |       0 |       0 | 34-154
+ src/pages/leads   |    7.56 |     5.55 |       9 |    7.07 |
+  LeadEditPage.tsx |       0 |        0 |       0 |       0 | 59-289
+  ...ormFields.tsx |   73.07 |      100 |   56.25 |   69.56 | 112-133,147-163
+  LeadsPage.tsx    |       0 |        0 |       0 |       0 | 87-564
+ src/pages/login   |       0 |        0 |       0 |       0 |
+  LoginPage.tsx    |       0 |        0 |       0 |       0 | 10-139
+ ...agement-center |       0 |        0 |       0 |       0 |
+  ...enterPage.tsx |       0 |        0 |       0 |       0 | 29-102
+ .../notifications |       0 |        0 |       0 |       0 |
+  ...tionsPage.tsx |       0 |        0 |       0 |       0 | 14-108
+ ...oauth-callback |       0 |        0 |       0 |       0 |
+  ...lbackPage.tsx |       0 |        0 |       0 |       0 | 40-132
+ src/pages/orders  |       0 |        0 |       0 |       0 |
+  ...FilterBar.tsx |       0 |        0 |       0 |       0 | 25-48
+  ...FormModal.tsx |       0 |        0 |       0 |       0 | 41-96
+  OrdersPage.tsx   |       0 |        0 |       0 |       0 | 22-177
+  OrdersTable.tsx  |       0 |        0 |       0 |       0 | 47-200
+  orders.types.ts  |       0 |      100 |     100 |       0 | 40-49
+  ...rdersState.ts |       0 |        0 |       0 |       0 | 21-335
+ ...pages/products |       0 |        0 |       0 |       0 |
+  ...tEditPage.tsx |       0 |        0 |       0 |       0 | 22-359
+  ProductsPage.tsx |       0 |        0 |       0 |       0 | 24-464
+  ...ucts.types.ts |       0 |        0 |       0 |       0 | 93-117
+ ...urchase-orders |       0 |        0 |       0 |       0 |
+  ...FormModal.tsx |       0 |        0 |       0 |       0 | 30-215
+  ...rdersPage.tsx |       0 |        0 |       0 |       0 | 38-310
+ ...s/quote-create |   22.33 |    27.52 |   17.07 |   19.31 |
+  ...reatePage.tsx |       0 |        0 |       0 |       0 | 32-290
+  quoteDraft.ts    |     100 |    93.75 |     100 |     100 | 100,119
+ ...s/quote-detail |       0 |        0 |       0 |       0 |
+  ...etailPage.tsx |       0 |        0 |       0 |       0 | 54-189
+ src/pages/quotes  |   21.21 |    26.66 |   21.87 |   21.66 |
+  QuotesPage.tsx   |       0 |        0 |       0 |       0 | 41-174
+  quotesSort.ts    |   82.35 |    61.53 |      70 |   81.25 | 24,26-27
+ ...pages/register |       0 |        0 |       0 |       0 |
+  ...yCombobox.tsx |       0 |        0 |       0 |       0 | 20-88
+  ...dressPage.tsx |       0 |        0 |       0 |       0 | 40-454
+  ...llingPage.tsx |       0 |        0 |       0 |       0 | 42-400
+  RegisterPage.tsx |       0 |        0 |       0 |       0 | 43-707
+ src/pages/roles   |       0 |        0 |       0 |       0 |
+  RolesPage.tsx    |       0 |        0 |       0 |       0 | 48-579
+ src/pages/sales   |       0 |        0 |       0 |       0 |
+  SalesPage.tsx    |       0 |        0 |       0 |       0 | 45-197
+ ...pages/schedule |       0 |        0 |       0 |       0 |
+  ...ePageImpl.tsx |       0 |        0 |       0 |       0 | 81-1211
+  ...tingsPage.tsx |       0 |        0 |       0 |       0 | 16-236
+  ...dule-owner.ts |       0 |        0 |       0 |       0 | 34-37
+  ...dule-utils.ts |       0 |        0 |       0 |       0 | 72-228
+ src/pages/shifts  |       0 |        0 |       0 |       0 |
+  ShiftsPage.tsx   |       0 |        0 |       0 |       0 | 15-122
+ src/pages/staff   |       0 |        0 |       0 |       0 |
+  ...fEditPage.tsx |       0 |        0 |       0 |       0 | 49-225
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 32-84
+  StaffPage.tsx    |       0 |        0 |       0 |       0 | 61-389
+ .../staff-reports |       0 |        0 |       0 |       0 |
+  ...portsPage.tsx |       0 |        0 |       0 |       0 | 16-103
+ ...es/super-admin |    2.86 |     2.54 |    2.99 |    2.32 |
+  DexTab.tsx       |       0 |        0 |       0 |       0 | 44-342
+  FxRatePage.tsx   |       0 |        0 |       0 |       0 | 27-86
+  ...liasesTab.tsx |       0 |        0 |       0 |       0 | 40-653
+  LLMBudgetTab.tsx |       0 |        0 |       0 |       0 | 37-218
+  ...eviewPage.tsx |       0 |        0 |       0 |       0 | 123-901
+  ...astersTab.tsx |       0 |        0 |       0 |       0 | 35-337
+  ...sAdminTab.tsx |       0 |        0 |       0 |       0 | 56-381
+  ...utionPage.tsx |       0 |        0 |       0 |       0 | 18-52
+  ...mportPage.tsx |       0 |        0 |       0 |       0 | 68-707
+  ...eportPage.tsx |       0 |        0 |       0 |       0 | 57-279
+  ...mportPage.tsx |       0 |        0 |       0 |       0 | 9-14
+  ...asterPage.tsx |   86.11 |    79.16 |   71.42 |   95.83 | 51
+  TcgSeriesTab.tsx |       0 |        0 |       0 |       0 | 38-364
+  ...alityPage.tsx |       0 |        0 |       0 |       0 | 23-56
+ ...ages/suppliers |       0 |        0 |       0 |       0 |
+  ...rEditPage.tsx |       0 |        0 |       0 |       0 | 16-82
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 25-70
+  ...liersPage.tsx |       0 |        0 |       0 |       0 | 22-219
+ src/pages/teams   |       0 |        0 |       0 |       0 |
+  TeamEditPage.tsx |       0 |        0 |       0 |       0 | 16-70
+  ...ormFields.tsx |       0 |      100 |       0 |       0 | 22-46
+  TeamsPage.tsx    |       0 |        0 |       0 |       0 | 44-308
+ src/utils         |     100 |       75 |     100 |     100 |
+  ...esentation.ts |     100 |       75 |     100 |     100 | 190
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 5.91% ( 716/12101 )
+Branches     : 7.02% ( 652/9280 )
+Functions    : 4.2% ( 161/3828 )
+Lines        : 5.71% ( 612/10713 )
+================================================================================

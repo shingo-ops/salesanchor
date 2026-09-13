@@ -28,11 +28,13 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
 from typing import Any, Optional
 
 import httpx
+
+from app.services.time import JST
 
 logger = logging.getLogger(__name__)
 
@@ -413,7 +415,7 @@ def _fetch_transit_days(
     Returns:
         {serviceType: transit_days} — transit_days = (delivery_date - today).days
     """
-    today = date.today()
+    today = datetime.now(JST).date()
     ship_date = (today + timedelta(days=1)).strftime("%Y-%m-%d")
     weight_val = float(weight_kg)
 

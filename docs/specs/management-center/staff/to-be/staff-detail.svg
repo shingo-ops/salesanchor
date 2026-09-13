@@ -1,0 +1,69 @@
+
+<svg width="720" height="800" viewBox="0 0 720 800" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="800" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; スタッフを編集</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">田中 太郎（オーナー）</text>
+
+  <rect x="24" y="70" width="672" height="140" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="12" fill="#5f5e5a">基本情報</text>
+  <text x="38" y="114" font-size="10" fill="#888780">氏名</text>
+  <rect x="38" y="120" width="290" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="136" font-size="11" fill="#2c2c2a">田中 太郎</text>
+  <text x="358" y="114" font-size="10" fill="#888780">メールアドレス</text>
+  <rect x="358" y="120" width="290" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="368" y="136" font-size="11" fill="#2c2c2a">tanaka@salesanchor.jp</text>
+
+  <text x="38" y="162" font-size="10" fill="#888780">ロール</text>
+  <rect x="38" y="168" width="140" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="184" font-size="11" fill="#2c2c2a">オーナー</text>
+  <text x="196" y="162" font-size="10" fill="#888780">入社日/招待日</text>
+  <rect x="196" y="168" width="140" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="206" y="184" font-size="11" fill="#2c2c2a">2025-04-01</text>
+
+  <text x="38" y="198" font-size="9" fill="#888780">最終ログイン: 2026-07-15 08:42</text>
+  <text x="230" y="198" font-size="9" fill="#888780">担当国: 全国　担当商材: 全商材</text>
+
+  <rect x="24" y="224" width="672" height="100" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="246" font-size="12" fill="#5f5e5a">Discord連携</text>
+  <text x="38" y="268" font-size="10" fill="#888780">社内サーバー用ID（メンションで使用）</text>
+  <rect x="38" y="274" width="290" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="290" font-size="11" fill="#2c2c2a">123456789012345678</text>
+  <text x="358" y="268" font-size="10" fill="#888780">顧客送受信用webhook ID</text>
+  <rect x="358" y="274" width="290" height="24" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1" stroke-dasharray="3 2"/>
+  <text x="368" y="290" font-size="10" fill="#888780">未設定（bot自動付与を検討中）</text>
+
+  <rect x="24" y="338" width="672" height="60" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="360" font-size="12" fill="#5f5e5a">報酬設定</text>
+  <rect x="38" y="368" width="640" height="20" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="382" font-size="10" fill="#888780">設定を編集…</text>
+
+  <rect x="24" y="412" width="672" height="90" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="434" font-size="12" fill="#5f5e5a">稼働実績（自動集計・編集不可）</text>
+  <text x="150" y="464" font-size="9" fill="#888780" text-anchor="middle">成約率</text>
+  <text x="150" y="484" font-size="15" font-weight="600" fill="#2c2c2a" text-anchor="middle">42%</text>
+  <text x="360" y="464" font-size="9" fill="#888780" text-anchor="middle">週間平均稼働日数</text>
+  <text x="360" y="484" font-size="15" font-weight="600" fill="#2c2c2a" text-anchor="middle">4.8日</text>
+  <text x="570" y="464" font-size="9" fill="#888780" text-anchor="middle">週間平均稼働時間</text>
+  <text x="570" y="484" font-size="15" font-weight="600" fill="#2c2c2a" text-anchor="middle">38.5h</text>
+
+  <rect x="24" y="516" width="672" height="80" rx="8" fill="#ffffff" stroke="#c98a1f" stroke-width="1"/>
+  <text x="38" y="538" font-size="12" fill="#5f5e5a">パスワード</text>
+  <text x="38" y="566" font-size="13" fill="#2c2c2a" letter-spacing="2">*********</text>
+  <text x="682" y="566" font-size="11" fill="#c98a1f" text-anchor="end">変更</text>
+  <text x="38" y="586" font-size="9" fill="#888780">本人による変更不可。オーナー、またはオーナーが許可した人間のみアクセス可能</text>
+
+  <rect x="24" y="616" width="140" height="30" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="94" y="635" font-size="11" fill="#0c447c" text-anchor="middle">保存する</text>
+  <rect x="174" y="616" width="100" height="30" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="224" y="635" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+  <text x="682" y="635" font-size="12" fill="#c4432f" text-anchor="end">&#128465; 削除</text>
+
+  <rect x="120" y="680" width="480" height="100" rx="10" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="360" y="706" font-size="13" font-weight="600" fill="#2c2c2a" text-anchor="middle">&#9888; スタッフを削除しますか？</text>
+  <text x="360" y="726" font-size="11" fill="#5f5e5a" text-anchor="middle">「田中 太郎」を削除します。この操作は取り消せません。</text>
+  <rect x="380" y="742" width="90" height="26" rx="5" fill="#c4432f"/>
+  <text x="425" y="759" font-size="10" fill="#ffffff" text-anchor="middle">削除する</text>
+  <rect x="280" y="742" width="90" height="26" rx="5" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="325" y="759" font-size="10" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>

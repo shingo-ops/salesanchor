@@ -1,0 +1,86 @@
+<svg width="760" height="900" viewBox="0 0 760 900" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="760" height="900" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">Pokemon Cards USA LLC</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">アメリカ ・ 取引継続 14か月・22回目</text>
+  <rect x="486" y="18" width="90" height="26" rx="6" fill="#faeeda"/>
+  <text x="531" y="35" font-size="11" fill="#854f0b" text-anchor="middle">優先度: 中</text>
+  <rect x="584" y="18" width="60" height="26" rx="6" fill="#e1f5ee"/>
+  <text x="614" y="35" font-size="11" fill="#0f6e56" text-anchor="middle">安定</text>
+  <rect x="652" y="18" width="108" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1.5"/>
+  <text x="706" y="35" font-size="10" fill="#0c447c" text-anchor="middle">受信箱を開く</text>
+
+  <rect x="24" y="64" width="350" height="130" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="84" font-size="13" font-weight="600" fill="#2c2c2a">請求先情報</text>
+  <text x="700" y="84" font-size="10" fill="#888780" text-anchor="end">2件</text>
+  <rect x="38" y="92" width="322" height="42" rx="6" fill="none" stroke="#378add" stroke-width="1"/>
+  <text x="46" y="106" font-size="11" fill="#2c2c2a" font-weight="600">本社（経理部）</text>
+  <rect x="300" y="98" width="34" height="14" rx="4" fill="#e6f1fb"/>
+  <text x="317" y="108" font-size="8" fill="#0c447c" text-anchor="middle">主要</text>
+  <text x="46" y="120" font-size="10" fill="#5f5e5a">billing@pokemoncards-usa.com</text>
+  <rect x="38" y="140" width="322" height="30" rx="6" fill="none" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="46" y="158" font-size="11" fill="#2c2c2a">西海岸支店</text>
+
+  <rect x="386" y="64" width="350" height="130" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="400" y="84" font-size="13" font-weight="600" fill="#2c2c2a">配送先情報</text>
+  <text x="726" y="84" font-size="10" fill="#888780" text-anchor="end">3件</text>
+  <rect x="400" y="92" width="322" height="42" rx="6" fill="none" stroke="#378add" stroke-width="1"/>
+  <text x="408" y="106" font-size="11" fill="#2c2c2a" font-weight="600">オークランド倉庫</text>
+  <rect x="662" y="98" width="34" height="14" rx="4" fill="#e6f1fb"/>
+  <text x="679" y="108" font-size="8" fill="#0c447c" text-anchor="middle">主要</text>
+  <text x="408" y="120" font-size="10" fill="#5f5e5a">5678 Warehouse Ave, Oakland, CA</text>
+  <rect x="400" y="140" width="322" height="30" rx="6" fill="none" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="408" y="158" font-size="11" fill="#2c2c2a">シアトル倉庫</text>
+  <text x="408" y="184" font-size="10" fill="#0c447c">他1件を表示…</text>
+
+  <rect x="24" y="204" width="350" height="94" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="224" font-size="13" font-weight="600" fill="#2c2c2a">取扱商材・販売方法（全件）</text>
+  <rect x="38" y="234" width="60" height="18" rx="5" fill="#e6f1fb"/>
+  <text x="68" y="247" font-size="9" fill="#0c447c" text-anchor="middle">ポケモン</text>
+  <rect x="104" y="234" width="66" height="18" rx="5" fill="#e6f1fb"/>
+  <text x="137" y="247" font-size="9" fill="#0c447c" text-anchor="middle">ワンピース</text>
+  <rect x="176" y="234" width="56" height="18" rx="5" fill="#e6f1fb"/>
+  <text x="204" y="247" font-size="9" fill="#0c447c" text-anchor="middle">遊戯王</text>
+  <rect x="38" y="260" width="66" height="18" rx="5" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="71" y="273" font-size="9" fill="#5f5e5a" text-anchor="middle">ECサイト</text>
+  <rect x="110" y="260" width="56" height="18" rx="5" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="138" y="273" font-size="9" fill="#5f5e5a" text-anchor="middle">実店舗</text>
+
+  <rect x="386" y="204" width="350" height="94" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="400" y="224" font-size="13" font-weight="600" fill="#2c2c2a">最終接触</text>
+  <text x="722" y="224" font-size="9" fill="#0c447c" text-anchor="end">受信箱で見る &#8599;</text>
+  <text x="400" y="248" font-size="12" fill="#5f5e5a">2日前（受信箱と連携）</text>
+  <text x="400" y="266" font-size="10" fill="#888780">価格重視・信頼構築済み</text>
+
+  <rect x="24" y="308" width="712" height="86" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="328" font-size="13" font-weight="600" fill="#2c2c2a">実績サマリー</text>
+  <text x="38" y="356" font-size="10" fill="#888780">トータル受注額</text>
+  <text x="38" y="376" font-size="18" font-weight="600" fill="#2c2c2a">¥2.1M</text>
+  <text x="220" y="356" font-size="10" fill="#888780">1回あたり</text>
+  <text x="220" y="376" font-size="18" font-weight="600" fill="#2c2c2a">¥95k</text>
+  <text x="400" y="356" font-size="10" fill="#888780">取引回数</text>
+  <text x="400" y="376" font-size="18" font-weight="600" fill="#2c2c2a">22回</text>
+  <text x="580" y="356" font-size="10" fill="#888780">直近受注日</text>
+  <text x="580" y="376" font-size="18" font-weight="600" fill="#2c2c2a">06-14</text>
+
+  <rect x="24" y="408" width="712" height="130" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="428" font-size="13" font-weight="600" fill="#2c2c2a">取引履歴</text>
+  <text x="44" y="450" font-size="10" fill="#888780">Order No.</text>
+  <text x="200" y="450" font-size="10" fill="#888780">請求書発行日</text>
+  <text x="700" y="450" font-size="10" fill="#888780" text-anchor="end">売上</text>
+  <line x1="38" y1="458" x2="722" y2="458" stroke="#e3e1d9" stroke-width="1"/>
+  <text x="44" y="478" font-size="12" fill="#5f5e5a">INV-1042</text>
+  <text x="200" y="478" font-size="12" fill="#5f5e5a">2026-06-14</text>
+  <text x="700" y="478" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥210,000</text>
+  <line x1="38" y1="486" x2="722" y2="486" stroke="#e3e1d9" stroke-width="1"/>
+  <text x="44" y="506" font-size="12" fill="#5f5e5a">INV-0988</text>
+  <text x="200" y="506" font-size="12" fill="#5f5e5a">2026-05-02</text>
+  <text x="700" y="506" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥98,000</text>
+  <text x="44" y="528" font-size="10" fill="#0c447c">全22件を表示…</text>
+
+  <rect x="24" y="548" width="712" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="568" font-size="13" font-weight="600" fill="#2c2c2a">担当者メモ</text>
+  <text x="722" y="568" font-size="10" fill="#5f5e5a" text-anchor="end">編集</text>
+  <text x="38" y="592" font-size="11" fill="#5f5e5a">レア度の高いカードを好む。価格交渉には応じるが納期厳守を重視。</text>
+  <text x="38" y="608" font-size="11" fill="#5f5e5a">担当: 田中（引き継ぎ 2026-04）</text>
+</svg>

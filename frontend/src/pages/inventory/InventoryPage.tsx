@@ -12,6 +12,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import InventoryFilterPanel from "./InventoryFilterPanel";
 
 interface InventoryRow {
@@ -375,41 +376,40 @@ export default function InventoryPage() {
       )}
 
       {/* ツールバー: 検索窓 / 検索 / リセット / カテゴリー / 詳細フィルタ / 発注書 */}
-      <section
-        className="inventory-filter"
-        style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", alignItems: "center", marginBottom: "var(--space-4)" }}
-      >
-        {/* 検索窓: タイトル列の終端あたりまでの固定幅（伸び縮みさせない） */}
-        <input
-          type="search"
-          placeholder={t("inventory.view.searchPlaceholder")}
-          data-testid="inventory-search"
-          value={searchQ}
-          onChange={(e) => {
-            setSearchQ(e.target.value);
-            setPage(1);
-          }}
-          onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-          style={{ width: "22rem", maxWidth: "100%", flex: "0 0 auto", padding: "var(--space-1) var(--space-10px)", fontSize: "var(--font-xs)", boxSizing: "border-box", height: "44px" }}
+        <ContentToolbar
+          left={
+            <>
+              <input
+                type="search"
+                className="field-h-md field-w-md"
+                placeholder={t("inventory.view.searchPlaceholder")}
+                data-testid="inventory-search"
+                value={searchQ}
+                onChange={(e) => {
+                  setSearchQ(e.target.value);
+                  setPage(1);
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+              />
+              <button type="button" className="btn-primary btn-sm field-h-md" data-testid="inventory-search-btn" onClick={runSearch}>
+                {t("common.search")}
+              </button>
+              <button type="button" className="btn-secondary btn-sm field-h-md" data-testid="inventory-reset-sort" onClick={resetAll}>
+                {t("inventory.resetSort")}
+              </button>
+              <button
+                type="button"
+                className={filterEnabled ? "btn-primary btn-sm field-h-md" : "btn-secondary btn-sm field-h-md"}
+                data-testid="inventory-filter-toggle"
+                aria-expanded={showFilterPanel}
+                aria-pressed={filterEnabled}
+                onClick={() => setShowFilterPanel((v) => !v)}
+              >
+                {t("inventory.filterPanel.button")}
+              </button>
+            </>
+          }
         />
-        <button type="button" className="btn-primary btn-sm" data-testid="inventory-search-btn" onClick={runSearch} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
-          {t("common.search")}
-        </button>
-        <button type="button" className="btn-secondary btn-sm" data-testid="inventory-reset-sort" onClick={resetAll} style={{ height: "44px", display: "inline-flex", alignItems: "center" }}>
-          {t("inventory.resetSort")}
-        </button>
-        <button
-          type="button"
-          className={filterEnabled ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
-          data-testid="inventory-filter-toggle"
-          aria-expanded={showFilterPanel}
-          aria-pressed={filterEnabled}
-          onClick={() => setShowFilterPanel((v) => !v)}
-          style={{ height: "44px", display: "inline-flex", alignItems: "center" }}
-        >
-          {t("inventory.filterPanel.button")}
-        </button>
-      </section>
 
       {/* フィルタ ポップアップ（ON/OFF・仕入元・カテゴリー・列の取捨。ユーザー別に永続化） */}
       {showFilterPanel && (

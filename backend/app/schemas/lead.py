@@ -97,6 +97,15 @@ class SalesFormOptionResponse(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+class CloseReasonRef(BaseModel):
+    """失注理由の参照（リード更新時に渡す）"""
+    reason_id: int = Field(ge=1, description="close_reasons.id")
+    is_primary: bool = Field(default=False, description="主因フラグ（必ず1件だけ True）")
+
+
+# ---------------------------------------------------------------------------
+
+
 class LeadCreate(BaseModel):
     """リード登録リクエスト"""
     customer_name: str = Field(min_length=1, max_length=255)
@@ -169,6 +178,9 @@ class LeadUpdate(BaseModel):
     sales_form: str | None = Field(default=None, max_length=100)
     # ADR-108 Phase B-1: 複数選択（_UPDATABLE_COLUMNS 外・leads.py で個別処理）
     sales_form_selections: list[SalesFormSelectionCreate] | None = None
+    # 失注時の理由登録（deal_close_reasons に lead_id で保存）
+    close_reason_memo: str | None = Field(default=None, max_length=1000, description="失注メモ")
+    close_reasons: list[CloseReasonRef] | None = Field(default=None, description="失注理由（主因1件必須）")
     competitor_check: bool | None = None
     per_order_amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
     monthly_frequency: Decimal | None = Field(default=None, ge=0, max_digits=10, decimal_places=2)
@@ -223,9 +235,11 @@ class LeadResponse(BaseModel):
     customer_type: str | None
     response_speed: str | None
     monthly_forecast: Decimal | None
+    amount: Decimal | None
+    currency: str | None
+    expected_close_date: date | None
     prospect_rank: str | None
     assigned_to: int | None
-    converted_deal_id: int | None
     notes: str | None
     created_at: datetime
     updated_at: datetime
@@ -250,6 +264,7 @@ class LeadResponse(BaseModel):
     # Discord Gateway fields (read-only, set by dm_writer)
     discord_user_id: str | None = None
     discord_dm_channel_id: str | None = None
+    discord_guild_channel_id: str | None = None
     # Discord role sync fields (read-only, set by discord_role_sync service)
     discord_role_sync_status: str | None = None
     discord_role_sync_at: datetime | None = None
@@ -273,10 +288,12 @@ class LeadStatsResponse(BaseModel):
 
 
 class LeadConvertRequest(BaseModel):
-    """リード→案件変換リクエスト（Step 5d 以降は company_id + contact_id 必須）"""
+    """リード→案件変換リクエスト（company/contact/title は互換窓として受理する）"""
     company_id: int = Field(ge=1, description="会社ID")
     contact_id: int = Field(ge=1, description="担当者ID")
     title: str = Field(min_length=1, max_length=255, description="案件タイトル")
     amount: Decimal | None = Field(default=None, ge=0, max_digits=15, decimal_places=2)
+    currency: str = Field(default="JPY", max_length=10, description="通貨")
+    expected_close_date: date | None = Field(default=None, description="成約予定日")
     assigned_to: int | None = Field(default=None, ge=1, description="担当者（省略時はリードの担当者を引き継ぐ）")
     notes: str | None = Field(default=None, max_length=5000)

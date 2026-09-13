@@ -58,7 +58,7 @@ def _compute_kpis(session, tenant_id: int) -> dict:
     r = session.execute(text("""
         SELECT
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'out_of_scope')) AS open_count
+            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'lead_out_of_scope', 'negotiating_out_of_scope')) AS open_count
         FROM leads
     """))
     lead_row = r.mappings().first() or {"total": 0, "open_count": 0}

@@ -45,8 +45,9 @@ _DEFAULT_ROLE_NAMES: dict[str, str] = {
 }
 
 
-def _get_bot_token(tenant_id: int) -> str | None:
-    return os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}") or None
+def _get_bot_token() -> str | None:
+    """共通 Bot Token を取得する (ADR-146 B方式)."""
+    return os.environ.get("DISCORD_BOT_TOKEN") or None
 
 
 async def _get_guild_and_role_names(
@@ -166,11 +167,11 @@ async def sync_lead_discord_role(
         )
         return
 
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         logger.warning(
-            "[discord_role_sync] DISCORD_BOT_TOKEN_%d 未設定 lead=%d",
-            tenant_id, lead_id,
+            "[discord_role_sync] DISCORD_BOT_TOKEN 未設定 lead=%d",
+            lead_id,
         )
         await _update_sync_status(tenant_id, lead_id, "failed")
         return

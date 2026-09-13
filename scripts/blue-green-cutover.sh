@@ -79,6 +79,7 @@ echo "  Image: ${BACKEND_IMAGE}"
 echo "Step 2: Starting green backend (backnet only, no traffic yet)..."
 docker run -d \
   --name "${GREEN_BACKEND}" \
+  --restart unless-stopped \
   --stop-signal SIGTERM \
   --stop-timeout 40 \
   --memory 512m \
@@ -86,8 +87,11 @@ docker run -d \
   --security-opt no-new-privileges:true \
   --tmpfs /tmp:size=67108864 \
   --volume "${REPO_DIR}/firebase-credentials.json:/app/firebase-credentials.json:ro" \
+  --volume "${REPO_DIR}/tcg-sheets-sa.json:${REPO_DIR}/tcg-sheets-sa.json:ro" \
+  --volume "${COMPOSE_PROJECT}_attachments_data:/data/attachments" \
   --env-file "${REPO_DIR}/.env" \
   --env GOOGLE_APPLICATION_CREDENTIALS=/app/firebase-credentials.json \
+  --env TCG_SCHEMA="${TCG_SCHEMA:-tenant_004}" \
   --log-driver json-file \
   --log-opt max-size=20m \
   --log-opt max-file=5 \
@@ -149,6 +153,7 @@ echo "  ✅ Old backend stopped and removed."
 # ── Step 6: Green を正規名にリネーム（次回デプロイとの整合性） ──────────────────
 echo "Step 6: Renaming green → ${OLD_BACKEND}..."
 docker rename "${GREEN_BACKEND}" "${OLD_BACKEND}"
+docker update --restart unless-stopped "${OLD_BACKEND}"
 echo "  ✅ Done."
 
 echo "============================================"

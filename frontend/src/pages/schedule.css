@@ -30,54 +30,6 @@
   gap: var(--schedule-shell-gap);
   min-height: 0;
   height: 100%; /* fill .app-content so page-level overflow-y never fires */
-  padding: var(--page-padding-y) var(--page-padding-x); /* #1: 他ページ共通ガター（24px）と揃える */
-}
-
-.schedule-shell__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding-bottom: var(--space-1);
-  padding-right: var(--page-header-avatar-clearance); /* #7: 固定アバターとのクリアランス 68px */
-}
-
-.schedule-shell__header-copy {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
-.schedule-shell__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
-}
-
-.schedule-shell__brand-icon {
-  width: var(--size-icon-btn-sm);
-  height: var(--size-icon-btn-sm);
-  border-radius: var(--radius-lg);
-  flex: none;
-}
-
-.schedule-shell__eyebrow {
-  margin: 0;
-  font-size: var(--font-xs);
-  font-weight: var(--font-weight-semi);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.schedule-shell__title {
-  margin: 0;
-  font-size: var(--font-xl);
-  line-height: 1.2;
-  font-weight: 600;
-  color: var(--text-primary);
 }
 
 .schedule-shell__range {
@@ -100,22 +52,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-}
-
-.schedule-nav__icon-button,
-.schedule-shell__icon-button {
-  padding: 0;
-  border-radius: 50%;
-}
-
-.schedule-nav__icon-button {
-  width: var(--space-9);
-  height: var(--space-9);
-}
-
-.schedule-shell__icon-button {
-  width: var(--size-icon-btn);
-  height: var(--size-icon-btn);
 }
 
 .schedule-view-switch {
@@ -192,15 +128,6 @@
   gap: var(--space-3);
 }
 
-.schedule-sidebar__create {
-  border-radius: var(--radius-full);
-  min-height: 3rem;
-  justify-content: flex-start;
-  padding-inline-start: var(--space-4);
-  font-weight: var(--font-weight-semi);
-  gap: var(--space-2);
-}
-
 .schedule-section__title {
   font-size: var(--font-base);
   font-weight: var(--font-weight-semi);
@@ -219,11 +146,6 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-}
-
-.schedule-mini-calendar__nav-button {
-  width: var(--size-icon-btn-sm);
-  height: var(--size-icon-btn-sm);
 }
 
 .schedule-mini-calendar {
@@ -1390,7 +1312,6 @@
     grid-template-columns: 1fr;
   }
 
-  .schedule-shell__header,
   .schedule-settings__header {
     align-items: flex-start;
     flex-direction: column;

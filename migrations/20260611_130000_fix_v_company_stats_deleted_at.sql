@@ -42,6 +42,17 @@ BEGIN
             CONTINUE;
         END IF;
 
+        -- deals テーブルが存在しない場合はスキップ（deals 廃止後の新テナント対応）
+        -- ビューが deals に LEFT JOIN するため deals なしでは CREATE OR REPLACE VIEW が失敗する。
+        -- 後続の 20260612_120000 が deals 非依存版を作成するため chain は破綻しない。
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_tables
+            WHERE schemaname = schema_rec.nspname AND tablename = 'deals'
+        ) THEN
+            RAISE NOTICE 'migration 20260611_130000: skipping schema %: deals table does not exist', schema_rec.nspname;
+            CONTINUE;
+        END IF;
+
         -- 新版（paid_invoice_count 列あり）が既に適用済みならスキップ
         IF EXISTS (
             SELECT 1 FROM information_schema.columns

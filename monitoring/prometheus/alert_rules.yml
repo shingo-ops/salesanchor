@@ -126,3 +126,22 @@ groups:
         annotations:
           summary: "バックエンド SSE 接続数が多い"
           description: "SSE 接続数が 8 を超えています。SSE は worker を占有しない一方で、接続とメモリを消費します。"
+
+  - name: f2_cleanup
+    rules:
+      - alert: F2CleanupStale
+        expr: (time() - f2_cleanup_last_success_timestamp{instance="app-vps"}) > 691200
+        for: 1h
+        labels:
+          severity: critical
+        annotations:
+          summary: "F2掃除係の黒板が8日以上更新なし(app-vps)"
+          description: "f2-cleanup.shが8日以上完全成功していない。cron・スクリプト・textfile配線を確認。"
+      - alert: F2CleanupAbsent
+        expr: absent(f2_cleanup_last_success_timestamp{instance="app-vps"})
+        for: 24h
+        labels:
+          severity: critical
+        annotations:
+          summary: "F2掃除係の黒板メトリクスが消失(app-vps)"
+          description: "黒板ファイルまたはtextfile配線の断線疑い。node_exporter設定を確認。"

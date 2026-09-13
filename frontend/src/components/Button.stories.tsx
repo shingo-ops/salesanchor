@@ -4,7 +4,9 @@
  * 標準ボタン金型の全バリアント・サイズ・状態確認。
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Button } from './Button'
+import { useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Button, type ButtonVariant } from './Button'
 
 const meta: Meta<typeof Button> = {
   title: 'Components/Button',
@@ -105,4 +107,36 @@ export const Outline: Story = {
       </div>
     </div>
   ),
+}
+
+
+function StateSamples({ dark }: { dark: boolean }) {
+  const { t } = useTranslation()
+  useEffect(() => {
+    const previous = document.documentElement.classList.contains('force-dark')
+    document.documentElement.classList.toggle('force-dark', dark)
+    return () => { document.documentElement.classList.toggle('force-dark', previous) }
+  }, [dark])
+  const variants: ButtonVariant[] = ['primary', 'secondary', 'ghost', 'danger', 'outline', 'tab']
+  return <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)', background: 'var(--bg-surface)', padding: 'var(--space-4)' }}>
+    {variants.map((variant) => <div key={variant} style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)' }}>
+      <Button variant={variant} size="sm">{t('common.save')}</Button>
+      <Button variant={variant}>{t('common.save')}</Button>
+      <Button variant={variant} size="lg">{t('common.save')}</Button>
+      <Button variant={variant} active>{t('common.save')}</Button>
+      <Button variant={variant} disabled>{t('common.save')}</Button>
+      <Button variant={variant} loading>{t('common.save')}</Button>
+      <Button variant={variant} iconOnly aria-label={t('common.add')}><span aria-hidden="true">+</span></Button>
+    </div>)}
+  </div>
+}
+
+export const LightStates: Story = {
+  parameters: { docs: { story: { inline: false, height: '600px' } } },
+  render: () => <StateSamples dark={false} />,
+}
+
+export const DarkStates: Story = {
+  parameters: { docs: { story: { inline: false, height: '600px' } } },
+  render: () => <StateSamples dark />,
 }

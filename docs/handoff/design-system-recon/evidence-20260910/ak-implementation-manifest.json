@@ -1,0 +1,53 @@
+{
+  "base": "739f772d4cf55c1b3972c02c086a7c77b807d293",
+  "products": [
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "targets": 4,
+      "sha256": "69dc7f5ce9cc118f1e55e3f5a13bee79148bafe96edd2d4b8044c26cd328c5b7",
+      "otherByteChanges": 0
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "targets": 4,
+      "sha256": "8a677097e941dc3d6f49b42b6889a3d6baf5860c8199eea9aaec9df062f987c5",
+      "otherByteChanges": 0
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "targets": 4,
+      "sha256": "e86122016dfe0ee1197129162596198eb90cb0c8776431dea7ca7fde7d819622",
+      "otherByteChanges": 0
+    },
+    {
+      "file": "frontend/src/components/PageFormButtonMigration.test.tsx",
+      "sha256": "bb93a444b2dda806ba671ddab64037302dc6b174ca7954b737f53cfe180d1ddc"
+    }
+  ],
+  "files": {
+    "browser-initial.cjs": "961fb2470dd43109352d922c78151bb27bbad0eca339e4fbd86c66570d48b34a",
+    "browser-result.json": "20a62cd22b8bb1c2c0afb7780771f5a87af7bd0dcd2e0038f92ed729b85d1c0e",
+    "browser-smoke-initial.json": "abb45480324932995d38e3c86f59f45d34d219eaa6d4de2dfb41bae811a444f4",
+    "browser-smoke.json": "6726d0cb97bd6679e329b165db8b3fed1e9e003db5a64c8feaf77f3b64e737b9",
+    "browser.cjs": "6ed6e102735deff76a2b20f1beed83424d3528b3a2307f1057f826b6b933b33a",
+    "companies-create.png": "843f29c006110e009c7091859afea693a4ee4d221c14847fad57bc627e068e87",
+    "companies-edit.png": "28b5f3e43a9c7cacc431e22d9f92cc7bd7696d4cf6f4dfad9ff69b4e74ca6af4",
+    "contacts-create.png": "52448bb5fe77fbdb7dcc39afb9991f15af831df8d03bb1b255d2d6bbd367c19d",
+    "contacts-edit.png": "fe72152297e19c03ab80293fd3b23e6733057a4fd14dfbfa7a5080d9c5fab839",
+    "generator-build.log": "a066bf2f85bbf02cfca99838bc36b50b4ae940ca4368331ee4411ce9a411e173",
+    "generator-checkall.log": "17d4ef0bff5bc15aa8b36d477e9bfcd55d62ca146157da941bdaa764fb9083eb",
+    "generator-coverage.log": "4fb35c01386b4bd9a5c80c99ab076a5cde230b6f2914c2cd9d204e0f289b6df7",
+    "generator-storybook.log": "40ffa564910dfd66f46346352ab2cb8ccca09d18ec8bef50f4771d9a472dc6ad",
+    "operations-result.json": "883a81b1d7f920f8c34e6738f018bceb8ea4ccdd59f51e668e29b123697d7488",
+    "operations.cjs": "645df15367750f9a7cdfda71aa22d776a6e1a8d8d4a74f761d575ef12088b07c",
+    "prepare.cjs": "7ebdb83447e08445f81eecbb7faa9faeda164482f7f662b1499ec00880f0c177",
+    "reopen-result.json": "eaba4545042a8d134995817b81952d9ae51e4e71bed0fa4652965c64e4832515",
+    "reopen.cjs": "513ef4250811ae309684ef006edb008eacd08040fbc9f544ed90d7570fe0e98e",
+    "source-verification.json": "80892e4cfd5eb872951874d5be2affd0168dbc7bb5ea59aea1c2c82027968873",
+    "suppliers-create.png": "f48a06beccb11be0e099c499d75c6ed91837f3d4fe231931d30f1dec8a776da0",
+    "suppliers-edit.png": "1aac0422fa54835d272cf128a6743f4aab94c1cb3238fc7f2f171adee5596ab2",
+    "verify-source.cjs": "b0b440ffdb8d0525de03fbd7d277a4a5309973e88535bd95848f6522cd83635f",
+    "working-counts.json": "dcae4127f8c4dffd6d46d4b6363ced232d36539918e3d901be4820baa6a9fa00"
+  },
+  "archive_sha256": "d3615d179470ab1f18757912777205e07a0bbf2394dbe36619474ce77a979d7a"
+}

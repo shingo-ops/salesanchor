@@ -30,7 +30,7 @@ router = APIRouter()
 @router.get(
     "/close-reasons",
     response_model=list[CloseReasonResponse],
-    dependencies=[Depends(require_permission("deals.view"))],
+    dependencies=[Depends(require_permission("leads.view"))],
 )
 async def list_close_reasons(
     type: str | None = Query(default=None, description="'won' または 'lost' でフィルタ"),
@@ -70,7 +70,7 @@ async def list_close_reasons(
     "/close-reasons",
     response_model=CloseReasonResponse,
     status_code=201,
-    dependencies=[Depends(require_permission("deals.update"))],
+    dependencies=[Depends(require_permission("leads.update"))],
 )
 async def create_close_reason(
     data: CloseReasonCreate,
@@ -97,7 +97,7 @@ async def create_close_reason(
 @router.patch(
     "/close-reasons/{reason_id}",
     response_model=CloseReasonResponse,
-    dependencies=[Depends(require_permission("deals.update"))],
+    dependencies=[Depends(require_permission("leads.update"))],
 )
 async def update_close_reason(
     reason_id: int,

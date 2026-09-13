@@ -8,7 +8,7 @@ Gateway が別コンテナで動作していても使用可能。
 - Gateway と FastAPI は別プロセス（別コンテナ）のため、
   in-process bot registry は使用しない。
 - Discord REST API v10 を httpx で直接叩く。
-- Bot Token は環境変数 `DISCORD_BOT_TOKEN_<TENANT_ID>` から取得（Gateway と同じ）。
+- Bot Token は環境変数 `DISCORD_BOT_TOKEN` から取得 (ADR-146 B方式: 共通1トークン)。
 - `discord_dm_channel_id` は受信時に leads テーブルに保存済み。
   DM チャンネルは user-bot 固有の永続チャンネルで変わらない。
 """
@@ -29,9 +29,9 @@ class DiscordSendError(Exception):
     """Discord DM 送信失敗。"""
 
 
-def _get_bot_token(tenant_id: int) -> str | None:
-    """環境変数 DISCORD_BOT_TOKEN_<TENANT_ID> からトークンを取得する。"""
-    return os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}") or None
+def _get_bot_token() -> str | None:
+    """環境変数 DISCORD_BOT_TOKEN から共通トークンを取得する (ADR-146 B方式)。"""
+    return os.environ.get("DISCORD_BOT_TOKEN") or None
 
 
 async def send_discord_dm(
@@ -43,7 +43,7 @@ async def send_discord_dm(
     """Discord DM チャンネルにメッセージを送信し、送信済みメッセージの Snowflake ID を返す。
 
     Args:
-        tenant_id: テナント ID（Bot Token の環境変数サフィックスに使用）
+        tenant_id: テナント ID（ログ用。B方式ではトークン取得に使用しない）
         dm_channel_id: 送信先 DM チャンネルの Snowflake ID（leads.discord_dm_channel_id）
         text: 送信するメッセージ本文（最大 2000 文字は呼び出し側で保証）
 
@@ -53,10 +53,10 @@ async def send_discord_dm(
     Raises:
         DiscordSendError: Bot Token 未設定 / Discord API エラー
     """
-    token = _get_bot_token(tenant_id)
+    token = _get_bot_token()
     if not token:
         raise DiscordSendError(
-            f"DISCORD_BOT_TOKEN_{tenant_id} が未設定です。"
+            "DISCORD_BOT_TOKEN が未設定です。"
             "GitHub Secrets / VPS 環境変数を確認してください。"
         )
 

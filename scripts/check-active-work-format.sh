@@ -15,6 +15,22 @@
 
 set -e
 
+# --dfile <path>: active-work.d/ 単票の検証モード（便1追加・既定動作は不変）
+if [ "${1:-}" = "--dfile" ]; then
+  DF="${2:-}"
+  [ -f "${DF}" ] || { echo "ERROR: ファイルなし: ${DF}"; exit 1; }
+  grep -q '^branch: ' "${DF}" || { echo "ERROR: branch: 行がありません: ${DF}"; exit 1; }
+  BAD=$(awk -F'|' '/^\|/ {
+    sep=1;
+    for(i=2;i<=NF-1;i++){x=$i; gsub(/[ -]/,"",x); if(length(x)>0){sep=0;break}}
+    if(sep==1) next;
+    h=$2; gsub(/^ +| +$/,"",h); if(h=="ブランチ名") next;
+    if(NF-2!=7) print NR": "$0}' "${DF}")
+  if [ -n "${BAD}" ]; then echo "ERROR: 7列違反:"; echo "${BAD}"; exit 1; fi
+  echo "OK: 単票フォーマット正常: ${DF}"
+  exit 0
+fi
+
 GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
 if [[ "${GIT_COMMON_DIR}" = /* ]]; then
   MAIN_REPO_ROOT="$(dirname "${GIT_COMMON_DIR}")"

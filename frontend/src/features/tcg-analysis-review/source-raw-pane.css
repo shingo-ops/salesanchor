@@ -1,0 +1,101 @@
+/* PARITY-03: ソース原文ペイン スタイル */
+
+.comparison-sheet .source-group {
+  grid-template-columns: 110px clamp(380px, 28vw, 520px) minmax(0, 1fr);
+}
+
+.comparison-sheet .source-raw {
+  --tcg-ar-source-min-h: 420px;
+  position: sticky;
+  top: var(--space-3);
+  align-self: start;
+  height: calc(100vh - 140px);
+  max-height: none;
+  min-height: var(--tcg-ar-source-min-h);
+  min-width: 0;
+  padding: var(--space-3);
+  border-right: 1px solid var(--border);
+  background: var(--bg-surface);
+}
+
+.source-raw-pane {
+  display: flex;
+  min-height: 0;
+  height: 100%;
+  flex-direction: column;
+}
+
+.source-search {
+  display: grid;
+  grid-template-columns: auto minmax(130px, 1fr) auto auto auto;
+  align-items: center;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.source-search label,
+.source-search output {
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+}
+
+.source-search output {
+  --tcg-ar-match-min-h: 18px;
+  grid-column: 1 / -1;
+  min-height: var(--tcg-ar-match-min-h);
+}
+
+.source-search input { min-width: 0; }
+
+.source-raw .raw {
+  min-width: 0;
+  min-height: 0;
+  max-height: none;
+  flex: 1;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+}
+
+.raw-line { display: inline; }
+
+.raw-line-highlight {
+  background: var(--accent-bg-subtle);
+  box-shadow: 0 0 0 2px var(--accent-bg-subtle);
+  transition: background-color 0.3s ease;
+}
+
+.line-jump {
+  border: 0;
+  background: transparent;
+  color: var(--accent);
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.comparison-metadata-row {
+  display: grid;
+  grid-template-columns: 72px minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.comparison-metadata-row b {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.comparison-metadata-value {
+  display: flex;
+  min-width: 0;
+  gap: var(--space-1);
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raw-line-highlight { transition: none; }
+}

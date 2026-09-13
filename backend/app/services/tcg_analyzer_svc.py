@@ -1,0 +1,1492 @@
+"""
+MIG-04 Phase 3: TCG 照合サービス。
+
+feat/tcg-migration-phase2:backend/tcg_migration/analyzer.py のロジックを
+backend/app/services 層に移植。
+
+extraction_items → analysis_results へのキーワード照合・単位解決・状態解決を行う。
+同期 SQLAlchemy Session を使用（Celery タスク / スクリプト実行から呼ぶため）。
+
+エンジンバージョン: "name-first-v6-master-safety"
+作品根拠・作品候補制約はv3商品照合だけへ追加。以下の旧照合関数は互換保持。
+
+キーワード照合エンジン (name-first-v2):
+  GAS investigate2.gs の matchKeyword_ を正として移植。
+  - normalizeEn_  : 全角英数記号(U+FF01-FF60) → 半角ASCII + 小文字化
+  - matchOneKw_   : 純ASCII語は単語境界正規表現、日本語混じりは tokenAndMatch_
+  - tokenAndMatch_: キーワードを空白トークン分割して全トークンAND照合
+  - matchKeyword_ : normalizeEn_ → 除外KW → 検索KW（カンマ区切り各語を matchOneKw_）
+
+TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
+"""
+from __future__ import annotations
+
+import logging
+import re
+import uuid
+from datetime import datetime, timezone
+from typing import Optional
+
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from app.services.tcg_condition_review_svc import digest_sql, reanalysis_condition
+from app.services.tcg_empty_box_rules import (
+    EMPTY_CANONICAL,
+    EMPTY_CODE,
+    classify_empty_box,
+    consumes_empty_memo,
+    mentions_empty_box,
+    valid_empty_definition,
+)
+from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
+from app.services.tcg_work_reference import (
+    WORK_ID_PROMPT_VERSIONS,
+    load_work_reference,
+    reference_digest,
+    validate_work_id,
+)
+
+logger = logging.getLogger(__name__)
+
+ENGINE_VERSION = "name-first-v7-gemini-work-id"
+
+# NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
+# (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
+
+# TCG解析システムは tenant_004 専用スキーマ
+from app.tcg_config import TCG_SCHEMA
+
+# ---------------------------------------------------------------------------
+# マスタロード
+# ---------------------------------------------------------------------------
+
+
+def load_lookup_maps(
+    session: Session,
+) -> tuple[dict, dict, dict, dict, dict, dict]:
+    """
+    照合に必要なルックアップマップを一括ロードする。
+
+    Returns:
+      product_code_to_uuid   : {code: uuid_str}
+      unit_alias_to_canonical: {alias_text: canonical}
+      unit_canonical_to_uuid : {canonical: uuid_str}
+      cond_alias_to_canonical: {alias_text: canonical}
+      cond_canonical_to_uuid : {canonical: uuid_str}
+    """
+    # --- 商品コード → UUID ---
+    rows = session.execute(
+        text(f"SELECT code, id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE")
+    ).fetchall()
+    product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
+
+    # --- 単位エイリアス → canonical + UUID ---
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ua.alias_text, u.canonical, u.id
+            FROM {TCG_SCHEMA}.unit_aliases ua
+            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            WHERE u.is_active = TRUE
+            """
+        )
+    ).fetchall()
+    unit_alias_to_canonical: dict[str, str] = {}
+    unit_canonical_to_uuid: dict[str, str] = {}
+    for alias_text, canonical, uid in rows:
+        unit_alias_to_canonical[alias_text] = canonical
+        unit_canonical_to_uuid[canonical] = str(uid)
+
+    # canonical 自体もエイリアスとして登録（直接マッチ用）
+    for canonical, uid in list(unit_canonical_to_uuid.items()):
+        unit_alias_to_canonical.setdefault(canonical, canonical)
+
+    # --- 単位エイリアス → (canonical, kubun) --- ※ resolve_unit_v2 用
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ua.alias_text, u.canonical, u.kubun, u.id
+            FROM {TCG_SCHEMA}.unit_aliases ua
+            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            WHERE u.is_active = TRUE
+            """
+        )
+    ).fetchall()
+    unit_alias_to_info: dict[str, tuple[str, str]] = {}
+    for alias_text, canonical, kubun, uid in rows:
+        unit_alias_to_info[alias_text] = (canonical, kubun or "")
+    for canonical in list(unit_canonical_to_uuid.keys()):
+        unit_alias_to_info.setdefault(canonical, (canonical, unit_alias_to_info.get(canonical, (canonical, ""))[1]))
+
+    # --- 状態エイリアス → canonical + UUID ---
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ca.alias_text, c.canonical, c.id
+            FROM {TCG_SCHEMA}.condition_aliases ca
+            JOIN {TCG_SCHEMA}.conditions c ON c.id = ca.condition_id
+            WHERE c.is_active = TRUE
+            """
+        )
+    ).fetchall()
+    cond_alias_to_canonical: dict[str, str] = {}
+    cond_canonical_to_uuid: dict[str, str] = {}
+    for alias_text, canonical, cid in rows:
+        cond_alias_to_canonical[alias_text] = canonical
+        cond_canonical_to_uuid[canonical] = str(cid)
+
+    # canonical 自体もエイリアスとして登録
+    for canonical, cid in list(cond_canonical_to_uuid.items()):
+        cond_alias_to_canonical.setdefault(canonical, canonical)
+
+    return (
+        product_code_to_uuid,
+        unit_alias_to_canonical,
+        unit_canonical_to_uuid,
+        cond_alias_to_canonical,
+        cond_canonical_to_uuid,
+        unit_alias_to_info,
+    )
+
+
+def load_product_kubun_type_map(session: Session) -> dict[str, str]:
+    """
+    商品コード → 商品区分 kubun_type マップをロードする。
+    product_category_id が NULL の商品は含まない。
+
+    GAS 対照: filterProductMasterByUnitCategoryV2_ 用の商品区分情報
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT p.code, pc.kubun_type
+            FROM {TCG_SCHEMA}.tcg_products p
+            JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
+            WHERE p.is_active = TRUE
+              AND p.product_category_id IS NOT NULL
+            """
+        )
+    ).fetchall()
+    return {r[0]: r[1] for r in rows}
+
+
+def load_product_keywords(
+    session: Session,
+) -> tuple[dict, dict]:
+    """
+    商品ごとの検索キーワード・除外キーワードをロードする。
+
+    Returns:
+      search_kw : {product_code: [kw1, kw2, ...]}
+      exclude_kw: {product_code: [kw1, kw2, ...]}
+    """
+    # 検索キーワード
+    rows = session.execute(
+        text(
+            f"""
+            SELECT p.code, psk.keyword
+            FROM {TCG_SCHEMA}.product_search_keywords psk
+            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = psk.product_id
+            WHERE p.is_active = TRUE
+            ORDER BY p.code, psk.position
+            """
+        )
+    ).fetchall()
+    search_kw: dict[str, list[str]] = {}
+    for code, kw in rows:
+        if code not in search_kw:
+            search_kw[code] = []
+        search_kw[code].append(kw)
+
+    # 除外キーワード
+    rows = session.execute(
+        text(
+            f"""
+            SELECT p.code, pek.keyword
+            FROM {TCG_SCHEMA}.product_exclude_keywords pek
+            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = pek.product_id
+            WHERE p.is_active = TRUE
+            ORDER BY p.code, pek.position
+            """
+        )
+    ).fetchall()
+    exclude_kw: dict[str, list[str]] = {}
+    for code, kw in rows:
+        if code not in exclude_kw:
+            exclude_kw[code] = []
+        exclude_kw[code].append(kw)
+
+    return search_kw, exclude_kw
+
+
+# ---------------------------------------------------------------------------
+# キーワード照合エンジン (GAS investigate2.gs 移植)
+# ---------------------------------------------------------------------------
+
+# 全角英数記号 U+FF01-FF60 → 半角 ASCII U+0021-0060 への変換オフセット
+_FULLWIDTH_OFFSET = 0xFEE0
+
+# 純ASCII語判定: 0x20-0x7E のみで構成
+_RE_PURE_ASCII = re.compile(r"^[\x20-\x7e]+$")
+
+# 単語境界: 前後が [a-z] でない位置
+# GAS: /(?<![a-z])word(?![a-z])/ — Python は (?<![a-z]) lookbehind OK
+_RE_WORD_BOUNDARY_TEMPLATE = r"(?<![a-z]){word}(?![a-z])"
+
+
+def normalize_en(s: str) -> str:
+    """
+    全角英数記号(U+FF01–FF60) → 半角ASCII(U+0021–0060) に変換し小文字化する。
+
+    GAS 対照: investigate2.gs:9569 normalizeEn_
+      return (s || '').replace(/[\\uFF01-\\uFF60]/g,
+        c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0)).toLowerCase();
+    """
+    result = []
+    for ch in (s or ""):
+        cp = ord(ch)
+        if 0xFF01 <= cp <= 0xFF60:
+            result.append(chr(cp - _FULLWIDTH_OFFSET))
+        else:
+            result.append(ch)
+    return "".join(result).lower()
+
+
+def token_and_match(kw: str, norm_text: str) -> bool:
+    """
+    日本語混じりキーワードの順不同トークンAND照合。
+
+    GAS 対照: investigate2.gs:9730 tokenAndMatch_
+      var kwNorm = normalizeEn_(kw);
+      var tokens = kwNorm.split(/\\s+/).filter(t => t.length > 0);
+      return tokens.every(t => normText.indexOf(t) >= 0);
+
+    kw を normalize_en した上で空白分割し、全トークンが norm_text に含まれれば True。
+    """
+    kw_norm = normalize_en(kw)
+    tokens = [t for t in re.split(r"\s+", kw_norm) if t]
+    if not tokens:
+        return False
+    return all(t in norm_text for t in tokens)
+
+
+def match_one_kw(kw: str, norm_text: str) -> bool:
+    """
+    1キーワードの照合。純ASCII語は単語境界、日本語混じりは token_and_match。
+
+    GAS 対照: investigate2.gs:9977 matchOneKw_
+      if (/^[\\x20-\\x7e]+$/.test(kw)) {
+        var kwl = kw.toLowerCase().replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&');
+        return /(?<![a-z])kwl(?![a-z])/.test(normText);
+      }
+      return tokenAndMatch_(kw, normText);
+    """
+    if not kw:
+        return False
+    if _RE_PURE_ASCII.match(kw):
+        kwl = re.escape(kw.lower())
+        pattern = _RE_WORD_BOUNDARY_TEMPLATE.format(word=kwl)
+        return bool(re.search(pattern, norm_text))
+    return token_and_match(kw, norm_text)
+
+
+def match_keyword(
+    text_raw: str,
+    search_kw_str: list[str],
+    exclude_kw_str: list[str],
+) -> tuple[bool, Optional[str]]:
+    """
+    商品名に対して検索KW/除外KWを照合し (hit, matched_kw) を返す。
+
+    GAS 対照: investigate2.gs:10048 matchPid_
+      if (!pid || !srchStr) return;  ← キーワード未登録の商品はスキップ
+
+    注: GAS matchKeyword_（investigate2.gs:9995）の searchKwStr 空 = 全マッチ
+        は matchPid_ レベルで上位ガードされており、実際には
+        キーワード未登録の商品は候補にならない。Python も同動作に統一。
+
+    Args:
+      text_raw      : 照合対象の生テキスト
+      search_kw_str : 検索キーワードのリスト（DB から個別行で渡す）
+      exclude_kw_str: 除外キーワードのリスト（同上）
+
+    Returns:
+      (hit, matched_kw_or_None)
+    """
+    norm_text = normalize_en(text_raw)
+
+    # 除外語チェック（1語でも hit したら除外）
+    for kw in exclude_kw_str:
+        if kw and match_one_kw(kw, norm_text):
+            return False, None
+
+    # 検索語未登録の商品は候補にしない（GAS: matchPid_ !srchStr → return）
+    if not search_kw_str:
+        return False, None
+
+    for kw in search_kw_str:
+        if kw and match_one_kw(kw, norm_text):
+            return True, kw
+
+    return False, None
+
+
+# ---------------------------------------------------------------------------
+# キーワード照合
+# ---------------------------------------------------------------------------
+
+
+def filter_product_codes_by_unit_kubun(
+    product_codes: list[str],
+    kubun: str,
+    product_code_to_kubun_type: dict[str, str],
+) -> list[str]:
+    """
+    unit kubun に基づいて商品コードリストを絞り込む。
+
+    GAS 対照: filterProductMasterByUnitCategoryV2_ (SystemResolverV2.gs)
+      '箱系' / '箱系大' (UC_BOX / UC_CARTON) → kubun_type='箱系' の商品に限定
+      その他 → 絞り込みなし（全商品を返す）
+
+    フィルタ後に候補がゼロになった場合はフォールバックとして全商品を返す。
+    """
+    if "箱系" not in kubun:
+        return product_codes
+
+    filtered = [
+        c for c in product_codes
+        if product_code_to_kubun_type.get(c) == "箱系"
+    ]
+    return filtered if filtered else product_codes
+
+
+def match_pid_name_first(
+    raw_name: str,
+    product_codes: list[str],
+    search_kw: dict,
+    exclude_kw: dict,
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """
+    raw_name に対してキーワード照合を行い product_code を解決する。
+
+    最長マッチキーワードを持つ商品を優先する。
+    除外キーワードにヒットした商品は候補から除外する。
+
+    Returns:
+      (matched_code, pid_basis, resolved, candidates)
+      - 0 candidates → (None, "NONE", False, [])
+      - 1 candidate  → (code, "SK:<kw>", True, [code])
+      - 2+ candidates → (best_code, "MULTI(PM.../...):要確認", False, [codes])
+
+    pid_basis は VARCHAR(100) に収まるよう截断する。
+    """
+    candidates: list[tuple[str, str, int]] = []  # (code, matched_kw, kw_len)
+
+    for code in product_codes:
+        kws = search_kw.get(code, [])
+        ex_kws = exclude_kw.get(code, [])
+
+        hit, matched_kw = match_keyword(raw_name, kws, ex_kws)
+        if not hit or matched_kw is None:
+            continue
+
+        candidates.append((code, matched_kw, len(matched_kw)))
+
+    return select_product_candidates(candidates)
+
+
+def select_product_candidates(
+    candidates: list[tuple[str, str, int]],
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """Reduce validated hits, preserving stable order and the legacy full tuple."""
+    if not candidates:
+        return (None, "NONE", False, [])
+
+    # 最長マッチ優先でソート
+    candidates.sort(key=lambda x: x[2], reverse=True)
+
+    if len(candidates) == 1:
+        code, kw, _ = candidates[0]
+        pid_basis = f"SK:{kw}"[:100]
+        return (code, pid_basis, True, [code])
+
+    # 複数候補: 最長マッチを返すが resolved=False
+    codes = [c[0] for c in candidates]
+    best_code, best_kw, _ = candidates[0]
+    parts = "/".join(f"PM.{c}" for c in codes[:5])
+    pid_basis = f"MULTI({parts}):要確認"[:100]
+    return (best_code, pid_basis, False, codes)
+
+
+def load_work_master(session: Session) -> list[dict]:
+    """Active game/work names only; alt_name is a single value, never a list."""
+    rows = session.execute(text(
+        f"SELECT id, display_name, alt_name FROM {TCG_SCHEMA}.tcg_series WHERE is_active = TRUE"
+    )).fetchall()
+    return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
+
+
+def resolve_work_evidence(
+    raw_name: str, raw_text: str, line_start: int, line_end: int,
+    raw_work_name: str | None, raw_work_span: str | None, works: list[dict],
+) -> str | None:
+    """Accept only an explicit item name or the nearest independent work heading.
+
+    NULL/NULL and empty/empty evidence can use a verified raw heading.
+    Partial, fabricated, ambiguous, or out-of-range citations are never repaired.
+    """
+    aliases: dict[str, set[str]] = {}
+    for work in works:
+        if not work.get("is_active", True):
+            continue
+        for name in (work["display_name"], work.get("alt_name")):
+            if name and normalize_en(name).strip():
+                aliases.setdefault(normalize_en(name).strip(), set()).add(str(work["id"]))
+
+    direct = {wid for name, ids in aliases.items()
+              if match_one_kw(name, normalize_en(raw_name)) for wid in ids}
+    if raw_work_name is None and raw_work_span is None and len(direct) == 1:
+        return next(iter(direct))
+    missing_pair = ((raw_work_name is None and raw_work_span is None)
+                    or (raw_work_name == "" and raw_work_span == ""))
+    if missing_pair and len(direct) <= 1:
+        inferred_heading = work_heading_evidence(raw_text, line_start, line_end, works)
+        if inferred_heading and (not direct or inferred_heading[0] in direct):
+            return inferred_heading[0]
+        return None
+    if not raw_work_name or not raw_work_span or len(direct) > 1:
+        return None
+    ids = aliases.get(normalize_en(raw_work_name).strip(), set())
+    if len(ids) != 1:
+        return None
+    work_id = next(iter(ids))
+    span = re.fullmatch(r"L(\d+)(?:-L(\d+))?", raw_work_span)
+    lines = raw_text.split("\n")
+    if not span:
+        return None
+    start = int(span[1])
+    end = int(span[2] or span[1])
+    if not (1 <= start <= end <= len(lines) and 1 <= line_start <= line_end <= len(lines)):
+        return None
+    if not any(raw_work_name in line for line in lines[start - 1:end]):
+        return None
+    if direct:
+        # A name citation must belong to this item, not another message line.
+        return work_id if (direct == ids and line_start <= start <= end <= line_end
+                           and raw_work_name in raw_name) else None
+
+    # Only standalone headings establish scope. Product rows never do.
+    nearest: tuple[int, set[str]] | None = None
+    for number, line in enumerate(lines[:line_start - 1], 1):
+        heading = line.strip()
+        if ((heading.startswith("【") and heading.endswith("】"))
+                or (heading.startswith("[") and heading.endswith("]"))):
+            heading = heading[1:-1].strip()
+        heading_ids = aliases.get(normalize_en(heading), set())
+        if heading_ids:
+            nearest = (number, heading_ids)
+    if nearest and start == end == nearest[0] and nearest[1] == ids:
+        return work_id
+    return None
+
+
+_MODEL_KEYWORD_RE = re.compile(r"[a-z0-9]+(?:\s*[-/]\s*[a-z0-9]+)*")
+
+
+def is_model_keyword(keyword: str) -> bool:
+    normalized = normalize_en(keyword)
+    return bool(_MODEL_KEYWORD_RE.fullmatch(normalized)
+                and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
+
+
+def match_product_keyword(kw: str, normalized_text: str) -> bool:
+    """Keep number-suffixed product tokens distinct without changing note/state matching."""
+    if not match_one_kw(kw, normalized_text):
+        return False
+    normalized = normalize_en(kw)
+    tokens = [normalized] if _RE_PURE_ASCII.fullmatch(kw) else normalized.split()
+    for token in tokens:
+        if re.search(r"[0-9]$", token):
+            left = r"(?<![a-z0-9])" if re.match(r"[a-z0-9]", token) else ""
+            if not re.search(left + re.escape(token) + r"(?![a-z0-9])", normalized_text):
+                return False
+    return True
+
+
+
+def match_product_name_space(kw: str, normalized_name: str) -> bool:
+    """Additional search-only equality; name has already passed normalize_en."""
+    if not kw or re.search(r"\s", kw) or not re.search(r"[぀-ヿ㐀-鿿]", kw):
+        return False
+    if any(char in normalized_name for char in ("\n", "\r", "\t")):
+        return False
+    return normalize_en(kw) == normalized_name.replace(" ", "").replace("\u3000", "")
+
+def match_pid_with_work(
+    raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
+    *, work_id: str | None, product_work_ids: dict[str, str | None],
+    raw_state: str = "", raw_memo: str = "",
+    product_category_classes: dict[str, str] | None = None,
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
+    fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
+    eligible: list[tuple[str, str, int]] = []
+    single_marker = single_card_marker(raw_name, raw_state, raw_memo)
+    for code in product_codes:
+        category = (product_category_classes or {}).get(code, "") or ""
+        if single_marker and category.casefold() in {"box", "case"}:
+            continue
+        if work_id is not None and product_work_ids.get(code) != work_id:
+            continue
+        if any(kw and match_product_keyword(kw, field)
+               for kw in exclude_kw.get(code, []) for field in fields):
+            continue
+        matched = [kw for kw in search_kw.get(code, [])
+                   if kw and match_product_keyword(kw, fields[0])
+                   and (work_id is not None or not is_model_keyword(kw))]
+        if not matched:
+            matched = [kw for kw in search_kw.get(code, [])
+                       if match_product_name_space(kw, fields[0])
+                       and (work_id is not None or not is_model_keyword(kw))]
+        if matched:
+            eligible.append((code, matched[0], len(matched[0])))
+    matched_code, basis, resolved, candidates = select_product_candidates(eligible)
+    if basis == "NONE":
+        return matched_code, basis, resolved, candidates  # review UI uses exact NONE
+    constraint = f"WORK:{work_id}" if work_id else "WORK:UNKNOWN"
+    return matched_code, f"{constraint}|{basis}"[:100], resolved, candidates
+
+
+# ---------------------------------------------------------------------------
+# 単位・状態解決
+# ---------------------------------------------------------------------------
+
+
+def resolve_unit(
+    raw_unit: str,
+    unit_alias_to_canonical: dict,
+) -> tuple[Optional[str], bool]:
+    """
+    raw_unit → (canonical, resolved_bool)。
+    解決不能は (None, False)。
+    """
+    if not raw_unit or not raw_unit.strip():
+        return (None, False)
+
+    stripped = raw_unit.strip()
+
+    # 完全一致
+    if stripped in unit_alias_to_canonical:
+        return (unit_alias_to_canonical[stripped], True)
+
+    # 小文字一致
+    lower = stripped.lower()
+    lower_map = {k.lower(): v for k, v in unit_alias_to_canonical.items()}
+    if lower in lower_map:
+        return (lower_map[lower], True)
+
+    return (None, False)
+
+
+def resolve_condition(
+    raw_state: str,
+    cond_alias_to_canonical: dict,
+) -> Optional[str]:
+    """
+    raw_state → canonical または None。
+    旧実装（alias lookup のみ）。resolve_condition_v2 に置き換え済み。
+    """
+    if not raw_state or not raw_state.strip():
+        return None
+
+    stripped = raw_state.strip()
+
+    if stripped in cond_alias_to_canonical:
+        return cond_alias_to_canonical[stripped]
+
+    # 小文字一致
+    lower = stripped.lower()
+    lower_map = {k.lower(): v for k, v in cond_alias_to_canonical.items()}
+    if lower in lower_map:
+        return lower_map[lower]
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 状態解決 v2: GAS resolveCondition_ R1〜R4 ロジック移植
+# ---------------------------------------------------------------------------
+
+
+def load_condition_entries(session: Session) -> list[dict]:
+    """
+    priority > 0 の conditions 行を condEntries として返す。
+    priority ASC → app_kubun 長 DESC → code ASC でソート済み（resolveCondition_ と同順）。
+
+    GAS 対照: readConditionMaster() condEntries 構築 (investigate2.gs:8118-8125)
+    code ASC タイブレーカーは GAS の R3 条件処理順（SHURI→PERI: CN0005→CN0006）を保証する。
+    GAS 根拠: investigate2.gs:9705-9710 で No shrink box (CN0005) を Opened box (CN0006) より先に判定。
+    """
+    rows = session.execute(
+        text(
+            f"""
+            SELECT c.id, c.code, c.canonical, c.priority,
+                   c.app_kubun, c.search_kw, c.exclude_kw
+            FROM {TCG_SCHEMA}.conditions c
+            WHERE c.is_active = TRUE
+              AND c.priority IS NOT NULL
+              AND c.priority > 0
+            ORDER BY c.priority ASC,
+                     length(COALESCE(c.app_kubun, '')) DESC,
+                     c.code ASC
+            """
+        )
+    ).fetchall()
+    return [
+        {
+            "cond_id": str(r[0]),
+            "code": r[1],
+            "canonical": r[2],
+            "priority": r[3],
+            "app_kubun": r[4] or "",
+            "search_kw": r[5] or "",
+            "exclude_kw": r[6] or "",
+        }
+        for r in rows
+    ]
+
+
+def app_kubun_matches(app_kubun_str: str, kubun: str) -> bool:
+    """
+    状態マスタの適用区分（カンマ区切り）と実際の kubun を照合する。
+
+    GAS 対照: appKubunMatches_(appKubunStr, kubun) (investigate2.gs:9583-9596)
+      空欄 = 全適用
+      '箱系大': kubun に '箱系大' を含む
+      '箱系'  : kubun に '箱系' を含み '箱系大' を含まない
+      '単位不明': kubun === '不明' or ''
+      その他   : kubun に kbn を含む（'パック系' 等）
+    """
+    if not app_kubun_str or not app_kubun_str.strip():
+        return True  # 空 = 全適用
+    for kbn in app_kubun_str.split(","):
+        kbn = kbn.strip()
+        if not kbn:
+            continue
+        if kbn == "箱系大":
+            if "箱系大" in kubun:
+                return True
+        elif kbn == "箱系":
+            if "箱系" in kubun and "箱系大" not in kubun:
+                return True
+        elif kbn == "単位不明":
+            if kubun in ("不明", ""):
+                return True
+        else:
+            if kbn in kubun:
+                return True
+    return False
+
+
+def resolve_unit_v2(
+    raw_unit: str,
+    unit_alias_to_info: dict[str, tuple[str, str]],
+) -> tuple[Optional[str], str, bool]:
+    """
+    raw_unit → (canonical, kubun, resolved)。
+    未知語は (raw_unit, '不明', False)。空は (None, '', False)。
+
+    GAS 対照: resolveUnit_() (investigate2.gs:9547-9561)
+      完全一致 → aliasMap[w]
+      小文字一致 → aliasMap[keys[i]]
+      未知語 → {canonical: w, kubun: '不明', unitId: ''}
+      null/'(なし)' → null
+    """
+    if not raw_unit or not raw_unit.strip():
+        return (None, "", False)
+    stripped = raw_unit.strip()
+    if stripped in unit_alias_to_info:
+        canonical, kubun = unit_alias_to_info[stripped]
+        return (canonical, kubun, True)
+    lower = stripped.lower()
+    lower_map = {k.lower(): v for k, v in unit_alias_to_info.items()}
+    if lower in lower_map:
+        canonical, kubun = lower_map[lower]
+        return (canonical, kubun, True)
+    return (stripped, "不明", False)
+
+
+def resolve_condition_v2(
+    raw_state: str,
+    raw_product_name: str,
+    kubun: str,
+    cond_entries: list[dict],
+    cond_canonical_to_uuid: dict,
+    *,
+    raw_memo: str = "",
+) -> tuple[Optional[str], Optional[str], str]:
+    """
+    (canonical, cond_id, basis) を返す。
+
+    GAS 対照: resolveCondition_(stateWord, prodName, unitResult, cm)
+              (investigate2.gs:9609-9661)
+
+    R1 (priority=1): FLAG_SINGLE 語 — isBoxOrCase のとき flagNote を付ける
+    R2 (priority=2): ダメージ/開封語 — appKubun で区分絞込
+    R3 (priority=3): 特殊語（シュリなし / ペリなし / 未サーチ）
+    R4a(priority=4): data-driven（通常品 / 未開封等）
+    R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
+    """
+    empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+    if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+        return (EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit")
+    cond_entries = [entry for entry in cond_entries if entry["code"] != EMPTY_CODE]
+    text_combined = (raw_state or "") + " " + (raw_product_name or "")
+    is_box_or_case = "箱系" in kubun  # 箱系大 も '箱系' を含む
+
+    # --- R1 pre-pass: isBoxOrCase のとき FLAG_SINGLE 語を検査 → flagNote ---
+    flag_note = ""
+    if is_box_or_case:
+        for e in cond_entries:
+            if e["priority"] != 1:
+                continue
+            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+            hit, matched_kw = match_keyword(text_combined, s_kws, [])
+            if hit:
+                flag_note = f"単品語あり・要確認({matched_kw})"
+                break
+
+    # --- Main loop (priority ASC, app_kubun 長 DESC — load_condition_entries でソート済み) ---
+    for e in cond_entries:
+        if not app_kubun_matches(e["app_kubun"], kubun):
+            continue
+        s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+        x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+        hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        if not hit:
+            continue
+        prefix = f"{flag_note}," if flag_note else ""
+        basis = f"{prefix}R{e['priority']}:{matched_kw}"
+        return (e["canonical"], e["cond_id"], basis)
+
+    # --- R4 code fallback: kubun のみで分岐 ---
+    b4_prefix = f"{flag_note}," if flag_note else ""
+    b4 = b4_prefix + "R4:単位既定"
+    if "箱系大" in kubun:
+        cid = _find_cond_id(cond_entries, "CN0001") or cond_canonical_to_uuid.get("Case")
+        return ("Case", cid, b4)
+    if "箱系" in kubun:
+        cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
+        return ("Sealed box", cid, b4)
+
+    # --- R5: パック既定 (GAS: applyPackConditionDefault, AnalysisV2PackCondition.gs:66-180) ---
+    # unit=パック系(UN0003) かつ R4b で FLAG_SINGLE になった行を Searched pack に変換する。
+    # GAS 実測: basisDist R5=60件、UN0003 の Searched pack=61件（残1件はキーワード直接マッチ）。
+    if kubun == "パック系":
+        # Only the pack default can consult memo; explicit state/name wins above.
+        for entry in cond_entries:
+            if entry["code"] != "CN0007" or entry["priority"] <= 0:
+                continue
+            if not app_kubun_matches(entry["app_kubun"], kubun):
+                continue
+            search = [k.strip() for k in entry["search_kw"].split(",") if k.strip()]
+            exclude = [k.strip() for k in entry["exclude_kw"].split(",") if k.strip()]
+            hit, keyword = match_keyword(raw_memo, search, exclude)
+            if hit:
+                return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
+        cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
+        return ("Searched pack", cid, b4_prefix + "R5:パック既定")
+
+    cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
+    return ("FLAG_SINGLE", cid, b4 + ":単位不明")
+
+
+def _find_cond_id(cond_entries: list[dict], code: str) -> Optional[str]:
+    """condEntries から code で cond_id を引く。"""
+    for e in cond_entries:
+        if e["code"] == code:
+            return e["cond_id"]
+    return None
+
+
+# ---------------------------------------------------------------------------
+# 数値正規化
+# ---------------------------------------------------------------------------
+
+
+def _parse_numeric(raw: str) -> Optional[float]:
+    """
+    カンマ・通貨記号・全角数字を除去して float に変換する。
+    失敗したら None を返す。
+    """
+    if not raw or not raw.strip():
+        return None
+
+    # 全角数字 → 半角
+    s = raw.strip()
+    s = s.translate(str.maketrans("０１２３４５６７８９", "0123456789"))
+
+    # 通貨記号・単位・スペースを除去
+    import re
+    s = re.sub(r"[^\d.,]", "", s)
+    s = s.replace(",", "")
+
+    try:
+        return float(s) if s else None
+    except ValueError:
+        return None
+
+
+# ---------------------------------------------------------------------------
+# C-1: 正規化ルール
+# ---------------------------------------------------------------------------
+
+
+def load_normalization_rules(session: Session) -> dict[str, list[dict]]:
+    """
+    tcg_normalization_rules から enabled=TRUE 行を {field: [rules sorted by priority ASC]} で返す。
+    テーブル未存在時は空 dict（graceful fallback）。
+    GAS 対照: normalizeTextField_ (SystemResolverV2.gs:197)
+    """
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT field, rule_type, from_val, to_val, priority
+                FROM {TCG_SCHEMA}.tcg_normalization_rules
+                WHERE enabled = TRUE ORDER BY field, priority ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_normalization_rules not found, C-1 skipped: %s", exc)
+        return {}
+    result: dict[str, list[dict]] = {}
+    for field, rule_type, from_val, to_val, priority in rows:
+        if field not in result:
+            result[field] = []
+        result[field].append(
+            {
+                "rule_type": rule_type,
+                "from_val": from_val or "",
+                "to_val": to_val or "",
+                "priority": priority,
+            }
+        )
+    return result
+
+
+def apply_field_normalization(raw: str, field_rules: list[dict]) -> str:
+    """
+    REMOVE: literal str.replace(fv, "")
+    REPLACE: literal str.replace(fv, tv)
+    REGEX_REPLACE: re.sub(fv, tv_py, result) where $N→\\N 変換済み
+    GAS 対照: normalizeTextField_ (SystemResolverV2.gs:197)
+    """
+    result = raw or ""
+    for rule in field_rules:
+        rt, fv, tv = rule["rule_type"], rule["from_val"], rule["to_val"]
+        if not fv and rt != "REGEX_REPLACE":
+            continue
+        try:
+            if rt == "REMOVE":
+                result = result.replace(fv, "")
+            elif rt == "REPLACE":
+                result = result.replace(fv, tv)
+            elif rt == "REGEX_REPLACE":
+                tv_py = re.sub(r"\$(\d+)", r"\\\1", tv)
+                result = re.sub(fv, tv_py, result)
+        except re.error:
+            logger.warning("[tcg_analyzer] normalization regex error: rt=%s from=%r", rt, fv)
+    return result.strip()
+
+
+# ---------------------------------------------------------------------------
+# C-7: 注記生成
+# ---------------------------------------------------------------------------
+
+
+def load_note_master(session: Session) -> list[dict]:
+    """tcg_note_master ロード、graceful fallback。GAS: _NOTE_MASTER_ROWS_"""
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT id, label_ja, search_keywords, exclude_keywords, priority,
+                       match_type, search_pattern, label_template
+                FROM {TCG_SCHEMA}.tcg_note_master
+                WHERE enabled = TRUE ORDER BY priority ASC, id ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_note_master not found, C-7 skipped: %s", exc)
+        return []
+    return [
+        {
+            "id": r[0],
+            "label_ja": r[1],
+            "search_keywords": [k.strip() for k in (r[2] or "").split(",") if k.strip()],
+            "exclude_keywords": [k.strip() for k in (r[3] or "").split(",") if k.strip()],
+            "match_type": r[5] or "LITERAL",
+            "search_pattern": r[6] or "",
+            "label_template": r[7] or "",
+        }
+        for r in rows
+    ]
+
+
+def _expand_note_label(template: str, match: re.Match[str]) -> str:
+    """REGEX 札の ``$1`` 形式の捕捉参照を展開する。"""
+
+    def replace_group(reference: re.Match[str]) -> str:
+        group_index = int(reference.group(1))
+        try:
+            return match.group(group_index) or ""
+        except IndexError:
+            return reference.group(0)
+
+    return re.sub(r"\$(\d+)", replace_group, template)
+
+
+def build_note_ja(raw_memo: str, note_entries: list[dict], *, raw_state: str = "") -> Optional[str]:
+    """Memo-only legacy notes; STATE_LITERAL explicitly also reads state."""
+    if not (raw_memo or raw_state) or not note_entries:
+        return None
+    norm_memo = normalize_en(raw_memo)
+    labels = []
+    for entry in note_entries:
+        match_type = entry.get("match_type", "LITERAL")
+        if not raw_memo and match_type != "STATE_LITERAL":
+            continue
+        if match_type != "REGEX":
+            note_input = f"{raw_memo}\n{raw_state}" if match_type == "STATE_LITERAL" else raw_memo
+            hit, _ = match_keyword(
+                note_input, entry["search_keywords"], entry["exclude_keywords"]
+            )
+            if hit:
+                labels.append(entry["label_ja"])
+            continue
+
+        if any(match_one_kw(kw, norm_memo) for kw in entry["exclude_keywords"]):
+            continue
+        pattern = entry.get("search_pattern", "")
+        if not pattern:
+            continue
+        try:
+            regex_match = re.search(pattern, norm_memo)
+        except re.error:
+            logger.warning(
+                "[tcg_analyzer] note regex error: id=%s pattern=%r",
+                entry.get("id"),
+                pattern,
+            )
+            continue
+        if regex_match:
+            template = entry.get("label_template") or entry["label_ja"]
+            labels.append(_expand_note_label(template, regex_match))
+    return ",".join(labels) if labels else None
+
+
+def build_review_reasons(
+    pid_resolved: bool,
+    candidates: list[str],
+    raw_memo: str,
+    note_ja: Optional[str],
+) -> list[str]:
+    """解析行を人手確認へ送る理由を安定した順序で返す。"""
+    reasons: list[str] = []
+    if not pid_resolved:
+        reasons.append("pid_unresolved")
+    if len(candidates) > 1:
+        reasons.append("multi_candidate")
+    if raw_memo.strip() and not note_ja and not consumes_empty_memo(raw_memo):
+        reasons.append("note_unmatched")
+    return reasons
+
+
+# ---------------------------------------------------------------------------
+# ステータス解決 v2
+# ---------------------------------------------------------------------------
+
+
+def load_status_master(session: Session) -> list[dict]:
+    """tcg_status_master ロード、graceful fallback。GAS: resolveStatusV2_"""
+    try:
+        rows = session.execute(
+            text(
+                f"""
+                SELECT status_id, canonical, search_pattern, exclude_pattern, priority, match_type, effect
+                FROM {TCG_SCHEMA}.tcg_status_master
+                WHERE enabled = TRUE ORDER BY effect ASC, priority ASC
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        session.rollback()
+        logger.debug("[tcg_analyzer] tcg_status_master not found, status='active' default: %s", exc)
+        return []
+    return [
+        {
+            "canonical": r[1],
+            "search_pattern": r[2] or "",
+            "priority": r[4],
+            "match_type": r[5],
+            "effect": r[6],
+        }
+        for r in rows
+    ]
+
+
+def _match_status_pattern(text_val: str, pattern: str, match_type: str) -> bool:
+    if match_type == "DEFAULT":
+        return True
+    if not pattern:
+        return False
+    if match_type == "LITERAL":
+        return pattern.lower() in text_val.lower()
+    if match_type == "REGEX":
+        try:
+            return bool(re.search(pattern, text_val))
+        except re.error:
+            return False
+    return False
+
+
+def resolve_status_v2(
+    raw_state: str, status_entries: list[dict], *, raw_memo: str = "",
+) -> tuple[str, Optional[str]]:
+    """
+    1. EXCLUDE（在庫切れ）優先 → (canonical, 'excluded')
+    2. OUTPUT REGEX/LITERAL → (canonical, None)
+    3. DEFAULT → (canonical, None)
+    空マスタ時は ('active', None)。GAS: resolveStatusV2_ (SystemResolverV2.gs)
+    """
+    if not status_entries:
+        return ("active", None)
+    text_val = raw_state or ""
+    for entry in sorted(
+        (e for e in status_entries if e["effect"] == "EXCLUDE"),
+        key=lambda e: e["priority"],
+    ):
+        memo_exact = (
+            entry["match_type"] == "LITERAL"
+            and bool(entry["search_pattern"])
+            and (raw_memo or "").strip().casefold() == entry["search_pattern"].strip().casefold()
+        )
+        if memo_exact or _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            return (entry["canonical"], "excluded")
+    for entry in sorted(
+        (e for e in status_entries if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"),
+        key=lambda e: e["priority"],
+    ):
+        if _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            return (entry["canonical"], None)
+    for entry in status_entries:
+        if entry["match_type"] == "DEFAULT":
+            return (entry["canonical"], None)
+    return ("active", None)
+
+
+# ---------------------------------------------------------------------------
+# 照合メイン
+# ---------------------------------------------------------------------------
+
+
+def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
+    """
+    extraction_job の全 extraction_items に対して照合を実行し、
+    analysis_results を INSERT/UPDATE (冪等) する。
+
+    Args:
+        session: 同期 SQLAlchemy Session
+        extraction_job_id: UUID 文字列
+
+    Returns:
+        {total, pid_resolved, unit_resolved, needs_review}
+    """
+    # ルックアップマップをロード
+    (
+        product_code_to_uuid,
+        unit_alias_to_canonical,
+        unit_canonical_to_uuid,
+        cond_alias_to_canonical,
+        cond_canonical_to_uuid,
+        unit_alias_to_info,
+    ) = load_lookup_maps(session)
+
+    cond_entries = load_condition_entries(session)
+    search_kw, exclude_kw = load_product_keywords(session)
+    product_codes = list(product_code_to_uuid.keys())
+    product_code_to_kubun_type = load_product_kubun_type_map(session)
+
+    works = load_work_master(session)
+    work_rows = session.execute(text(
+        f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+    )).fetchall()
+    product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
+    # Registration stores the work label in category_class. The referenced product
+    # category is authoritative for Box guards; legacy rows without it keep fallback.
+    product_category_classes = {
+        row[0]: (
+            "Box" if product_code_to_kubun_type[row[0]] in {"箱系", "箱系大"} else ""
+        ) if row[0] in product_code_to_kubun_type else (row[2] or "")
+        for row in work_rows
+    }
+
+    # C-1/C-7/Status マスタをロード（graceful fallback: テーブル不在時は空で続行）
+    norm_rules = load_normalization_rules(session)
+    note_entries = load_note_master(session)
+    status_entries = load_status_master(session)
+
+    # to_jsonb keeps old 7/9-column fixtures and saved jobs readable.
+    metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
+                               {"id": extraction_job_id}).scalar_one_or_none()
+    work_decisions: dict[str, str | None] | None = None
+    if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
+        reference = metadata.get("work_reference_snapshot")
+        digest = metadata.get("work_reference_sha256")
+        if not reference or reference_digest(reference) != digest:
+            raise ValueError("Work reference is missing or corrupted")
+        if reference_digest(load_work_reference(session, TCG_SCHEMA)) != digest:
+            raise ValueError("Work reference changed; re-extraction required")
+        decisions = session.execute(text(f"""
+            SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
+            FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
+        """), {"id": extraction_job_id}).fetchall()
+        work_decisions = {str(i): validate_work_id(value, reference) for i, value in decisions}
+
+    # extraction_items を取得（raw_memo を含む）
+    rows = session.execute(
+        text(
+            f"""
+            SELECT ei.id, ei.raw_product_name, ei.raw_quantity, ei.raw_price,
+                   ei.raw_unit, ei.raw_state, ei.raw_memo,
+                   ei.raw_work_name, ei.raw_work_source_line_span,
+                   ei.line_start, ei.line_end, sm.raw_text,
+                   EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections ic
+                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id')
+            FROM {TCG_SCHEMA}.extraction_items ei
+            JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            WHERE ei.extraction_job_id = :ej_id
+            ORDER BY ei.line_start, ei.id
+            FOR SHARE OF ei, ej, sm
+            """
+        ),
+        {"ej_id": extraction_job_id},
+    ).fetchall()
+
+    # Hash this source once and reuse it across all item binding comparisons.
+    source_hash = session.execute(text(f"""SELECT {digest_sql('sm.raw_text')}
+        FROM {TCG_SCHEMA}.source_messages sm JOIN {TCG_SCHEMA}.extraction_jobs ej
+        ON ej.source_message_id=sm.id WHERE ej.id=CAST(:job AS uuid)"""),
+        {"job": extraction_job_id}).scalar_one_or_none()
+    now = datetime.now(timezone.utc)
+    stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0,
+             "skipped_product_corrections": 0}
+
+    for row in rows:
+        (
+            item_id,
+            raw_product_name,
+            raw_quantity,
+            raw_price,
+            raw_unit,
+            raw_state,
+            raw_memo,
+            raw_work_name,
+            raw_work_span,
+            line_start,
+            line_end,
+            source_text,
+            has_product_correction,
+        ) = row
+
+        stats["total"] += 1
+        session.execute(text(f"SELECT id FROM {TCG_SCHEMA}.analysis_results "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) FOR UPDATE"), {"eid": str(item_id)})
+        # A product correction may have committed after the initial extraction read.
+        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='product_id')"),
+            {"eid": str(item_id)}).scalar_one()
+        if has_product_correction:
+            stats["skipped_product_corrections"] += 1
+            effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
+            if effective:
+                session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+                    condition_id=CAST(:condition_id AS uuid), condition_canonical=:canonical,
+                    condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
+                    updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
+                    dict(effective, eid=str(item_id), updated_at=now))
+                stats["needs_review"] += int(effective["needs_review"])
+            continue
+        raw_product_name = raw_product_name or ""
+        raw_unit = raw_unit or ""
+        raw_state = raw_state or ""
+        raw_memo = raw_memo or ""
+
+        # C-1: 正規化ルール適用（キーワード照合エンジンへの入力を整形）
+        # GAS: normalizeTextField_ (SystemResolverV2.gs:197) — フィールドごとに独立適用
+        norm_product_name = apply_field_normalization(raw_product_name, norm_rules.get("PRODUCT_NAME", []))
+        norm_unit = apply_field_normalization(raw_unit, norm_rules.get("UNIT", []))
+        norm_condition = apply_field_normalization(raw_state, norm_rules.get("CONDITION", []))
+        norm_status = apply_field_normalization(raw_state, norm_rules.get("STATUS", []))
+        norm_memo = apply_field_normalization(raw_memo, norm_rules.get("NOTE", []))
+        condition_memo = apply_field_normalization(raw_memo, norm_rules.get("CONDITION", []))
+        note_state = apply_field_normalization(raw_state, norm_rules.get("NOTE", []))
+
+        # 単位解決 v2（商品フィルタより先に実行）— 正規化済み norm_unit を使用
+        unit_canonical, kubun, unit_resolved = resolve_unit_v2(norm_unit, unit_alias_to_info)
+        unit_uuid = unit_canonical_to_uuid.get(unit_canonical) if unit_canonical else None
+
+        if unit_resolved:
+            stats["unit_resolved"] += 1
+
+        # unit kubun で商品コードを絞り込み（GAS: filterProductMasterByUnitCategoryV2_）
+        filtered_codes = filter_product_codes_by_unit_kubun(
+            product_codes, kubun, product_code_to_kubun_type
+        )
+
+        # 商品照合 — 正規化済み norm_product_name を使用
+        work_id = (work_decisions[str(item_id)] if work_decisions is not None else resolve_work_evidence(
+            raw_product_name, source_text or "", line_start, line_end,
+            raw_work_name, raw_work_span, works,
+        ))
+        matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
+            norm_product_name, filtered_codes, search_kw, exclude_kw,
+            work_id=work_id, product_work_ids=product_work_ids,
+            raw_state=norm_condition, raw_memo=norm_memo,
+            product_category_classes=product_category_classes,
+        )
+        if work_decisions is not None and pid_basis != "NONE":
+            pid_basis = ("GEMINI|" + pid_basis)[:100]
+        if work_decisions is None and work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+            heading = work_heading_evidence(source_text or "", line_start, line_end, works)
+            if heading and heading[0] == work_id:
+                pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]
+        product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
+
+        if pid_resolved:
+            stats["pid_resolved"] += 1
+
+        # 状態解決 v2 — 正規化済み norm_condition を使用
+        condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
+            norm_condition, norm_product_name, kubun, [e for e in cond_entries if e["code"] != EMPTY_CODE], cond_canonical_to_uuid,
+            raw_memo=condition_memo,
+        )
+
+        empty_class = classify_empty_box(raw_product_name, raw_state, raw_memo)
+        empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+        if empty_class == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+            condition_canonical, condition_uuid, condition_basis_str = (
+                EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit"
+            )
+
+        # 数量・価格正規化
+        quantity_normalized = _parse_numeric(raw_quantity or "")
+        price_normalized = _parse_numeric(raw_price or "")
+
+        # C-7: 注記生成 — 正規化済み norm_memo を使用
+        # GAS: buildNoteJA_ (SystemResolverV2.gs)
+        note_ja = build_note_ja(norm_memo, note_entries, raw_state=note_state)
+
+        # ステータス解決 v2 — 正規化済み norm_status を使用
+        # GAS: resolveStatusV2_ (SystemResolverV2.gs)
+        status_val, exclusion_val = resolve_status_v2(
+            norm_status, status_entries,
+            raw_memo=apply_field_normalization(raw_memo or "", norm_rules.get("STATUS", [])),
+        )
+
+        # needs_review 判定
+        review_reasons = build_review_reasons(
+            pid_resolved, candidates, raw_memo, note_ja
+        )
+        if mentions_empty_box(raw_product_name, raw_state, raw_memo) and not valid_empty_definition(empty_entry):
+            review_reasons.append("empty_box_master_unavailable")
+        elif empty_class != "none":
+            review_reasons.append("empty_box" if empty_class == "positive" else "empty_box_ambiguous")
+        # Check the saved chosen condition against new values before the UPSERT.
+        effective = reanalysis_condition(session, str(item_id), {
+            "product_id": product_uuid, "pid_resolved": pid_resolved, "unit_id": unit_uuid, "unit_canonical": unit_canonical,
+            "unit_resolved": unit_resolved, "quantity_normalized": quantity_normalized,
+            "price_normalized": price_normalized, "condition_id": condition_uuid,
+            "condition_canonical": condition_canonical, "condition_basis": condition_basis_str,
+            "review_reasons": ",".join(review_reasons), "needs_review": bool(review_reasons),
+        }, schema=TCG_SCHEMA, source_hash=source_hash)
+        if effective:
+            if effective["valid_ack"]:
+                condition_uuid, condition_canonical, condition_basis_str = (
+                    effective["condition_id"], effective["canonical"], effective["basis"]
+                )
+            review_reasons = [reason for reason in effective["review_reasons"].split(",") if reason]
+        needs_review = bool(review_reasons) or bool(effective and effective["needs_review"])
+
+        if needs_review:
+            stats["needs_review"] += 1
+
+        review_reasons_str = ",".join(review_reasons) if review_reasons else None
+
+        # analysis_results を UPSERT (extraction_item_id に UNIQUE 制約あり)
+        session.execute(
+            text(
+                f"""
+                INSERT INTO {TCG_SCHEMA}.analysis_results (
+                    id,
+                    extraction_item_id,
+                    product_id,
+                    pid_resolved,
+                    pid_basis,
+                    unit_id,
+                    unit_canonical,
+                    unit_resolved,
+                    condition_id,
+                    condition_canonical,
+                    condition_basis,
+                    quantity_normalized,
+                    price_normalized,
+                    note_ja,
+                    status,
+                    exclusion,
+                    needs_review,
+                    review_reasons,
+                    engine_version,
+                    computed_at,
+                    updated_at
+                )
+                VALUES (
+                    :id,
+                    :extraction_item_id,
+                    :product_id,
+                    :pid_resolved,
+                    :pid_basis,
+                    :unit_id,
+                    :unit_canonical,
+                    :unit_resolved,
+                    :condition_id,
+                    :condition_canonical,
+                    :condition_basis,
+                    :quantity_normalized,
+                    :price_normalized,
+                    :note_ja,
+                    :status,
+                    :exclusion,
+                    :needs_review,
+                    :review_reasons,
+                    :engine_version,
+                    :computed_at,
+                    :updated_at
+                )
+                ON CONFLICT (extraction_item_id)
+                DO UPDATE SET
+                    product_id          = EXCLUDED.product_id,
+                    pid_resolved        = EXCLUDED.pid_resolved,
+                    pid_basis           = EXCLUDED.pid_basis,
+                    unit_id             = EXCLUDED.unit_id,
+                    unit_canonical      = EXCLUDED.unit_canonical,
+                    unit_resolved       = EXCLUDED.unit_resolved,
+                    condition_id        = EXCLUDED.condition_id,
+                    condition_canonical = EXCLUDED.condition_canonical,
+                    condition_basis     = EXCLUDED.condition_basis,
+                    quantity_normalized = EXCLUDED.quantity_normalized,
+                    price_normalized    = EXCLUDED.price_normalized,
+                    note_ja             = EXCLUDED.note_ja,
+                    status              = EXCLUDED.status,
+                    exclusion           = EXCLUDED.exclusion,
+                    needs_review        = EXCLUDED.needs_review,
+                    review_reasons      = EXCLUDED.review_reasons,
+                    engine_version      = EXCLUDED.engine_version,
+                    computed_at         = EXCLUDED.computed_at,
+                    updated_at          = EXCLUDED.updated_at
+                """
+            ),
+            {
+                "id": str(uuid.uuid4()),
+                "extraction_item_id": str(item_id),
+                "product_id": product_uuid,
+                "pid_resolved": pid_resolved,
+                "pid_basis": pid_basis,
+                "unit_id": unit_uuid,
+                "unit_canonical": unit_canonical,
+                "unit_resolved": unit_resolved,
+                "condition_id": condition_uuid,
+                "condition_canonical": condition_canonical,
+                "condition_basis": condition_basis_str,
+                "quantity_normalized": quantity_normalized,
+                "price_normalized": price_normalized,
+                "note_ja": note_ja,
+                "status": status_val,
+                "exclusion": exclusion_val,
+                "needs_review": needs_review,
+                "review_reasons": review_reasons_str,
+                "engine_version": ENGINE_VERSION,
+                "computed_at": now,
+                "updated_at": now,
+            },
+        )
+
+    session.commit()
+
+    # --- 後処理: E3a → E5 → E3b → E4 ---
+    # GAS Phase 3 実行順序に対応 (AnalysisV2UnitRecovery.gs / AnalysisV2ConditionRecalc.gs /
+    #                              AnalysisV2UnitFromCondition.gs)
+    # lazy import: tcg_unit_recovery_svc → tcg_analyzer_svc の循環インポートを回避
+    from app.services.tcg_unit_recovery_svc import (  # noqa: PLC0415
+        apply_unit_from_condition_for_job,
+        apply_unit_recovery_for_job,
+        apply_unit_unresolved_flag_for_job,
+    )
+
+    # E3a + E5: 商品名から unit 復旧 → condition 再計算
+    recovery = apply_unit_recovery_for_job(session, extraction_job_id, TCG_SCHEMA)
+    if recovery["e3a_recovered"] or recovery["e5_changed"]:
+        session.commit()
+    stats["e3a_recovered"] = recovery["e3a_recovered"]
+    stats["e5_changed"] = recovery["e5_changed"]
+
+    # E3b: E3a 後も unit_resolved=FALSE の行に UNIT_UNRESOLVED フラグ
+    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, TCG_SCHEMA)
+
+    # E4: condition_canonical から unit を逆引き
+    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, TCG_SCHEMA)
+
+    if e3b["flagged"] or e4["resolved"]:
+        session.commit()
+    stats["e3b_flagged"] = e3b["flagged"]
+    stats["e4_resolved"] = e4["resolved"]
+
+    logger.info(
+        "[tcg_analyzer] extraction_job=%s stats=%s", extraction_job_id, stats
+    )
+    return stats
+
+
+__all__ = [
+    "ENGINE_VERSION",
+    "load_lookup_maps",
+    "load_product_kubun_type_map",
+    "load_product_keywords",
+    "load_condition_entries",
+    "normalize_en",
+    "token_and_match",
+    "match_one_kw",
+    "match_keyword",
+    "match_pid_name_first",
+    "filter_product_codes_by_unit_kubun",
+    "app_kubun_matches",
+    "resolve_unit",
+    "resolve_unit_v2",
+    "resolve_condition",
+    "resolve_condition_v2",
+    "load_normalization_rules",
+    "apply_field_normalization",
+    "load_note_master",
+    "build_note_ja",
+    "build_review_reasons",
+    "load_status_master",
+    "resolve_status_v2",
+    "analyze_extraction_job",
+]

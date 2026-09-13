@@ -36,19 +36,22 @@
       {
         "matcher": "startup",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-log-digest.sh\"", "timeout": 20 }
         ]
       },
       {
         "matcher": "resume",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-log-digest.sh\"", "timeout": 20 }
         ]
       },
       {
         "matcher": "clear",
         "hooks": [
-          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 }
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/check-freshness.sh\"", "timeout": 12 },
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-log-digest.sh\"", "timeout": 20 }
         ]
       }
     ]

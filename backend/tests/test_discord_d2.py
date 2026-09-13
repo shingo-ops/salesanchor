@@ -260,7 +260,7 @@ class TestSyncLeadDiscordRole:
     async def test_skip_no_bot_token(self):
         """Bot Token 未設定のとき discord API を叩かず sync_status=failed を記録。"""
         with patch.dict(os.environ, {}, clear=False):
-            os.environ.pop("DISCORD_BOT_TOKEN_4", None)
+            os.environ.pop("DISCORD_BOT_TOKEN", None)
             with patch("app.services.discord_role_sync._update_sync_status", new=AsyncMock()) as mock_upd:
                 with patch("app.services.discord_role_sync.discord_api_request") as mock_req:
                     await sync_lead_discord_role(
@@ -275,7 +275,7 @@ class TestSyncLeadDiscordRole:
     @pytest.mark.asyncio
     async def test_skip_no_guild_id(self):
         """guild_id 未設定のとき silent skip (ログのみ)。"""
-        with patch.dict(os.environ, {"DISCORD_BOT_TOKEN_4": "fake-token"}):
+        with patch.dict(os.environ, {"DISCORD_BOT_TOKEN": "fake-token"}):
             with patch("app.services.discord_role_sync._get_guild_and_role_names", new=AsyncMock(return_value=(None, "Member", "Partner"))):
                 with patch("app.services.discord_role_sync.discord_api_request") as mock_req:
                     await sync_lead_discord_role(

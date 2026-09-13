@@ -6,7 +6,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
 import { getRevenueSummary, type RevenueSummaryResponse } from "../../api/funnel";
 import "./FunnelRevenuePage.css";
@@ -22,7 +21,6 @@ function achievementRate(actual: number, target: number): number {
 
 export default function FunnelRevenuePage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [data, setData] = useState<RevenueSummaryResponse | null>(null);
   const [loading, setLoading] = useState(true);
@@ -63,15 +61,6 @@ export default function FunnelRevenuePage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.revenuePageTitle"
-      headerAction={
-        <button
-          type="button"
-          className="frp-back-btn"
-          onClick={() => navigate("/")}
-        >
-          ← {t("nav.dashboard")}
-        </button>
-      }
     >
       <div className="frp-grid">
 

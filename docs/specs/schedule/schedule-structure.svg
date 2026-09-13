@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 420" font-family="sans-serif" font-size="13">
+  <style>
+    .t{font-size:13px;fill:#1a1a1a}.s{font-size:11px;fill:#555}.h{font-size:14px;font-weight:600;fill:#1a1a1a}
+    .box{fill:none;stroke:#c9c6c0;stroke-width:1}
+    .pin{fill:none;stroke:#7C6BB8;stroke-width:1;stroke-dasharray:5 3}
+    .scr{fill:none;stroke:#3E7C7B;stroke-width:1;stroke-dasharray:5 3}
+    .g{fill:#f0eee9}.p{fill:#ece8f6}.r{fill:#fbe4e4}.a{fill:#fdf0d9}.tl{fill:#e0efee}
+  </style>
+  <text class="h" x="200" y="26" text-anchor="middle">PC・タブレット＝週の地図</text>
+  <rect class="box" x="20" y="40" width="360" height="300" rx="10"/>
+  <rect class="g" x="32" y="52" width="336" height="30" rx="6"/><text class="s" x="200" y="71" text-anchor="middle">共通の額縁（全ページ同一 PageLayout）</text>
+  <rect class="pin" x="32" y="90" width="336" height="86" rx="6"/><text class="s" x="200" y="104" text-anchor="middle">ピン留めの箱（スクロールしない）</text>
+  <rect class="p" x="40" y="112" width="320" height="24" rx="4"/><text class="s" x="200" y="128" text-anchor="middle">日付ヘッダー：常に7列固定</text>
+  <rect class="p" x="40" y="144" width="320" height="24" rx="4"/><text class="s" x="200" y="160" text-anchor="middle">終日予定の行：常に見える</text>
+  <rect class="scr" x="32" y="184" width="336" height="146" rx="6"/><text class="s" x="200" y="198" text-anchor="middle">スクロールする箱（時間グリッドのみ）</text>
+  <rect class="r" x="58" y="212" width="74" height="24" rx="4"/><text class="s" x="95" y="228" text-anchor="middle">遅延</text>
+  <rect class="a" x="150" y="242" width="74" height="24" rx="4"/><text class="s" x="187" y="258" text-anchor="middle">今日期日</text>
+  <rect class="tl" x="242" y="272" width="74" height="24" rx="4"/><text class="s" x="279" y="288" text-anchor="middle">予定</text>
+  <text class="s" x="200" y="318" text-anchor="middle">状態色＋CTA・空きマスで＋追加</text>
+  <text class="h" x="550" y="26" text-anchor="middle">スマホ＝今日の一本道</text>
+  <rect class="box" x="450" y="40" width="200" height="300" rx="14"/>
+  <rect class="g" x="460" y="52" width="180" height="28" rx="6"/><text class="s" x="550" y="70" text-anchor="middle">共通の額縁（同じ部品）</text>
+  <rect class="p" x="460" y="88" width="180" height="24" rx="4"/><text class="s" x="550" y="104" text-anchor="middle">◀ 7/3（金）▶ スワイプ</text>
+  <rect class="p" x="460" y="120" width="180" height="22" rx="4"/><text class="s" x="550" y="135" text-anchor="middle">終日：商品X 販売開始</text>
+  <rect class="r" x="460" y="150" width="180" height="24" rx="4"/><text class="s" x="550" y="166" text-anchor="middle">受注#118 発送（遅延2日）</text>
+  <rect class="a" x="460" y="182" width="180" height="24" rx="4"/><text class="s" x="550" y="198" text-anchor="middle">見積送付（今日期日）</text>
+  <rect class="tl" x="460" y="214" width="180" height="24" rx="4"/><text class="s" x="550" y="230" text-anchor="middle">打合せ 14:00</text>
+  <rect x="460" y="246" width="180" height="24" rx="4" fill="none" stroke="#c9c6c0" stroke-dasharray="3 3"/><text class="s" x="550" y="262" text-anchor="middle">＋ タップで追加</text>
+  <text class="s" x="550" y="300" text-anchor="middle">縦1列で全予定を網羅</text>
+  <rect class="g" x="20" y="356" width="200" height="52" rx="8"/><text class="h" x="120" y="376" text-anchor="middle">原則1 測らない</text><text class="s" x="120" y="396" text-anchor="middle">固定物はスクロール箱の外へ</text>
+  <rect class="g" x="240" y="356" width="200" height="52" rx="8"/><text class="h" x="340" y="376" text-anchor="middle">原則2 折らない</text><text class="s" x="340" y="396" text-anchor="middle">狭い時は列でなく形を変える</text>
+  <rect class="g" x="460" y="356" width="200" height="52" rx="8"/><text class="h" x="560" y="376" text-anchor="middle">原則3 部品は1種類</text><text class="s" x="560" y="396" text-anchor="middle">額縁もボタンも共通部品SSOT</text>
+</svg>

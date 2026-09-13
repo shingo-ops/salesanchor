@@ -21,7 +21,6 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/quotes":                     "nav.quotesInvoices",
   "/invoices":                   "nav.quotesInvoices",
   "/reports":                    "nav.reports",
-  "/deals":                      "nav.deals",
   "/suppliers":                  "nav.suppliers",
   "/purchase-orders":            "nav.purchaseOrders",
   "/staff":                      "nav.staff",
@@ -40,7 +39,4 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/admin/tenant-policy":        "nav.tenantPolicy",
   "/admin/discord-config":       "nav.discordConfig",
   "/admin/discord-announce":     "nav.discordAnnounce",
-  "/super-admin/masters":        "nav.superAdminMasters",
-  "/super-admin/inbound":        "nav.superAdminInbound",
-  "/super-admin/phase-switch":   "nav.superAdminPhaseSwitch",
 };

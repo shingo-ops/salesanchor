@@ -1,0 +1,89 @@
+<svg width="760" height="820" viewBox="0 0 760 820" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="760" height="820" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">INV-1042</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">Pokemon Cards USA LLC ・ 請求書発行日 2026-06-14</text>
+  <rect x="656" y="18" width="80" height="26" rx="6" fill="#e1f5ee"/>
+  <text x="696" y="35" font-size="11" fill="#0f6e56" text-anchor="middle">完了</text>
+
+  <rect x="24" y="70" width="712" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="90" font-size="12" fill="#5f5e5a">進行状況</text>
+  <g font-size="9" fill="#5f5e5a" text-anchor="middle">
+    <circle cx="90" cy="112" r="9" fill="#1d9e75"/><text x="90" y="132">発行</text>
+    <line x1="115" y1="112" x2="200" y2="112" stroke="#1d9e75" stroke-width="2"/>
+    <circle cx="225" cy="112" r="9" fill="#1d9e75"/><text x="225" y="132">入金</text>
+    <line x1="250" y1="112" x2="335" y2="112" stroke="#1d9e75" stroke-width="2"/>
+    <circle cx="360" cy="112" r="9" fill="#1d9e75"/><text x="360" y="132">仕入</text>
+    <line x1="385" y1="112" x2="470" y2="112" stroke="#1d9e75" stroke-width="2"/>
+    <circle cx="495" cy="112" r="9" fill="#1d9e75"/><text x="495" y="132">発送</text>
+    <line x1="520" y1="112" x2="605" y2="112" stroke="#1d9e75" stroke-width="2"/>
+    <circle cx="630" cy="112" r="9" fill="#1d9e75"/><text x="630" y="132">完了</text>
+  </g>
+
+  <rect x="24" y="150" width="350" height="88" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="170" font-size="13" font-weight="600" fill="#2c2c2a">取引先情報</text>
+  <text x="38" y="190" font-size="11" fill="#5f5e5a">Pokemon Cards USA LLC</text>
+  <text x="38" y="208" font-size="11" fill="#5f5e5a">アメリカ ・ ECサイト</text>
+  <text x="38" y="226" font-size="11" fill="#5f5e5a">取引継続: 14か月・22回目</text>
+
+  <rect x="386" y="150" width="350" height="88" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="400" y="170" font-size="13" font-weight="600" fill="#2c2c2a">関連書類</text>
+  <text x="400" y="190" font-size="11" fill="#0c447c">請求書PDF</text>
+  <text x="726" y="190" font-size="11" fill="#888780" text-anchor="end">&#8595;</text>
+  <text x="400" y="208" font-size="11" fill="#0c447c">発送ラベル</text>
+  <text x="726" y="208" font-size="11" fill="#888780" text-anchor="end">&#8595;</text>
+  <text x="400" y="226" font-size="11" fill="#5f5e5a">仕入れ領収書</text>
+  <rect x="620" y="216" width="106" height="16" rx="4" fill="none" stroke="#b4b2a9" stroke-width="1" stroke-dasharray="3 2"/>
+  <text x="673" y="228" font-size="9" fill="#5f5e5a" text-anchor="middle">アップロード</text>
+
+  <rect x="24" y="248" width="712" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="268" font-size="13" font-weight="600" fill="#2c2c2a">顧客への請求情報</text>
+  <text x="38" y="288" font-size="10" fill="#888780">支払い方法</text>
+  <text x="38" y="304" font-size="12" fill="#2c2c2a">PayPal</text>
+  <text x="280" y="288" font-size="10" fill="#888780">入金日</text>
+  <text x="280" y="304" font-size="12" fill="#2c2c2a">2026-06-16</text>
+  <text x="520" y="288" font-size="10" fill="#888780">通貨</text>
+  <text x="520" y="304" font-size="12" fill="#2c2c2a">USD</text>
+
+  <rect x="24" y="326" width="712" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="346" font-size="13" font-weight="600" fill="#2c2c2a">仕入れ情報</text>
+  <text x="38" y="366" font-size="10" fill="#888780">仕入元</text>
+  <text x="38" y="382" font-size="12" fill="#2c2c2a">A社（提供元）</text>
+  <text x="280" y="366" font-size="10" fill="#888780">発注日</text>
+  <text x="280" y="382" font-size="12" fill="#2c2c2a">2026-06-14</text>
+  <text x="520" y="366" font-size="10" fill="#888780">仕入費支払日</text>
+  <text x="520" y="382" font-size="12" fill="#2c2c2a">2026-06-15</text>
+
+  <rect x="24" y="404" width="712" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="424" font-size="13" font-weight="600" fill="#2c2c2a">発送情報</text>
+  <text x="38" y="444" font-size="10" fill="#888780">配送会社</text>
+  <text x="38" y="460" font-size="12" fill="#2c2c2a">FedEx</text>
+  <text x="280" y="444" font-size="10" fill="#888780">発送日</text>
+  <text x="280" y="460" font-size="12" fill="#2c2c2a">2026-06-16</text>
+  <text x="520" y="444" font-size="10" fill="#888780">追跡番号</text>
+  <text x="520" y="460" font-size="12" fill="#0c447c">7812-3456-9021</text>
+
+  <rect x="24" y="482" width="712" height="46" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="510" font-size="13" font-weight="600" fill="#2c2c2a">トラブル記録</text>
+  <rect x="640" y="496" width="80" height="18" rx="6" fill="#f1efe8"/>
+  <text x="680" y="509" font-size="10" fill="#888780" text-anchor="middle">記録なし</text>
+
+  <rect x="24" y="536" width="712" height="240" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="560" font-size="13" font-weight="600" fill="#2c2c2a">利益の詳細内訳</text>
+  <text x="38" y="586" font-size="12" fill="#5f5e5a">売上</text>
+  <text x="360" y="586" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥210,000</text>
+  <text x="38" y="610" font-size="12" fill="#5f5e5a">原価（仕入）</text>
+  <text x="360" y="610" font-size="12" fill="#5f5e5a" text-anchor="end">¥142,000</text>
+  <text x="38" y="634" font-size="12" fill="#5f5e5a">送料</text>
+  <text x="360" y="634" font-size="12" fill="#5f5e5a" text-anchor="end">¥8,400</text>
+  <text x="38" y="658" font-size="12" fill="#5f5e5a">決済手数料</text>
+  <text x="360" y="658" font-size="12" fill="#5f5e5a" text-anchor="end">¥7,600</text>
+  <line x1="38" y1="670" x2="360" y2="670" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="692" font-size="12" fill="#5f5e5a">利益</text>
+  <text x="360" y="692" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥52,000</text>
+  <text x="38" y="716" font-size="12" fill="#5f5e5a">還付金額（消費税還付）</text>
+  <text x="360" y="716" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥16,800</text>
+  <line x1="38" y1="728" x2="360" y2="728" stroke="#5f5e5a" stroke-width="1"/>
+  <text x="38" y="754" font-size="16" font-weight="600" fill="#2c2c2a">合計利益</text>
+  <text x="360" y="754" font-size="16" font-weight="600" fill="#2c2c2a" text-anchor="end">¥68,800</text>
+</svg>

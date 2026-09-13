@@ -118,3 +118,45 @@
 - **子（マスタ別設計書・7つ）**：各マスタの詳しい中身。§4 の表からたどる。
 - **子（開発計画書）**：現状・課題・移行手順・調査項目。理想を現実にどう実現したかの履歴。
 - この親に各子をぶら下げることで、設計書（理想）から開発履歴（実現）まできれいにたどれる。
+
+## 関連する調査記録
+
+- [商品辞書の育成・LINE解析精度の調査](../../handoff/tcg-product-master-growth/recon.md)（現状と未確認事項。仕様の決定ではない）
+
+- [作品IDによる商品特定・除外語の設計案](../../handoff/tcg-product-master-growth/design-keyword.md#10-db確認後の実装契約案9の未確認事項を更新)（§10。文書レビュー中）
+
+- [作品判定の実装カード案](../../handoff/tcg-product-master-growth/card-work-matching-v3.md)（文書承認後に有効）
+
+## 関連する開発記録
+
+- [インポート・解析・配信の統合設計（第1段階）](../../handoff/pmg-import-delivery-ssot/design.md)
+- [同テーマの実物確認](../../handoff/pmg-import-delivery-ssot/recon.md)
+
+
+## 8. 商品一覧の発売日順・作品タブ（2026-09-11）
+
+PO原文: 「商品マスタの並びはデフォルトは販売日の新しい順に上から並べる、タブを付けてポケモン、ワンピースなど作品別に絞り込みが出来るようにする」。既存の「発売日」を指すかの確認への返答は「進める」。本項では発売日として扱う。
+
+- 初期表示は発売日の新しい商品から並ぶ。
+- 「すべて」と作品別のタブで表示対象を切り替えられる。
+- 作品で絞った後も発売日の新しい順を維持する。
+
+詳細案・受入条件: [既存一覧設計の追加節](../../handoff/tcg-product-import/design.md#14-発売日降順と作品タブ2026-09-11設計案)。現在地・実物根拠: [調査追補](../../handoff/tcg-product-import/recon.md#2026-09-11-発売日順と作品タブの調査)。3項目は依頼として受領済み。日付未登録やタブ候補の扱いなどの詳細は設計案であり、実装開始の承認とは区別する。
+
+- [Geminiによる作品IDのみの判断（2026-09-12）](../../handoff/tcg-product-master-growth/design-keyword.md#16-geminiが商品マスタを参照して作品idのみを判断する設計草案2026-09-12)（目的・境界合意済み、方式審査中）
+
+## Android LINE履歴の入力追加
+
+- [設計](../../handoff/line-android-import/design.md)
+- [現状・検証](../../handoff/line-android-import/recon.md)
+
+Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)、[検証](../../handoff/line-android-login/recon.md)。
+
+- [Android取込後の管理接続](../../handoff/line-import-delivery/design.md): フロントなしで確認・解析・既存配信へ接続。実配信未確認。
+
+- [PC/Androidの仕入先名の照合](../../handoff/line-supplier-aliases/design.md): 保存投稿の指紋を用いた読取調査。
+
+
+### 抽出待ち時間の限定是正案（2026-09-13・未実装）
+
+[設計・審査](../../handoff/tcg-product-master-growth/design-keyword.md) と [実測](../../handoff/tcg-product-master-growth/recon.md) の「シンソク抽出の時間制限見直し」を参照。300/330秒の限定実装は2026-09-13にPO承認済み。実装/検証中で本番未反映。型番3商品の不整合は別の未解決事項。

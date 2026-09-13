@@ -261,7 +261,6 @@ export function useOrdersState() {
       return;
     }
     const basePayload = {
-      deal_id: form.deal_id ? Number(form.deal_id) : null,
       order_number: form.order_number,
       total_amount: form.total_amount ? Number(form.total_amount) : null,
       status: form.status,
@@ -290,7 +289,6 @@ export function useOrdersState() {
   const handleEdit = (o: OrderListItem) => {
     setEditId(o.id);
     setForm({
-      deal_id: o.deal_id ? String(o.deal_id) : "",
       order_number: o.order_number,
       total_amount: o.total_amount ? String(o.total_amount) : "",
       status: o.status,

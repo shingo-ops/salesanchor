@@ -23,7 +23,7 @@ export const STATUS_TABS = [
   { key: "deal",     labelKey: "inbox.tabDeal",     statuses: ["negotiating"] },
   { key: "existing", labelKey: "inbox.tabExisting", statuses: ["existing_customer"] },
   { key: "followup", labelKey: "inbox.tabFollowUp", statuses: ["follow_up_short", "follow_up_long"] },
-  { key: "archive",  labelKey: "inbox.tabArchive",  statuses: ["lost", "out_of_scope"] },
+  { key: "archive",  labelKey: "inbox.tabArchive",  statuses: ["lost", "lead_out_of_scope", "negotiating_out_of_scope"] },
 ] as const;
 
 export type StatusTabKey = "all" | "lead" | "deal" | "existing" | "followup" | "archive";
@@ -34,7 +34,7 @@ export type KarteTabKey = "contact" | "company" | "deal";
 // ---------------------------------------------------------------------------
 
 // フォローアップフィルターから除外するステータス（返信しても意味がない相手）
-export const FOLLOWUP_EXCLUDED = new Set(["lost", "out_of_scope"]);
+export const FOLLOWUP_EXCLUDED = new Set(["lost", "lead_out_of_scope", "negotiating_out_of_scope"]);
 
 // ---------------------------------------------------------------------------
 // ADR-108 Phase B-1: sales_form 複数選択型

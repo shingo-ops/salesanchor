@@ -10,7 +10,8 @@ from __future__ import annotations
 """
 
 import logging
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -37,8 +38,15 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _today_jst() -> date:
+    return datetime.now(_JST).date()
+
+
 def _current_week_num() -> int:
-    return date.today().isocalendar()[1]
+    return _today_jst().isocalendar()[1]
 
 
 def _achievement_rate(actual: float, target: float) -> float:
@@ -268,7 +276,7 @@ async def get_goal_summary(
     tab='individual': user_id（未指定は current_user.id）の個人目標
     tab='team':       team_id のチーム目標
     """
-    today = date.today()
+    today = _today_jst()
     current_month = today.month
     current_year = today.year
     current_week = _current_week_num()
@@ -377,25 +385,26 @@ async def _fetch_actuals(
     )
     revenue = float(r.scalar() or 0)
 
-    # 商談数（期間内に作成された商談）
+    # 商談数（期間内に商談段階へ入ったリード）
     r = await db.execute(
         text(f"""
             SELECT COUNT(*) AS val
-            FROM deals
+            FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end
+              AND status IN ('negotiating', 'existing_customer', 'lost')
         """),
         params,
     )
     deal_count = float(r.scalar() or 0)
 
-    # 成約率（期間内の成約 / 期間内の商談）
+    # 成約率（期間内に決着したリードのうち成約した割合）
     r = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE status = 'won') AS won,
-                COUNT(*) AS total
-            FROM deals
+                COUNT(*) FILTER (WHERE status = 'existing_customer') AS won,
+                COUNT(*) FILTER (WHERE status IN ('existing_customer', 'lost')) AS total
+            FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end
         """),
@@ -422,8 +431,8 @@ async def _fetch_actuals(
     r = await db.execute(
         text(f"""
             SELECT
-                COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted,
-                COUNT(*) AS total
+                COUNT(*) FILTER (WHERE status IN ('negotiating', 'existing_customer', 'lost')) AS converted,
+                COUNT(*) FILTER (WHERE status NOT IN ('out_of_scope', 'disqualified')) AS total
             FROM leads
             WHERE {assign_filter}
               AND created_at >= :start AND created_at < :end

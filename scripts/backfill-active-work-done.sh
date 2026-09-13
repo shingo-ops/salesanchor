@@ -3,11 +3,11 @@
 #
 # 目的:
 #   active-work.md に IN_PROGRESS と記録されているが、
-#   実際には develop へのマージが完了しているブランチを DONE に更新する。
+#   実際には main へのマージが完了しているブランチを DONE に更新する。
 #   「自動DONE（未来）＋棚卸し（過去）でひと揃い」の「過去」を担う。
 #
 # 判定基準（ADR-114 §3 マージ判定切り分け）:
-#   - gh で merged かつ base=develop → DONE に更新
+#   - gh で merged かつ base=main → DONE に更新
 #   - closed（未マージ）→ 更新しない（安全側）
 #   - PR なし → 更新しない（確証なし）
 #
@@ -65,11 +65,11 @@ SKIP_NOT_MERGED=()
 SKIP_ERROR=()
 
 for BRANCH in "${IN_PROGRESS_BRANCHES[@]}"; do
-  # gh で develop へのマージ済みを確認
+  # gh で main へのマージ済みを確認
   MERGED_COUNT=$(gh pr list \
     --repo "${REPO_NAME}" \
     --state merged \
-    --base develop \
+    --base main \
     --head "${BRANCH}" \
     --json number \
     --jq length 2>/dev/null || echo "0")

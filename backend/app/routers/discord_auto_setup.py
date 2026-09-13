@@ -7,7 +7,7 @@ API:
 
 前提:
   - Bot が guild に招待済み（tenant_discord_config.guild_id 設定済み）
-  - DISCORD_BOT_TOKEN_{tenant_id} 環境変数設定済み
+  - DISCORD_BOT_TOKEN 環境変数設定済み（ADR-146 B方式: 共通 Bot Token）
   - 既存 permissions=268504082 で MANAGE_CHANNELS / MANAGE_ROLES / SEND_MESSAGES をカバー済み
 
 冪等動作:
@@ -99,12 +99,12 @@ async def run_auto_setup(
         )
     guild_id = str(row[0])
 
-    # 2. Bot トークン取得
-    bot_token: str | None = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
+    # 2. Bot トークン取得 (ADR-146 B方式: 共通 Bot Token)
+    bot_token: str | None = os.environ.get("DISCORD_BOT_TOKEN") or None
     if not bot_token:
         raise HTTPException(
             status_code=503,
-            detail=f"Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN_{tenant_id} を確認してください。",
+            detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。",
         )
 
     # 3. 既存設定取得（冪等チェック用）
@@ -252,7 +252,7 @@ async def run_auto_setup(
             existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
-            permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id),
+            permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id, bot_user_id),
         )
         steps.append(ch_ticket_step)
         if ch_ticket_step.discord_id:
@@ -637,8 +637,9 @@ async def _post_ticket_button_step(
 def _ticket_ch_overwrites(
     guild_id: str,
     staff_role_id: str | None,
+    bot_user_id: str = "",
 ) -> list[dict[str, Any]]:
-    """ticket-start: @everyone view可（チケットを開くためのチャンネル）、Staff送信可。"""
+    """ticket-start: @everyone view可（チケットを開くためのチャンネル）、Staff送信可、bot書込可。"""
     overwrites: list[dict[str, Any]] = [
         {
             "id": guild_id,  # @everyone
@@ -651,6 +652,16 @@ def _ticket_ch_overwrites(
         overwrites.append({
             "id": staff_role_id,
             "type": 0,
+            "allow": str(_SEND_MESSAGES),
+            "deny": "0",
+        })
+    if bot_user_id:
+        # bot 自身が ticket-start に書き込めるよう member overwrite を追加（type=1）。
+        # カテゴリの @everyone deny SEND がチャンネルにも継承されるため bot も弾かれる
+        # → カテゴリ(:207-219) と同パターンで bot user を明示的に許可する。
+        overwrites.append({
+            "id": bot_user_id,
+            "type": 1,  # member overwrite（bot ユーザー個人）
             "allow": str(_SEND_MESSAGES),
             "deny": "0",
         })

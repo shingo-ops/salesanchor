@@ -15,9 +15,11 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { STATUS_ICONS } from "../../constants/icons";
@@ -238,47 +240,53 @@ export default function ContactsPage() {
   };
 
   const pendingDedupCount = contacts.filter((c) => c.status === "pending_dedup_review").length;
+  const headerAction = (
+    <div className="page-header-actions">
+      {pendingDedupCount > 0 && (
+        <span className="dedup-summary">
+          {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
+        </span>
+      )}
+    </div>
+  );
+  const pageContentActions = hasPermission("customers.create") ? (
+    <button
+      className="btn-primary field-h-md"
+      onClick={() => {
+        setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
+        setShowCreate(true);
+      }}
+    >
+      + {t("contacts.newContact")}
+    </button>
+  ) : undefined;
 
   return (
     <PageLayout
       navKey="nav.contacts"
       subtitleKey="contacts.subtitle"
-      headerAction={
-        <div className="page-header-actions">
-          {pendingDedupCount > 0 && (
-            <span className="dedup-summary">
-              {t("contacts.pendingDedupCount", { count: pendingDedupCount })}
-            </span>
-          )}
-          {hasPermission("customers.create") && (
-            <button
-              className="btn-primary"
-              onClick={() => {
-                setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
-                setShowCreate(true);
-              }}
-            >
-              + {t("contacts.newContact")}
-            </button>
-          )}
-        </div>
-      }
+      headerAction={headerAction}
     >
-      <div className="filter-bar">
-        <select value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)} className="search-input">
-          <option value="">{t("contacts.allCompanies")}</option>
-          {companies.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
-          ))}
-        </select>
-        <input
-          type="text"
-          placeholder={t("contacts.searchPlaceholder")}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="search-input"
-        />
-      </div>
+      <ContentToolbar
+        left={
+          <>
+            <select className="search-input field-h-md field-w-sm" value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>
+              <option value="">{t("contacts.allCompanies")}</option>
+              {companies.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>
+              ))}
+            </select>
+            <input
+              type="text"
+              placeholder={t("contacts.searchPlaceholder")}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="search-input field-h-md field-w-sm"
+            />
+          </>
+        }
+        right={pageContentActions}
+      />
 
       {error && <div className="error-banner">{error}</div>}
 
@@ -340,10 +348,10 @@ export default function ContactsPage() {
               <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
             </div>
             <div className="form-actions">
-              <button type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
-              <button type="submit" className="btn-primary" disabled={submitting}>
+              <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
+              <Button variant="primary" size="md" type="submit" disabled={submitting}>
                 {submitting ? t("common.saving") : t("common.register")}
-              </button>
+              </Button>
             </div>
           </form>
         </div>
@@ -363,8 +371,8 @@ export default function ContactsPage() {
             companies={companies}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

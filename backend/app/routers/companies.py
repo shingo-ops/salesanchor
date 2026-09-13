@@ -191,8 +191,8 @@ async def _fetch_company_stats(db: AsyncSession, company_id: int) -> dict:
     try:
         res = await db.execute(
             text("""
-                SELECT total_deal_amount, paid_invoice_count, last_paid_at,
-                       deal_count, conversation_count, last_conversation_at
+                SELECT paid_invoice_count, last_paid_at,
+                       conversation_count, last_conversation_at
                 FROM v_company_stats
                 WHERE company_id = :cid
             """),
@@ -368,6 +368,11 @@ async def create_company(
 ):
     """会社を登録する（本体 + 副テーブル）。company_code 未指定なら CO-{id:05d}。"""
     try:
+        # 便1a: lead 必須（背骨）
+        lead_check = await db.execute(text("SELECT id FROM leads WHERE id = :id"), {"id": data.lead_id})
+        if not lead_check.first():
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定されたリードが見つかりません")
+
         explicit_code = data.company_code and data.company_code.strip()
         # CO-PEND-<8hex> = 最大 16 文字 (VARCHAR(20) に収まる)。
         # 元は hex 32 文字で VARCHAR(20) 超過の StringDataRightTruncationError 500 が出ていた（Step 5c-1 検証で発覚）。
@@ -436,6 +441,18 @@ async def create_company(
                 text("UPDATE companies SET monthly_forecast_updated_at = NOW() WHERE id = :id"),
                 {"id": new_id},
             )
+
+        # 便1a: フォーム入力→商談へ会社を紐づけ（正順ライフサイクル）
+        if data.deal_id is not None:
+            deal_row = (await db.execute(
+                text("SELECT lead_id FROM deals WHERE id = :id"), {"id": data.deal_id})).first()
+            if not deal_row:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された商談が見つかりません")
+            if deal_row[0] != data.lead_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="商談の出自リードと会社の出自リードが一致しません")
+            await db.execute(text("UPDATE deals SET company_id = :cid WHERE id = :did"),
+                {"cid": new_id, "did": data.deal_id})
 
         await _replace_addresses(db, new_id, data.addresses)
         await _replace_sales_channels(db, new_id, data.sales_channels)

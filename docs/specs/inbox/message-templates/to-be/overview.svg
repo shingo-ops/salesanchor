@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 250" width="680" height="250" font-family="sans-serif">
+<rect width="680" height="250" fill="#ffffff"/>
+<text x="340" y="28" font-size="15" text-anchor="middle" font-weight="bold" fill="#1a1a1a">定型文 全体像(3画面)</text>
+<rect x="40" y="45" width="180" height="90" rx="12" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="130" y="70" font-size="13" text-anchor="middle" font-weight="bold" fill="#0C447C">1 会話画面</text>
+<text x="130" y="92" font-size="11" text-anchor="middle" fill="#185FA5">+ボタンで呼出(KGI2)</text>
+<text x="130" y="112" font-size="11" text-anchor="middle" fill="#185FA5">入力欄へ転記(KGI5,6)</text>
+<rect x="260" y="45" width="180" height="90" rx="12" fill="#FAEEDA" stroke="#BA7517" stroke-width="1"/>
+<text x="350" y="70" font-size="13" text-anchor="middle" font-weight="bold" fill="#633806">2 呼び出しパネル</text>
+<text x="350" y="92" font-size="11" text-anchor="middle" fill="#854F0B">シーン別一覧(KGI3)</text>
+<text x="350" y="112" font-size="11" text-anchor="middle" fill="#854F0B">名前+冒頭+メモ(KGI4)</text>
+<rect x="480" y="45" width="160" height="90" rx="12" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="560" y="70" font-size="13" text-anchor="middle" font-weight="bold" fill="#04342C">3 設定画面</text>
+<text x="560" y="92" font-size="11" text-anchor="middle" fill="#0F6E56">追加・編集・削除</text>
+<text x="560" y="112" font-size="11" text-anchor="middle" fill="#0F6E56">(KGI1)</text>
+<line x1="222" y1="80" x2="256" y2="80" stroke="#888" stroke-width="1"/>
+<line x1="480" y1="90" x2="442" y2="90" stroke="#888" stroke-width="1"/>
+<text x="340" y="170" font-size="11" text-anchor="middle" fill="#555">+ボタン→パネルで選ぶ→入力欄に相手言語の本文→通常の送信ボタンで送る</text>
+<text x="340" y="192" font-size="11" text-anchor="middle" fill="#555">設定画面はパネルの管理から開き、シーンとテンプレを追加・編集・削除</text>
+<text x="340" y="214" font-size="11" text-anchor="middle" fill="#555">AI翻訳は使わない(用語集テーマ translation-glossary とは独立)</text>
+</svg>

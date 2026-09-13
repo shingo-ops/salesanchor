@@ -68,6 +68,9 @@ async def _setup_source_less_schema(conn, schema: str) -> None:
             id              SERIAL PRIMARY KEY,
             tenant_id       INTEGER      NOT NULL DEFAULT 1,
             customer_name   VARCHAR(255),
+            amount          NUMERIC(15,2),
+            currency        VARCHAR(10) DEFAULT 'JPY',
+            expected_close_date DATE,
             discord_user_id VARCHAR(64),
             created_at      TIMESTAMPTZ  DEFAULT NOW()
         )

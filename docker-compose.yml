@@ -45,6 +45,7 @@ services:
       - ./certbot/www:/var/www/certbot:rw
       - ./certbot/conf:/etc/letsencrypt:rw
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    restart: unless-stopped
     deploy:
       resources:
         limits:
@@ -92,10 +93,12 @@ services:
       # この行が無いと .env に値があっても os.getenv が空になり、LLM が
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
       # ADR-091 KPI4〜7: Discord REST API 呼び出し（アナウンス・招待・削除・ロール同期）
       # backend コンテナも Bot トークンが必要（discord-gateway だけでは不足）
-      - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
+      # ADR-146 B方式: per-tenant トークン（DISCORD_BOT_TOKEN_4）を共通トークンに統合
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       # API連携: Googleドライブ OAuth（ユーザー委任方式）。カレンダーと同一の OAuth
       # クライアントを流用可。この3行が無いと .env に値があっても os.getenv が空になり
       # 連携が動かない（compose passthrough 漏れ対策）。
@@ -106,8 +109,15 @@ services:
       # この2行が無いと .env に値があっても os.getenv が空になりバイパスが不活性になる。
       - SMOKE_SERVICE_TOKEN=${SMOKE_SERVICE_TOKEN:-}
       - SMOKE_SERVICE_EMAIL=${SMOKE_SERVICE_EMAIL:-}
+      # DIST-01: TCG 在庫配信 SA 鍵ファイルパス（ホスト側の絶対パスをコンテナ内同一パスでマウント）
+      # 未設定の場合は配信 API 呼び出し時に 503 を返す（起動時エラーにはしない）。
+      - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
+      # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
+      - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+      - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
+      - attachments_data:/data/attachments
     depends_on:
       postgres:
         condition: service_healthy
@@ -193,6 +203,7 @@ services:
       # backend(docker-compose.yml:93-94) と同パターンで渡す。
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
@@ -204,6 +215,8 @@ services:
       - REVIEW_MAIL_WEBMAIL_URL=${REVIEW_MAIL_WEBMAIL_URL:-}
       - REVIEW_MAIL_DISCORD_WEBHOOK=${REVIEW_MAIL_DISCORD_WEBHOOK:-}
       - REVIEW_MAIL_DISCORD_MENTION=${REVIEW_MAIL_DISCORD_MENTION:-}
+      # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
+      - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
     depends_on:
@@ -239,6 +252,8 @@ services:
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
+      # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
+      - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
     depends_on:
       redis:
         condition: service_healthy
@@ -261,25 +276,23 @@ services:
       - backnet
 
   # ============================================================
-  # Discord Gateway Worker (ADR-009 M2: Skeleton)
+  # Discord Gateway Worker (ADR-146 B方式: 共通bot1台 + guild_id振り分け)
   # ============================================================
-  # WebSocket 常駐プロセス。per-tenant Bot Token を環境変数経由で受け取り
-  # READY/heartbeat ログのみ出力する skeleton 段階。
-  # M3 で MESSAGE_CREATE → raw_webhook_events ingestion を追加予定。
+  # WebSocket 常駐プロセス。共通 Bot Token 1本で全テナントのサーバーを受信し、
+  # guild_id → public.tenant_discord_config で tenant_id を逆引きして振り分ける。
   discord-gateway:
     build: ./backend
     command: python -m app.discord_gateway.main
+    volumes:
+      - attachments_data:/data/attachments
     environment:
       - ENVIRONMENT=${ENVIRONMENT:-development}
       - DISCORD_GATEWAY_LOG_LEVEL=${DISCORD_GATEWAY_LOG_LEVEL:-INFO}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379/0}
       - CELERY_BROKER_URL=${CELERY_BROKER_URL:-redis://redis:6379/1}
       - CELERY_RESULT_BACKEND=${CELERY_RESULT_BACKEND:-redis://redis:6379/2}
-      # per-tenant Bot Token（ADR-009 5-3）
-      # 形式: DISCORD_BOT_TOKEN_<TENANT_ID>=<token>
-      # tenant_004 = HIGH LIFE JPN
-      - DISCORD_BOT_TOKEN_4=${DISCORD_BOT_TOKEN_4:-}
-      - DISCORD_TENANT_CODE_4=${DISCORD_TENANT_CODE_4:-highlife-jpn}
+      # ADR-146 B方式: 共通 Bot Token（テナント共通 — 1本のみ）
+      - DISCORD_BOT_TOKEN=${DISCORD_BOT_TOKEN:-}
       # チケット作成で DB アクセスが必要（ticket_channel_creator.get_ticket_config）。
       # 未設定だと database.py のデフォルト myapp_user にフォールバックして接続失敗する。
       - DATABASE_URL=${DATABASE_URL}
@@ -409,6 +422,7 @@ services:
 volumes:
   postgres_data:
   redis_data:
+  attachments_data:
 
 networks:
   frontnet:

@@ -1,0 +1,82 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
++ actual - expected
+
+  {
+    cls: 'btn-ghost',
+    computed: {
++     background: 'rgba(255, 255, 255, 0.26)',
+-     background: 'rgba(255, 255, 255, 0.424)',
+      border: 'rgb(26, 32, 44)',
+      clientWidth: 55,
+      color: 'rgb(26, 32, 44)',
+      fontSize: '13.6px',
+      height: 44,
+
+    at file:///private/tmp/frontend-button-appearance-20260911/browser.mjs:37:657
+    at runNextTicks (node:internal/process/task_queues:64:5)
+    at process.processImmediate (node:internal/timers:472:9) {
+  generatedMessage: true,
+  code: 'ERR_ASSERTION',
+  actual: {
+    dark: false,
+    width: 390,
+    cls: 'btn-ghost',
+    state: 'hover',
+    computed: {
+      color: 'rgb(26, 32, 44)',
+      background: 'rgba(255, 255, 255, 0.26)',
+      width: 55,
+      height: 44,
+      minHeight: '44px',
+      radius: '6px',
+      opacity: '1',
+      border: 'rgb(26, 32, 44)',
+      outline: 'rgb(26, 32, 44)',
+      outlineWidth: '3px',
+      outlineOffset: '0px',
+      outlineStyle: 'none',
+      padding: '8px 12px',
+      fontSize: '13.6px',
+      whiteSpace: 'nowrap',
+      x: 12,
+      y: 12,
+      scrollWidth: 55,
+      clientWidth: 55
+    }
+  },
+  expected: {
+    dark: false,
+    width: 390,
+    cls: 'btn-ghost',
+    state: 'hover',
+    computed: {
+      color: 'rgb(26, 32, 44)',
+      background: 'rgba(255, 255, 255, 0.424)',
+      width: 55,
+      height: 44,
+      minHeight: '44px',
+      radius: '6px',
+      opacity: '1',
+      border: 'rgb(26, 32, 44)',
+      outline: 'rgb(26, 32, 44)',
+      outlineWidth: '3px',
+      outlineOffset: '0px',
+      outlineStyle: 'none',
+      padding: '8px 12px',
+      fontSize: '13.6px',
+      whiteSpace: 'nowrap',
+      x: 12,
+      y: 12,
+      scrollWidth: 55,
+      clientWidth: 55
+    }
+  },
+  operator: 'deepStrictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.12.0

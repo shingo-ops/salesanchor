@@ -20,6 +20,8 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -211,15 +213,15 @@ export default function StaffPage() {
     <PageLayout
       navKey="nav.staff"
       subtitleKey="staff.subtitle"
-      headerAction={hasPermission("staff.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
-            {t("staff.newStaff")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      <ContentToolbar
+        right={hasPermission("staff.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+            {t("staff.newStaff")}
+          </button>
+        ) : undefined}
+      />
 
       {/* 新規作成 Modal（全項目・既存 UX 保持） */}
       <Modal
@@ -295,10 +297,10 @@ export default function StaffPage() {
             ));
           })()}
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md" disabled={submitting}>
               {submitting ? t("common.submitting") : t("common.register")}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -317,8 +319,8 @@ export default function StaffPage() {
             roles={roles}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

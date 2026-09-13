@@ -1,0 +1,37 @@
+[
+  {
+    "path": "frontend/src/components/EmptyState.css",
+    "lines": 75,
+    "sha256": "810e8464b4f728fdfc30210606b334c1e6d90ab4ec4ad1b0e37445f8c41e91a3"
+  },
+  {
+    "path": "frontend/src/components.css",
+    "lines": 920,
+    "sha256": "b5825713fb365cba07f60b00dc589b638e21d859dd34c5163202be89d0c833d4"
+  },
+  {
+    "path": "frontend/src/constants/icons.tsx",
+    "lines": 409,
+    "sha256": "0217103b0de96319d1d6feec8e236c2702c5f069d9fd8556064f3c7d1c536395"
+  },
+  {
+    "path": "frontend/src/constants/platform-icon.css",
+    "lines": 30,
+    "sha256": "c5cb3bf24a0d94e32d02d0245d3a34b11aa3f5fda38d027b00ad0e95bd5d0d26"
+  },
+  {
+    "path": "frontend/src/index.css",
+    "lines": 426,
+    "sha256": "51cf670b4f617e0da642caab8e597ec435e11bc569969fc91998d9509ddb0537"
+  },
+  {
+    "path": "frontend/src/pages/dashboard/DashboardPage.css",
+    "lines": 555,
+    "sha256": "680c81426cdf6fb40faa16b05df515306e1fedbcb9945d93505baeb2aeedb6ca"
+  },
+  {
+    "path": "frontend/src/pages/inbox/InboxPage.css",
+    "lines": 1747,
+    "sha256": "c63ac05ad99d8e9f8fea52ddd0a40864665025dc4dd29c60796d3c7ff5c26a95"
+  }
+]

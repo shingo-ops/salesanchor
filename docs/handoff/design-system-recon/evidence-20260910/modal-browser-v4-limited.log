@@ -1,0 +1,293 @@
+[
+  {
+    "width": 320,
+    "lang": "ja",
+    "kind": "purchase",
+    "natural": {
+      "original": [
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        }
+      ],
+      "childrenWidths": [
+        {
+          "width": 70.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 113.4375,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 68.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        }
+      ],
+      "gap": 12,
+      "required": 277.0625,
+      "available": 272,
+      "fits": false,
+      "referenceOnly": true
+    }
+  },
+  {
+    "width": 320,
+    "lang": "en",
+    "kind": "purchase",
+    "natural": {
+      "original": [
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        }
+      ],
+      "childrenWidths": [
+        {
+          "width": 92.421875,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 86.828125,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 86.4375,
+          "marginLeft": 0,
+          "marginRight": 0
+        }
+      ],
+      "gap": 12,
+      "required": 289.6875,
+      "available": 272,
+      "fits": false,
+      "referenceOnly": true
+    }
+  },
+  {
+    "width": 1280,
+    "lang": "ja",
+    "kind": "purchase",
+    "natural": {
+      "original": [
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        }
+      ],
+      "childrenWidths": [
+        {
+          "width": 70.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 113.4375,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 68.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        }
+      ],
+      "gap": 12,
+      "required": 277.0625,
+      "available": 832,
+      "fits": true,
+      "referenceOnly": true
+    }
+  },
+  {
+    "width": 1280,
+    "lang": "ja",
+    "kind": "shipping",
+    "natural": {
+      "original": [
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        }
+      ],
+      "childrenWidths": [
+        {
+          "width": 201.25,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 113.4375,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 68.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        }
+      ],
+      "gap": 12,
+      "required": 407.5,
+      "available": 832,
+      "fits": true,
+      "referenceOnly": true
+    }
+  },
+  {
+    "width": 1280,
+    "lang": "ja",
+    "kind": "orders",
+    "natural": {
+      "original": [
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "512.859px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": "auto"
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        },
+        {
+          "grow": "0",
+          "basis": "auto",
+          "shrink": "1",
+          "marginLeft": "0px",
+          "marginRight": "0px",
+          "inlineMarginLeft": "",
+          "inlineMarginRight": ""
+        }
+      ],
+      "childrenWidths": [
+        {
+          "width": 112.890625,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 113.4375,
+          "marginLeft": 0,
+          "marginRight": 0
+        },
+        {
+          "width": 68.8125,
+          "marginLeft": 0,
+          "marginRight": 0
+        }
+      ],
+      "gap": 12,
+      "required": 319.140625,
+      "available": 832,
+      "fits": true,
+      "referenceOnly": true
+    }
+  }
+]
+PASS pairs 5

@@ -87,21 +87,21 @@ EXPORT_QUERIES = {
     },
     "deals": {
         "query": """
-            SELECT d.id, d.deal_code,
-                   COALESCE(co.billing_display_name, ba.name, co.name) AS customer_name,
-                   d.title, d.amount,
-                   d.currency, d.status, d.stage, d.probability,
-                   d.expected_close_date, d.notes, d.created_at, d.updated_at
-            FROM deals d
-            LEFT JOIN companies co ON d.company_id = co.id
+            SELECT l.id, l.lead_code,
+                   COALESCE(co.billing_display_name, ba.name, co.name, l.company_name, l.customer_name) AS customer_name,
+                   l.customer_name AS lead_name, l.amount,
+                   l.currency, l.status, l.expected_close_date,
+                   l.notes, l.created_at, l.updated_at
+            FROM leads l
+            LEFT JOIN companies co ON co.lead_id = l.id
             LEFT JOIN company_addresses ba ON ba.company_id = co.id
                  AND ba.address_type = 'billing' AND ba.is_default = TRUE
-            ORDER BY d.id
+            WHERE l.status IN ('negotiating', 'existing_customer', 'lost')
+            ORDER BY l.id
         """,
         "headers": [
-            "ID", "案件コード", "顧客名", "案件名", "金額",
-            "通貨", "ステータス", "ステージ", "成約確率(%)",
-            "成約予定日", "備考", "作成日", "更新日",
+            "ID", "リードコード", "顧客名", "リード名", "見込金額",
+            "通貨", "ステータス", "成約予定日", "備考", "作成日", "更新日",
         ],
     },
     "orders": {

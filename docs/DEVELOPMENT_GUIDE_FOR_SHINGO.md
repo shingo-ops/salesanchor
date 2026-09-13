@@ -47,9 +47,9 @@ salesanchor/
 
 ### 基本フロー
 ```
-develop（開発統合）  →  main（本番）
-    ↑                        ↑
-feature/xxx/機能名     PR (develop → main) でリリース
+release/<topic>（作業・出荷準備）  →  main（本番）
+    ↑                                    ↑
+feature/xxx/機能名（任意）          PR (release/* → main) でリリース
 ```
 
 ### ブランチ命名規則
@@ -67,19 +67,15 @@ feature/shingo/meta-webhook-integration
 ### 守るべきルール
 | ルール | 理由 |
 |-------|------|
-| **`develop` や `main` に直接コミットしない** | レビューなしの変更は事故の元 |
-| **必ず `develop` から feature ブランチを切る** | main は本番リリース専用 |
-| **feature → develop はPRでマージ** | 変更履歴とレビューが残る |
-| **develop → main もPRでマージ** | GitHub Actions で自動デプロイが走る |
+| **`main` に直接コミットしない** | レビューなしの変更は事故の元 |
+| **必ず `origin/main` から `release/<topic>` ブランチを切る** | main は本番リリース専用 |
+| **release/* → main はPRでマージ** | 変更履歴とレビューが残る・Branch Protection で強制 |
+| **危険な変更は PO の GO 記録が必須** | 本番事故防止（ADR-135/136） |
 
 ### 作業開始手順
 ```bash
-# 1. developを最新化
-git checkout develop
-git pull origin develop
-
-# 2. featureブランチを作成
-git checkout -b feature/shingo/my-new-feature
+# 1. 最新 main から作業台（worktree）を作成
+bash scripts/new-worktree.sh release/my-new-feature
 
 # 3. 作業＆コミット（こまめに！30分に1回以上）
 git add -A
@@ -97,7 +93,8 @@ git push origin HEAD
 | ブランチ | 状態 | 説明 |
 |---------|------|------|
 | `main` | 本番稼働中 | VPS (jarvis-claude.uk) で稼働 |
-| `develop` | 開発統合 | main と同期済み。**新ブランチはここから切る** |
+| `release/*` | 作業・出荷準備 | 最新 main から切る。main への PR 経由の唯一の入口 |
+| `develop` | ロールバック残置 | 新規作業では使用しない・物理的に消さない（第3便まで） |
 
 ### 全てマージ済み（触る必要なし）
 `feature/morimoto/*` ブランチが多数ありますが、**全て develop にマージ済み**です。GitHub上にリモートブランチが残っていますが、作業中のものはありません。
@@ -271,9 +268,9 @@ npx tsc --noEmit
 ## 8. デプロイの流れ
 
 ```
-feature/shingo/xxx → PR → develop にマージ
+feature/shingo/xxx（任意）→ release/<topic>
                               ↓
-                     develop → PR → main にマージ
+                     release/* → PR → main にマージ（PO GO 必須）
                               ↓
                      GitHub Actions 「Deploy to VPS」 が自動実行
                               ↓

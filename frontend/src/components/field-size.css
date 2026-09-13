@@ -1,0 +1,20 @@
+/* 入力部品 寸法金型（field-size）— design-system/component-ssot/field-size/design.md §1
+   高さ3段(h-sm/md/lg)×幅3段(w-sm/md/lg)を独立クラスで付与。
+   既存の .comp-field 等には手を入れず、この金型クラスを足した要素だけに効く。
+   字体・角丸・枠線は既存トークン管轄（本金型は高さ・幅のみ担当）。 */
+
+/* --- 高さ3段（min-heightで統一・box-sizing:border-boxで枠込み固定）--- */
+.field-h-sm { min-height: var(--field-h-sm, 28px); box-sizing: border-box; }
+.field-h-md { min-height: var(--field-h-md, 36px); box-sizing: border-box; }
+.field-h-lg { min-height: var(--field-h-lg, 44px); box-sizing: border-box; }
+
+/* --- 幅3段（widthで固定。lgは伸びるが上限あり）--- */
+.field-w-sm { width: var(--field-w-sm, 160px); }
+.field-w-md { width: var(--field-w-md, 280px); }
+.field-w-lg { width: 100%; max-width: var(--field-w-lg-max, 480px); }
+
+/* 操作台の中で使うとき、金型付き入力は縦積みラッパーの癖を打ち消す
+   （.comp-field の flex-column/margin-bottom/width:100% を金型側で上書き）*/
+.content-toolbar .field-w-sm,
+.content-toolbar .field-w-md,
+.content-toolbar .field-w-lg { margin-bottom: 0; }

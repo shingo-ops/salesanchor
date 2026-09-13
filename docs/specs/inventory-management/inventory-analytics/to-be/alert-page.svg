@@ -1,0 +1,43 @@
+<svg width="720" height="440" viewBox="0 0 720 440" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="440" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">検知・アナウンス</text>
+  <rect x="560" y="18" width="140" height="26" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="630" y="35" font-size="10" fill="#2c2c2a" text-anchor="middle">&#9881; しきい値を設定</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">検知ルールに合致すると、根拠数値つきでここに通知されます</text>
+
+  <rect x="24" y="70" width="672" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <rect x="24" y="70" width="4" height="70" fill="#c4432f"/>
+  <text x="40" y="92" font-size="13" font-weight="600" fill="#2c2c2a">151 BOX（A社）価格下落</text>
+  <text x="680" y="88" font-size="10" fill="#888780" text-anchor="end">3分前</text>
+  <text x="40" y="112" font-size="11" fill="#5f5e5a">7日間で ¥18,300 → ¥16,800（-8.2%）</text>
+  <text x="40" y="128" font-size="10" fill="#888780">検知ルール: 価格7日±10% ・ 実測 -8.2%</text>
+
+  <rect x="24" y="150" width="672" height="70" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <rect x="24" y="150" width="4" height="70" fill="#c98a1f"/>
+  <text x="40" y="172" font-size="13" font-weight="600" fill="#2c2c2a">ARバルク（B社）在庫急減</text>
+  <text x="680" y="168" font-size="10" fill="#888780" text-anchor="end">1時間前</text>
+  <text x="40" y="192" font-size="11" fill="#5f5e5a">24時間で 40個 → 12個（-70%）</text>
+  <text x="40" y="208" font-size="10" fill="#888780">検知ルール: 在庫24時間50%減 ・ 実測 -70%</text>
+
+  <rect x="24" y="240" width="672" height="130" rx="8" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="40" y="264" font-size="12" font-weight="600" fill="#2c2c2a">しきい値を設定（参考表示）</text>
+
+  <text x="40" y="292" font-size="11" fill="#5f5e5a">価格変動（日数指定）</text>
+  <rect x="200" y="280" width="36" height="20" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="218" y="294" font-size="11" fill="#2c2c2a" text-anchor="middle">7</text>
+  <text x="244" y="292" font-size="11" fill="#5f5e5a">日で</text>
+  <rect x="272" y="280" width="46" height="20" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="295" y="294" font-size="11" fill="#2c2c2a" text-anchor="middle">±10</text>
+  <text x="328" y="292" font-size="11" fill="#5f5e5a">%以上</text>
+
+  <text x="40" y="330" font-size="11" fill="#5f5e5a">在庫変動（時間指定）</text>
+  <rect x="200" y="318" width="36" height="20" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="218" y="332" font-size="11" fill="#2c2c2a" text-anchor="middle">24</text>
+  <text x="244" y="330" font-size="11" fill="#5f5e5a">時間で</text>
+  <rect x="280" y="318" width="46" height="20" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="303" y="332" font-size="11" fill="#2c2c2a" text-anchor="middle">50</text>
+  <text x="336" y="330" font-size="11" fill="#5f5e5a">%減以上</text>
+
+  <text x="360" y="400" font-size="10" fill="#888780" text-anchor="middle">アナウンスは根拠数値（変動前後・期間）つきで届く。しきい値は運用しながら調整可能</text>
+</svg>

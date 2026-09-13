@@ -1,0 +1,10 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "cases": [],
+  "future": [],
+  "keyboard": [],
+  "errors": [],
+  "externalRequests": [],
+  "status": "FAIL",
+  "failure": "Error: page.evaluate: Error: Natural width probe did not restore original\n    at eval (eval at evaluate (:302:30), <anonymous>:1:1855)\n    at async <anonymous>:328:30"
+}

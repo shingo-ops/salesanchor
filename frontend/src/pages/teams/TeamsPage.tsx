@@ -17,6 +17,7 @@ import { Drawer } from "../../components/Drawer";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
@@ -171,15 +172,17 @@ export default function TeamsPage() {
     <PageLayout
       navKey="nav.teams"
       subtitleKey="teams.subtitle"
-      headerAction={hasPermission("teams.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
-            {t("teams.newTeam")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("teams.create") ? (
+        <ContentToolbar
+          right={
+            <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
+              {t("teams.newTeam")}
+            </button>
+          }
+        />
+      ) : undefined}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal

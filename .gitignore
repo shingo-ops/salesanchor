@@ -62,9 +62,11 @@ scripts/output/
 # 原本スプレッドシートCSV（個人情報・顧客データを含むため絶対に上げない）
 sheets/
 
-# Claude Code エージェント（reviewer/evaluator等）のローカル成果物（active-work.md のみ共有SSoTとして追跡）
+# Claude Code エージェント（reviewer/evaluator等）のローカル成果物（active-work.md と active-work.d/ のポストを共有SSoTとして追跡・ledger-guard design-phase2）
 .claude-pipeline/*
 !.claude-pipeline/active-work.md
+!.claude-pipeline/active-work.d/
+!.claude-pipeline/active-work.d/*.md
 
 # Claude Code: allowlist 戦略
 # - `.claude/*` を一括 ignore し、チーム共有したい資産だけ `!` で取り戻す

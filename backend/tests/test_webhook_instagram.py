@@ -52,6 +52,9 @@ _LEADS_DDL = """
         tenant_id INTEGER NOT NULL DEFAULT 999,
         lead_code VARCHAR(20),
         customer_name VARCHAR(255) NOT NULL,
+        amount NUMERIC(15,2),
+        currency VARCHAR(10) DEFAULT 'JPY',
+        expected_close_date DATE,
         company_name VARCHAR(255),
         email VARCHAR(255),
         phone VARCHAR(50),
@@ -109,6 +112,8 @@ _META_MESSAGES_DDL = """
         seen_by_staff_id INTEGER,
         page_id VARCHAR(50),
         original_language VARCHAR(10),
+        attachment_url TEXT,
+        attachment_type VARCHAR(20),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
 """

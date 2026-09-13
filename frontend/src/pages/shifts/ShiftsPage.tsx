@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 import { Select } from "../../components/Select";
 import { DataTable } from "../../components/DataTable";
@@ -44,13 +45,13 @@ export default function ShiftsPage() {
     <PageLayout
       navKey="nav.shifts"
       subtitleKey="shifts.subtitle"
-      headerAction={hasPermission("shifts.manage") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      <ContentToolbar
+        right={hasPermission("shifts.manage") ? (
+          <button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</button>
+        ) : undefined}
+      />
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}

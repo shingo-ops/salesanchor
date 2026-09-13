@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 410" font-family="sans-serif">
+  <style>
+    .t{font-size:13px;fill:#1a1a1a}.s{font-size:11px;fill:#555}.h{font-size:13px;font-weight:600;fill:#1a1a1a}
+    .gray{fill:#f0eee9;stroke:#b0aca4;stroke-width:0.5}
+    .purple{fill:#ece8f6;stroke:#7C6BB8;stroke-width:0.5}
+    .teal{fill:#e0efee;stroke:#3E7C7B;stroke-width:0.5}
+    .ln{stroke:#9a968e;stroke-width:1;fill:none}
+  </style>
+  <rect class="gray" x="80" y="40" width="230" height="52" rx="8"/><text class="h" x="195" y="60" text-anchor="middle">源泉データ（原本・SSOT）</text><text class="s" x="195" y="80" text-anchor="middle">受信箱・リード・受注・商品・目標</text>
+  <rect class="purple" x="380" y="40" width="230" height="52" rx="8"/><text class="h" x="495" y="60" text-anchor="middle">提案エンジン（決定論/統計）</text><text class="s" x="495" y="80" text-anchor="middle">AIは言語化層のみ D3 D7 D8</text>
+  <line class="ln" x1="310" y1="66" x2="378" y2="66"/><polygon points="378,66 370,62 370,70" fill="#9a968e"/>
+  <text class="s" x="500" y="112">結果を記録し学習 D7</text>
+  <line class="ln" x1="195" y1="92" x2="290" y2="136"/><polygon points="290,136 281,134 285,127" fill="#9a968e"/>
+  <line class="ln" x1="470" y1="92" x2="400" y2="136"/><polygon points="400,136 405,128 409,135" fill="#9a968e"/>
+  <rect class="purple" x="230" y="140" width="220" height="52" rx="8"/><text class="h" x="340" y="160" text-anchor="middle">やることフィード</text><text class="s" x="340" y="180" text-anchor="middle">超過→当日→重要・上限N件</text>
+  <line class="ln" x1="290" y1="192" x2="150" y2="250"/><polygon points="150,250 156,243 160,250" fill="#9a968e"/>
+  <line class="ln" x1="340" y1="192" x2="340" y2="250"/><polygon points="340,250 336,242 344,242" fill="#9a968e"/>
+  <line class="ln" x1="390" y1="192" x2="530" y2="250"/><polygon points="530,250 520,250 524,243" fill="#9a968e"/>
+  <rect class="teal" x="40" y="254" width="180" height="52" rx="8"/><text class="h" x="130" y="274" text-anchor="middle">ダッシュボード</text><text class="s" x="130" y="294" text-anchor="middle">羅針盤 数字＋CTA</text>
+  <rect class="teal" x="250" y="254" width="180" height="52" rx="8"/><text class="h" x="340" y="274" text-anchor="middle">カレンダー</text><text class="s" x="340" y="294" text-anchor="middle">時間の地図＋CTA</text>
+  <rect class="teal" x="460" y="254" width="180" height="52" rx="8"/><text class="h" x="550" y="274" text-anchor="middle">通知</text><text class="s" x="550" y="294" text-anchor="middle">開いていない時の呼び鈴</text>
+  <line class="ln" x1="222" y1="280" x2="248" y2="280"/><polygon points="222,280 230,276 230,284" fill="#9a968e"/><polygon points="248,280 240,276 240,284" fill="#9a968e"/>
+  <line class="ln" x1="70" y1="254" x2="90" y2="94" stroke-dasharray="4 4"/><polygon points="90,94 85,102 93,103" fill="#9a968e"/>
+  <text class="s" x="16" y="170">確認つき</text><text class="s" x="16" y="186">原本更新</text>
+  <rect class="gray" x="40" y="346" width="180" height="34" rx="8"/><text class="h" x="130" y="367" text-anchor="middle">目標設定ページ D9</text>
+  <line class="ln" x1="130" y1="306" x2="130" y2="344"/><polygon points="130,344 126,336 134,336" fill="#9a968e"/>
+  <text class="s" x="340" y="400" text-anchor="middle">上=3レンズに分離／下=1本の原本に統合（SSOT）</text>
+</svg>

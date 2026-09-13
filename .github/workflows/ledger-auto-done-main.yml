@@ -1,0 +1,142 @@
+name: 台帳の自動DONE化（main）
+
+# main への PR がマージされた瞬間に active-work.d の単票を DONE 化し、
+# 台帳PRを作って自動マージする。
+#
+# 設計: docs/handoff/ledger-auto-done-main/design.md
+#
+# 重要な前提（2026-09-02 実測）:
+# - main は ruleset 15777895 により pull_request 必須。直接 push はできない。
+# - GITHUB_TOKEN で作った PR は CI が走らず auto-merge が永久に待つ。
+#   そのため PR 作成・push には PIPELINE_PAT を使う。
+# - 台帳のみの変更は check-process-artifacts.js の DOCS_PATTERNS に該当し
+#   「書類のみの変更 — 自動スキップ（pass）」となる。GO記録は不要。
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+concurrency:
+  group: ledger-auto-done-main
+  cancel-in-progress: false
+
+jobs:
+  ledger-done:
+    if: >
+      github.event.pull_request.merged == true &&
+      !startsWith(github.event.pull_request.head.ref, 'release/ledger-done-') &&
+      !startsWith(github.event.pull_request.head.ref, 'release/ledger-auto-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          token: ${{ secrets.PIPELINE_PAT }}
+          fetch-depth: 0
+
+      - name: Check ledger entry exists
+        id: check
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          SAFE="${BRANCH//\//-}"
+          DFILE=".claude-pipeline/active-work.d/${SAFE}.md"
+          if [ -f "${DFILE}" ]; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+            echo "dfile=${DFILE}" >> "$GITHUB_OUTPUT"
+            echo "found: ${DFILE}"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "not found (skip): ${DFILE}"
+          fi
+
+      - name: Update to DONE
+        if: steps.check.outputs.found == 'true'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DFILE: ${{ steps.check.outputs.dfile }}
+        run: |
+          bash scripts/ledger-update.sh "${BRANCH}" --status DONE || {
+            echo "::warning::DONE update failed (skip)"
+            exit 0
+          }
+          bash scripts/ledger-update.sh "${BRANCH}" --pr "${PR_NUMBER}" || {
+            echo "::warning::PR number update failed (skip)"
+            exit 0
+          }
+          cat "${DFILE}"
+
+      - name: Create ledger PR and enable auto-merge
+        if: steps.check.outputs.found == 'true'
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          DFILE: ${{ steps.check.outputs.dfile }}
+        run: |
+          if git diff --quiet "${DFILE}"; then
+            echo "no change (already DONE) - skip"
+            exit 0
+          fi
+
+          LEDGER_BRANCH="release/ledger-done-${PR_NUMBER}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${LEDGER_BRANCH}"
+          git add "${DFILE}"
+          git commit -m "chore(ledger): PR #${PR_NUMBER} を DONE 化（自動）"
+
+          if ! git push origin "${LEDGER_BRANCH}"; then
+            echo "::warning::push failed (skip)"
+            exit 0
+          fi
+
+          BODY_FILE="$(mktemp)"
+          {
+            echo "## 変更概要"
+            echo ""
+            echo "PR #${PR_NUMBER} のマージ完了に伴い、台帳を DONE 化する。"
+            echo "本PRは .github/workflows/ledger-auto-done-main.yml が自動生成した。"
+            echo ""
+            echo "## マージ実測"
+            echo ""
+            echo "- 元PR: #${PR_NUMBER}"
+            echo "- ブランチ: ${BRANCH}"
+            echo "- mergeCommit: ${MERGE_SHA}"
+            echo ""
+            echo "### 標準ワークフロー確認"
+            echo ""
+            echo "対象ADR: ADR-114"
+            echo "recon: docs/handoff/ledger-auto-done-main/recon.md"
+            echo "設計: docs/handoff/ledger-auto-done-main/design.md"
+            echo "触るファイル:"
+            echo "${DFILE}"
+            echo "削除するファイル:"
+            echo "${DFILE}"
+            echo ""
+            echo "### GO記録"
+            echo ""
+            echo "GO発行者: 自動（台帳のみの変更のため GO 不要）"
+            echo "日時: 自動"
+            echo "GO原文: 自動"
+            echo "バックアップ確認: 該当なし（台帳のみ・DB変更なし）"
+          } > "${BODY_FILE}"
+
+          if ! PR_URL="$(gh pr create --base main --head "${LEDGER_BRANCH}" --title "chore(ledger): PR #${PR_NUMBER} を DONE 化（自動）" --body-file "${BODY_FILE}")"; then
+            echo "::warning::gh pr create failed (skip)"
+            exit 0
+          fi
+
+          echo "created: ${PR_URL}"
+
+          if gh pr merge --auto --merge "${PR_URL}"; then
+            echo "auto-merge enabled"
+          else
+            echo "::warning::auto-merge failed - manual merge required"
+            exit 0
+          fi

@@ -14,6 +14,8 @@
  *   GH_TOKEN      GitHub API トークン（CI では自動設定）
  * テスト用モック変数:
  *   CHANGED_FILES 改行区切りのファイルパスリスト（BASE_SHA/HEAD_SHA の代替）
+ *   MOCK_ADDED_FILES 新規追加ファイルの改行区切りリスト（added= A の代替）
+ *   MOCK_ORIGIN_MAIN_FILES latest origin/main の改行区切りファイルリスト
  *   MOCK_PR_BODY  PR 本文テキスト（GitHub API の代替）
  *   MOCK_PR_AUTHOR PR 作者ログイン（GitHub API の代替）
  */
@@ -25,12 +27,16 @@ const { analyzeRepositoryDiff } = require('./detect-external-api-change');
 const { join } = require('path');
 
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
+let cachedOriginMainPaths = null;
 
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
 
 // ─── GO権限（PO単独）────────────────────────────────────────────────────────
 const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
+
+// ─── 維持の仕組み欄の猶予閾値（GRACE_THRESHOLD_PR と同値） ───────────────────
+const MAINTENANCE_GRACE_PR = 2600;
 
 // ─── パス区分定義（design.md §1） ────────────────────────────────────────────
 const DOCS_PATTERNS = [
@@ -43,6 +49,18 @@ const DOCS_PATTERNS = [
   /^\.codex\//,
   /^\.github\/(?!workflows\/)/,
 ];
+
+// ─── 正本ファイル（書類のみでも照合を飛ばさない・柱2 design-pillar2.md）──────
+const CANONICAL_DOCS_PATTERNS = [
+  /^docs\/specs\/.*\/ideal-state\.md$/,
+  /^docs\/specs\/.*\/kgi\.md$/,
+  /^docs\/ai-agents\/(?!lessons\.d\/).*\.md$/,
+  /^(CLAUDE|AGENTS)\.md$/,
+];
+
+function hasCanonicalDoc(files) {
+  return files.some(f => CANONICAL_DOCS_PATTERNS.some(r => r.test(f)));
+}
 
 const DANGEROUS_PATTERNS = [
   /^migrations\//,                       // DBマイグレーション（ADR-135）
@@ -121,6 +139,59 @@ function getExternalApiChangeReport() {
   }
 
   return analyzeRepositoryDiff({ baseRef, headRef });
+}
+
+function parseLineList(envValue) {
+  return envValue
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+}
+
+function getAddedFiles() {
+  if (process.env.MOCK_ADDED_FILES !== undefined) {
+    return parseLineList(process.env.MOCK_ADDED_FILES);
+  }
+
+  const base = process.env.BASE_SHA;
+  const head = process.env.HEAD_SHA;
+  if (!base || !head) {
+    return [];
+  }
+
+  const output = execSync(
+    `git diff --name-status --diff-filter=A "${base}...${head}"`,
+    { encoding: 'utf8' }
+  ).trim();
+
+  if (!output) {
+    return [];
+  }
+
+  return output
+    .split('\n')
+    .map(line => line.split('\t').slice(1).join('\t').trim())
+    .filter(Boolean);
+}
+
+function getLatestOriginMainPaths() {
+  if (process.env.MOCK_ORIGIN_MAIN_FILES !== undefined) {
+    return new Set(parseLineList(process.env.MOCK_ORIGIN_MAIN_FILES));
+  }
+
+  if (cachedOriginMainPaths) {
+    return cachedOriginMainPaths;
+  }
+
+  execSync('git fetch origin main --quiet', { stdio: 'pipe' });
+  const output = execSync('git ls-tree -r --name-only origin/main', { encoding: 'utf8' }).trim();
+  const paths = output ? parseLineList(output) : [];
+  cachedOriginMainPaths = new Set(paths);
+  return cachedOriginMainPaths;
+}
+
+function findAddedPathsAlreadyInMain(addedFiles, originMainPaths) {
+  return addedFiles.filter(filePath => originMainPaths.has(filePath));
 }
 
 // ─── PR 本文パース ────────────────────────────────────────────────────────────
@@ -379,6 +450,42 @@ function validateDesignDoc(designContent, reconPath, adr) {
   return errors;
 }
 
+// ─── 維持の仕組み欄 検証（正本§1.7・design-partner-loop maintenance-gate） ──
+// 検査A: 「## 維持の仕組み」欄の存在と「守り手:」行の非空
+// 検査B: 守り手パスの実在（「人手で守る」宣言時はスキップ）
+function validateMaintenanceSection(designContent) {
+  const errors = [];
+  const headingMatch = /^##[^\n]*維持の仕組み[^\n]*$/m.exec(designContent);
+  if (!headingMatch) {
+    errors.push('  ❌ 設計docに「## 維持の仕組み」欄がありません（正本§1.7・空欄不可）');
+    return errors;
+  }
+  const afterHeading = designContent.slice(headingMatch.index + headingMatch[0].length);
+  const nextSectionMatch = afterHeading.match(/\n##/);
+  const sectionContent = nextSectionMatch
+    ? afterHeading.slice(0, nextSectionMatch.index)
+    : afterHeading;
+  const guardianMatch = sectionContent.match(/守り手:\s*([^\n]*)/);
+  const guardianValue = guardianMatch ? guardianMatch[1].trim() : '';
+  if (!guardianValue) {
+    errors.push('  ❌ 「維持の仕組み」欄の「守り手:」が空欄です（関所パス、または「人手で守る」＋理由）');
+    return errors;
+  }
+  if (/人手で守る/.test(guardianValue)) {
+    return errors; // 関所なし宣言 — 理由の適切性は人のレビュー
+  }
+  const pathMatch = guardianValue.match(/[\w.\-]+(?:\/[\w.\-]+)+/);
+  if (!pathMatch) {
+    errors.push(`  ❌ 「守り手:」にファイルパスが見つかりません（「${guardianValue}」）`);
+    return errors;
+  }
+  const guardianPath = normalizeCitationPath(pathMatch[0]);
+  if (!existsSync(join(repoRoot, guardianPath))) {
+    errors.push(`  ❌ 守り手ファイルが存在しません: ${guardianPath}`);
+  }
+  return errors;
+}
+
 function normalizeAdrList(adrOrAdrs) {
   if (!adrOrAdrs) return [];
   const list = Array.isArray(adrOrAdrs) ? adrOrAdrs : [adrOrAdrs];
@@ -516,6 +623,20 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
       const designContent = readFileSync(fullDesignPath, 'utf8');
       const designErrors = validateDesignDoc(designContent, reconPath, adrs);
       errors.push(...designErrors);
+
+      // 維持の仕組み欄 検査（PR番号2600以上のみ・初期は警告モード）
+      const maintenancePrNumber = parseInt(process.env.PR_NUMBER, 10);
+      if (maintenancePrNumber >= MAINTENANCE_GRACE_PR) {
+        const maintenanceErrors = validateMaintenanceSection(designContent);
+        if (maintenanceErrors.length > 0) {
+          if (process.env.MAINTENANCE_ENFORCE === 'fail') {
+            errors.push(...maintenanceErrors);
+          } else {
+            console.warn('⚠️  維持の仕組み欄チェック（警告モード・将来failへ引き上げ予定）:');
+            for (const e of maintenanceErrors) console.warn(e);
+          }
+        }
+      }
     }
   }
 
@@ -559,9 +680,24 @@ function main() {
 
   const { hasDangerous, hasRealCode, hasDocsOnly } = classifyChanges(changedFiles);
 
-  if (hasDocsOnly) {
+  if (hasDocsOnly && !hasCanonicalDoc(changedFiles)) {
     console.log('✅ 書類のみの変更 — 自動スキップ（pass）');
     process.exit(0);
+  }
+  if (hasDocsOnly && hasCanonicalDoc(changedFiles)) {
+    console.log('ℹ️ 書類のみだが正本を含む — 宣言照合へ進む（柱2）');
+  }
+
+  const addedFiles = getAddedFiles();
+  if (addedFiles.length > 0) {
+    const duplicateAddedFiles = findAddedPathsAlreadyInMain(addedFiles, getLatestOriginMainPaths());
+    if (duplicateAddedFiles.length > 0) {
+      printFailure([
+        '❌ 新規作成したファイルが最新 origin/main に既に存在します',
+        ...duplicateAddedFiles.map(filePath => `   - ${filePath}`),
+        '   → このパスは既に main に在ります。古い土台で作業している可能性が高いので、最新 origin/main に rebase してやり直してください',
+      ]);
+    }
   }
 
   // PR 作者チェック（コード変更を含む PR のみ）
@@ -671,13 +807,14 @@ function main() {
         if (!declaration || !declaration.deleteFiles || declaration.deleteFiles.length === 0) {
           deleteErrors.push('❌ PR本文に「削除するファイル:」の宣言がありません（PR番号2600以上で必須）');
           deleteErrors.push('   → 「### 標準ワークフロー確認」の「削除するファイル:」にリポジトリ相対パスを記入してください');
-          deleteErrors.push('   → 削除が無い場合は「削除するファイル: なし」と記入してください');
+          deleteErrors.push('   ※「削除するファイル」とは、丸ごと消したファイルだけでなく、1行でも削除・変更した行があるファイルを指します');
+          deleteErrors.push('   → 行の削除・変更が無い場合は「削除するファイル: なし」と記入してください');
         } else {
           const undeclaredDeletes = deletedFiles.filter(f => !declaration.deleteFiles.includes(f));
           if (undeclaredDeletes.length > 0) {
             deleteErrors.push('❌ 宣言外のファイルから行を削除しています:');
             undeclaredDeletes.forEach(f => deleteErrors.push(`   - ${f}`));
-            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない削除を除去してください');
+            deleteErrors.push('   → 「削除するファイル:」に追記するか、意図しない変更を除去してください');
           }
         }
         if (deleteErrors.length > 0) {
@@ -739,6 +876,7 @@ function main() {
 module.exports = {
   classifyFile,
   classifyChanges,
+  hasCanonicalDoc,
   hasUserImpactingChange,
   isUserImpactingFile,
   getExternalApiChangeReport,
@@ -750,6 +888,7 @@ module.exports = {
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
+  validateMaintenanceSection,
 };
 
 // CLI として直接実行された場合のみ main() を呼ぶ

@@ -17,6 +17,9 @@
 -- 作成日: 2026-06-12
 -- 関連: docs/handoff/funnel-dashboard-stage1/design.md §2.2
 --       docs/adr/ADR-138-funnel-dashboard-stage1.md §D1-2
+-- ガード: deals テーブルが存在しないスキーマはスキップ（deals 廃止後の新テナント対応）
+--         後続マイグレーション (20260721, 20260724) は deal_close_reasons/close_reasons の
+--         存在確認ガードを持つため、スキップしても migration chain は破綻しない。
 
 DO $$
 DECLARE
@@ -29,6 +32,17 @@ BEGIN
         WHERE nspname ~ '^tenant_\d+$'
         ORDER BY nspname
     LOOP
+        -- deals テーブルが存在しない場合はスキップ
+        -- (deal_close_reasons は deals への FK を持つため deals なしでは作成不可)
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_rec.schema_name
+              AND table_name = 'deals'
+        ) THEN
+            RAISE NOTICE 'Migration 102: skipping schema %: deals table does not exist', schema_rec.schema_name;
+            CONTINUE;
+        END IF;
+
         RAISE NOTICE 'Migration 102: processing schema %', schema_rec.schema_name;
 
         -- ── 1. close_reasons マスタテーブル ──────────────────────────────────
@@ -45,27 +59,40 @@ BEGIN
         $sql$, schema_rec.schema_name);
 
         -- ── 2. deal_close_reasons 中間表（主因1 + 副因複数）────────────────
-        EXECUTE format($sql$
-            CREATE TABLE IF NOT EXISTS %I.deal_close_reasons (
-                id         SERIAL PRIMARY KEY,
-                deal_id    INTEGER NOT NULL
-                               REFERENCES %I.deals(id) ON DELETE CASCADE,
-                reason_id  INTEGER NOT NULL
-                               REFERENCES %I.close_reasons(id),
-                is_primary BOOLEAN NOT NULL DEFAULT false,
-                UNIQUE (deal_id, reason_id)
-            )
-        $sql$,
-            schema_rec.schema_name,
-            schema_rec.schema_name,
-            schema_rec.schema_name
-        );
+        IF NOT EXISTS (
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = schema_rec.schema_name
+              AND table_name = 'deal_close_reasons'
+        ) THEN
+            EXECUTE format($sql$
+                CREATE TABLE %I.deal_close_reasons (
+                    id         SERIAL PRIMARY KEY,
+                    deal_id    INTEGER NOT NULL
+                                   REFERENCES %I.deals(id) ON DELETE CASCADE,
+                    reason_id  INTEGER NOT NULL
+                                   REFERENCES %I.close_reasons(id),
+                    is_primary BOOLEAN NOT NULL DEFAULT false,
+                    UNIQUE (deal_id, reason_id)
+                )
+            $sql$,
+                schema_rec.schema_name,
+                schema_rec.schema_name,
+                schema_rec.schema_name
+            );
+        END IF;
 
-        EXECUTE format(
-            'CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_deal
-             ON %I.deal_close_reasons (deal_id)',
-            schema_rec.schema_name
-        );
+        IF EXISTS (
+            SELECT 1 FROM information_schema.columns
+            WHERE table_schema = schema_rec.schema_name
+              AND table_name = 'deal_close_reasons'
+              AND column_name = 'deal_id'
+        ) THEN
+            EXECUTE format(
+                'CREATE INDEX IF NOT EXISTS idx_deal_close_reasons_deal
+                 ON %I.deal_close_reasons (deal_id)',
+                schema_rec.schema_name
+            );
+        END IF;
 
         -- ── 3. deals.close_reason_memo 追加 ──────────────────────────────────
         EXECUTE format(

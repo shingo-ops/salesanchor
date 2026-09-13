@@ -1,0 +1,60 @@
+<svg width="820" height="360" viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="820" height="360" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="328" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">管理センター</text>
+  <text x="36" y="66" font-size="9" fill="#888780" letter-spacing="0.5">チーム管理</text>
+  <text x="40" y="88" font-size="12" fill="#5f5e5a">スタッフ</text>
+  <text x="40" y="114" font-size="12" fill="#5f5e5a">ロール</text>
+  <rect x="16" y="124" width="200" height="30" fill="#e6f1fb"/>
+  <rect x="16" y="124" width="3" height="30" fill="#378add"/>
+  <text x="40" y="143" font-size="12" fill="#0c447c" font-weight="600">シフト</text>
+
+  <text x="236" y="42" font-size="16" font-weight="600" fill="#2c2c2a">シフト</text>
+  <rect x="618" y="26" width="52" height="24" rx="6" fill="#e6f1fb"/>
+  <text x="644" y="42" font-size="10" fill="#0c447c" text-anchor="middle">週間</text>
+  <text x="686" y="42" font-size="10" fill="#5f5e5a">月間</text>
+  <text x="740" y="42" font-size="10" fill="#5f5e5a">&#8249; 7/14〜7/20 &#8250;</text>
+
+  <line x1="236" y1="66" x2="800" y2="66" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="242" y="86" font-size="10" fill="#888780">担当者</text>
+  <text x="342" y="86" font-size="10" fill="#888780" text-anchor="middle">月14</text>
+  <text x="400" y="86" font-size="10" fill="#888780" text-anchor="middle">火15</text>
+  <text x="458" y="86" font-size="10" fill="#888780" text-anchor="middle">水16</text>
+  <text x="516" y="86" font-size="10" fill="#888780" text-anchor="middle">木17</text>
+  <text x="574" y="86" font-size="10" fill="#888780" text-anchor="middle">金18</text>
+  <text x="632" y="86" font-size="10" fill="#c4432f" text-anchor="middle">土19</text>
+  <text x="690" y="86" font-size="10" fill="#c4432f" text-anchor="middle">日20</text>
+  <line x1="236" y1="94" x2="800" y2="94" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="118" font-size="12" fill="#2c2c2a">田中 太郎</text>
+  <rect x="320" y="106" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="342" y="119" font-size="9" fill="#0c447c" text-anchor="middle">9-18</text>
+  <rect x="378" y="106" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="400" y="119" font-size="9" fill="#0c447c" text-anchor="middle">9-18</text>
+  <rect x="436" y="106" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="458" y="119" font-size="9" fill="#0c447c" text-anchor="middle">9-18</text>
+  <text x="516" y="119" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <rect x="552" y="106" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="574" y="119" font-size="9" fill="#0c447c" text-anchor="middle">9-18</text>
+  <text x="632" y="119" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <text x="690" y="119" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <line x1="236" y1="132" x2="800" y2="132" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="156" font-size="12" fill="#2c2c2a">佐藤 花子</text>
+  <rect x="320" y="144" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="342" y="157" font-size="9" fill="#0c447c" text-anchor="middle">10-19</text>
+  <text x="400" y="157" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <rect x="436" y="144" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="458" y="157" font-size="9" fill="#0c447c" text-anchor="middle">10-19</text>
+  <rect x="494" y="144" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="516" y="157" font-size="9" fill="#0c447c" text-anchor="middle">10-19</text>
+  <rect x="552" y="144" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="574" y="157" font-size="9" fill="#0c447c" text-anchor="middle">10-19</text>
+  <rect x="610" y="144" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="632" y="157" font-size="9" fill="#0c447c" text-anchor="middle">10-19</text>
+  <text x="690" y="157" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <line x1="236" y1="170" x2="800" y2="170" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="194" font-size="12" fill="#2c2c2a">鈴木 次郎</text>
+  <text x="342" y="194" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <rect x="378" y="182" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="400" y="195" font-size="9" fill="#0c447c" text-anchor="middle">13-20</text>
+  <rect x="436" y="182" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="458" y="195" font-size="9" fill="#0c447c" text-anchor="middle">13-20</text>
+  <rect x="494" y="182" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="516" y="195" font-size="9" fill="#0c447c" text-anchor="middle">13-20</text>
+  <text x="574" y="195" font-size="9" fill="#888780" text-anchor="middle">休</text>
+  <rect x="610" y="182" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="632" y="195" font-size="9" fill="#0c447c" text-anchor="middle">13-20</text>
+  <rect x="668" y="182" width="44" height="18" rx="3" fill="#e6f1fb"/><text x="690" y="195" font-size="9" fill="#0c447c" text-anchor="middle">13-20</text>
+
+  <text x="518" y="330" font-size="10" fill="#888780" text-anchor="middle">マスをクリックすると、そのシフトを編集できる。土日は列見出しを赤系で区別</text>
+</svg>

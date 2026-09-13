@@ -63,6 +63,7 @@ async def issue_state(
     staff_id: int,
     *,
     ttl_seconds: int = _DEFAULT_TTL_SECONDS,
+    extra: dict | None = None,
 ) -> dict[str, object]:
     """state を新規発行し、Redis に Fernet 暗号化したペイロードを TTL 付きで保存する。
 
@@ -70,6 +71,9 @@ async def issue_state(
         tenant_id: 接続を開始したテナント ID
         staff_id: 開始した staff の ID（監査用）
         ttl_seconds: state の有効期間（既定 600 秒）
+        extra: 任意の追加キーを payload に merge する（省略可）。
+            予約済みキー ``tenant_id`` / ``staff_id`` / ``created_at`` / ``nonce``
+            と衝突する場合は ValueError を送出する。
 
     Returns:
         {
@@ -101,6 +105,12 @@ async def issue_state(
         "created_at": now.isoformat(),
         "nonce": nonce,
     }
+    if extra:
+        _RESERVED = {"tenant_id", "staff_id", "created_at", "nonce"}
+        conflicts = _RESERVED & extra.keys()
+        if conflicts:
+            raise ValueError(f"extra のキーが予約済みキーと衝突します: {conflicts}")
+        payload.update(extra)
     encrypted = encryption.encrypt(json.dumps(payload, separators=(",", ":")))
 
     try:

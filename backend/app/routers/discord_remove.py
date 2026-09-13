@@ -28,7 +28,6 @@ from app.auth.dependencies import (
     tenant_table_ref,
 )
 from app.database import get_db
-from app.discord_gateway.config import load_tenant_bot_configs
 from app.models import User
 from app.services.audit import record_audit_log
 
@@ -36,12 +35,9 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 
-def _get_bot_token(tenant_id: int) -> str | None:
-    token = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
-    if token:
-        return token
-    cfg = next((c for c in load_tenant_bot_configs() if c.tenant_id == tenant_id), None)
-    return cfg.bot_token if cfg else None
+def _get_bot_token() -> str | None:
+    """共通 Bot Token を取得する (ADR-146 B方式)."""
+    return os.environ.get("DISCORD_BOT_TOKEN") or None
 
 
 async def _get_lead_discord_info(
@@ -99,7 +95,7 @@ async def remove_from_channel(
     if not channel_id:
         raise HTTPException(status_code=409, detail="チケットチャンネルが設定されていません。")
 
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。")
 
@@ -155,7 +151,7 @@ async def kick_member(
     """顧客を Discord サーバーから Kick する（再参加可能）。"""
     discord_user_id, _ = await _get_lead_discord_info(db, tenant_id, lead_id)
     guild_id = await _get_guild_id(db, tenant_id)
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。")
 
@@ -205,7 +201,7 @@ async def ban_member(
     """顧客を Discord サーバーから BAN する（再参加不可）。"""
     discord_user_id, _ = await _get_lead_discord_info(db, tenant_id, lead_id)
     guild_id = await _get_guild_id(db, tenant_id)
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。")
 

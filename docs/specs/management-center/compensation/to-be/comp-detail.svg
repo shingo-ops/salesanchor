@@ -1,0 +1,46 @@
+<svg width="720" height="620" viewBox="0 0 720 620" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="620" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; 報酬設定</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">佐藤 花子</text>
+
+  <rect x="24" y="70" width="672" height="80" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="12" font-weight="600" fill="#2c2c2a">時給</text>
+  <rect x="640" y="80" width="34" height="18" rx="9" fill="#378add"/><circle cx="663" cy="89" r="7" fill="#ffffff"/>
+  <rect x="38" y="106" width="120" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="122" font-size="11" fill="#2c2c2a">¥1,200</text>
+  <text x="168" y="122" font-size="10" fill="#5f5e5a">/ 時間</text>
+
+  <rect x="24" y="164" width="672" height="150" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="186" font-size="12" font-weight="600" fill="#2c2c2a">件数単価</text>
+  <rect x="120" y="176" width="30" height="16" rx="8" fill="#378add"/><circle cx="141" cy="184" r="6" fill="#ffffff"/>
+  <rect x="618" y="176" width="66" height="22" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="651" y="191" font-size="10" fill="#0c447c" text-anchor="middle">+ 追加</text>
+
+  <rect x="38" y="206" width="26" height="14" rx="7" fill="#378add"/><circle cx="57" cy="213" r="5" fill="#ffffff"/>
+  <text x="74" y="217" font-size="11" fill="#2c2c2a">リード対応</text>
+  <text x="560" y="217" font-size="11" fill="#2c2c2a" text-anchor="end">¥100 / 件</text>
+  <text x="682" y="217" font-size="11" fill="#888780" text-anchor="end">&#128465;</text>
+  <line x1="38" y1="228" x2="682" y2="228" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="38" y="240" width="26" height="14" rx="7" fill="#f1efe8" stroke="#b4b2a9" stroke-width="1"/><circle cx="45" cy="247" r="5" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="74" y="251" font-size="11" fill="#a8a6a0">検品〜発送完了（無効）</text>
+  <text x="560" y="251" font-size="11" fill="#a8a6a0" text-anchor="end">¥200 / 件</text>
+  <text x="682" y="251" font-size="11" fill="#888780" text-anchor="end">&#128465;</text>
+
+  <rect x="24" y="330" width="672" height="120" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="352" font-size="12" font-weight="600" fill="#2c2c2a">インセンティブ</text>
+  <rect x="150" y="342" width="30" height="16" rx="8" fill="#378add"/><circle cx="171" cy="350" r="6" fill="#ffffff"/>
+  <rect x="618" y="342" width="66" height="22" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="651" y="357" font-size="10" fill="#0c447c" text-anchor="middle">+ 追加</text>
+
+  <rect x="38" y="372" width="26" height="14" rx="7" fill="#378add"/><circle cx="57" cy="379" r="5" fill="#ffffff"/>
+  <text x="74" y="383" font-size="11" fill="#2c2c2a">成約時・売上</text>
+  <text x="560" y="383" font-size="11" fill="#2c2c2a" text-anchor="end">1%</text>
+  <text x="682" y="383" font-size="11" fill="#888780" text-anchor="end">&#128465;</text>
+
+  <rect x="24" y="474" width="140" height="30" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="94" y="493" font-size="11" fill="#0c447c" text-anchor="middle">保存する</text>
+  <rect x="174" y="474" width="100" height="30" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="224" y="493" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>

@@ -156,9 +156,11 @@ export default function InboxPage() {
                 setDraft={state.setDraft}
                 sending={state.sending}
                 sendError={state.sendError}
+                sendErrorReason={state.sendErrorReason}
+                sendErrorCode={state.sendErrorCode}
                 sendDisabled={state.sendDisabled}
                 canSend={state.canSend}
-                discordDmChannelMissing={state.discordDmChannelMissing}
+                discordChannelMissing={state.discordChannelMissing}
                 trimmedDraft={state.trimmedDraft}
                 submitSend={state.submitSend}
                 handleKeyDown={state.handleKeyDown}

@@ -1,0 +1,803 @@
+{
+  "baseline": "4734fe7f353a07df7ac1608b362f1d61524c79ab",
+  "repository": "/Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source",
+  "proposal": "/Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source",
+  "dependencies": "/Users/tanizawashingo/worktrees/salesanchor/release-frontend-color-source/frontend",
+  "supplemental": false,
+  "tokens": [
+    {
+      "theme": "light",
+      "width": 390,
+      "--indicator": "rgb(30, 58, 138)",
+      "--sidebar-item-active-border": "rgb(30, 58, 138)",
+      "--sidebar-item-active-color": "rgb(30, 58, 138)",
+      "--sidebar-bg": "rgb(255, 255, 255)",
+      "--accent-bg": "rgb(30, 58, 138)",
+      "--icon-action": "rgb(74, 85, 104)",
+      "--icon-action-hover": "rgb(26, 32, 44)",
+      "--icon-action-danger": "rgb(229, 62, 62)",
+      "--icon-empty": "rgb(113, 128, 150)",
+      "--icon-decorative": "rgb(30, 58, 138)",
+      "--icon-search": "rgb(74, 85, 104)",
+      "--icon-status-success": "rgb(34, 84, 61)",
+      "--icon-platform-mail": "rgb(255, 255, 255)"
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "--indicator": "rgb(30, 58, 138)",
+      "--sidebar-item-active-border": "rgb(30, 58, 138)",
+      "--sidebar-item-active-color": "rgb(30, 58, 138)",
+      "--sidebar-bg": "rgb(255, 255, 255)",
+      "--accent-bg": "rgb(30, 58, 138)",
+      "--icon-action": "rgb(74, 85, 104)",
+      "--icon-action-hover": "rgb(26, 32, 44)",
+      "--icon-action-danger": "rgb(229, 62, 62)",
+      "--icon-empty": "rgb(113, 128, 150)",
+      "--icon-decorative": "rgb(30, 58, 138)",
+      "--icon-search": "rgb(74, 85, 104)",
+      "--icon-status-success": "rgb(34, 84, 61)",
+      "--icon-platform-mail": "rgb(255, 255, 255)"
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "--indicator": "rgb(91, 141, 217)",
+      "--sidebar-item-active-border": "rgb(91, 141, 217)",
+      "--sidebar-bg": "rgb(30, 41, 59)",
+      "--accent-bg": "rgb(91, 141, 217)",
+      "--icon-action": "rgb(203, 213, 225)",
+      "--icon-action-hover": "rgb(241, 245, 249)",
+      "--icon-action-danger": "rgb(248, 113, 113)",
+      "--icon-empty": "rgb(148, 163, 184)",
+      "--icon-decorative": "rgb(91, 141, 217)",
+      "--icon-search": "rgb(203, 213, 225)",
+      "--icon-status-success": "rgb(187, 247, 208)",
+      "--icon-platform-mail": "rgb(255, 255, 255)"
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "--indicator": "rgb(91, 141, 217)",
+      "--sidebar-item-active-border": "rgb(91, 141, 217)",
+      "--sidebar-bg": "rgb(30, 41, 59)",
+      "--accent-bg": "rgb(91, 141, 217)",
+      "--icon-action": "rgb(203, 213, 225)",
+      "--icon-action-hover": "rgb(241, 245, 249)",
+      "--icon-action-danger": "rgb(248, 113, 113)",
+      "--icon-empty": "rgb(148, 163, 184)",
+      "--icon-decorative": "rgb(91, 141, 217)",
+      "--icon-search": "rgb(203, 213, 225)",
+      "--icon-status-success": "rgb(187, 247, 208)",
+      "--icon-platform-mail": "rgb(255, 255, 255)"
+    }
+  ],
+  "cases": [
+    {
+      "theme": "light",
+      "width": 390,
+      "action": {
+        "color": "rgb(74, 85, 104)"
+      },
+      "hover": {
+        "color": "rgb(26, 32, 44)"
+      },
+      "danger": {
+        "color": "rgb(229, 62, 62)"
+      },
+      "empty": {
+        "color": "rgb(113, 128, 150)"
+      },
+      "decorative": {
+        "color": "rgb(30, 58, 138)"
+      },
+      "search": {
+        "color": "rgb(74, 85, 104)"
+      },
+      "lock": {
+        "color": "rgb(34, 84, 61)"
+      },
+      "mail-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "action": {
+        "color": "rgb(74, 85, 104)"
+      },
+      "hover": {
+        "color": "rgb(26, 32, 44)"
+      },
+      "danger": {
+        "color": "rgb(229, 62, 62)"
+      },
+      "empty": {
+        "color": "rgb(113, 128, 150)"
+      },
+      "decorative": {
+        "color": "rgb(30, 58, 138)"
+      },
+      "search": {
+        "color": "rgb(74, 85, 104)"
+      },
+      "lock": {
+        "color": "rgb(34, 84, 61)"
+      },
+      "mail-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "action": {
+        "color": "rgb(203, 213, 225)"
+      },
+      "hover": {
+        "color": "rgb(241, 245, 249)"
+      },
+      "danger": {
+        "color": "rgb(248, 113, 113)"
+      },
+      "empty": {
+        "color": "rgb(148, 163, 184)"
+      },
+      "decorative": {
+        "color": "rgb(91, 141, 217)"
+      },
+      "search": {
+        "color": "rgb(203, 213, 225)"
+      },
+      "lock": {
+        "color": "rgb(187, 247, 208)"
+      },
+      "mail-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "action": {
+        "color": "rgb(203, 213, 225)"
+      },
+      "hover": {
+        "color": "rgb(241, 245, 249)"
+      },
+      "danger": {
+        "color": "rgb(248, 113, 113)"
+      },
+      "empty": {
+        "color": "rgb(148, 163, 184)"
+      },
+      "decorative": {
+        "color": "rgb(91, 141, 217)"
+      },
+      "search": {
+        "color": "rgb(203, 213, 225)"
+      },
+      "lock": {
+        "color": "rgb(187, 247, 208)"
+      },
+      "mail-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "mail-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-default": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-16": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "11px",
+        "height": "11px",
+        "svgWidth": "11",
+        "svgHeight": "11",
+        "ariaHidden": "true",
+        "wrapWidth": "16px",
+        "wrapHeight": "16px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-20": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "14px",
+        "height": "14px",
+        "svgWidth": "14",
+        "svgHeight": "14",
+        "ariaHidden": "true",
+        "wrapWidth": "20px",
+        "wrapHeight": "20px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      },
+      "email-24": {
+        "color": "rgb(255, 255, 255)",
+        "fill": "rgb(255, 255, 255)",
+        "width": "17px",
+        "height": "17px",
+        "svgWidth": "17",
+        "svgHeight": "17",
+        "ariaHidden": "true",
+        "wrapWidth": "24px",
+        "wrapHeight": "24px",
+        "pathCount": 2,
+        "viewBox": "0 0 24 24",
+        "tag": "svg"
+      }
+    }
+  ],
+  "staticResolutions": [
+    {
+      "theme": "light",
+      "token": "--indicator",
+      "oldValue": "#1e3a8a",
+      "newValue": "#1e3a8a"
+    },
+    {
+      "theme": "light",
+      "token": "--sidebar-item-active-border",
+      "oldValue": "#1e3a8a",
+      "newValue": "#1e3a8a"
+    },
+    {
+      "theme": "light",
+      "token": "--sidebar-item-active-color",
+      "oldValue": "#1e3a8a",
+      "newValue": "#1e3a8a"
+    },
+    {
+      "theme": "light",
+      "token": "--sidebar-bg",
+      "oldValue": "#ffffff",
+      "newValue": "#ffffff"
+    },
+    {
+      "theme": "light",
+      "token": "--accent-bg",
+      "oldValue": "#1e3a8a",
+      "newValue": "#1e3a8a"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-action",
+      "source": "--text-secondary",
+      "oldValue": "#4a5568",
+      "newValue": "#4a5568"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-action-hover",
+      "source": "--text-primary",
+      "oldValue": "#1a202c",
+      "newValue": "#1a202c"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-action-danger",
+      "source": "--danger",
+      "oldValue": "#e53e3e",
+      "newValue": "#e53e3e"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-empty",
+      "source": "--text-muted",
+      "oldValue": "#718096",
+      "newValue": "#718096"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-decorative",
+      "source": "--accent",
+      "oldValue": "#1e3a8a",
+      "newValue": "#1e3a8a"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-search",
+      "source": "--text-secondary",
+      "oldValue": "#4a5568",
+      "newValue": "#4a5568"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-status-success",
+      "source": "--success-text",
+      "oldValue": "#22543d",
+      "newValue": "#22543d"
+    },
+    {
+      "theme": "light",
+      "token": "--icon-platform-mail",
+      "source": "--on-accent",
+      "oldValue": "#ffffff",
+      "newValue": "#ffffff"
+    },
+    {
+      "theme": "dark",
+      "token": "--indicator",
+      "oldValue": "#5b8dd9",
+      "newValue": "#5b8dd9"
+    },
+    {
+      "theme": "dark",
+      "token": "--sidebar-item-active-border",
+      "oldValue": "#5b8dd9",
+      "newValue": "#5b8dd9"
+    },
+    {
+      "theme": "dark",
+      "token": "--sidebar-bg",
+      "oldValue": "#1e293b",
+      "newValue": "#1e293b"
+    },
+    {
+      "theme": "dark",
+      "token": "--accent-bg",
+      "oldValue": "#5b8dd9",
+      "newValue": "#5b8dd9"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-action",
+      "source": "--text-secondary",
+      "oldValue": "#cbd5e1",
+      "newValue": "#cbd5e1"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-action-hover",
+      "source": "--text-primary",
+      "oldValue": "#f1f5f9",
+      "newValue": "#f1f5f9"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-action-danger",
+      "source": "--danger",
+      "oldValue": "#f87171",
+      "newValue": "#f87171"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-empty",
+      "source": "--text-muted",
+      "oldValue": "#94a3b8",
+      "newValue": "#94a3b8"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-decorative",
+      "source": "--accent",
+      "oldValue": "#5b8dd9",
+      "newValue": "#5b8dd9"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-search",
+      "source": "--text-secondary",
+      "oldValue": "#cbd5e1",
+      "newValue": "#cbd5e1"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-status-success",
+      "source": "--success-text",
+      "oldValue": "#bbf7d0",
+      "newValue": "#bbf7d0"
+    },
+    {
+      "theme": "dark",
+      "token": "--icon-platform-mail",
+      "source": "--on-accent",
+      "oldValue": "#ffffff",
+      "newValue": "#ffffff"
+    }
+  ],
+  "limits": [
+    "Local CSS fixtures and actual PlatformIcon server rendering, not full-page PO visual approval."
+  ],
+  "counts": {
+    "staticTokenPairs": 25,
+    "themeViewportPairs": 4,
+    "browserTokenPairs": 50,
+    "browserControlPairs": 60
+  },
+  "status": "PASS"
+}

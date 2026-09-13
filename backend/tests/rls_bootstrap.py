@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
@@ -31,15 +32,67 @@ _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260614_100000_create_sales_form_tables.sql",
 ]
 _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE = 20260623
+_PUBLIC_BOOTSTRAP_LOCK_KEY = 1
 _TENANT_SCHEMA_LOCK_NAMESPACE = 20260623
+
+
+@asynccontextmanager
+async def public_bootstrap_lock(admin_engine):
+    """shared public bootstrap を xdist 下で直列化する。"""
+    async with admin_engine.connect() as conn:
+        await conn.execute(
+            text("SELECT pg_advisory_lock(:namespace, :lock_key)"),
+            {
+                "namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE,
+                "lock_key": _PUBLIC_BOOTSTRAP_LOCK_KEY,
+            },
+        )
+        try:
+            yield
+        finally:
+            with suppress(Exception):
+                await conn.execute(
+                    text("SELECT pg_advisory_unlock(:namespace, :lock_key)"),
+                    {
+                        "namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE,
+                        "lock_key": _PUBLIC_BOOTSTRAP_LOCK_KEY,
+                    },
+                )
+
+
 async def _apply_migration(admin_engine, filename: str) -> None:
-    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
     async with admin_engine.begin() as conn:
-        # exec_driver_sql はPrepared Statementプロトコルを使うため
-        # マルチ命令SQLを含む migration ファイルで失敗する。
-        # asyncpgのraw接続でSimple Query プロトコルを使う。
-        raw = await conn.get_raw_connection()
-        await raw.driver_connection.execute(sql)
+        await _apply_migration_on_conn(conn, filename)
+
+
+def _scope_tenant_migration(sql: str, filename: str, schema_name: str) -> str:
+    """テスト用の正本SQLを、要求された一つの数値テナントに限定する。"""
+    selectors = {
+        "20260611_100000_create_channel_masters.sql": "\n        WHERE nspname ~ '^tenant_\\d+$'\n",
+        "20260614_100000_create_sales_form_tables.sql": "\n    WHERE nspname LIKE 'tenant_%'\n",
+    }
+    if not re.fullmatch(r"tenant_[0-9]+", schema_name):
+        raise ValueError("Invalid test tenant schema")
+    if filename not in selectors:
+        raise ValueError("Unknown tenant bootstrap migration")
+    selector = selectors[filename]
+    if sql.count(selector) != 1:
+        raise ValueError("Canonical tenant selector changed; review required")
+    scoped = selector.rstrip("\n") + f" AND nspname = '{schema_name}'\n"
+    return sql.replace(selector, scoped, 1)
+
+
+async def _apply_migration_on_conn(conn, filename: str, *, schema_name: str | None = None) -> None:
+    sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
+    if schema_name is not None:
+        sql = _scope_tenant_migration(sql, filename, schema_name)
+    elif filename in _TENANT_BOOTSTRAP_MIGRATIONS:
+        raise ValueError("Tenant bootstrap migration requires a target schema")
+    # exec_driver_sql はPrepared Statementプロトコルを使うため
+    # マルチ命令SQLを含む migration ファイルで失敗する。
+    # asyncpgのraw接続でSimple Query プロトコルを使う。
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
 
 
 async def _ensure_public_users(conn) -> None:
@@ -139,22 +192,23 @@ async def tenant_schema_lock(admin_engine, tenant_id: int):
 
 async def bootstrap_public_products(admin_engine) -> None:
     """public.products とその周辺の前提 migration を冪等に適用する。"""
-    for filename in _PG_BOOTSTRAP_MIGRATIONS:
-        await _apply_migration(admin_engine, filename)
+    async with public_bootstrap_lock(admin_engine):
+        for filename in _PG_BOOTSTRAP_MIGRATIONS:
+            await _apply_migration(admin_engine, filename)
 
-    async with admin_engine.connect() as conn:
-        fk_exists = await conn.scalar(
-            text("""
-                SELECT 1
-                FROM pg_constraint c
-                JOIN pg_class rel ON rel.oid = c.conrelid
-                JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
-                WHERE nsp.nspname = 'public'
-                  AND rel.relname = 'products'
-                  AND c.conname = 'fk_products_tcg_type'
-            """)
-    )
-    assert fk_exists == 1, "FK migration が public.products に適用されていません"
+        async with admin_engine.connect() as conn:
+            fk_exists = await conn.scalar(
+                text("""
+                    SELECT 1
+                    FROM pg_constraint c
+                    JOIN pg_class rel ON rel.oid = c.conrelid
+                    JOIN pg_namespace nsp ON nsp.oid = rel.relnamespace
+                    WHERE nsp.nspname = 'public'
+                      AND rel.relname = 'products'
+                      AND c.conname = 'fk_products_tcg_type'
+                """)
+            )
+        assert fk_exists == 1, "FK migration が public.products に適用されていません"
 
 
 async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
@@ -165,38 +219,39 @@ async def bootstrap_tenant_schema(admin_engine, tenant_id: int) -> str:
             {"namespace": _PUBLIC_BOOTSTRAP_LOCK_NAMESPACE},
         )
         try:
-            await _bootstrap_public_shared(conn)
-            await _ensure_public_users(conn)
-            await conn.execute(
-                text("""
-                    INSERT INTO public.tenants (
-                        id, tenant_code, tenant_name, company_name, is_active
-                    )
-                    VALUES (
-                        :tenant_id,
-                        :tenant_code,
-                        :tenant_name,
-                        :company_name,
-                        TRUE
-                    )
-                    ON CONFLICT (id) DO UPDATE SET
-                        tenant_code = EXCLUDED.tenant_code,
-                        tenant_name = EXCLUDED.tenant_name,
-                        company_name = EXCLUDED.company_name,
-                        is_active = EXCLUDED.is_active
-                """),
-                {
-                    "tenant_id": int(tenant_id),
-                    "tenant_code": f"tenant_{int(tenant_id):03d}",
-                    "tenant_name": f"tenant_{int(tenant_id):03d}",
-                    "company_name": f"tenant_{int(tenant_id):03d}",
-                },
-            )
-            schema_name = f"tenant_{int(tenant_id):03d}"
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
-            schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
-            for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
-                await _apply_migration(admin_engine, filename)
+            async with public_bootstrap_lock(admin_engine):
+                await _bootstrap_public_shared(conn)
+                await _ensure_public_users(conn)
+                await conn.execute(
+                    text("""
+                        INSERT INTO public.tenants (
+                            id, tenant_code, tenant_name, company_name, is_active
+                        )
+                        VALUES (
+                            :tenant_id,
+                            :tenant_code,
+                            :tenant_name,
+                            :company_name,
+                            TRUE
+                        )
+                        ON CONFLICT (id) DO UPDATE SET
+                            tenant_code = EXCLUDED.tenant_code,
+                            tenant_name = EXCLUDED.tenant_name,
+                            company_name = EXCLUDED.company_name,
+                            is_active = EXCLUDED.is_active
+                    """),
+                    {
+                        "tenant_id": int(tenant_id),
+                        "tenant_code": f"tenant_{int(tenant_id):03d}",
+                        "tenant_name": f"tenant_{int(tenant_id):03d}",
+                        "company_name": f"tenant_{int(tenant_id):03d}",
+                    },
+                )
+                schema_name = f"tenant_{int(tenant_id):03d}"
+                await conn.execute(text(f"DROP SCHEMA IF EXISTS {schema_name} CASCADE"))
+                schema_name = await create_tenant_schema(conn, tenant_id, admin_db=conn)
+                for filename in _TENANT_BOOTSTRAP_MIGRATIONS:
+                    await _apply_migration_on_conn(conn, filename, schema_name=schema_name)
         finally:
             with suppress(Exception):
                 await conn.execute(

@@ -1,0 +1,36 @@
+{
+  "base": "9e0406eeb5fa804dd678874c395fe66d906faafa",
+  "targets": 4,
+  "files": [
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "sha256": "dc928da7fc3bdf092ad0c0842e4131383dedb1900bfa53761f92b8a1fb9708d4",
+      "items": [
+        {
+          "line": 209,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={() => navigate(\"/contacts\")}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 210,
+          "original": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>"
+        }
+      ],
+      "otherButtons": 2
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierEditPage.tsx",
+      "sha256": "c6986cbbf81b0a4c7299897ee83f46531bd37c5463fa33dfb084ef19aa18fbd0",
+      "items": [
+        {
+          "line": 79,
+          "original": "<button\n              type=\"button\"\n              className=\"btn-secondary\"\n              onClick={() => navigate(\"/suppliers\")}\n            >\n              {t(\"common.cancel\")}\n            </button>"
+        },
+        {
+          "line": 86,
+          "original": "<button type=\"submit\" className=\"btn-primary\">\n              {t(\"common.update\")}\n            </button>"
+        }
+      ],
+      "otherButtons": 0
+    }
+  ]
+}

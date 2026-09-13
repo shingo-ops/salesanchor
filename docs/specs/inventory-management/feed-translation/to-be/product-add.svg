@@ -1,0 +1,53 @@
+<svg width="720" height="480" viewBox="0 0 720 480" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="480" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; 商品を追加</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">商品マスタに新しい商品を登録します</text>
+
+  <rect x="24" y="70" width="672" height="200" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="12" fill="#5f5e5a">基本情報</text>
+
+  <text x="38" y="114" font-size="10" fill="#888780">カテゴリ</text>
+  <rect x="38" y="120" width="200" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="137" font-size="11" fill="#888780">選択してください &#9660;</text>
+  <text x="258" y="114" font-size="10" fill="#888780">マーク</text>
+  <rect x="258" y="120" width="200" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="268" y="137" font-size="11" fill="#888780">例: SV</text>
+
+  <text x="38" y="164" font-size="10" fill="#888780">商品名（日本語）</text>
+  <rect x="38" y="170" width="300" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="187" font-size="11" fill="#888780">例: 151 BOX</text>
+  <text x="358" y="164" font-size="10" fill="#888780">商品名（英語）</text>
+  <rect x="358" y="170" width="300" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="368" y="187" font-size="11" fill="#888780">例: Pokemon 151 Booster Box</text>
+
+  <text x="38" y="214" font-size="10" fill="#888780">ケース入数</text>
+  <rect x="38" y="220" width="130" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="168" y="214" font-size="10" fill="#888780">BOX入数</text>
+  <rect x="168" y="220" width="130" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="308" y="214" font-size="10" fill="#888780">発売日</text>
+  <rect x="308" y="220" width="150" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="468" y="214" font-size="10" fill="#888780">タイプ</text>
+  <rect x="468" y="220" width="150" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="478" y="237" font-size="11" fill="#888780">選択 &#9660;</text>
+
+  <rect x="24" y="284" width="672" height="130" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="306" font-size="12" fill="#5f5e5a">通関・輸出情報</text>
+  <text x="38" y="328" font-size="10" fill="#888780">Box重量</text>
+  <rect x="38" y="334" width="140" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="188" y="328" font-size="10" fill="#888780">Case重量</text>
+  <rect x="188" y="334" width="140" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="338" y="328" font-size="10" fill="#888780">HSコード</text>
+  <rect x="338" y="334" width="140" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="488" y="328" font-size="10" fill="#888780">品目</text>
+  <rect x="488" y="334" width="90" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="588" y="328" font-size="10" fill="#888780">素材</text>
+  <rect x="588" y="334" width="90" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="384" font-size="10" fill="#888780">整形ワード（表記ゆれの正規化）</text>
+  <rect x="38" y="390" width="640" height="24" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="24" y="428" width="150" height="30" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="99" y="447" font-size="11" fill="#0c447c" text-anchor="middle">登録する</text>
+  <rect x="184" y="428" width="100" height="30" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="234" y="447" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>

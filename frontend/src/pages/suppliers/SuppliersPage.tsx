@@ -2,12 +2,14 @@ import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
@@ -99,13 +101,13 @@ export default function SuppliersPage() {
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
-      headerAction={hasPermission("suppliers.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("suppliers.create") ? (
+        <ContentToolbar
+          right={<button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>}
+        />
+      ) : undefined}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal
@@ -120,8 +122,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setCreateForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>
@@ -139,8 +141,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

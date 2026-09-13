@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 380" font-family="sans-serif">
+  <style>
+    .t{font-size:13px;fill:#1a1a1a}.s{font-size:10px;fill:#555}.h{font-size:13px;font-weight:600;fill:#1a1a1a}
+    .box{fill:#f6f4ef;stroke:#c9c6c0;stroke-width:0.5}
+    .red{fill:#fbe4e4;stroke:#E24B4A;stroke-width:0.5}
+    .me{fill:#f6f4ef;stroke:#3E7C7B;stroke-width:1}
+    .tab{fill:#ece8f6;stroke:#7C6BB8;stroke-width:0.5}
+  </style>
+  <text class="h" x="200" y="24" text-anchor="middle">PC＝采配台</text>
+  <rect class="box" x="20" y="34" width="360" height="300" rx="10"/>
+  <!-- tabs 2 rows -->
+  <rect class="tab" x="30" y="44" width="60" height="20" rx="10"/><text class="s" x="60" y="58" text-anchor="middle">全て</text>
+  <rect x="94" y="44" width="60" height="20" rx="10" fill="#f0eee9"/><text class="s" x="124" y="58" text-anchor="middle">Aさん</text>
+  <rect x="158" y="44" width="60" height="20" rx="10" fill="#f0eee9"/><text class="s" x="188" y="58" text-anchor="middle">Bさん</text>
+  <text class="s" x="300" y="58" text-anchor="middle">今日 | 今週</text>
+  <!-- alert band -->
+  <rect class="red" x="30" y="72" width="340" height="30" rx="6"/><text class="s" x="44" y="91">⚠ 無担当ボール：顧客Z 受信 3時間12分 → 担当を割当</text>
+  <!-- member grid -->
+  <rect class="me" x="30" y="112" width="108" height="96" rx="6"/><text class="s" x="40" y="130">●あなた</text><text class="s" x="40" y="146">返信中</text><text class="s" x="40" y="164" fill="#E24B4A">ボール3・42分</text><text class="s" x="40" y="180">行動 3/5</text><rect class="tab" x="38" y="186" width="92" height="16" rx="8"/><text class="s" x="84" y="198" text-anchor="middle">レーンでさばく</text>
+  <rect class="box" x="146" y="112" width="108" height="96" rx="6"/><text class="s" x="156" y="130">●Bさん</text><text class="s" x="156" y="146">発送作業中</text><text class="s" x="156" y="164">ボール1・8分</text><text class="s" x="156" y="180">行動 4/5</text>
+  <rect class="box" x="262" y="112" width="108" height="96" rx="6"/><text class="s" x="272" y="130">○Cさん</text><text class="s" x="272" y="146">手すき</text><text class="s" x="272" y="164">ボール0・待ち4</text><text class="s" x="272" y="180">行動 5/5</text>
+  <text class="s" x="30" y="232">カード／ボールをクリック → 受信箱の該当レーン・会話へ直行（T3）</text>
+  <text class="s" x="30" y="250">表示は受信箱と同一源泉＝食い違い0（T1）・新規入力ゼロ</text>
+  <!-- inbox lane -->
+  <text class="h" x="530" y="24" text-anchor="middle">受信箱＝作業場（さばきモード）</text>
+  <rect class="box" x="410" y="34" width="240" height="300" rx="10"/>
+  <text class="s" x="422" y="56">🎾 自分のボール 3（古い順）</text>
+  <rect class="red" x="422" y="64" width="216" height="30" rx="4"/><text class="s" x="432" y="83">顧客X 見積の返事 42分 ← 最古先頭</text>
+  <rect class="box" x="422" y="98" width="216" height="24" rx="4"/><text class="s" x="432" y="114">顧客Y 在庫確認 15分</text>
+  <rect class="box" x="422" y="126" width="216" height="24" rx="4"/><text class="s" x="432" y="142">顧客W 支払方法 8分</text>
+  <rect x="422" y="158" width="216" height="80" rx="6" fill="#ffffff" stroke="#9a968e" stroke-width="0.5"/>
+  <text class="s" x="432" y="176">差し込み定型（AI不使用・DB値挿入）</text>
+  <text class="s" x="432" y="194">単価¥58,000×30=¥1,740,000</text>
+  <text class="s" x="432" y="210">送料¥42,300・在庫32box</text>
+  <text class="s" x="432" y="228" fill="#7C6BB8">根拠: 商品マスタ／在庫表／送料マスタ</text>
+  <rect class="tab" x="422" y="246" width="216" height="22" rx="11"/><text class="s" x="530" y="261" text-anchor="middle">送信して次へ ▶（自動遷移・探索ゼロ）</text>
+  <text class="s" x="422" y="292">送信→操作ゼロで次の最古ボールへ</text>
+  <text class="s" x="422" y="310">ボール0＝コート整地完了</text>
+</svg>

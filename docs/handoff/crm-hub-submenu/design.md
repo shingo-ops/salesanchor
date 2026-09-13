@@ -1,14 +1,14 @@
 # design: crm-hub-submenu
 
 **対象:** PR — CustomerHubPage のサブナビを SubMenu 共通部品に置換
-**対象ADR:** ADR-148
+**対象ADR:** ADR-149
 **recon:** docs/handoff/crm-hub-submenu/recon.md
 
 ---
 
 ## 外部・過去事例の参照と我々への応用
 
-- 同リポジトリ内 ADR-148（`docs/adr/ADR-148-submenu-ssot-link-mode.md`）が定める段階移行の Step 2 に該当。1本目（PR #2650）で SubMenu にリンク型を追加済み。本 PR はそれを初めて本番ページに適用する。
+- 同リポジトリ内 ADR-149（`docs/adr/ADR-149-submenu-ssot-link-mode.md`）が定める段階移行の Step 2 に該当。1本目（PR #2650）で SubMenu にリンク型を追加済み。本 PR はそれを初めて本番ページに適用する。
 - react-router-dom v7 の `useLocation` による現在パス取得は、同リポジトリの NavItemList.tsx 等で確立されたパターンに沿う。
 
 ---

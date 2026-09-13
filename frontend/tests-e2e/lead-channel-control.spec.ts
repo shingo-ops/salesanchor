@@ -30,7 +30,6 @@ const leadFixture = {
   monthly_forecast: 120000,
   prospect_rank: "B",
   assigned_to: null,
-  converted_deal_id: null,
   notes: "channel fixture",
   country: null,
   created_at: "2026-06-21T00:00:00Z",
