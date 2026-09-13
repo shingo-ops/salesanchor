@@ -1034,7 +1034,7 @@ def test_25th_fault_rolls_back_every_table(pg, fault):
 
 
 def test_25th_absent_partial_and_lock_failure(pg):
-    connection, _, _ = pg
+    connection, engine, _ = pg
     apply_25th(connection)  # tenant_004 entirely absent, including the product row type.
     seed_25th(connection)
     before = snapshot_25th(connection)
@@ -1045,7 +1045,7 @@ def test_25th_absent_partial_and_lock_failure(pg):
         cursor.execute('ROLLBACK')
         cursor.execute('ALTER TABLE tenant_004.held_keywords RENAME TO product_search_keywords')
     assert snapshot_25th(connection) == before
-    blocker = psycopg2.connect(connection.dsn)
+    blocker = engine.raw_connection()
     try:
         with blocker.cursor() as cursor:
             cursor.execute('LOCK TABLE tenant_004.tcg_products IN SHARE ROW EXCLUSIVE MODE')
@@ -1148,3 +1148,30 @@ def test_25th_all_seven_missing_but_other_tcg_tables_remain_fails(pg):
             for table in tables:
                 cursor.execute(sql.SQL('ALTER TABLE tenant_902.{} SET SCHEMA tenant_004').format(sql.Identifier(table)))
     assert snapshot_25th(connection) == before
+
+
+def test_25th_real_analysis_preserves_controls_and_ambiguous_review(pg, monkeypatch):
+    connection, engine, _ = pg
+    seed_25th(connection)
+    apply_25th(connection)
+    configure_25th(monkeypatch)
+    cases = CONTROLS_25TH[:9]
+    _, jid, result = run_message(connection, engine, monkeypatch,
+        '\n'.join(' '.join(c[:3]) for c in cases),
+        [record(name, n, state=state, memo=memo) for n, (name, state, memo, _) in enumerate(cases, 1)])
+    assert result['status'] == 'done' and result['items_count'] == 9
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT ar.pid_resolved,p.japanese_title,p.code,ar.needs_review,ar.pid_basis,ei.raw_memo FROM tenant_004.analysis_results ar JOIN tenant_004.extraction_items ei ON ei.id=ar.extraction_item_id LEFT JOIN tenant_004.tcg_products p ON p.id=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start', (jid,))
+        rows = cursor.fetchall()
+    for row, case in zip(rows, cases, strict=True):
+        resolved, title, code, review, _, _ = row
+        expected = case[3]
+        assert resolved is (expected is not None)
+        if expected == 'SET':
+            assert title == SPECIAL
+        elif expected:
+            assert code == expected
+        else:
+            assert review
+    assert rows[7][5] == 'プロモカードパック1個を含む'
+    assert 'MULTI' in rows[8][4] and rows[8][3]
