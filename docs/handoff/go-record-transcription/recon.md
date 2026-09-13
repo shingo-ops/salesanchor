@@ -960,3 +960,76 @@ PO原文「進める」を隔離設定とカード完成の指示として受領
 診断部品草案を実書込失敗とexit1の観測に対応させ、設定JSONとAGENTS草案を作成。private/tmp専用root/報告先の不存在を読取確認。設定配置やモデル起動は0。Python構文/JSON設定/原本3hashとカードの整合は直接検査PASS。カードはTH-GO-HOOK-H1-01、card-lint exit0（長行警告5件）、未確定IDは診断実行で得るsession_idだけとし、取得・再開手順を先行定義した。
 
 正式カードの限定自己審査APPROVE。未実測のUIが異なる場合は操作を推測せず停止し、信頼DB直接編集/既存ガード無効化をしない。最大7入力・診断session1つ、実行中追加入力はH2へ残す。P2全体REVISE。実行担当1名＋診断セッション1つと当該定義だけの通常信頼登録への明示委任を次のPO判断とする。既存の包括的GOやP1委任で起動しない。
+
+
+## 2026-09-13 H1実機診断の停止結果
+
+PO原文「進める」を、直前に提示した「実行担当1名と診断セッション1つを起動し、この診断フックだけの通常の信頼登録を含めて実行」の承認として受領。TH-GO-HOOK-H1-01だけをworker h1_hook_diagnosticへ委任した。製品実装・代理GO・本番操作の承認ではない。開始preflight成功、設計worktree差分0、PR #3440 head4a026358e4d0772ddf26e80588521611a3030c4e。本店165commit遅れ/台帳以外30件の変更は保持した。
+
+実行担当報告: CLI0.154.0、専用プロジェクトと診断hook1件だけ通常UIで信頼登録し、同じ診断sessionで5入力。5件目のtimeoutでfail-openを観測して以後の入力を停止した。親は専用journal、診断JSON4件、TUI生ログ、配置3hashを別途読み取り照合した。親による試験の再実行は0。独立した第二者による設計レビューとは称しない。
+
+| 入力順 | ケース | 親が直接照合した記録/画面 | 判定 |
+|---|---|---|---|
+| 1 | normal | 新規JSON1件とH1-ACK | 期待一致 |
+| 2 | 同文normal | 別JSON・別turn_id・同sessionとH1-ACK | 期待一致 |
+| 3 | block | 新規JSON1件、Blocked by hook / H1 diagnostic block、H1-ACKなし | 期待一致 |
+| 4 | write-error | JSON追加0、Blocked by hook / H1 diagnostic storage unavailable、H1-ACKなし | 期待一致 |
+| 5 | timeout | 新規JSON1件、Hook failed / hook timed out after 2s、その後H1-ACK | 強制停止不合格 |
+| 未送信 | exit-error、同session再開後normal | 停止条件により実施せず | 未確認 |
+
+最終journal日時2026-09-13T03:10:32.160292+00:00。合成送信5、期待一致4、強制停止不合格1、画面応答3。内部モデル呼出総数は未取得（応答3と同一視しない）。全診断JSONはUserPromptSubmit、同じsession_id 01a098bb-12ee-7231-bfe1-88cc965bef7d、authorization_issued=false。write-errorは記録作成失敗を狙ったケースでturn_id未取得。診断ファイル名やreceived_nsを正式受信ID/時刻へ昇格させない。
+
+停止分類は想定していた障害条件の実挙動確認であり、カード不備・権限ガード拒否ではない。時間切れでもモデルが継続する事実から、このUserPromptSubmit hook単独に認可の強制停止を任せる案をREJECT。記録/明示blockの限定観測結果は保持する。Architect同一AI自己審査としてP2全体REVISEを維持し、既存画面/追加入力/H2、取消の正規配送、writer権限分離は未確認。H1診断設計APPROVEと安全性の合格を区別する。
+
+専用診断場所/private/tmp/salesanchor-go-hook-h1-20260913と信頼登録は証拠保全のため保持。worker最終観測でPTY51269はalive/idle、停止後の入力・終了操作・再開なし。親はPTYへ入力していない。稼働し続ける試験とは扱わず、新たな送信はしない。既存hooks画面はPreToolUse11、UserPromptSubmit既存1＋診断1、Stop1で、専用定義だけTrustedになった表示を親も確認した。ユーザー設定変更/既存ガード無効化/制限解除なしという操作範囲は担当報告と専用ログで確認した。
+
+次の一手: 既存P2の外部送信主体と記録主体を分ける契約を、この不合格事実に基づき再検討する。モデルが進んでも、未保存/期限切れ/取消/配送不明なら送信側で拒否する条件を実物に照合する。今回の委任で追加セッション・再試験・製品実装を開始しない。代理GO0、本番変更0、#3440未マージ。
+
+専用証拠（親が内容とSHA256を直接確認）:
+
+- /tmp/reports/TH-GO-HOOK-H1/journal.jsonl: SHA256 dfc53cba985d37416b28492db1f49f9d9bfe5b7ac0da16ee82494ffa0bff0ac1
+- /tmp/reports/TH-GO-HOOK-H1/tui-session.log: SHA256 bda963a421ffe8c201deee13d70312bd30549a4b21c4b116a6211a565a646bc9
+- /tmp/reports/TH-GO-HOOK-H1/execution-report.txt: SHA256 65d1a29e72325e5c5df6b7fcbfe8a3df17d501665b815b9caa33b151dcd4d224
+
+診断メタデータ4件を以下へ保存する。raw TUI全文は専用報告先に保持し、他セッション/共有hook原文は読んでいない。
+
+```json
+[
+  {
+    "diagnostic": "H1",
+    "received_ns": 1789268990402914000,
+    "session_id": "01a098bb-12ee-7231-bfe1-88cc965bef7d",
+    "turn_id": "01a098be-195e-73a0-87f9-3e4dac355f46",
+    "event": "UserPromptSubmit",
+    "mode": "timeout",
+    "authorization_issued": false
+  },
+  {
+    "diagnostic": "H1",
+    "received_ns": 1789268902732084000,
+    "session_id": "01a098bb-12ee-7231-bfe1-88cc965bef7d",
+    "turn_id": "01a098bc-c244-74d0-aae9-7cea9ebe0697",
+    "event": "UserPromptSubmit",
+    "mode": "normal",
+    "authorization_issued": false
+  },
+  {
+    "diagnostic": "H1",
+    "received_ns": 1789268938202152000,
+    "session_id": "01a098bb-12ee-7231-bfe1-88cc965bef7d",
+    "turn_id": "01a098bd-4d2d-7820-acc0-59227073cce1",
+    "event": "UserPromptSubmit",
+    "mode": "block",
+    "authorization_issued": false
+  },
+  {
+    "diagnostic": "H1",
+    "received_ns": 1789268872001506000,
+    "session_id": "01a098bb-12ee-7231-bfe1-88cc965bef7d",
+    "turn_id": "01a098bc-4886-7ea3-9d85-55dcbe56fb7a",
+    "event": "UserPromptSubmit",
+    "mode": "normal",
+    "authorization_issued": false
+  }
+]
+```

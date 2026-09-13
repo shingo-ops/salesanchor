@@ -2410,3 +2410,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 入力hook追補: 公式Hooksと既存UserPromptSubmit command1件・card-lint-hook.shを直接確認。H0完了、H1診断部品草案を作成し構文検査成功。H1/H2実機0・hook変更0・新規セッション0。実行設計REVISE、隔離設定/正式カードが次工程。根拠はrecon.md「2026-09-13 入力フックの接続候補確認」。
 
 2026-09-13 H1正式カード追補: TH-GO-HOOK-H1-01、診断設定/部品/セッション指示3原本を確定。原本hash・Python構文・JSON設定を直接照合、card-lint exit0（長行警告5件）。限定同一AI自己審査APPROVE、実機0・新規セッション0・設定信頼変更0、P2全体REVISE。次は本カード範囲の明示委任。根拠はrecon.md「2026-09-13 H1隔離カードの確定」。
+
+2026-09-13 H1実機追補: PO原文「進める」を担当1名＋診断session1つ＋専用hook通常信頼登録の限定委任として実行。5入力、期待一致4、timeout後H1-ACKのfail-open1で停止。親は専用journal/TUI/4JSON/配置3hashを直接照合。hook単独の強制停止案REJECT、P2全体REVISE。exit-error/再開/H2未確認、内部モデル呼出総数未取得、代理GO0。根拠はrecon.md「2026-09-13 H1実機診断の停止結果」。
