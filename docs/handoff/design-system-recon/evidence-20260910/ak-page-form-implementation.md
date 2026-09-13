@@ -32,6 +32,12 @@ strict eslint警告0、単独28試験成功。全体coverage 24files/254tests成
 
 rootによる設計照合・差分/操作/表示検収: APPROVE（本実装の提出検収）。同一AIによる設計自己審査と区別。独立した最終Reviewer/Evaluatorの指名・PO目視完了とは称しない。
 
-次は保存commit→最新main統合→PR提出→新HEADのCI照合。今回の番号付きPO GO受領前にマージ/本番反映しない。表・報酬3・カレンダー色は別便、新CIは最後。
+保存commitと最新main統合・PR提出は完了。次は新HEADのCI照合と番号付きGO受領。今回の番号付きPO GO受領前にマージ/本番反映しない。表・報酬3・カレンダー色は別便、新CIは最後。
 
 再現資料: ak-implementation-checkpoint.tar.gzとmanifest。ブラウザー原稿prepare.cjsは前後の実ページをbundleし、初回設定はこの作業台の絶対パスを使う。再開時に実在する作業台へ合わせる。描画のbeforeはff366628の原文、afterはmanifestに固定した実装原文。生成済みbundleはarchiveへ含めず同じlockで再生成する。
+
+## PR提出記録（2026-09-13）
+
+実装保存58c63d75、main ee455fb1の統合c5deebbcをpushし、正式wrapperでready [PR #3457](https://github.com/shingo-ops/salesanchor/pull/3457)を提出。remote HEADとPR HEAD c5deebbcの一致、作業台status空、製品4hash維持を確認。公開カードはak-publish-card.txt。
+
+c5deebbcのprocess-artifacts gate（job 103650447463）ログをrootが直接確認し、唯一の記載エラーは「### GO記録」未記載。今回の番号付きGO未受領による承認ゲートであり、前便GOの再利用・迂回はしない。ほかのCIの最終結果は更新後HEADで確認する。マージ・本番反映は未実施。
