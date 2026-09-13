@@ -2492,3 +2492,19 @@ tradeoff: manually prepared extraction response and synthetic dictionary do not 
 decision: PO display/date requirements fixed; self-review REVISE; candidate dictionaries remain unregistered
 follow_up: date context, scoped negation, calendar validation, offer linking and implementation acceptance tests
 ```
+
+```text
+id: EV-20260913-LINE-RESTOCK-NEGATIVE-STOCK
+date: 2026-09-13
+agent: Codex design partner
+task: 再入荷予定なしの数量・状態・備考の分離をPO合意し追加部品検証
+scope: design PR #3456; no product changes
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_negative_stock_probe
+    summary: 3 synthetic manually extracted cases; raw quantity retained 3/3; synthetic status matches 3/3; candidate memo mismatches 3/3; no DB/UI/model invocation
+confidence: high
+tradeoff: status default active is not permission to restore old sold-out inventory; actual update behavior untested
+decision: retain explicit stock quantity and existing quantity when absent; sold-out requires separate evidence; suppress only related negative restock memo; self-review REVISE
+follow_up: scoped negation, event absence semantics, persistent offer matching and implementation acceptance tests
+```

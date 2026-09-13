@@ -491,5 +491,76 @@
       "note_matches": 6,
       "note_mismatches": 3
     }
+  },
+  "restock_negative_stock_probe": {
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "method": "unchanged functions with manually prepared extraction and synthetic dictionaries; no inventory update or UI test",
+    "rows": [
+      {
+        "id": "N1",
+        "synthetic": true,
+        "raw_quantity": "8",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "8",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N2",
+        "synthetic": true,
+        "raw_quantity": "0",
+        "raw_state": "完売",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "0",
+        "quantity_preserved": true,
+        "actual_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "expected_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N3",
+        "synthetic": true,
+        "raw_quantity": "",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      }
+    ],
+    "summary": {
+      "quantity_representation_preserved": 3,
+      "status_matches": 3,
+      "note_matches": 0
+    }
   }
 }
