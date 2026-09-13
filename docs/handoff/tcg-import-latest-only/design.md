@@ -985,6 +985,27 @@ attempt_idは当該publication全対象で一意。request_keyは当該publicati
 
 自己査定: **APPROVE（本項の設計補正、同一AIによる自己審査）**。設定6キー・結果8キー・試行9キーとnull条件を確定し、結果不明/失敗/成功を分離した。独立レビューや実PG合格ではない。8試験群の第5群で未知キー/型/null/不正状態、設定不一致の予約、別対象予約、unknown解除、終端attempt改変、成功hash/行数不一致を負の試験に含め、正常予約→成功→解除も確認する。今回の停止原因を解消したカードを再発行し、製品3ファイル範囲を維持する。
 
+### 日付組合せと対象選択の保存境界（第2便再照合、2026-09-13）
+
+2回目の停止も設計の型定義不足（カード不備）。配信JSON不足は解消済み、製品3ファイル未編集。残る2点を§17/22/24の既定方針から以下へ固定する。新たな予定日推定を追加しない。
+
+plansのresolution/date_precision/date_start/date_end/review_reasonの許可組合せは次だけ。これ以外をDBで拒否する。polarity/date_kindの既存列挙条件は別途併用し、日付解決から数量や肯定/否定を変更しない。
+
+| resolution | date_precision | date_start/date_end | review_reason |
+|---|---|---|---|
+| resolved | day | 有限日付・両方非NULL・同日 | NULL |
+| resolved | range | 有限日付・両方非NULL・開始<=終了 | NULL |
+| unspecified | unspecified または period | 両方NULL | NULL |
+| needs_review | day/range/period/unspecified | 両方NULL | 非空文字列の理由コード |
+
+resolved/periodとresolved/unspecifiedは禁止。「2026年9月下旬」のように年も種類も明確だが日を特定できない期間はperiod/unspecifiedで原文保持し、21〜30日へ展開しない。年なし期間や種類不明・矛盾を含む表現はperiod/needs_reviewでyear_unresolved等の理由を保存する。periodではdate_raw非空。日付未記載はunspecified/unspecified、date_rawは空文字可。invalid_calendarでも別イベントとして完売を適用する既定方針は維持。DBは保存組合せを検査し、原文の年月日解釈・理由の導出は第3便の共通サービスで検査する。
+
+proposalは既定4キーを厳密検査する。target_selectorの「根拠」は正式キーevidenceへ固定し、全体はchannel_id/product_id/unit_id/condition_id/price/shipping_label/evidenceの7キーobject。channel_idはUUID文字列で当該sourceのsupplier_channel_idと一致。product_id/unit_id/condition_idはUUID文字列またはJSON null、priceは0〜999999999999.99の通常十進文字列（小数部最大2桁）またはJSON null、shipping_labelは文字列またはJSON null。省略はnull、空文字から発送枠を作らない。未知キー/欠落/不正型をDBで拒否する。商品等の候補が未解決でも保存できるよう、selector内の候補IDのFK実在/一意対応は保存入口の検査とし、確定offerのFKとは区別する。
+
+evidenceはproduct_id/unit_id/condition_id/price/shipping_labelの5キーobject、各値は§22のspan配列（根拠なしは空配列、JSON nullは禁止）。DBはこの5キーと配列型まで検査し、spanの内部キー/位置/原文一致は第1便部品を用いた第3便共通入口の責務。channelは原文の仕入元メタデータを用いるため推定根拠文字列を保存しない。resolvedなIDでも原文にその名称が明記されない既存枠対応があり得るため、空根拠配列だけをDBで却下しない。適用時に商品・枠の一意な対応を確認する。patch内部のpresence/value・根拠一致も§24どおり共通入口の責務で、DBはobject型まで。この境界を「全JSON内部検査済み」と報告しない。
+
+自己査定: **APPROVE（上記2点の設計補正、同一AIの自己審査）**。第5試験群へ日付の全許可/禁止組合せ、第2群へselector7キー/evidence5キーの型・欠落・未知キー拒否を含める。日付抽出・商品特定精度は第2便の実PG合格から宣言しない。3ファイルの実装範囲と既に受領済みのPO委任は維持する。
+
 ### 第2便発行前の型・最新main照合（2026-09-13）
 
 latest mainは56a1661d03a583be53fc74507c7d428faa2f0b18。第1便PR3471の製品4ファイルとは変更パスが重ならない。第2便の登録は20260913_150000_tcg_empty_box_condition.sqlの後へ1行追加し、既存登録とCN0011の定義を変更しない。
@@ -1057,7 +1078,7 @@ correction_idsの既存DB型はBIGSERIAL。UUIDへ変換しない。JSONでは1�
 
 analysis_result_snapshotのキーはschema_version（1）、kind（item/no_item）、extraction_item_id（UUID|null）、product_id/unit_id/condition_id（UUID|null）、quantity/price（Decimal文字列|null）、status/exclusion（string|null）、pid_resolved/unit_resolved/needs_review（boolean）、pid_basis/unit_basis/condition_basis（string|null）、review_reasons（string配列）、evidence（object）、correction_ids（正のBIGINTを十進文字列にした配列）、proposal（object）に固定。未知キーは拒否。kind=no_itemでは明細ID/商品等/数量価格/basisはnull、resolvedはfalse、evidenceは原文分類根拠、needs_review/reasonsは分類結果を示す。
 
-proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/根拠）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
+proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/evidence。形と検査境界は本節の日付組合せと対象選択の保存境界）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
 
 空抽出でも明確な在庫語が原文にある場合は、ignore種別のpending候補を原文単位で記録して「抽出できず確認待ち」とする。この候補は数量操作へ直接applyできず、再抽出して根拠が揃った別イベントを作る。無関係と確認できた原文はignored。空抽出から全商品を0にする経路はない。
 
