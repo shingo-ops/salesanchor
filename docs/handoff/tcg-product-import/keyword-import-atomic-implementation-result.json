@@ -1,0 +1,48 @@
+{
+  "status": "implementation diff prepared; static and parent review passed; formal CI pending",
+  "branch": "release/product-csv-atomicity",
+  "worktree": "/Users/tanizawashingo/worktrees/salesanchor/release-product-csv-atomicity",
+  "base_head": "1a8eed69a8d4e1c17cefc7dcef579f63493b17dd",
+  "design_sha256": "0806d0eb64d9d81c364f871e84e75952012794b851585952823d011457e5a8f6",
+  "po_original": "進める",
+  "approval_scope": "design20 adoption and existing executor four-file implementation; stop before PR",
+  "files_sha256": {
+    "backend/app/services/tcg_product_master_svc.py": "ce0861d18c4f6700be23c5bd67c53fd2726bf0e26292437205793dfd3420d50d",
+    "backend/app/services/tcg_product_import_svc.py": "d443ec8fba4d12ef334900e00d245030888eccd687affbcbcbb4c72ded5fce5d",
+    "backend/tests/test_tcg_product_import.py": "4e7537cc17502989b930a3d671e90f86bf291238cb26f872d0c5b96f8caabfdf",
+    "backend/tests/test_tcg_product_import_atomicity_pg.py": "3e8e707b36e3130def837764ef863cf94f8f96f2934343a2645cef579445d7df"
+  },
+  "worker_checks": {
+    "make_lint_ci_exit": 0,
+    "mypy": "existing advisory warnings; not strict pass",
+    "changed_tests_ruff_exit": 0,
+    "diff_check_exit": 0,
+    "pg_cases_added": 228,
+    "pg_execution": false,
+    "ci_timeout_minutes": 15,
+    "ci_runtime_measured": false
+  },
+  "parent_checks": {
+    "actual_ast_memory_cases": 354,
+    "direct_test_function_calls": 25,
+    "baseline_failure_detected": "verify_value row1 product/history mismatch",
+    "final_source_hashes_match": true,
+    "diff_check_exit": 0,
+    "read_only_review": "limited implementation contract consistent; formal pytest/PG not executed"
+  },
+  "not_performed": [
+    "pytest runner",
+    "real PostgreSQL",
+    "coverage",
+    "product commit",
+    "push",
+    "PR create/update",
+    "merge",
+    "deployment",
+    "eight-product update",
+    "44 registrations",
+    "reanalysis",
+    "sheet distribution"
+  ],
+  "raw_report": "/tmp/reports/CARD-PRODUCT-CSV-ATOMIC-IMPL-01.txt"
+}

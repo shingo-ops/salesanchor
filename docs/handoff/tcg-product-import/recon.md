@@ -866,3 +866,20 @@ PO原文「進めてくれ」を受領し、PR直前停止を維持して§20を
 ### CSV整合性修正の実装委任承認（2026-09-13）
 
 方式採用と4ファイル修正の委任質問にPO原文「進める」を受領。正式カードcard-product-csv-atomic-impl.mdを作成しcard-lint終了0（長行警告2）、既存/root/csv_card_executorへ委任継続。公式new-worktreeでrelease/product-csv-atomicityを作成、HEAD/main1a8eed69一致/clean/preflight成功を直接確認。本店dirty31は保持、reaper削除対象0。Dockerはsocket未存在で接続失敗を直接確認し、pytest/実PG未実施を維持。設計SHA0806d0eb64d9d81c364f871e84e75952012794b851585952823d011457e5a8f6を固定。製品commit/push/PR作成なしで4ファイル差分・静的検査・親レビューまで。
+
+
+### CSV整合性修正・実装受領とPR直前停止（2026-09-13）
+
+既存担当の4ファイル差分を受領。2サービスのdiffを親が直接読み、create_product/record_rowの既定True維持、CSVのFalse指定と商品/全語/created履歴のcommit1回、create呼出だけのValueError継続、失敗時rollback・元例外保持、成功後のカウンタ更新を確認。単品既定経路の既存確定後エラーまで解消したとはしない。
+
+担当報告：make lint-ci終了0（mypyは既定の警告扱い）、変更2試験ruff終了0、diff --check終了0。初回ruffは新規試験の未使用import1件を検出、同ファイル内で除去して再検査成功。親も4SHAと実ファイルの一致、指定4ファイル以外の差分0、diff --check終了0を直接確認。新規PG試験は未追跡263行のためtrackedだけのdiff統計に含まれないことを確認した。
+
+親自身の検算：旧基点1a8eed69から固定抽出した実サービスはverify_valueの1行目で商品/履歴不一致を検出。最終2サービスの実ASTをメモリDBで実行した354ケース（8種×44位置＋正常/finish）は不整合0、検索語/除外語の残存0、同digest再送追加0。既定Trueのcommit1/Falseのcommit0も直接確認。最終SHAは同検算時から不変。
+
+さらに追加unitの実関数をASTで抽出し直接呼び出した25ケースが成功。pytest runner/DBは実行せず、socket.connectを拒否した。初回は開発依存だけのvenvにSQLAlchemyがなくImportErrorとなったため、親用/tmpへ既定2.0.38を導入して再実行。製品venv/依存定義を親が変更したものではない。直接呼出はfixture収集・pytestフック・全suiteの保証ではない。
+
+PG試験は現物を読取。正常1ケース（44商品）/保存前ValueError44/確認ValueError44/履歴失敗44/commit前44/commit後44/追加7の計228ケース、各fixtureの独立DB。C1–C11対応を確認。別接続で実体/語/履歴を照合し、PGをskipする追加条件や安全ガード緩和なし。既存CI timeout15分に収まるかは未測定で、成功と宣言しない。pytest/実PG/coverageは未実施。
+
+状態：方式の設計自己審査/PO承認/既存担当への実装委任済み、製品差分準備済み・静的検査済み・親の読取レビュー済み。正式CI待ち。生報告と4SHA、再現資料はkeyword-import-atomic-implementation-result.json/keyword-import-atomic-parent-review.json/keyword-import-atomic-direct-unit.jsonと対応.py.txt。製品worktreeのHEADは1a8eed69、4ファイルは未コミットで保持。文書だけローカルコミットへ保存する。push/PR更新/新規PR/本番変更はなし。
+
+再開手順：専用製品worktreeと4SHAを照合→PR提出の許可範囲を確認→製品公開カードを作成/検査→通常CIでC1–C11・228PGケース実行と所要時間を確認。時間超過や実PG失敗は原因を読み取り、必要な設計へ戻す。skip/CIガード緩和で通さない。B便の実商品値/実投稿正解/運用QA/8商品更新は引き続きREVISE、データ登録と再解析/配信の承認は含めない。
