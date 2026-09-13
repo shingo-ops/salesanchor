@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| シンソク抽出100秒超過の限定是正設計 | 設計パートナー | 固定2回99.842/136.291秒・原文1176照合一致、型番3商品不整合は別課題、自己審査APPROVE | PR #3476提出済み。CI結果はPR参照、番号付きマージGO待ち。本番未反映 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・recon時間制限節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
 | Geminiの商品マスタ参照・作品IDのみ判断 | Agent | Client寿命修正PR3472提出、製品CI2819成功/95skip/失敗0。新取込基準729 | 番号付きGO待ち。最新HEAD検証はPR本文へ記録。本番比較/採用/配信未実施 | PR3472 / CI34739377763 / docs/handoff/tcg-product-master-growth/recon.md | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
