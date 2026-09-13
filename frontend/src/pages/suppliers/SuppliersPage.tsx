@@ -2,6 +2,7 @@ import { useEffect, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -121,8 +122,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setCreateForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>
@@ -140,8 +141,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>
