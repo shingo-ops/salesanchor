@@ -149,4 +149,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
-| 実商品CSV登録前確認 | 設計担当 | A便の設計自己審査APPROVE・PO正式設計承認済み（6ファイル/A1–A8）。B便の既存語更新/44件登録はREVISE | 設計/カードをローカル保存・カード違反0。PO公開承認に基づくpush成功・文書PR #3466提出。A便6ファイル実装・静的検査・親の読取検算済み。製品PR #3473（e484f168）提出。正式pytest/PG3260成功・95skip。PO原文GO #3473受領。既存担当へ通常マージ/自動配備のカード引き継ぎ済み。新HEADのCIと今回backup/配備HEAD/HTTPを確認、B便は確認待ち | docs/handoff/tcg-product-import/design.md §18-7 / EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL | 2026-09-13 |
+| 実商品CSV登録前確認 | 設計担当 | A便設計自己審査APPROVE・PO承認・実装・正式CI・PR3473マージ/本番配備完了。B便8商品更新/44登録はREVISE | A便の後続GO/配備記録を文書PR3466へ保存（別途未マージ）。次はB便未解決受入条件の設計確認。再解析/3シート配信は未実施 | docs/handoff/tcg-product-import/product-name-space-release-result.json / EV-20260913-PRODUCT-NAME-SPACE-RELEASE | 2026-09-13 |
