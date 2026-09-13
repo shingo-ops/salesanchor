@@ -1107,3 +1107,14 @@ preflight成功、本店はorigin/mainより196コミット遅れ・台帳以外
 
 公式ledger-viewでrelease/product-name-space-match-implがREVIEW/PR3473と確認。GitHub直接読取ではOPEN、HEAD a618c147bac99296c46cd4647d7cec0e0ff456a6、main c22ad508取込済み。製品6ファイル中tcg_analyzer_svc.pyが本案と重複。別担当がGO3473を受領して最終CI/反映を進めている記録あり。本セッションでそのGOを流用しない。
 PR3473版tcg_analyzer_svc.py:518 match_product_name_spaceは検索語に日本語を含み空白なしの場合だけ、商品名から半角/全角空白を除いた全体一致を追加する。今回の30th CELEBRATIONは検索語に空白があり日本語がなく、この追加経路の対象外。同:527のmatch_pid_with_workは候補選択をselect_product_candidatesへ分離しており、旧版に対する本案をそのまま適用してよいとは判定しない。根拠はgit show origin/release/product-name-space-match-implの該当関数とgh pr view 3473。台帳の重複時停止規則に従い製品実装/カード発行を停止。推奨順序は3473反映後の実物を基点に本案を追加し、既存293名称/96設計例・除外/R5を回帰確認すること。
+
+
+## 2026-09-13 連続空白対応・3473反映後の実物照合
+
+PR3473: GitHub MERGED/mergedAt2026-09-13T06:39:45Z/merge8d5aa581。Deploy34743294988成功、後続62e22f8cのDeploy34744293217成功。本番gitHEAD62e22f8c、稼働analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52、3473マージ版と一致。main push上の他チェックにはfailureもあり、全CI成功とは称さない。本調査でそれらを修復していない。
+
+新案は辞書コピーを変換する前案から、match_product_keywordの局所2変数だけを変換する方式へ修正。稼働関数を隔離プロセスのメモリ内だけで置換し固定729件を検算、商品特定553→563、既特定変更0、全結果差分11（10商品追加、1basisのみ）。旧552基準との1差を本案の効果としない。API/DB接続/製品ファイル変更0、入力保持true。非公開/tmp/line-space-post3473-proof-private.json。過去取込コピーの検算であり本番保存結果ではない。
+
+実物根拠: 3473版analyzer:503 match_product_keyword、:518 match_product_name_space、:526 match_pid_with_work。既存品質lint:57 R3、:68 R4、:79 R5、:101 R6、:115 R7。R3/6同語とR4/5検索除外を対称化し、日本語fallbackとR1/2/7を維持する必要を確認。analyzer ENGINE_VERSIONを期待する実PG試験あり。product_guardsはASTで関数を選ぶため新helperもローダーへ加える。Context7を要するライブラリ仕様調査は今回なし（既存Python正規表現と自社契約の局所設計）。
+
+品質検算追補: 固定マスタと稼働lint関数を使いR3/R4/R5/R6の空白対称化を隔離メモリで検算。指摘件数は順に1→1、0→0、15→15、2→2、各指摘集合の追加/削除0。既存指摘を解消したとは称さない。/tmp/line-space-quality-proof-private.jsonl、DB/Gemini0。正式card-lint終了0（長行37警告）、task-state/diff検査成功。製品コード/DB変更0、カード発行済み・実装担当未起動。
