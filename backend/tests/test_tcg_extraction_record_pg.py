@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_extraction_record_svc as records
 from app.tasks import tcg_extraction as extraction
-from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, seed_products
+from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, provision, seed_products
 from tests.test_tcg_work_matching_integration import pg as pg
 
 MIGRATION = MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql"
@@ -115,8 +115,9 @@ def test_no_response_is_not_an_empty_response(pg, monkeypatch, failure):
     assert attempt["error_code"] == failure and item_count(pg, jid) == 0
 
 
+@pytest.mark.parametrize("soft", [False, True])
 @pytest.mark.parametrize("stage", ["start", "receive", "items"])
-def test_storage_failure_never_adopts_or_analyzes(pg, monkeypatch, stage):
+def test_storage_failure_never_adopts_or_analyzes(pg, monkeypatch, stage, soft):
     seed_products(pg[0])
     sid, jid = source(pg)
     calls = fake_model(monkeypatch)
@@ -131,12 +132,15 @@ def test_storage_failure_never_adopts_or_analyzes(pg, monkeypatch, stage):
             nonlocal commits
             commits += 1
             if commits == {"start": 1, "receive": 2, "items": 3}[stage]:
+                if soft:
+                    raise SoftTimeLimitExceeded()
                 raise RuntimeError("private SQL parameter data")
             return original()
 
         monkeypatch.setattr(session, "commit", commit)
         result = extraction._run_extraction(session, sid)
     assert result["status"] == "error" and item_count(pg, jid) == 0 and analyzed == []
+    assert result["error_message"] == ("SOFT_TIME_LIMIT" if soft else "RECORD_WRITE_FAILED")
     assert len(calls) == (0 if stage == "start" else 1)
     attempts = rows(pg, jid)
     assert len(attempts) == (0 if stage == "start" else 1)
@@ -258,11 +262,12 @@ def test_migration_idempotent_and_parent_lifecycle(pg, monkeypatch):
 
 def test_partial_schema_stops_migration(pg):
     with pg[0].cursor() as cur:
-        cur.execute("CREATE TABLE tenant_902.source_messages (id uuid PRIMARY KEY)")
+        provision(cur, "tenant_904")
+        cur.execute("ALTER TABLE tenant_904.extraction_items RENAME TO interrupted_items")
         with pytest.raises(psycopg2.errors.RaiseException, match="Partial extraction schema"):
             cur.execute(MIGRATION.read_text())
         cur.execute("ROLLBACK")
-        cur.execute("SELECT to_regclass('tenant_902.extraction_attempts')")
+        cur.execute("SELECT to_regclass('tenant_904.extraction_attempts')")
         assert cur.fetchone()[0] is None
 
 
@@ -323,7 +328,6 @@ def test_analysis_failure_does_not_reclassify_committed_extraction(pg, monkeypat
 
 
 def test_new_tcg_schema_receives_history_on_migration(pg):
-    from tests.test_tcg_work_matching_integration import provision
     with pg[0].cursor() as cur:
         provision(cur, "tenant_903")
         cur.execute(MIGRATION.read_text())
