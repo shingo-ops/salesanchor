@@ -1,0 +1,48 @@
+{
+  "status": "REVIEW_DRAFT_NOT_APPROVED_FOR_IMPORT",
+  "created_at_utc": "2026-09-13T01:48:11.825066+00:00",
+  "csv": "sword-shield-44-review-draft.csv",
+  "sha256": "c4ba5619b293bd222bce0c65d1faab48059d5b3a24ea46c4b12eb5540eaffa1b",
+  "bytes": 9798,
+  "source_catalog_sha256": "8db590ecdd64d550f6459e46d17cc1e72942f8c17c08efad40316fbc711b5df3",
+  "source_service_sha256": "05bfc76682b28776b2fb3f5595dc91e1b782e1976bfe14003e4dc0f89a5f1366",
+  "checks": {
+    "header_matches_current_service": true,
+    "columns": 10,
+    "product_rows": 44,
+    "utf8_bom": true,
+    "crlf_records": 45,
+    "required_fields_missing": 0,
+    "duplicate_title_mark": 0,
+    "valid_calendar_dates": 43,
+    "blank_date_rows": [
+      37
+    ],
+    "blank_mark_rows": [
+      25
+    ],
+    "csv_roundtrip_equal": true,
+    "current_parse_rows_errors": [],
+    "current_parse_rows_count": 44,
+    "formula_prefix_cells": 0,
+    "simple_name_simulation_positive": 44,
+    "simple_name_simulation_cross_hits": [],
+    "simple_name_simulation_cross_comparisons": 1892,
+    "simple_bundle_negatives": 22
+  },
+  "draft_changes": {
+    "25.mark": "blank: dedicated mark unconfirmed",
+    "37.mark": "SN: official card image",
+    "37.release_date": "blank: official date approximate"
+  },
+  "not_verified": [
+    "English names and other marks inherited from historical catalog",
+    "current DB codes and existing products",
+    "production keyword matcher and real messages",
+    "authenticated UI download and preview",
+    "QA schema target"
+  ],
+  "production_preview_calls": 0,
+  "production_commit_calls": 0,
+  "review": "REVISE: values and live validation remain unresolved"
+}

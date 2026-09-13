@@ -376,3 +376,58 @@ POが許可したSSH経路で、稼働中APIの既存resolve_supplierへaction=c
 
 
 進捗表示改善の最終実測: root直接実行の全unit143件、E2E8件、build/check:allは成功。詳細と初回失敗の区別、3viewport画像はdesignの「表示改善の実装・最終レビュー」。本番操作なし。共通部品/集計契約を維持して要確認導線と情報階層を変更した。
+
+
+## 2026-09-13 3段階CTA製品実装の実物照合
+
+基準origin/main dd1df11c。rootがImportWorkflowPanel上部actions/3cardsとuseImportWorkflowの5秒更新・遅延応答破棄を読取。Terra調査: tcg_import_progress.py:13-34に取込リンク起点CTE、37-46にcoverage envelope、107-135にitems filter。正規migration20260831_110000...:221-252にraw_text/received_at/is_active、supplier_channel_id nullable、extraction_jobs.status/error_messageを確認。新しいmessages/job GETはSELECTのみで実現、0明細エラーをjobs起点で保持。既存正規PGfixture test_tcg_import_progress_pg.pyとunit/E2Eが再利用可能。固定ルートの後に新規可変ルートを置く。
+
+PO「この表示に変更してくれ」を実装承認として受領。root同一AIによるPlanner→Architect整合検査APPROVE（限定3カードCTA+必要GET）。正式カードlint exit0。新しいライブラリ仕様の調査なし。本番への再抽出/配信POSTは含めない。詳細契約/受入表/Whyはdesign.mdの同日実装設計節。実装・試験結果は追記待ち。
+
+
+## 2026-09-13 3カードCTA実装の未完了記録
+
+設計APPROVE/実装承認済み、製品実装は未完了で審査REVISE。詳細はreports/pmg-stage-card-actions/HANDOFF.md。暫定実装の状態管理/表示/試験不足とRuff4件を根拠付き保存。既存担当の未実施報告反復により担当引継ぎを検討、新規起動のPO明示委任待ち。未コミット・PRなし・本番未変更。
+
+
+### 3段階カードCTA・実装検収（2026-09-13）
+
+担当交代: POの新規担当1名への委任承認「進める」を受け、pmg_cta_completionが同じカード/作業台の未完差分を継承して完成。rootは製品を編集せず、差分・試験ログ・画像を審査した。
+
+実装: 3カード下部に主CTAの高さを揃えた確認操作、成功/対象なし/エラーの分割バー。投稿と抽出jobの取込限定GET、results_presentフィルター、詳細のページング/表示更新/遅延応答除外を追加。投稿の再利用・現在無効・受信日時を表示。明細0件の抽出エラーを表示し、生例外を公開しない。詳細の原因不明と調査依頼の重複文言を画像審査で解消。
+
+実装担当実行・root原ログ確認: frontend全unit26ファイル273件成功（対象3ファイル29件を含む）、実PostgreSQL18件成功/skip0、Playwright12件成功33.1秒、build/check:all/backend lint-ci終了0。check:allは218警告/0errors。backend lint-ciはRuff成功・Bandit high0、mypy非blocking診断532件を含むため型診断全解消とはしない。追加サービスの診断0、routerのfilename型診断は追加GET外の既存行。rootが直接git diff --check終了0、製品差分/試験コードと保存ログを照合した。rootは試験そのものの再実行を行っていない。
+
+画面は模擬APIのPC1440/狭幅390・日本語light/英語darkで確認。rootはcards-{1440,390}-{ja,en}.pngとanalysis-action-390-ja.png等を直接閲覧。縦並びの解析CTAはスクロール後viewport到達・クリック成功を試験。CTAからPOST0、JS error0、横溢れ0、原文HTML非実行。初回390jaの1失敗は辞書編集中の同URL再読み込みと重なり、固定差分では12/12成功。待機追加による試験基準緩和なし。画像の44/1019/313等はfixtureであり本番実数ではない。
+
+証跡保存先: reports/pmg-stage-card-actions/{all-unit,pg,check-final,build,backend-lint,e2e,colima-stop}.txt、cards/error/analysis-actionのPNG、verification-manifest.json（各SHA256）。専用Colima dist01-3258停止ログ確認、他者profile/本番変更なし。Gitには正式設計・試験コードを保存し、旧unfinished差分/キャッシュは含めない。
+
+最終差分/視覚審査: APPROVE（root、担当実装と照合）。限定設計の受入を満たし、PR/CI確認へ進める。新GO未受領、未マージ・本番未反映。設計審査は同一AI自己審査であり独立第二者レビューとは称さない。配信候補集計の不一致、再抽出操作、全体ダッシュボードの残設計は今回解消していない。
+
+
+### 公開pushの承認待ち（2026-09-13）
+
+ローカル実装commit8bb8df00、最新main af269ae2の文書変更を統合したHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8。統合は文書のみ、双方の根拠登録を保持。通常pushは実行前の自動承認レビューで2回拒否された。読み取り照合でorigin=https://github.com/shingo-ops/salesanchor.git、GitHub owner/name一致、isPrivate=falseを確認。拒否理由は「公開GitHubへの送信についてユーザー本人の明示承認が必要。表示変更依頼・担当カード/root指示では不足」。制限解除・別送信経路・force等の迂回はしない。
+
+現在地: 実装/ローカル検証/審査/ローカルコミット済み。push未実施、PR未提出、PR CI未実行、マージ/本番未実施。次はPOの公開push・PR提出の明示承認を受領後に通常手順を再開。マージには別途新PR番号のGOが必要。検証ログと画面20ファイルは親引継ぎ作業台reports/pmg-stage-card-actions-final-20260913にもSHA256照合して複製済み。
+
+
+### 公開push・PR提出の本人承認受領（2026-09-13）
+
+直前の質問「公開GitHubリポジトリへ変更をpushし、PRを提出してよいですか？」に、PO原文「進めてくれ」を受領。公開送信先shingo-ops/salesanchorのrelease/pmg-stage-card-actionsへの通常pushとmain向けPR提出を承認した回答として記録する。上の公開送信承認待ちは解消。preflight終了0、ローカル検収済み差分と最新mainを照合して通常手順を再開する。これは新PR番号のマージGOではなく、本番反映は未承認・未実施。
+
+
+### PR #3467提出・CI完了（2026-09-13）
+
+公開push承認後の通常push・PR提出・register-pr完了。PR https://github.com/shingo-ops/salesanchor/pull/3467 、HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100。最新main9f5415c3統合で製品差分は検収時から変更0、対象unit29件/Ruff/台帳検査成功。rootがGitHubの最新HEAD・全チェック完了を直接確認: 41SUCCESS/6SKIPPED/1FAILURE。失敗はprocess-artifacts gate job103667191630の「### GO記録なし」のみ。番号付きGO未受領なので記録を創作しない。
+
+backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行の保存ログをrootが確認。Frontend E2E GitHub jobはSKIPPEDであり、ローカルPlaywright12成功と区別する。証跡reports/pmg-stage-card-actions/ci-3467.json、ci-pytest-3467.txt、verification-manifest.json。親作業台reports/pmg-stage-card-actions-pr3467にもハッシュ照合して保存。
+
+現在地: 設計・実装・審査・公開push・PR提出・CI照合済み。新番号付きGO未受領、未マージ・本番未反映。次はPOへ3カードCTA変更/検証結果/DB変更なしを提示しGO #3467を受領後、最新HEADとCIを再確認する。今回の公開送信承認をマージGOへ読み替えない。本節と台帳の結果追補はローカル保存し、次の承認記録と同時に通常コミットする。
+
+
+### GO #3467受領（2026-09-13 12:45:59 JST 記録）
+
+PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
+
+CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
