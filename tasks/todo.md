@@ -10,7 +10,7 @@
 |------|------|------|---------|-----|------|
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
-| Geminiの商品マスタ参照・作品IDのみ判断 | Codex | CARD06連続空白実装済み。純関数直接照合457成功、lint終了0。PR未作成 | PO指定でPR直前停止。PR作成後に正式pytest/実PG/CI、GOは別途 | release/product-space-runs / recon CARD06実装確認 / 設計PR3462 HEAD75b90916 | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | Codex | CARD06実装済み。原文照合19件の正答8→18、既存誤商品1残存。純関数457成功 | PR直前停止を継続。既存9種セット誤商品を別課題として判断、正式CI/PG未実施 | product-space-accuracy.json / recon商品正答率評価 / 実装2534ca14 | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AMスタッフ6ボタンPR3468マージ・本番反映済み。deploy34742996601成功、新規backup7.6M/公開6件/health正常を直接確認 | 本便完了。残存旧299の次便選定へ。表/報酬3/カレンダー色保留、新CI最後。新規実装の承認は別 | docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json / EV-20260913-FRONTEND-AM-RELEASE | 2026-09-13 |

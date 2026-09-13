@@ -2926,3 +2926,5 @@ EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録�
 PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50d719b、deploy34742996601成功。root実ログで新規backup7.6M/配備HEAD一致、直接HTTP200/DBRedisCelery connected/公開3フォーム6ボタン属性を確認。根拠docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。検収器修正履歴保存。本番認証付きフォーム送信・PO目視・復元試験は未実施。本便完了、残存旧299の次便設計は別。
 
 EV-20260913-LINE-SPACE-IMPLEMENTED: CARD06をmain1a8eed69起点で実装。商品専用連続半角空白と品質R3〜R6/版v8。純関数直接照合457成功（既存431/追加26）、lint終了0、mypy警告あり。Docker不在/PR未作成で正式pytest/PG/CI未実施。PO指示によりPR直前停止。recon実装確認節参照。
+
+EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全差分11を含む2投稿全19明細を同一AIが原文/マスタからラベル。正答8→18（42.1→94.7%）、未特定10→0、誤商品1→1。非盲検・全体精度ではない。9種セット誤商品を残存課題として記録。product-space-accuracy.json/recon参照。DB/Gemini/本番変更0。

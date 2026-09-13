@@ -1,0 +1,441 @@
+{
+  "scope": "All 19 saved product items in the two source posts containing any changed full matching result in the fixed 729-item snapshot. Not a random sample.",
+  "label_method": "Same AI reviewed complete source text and master definitions. Predictions had been seen previously; not blind, held-out or independent review. Product identity only.",
+  "input_file_sha256": "c6ff28e2f543a77ba4d67b45fabb9933c0c94700a8163301bf689226afd3a677",
+  "snapshot_sha256": "f8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385",
+  "before_analyzer_sha256": "3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52",
+  "after_analyzer_sha256": "d0c5f1eec36e06469864833fe1076e7f240268016b1afe6fb413c4ddb0f687d0",
+  "implementation_commit": "2534ca145897fee07eabe98377e349c99578233d",
+  "metrics": {
+    "before": {
+      "correct": 8,
+      "unresolved": 10,
+      "wrong_product": 1,
+      "denominator": 19,
+      "accuracy": 0.42105263157894735
+    },
+    "after": {
+      "correct": 18,
+      "unresolved": 0,
+      "wrong_product": 1,
+      "denominator": 19,
+      "accuracy": 0.9473684210526315
+    }
+  },
+  "cohort": {
+    "items": 729,
+    "before_resolved": 553,
+    "after_resolved": 563,
+    "changed_full_results": 11,
+    "all_changed_results_labeled": true,
+    "unlabeled_items": 710,
+    "prior_resolved_product_changes": 0
+  },
+  "rows": [
+    {
+      "item_id": "4f44e328-306d-472e-8dd4-4715dc9188a3",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 27,
+      "line_end": 31,
+      "evidence_line_sha256": "a77a28fdb465b5aece57d4d28688bec6b3a2758ab99777d43b52056b9e00f8cb",
+      "expected_product_code": "PM0219",
+      "expected_title": "ストームエメラルダ",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0219",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0219",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "75b6d982-bb9d-43c2-831e-af34aa1f0951",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 11,
+      "line_end": 15,
+      "evidence_line_sha256": "247593c1f2413f575831aac08b60b550455a10f3bdbce7b82d512e69f1a88af3",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "9cd43dc9-a8eb-4b77-8923-4af0bf515839",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 1,
+      "line_end": 3,
+      "evidence_line_sha256": "88ee902016f7b601d70468ca399216837a6a67d18e130c324d7401e22a30ce96",
+      "expected_product_code": "PM0264",
+      "expected_title": "FUTURISTIC BOX",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0264",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0264",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "9d2b898e-5b8a-4ca0-89bc-d73127251f3a",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 17,
+      "line_end": 19,
+      "evidence_line_sha256": "02b457d4181c4094562de15e9495b50651798769f189ee92f06fcaeca97a43f7",
+      "expected_product_code": null,
+      "expected_title": null,
+      "rationale": "Explicit nine-type card-set assortment; no single matching assortment master. Abstain instead of ordinary booster.",
+      "before": {
+        "predicted_product_code": "PM0263",
+        "correct": false,
+        "outcome": "wrong_product"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": false,
+        "outcome": "wrong_product"
+      }
+    },
+    {
+      "item_id": "a27a51d4-009c-47aa-9753-a22252d0cb6f",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 21,
+      "line_end": 25,
+      "evidence_line_sha256": "d3be97ead366a82ceccfdf7b3fec88a33b5dbcddd9b7fd9ad8021c97e68e6098",
+      "expected_product_code": "PM0265",
+      "expected_title": "30th CELEBRATION プレミアムデッキセット",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "b65dd482-1e90-4fc9-ba35-fbd909b63513",
+      "source_id": "9ece68fb-f35f-49ec-86cf-e4c73fa38bc6",
+      "source_sha256": "cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269",
+      "line_start": 5,
+      "line_end": 9,
+      "evidence_line_sha256": "d71977aa38d04be4dd5618d45febae84bc708d765c8b1594ca68c489c57bfabf",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "037a85a0-1b58-40a1-9731-9b83b6620c17",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 37,
+      "line_end": 39,
+      "evidence_line_sha256": "be767ae6962043848185764f6a25c0fb73b3a6861ec57d2305bd5d5768d0c875",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "1e7790c1-e6dd-469c-a7c5-07b34a0935c5",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 45,
+      "line_end": 47,
+      "evidence_line_sha256": "221a96ceff411c283516dd25b44ad4e9937c8bdfe7ff696322dd0f1ad503947e",
+      "expected_product_code": "PM0265",
+      "expected_title": "30th CELEBRATION プレミアムデッキセット",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "31f8b5ba-7f28-4279-9248-2e3960a2eec6",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 5,
+      "line_end": 7,
+      "evidence_line_sha256": "b42067cf61aca5ab2b80b3a11064bb466fff6572a18ef39cb251756213a69f72",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "459cfa30-6a5e-4cc2-8729-c97cdb4f00ee",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 53,
+      "line_end": 55,
+      "evidence_line_sha256": "2235455738225aafbe2c28d30142af303512d2251b423a9e4e3b5a07c800b834",
+      "expected_product_code": "PM0264",
+      "expected_title": "FUTURISTIC BOX",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0264",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "4736b1e3-cddd-455d-9c1e-46ccdf4f4546",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 49,
+      "line_end": 51,
+      "evidence_line_sha256": "072f88743f29996d97affec44685aa54b19b30679b0888646239f67fc305e025",
+      "expected_product_code": "PM0264",
+      "expected_title": "FUTURISTIC BOX",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0264",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "4d316b32-e13c-4d50-a7fb-976ad542769b",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 17,
+      "line_end": 19,
+      "evidence_line_sha256": "2ca52c5e074895bdd2eb1ef8ed3a57e44eafc3655752b2a8c51b803ee646a46e",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "5b0e62cd-03b6-46c9-be80-fbfc84e2ca9f",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 21,
+      "line_end": 23,
+      "evidence_line_sha256": "c2c2113606557b8707a7085a116b782c58d45bd28a9184c31ec58e5d267006ca",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "6543a13f-a308-461b-a83c-0cdc15eab4bd",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 29,
+      "line_end": 31,
+      "evidence_line_sha256": "9252301444ea1058d7a327922dde2761d2b9926656fcbbf8e27bdb0c844e2977",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "9afe0c82-74de-406d-b241-1102764625eb",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 33,
+      "line_end": 35,
+      "evidence_line_sha256": "fc2eadd671ece146d9998e091a432de2e373bd931a959b631c51909ea2f507cc",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "9e79b83d-423c-4c27-a3a3-5d1243a761b3",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 41,
+      "line_end": 43,
+      "evidence_line_sha256": "716d79edd222dc83d7ed5d8074be5aa8c8b81c3276065a096590dbce7205f465",
+      "expected_product_code": "PM0265",
+      "expected_title": "30th CELEBRATION プレミアムデッキセット",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "a16d09e2-775c-4673-9a4d-6da9d084b52c",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 13,
+      "line_end": 15,
+      "evidence_line_sha256": "8100916c7676100ff8c010f016054e496448529e2677c35d4138723a58a7890e",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "ad87e9be-f941-41d7-85cc-4f6258f5b302",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 9,
+      "line_end": 11,
+      "evidence_line_sha256": "47faaa6c108c3a81406e34c603276e3897bd5682e719ca1bc8e5bd21a830b926",
+      "expected_product_code": "PM0265",
+      "expected_title": "30th CELEBRATION プレミアムデッキセット",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      },
+      "after": {
+        "predicted_product_code": "PM0265",
+        "correct": true,
+        "outcome": "correct"
+      }
+    },
+    {
+      "item_id": "fd0bb4f2-c6b1-445e-a2ac-6c28f4e9fef6",
+      "source_id": "cced581f-7368-4767-8927-710a86c0b4c1",
+      "source_sha256": "ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369",
+      "line_start": 25,
+      "line_end": 27,
+      "evidence_line_sha256": "2454aef841ce811199a8d63bdf292c4e803a55e07d903c7a6c9caa7260878477",
+      "expected_product_code": "PM0263",
+      "expected_title": "30th CELEBRATION",
+      "rationale": "Source product identity agrees with the master title; shipping date/pack condition do not change product identity.",
+      "before": {
+        "predicted_product_code": null,
+        "correct": false,
+        "outcome": "unresolved"
+      },
+      "after": {
+        "predicted_product_code": "PM0263",
+        "correct": true,
+        "outcome": "correct"
+      }
+    }
+  ],
+  "input_unchanged": true,
+  "gemini_calls": 0,
+  "db_calls": 0,
+  "pytest_run": false,
+  "adoptable": false,
+  "evaluator_script_sha256": "99ec9d3581eb9207a1c9cd62440b1edea3b21c707cd5ebee41f368e152a047a8"
+}
