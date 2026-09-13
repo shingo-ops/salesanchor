@@ -2705,3 +2705,5 @@ EV-20260913-LINE-WORK-COMPARE本番反映: PO原文GO #3465受領、merge9f5415c
 EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・前後全入力SHA一致。実callback初回1試行/応答0でMODEL_CALL_FAILED、診断根拠不足。キー設定/SDK/クライアント生成を生成APIなしで確認。原因未確定、診断付き同一投稿再試行はPO承認待ち。設計§17.9/recon停止節。採用/配信0。
 
 EV-20260913-LINE-WORK-COMPARE対象変更: 診断再試行はINACTIVE_SOURCEでAPI0。旧44中18無効/置換先18は新確定取込にリンク、新44有効/観測時7ジョブ未終端。対象切替PO判断待ち。recon13:41/設計§17.10参照。
+
+EV-20260913-LINE-WORK-COMPARE-CLIENT: 新取込729明細/対照不一致0、診断RuntimeError。実SDK2.8.0と公式Client.__del__確認、temporary閉鎖/held未閉鎖。配備済みadapterの寿命Fake再現とwith保持の4確認true、追加生成API0。修正設計§17.12自己APPROVE、実装承認待ち。

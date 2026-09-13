@@ -1031,3 +1031,20 @@ PO「進める」で同一2明細の診断付き再試行を承認。配備フ�
 READ ONLY追加調査: 旧取込536422ed-79c7-4a87-a887-09a02b97968fは44リンク/26有効/18無効かつsuperseded_byあり。旧snapshotとの差は18原文のis_active/superseded_by。対象2明細の原文8242110d-729a-43a8-a5f9-465091329c5cも無効、置換先cced581f-7368-4767-8927-710a86c0b4c1。旧ジョブdone37/empty6/error1。
 新取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0は13:36:33 JST作成、review_status=ok/unresolved_count=0、リンク確定13:36:38。観測時44リンク/44有効、done33/empty4/running2/pending5。旧18原文の置換先18件すべてが新取込にリンク。操作主体・事業理由は未確認。新対象も処理中につき比較不可。
 非公開証跡: /tmp/line-work-one-diagnostic-private.json、/tmp/line-cohort-state-private.json、/tmp/line-new-cohort-state-private.json（恒久保管ではない）。旧対象の無効解除や別対象への自動切替はしない。新確定取込の処理完了後に対象/基準を取り直す案をPOへ確認する。
+
+
+## 2026-09-13 新確定取込の比較基準
+
+POが対象切替に「合意」。READ ONLYで新取込44有効、done38/empty5/error1（保存error_messageはGemini API 呼び出し失敗: SoftTimeLimitExceeded()）、全ジョブ終端を確認。配備済みサービスによる新基準729明細/確定552/未確定177/訂正0、対照不一致0。全入力SHA719788e246589c708f66ead2d74040f6125cb254c576e3e6e53584fe823c72ccが前後一致。モデル0/DB書込0。非公開/tmp/line-new-work-control-private.json。superseded_byの実DB参照から新診断原文cced581f-7368-4767-8927-710a86c0b4c1を特定、新保存13明細と確認。旧2明細との対応を推測せず、新13明細IDで診断1投稿を固定する。
+
+
+### 新対象の診断結果・通信クライアント寿命の不具合
+
+新13明細の診断は2026-09-13T04:47:09〜04:47:14Z、アプリ試行1、builtins.RuntimeError、整数code/status_codeなし、応答なし、前後全入力SHA一致。非公開/tmp/line-new-one-diagnostic-private.json。追加生成APIは停止、候補/採用/配信0。
+原因の読み取り検証: 本番google-genai=2.8.0。Client.__del__はself.close()を呼ぶ。tcg_work_comparison_svc.py:85は_get_genai_client().models.generate_contentでClientを変数に保持しない。本番プロセスで生成メソッドを取得するだけの検査ではtemporaryの_httpx_client.is_closed=True、held変数の同値=False。閉じたHTTPクライアントは送信前にRuntimeError「Cannot send a request, as the client has been closed.」を返すことを、127.0.0.1:1宛のリクエストオブジェクトとclosed事前assertで確認。Gemini生成API0。
+
+API非使用の独立プロセスで、Client破棄時に接続を閉じるモデルを使い配備済みcall_work_model自体を呼ぶとclosed_before_callを再現。Clientをwithで保持する案は応答取得成功、成功後close=True、例外後close=True。4確認すべてtrue、Gemini API0。/tmp/line-lifecycle-offline-proof.jsonに保存。製品ファイルや稼働サービス設定は変更していない。
+
+一次資料: https://github.com/googleapis/python-genai/blob/v2.8.0/google/genai/client.py （2026-09-13確認、Client.close/__enter__/__exit__/__del__）。Context7利用可能ツール0のため、PO起動指示の代替許可で公式ソースを直接確認。本番実物と一致。新モデル仕様を推測して変更しない。
+
+CIが見逃した範囲: tests/test_tcg_work_comparison.py:21で実clientを禁止し、比較テストはmodel_call自体を模擬値へ置換。call_work_modelのClient寿命を検査していなかった。今回の比較用アダプタの実装不具合であり、Geminiの商品判断精度の証拠にはならない。新取込error1のSoftTimeLimitExceededの原因と同一視しない。通常抽出gemini_extraction_svc.py:185はclient変数を保持している。
