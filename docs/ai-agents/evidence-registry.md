@@ -2891,3 +2891,23 @@ tradeoff: static strings exclude dynamic/external SQL; postprocessing and manual
 decision: add final analysis result snapshot/digest and drift hold to event/publication contract; self-review REVISE
 follow_up: consolidate final columns and shared caller contract; executable product acceptance follows implementation
 ```
+
+```text
+id: EV-20260913-LINE-CONTRACT-CONSOLIDATION
+date: 2026-09-13
+agent: Codex design partner
+task: 保存・再解析確認・配信の契約統合
+scope: documentation only; same-AI self-review, not independent review
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/design.md section 27
+    summary: former sections 27-29 consolidated; 2 omitted columns included; before/after fixed to 3 keys; contributing field references and read-only digest comparison defined
+  - type: design_counterexample
+    reference: docs/handoff/tcg-import-latest-only/design.md section 27 event transitions
+    summary: 10:00 quantity 10, 12:00 quantity 10, delayed 11:00 quantity 5 must retain 10; acceptance specification, not an executed product test
+confidence: high for documented structure, product behavior unverified
+tradeoff: per-field evidence adds audit storage and can hold publication when current analysis changes; complete historical master replay remains out of scope
+validation: git diff --check, task-state, ADR-index, process-artifact format/citations/maintenance, legacy suffix preservation and consolidated key checks passed
+decision: APPROVE only for consolidated contract consistency; overall formal review remains incomplete, no implementation card
+follow_up: one final whole-design consistency review and formal card checks; product acceptance after implementation
+```

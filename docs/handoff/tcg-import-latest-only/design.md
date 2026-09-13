@@ -11,13 +11,13 @@ ADR: [ADR-154](../../adr/ADR-154-tcg-parity02-gas-python-migration.md)、[ADR-11
 
 ## 2026-09-13の状態
 
-現行契約の索引は§24、数量・発送枠は§25、追加実例と既存更新経路は§26、統合列定義と共通入口は§27を参照。過去追補の未確定記録だけで現在の状態を判断しない。
+現行契約の索引は§24、数量・発送枠は§25、追加実例と既存更新経路は§26、保存・再解析確認・配信の現行契約は§27へ統合済み。旧§28/29は§27へ吸収した。過去追補の未確定記録だけで現在の状態を判断しない。
 
 文書PR: https://github.com/shingo-ops/salesanchor/pull/3456 （提出済み・未マージ）。
 
 区分: 既存の延長・修正。従来のSQR-05設計を本ファイルの末尾へ原文のまま残し、同じ保存先に改訂案を置く。
 PO合意済み: 商品を指定した〆は売り切れ・数量0として在庫表示から除外する。他商品を維持する。原文を複数保存する。混在投稿は商品ごとに判断する。投稿に無い商品は維持する。
-技術方式・DB追加項目・API・切替手順は以下の草案。自己審査はREVISE。実装カード未発行、製品実装・DB操作・マージ・本番反映・再解析・シート配信は本セッション未実施。
+技術方式・DB追加項目・API・切替手順は以下の草案。全体の正式最終審査は未完了（従前REVISEを解除しない）。§27の統合契約のみ文書整合の自己審査APPROVE。実装カード未発行、製品実装・DB操作・マージ・本番反映・再解析・シート配信は本セッション未実施。
 GO委任は未有効として扱う。文書作成・提出を実装承認または代理GOに読み替えない。
 
 ## 1. POの願いと合意
@@ -738,14 +738,14 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 
 同一AIの自己審査はREVISE。ここまでの調査を再度「実例未提供」として止めない。次は列定義の統合と共通処理の呼出一覧を最終化する。実装後に必要なAI評価・実PG試験・画面/配信試験は、設計前の調査不足と混同しない。
 
-## 27. 列定義と共通入口の統合案（2026-09-13）
+## 27. 保存・再解析確認・配信の統合契約（2026-09-13）
 
-本節を§18/20/22/24/26の列追加案の統合先とする。各表の列はここへ集約し、複数節から推測してmigrationを作らない。SQLファイルは未作成・未実行。型後の「?」はNULL可、それ以外はNOT NULL。JSONBはobject/arrayを記した型だけ許可。IDはUUID、既存参照の削除はRESTRICT。現在の基準はこれまでの調査SHAに固定し、実装開始時のmain差分を再照合する。
+本節を保存列・snapshot・確認証跡・状態遷移の唯一の現行定義とする。旧§28/29を本節に統合した。§18/20/22/24/26の同じ項目は本節で置換し、過去の未確定記録は審査履歴としてのみ読む。業務要件は§1〜5、日付は§17、公開は§19、手動確認は§20、切替は§21、抽出は§22、履歴は§23、数量は§25を併用する。各表の列はここへ集約し、複数節から推測してmigrationを作らない。SQLファイルは未作成・未実行。型後の「?」はNULL可、それ以外はNOT NULL。JSONBはobject/arrayを記した型だけ許可。IDはUUID、既存参照の削除はRESTRICT。現在の基準はこれまでの調査SHAに固定し、実装開始時のmain差分を再照合する。
 
 | テーブル | 統合した列定義 |
 |---|---|
-| tcg_stock_offers | id UUID PK、supplier_channel_id UUID FK、product_id UUID FK、unit_id UUID FK、condition_id UUID FK、price NUMERIC(14,2)?、shipping_label TEXT?、shipping_evidence JSONB array、quantity NUMERIC(14,2)?、availability TEXT、quantity_event_id UUID? FK、price_event_id UUID? FK、condition_event_id UUID? FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
-| tcg_stock_events | id UUID PK、source_message_id UUID FK、extraction_item_id UUID? FK、offer_id UUID? FK、event_kind TEXT、event_key TEXT UNIQUE、engine_version TEXT、source_posted_at TIMESTAMPTZ?、evidence JSONB object、patch JSONB object、decision TEXT、review_reasons JSONB array、before_values/after_values JSONB object、applied_offer_revision BIGINT?、analysis_input_snapshot/analysis_result_snapshot JSONB object、analysis_input_digest/analysis_result_digest TEXT、supersedes_event_id UUID? FK、resolution_key TEXT? UNIQUE、resolution_request_hash TEXT?、resolved_by TEXT?、resolved_at TIMESTAMPTZ?、resolution_response JSONB object?、created_at TIMESTAMPTZ DEFAULT now()、applied_at TIMESTAMPTZ? |
+| tcg_stock_offers | id UUID PK、supplier_channel_id UUID FK、product_id UUID FK、unit_id UUID FK、condition_id UUID FK、price NUMERIC(14,2)?、shipping_label TEXT?、shipping_evidence JSONB array、quantity NUMERIC(14,2)?、availability TEXT、quantity_event_id UUID? FK、price_event_id UUID? FK、condition_event_id UUID? FK、validation_event_id UUID? FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
+| tcg_stock_events | id UUID PK、source_message_id UUID FK、extraction_item_id UUID? FK、offer_id UUID? FK、event_kind TEXT、event_key TEXT UNIQUE、engine_version TEXT、source_posted_at TIMESTAMPTZ?、evidence JSONB object、patch JSONB object、decision TEXT、review_reasons JSONB array、before_values/after_values JSONB object、applied_offer_revision BIGINT?、analysis_input_snapshot/analysis_result_snapshot JSONB object、analysis_input_digest/analysis_result_digest/proposal_input_digest TEXT、supersedes_event_id UUID? FK、resolution_key TEXT? UNIQUE、resolution_request_hash TEXT?、resolved_by TEXT?、resolved_at TIMESTAMPTZ?、resolution_response JSONB object?、created_at TIMESTAMPTZ DEFAULT now()、applied_at TIMESTAMPTZ? |
 | tcg_restock_plans | id UUID PK、offer_id UUID FK、polarity TEXT、certainty_raw TEXT、date_kind/date_precision/date_raw TEXT、date_start/date_end DATE?、resolution TEXT、review_reason TEXT?、source_event_id UUID FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
 | tcg_stock_publications | id UUID PK、state TEXT、schema_version INTEGER、input_manifest JSONB object、rows JSONB array、rows_sha256 TEXT?、row_count INTEGER、target_results JSONB object、created_at TIMESTAMPTZ DEFAULT now()、ready_at TIMESTAMPTZ? |
 | extraction_items（追加列） | evidence_payload JSONB object?。既存行はNULL、v5ではformat_version=5を必須 |
@@ -755,7 +755,7 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 
 ### 制約・索引の確定対象
 
-- 全revision>=1、row_count>=0、schema_version>=1。availability/event_kind/decision/polarity/date_kind/date_precision/resolution/stateは各節の列挙値にCHECKを付ける。状態未確定を任意文字列で通さない。
+- 全revision>=1、row_count>=0、schema_version>=1。CHECKの列挙値は availability=available/sold_out/unknown、event_kind=stock_set/sold_out/offer_patch/plan_assert/plan_deny/ignore、decision=pending/applied/ignored/stale/rejected、polarity=positive/negative/unknown、date_kind=arrival/shipment/order_cutoff/unknown、date_precision=day/range/period/unspecified、resolution=resolved/unspecified/needs_review、state=building/ready/delivering/completed/partial/failed。状態未確定を任意文字列で通さない。
 - offersの数量状態とprice>=0は§24、eventsの適用状態整合は§24、plansの日付整合は§24。resolution_key等の手動解決5列は全NULLまたは全非NULL。JSON object?のresolution_responseもこの組に含める。
 - sha256/digest/request_hashは64桁の小文字16進。入力snapshotとhash、結果snapshotとhashの一致は保存入口で検証する。比較規約はキー順固定・UTF-8・空白なし・Decimalを文字列・日時をUTC ISO形式。揮発的な解析時刻等は解析result hashから除き、適用監査時刻は別列で保存。
 - publicationsはready/delivering/completed/partialでrows_sha256/ready_atが非NULL、row_count=rowsのデータ行数（ヘッダー除く）。rowsはヘッダーを含む12列配列で、全セル文字列。ready以後は内容とmanifestを変更不可。
@@ -776,19 +776,11 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 | stockイベント手動解決API | 原文/候補集合/対象revisionを再照合して同じ適用入口へ |
 | distribution | 保存済みofferのprojectionとanalysis_driftを検査してpublication生成。analysis_resultsから数量を直出力しない |
 
-共通入口ではチャネル→analysis_results→offer/planの順で行ロックし、結果digestと対象revisionを再照合する。既存解析の結果書込トランザクション内からチャネルロックへ入らず、commit後に接続して逆順ロックを避ける。外部AI/Sheets呼出し中はDBトランザクションを保持しない。
+共通入口ではチャネル→analysis_results→event→offer→planの順（同種複数行はUUID昇順）で行ロックし、結果digestと対象revisionを再照合する。既存解析の結果書込トランザクション内からチャネルロックへ入らず、commit後に接続して逆順ロックを避ける。外部AI/Sheets呼出し中はDBトランザクションを保持しない。
 
 publication生成と解析input snapshot読取はREPEATABLE READの短いトランザクションで同じ読取版を使用する。[PostgreSQL 16公式](https://www.postgresql.org/docs/16/transaction-iso.html)はREAD COMMITTEDでは同じトランザクションの連続SELECTでも異なる版を見得ること、REPEATABLE READの更新競合では全体再試行が必要なことを規定する。DB競合時は外部送信前にトランザクション全体を最大3回再試行し、以後保留。
 
 送信前に対象行をロックしactive_publication_idを予約してcommit。同じpublicationでもoutcome不明の試行を別workerが新しい試行として再開しない。既存attemptを照会・読取検証してから再試行を決める。解決できない限り別publicationの送信を始めない。成功応答が遅れて届いても、attempt_id/active_publication_id不一致なら新しい予約を解除しない。
-
-### 残件を増殖させないための審査整理
-
-具体化した業務契約・参照例・保存列・呼出元は本節までに集約した。SQLの正式作成は実装役の作業だが、制約トリガーのイベント種別ごとの許可遷移（pending→applied等）とsnapshot生成の厳密なJSON項目は、Generatorへ渡す前に設計で固定する必要がある。これを最終の設計残件とする。新たな事実で影響が増えた場合は根拠を示し、単に「精度未測定」を理由に未実装試験を前倒し要求しない。
-
-自己審査REVISE。現段階で実装カードを発行せず、設計合格/実装済みと呼ばない。実PG・AI・UI・配信・切替の試験は実装後ゲートで、今回は文書整合チェックのみ。
-
-## 28. 状態遷移とsnapshot項目の固定案（2026-09-13）
 
 ### イベントの状態遷移
 
@@ -796,10 +788,12 @@ publication生成と解析input snapshot読取はREPEATABLE READの短いトラ�
 |---|---|---|
 | 未作成 | pending | 原文ID、engine版、event_key、両snapshot/digestを固定。候補以外の在庫更新0 |
 | pending | applied | 確定offer一致、入力/結果digest不変、原投稿時刻・revision検証、数量/予定の型・意味検査成功。before/afterと参照を同じtransactionで保存 |
-| pending | ignored | 同じ値の再通知、または明確に在庫操作を含まない通知。数量/予定不変。理由を保存 |
+| pending | ignored | 同じ原投稿時刻・同じ値の重複、または明確に在庫操作を含まない通知。数量/予定不変。理由を保存 |
 | pending | stale | 対象項目に既に新しい原投稿時刻のイベントが適用済み。quantity/plan変更0 |
 | pending | rejected | 管理者が原文と候補を確認して却下。理由とsubject/時刻/キーを保存 |
 | applied/ignored/stale/rejected | 同状態のみ | 内容と結果は不変。訂正・再抽出は別IDのpendingイベントにsupersedes_event_idを付ける |
+
+数量が同じでも原投稿時刻が新しい在庫通知はappliedとし、quantity_event_idを進める。10時=10個→12時=10個→遅着した11時=5個なら、最後はstaleで10個を維持する。再解析の確認イベントはこの「新しい在庫通知」と別扱いで、数量根拠の時刻を進めない。
 
 pendingのまま候補再検査できるが、source/evidence/patch/解析版は変更不可。offer_idの選択とreview_reasons、手動解決情報だけが変更可能。同時操作はchannelとevent行をロックして判定する。参照トリガーは適用時にevent.offer_id=参照先offer.id、sourceとofferのchannel一致、source_posted_atの写し一致を要求する。原文のチャネル/時刻変更が既存イベントと矛盾する場合は拒否し、原文訂正は別IDとして扱う。
 
@@ -815,7 +809,7 @@ active_publication_idとattempt IDの一致を予約解除条件にする。成�
 
 ### snapshotの厳密な形
 
-analysis_input_snapshotは全マスタの再現用snapshotではなく、原文と解析版の来歴を保存する。キーはschema_version（1）、engine_version（string）、prompt_version（string）、work_reference_sha256（string|null）、source_sha256（string）、extraction_payload（object|null）、correction_ids（UUID配列）の7件に固定。extraction_payloadは今回使用した保存済みのraw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name/resolved_work_id/line_start/line_end/evidence_payloadを含む。no_itemならnull。correction_idsは使用した既存の不変訂正履歴IDを順序固定で参照する。
+analysis_input_snapshotは全マスタの再現用snapshotではなく、原文と解析版の来歴を保存する。キーはschema_version（1）、engine_version（string）、prompt_version（string）、policy_version（string）、work_reference_sha256（string|null）、source_sha256（string）、extraction_payload（object|null）、correction_ids（UUID配列）の8件に固定。extraction_payloadは今回使用した保存済みのraw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name/resolved_work_id/line_start/line_end/evidence_payloadを含む。no_itemならnull。correction_idsは使用した既存の不変訂正履歴IDを順序固定で参照する。
 
 全マスタsnapshotを新たに保存する案は採用しない。根拠: 現行load_lookup_mapsは6辞書、商品/作品/正規化/状態/備考は別ロード、単位補正は後段で再読込される。完全な入力再現は今回の在庫保全以上の改修を要求する。一方、数量・対象・状態・予定を変える最終結果は次のsnapshotで検出できる。既存work_reference_snapshotと既存監査履歴は保持するが、全マスタ状態を完全再現できるとは宣言しない。
 
@@ -825,17 +819,9 @@ proposalはevent_kind、target_selector（channel_id/product_id/unit_id/conditio
 
 空抽出でも明確な在庫語が原文にある場合は、ignore種別のpending候補を原文単位で記録して「抽出できず確認待ち」とする。この候補は数量操作へ直接applyできず、再抽出して根拠が揃った別イベントを作る。無関係と確認できた原文はignored。空抽出から全商品を0にする経路はない。
 
-before_values/after_valuesはoffer（id/revision/product_id/unit_id/condition_id/quantity/price/availability）、plans（変更対象のid/revision/polarity/date_kind/date_precision/date_raw/date_start/date_end/resolution/review_reason）の2キー。未適用はoffer=null/plans=[]。適用後はその時点の値として不変。current_offerは別の現在値をAPIで返す。
+before_values/after_valuesは必ずoffer、plans、validated_inputsの3キー。offerはid/revision/supplier_channel_id/product_id/unit_id/condition_id/shipping_label/shipping_evidence/quantity/price/availability/quantity_event_id/price_event_id/condition_event_id/validation_event_idを持つ。plansは当該offerの全予定（否定済みも含む）をid順で保存し、各要素はid/revision/polarity/certainty_raw/date_kind/date_precision/date_raw/date_start/date_end/resolution/review_reason/source_event_id。validated_inputsの要素は次項の3キーに固定する。他offerの値は含めない。未適用はoffer=null/plans=[]/validated_inputs=[]。新規offerのbeforeも同じ空形、afterは生成後の値。適用後はその時点の値として不変。current_offerは別の現在値をAPIで返す。
 
 resolution_responseはevent_id/decision/offer_id/applied_offer_revision/reasonの5キーに固定。入力reasonをここに保存して監査できるようにする。任意フィールド修正や原投稿時刻の書換えを手動解決に紛れ込ませない。
-
-### 既往記載の置換と設計審査
-
-§24/26/27の全マスタ入力snapshotという記載は、本節の来歴＋最終proposal方式に置換する。数量・対象・単位・状態・予定のいずれかが変われば最終digestが変わり、既適用との差分は保留する。単にマスタの無関係な行が増えたことだけで既存在庫の配信を止めない。再現性は原文/抽出版/適用時結果/訂正履歴の範囲であり、過去全マスタの完全再現は対象外。
-
-同一AIの自己審査: **REVISE（未解消は配信前driftの比較方法）**。来歴・最終結果の保存形式は固定した。ただしproposalを含むdigestはanalysis_resultsの行だけから算出できない。配信前比較が読み取りだけで同じproposalを再構成できることを、共通サービスの純粋関数の入力と出力としてさらに固定する必要がある。書き込みを伴う再解析を配信前に暗黙実行しない。
-
-## 29. drift比較の読み取り契約と最終査定（2026-09-13）
 
 ### 純粋な提案生成
 
@@ -846,19 +832,42 @@ normalized_resultはanalysis_result_snapshotのうちschema_version/kind/extract
 ### 配信前の比較
 
 1. 同じ読取snapshotで現在の保存済みraw欄、原文hash/原投稿日、analysis_resultsの上記正規化結果、訂正ID集合を取得する。
-2. これらと現在policy_versionの正規化JSONからproposal_input_digestを計算する。イベントへこのdigest TEXT NOT NULLを追加し、生成時に同じ計算で保存する。64桁制約を付ける。
+2. proposal_input_digestは {schema_version:1, source_sha256, source_posted_at, extraction_payload, normalized_result, policy_version} の正規化JSONのSHA256。source_posted_atはUTC ISO文字列またはnull。生成時と配信時に同じ入力構築関数を使い、イベントの同名列へ保存する。policy_versionはanalysis_result_snapshot.proposal内へ混ぜず、この入力に明示する。新規列は冒頭の表に含めた。
 3. 最新の確認済み証跡とdigestが一致すれば、入力不変として扱う。proposalを再計算する必要はない。不一致ならanalysis_driftで保留し、再解析/再抽出/手動確認へ戻す。配信前検査はSELECTだけで、候補作成・再解析・在庫更新を実行しない。
 4. policy_version不一致は、旧規則の意味を現コードで推測しない。新しい版で別候補を作り確認する。結果が同じ場合でも新しい確認証跡を残してから配信する。
 
-新しい確認証跡のためoffersへvalidation_event_id UUID? FKを追加する。これは数量の最終変更を示すquantity_event_idと別。既適用結果と新proposalが同じ場合はoffer_patch（変更項目なし）の確認イベントをappliedとして残し、offer.revisionとvalidation_event_idだけ更新できる。数量・価格・商品・単位・予定は変えない。差分がある場合は自動確認せず、pendingのまま。
+### 項目別の確認証跡
 
-通常の新イベント適用でもvalidation_event_idをそのeventへ進める。確認対象は当該offerに寄与する項目別証跡すべて（数量/価格/状態/有効予定）であり、最後の数量イベント1件だけの一致で他項目のdriftを見落とさない。validationのafter_valuesへ検査したevent IDと各proposal_input_digestの配列 `validated_inputs` を追加する。順序はevent IDの辞書順。新しい確定変更時は当該項目だけ寄与元を差し替え、他項目の証跡は維持する。
+validation_event_idは最新の確認記録を指し、数量の根拠quantity_event_idと分離する。validated_inputsはfield_key、event_id、proposal_input_digestの3キーを持つ配列で、field_key順（同値禁止）。field_keyはidentity、quantity、price、condition、plan:<予定UUID>だけ。event_idは現在値を提供した適用済みイベントであり、最新確認イベントと同じとは限らない。
 
-### 同一AIの審査結果
+- identityは当該offerを作成したイベントを引き継ぎ、仕入元/商品/単位/発送枠の確定対応を検査する。商品ID訂正等で一致しなくなれば保留し、別商品へofferを移動しない。
+- quantity/price/conditionは対応するofferのevent_id列が非NULLの項目だけを収録し、同じevent_idであることを検査する。quantityは数量と販売状態を一組で扱う。
+- plan:<予定UUID>は現在の全planに1件ずつ持ち、source_event_idと一致させる。否定済み予定も検査し、古い肯定が再表示されるのを防ぐ。
+- 各参照は同じoffer・channelのappliedイベントであることを共通入口と制約トリガーで検査する。identity参照は作成イベントのbefore.offer=null/after.offer.id一致も要求する。入力変更が未確認なら、他項目だけの適用によってそのdigestを新しい値へ更新してはいけない。
 
-**REVISE**。読み取り比較の入口は定義できたが、§27のbefore/afterと§28の2キー制約にvalidated_inputsを追加する整合、確認イベントが各項目の寄与元を列挙するデータ構造がまだ一つの正式な列/JSON契約に統合されていない。複数節から解釈して実装させないため、次回は追補を増やすのではなく§27〜29を1つの実装契約として再編集する。
+通常の新イベント適用では、そのイベントが実際に変更した項目（新しい同値通知も含む）の寄与元を差し替え、他項目の証跡を引き継ぐ。同じtransactionでrevisionとvalidation_event_idを進め、before/afterへ完全な証跡集合を保存する。新規イベント自身をafterの参照に含められるよう、イベント作成・offer更新・終端状態確定後の整合検査をcommit時に行う。proposal_input_digestに生成IDやbefore/afterを含めないのでhashの循環はない。
 
-この未完成部分は、単純な「〆語の追加」で解消できる問題ではない。要件は維持し、現在在庫と原文履歴を分けた結果生じる再解析との接続を完成させてからカード化する。今回も製品変更/DB操作/マージは0。
+再解析で入力digestが変わった場合は、配信処理外で同じ純粋関数から新proposalを生成する。各field_keyについて、その寄与元が確定した値・対象・根拠の対応と照合する。同じ原文の別商品/発送枠、明示から省略への変化、否定の反転、未解決の結果は「同じ」とみなさない。価格だけを別の新通知で更新した場合、古い数量根拠に含まれた旧価格との相違だけで数量を巻き戻さない。比較対象は当該fieldとidentityであり、上書き済みの他fieldではない。
+
+1確認イベントが新たに検査する入力は1つの寄与元イベントに限定し、その入力/結果snapshotと現在policy_versionを保存する。同じ寄与元が複数fieldへ寄与していれば、それらをまとめて比較する。異なる寄与元は別確認イベントとし、未確認の他寄与元のdigestは引き継ぐ。全寄与元の確認が揃うまでは配信前検査で保留が続く。確認対象の寄与がすべて同じなら、変更項目なしのoffer_patch確認イベントをappliedとして残せる。offer.revisionとvalidation_event_idだけ更新し、数量/価格/状態/予定、各寄与元event_idと原投稿時刻は維持する。新しいvalidated_inputsには同じ寄与元event_idと今回確認したdigestを保存する。過去イベントのdigestは書き換えない。差分または対応不明があればpendingで保留し、自動確認しない。確認イベントのevent_keyはoffer_id＋直前validation_event_id＋新validated_inputsのSHA256＋confirmationを正規化して作り、並行再試行の二重記録を防ぐ。
+
+通常イベントのevent_keyは原文ID＋抽出結果ID（no_itemは固定文字列）＋analysis_input_digest＋analysis_result_digest＋proposal_input_digest＋操作種別＋明細内操作番号の正規化JSONからSHA256を作る。§24の全マスタsnapshot案とkey式はこれで置換する。同じ抽出IDで後段補正や手動訂正だけが変わっても別候補として識別する。キーの違いを新しい入荷とみなさず、既適用原文の再解析差分は保留する。
+
+配信前は最新validationイベントのafter.validated_inputs全件を読み、各参照の現在入力digestと比較する。集合の欠落/余剰、異なるoffer、未適用参照も保留理由とする。1件でも不一致ならpublicationをreadyにせず、原文とfield_keyを示す。読取比較だけで解析・候補・数量を変更しない。確認完了と実際の配信成功は別状態で記録する。
+
+### 統合時の自己審査と実装後の検証
+
+同一AIによる本節の整合自己審査: **APPROVE（統合契約の文書審査に限定）**。独立した第二者レビューではない。列定義にvalidation_event_id/proposal_input_digestを収録し、before/afterの3キー、項目別証跡、状態遷移、読み取り検査を本節へ統合した。旧§28/29は独立した指示として残さない。
+
+| 観点 | 確認した設計条件 | 実装後に必要な検証 |
+|---|---|---|
+| 原文と現在在庫 | immutableイベントとofferを分離、対象offerだけ適用 | K1〜K8の実PG試験、他商品全業務値不変 |
+| 再解析/訂正/後段補正 | 6呼出経路と純粋入力digest、項目別寄与元を固定 | 同じ抽出IDの変更検出、他項目の未確認差分を隠さない |
+| 同値の再通知 | 新しい在庫通知は根拠時刻を更新、確認は更新しない | 10時10個→12時10個→11時5個の遅着で10個を維持 |
+| 確認後の再試行 | 新確認記録を保存、過去証跡は不変 | 同じ確認の二重適用0、競合rollbackで部分変更0 |
+| 配信 | 全寄与元をSELECT検査、同じ版を3先へ、成否不明は予約保持 | K9の3先全行一致、失敗先のみ再試行、旧応答で予約解除0 |
+
+今回は文書契約の整理であり、上表の製品検証は未実施。設計全体の正式な最終審査とカードチェックは未完了で、実装可能なカードは発行しない。残作業は§1〜27を通した最終整合検査と正式カード作成に限定し、既に解消した仕様を次の追補として再設計しない。設計全体の合格/POによる技術方式承認/実装/マージ/本番反映を、この限定APPROVEから宣言しない。
 
 ---
 
