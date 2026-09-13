@@ -476,6 +476,10 @@ run-guard-evaluation.js:28はmainが祖先であることを要求。公開済�
 
 第2便fixture修正保存: 同じ担当が07da520ae37fa060deaf958286c3b0b5a17e7ab7に試験既定値1行だけを保存。親が実commit/diffを確認、担当ruff成功。新SQLは変更なし。再CIのため通常pushへ。
 
+## 第2便の2回目実PGと初期化順序補正（2026-09-13）
+
+親取得のjob103688678583実ログ、HEAD79890cfcで3260成功/95skip/8setup error/309warnings、129.28秒、coverage63.82%。初回のIndexErrorは解消。新SQLのcontrol初期行挿入後に索引を作成し、遅延外部キーの検査待ちでObjectInUseとなった。全8名は実収集・未合格。設計追補でDDL完了後の初期行挿入とファイル単位の再適用commitを固定。既存8群の受入条件は保持、4群の同一transaction試験は不変。新SQL/新試験2ファイルだけの補正を同じ担当へ渡す。承認経路の祖先検査は今回成功、process-artifactsの失敗は番号付きGO未記録のみ。GO/本番変更なし。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)

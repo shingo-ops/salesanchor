@@ -72,6 +72,8 @@ EV-20260913-LINE-STORAGE-PR: PR3479 HEAD5edbe183をGitHub/.pr-number/remoteで�
 
 EV-20260913-LINE-STORAGE-CI-01: PR3479 eab1609bのCI実ログで3260成功/95skip/新規8群setup error、coverage63.82%。queryの空tuple渡しを公式仕様で照合、1行修正へ。全件dryrun128SQL2周成功だが新SQL対象外、合格根拠には不採用。main通常統合3c0bc15eで製品hash保持、GO/本番なし。
 
+EV-20260913-LINE-STORAGE-CI-02: PR3479 HEAD79890cfc、job103688678583で3260成功/95skip/8setup error/coverage63.82%。空tuple問題解消、新SQLのcontrol初期化が索引作成前で遅延FK検査待ちとなる。DDL後の初期化とファイル単位反復へ設計追補、自己審査APPROVE。制約/8群の受入は不変。実装検収REVISE、GO/本番なし。
+
 ```text
 id: EV-20260910-LINE-ACCURACY-01
 date: 2026-09-10

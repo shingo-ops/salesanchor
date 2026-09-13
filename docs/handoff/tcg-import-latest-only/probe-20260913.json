@@ -2445,5 +2445,18 @@
     "acceptance": "REVISE",
     "fixture_fix_commit": "07da520ae37fa060deaf958286c3b0b5a17e7ab7",
     "fixture_fix_test_sha256": "ac7704ad79de027155d0bc32a35e972f668d03ecfc852bd4afe558208a533c64"
+  },
+  "stage2_ci_second": {
+    "head": "79890cfce9b1ec4a2271fb2f5b9cda50f884557b",
+    "pytest_job": 103688678583,
+    "passed": 3260,
+    "skipped": 95,
+    "errors": 8,
+    "warnings": 309,
+    "coverage_percent": 63.82,
+    "seconds": 129.28,
+    "cause": "control INSERT precedes CREATE INDEX while deferred FK events pending",
+    "acceptance": "REVISE",
+    "design_correction": "initialize control after all per-tenant DDL; repeat file applications in separate transactions"
   }
 }

@@ -1134,6 +1134,14 @@ validation_event_idは最新の確認記録を指し、数量の根拠quantity_e
 
 ---
 
+### 第2便の初期行・DDL順序と再適用の区切り（2026-09-13実PG追補）
+
+実CI job103688678583では新規8群がtcg_stock_controlのCREATE INDEX時にpending trigger eventsで失敗した。初期control行の挿入は、そのテナントの全DDL（表・列・関数・索引・制約・トリガー）を終えてから行う。INSERT内容/ON CONFLICT DO NOTHING/既存control値保持は変更しない。制約を無効化せず、途中COMMITをmigrationへ追加しない。初期行は既存の外部キーと遅延検査を通常どおり受けてcommitする。
+
+反復適用試験は各apply直後にcommitしてから次回applyを呼ぶ。実際のrun_sqlはファイル単位のpsql実行であるため、これを再現する。新規テナントbootstrapもcommitしてからmigrationを適用する。同一業務transactionの正当な循環参照と不正commitの原子性は別の第4群で維持する。外部キー/制約を緩めない。
+
+根拠: 実PG失敗8件、scripts/run_all_migrations.shのrun_sql、および2026-09-13に直接確認した[PostgreSQL16制約タイミング](https://www.postgresql.org/docs/16/sql-set-constraints.html)・[遅延トリガー](https://www.postgresql.org/docs/16/sql-createtrigger.html)。Context7利用不可につき許可済みの公式資料代替。代替の制約強制即時化は呼出元の検査時点まで変えるため採用しない。変更2製品ファイル（新SQLと新試験）、既存登録1行は不変。同一AIによる設計自己審査APPROVE、実PGの再合格は未確認。
+
 ## 旧設計の原文（履歴・2026-09-05のSQR-05）
 
 以下は旧方式の当時の根拠であり、今回改訂案の実装指示として使用しない。
