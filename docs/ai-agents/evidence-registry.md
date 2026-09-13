@@ -2675,6 +2675,12 @@ EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審
 
 PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
 
+EV-20260912-LINE-WORK-ID最終反映: GO3458本人原文受領、HEADcb2ef474 CI34732415064 2733成功/95skip/失敗0、mergecacc889e・Deploy34732557622成功。本番p2/p1互換・health connected確認。最新取込1f6e72acはpending_review/仕入先38/原文リンク0、直近確定536422edは44投稿。比較対象をPOへ質問中、追加Gemini/再解析/配信0。PR3458本文とrecon「GO受領後の最終結果」参照。
+
+EV-20260912-LINE-WORK-ID p2実抽出: POが確定済み44投稿の比較を承認。p2初回1投稿はdone/items1、行番号受理。raw_priceの¥脱落、raw_memoの残り→残り22でRAW一致条件不成立・停止。新作品はマスタOne Pieceと一致、旧要確認はnote_unmatchedなので商品確定改善の証拠ではない。DB更新0/配信0。recon同日比較再開節、非公開JSON SHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38。
+
+EV-20260912-LINE-WORK-ID設計見直し: PO「進める」でRAW固定作品比較への設計見直し着手を承認。READ ONLY実測762固有ID/空名0/不正位置0/訂正0、602既特定/160未特定/要確認166。有効商品293/作品NULL0。設計§17の2列ID契約・商品照合READ ONLYは自己APPROVE、全再解析/採用/配信REVISE。実装・追加Gemini0。recon同日設計棚卸し参照。
+
 ### EV-20260913-FRONTEND-AL-DESIGN
 
 基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
@@ -2704,6 +2710,14 @@ EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示�
 
 EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
 
+EV-20260913-LINE-WORK-COMPARE本番反映: PO原文GO #3465受領、merge9f5415c3、Deploy34735713952成功。backup7.2M、稼働HEAD/比較サービスSHA一致、API connected。実Gemini追加/採用/配信0。正式証跡はrecon「2026-09-13 GO #3465・比較実装の本番反映」。
+
+EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・前後全入力SHA一致。実callback初回1試行/応答0でMODEL_CALL_FAILED、診断根拠不足。キー設定/SDK/クライアント生成を生成APIなしで確認。原因未確定、診断付き同一投稿再試行はPO承認待ち。設計§17.9/recon停止節。採用/配信0。
+
+EV-20260913-LINE-WORK-COMPARE対象変更: 診断再試行はINACTIVE_SOURCEでAPI0。旧44中18無効/置換先18は新確定取込にリンク、新44有効/観測時7ジョブ未終端。対象切替PO判断待ち。recon13:41/設計§17.10参照。
+
+EV-20260913-LINE-WORK-COMPARE-CLIENT: 新取込729明細/対照不一致0、診断RuntimeError。実SDK2.8.0と公式Client.__del__確認、temporary閉鎖/held未閉鎖。配備済みadapterの寿命Fake再現とwith保持の4確認true、追加生成API0。修正設計§17.12自己APPROVE、実装承認待ち。
+
 
 EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
 
@@ -2713,3 +2727,7 @@ EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、アプリ呼出し1・応答13/13、全入力SHA前後一致、作品ID変化0、商品特定3→3。生成APIなしの入力コピー空白差対照は3→13、既特定3の商品変更0。原因再現であり本番改善ではない。DB書込/採用/配信0。recon14:49節参照。
