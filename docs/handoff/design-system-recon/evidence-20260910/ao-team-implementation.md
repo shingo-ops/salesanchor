@@ -30,3 +30,7 @@ TeamsPage.tsx/TeamEditPage.tsxの6ボタンだけを既存Button secondary/prima
 維持は新規Team回帰と既存CI。本便の製品差分revertで戻せDB復元不要。番号付きGO #3487は未受領、マージ/本番反映未実施。LINE再解析/シート配信は対象外。表/報酬3/カレンダー色保留、新CIは最後。
 
 実装担当の品質完了をrootが原ログで確認: 対象strict eslintエラー/警告0、34新規/30files377全体試験、check:all/build/build-storybookすべてexit0。全体既存218warnings/0errors、coverage statements16.87%（全体高網羅とはしない）。root実装照合・表示操作検収APPROVE。検証サーバー停止済み。最新main313d7796までfrontend差分0を確認、保存後の通常統合とPR3487最新CIへ進む。
+
+## 最新main統合確認
+
+実装5fdfd98f保存後、main313d7796を通常merge（359a8203792b8ae7461412c2462b43f8ae380a9b）。競合なし。統合後の製品3/共有12/archive/証跡29hash一致、基準から最新mainまでfrontend差分0。検証対象のコード・依存は不変のため377試験/144表示/37操作を重複実行せず、PR3487最新HEAD CIを確認する。最新CIとGO待ち状態はPR本文・現行active-work.dへ記録。
