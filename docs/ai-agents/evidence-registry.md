@@ -2930,3 +2930,5 @@ EV-20260913-LINE-SPACE-IMPLEMENTED: CARD06をmain1a8eed69起点で実装。商�
 EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全差分11を含む2投稿全19明細を同一AIが原文/マスタからラベル。正答8→18（42.1→94.7%）、未特定10→0、誤商品1→1。非盲検・全体精度ではない。9種セット誤商品を残存課題として記録。product-space-accuracy.json/recon参照。DB/Gemini/本番変更0。
 
 EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
+
+EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する限定実装。固定729件で個別9種の誤候補除去/集合1件を保留、他719不変。正式CI未実行、ローカルlint/runner構文/diff成功。GO3481転用なし、本番未適用。recon CARD07節参照。

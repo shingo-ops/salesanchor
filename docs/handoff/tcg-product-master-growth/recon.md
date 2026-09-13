@@ -1080,3 +1080,17 @@ PO「正答率テストを実施」を受領。コード2534ca14とその親1a8e
 
 PO「進めてくれ」に基づき、PR直前停止から提出/正式CIの段階へ進行。preflight成功、latest origin/main包含、作業机clean、card-lint終了0（長行警告のみ）。公式gh-pr-create-safe.shの初回はGraphQL実行エラーで未作成確認、再実行はHTTP502を返したがGitHubの実読取でPR3481 OPEN/ready/base main/HEADb9d4b66aの作成を確認。重複PRは作成せずregister-pr.shとledger-updateで登録した。
 実装内容は2534ca14と同じ。正答率は19件限定で8→18、既存9種セット誤商品1件は残存。マージGO未受領、本番変更/再解析/配信0。正式CI結果は当該PR本文に実行ID/HEADとともに記録し、未完了を成功扱いしない。
+
+
+## 9種セット対策の事前調査（2026-09-13）
+
+該当明細9d2b898e-5b8a-4ca0-89bc-d73127251f3aは本番READ ONLY再確認でもactive/done・PM0263・needs_review=false、supersededなし。対象商品/9個別/関連2商品計12件と検索/除外語を取得。PM0263の除外語は3件でカードセットなし。非公開/tmp/nine-set-current-private.json。
+固定729件のコピーで除外語カードセットをPM0263だけに追加しv8の実関数を使う検算。変化10件（個別9種MULTI→各単一、集合1件PM0263→NONE）、他719件の全商品照合戻り値同一。19ラベルは19正答、特定数563→571。原文/辞書コピー元の変更0、DB/Gemini0。/tmp/nine-set-exclusion-proof-private.json。個別9種は原文の共通見出し19行と内訳9行に分かれ、完全名単一行一致はfalseだったため全文を読み直して対応を確認。原文根拠の不足を文字列完全一致で隠さない。
+実装経路は既存migrations/20260910_170000_tcg_keyword_false_positive_guards.sqlとcard-keyword-false-positive-guards.md。既存runnerは明示run_sql登録方式、migrationファイルだけでは配備されない。今回も専用migration/登録1行/既存PG試験の3製品ファイルに限定。新規API/ライブラリ仕様確認なし。
+
+
+### CARD-LINE-CARDSET-07 実装検証
+
+GO3481の空白修正はmerge6326115c/Deploy34750745805で本番反映済み。今回は同merge起点のrelease/cardset-exclusionで追加依頼を実装。新語1行を追加する単一transaction、同一性/重複/構造ガード、既存run_sql登録1行、既存PG試験9ケース。原文/既存結果/他商品/他テナントを更新しない。本人実装でサブエージェント0。
+make lint-ci終了0、ruff/Bandit高重大度0、mypyは既存エラーを警告扱いとするため型検査完全成功ではない。変更試験ruff、runner構文検査、diff検査成功。ローカルDocker不在につきpytest/PG未実行、正式CIで9ケースと既存回帰を検証する。固定コピー729件の除外語対照は個別9種の誤候補除去と9種集合1件の適切な保留、他719件不変。19ラベル正答19件は「商品未特定が正解」の1件を含む。19商品すべてを特定できたとの意味ではない。
+自己差分確認は追加migration/runner登録/既存試験の3製品ファイルに限定。実装PRのGOは未受領で本番未適用、既存誤結果の再解析も未実施。正式CIの実行HEAD/結果は本PR本文へ保存する。

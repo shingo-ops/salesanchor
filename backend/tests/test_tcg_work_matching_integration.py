@@ -936,3 +936,123 @@ def test_space_product_match_saved_in_isolated_database(
             assert code is None and basis == "NONE" and needs_review
         else:
             assert needs_review and "MULTI(" in basis and "SPACE_A" in basis and "SPACE_B" in basis
+
+
+CARDSET_MIGRATION = "20260913_200000_tcg_cardset_exclusion.sql"
+CARDSET_KINDS = ["フシギダネ", "チコリータ", "キモリ", "ナエトル", "ツタージャ",
+                 "ハリマロン", "モクロー", "サルノリ", "ニャオハ"]
+
+
+def seed_cardset_dictionary(connection, schema):
+    with connection.cursor() as cursor:
+        provision(cursor, schema)
+        products = [
+            ("PM0263", "30th CELEBRATION", ["30th CELEBRATION"],
+             ["FUTURISTIC", "プレミアムデッキセット", "エーフィ"]),
+            ("PM0264", "FUTURISTIC BOX", ["30th CELEBRATION FUTURISTIC"], []),
+            ("PM0265", "プレミアムデッキセット", ["プレミアムデッキセット"], []),
+        ] + [(f"PM{276+i:04d}", "カードセット " + kind, ["カードセット " + kind], [])
+             for i, kind in enumerate(CARDSET_KINDS)]
+        for code, title, search, exclude in products:
+            cursor.execute(sql.SQL("""INSERT INTO {}.tcg_products
+                (code,japanese_title,category_class,is_active,work_id,product_category_id)
+                SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
+                {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""").format(
+                    *[sql.Identifier(schema)] * 3), (code, title))
+            pid = cursor.fetchone()[0]
+            for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
+                for position, word in enumerate(keywords, 5):
+                    cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
+                        sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+
+
+def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
+    connection, engine, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    def match(name, state="", memo=""):
+        with Session(engine) as session:
+            search, exclude = analyzer.load_product_keywords(session)
+        return analyzer.match_pid_with_work(name, list(search), search, exclude,
+            work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
+    bundle = "MEGA 30th CELEBRATION カードセット (9種セット)"
+    assert match(bundle)[0:3:2] == ("PM0263", True)
+    names = ["30th  CELEBRATION", "30th CELEBRATION FUTURISTIC", "30th CELEBRATION プレミアムデッキセット"]
+    controls = [match(name) for name in names]
+    individual = ["30th CELEBRATION カードセット " + kind for kind in CARDSET_KINDS]
+    assert all(not match(name)[2] for name in individual)
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    after = guard_snapshot(connection)
+    key = ("tenant_004", "product_exclude_keywords")
+    added = set(after[key]) - set(before[key])
+    assert len(added) == 1 and {(r[4], r[2], r[3]) for r in added} == {("PM0263", "カードセット", 8)}
+    assert set(before[key]).issubset(set(after[key]))
+    for other_key in before:
+        if other_key != key:
+            assert before[other_key] == after[other_key]
+    assert match(bundle) == (None, "NONE", False, [])
+    assert [match(name) for name in names] == controls
+    for i, name in enumerate(individual):
+        result = match(name)
+        assert result[0] == f"PM{276+i:04d}" and result[2] and result[3] == [f"PM{276+i:04d}"]
+    assert match("30th CELEBRATION", state="カードセット") == (None, "NONE", False, [])
+    assert match("30th CELEBRATION", memo="カードセット") == (None, "NONE", False, [])
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    assert guard_snapshot(connection) == after
+
+
+@pytest.mark.parametrize("field,value", [
+    ("japanese_title", "別商品"), ("work_id", None), ("product_category_id", None),
+    ("code", "PM_CHANGED"), ("is_active", False),
+])
+def test_cardset_identity_failure_preserves_keywords(pg, field, value):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}=%s WHERE code='PM0263'").format(sql.Identifier(field)), (value,))
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert guard_snapshot(connection) == before
+
+
+def test_cardset_duplicate_target_preserves_keywords(pg):
+    connection, _, _ = pg
+    for schema in ("tenant_004", "tenant_903"):
+        seed_cardset_dictionary(connection, schema)
+    with connection.cursor() as cursor:
+        for position in (8, 9):
+            cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'カードセット',%s FROM tenant_004.tcg_products WHERE code='PM0263'", (str(uuid4()), position))
+    before = guard_snapshot(connection)
+    with connection.cursor() as cursor:
+        with pytest.raises(psycopg2.errors.RaiseException, match="duplicate cardset"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+    assert guard_snapshot(connection) == before
+
+
+def test_cardset_absent_schema_and_partial_structure(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("SELECT to_regnamespace('tenant_004')")
+        assert cursor.fetchone()[0] is None
+        cursor.execute("CREATE SCHEMA tenant_004")
+        cursor.execute("CREATE TABLE tenant_004.tcg_products(id uuid)")
+        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
+            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("ROLLBACK")
+        cursor.execute("SELECT count(*) FROM tenant_004.tcg_products")
+        assert cursor.fetchone()[0] == 0
+
+
+def test_cardset_migration_registered_once():
+    runner = (MIGRATIONS.parent / "scripts/run_all_migrations.sh").read_text()
+    assert runner.splitlines().count("run_sql migrations/" + CARDSET_MIGRATION) == 1

@@ -107,3 +107,19 @@ END OF CARD
 禁止: 保存原文の空白除去・全空白削除・状態/単位/価格/数量の変更・マスタ登録更新・DB/migration/CI/secrets変更・実Gemini試験・本番再解析/採用/配信・未確認成功宣言。
 本報告はカード CARD-LINE-PRODUCT-SPACE-06 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別する。停止時は手順番号/最後のコマンド/理由をPOへ報告する。
 END OF CARD
+
+
+## CARD-LINE-CARDSET-07
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-CARDSET-07。mode handoff、ADR113/154。
+設計: design-keyword.md「カードセットの通常商品への誤一致防止」。PO追加依頼は9種セット誤判定対策、自己審査APPROVE。本人セッションで限定実装し、追加エージェントは起動しない。
+手順0: preflightと台帳/重複確認、最新origin/mainの3481マージ6326115c包含を確認。公式new-worktree.shでrelease/cardset-exclusionを用意する。既存の他者の変更を戻さない。
+許可ファイル: migrations/20260913_200000_tcg_cardset_exclusion.sql、scripts/run_all_migrations.shの登録1行、backend/tests/test_tcg_work_matching_integration.py。文書は既存design-keyword/recon、本カード、ADR154 Why、evidence-registry、tasks/todo。
+手順1: tenant_004のPM0263に除外語1行だけを追加するmigrationを最終設計どおり実装。BEGIN/局所timeout/5表の状態/同一性/重複/ロック/既登録時変更0を保持する。既存run_sqlへ末尾の登録1行追加。
+手順2: 隔離CI PostgreSQLで初回追加1/2回目0/別商品と別tenant保持/対象同一性不一致/重複/部分構造/空構造を検査。商品期待例を固定し、集合は未確定・個別9種は正しい商品・正常商品維持を確認。実Geminiを呼ばない。
+手順3: make lint-ci、card-lint.sh、check-task-state.sh、diff --check、migration lintの既存チェック。Docker不在のローカルpytestは禁止、正式PGは既存CIで確認。
+手順4: git log/許可差分を確認して正式gh-pr-create-safe.shでready PR提出。--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。正式card-lint違反0が前提。新PRのGO未受領、GO3481転用禁止。
+禁止: 本番DB直接更新、既存解析行/手動訂正/数量の上書き、新しい集合商品作成、既存データ再解析、配信、CI/deploy/secrets変更、追加スキーマ/他tenant変更、ガード迂回。
+本報告はカード CARD-LINE-CARDSET-07 の実行結果である、と冒頭に記す。停止時は手順番号/最後のコマンド/理由をPOへ報告。自己確認・正式CI・未実行を分ける。
+END OF CARD
