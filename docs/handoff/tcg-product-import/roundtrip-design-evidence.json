@@ -1,0 +1,24 @@
+{
+  "base": "1021268623f2dba566d953fea056ff548ae28f3a",
+  "source_sha256": {
+    "backend/app/services/tcg_product_import_svc.py": "d443ec8fba4d12ef334900e00d245030888eccd687affbcbcbb4c72ded5fce5d",
+    "backend/app/services/tcg_product_master_svc.py": "ce0861d18c4f6700be23c5bd67c53fd2726bf0e26292437205793dfd3420d50d",
+    "backend/app/routers/tcg_product_import.py": "970f1af901bca15ed8b573235b673212bf338edaf5d24d4c9ad8d5c28a2d78dd",
+    "backend/tests/test_tcg_product_import_atomicity_pg.py": "1cc6e907d62e8fff6a281f1d7d91baf88bd93f1e852d0dfafc46a211bc0a8a7f",
+    "backend/tests/test_tcg_work_matching_integration.py": "97b82c5773f4d4aa6b153fb1b4e9670c625c1cb1a55d0b90938292a1fdfa4eb1",
+    "migrations/20260906_120000_create_tcg_tables_t001.sql": "e3d84e6a2a9de0b4746b8fb19397885be695aa495a870b30fbce29707161eb24",
+    "migrations/20260906_130000_create_tcg_product_import_history_t004.sql": "fc3f089a8cd132fa1f0081a620a377da97ba1b5217d793740d4c9a77a8bfc2eb",
+    "frontend/src/pages/super-admin/TcgProductMasterPage.tsx": "f36ef8bc04a1928a85e999fce36e488a7a91e8491f283e6b376863fbe9c0bc0c",
+    "frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx": "b948fd6ad6a6da362d82c35588a0b1216450efb23ad4a1cc38d352b87fd061e6",
+    "frontend/src/lib/api.ts": "de0bacbead0f96d7ab1d702ad3e331910602aaffef50accb577a2bd846ffaea3"
+  },
+  "context7": "unavailable: tool catalog contains no Context7 tools",
+  "official_docs_checked_20260913": [
+    "https://docs.python.org/3.12/library/csv.html",
+    "https://www.postgresql.org/docs/16/explicit-locking.html",
+    "https://fastapi.tiangolo.com/advanced/custom-response/"
+  ],
+  "external_cases": "not necessary; extension of verified existing local CSV/SQL contracts",
+  "design_review": "APPROVE same-AI self-review, not independent second-party",
+  "implementation": "not started"
+}
