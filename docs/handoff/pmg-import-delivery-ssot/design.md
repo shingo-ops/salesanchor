@@ -1069,3 +1069,19 @@ ImportWorkflowPanel.tsx:68-87は上部actionsと3stageが別領域、エラーCT
 ### 公開push・PR提出の本人承認受領（2026-09-13）
 
 直前の質問「公開GitHubリポジトリへ変更をpushし、PRを提出してよいですか？」に、PO原文「進めてくれ」を受領。公開送信先shingo-ops/salesanchorのrelease/pmg-stage-card-actionsへの通常pushとmain向けPR提出を承認した回答として記録する。上の公開送信承認待ちは解消。preflight終了0、ローカル検収済み差分と最新mainを照合して通常手順を再開する。これは新PR番号のマージGOではなく、本番反映は未承認・未実施。
+
+
+### PR #3467提出・CI完了（2026-09-13）
+
+公開push承認後の通常push・PR提出・register-pr完了。PR https://github.com/shingo-ops/salesanchor/pull/3467 、HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100。最新main9f5415c3統合で製品差分は検収時から変更0、対象unit29件/Ruff/台帳検査成功。rootがGitHubの最新HEAD・全チェック完了を直接確認: 41SUCCESS/6SKIPPED/1FAILURE。失敗はprocess-artifacts gate job103667191630の「### GO記録なし」のみ。番号付きGO未受領なので記録を創作しない。
+
+backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行の保存ログをrootが確認。Frontend E2E GitHub jobはSKIPPEDであり、ローカルPlaywright12成功と区別する。証跡reports/pmg-stage-card-actions/ci-3467.json、ci-pytest-3467.txt、verification-manifest.json。親作業台reports/pmg-stage-card-actions-pr3467にもハッシュ照合して保存。
+
+現在地: 設計・実装・審査・公開push・PR提出・CI照合済み。新番号付きGO未受領、未マージ・本番未反映。次はPOへ3カードCTA変更/検証結果/DB変更なしを提示しGO #3467を受領後、最新HEADとCIを再確認する。今回の公開送信承認をマージGOへ読み替えない。本節と台帳の結果追補はローカル保存し、次の承認記録と同時に通常コミットする。
+
+
+### GO #3467受領（2026-09-13 12:45:59 JST 記録）
+
+PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
+
+CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。

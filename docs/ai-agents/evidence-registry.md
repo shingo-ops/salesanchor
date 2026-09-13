@@ -2703,3 +2703,9 @@ EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b436
 EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
 
 EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
+
+
+EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
+
+
+EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
