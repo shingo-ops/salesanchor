@@ -1,0 +1,44 @@
+[
+  {
+    "case": 1,
+    "title": "TH-GO-P1-LIVE-20260913-01 normal",
+    "body": "{\"schema_version\":1,\"kind\":\"probe\",\"request_id\":\"TH-GO-P1-LIVE-20260913-01\",\"target_repo_id\":1363676622}",
+    "expected_reason": "ACCEPTED_PROBE",
+    "expected_conclusion": "success"
+  },
+  {
+    "case": 2,
+    "title": "TH-GO-P1-LIVE-20260913-02 bad-json",
+    "body": "{",
+    "expected_reason": "BODY_INVALID",
+    "expected_conclusion": "failure"
+  },
+  {
+    "case": 3,
+    "title": "TH-GO-P1-LIVE-20260913-03 wrong-target",
+    "body": "{\"schema_version\":1,\"kind\":\"probe\",\"request_id\":\"TH-GO-P1-LIVE-20260913-03\",\"target_repo_id\":0}",
+    "expected_reason": "TARGET_INVALID",
+    "expected_conclusion": "failure"
+  },
+  {
+    "case": 4,
+    "title": "TH-GO-P1-LIVE-20260913-04 extra-field",
+    "body": "{\"schema_version\":1,\"kind\":\"probe\",\"request_id\":\"TH-GO-P1-LIVE-20260913-04\",\"target_repo_id\":1363676622,\"extra\":\"synthetic\"}",
+    "expected_reason": "SCHEMA_INVALID",
+    "expected_conclusion": "failure"
+  },
+  {
+    "case": 5,
+    "title": "TH-GO-P1-LIVE-20260913-05 bool-version",
+    "body": "{\"schema_version\":true,\"kind\":\"probe\",\"request_id\":\"TH-GO-P1-LIVE-20260913-05\",\"target_repo_id\":1363676622}",
+    "expected_reason": "SCHEMA_INVALID",
+    "expected_conclusion": "failure"
+  },
+  {
+    "case": 6,
+    "title": "TH-GO-P1-LIVE-20260913-06 command-id",
+    "body": "{\"schema_version\":1,\"kind\":\"probe\",\"request_id\":\"$(printf P1_SYNTHETIC)\",\"target_repo_id\":1363676622}",
+    "expected_reason": "REQUEST_INVALID",
+    "expected_conclusion": "failure"
+  }
+]

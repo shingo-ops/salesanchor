@@ -869,3 +869,22 @@ Context7公開ツール0件につき起動指示の代替許可を使用。
 GitHub connectorの主体id246949427、対象repo id1363676622を照合し、merge_method=merge、expected_head_shaを指定して1回送信。応答merged trueを再GETで確認。merged_at 2026-09-13T01:20:35Z（10:20:35 JST）、merge SHA e239ec21638cf329c882d19b10e03a58a10b5b31。sandbox mainも同SHA。Actions workflows GETはGO intake probe P1/id356839824/path .github/workflows/go-intake-probe-p1.yml/state activeを返した。
 
 状態: P1準備PRマージ済み・試験workflow設置済み。実機Issue試験0件、GO発行0件、本番変更0件、全体設計REVISE。次は既存P1計画の6ケースを正式な別カードへ具体化し、試験担当・合成Issue作成範囲・期待理由コード・結果保存・停止条件を確定する。今回のPR取り込み承認を、追加担当起動・試験Issue作成の承認として扱わない。
+
+
+## 2026-09-13 P1実機6ケースの設計・自己審査
+
+POの「進めてくれ」を、直前に示した受付試験手順の整備として受領。実行役を起動せず、Issue作成0件でカードと合成入力を整備した。製品/CI/運用スクリプトは変更しない。
+
+対象は既存P1の正常/壊れたJSON/対象違い/余分な欄/bool版/コマンド文字列の6ケース。入力正本intake-p1-live-cases.json、実行カードTH-GO-INTAKE-P1-LIVE-01.txt、直接検証結果intake-p1-live-local-evidence.json。原本inline classifyを抽出し6/6の理由一致を直接実行。これはローカル検証で、実機成功件数には含めない。既存18件に足して24件という網羅性を主張しない。
+
+読み取り事実: CLI user shingo-cc/id239116221、sandbox repo1363676622/owner246949427/has_issues true、workflow356839824 active。Issue一覧はPR #1だけ、workflow run0件。書込拒否の解消・ログ取得成功は未実測であり、試験時に停止可能な前提として扱う。接続アプリ主体は異なるため、合成受付は設計どおり通常CLIに固定する。
+
+Context7ツール不在のため起動指示の代替許可で2026-09-13に公式資料を確認: [Issue API](https://docs.github.com/en/rest/issues/issues#create-an-issue)、[run API](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow)、[jobログ](https://docs.github.com/en/rest/actions/workflow-jobs#download-job-logs-for-a-workflow-run-job)。ローカルgh api/gh issue createのhelpとも照合。run APIのevent/actor/head_sha/run_attemptと、Issue author/body/作成時刻を使用する。issuesイベントのdisplay_titleが必ずIssue titleになるとは確認できず、対応根拠に採用しない。外部事例は不要で、自社入力契約と実際のAPIの観測を用いる。
+
+選択理由: 6件を直列送信し、送信前後のIssue/run集合の一意差分を確認する。並列送信は結果の取り違えを増やすため採らない。現在のworkflowはissue_id/request_idを出力しないため、これは孤立した試験中の限定的な対応推定であり、本番の受付証明には不足する。別Issue/複数run混入時は未確認で停止。完全な暗号的結び付けや本番認可の検証成功と称しない。
+
+受入: 正常1件ACCEPTED_PROBE/success、不正5件は指定reason/exit1/failure、全6件authorization_issued=false。インフラfailureやログ欠落を期待拒否PASSに変換しない。試験用Issueは公開・最大6件、run再実行と応答不明時の再POSTは禁止。未出現/未完了はWAITINGを保存して読取から再開。投入元データをshellへ展開しない。
+
+Architect自己審査: 限定カードAPPROVE。既存計画とケース6件の対応、入力固定hash、対象/主体/版の実測、ローカル6/6、カード検査exit0（長行警告3件）、再送/混同の停止条件が根拠。API書込・run対応・ログ取得は試験で確認する対象であり、成功を前提にしない。全体設計REVISEを維持。PO本人認証・代理GO・期限/取消・専用App・本番導入は対象外。同一AI自己審査であり独立第二者レビューではない。
+
+維持担当: 設計担当は入力/原本hashとカード/根拠の同期、明示委任された検証担当はIssue→run→job→理由の記録、親は結果の直接読取確認と台帳保存。カード実行と担当1名への委任承認は未受領。次のPO判断はこの1カード（合成Issue最大6件）の検証担当1名への実行委任。

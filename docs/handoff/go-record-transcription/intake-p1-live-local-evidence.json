@@ -1,0 +1,38 @@
+{
+  "date": "2026-09-13",
+  "scope": "local inline classify only; no GitHub Issues created",
+  "fixture_sha256": "6014352fe267a1565f0ecc55a6bc36ead7bbbe7404ffe759594fa97eea6355fd",
+  "workflow_sha256": "e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26",
+  "results": [
+    {
+      "case": 1,
+      "actual": "ACCEPTED_PROBE",
+      "passed": true
+    },
+    {
+      "case": 2,
+      "actual": "BODY_INVALID",
+      "passed": true
+    },
+    {
+      "case": 3,
+      "actual": "TARGET_INVALID",
+      "passed": true
+    },
+    {
+      "case": 4,
+      "actual": "SCHEMA_INVALID",
+      "passed": true
+    },
+    {
+      "case": 5,
+      "actual": "SCHEMA_INVALID",
+      "passed": true
+    },
+    {
+      "case": 6,
+      "actual": "REQUEST_INVALID",
+      "passed": true
+    }
+  ]
+}

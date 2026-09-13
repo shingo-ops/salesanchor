@@ -1,0 +1,90 @@
+読んだ節: guards/00-common.md、03-file.md、11-lint.md（docs/handoff/design-partner-card-ops/配下）。
+照合結果: 実在入力2件、固定repo/主体/版、構造化入力、送信上限6件、再送禁止、結果対応付け、期待した拒否の扱い、停止保存を確認。
+
+TH-GO-INTAKE-P1-LIVE-01
+mode: handoff
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 設計案作成・自己審査用。実行開始には、POが検証担当1名への本カード委任と合成Issue最大6件の作成を承認した記録を必要とする。
+担当: POが本カードを明示委任した検証担当1名。自動起動・追加担当起動は禁止。
+目的: 正常1件の受付と不正5件の拒否をGitHub上で確認する。
+対象: shingo-ops/salesanchor-go-gate-sandbox、repo_id1363676622、owner_id246949427。
+許可: 通常CLI shingo-cc/id239116221で下記Issue6件を各1回まで作成、関連API読取、/tmp/reports/TH-GO-INTAKE-P1-LIVE-01配下への非秘密記録。
+禁止: 製品変更、workflow変更、PR/branch/merge、GO発行、資格切替、App/secret/権限変更、Issue編集/コメント/終了、run再実行。本文は合成入力だけ。他者の変更を戻さない。
+実在作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design
+実在入力: docs/handoff/go-record-transcription/intake-p1-live-cases.json
+実在根拠: docs/handoff/go-record-transcription/intake-p1-live-local-evidence.json
+入力hash: 6014352fe267a1565f0ecc55a6bc36ead7bbbe7404ffe759594fa97eea6355fd
+固定main: e239ec21638cf329c882d19b10e03a58a10b5b31
+workflow: id356839824、.github/workflows/go-intake-probe-p1.yml、active
+workflow内容hash: e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26
+
+手順1 入力と主体の照合
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && ./scripts/dev/executor-preflight.sh --check
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && gh api user --jq '{login,id}'
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && shasum -a 256 docs/handoff/go-record-transcription/intake-p1-live-cases.json
+期待: preflight成功、shingo-cc/id239116221、上記hash一致。connector本人主体での作成に切り替えない。
+
+手順2 実行前の対象・履歴読取
+CLI GET: repos/shingo-ops/salesanchor-go-gate-sandbox、branches/main、actions/workflows/356839824。
+GETパスはrepo APIの下。期待: repo/owner ID一致、archived false、has_issues true、main固定SHA、workflow active。
+Contents GETで固定SHAのworkflowをbase64 decodeし、内容hash一致を確認する。
+Issue一覧GET: repos/shingo-ops/salesanchor-go-gate-sandbox/issues?state=all&per_page=100&page=1
+run一覧GET: repos/shingo-ops/salesanchor-go-gate-sandbox/actions/workflows/356839824/runs?per_page=100&page=1
+各一覧は最大100件。Link nextがあれば一覧不足として停止（無制限列挙しない）。
+Issueのpull_request付きはPRとして区別する。
+初回は本カードtitle6件と既存報告がないことを確認。同title既存・未知の試行・未完了runがあれば送信せず停止。
+読取拒否を不存在へ変換しない。再開の取り扱いは手順6による。
+
+手順3 ローカル入力ファイルを用意
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && python3 - <<'PY'
+from pathlib import Path
+import json
+source=Path('docs/handoff/go-record-transcription/intake-p1-live-cases.json')
+dest=Path('/tmp/reports/TH-GO-INTAKE-P1-LIVE-01')
+dest.mkdir(parents=True,exist_ok=True)
+for case in json.loads(source.read_text()):
+    p=dest/(str(case['case'])+'-request.json')
+    value=json.dumps({'title':case['title'],'body':case['body']})+'\n'
+    if p.exists():
+        assert p.read_text()==value, 'existing input differs'
+    else:
+        with p.open('x') as out: out.write(value)
+PY
+本文内のコマンド文字列を実行しない。作成payloadはtitle/bodyだけ、assignee/label等を追加しない。
+
+手順4 1ケースを1回だけ作成
+case順は1→2→3→4→5→6。下のコマンドはcase1。case2以降は直前caseの手順5がPASSの場合だけ、入力ファイル名の数字を当該caseへ変更する。
+毎回手順1の主体と手順2のmainを再確認し、Issue/run一覧のID集合・時刻を記録する。
+送信前に当該caseの送信開始をjournal.jsonlに追記してから、POSTを1回実行する。
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && gh api --method POST repos/shingo-ops/salesanchor-go-gate-sandbox/issues --input /tmp/reports/TH-GO-INTAKE-P1-LIVE-01/1-request.json
+応答number/id/html_url/user.id/title/body/created_atを記録。Issue GETで主体・title/body一致と未編集を確認する。
+POST応答不明は結果不明として停止、再POSTしない。403/422等の拒否時も資格を切り替えず停止。
+
+手順5 当該ケースの結果読取
+run一覧を再GET。未出現/未完了はWAITINGとしてjournalへ保存し、本便を停止する。次便は読取から再開し、再送しない。
+対応するrunは送信前集合にない1件で、workflow_id356839824/event issues/head_sha固定値/actorとtriggering_actor id239116221/run_attempt1を要求。
+同時間帯のIssue一覧差分も当該Issue1件だけであることを確認。複数候補、他Issue混入、main変化、再実行、更新済み本文は対応不明で停止する。
+時刻だけやdisplay_titleだけで対応付けない。この直列・一意差分による対応は限定試験の観測であり、本番用の受付証明ではない。
+run GETとjobs GETは返却されたrun IDを使う。jobはprobe1件、step名Classify synthetic requestの完了を確認。
+MCP github_fetch_workflow_job_logs(repo_full_name=shingo-ops/salesanchor-go-gate-sandbox,job_id=取得job.id)でログ読取。返却値の実IDを使い、番号を仮置きしない。
+ログの実行結果行からJSONを読み、probe=P1、reasonが下表と一致、authorization_issuedがbool falseであることを確認。
+ソースを表示した行の文字列を実行結果として採用しない。実行結果0件/複数件/取得不可は未確認で停止。
+case1: ACCEPTED_PROBE / stepとrun success
+case2: BODY_INVALID / stepとrun failure / process exit code 1
+case3: TARGET_INVALID / stepとrun failure / process exit code 1
+case4: SCHEMA_INVALID / stepとrun failure / process exit code 1
+case5: SCHEMA_INVALID / stepとrun failure / process exit code 1
+case6: REQUEST_INVALID / stepとrun failure / process exit code 1
+否定5件は上記理由・exit1・falseがすべて一致した場合だけPASS。単に赤いrunであることは合格ではない。
+不一致、インフラ障害、取消、時間切れ、認可trueは停止。workflow修正・run再実行をしない。
+
+手順6 記録と停止・再開
+/tmp/reports/TH-GO-INTAKE-P1-LIVE-01/journal.jsonlにJSON1行ずつ追記する。上書きしない。
+各行はcard、UTC観測時刻、case、phase、主体/repo ID、main/hash、Issue URL/id/number、run/job URL/id、reason、conclusion、authorization_issued、判定、停止理由の取得済み項目を持つ。
+APIの非秘密結果とjobログは同ディレクトリ内へcase/run/jobを含む別名で保存する。秘密値・実チャットログを出力しない。
+再開時は手順1/2とjournalを照合。POST開始記録があれば送信し直さず、当該Issue/runの読取だけ行う。未作成と断定できない場合は停止する。
+PASS済みcaseは読取一致を確認して飛ばし、未送信caseだけ次へ進む。全6件PASSで停止し、7件目を作らない。
+報告冒頭: 本報告はカード TH-GO-INTAKE-P1-LIVE-01 の実行結果である。
+完了報告本文に生出力を全文含め、実機PASS件数/期待拒否件数/未確認/GO発行0を区別する。
+報告パスは一字一句そのまま使用する。親設計担当が結果を確認して既存文書へ保存する。実行担当は製品repoの文書/台帳を変更しない。
+END OF CARD
