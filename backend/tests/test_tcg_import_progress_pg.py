@@ -230,6 +230,40 @@ async def test_errors_results_reasons_and_pagination(pg):
         assert empty["total"]==166 and empty["items"]==[]
 
 
+async def test_stage_detail_reads_keep_raw_message_and_zero_item_error(pg):
+    engine, conn, _ = pg
+    job = await upload(engine, export(body="<b>raw message</b>"))
+    with conn.cursor() as c:
+        c.execute(f"UPDATE {SCHEMA}.extraction_jobs SET status='error', error_message='secret traceback' RETURNING id")
+        error_id = str(c.fetchone()[0])
+    async with AsyncSession(engine) as db:
+        messages = await progress.read_messages(db, job["import_job_id"], 25, 0)
+        errors = await progress.read_extraction_jobs(db, job["import_job_id"], 25, 0, "error")
+        all_jobs = await progress.read_extraction_jobs(db, job["import_job_id"], 25, 0, "all")
+        results = await progress.read_items(db, job["import_job_id"], 25, 0, "results_present")
+    assert messages["total"] == 1 and messages["messages"][0]["raw_text"] == "<b>raw message</b>"
+    assert errors["total"] == 1 and errors["jobs"][0]["id"] == error_id
+    assert errors["jobs"][0]["item_count"] == 0 and errors["jobs"][0]["error_reason_code"] == "unclassified"
+    assert "error_message" not in errors["jobs"][0]
+    assert all_jobs["total"] == 1 and results["total"] == 0
+
+
+async def test_stage_details_are_scoped_paginated_and_hide_unknown_coverage(pg):
+    engine, conn, _ = pg
+    first = await upload(engine, export(body="one"))
+    second = await upload(engine, export(body="two", day="11"))
+    with conn.cursor() as c:
+        c.execute(f"UPDATE {SCHEMA}.source_messages SET is_active=false WHERE raw_text LIKE '%one%'")
+        c.execute(f"UPDATE {SCHEMA}.extraction_jobs SET status='error' WHERE source_message_id=(SELECT source_message_id FROM {SCHEMA}.import_job_messages WHERE import_job_id=%s)", (first["import_job_id"],))
+    async with AsyncSession(engine) as db:
+        page = await progress.read_messages(db, first["import_job_id"], 1, 0)
+        other = await progress.read_messages(db, second["import_job_id"], 1, 0)
+        errors = await progress.read_extraction_jobs(db, first["import_job_id"], 1, 0, "error")
+    assert page["total"] == 1 and page["messages"][0]["is_active"] is False
+    assert "one" in page["messages"][0]["raw_text"] and "two" in other["messages"][0]["raw_text"]
+    assert errors["total"] == 1 and errors["jobs"][0]["source_message_id"] == page["messages"][0]["id"]
+
+
 async def test_api_auth_validation_and_db_errors(pg):
     engine,_,_=pg
     app=FastAPI(); app.include_router(routes.router)
@@ -337,3 +371,75 @@ async def test_pending_confirmation_reuses_existing_post(pg):
         assert r["coverage"]=="complete" and r["messages"]["reused"]==1
     assert count(conn,"source_messages")==1 and count(conn,"import_job_messages")==2
     assert enqueue.call_count==1
+
+
+async def test_stage_details_mixed_results_counts_null_supplier_and_reuse(pg):
+    engine, conn, _ = pg
+    original = await upload(engine, export(body="first"))
+    reused = await upload(engine, export(body="first", header="again"))
+    await upload(engine, export(body="outside", day="11"))
+    with conn.cursor() as c:
+        c.execute(f"SELECT source_message_id FROM {SCHEMA}.import_job_messages WHERE import_job_id=%s", (original["import_job_id"],))
+        message = str(c.fetchone()[0])
+        c.execute(f"UPDATE {SCHEMA}.source_messages SET supplier_channel_id=NULL WHERE id=%s", (message,))
+        c.execute(f"UPDATE {SCHEMA}.extraction_jobs SET status='error',error_message='secret traceback' WHERE source_message_id=%s RETURNING id", (message,))
+        job = str(c.fetchone()[0])
+        for index in range(3):
+            item = str(uuid4())
+            c.execute(f"INSERT INTO {SCHEMA}.extraction_items(id,extraction_job_id,raw_product_name) VALUES (%s,%s,'card')", (item, job))
+            if index != 2:
+                c.execute(f"INSERT INTO {SCHEMA}.analysis_results(id,extraction_item_id,pid_resolved,unit_resolved,needs_review,engine_version) VALUES (%s,%s,false,false,false,'test')", (str(uuid4()), item))
+    before = {table: count(conn, table) for table in ("import_jobs", "source_messages", "extraction_jobs", "extraction_items", "analysis_results")}
+    async with AsyncSession(engine) as db:
+        posts = await progress.read_messages(db, reused["import_job_id"], 1, 0)
+        assert posts["messages"][0]["supplier_name"] is None
+        assert posts["messages"][0]["relation_kind"] == "reused"
+        assert posts["messages"][0]["is_active"] is False
+        assert (await progress.read_messages(db, reused["import_job_id"], 1, 1))["messages"] == []
+        errors = await progress.read_extraction_jobs(db, reused["import_job_id"], 1, 0, "error")
+        assert errors["total"] == 1 and errors["jobs"][0]["item_count"] == 3
+        assert "secret" not in str(errors)
+        assert (await progress.read_extraction_jobs(db, reused["import_job_id"], 1, 1, "error"))["jobs"] == []
+        assert (await progress.read_items(db, reused["import_job_id"], 25, 0, "all"))["total"] == 3
+        assert (await progress.read_items(db, reused["import_job_id"], 25, 0, "results_present"))["total"] == 2
+    assert before == {table: count(conn, table) for table in before}
+
+
+async def test_new_details_coverage_foreign_tenant_and_api_validation(pg):
+    engine, conn, _ = pg
+    ids = [(str(uuid4()), state) for state in ("ok", "pending_review", "discarded")]
+    foreign = str(uuid4())
+    with conn.cursor() as c:
+        for jid, state in ids:
+            c.execute(f"INSERT INTO {SCHEMA}.import_jobs(id,review_status,filename,raw_sha256) VALUES (%s,%s,'test',%s)", (jid, state, jid))
+        c.execute("INSERT INTO tenant_872.import_jobs(id,filename,raw_sha256) VALUES (%s,'test',%s)", (foreign, foreign))
+    async with AsyncSession(engine) as db:
+        for jid, state in ids:
+            for reader in (lambda: progress.read_messages(db, jid, 25, 0), lambda: progress.read_extraction_jobs(db, jid, 25, 0, "all")):
+                value = await reader()
+                assert value["total"] is None
+                assert value.get("messages", value.get("jobs")) is None
+                assert value["coverage"] == ("legacy_unknown" if state == "ok" else state)
+        for reader in (lambda: progress.read_messages(db, foreign, 25, 0), lambda: progress.read_extraction_jobs(db, foreign, 25, 0, "all")):
+            with pytest.raises(HTTPException) as exc:
+                await reader()
+            assert exc.value.status_code == 404
+    app = FastAPI()
+    app.include_router(routes.router)
+    async def database():
+        async with AsyncSession(engine) as session:
+            yield session
+    app.dependency_overrides[get_db] = database
+    path = f"/tcg/line-import/{foreign}"
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        for endpoint in ("messages", "extraction-jobs"):
+            assert (await client.get(path + "/" + endpoint)).status_code in (401, 403)
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=False)
+        for endpoint in ("messages", "extraction-jobs"):
+            assert (await client.get(path + "/" + endpoint)).status_code == 403
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=True)
+        for endpoint in ("messages", "extraction-jobs"):
+            assert (await client.get(path + "/" + endpoint)).status_code == 404
+            for query in ("limit=0", "limit=101", "offset=-1"):
+                assert (await client.get(path + "/" + endpoint + "?" + query)).status_code == 422
+        assert (await client.get(path + "/extraction-jobs?filter=invalid")).status_code == 422

@@ -1888,3 +1888,19 @@ private-research/emptybox-final-contract-20260913/check.py/result.jsonで表現2
 
 
 2026-09-13 空箱限定実装PR提出: https://github.com/shingo-ops/salesanchor/pull/3470 / HEAD3301b4f682ee8b56716e70929c1e2ae1f9e73c93 / OPEN / 所有22ファイルを親がGitHub API確認。画面6/6・Python3.12静的検査は担当報告、PG受入CIは進行中。親の読取指摘4件とカード本文例不足の補正を設計§19.8へ保存。実装中・未マージ・本番未変更。
+
+
+## 2026-09-13 作品ID読取比較の実装検証
+
+比較専用設計は未マージPR #3462、HEAD 2fc9e64755ebc69be31781d1b1a6332ccf9068f0 の design-keyword.md §17 / CARD-LINE-WORK-COMPARE-03 を参照。後続のPO「進める」を受け、origin/main dd1df11c 起点の専用机 release/line-work-id-comparison に新サービスと試験2ファイルを追加。既存製品コード変更0。本記録は設計PRのマージやGO委任有効化を意味しない。
+
+実装は保存RAW・明細IDを固定し、2列の作品判断だけを受け付ける。保存商品結果と旧作品判断の対照不一致時はモデル呼出し0。READ ONLYの専用トランザクションを毎回閉じ、モデル前後の全入力/マスタSHA不一致で停止。訂正済みを除外し、候補は常にadoptable=false・正誤未検証。
+
+ローカル make lint-ci 終了0、ruff成功、Bandit高重大度0。mypyは既存エラーを警告扱いにするMakefileのため完全な型検査成功とは称さない。Docker未稼働につきpytest未実行、合成データ・模擬モデル・隔離PostgreSQL試験はGitHub CIで検証する。実Gemini呼出し0、本番更新0、候補採用0、配信0。実装自己確認であり独立レビューではない。CI結果は実装PRで記録する。
+
+
+### PR #3465 比較実装のCI結果
+
+製品HEAD d8ff688f5f57d0ada396f0fa0fd76de1717d1399。Backend CI34735091935 / job103664991919: 2759 passed、95 skipped、失敗0、coverage63.26%、95.38秒。全表不変、READ ONLYによるDML拒否、API中transactionなし、RAW/マスタ/訂正/解析/リンク変更時停止、実analyzer内の候補集合との一致を合成データで検証。初回CI34734918033は2753成功/6失敗、共通原因は試験DBの正規化表未構築。既存migrationで試験環境を補完して解消、製品側の厳格な表存在検査は維持。
+
+追加のローカル単独mypyは2.3.1内部エラーで終了2。型検査の完全成功とは称さない。実装自己レビューは比較カードの範囲で合格、独立レビューなし。gh pr checks実測で番号付きGO未受領のprocess-artifacts gateだけ失敗、他に失敗/実行中なし。PR #3465提出済み・未マージ、比較用の本番モデル実行/再解析/採用/配信は未実施。比較結果の正誤判定・安全な採用保存・配信設計はこの試験の合格対象外。
