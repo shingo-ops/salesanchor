@@ -2939,6 +2939,10 @@ EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全
 
 EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
 
+EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する限定実装。固定729件で個別9種の誤候補除去/集合1件を保留、他719不変。正式CI未実行、ローカルlint/runner構文/diff成功。GO3481転用なし、本番未適用。recon CARD07節参照。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: PO「進める」で本セッション実装担当へ割当て。改訂2/カード08（設計PR3462 commit3b40ceea）に基づき新集合1/相互除外/登録安全性と商品86入力を実装。正式PG/CI待ち、本番登録・マージ・再解析未実施。recon CARD08実装着手節。
+
 ### EV-20260913-FRONTEND-AN-RELEASE
 
 2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
