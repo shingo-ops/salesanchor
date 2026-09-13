@@ -1009,3 +1009,17 @@ PO原文「GO #3465」を12:30 JSTに受領確認、PR本文へ正式転記。HE
 Deploy34735713952 / job103666657661成功。ログで03:32:32 UTCにsalesanchor_db_20260913_123227.sql.gz（7.2M）取得、03:35:25 UTCにDeployment completed successfullyを確認。復元試験は未実施。SSH読取で本番git HEADがmergeCommitに一致、稼働backend内の比較サービスSHA256はdb603a598d1d3a3dd74d92f04c11ac31445d6126cfd7925ce909f9c91893143c、ローカル同ファイルと一致。公開/api/healthはstatus ok、database/redis/celery connected。
 
 状態: 比較設計自己審査済み、比較実装PO承認済み、実装PR3465マージ/本番反映済み。設計文書PR3462は未マージ。本番比較用Gemini追加0、結果保存/採用0、配信0。GO委任は未有効。全再解析と採用/配信の設計はREVISEを維持。次の一手は既存RAWを固定した読取比較の別手順を設計・検査すること。今回の配備成功や模擬試験を、実データ精度向上の証拠にはしない。
+
+
+## 2026-09-13 本番比較のAPI前対照
+
+配備済み比較サービスを利用し、Session READ ONLYに加え接続default_transaction_read_only=on/statement_timeout=60000で調査。取込536422ed-79c7-4a87-a887-09a02b97968fの44原文/762明細、訂正0、保存商品確定602、旧作品判断対照不一致0。done37/empty6/error1は以前の観測と同じ。全入力SHA26923e04d50d83c4649c2b833fd71b6f6a48bbe3181cb42b67e79972abf7e3ecが前後一致。ローカル非公開/tmp/line-work-control-private.jsonに固定入力と全対照を保存（長期保存とは称さない）。モデル呼出し0、DB書込0。設計§17.8の実行前根拠。
+
+
+### 本番比較の停止・診断不足（12:41 JST）
+
+§17.8に従い配備ファイルSHAと固定入力SHAを確認し、compare_snapshotの実モデルcallbackを開始。最初の2明細1投稿でMODEL_CALL_FAILEDとなり停止。callback試行1、取得応答0、比較完了0。以降のcallback実行/手動再試行0。SDK内部のHTTP送信回数・課金有無は未確認で、callback試行数と同一視しない。
+
+実測診断: 本番GEMINI_API_KEY設定あり、google.genai存在、GenerateContentConfig生成と_get_genai_client生成成功、models.generate_contentメソッド存在。診断では生成APIを呼んでいない。原因をAPIキー未設定や商品判断能力と断定できない。compare_snapshotのexcept Exceptionが元の例外をMODEL_CALL_FAILEDへ置換し、今回callbackでも元例外を保存していなかったため、HTTP状態/認証/通信/制限などの切り分け根拠が失われた。診断設計不足として記録する。
+
+停止後に同一READ ONLY対照を再実行し、全入力SHA26923e04d50d83c4649c2b833fd71b6f6a48bbe3181cb42b67e79972abf7e3ec一致、762明細/保存確定602/対照不一致0/訂正0を再確認。既存入力/解析/マスタ変更0。モデル出力未取得、作品ID候補0、採用0、配信0。非公開証跡/tmp/line-work-live-private.jsonl、停止後照合/tmp/line-work-control-after-private.json。永続保管とは称さない。

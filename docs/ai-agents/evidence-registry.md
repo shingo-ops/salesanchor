@@ -2701,3 +2701,5 @@ PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8�
 EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
 
 EV-20260913-LINE-WORK-COMPARE本番反映: PO原文GO #3465受領、merge9f5415c3、Deploy34735713952成功。backup7.2M、稼働HEAD/比較サービスSHA一致、API connected。実Gemini追加/採用/配信0。正式証跡はrecon「2026-09-13 GO #3465・比較実装の本番反映」。
+
+EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・前後全入力SHA一致。実callback初回1試行/応答0でMODEL_CALL_FAILED、診断根拠不足。キー設定/SDK/クライアント生成を生成APIなしで確認。原因未確定、診断付き同一投稿再試行はPO承認待ち。設計§17.9/recon停止節。採用/配信0。
