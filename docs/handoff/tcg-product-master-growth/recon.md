@@ -974,3 +974,12 @@ PO原文「GO #3458」を11:04 JSTに受領確認。HEAD44fac147のCI34731045931
 製品HEAD d8ff688f5f57d0ada396f0fa0fd76de1717d1399。Backend CI34735091935 / job103664991919: 2759 passed、95 skipped、失敗0、coverage63.26%、95.38秒。全表不変、READ ONLYによるDML拒否、API中transactionなし、RAW/マスタ/訂正/解析/リンク変更時停止、実analyzer内の候補集合との一致を合成データで検証。初回CI34734918033は2753成功/6失敗、共通原因は試験DBの正規化表未構築。既存migrationで試験環境を補完して解消、製品側の厳格な表存在検査は維持。
 
 追加のローカル単独mypyは2.3.1内部エラーで終了2。型検査の完全成功とは称さない。実装自己レビューは比較カードの範囲で合格、独立レビューなし。gh pr checks実測で番号付きGO未受領のprocess-artifacts gateだけ失敗、他に失敗/実行中なし。PR #3465提出済み・未マージ、比較用の本番モデル実行/再解析/採用/配信は未実施。比較結果の正誤判定・安全な採用保存・配信設計はこの試験の合格対象外。
+
+
+## 2026-09-13 CARD-LINE-WORK-CLIENT-04実装
+
+POが限定修正・テスト追加の確認に「進める」と回答。設計PR3462 HEAD2665d8e9、design-keyword.md §17.12とCARD-LINE-WORK-CLIENT-04を読んで実装。最新origin/main 56a1661d起点の専用release/line-work-client-lifetimeを公式手順で作成。製品差分はcall_work_model内のwith保持・text取得後closeのみ、他関数/モデル/プロンプト/DB変更0。
+
+寿命感知FakeClientはfactoryごと新規生成、ModelsはClient本体を保持しない。旧式の早期close検出1、text正常/空/None3、generate/text例外時close2の計6試験を既存比較テストへ追加。生成API使用0。make lint-ci終了0、ruff成功/Bandit高重大度0、mypyは既存警告（当該既存unused-ignoreを含む）で完全合格とは称さない。Docker未稼働につきローカルpytest未実行、実PG/単体は既存GitHub CIで確認する。
+
+POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関係を質問された。通常抽出はgemini_extraction_svc.py:185でclient変数保持、tcg_extraction.pyの100秒soft limit経路。比較サービスは通常抽出から参照されない（rgでcall_work_model定義1件のみ）。今回の接続保持不具合とは別の停止である。商品マスタを含むprompt追加が応答時間へ与えた影響は未測定で、因果を断定しない。タイムアウト修正/再抽出はこのカードに追加しない。

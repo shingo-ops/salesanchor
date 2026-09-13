@@ -82,11 +82,13 @@ def call_work_model(prompt: str) -> str:
     """Explicit live callable; never selected automatically by compare_snapshot."""
     from google.genai import types  # type: ignore[import-untyped]
 
-    response = gemini._get_genai_client().models.generate_content(
-        model=gemini._GEMINI_MODEL, contents=prompt,
-        config=types.GenerateContentConfig(temperature=0),
-    )
-    return getattr(response, "text", "") or ""
+    # Keep Client alive until the response is read; its destructor closes HTTP.
+    with gemini._get_genai_client() as client:
+        response = client.models.generate_content(
+            model=gemini._GEMINI_MODEL, contents=prompt,
+            config=types.GenerateContentConfig(temperature=0),
+        )
+        return getattr(response, "text", "") or ""
 
 
 def _records(session, sql: str, params: dict) -> list[dict]:
