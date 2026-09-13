@@ -2652,3 +2652,145 @@ follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 ```
 
 2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-PREFLIGHT
+date: 2026-09-13
+agent: Codex design partner (Planner then Architect self-review)
+task: 実商品44候補のCSV登録前調査
+scope: docs/handoff/tcg-product-import/recon.md とタスク台帳。商品登録なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md 2026-09-13実商品CSVの登録前調査
+    summary: 公式発売日43一致/1不一致、公式画像で37番SN、候補名の包含3組、現行parserとスキーマ設定を直接照合
+confidence: 発売日の根拠は個別公式資料。登録可否は未確認
+tradeoff: CSV作成機能とブラウザー接続が利用できず、代替書き出しの回答待ち。英語名等の未確定値・最新DB・QA確認が残る
+decision: REVISE。同一AIの自己審査。登録可能判定・PO値承認・登録GOなし
+follow_up: 書き出し方法回答後にレビュー用CSVと静的検証。本番実登録は別承認
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-DRAFT
+date: 2026-09-13
+agent: Codex design partner (same-AI self-review)
+task: Python標準CSV機能で確認用44件を作成
+scope: 確認用CSVと検証JSON・既存recon・台帳。商品登録なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-review-validation.json
+    summary: 44行10列BOM/CRLF・現行parserで44行・必須欠落0・重複0・実在日43。簡易名称比較1892組で他商品hit0
+confidence: 形式検査は直接実測。本番判定は未確認
+tradeoff: 発売日1件とmark1件は未確定空欄、英語名等は既存候補。除外語3件は提案段階
+decision: 書出方法のPO回答受領・CSV作成済み。登録可否の自己審査REVISEを維持
+follow_up: 値/検索語と最新DB・QA・実画面を照合してから登録便判断
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-KEYWORDS
+date: 2026-09-13
+agent: Codex design partner
+task: 空欄方針の承認記録・既存品質検査
+scope: 既存候補44件の読み取り検証と文書保存
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-keyword-validation.json
+    summary: 既存純関数のR1–R7を実行。1文字トークンSTOP5件/2文字WARN2件。候補内R3–R6は0
+confidence: 直接検証。本番データとの照合は未実施
+tradeoff: CSV形式検査では検索語品質を保証しない。本番鍵はタスク単位の許可が必要
+decision: 空欄方針はPO回答受領。REVISEを維持
+follow_up: 記録した読み取りSQLの鍵使用許可後に最新マスタ照合と検索語案の修正
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-LIVE-READ
+date: 2026-09-13
+agent: Codex design partner
+task: PO許可済み鍵による商品マスタ読取と44候補比較
+scope: 本番商品/分類/検索語/除外語のみ、SQL読み取り専用
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-live-snapshot.json
+    summary: SHOW transaction_read_only=on確認後、PGOPTIONS指定の7SELECTすべてexit0。商品296/有効293・分類4コード有効
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-live-comparison.json
+    summary: 商品名一致0/同mark9行。既存との差分はR2-stop5/R3-stop1/R5-warn45組。新旧スタートデッキに同語あり
+confidence: 読取結果の直接比較。別接続7問・実原文の誤判定件数ではない
+tradeoff: 既存側の検索語も見直し対象になるがDB変更権限なし。登録直前再照合必要
+decision: 読取承認受領・照合完了、REVISE維持。本登録なし
+follow_up: 原文例と現行制約を含めた検索語競合の修正設計
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-KEYWORD-DESIGN
+date: 2026-09-13
+agent: Codex design partner (same-AI Planner then Architect)
+task: 既存8商品とCSV候補の検索語修正草案
+scope: design/recon・対照検算資料のみ、DB/CSV/製品コード変更なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-revision-experiment.json
+    summary: 入力349。既存正解256名称の劣化0・候補43確定/世代不明1保留・追加R3/R5は0。R2停止5残存
+confidence: 既存純関数のオフライン対照。期待値は設計例、実原文/PO正解ではない
+tradeoff: 短縮名は確認待ち増加。1文字規則と実原文試験、QA/反映順序は未確立
+decision: 草案作成・自己審査REVISE。略称方針と既存DB変更は未承認
+follow_up: 曖昧な略称の扱いについてPO判断後に残件設計
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-SPACE-DESIGN
+date: 2026-09-13
+agent: Codex design partner (same-AI self-review)
+task: 略称方針記録と商品名の空白差だけを扱う追加案
+scope: 設計/検算資料のみ。製品/CSV/DBの変更0
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-space-design-experiment.json
+    summary: データだけの削除案で7名称未確定。限定一致試作389入力・96期待例不一致0・既存正解256名称劣化0。品質意味合わせ後も追加R1–R6停止/警告0
+confidence: 設計用合成例の試作。実原文精度/実装/CIではない
+tradeoff: 製品判定と品質R5の限定変更が必要。正式設計承認・QA/反映順序は未了
+decision: 略称方針のPO回答受領。追加案作成、全体REVISE維持
+follow_up: 正式受入条件と反映順序を設計して承認提示
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-DESIGN-GATE
+date: 2026-09-13
+agent: Codex Planner then Architect (same-AI self-review)
+task: 判定処理の受入条件とQA/反映順序を確定
+scope: design/recon/ADR追加案/検算/台帳のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md §18
+    summary: 製品6ファイル・A1–A8・隔離CI fixtureを照合。B0–B6はデータ別便に分離
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-reducer-equivalence.json
+    summary: 既存候補選択との300例tuple比較で不一致0
+confidence: A便の設計実行可能性。正式pytest/実装結果は未取得
+tradeoff: B便は値/実原文/QA先/部分失敗の検証待ちで登録不可
+decision: A便のみ設計APPROVE、B便REVISE。PO設計/実装承認は未受領
+follow_up: A便のPO設計承認後、正式保存・カード検査
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL
+date: 2026-09-13
+agent: Codex design partner
+task: A便正式設計承認の永続化と実装引き継ぎ準備
+scope: 設計文書・カード・根拠・台帳。製品変更なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md §18-7
+    summary: A便の正式設計承認を求めた質問へのPO回答原文「進める」を対象とともに記録
+confidence: 設計承認の記録。実装承認・委任・マージGOではない
+tradeoff: B便はREVISE、製品の正式試験は実装後に必要
+decision: A便を承認済み設計として文書PR保存。実装未着手
+follow_up: 正式カード検査と文書PR提出後、実装開始・担当への委任をPOへ提示
+```
