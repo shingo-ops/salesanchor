@@ -1,0 +1,20 @@
+CARD-AO-SAVE-02（発行済み）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AO-SAVE-02
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。実在/保存範囲/L32照合。
+担当: team_button_generator。rootが文書を準備済み。他者の変更を戻さない。新AI起動なし。
+許可: 指定13ファイルの保存前照合、git add/commit/pushだけ。
+禁止: 製品再編集、文書の独断編集、PR/GO/merge/本番操作、共有部品/他者変更。
+前提: root実装照合/144表示/37操作前後組成功。担当377試験・全品質exit0をroot原ログ確認済み。
+手順0: statusとmanifestの製品3/archive/証跡全hashを照合し、不一致は停止。frontend/coverageはrootが/tmpへ退避済み。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && bash scripts/check-task-state.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git add docs/ai-agents/evidence-registry.md docs/handoff/design-system-recon/evidence-20260910/ao-team-button-card.txt docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md docs/handoff/design-system-recon/evidence-20260910/ao-implementation-checkpoint.tar.gz docs/handoff/design-system-recon/evidence-20260910/ao-implementation-manifest.json docs/handoff/design-system-recon/evidence-20260910/ao-save-card.txt docs/handoff/design-system-recon/recon.md docs/specs/design-system/design.md docs/specs/design-system/migration.md frontend/src/components/TeamFormButtonMigration.test.tsx frontend/src/pages/teams/TeamEditPage.tsx frontend/src/pages/teams/TeamsPage.tsx tasks/todo.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git commit -m "feat: unify six team form action buttons"
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git log -1 --format=%H
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git push -u origin HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git ls-remote origin refs/heads/release/frontend-next-button-design
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git status --short
+手順1: commit/remoteHEAD/statusとmanifest照合結果を報告して停止。失敗は原コマンドと理由を返す。
+END OF CARD
