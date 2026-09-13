@@ -2697,12 +2697,32 @@ PO原文「この表示に変更してくれ」で3カード下部CTA実装を�
 PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
 
 
+### EV-20260913-FRONTEND-AM-DESIGN
+基準af269ae2、6原文/2ページ+共有7hashを保存。type6/6、登録disabled2、3payloadと実UiPrefsProvider契約を照合。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
+
+EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
+
+```text
+id: EV-20260913-FRONTEND-AM-IMPLEMENTATION
+date: 2026-09-13
+agent: root design partner / existing button_generator
+task: スタッフ3フォーム6ボタン移管
+scope: StaffPage/StaffEditPage/StaffFormButtonMigration.test.tsx
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md
+    summary: root直接96表示/29操作前後組・2ページ逆変換/共有7hash一致。担当32新規/298全体試験品質原ログ確認
+confidence: high
+tradeoff: 合成認証/API、実UiPrefsProvider。本番PO目視未実施。初回検収器class差検出も保存
+decision: 実装検収APPROVE、設計自己審査を独立第二者レビューと区別
+follow_up: PR3468実装更新・統合後品質/CI、今回番号付きGO待ち。merge/本番未実施
+```
+
 EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8、通常pushの自動承認拒否2回。origin/owner一致・public確認済み、公開送信のPO明示承認が必要との理由。PR未提出/CI未実行/本番未反映、迂回なし。design/reconの「公開pushの承認待ち」参照。
 
 
 EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
 
-EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
 
 
 EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
@@ -2713,6 +2733,33 @@ EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
+
+
+```text
+id: EV-20260913-SHINSOKU-TIMEOUT-01
+date: 2026-09-13
+agent: Codex design partner / same-AI self-review
+task: 長文抽出100秒超過と原文精度の限定検証
+scope: docs/handoff/tcg-product-master-growth/design-keyword.md 時間制限節
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-product-master-growth/recon.md 時間制限節
+    summary: API99.842/136.291秒、解析0.554/0.683秒、147件/1176照合一致、DB更新0、前後SHA一致
+confidence: high for measured sample; unknown for population
+tradeoff: 有限300/330秒案は占有増。型番3商品不整合・統合配信未検証は分離
+decision: 設計自己審査APPROVE、数値/実装PO承認待ち、カード草案
+follow_up: card-lint/文書検査、PO承認後の限定実装
+```
+
+EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
+
+EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
 
 ```text
 id: EV-20260913-PRODUCT-CSV-PREFLIGHT
