@@ -66,6 +66,8 @@ Dockerがないローカルではpytestを回さず、静的検査とready PRを
   cd /Users/tanizawashingo/worktrees/salesanchor/release-line-25th-product-disambiguation && bash scripts/check-task-state.sh
 
 手順9（保存・提出）
+診断CIの前にmainが進んだ場合は通常取り込みを行う。7dcb9ce9のrunner競合は既存Dragon Ball2行、本便25th1行、空箱の順を全て保持して解消する。
+他のmain由来ファイルを独自変更せず、本便差分が所有3ファイルだけと確認して通常pushする。期待/追加登録案は変えない。
 所有3ファイルの実差分を確認し、検査結果を記録してその3ファイルだけをコミットする。
 コミット後に `git log -1 --format=%H` で保存を確認してpushする。公式 `scripts/gh-pr-create-safe.sh` でmain向けready PRを作成する。
 PR本文は一時ファイルに実際の改行で保存し `--body-file` で渡す。必須CIは `gh pr checks` とGitHub APIで確認する。
