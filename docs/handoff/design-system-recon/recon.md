@@ -678,3 +678,6 @@ AK製品PR3457本番成功、結果文書PR3460 merge9e0406ee。専用編集2ペ
 
 
 2026-09-13 AM実物調査: StaffPage:299〜302/321〜322、StaffEditPage:225〜226の6ボタン。登録POST・簡易PATCH6項目・専用PATCH全項目の差と本人refresh条件を確認。UiPrefsProvider外no-opを検収に使わず実Provider必須。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AM実装検収: PO原文「進める進める」で承認、6ボタン移管。root逆変換2ページ/共有7hash一致、96表示/29操作前後組成功。担当32新規/298全体試験と品質成功を原ログ確認。共通106/旧299（最新main統合前）。根拠: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md。実装検収APPROVE。PR3468実装更新・統合後品質/CIへ、今回番号付きGO/マージ/本番未実施。

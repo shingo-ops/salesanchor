@@ -1,9 +1,9 @@
-CARD-AM-STAFF-01（草案・未発行）
+CARD-AM-STAFF-01（発行済み）
 本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
 受領確認: 受領。CARD-AM-STAFF-01
 読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在作業台/原文/L32照合。
-開始条件: 今回6件のPO実装承認と担当確定。現時点で未充足、実行禁止。
-担当: 承認後に確定。他者も作業中なので変更を戻さず調整する。新AIを自己起動しない。
+開始条件: 今回6件の実装承認質問にPO原文「進める進める」を受領（2026-09-13）。実装のみ有効、新GOは含まない。
+担当: 前便から委任済みのbutton_generator。他者も作業中なので変更を戻さず調整する。新AIを自己起動しない。
 根拠: docs/specs/design-system/design.md§AM、am-staff-button-audit.json。
 基準: af269ae20ed2f52e6cd49ba0403ad7799e3a3870。
 所有: frontend/src/pages/staff/StaffPage.tsx、frontend/src/pages/staff/StaffEditPage.tsx、新規frontend/src/components/StaffFormButtonMigration.test.tsx。

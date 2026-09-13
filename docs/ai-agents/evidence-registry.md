@@ -2697,3 +2697,19 @@ PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8�
 基準af269ae2、6原文/2ページ+共有7hashを保存。type6/6、登録disabled2、3payloadと実UiPrefsProvider契約を照合。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
 
 EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
+
+```text
+id: EV-20260913-FRONTEND-AM-IMPLEMENTATION
+date: 2026-09-13
+agent: root design partner / existing button_generator
+task: スタッフ3フォーム6ボタン移管
+scope: StaffPage/StaffEditPage/StaffFormButtonMigration.test.tsx
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md
+    summary: root直接96表示/29操作前後組・2ページ逆変換/共有7hash一致。担当32新規/298全体試験品質原ログ確認
+confidence: high
+tradeoff: 合成認証/API、実UiPrefsProvider。本番PO目視未実施。初回検収器class差検出も保存
+decision: 実装検収APPROVE、設計自己審査を独立第二者レビューと区別
+follow_up: PR3468実装更新・統合後品質/CI、今回番号付きGO待ち。merge/本番未実施
+```
