@@ -1,9 +1,9 @@
-CARD-AO-TEAMS-01（未発行草案）
+CARD-AO-TEAMS-01（実装承認済み・担当確定後に発行）
 本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
-受領確認: 未受領。実装承認と正式発行前は実行しない。
+受領確認: PO原文「進める」でAO6件の実装承認済み。実装担当の受領は未実施。
 読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在/原文/L32を照合。
-開始条件: AOチーム6件のPO実装承認を受領し、設計担当が本カードを発行済みに更新してから有効。
-担当: 承認後に既存の実装担当へ渡す。他者も作業中なので変更を戻さず調整する。新AIを起動しない。
+開始条件: 新担当1名への委任承認を受領し、設計担当が本カードを発行済みに更新してから有効。
+担当: 新担当1名への委任確認待ち。他者も作業中なので変更を戻さず調整する。担当自身は新AIを起動しない。
 根拠: docs/specs/design-system/design.md§AO、ao-team-button-audit.json。基準116b1cf667addd0b6d3b68a574641e0081dc4517。
 所有: frontend/src/pages/teams/TeamsPage.tsx、frontend/src/pages/teams/TeamEditPage.tsx、新規frontend/src/components/TeamFormButtonMigration.test.tsx。
 許可: 指定6件移管・回帰試験・ローカル品質検証。合成fixtureと原ログは/tmp。パスは一字一句そのまま使う。
