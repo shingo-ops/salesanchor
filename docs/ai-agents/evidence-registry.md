@@ -2724,3 +2724,5 @@ observed: dedicated worktree based on main56a1661d; migration/test paths absent;
 state: design documents prepared, product not yet implemented; no merge or production
 next: three-file implementation and parent review, then product PR and existing CI real-PG tests
 ```
+
+EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。

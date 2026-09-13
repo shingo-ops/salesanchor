@@ -153,4 +153,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | PO委任済み。専用作業台作成、設計準備済み | 正式カードで3ファイル実装/静的検証。親レビュー後にcommit/PR、CIで実PG8群を確認 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-DELEGATED | 2026-09-13 |
+| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | PO委任済み。JSON契約不足で実装前停止、§27補正・自己査定済み | 正式カードで3ファイル実装/静的検証。親レビュー後にcommit/PR、CIで実PG8群を確認 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-DELEGATED | 2026-09-13 |

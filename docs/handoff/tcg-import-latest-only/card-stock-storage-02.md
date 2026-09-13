@@ -51,7 +51,7 @@ UUID付きtcg_stock_test_名の新DBを作り、そのDB内だけにtenant_951/9
     期待する出力: release/line-stock-storageで未保存変更0。親の文書commit後に開始。
 手順3: 設計照合
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
-    期待する出力: be63630b27e47200e0edc23a01e9103cd9af487112fc29405ed22d7db78dd311。
+    期待する出力: ac23e48b019499b7745e857f8ddb93981e3f587845247e2cbed9434eac830368。
 手順4: 実装
     design §15/20/21/24/27と本カードの8群を読み、§27を現行正本として3ファイルを実装する。
     migrationはDO/pg_namespace走査、追加専用、トランザクションで失敗を戻す。既存TCG親の欠落を無言成功にしない。
