@@ -34,7 +34,9 @@ PR本文を通常のgh pr viewで取得し、tmp本文を編集後gh pr edit --b
 既存deploy.ymlの配備前新規バックアップ生成・存在確認と失敗停止を維持する。過去バックアップを今回取得済みとしない。
 手順3 最新取得
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-name-space-match-impl && git fetch origin
-確認済みmainはc22ad508993a1c7df679d51e01f08080dc3c341dに限定。別SHAなら親へ差分を戻す。
+確認済みmainはc50d719b2505c3e1d1977c4f36bdae39f14dae22に更新。別SHAなら親へ差分を戻す。
+c22ad508からの追加はPR3468のスタッフ画面6ボタン共通化・試験・文書14ファイル。親が実diffで6製品への変更0を確認済み。
+再開時の製品HEADはa618c147bac99296c46cd4647d7cec0e0ff456a6、初期6SHAは不変。手順3から通常取込・push・新HEADのCIを行う。
 今回6製品ファイルにmain側変更0。追加は抽出タスクの120/100秒→330/300秒、public.productsの既承認seed55件と登録、所有権/フックの補助、文書。
 親が現物照合済み。seedはpublic.productsで本便が照合するtenant側tcg_productsとは別。既存main内容を保持する。
 手順4 確認済みmain取込
@@ -48,6 +50,8 @@ PR本文を通常のgh pr viewで取得し、tmp本文を編集後gh pr edit --b
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-name-space-match-impl && gh pr checks
 全実行チェック成功を待ち、GO記録gateも成功を直接確認。pytest/PG内部ジョブが実際に走ったかを確認。
 必要な当該PR/配備のCIログは通常読取経路で取得可。未知の技術失敗は親へ報告して停止する。
+本文更新で取消された旧GO gateだけがrollupに残る場合、同一HEADの当該旧runを通常のgh run rerunで再実行可。
+同一HEAD・GO本文不変を照合し、再実行の成功を待つ。取消を成功扱いせず、失敗・拒否なら停止する。
 手順7 マージ直前
 GO本文、最新HEAD、最新main、23ファイル境界、6製品SHA、全実行CI成功/対象外、status空を同じ時点で確認。
 必要な「確認済み：」コメントはbody-fileで記録可。独立レビューを名乗らない。確認済み版から変化していれば停止。
