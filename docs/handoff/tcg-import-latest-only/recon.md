@@ -320,6 +320,25 @@ Context7ツールなしを確認し、ユーザー指定の公式資料代替を
 
 `backend/app/routers/tcg_analysis_review.py:94` はrequire_super_admin。手動解決API案も同じ権限に限定。`backend/app/services/tcg_distribution_svc.py:39` の5000行と同:448のタブ作成禁止を設計に維持。影響範囲は設計§19〜21、公開/手動解決/初期化の契約案。製品コード変更0、外部送信0。
 
+## 抽出版・原文表示・テナント設定の照合（2026-09-13）
+
+固定基点9858b29c4210b653aec22d85d5eda32cdc826b40。
+`backend/app/services/gemini_extraction_svc.py:35` と同ファイルのWORK_ID_PROMPT_TEXTの既存v3/v4は原文欄と作品IDを分離。parse_extraction_responseはv2/v3/v4の7/9/10列に対応し、新しい根拠位置JSONは未対応。`backend/app/tasks/tcg_extraction.py:165` 以降は外部呼出し後の作品参照変更を検査してから原文欄を保存する。この制約をv5でも維持する。
+
+`frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:60` 付近はsupplier/sourceから原文1件、同:67はstrip_raw_text=trueの明細一覧を取得。履歴を増やすだけでは過去行が最新原文を参照するため、メッセージID別取得が必要。`backend/app/routers/tcg_supplier_quality.py:78` は仕入元ID単位のsourceエンドポイント。`backend/app/services/tcg_analysis_review_svc.py:216` の並び順はreceived_atとline_start。履歴版選択と同一日時の安定順を別途定義した。
+
+`backend/app/tcg_config.py:19` 以降はTCG_SCHEMAを環境設定から検証して読む（既定tenant_004）。説明コメントだけで固定スキーマと断定しない。`migrations/20260912_020000_tcg_resolved_work_id.sql:6` は既存TCGテーブルを持つtenant_*を列挙。新migrationの対象manifestと前提検査が必要。
+
+設計§22〜24でv5/履歴/API既定値/制約を具体化。v5は提案であり、製品テスト実行0・精度測定0。FK保持による既存削除経路への影響、原文チャネル変更とイベント整合が未照合のためREVISE。
+
+## 解析再実行と既存テストの追加照合（2026-09-13）
+
+`backend/tests/test_tcg_is_active_filter.py:75` の対象3サービスと同:86の全SQL active強制は履歴scopeと衝突する。テスト撤去ではなく結果集合と重複防止に置換する設計対象へ追加。`backend/app/services/tcg_supplier_quality_svc.py:35` 付近のexclusion要確認集計と同:70付近のsupplier_id=SPコードも確認した。新API案のUUID絞込をsupplier_codeへ修正した。
+
+`backend/app/services/tcg_analyzer_svc.py:1307` はanalysis_resultsをextraction_item_idでUPSERT。`backend/app/services/tcg_product_master_svc.py:638` 付近の再解析は同じjobへanalyze_extraction_jobを再実行するため、抽出IDのみではマスタ変更後の版を識別できない。適用時の不変結果、analysis_input_digest、差分保留を設計に追加した。
+
+読み取り検索のコマンドに削除SQLの文字列が含まれたためPreToolUseが拒否。削除実行0、ガード変更0。テーブル参照ファイルの読み取りを継続した。backend/app、tools、ops、scripts内の参照を調査し、常設の抽出処理はINSERT/job状態更新、原文取込はactive更新、再解析はUPSERTであることを確認。任意の過去運用や外部の削除まで不存在とは断定しない。migrationのFK影響と履歴保持試験は残件。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

@@ -2837,3 +2837,19 @@ tradeoff: API atomicity is not cross-spreadsheet atomicity or collaborator isola
 decision: design sections 19-21 specify one-call replacement, readback/retry, super-admin resolution and shadow cutover; same-AI review REVISE
 follow_up: extraction event contract, history version selection and full DDL constraints; measure live counts/size during authorized rehearsal
 ```
+
+```text
+id: EV-20260913-LINE-EXTRACTION-HISTORY-CONTRACT
+date: 2026-09-13
+agent: Codex design partner
+task: 抽出版互換・履歴原文・DB制約の整合
+scope: read-only code/schema; design PR #3456
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md 抽出版・原文表示・テナント設定の照合
+    summary: v4 retains raw fields and separate work ID; supplier view loads only one latest source; TCG_SCHEMA is validated environment config, not unconditionally tenant_004
+confidence: high
+tradeoff: exact source spans prove verbatim text but not correct semantic ownership; RESTRICT/constraint triggers can conflict with existing correction/deletion
+decision: draft v5 evidence schema, versioned history/source API and storage constraints; current contract index in design section 24; same-AI review REVISE
+follow_up: source/channel mutation and delete-path audit, boundary gold labels and complete UI callers before card
+```

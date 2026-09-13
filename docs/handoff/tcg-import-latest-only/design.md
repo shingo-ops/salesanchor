@@ -11,6 +11,8 @@ ADR: [ADR-154](../../adr/ADR-154-tcg-parity02-gas-python-migration.md)、[ADR-11
 
 ## 2026-09-13の状態
 
+現行契約の索引と残件は§24を参照。過去追補の未確定記録だけで現在の状態を判断しない。
+
 文書PR: https://github.com/shingo-ops/salesanchor/pull/3456 （提出済み・未マージ）。
 
 区分: 既存の延長・修正。従来のSQR-05設計を本ファイルの末尾へ原文のまま残し、同じ保存先に改訂案を置く。
@@ -576,6 +578,85 @@ publicationごとに旧管理範囲・対象設定版・送信内容hashを固�
 ### 残件の整理と自己審査
 
 同一AIの自己審査REVISE継続。§18で未確定だった公開方式は公式の原子的更新、手動解決は上記API、初期化はshadow＋差分確認に具体化した。残る実装前の契約は抽出から操作イベントへの型/根拠対応、解析履歴版選択、追加DDLの全チェック制約と既存migration様式の整合。実際の重複件数/公開サイズ/切替所要時間は実装後リハーサルで測定する項目として区別する。実装カードは未発行。
+
+## 22. 抽出形式と操作への接続（v5草案、2026-09-13）
+
+既存v2/v3/v4の7/9/10列の読取互換と作品IDの参照検証を維持する。新方式は別のprompt_version `raw-stock-evidence-v5` とし、既存v4データを新方式として自動解釈しない。新しい抽出形式・プロンプトは製品へ未登録。作品ID以外のID、正準商品状態、在庫判定、推定数量をAIへ生成させない。
+
+v5は1つのJSON object（format_version=5、items配列）とする。Markdown/説明文/重複キー/未定義キー/非有限数を拒否。空配列は抽出なし候補であり、既存在庫を消さない。既存のモデル呼出し・参照snapshotは再利用し、APIのstructured-output機能への依存は追加しない。JSON解析の後に以下をアプリケーション側で検査する。
+
+各itemの必須キー:
+
+| キー | 型・意味 |
+|---|---|
+| raw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name | string。原文の抽出値。未記載は空文字。数量を数字型に変換させず、完売を0へ補完させない |
+| resolved_work_id | UUID文字列またはnull。既存v4の参照許可ID/明示作品との矛盾検査を維持 |
+| field_evidence | 上記7 rawキーを全て持つobject。各値は下記span配列。空文字なら空配列 |
+| shipping_label | string。原文の発送分①等。未記載は空文字、意味を推定して補わない |
+| shipping_evidence | span配列。shipping_labelを支える原文位置 |
+| clauses | 原文節の配列。各要素はtext:string、spans:span配列のみ。完売/否定/入荷等の判定値は含めない |
+
+spanはline（1始まり整数）、start/end（その行のUnicodeコードポイント0始まり・終了非包含）。原文raw_textを改変せずLFで分割し、CR等も保存文字として扱う。範囲は0<=start<end<=当該行の文字数。昇順のspanから取得した部分文字列をLFで結合した結果が抽出textと完全一致すること。補完/言い換え/全角半角の変更は不一致。1件で複数商品を兼ねるitemは許可せず、商品名共有の別発送枠は商品名根拠を再利用しつつ枠の根拠を分ける。
+
+Systemは検証後に既存line_start/endを全根拠のmin/maxとして導出し、既存raw欄と新しいevidence_payload JSONB（format_version/field_evidence/shipping/clauses）をextraction_itemsに保存。操作番号は検証済みitems/clausesの配列順から付与し、UUIDをAIに生成させない。
+
+1. 形式不正はjob error、全イベント生成0。根拠不一致は当該itemを保留する。原応答は安全なエラー証跡として保持する設計だが、secretsを含むエラー文字列を保存しない。
+2. 語句判定は検証済みの節単位で§12/17を適用。商品/枠/節の対応が曖昧ならpending。文字列一致だけでその商品の補足と証明できたことにはしない。隣の商品境界・発送枠をまたぐ節は自動適用しない。
+3. 同じitemの現在数量と完売が矛盾する場合、部分文字列の末尾を無条件採用せず保留。「10→残3」のように更新関係が明示される型は辞書へ個別登録・反例検証したものだけを許可する。
+4. stock_set/sold_outとplan_assert/plan_denyを別イベントへ分解する。1明細に両者があれば2イベント。日付の保留はplan側だけに付き、現在完売の独立確定を妨げない。
+5. 抽出jobのdone/empty/errorは実行状態、eventのpending/applied等は在庫反映状態。これらを混同しない。配信の既存「抽出処理中」ガードは残すが、日付イベントのpendingを抽出runningへ戻して配信全体を永久停止させない。保留在庫イベントは旧確定値を維持し、その未解決件数を配信確認画面に示す。
+
+新列追加とv5導入は後方互換で行い、v4の作品参照更新競合・未知ID拒否試験を維持。v2/v3/v4は解析閲覧可能だが、新在庫イベントの初回自動生成はしない。初期化済み原文の再抽出は§18の差分保留へ送る。
+
+受入条件: 捏造された根拠拒否、文字位置のずれ拒否、別商品/別枠の節混入保留、追加予定数量の在庫加算0、完売と予定イベント分離、v4作品ID制約維持、空配列による在庫変化0。実モデルの正解率は未測定。原文5件の部品試験をv5抽出精度の証拠に転用しない。
+
+## 23. 解析履歴と原文の表示契約（2026-09-13）
+
+現行SupplierDetailViewは最新原文1件を先に取得し、複数明細へ共用する。履歴化では明細のsource_message_idと表示原文を一致させる必要がある。
+
+- 既存GET /api/v1/tcg/analysis-resultsへ `source_scope=active|history`（省略active）と `extraction_scope=latest_completed|all_versions`（省略latest_completed）、`supplier_code` string任意（既存のSPコードと完全一致）を追加。既存provider文字列との併用時は両方一致を要求する。新しい解析リストはhistory/latest_completedを明示して呼び、旧呼出しの省略時activeは維持する。
+- latest_completedは各source_message_idについて最新の検証済み完了jobをcreated_at DESC,id DESCで1件選ぶ。新しいjobがrunning/errorなら旧完了結果を表示し、別途latest_attempt_statusを返す。新しいempty完了では明細0だが、過去の適用済みイベントと原文は消さない。all_versionsで到達可能にする。
+- 一覧は原投稿日時DESC NULLS LAST、source_message_id、job日時DESC、extraction_item_idの順で安定化し、total/item_total/providersへ同じscopeを適用する。NULL原投稿日時をcreated_atとして表示しない。
+- 一覧項目にextraction_job_id、prompt_version、source_posted_at nullable、latest_attempt_status、stock_effectsを追加。quantity/priceのAPI表現は小数を損なわないdecimal文字列またはnullに固定する。current_offerの未知quantity=nullを0へ変換しない。
+- 新規GET /api/v1/tcg/source-messages/{source_message_id}: require_super_admin、設定されたTCG_SCHEMA内の原文IDを検索し、id/supplier_channel_id/raw_text/line_posted_at nullable/raw_sha256を返す。is_activeで除外しない。見つからなければ404。書込なし。既存supplier/sourceは変更しない。
+- 行の原文ボタンはそのsource_message_idを指定して取得。取得完了前に古い原文へ行ジャンプしない。応答が順不同で戻る場合も現在選択中IDと一致するものだけ表示。別行に切り替えても元のsource IDを修正送信へ混ぜない。
+- 完売フィルターは新パラメータavailability=sold_outで、当該抽出イベントのapplied_availabilityを対象とする。現在在庫の状態とは別。商品未解決/枠不明/日付保留などをreview_issuesへ個別表示する。NORMAL_COMPLETEDには完売だけを理由に排除せず、真の保留理由がない行を含める。
+
+実装後の必須試験: 原文2件と異なる同じ行番号を用意し、各行が正しい原文を開く。新job失敗時の旧完了表示、全版表示の識別、empty時の過去イベント到達、旧API省略値互換、NULL数量、完売フィルターと商品状態の非混同を確認する。現在在庫の独立一覧からも原文/適用イベントに到達でき、抽出明細0で現在在庫まで消えないことを確認する。
+
+## 24. DB制約の追加査定と現時点の残件（2026-09-13）
+
+既存TCG_SCHEMAは検証済みtenant_NNN環境設定（既定tenant_004）である。固定文字列tenant_004の新規埋込やHTTP入力からのスキーマ指定はしない。既存migrationはTCGテーブルが存在するtenant_*を列挙する形式。本件は対象一覧をリハーサルmanifestに固定し、想定外スキーマへの自動適用を止める。
+
+§18のDDL案を次の制約で補う:
+
+- offers.quantity/priceに負数を許可しない。availableにはquantity IS NOT NULL AND quantity>0、sold_outにはquantity IS NOT NULL AND quantity=0を要求する。unknownはquantity IS NULL。NULLのCHECK評価で制約が抜けない形にする。revisionはNOT NULLかつ1以上。
+- events.decision/applied_at/applied_offer_revisionの整合: appliedだけは全て非NULL、offer_idも非NULL。pending/ignored/stale/rejectedではapplied_at/applied_offer_revisionはNULL。ignoreイベントをappliedにしない。event_keyはNOT NULL UNIQUE。priceのみ変更でquantityを再設定しない。
+- JSONBはobject/arrayの所定型を検査。patchは許可キーとpresence/valueの整合をサービスで検証し、同じ検証をworkerと手動APIの共通入口で使う。任意JSONをSQL列名へ展開しない。
+- plansの日付がresolvedかつdayならdate_start/date_endとも非NULLで同じ日。resolved/rangeなら両方非NULLで開始<=終了。unspecifiedでは両方NULL、needs_reviewでは確定値をnullへ置き原文を保持。polarity=negativeを肯定表示しない。1枠複数予定を勝手に一括否定しない。
+- offer→eventの参照が同じoffer、event→source/offerが同じchannelであることを、ロック内の整合検証＋制約トリガーで保証する案。トリガーはイベント/offer参照の更新とsourceのチャネル変更も対象にする。既存の原文チャネル訂正処理との衝突を調査するまで正式SQLを確定しない。
+- publication ready後のrows/hash/manifest変更は禁止し、再生成は別publication ID。target_resultsの更新は対象キー単位にロックして他対象の結果を失わせない。複数workerの配信排他について、DBロックの期限と外部リクエスト成否不明の扱いを実装後試験へ明記する。
+- source/extractionのCASCADE削除を新イベントFKのRESTRICTで止める案は既存削除/再解析に影響し得る。削除経路を全て照合し、履歴保持へ修正する対象を確定してからmigrationを発行する。
+
+### 追加照合で確定した変更対象
+
+- 既存 `backend/tests/test_tcg_is_active_filter.py` は3サービスの全原文SQLにactive条件を要求する。履歴経路でも同条件を強制すると完売履歴が消える。既存テストを単に削除せず、active/historyそれぞれの結果集合・最新版抽出の重複防止・現在在庫出力に不要原文が混入しない試験へ置換する。診断等でactiveが必要な経路は維持する。
+- `backend/app/services/tcg_supplier_quality_svc.py` の仕入元一覧はactive原文とexclusionによる要確認件数を使うため、詳細だけを履歴化すると件数が不一致になる。新解析画面の一覧にも同じsource_scope/extraction_scopeを適用し、要確認述語を共通化する。既存source APIのsupplier_idはUUIDでなくSPコード。新しい絞込名をsupplier_codeとし、別IDを混同しない。
+- `backend/app/services/tcg_product_master_svc.py` の再解析は同じextraction_item_idのanalysis_resultsをUPSERTする。抽出job IDだけで解析結果の版を識別してはいけない。イベントの適用時結果はbefore/afterに保存し、現在のanalysis_resultsで過去結果を上書き表示しない。
+- §18のevent_keyを補正: 原文ID＋抽出結果ID＋analysis_input_digest＋操作種別＋明細内操作番号。analysis_input_digestはエンジン版と、その解析で実際にロードした商品/単位/状態/正規化/備考/作品参照データの正規化済みsnapshotのSHA256。順序・型・null表現を固定し、実行日時を含めない。snapshot取得は解析に使用するデータと同一読取版にする。同じ入力なら再実行は同じkey、異なるmaster入力なら別候補になるが自動二重適用しない。既適用結果との差分を確認待ちにし、イベントへsupersedes_event_id nullableを追加して対応を記録する。
+- 正規化の再解析と、AI再抽出の両方で上記の差分保留を共通化する。マスタ更新だけで現在在庫が復活する経路を作らない。実装後は同じ抽出ID・異なるマスタ版の試験が必須。
+
+### 現行設計の読み方と審査
+
+§1〜11は目的/KGI/基本設計、§12以降は追補。現行の詳細契約は§17（日付）、§18＋本節（保存）、§19（公開）、§20（手動確認）、§21（切替）、§22（抽出）、§23（履歴）。前節にある「未確定」は当時の状態であり、解消の有無はこの索引と次の表で確認する。全体をAPPROVEした意味ではない。
+
+| 項目 | 今回の到達点 | なお必要な証拠 |
+|---|---|---|
+| 抽出→操作 | v5のキー/根拠位置/版互換/操作分解を定義 | 真の商品の境界と数量更新表現の判定規則・正解集合 |
+| 履歴表示 | scope既定値/版選択/原文ID取得/競合応答対策を定義 | 既存全呼出元との接続確認と実装後API/UI試験 |
+| DB制約 | NULL・数量状態・JSON・イベント整合の条件を定義 | 既存削除/チャネル訂正との整合、最終DDLの型/FK/トリガー査定 |
+
+同一AIの自己審査は**REVISE**。型と状態の形だけで意味解析精度を保証しない。前提不足を新たなテスト数で覆わず、上表の調査を続ける。実装カードは発行しない。
 
 ---
 
