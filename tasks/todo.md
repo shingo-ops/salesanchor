@@ -8,8 +8,8 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | Geminiの商品マスタ参照・作品IDのみ判断 | Agent | PR #3441の番号付きGO受領。2af2270cのCI2679成功/失敗0、最新main追従 | 最新HEADのCI合格後に正規マージ・反映確認、最新取込の比較。原文差異は停止、精度向上時のみ要確認以外を3シート配信 | PR #3441 / docs/handoff/tcg-product-master-growth/recon.md / EV-20260912-LINE-WORK-ID | 2026-09-13 |
-| Android LINE専用API・Termux送信 | Codex | 最新1163投稿/124名を照合。直近500件で56名本文一致、34名名一致のみ、33名未確定、1名同名重複 | 過去投稿の指紋照会を10000件へ拡張し全員の根拠を再集計。照合完了後に名前対応 | Issue #3437 / docs/handoff/line-supplier-aliases/recon.md | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | PR #3442。PO原文GO #3442受領、main統合後も製品7hash保持。220試験・表示120組/実Confirm60/キー10成功 | 最新のマージ/本番反映状態はPR #3442本文の実測記録を参照。CI通過後マージ・deployと公開配布物を照合。PO目視別、報酬3保留、新CI最後 | PR #3442 / docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / EV-20260912-FRONTEND-AJ-PR | 2026-09-13 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |

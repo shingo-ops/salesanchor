@@ -30,3 +30,19 @@ PR #3447のRSA4096/AES256-GCM暗号化read-only照会を本番で実証済み。
 |取得打切りを全件取得と誤認しない|backend/tests/test_line_import_admin.pyの上限未満・丁度・超過3ケース|
 |全124名に判定と根拠を付ける|端末内all-senders-comparison.json/csv。実名を公開Gitへ保存しない|
 |PC経路を維持|変更対象は管理inspectとその試験のみ、全体CI|
+
+## 確認できたAndroid名の既存マスタへの紐付け
+依頼原文「対応先が分かった人をとりあえず紐付けて」。docs/handoff/line-supplier-aliases/recon.md参照。KGIは日時・長文一致の5名を既存コードへ対応させ、元PC名の変更0、未知の人の自動登録0、原本変更0とする。
+public.line_supplier_source_namesにTCG schema/入力形式/表示名から既存supplier UUIDへの対応と証拠ハッシュを保存。既存全テナント・将来テナント共通のpublic表のためテナント毎のDDL不要。FKの代わりに登録時と読取時に同一TCG schemaの有効マスタを検証。無効・重複・矛盾した対応はAndroidでは未解決にする。
+Android新規取込は内部マーカー付きpending_messagesを保存。マーカー付き確定処理だけ対応表を使い、従来PCのパーサーと名前解決は維持。旧Android保留分は端末原本から計算したandroid-v1ドメイン付きSHA256と対象job.raw_sha256の一致を確認してlink操作内でマーカーを付ける。この管理ハッシュ指定は原本を扱う承認済み管理者の操作であり、一般ユーザーに汎用更新機能を公開しない。
+linkは既存端末の有効なsuper-admin所有者と取込所有者を検査。未解決/解決済み名の名前ハッシュ1名を選び、既存全仕入先の同日時の長文SHA256（名前残部補正を含む）が指定コードだけに一致することをサーバーで再検証。上限10000超は拒否。同じ対応の再適用は許可し、他のsupplierへ上書きはしない。マスタ共有ロックで検証中の名前変更を抑止。対応と対象pendingの未解決名再計算を同一トランザクションで保存する。元のdisplay_name/body/timestampは変更しない。
+今回は紐付けのみ。保留中取込のcommit・抽出・解析・配信は行わない。過去投稿による在庫置換の問題は確定前に別途検証し、紐付け完了を配信完了と混同しない。
+
+|基準|検証方法|
+|---|---|
+|PC名・原本文を変えずAndroid名を解決|backend/tests/test_line_source_names.py、全体CI|
+|所有者・原本ハッシュ・日時本文証拠なしを拒否|同テストと既存admin試験|
+|重複名・無効対応・別supplierへの上書きを拒否|同テスト|
+|新規Android取込と保留確定の両方で対応表を参照|同テストの取込/確定経路試験|
+|public表の冪等DDL・スコープ分離・INSERT/SELECTのみ|backend/tests/test_line_import_devices_pg.pyの実PostgreSQL試験|
+|5名の対応が本番保存される|反映後link成功と暗号化inspectのsource_aliases確認|

@@ -2477,6 +2477,8 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 - 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
+
+Android別名紐付け: 同日時・長文一致の5名を既存マスタへ対応付ける。設計/検証: docs/handoff/line-supplier-aliases/design.md / recon.md。元マスタ名上書き0、未知の人の新規作成0。実DB検証・本番保存はCI/反映後に確認。
 ```text
 id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
 date: 2026-09-11
