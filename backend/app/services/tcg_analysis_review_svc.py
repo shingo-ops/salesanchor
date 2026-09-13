@@ -11,6 +11,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
@@ -36,6 +37,7 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
     LEFT JOIN {TCG_SCHEMA}.tcg_products p ON p.id = ar.product_id
+    {review_joins(schema=TCG_SCHEMA)}
 """
 
 # ---------------------------------------------------------------------------
@@ -71,7 +73,7 @@ def _build_where(
     # status_tab による絞り込み（review_only より優先）
     if status_tab == "NEEDS_REVIEW":
         conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL)"
+            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL OR cr.needs_review)"
         )
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
         conditions.append("ar.pid_basis = 'NONE'")
@@ -81,14 +83,14 @@ def _build_where(
         conditions.append("NOT ar.pid_resolved")
     elif status_tab == "NORMAL_COMPLETED":
         conditions.append(
-            "ar.pid_resolved AND ar.unit_resolved AND ar.exclusion IS NULL"
+            "ar.pid_resolved AND ar.unit_resolved AND ar.exclusion IS NULL AND NOT cr.needs_review"
         )
     # 'ALL' は追加条件なし
 
     # チェックボックスフィルタ（タブ絞り込みに追加）
     if review_only and status_tab not in ("NEEDS_REVIEW",):
         conditions.append(
-            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL)"
+            "(NOT ar.pid_resolved OR NOT ar.unit_resolved OR ar.exclusion IS NOT NULL OR cr.needs_review)"
         )
     if unregistered_only:
         conditions.append("ar.pid_basis = 'NONE'")
@@ -162,11 +164,11 @@ async def fetch_analysis_results(
     )
 
     # 総件数
-    count_sql = f"SELECT COUNT(*) {_BASE_FROM} {where}"
+    count_sql = f"{source_cte(schema=TCG_SCHEMA)} SELECT COUNT(*) {_BASE_FROM} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
 
     # 提供者一覧（フィルタ後の全仕入元）
-    prov_sql = f"""
+    prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT DISTINCT COALESCE(ts.name, '不明') AS name
         {_BASE_FROM}
         {where}
@@ -176,7 +178,7 @@ async def fetch_analysis_results(
     providers = [r[0] for r in provider_rows]
 
     # アイテム一覧
-    items_sql = f"""
+    items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
             ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
@@ -197,7 +199,9 @@ async def fetch_analysis_results(
             ar.pid_basis,
             ar.unit_canonical,
             ar.unit_resolved,
-            ar.condition_canonical,
+            cr.canonical AS condition_canonical,
+            cr.condition_id, cr.review_version, cr.needs_review, cr.review_reasons,
+            cr.valid_ack AS condition_confirmed, cr.classification AS empty_box_classification,
             ar.note_ja,
             ar.status,
             ar.exclusion,
@@ -254,7 +258,12 @@ async def fetch_analysis_results(
                     "note": row.note_ja or "",
                     "exclusion": row.exclusion or "",
                 },
-                "review_issues": _compute_issues(
+                "condition_review": {
+                    "condition_id": row.condition_id, "review_version": row.review_version,
+                    "needs_review": row.needs_review, "review_reasons": row.review_reasons or "",
+                    "confirmed": row.condition_confirmed, "classification": row.empty_box_classification,
+                },
+                "review_issues": (["CONDITION_REVIEW_REQUIRED"] if row.needs_review else []) + _compute_issues(
                     pid_resolved=row.pid_resolved,
                     pid_basis=row.pid_basis,
                     unit_resolved=row.unit_resolved,

@@ -3546,5 +3546,33 @@
       "multi_candidate": "商品候補が複数",
       "note_unmatched": "メモの変換先が見つからない"
     }
+  },
+  "conditionReview": {
+    "title": "状態の確認",
+    "needsReview": "要確認",
+    "emptyBox": "空箱",
+    "current": "現在の状態：{{condition}}",
+    "original": "抽出した原文 — 商品：{{name}}／状態：{{state}}／備考：{{memo}}",
+    "unknown": "未確認",
+    "select": "実際の状態を選択",
+    "confirm": "空箱であることを確認",
+    "correct": "選択した状態で保存",
+    "saving": "保存中…",
+    "saved": "状態を確認しました。配信には他の条件も満たす必要があります。",
+    "otherReasonsRemain": "状態は確認済みです。他の未確認事項が残るため配信を保留しています。",
+    "changed": "内容が変わりました。再取得した内容を確認してから、もう一度確認してください。",
+    "reloadFailed": "内容が変わり、再取得にも失敗しました。再読込してから確認してください。",
+    "saveFailed": "状態を保存できませんでした。もう一度お試しください。",
+    "loadFailed": "状態の選択肢を取得できませんでした。",
+    "otherReason": "他にも確認が必要な項目があります。",
+    "separator": "／",
+    "reasons": {
+      "empty_box": "空箱であることの確認が必要です。",
+      "empty_box_ambiguous": "空箱の説明が曖昧です。実際の状態を選択してください。",
+      "empty_box_master_unavailable": "空箱の状態定義を利用できません。",
+      "note_unmatched": "備考の確認が残っています。",
+      "pid_unresolved": "商品を特定できていません。",
+      "multi_candidate": "商品候補が複数あります。"
+    }
   }
 }

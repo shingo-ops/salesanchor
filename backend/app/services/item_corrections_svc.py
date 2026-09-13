@@ -31,6 +31,8 @@ async def save_corrections(
     Returns:
         {"saved": <挿入行数>}
     """
+    if any(field["field_name"] == "condition_review" for field in fields):
+        raise ValueError("condition_review requires the versioned review API")
     if not fields:
         return {"saved": 0}
 

@@ -634,3 +634,5 @@ run_sql migrations/20260912_160000_line_import_devices.sql
 
 # Android source names (public control plane; all current/future tenants)
 run_sql migrations/20260912_170000_line_supplier_source_names.sql
+
+run_sql migrations/20260913_150000_tcg_empty_box_condition.sql

@@ -3,7 +3,15 @@ import { StatusBadge } from './components/StatusBadge';
 import { productMetadataIssueBadges, reviewIssueBadges, type ReviewIssuePresentation } from './reviewIssues';
 import './item-comparison-readonly.css';
 
-export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[] };
+export type ConditionReview = {
+  condition_id: string | null;
+  review_version: string;
+  needs_review: boolean;
+  review_reasons: string;
+  confirmed: boolean;
+  classification: string;
+};
+export type AnalysisReviewItem = { extraction_item_id: string; source_message_id: string; provider: string; raw_text: string; gemini: Record<string, string>; system: Record<string, string>; review_issues?: string[]; condition_review?: ConditionReview | null };
 export type CorrectionValues = { corrected_product_name: string; corrected_quantity: string; corrected_price: string; corrected_unit: string; corrected_condition: string; corrected_memo: string };
 export type CorrectionOptions = { units: string[]; conditions: string[] };
 
