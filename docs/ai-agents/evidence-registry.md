@@ -2680,3 +2680,11 @@ EV-20260912-LINE-WORK-ID最終反映: GO3458本人原文受領、HEADcb2ef474 CI
 EV-20260912-LINE-WORK-ID p2実抽出: POが確定済み44投稿の比較を承認。p2初回1投稿はdone/items1、行番号受理。raw_priceの¥脱落、raw_memoの残り→残り22でRAW一致条件不成立・停止。新作品はマスタOne Pieceと一致、旧要確認はnote_unmatchedなので商品確定改善の証拠ではない。DB更新0/配信0。recon同日比較再開節、非公開JSON SHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38。
 
 EV-20260912-LINE-WORK-ID設計見直し: PO「進める」でRAW固定作品比較への設計見直し着手を承認。READ ONLY実測762固有ID/空名0/不正位置0/訂正0、602既特定/160未特定/要確認166。有効商品293/作品NULL0。設計§17の2列ID契約・商品照合READ ONLYは自己APPROVE、全再解析/採用/配信REVISE。実装・追加Gemini0。recon同日設計棚卸し参照。
+
+### EV-20260913-FRONTEND-AL-DESIGN
+
+基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
+
+### EV-20260913-FRONTEND-AL-IMPLEMENTATION
+
+PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
