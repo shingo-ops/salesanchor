@@ -2747,3 +2747,5 @@ EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701
 - EV-20260913-LINE-CARDSET-08-CI: PR3483 HEADe6e5d463、Backend CI34754328005/job103716059145を直接確認、3316成功/95skip/coverage63.83%。Migration34754327876成功。38success/4skip、唯一のfailureはGO未記録。バックアップ6.6M生成ログ確認。本番未登録/再解析未実施、recon正式CI節。
 
 - EV-20260913-LINE-CARDSET-08-PROD: GO #3483受領、merge116b1cf6、Deploy34758371227成功、backup6.6M生成。PM0297新規1・個別9UUID保持・本番辞書で28商品名/28、58境界/58一致、health正常を直接確認。旧明細9d2b898eの解析結果は未更新。再解析/配信未実施。recon「PR3483 GO・本番登録完了」。
+
+- EV-20260913-LINE-CARDSET-REANALYSIS: PO「再解析してテストしてみて」。既存serviceで2ジョブ25明細を再解析、run2完了/snapshot25、raw/訂正不変。既知15商品正答5→15、商品特定9→18、要確認17→13。残13は参照digest不一致で書込前停止。単位補完後も理由残存1件を確認、再抽出/配信未実施。recon再解析テスト節。

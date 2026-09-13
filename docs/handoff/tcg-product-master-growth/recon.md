@@ -1309,3 +1309,35 @@ Deploy34758371227/job103726640926 success。配備前backupは12:55:15.5722715Z�
 参考: merge SHAにぶら下がる別PR2649（main→develop）のpull_request実行に失敗が表示された。Actions run34758374030のevent/head/base/pull_requestsを直接確認し、今回の承認済みPR3483の検査やpush Deployと区別した。別PRのCI/ブランチには変更0。
 
 状態: 設計/自己審査/PO実装承認/正式CI/番号付きGO/マージ/本番新商品登録/稼働照合確認まで完了。GO委任有効化なし。再解析/3シート配信は未実施。次は既存結果を更新する別手順を対象・訂正保持条件込みで確認する。
+
+
+## PR3483後・保存抽出の再解析テスト（2026-09-13）
+
+PO原文「再解析してテストしてみて」を受領。過去カードの再解析未承認状態は今回の対象限定再解析について更新。Gemini再抽出/全取込再解析/配信をこの指示から追加しない。preflight成功。関連原文3件はジョブ単位で19+13+6=38明細（既存の正解ラベル28を含む）と読取確認した。
+
+実行前に3ジョブの全raw/source/analysis/corrections/runsをREAD ONLYで取得、done/原文有効/未完了run0/訂正0。前処理のlatest job照合・入力SHA一致・engine v8を確認し、既存_run_reanalyze_syncだけを固定2ジョブへ実行。SQL直書きによる解析結果の更新やガード解除はない。元GAS退避表analysis_results_gas_baseline_20260903実在、直近配備backupに加え今回runのbefore snapshot25件を確認した。
+
+| 対象ジョブ | 明細 | run ID | 完了UTC | 商品特定 前→後 | 要確認 前→後（最終DB） |
+|---|---|---|---|---|---|
+| ebfe8c27-a61f-4058-a940-95db84d1eee4 | 6 | 00b3d27e-ee87-48fe-880f-3994204c6fd5 | 2026-09-13 13:11:17.839535 | 6→6 | 1→6 |
+| 25d73a0f-2cb3-489b-b8de-c6c661c8f071 | 19 | 67245fc0-6229-4978-98ac-162951262c0f | 2026-09-13 13:11:19.205416 | 3→12 | 16→7 |
+
+合計25明細、商品特定9→18、要確認17→13、単位確定19→19。件数は最終DBから再集計。wrapper戻り値afterは後処理前のunit_resolved=0を含む（6件ジョブの最終DBは1）ため最終値として流用しない。run snapshotは各6/19、runは2/2 completed_atあり。追加明細/欠落0、対象25と保留13すべてで原文/抽出全フィールド/訂正不変。状態/数量/価格等の保存値に変更なし、差分は商品・照合根拠・要確認/理由・計算日時/版。
+
+正解ラベルのある実行対象15件は商品正答5→15（33.3%→100%）。内訳は集合を含む6件と個別9件。対象9d2b898e-5b8a-4ca0-89bc-d73127251f3aはPM0263からPM0297 UUID59535ce4-3268-4a8a-a51e-4075d499f23bへ実際に保存変更された。個別9件はMULTIから各PM0276〜0284へ確定し、各needs_reviewがfalse。全25件の正答率や状態/数量等を含む100%ではない。
+
+### 今回判明した単位/確認フラグの課題
+
+6明細投稿は抽出raw_unitが6/6空。最終DBでは5件がunit_resolved=false、末尾BOXのb65dd482-1e90-4fc9-ba35-fbd909b63513だけE3a後処理でBox/true。全6件にunit_unresolvedが残り、以前要確認falseだった5件がtrueとなった。9種セットも商品は正しいが単位未確定で要確認。抽出値が空という事実であり、原文に単位が存在しないと断定しない。
+
+コード根拠（稼働相当116b1cf6）: tcg_condition_review_svc.py:136はunit未確定時の理由を生成。tcg_analyzer_svcはこの状態を保存してからE3a/E5/E3b/E4を実行。tcg_unit_recovery_svc.py:867以降E3a UPDATEはunit_id/canonical/resolved/basisだけでreview_reasons/needs_reviewを再計算しない。b65dd482は単位確定後もunit_unresolved理由が残る不整合を直接確認。19件投稿の既存未特定1件9d056b75にもunit_unresolved理由追加があるがneeds_reviewは元からtrue。フラグ解除や単位の推測補完は未実施。
+
+### 保留13明細
+
+ジョブdf42518d-711a-48aa-afc4-e41c5c8960f1はraw-extraction-v4-work-id-p2。保存参照digest5e7682fdba3437c06cc737353225f75f116e25fc92015f3d9e82df18bcc3c924と現在698d626dc1a95a72f2a31146d72c8683376256aa4f2f48bb7e35f775a816eb3aが不一致。既存analyzerの「Work reference changed; re-extraction required」に該当するため、書込関数を呼ぶ前に停止。この13件のanalysis/runsは前後完全一致、未完了runの新設0。tcg_work_reference.py:36以降の参照は作品だけでなく商品名/検索語/除外語も含む。今回以外の商品マスタ更新も含まれ得るため、差分を今回集合追加1件だけに帰属させない。
+
+稼働HEADを再確認したところ1021268623f2dba566d953fea056ff548ae28f3a（別PR3484のCSV原子化）が反映済み。master service差分はcreate_productのcommit引数のみで、再解析経路は変更なしとGitHub patchで照合。analyzer/condition_review/unit_recovery/work_referenceの4ファイルSHA256は116b1cf6と本番で一致。最新HEADをチャット履歴で固定しなかった。
+
+非公開証跡: /tmp/cardset-reanalysis-before-private.json、after-private.json、final-private.json、executed.jsonl、gold-result.json、execute.py。snapshot件数確認の初回READ ONLY SELECTは列名analysis_run_id誤りで失敗、サービスの正本INSERT列run_idを読み直して修正し6/19を取得。DB更新は再実行していない。
+
+状態: 25明細再解析・結果検証済み、商品誤判定の対象1件修正/個別9確定を確認。13明細は参照変更で保留。単位未確定と後処理後フラグ不整合を新しい課題として記録。実Gemini/配信0。次は単位確認フラグの整合と、参照変更時に13明細を扱う正式な再抽出手順を整理する。全体100%や配信可能な状態とは宣言しない。
