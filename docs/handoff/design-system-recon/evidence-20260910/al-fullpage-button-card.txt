@@ -1,0 +1,35 @@
+CARD-AL-FULLPAGE-01（草案・未発行）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在作業台/原文/L32を照合。PR/マージ手順なし。
+本文のパスは一字一句そのまま使用する。
+受領確認: 受領。CARD-AL-FULLPAGE-01
+開始条件: POの今回4ボタンの明示的実装承認と担当確定。現時点で未充足、実行禁止。
+担当: 承認後に確定。他者も作業中なので変更を戻さず調整する。新AIを自己起動しない。
+根拠: docs/specs/design-system/design.md§AL、al-fullpage-button-audit.json。
+基準: 9e0406eeb5fa804dd678874c395fe66d906faafa。
+所有: frontend/src/pages/contacts/ContactEditPage.tsx、frontend/src/pages/suppliers/SupplierEditPage.tsx、frontend/src/components/FullPageFormButtonMigration.test.tsx。
+許可: 指定2ページ4対象の実装、新規実ページ試験、既存品質検証。合成fixture/原ログは/tmpへ保存。
+禁止: CSS/共有部品/翻訳/入力/route/API/DB/CI/依存lock変更、文書/台帳/GO編集、commit/push/PR/merge/本番操作。
+手順0: preflight/statusと原hashを確認。基準の対象ページ/共有Button/CSSと差があれば編集前に停止し設計へ戻す。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git diff 9e0406eeb5fa804dd678874c395fe66d906faafa -- frontend/src/pages/contacts/ContactEditPage.tsx frontend/src/pages/suppliers/SupplierEditPage.tsx frontend/src/components/Button.tsx frontend/src/components/Button.css frontend/src/components.css
+手順1: JSONのform-actions直属4件だけbutton→Button、旧className除去、取消secondary/更新primary、全size md。
+既存../../components/Buttonのnamed import追加。type/onClick/childrenと業務本文/DOM順/form/maxWidthは逐語保持。
+重複確認2ボタン、loading/disabled/aria-busy追加、通常更新ロック追加、style/layoutClassNameは禁止。
+手順2: 実2ページをルータへmountする意味的試験を新規作成。通信を全mockし部品を単純buttonへ置換しない。
+設計ALの成功URL/ID/payload/遷移、取消書込0、失敗入力保持、会社必須、重複確認状態と制御、入力Enterを検証する。
+手順3: 依存がなければ既存lockでnpm ciを実施し、以下を実行する。lock変更禁止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npx eslint src/pages/contacts/ContactEditPage.tsx src/pages/suppliers/SupplierEditPage.tsx src/components/FullPageFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm run test:unit -- src/components/FullPageFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design/frontend && npm run build-storybook
+手順4: 差分/原ログを設計担当へ引き継いで停止。rootが逆変換一致と実ページ72前後組/キーボードを検収する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git diff --stat
+期待出力: 指定4/4の移管、業務本文変更0、操作維持、検証結果と未完を区別。
+失敗・差異・範囲外修理が必要なら原ログと対象を返し停止。設計外の修理・未検証を成功とする記録は禁止。
+END OF CARD
