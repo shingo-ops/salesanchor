@@ -2891,3 +2891,6 @@ SIG再開調査。保存資料21件のSHA256照合21一致/0不一致。固定�
 
 
 2026-09-13 正式保存準備: release/line-empty-box-design-handoffをorigin/main af269ae2起点に公式手順で作成。既存文書を保持して追記差分を統合。重複を避け今回の設計節は17〜19へ更新。参照サービス5件/レビュー画面のcacc889e→af269ae2差分0を確認。設計モデルの26+15固定対照を設計§19.7に掲載。カードは実行未許可の引継ぎ案、製品実装未着手。
+
+
+2026-09-13 文書PR提出: https://github.com/shingo-ops/salesanchor/pull/3464 。初回HEAD ba68076c9b49ff96abeae104efe6b3a26afccab0、OPEN、文書6ファイルのみをGitHub APIで確認。ローカルdiff/task-state/両card-lint終了0、旧25thカードの長文警告3件。提出時CI進行中。未マージ、製品実装/本番変更なし。設計の正本参照は本PRの§19、旧作業台の§18は履歴として保持。
