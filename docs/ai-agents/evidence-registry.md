@@ -2749,3 +2749,43 @@ EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701
 - EV-20260913-LINE-CARDSET-08-PROD: GO #3483受領、merge116b1cf6、Deploy34758371227成功、backup6.6M生成。PM0297新規1・個別9UUID保持・本番辞書で28商品名/28、58境界/58一致、health正常を直接確認。旧明細9d2b898eの解析結果は未更新。再解析/配信未実施。recon「PR3483 GO・本番登録完了」。
 
 - EV-20260913-LINE-CARDSET-REANALYSIS: PO「再解析してテストしてみて」。既存serviceで2ジョブ25明細を再解析、run2完了/snapshot25、raw/訂正不変。既知15商品正答5→15、商品特定9→18、要確認17→13。残13は参照digest不一致で書込前停止。単位補完後も理由残存1件を確認、再抽出/配信未実施。recon再解析テスト節。
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-RECORD-DRAFT
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 商品マスタ参照テーマ・通常抽出記録の設計
+scope: 未承認設計案、製品変更0
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md / 通常記録Aの具体化
+    summary: tcg_diagnosticsの管理者認証、taskの送受信記録不足、backup.shのDB全体dumpを確認。根拠行は設計本文に記載。
+confidence: medium
+tradeoff: 記録障害で当該投稿の完了が遅れる停止案。容量/親削除/保持は追加確認が必要。
+decision: 自己審査REVISE。新候補判断を通常promptへ追加しない。
+follow_up: POへ保存障害時の停止方針を提示。残る技術確認後に正式カード検査。
+```
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-DESIGN-REVIEW
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 通常記録Aの限定設計審査
+scope: 設計、製品実装0、Gemini呼出0
+evidence:
+  - type: command
+    reference: prod1 backend SQLAlchemy read-only connection / 2026-09-14
+    summary: jarvis_db、salesanchor_app、TCG_SCHEMA004、抽出3表は001/004・所有者jarvis、新履歴0。
+  - type: command
+    reference: fixed snapshot f8e3b354 + 実format_prompt_input helper
+    summary: 44投稿入力再構成最大99099 bytes/合計3886828 bytes。実送信記録ではない。
+  - type: external
+    reference: https://docs.celeryq.dev/en/stable/userguide/workers.html#time-limits (2026-09-14)
+    summary: soft例外は捕捉可、hard強制終了は捕捉不可。Context7利用不可の公式代替。
+confidence: high
+tradeoff: 保存障害/上限超過は当該新結果を止める。容量増、実装後性能試験が必要。
+decision: 通常記録Aの自己審査APPROVE。実装/CI/本番成功とは区別。
+follow_up: 正式カード検査と実装担当への明示承認。Bの商品候補判断は別設計。
+```

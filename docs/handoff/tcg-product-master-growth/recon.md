@@ -1341,3 +1341,26 @@ PO原文「再解析してテストしてみて」を受領。過去カードの
 非公開証跡: /tmp/cardset-reanalysis-before-private.json、after-private.json、final-private.json、executed.jsonl、gold-result.json、execute.py。snapshot件数確認の初回READ ONLY SELECTは列名analysis_run_id誤りで失敗、サービスの正本INSERT列run_idを読み直して修正し6/19を取得。DB更新は再実行していない。
 
 状態: 25明細再解析・結果検証済み、商品誤判定の対象1件修正/個別9確定を確認。13明細は参照変更で保留。単位未確定と後処理後フラグ不整合を新しい課題として記録。実Gemini/配信0。次は単位確認フラグの整合と、参照変更時に13明細を扱う正式な再抽出手順を整理する。全体100%や配信可能な状態とは宣言しない。
+
+
+## 判断記録の検討（2026-09-14）
+
+依頼「記録方法を検討してくれ」。根拠と提案はdesign-keyword.md「Gemini判断の記録方法・検討草案」。通常taskの応答保存欠落、既存比較の作品ID限定を確認。前回の文書保存は自動承認の利用上限で拒否され未保存だった。再開時git status clean・草案見出しなし・preflight成功を確認。Planner草案/Architect自己審査REVISE。製品変更/実Gemini/本番更新なし。25件再解析と残る13件保留・単位フラグ問題は解消扱いにしない。
+
+
+### 記録設計の追加調査（2026-09-14）
+
+既存診断APIの管理者認証、TCG_SCHEMAのサーバ固定、抽出例外の戻り値化、DB全体/テナント単位backupと通常backupの設定値30日を実物確認。通常記録Aの保存構造・3段階transaction・終了未確認・読取API・試験条件をdesign-keyword.md「通常記録Aの具体化」に保存。PO判断候補は記録障害時に当該新結果を止める方針。実装可能性審査はREVISEを維持。削除処理の読取検索が禁止語フックに拒否され、解除せず未確認を記録。他の直接ファイル閲覧は継続した。新SDK仕様調査/実Gemini/製品変更/本番操作は0。
+
+
+### 通常記録Aの限定設計審査（2026-09-14）
+
+PO「進める」を直前の記録保存失敗時の停止方針への合意として受領。GitHub main313d7796を再確認。本番read-onlyでjarvis_db/salesanchor_app/tenant_004、対象3表は001/004所有者jarvis、新extraction_attempts0を確認。列実物とDBサイズ94,567,447 bytesを確認。固定44投稿を実format helperで再構成し入力最大99,099 bytes、合計3,886,828 bytes。容量検算でありAPI呼出なし。Context7なし→Celery公式time-limits資料を直接参照（2026-09-14）。限定設計の停止境界、8MiB上限、FK/保持、新schema適用、soft/hard中断とPG受入を具体化して自己審査APPROVE。実装/CI/本番反映の成功ではない。
+
+
+保存検査: CARD09交付準備を既存card-gemini-work-id.mdへ追加。card-lintは違反0（L24長文警告67件のみ）、check-task-state成功、ADR索引check成功、git diff --check成功。製品試験/CI/復元試験は今回未実行。文書は専用worktreeへ保存、今回分のcommit/push/PR更新は未実施。CARD09の実装割当て/開始承認は未受領。
+
+
+### CARD09実装開始承認の受領（2026-09-14）
+
+直前の案内「次は、実装担当の指定と実装開始承認です」に対してPO原文「進める」。カード09の実装開始承認として受領し、担当指定を質問した。起動指示の自動実装切替禁止を維持し、回答前に本セッションを実装役へ切り替えず、別エージェントも起動しない。過去カードやPRへのGOを転用しない。
