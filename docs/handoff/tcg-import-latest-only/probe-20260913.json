@@ -2499,5 +2499,53 @@
     "cause": "control INSERT precedes CREATE INDEX while deferred FK events pending",
     "acceptance": "REVISE",
     "design_correction": "initialize control after all per-tenant DDL; repeat file applications in separate transactions"
+  },
+  "stage2_ddl_fix_submission": {
+    "commit": "9711cc40badfd01b2d77de8fe92d32b359e7ee79",
+    "sql_sha256": "44b8c27735dafcd7376afe374a728e58d5c29727e7270d50563703ea653adf65",
+    "test_sha256": "255b58b502eaded33ddcf999ee3fa45f3267072eb216a8438bd125f58357219a",
+    "outbound_review_initially_rejected": true,
+    "new_evidence": "outgoing2commits8files81insertions2deletions examined, no new LINE source/personal data/credentials",
+    "same_command_review_allowed": true,
+    "parent_verified_remote_and_pr_head": true,
+    "worker_remote_ref_typo": "refs/heads/release-line-stock-storage; parent separately checked official ref",
+    "ci_job": 103690386821,
+    "ci_complete": false
+  },
+  "stage2_local_final": {
+    "observed_at": "2026-09-13T07:23:02.824591+00:00",
+    "scope_instruction": "離席・PR直前まで。指示後の追加push/PR更新なし",
+    "published_pr": 3479,
+    "published_head": "9711cc40badfd01b2d77de8fe92d32b359e7ee79",
+    "product_local_commit": "7b172c4687eb0fa2613938109e7fe8aaaceac161",
+    "published_fix": false,
+    "latest_real_pg": {
+      "job": 103690386821,
+      "passed": 3267,
+      "skipped": 95,
+      "failed": 1,
+      "warnings": 309,
+      "coverage_percent": 63.82,
+      "seconds": 124.12,
+      "failed_test": "test_deferred_transaction_integrity",
+      "failure": "second connection from obscured pg.dsn authentication failed"
+    },
+    "local_parent_verified": [
+      "commit and one-site diff",
+      "ruff success",
+      "Python syntax success",
+      "8 test names and all asserts unchanged",
+      "other7 test AST unchanged",
+      "SQL unchanged from real PG run"
+    ],
+    "test_sha256": "e9e7c9e3ee0da98a36010ce1545b1af1616b95804450a478e15fcaac25e8d459",
+    "sql_sha256": "44b8c27735dafcd7376afe374a728e58d5c29727e7270d50563703ea653adf65",
+    "same_ai_diff_review": "APPROVE",
+    "full_stage2_acceptance": "REVISE pending actual PG retry",
+    "new_pr": false,
+    "merged": false,
+    "production": false,
+    "reanalysis": false,
+    "sheets_distribution": false
   }
 }

@@ -145,7 +145,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | 第1便PR3471/第2便PR3479提出。第2便CIは3260成功/95skip/新規8群setup error、現在REVISE | 初回引数不備は修正済み。SQL初期行をDDL後へ移す設計追補・同じ担当の修正/再CIへ。GO/本番なし | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-CI-02 | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | stock_contract_01 / 設計担当 | PR3479公開HEAD9711cc40はCI3267成功/95skip/1失敗。残る接続不備を7b172c46でローカル修正・静的検査成功 | PO離席指示に従い追加push/PR更新前で停止。実PG再検証は未実施、全体検収REVISE。境界変更後に正式カードと8群再CI | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-LOCAL-READY | 2026-09-13 |
 
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）

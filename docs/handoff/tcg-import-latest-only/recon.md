@@ -494,6 +494,26 @@ PR https://github.com/shingo-ops/salesanchor/pull/3479 提出済み。親がGitH
 
 既存migration単体job103687352992では今回SQL2回実行成功。ただしTCG未導入で処理対象なしのためTCG有りの保証ではない。全件dryrun job103687353037は128SQLを2周成功したが、workflowの時期フィルターで今回SQLは対象外。成功を新SQL検証とした従前想定を訂正し、全登録SQLとの組合せは未確認として維持。新規8群の実PG合格を省略しない。現在の実装検収REVISE。祖先検査は2回目成功、番号付きGO欠落チェックは保持。
 
+## 第2便の順序修正保存と公開送信審査（2026-09-13）
+
+担当が9711cc40badfd01b2d77de8fe92d32b359e7ee79へ新SQL/新試験2件を保存。親が実commit/diffを直接確認し、初期INSERT移動と試験のcommit3行だけ、担当ruff成功。3回目CIはまだ未実施。
+
+通常pushが自動承認審査で拒否された。理由は公開先/payloadへの明示承認を確認できず機密流出になり得るというもの。拒否後、親がgh repo viewでshingo-ops/salesanchorのPUBLICを確認し、未送信2commit a0d9ee4c/9711cc40、公開済79890cfcとの差分8files81追加/2削除を全て読取照合。製品は公開済SQL文の移動と試験commit3行、6文書はCI実数値/公式仕様/設計/カードの記録のみ。新しいLINE原文・個人情報・secretsを含まない。拒否メッセージが認める低リスク確認の追加根拠を同じ担当へ渡し、同一コマンド/宛先/HEADを1回だけ再審査へ出した。別ツール/ガード解除/強制送信はしない。再拒否ならPOへ戻す。
+
+公開送信の再審査結果: 追加の差分確認を添えた同一pushが成功。担当がremote参照を誤記して照合を中断したため、親が正式なrefs/heads/release/line-stock-storageを直接照会し9711cc40一致を確認。GitHub PR3479 HEADも同値、MERGEABLE。3回目CI job103690386821が開始。公開送信ブロックは解消、検証結果待ち。
+
+## 離席指示後のローカル仕上げ・提出前の停止点（2026-09-13）
+
+PO原文: 「› 離席するので最後まで進めてくれPRの直前まで進めて結果を報告してくれ」。この指示より前にPR3479と設計PR3456は提出済み。設計担当は以後の追加push/PR更新を停止し、ローカルの修正/検査/引き継ぎまでに境界を狭めた。新規PR・代理GO・マージ・本番反映は行わない。
+
+直近の実PG: PR3479 HEAD9711cc40badfd01b2d77de8fe92d32b359e7ee79、job103690386821。親が実ログを取得し3267成功/95skip/1失敗/309warnings、124.12秒、coverage63.82%を確認。8群は初回から実収集され、今回は失敗一覧にtest_deferred_transaction_integrityだけがある。原因はpg.dsnに隠された認証情報を2本目へ渡せないこと。SQL初期化の8setup errorは解消。全8群の最終合格や本番機能完成とは扱わない。
+
+同じ担当が試験接続の1箇所を7b172c4687eb0fa2613938109e7fe8aaaceac161へ保存。親が実commit/diffとruff成功、Python構文、8試験名と全assert不変、他7群のAST不変を直接確認した。試験SHA256 e9e7c9e3ee0da98a36010ce1545b1af1616b95804450a478e15fcaac25e8d459。新SQLは実PG時の44b8c27735dafcd7376afe374a728e58d5c29727e7270d50563703ea653adf65と同一。接続修正は公式Psycopg connection.dsn/password秘匿とconnectキーワード上書きを根拠とする（https://www.psycopg.org/docs/connection.html / https://www.psycopg.org/docs/module.html 、Context7利用不可の許可済み公式代替、2026-09-13確認）。CI用の既存環境変数を実行時に使う式だけで、秘密値の読み出し/表示/変更なし。
+
+自己審査: 接続修正1箇所の差分はAPPROVE。保存層全体の実装検収はREVISE（修正後の実PG未実施）。独立第二者レビューではない。ローカルDocker不在、既存試験は実GitHub Actions専用のため、公開更新を止めた状態では4回目CIを起動していない。静的検査を実PG合格に置き換えない。
+
+引き継ぎ: ローカル修正7b172c46は未push、公開PRは9711cc40のまま。最新の境界が変更された後にのみ、同じ担当へ新しい正式カードを発行し、通常push・既存CIで8群の失敗/skip0を確認する。番号付きGO未記録の承認ゲートは別問題として保持。全登録SQLとの組合せ、既存解析/配信への接続、実LINEのK1〜K10、マージ、本番、再解析、3シート配信は未完了。次便実装への自動移行なし。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)
