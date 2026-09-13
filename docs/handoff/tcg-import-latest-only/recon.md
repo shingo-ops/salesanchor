@@ -361,6 +361,17 @@ Context7利用不可のため、許可された公式資料代替で [PostgreSQL
 
 4新表と2既存表の追加列、配信予約、共通入口6経路を統合。各サービスの個別トランザクションの後に接続し、解析書込から逆順ロックへ入らない契約とした。状態遷移とsnapshotの厳密項目は最終設計残件、実装後試験と分けて記録した。
 
+## 最終査定の最新main照合（2026-09-13）
+
+fetch後のorigin/mainはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870。専用設計作業台の基準644bf9a4から差分を読取確認。通常fetchはFETCH_HEADの書込権限で失敗し、許可済みGit参照更新の範囲で昇格実行が成功した。製品ファイルは変更していない。
+
+- backend/app/services/tcg_work_reference.py:12のWORK_ID_PROMPT_VERSIONSはv4-work-id-p1/p2を保持。backend/app/services/tcg_analyzer_svc.pyとbackend/app/tasks/tcg_extraction.pyは集合所属で判定する。将来v5接続時も両既存版を保持する。
+- backend/app/services/tcg_line_import_svc.py:571とbackend/app/routers/tcg_line_import.py:610にAndroid固有のline_source_names照合が追加された。複数原文保存の接続時に旧resolve_suppliersだけへ巻き戻さない。
+- backend/app/services/gemini_extraction_svc.pyの最新差分はv4根拠範囲の書式指示と、原文を含めないエラー情報。本便は当該既存関数を編集せず新規の検証部品を作る計画。
+- backend/app/__init__.pyはpackageコメントだけ、services/__init__.pyは空。第1便は標準ライブラリだけの新規モジュールとし、unittestによる部品試験でDB接続を要求しない。全pytestは別のDocker必須検証。
+
+全体の正式査定で現在在庫/切替/意味変更時の解決操作の記述不足を残した。第1便の純粋部品はこの未解決に依存せず、変更ファイル4件と6試験群をdesign §15へ固定した。実装/モデル呼出/DB操作0。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

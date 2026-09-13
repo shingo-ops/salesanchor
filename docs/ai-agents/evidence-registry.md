@@ -2911,3 +2911,25 @@ validation: git diff --check, task-state, ADR-index, process-artifact format/cit
 decision: APPROVE only for consolidated contract consistency; overall formal review remains incomplete, no implementation card
 follow_up: one final whole-design consistency review and formal card checks; product acceptance after implementation
 ```
+
+```text
+id: EV-20260913-LINE-CONTRACT-CARD-01
+date: 2026-09-13
+agent: Codex design partner
+task: 全体最終査定と独立した第1便のカード作成
+scope: docs only, no agent spawn, no product implementation
+evidence:
+  - type: command
+    reference: git fetch origin main and git diff HEAD...origin/main
+    summary: latest main af269ae20ed2f52e6cd49ba0403ad7799e3a3870; preserve v4 p1/p2 and Android sender-resolution changes
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/design.md sections 11 and 15
+    summary: whole design REVISE; stage 1 only APPROVE with 4 new files, 2 pure functions and 6 acceptance groups; same-AI review
+  - type: command
+    reference: bash scripts/card-lint.sh docs/handoff/tcg-import-latest-only/card-stock-contract-01.md
+    summary: exit 0, zero violations, L24 long-line warning only; manual path/hash/scope/stop-condition checks completed
+validation: process-artifact design/citations/maintenance checks passed; product tests not executed
+tradeoff: stage 1 is intentionally not connected to inventory; it cannot yet prevent production stock loss, but its contract does not depend on unresolved inventory APIs or cutover storage
+decision: prepare bounded implementation card without launching an executor or issuing GO
+follow_up: executor implements stage 1 and returns code/test evidence; finalize remaining whole-design contracts before subsequent cards
+```
