@@ -38,31 +38,32 @@ API/SQL仕様は既存+確認済み公式資料（Context7不在）で設計済�
 未知main/先約/製品競合/仕様不足/検証で設計変更が必要/権限拒否は該当操作を停止し生出力を親へ返す。範囲内実装/テスト誤りは原因を読み修正再検査可。
 生出力は報告ファイルへ保存し、親への連絡は短い現在地でよい。1分程度ごとに現在地を連絡する。
 
+再開注意: 旧手順1の短いブランチ名は設計場所との前方一致で実在しない場所を既存と誤判定した。親がgit worktree listとscript96行を直接確認済み。新しいrelease/product-csv-roundtrip-implを正式scriptで作成し、既存報告へ追記して手順1から再開。報告の排他新規作成は繰り返さない。
 手順1 正式作業場所
-  cd /Users/tanizawashingo/salesanchor && bash scripts/new-worktree.sh release/product-csv-roundtrip
+  cd /Users/tanizawashingo/salesanchor && bash scripts/new-worktree.sh release/product-csv-roundtrip-impl
 旧終了worktreeの再使用はしない。自動cleanup対象外の他者作業を触らない。
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl && ./scripts/dev/executor-preflight.sh
 HEADはorigin/main1021268623f2dba566d953fea056ff548ae28f3a、status空、台帳先約なしを確認。異なるmainなら親へ確認。
 手順2 設計取込
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip && git merge --no-edit d56649c5
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl && git merge --no-edit d56649c5
 7文書以外の追加がないこと、固定designSHAを確認。
 手順3 実装
 設計§21通り13ファイルのみ変更。GET export12列、既存preview/commitヘッダ分岐、更新はrevision/全行lock再照合/商品語履歴commit1回。
 有効無効/未公開列の維持、無変更語のUUID/位置維持、同一digest再送409、既存10列回帰維持。実装裁量は命名/fixture具体値など非契約だけ。
 DB定義/SQL条件は既存migrationの列を直接確認してから書く。独自テストCREATE TABLE禁止。
 手順4 静的検査
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/backend && make lint-ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/backend && make lint-ci
 既定dev依存だけで不足する場合はローカルvenvへ既定requirementsを導入可、lock定義の変更はしない。
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/frontend && npm ci
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/frontend && npm run check:all
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/frontend && npm run build
 手順5 テスト
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/frontend && npm run test:unit
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip/frontend && npx playwright test tests-e2e/tcg-product-import.spec.ts --project=chromium
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/frontend && npm run test:unit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl/frontend && npx playwright test tests-e2e/tcg-product-import.spec.ts --project=chromium
 既定playwright.config.tsのPORTで他者と衝突しない空きportを使ってよい。合成APIのみ、検査を無効化しない。新日英390/1440の画像を/tmp/reportsへ保存し親へパス報告。
 Backend実PGは既存Docker可否を確認。不可なら未実施とし、親レビュー後の正式CIで実行。R1–R11の対応表を報告へ作る。
 手順6 差分検査/親レビュー待ち
-  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-csv-roundtrip-impl && git diff --check
 13製品だけの変更、7文書固定、依存lock変更0、全製品差分とSHA一覧、新規試験sourceを報告へ保存する。
 親が実差分/スクリーンショット/試験をレビューできる状態で停止。まだ製品commit/push/PR作成はせず、親の公開カードを待つ。
 END OF CARD

@@ -895,3 +895,5 @@ PR直前停止と未実行CIを報告した後のPO原文「進める」を、�
 PO原文「合意、この内容を目標として進める、離席するのでエクスポート機能を実装してPRマージ本番反映まで完了させてくれ」。前提の3条件を設計§21へ整理。最新main10212686起点の正式new-worktreeで専用設計場所を作成。他者の未保存変更は保持。実装範囲は旧10列新規取込を保持した12列既存更新とexport。原文GO #番号は存在しないためprocess gateを偽装せずPR完成後に不足を示す。参照一次情報のSHAはroundtrip-design-evidence.json、事実行番号/設計自己審査/受入条件はdesign§21。Context7不在のため許可済みの公式docsを直接確認。製品変更0。
 
 設計時のCSV codec対照：13種の空/日本語/空白/comma/quote/CRLF/式先頭/apostrophe値を語配列0〜2要素と商品名で組合せ、外側BOM CSV＋内側CSV＋可逆apostrophe処理の2379組が往復一致。設計用の純Python試作であり製品実装の試験ではない。実装後は現物codec/PGで検証する。frontend api.requestForm:173はPOST再送ループなしを直接確認。Playwright portはconfig.ts:20のPORT変数で固定可能、カード文言を実物へ合わせた。
+
+実装開始前停止の観測：公式new-worktree.sh96行がgrep部分一致のため、release-product-csv-roundtrip-designだけの実在を短いrelease-product-csv-roundtrip実在と誤判定。git worktree list --porcelainで実装場所なし、test -d失敗を親確認。cdガードの拒否は正常作動。script/guardを変更せず、部分一致しないrelease/product-csv-roundtrip-implへ正式カードを補正し同じ作成手順を使う。製品編集0。
