@@ -2713,3 +2713,14 @@ EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+```text
+id: EV-20260913-LINE-STORAGE-DELEGATED
+date: 2026-09-13
+agent: design partner / existing stock_contract_01
+request: PO original 進める to explicit stage2 three-file implementation/testing/PR delegation
+reference: docs/handoff/tcg-import-latest-only/design.md section15,27 and card-stock-storage-02.md
+observed: dedicated worktree based on main56a1661d; migration/test paths absent; previous registry line retained
+state: design documents prepared, product not yet implemented; no merge or production
+next: three-file implementation and parent review, then product PR and existing CI real-PG tests
+```
