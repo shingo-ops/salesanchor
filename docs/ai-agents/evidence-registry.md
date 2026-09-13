@@ -2841,3 +2841,6 @@ EV-20260913-PRODUCT-CSV-PUBLISH-HOLD: A便設計/カード/調査証拠を0ceb2a
 
 
 EV-20260913-PRODUCT-CSV-PUBLISH-APPROVAL: 公開先shingo-ops/salesanchorと内部商品ID/検索語/除外語の公開を明示した質問に、PO原文「進めてくれ」を受領。本便17文書ファイル/調査証拠のpush・文書PR提出を承認。実装・委任・マージGOではない。根拠はdocs/handoff/tcg-product-import/recon.md「公開送信のPO承認」。
+
+
+EV-20260913-PRODUCT-CSV-DESIGN-PR: 公開承認に基づく通常push成功、公式ラッパーで文書PR #3466提出（初回HEAD7316bdfb）、.pr-number一致を直接確認。カード違反0/台帳検査成功。設計自己審査済み・PO設計/資料公開承認済み・文書保存/PR提出済み。実装/委任・マージ・本番反映は未実施。PR: https://github.com/shingo-ops/salesanchor/pull/3466

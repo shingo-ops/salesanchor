@@ -600,7 +600,7 @@ preflight成功。本店の他者変更を保持。origin/mainに後続差分が
 
 ### 既存の品質検査を直接実行した結果
 
-[品質検査の実測JSON](sword-shield-44-keyword-validation.json)。`tcg_analyzer_svc.py:229`のnormalize_en、:247のtoken_and_match、:265のmatch_one_kwと依存定数をASTで抽出し、そのまま実行。`tcg_keyword_lint.py`の既存R1–R7とrun_allを同じ関数へ接続した。DBやサービス全体は起動していない。
+[品質検査の実測JSON](sword-shield-44-keyword-validation.json)。`backend/app/services/tcg_analyzer_svc.py:229`のnormalize_en、:247のtoken_and_match、:265のmatch_one_kwと依存定数をASTで抽出し、そのまま実行。`backend/app/services/tcg_keyword_lint.py`の既存R1–R7とrun_allを同じ関数へ接続した。DBやサービス全体は起動していない。
 
 - STOP：R2-stop 5件。#1–5の空白付き検索語は草/炎/水/雷/闘の1文字トークンに分かれる。
 - WARN：R2-warn 2件。#35/#44の空白付き検索語に2文字のvsが含まれる。
@@ -750,3 +750,10 @@ PR全差分への通常diff --checkはCSVの規定CRLFを45行のtrailing whites
 ### 公開送信のPO承認（2026-09-13）
 
 「内部商品ID・検索語・除外語を含む調査資料を公開し、文書PRを提出してよいですか？」と送信先が公開リポジトリであることを明示して確認し、PO回答原文「進めてくれ」を受領した。対象はshingo-ops/salesanchorへの本便17文書ファイルとその調査証拠のpush/文書PR提出。先の自動承認レビュー拒否を保持したうえで、追加された明示承認を根拠に通常の承認経路で再申請する。実装開始・担当への委任・マージ・本番変更の承認には拡張しない。
+
+
+### 文書PR提出結果（2026-09-13）
+
+POの追加公開承認を明示した通常の承認経路でgit push -u origin HEADが成功。公式gh-pr-create-safe.shで文書PR https://github.com/shingo-ops/salesanchor/pull/3466 を提出し、.pr-numberの3466登録を直接確認した。初回提出HEADは7316bdfb。mainとの差分は17文書/証拠ファイルのみ。カード検査は再実行して終了0（L24警告2）、task-state-check成功。実装開始/委任・マージ・本番変更は未実施。次はPRチェックを確認し、実装カードの実行承認を別途提示する。
+
+PR3466初回process-artifacts gateはrecon内の省略ファイルパス2件を実在確認できず失敗（job103667019390）。リポジトリ相対パスへ訂正して再検査する。製品コード/CIの変更はない。
