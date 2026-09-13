@@ -32,3 +32,7 @@ root実装照合・表示操作検収APPROVE。維持は新規32回帰と既存C
 ## 最新main統合確認
 
 2026-09-13、実装08b2fa96をpush後、main 5c0704dfを通常merge（7e179ceb）。evidence-registryの双方追記を保持。基準1a8eed69→mainのfrontend差分0、統合後の製品3/共有10/archive/証跡28 SHA256すべて一致。343試験・96表示・30操作前後組の対象は不変のためローカル全試験を重複実行せず、PR最新HEADのCIを確認する。最新CI結果はPR3480本文と現行active-work.dに記録。GO3480/マージ/本番反映未実施。
+
+## GO・本番反映完了
+
+2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。

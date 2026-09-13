@@ -2938,3 +2938,7 @@ EV-20260913-LINE-SPACE-IMPLEMENTED: CARD06をmain1a8eed69起点で実装。商�
 EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全差分11を含む2投稿全19明細を同一AIが原文/マスタからラベル。正答8→18（42.1→94.7%）、未特定10→0、誤商品1→1。非盲検・全体精度ではない。9種セット誤商品を残存課題として記録。product-space-accuracy.json/recon参照。DB/Gemini/本番変更0。
 
 EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
+
+### EV-20260913-FRONTEND-AN-RELEASE
+
+2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
