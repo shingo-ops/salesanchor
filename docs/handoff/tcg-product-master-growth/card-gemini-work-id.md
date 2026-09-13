@@ -109,7 +109,7 @@ END OF CARD
 本報告はカード CARD-LINE-CARDSET-07 の実行結果である、と冒頭に記す。停止時は手順番号/最後のコマンド/理由をPOへ報告。自己確認・正式CI・未実行を分ける。
 END OF CARD
 
-## CARD-LINE-CARDSET-08（担当割当て待ち）
+## CARD-LINE-CARDSET-08（本セッションへの実装割当て済み）
 
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-CARDSET-08。mode handoff、ADR113/154。設計はdesign-keyword.md「カードセット登録と相互除外・改訂2」。自己審査APPROVEは独立レビューではない。
@@ -122,3 +122,5 @@ END OF CARD
 禁止: 本番DB直書き、既存解析/訂正/数量の上書き、9倍や9明細への分割、原文変更、CI/deploy/secrets変更、実Gemini試験、承認ガード迂回、マージ/配備/再解析/配信の独断実行。衝突や分類不明があればその操作を停止して設計へ戻す。
 本報告はカード CARD-LINE-CARDSET-08 の実行結果である、と冒頭に記す。停止時は手順番号/コマンド/理由をPOへ報告。設計検算・正式CI・本番確認を区別する。
 END OF CARD
+
+PO割当て追記: 本セッションの実装担当への切替とPR3483改訂を確認する質問に対し、PO原文「進める」を受領。2026-09-13T11:17:55Zに作業中実時刻を確認（受領時刻自体は未取得）。新エージェント起動なし、番号付きマージGOではない。

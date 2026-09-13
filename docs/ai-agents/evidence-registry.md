@@ -2741,3 +2741,7 @@ EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701
 - EV-20260913-LINE-CARDSET-07: PR3481 merge6326115c/Deploy34750745805成功を直接確認。追加PR3483は固定729件で誤商品1→未特定、個別9→各正しい候補、他719不変。Backend CI34751619981は3295成功/95skip/coverage63.83%、Migration CI34751619987成功。GO未受領。根拠: docs/handoff/tcg-product-master-growth/recon.md「PR3481本番反映とカードセット対策PR3483」。
 
 - EV-20260913-LINE-CARDSET-08: 本番個別3登録済み/集合0をREAD ONLY確認。新集合1と相互除外のコピー検算で商品28/28、境界58/58、他719不変。設計自己APPROVE/カード08担当待ち、製品実装・本番登録は未実施。根拠: recon「カードセット登録・改訂2の事実確認と設計検算」。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: POの明示切替承認で本セッションがカード08を実装。PR3483 HEADda948509、商品新規1と相互除外/安全性/商品86入力のPG試験を追加。静的チェック成功、正式CI確認中。本番未反映。
+
+- EV-20260913-LINE-CARDSET-08-CI: PR3483 HEADe6e5d463、Backend CI34754328005/job103716059145を直接確認、3316成功/95skip/coverage63.83%。Migration34754327876成功。38success/4skip、唯一のfailureはGO未記録。バックアップ6.6M生成ログ確認。本番未登録/再解析未実施、recon正式CI節。
