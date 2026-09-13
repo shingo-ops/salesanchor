@@ -797,3 +797,51 @@ A1〜A6のコード・固定試験・純関数検算は設計と整合。A7の�
 - backend/tests/test_tcg_keyword_lint.py: `70980eace0bab9d2e427f5ad9ac6b697c3e87b28b27b1d74bc9766535a572429`
 - backend/tests/test_tcg_product_guards.py: `0ab1b9b4661ddd96a1fc0dca14e9160f7179d12da16a7ba7885d511eada27645`
 - backend/tests/test_tcg_work_matching_integration.py: `36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551`
+
+
+### 製品PR公開・正式CIの承認（2026-09-13）
+
+「製品PRを作成してCIで正式検証を進めてよいですか？」へのPO回答原文「進める進める」を受領。既存実装担当へ公開用カードを渡す。文書PR3466の確認済みd11d27b7の17文書と、検収済み6製品差分を製品PRへ載せる。製品6ファイルの初期SHAは直前の記録と同一を確認する。マージ/本番/データ変更は対象外。
+
+最新origin/main56a1661dは空箱条件/状態再解析の保護をanalyzerへ追加している。商品名照合とは別箇所の変更を現物で確認した。既存main内容を保持し、今回の6ファイルを越える修正が必要なら停止する条件をカードへ入れた。組合せの正式PGはCIで確認する。
+
+
+### 製品PR3473・正式CI完了（2026-09-13）
+
+製品PR https://github.com/shingo-ops/salesanchor/pull/3473 を既存実装担当が公式wrapperで提出。親はPR API・.pr-number・実worktreeの状態と差分を直接確認。HEAD e484f168c757d9b46869895d1d70d96451f22ae0、main b52a4def取り込み済み、6製品＋固定版17文書の計23ファイル、未保存変更0。既存空箱/状態再解析保護・LINE client寿命修正を維持し、analyzerのmainとの差分は商品照合部分だけ。
+
+正式Backend CI: https://github.com/shingo-ops/salesanchor/actions/runs/34740813915/job/103680104043 。GitHub実行の全pytest＋PostgreSQL RLSは **3260 passed / 95 skipped / 309 warnings / 116.55秒、coverage63.82%（必須60%）**。実装担当の報告だけでなく親もAPIから実ログを保存し、試験ステップsuccessと完了件数を直接確認した。新規PG8例は既存収集対象・追加skipなし。quietログに個別テスト名は表示されないため8例別々の実行ログを取得したとはしない。
+
+チェック集計は36成功・8対象外・1失敗。唯一の失敗は https://github.com/shingo-ops/salesanchor/actions/runs/34740813907/job/103680092020 のGO記録欠落で、親が実ログで確認。技術検証の失敗と混同せず、GOを創作して通さない。
+
+main統合後も親AST検算を再実行。基準は固定旧基点af269ae2であり、実装後HEAD同士の自己比較ではない。analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52で293名称の期待tuple不一致0、従来確定劣化0、旧関数500対照不一致0、境界10一致を確認した。
+
+現在地：A便設計自己審査済み／PO設計・実装・公開承認済み／実装と読取審査済み／製品PR提出・正式CI成功／マージGO未受領／未マージ・本番未反映。B便の既存8商品更新・44登録はREVISE、再解析・3シート配信も未実施。文書PR3466は後続の承認/検証記録を保持する別PRであり、本製品PRのGOに含めない。
+
+マージ判断前の読取確認：最新main b52a4defのdeploy34740608928/job103679559392はsuccess。実ログ2026-09-13T05:34:52Zでsalesanchor_db_20260913_143449.sql.gz (7.6M)の生成成功を確認。これは直近配備時のバックアップでありPR3473用の新規バックアップではない。番号付きGO後の配備では通常手順の新バックアップ成功を別途確認する。復元試験を行った記録ではない。
+
+次の判断はPR3473のHEAD e484f168について、通常マージと自動本番配備のPO GO。CI成功はこの承認を兼ねない。
+
+
+### PO GO3473受領（2026-09-13）
+
+PO原文「GO #3473」を受領。対象は製品PR3473、承認時HEAD e484f168c757d9b46869895d1d70d96451f22ae0。通常マージと自動配備・バックアップ/配備HEAD/公開HTTPの確認を既存担当へ引き継ぐ。AI代理GOではなくPO本人の原文承認。文書PR3466やB便のデータ登録は含めない。
+
+開始時preflight成功・製品worktree clean・.pr-number3473・HEAD一致を直接確認。最新main c22ad508は抽出タスクの待ち時間延長、public.products向けseed55件と登録、所有権等の補助と文書を追加。今回6製品へのmain側変更0を確認。seedはtenant側tcg_productsとは別であることをSQL対象から確認した。これらを保持した通常追従をカードで指定し、未知main/製品競合/CI失敗なら停止する。
+
+GO記録更新により旧process run34742742062がcancelled、後続34742756998はsuccessだったがPR rollupに取消が残り、手順7の全成功確認で停止。製品HEADa618c147不変で旧runだけ通常再実行できる条件をカード手順6へ追記しcard-lint終了0。取消を成功に読み替えず、再実行結果の反映を待つ。親も最終Backend job103685126791の実ログで3260passed/95skipped/309warnings/114.97秒、coverage63.82%を直接確認した。
+
+マージ直前にmainがc50d719bへ進んだため実装担当は停止。親がc22ad508..c50d719b実diffを確認：既承認PR3468のスタッフ6ボタン共通化2画面・追加試験1・文書11、計14ファイル。今回6製品/DB/CI/運用スクリプトへの追加変更0。既存main変更を保持する通常追従としてカードのmain基点を更新し、新HEADのCIを再確認する。PO GO対象/製品SHA/業務範囲は拡張していない。
+
+
+### PR3473 マージ・本番配備完了（2026-09-13）
+
+既存実装担当が正式wrapperでmerge commit、cleanup終了0を報告。親もPR APIで2026-09-13 15:39:45 JSTのMERGED、merge8d5aa58146dc81bc84ef5db0e60f835d23d17d29を直接確認。最終HEADb59c923c、mainc50d719b統合後も6製品SHA/23ファイル境界は担当が照合、全36チェック成功/8対象外。取消された旧GO gateは通常再実行成功後に進めた。
+
+最終Backend run34743123495/job103686128008は3260passed/95skipped/309warnings/122.94秒、coverage63.82%。親が実ログを直接取得して確認。配備run34743294988/job103686551222はsuccess、親の実ログ1035行に配備HEAD8d5aa581、588行に今回backup salesanchor_db_20260913_154016.sql.gz (7.6M)、4660行にhealth成功を確認した。コマンドのecho行ではなく日時付き実出力を根拠とする。復元試験は未実施。
+
+親が公開API/画面へ直接curlし双方HTTP200、database/redis/celery connected。実装担当だけの検証報告と混同しない。設計は同一AIによる自己審査で、独立第二者審査ではない。状態：A便設計審査/PO承認/実装/正式CI/マージ/本番配備完了。商品名全体の半角・全角スペース差への対応が反映済み。実投稿の再解析・本番精度測定は行っていないため、既存解析結果が改善済みとはしない。
+
+詳細はproduct-name-space-release-result.json。旧release-result.jsonはPR3438用のまま保持。B便8商品更新/44登録はREVISE、再解析/3シート配信未実施。文書PR3466は後続の承認/公開・配備カード/検証記録だけのPRへmain同期し、保存更新する。文書PRのマージGOは未受領。次の一手はB便の未解決受入条件を設計相談で確定すること。
+
+後処理：製品PR本文への内部backup名等の詳細追記は実装担当側の自動承認審査で公開範囲を理由に拒否された。制限を変更せず、公開済みPR/merge/run成功と公開HTTP成功だけの追記へ縮小し、通常審査で承認・反映済みとの担当報告を受領。生報告はCARD-PRODUCT-NAME-SPACE-RELEASE-01-public-final.json。文書PR3466ではtasks/todo.mdの1行更新を削除宣言へ含め忘れprocess gateが失敗したため、実numstatに基づき本文の宣言を修正。検査設定の変更なし。

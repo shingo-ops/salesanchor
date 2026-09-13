@@ -1,0 +1,65 @@
+{
+  "date_jst": "2026-09-13",
+  "pr": 3473,
+  "pr_url": "https://github.com/shingo-ops/salesanchor/pull/3473",
+  "po_go_original": "GO #3473",
+  "go_kind": "PO本人の原文承認、AI代理GOではない",
+  "approved_head": "e484f168c757d9b46869895d1d70d96451f22ae0",
+  "released_head": "b59c923c6a3585f06bc77c829b4ea166617fcca4",
+  "merge_sha": "8d5aa58146dc81bc84ef5db0e60f835d23d17d29",
+  "merged_at_jst": "2026-09-13T15:39:45+09:00",
+  "deployment": {
+    "run": 34743294988,
+    "job": 103686551222,
+    "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34743294988",
+    "conclusion": "success",
+    "observed_head": "8d5aa581",
+    "head_log_line": 1035,
+    "health_success_line": 4660
+  },
+  "backup": {
+    "basename": "salesanchor_db_20260913_154016.sql.gz",
+    "reported_size": "7.6M",
+    "success_log_at_jst": "2026-09-13T15:40:21+09:00",
+    "log_line": 588,
+    "restoration_test_performed": false
+  },
+  "ci": {
+    "run": 34743123495,
+    "job": 103686128008,
+    "passed": 3260,
+    "skipped": 95,
+    "warnings": 309,
+    "duration_seconds": 122.94,
+    "coverage_percent": 63.82,
+    "checks_success": 36,
+    "checks_skipped": 8
+  },
+  "http": {
+    "api_health": 200,
+    "app": 200,
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "evidence_roles": {
+    "worker": "通常main統合・CI・正式merge・自動配備監視",
+    "parent": "PR API・最終pytest実ログ・配備実ログを直接取得、公開HTTPを直接確認。設計は同一AI自己審査で独立第二者レビューではない"
+  },
+  "not_performed": [
+    "B便8商品更新",
+    "44商品登録",
+    "再解析",
+    "3シート配信",
+    "実投稿による本番精度検証",
+    "バックアップ復元試験",
+    "文書PR3466のマージ"
+  ],
+  "logs": [
+    "/tmp/reports/CARD-PRODUCT-NAME-SPACE-RELEASE-01.txt",
+    "/tmp/reports/sa-space-parent-merged.json",
+    "/tmp/reports/sa-space-parent-release-pytest.log",
+    "/tmp/reports/sa-space-parent-release-deploy.log",
+    "/tmp/reports/sa-space-parent-release-health.json"
+  ]
+}
