@@ -1,0 +1,24 @@
+CARD-AN-TEST-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AN-TEST-02
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。原文/実在/L32照合。
+担当: 既存button_generator。他者が作業中、他者の変更を戻さない。新AIを起動しない。
+許可: frontend/src/components/BotFormButtonMigration.test.tsxの4失敗の試験前提修正と未完品質検証のみ。
+禁止: 製品2ページ/共有部品/入力/権限/認証/API/DB/secrets/CI/依存lock/文書/GO変更、実キー/外部API操作、commit/push/PR/merge/本番。
+根拠: root直接ブラウザーの/tmp/an-impl-validation/test-assumptions.json、8観測成功。初回32中4失敗原ログをunit-initial-failure.logへ保存済み。
+原因: 用途selectは4選択肢すべて非空で、空change後はReactが既存選択肢へ戻す。Drawer.tsx:130以降は閉じてもDOM常設。
+手順1: 用途3ケースはrequired属性と非空4選択肢の維持をassertする。
+ネイティブ必須の負例はpurposeのHTMLSelectElement.selectedIndex=-1を試験内で設定し、checkValidity false/クリック送信0を検証。
+これは通常UIで空を選べるとの主張ではない。空option追加・製品修正・必須検査削除はしない。他の必須/不正emailの検査は維持。
+権限拒否1ケースはDOM不存在でなくcomp-drawer-panel--openが付かないことをassert。許可時はクラスあり、拒否時なし。
+行クリック/起動ボタンと書込0の検査は維持し、Drawerをmockしない。
+手順2: 対象strict eslint/単独32試験、既存全品質を完了し原ログ/tmp/an-generator-*.logへ保存。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npx eslint src/pages/bots/BotsPage.tsx src/pages/bots/BotEditPage.tsx src/components/BotFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run test:unit -- src/components/BotFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design && git diff --check
+手順3: 製品3hash/共有10hash/原ログ/statusを返して停止。失敗時は原コマンドと理由を報告し条件を弱めない。
+END OF CARD
