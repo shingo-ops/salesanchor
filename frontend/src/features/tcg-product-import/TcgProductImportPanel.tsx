@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../../lib/api";
 import { TextField } from "../../components/TextField";
 import { ContentToolbar } from "../../components/ContentToolbar";
+import { Button } from "../../components/Button";
 import { HeaderButton } from "../../components/HeaderButton";
 import { TcgProductImportPreview, type PreviewResponse } from "./TcgProductImportPreview";
 import { importMessage } from "./importMessages";
@@ -25,6 +26,14 @@ export function TcgProductImportPanel({ onDone }: { onDone: () => void }) {
     if (next.size === 0) { setError(t("productCsv.messages.csvEmpty")); return; }
     if (next.size > 2 * 1024 * 1024) { setError(t("productCsv.messages.tooLarge")); return; }
     setFile(next);
+  }
+  function downloadTemplate() {
+    const anchor = document.createElement("a");
+    anchor.href = "/templates/tcg-product-import-template.csv";
+    anchor.download = "tcg-product-import-template.csv";
+    document.body.appendChild(anchor);
+    try { anchor.click(); }
+    finally { anchor.remove(); }
   }
   async function review() {
     if (!file || lock.current || uncertain || result) return;
@@ -55,10 +64,13 @@ export function TcgProductImportPanel({ onDone }: { onDone: () => void }) {
       <p>{t("productCsv.receipt", { id: result.job_id })}</p>
       <ContentToolbar right={<HeaderButton variant="primary" onClick={onDone}>{t("productCsv.back")}</HeaderButton>} />
     </section> : uncertain ? <ContentToolbar right={<HeaderButton variant="secondary" onClick={onDone}>{t("productCsv.back")}</HeaderButton>} /> : preview ? <TcgProductImportPreview preview={preview} busy={busy} onCommit={() => void commit()} onCancel={() => { if (!lock.current) { setPreview(null); setFile(null); setError(""); } }} /> : <>
+      <ContentToolbar right={<Button variant="secondary" type="button" disabled={busy} onClick={downloadTemplate}>{t("productCsv.downloadTemplate")}</Button>} />
+      <p>{t("productCsv.templateIntro")}</p>
+      <p>{t("productCsv.templateRequired")} <code>japanese_title</code> / <code>division_code</code>, <code>work_code</code>, <code>manufacturer_code</code>, <code>product_category_code</code></p>
+      <p>{t("productCsv.templateOptional")}</p>
       <section aria-label={t("productCsv.drop")} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (lock.current || uncertain || result) return; if (e.dataTransfer.files.length !== 1) { setFile(null); setPreview(null); setError(t("productCsv.oneFile")); return; } select(e.dataTransfer.files[0]); }}>
         <p>{t("productCsv.drop")}</p>
         <TextField type="file" accept=".csv,text/csv" label={t("productCsv.file")} disabled={busy} onChange={e => select(e.target.files?.[0] ?? null)} />
-        <p>{t("productCsv.format")}</p>
         {file && <p>{file.name}</p>}
       </section>
       <ContentToolbar left={<HeaderButton variant="secondary" onClick={onDone} disabled={busy}>{t("productCsv.back")}</HeaderButton>} right={<HeaderButton variant="primary" onClick={() => void review()} disabled={!file || busy}>{busy ? t("common.loading") : t("productCsv.review")}</HeaderButton>} />

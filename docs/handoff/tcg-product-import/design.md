@@ -394,3 +394,138 @@ PO原文「GO #3431」を本セッションで受領。対象は本節の設計�
 準備時のdocker infoはdocker.sock不存在で失敗した。PGの正式実走を飛ばして機能完成とせず、既存CIの実PGを後続の必須条件として保持する。既存依存の導入と変更範囲内の失敗修正だけをカードで許可する。承認済みAC1〜9と7ファイル契約に変更はない。カードの検査結果はreconと根拠登録に記録する。
 
 引継ぎの保存は同じ実装用ブランチの準備PRで行う。実装コミットの確認後はそのPRを更新し、重複する実装PRを新規作成しない。準備PRは実装・検証完了までDraftのまま保持し、文書だけの現在の差分を機能完成としてマージしない。
+
+
+## 15. 空のサンプルCSVと登録者情報の限定修正（2026-09-11）
+
+状態: 設計前提PO合意済み／詳細案／製品未実装。モードは本書冒頭の handoff。親: [商品マスタ](../../specs/product-master/README.md)。根拠: [調査追補](recon.md#2026-09-11-空のサンプルcsvと登録者情報の再開調査)。既存テーマの延長として本書を更新する。
+
+### 15-1 目的・承認の境界
+
+提示した確認文は「この形式を今回のサンプルとして設計してよいですか？」。対象形式は「10列の見出しだけのCSV＋画面の入力説明」。PO返答原文は「進める」。これは形式を前提に設計を進める承認であり、この詳細案の実装・マージ・本番投入のGOではない。登録不具合は引き継ぎ依頼に従って限定修正案を併記する。
+
+目的は、SaaS管理者が列を手入力せずCSVを作り始められ、既存の認証を通った登録者情報の読み方で登録が落ちないこと。成功条件は下表AC1〜7。44商品登録の完了や安全な本番再送をこの設計の成果に含めない。
+
+### 15-2 変更前後・実装契約案
+
+現状はファイル選択と書式説明だけ。変更後は選択画面のドロップ領域の直前に ContentToolbar を置き、right に既存 Button（secondary、type=button）で「空のサンプルCSVを保存」を配置する。その直下に入力説明を置く。busy中は無効、preview/result/uncertainの段ではこの操作を表示しない。既存PageLayout・確認・結果・再送禁止を維持する。新しいCSSや共通部品変更は不要。
+
+保存対象は新規 `frontend/public/templates/tcg-product-import-template.csv`。UTF-8 BOM付き、見出し1行＋CRLF、商品行0、次の10列を空白を足さずこの順で持つ。
+
+```text
+mark,japanese_title,english_title,release_date,search_keywords,exclude_keywords,division_code,work_code,manufacturer_code,product_category_code
+```
+
+Buttonのクリック内で一時的なa要素を生成し、hrefを `/templates/tcg-product-import-template.csv`、downloadを `tcg-product-import-template.csv` にする。bodyへ追加してclick、finallyで除去する。商品API、認証情報取得、preview、commitを呼ばず、File/preview/errorの状態も変更しない。保存完了をアプリが推定する通知は出さない。URLは同一オリジンで、CSVは公開静的資産となる。内容は公開可能な見出しだけで、商品・マスタコード・認証情報を含めない。画面自体の管理者制限は既存どおり。
+
+入力説明の翻訳キーと文案（両言語のキーを対に追加、t()経由）:
+
+| productCsv配下のキー | 日本語 | English |
+|---|---|---|
+| downloadTemplate | 空のサンプルCSVを保存 | Download blank sample CSV |
+| templateIntro | 見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。 | This CSV contains only column headings. Enter products from row 2, keep the heading order, and save as UTF-8 CSV. |
+| templateRequired | 必須項目は日本語名と4つの分類コードです。分類コードには登録済みのコードを使用してください。 | The Japanese title and all four classification codes are required. Use existing classification codes. |
+| templateOptional | 発売日はYYYY-MM-DD形式で入力し、不明なら空欄にします。検索・除外キーワードを複数指定する場合は、1つのセル内でカンマで区切ってください。 | Enter the release date as YYYY-MM-DD, or leave it blank if unknown. Separate multiple search or exclusion keywords with commas within one cell. |
+
+説明では必須5列の機械名を対応づけて表示する（japanese_title、日本語名／division_code、work_code、manufacturer_code、product_category_code、4分類コード）。見出し名は翻訳対象ではないCSV識別子。既存 productCsv.format と重複する説明はまとめて配置し、その既存キーは他画面のために削除しない。
+
+登録側は `backend/app/routers/tcg_product_import.py` で `from app.models import User` を追加し、require_super_adminを受ける3関数の user/_user型をUserへ揃える。実行者の式だけを `str(user.email or user.id or "")` に直す。email優先・id代替・空の場合空文字という既存意図を維持する。require_super_adminの認可条件、get_current_user、サービス、SQL、request/response、digest検査は変更しない。
+
+### 15-3 影響範囲
+
+製品実装時に触るファイルは次の8本に限定する。本設計便では編集しない。
+
+1. frontend/public/templates/tcg-product-import-template.csv（新規）
+2. frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx
+3. frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx
+4. frontend/src/locales/ja.json
+5. frontend/src/locales/en.json
+6. frontend/tests-e2e/tcg-product-import.spec.ts
+7. backend/app/routers/tcg_product_import.py
+8. backend/tests/test_tcg_product_import.py
+
+対象外: DB/migration、create_product、履歴の原子性、認証・権限制度、CI/運用スクリプト、44商品のCSV作成・投入・発売日の採択、QA接続先変更、解析/再解析/3シート配信。既存親仕様の2層マスタを今回再設計しない。必要な追加変更が出た場合は契約へ戻す。
+
+### 15-4 受入条件・検証方法
+
+| ID | ○の条件 | 実装後に行う検証 |
+|---|---|---|
+| AC1 | 保存ファイルの見出しがCSV_COLUMNSと順序まで一致し10列、商品0行、BOM/CRLFあり | Panel.test.tsxでnode:fsを使い実資産を読む。backendサービスのCSV_COLUMNSのリスト区間を限定抽出し、引用された文字列10個を順に比較。リスト抽出不能も失敗にする。固定の期待値複写だけで一致を主張しない |
+| AC2 | 日英両方で保存操作が見え、クリック/キーボードでファイルが保存され、画面は取込に留まる | 既存E2Eに日英各ケースを追加。downloadイベント、suggestedFilename、取得ファイルの実バイトを検査。API mockとは別に静的資産は実サーバーから取得する |
+| AC3 | 保存操作によるpreview/commit呼出0回、選択済みFile変更0回 | Panelの単体試験でa.clickだけを差し替え、api.postForm未呼出と選択したファイルの維持を確認。busy中とpreview/result/uncertainでは操作不可も確認 |
+| AC4 | 空テンプレートを選んで内容確認すると0件で登録できない | E2Eのpreviewを0件応答にして確定ボタン無効・commit0回を検査。このAPI応答はモックであり実DB検査と区別する |
+| AC5 | 本物のUserインスタンスでcommit endpointが成功応答し、emailが実行者として1回渡る | backend既存HTTPテストで認証依存をUser(id=1,email="qa@example.com",is_super_admin=True)へ置換、previewとcommit_importをAsyncMock。status200・戻り値・同じraw/file名/emailでawait1回をassert。id代替ケースも追加。修正前のuser.getへ戻すと失敗することを確認 |
+| AC6 | 未認証拒否、非管理者403、digest不一致409、不正ファイル422でcommit_import未呼出 | 既存テストの辞書fixtureをUserに置換。非管理者試験はrequire_super_admin自身を残しget_current_userだけ非管理者Userへ置換。各依存上書きはfinallyで復元。認証システムそのものを改造しない |
+| AC7 | 日英説明・管理者制限・狭い画面・既存取込操作を維持 | 日英390pxの実ブラウザー画像とキーボード操作、Panel単体/既存E2E、frontend check:all/build、backend lint-ci、既存CIのPGを含むpytestを確認 |
+
+検証で全件rollback・履歴との完全同時確定・実ユーザーログイン・本番登録の成功まで証明したとは言わない。AC5は本物のUser型＋HTTP経路を使うが、DB書き込みはモックである。実DB試験はDocker/CIで実施する。Dockerなしの手元ではpytestを実行せずlint-ciまでとし、CI未確認を合格としない。
+
+### 15-5 選択理由・限界・Why用根拠
+
+見出し10列と必須5列は既存パーサーから確認できる。見本商品を1行入れる方式は、コードの実在・重複・誤登録への対処が増えるため不採用。動的テンプレートAPI新設は固定10列に対して認証/応答/テスト面が増えるため不採用。公開静的1ファイルなら登録サービスを呼ばず配布できる。見本行がなく入力例としては弱い点を画面説明で補うが、実コードの検索UIは追加しない。
+
+認証依存の返却はUser、呼出先はdict.getという実物不一致を直す。現行HTTP試験は成功commit経路を検査していないため、その経路を本物のUser型で1本以上追加する。外部導入事例は該当なし。固定ファイル配布とローカル型不整合の修正であり、他社の成功率は本件の成功根拠にならない。数値のある根拠は列10/必須5/返却型不一致1箇所と検証条件に限る。
+
+残る制約: ダウンロードは利用者のブラウザー設定に左右されるため属性指定だけで成功を判定しない。backendは1商品ごとのcommitであり、途中失敗で部分登録が残る。商品登録と履歴記録の間にも空白区間がある。digestは同一ファイルの証明で、人の承認券ではない。既存§2/§8の「承認を経ない経路0」「追跡できる」という記述を、現実に保証済みと読み替えない。これらの制度/DB変更は別の設計判断を要する。
+
+### 15-6 維持の仕組み
+
+守り手: frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx、frontend/tests-e2e/tcg-product-import.spec.ts、backend/tests/test_tcg_product_import.py。前者に実CSVとbackend列定義の一致検査、後者にUser型の成功経路を追加する契約。既存 .github/workflows/frontend-check.yml と .github/workflows/test.yml の静的/バックエンド検査を維持する。対象E2Eとfrontend単体の実行結果は実装役がPRへ添付し、Reviewerが確認する（本便でCIの新規必須化はしない）。将来列を変更する担当は資産・入力説明・試験を同じ便で更新する。
+
+### 15-7 設計審査
+
+判定: APPROVE（§15の限定設計品質）。同一AIがPlannerとして作成後、Architectとして本物の返却型/既存API/部品/CSV仕様/検証経路と8ファイル境界を照合した自己審査であり、独立した第二者レビューではない。空CSVが既存パーサーで0件・エラー0になる隔離検算と、現行endpointのget不整合再現が根拠。製品試験は未実施で、合格は動作保証ではない。詳細案の未解決技術前提はない。残余リスクは§15-5、実データ投入の認証・復旧経路は別段階の未解決事項として残す。PO詳細案承認、製品実装開始、正式カード発行、製品検証、マージ、本番反映、44商品投入は未実施。LINEのGO委任は有効化待ちのまま。本設計は実行カードではない。
+
+
+### 2026-09-12 §15のPO承認・正式カード準備
+
+確認文「この設計を承認し、実装役へ渡す正式カードの作成へ進めてよいですか？」へのPO返答原文は「進める」。§15の詳細設計承認および実装役へ渡すカード準備の承認として記録する。設計担当の製品実装への切替、別エージェント起動、PR #3436や後続製品PRのマージ、本番投入を承認されたとは扱わない。前節の詳細案承認待ちは本追記で更新する。
+
+PR #3436のd4f5f86fは実行チェックすべて成功、対象外の製品試験はSKIPPED。2026-09-12のdocker infoはdocker.sock不在でexit1。実装カードはローカルpytestを実行させず、後続の正式CIで実DB試験を確認する境界を保持する。
+
+正式カード: [CARD-PRODUCT-CSV-TEMPLATE-IMPL-01](card-template-impl.md)。origin/main adc8bc4d起点の専用実装worktreeを公式手順で作成し、実在・未保存0・preflight成功を確認。カードはローカル実装/検査/未保存差分の報告までを指定し、公開と本番操作は別便へ分ける。カード発行は実装役の自動起動を意味しない。設計担当は読取・文書作業を継続する。
+
+
+### 2026-09-12 実装役への委任
+
+直前の説明「カードを実装役へ渡せます。実装役の起動・製品変更・本番変更は行っていません。」へのPO返答原文は「進める」。本カードを実装役1名へ渡す指示として受領し、csv_card_executorへ委任した。担当は専用実装worktreeの8製品ファイル、成果物は差分と指定の生報告。停止条件は正式カードのまま。設計担当は製品編集を行わず、返却差分と試験の読み取り確認を担当する。コミット・公開・マージ・本番変更・孫エージェント起動は委任対象外。
+
+カード運用訂正: 01は報告保存で停止し製品未着手。報告保存方式を直接リダイレクトにした [CARD-PRODUCT-CSV-TEMPLATE-IMPL-02](card-template-impl.md) が現在の正式版。設計§15・8ファイル境界は不変。原因と実測はrecon同日追補。
+
+実装現在地（2026-09-12）: カード02の指定8ファイル実装・ローカル単体13件/E2E7件/ビルド/静的検査まで実施。設計担当の読取差分確認済み。AC5〜6のHTTP試験/実DB/CIと本番QAは未実施。製品コミット・公開・マージ・配備は未実施。詳細と実行主体の区別はreconの同日実装結果を参照する。
+
+
+### 2026-09-12 製品PR公開・CI確認の承認
+
+提示した次手「実装済みの8ファイルをコミットして製品PRを作り、CIで未実行のHTTP・DB試験を確認する段階」へのPO返答原文は「進める」。これを製品差分のコミット/公開とCI確認の承認として受領。マージ・本番反映は製品PR番号へのGO後とした説明を維持する。[公開カード](card-publish.md)を同じ実装役へ委任した。8製品ファイルに承認設計/recon/実装カード/公開カードの4文書を添え、台帳は設計担当が保持する。CIで発見した範囲内の実装修正は実装役が行い、範囲外や契約変更は設計へ戻す。
+
+
+### 2026-09-12 製品PR公開・CI結果
+
+実装PR [#3438](https://github.com/shingo-ops/salesanchor/pull/3438)、HEAD ff008f180e150be2241ad7d6d2d2f292a439f900。実装8ファイルと設計根拠4文書を保存・公開済み。親の直接確認でCIは40成功/6対象外/1失敗。バックエンド全suite・PostgreSQL RLSの集約チェック成功。process-artifacts gate失敗の詳細ログは未取得、別途ローカル照合でGO欄未記入を確認。PO GOは未取得につき創作しない。
+
+設計作成/自己審査/PO設計承認/実装/PR提出は実施済み。AC5の修正前に戻した失敗確認は未実施であり全受入完了とはしない。検証結果の実行主体とログ取得限界はreconの同日追補に記録。マージ/本番反映/再解析/3シート配信は未実施。次は残る検証の完了後、PR番号を示してマージ判断へ進む。
+
+
+### 2026-09-12 残件確認完了
+
+AC5の修正前後対照は既存HTTP試験関数を直接呼び出して完了。旧式3ケース失敗、復元後同じ3ケース成功、製品8ファイル/HEAD不変、DB/通信試行0。pytest再実行ではなくDB/監査mockを共通にしたASGI内検算。CI全suiteは実ログで2601成功/95skipを確認。失敗ゲートの実ログも取得し、GO記録欠落と確定した。前節の検証残件を解消し、詳細はreconの同日残件検証を参照する。PO GO/マージ/本番反映は未実施のまま。
+
+
+### 2026-09-13 本番反映前の判定
+
+main5b21b3b8統合後のPR3438 HEADは2184092c4f7cafcb43188626490c892db5ed82d7。親が8製品＋4文書の12ファイルと新HEADのCI38成功/6対象外/1失敗を直接確認。全pytest/PG集約成功。失敗はGO記録欠落のみと実ログ確認済み。8製品は前便対照検算時のSHAと一致する。
+
+本番API/AppはHTTP200、healthはDB/Redis/Celery connected。最新成功配備の19:39 JSTバックアップ生成6.7Mを実ログ確認したが、今回配備の直前取得はまだ実行していない。既存配備は取得/ファイル確認失敗で停止し、health失敗時は前HEADへの復旧を試みる。今回のDB/migration変更は0。詳細・制約はrecon同日節。
+
+GO判断対象: PR3438のマージと、そのmain pushが起動する本番配備。利用者に見える変化は空CSV保存と日英説明、登録時User属性修正。完了確認は配備前バックアップ成功、配備HEAD一致、health/API/App正常、静的CSV148バイト/BOM/CRLF/10列/商品0行。実商品登録・再解析・シート配信は対象外。番号付きGO未取得でありマージ/本番変更は未実施。
+
+
+### 2026-09-13 GO受領・反映カード
+
+PO原文「GO #3438」を受領。承認対象は本PRのマージと自動本番配備であり、実登録/解析/配信を含まない。正式 [反映カード](card-release.md) を同じ実装役へ委任した。カード初回検査の受領文/出力保存不足を修正しcard-lint違反0、長行警告2、11手順を同一AIで確認。設計パートナーは製品実装へ切り替わらない。最新main d66923e2は別画面Button統一等で今回8製品との重複0。統合CI後に正式merge、本番backup/HEAD/health/CSVを確認する。現時点でマージ・配備成功は未宣言。
+
+
+### 2026-09-13 §15の実装・本番反映完了
+
+PO原文GO #3438に基づき、製品PR3438をmerge739f772dでマージ。配備run34718060417成功、配備前backup6.7Mの新規取得と配備HEAD一致、API/App/CSV200、CSV148バイト全一致を確認した。正式結果は [release-result.json](release-result.json)、実行主体と根拠はrecon同日完了節。設計作成・自己審査・PO承認・実装・PR・マージ・本番反映を完了。商品登録・再解析・シート配信・本番認証付きボタン操作は行っていない。文書PR3436は正式記録の保存先としてOPEN、今回のGO対象外。

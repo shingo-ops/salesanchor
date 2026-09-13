@@ -236,6 +236,7 @@ async def fetch_output_rows(
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser
             ON ser.id = p.work_id
         WHERE ar.pid_resolved = TRUE
+          AND ar.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
@@ -377,7 +378,7 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
             ON ic.extraction_item_id = ar.extraction_item_id
             AND ic.corrected_at >= NOW() - INTERVAL '30 days'
         WHERE ar.condition_canonical = 'FLAG_SINGLE'
-          AND ar.created_at >= NOW() - INTERVAL '30 days'
+          AND ar.computed_at >= NOW() - INTERVAL '30 days'
     """))
     gate = gate_result.mappings().one()
     total = gate["total_flag"] or 0

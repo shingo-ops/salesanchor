@@ -1,0 +1,46 @@
+CARD-AJ-PUBLISH-06
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AJ-PUBLISH-06
+読んだ節: guards/00-common.md、01-read.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+照合1〜7: ○（パス、ready、全文、提出1目的、既存作業台、template由来、diff/hash/PR番号検算）。L32○。
+担当: 同じ実装担当。他者も作業中なので変更を戻さない。rootが文書競合を両側原文保持で解消し、task-state/diff/hashを検算済み。
+目的: 検収済み13ボタン移管をready PRに提出する。POの2026-09-12依頼に基づく。
+許可: 文書競合解消のstageとmerge commit確定、検収hash読取、既存releaseへのpush、テンプレート由来PR本文作成、正式wrapperでready PR提出、登録簿/PRの読取確認。
+禁止: 製品/設計本文の追加編集、新規AI、GO記録創作、mainへのリモートmerge、本番反映、保護/CI設定変更、権限拒否の迂回。
+rootが原文を実測したところ、現行GO検査は番号なしで拒否するためPR提出後は正式GO照合待ちとする。
+失敗時は停止し手順番号/最後のコマンド/理由/対象名と生出力全文をrootへ返す。コマンド先頭のcd接頭辞を省略しない。
+
+手順0: 文書競合1件の解消を確定する。git diff --checkに競合記号が残る場合は停止する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git add docs/ai-agents/evidence-registry.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git commit --no-edit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git log -1 --format=fuller
+
+手順1: 製品hash保持とmain差分、作業状態を検査する。製品不一致・予期しない未保存変更があればpush前に停止する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 -c 'import json,pathlib,hashlib; m=json.loads(pathlib.Path("docs/handoff/design-system-recon/evidence-20260910/aj-validation-manifest.json").read_text()); [print(f["path"],hashlib.sha256(pathlib.Path(f["path"]).read_bytes()).hexdigest()) for f in m["products"]]; assert all(hashlib.sha256(pathlib.Path(f["path"]).read_bytes()).hexdigest()==f["sha256"] for f in m["products"])'
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff --name-only origin/main...HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && gh api user --jq .login
+
+期待する出力: 製品7hash一致、status空、APIユーザーshingo-cc。CommissionPanel製品差分なし、製品は5TSXとtestのみ。
+
+手順2: rootが作成・構文検査済みのテンプレート記入原稿を実行。本文は/tmpへ保存し、元テンプレートは編集しない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && python3 /tmp/aj-pr-body-builder.py
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && cat /tmp/aj-pr-body-20260912.md
+
+本文の触るファイル/削除するファイルはgit diff実測由来。GO記録セクションを作らず、PO原文と未充足条件をそのまま含める。
+
+手順3: 既存releaseへpush、成功後にremote HEAD一致を確認。失敗時にPRへ進まない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git push -u origin HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git ls-remote origin refs/heads/release/frontend-shared-button-migration
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git log -1 --format=%H
+
+手順4: ready PRを正式wrapperで作成。draftオプションなし。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && bash scripts/gh-pr-create-safe.sh --base main --title "feat: unify thirteen shared actions with Button" --body-file /tmp/aj-pr-body-20260912.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && cat .pr-number
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && gh pr list --state open --head release/frontend-shared-button-migration --limit 5 --json number,url,headRefOid,baseRefName,isDraft
+
+期待する出力: .pr-numberとhead指定PR一覧の番号一致、base main、isDraft false、headは最新保存コミット。
+完了報告は「本報告はカード CARD-AJ-PUBLISH-06 の実行結果である」で開始、全手順の生出力全文を返す。
+完了後は停止。CI読取監視・台帳最終記録はroot担当。正式GOなしのmerge/本番反映は行わない。
+END OF CARD

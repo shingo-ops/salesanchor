@@ -889,3 +889,47 @@ c=asyncio.run(trial());assert c[0]['analysis_updates']==1;assert all(x['analysis
 report={'method':'Actual Python functions with SQL captured; WHERE predicates on synthetic SQLite table. No Postgres, network, product writes, or model calls. Counts are combinations, not production incidents.','source_commit':'adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b','matrix':summary,'corrections':c,'files':{str(p.relative_to(W)):hashlib.sha256(p.read_bytes()).hexdigest() for p in [W/'backend/app/services/tcg_analysis_review_svc.py',W/'backend/app/services/tcg_distribution_svc.py',W/'backend/app/services/item_corrections_svc.py']}}
 print(json.dumps(report,ensure_ascii=False,indent=2))
 ```
+
+
+## 2026-09-12 商品マスタ参照による作品ID判断
+
+起点: 66b41766（origin/mainから専用worktree）。先行本番調査時4afb81cとの製品3ファイル差分0。
+直接確認: backend/app/services/gemini_extraction_svc.py:32（推測・ID禁止）、:45（型番のみ空欄）、:153（表示名と別名だけ参照）、backend/app/tasks/tcg_extraction.py:148（作品一覧を渡す）、backend/app/services/tcg_analyzer_svc.py:400（tcg_series）、:408（原文根拠）、:516（作品不明の型番禁止）、:1160（◆等の正規化）、:1181（作品検証）。
+本番celery-workerの対象ファイルもssh経由で読み取り、同じ契約を確認。TCG_SCHEMA=tenant_004。
+
+本番SELECT実測（2026-09-12 JST、本セッション実行）:
+- NR0022 PRODUCT_NAME REMOVE ◆ enabled=true。CONDITION/NOTE/UNIT/STATUSの対応4ルールもenabled=true。
+- 有効原文に紐づく解析1557明細: 要確認なし1041、pid_unresolved444、pid_unresolved/multi_candidate32、pid_unresolved/note_unmatched22、note_unmatched14、3理由複合4。
+- latest群をcreated_at >= 2026-09-11T23:00:00Zで切った観測:320明細、要確認120、商品未解決114。この時点の時刻フィルターであり、正式なimport_job識別の代替ではない。実行前に正式な取込IDとリンクで固定する。
+- 原文UUID 29f19cc0-07be-43ef-a4ff-5bc668320fae:19明細、商品確定0、要確認19。created_at=2026-09-11T08:11:50.491655Z。直近320件の母集団とは別。「◆OP-01」作品原文欄空、line59–61、engine=name-first-v6-master-safety。投稿は型番を列記し、作品見出しなし。19件全ての正解作品をモデルの推測で確定したわけではない。
+- OP-13抽出名「受け継がれる意志【OP-13】」の引用見出しは「【在庫品】 ワンピースカード」（最新投稿の2明細）または「【ワンピースカード】」（前日）。作品マスタはOne Piece／ワンピースの単一別名。完全一致検証では採用されない。
+- 有効商品293、work_id NULL0、作品8。code/title/english_title/mark/work_id/search/excludeを集約したJSON相当68143文字。実トークン数・料金・Gemini正解率は未計測。
+- PR #3417はOPEN、HEAD1186384cf6f743cc50035c380aec188012eb5e19。発送条件等の原文保持変更があるが本番未採用。
+
+### PM0181正式名の明示依頼による訂正
+
+PO原文:「受け継がれる意志→マスタの名前を修正してくれ」。
+公式根拠: [バンダイ商品情報](https://www.bandai.co.jp/catalog/item.php?jan_cd=4582769864865000)。「受け継がれる意志【OP-13】」。
+対象tenant_004.tcg_products、UUID26b15871-7ab6-4bbe-89f5-66280166e822、code PM0181、mark OP-13。
+変更前JSONを /tmp/salesanchor-pm0181-before.json に退避。ローカル一時保存であり永続バックアップとは称さない。
+所定permit-danger.shの書込みが最初PermissionErrorで停止。権限審査で同じ所定手順を実行し成功。ガード解除／別経路への迂回なし。
+id/code/変更前名称の全一致を条件にjapanese_titleのみ「受け継がれる意思」→「受け継がれる意志」。UPDATE 1。別SELECTでPM0181／受け継がれる意志／OP-13を確認。検索キーワード2件の「意思」は未変更、再解析・配信未実行。行全体の変更前値は公開PRへ含めず、今回訂正した3値だけを記録。
+
+### 調査の限界・再現手順
+
+SQLはPGOPTIONS=-c default_transaction_read_only=onを使用（上記名称1件の明示修正を除く）。初回の標準入力形式はpsql-write-guardに拒否されたため、ガードに明記された-c SELECT形式で読み取りを実施。生の顧客投稿は公開文書へ載せない。
+現在の解析値を正解ラベルとみなさず、未解決減少と誤確定増加を別々に比較する。プロンプト内のモデル名からSDKの仕様やトークン上限を推測しない。
+
+
+### PR #3441 検証・退避記録
+
+[PR #3441](https://github.com/shingo-ops/salesanchor/pull/3441)をready提出。初回CIの並列収集はランダムUUIDパラメータの不一致で失敗し固定UUIDへ訂正。run34663710924（6c47fe18）は2604成功/95skip/1失敗、coverage62.38%。唯一の失敗は旧状態/注記fixtureで新schema未準備・作品参照欠落。実migrationと架空作品参照を追加（8d245eac）。直近検証結果はPRのHEAD付きチェックを参照し、旧HEADの結果を新HEADの合格とみなさない。
+承認gate job103471510004（run34663790634）を含む各回は番号付きGO記録が無いため失敗。POの一般的な条件付き実行依頼を「GO #3441」と代筆しない。マージ/機能配備/再抽出/再解析/配信は未実施。
+本番9表（extraction_jobs/extraction_items/analysis_results/item_corrections/source_messages/tcg_products/tcg_series/product_search_keywords/product_exclude_keywords）をpg_dumpで読取退避。ローカル/private/tmp/salesanchor-line-work-before-3441.sql、17837898 bytes、SHA256 399c9e9a6df673ef888143214ab612ca7a6d8b975d38f537cdd83ef6aa284e3b。公開PRにデータ本体を含めない。一時保存であり永続退避の保証は無い。本番実行前に対象の鮮度と退避の読取可能性を再確認する。
+
+
+## 2026-09-13 PR #3441再開・main追従
+
+PO原文「進めてくれ」を受領。gh pr viewでOPEN、HEAD e25b09a9887cde20b0c2a561e681b50baf850c28、mergedAt null、mergeStateStatus DIRTYを確認。前回Backend CI34663978933は2606 passed/95 skipped、失敗0、coverage62.53%。番号付きGOの承認経路は未充足。
+
+origin/main 5b21b3b8の追従でevidence-registry、商品マスタREADME、tasks/todoの3ファイルに追記位置の競合を確認。両方のテーマを保持して解消。製品コードの競合なし。runnerは双方のmigration登録を自動統合。追従後HEADのCIで再検証し、結果はPR #3441本文に記録する。Gemini実呼出し・本番再解析・配信は未実施。

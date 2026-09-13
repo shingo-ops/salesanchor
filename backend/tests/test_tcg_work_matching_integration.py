@@ -40,6 +40,7 @@ def provision(cursor, schema):
 
 def migrate(cursor):
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
+    cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / DICTIONARY).read_text())
 
 
@@ -100,7 +101,7 @@ def seed_products(connection):
         migrate(cursor)
 
 
-def run_message(connection, engine, monkeypatch, raw, records):
+def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
     smid, jobid = str(uuid4()), str(uuid4())
     with connection.cursor() as cursor:
         cursor.execute(f"""INSERT INTO {SCHEMA}.source_messages
@@ -108,7 +109,11 @@ def run_message(connection, engine, monkeypatch, raw, records):
             SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
                        (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
         cursor.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
-    response = HEADER + "\n" + "\n".join("｜".join(row) for row in records)
+    header = HEADER + ("｜RESOLVED_WORK_ID" if work_id_mode else "")
+    response = header + "\n" + "\n".join("｜".join(row) for row in records)
+    if not work_id_mode:
+        # Keep legacy 9-column end-to-end regressions while new jobs use v4.
+        monkeypatch.setattr(extraction, "extract_message", lambda raw, **kw: gemini.extract_message(raw))
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *args, **kwargs: response)
     with Session(engine) as session:
         result = extraction._run_extraction(session, smid)
@@ -215,7 +220,7 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
         finally:
             await async_engine.dispose()
     candidates = asyncio.run(output())  # read-only, never delivery
-    assert len(candidates) == 4  # PSA10 Box is excluded by the common guard
+    assert len(candidates) == 3  # PSA10 Box and the still-needs-review corrected row are excluded
     assert sum(r[2] == NORMAL for r in candidates) == 1
 
 
@@ -245,7 +250,7 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
-        assert cursor.fetchone() == ("PM0123", True, "name-first-v6-master-safety")
+        assert cursor.fetchone() == ("PM0123", True, "name-first-v7-gemini-work-id")
 
 
 RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"
@@ -393,8 +398,9 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
     monkeypatch.setattr(product_master, "_SYNC_DB_URL", str(engine.url.render_as_string(hide_password=False)))
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / STRUCTURE).read_text())
+        cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active) VALUES (%s,%s,'Box',true) RETURNING id", (code, name))
+            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
@@ -813,3 +819,61 @@ def test_raw_heading_and_box_guard_through_analysis(pg, monkeypatch, heading, st
         assert actual is resolved
         if resolved:
             assert basis.startswith("WORK_HEADER:L1|")
+
+
+@pytest.fixture(autouse=True)
+def prohibit_live_gemini(monkeypatch):
+    def forbidden():
+        pytest.fail("Gemini live calls are forbidden in tests")
+    monkeypatch.setattr(gemini, "_get_genai_client", forbidden)
+
+
+def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch):
+    connection, engine, async_url = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'")
+        wid = str(cursor.fetchone()[0])
+    raw = "◆EB01 1BOX 1000円"
+    _, jid, result = run_message(connection, engine, monkeypatch, raw,
+        [record("◆EB01", 1) + [wid]], work_id_mode=True)
+    assert result["status"] == "done" and result["items_count"] == 1
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT ei.raw_product_name,ei.raw_work_name,ei.resolved_work_id,ar.pid_resolved,ar.pid_basis FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id WHERE ei.extraction_job_id=%s", (jid,))
+        row = cursor.fetchone()
+        assert row[0:2] == ("◆EB01", "") and str(row[2]) == wid
+        assert row[3] and row[4].startswith("GEMINI|WORK:")
+        cursor.execute(f"SELECT work_reference_snapshot,work_reference_sha256 FROM {SCHEMA}.extraction_jobs WHERE id=%s", (jid,))
+        ref, digest = cursor.fetchone()
+        from app.services.tcg_work_reference import reference_digest
+        assert reference_digest(ref) == digest
+        cursor.execute(f"UPDATE {SCHEMA}.analysis_results SET needs_review=false,condition_canonical='Sealed box',unit_resolved=true,price_normalized=1000 WHERE extraction_item_id IN (SELECT id FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s)", (jid,))
+
+    async def fetch():
+        ae = create_async_engine(async_url)
+        try:
+            async with AsyncSession(ae) as session:
+                return await distribution.fetch_output_rows(session)
+        finally:
+            await ae.dispose()
+    assert len(asyncio.run(fetch())) == 1
+    with connection.cursor() as cursor:
+        cursor.execute(f"UPDATE {SCHEMA}.analysis_results SET needs_review=true")
+    assert asyncio.run(fetch()) == []
+    with connection.cursor() as cursor:
+        cursor.execute(f"UPDATE {SCHEMA}.tcg_products SET japanese_title='changed' WHERE code='PM0123'")
+    with Session(engine) as session, pytest.raises(ValueError, match="reference changed"):
+        analyzer.analyze_extraction_job(session, jid)
+
+
+def test_work_id_schema_existing_future_and_repeat(pg):
+    connection, _, _ = pg
+    with connection.cursor() as cursor:
+        migrate(cursor)
+        provision(cursor, "tenant_907")
+        migrate(cursor)
+        migrate(cursor)
+        cursor.execute("SELECT table_schema,column_name,data_type FROM information_schema.columns WHERE table_schema IN ('tenant_901','tenant_907') AND column_name IN ('resolved_work_id','work_reference_snapshot','work_reference_sha256') ORDER BY 1,2")
+        rows = cursor.fetchall()
+        assert len(rows) == 6
+        assert {r[1:] for r in rows} == {('resolved_work_id','uuid'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}

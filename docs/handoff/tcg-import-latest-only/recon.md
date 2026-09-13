@@ -283,6 +283,14 @@ PO合意に従い合成3件N1〜N3を追加。固定SHAは `99a008a74a8c9926871d
 
 証跡: [probe-20260913.json](probe-20260913.json) の `restock_negative_stock_probe`。N3のactiveはこの関数の既定値であり、既存完売をactiveへ戻す許可ではない。数量/状態の記載がないときは反映イベントを発生させない設計が別途必要。設計の行別受入契約を更新、自己審査REVISE。
 
+## main追従・互換性再確認（2026-09-13）
+
+origin/main `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8` を設計ブランチへ取り込み。競合はADR-154/evidence-registry/tasksの末尾追記3件。双方の追記を保持し、main比の削除は3ファイルすべて0行。製品コードはmainの既存更新を取り込んだもので、本件独自の製品実装ではない。
+
+`backend/app/services/gemini_extraction_svc.py:225` のパーサーはv2/v3/v4を受け、v4の10列目は作品ID。前の9列固定前提を修正。最新SHAでも前回の9件＋否定3件を再実行し、備考一致6/9、数量表現保持3/3・状態3/3・備考一致0/3を再現。これらはv3の手動応答でありv4/AI全文評価ではない。JSONのmain追従再試験に旧結果と区別して保存した。
+
+現在在庫の本番集計は未実行。CLAUDE.mdのVPS鍵規則と `docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58` の監視専用制限を確認した。既存カードの無制限鍵例から本タスクの許可を推定しない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

@@ -1,5 +1,9 @@
 {
   "productCsv": {
+    "downloadTemplate": "Download blank sample CSV",
+    "templateIntro": "This CSV contains only column headings. Enter products from row 2, keep the heading order, and save as UTF-8 CSV.",
+    "templateRequired": "The Japanese title and all four classification codes are required. Use existing classification codes.",
+    "templateOptional": "Enter the release date as YYYY-MM-DD, or leave it blank if unknown. Separate multiple search or exclusion keywords with commas within one cell.",
     "allWorks": "All",
     "code": "Code",
     "title": "Product name",
