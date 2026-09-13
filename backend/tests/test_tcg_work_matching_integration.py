@@ -991,7 +991,8 @@ def test_25th_migration_exact_delta_replay_other_tenant_and_27_controls(pg, monk
     for name, state, memo, expected in cases:
         actual = analyzer.match_pid_with_work(name, list(search), search, exclude, work_id=None,
             product_work_ids={}, raw_state=state, raw_memo=memo)
-        assert actual[0] == (code if expected == 'SET' else expected), (name, state, memo, actual)
+        assert (actual[0] if actual[2] else None) == (code if expected == 'SET' else expected), (name, state, memo, actual)
+        assert actual[2] is (expected is not None)
     # Appended positions follow existing maximum, with existing IDs/positions preserved.
     with connection.cursor() as cursor:
         cursor.execute("SELECT position FROM tenant_004.product_search_keywords WHERE keyword=%s", (ANNIVERSARY,))
@@ -1128,3 +1129,22 @@ def test_25th_old_v4_rejected_without_result_or_correction_changes_new_version_s
     with connection.cursor() as cursor:
         cursor.execute('SELECT work_reference_sha256 FROM tenant_004.extraction_jobs WHERE id=%s', (new_jid,))
         assert cursor.fetchone()[0] != old_digest
+
+
+def test_25th_all_seven_missing_but_other_tcg_tables_remain_fails(pg):
+    connection, _, _ = pg
+    seed_25th(connection)
+    tables = ['tcg_products', 'product_search_keywords', 'product_exclude_keywords',
+              'tcg_major_categories', 'tcg_series', 'tcg_manufacturers', 'tcg_product_categories']
+    before = snapshot_25th(connection)
+    with connection.cursor() as cursor:
+        for table in tables:
+            cursor.execute(sql.SQL('ALTER TABLE tenant_004.{} SET SCHEMA tenant_902').format(sql.Identifier(table)))
+        try:
+            with pytest.raises(psycopg2.errors.RaiseException, match='partial tables'):
+                apply_25th(connection)
+        finally:
+            cursor.execute('ROLLBACK')
+            for table in tables:
+                cursor.execute(sql.SQL('ALTER TABLE tenant_902.{} SET SCHEMA tenant_004').format(sql.Identifier(table)))
+    assert snapshot_25th(connection) == before

@@ -26,7 +26,13 @@ DECLARE
 BEGIN
     SELECT count(*) INTO table_count FROM unnest(required_tables) t
     WHERE to_regclass('tenant_004.' || t) IS NOT NULL;
-    IF table_count = 0 THEN RETURN; END IF;
+    IF table_count = 0 AND NOT EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_schema='tenant_004'
+        AND (table_name LIKE 'tcg_%' OR table_name IN (
+            'conditions','analysis_results','extraction_items','extraction_jobs','source_messages','item_corrections',
+            'analysis_run_snapshots','analysis_runs','audit_log','condition_aliases','import_jobs','item_notes',
+            'products_logistics','supplier_channels','unit_aliases','units','unparsed_lines'))
+    ) THEN RETURN; END IF;
     IF table_count <> cardinality(required_tables) THEN
         RAISE EXCEPTION '25th partial tables; no changes';
     END IF;
