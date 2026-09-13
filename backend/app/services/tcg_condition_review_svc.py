@@ -66,7 +66,7 @@ def _binding(selected: str) -> str:
     for key in ("product_id", "unit_id", "unit_canonical", "unit_resolved"):
         pairs[key] = f"cr_data.ar->'{key}'"
     for key in ("quantity_normalized", "price_normalized"):
-        pairs[key] = f"trim_scale((cr_data.ar->>'{key}')::numeric)"
+        pairs[key] = f"trim_scale((cr_data.ar->>'{key}')::numeric(14,2))"
     pairs.update({"product_title": "cr_product.japanese_title", "product_work": "cr_product.work_id",
                   "product_category": "to_jsonb(cr_product)->'product_category_id'",
                   "product_category_class": "to_jsonb(cr_product)->'category_class'",

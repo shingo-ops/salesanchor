@@ -411,3 +411,19 @@ def test_missing_empty_definition_holds(pg):
         cursor.execute("UPDATE tenant_004.conditions SET code='CN0098' WHERE code='CN0011'")
     assert 'empty_box_master_unavailable' in context(pg,item)['review_reasons']
     assert output(pg)==[]
+
+
+def test_quantity_and_price_binding_matches_storage_precision(pg):
+    item=seed(pg)
+    with pg['connection'].cursor() as cursor:
+        cursor.execute("UPDATE tenant_004.extraction_items SET raw_quantity='2.345',raw_price='10.125' WHERE id=%s",(item['eid'],))
+    with Session(pg['engine']) as db:
+        analyzer.analyze_extraction_job(db,item['job'])
+        numeric=db.execute(text("SELECT quantity_normalized::text,price_normalized::text FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        assert tuple(numeric)==('2.35','10.13')
+    save(pg,item)
+    binding=context(pg,item)['ack_binding_hash']
+    with Session(pg['engine']) as db: analyzer.analyze_extraction_job(db,item['job'])
+    after=context(pg,item)
+    assert after['valid_ack'] is True and after['needs_review'] is False
+    assert after['ack_binding_hash']==binding
