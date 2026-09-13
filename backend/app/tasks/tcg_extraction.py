@@ -162,8 +162,9 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     except Exception:
         code = "RECORD_WRITE_FAILED"
     recorder.fail(code)
+    message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
     return {"extraction_job_id": extraction_job_id, "status": "error", "items_count": 0,
-            "analysis_stats": None, "error_message": code}
+            "analysis_stats": None, "error_message": message}
 
 
 def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder):
@@ -184,7 +185,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         None, None, reference["works"],
                     )
                     if explicit and item.get("resolved_work_id") not in (None, explicit):
-                        raise ValueError("Work ID contradicts explicit source evidence")
+                        raise RecordError("WORK_ID_CONFLICT")
         except SoftTimeLimitExceeded:
             raise
         except Exception as exc:

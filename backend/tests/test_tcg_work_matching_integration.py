@@ -399,12 +399,13 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
     connection, engine, async_url = pg
     seed_condition_note(connection)
     monkeypatch.setattr(sys.modules[__name__], "SCHEMA", "tenant_004")
-    for module in (analyzer, extraction, distribution, product_master):
+    for module in (analyzer, extraction, distribution, product_master, extraction_records):
         monkeypatch.setattr(module, "TCG_SCHEMA", "tenant_004")
     monkeypatch.setattr(product_master, "_SYNC_DB_URL", str(engine.url.render_as_string(hide_password=False)))
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / STRUCTURE).read_text())
         cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
+        cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]

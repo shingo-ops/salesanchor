@@ -1476,3 +1476,6 @@ main e27c2f599dc81aa28c32f21bb13fbdf3920c7144を文書専用枝へ統合。7文�
 ### CARD09実装差分・初回検証（2026-09-14）
 
 新履歴service、送受信hook、taskの条件付き取得/保存、管理者限定API、追加migration/runner、PGとAPI試験を実装。既存9列回帰は実service+偽transportで記録境界を通すよう更新。解析後の例外を抽出明細0と誤報告しないよう、確定済み抽出と解析エラーを区別した（設計の別状態契約）。実装初回のテスト自動編集で余分なmigration行を挿入した構文エラーを静的検査で検出・修正済み。ruff成功、Bandit High0、mypyは既存の警告運用。Docker socket不在につきローカルpytest未実行、正式PG/CI待ち。実Gemini/本番操作0。
+
+
+CARD09初回CI: PR3494、HEAD5cca283e、Backend run34767132247/job103750026968は3失敗/3647成功/95skip、257.14秒。追加記録serviceのcoverage92%。3件は従来のエラー応答非公開契約、作品矛盾の固定文言互換、旧004切替試験で追加service/schema適用を追従していなかったfixture。返答全文の保存は記録付き通常処理に限定し、記録なしの既存エラー戻り値は空を維持。作品矛盾は固定WORK_ID_CONFLICTコードと従来固定文言を分離。004試験に正式migration/追加serviceのschema切替を追加。新テストの本番DDL複製1件は正式migration由来fixtureへ修正済み、schema-dup検査成功。実Gemini0。失敗を合格扱いせず、修正後のCIを実施する。
