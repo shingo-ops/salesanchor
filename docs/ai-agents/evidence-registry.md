@@ -2489,6 +2489,8 @@ AK追記: Planner案の作成後、同一AI Architect自己審査APPROVE。設�
 ### EV-20260913-FRONTEND-AK-IMPLEMENTATION
 
 PO原文「進める」で12ボタン実装承認。共通96/旧309、指定外業務本文0。root実ブラウザー通常144/pending48/操作36/再開6前後組成功。実装担当254試験と品質成功を原ログ照合。root検収APPROVE、PR/番号付きGO/本番未実施。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-implementation-manifest.json。
+
+Android別名紐付け: 同日時・長文一致の5名を既存マスタへ対応付ける。設計/検証: docs/handoff/line-supplier-aliases/design.md / recon.md。元マスタ名上書き0、未知の人の新規作成0。実DB検証・本番保存はCI/反映後に確認。
 ```text
 id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
 date: 2026-09-11
