@@ -985,3 +985,27 @@ POは「直近の確定済み44投稿（9:31取込）で精度比較を続けて
 POは設計見直しの質問に「進める」と回答。scopeは既存RAW固定・作品IDだけの比較方式。本番SELECTで762/商品既特定602/未特定160/要確認166/訂正0、固有item ID762/商品名空0/位置不正0、有効商品293/作品NULL0を再照会。理由内訳pid128、pid+multi19、pid+note12、pid+multi+note1、noteのみ6。PGはREAD ONLY。最初のSELECTの小なり記号がhookにリダイレクト扱いで拒否されたため、意味が同じBETWEEN条件を使う読み取りに分割して成功。ガードの解除・DB書込みなし。
 コード照合: tcg_analyzer_svc.py:501–531はDB非依存商品照合、:1180–1217は正規化/単位区分経路、:1261はupsert、:1355/1370/1381はcommit。比較を既存全再解析に混ぜるrollback案は不可。item_corrections_svc.pyも保存commitあり。docker infoはdaemon未接続、実PG検査は未実行。新規SDK仕様調査なし。
 設計§17は明細IDの完全対応・2列作品判断・全入力SHA・比較READ ONLYと商品照合結果に限定。比較設計自己APPROVE、採用/全再解析/配信REVISE。手続きなしの採用や追加Geminiはしない。現在のp2新規抽出のRAW忠実性を修復済みとは主張しない。
+
+## 2026-09-13 作品ID読取比較の実装検証
+
+比較専用設計は未マージPR #3462、HEAD 2fc9e64755ebc69be31781d1b1a6332ccf9068f0 の design-keyword.md §17 / CARD-LINE-WORK-COMPARE-03 を参照。後続のPO「進める」を受け、origin/main dd1df11c 起点の専用机 release/line-work-id-comparison に新サービスと試験2ファイルを追加。既存製品コード変更0。本記録は設計PRのマージやGO委任有効化を意味しない。
+
+実装は保存RAW・明細IDを固定し、2列の作品判断だけを受け付ける。保存商品結果と旧作品判断の対照不一致時はモデル呼出し0。READ ONLYの専用トランザクションを毎回閉じ、モデル前後の全入力/マスタSHA不一致で停止。訂正済みを除外し、候補は常にadoptable=false・正誤未検証。
+
+ローカル make lint-ci 終了0、ruff成功、Bandit高重大度0。mypyは既存エラーを警告扱いにするMakefileのため完全な型検査成功とは称さない。Docker未稼働につきpytest未実行、合成データ・模擬モデル・隔離PostgreSQL試験はGitHub CIで検証する。実Gemini呼出し0、本番更新0、候補採用0、配信0。実装自己確認であり独立レビューではない。CI結果は実装PRで記録する。
+
+
+### PR #3465 比較実装のCI結果
+
+製品HEAD d8ff688f5f57d0ada396f0fa0fd76de1717d1399。Backend CI34735091935 / job103664991919: 2759 passed、95 skipped、失敗0、coverage63.26%、95.38秒。全表不変、READ ONLYによるDML拒否、API中transactionなし、RAW/マスタ/訂正/解析/リンク変更時停止、実analyzer内の候補集合との一致を合成データで検証。初回CI34734918033は2753成功/6失敗、共通原因は試験DBの正規化表未構築。既存migrationで試験環境を補完して解消、製品側の厳格な表存在検査は維持。
+
+追加のローカル単独mypyは2.3.1内部エラーで終了2。型検査の完全成功とは称さない。実装自己レビューは比較カードの範囲で合格、独立レビューなし。gh pr checks実測で番号付きGO未受領のprocess-artifacts gateだけ失敗、他に失敗/実行中なし。PR #3465提出済み・未マージ、比較用の本番モデル実行/再解析/採用/配信は未実施。比較結果の正誤判定・安全な採用保存・配信設計はこの試験の合格対象外。
+
+
+## 2026-09-13 GO #3465・比較実装の本番反映
+
+PO原文「GO #3465」を12:30 JSTに受領確認、PR本文へ正式転記。HEAD94037515のBackend CI34735261457は2759成功/95skip/失敗0、coverage63.26%。GOチェック34735678099成功、全チェック失敗/実行中0、main包含と対象HEAD一致を確認し、gh-pr-merge-safe.sh --merge --match-head-commitで実行。GitHub mergedAt=2026-09-13T03:31:48Z、mergedBy=shingo-cc、mergeCommit=9f5415c31104e325b38da03df8ef9acdc5973066 を実測。公式スクリプトが対象机・ローカルブランチを削除し占有台帳DONEを記録。以後の証跡は既存の設計PR3462へ保存し、マージ済み机へ追加pushしない。
+
+Deploy34735713952 / job103666657661成功。ログで03:32:32 UTCにsalesanchor_db_20260913_123227.sql.gz（7.2M）取得、03:35:25 UTCにDeployment completed successfullyを確認。復元試験は未実施。SSH読取で本番git HEADがmergeCommitに一致、稼働backend内の比較サービスSHA256はdb603a598d1d3a3dd74d92f04c11ac31445d6126cfd7925ce909f9c91893143c、ローカル同ファイルと一致。公開/api/healthはstatus ok、database/redis/celery connected。
+
+状態: 比較設計自己審査済み、比較実装PO承認済み、実装PR3465マージ/本番反映済み。設計文書PR3462は未マージ。本番比較用Gemini追加0、結果保存/採用0、配信0。GO委任は未有効。全再解析と採用/配信の設計はREVISEを維持。次の一手は既存RAWを固定した読取比較の別手順を設計・検査すること。今回の配備成功や模擬試験を、実データ精度向上の証拠にはしない。

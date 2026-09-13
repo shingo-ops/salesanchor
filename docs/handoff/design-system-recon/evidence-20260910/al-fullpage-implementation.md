@@ -31,3 +31,16 @@ rootの設計照合/操作/表示検収APPROVE。設計は同一AIの自己審�
 製品3hash、19資料のmanifest、al-implementation-checkpoint.tar.gzへ保存。再現原稿はこの作業台の絶対パスを使用、再開時に実在作業台へ合わせる。生成bundle/依存は含めず既存lockから再生成。beforeは9e0406ee、afterはmanifest製品hash。
 
 次は実装をcommit/pushし、既存設計PR3461を実装PRへ更新して最新CI確認。今回番号付きGOなしにマージ/本番反映しない。表/報酬3/カレンダー色保留、新CI最後。
+
+## 本番反映完了（2026-09-13、上記GO待ちを更新）
+
+PO原文「「GO #3461」（先頭の鉤括弧を含む）を受領し、PR3461の正式GO欄に逐語転記。AI代理発行ではない。HEAD4c5f1cdaの製品3hashが検証版と一致、origin/main差分先行0、CI39成功/8対象外・CLEANを確認後、正式wrapperでmerge commit。
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3461 （MERGED、2026-09-13T02:45:13Z）
+- merge: dd1df11cccfe45ca7435f10eaf260cfbd40308f9
+- deploy: https://github.com/shingo-ops/salesanchor/actions/runs/34733817710 （SUCCESS、job103661473048）
+- root原ログ確認: salesanchor_db_20260913_114551.sql.gz 7.2M取得、配備HEAD dd1df11c、Green backend healthy、Finalize/Verify成功。復元試験は未実施。
+- root直接公開確認: app.salesanchor.jp/ HTTP200、api.salesanchor.jp/api/health HTTP200、database/redis/celery connected。
+- 公開資産 /assets/index-CZh0eB0x.js の対象2フォーム4ボタンにtype/variant/sizeと取消先を確認。hash/抜粋はal-production-verification.json。
+
+設計自己審査済み、PO実装承認済み、root実装検収済み、GO受領済み、実装/マージ/本番反映済み。本番認証付きフォーム送信・PO目視は未実施。LINE再解析/3シート配信は本便対象外、実施なし。次は残存旧305利用の次便設計。表/報酬3/カレンダー色保留、新CI最後。追加実装の承認とは扱わない。
