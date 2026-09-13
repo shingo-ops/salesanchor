@@ -2964,3 +2964,5 @@ EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する�
 ### EV-20260913-FRONTEND-AN-RELEASE
 
 2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN: PO原文と合意3条件をdesign§21へ保存。main10212686/10一次情報SHA/旧10列新規専用・非可逆strip/split/既存履歴型を実物確認。12列更新専用・revision/全行同時確定・13製品ファイル/R1–R11を同一AI自己審査APPROVE。Context7不在、公式資料代替確認。既存担当の実装13SHAと親の直接算出が13/13一致、読取レビュー/画像確認済み、FE350/E2E11成功。Backend22unit+23PGは定義済み・実行待ち。正式CI/番号付きGO原文なし。最新main313d7796の非競合2ファイルを保持して公開へ。根拠roundtrip-design-evidence.json/recon/roundtrip-parent-review.json。

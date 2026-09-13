@@ -8,7 +8,7 @@ import { HeaderButton } from "../../components/HeaderButton";
 import { TcgProductImportPreview, type PreviewResponse } from "./TcgProductImportPreview";
 import { importMessage } from "./importMessages";
 
-interface Result { job_id: string; filename: string; total: number; created: number; skipped: number }
+interface Result { job_id: string; filename: string; total: number; created: number; skipped: number; mode?: "update"; updated?: number; unchanged?: number }
 export function TcgProductImportPanel({ onDone }: { onDone: () => void }) {
   const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
@@ -45,27 +45,34 @@ export function TcgProductImportPanel({ onDone }: { onDone: () => void }) {
   }
   async function commit() {
     if (!file || !preview || lock.current || uncertain || result || preview.ok === 0 || preview.file_errors.length) return;
+    if (preview.mode === "update" && preview.blocked > 0) return;
     lock.current = true; setBusy(true); setError("");
     const form = new FormData(); form.append("file", file); form.append("confirmed_digest", preview.digest);
     try {
       const response = await api.postForm<Result>("/tcg/products/import/commit", form);
       if (typeof response.job_id !== "string" || !Number.isInteger(response.created) || !Number.isInteger(response.skipped)) throw new Error("Invalid import result");
+      if (preview.mode === "update" && (response.mode !== "update" || !Number.isInteger(response.updated) || !Number.isInteger(response.unchanged))) throw new Error("Invalid update result");
       setResult(response); setPreview(null);
-    } catch {
+    } catch (e) {
+      if (preview.mode === "update" && e instanceof ApiError && (e.status === 409 || e.status === 422)) {
+        setPreview(null); setFile(null); setError(t("productCsv.updateRejected"));
+        return;
+      }
       // A failed response can follow a committed row: never offer an automatic retry.
       setUncertain(true); setError(t("productCsv.uncertain"));
     } finally { lock.current = false; setBusy(false); }
   }
   return <>
-    <p>{t("productCsv.steps")}</p>
+    <p>{t(preview?.mode === "update" || result?.mode === "update" ? "productCsv.updateSteps" : "productCsv.steps")}</p>
     {error && <p role="alert">{error}</p>}
     {result ? <section aria-label={t("productCsv.result")}>
-      <p role="status">{t("productCsv.resultCounts", { total: result.total, created: result.created, skipped: result.skipped })}</p>
+      <p role="status">{result.mode === "update" ? t("productCsv.updateCounts", { updated: result.updated, unchanged: result.unchanged }) : t("productCsv.resultCounts", { total: result.total, created: result.created, skipped: result.skipped })}</p>
       <p>{t("productCsv.receipt", { id: result.job_id })}</p>
       <ContentToolbar right={<HeaderButton variant="primary" onClick={onDone}>{t("productCsv.back")}</HeaderButton>} />
     </section> : uncertain ? <ContentToolbar right={<HeaderButton variant="secondary" onClick={onDone}>{t("productCsv.back")}</HeaderButton>} /> : preview ? <TcgProductImportPreview preview={preview} busy={busy} onCommit={() => void commit()} onCancel={() => { if (!lock.current) { setPreview(null); setFile(null); setError(""); } }} /> : <>
       <ContentToolbar right={<Button variant="secondary" type="button" disabled={busy} onClick={downloadTemplate}>{t("productCsv.downloadTemplate")}</Button>} />
       <p>{t("productCsv.templateIntro")}</p>
+      <p>{t("productCsv.updateHint")}</p>
       <p>{t("productCsv.templateRequired")} <code>japanese_title</code> / <code>division_code</code>, <code>work_code</code>, <code>manufacturer_code</code>, <code>product_category_code</code></p>
       <p>{t("productCsv.templateOptional")}</p>
       <section aria-label={t("productCsv.drop")} onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); if (lock.current || uncertain || result) return; if (e.dataTransfer.files.length !== 1) { setFile(null); setPreview(null); setError(t("productCsv.oneFile")); return; } select(e.dataTransfer.files[0]); }}>

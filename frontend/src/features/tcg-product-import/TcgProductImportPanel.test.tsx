@@ -1,10 +1,10 @@
 import { readFileSync } from "node:fs";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
+import { api, ApiError } from "../../lib/api";
 import i18n from "../../i18n";
 import { TcgProductImportPanel } from "./TcgProductImportPanel";
-vi.mock("../../lib/api", () => ({ api: { postForm: vi.fn() }, ApiError: class extends Error {} }));
+vi.mock("../../lib/api", async importOriginal => ({ ...await importOriginal<typeof import("../../lib/api")>(), api: { postForm: vi.fn() } }));
 const sample = () => new File(["mark,japanese_title\nA,Fixture"], "products.csv", { type: "text/csv" });
 const preview = { filename: "products.csv", digest: "a".repeat(64), file_errors: [], total: 2, ok: 1, blocked: 1, rows: [
   { row_no: "2", japanese_title: "Fixture", mark: "A", blocking: [], warnings: ["NO_SEARCH_KEYWORD"] },
@@ -17,6 +17,36 @@ async function review() {
 }
 beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage("en"); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+const updatePreview = { ...preview, mode: "update", ok: 2, blocked: 0, updated: 1, unchanged: 1, rows: [
+  { row_no: "1", japanese_title: "Changed", mark: "A", product_code: "PM01", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old title", after: "Changed" }] },
+  { row_no: "2", japanese_title: "Same", mark: "B", product_code: "PM02", action: "unchanged", blocking: [], warnings: [], changes: [] },
+] };
+it("R10 shows changes and sends one update only after confirmation", async () => {
+  vi.mocked(api.postForm).mockResolvedValueOnce(updatePreview).mockResolvedValueOnce({ job_id: "updated", total: 2, mode: "update", created: 0, skipped: 0, updated: 1, unchanged: 1 });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect(screen.getByText(/Old title/)).toBeTruthy(); expect(screen.getByText("PM01")).toBeTruthy();
+  expect(screen.getByText("1. Choose file → 2. Review → 3. Update")).toBeTruthy();
+  expect(screen.getByText("Total: 2 / Valid: 2 / Blocked: 0")).toBeTruthy();
+  expect(api.postForm).toHaveBeenCalledTimes(1);
+  const button = screen.getByRole("button", { name: "Confirm updates" }); fireEvent.click(button); fireEvent.click(button);
+  await screen.findByRole("status"); expect(api.postForm).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("status").textContent).toContain("Updates: 1");
+  expect(screen.getByText("1. Choose file → 2. Review → 3. Update")).toBeTruthy();
+});
+it("R10 blocks the entire update file when one row fails", async () => {
+  vi.mocked(api.postForm).mockResolvedValue({ ...updatePreview, blocked: 1, ok: 1 });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect((screen.getByRole("button", { name: "Confirm updates" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(api.postForm).toHaveBeenCalledTimes(1);
+});
+it.each([409, 422, 500])("R10 distinguishes definite rejection from uncertain response %s", async status => {
+  vi.mocked(api.postForm).mockResolvedValueOnce(updatePreview).mockRejectedValueOnce(new ApiError("ROUNDTRIP_STALE", status, null));
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm updates" })); await screen.findByRole("alert");
+  if (status < 500) expect(screen.getByLabelText("CSV file")).toBeTruthy();
+  else expect(screen.queryByLabelText("CSV file")).toBeNull();
+  expect(api.postForm).toHaveBeenCalledTimes(2);
+});
 describe("product import confirmation", () => {
   it("does not send until review, then submits the exact file and digest once", async () => {
     vi.mocked(api.postForm).mockResolvedValueOnce(preview).mockResolvedValueOnce({ job_id: "receipt-1", total: 2, created: 1, skipped: 1 });
