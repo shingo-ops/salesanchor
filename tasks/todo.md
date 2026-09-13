@@ -145,7 +145,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | 第1便PR3471提出・CI2769成功。第2便追従/拒否試験保存の停止解消、試験commit ad0d9fc7、通常push 5edbe183到達確認 | 第2便の通常レビュー用PR提出と既存CIの実PG8群/全件migration確認。実PG未実施で検収REVISE、マージ/本番なし | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-RESUMED | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | 第1便PR3471/第2便PR3479提出。第2便CIは3260成功/95skip/新規8群setup error、現在REVISE | 初回引数不備は修正済み。SQL初期行をDDL後へ移す設計追補・同じ担当の修正/再CIへ。GO/本番なし | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-CI-02 | 2026-09-13 |
 
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）

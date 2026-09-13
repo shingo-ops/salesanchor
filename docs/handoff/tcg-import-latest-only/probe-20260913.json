@@ -2450,5 +2450,54 @@
     "proxy_go": false,
     "merged": false,
     "production": false
+  },
+  "stage2_product_submission": {
+    "observed_at": "2026-09-13T06:45:53.817429+00:00",
+    "pr": 3479,
+    "url": "https://github.com/shingo-ops/salesanchor/pull/3479",
+    "head": "5edbe18379091057fde28eafcb7c8ea01decb05f",
+    "is_draft": false,
+    "real_pg_executed": false,
+    "initial_conflict": [
+      "tasks/todo.md",
+      "docs/ai-agents/evidence-registry.md"
+    ],
+    "resolution": "relocate only own documentation additions; read-only merge test exit0 for both files",
+    "acceptance": "REVISE pending CI",
+    "merged": false,
+    "production": false
+  },
+  "stage2_ci_first": {
+    "head": "eab1609b1bf202c57fca2134952047abf4b1f054",
+    "pytest_job": 103687400896,
+    "passed": 3260,
+    "skipped": 95,
+    "errors": 8,
+    "warnings": 309,
+    "coverage_percent": 63.82,
+    "seconds": 106.81,
+    "stock_cases": "all8 named as fixture setup errors; none passed",
+    "cause": "empty tuple parameter binding on raw migration SQL",
+    "full_dryrun_job": 103687353037,
+    "full_dryrun_sql_count": 128,
+    "full_dryrun_rounds": 2,
+    "new_sql_in_full_dryrun": false,
+    "main_sync_head": "3c0bc15e9c9952b4a29fa7774357c36e887b1999",
+    "acceptance": "REVISE",
+    "fixture_fix_commit": "07da520ae37fa060deaf958286c3b0b5a17e7ab7",
+    "fixture_fix_test_sha256": "ac7704ad79de027155d0bc32a35e972f668d03ecfc852bd4afe558208a533c64"
+  },
+  "stage2_ci_second": {
+    "head": "79890cfce9b1ec4a2271fb2f5b9cda50f884557b",
+    "pytest_job": 103688678583,
+    "passed": 3260,
+    "skipped": 95,
+    "errors": 8,
+    "warnings": 309,
+    "coverage_percent": 63.82,
+    "seconds": 129.28,
+    "cause": "control INSERT precedes CREATE INDEX while deferred FK events pending",
+    "acceptance": "REVISE",
+    "design_correction": "initialize control after all per-tenant DDL; repeat file applications in separate transactions"
   }
 }

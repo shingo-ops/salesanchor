@@ -486,6 +486,14 @@ SQL SHA256 0c68042e6de9b2c205916cf7f8c2f9d138dbe845e74a6d38c2b0a7204f783efa、�
 
 現在の検収はREVISE（実PG未実施）。次は既承認の通常push・通常レビュー用PR・既存CI。正式カード検査L14により下書き案を撤回し、design-partner.md §5.5-2の通常PRを使う。検収/マージ承認とは別。期限付きGO委任は未有効、番号付きGO/マージ/本番反映/再解析/3シート配信なし。同一AIの設計自己審査と実装担当の検査を区別する。
 
+## 第2便PR3479提出と実PG2回の結果（2026-09-13）
+
+PR https://github.com/shingo-ops/salesanchor/pull/3479 提出済み。親がGitHub/remote/.pr-numberを照合。共通台帳2件の競合は自追記の移動で解消、その後に承認経路のmain祖先条件へ合わせ8d5aa581を通常統合（3c0bc15e）し、新SQL/試験/登録差分を保持。新規GO/マージ/本番なし。
+
+初回eab1609bのjob103687400896は3260成功/95skip/新規8群setup error、coverage63.82%。引数なしSQLに空tupleを渡した不備を07da520aの既定値None1行で修正し、79890cfcへpush。2回目job103688678583も3260成功/95skip/8setup error、129.28秒、coverage63.82%。初回不備は解消、今回のSQLはcontrol初期行挿入後に索引を作る順序で遅延FKの検査待ちが発生。design追補を同一AIで自己審査APPROVE、既存担当へ新SQL/新試験2ファイルの順序・適用区切り修正カードを発行。
+
+既存migration単体job103687352992では今回SQL2回実行成功。ただしTCG未導入で処理対象なしのためTCG有りの保証ではない。全件dryrun job103687353037は128SQLを2周成功したが、workflowの時期フィルターで今回SQLは対象外。成功を新SQL検証とした従前想定を訂正し、全登録SQLとの組合せは未確認として維持。新規8群の実PG合格を省略しない。現在の実装検収REVISE。祖先検査は2回目成功、番号付きGO欠落チェックは保持。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)
