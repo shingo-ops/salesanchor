@@ -28,3 +28,7 @@ strict eslint3ファイル警告/エラー0、単独32試験、全体29files/343
 
 an-implementation-manifest.jsonに製品3/証跡/archive SHA256。checkpointは再現スクリプト/比較JSON/画像/原ログ（依存物・生成bundleを除外）。復元先に絶対パスを合わせ既存依存でprepare.cjs→server.cjs→browser.cjs/operations.cjs/closing.cjsを実行する。beforeは1a8eed69固定、afterはmanifest製品hash。サーバー停止済み。
 root実装照合・表示操作検収APPROVE。維持は新規32回帰と既存CI、新CI追加なし。本便revertで戻せDB復元不要。PR3480へ実装保存、最新main取込み後の差分/製品hashとCI確認へ。今回番号付きGO/マージ/本番は未実施、過去GO3468等は転用しない。表/報酬3/カレンダー色保留、新CI最後。
+
+## 最新main統合確認
+
+2026-09-13、実装08b2fa96をpush後、main 5c0704dfを通常merge（7e179ceb）。evidence-registryの双方追記を保持。基準1a8eed69→mainのfrontend差分0、統合後の製品3/共有10/archive/証跡28 SHA256すべて一致。343試験・96表示・30操作前後組の対象は不変のためローカル全試験を重複実行せず、PR最新HEADのCIを確認する。最新CI結果はPR3480本文と現行active-work.dに記録。GO3480/マージ/本番反映未実施。
