@@ -2710,10 +2710,6 @@ EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直�
 
 EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
 
-EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
-
-EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
-
 ```text
 id: EV-20260913-LINE-STORAGE-DELEGATED
 date: 2026-09-13
@@ -2732,3 +2728,9 @@ EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselecto
 EV-20260913-LINE-STORAGE-DELEGATED 保存ガード拒否: 新SQLhash08e7f6b。原文削除の負例を試験コードへ保存する操作がPreToolUse hookで拒否。DB実行なし、チケット自己発行/文字列分割/別手段への置換なし。残部のみ再開し、拒否負例は承認待ち。
 
 EV-20260913-LINE-STORAGE-DELEGATED 残部確認: SQL823行/試験456行/登録1行、hash0c68042e/ec921a76/742055feを親照合。担当静的検査成功、親schema定義コピー0確認。実PG未実施・原文削除負例未保存で検収REVISE。検証用Draft提出準備。
+
+EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの登録完了報告後、正式ガード下で追従完了HEAD bc33aa37。SQLhash0c68042e保持、承認済み原文削除拒否テスト保存・commit ad0d9fc7を親が直接確認。試験hash a5227daa、ruff成功。過去の保存停止は解消、実PG未実施のため検収REVISEを継続。既承認の通常push/検証PRへ。代理GO/マージ/本番なし。
+
+EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。

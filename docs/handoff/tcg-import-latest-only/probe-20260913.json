@@ -2387,5 +2387,27 @@
       "pending": 0,
       "sole_failure": "numbered PO GO missing"
     }
+  },
+  "stage2_storage_resumption": {
+    "observed_at": "2026-09-13T06:36:48.733807+00:00",
+    "base": "7dcb9ce982af39b3b6ef9c1089fe1255952ae37a",
+    "resumed_head": "bc33aa37df25d685bc8f13b3084b6ca5ba0f20fe",
+    "test_commit": "ad0d9fc7c7b037e82a39b82e2f77644eba44ec7b",
+    "sql_sha256": "0c68042e6de9b2c205916cf7f8c2f9d138dbe845e74a6d38c2b0a7204f783efa",
+    "test_sha256": "a5227daa0e39f61e2f259ae7a99a8bea5ad1619094487767c81d5b354889174f",
+    "parent_verified": [
+      "git log HEAD and one-file diff",
+      "same SQL hash",
+      "approved negative case saved"
+    ],
+    "worker_reported": [
+      "ruff passed",
+      "preflight and commit hooks passed"
+    ],
+    "real_pg_executed": false,
+    "acceptance": "REVISE pending actual PG CI",
+    "proxy_go": false,
+    "merged": false,
+    "production": false
   }
 }

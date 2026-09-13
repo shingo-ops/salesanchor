@@ -153,4 +153,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | 3ファイル残部保存・静的検査成功。原文削除負例は保存ガード拒否で未保存 | 検証用Draft PRで既存CIを実行。拒否負例の具体案を添えて限定保存承認を求める。全体検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-DELEGATED | 2026-09-13 |
+| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | 追従と承認済み拒否試験保存完了。試験commit ad0d9fc7、静的検査成功 | 通常push・検証用PRで既存CIの実PG8群/全件migrationを確認。実PG未実施で検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-RESUMED | 2026-09-13 |
