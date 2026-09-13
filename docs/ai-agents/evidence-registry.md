@@ -2928,3 +2928,7 @@ PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50
 ### EV-20260913-FRONTEND-AN-DESIGN
 
 固定1a8eed69でBot3フォーム6原文・2ページ/共有10hash・共通114/旧299を直接監査。期待120/293。type6/6、disabled2、対象外5ボタン/ConfirmModal2。POST成功のキー表示と2PATCHの契約・権限・長い登録ラベルを照合。docs/specs/design-system/design.md§ANで96組検収と合成APIのみの検証条件、失敗時REVISEを規定。同一AI自己審査APPROVE、製品変更0、実装承認未受領。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-button-audit.json。外部事例/新API調査不要（既存native部品契約の移管）。
+
+### EV-20260913-FRONTEND-AN-IMPLEMENTATION
+
+PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致・96表示/24操作+6閉鎖前後組成功。初回試験4誤前提を8実観測で確定し試験のみ修正。担当32新規/343全体試験・品質成功の原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md / an-implementation-manifest.json。実装検収APPROVE、PR3480最新CIへ。今回GO/merge/本番未実施、合成キーだけで実キー操作0。

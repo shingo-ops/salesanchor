@@ -1530,3 +1530,10 @@ APPROVE（AN設計合格）。同一AIによる自己審査であり独立第二
 設計上の未解決仕様なし。POの今回6件実装承認、製品実装、AN表示検証は未実施。カードは未発行草案。設計合格はPO承認/実装/GO/本番反映の承認を兼ねない。
 
 AN形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-state/diff-check成功、card-lint exit0（長行警告1のみ）。2ページ/共有10hash不変、製品差分0。カードは未発行草案。
+
+2026-09-13 AN実装承認: 今回6件への実装承認質問にPO原文「進める」を受領。CARD-AN-BOTS-01を既存button_generatorへ発行。rootは検収/記録、製品実装へ自動切替しない。新GO/マージ/本番未承認。
+
+AN試験前提の補足（2026-09-13）: 初回回帰32中4失敗を停止・再調査。root変更前後8観測で用途selectは非空4候補、selectedIndex=-1の負例はnative invalid/送信0、DrawerはDOM常設/権限拒否でopenクラスなしを確認。通常UIで用途を空にできるとはしない。必須属性/負例検査は維持し、DOM不存在の誤期待を開閉状態へ修正。CARD-AN-TEST-02を発行。製品変更追加0、受入条件の緩和なし。
+
+
+2026-09-13 AN実装検収: PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致、最終96表示・24操作+6閉鎖再開前後組成功。試験前提8観測で初回4失敗を試験のみ補正、担当32新規/343全体試験・品質成功を原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md。実装検収APPROVE、PR3480実装更新と最新main/CIへ、今回番号付きGO/マージ/本番未実施。
