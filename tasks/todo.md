@@ -153,4 +153,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | PO委任済み。新SQL途中保存。負例の保存がガード拒否、影響のない残部を継続 | 拒否負例以外の実装/静的検査を完了し、正確な追加コードを確認して保存承認を求める。実PG/PR未完了 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-DELEGATED | 2026-09-13 |
+| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | 3ファイル残部保存・静的検査成功。原文削除負例は保存ガード拒否で未保存 | 検証用Draft PRで既存CIを実行。拒否負例の具体案を添えて限定保存承認を求める。全体検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-DELEGATED | 2026-09-13 |

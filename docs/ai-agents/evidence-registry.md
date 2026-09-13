@@ -2730,3 +2730,5 @@ EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未
 EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。
 
 EV-20260913-LINE-STORAGE-DELEGATED 保存ガード拒否: 新SQLhash08e7f6b。原文削除の負例を試験コードへ保存する操作がPreToolUse hookで拒否。DB実行なし、チケット自己発行/文字列分割/別手段への置換なし。残部のみ再開し、拒否負例は承認待ち。
+
+EV-20260913-LINE-STORAGE-DELEGATED 残部確認: SQL823行/試験456行/登録1行、hash0c68042e/ec921a76/742055feを親照合。担当静的検査成功、親schema定義コピー0確認。実PG未実施・原文削除負例未保存で検収REVISE。検証用Draft提出準備。
