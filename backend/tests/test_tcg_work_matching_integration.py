@@ -8,6 +8,7 @@ import asyncio
 import hashlib
 import os
 from pathlib import Path
+from types import SimpleNamespace
 from uuid import uuid4
 
 import psycopg2
@@ -22,6 +23,7 @@ from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_diagnostics_svc as diagnostics
 from app.services import tcg_distribution_svc as distribution
+from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 
@@ -42,6 +44,7 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / DICTIONARY).read_text())
+    cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
 
 
 @pytest.fixture
@@ -69,7 +72,7 @@ def pg(monkeypatch):
             provision(cursor, SCHEMA)
             cursor.execute("CREATE SCHEMA tenant_006; CREATE SCHEMA tenant_902")
             migrate(cursor)
-        for module in (analyzer, extraction, distribution):
+        for module in (analyzer, extraction, distribution, extraction_records):
             monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
         monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")
         yield connection, engine, url.set(database=name, drivername="postgresql+asyncpg")
@@ -113,8 +116,11 @@ def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=F
     response = header + "\n" + "\n".join("｜".join(row) for row in records)
     if not work_id_mode:
         # Keep legacy 9-column end-to-end regressions while new jobs use v4.
-        monkeypatch.setattr(extraction, "extract_message", lambda raw, **kw: gemini.extract_message(raw))
-    monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *args, **kwargs: response)
+        monkeypatch.setattr(extraction, "extract_message", lambda raw, **kw: gemini.extract_message(raw, recorder=kw["recorder"]))
+    else:
+        monkeypatch.setattr(extraction, "extract_message", gemini.extract_message)
+    client = SimpleNamespace(models=SimpleNamespace(generate_content=lambda **kwargs: SimpleNamespace(text=response)))
+    monkeypatch.setattr(gemini, "_get_genai_client", lambda: client)
     with Session(engine) as session:
         result = extraction._run_extraction(session, smid)
     return smid, jobid, result

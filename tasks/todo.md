@@ -10,7 +10,7 @@
 |------|------|------|---------|-----|------|
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
-| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | カード08実装:個別3既存再利用/9種集合1追加と相互除外。PR3483改訂準備 | 改訂後正式CI/PGを確認し番号付きGOへ。再解析/配信未実施 | 設計PR3462 commit3b40ceea / CARD08 / recon実装着手節 | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | 25明細再解析済み（既知15商品15/15、要確認17→13）。通常記録A/CARD09実装差分準備、静的検査成功 | 停止方針合意済み、CARD09正式PG/CIと差分審査。13明細保留・単位/フラグ不整合は未解消。配信未実施 | run00b3d27e/67245fc0・snapshot25 / recon再解析テスト節 | 2026-09-14 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AOチーム6ボタン実装検収済み。144表示/37操作前後組、34新規/377全体試験・品質成功 | PR3487実装保存、最新main/CI確認後に今回番号付きGO判断。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md / EV-20260914-FRONTEND-AO-IMPLEMENTATION | 2026-09-14 |

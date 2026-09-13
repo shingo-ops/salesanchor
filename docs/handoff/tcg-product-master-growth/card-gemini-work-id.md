@@ -140,3 +140,28 @@ END OF CARD
 END OF CARD
 
 PO割当て追記: 本セッションの実装担当への切替とPR3483改訂を確認する質問に対し、PO原文「進める」を受領。2026-09-13T11:17:55Zに作業中実時刻を確認。受領そのものの正確な時刻は未取得、同時刻を受領時刻としない。新エージェント起動なし、マージGOとは扱わない。
+
+
+
+# CARD-LINE-EXTRACTION-RECORD-09（実装開始承認済み・本セッション担当）
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 本カードは通常記録Aの実装準備用。設計自己審査APPROVE、停止方針はPO合意済み。2026-09-14の「次は、実装担当の指定と実装開始承認です」へのPO原文「進める」を実装開始承認として受領。その後「このセッションを実装担当へ切り替え、カード09を実装してよいですか？」へのPO原文「進める」を受領。本セッションを実装担当に割当て済み。過去CARD08の実装承認や番号付きGOを流用しない。新しいサブエージェントは起動しない。
+
+mode: handoff。親 docs/specs/product-master/README.md、設計 design-keyword.md「通常記録A・実装引継ぎ版」、根拠 recon.md「通常記録Aの限定設計審査」、ADR113/154。上記の最終節がAの過去草案より優先。Bの商品候補判断は対象外。
+
+作業場所: 実装承認後、公式new-worktree.shでその時点のorigin/mainからrelease/line-extraction-attempt-recordを作成する。設計文書枝の古いtaskをコピーしない。開始時にmain313d7796からの対象差分を確認し、契約に影響する変更/採番衝突は設計へ戻す。他者変更の上書き・本店での製品編集は禁止。
+
+製品許可ファイル（実装承認後のみ）: backend/app/services/gemini_extraction_svc.py、backend/app/tasks/tcg_extraction.py、backend/app/services/tcg_extraction_record_svc.py（新規）、backend/app/routers/tcg_diagnostics.py、migrations/20260914_010000_tcg_extraction_attempts.sql（新規）、scripts/run_all_migrations.sh、backend/tests/test_tcg_extraction_record_pg.py（新規）、backend/tests/test_tcg_extraction_record_api.py（新規）、backend/tests/test_tcg_gemini_extraction.py、backend/tests/test_tcg_work_matching_integration.py。
+文書許可: 本カード、design-keyword.md、recon.md、ADR154のWhy追補案、evidence-registry.md、tasks/todo.md、当該枝のactive-work.d記録。正式な状態変更を根拠とともに更新する。
+
+禁止: Gemini実呼出、prompt/作品ID判断/10列/数量価格状態の変更、商品候補判断、配信変更、商品辞書更新、secrets/認証基盤/CI/deploy設定/運用スクリプトの独断変更（許可したmigration runner登録1行以外）、本番接続・DB更新・再解析・シート配信・マージ・GO代筆。本カードを使った実装セッション開始だけで本番操作は許可されない。
+
+手順1 設計に従って開始/受信/完了の保存と条件付きjob取得、同一jobの試行紐付け、soft中断分類、8MiB境界、管理者限定読取APIを実装。一般例外処理による応答消失を直し、保存失敗時は当該新明細/自動解析を確定しない。既存300/330秒は維持。未完了を成功/未送信と表示しない。
+手順2 新migrationを末尾登録し、001/004と将来TCG基礎表を用意したschemaへ適用できることを隔離PGで検証。無関係schemaにTCGを作らない。所有者/権限/部分不足/冪等/親削除連鎖を設計どおり確認する。
+手順3 指定のPG/権限/失敗境界と既存回帰を実行する。実Geminiは偽応答に置換。Docker不在ならローカルpytestを行わずBackend CIで実施。CI実行前の純関数確認をPG合格と称しない。保存I/O性能条件に失敗したら閾値を変えず設計へ戻す。
+手順4 make lint-ci、正式card-lint、check-task-state、ADR索引、diff検査を実行し、公式safe経路でmain宛PRを起票する。CI/自己レビュー結果を実行根拠と区別して報告し、マージせず停止する。
+
+停止条件: 不明なスキーマ/権限/現在の差分、試験失敗、採番衝突、保存と結果の紐付け不整合、削除/保持契約の不整合がある場合は設計へ戻す。既存保護の解除・迂回をしない。
+報告先: PO/設計パートナー。本番採用ではなく実装PRの結果として、差分HEAD、正式PG/CI、未実行検証、記録なしで確定された新明細0、実Gemini呼出0を明示する。生の顧客原文/応答をPRへ貼らない。
+END OF CARD

@@ -2675,6 +2675,12 @@ EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審
 
 PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
 
+EV-20260912-LINE-WORK-ID最終反映: GO3458本人原文受領、HEADcb2ef474 CI34732415064 2733成功/95skip/失敗0、mergecacc889e・Deploy34732557622成功。本番p2/p1互換・health connected確認。最新取込1f6e72acはpending_review/仕入先38/原文リンク0、直近確定536422edは44投稿。比較対象をPOへ質問中、追加Gemini/再解析/配信0。PR3458本文とrecon「GO受領後の最終結果」参照。
+
+EV-20260912-LINE-WORK-ID p2実抽出: POが確定済み44投稿の比較を承認。p2初回1投稿はdone/items1、行番号受理。raw_priceの¥脱落、raw_memoの残り→残り22でRAW一致条件不成立・停止。新作品はマスタOne Pieceと一致、旧要確認はnote_unmatchedなので商品確定改善の証拠ではない。DB更新0/配信0。recon同日比較再開節、非公開JSON SHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38。
+
+EV-20260912-LINE-WORK-ID設計見直し: PO「進める」でRAW固定作品比較への設計見直し着手を承認。READ ONLY実測762固有ID/空名0/不正位置0/訂正0、602既特定/160未特定/要確認166。有効商品293/作品NULL0。設計§17の2列ID契約・商品照合READ ONLYは自己APPROVE、全再解析/採用/配信REVISE。実装・追加Gemini0。recon同日設計棚卸し参照。
+
 ### EV-20260913-FRONTEND-AL-DESIGN
 
 基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
@@ -2723,6 +2729,14 @@ EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b436
 
 EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
 
+
+EV-20260913-LINE-WORK-COMPARE本番反映: PO原文GO #3465受領、merge9f5415c3、Deploy34735713952成功。backup7.2M、稼働HEAD/比較サービスSHA一致、API connected。実Gemini追加/採用/配信0。正式証跡はrecon「2026-09-13 GO #3465・比較実装の本番反映」。
+
+EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・前後全入力SHA一致。実callback初回1試行/応答0でMODEL_CALL_FAILED、診断根拠不足。キー設定/SDK/クライアント生成を生成APIなしで確認。原因未確定、診断付き同一投稿再試行はPO承認待ち。設計§17.9/recon停止節。採用/配信0。
+
+EV-20260913-LINE-WORK-COMPARE対象変更: 診断再試行はINACTIVE_SOURCEでAPI0。旧44中18無効/置換先18は新確定取込にリンク、新44有効/観測時7ジョブ未終端。対象切替PO判断待ち。recon13:41/設計§17.10参照。
+
+EV-20260913-LINE-WORK-COMPARE-CLIENT: 新取込729明細/対照不一致0、診断RuntimeError。実SDK2.8.0と公式Client.__del__確認、temporary閉鎖/held未閉鎖。配備済みadapterの寿命Fake再現とwith保持の4確認true、追加生成API0。修正設計§17.12自己APPROVE、実装承認待ち。
 
 
 EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
@@ -2889,6 +2903,68 @@ EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-REVIEW: 既存実装担当が許可6フ
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、アプリ呼出し1・応答13/13、全入力SHA前後一致、作品ID変化0、商品特定3→3。生成APIなしの入力コピー空白差対照は3→13、既特定3の商品変更0。原因再現であり本番改善ではない。DB書込/採用/配信0。recon14:49節参照。
+
+EV-20260913-LINE-SPACE-DESIGN: 固定729件の連続半角空白局所コピー検算552→562、既特定552の変更0、basis表記のみ5。DB/Gemini0。本番改善ではない。PR3473 a618c147との同関数重複をledger/GitHub/git showで確認、追加設計REVISE・カード未発行。recon連続空白節参照。
+
+EV-20260913-LINE-SPACE-FINAL: PR3473 MERGED/配備成功と稼働analyzer SHA一致。固定729件は新版553→563、既特定変更0、basisのみ1。品質R3/R4/R5/R6の指摘集合増減0。設計自己APPROVE、CARD-LINE-PRODUCT-SPACE-06正式検査終了0（長行警告のみ）、実装未着手。recon/ADR154 Why追補案参照。
+
+EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701245040実ログ3286成功/95skip/失敗0、coverage63.83%。33成功8skip、唯一の失敗はGO未記録ゲート。19件正答8→18、既存誤商品1残存。本番変更0。recon正式CI節参照。
+
+- EV-20260913-LINE-CARDSET-07: PR3481 merge6326115c/Deploy34750745805成功を直接確認。追加PR3483は固定729件で誤商品1→未特定、個別9→各正しい候補、他719不変。Backend CI34751619981は3295成功/95skip/coverage63.83%、Migration CI34751619987成功。GO未受領。根拠: docs/handoff/tcg-product-master-growth/recon.md「PR3481本番反映とカードセット対策PR3483」。
+
+- EV-20260913-LINE-CARDSET-08: 本番個別3登録済み/集合0をREAD ONLY確認。新集合1と相互除外のコピー検算で商品28/28、境界58/58、他719不変。設計自己APPROVE/カード08担当待ち、製品実装・本番登録は未実施。根拠: recon「カードセット登録・改訂2の事実確認と設計検算」。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: POの明示切替承認で本セッションがカード08を実装。PR3483 HEADda948509、商品新規1と相互除外/安全性/商品86入力のPG試験を追加。静的チェック成功、正式CI確認中。本番未反映。
+
+- EV-20260913-LINE-CARDSET-08-CI: PR3483 HEADe6e5d463、Backend CI34754328005/job103716059145を直接確認、3316成功/95skip/coverage63.83%。Migration34754327876成功。38success/4skip、唯一のfailureはGO未記録。バックアップ6.6M生成ログ確認。本番未登録/再解析未実施、recon正式CI節。
+
+- EV-20260913-LINE-CARDSET-08-PROD: GO #3483受領、merge116b1cf6、Deploy34758371227成功、backup6.6M生成。PM0297新規1・個別9UUID保持・本番辞書で28商品名/28、58境界/58一致、health正常を直接確認。旧明細9d2b898eの解析結果は未更新。再解析/配信未実施。recon「PR3483 GO・本番登録完了」。
+
+- EV-20260913-LINE-CARDSET-REANALYSIS: PO「再解析してテストしてみて」。既存serviceで2ジョブ25明細を再解析、run2完了/snapshot25、raw/訂正不変。既知15商品正答5→15、商品特定9→18、要確認17→13。残13は参照digest不一致で書込前停止。単位補完後も理由残存1件を確認、再抽出/配信未実施。recon再解析テスト節。
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-RECORD-DRAFT
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 商品マスタ参照テーマ・通常抽出記録の設計
+scope: 未承認設計案、製品変更0
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md / 通常記録Aの具体化
+    summary: tcg_diagnosticsの管理者認証、taskの送受信記録不足、backup.shのDB全体dumpを確認。根拠行は設計本文に記載。
+confidence: medium
+tradeoff: 記録障害で当該投稿の完了が遅れる停止案。容量/親削除/保持は追加確認が必要。
+decision: 自己審査REVISE。新候補判断を通常promptへ追加しない。
+follow_up: POへ保存障害時の停止方針を提示。残る技術確認後に正式カード検査。
+```
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-DESIGN-REVIEW
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 通常記録Aの限定設計審査
+scope: 設計、製品実装0、Gemini呼出0
+evidence:
+  - type: command
+    reference: prod1 backend SQLAlchemy read-only connection / 2026-09-14
+    summary: jarvis_db、salesanchor_app、TCG_SCHEMA004、抽出3表は001/004・所有者jarvis、新履歴0。
+  - type: command
+    reference: fixed snapshot f8e3b354 + 実format_prompt_input helper
+    summary: 44投稿入力再構成最大99099 bytes/合計3886828 bytes。実送信記録ではない。
+  - type: external
+    reference: https://docs.celeryq.dev/en/stable/userguide/workers.html#time-limits (2026-09-14)
+    summary: soft例外は捕捉可、hard強制終了は捕捉不可。Context7利用不可の公式代替。
+confidence: high
+tradeoff: 保存障害/上限超過は当該新結果を止める。容量増、実装後性能試験が必要。
+decision: 通常記録Aの自己審査APPROVE。実装/CI/本番成功とは区別。
+follow_up: 正式カード検査と実装担当への明示承認。Bの商品候補判断は別設計。
+```
 
 EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
 
