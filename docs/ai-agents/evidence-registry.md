@@ -2687,3 +2687,7 @@ PO原文「進めてくれ」で4件実装承認。root実2ページの72表示�
 ### EV-20260913-PMG-STAGE-CTA
 
 PO原文「この表示に変更してくれ」で3カード下部CTA実装を承認、新規担当委任「進める」でpmg_cta_completionが完成。root差分/画像審査APPROVE、担当実行のunit273/実PG18skip0/E2E12成功とbuild/check/lint終了0を原ログ照合。mypy532診断は非blockingとして明記。正本docs/handoff/pmg-import-delivery-ssot/design.md/recon.md「3段階カードCTA・実装検収」、CARD-PMG-STAGE-CTA-01。reports/pmg-stage-card-actions/verification-manifest.jsonにログ/画面SHA256保存。新PR/CI確認へ。新番号付きGO未受領、マージ/本番反映未実施。
+
+### EV-20260913-FRONTEND-AL-RELEASE
+
+PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
