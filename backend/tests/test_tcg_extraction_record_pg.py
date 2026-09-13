@@ -341,3 +341,29 @@ def test_malformed_history_column_rejects_without_erasing_data(pg):
         with pytest.raises(psycopg2.errors.RaiseException, match="Incompatible extraction attempts column"):
             cur.execute(MIGRATION.read_text())
         cur.execute("ROLLBACK")
+
+
+@pytest.mark.parametrize("received", [False, True])
+def test_simulated_process_exit_keeps_last_committed_stage(pg, monkeypatch, received):
+    seed_products(pg[0])
+    sid, jid = source(pg)
+    fake_model(monkeypatch)
+    if received:
+        original = records.AttemptRecorder.on_response
+
+        def stop(self, response):
+            original(self, response)
+            raise SystemExit("simulated process exit")
+
+        monkeypatch.setattr(records.AttemptRecorder, "on_response", stop)
+    else:
+        def stop():
+            raise SystemExit("simulated process exit")
+
+        fake_model(monkeypatch, action=stop)
+    with pytest.raises(SystemExit):
+        run(pg, sid)
+    attempt, = rows(pg, jid)
+    assert attempt["phase"] == ("received" if received else "started")
+    assert attempt["finished_at"] is None and item_count(pg, jid) == 0
+    assert attempt["response_text"] == (VALID if received else None)

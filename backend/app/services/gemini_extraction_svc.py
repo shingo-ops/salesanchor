@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 
@@ -200,7 +201,7 @@ def call_gemini_extraction(
         full_prompt = (f"{WORK_ID_PROMPT_TEXT}\n商品・作品マスタ（参照値）:"
                        f"{reference_json(work_reference)}\n\n原文:\n{prompt_input}")
 
-    payload = {"model": _GEMINI_MODEL, "contents": full_prompt, "config": {"temperature": 0}}
+    payload: dict[str, Any] = {"model": _GEMINI_MODEL, "contents": full_prompt, "config": {"temperature": 0}}
     if recorder is not None:
         recorder.before_send(payload)
     client = _get_genai_client()
