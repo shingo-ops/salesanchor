@@ -978,3 +978,8 @@ noneは空箱専用判定の対象なし（従来判定へ）、positiveは明�
 壊れた履歴の読取保護はIS JSON OBJECTに加えpg_input_is_valid(human_value, jsonb型名)をCASEのcast前条件に使う。JSON文法として有効なNUL escape/数値overflowもjsonbとして無効なら確認無効として扱う。担当がPG16公式[入力有効性検査](https://www.postgresql.org/docs/16/functions-info.html#FUNCTIONS-INFO-VALIDITY)とREL_16_STABLE jsonb.cを確認し2試験追加。新しい業務判断ではなく§19.3の破損履歴保護を満たす補強。実PG結果は未確認。
 
 実装PRの最初のprocess-artifacts失敗は、カードのPR本文例が正式見出し/ファイル宣言を省略していたため。設計担当の指示不足としてカードを正式テンプレへ補正し実装担当へ伝達。検査の変更/迂回は行わない。
+
+
+### 19.9 限定実装の到達点（2026-09-13）
+
+PR #3470 / HEAD8684707cの実装・技術検証・PR提出を確認。実PG16を含む全pytest2813成功/95skip/失敗0、画面単体6成功。親の指摘4件と不正JSONB/保存小数精度の保護を試験で確認。読取適合判定APPROVE（独立第二者レビューではない）。検証ログ/本人実行と報告の区別はrecon「空箱限定実装・最終検証」参照。承認検査は番号付きGO未受領で失敗を保持し、未マージ/本番未反映/再解析未実施/配信未実施。設計PR自身のマージも別途であり、この記録を許可へ読み替えない。
