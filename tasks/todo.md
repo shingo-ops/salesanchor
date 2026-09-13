@@ -148,3 +148,9 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
+
+## LINE在庫 第1便正式提出
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| 第1便4ファイルの正式提出 | stock_contract_01 / 設計担当 | PO追加委任済み。最新main起点の作業台作成済み | 同一hashコピー/検証/commit後、親検算を経てpush/PR。merge/本番禁止 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-PRODUCT-HANDOFF | 2026-09-13 |
