@@ -7,7 +7,7 @@
 
 担当: POがこのカードを渡した実装役。設計担当自身は実行しない。受領確認としてカードID・作業台・4ファイルの範囲を最初に返す。
 目的: 根拠のない抽出値を拒否し、「①」を1と保持し、「10→残3」を103へ変換しない部品を作る。
-設計審査: 同一AIによる第1便限定APPROVE（design §11）。全体はREVISE。実装移行のPO原文記録はdesign §15。マージ/本番GOではない。
+設計審査: 同一AIによる第1便限定APPROVE（design §11）。全体設計も自己審査APPROVEだが、本カードの実装許可は第1便だけ。実装移行のPO原文記録はdesign §15。マージ/本番GOではない。
 作業台: /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-message-design
 ブランチ: release/line-stock-message-design
 このカードを引き渡す時点で設計担当は編集を終了する。受領者が正規にこの作業台を利用できる場合だけ続行する。所有制御の拒否を解除しない。
@@ -26,14 +26,14 @@
 
 手順3: 正式設計の内容一致を確認
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-message-design && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
-    期待する出力: 233e432862361a2ff9e3b2ce209be108b8ec3f4420b0b5d473d8126148513a0f。一致した場合のみ次へ。
+    期待する出力: 6f435e1a1ceda35498557c9f248d7a38ae7d6677efc7b04714e4874570aa8ee8。一致した場合のみ次へ。
 
 手順4: 実装
     設計文書の§15「第1便の実装境界」全文と§22/25を読み、指定した4ファイルを新規作成する。
     新規ファイルが既に存在した場合は上書きせず停止する。
     validate_stock_evidence、StockEvidenceError、parse_stock_quantityを指定型/戻り値/例外で実装する。
     6試験群をunittest.TestCaseで実装し、入力/期待値は設計の表と一致させる。
-    未解決の全体設計を補完せず、DB・既存worker・画面・配信への呼出接続を作らない。
+    本カードの範囲を拡張せず、DB・既存worker・画面・配信への呼出接続を作らない。
 
 手順5: 部品テスト
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-message-design/backend && python3 -m unittest discover -s tests/stock_contract -p 'test_*.py' -v
@@ -57,6 +57,6 @@ END OF CARD
 
 ## カードの査定記録（実装手順ではない）
 
-機械: scripts/card-lint.shを実行しexit 0、違反0。L24（200字超）は5行の警告のみ。未実装の目視項目も下記で照合した。
+機械: scripts/card-lint.shを実行しexit 0、違反0。L24（200字超）は6行の警告のみ。未実装の目視項目も下記で照合した。
 同一AIの目視: 実在作業台、確定した設計hash、4ファイルだけの権限、停止/報告、既存処理未接続を照合済み。独立レビューではない。
 本カードの成果物は未接続の部品と試験。実装カード作成済みと製品実装済みを区別する。

@@ -17,7 +17,7 @@ ADR: [ADR-154](../../adr/ADR-154-tcg-parity02-gas-python-migration.md)、[ADR-11
 
 区分: 既存の延長・修正。従来のSQR-05設計を本ファイルの末尾へ原文のまま残し、同じ保存先に改訂案を置く。
 PO合意済み: 商品を指定した〆は売り切れ・数量0として在庫表示から除外する。他商品を維持する。原文を複数保存する。混在投稿は商品ごとに判断する。投稿に無い商品は維持する。
-技術方式・DB追加項目・API・切替手順は以下の草案。全体の最終査定はREVISE。第1便の純粋部品だけ設計APPROVE・実装カード作成済み（§11/15）。製品実装・DB操作・マージ・本番反映・再解析・シート配信は本セッション未実施。
+技術方式・DB追加項目・API・切替手順は以下の草案。全体設計の同一AI自己審査はAPPROVE（§11）。第1便の純粋部品カードは作成済み、後続カードは未発行。技術方式全体のPO承認や製品合格を意味しない。製品実装・DB操作・マージ・本番反映・再解析・シート配信は本セッション未実施。
 GO委任は未有効として扱う。文書作成・提出を実装承認または代理GOに読み替えない。
 
 ## 1. POの願いと合意
@@ -177,9 +177,19 @@ DBには既に複数原文を置ける（recon参照）。原文テーブルを�
 
 ## 11. Architect最終査定（2026-09-13）
 
-**全体: REVISE／第1便（§15の原文根拠検証・数量部品）: APPROVE。** 同じAIがPlannerとして範囲と契約を固定した後に自己審査した。独立した第二者レビューではない。
+**全体: APPROVE（設計合格）／第1便: APPROVE。** 同じAIがPlannerとして範囲と契約を固定した後に自己審査した。独立した第二者レビューではない。
 
-全体を実装可能とはしない。現在在庫一覧と配信保留の操作API、切替manifest/差分キューの永続配置、再解析で意味が変わった既適用イベントの解決操作が全体契約として書き切れていない。DB列の統合だけでこれらを補ったことにはならない。後続便の前に該当する§20/21/23/27を更新する。これは製品テストを設計前に要求する理由ではない。
+前回の3残件は§20.1（再解析解決）、§20.2（在庫/配信操作）、§21.1と§27（切替保存と制約）で解消した。設計を作成後、既存配信入口・原文リンク・制約・状態遷移との整合を同一AIで審査した。設計合格は技術方式全体のPO承認、製品検証、切替GOを兼ねない。元のPO要件を変更する決定はない。
+
+| 前回の残件 | 今回固定した内容 | 審査上の限界 |
+|---|---|---|
+| 現在在庫と配信保留の操作 | 一覧/詳細/公開履歴/retry/pause/resume、既存preview/runとの接続、型と拒否条件 | 強制送信や自由な在庫上書きは提供しない |
+| 切替の永続保存 | 6表の統合列定義、baseline publication、制御1行、原文inbox、commit境界のseq | 複数世代の再移行は対象外。初回切替は別の本番カード/GO必須 |
+| 再解析で意味が変化 | 同一枠の項目訂正と前回値支持を監査付きで分離、後続通知は409で保護 | 商品間移動や根拠不足は保留。人が支持できない旧値を強制承認しない |
+
+審査中に見つけた2つの矛盾も修正した。legacyでのpauseはbaseline未作成でも許可する。切替候補はpaused/shadowを必要条件とする専用検査で作り、通常送信のpaused拒否と混同しない。未settledのまま先にpauseして処理不能になる順序も、ロック内で検査してからfreezeする順へ修正した。
+
+残る実測は実装後のK1〜K10・実PG/AI/UI/配信・切替リハーサル。実装合格数0/10のまま。後続カードはこの設計を便ごとの確定ファイル一覧へ落として正式チェックする。今回は第1便カードの範囲を拡張せず、後続の実装開始・マージ・本番操作は行わない。
 
 第1便はこれらに依存しない純粋部品4ファイルに限定する。受入入力/結果、関数の型、原文位置、例外、数値範囲、依存禁止を§15に固定した。範囲外への接続は禁止として分割審査する。
 
@@ -616,6 +626,46 @@ publicationごとに旧管理範囲・対象設定版・送信内容hashを固�
 
 受入: 非管理者拒否、他チャネル選択拒否、競合409、同じ要求2回で適用1回、〆単独create拒否、古い原文で現数量不変、正しく解決したA以外UPDATE0。全7条件は実装後試験。
 
+
+### 20.1 再解析差分の解決（通常の新着〆とは別入口）
+
+新規GET /api/v1/tcg/stock-events/{event_id}/reconciliationは、再解析から作られたpendingイベントだけを対象にする。レスポンスはevent_id、previous_event_id、offer_id、expected_revision、previous（以前確定した項目値）、proposed（今回の候補値）、changed_fields、source_message_id、candidate_set_token、allowed_actions、review_reasons。値の型は§27のsnapshotと同じ。元のappliedイベントは変更しない。
+
+新規POST /api/v1/tcg/stock-events/{event_id}/reconcileの入力はaction（confirm_previous/accept_revision）、expected_revision（整数1以上）、candidate_set_token、idempotency_key（UUID）、reason（1〜1000文字）。対象offerはGETで確定したものだけで、自由な数量や商品IDを入力する欄は作らない。認証/テナント/チャネル、競合409、入力422、対象404、同一キー再試行は既存resolveと同じ規則。
+
+- confirm_previous: 原文を見た管理者が以前の確定値を支持する操作。「解析差分を無視」ボタンにはしない。現在も寄与している旧イベントの項目値と対応先を明示して確認する。数量/価格/販売状態/予定は不変。新しい確認イベントの監査記録に今回の解析結果と、管理者が支持した前回の項目値を別々に保存する。過去の解析結果を今回のモデル出力として代筆しない。
+- accept_revision: 商品/単位/状態/発送枠のidentityが一致し、原文に明示された数量・価格・既存予定の意味/日付だけが変わる場合に許可。現在の当該項目の寄与元がprevious_event_idであることを要求し、既に後続通知で置き換わっていれば409。訂正対象の項目だけを新イベントへ置換し、原投稿時刻は維持する。同時刻矛盾の一般通知を自動決着する例外にはせず、この明示された訂正操作だけで適用する。
+- 別商品/別単位/別状態/別発送枠、予定の対応先が複数、肯定/否定の根拠不足、数量未記載への変化ではaccept_revisionを表示せず、サーバーも422。商品間の在庫移動・複数offerの一括修正は本設計の対象外。前回値を支持できなければ確認待ちのまま原文照合を訂正し、再抽出/再解析する。数量0や前回値支持を強制して保留を消す操作は作らない。
+
+同じ解析版・同じ項目集合の並行確認はevent行とoffer revisionで直列化する。pendingイベントが他の要求で解決済みなら、同じidempotency_keyだけ保存応答を返し、それ以外は409。成功レスポンスは§27のresolution_responseにreconciliationを追加した形。reconciliationはaction、previous_event_id、field_keys、observed_result_digest、confirmed_values、effect_event_idの6キー。通常resolveではnull。actor/時刻/reasonは既存の解決監査列へ保存する。
+
+confirm_previousでは対象pending候補をignoredに確定し、変更項目なしのoffer_patch確認イベントを別IDで作成・appliedにする。候補のpatchを空に書き換えない。確認イベントのsupersedes_event_idは今回解決した候補IDを指し、候補のresolution_response.reconciliation.effect_event_idは確認イベントを指す。候補側のapplied_at/applied_offer_revisionはNULLのまま、確認側に適用時刻/revisionと前後値を保存する。この2記録とoffer更新は同一transactionで確定し、候補に残ったpendingが配信を永久保留する状態を作らない。確認イベントは候補の認証済み解決記録を参照して操作者を追跡し、同じresolution_keyを別行へ複製しない。accept_revisionでは候補自身をappliedにし、effect_event_idも自身のID。
+
+confirm_previousは管理者の判断という別の証跡であり、純粋関数の「同じ結果なら自動確認」と区別する。validated_inputsのdigestは今回の観測入力、confirmed_valuesは以前の値。次の解析変更では再びdigest不一致を検出する。再確認を自動で永久承認しない。accept_revisionでは新しい寄与元を記録するが、対象外の寄与元と未確認digestは引き継ぐ。
+
+受入: 同じofferの数量10→3の訂正でB/C不変、12時の新着10が既にあるとき10時の訂正を409、前回値支持で業務値不変、別商品への移動422、同じキー再試行1回反映、確認後の次の解析変更を再保留。これらは実装後の実PG/API試験。
+
+### 20.2 現在在庫・配信保留を確認するAPIと画面
+
+すべてrequire_super_adminとTCG_SCHEMA固定。GETはDB更新・AI・外部送信をしない。数量/価格はDecimal文字列またはnull、日時はUTC ISO文字列またはnull。
+
+| 入口 | 入出力と効果 |
+|---|---|
+| GET /api/v1/tcg/stock-offers | supplier_code任意、availability=available/sold_out/unknown/all（省略available）、limit=1〜200（省略50）、offset>=0（省略0）。items/total/control_modeを返す。同一読取版で件数と行を取得、supplier_channel_id/product_id/idの順。shadow中は現在在庫として公開せず409 stock_projection_not_active |
+| GET /api/v1/tcg/stock-offers/{offer_id} | 確定行のoffer、plans、provenance（項目別event_id/source_message_id/source_posted_at）、review_issuesを返す。完売もIDで取得可。未存在/他テナント404 |
+| GET /api/v1/tcg/stock-publications/{publication_id} | id/state/row_count/rows_sha256/created_at/ready_atとtarget_results、input_manifest中の検証結果を返す。secretsとraw_textは含めない |
+| POST /api/v1/tcg/stock-publications/{publication_id}/retry | 入力expected_rows_sha256、idempotency_key、reason。同じ固定内容を未成功先だけ再試行。キーの範囲は当該publication。target_results.attemptsへrequest_key/request_hash/actor/reasonも保存し、同じキー/同じ要求は既存試行の結果だけ返す。同じキー/異なる要求は409。成否不明attempt、設定変更、pausedなら409。既存配信ガードを再検査し、成功先を再送しない |
+| POST /api/v1/tcg/stock-delivery/pause | 入力expected_control_revision、reason。制御行ロックでpausedと直前modeを保存しrevisionを進める。以後の新規送信0。送信中を取り消したことにはせず読取監視は継続 |
+| POST /api/v1/tcg/stock-delivery/resume | 同じ入力。pausedから直前modeへだけ戻す。切替待ちのshadowからprojectedへ変更できない。不明attempt/入力drift/設定変更があれば409。既に同じ状態なら同じrevisionの再要求だけ無変更成功 |
+
+一覧itemと詳細offerは§27のoffer snapshotと同じキー。plansも同節の全予定。review_issuesはcode/event_id/field_keyの配列。projection未有効のとき、従来の解析一覧/APIを現在在庫と偽って返さない。画面は既存TCG解析レビューの中に「現在在庫」「解析履歴」を分け、現在在庫は販売状態、履歴は適用当時の状態で絞る。完売履歴から原文を開く導線を維持する。手入力の在庫一括変更欄は追加しない。
+
+既存GET /tcg/distribution/previewには既存キーを残してcontrol_mode、control_revision、blocking_reasons、warning_reasons、latest_publication_id、projection_revision_digestを追加する。blocking_reasonsはcode/event_id/offer_id/source_message_id（不要なIDはnull）の配列。日付だけのpendingはwarning、数量/対象不明のpending・analysis_drift・未完了job・inbox error/未settled・pausedはblocking。画面は保留理由から原文/確認画面へ移動できる。保留解除のためだけの強制送信は作らない。
+
+既存POST /tcg/distribution/runと/run/{target_id}のURL・権限・旧modeでの応答は維持。projectedでは§27のpublicationを作り、既存run_id/results/errorsにpublication_id/stateを追加する。全3先へのrunをK9とし、個別run成功を3先完了と報告しない。ガード不成立ではpublicationの送信0・既存シート不変、errorsに理由を返す。POST処理はeventの保留解決を代行しない。
+
+受入: 既定一覧に完売0行/履歴には存在、他テナント404、未知数量はnull、preview件数と確定出力一致、pause後の新送信0、再開でshadowから本番切替0、retryの旧hash409/成功先再送0。UI文字列はi18n、PageLayout/既存部品を使用し、実装後に日英・暗色・原文行切替を検証する。
+
 ## 21. 初期在庫の切替手順案（2026-09-13）
 
 現在在庫の件数/正解は本番未照会であり、推定値を置かない。未知件数に依存する自然キー統合を行わず、移行リハーサルで実値を埋める。これは移行前ゲートであり、未実装コードの事前合格を要求するものではない。
@@ -629,6 +679,27 @@ publicationごとに旧管理範囲・対象設定版・送信内容hashを固�
 7. 障害時は新規配信を停止して最後に確認したpublicationを維持。既存latest-onlyへ自動復帰して新たな〆を失わせない。旧版へ戻す必要がある場合は、切替後のイベントとの在庫差分と売り切れ復活リスクを示して別途判断する。
 
 リハーサル成果物は基準件数、仮offer数、隔離数、理由別差分、差分キュー滞留、全対象hash、実行時間、復旧結果。件数の整合と理由不明差分0を実測してから本番カードへ渡す。原文/イベント/旧manifestの削除は行わない。
+
+
+### 21.1 保存先と切替境界
+
+§27にtcg_stock_controlとtcg_stock_inboxを追加し、新規表は計6表とする。メモリのキュー、作業者の/tmp、received_atの最大値だけを切替の正本にしない。controlは当該テナントの初回切替を1行で管理し、rollout_idは作成後不変。今回、複数世代のやり直しやprojectedからlegacyへの自動復帰は提供しない。
+
+- baseline_publication_id: 旧出力の12列rows、寄与したanalysis_result/source IDと値、対象設定snapshotを保存したpublication。input_manifest.kind=baseline、state=readyで固定し、送信対象にはできない。既存ready後不変制約を再利用する。
+- 切替候補は別publicationでinput_manifest.kind=cutover。新方式の通常配信はkind=stock、旧modeで共通writerを使う配信はkind=legacy_stock。legacy_stockはlegacy/shadow時だけ送信可能、cutoverはcontrolのapproved_publication_idとの一致が必要、stockはprojected時だけ送信可能。baselineはどのmodeでも送信不可。manifestの共通キーはschema_version=1、kind、rollout_id、control_revision、watermark_seq、source_ids、offer_revisions、target_snapshots、validation（blocking_reasons/warning_reasons）、baseline_publication_id。baselineでは不要なwatermark/基準IDはnull、offer_revisionsは空配列。raw_text/secretsは入れない。
+- inboxは原文IDにつき1行。source保存と同じtransactionでseqを制御行から払い出し、sourceの再利用は同じinboxを再利用する。import_job_messagesは取込との既存リンクとして維持する。seqは「確定順の境界」であり、在庫更新の新旧判定には原投稿時刻を使う。
+- mode=legacyでは新しい在庫へ反映せず既存処理を継続する。shadow開始の制御行ロック下でbaselineを保存し、基準source ID集合をinboxへseedしてからmode=shadowへ進める。それ以降の全新規原文は同じ制御行を先にロックしてinboxへ登録する。これにより基準取得と新規登録の隙間を作らない。
+- baselineの分析行をそのまま自動確定しない。対象原文をv5で検証し、在庫候補と旧出力の対応を確認する。旧版だけから新イベントを自動生成しない規則は維持する。対応不明/数量不明/価格枠重複はpending。移行候補はmode=shadowのofferであり、公開入口は旧出力だけを読む。
+- inbox.state=pendingからsettledは、当該原文のイベント一覧をDBに保存した同じtransactionで進める。pendingイベントを含み得るためsettledを「在庫確定」と表示しない。抽出/保存失敗はerror。診断再試行でerror→pendingのみ許可し、エラーを削除しない。event_idsは同じsourceの既存イベントだけを保持する。
+- 切替候補作成時はcontrolをロックしてwatermark候補=next_seq-1を読み、その範囲のinboxがsettled、在庫/解析blocking 0、実行中/成否不明の旧配信0を先に検査する。不成立ならshadowを維持して保留理由を返す。成立した同じtransactionでpaused（resume_mode=shadow）とwatermark_seqを固定する。kind=cutoverのready検査はこのpaused/shadowを必須条件とし、通常送信を止めるpaused自体とwatermark後の待機原文を理由に候補生成を拒否しない。それ以外の数量/解析/権限/設定検査は維持する。watermark以降の原文取込は継続してpendingに置き、承認候補を後から書き換えない。解析は継続可能だがofferへの反映を保留する。
+- 正規の本番切替カードは実際のrollout_id/control revision/候補publication ID/hash/watermarkを列挙し、POのGOと既存承認経路を確認する。切替直前に入力digest/対象設定/保留/試験根拠を再照合し、controlのapproved_publication_idを候補へ設定してmode=projectedへ変更する。この操作は通常APIへ公開しない。pause/resumeや認証済み管理者というだけで初回切替を許可しない。
+- projected開始時は承認した候補版を先に配信する。成功/失敗を記録後、watermark後のinboxを共通入口で処理し、次のstock publicationへ進める。初回配信がpartialまたは成否不明なら次版の送信を保留する。プロセス再起動後はcontrol/inbox/publicationから再開し、同じsource/event_keyを二重適用しない。
+
+原文保存と投影更新はcontrol→channel→analysis_results→event→offer→planの順でロックする。通常処理の追加直列化は短いDB処理だけで、外部AI/Sheets通信中はロックを保持しない。原文取込以外からsourceを作る既存入口も同じ登録入口へ接続する。配信直前にはactive source ID集合とinbox登録を照合し、未登録があれば保留する。過去のinactive sourceを全件再登録する意味ではない。通常のsource作成/再利用入口ではis_activeにかかわらずshadow開始後の対象原文を登録する。
+
+既存の旧配信入口もcontrolに従う。shadowでは旧出力を使いながらtarget予約/attempt記録は新しい共通writerを通す。pausedでは旧新とも新規送信を開始しない。これらの入口接続と初回切替が同時に検証できるまで本番GOを求めない。
+
+受入: baseline固定直前/直後/処理途中停止の3境界でsource登録欠落0、同じ原文再取込でinbox1行、watermark後の遅着が承認版を変更しない、再起動で2重適用0、未解決/エラーあり切替0、pausedで旧run送信0、初回partial時に新版送信0。実PGと故障注入で確認する。実件数/サイズ/実行時間はリハーサル記録で埋め、推定値を承認根拠にしない。
 
 ### 残件の整理と自己審査
 
@@ -795,7 +866,7 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 
 ## 27. 保存・再解析確認・配信の統合契約（2026-09-13）
 
-本節を保存列・snapshot・確認証跡・状態遷移の唯一の現行定義とする。旧§28/29を本節に統合した。§18/20/22/24/26の同じ項目は本節で置換し、過去の未確定記録は審査履歴としてのみ読む。業務要件は§1〜5、日付は§17、公開は§19、手動確認は§20、切替は§21、抽出は§22、履歴は§23、数量は§25を併用する。各表の列はここへ集約し、複数節から推測してmigrationを作らない。SQLファイルは未作成・未実行。型後の「?」はNULL可、それ以外はNOT NULL。JSONBはobject/arrayを記した型だけ許可。IDはUUID、既存参照の削除はRESTRICT。現在の基準はこれまでの調査SHAに固定し、実装開始時のmain差分を再照合する。
+本節を保存列・snapshot・確認証跡・状態遷移の唯一の現行定義とする。旧§28/29を本節に統合した。§18/20/22/24/26の同じ項目は本節で置換し、過去の未確定記録は審査履歴としてのみ読む。業務要件は§1〜5、日付は§17、公開は§19、手動確認は§20、切替は§21、抽出は§22、履歴は§23、数量は§25を併用する。各表の列はここへ集約し、複数節から推測してmigrationを作らない。SQLファイルは未作成・未実行。型後の「?」はNULL可、それ以外はNOT NULL。JSONBはobject/arrayを記した型だけ許可。IDはcontrol.idのSMALLINTを除いてUUID、既存参照の削除はRESTRICT。現在の基準はこれまでの調査SHAに固定し、実装開始時のmain差分を再照合する。
 
 | テーブル | 統合した列定義 |
 |---|---|
@@ -803,6 +874,8 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 | tcg_stock_events | id UUID PK、source_message_id UUID FK、extraction_item_id UUID? FK、offer_id UUID? FK、event_kind TEXT、event_key TEXT UNIQUE、engine_version TEXT、source_posted_at TIMESTAMPTZ?、evidence JSONB object、patch JSONB object、decision TEXT、review_reasons JSONB array、before_values/after_values JSONB object、applied_offer_revision BIGINT?、analysis_input_snapshot/analysis_result_snapshot JSONB object、analysis_input_digest/analysis_result_digest/proposal_input_digest TEXT、supersedes_event_id UUID? FK、resolution_key TEXT? UNIQUE、resolution_request_hash TEXT?、resolved_by TEXT?、resolved_at TIMESTAMPTZ?、resolution_response JSONB object?、created_at TIMESTAMPTZ DEFAULT now()、applied_at TIMESTAMPTZ? |
 | tcg_restock_plans | id UUID PK、offer_id UUID FK、polarity TEXT、certainty_raw TEXT、date_kind/date_precision/date_raw TEXT、date_start/date_end DATE?、resolution TEXT、review_reason TEXT?、source_event_id UUID FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
 | tcg_stock_publications | id UUID PK、state TEXT、schema_version INTEGER、input_manifest JSONB object、rows JSONB array、rows_sha256 TEXT?、row_count INTEGER、target_results JSONB object、created_at TIMESTAMPTZ DEFAULT now()、ready_at TIMESTAMPTZ? |
+| tcg_stock_control | id SMALLINT PK CHECK(id=1)、rollout_id UUID UNIQUE、mode TEXT（legacy/shadow/paused/projected）、resume_mode TEXT?（legacy/shadow/projected）、revision BIGINT DEFAULT 1、next_seq BIGINT DEFAULT 1、watermark_seq BIGINT?、baseline_publication_id UUID? FK、approved_publication_id UUID? FK、last_reason TEXT?、updated_by TEXT?、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
+| tcg_stock_inbox | source_message_id UUID PK FK、seq BIGINT UNIQUE、state TEXT（pending/settled/error）、event_ids JSONB array、error_code TEXT?、attempt_count INTEGER DEFAULT 0、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
 | extraction_items（追加列） | evidence_payload JSONB object?。既存行はNULL、v5ではformat_version=5を必須 |
 | tcg_distribution_targets（追加列） | active_publication_id UUID? FK。配信先行のロック下で予約し、解決済みの試行だけ解除。期限だけで自動解除しない |
 
@@ -814,9 +887,19 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 - offersの数量状態とprice>=0は§24、eventsの適用状態整合は§24、plansの日付整合は§24。resolution_key等の手動解決5列は全NULLまたは全非NULL。JSON object?のresolution_responseもこの組に含める。
 - sha256/digest/request_hashは64桁の小文字16進。入力snapshotとhash、結果snapshotとhashの一致は保存入口で検証する。比較規約はキー順固定・UTF-8・空白なし・Decimalを文字列・日時をUTC ISO形式。揮発的な解析時刻等は解析result hashから除き、適用監査時刻は別列で保存。
 - publicationsはready/delivering/completed/partialでrows_sha256/ready_atが非NULL、row_count=rowsのデータ行数（ヘッダー除く）。rowsはヘッダーを含む12列配列で、全セル文字列。ready以後は内容とmanifestを変更不可。
-- 対象ごとのtarget_resultsはtarget IDをキーとしてtarget設定snapshot、status、attempts配列、verified_rows/hash/timeを保持。各attemptはattempt_id/started_at/finished_at nullable/outcome/error nullable。返答不明をsuccessへ丸めない。
+- 対象ごとのtarget_resultsはtarget IDをキーとしてtarget設定snapshot、status、attempts配列、verified_rows/hash/timeを保持。各attemptはattempt_id/request_key/request_hash/actor/reason/started_at/finished_at nullable/outcome/error nullable。初回送信でもサーバーがrequest_keyを発行する。返答不明をsuccessへ丸めない。
 - FKのチャネル一致/自身以外のoffer参照/適用後不変は制約トリガー案を維持。source/extraction参照の外部削除はRESTRICTで失敗させる設計で、既存削除の成功互換は保証しない。未知の運用が失敗すれば停止して報告する。
 - 索引: offers(channel,product,unit,condition)、events(source_message_id,created_at,id)、events(offer_id,created_at,id)、events(decision,created_at,id)、plans(offer_id,source_event_id)、publications(state,created_at,id)。後方FK参照の必要索引をmigration検査で確認。商品の自然キーを新UNIQUEにしない。
+
+### control/inboxの追加制約
+
+controlのrevision/next_seqは1以上、watermark_seqはnullまたは0以上かつnext_seq未満。pausedのときだけresume_mode非NULL。shadow/projectedおよびpausedでresume_modeがshadow/projectedならbaseline_publication_id非NULL。legacyとpaused/legacyではbaselineはNULL可。projectedではapproved_publication_id非NULL。pausedでresume_mode=projectedの場合も承認版参照を維持する。初期行はlegacy、baseline/承認版/watermark/resume_modeはnull。controlの削除・rollout_id変更は禁止する。
+
+baseline参照はkind=baseline/ready、承認版参照はkind=cutoverかつready到達済み、同じrollout_idであることを制約トリガーで検査する。制御列の更新は共通サービスだけが行い、revision一致を要求する。shadow→paused→projected以外の初回切替は禁止。resumeは保存済みresume_modeにしか戻せない。
+
+inboxはseq>=1、attempt_count>=0、errorならerror_code非NULL。state/参照不変条件をトリガーと共通入口で検査し、同じsource IDの付替え・seq変更を許可しない。索引はinbox(state,seq)。settledのevent_idsは全件source一致、空配列を正常な無関係判定の証拠として使わず、原文分類イベントを少なくとも1件残す。
+
+入力manifest/target設定に原文・秘密を入れず、個別原文への権限制御されたリンクを使う。以上を含む物理新規表は計6表で、§18等の「4表」はその時点の草案数。正式migrationは本節の列一覧を使用する。
 
 ### 反映処理の入口と呼出順
 
@@ -831,7 +914,7 @@ backend/app内のPython245ファイルをAST構文解析、構文失敗0。対�
 | stockイベント手動解決API | 原文/候補集合/対象revisionを再照合して同じ適用入口へ |
 | distribution | 保存済みofferのprojectionとanalysis_driftを検査してpublication生成。analysis_resultsから数量を直出力しない |
 
-共通入口ではチャネル→analysis_results→event→offer→planの順（同種複数行はUUID昇順）で行ロックし、結果digestと対象revisionを再照合する。既存解析の結果書込トランザクション内からチャネルロックへ入らず、commit後に接続して逆順ロックを避ける。外部AI/Sheets呼出し中はDBトランザクションを保持しない。
+共通入口ではcontrol→チャネル→analysis_results→event→offer→planの順（同種複数行はUUID昇順）で行ロックし、結果digestと対象revisionを再照合する。既存解析の結果書込トランザクション内からチャネルロックへ入らず、commit後に接続して逆順ロックを避ける。外部AI/Sheets呼出し中はDBトランザクションを保持しない。
 
 publication生成と解析input snapshot読取はREPEATABLE READの短いトランザクションで同じ読取版を使用する。[PostgreSQL 16公式](https://www.postgresql.org/docs/16/transaction-iso.html)はREAD COMMITTEDでは同じトランザクションの連続SELECTでも異なる版を見得ること、REPEATABLE READの更新競合では全体再試行が必要なことを規定する。DB競合時は外部送信前にトランザクション全体を最大3回再試行し、以後保留。
 
@@ -851,6 +934,8 @@ publication生成と解析input snapshot読取はREPEATABLE READの短いトラ�
 数量が同じでも原投稿時刻が新しい在庫通知はappliedとし、quantity_event_idを進める。10時=10個→12時=10個→遅着した11時=5個なら、最後はstaleで10個を維持する。再解析の確認イベントはこの「新しい在庫通知」と別扱いで、数量根拠の時刻を進めない。
 
 pendingのまま候補再検査できるが、source/evidence/patch/解析版は変更不可。offer_idの選択とreview_reasons、手動解決情報だけが変更可能。同時操作はchannelとevent行をロックして判定する。参照トリガーは適用時にevent.offer_id=参照先offer.id、sourceとofferのchannel一致、source_posted_atの写し一致を要求する。原文のチャネル/時刻変更が既存イベントと矛盾する場合は拒否し、原文訂正は別IDとして扱う。
+
+手動reconcileのconfirm_previousは数量等の業務値を変えない確認イベント、accept_revisionは以前の原投稿時刻を保持した訂正イベントとして扱う（§20.1）。通常通知の時刻順序検査を一般的に緩めない。
 
 planイベントでもappliedならoffer.revisionを1増やし、applied_offer_revisionに保存する。quantity_event_idと数量は触らない。日付だけのpendingは数量イベントと分離する。すべての在庫更新でbefore/afterは当該offer/planだけを含み、他枠をまとめて上書きしない。
 
@@ -876,7 +961,7 @@ proposalはevent_kind、target_selector（channel_id/product_id/unit_id/conditio
 
 before_values/after_valuesは必ずoffer、plans、validated_inputsの3キー。offerはid/revision/supplier_channel_id/product_id/unit_id/condition_id/shipping_label/shipping_evidence/quantity/price/availability/quantity_event_id/price_event_id/condition_event_id/validation_event_idを持つ。plansは当該offerの全予定（否定済みも含む）をid順で保存し、各要素はid/revision/polarity/certainty_raw/date_kind/date_precision/date_raw/date_start/date_end/resolution/review_reason/source_event_id。validated_inputsの要素は次項の3キーに固定する。他offerの値は含めない。未適用はoffer=null/plans=[]/validated_inputs=[]。新規offerのbeforeも同じ空形、afterは生成後の値。適用後はその時点の値として不変。current_offerは別の現在値をAPIで返す。
 
-resolution_responseはevent_id/decision/offer_id/applied_offer_revision/reasonの5キーに固定。入力reasonをここに保存して監査できるようにする。任意フィールド修正や原投稿時刻の書換えを手動解決に紛れ込ませない。
+resolution_responseはevent_id/decision/offer_id/applied_offer_revision/reason/reconciliationの6キーに固定。reconciliationは通常resolveでnull、再解析差分の手動解決時は§20.1の6キーobject。入力reasonをここに保存して監査できるようにする。任意フィールド修正や原投稿時刻の書換えを手動解決に紛れ込ませない。
 
 ### 純粋な提案生成
 
@@ -922,7 +1007,7 @@ validation_event_idは最新の確認記録を指し、数量の根拠quantity_e
 | 確認後の再試行 | 新確認記録を保存、過去証跡は不変 | 同じ確認の二重適用0、競合rollbackで部分変更0 |
 | 配信 | 全寄与元をSELECT検査、同じ版を3先へ、成否不明は予約保持 | K9の3先全行一致、失敗先のみ再試行、旧応答で予約解除0 |
 
-今回は文書契約の整理であり、上表の製品検証は未実施。設計全体は§11の最終査定でREVISE。第1便の原文根拠/数量部品だけは設計合格・カードチェック完了で、在庫反映を含む本節全体の実装カードは未発行。便ごとの実装可否は§11を参照する。既に解消した仕様を次の追補として再設計しない。設計全体の合格/POによる技術方式承認/実装/マージ/本番反映を、この限定APPROVEから宣言しない。
+今回は文書契約の整理であり、上表の製品検証は未実施。設計全体は§11の最終査定でAPPROVE。第1便はカードチェック完了で、在庫反映を含む後続便の実装カードは未発行。便ごとの実装可否は§11を参照する。既に解消した仕様を次の追補として再設計しない。設計全体の合格/POによる技術方式承認/実装/マージ/本番反映を、この限定APPROVEから宣言しない。
 
 ---
 

@@ -145,7 +145,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | 要件PO合意・実装移行承認記録済み。PR #3456。全体最終査定REVISE、第1便の原文根拠/数量部品は設計APPROVE。4ファイル限定カード作成・card-lint合格。製品未着手・担当未起動 | PO指定の実装役へ第1便カードを引き継ぎ、部品試験と差分を検収。全体の在庫操作API/切替保存先/意味変更の解決は後続便前に完成する | docs/handoff/tcg-import-latest-only/design.md §11/15 / docs/handoff/tcg-import-latest-only/card-stock-contract-01.md / EV-20260913-LINE-CONTRACT-CARD-01 | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | 要件PO合意・実装移行承認記録済み。PR #3456。在庫/配信API・再解析解決・切替control/inboxを統合し全体設計自己審査APPROVE。第1便カードは4ファイル限定。製品未着手・担当未起動 | 第1便の実装差分と部品試験を検収し、6表の保存/統合処理を後続の正式カードへ分割する。技術方式全体のPO承認・マージ・本番切替は別段階 | docs/handoff/tcg-import-latest-only/design.md §11/20/21/27 / EV-20260913-LINE-FINAL-DESIGN-REVIEW / PR #3456 | 2026-09-13 |
 
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）

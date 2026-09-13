@@ -372,6 +372,16 @@ fetch後のorigin/mainはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870。専用設計
 
 全体の正式査定で現在在庫/切替/意味変更時の解決操作の記述不足を残した。第1便の純粋部品はこの未解決に依存せず、変更ファイル4件と6試験群をdesign §15へ固定した。実装/モデル呼出/DB操作0。
 
+## 残る操作契約の接続確認（2026-09-13）
+
+基準mainはGitHub branches/mainの読取でもaf269ae20ed2f52e6cd49ba0403ad7799e3a3870と一致。専用作業台の製品ファイルは未変更。
+
+- backend/app/routers/tcg_distribution.py:154/163/172: preview、全先run、個別runが存在。新しい履歴/保留APIを追加してもこのURLとsuper_admin境界を維持する設計とした。
+- backend/app/services/tcg_distribution_svc.py:272/629: previewとrunは別集計。runはanalysis_runs未完了、extraction_jobsのpending/running/extractedを阻止する。新previewと送信に同じprojection検査を使い、既存ガードを削除しない。
+- migrations/20260910_010000_tcg_import_message_links.sql:21: import_job_messagesのキーはimport_job_id/source_message_id。取込との多対多リンクであり、切替境界の順番・処理状態・停止を持つキューではないため、同表への意味の流用をせずcontrol/inboxを追加する設計とした。
+
+設計審査ではAPI/保存先/拒否条件/状態遷移を照合。legacyのpauseとbaseline必須制約の矛盾、freeze前の未settled確認、切替候補のpaused条件、前回値支持後の候補終端化を文書内で修正した。コード/DB/モデルによる新方式の試験は0。全体設計APPROVEは同一AIの自己審査であり、実装の独立レビュー・POの切替GOではない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

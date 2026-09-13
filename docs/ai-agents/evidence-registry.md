@@ -2933,3 +2933,23 @@ tradeoff: stage 1 is intentionally not connected to inventory; it cannot yet pre
 decision: prepare bounded implementation card without launching an executor or issuing GO
 follow_up: executor implements stage 1 and returns code/test evidence; finalize remaining whole-design contracts before subsequent cards
 ```
+
+```text
+id: EV-20260913-LINE-FINAL-DESIGN-REVIEW
+date: 2026-09-13
+agent: Codex design partner
+task: 在庫操作・再解析解決・初回切替の契約を完成
+scope: design review only; no implementation, DB, external delivery or new executor
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md 残る操作契約の接続確認
+    summary: verified current main af269ae2; existing preview/run and import-job source links inspected
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/design.md sections 20.1, 20.2, 21.1 and 27
+    summary: reconciliation/API shapes, control/inbox and cutover watermark defined; six total new tables; old publication and source history retained
+confidence: design contracts reviewed; implementation behavior unverified
+tradeoff: storage and short control-row serialization increase; identity-changing reinterpretation remains pending rather than moving stock across products; production cutover needs separate concrete card and PO GO
+validation: diff whitespace, card-lint, task-state, ADR-index, design/citation/maintenance, unchanged stage-1 contract, card hash and legacy preservation passed; two draft table-count assertions included an existing table and caller-list rows; corrected the inspection to the schema table only and verified six new tables
+decision: overall design APPROVE by same-AI self-review; not independent review or PO approval; stage-1 card scope remains four new pure-component files
+follow_up: execute and review authorized stage-1 card through designated executor; issue later bounded cards and run K1-K10 product acceptance before production
+```

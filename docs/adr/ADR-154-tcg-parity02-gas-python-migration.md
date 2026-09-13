@@ -102,3 +102,9 @@ PO指示によりテスト時のGemini実呼出し0。事前は機械契約を�
 
 全体の最終査定はREVISE。原文根拠検証と数量解釈だけを純粋部品4ファイルへ分割し、第1便の同一AI自己審査はAPPROVE、正式カードチェック合格。理由: 既存数量関数の5例中3不一致を具体的に検証でき、未完成の在庫API/切替/再解析解決から独立して実装できるため。現在在庫へ未接続なので業務改善完了とはしない。
 設計と限界: [design §11/15](../handoff/tcg-import-latest-only/design.md)。引き継ぎ: [第1便カード](../handoff/tcg-import-latest-only/card-stock-contract-01.md)。根拠: EV-20260913-LINE-CONTRACT-CARD-01。製品実装・DB変更・マージは未実施。
+
+### 全体設計の査定更新（2026-09-13・PO決定への昇格ではない）
+
+同一AIの全体自己審査APPROVE。前回残した在庫/配信API、再解析差分の解決、切替の永続保存を既存design §20/21/27へ統合した。追加表はcontrol/inboxを含む6表。Why: 既存import_job_messagesは原文とのリンクだけで処理順/保留/切替停止を持たず、メモリや最大日時だけでは承認版の境界を固定できないため。原文登録と同じtransactionのinbox、固定publication、旧値支持と明示訂正の別監査を採用する。
+
+これは方式全体のPO承認、独立レビュー、実装/DB検証、初回切替GOではない。第1便カードの4ファイル範囲を拡張せず、製品は未着手。根拠: EV-20260913-LINE-FINAL-DESIGN-REVIEW、[design §11](../handoff/tcg-import-latest-only/design.md)、[recon](../handoff/tcg-import-latest-only/recon.md)。
