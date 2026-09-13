@@ -29,3 +29,16 @@ mode: handoff
 CIで模擬Geminiと隔離PostgreSQLによる正常/不正ID/型番作品限定/旧版/配信要確認除外/未migration/参照変更の試験を行う。実行件数と成否を生出力から記録。未実行を成功扱いにしない。
 停止時は手順番号・最後のコマンド・理由を完了報告へ記す。本報告はカードCARD-LINE-GEMINI-WORK-ID-01の実行結果である、と冒頭に記す。完了報告の本文に検証の生出力を全文含める（POへの説明は要点を併記可）。
 END OF CARD
+
+
+## 後続カード CARD-LINE-WORK-SPAN-02
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: guards/04-worktree.md、guards/11-lint.md。設計はdesign-keyword.md §16.12、自己審査APPROVE。PO修正着手承認「進めてくれ」。
+作業場所: release/line-work-id-production-record（origin/main ee455fb1起点、既存2709f628は本番証跡の文書のみ）。
+許可: gemini_extraction_svc.py、tcg_work_reference.py、tcg_analyzer_svc.py、tasks/tcg_extraction.py、tests/test_tcg_work_id.py、tests/test_tcg_work_matching_integration.py、既存design-keyword.md/recon.md、ADR154のWhyと生成索引、evidence-registry.md、tasks/todo.md、本カード。
+手順1 span出力契約・p2版・p1互換・内容を含まない診断を設計どおり実装。
+手順2 make lint-ci、check-task-state.sh、card-lint.sh、diff --check。Docker不在では実PGはCIで実行。Gemini実呼出しは禁止。
+手順3 ready PR作成、正式カード検査違反0を先に確認。設計の再解釈・推測補正・DB/CI/secrets変更・追加本番操作は禁止。
+期待: 模擬8種拒否/正常span、p1/p2実PG互換が成功。報告は本カードの実行結果として自己レビューとCI実行結果を区別する。GO3441を追加PRへ流用しない。
+END OF CARD

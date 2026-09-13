@@ -68,7 +68,12 @@ WORK_ID_PROMPT_TEXT = (
     "RAW_STATEは原文の状態語、RAW_MEMOはその商品の原文の補足。なければ空欄。"
     "RAW_SOURCE_LINE_SPANは商品名と数量価格を含む最小の連続Line ID範囲。"
     "Systemの[L0001]形式の位置情報だけを使い、新しいLine IDを作らない。"
+    "RAW_SOURCE_LINE_SPANは必須。単行はL0001、複数行はL0001-L0005の形式だけで返す。"
+    "入力の角括弧[]は出力しない。区切りは半角ハイフン-を1つだけ使う。"
+    "行番号の列挙、カンマ、波ダッシュ、空白、説明文は禁止。"
+    "例えば商品名がL0001、価格がL0003、数量がL0005ならL0001-L0005を返す。"
     "RAW_WORK_NAMEとRAW_WORK_SOURCE_LINE_SPANは原文に実在する作品表記と位置。"
+    "RAW_WORK_SOURCE_LINE_SPANも単行L0001または連続範囲L0001-L0005の形式にする。"
     "原文に作品表記がなければこの2列は空欄。推定した作品名を代入しない。"
     "作品IDは原文作品欄と別のRESOLVED_WORK_ID列だけに返す。"
     "商品名・数量・価格・単位・状態・メモをマスタの値に置き換えない。"
@@ -297,7 +302,13 @@ def parse_extraction_response(
             line_end = int(span_m.group(2)) if span_m.group(2) else line_start
         else:
             if version >= 3:
-                raise ValueError("v3 extraction has an invalid product source span")
+                # Shape only: never include customer text or model output in errors/logs.
+                detail = ""
+                if version == 4:
+                    brackets = "[" in raw_span or "]" in raw_span
+                    alphabet = all(c in "L0123456789-" for c in raw_span)
+                    detail = f" (length={len(raw_span)}, brackets={brackets}, allowed_chars={alphabet})"
+                raise ValueError(f"v{version} extraction has an invalid product source span{detail}")
             # パース不能の span は警告のみ、先頭行扱いで続行
             logger.warning(
                 "[gemini_extraction] unparseable span: %r", raw_span
