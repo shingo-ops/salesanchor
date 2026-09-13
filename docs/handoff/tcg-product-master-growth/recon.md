@@ -1479,3 +1479,14 @@ main e27c2f599dc81aa28c32f21bb13fbdf3920c7144を文書専用枝へ統合。7文�
 
 
 CARD09初回CI: PR3494、HEAD5cca283e、Backend run34767132247/job103750026968は3失敗/3647成功/95skip、257.14秒。追加記録serviceのcoverage92%。3件は従来のエラー応答非公開契約、作品矛盾の固定文言互換、旧004切替試験で追加service/schema適用を追従していなかったfixture。返答全文の保存は記録付き通常処理に限定し、記録なしの既存エラー戻り値は空を維持。作品矛盾は固定WORK_ID_CONFLICTコードと従来固定文言を分離。004試験に正式migration/追加serviceのschema切替を追加。新テストの本番DDL複製1件は正式migration由来fixtureへ修正済み、schema-dup検査成功。実Gemini0。失敗を合格扱いせず、修正後のCIを実施する。
+
+
+### CARD09実装・正式CI結果（2026-09-14）
+
+製品HEAD c4624ec17e89a747f13558c926470d191f140923、PR https://github.com/shingo-ops/salesanchor/pull/3494 。Backend run34767671465/job103751462713の完了ログを直接取得し、3654 passed / 96 skipped / 0 failed / 309 warnings、270.82秒、全体coverage64.85%（基準60%）、新記録service94%を確認。skipは成功件数に含めない。Migration SQL run34767671414の実DB全件ドライラン/追加SQL、Tenant Schema Integrity、test-schema-dup、backend lintは成功。ローカルDocker不在につきローカルpytestは未実行。
+
+偽SDK応答と隔離PGで、入力・応答・明細UUIDの対応、各保存段階の通常例外/soft中断、失敗時の新明細0、再試行履歴、同時取得、容量境界、管理者閲覧、親削除連鎖、部分schema拒否、44試行の保存I/O条件を検証。SystemExitによる中断2ケースは保存済みstarted/receivedが終了未確認で残ることを確認した模擬試験であり、OS強制終了や本番負荷試験ではない。prompt/modelの定数3件は基準から不変、300/330秒制限も維持。実Gemini呼出0、本番接続/更新/再解析/配信0。
+
+同一AIによる実装差分の自己確認では、カード16ファイルの範囲、記録前の結果確定防止、終端履歴の上書き防止、非公開本文を一般エラーへ出さない契約を照合。独立した第二者レビューやPO指定の最終レビューとは称しない。今回の試験は記録・失敗制御の検証であり、Geminiの商品正答率の測定ではない。
+
+Process Artifacts Gate run34767671426/job103751447251はPR本文のGO記録欠落のみで失敗。POのGO #3494未受領のため、記録を創作せず保持する。全CI合格/マージ可能承認済みとは宣言しない。状態: 設計自己審査済み・実装開始承認済み・実装/正式PG検証済み・PR3494提出済み。次はPO指定の最終レビューと本PRの番号付きGO。マージ/本番反映未実施。従前の13明細保留、単位と要確認フラグの不整合は未解消。
