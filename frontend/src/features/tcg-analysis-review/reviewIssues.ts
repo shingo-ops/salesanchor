@@ -1,7 +1,9 @@
-export type AtomicReviewIssueId = 'PRODUCT_ID_UNRESOLVED' | 'UNIT_UNRESOLVED' | 'EXCLUDED' | 'PRODUCT_MASTER_UNREGISTERED' | 'SUPPLIER_UNREGISTERED' | 'PRODUCT_CONFIRMED';
+import i18n from "../../i18n";
+export type AtomicReviewIssueId = 'PRODUCT_ID_UNRESOLVED' | 'UNIT_UNRESOLVED' | 'EXCLUDED' | 'PRODUCT_MASTER_UNREGISTERED' | 'SUPPLIER_UNREGISTERED' | 'PRODUCT_CONFIRMED' | 'CONDITION_REVIEW_REQUIRED';
 export type ReviewIssuePresentation = { id: AtomicReviewIssueId | 'NEEDS_REVIEW'; label: string; tone: 'warning' | 'danger' | 'success'; visible: boolean };
 
 export const REVIEW_ISSUES: Record<AtomicReviewIssueId, ReviewIssuePresentation> = {
+  CONDITION_REVIEW_REQUIRED: { id: 'CONDITION_REVIEW_REQUIRED', get label() { return i18n.t("conditionReview.needsReview"); }, tone: 'warning', visible: true },
   PRODUCT_ID_UNRESOLVED: { id: 'PRODUCT_ID_UNRESOLVED', label: '商品ID未解決', tone: 'danger', visible: false },
   UNIT_UNRESOLVED: { id: 'UNIT_UNRESOLVED', label: '単位未解決', tone: 'warning', visible: true },
   EXCLUDED: { id: 'EXCLUDED', label: '除外対象', tone: 'danger', visible: true },
@@ -10,7 +12,7 @@ export const REVIEW_ISSUES: Record<AtomicReviewIssueId, ReviewIssuePresentation>
   PRODUCT_CONFIRMED: { id: 'PRODUCT_CONFIRMED', label: '確認済み', tone: 'success', visible: true },
 };
 
-const needsReviewIssueIds: AtomicReviewIssueId[] = ['PRODUCT_ID_UNRESOLVED', 'UNIT_UNRESOLVED', 'EXCLUDED'];
+const needsReviewIssueIds: AtomicReviewIssueId[] = ['PRODUCT_ID_UNRESOLVED', 'UNIT_UNRESOLVED', 'EXCLUDED', 'CONDITION_REVIEW_REQUIRED'];
 const needsReviewBadge: ReviewIssuePresentation = { id: 'NEEDS_REVIEW', label: '要確認', tone: 'warning', visible: true };
 
 export const hasNeedsReview = (issues: string[]) => needsReviewIssueIds.some((issue) => issues.includes(issue));
@@ -20,7 +22,7 @@ export const reviewIssueBadges = (issues: string[]) => {
     .filter((id): id is AtomicReviewIssueId => id in REVIEW_ISSUES)
     .map((id) => REVIEW_ISSUES[id])
     .filter((issue) => issue.visible);
-  const hasOnlyPidDerivedReview = issues.includes('PRODUCT_MASTER_UNREGISTERED') && !issues.includes('UNIT_UNRESOLVED') && !issues.includes('EXCLUDED');
+  const hasOnlyPidDerivedReview = issues.includes('PRODUCT_MASTER_UNREGISTERED') && !issues.includes('UNIT_UNRESOLVED') && !issues.includes('EXCLUDED') && !issues.includes('CONDITION_REVIEW_REQUIRED');
   return [...atomicBadges, ...(hasNeedsReview(issues) && !hasOnlyPidDerivedReview ? [needsReviewBadge] : [])];
 };
 
