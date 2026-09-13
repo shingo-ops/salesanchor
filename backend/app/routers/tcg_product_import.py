@@ -22,9 +22,11 @@ tcg_product_import_svc から既存の create_product を呼ぶ。
 """
 from __future__ import annotations
 
+import csv
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -32,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.services import tcg_product_roundtrip_svc as roundtrip
 from app.services.tcg_product_import_svc import commit_import, preview
 from app.tcg_config import TCG_SCHEMA
 
@@ -137,6 +140,24 @@ async def list_products(
 # 取り込み
 # ---------------------------------------------------------------------------
 
+@router.get("/tcg/products/export")
+async def export_products(
+    query: str = Query(default=""),
+    work_id: UUID | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> Response:
+    try:
+        raw = await roundtrip.export_csv(db, query, str(work_id) if work_id else None)
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
+    return Response(raw, media_type="text/csv; charset=utf-8", headers={
+        "Content-Disposition": 'attachment; filename="tcg-products-update.csv"',
+        "Cache-Control": "no-store",
+    })
+
 
 async def _read_csv(file: UploadFile) -> bytes:
     """アップロードされた CSV を読む。形と大きさをここで弾く。"""
@@ -172,7 +193,14 @@ async def preview_import(
     画面はこの結果を確認の段で見せる。止める判定のある行は登録されない。
     """
     raw = await _read_csv(file)
-    return await preview(db, raw, file.filename or "")
+    try:
+        if roundtrip.is_update(raw):
+            return await roundtrip.preview_update(db, raw, file.filename or "")
+        return await preview(db, raw, file.filename or "")
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
 
 
 @router.post(
@@ -192,7 +220,15 @@ async def commit_import_endpoint(
     同じものを必ず受け取る。一致しない場合は書き込まない。
     """
     raw = await _read_csv(file)
-    checked = await preview(db, raw, file.filename or "")
+    try:
+        if roundtrip.is_update(raw):
+            return await roundtrip.commit_update(db, raw, file.filename or "", str(user.email or user.id or ""), confirmed_digest)
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    try:
+        checked = await preview(db, raw, file.filename or "")
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
     if checked["file_errors"]:
         raise HTTPException(status_code=422, detail=checked["file_errors"])
     if confirmed_digest != checked["digest"]:
