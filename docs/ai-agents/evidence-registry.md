@@ -2745,3 +2745,5 @@ EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701
 - EV-20260913-LINE-CARDSET-08-IMPL: POの明示切替承認で本セッションがカード08を実装。PR3483 HEADda948509、商品新規1と相互除外/安全性/商品86入力のPG試験を追加。静的チェック成功、正式CI確認中。本番未反映。
 
 - EV-20260913-LINE-CARDSET-08-CI: PR3483 HEADe6e5d463、Backend CI34754328005/job103716059145を直接確認、3316成功/95skip/coverage63.83%。Migration34754327876成功。38success/4skip、唯一のfailureはGO未記録。バックアップ6.6M生成ログ確認。本番未登録/再解析未実施、recon正式CI節。
+
+- EV-20260913-LINE-CARDSET-08-PROD: GO #3483受領、merge116b1cf6、Deploy34758371227成功、backup6.6M生成。PM0297新規1・個別9UUID保持・本番辞書で28商品名/28、58境界/58一致、health正常を直接確認。旧明細9d2b898eの解析結果は未更新。再解析/配信未実施。recon「PR3483 GO・本番登録完了」。

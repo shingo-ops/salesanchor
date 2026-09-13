@@ -1292,3 +1292,20 @@ Backend CI34754328005/job103716059145の直接ログ: 3316 passed / 95 skipped /
 Backup: Deploy34752797542/job103712050698の2026-09-13T10:48:54.5504702Zログでsalesanchor_db_20260913_194851.sql.gz（6.6M）の生成を直接確認。復元未試験。今回配備前backupは既存手順で生成/確認する。
 
 PR3483本文へ最終HEADと正式CIを保存。状態は改訂設計/実装/正式CI済み、番号付きGO未受領、未マージ・本番未登録・既存結果再解析/配信未実施。次はPOのGO #3483受領後にHEAD/CI/main/backupを再確認して公式merge経路へ進む。新たなGO発行や委任有効化はしていない。
+
+
+## PR3483 GO・本番登録完了（2026-09-13）
+
+PO原文 **GO #3483** を受領。2026-09-13T12:53:34Zに実時刻確認しPR本文へ逐語転記。preflight成功、ローカル/PR HEAD e6e5d463一致、origin/main87d29d72包含、GO記録反映後gh pr checksで失敗/未完了なしを確認。公式gh-pr-merge-safe.sh --merge --match-head-commit e6e5d463c71f4b46de88412353022c3dfc9ab763でマージ。GitHub mergedAt12:54:30Z、merge116b1cf667addd0b6d3b68a574641e0081dc4517。机/ブランチは公式wrapperで自動削除。
+
+Deploy34758371227/job103726640926 success。配備前backupは12:55:15.5722715Zにsalesanchor_db_20260913_215511.sql.gz（6.6M）生成。SQL登録229/230は12:57:50.2222539Z、230/230は12:57:50.3636728Zに実行、12:58:10.9715915ZにDeployment completed successfully。復元試験未実施。SSHで稼働git HEAD116b1cf6一致、公開health status ok/database・redis・celery connected。
+
+本番DBのSHOW transaction_read_only=onをassertして照合。新商品PM0297「MEGA 30th CELEBRATION カードセット（9種セット）」UUID59535ce4-3268-4a8a-a51e-4075d499f23b、同系列9種集合登録は1件。既存個別9商品のUUIDすべて同一。配備前後に取得した共通11商品の全保存フィールド一致（PM0264の配備前全フィールドは今回比較集合に含めていない）。通常3のカードセット除外と個別9の種セット除外、新集合検索1/除外2を確認。
+
+稼働analyzer name-first-v8-product-space-runsと全本番商品検索/除外辞書を使い、保存結果へ書き込まず28商品名+58合成例を照合: 28/28・58/58期待一致。work_id=None、状態/メモ空の照合で、既存28明細の再解析や状態/価格/数量の正答率ではない。実Gemini呼出し0。非公開/tmp/cardset3483-production-private.json、/tmp/cardset3483-before-private.json。重要な数値とIDは本節に保存済み。
+
+保存済みの誤判定対象9d2b898e-5b8a-4ca0-89bc-d73127251f3aは旧PM0263 UUID e5e0b8da-820b-40ca-9af6-110f0d81855e、pid_resolved=true、needs_review=falseのまま。今回migrationは過去結果を書き換えない契約どおり。既存結果の再解析・配信は未実施。
+
+参考: merge SHAにぶら下がる別PR2649（main→develop）のpull_request実行に失敗が表示された。Actions run34758374030のevent/head/base/pull_requestsを直接確認し、今回の承認済みPR3483の検査やpush Deployと区別した。別PRのCI/ブランチには変更0。
+
+状態: 設計/自己審査/PO実装承認/正式CI/番号付きGO/マージ/本番新商品登録/稼働照合確認まで完了。GO委任有効化なし。再解析/3シート配信は未実施。次は既存結果を更新する別手順を対象・訂正保持条件込みで確認する。
