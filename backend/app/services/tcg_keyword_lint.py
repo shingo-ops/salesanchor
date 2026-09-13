@@ -13,7 +13,7 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from app.services.tcg_analyzer_svc import match_one_kw, normalize_en
+from app.services.tcg_analyzer_svc import match_one_kw, match_product_name_space, normalize_en
 
 # 純ASCII語（英数記号のみ）の判定。日本語混じりはこれに当たらない。
 _RE_PURE_ASCII = re.compile(r"^[\x20-\x7e]+$")
@@ -88,7 +88,7 @@ def check_r5_piggyback(search_kw: dict, exclude_kw: dict) -> list[str]:
                     if normalize_en(a_kw) == normalize_en(b_kw):
                         continue
                     b_norm = normalize_en(b_kw)
-                    if not match_one_kw(a_kw, b_norm):
+                    if not (match_one_kw(a_kw, b_norm) or match_product_name_space(a_kw, b_norm)):
                         continue
                     guarded = any(
                         match_one_kw(ex, b_norm) for ex in exclude_kw.get(a_code, [])

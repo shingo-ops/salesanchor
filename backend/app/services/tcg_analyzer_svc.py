@@ -393,6 +393,13 @@ def match_pid_name_first(
 
         candidates.append((code, matched_kw, len(matched_kw)))
 
+    return select_product_candidates(candidates)
+
+
+def select_product_candidates(
+    candidates: list[tuple[str, str, int]],
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """Reduce validated hits, preserving stable order and the legacy full tuple."""
     if not candidates:
         return (None, "NONE", False, [])
 
@@ -507,6 +514,15 @@ def match_product_keyword(kw: str, normalized_text: str) -> bool:
     return True
 
 
+
+def match_product_name_space(kw: str, normalized_name: str) -> bool:
+    """Additional search-only equality; name has already passed normalize_en."""
+    if not kw or re.search(r"\s", kw) or not re.search(r"[぀-ヿ㐀-鿿]", kw):
+        return False
+    if any(char in normalized_name for char in ("\n", "\r", "\t")):
+        return False
+    return normalize_en(kw) == normalized_name.replace(" ", "").replace("\u3000", "")
+
 def match_pid_with_work(
     raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
     *, work_id: str | None, product_work_ids: dict[str, str | None],
@@ -515,7 +531,7 @@ def match_pid_with_work(
 ) -> tuple[Optional[str], str, bool, list[str]]:
     """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
     fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
-    eligible: dict[str, list[str]] = {}
+    eligible: list[tuple[str, str, int]] = []
     single_marker = single_card_marker(raw_name, raw_state, raw_memo)
     for code in product_codes:
         category = (product_category_classes or {}).get(code, "") or ""
@@ -529,11 +545,13 @@ def match_pid_with_work(
         matched = [kw for kw in search_kw.get(code, [])
                    if kw and match_product_keyword(kw, fields[0])
                    and (work_id is not None or not is_model_keyword(kw))]
+        if not matched:
+            matched = [kw for kw in search_kw.get(code, [])
+                       if match_product_name_space(kw, fields[0])
+                       and (work_id is not None or not is_model_keyword(kw))]
         if matched:
-            eligible[code] = matched
-    matched_code, basis, resolved, candidates = match_pid_name_first(
-        raw_name, list(eligible), eligible, {},
-    )
+            eligible.append((code, matched[0], len(matched[0])))
+    matched_code, basis, resolved, candidates = select_product_candidates(eligible)
     if basis == "NONE":
         return matched_code, basis, resolved, candidates  # review UI uses exact NONE
     constraint = f"WORK:{work_id}" if work_id else "WORK:UNKNOWN"
