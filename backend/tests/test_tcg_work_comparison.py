@@ -147,3 +147,94 @@ def test_same_names_are_associated_only_by_item_id(monkeypatch):
     report = comparison.compare_snapshot(snap, None, model_call=lambda _: comparison.HEADER + f"\n{ITEM2}｜\n{ITEM}｜{ONE}")
     assert report["items"][ITEM]["candidate"]["product_id"] == PRODUCT
     assert report["items"][ITEM2]["candidate"]["product_id"] is None
+
+
+@pytest.fixture
+def lifetime_client(monkeypatch):
+    """Record state without retaining Client, like the real SDK's Models object."""
+    states = []
+    settings = {"text": "ITEM_ID｜WORK_ID", "fail_at": None}
+
+    class Response:
+        def __init__(self, state):
+            self.state = state
+
+        @property
+        def text(self):
+            assert not self.state["closed"], "client closed before text was read"
+            self.state["events"].append("text")
+            if settings["fail_at"] == "text":
+                raise ValueError("synthetic failure")
+            return settings["text"]
+
+    class Models:
+        def __init__(self, state):
+            self.state = state
+
+        def generate_content(self, **kwargs):
+            if self.state["closed"]:
+                raise RuntimeError("closed_before_call")
+            self.state["arguments"] = kwargs
+            self.state["events"].append("generate")
+            if settings["fail_at"] == "generate":
+                raise ValueError("synthetic failure")
+            return Response(self.state)
+
+    class Client:
+        def __init__(self, state):
+            self.state = state
+            self.models = Models(state)
+
+        def close(self):
+            if not self.state["closed"]:
+                self.state["closed"] = True
+                self.state["events"].append("close")
+
+        def __del__(self):
+            self.close()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.close()
+
+    def factory():
+        state = {"closed": False, "events": []}
+        states.append(state)
+        return Client(state)
+
+    monkeypatch.setattr(comparison.gemini, "_get_genai_client", factory)
+    return settings, states, factory
+
+
+def test_client_fixture_detects_unretained_client(lifetime_client):
+    _, states, factory = lifetime_client
+    # This is the old adapter expression: the fake must detect its early close.
+    with pytest.raises(RuntimeError, match="closed_before_call"):
+        factory().models.generate_content()
+    assert states[0]["events"] == ["close"]
+
+
+@pytest.mark.parametrize("value", ["ITEM_ID｜WORK_ID", "", None])
+def test_work_model_keeps_client_alive_until_text_read(lifetime_client, value):
+    settings, states, _ = lifetime_client
+    settings["text"] = value
+    assert comparison.call_work_model("synthetic prompt") == (value or "")
+    assert len(states) == 1
+    state = states[0]
+    assert state["closed"] and state["events"] == ["generate", "text", "close"]
+    assert state["arguments"]["model"] == comparison.gemini._GEMINI_MODEL
+    assert state["arguments"]["contents"] == "synthetic prompt"
+    assert state["arguments"]["config"].temperature == 0
+
+
+@pytest.mark.parametrize("stage", ["generate", "text"])
+def test_work_model_closes_client_and_propagates_errors(lifetime_client, stage):
+    settings, states, _ = lifetime_client
+    settings["fail_at"] = stage
+    with pytest.raises(ValueError, match="synthetic failure"):
+        comparison.call_work_model("synthetic prompt")
+    assert len(states) == 1 and states[0]["closed"]
+    expected = ["generate", "close"] if stage == "generate" else ["generate", "text", "close"]
+    assert states[0]["events"] == expected

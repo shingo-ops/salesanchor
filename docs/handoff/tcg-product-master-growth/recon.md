@@ -1953,3 +1953,18 @@ POは本番マスタ読取専用1回の質問に「進める」。親がprod1へ
 新マスタで現在の照合関数を再実行: 固定67件は商品特定59→60/変更2、15基本例+12否定例は27/27、否定案の実67件追加差分0。正答率・全解析・配信試験ではない。設計§17改訂4へ期待15行と否定12例の生成条件、実在参照/属性を固定。category_classは新規サービス同様Pokemon、Boxは商品区分参照であり混同しない。
 
 Planner設計案完成→Architect同一AI自己審査APPROVE（限定実装設計）。実PG受入は実装後に必要。カード準備済み/未発行、明示実装委任は未受領。否定4語は設計による安全策案、POの新たな原文やGOは創作しない。今回の読取許可は消費済み。製品変更/DB更新/新規Gemini/再解析/配信0。非公開証拠保存名 private-research/25th-live-final-20260913、master SHA ee099009f5c5865b196452ab09957fcf285e4d6e9e69e5cac1b7d8938ff99f0c。
+## 2026-09-13 CARD-LINE-WORK-CLIENT-04実装
+
+POが限定修正・テスト追加の確認に「進める」と回答。設計PR3462 HEAD2665d8e9、design-keyword.md §17.12とCARD-LINE-WORK-CLIENT-04を読んで実装。最新origin/main 56a1661d起点の専用release/line-work-client-lifetimeを公式手順で作成。製品差分はcall_work_model内のwith保持・text取得後closeのみ、他関数/モデル/プロンプト/DB変更0。
+
+寿命感知FakeClientはfactoryごと新規生成、ModelsはClient本体を保持しない。旧式の早期close検出1、text正常/空/None3、generate/text例外時close2の計6試験を既存比較テストへ追加。生成API使用0。make lint-ci終了0、ruff成功/Bandit高重大度0、mypyは既存警告（当該既存unused-ignoreを含む）で完全合格とは称さない。Docker未稼働につきローカルpytest未実行、実PG/単体は既存GitHub CIで確認する。
+
+POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関係を質問された。通常抽出はgemini_extraction_svc.py:185でclient変数保持、tcg_extraction.pyの100秒soft limit経路。比較サービスは通常抽出から参照されない（rgでcall_work_model定義1件のみ）。今回の接続保持不具合とは別の停止である。商品マスタを含むprompt追加が応答時間へ与えた影響は未測定で、因果を断定しない。タイムアウト修正/再抽出はこのカードに追加しない。
+
+
+### PR #3472 CI確認
+
+製品HEAD0197109272bdcfefab0cc1e447bdb7ad5d636552、Backend CI34739377763/job103676363729は2819 passed/95 skipped/失敗0、119.19秒、coverage63.80%。追加6試験を含め成功。自己確認APPROVE（Client寿命限定）、独立レビューではない。PR3472提出済み、GO未受領のprocess-artifacts gate以外失敗/実行中0を確認。実Gemini/本番変更/採用/配信0。最新HEADの最終検証結果はPR本文へ記録する。
+
+
+2026-09-13 25th実装委任: POへ「25th対応に限定し、実装担当へ実装・テスト・PR作成まで委任してよいですか。マージ・本番反映は含めません」と確認し、原文「進める」を受領。CARD-LINE-25TH-MASTER-01発行。設計参照は文書PR #3464 / HEAD67312ce0 §17改訂4。既存委任担当1名へ新しい25th便を明示委任、追加委任禁止、所有はmigration/runner登録/既存統合テストの3ファイル。最新main b52a4defは比較用Geminiクライアントと別テストの変更で商品照合/辞書の変更なし。最新mainの文書追記との競合は両方の記録を保持して解消。停止条件は設計矛盾/範囲外/承認ゲート拒否、完了は実装・必要試験・PR提出まで。設計担当は製品編集をせず、差分と実測を読取確認する。GO #3470を再利用しない。
