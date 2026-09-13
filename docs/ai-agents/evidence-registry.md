@@ -2734,3 +2734,5 @@ follow_up: card-lint/文書検査、PO承認後の限定実装
 EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
 
 EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。

@@ -1016,3 +1016,5 @@ POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関�
 実装確認（2026-09-13）: POの明示委任により実装役1名がtask定義の2行のみ変更。設計担当はgit diffを直接確認し、hard120→330/soft100→300以外の製品変更0を確認。実装役の登録task読取報告は名称tcg.extract_source_message、soft300/hard330。既存API timeout試験がerror/items0を検証するため新規テストなし。ruff成功は実装役報告。ローカルPython3.14とBanditの非互換でスキャン不完全、mypyも既存警告のため完全な静的検査成功とはしない。正式Backend CIはPR提出後に確認。マージ/本番変更/今回の実Gemini呼出し0。
 
 実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
+
+PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。
