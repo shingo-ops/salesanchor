@@ -8,7 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-WORK_ID_PROMPT_VERSION = "raw-extraction-v4-work-id-p1"
+WORK_ID_PROMPT_VERSION = "raw-extraction-v4-work-id-p2"
+WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", WORK_ID_PROMPT_VERSION})
 
 
 def reference_json(reference: dict) -> str:

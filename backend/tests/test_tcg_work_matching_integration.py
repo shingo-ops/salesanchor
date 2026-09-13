@@ -11,17 +11,17 @@ from pathlib import Path
 from uuid import uuid4
 
 import psycopg2
-from psycopg2 import sql
 import pytest
-from sqlalchemy import create_engine
+from psycopg2 import sql
+from sqlalchemy import create_engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
 from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
-from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_diagnostics_svc as diagnostics
+from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
 
@@ -828,7 +828,8 @@ def prohibit_live_gemini(monkeypatch):
     monkeypatch.setattr(gemini, "_get_genai_client", forbidden)
 
 
-def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch):
+@pytest.mark.parametrize("saved_version", ["raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2"])
+def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_version):
     connection, engine, async_url = pg
     seed_products(connection)
     with connection.cursor() as cursor:
@@ -838,6 +839,13 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch):
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
         [record("◆EB01", 1) + [wid]], work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == 1
+    with connection.cursor() as cursor:
+        cursor.execute(f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s", (saved_version, jid))
+    with Session(engine) as session:
+        analyzer.analyze_extraction_job(session, jid)
+        basis = session.execute(text(f"SELECT ar.pid_basis FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=:jid"), {"jid": jid}).scalar_one()
+        assert basis.startswith("GEMINI|WORK:")
+        session.rollback()
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT ei.raw_product_name,ei.raw_work_name,ei.resolved_work_id,ar.pid_resolved,ar.pid_basis FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id WHERE ei.extraction_job_id=%s", (jid,))
         row = cursor.fetchone()
