@@ -2728,3 +2728,5 @@ next: three-file implementation and parent review, then product PR and existing 
 EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。
 
 EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。
+
+EV-20260913-LINE-STORAGE-DELEGATED 保存ガード拒否: 新SQLhash08e7f6b。原文削除の負例を試験コードへ保存する操作がPreToolUse hookで拒否。DB実行なし、チケット自己発行/文字列分割/別手段への置換なし。残部のみ再開し、拒否負例は承認待ち。

@@ -5,6 +5,14 @@
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、07-migration.md、10-executor.md、11-lint.md。
 照合結果: 既存migrationはtenantスキーマ走査・追加専用、run_all_migrations.sh登録と実PG確認が必要。第1便の部品検収は完了。製品PR3471への正式引き継ぎも完了。第2便の実装・検証・PR提出までPO委任受領済み。本カードは実装と静的検証まで。commit/push/PRは親の差分確認後に別カード。
 
+再開範囲（2026-09-13、ガード拒否後の影響を受けない部分）:
+- 保存済み新SQLのhashは08e7f6b375d4143eb81e67a75c9a278012884f5dfa022c6065b36cb4f0ece0a2。手順2はこの新規SQL1ファイルだけ未追跡が期待値。破棄・巻戻ししない。
+- 拒否された原文削除の負例の保存は停止を維持する。その命令を別のAPI・文字列分割・別ツールで代替しない。許可チケット自己発行は禁止。
+- 新SQLの原文参照ロック等の残る実装、登録1行、残りの負例/正常系を持つ8試験関数の保存と静的検査だけを続ける。原文削除拒否の受入条件は削除しない。未作成・未検証として報告する。
+- 第3群にその削除負例を入れていない段階を全試験完了としない。偽の成功・skip・代用の文字列検査を加えない。その他の検査失敗時の停止は従前どおり。
+- 拒否された負例の正確な追加予定コードを、コマンドとして実行せず最終報告のテキストで親へ返す。POが保存対象を確認できる材料とする。
+- commit/push/PR/実DB実行は禁止のまま。未完了の削除負例を含めて親が確認し、必要な承認を求める。
+
 受領確認: カードID・作業台・3ファイルだけの範囲を返す。担当は同じstock_contract_01。
 作業台: /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage
 ブランチ: release/line-stock-storage
@@ -48,7 +56,7 @@ UUID付きtcg_stock_test_名の新DBを作り、そのDB内だけにtenant_951/9
     期待する出力: PREFLIGHT OK。
 手順2: 状態確認
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && git status --short --branch
-    期待する出力: release/line-stock-storageで未保存変更0。親の文書commit後に開始。
+    期待する出力: release/line-stock-storageで上記hashの新SQL1ファイルだけ未追跡。親の文書commit後に開始。
 手順3: 設計照合
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
     期待する出力: 6744f7a7e6f5cef0a716677f7b8ef2b5e5702a35131346b0c777b8dec6b5a1f3。
