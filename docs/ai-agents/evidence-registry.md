@@ -2865,3 +2865,6 @@ EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-APPROVAL: 既存担当へのカード�
 
 
 EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-REVIEW: 既存実装担当が許可6ファイルの修正/試験追加、make lint-ci/4テストruff/diff-check終了0（mypy警告扱い）。親は生報告と実6SHA一致を直接確認。AST純関数検算は293名称期待tuple不一致0・従来確定劣化0・既存正解256保持・旧public関数500例不一致0・境界10一致・96設計例不一致0・R5方向別6成功。追加テストの作品ID誤りと既存import整形を限定修正して再確認。pytest/PG/CI未実施、製品公開/マージ/本番変更なし。根拠: docs/handoff/tcg-product-import/recon.md「A便の実装受領・読取確認」。
+
+
+EV-20260913-PRODUCT-NAME-SPACE-PUBLISH-APPROVAL: 製品PR作成とCI正式検証の質問にPO原文「進める進める」を受領。公開カード違反0、既存/root/csv_card_executorへ委任継続。検収済み6製品ファイルと固定版d11d27b7の17文書を対象にcommit/push/PR/通常CIを許可、マージ/本番/データ変更は禁止。最新main56a1661dの空箱/状態保護は保持。根拠: docs/handoff/tcg-product-import/card-product-name-space-publish.md とreconの公開承認節。

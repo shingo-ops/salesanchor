@@ -797,3 +797,10 @@ A1〜A6のコード・固定試験・純関数検算は設計と整合。A7の�
 - backend/tests/test_tcg_keyword_lint.py: `70980eace0bab9d2e427f5ad9ac6b697c3e87b28b27b1d74bc9766535a572429`
 - backend/tests/test_tcg_product_guards.py: `0ab1b9b4661ddd96a1fc0dca14e9160f7179d12da16a7ba7885d511eada27645`
 - backend/tests/test_tcg_work_matching_integration.py: `36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551`
+
+
+### 製品PR公開・正式CIの承認（2026-09-13）
+
+「製品PRを作成してCIで正式検証を進めてよいですか？」へのPO回答原文「進める進める」を受領。既存実装担当へ公開用カードを渡す。文書PR3466の確認済みd11d27b7の17文書と、検収済み6製品差分を製品PRへ載せる。製品6ファイルの初期SHAは直前の記録と同一を確認する。マージ/本番/データ変更は対象外。
+
+最新origin/main56a1661dは空箱条件/状態再解析の保護をanalyzerへ追加している。商品名照合とは別箇所の変更を現物で確認した。既存main内容を保持し、今回の6ファイルを越える修正が必要なら停止する条件をカードへ入れた。組合せの正式PGはCIで確認する。
