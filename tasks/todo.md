@@ -149,5 +149,5 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
-| 商品CSV出力・編集・更新往復 | 設計担当/既存実装担当 | PO目標合意・実装〜配備依頼、design§21自己審査APPROVE。製品未実装 | 13製品ファイルを正式カードで委任しR1–R11/旧経路回帰/CI/PRを完了。番号付きGO原文を創作しない | docs/handoff/tcg-product-import/design.md §21 / EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN | 2026-09-13 |
+| 商品CSV出力・編集・更新往復 | 設計担当/既存実装担当 | PO目標合意・実装〜配備依頼、設計自己審査済み。13製品差分/親読取レビュー済み、FE350/E2E11成功、Backend22unit+23PG定義済みで実行待ち | 最新main313d7796の非競合2ファイルを保持し公開カードでPR/正式CIへ進む。番号付きGO原文は未受領、代筆しない | docs/handoff/tcg-product-import/roundtrip-parent-review.json / EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN | 2026-09-13 |
 | 実商品CSV登録前確認 | 設計担当 | A便設計自己審査APPROVE・PO承認・実装・正式CI・PR3473マージ/本番配備完了。B便8商品更新/44登録はREVISE | B便§19/180例はREVISE。CSVの行単位整合対策§20・4ファイル案/C1–C11を設計自己審査APPROVEでローカル保存。PO承認4ファイル実装差分/静的検査/親レビュー済み。親AST354/直接unit25成功、PG228追加は未実行。PR直前停止、次は公開許可後の正式CI（15分内未測定）。個別値/正解例・運用QAは未完了 | docs/handoff/tcg-product-import/product-name-space-release-result.json / EV-20260913-PRODUCT-NAME-SPACE-RELEASE | 2026-09-13 |
