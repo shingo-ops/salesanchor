@@ -2831,3 +2831,6 @@ follow_up: 正式カード検査と文書PR提出後、実装開始・担当へ�
 
 
 EV-20260913-PRODUCT-CSV-PUBLISH-HOLD: A便設計/カード/調査証拠を0ceb2a16、main追従を0eb20160にローカル保存。card-lint違反0。公開リポジトリshingo-ops/salesanchorへのpushは自動承認レビューが資料の機密性/公開承認未確認として拒否。gh repo viewでPUBLICを確認し送信停止。内部商品ID/有効状態/検索除外語を含むためPOへ公開可否を提示。PR未提出・実装未着手。詳細はdocs/handoff/tcg-product-import/recon.md「文書PR提出前の停止」。
+
+
+EV-20260913-PRODUCT-CSV-PUBLISH-APPROVAL: 公開先shingo-ops/salesanchorと内部商品ID/検索語/除外語の公開を明示した質問に、PO原文「進めてくれ」を受領。本便17文書ファイル/調査証拠のpush・文書PR提出を承認。実装・委任・マージGOではない。根拠はdocs/handoff/tcg-product-import/recon.md「公開送信のPO承認」。

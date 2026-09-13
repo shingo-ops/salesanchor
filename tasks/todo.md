@@ -147,4 +147,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
-| 実商品CSV登録前確認 | 設計担当 | A便の設計自己審査APPROVE・PO正式設計承認済み（6ファイル/A1–A8）。B便の既存語更新/44件登録はREVISE | 設計/カードをローカル保存・カード違反0。PUBLIC宛pushは自動承認レビュー拒否、資料公開のPO確認待ち。実装/委任未承認、B便は確認待ち | docs/handoff/tcg-product-import/design.md §18-7 / EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL | 2026-09-13 |
+| 実商品CSV登録前確認 | 設計担当 | A便の設計自己審査APPROVE・PO正式設計承認済み（6ファイル/A1–A8）。B便の既存語更新/44件登録はREVISE | 設計/カードをローカル保存・カード違反0。PUBLIC宛資料公開・文書PR提出のPO明示承認受領、通常経路で再申請。実装/委任未承認、B便は確認待ち | docs/handoff/tcg-product-import/design.md §18-7 / EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL | 2026-09-13 |
