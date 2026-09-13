@@ -2942,3 +2942,9 @@ EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-APPROVAL: PO原文「進める」を受領�
 EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-REVIEW: 既存担当4ファイル差分/静的検査受領。親が2サービスと新規PG現物/4SHA/範囲/diff検査を直接確認。旧版不整合を検出する実AST検算は新版354ケース全一致、unit関数直接呼出25成功。PG228ケース追加は未実行、CI15分内未測定。製品未commit/push/PR前停止、本番変更なし。根拠recon実装受領節とkeyword-import-atomic-implementation-result.json。
 
 EV-20260913-PRODUCT-CSV-ATOMIC-PUBLISH: PR直前停止の報告後にPO原文「進める」を受領し製品PR提出/通常CI確認へ進行。最新main1a8eed69追加差分0/4SHA一致、正式公開カードへ。ADR154 Whyへ確定境界と旧版不一致/新版メモリ354・直接unit25の根拠を保存。実PG未実施、マージGOなし。根拠recon公開承認節。
+
+EV-20260913-LINE-SPACE-IMPLEMENTED: CARD06をmain1a8eed69起点で実装。商品専用連続半角空白と品質R3〜R6/版v8。純関数直接照合457成功（既存431/追加26）、lint終了0、mypy警告あり。Docker不在/PR未作成で正式pytest/PG/CI未実施。PO指示によりPR直前停止。recon実装確認節参照。
+
+EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全差分11を含む2投稿全19明細を同一AIが原文/マスタからラベル。正答8→18（42.1→94.7%）、未特定10→0、誤商品1→1。非盲検・全体精度ではない。9種セット誤商品を残存課題として記録。product-space-accuracy.json/recon参照。DB/Gemini/本番変更0。
+
+EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
