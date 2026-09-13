@@ -26,7 +26,7 @@ STAMP = "2026-09-13T00:00:00Z"
 RAW_FIELDS = ("raw_product_name", "raw_quantity", "raw_price", "raw_unit", "raw_state", "raw_memo", "raw_work_name")
 
 
-def query(connection, statement, params=()):
+def query(connection, statement, params=None):
     with connection.cursor() as cursor:
         cursor.execute(statement, params)
         return cursor.fetchall() if cursor.description else []
