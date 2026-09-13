@@ -60,3 +60,18 @@ API前の対照計算は、同一マスタ/RAW/処理で旧作品判断の商品
 禁止: 実装テストでGemini実呼出し、本番DML/再解析/結果採用/配信、DB/CI/deploy/secrets変更、既存RAWの更新、判定不能の推測補完、承認ガード解除。後段の実Gemini比較も、CI合格・正規マージ/本番反映確認後の別手順とする。
 完了報告の冒頭は「本報告はカード CARD-LINE-WORK-COMPARE-03 の実行結果である」。本文に検証の生出力を全文含め、停止時は手順番号/最後のコマンド/理由を記す。PO説明では比較設計合格・実装/CI・本番比較未実施・採用/配信未完了を分ける。
 END OF CARD
+
+
+## 実装承認待ち CARD-LINE-WORK-CLIENT-04
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-WORK-CLIENT-04。設計design-keyword.md §17.12、reconのClient寿命不具合節。自己審査APPROVE、PO実装承認待ち。
+手順0: POが修正実装を承認した場合のみ、executor-preflight後に最新origin/main起点の専用release/line-work-client-lifetimeを公式new-worktreeで準備する。先約確認必須。新エージェント自動起動禁止。
+許可ファイル: backend/app/services/tcg_work_comparison_svc.py、backend/tests/test_tcg_work_comparison.py、既存design-keyword.md/recon.md、本カード、tasks/todo.md、docs/ai-agents/evidence-registry.md。
+手順1: call_work_modelのclientをwithで保持し、応答text取得後/例外時にclose。ほかの関数やモデル設定を変えない。
+手順2: 毎回新規FakeClientを生成する寿命感知試験を追加。旧実装失敗/修正後成功、正常/例外時解放、引数/text契約を確認。Gemini実通信禁止。
+手順3: make lint-ci、既存Backend CI、check-task-state、card-lint、diff --check。Docker不在のローカルpytestは禁止、実PGは既存CI。合格は試験全成功と対象外差分0。
+手順4: gh-pr-create-safe.shでready PR、--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。正式card-lint違反0を先に確認。GO3465の転用禁止。
+禁止: DB/CI/secrets/配信仕様変更、本番修正直書き、修正前後のGemini試験実呼出し、自動再試行追加、採用/全再解析/配信、未確認成功宣言。新設計へ広げる必要がある場合は停止する。
+本報告はカード CARD-LINE-WORK-CLIENT-04 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別し、停止時は手順番号/コマンド/理由を記録する。
+END OF CARD

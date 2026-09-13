@@ -2865,3 +2865,7 @@ EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-APPROVAL: 既存担当へのカード�
 
 
 EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-REVIEW: 既存実装担当が許可6ファイルの修正/試験追加、make lint-ci/4テストruff/diff-check終了0（mypy警告扱い）。親は生報告と実6SHA一致を直接確認。AST純関数検算は293名称期待tuple不一致0・従来確定劣化0・既存正解256保持・旧public関数500例不一致0・境界10一致・96設計例不一致0・R5方向別6成功。追加テストの作品ID誤りと既存import整形を限定修正して再確認。pytest/PG/CI未実施、製品公開/マージ/本番変更なし。根拠: docs/handoff/tcg-product-import/recon.md「A便の実装受領・読取確認」。
+
+EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
