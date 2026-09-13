@@ -1,0 +1,18 @@
+CARD-AJ-READONLY-REVIEW-04
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AJ-READONLY-REVIEW-04
+読んだ節: guards/00-common.md、01-read.md、11-lint.md、design-partner.md§5.5。
+照合1〜7: ○。PRなし、1目的、実在worktree、全文報告。L32未確定の目印なし。
+担当: 同じ実装担当が読み取りレビューを行う。Commission復元は自分の作業であり独立レビューと称しない。
+他者も同じコードベースで作業中。他者変更を戻さない。製品/文書/台帳編集、追加AI、commit/push/PR、実API、本番操作は禁止。
+対象: design.md§AJと5移管TSX、SharedButtonMigration.test.tsx。rootは品質検証・ブラウザー確認中。
+手順0: 固定基準との差分を読む。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration && git diff adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b -- frontend/src/components/ConfirmModal.tsx frontend/src/components/PriorityScoreOverride.tsx frontend/src/components/OrderFinancialPanel.tsx frontend/src/components/PurchaseDetailPanel.tsx frontend/src/components/ShippingDetailPanel.tsx frontend/src/components/SharedButtonMigration.test.tsx
+手順1: 対象6ファイルとButton.tsx、Modal.tsx、Button.css、設計§AH/AJ、必要なAPI型を読み取り確認する。
+確認観点: native type/form/disabled/autoFocus/イベント/翻訳/分岐の維持、共通Button公開契約、テストが要求した操作と保存引数を実際に検査するか、テスト副作用の復元。
+今回、試験を再実行しない。疑義はfile:lineと観測事実で記載し、修正しない。
+手順2: 読み取り判定を返す。
+完了報告は「本報告はカード CARD-AJ-READONLY-REVIEW-04 の実行結果である」で開始し、確認した範囲とAPPROVE/REVISE、根拠を全文で返す。
+表示/全体品質はrootの別検証が必要。独立した最終Reviewer/Evaluatorが完了したとは主張しない。
+停止時は手順番号/最後のコマンド/対象/理由と生出力を設計担当へ全文で返す。
+END OF CARD

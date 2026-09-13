@@ -31,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.models import User
 from app.services.tcg_product_import_svc import commit_import, preview
 from app.tcg_config import TCG_SCHEMA
 
@@ -82,7 +83,7 @@ async def list_products(
     offset: int = Query(default=0, ge=0),
     work_id: UUID | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_super_admin),
+    _user: User = Depends(require_super_admin),
 ) -> ProductListResponse:
     like = "%" + query.strip() + "%" if query.strip() else "%"
     condition = "(p.japanese_title ILIKE :like OR p.code ILIKE :like)"
@@ -163,7 +164,7 @@ async def _read_csv(file: UploadFile) -> bytes:
 async def preview_import(
     file: UploadFile = File(..., description="10列の CSV ファイル"),
     db: AsyncSession = Depends(get_db),
-    _user: dict = Depends(require_super_admin),
+    _user: User = Depends(require_super_admin),
 ) -> dict:
     """
     検査だけを行う。書き込みを一切しない。
@@ -182,7 +183,7 @@ async def commit_import_endpoint(
     file: UploadFile = File(..., description="10列の CSV ファイル"),
     confirmed_digest: str = Form(..., description="確認の段で受け取った指紋"),
     db: AsyncSession = Depends(get_db),
-    user: dict = Depends(require_super_admin),
+    user: User = Depends(require_super_admin),
 ) -> dict:
     """
     検査をやり直し、止める判定の無い行だけを登録する。
@@ -196,7 +197,7 @@ async def commit_import_endpoint(
         raise HTTPException(status_code=422, detail=checked["file_errors"])
     if confirmed_digest != checked["digest"]:
         raise HTTPException(status_code=409, detail="PRODUCT_IMPORT_DIGEST_MISMATCH")
-    executed_by = str(user.get("email") or user.get("id") or "")
+    executed_by = str(user.email or user.id or "")
     try:
         return await commit_import(db, raw, file.filename or "", executed_by)
     except ValueError as exc:
