@@ -56,6 +56,9 @@ def fixture_data(pg, monkeypatch):
         cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
         cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
         cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0200'", (str(uuid4()),))
+    with connection.cursor() as cursor:
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'ALPHA BETA',100 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'LIMITED EDITION',100 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
     cases = [
         ("EB01 1BOX 1000円", record("EB01", 1)),
         ("メモリアルコレクション 1BOX 1000円", record("メモリアルコレクション", 1)),
@@ -63,6 +66,8 @@ def fixture_data(pg, monkeypatch):
         ("EB01 PSA10 1BOX 1000円", record("EB01", 1, state="PSA10")),
         ("メモリアルコレクション PSA10 1BOX 1000円", record("メモリアルコレクション", 1, state="PSA10")),
         ("共通商品 1BOX 1000円", record("共通商品", 1)),
+        ("ALPHA  BETA 1BOX 1000円", record("ALPHA  BETA", 1)),
+        ("ALPHA   BETA LIMITED  EDITION 1BOX 1000円", record("ALPHA   BETA", 1, state="LIMITED  EDITION")),
         ("メモリアルコレクション 1? 1000円", record("メモリアルコレクション", 1)),
     ]
     cases[-1][1][3] = "?"
@@ -108,7 +113,12 @@ def test_comparison_matches_production_and_leaves_all_tables_unchanged(pg, monke
         return comparison.HEADER + "\n" + "\n".join(rows)
     report = comparison.compare_snapshot(snap, factory, model_call=model)
     assert report["status"] == "comparison_complete_unverified"
-    assert report["model_calls"] == 7 and not report["mismatches"]
+    assert report["model_calls"] == 9 and not report["mismatches"]
+    spaced = {i["raw_product_name"]: i for i in items.values() if i["raw_product_name"].startswith("ALPHA")}
+    assert set(spaced) == {"ALPHA  BETA", "ALPHA   BETA"}
+    for name, expected in [("ALPHA  BETA", True), ("ALPHA   BETA", False)]:
+        matched = comparison.match_item(spaced[name], None, snap["data"]["context"])
+        assert matched["pid_resolved"] is expected
     for row in report["items"].values():
         assert row["saved"]["product_id"] == row["control"]["product_id"] == row["candidate"]["product_id"]
         assert row["control"]["candidates"] == row["candidate"]["candidates"]
