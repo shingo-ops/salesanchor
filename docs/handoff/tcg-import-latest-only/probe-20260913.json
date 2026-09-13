@@ -807,5 +807,97 @@
         "note_matches": 0
       }
     }
+  },
+  "date_calendar_oracle": {
+    "method": "Python stdlib calendar oracle for design fixture expectations; not Sales Anchor implementation tests or AI extraction",
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "results": [
+      {
+        "id": "D01",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T10:00:00+09:00",
+        "expected": "2026-09-14",
+        "actual": "2026-09-14",
+        "passed": true
+      },
+      {
+        "id": "D02",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-30T23:59:00+09:00",
+        "expected": "2026-10-01",
+        "actual": "2026-10-01",
+        "passed": true
+      },
+      {
+        "id": "D03",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-12-31T23:59:00+09:00",
+        "expected": "2027-01-01",
+        "actual": "2027-01-01",
+        "passed": true
+      },
+      {
+        "id": "D04",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2028-02-28T12:00:00+09:00",
+        "expected": "2028-02-29",
+        "actual": "2028-02-29",
+        "passed": true
+      },
+      {
+        "id": "D05",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2027-02-28T12:00:00+09:00",
+        "expected": "2027-03-01",
+        "actual": "2027-03-01",
+        "passed": true
+      },
+      {
+        "id": "D06",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T16:00:00+00:00",
+        "expected": "2026-09-15",
+        "actual": "2026-09-15",
+        "passed": true
+      },
+      {
+        "id": "D07",
+        "operation": "calendar_validity",
+        "ymd": [
+          2026,
+          2,
+          30
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D08",
+        "operation": "calendar_validity",
+        "ymd": [
+          2027,
+          2,
+          29
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D09",
+        "operation": "calendar_validity",
+        "ymd": [
+          2028,
+          2,
+          29
+        ],
+        "expected": true,
+        "actual": true,
+        "passed": true
+      }
+    ],
+    "passed": 9,
+    "total": 9
   }
 }

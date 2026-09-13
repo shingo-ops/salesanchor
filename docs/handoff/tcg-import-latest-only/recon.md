@@ -291,6 +291,14 @@ origin/main `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8` を設計ブランチへ�
 
 現在在庫の本番集計は未実行。CLAUDE.mdのVPS鍵規則と `docs/handoff/rehearsal-env/design-b-ssh-isolation.md:58` の監視専用制限を確認した。既存カードの無制限鍵例から本タスクの許可を推定しない。
 
+## 日付の正解値確認（2026-09-13）
+
+[probe-20260913.json](probe-20260913.json) の `date_calendar_oracle` にPython実行版と9件の入力・期待値・実測値を保存。原投稿日をJSTへ変換して翌日を計算する6件（月末・年末・閏年・UTC/JST境界含む）と暦の妥当性3件、計9/9が一致。式は `datetime.fromisoformat(posted_at).astimezone(JST).date() + timedelta(days=1)`、暦検査は `date(year, month, day)` のValueError。実行版はローカルPython 3.14.3であり、本番Python 3.12上の製品試験とは区別する。
+
+これは受入テストの正解値の計算であり、製品の日時解決処理は未実装。手動ラベルの既存部品試験の不一致3件を解消した証拠にはしない。設計§17に意味契約と未実行の受入例14件を保存。今回の製品コード/DB/外部API変更は0。
+
+GitHub読取: #3465はPR/Issueとも取得不可。#3456はHEAD 3c17a83ce61ba154c53ad664883df7e9d1d2a9e0、OPEN/CLEANを確認。承認対象の番号を推定していない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

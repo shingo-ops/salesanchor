@@ -2786,3 +2786,19 @@ tradeoff: live inventory mapping remains unverified because allowed SSH key is m
 decision: retain v2/v3/v4 compatibility; separate explicit stock events from restock events and uncertain dates; self-review REVISE
 follow_up: physical schema/API, baseline mapping via authorized read path, and self-review before card issuance
 ```
+
+```text
+id: EV-20260913-LINE-DATE-CONTRACT
+date: 2026-09-13
+agent: Codex design partner
+task: 否定と予定日だけの保留契約・受入例の具体化
+scope: design-only PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json date_calendar_oracle
+    summary: 6 next-day and 3 calendar-validity expected values independently checked using local Python stdlib; 9/9 agree; no product implementation test
+confidence: high
+tradeoff: local Python 3.14.3 calendar calculation is not production Python 3.12 or model evaluation; prior 3 component mismatches remain unresolved
+decision: draft semantic contract and 14 implementation acceptance cases recorded in design section 17; same-AI self-review REVISE
+follow_up: physical DDL/API, offer generation identity, initial stock migration and manual resolution UI before implementation card
+```
