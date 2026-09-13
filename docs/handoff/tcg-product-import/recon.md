@@ -893,3 +893,17 @@ PR直前停止と未実行CIを報告した後のPO原文「進める」を、�
 ## 商品CSV往復・新規依頼（2026-09-13）
 
 PO原文「合意、この内容を目標として進める、離席するのでエクスポート機能を実装してPRマージ本番反映まで完了させてくれ」。前提の3条件を設計§21へ整理。最新main10212686起点の正式new-worktreeで専用設計場所を作成。他者の未保存変更は保持。実装範囲は旧10列新規取込を保持した12列既存更新とexport。原文GO #番号は存在しないためprocess gateを偽装せずPR完成後に不足を示す。参照一次情報のSHAはroundtrip-design-evidence.json、事実行番号/設計自己審査/受入条件はdesign§21。Context7不在のため許可済みの公式docsを直接確認。製品変更0。
+
+設計時のCSV codec対照：13種の空/日本語/空白/comma/quote/CRLF/式先頭/apostrophe値を語配列0〜2要素と商品名で組合せ、外側BOM CSV＋内側CSV＋可逆apostrophe処理の2379組が往復一致。設計用の純Python試作であり製品実装の試験ではない。実装後は現物codec/PGで検証する。frontend api.requestForm:173はPOST再送ループなしを直接確認。Playwright portはconfig.ts:20のPORT変数で固定可能、カード文言を実物へ合わせた。
+
+実装開始前停止の観測：公式new-worktree.sh96行がgrep部分一致のため、release-product-csv-roundtrip-designだけの実在を短いrelease-product-csv-roundtrip実在と誤判定。git worktree list --porcelainで実装場所なし、test -d失敗を親確認。cdガードの拒否は正常作動。script/guardを変更せず、部分一致しないrelease/product-csv-roundtrip-implへ正式カードを補正し同じ作成手順を使う。製品編集0。
+
+実装ソース保存時のガード停止：exec_commandのheredoc内の語削除SQLが実DBの不可逆操作として検出された。親の読取検索も同じ語の検出で拒否され、shellテキスト全体の誤分類と判明。permit/設定変更/SQL文字分割を行わず、通常の構造化tools.apply_patchでSQLをそのまま提示するコード編集として再申請し成功。DB接続/SQL実行はなし。正式編集経路で実装継続する。
+
+実装詳細の確認（2026-09-13）：2MiB未満でも標準csvのセル上限に達するため、同期読取のtry/finallyだけfield_size_limitを拡大して復元する方式を採用。生バイト2MiB制限は保持し、awaitを挟まない。大セル/境界/例外時復元を製品試験へ要求。OWASP公式 https://owasp.org/www-community/attacks/CSV_Injection を直接確認し、全角＝＋－＠も可逆保護対象に含め、外側更新CSVをQUOTE_ALLとする。Excel保存・再読込後まで万能な安全保証はしない。Context7不在の公式資料代替、固定設計§21の契約を満たす実装詳細としてカード追記。固定design SHAは変更しない。
+
+実装中の親読取確認：単一SELECT export、全商品列/語UUID/位置を含むrevision、全対象table lock後の再検証、1commit、未変更語の保持を現物確認。PG試験初版は先頭1商品の失敗だけだったため、2商品の編集と2商品目失敗、応答不明後の全商品/語/履歴一致、同code別tenant、無効参照保持、codeだけの相互入替でstaleを検出する証跡を追加するよう要求し、修正版を読取確認。既存provision/atomic_pg fixtureの安全条件は不変。
+
+画面確認：初回Chromium11成功の画像を親が直接開き、1440で変更前後が読めること、390で変更列が画面外にあることを確認。既存DataTable横スクロールを実際に操作してviewport内を検証する試験/画像を追加要求。更新modeにも残っていた「登録」のsteps/summary/statusを設計§21-6に合わせて日英修正し、結果画面も保持するよう要求。全FEunit初回349成功/1件StaffFormButtonMigration timeout、同時build終了後の単独再実行350成功（12.78秒）を生ログで確認。製品改修後の最終再検証は別途記録する。Docker daemon不在のため実PGは正式CI待ちであり、ローカル成功を創作しない。
+
+保持対象を親が直接比較：旧master/importサービス、frontend package-lock、backend requirements/dev、共通api.ts、固定design.mdの7ファイルがd56649c5版とbyte一致。make lint-ciは既存方針でmypy非阻止、コマンド終了0と型検査出力に既存範囲のエラーがあることは区別する。新規venv312は未追跡の許可済み開発環境、製品としてcommitしない。
