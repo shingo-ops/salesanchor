@@ -41,3 +41,17 @@ rootによる設計照合・差分/操作/表示検収: APPROVE（本実装の�
 実装保存58c63d75、main ee455fb1の統合c5deebbcをpushし、正式wrapperでready [PR #3457](https://github.com/shingo-ops/salesanchor/pull/3457)を提出。remote HEADとPR HEAD c5deebbcの一致、作業台status空、製品4hash維持を確認。公開カードはak-publish-card.txt。
 
 c5deebbcのprocess-artifacts gate（job 103650447463）ログをrootが直接確認し、唯一の記載エラーは「### GO記録」未記載。今回の番号付きGO未受領による承認ゲートであり、前便GOの再利用・迂回はしない。ほかのCIの最終結果は更新後HEADで確認する。マージ・本番反映は未実施。
+
+## 本番反映完了（2026-09-13、過去のGO待ち記録を更新）
+
+PO原文「GO #3457」を本セッションで受領し、PR本文の正式GO欄へ転記。AIの代理GOではない。最新main b769e978統合時の競合はevidence-registryの追記1箇所のみ、両側を全文保持。製品4hash不変。HEAD 3d6923bab3729bad02388278b8a57b8ddf0070b0のCI保留0/失敗0・mergeStateStatus CLEANを直接確認後、正式merge wrapperでマージ。
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3457 （MERGED、2026-09-13T01:52:27Z）
+- merge: d9f8629c3765b2bf47020e620cc8a58b842432b2
+- deploy: https://github.com/shingo-ops/salesanchor/actions/runs/34731608784 （SUCCESS、job103655291841）
+- 実ログ確認: salesanchor_db_20260913_105302.sql.gz、7.2M、新規取得成功。配備HEAD d9f8629c、backend healthy、Finalize/Verify deployment成功。バックアップ復元試験は未実施。
+- root直接HTTP確認: app.salesanchor.jp/ HTTP200、api.salesanchor.jp/api/health HTTP200、database/redis/celery connected。
+- 公開資産 /assets/index-qPEhx4EM.js に今回のsecondary/primary mdの6組12ボタンを確認。抜粋・hashはak-production-verification.json。
+- 確認手段の補正: 初回PythonはローカルCA設定エラー、証明書検証を維持したcurlで再確認。最初の/healthは404、正規/api/healthで200。これを本番障害や製品修正とは扱わない。資産の初回連絡先deleteラベルによる探索は一致せず、実際の6フォーム文脈を照合した。
+
+設計自己審査済み・PO実装承認済み・root実装検収済み・PO GO受領済み・実装/マージ/本番反映済み。本番認証付きフォーム送信・PO目視は未実施。LINE再解析/3シート配信は本便対象外で実施なし。次は残存旧ボタン309利用の次便設計、表/報酬3/カレンダー色は保留、新CIは全画面移行の最後。追加実装の開始承認とは扱わない。
