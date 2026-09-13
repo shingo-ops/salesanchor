@@ -1,0 +1,2146 @@
+{
+  "source_sha": "5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15",
+  "source_path": "backend/app/services/tcg_line_import_svc.py",
+  "source_sha256": "95f57a6c24eeebdd3b0eb7b214ebf8be25afaab936541124391f2beec29d1015",
+  "executed_at": "2026-09-12T20:20:21.118849+00:00",
+  "synthetic_cases": [
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A〆"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A〆",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "7277b23ca0e07b3dada49e580a5bebc9d1145c492d8aee60cde8bef4cf11d043",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "ありがとうございます"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "ありがとうございます",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "21b2ba1811e66eef3e01a48e589b379c48c9efa25b3a8354c7e883e04351ba73",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A 5個 1000円"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A 5個 1000円",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "463947ee55c16724f9c07e615485ff5fecadc5ef2e4e4466d36ce7390efa2f32",
+          "skipped_message_count": 1
+        }
+      ]
+    }
+  ],
+  "case_count": 3,
+  "db_calls": 0,
+  "external_api_calls": 0,
+  "scope": "current-function observation, not improved implementation validation",
+  "vocabulary_corpus": {
+    "observed_at": "2026-09-12T20:36:25.059805+00:00",
+    "method": "UTF-8-SIG splitlines; lowercase literal substring per line, no Unicode normalization; term counts overlap; union counts each matching line once per file; no cross-file/message deduplication",
+    "scope": "full supplied files, no time-window filtering; statistical retrieval only, not semantic sold-out labels or accuracy",
+    "sources": [
+      {
+        "source_id": "A",
+        "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3",
+        "byte_count": 2929746,
+        "line_count": 120412,
+        "matching_line_union": 1582,
+        "term_line_counts": {
+          "〆": 195,
+          "〆切": 14,
+          "売り切れ": 9,
+          "売切れ": 0,
+          "売切": 0,
+          "売りきれ": 0,
+          "売り切り": 0,
+          "売切り": 0,
+          "完売": 1376,
+          "完売中": 10,
+          "在庫切れ": 0,
+          "品切れ": 0,
+          "在庫なし": 0,
+          "在庫無し": 0,
+          "在庫無": 0,
+          "締切": 12,
+          "締め切り": 12,
+          "終了": 2,
+          "sold out": 0,
+          "soldout": 0
+        },
+        "reviewed_reference_locations": [
+          {
+            "line": 448,
+            "line_sha256": "fc84f2424f2a8ec36cf69100535a829bd78b54e3a94276b99aeb84e67daac10d"
+          },
+          {
+            "line": 2005,
+            "line_sha256": "071c4c9fc27930eb4c15743123fef70127db8ed07d44e483e4914dd7bb50a02e"
+          },
+          {
+            "line": 20098,
+            "line_sha256": "70515143fa7fb4aaccd10293ee053a8bd0eaa45cb6252af58f01f7eedf4e86d9"
+          },
+          {
+            "line": 31113,
+            "line_sha256": "6db21218caa134e9c978105e264f85a9d3657124913462f2ddbfddb142722f2d"
+          },
+          {
+            "line": 84917,
+            "line_sha256": "6d9855e07c64df7f75570157987e5d9897a8e8f02c49908b5b61dcd1af2c102b"
+          },
+          {
+            "line": 90252,
+            "line_sha256": "10380685fba0c211d78dc08d0caf977d740c8e2268103876b8c37e983e57b7ea"
+          },
+          {
+            "line": 39205,
+            "line_sha256": "adf3d260dcfa30dd9e94c9db588b868da6871d4884a5dc900561fcbed1a3c9b3"
+          }
+        ]
+      },
+      {
+        "source_id": "B",
+        "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07",
+        "byte_count": 25736286,
+        "line_count": 985978,
+        "matching_line_union": 11523,
+        "term_line_counts": {
+          "〆": 4295,
+          "〆切": 502,
+          "売り切れ": 49,
+          "売切れ": 9,
+          "売切": 790,
+          "売りきれ": 0,
+          "売り切り": 16,
+          "売切り": 0,
+          "完売": 5632,
+          "完売中": 456,
+          "在庫切れ": 27,
+          "品切れ": 2,
+          "在庫なし": 38,
+          "在庫無し": 0,
+          "在庫無": 0,
+          "締切": 147,
+          "締め切り": 63,
+          "終了": 500,
+          "sold out": 2,
+          "soldout": 0
+        },
+        "reviewed_reference_locations": [
+          {
+            "line": 49283,
+            "line_sha256": "b2e12ed7e3a725eac79aa89f4380b7f82135ed144b90bf0e5004eb2d2527cb61"
+          },
+          {
+            "line": 165528,
+            "line_sha256": "91d4afdea39d1d8d5c399e3c3a8c51556e58ebde5b004c210c7c6fdd2f00fdc0"
+          },
+          {
+            "line": 397088,
+            "line_sha256": "c6ebfb7621af156099f41c764a1a35daff71bd2e4046c2b801434ac028a76da4"
+          },
+          {
+            "line": 705265,
+            "line_sha256": "ca2d374184ca0808106482f42c7706e1223b03f7d4e6ea0c77e0246885f24bf5"
+          },
+          {
+            "line": 712492,
+            "line_sha256": "8dd8855c5738ca9e37c0e2b8bfc78a2bce415993eadff51ebb91d1ae57d2f7df"
+          },
+          {
+            "line": 819695,
+            "line_sha256": "49fc4bb6a5231a0f04eb2559bcade7563d3bb3f4c6712a9f9b7eaa7e867c6d55"
+          },
+          {
+            "line": 264565,
+            "line_sha256": "5bda3ff22f6b216d323060339a204a8a4f4eaf3ed3929a7351dab31299a0f2ca"
+          }
+        ]
+      }
+    ],
+    "searched_terms": [
+      "〆",
+      "〆切",
+      "売り切れ",
+      "売切れ",
+      "売切",
+      "売りきれ",
+      "売り切り",
+      "売切り",
+      "完売",
+      "完売中",
+      "在庫切れ",
+      "品切れ",
+      "在庫なし",
+      "在庫無し",
+      "在庫無",
+      "締切",
+      "締め切り",
+      "終了",
+      "sold out",
+      "soldout"
+    ]
+  },
+  "status_exclusion_probe": {
+    "source_sha": "5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15",
+    "unchanged_at_main_sha": "d66923e2edad1b6c22df4cba8adf74f23b968cfc",
+    "source_path": "backend/app/services/tcg_analyzer_svc.py",
+    "source_sha256": "9cfb1b6bcd1cc3e5a00aba20d037543c7e3a8385dcf857e07bc7ce5989e24740",
+    "functions": [
+      "load_status_master",
+      "_match_status_pattern",
+      "resolve_status_v2"
+    ],
+    "synthetic_db_columns": [
+      "status_id",
+      "canonical",
+      "search_pattern",
+      "exclude_pattern",
+      "priority",
+      "match_type",
+      "effect"
+    ],
+    "synthetic_db_rows": [
+      [
+        "TEST01",
+        "sold_out",
+        "売り切れ|完売",
+        "売り切れではない|完売となる場合",
+        1,
+        "REGEX",
+        "EXCLUDE"
+      ],
+      [
+        "TEST02",
+        "active",
+        "",
+        "",
+        99,
+        "DEFAULT",
+        "OUTPUT"
+      ]
+    ],
+    "loaded_entries": [
+      {
+        "canonical": "sold_out",
+        "search_pattern": "売り切れ|完売",
+        "priority": 1,
+        "match_type": "REGEX",
+        "effect": "EXCLUDE"
+      },
+      {
+        "canonical": "active",
+        "search_pattern": "",
+        "priority": 99,
+        "match_type": "DEFAULT",
+        "effect": "OUTPUT"
+      }
+    ],
+    "loaded_exclude_pattern_count": 0,
+    "cases": [
+      {
+        "synthetic_raw_state": "売り切れ",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      },
+      {
+        "synthetic_raw_state": "売り切れではない",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      },
+      {
+        "synthetic_raw_state": "予告なく完売となる場合があります",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      }
+    ],
+    "db_calls": 0,
+    "external_api_calls": 0,
+    "scope": "current isolated resolver using synthetic master and raw_state; no end-to-end extraction or production accuracy measurement"
+  },
+  "restock_date_component_probe": {
+    "executed_at": "2026-09-13T00:51:05.199968+00:00",
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "code_hashes": {
+      "backend/app/services/tcg_analyzer_svc.py": "9cfb1b6bcd1cc3e5a00aba20d037543c7e3a8385dcf857e07bc7ce5989e24740",
+      "backend/app/services/gemini_extraction_svc.py": "e5a53869d4421a45d28d4272561960c63c42cc0c9c83858a36bd949cb7c6f176"
+    },
+    "method": "AST isolated unchanged production functions; manually labelled extraction responses; synthetic in-memory candidate masters; no DB, model API, UI or sheets",
+    "relative_date_assumption": "S1 posted at 2026-09-13 JST; current function receives no posted-at argument",
+    "candidate_date_pattern": "(\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬)(?:[〜～]\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬))?)",
+    "candidate_restock_pattern": "(?:追加可能性あり|追加の可能性あり|追加予定(?:あり)?|(?:追加|再)?入荷予定(?:あり)?)",
+    "files": {
+      "A": {
+        "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3"
+      },
+      "B": {
+        "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07"
+      }
+    },
+    "results": [
+      {
+        "id": "R1",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 31113,
+        "input": "数量：完売〆（追加可能性あり）",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R2",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 109822,
+        "input": "後日、追加入荷予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R3",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 95980,
+        "input": "後日、追加予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R4",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 325164,
+        "input": "※8月30日再入荷予定",
+        "expected_note": "追加予定あり（8月30日入荷予定）",
+        "actual_note": "追加予定あり（8月30日入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R5",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 1957,
+        "input": "（12月下旬〜1月中旬入荷予定、",
+        "expected_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "actual_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S1",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "明日、追加入荷予定",
+        "expected_note": "追加予定あり（9月14日入荷予定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S2",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "9月20日発送予定。追加入荷予定あり",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S3",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "再入荷予定なし",
+        "expected_note": null,
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S4",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "2月30日再入荷予定",
+        "expected_note": "確認待ち",
+        "actual_note": "追加予定あり（2月30日入荷予定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      }
+    ],
+    "summary": {
+      "cases": 9,
+      "raw_memo_preserved": 9,
+      "note_matches": 6,
+      "note_mismatches": 3
+    }
+  },
+  "restock_negative_stock_probe": {
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "method": "unchanged functions with manually prepared extraction and synthetic dictionaries; no inventory update or UI test",
+    "rows": [
+      {
+        "id": "N1",
+        "synthetic": true,
+        "raw_quantity": "8",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "8",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N2",
+        "synthetic": true,
+        "raw_quantity": "0",
+        "raw_state": "完売",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "0",
+        "quantity_preserved": true,
+        "actual_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "expected_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N3",
+        "synthetic": true,
+        "raw_quantity": "",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      }
+    ],
+    "summary": {
+      "quantity_representation_preserved": 3,
+      "status_matches": 3,
+      "note_matches": 0
+    }
+  },
+  "main_sync_retest": {
+    "restock_date": {
+      "executed_at": "2026-09-13T01:10:43.622415+00:00",
+      "source_sha": "ee455fb1ba4c7ad407ed6506ee4fe515fce371a8",
+      "code_hashes": {
+        "backend/app/services/tcg_analyzer_svc.py": "4f119aa4516191bcc13c931a337d9706b8dc729d96711df946e0113e88cf0c92",
+        "backend/app/services/gemini_extraction_svc.py": "f6de694ce6c182e639b3f957fed86b267724b70dfa9d9cbe2ca1a29921fcda1b"
+      },
+      "method": "AST isolated unchanged production functions; manually labelled extraction responses; synthetic in-memory candidate masters; no DB, model API, UI or sheets",
+      "relative_date_assumption": "S1 posted at 2026-09-13 JST; current function receives no posted-at argument",
+      "candidate_date_pattern": "(\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬)(?:[〜～]\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬))?)",
+      "candidate_restock_pattern": "(?:追加可能性あり|追加の可能性あり|追加予定(?:あり)?|(?:追加|再)?入荷予定(?:あり)?)",
+      "files": {
+        "A": {
+          "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3"
+        },
+        "B": {
+          "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07"
+        }
+      },
+      "results": [
+        {
+          "id": "R1",
+          "kind": "real_memo_manual_extraction",
+          "source": "A",
+          "line": 31113,
+          "input": "数量：完売〆（追加可能性あり）",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R2",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 109822,
+          "input": "後日、追加入荷予定あります。",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R3",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 95980,
+          "input": "後日、追加予定あります。",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R4",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 325164,
+          "input": "※8月30日再入荷予定",
+          "expected_note": "追加予定あり（8月30日入荷予定）",
+          "actual_note": "追加予定あり（8月30日入荷予定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "active",
+            null
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R5",
+          "kind": "real_memo_manual_extraction",
+          "source": "A",
+          "line": 1957,
+          "input": "（12月下旬〜1月中旬入荷予定、",
+          "expected_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+          "actual_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "active",
+            null
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S1",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "明日、追加入荷予定",
+          "expected_note": "追加予定あり（9月14日入荷予定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S2",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "9月20日発送予定。追加入荷予定あり",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S3",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "再入荷予定なし",
+          "expected_note": null,
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S4",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "2月30日再入荷予定",
+          "expected_note": "確認待ち",
+          "actual_note": "追加予定あり（2月30日入荷予定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        }
+      ],
+      "summary": {
+        "cases": 9,
+        "raw_memo_preserved": 9,
+        "note_matches": 6,
+        "note_mismatches": 3
+      }
+    },
+    "negative_stock": {
+      "source_sha": "ee455fb1ba4c7ad407ed6506ee4fe515fce371a8",
+      "method": "unchanged functions with manually prepared extraction and synthetic dictionaries; no inventory update or UI test",
+      "rows": [
+        {
+          "id": "N1",
+          "synthetic": true,
+          "raw_quantity": "8",
+          "raw_state": "",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "8",
+          "quantity_preserved": true,
+          "actual_status": [
+            "active",
+            null
+          ],
+          "expected_status": [
+            "active",
+            null
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        },
+        {
+          "id": "N2",
+          "synthetic": true,
+          "raw_quantity": "0",
+          "raw_state": "完売",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "0",
+          "quantity_preserved": true,
+          "actual_status": [
+            "sold_out",
+            "excluded"
+          ],
+          "expected_status": [
+            "sold_out",
+            "excluded"
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        },
+        {
+          "id": "N3",
+          "synthetic": true,
+          "raw_quantity": "",
+          "raw_state": "",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "",
+          "quantity_preserved": true,
+          "actual_status": [
+            "active",
+            null
+          ],
+          "expected_status": [
+            "active",
+            null
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        }
+      ],
+      "summary": {
+        "quantity_representation_preserved": 3,
+        "status_matches": 3,
+        "note_matches": 0
+      }
+    }
+  },
+  "date_calendar_oracle": {
+    "method": "Python stdlib calendar oracle for design fixture expectations; not Sales Anchor implementation tests or AI extraction",
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "results": [
+      {
+        "id": "D01",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T10:00:00+09:00",
+        "expected": "2026-09-14",
+        "actual": "2026-09-14",
+        "passed": true
+      },
+      {
+        "id": "D02",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-30T23:59:00+09:00",
+        "expected": "2026-10-01",
+        "actual": "2026-10-01",
+        "passed": true
+      },
+      {
+        "id": "D03",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-12-31T23:59:00+09:00",
+        "expected": "2027-01-01",
+        "actual": "2027-01-01",
+        "passed": true
+      },
+      {
+        "id": "D04",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2028-02-28T12:00:00+09:00",
+        "expected": "2028-02-29",
+        "actual": "2028-02-29",
+        "passed": true
+      },
+      {
+        "id": "D05",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2027-02-28T12:00:00+09:00",
+        "expected": "2027-03-01",
+        "actual": "2027-03-01",
+        "passed": true
+      },
+      {
+        "id": "D06",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T16:00:00+00:00",
+        "expected": "2026-09-15",
+        "actual": "2026-09-15",
+        "passed": true
+      },
+      {
+        "id": "D07",
+        "operation": "calendar_validity",
+        "ymd": [
+          2026,
+          2,
+          30
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D08",
+        "operation": "calendar_validity",
+        "ymd": [
+          2027,
+          2,
+          29
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D09",
+        "operation": "calendar_validity",
+        "ymd": [
+          2028,
+          2,
+          29
+        ],
+        "expected": true,
+        "actual": true,
+        "passed": true
+      }
+    ],
+    "passed": 9,
+    "total": 9
+  },
+  "sheet_write_failure_probe": {
+    "method": "unchanged production writer AST; simulated worksheet and auth helpers; no Google or DB calls; demonstrates call ordering only",
+    "code_sha256": "8d899a0b812f583eab3320a7fce4fc07eaf1da94ce29111c5328128c5a0626e4",
+    "results": [
+      {
+        "case": "success",
+        "calls": [
+          "clear",
+          "append_rows"
+        ],
+        "status": "ok",
+        "visible_rows_after": 2,
+        "old_values_retained": false
+      },
+      {
+        "case": "append_fails",
+        "calls": [
+          "clear",
+          "append_rows"
+        ],
+        "status": "error",
+        "visible_rows_after": 0,
+        "old_values_retained": false
+      }
+    ]
+  },
+  "shipping_slot_reference_labels": {
+    "method": "Same-AI manual reference labels from three actual posts; not model results, production offer mapping or independently reviewed gold set",
+    "source_sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3",
+    "rows": [
+      {
+        "id": "G01",
+        "source": "A",
+        "message_group": "M1",
+        "raw_product_group": "P1",
+        "slot_label": "shipping_1",
+        "line_start": 31112,
+        "line_end": 31114,
+        "source_span_sha256": "33a0b9f99ad2d6906bee9d4a707ed2d0a03ed0b688775b131cc84b74b8b1bcf5",
+        "catalog_product_id": null,
+        "stock_action": "sold_out",
+        "quantity_expected": 0,
+        "unit_explicit": null,
+        "restock_positive": true,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "0 is the agreed sold-out interpretation, not a raw quantity token"
+      },
+      {
+        "id": "G02",
+        "source": "A",
+        "message_group": "M1",
+        "raw_product_group": "P1",
+        "slot_label": "shipping_2",
+        "line_start": 31116,
+        "line_end": 31118,
+        "source_span_sha256": "f8562a1e62cd339d9841eb5028da56e128b597052a9313a607606f3371136160",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 12,
+        "unit_explicit": "BOX",
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G03",
+        "source": "A",
+        "message_group": "M1",
+        "raw_product_group": "P2",
+        "slot_label": "shipping_1",
+        "line_start": 31121,
+        "line_end": 31123,
+        "source_span_sha256": "2a677fea46ed142a6e67c91c7f6007c00d99b0428962fc9e7c97563e06d6286c",
+        "catalog_product_id": null,
+        "stock_action": "sold_out",
+        "quantity_expected": 0,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "0 is the agreed sold-out interpretation, not a raw quantity token"
+      },
+      {
+        "id": "G04",
+        "source": "A",
+        "message_group": "M1",
+        "raw_product_group": "P2",
+        "slot_label": "shipping_2",
+        "line_start": 31125,
+        "line_end": 31127,
+        "source_span_sha256": "17692ed4597cd90b7589477aad5363bd2cddd21d14134ac2b1931481fc30b0cf",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 7,
+        "unit_explicit": "BOX",
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G05",
+        "source": "A",
+        "message_group": "M2",
+        "raw_product_group": "P1",
+        "slot_label": "shipping_1",
+        "line_start": 90252,
+        "line_end": 90252,
+        "source_span_sha256": "10380685fba0c211d78dc08d0caf977d740c8e2268103876b8c37e983e57b7ea",
+        "catalog_product_id": null,
+        "stock_action": "sold_out",
+        "quantity_expected": 0,
+        "unit_explicit": null,
+        "restock_positive": true,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "0 is the agreed sold-out interpretation, not a raw quantity token"
+      },
+      {
+        "id": "G06",
+        "source": "A",
+        "message_group": "M2",
+        "raw_product_group": "P1",
+        "slot_label": "shipping_2",
+        "line_start": 90253,
+        "line_end": 90253,
+        "source_span_sha256": "08db4305c384af57b4ea83277b0dc804c34c70e4aa01093a5ef7089fdfa77730",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 1,
+        "unit_explicit": "カートン",
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G07",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "shipping_1",
+        "line_start": 90255,
+        "line_end": 90256,
+        "source_span_sha256": "921bb6ccf285516c680a1dab61b00724acb29a1ffe3fc16f8d48368b452d5959",
+        "catalog_product_id": null,
+        "stock_action": "sold_out",
+        "quantity_expected": 0,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "0 is the agreed sold-out interpretation, not a raw quantity token"
+      },
+      {
+        "id": "G08",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "shipping_2",
+        "line_start": 90257,
+        "line_end": 90258,
+        "source_span_sha256": "5083889dfacf0da7aa55000aa83a9629ab8e8b02757fb73a1df12ae17fb5f743",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 100,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G09",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "release_day",
+        "line_start": 90259,
+        "line_end": 90260,
+        "source_span_sha256": "2abe652669f7a471c5cfb033f0854d06e93993dba43d059866029e6600f2e208",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 1000,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G10",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "09_17_shipping",
+        "line_start": 90261,
+        "line_end": 90262,
+        "source_span_sha256": "99168a4431304f9055b8b6d8f865db042d9cbdd0df20ea5f8efda962c52fc747",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 1000,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G11",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "09_18_shipping",
+        "line_start": 90263,
+        "line_end": 90264,
+        "source_span_sha256": "8b4803d1e3f9e9f0be10c689b1054a36e626de1614336a52136fccfeed34de3f",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 500,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G12",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P3",
+        "slot_label": "09_19_shipping",
+        "line_start": 90265,
+        "line_end": 90266,
+        "source_span_sha256": "f6d9e4b7f72b331233f24c301e41e7ccda07d789f6187189f8631be00d7f5d14",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 1000,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      },
+      {
+        "id": "G13",
+        "source": "A",
+        "message_group": "M3",
+        "raw_product_group": "P4",
+        "slot_label": "release_day",
+        "line_start": 90268,
+        "line_end": 90269,
+        "source_span_sha256": "57a20ac75cdddf171358c8fae1b1572812fc5ab032132d2b96dcbe498c7619eb",
+        "catalog_product_id": null,
+        "stock_action": "stock_set",
+        "quantity_expected": 100,
+        "unit_explicit": null,
+        "restock_positive": false,
+        "arrival_date_expected": null,
+        "apply_to_existing_offer": "pending_until_unique_supported_match",
+        "quantity_note": "explicit quantity; omitted unit remains unknown"
+      }
+    ],
+    "summary": {
+      "messages": 3,
+      "offers": 13,
+      "sold_out": 4,
+      "positive_quantity": 9,
+      "positive_quantity_missing_unit": 6,
+      "restock_positive": 2,
+      "model_calls": 0
+    },
+    "constraints": [
+      "M1 and M2 must not be auto-linked by repeated shipping_1 labels; dates and prices differ",
+      "M2 and M3 are different sender headers; never merge by nearby position",
+      "P3 abbreviated name has no asserted catalog identity",
+      "BOX and carton stay distinct; no conversion factor assumed",
+      "all dates in these slot labels are shipping dates, not restock arrival dates"
+    ]
+  },
+  "numeric_boundary_probe": {
+    "method": "unchanged numeric helper AST; supplied raw quantity tokens, not actual AI outputs or full analyzer",
+    "code_sha256": "4f119aa4516191bcc13c931a337d9706b8dc729d96711df946e0113e88cf0c92",
+    "cases": [
+      {
+        "raw": "①",
+        "expected": 1,
+        "actual": null,
+        "matches": false
+      },
+      {
+        "raw": "残①カートン",
+        "expected": 1,
+        "actual": null,
+        "matches": false
+      },
+      {
+        "raw": "1,000",
+        "expected": 1000,
+        "actual": 1000.0,
+        "matches": true
+      },
+      {
+        "raw": "10→残3",
+        "expected": null,
+        "actual": 103.0,
+        "matches": false
+      },
+      {
+        "raw": "",
+        "expected": null,
+        "actual": null,
+        "matches": true
+      }
+    ]
+  },
+  "additional_acceptance_labels": {
+    "method": "Additional same-AI manual acceptance labels, not independent model evaluation; original supplier/product names and prices omitted",
+    "references": [
+      {
+        "source": "B",
+        "start": 529960,
+        "end": 529970,
+        "sha256": "3b9610486d4ff97bf2ce870ff6e814add8040f1ffcc5c89f6cc6e1627bceafad"
+      },
+      {
+        "source": "B",
+        "start": 533930,
+        "end": 533941,
+        "sha256": "d8c1fcdf0db2b252c88de14851bb4bf9b7ba160ebddb793e78e174baf94a8501"
+      },
+      {
+        "source": "B",
+        "start": 543172,
+        "end": 543180,
+        "sha256": "b857f0ddad39de4743bac2e6cde2594493b503ad682296cd2219911d05fd45e5"
+      }
+    ],
+    "labels": [
+      {
+        "id": "H01",
+        "message_group": "H1",
+        "raw_product_group": "P1",
+        "unit_expected": "BOX",
+        "line_start": 529960,
+        "line_end": 529962,
+        "quantity_expected": 100,
+        "stock_action": "stock_set",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H02",
+        "message_group": "H1",
+        "raw_product_group": "P2",
+        "unit_expected": "BOX",
+        "line_start": 529964,
+        "line_end": 529966,
+        "quantity_expected": 30,
+        "stock_action": "stock_set",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H03",
+        "message_group": "H1",
+        "raw_product_group": "P3",
+        "unit_expected": "BOX",
+        "line_start": 529968,
+        "line_end": 529970,
+        "quantity_expected": 0,
+        "stock_action": "sold_out",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H04",
+        "message_group": "H2",
+        "raw_product_group": "P4",
+        "unit_expected": "カートン",
+        "line_start": 533930,
+        "line_end": 533932,
+        "quantity_expected": 0,
+        "stock_action": "sold_out",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H05",
+        "message_group": "H2",
+        "raw_product_group": "P4",
+        "unit_expected": "BOX",
+        "line_start": 533934,
+        "line_end": 533935,
+        "quantity_expected": 40,
+        "stock_action": "stock_set",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H06",
+        "message_group": "H2",
+        "raw_product_group": "P4",
+        "unit_expected": "パック",
+        "line_start": 533938,
+        "line_end": 533940,
+        "quantity_expected": 8000,
+        "stock_action": "stock_set",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H07",
+        "message_group": "H3",
+        "raw_product_group": "P5",
+        "unit_expected": "セット",
+        "line_start": 543173,
+        "line_end": 543176,
+        "quantity_expected": 400,
+        "stock_action": "stock_set",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      },
+      {
+        "id": "H08",
+        "message_group": "H3",
+        "raw_product_group": "P6",
+        "unit_expected": "BOX",
+        "line_start": 543178,
+        "line_end": 543180,
+        "quantity_expected": 0,
+        "stock_action": "sold_out",
+        "restock_positive": false,
+        "catalog_product_id": null,
+        "existing_offer_id": null
+      }
+    ],
+    "summary": {
+      "posts": 3,
+      "offers": 8,
+      "sold_out": 3,
+      "positive_quantity": 5,
+      "model_calls": 0
+    },
+    "limitations": [
+      "No claim of template/sender independence or unseen-corpus generalization",
+      "Same product different units must stay separate; no carton/BOX/pack conversion",
+      "Current database identity matching not performed"
+    ],
+    "exact_duplicate_check": {
+      "previous_message_hashes": 17,
+      "additional_messages": 3,
+      "matches": 0,
+      "not_checked": "near-duplicate templates, all historical references or sender-independent split"
+    }
+  },
+  "runtime_table_reference_audit": {
+    "scope": "AST string/f-string metadata only; no SQL execution; dynamic expressions and external operations not resolved",
+    "python_files": 245,
+    "syntax_errors": [],
+    "entries": [
+      {
+        "path": "backend/app/line_import_admin.py",
+        "line": 113,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "6db10570f0570958e1a8928af02e059d29fb515b864e3890112508a69eeceebd"
+      },
+      {
+        "path": "backend/app/routers/tcg_diagnostics.py",
+        "line": 1,
+        "first_token": "TCG",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "3ea442acd4804c1661d833324ec430a706205b31e971f2bcd0883412b57ec094"
+      },
+      {
+        "path": "backend/app/routers/tcg_diagnostics.py",
+        "line": 91,
+        "first_token": "extraction_jobs",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "1e10c80e456de348860d3c927693fd26f3800561c791d409d97d12bf4daabcf0"
+      },
+      {
+        "path": "backend/app/routers/tcg_line_import.py",
+        "line": 1,
+        "first_token": "MIG-04",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "afdeb5e6d1b6489a87750b4437a5f5ef4f050b6518bf6a251ba4ce488f6418ec"
+      },
+      {
+        "path": "backend/app/routers/tcg_line_import.py",
+        "line": 150,
+        "first_token": "LINE",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "1e4864afbb508fe615621860db44baea048e78438f810b43c1e3b5e3fe503244"
+      },
+      {
+        "path": "backend/app/routers/tcg_line_import.py",
+        "line": 562,
+        "first_token": "保留中ジョブの",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "212f6cc762ebbbcc069b3a7f2183abd50e0afb6f799ec4b0c5da9584e65ad7a5"
+      },
+      {
+        "path": "backend/app/routers/tcg_line_import.py",
+        "line": 556,
+        "first_token": "確認完了後に",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "e926d31d66c5dd8caf8bd0b0306ae129a111bc78b0990820a9a17babe243c4d9"
+      },
+      {
+        "path": "backend/app/routers/tcg_parallel_report.py",
+        "line": 74,
+        "first_token": "全仕入元の",
+        "tables": [
+          "extraction_items"
+        ],
+        "sha256": "ff253f4c6a0efd86bde73410e9adcb0eddd0da06d3d7498a389e730f7ef8526d"
+      },
+      {
+        "path": "backend/app/routers/tcg_product_master.py",
+        "line": 296,
+        "first_token": "指定ジョブの",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "d3c80785e6dfe28f0dfe9273af451cda16afe21da2d1e0308fa300268982df3d"
+      },
+      {
+        "path": "backend/app/tasks/tcg_mirror.py",
+        "line": 204,
+        "first_token": "extraction_items",
+        "tables": [
+          "extraction_items"
+        ],
+        "sha256": "808526c4292a33369614afbdc1458837111cc8ef9bbd78179ba376c77da0ff4b"
+      },
+      {
+        "path": "backend/app/tasks/tcg_mirror.py",
+        "line": 204,
+        "first_token": "analysis_results",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "e405d8dda0bd469dd52975d062d94de8d5834e8bc7bd81906ff7afd8149c6171"
+      },
+      {
+        "path": "backend/app/tasks/tcg_mirror.py",
+        "line": 187,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "c152f60a0b6cb50e1187457ff7a9b70c55eb8ba7d7f07bf316ab103739355377"
+      },
+      {
+        "path": "backend/app/tasks/tcg_mirror.py",
+        "line": 212,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "e484ca494076301e5b84bf337f7abf87990ff46211b3fccaff6fdac52117b4df"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 1,
+        "first_token": "MIG-04",
+        "tables": [
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "ed47c721537c3c448af47a58f8e9a0280acce4ccfb4a70cee30055a05dc03678"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 160,
+        "first_token": "UPDATE",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "6c074d2eeed1242fc6037634a6b6026eff5e9b026ff350876e83df823b8a6a06"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 245,
+        "first_token": "UPDATE",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "d6fa971ecbca3e95be0279502200f2e4478d2de588c5103a119c9c471fbd45ed"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 108,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs",
+          "extraction_items"
+        ],
+        "sha256": "7930e10f992921ed7f7e237316d10d573a40ed39e99711cadc3e353970398ebd"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 124,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs"
+        ],
+        "sha256": "4534785428cebb327e3ab263534b2990836ceaeca00d3a1e1f8de7f9cd116200"
+      },
+      {
+        "path": "backend/app/tasks/tcg_extraction.py",
+        "line": 204,
+        "first_token": "INSERT",
+        "tables": [
+          "extraction_items"
+        ],
+        "sha256": "c4712348d4bc217d51d317eab237174c5632a4d840ef37a945187a83c0c7583a"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 63,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "a8694c0c35e25c7ac1647760bc9573de778a2a90fd38f3b8de19c01b3383e778"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 68,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "2e717337c09a20fb1539c61020595057fd2f56887e7e7e45b40fdbbbf79a4edc"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 79,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "dc7e6177c0e2cfe199909e5cca182424d7b53d3bdbcffd8c29aa8c00fbad55c4"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 88,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "fa34513b0d2bb592f869d7a5d5871f1f2b6ab78ba4d63db632ee08e2da815248"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 98,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "17212698b85f799c5ad2002bfa17c262457f576e2c918b789fabfdfe89d910be"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 149,
+        "first_token": "extraction_jobs",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "1b59534ff231d18603aec5ad8130a7abdd6e87336c4d8502e9bf50d0d44a5c75"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 212,
+        "first_token": "UPDATE",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "e1f83e6d7ba9082012cca1a31054cc03120a7a6a45c1a6f81bb93f9d174451f6"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 178,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "18fa6cd5c71ec319a454cce7c6c4c21318ab01f62e35af10a0ea5b9cb7171491"
+      },
+      {
+        "path": "backend/app/services/tcg_diagnostics_svc.py",
+        "line": 194,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "0e058c38a50fc1a49f446c7c196b164cca10d875a3fe3ca17f862f5384cd814e"
+      },
+      {
+        "path": "backend/app/services/tcg_product_master_svc.py",
+        "line": 690,
+        "first_token": "単一",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "b6d35c10584404d35bfdf1650df94d919efb425e3db423589792415fcc83d705"
+      },
+      {
+        "path": "backend/app/services/tcg_product_master_svc.py",
+        "line": 50,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "9eddddeaa3f750d2055c2c2d6c08199d0aa6da96d3d35677017b83b7f2ec5662"
+      },
+      {
+        "path": "backend/app/services/tcg_product_master_svc.py",
+        "line": 555,
+        "first_token": "INSERT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "3a0bef5e11f6b84f089432161c8d4ff86e55d445ca3c1af6dfe8f0da0da3c291"
+      },
+      {
+        "path": "backend/app/services/tcg_product_master_svc.py",
+        "line": 616,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "42a1d203b963724a430b37f36a7c51948048b92c4cb0b64ce4be823b6e8be09b"
+      },
+      {
+        "path": "backend/app/services/tcg_product_master_svc.py",
+        "line": 644,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "464b56791ca5015a92fc80ca507b7a88c86fdf4b377f0d6339f4f79cd2566664"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1,
+        "first_token": "MIG-04",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "e2fd84cc6aa58be3e63f11eca76f0addcd59fed5955fe3a6f64ddd3483fa06cc"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1069,
+        "first_token": "extraction_job",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "b8fb696c421bf56216f2d09d61669df1a72f73f19f61fb33fd942f178395101c"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1260,
+        "first_token": "INSERT",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "47e6cefcd5890f0a7b18660a35d1d03f4f68c287a6ec1445e6ec0ae68df7e599"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1115,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "b3b12245f88ee24fa61e0c2f063cf7997d590fc31f62ae644873acef19cff04a"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1134,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items"
+        ],
+        "sha256": "00b45d52593205ba4a142bdbe347cb060b5905c1604cc598d3cd86a40ee020b4"
+      },
+      {
+        "path": "backend/app/services/tcg_analyzer_svc.py",
+        "line": 1125,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items"
+        ],
+        "sha256": "56f1fd1d1e293a60fa9d469571baa0b15802e68da374272df7b3d083a7dacb2a"
+      },
+      {
+        "path": "backend/app/services/tcg_parallel_report_svc.py",
+        "line": 1,
+        "first_token": "MIG-04",
+        "tables": [
+          "extraction_items"
+        ],
+        "sha256": "c0dd40129b1c72a8f1a27bf07c678bb84e8eb6737176e1e663c6bc74e80d36b7"
+      },
+      {
+        "path": "backend/app/services/tcg_parallel_report_svc.py",
+        "line": 173,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "66d60cfc9925b55bc776cd2a3a025a4aa634ca703d50900e09776932cb76977b"
+      },
+      {
+        "path": "backend/app/services/tcg_analysis_review_svc.py",
+        "line": 31,
+        "first_token": "FROM",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "5787bd62aa660df94f3328a4adcc234f8016608841dbb647a5181cb9ec43da1e"
+      },
+      {
+        "path": "backend/app/services/item_corrections_svc.py",
+        "line": 63,
+        "first_token": "UPDATE",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "270f6a7781aa8e2de8dc71dfea03a20bbc2d7e9374242b512f3a5c1242e53086"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 1,
+        "first_token": "MIG-04",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "1a41c6e958ee6f743b1dbff2ea2843dc9b63cab4be75eed0b514a1f6b7b17063"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 332,
+        "first_token": "provider_entries",
+        "tables": [
+          "source_messages",
+          "extraction_jobs"
+        ],
+        "sha256": "0e35219227facf919c15836fb9f544fde54da59209cd056cb1f1e9e18e24ce45"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 485,
+        "first_token": "LINE",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "3e8eae020ca7c39273118d35858425436f10e3227ff0b546c70b1b0ebcf6cfb4"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 370,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "85f2b27c756cb489793e6ed2eedf02a2cfbd1f10fd7a8bec2a2e3f53ea85633d"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 387,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "471ee66e6f517ab018fd49f844ac3076d86fd68713c7339e5c2041cb1956f2ab"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 407,
+        "first_token": "INSERT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "66c831bc206b324ae3960cb28e9b8d516a09a564df49419e8a74dcd627e620d9"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 442,
+        "first_token": "INSERT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "034c8c070d04b73dfdf5e8c06102a9feca379fedf39aadff39d0e4c46db0e57c"
+      },
+      {
+        "path": "backend/app/services/tcg_line_import_svc.py",
+        "line": 430,
+        "first_token": "UPDATE",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "628f0fa43a5a396ba7ff0898d4295adc8cd47a3bbac4a1c5122c093b36ab3b3f"
+      },
+      {
+        "path": "backend/app/services/tcg_supplier_quality_svc.py",
+        "line": 17,
+        "first_token": "仕入元品質サマリー一覧を",
+        "tables": [
+          "source_messages",
+          "analysis_results"
+        ],
+        "sha256": "f1ba4f1fcb53a13489a0a01a5efdf29e4a1ef010c8feee04796701c05a11233a"
+      },
+      {
+        "path": "backend/app/services/tcg_supplier_quality_svc.py",
+        "line": 29,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "18e51894c39d80b5306f7e30db6db37c2d49d20b06217a71204168f77424ba9a"
+      },
+      {
+        "path": "backend/app/services/tcg_supplier_quality_svc.py",
+        "line": 73,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages"
+        ],
+        "sha256": "e6ccbfad0de1b1b2206b58b915d1cf9f37369633b0fb0a07c6531379b5a821d4"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 627,
+        "first_token": "全",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "beab457da0c3d08a567c5d986a0afcf7c89ad73a5dbd034293517da7c96845b4"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 868,
+        "first_token": "UPDATE",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "f3e18fcc5be6d9908d4f93ed3db68e0bb5a3a28647b8dc0fe55326af54bfedf8"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 986,
+        "first_token": "UPDATE",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "241f6ec463e5cf9b2a6a11677580572b197836cf3fd21ec0ce45e629a6908293"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 1056,
+        "first_token": "UPDATE",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "f635cc7c27cca19bc405a700d3a94cb992dfcafea4452f7ae32b07724d6bb4bd"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 1170,
+        "first_token": "UPDATE",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "193b7970fc4f8874daf1472ece757afa144a6671f3b0a60537d882ff6edaf25d"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 266,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "f95237d355f154b7faf80bc80424dcdf4a0d1b30e82472520dcedfb45eb59169"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 634,
+        "first_token": "SELECT",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "626db734d0113b2985e8a47474099e251398964871371fec8518718762050ac3"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 783,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "e22746a1ce9df2f095550d0960907d1912069270753b51d86999660617856dad"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 918,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "e230107d10404fe8b94d36172cc896c92d9437cc5bd081a95172e7b76f4d42c4"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 1038,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "22b4be17619e01a6619f95d6fdad61941123ee4ce45b82e97c10c9a3b2ae9218"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 1140,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "da26f3cefa1f137e98fa6feed1761f7f79d7c38d1abf890f1731141f65f82a5e"
+      },
+      {
+        "path": "backend/app/services/tcg_unit_recovery_svc.py",
+        "line": 450,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "4d7befcef3905cdd9ebb089e1ec8b66a59e5d1c70ff6da3d4f35a196b58544e8"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 208,
+        "first_token": "SELECT",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "fa31ed5cd3c62042d71bdfd74a33a5e569c24cc128f806fd274e41b66762de08"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 692,
+        "first_token": "安全装置",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "5855870aa681769c366845a8a26e98a2afd044ef65103563a52a22506d759731"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 288,
+        "first_token": "SELECT",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "9880fe7fd7131f16ff2a24dabd8b4a737188894b0aba47834dab50c6a44219fe"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 299,
+        "first_token": "SELECT",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "3804a51afc00cebbb61953f24dd00d303cab88cfa7649e636bd5f82265a247ef"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 372,
+        "first_token": "SELECT",
+        "tables": [
+          "analysis_results"
+        ],
+        "sha256": "1e6c25b9157ea82c5341a7e112b15162b9f200b1895195f9c2e27b3537f40633"
+      },
+      {
+        "path": "backend/app/services/tcg_distribution_svc.py",
+        "line": 682,
+        "first_token": "SELECT",
+        "tables": [
+          "extraction_jobs"
+        ],
+        "sha256": "84f4f63f1951c130ae5568a563409d0af172779fea95f1b8c85d618012ca57f8"
+      },
+      {
+        "path": "backend/app/services/tcg_import_progress.py",
+        "line": 14,
+        "first_token": "job",
+        "tables": [
+          "source_messages",
+          "extraction_jobs",
+          "extraction_items",
+          "analysis_results"
+        ],
+        "sha256": "01d587073067bb88cdcabf5d9a0bfddf6a4e03afe11482dd926238e43d5c8844"
+      }
+    ]
+  },
+  "stage1_component_review": {
+    "date": "2026-09-13",
+    "base_head": "9d7c7436c6edee4263edccd5a6851ebdac4cc31c",
+    "executed_design_sha256": "e13c1f46f10036a75fa7c82a2dfeeb6865bd5450b367f761864bb06222b30f1d",
+    "executor": "/root/stock_contract_01",
+    "reviewer": "root design partner; same session, not independent external review",
+    "decision": "APPROVE stage 1 components only",
+    "files_sha256": {
+      "backend/app/services/tcg_stock_evidence.py": "60298f166c1c1930f0f024e3da7b9ddbf8adcdf5383e8b37e97973a551efda43",
+      "backend/app/services/tcg_stock_quantity.py": "bc3c1db696407b3b917734a96ca7a621ecc00c6ef23180a941e48b271c92679d",
+      "backend/tests/stock_contract/test_stock_evidence.py": "d5de08db7f4715be250977d4f1a34bd640c302989576d927940e914a5dd08a53",
+      "backend/tests/stock_contract/test_stock_quantity.py": "77725deb6dbb40ae9f710cd7fd97f35be00ab1cf8ca60e4b524faffe46768ecf"
+    },
+    "product_files_status": "untracked local files; not committed or included in PR 3456",
+    "worker_report": {
+      "unittest_groups_passed": 6,
+      "mypy_new_modules_errors": 0
+    },
+    "root_direct": {
+      "python": "3.12.8",
+      "unittest_output": "test_empty_and_confidentiality (test_stock_evidence.StockEvidenceTests.test_empty_and_confidentiality) ... ok\ntest_invalid_evidence (test_stock_evidence.StockEvidenceTests.test_invalid_evidence) ... ok\ntest_source_evidence (test_stock_evidence.StockEvidenceTests.test_source_evidence) ... ok\ntest_boundaries_and_purity (test_stock_quantity.StockQuantityTests.test_boundaries_and_purity) ... ok\ntest_quantity_preservation (test_stock_quantity.StockQuantityTests.test_quantity_preservation) ... ok\ntest_unsupported_quantities (test_stock_quantity.StockQuantityTests.test_unsupported_quantities) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 0.002s\n\nOK\n",
+      "ruff": "0.9.10; app/ and final new modules passed",
+      "bandit": "1.8.3; app/: High 0, Low 25, Medium 596; skipped files 0; final new modules all severity findings 0 and errors 0",
+      "mypy": "1.13.0; final new modules errors 0; isolated tooling environment full app emitted 153 errors outside new modules; advisory per Makefile",
+      "lint_ci_exit": 0,
+      "lint_ci_environment": "isolated Python 3.12 tooling only, not full application dependencies; existing declared checker versions unchanged",
+      "initial_failure": "worker ruff cache permission; root Python 3.14 Bandit ast.Num internal errors and 3 new mypy errors. New errors fixed; Python 3.12 rerun used, no check suppression added",
+      "new_files_whitespace": "4/4 no trailing whitespace"
+    },
+    "not_tested": [
+      "K1-K10 inventory behavior",
+      "PostgreSQL",
+      "AI extraction accuracy",
+      "UI",
+      "production",
+      "3 sheets distribution"
+    ]
+  },
+  "stage1_handoff_preparation": {
+    "date": "2026-09-13",
+    "remote_main_verified": "0002d110db0a91013e615fea6a2496ddf2f12e02",
+    "docs_pr": 3456,
+    "docs_pr_head_checked": "0242a98ecd8f185434824d9b67b7ab652a1fbb80",
+    "docs_checks": "3 success, 1 skipped (guard-authoring unit tests)",
+    "source_files_verified": "4/4 sha256 match stage1_component_review; untracked local files unchanged",
+    "target_branch_proposed": "release/line-stock-contract",
+    "target_worktree_created": false,
+    "product_commit_or_pr_created": false,
+    "local_docker": "docker info failed: /var/run/docker.sock does not exist",
+    "stage2_ci_path": "existing .github/workflows/test.yml pytest-run PostgreSQL16 service + new self-contained fixture in the one authorized new test file; not executed",
+    "delegation_boundary": "previous worker authorization covers four files and component tests, forbids commit/push/PR. Broader handoff delegation pending PO; no new agent started"
+  },
+  "stage1_product_commit": {
+    "date": "2026-09-13",
+    "commit": "0c90de2122527f0007b5022cf720b004e4ac1f87",
+    "base_main": "0002d110db0a91013e615fea6a2496ddf2f12e02",
+    "worker_report": {
+      "unittest_groups": 6,
+      "target_mypy_errors": 0,
+      "lint_ci_exit": 0,
+      "bandit_high": 0,
+      "bandit_low": 25,
+      "bandit_medium": 611,
+      "bandit_skip": 0
+    },
+    "parent_direct": "git show committed four paths and SHA256 match; clean status; read full lint log: 154 advisory mypy errors outside new modules, new modules0, Bandit internal errors0",
+    "product_pr": "not submitted at this save point",
+    "scope": "four unconnected pure-component files only; no DB/production"
+  }
+}

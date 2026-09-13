@@ -2709,3 +2709,22 @@ EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直�
 
 
 EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
+
+```text
+id: EV-20260913-LINE-PRODUCT-HANDOFF
+date: 2026-09-13
+agent: design partner / existing stock_contract_01
+scope: explicit additional PO delegation through product PR, no merge or production
+reference: docs/handoff/tcg-import-latest-only/design.md section15 and recon.md
+observed: release/line-stock-contract at origin/main 0002d110; existing worktrees retained
+next: same executor copies four verified files and commits; parent verifies before push/PR
+```
+
+```text
+id: EV-20260913-LINE-PRODUCT-COMMIT
+date: 2026-09-13
+reference: docs/handoff/tcg-import-latest-only/probe-20260913.json stage1_product_commit
+observed: root verified0c90de21 contains exactly4 paths and reviewed hashes; worker stopped after commit
+validation: worker6 unittest groups and target mypy passed; root read lint log High0/skip0/internal errors0,154 advisory mypy errors outside new modules
+next: authorized push and product PR, no merge or production
+```
