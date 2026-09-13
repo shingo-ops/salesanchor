@@ -153,4 +153,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 第1便4ファイルの正式提出 | stock_contract_01 / 設計担当 | PO追加委任済み。最新main起点の作業台作成済み | 同一hashコピー/検証/commit後、親検算を経てpush/PR。merge/本番禁止 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-PRODUCT-HANDOFF | 2026-09-13 |
+| 第1便4ファイルの正式提出 | stock_contract_01 / 設計担当 | 製品commit0c90de21確認。4/4hash一致、部品6群・対象mypy成功、既存型警告154は別記 | 親のcommit検算完了。push/製品PR提出とCI確認。merge/本番禁止 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-PRODUCT-HANDOFF | 2026-09-13 |

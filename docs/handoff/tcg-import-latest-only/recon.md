@@ -416,6 +416,10 @@ GitHub main APIとorigin/mainは0002d110db0a91013e615fea6a2496ddf2f12e02で一�
 
 PO原文「進める」で製品PRまで同じ担当に追加委任。release/line-stock-contractをorigin/main 0002d110から作成し実在/HEAD一致確認。自動回収を含むnew-worktree.sh:65-68を避け、前回承認済みの既存作業台保持手順で作成。UUIDと分割台帳を登録し他作業台を保持。文書配置は一度main対象と判定され保護チェックで停止したため、cdで専用作業台を明示した。ガード変更なし。製品は担当が同一hashの4ファイルをコピーする。
 
+## 第1便製品コミット検算（2026-09-13）
+
+同じstock_contract_01のSAVE-01が完了し停止。0c90de2122527f0007b5022cf720b004e4ac1f87は新規4ファイル・379追加行だけ。親がgit showで4パスと内容hashを検算して4/4一致、clean確認。担当報告: Python3.12部品6群/対象mypy成功、make lint-ci exit0。親がログを直接読み、ruff成功、Bandit High0/Low25/Medium611/skip0/内部エラー0、全体mypy既存領域154警告・新規0を確認。前回の旧main検査とは対象版/件数を分ける。実PG/AI/UI/配信未実施。次は検収済みcommitをpushし、番号付きGOなしの製品PRを提出する。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

@@ -2125,5 +2125,22 @@
     "local_docker": "docker info failed: /var/run/docker.sock does not exist",
     "stage2_ci_path": "existing .github/workflows/test.yml pytest-run PostgreSQL16 service + new self-contained fixture in the one authorized new test file; not executed",
     "delegation_boundary": "previous worker authorization covers four files and component tests, forbids commit/push/PR. Broader handoff delegation pending PO; no new agent started"
+  },
+  "stage1_product_commit": {
+    "date": "2026-09-13",
+    "commit": "0c90de2122527f0007b5022cf720b004e4ac1f87",
+    "base_main": "0002d110db0a91013e615fea6a2496ddf2f12e02",
+    "worker_report": {
+      "unittest_groups": 6,
+      "target_mypy_errors": 0,
+      "lint_ci_exit": 0,
+      "bandit_high": 0,
+      "bandit_low": 25,
+      "bandit_medium": 611,
+      "bandit_skip": 0
+    },
+    "parent_direct": "git show committed four paths and SHA256 match; clean status; read full lint log: 154 advisory mypy errors outside new modules, new modules0, Bandit internal errors0",
+    "product_pr": "not submitted at this save point",
+    "scope": "four unconnected pure-component files only; no DB/production"
   }
 }

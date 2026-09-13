@@ -2719,3 +2719,12 @@ reference: docs/handoff/tcg-import-latest-only/design.md section15 and recon.md
 observed: release/line-stock-contract at origin/main 0002d110; existing worktrees retained
 next: same executor copies four verified files and commits; parent verifies before push/PR
 ```
+
+```text
+id: EV-20260913-LINE-PRODUCT-COMMIT
+date: 2026-09-13
+reference: docs/handoff/tcg-import-latest-only/probe-20260913.json stage1_product_commit
+observed: root verified0c90de21 contains exactly4 paths and reviewed hashes; worker stopped after commit
+validation: worker6 unittest groups and target mypy passed; root read lint log High0/skip0/internal errors0,154 advisory mypy errors outside new modules
+next: authorized push and product PR, no merge or production
+```
