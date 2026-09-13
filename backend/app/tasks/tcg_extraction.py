@@ -29,7 +29,7 @@ from sqlalchemy.orm import Session
 from app.services.gemini_extraction_svc import _safe_error_message, extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_work_reference import (
-    WORK_ID_PROMPT_VERSION,
+    WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
     reference_json,
@@ -176,7 +176,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             current = load_work_reference(session, TCG_SCHEMA)
             if reference_digest(current) != digest:
                 raise ValueError("Product/work reference changed during extraction")
-            if result["prompt_version"] == WORK_ID_PROMPT_VERSION:
+            if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:
                 for item in result["items"]:
                     explicit = resolve_work_evidence(
                         item["raw_product_name"], raw_text, item["line_start"], item["line_end"],
