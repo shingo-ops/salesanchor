@@ -145,7 +145,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | 全体設計自己審査APPROVE。PR #3456。第1便4ファイルのカードは準備済み・未実装。第2便はmigration/登録/PG試験の3ファイル・8試験群の未発行草案。01〜05と別本番便の開始条件を保存 | 第1便の別担当への明示委任を確認中。委任後は第1便だけ実装・結果検収。第2便は前段検収/最新作業台/隔離PG経路確定後に正式発行 | docs/handoff/tcg-import-latest-only/design.md §15 / docs/handoff/tcg-import-latest-only/card-stock-storage-02.md / EV-20260913-LINE-STORAGE-CARD-DRAFT | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | 全体設計自己審査APPROVE。PR #3456は文書のみ。第1便を明示委任し4ファイルをローカル実装、親も部品6群/対象静的検査を直接再検証して限定検収APPROVE。製品未コミット・未接続 | 第1便成果物の正式引き継ぎと第2便の最新main/隔離PG経路を確定。第2便未発行、本番未変更 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STAGE1-REVIEW | 2026-09-13 |
 
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）

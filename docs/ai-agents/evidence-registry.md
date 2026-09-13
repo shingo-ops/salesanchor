@@ -2972,3 +2972,17 @@ tradeoff: draft format pass is not executable-card approval; first-stage impleme
 request: explicit delegation of stage 1 to another executor requested from PO; no response recorded at this save point
 follow_up: stage-1 delegation and implementation evidence; finalize storage card only after prerequisites
 ```
+
+```text
+id: EV-20260913-LINE-STAGE1-REVIEW
+date: 2026-09-13
+agent: Codex design partner / delegated stock_contract_01
+scope: four new pure-component files and tests; no existing product integration
+request: PO original reply 進める to explicit stage-1 delegation question; no proxy GO
+reference: docs/handoff/tcg-import-latest-only/recon.md and probe-20260913.json stage1_component_review
+validation: worker reports six unittest groups and two-module mypy passed; root directly reran six groups, targeted ruff/mypy/Bandit, all passed; full lint-ci exit 0 on Python3.12 tooling environment with 153 advisory mypy errors outside new modules; full Bandit High0/skip0
+failure: original cache permission and Python3.14 Bandit internal error not treated as pass; three new mypy errors fixed under formally linted follow-up card
+decision: stage-1 component review APPROVE; same-session parent review, not independent third-party review
+state: product files local/untracked, no product commit or PR; docs PR3456; no DB, K1-K10, AI/UI, production or distribution verification
+follow_up: formal product handoff and stage-2 latest-main/isolated-PostgreSQL prerequisites; stage2 remains unissued
+```

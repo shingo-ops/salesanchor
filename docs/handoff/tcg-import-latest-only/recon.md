@@ -390,6 +390,18 @@ migrations/20260906_120000_create_tcg_tables_t001.sql:318/350/388/410でsupplier
 
 第1便の新規4ファイルは専用作業台に未存在。第2便は3ファイルと8試験群の草案で、未発行。正式試験経路と前段の検収が必要であり、形式検査のみで着手可とはしない。
 
+## 第1便の委任・実装検収（2026-09-13）
+
+POへの「第1便を別の実装担当へ委任して進めてよいですか」という問いに、原文「進める」を受領。委任は新規4ファイルと部品試験だけ。/root/stock_contract_01へCARD-LINE-STOCK-CONTRACT-01、続いて01-FIXを渡した。実装担当は停止済み。設計担当自身は製品コードを変更していない。GO委任の有効化ではない。
+
+実物確認: backend/app/services/tcg_stock_evidence.py:45,93に検証済み辞書の型確定、backend/tests/stock_contract/test_stock_evidence.py:58,112に全raw項目とclausesの原文一致・逆順/重複の拒否例。数量はbackend/app/services/tcg_stock_quantity.pyで丸数字/Decimal/曖昧入力拒否を実装。新規4ファイルは未追跡のローカル成果物で、製品コミット・製品PR未提出。ファイル全hashはprobe-20260913.jsonのstage1_component_reviewへ保存した。
+
+実装担当の報告: Python3.12 unittest 6群成功、対象mypy 2モジュール指摘0。設計担当が別途直接再実行: 同6群成功、対象ruff成功、対象mypy指摘0、対象Banditは全重大度指摘0/内部エラー0。新規4ファイルの末尾空白なし、追跡済み製品差分0を確認した。
+
+停止の扱い: 最初のruff cache書込み権限失敗は通常のsandbox審査経路で再実行。Python3.14ではBanditのast.Num内部例外が出たため合格扱いにしなかった。新規mypy指摘3件は修正カードで解消。Python3.12.8の隔離検査環境に既存requirements-devのruff0.9.10/Bandit1.8.3/mypy1.13.0を導入し、make lint-ciを実行してexit0。全appのruff成功、Bandit High0/Low25/Medium596/skip0。mypyは全アプリ依存を入れない検査環境で既存領域153件の警告を出したが、新規2部品の警告0。全体の型検査無警告やCI全成功とは扱わない。
+
+検収: **APPROVE（第1便の未接続部品のみ）**。設計契約と実物を同セッションの親が照合した検収で、独立した第三者レビューではない。既存呼出元への接続、K1〜K10、実PG、AI精度、UI、マージ、本番、再解析、3シート配信は未実施。次は製品成果物の正式引き継ぎ方法と第2便の最新main/隔離PG経路を確定する。第2便カードは引き続き未発行。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

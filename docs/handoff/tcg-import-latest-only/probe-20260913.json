@@ -2073,5 +2073,43 @@
         "sha256": "01d587073067bb88cdcabf5d9a0bfddf6a4e03afe11482dd926238e43d5c8844"
       }
     ]
+  },
+  "stage1_component_review": {
+    "date": "2026-09-13",
+    "base_head": "9d7c7436c6edee4263edccd5a6851ebdac4cc31c",
+    "executed_design_sha256": "e13c1f46f10036a75fa7c82a2dfeeb6865bd5450b367f761864bb06222b30f1d",
+    "executor": "/root/stock_contract_01",
+    "reviewer": "root design partner; same session, not independent external review",
+    "decision": "APPROVE stage 1 components only",
+    "files_sha256": {
+      "backend/app/services/tcg_stock_evidence.py": "60298f166c1c1930f0f024e3da7b9ddbf8adcdf5383e8b37e97973a551efda43",
+      "backend/app/services/tcg_stock_quantity.py": "bc3c1db696407b3b917734a96ca7a621ecc00c6ef23180a941e48b271c92679d",
+      "backend/tests/stock_contract/test_stock_evidence.py": "d5de08db7f4715be250977d4f1a34bd640c302989576d927940e914a5dd08a53",
+      "backend/tests/stock_contract/test_stock_quantity.py": "77725deb6dbb40ae9f710cd7fd97f35be00ab1cf8ca60e4b524faffe46768ecf"
+    },
+    "product_files_status": "untracked local files; not committed or included in PR 3456",
+    "worker_report": {
+      "unittest_groups_passed": 6,
+      "mypy_new_modules_errors": 0
+    },
+    "root_direct": {
+      "python": "3.12.8",
+      "unittest_output": "test_empty_and_confidentiality (test_stock_evidence.StockEvidenceTests.test_empty_and_confidentiality) ... ok\ntest_invalid_evidence (test_stock_evidence.StockEvidenceTests.test_invalid_evidence) ... ok\ntest_source_evidence (test_stock_evidence.StockEvidenceTests.test_source_evidence) ... ok\ntest_boundaries_and_purity (test_stock_quantity.StockQuantityTests.test_boundaries_and_purity) ... ok\ntest_quantity_preservation (test_stock_quantity.StockQuantityTests.test_quantity_preservation) ... ok\ntest_unsupported_quantities (test_stock_quantity.StockQuantityTests.test_unsupported_quantities) ... ok\n\n----------------------------------------------------------------------\nRan 6 tests in 0.002s\n\nOK\n",
+      "ruff": "0.9.10; app/ and final new modules passed",
+      "bandit": "1.8.3; app/: High 0, Low 25, Medium 596; skipped files 0; final new modules all severity findings 0 and errors 0",
+      "mypy": "1.13.0; final new modules errors 0; isolated tooling environment full app emitted 153 errors outside new modules; advisory per Makefile",
+      "lint_ci_exit": 0,
+      "lint_ci_environment": "isolated Python 3.12 tooling only, not full application dependencies; existing declared checker versions unchanged",
+      "initial_failure": "worker ruff cache permission; root Python 3.14 Bandit ast.Num internal errors and 3 new mypy errors. New errors fixed; Python 3.12 rerun used, no check suppression added",
+      "new_files_whitespace": "4/4 no trailing whitespace"
+    },
+    "not_tested": [
+      "K1-K10 inventory behavior",
+      "PostgreSQL",
+      "AI extraction accuracy",
+      "UI",
+      "production",
+      "3 sheets distribution"
+    ]
   }
 }
