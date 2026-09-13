@@ -635,4 +635,6 @@ run_sql migrations/20260912_160000_line_import_devices.sql
 # Android source names (public control plane; all current/future tenants)
 run_sql migrations/20260912_170000_line_supplier_source_names.sql
 
+# ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
+run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
 run_sql migrations/20260913_150000_tcg_empty_box_condition.sql
