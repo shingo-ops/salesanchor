@@ -1,4 +1,4 @@
--- CARD-LINE-25TH-MASTER-01 / design-keyword §17 revision 4.
+-- CARD-LINE-25TH-MASTER-01 / design-keyword §17 revision 6.
 -- Additive tenant_004 dictionary change; every guard precedes the first INSERT.
 BEGIN;
 SET LOCAL lock_timeout = '5s';
@@ -9,6 +9,7 @@ DECLARE
         'tcg_major_categories','tcg_series','tcg_manufacturers','tcg_product_categories'];
     table_count integer;
     base record;
+    promo record;
     candidate record;
     candidate_ids uuid[];
     set_id uuid;
@@ -21,7 +22,7 @@ DECLARE
     actual_words text[];
     baseline_words text[];
     set_search text[] := ARRAY['25thアニバーサリー スペシャルセット','25th ANNIVERSARY COLLECTION スペシャルセット'];
-    set_exclude text[] := ARRAY['サプライのみ','スペシャルセットではない','スペシャルセットではありません','スペシャルセットじゃない','スペシャルセットでは無い'];
+    set_exclude text[] := ARRAY['サプライのみ','スペシャルセットではない','スペシャルセットではありません','スペシャルセットじゃない','スペシャルセットでは無い','スペシャルセット プロモパック'];
     base_exclude text[] := ARRAY['プロモ','ゴールデン','golden','サプライのみ','スペシャルセット'];
 BEGIN
     SELECT count(*) INTO table_count FROM unnest(required_tables) t
@@ -48,6 +49,28 @@ BEGIN
     WHERE p.id='797f6adb-87f5-4316-99be-6227bda5c431'::uuid AND p.code='PM0071'
       AND p.japanese_title='25th Anniversary Collection' AND p.mark='S8a' AND p.is_active;
     IF base.id IS NULL THEN RAISE EXCEPTION '25th base identity mismatch'; END IF;
+    SELECT p.* INTO promo FROM tenant_004.tcg_products p
+    JOIN tenant_004.tcg_series w ON w.id=p.work_id AND w.code='IP001' AND w.display_name='Pokemon' AND w.is_active
+    JOIN tenant_004.tcg_product_categories c ON c.id=p.product_category_id AND c.code='PC_SINGLE'
+        AND c.display_name='Single' AND c.kubun_type='シングル系' AND c.is_active
+    WHERE p.id='c725c6f7-4572-48c0-925f-914846096077'::uuid AND p.code='PM0072'
+      AND p.japanese_title='25th Anniversary Collection プロモパック' AND p.mark='PROMO' AND p.is_active;
+    IF promo.id IS NULL THEN RAISE EXCEPTION '25th promo identity mismatch'; END IF;
+    FOREACH target_table IN ARRAY ARRAY['product_search_keywords','product_exclude_keywords'] LOOP
+        IF target_table='product_search_keywords' THEN
+            baseline_words := ARRAY['25th Anniversary Collection プロモパック','25th Anniversary Collection プロモ',
+                                    '25th アニバーサリー プロモパック','25thプロモパック'];
+            target_words := ARRAY[]::text[];
+        ELSE
+            baseline_words := ARRAY['25th Golden Box'];
+            target_words := ARRAY['スペシャルセット プロモパック'];
+        END IF;
+        EXECUTE format('SELECT array_agg(keyword) FROM tenant_004.%I WHERE product_id=$1',target_table) INTO actual_words USING promo.id;
+        IF NOT baseline_words <@ COALESCE(actual_words,ARRAY[]::text[])
+           OR NOT COALESCE(actual_words,ARRAY[]::text[]) <@ (baseline_words || target_words) THEN
+            RAISE EXCEPTION '25th unexpected promo dictionary: %',target_table;
+        END IF;
+    END LOOP;
     IF EXISTS (SELECT 1 FROM tenant_004.product_search_keywords GROUP BY product_id,keyword HAVING count(*)>1)
        OR EXISTS (SELECT 1 FROM tenant_004.product_exclude_keywords GROUP BY product_id,keyword HAVING count(*)>1) THEN
         RAISE EXCEPTION '25th duplicate existing keyword';
@@ -110,10 +133,12 @@ BEGIN
                 base.division_id,base.work_id,base.manufacturer_id,base.product_category_id,true,NULL,NULL,NULL)
         RETURNING id INTO set_id;
     END IF;
-    FOREACH target_id IN ARRAY ARRAY[base.id,set_id] LOOP
+    FOREACH target_id IN ARRAY ARRAY[base.id,set_id,promo.id] LOOP
         FOREACH target_table IN ARRAY ARRAY['product_search_keywords','product_exclude_keywords'] LOOP
             target_words := CASE WHEN target_id=base.id THEN
                 CASE WHEN target_table='product_search_keywords' THEN ARRAY['25thアニバーサリー'] ELSE base_exclude END
+                WHEN target_id=promo.id THEN
+                CASE WHEN target_table='product_search_keywords' THEN ARRAY[]::text[] ELSE ARRAY['スペシャルセット プロモパック'] END
                 ELSE CASE WHEN target_table='product_search_keywords' THEN set_search ELSE set_exclude END END;
             FOREACH word IN ARRAY target_words LOOP
                 EXECUTE format('INSERT INTO tenant_004.%I (product_id,keyword,position)

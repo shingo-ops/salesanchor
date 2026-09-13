@@ -891,6 +891,7 @@ def test_work_id_schema_existing_future_and_repeat(pg):
 TWENTY_FIFTH = '20260913_120000_tcg_25th_product_disambiguation.sql'
 ANNIVERSARY = '25thアニバーサリー'
 SPECIAL = '25th ANNIVERSARY COLLECTION スペシャルセット'
+PROMO_25TH_ID = 'c725c6f7-4572-48c0-925f-914846096077'
 BASE_25TH_ID = '797f6adb-87f5-4316-99be-6227bda5c431'  # Migration identity, not a generated set ID.
 NEGATIONS_25TH = ['スペシャルセットではない', 'スペシャルセットではありません', 'スペシャルセットじゃない', 'スペシャルセットでは無い']
 PRODUCTS_25TH = [
@@ -937,7 +938,7 @@ def seed_25th(connection, schema='tenant_004'):
                 ,true FROM {}.tcg_major_categories d,{}.tcg_series w,{}.tcg_manufacturers m,{}.tcg_product_categories c
                 WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code=%s RETURNING id""").format(
                     *[sql.Identifier(schema)] * 5),
-                (BASE_25TH_ID if code == 'PM0071' else str(uuid4()), code, title, mark, category))
+                (BASE_25TH_ID if code == 'PM0071' else PROMO_25TH_ID if code == 'PM0072' else str(uuid4()), code, title, mark, category))
             pid = cursor.fetchone()[0]
             for table, words in [('product_search_keywords', search), ('product_exclude_keywords', exclude)]:
                 for position, word in enumerate(words, 1):
@@ -972,7 +973,7 @@ def test_25th_migration_exact_delta_replay_other_tenant_and_27_controls(pg, monk
     before = snapshot_25th(connection, ('tenant_004', 'tenant_908'))
     apply_25th(connection)
     after = snapshot_25th(connection, ('tenant_004', 'tenant_908'))
-    for table, delta in [('tcg_products', 1), ('product_search_keywords', 3), ('product_exclude_keywords', 10)]:
+    for table, delta in [('tcg_products', 1), ('product_search_keywords', 3), ('product_exclude_keywords', 12)]:
         assert len(after['tenant_004', table]) - len(before['tenant_004', table]) == delta
         assert all(row in after['tenant_004', table] for row in before['tenant_004', table])
         assert before['tenant_908', table] == after['tenant_908', table]
@@ -997,6 +998,8 @@ def test_25th_migration_exact_delta_replay_other_tenant_and_27_controls(pg, monk
     with connection.cursor() as cursor:
         cursor.execute("SELECT position FROM tenant_004.product_search_keywords WHERE keyword=%s", (ANNIVERSARY,))
         assert cursor.fetchone()[0] == 5
+        cursor.execute("SELECT keyword,position FROM tenant_004.product_exclude_keywords WHERE product_id=%s ORDER BY position", (PROMO_25TH_ID,))
+        assert cursor.fetchall() == [('25th Golden Box', 2), ('スペシャルセット プロモパック', 3)]
 
 
 @pytest.mark.parametrize('fault', ['identity', 'inactive_reference', 'duplicate_word', 'unexpected_word', 'same_name_other_form', 'same_keyword_other_title', 'inactive_set', 'duplicate_set', 'partial_set_words', 'id_collision', 'code_overflow'])
@@ -1155,7 +1158,9 @@ def test_25th_real_analysis_preserves_controls_and_ambiguous_review(pg, monkeypa
     seed_25th(connection)
     apply_25th(connection)
     configure_25th(monkeypatch)
-    cases = CONTROLS_25TH[:9]
+    # Revision 6: retain contradictory BOX input, expect unresolved/review.
+    cases = list(CONTROLS_25TH[:9])
+    cases[1] = (*cases[1][:3], None)
     _, jid, result = run_message(connection, engine, monkeypatch,
         '\n'.join(' '.join(c[:3]) for c in cases),
         [record(name, n, state=state, memo=memo) for n, (name, state, memo, _) in enumerate(cases, 1)])
@@ -1181,7 +1186,74 @@ def test_25th_real_analysis_preserves_controls_and_ambiguous_review(pg, monkeypa
             errors.append(f'{index}: review missing')
     if rows[7][5] != 'プロモカードパック1個を含む':
         errors.append('8: memo changed')
-    if 'MULTI' not in rows[8][4] or not rows[8][3]:
+    if rows[8][0] or not rows[8][3]:
         errors.append('9: ambiguous review not preserved')
     if errors:
         pytest.fail(json.dumps(dict(errors=errors, observations=observations), ensure_ascii=False, indent=2))
+
+
+@pytest.mark.parametrize('fault', ['uuid', 'title', 'mark', 'inactive', 'work', 'category', 'category_inactive', 'missing_search', 'duplicate_search', 'unknown_search', 'missing_exclude', 'duplicate_exclude', 'unknown_exclude'])
+def test_25th_promo_guards_before_any_write(pg, fault):
+    connection, _, _ = pg
+    seed_25th(connection)
+    with connection.cursor() as cursor:
+        if fault == 'uuid':
+            # Same code/title but a different physical product identity.
+            cursor.execute("UPDATE tenant_004.tcg_products SET code='PM0900' WHERE code='PM0072'")
+            cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,mark,category_class,division_id,work_id,manufacturer_id,product_category_id,is_active) SELECT 'PM0072',japanese_title,mark,category_class,division_id,work_id,manufacturer_id,product_category_id,is_active FROM tenant_004.tcg_products WHERE code='PM0900' RETURNING id")
+            replacement_id = cursor.fetchone()[0]
+            for table in ('product_search_keywords', 'product_exclude_keywords'):
+                cursor.execute(sql.SQL('UPDATE tenant_004.{} SET product_id=%s WHERE product_id=%s').format(sql.Identifier(table)), (replacement_id, PROMO_25TH_ID))
+        elif fault in ('title', 'mark', 'inactive', 'work', 'category'):
+            column, value = {'title': ('japanese_title', 'different'), 'mark': ('mark', 'different'),
+                             'inactive': ('is_active', False), 'work': ('work_id', None),
+                             'category': ('product_category_id', None)}[fault]
+            cursor.execute(sql.SQL("UPDATE tenant_004.tcg_products SET {}=%s WHERE code='PM0072'").format(sql.Identifier(column)), (value,))
+        elif fault == 'category_inactive':
+            cursor.execute("UPDATE tenant_004.tcg_product_categories SET is_active=false WHERE code='PC_SINGLE'")
+        else:
+            table = 'product_search_keywords' if fault.endswith('search') else 'product_exclude_keywords'
+            word = '25th Anniversary Collection プロモパック' if fault.endswith('search') else '25th Golden Box'
+            if fault.startswith('missing'):
+                cursor.execute(sql.SQL('UPDATE tenant_004.{} SET keyword=%s WHERE product_id=%s AND keyword=%s').format(sql.Identifier(table)), ('changed', PROMO_25TH_ID, word))
+            else:
+                cursor.execute(sql.SQL('INSERT INTO tenant_004.{}(product_id,keyword,position) VALUES (%s,%s,99)').format(sql.Identifier(table)),
+                    (PROMO_25TH_ID, word if fault.startswith('duplicate') else 'unexpected'))
+    before = snapshot_25th(connection)
+    with pytest.raises(psycopg2.errors.RaiseException):
+        apply_25th(connection)
+    with connection.cursor() as cursor:
+        cursor.execute('ROLLBACK')
+    assert snapshot_25th(connection) == before
+
+
+def test_25th_compound_all_units_hold_pack_promo_and_two_memos(pg, monkeypatch):
+    connection, engine, async_url = pg
+    seed_25th(connection)
+    apply_25th(connection)
+    configure_25th(monkeypatch)
+    with connection.cursor() as cursor:
+        cursor.execute("INSERT INTO tenant_004.units(code,canonical,kubun,is_active) VALUES ('UN0002','Pack','パック系',true) RETURNING id")
+        cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Pack','en')", (cursor.fetchone()[0],))
+    name = ANNIVERSARY + ' スペシャルセット プロモパック'
+    records = [record(name, i) for i in range(1, 4)]
+    for row, unit in zip(records, ['BOX', 'Pack', 'unknown-unit'], strict=True):
+        row[3] = unit
+    _, jid, result = run_message(connection, engine, monkeypatch, '\n'.join([name]*3), records)
+    assert result['status'] == 'done' and result['items_count'] == 3
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT ar.pid_resolved,ar.needs_review FROM tenant_004.analysis_results ar JOIN tenant_004.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s', (jid,))
+        assert cursor.fetchall() == [(False, True)] * 3
+    assert asyncio.run(output_25th(async_url)) == []
+    memos = ['プロモカードパック1個を含む', 'プロモパック1個を含む']
+    rows = [record(ANNIVERSARY + ' プロモパック', 1)] + [record(SPECIAL, n, memo=memo) for n, memo in enumerate(memos, 2)]
+    rows[0][3] = 'Pack'
+    _, new_jid, result = run_message(connection, engine, monkeypatch, '\n'.join(' '.join(row[:6]) for row in rows), rows)
+    assert result['status'] == 'done' and result['analysis_stats']['pid_resolved'] == 3
+    with connection.cursor() as cursor:
+        cursor.execute('SELECT p.code,p.japanese_title,ei.raw_memo,ar.needs_review FROM tenant_004.analysis_results ar JOIN tenant_004.extraction_items ei ON ei.id=ar.extraction_item_id JOIN tenant_004.tcg_products p ON p.id=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start', (new_jid,))
+        observed = cursor.fetchall()
+    assert observed[0][0] == 'PM0072'
+    assert [r[1] for r in observed[1:]] == [SPECIAL, SPECIAL]
+    assert [r[2] for r in observed[1:]] == memos
+    assert all(r[3] for r in observed[1:])  # Unknown memo reason is not cleared.
