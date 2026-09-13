@@ -3,7 +3,7 @@
 # CARD-LINE-STOCK-STORAGE-02 — 草案・未発行
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、07-migration.md、10-executor.md、11-lint.md。
-照合結果: 既存migrationはtenantスキーマ走査・追加専用、run_all_migrations.sh登録と実PG確認が必要。第1便の部品検収は完了。製品の正式引き継ぎは未完了。本カードは投入しない。
+照合結果: 既存migrationはtenantスキーマ走査・追加専用、run_all_migrations.sh登録と実PG確認が必要。第1便の部品検収は完了。製品PR3471への正式引き継ぎも完了。第2便の実装委任は未受領。本カードは投入しない。
 
 受領確認: 実装役がこの草案を受け取った場合は「第2便未発行」を返して停止する。以下は発行前に具体化する作業内容であり実行命令ではない。
 開始条件: 第1便のコード/試験検収、最新mainとの統合済み作業台、次の3ファイルへの正式な権限、以下のCI専用隔離PostgreSQL試験経路を設計担当が確認して発行版へ改訂した後。
@@ -19,10 +19,10 @@ SQL責務: 6表と2追加列、FK/NOT NULL/CHECK/索引/不変トリガー、con
 
 実PGで確認する試験群:
 1. 2回適用後も新規6表/追加2列/control1行、既存行の業務値と既存登録行が不変。
-2. available/null、sold_out/正数量、負数、不正enum、非object/array、非64桁digestを拒否する。
+2. available/null、sold_out/正数量、負数、NaN/Infinity、不正enum、非object/array/JSON null/必須キー欠落、非64桁digest、訂正履歴IDのUUID/数値型/範囲外を拒否する。訂正IDは十進文字列として1/2/10/9007199254740993/9223372036854775807を保持する。
 3. appliedに対象/時刻/revisionが欠けた行、別offer/channelの参照、終端イベント改変、原文削除の連鎖を拒否する。
 4. 同一transaction内の循環参照は正しい場合だけ成功し、不正なcommitは全変更を戻す。
-5. 予定の日付型/範囲、ready後のpayload/manifest不変、予約の対象一致を検証する。
+5. 予定の日付型/範囲と無限日付拒否、ready後のpayload/manifest不変、予約の対象一致を検証する。
 6. controlのlegacy/paused-legacyを許可し、baselineなしshadowや承認版なしprojected、勝手なrollout_id変更を拒否する。
 7. inboxのsource/seq二重登録と改変、別sourceのevent参照、未記録のsettledを拒否する。
 8. 同一ローカル試験DBの複数テナントでFK/行が混ざらず、TCG未導入スキーマを対象にしない。
@@ -37,7 +37,7 @@ UUID付きtcg_stock_test_名の新DBを作り、そのDB内だけにtenant_951/9
 
 禁止: 本番/QAサービスへの接続、既存ジョブの起動、AI/Sheets、secrets、CI・guard変更、permit自己発行、deploy/マージ、未記載の運用スクリプト編集。
 完了報告に必要: 実HEAD、3ファイル差分、適用対象、収集/成功/失敗/skip件数、実PG結果、登録検査結果。これらが揃っても本番GOにはしない。
-停止条件: 前段の正式引き継ぎ未完了、採番衝突、既存登録差分、対象不明、検証失敗、権限拒否のいずれか。失敗した操作と出力を設計担当へ返す。
+停止条件: 採番衝突、既存登録差分、対象不明、検証失敗、権限拒否のいずれか。失敗した操作と出力を設計担当へ返す。
 END OF CARD
 
 ## 草案の形式検査
@@ -46,6 +46,12 @@ card-lintは書式だけを確認する。実行コマンドを持たない未�
 
 ## 発行前の具体化記録（2026-09-13）
 
-参照mainは0002d110db0a91013e615fea6a2496ddf2f12e02（GitHub APIとローカルorigin/main一致）。予定SQL名は未使用。登録位置は既存の20260912_170000_line_supplier_source_names.sqlのrun_sql行の後。既存行は変更しない。
+参照mainは56a1661d03a583be53fc74507c7d428faa2f0b18（GitHub APIとローカルorigin/main一致）。予定SQL名は未使用。登録位置は既存の20260913_150000_tcg_empty_box_condition.sqlのrun_sql行の後。既存行は変更しない。
 新規テナントへの試験は「TCG親表準備後に本SQLを再適用できる」の検証であり、全テナント作成経路への自動導入を実装済みとはしない。実サービス側でTCGを導入する運用は別の開始条件として残す。
-同一AIの査定: CI試験経路の設計はAPPROVE。第2便カード全体は未発行。具体的な最新作業台・第1便の正式保存・担当への範囲付与がまだ必要。実PG結果は0件であり、実装前の試験成功を捏造しない。
+同一AIの査定: CI試験経路の設計はAPPROVE。第2便カード全体は未発行。第1便の正式保存は完了。具体的な第2便専用作業台と担当への範囲付与がまだ必要。実PG結果は0件であり、実装前の試験成功を捏造しない。
+
+## 実装委任案（3ファイル・第2便だけ）
+
+担当候補は既存stock_contract_01。新規エージェントは起動しない。最新origin/main起点のrelease/line-stock-storageを専用候補にする。新規SQL1本・登録1行・実PG試験1ファイルの実装、検証、commit/push/PRと既存CIによる試験までをPOへ提示する。第1便の追加委任は本便へ流用しない。実装カードの発行版は作業台実在確認後に手順と設計hashを固定して再検査する。
+SQL試験8群の関数名はtest_repeat_and_existing_data、test_value_and_snapshot_constraints、test_event_integrity、test_deferred_transaction_integrity、test_plan_and_publication_integrity、test_control_integrity、test_inbox_integrity、test_existing_future_and_absent_tenantsに固定。各群の収集と実行を証跡に残す。
+最新mainの訂正履歴とEmpty boxの定義は書き換えない。第2便では数量/商品/状態を本サービスへ投影せず、control初期値legacyのまま。本番適用、既存処理接続、配信、マージ、第3便への自動移行は禁止。

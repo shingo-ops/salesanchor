@@ -420,6 +420,16 @@ GitHub main APIとorigin/mainは0002d110db0a91013e615fea6a2496ddf2f12e02で一�
 
 第1便の保存/製品PR提出まで完了。第2便は未発行、DB/マージ/本番/再解析/3シート配信は未実施。次は製品PRのCI結果とPO指定の最終レビューを確認する。新規エージェントの起動や代理GOは行っていない。
 
+## 第2便の追査と設計補正（2026-09-13）
+
+実GitHub mainとorigin/mainは56a1661dで一致。PR3470によりtcg_condition_review_svc、配信/訂正入口、CN0011 migrationと登録が追加された。第1便の4新規ファイルとはパス衝突0。PR3471はHEAD53479dbf/OPEN、reviews=[]、最新checkでは番号付きGO欠落だけがFAIL。第1便のCI結果を新main全体の合格へ読み替えない。
+
+観測1: migrations/20260903_170000_item_corrections_t004.sql:23とmigrations/20260906_120000_create_tcg_tables_t001.sql:206でitem_corrections.idはBIGSERIAL。設計のcorrection_ids UUID配列は誤り。既存DB型を変えず、JSONは正のBIGINTの十進文字列配列へ修正。新規6表のUUIDとは分離。
+観測2: PostgreSQL16公式数値型はNaNが通常値より大きいこと、numeric(precision,scale)の丸めを記載。したがってquantity>=0だけでは不足するという推論から、有限な上下限と状態組合せを設計へ追加。公式制約ページでCHECKのNULL許容、日付関数でisfiniteも確認。Context7利用不可を明記し公式代替を使用した。実SQLの試験は未実施。
+観測3: 最新mainのtcg_condition_review_svc.py:155-185でvalid_ack/review_version/needs_review/condition_id/basis等をSQL再評価。distribution_svcは保存済みarより有効なcrの値を使う。設計の後続接続はこれを維持し、active原文だけのsource_cte一覧を過去原文の検証に誤用しない。第2便は既存サービスを変更しない。
+
+Planner補正後のArchitect自己査定: 上記3点APPROVE、第1便契約不変。第2便は3ファイル/8実PG群の具体案を更新したが未発行。担当への第2便委任は未受領、専用作業台未作成。次はこの限定範囲の委任判断1件。最終レビューの指定や番号付きGOはこの委任に含めない。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

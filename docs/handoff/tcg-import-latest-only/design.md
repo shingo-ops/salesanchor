@@ -179,6 +179,8 @@ DBには既に複数原文を置ける（recon参照）。原文テーブルを�
 
 **全体: APPROVE（設計合格）／第1便: APPROVE。** 同じAIがPlannerとして範囲と契約を固定した後に自己審査した。独立した第二者レビューではない。
 
+追査（2026-09-13）: 既存訂正IDをUUIDとした誤りと、numericの非負条件だけではNaNを排除できない不足を発見し、Plannerとして§27を修正後に再査定した。訂正ID型/有限値/JSON null条件と最新mainの状態確認保持について同一AIでAPPROVE。第1便の契約・コード・検収は不変。第2便の実PG合格や実装委任は未受領。
+
 前回の3残件は§20.1（再解析解決）、§20.2（在庫/配信操作）、§21.1と§27（切替保存と制約）で解消した。設計を作成後、既存配信入口・原文リンク・制約・状態遷移との整合を同一AIで審査した。設計合格は技術方式全体のPO承認、製品検証、切替GOを兼ねない。元のPO要件を変更する決定はない。
 
 | 前回の残件 | 今回固定した内容 | 審査上の限界 |
@@ -930,6 +932,22 @@ inboxはseq>=1、attempt_count>=0、errorならerror_code非NULL。state/参照�
 
 入力manifest/target設定に原文・秘密を入れず、個別原文への権限制御されたリンクを使う。以上を含む物理新規表は計6表で、§18等の「4表」はその時点の草案数。正式migrationは本節の列一覧を使用する。
 
+### 第2便発行前の型・最新main照合（2026-09-13）
+
+latest mainは56a1661d03a583be53fc74507c7d428faa2f0b18。第1便PR3471の製品4ファイルとは変更パスが重ならない。第2便の登録は20260913_150000_tcg_empty_box_condition.sqlの後へ1行追加し、既存登録とCN0011の定義を変更しない。
+
+数値制約は非負条件だけにしない。quantity/priceが非NULLなら0以上999999999999.99以下を要求し、NaN/Infinity/-Infinityを拒否する。availabilityのavailable→quantity非NULLかつ正、sold_out→0、unknown→NULLの組合せ制約も併用する。NUMERIC(14,2)が行う丸めは原文精度の検証にならない。小数3桁の拒否は保存入口の責務として維持し、第2便のDB型だけで丸め前の桁を検知できるとはしない。
+
+新規6表のDATE/TIMESTAMPTZは、NULL可列のNULLを除いてisfiniteを満たす。日付不明はNULL/needs_reviewで表し、infinityを未定日の代用にしない。CHECK結果がNULLだと通過するため、必須列のNOT NULL、JSON object/arrayの型検査、必須キーの存在、任意列の全NULL/全非NULLを別に明記する。JSON nullをSQL NULLと同一視しない。
+
+根拠: Context7 MCPは利用不可。許可済み代替として2026-09-13に[PostgreSQL16数値型](https://www.postgresql.org/docs/16/datatype-numeric.html)、[制約](https://www.postgresql.org/docs/16/ddl-constraints.html)、[日付関数](https://www.postgresql.org/docs/16/functions-datetime.html)を直接確認。BIGSERIALの上限、numericのNaN比較/丸め、CHECKのNULL許容、isfiniteを照合した。SQLの実行結果ではない。
+
+PR3470で商品状態の有効な確認結果が追加された。後続03/04/05便ではtcg_condition_review_svcのcontext_sql/review_joinsで得た有効なcondition_id/basis/needs_review/review_reasonsを同じ読取版で取り込み、analysis_resultsの保存済み値だけへ戻さない。既存のbinding_hash/valid_ackの判定を複製せず、SQLで再評価した結果を使用する。review_versionには更新時刻も含まれるためproposalの安定digestへそのまま追加しない。effectiveな上記値と実際に使用したcorrection_idsを既存のsnapshotキーへ詰める。itemがない場合の既存no_item規則は維持する。
+
+既存のsource_cteは通常active原文だけを読むが、context_sqlはitem_onlyで当該原文を読む。新方式で保持した過去原文の検証にactive限定の一覧queryを流用しない。過去原文の再検証と現在公開できるかの判定を分ける。第2便ではこのサービスを変更/接続せず、親データと確認履歴を不変としてmigrationを検証する。
+
+受入の補強: 訂正IDの1/2/10/大きい整数の保持と不正型拒否、NaN数量/価格拒否、無限日付拒否、必須JSONキー欠落/JSON null拒否。第3便以降では有効な人の確認を維持し、原文/商品/状態定義が変わって確認が無効になれば再保留する。第2便の試験だけで後者を合格扱いにしない。
+
 ### 反映処理の入口と呼出順
 
 新しい共通サービス `tcg_stock_projection_svc`（案）へ候補生成・一意照合・項目別時刻検査・適用/保留を集約する。既存サービスからofferテーブルへ直接書かない。
@@ -978,11 +996,13 @@ active_publication_idとattempt IDの一致を予約解除条件にする。成�
 
 ### snapshotの厳密な形
 
-analysis_input_snapshotは全マスタの再現用snapshotではなく、原文と解析版の来歴を保存する。キーはschema_version（1）、engine_version（string）、prompt_version（string）、policy_version（string）、work_reference_sha256（string|null）、source_sha256（string）、extraction_payload（object|null）、correction_ids（UUID配列）の8件に固定。extraction_payloadは今回使用した保存済みのraw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name/resolved_work_id/line_start/line_end/evidence_payloadを含む。no_itemならnull。correction_idsは使用した既存の不変訂正履歴IDを順序固定で参照する。
+analysis_input_snapshotは全マスタの再現用snapshotではなく、原文と解析版の来歴を保存する。キーはschema_version（1）、engine_version（string）、prompt_version（string）、policy_version（string）、work_reference_sha256（string|null）、source_sha256（string）、extraction_payload（object|null）、correction_ids（正のBIGINTを十進文字列にした配列）の8件に固定。extraction_payloadは今回使用した保存済みのraw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name/resolved_work_id/line_start/line_end/evidence_payloadを含む。no_itemならnull。correction_idsは使用した既存の不変訂正履歴IDを順序固定で参照する。
+
+correction_idsの既存DB型はBIGSERIAL。UUIDへ変換しない。JSONでは1〜9223372036854775807の整数を先頭ゼロなし十進文字列で保持し、数値として昇順・重複なしとする。空配列は許可。UUID文字列、0、負数、小数、範囲超過、JSON数値型は拒否。既存DBの列型は変えない。IDが9007199254740993や9223372036854775807でも同じ文字列のまま保存・表示・digest計算に使う。これは既存訂正履歴への参照であり、新規6表のUUID採番とは区別する。
 
 全マスタsnapshotを新たに保存する案は採用しない。根拠: 現行load_lookup_mapsは6辞書、商品/作品/正規化/状態/備考は別ロード、単位補正は後段で再読込される。完全な入力再現は今回の在庫保全以上の改修を要求する。一方、数量・対象・状態・予定を変える最終結果は次のsnapshotで検出できる。既存work_reference_snapshotと既存監査履歴は保持するが、全マスタ状態を完全再現できるとは宣言しない。
 
-analysis_result_snapshotのキーはschema_version（1）、kind（item/no_item）、extraction_item_id（UUID|null）、product_id/unit_id/condition_id（UUID|null）、quantity/price（Decimal文字列|null）、status/exclusion（string|null）、pid_resolved/unit_resolved/needs_review（boolean）、pid_basis/unit_basis/condition_basis（string|null）、review_reasons（string配列）、evidence（object）、correction_ids（UUID配列）、proposal（object）に固定。未知キーは拒否。kind=no_itemでは明細ID/商品等/数量価格/basisはnull、resolvedはfalse、evidenceは原文分類根拠、needs_review/reasonsは分類結果を示す。
+analysis_result_snapshotのキーはschema_version（1）、kind（item/no_item）、extraction_item_id（UUID|null）、product_id/unit_id/condition_id（UUID|null）、quantity/price（Decimal文字列|null）、status/exclusion（string|null）、pid_resolved/unit_resolved/needs_review（boolean）、pid_basis/unit_basis/condition_basis（string|null）、review_reasons（string配列）、evidence（object）、correction_ids（正のBIGINTを十進文字列にした配列）、proposal（object）に固定。未知キーは拒否。kind=no_itemでは明細ID/商品等/数量価格/basisはnull、resolvedはfalse、evidenceは原文分類根拠、needs_review/reasonsは分類結果を示す。
 
 proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/根拠）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
 

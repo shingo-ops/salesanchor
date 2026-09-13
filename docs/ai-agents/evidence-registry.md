@@ -3010,3 +3010,16 @@ block: actual process gate log requires numbered PO GO; not fabricated
 state: product PR submitted; stage2/DB/merge/production/reanalysis/distribution not executed
 next: CI completion and PO-designated final review
 ```
+
+```text
+id: EV-20260913-LINE-STORAGE-PREFLIGHT
+agent: design partner
+date: 2026-09-13
+reference: docs/handoff/tcg-import-latest-only/recon.md and design.md section27
+observed: main56a1661d includes condition-review PR3470; item_corrections.id BIGSERIAL in two canonical migrations; stage1 four paths unchanged
+external: Context7 unavailable; PostgreSQL16 official numeric/constraints/datetime docs directly checked, no SQL run
+correction: correction_ids decimal strings instead of UUID; finite quantity/price/date constraints; preserve effective condition review in later integration
+review: same-AI Planner correction then Architect APPROVE for these corrections; no independent review
+state: stage2 draft updated,3 files and8 PG groups; no stage2 delegation/implementation/DB/merge/production
+next: PO decision on bounded stage2 delegation to existing executor through PR/CI
+```
