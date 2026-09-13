@@ -2940,3 +2940,5 @@ EV-20260913-PRODUCT-CSV-ATOMIC-DESIGN: 実呼出元2箇所・commit順・pinSQLA
 EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-APPROVAL: PO原文「進める」を受領、方式採用/4ファイル実装を既存担当へ委任。公式専用作業台main1a8eed69/clean/preflight成功、正式カード違反0。Docker未接続でpytest/PGは未実施。push/PR直前停止、本番/データ変更は対象外。根拠design§20-7/recon/card-product-csv-atomic-impl.md。
 
 EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-REVIEW: 既存担当4ファイル差分/静的検査受領。親が2サービスと新規PG現物/4SHA/範囲/diff検査を直接確認。旧版不整合を検出する実AST検算は新版354ケース全一致、unit関数直接呼出25成功。PG228ケース追加は未実行、CI15分内未測定。製品未commit/push/PR前停止、本番変更なし。根拠recon実装受領節とkeyword-import-atomic-implementation-result.json。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-PUBLISH: PR直前停止の報告後にPO原文「進める」を受領し製品PR提出/通常CI確認へ進行。最新main1a8eed69追加差分0/4SHA一致、正式公開カードへ。ADR154 Whyへ確定境界と旧版不一致/新版メモリ354・直接unit25の根拠を保存。実PG未実施、マージGOなし。根拠recon公開承認節。

@@ -883,3 +883,8 @@ PG試験は現物を読取。正常1ケース（44商品）/保存前ValueError4
 状態：方式の設計自己審査/PO承認/既存担当への実装委任済み、製品差分準備済み・静的検査済み・親の読取レビュー済み。正式CI待ち。生報告と4SHA、再現資料はkeyword-import-atomic-implementation-result.json/keyword-import-atomic-parent-review.json/keyword-import-atomic-direct-unit.jsonと対応.py.txt。製品worktreeのHEADは1a8eed69、4ファイルは未コミットで保持。文書だけローカルコミットへ保存する。push/PR更新/新規PR/本番変更はなし。
 
 再開手順：専用製品worktreeと4SHAを照合→PR提出の許可範囲を確認→製品公開カードを作成/検査→通常CIでC1–C11・228PGケース実行と所要時間を確認。時間超過や実PG失敗は原因を読み取り、必要な設計へ戻す。skip/CIガード緩和で通さない。B便の実商品値/実投稿正解/運用QA/8商品更新は引き続きREVISE、データ登録と再解析/配信の承認は含めない。
+
+
+### CSV整合性修正の製品公開・CI確認（2026-09-13、承認受領）
+
+PR直前停止と未実行CIを報告した後のPO原文「進める」を、製品PR提出と通常CIの確認へ進む承認として受領。既存担当へ公開カードを渡す。preflight成功、最新main1a8eed69から追加差分0、検収4SHA/実worktree差分一致を直接確認。マージ/配備の番号付きGO、データ更新/44登録/再解析/配信は含めない。
