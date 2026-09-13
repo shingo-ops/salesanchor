@@ -2697,6 +2697,220 @@ PO原文「この表示に変更してくれ」で3カード下部CTA実装を�
 PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
 
 
+```text
+id: EV-20260911-LINE-INTERRUPTION
+date: 2026-09-11
+agent: Codex (same-agent investigation)
+task: 抽出2投稿の停止段階・原因・復旧条件
+scope: read-only production investigation; local fault injection; docs only
+evidence:
+  - type: log
+    reference: deploy run34578529308 + Loki旧worker acf087854064
+    summary: 対象2API開始と同worker強制削除の時系列・ID一致
+  - type: command
+    reference: /private/tmp/onepiece-research/reproduce-interruption-result.json
+    summary: 実関数/偽DB・偽APIの局所試験3件成功、Gemini実呼出し0
+confidence: high
+tradeoff: API事業者側の処理完了・課金は未確認。実worker停止統合試験未実施。
+decision: 原因調査完了。対策案は未承認・未実装、設計合格ではない。
+follow_up: recon.md「抽出2投稿中断の原因調査」の配備競合防止・中断回収設計
+```
+
+
+## EV-20260911-SIG-ACCURACY-RESUME
+
+SIG再開調査。保存資料21件のSHA256照合21一致/0不一致。固定結果1044行/729候補の再集計、未確定142行21表記/特殊160行27表記を確認。29投稿の共通注意書きを個別損傷と区別。根拠: docs/handoff/tcg-product-master-growth/recon.md「SIG解析精度を上げる対策の優先順位」、非公開sig-20260911/SHA256-MANIFEST.json。試作再実行・本番照会なし。提案作成済み、実装設計は自己審査REVISE、省略単位の業務確認待ち。Gemini0・製品/DB/シート変更0。
+
+
+## EV-20260911-SIG-UNIT-PRICE-TEST
+
+今回直接実行した固定1044行の局所比較。明示単位49行（Case47/Box2）の回収4→49、45増分中商品確定41。原文先頭タグ対照は10/11から矛盾検出修正後11/11。価格の時系列試験は同一商品のCase2件一致、Box検証0・誤判定率未確立。従来省略仮説の追加否定対照6/13成功で不採用。根拠: recon.md「SIG単位・価格・状態の比較試験」、非公開sig-20260911/accuracy-followup/のコード・結果・SHA256。全DB/抽出/配信試験なし。自己審査REVISE、実装未着手、Gemini/本番変更0。
+
+
+## EV-20260912-SIG-FIVE-TESTS
+
+5領域の直接オフライン試験。商品修正5群で過去1044行中追加確定25/既存確定変更0、限定境界対照30/30。保存最新66行の追加確定0。価格9条件は同じCase2件だけ正解確認、特殊補完11行保留、状態対照24/24（判定13/保留11）。重複除去205実抽出の原文数量/価格一致205、応答再生205。カートン11は既存Case11で追加改善0。Docker不在のため実DB全工程未実施。根拠: recon.md「5つの未解決点の追加試験」、非公開five-tests-20260912のコード/結果/SHA256。設計自己審査REVISE、製品/本番/実Gemini変更0。
+
+
+### EV-20260912-SIG-GEMINI-ONE-SHOT
+
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「Gemini 1回比較の準備・認証停止（2026-09-12）」
+- 人工66ケース/採点器自己確認4/4。Gemini実呼出し0、認証経路待ち。API許可上限1、再送禁止。実精度向上の証拠ではない。
+- 保存: private-research/sig-20260911/gemini-one-shot-20260912/ のSHA256-MANIFEST.json。製品/DB/配信変更0。
+
+
+### EV-20260912-SIG-GEMINI-ONE-RESULT
+
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「Gemini 1回比較の実結果」。実生成HTTP1・再送0、モデルgemini-3.6-flash、36.344秒。
+- 人工66件: 事前文字列一致47/66、出力値契約不足19件を含む。事後意味確認66/66（22判定44保留、独立検証ではない）。同じ商品30件で現行27→Gemini30。正式候補一覧の差を含みモデル単体の優位性は未確立。
+- 既存非公開証跡保存先のresponse.json/result.json/semantic-review.json/SHA256-MANIFEST.json。REVISE、製品変更0、許可1回消費済み。
+
+
+### EV-20260912-SIG-MASTER-BOX-TRIAL
+
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「SIG 商品マスタ箱系によるBox補完の隔離試験」。最新保存66件の単位確定1→58、商品特定59のまま。重複除去205件で単位15→181。対照12/12、既存値保持検証成功。
+- 既存状態再評価では57件Sealed boxになるがサーチ可能性備考1件を含み正答改善と認定しない。商品未確定7件残存。Gemini0、本番変更0。REVISE。
+
+
+### EV-20260912-SIG-BOX-SOURCE-AUDIT
+
+- 根拠: recon.md「Box補完試験の原文照合・備考保持確認」。66行の数量価格・抽出文字列の原文内存在・note_ja保持を照合、不一致0。Start deck100の原文L109にサーチ可能性の備考。備考は保持され、状態だけ既定化。商品ID正解や未開封状態の独立検証とは区別。
+- 非公開master-box-trial-20260912/source-audit.json。製品/本番/Gemini追加0。
+
+
+### EV-20260912-SIG-HUMAN-REVIEW-DELIVERY
+
+- 根拠: recon.md「人間確認後の配信経路・調査と設計候補」。要確認と配信WHEREの実ソースを人工6行で照合。備考未解釈1行が配信条件を通り、状態FLAG/価格欠落は要確認タブ対象外。SQLite局所検査でありPostgreSQL統合試験ではない。
+- 修正APIは商品IDだけ解析へ反映、汎用画面は読取専用、確認後の配信起動なし。既存全置換と未完了ガードを踏まえ設計草案。REVISE、製品/本番変更0。private-research/sig-20260911/review-gate-recon-20260912/参照。
+
+
+### EV-20260912-SIG-ACCURACY-EVIDENCE-AUDIT
+
+- 根拠: recon.md「最新保存66明細の正答根拠監査」。数量価格66/66一致、名称対応の根拠55（正式名一致48+公式対応7）、確定中の未検証4、システム商品未確定7。名称対応率と総合正答率を区別。
+- 独立の販売単位/全状態正解が不足し総合正答率は算出不可。非公開accuracy-audit-20260912/に66行別根拠。製品/Gemini追加0。
+
+
+### EV-20260912-WEGO-FULL-HISTORY-MATCH
+
+- 対象: PO指定LINE2ファイル、1,104,650物理行・35,842メッセージ開始行（システムイベント含む）。全行分割と既存パーサ件数を直接照合。保存293商品マスタとの行単位候補検査であり、全商品の正答率ではない。
+- 試験: 11商品15検索語の仮追加で未確定→確定153種類/延べ2,108行（検索一致なし757行+コード等候補あり1,351行）。実在するサプライのみ/プロモのみをセット本体へ確定する反例あり。保守的保留判定で3種類/7行を要確認へ、人工40/40通過。全履歴の誤確定/検索漏れ0は未達。
+- 訂正: ナンジャモジムセットは正式名PM0099の登録あり。未登録と断定せず略称候補として試験。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「WEGO指定2ファイルの全行調査と商品検索語試験」、private-research/wego-full-history-20260912/ の22ファイル+manifest（SHA一致確認、非公開）。
+- 状態: 自己審査REVISE、追加Gemini0、製品/DB/本番/配信変更0。最新マスタ照合と商品明細の全件正解付き検査が残る。
+
+
+### EV-20260913-WEGO-CONTEXT-CONFLICTS
+
+- 原文の数値取引構文243,043行と直前行を照合。検索不一致の直前行17,851種類/93,631出現は送料等も含み、商品件数ではない。
+- 空白/半角カナ等の正規化で21種類/68出現が新たに確定。人工制約15例は13成功/2失敗、保留試作後15/15。同じ発見例の再検査。
+- 商品名と型番の矛盾を公式資料と照合: 7種類/122出現。原本全出現位置を再確認、現行関数で122確定、試作では122保留。正しい現物のIDは不明なので122誤商品とは数えない。全追加保留候補37種類/215出現には正当な複数商品列挙/vol.1等を含む。
+- 公式存在確認5商品の該当表記1,881出現は保存293商品マスタの検索に一致なし。最新DB登録状況は未確認。
+- GitHub main d66923e2edad1b6c22df4cba8adf74f23b968cfc の商品判定/ガード2ファイルをAPIで取得、保存実ソースとの全文SHA一致を確認。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「WEGO全履歴の継続調査」、private-research/wego-followup-20260913/18ファイル+manifest（保存後hash照合）。
+- 状態: REVISE。最新マスタの読取SELECTを準備、当該SSH鍵のタスク単位許可待ち。外部AI呼出/DB更新/製品変更/配信0。
+
+
+### EV-20260913-GEMINI-EXTRACTED-NORMALIZATION
+
+- 実保存Gemini抽出2投稿67明細で商品照合を直接比較。整形前の保存解析一致67/67。追加整形前59確定/後59確定、新規確定0、ID変更0、確定解除0。文字の追加変化2件も未確定のまま。
+- 補足の実保存489明細も整形前後の判定変化0。旧解析との比較差4件を整形効果に数えない。主評価と66item_id重複、合計独立556件とはしない。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「実際のGemini抽出済みデータによる整形比較」、private-research/gemini-extracted-normalization-20260913/5ファイル（保存SHA検証済み）。原本LINE走査の68出現増は抽出後の改善証拠として流用不可。
+- 範囲: 保存293商品マスタ・保存作品判定固定の局所比較。全工程/総合正答率の測定ではない。新規Gemini/製品変更/DB書込み/配信0。製品設計REVISE。
+
+
+### EV-20260913-SIG-SEVEN-CAUSES
+
+- SIGの未特定7件を実抽出名と原文・保存293商品マスタで比較。全7件で除外等を適用する前の検索候補0。除外全解除でも特定0/7。全7件で抽出名を原文中に確認。
+- 25thアニバーサリーは登録済み商品群への略称不足と形態確認。残る6件は保存マスタに対応する商品名/検索語/除外語を確認できない。現在の本番未登録とは断定しない。P-159の正式版は一次資料未確認。
+- POの整形実装方針決定を原文で記録。正式設計REVISE・製品実装未着手、追加Gemini/DB/本番/配信変更0。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「SIG未特定7明細の原因切り分けと整形実装方針」、private-research/sig-seven-causes-20260913/4ファイル（SHA照合済み）。
+
+
+### EV-20260913-SIG-25TH-ALIAS-APPROVED
+
+- POが25thアニバーサリーの追加先を通常拡張パック25th Anniversary Collection（PM0071）と確認し「イェス」。対応先確定。
+- 実抽出SIG66明細の仮追加比較は59→60確定、変更1件。境界試験ではプロモ等5例もPM0071へ広く一致するため単純追加案REVISE。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「PO確定: 25thアニバーサリーの追加先」、private-research/sig-25th-alias-approved-20260913/4ファイル（hash照合）。DB/Gemini追加0。
+
+
+### EV-20260913-25TH-PRODUCT-EXCLUDES
+
+- PM0071のみプロモ/ゴールデン/goldenを除外するメモリ試験。SIG66明細の商品特定60を維持。通常商品とPM0072プロモパックの判定を維持し、プロモ/ゴールデンBOX/GOLDEN BOXでPM0071への確定を抑止。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「25thの商品別除外語」、private-research/25th-exclude-trial-20260913/。本番登録0、残る形態3例の扱い未解決で設計REVISE。
+
+
+### EV-20260913-SIG-ACTUAL-EXCLUDES-RETEST
+
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「Gemini実抽出データで除外語追加を再検証」。private-research/sig-actual-excludes-retest-20260913/に入力SHA・明細別3条件比較・再実行scriptを保存。
+- 実測: 保存Gemini抽出67明細（SIG66）、SIG商品特定59→60→60。除外追加の判定変化0。golden/ゴールデン実例0のため当該効果は実データでは未測定。最新本番読取・Gemini再呼出・製品変更なし。
+
+
+### EV-20260913-25TH-REGISTRATION-APPROVAL
+
+- PO原文: 「これで合意、登録してくれ」。対象PM0071の検索語1語・商品別除外語3語の登録依頼を受領。
+- 正式記録: docs/handoff/tcg-product-master-growth/recon.md「PO合意・登録依頼受領」。登録内容合意済み、設計REVISE、カード未発行・DB未登録を区別。
+
+
+### EV-20260913-25TH-SPECIAL-SUPPLY-REQUEST
+
+- PO依頼: スペシャルセットとサプライのみを登録して検索語・除外語で区別。
+- docs/handoff/tcg-product-master-growth/recon.md「スペシャルセットの別商品登録依頼とサプライの未確定」に記録。スペシャルセットは公式で実在確認済み、サプライのみは人工例で商品未同定。DB未登録。
+
+
+### EV-20260913-25TH-SUPPLY-EXCLUDE-APPROVED
+
+- PO原文「合意、除外ワードに登録して」。PM0071の商品別除外語「サプライのみ」と要確認/配信対象外の方針に合意。
+- 根拠: docs/handoff/tcg-product-master-growth/recon.md「PO合意: サプライのみの除外登録」。文書記録済み、DB未登録、配信経路の検証未完了。
+
+
+### EV-20260913-25TH-DESIGN-PREP
+
+- 根拠: recon「25th登録準備の追加実測」、design-keyword.md §17。最新main SHA ee455fb1、5関数AST一致、保存67明細59→60、サプライ3欄NONE+要確認、配信SQLの除外条件を静的確認。
+- private-research/25th-design-review-20260913/に実測script/result/コード/読み取りSQL/SHAを保存。DB実行なし。自己審査REVISE、最新マスタ照合待ち、正式カード未発行。
+
+
+### EV-20260913-25TH-LIVE-MASTER-READ
+
+- PO「進める」を直前の人間用SSH読取1回確認への許可として受領、1回成功・read_only=on。2026-09-13 10:32 JST、296商品/検索657/除外156。
+- 根拠: recon「最新マスタ読み取り1回と再試験」、design-keyword.md §17追記。対象通常PM0071のID一致、追加5語未登録、25thセット登録見当たらず。
+- 最新辞書+保存実抽出67件59→60、サプライ3欄NONE+要確認。private-research/25th-design-review-20260913/に入力SHAと再試験保存。DB更新0。
+
+
+### EV-20260913-25TH-SPECIAL-SET-DISAMBIGUATION
+
+- 訂正: SIG保存原文L121と抽出cc81d3d1にスペシャルセットが実在、保存判定PM0071。「人工例だけ」の説明を撤回。商品特定率は正答率ではない。
+- 最新辞書+仮セット+提案除外で実67件59→60、変更2（略称回復1、セット紐付け訂正1）。人工21/21成功。空箱は未承認の提案。
+- recon訂正節、design-keyword.md §17改訂2、private-research/25th-design-review-20260913/result-set.jsonと原文行証拠。DB/製品変更0。
+
+
+### EV-20260913-EMPTYBOX-HISTORY
+
+- 提供2履歴全1,104,650行を検索、空箱10/0行。前後原文を確認し全10行は同投稿者のポケモンカートン空箱6個セット販売の反復。25th特定の空箱表記は未確認。
+- 25th Goldenのサプライのみ販売も原文確認。recon「空箱の履歴全行検索」、private-research/25th-emptybox-history-20260913/に入力SHA/行番号/文脈。
+
+
+### EV-20260913-EMPTYBOX-CONDITION-DESIGN
+
+- PO方針変更: 空箱は商品別除外ではなく共通状態。design-keyword.md §18、recon「空箱の状態マスタ化」。
+- 実関数+保存条件: マスタのみ12中8状態判定、認識8件の要確認は0。局所拡張12/12、既存7/7、曖昧4例検出。実DB/確認後配信は未検証。
+- 商品辞書から空箱案を外した15対照全成功、保存実67件59→60・2変更維持。製品未変更、自己審査REVISE。
+
+
+### EV-20260913-EMPTYBOX-CONFIRMATION-PATH
+
+- main cacc889eの画面は読取表示、商品確認はproduct_idだけ。実保存関数4対照はcondition/needs_review更新0、要確認タブSQLもneeds_reviewを参照しない。
+- 根拠recon「空箱の確認後経路を実物照合」、design-keyword.md §18.6、private-research/emptybox-confirmation-design-20260913/。SQL記録代役による検証、DB結合は未実施。最新状態/列確認待ち。
+
+
+### EV-20260913-EMPTYBOX-LIVE-CONDITION-CONTEXT
+
+- PO許可の読取1回成功、2026-09-13 11:35 JST、read_only=on。conditions10/units8/対象列42、CN0011未使用、Empty box未登録。
+- 保存条件全10行と一致、関連5関数AST一致。根拠recon「状態マスタ・確認列の最新読取」、design-keyword.md §18.7、非公開live-condition-context.jsonとSHA。
+- 最新マスタ/列確認済み、確認版/失効の最終契約は設計中、DB更新0。
+
+
+### EV-20260913-EMPTYBOX-FINAL-CONTRACT
+
+- design-keyword.md §19: 空箱/否定/曖昧の有限判定、確認のbinding、共通読取ガード、既存履歴/画面/配信への接続を固定。
+- 設計モデル表現26/26・確認15/15。実関数/現マスタの既出根拠と書込6箇所の照合、PG16公式仕様が根拠。実DB実装試験は未実施。
+- 同一AI自己審査APPROVE、実装未着手。private-research/emptybox-final-contract-20260913/にscript/result/SHA。
+
+
+2026-09-13 カード整備: `card-empty-box-condition-review.md`（CARD-LINE-EMPTY-BOX-REVIEW-01）を引継ぎ案として保存。所有23ファイル、設計§19の受入、禁止範囲、正式保存/実装依頼の開始条件を明記。`bash scripts/card-lint.sh docs/handoff/tcg-product-master-growth/card-empty-box-condition-review.md` exit 0（警告なし）、`git diff --check` exit 0、`bash scripts/check-task-state.sh` exit 0。製品実装・実DB/画面試験・PR提出・本番変更は未実施。旧25th商品カードは未発行のまま。
+
+
+2026-09-13 正式保存準備: release/line-empty-box-design-handoffをorigin/main af269ae2起点に公式手順で作成。既存文書を保持して追記差分を統合。重複を避け今回の設計節は17〜19へ更新。参照サービス5件/レビュー画面のcacc889e→af269ae2差分0を確認。設計モデルの26+15固定対照を設計§19.7に掲載。カードは実行未許可の引継ぎ案、製品実装未着手。
+
+
+2026-09-13 文書PR提出: https://github.com/shingo-ops/salesanchor/pull/3464 。初回HEAD ba68076c9b49ff96abeae104efe6b3a26afccab0、OPEN、文書6ファイルのみをGitHub APIで確認。ローカルdiff/task-state/両card-lint終了0、旧25thカードの長文警告3件。提出時CI進行中。未マージ、製品実装/本番変更なし。設計の正本参照は本PRの§19、旧作業台の§18は履歴として保持。
+
+
+2026-09-13 実装委任: POへ「空箱対応に限定して、別の実装担当へ実装・テスト・PR提出までを委任してよいか。マージ・本番反映は含めない」と明示確認し、PO原文「進める」を受領。CARD-LINE-EMPTY-BOX-REVIEW-01を発行。担当は委任先1名、製品所有23ファイル、追加委任禁止。停止条件はカード範囲外/設計矛盾/承認ゲート拒否、完了は実装・必要試験・PR提出まで。設計担当は製品を変更せず差分/検証を読み取り確認する。GO委任の有効化やPOの番号付きGOではない。設計参照は文書PR3464のHEAD54469a74 §19。
+
+
+2026-09-13 空箱限定実装PR提出: https://github.com/shingo-ops/salesanchor/pull/3470 / HEAD3301b4f682ee8b56716e70929c1e2ae1f9e73c93 / OPEN / 所有22ファイルを親がGitHub API確認。画面6/6・Python3.12静的検査は担当報告、PG受入CIは進行中。親の読取指摘4件とカード本文例不足の補正を設計§19.8へ保存。実装中・未マージ・本番未変更。
+
+
 EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8、通常pushの自動承認拒否2回。origin/owner一致・public確認済み、公開送信のPO明示承認が必要との理由。PR未提出/CI未実行/本番未反映、迂回なし。design/reconの「公開pushの承認待ち」参照。
 
 
@@ -2710,10 +2924,83 @@ EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直�
 
 EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
 
+
+### 空箱限定実装・最終検証（2026-09-13）
+
+実装PR https://github.com/shingo-ops/salesanchor/pull/3470 、HEAD8684707cdf7fe347cd14ec48b4d94c978dcc111f。親がGitHub APIでOPEN/所有22ファイル/最終HEADを確認。GitHubの実PG16を含む全pytestログ（run34736840990/job103669691099）を親が直接読み、2813 passed / 95 skipped / 失敗0、114.85秒、coverage64%を確認。空箱必須PG試験にはskip経路がなく、26分類SQL/Python一致・15確認状態・旧備考・競合/再送・不正JSON/JSONB・原文変更・商品/単位変更・E5非上書き・件数/配信・保存小数精度を検証。95skipを成功に数えない。
+
+画面単体6/6とPython3.12静的検査は実装担当が実行し、親は画面ログの6 passedを読取確認。親自身が行ったのはPython判定26例の直接実行、製品差分の読取照合、GitHub検査/ログの直接確認であり、実PG/画面試験を親がローカル実行したとはしない。ブラウザ実機操作や本番実データ再解析は未実施。設計モデルの一致を総合解析正答率へ置き換えない。
+
+初回CIは2803成功/2失敗/95skip。既存配信の解消済みunit_unresolved残存とactive表記検査を修正。中間928962a9は2812成功/失敗0/95skip。最後に実列NUMERIC(14,2)とbindingを揃え、数量2.345→2.35・価格10.125→10.13でも同内容再解析で確認保持となる1試験を追加し、最終2813成功を確認した。親指摘4件は修正と対応試験を確認済み。
+
+設計担当の読取適合判定: APPROVE（委任範囲の実装/技術検証/PR提出まで）。独立した第二者レビューとは称しない。gh pr checks集約は42成功/2skip/1失敗、残るprocess-artifactsはrun34736874594/job103669756096で番号付きGO記録セクション不足を直接確認。これは技術試験失敗と区別するが、CI全緑・マージ可能な承認取得済みとはしない。一般の「進める」をGO #3470として代筆しない。
+
+空箱カードの委任範囲は完了。実装PRは未マージ、本番反映・本番DB変更・再解析・3シート配信は未実施。GO委任有効化は本作業に含まない。25th商品辞書の別カードは未発行のまま。本記録はマージや本番操作の承認を求めたり代行したりするものではない。
+
+
+2026-09-13 13:45 JST記録: PO原文「GO #3470」を受領。直前の説明に沿い、既存実装担当へ本番安全確認後のPR3470マージ・自動本番反映の結果確認を委任。CARD-LINE-EMPTY-BOX-RELEASE-01発行。現HEAD8684707c、技術CI42成功/2skip、GOゲートのみ不足。安全確認/バックアップは現時点未実施で、完了後にのみGO記録のバックアップ欄へ実測を転記する。再解析/配信/PR3464マージは対象外。GO委任モードの自己有効化ではなく、PO本人の個別番号付きGO。
+
+
+### 空箱限定リリース完了（2026-09-13 14:03 JST確認）
+
+PO原文「GO #3470」に基づき、既存の委任実装担当がCARD-LINE-EMPTY-BOX-RELEASE-01を実行。PR https://github.com/shingo-ops/salesanchor/pull/3470 は13:57:35 JSTにMERGED、merge SHA56a1661d03a583be53fc74507c7d428faa2f0b18。直前HEAD8684707c、所有22ファイル、最新検査43成功/2skip/失敗0、GOゲート成功。DB未完抽出/解析0、Celery active/reserved/scheduled各空を確認して公式merge wrapperを実行（exit0）。
+
+13:55:10 JSTにconditions/analysis_results/item_correctionsの3表を読取pg_dumpでバックアップ。2096257 bytes、SHA256 d0a2cd3b4b395882dc11bac40429e9bacf684a284b317b9b62d0567876446592、pg_restore --list終了0/TABLE DATA3件。初回のSSH読取とローカルheredoc併記はフックがSQL実行前に拒否。カードを同一権限のSELECT単独コマンドへ補正し成功、ガード解除や回避はしていない。
+
+自動配備 https://github.com/shingo-ops/salesanchor/actions/runs/34739114060 は上記merge SHAでsuccess。14:02:22 JSTに空箱migration（230/230）適用。14:03:19 JSTの本番SELECTはread_only=on、CN0011/Empty boxが設計どおり有効1件、既存10状態の全列一致。解析結果28994件/訂正17件で前後件数同一。API healthとappはHTTP200、DB/Redis/Celery connected、実配備HEADもmerge SHAと一致。
+
+親はGitHub APIからMERGED/配備成功を直接確認し、担当の保存した前後DB JSONをPythonで直接対照して既存10行一致/追加CN0011のみを確認。HTTP/配備版/バックアップの保存ログも読取確認。SSH・本番照会・バックアップ・マージを実行したのは委任担当であり、親自身の本番操作や独立第二者レビューとはしない。証跡/バックアップは非公開ローカル保存先 private-research/emptybox-release-3470-20260913 に保管（Gitへ生データを含めない）。
+
+設計合格・個別PO GO受領・実装・マージ・本番反映・読取確認は完了。人の確認保存の本番実機操作、再解析、3シート配信は未実施。総合解析正答率の再測定ではない。25th商品辞書カードは未発行、文書PR #3464は未マージ、GO委任モードは有効化していない。
+
+
+### 25thカード再審査（2026-09-13 14:17 JST以降）
+
+origin/main56a1661d・設計PR #3464 OPEN/e9fb8b6d・製品PR #3470 MERGEDを直接確認。preflight成功、本店は185遅れ/台帳以外の未保存30件を保持し専用文書作業台を使用。該当25th runbookは検索で見当たらず既存todo行を更新。
+
+保存マスタ10:32 JST/有効293商品とGemini67明細（SIG66）を最新照合8関数で再測定。旧関数AST8/8一致、商品特定59→60、変更2（略称回復1/セット訂正1）、固定15例15/15。work_id=Noneの局所比較であり現在本番全経路や総合正答率を表さない。
+
+追加人工入力のセット否定がセットへ誤確定。設計提案の否定4語を新セットの除外へ仮追加すると12/12未特定、既存15/15と実67行に追加差分0。設計§17改訂3と未発行カードを更新し、商品1/検索3/除外10の案へ訂正。否定4語はPO合意済みとしない。PM0073のサプライ表記は本便未対処として記載。新しい商品/辞書版では旧v4再解析が拒否される現行契約も実物で確認し受入へ追加。
+
+自己審査REVISE（同一AI）。最新マスタ再照合と最終整合判定が残る。製品実装/本番接続/DB更新/追加Gemini/再解析/配信0、追加実装委任0。証拠は非公開ローカル保存名 private-research/25th-recheck-20260913 のcheck.py/result-private.json/check-negation-draft.py/negation-draft-result.jsonとmanifest.json。入力SHA5e165443af0812b5f2c45c8b82e2c7682514bfd1cffdbcbbd005821174961693、マスタSHA9373400c7036275dcd32bbbf63ff92d14bb1d5cf35c205b0fec921ec46a1ed63。
+
+
+### 25th最終設計の本番マスタ照合（2026-09-13 14:29 JST）
+
+POは本番マスタ読取専用1回の質問に「進める」。親がprod1へ1接続・単一SELECTを実行、exit0/read_only=on/statement_timeout10000。14:29:54 JST取得の商品296/検索657/除外156/作品11は前回共通全欄と一致。通常PM0071と参照DIV01/IP001/MK001/PC_BOXは有効で同一性確認済み。新セット候補0、商品+語重複0。初回のローカル文書検索はrgのOR表記をpipe-to-psqlとしてフック拒否（SSH/SQL実行前）。読取を分離して成功し、解除していない。
+
+新マスタで現在の照合関数を再実行: 固定67件は商品特定59→60/変更2、15基本例+12否定例は27/27、否定案の実67件追加差分0。正答率・全解析・配信試験ではない。設計§17改訂4へ期待15行と否定12例の生成条件、実在参照/属性を固定。category_classは新規サービス同様Pokemon、Boxは商品区分参照であり混同しない。
+
+Planner設計案完成→Architect同一AI自己審査APPROVE（限定実装設計）。実PG受入は実装後に必要。カード準備済み/未発行、明示実装委任は未受領。否定4語は設計による安全策案、POの新たな原文やGOは創作しない。今回の読取許可は消費済み。製品変更/DB更新/新規Gemini/再解析/配信0。非公開証拠保存名 private-research/25th-live-final-20260913、master SHA ee099009f5c5865b196452ab09957fcf285e4d6e9e69e5cac1b7d8938ff99f0c。
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
 
+
+2026-09-13 25th実装委任: POへ「25th対応に限定し、実装担当へ実装・テスト・PR作成まで委任してよいですか。マージ・本番反映は含めません」と確認し、原文「進める」を受領。CARD-LINE-25TH-MASTER-01発行。設計参照は文書PR #3464 / HEAD67312ce0 §17改訂4。既存委任担当1名へ新しい25th便を明示委任、追加委任禁止、所有はmigration/runner登録/既存統合テストの3ファイル。最新main b52a4defは比較用Geminiクライアントと別テストの変更で商品照合/辞書の変更なし。最新mainの文書追記との競合は両方の記録を保持して解消。停止条件は設計矛盾/範囲外/承認ゲート拒否、完了は実装・必要試験・PR提出まで。設計担当は製品編集をせず、差分と実測を読取確認する。GO #3470を再利用しない。
+
+
+### 25th実装PRの受入衝突と停止（2026-09-13）
+
+PR #3475 OPEN、所有migration/runner/統合テストの3ファイルを親がAPI確認。R1 NULL明示/R2 MULTI未特定の比較/R3部分欠落の停止を親読取で指摘し、担当が所有内で修正。実装語を読み出して保存実67件を親が局所再実行し59→60/変更2/27対照成功（実SQLではない）。
+
+初回CI4dc97f35:2834成功/95skip/1失敗。ロック試験の接続方法を直し全解析9行試験を追加した726475b1:2835成功/95skip/1失敗。後者はプロモ+BOXの未特定が局所PM0072期待と不一致。親がGitHubログを直接確認。商品名照合の前に単位で箱系候補へ絞る実装があり、局所27例を全解析の同一期待として渡した設計の不足。親の実関数対照では曖昧セット+プロモ名がBOX時にセット確定することも再現。
+
+設計§17改訂5をREVISEとして保存。対処案は新セット/PM0072双方に複合除外「スペシャルセット プロモパック」を1語ずつ。局所9/9未特定・基本15/15・67件差分0・同梱備考2例のセット保持を確認。ただし既存PM0072不変の範囲変更なので未実装、PO判断待ち。担当は現所有テストの匿名9行診断だけ続けて報告停止、期待/製品辞書は変えない。番号付きGOなし、process-artifactsのGO不足は技術失敗と別。本番変更/追加Gemini/再解析/配信0。証拠は非公開保存名 private-research/25th-implementation-review-20260913。
+
+
+### 25th全解析9行の最終診断（2026-09-13 15:09 JST）
+
+PR #3475 / HEAD13c58171c43317c9e17f9408fa102173bbe41ad1、main7dcb9ce9追従後も差分は所有3ファイルのみ429追加。競合したrunnerは既存Dragon Ball2行・本便25th・空箱を保持。main側追加はpublic.products対象でありtenant_004の商品照合コードに変更なし。
+
+GitHub CI34741929357/job103682999611は2835 passed /95 skipped /1 failed、118.88秒、coverage63.80%。同じ9行試験の診断出力で、2行目プロモパック+BOXはcode=null/resolved=false/review=true、9行目セット+プロモパック+BOXは試験新セットPM0074/resolved=true/review=false。全9行のうち商品期待の一致は7、相違は2。8行目のセット同梱備考は商品SET確定/備考保持/review=true。PM0074は使い捨て試験DBの採番結果であり本番登録番号ではない。
+
+親はGitHubから診断ログを直接取得し全試験集計を確認、担当のdiagnostic-9rows.json全行も読取確認した。試験の実行環境はCIの隔離PostgreSQLで、親のローカル実DB実行ではない。実装担当のローカルmake lint-ciは終了0、ruff/Bandit高重大度0だが既存mypy非阻害エラーを完全な型検査合格とはしない。
+
+これにより改訂5の懸念を実PGでも確認した。期待を変えず失敗を保持して製品編集停止。通常27局所例/移行/再実行/異常時変更0/18配信抑止+空箱3例/旧v4拒否等の合格を、全受入合格へ置換しない。process-artifactsの未GOによる失敗とは別の技術失敗である。設計判定REVISE継続。PM0072と新セットへの複合除外案は局所試験のみ、未承認・未実装。本番反映/マージ/再解析/配信は未実施。
+
+
+2026-09-13 複合除外の承認・再開: セット/プロモ両側への複合除外「スペシャルセット プロモパック」各1語追加を説明し、プロモ側の変更確認にPO原文「進める」。設計§17改訂6へ商品1/検索3/除外12、PM0072同一性/既存語保持、単位別の全解析期待を固定。同一AI自己再審査APPROVE（限定実装設計）、実PG合格は未確認。CARD-LINE-25TH-MASTER-01改訂6を発行し、既存担当・既存PR #3475/HEAD13c58171・所有3ファイルで再開。マージ/本番接続/再解析/配信/追加Geminiは許可されていない。
 
 ```text
 id: EV-20260913-SHINSOKU-TIMEOUT-01
@@ -2736,3 +3023,16 @@ EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進め
 EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
 
 EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
+
+
+### 25th複合除外・実装受入完了（2026-09-13）
+
+PR #3475 OPEN、HEAD94a7f695e7a9d11dc5860ada6dea8a20580eff73。差分は委任したmigration/runner登録/既存統合テストの3ファイル、526追加。通常略称、新スペシャルセット、セット/PM0072双方の複合除外を実装。隔離DBの増分は商品1/検索3/除外12、再実行の行変更0、他テナント変更0。PM0072の同一性・既存語検査を含む異常時は変更0。最新main c22ad508の抽出task変更はsoft100→300/hard120→330のみで、照合処理の変更なしを親が読取確認。
+
+親がGitHub CI34742599601/job103684752592のログを直接取得: 2850 passed /95 skipped /失敗0、112.72秒、coverage63.81%。新規31試験instanceのskip0は実装担当の集計報告。元の全解析9行を保持し、プロモ+BOXは未特定/要確認、セット+プロモの曖昧名はBOX/Pack/未知単位の3例すべて未特定/要確認/出力0。通常プロモ+PackはPM0072、同梱備考2例はセット商品と原文備考を保持。サプライ/否定18例と空箱3欄の保留、旧v4参照変更時の拒否と結果・訂正保持、新版成功も同CIで合格。
+
+親は最終実装の語宣言と保存済みGemini抽出67件をローカル再照合: 特定59→60、変化2、基本15/15・否定12/12成功。SQL SHA256 a340879820429278f1fbca8c2072731bf91ec10e50e49c94e602c107f93ab0e2、マスタSHA256 ee099009f5c5865b196452ab09957fcf285e4d6e9e69e5cac1b7d8938ff99f0c、抽出入力SHA256 5e165443af0812b5f2c45c8b82e2c7682514bfd1cffdbcbbd005821174961693。これは商品照合関数の局所測定で、総合正答率・本番解析の実測ではない。未特定7件の解消や全投稿で誤判定0を証明しない。
+
+親の製品差分読取確認APPROVE（改訂6の限定受入）。設計審査は同一AI自己審査で、独立した第二者設計レビューではない。ローカルmake lint-ci終了0は担当報告、既存mypy非阻害エラーを型検査完全合格としない。実DB試験はGitHub CIであり親のローカル実DB実行ではない。
+
+最新PR checksは38成功/4skip/1失敗、残るprocess-artifacts gateは「PR本文に『### GO記録』セクションがありません」のみ（job103684812184、親直接確認）。番号付きGO #3475は未受領でありゲートを保持。実装・試験・既存PR更新まで完了。マージ/本番反映/追加Gemini/再解析/3シート配信は未実施。非公開証拠保存名: private-research/25th-compound-review-20260913（親の再測定、CIログ、担当全文報告）。
