@@ -2476,3 +2476,19 @@ tradeoff: same display name is not verified supplier identity; repeated posts/cr
 decision: record requested sold-out row retention in analysis list with sold-out status and possible-additional-stock memo; keep stock output excluded, self-review REVISE
 follow_up: finalize shipping-slot identity and status/note/history UI contracts and verify on labeled examples before implementation
 ```
+
+```text
+id: EV-20260913-LINE-RESTOCK-DATE-PROBE
+date: 2026-09-13
+agent: Codex design partner
+task: PO確定の追加予定あり表示・日付保持を現行部品で検証
+scope: read-only source corpus and unchanged code; synthetic in-memory master; design PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_date_component_probe
+    summary: 5 real memo fragments and 4 synthetic cases; raw memo preserved 9/9, candidate note matches 6/9, mismatches 3/9; no model API/DB/UI/sheets
+confidence: high
+tradeoff: manually prepared extraction response and synthetic dictionary do not measure model or production performance; initial reservation arrival is not evidence of replenishment
+decision: PO display/date requirements fixed; self-review REVISE; candidate dictionaries remain unregistered
+follow_up: date context, scoped negation, calendar validation, offer linking and implementation acceptance tests
+```

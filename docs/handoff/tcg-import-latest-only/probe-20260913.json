@@ -319,5 +319,177 @@
     "db_calls": 0,
     "external_api_calls": 0,
     "scope": "current isolated resolver using synthetic master and raw_state; no end-to-end extraction or production accuracy measurement"
+  },
+  "restock_date_component_probe": {
+    "executed_at": "2026-09-13T00:51:05.199968+00:00",
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "code_hashes": {
+      "backend/app/services/tcg_analyzer_svc.py": "9cfb1b6bcd1cc3e5a00aba20d037543c7e3a8385dcf857e07bc7ce5989e24740",
+      "backend/app/services/gemini_extraction_svc.py": "e5a53869d4421a45d28d4272561960c63c42cc0c9c83858a36bd949cb7c6f176"
+    },
+    "method": "AST isolated unchanged production functions; manually labelled extraction responses; synthetic in-memory candidate masters; no DB, model API, UI or sheets",
+    "relative_date_assumption": "S1 posted at 2026-09-13 JST; current function receives no posted-at argument",
+    "candidate_date_pattern": "(\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬)(?:[〜～]\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬))?)",
+    "candidate_restock_pattern": "(?:追加可能性あり|追加の可能性あり|追加予定(?:あり)?|(?:追加|再)?入荷予定(?:あり)?)",
+    "files": {
+      "A": {
+        "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3"
+      },
+      "B": {
+        "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07"
+      }
+    },
+    "results": [
+      {
+        "id": "R1",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 31113,
+        "input": "数量：完売〆（追加可能性あり）",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R2",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 109822,
+        "input": "後日、追加入荷予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R3",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 95980,
+        "input": "後日、追加予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R4",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 325164,
+        "input": "※8月30日再入荷予定",
+        "expected_note": "追加予定あり（8月30日入荷予定）",
+        "actual_note": "追加予定あり（8月30日入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R5",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 1957,
+        "input": "（12月下旬〜1月中旬入荷予定、",
+        "expected_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "actual_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S1",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "明日、追加入荷予定",
+        "expected_note": "追加予定あり（9月14日入荷予定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S2",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "9月20日発送予定。追加入荷予定あり",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S3",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "再入荷予定なし",
+        "expected_note": null,
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S4",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "2月30日再入荷予定",
+        "expected_note": "確認待ち",
+        "actual_note": "追加予定あり（2月30日入荷予定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      }
+    ],
+    "summary": {
+      "cases": 9,
+      "raw_memo_preserved": 9,
+      "note_matches": 6,
+      "note_mismatches": 3
+    }
   }
 }
