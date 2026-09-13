@@ -993,3 +993,23 @@ backendの受入D7を補強し、参照する解析結果の全列と別テナ�
 
 process-artifacts gate（run34765540117）はPR番号付きGO記録不足で拒否。
 POの公開依頼は受領済みだが、原文を「GO #番号」へ創作せず、正式ゲートは維持して停止する。
+
+### DETAIL-01 保存・参照不変の実DB検証完了（2026-09-14 00:37 JST）
+
+e1f6513cのbackend CI run34765847297/job103746586673はsuccess。
+原ログ /tmp/product-detail-pg-ci-final-code.log: 3596 passed, 95 skipped, 309 warnings in 236.76s、保存サービス73文中71実行（97%）。
+CIはlocalhost:5432/jarvis_test_dbのRLS_ADMIN_DATABASE_URLを設定。新規27ケースの共通skip条件は該当せず、
+実DB専用fixtureがGITHUB_ACTIONS/localhost/試験DBを確認して実行された。全体の95skipを本便の未実施と混同しない。
+原子性・2同時編集・既存追加語の競合・応答消失・非管理者/不正入力・分類・商品ID/解析参照・別テナント不変を検証した。
+ローカルの統合後単体は30ファイル377件成功（mainの別便34件追加後、/tmp/product-detail-unit-integration.log）。
+
+mainがe27c2f59まで前進。製品コード競合0、tasks/todo.mdとevidence-registry.mdの追記競合2件を、
+本便行＋mainの最新別便行、双方の根拠追記を残して解消。統合後の最終CIはPR3492の最新HEAD checksが正本。
+本便製品コードは84a6a697から変更なし。追加変更は試験の表示期待/不変検証と文書記録のみ。
+
+実装差分の自己レビュー: 既存CSV経路・認可・ID維持、値バインド、商品ロック後の版再取得、
+一括確定/rollback、UI多重送信/未保存確認、日英キーを照合。未解決の製品不具合なし。
+同一AIによる自己レビューであり、独立した第二者レビューではない。
+現在地: 設計作成/設計自己審査/PO実装承認/実装/PR提出済み。正式GO記録待ち、マージ/デプロイ未実施。
+公開依頼の原文は受領済みだが、scripts/check-process-artifacts.js:293–321は当該PR番号を含む原文を要求するため創作しない。
+DB構造変更/本番データ直接更新0。本便コードはGit/PRに保存済み。コードの復旧は通常のPR経路で行う。
