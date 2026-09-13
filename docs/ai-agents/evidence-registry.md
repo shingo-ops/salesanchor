@@ -2924,3 +2924,7 @@ EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録�
 ### EV-20260913-FRONTEND-AM-RELEASE
 
 PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50d719b、deploy34742996601成功。root実ログで新規backup7.6M/配備HEAD一致、直接HTTP200/DBRedisCelery connected/公開3フォーム6ボタン属性を確認。根拠docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。検収器修正履歴保存。本番認証付きフォーム送信・PO目視・復元試験は未実施。本便完了、残存旧299の次便設計は別。
+
+### EV-20260913-FRONTEND-AN-DESIGN
+
+固定1a8eed69でBot3フォーム6原文・2ページ/共有10hash・共通114/旧299を直接監査。期待120/293。type6/6、disabled2、対象外5ボタン/ConfirmModal2。POST成功のキー表示と2PATCHの契約・権限・長い登録ラベルを照合。docs/specs/design-system/design.md§ANで96組検収と合成APIのみの検証条件、失敗時REVISEを規定。同一AI自己審査APPROVE、製品変更0、実装承認未受領。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-button-audit.json。外部事例/新API調査不要（既存native部品契約の移管）。

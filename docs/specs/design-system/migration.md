@@ -260,3 +260,6 @@ PO原文「GO #3468」に基づき、最新HEAD0829affdのCI38成功/8対象外�
 
 根拠と再現検査器: docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。初回ローカルPython CA不足は検証を無効化せずsystem curlへ、見出し数固定の検収器仮定は取消先との一意対応へ修正。失敗履歴をJSONに残し製品は変更していない。
 設計自己審査・PO実装承認・root検収・GO受領・実装保存・マージ・本番反映済み。本番認証付きフォーム送信とPO目視は未実施。LINE再解析/3シート配信は本便対象外。残存旧299の次便選定は別の設計作業、表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AN次便設計案: Bot3フォーム6ボタンを実物監査（BotsPage:259/260/281/282、BotEditPage:88/95）。共通114/旧299→期待120/293、共有10hashを保存。キー表示を伴う登録と通常編集の差を分離、96表示組は未実行。設計はdesign.md§AN、根拠evidence-20260910/an-bot-button-audit.json。同一AI自己審査APPROVE、今回実装承認待ち・製品未変更。表/報酬3/カレンダー色保留、新CI最後。
