@@ -90,3 +90,20 @@ mode: handoff。状態: 実装承認済み・発行。読んだ節: guards/04-wo
 禁止: 本番DML、実Gemini試験、マスタ修正、モデル/prompt/SDK再試行/配信変更、全taskの時間制限変更、CI/deploy/scripts/secrets変更、ガード解除。設計範囲で進められる場合のみ続行。
 本報告はカード CARD-LINE-EXTRACTION-TIMEOUT-05 の実行結果である、と冒頭に記す。検証の生出力を添え、停止時は手順番号・コマンド・理由を記す。
 END OF CARD
+
+
+## CARD-LINE-PRODUCT-SPACE-06
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-PRODUCT-SPACE-06。
+設計: design-keyword.md「連続空白案の最終契約（PR3473反映後）」、recon同名の照合節。mode: handoff、ADR113/154、自己審査APPROVE。POは導入方針と3473後の順序を承認済み。設計担当の自動実装役化と新エージェント起動は禁止。
+手順0: 担当を割り当てられた実装役がpreflight/台帳を確認し、最新origin/mainから公式new-worktree.shでrelease/product-space-runsを準備する。同名/同対象の占有があれば停止、他者の変更を触らない。3473マージ8d5aa581の包含とanalyzerの契約を照合する。
+許可ファイル: backend/app/services/tcg_analyzer_svc.py、backend/app/services/tcg_keyword_lint.py、backend/tests/test_tcg_keyword_matching.py、backend/tests/test_tcg_keyword_lint.py、backend/tests/test_tcg_product_guards.py、backend/tests/test_tcg_work_matching_integration.py、backend/tests/test_tcg_work_comparison_pg.py。
+文書許可: 既存design-keyword.md/recon.md、本カード、docs/adr/ADR-154-tcg-parity02-gas-python-migration.mdのWhy、docs/ai-agents/evidence-registry.md、tasks/todo.md。設計証跡はPR3462の今回版を参照し、実装PRからその版を識別可能にする。
+手順1: 商品専用連続半角空白helperとmatch_product_keyword入口2変数への適用、品質R3/R4/R5/R6の同じ空白契約、ENGINE_VERSIONのv8を実装。最終契約の通り、共通文字正規化と日本語fallback、検索語元値/順序/長さは保持する。
+手順2: 2個/3個・片側/両側・除外・複数候補・作品/Single/数字境界・原文不変・basis/順序・品質検査の方向別ケースを合成試験へ追加。既存293名称/96例を維持。ASTローダーと版期待値を合わせる。実PGでRAW/訂正保持と比較の候補一致を確認。
+手順3: make lint-ci、check-task-state.sh、card-lint.sh、git diff --check。Docker不在のローカルpytestは禁止、正式pytest/PGは既存Backend CIで実行。期待は対象試験/既存回帰全成功、対象外差分0、実Gemini0。新規品質違反を黙って無視しない。
+手順4: git logと差分一覧を確認し公式gh-pr-create-safe.shでready PR作成。--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。別便GOの流用禁止、マージは本カード外。
+禁止: 保存原文の空白除去・全空白削除・状態/単位/価格/数量の変更・マスタ登録更新・DB/migration/CI/secrets変更・実Gemini試験・本番再解析/採用/配信・未確認成功宣言。
+本報告はカード CARD-LINE-PRODUCT-SPACE-06 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別する。停止時は手順番号/最後のコマンド/理由をPOへ報告する。
+END OF CARD
