@@ -1,0 +1,270 @@
+{
+  "summary": {
+    "sha": "739f772d4cf55c1b3972c02c086a7c77b807d293",
+    "commonBefore": 84,
+    "commonTarget": 96,
+    "legacyBefore": 319,
+    "legacyTarget": 309,
+    "dedicated": 20,
+    "links": 8,
+    "targetCount": 12,
+    "legacyTargets": 10,
+    "bareTargets": 2
+  },
+  "sources": [
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "sha256": "a85e7ef03cbd1334c6f2c82358c472a1a22129014f356e09da2f325f28b342cc"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "sha256": "f7484d6d1fb4c578c322031e60e8b3aa8e23a1468a6d4cd8cb1d9dbae84c4b0c"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "sha256": "59981cd9b16b8a4d8276019d8abb5546c221f7cbca90ad8172b899260c984eee"
+    }
+  ],
+  "targets": [
+    {
+      "id": "AK-01",
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 550,
+      "bsa": null,
+      "attrs": {
+        "type": "\"button\"",
+        "onClick": "{() => setShowCreate(false)}",
+        "disabled": "{submitting}"
+      },
+      "element": "<button type=\"button\" onClick={() => setShowCreate(false)} disabled={submitting}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit} className=\"form-grid\">",
+        "<div className=\"modal-content-wide\">",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"companies.newCompany\")}\n        size=\"lg\"\n      >",
+        "<PageLayout\n      navKey=\"nav.companies\"\n      subtitleKey=\"companies.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-02",
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 551,
+      "bsa": "BSA-114",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\" disabled={submitting}>\n                  {submitting ? t(\"common.saving\") : t(\"common.register\")}\n                </button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit} className=\"form-grid\">",
+        "<div className=\"modal-content-wide\">",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"companies.newCompany\")}\n        size=\"lg\"\n      >",
+        "<PageLayout\n      navKey=\"nav.companies\"\n      subtitleKey=\"companies.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    },
+    {
+      "id": "AK-03",
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 572,
+      "bsa": "BSA-115",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      },
+      "element": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"companies.editCompany\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/crm/companies/${editId}`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.companies\"\n      subtitleKey=\"companies.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-04",
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 573,
+      "bsa": "BSA-116",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"companies.editCompany\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/crm/companies/${editId}`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.companies\"\n      subtitleKey=\"companies.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    },
+    {
+      "id": "AK-05",
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 350,
+      "bsa": null,
+      "attrs": {
+        "type": "\"button\"",
+        "onClick": "{() => setShowCreate(false)}",
+        "disabled": "{submitting}"
+      },
+      "element": "<button type=\"button\" onClick={() => setShowCreate(false)} disabled={submitting}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit} className=\"form-grid\">",
+        "<div className=\"modal-content-wide\">",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"contacts.newContact\")}\n        size=\"lg\"\n      >",
+        "<PageLayout\n      navKey=\"nav.contacts\"\n      subtitleKey=\"contacts.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-06",
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 351,
+      "bsa": "BSA-132",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\" disabled={submitting}>\n                {submitting ? t(\"common.saving\") : t(\"common.register\")}\n              </button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit} className=\"form-grid\">",
+        "<div className=\"modal-content-wide\">",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"contacts.newContact\")}\n        size=\"lg\"\n      >",
+        "<PageLayout\n      navKey=\"nav.contacts\"\n      subtitleKey=\"contacts.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    },
+    {
+      "id": "AK-07",
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 373,
+      "bsa": "BSA-133",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      },
+      "element": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"contacts.editContact\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/contacts/${editId}/edit`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.contacts\"\n      subtitleKey=\"contacts.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-08",
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 374,
+      "bsa": "BSA-134",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"contacts.editContact\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/contacts/${editId}/edit`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.contacts\"\n      subtitleKey=\"contacts.subtitle\"\n      headerAction={headerAction}\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    },
+    {
+      "id": "AK-09",
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 124,
+      "bsa": "BSA-393",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}"
+      },
+      "element": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowCreate(false)}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit}>",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"suppliers.newSupplier\")}\n        size=\"md\"\n      >",
+        "<PageLayout\n      navKey=\"nav.suppliers\"\n      subtitleKey=\"suppliers.subtitle\"\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-10",
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 125,
+      "bsa": "BSA-394",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.register\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleCreateSubmit}>",
+        "<Modal\n        open={showCreate}\n        onClose={() => setShowCreate(false)}\n        title={t(\"suppliers.newSupplier\")}\n        size=\"md\"\n      >",
+        "<PageLayout\n      navKey=\"nav.suppliers\"\n      subtitleKey=\"suppliers.subtitle\"\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    },
+    {
+      "id": "AK-11",
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 143,
+      "bsa": "BSA-395",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      },
+      "element": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"suppliers.editSupplier\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/suppliers/${editId}/edit`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.suppliers\"\n      subtitleKey=\"suppliers.subtitle\"\n    >"
+      ],
+      "variant": "secondary",
+      "size": "md"
+    },
+    {
+      "id": "AK-12",
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 144,
+      "bsa": "BSA-396",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      },
+      "element": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "parents": [
+        "<div className=\"form-actions\">",
+        "<form onSubmit={handleEditSubmit}>",
+        "<Drawer\n        open={drawerOpen}\n        onClose={closeDrawer}\n        title={t(\"suppliers.editSupplier\")}\n        onOpenFullPage={editId ? () => { closeDrawer(); navigate(`/suppliers/${editId}/edit`); } : undefined}\n      >",
+        "<PageLayout\n      navKey=\"nav.suppliers\"\n      subtitleKey=\"suppliers.subtitle\"\n    >"
+      ],
+      "variant": "primary",
+      "size": "md"
+    }
+  ]
+}
