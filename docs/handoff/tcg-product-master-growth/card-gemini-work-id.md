@@ -75,3 +75,18 @@ END OF CARD
 禁止: DB/CI/secrets/配信仕様変更、本番修正直書き、修正前後のGemini試験実呼出し、自動再試行追加、採用/全再解析/配信、未確認成功宣言。新設計へ広げる必要がある場合は停止する。
 本報告はカード CARD-LINE-WORK-CLIENT-04 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別し、停止時は手順番号/コマンド/理由を記録する。
 END OF CARD
+
+
+## 実装承認済み CARD-LINE-EXTRACTION-TIMEOUT-05
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+mode: handoff。状態: 実装承認済み・発行。読んだ節: guards/04-worktree.md、guards/11-lint.md。受領確認: CARD-LINE-EXTRACTION-TIMEOUT-05。design-keyword.md/recon.md「シンソク抽出の時間制限見直し」、ADR-154/ADR-113に従う。
+手順0: POが300/330秒の限定実装と実装役への委任を承認した。受領記録2026-09-13 14:44 JST、PO原文「進める」。マージ・本番反映の承認ではない。公式作成済みrelease/shinsoku-extraction-timeout-designを使用し、preflightと現在HEAD/先約を確認する。実装担当1名へbackendの許可ファイルだけを委任。設計担当は文書を所有し、相互の変更を戻さない。
+許可ファイル: backend/app/tasks/tcg_extraction.py、backend/tests/test_tcg_gemini_extraction.py（既存試験不足時のみ）、design-keyword.md、recon.md、本カード、tasks/todo.md、docs/ai-agents/evidence-registry.md。
+手順1: tcg.extract_source_messageだけsoft_time_limit=300、time_limit=330にする。他の設定・処理は変更しない。
+手順2: 登録task属性を確認。make lint-ciと既存Backend CIで通常抽出/例外処理の回帰0を確認。Dockerなしのローカルpytestは禁止。模擬応答のみ。
+手順3: check-task-state.sh、card-lint.sh、git diff --check。期待: 違反0・対象外製品差分0・原文/解析サービス差分0。結果を設計/recon/台帳へ追記。
+手順4: 正式レビュー手順でPR提出。本カードはマージ/本番反映/再抽出/配信を許可しない。番号付きGOの創作・転用は禁止。
+禁止: 本番DML、実Gemini試験、マスタ修正、モデル/prompt/SDK再試行/配信変更、全taskの時間制限変更、CI/deploy/scripts/secrets変更、ガード解除。設計範囲で進められる場合のみ続行。
+本報告はカード CARD-LINE-EXTRACTION-TIMEOUT-05 の実行結果である、と冒頭に記す。検証の生出力を添え、停止時は手順番号・コマンド・理由を記す。
+END OF CARD
