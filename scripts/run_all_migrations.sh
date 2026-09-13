@@ -623,19 +623,12 @@ run_sql migrations/20260910_010000_tcg_import_message_links.sql
 
 # LINE work evidence before v3 code; dictionary filter is independently idempotent.
 run_sql migrations/20260910_160000_tcg_work_evidence.sql
-run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
 run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
 run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
 run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
 run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
 
-# Android LINE import-only device authorization (public; all tenants)
-run_sql migrations/20260912_160000_line_import_devices.sql
-
-# Android source names (public control plane; all current/future tenants)
-run_sql migrations/20260912_170000_line_supplier_source_names.sql
-
 # ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
 run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
-run_sql migrations/20260913_150000_tcg_empty_box_condition.sql
+run_sql migrations/20260913_020000_seed_onepiece_products.sql
 run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
