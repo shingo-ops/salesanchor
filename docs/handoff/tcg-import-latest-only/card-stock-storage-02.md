@@ -1,15 +1,19 @@
 本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
 
-# CARD-LINE-STOCK-STORAGE-02 — 草案・未発行
+# CARD-LINE-STOCK-STORAGE-02
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、07-migration.md、10-executor.md、11-lint.md。
-照合結果: 既存migrationはtenantスキーマ走査・追加専用、run_all_migrations.sh登録と実PG確認が必要。第1便の部品検収は完了。製品PR3471への正式引き継ぎも完了。第2便の実装委任は未受領。本カードは投入しない。
+照合結果: 既存migrationはtenantスキーマ走査・追加専用、run_all_migrations.sh登録と実PG確認が必要。第1便の部品検収は完了。製品PR3471への正式引き継ぎも完了。第2便の実装・検証・PR提出までPO委任受領済み。本カードは実装と静的検証まで。commit/push/PRは親の差分確認後に別カード。
 
-受領確認: 実装役がこの草案を受け取った場合は「第2便未発行」を返して停止する。以下は発行前に具体化する作業内容であり実行命令ではない。
-開始条件: 第1便のコード/試験検収、最新mainとの統合済み作業台、次の3ファイルへの正式な権限、以下のCI専用隔離PostgreSQL試験経路を設計担当が確認して発行版へ改訂した後。
+受領確認: カードID・作業台・3ファイルだけの範囲を返す。担当は同じstock_contract_01。
+作業台: /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage
+ブランチ: release/line-stock-storage
+他者と共同の作業環境である。他者の変更を戻さない。親は受領後に作業台を編集しない。
+許可: 以下3ファイルの実装・読み取り・静的検査。製品コードやDBの既存値を変更する呼出元は追加しない。
+禁止: 文書/台帳/GO/依存/CI/secrets編集、新規エージェント、commit/push/PR/merge、本番/QA/ローカルDBへのSQL実行、全backend pytestのローカル実行。
 
-変更予定の3ファイル:
-- migrations/20260913_230000_tcg_stock_projection.sql（新規、採番再確認）
+変更ファイル（固定3ファイル）:
+- migrations/20260913_230000_tcg_stock_projection.sql（新規、未使用を親確認済み）
 - scripts/run_all_migrations.sh（既存登録を保持、新SQLのrun_sql登録1行のみ）
 - backend/tests/test_tcg_stock_schema_pg.py（新規、実PostgreSQL制約検証）
 
@@ -38,20 +42,58 @@ UUID付きtcg_stock_test_名の新DBを作り、そのDB内だけにtenant_951/9
 禁止: 本番/QAサービスへの接続、既存ジョブの起動、AI/Sheets、secrets、CI・guard変更、permit自己発行、deploy/マージ、未記載の運用スクリプト編集。
 完了報告に必要: 実HEAD、3ファイル差分、適用対象、収集/成功/失敗/skip件数、実PG結果、登録検査結果。これらが揃っても本番GOにはしない。
 停止条件: 採番衝突、既存登録差分、対象不明、検証失敗、権限拒否のいずれか。失敗した操作と出力を設計担当へ返す。
+
+手順1: preflight
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && ./scripts/dev/executor-preflight.sh
+    期待する出力: PREFLIGHT OK。
+手順2: 状態確認
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && git status --short --branch
+    期待する出力: release/line-stock-storageで未保存変更0。親の文書commit後に開始。
+手順3: 設計照合
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
+    期待する出力: 6744f7a7e6f5cef0a716677f7b8ef2b5e5702a35131346b0c777b8dec6b5a1f3。
+手順4: 実装
+    design §15/20/21/24/27と本カードの8群を読み、§27を現行正本として3ファイルを実装する。
+    migrationはDO/pg_namespace走査、追加専用、トランザクションで失敗を戻す。既存TCG親の欠落を無言成功にしない。
+    最新mainのCN0011と訂正履歴の既存値を変えず、既存run_all_migrations.sh末尾の空箱migration登録の後へ新run_sqlを1行だけ追加する。
+    循環参照・複数表整合・原文側変更の拒否は設計の対象として実装する。原文との不一致を数値の丸めやUUID変換で吸収しない。
+    検査のためのヘルパー/fixtureは新規試験ファイル内だけに置く。既存テストのfixtureは変更しない。
+    8関数名: test_repeat_and_existing_data、test_value_and_snapshot_constraints、test_event_integrity、test_deferred_transaction_integrity、test_plan_and_publication_integrity、test_control_integrity、test_inbox_integrity、test_existing_future_and_absent_tenants。
+    設計契約の不明点は親へ返す。製品を独断再設計しない。実PGはPR提出後の本物のCIで実行するため、ローカル未実行を合格としない。
+手順5: Python構文と試験群確認
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && python3 - <<'CHECK'
+import ast
+from pathlib import Path
+p=Path('backend/tests/test_tcg_stock_schema_pg.py')
+tree=ast.parse(p.read_text())
+names={n.name for n in tree.body if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name.startswith('test_')}
+expected={'test_repeat_and_existing_data','test_value_and_snapshot_constraints','test_event_integrity','test_deferred_transaction_integrity','test_plan_and_publication_integrity','test_control_integrity','test_inbox_integrity','test_existing_future_and_absent_tenants'}
+assert names==expected,names
+print('syntax valid; eight named groups present; NOT executed')
+CHECK
+    期待する出力: syntax valid; eight named groups present; NOT executed。
+手順6: 試験コード静的検査
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && /private/tmp/line-stock-check-py312/bin/ruff check --no-cache backend/tests/test_tcg_stock_schema_pg.py
+    期待する出力: 成功。失敗なら停止して親へ報告。
+手順7: 登録スクリプト構文
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && bash -n scripts/run_all_migrations.sh
+    期待する出力: exit0。実スクリプトは実行しない。
+手順8: 登録1行と範囲検算
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && python3 - <<'CHECK'
+import subprocess
+from pathlib import Path
+p='scripts/run_all_migrations.sh'
+old=subprocess.check_output(['git','show','HEAD:'+p],text=True)
+new=Path(p).read_text()
+assert new==old+'run_sql migrations/20260913_230000_tcg_stock_projection.sql\n'
+print('existing registry bytes unchanged; exactly one run_sql appended')
+CHECK
+    期待する出力: existing registry bytes unchanged; exactly one run_sql appended。
+手順9: 差分形式
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && git diff --check
+    期待する出力: 指摘0。新規2ファイル全文も親へ返す。
+手順10: 範囲
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage && git status --short --untracked-files=all
+    期待する出力: 指定3ファイルだけ。差分/新規全文/静的検証結果/実PG未実施を親へ返して停止。
+失敗・不明・範囲外・権限拒否があればその操作で停止し生出力を報告する。検査変更や環境偽装で通さない。
 END OF CARD
-
-## 草案の形式検査
-
-card-lintは書式だけを確認する。実行コマンドを持たない未発行草案が形式検査を通っても、実装可能なカードへ昇格しない。正式版の作業台・検証コマンドは前段検収後に固定する。
-
-## 発行前の具体化記録（2026-09-13）
-
-参照mainは56a1661d03a583be53fc74507c7d428faa2f0b18（GitHub APIとローカルorigin/main一致）。予定SQL名は未使用。登録位置は既存の20260913_150000_tcg_empty_box_condition.sqlのrun_sql行の後。既存行は変更しない。
-新規テナントへの試験は「TCG親表準備後に本SQLを再適用できる」の検証であり、全テナント作成経路への自動導入を実装済みとはしない。実サービス側でTCGを導入する運用は別の開始条件として残す。
-同一AIの査定: CI試験経路の設計はAPPROVE。第2便カード全体は未発行。第1便の正式保存は完了。具体的な第2便専用作業台と担当への範囲付与がまだ必要。実PG結果は0件であり、実装前の試験成功を捏造しない。
-
-## 実装委任案（3ファイル・第2便だけ）
-
-担当候補は既存stock_contract_01。新規エージェントは起動しない。最新origin/main起点のrelease/line-stock-storageを専用候補にする。新規SQL1本・登録1行・実PG試験1ファイルの実装、検証、commit/push/PRと既存CIによる試験までをPOへ提示する。第1便の追加委任は本便へ流用しない。実装カードの発行版は作業台実在確認後に手順と設計hashを固定して再検査する。
-SQL試験8群の関数名はtest_repeat_and_existing_data、test_value_and_snapshot_constraints、test_event_integrity、test_deferred_transaction_integrity、test_plan_and_publication_integrity、test_control_integrity、test_inbox_integrity、test_existing_future_and_absent_tenantsに固定。各群の収集と実行を証跡に残す。
-最新mainの訂正履歴とEmpty boxの定義は書き換えない。第2便では数量/商品/状態を本サービスへ投影せず、control初期値legacyのまま。本番適用、既存処理接続、配信、マージ、第3便への自動移行は禁止。

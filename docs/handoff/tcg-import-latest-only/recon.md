@@ -394,7 +394,7 @@ migrations/20260906_120000_create_tcg_tables_t001.sql:318/350/388/410でsupplier
 
 POへの「第1便を別の実装担当へ委任して進めてよいですか」という問いに、原文「進める」を受領。委任は新規4ファイルと部品試験だけ。/root/stock_contract_01へCARD-LINE-STOCK-CONTRACT-01、続いて01-FIXを渡した。実装担当は停止済み。設計担当自身は製品コードを変更していない。GO委任の有効化ではない。
 
-実物確認: backend/app/services/tcg_stock_evidence.py:45,93に検証済み辞書の型確定、backend/tests/stock_contract/test_stock_evidence.py:58,112に全raw項目とclausesの原文一致・逆順/重複の拒否例。数量はbackend/app/services/tcg_stock_quantity.pyで丸数字/Decimal/曖昧入力拒否を実装。新規4ファイルは未追跡のローカル成果物で、製品コミット・製品PR未提出。ファイル全hashはprobe-20260913.jsonのstage1_component_reviewへ保存した。
+実物確認: [第1便の原文根拠部品（45/93行）](https://github.com/shingo-ops/salesanchor/blob/0c90de2122527f0007b5022cf720b004e4ac1f87/backend/app/services/tcg_stock_evidence.py#L45)に検証済み辞書の型確定、[第1便の原文根拠試験（58/112行）](https://github.com/shingo-ops/salesanchor/blob/0c90de2122527f0007b5022cf720b004e4ac1f87/backend/tests/stock_contract/test_stock_evidence.py#L58)に全raw項目とclausesの原文一致・逆順/重複の拒否例。数量はbackend/app/services/tcg_stock_quantity.pyで丸数字/Decimal/曖昧入力拒否を実装。新規4ファイルは未追跡のローカル成果物で、製品コミット・製品PR未提出。ファイル全hashはprobe-20260913.jsonのstage1_component_reviewへ保存した。
 
 実装担当の報告: Python3.12 unittest 6群成功、対象mypy 2モジュール指摘0。設計担当が別途直接再実行: 同6群成功、対象ruff成功、対象mypy指摘0、対象Banditは全重大度指摘0/内部エラー0。新規4ファイルの末尾空白なし、追跡済み製品差分0を確認した。
 
@@ -430,7 +430,19 @@ GitHub main APIとorigin/mainは0002d110db0a91013e615fea6a2496ddf2f12e02で一�
 
 Planner補正後のArchitect自己査定: 上記3点APPROVE、第1便契約不変。第2便は3ファイル/8実PG群の具体案を更新したが未発行。担当への第2便委任は未受領、専用作業台未作成。次はこの限定範囲の委任判断1件。最終レビューの指定や番号付きGOはこの委任に含めない。
 
+## 第2便の追加委任と作業台（2026-09-13）
+
+PO原文「進める」を第2便3ファイル/8試験群/PR提出までの追加委任として受領。既存担当stock_contract_01を再開し、新規エージェントは起動しない。release/line-stock-storageをorigin/main56a1661dから既存作業台保持の承認済み手順で作成。親が実在/clean/採番未使用/末尾登録位置を確認。設計資料と自作業台の台帳/UUIDだけを配置。製品実装前の記録で、DB/本番/mergeは行わない。
+
 ---
+
+## 第2便JSON不足による停止と解消（2026-09-13）
+
+担当は設計hash be63630b の手順4でtarget_snapshots/target_resultsの型・状態不足を報告し停止。指定3製品ファイル未編集をgit statusで親も確認。分類はカード不備。既存配信先6列と更新5項目を実物照合し、design §27に設定6キー・結果8キー・試行9キー、null条件、予約/解除と設定変更時の条件を固定。同一AIの設計自己査定APPROVE。実PGは未実施。再発行カードで同じ担当が3ファイル実装を再開し、その後の親確認とCI8群の結果を別途記録する。
+
+## 第2便の日付・対象選択型の再照合（2026-09-13）
+
+担当はhash ac23e48bの手順4で日付period/unspecifiedの組合せとselector根拠キーの未定義を報告。配信JSON停止点は解消、製品未編集。分類はカード不備。§17の曖昧日付非展開、§22のspan、§24の入口責務を照合しdesign §27へ許可日付4行とselector7キー/evidence5キーのDB境界を統合。同一AI自己査定APPROVE。実PG未実施。カード再チェック後に同じ担当を再開する。
 
 ## 旧調査原文（SQR-05移植時点・履歴）
 

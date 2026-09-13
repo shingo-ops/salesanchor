@@ -3023,3 +3023,18 @@ review: same-AI Planner correction then Architect APPROVE for these corrections;
 state: stage2 draft updated,3 files and8 PG groups; no stage2 delegation/implementation/DB/merge/production
 next: PO decision on bounded stage2 delegation to existing executor through PR/CI
 ```
+
+```text
+id: EV-20260913-LINE-STORAGE-DELEGATED
+date: 2026-09-13
+agent: design partner / existing stock_contract_01
+request: PO original 進める to explicit stage2 three-file implementation/testing/PR delegation
+reference: docs/handoff/tcg-import-latest-only/design.md section15,27 and card-stock-storage-02.md
+observed: dedicated worktree based on main56a1661d; migration/test paths absent; previous registry line retained
+state: design documents prepared, product not yet implemented; no merge or production
+next: three-file implementation and parent review, then product PR and existing CI real-PG tests
+```
+
+EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。
+
+EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。

@@ -456,6 +456,8 @@ PO原文:
 
 以前の委任カードはコミット/push/PRを明示禁止している。今回の「進める」は引き継ぎ準備を継続する根拠として記録し、担当の権限を黙って拡張しない。上記の製品提出まで同じ担当へ委任するかは、この具体的な範囲を提示してPOに確認する。第1便の部品実装承認を再承認させるものではない。
 
+第2便委任の受領（2026-09-13）: 3ファイルの実装・8群の検証・PR提出まで同じ担当へ委任する問いに、PO原文「進める」を受領。release/line-stock-storageの専用作業台を最新origin/main 56a1661dから作成し実在確認済み。第2便の正式カードだけを既存stock_contract_01へ渡す。第1便PR3471のマージ、既存処理接続、本番適用、第3便への自動移行は含まない。
+
 ### 後続便の順序と開始条件
 
 第1便の4部品/試験は委任先がローカル作成し、部品6群と対象静的検査を設計担当も直接実行して検収済み。未コミットで既存処理には未接続。順序は次のとおり。カード番号の予約は実装の開始許可ではない。
@@ -469,7 +471,7 @@ PO原文:
 | 05 | 固定publication・writer・停止/再試行・shadow切替準備 | 03/04検収後にカード化 / K9〜K10・3接続QA・失敗注入・切替リハーサル |
 | 本番便 | 初回切替・再解析・3先配信 | レビュー/必須CI/実物のID・hash・差分を提示した別カードとPO GO / 実際の配信結果全件照合 |
 
-第2便草案は[card-stock-storage-02.md](card-stock-storage-02.md)。前段未検収のため未発行。03以降はこの順序表だけであり、実装カードが存在するとは扱わない。マージ・本番実行を便番号だけから許可しない。
+第2便正式カードは[card-stock-storage-02.md](card-stock-storage-02.md)。前段検収・追加委任後に発行し、必須JSON不足の停止を§27で補正して再発行する。03以降はこの順序表だけであり、実装カードが存在するとは扱わない。マージ・本番実行を便番号だけから許可しない。
 
 第2便のFK対応: supplier_channel_id→supplier_channels.id、product_id→tcg_products.id、unit_id→units.id、condition_id→conditions.id、source_message_id→source_messages.id、extraction_item_id→extraction_items.id。新規表相互参照は§27の表名へ接続する。既存のsource/抽出行削除を新FKのRESTRICTが拒否することを負の試験に含める。metadataのJSON参照も同一source/offer/channelを検査する。
 
@@ -932,6 +934,78 @@ inboxはseq>=1、attempt_count>=0、errorならerror_code非NULL。state/参照�
 
 入力manifest/target設定に原文・秘密を入れず、個別原文への権限制御されたリンクを使う。以上を含む物理新規表は計6表で、§18等の「4表」はその時点の草案数。正式migrationは本節の列一覧を使用する。
 
+### 第2便停止を解消する配信JSON契約（2026-09-13）
+
+停止分類はカード不備（設計の必須JSON形の不足）。製品3ファイル未編集で担当が停止した事実を受け、Plannerが既存配信先の列と更新入口に照合して以下を固定する。新たな業務判断・配信権限の追加ではない。本項は§21.1と本節のtarget関連の略記より優先する。
+
+根拠: migrations/20260906_120000_create_tcg_tables_t001.sql:225、backend/app/services/tcg_distribution_svc.py:443、backend/app/services/tcg_distribution_svc.py:547。既存設定の5項目とIDを使い、送信実績日時・件数・last_result・created_at・updated_at・active_publication_idは設定比較から除く。sa_key_secret_nameは設定名だけで、秘密値を保存しない。Google側の数値sheetId/grid/管理範囲は§19の送信直前検査で取得する実行情報で、このDB設定snapshotには含めない。DBだけでGoogle側の変更を検出したとはしない。
+
+#### manifestと設定snapshot
+
+input_manifestは§21.1の10キーだけを持つobject（未知キー/必須キー欠落を拒否）。schema_versionは整数1、kindはbaseline/cutover/stock/legacy_stock、rollout_idはUUID文字列、control_revisionは正の整数、watermark_seqは非負整数またはJSON null、baseline_publication_idはUUID文字列またはJSON null。source_idsはUUID文字列の重複なし昇順配列。offer_revisionsはoffer_id（UUID文字列）とrevision（正の整数）の2キーobjectの配列で、offer_id昇順・重複なし。validationはblocking_reasons/warning_reasonsの2キーobject、各値は空文字でない理由コード文字列の重複なし配列。target_snapshotsは対象ID（小文字標準UUID文字列）をキーにしたobjectとする。対象数3をDBに固定せず、実際に選択した接続先集合を固定する。全3先の配信成功は後続便の受入条件。
+
+各target_snapshots値は次の6キーだけのobject。idは外側のキーと同じUUID文字列。name/spreadsheet_id/sheet_name/sa_key_secret_nameは文字列（既存値をそのまま保持、正規化・空白除去しない）、is_activeはboolean。ready到達時の配信対象はis_active=trueかつ4文字列が非空。snapshotの比較は6項目の完全一致。型違い、キー不足/余分、JSON nullを拒否。ready時に同一tenantの既存targetが全件存在し設定が一致することを検査する。buildingでは集合が空でもよいが、readyでは1件以上。baselineでも同じ形で基準となる宛先集合を保存する。
+
+baselineはwatermark_seq/baseline_publication_id=null、offer_revisions=[]、state=ready固定で送信しない。cutover/stockはwatermark_seqとbaseline_publication_idが非null、legacy_stockは両方null可。source/offerのUUID参照は同一tenantの既存行、baseline参照は同じrollout_idのkind=baseline/readyへ接続する。全kindのmanifest.rollout_idはcontrolと一致。manifest.control_revisionは生成時点の値として保持し、control更新で過去版を変更しない。整数JSON値は小数・booleanを拒否し、BIGINTの範囲内とする。
+
+#### 対象ごとの結果
+
+target_resultsのキー集合はtarget_snapshotsと常に同一。各値は以下の8キーのみ。buildingから全キーを用意し、未設定値は指定したJSON nullとする。
+
+| キー | 型・条件 |
+|---|---|
+| target_snapshot | 上記6キーobject。input_manifest.target_snapshotsの同じIDの値と完全一致 |
+| status | pending / in_flight / unknown / succeeded / failed の文字列 |
+| attempts | 下記attempt objectの配列。未送信は空配列、追加は末尾だけ |
+| verified_rows | 非負整数またはnull。succeededだけ非nullでpublication.row_countに一致（ヘッダーを除く） |
+| verified_sha256 | 64桁小文字16進文字列またはnull。succeededだけ非nullでpublication.rows_sha256に一致 |
+| verified_at | 有限UTC日時文字列またはnull。succeededだけ非nullで最新attempt.finished_atに一致 |
+| review_reason | nullまたは target_config_changed / readback_mismatch / outcome_unknown の理由コード文字列 |
+| reservation_attempt_id | UUID文字列またはnull。現在予約した最新attemptのID。予約解決後はnull |
+
+日時JSON文字列はYYYY-MM-DDTHH:MM:SS[.1〜6桁]ZのUTC形式、実在する有限日時だけを許可する。成功以外はverifiedの3値すべてnull。pendingはattempts=[]、reservation_attempt_id=null。in_flight/unknownは最新attemptが同じoutcomeでreservation_attempt_idがそのattempt_id。succeeded/failedは最新attemptの同じoutcomeに対応し、予約解除前はそのID、解除後はnullを許可。baselineは全対象pendingでattempts=[]のままreadyを保持する。
+
+review_reasonは結果とは別の停止理由。初期はnull、unknownはoutcome_unknown、読取不一致のfailedはreadback_mismatch。設定変更を検知したらtarget_config_changedを優先して保存し、結果不明の予約は維持する。成功済みの確認記録を設定変更のために消さない。設定を戻して再照合できても、自動再送せず既存retryの明示要求を必要とする。再照合・再試行を開始する同じtransactionでreview_reasonをnullへ戻せる。理由が非nullのまま新attemptを追加しない。
+
+#### 試行の形と変更可能範囲
+
+各attemptはattempt_id/request_key/request_hash/actor/reason/started_at/finished_at/outcome/errorの9キーだけ。attempt_idはUUID文字列。request_key/actor/reasonは非空文字列、request_hashは64桁小文字16進、started_atは上記有限UTC日時。finished_atは同形式日時またはnull。outcomeはin_flight/unknown/succeeded/failed。errorはnullまたは非空の安全なエラーコード文字列（英小文字・数字・下線、1〜128文字）。外部レスポンス全文・秘密・原文をerrorへ保存しない。
+
+in_flightはfinished_at/error=null。unknownはfinished_at=null、error非null。succeededはfinished_at非nullかつstarted_at以降、error=null。failedはfinished_at非nullかつstarted_at以降、error非null。読取不一致のerrorはreadback_mismatch。通信応答成功だけではsucceededにしない。unknownからは読取等で解決を証明してsucceeded/failedへだけ進める。in_flightからunknown/succeeded/failed、終端succeeded/failedは不変。既存attemptの先頭6入力項目（attempt_id/request_key/request_hash/actor/reason/started_at）は不変、配列の削除/並替えは禁止。
+
+attempt_idは当該publication全対象で一意。request_keyは当該publicationの要求を識別し、1要求を複数対象へ送るため対象間で同じ値を許す。その場合request_hash/actor/reasonは同一。1対象内のrequest_keyは重複不可。同じ要求の再受信は既存結果を返し、別attemptを足さない。新しいキーによる再試行は未成功で前attemptがfailedかつ予約解除済みの対象だけ。unknownから新attemptを作らない。DBは形・値・一意性・遷移を検査し、認証主体の取得、要求hashの計算、読取結果の真偽の検証は共通サービスの責務。文字列の自己申告だけで実配信成功とは判定しない。
+
+#### 予約・集約状態をDBで検査する境界
+
+配信対象行のactive_publication_idをnullからPへ変えるtransactionは、Pのkindがbaseline以外、state=delivering、当該targetのsnapshotが現在の設定と完全一致してis_active=true、最新attemptがin_flight、reservation_attempt_id一致、review_reason=nullを要求する。同じtransactionでpublication結果とtarget予約を保存できるようcommit時に検査する。既存mode/承認版条件（§21.1）も適用する。Pから別Pへの直接付替えは禁止。Pからnullへの解除はP内の最新attemptがsucceeded/failedと確定し、旧reservation_attempt_idがそのIDに一致する場合だけ。解除と結果内reservation_attempt_id=null化は同一transaction。unknownの予約解除を拒否する。
+
+予約中のtarget設定更新自体は既存の管理機能との互換を保って許容するが、設定変更と同じtransactionでその対象結果にreview_reason=target_config_changedを保存するトリガーを置く。snapshotは不変で、新設定へ転送しない。未予約のready版は設定変更をDBへ自動波及させず、送信直前に比較して理由を記録し停止する。外部送信直前の再照合と排他は第5便のwriter責務。DBだけで通信中の外部操作を取り消せるとはしない。予約中targetのDELETEは拒否し、過去publicationで参照されるtargetの物理DELETEも拒否する（無効化で保持）。
+
+各予約IDは対応するtarget.active_publication_idと一致し、in_flight/unknownは予約なしで保存不可。行ロック・commit時制約で相互整合を検査する。building/readyは全対象pending。buildingからのfailedはattempts=[]で可。ready到達後のdeliveringは少なくとも1件未成功、completedは全対象succeededかつ全予約解除済み、partialは成功1件以上かつ未成功1件以上、failedは成功0件かつ全対象failed。in_flight/unknownを含む版をfailed/completedにしない。completedの結果は予約解除のnull化だけ許可し、成功結果/試行は不変。内容不変と状態遷移は本節既定どおり。
+
+自己査定: **APPROVE（本項の設計補正、同一AIによる自己審査）**。設定6キー・結果8キー・試行9キーとnull条件を確定し、結果不明/失敗/成功を分離した。独立レビューや実PG合格ではない。8試験群の第5群で未知キー/型/null/不正状態、設定不一致の予約、別対象予約、unknown解除、終端attempt改変、成功hash/行数不一致を負の試験に含め、正常予約→成功→解除も確認する。今回の停止原因を解消したカードを再発行し、製品3ファイル範囲を維持する。
+
+### 日付組合せと対象選択の保存境界（第2便再照合、2026-09-13）
+
+2回目の停止も設計の型定義不足（カード不備）。配信JSON不足は解消済み、製品3ファイル未編集。残る2点を§17/22/24の既定方針から以下へ固定する。新たな予定日推定を追加しない。
+
+plansのresolution/date_precision/date_start/date_end/review_reasonの許可組合せは次だけ。これ以外をDBで拒否する。polarity/date_kindの既存列挙条件は別途併用し、日付解決から数量や肯定/否定を変更しない。
+
+| resolution | date_precision | date_start/date_end | review_reason |
+|---|---|---|---|
+| resolved | day | 有限日付・両方非NULL・同日 | NULL |
+| resolved | range | 有限日付・両方非NULL・開始<=終了 | NULL |
+| unspecified | unspecified または period | 両方NULL | NULL |
+| needs_review | day/range/period/unspecified | 両方NULL | 非空文字列の理由コード |
+
+resolved/periodとresolved/unspecifiedは禁止。「2026年9月下旬」のように年も種類も明確だが日を特定できない期間はperiod/unspecifiedで原文保持し、21〜30日へ展開しない。年なし期間や種類不明・矛盾を含む表現はperiod/needs_reviewでyear_unresolved等の理由を保存する。periodではdate_raw非空。日付未記載はunspecified/unspecified、date_rawは空文字可。invalid_calendarでも別イベントとして完売を適用する既定方針は維持。DBは保存組合せを検査し、原文の年月日解釈・理由の導出は第3便の共通サービスで検査する。
+
+proposalは既定4キーを厳密検査する。target_selectorの「根拠」は正式キーevidenceへ固定し、全体はchannel_id/product_id/unit_id/condition_id/price/shipping_label/evidenceの7キーobject。channel_idはUUID文字列で当該sourceのsupplier_channel_idと一致。product_id/unit_id/condition_idはUUID文字列またはJSON null、priceは0〜999999999999.99の通常十進文字列（小数部最大2桁）またはJSON null、shipping_labelは文字列またはJSON null。省略はnull、空文字から発送枠を作らない。未知キー/欠落/不正型をDBで拒否する。商品等の候補が未解決でも保存できるよう、selector内の候補IDのFK実在/一意対応は保存入口の検査とし、確定offerのFKとは区別する。
+
+evidenceはproduct_id/unit_id/condition_id/price/shipping_labelの5キーobject、各値は§22のspan配列（根拠なしは空配列、JSON nullは禁止）。DBはこの5キーと配列型まで検査し、spanの内部キー/位置/原文一致は第1便部品を用いた第3便共通入口の責務。channelは原文の仕入元メタデータを用いるため推定根拠文字列を保存しない。resolvedなIDでも原文にその名称が明記されない既存枠対応があり得るため、空根拠配列だけをDBで却下しない。適用時に商品・枠の一意な対応を確認する。patch内部のpresence/value・根拠一致も§24どおり共通入口の責務で、DBはobject型まで。この境界を「全JSON内部検査済み」と報告しない。
+
+自己査定: **APPROVE（上記2点の設計補正、同一AIの自己審査）**。第5試験群へ日付の全許可/禁止組合せ、第2群へselector7キー/evidence5キーの型・欠落・未知キー拒否を含める。日付抽出・商品特定精度は第2便の実PG合格から宣言しない。3ファイルの実装範囲と既に受領済みのPO委任は維持する。
+
 ### 第2便発行前の型・最新main照合（2026-09-13）
 
 latest mainは56a1661d03a583be53fc74507c7d428faa2f0b18。第1便PR3471の製品4ファイルとは変更パスが重ならない。第2便の登録は20260913_150000_tcg_empty_box_condition.sqlの後へ1行追加し、既存登録とCN0011の定義を変更しない。
@@ -1004,7 +1078,7 @@ correction_idsの既存DB型はBIGSERIAL。UUIDへ変換しない。JSONでは1�
 
 analysis_result_snapshotのキーはschema_version（1）、kind（item/no_item）、extraction_item_id（UUID|null）、product_id/unit_id/condition_id（UUID|null）、quantity/price（Decimal文字列|null）、status/exclusion（string|null）、pid_resolved/unit_resolved/needs_review（boolean）、pid_basis/unit_basis/condition_basis（string|null）、review_reasons（string配列）、evidence（object）、correction_ids（正のBIGINTを十進文字列にした配列）、proposal（object）に固定。未知キーは拒否。kind=no_itemでは明細ID/商品等/数量価格/basisはnull、resolvedはfalse、evidenceは原文分類根拠、needs_review/reasonsは分類結果を示す。
 
-proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/根拠）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
+proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/evidence。形と検査境界は本節の日付組合せと対象選択の保存境界）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
 
 空抽出でも明確な在庫語が原文にある場合は、ignore種別のpending候補を原文単位で記録して「抽出できず確認待ち」とする。この候補は数量操作へ直接applyできず、再抽出して根拠が揃った別イベントを作る。無関係と確認できた原文はignored。空抽出から全商品を0にする経路はない。
 
