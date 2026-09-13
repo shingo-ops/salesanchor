@@ -1057,3 +1057,15 @@ ImportWorkflowPanel.tsx:68-87は上部actionsと3stageが別領域、エラーCT
 証跡保存先: reports/pmg-stage-card-actions/{all-unit,pg,check-final,build,backend-lint,e2e,colima-stop}.txt、cards/error/analysis-actionのPNG、verification-manifest.json（各SHA256）。専用Colima dist01-3258停止ログ確認、他者profile/本番変更なし。Gitには正式設計・試験コードを保存し、旧unfinished差分/キャッシュは含めない。
 
 最終差分/視覚審査: APPROVE（root、担当実装と照合）。限定設計の受入を満たし、PR/CI確認へ進める。新GO未受領、未マージ・本番未反映。設計審査は同一AI自己審査であり独立第二者レビューとは称さない。配信候補集計の不一致、再抽出操作、全体ダッシュボードの残設計は今回解消していない。
+
+
+### 公開pushの承認待ち（2026-09-13）
+
+ローカル実装commit8bb8df00、最新main af269ae2の文書変更を統合したHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8。統合は文書のみ、双方の根拠登録を保持。通常pushは実行前の自動承認レビューで2回拒否された。読み取り照合でorigin=https://github.com/shingo-ops/salesanchor.git、GitHub owner/name一致、isPrivate=falseを確認。拒否理由は「公開GitHubへの送信についてユーザー本人の明示承認が必要。表示変更依頼・担当カード/root指示では不足」。制限解除・別送信経路・force等の迂回はしない。
+
+現在地: 実装/ローカル検証/審査/ローカルコミット済み。push未実施、PR未提出、PR CI未実行、マージ/本番未実施。次はPOの公開push・PR提出の明示承認を受領後に通常手順を再開。マージには別途新PR番号のGOが必要。検証ログと画面20ファイルは親引継ぎ作業台reports/pmg-stage-card-actions-final-20260913にもSHA256照合して複製済み。
+
+
+### 公開push・PR提出の本人承認受領（2026-09-13）
+
+直前の質問「公開GitHubリポジトリへ変更をpushし、PRを提出してよいですか？」に、PO原文「進めてくれ」を受領。公開送信先shingo-ops/salesanchorのrelease/pmg-stage-card-actionsへの通常pushとmain向けPR提出を承認した回答として記録する。上の公開送信承認待ちは解消。preflight終了0、ローカル検収済み差分と最新mainを照合して通常手順を再開する。これは新PR番号のマージGOではなく、本番反映は未承認・未実施。

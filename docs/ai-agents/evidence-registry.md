@@ -2691,3 +2691,9 @@ PO原文「この表示に変更してくれ」で3カード下部CTA実装を�
 ### EV-20260913-FRONTEND-AL-RELEASE
 
 PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+
+EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8、通常pushの自動承認拒否2回。origin/owner一致・public確認済み、公開送信のPO明示承認が必要との理由。PR未提出/CI未実行/本番未反映、迂回なし。design/reconの「公開pushの承認待ち」参照。
+
+
+EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
