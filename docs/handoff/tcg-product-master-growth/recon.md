@@ -1039,3 +1039,18 @@ PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計com
 - 原文の独立した価格行抽出147件とline_end集合が一致、欠落・重複0。数量・価格・単位・解析後数量・解析後価格の5項目×147=735照合は差異0。事前原文行全体も不変。前回の原文照合済み抽出との商品名/数量/単位/状態/備考/行終端/作品IDは同一。raw価格のカンマ表記だけ差があり、数値147件は一致。解析の数量・価格・Condition・Status・備考・商品/単位特定フラグは前回純関数検証と一致。
 - 状態: 当該1件は通常の本番経路で抽出・解析まで完了、100秒制限による失敗の解消を実測。全投稿の300秒以内・全体正答率を保証するものではない。既知マスタ型番3商品5明細の不整合は別課題。配信処理は未実行。
 - 非公開の前後スナップショット: /private/tmp/shinsoku-retry-before-20260913.json、/private/tmp/shinsoku-retry-after-20260913.json（0600）。原文や全明細をrepoへ公開しない。
+
+
+## CARD-LINE-PRODUCT-SPACE-06 実装・PR作成直前の確認（2026-09-13）
+
+PO原文「離席するので最後まで進めてくれPRの直前まで進めて結果を報告してくれ」を、本カードの限定実装・検証までの明示許可として受領。設計専任の前提に対する今回の追加指示として扱い、本人セッションで実装。サブエージェント起動0。PR作成・マージ・本番反映は許可範囲外として停止する。
+設計の正式参照版は文書PR3462 HEAD75b90916、designの連続空白最終契約とカード06を本ブランチにも保存。前提となるPR3473はMERGED/merge8d5aa581、Deploy34743294988成功。稼働analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52一致は設計時直接確認済み。新規ライブラリ/API仕様変更なし。
+
+preflight成功、本店はorigin/mainより223コミット遅れ・台帳以外未保存30件。公式new-worktree.shでorigin/main1a8eed69起点、専用release/product-space-runsを作成。製品実装はanalyzer/helper/品質R3〜R6と解析版v8、試験5ファイル。共通normalize_en・match_one_kw・日本語fallback・候補順位/元検索語を保持。新しい状態/価格/数量/DB/CI変更なし。
+
+検証結果: make lint-ci終了0、ruff app成功、Bandit高重大度0。mypyは既存エラーをMakefileが警告扱いとするため型検査完全成功ではない。変更試験5ファイルのruff成功。DB/pytestを起動せず既存ASTローダーで製品純関数を読込み、固定期待値293名称/96設計例を含む既存431ケースと追加26ケース、計457の直接照合を実行し失敗0。正式pytestとは区別する。初回の非公開検算ドライバーはdeepcopyの読込み不足9件を出したが、製品試験コードはimport済み。ドライバー補完後457成功。ruff初回は作業机外のcache書込み拒否、no-cacheで再実行成功。制限変更なし。
+
+PostgreSQL比較fixtureに連続空白の一致/除外2ケースを追加、保存RAWの空白保持と比較の特定結果を検証するassertを追加。既存の訂正保護試験は維持。ローカルDocker daemonに接続不可、PG fixtureも隔離GitHub CI専用を要求するため、pytest/実PG未実行。PRを作らない今回の指示によりPR起動CIも未実施。GITHUB_ACTIONSの偽装や外部DBへの代用なし。
+
+自己差分確認: 製品ファイル2・既存試験5の範囲。原文保存/解析結果の大量更新/モデル設定/配信処理の変更0。正式CI未完了なのでマージ可能・本番改善完了とは宣言しない。PR作成前で停止する。実Gemini呼出し0、本番変更/再解析/採用/配信0。
+非公開検証ログ: /tmp/product-space-lint.log、/tmp/product-space-direct-result.json。一時領域であり恒久保管ではない。次はPOのPR作成指示後に正式CIを起動し、失敗があれば本カード範囲で修正する。

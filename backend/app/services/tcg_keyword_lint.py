@@ -13,7 +13,12 @@ from __future__ import annotations
 import re
 from typing import Iterable
 
-from app.services.tcg_analyzer_svc import match_one_kw, match_product_name_space, normalize_en
+from app.services.tcg_analyzer_svc import (
+    collapse_product_spaces,
+    match_one_kw,
+    match_product_name_space,
+    normalize_en,
+)
 
 # 純ASCII語（英数記号のみ）の判定。日本語混じりはこれに当たらない。
 _RE_PURE_ASCII = re.compile(r"^[\x20-\x7e]+$")
@@ -59,7 +64,7 @@ def check_r3_shared_kw(search_kw: dict) -> list[str]:
     owners: dict[str, set[str]] = {}
     for code, kws in search_kw.items():
         for kw in kws:
-            owners.setdefault(normalize_en(kw), set()).add(code)
+            owners.setdefault(collapse_product_spaces(normalize_en(kw)), set()).add(code)
     return sorted(
         f"{k} -> {','.join(sorted(v))}" for k, v in owners.items() if len(v) > 1
     )
@@ -71,7 +76,7 @@ def check_r4_self_kill(search_kw: dict, exclude_kw: dict) -> list[str]:
     for code in sorted(exclude_kw):
         for ex in exclude_kw[code]:
             for sk in search_kw.get(code, []):
-                if match_one_kw(ex, normalize_en(sk)):
+                if match_one_kw(collapse_product_spaces(ex), collapse_product_spaces(normalize_en(sk))):
                     out.append(f"{code}: '{ex}' kills '{sk}'")
     return out
 
@@ -85,13 +90,14 @@ def check_r5_piggyback(search_kw: dict, exclude_kw: dict) -> list[str]:
                 if b_code == a_code:
                     continue
                 for b_kw in search_kw[b_code]:
-                    if normalize_en(a_kw) == normalize_en(b_kw):
+                    if collapse_product_spaces(normalize_en(a_kw)) == collapse_product_spaces(normalize_en(b_kw)):
                         continue
                     b_norm = normalize_en(b_kw)
-                    if not (match_one_kw(a_kw, b_norm) or match_product_name_space(a_kw, b_norm)):
+                    if not (match_one_kw(collapse_product_spaces(a_kw), collapse_product_spaces(b_norm))
+                            or match_product_name_space(a_kw, b_norm)):
                         continue
                     guarded = any(
-                        match_one_kw(ex, b_norm) for ex in exclude_kw.get(a_code, [])
+                        match_one_kw(collapse_product_spaces(ex), collapse_product_spaces(b_norm)) for ex in exclude_kw.get(a_code, [])
                     )
                     if not guarded:
                         out.append(f"{a_code}:'{a_kw}' rides {b_code}:'{b_kw}'")
@@ -104,7 +110,7 @@ def check_r6_dup_in_product(search_kw: dict) -> list[str]:
     for code in sorted(search_kw):
         seen: dict[str, str] = {}
         for kw in search_kw[code]:
-            n = normalize_en(kw)
+            n = collapse_product_spaces(normalize_en(kw))
             if n in seen:
                 out.append(f"{code}: '{seen[n]}' / '{kw}'")
             else:

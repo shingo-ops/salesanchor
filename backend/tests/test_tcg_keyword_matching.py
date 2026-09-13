@@ -3729,3 +3729,51 @@ def test_space_normal_priority_is_per_product_not_global():
 ])
 def test_space_legacy_reducer_full_tuple_contract(name, codes, search, exclude, expected):
     assert match_pid_name_first(name, codes, search, exclude) == expected
+
+
+@pytest.mark.parametrize("name_spaces", [" ", "  ", "   "])
+@pytest.mark.parametrize("keyword_spaces", [" ", "  ", "   "])
+def test_product_space_runs_keep_raw_keyword_and_inputs(name_spaces, keyword_spaces):
+    from copy import deepcopy
+    name = "30th" + name_spaces + "CELEBRATION 18日発送"
+    keyword = "30th" + keyword_spaces + "CELEBRATION"
+    search = {"A": [keyword]}
+    before = deepcopy(search)
+    assert match_pid_with_work(name, ["A"], search, {}, work_id="pokemon",
+                               product_work_ids={"A": "pokemon"}) == (
+        "A", "WORK:pokemon|SK:" + keyword, True, ["A"])
+    assert search == before
+    assert name == "30th" + name_spaces + "CELEBRATION 18日発送"
+
+
+@pytest.mark.parametrize("field", ["name", "state", "memo"])
+@pytest.mark.parametrize("spaces", ["  ", "   "])
+def test_product_space_runs_exclusion_in_each_field(field, spaces):
+    values = {"name": "ALPHA  BETA", "state": "", "memo": ""}
+    values[field] += " LIMITED" + spaces + "EDITION"
+    assert match_pid_with_work(values["name"], ["A"], {"A": ["ALPHA BETA"]},
+                               {"A": ["LIMITED   EDITION"]}, work_id=None,
+                               product_work_ids={}, raw_state=values["state"],
+                               raw_memo=values["memo"]) == (None, "NONE", False, [])
+
+
+@pytest.mark.parametrize("name", ["ALPHABETA", "ALPHA\tBETA", "ALPHA\nBETA", "ALPHA　BETA"])
+def test_product_space_runs_do_not_erase_separators(name):
+    assert match_pid_with_work(name, ["A"], {"A": ["ALPHA BETA"]}, {},
+                               work_id=None, product_work_ids={}) == (None, "NONE", False, [])
+
+
+def test_product_space_runs_preserve_ambiguity_and_legacy_matching():
+    search = {"A": ["ALPHA BETA"], "B": ["ALPHA  BETA"]}
+    result = match_pid_with_work("ALPHA   BETA", ["A", "B"], search, {},
+                                 work_id=None, product_work_ids={})
+    assert result[2] is False and result[3] == ["B", "A"]
+    assert match_one_kw("ALPHA BETA", normalize_en("ALPHA  BETA")) is False
+    assert match_pid_name_first("ALPHA  BETA", ["A"], {"A": ["ALPHA BETA"]}, {}) == (
+        None, "NONE", False, [])
+
+
+@pytest.mark.parametrize("name,expected", [("SET  100", True), ("SET  1000", False), ("SET  100a", False)])
+def test_product_space_runs_preserve_numeric_boundary(name, expected):
+    from app.services.tcg_analyzer_svc import match_product_keyword
+    assert match_product_keyword("SET 100", normalize_en(name)) is expected
