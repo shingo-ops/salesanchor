@@ -110,6 +110,7 @@ async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, fil
             SELECT * FROM items WHERE :filter_by = 'all'
                 OR (:filter_by = 'needs_review' AND needs_review)
                 OR (:filter_by = 'extraction_error' AND extraction_status = 'error')
+                OR (:filter_by = 'results_present' AND analysis_result_id IS NOT NULL)
         ), page AS (
             SELECT id, extraction_job_id, source_message_id, extraction_status,
                    analysis_result_id, raw_product_name, raw_quantity, raw_price, raw_unit,
@@ -132,4 +133,48 @@ async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, fil
     response.update(limit=limit, offset=offset, filter=filter_by, unit="extraction_item")
     if response["coverage"] != "complete":
         response.update(total=None, items=None)
+    return response
+
+
+async def read_messages(db: AsyncSession, job_id: str, limit: int, offset: int) -> dict[str, Any]:
+    result = await db.execute(text(f"""
+        WITH {_scope_ctes()}, page AS (
+          SELECT m.id::text, m.raw_text, m.received_at, m.created_at, m.is_active,
+                 m.relation_kind, ts.name AS supplier_name
+          FROM messages m LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id
+          LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          ORDER BY m.created_at, m.id LIMIT :limit OFFSET :offset
+        ) SELECT jsonb_build_object('as_of', statement_timestamp(), 'review_status', job.review_status,
+          'linked', job.messages_linked_at IS NOT NULL, 'total',(SELECT count(*) FROM messages),
+          'messages',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job
+    """), {"job_id": job_id, "limit": limit, "offset": offset})
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Import job not found")
+    response = _envelope(row, job_id)
+    response.update(limit=limit, offset=offset, unit="source_message")
+    if response["coverage"] != "complete":
+        response.update(total=None, messages=None)
+    return response
+
+
+async def read_extraction_jobs(db: AsyncSession, job_id: str, limit: int, offset: int, filter_by: str) -> dict[str, Any]:
+    result = await db.execute(text(f"""
+        WITH {_scope_ctes()}, filtered AS (SELECT * FROM jobs WHERE :filter_by='all' OR status='error'), page AS (
+          SELECT j.id::text, j.source_message_id::text, j.status, j.created_at, j.extracted_at, m.raw_text,
+                 ts.name AS supplier_name, (SELECT count(*) FROM {TCG_SCHEMA}.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
+                 CASE WHEN j.status='error' THEN 'unclassified' ELSE NULL END AS error_reason_code
+          FROM filtered j JOIN messages m ON m.id=j.source_message_id
+          LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          ORDER BY j.created_at,j.id LIMIT :limit OFFSET :offset
+        ) SELECT jsonb_build_object('as_of',statement_timestamp(),'review_status',job.review_status,'linked',job.messages_linked_at IS NOT NULL,
+          'total',(SELECT count(*) FROM filtered),'jobs',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job
+    """), {"job_id": job_id, "limit": limit, "offset": offset, "filter_by": filter_by})
+    row=result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Import job not found")
+    response = _envelope(row, job_id)
+    response.update(limit=limit, offset=offset, filter=filter_by, unit="extraction_job")
+    if response["coverage"] != "complete":
+        response.update(total=None, jobs=None)
     return response
