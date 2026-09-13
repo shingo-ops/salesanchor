@@ -1380,3 +1380,64 @@ AL形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-st
 2026-09-13 AL実装承認: 今回4件の実装承認質問へのPO原文「進めてくれ」を受領。既存button_generatorへCARD-AL-FULLPAGE-01を発行。設計担当は製品を編集せず検収/記録を担当する。新GO/本番操作は未承認。
 
 2026-09-13 AL実装検収済み: PO原文「進めてくれ」で実装承認。4ボタン移管、root逆変換2ページ一致・実表示72前後組/操作24前後組成功、実装担当266試験/品質成功を原ログ確認。共通100/旧305。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md。PR3461実装更新へ、今回番号付きGO/マージ/本番未実施。
+
+### AM. スタッフの登録・簡易編集・専用編集6ボタン（2026-09-13設計案）
+
+状態: PO原文「進める」に基づく次便設計。今回6件の実装承認は未受領。既存のあるべき姿/KGIを継承し、6件という対象選定は設計担当案。ALは製品PR3461本番反映済み、結果文書PR3463もmainへ統合済み。基準af269ae20ed2f52e6cd49ba0403ad7799e3a3870。
+
+目的: スタッフを登録・編集する3フォームの取消/登録/更新を共通Buttonへ揃え、保存内容・完了後の動作を保持する。成功は対象6/6移管・業務本文差分0・各フォームの検証成功で判定する。今回6件をPO発言として代筆せず、実装前にPOの判断を受ける。
+
+#### 実物調査と対象
+
+[対象6原文・2ページと共有7ファイルのhash](../../handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json)。TypeScript構文再測定で共通100/旧prefix305（button/Link/aを含む実運用母数）。6件成功後の期待値は106/299。検査対象除外はstories/test/spec/design-previewで既存と同じ。
+
+| 対象 | 実物の行 | 固有の保持条件 |
+|---|---|---|
+| StaffPage 登録2件 | :299〜302 | POST /staff、submitting時の取消/登録disabled、登録中文言、連投防止、staff_code空ならpayloadから除外/指定時trim |
+| StaffPage 簡易編集2件 | :321/322 | PATCH /staff/:id、6項目のみ。成功でDrawerを閉じ一覧再取得。通常編集の保存ロックなし |
+| StaffEditPage 専用編集2件 | :225/226 | PATCH /staff/:id、全項目とui_preferences6個。本人を編集したときだけ設定再取得を待ち、/staffへ遷移 |
+
+StaffPage:147〜176の登録payloadとStaffPage:179〜198の簡易編集payloadは異なる。StaffEditPage:121〜145の全項目編集も別契約。本人条件はselfStaffId !== null && Number(id) === selfStaffId。UiPrefsContext:83〜126は実API /staff/meを取得し、失敗を内部で捕捉してdefaultへ戻す。Providerなしでは:154〜165のdefault/no-opに落ちるため、それだけで本人refresh成功としない。表示テーマは同:128〜130でThemeContextへ委譲されているので、ui_preferences.dark_mode保存を即時テーマ切替の保証としない。
+
+#### 実装契約・対象外
+
+候補製品はfrontend/src/pages/staff/StaffPage.tsx、frontend/src/pages/staff/StaffEditPage.tsx、新規frontend/src/components/StaffFormButtonMigration.test.tsxの3ファイル。既存../../components/Buttonのnamed importを各ページへ追加し、監査AM-01〜06だけbutton開始/終了tagをButtonへ、旧classNameを除去、取消3=secondary、登録/更新3=primary、全size md明示。
+
+type明示6/6、disabled既存2/6、対象ボタンへのstyle/ref/form属性追加対応0。type/onClick/disabled/children/条件式、DOM順、form/onSubmit、wrapper/maxWidth、hooks/全payloadを逐語保持。Button.tsx:41〜93のnative属性転送を利用し、loading/loadingText/新disabled/aria-busy/fullWidth/style/layoutClassNameを追加しない。
+
+スタッフの権限判定、role_id・Firebase UID・UI設定の扱いは変更しない。一覧の新規起動/編集/削除/本人削除制約、行クリック/リンク、Bot、他ページ、共有部品/CSS/入力/翻訳/認証/API/DB/依存/CIは対象外。表/報酬3/カレンダー色保留、新CI最後。新規認可やアカウント変更の仕様を設計・実装しない。
+
+#### Why・代替とリスク
+
+同一スタッフ領域の3フォームで、既存Buttonへ転送できるnative属性6/6に限定し、送信処理を変更せず外観を一箇所へ寄せられる。form-actionsの配置ownerはcomponents.css:46〜51、Button.css:2〜17のnowrap/標準paddingを使用。ALの72表示組・24操作組成功はこのスタッフ画面の検収ではない。Modalの長い登録フォームと本人設定再取得は本便で個別に検証する。
+
+専用編集2件だけ先行する案は同じスタッフ編集の簡易画面に旧外観が残るので不採用。Botの6件も混ぜる案はキー発行/別payloadの責務を増やすため不採用。CSS拡張案は移管以外の影響を増やすため不採用。幅不足やfocus欠けが出たら該当移管を未合格として設計へ戻し、本便へCSS修理を加えない。
+
+外部導入事例や新ライブラリ仕様の調査は不要。新APIを導入せず、自社の原文6件・共有Button・既存状態管理と前後検証が直接根拠。新ADR不要、ADR-113/067/027/073と既存Modal/Drawer方針を継承。このWhyを既存ADRへ接続できる根拠として残す。
+
+#### 受入条件
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象6/6・業務差分0 | import/tag/class/variant/size逆変換で2ページが基準と全バイト一致。監査JSONのtype/disabled/children一致。製品差分3ファイルのみ |
+| 3フォームの保存/取消 | 実ページ・実入力・実Modal/Drawerをmountし全通信を合成mock。クリック/入力EnterでPOST/PATCHのURL・ID・全payloadと成功close/reload/遷移を確認。取消書込0、失敗時入力/エラー保持、再度開いた際の入力状態を前後比較 |
+| 登録制御 | staff_code空時のキー不在とtrim済指定値、空文字null化、role_id数値化、6設定booleanを検証。姓/名/メール/役割requiredの無効入力で送信0。登録pending中disabled2・文言維持・連投0・失敗後復帰 |
+| 本人更新の設定再取得 | 実UiPrefsProviderを使用し認証入口とAPIのみmock。初回/staff/meと更新後再取得を区別。専用編集のself/other/nullで追加再取得1/0/0を確認。selfでは完了を待って一覧へ移動。再取得失敗時もProviderが既存どおり内部捕捉して遷移することを確認。簡易編集へ本人refreshを追加しない |
+| 通常編集制御 | 簡易/専用編集へ新たな保存ロックを導入しない。pending時の対象disabled/aria-busy/文言が前後同一 |
+| 実表示 | 登録/簡易/専用の3フォーム×6幅390/640/767/768/1279/1280×日英×明暗=72前後組。さらに登録pending24組。計96組。入力を省かず実Tab/ShiftTabで対象へ到達、文字/本体/輪郭の4辺欠け0、初期横overflow増加0、並び順一致 |
+| キーボードと終了 | 各フォームの取消/送信Enter/Space、入力Enter、Escを前後比較。Modal/Drawerの閉じる/再開とfocus復帰、専用編集の一覧遷移を別々に確認。programmatic focusだけをTab成功としない |
+| 品質 | 対象strict eslint、新規ページ回帰、既存coverage/check:all/build/Storybookと最新PR必須CIを成功。新CIは作らない |
+
+96表示組は実装後の計画で、実行済みではない。ローカル合成データの検証は本番認証・実アカウント更新の検証と区別する。640pxは狭幅であり実200%zoomではない。本番のスタッフ権限/Firebase UIDを試験目的で書き換えない。
+
+#### 維持・担当・停止・戻し方
+
+外観は既存Button、配置は既存form-actions/Modal/Drawerが所有する。Generatorは指定3製品と試験、設計担当は実物照合/カード/実ページ検収/台帳、POは今回6件の実装と将来の番号付きGOを判断する。承認後に担当を確定し、この草案だけで新AIを起動しない。維持は新規ページ回帰と既存CI。本便単位で戻せる変更としDB復元なし。原hash差異/契約外修正/検証失敗は記録して設計へ戻す。
+
+#### Architect自己審査（Planner作成後）
+
+判定: APPROVE（設計合格）。同一AIの自己審査であり、独立した第二者レビューではない。
+根拠: 6原文のnative属性と共有Buttonを照合し、3種のpayload/登録ロック/本人refresh差を検証可能な形に分離。Provider外no-opの誤検収を排し、認証/APIのmock境界と実部品の検収条件を明示。権限/認証の仕様変更は含まれない。過去成功の適用限界と不成立時の停止を明記。
+設計上の未解決前提なし。今回のPO実装承認、実装、96組の実表示検収、製品CIは未実施。カードは未発行草案で、形式検査成功も実装開始承認とはしない。
+
+AM形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-state/diff-check成功、card-lint exit0（長行警告1のみ）。未発行カードam-staff-button-card.txt。製品差分0。

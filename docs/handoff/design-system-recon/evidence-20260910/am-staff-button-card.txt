@@ -1,0 +1,37 @@
+CARD-AM-STAFF-01（草案・未発行）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AM-STAFF-01
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在作業台/原文/L32照合。
+開始条件: 今回6件のPO実装承認と担当確定。現時点で未充足、実行禁止。
+担当: 承認後に確定。他者も作業中なので変更を戻さず調整する。新AIを自己起動しない。
+根拠: docs/specs/design-system/design.md§AM、am-staff-button-audit.json。
+基準: af269ae20ed2f52e6cd49ba0403ad7799e3a3870。
+所有: frontend/src/pages/staff/StaffPage.tsx、frontend/src/pages/staff/StaffEditPage.tsx、新規frontend/src/components/StaffFormButtonMigration.test.tsx。
+許可: 指定2ページ6対象の実装と回帰試験、ローカル品質検証。合成fixture/原ログは/tmpへ保存。
+禁止: 入力/翻訳/権限/認証/API/DB/CI/依存lock/共有部品/CSS/設定管理変更、文書/台帳/GO編集、commit/push/PR/merge/本番操作。
+本文のパスは一字一句そのまま使用する。
+手順0: preflight/status、監査JSONの2ページ/共有7hashを照合。対象原文/共有契約に差があれば編集前に設計担当へ停止報告。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design && git status --short
+手順1: AM-01〜06だけbutton開始/終了tagをButtonへ、旧className除去、取消secondary/登録更新primary、size md。
+既存../../components/Buttonのnamed importを2ページに追加。type/disabled/onClick/children/条件式と業務本文を逐語保持。
+loading/新disabled/aria-busy/fullWidth/style/layoutClassNameを追加しない。form/順序/wrapper/入力/共有CSSを変えない。
+手順2: 実2ページ・実入力・実Modal/Drawer・実UiPrefsProvider・Routerで試験を作成。認証入口とAPIだけを合成mock、部品を単純buttonへ差し替えない。
+3フォームのURL/ID/全payload/成功遷移・閉じる・再取得/取消書込0/失敗入力保持/入力Enterを確認。
+登録code省略/trim、null化、role_id数値化、設定6boolean、required、pending disabled2/連投0/失敗復帰を確認。
+専用編集self/other/nullで更新後/staff/me追加1/0/0を確認。selfは再取得を待って移動、HTTP失敗時は実Providerの捕捉後に移動。
+Providerなしno-opで成功としない。簡易編集へ本人refreshや通常編集ロックを追加しない。
+手順3: 依存未準備なら既存lockでnpm ci。次の品質検証を順に実行する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npx eslint src/pages/staff/StaffPage.tsx src/pages/staff/StaffEditPage.tsx src/components/StaffFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm run test:unit -- src/components/StaffFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design/frontend && npm run build-storybook
+手順4: 実装差分と原ログをrootへ引き継いで停止。rootが逆変換2原文一致と96表示前後組/キーボード/再開を検収する。
+失敗・差異があれば対象と最後のコマンド・原ログを返す。設計外の修理や未検証を成功とする記録は禁止。
+期待出力: 対象6/6移管、業務本文差分0、品質結果/未完の区別。既存母数の期待共通106/旧299は他便増減と分離する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-staff-button-design && git diff --stat
+END OF CARD

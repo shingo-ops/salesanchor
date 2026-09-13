@@ -1,0 +1,84 @@
+{
+  "base": "af269ae20ed2f52e6cd49ba0403ad7799e3a3870",
+  "counts": {
+    "common": 100,
+    "legacy": 305
+  },
+  "targetCount": 6,
+  "files": [
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "sha256": "90aadb6d6b2dff84a7db08097222f6b622d7c740487debb6d6e5095095acabb6",
+      "targets": [
+        {
+          "id": "AM-01",
+          "line": 299,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowCreate(false)} disabled={submitting}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "id": "AM-02",
+          "line": 300,
+          "original": "<button type=\"submit\" className=\"btn-primary\" disabled={submitting}>\n              {submitting ? t(\"common.submitting\") : t(\"common.register\")}\n            </button>"
+        },
+        {
+          "id": "AM-03",
+          "line": 321,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "id": "AM-04",
+          "line": 322,
+          "original": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>"
+        }
+      ],
+      "otherButtons": 3
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+      "sha256": "34fc25f53f11408f1ccedf81aa68140a33cdf4f2b8789a4cd0b22d046872b0d8",
+      "targets": [
+        {
+          "id": "AM-05",
+          "line": 225,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={() => navigate(\"/staff\")}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "id": "AM-06",
+          "line": 226,
+          "original": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>"
+        }
+      ],
+      "otherButtons": 0
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Drawer.css",
+      "sha256": "5cc3e35c7c303ca498d6d06833bb92a26b26173baf0f333c1f2b7681a997d195"
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffFormFields.tsx",
+      "sha256": "38dc00a6c4a584975217baab3f2aafb564d8d12b677878a6eb1d4f85879e3196"
+    },
+    {
+      "file": "frontend/src/contexts/UiPrefsContext.tsx",
+      "sha256": "93e2e7bf0d247b6b13e07da451645441a4e7d56ac88acfee850854218b7de2d6"
+    }
+  ]
+}
