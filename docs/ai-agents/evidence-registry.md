@@ -2853,3 +2853,22 @@ tradeoff: exact source spans prove verbatim text but not correct semantic owners
 decision: draft v5 evidence schema, versioned history/source API and storage constraints; current contract index in design section 24; same-AI review REVISE
 follow_up: source/channel mutation and delete-path audit, boundary gold labels and complete UI callers before card
 ```
+
+```text
+id: EV-20260913-LINE-SLOT-NUMERIC-REFERENCE
+date: 2026-09-13
+agent: Codex design partner
+task: 発送枠の参照正解と数量変換の反例
+scope: 3 private-source posts manually labelled; unchanged numeric helper AST; no DB/API writes
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json shipping_slot_reference_labels
+    summary: 13 offers; 4 sold-out, 9 positive quantities, 6 positive quantities without unit; 2 restock possibilities; no catalog/offer ID mapping
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json numeric_boundary_probe
+    summary: 5 helper cases, 2 match and 3 mismatch; circled quantity is lost and arrow expression becomes concatenated number
+confidence: high
+tradeoff: manual labels are same-AI development references, not held-out model evaluation; denied SQL keyword audit was not executed
+decision: add single-number grammar, scoped circled-number handling and ambiguous-expression hold; self-review REVISE
+follow_up: independent nonduplicate evaluation fixtures and final DDL/operation compatibility
+```
