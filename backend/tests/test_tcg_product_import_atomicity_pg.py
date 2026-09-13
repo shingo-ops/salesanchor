@@ -46,13 +46,30 @@ def atomic_pg(pg, monkeypatch):
         monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
     with connection.cursor() as cur:
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", SCHEMA))
-        cur.execute("CREATE SCHEMA tenant_990")
-        cur.execute("CREATE TABLE tenant_990.sentinel (value text PRIMARY KEY)")
-        cur.execute("INSERT INTO tenant_990.sentinel VALUES ('unchanged')")
+        work_fixture.provision(cur, "tenant_990")
+        cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", "tenant_990"))
+        cur.execute("INSERT INTO tenant_990.tcg_products (code,japanese_title,category_class,is_active) VALUES ('SENTINEL','unchanged','Box',true) RETURNING id")
+        product_id = cur.fetchone()[0]
+        for table in ("product_search_keywords", "product_exclude_keywords"):
+            cur.execute(f"INSERT INTO tenant_990.{table}(product_id,keyword,position) VALUES (%s,'unchanged',1)", (product_id,))
+        cur.execute("INSERT INTO tenant_990.tcg_product_import_jobs(filename,raw_sha256,total_rows) VALUES ('sentinel.csv',%s,1) RETURNING id", ("0" * 64,))
+        job_id = cur.fetchone()[0]
+        cur.execute("INSERT INTO tenant_990.tcg_product_import_rows(job_id,row_no,japanese_title,result,product_code) VALUES (%s,1,'unchanged','created','SENTINEL')", (job_id,))
+    before = sentinel_snapshot(connection)
     yield connection, async_url
+    assert sentinel_snapshot(connection) == before
+
+
+def sentinel_snapshot(connection):
+    """All stored columns in the other tenant's real product/word/history tables."""
+    rows = {}
     with connection.cursor() as cur:
-        cur.execute("SELECT value FROM tenant_990.sentinel")
-        assert cur.fetchall() == [("unchanged",)]
+        for table in ("tcg_products", "product_search_keywords", "product_exclude_keywords",
+                      "tcg_product_import_jobs", "tcg_product_import_rows"):
+            cur.execute(f"SELECT row_to_json(t) FROM tenant_990.{table} t ORDER BY id")
+            rows[table] = cur.fetchall()
+            assert len(rows[table]) == 1
+    return rows
 
 
 def observe(connection):
@@ -68,7 +85,7 @@ def observe(connection):
         rows = cur.fetchall()
         cur.execute(f"SELECT total_rows,created_rows,skipped_rows,status FROM {SCHEMA}.tcg_product_import_jobs")
         jobs = cur.fetchall()
-        cur.execute("SELECT value FROM tenant_990.sentinel")
+        cur.execute("SELECT japanese_title FROM tenant_990.tcg_products WHERE code='SENTINEL'")
         assert cur.fetchall() == [("unchanged",)]
     return products, words, rows, jobs
 
