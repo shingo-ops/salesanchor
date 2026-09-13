@@ -474,6 +474,8 @@ SQL SHA256 0c68042e6de9b2c205916cf7f8c2f9d138dbe845e74a6d38c2b0a7204f783efa、�
 
 run-guard-evaluation.js:28はmainが祖先であることを要求。公開済みの自ブランチへ指定main8d5aa581を同じ担当が通常統合しHEAD3c0bc15e、親も実在を確認。新SQL/試験hashと登録1行を保持。新規GO/マージ/本番なし。
 
+第2便fixture修正保存: 同じ担当が07da520ae37fa060deaf958286c3b0b5a17e7ab7に試験既定値1行だけを保存。親が実commit/diffを確認、担当ruff成功。新SQLは変更なし。再CIのため通常pushへ。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)

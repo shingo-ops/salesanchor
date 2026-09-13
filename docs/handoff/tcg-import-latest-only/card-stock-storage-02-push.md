@@ -3,7 +3,7 @@
 # CARD-LINE-STOCK-STORAGE-02-PUSH
 
 読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、04-worktree.md、05-pr.md、10-executor.md。
-照合結果: 親が試験commit ad0d9fc7と承認範囲3製品ファイルを直接確認。実PGは未実施。既承認の公開GitHub shingo-ops/salesanchorへの提出だけ進める。
+照合結果: 親がfixture修正commit07da520aの既定値1行のみと、最新main統合を直接確認。初回実PGは新規8群setup error、修正後の再CI待ち。既承認の公開GitHub shingo-ops/salesanchorへの提出だけ進める。
 受領確認: 同じ担当・自分のブランチだけの通常pushであることを返す。
 担当: stock_contract_01。他者と共同作業中。他者の変更を戻さない。新規担当禁止。
 作業台: /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-storage
