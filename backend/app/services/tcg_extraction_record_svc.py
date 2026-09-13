@@ -6,6 +6,7 @@ import json
 import logging
 from uuid import uuid4
 
+from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
 from sqlalchemy import text
 
@@ -82,7 +83,7 @@ class AttemptRecorder:
                      "parent": parent, "body": None if oversized else body, "sha": digest(body),
                      "size": byte_count, "model": payload["model"], "version": self.prompt_version})
             s.commit()
-        except RecordError:
+        except (RecordError, SoftTimeLimitExceeded):
             s.rollback()
             raise
         except Exception:
@@ -121,7 +122,7 @@ class AttemptRecorder:
             """), {"id": self.id, "body": None if oversized else response,
                      "size": size, "sha": digest(response)}).scalar_one()
             s.commit()
-        except RecordError:
+        except (RecordError, SoftTimeLimitExceeded):
             s.rollback()
             raise
         except Exception:
