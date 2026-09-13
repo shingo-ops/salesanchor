@@ -1118,3 +1118,14 @@ PR3473: GitHub MERGED/mergedAt2026-09-13T06:39:45Z/merge8d5aa581。Deploy3474329
 実物根拠: 3473版analyzer:503 match_product_keyword、:518 match_product_name_space、:526 match_pid_with_work。既存品質lint:57 R3、:68 R4、:79 R5、:101 R6、:115 R7。R3/6同語とR4/5検索除外を対称化し、日本語fallbackとR1/2/7を維持する必要を確認。analyzer ENGINE_VERSIONを期待する実PG試験あり。product_guardsはASTで関数を選ぶため新helperもローダーへ加える。Context7を要するライブラリ仕様調査は今回なし（既存Python正規表現と自社契約の局所設計）。
 
 品質検算追補: 固定マスタと稼働lint関数を使いR3/R4/R5/R6の空白対称化を隔離メモリで検算。指摘件数は順に1→1、0→0、15→15、2→2、各指摘集合の追加/削除0。既存指摘を解消したとは称さない。/tmp/line-space-quality-proof-private.jsonl、DB/Gemini0。正式card-lint終了0（長行37警告）、task-state/diff検査成功。製品コード/DB変更0、カード発行済み・実装担当未起動。
+
+
+## 連続空白対応 PR3481・正式CI合格（2026-09-13）
+
+PO「進めてくれ」でPR直前停止から提出/正式CIへ進行。実装2534ca14、商品正答率評価b9d4b66a、提出記録後の最終HEAD89d4b699f0ace4b352a022d96c5caba438f06440。製品コード2ファイル/試験5ファイルと文書差分。正式gh-pr-create-safe.shはGraphQL/502を返したがGitHub直接読取でPR3481 OPEN/ready/base mainを確認し、重複作成せずregister-pr.shで登録。遅延後にpull_requestのCIが起動した。原因は未確定、保護解除やCI設定変更は行っていない。
+
+Backend CI34748717910/job103701245040のログを直接取得。3286 passed、95 skipped、309 warnings、121.55秒、失敗0。coverage63.83%（必須60%）。新規26ケースを含む正式pytest/隔離PostgreSQL経路の成功であり、実Geminiの正答率ではない。ローカル457直接照合や過去CI3260成功と区別する。全チェックは33成功/8対象外skip/1失敗、実行中0。唯一の失敗はprocess-artifacts gate34748717897/job103701224510の「GO記録セクションなし」。設計/コード検証失敗ではなく番号付きGO未受領の承認待ち。
+
+商品IDの正答率は実装PR内product-space-accuracy.jsonに記録。固定729件中、全差分11を含む2投稿全19明細を原文/マスタから同一AIがラベル。正答8→18（42.1%→94.7%）、未特定10→0、既存誤商品1→1。9種セットをPM0263に結ぶ既存誤判定は未修正。無作為/盲検/独立レビューではなく、未ラベル710件を含む全体正答率ではない。
+
+本番再解析/採用/配信0、GO未受領・未マージ。CI結果はPR3481本文にも保存し、製品PRのHEADを証跡追記だけで変更しない。本記録は既存設計PR3462への追記であり、同PRのマージ承認ではない。次は対象HEADの番号付きGO確認とマージ前再検査。実装/CI成功を残存誤判定の解消と扱わない。

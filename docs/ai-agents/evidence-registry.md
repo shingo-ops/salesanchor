@@ -2735,3 +2735,5 @@ EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、ア�
 EV-20260913-LINE-SPACE-DESIGN: 固定729件の連続半角空白局所コピー検算552→562、既特定552の変更0、basis表記のみ5。DB/Gemini0。本番改善ではない。PR3473 a618c147との同関数重複をledger/GitHub/git showで確認、追加設計REVISE・カード未発行。recon連続空白節参照。
 
 EV-20260913-LINE-SPACE-FINAL: PR3473 MERGED/配備成功と稼働analyzer SHA一致。固定729件は新版553→563、既特定変更0、basisのみ1。品質R3/R4/R5/R6の指摘集合増減0。設計自己APPROVE、CARD-LINE-PRODUCT-SPACE-06正式検査終了0（長行警告のみ）、実装未着手。recon/ADR154 Why追補案参照。
+
+EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701245040実ログ3286成功/95skip/失敗0、coverage63.83%。33成功8skip、唯一の失敗はGO未記録ゲート。19件正答8→18、既存誤商品1残存。本番変更0。recon正式CI節参照。
