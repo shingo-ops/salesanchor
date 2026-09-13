@@ -51,11 +51,16 @@ def all_tables(connection):
 def fixture_data(pg, monkeypatch):
     connection, engine, _ = pg
     seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0200'", (str(uuid4()),))
     cases = [
         ("EB01 1BOX 1000円", record("EB01", 1)),
         ("メモリアルコレクション 1BOX 1000円", record("メモリアルコレクション", 1)),
         ("ワンピース\nEB01 1BOX 1000円", record("EB01", 2, "ワンピース", "L0001")),
         ("EB01 PSA10 1BOX 1000円", record("EB01", 1, state="PSA10")),
+        ("メモリアルコレクション PSA10 1BOX 1000円", record("メモリアルコレクション", 1, state="PSA10")),
+        ("共通商品 1BOX 1000円", record("共通商品", 1)),
         ("メモリアルコレクション 1? 1000円", record("メモリアルコレクション", 1)),
     ]
     cases[-1][1][3] = "?"
@@ -69,7 +74,15 @@ def fixture_data(pg, monkeypatch):
 
 
 def test_comparison_matches_production_and_leaves_all_tables_unchanged(pg, monkeypatch):
+    production_matches = []
+    original_match = comparison.analyzer.match_pid_with_work
+    def capture(*args, **kwargs):
+        result = original_match(*args, **kwargs)
+        production_matches.append(result)
+        return result
+    monkeypatch.setattr(comparison.analyzer, "match_pid_with_work", capture)
     connection, engine, iid = fixture_data(pg, monkeypatch)
+    monkeypatch.setattr(comparison.analyzer, "match_pid_with_work", original_match)
     sessions = []
     def factory():
         session = Session(engine)
@@ -93,10 +106,20 @@ def test_comparison_matches_production_and_leaves_all_tables_unchanged(pg, monke
         return comparison.HEADER + "\n" + "\n".join(rows)
     report = comparison.compare_snapshot(snap, factory, model_call=model)
     assert report["status"] == "comparison_complete_unverified"
-    assert report["model_calls"] == 5 and not report["mismatches"]
+    assert report["model_calls"] == 7 and not report["mismatches"]
     for row in report["items"].values():
         assert row["saved"]["product_id"] == row["control"]["product_id"] == row["candidate"]["product_id"]
         assert row["control"]["candidates"] == row["candidate"]["candidates"]
+    # Compare candidate sets actually returned inside the production analyzer,
+    # independent of the comparator's own control/candidate calls.
+    expected = sorted((code or "", resolved, tuple(sorted(candidates)))
+                      for code, _, resolved, candidates in production_matches)
+    ids_to_codes = {v: k for k, v in snap["data"]["context"]["product_ids"].items()}
+    actual = sorted((ids_to_codes.get(row["control"]["product_id"], ""),
+                     row["control"]["pid_resolved"], tuple(row["control"]["candidates"]))
+                    for row in report["items"].values())
+    assert actual == expected
+    assert any(len(candidates) > 1 for _, _, _, candidates in production_matches)
     assert all_tables(connection) == before
     assert comparison.read_snapshot(factory, iid)["sha256"] == snap["sha256"]
     assert report["db_writes"] == 0 and not report["adoptable"]
