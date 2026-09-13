@@ -100,6 +100,7 @@ async def test_android_unresolved_sender_and_multiline_body_are_preserved():
         result = MagicMock()
         result.fetchone.return_value = None
         result.fetchall.return_value = []
+        result.mappings.return_value.all.return_value = []
         if 'INSERT INTO' in str(stmt) and 'import_jobs' in str(stmt):
             captured.append(params)
         return result

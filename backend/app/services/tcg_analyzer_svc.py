@@ -32,7 +32,7 @@ from sqlalchemy.orm import Session
 
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
-    WORK_ID_PROMPT_VERSION,
+    WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
     validate_work_id,
@@ -1115,7 +1115,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
                                {"id": extraction_job_id}).scalar_one_or_none()
     work_decisions: dict[str, str | None] | None = None
-    if metadata and metadata.get("prompt_version") == WORK_ID_PROMPT_VERSION:
+    if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
         reference = metadata.get("work_reference_snapshot")
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:

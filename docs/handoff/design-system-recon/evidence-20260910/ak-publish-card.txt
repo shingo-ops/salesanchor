@@ -1,0 +1,28 @@
+CARD-AK-PUBLISH-03
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AK-PUBLISH-03
+読んだ節: guards/00-common.md、04-worktree.md、05-pr.md、11-lint.md。実在/所有/ready/template/L32照合○。
+担当: 同じbutton_generator。他者も作業中なので変更を戻さない。
+目的: 検収済み12ボタンと根拠文書をready PRとして提出する。
+許可と所有: 検収hash確認、既存releaseへのpush、指定本文原稿生成、正式PR作成wrapper、登録番号の読取確認。
+禁止: 製品/設計の編集、新AI、GO原文創作、remote main merge/本番操作、ガード迂回。
+基準: head c5deebbcf21c657e90e703dfc62b12f4ff0387ca、main ee455fb1。root検収済み。新番号GOは未受領。
+手順0: head/status/hashを確認。予期しない差分ならpush前に停止してrootへ返す。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git log -1 --format=%H
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git diff --name-only origin/main...HEAD -- frontend backend scripts .github migrations
+期待: status空、head一致、製品差分3ページとtestだけ。manifestの製品4hash一致を直接確認。
+手順1: root原稿でtemplate由来PR本文を作り、読む。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && python3 /tmp/ak-pr-body-builder.py
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && cat /tmp/ak-pr-body.md
+手順2: 既存releaseへpushし、リモートの同一headを確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git push -u origin HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && git ls-remote origin refs/heads/release/frontend-page-button-design
+期待: remote c5deebbcf21c657e90e703dfc62b12f4ff0387ca。
+手順3: ready PRを正式wrapperで作る。新番号は生成結果から取得。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && bash scripts/gh-pr-create-safe.sh --base main --title "feat: unify twelve page form actions with Button" --body-file /tmp/ak-pr-body.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && cat .pr-number
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-page-button-design && gh pr list --state open --head release/frontend-page-button-design --limit 5 --json number,url,headRefOid,baseRefName,isDraft
+期待: .pr-numberと取得PR番号一致、base main、head一致、isDraft false。
+終了後停止し、生出力と実在PR URLをrootへ報告。CIの読取・台帳最終記録はroot担当。
+END OF CARD

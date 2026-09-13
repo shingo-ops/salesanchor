@@ -659,3 +659,19 @@ Architect判定: **APPROVE（分割作業カードの整合性のみ）**。Plan
 13移管分割実行済み。設計担当がAST差分・Button83/旧319・全体220試験・表示120組/実Confirm60条件/キー操作10条件を直接確認。限定読取担当の報告とroot直接検証を区別した。
 詳細は [実装検収](evidence-20260910/shared-button-implementation.md) の2026-09-12節と保存manifest参照。
 POからPR/マージ/本番反映の依頼を受領。現行validateGORecordは受領原文にPR番号がないため拒否することを直接確認。番号付きGOを代筆せず、PR/CIまで進め正式承認待ちとする。
+
+
+### 2026-09-13 AKの対象選定
+
+固定739f772dで旧319・共通84を再計測。3ページ6フォームの12ボタン（旧10/裸2）を次便候補とした。実物のtype/属性/原hash、局所配置192組と失敗原稿は[evidence-20260910/ak-page-form-buttons.md](evidence-20260910/ak-page-form-buttons.md)へ保存。詳細設計はdesign.md§AK。製品差分0、PO実装承認未取得。
+
+
+### 2026-09-13 AK実装承認・検収
+
+PO原文「進める」（12件の実装承認質問への返信）を受領。CARD-AK-PAGE-FORMS-01を既存担当へ発行。製品3ページ12個とページ試験1ファイルを実装。共通96/旧309/専用20/リンク8、業務本文差分0。root直接ブラウザーは通常144・pending48・操作36・再開6の前後組全成功。実装担当品質254試験/checkall/build/Storybook成功を原ログ確認。実装検収APPROVE、詳細はak-page-form-implementation.md。今回PR/新番号GO/マージ/本番は未実施。
+
+### 2026-09-13 AL次便調査
+
+AK製品PR3457本番成功、結果文書PR3460 merge9e0406ee。専用編集2ページのform-actions4件を実物調査。ContactEditPage:209/210、SupplierEditPage:79/86、type明示4/4、対象外連絡先重複確認2。原文/hashはevidence-20260910/al-fullpage-button-audit.json。専用画面の前後表示は未検証、設計はdocs/specs/design-system/design.md§AL。今回4件の実装承認未受領。
+
+2026-09-13 AL実装検収済み: PO原文「進めてくれ」で実装承認。4ボタン移管、root逆変換2ページ一致・実表示72前後組/操作24前後組成功、実装担当266試験/品質成功を原ログ確認。共通100/旧305。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md。PR3461実装更新へ、今回番号付きGO/マージ/本番未実施。

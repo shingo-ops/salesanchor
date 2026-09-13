@@ -2477,6 +2477,20 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 - 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
+
+
+### EV-20260913-FRONTEND-AK-DESIGN
+
+固定739f772dの構文監査: 共通84、旧prefix319/専用20/リンク8、次便3ページ12件（旧10/裸2）。配置予備192前後組のafter欠け0、初回原稿不備144失敗も保存。実ページ/API/キーボード検収とは区別。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-buttons.md、docs/specs/design-system/design.md§AK。製品未変更、実装承認未取得。
+
+AK追記: Planner案の作成後、同一AI Architect自己審査APPROVE。設計/維持/引用検査エラー0、カード正式lint exit0、archive8hash/CSS9hash/製品原hash3件一致。PO実装承認・製品検収とは区別。
+
+
+### EV-20260913-FRONTEND-AK-IMPLEMENTATION
+
+PO原文「進める」で12ボタン実装承認。共通96/旧309、指定外業務本文0。root実ブラウザー通常144/pending48/操作36/再開6前後組成功。実装担当254試験と品質成功を原ログ照合。root検収APPROVE、PR/番号付きGO/本番未実施。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-implementation-manifest.json。
+
+Android別名紐付け: 同日時・長文一致の5名を既存マスタへ対応付ける。設計/検証: docs/handoff/line-supplier-aliases/design.md / recon.md。元マスタ名上書き0、未知の人の新規作成0。実DB検証・本番保存はCI/反映後に確認。
 ```text
 id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
 date: 2026-09-11
@@ -2652,6 +2666,26 @@ follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 ```
 
 2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
+
+EV-20260912-LINE-WORK-ID本番結果: PR3441 merge ee455fb1、CI34729142077 2698成功/95skip、deploy34729320369成功。実Gemini1回はinvalid product source spanで停止。旧結果更新0・配信0、精度未確認・結果採用保留。詳細はdocs/handoff/tcg-product-master-growth/recon.md「2026-09-13 PR #3441本番反映・再抽出停止記録」。
+
+EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審査APPROVE/後続カード検査終了0。p2出力契約/p1互換/形状診断を実装。静的検査終了0（mypy警告）、実PGは後続PR CI。追加実Gemini0・本番更新0・配信0。
+
+### EV-20260913-FRONTEND-AK-RELEASE
+
+PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+### EV-20260913-FRONTEND-AL-DESIGN
+
+基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
+
+### EV-20260913-FRONTEND-AL-IMPLEMENTATION
+
+PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
+
+### EV-20260913-FRONTEND-AL-RELEASE
+
+PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
 
 
 ```text
