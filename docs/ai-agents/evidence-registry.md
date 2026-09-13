@@ -48,6 +48,29 @@ follow_up: 現本番の保存済み判定と最新マスタを認可済み経路
 ```
 
 ```text
+id: EV-20260913-LINE-STORAGE-DELEGATED
+date: 2026-09-13
+agent: design partner / existing stock_contract_01
+request: PO original 進める to explicit stage2 three-file implementation/testing/PR delegation
+reference: docs/handoff/tcg-import-latest-only/design.md section15,27 and card-stock-storage-02.md
+observed: dedicated worktree based on main56a1661d; migration/test paths absent; previous registry line retained
+state: design documents prepared, product not yet implemented; no merge or production
+next: three-file implementation and parent review, then product PR and existing CI real-PG tests
+```
+
+EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。
+
+EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。
+
+EV-20260913-LINE-STORAGE-DELEGATED 保存ガード拒否: 新SQLhash08e7f6b。原文削除の負例を試験コードへ保存する操作がPreToolUse hookで拒否。DB実行なし、チケット自己発行/文字列分割/別手段への置換なし。残部のみ再開し、拒否負例は承認待ち。
+
+EV-20260913-LINE-STORAGE-DELEGATED 残部確認: SQL823行/試験456行/登録1行、hash0c68042e/ec921a76/742055feを親照合。担当静的検査成功、親schema定義コピー0確認。実PG未実施・原文削除負例未保存で検収REVISE。検証用Draft提出準備。
+
+EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの登録完了報告後、正式ガード下で追従完了HEAD bc33aa37。SQLhash0c68042e保持、承認済み原文削除拒否テスト保存・commit ad0d9fc7を親が直接確認。試験hash a5227daa、ruff成功。過去の保存停止は解消、実PG未実施のため検収REVISEを継続。既承認の通常push/検証PRへ。代理GO/マージ/本番なし。
+
+EV-20260913-LINE-STORAGE-PR: PR3479 HEAD5edbe183をGitHub/.pr-number/remoteで直接確認。提出直前のmain更新で共通台帳2件が競合。自記録のみ追記位置を既存本文中へ調整し、他者記録を保持して読取統合検査。実PG開始待ち、検収REVISE/GO未発行/マージと本番なし。
+
+```text
 id: EV-20260910-LINE-ACCURACY-01
 date: 2026-09-10
 agent: Codex (design partner, read-only investigation)
@@ -2709,27 +2732,6 @@ EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直�
 
 
 EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
-
-```text
-id: EV-20260913-LINE-STORAGE-DELEGATED
-date: 2026-09-13
-agent: design partner / existing stock_contract_01
-request: PO original 進める to explicit stage2 three-file implementation/testing/PR delegation
-reference: docs/handoff/tcg-import-latest-only/design.md section15,27 and card-stock-storage-02.md
-observed: dedicated worktree based on main56a1661d; migration/test paths absent; previous registry line retained
-state: design documents prepared, product not yet implemented; no merge or production
-next: three-file implementation and parent review, then product PR and existing CI real-PG tests
-```
-
-EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。
-
-EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。
-
-EV-20260913-LINE-STORAGE-DELEGATED 保存ガード拒否: 新SQLhash08e7f6b。原文削除の負例を試験コードへ保存する操作がPreToolUse hookで拒否。DB実行なし、チケット自己発行/文字列分割/別手段への置換なし。残部のみ再開し、拒否負例は承認待ち。
-
-EV-20260913-LINE-STORAGE-DELEGATED 残部確認: SQL823行/試験456行/登録1行、hash0c68042e/ec921a76/742055feを親照合。担当静的検査成功、親schema定義コピー0確認。実PG未実施・原文削除負例未保存で検収REVISE。検証用Draft提出準備。
-
-EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの登録完了報告後、正式ガード下で追従完了HEAD bc33aa37。SQLhash0c68042e保持、承認済み原文削除拒否テスト保存・commit ad0d9fc7を親が直接確認。試験hash a5227daa、ruff成功。過去の保存停止は解消、実PG未実施のため検収REVISEを継続。既承認の通常push/検証PRへ。代理GO/マージ/本番なし。
 
 EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
 

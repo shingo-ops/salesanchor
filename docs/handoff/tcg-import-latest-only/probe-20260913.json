@@ -2409,5 +2409,21 @@
     "proxy_go": false,
     "merged": false,
     "production": false
+  },
+  "stage2_product_submission": {
+    "observed_at": "2026-09-13T06:45:53.817429+00:00",
+    "pr": 3479,
+    "url": "https://github.com/shingo-ops/salesanchor/pull/3479",
+    "head": "5edbe18379091057fde28eafcb7c8ea01decb05f",
+    "is_draft": false,
+    "real_pg_executed": false,
+    "initial_conflict": [
+      "tasks/todo.md",
+      "docs/ai-agents/evidence-registry.md"
+    ],
+    "resolution": "relocate only own documentation additions; read-only merge test exit0 for both files",
+    "acceptance": "REVISE pending CI",
+    "merged": false,
+    "production": false
   }
 }

@@ -43,6 +43,7 @@
 | VPS runner登録（ADR-078） | PO待ち | 2026-06-15予定日到来も未実行。現在 qa-smoke 未稼働のまま | PO GOを待って `docs/runbooks/vps-runner-setup.md` に従い実行 | memory/project_vps_runner_plan.md / ADR-078 | 2026-06-17 |
 | Meta App Review 申請 | PO待ち | ドキュメント整備済み・動画未撮影 | PO が申請動画を撮影 → Agent がレビュー申請書類を提出 | memory/project_meta_app_review_progress.md | 2026-06-17 |
 | discord-gateway live受信の LLM 解析 env 注入（Issue #1154） | PO待ち | gateway は idle(bot token未設定)・DATABASE_URL/GEMINI_API_KEY 未注入を docker inspect で確認。live化した瞬間に DB接続失敗+LLM不発 | PO が live化判断 → compose の discord-gateway に DATABASE_URL/GEMINI_API_KEY 追加 + bot token 設定 + 実機確認 | Issue #1154 / docker-compose.yml | 2026-06-17 |
+| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | 追従と承認済み拒否試験保存完了。試験commit ad0d9fc7、静的検査成功 | PR3479提出済み。最新文書競合解消後、既存CIの実PG8群/全件migrationを確認。実PG未実施で検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-RESUMED | 2026-09-13 |
 | (follow-up) ParseReviewPage の Phase A 在庫スキップ警告コードの撤去検討 | Agent | Option Z で Discord 承認が在庫を触らなくなり phaseAWarning が発火しない dead code 化。害は無いが整理候補 | 低優先。次の在庫系PRに同梱可 | frontend ParseReviewPage.tsx (phaseWarning) | 2026-06-17 |
 
 ---
@@ -148,9 +149,3 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
-
-## LINE在庫保存 第2便
-
-| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
-|------|------|------|------|------|------|
-| 第2便3ファイルの保存層実装 | stock_contract_01 / 設計担当 | 追従と承認済み拒否試験保存完了。試験commit ad0d9fc7、静的検査成功 | 通常push・検証用PRで既存CIの実PG8群/全件migrationを確認。実PG未実施で検収REVISE | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-RESUMED | 2026-09-13 |

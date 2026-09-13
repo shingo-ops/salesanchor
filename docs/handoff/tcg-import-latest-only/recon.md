@@ -462,6 +462,10 @@ SQL SHA256 0c68042e6de9b2c205916cf7f8c2f9d138dbe845e74a6d38c2b0a7204f783efa、�
 
 現在の検収はREVISE（実PG未実施）。次は既承認の通常push・通常レビュー用PR・既存CI。正式カード検査L14により下書き案を撤回し、design-partner.md §5.5-2の通常PRを使う。検収/マージ承認とは別。期限付きGO委任は未有効、番号付きGO/マージ/本番反映/再解析/3シート配信なし。同一AIの設計自己審査と実装担当の検査を区別する。
 
+## 第2便PR3479提出と共通台帳の競合（2026-09-13）
+
+親がGitHubでPR3479 https://github.com/shingo-ops/salesanchor/pull/3479、HEAD5edbe18379091057fde28eafcb7c8ea01decb05f、通常PRを確認。担当の公式wrapperによる.pr-number3479と自台帳登録も照合。main8d5aa581への別便更新により、共通台帳2件だけ競合。新SQL/試験/登録行の競合は0。自分の追記を既存文書中へ移し、他者の全記録を保持した候補2件をgit merge-fileで照合し両方終了0。製品コード不変、DB実行なし。追記位置の文書修正後にCI開始を確認する。
+
 ## 旧調査原文（SQR-05移植時点・履歴）
 
 # recon — tcg-import-latest-only (SQR-05 移植)
