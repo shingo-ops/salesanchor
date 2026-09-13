@@ -2676,3 +2676,5 @@ EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審
 PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
 
 EV-20260912-LINE-WORK-ID最終反映: GO3458本人原文受領、HEADcb2ef474 CI34732415064 2733成功/95skip/失敗0、mergecacc889e・Deploy34732557622成功。本番p2/p1互換・health connected確認。最新取込1f6e72acはpending_review/仕入先38/原文リンク0、直近確定536422edは44投稿。比較対象をPOへ質問中、追加Gemini/再解析/配信0。PR3458本文とrecon「GO受領後の最終結果」参照。
+
+EV-20260912-LINE-WORK-ID p2実抽出: POが確定済み44投稿の比較を承認。p2初回1投稿はdone/items1、行番号受理。raw_priceの¥脱落、raw_memoの残り→残り22でRAW一致条件不成立・停止。新作品はマスタOne Pieceと一致、旧要確認はnote_unmatchedなので商品確定改善の証拠ではない。DB更新0/配信0。recon同日比較再開節、非公開JSON SHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38。
