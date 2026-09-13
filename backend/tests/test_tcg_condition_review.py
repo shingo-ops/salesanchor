@@ -57,8 +57,8 @@ def pg():
             provision(cursor, SCHEMA)
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
-            cursor.execute("CREATE SCHEMA tenant_006; CREATE TABLE tenant_006.condition_sentinel (value text)")
-            cursor.execute("INSERT INTO tenant_006.condition_sentinel VALUES ('untouched')")
+            provision(cursor, "tenant_006")
+            cursor.execute("INSERT INTO tenant_006.conditions (code,canonical,is_active) VALUES ('CN0099','untouched',true)")
             cursor.execute("INSERT INTO tenant_004.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) VALUES ('CN0003','Sealed box',4,'箱系','未開封','',true) RETURNING id")
             normal = str(cursor.fetchone()[0])
             cursor.execute("SELECT id FROM tenant_004.conditions WHERE code='CN0011'")
@@ -150,7 +150,7 @@ def test_migration_idempotent_and_other_tenant(pg):
         cursor.execute(MIGRATION.read_text())
         cursor.execute("SELECT to_jsonb(c) FROM tenant_004.conditions c ORDER BY code")
         assert cursor.fetchall()==before
-        cursor.execute("SELECT * FROM tenant_006.condition_sentinel")
+        cursor.execute("SELECT canonical FROM tenant_006.conditions WHERE code='CN0099'")
         assert cursor.fetchall()==[("untouched",)]
         cursor.execute("UPDATE tenant_004.conditions SET canonical='Wrong' WHERE code='CN0011'")
         with pytest.raises(psycopg2.Error, match="unexpected existing definition"):
@@ -348,12 +348,14 @@ def test_migration_partial_structure_rejects_before_insert(pg):
     # New isolated schema, no destructive cleanup of any existing table.
     script=MIGRATION.read_text().replace('tenant_004','tenant_907')
     with pg['connection'].cursor() as cursor:
-        cursor.execute('CREATE SCHEMA tenant_907; CREATE TABLE tenant_907.conditions (code text)')
+        provision(cursor, 'tenant_907')
+        cursor.execute('CREATE SCHEMA tenant_908')
+        cursor.execute('ALTER TABLE tenant_907.extraction_items SET SCHEMA tenant_908')
         with pytest.raises(psycopg2.Error,match='incomplete TCG structure'): cursor.execute(script)
         cursor.execute('ROLLBACK')
         cursor.execute('SELECT count(*) FROM tenant_907.conditions')
         assert cursor.fetchone()[0]==0
         # An entirely absent TCG structure is the documented no-op, not partial success.
-        cursor.execute(MIGRATION.read_text().replace('tenant_004','tenant_908'))
-        cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_908'")
+        cursor.execute(MIGRATION.read_text().replace('tenant_004','tenant_909'))
+        cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_909'")
         assert cursor.fetchone()[0]==0

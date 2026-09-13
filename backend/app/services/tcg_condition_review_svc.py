@@ -138,7 +138,11 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
                 CASE WHEN cr_data.ar->>'exclusion' IS NOT NULL THEN 'excluded' END
             ]) reason
               WHERE reason != '' AND reason NOT IN ({empty_reasons})
-                AND NOT (reason = 'note_unmatched' AND {pure_memo}) ORDER BY reason) AS other_reasons,
+                AND NOT (reason = 'note_unmatched' AND {pure_memo})
+                AND NOT (reason = 'pid_unresolved' AND cr_data.ar->>'pid_resolved' = 'true')
+                AND NOT (reason = 'unit_unresolved' AND cr_data.ar->>'unit_resolved' = 'true')
+                AND NOT (reason = 'price_unresolved' AND cr_data.ar->>'price_normalized' IS NOT NULL)
+                AND NOT (reason = 'excluded' AND cr_data.ar->>'exclusion' IS NULL) ORDER BY reason) AS other_reasons,
         COALESCE((cr_data.ar->>'needs_review')::boolean, FALSE)
             AND COALESCE(cr_data.ar->>'review_reasons', '') = '' AS unknown_review,
         CASE WHEN cr_input.mentions AND NOT cr_input.master_valid THEN 'empty_box_master_unavailable'
