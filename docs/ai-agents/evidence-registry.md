@@ -2414,3 +2414,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 H1実機追補: PO原文「進める」を担当1名＋診断session1つ＋専用hook通常信頼登録の限定委任として実行。5入力、期待一致4、timeout後H1-ACKのfail-open1で停止。親は専用journal/TUI/4JSON/配置3hashを直接照合。hook単独の強制停止案REJECT、P2全体REVISE。exit-error/再開/H2未確認、内部モデル呼出総数未取得、代理GO0。根拠はrecon.md「2026-09-13 H1実機診断の停止結果」。
 
 2026-09-13 送信側拒否条件追補: main66b41766のdeploy/wrapperをcontents APIで固定読取、有効rules4種/必須13、bypass詳細未確定を確認。5主体/8手順/S01〜S10を草案化。配備前LP書込・可変mainを停止境界の残件へ追加。自己審査REVISE、実機追加0/代理GO0。根拠はrecon.md「2026-09-13 送信側拒否条件の照合」。
+
+2026-09-13 配置追補: ADR-075/B-11/115とmain66b41766の既定復帰を照合。非公開制御/記録repo・資格5主体・配備切替6手順を推奨草案化。Actions policies GET403、実権限/費用/入力捕捉は未確認。自己審査REVISE、採用承認/設定変更/追加実機/代理GO0。根拠はrecon.md「2026-09-13 制御と配備の配置照合」。

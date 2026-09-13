@@ -1048,3 +1048,22 @@ Context7ツールは本セッションの利用可能一覧で0。起動指示�
 Planner成果: design.md「送信側で拒否する契約」に5主体、8手順、S01〜S10の判定可能な条件を作成。H1単独hook REJECTを維持し、送信資格/状態更新の分離、原入力欠落時の拒否、同期mergeのHEAD固定、応答不明の再送禁止、最初のLP書込より前の配備判定を具体化した。既存の製品Appとstate writer共用候補は不採用へ整理した。モデルが継続しても外部操作0という目的であり、実装した事実ではない。
 
 Architect自己審査REVISE。main push後の自動配備・可変mainと「各開始前の期限/取消」には未解消の接続差がある。mergeを許可しても配備未開始になる状態を明示し、既存ADR-092の進行中migration非中断を維持する。新しい運用方式/費用はPO承認済みにしない。元入力完全捕捉、base競合、専用資格/配備入口の実物とS01〜S10実機は未確認。試験10件は計画で実行0、診断再開0、新担当0、製品実装/代理GO/本番変更0。次は制御/配備主体の配置と権限差分の具体化。文書保存は既存PR #3440、マージ未実施。
+
+
+## 2026-09-13 制御と配備の配置照合
+
+PO原文「進める」を配置/権限の設計継続として受領。preflight成功、worktree差分0、PR #3440 OPEN/head aef379c3772dc24259e3f05c885525c186baaa50、base66b417665c013fdb354d5bda63226d07a1b2182c。本店167commit遅れ/台帳以外30件は変更しなかった。
+
+索引からADR-075/B-11、ADR-111、ADR-115、ADR-116と権限秘密SSOTのREADME/ideal-state/kgiを確認。ADR-075はGitHub Secrets一元管理、ADR-111は旧pipelineのMac分離であり新たな常時稼働hostの存在証明には使わない。ADR-116の旧develop stampを現行配備認可へ転用しない。ADR-115のhealth失敗時PREV_SHA復帰は保持すべき既定処理。main66b41766のdeploy.ymlをcontents GETし、:565-572復帰、:627/:637-638失敗扱いを直接確認した。
+
+GET repos/shingo-ops/salesanchor/actions/permissionsはHTTP403、repository readまたはActions policies権限が必要という応答。現行ポリシーは未確認。これは読取APIの権限拒否で、自動承認レビューの拒否ではない。別資格への切替/権限拡張/設定更新なし。
+
+Context7利用可能ツール0のため起動指示の代替許可で2026-09-13にGitHub公式を照合:
+- [Installation token](https://docs.github.com/en/apps/creating-github-apps/authenticating-with-a-github-app/generating-an-installation-access-token-for-a-github-app): repo/permissionsを発行時に絞れるがApp権限を超えられず、token期限は1時間。元委任の取消/24時間とは別。
+- [Secure use](https://docs.github.com/en/actions/reference/security/secure-use): repoへのwriteとworkflow経由のsecret到達の関係、特権workflowでの未信頼コード実行の危険を確認。Environment名の分離だけでは保守者分離の証明にしない。
+- [Deployments and environments](https://docs.github.com/en/actions/reference/workflows-and-actions/deployments-and-environments): 保護/秘密の配置候補として参照。現在の契約で使用可能か未確認。
+- [Actions billing](https://docs.github.com/en/billing/concepts/product-billing/github-actions): 非公開repoは契約別枠と超過課金。実契約/使用量/予想時間がなく月額見積は未作成。費用0としない。
+
+Planner成果: 既存design.mdへ配置3案、推奨する非公開制御/記録repoとGitHub-hostedジョブ、5主体の資格上限、配備切替6手順を整理。新repo/名前/IDは未作成でカードへ仮置きしない。製品merge Appとstate writer Appを別にする理由を、repo単位のwrite分離としてWhyへ残す。外部導入事例は不要、実経路・既存ADR・公式仕様が直接根拠。
+
+自己審査REVISE。原入力捕捉はGitHubジョブの配置で解決しないこと、製品実行資格と認可根の秘密を区別すること、旧配備と新配備の同時書込を避けることを明記。前便の自動巻戻し禁止がADR-115の既定復帰まで禁じるよう読める点を補足した。PO採用承認0、製品/CI/scripts/secrets/権限変更0、新repo/診断/新担当0、代理GO0。次は入力受付と非本番権限検証の依存関係整理、最小診断設計。#3440へ文書保存、マージは行わない。
