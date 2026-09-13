@@ -1,0 +1,17 @@
+{
+  "description": "H1 synthetic diagnostic only; no GO issuance",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/usr/bin/python3 /private/tmp/salesanchor-go-hook-h1-20260913/hook_h1_diagnostic.py",
+            "timeout": 2,
+            "async": false
+          }
+        ]
+      }
+    ]
+  }
+}

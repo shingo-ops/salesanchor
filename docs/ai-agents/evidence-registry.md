@@ -2408,3 +2408,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 入力経路追補: codex-cli0.154.0のhelp/schema生成でuserMessage/steer応答/item通知/turn一覧の4型を直接確認。公式App Server資料と照合し、履歴readだけでは取消の完全配送を証明できないと整理。受信時記録とwriterの順序契約、I01〜I08を草案保存。根拠はrecon.md「2026-09-13 入力経路の仕様照合」。自己審査REVISE、実機接続/セッション起動/代理GO0。
 
 2026-09-13 入力hook追補: 公式Hooksと既存UserPromptSubmit command1件・card-lint-hook.shを直接確認。H0完了、H1診断部品草案を作成し構文検査成功。H1/H2実機0・hook変更0・新規セッション0。実行設計REVISE、隔離設定/正式カードが次工程。根拠はrecon.md「2026-09-13 入力フックの接続候補確認」。
+
+2026-09-13 H1正式カード追補: TH-GO-HOOK-H1-01、診断設定/部品/セッション指示3原本を確定。原本hash・Python構文・JSON設定を直接照合、card-lint exit0（長行警告5件）。限定同一AI自己審査APPROVE、実機0・新規セッション0・設定信頼変更0、P2全体REVISE。次は本カード範囲の明示委任。根拠はrecon.md「2026-09-13 H1隔離カードの確定」。

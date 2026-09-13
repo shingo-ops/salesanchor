@@ -1,0 +1,101 @@
+読んだ節: docs/handoff/design-partner-card-ops/guards/00-common.md、03-file.md、11-lint.md。
+照合結果: CLI0.154.0の対話起動/再開、公式project hookと通常の信頼確認、実在入力3件、予定出力の不存在、起動上限、停止と記録を確認。
+
+TH-GO-HOOK-H1-01
+mode: handoff
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 本カードの実行はPOが「実行担当1名・診断セッション1つ・診断hook1件の通常信頼登録」を明示承認した後に限る。設計継続は起動承認ではない。
+目的: 隔離CLIセッションで入力hookの記録・明示拒否・保存失敗・異常終了を観測する。現画面全入口の保証や代理GOの有効化ではない。
+担当所有範囲: 下記診断ディレクトリ、報告先、診断用セッション1つ、この新設プロジェクトと診断hook定義だけの通常信頼登録。
+実行担当1名以外の追加担当起動は不可。診断セッションは試験対象であり製品実装担当ではない。
+他者の変更を戻さない。既存ユーザー/プロジェクトのhooks・認証・requirements・sandbox・権限・製品・CI・scripts・GO記録を変更しない。
+禁止: 外部Issue/PR、マージ、GO発行、credentialsの取得/コピー、信頼確認の迂回オプション、既存hookの無効化、他セッションの履歴閲覧。
+コード変更は0。診断用3ファイルは原本の配置のみ。診断セッションがツール利用を求めたら許可せず停止。
+
+実在作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design
+実在入力（docs/handoff/go-record-transcription配下）とSHA256:
+hook-h1-diagnostic.py.txt = d7aeabf3ecf16f0de39ca3b8734bbde172e1f3d92ded013f371cd76841944b1c
+hook-h1-hooks.json.txt = ef2aff1491d93501bebc12a077468eb8f947508920545754a7c343c4c7aa664e
+hook-h1-agents.md.txt = d4e1edc8b988df075cafe3eb6c219fe57cf02ea935e93afac36ae1767f1fdb3a
+予定する診断場所: /private/tmp/salesanchor-go-hook-h1-20260913
+予定報告先: /tmp/reports/TH-GO-HOOK-H1
+初回は両方不存在が条件。同名が既にある場合は上書きせず停止。再開は手順6で照合する。
+
+手順1 preflight・原本確認
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && ./scripts/dev/executor-preflight.sh --check
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && codex --version
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && shasum -a 256 docs/handoff/go-record-transcription/hook-h1-diagnostic.py.txt docs/handoff/go-record-transcription/hook-h1-hooks.json.txt docs/handoff/go-record-transcription/hook-h1-agents.md.txt
+期待: preflight成功、CLI0.154.0、3hash一致。異なれば停止。設定やCLIを更新しない。
+
+手順2 専用場所へ原本3件を配置
+    cd /Users/tanizawashingo/worktrees/salesanchor/release-go-delegation-activation-design && python3 - <<'PY'
+from pathlib import Path
+import hashlib
+source=Path('docs/handoff/go-record-transcription')
+target=Path('/private/tmp/salesanchor-go-hook-h1-20260913')
+report=Path('/tmp/reports/TH-GO-HOOK-H1')
+assert not target.exists() and not report.exists(), 'existing diagnostic work'
+target.mkdir()
+(target/'.codex').mkdir()
+report.mkdir(parents=True)
+mapping={'hook-h1-diagnostic.py.txt':'hook_h1_diagnostic.py',
+         'hook-h1-hooks.json.txt':'.codex/hooks.json',
+         'hook-h1-agents.md.txt':'AGENTS.md'}
+for src,dst in mapping.items():
+    data=(source/src).read_bytes()
+    with (target/dst).open('xb') as stream: stream.write(data)
+    assert (target/dst).read_bytes()==data
+    print(dst,hashlib.sha256(data).hexdigest())
+PY
+    cd /private/tmp/salesanchor-go-hook-h1-20260913 && git init -b release/hook-h1-probe
+このGitは診断用の新規ローカル境界で、製品の作業ブランチではない。remote登録・commit・pushなし。製品のworktree作成規則を変更しない。
+
+手順3 対話起動と通常の信頼確認
+PTY機能のあるexec_commandで次を1回だけ起動する。
+    cd /private/tmp/salesanchor-go-hook-h1-20260913 && codex --sandbox read-only --ask-for-approval on-request --no-alt-screen
+モデル指定はせず現在の既定を使う。初期プロンプトは渡さない。ログイン要求/課金要求/実行制限は変更せず停止する。
+この専用プロジェクトの信頼確認が表示されたらパス一致を確認して通常の操作で進める。別プロジェクトは信頼登録しない。
+同じTUIで /hooks を開き、sourceがこの専用場所の.codex/hooks.json、event UserPromptSubmit、commandが上記python3と配置ファイル、同期、timeout2秒であることを確認する。
+一致したこの1定義だけ通常の信頼操作で登録する。信頼DBを直接編集しない。既存hookの表示は変更しない。
+UIが異なり操作を特定できない、対象定義が出ない、既存hookまで変更を求められる場合は画面を記録して停止する。
+信頼を済ませた後も既存ガードを維持。初期化が新セッションを増やす場合は上限超過として停止。
+
+手順4 合成入力と結果の観測
+同じTUIに下記を各1回、順番に送る。全体の入力上限は7回。送信前後の診断JSONファイル名集合と画面を保存する。
+1: H1-PROBE-NORMAL
+2: H1-PROBE-NORMAL
+3: H1-PROBE-BLOCK
+4: H1-PROBE-WRITE-ERROR
+5: H1-PROBE-TIMEOUT
+6: H1-PROBE-EXIT-ERROR
+各送信でツール利用や別担当起動は承認しない。原文は上記マーカーだけ。モデルへの追加依頼で挙動を補正しない。
+各caseで新ファイルのsession_id/turn_id/event/mode/authorization_issued=falseと、画面のモデル応答H1-ACKまたはblock/エラーを対応付ける。
+normal2回は記録ファイルが別であることを確認。ただしランダム診断ファイルIDを元入力の安定IDとして採用しない。
+blockは記録1件と明示停止、モデルH1-ACKなしが期待値。
+write-errorは/dev/null配下への作成が失敗し、storage unavailableの明示停止が期待値。既存ファイルの権限は変更しない。
+timeoutは10秒待つ部品にhook側2秒制限がかかる診断。異常終了はexit1。モデルが続く場合はfail-openの観測として記録し、このhook単独による強制停止案を不合格にする。
+単に診断ファイルがあることを「入力保存ACK」や「モデル停止」とみなさない。
+block/save-errorが素通り、理由不明、候補複数、他session記録混入、診断以外の書込要求なら以後の入力を停止する。
+timeout/exit1は継続する可能性を調べる診断項目。結果が既定の安全条件を満たさなければ不合格として停止し、無効化等で続けない。
+1回の観測が60秒を超える場合は保留を記録して新しい送信を停止。実行中プロセスへ無意味な追加入力をしない。
+
+手順5 同じ診断セッションの再開
+手順4に不明/不合格がなく、最後の入力処理が終了した場合だけ実施。
+診断レコードのsession_idが全件同じ非空値であることを確認し、その値をjournalへ記録する。
+TUIを通常終了し、同じsession_idを明示して対話再開する。再開の引数順はCLI helpと照合する。
+コマンドの形は codex resume SESSION_ID --sandbox read-only --ask-for-approval on-request --no-alt-screen。
+SESSION_IDは診断レコードから得た実値のみ。最新セッション指定や一覧選択、他者のIDは使わない。
+再開後の7回目としてH1-PROBE-NORMALを1回送信し、同sessionの新しい記録と応答を確認。
+実行中追加入力の発火はこのカードでは未検証として残す。再開成功を追加入力経路や現画面の合格に広げない。
+
+手順6 報告・停止・再開
+/tmp/reports/TH-GO-HOOK-H1/journal.jsonlに、card/UTC時刻/step/case/送信前後の診断ファイル集合/session_id/turn_id/画面の結論/停止理由をJSON行で追記する。
+画面の生出力は同ディレクトリのtui-session.logへ追記し、実チャット本文・認証情報は保存しない。認証入力は行わない。
+途中停止では新しいセッションや新しいマーカーを送らず、当該PTY/sessionの状態と未確認項目を報告する。
+同カード再開時は配置3hashとjournalを照合し、確認済みの送信を繰り返さない。同じ診断セッションだけを再開する。
+正常完了時はTUIを通常終了して停止する。診断場所/ログは証拠として保持し、権限や信頼の後片付けは独断で行わない。
+診断hookはこの専用プロジェクトにしか新設しない。他の場所にコピーしない。既存ユーザーhookは本カードの変更対象外。
+報告冒頭: 本報告はカード TH-GO-HOOK-H1-01 の実行結果である。
+完了報告本文に生出力を全文含め、観測済み/期待合格/不合格/未確認、プロンプト送信数、モデル呼出数（未取得なら未確認）、GO発行0を区別する。
+報告パスは一字一句そのまま使用する。文書・台帳保存は親担当が行い、実行担当は製品repoを編集しない。
+END OF CARD

@@ -9,7 +9,8 @@ from pathlib import Path
 data = json.load(sys.stdin)
 prompt = data.get("prompt")
 modes = {"H1-PROBE-NORMAL": "normal", "H1-PROBE-BLOCK": "block",
-         "H1-PROBE-WRITE-ERROR": "write-error", "H1-PROBE-TIMEOUT": "timeout"}
+         "H1-PROBE-WRITE-ERROR": "write-error", "H1-PROBE-TIMEOUT": "timeout",
+         "H1-PROBE-EXIT-ERROR": "exit-error"}
 if prompt not in modes:
     sys.exit(0)
 mode = modes[prompt]
@@ -20,7 +21,7 @@ record = {"diagnostic": "H1", "received_ns": time.time_ns(),
 dest = Path("/tmp/reports/TH-GO-HOOK-H1")
 try:
     if mode == "write-error":
-        raise OSError("synthetic write failure")
+        dest = Path("/dev/null/TH-GO-HOOK-H1")
     dest.mkdir(parents=True, exist_ok=True)
     with (dest / (str(uuid.uuid4()) + ".json")).open("x") as stream:
         json.dump(record, stream)
@@ -29,6 +30,8 @@ try:
 except OSError:
     print(json.dumps({"decision": "block", "reason": "H1 diagnostic storage unavailable"}))
     sys.exit(0)
+if mode == "exit-error":
+    sys.exit(1)
 if mode == "timeout":
     time.sleep(10)
 if mode == "block":
