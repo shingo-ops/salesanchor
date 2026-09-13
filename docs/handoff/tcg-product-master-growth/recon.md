@@ -1003,7 +1003,7 @@ Lokiの旧workerログのfilename内コンテナIDは、deployのforce-rm出力I
 
 PO明示承認により2jobsはerror、原文保持。既存手修正が再解析で消えた別1商品は値を復元しexcluded。18:06JSTに584行×3シート配信、再読全セル一致。成功扱いに変更して配信したのではない。原因修正・2投稿復旧は未実施。
 
-非公開証拠: `/private/tmp/onepiece-research/stopped-loki.json`, `stopped-worker-final.json`, `stopped-followup-loki.json`, `deploy3434.log`, `incident-source/`, `reproduce-interruption.py`, `reproduce-interruption-result.json`, `finalize-stopped-two-receipt.json`, `delivery-receipt-private.jsonl`。顧客原文とログ実体はGitへ含めない。
+非公開証拠: /private/tmp/onepiece-research/stopped-loki.json, stopped-worker-final.json, stopped-followup-loki.json, deploy3434.log, incident-source/, reproduce-interruption.py, reproduce-interruption-result.json, finalize-stopped-two-receipt.json, delivery-receipt-private.jsonl。顧客原文とログ実体はGitへ含めない。 これらは調査時のローカル保存名であり、リポジトリ内ファイルの引用ではない。
 
 ログ照会の仕様だけ[Grafana Loki公式API](https://grafana.com/docs/loki/latest/reference/loki-http-api/)で確認（2026-09-11）。Context7はツール一覧に存在せず、PO許可済み代替を使用。外部導入事例は、本番ログ・当該コード・局所再現が直接証拠のため不要。
 
@@ -1428,7 +1428,7 @@ preflight成功。調査HEAD=adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b。調査�
 | 配信行の選別 | tcg_distribution_svc.py:183-252。商品・単位確定、価格非NULL、非excluded、状態非FLAGを要求 | needs_reviewや人の確認完了を参照しない。include_flag_single設定でFLAG_SINGLEを通せる。現本番設定値は今回未照会 |
 | 人の修正 | item_corrections_svc.py:15-73。修正履歴・確認者を記録、商品ID変更のみ解析結果へ反映 | 単位/状態/価格/数量/備考の修正は同サービスでは履歴のみ。全項目を確定して配信する完了処理がない |
 | 画面 | SupplierDetailView.tsx:97でItemComparisonをreadOnly=true。ItemComparison.tsx:23の汎用修正保存ボタンもdisabled=true | 商品選択/確認はProductMasterDrawer.tsx:420-445にあるが、汎用の行全体確認完了UIではない |
-| 権限 | routers/item_corrections.py:54-75でsuper_admin必須 | 一般運用者への権限拡大は別判断。設計候補は既存権限を維持 |
+| 権限 | backend/app/routers/item_corrections.py:54-75でsuper_admin必須 | 一般運用者への権限拡大は別判断。設計候補は既存権限を維持 |
 | 再解析 | tcg_analyzer_svc.py:1116、1150-1152で商品修正履歴がある行をスキップ | 原文/版が変わっても過去の確認を無条件に引き継がない仕組みの検討が必要 |
 | 配信 | tcg_distribution_svc.py:411-474はclear→append_rowsの全置換、628以降に全配信先処理と未完了ガード | 修正保存後の自動起動なし。確認完了≠配信成功。多接続先の一部失敗/再試行/同時配信を扱う必要 |
 
@@ -1635,11 +1635,11 @@ A/Bは前節指定ファイル。最後の例は次行に「美品」、その�
 
 #### 最新マスタ読取の準備と停止範囲
 
-`docs/handoff/rehearsal-env/design-b-ssh-isolation.md:107` は「エージェントが無制限鍵を使えるのは、人間の明示許可（都度・タスク単位）がある場合のみ」。実物の `~/.ssh/config` はエージェント鍵を監視専用、prod1/prod2を人間の緊急対話用として区別している。既存 `card-templates.md:73` の本番DB読取定型は人間用鍵を使用するため、本タスクでその接続を開始していない。以前のGemini1回の認証許可を今回へ広げない。
+`docs/handoff/rehearsal-env/design-b-ssh-isolation.md:107` は「エージェントが無制限鍵を使えるのは、人間の明示許可（都度・タスク単位）がある場合のみ」。実物の `~/.ssh/config` はエージェント鍵を監視専用、prod1/prod2を人間の緊急対話用として区別している。既存 `docs/handoff/tcg-product-master-growth/card-templates.md:73` の本番DB読取定型は人間用鍵を使用するため、本タスクでその接続を開始していない。以前のGemini1回の認証許可を今回へ広げない。
 
 - 具体的な読取候補: tenant_004の有効商品・商品区分・検索語・除外語・作品名を1回の読み取り専用接続で取得。新規外部AI呼出なし。read-latest-master.sqlにSELECT1文を準備済み、未実行。
 - 実行条件: 人間用SSH鍵を当該読取タスクに限り利用する許可。接続時PGOPTIONSでdefault_transaction_read_only=onとstatement_timeout=10000、`-X`/ON_ERROR_STOPを固定、取得時刻/read_only値を記録しon以外は成果物として採用しない。
-- 読取SQLの列は `tcg_product_master_svc.py:126`、`:366`、`:82`、`tcg_analyzer_svc.py:149`、`:171`、`:189` の実物で確認。現在DBのスキーマが異なればエラーを報告し変更しない。
+- 読取SQLの列は `backend/app/services/tcg_product_master_svc.py:126`、`:366`、`:82`、`backend/app/services/tcg_analyzer_svc.py:149`、`:171`、`:189` の実物で確認。現在DBのスキーマが異なればエラーを報告し変更しない。
 - 最新マスタ取得だけを保留。ローカル全行検査・公式照合・文書保存は進めた。今回、文書のrg検索に対してlocal psql-write-guardがパイプを誤検知して拒否した1回がある。解除せず、DB操作を含まない単純な文書検索で確認した。SSH接続/DBクエリの拒否実績とは混同しない。
 
 証拠保存先: `~/.local/share/salesanchor/private-research/wego-followup-20260913/`（18ファイル+manifest、前回証拠を依存として明記）。全出現位置・原文前後・試作結果を非公開保存。現在は調査/試験/文書保存、製品設計REVISE、最新本番マスタ読取未実施、検索漏れ0未達、製品実装/本番変更なし。
@@ -1873,10 +1873,12 @@ private-research/emptybox-final-contract-20260913/check.py/result.jsonで表現2
 同一AI自己審査は§19の限定実装設計APPROVE。実DB/画面/CI/競合試験は実装後の必須受入。実装担当未起動、DB/製品変更なし。通常25thの辞書カードは空箱保護の完成と合わせて扱い、条件マスタ1行を先に投入しない。POのGOや独立レビューを創作しない。
 
 
-2026-09-13 カード整備: `card-empty-box-condition-review.md`（CARD-LINE-EMPTY-BOX-REVIEW-01）を引継ぎ案として保存。所有23ファイル、設計§19の受入、禁止範囲、正式保存/実装依頼の開始条件を明記。`bash scripts/card-lint.sh docs/handoff/tcg-product-master-growth/card-empty-box-condition-review.md` exit 0（警告なし）、`git diff --check` exit 0、`bash scripts/check-task-state.sh` exit 0。製品実装・実DB/画面試験・PR提出・本番変更は未実施。旧25th商品カードは未発行のまま。
+2026-09-13 カード整備: `docs/handoff/tcg-product-master-growth/card-empty-box-condition-review.md`（CARD-LINE-EMPTY-BOX-REVIEW-01）を引継ぎ案として保存。所有23ファイル、設計§19の受入、禁止範囲、正式保存/実装依頼の開始条件を明記。`bash scripts/card-lint.sh docs/handoff/tcg-product-master-growth/card-empty-box-condition-review.md` exit 0（警告なし）、`git diff --check` exit 0、`bash scripts/check-task-state.sh` exit 0。製品実装・実DB/画面試験・PR提出・本番変更は未実施。旧25th商品カードは未発行のまま。
 
 
 2026-09-13 正式保存準備: release/line-empty-box-design-handoffをorigin/main af269ae2起点に公式手順で作成。既存文書を保持して追記差分を統合。重複を避け今回の設計節は17〜19へ更新。参照サービス5件/レビュー画面のcacc889e→af269ae2差分0を確認。設計モデルの26+15固定対照を設計§19.7に掲載。カードは実行未許可の引継ぎ案、製品実装未着手。
 
 
 2026-09-13 文書PR提出: https://github.com/shingo-ops/salesanchor/pull/3464 。初回HEAD ba68076c9b49ff96abeae104efe6b3a26afccab0、OPEN、文書6ファイルのみをGitHub APIで確認。ローカルdiff/task-state/両card-lint終了0、旧25thカードの長文警告3件。提出時CI進行中。未マージ、製品実装/本番変更なし。設計の正本参照は本PRの§19、旧作業台の§18は履歴として保持。
+
+2026-09-13 PR3464検査修正: CIの参照実在検査で省略パスと非公開証拠名の混同を検出。リポジトリ内引用はルート相対フルパスへ修正、非公開ファイルは調査時のローカル保存名と明記。証拠内容や検査ロジックは変更しない。
