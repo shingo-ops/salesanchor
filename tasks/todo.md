@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| Geminiの商品マスタ参照・作品IDのみ判断 | 設計担当 | 既存RAW/762明細ID固定の作品比較へ設計見直し。比較自己APPROVE、採用/全再解析/配信REVISE | 比較専用実装の承認・カード化。既存602/未特定160を分離評価。製品実装/追加Gemini/配信0 | design-keyword.md §17 / recon.md作品IDのみ比較の設計棚卸し / EV-20260912-LINE-WORK-ID | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | 設計担当 | 既存RAW/762明細ID固定の作品比較へ設計見直し。比較自己APPROVE、採用/全再解析/配信REVISE | PR3462の比較設計・検査済カードで実装する承認待ち。既存602/未特定160を分離評価。製品実装/追加Gemini/配信0 | design-keyword.md §17 / recon.md作品IDのみ比較の設計棚卸し / EV-20260912-LINE-WORK-ID | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AK12ボタンPR #3457マージ・本番反映済み。deploy34731608784成功、公開12件/health200を直接確認 | 残存旧309利用の次便設計。表/報酬3/カレンダー色保留、新CI最後。追加実装未承認 | docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / EV-20260913-FRONTEND-AK-IMPLEMENTATION | 2026-09-13 |
