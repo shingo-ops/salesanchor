@@ -2,13 +2,13 @@
 
 CARD-LINE-EMPTY-BOX-REVIEW-01
 
-状態: 引継ぎ案・未発行。技術設計は同一AI自己審査APPROVE。文書の正式保存とPOによる実装担当への明示依頼が揃うまで実行しない。
+状態: 発行済み。設計PR #3464 / HEAD54469a74に保存済み、同一AI自己審査APPROVE。POが空箱対応の別実装担当への委任（実装・テスト・PR提出まで）に「進める」と回答。マージ・本番反映は対象外。
 このカードは、空箱を状態として記録し、人の確認前の配信を止めるための実装指示書です。
 設計: docs/handoff/tcg-product-master-growth/design-keyword.md §19（§18の技術草案を置換）。
 親: docs/specs/product-master/README.md。ADR-113 / ADR-154、mode: handoff。
 読んだ節: docs/ai-agents/design-partner.md §5.5、docs/handoff/design-partner-card-ops/guards/00-common.md、guards/11-lint.md。
 自己照合: 1○ 記号保護、2○ ready PR、3○ 全文報告、4○ 空箱確認の1目的、5○ 公式机作り、6○ PR例、7○ 設計モデルと実装試験の区別。
-人手照合: 未確定の代入目印なし。作業台は手順1で作る。正式保存・実装依頼は開始条件であり、確認済みと代筆しない。
+人手照合: 未確定の代入目印なし。作業台は手順1で作る。設計保存と今回の明示委任を確認。POの番号付きGO原文は受領しておらず生成しない。
 
 受領確認
 最初に「CARD-LINE-EMPTY-BOX-REVIEW-01 受領」と返す。開始条件未充足なら実行せず設計パートナーへ返す。
@@ -45,7 +45,7 @@ CARD-LINE-EMPTY-BOX-REVIEW-01
 設計/recon/根拠台帳/GO記録は設計担当所有。過去のSSH読取許可は消費済みで再付与しない。
 
 開始条件
-設計§19、正式保存のPR/HEAD、POの明示的な実装依頼を確認する。自己審査は独立した第二者レビューではない。
+設計§19はPR #3464のHEAD54469a74を固定参照する。main未マージのため専用設計作業台から読み取り参照する。製品作業台はorigin/main起点。設計自己審査は独立レビューではない。
 起動名・代理GO・本カードの存在で許可を補わない。既存の未保存差分を取り込まない。
 
 手順0
