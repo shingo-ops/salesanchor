@@ -160,3 +160,5 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 ### 抽出待ち時間の限定是正案（2026-09-13・未実装）
 
 [設計・審査](../../handoff/tcg-product-master-growth/design-keyword.md) と [実測](../../handoff/tcg-product-master-growth/recon.md) の「シンソク抽出の時間制限見直し」を参照。300/330秒の限定実装は2026-09-13にPO承認済み。実装/検証中で本番未反映。型番3商品の不整合は別の未解決事項。
+
+- [商品マスタ一覧・詳細編集（DETAIL-01）](../../handoff/tcg-product-import/design.md#2026-09-13-商品詳細編集と二言語一覧detail-01)（2026-09-13、完成条件PO合意・自己審査合格、UI検証済み・更新APIソース保存の承認待ち）

@@ -2964,3 +2964,21 @@ EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する�
 ### EV-20260913-FRONTEND-AN-RELEASE
 
 2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+## EV-20260913-PRODUCT-DETAIL
+
+商品マスタDETAIL-01。POの一覧/詳細編集条件と進行依頼を受領。origin/main 10212686起点で公式worktree作成。
+設計・自己審査は docs/handoff/tcg-product-import/design.md DETAIL-01、実測はrecon.mdの同日節。
+実装・CI・本番の検証結果は現時点で未取得。状態を完了としない。
+
+
+EV-20260913-PRODUCT-DETAIL 追記: 一覧/GET詳細/編集UIを作成。新規画面11件と既存CSV7件成功（模擬API）、frontend build/check:all/限定eslint成功、backend限定ruff成功。
+更新APIコード保存がPreToolUse hookで拒否され、POへソース保存の承認質問を送信。解除・迂回なし。
+backend全体lintは走査例外/既存型エラーで中断、実PG/CI未実施。PR未提出、マージ/デプロイ未実施。
+根拠: docs/handoff/tcg-product-import/recon.md「DETAIL-01 作業停止時の実行結果」。
+
+
+EV-20260913-PRODUCT-DETAIL 再開試行: ソース保存承認「進める」受領後、公式permit-danger.shの呼出し自体が自動ガードで拒否。許可は未発行。ガード実体151行のコマンド全文一致と例外分岐なしを読み取り確認。PO端末での正規手続き待ち。更新API/PR/マージ/本番は未完了。
+
+EV-20260913-PRODUCT-DETAIL 2026-09-14追記: PO原文「実行した」、公式許可でソース保存exit 0。GET/PUTと競合/一括確定を実装。UI18件、build/check:all、Python3.12 make lint-ci成功。実PGはDocker不在のためCI待ち。詳細はrecon.md「許可適用とローカル最終検証」。マージ/本番未実施。
