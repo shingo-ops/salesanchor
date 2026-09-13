@@ -30,6 +30,15 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.tcg_condition_review_svc import digest_sql, reanalysis_condition
+from app.services.tcg_empty_box_rules import (
+    EMPTY_CANONICAL,
+    EMPTY_CODE,
+    classify_empty_box,
+    consumes_empty_memo,
+    mentions_empty_box,
+    valid_empty_definition,
+)
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSIONS,
@@ -711,6 +720,10 @@ def resolve_condition_v2(
     R4a(priority=4): data-driven（通常品 / 未開封等）
     R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
     """
+    empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+    if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+        return (EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit")
+    cond_entries = [entry for entry in cond_entries if entry["code"] != EMPTY_CODE]
     text_combined = (raw_state or "") + " " + (raw_product_name or "")
     is_box_or_case = "箱系" in kubun  # 箱系大 も '箱系' を含む
 
@@ -972,7 +985,7 @@ def build_review_reasons(
         reasons.append("pid_unresolved")
     if len(candidates) > 1:
         reasons.append("multi_candidate")
-    if raw_memo.strip() and not note_ja:
+    if raw_memo.strip() and not note_ja and not consumes_empty_memo(raw_memo):
         reasons.append("note_unmatched")
     return reasons
 
@@ -1143,11 +1156,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             WHERE ei.extraction_job_id = :ej_id
             ORDER BY ei.line_start, ei.id
+            FOR SHARE OF ei, ej, sm
             """
         ),
         {"ej_id": extraction_job_id},
     ).fetchall()
 
+    # Hash this source once and reuse it across all item binding comparisons.
+    source_hash = session.execute(text(f"""SELECT {digest_sql('sm.raw_text')}
+        FROM {TCG_SCHEMA}.source_messages sm JOIN {TCG_SCHEMA}.extraction_jobs ej
+        ON ej.source_message_id=sm.id WHERE ej.id=CAST(:job AS uuid)"""),
+        {"job": extraction_job_id}).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0,
              "skipped_product_corrections": 0}
@@ -1170,8 +1189,22 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         ) = row
 
         stats["total"] += 1
+        session.execute(text(f"SELECT id FROM {TCG_SCHEMA}.analysis_results "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) FOR UPDATE"), {"eid": str(item_id)})
+        # A product correction may have committed after the initial extraction read.
+        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='product_id')"),
+            {"eid": str(item_id)}).scalar_one()
         if has_product_correction:
             stats["skipped_product_corrections"] += 1
+            effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
+            if effective:
+                session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+                    condition_id=CAST(:condition_id AS uuid), condition_canonical=:canonical,
+                    condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
+                    updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
+                    dict(effective, eid=str(item_id), updated_at=now))
+                stats["needs_review"] += int(effective["needs_review"])
             continue
         raw_product_name = raw_product_name or ""
         raw_unit = raw_unit or ""
@@ -1224,9 +1257,16 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 状態解決 v2 — 正規化済み norm_condition を使用
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
-            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid,
+            norm_condition, norm_product_name, kubun, [e for e in cond_entries if e["code"] != EMPTY_CODE], cond_canonical_to_uuid,
             raw_memo=condition_memo,
         )
+
+        empty_class = classify_empty_box(raw_product_name, raw_state, raw_memo)
+        empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+        if empty_class == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+            condition_canonical, condition_uuid, condition_basis_str = (
+                EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit"
+            )
 
         # 数量・価格正規化
         quantity_normalized = _parse_numeric(raw_quantity or "")
@@ -1247,7 +1287,25 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         review_reasons = build_review_reasons(
             pid_resolved, candidates, raw_memo, note_ja
         )
-        needs_review = len(review_reasons) > 0
+        if mentions_empty_box(raw_product_name, raw_state, raw_memo) and not valid_empty_definition(empty_entry):
+            review_reasons.append("empty_box_master_unavailable")
+        elif empty_class != "none":
+            review_reasons.append("empty_box" if empty_class == "positive" else "empty_box_ambiguous")
+        # Check the saved chosen condition against new values before the UPSERT.
+        effective = reanalysis_condition(session, str(item_id), {
+            "product_id": product_uuid, "pid_resolved": pid_resolved, "unit_id": unit_uuid, "unit_canonical": unit_canonical,
+            "unit_resolved": unit_resolved, "quantity_normalized": quantity_normalized,
+            "price_normalized": price_normalized, "condition_id": condition_uuid,
+            "condition_canonical": condition_canonical, "condition_basis": condition_basis_str,
+            "review_reasons": ",".join(review_reasons), "needs_review": bool(review_reasons),
+        }, schema=TCG_SCHEMA, source_hash=source_hash)
+        if effective:
+            if effective["valid_ack"]:
+                condition_uuid, condition_canonical, condition_basis_str = (
+                    effective["condition_id"], effective["canonical"], effective["basis"]
+                )
+            review_reasons = [reason for reason in effective["review_reasons"].split(",") if reason]
+        needs_review = bool(review_reasons) or bool(effective and effective["needs_review"])
 
         if needs_review:
             stats["needs_review"] += 1
