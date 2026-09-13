@@ -757,3 +757,12 @@ PR全差分への通常diff --checkはCSVの規定CRLFを45行のtrailing whites
 POの追加公開承認を明示した通常の承認経路でgit push -u origin HEADが成功。公式gh-pr-create-safe.shで文書PR https://github.com/shingo-ops/salesanchor/pull/3466 を提出し、.pr-numberの3466登録を直接確認した。初回提出HEADは7316bdfb。mainとの差分は17文書/証拠ファイルのみ。カード検査は再実行して終了0（L24警告2）、task-state-check成功。実装開始/委任・マージ・本番変更は未実施。次はPRチェックを確認し、実装カードの実行承認を別途提示する。
 
 PR3466初回process-artifacts gateはrecon内の省略ファイルパス2件を実在確認できず失敗（job103667019390）。リポジトリ相対パスへ訂正して再検査する。製品コード/CIの変更はない。
+
+
+### A便の実装開始・既存担当への委任承認（2026-09-13）
+
+「既存の実装担当へカードを渡し、対象6ファイルの実装と検証を開始してよいですか？」へのPO回答原文「進める」を受領。既存/root/csv_card_executorへCARD-PRODUCT-NAME-SPACE-IMPL-01を引き継ぐ。製品公開/マージ/本番データ変更や新規エージェント起動へ拡張しない。
+
+実装worktreeでpreflight成功、未保存変更0、HEAD af269ae2、origin/main 9f5415c3を直接確認。両者の対象6ファイル差分0を確認したためカード基点欄へ両値を記録。旧release/line-box-heading-guardsの未保存作業は保持。対応PR3430はMERGED（6c55e40d）、旧単品ガード本体と作品根拠関数が現mainに存在することを照合した。本便は別worktreeの現行コードを基に進め、旧作業の上書き/清掃/台帳変更を行わない。
+
+文書PR3466のHEAD5622b793はチェック33成功/10対象外/失敗0を直接確認。これを製品のpytest合格には読み替えない。

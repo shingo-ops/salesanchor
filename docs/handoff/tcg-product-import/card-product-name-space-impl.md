@@ -4,7 +4,7 @@ CARD-PRODUCT-NAME-SPACE-IMPL-01
 照合: 実在する専用worktree、基点、6製品ファイル、設計の完全一致契約、Docker接続失敗を直接確認。L32は自己照合。
 
 状態
-POのA便正式設計承認済み。実装開始・担当への委任は承認待ち。本カードを保存しただけでは実行しない。
+POのA便正式設計承認済み。2026-09-13、既存実装担当へのカード委任・対象6ファイルの実装検証開始を尋ね、PO原文「進める」を受領。実行担当は/root/csv_card_executor。
 担当は承認後にPOが委任する既存実装役1名。新規エージェントや別セッションを起動しない。
 目的はdesign §17-2/17-3・§18のA便のみ忠実実装し、6ファイルの差分と検証報告を設計担当へ返すこと。
 
@@ -40,7 +40,7 @@ GITHUB_ACTIONS偽装、fixtureの安全条件緩和、外部DB代用、skip追�
 期待値: 空。初期状態だけでなく終了時も差分を確認する。
 手順4 基点
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-name-space-match-impl && git rev-parse HEAD origin/main
-期待値: HEADはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870。origin/mainが進んでいれば対象6ファイルへの差分を設計担当へ返す。
+期待値: HEADはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870、origin/mainは9f5415c31104e325b38da03df8ef9acdc5973066。設計担当が対象6ファイルの差分0を直接確認済み。この2値以外なら差分を設計担当へ返す。
 手順5 preflight
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-name-space-match-impl && ./scripts/dev/executor-preflight.sh
 期待値: PREFLIGHT OK、終了0。
