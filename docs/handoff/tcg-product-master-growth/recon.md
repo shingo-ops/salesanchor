@@ -1083,3 +1083,16 @@ PO「確認結果を調査」を受け、追加Geminiを呼ばずPR/API/本番DB
 今回の読み取り前後SHAはf8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385で一致。前回719788e2版から変わった区分はmastersのみ。conditionsは10→11（CN0011/Empty box追加）、product_exclude_keywordsは156→156で49ID入替。ただし(product_id,keyword,position)の多重集合は完全一致（内容追加/削除0）。items/analyses/sources/jobs/correctionsは前回と全件一致。旧全入力SHAの流用は禁止、新たな本番比較では現在版を固定し直す。
 
 一次資料: /tmp/line-review-current-control.json（非公開・恒久保存ではない）、PR3472、Deploy34740608928。今回の生成API0、本番DML0、結果採用0、配信0。確認済みは修正の配備・稼働と保存対照の再現。Gemini実応答/精度改善は別の未実施工程である。
+
+
+## 2026-09-13 14:49 修正後の実Gemini応答と商品照合の切り分け
+
+PO「進める」を受け、設計§17.11の新対象1投稿13明細に限定して実行。直前のREAD ONLY全729明細対照は不一致0。基準SHA f8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385、配備ファイルSHA c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002ddaを検査。対象取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0、原文cced581f-7368-4767-8927-710a86c0b4c1、抽出df42518d-711a-48aa-afc4-e41c5c8960f1。
+
+診断全体05:49:35.270241〜05:49:54.202775 UTC（18.93秒。API単独所要時間ではない）、アプリ呼出し1、応答取得成功、13明細IDの完全対応を検証。SDK内部HTTP試行数は未測定。前後全入力SHA一致、DB書込0。全13作品IDは既存と同じPokemon（ポケモン）。保存商品特定3/13、旧判断対照3/13、新判断候補3/13、商品ID変更0。作品判断だけの変更による改善は当該投稿では確認できない。ワンピースの性能・全729件の精度・タイムアウト解消の証拠にはならない。候補はlabel=unverified、adoptable=falseを維持。
+
+追加の生成APIなし切り分け: 保存入力のコピーと同じマスタを稼働コードの純粋関数match_itemへ渡す。raw_product_name内の連続半角空白だけを1個へまとめたコピーでは商品候補が3→13件。既特定3件の商品ID変更0、未特定10件すべてに単一候補（PM0263が8件、PM0264が2件）。作品ID、価格、数量、状態、マスタは固定。DB接続0、生成API0、製品ファイル変更0。これは仮の入力による原因再現であり、本番改善・採用・商品正解率100%ではない。
+
+根拠: tcg_analyzer_svc.py:238 normalize_enは英数幅と大小文字を変換するが連続空白を畳まない。同:274 match_one_kwは純ASCIIキーワードをescapeして空白も逐語で照合。同:516 match_pid_with_work、tcg_work_comparison_svc.py:179 match_item経路。登録検索語はPM0263「30th CELEBRATION」、PM0264「30th CELEBRATION FUTURISTIC」。原文抽出10件の「30th  CELEBRATION」は半角空白2個であり、商品マスタ不存在や作品ID未判定ではなく照合の空白差で候補0となることを再現した。正規化を共通関数へ直接追加すると状態/除外語等にも影響するため、修正設計では商品照合への適用範囲と誤一致防止を先に確認する。
+
+非公開一時証跡: /tmp/line-postfix-baseline-private.json、/tmp/line-postfix-one-diagnostic-private.json、/tmp/line-space-only-proof-private.json。顧客原文・価格をPRへ転載しない。一時領域のため恒久保存とは称さない。外部事例は不要（当該入力・稼働コードによる原因再現を根拠とする）。状態: PR3472実装/マージ/本番反映済み、実応答確認済み、当該作品ID比較の改善0、空白差の原因調査済み・修正設計未承認、採用/全再解析/配信未実施。次は原文を保持した商品照合の空白差対処について影響範囲と誤一致を調査する。新規GOや委任有効化はない。

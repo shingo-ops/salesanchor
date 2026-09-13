@@ -2729,3 +2729,5 @@ EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保�
 EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
 
 EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、アプリ呼出し1・応答13/13、全入力SHA前後一致、作品ID変化0、商品特定3→3。生成APIなしの入力コピー空白差対照は3→13、既特定3の商品変更0。原因再現であり本番改善ではない。DB書込/採用/配信0。recon14:49節参照。
