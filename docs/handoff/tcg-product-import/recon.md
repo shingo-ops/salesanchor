@@ -843,3 +843,5 @@ GO記録更新により旧process run34742742062がcancelled、後続34742756998
 親が公開API/画面へ直接curlし双方HTTP200、database/redis/celery connected。実装担当だけの検証報告と混同しない。設計は同一AIによる自己審査で、独立第二者審査ではない。状態：A便設計審査/PO承認/実装/正式CI/マージ/本番配備完了。商品名全体の半角・全角スペース差への対応が反映済み。実投稿の再解析・本番精度測定は行っていないため、既存解析結果が改善済みとはしない。
 
 詳細はproduct-name-space-release-result.json。旧release-result.jsonはPR3438用のまま保持。B便8商品更新/44登録はREVISE、再解析/3シート配信未実施。文書PR3466は後続の承認/公開・配備カード/検証記録だけのPRへmain同期し、保存更新する。文書PRのマージGOは未受領。次の一手はB便の未解決受入条件を設計相談で確定すること。
+
+後処理：製品PR本文への内部backup名等の詳細追記は実装担当側の自動承認審査で公開範囲を理由に拒否された。制限を変更せず、公開済みPR/merge/run成功と公開HTTP成功だけの追記へ縮小し、通常審査で承認・反映済みとの担当報告を受領。生報告はCARD-PRODUCT-NAME-SPACE-RELEASE-01-public-final.json。文書PR3466ではtasks/todo.mdの1行更新を削除宣言へ含め忘れprocess gateが失敗したため、実numstatに基づき本文の宣言を修正。検査設定の変更なし。

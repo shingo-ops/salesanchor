@@ -72,4 +72,5 @@ https://api.salesanchor.jp/api/health と https://app.salesanchor.jp/ のHTTP200
 手順12 結果
 merge SHA/配備run/今回バックアップ/実配備HEAD/HTTP/CI根拠/未確認/生報告を親へ返す。
 PR本文の最終状態も通常編集で実績に合わせ、GO原文と検証履歴を保持する。親が正式台帳と文書を保存する。
+公開PRへの内部詳細追記が審査拒否された場合、公開済みPR/merge/run成功と公開HTTP成功だけの結果追記へ縮小可。GO原文/履歴を保持し、再拒否なら停止。
 END OF CARD
