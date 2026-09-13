@@ -328,18 +328,33 @@ def test_master_missing_or_disabled_holds_historical_rows(pg):
     assert error.value.status_code==422
 
 
-def test_raw_update_waits_for_review_source_lock(pg):
-    item=seed(pg)
+def test_raw_update_waits_for_review_source_lock(pg, monkeypatch):
+    item=seed(pg);payload=request(pg,item)
     async def run():
         engine=create_async_engine(pg['url'])
+        locked,proceed=asyncio.Event(),asyncio.Event()
         try:
             async with AsyncSession(engine) as first, AsyncSession(engine) as second:
-                await first.execute(text("SELECT id FROM tenant_004.source_messages WHERE id=CAST(:smid AS uuid) FOR SHARE"),item)
+                original_execute=first.execute
+                async def observed(statement,*args,**kwargs):
+                    result=await original_execute(statement,*args,**kwargs)
+                    if 'FOR SHARE OF ei, ej, sm' in str(statement):
+                        locked.set()
+                        await proceed.wait()
+                    return result
+                monkeypatch.setattr(first,'execute',observed)
+                saving=asyncio.create_task(condition.save_condition_review(first,extraction_item_id=item['eid'],
+                    source_message_id=item['smid'],request=payload,corrected_by='test'))
+                await asyncio.wait_for(locked.wait(),10)
                 await second.execute(text("SET LOCAL lock_timeout='100ms'"))
-                with pytest.raises(Exception,match='lock timeout'):
-                    await second.execute(text("UPDATE tenant_004.source_messages SET raw_text='changed' WHERE id=CAST(:smid AS uuid)"),item)
-                await second.rollback()
-                await first.rollback()
+                try:
+                    with pytest.raises(Exception,match='lock timeout'):
+                        await second.execute(text("UPDATE tenant_004.source_messages SET raw_text='changed' WHERE id=CAST(:smid AS uuid)"),item)
+                finally:
+                    await second.rollback()
+                    proceed.set()
+                result=await asyncio.wait_for(saving,10)
+                assert result['saved']==1
         finally: await engine.dispose()
     asyncio.run(run())
 
@@ -359,3 +374,40 @@ def test_migration_partial_structure_rejects_before_insert(pg):
         cursor.execute(MIGRATION.read_text().replace('tenant_004','tenant_909'))
         cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_909'")
         assert cursor.fetchone()[0]==0
+
+
+def test_product_correction_changes_binding_and_retains_manual_product(pg):
+    item=seed(pg);save(pg,item)
+    with pg['connection'].cursor() as cursor:
+        cursor.execute("INSERT INTO tenant_004.tcg_products(code,japanese_title,category_class,is_active) VALUES ('PM0901','Other product','Box',true) RETURNING id")
+        other=str(cursor.fetchone()[0])
+    async def run():
+        engine=create_async_engine(pg['url'])
+        try:
+            async with AsyncSession(engine) as db:
+                await corrections.save_corrections(db,extraction_item_id=item['eid'],source_message_id=item['smid'],
+                    fields=[{'field_name':'product_id','system_value':pg['product'],'human_value':other}],corrected_by='test')
+        finally: await engine.dispose()
+    asyncio.run(run())
+    assert context(pg,item)['needs_review'] is True
+    with Session(pg['engine']) as db:
+        analyzer.analyze_extraction_job(db,item['job'])
+        assert str(db.execute(text("SELECT product_id FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).scalar_one())==other
+
+
+def test_real_input_change_rejects_old_screen_without_writes(pg):
+    item=seed(pg);payload=request(pg,item)
+    with pg['connection'].cursor() as cursor:
+        cursor.execute("UPDATE tenant_004.extraction_items SET raw_price='20' WHERE id=%s",(item['eid'],))
+    before=context(pg,item)
+    with pytest.raises(HTTPException) as error:save(pg,item,payload)
+    assert error.value.status_code==409
+    assert context(pg,item)==before
+
+
+def test_missing_empty_definition_holds(pg):
+    item=seed(pg,condition_id=pg['normal'],condition_canonical='Sealed box',reasons='')
+    with pg['connection'].cursor() as cursor:
+        cursor.execute("UPDATE tenant_004.conditions SET code='CN0098' WHERE code='CN0011'")
+    assert 'empty_box_master_unavailable' in context(pg,item)['review_reasons']
+    assert output(pg)==[]
