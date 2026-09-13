@@ -31,10 +31,16 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
+from app.services.tcg_work_reference import (
+    WORK_ID_PROMPT_VERSION,
+    load_work_reference,
+    reference_digest,
+    validate_work_id,
+)
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v6-master-safety"
+ENGINE_VERSION = "name-first-v7-gemini-work-id"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -1105,6 +1111,23 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     note_entries = load_note_master(session)
     status_entries = load_status_master(session)
 
+    # to_jsonb keeps old 7/9-column fixtures and saved jobs readable.
+    metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
+                               {"id": extraction_job_id}).scalar_one_or_none()
+    work_decisions: dict[str, str | None] | None = None
+    if metadata and metadata.get("prompt_version") == WORK_ID_PROMPT_VERSION:
+        reference = metadata.get("work_reference_snapshot")
+        digest = metadata.get("work_reference_sha256")
+        if not reference or reference_digest(reference) != digest:
+            raise ValueError("Work reference is missing or corrupted")
+        if reference_digest(load_work_reference(session, TCG_SCHEMA)) != digest:
+            raise ValueError("Work reference changed; re-extraction required")
+        decisions = session.execute(text(f"""
+            SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
+            FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
+        """), {"id": extraction_job_id}).fetchall()
+        work_decisions = {str(i): validate_work_id(value, reference) for i, value in decisions}
+
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
         text(
@@ -1178,17 +1201,19 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         )
 
         # 商品照合 — 正規化済み norm_product_name を使用
-        work_id = resolve_work_evidence(
+        work_id = (work_decisions[str(item_id)] if work_decisions is not None else resolve_work_evidence(
             raw_product_name, source_text or "", line_start, line_end,
             raw_work_name, raw_work_span, works,
-        )
+        ))
         matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
             norm_product_name, filtered_codes, search_kw, exclude_kw,
             work_id=work_id, product_work_ids=product_work_ids,
             raw_state=norm_condition, raw_memo=norm_memo,
             product_category_classes=product_category_classes,
         )
-        if work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+        if work_decisions is not None and pid_basis != "NONE":
+            pid_basis = ("GEMINI|" + pid_basis)[:100]
+        if work_decisions is None and work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
             heading = work_heading_evidence(source_text or "", line_start, line_end, works)
             if heading and heading[0] == work_id:
                 pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]

@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| Geminiの商品マスタ参照・作品IDのみ判断 | Agent | PR #3441の番号付きGO受領。2af2270cのCI2679成功/失敗0、最新main追従 | 最新HEADのCI合格後に正規マージ・反映確認、最新取込の比較。原文差異は停止、精度向上時のみ要確認以外を3シート配信 | PR #3441 / docs/handoff/tcg-product-master-growth/recon.md / EV-20260912-LINE-WORK-ID | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 最新1163投稿/124名を照合。直近500件で56名本文一致、34名名一致のみ、33名未確定、1名同名重複 | 過去投稿の指紋照会を10000件へ拡張し全員の根拠を再集計。照合完了後に名前対応 | Issue #3437 / docs/handoff/line-supplier-aliases/recon.md | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AK12ボタン実装・root検収APPROVE。共通96/旧309。254試験と実画面192組/操作36/再開6組成功 | 保存・最新main統合・PR提出・最新CI確認。今回の番号付きGO待ちでマージ/本番未実施、表/報酬3保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / EV-20260913-FRONTEND-AK-IMPLEMENTATION | 2026-09-13 |
@@ -139,3 +140,10 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
 | 商品マスタ一覧・CSV画面 | Agent | PR #3422はdd9d3abfマージ・deploy34558334380成功、公開資産の2ルート/health確認済み。PO指定で既存サイドメニューを解析精度管理直下へ移動 | 配置変更PR #3429提出、eslint/build成功。最新CIと番号付きGOを確認して本番反映。CSV試行/44件登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+
+
+## 商品CSVサンプルと登録者情報（2026-09-11）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
