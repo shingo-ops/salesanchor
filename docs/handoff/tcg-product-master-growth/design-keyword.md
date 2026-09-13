@@ -969,3 +969,12 @@ noneは空箱専用判定の対象なし（従来判定へ）、positiveは明�
 | same-input-reanalysis | True | True |
 
 確認モデルの基準値は商品product-A・単位Box・数量1・価格10・状態定義empty-enabled-v1・原文source-A。他の理由/未解決/除外なし。changed行はその項目だけを変更する。trueは空箱確認の保護と残条件のモデル上の候補判定であり、実シート送信を意味しない。
+
+
+### 19.8 実装中の整合確認（2026-09-13）
+
+実装PR #3470、初回HEAD3301b4f6。親は製品を変更せず読取照合し、分類参照列、原文hashの対象限定/再利用、純粋な空箱備考の旧note_unmatched重複、単位/価格等の残条件と確認応答の一致の4点を指摘。担当が修正・対応試験を追加。最終合格はCI実測待ち。Python判定26例は親が実関数へ通して一致、UI6例/静的検査は担当報告であり親自身の実行と区別する。
+
+壊れた履歴の読取保護はIS JSON OBJECTに加えpg_input_is_valid(human_value, jsonb型名)をCASEのcast前条件に使う。JSON文法として有効なNUL escape/数値overflowもjsonbとして無効なら確認無効として扱う。担当がPG16公式[入力有効性検査](https://www.postgresql.org/docs/16/functions-info.html#FUNCTIONS-INFO-VALIDITY)とREL_16_STABLE jsonb.cを確認し2試験追加。新しい業務判断ではなく§19.3の破損履歴保護を満たす補強。実PG結果は未確認。
+
+実装PRの最初のprocess-artifacts失敗は、カードのPR本文例が正式見出し/ファイル宣言を省略していたため。設計担当の指示不足としてカードを正式テンプレへ補正し実装担当へ伝達。検査の変更/迂回は行わない。
