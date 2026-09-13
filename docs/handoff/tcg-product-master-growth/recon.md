@@ -1072,3 +1072,14 @@ Deploy34740608928/job103679559392成功。ログで05:34:52 UTC、salesanchor_db
 本番の隔離Pythonプロセスで寿命感知Fakeを使い配備済みcall_work_modelを検査。adapter_failed_before_send=false、adapter_response_correct=true、正常/異常close=true、生成API0。/tmp/line-lifecycle-postdeploy-proof.jsonに記録。製品ファイル変更や実Gemini再試行ではない。通常抽出の100秒タイムアウトを解消したとは称さない。
 
 状態: 限定修正設計/PO承認/実装/CI/マージ/本番反映完了。実データの再比較・精度評価・採用・配信は未実施、次は固定対象の現在状態を再確認した上で診断付き本番比較の手順へ進む。GO委任は有効化していない。証跡保存は既存の文書PR3462、同PR自体は未マージ。
+
+
+## 2026-09-13 14:45 確認結果の再調査
+
+PO「確認結果を調査」を受け、追加Geminiを呼ばずPR/API/本番DBを再確認。PR3472はMERGED、merge b52a4def、Deploy34740608928はsuccess。本番git HEAD一致、比較サービスSHA c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002dda一致。公開healthはDB/Redis/Celery connected。既実行のCI34739556003ログ2819 passed/95skip/coverage63.80%、本番Fake検査結果を読み取り照合した。CIやFakeをこの調査で再実行したとは称さない。
+
+新確定取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0を配備済みread_snapshot/old_work/match_itemでREAD ONLY再調査。44有効/38done/5empty/1error、729明細/商品特定552/未特定177/要確認260/訂正0、保存商品ID・確定flag対照不一致0。要確認260は商品特定済みの明細も含む。シンソクjob713b8823（source27a4b1fc）は現在もerror、保存理由SoftTimeLimitExceeded、extracted_at NULL。商品精度改善やタイムアウト解消の実績はない。
+
+今回の読み取り前後SHAはf8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385で一致。前回719788e2版から変わった区分はmastersのみ。conditionsは10→11（CN0011/Empty box追加）、product_exclude_keywordsは156→156で49ID入替。ただし(product_id,keyword,position)の多重集合は完全一致（内容追加/削除0）。items/analyses/sources/jobs/correctionsは前回と全件一致。旧全入力SHAの流用は禁止、新たな本番比較では現在版を固定し直す。
+
+一次資料: /tmp/line-review-current-control.json（非公開・恒久保存ではない）、PR3472、Deploy34740608928。今回の生成API0、本番DML0、結果採用0、配信0。確認済みは修正の配備・稼働と保存対照の再現。Gemini実応答/精度改善は別の未実施工程である。
