@@ -1991,3 +1991,32 @@ GitHub CI34741929357/job103682999611は2835 passed /95 skipped /1 failed、118.8
 
 
 2026-09-13 複合除外の承認・再開: セット/プロモ両側への複合除外「スペシャルセット プロモパック」各1語追加を説明し、プロモ側の変更確認にPO原文「進める」。設計§17改訂6へ商品1/検索3/除外12、PM0072同一性/既存語保持、単位別の全解析期待を固定。同一AI自己再審査APPROVE（限定実装設計）、実PG合格は未確認。CARD-LINE-25TH-MASTER-01改訂6を発行し、既存担当・既存PR #3475/HEAD13c58171・所有3ファイルで再開。マージ/本番接続/再解析/配信/追加Geminiは許可されていない。
+
+## シンソク抽出の時間制限見直し（2026-09-13）
+
+原文照合と待ち時間の根拠。親: [商品マスタ](../../specs/product-master/README.md)。設計: [design-keyword.md](./design-keyword.md) の同名節。ADR-154/ADR-113。
+
+- 本番job 713b8823-3148-4aec-bf43-0621fc470eb0、原文27a4b1fc-19bc-4367-8da3-cae3ba44f729。13:41:02 JST API開始、13:42:42にSoftTimeLimitExceeded。HTTP応答ヘッダ受信待ちで停止。本番 backend/app/tasks/tcg_extraction.py:299–300 はhard120/soft100。gemini_extraction_svc.py:198–212 は参照全体＋原文を生成する。
+- PO「これをまず実行」「抽出できたのであれば解析まで進めて結果を確認」、続く精度確認への「進める」を受領。GO委任の有効化や本番変更承認とは扱わない。
+- 原文5256文字/497行、293商品/11作品、prompt79749文字/99099bytes、37687入力トークン。prompt SHA f2d0fb1a142e84f9320f7f2d2225c0d9582e0e0aaf4da2c425089bdd9e1d0626。
+- 14:20 JST: API99.842秒、純関数解析0.554秒、147件。思考17762/回答11491トークン。
+- 14:28 JST: API136.291秒、純関数解析0.683秒、147件。思考30469/回答11606、Google側cache32740入力トークン。原文/参照/prompt/temperature同一。cache/思考量は固定しておらず時間差全体の原因を断定しない。
+- 各回API1回、SDK attempts=1、検証上限300秒。DBはREPEATABLE READ/READ ONLY、API中接続閉鎖。job/原文/明細/解析/訂正と照合マスタの前後SHA一致。DB更新/設定変更/配信0。現行の照合・正規化純関数で計算し、保存再解析関数は呼んでいない。
+- 原文147価格行を独立した形式読み取りで採番しモデル行番号へ一対一対応。商品名転記・数量・価格・単位・状態タグ・Condition・Status・行位置の8項目×147=1176照合一致。欠落/重複0。全件In Stock、Sealed box73/Damaged sealed box74。
+- 商品名による特定を84商品147明細で目視確認。138件はマスタ日本語名の原文一致、9件はDX/デラックス・英字大小・正式名接頭辞・OP17表記を対照。商品名の誤特定は検出0。同一AIの自己確認であり独立レビューではない。
+- 型番不整合: PM0198（2明細）原文M2a/マスタM3、PM0041（2明細）SM10b/SM10a、PM0024（1明細）SM5S/SM5M。3商品5明細は未修正。商品名特定とマスタ全項目の正しさを分離する。
+- 旧統合規則の期待値135行。A−/B混在12商品で数量合算・最高単価を原文側と解析側から独立計算し一致。配信プログラム自体の統合出力は未実行。予約/発送条件/他仕入先/全体精度は未測定。
+- 非公開原本: /private/tmp/shinsoku-accuracy-20260913.jsonl（0600）、全明細対照表 /private/tmp/shinsoku-accuracy-20260913.md（0600）。内容を公開repo/PRへ貼らない。入力SHA 37c9c5a54be517513aaf6d06856c9a8bc4676a44f04d4d36f92838be26ed8cb8。
+- 文書worktreeは公式new-worktree.shでorigin/main b52a4defから作成。事前/作成時の回収対象0、製品コード変更0。
+
+結論: 今回は100/120秒では不足する。解析方式変更の根拠はない。2回の成功で全投稿300秒以内を保証せず、有限延長だけを設計する。
+
+文書保存後の直接検証: check-task-state.sh終了0、card-lint.sh終了0（既存カードを含む200字超30行の警告のみ）、git diff --check終了0。差分6ファイルは文書のみ。カードは機械検査済み草案・未発行、PO数値/実装承認待ち。未コミット・未push・未PR。
+
+実装承認受領（2026-09-13 14:44 JST）: PO原文「進める」。直前の300/330秒の限定変更を実装役へ渡す承認依頼への応答。時間制限2定数の実装・検証・PR提出を1名へ委任し、設計担当が成果物確認を行う。マージ/本番反映/実Gemini/DB更新は承認対象外。過去の未承認記録は当時の状態。
+
+実装確認（2026-09-13）: POの明示委任により実装役1名がtask定義の2行のみ変更。設計担当はgit diffを直接確認し、hard120→330/soft100→300以外の製品変更0を確認。実装役の登録task読取報告は名称tcg.extract_source_message、soft300/hard330。既存API timeout試験がerror/items0を検証するため新規テストなし。ruff成功は実装役報告。ローカルPython3.14とBanditの非互換でスキャン不完全、mypyも既存警告のため完全な静的検査成功とはしない。正式Backend CIはPR提出後に確認。マージ/本番変更/今回の実Gemini呼出し0。
+
+実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
+
+PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。

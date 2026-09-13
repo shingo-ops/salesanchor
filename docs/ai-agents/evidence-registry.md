@@ -3001,3 +3001,25 @@ GitHub CI34741929357/job103682999611は2835 passed /95 skipped /1 failed、118.8
 
 
 2026-09-13 複合除外の承認・再開: セット/プロモ両側への複合除外「スペシャルセット プロモパック」各1語追加を説明し、プロモ側の変更確認にPO原文「進める」。設計§17改訂6へ商品1/検索3/除外12、PM0072同一性/既存語保持、単位別の全解析期待を固定。同一AI自己再審査APPROVE（限定実装設計）、実PG合格は未確認。CARD-LINE-25TH-MASTER-01改訂6を発行し、既存担当・既存PR #3475/HEAD13c58171・所有3ファイルで再開。マージ/本番接続/再解析/配信/追加Geminiは許可されていない。
+
+```text
+id: EV-20260913-SHINSOKU-TIMEOUT-01
+date: 2026-09-13
+agent: Codex design partner / same-AI self-review
+task: 長文抽出100秒超過と原文精度の限定検証
+scope: docs/handoff/tcg-product-master-growth/design-keyword.md 時間制限節
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-product-master-growth/recon.md 時間制限節
+    summary: API99.842/136.291秒、解析0.554/0.683秒、147件/1176照合一致、DB更新0、前後SHA一致
+confidence: high for measured sample; unknown for population
+tradeoff: 有限300/330秒案は占有増。型番3商品不整合・統合配信未検証は分離
+decision: 設計自己審査APPROVE、数値/実装PO承認待ち、カード草案
+follow_up: card-lint/文書検査、PO承認後の限定実装
+```
+
+EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
