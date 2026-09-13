@@ -2688,6 +2688,10 @@ PO原文「進めてくれ」で4件実装承認。root実2ページの72表示�
 
 PO原文「この表示に変更してくれ」で3カード下部CTA実装を承認、新規担当委任「進める」でpmg_cta_completionが完成。root差分/画像審査APPROVE、担当実行のunit273/実PG18skip0/E2E12成功とbuild/check/lint終了0を原ログ照合。mypy532診断は非blockingとして明記。正本docs/handoff/pmg-import-delivery-ssot/design.md/recon.md「3段階カードCTA・実装検収」、CARD-PMG-STAGE-CTA-01。reports/pmg-stage-card-actions/verification-manifest.jsonにログ/画面SHA256保存。新PR/CI確認へ。新番号付きGO未受領、マージ/本番反映未実施。
 
+### EV-20260913-LINE-WORK-COMPARE
+
+作品ID読取比較の実装着手。根拠: docs/handoff/tcg-product-master-growth/recon.md「2026-09-13 作品ID読取比較の実装検証」、設計PR #3462 HEAD 2fc9e647。make lint-ci終了0（mypy既存警告あり）、実PG試験未実行。実モデル/本番書込/配信0。
+
 ### EV-20260913-FRONTEND-AL-RELEASE
 
 PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
@@ -2697,3 +2701,5 @@ EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b436
 
 
 EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
+
+EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
