@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.tcg_config import TCG_SCHEMA
 
 # 安全装置 #5: 書き込み行数上限
@@ -199,20 +200,20 @@ async def fetch_output_rows(
     # include_flag_single=True のとき FLAG_SINGLE だけは通す。他の FLAG_* は常に除外。
     if include_flag_single:
         cond_filter = (
-            "(ar.condition_canonical NOT LIKE 'FLAG_%'"
-            " OR ar.condition_canonical = 'FLAG_SINGLE')"
+            "(cr.canonical NOT LIKE 'FLAG_%'"
+            " OR cr.canonical = 'FLAG_SINGLE')"
         )
     else:
-        cond_filter = "ar.condition_canonical NOT LIKE 'FLAG_%'"
+        cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
 
-    sql = text(f"""
+    sql = text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
             COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
             COALESCE(p.mark, '')                                    AS mark,
             COALESCE(p.japanese_title, '')                          AS japanese_title,
             COALESCE(p.english_title, '')                           AS english_title,
-            ar.condition_canonical                                   AS condition,
+            cr.canonical                                   AS condition,
             COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
             COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
             COALESCE(ar.note_ja, '')                                AS note_ja,
@@ -235,8 +236,9 @@ async def fetch_output_rows(
             ON p.id = ar.product_id
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser
             ON ser.id = p.work_id
+        {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
-          AND ar.needs_review IS FALSE
+          AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
@@ -280,15 +282,22 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     # 配信候補件数
     if include_flag_single:
         cond_filter = (
-            "(ar.condition_canonical NOT LIKE 'FLAG_%'"
-            " OR ar.condition_canonical = 'FLAG_SINGLE')"
+            "(cr.canonical NOT LIKE 'FLAG_%'"
+            " OR cr.canonical = 'FLAG_SINGLE')"
         )
     else:
-        cond_filter = "ar.condition_canonical NOT LIKE 'FLAG_%'"
-    count_result = await db.execute(text(f"""
+        cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
+          AND cr.needs_review IS FALSE
+          AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
@@ -296,32 +305,37 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""
+    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
-            COUNT(*) FILTER (WHERE ar.condition_canonical LIKE 'FLAG_%')
+            COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
                 AS exc_flag,
             COUNT(*) FILTER (
-                WHERE ar.condition_canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = TRUE)
                 AS exc_pid_only,
             COUNT(*) FILTER (
-                WHERE ar.condition_canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%'
                   AND ar.pid_resolved = TRUE
                   AND ar.unit_resolved = FALSE)
                 AS exc_unit_only,
             COUNT(*) FILTER (
-                WHERE ar.condition_canonical NOT LIKE 'FLAG_%'
+                WHERE cr.canonical NOT LIKE 'FLAG_%'
                   AND ar.pid_resolved = FALSE
                   AND ar.unit_resolved = FALSE)
                 AS exc_both,
             COUNT(*) FILTER (
                 WHERE ar.pid_resolved = TRUE
                   AND ar.unit_resolved = TRUE
-                  AND ar.condition_canonical NOT LIKE 'FLAG_%'
+                  AND cr.canonical NOT LIKE 'FLAG_%'
                   AND ar.price_normalized IS NULL)
                 AS exc_price
         FROM {TCG_SCHEMA}.analysis_results ar
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        {review_joins(schema=TCG_SCHEMA)}
     """))
     excl = excl_result.mappings().one()
 

@@ -341,3 +341,35 @@ class TestSafetyLimits:
     def test_e5_max(self):
         # GAS: COND_RECALC_MAX_ROWS_ = 200
         assert E5_MAX_ROWS == 200
+
+
+@pytest.mark.parametrize("basis", ["EMPTY_BOX:explicit", "MANUAL_CONDITION_REVIEW"])
+def test_e5_does_not_overwrite_empty_or_manual_condition(basis, request):
+    from tests.test_tcg_condition_review import seed
+    from app.services.tcg_unit_recovery_svc import apply_unit_recovery_for_job
+    from sqlalchemy.orm import Session
+    from sqlalchemy import text
+    pg = request.getfixturevalue("empty_review_pg")
+    item = seed(pg, name="Test Booster 空箱 Box", condition_basis=basis, unit_resolved=False, unit_id=None, unit_canonical="")
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("UPDATE tenant_004.extraction_items SET raw_unit='' WHERE id=%s", (item["eid"],))
+    with Session(pg["engine"]) as db:
+        before = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        result = apply_unit_recovery_for_job(db,item["job"],tenant_schema="tenant_004")
+        assert result["e3a_recovered"] == 1
+        assert result["e5_changed"] == 0
+        after = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        assert after == before
+
+
+@pytest.fixture
+def empty_review_pg(request):
+    # Reuse the scoped CI fixture without introducing another database provider.
+    from tests.test_tcg_condition_review import pg
+    generator = pg.__wrapped__()
+    value = next(generator)
+    yield value
+    try:
+        next(generator)
+    except StopIteration:
+        pass

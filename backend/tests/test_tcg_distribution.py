@@ -257,9 +257,9 @@ def test_fetch_output_rows_flag_filter_exclude():
 
     src = inspect.getsource(fetch_output_rows)
     # include_flag_single=True 分岐で OR FLAG_SINGLE を通す実装が存在すること
-    assert "OR ar.condition_canonical = 'FLAG_SINGLE'" in src
+    assert "OR cr.canonical = 'FLAG_SINGLE'" in src
     # False 側は NOT LIKE のみ（AND != FLAG_SINGLE の古い実装がないこと）
-    assert "AND ar.condition_canonical != 'FLAG_SINGLE'" not in src
+    assert "AND cr.canonical != 'FLAG_SINGLE'" not in src
 
 
 # ---------------------------------------------------------------------------

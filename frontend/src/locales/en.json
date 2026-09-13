@@ -3560,5 +3560,33 @@
     "activePost": "Active post",
     "inactivePost": "Historical post (currently inactive)",
     "receivedAt": "Received at (JST)"
+  },
+  "conditionReview": {
+    "title": "Review the condition",
+    "needsReview": "Needs review",
+    "emptyBox": "Empty box",
+    "current": "Current condition: {{condition}}",
+    "original": "Extracted original — product: {{name}} / condition: {{state}} / note: {{memo}}",
+    "unknown": "Unknown",
+    "select": "Select the actual condition",
+    "confirm": "Confirm empty box",
+    "correct": "Save selected condition",
+    "saving": "Saving…",
+    "saved": "Condition confirmed. Delivery still follows the other eligibility checks.",
+    "otherReasonsRemain": "Condition confirmed. Other issues still prevent delivery.",
+    "changed": "The content changed. Review the refreshed details before confirming again.",
+    "reloadFailed": "The content changed, but refreshing failed. Reload before confirming again.",
+    "saveFailed": "Could not confirm the condition. Please retry.",
+    "loadFailed": "Could not load the condition choices.",
+    "otherReason": "Another issue requires review.",
+    "separator": " / ",
+    "reasons": {
+      "empty_box": "Empty box requires confirmation.",
+      "empty_box_ambiguous": "The empty-box description is ambiguous. Select the actual condition.",
+      "empty_box_master_unavailable": "The empty-box definition is unavailable.",
+      "note_unmatched": "The note still requires review.",
+      "pid_unresolved": "The product is not identified.",
+      "multi_candidate": "More than one product matched."
+    }
   }
 }
