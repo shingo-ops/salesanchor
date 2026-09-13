@@ -2436,6 +2436,17 @@ PO原文「承認する、離席するのでPR．マージ、本番反映まで�
 - 検証記録の同一AI自己レビューAPPROVE、製品設計REVISE。文書PRのみ。POの条件付きマージ許可はreconに原文保存。製品実装/配信/Gemini追加0。
 
 
+## EV-20260912-LINE-WORK-ID
+
+2026-09-12: PO原文「今回geminiに判断させるのは作品IDのみ、ほかは原文抽出させる」「進める」。本番読み取り293商品/8作品/作品NULL0、現promptは作品推測禁止。詳細はdocs/handoff/tcg-product-master-growth/recon.md末尾、方式案はdesign-keyword.md §16。PM0181商品名を明示依頼により意思→意志、旧値退避、UPDATE 1と再SELECT確認。検索語未変更。製品実装・再抽出・配信未実施。後続指示はテストでGemini使用禁止、本番マージ後の最新取込で抽出/解析、精度向上確認後に要確認以外を配信。代理GO有効化ではない。
+
+EV-20260912-LINE-WORK-ID実装追記: §16.10で事前実API禁止に対応。カードL29を修正して終了0、長行警告のみ。実装/静的検査/文書検査済み、ローカルDocker不在により実DBはCI前。Gemini実呼出し0、本番機能変更0。
+
+EV-20260912-LINE-WORK-ID PR提出: PR #3441 ready。run34663710924は2604成功/1失敗/95skip、旧fixture不足を8d245eacで修正。最終判定はPR最新HEAD。現行gateは番号付きGO原文欠落で停止。9表17837898 bytes退避、hashはrecon末尾。Gemini実呼出し0、マージ/本番反映/再抽出/配信0。
+
+2026-09-13追補: HEAD e25b09a9のBackend CI34663978933は2606 passed/95 skipped、失敗0、coverage62.53%。PO原文「進めてくれ」受領。番号付きGOへ代筆せず、最新main 5b21b3b8との文書3競合を双方保持で解消。追従後CIは再確認。マージ/本番再抽出/配信未実施。
+
+
 ### EV-20260912-FRONTEND-AJ-PR — PR3442提出と承認待ち
 
 ready PR https://github.com/shingo-ops/salesanchor/pull/3442 。初回44320bd6、base main、draft false、登録番号3442を直接照合。
@@ -2639,3 +2650,5 @@ tradeoff: 復元試験・本番認証付きボタン操作・商品登録は未�
 decision: GO3438で承認された反映と所定完了確認を完了。文書PR3436は未マージ
 follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 ```
+
+2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
