@@ -858,3 +858,14 @@ Context7公開ツール0件につき起動指示の代替許可を使用。
 親のPR直接確認: [sandbox PR #1](https://github.com/shingo-ops/salesanchor-go-gate-sandbox/pull/1)はOPEN・draft false、head release/go-intake-probe-p1/b414b7b5ba3c7196649745dea2a64bf442ff851a、base main/a815d94c535f59fae6415b881296d64ef17bf6c7。差分は指定workflowの新設1件（80行追加・削除0）。カードのPR作成受入条件を満たす。P1準備PR作成完了、実機試験0・GO発行0・マージ0。P1準備物の読取審査APPROVE、全体REVISEを維持。次はsandbox PR #1のマージ承認を受け、その後に別カードで実機6ケースを扱う。
 
 実装担当の報告: /tmp/reports/TH-GO-INTAKE-P1-PR-RESULT.json、observed_at 2026-09-12T20:22:55Z。preflight・主体/対象/不存在確認・branch/file/PR作成の成功を報告し、カード完了後に外部操作停止。親は報告JSONのcommit一致を読取確認。今回の18ケース再実行は行っておらず、ローカル試験の直接実施日は前節の2026-09-12。今回追加文書の台帳構造・見出し・diff検査は成功。
+
+
+## 2026-09-13 P1準備PRのマージ確認
+
+検証用PR #1のマージ承認を求めた後、現在の作業がGO委任の受付試験準備であると説明し、PO原文「進める」を受領。対象はsandbox PR #1の取り込みに限定する。番号付きGO原文・代理GOを創作せず、製品repoのマージや本番変更へ広げない。
+
+直接確認: preflight成功、PR head b414b7b5ba3c7196649745dea2a64bf442ff851a/base a815d94c535f59fae6415b881296d64ef17bf6c7は不変。差分は指定workflow新設1件・80行追加、原本SHA256 e2112e8ecddce8b2ca0e1979a7239241158dc15ff8580361e03c0a73eb801d26一致。check-runs/statusとも登録0件であり、CI成功とは報告しない。既存ローカル18/18・actionlintと準備物の読取審査を根拠とする。
+
+GitHub connectorの主体id246949427、対象repo id1363676622を照合し、merge_method=merge、expected_head_shaを指定して1回送信。応答merged trueを再GETで確認。merged_at 2026-09-13T01:20:35Z（10:20:35 JST）、merge SHA e239ec21638cf329c882d19b10e03a58a10b5b31。sandbox mainも同SHA。Actions workflows GETはGO intake probe P1/id356839824/path .github/workflows/go-intake-probe-p1.yml/state activeを返した。
+
+状態: P1準備PRマージ済み・試験workflow設置済み。実機Issue試験0件、GO発行0件、本番変更0件、全体設計REVISE。次は既存P1計画の6ケースを正式な別カードへ具体化し、試験担当・合成Issue作成範囲・期待理由コード・結果保存・停止条件を確定する。今回のPR取り込み承認を、追加担当起動・試験Issue作成の承認として扱わない。

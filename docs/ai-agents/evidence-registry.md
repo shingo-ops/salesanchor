@@ -2396,3 +2396,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 - 公開: 文書PR https://github.com/shingo-ops/salesanchor/pull/3440 を公式PR作成スクリプトで提出し、.pr-number=3440を確認。GO #3406は転用せず、本PRは未マージ。
 
 2026-09-13 P1限定委任の実行追補: 実装役1名への準備PR作成委任にPO原文「進めてくれ」を受領。sandbox PR https://github.com/shingo-ops/salesanchor-go-gate-sandbox/pull/1 を作成。親がAPIでOPEN/ready・指定branch/head b414b7b5ba3c7196649745dea2a64bf442ff851a・main base a815d94c535f59fae6415b881296d64ef17bf6c7・workflow新設1件を直接確認し、取得内容SHA256が既存原本と一致。準備PRの受入完了、実機試験0・GO発行0・マージ0。全体REVISE。詳細はrecon.mdの2026-09-13節。過去の403は履歴として保持、権限変更の原因は未確認。
+
+2026-09-13 P1マージ追補: PO原文「進める」を検証用PR #1の取り込み承認として受領。expected_head_sha=b414b7b5でmerge commitを1回送信、再GETでmerged_at2026-09-13T01:20:35Z/merge e239ec21638cf329c882d19b10e03a58a10b5b31/main一致を直接確認。workflow id356839824 active。実機0・GO発行0・本番変更0、全体REVISE。詳細はrecon.md「2026-09-13 P1準備PRのマージ確認」。
