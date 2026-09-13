@@ -2477,6 +2477,124 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 - 2026-09-12追補: PR #3449 deploy34679205838成功。inspect34679390340の大きい単一行結果を取得できず、照合は停止。分割出力の回帰試験を追加。
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
+
+```text
+id: EV-20260913-LINE-STOCK-MESSAGES
+date: 2026-09-13
+agent: Codex design partner (Planner -> Architect, same-AI self-review)
+task: LINE在庫・〆・無関係・混在投稿の商品単位反映設計
+scope: docs-only; current-code read and synthetic pure-function probe
+evidence:
+  - type: command
+    reference: git ls-remote origin refs/heads/main / git rev-parse origin/main
+    summary: both 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15; preflight PASS; own worktree created with existing worktrees preserved
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json
+    summary: AST-isolated current build_provider_entries; 3 synthetic cases each retain only latest body, skipped_message_count=1; DB/API access=0
+  - type: file
+    reference: backend/app/services/tcg_line_import_svc.py:273,327,426; backend/app/services/tcg_distribution_svc.py:229,463
+    summary: latest-only selection, channel-wide source supersede, active-source output, full-sheet replacement
+  - type: adr
+    reference: docs/adr/ADR-154-tcg-parity02-gas-python-migration.md
+    summary: append proposed change and Why, preserve historical accepted migration contract
+confidence: high
+tradeoff: high applies only to fixed-code path and synthetic probe; actual production incidents, classification accuracy, live schema and rollout are unverified
+decision: PO meaning agreement recorded; technical draft self-review REVISE; docs PR https://github.com/shingo-ops/salesanchor/pull/3456 OPEN; no implementation card or production operation
+follow_up: inspect real-message ground truth and offer identity duplicates; finalize DDL/API/UI/rollout then re-review
+```
+
+```text
+id: EV-20260913-LINE-STOCK-VOCAB
+date: 2026-09-13
+agent: Codex design partner (same-AI Planner/Architect)
+task: PO提供LINE原文から売切候補と誤判定防止条件を設計登録
+scope: two user-provided files read-only; aggregate/hash evidence; docs PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json vocabulary_corpus
+    summary: 2 sources; 1106390 lines; 20 literal search terms; 13105 matching-line union; 14 reviewed context positions with line hashes; no public raw transcript
+  - type: command
+    reference: same JSON status_exclusion_probe; backend/app/services/tcg_analyzer_svc.py:979-1060
+    summary: SELECT exclude_pattern discarded in loader and unused in resolver; synthetic 3 states all excluded including 2 negative/conditional cases; real DB/API calls=0
+confidence: high
+tradeoff: counts describe retrieval only and include reposts/cross-file overlaps; manual context boundary examples are not a complete labeled evaluation set or live offer mapping
+decision: register 11 candidate groups, 8 scoped blocking conditions and 12 regression cases in design only; runtime registration=0; self-review REVISE
+follow_up: establish gold labels and price/shipping/condition/unit-specific offer identity, then finalize scoped exclusion logic, DDL/API and rollout before implementation card
+```
+
+```text
+id: EV-20260913-LINE-STOCK-DISPLAY
+date: 2026-09-13
+agent: Codex design partner
+task: 締切の適用範囲・発送枠の既存対応・完売行の表示を確認
+scope: user-supplied files and current code read-only; design PR #3456
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md additional cutoff audit
+    summary: exact display-name headers A28/B372=400 posts, 17:30 clause in 1; explicit same-day-shipping clause in 121 posts/141 lines; 115 dates and 12 multi-time candidate dates, not a semantic inconsistency rate
+  - type: command
+    reference: current parse_extraction_response AST-isolated synthetic 2-row response
+    summary: preserves 2 rows and separate memos; AI extraction, persistent shipping-slot matching and production update not tested
+  - type: file
+    reference: backend/app/services/tcg_analysis_review_svc.py:35,72-84,238-256; backend/app/services/tcg_analyzer_svc.py:918-954
+    summary: status/note/raw memo output fields exist; active-source filtering, exclusion-to-review classification, dictionary-only note generation need explicit integration for requested display
+confidence: high
+tradeoff: same display name is not verified supplier identity; repeated posts/cross-file overlaps retained; no all-supplier uniformity or model-accuracy claim
+decision: record requested sold-out row retention in analysis list with sold-out status and possible-additional-stock memo; keep stock output excluded, self-review REVISE
+follow_up: finalize shipping-slot identity and status/note/history UI contracts and verify on labeled examples before implementation
+```
+
+```text
+id: EV-20260913-LINE-RESTOCK-DATE-PROBE
+date: 2026-09-13
+agent: Codex design partner
+task: PO確定の追加予定あり表示・日付保持を現行部品で検証
+scope: read-only source corpus and unchanged code; synthetic in-memory master; design PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_date_component_probe
+    summary: 5 real memo fragments and 4 synthetic cases; raw memo preserved 9/9, candidate note matches 6/9, mismatches 3/9; no model API/DB/UI/sheets
+confidence: high
+tradeoff: manually prepared extraction response and synthetic dictionary do not measure model or production performance; initial reservation arrival is not evidence of replenishment
+decision: PO display/date requirements fixed; self-review REVISE; candidate dictionaries remain unregistered
+follow_up: date context, scoped negation, calendar validation, offer linking and implementation acceptance tests
+```
+
+```text
+id: EV-20260913-LINE-RESTOCK-NEGATIVE-STOCK
+date: 2026-09-13
+agent: Codex design partner
+task: 再入荷予定なしの数量・状態・備考の分離をPO合意し追加部品検証
+scope: design PR #3456; no product changes
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_negative_stock_probe
+    summary: 3 synthetic manually extracted cases; raw quantity retained 3/3; synthetic status matches 3/3; candidate memo mismatches 3/3; no DB/UI/model invocation
+confidence: high
+tradeoff: status default active is not permission to restore old sold-out inventory; actual update behavior untested
+decision: retain explicit stock quantity and existing quantity when absent; sold-out requires separate evidence; suppress only related negative restock memo; self-review REVISE
+follow_up: scoped negation, event absence semantics, persistent offer matching and implementation acceptance tests
+```
+
+```text
+id: EV-20260913-LINE-IMPLEMENTATION-INTENT
+date: 2026-09-13
+agent: Codex design partner
+task: PO実装移行承認と未解決の設計引継ぎ条件を記録
+scope: design PR #3456; product unchanged
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/design.md section 15
+    summary: exact user request retained; design review REVISE, card not issued
+  - type: command
+    reference: gh pr view 3456 --json state,headRefOid,mergeStateStatus
+    summary: OPEN, b4f0af7b108a46276cec80c740e5c9c97c2471af, DIRTY
+confidence: high
+tradeoff: implementation authorization does not fill missing technical contracts or authorize production changes
+decision: preserve authorization without asking again; separate design readiness from post-implementation test gates; do not switch roles automatically
+follow_up: finalize offer/schema/API/rollout contracts, resolve document conflicts, self-review and formal card validation
+```
+
 ```text
 id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
 date: 2026-09-11
@@ -2652,3 +2770,35 @@ follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 ```
 
 2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
+
+```text
+id: EV-20260913-LINE-DESIGN-MAIN-SYNC
+date: 2026-09-13
+agent: Codex design partner
+task: 設計PRの文書競合解消と現行v4互換・予定/数量イベント分離の具体化
+scope: design-only changes relative to origin/main ee455fb1ba4c7ad407ed6506ee4fe515fce371a8
+evidence:
+  - type: command
+    reference: git merge-tree and merge origin/main; docs/handoff/tcg-import-latest-only/probe-20260913.json main_sync_retest
+    summary: 3 append-only document conflicts resolved retaining both sides; 9+3 component cases rerun with same outcomes; no production connection
+confidence: high
+tradeoff: live inventory mapping remains unverified because allowed SSH key is monitoring-only; former manual-key template is not task authorization
+decision: retain v2/v3/v4 compatibility; separate explicit stock events from restock events and uncertain dates; self-review REVISE
+follow_up: physical schema/API, baseline mapping via authorized read path, and self-review before card issuance
+```
+
+```text
+id: EV-20260913-LINE-DATE-CONTRACT
+date: 2026-09-13
+agent: Codex design partner
+task: 否定と予定日だけの保留契約・受入例の具体化
+scope: design-only PR #3456
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json date_calendar_oracle
+    summary: 6 next-day and 3 calendar-validity expected values independently checked using local Python stdlib; 9/9 agree; no product implementation test
+confidence: high
+tradeoff: local Python 3.14.3 calendar calculation is not production Python 3.12 or model evaluation; prior 3 component mismatches remain unresolved
+decision: draft semantic contract and 14 implementation acceptance cases recorded in design section 17; same-AI self-review REVISE
+follow_up: physical DDL/API, offer generation identity, initial stock migration and manual resolution UI before implementation card
+```

@@ -1,0 +1,903 @@
+{
+  "source_sha": "5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15",
+  "source_path": "backend/app/services/tcg_line_import_svc.py",
+  "source_sha256": "95f57a6c24eeebdd3b0eb7b214ebf8be25afaab936541124391f2beec29d1015",
+  "executed_at": "2026-09-12T20:20:21.118849+00:00",
+  "synthetic_cases": [
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A〆"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A〆",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "7277b23ca0e07b3dada49e580a5bebc9d1145c492d8aee60cde8bef4cf11d043",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "ありがとうございます"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "ありがとうございます",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "21b2ba1811e66eef3e01a48e589b379c48c9efa25b3a8354c7e883e04351ba73",
+          "skipped_message_count": 1
+        }
+      ]
+    },
+    {
+      "input": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 10:00:00",
+          "body": "商品A 10個 1000円\n商品B 20個 2000円\n商品C 30個 3000円"
+        },
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "timestamp": "2026-09-13 11:00:00",
+          "body": "商品A 5個 1000円"
+        }
+      ],
+      "output": [
+        {
+          "sp_code": "TEST-A",
+          "canonical_name": "Synthetic Supplier",
+          "raw_text": "商品A 5個 1000円",
+          "received_at": "2026-09-13 10:00:00",
+          "line_posted_at": "2026-09-13 11:00:00",
+          "sha256": "463947ee55c16724f9c07e615485ff5fecadc5ef2e4e4466d36ce7390efa2f32",
+          "skipped_message_count": 1
+        }
+      ]
+    }
+  ],
+  "case_count": 3,
+  "db_calls": 0,
+  "external_api_calls": 0,
+  "scope": "current-function observation, not improved implementation validation",
+  "vocabulary_corpus": {
+    "observed_at": "2026-09-12T20:36:25.059805+00:00",
+    "method": "UTF-8-SIG splitlines; lowercase literal substring per line, no Unicode normalization; term counts overlap; union counts each matching line once per file; no cross-file/message deduplication",
+    "scope": "full supplied files, no time-window filtering; statistical retrieval only, not semantic sold-out labels or accuracy",
+    "sources": [
+      {
+        "source_id": "A",
+        "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3",
+        "byte_count": 2929746,
+        "line_count": 120412,
+        "matching_line_union": 1582,
+        "term_line_counts": {
+          "〆": 195,
+          "〆切": 14,
+          "売り切れ": 9,
+          "売切れ": 0,
+          "売切": 0,
+          "売りきれ": 0,
+          "売り切り": 0,
+          "売切り": 0,
+          "完売": 1376,
+          "完売中": 10,
+          "在庫切れ": 0,
+          "品切れ": 0,
+          "在庫なし": 0,
+          "在庫無し": 0,
+          "在庫無": 0,
+          "締切": 12,
+          "締め切り": 12,
+          "終了": 2,
+          "sold out": 0,
+          "soldout": 0
+        },
+        "reviewed_reference_locations": [
+          {
+            "line": 448,
+            "line_sha256": "fc84f2424f2a8ec36cf69100535a829bd78b54e3a94276b99aeb84e67daac10d"
+          },
+          {
+            "line": 2005,
+            "line_sha256": "071c4c9fc27930eb4c15743123fef70127db8ed07d44e483e4914dd7bb50a02e"
+          },
+          {
+            "line": 20098,
+            "line_sha256": "70515143fa7fb4aaccd10293ee053a8bd0eaa45cb6252af58f01f7eedf4e86d9"
+          },
+          {
+            "line": 31113,
+            "line_sha256": "6db21218caa134e9c978105e264f85a9d3657124913462f2ddbfddb142722f2d"
+          },
+          {
+            "line": 84917,
+            "line_sha256": "6d9855e07c64df7f75570157987e5d9897a8e8f02c49908b5b61dcd1af2c102b"
+          },
+          {
+            "line": 90252,
+            "line_sha256": "10380685fba0c211d78dc08d0caf977d740c8e2268103876b8c37e983e57b7ea"
+          },
+          {
+            "line": 39205,
+            "line_sha256": "adf3d260dcfa30dd9e94c9db588b868da6871d4884a5dc900561fcbed1a3c9b3"
+          }
+        ]
+      },
+      {
+        "source_id": "B",
+        "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07",
+        "byte_count": 25736286,
+        "line_count": 985978,
+        "matching_line_union": 11523,
+        "term_line_counts": {
+          "〆": 4295,
+          "〆切": 502,
+          "売り切れ": 49,
+          "売切れ": 9,
+          "売切": 790,
+          "売りきれ": 0,
+          "売り切り": 16,
+          "売切り": 0,
+          "完売": 5632,
+          "完売中": 456,
+          "在庫切れ": 27,
+          "品切れ": 2,
+          "在庫なし": 38,
+          "在庫無し": 0,
+          "在庫無": 0,
+          "締切": 147,
+          "締め切り": 63,
+          "終了": 500,
+          "sold out": 2,
+          "soldout": 0
+        },
+        "reviewed_reference_locations": [
+          {
+            "line": 49283,
+            "line_sha256": "b2e12ed7e3a725eac79aa89f4380b7f82135ed144b90bf0e5004eb2d2527cb61"
+          },
+          {
+            "line": 165528,
+            "line_sha256": "91d4afdea39d1d8d5c399e3c3a8c51556e58ebde5b004c210c7c6fdd2f00fdc0"
+          },
+          {
+            "line": 397088,
+            "line_sha256": "c6ebfb7621af156099f41c764a1a35daff71bd2e4046c2b801434ac028a76da4"
+          },
+          {
+            "line": 705265,
+            "line_sha256": "ca2d374184ca0808106482f42c7706e1223b03f7d4e6ea0c77e0246885f24bf5"
+          },
+          {
+            "line": 712492,
+            "line_sha256": "8dd8855c5738ca9e37c0e2b8bfc78a2bce415993eadff51ebb91d1ae57d2f7df"
+          },
+          {
+            "line": 819695,
+            "line_sha256": "49fc4bb6a5231a0f04eb2559bcade7563d3bb3f4c6712a9f9b7eaa7e867c6d55"
+          },
+          {
+            "line": 264565,
+            "line_sha256": "5bda3ff22f6b216d323060339a204a8a4f4eaf3ed3929a7351dab31299a0f2ca"
+          }
+        ]
+      }
+    ],
+    "searched_terms": [
+      "〆",
+      "〆切",
+      "売り切れ",
+      "売切れ",
+      "売切",
+      "売りきれ",
+      "売り切り",
+      "売切り",
+      "完売",
+      "完売中",
+      "在庫切れ",
+      "品切れ",
+      "在庫なし",
+      "在庫無し",
+      "在庫無",
+      "締切",
+      "締め切り",
+      "終了",
+      "sold out",
+      "soldout"
+    ]
+  },
+  "status_exclusion_probe": {
+    "source_sha": "5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15",
+    "unchanged_at_main_sha": "d66923e2edad1b6c22df4cba8adf74f23b968cfc",
+    "source_path": "backend/app/services/tcg_analyzer_svc.py",
+    "source_sha256": "9cfb1b6bcd1cc3e5a00aba20d037543c7e3a8385dcf857e07bc7ce5989e24740",
+    "functions": [
+      "load_status_master",
+      "_match_status_pattern",
+      "resolve_status_v2"
+    ],
+    "synthetic_db_columns": [
+      "status_id",
+      "canonical",
+      "search_pattern",
+      "exclude_pattern",
+      "priority",
+      "match_type",
+      "effect"
+    ],
+    "synthetic_db_rows": [
+      [
+        "TEST01",
+        "sold_out",
+        "売り切れ|完売",
+        "売り切れではない|完売となる場合",
+        1,
+        "REGEX",
+        "EXCLUDE"
+      ],
+      [
+        "TEST02",
+        "active",
+        "",
+        "",
+        99,
+        "DEFAULT",
+        "OUTPUT"
+      ]
+    ],
+    "loaded_entries": [
+      {
+        "canonical": "sold_out",
+        "search_pattern": "売り切れ|完売",
+        "priority": 1,
+        "match_type": "REGEX",
+        "effect": "EXCLUDE"
+      },
+      {
+        "canonical": "active",
+        "search_pattern": "",
+        "priority": 99,
+        "match_type": "DEFAULT",
+        "effect": "OUTPUT"
+      }
+    ],
+    "loaded_exclude_pattern_count": 0,
+    "cases": [
+      {
+        "synthetic_raw_state": "売り切れ",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      },
+      {
+        "synthetic_raw_state": "売り切れではない",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      },
+      {
+        "synthetic_raw_state": "予告なく完売となる場合があります",
+        "actual_result": [
+          "sold_out",
+          "excluded"
+        ]
+      }
+    ],
+    "db_calls": 0,
+    "external_api_calls": 0,
+    "scope": "current isolated resolver using synthetic master and raw_state; no end-to-end extraction or production accuracy measurement"
+  },
+  "restock_date_component_probe": {
+    "executed_at": "2026-09-13T00:51:05.199968+00:00",
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "code_hashes": {
+      "backend/app/services/tcg_analyzer_svc.py": "9cfb1b6bcd1cc3e5a00aba20d037543c7e3a8385dcf857e07bc7ce5989e24740",
+      "backend/app/services/gemini_extraction_svc.py": "e5a53869d4421a45d28d4272561960c63c42cc0c9c83858a36bd949cb7c6f176"
+    },
+    "method": "AST isolated unchanged production functions; manually labelled extraction responses; synthetic in-memory candidate masters; no DB, model API, UI or sheets",
+    "relative_date_assumption": "S1 posted at 2026-09-13 JST; current function receives no posted-at argument",
+    "candidate_date_pattern": "(\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬)(?:[〜～]\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬))?)",
+    "candidate_restock_pattern": "(?:追加可能性あり|追加の可能性あり|追加予定(?:あり)?|(?:追加|再)?入荷予定(?:あり)?)",
+    "files": {
+      "A": {
+        "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3"
+      },
+      "B": {
+        "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07"
+      }
+    },
+    "results": [
+      {
+        "id": "R1",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 31113,
+        "input": "数量：完売〆（追加可能性あり）",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R2",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 109822,
+        "input": "後日、追加入荷予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R3",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 95980,
+        "input": "後日、追加予定あります。",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R4",
+        "kind": "real_memo_manual_extraction",
+        "source": "B",
+        "line": 325164,
+        "input": "※8月30日再入荷予定",
+        "expected_note": "追加予定あり（8月30日入荷予定）",
+        "actual_note": "追加予定あり（8月30日入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "R5",
+        "kind": "real_memo_manual_extraction",
+        "source": "A",
+        "line": 1957,
+        "input": "（12月下旬〜1月中旬入荷予定、",
+        "expected_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "actual_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "active",
+          null
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S1",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "明日、追加入荷予定",
+        "expected_note": "追加予定あり（9月14日入荷予定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S2",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "9月20日発送予定。追加入荷予定あり",
+        "expected_note": "追加予定あり（日付未定）",
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": true,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S3",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "再入荷予定なし",
+        "expected_note": null,
+        "actual_note": "追加予定あり（日付未定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      },
+      {
+        "id": "S4",
+        "kind": "synthetic_counterexample",
+        "source": null,
+        "line": null,
+        "input": "2月30日再入荷予定",
+        "expected_note": "確認待ち",
+        "actual_note": "追加予定あり（2月30日入荷予定）",
+        "note_matches": false,
+        "raw_memo_preserved": true,
+        "status": [
+          "sold_out",
+          "excluded"
+        ],
+        "empty_master_note": null
+      }
+    ],
+    "summary": {
+      "cases": 9,
+      "raw_memo_preserved": 9,
+      "note_matches": 6,
+      "note_mismatches": 3
+    }
+  },
+  "restock_negative_stock_probe": {
+    "source_sha": "99a008a74a8c9926871d1e9ad084433f0b3e8cd3",
+    "method": "unchanged functions with manually prepared extraction and synthetic dictionaries; no inventory update or UI test",
+    "rows": [
+      {
+        "id": "N1",
+        "synthetic": true,
+        "raw_quantity": "8",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "8",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N2",
+        "synthetic": true,
+        "raw_quantity": "0",
+        "raw_state": "完売",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "0",
+        "quantity_preserved": true,
+        "actual_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "expected_status": [
+          "sold_out",
+          "excluded"
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      },
+      {
+        "id": "N3",
+        "synthetic": true,
+        "raw_quantity": "",
+        "raw_state": "",
+        "raw_memo": "再入荷予定なし",
+        "parsed_quantity": "",
+        "quantity_preserved": true,
+        "actual_status": [
+          "active",
+          null
+        ],
+        "expected_status": [
+          "active",
+          null
+        ],
+        "actual_note": "追加予定あり（日付未定）",
+        "expected_note": null,
+        "stock_update_tested": false
+      }
+    ],
+    "summary": {
+      "quantity_representation_preserved": 3,
+      "status_matches": 3,
+      "note_matches": 0
+    }
+  },
+  "main_sync_retest": {
+    "restock_date": {
+      "executed_at": "2026-09-13T01:10:43.622415+00:00",
+      "source_sha": "ee455fb1ba4c7ad407ed6506ee4fe515fce371a8",
+      "code_hashes": {
+        "backend/app/services/tcg_analyzer_svc.py": "4f119aa4516191bcc13c931a337d9706b8dc729d96711df946e0113e88cf0c92",
+        "backend/app/services/gemini_extraction_svc.py": "f6de694ce6c182e639b3f957fed86b267724b70dfa9d9cbe2ca1a29921fcda1b"
+      },
+      "method": "AST isolated unchanged production functions; manually labelled extraction responses; synthetic in-memory candidate masters; no DB, model API, UI or sheets",
+      "relative_date_assumption": "S1 posted at 2026-09-13 JST; current function receives no posted-at argument",
+      "candidate_date_pattern": "(\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬)(?:[〜～]\\d{1,2}月(?:\\d{1,2}日|上旬|中旬|下旬))?)",
+      "candidate_restock_pattern": "(?:追加可能性あり|追加の可能性あり|追加予定(?:あり)?|(?:追加|再)?入荷予定(?:あり)?)",
+      "files": {
+        "A": {
+          "sha256": "f88a6a7c193b6c178dad7ba8104ffffd9b7cd46b52b6afefef33a860fb4e61a3"
+        },
+        "B": {
+          "sha256": "8a765988fb5c7dc50374625293a3760c90236ce2ec57e565e1cc20e169e7ae07"
+        }
+      },
+      "results": [
+        {
+          "id": "R1",
+          "kind": "real_memo_manual_extraction",
+          "source": "A",
+          "line": 31113,
+          "input": "数量：完売〆（追加可能性あり）",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R2",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 109822,
+          "input": "後日、追加入荷予定あります。",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R3",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 95980,
+          "input": "後日、追加予定あります。",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R4",
+          "kind": "real_memo_manual_extraction",
+          "source": "B",
+          "line": 325164,
+          "input": "※8月30日再入荷予定",
+          "expected_note": "追加予定あり（8月30日入荷予定）",
+          "actual_note": "追加予定あり（8月30日入荷予定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "active",
+            null
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "R5",
+          "kind": "real_memo_manual_extraction",
+          "source": "A",
+          "line": 1957,
+          "input": "（12月下旬〜1月中旬入荷予定、",
+          "expected_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+          "actual_note": "追加予定あり（12月下旬〜1月中旬入荷予定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "active",
+            null
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S1",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "明日、追加入荷予定",
+          "expected_note": "追加予定あり（9月14日入荷予定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S2",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "9月20日発送予定。追加入荷予定あり",
+          "expected_note": "追加予定あり（日付未定）",
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": true,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S3",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "再入荷予定なし",
+          "expected_note": null,
+          "actual_note": "追加予定あり（日付未定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        },
+        {
+          "id": "S4",
+          "kind": "synthetic_counterexample",
+          "source": null,
+          "line": null,
+          "input": "2月30日再入荷予定",
+          "expected_note": "確認待ち",
+          "actual_note": "追加予定あり（2月30日入荷予定）",
+          "note_matches": false,
+          "raw_memo_preserved": true,
+          "status": [
+            "sold_out",
+            "excluded"
+          ],
+          "empty_master_note": null
+        }
+      ],
+      "summary": {
+        "cases": 9,
+        "raw_memo_preserved": 9,
+        "note_matches": 6,
+        "note_mismatches": 3
+      }
+    },
+    "negative_stock": {
+      "source_sha": "ee455fb1ba4c7ad407ed6506ee4fe515fce371a8",
+      "method": "unchanged functions with manually prepared extraction and synthetic dictionaries; no inventory update or UI test",
+      "rows": [
+        {
+          "id": "N1",
+          "synthetic": true,
+          "raw_quantity": "8",
+          "raw_state": "",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "8",
+          "quantity_preserved": true,
+          "actual_status": [
+            "active",
+            null
+          ],
+          "expected_status": [
+            "active",
+            null
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        },
+        {
+          "id": "N2",
+          "synthetic": true,
+          "raw_quantity": "0",
+          "raw_state": "完売",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "0",
+          "quantity_preserved": true,
+          "actual_status": [
+            "sold_out",
+            "excluded"
+          ],
+          "expected_status": [
+            "sold_out",
+            "excluded"
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        },
+        {
+          "id": "N3",
+          "synthetic": true,
+          "raw_quantity": "",
+          "raw_state": "",
+          "raw_memo": "再入荷予定なし",
+          "parsed_quantity": "",
+          "quantity_preserved": true,
+          "actual_status": [
+            "active",
+            null
+          ],
+          "expected_status": [
+            "active",
+            null
+          ],
+          "actual_note": "追加予定あり（日付未定）",
+          "expected_note": null,
+          "stock_update_tested": false
+        }
+      ],
+      "summary": {
+        "quantity_representation_preserved": 3,
+        "status_matches": 3,
+        "note_matches": 0
+      }
+    }
+  },
+  "date_calendar_oracle": {
+    "method": "Python stdlib calendar oracle for design fixture expectations; not Sales Anchor implementation tests or AI extraction",
+    "python": "3.14.3 (v3.14.3:323c59a5e34, Feb  3 2026, 11:41:37) [Clang 16.0.0 (clang-1600.0.26.6)]",
+    "results": [
+      {
+        "id": "D01",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T10:00:00+09:00",
+        "expected": "2026-09-14",
+        "actual": "2026-09-14",
+        "passed": true
+      },
+      {
+        "id": "D02",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-30T23:59:00+09:00",
+        "expected": "2026-10-01",
+        "actual": "2026-10-01",
+        "passed": true
+      },
+      {
+        "id": "D03",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-12-31T23:59:00+09:00",
+        "expected": "2027-01-01",
+        "actual": "2027-01-01",
+        "passed": true
+      },
+      {
+        "id": "D04",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2028-02-28T12:00:00+09:00",
+        "expected": "2028-02-29",
+        "actual": "2028-02-29",
+        "passed": true
+      },
+      {
+        "id": "D05",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2027-02-28T12:00:00+09:00",
+        "expected": "2027-03-01",
+        "actual": "2027-03-01",
+        "passed": true
+      },
+      {
+        "id": "D06",
+        "operation": "posted_jst_date_plus_one",
+        "posted_at": "2026-09-13T16:00:00+00:00",
+        "expected": "2026-09-15",
+        "actual": "2026-09-15",
+        "passed": true
+      },
+      {
+        "id": "D07",
+        "operation": "calendar_validity",
+        "ymd": [
+          2026,
+          2,
+          30
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D08",
+        "operation": "calendar_validity",
+        "ymd": [
+          2027,
+          2,
+          29
+        ],
+        "expected": false,
+        "actual": false,
+        "passed": true
+      },
+      {
+        "id": "D09",
+        "operation": "calendar_validity",
+        "ymd": [
+          2028,
+          2,
+          29
+        ],
+        "expected": true,
+        "actual": true,
+        "passed": true
+      }
+    ],
+    "passed": 9,
+    "total": 9
+  }
+}
