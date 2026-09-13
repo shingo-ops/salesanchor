@@ -978,3 +978,10 @@ POは「直近の確定済み44投稿（9:31取込）で精度比較を続けて
 新作品ID c6acce0e-fe08-446a-adae-8e9bc946b8b0は参照マスタのOne Piece/ワンピースと一致。OP-17（PM0266）のwork_idにも一致。旧解析は既にpid_resolved true、condition Case、needs_review true、review_reasons note_unmatched。この標本は商品未特定改善の証拠にならず、作品選択と行番号の動作確認にとどまる。
 停止結果: DB書込み0、旧抽出/訂正/解析変更0、残り43投稿の追加API0、配信0。抽出方式の全体精度改善は未確認・結果採用保留。比較レポートSHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38、/tmp/line-3458-candidate-result.json（非公開、長期保管ではない）。
 次の提案（未承認）: 既存の原文抽出欄を固定し、商品名・位置等で曖昧さなく1対1対応する明細について作品IDだけを比較する設計へ見直す。対応曖昧は停止。再抽出のRAW差異を黙って採用しない。今回は設計§16.10のRAW差異時停止条件を維持し、条件変更や追加実行は行っていない。POへ比較方式の判断を求める。
+
+
+## 2026-09-13 作品IDのみ比較の設計棚卸し
+
+POは設計見直しの質問に「進める」と回答。scopeは既存RAW固定・作品IDだけの比較方式。本番SELECTで762/商品既特定602/未特定160/要確認166/訂正0、固有item ID762/商品名空0/位置不正0、有効商品293/作品NULL0を再照会。理由内訳pid128、pid+multi19、pid+note12、pid+multi+note1、noteのみ6。PGはREAD ONLY。最初のSELECTの小なり記号がhookにリダイレクト扱いで拒否されたため、意味が同じBETWEEN条件を使う読み取りに分割して成功。ガードの解除・DB書込みなし。
+コード照合: tcg_analyzer_svc.py:501–531はDB非依存商品照合、:1180–1217は正規化/単位区分経路、:1261はupsert、:1355/1370/1381はcommit。比較を既存全再解析に混ぜるrollback案は不可。item_corrections_svc.pyも保存commitあり。docker infoはdaemon未接続、実PG検査は未実行。新規SDK仕様調査なし。
+設計§17は明細IDの完全対応・2列作品判断・全入力SHA・比較READ ONLYと商品照合結果に限定。比較設計自己APPROVE、採用/全再解析/配信REVISE。手続きなしの採用や追加Geminiはしない。現在のp2新規抽出のRAW忠実性を修復済みとは主張しない。

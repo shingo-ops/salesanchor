@@ -155,3 +155,5 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 - [Android取込後の管理接続](../../handoff/line-import-delivery/design.md): フロントなしで確認・解析・既存配信へ接続。実配信未確認。
 
 - [PC/Androidの仕入先名の照合](../../handoff/line-supplier-aliases/design.md): 保存投稿の指紋を用いた読取調査。
+
+- [保存済み原文を固定する作品ID比較](../../handoff/tcg-product-master-growth/design-keyword.md#17-保存済み原文を固定した作品id比較2026-09-13-設計見直し): 比較設計自己審査済み。実装未着手、採用/全再解析/配信設計はREVISE。
