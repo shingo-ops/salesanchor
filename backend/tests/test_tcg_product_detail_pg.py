@@ -100,13 +100,39 @@ def edit_pg(pg, monkeypatch):
             for table in details.WORD_TABLES.values():
                 cur.execute(f"INSERT INTO {durable.SCHEMA}.{table}(product_id,keyword,position) "
                             "VALUES (%s,'Alpha, Beta',1)", (pid,))
-    return connection, url
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.source_messages(raw_text,raw_sha256,is_active) "
+                    "VALUES ('fixture',%s,true) RETURNING id", ("0" * 64,))
+        smid = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.extraction_jobs(source_message_id,status) "
+                    "VALUES (%s,'done') RETURNING id", (smid,))
+        job = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.extraction_items(extraction_job_id) VALUES (%s) RETURNING id", (job,))
+        item = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.analysis_results "
+                    "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version) "
+                    f"SELECT %s,id,true,false,true,'fixture' FROM {durable.SCHEMA}.tcg_products WHERE code='DETAIL'", (item,))
+        durable.provision(cur, "tenant_990")
+        cur.execute("INSERT INTO tenant_990.tcg_products(code,japanese_title,category_class,is_active) "
+                    "VALUES ('DETAIL','Other tenant','Other',true) RETURNING id")
+        other_pid = cur.fetchone()[0]
+        for table in details.WORD_TABLES.values():
+            cur.execute(f"INSERT INTO tenant_990.{table}(product_id,keyword,position) VALUES (%s,'Other',1)", (other_pid,))
+    def other_rows():
+        with connection.cursor() as cur:
+            rows = {}
+            for table in ("tcg_products", *details.WORD_TABLES.values(), "audit_log"):
+                cur.execute(f"SELECT row_to_json(t) FROM tenant_990.{table} t ORDER BY id")
+                rows[table] = cur.fetchall()
+            return rows
+    before = other_rows()
+    yield connection, url
+    assert other_rows() == before
 
 
 def observed(connection):
     with connection.cursor() as cur:
         result = {}
-        for table in ("tcg_products", *details.WORD_TABLES.values(), "audit_log"):
+        for table in ("tcg_products", *details.WORD_TABLES.values(), "audit_log", "analysis_results"):
             cur.execute(f"SELECT row_to_json(t) FROM {durable.SCHEMA}.{table} t ORDER BY id")
             result[table] = [r[0] for r in cur.fetchall()]
         return result
@@ -144,6 +170,7 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         for table in details.WORD_TABLES.values():
             assert [r for r in before[table] if r["product_id"] == sentinel["id"]] == [
                 r for r in after[table] if r["product_id"] == sentinel["id"]]
+        assert after["analysis_results"] == before["analysis_results"]
         assert len(after["audit_log"]) == 1
         audit = after["audit_log"][0]
         assert audit["changed_by"] == "ci-reviewer" and audit["record_id"] == product["id"]

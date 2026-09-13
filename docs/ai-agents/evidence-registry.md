@@ -2982,3 +2982,5 @@ backend全体lintは走査例外/既存型エラーで中断、実PG/CI未実施
 EV-20260913-PRODUCT-DETAIL 再開試行: ソース保存承認「進める」受領後、公式permit-danger.shの呼出し自体が自動ガードで拒否。許可は未発行。ガード実体151行のコマンド全文一致と例外分岐なしを読み取り確認。PO端末での正規手続き待ち。更新API/PR/マージ/本番は未完了。
 
 EV-20260913-PRODUCT-DETAIL 2026-09-14追記: PO原文「実行した」、公式許可でソース保存exit 0。GET/PUTと競合/一括確定を実装。UI18件、build/check:all、Python3.12 make lint-ci成功。実PGはDocker不在のためCI待ち。詳細はrecon.md「許可適用とローカル最終検証」。マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL PR追記: PR3492正式提出、84a6a697/99e211bb。既存単体4件の旧文言期待を補正しローカル343件成功。CI実PG進行中、run34765540117は番号付きGO記録不足で停止。

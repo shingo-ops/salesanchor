@@ -997,7 +997,7 @@ TcgProductMasterPageの列を合意済み5列に変更し、商品コードはro
 backend/app/routers/tcg_product_import.py、backend/app/services/tcg_product_detail_svc.py、
 backend/app/services/tcg_product_master_svc.py（検索語追加の行ロック1点）、backend/tests/test_tcg_product_detail_pg.py、
 backend/tests/test_tcg_product_list_pg.py。
-frontend/src/pages/super-admin/TcgProductMasterPage.tsx、frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx、
+frontend/src/pages/super-admin/TcgProductMasterPage.tsx、同TcgProductMasterPage.test.tsx、frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx、
 同ディレクトリのproduct-csv.css、frontend/src/locales/ja.json/en.json、frontend/tests-e2e/tcg-product-import.spec.ts、
 frontend/tests-e2e/tcg-product-detail.spec.ts。
 本節/recon/cardとtasks/todo.md/evidence-registry/親の開発履歴リンクのみ記録更新。
@@ -1042,3 +1042,5 @@ GET/PUT、10項目の入力検査、親商品行ロック、同時保存/追加�
 Python3.12専用一時環境でmake lint-ci exit 0、ruff/bandit成功。mypyは既存方針で警告扱い、変更対象のエラーなし。
 Docker接続不可のためローカルpytestは未実施。実PGの原子性/同時更新/認可/分類/入力検査/応答消失は既存CIで実行待ち。
 設計作成/同一AIの自己審査/実装済み、PR/マージ/本番反映は未完了。独立した第二者レビューとは称さない。
+
+DETAIL-01試験対象の補足（2026-09-14）: CIが既存一覧単体試験4件の旧文言期待を検出。TcgProductMasterPage.test.tsxを対象に加え、D1/D2の5列・数値0・二言語名へ期待値を更新する。既存検索/作品/ページングの検査は維持。追加の製品仕様変更なし。同一AIの設計整合審査APPROVE。

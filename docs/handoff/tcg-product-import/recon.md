@@ -981,3 +981,15 @@ API実装を完了。既存add_search_keywordの親商品ロック1点を同じ�
 別接続から確定済みの商品/語/監査を照合する。成功、語ID保持、古い版、2同時編集、既存語追加、
 語書込/監査/commit前/キャンセル失敗、commit応答消失、実認可依存、422入力、分類導出を追加。
 現時点では実DB結果は未確認。独立レビュー/PR/マージ/本番デプロイも未完了。
+
+### DETAIL-01 PR提出と既存試験補正（2026-09-14）
+
+正式PR: https://github.com/shingo-ops/salesanchor/pull/3492 。製品実装コミット84a6a697、最新main追従99e211bb。
+初回CIのFrontend lint & custom checks（run34765501418）では既存一覧単体試験4件が旧文言を期待して失敗。
+5列/日英名/0表示を検証する期待値へ更新し、既存検索/作品/ページング検査は維持した。
+ローカルnpm run test:coverageは29ファイル343件すべて成功（/tmp/product-detail-unit-coverage.log）。
+backendの受入D7を補強し、参照する解析結果の全列と別テナント同名商品の商品/語/監査不変を追加した。
+初回backend lint CI成功、実PGは実行中。検証未完了の試験を成功扱いしない。
+
+process-artifacts gate（run34765540117）はPR番号付きGO記録不足で拒否。
+POの公開依頼は受領済みだが、原文を「GO #番号」へ創作せず、正式ゲートは維持して停止する。
