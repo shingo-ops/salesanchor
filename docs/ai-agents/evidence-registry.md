@@ -2915,4 +2915,8 @@ EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更
 
 EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
 
+
+EV-20260913-SHINSOKU-TIMEOUT-01 完了追記: PO原文「GO #3476」を2026-09-13 15:14 JST受領、PR #3476を15:16:21 JSTに正規マージ（c22ad508）。Backend CI34741872204・GO gate34742291130・配備34742337546成功を直接確認。本番worker再起動15:18:34 JST、task属性300/330秒をSSH読み取りで直接確認。対象投稿の再抽出は未実施。詳細はrecon.mdのPR #3476マージ・配備確認節。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 再抽出完了: PO原文「次を進める」に基づき固定job713b8823を既存retry_extractionで1回投入、enqueued1。2026-09-13 15:33:13 JST、通常Celery taskが146.425139秒でdone。DBで明細147/解析147/要確認0/エラーNULL。原文数量価格単位等735照合一致、欠落重複0。原文不変、配信未実行、全投稿の保証ではない。根拠はrecon.mdの本番1件再抽出節、worker task91ff4091ログと非公開の前後スナップショットを設計担当が直接確認。
 EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
