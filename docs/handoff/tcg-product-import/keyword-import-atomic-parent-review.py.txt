@@ -1,0 +1,100 @@
+"""Parent read-only execution of actual AST functions; simulated persistence, no DB."""
+import ast,asyncio,hashlib,json,sys,types
+from pathlib import Path
+WT=Path(sys.argv[1] if len(sys.argv)>1 else '/Users/tanizawashingo/worktrees/salesanchor/release-product-csv-atomicity')
+class Failure(RuntimeError): pass
+class Result:
+ def __init__(self,row):self.row=row
+ def fetchone(self):return self.row
+class DB:
+ def __init__(self,kind='normal',at=0):
+  self.kind=kind;self.at=at;self.products=[];self.words=[];self.history=[];self.job=None;self.pending=[];self.commits=0;self.rollbacks=0
+ async def execute(self,sql,p):
+  if 'INSERT INTO tenant_001.tcg_product_import_jobs' in sql:
+   if self.job:raise Failure('duplicate digest')
+   self.pending.append(('job',p));return Result(['job1'])
+  if 'SELECT display_name' in sql:return Result(types.SimpleNamespace(display_name='Fixture work'))
+  if 'INSERT INTO tenant_001.tcg_products' in sql:
+   n=int(p['japanese_title'][7:])
+   if self.kind=='create_value' and n==self.at:raise ValueError('create')
+   self.pending.append(('product',dict(p,n=n,id='id'+str(n))));return Result(types.SimpleNamespace(id='id'+str(n)))
+  if 'INSERT INTO tenant_001.product_' in sql:self.pending.append(('word',p));return Result(None)
+  if 'SELECT code FROM tenant_001.tcg_products' in sql:
+   n=int(p['id'][2:])
+   if n==self.at and self.kind=='verify_value':return Result(None)
+   if n==self.at and self.kind=='verify_io':raise Failure('verify')
+   product=next((x for x in self.products+[v for k,v in self.pending if k=='product'] if x['id']==p['id']),None)
+   return Result(types.SimpleNamespace(code=product['code']) if product else None)
+  if 'INSERT INTO tenant_001.tcg_product_import_rows' in sql:
+   if int(p['row_no'])==self.at and self.kind=='history_io':raise Failure('history')
+   if int(p['row_no'])==self.at and self.kind=='history_value':raise ValueError('history')
+   self.pending.append(('history',p));return Result(None)
+  if 'UPDATE tenant_001.tcg_product_import_jobs' in sql:
+   if self.kind=='finish':raise Failure('finish')
+   self.pending.append(('finish',p));return Result(None)
+  raise AssertionError(sql)
+ async def commit(self):
+  row=next((v['n'] for k,v in self.pending if k=='product'),0)
+  if row==self.at and self.kind=='commit_before':raise Failure('commit before')
+  self.commits+=1
+  for k,p in self.pending:
+   if k=='job':self.job={'status':'running'}
+   elif k=='product':self.products.append(p)
+   elif k=='word':self.words.append(p)
+   elif k=='history':self.history.append(p)
+   elif k=='finish':self.job.update(p)
+  self.pending=[]
+  if row==self.at and self.kind=='commit_after':raise Failure('commit acknowledged lost')
+ async def rollback(self):self.rollbacks+=1;self.pending=[]
+ async def flush(self):pass
+sources={}
+def funcs(rel,names,namespace):
+ p=WT/rel;s=p.read_text();sources[rel]=hashlib.sha256(p.read_bytes()).hexdigest();nodes=[n for n in ast.parse(s).body if isinstance(n,ast.AsyncFunctionDef) and n.name in names];assert len(nodes)==len(names)
+ exec(compile(ast.Module(body=nodes,type_ignores=[]),str(p),'exec'),namespace)
+async def duplicates(db,**kw):return {'candidates':[]}
+async def nextcode(db):return f'PM{len(db.products)+1:04}'
+common={'AsyncSession':object,'Any':object,'text':lambda s:s,'TCG_SCHEMA':'tenant_001'}
+master=dict(common,check_duplicates=duplicates,_next_pm_code=nextcode)
+funcs('backend/app/services/tcg_product_master_svc.py',{'create_product'},master)
+mod=types.ModuleType('app.services.tcg_product_master_svc');mod.create_product=master['create_product'];sys.modules[mod.__name__]=mod
+rows=[{'row_no':str(i)} for i in range(1,45)]
+async def preview(db,raw,name):return {'file_errors':[],'digest':'fixed','total':44,'rows':[dict(r,japanese_title='Fixture'+r['row_no'],mark='',warnings=[],blocking=['blocked'] if db.kind=='blocked' and int(r['row_no'])==db.at else []) for r in rows]}
+async def lookups(db):return {}
+def payload(r,l):return dict(extraction_item_id='',source_message_id='',division_id='d',work_id='w',manufacturer_id='m',product_category_id='c',japanese_title='Fixture'+r['row_no'],release_date=None,search_keywords='keyword',exclude_keywords='exclude')
+ns=dict(common,preview=preview,load_lookup_maps=lookups,parse_rows=lambda b:(rows,[]),build_payload=payload,RESULT_CREATED='created',RESULT_ERROR='error',RESULT_SKIPPED='skipped')
+funcs('backend/app/services/tcg_product_import_svc.py',{'start_job','record_row','finish_job','commit_import'},ns)
+async def case(kind,at):
+ db=DB(kind,at);result=None;error=None
+ try:result=await ns['commit_import'](db,b'fixture','fixture.csv','review')
+ except (Failure,ValueError) as exc:error=str(exc)
+ created=[h for h in db.history if h['kind']=='created']
+ assert {p['code'] for p in db.products}=={h['code'] for h in created},(kind,at,'product/history mismatch')
+ assert len(db.words)==2*len(db.products),(kind,at,'orphan words')
+ if kind in ('normal','finish'):expect=44
+ elif kind in ('create_value','verify_value','blocked'):expect=43
+ elif kind=='commit_after':expect=at
+ else:expect=at-1
+ assert len(db.products)==expect,(kind,at,len(db.products),expect,error)
+ if kind in ('normal','create_value','verify_value','blocked'):
+  assert result['created']==expect and result['skipped']==44-expect and db.job['status']=='ok'
+ else:assert result is None and error and db.job['status']=='running'
+ before=(len(db.products),len(db.history))
+ try:await ns['commit_import'](db,b'fixture','fixture.csv','review')
+ except Failure as exc:assert str(exc)=='duplicate digest'
+ else:raise AssertionError('retry accepted')
+ assert before==(len(db.products),len(db.history))
+ return {'kind':kind,'row':at,'products':len(db.products),'history':len(db.history),'error':error,'commits':db.commits,'rollbacks':db.rollbacks}
+async def main():
+ out=[await case('normal',0),await case('finish',0)]
+ for kind in ('create_value','verify_value','verify_io','history_io','history_value','commit_before','commit_after','blocked'):
+  for at in range(1,45):out.append(await case(kind,at))
+ defaults=[]
+ for commit in (True,False):
+  db=DB();kw=payload({'row_no':'1'},{});kw.update(force=True)
+  if not commit:kw['commit']=False
+  await master['create_product'](db,**kw)
+  assert db.commits==int(commit) and len(db.products)==int(commit)
+  defaults.append({'commit':commit,'commits':db.commits,'saved_products':len(db.products)})
+ result={'mode':'actual AST service functions with memory DB, not pytest/PostgreSQL','cases':len(out),'source_sha256':sources,'default_contract':defaults,'results':out}
+ Path('/tmp/sa-csv-atomic-parent-review.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n');print(json.dumps({k:v for k,v in result.items() if k!='results'},ensure_ascii=False))
+asyncio.run(main())

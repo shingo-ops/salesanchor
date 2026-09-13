@@ -631,5 +631,6 @@ run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
 # ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
 run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
 run_sql migrations/20260913_020000_seed_onepiece_products.sql
+run_sql migrations/20260913_030000_seed_unregistered_products.sql
 run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
 run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
