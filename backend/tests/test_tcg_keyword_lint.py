@@ -142,3 +142,30 @@ class TestRunAll:
         res = run_all(["PM0098"], {"PM0098": ["クレイバースト"]}, {})
         assert res["exit_code"] == 0
         assert res["findings"]["R1"][0] == STOP
+
+
+
+def test_r5_space_search_and_unchanged_exclusion_semantics():
+    search = {"A": ["スターターセットV草"], "B": ["スターターセットV 草"]}
+    edge = "A:'スターターセットV草' rides B:'スターターセットV 草'"
+    assert edge in check_r5_piggyback(search, {})
+    assert edge not in check_r5_piggyback(search, {"A": ["スターターセット"]})
+    # Exclusions deliberately do not gain the search-only space rule.
+    assert edge in check_r5_piggyback(search, {"A": ["スターターセットV草"]})
+
+
+def test_r5_space_full_name_boundary_and_other_rules_unchanged():
+    for other in ["限定スターターセットV 草", "スターターセットV 草 10箱",
+                  "スターターセットV\n草", "スターターセットV\r草", "スターターセットV\t草"]:
+        findings = check_r5_piggyback({"A": ["スターターセットV草"], "B": [other]}, {})
+        assert not any(item.startswith("A:") for item in findings)
+        if any(char in other for char in ("\n", "\r", "\t")):
+            assert findings == [f"B:'{other}' rides A:'スターターセットV草'"]
+    assert check_r5_piggyback({"A": ["EB01"], "B": ["EB 01"]}, {}) == []
+    search = {"A": ["スターターセットV草"], "B": ["スターターセットV 草"]}
+    assert check_r1_empty_search(list(search), search) == []
+    assert check_r2_short_tokens(search) == (["B:スターターセットV 草"], [])
+    assert check_r3_shared_kw(search) == []
+    assert check_r4_self_kill({"B": search["B"]}, {"B": search["A"]}) == []
+    assert check_r6_dup_in_product(search) == []
+    assert check_r7_spaced_ja(search) == ["B:スターターセットV 草"]
