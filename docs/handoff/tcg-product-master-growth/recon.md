@@ -958,3 +958,13 @@ POが前述の停止報告と修正質問へ「進めてくれ」と回答。設
 ## 2026-09-13 GO #3458受領
 
 PO原文「GO #3458」を11:04 JSTに受領確認。HEAD44fac147のCI34731045931は2710 passed/95 skipped、失敗0、coverage62.95%。最新main d9f8629cへ追従、台帳競合は本件とAndroid側の各最新行を保持。本番9表を再退避18652912 bytes、SHA256 5ea522ebb075c0b8a1dd6c7cab981b502b7eed66da95c29edb9194b3a6fa8c35。最終CI/マージ/本番反映/比較結果はPR3458本文へ実測で追記する。受領時点の追加Gemini呼出し・配信0。
+
+
+## GO受領後の最終結果（2026-09-13）
+
+最終HEAD cb2ef47465b6b4e0b560e2a1006a716a912ea50e。
+[CI34732415064](https://github.com/shingo-ops/salesanchor/actions/runs/34732415064): **2733 passed / 95 skipped / 失敗0 / coverage63.10%**、全必須チェック成功。先行629b7e5fのCI成功後にmainが前進し、merge-safeが文書競合で停止したため双方保持で追従、最終HEADを再検証した。
+2026-09-13 11:14 JST 正規merge-safeでマージ、merge SHA cacc889e0e44ed647fbd0a7d1c110ab11f86aec5。
+[Deploy34732557622](https://github.com/shingo-ops/salesanchor/actions/runs/34732557622)成功。本番git HEAD一致、prompt=raw-extraction-v4-work-id-p2、受理版p1/p2を直接確認。/api/healthはDB/Redis/Celery connected。
+
+比較対象の未決: 実行前に最新取込を再照会したところ、10:43 JSTのimport1f6e72ac-733f-41b8-bd1f-7256f77dcc53が新規追加されていた。仕入先38件未確定、pending_review、リンク済み原文0。9:31 JSTの直近確定済み取込536422ed-79c7-4a87-a887-09a02b97968fは44投稿。POに「確定済み44投稿で比較継続／新取込の確定を待つ」を質問中、回答未受領。新取込を確定済みと読み替えず、追加Gemini呼出し・再解析・結果上書き・配信は0のまま停止。修正版の実抽出精度は未確認。コード反映済みと結果採用・配信未完了を区別する。
