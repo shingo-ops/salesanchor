@@ -145,7 +145,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| LINEの〆による他商品消失を防ぐ設計 | Agent | 第1便PR3471提出・CI2769成功。第2便3ファイルを3250e829へ保存、静的検査成功、実PG未実施 | 第2便の限定再開はPO承認済み。正規承認チケットの発行コマンド自体がPreToolUseに拒否。通常ターミナルからの承認登録待ち。追従1/8・文書競合解決済み、実PG/PR/本番未実施 | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-GUARD-STOP | 2026-09-13 |
+| LINEの〆による他商品消失を防ぐ設計 | Agent | 第1便PR3471提出・CI2769成功。第2便追従/拒否試験保存の停止解消、試験commit ad0d9fc7、通常push 5edbe183到達確認 | 第2便の通常レビュー用PR提出と既存CIの実PG8群/全件migration確認。実PG未実施で検収REVISE、マージ/本番なし | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-RESUMED | 2026-09-13 |
 
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）

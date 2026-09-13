@@ -3042,3 +3042,5 @@ EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselecto
 EV-20260913-LINE-STORAGE-GUARD-STOP: 第2便製品commit3250e829、旧先端47ee5114保全。担当のAST8関数/ruff/bash/登録1行検査成功、親がhash/差分/定義コピー0を確認。未公開ブランチ追従1/8の文書競合は親解決・stage済み。続行カード保存と原文削除負例保存がPreToolUse hook拒否で停止。実PG/PR未実施、全体検収REVISE。限定PO承認待ち。詳細reconの保全・承認停止節。
 
 EV-20260913-LINE-STORAGE-GUARD-STOP 追記: PO原文「進める」で直前の限定2操作の再開承認を受領。正規チケット発行コマンド自体がPreToolUseに拒否。ローカルhook144〜151行の部分一致と発行例外なしを読取確認。承認未受領ではなく承認登録ブロック。追従1/8と解決済みindexを保全、DB実行0。通常ターミナルから正規発行を依頼。
+
+EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの登録完了報告後、正式ガード下で追従完了HEAD bc33aa37。SQLhash0c68042e保持、承認済み原文削除拒否テスト保存・commit ad0d9fc7を親が直接確認。試験hash a5227daa、ruff成功。過去の保存停止は解消、実PG未実施のため検収REVISEを継続。既承認の通常push/検証PRへ。代理GO/マージ/本番なし。
