@@ -1163,3 +1163,112 @@ SSH読取時点の本番HEAD6326115c、engine name-first-v8-product-space-runs�
 最終HEAD fb41b64538d8fb8fa4c429e4b79ef3aba105e13e、main5c0704df包含・GitHub mergeable。Backend CI34751619981/job103709049740の直接ログ: 3295 passed / 95 skipped / 309 warnings / 115.30秒 / coverage63.83%。追加9ケースも正式PostgreSQLで成功。Migration CI34751619987の実SQL/全件ドライラン/登録点検成功。全チェック37success/4skip/1failure、未完了0（PR本文追記前の観測）。唯一の失敗はprocess-artifacts gateの新番号GO記録なし。修正前テスト定義を使ったCI34751560833も3295成功だが最終確認根拠は34751619981とする。
 
 正式証跡をPR3483本文へ保存。GO #3483未受領・未マージ・本番未反映・保存済み結果未修復・再解析/配信未実施。設計自己審査と直接読んだCIログを区別し、第二者レビューとは称さない。次は対象HEADとチェック/バックアップを再確認した上でPO本人の番号付きGOを受けること。PR3481のGOと配備成功は追加PRの承認に転用しない。
+
+
+## カードセット登録・改訂2の事実確認と設計検算（2026-09-13）
+
+PO最新依頼: 個別3名称と「MEGA 30th CELEBRATION カードセット（9種セット）」を登録し、検索/除外語で誤採用を防ぎ、正答率100%を目指す。本人のマージGOや実装担当への切替許可を補って記録しない。
+
+本番READ ONLY再読取で個別3はPM0276/277/278として有効、同系列9個別も存在。9種/９種/CELEBRATIONを含む名前を全商品から確認して集合商品の登録0、PM最大0296。個別3の名称から先頭のブランド名を省いたPO表記は既存検索語に一致するため新規重複登録不要。単一の集合商品1件の追加が必要。商品区分は現存PC_BOX（Box/箱系）、9個別の参照はDIV01/IP001/MK001。根拠SQLはSELECTとSHOW read_onlyのみ。途中でcategoryのlabel_ja列がないためSELECT失敗、正式定義とSELECT *でdisplay_nameとkubun_typeを確認し直した。DB変更なし。
+
+コード根拠: tcg_analyzer_svc.py:258 token_and_matchは日本語混在検索語の空白区切りAND部分一致。単独9種セットでは19種への部分一致の危険があるため括弧込み/商品系列込みの検索語に限定。normalize_en:238は全角英数/括弧を半角へ正規化。match_pid_with_workと比較match_itemの実関数を隔離プロセスへ読み込み、マスタコピーだけ変更。tcg_product_master_svc.py:274はPM最大+1採番。20260905_010000_tcg_pokemon_master_batch1_t004.sql:62以降が個別9既存登録と同系列集合の根拠。
+
+固定729件は従来と同じコピー。原文に基づく19件+個別9件、計28件で新設計の商品ID正答28/28。今回の集合商品新設に伴い1件の期待値を未特定から予定PM0297へ変更（製品登録IDは検算用の仮UUID）。他の期待商品を結果に合わせて書き換えていない。同一AIの非盲検検算であり独立評価ではない。商品特定563→572、戻り値変更10件、他719件不変。状態/数量/価格の正答率、全729件の正答率、本番改善とは称さない。
+
+原文に基づく28件の期待値と検算結果（顧客原文/価格は保存しない）:
+
+| 明細ID | 原文ID | 行 | 期待=結果 | 原文SHA256 |
+|---|---|---|---|---|
+| 4f44e328-306d-472e-8dd4-4715dc9188a3 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 27–31 | PM0219 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 75b6d982-bb9d-43c2-831e-af34aa1f0951 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 11–15 | PM0263 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 9cd43dc9-a8eb-4b77-8923-4af0bf515839 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 1–3 | PM0264 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 9d2b898e-5b8a-4ca0-89bc-d73127251f3a | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 17–19 | PM0297 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| a27a51d4-009c-47aa-9753-a22252d0cb6f | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 21–25 | PM0265 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| b65dd482-1e90-4fc9-ba35-fbd909b63513 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 5–9 | PM0263 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 037a85a0-1b58-40a1-9731-9b83b6620c17 | cced581f-7368-4767-8927-710a86c0b4c1 | 37–39 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 1e7790c1-e6dd-469c-a7c5-07b34a0935c5 | cced581f-7368-4767-8927-710a86c0b4c1 | 45–47 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 31f8b5ba-7f28-4279-9248-2e3960a2eec6 | cced581f-7368-4767-8927-710a86c0b4c1 | 5–7 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 459cfa30-6a5e-4cc2-8729-c97cdb4f00ee | cced581f-7368-4767-8927-710a86c0b4c1 | 53–55 | PM0264 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 4736b1e3-cddd-455d-9c1e-46ccdf4f4546 | cced581f-7368-4767-8927-710a86c0b4c1 | 49–51 | PM0264 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 4d316b32-e13c-4d50-a7fb-976ad542769b | cced581f-7368-4767-8927-710a86c0b4c1 | 17–19 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 5b0e62cd-03b6-46c9-be80-fbfc84e2ca9f | cced581f-7368-4767-8927-710a86c0b4c1 | 21–23 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 6543a13f-a308-461b-a83c-0cdc15eab4bd | cced581f-7368-4767-8927-710a86c0b4c1 | 29–31 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 9afe0c82-74de-406d-b241-1102764625eb | cced581f-7368-4767-8927-710a86c0b4c1 | 33–35 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 9e79b83d-423c-4c27-a3a3-5d1243a761b3 | cced581f-7368-4767-8927-710a86c0b4c1 | 41–43 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| a16d09e2-775c-4673-9a4d-6da9d084b52c | cced581f-7368-4767-8927-710a86c0b4c1 | 13–15 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| ad87e9be-f941-41d7-85cc-4f6258f5b302 | cced581f-7368-4767-8927-710a86c0b4c1 | 9–11 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| fd0bb4f2-c6b1-445e-a2ac-6c28f4e9fef6 | cced581f-7368-4767-8927-710a86c0b4c1 | 25–27 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 16e6cd9e-f665-4fd9-abb1-363ebfad179e | dd423a78-efb0-4d63-ab68-806d37a763d6 | 45–47 | PM0277 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 2751bfa0-1de7-4a59-9de4-cec05dd7e2cc | dd423a78-efb0-4d63-ab68-806d37a763d6 | 41–43 | PM0282 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 2c7ab86e-2d33-4c7f-8b36-217a251175cd | dd423a78-efb0-4d63-ab68-806d37a763d6 | 29–31 | PM0280 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 481b9ba9-733c-4350-b5af-a7aab74610c0 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 37–39 | PM0281 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 5bb34f3a-6b59-4a95-b28b-226e2c1434e0 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 33–35 | PM0279 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 8ac48018-317e-4ec6-8c10-cab9bce5ce60 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 19–23 | PM0278 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ce265e7a-5cca-4ea9-9196-f33f09c4f022 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 49–51 | PM0284 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ceb6e570-351a-4e41-84bd-5216d98aa38f | dd423a78-efb0-4d63-ab68-806d37a763d6 | 25–27 | PM0283 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ee813a51-d30a-4340-a19f-b134cb48f6d9 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 53–55 | PM0276 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+
+設計の境界58例: 58/58期待一致。未特定を正解とする例を含む。テスト入力は下表の合成名、work_id=None/raw_state空/raw_memo空、単位は固定コピーのBOX。
+
+| 合成商品名 | 期待=結果 |
+|---|---|
+| MEGA 30th CELEBRATION カードセット (1種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (2種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (3種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (4種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (5種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (6種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (7種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (8種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) | PM0297 |
+| MEGA 30th CELEBRATION カードセット (10種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (11種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (12種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (13種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (14種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (15種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (16種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (17種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (18種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (19種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (20種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (1種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (2種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (3種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (4種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (5種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (6種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (7種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (8種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (9種セット) | PM0297 |
+| 30th  CELEBRATION カードセット (10種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (11種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (12種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (13種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (14種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (15種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (16種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (17種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (18種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (19種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (20種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット（９種セット） | PM0297 |
+| ◆MEGA 30th CELEBRATION カードセット (9種セット) | PM0297 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ | PM0276 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ | PM0277 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ | PM0278 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ | PM0279 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル | PM0280 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ | PM0281 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ | PM0282 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン | PM0283 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス | PM0284 |
+| 30th CELEBRATION | PM0263 |
+| 30th CELEBRATION FUTURISTIC | PM0264 |
+| 30th CELEBRATION プレミアムデッキセット | PM0265 |
+| 別作品 カードセット (9種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) FUTURISTIC | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) プレミアムデッキセット | 未特定 |
+
+状態: 設計改訂/自己審査APPROVE/設計検算済み、カード08担当割当て待ち。製品実装/新商品本番登録/改訂後正式PG/マージ/再解析/配信は未実施。PR3483は旧HEADのまま、改訂実装と再検証が終わるまで旧版へのGOを求めない。次は明示された実装担当へカード08を引き継ぐ。

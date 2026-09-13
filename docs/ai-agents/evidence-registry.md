@@ -2739,3 +2739,5 @@ EV-20260913-LINE-SPACE-FINAL: PR3473 MERGED/配備成功と稼働analyzer SHA一
 EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701245040実ログ3286成功/95skip/失敗0、coverage63.83%。33成功8skip、唯一の失敗はGO未記録ゲート。19件正答8→18、既存誤商品1残存。本番変更0。recon正式CI節参照。
 
 - EV-20260913-LINE-CARDSET-07: PR3481 merge6326115c/Deploy34750745805成功を直接確認。追加PR3483は固定729件で誤商品1→未特定、個別9→各正しい候補、他719不変。Backend CI34751619981は3295成功/95skip/coverage63.83%、Migration CI34751619987成功。GO未受領。根拠: docs/handoff/tcg-product-master-growth/recon.md「PR3481本番反映とカードセット対策PR3483」。
+
+- EV-20260913-LINE-CARDSET-08: 本番個別3登録済み/集合0をREAD ONLY確認。新集合1と相互除外のコピー検算で商品28/28、境界58/58、他719不変。設計自己APPROVE/カード08担当待ち、製品実装・本番登録は未実施。根拠: recon「カードセット登録・改訂2の事実確認と設計検算」。
