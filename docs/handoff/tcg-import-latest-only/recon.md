@@ -394,7 +394,7 @@ migrations/20260906_120000_create_tcg_tables_t001.sql:318/350/388/410でsupplier
 
 POへの「第1便を別の実装担当へ委任して進めてよいですか」という問いに、原文「進める」を受領。委任は新規4ファイルと部品試験だけ。/root/stock_contract_01へCARD-LINE-STOCK-CONTRACT-01、続いて01-FIXを渡した。実装担当は停止済み。設計担当自身は製品コードを変更していない。GO委任の有効化ではない。
 
-実物確認: backend/app/services/tcg_stock_evidence.py:45,93に検証済み辞書の型確定、backend/tests/stock_contract/test_stock_evidence.py:58,112に全raw項目とclausesの原文一致・逆順/重複の拒否例。数量はbackend/app/services/tcg_stock_quantity.pyで丸数字/Decimal/曖昧入力拒否を実装。新規4ファイルは未追跡のローカル成果物で、製品コミット・製品PR未提出。ファイル全hashはprobe-20260913.jsonのstage1_component_reviewへ保存した。
+実物確認: [第1便の原文根拠部品（45/93行）](https://github.com/shingo-ops/salesanchor/blob/0c90de2122527f0007b5022cf720b004e4ac1f87/backend/app/services/tcg_stock_evidence.py#L45)に検証済み辞書の型確定、[第1便の原文根拠試験（58/112行）](https://github.com/shingo-ops/salesanchor/blob/0c90de2122527f0007b5022cf720b004e4ac1f87/backend/tests/stock_contract/test_stock_evidence.py#L58)に全raw項目とclausesの原文一致・逆順/重複の拒否例。数量はbackend/app/services/tcg_stock_quantity.pyで丸数字/Decimal/曖昧入力拒否を実装。新規4ファイルは未追跡のローカル成果物で、製品コミット・製品PR未提出。ファイル全hashはprobe-20260913.jsonのstage1_component_reviewへ保存した。
 
 実装担当の報告: Python3.12 unittest 6群成功、対象mypy 2モジュール指摘0。設計担当が別途直接再実行: 同6群成功、対象ruff成功、対象mypy指摘0、対象Banditは全重大度指摘0/内部エラー0。新規4ファイルの末尾空白なし、追跡済み製品差分0を確認した。
 
