@@ -52,6 +52,8 @@ def fixture_data(pg, monkeypatch):
     connection, engine, _ = pg
     seed_products(connection)
     with connection.cursor() as cursor:
+        migration = Path(__file__).resolve().parents[2] / "migrations/20260903_160000_tcg_normalization_rules_t004.sql"
+        cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
         cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
         cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0200'", (str(uuid4()),))
     cases = [
