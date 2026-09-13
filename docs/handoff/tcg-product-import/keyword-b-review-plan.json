@@ -1,0 +1,278 @@
+{
+  "status": "DRAFT_NOT_APPROVED_NOT_EXECUTABLE",
+  "source_snapshot_sha256": "cfd70fede988b88802e703fd53afcde705b91e0cc1257c326e4e31c8b752c007",
+  "source_csv_sha256": "c4ba5619b293bd222bce0c65d1faab48059d5b3a24ea46c4b12eb5540eaffa1b",
+  "existing_products": {
+    "PM0048": {
+      "before_search": [
+        "シールド"
+      ],
+      "after_search": [
+        "シールド"
+      ],
+      "before_exclude": [
+        "プレシャス"
+      ],
+      "after_exclude": [
+        "プレシャス",
+        "プレミアムトレーナーボックス",
+        "ファミリーポケモンカードゲーム"
+      ]
+    },
+    "PM0060": {
+      "before_search": [
+        "白銀"
+      ],
+      "after_search": [
+        "白銀"
+      ],
+      "before_exclude": [],
+      "after_exclude": [
+        "ジャンボパックセット"
+      ]
+    },
+    "PM0061": {
+      "before_search": [
+        "漆黒"
+      ],
+      "after_search": [
+        "漆黒"
+      ],
+      "before_exclude": [],
+      "after_exclude": [
+        "ジャンボパックセット"
+      ]
+    },
+    "PM0062": {
+      "before_search": [
+        "イーブイヒーローズ"
+      ],
+      "after_search": [
+        "イーブイヒーローズ"
+      ],
+      "before_exclude": [
+        "イーブイズセット"
+      ],
+      "after_exclude": [
+        "イーブイズセット",
+        "VMAXスペシャルセット"
+      ]
+    },
+    "PM0074": {
+      "before_search": [
+        "VMAX"
+      ],
+      "after_search": [
+        "VMAXクライマックス",
+        "VMAX クライマックス"
+      ],
+      "before_exclude": [],
+      "after_exclude": []
+    },
+    "PM0087": {
+      "before_search": [
+        "VSTAR",
+        "VSTARユニバース"
+      ],
+      "after_search": [
+        "VSTARユニバース",
+        "VSTAR ユニバース"
+      ],
+      "before_exclude": [],
+      "after_exclude": []
+    },
+    "PM0126": {
+      "before_search": [
+        "いつでもどこでも"
+      ],
+      "after_search": [
+        "いつでもどこでもバトルアカデミー",
+        "いつでもどこでも バトルアカデミー"
+      ],
+      "before_exclude": [],
+      "after_exclude": []
+    },
+    "PM0200": {
+      "before_search": [
+        "MEGAスタートデッキ",
+        "MEGA スタートデッキ100",
+        "MEGAスタートデッキ100",
+        "MEGA バトルコレクション",
+        "スタートデッキ100",
+        "メガ スタートデッキ100",
+        "メガスタートデッキ100"
+      ],
+      "after_search": [
+        "MEGAスタートデッキ",
+        "MEGA スタートデッキ100",
+        "MEGAスタートデッキ100",
+        "MEGA バトルコレクション",
+        "メガ スタートデッキ100",
+        "メガスタートデッキ100"
+      ],
+      "before_exclude": [
+        "ex",
+        "Generations",
+        "コロ",
+        "コロコロ",
+        "コロちゃお",
+        "コロチャオ"
+      ],
+      "after_exclude": [
+        "ex",
+        "Generations",
+        "コロ",
+        "コロコロ",
+        "コロちゃお",
+        "コロチャオ"
+      ]
+    }
+  },
+  "candidate_overrides": {
+    "CSV01": {
+      "before_search": [
+        "スターターセットV 草",
+        "スターターセットV草"
+      ],
+      "after_search": [
+        "スターターセットV 草",
+        "スターターセットV草"
+      ],
+      "before_exclude": [
+        "種セット"
+      ],
+      "after_exclude": [
+        "種セット",
+        "VMAX",
+        "VSTAR",
+        "スターターセットV5"
+      ]
+    },
+    "CSV02": {
+      "before_search": [
+        "スターターセットV 炎",
+        "スターターセットV炎"
+      ],
+      "after_search": [
+        "スターターセットV 炎",
+        "スターターセットV炎"
+      ],
+      "before_exclude": [
+        "種セット",
+        "セブン"
+      ],
+      "after_exclude": [
+        "種セット",
+        "セブン",
+        "VMAX",
+        "VSTAR",
+        "スターターセットV5"
+      ]
+    },
+    "CSV03": {
+      "before_search": [
+        "スターターセットV 水",
+        "スターターセットV水"
+      ],
+      "after_search": [
+        "スターターセットV 水",
+        "スターターセットV水"
+      ],
+      "before_exclude": [
+        "種セット"
+      ],
+      "after_exclude": [
+        "種セット",
+        "VMAX",
+        "VSTAR",
+        "スターターセットV5"
+      ]
+    },
+    "CSV04": {
+      "before_search": [
+        "スターターセットV 雷",
+        "スターターセットV雷"
+      ],
+      "after_search": [
+        "スターターセットV 雷",
+        "スターターセットV雷"
+      ],
+      "before_exclude": [
+        "種セット"
+      ],
+      "after_exclude": [
+        "種セット",
+        "VMAX",
+        "VSTAR",
+        "スターターセットV5"
+      ]
+    },
+    "CSV05": {
+      "before_search": [
+        "スターターセットV 闘",
+        "スターターセットV闘"
+      ],
+      "after_search": [
+        "スターターセットV 闘",
+        "スターターセットV闘"
+      ],
+      "before_exclude": [
+        "種セット"
+      ],
+      "after_exclude": [
+        "種セット",
+        "VMAX",
+        "VSTAR",
+        "スターターセットV5"
+      ]
+    },
+    "CSV36": {
+      "before_search": [
+        "スタートデッキ100"
+      ],
+      "after_search": [
+        "スタートデッキ100 2021"
+      ],
+      "before_exclude": [
+        "コロコロ"
+      ],
+      "after_exclude": [
+        "コロコロ",
+        "MEGA",
+        "メガ",
+        "バトルコレクション"
+      ]
+    }
+  },
+  "candidate_search_override_after_A": {
+    "CSV01": [
+      "スターターセットV草"
+    ],
+    "CSV02": [
+      "スターターセットV炎"
+    ],
+    "CSV03": [
+      "スターターセットV水"
+    ],
+    "CSV04": [
+      "スターターセットV雷"
+    ],
+    "CSV05": [
+      "スターターセットV闘"
+    ],
+    "CSV35": [
+      "スペシャルデッキセットザシアン・ザマゼンタvsムゲンダイナ"
+    ],
+    "CSV44": [
+      "スペシャルデッキセットリザードンVSTARvsレックウザVMAX"
+    ]
+  },
+  "unresolved": [
+    "PO acceptance of individual values and real-message labels",
+    "current master precondition equality",
+    "isolated QA backend and actual schema",
+    "atomic eight-product update and PostgreSQL failure/reconciliation tests"
+  ],
+  "applied_to_csv": false,
+  "applied_to_database": false
+}

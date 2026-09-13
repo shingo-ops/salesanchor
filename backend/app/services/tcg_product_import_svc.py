@@ -395,7 +395,7 @@ async def start_job(
 
 async def record_row(
     db: AsyncSession, job_id: str, checked: dict[str, Any], result_kind: str,
-    product_code: str, messages: str,
+    product_code: str, messages: str, *, commit: bool = True,
 ) -> None:
     """CSV の1行ぶんの結果を残す。"""
     await db.execute(
@@ -414,7 +414,8 @@ async def record_row(
             "messages": messages or None,
         },
     )
-    await db.commit()
+    if commit:
+        await db.commit()
 
 
 async def finish_job(
@@ -435,14 +436,25 @@ async def finish_job(
 async def commit_import(
     db: AsyncSession, raw: bytes, filename: str, executed_by: str
 ) -> dict[str, Any]:
-    """
-    検査をやり直し、止める判定の無い行だけを登録する。
+    """Commit each product, its keywords and created receipt together.
 
-    途中で落ちるとそこまでの行は入ったまま残る。既存の create_product が
-    1商品ごとに確定するため、全体のやり直しはできない。どの行がどうなった
-    かは tcg_product_import_rows に1行ずつ残して追える形にする。
+    Earlier rows stay committed on failure. An uncertain commit response is not
+    retried: rollback does not prove that the server did not commit the row.
     """
     from app.services.tcg_product_master_svc import create_product
+
+    async def rollback_preserving_error(error: BaseException) -> None:
+        try:
+            await db.rollback()
+        except BaseException as rollback_error:
+            raise error from rollback_error
+
+    async def record_rejection(checked: dict[str, Any], kind: str, notes: str) -> None:
+        try:
+            await record_row(db, job_id, checked, kind, "", notes)
+        except BaseException as error:
+            await rollback_preserving_error(error)
+            raise
 
     checked_all = await preview(db, raw, filename)
     if checked_all["file_errors"]:
@@ -461,21 +473,37 @@ async def commit_import(
         checked = by_row[row["row_no"]]
         notes = ";".join(checked["blocking"] + checked["warnings"])
         if checked["blocking"]:
+            await record_rejection(checked, RESULT_SKIPPED, notes)
             skipped += 1
-            await record_row(db, job_id, checked, RESULT_SKIPPED, "", notes)
             continue
         payload = build_payload(row, lookups)
         try:
-            outcome = await create_product(db, force=True, **payload)
-        except ValueError as exc:
+            outcome = await create_product(db, force=True, commit=False, **payload)
+        except ValueError as error:
+            # Only a creation ValueError may become a rejected row. Rollback
+            # must succeed before its error receipt starts another transaction.
+            await rollback_preserving_error(error)
+            await record_rejection(checked, RESULT_ERROR, str(error))
             skipped += 1
-            await record_row(db, job_id, checked, RESULT_ERROR, "", str(exc))
             continue
-        code = str(outcome.get("product_id", ""))
-        created += 1
-        await record_row(db, job_id, checked, RESULT_CREATED, code, notes)
+        except BaseException as error:
+            await rollback_preserving_error(error)
+            raise
 
-    await finish_job(db, job_id, created, skipped, "ok")
+        try:
+            code = str(outcome.get("product_id", ""))
+            await record_row(db, job_id, checked, RESULT_CREATED, code, notes, commit=False)
+            await db.commit()
+        except BaseException as error:
+            await rollback_preserving_error(error)
+            raise
+        created += 1
+
+    try:
+        await finish_job(db, job_id, created, skipped, "ok")
+    except BaseException as error:
+        await rollback_preserving_error(error)
+        raise
     return {
         "job_id": job_id,
         "filename": filename,
