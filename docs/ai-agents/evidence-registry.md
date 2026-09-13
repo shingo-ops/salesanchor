@@ -2402,3 +2402,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 P1実機カード追補: TH-GO-INTAKE-P1-LIVE-01.txt、intake-p1-live-cases.json、intake-p1-live-local-evidence.jsonを作成。原本classifyでローカル6/6の理由一致、カード検査exit0（長行警告3件）。実機0・担当起動0。限定同一AI自己審査APPROVE、全体REVISE。根拠とAPI確認・直列対応の限界はrecon.md末尾。次は担当1名への実行委任判断。
 
 2026-09-13 P1実機完了: PO原文「進める」を担当1名への最大6件の実行委任として受領。sandbox Issue #2〜#7、run34732212144/34732308387/34732406466/34732496119/34732553655/34732582404。親もAPIと各job実行ログを直接取得し6/6（正常1・期待拒否5）、全件false、送信6・再送0を確認。証拠はintake-p1-live-local-evidence.jsonのgithub_live_review。P1合成受付APPROVE、全体REVISE、限定委任完了・本番変更0。次はP2設計。
+
+2026-09-13 P2詳細契約追補: design.mdのP2節へ7記録型・8状態遷移・整数ミリ秒期限・取消先着・保存応答不明・14試験群の入力を草案保存。sandbox state refs空・P1 workflow1件、既存validator/merge/deployの実物を直接確認。取消の正規配送/欠落検知、App/初期state/時刻取得が未確立で自己審査REVISE。P2実機0・実装0・新規承認0。根拠はrecon.md「2026-09-13 P2の実物照合」。

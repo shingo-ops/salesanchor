@@ -899,3 +899,18 @@ Architect自己審査: 限定カードAPPROVE。既存計画とケース6件の�
 親の直接確認: Issue6件のauthor/title/body/未編集、run6件のevent issues/actorとtriggering_actor239116221/固定main e239ec21638cf329c882d19b10e03a58a10b5b31/run_attempt1、各probe stepの結論をAPIで照合。各jobのMCPログ実行行を別途取得し、正常ACCEPTED_PROBE/success1件、不正BODY_INVALID/TARGET_INVALID/SCHEMA_INVALID/SCHEMA_INVALID/REQUEST_INVALIDとexit1/failure5件、全件authorization_issued=falseを確認した。journalの送信開始6行・対応run IDも直接照合。永続証拠はintake-p1-live-local-evidence.jsonのgithub_live_review。ローカル検証部分と実機部分を分離した。
 
 受入結果: P1合成受付6ケースAPPROVE。全体設計REVISEを維持。代理GOの有効化、PO本人性の証明、期限/取消、権限分離、本番反映の合格ではない。次はP2委任記録・取消の契約と既存14検証条件について未確定の入力を調査し、正式設計へ進める。実行担当の今回の委任は6件完了で終了。追加Issue/新担当/本番操作の承認へ転用しない。
+
+
+## 2026-09-13 P2の実物照合
+
+調査基準は文書PR #3440 head09d1972d17c8f79ccaf3c8d9ea417ba1f3b76303。preflight成功、専用worktree差分0から開始。本店はorigin/mainより161commit遅れ・台帳以外の未保存29件という警告があり、変更しなかった。GOフロー現行行と既存索引、ADR-113のhandoff順序、design.mdのP2契約/14条件と永続状態案を照合した。
+
+実コードの観測: scripts/check-process-artifacts.js:36/293は本人名義allowlistとGO本文検査、:831/:850が呼出。scripts/gh-pr-merge-safe.sh:93以降はmain追従と再試行、.github/workflows/deploy.yml:184はorigin/mainの配備。scripts/backend/app/.github/workflowsを対象にgrant_id/source_event_id/ORIGIN_CONFLICT/SCOPE_UNVERIFIEDをrg検索して一致0。これらの範囲ではP2契約実装を確認できない。全repoや本番の完全な不存在証明ではない。
+
+sandbox GET: release/go-merge-stateのmatching refsは空、workflow一覧は既存P1/id356839824/activeの1件。状態正本の初期commit、状態writer Appの実ID/鍵/実権限、元発話/取消の正規取り込み実装は今回確認できない。秘密値や他セッション原文を調査・公開しない。P1の実機6件だけでこれらを推定しない。
+
+Context7不在のため起動指示の代替許可により2026-09-13に公式[ref更新](https://docs.github.com/en/rest/git/refs#update-a-reference)と[Actions concurrency](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/control-workflow-concurrency)を確認。force=falseのfast-forward条件は期待旧SHAの汎用比較ではない。単一親の競合子commitを使う設計推論と、権限/巻戻し防止の実機検証を分ける。Actions実行制御を永続状態や元発話の配送証明にしない。外部導入事例は不要で、この権限境界は自社の契約とAPIの実物照合で確かめる。
+
+Planner成果: design.md「2026-09-13 P2期限・取消の詳細契約」に7記録型、期限計算、8状態遷移、同origin再送、取消が登録より先に届く場合、保存応答不明、14試験群の具体入力を整理。正規取消の配送確認位置と予約の整合が未解決であることを明記した。時刻は整数ミリ秒、期限差86400000ミリ秒、現在時刻が期限と同じなら拒否。これは設計契約であり実装試験の成功数ではない。
+
+Architect自己審査REVISE: 取消の通知が未到達である場合、状態が未取消に見えるだけでは新規送信を認可できない。正規取り込み主体・欠落検知・初期state/code・App/権限・時刻取得を確立するまでP2実装カードを発行しない。P1合格維持、P2試験0件、新たなPO判断0件、実装/GO/権限変更0件。次の調査は正規の元発話/取消取り込み経路と状態writerの具体化。既存合意の再承認は求めない。
