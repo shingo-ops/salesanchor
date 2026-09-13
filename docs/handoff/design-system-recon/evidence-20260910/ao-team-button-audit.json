@@ -1,0 +1,141 @@
+{
+  "base": "116b1cf667addd0b6d3b68a574641e0081dc4517",
+  "counts": {
+    "common": 120,
+    "legacy": 293
+  },
+  "expected": {
+    "common": 126,
+    "legacy": 287
+  },
+  "pages": [
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "sha256": "f6d15136f8d433c0d9ceb776c11ba3172da6b5f84b44f9016f00315d6c8a3187"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "sha256": "8359955d250a5f5447fd6c5dd2d5274d57aab2d58866dc9ed5e624aec5a8d730"
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "sha256": "ad0a218807e7ec52d25495cb00b05148cc1c05cb40424bf16da3c5b1990ab7a8"
+    },
+    {
+      "file": "frontend/src/components/Drawer.css",
+      "sha256": "5cc3e35c7c303ca498d6d06833bb92a26b26173baf0f333c1f2b7681a997d195"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamFormFields.tsx",
+      "sha256": "4064d5d689c7a88b3afe63b6cfc61a8759135ab7122bf88c5aae9b038557837e"
+    },
+    {
+      "file": "frontend/src/hooks/useRecordDrawer.ts",
+      "sha256": "d1d511bdab408034b8b1689fdcf963f050bb53181e2e172f86db1dccf4d8bfa0"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.css",
+      "sha256": "7f39b54bdf095b481e7570a3093aebffc409dab451eae5b12fb5fc6f875c1fc8"
+    },
+    {
+      "file": "frontend/src/App.tsx",
+      "sha256": "0544680ef2929b52fccb2fa7c3485af81ac6a2cede2bb3efe0da51f98d970826"
+    }
+  ],
+  "targets": [
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 200,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowCreate(false)}>\n              {t(\"common.cancel\")}\n            </button>",
+      "id": "AO-01"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 203,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.create\")}</button>",
+      "id": "AO-02"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 221,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>\n              {t(\"common.cancel\")}\n            </button>",
+      "id": "AO-03"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 224,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "id": "AO-04"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "line": 67,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-secondary\"\n              onClick={() => navigate(\"/teams\")}\n            >\n              {t(\"common.cancel\")}\n            </button>",
+      "id": "AO-05"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "line": 74,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">\n              {t(\"common.update\")}\n            </button>",
+      "id": "AO-06"
+    }
+  ],
+  "nonTargets": [
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 180,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>\n              {t(\"teams.newTeam\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 243,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 253,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => removeMember(m.user_id)}>{t(\"common.remove\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 280,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openMembers(team); }}>{t(\"teams.membersBtn\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 282,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(team); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 285,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(team); }}>{t(\"common.delete\")}</button>"
+    }
+  ]
+}

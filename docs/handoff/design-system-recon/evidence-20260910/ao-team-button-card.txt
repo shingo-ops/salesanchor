@@ -1,0 +1,32 @@
+CARD-AO-TEAMS-01（未発行草案）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 未受領。実装承認と正式発行前は実行しない。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在/原文/L32を照合。
+開始条件: AOチーム6件のPO実装承認を受領し、設計担当が本カードを発行済みに更新してから有効。
+担当: 承認後に既存の実装担当へ渡す。他者も作業中なので変更を戻さず調整する。新AIを起動しない。
+根拠: docs/specs/design-system/design.md§AO、ao-team-button-audit.json。基準116b1cf667addd0b6d3b68a574641e0081dc4517。
+所有: frontend/src/pages/teams/TeamsPage.tsx、frontend/src/pages/teams/TeamEditPage.tsx、新規frontend/src/components/TeamFormButtonMigration.test.tsx。
+許可: 指定6件移管・回帰試験・ローカル品質検証。合成fixtureと原ログは/tmp。パスは一字一句そのまま使う。
+禁止: 対象外6ボタン/メンバーModal/ConfirmModal/入力/翻訳/権限/認証/API/DB/secrets/CI/依存lock/共有12変更。
+禁止: 実チーム/メンバー書込・外部通信、文書/台帳/GO編集、commit/push/PR/merge/本番操作、新AI起動。
+手順0: preflight/status、監査JSONの2ページ/共有12hashと原文6を照合。不一致は編集前停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git status --short
+手順1: AO-01〜06だけ開始/終了tagをButtonへ、旧className除去、取消secondary/送信primary、size md。
+2ページに../../components/Buttonのnamed import追加。type/onClick/children/条件式と残り全文を保持。
+loading/loadingText/disabled/aria-busy/fullWidth/style/layoutClassName/pending stateを追加しない。逆変換2ページ全byte一致。
+手順2: 実ページ/入力/Modal/Drawer/Router/翻訳/usePermissionsの回帰。認証入口・APIだけ合成。
+3項目payload/null/Number変換/空白保持、required/min負例、textareaEnter改行、成功close/reset/GETと専用遷移を検査。
+取消書込0・失敗保持/再試行、pending全6有効と独立2回送信の回数維持、create/update権限・members通信0/DELETE0を確認。
+Drawer閉鎖はopenクラスで判定。設計AO受入表を全て満たす。rootの144表示/30操作前後組検収は別担当。
+手順3: 既存lockで必要ならnpm ci、対象strict eslint、新規回帰、全体品質を順に実施。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npx eslint src/pages/teams/TeamsPage.tsx src/pages/teams/TeamEditPage.tsx src/components/TeamFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm run test:unit -- src/components/TeamFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-design && git diff --check
+手順4: 原ログ/製品3hash/共有12hash/statusを返して停止。失敗は原コマンドと理由を返し、条件を弱めない。
+END OF CARD
