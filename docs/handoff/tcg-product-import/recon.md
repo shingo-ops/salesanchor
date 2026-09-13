@@ -854,3 +854,10 @@ POのPR直前まで進行指示を受領。preflight成功、本店dirty30/226be
 設計§19に制御経路・三者照合・実行前条件・代替案・自己審査REVISEを保存。実取込4関数のASTとメモリ永続化モデルで180ケースを直接実行、期待値一致/DB接続0。実体だけ保存済み、44件保存済みでも返却43件、履歴44件でもjob runningをモデルで識別。実PG/本番障害の実測ではない。8商品変更前後と候補修正案をkeyword-b-review-plan.jsonへ固定。元CSVは不変。正式カード未発行、実装役は起動せず、製品/DB/本番変更なし。
 
 保存物はkeyword-import-partial-audit.json/.py.txt、keyword-b-review-plan.json、既存design/recon/台帳。未完了は個別値と実投稿正解、稼働QA隔離、原子的更新と実PG部分失敗検証。これらを完了と創作せず、登録可能の合格は保留。
+
+
+### CSV行単位整合性の対策設計（2026-09-13）
+
+PO原文「進めてくれ」を受領し、PR直前停止を維持して§20を設計。preflight成功、本店dirty31を保持。main1a8eed69に対する未取込差分0、製品未保存変更0。create_productの実呼出元2箇所、履歴helperの呼出元、commit/rollbackと現行採番、既存PG fixture/CIを直接読取。Context7未提供のため公式SQLAlchemy2.0資料とpin2.0.38ソースへ代替アクセスし、内部commitを残すnested案を除外。
+
+推奨はCSVの1行の商品・全語・created履歴を同時確定、単品の既定動作維持。commit応答不明をrollback成功と誤認しない契約、4製品ファイル案、別接続PGでC1–C11を確認する試験仕様を保存。設計限定の同一AI審査APPROVE、PO方式承認/製品実装/PG実行なし。B便はREVISE。証拠shaはkeyword-import-atomic-design-evidence.json。製品ファイルを変更せず、push/PR更新/新規PR/本番操作なし。
