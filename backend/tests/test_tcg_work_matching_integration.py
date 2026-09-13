@@ -1044,8 +1044,8 @@ def test_cardset_absent_schema_and_partial_structure(pg):
         cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
         cursor.execute("SELECT to_regnamespace('tenant_004')")
         assert cursor.fetchone()[0] is None
-        cursor.execute("CREATE SCHEMA tenant_004")
-        cursor.execute("CREATE TABLE tenant_004.tcg_products(id uuid)")
+        provision(cursor, "tenant_004")
+        cursor.execute("ALTER TABLE tenant_004.product_search_keywords RENAME TO temporarily_missing_search")
         with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
             cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
         cursor.execute("ROLLBACK")
