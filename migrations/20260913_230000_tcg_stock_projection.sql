@@ -264,7 +264,6 @@ CREATE TABLE IF NOT EXISTS tcg_stock_inbox (
 );
 ALTER TABLE extraction_items ADD COLUMN IF NOT EXISTS evidence_payload jsonb;
 ALTER TABLE tcg_distribution_targets ADD COLUMN IF NOT EXISTS active_publication_id uuid;
-INSERT INTO tcg_stock_control(id,rollout_id,mode) VALUES(1,gen_random_uuid(),'legacy') ON CONFLICT(id) DO NOTHING;
 $ddl$;
         -- Remaining referential and transition guards follow in this same transaction.
         EXECUTE $ddl$
@@ -818,6 +817,9 @@ $ddl$;
                 EXECUTE format('CREATE CONSTRAINT TRIGGER stock_deferred_guard AFTER INSERT OR UPDATE ON %I.%I DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION %I.stock_deferred_guard()',ns,relation_name,ns);
             END IF;
         END LOOP;
+        EXECUTE $ddl$
+INSERT INTO tcg_stock_control(id,rollout_id,mode) VALUES(1,gen_random_uuid(),'legacy') ON CONFLICT(id) DO NOTHING;
+$ddl$;
         PERFORM set_config('search_path',saved_path,true);
     END LOOP;
 END $migration$;

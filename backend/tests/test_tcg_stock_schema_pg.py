@@ -176,6 +176,7 @@ def test_repeat_and_existing_data(pg):
     before = query(pg, f"SELECT row_to_json(s) FROM {SCHEMA}.source_messages s")
     control = query(pg, f"SELECT row_to_json(c) FROM {SCHEMA}.tcg_stock_control c")
     apply(pg)
+    pg.commit()
     apply(pg)
     pg.commit()
     assert before == query(pg, f"SELECT row_to_json(s) FROM {SCHEMA}.source_messages s")
@@ -463,7 +464,9 @@ def test_existing_future_and_absent_tenants(pg):
     assert query(pg, "SELECT count(*) FROM tenant_951.tcg_stock_offers")[0][0] == 0
     assert query(pg, "SELECT count(*) FROM tenant_952.tcg_stock_offers")[0][0] == 1
     bootstrap(pg, "tenant_953")
+    pg.commit()
     apply(pg)
+    pg.commit()
     apply(pg)
     pg.commit()
     names = query(pg, "SELECT table_name FROM information_schema.tables WHERE table_schema='tenant_953' AND table_name=ANY(%s)", (list(TABLES),))
