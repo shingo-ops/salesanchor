@@ -2962,4 +2962,4 @@ origin/main56a1661d・設計PR #3464 OPEN/e9fb8b6d・製品PR #3470 MERGEDを直
 
 追加人工入力のセット否定がセットへ誤確定。設計提案の否定4語を新セットの除外へ仮追加すると12/12未特定、既存15/15と実67行に追加差分0。設計§17改訂3と未発行カードを更新し、商品1/検索3/除外10の案へ訂正。否定4語はPO合意済みとしない。PM0073のサプライ表記は本便未対処として記載。新しい商品/辞書版では旧v4再解析が拒否される現行契約も実物で確認し受入へ追加。
 
-自己審査REVISE（同一AI）。最新マスタ再照合と否定4語案の方針確認が残る。製品実装/本番接続/DB更新/追加Gemini/再解析/配信0、追加実装委任0。証拠は非公開ローカル保存名 private-research/25th-recheck-20260913 のcheck.py/result-private.json/check-negation-draft.py/negation-draft-result.jsonとmanifest.json。入力SHA5e165443af0812b5f2c45c8b82e2c7682514bfd1cffdbcbbd005821174961693、マスタSHA9373400c7036275dcd32bbbf63ff92d14bb1d5cf35c205b0fec921ec46a1ed63。
+自己審査REVISE（同一AI）。最新マスタ再照合と最終整合判定が残る。製品実装/本番接続/DB更新/追加Gemini/再解析/配信0、追加実装委任0。証拠は非公開ローカル保存名 private-research/25th-recheck-20260913 のcheck.py/result-private.json/check-negation-draft.py/negation-draft-result.jsonとmanifest.json。入力SHA5e165443af0812b5f2c45c8b82e2c7682514bfd1cffdbcbbd005821174961693、マスタSHA9373400c7036275dcd32bbbf63ff92d14bb1d5cf35c205b0fec921ec46a1ed63。
