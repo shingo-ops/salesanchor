@@ -1469,3 +1469,64 @@ PO原文「GO #3468」に基づき、最新HEAD0829affdのCI38成功/8対象外�
 
 根拠と再現検査器: docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。初回ローカルPython CA不足は検証を無効化せずsystem curlへ、見出し数固定の検収器仮定は取消先との一意対応へ修正。失敗履歴をJSONに残し製品は変更していない。
 設計自己審査・PO実装承認・root検収・GO受領・実装保存・マージ・本番反映済み。本番認証付きフォーム送信とPO目視は未実施。LINE再解析/3シート配信は本便対象外。残存旧299の次便選定は別の設計作業、表/報酬3/カレンダー色保留、新CI最後。
+
+
+### AN. Bot管理3フォーム6ボタン（2026-09-13・未承認案）
+
+#### 目的・既存の合意
+
+親ideal-state.mdのPO原文「統一感のあるフロントエンドのUI/UXを実現したい」と承認済kgi.mdの共通部品一元管理を継承する。前便AMはPR3468本番反映済み、結果PR3478 main統合済み。今回「進める」は次便の調査・設計として受領し、AN製品実装承認・GOとは扱わない。
+Bot登録・簡易編集・専用編集の取消/送信6件を共通Buttonへ寄せる案。成功条件は対象6/6の移管、業務本文差分0、表示96前後組・操作契約の合格。全体KGIを6件だけで達成済みとしない。
+
+#### 観測事実と変更前後
+
+固定1a8eed69a8d4e1c17cefc7dcef579f63493b17dd。TypeScript構文測定で共通114、旧299。旧はbutton/Link/aを含みstories/test/spec/design-previewを除外。成功後の期待は120/293。原文・行・2ページhash・共有10hashはdocs/handoff/design-system-recon/evidence-20260910/an-bot-button-audit.json。
+
+| 対象 | 実物 | 保持する契約 |
+|---|---|---|
+| AN-01/02 登録 | BotsPage.tsx:259/260 | type button/submit、submitting時2件disabled、common.submitting/bots.registerIssueKey分岐 |
+| AN-03/04 簡易編集 | BotsPage.tsx:281/282 | cancel closeDrawer、submit PATCH、保存ロックなし |
+| AN-05/06 専用編集 | BotEditPage.tsx:88/95 | cancel /bots、submit PATCH、保存後/botsへ移動、保存ロックなし |
+
+BotsPage.tsx:121〜145のPOST /botsはdisplay_name/purpose/status/discord_user_id/sender_email/owner_staff_idの6項目、bot_code非空trim時だけ追加。空discord/emailはnull、ownerはparseInt。成功でcreated.api_keyをnewApiKeyへ設定、Modal閉鎖・入力リセット・一覧とstaff再取得。:208〜213のキー表示/確認ボタンは変更しない。UIの確認で表示を消すだけであり、永続保存や再取得不可をフロントだけから保証しない。
+簡易編集:149〜166と専用編集:61〜77のPATCH /bots/:idは同じ6項目。bot_code/api_keyを送らない。簡易は閉じてloadAll、専用は/botsへ遷移。Staff版の本人設定refreshは存在しない。エラー保持/通常編集pending時の有効状態を維持。
+BotFormFields.tsx:33〜95でdisplay_name/purpose/owner_staff_idがrequired、sender_emailはemail型。登録はBotsPage:224〜256の実input/selectで同条件を持つ。英語登録ラベルはen.json bots.registerIssueKey = Register (Issue API Key)で前便より長く、狭幅の確認が必要。
+Button.tsx:38/49〜87はnative属性を転送。対象6件すべてtype明示、既存disabled2件、style/ref/form指定0。Button.css:2〜17はnowrap、components.css:46〜51は右寄せflexで折返し指定なし。
+
+#### 実装範囲・対象外
+
+製品の許可候補はfrontend/src/pages/bots/BotsPage.tsx、frontend/src/pages/bots/BotEditPage.tsx、新規frontend/src/components/BotFormButtonMigration.test.tsxのみ。既存../../components/Buttonのnamed importを追加し、監査6件の開始/終了tagをButtonへ、classNameを除去、取消3 secondary/登録更新3 primary、size md明示。type/disabled/onClick/children/条件式・form・順序・wrapper・処理本文を逐語保持。逆変換で2ページの全バイト一致を確認する。
+loading/loadingText/新disabled/aria-busy/fullWidth/style/layoutClassNameを足さない。登録のネイティブselect/既存英語直書き/インラインstyleは別の移行課題として維持し今回修正しない。
+対象外5ボタン（新規起動、キー表示の確認、行編集、キー再発行、削除）とConfirmModal2個、rotate-key/delete処理、権限条件・行クリック、共有10ファイル、翻訳/認証/API/DB/secrets/CI/依存lockは変更禁止。キー発行/再発行の仕様変更と実キー発行操作は本便に含めない。
+
+#### Why・選択理由・代替・リスク
+
+3フォームが同じnative属性の共通Buttonへ転送可能（type6/6、直接style0/6）。原文逆変換で副作用処理の非変更を全バイト判定でき、1つの外観定義に6件を追加できる。登録だけは新規キー表示への遷移があるため、合成キーを返す試験でフローを独立検証する。
+編集4件だけの案は登録の旧外観が残るため、まず同じ3フォーム6件を一組とする。登録ラベルが96表示組で収まらない場合は本案をREVISEへ戻し、編集4件の先行案へ分離する。CSS拡張/文言短縮を実装役の判断で追加しない。キー再発行/削除ボタンも一括移行する案は副作用の対象を増やすので今回不採用。
+外部事例と新ライブラリ/API仕様調査は不要。既存自社部品の属性契約・対象原文が直接根拠で、AMの96組成功をAN成功の証明には使わない。新APIは導入しない。ADR-113/067/027/073を継承し、実Modalの方針はADR-122参照。新ADRは不要、Whyの根拠はこの節と監査JSONへ接続する。
+
+#### 受入条件・検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 6件移管、本文差分0 | 原文6件の属性/条件式一致、2ページ逆変換全バイト一致、共有10hash不変。製品差分は指定3ファイルのみ |
+| 登録payload/キー表示保持 | 実ページ/入力/Modalをmount、POST /botsの全payloadとbot_code空時キー不在・指定時trim、null化/owner数値化を照合。成功で合成APIキー表示、Modal閉鎖、reset、bots/staff追加GET各1。確認ボタンで表示消去、再開時入力初期値を確認。実キーを使用・保存しない |
+| 登録必須/連投/失敗 | required3条件と不正emailは送信0。pendingでdisabled2・文言保持・連投0、拒否後エラー/入力保持・解除・再試行成功。Esc/ヘッダXを独断でロックせず前後比較 |
+| 編集payload/遷移 | 簡易・専用PATCH URL/ID/6項目全一致、bot_code/api_key送信0、キー発行POST0/rotate0/delete0。成功は簡易close+一覧再取得、専用/bots遷移。失敗入力保持、保存中のdisabled/aria-busy/文言が前後同一、設定refresh追加0 |
+| 権限と非対象の保持 | 実usePermissionsをAPI合成で使用しbots.create/update/deleteの許可/拒否を確認。対象フォーム操作で再発行/削除通信0。非対象5ボタン/ConfirmModal2個は逆変換全文一致で保持を保証し、実副作用は実行しない |
+| 実表示96前後組 | 3フォーム×6幅390/640/767/768/1279/1280×日英×明暗=72組＋登録pending24組。入力を省かず実Tab/ShiftTab到達、文字/本体/フォーカス輪郭の四辺欠け0、初期横overflow増加0、順序一致。登録長ラベルを省略しない。disabledは通常状態でTab/輪郭を検証 |
+| キーボード/終了 | 全3フォーム取消/送信Enter/Space、入力Enter、Escを前後比較。Modal/Drawerのclose/reopenとfocus復帰、専用編集の一覧遷移を検査。合成キー表示/確認の操作も前後比較 |
+| 品質 | 対象3strict eslint、新規回帰、既存test:coverage/check:all/build/build-storybookと最新PR必須CI成功。失敗は原因と原ログを保存し、品質条件を弱めない |
+
+試験は実ページ/入力/Select/Button/Modal/Drawer/Router/翻訳を使い、認証入口・APIだけ合成する。全外部通信を遮断。本番Bot・実APIキー・Discord連携を試験用に操作しない。96組は実装後の計画で未実行。本番認証/全App/sidebar/PO目視とローカル検証を区別し、640pxを実200%zoomとはしない。
+
+#### 維持・担当・戻し方
+
+外観ownerはButton、配置ownerはform-actions/Modal/Drawer、回帰は新規Botページ試験と既存CI。設計担当がカード・逆変換・表示操作検収・台帳、承認後の実装担当が指定3ファイルと品質検証を担う。未承認草案だけで既存担当を起動せず新AIも起動しない。原文/hash差異・範囲外修正・検証失敗は停止し設計へ戻す。戻しは本便の製品差分revert、DB変更なし。表/報酬3/カレンダー色保留、新CIは最後。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（AN設計合格）。同一AIによる自己審査であり独立第二者レビューではない。対象6件/共有10ファイル/3送信契約/権限とキー表示の境界が実物で特定でき、逆変換・96表示組・API合成検証で受入を○×判定できる。長い登録ラベルの未検証と失敗時のREVISE条件を明示し、既存キー発行ロジックの変更を禁止した。
+設計上の未解決仕様なし。POの今回6件実装承認、製品実装、AN表示検証は未実施。カードは未発行草案。設計合格はPO承認/実装/GO/本番反映の承認を兼ねない。
+
+AN形式検査: validateDesignDoc/validateMaintenanceSectionエラー0、task-state/diff-check成功、card-lint exit0（長行警告1のみ）。2ページ/共有10hash不変、製品差分0。カードは未発行草案。

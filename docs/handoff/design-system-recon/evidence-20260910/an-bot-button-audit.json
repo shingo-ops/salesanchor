@@ -1,0 +1,100 @@
+{
+  "base": "1a8eed69a8d4e1c17cefc7dcef579f63493b17dd",
+  "counts": {
+    "common": 114,
+    "legacy": 299
+  },
+  "expected": {
+    "common": 120,
+    "legacy": 293
+  },
+  "targetCount": 6,
+  "files": [
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "sha256": "092da3394a66f5db54a0bdae1e3ba7c64fa2f048619670c730a8b7d7233ebe34",
+      "targets": [
+        {
+          "id": "AN-01",
+          "line": 259,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowCreate(false)} disabled={submitting}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "id": "AN-02",
+          "line": 260,
+          "original": "<button type=\"submit\" className=\"btn-primary\" disabled={submitting}>\n              {submitting ? t(\"common.submitting\") : t(\"bots.registerIssueKey\")}\n            </button>"
+        },
+        {
+          "id": "AN-03",
+          "line": 281,
+          "original": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "id": "AN-04",
+          "line": 282,
+          "original": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>"
+        }
+      ],
+      "otherButtons": 5
+    },
+    {
+      "file": "frontend/src/pages/bots/BotEditPage.tsx",
+      "sha256": "9e8f929cd21032cc0c9276878bc95eeadcf467a65597098ef15bfa46ef9c182d",
+      "targets": [
+        {
+          "id": "AN-05",
+          "line": 88,
+          "original": "<button\n              type=\"button\"\n              className=\"btn-secondary\"\n              onClick={() => navigate(\"/bots\")}\n            >\n              {t(\"common.cancel\")}\n            </button>"
+        },
+        {
+          "id": "AN-06",
+          "line": 95,
+          "original": "<button type=\"submit\" className=\"btn-primary\">\n              {t(\"common.update\")}\n            </button>"
+        }
+      ],
+      "otherButtons": 0
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "sha256": "ad0a218807e7ec52d25495cb00b05148cc1c05cb40424bf16da3c5b1990ab7a8"
+    },
+    {
+      "file": "frontend/src/components/Drawer.css",
+      "sha256": "5cc3e35c7c303ca498d6d06833bb92a26b26173baf0f333c1f2b7681a997d195"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotFormFields.tsx",
+      "sha256": "f868eda5fe87d3be9aa2cc4579507fe166c51b36278b8252a2ebd6a6fb89e3f4"
+    },
+    {
+      "file": "frontend/src/hooks/useRecordDrawer.ts",
+      "sha256": "d1d511bdab408034b8b1689fdcf963f050bb53181e2e172f86db1dccf4d8bfa0"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    }
+  ]
+}

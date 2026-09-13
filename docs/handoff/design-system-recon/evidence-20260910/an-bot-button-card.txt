@@ -1,0 +1,33 @@
+CARD-AN-BOTS-01（未発行草案）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 発行後に「受領。CARD-AN-BOTS-01」と返す。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在/原文/L32照合。
+開始条件: 今回6件のPO実装承認と設計担当の正式発行が必要。現在は実行禁止。
+担当: 承認後に確定。既存担当を含めこの草案だけで起動しない。他者の変更を戻さない。
+根拠: docs/specs/design-system/design.md§AN、an-bot-button-audit.json。基準1a8eed69a8d4e1c17cefc7dcef579f63493b17dd。
+所有: frontend/src/pages/bots/BotsPage.tsx、frontend/src/pages/bots/BotEditPage.tsx、新規frontend/src/components/BotFormButtonMigration.test.tsx。
+許可: 発行後、指定6件移管・回帰試験・ローカル品質検証。合成fixture/原ログは/tmp。
+禁止: 非対象5ボタン/ConfirmModal/入力/翻訳/権限/認証/API/DB/secrets/CI/依存lock/共有部品/CSS変更。
+禁止: 実キー発行/再発行/削除/外部通信、文書/台帳/GO編集、commit/push/PR/merge/本番操作、新AI起動。
+手順0: preflight/status、監査JSONの2ページ/共有10hash一致と原文6件を照合。不一致は編集前停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design && git status --short
+手順1: AN-01〜06だけ開始/終了tagをButtonへ、旧className除去、取消secondary/登録更新primary、size md。
+既存../../components/Button named importを2ページへ追加。type/disabled/onClick/children/条件式・業務本文を逐語保持。
+loading/loadingText/新disabled/aria-busy/fullWidth/style/layoutClassNameを追加しない。逆変換で2ページ全byte一致。
+手順2: 実ページ/入力/Modal/Drawer/Router/翻訳/usePermissionsで回帰。認証入口とAPIのみ合成、実キー使用禁止。
+登録の全payload/code省略とtrim/null化/owner数値化/required3・不正email/連投0/失敗入力保持と復帰を確認。
+成功で合成キー表示・確認で消去・Modal閉鎖とreset・bots/staff再取得を確認。編集は6項目PATCHのみ。
+簡易close/loadAll、専用/bots遷移、取消書込0、失敗保持、通常編集pendingロック追加0。rotate/delete通信0。
+設計AN受入表の権限・再開・キー表示条件を全て満たす。rootの96組実表示検収は別担当と区別する。
+手順3: 既存lockで必要ならnpm ci、対象strict eslint・新規回帰・全体品質を順に実施。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm ci
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npx eslint src/pages/bots/BotsPage.tsx src/pages/bots/BotEditPage.tsx src/components/BotFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run test:unit -- src/components/BotFormButtonMigration.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-bot-button-design && git diff --check
+手順4: 原ログ/製品3hash/共有10hash/statusを返して停止。失敗時は原コマンド・理由を返し、条件を弱めない。
+END OF CARD
