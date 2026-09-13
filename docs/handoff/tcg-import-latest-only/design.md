@@ -456,6 +456,65 @@ main追従基点 `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8`。抽出形式はv2=
 
 同一AIによる自己審査: **REVISE継続**。日時計算の入力、否定の適用範囲、日付だけ保留する契約と受入例を具体化した。原文日時が不確かなケースや曖昧な否定は自動適用せず、在庫消失を防ぐ条件を維持する。物理DDL/API、初期在庫の移行、販売枠の世代識別、手動解決UIの全契約が未確定であるため、全体設計合格・カード発行はしない。
 
+## 18. 保存・解析表示・配信の接続（物理設計草案、2026-09-13）
+
+根拠はrecon「保存・画面・配信の再照合」。本節は追加テーブル/レスポンスの具体案であり、DDL実行・API実装の指示ではない。既存のテナント境界と認証を維持する。テーブル名は案として固定し、既存運用・移行の査定後に正式カードへ転記する。
+
+### 18.1 保存先と制約
+
+原文・抽出・解析の既存3階層は残す。現在在庫をsource_messages.is_activeから独立させるため、次の4テーブルを同じTCGテナントスキーマへ追加する案とする。全IDはUUID、日時はTIMESTAMPTZ、数量/価格は既存に合わせNUMERIC(14,2)。参照先の削除はRESTRICTを基本とし、原文削除の連鎖で在庫証跡を消さない。追加のschema/型/制約は移行リハーサルで確認する。
+
+| テーブル | 必須列と制約案 |
+|---|---|
+| tcg_stock_offers | id PK、supplier_channel_id FK、product_id FK、unit_id FK、condition_id FK、price nullable、shipping_label nullable、shipping_evidence JSONB、quantity nullable、availability（available/sold_out/unknown）、quantity_event_id nullable FK、price_event_id nullable FK、condition_event_id nullable FK、revision BIGINT NOT NULL、created_at/updated_at。quantity>=0、sold_outならquantity=0、availableならquantity>0、quantity不明ならunknown。商品/価格/枠ラベルの複合UNIQUEは置かない |
+| tcg_stock_events | id PK、source_message_id FK、extraction_item_id nullable FK、offer_id nullable FK、event_kind（stock_set/sold_out/offer_patch/plan_assert/plan_deny/ignore）、event_key TEXT UNIQUE、engine_version、source_posted_at nullable、evidence JSONB、patch JSONB、decision（pending/applied/ignored/stale/rejected）、review_reasons JSONB、before_values/after_values JSONB、applied_offer_revision nullable、created_at/applied_at。offer_id未確定ならapplied禁止。適用済みの内容は不変、訂正は別イベント |
+| tcg_restock_plans | id PK、offer_id FK、polarity、certainty_raw、date_kind/date_precision/date_raw、date_start/date_end DATE nullable、resolution/review_reason、source_event_id FK、revision BIGINT、created_at/updated_at。1枠に複数予定を許可。否定は行を物理削除せずnegativeへ更新。異なる予定を日付だけで同一視しない |
+| tcg_stock_publications | id PK、state（building/ready/delivering/completed/partial/failed）、schema_version、input_manifest JSONB、rows JSONB、rows_sha256、row_count、target_results JSONB、created_at/ready_at。ready以降のrows/hashは不変。target_resultsは接続先IDごとに状態/件数/hash/確認時刻/エラーを持つ。公開完了は対象全件の確認成功時だけ |
+
+offerの状態/単位は販売枠の属性。異なる状態/単位への明示変更を同じofferへの単純上書きにせず、同一販売枠を継続する訂正か新枠かを解決する。FKの循環（offer→event→offer）は、offerを参照イベントなしで作成後、同一トランザクションでeventと参照を設定する順序をカードへ明記する。
+
+`patch` はquantity/price/condition/planの各項目についてpresence（absent/value/explicit_clear）とvalue・根拠行を保存。absentは既存値を維持、explicit_clearはその項目で許可する場合だけ。数量の空欄をclear/0へ変換しない。quantity_event_id等から項目別の適用時刻を得る。予定の更新はrestock_plans側のrevisionで独立管理する。
+
+`event_key` は原文ID＋固定された抽出結果ID＋操作種別＋明細内操作番号を正規表現済みの区切り形式で構成する。キュー再実行は同じ抽出結果を使って同じkeyとなる。**AI再抽出は別抽出結果になり得るため、UNIQUEだけで再適用防止済みとしない**。適用済み原文の再抽出は差分候補として保留し、既存イベントとの対応が確定するまで反映しない。原文の重複取込は既存の原投稿日時＋hash＋本文一致を維持する。
+
+### 18.2 対象限定更新と時刻競合
+
+1. 明示的な商品在庫の初回投稿だけ新規offer候補を作る。〆単独や予定単独から在庫不明の商品枠を自動増殖させない。既存枠候補0/複数、同じ①の別期間再使用はpendingで手動解決へ回す。
+2. チャネルID順で既存ロックを取得し、offerのrevisionと項目別の適用済み原投稿時刻を読み直す。別チャネルの同名商品は検索・更新対象に含めない。
+3. 新しい時刻なら対象項目だけ適用。古い時刻ならstale。等しい時刻で内容も同一ならignored、矛盾すればpending。同秒の競合を取込順・UUID順で勝手に決着させない。原投稿時刻不明も自動上書きしない。
+4. before/after、イベントdecision、offer/plan更新を同じトランザクションで確定。例: A〆はAのquantity=0/availability=sold_outと履歴だけを更新する。B/Cと他仕入元のAにUPDATEを発行しない。
+5. 手動解決APIは期待revisionを要求し、競合時409で再読込。訂正者・時刻・理由・元候補を記録する。新規枠作成/既存枠選択/無関係として棄却の3操作を扱う。エンドポイントと権限の最終契約は残件であり、未定のまま実装カードに渡さない。
+
+### 18.3 解析リストAPIと表示
+
+既存 `GET /api/v1/tcg/analysis-results` のgemini/system、認証、ページングを保持し、各itemへ `stock_effects: []` を追加する案。1抽出明細から数量と予定の複数イベントが生じるため単一のoffer/statusを直置きしない。
+
+各stock_effectはevent_id、offer_id nullable、decision、event_kind、applied_revision nullable、applied_quantity nullable、applied_availability nullable、current_offer（revision/quantity/availability）nullable、plans配列、review_reasonsを返す。数値の不明はnullであり空文字0変換をしない。JSON数量の数値/文字列表現は既存APIとの適合を最終査定する。planは§17の意味契約を返し、表示ラベルはi18nキーから組み立てる。
+
+- 原文の欄にはgemini抽出値を残す。反映結果の数量はapplied_quantity、現在在庫はcurrent_offer.quantityと分ける。過去の完売イベントが後日入荷で消えたように見せない。
+- 商品の「未開封」等は商品状態、available/sold_out/unknownは販売状態として別に表示。既存system.conditionを完売で上書きしない。
+- 既存リストの最新原文条件を在庫履歴のフィルターから除く。新しい原文にAしかなくても、Bの履歴と現在在庫を取得可能にする。再解析版の重複は最新版抽出と過去版の切替で扱い、一覧件数を意図せず増殖させない。history/latestの既定値と移行互換は残件。
+- 完売確定だけではNEEDS_REVIEWに含めない。商品/単位/枠の未解決、日付の保留等があればその理由で含める。完売フィルターは販売状態を使い、exclusionの有無で代用しない。
+- 原文・確定時の結果・現在在庫・保留理由の4つを同じ行から辿れる。既存ItemComparisonが数量にgeminiを、状態にsystem.conditionを使うことを踏まえ、API追加だけで表示改修済みとしない。
+
+### 18.4 在庫配信
+
+配信元はtcg_stock_offersの確定値＋対象の有効な予定表示とする。availableかつquantity>0を必要条件とし、既存の商品/単位/価格/状態の品質条件も維持。sold_outとunknownは配信しない。予定の日付だけの保留は確定した数量を消さず、確認済みの備考だけを載せる。判定保留の新イベントは確定済みofferを上書きしないが、現在の未完了解析ガードは保持し、pendingを成功扱いにして配信しない。
+
+1回の配信は、同一DBスナップショットから現行12列形式を生成し、publicationのrows/hash/対象接続先ID集合を固定する。接続先ごとにDBを読み直さない。3接続先は同じpublicationを受け取り、再試行は失敗先だけへ同じ内容を再送する。新しい在庫更新は次のpublicationに入れる。
+
+3接続先すべての件数・内容一致が確認できて初めてcompleted。2/3成功はpartialとして表示し、全配信完了と報告しない。現行clear→writeは途中失敗で空表示を起こし得るため、公開手順の原子的切替/復旧方法のAPI仕様確認が必要。これは今回未確認であり、snapshot保存だけで解決したとはしない。外部API仕様調査時はContext7、利用不可なら公式ドキュメントで確認する。
+
+### 18.5 初期化と受入条件
+
+過去原文を全件activeへ戻して初期化しない。切替時点の候補を1分析行→1仮offerとして抽出し、重複/世代不明を隔離、確定分の出力と現行出力を対象別に比較する。過去の〆で消えていた商品を復活させないため、仮offerを検証前に公開しない。基準時点以降の新投稿は差分キューに保持し、検証完了後に適用する。既存在庫の正解・重複実測、移行件数、PO確認用差分は切替設計の残件。
+
+実装後に必須: (1) A〆でB/C/他仕入元A不変、(2) 全体トランザクション失敗時0変更、(3) 同じイベント再送時履歴/数量の重複0、(4) 同秒競合保留、(5) 解析リスト完売保持と数量/商品状態/販売状態の区別、(6) 日付だけ保留で完売反映、(7) 3接続先同一hashと失敗先再送、(8) 移行候補隔離と未承認の旧商品復活0。実PG/API/UI/配信試験の実行はまだ0。
+
+### 18.6 同一AIの設計審査
+
+**REVISE**。保存項目・対象限定更新・API追加・配信版の保持を具体化した。現在在庫の実測、抽出の操作分割契約、手動解決APIの権限、履歴版選択の互換、配信の安全な公開方法、切替手順が未確定。設計前提の調査で補う項目と実装後試験を区別し、未解決を実装役の裁量へ渡さない。追加4テーブルは設計案でありDB変更0・実装カード未発行。
+
 ---
 
 ## 旧設計の原文（履歴・2026-09-05のSQR-05）

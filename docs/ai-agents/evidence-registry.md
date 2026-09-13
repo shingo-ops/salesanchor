@@ -2802,3 +2802,19 @@ tradeoff: local Python 3.14.3 calendar calculation is not production Python 3.12
 decision: draft semantic contract and 14 implementation acceptance cases recorded in design section 17; same-AI self-review REVISE
 follow_up: physical DDL/API, offer generation identity, initial stock migration and manual resolution UI before implementation card
 ```
+
+```text
+id: EV-20260913-LINE-STOCK-STORAGE-UI
+date: 2026-09-13
+agent: Codex design partner
+task: 保存・解析画面・配信への接続設計
+scope: code/schema read-only; design PR #3456
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md 保存・画面・配信の再照合
+    summary: analysis rows belong to extraction items; review/distribution filter active source; UI quantity uses extraction and state uses condition; sheet clear precedes write
+confidence: high
+tradeoff: new storage adds migration and audit responsibility; immutable publication does not itself guarantee atomic sheet visibility
+decision: draft 4 tables, per-field event updates, stock_effects API and fixed 12-column publication contract in design section 18; self-review REVISE
+follow_up: extraction operation format, manual resolution authorization, history compatibility, publication API safety and initial-stock reconciliation
+```

@@ -299,6 +299,19 @@ origin/main `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8` を設計ブランチへ�
 
 GitHub読取: #3465はPR/Issueとも取得不可。#3456はHEAD 3c17a83ce61ba154c53ad664883df7e9d1d2a9e0、OPEN/CLEANを確認。承認対象の番号を推定していない。
 
+## 保存・画面・配信の再照合（2026-09-13）
+
+読取基点は設計ブランチ7cfcd94c33092067bb76890bceecd8a8609a6587。製品ファイルは変更していない。
+
+- `migrations/20260906_120000_create_tcg_tables_t001.sql:350` 原文、同:388 抽出、同:410 analysis_resultsは抽出明細単位UNIQUE。販売枠の現在在庫を独立保持する構造ではない。
+- `backend/app/services/tcg_line_import_svc.py:345` チャネルロック、同:370 原文重複照合、同:426 過去active全件無効化。商品単位の更新先を変えずに〆語句だけを増やす方法では目的を満たさない。
+- `backend/app/routers/tcg_analysis_review.py:28` 原文抽出とsystemのレスポンス。`backend/app/services/tcg_analysis_review_svc.py:35` active原文限定、同:72 exclusion有無を要確認に使う。完売を正常な結果として保持するため接続改訂が必要。
+- `frontend/src/features/tcg-analysis-review/ItemComparison.tsx:17` FinalSystemValueは数量をgemini.quantityから、stateをsystem.conditionから表示。商品状態と販売状態、抽出数量と反映数量は分離が必要。
+- `backend/app/services/tcg_distribution_svc.py:183` 現行12列出力、同:229 active原文JOIN、同:239以降 品質条件。現在在庫への参照変更時も品質条件を維持する。単純なquantity条件の追加だけでは他商品消失を直せない。
+- `backend/app/services/tcg_distribution_svc.py:464` clear→write。複数接続先で不変データを配ることと、各シートの途中失敗時の表示維持は別問題。外部APIの安全な公開方式は未調査として残す。
+
+design §18に追加4テーブルの列/制約案、更新順序、stock_effectsの配列レスポンス、12列配信との境界、未実行の受入条件8項目を保存。設計案の生成は実装検証ではない。自己審査REVISE。次は抽出/手動解決/履歴互換/配信公開・初期化の未確定契約を実物と照合する。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）
