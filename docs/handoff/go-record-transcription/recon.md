@@ -1033,3 +1033,18 @@ PO原文「進める」を、直前に提示した「実行担当1名と診断�
   }
 ]
 ```
+
+
+## 2026-09-13 送信側拒否条件の照合
+
+PO原文「進める」をH1不合格後の設計継続として受領。preflight成功、文書worktree差分0、PR #3440 OPEN/head ab0be7b717bc7862d3ce1cd2ee35082a589ff9a8。本店167commit遅れ/台帳以外30件は保持。worktree側のactive-work.dには当該登録がなく、本店の現行active-work.d/release-go-delegation-activation-design.mdを直接読んでREVIEW/3440を確認。旧active-work.mdは凍結であることを確認した。台帳未反映を完了/消失とは判定しない。
+
+GitHub contents APIでmain 66b417665c013fdb354d5bda63226d07a1b2182cを固定してdeploy.yml/gh-pr-merge-safe.shを読み、ローカルだけの古い観測に依存しなかった。前者SHA256 3d1103801ef505bf91116c230e6b618bd478ee9b5e42ff4d47d889bceb3bd165、後者 f8a502005a7e62946799fccaf368e53c9f0054b30b197e94ea78a052611c9afe。deploy:3-6 main push、:64-78 SSH/LP rsync、:183-184 origin/main、wrapper:19-22 Actionsスキップ/:93-111追従再送を直接確認。秘密値は取得せず、コードの参照名のみ読んだ。
+
+GET repos/shingo-ops/salesanchor/rules/branches/mainはruleset15777895から4規則、required_status_checks13、strict=true、required_approving_review_count=0、allowed_merge_methods=[merge]。GET rulesets/15777895のenforcement=active、conditionsはDEFAULT_BRANCH、bypass_actors=null。このAPI観測だけでは全資格の実権限や迂回者不存在を確定しない。保護/鍵/CI設定変更0、否定操作試験0。
+
+Context7ツールは本セッションの利用可能一覧で0。起動指示の代替許可に基づき2026-09-13に公式[Merge a pull request](https://docs.github.com/en/rest/pulls/pulls#merge-a-pull-request)と[Rulesets](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets)を取得。mergeはContents write、shaはPR head一致、409は不一致、base期待SHA引数は当該定義にない。更新制限はbypass権限との関係を持つため、既存品質規則とまとめて無条件迂回を許す設計は採らない。具体ruleset差分/実対照試験は次段階。外部導入事例は不要、自社の送信経路とAPI条件が直接の判断根拠。
+
+Planner成果: design.md「送信側で拒否する契約」に5主体、8手順、S01〜S10の判定可能な条件を作成。H1単独hook REJECTを維持し、送信資格/状態更新の分離、原入力欠落時の拒否、同期mergeのHEAD固定、応答不明の再送禁止、最初のLP書込より前の配備判定を具体化した。既存の製品Appとstate writer共用候補は不採用へ整理した。モデルが継続しても外部操作0という目的であり、実装した事実ではない。
+
+Architect自己審査REVISE。main push後の自動配備・可変mainと「各開始前の期限/取消」には未解消の接続差がある。mergeを許可しても配備未開始になる状態を明示し、既存ADR-092の進行中migration非中断を維持する。新しい運用方式/費用はPO承認済みにしない。元入力完全捕捉、base競合、専用資格/配備入口の実物とS01〜S10実機は未確認。試験10件は計画で実行0、診断再開0、新担当0、製品実装/代理GO/本番変更0。次は制御/配備主体の配置と権限差分の具体化。文書保存は既存PR #3440、マージ未実施。
