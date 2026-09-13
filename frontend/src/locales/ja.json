@@ -1,5 +1,9 @@
 {
   "productCsv": {
+    "downloadTemplate": "空のサンプルCSVを保存",
+    "templateIntro": "見出しだけのCSVです。2行目から商品を入力し、見出しの順序を変えずにUTF-8のCSVで保存してください。",
+    "templateRequired": "必須項目は日本語名と4つの分類コードです。分類コードには登録済みのコードを使用してください。",
+    "templateOptional": "発売日はYYYY-MM-DD形式で入力し、不明なら空欄にします。検索・除外キーワードを複数指定する場合は、1つのセル内でカンマで区切ってください。",
     "allWorks": "すべて",
     "code": "商品コード",
     "title": "商品名",

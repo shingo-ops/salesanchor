@@ -59,3 +59,18 @@ v2のGAS一致は移植当時の検証として保存する。v3の商品判定�
 設計: docs/handoff/tcg-product-master-growth/design-keyword.md §10
 根拠: docs/handoff/tcg-product-master-growth/recon.md §2026-09-10本番DB読み取り調査
 承認状態: POの実装依頼とGOは受領済み。本追加決定案の文書承認・マージは未完了。
+
+
+## 追加決定案（2026-09-12）: 商品参照に基づく作品IDのみのGemini判断
+
+状態: PO目的/境界/条件付き実行依頼を受領、方式は本PRで審査。詳細は[design-keyword §16](../handoff/tcg-product-master-growth/design-keyword.md)、実物は[recon末尾](../handoff/tcg-product-master-growth/recon.md)。
+
+### What
+
+Geminiへ有効商品と作品の対応表を渡し、既存原文9列に作品UUIDのみを追加する。商品IDや状態等を判断させない。推定値は原文と別保存し、参照版・IDを検証して従来の商品照合へ渡す。旧7/9列は従来方式を維持。配信はneeds_review=falseの行に限定する。
+
+### Why
+
+本番の型番投稿19明細で商品確定0、作品見出しの完全一致拒否とOP-13辞書の漢字差を確認。有効293商品の作品参照欠落0、8作品への対応表は存在する。現在のGeminiには商品対応を渡さず、型番からの作品判断を禁止していた。本案は作品IDだけを例外にし、過去の別作品EB01誤一致を否定試験に残す。19件全ての正解確定・精度向上を事前に証明したものではない。
+
+PO指示によりテスト時のGemini実呼出し0。事前は機械契約を模擬/実DBで検証し、本番後の固定原文に対する正誤比較で採用/配信を決める。旧判断を自動上書きしない。実装承認と番号付きマージGO、本番品質合格を区別する。

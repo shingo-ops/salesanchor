@@ -24,6 +24,7 @@ import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { auth } from "../lib/firebase";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 export interface ShippingDetailDto {
   id: number;
@@ -334,9 +335,9 @@ export default function ShippingDetailPanel({
 
   const footer = (
     <>
-      <button
+      <Button
         type="button"
-        className="btn-secondary"
+        variant="secondary"
         onClick={handleDownloadCsv}
         disabled={!existing || downloading}
         data-testid="ship-download-csv"
@@ -347,24 +348,24 @@ export default function ShippingDetailPanel({
         }
       >
         {downloading ? t("shipping.downloading") : t("shipping.downloadCsv")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="btn-secondary"
+        variant="secondary"
         onClick={onClose}
         disabled={saving}
       >
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         form="shipping-detail-form"
         type="submit"
-        className="btn-primary"
+        variant="primary"
         disabled={saving}
         data-testid="ship-save"
       >
         {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
-      </button>
+      </Button>
     </>
   );
 
