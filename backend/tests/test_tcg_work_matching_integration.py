@@ -1163,15 +1163,25 @@ def test_25th_real_analysis_preserves_controls_and_ambiguous_review(pg, monkeypa
     with connection.cursor() as cursor:
         cursor.execute('SELECT ar.pid_resolved,p.japanese_title,p.code,ar.needs_review,ar.pid_basis,ei.raw_memo FROM tenant_004.analysis_results ar JOIN tenant_004.extraction_items ei ON ei.id=ar.extraction_item_id LEFT JOIN tenant_004.tcg_products p ON p.id=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start', (jid,))
         rows = cursor.fetchall()
-    for row, case in zip(rows, cases, strict=True):
-        resolved, title, code, review, _, _ = row
+    import json
+    observations = []
+    errors = []
+    for index, (row, case) in enumerate(zip(rows, cases, strict=True), 1):
+        resolved, title, code, review, basis, memo = row
         expected = case[3]
-        assert resolved is (expected is not None)
-        if expected == 'SET':
-            assert title == SPECIAL
-        elif expected:
-            assert code == expected
-        else:
-            assert review
-    assert rows[7][5] == 'プロモカードパック1個を含む'
-    assert 'MULTI' in rows[8][4] and rows[8][3]
+        observations.append(dict(index=index, name=case[0], unit='BOX', expected=expected,
+                                 code=code, resolved=resolved, basis=basis, review=review, memo=memo))
+        if resolved is not (expected is not None):
+            errors.append(f'{index}: resolved mismatch')
+        if expected == 'SET' and title != SPECIAL:
+            errors.append(f'{index}: set title mismatch')
+        elif expected and expected != 'SET' and code != expected:
+            errors.append(f'{index}: code mismatch')
+        elif expected is None and not review:
+            errors.append(f'{index}: review missing')
+    if rows[7][5] != 'プロモカードパック1個を含む':
+        errors.append('8: memo changed')
+    if 'MULTI' not in rows[8][4] or not rows[8][3]:
+        errors.append('9: ambiguous review not preserved')
+    if errors:
+        pytest.fail(json.dumps(dict(errors=errors, observations=observations), ensure_ascii=False, indent=2))
