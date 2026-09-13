@@ -2416,6 +2416,17 @@
     "real_pg_executed": false,
     "product_pr_created": false,
     "production_changed": false,
-    "review": "REVISE: acceptance incomplete"
+    "review": "REVISE: acceptance incomplete",
+    "resumption_approval": {
+      "po_original": "進める",
+      "scope": [
+        "unpublished branch continuation",
+        "one source-removal rejection test code save"
+      ],
+      "received": true,
+      "ticket_issue_attempt": "blocked by PreToolUse",
+      "guard_observation": "dangerous-operation substring check includes official ticket issuer command",
+      "next": "human terminal registers tickets through official script; no guard changes"
+    }
   }
 }
