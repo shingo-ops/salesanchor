@@ -2387,5 +2387,35 @@
       "pending": 0,
       "sole_failure": "numbered PO GO missing"
     }
+  },
+  "stage2_storage_guard_stop": {
+    "product_commit": "3250e8290d7e2291fe37fecb5790ad6ba7348064",
+    "preserved_tip": "47ee511468008a767b89c42ed164d026c5ea0d8b",
+    "target_main": "7dcb9ce982af39b3b6ef9c1089fe1255952ae37a",
+    "rebase_step": "1/8",
+    "unmerged_files": 0,
+    "resolved_document_staged": true,
+    "worker_reported_checks": [
+      "AST eight functions, not collection",
+      "ruff passed",
+      "bash syntax passed",
+      "registry bytes unchanged plus one line",
+      "diff check passed"
+    ],
+    "parent_verified": [
+      "product commit three files 1280 added lines",
+      "three hashes match",
+      "copied table definitions zero",
+      "source locks and plan contents safeguards read",
+      "evidence conflict preserves both sides"
+    ],
+    "blocked": [
+      "source-removal negative test code save",
+      "continue-card save"
+    ],
+    "real_pg_executed": false,
+    "product_pr_created": false,
+    "production_changed": false,
+    "review": "REVISE: acceptance incomplete"
   }
 }
