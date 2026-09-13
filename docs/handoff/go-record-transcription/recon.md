@@ -914,3 +914,23 @@ Context7不在のため起動指示の代替許可により2026-09-13に公式[r
 Planner成果: design.md「2026-09-13 P2期限・取消の詳細契約」に7記録型、期限計算、8状態遷移、同origin再送、取消が登録より先に届く場合、保存応答不明、14試験群の具体入力を整理。正規取消の配送確認位置と予約の整合が未解決であることを明記した。時刻は整数ミリ秒、期限差86400000ミリ秒、現在時刻が期限と同じなら拒否。これは設計契約であり実装試験の成功数ではない。
 
 Architect自己審査REVISE: 取消の通知が未到達である場合、状態が未取消に見えるだけでは新規送信を認可できない。正規取り込み主体・欠落検知・初期state/code・App/権限・時刻取得を確立するまでP2実装カードを発行しない。P1合格維持、P2試験0件、新たなPO判断0件、実装/GO/権限変更0件。次の調査は正規の元発話/取消取り込み経路と状態writerの具体化。既存合意の再承認は求めない。
+
+
+## 2026-09-13 入力経路の仕様照合
+
+PO原文「進める」を取り込み経路の設計継続として受領。preflight成功、設計worktree差分0で開始。本店の未保存29件は変更しない。scripts/.github/workflows/docs/ai-agentsの関連ファイルを調べ、scripts/codex-exec.sh末尾は組み立てた入力をcodex execへ渡す方式と確認。受信証跡/連続位置/取消保存を同ラッパーでは確認できない。実行はしていない。
+
+openai-docsスキルを適用。Context7不在の代替許可で公式[Codex App Server](https://learn.chatgpt.com/docs/app-server)を実際に取得した。thread/readは再開なしに履歴を読む経路、turn/steerは実行中turnへの入力経路。通知と履歴の存在だけで、この画面のPO入力がすべて欠落なく保存されたと証明できる記述は確認できなかった。これはAPI不存在の断定ではなく、必要な保証の未確認である。
+
+実物CLIはcodex-cli 0.154.0。codex --help、app-server --help、generate-json-schema --helpを確認し、/tmp/p2-codex-schema-20260913へスキーマだけを出力した。サーバー/新AIセッション起動0、会話履歴読取0、外部送信0、設定変更0。CLIはPATH alias作成不可の警告を返したがhelp/schema出力はexit0。制限解除はしていない。
+
+| 実物schema（v2配下） | 観測 | SHA256 |
+|---|---|---|
+| ThreadReadResponse.json | userMessageにid/content/typeと任意clientId。元入力の受信時刻・連続seqはこの型にない | d2616b2f1ea2ebcc07b7d9fae6b221a70adeb907413d790da39613650dea07ec |
+| TurnSteerResponse.json | 応答欄はturnId。個々の入力の保存証明ではない | 866ba9a77c12b5d570c837d58f73bf40b24e50fa93404bdf792dd984d313b1aa |
+| ItemStartedNotification.json | item/startedAtMs/threadId/turnId。startedAtMsの説明はitem lifecycle開始で、POの入力受信日時とは断定しない | c4c34f47db6326cd4841bae428f23d08eb285077ffad35be9772b928c65bb912 |
+| ThreadTurnsListParams.json | cursor/itemsView/sortDirection等を持つ。turnページングと全入力の連続位置は同じ保証ではない | 2a8b93d7d4437cc25e16a1dde16d8db3c338d39e16c5eece2a56e943a21577d7 |
+
+Planner成果: 既存P2節に「取消の正規取り込みと状態writer」を追加。後追い履歴read/AI転記/入力時の独立保存を比較し、入力時保存を推奨草案とした。AIが見る前の記録、未分類入力がある間の停止、入力追加と操作確定を同じ順序で扱う契約、接続断/世代/再起動、秘密を扱う主体の分離を具体化。source_seq/generationは新設する契約で、Codexの実在フィールドと混同しない。
+
+Architect自己審査REVISE: この既存画面への接続・全対象入口の捕捉・信頼できる受信日時・writer権限分離は未実測。独立保存の仕組みが現画面に追加可能と断定しない。取消と操作確定の競合を含むI01〜I08を先行検証条件として保存した。8件は計画で実行0件。次は既存画面接続の可否を確認する限定検証設計。UI変更/運用費/入口制限をPO合意済みとしない。新しい事業判断を受けた記録0件、P2実装0・代理GO0。
