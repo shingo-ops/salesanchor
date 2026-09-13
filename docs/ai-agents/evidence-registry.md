@@ -2739,3 +2739,5 @@ EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanc
 
 
 EV-20260913-SHINSOKU-TIMEOUT-01 完了追記: PO原文「GO #3476」を2026-09-13 15:14 JST受領、PR #3476を15:16:21 JSTに正規マージ（c22ad508）。Backend CI34741872204・GO gate34742291130・配備34742337546成功を直接確認。本番worker再起動15:18:34 JST、task属性300/330秒をSSH読み取りで直接確認。対象投稿の再抽出は未実施。詳細はrecon.mdのPR #3476マージ・配備確認節。
+
+EV-20260913-SHINSOKU-TIMEOUT-01 再抽出完了: PO原文「次を進める」に基づき固定job713b8823を既存retry_extractionで1回投入、enqueued1。2026-09-13 15:33:13 JST、通常Celery taskが146.425139秒でdone。DBで明細147/解析147/要確認0/エラーNULL。原文数量価格単位等735照合一致、欠落重複0。原文不変、配信未実行、全投稿の保証ではない。根拠はrecon.mdの本番1件再抽出節、worker task91ff4091ログと非公開の前後スナップショットを設計担当が直接確認。
