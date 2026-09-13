@@ -772,3 +772,154 @@ A3/A6にはこの通常優先とA便単独の前後対照も含める。A便の�
 A便は設計自己審査APPROVE／PO設計承認済み。実装開始・実装担当への委任・PRマージ・本番反映の承認は含めない。B便はREVISEを維持し、既存8商品更新・44件登録・再解析・配信は未着手。GO委任の有効化記録でもない。
 
 実装引き継ぎは[専用カード](card-product-name-space-impl.md)で行う。カードの存在・正式検査の合格だけでは実行を開始しない。次は承認済み設計とカードを文書PRに保存し、具体的な実装範囲をPOに提示する。
+
+
+## 19. B便のPR前準備と部分失敗の再審査（2026-09-13・草案）
+
+### 19-1. 依頼と現在地
+
+PO原文「離席するので最後まで進めてくれPRの直前まで進めて結果を報告してくれ」を受領。A便の本番反映後に残ったB便の調査・設計・文書準備を進める。今回の成果はローカルのレビュー用文書と証拠であり、既存PR3466へのpush/更新、新規PR提出、製品実装、実データ書込、メッセージ取得、再解析/配信を行わない。PO合意済みの略称方針と空欄2項目は再承認を求めず、未承認の個別値を採用済みとしない。
+
+最新確認main `1a8eed69a8d4e1c17cefc7dcef579f63493b17dd` は文書のみの追加8ファイル。現在の取込サービスとA便照合の製品内容は維持。A便はproduct-name-space-release-result.jsonの通り完了。B便の合格条件は§18-4を維持する。
+
+### 19-2. 実コードから確定した停止時の問題とWhy
+
+- `backend/app/tcg_config.py:20` と `docker-compose.yml:116/219/256`：TCG_SCHEMAの既定はtenant_004。APIは `backend/app/routers/tcg_product_import.py:36` で共有設定を参照する。QAユーザーのログインだけではtenant_001への隔離を証明できない。これは設定ファイル上の事実であり、現在稼働中の環境値を取得した結果ではない。
+- `backend/app/services/tcg_product_import_svc.py:392/417/432`：job開始、行履歴、job完了が別々にcommitする。`同:468–476` でcreate_productの後にrecord_rowを呼ぶ。
+- `backend/app/services/tcg_product_master_svc.py:426–438`：商品をcommit後にpost-write確認し、不一致ではValueErrorを返す。取込側 `tcg_product_import_svc.py:470–473` はValueErrorを行エラーとして記録し続行するため、商品確定済みの行を未作成とみなしてはいけない。
+- `migrations/20260906_130000_create_tcg_product_import_history_t004.sql:50–53`：ファイルdigestの一意索引。途中停止後に同じファイルを再送しても続きから再開する仕組みではない。
+- `backend/tests/test_tcg_product_import.py:132–150` は取込サービスをmockしたHTTP契約試験。今回の実DB部分失敗180条件の実行証拠にはならない。
+
+根拠は [実処理の制御経路検算](keyword-import-partial-audit.json) と [再現用資料](keyword-import-partial-audit.py.txt)。実commit_import/start_job/record_row/finish_jobをAST抽出し、DB境界とcreate_productをメモリ上の代役にした180ケース。DB接続0、本番変更0、pytest/実PostgreSQL試験ではない。create_productの確定順序は現物に基づくモデルであり、実通信障害の再現成功とはしない。
+
+| 検算条件 | 件数 | 観測した制御結果 |
+|---|---:|---|
+| 完了/商品保存前停止 | 1＋44 | 0–44商品の45段階を識別 |
+| 商品保存後・履歴保存前停止 | 44 | 商品n件、履歴n−1件 |
+| 商品保存後の確認で通信例外相当 | 44 | 商品n件、履歴n−1件で停止 |
+| 保存後の確認がValueError | 44 | 実商品44件、返却created43/skipped1、job status ok |
+| 最終job更新失敗 | 1 | 商品/履歴44件でもjob running |
+| 事前blocking/保存前ValueError | 2 | 商品43件、履歴44件、job ok |
+
+同じdigestの再送を全180例で拒否し、モデル内の商品/履歴が増えないことを確認した。一意制約自体のDB試験ではない。`ok`、件数、履歴のいずれか単独を完了証拠にする方式は採用不可。
+
+### 19-3. 値のレビュー用成果物
+
+[keyword-b-review-plan.json](keyword-b-review-plan.json) に既存8商品の検索語/除外語の変更前後を既存実験JSONから転記し、44候補への変更部分とA便後の7行の検索語上書きを明示した。元資料のSHAを固定し、草案・CSV未適用・DB未適用を機械可読で記録。CSVを登録可能版と呼ばない。英語名等の未確認値は変更せず残し、公式再確認済みとは記載しない。
+
+最新のマスタに一致する保証はないため、実行直前に8商品のID/全語/順序/有効状態、候補44行の分類と重複を再照合する。差分があれば該当行を止める。PO正解付き実投稿を作り話で埋めない。
+
+### 19-4. 実装役へ渡す前に完成させる実行設計
+
+1. 実行先はDBホスト/DB名/有効TCG_SCHEMA/backend識別子を読み取り、tenant_001の隔離を確認。secrets値は証拠に含めない。現在は未確認。
+2. 8商品の変更は1トランザクションで、変更前の完全一致確認→対象語だけ置換→変更後照合→commitとする草案。APIを8回呼んで原子的とみなさない。適用SQL/ロック/rollback方式は未実装で、別途実物とPG検証を揃える。
+3. 変更後の承認済みCSVをpreview。digest一致だけでなく行単位のblocking0、採用済みwarning、4分類、全44値を確認。previewはマスタの版を固定しないため、書込前のマスタ再照合が必要。
+4. 登録後または停止後は商品実体・検索語/除外語・履歴の三者を照合。商品特定は対象スキーマ/作品/正式名/マーク/分類/全語と基準時点との差分で行い、推測したPM採番や全体件数で代用しない。
+5. 各行を「実体/履歴一致」「実体のみ」「履歴のみ又は値不一致」「実体/履歴とも未確認」に分ける。複数候補や並行追加があれば不明扱い。未知の行を未登録扱いして再送しない。
+6. 不一致では追加書込を止めて読取報告。履歴補正、未登録分だけの再開、商品取消はそれぞれ具体的な別設計とGOが必要。CSV改変でdigest制約を迂回しない。
+
+正式カードはB0–B3合格後に作成・card-lintする。本節は実行カードではない。
+
+### 19-5. 代替案と選択理由
+
+推奨草案は「既存取込を維持し、事前の隔離PG試験と三者照合を必須にする」。既存挙動への影響を抑えられるが、不一致時に自動再開できず復旧の判断が残る。
+
+代替は「商品と履歴を同一トランザクションにまとめ、確定後に失敗を返さないよう取込実装を改修する」。根本的に不整合窓を減らせるが、共有create_productの他呼出元・トランザクション契約の追加設計と製品承認が必要。B便のデータ変更承認に紛れ込ませない。全44件を1トランザクションにする方式も現行の行単位確定契約を変えるため未採用。
+
+外部事例は不要。自システムの確定順序と実制御経路の検算が直接の根拠であり、外部の数値を安全性の証明に代用しない。ライブラリ/API仕様の調査は行わず、ローカル実装を照合した。
+
+### 19-6. 受入条件・維持担当・自己審査
+
+| 条件 | 検証方法/判定 | 担当 |
+|---|---|---|
+| 停止時の制御経路を把握 | 180例の期待値一致。メモリ検算のみ完了 | 設計担当 |
+| 個別値/実投稿の正解を確定 | 8商品/44行/正解例のPO確認。未完了 | PO＋設計担当 |
+| QA隔離と更新原子性 | 実backend設定・PGの対象外不変/失敗rollback。未完了 | 承認後の実装担当 |
+| 商品と履歴を誤認しない | 実PGで45段階＋確定後失敗を検証し三者照合。未完了 | 実装担当＋レビュー担当 |
+| 登録完了 | 対象44行すべて実体/関連語/履歴一致。未実施 | 実装担当、PO確認 |
+
+Architect判定：**REVISE（同一AIの自己審査）**。設計資料と新しい停止経路の根拠は保存可能だが、実登録に必要なB0/B1/B2/B3を満たさない。180例を実PG合格へ読み替えない。製品修正・正式実行カード・本番登録は未着手。PO不在のため正解例/値の承認を代行しない。再開時は本節から未確認条件を埋め、ADR-113の設計整合検査と正式カード検査を経る。
+
+
+## 20. CSV行単位の確定整合性・先行修正案（2026-09-13、PO未承認草案）
+
+### 20-1. 目的と境界
+
+POの「進めてくれ」を受け、§19で見つけたCSVの保存/履歴不一致を防ぐ方式を設計した。POの個別商品値を代筆せず、B便の8商品更新/44登録と分けて技術対策だけを先行できる形にする。本節は新しい製品修正の設計案であり、実装・委任・公開・本番反映は未承認。前回のPR直前停止を維持する。
+
+成功条件は、CSVのcreated履歴と商品・関連語が1行につき同じ確定単位で存在すること。履歴0で商品だけ残る失敗経路、商品ありなのに当該行をerror/skippedとして続行する失敗経路を、改修後のCSV新規処理から除く。過去の不整合データ修復、単品登録の既存エラー動作の変更、ファイル全体の原子化、自動再送、8商品の更新は対象外。
+
+### 20-2. 根拠・ライブラリ仕様・Why
+
+実コードとshaはkeyword-import-atomic-design-evidence.json。商品作成の実呼出元は単品router:220とimport service:469の2箇所。start_job/record_row/finish_jobの実呼出元は取込サービス内だけ。現在の180ケース検算は§19の通りで、製品改修後の試験成功ではない。
+
+requirements.txt:4のSQLAlchemyは2.0.38。Context7 MCPは利用できず、起動指示の代替許可に従い2026-09-13に[公式2.0トランザクション資料](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)と[AsyncSession資料](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html)、[実使用版2.0.38の公式ソース](https://raw.githubusercontent.com/sqlalchemy/sqlalchemy/rel_2_0_38/lib/sqlalchemy/ext/asyncio/session.py)を確認。commit/rollbackは現在のトランザクションに作用し、AsyncSessionも同期Sessionへ委譲する。SELECT後の自動開始と、Session.commitが最外側へ作用することを踏まえ、既存内部commitを残したままbegin_nestedで包む案は不採用。実資料の公開日はソースにないため確認日と区別する。
+
+外部導入事例は不要。処理順序と確定境界の問題であり、他社の成功率を本件の保証に使わない。外部仕様は境界設計の根拠であり、実環境合格は正式CIで別に確認する。
+
+### 20-3. 実装契約（4製品ファイル案）
+
+| ファイル | 変更範囲 |
+|---|---|
+| backend/app/services/tcg_product_master_svc.py | create_productのkeyword-only引数にcommit: bool = Trueを追加し、既存commit位置だけを条件化。False時は商品/全関連語/確認SELECTを同じ未確定トランザクションで行い、確定しない |
+| backend/app/services/tcg_product_import_svc.py | record_rowにkeyword-only commit: bool = Trueを追加。CSVの正常行だけ商品と履歴をcommit=Falseで呼び、最後に1回commit。エラー処理とカウンタ更新順を限定変更 |
+| backend/tests/test_tcg_product_import.py | 既存HTTP試験を維持し、サービス境界のcommit/rollback回数・既定True/False・ValueErrorを捕捉する範囲を試験 |
+| backend/tests/test_tcg_product_import_atomicity_pg.py | 新規。実PGの別接続から商品/関連語/履歴を確認する障害注入試験 |
+
+router/API型/認証・分類・重複判定・force・採番・他のサービス関数・既存migration・CI設定を変更しない。内部引数はHTTPへ露出しない。create_product既定Trueでは、既存のcommit→確認順・戻り値・重複拒否を維持する。従って単品登録には既存の確定後ValueError経路が残ることを明記し、本便で解消済みとはしない。
+
+create_product(False)はcallerが確定/破棄する契約。既存SQLはexecuteで発行されるため、呼出元に「内部確定しない」ことを保証する。False時に確認SELECT失敗・語INSERT失敗などがあれば呼出元へ例外を返し、戻り値だけを成功にしない。record_row(False)もINSERTだけで確定せず、作成済み結果と同じsessionを使う。
+
+### 20-4. 取込1行の確定手順
+
+start_jobは従来どおり先に確定する。preview/lookupのSELECTが自動開始したトランザクションに対して、追加のdb.beginを無条件で呼ばない。ファイルdigest制約・行順・正常時レスポンス型・最終status表現は維持。
+
+1. blocking行は従来のskipped履歴を1回保存・確定し、成功後にskippedを増やす。商品作成を呼ばない。
+2. 正常候補行はcreate_product(commit=False)を呼ぶ。この呼出だけで発生したValueErrorはrollbackを成功確認した後、別の確定単位でerror履歴を保存し、成功後にskippedを増やして次行へ進む。商品・検索語・除外語は残さない。
+3. 商品作成が成功したら、返った商品コードでrecord_row(RESULT_CREATED, commit=False)を実行し、db.commitを1回呼ぶ。成功応答を受けてからcreatedを増やす。
+4. 履歴INSERTやcommitの例外は上記ValueErrorの「行スキップ継続」に入れない。rollbackを試みて元の例外を保持し、取込全体を停止する。rollback自体の失敗も成功/スキップ扱いしない。SQL例外・取消を含むその他の失敗も同じ停止原則。未確定のsessionは既存get_dbのclose経路で解放する。
+5. commit応答が失われた場合、rollbackで保存結果を取り消せたとは断言しない。実体とcreated履歴が両方存在するか両方存在しない状態を別接続で照合し、自動再送しない。createdのメモリ値は完了証拠に使わない。
+6. finish_jobは従来どおり行処理の後に別途確定する。ここで失敗すればjob runningが残り得るが、商品と行履歴は一致する。成功表示は返さず、§19の照合で結果を報告する。
+
+データベースが正常な原子性を保つ限り、正常行の商品・検索語・除外語・created履歴は一括で確定/破棄される。この条件付き推論を実PG検証で確認する。通信応答不明や既存データの不整合は別の問題として残す。
+
+### 20-5. 実PG試験の実行先と受入条件
+
+既存tests/test_tcg_work_matching_integration.py:48–81のpg fixtureを再利用する。GITHUB_ACTIONS=true、RLS_ADMIN_DATABASE_URLのlocalhost/127.0.0.1とjarvis_test_dbを検査し、fixture自身が作る一時DBを使う。条件不成立は未検証として失敗し、ローカルでGITHUB_ACTIONSを偽装しない。fixtureはDBをCIサービス終了まで残し、本番DBやtenant_001に接続しない。
+
+このfixtureのschema tenant_901へ、既存取り込み履歴migrationをテスト内で明示的にtenant_004→tenant_901置換して適用。master/import各モジュールのTCG_SCHEMAをmonkeypatchし、HTTPを使う試験ではrouterも同じ値へ固定する。実DDLファイルやtcg_configの入力制限を変更しない。生SQLのfixture置換は本番migrationの改変ではない。各パラメータ試験はfixtureの独立DBで分離する。
+
+AsyncSessionはengineへbindし、外側rollback専用トランザクションに閉じ込めない。fixtureの独立psycopg2接続からcommit前後の可視性を確認する。単に同じsessionでSELECTできたことを永続化の証拠にしない。既存CI .github/workflows/test.yml:206–241が実PGと全pytestを実行するため、CI設定追加は不要。
+
+| ID | 条件/検証 |
+|---|---|
+| C1 | 正常44行：商品44・関連語が期待値一致・created履歴44・job件数一致。実体/履歴のリンクを全行確認 |
+| C2 | 44行それぞれで保存前ValueError：当該商品/関連語0、error履歴1、他43行正常。単なる件数だけでなく行ID/名前を照合 |
+| C3 | 44行それぞれで未確定商品保存後の確認ValueError：当該商品/関連語0、error履歴1、他43行正常。旧実装で失敗することを対照確認 |
+| C4 | 44行それぞれでcreated履歴INSERT失敗：当該商品/語/created履歴0、前の成功行はすべて存続、後続行0、API成功応答なし |
+| C5 | 44行それぞれで行commit実行前失敗：C4と同じ。commit直後に例外を注入する対照では当該実体と履歴の両方あり、再送0 |
+| C6 | finish_job失敗：商品/created履歴44一致、job未完了、成功応答なし。同じdigest再送で商品/履歴追加0 |
+| C7 | blocking行・履歴保存失敗・rollback失敗・取消：継続可否とカウンタ更新順が契約どおり。失敗を握りつぶさない |
+| C8 | 単品create_product既定True：既存test_tcg_completion_safety.py:128の正常作成/重複拒否を維持。Falseのcommit回数0・Trueの既存commit回数1を直接確認 |
+| C9 | 参照先の限定：別schema sentinelの前後値不変、商品/語/履歴すべてTCG_SCHEMA一致。UIログインによる隔離と混同しない |
+| C10 | 採番競合の注入：既存最大+1の方式は変えず、制約違反ならSQL例外として停止、未確定の語/履歴を残さない。再採番・自動リトライを追加しない |
+| C11 | 既存HTTP認証/digest/ファイル試験、make lint-ci、変更試験ruff、全pytest/PG、coverage60%以上。skipで追加PG合格を代用しない |
+
+C1–C11は実装後の受入契約であり、今実施済みではない。メモリ検算180例は修正前の課題の根拠として保持する。新たなPGを実行できるのは正式実装カードとPO実装承認後の担当である。
+
+### 20-6. 代替案・リスク・審査
+
+代替1（現状＋照合だけ）は§19に残す。不一致を検出できるが予防できないため、この追加案では行単位の同時確定を推奨する。代替2（全44行の同時確定）は途中まで成功を残す現行契約を変え、長い占有を生むため採用しない。代替3（nestedで包むだけ）は内部commitが最外側を確定するため不採用。
+
+行のトランザクションに履歴INSERTが加わり確定までの時間が延びる。最大+1採番の既存並行競合がなくなるとはしない。テストで競合時の停止を確認し、新しい採番/ロック設計は別途扱う。新引数の既定を変えると単品登録へ影響するため、既定Trueと呼出元2箇所の試験を維持する。
+
+設計担当は4ファイル境界/引数契約/根拠sha、実装担当はcommit境界とC1–C11、レビュー担当は別接続でのPG結果と既存API維持、POは本方式の採用と実装開始を判断する。今後この2サービスを変更するPRでも追加した試験を通常全suiteで実行する。
+
+Architect：**APPROVE（§20の限定した技術設計の自己審査）**。共有呼出元・SQL確定順・使用版の公式仕様・CIの隔離DB生成方式を現物照合し、実装4ファイルと失敗時の契約を固定した。未実装を検証済みとせず、PO承認と実装/CI合格は別状態とする。同一AIによる審査で独立第二者レビューではない。
+
+B便の個別値/実投稿正解/運用QA/8商品更新設計は未完了で**REVISEを維持**。本節合格をB便登録や本番GOに転用しない。正式実行カードは本方式のPO採用・実装承認を確認後に発行し、ADR-113整合とcard-lintを実施する。現在はPR直前の文書草案保存まで。
+
+
+### 20-7. POによる方式採用・実装委任承認（2026-09-13）
+
+「この方式を採用し、実装担当へ4ファイルの修正を委任してよいですか？」へのPO回答原文「進める」を受領。§20の方式採用と4ファイル実装/検証を既存/root/csv_card_executorへ委任する承認。実装結果を確認するまでpush/PR提出を行わず、マージ/本番/8商品更新/44登録/再解析/配信は含めない。設計担当は自動で実装役へ切り替わらない。

@@ -90,3 +90,12 @@ Why：CSVの1文字トークン等を消すだけでは7件の元の商品名が
 Scope：判定サービス/品質R5/対応テストの6ファイルだけ。新商品登録・既存マスタ更新・再解析・配信は別便。GAS移植当時の照合を遡って書き換えず、商品照合の追加契約として扱う。
 
 詳細：[design §17–18](../handoff/tcg-product-import/design.md)。同一AIの自己審査は判定処理A便に限りAPPROVE、商品登録B便はREVISE。POのA便正式設計承認はdesign §18-7に原文と対象を記録済み。実装承認・マージGOは未受領。本追記は承認済み設計の文書PR保存対象であり、main反映・製品実装の完了を意味しない。
+
+
+### 追加決定：CSVの行単位確定整合性（2026-09-13・設計PO承認済み）
+
+What/Scope: CSVの正常行の商品・検索語/除外語・created履歴を同じsessionの1回のcommitで確定する。共有create_product/record_rowはcommit=Trueを既定に保ち、CSVのみFalseを指定して呼出元が確定/破棄する。単品登録/API型/採番/重複判定を維持する。4製品ファイルと受入C1–C11はdocs/handoff/tcg-product-import/design.md §20。全ファイルの原子化・再送・過去データ修復・8商品更新/44登録は対象外。
+
+Why: 既存取込は商品commit後に検証しValueErrorを返し得るため、商品保存済みでも行errorとして続行する。旧実処理AST＋メモリモデル180例で商品/履歴不整合の経路を整理し、固定旧版は親の比較検算でもverify_value行1で不一致を検出。修正後2サービスの同じ検算354例は商品/語/created履歴不整合0、追加unit関数直接呼出25成功。これらは実PG結果ではない。SQLAlchemy2.0.38の公式仕様と使用版ソースを照合し、内部commitを残すnested案を除外した。早期成功行を保持する現行契約を保つため行単位を選択。commit応答不明は再送せず、別接続で照合する。
+
+POの方式採用と4ファイル実装委任はdesign§20-7に原文「進める」と範囲付きで記録。実装は差分準備・静的/親読取確認済み、正式PG228ケース/CIは未実行。設計合格は同一AIの自己審査で、PO GOや本番反映承認ではない。根拠: keyword-import-atomic-design-evidence.json、keyword-import-atomic-implementation-result.json、reconの実装受領節（いずれもdocs/handoff/tcg-product-import/）。

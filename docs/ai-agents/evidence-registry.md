@@ -2924,3 +2924,21 @@ EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録�
 ### EV-20260913-FRONTEND-AM-RELEASE
 
 PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50d719b、deploy34742996601成功。root実ログで新規backup7.6M/配備HEAD一致、直接HTTP200/DBRedisCelery connected/公開3フォーム6ボタン属性を確認。根拠docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。検収器修正履歴保存。本番認証付きフォーム送信・PO目視・復元試験は未実施。本便完了、残存旧299の次便設計は別。
+
+EV-20260913-PRODUCT-NAME-SPACE-PUBLISH-APPROVAL: 製品PR作成とCI正式検証の質問にPO原文「進める進める」を受領。公開カード違反0、既存/root/csv_card_executorへ委任継続。検収済み6製品ファイルと固定版d11d27b7の17文書を対象にcommit/push/PR/通常CIを許可、マージ/本番/データ変更は禁止。最新main56a1661dの空箱/状態保護は保持。根拠: docs/handoff/tcg-product-import/card-product-name-space-publish.md とreconの公開承認節。
+
+EV-20260913-PRODUCT-NAME-SPACE-CI: 製品PR3473/HEADe484f168、6製品+17文書/cleanを親が直接確認。Backend run34740813915/job103680104043実ログ3260passed/95skip/coverage63.82%。36チェック成功/8対象外、唯一の失敗はprocess gateの番号付きGO未記録。親もCIログと固定旧基点AST293/500/境界検算を確認。最新main配備34740608928の直近backup7.6M生成を読取確認（今回配備用ではない）。技術検証済み・GO未受領・未マージ/本番未反映。根拠: docs/handoff/tcg-product-import/recon.md「製品PR3473・正式CI完了」。
+
+EV-20260913-PRODUCT-NAME-SPACE-GO: PO原文「GO #3473」を受領、承認時HEADe484f168。親がpreflight/clean/.pr-number/HEADを直接照合し、確認済みmainc22ad508（6製品変更0）追従と通常merge/autodeployのカードを既存担当へ引き継ぎ。カード違反0。PO本人の承認でありAI代理GOではない。文書PR3466/B便データ操作は対象外。結果未確認、reconのGO3473節参照。
+
+EV-20260913-PRODUCT-NAME-SPACE-RELEASE: PO GO3473に基づき正式merge8d5aa581（15:39:45 JST）/配備34743294988成功。親もPR API・実pytestログ3260passed/95skip/63.82%・配備HEAD・今回backup7.6M生成・公開HTTP200/DB等connectedを直接確認。6製品SHA維持は既存担当が照合。実投稿再解析/精度測定/商品登録/3シート配信/復元試験なし。文書PR3466は別途未マージ。根拠: docs/handoff/tcg-product-import/product-name-space-release-result.json とrecon完了節。
+
+EV-20260913-PRODUCT-CSV-B-PREP: PR直前までのPO指示に基づく文書準備。実取込4関数AST/メモリモデル180例期待値一致、DB接続0。商品commitと履歴commitの間、post-write ValueError時の返却件数不一致を識別。8商品変更前後と候補上書き草案を固定。実PG/QA/個別値PO確認未完了、同一AI自己審査REVISE、実行カード未発行。design§19/reconとkeyword-import-partial-audit.jsonを根拠とする。push/PR更新/製品/本番操作なし。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-DESIGN: 実呼出元2箇所・commit順・pinSQLAlchemy2.0.38公式ソース・実CI一時DBfixtureを確認。CSV行の商品/語/履歴を同時確定する4ファイル案とC1–C11をdesign§20に保存。限定技術設計は同一AI自己審査APPROVE、PO採用/実装/新PG試験未実施。B便データ登録はREVISE維持。Context7不在は公式資料代替で確認。根拠keyword-import-atomic-design-evidence.json/recon。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-APPROVAL: PO原文「進める」を受領、方式採用/4ファイル実装を既存担当へ委任。公式専用作業台main1a8eed69/clean/preflight成功、正式カード違反0。Docker未接続でpytest/PGは未実施。push/PR直前停止、本番/データ変更は対象外。根拠design§20-7/recon/card-product-csv-atomic-impl.md。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-REVIEW: 既存担当4ファイル差分/静的検査受領。親が2サービスと新規PG現物/4SHA/範囲/diff検査を直接確認。旧版不整合を検出する実AST検算は新版354ケース全一致、unit関数直接呼出25成功。PG228ケース追加は未実行、CI15分内未測定。製品未commit/push/PR前停止、本番変更なし。根拠recon実装受領節とkeyword-import-atomic-implementation-result.json。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-PUBLISH: PR直前停止の報告後にPO原文「進める」を受領し製品PR提出/通常CI確認へ進行。最新main1a8eed69追加差分0/4SHA一致、正式公開カードへ。ADR154 Whyへ確定境界と旧版不一致/新版メモリ354・直接unit25の根拠を保存。実PG未実施、マージGOなし。根拠recon公開承認節。

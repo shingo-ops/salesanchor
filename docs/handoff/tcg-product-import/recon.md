@@ -797,3 +797,94 @@ A1〜A6のコード・固定試験・純関数検算は設計と整合。A7の�
 - backend/tests/test_tcg_keyword_lint.py: `70980eace0bab9d2e427f5ad9ac6b697c3e87b28b27b1d74bc9766535a572429`
 - backend/tests/test_tcg_product_guards.py: `0ab1b9b4661ddd96a1fc0dca14e9160f7179d12da16a7ba7885d511eada27645`
 - backend/tests/test_tcg_work_matching_integration.py: `36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551`
+
+
+### 製品PR公開・正式CIの承認（2026-09-13）
+
+「製品PRを作成してCIで正式検証を進めてよいですか？」へのPO回答原文「進める進める」を受領。既存実装担当へ公開用カードを渡す。文書PR3466の確認済みd11d27b7の17文書と、検収済み6製品差分を製品PRへ載せる。製品6ファイルの初期SHAは直前の記録と同一を確認する。マージ/本番/データ変更は対象外。
+
+最新origin/main56a1661dは空箱条件/状態再解析の保護をanalyzerへ追加している。商品名照合とは別箇所の変更を現物で確認した。既存main内容を保持し、今回の6ファイルを越える修正が必要なら停止する条件をカードへ入れた。組合せの正式PGはCIで確認する。
+
+
+### 製品PR3473・正式CI完了（2026-09-13）
+
+製品PR https://github.com/shingo-ops/salesanchor/pull/3473 を既存実装担当が公式wrapperで提出。親はPR API・.pr-number・実worktreeの状態と差分を直接確認。HEAD e484f168c757d9b46869895d1d70d96451f22ae0、main b52a4def取り込み済み、6製品＋固定版17文書の計23ファイル、未保存変更0。既存空箱/状態再解析保護・LINE client寿命修正を維持し、analyzerのmainとの差分は商品照合部分だけ。
+
+正式Backend CI: https://github.com/shingo-ops/salesanchor/actions/runs/34740813915/job/103680104043 。GitHub実行の全pytest＋PostgreSQL RLSは **3260 passed / 95 skipped / 309 warnings / 116.55秒、coverage63.82%（必須60%）**。実装担当の報告だけでなく親もAPIから実ログを保存し、試験ステップsuccessと完了件数を直接確認した。新規PG8例は既存収集対象・追加skipなし。quietログに個別テスト名は表示されないため8例別々の実行ログを取得したとはしない。
+
+チェック集計は36成功・8対象外・1失敗。唯一の失敗は https://github.com/shingo-ops/salesanchor/actions/runs/34740813907/job/103680092020 のGO記録欠落で、親が実ログで確認。技術検証の失敗と混同せず、GOを創作して通さない。
+
+main統合後も親AST検算を再実行。基準は固定旧基点af269ae2であり、実装後HEAD同士の自己比較ではない。analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52で293名称の期待tuple不一致0、従来確定劣化0、旧関数500対照不一致0、境界10一致を確認した。
+
+現在地：A便設計自己審査済み／PO設計・実装・公開承認済み／実装と読取審査済み／製品PR提出・正式CI成功／マージGO未受領／未マージ・本番未反映。B便の既存8商品更新・44登録はREVISE、再解析・3シート配信も未実施。文書PR3466は後続の承認/検証記録を保持する別PRであり、本製品PRのGOに含めない。
+
+マージ判断前の読取確認：最新main b52a4defのdeploy34740608928/job103679559392はsuccess。実ログ2026-09-13T05:34:52Zでsalesanchor_db_20260913_143449.sql.gz (7.6M)の生成成功を確認。これは直近配備時のバックアップでありPR3473用の新規バックアップではない。番号付きGO後の配備では通常手順の新バックアップ成功を別途確認する。復元試験を行った記録ではない。
+
+次の判断はPR3473のHEAD e484f168について、通常マージと自動本番配備のPO GO。CI成功はこの承認を兼ねない。
+
+
+### PO GO3473受領（2026-09-13）
+
+PO原文「GO #3473」を受領。対象は製品PR3473、承認時HEAD e484f168c757d9b46869895d1d70d96451f22ae0。通常マージと自動配備・バックアップ/配備HEAD/公開HTTPの確認を既存担当へ引き継ぐ。AI代理GOではなくPO本人の原文承認。文書PR3466やB便のデータ登録は含めない。
+
+開始時preflight成功・製品worktree clean・.pr-number3473・HEAD一致を直接確認。最新main c22ad508は抽出タスクの待ち時間延長、public.products向けseed55件と登録、所有権等の補助と文書を追加。今回6製品へのmain側変更0を確認。seedはtenant側tcg_productsとは別であることをSQL対象から確認した。これらを保持した通常追従をカードで指定し、未知main/製品競合/CI失敗なら停止する。
+
+GO記録更新により旧process run34742742062がcancelled、後続34742756998はsuccessだったがPR rollupに取消が残り、手順7の全成功確認で停止。製品HEADa618c147不変で旧runだけ通常再実行できる条件をカード手順6へ追記しcard-lint終了0。取消を成功に読み替えず、再実行結果の反映を待つ。親も最終Backend job103685126791の実ログで3260passed/95skipped/309warnings/114.97秒、coverage63.82%を直接確認した。
+
+マージ直前にmainがc50d719bへ進んだため実装担当は停止。親がc22ad508..c50d719b実diffを確認：既承認PR3468のスタッフ6ボタン共通化2画面・追加試験1・文書11、計14ファイル。今回6製品/DB/CI/運用スクリプトへの追加変更0。既存main変更を保持する通常追従としてカードのmain基点を更新し、新HEADのCIを再確認する。PO GO対象/製品SHA/業務範囲は拡張していない。
+
+
+### PR3473 マージ・本番配備完了（2026-09-13）
+
+既存実装担当が正式wrapperでmerge commit、cleanup終了0を報告。親もPR APIで2026-09-13 15:39:45 JSTのMERGED、merge8d5aa58146dc81bc84ef5db0e60f835d23d17d29を直接確認。最終HEADb59c923c、mainc50d719b統合後も6製品SHA/23ファイル境界は担当が照合、全36チェック成功/8対象外。取消された旧GO gateは通常再実行成功後に進めた。
+
+最終Backend run34743123495/job103686128008は3260passed/95skipped/309warnings/122.94秒、coverage63.82%。親が実ログを直接取得して確認。配備run34743294988/job103686551222はsuccess、親の実ログ1035行に配備HEAD8d5aa581、588行に今回backup salesanchor_db_20260913_154016.sql.gz (7.6M)、4660行にhealth成功を確認した。コマンドのecho行ではなく日時付き実出力を根拠とする。復元試験は未実施。
+
+親が公開API/画面へ直接curlし双方HTTP200、database/redis/celery connected。実装担当だけの検証報告と混同しない。設計は同一AIによる自己審査で、独立第二者審査ではない。状態：A便設計審査/PO承認/実装/正式CI/マージ/本番配備完了。商品名全体の半角・全角スペース差への対応が反映済み。実投稿の再解析・本番精度測定は行っていないため、既存解析結果が改善済みとはしない。
+
+詳細はproduct-name-space-release-result.json。旧release-result.jsonはPR3438用のまま保持。B便8商品更新/44登録はREVISE、再解析/3シート配信未実施。文書PR3466は後続の承認/公開・配備カード/検証記録だけのPRへmain同期し、保存更新する。文書PRのマージGOは未受領。次の一手はB便の未解決受入条件を設計相談で確定すること。
+
+後処理：製品PR本文への内部backup名等の詳細追記は実装担当側の自動承認審査で公開範囲を理由に拒否された。制限を変更せず、公開済みPR/merge/run成功と公開HTTP成功だけの追記へ縮小し、通常審査で承認・反映済みとの担当報告を受領。生報告はCARD-PRODUCT-NAME-SPACE-RELEASE-01-public-final.json。文書PR3466ではtasks/todo.mdの1行更新を削除宣言へ含め忘れprocess gateが失敗したため、実numstatに基づき本文の宣言を修正。検査設定の変更なし。
+
+
+### B便・離席中のPR直前準備（2026-09-13）
+
+POのPR直前まで進行指示を受領。preflight成功、本店dirty30/226behindを保持し既存専用文書worktreeで継続。最新main1a8eed69a8d4e1c17cefc7dcef579f63493b17ddの追加8文書を同期し、証拠台帳の双方追記を保持。既存PR3466はOPEN、今回の変更はpush/PR提出しない。
+
+設計§19に制御経路・三者照合・実行前条件・代替案・自己審査REVISEを保存。実取込4関数のASTとメモリ永続化モデルで180ケースを直接実行、期待値一致/DB接続0。実体だけ保存済み、44件保存済みでも返却43件、履歴44件でもjob runningをモデルで識別。実PG/本番障害の実測ではない。8商品変更前後と候補修正案をkeyword-b-review-plan.jsonへ固定。元CSVは不変。正式カード未発行、実装役は起動せず、製品/DB/本番変更なし。
+
+保存物はkeyword-import-partial-audit.json/.py.txt、keyword-b-review-plan.json、既存design/recon/台帳。未完了は個別値と実投稿正解、稼働QA隔離、原子的更新と実PG部分失敗検証。これらを完了と創作せず、登録可能の合格は保留。
+
+
+### CSV行単位整合性の対策設計（2026-09-13）
+
+PO原文「進めてくれ」を受領し、PR直前停止を維持して§20を設計。preflight成功、本店dirty31を保持。main1a8eed69に対する未取込差分0、製品未保存変更0。create_productの実呼出元2箇所、履歴helperの呼出元、commit/rollbackと現行採番、既存PG fixture/CIを直接読取。Context7未提供のため公式SQLAlchemy2.0資料とpin2.0.38ソースへ代替アクセスし、内部commitを残すnested案を除外。
+
+推奨はCSVの1行の商品・全語・created履歴を同時確定、単品の既定動作維持。commit応答不明をrollback成功と誤認しない契約、4製品ファイル案、別接続PGでC1–C11を確認する試験仕様を保存。設計限定の同一AI審査APPROVE、PO方式承認/製品実装/PG実行なし。B便はREVISE。証拠shaはkeyword-import-atomic-design-evidence.json。製品ファイルを変更せず、push/PR更新/新規PR/本番操作なし。
+
+
+### CSV整合性修正の実装委任承認（2026-09-13）
+
+方式採用と4ファイル修正の委任質問にPO原文「進める」を受領。正式カードcard-product-csv-atomic-impl.mdを作成しcard-lint終了0（長行警告2）、既存/root/csv_card_executorへ委任継続。公式new-worktreeでrelease/product-csv-atomicityを作成、HEAD/main1a8eed69一致/clean/preflight成功を直接確認。本店dirty31は保持、reaper削除対象0。Dockerはsocket未存在で接続失敗を直接確認し、pytest/実PG未実施を維持。設計SHA0806d0eb64d9d81c364f871e84e75952012794b851585952823d011457e5a8f6を固定。製品commit/push/PR作成なしで4ファイル差分・静的検査・親レビューまで。
+
+
+### CSV整合性修正・実装受領とPR直前停止（2026-09-13）
+
+既存担当の4ファイル差分を受領。2サービスのdiffを親が直接読み、create_product/record_rowの既定True維持、CSVのFalse指定と商品/全語/created履歴のcommit1回、create呼出だけのValueError継続、失敗時rollback・元例外保持、成功後のカウンタ更新を確認。単品既定経路の既存確定後エラーまで解消したとはしない。
+
+担当報告：make lint-ci終了0（mypyは既定の警告扱い）、変更2試験ruff終了0、diff --check終了0。初回ruffは新規試験の未使用import1件を検出、同ファイル内で除去して再検査成功。親も4SHAと実ファイルの一致、指定4ファイル以外の差分0、diff --check終了0を直接確認。新規PG試験は未追跡263行のためtrackedだけのdiff統計に含まれないことを確認した。
+
+親自身の検算：旧基点1a8eed69から固定抽出した実サービスはverify_valueの1行目で商品/履歴不一致を検出。最終2サービスの実ASTをメモリDBで実行した354ケース（8種×44位置＋正常/finish）は不整合0、検索語/除外語の残存0、同digest再送追加0。既定Trueのcommit1/Falseのcommit0も直接確認。最終SHAは同検算時から不変。
+
+さらに追加unitの実関数をASTで抽出し直接呼び出した25ケースが成功。pytest runner/DBは実行せず、socket.connectを拒否した。初回は開発依存だけのvenvにSQLAlchemyがなくImportErrorとなったため、親用/tmpへ既定2.0.38を導入して再実行。製品venv/依存定義を親が変更したものではない。直接呼出はfixture収集・pytestフック・全suiteの保証ではない。
+
+PG試験は現物を読取。正常1ケース（44商品）/保存前ValueError44/確認ValueError44/履歴失敗44/commit前44/commit後44/追加7の計228ケース、各fixtureの独立DB。C1–C11対応を確認。別接続で実体/語/履歴を照合し、PGをskipする追加条件や安全ガード緩和なし。既存CI timeout15分に収まるかは未測定で、成功と宣言しない。pytest/実PG/coverageは未実施。
+
+状態：方式の設計自己審査/PO承認/既存担当への実装委任済み、製品差分準備済み・静的検査済み・親の読取レビュー済み。正式CI待ち。生報告と4SHA、再現資料はkeyword-import-atomic-implementation-result.json/keyword-import-atomic-parent-review.json/keyword-import-atomic-direct-unit.jsonと対応.py.txt。製品worktreeのHEADは1a8eed69、4ファイルは未コミットで保持。文書だけローカルコミットへ保存する。push/PR更新/新規PR/本番変更はなし。
+
+再開手順：専用製品worktreeと4SHAを照合→PR提出の許可範囲を確認→製品公開カードを作成/検査→通常CIでC1–C11・228PGケース実行と所要時間を確認。時間超過や実PG失敗は原因を読み取り、必要な設計へ戻す。skip/CIガード緩和で通さない。B便の実商品値/実投稿正解/運用QA/8商品更新は引き続きREVISE、データ登録と再解析/配信の承認は含めない。
+
+
+### CSV整合性修正の製品公開・CI確認（2026-09-13、承認受領）
+
+PR直前停止と未実行CIを報告した後のPO原文「進める」を、製品PR提出と通常CIの確認へ進む承認として受領。既存担当へ公開カードを渡す。preflight成功、最新main1a8eed69から追加差分0、検収4SHA/実worktree差分一致を直接確認。マージ/配備の番号付きGO、データ更新/44登録/再解析/配信は含めない。
