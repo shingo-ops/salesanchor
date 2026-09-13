@@ -888,3 +888,14 @@ Context7ツール不在のため起動指示の代替許可で2026-09-13に公�
 Architect自己審査: 限定カードAPPROVE。既存計画とケース6件の対応、入力固定hash、対象/主体/版の実測、ローカル6/6、カード検査exit0（長行警告3件）、再送/混同の停止条件が根拠。API書込・run対応・ログ取得は試験で確認する対象であり、成功を前提にしない。全体設計REVISEを維持。PO本人認証・代理GO・期限/取消・専用App・本番導入は対象外。同一AI自己審査であり独立第二者レビューではない。
 
 維持担当: 設計担当は入力/原本hashとカード/根拠の同期、明示委任された検証担当はIssue→run→job→理由の記録、親は結果の直接読取確認と台帳保存。カード実行と担当1名への委任承認は未受領。次のPO判断はこの1カード（合成Issue最大6件）の検証担当1名への実行委任。
+
+
+## 2026-09-13 P1実機カードの実行委任
+
+直前の「検証担当1名に、合成Issue最大6件の作成と結果確認を委任してよいですか」という確認に、PO原文「進める」を受領。担当p1_live_testへTH-GO-INTAKE-P1-LIVE-01を明示委任した。親は文書と結果の直接読取確認、実行担当は指定sandboxの6件までと非秘密記録を所有する。追加担当起動・製品変更・GO発行は含まない。以下に担当報告と親の確認を区別して追記する。
+
+実行担当報告: result.json/journal.jsonl（/tmp/reports/TH-GO-INTAKE-P1-LIVE-01）に実機6/6 PASS、Issue #2〜#7、送信6回・再送0回・GO発行0件を記録。各送信直後のWAITINGは記録して同じ担当へ読取再開を指示し、再POSTを行わなかった。最終報告で完了停止。
+
+親の直接確認: Issue6件のauthor/title/body/未編集、run6件のevent issues/actorとtriggering_actor239116221/固定main e239ec21638cf329c882d19b10e03a58a10b5b31/run_attempt1、各probe stepの結論をAPIで照合。各jobのMCPログ実行行を別途取得し、正常ACCEPTED_PROBE/success1件、不正BODY_INVALID/TARGET_INVALID/SCHEMA_INVALID/SCHEMA_INVALID/REQUEST_INVALIDとexit1/failure5件、全件authorization_issued=falseを確認した。journalの送信開始6行・対応run IDも直接照合。永続証拠はintake-p1-live-local-evidence.jsonのgithub_live_review。ローカル検証部分と実機部分を分離した。
+
+受入結果: P1合成受付6ケースAPPROVE。全体設計REVISEを維持。代理GOの有効化、PO本人性の証明、期限/取消、権限分離、本番反映の合格ではない。次はP2委任記録・取消の契約と既存14検証条件について未確定の入力を調査し、正式設計へ進める。実行担当の今回の委任は6件完了で終了。追加Issue/新担当/本番操作の承認へ転用しない。

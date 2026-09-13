@@ -34,5 +34,121 @@
       "actual": "REQUEST_INVALID",
       "passed": true
     }
-  ]
+  ],
+  "github_live_review": {
+    "date": "2026-09-13",
+    "reviewer": "parent direct API and MCP job logs; worker execution reported separately",
+    "fixed_main": "e239ec21638cf329c882d19b10e03a58a10b5b31",
+    "cases": [
+      {
+        "case": 1,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/2",
+        "issue_number": 2,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732212144",
+        "run_id": 34732212144,
+        "job_id": 103656959926,
+        "expected_reason": "ACCEPTED_PROBE",
+        "conclusion": "success",
+        "execution_line": "2026-09-13T02:06:38.7069264Z {\"probe\": \"P1\", \"reason\": \"ACCEPTED_PROBE\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "ACCEPTED_PROBE",
+          "authorization_issued": false
+        },
+        "exit_one": false
+      },
+      {
+        "case": 2,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/3",
+        "issue_number": 3,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732308387",
+        "run_id": 34732308387,
+        "job_id": 103657227062,
+        "expected_reason": "BODY_INVALID",
+        "conclusion": "failure",
+        "execution_line": "2026-09-13T02:08:54.5732721Z {\"probe\": \"P1\", \"reason\": \"BODY_INVALID\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "BODY_INVALID",
+          "authorization_issued": false
+        },
+        "exit_one": true
+      },
+      {
+        "case": 3,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/4",
+        "issue_number": 4,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732406466",
+        "run_id": 34732406466,
+        "job_id": 103657490957,
+        "expected_reason": "TARGET_INVALID",
+        "conclusion": "failure",
+        "execution_line": "2026-09-13T02:11:00.3798136Z {\"probe\": \"P1\", \"reason\": \"TARGET_INVALID\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "TARGET_INVALID",
+          "authorization_issued": false
+        },
+        "exit_one": true
+      },
+      {
+        "case": 4,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/5",
+        "issue_number": 5,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732496119",
+        "run_id": 34732496119,
+        "job_id": 103657745445,
+        "expected_reason": "SCHEMA_INVALID",
+        "conclusion": "failure",
+        "execution_line": "2026-09-13T02:13:07.5420824Z {\"probe\": \"P1\", \"reason\": \"SCHEMA_INVALID\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "SCHEMA_INVALID",
+          "authorization_issued": false
+        },
+        "exit_one": true
+      },
+      {
+        "case": 5,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/6",
+        "issue_number": 6,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732553655",
+        "run_id": 34732553655,
+        "job_id": 103657910443,
+        "expected_reason": "SCHEMA_INVALID",
+        "conclusion": "failure",
+        "execution_line": "2026-09-13T02:14:32.0464097Z {\"probe\": \"P1\", \"reason\": \"SCHEMA_INVALID\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "SCHEMA_INVALID",
+          "authorization_issued": false
+        },
+        "exit_one": true
+      },
+      {
+        "case": 6,
+        "issue_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/issues/7",
+        "issue_number": 7,
+        "run_url": "https://github.com/shingo-ops/salesanchor-go-gate-sandbox/actions/runs/34732582404",
+        "run_id": 34732582404,
+        "job_id": 103657992474,
+        "expected_reason": "REQUEST_INVALID",
+        "conclusion": "failure",
+        "execution_line": "2026-09-13T02:15:24.8109441Z {\"probe\": \"P1\", \"reason\": \"REQUEST_INVALID\", \"authorization_issued\": false}",
+        "result": {
+          "probe": "P1",
+          "reason": "REQUEST_INVALID",
+          "authorization_issued": false
+        },
+        "exit_one": true
+      }
+    ],
+    "passed": 6,
+    "accepted": 1,
+    "expected_rejections": 5,
+    "issues_created": 6,
+    "post_attempts": 6,
+    "authorization_issued": false,
+    "limits": "Isolated serial Issue/run delta correlation; no production grant, identity attestation, expiry or revocation verification."
+  }
 }

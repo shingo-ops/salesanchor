@@ -2400,3 +2400,5 @@ EV-20260911-FRONTEND-MOLD-30: 2026-09-11 18:01 JST（受領後記録）: PO原�
 2026-09-13 P1マージ追補: PO原文「進める」を検証用PR #1の取り込み承認として受領。expected_head_sha=b414b7b5でmerge commitを1回送信、再GETでmerged_at2026-09-13T01:20:35Z/merge e239ec21638cf329c882d19b10e03a58a10b5b31/main一致を直接確認。workflow id356839824 active。実機0・GO発行0・本番変更0、全体REVISE。詳細はrecon.md「2026-09-13 P1準備PRのマージ確認」。
 
 2026-09-13 P1実機カード追補: TH-GO-INTAKE-P1-LIVE-01.txt、intake-p1-live-cases.json、intake-p1-live-local-evidence.jsonを作成。原本classifyでローカル6/6の理由一致、カード検査exit0（長行警告3件）。実機0・担当起動0。限定同一AI自己審査APPROVE、全体REVISE。根拠とAPI確認・直列対応の限界はrecon.md末尾。次は担当1名への実行委任判断。
+
+2026-09-13 P1実機完了: PO原文「進める」を担当1名への最大6件の実行委任として受領。sandbox Issue #2〜#7、run34732212144/34732308387/34732406466/34732496119/34732553655/34732582404。親もAPIと各job実行ログを直接取得し6/6（正常1・期待拒否5）、全件false、送信6・再送0を確認。証拠はintake-p1-live-local-evidence.jsonのgithub_live_review。P1合成受付APPROVE、全体REVISE、限定委任完了・本番変更0。次はP2設計。

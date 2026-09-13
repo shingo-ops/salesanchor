@@ -12,7 +12,7 @@ status: draft
 
 ## 2026-09-13 P1実機カードの現在地
 
-sandbox PR #1はマージ済み、受付workflow active。次は[実機カード](TH-GO-INTAKE-P1-LIVE-01.txt)で[合成入力6件](intake-p1-live-cases.json)を確認する。限定カードの同一AI自己審査APPROVE、全体REVISE。ローカル6/6、実機0件。設計と根拠はrecon.md「2026-09-13 P1実機6ケースの設計・自己審査」。担当1名への実行委任・Issue作成承認待ち。準備PRの承認を試験実行へ拡張しない。
+sandbox PR #1マージ後、POの検証担当1名への限定委任で実機6件を実行。正常1件受付・不正5件期待拒否・全件GO未発行を親も直接確認し、P1合成受付はAPPROVE。証拠はrecon.md「2026-09-13 P1実機カードの実行委任」とintake-p1-live-local-evidence.jsonのgithub_live_review。全体REVISE。本番用の本人証明やP2期限/取消を検証したとは扱わない。次はP2の未確定入力調査と正式設計。以下の実機未実施記述は計画当時の履歴。
 
 ## 2026-09-12 実行経路の整備計画（現行入口・草案）
 
