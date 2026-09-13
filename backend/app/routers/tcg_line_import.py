@@ -40,7 +40,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services import line_source_names
-from app.services.tcg_import_progress import read_items, read_progress
+from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
     TCG_SCHEMA,
@@ -665,10 +665,20 @@ async def get_import_items(
     import_job_id: uuid.UUID,
     limit: int = Query(50, ge=1, le=100),
     offset: int = Query(0, ge=0),
-    filter_by: Literal["all", "needs_review", "extraction_error"] = Query("all", alias="filter"),
+    filter_by: Literal["all", "needs_review", "extraction_error", "results_present"] = Query("all", alias="filter"),
     db: AsyncSession = Depends(get_db),
 ):
     return await read_items(db, str(import_job_id), limit, offset, filter_by)
+
+
+@router.get("/tcg/line-import/{import_job_id}/messages", dependencies=[Depends(require_super_admin)], tags=["super-admin"])
+async def get_import_messages(import_job_id: uuid.UUID, limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0), db: AsyncSession = Depends(get_db)):
+    return await read_messages(db, str(import_job_id), limit, offset)
+
+
+@router.get("/tcg/line-import/{import_job_id}/extraction-jobs", dependencies=[Depends(require_super_admin)], tags=["super-admin"])
+async def get_import_extraction_jobs(import_job_id: uuid.UUID, limit: int = Query(25, ge=1, le=100), offset: int = Query(0, ge=0), filter_by: Literal["all", "error"] = Query("all", alias="filter"), db: AsyncSession = Depends(get_db)):
+    return await read_extraction_jobs(db, str(import_job_id), limit, offset, filter_by)
 
 
 @router.post(
