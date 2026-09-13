@@ -2818,3 +2818,22 @@ tradeoff: new storage adds migration and audit responsibility; immutable publica
 decision: draft 4 tables, per-field event updates, stock_effects API and fixed 12-column publication contract in design section 18; self-review REVISE
 follow_up: extraction operation format, manual resolution authorization, history compatibility, publication API safety and initial-stock reconciliation
 ```
+
+```text
+id: EV-20260913-LINE-PUBLICATION-RECOVERY
+date: 2026-09-13
+agent: Codex design partner
+task: 配信失敗復旧と手動解決・初期切替の契約
+scope: local simulated writer and official Google docs; no external writes
+evidence:
+  - type: command
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json sheet_write_failure_probe
+    summary: old writer success/error cases both clear then append; injected append failure leaves 0 visible rows
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/recon.md 配信失敗の模擬実行と公式仕様確認
+    summary: Context7 unavailable; authorized direct Google docs confirm per-spreadsheet atomic batch, UpdateCells range clearing, recommended 2MB and 180s processing limit
+confidence: high
+tradeoff: API atomicity is not cross-spreadsheet atomicity or collaborator isolation; candidate publication not live-tested
+decision: design sections 19-21 specify one-call replacement, readback/retry, super-admin resolution and shadow cutover; same-AI review REVISE
+follow_up: extraction event contract, history version selection and full DDL constraints; measure live counts/size during authorized rehearsal
+```

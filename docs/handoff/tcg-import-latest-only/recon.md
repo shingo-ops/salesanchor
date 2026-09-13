@@ -312,6 +312,14 @@ GitHub読取: #3465はPR/Issueとも取得不可。#3456はHEAD 3c17a83ce61ba154
 
 design §18に追加4テーブルの列/制約案、更新順序、stock_effectsの配列レスポンス、12列配信との境界、未実行の受入条件8項目を保存。設計案の生成は実装検証ではない。自己審査REVISE。次は抽出/手動解決/履歴互換/配信公開・初期化の未確定契約を実物と照合する。
 
+## 配信失敗の模擬実行と公式仕様確認（2026-09-13）
+
+基点c10f26f505b588140048000752b384a70bff4e05。`backend/app/services/tcg_distribution_svc.py:412` の_write_to_target_syncだけをAST抽出し、認証/worksheetを模擬化して実行。成功とappend失敗の2件ともclear→appendの順。後者はstatus=error、残存0行。実Google/DB操作0。コードhashと結果は [probe-20260913.json](probe-20260913.json) sheet_write_failure_probe。これは現行の呼出順の反例で、新公開方式の試験合格ではない。
+
+Context7ツールなしを確認し、ユーザー指定の公式資料代替を使用。確認日2026-09-13。Google Sheets [batchUpdate](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/batchUpdate)は同じspreadsheets内の更新を原子的に適用するが共同編集結果の一致を保証しない。[UpdateCellsRequest](https://developers.google.com/workspace/sheets/api/reference/rest/v4/spreadsheets/request#UpdateCellsRequest)のrange/fieldsにより新データ未被覆の旧セル値を除去可能。[利用上限](https://developers.google.com/workspace/sheets/api/limits)は推奨2MBと処理180秒、指数backoffを記載。これらはAPIの仕様根拠であり外部企業の成功率・性能実測ではない。
+
+`backend/app/routers/tcg_analysis_review.py:94` はrequire_super_admin。手動解決API案も同じ権限に限定。`backend/app/services/tcg_distribution_svc.py:39` の5000行と同:448のタブ作成禁止を設計に維持。影響範囲は設計§19〜21、公開/手動解決/初期化の契約案。製品コード変更0、外部送信0。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

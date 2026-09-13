@@ -899,5 +899,31 @@
     ],
     "passed": 9,
     "total": 9
+  },
+  "sheet_write_failure_probe": {
+    "method": "unchanged production writer AST; simulated worksheet and auth helpers; no Google or DB calls; demonstrates call ordering only",
+    "code_sha256": "8d899a0b812f583eab3320a7fce4fc07eaf1da94ce29111c5328128c5a0626e4",
+    "results": [
+      {
+        "case": "success",
+        "calls": [
+          "clear",
+          "append_rows"
+        ],
+        "status": "ok",
+        "visible_rows_after": 2,
+        "old_values_retained": false
+      },
+      {
+        "case": "append_fails",
+        "calls": [
+          "clear",
+          "append_rows"
+        ],
+        "status": "error",
+        "visible_rows_after": 0,
+        "old_values_retained": false
+      }
+    ]
   }
 }
