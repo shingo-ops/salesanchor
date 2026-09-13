@@ -1048,3 +1048,27 @@ API非使用の独立プロセスで、Client破棄時に接続を閉じるモ�
 一次資料: https://github.com/googleapis/python-genai/blob/v2.8.0/google/genai/client.py （2026-09-13確認、Client.close/__enter__/__exit__/__del__）。Context7利用可能ツール0のため、PO起動指示の代替許可で公式ソースを直接確認。本番実物と一致。新モデル仕様を推測して変更しない。
 
 CIが見逃した範囲: tests/test_tcg_work_comparison.py:21で実clientを禁止し、比較テストはmodel_call自体を模擬値へ置換。call_work_modelのClient寿命を検査していなかった。今回の比較用アダプタの実装不具合であり、Geminiの商品判断精度の証拠にはならない。新取込error1のSoftTimeLimitExceededの原因と同一視しない。通常抽出gemini_extraction_svc.py:185はclient変数を保持している。
+
+## 2026-09-13 CARD-LINE-WORK-CLIENT-04実装
+
+POが限定修正・テスト追加の確認に「進める」と回答。設計PR3462 HEAD2665d8e9、design-keyword.md §17.12とCARD-LINE-WORK-CLIENT-04を読んで実装。最新origin/main 56a1661d起点の専用release/line-work-client-lifetimeを公式手順で作成。製品差分はcall_work_model内のwith保持・text取得後closeのみ、他関数/モデル/プロンプト/DB変更0。
+
+寿命感知FakeClientはfactoryごと新規生成、ModelsはClient本体を保持しない。旧式の早期close検出1、text正常/空/None3、generate/text例外時close2の計6試験を既存比較テストへ追加。生成API使用0。make lint-ci終了0、ruff成功/Bandit高重大度0、mypyは既存警告（当該既存unused-ignoreを含む）で完全合格とは称さない。Docker未稼働につきローカルpytest未実行、実PG/単体は既存GitHub CIで確認する。
+
+POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関係を質問された。通常抽出はgemini_extraction_svc.py:185でclient変数保持、tcg_extraction.pyの100秒soft limit経路。比較サービスは通常抽出から参照されない（rgでcall_work_model定義1件のみ）。今回の接続保持不具合とは別の停止である。商品マスタを含むprompt追加が応答時間へ与えた影響は未測定で、因果を断定しない。タイムアウト修正/再抽出はこのカードに追加しない。
+
+
+### PR #3472 CI確認
+
+製品HEAD0197109272bdcfefab0cc1e447bdb7ad5d636552、Backend CI34739377763/job103676363729は2819 passed/95 skipped/失敗0、119.19秒、coverage63.80%。追加6試験を含め成功。自己確認APPROVE（Client寿命限定）、独立レビューではない。PR3472提出済み、GO未受領のprocess-artifacts gate以外失敗/実行中0を確認。実Gemini/本番変更/採用/配信0。最新HEADの最終検証結果はPR本文へ記録する。
+
+
+## 2026-09-13 GO #3472・Client寿命修正の本番反映
+
+PO原文GO #3472を14:32 JST受領確認しPR本文へ転記。HEAD833cf7b5、Backend CI34739556003は2819成功/95skip/失敗0、coverage63.80%。GO評価34740572926成功後、全チェック失敗/実行中0とmain包含・HEAD一致を確認。公式gh-pr-merge-safe.sh --merge --match-head-commitで実行し、GitHub mergedAt=2026-09-13T05:33:51Z、mergedBy=shingo-cc、mergeCommit=b52a4def309d20d09f327ab19efcea0ccaacf3e5を直接確認。公式処理が対象机/ローカルブランチを回収し、占有台帳DONEを記録。
+
+Deploy34740608928/job103679559392成功。ログで05:34:52 UTC、salesanchor_db_20260913_143449.sql.gz（7.6M）取得、05:37:32 UTC Deployment completed successfully。復元試験は未実施。SSH読取で本番git HEAD一致、稼働backend比較サービスSHA256=c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002dda、マージ版と一致。公開/api/healthはstatus ok/database・redis・celery connected。
+
+本番の隔離Pythonプロセスで寿命感知Fakeを使い配備済みcall_work_modelを検査。adapter_failed_before_send=false、adapter_response_correct=true、正常/異常close=true、生成API0。/tmp/line-lifecycle-postdeploy-proof.jsonに記録。製品ファイル変更や実Gemini再試行ではない。通常抽出の100秒タイムアウトを解消したとは称さない。
+
+状態: 限定修正設計/PO承認/実装/CI/マージ/本番反映完了。実データの再比較・精度評価・採用・配信は未実施、次は固定対象の現在状態を再確認した上で診断付き本番比較の手順へ進む。GO委任は有効化していない。証跡保存は既存の文書PR3462、同PR自体は未マージ。

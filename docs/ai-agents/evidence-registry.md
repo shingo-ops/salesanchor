@@ -2690,6 +2690,10 @@ EV-20260912-LINE-WORK-ID設計見直し: PO「進める」でRAW固定作品比�
 PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
 
 
+### EV-20260913-PMG-STAGE-CTA
+
+PO原文「この表示に変更してくれ」で3カード下部CTA実装を承認、新規担当委任「進める」でpmg_cta_completionが完成。root差分/画像審査APPROVE、担当実行のunit273/実PG18skip0/E2E12成功とbuild/check/lint終了0を原ログ照合。mypy532診断は非blockingとして明記。正本docs/handoff/pmg-import-delivery-ssot/design.md/recon.md「3段階カードCTA・実装検収」、CARD-PMG-STAGE-CTA-01。reports/pmg-stage-card-actions/verification-manifest.jsonにログ/画面SHA256保存。新PR/CI確認へ。新番号付きGO未受領、マージ/本番反映未実施。
+
 ### EV-20260913-LINE-WORK-COMPARE
 
 作品ID読取比較の実装着手。根拠: docs/handoff/tcg-product-master-growth/recon.md「2026-09-13 作品ID読取比較の実装検証」、設計PR #3462 HEAD 2fc9e647。make lint-ci終了0（mypy既存警告あり）、実PG試験未実行。実モデル/本番書込/配信0。
@@ -2697,6 +2701,12 @@ PO原文「進めてくれ」で4件実装承認。root実2ページの72表示�
 ### EV-20260913-FRONTEND-AL-RELEASE
 
 PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+
+EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8、通常pushの自動承認拒否2回。origin/owner一致・public確認済み、公開送信のPO明示承認が必要との理由。PR未提出/CI未実行/本番未反映、迂回なし。design/reconの「公開pushの承認待ち」参照。
+
+
+EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
 
 EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
 
@@ -2707,3 +2717,15 @@ EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・
 EV-20260913-LINE-WORK-COMPARE対象変更: 診断再試行はINACTIVE_SOURCEでAPI0。旧44中18無効/置換先18は新確定取込にリンク、新44有効/観測時7ジョブ未終端。対象切替PO判断待ち。recon13:41/設計§17.10参照。
 
 EV-20260913-LINE-WORK-COMPARE-CLIENT: 新取込729明細/対照不一致0、診断RuntimeError。実SDK2.8.0と公式Client.__del__確認、temporary閉鎖/held未閉鎖。配備済みadapterの寿命Fake再現とwith保持の4確認true、追加生成API0。修正設計§17.12自己APPROVE、実装承認待ち。
+
+
+EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
+
+
+EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
+
+EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
