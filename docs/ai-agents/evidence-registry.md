@@ -2508,3 +2508,22 @@ tradeoff: status default active is not permission to restore old sold-out invent
 decision: retain explicit stock quantity and existing quantity when absent; sold-out requires separate evidence; suppress only related negative restock memo; self-review REVISE
 follow_up: scoped negation, event absence semantics, persistent offer matching and implementation acceptance tests
 ```
+
+```text
+id: EV-20260913-LINE-IMPLEMENTATION-INTENT
+date: 2026-09-13
+agent: Codex design partner
+task: PO実装移行承認と未解決の設計引継ぎ条件を記録
+scope: design PR #3456; product unchanged
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/design.md section 15
+    summary: exact user request retained; design review REVISE, card not issued
+  - type: command
+    reference: gh pr view 3456 --json state,headRefOid,mergeStateStatus
+    summary: OPEN, b4f0af7b108a46276cec80c740e5c9c97c2471af, DIRTY
+confidence: high
+tradeoff: implementation authorization does not fill missing technical contracts or authorize production changes
+decision: preserve authorization without asking again; separate design readiness from post-implementation test gates; do not switch roles automatically
+follow_up: finalize offer/schema/API/rollout contracts, resolve document conflicts, self-review and formal card validation
+```
