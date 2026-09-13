@@ -2920,3 +2920,7 @@ EV-20260913-SHINSOKU-TIMEOUT-01 完了追記: PO原文「GO #3476」を2026-09-1
 
 EV-20260913-SHINSOKU-TIMEOUT-01 再抽出完了: PO原文「次を進める」に基づき固定job713b8823を既存retry_extractionで1回投入、enqueued1。2026-09-13 15:33:13 JST、通常Celery taskが146.425139秒でdone。DBで明細147/解析147/要確認0/エラーNULL。原文数量価格単位等735照合一致、欠落重複0。原文不変、配信未実行、全投稿の保証ではない。根拠はrecon.mdの本番1件再抽出節、worker task91ff4091ログと非公開の前後スナップショットを設計担当が直接確認。
 EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
+
+### EV-20260913-FRONTEND-AM-RELEASE
+
+PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50d719b、deploy34742996601成功。root実ログで新規backup7.6M/配備HEAD一致、直接HTTP200/DBRedisCelery connected/公開3フォーム6ボタン属性を確認。根拠docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。検収器修正履歴保存。本番認証付きフォーム送信・PO目視・復元試験は未実施。本便完了、残存旧299の次便設計は別。
