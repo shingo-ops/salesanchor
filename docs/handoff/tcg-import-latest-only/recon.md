@@ -402,6 +402,16 @@ POへの「第1便を別の実装担当へ委任して進めてよいですか�
 
 検収: **APPROVE（第1便の未接続部品のみ）**。設計契約と実物を同セッションの親が照合した検収で、独立した第三者レビューではない。既存呼出元への接続、K1〜K10、実PG、AI精度、UI、マージ、本番、再解析、3シート配信は未実施。次は製品成果物の正式引き継ぎ方法と第2便の最新main/隔離PG経路を確定する。第2便カードは引き続き未発行。
 
+## 正式引き継ぎ・第2便CI経路の確認（2026-09-13）
+
+GitHub main APIとorigin/mainは0002d110db0a91013e615fea6a2496ddf2f12e02で一致。PR3456の0242a98eでは文書チェック3成功、guard-authoring unit testsだけskip。新規4製品ファイルは前回hashと4/4一致し、まだ未追跡。第1便を再実装する必要はない。
+
+第2便の具体的な検証経路: .github/workflows/test.yml:38,122,206,224,241にbackend差分検出、PostgreSQL16使い捨てservice、RLS_ADMIN_DATABASE_URL、全pytest実行がある。backend/tests/test_tcg_work_matching_integration.py:48-77のUUID別DB作成/CI限定/ローカルhost限定/管理DB限定/接続終了方式を読み取り参照した。新試験ファイル自身のfixtureで同じ隔離方式を使い、既存解析fixtureを横流用しない。migration-test.yml:688以降の全件ドライランも別の合格条件。CI仕様変更は不要。
+
+本端末のdocker infoはunix /var/run/docker.sock欠落で失敗。実PG未実行。GITHUB_ACTIONSをローカルで偽装しない。予定SQL名はlatest mainで未使用、run_all_migrations.sh末尾のLINE送信者名登録を保持する。TCG新規導入の自動経路は今回の検索では確認できず、「親表作成後に新SQLを再適用する」試験と区別した。
+
+査定: 第2便のCI試験経路は同一AIの設計査定APPROVE、実装/実PG合格ではない。第1便の製品提出はdesign §15の具体案まで準備済み。担当の前便はcommit/push/PR禁止のため、同じ担当へその範囲を追加委任する確認を次のPO判断1件とする。製品PR未作成、第2便未発行、マージ/本番未実施。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）

@@ -2986,3 +2986,16 @@ decision: stage-1 component review APPROVE; same-session parent review, not inde
 state: product files local/untracked, no product commit or PR; docs PR3456; no DB, K1-K10, AI/UI, production or distribution verification
 follow_up: formal product handoff and stage-2 latest-main/isolated-PostgreSQL prerequisites; stage2 remains unissued
 ```
+
+```text
+id: EV-20260913-LINE-HANDOFF-PREP
+date: 2026-09-13
+agent: Codex design partner
+scope: read-only verification and documentation; no executor resumed
+reference: docs/handoff/tcg-import-latest-only/recon.md and design.md section15; card-stock-storage-02.md
+observed: main API and origin/main 0002d110 match; docs PR3456 at0242a98e has3 successful checks and1 skipped;4 product SHA256 match; target migration filename absent
+validation_path: existing test.yml PostgreSQL16 service and CI-only random-database fixture pattern; 8 schema acceptance groups specified; no CI changes
+limitation: local Docker socket absent, PostgreSQL not executed; automatic future TCG provisioning not verified
+review: same-AI APPROVE for CI validation-path design only; stage2 remains unissued
+next_decision: extend existing stage1 executor delegation to isolated worktree/copy/verification/product commit/push/PR only; no merge, DB or stage2 implementation
+```

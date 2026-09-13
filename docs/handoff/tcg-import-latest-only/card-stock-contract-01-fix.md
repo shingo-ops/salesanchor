@@ -26,7 +26,7 @@
 
 手順3: 正式設計の内容一致を確認
     cd /Users/tanizawashingo/worktrees/salesanchor/release-line-stock-message-design && shasum -a 256 docs/handoff/tcg-import-latest-only/design.md
-    期待する出力: 2bd49c488429a420c25fe375ce362aba5c0886340a695658f817a049946ab0cd。一致した場合のみ次へ。
+    期待する出力: 12d8830404f4688594433439de4ea653b09f552184c1ed7e28d6685a5dba651f。一致した場合のみ次へ。
 
 手順4: 限定修正
     tcg_stock_evidence.pyの_shapeは辞書を検証後に返す型付き関数とし、最上位parsedをその戻り値で受け直す。
