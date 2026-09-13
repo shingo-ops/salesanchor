@@ -82,4 +82,14 @@ AST試験の抽出名へ新関数を追加する。A1〜A8の正否例/同値性
 手順14 引き継ぎ
 6ファイルの差分、実施した検証と未実施のpytest/PG、A1〜A8対応箇所、停止/未決、報告ファイルを設計担当へ返す。
 設計担当が読取レビュー後にPR公開と通常CIへ引き継ぐ。正式試験未実施の状態で実装完了/公開可能としない。
+手順15 2026-09-13 読取審査後の限定修正と再検査
+初回実装済み6ファイルと既存報告を引き継ぐ。同じ報告へ追記し、手順1の排他作成・初期status空条件は再実行しない。
+設計担当が既存HEADにもあるI001の原因を実測した。同じ許可ファイル内の下記importだけ1名1行に整形する。
+対象: backend/tests/test_tcg_keyword_matching.py の CARD-LINE-WORK-MATCHING-V3-01 直下。
+is_model_keyword / match_pid_with_work / resolve_work_evidence の名前・意味を変えず、現在1行の3名を3行にする。
+同ファイルtest_space_96_designed_inputsのpokemon=works["PM0191"]は誤り。PM0191はOne Piece。
+保存資料IP001と一致するPM0048のwork_idを使い、PM0200も同じIDであることをassertする。商品マスタ・設計期待値を変えない。
+これは設計仕様の変更ではなく、既存語整形と追加テストの作品IDの修正。上記以外の既存問題が出たら従来どおり停止する。
+手順10〜14を再実行し、許可4テストのruffも既存venvで検査する。pytest/PG禁止・公開禁止は維持。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-product-name-space-match-impl/backend && .venv/bin/ruff check tests/test_tcg_keyword_matching.py tests/test_tcg_keyword_lint.py tests/test_tcg_product_guards.py tests/test_tcg_work_matching_integration.py
 END OF CARD

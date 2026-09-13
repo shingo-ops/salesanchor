@@ -766,3 +766,34 @@ PR3466初回process-artifacts gateはrecon内の省略ファイルパス2件を�
 実装worktreeでpreflight成功、未保存変更0、HEAD af269ae2、origin/main 9f5415c3を直接確認。両者の対象6ファイル差分0を確認したためカード基点欄へ両値を記録。旧release/line-box-heading-guardsの未保存作業は保持。対応PR3430はMERGED（6c55e40d）、旧単品ガード本体と作品根拠関数が現mainに存在することを照合した。本便は別worktreeの現行コードを基に進め、旧作業の上書き/清掃/台帳変更を行わない。
 
 文書PR3466のHEAD5622b793はチェック33成功/10対象外/失敗0を直接確認。これを製品のpytest合格には読み替えない。
+
+
+### 実装差分の途中審査とカード補正（2026-09-13）
+
+親のAST純関数検算は既存293名称の期待tuple不一致0、旧確定tuple劣化0、既存正解256維持、旧関数との500対照不一致0、境界10例一致。正式pytestではない。追加テストを読むとR5逆方向の従来一致を消す期待値を発見し、方向別の検査へ修正を依頼した。
+
+次に96例fixtureを製品純関数へ渡して1例不一致を実測。test_space_96_designed_inputsのpokemonがPM0191（One Piece）のIDを参照していた。保存資料のIP001と一致するPM0048へ訂正しPM0200と同一作品をassertする指示をカード手順15へ追加した。設計期待値やマスタ変更は不要。
+
+実装担当はmake lint-ci終了0後、補助ruffで既存test_tcg_keyword_matching.pyの途中importにI001を検出し規定停止。親のruff --diff読取で3識別子を1名1行に整形するだけと確認し、許可ファイル内のその箇所に限る補正をカード化。既存問題全般の修正へ広げず、テスト誤りと整形の2点だけを追加指示する。
+
+
+### A便の実装受領・読取確認（2026-09-13）
+
+既存実装担当から手順15完了を受領し、対象worktreeのstatusで製品6ファイルだけの差分（2705追加/9削除）を直接確認した。変更は候補選択の共有化、通常成立語0のときだけの完全一致追加、R5検索側への同関数接続、既存試験群への固定例追加。旧作品/単品/除外/状態/注記経路とp1/p2対応を維持している。
+
+実装担当が実行した検証（親は生ログを読取確認）：make lint-ci終了0（ruff app/bandit成功、mypyは既存Makefileの警告扱い）、4テストのruff終了0、diff --check終了0。補助ruffの途中停止は手順15で対象importだけを整形して解消した。
+
+親が直接実行した検証：実装ソースから純関数だけをAST抽出。既存293名称は保存済みA単独期待tupleに全一致、従来resolved tuple劣化0、既存正解256維持。旧public関数とのseed913・500例対照はtuple不一致0。追加経路の境界10例一致、追加テストから固定データを取り出した96期待例は修正後不一致0、R5検索/除外/制御文字の方向別6検査成功。最初の96例検算で1例不一致を見つけ作品IDを訂正させ、期待値は変えていない。親検算はpytest/DBではない。
+
+A1〜A6のコード・固定試験・純関数検算は設計と整合。A7の隔離PG保存試験8例を追加済みだが実行は未確認。A8の正式pytest/PG/通常CIも未実施のため、製品公開可能・本番品質合格とは判定しない。現在は実装差分準備済み／読取審査済み／正式検証待ち。製品commit/push/PR・マージ・本番データ変更はなし。B便はREVISE。
+
+生報告：/tmp/reports/CARD-PRODUCT-NAME-SPACE-IMPL-01.txt。親検算：/tmp/sa-space-parent-review.json。次はこの6ファイルを製品PRへ保存し、既存CIで全pytest/隔離PGを確認する公開便。マージは番号/HEADを示す別のPO GOが必要。
+
+最終ファイルSHA256（生報告と実ファイルの一致を親が直接確認）:
+
+- backend/app/services/tcg_analyzer_svc.py: `7ffaabe42b21c3ab16ddd2db91297ca35b0eeefd2370595c7d5ebd06015f8220`
+- backend/app/services/tcg_keyword_lint.py: `16582096369e3462cf08e2e58ac4b1afe63f2f0df0be45a4e76de017eae848e8`
+- backend/tests/test_tcg_keyword_matching.py: `c3dd87a86e19c72c86da84e612e4ccbae1094543260964d46e4b457aeeefdfff`
+- backend/tests/test_tcg_keyword_lint.py: `70980eace0bab9d2e427f5ad9ac6b697c3e87b28b27b1d74bc9766535a572429`
+- backend/tests/test_tcg_product_guards.py: `0ab1b9b4661ddd96a1fc0dca14e9160f7179d12da16a7ba7885d511eada27645`
+- backend/tests/test_tcg_work_matching_integration.py: `36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551`
