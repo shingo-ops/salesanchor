@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_analysis_review_svc import fetch_analysis_results
+from app.services.tcg_condition_review_svc import condition_options
 
 router = APIRouter()
 
@@ -35,6 +36,8 @@ class GeminiFields(BaseModel):
 
 
 class SystemFields(BaseModel):
+    product_title: str = ""
+    product_uuid: str = ""
     product_id: str
     pid_resolved: str
     pid_basis: str
@@ -46,6 +49,15 @@ class SystemFields(BaseModel):
     exclusion: str
 
 
+class ConditionReviewFields(BaseModel):
+    condition_id: str | None
+    review_version: str
+    needs_review: bool
+    review_reasons: str
+    confirmed: bool
+    classification: str
+
+
 class AnalysisResultItem(BaseModel):
     extraction_item_id: str
     source_message_id: str
@@ -54,6 +66,7 @@ class AnalysisResultItem(BaseModel):
     gemini: GeminiFields
     system: SystemFields
     review_issues: list[str]
+    condition_review: ConditionReviewFields | None = None
 
 
 class AnalysisResultsResponse(BaseModel):
@@ -116,3 +129,11 @@ async def list_analysis_results(
         limit=data["limit"],
         providers=data["providers"],
     )
+
+
+@router.get("/tcg/conditions/review-options")
+async def list_condition_review_options(
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_super_admin),
+) -> list[dict]:
+    return await condition_options(db)
