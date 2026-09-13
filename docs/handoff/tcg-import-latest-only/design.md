@@ -11,7 +11,7 @@ ADR: [ADR-154](../../adr/ADR-154-tcg-parity02-gas-python-migration.md)、[ADR-11
 
 ## 2026-09-13の状態
 
-現行契約の索引は§24、数量・発送枠の最新査定は§25を参照。過去追補の未確定記録だけで現在の状態を判断しない。
+現行契約の索引は§24、数量・発送枠は§25、追加実例と既存更新経路は§26、統合列定義と共通入口は§27を参照。過去追補の未確定記録だけで現在の状態を判断しない。
 
 文書PR: https://github.com/shingo-ops/salesanchor/pull/3456 （提出済み・未マージ）。
 
@@ -600,7 +600,7 @@ spanはline（1始まり整数）、start/end（その行のUnicodeコードポ�
 
 Systemは検証後に既存line_start/endを全根拠のmin/maxとして導出し、既存raw欄と新しいevidence_payload JSONB（format_version/field_evidence/shipping/clauses）をextraction_itemsに保存。操作番号は検証済みitems/clausesの配列順から付与し、UUIDをAIに生成させない。
 
-1. 形式不正はjob error、全イベント生成0。根拠不一致は当該itemを保留する。原応答は安全なエラー証跡として保持する設計だが、secretsを含むエラー文字列を保存しない。
+1. 形式不正はjob error、全イベント生成0。根拠不一致はjob errorとして当該投稿のイベント生成0。検証失敗したフィールド名・位置・理由だけを既存error_messageへ保存し、不正なモデル応答はDBへ取り込まない。原文はsource_messagesに保持する。別投稿の処理は巻き戻さない。
 2. 語句判定は検証済みの節単位で§12/17を適用。商品/枠/節の対応が曖昧ならpending。文字列一致だけでその商品の補足と証明できたことにはしない。隣の商品境界・発送枠をまたぐ節は自動適用しない。
 3. 同じitemの現在数量と完売が矛盾する場合、部分文字列の末尾を無条件採用せず保留。「10→残3」のように更新関係が明示される型は辞書へ個別登録・反例検証したものだけを許可する。
 4. stock_set/sold_outとplan_assert/plan_denyを別イベントへ分解する。1明細に両者があれば2イベント。日付の保留はplan側だけに付き、現在完売の独立確定を妨げない。
@@ -694,6 +694,171 @@ Systemは検証後に既存line_start/endを全根拠のmin/maxとして導出�
 読み取れた常設抽出はINSERT/job状態更新、再解析はanalysis_resultsのUPSERT、原文取込はactiveフラグ更新である。既存FKに新しいRESTRICTを加える影響を、過去の任意運用を含めて不存在とは断定しない。自動検索は不可逆SQLの語句に対するPreToolUseガードで止まり、実行0・ガード解除0。広範なSQL自動監査を完了した記録は作らない。
 
 同一AIの自己審査REVISE。解消: 発送枠の具体参照例、単位省略の扱い、丸数字/数値連結の反例と数量規則。残件: v5の境界判定を検証する非重複評価例、初期化/再解析での不変証跡の最終DDLと既存運用への影響確認。未解決を埋めるために製品コードやDBを変更していない。
+
+## 26. 追加受入例と既存更新経路の査定（2026-09-13）
+
+### 別実例の追加
+
+原文Bの3投稿8枠を手動ラベル化した。根拠位置・全文hash・匿名化した期待値はprobe JSONのadditional_acceptance_labels。既に参照した17投稿の全文hashと比較して一致0/3。類似テンプレート/同一送信者の独立性は未検査なので、独立評価・未知データ性能を証明したとはしない。
+
+| 投稿 | 完全な投稿の行範囲 | 期待結果 |
+|---|---|---|
+| H1 | B529960〜529970 | 商品3種のBOX。数量100/30/完売をそれぞれに適用 |
+| H2 | B533930〜533941 | 同じ商品表記のカートン完売、BOX40、パック8000。カートンの完売をBOX/パックへ広げない |
+| H3 | B543172〜543180 | 商品セット400と別商品BOX完売。セット内の各商品へ数量400を複製しない |
+
+この3投稿に追加予定の肯定なし。数量・単位を明示する5枠と完売3枠を区別。全体で§25の13枠＋8枠=21枠の参照例を保持するが、実在庫のID照合もAI実行も0。これらは実装後の入力/期待値として固定し、テスト成功件数へ加算しない。
+
+### runtime参照監査（読み取りのみ）
+
+backend/app内のPython245ファイルをAST構文解析、構文失敗0。対象4テーブルを含む定数/f-string73件を収集した。説明文も含む73件をSQL73件とは呼ばない。先頭がSQL命令のものはSELECT35、UPDATE9、INSERT5、FROM句1。本文は保存せずパス/行/先頭語/対象テーブル/hashをprobe JSONへ保存した。動的な文字列結合、外部ツール、本番操作、過去migrationは対象外。
+
+確認できたUPDATE9件: extraction_jobsのrunning/最終status/診断再試行が3、source_messagesのactive/superseded更新が1、analysis_resultsの商品手動訂正が1、単位補正/状態補正/単位未解決表示/状態からの単位補完が4。これらの常設定数SQLにはsource原文削除やチャネルID変更を確認していない。削除が全環境に存在しないとの証明ではない。RESTRICT導入で未知の削除が失敗する場合は履歴保持のため停止し、CASCADEへ緩めない。
+
+先の不可逆語句検索はガードに拒否され実行0。今回はSQLを実行せず、テーブル名を含む文字列のメタデータだけを列挙する一般的な読み取りで範囲を確認した。ガード変更・許可スクリプト・権限拡張0。
+
+### 解析結果の直接更新に対する接続補正
+
+§24のanalysis_input_digestだけでは不十分。既存item_corrections_svcの商品訂正とunit_recoveryの後段補正は、マスタsnapshotが同じでも結果を変えるため、**最終解析結果snapshotとそのdigest**もイベントに必要。
+
+- tcg_stock_eventsへanalysis_result_snapshot JSONB NOT NULL、analysis_result_digest TEXT NOT NULLを追加。snapshotはproduct_id、unit_id/状態ID、quantity/price、status/exclusion/needs_review/reasons、原文根拠、補正履歴ID集合を含む。時刻/表示用文字列等の意味を変えない値はhashに含めず、キー/配列順・Decimal文字列表現を固定する。
+- イベント生成は単位補完等の後処理完了後。analysis_input_digest＋analysis_result_digestをevent_keyの解析版部分に含める。同じ結果への再実行は適用1回、結果が異なる場合は別候補を作り、既適用eventがあれば自動反映しない。
+- 商品手動訂正や単位補正後、同じ共通の候補再検査処理を呼ぶ。加えて配信前の整合検査で、offerに関連する適用済み抽出明細の最新結果digestとの差分を検出する。未接続の更新経路で黙って通ることを防ぐ。
+- 差分はanalysis_driftとして確認待ち。確定在庫そのものを新商品/新単位へ移し替えず、原文・適用時結果・最新解析を並べて表示。対象に関係する未解決のdriftがあるpublicationは作成前に保留し、既存の公開版を維持する。日付だけの確認待ちとは別のガード。
+- item_correctionsが既定スキーマ文字列を持つ点は、今回の新在庫処理に持ち込まない。新接続はTCG_SCHEMAと対象IDを検証する。既存呼出先との設定不一致は検出して停止し、他テナントへ転送しない。
+
+### 審査項目の更新
+
+| 調査項目 | 判定 | 根拠/限界 |
+|---|---|---|
+| 発送/単位別の実例が不足 | 解消（参照例として） | 合計6投稿21枠。モデル精度・独立評価は未実施 |
+| runtimeの原文/抽出更新経路が未確認 | 限定範囲で確認済み | 245ファイル、対象文字列73。動的/外部操作は対象外と明示 |
+| マスタ版だけの重複判定 | 設計修正 | 最終解析結果digestを追加し、手動訂正/後段補正も差分保留 |
+| 最終DDLと既存保存処理の一致 | 未完了 | snapshot・digest・監査列を反映した単一の最終列定義へ統合が必要 |
+
+同一AIの自己審査はREVISE。ここまでの調査を再度「実例未提供」として止めない。次は列定義の統合と共通処理の呼出一覧を最終化する。実装後に必要なAI評価・実PG試験・画面/配信試験は、設計前の調査不足と混同しない。
+
+## 27. 列定義と共通入口の統合案（2026-09-13）
+
+本節を§18/20/22/24/26の列追加案の統合先とする。各表の列はここへ集約し、複数節から推測してmigrationを作らない。SQLファイルは未作成・未実行。型後の「?」はNULL可、それ以外はNOT NULL。JSONBはobject/arrayを記した型だけ許可。IDはUUID、既存参照の削除はRESTRICT。現在の基準はこれまでの調査SHAに固定し、実装開始時のmain差分を再照合する。
+
+| テーブル | 統合した列定義 |
+|---|---|
+| tcg_stock_offers | id UUID PK、supplier_channel_id UUID FK、product_id UUID FK、unit_id UUID FK、condition_id UUID FK、price NUMERIC(14,2)?、shipping_label TEXT?、shipping_evidence JSONB array、quantity NUMERIC(14,2)?、availability TEXT、quantity_event_id UUID? FK、price_event_id UUID? FK、condition_event_id UUID? FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
+| tcg_stock_events | id UUID PK、source_message_id UUID FK、extraction_item_id UUID? FK、offer_id UUID? FK、event_kind TEXT、event_key TEXT UNIQUE、engine_version TEXT、source_posted_at TIMESTAMPTZ?、evidence JSONB object、patch JSONB object、decision TEXT、review_reasons JSONB array、before_values/after_values JSONB object、applied_offer_revision BIGINT?、analysis_input_snapshot/analysis_result_snapshot JSONB object、analysis_input_digest/analysis_result_digest TEXT、supersedes_event_id UUID? FK、resolution_key TEXT? UNIQUE、resolution_request_hash TEXT?、resolved_by TEXT?、resolved_at TIMESTAMPTZ?、resolution_response JSONB object?、created_at TIMESTAMPTZ DEFAULT now()、applied_at TIMESTAMPTZ? |
+| tcg_restock_plans | id UUID PK、offer_id UUID FK、polarity TEXT、certainty_raw TEXT、date_kind/date_precision/date_raw TEXT、date_start/date_end DATE?、resolution TEXT、review_reason TEXT?、source_event_id UUID FK、revision BIGINT DEFAULT 1、created_at/updated_at TIMESTAMPTZ DEFAULT now() |
+| tcg_stock_publications | id UUID PK、state TEXT、schema_version INTEGER、input_manifest JSONB object、rows JSONB array、rows_sha256 TEXT?、row_count INTEGER、target_results JSONB object、created_at TIMESTAMPTZ DEFAULT now()、ready_at TIMESTAMPTZ? |
+| extraction_items（追加列） | evidence_payload JSONB object?。既存行はNULL、v5ではformat_version=5を必須 |
+| tcg_distribution_targets（追加列） | active_publication_id UUID? FK。配信先行のロック下で予約し、解決済みの試行だけ解除。期限だけで自動解除しない |
+
+未知の商品/単位/状態から確定offerを作らず、未解決はoffer_idなしのpending eventとして保持する。単位/状態の未記載でも既存の一意なofferへ対応できれば、その確定属性を維持する。source_posted_atはsourceの原投稿日時の写し、resolved_atは操作者の判断時刻であり混同しない。resolved_byは認証済みsubject文字列を保存し、クライアントに指定させない。
+
+### 制約・索引の確定対象
+
+- 全revision>=1、row_count>=0、schema_version>=1。availability/event_kind/decision/polarity/date_kind/date_precision/resolution/stateは各節の列挙値にCHECKを付ける。状態未確定を任意文字列で通さない。
+- offersの数量状態とprice>=0は§24、eventsの適用状態整合は§24、plansの日付整合は§24。resolution_key等の手動解決5列は全NULLまたは全非NULL。JSON object?のresolution_responseもこの組に含める。
+- sha256/digest/request_hashは64桁の小文字16進。入力snapshotとhash、結果snapshotとhashの一致は保存入口で検証する。比較規約はキー順固定・UTF-8・空白なし・Decimalを文字列・日時をUTC ISO形式。揮発的な解析時刻等は解析result hashから除き、適用監査時刻は別列で保存。
+- publicationsはready/delivering/completed/partialでrows_sha256/ready_atが非NULL、row_count=rowsのデータ行数（ヘッダー除く）。rowsはヘッダーを含む12列配列で、全セル文字列。ready以後は内容とmanifestを変更不可。
+- 対象ごとのtarget_resultsはtarget IDをキーとしてtarget設定snapshot、status、attempts配列、verified_rows/hash/timeを保持。各attemptはattempt_id/started_at/finished_at nullable/outcome/error nullable。返答不明をsuccessへ丸めない。
+- FKのチャネル一致/自身以外のoffer参照/適用後不変は制約トリガー案を維持。source/extraction参照の外部削除はRESTRICTで失敗させる設計で、既存削除の成功互換は保証しない。未知の運用が失敗すれば停止して報告する。
+- 索引: offers(channel,product,unit,condition)、events(source_message_id,created_at,id)、events(offer_id,created_at,id)、events(decision,created_at,id)、plans(offer_id,source_event_id)、publications(state,created_at,id)。後方FK参照の必要索引をmigration検査で確認。商品の自然キーを新UNIQUEにしない。
+
+### 反映処理の入口と呼出順
+
+新しい共通サービス `tcg_stock_projection_svc`（案）へ候補生成・一意照合・項目別時刻検査・適用/保留を集約する。既存サービスからofferテーブルへ直接書かない。
+
+| 呼出元 | 追加する接続 |
+|---|---|
+| tcg_extraction task | 抽出・商品照合・単位等の後処理が完了してcommitした後に候補生成。失敗/途中状態から適用しない |
+| tcg_product_master_svc再解析 | 同じextraction IDでも最終結果digest比較。既適用差分をpendingへ。再解析=入荷にはしない |
+| item_corrections_svc | 訂正保存commit後に候補再検査。商品ID訂正で既存offerを別商品へ移動させない |
+| tcg_unit_recovery_svc | 後段補正完了を呼出側で待ち、最終snapshotを生成。中間結果ごとに数量イベントを発行しない |
+| stockイベント手動解決API | 原文/候補集合/対象revisionを再照合して同じ適用入口へ |
+| distribution | 保存済みofferのprojectionとanalysis_driftを検査してpublication生成。analysis_resultsから数量を直出力しない |
+
+共通入口ではチャネル→analysis_results→offer/planの順で行ロックし、結果digestと対象revisionを再照合する。既存解析の結果書込トランザクション内からチャネルロックへ入らず、commit後に接続して逆順ロックを避ける。外部AI/Sheets呼出し中はDBトランザクションを保持しない。
+
+publication生成と解析input snapshot読取はREPEATABLE READの短いトランザクションで同じ読取版を使用する。[PostgreSQL 16公式](https://www.postgresql.org/docs/16/transaction-iso.html)はREAD COMMITTEDでは同じトランザクションの連続SELECTでも異なる版を見得ること、REPEATABLE READの更新競合では全体再試行が必要なことを規定する。DB競合時は外部送信前にトランザクション全体を最大3回再試行し、以後保留。
+
+送信前に対象行をロックしactive_publication_idを予約してcommit。同じpublicationでもoutcome不明の試行を別workerが新しい試行として再開しない。既存attemptを照会・読取検証してから再試行を決める。解決できない限り別publicationの送信を始めない。成功応答が遅れて届いても、attempt_id/active_publication_id不一致なら新しい予約を解除しない。
+
+### 残件を増殖させないための審査整理
+
+具体化した業務契約・参照例・保存列・呼出元は本節までに集約した。SQLの正式作成は実装役の作業だが、制約トリガーのイベント種別ごとの許可遷移（pending→applied等）とsnapshot生成の厳密なJSON項目は、Generatorへ渡す前に設計で固定する必要がある。これを最終の設計残件とする。新たな事実で影響が増えた場合は根拠を示し、単に「精度未測定」を理由に未実装試験を前倒し要求しない。
+
+自己審査REVISE。現段階で実装カードを発行せず、設計合格/実装済みと呼ばない。実PG・AI・UI・配信・切替の試験は実装後ゲートで、今回は文書整合チェックのみ。
+
+## 28. 状態遷移とsnapshot項目の固定案（2026-09-13）
+
+### イベントの状態遷移
+
+| 元状態 | 次状態 | 必須条件 |
+|---|---|---|
+| 未作成 | pending | 原文ID、engine版、event_key、両snapshot/digestを固定。候補以外の在庫更新0 |
+| pending | applied | 確定offer一致、入力/結果digest不変、原投稿時刻・revision検証、数量/予定の型・意味検査成功。before/afterと参照を同じtransactionで保存 |
+| pending | ignored | 同じ値の再通知、または明確に在庫操作を含まない通知。数量/予定不変。理由を保存 |
+| pending | stale | 対象項目に既に新しい原投稿時刻のイベントが適用済み。quantity/plan変更0 |
+| pending | rejected | 管理者が原文と候補を確認して却下。理由とsubject/時刻/キーを保存 |
+| applied/ignored/stale/rejected | 同状態のみ | 内容と結果は不変。訂正・再抽出は別IDのpendingイベントにsupersedes_event_idを付ける |
+
+pendingのまま候補再検査できるが、source/evidence/patch/解析版は変更不可。offer_idの選択とreview_reasons、手動解決情報だけが変更可能。同時操作はchannelとevent行をロックして判定する。参照トリガーは適用時にevent.offer_id=参照先offer.id、sourceとofferのchannel一致、source_posted_atの写し一致を要求する。原文のチャネル/時刻変更が既存イベントと矛盾する場合は拒否し、原文訂正は別IDとして扱う。
+
+planイベントでもappliedならoffer.revisionを1増やし、applied_offer_revisionに保存する。quantity_event_idと数量は触らない。日付だけのpendingは数量イベントと分離する。すべての在庫更新でbefore/afterは当該offer/planだけを含み、他枠をまとめて上書きしない。
+
+### publicationの状態遷移
+
+building→readyは行数/12列/内容hash/全対象manifest確定時。building→failedは生成検証失敗時でready_at/hashはNULL可。ready→deliveringは対象予約と送信開始時。delivering→completedは全対象読取一致、delivering→partialは一部のみ一致、delivering→failedは一致対象0で全試行が明確に失敗。成否不明の試行があればdelivering/partialに留める。
+
+partial/failed（既にreadyとなった版）→deliveringの再試行は未成功先だけ。同じ版の同じ内容を使い、成功先を消さない。completedは内容不変の終端状態。readyへ到達した版は、その後failedでもhash/manifestを変更しない。buildingから失敗した版の再生成は別ID。ready/delivering中に対象設定が変わった場合は、送信を止めてreview_reasonをtarget_resultsへ記録し、自動転送しない。
+
+active_publication_idとattempt IDの一致を予約解除条件にする。成否不明の旧要求が存在する限り、新版をその対象へ送信しない。期限切れだけを成功/未適用の証明にしない。
+
+### snapshotの厳密な形
+
+analysis_input_snapshotは全マスタの再現用snapshotではなく、原文と解析版の来歴を保存する。キーはschema_version（1）、engine_version（string）、prompt_version（string）、work_reference_sha256（string|null）、source_sha256（string）、extraction_payload（object|null）、correction_ids（UUID配列）の7件に固定。extraction_payloadは今回使用した保存済みのraw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_work_name/resolved_work_id/line_start/line_end/evidence_payloadを含む。no_itemならnull。correction_idsは使用した既存の不変訂正履歴IDを順序固定で参照する。
+
+全マスタsnapshotを新たに保存する案は採用しない。根拠: 現行load_lookup_mapsは6辞書、商品/作品/正規化/状態/備考は別ロード、単位補正は後段で再読込される。完全な入力再現は今回の在庫保全以上の改修を要求する。一方、数量・対象・状態・予定を変える最終結果は次のsnapshotで検出できる。既存work_reference_snapshotと既存監査履歴は保持するが、全マスタ状態を完全再現できるとは宣言しない。
+
+analysis_result_snapshotのキーはschema_version（1）、kind（item/no_item）、extraction_item_id（UUID|null）、product_id/unit_id/condition_id（UUID|null）、quantity/price（Decimal文字列|null）、status/exclusion（string|null）、pid_resolved/unit_resolved/needs_review（boolean）、pid_basis/unit_basis/condition_basis（string|null）、review_reasons（string配列）、evidence（object）、correction_ids（UUID配列）、proposal（object）に固定。未知キーは拒否。kind=no_itemでは明細ID/商品等/数量価格/basisはnull、resolvedはfalse、evidenceは原文分類根拠、needs_review/reasonsは分類結果を示す。
+
+proposalはevent_kind、target_selector（channel_id/product_id/unit_id/condition_id/price/shipping_label/根拠）、patch、review_reasonsの4キー。patchは§18のpresence/value形式で、日付/肯定否定も含む。生成UUID・event_key・実行時刻はproposalに含めず、digestの循環依存を作らない。提案内容が変わればdigestが変わる。
+
+空抽出でも明確な在庫語が原文にある場合は、ignore種別のpending候補を原文単位で記録して「抽出できず確認待ち」とする。この候補は数量操作へ直接applyできず、再抽出して根拠が揃った別イベントを作る。無関係と確認できた原文はignored。空抽出から全商品を0にする経路はない。
+
+before_values/after_valuesはoffer（id/revision/product_id/unit_id/condition_id/quantity/price/availability）、plans（変更対象のid/revision/polarity/date_kind/date_precision/date_raw/date_start/date_end/resolution/review_reason）の2キー。未適用はoffer=null/plans=[]。適用後はその時点の値として不変。current_offerは別の現在値をAPIで返す。
+
+resolution_responseはevent_id/decision/offer_id/applied_offer_revision/reasonの5キーに固定。入力reasonをここに保存して監査できるようにする。任意フィールド修正や原投稿時刻の書換えを手動解決に紛れ込ませない。
+
+### 既往記載の置換と設計審査
+
+§24/26/27の全マスタ入力snapshotという記載は、本節の来歴＋最終proposal方式に置換する。数量・対象・単位・状態・予定のいずれかが変われば最終digestが変わり、既適用との差分は保留する。単にマスタの無関係な行が増えたことだけで既存在庫の配信を止めない。再現性は原文/抽出版/適用時結果/訂正履歴の範囲であり、過去全マスタの完全再現は対象外。
+
+同一AIの自己審査: **REVISE（未解消は配信前driftの比較方法）**。来歴・最終結果の保存形式は固定した。ただしproposalを含むdigestはanalysis_resultsの行だけから算出できない。配信前比較が読み取りだけで同じproposalを再構成できることを、共通サービスの純粋関数の入力と出力としてさらに固定する必要がある。書き込みを伴う再解析を配信前に暗黙実行しない。
+
+## 29. drift比較の読み取り契約と最終査定（2026-09-13）
+
+### 純粋な提案生成
+
+共通サービスに `build_stock_proposal(extraction_payload, normalized_result, source_posted_at, policy_version)` を置く。DB/AI/現在時刻にアクセスせず、入力からproposalだけを返す。policy_versionは実装された数量/否定/日付/境界規則の版であり、規則変更時に必ず更新する。主語や販売枠の不明を保留へ返し、推定補完しない。マスタ検索等は呼出前の解析で済ませ、normalized_resultを入力する。
+
+normalized_resultはanalysis_result_snapshotのうちschema_version/kind/extraction_item_id/product_id/unit_id/condition_id/quantity/price/status/exclusion/pid_resolved/unit_resolved/needs_review/pid_basis/unit_basis/condition_basis/review_reasons/correction_ids。evidenceはextraction_payloadから導出、proposalは戻り値なので入力へ含めない。原投稿日が必要な相対日付に未確定日時を与えれば保留を返す。
+
+### 配信前の比較
+
+1. 同じ読取snapshotで現在の保存済みraw欄、原文hash/原投稿日、analysis_resultsの上記正規化結果、訂正ID集合を取得する。
+2. これらと現在policy_versionの正規化JSONからproposal_input_digestを計算する。イベントへこのdigest TEXT NOT NULLを追加し、生成時に同じ計算で保存する。64桁制約を付ける。
+3. 最新の確認済み証跡とdigestが一致すれば、入力不変として扱う。proposalを再計算する必要はない。不一致ならanalysis_driftで保留し、再解析/再抽出/手動確認へ戻す。配信前検査はSELECTだけで、候補作成・再解析・在庫更新を実行しない。
+4. policy_version不一致は、旧規則の意味を現コードで推測しない。新しい版で別候補を作り確認する。結果が同じ場合でも新しい確認証跡を残してから配信する。
+
+新しい確認証跡のためoffersへvalidation_event_id UUID? FKを追加する。これは数量の最終変更を示すquantity_event_idと別。既適用結果と新proposalが同じ場合はoffer_patch（変更項目なし）の確認イベントをappliedとして残し、offer.revisionとvalidation_event_idだけ更新できる。数量・価格・商品・単位・予定は変えない。差分がある場合は自動確認せず、pendingのまま。
+
+通常の新イベント適用でもvalidation_event_idをそのeventへ進める。確認対象は当該offerに寄与する項目別証跡すべて（数量/価格/状態/有効予定）であり、最後の数量イベント1件だけの一致で他項目のdriftを見落とさない。validationのafter_valuesへ検査したevent IDと各proposal_input_digestの配列 `validated_inputs` を追加する。順序はevent IDの辞書順。新しい確定変更時は当該項目だけ寄与元を差し替え、他項目の証跡は維持する。
+
+### 同一AIの審査結果
+
+**REVISE**。読み取り比較の入口は定義できたが、§27のbefore/afterと§28の2キー制約にvalidated_inputsを追加する整合、確認イベントが各項目の寄与元を列挙するデータ構造がまだ一つの正式な列/JSON契約に統合されていない。複数節から解釈して実装させないため、次回は追補を増やすのではなく§27〜29を1つの実装契約として再編集する。
+
+この未完成部分は、単純な「〆語の追加」で解消できる問題ではない。要件は維持し、現在在庫と原文履歴を分けた結果生じる再解析との接続を完成させてからカード化する。今回も製品変更/DB操作/マージは0。
 
 ---
 

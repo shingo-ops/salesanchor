@@ -2872,3 +2872,22 @@ tradeoff: manual labels are same-AI development references, not held-out model e
 decision: add single-number grammar, scoped circled-number handling and ambiguous-expression hold; self-review REVISE
 follow_up: independent nonduplicate evaluation fixtures and final DDL/operation compatibility
 ```
+
+```text
+id: EV-20260913-LINE-RUNTIME-DRIFT
+date: 2026-09-13
+agent: Codex design partner
+task: 別実例とruntime更新の追加査定
+scope: AST metadata read only across backend/app; manual corpus labels
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json runtime_table_reference_audit
+    summary: 245 Python files, 0 syntax failures, 73 target-table string references; 35 SELECT, 9 UPDATE, 5 INSERT and 1 FROM plus documentation strings; no SQL executed
+  - type: file
+    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json additional_acceptance_labels
+    summary: 3 additional posts/8 offers, exact full-message matches 0 against 17 prior references; not sender/template-independent model evaluation
+confidence: high
+tradeoff: static strings exclude dynamic/external SQL; postprocessing and manual product correction change results without master-input changes
+decision: add final analysis result snapshot/digest and drift hold to event/publication contract; self-review REVISE
+follow_up: consolidate final columns and shared caller contract; executable product acceptance follows implementation
+```

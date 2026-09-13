@@ -347,6 +347,20 @@ Context7ツールなしを確認し、ユーザー指定の公式資料代替を
 
 全backend/appのSQLを集計する読み取りハーネスはPreToolUseに拒否され、実行していない。拒否理由は不可逆SQL語句、解除/許可スクリプト実行0。限定した常設コードの読取結果と、広範な監査未完了を区別する。
 
+## 追加実例と参照文字列の全ファイル読取（2026-09-13）
+
+基点4879b9039fbbb067861b6c4db868708fec095b58。backend/app Python245ファイルのASTから対象テーブル名を含む文字列73件を収集、構文エラー0。SQL実行なし。内訳はSELECT35/UPDATE9/INSERT5/FROM1、残り説明文等。対象と範囲の限界はprobe JSON runtime_table_reference_audit。全ての動的SQL/外部運用を監査したとはしない。
+
+`backend/app/services/item_corrections_svc.py:63` は商品IDをanalysis_resultsへ直接更新。`backend/app/services/tcg_unit_recovery_svc.py:868`、同:986、同:1056、同:1170は後段で単位/状態等を更新。`backend/app/services/tcg_diagnostics_svc.py:212` はerror jobをpendingへ戻す。`backend/app/services/tcg_line_import_svc.py:430` は原文active更新。再解析の入力版に加えて最終解析結果の版が必要と判断し、design §26へ接続補正を記録。
+
+原文Bの3投稿8枠を追加参照例として保存。行範囲B529960〜529970/B533930〜533941/B543172〜543180。従来参照17投稿の全文hashと新3投稿の一致0。類似文/送信者分離は未検証。商品単位の完売が他単位へ伝播してはいけない実例と、セット数量を構成商品へ複製してはいけない実例を含む。手動ラベルでありモデル評価0。
+
+## snapshot読取と列定義の統合（2026-09-13）
+
+Context7利用不可のため、許可された公式資料代替で [PostgreSQL 16の分離レベル](https://www.postgresql.org/docs/16/transaction-iso.html) と [制約](https://www.postgresql.org/docs/16/ddl-constraints.html) を直接確認。複数SELECTを同じ読取版へ固定する必要、NULLを含むCHECKとNOT NULLの区別を設計§27へ反映。外部・過去導入事例の成功率ではなく仕様根拠。DB接続・SQL実行0。
+
+4新表と2既存表の追加列、配信予約、共通入口6経路を統合。各サービスの個別トランザクションの後に接続し、解析書込から逆順ロックへ入らない契約とした。状態遷移とsnapshotの厳密項目は最終設計残件、実装後試験と分けて記録した。
+
 ---
 
 ## 旧調査原文（SQR-05移植時点・履歴）
