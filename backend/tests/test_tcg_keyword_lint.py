@@ -169,3 +169,25 @@ def test_r5_space_full_name_boundary_and_other_rules_unchanged():
     assert check_r4_self_kill({"B": search["B"]}, {"B": search["A"]}) == []
     assert check_r6_dup_in_product(search) == []
     assert check_r7_spaced_ja(search) == ["B:スターターセットV 草"]
+
+
+def test_space_runs_detect_shared_and_duplicate_keywords():
+    assert check_r3_shared_kw({"A": ["ALPHA BETA"], "B": ["ALPHA   BETA"]}) == [
+        "alpha beta -> A,B"]
+    assert check_r6_dup_in_product({"A": ["ALPHA BETA", "ALPHA   BETA"]}) == [
+        "A: 'ALPHA BETA' / 'ALPHA   BETA'"]
+
+
+def test_space_runs_self_exclusion_and_piggyback_both_directions():
+    for a, b in [("ALPHA BETA", "ALPHA   BETA"), ("ALPHA   BETA", "ALPHA BETA")]:
+        assert check_r4_self_kill({"A": [b]}, {"A": [a]}) == [f"A: '{a}' kills '{b}'"]
+        search = {"A": [a], "B": [b + " LIMITED  EDITION"]}
+        assert check_r5_piggyback(search, {}) == [f"A:'{a}' rides B:'{b} LIMITED  EDITION'"]
+        assert check_r5_piggyback(search, {"A": ["LIMITED EDITION"]}) == []
+        assert check_r5_piggyback({"A": [a], "B": [b]}, {}) == []
+
+
+def test_space_runs_quality_keeps_single_space_distinct_from_no_space():
+    assert check_r3_shared_kw({"A": ["ALPHA BETA"], "B": ["ALPHABETA"]}) == []
+    assert check_r4_self_kill({"A": ["ALPHABETA"]}, {"A": ["ALPHA BETA"]}) == []
+    assert check_r5_piggyback({"A": ["ALPHA BETA"], "B": ["ALPHABETA"]}, {}) == []

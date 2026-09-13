@@ -49,7 +49,7 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v7-gemini-work-id"
+ENGINE_VERSION = "name-first-v8-product-space-runs"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -500,8 +500,15 @@ def is_model_keyword(keyword: str) -> bool:
                 and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
 
 
+def collapse_product_spaces(value: str) -> str:
+    """Collapse repeated ASCII spaces only in product comparison copies."""
+    return re.sub(r" {2,}", " ", value)
+
+
 def match_product_keyword(kw: str, normalized_text: str) -> bool:
     """Keep number-suffixed product tokens distinct without changing note/state matching."""
+    kw = collapse_product_spaces(kw)
+    normalized_text = collapse_product_spaces(normalized_text)
     if not match_one_kw(kw, normalized_text):
         return False
     normalized = normalize_en(kw)
