@@ -640,3 +640,6 @@ run_sql migrations/20260914_080000_add_abbreviation_keywords_t004.sql
 
 # CARD09: persist extraction attempts before adopting new results.
 run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
+
+# UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
+run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
