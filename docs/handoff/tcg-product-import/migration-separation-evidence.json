@@ -745,6 +745,90 @@
       "metrics_visible": false,
       "observed_by": "root directly downloaded failed-job log",
       "log_sha256": "50ba39ad5ba5c95bd1b9ee099d8f1177725b00f91206533e54ba2029cf8449f1"
+    },
+    {
+      "run_id": 34807228083,
+      "job_id": 103861391011,
+      "head": "9e954af8cdaaa7a7031c524c7839a83a8077d758",
+      "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34807228083/job/103861391011",
+      "conclusion": "success",
+      "passed": 3726,
+      "failed": 0,
+      "skipped": 95,
+      "seconds": 444.97,
+      "new_cases_passed": 9,
+      "new_cases_skipped": 0,
+      "test_sha256": "99e30fc0095d89344a3c390b317104357275aa02e520b2754d5b262b408a712d",
+      "observed_by": "root directly downloaded full CI log and parsed nine unique case records; every emit follows assertions",
+      "log_sha256": "730b1463b1b23e8c3af5088625ad0d9218a8b96af95f45c59c3a35539a569d05",
+      "observations": [
+        {
+          "case": "V1",
+          "initial_constraints": 20,
+          "missing_unique": 2,
+          "production_constraints": 22
+        },
+        {
+          "case": "V2-structure",
+          "editable_fields": 10,
+          "row_differences": 0,
+          "runs": 2,
+          "source_sha256": {
+            "20260831_110000_create_tcg_analysis_tables_t004.sql": "46f05828c20298fcc932ee9094fdeb6caf59d417a9400099bec592e49413feda",
+            "20260902_110000_tcg_classification_masters.sql": "5585e3fd3c9d9f06d015a1c0edea532b36691ee115a77dafc68ee72c89a370a9",
+            "20260902_110100_tcg_products_classification_ids.sql": "f91ecf158dc21559739b7ed70382bc6655b4dc4221570afb37a21a57f7c820db",
+            "20260903_180000_tcg_products_mark_en_t004.sql": "2a44eb1f7bb7538b4fcc761db34511299c4edc07bff72ce332b9064663189080"
+          }
+        },
+        {
+          "case": "V2-coalesce",
+          "nonnull_preserved": 2,
+          "null_refilled": 2,
+          "source_sha256": "2a44eb1f7bb7538b4fcc761db34511299c4edc07bff72ce332b9064663189080"
+        },
+        {
+          "bundle_created": 1,
+          "case": "V3-title",
+          "edited_titles_accepted": 11,
+          "identities_preserved": 11
+        },
+        {
+          "case": "V3-rollback",
+          "changed_rows_after_failure": 0,
+          "structural_fault": "PM0276.work_id=NULL"
+        },
+        {
+          "case": "V4",
+          "classification_fields_restored": 4,
+          "exclude_words_restored": 1,
+          "search_words_restored": 9
+        },
+        {
+          "case": "V4-bundle",
+          "pm0264_exclude_words_restored": 1,
+          "product_identity_preserved": true
+        },
+        {
+          "case": "V5",
+          "databases": 2,
+          "with_unique_migrations": 2,
+          "without_unique_failures": 2
+        },
+        {
+          "case": "V6",
+          "compared_tables": 11,
+          "differences": 0,
+          "pg_dump": "pg_dump (PostgreSQL) 16.15 (Ubuntu 16.15-1.pgdg24.04+2)",
+          "pg_restore": "pg_restore (PostgreSQL) 16.15 (Ubuntu 16.15-1.pgdg24.04+2)",
+          "server_major": 16,
+          "snapshot_sha256": "e91ac6a9b95ac5620805d337810086426d547aaab8fbc5deca8474cfc5727f32"
+        }
+      ],
+      "limits": [
+        "isolated artificial CI data, not production writes",
+        "structure fragments, not full 233 registration runner",
+        "artificial dump/restore, not production backup restoration"
+      ]
     }
   ]
 }

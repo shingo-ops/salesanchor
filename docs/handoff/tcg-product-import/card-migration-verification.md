@@ -117,3 +117,12 @@ commit message: test: fix migration verification query binding and observations
 公開前にgit diff --check、card-lint、check-task-stateを通す。製品/CI/SQL変更禁止、PRのマージ・本番操作禁止は維持。
 push後はHEADを親へ返して待機する。
 END OF CARD
+
+# CARD-PRODUCT-MIGRATION-VERIFY-RESULT-PUBLISH
+親がCI34807228083の実ログを取得し9case成功/skip0を検算。今回の成果物は結果文書だけ。
+対象はdocs/ai-agents/evidence-registry.md、docs/handoff/tcg-product-import/design.md、同recon.md、同migration-separation-evidence.json、本カード、tasks/todo.mdの6ファイル。
+実装役は他者と共同作業中。test/製品/CI/元SQLを変更せず、上記6ファイルだけstage/commit/通常pushする。
+事前検査はgit diff --check、card-lint、check-task-state。検証test SHA99e30fc0095d89344a3c390b317104357275aa02e520b2754d5b262b408a712d不変を確認。
+commit message: docs: record isolated migration verification evidence
+force/PRのmainマージ/本番操作は禁止。HEADを親へ返して停止する。
+END OF CARD

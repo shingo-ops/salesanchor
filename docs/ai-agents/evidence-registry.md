@@ -3097,3 +3097,5 @@ EV-20260914-PRODUCT-MIGRATION-SEPARATION: 方針合意に基づく設計調査�
 EV-20260914-PRODUCT-MIGRATION-SEPARATION 追加照合: Python26→間接SQL32、直接と合計237固有SQLの静的依存証跡を追加。本番readonly SELECTで固定名12対象中11不一致、268分類/型番英語の投影で3商品5差、22制約validated/分類NULL0を確認。本番語unique2と初期DDLの差、旧復元手順の接続/QA用途不一致を識別。Docker接続不可・既存PG fixtureのCI制約を維持しDB試験未実施。切替自己審査REVISE、検証専用便V1–V6の計画のみAPPROVE・委任未実施。recon/designと証跡JSON followup_20260914参照。
 
 EV-20260914-PRODUCT-MIGRATION-VERIFY-START: POの限定検証委任への進行指示に基づき70d145f起点の専用作業台で検証役1名へ新規test1本のみ委任。正式カードlint違反0・検証自己設計審査合格。親はPR3500と配備34804164057成功/233到達を直接確認、readonly CSV再照合34項目中23一致11差。製品切替はREVISE、既存製品/DB/CI変更なし。recon委任節と証跡post_pr3500_csv参照。
+
+EV-20260914-PRODUCT-MIGRATION-VERIFY-CI: PR3502/HEAD9e954af8、Backend34807228083/job103861391011を親が直接取得。3726pass/95skip/0fail、今回9case成功skip0。構造候補10項目2周差0、語9+1+1再追加/分類4再充填、NULL2再充填、初期unique不足2、人工復元11表差0。検証APPROVE・切替REVISE（同一AI自己審査）。本番変更0。根拠migration-separation-evidence.json verification_ci_attempts[1]とrecon/design確定結果節。

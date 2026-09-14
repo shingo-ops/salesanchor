@@ -1136,3 +1136,16 @@ CSVを日常更新に使い、DB構造変更と初期登録を分ける方向へ
 検証PR3502/57f2ad07提出後のCI: guard34805799525はerror、通常Backend workflowは未起動。GitHubでbase5afb5af1、PR CONFLICTINGを直接確認。run-guard-evaluation.jsはbaseがheadの祖先であることを要求する。main更新を取り込み、末尾追記競合3文書を双方の原文保持で解消。main変更は対象SQL10本/再利用PG生成helper/接続制限に差分なしと担当が確認。親は文書3件の両側全文保持を機械照合。ガード・CI変更なし、再実行結果待ち。
 
 初回実PG CI34806371166 / job103858961380 / HEAD ebf21776: 3725pass/95skip/1fail、277.88秒。V2のSQLにLIKEのliteral %とbind引数が混在しIndexError（test:360）。親が実ログを取得し原因箇所を照合。9件すべて成功とはしない。capsys.disabledの数値printはxdistのCIログに現れず、検証根拠の出力方式も修正する。Context7利用不可のためPsycopg公式usageのliteral %/bind仕様とpytest公式warnings captureを直接確認。修正対象は検証test1本だけ。
+
+### 検証便の確定結果（2026-09-14・PR #3502）
+
+親がCI34807228083/job103861391011、HEAD9e954af8の実ログを直接取得。3726成功/95skip/失敗0、444.97秒。専用観測JSON9件を抽出し、今回の9ケース成功/skip0を確認。test SHA256は99e30fc0095d89344a3c390b317104357275aa02e520b2754d5b262b408a712d。全suiteの95skipを今回の成功件数へ含めない。担当報告だけの静的検査と親の実CI確認を区別する。
+
+- V1: 初期20制約、本番証跡22制約、語unique不足2件を照合。V5でuniqueなしの2migration失敗/あり2成功を別DBで実証。
+- V2: 元SQL構造断片で空schemaを初期化後、10項目を編集して2回実行、行差分0。現行COALESCEは非NULL2項目を保持するが、明示NULL2項目を再充填。
+- V3: 現行bundleは11商品名変更を許容しID/参照保持。構造不整合の例外後rollback差分0。
+- V4: 過去処理で検索語9・除外語1・分類4項目が戻る。別bundle経路でPM0264除外語1が戻る。これらは原因機構の再現であり、誰が本番各行を変更したかの排他的特定ではない。
+- V6: PostgreSQL16、pg_dump/pg_restore16.15、人工データ11表の全列/ID/参照/履歴/語順の復元差分0。本番backup復元ではない。
+
+Planner結論: CSV更新自体を廃止する根拠はない。DB構造の更新は維持し、過去の商品内容を戻す処理を通常配備から分離する案を支持する実測根拠を確立した。空環境のunique不足2件も切替契約に含める。
+Architect同一AI自己審査: **検証便APPROVE、製品切替REVISE**。原因再現/構造候補/人工復元は実証済み。全実行対象2周、実CSV往復、新規商品初期投入、本番backup隔離復元、最新データ修復の業務判断は未完了。切替実装・PRのmainマージ・本番変更は未着手。本記録はPOの承認原文でも委任GOでもない。
