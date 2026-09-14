@@ -3002,3 +3002,6 @@ AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン�
 EV-20260913-PRODUCT-DETAIL 実DB検証: e1f6513c/run34765847297/job103746586673成功、3596 passed/全体95skip、保存サービス97%。本便27ケースskip条件非該当、参照/別テナント不変含む。統合単体377件成功。PR3492正式GO記録待ち、最新HEAD checks正本、マージ/本番未実施。
 
 EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。起動ガードはPO復旧報告後preflight成功。PR3490を保持して統合、CSV検索条件1点整合・相互競合試験4件追加。最終CI/本番はこれから確認。recon同名節参照。
+### EV-20260914-FRONTEND-AO-RELEASE
+
+2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
