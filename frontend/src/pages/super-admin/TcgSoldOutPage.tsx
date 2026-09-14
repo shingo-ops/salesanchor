@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
+import { TextField } from "../../components/TextField";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -76,12 +77,9 @@ export default function TcgSoldOutPage() {
   if (!isSuperAdmin) return <PageLayout navKey="nav.superAdminTcgSoldOut"><p role="alert">{t("soldOut.denied")}</p></PageLayout>;
   return <PageLayout navKey="nav.superAdminTcgSoldOut" subtitleKey="soldOut.subtitle">
     <ContentToolbar left={<>
-      <label className="comp-field">
-        <span className="comp-field__label">{t("soldOut.search")}</span>
-        <input className="comp-field__input" type="search" value={draft} maxLength={100}
-          onChange={event => setDraft(event.target.value)}
-          onKeyDown={event => { if (event.key === "Enter") { setQ(draft.trim()); setOffset(0); } }} />
-      </label>
+      <TextField label={t("soldOut.search")} type="search" value={draft} maxLength={100}
+        onChange={event => setDraft(event.target.value)}
+        onKeyDown={event => { if (event.key === "Enter") { setQ(draft.trim()); setOffset(0); } }} />
       <Select label={t("soldOut.scope")} value={scope} options={[
         { value: "all", label: t("soldOut.all") }, { value: "active", label: t("soldOut.active") }, { value: "history", label: t("soldOut.history") },
       ]} onChange={event => { setScope(event.target.value as SourceScope); setOffset(0); }} />
