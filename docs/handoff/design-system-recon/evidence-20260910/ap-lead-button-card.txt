@@ -1,0 +1,38 @@
+CARD-AP-LEADS-01（未発行・担当委任待ち）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 報告冒頭に「本報告はカードCARD-AP-LEADS-01の実行結果である」と記載する。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在/原文/L32を照合。
+開始条件: 設計§APの自己審査合格とPOの本便担当への明示委任。委任未確定なので現時点は実行禁止。
+担当: 明示委任された実装担当1名。製品3ファイルを所有。他者も作業中、他者変更を戻さない。新AI起動禁止。
+根拠: docs/specs/design-system/design.md§AP、ap-lead-button-audit.json。基準e39fa65abb83837a7909290b993a8cd363a11ef9。
+所有: frontend/src/pages/leads/LeadsPage.tsx、frontend/src/pages/leads/LeadEditPage.tsx、新規frontend/src/components/LeadFormButtonMigration.test.tsx。
+許可: 指定6件移管・回帰試験・ローカル品質検証。合成fixtureと原ログは/tmp。パスは一字一句そのまま使う。
+禁止: 対象外6/共有21/入力/失注helper/翻訳/依存lock/権限/認証/API/DB/secrets/CI変更。
+禁止: 本番書込/外部通信、文書/台帳/GO編集、commit/push/PR/merge/本番操作、新AI起動。
+手順0: preflight/status、監査JSONの2ページ/共有21hashと原文6を照合。不一致は編集前停止。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git status --short
+手順1: AP-01〜06だけ開始/終了tagをButtonへ、旧className除去、取消secondary/送信primary、size md。
+2ページに../../components/Buttonのnamed import追加。type/onClick/children/条件式と残り全文を保持。
+loading/loadingText/disabled/aria-busy/fullWidth/style/layoutClassName/pending stateを追加しない。逆変換2ページ全byte一致。
+手順2: 実ページ/入力/Select/Combobox/Modal/Drawer/Router/翻訳/usePermissions/useSSEの回帰。認証入口/API/SSE transportだけ合成。
+設計APの全受入表を満たす。3送信15/7/15項目とlost時+2、空null/Number/空白/未編集理由空を検査。
+入力invalid送信0、成功close/reset/GET/遷移、取消0、失敗保持/再試行、pending独立2回送信の回数維持。
+実Combobox候補選択/query/clear、SSE update1/ping0、権限拒否Drawerはopenクラスなし。rootは240表示組を検収。
+手順3: npm ci済み。以下strict eslint、新規/既存回帰、全体品質を順に実行。依存差異は停止して報告。
+追加検査: textareaEnter改行、Drawer専用遷移、DELETE/convert/merge/スコア書込0。条件を弱めない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npx eslint src/pages/leads/LeadsPage.tsx src/pages/leads/LeadEditPage.tsx src/components/LeadFormButtonMigration.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npm run test:unit -- src/components/LeadFormButtonMigration.test.tsx src/pages/leads/LeadFormFields.test.tsx
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npm run test:coverage
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend && npm run build-storybook
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git diff --check
+手順4: 全生出力・原ログの場所/製品3hash/共有21hash/statusをroot宛完了報告本文へ含めて停止。
+カード事前照合: 記号○、ready規則○、報告宛先○、1目的○、起点登録○、書式例○、合格条件と対象名○。
+既存worktreeは上記基準から作成済み・active-work.d登録済み。new-worktree.sh再実行禁止。
+成功: 各exit0、strict警告0、新規回帰全成功、原文6/対象外6一致、製品差分指定3のみ。
+後続PRが許可された場合はreadyで作り`--draft`禁止。今回はPR操作禁止。
+PR欄の例: `- 触るファイル: frontend/src/pages/leads/LeadsPage.tsx, frontend/src/pages/leads/LeadEditPage.tsx, frontend/src/components/LeadFormButtonMigration.test.tsx`。多段箇条書きは禁止。
+停止時: 手順番号/最後のコマンド/対象名/理由を報告。不明/失敗/範囲外を独断回避しない。
+END OF CARD

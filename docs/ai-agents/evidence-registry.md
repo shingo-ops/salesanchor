@@ -3005,3 +3005,10 @@ EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。�
 ### EV-20260914-FRONTEND-AO-RELEASE
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### EV-20260914-FRONTEND-AP-DESIGN
+
+APリード6件の原文/21hash/対象外6/他候補5画面を直接監査。基準e39fa65a、共通131/旧287。既存失注試験1ファイル3件をroot直接実行し成功。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-button-audit.json、ap-existing-lead-test.txt、設計docs/specs/design-system/design.md§AP。条件付き続行指示を受領、担当委任・番号付きGOは未取得。製品実装/表示240組は未実施。
+
+AP設計自己審査APPROVE（同一AI）。原文12件各1出現、23ファイルhash一致、形式エラー0。カードは未発行、実装担当への本便委任を確認する段階。

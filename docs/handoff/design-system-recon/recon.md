@@ -729,3 +729,27 @@ AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン�
 ## AO 本番反映結果
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### APリード6ボタン・選定recon（2026-09-14）
+
+基準e39fa65abb83837a7909290b993a8cd363a11ef9。設計はdocs/specs/design-system/design.md§AP。部品=UI部品/共有hook/helper/トークン・CSS。監査原文と21hashはevidence-20260910/ap-lead-button-audit.json、再測定器ap-lead-audit.cjs。
+
+1. 全体像: App.tsx:163/178から一覧/専用編集へ。LeadsPage.tsx:187/218、LeadEditPage.tsx:129に登録15/簡易7/専用15項目送信（編集lost時+2）。一覧SSE更新はLeadsPage.tsx:180。案件化/統合/削除は別の処理。
+2. 共用部品: Button.tsx:38/49、LeadFormFields.tsx:44/95、CountryCombobox.tsx:35、ChannelTypeCombobox.tsx:35、useRecordDrawer.ts:39、useSSE.ts:25を直接照合。国/チャネルの入力は検索queryで、確定値は候補クリック時のみ変わる。
+3. 非共用部品: LeadsPage.tsx:439/440/540/541、LeadEditPage.tsx:289/290の旧6件。原文type6/6、対象外6件。初回監査は案件化取消を含む7件となりassertで停止、親formのperformConvertを構文で除外して6件を原文照合。未保存の誤集計を確定値へ採用しない。
+4. ルールの所在: ADR索引から113/067/027/073/122、lead索引から109/119を確認。既存design-systemの延長。Button.cssとcomponents.cssの外観/配置を変更しない。正式カードは設計パートナー§5.5とcard-lintで検査。
+5. 維持の仕組み: frontend/vitest.unit.config.ts:36のsrc/**/*.test対象にLeadFormFields.test.tsxが含まれる。実行1ファイル3件成功（ap-existing-lead-test.txt）、CountryComboboxは当該既存試験ではmock。LeadsPage/LeadEditPageを直接importする既存ページ回帰は検索0。新規LeadFormButtonMigration.test.tsxと既存frontend品質CIで補う計画。実装後の試験は未実施。
+6. 設計図との対照:
+
+| 親の目的 | 現状 | 判定 |
+|---|---|---|
+| ボタン外観を共通部品に集約 | 共通131/旧287、今回6件は旧実装 | 不足6件を今回対象 |
+| 既存の操作・業務内容保持 | type/onClick/入力/送信契約を特定 | 一致、変換対象外の本文維持 |
+| 表/報酬3/カレンダー色保留・新CI最後 | 今回製品/CI未変更 | 一致、対象外 |
+
+余剰の新機能追加なし。利用回数・事業効果は未測定。比較対象は5別画面の各2件（JSONに原文/行/hash）。リードは1領域2ページで6件を揃えるため選定。安全性や効果の全候補中最大を測定したとはしない。
+
+7. ノイズと境界: 構文でbutton/Link/aのbtn-*だけを旧数としstories/test/spec/design-previewを除外。現mainの共通+5はPR3492の商品詳細Drawerで、APの成果へ加算しない。監査共有21以外も製品許可3ファイル以外は変更禁止。本番書込/実認証/外部通信0。GO委任正式文書はdraft/REVISE、有効化を確認できず代理GOを使わない。
+
+外部事例なし: 新仕様/新ライブラリ導入ではなく既存部品への移管。npm ci成功の既存依存監査出力（24件）はap-npm-ci.txtへ保存し、本便で依存更新はしない。旧3試験の成功とAP製品実装・表示240組の合格を混同しない。runbook検索では今回AP固有スプリントなし、既存todo行/recon/migrationへ保存する。

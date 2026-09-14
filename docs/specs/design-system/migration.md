@@ -282,3 +282,6 @@ AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン�
 ## AO 本番反映結果
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+2026-09-14 AP設計: 基準e39fa65a、リード3フォーム6件。共通131/旧287→期待137/281。原文6・対象外6・共有21hash、既存失注試験3成功。設計§AP/監査ap-lead-button-audit.json。製品未変更、新規回帰/表示240組未実行。担当委任未確定、番号付きGO未受領。表/報酬3/カレンダー色保留、新CI最後。

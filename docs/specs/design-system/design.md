@@ -1604,3 +1604,79 @@ AO担当委任承認: 新しい実装担当1名への委任質問にPO原文「�
 
 
 AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
+
+### AP. リード3フォーム6ボタン移管設計（2026-09-14）
+
+状態: 調査・設計。PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら進める」を受領。条件付き続行指示として扱う。全体目的は既存合意を継承し再承認対象にしない。新担当への委任、今回番号付きGOは未受領。rootは設計担当を継続する。mode: handoff。
+
+#### 目的・選定と事実根拠
+
+既存の「1ヵ所直せば全ページが変わる」目的に沿い、リード登録Modal・簡易編集Drawer・専用編集の取消/送信を既存Buttonへ移管する。KGIは対象6/6移管、業務本文の逆変換差分0、対象外6/6保持、共有21ファイルhash不変、表示・操作の受入違反0。利用頻度・工数短縮・売上効果は未測定で、最大の事業効果を証明したとはしない。
+
+基準e39fa65abb83837a7909290b993a8cd363a11ef9。専用worktreeとorigin/main一致、preflight成功、作成時未保存0。構文監査は共通131/旧287、期待137/281。前回AO126からの共通+5はPR3492の商品詳細Drawerの追加5件で、リード2ページ/Button2は前回結果文書merge7b3aea8cから差分0。原文/共有hash/候補比較は[ap-lead-button-audit.json](../../handoff/design-system-recon/evidence-20260910/ap-lead-button-audit.json)、再測定は同ディレクトリap-lead-audit.cjs。行番号は基準時の案内で、置換条件には原文を使う。
+
+| 候補 | 直接確認した範囲 | 選定理由・制約 |
+|---|---|---|
+| リード6件 | 2ページ、同一リードの3フォーム、POST1/PATCH2契約 | 今回採用。1領域で登録/簡易/専用を揃える。失注条件と実時間更新の検証は追加必須 |
+| Badges/Buddy/Shifts/StaffReports | 各1ページ1フォーム2件、合計8件 | 4領域をまたぎ、数値変換・終了処理・時刻・報告期間など別契約。別便へ。簡単さや優先度を利用実績なしで断定しない |
+| Notifications | 1ページ1フォーム2件 | Webhook URL登録を含むため今回混ぜない。実Webhookの試験は禁止 |
+| 専用リード編集2件のみ | 1ページ1フォーム | 4件を残す。今回の3フォーム全体を揃える目的に対して採用しない |
+
+#### 変更内容・許可ファイル
+
+| 対象 | 基準のfile:line | 変更後 |
+|---|---|---|
+| AP-01/02 登録取消/登録 | frontend/src/pages/leads/LeadsPage.tsx:439/440 | Button secondary/primary、size md |
+| AP-03/04 簡易取消/更新 | frontend/src/pages/leads/LeadsPage.tsx:540/541 | 同上 |
+| AP-05/06 専用取消/更新 | frontend/src/pages/leads/LeadEditPage.tsx:289/290 | 同上 |
+
+製品許可は上記2ページと新規frontend/src/components/LeadFormButtonMigration.test.tsxの3ファイルのみ。2ページに../../components/Buttonのnamed importを追加。監査原文6件の開始/終了tagだけをButtonへ、classNameを取消variant="secondary"/送信variant="primary"とsize="md"へ置換する。type/onClick/children/条件式と残り本文は逐語保持。importと6件を逆変換し、元2ページとの全バイト一致で判定する。
+
+loading/loadingText/disabled/aria-busy/fullWidth/style/layoutClassName/pending stateを追加しない。type明示6/6、保存中ロックなしが現行。入力・wrapper・Select/Combobox・Modal/Drawer・権限・SSE・route・翻訳・依存・API/DB/CI変更禁止。対象外6原文は新規起動1、案件化Modal2、行内案件化/統合/削除3。MergeLeadModal、ConfirmModal、スコアも対象外。本番リード・外部通信・実Webhook・secretsに触れない。
+
+#### 3送信契約・読み取り境界
+
+LeadsPage.tsx:187〜215登録POST /leadsは15項目。customer_name/statusは原値、company_name/email/phone/channel_type/initiative/type/temperature/estimated_scale/customer_type/response_speed/notes/countryは空文字のみnull、monthly_forecastは非空Number/空null。成功はModal閉鎖・emptyCreateFormへreset・一覧再取得。登録にはLostReasonFieldsもclose_reasons送信もない。status=lostを選べる現状を編集契約で上書きしない。
+
+同:218〜244簡易PATCH /leads/:idはcustomer_name/email/phone/status/type/notes/countryの7項目＋失注時2項目。customer_name/status原値、残り5項目は空null。id/formが無ければ送信しない。成功はcloseDrawer/reset/一覧再取得。LeadEditPage.tsx:129〜160専用PATCHは登録と同じ15項目＋失注時2項目、成功は/crm/leadsへ移動。
+
+LeadFormFields.tsx:44〜56のhelperはstatus!=lostで追加キー0、lostならclose_reason_memo（空null/原値）とclose_reasons（選択なし[]、選択あり[{reason_id:Number(id),is_primary:true}]）を追加。LeadsPage.tsx:100〜110とLeadEditPage.tsx:84〜105は既存失注理由を入力へ復元せず空で初期化する。これは変更前の観測であり、保存によるDB上の実際の消去を今回実測したとはしない。今回の見た目変更で修正せず、空の再送信を含む前後のpayload一致を検査する。必要なら別テーマで検討する。
+
+LeadsPage.tsx:145〜184はstatus絞込GET /leads、GET /close-reasons?type=lost、fetch型SSE /api/v1/leads/stream。SSEのevent:updateで一覧再取得、pingは無視（useSSE.ts:75〜90）。合成ストリームと認証入口だけを置き換え、hook本体は使用する。通常の再取得件数検証ではイベントを送らず、SSE再取得は別ケースで明示イベントを送る。
+
+CountryCombobox.tsx:35/113/180、ChannelTypeCombobox.tsx:35/113/180はGET /countries・/channel-masters、active絞込、文字入力はqueryのみ更新、候補クリックでcode/platform確定。入力だけでpayloadに反映されたと誤判定しない。候補確定・クリア・未選択文字入力後blurを実部品で検査する。
+
+LeadsPage.tsx:312/520はcreate権限で起動、update権限で行クリック。App.tsx:163は専用route、専用ページ独自のusePermissions条件はない。認証/認可の新仕様を加えない。取得失敗・失注候補取得失敗は既存エラー表示のまま（専用取得処理:84〜123）。
+
+#### 受入条件・検証方法
+
+| 条件 | 必須検証 |
+|---|---|
+| 原文・範囲 | 2ページ逆変換全バイト一致、対象外6原文/共有21hash一致。製品差分3件のみ。共通137/旧281。他便増減は再測定して分離 |
+| payload | 実3フォーム状態でPOST/PATCH URL/ID/全キー/値一致。空null、前後空白保持、monthly空/0/42、簡易への15項目流入0。編集2フォームlostの選択あり/空/非lost復帰で17/9または15/7キー、登録lostでも15キー。未編集再保存の理由空も保持 |
+| 入力制約 | 3フォームcustomer_name空と不正emailはnative invalid/送信0。登録/専用monthly負値・小数はinvalid、0/空はvalid。textarea Enterは改行/送信0。国/チャネルは実候補クリック・クリア・未確定文字列を操作 |
+| 成功/取消/失敗 | 登録close/reset/GET追加1、簡易close/reset/GET追加1、専用一覧遷移。取消書込0。失敗は入力保持と既存エラー、再試行成功。Modal/Drawer閉鎖と再開・focus復帰、Drawerから専用へのURL/ID一致 |
+| pending | 全3フォームの2ボタン有効・文言/aria状態維持。合成APIで独立2回送信の回数が前後2。取消/Esc/X閉鎖も前後一致。連投防止を無断追加しない |
+| 権限/更新 | 実usePermissions+合成/me/permissionsでcreate/update許可拒否。Drawer拒否はopenクラスなし。SSE update1回でGET追加1、pingで0、フォーム入力が前後同じ。対象操作でDELETE/convert/merge/スコア書込0 |
+| 実表示240前後組 | 登録通常・簡易非lost/lost・専用非lost/lostの5構成×6幅390/640/767/768/1279/1280×日英×明暗×通常/pending=240組。実UiPrefsProvider・全入力を使用。Tab/ShiftTabで到達、文字/本体/focus輪郭の四辺欠け0、初期横overflow増加0。狭幅で下部まで実scrollする。640pxを実200%zoomとは呼ばない |
+| 操作 | 3フォーム×取消Enter/Space・送信Enter/Space・入力Enter・Esc・pending・失敗の24前後組＋Modal/Drawerの通常X/pendingEsc/pendingXの6組。textareaEnter各3、Drawer専用遷移1、SSE update/ping、国/チャネル、lostの追加ケースを別に照合 |
+| 品質 | 対象3strict eslint、新規実ページ回帰、既存LeadFormFields試験、test:coverage/check:all/build/build-storybook、最新PR必須CI成功。既存部品試験3件だけでページ送信合格としない |
+
+実ページ/実入力/Select/Combobox/Button/Modal/Drawer/Router/翻訳/usePermissions/useSSEを使用。認証入口・API・SSE transportのみ合成し、外部通信を遮断する。実認証・全App/sidebar・本番送信・PO目視は別であり未実施。240表示組と新規回帰は実装後の計画、実行済みではない。
+
+#### Why・リスク・接触面と維持
+
+Button.tsx:38/49〜87はnative属性を転送でき、対象6件に特殊属性はない。6件移管を逆変換で隔離し、3種類のpayloadとlost分岐を実ページで照合できるため、見た目の集約と業務挙動の維持を個別に判定できる。AOの成功件数をAP成功へ転用しない。外部導入事例・新ライブラリ調査は不要（既存社内部品への機械的移管）。ADR-113/067/027/073/122を継承、リード状態はADR-109、統合はADR-119の境界に従う。新ADR不要、将来のWhyには本監査と上記代替比較を利用できる。
+
+リスクは長いフォーム/失注分岐によるfocus欠け、SSEでGET回数を誤計数、Combobox未確定値の誤期待。失敗時はREVISEに戻し、CSS拡張・ラベル短縮・入力省略・機能修正で通さない。既存pending連投と理由空初期化は観測/維持するが、業務上の妥当性を本便で承認したとはしない。
+
+接触面6面: ①利用者は3フォームの外観、操作契約は維持。②設計担当が監査/カード/検収、実装担当は明示委任後の3ファイルのみ。③既存frontend品質CIを使用し新CI追加0。④合成データのみ、DB/テナント書込0。⑤マージ/配備は別の番号付きGOと既存経路、今回実行0。⑥外部API通信0、国/チャネル/SSEはローカル合成。
+
+外観ownerはButton、配置はform-actions/Modal/Drawer、回帰の守り手は新規Leadページ試験とfrontend/vitest.unit.config.ts/既存CI。設計担当がhash/逆変換/表示操作を人手確認する。製品差分revertで戻せDB復元不要。未解決仕様・原文/hash差異・範囲外変更・検証失敗は停止して設計へ返す。表/報酬3/カレンダー色は保留、新CIは全画面移管後の最後。
+
+
+#### Architect自己審査（Planner設計後・2026-09-14）
+
+APPROVE（AP設計合格）。同一AIによる自己審査であり、独立した第二者レビューではない。原文6/type6/対象外6の各1回出現、2ページ/共有21hashを再照合して一致。3送信契約とlost追加2、Combobox確定、SSE更新、権限/非対象処理の境界を実物で特定し、逆変換・実ページ回帰・240表示組で○×判定できる。ADR-113 handoff/既存Button/既存unit configとの矛盾なし。既存失注3試験はroot直接実行で成功し、実ページ回帰が未整備である点を受入条件へ補った。
+
+設計上の未解決仕様なし。設計/維持形式エラー0、正式card-lint exit0（長行警告3、停止条件なし）。条件付き続行指示の範囲で文書保存へ進む。実装担当への本便委任は未確定、カードは未発行。新規回帰/240表示/製品実装/今回番号GO/マージ/本番反映は未実施。設計合格はこれらの完了や承認を兼ねない。
