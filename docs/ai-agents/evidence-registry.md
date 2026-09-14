@@ -37,8 +37,8 @@ evidence:
     summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
 confidence: medium
 tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
-decision: 8状態PO合意・方式の自己審査APPROVE。実装6ファイルのRuffと台帳/差分検査成功。実PG/CI未実行。本番未反映。
-follow_up: 正式CIで実PG検証。手元Python3.14ではBandit内部例外のためlint-ci全合格とは扱わない。条件付き本番許可を番号付きGOと偽らない。
+decision: 8状態PO合意・設計/実装自己審査済み。PR #3501 HEAD fc059880で正式CI3720成功/95skip・coverage65.07%。GO記録のみ停止、本番未反映。
+follow_up: 番号付きGO後に最新HEAD/CI・本番確認条件を照合。手元Python3.14のBandit例外は正式CI成功と区別。条件付き許可を番号付きGOと偽らない。
 ```
 
 ```text

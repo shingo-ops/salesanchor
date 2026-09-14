@@ -173,3 +173,88 @@ def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
     assert reviewed["items"][0]["system"]["condition"] == "Case"
     assert output[0][4] == "Case" and output[0][7] == "confirmed-case"
     assert snapshot(pg) == before
+
+
+def test_larger_result_set_query_plans_and_read_only_delivery(pg, capsys):
+    """Measure real queries over 4,097 rows; this is not production telemetry."""
+    import json
+
+    from psycopg2.extras import execute_values
+    from sqlalchemy import text
+
+    baseline = seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"],
+                    condition_canonical="Case", note_ja="baseline")
+    entries = [{"smid": str(uuid4()), "job": str(uuid4()), "eid": str(uuid4())}
+               for _ in range(4096)]
+    expected = [(0, 10, baseline["eid"], "baseline")]
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("SELECT supplier_channel_id,raw_text,raw_sha256,received_at "
+                       "FROM tenant_004.source_messages WHERE id=%s", (baseline["smid"],))
+        source = cursor.fetchone()
+        execute_values(cursor, "INSERT INTO tenant_004.source_messages "
+                       "(id,supplier_channel_id,raw_text,raw_sha256,received_at,is_active) VALUES %s",
+                       [(e["smid"], *source, True) for e in entries])
+        execute_values(cursor, "INSERT INTO tenant_004.extraction_jobs "
+                       "(id,source_message_id,status) VALUES %s",
+                       [(e["job"], e["smid"], "done") for e in entries])
+        execute_values(cursor, "INSERT INTO tenant_004.extraction_items "
+                       "(id,extraction_job_id,line_start,line_end,raw_product_name,raw_quantity,raw_price,raw_unit) VALUES %s",
+                       [(e["eid"], e["job"], 1, 1, "Test Booster", "1", "10", "Box") for e in entries])
+        values = []
+        for n, entry in enumerate(entries):
+            rank, price = n % 8, (n * 17) % 1000 + 1
+            expected.append((rank, price, entry["eid"], str(n)))
+            values.append((entry["eid"], pg["product"], True, "EXACT", pg["unit"], "Box", True,
+                           pg["normal"], STATES[rank], "TEST", 1, price, str(n), "active", False, "test"))
+        execute_values(cursor, "INSERT INTO tenant_004.analysis_results "
+                       "(extraction_item_id,product_id,pid_resolved,pid_basis,unit_id,unit_canonical,unit_resolved,"
+                       "condition_id,condition_canonical,condition_basis,quantity_normalized,price_normalized,"
+                       "note_ja,status,needs_review,engine_version) VALUES %s", values)
+    import_id = link_import(pg, [baseline, *entries])
+    before = snapshot(pg)
+    plans = []
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                await db.execute(text("SET TRANSACTION READ ONLY"))
+                await db.execute(text("SET LOCAL statement_timeout = '10s'"))
+                assert (await db.execute(text("SHOW transaction_read_only"))).scalar_one() == "on"
+
+                class MeasuredSession:
+                    consumer = ""
+
+                    async def execute(self, statement, parameters=None):
+                        result = await db.execute(statement, parameters)
+                        explanation = await db.execute(text("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) "
+                                                            + str(statement)), parameters)
+                        plan = explanation.scalar_one()[0]
+                        plans.append({"consumer": self.consumer, "execution_ms": plan["Execution Time"],
+                                      "planning_ms": plan["Planning Time"],
+                                      "actual_rows": plan["Plan"]["Actual Rows"]})
+                        return result
+
+                measured = MeasuredSession()
+                measured.consumer = "review"
+                reviewed = await review.fetch_analysis_results(measured, limit=8192)
+                measured.consumer = "import"
+                imported = await progress.read_items(measured, import_id, 8192, 0, "all")
+                measured.consumer = "distribution"
+                output = await distribution.fetch_output_rows(measured)
+                return reviewed, imported, output
+        finally:
+            await engine.dispose()
+
+    reviewed, imported, output = asyncio.run(run())
+    expected.sort()
+    assert reviewed["total"] == imported["total"] == len(output) == 4097
+    assert [r["extraction_item_id"] for r in reviewed["items"]] == [r[2] for r in expected]
+    assert [r["id"] for r in imported["items"]] == [r[2] for r in expected]
+    assert [r[7] for r in output] == [r[3] for r in expected]
+    assert snapshot(pg) == before
+    assert {p["consumer"] for p in plans} == {"review", "import", "distribution"}
+    with capsys.disabled():
+        print("RESULT_ORDER_QUERY_PLANS " + json.dumps({"rows": 4097, "sources": 4097,
+              "transaction_read_only": True, "statement_timeout_ms": 10000,
+              "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI", "plans": plans}))

@@ -60,5 +60,25 @@
     "CSV has no product UUID; same title does not prove same product ID",
     "SQL experiment uses synthetic rows, not production or service joins",
     "Initial save failed with filesystem PermissionError after successful experiment; this file records those observed results"
-  ]
+  ],
+  "implementation_ci": {
+    "head": "fc059880505b734533d46c480c23ed54c25caf8b",
+    "pr": "https://github.com/shingo-ops/salesanchor/pull/3501",
+    "backend_job": 103857564620,
+    "passed": 3720,
+    "skipped": 95,
+    "warnings": 309,
+    "seconds": 235.56,
+    "coverage_percent": 65.07,
+    "new_tests": 3,
+    "new_test_skip_paths": 0,
+    "checks": {
+      "success": 34,
+      "skipped": 8,
+      "failure": 1
+    },
+    "failure": "process-artifacts gate: missing PR-specific GO record",
+    "pytest_log_sha256": "6e204ad053134c4f1636b78c4627cac9b16f3f9b064ef6c8655ff55c21c1a334",
+    "production_changed": false
+  }
 }

@@ -1162,3 +1162,23 @@ review_joinsの先頭はcondition_review_sourcesへのINNER JOINであり、既�
 直接実行: 対象6ファイルのruff check --no-cache成功、git diff --check成功、check-task-state.sh成功、対象Pythonコンパイル成功。make lint-ciのRuffは全app成功したが、Python3.14のast.Num廃止でBandit内部例外が多発。mypyも診断を出しており、終了コードだけで全品質合格とは宣言しない。Docker daemon未接続のため、ルールに従い手元pytestは実行していない。
 
 実PostgreSQL試験は96明細（4商品×8状態×3価格）とページ7/25/50、未解析/非active/未特定/NULL/未知状態、人手確定状態/同価格UUIDを検証するコードを用意した段階。正式CIの隔離DBで実行しskipを成功と扱わない。合成292行の先行READ ONLY検算とも区別する。実装検収・PR CI・本番反映は未完了。実シートを書き換えていない。
+
+
+### RESULT-ORDER PR #3501・正式CI確認（2026-09-14）
+
+PR https://github.com/shingo-ops/salesanchor/pull/3501 。HEAD fc059880505b734533d46c480c23ed54c25caf8b。初回CIのguard-authoring errorは最新mainを祖先に要求する検査に対してmainが進んでいたため発生。最新main5afb5af1を通常mergeし、両側の文書・製品差分を保持、競合なし。追従後の検査成功をGitHub APIで確認した。
+
+rootが直接取得した正式CI backend job103857564620: 3720 passed / 95 skipped / 309 warnings、235.56秒、coverage65.07%。今回追加3試験はskip処理なし、96行の3経路・ページ7/25/50・保存値不変・未解析/無効原文保持・人手確定状態・UUID順を検証。既存95スキップと区別する。Backend lint成功。全チェック34SUCCESS/8SKIPPED/1FAILURE、MERGEABLE（競合なしであって承認済みではない）。本番相当負荷のEXPLAIN/実測、認証済み本番APIと実配信後の照合は未実施。
+
+失敗1件はprocess-artifacts gate job103857514230: PR本文に「### GO記録」なし、「GO #<PR番号>」受領後の転記を要求。既受領の条件付き本番許可にPR番号を補筆せず、マージ/本番配備を停止。GO委任は有効化していない。
+
+現在地: 8状態PO合意、設計/実装自己審査、文書/コードcommit/push、PR提出、正式CIの技術検証済み。新番号付きGO未受領、未マージ・本番/シート未変更。CI結果はresult-order-evidence.jsonとPR本文へ保存。原ログは/tmp/sa-result-order-pytest-ci.txt、同jsonにSHA256。通常deployは既存Pre-deploy DB backupとhealth確認を持つ（.github/workflows/deploy.yml:127,530）が、今回の実バックアップ成功はまだ観測していない。
+
+
+### RESULT-ORDER 追加確認の指示受領と負荷試験（2026-09-14）
+
+PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら進める」を受領。条件付き続行指示として扱い、GO #3501という原文に書き換えない。PRの最新HEAD fc059880・OPEN/未マージと技術検査成功を再確認。
+
+負荷の未確認を補うため、既存試験ファイルに4,097明細/4,097原文の隔離CI試験を追加。3サービス実SQLをREAD ONLY・各SQL10秒上限で実行し、EXPLAIN ANALYZEの時間/行数を記録する。全件の順序と保存値の前後一致も検証。公開CSV607行の約6.7倍だが、実本番の件数/分布/設備と同一ではない。温まったキャッシュの測定であり、本番応答時間の保証としない。試験作成時点では未実行。
+
+本番ブラウザー読取は既存Chrome Profile 34が使用中のため失敗し、閉じる/ロック解除/別人セッション利用はしていない。過去の人間用SSH鍵許可は別診断限定と文書に明記されており、本件へ流用していない。本番相当EXPLAINと認証済み本番API照合は引き続き未確認。
