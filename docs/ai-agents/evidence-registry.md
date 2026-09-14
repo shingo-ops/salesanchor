@@ -3091,3 +3091,15 @@ EV-20260914-PRODUCT-ALL-TERMS-LOCAL: 実装5ファイル。純関数48/48、ruff
 CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
 
 EV-20260914-PRODUCT-ALL-TERMS-CI: PR3499 HEAD9f96d682、正式CI34798680670の実ログで3718成功/95skip/失敗0、coverage65.05%、265.85秒。固定正解4件改善/他1500判定不変。自己レビュー、独立審査ではない。GO記録検査と既存PM0264配備障害で本番未反映。根拠docs/handoff/tcg-product-import/all-terms-result.json。
+
+## 抽出試行記録2件の限定是正・実装開始（2026-09-14）
+EV-20260914-ATTEMPT-INTEGRITY。PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映、でーたのSSOTは厳守」。検証後反映の意図を受領。新規PR番号のGO原文は未受領で創作しない。
+既存担当error_visibility_reconにCARD-PMG-ATTEMPT-RECORD-FIX-01を交付、正式card-lint exit0。rootは設計/文書/本番read-only照合を担当、製品は担当が所有。他者変更を戻さない。公式new-worktreeでrelease/attempt-record-integrity-fix、base5afb5af1、UUID98aa2dcc-41fc-4469-a375-b259b8df81ec。未保存作業を保護する公式回収の既定安全検査を維持。
+旧PR3494は別操作でマージ済み。main5afb5af1の対象2ファイルはe594d3efと同一。rootの実PG再現/候補比較をreports/pr3494-evidence-20260914へ保存。限定修正設計はdesign.md同日末尾、同一AI自己審査APPROVE。製品実装・正式PG/CI/コードレビューはこれから。
+root本番read-onlyでgitHEAD5afb5af1、backend/workerの対象serviceSHA28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4一致。PG16.13、2schema各9制約がPG16.15期待値と一致。本番の具体的な件数は非公開の調査記録に保持し、この公開候補文書には転記しない。この照合は将来の不具合不存在の証明ではない。実本番DML/再抽出/Sheets呼出0。
+run34804870906のdeploy成功とbackup生成ログを確認、実ファイルの存在とgzip -t exit0を確認。復元試験は未実施。公開health status ok・database/redis/celery connected。今回の追加修正反映はまだ未実施。
+
+### 正式CIによる並行検証へ進む判断（2026-09-14）
+別担当コードレビューは製品service4d255b7c/migration0c39573b、最終testfe5f2593でAPPROVE。root hash照合成功。担当の初回対象試験73成功/1失敗は専用DBにsalesanchor_appがない権限fixture不足、実CI test.yml:180–203のロール定義をroot照合。対象だけで全app coverage測定した初回閾値未達を全体試験の合格にしない。
+最終版は実行途中17/74で専用PG空き789→645MBを担当が観測。以前の2走行の保持DBも同専用環境に残る。容量不足を確定エラーと断定せず、不足予防で試験中断・専用profile拡張を指示。本番/他者DBは変更せず、保持fixtureを削除しない。
+ローカル全試験完了をPR提出前の必須条件にしていたカード02を改訂。これはローカル環境都合で正式CIも止めないためで、レビュー/試験/GOのマージ基準は緩和しない。未完了をPR本文に記載し、正式Backend CI全体とMigration SQLの成功を必須とする。commit/PRは検証対象を固定する手順、本番反映の合格ではない。

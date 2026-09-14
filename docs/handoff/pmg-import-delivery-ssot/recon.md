@@ -431,3 +431,15 @@ backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行�
 PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+## 抽出試行記録2件の限定是正・実装開始（2026-09-14）
+EV-20260914-ATTEMPT-INTEGRITY。PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映、でーたのSSOTは厳守」。検証後反映の意図を受領。新規PR番号のGO原文は未受領で創作しない。
+既存担当error_visibility_reconにCARD-PMG-ATTEMPT-RECORD-FIX-01を交付、正式card-lint exit0。rootは設計/文書/本番read-only照合を担当、製品は担当が所有。他者変更を戻さない。公式new-worktreeでrelease/attempt-record-integrity-fix、base5afb5af1、UUID98aa2dcc-41fc-4469-a375-b259b8df81ec。未保存作業を保護する公式回収の既定安全検査を維持。
+旧PR3494は別操作でマージ済み。main5afb5af1の対象2ファイルはe594d3efと同一。rootの実PG再現/候補比較をreports/pr3494-evidence-20260914へ保存。限定修正設計はdesign.md同日末尾、同一AI自己審査APPROVE。製品実装・正式PG/CI/コードレビューはこれから。
+root本番read-onlyでgitHEAD5afb5af1、backend/workerの対象serviceSHA28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4一致。PG16.13、2schema各9制約がPG16.15期待値と一致。本番の具体的な件数は非公開の調査記録に保持し、この公開候補文書には転記しない。この照合は将来の不具合不存在の証明ではない。実本番DML/再抽出/Sheets呼出0。
+run34804870906のdeploy成功とbackup生成ログを確認、実ファイルの存在とgzip -t exit0を確認。復元試験は未実施。公開health status ok・database/redis/celery connected。今回の追加修正反映はまだ未実施。
+
+### 正式CIによる並行検証へ進む判断（2026-09-14）
+別担当コードレビューは製品service4d255b7c/migration0c39573b、最終testfe5f2593でAPPROVE。root hash照合成功。担当の初回対象試験73成功/1失敗は専用DBにsalesanchor_appがない権限fixture不足、実CI test.yml:180–203のロール定義をroot照合。対象だけで全app coverage測定した初回閾値未達を全体試験の合格にしない。
+最終版は実行途中17/74で専用PG空き789→645MBを担当が観測。以前の2走行の保持DBも同専用環境に残る。容量不足を確定エラーと断定せず、不足予防で試験中断・専用profile拡張を指示。本番/他者DBは変更せず、保持fixtureを削除しない。
+ローカル全試験完了をPR提出前の必須条件にしていたカード02を改訂。これはローカル環境都合で正式CIも止めないためで、レビュー/試験/GOのマージ基準は緩和しない。未完了をPR本文に記載し、正式Backend CI全体とMigration SQLの成功を必須とする。commit/PRは検証対象を固定する手順、本番反映の合格ではない。
