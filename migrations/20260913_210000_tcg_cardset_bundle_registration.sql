@@ -11,17 +11,16 @@ DECLARE
     term record;
     term_count integer;
 BEGIN
-    IF to_regclass('public.products') IS NULL THEN RETURN; END IF;
     SELECT count(*) INTO table_count
-    FROM unnest(ARRAY['tcg_major_categories', 'tcg_series',
+    FROM unnest(ARRAY['tcg_products', 'tcg_major_categories', 'tcg_series',
         'tcg_manufacturers', 'tcg_product_categories',
         'product_search_keywords', 'product_exclude_keywords']) AS t(name)
     WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
     IF table_count = 0 THEN RETURN;
-    ELSIF table_count <> 6 THEN
+    ELSIF table_count <> 7 THEN
         RAISE EXCEPTION 'cardset bundle: incomplete TCG structure';
     END IF;
-    LOCK TABLE public.products, tenant_004.tcg_major_categories,
+    LOCK TABLE tenant_004.tcg_products, tenant_004.tcg_major_categories,
         tenant_004.tcg_series, tenant_004.tcg_manufacturers,
         tenant_004.tcg_product_categories, tenant_004.product_search_keywords,
         tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;
@@ -52,7 +51,7 @@ BEGIN
             ('PM0284', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス')
         ) AS e(code, title)
     LOOP
-        SELECT tcg_uuid AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active INTO product FROM public.products WHERE product_code = expected.code;
+        SELECT * INTO product FROM tenant_004.tcg_products WHERE code = expected.code;
         IF product.id IS NULL
            OR product.category_class IS DISTINCT FROM 'Box'
            OR product.division_id IS DISTINCT FROM refs.division_id
@@ -65,20 +64,20 @@ BEGIN
     END LOOP;
 
     -- Recognize this assortment under another code instead of creating a duplicate.
-    IF EXISTS (SELECT 1 FROM public.products
-        WHERE product_code <> 'PM0297' AND name ILIKE '%CELEBRATION%'
-          AND name LIKE '%カードセット%'
-          AND name ~ '(^|[^0-9０-９])[9９][[:space:]　]*種') THEN
+    IF EXISTS (SELECT 1 FROM tenant_004.tcg_products
+        WHERE code <> 'PM0297' AND japanese_title ILIKE '%CELEBRATION%'
+          AND japanese_title LIKE '%カードセット%'
+          AND japanese_title ~ '(^|[^0-9０-９])[9９][[:space:]　]*種') THEN
         RAISE EXCEPTION 'cardset bundle: assortment already exists under another code';
     END IF;
-    SELECT tcg_uuid AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active INTO product FROM public.products WHERE product_code = 'PM0297';
+    SELECT * INTO product FROM tenant_004.tcg_products WHERE code = 'PM0297';
     IF product.id IS NULL THEN
-        INSERT INTO public.products
-            (product_code, name, category_class, division_id, work_id,
-             manufacturer_id, product_category_id, is_active, tcg_uuid)
+        INSERT INTO tenant_004.tcg_products
+            (code, japanese_title, category_class, division_id, work_id,
+             manufacturer_id, product_category_id, is_active)
         VALUES ('PM0297', 'MEGA 30th CELEBRATION カードセット（9種セット）',
             'Box', refs.division_id, refs.work_id, refs.manufacturer_id,
-            refs.product_category_id, true, gen_random_uuid());
+            refs.product_category_id, true);
     ELSIF product.category_class IS DISTINCT FROM 'Box'
        OR product.division_id IS DISTINCT FROM refs.division_id
        OR product.work_id IS DISTINCT FROM refs.work_id
@@ -106,7 +105,7 @@ BEGIN
         ('PM0297', '30th CELEBRATION カードセット (9種セット)', 'product_search_keywords')
     ) AS k(code, keyword, table_name)
     LOOP
-        SELECT tcg_uuid AS id INTO product FROM public.products WHERE product_code = term.code;
+        SELECT id INTO product FROM tenant_004.tcg_products WHERE code = term.code;
         EXECUTE format('SELECT count(*) FROM tenant_004.%I WHERE product_id=$1 AND keyword=$2', term.table_name)
             INTO term_count USING product.id, term.keyword;
         IF term_count > 1 THEN

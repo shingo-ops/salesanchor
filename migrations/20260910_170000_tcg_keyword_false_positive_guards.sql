@@ -20,7 +20,7 @@ BEGIN
         RAISE EXCEPTION 'tenant_004 incomplete TCG structure';
     END IF;
 
-    LOCK TABLE public.products, tenant_004.tcg_products, tenant_004.tcg_series,
+    LOCK TABLE tenant_004.tcg_products, tenant_004.tcg_series,
         tenant_004.tcg_product_categories, tenant_004.product_search_keywords,
         tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;
 
@@ -30,12 +30,12 @@ BEGIN
         ('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', 'product_exclude_keywords', 'スペシャルデッキセット')
     ) AS v(code, title, work_code, category_code, keyword_table, keyword)
     LOOP
-        SELECT p.tcg_uuid AS id, p.name AS japanese_title, w.code AS work_code, c.code AS category_code
+        SELECT p.id, p.japanese_title, w.code AS work_code, c.code AS category_code
         INTO product
-        FROM public.products p
+        FROM tenant_004.tcg_products p
         LEFT JOIN tenant_004.tcg_series w ON w.id = p.work_id
         LEFT JOIN tenant_004.tcg_product_categories c ON c.id = p.product_category_id
-        WHERE p.product_code = target.code;
+        WHERE p.code = target.code;
         IF product.id IS NULL OR product.japanese_title IS DISTINCT FROM target.title
            OR product.work_code IS DISTINCT FROM target.work_code
            OR product.category_code IS DISTINCT FROM target.category_code THEN
@@ -49,7 +49,7 @@ BEGIN
     END LOOP;
 
     DELETE FROM tenant_004.product_search_keywords
-    WHERE product_id = (SELECT tcg_uuid FROM public.products WHERE product_code='PM0230')
+    WHERE product_id = (SELECT id FROM tenant_004.tcg_products WHERE code='PM0230')
       AND keyword = 'vol.1';
     FOR target IN SELECT * FROM (VALUES
         ('PM0104', 'マスターボールミラー'),
@@ -57,13 +57,13 @@ BEGIN
     ) AS v(code, keyword)
     LOOP
         INSERT INTO tenant_004.product_exclude_keywords (id, product_id, keyword, position)
-        SELECT gen_random_uuid(), p.tcg_uuid, target.keyword, COALESCE(MAX(e.position), -1)+1
-        FROM public.products p
-        LEFT JOIN tenant_004.product_exclude_keywords e ON e.product_id=p.tcg_uuid
-        WHERE p.product_code=target.code
+        SELECT gen_random_uuid(), p.id, target.keyword, COALESCE(MAX(e.position), -1)+1
+        FROM tenant_004.tcg_products p
+        LEFT JOIN tenant_004.product_exclude_keywords e ON e.product_id=p.id
+        WHERE p.code=target.code
           AND NOT EXISTS (SELECT 1 FROM tenant_004.product_exclude_keywords existing
-                          WHERE existing.product_id=p.tcg_uuid AND existing.keyword=target.keyword)
-        GROUP BY p.tcg_uuid;
+                          WHERE existing.product_id=p.id AND existing.keyword=target.keyword)
+        GROUP BY p.id;
     END LOOP;
 END;
 $body$;

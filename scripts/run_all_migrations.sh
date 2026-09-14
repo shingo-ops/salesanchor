@@ -615,8 +615,6 @@ run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
 # LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
 run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
 
-# PHASE-2B: public.products Phase 2b columns prerequisite (work_id, unit, condition, etc.)
-run_sql migrations/20260909_000000_public_products_phase2b_columns.sql
 
 # NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
 run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
