@@ -208,20 +208,20 @@ function parseSOPDeclaration(prBody) {
   const reconMatch = section.match(/recon:\s*(docs\/handoff\/[^\s\n]+\.md)/);
   const designMatch = section.match(/設計:\s*([^\n（]+)/);
   const modeMatch = section.match(/モード:\s*(些細|緊急)/);
-  const touchFilesMatch = section.match(/触るファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const touchFilesMatch = section.match(/触るファイル:\s*((?:[\s\S]*?)(?=\n[^\s-*]|\n*$))/);
   const touchFiles = touchFilesMatch
     ? touchFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.trim())
+        .map(f => f.replace(/^[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
         .filter(f => f.length > 0)
     : [];
-  const deleteFilesMatch = section.match(/削除するファイル:\s*([^\n]*(?:\n(?![-*#\s])[^\n]*)*)/);
+  const deleteFilesMatch = section.match(/削除するファイル:\s*((?:[\s\S]*?)(?=\n[^\s-*]|\n*$))/);
   const deleteFiles = deleteFilesMatch
     ? deleteFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.trim())
+        .map(f => f.replace(/^[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
         .filter(f => f.length > 0 && f !== 'なし')
     : [];
 
