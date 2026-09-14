@@ -1,0 +1,83 @@
+{
+  "observed_at": "2026-09-14T01:06:28.301840+00:00",
+  "app_url": "https://app.salesanchor.jp/",
+  "scripts": [
+    "/assets/index-Df5nDPe6.js"
+  ],
+  "styles": [
+    "/assets/index-CMN3I7-n.css"
+  ],
+  "index_sha256": "0c6d44ffa373cd8459deff94f1dbf993b60315fc63ab826d72749091a4e7dc59",
+  "javascript_sha256": "e918d5e8e71b782c7f818c332ea105195fe9e54b3877a5f1fedc0c1bca53c128",
+  "checks": {
+    "detail_api_path": true,
+    "drawer_save_and_conflict_keys": true,
+    "bilingual_product_name": true,
+    "search_and_exclusion_counts": true,
+    "english_caption_size": true,
+    "vertical_name_layout": true,
+    "csv_export_preserved": true
+  },
+  "health_url": "https://api.salesanchor.jp/api/health",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "limitations": [
+    "公開配布物とhealthの読み取り確認。ログイン後の本番商品保存は未実施。",
+    "ブラウザー22件はローカルのモックAPI操作。実DB保存はCIで実行。"
+  ],
+  "recorded_at": "2026-09-14T01:13:01.395387+00:00",
+  "pr": {
+    "number": 3492,
+    "head": "56eaa09aacfc091d6f12ea4d815ecdcff4eda680",
+    "merge": "e39fa65abb83837a7909290b993a8cd363a11ef9",
+    "merged_at": "2026-09-14T01:00:06Z",
+    "go_original": "進めるGO #3492"
+  },
+  "ci": {
+    "run": 34794038412,
+    "job": 103823630794,
+    "passed": 3647,
+    "skipped": 95,
+    "detail_service_coverage_percent": 97,
+    "local_unit_passed": 384,
+    "local_browser_passed": 22
+  },
+  "deployment": {
+    "run": 34794455633,
+    "job": 103824761091,
+    "conclusion": "failure",
+    "backup": "salesanchor_db_20260914_100047.sql.gz",
+    "backup_size": "7.2M",
+    "code_step": "success",
+    "finalize_health_step": "success",
+    "migration_step": "failure",
+    "failed_migration": "20260913_210000_tcg_cardset_bundle_registration.sql",
+    "error": "cardset bundle: identity mismatch PM0264",
+    "post_deploy_smoke": "skipped",
+    "verification_step": "skipped",
+    "design_site": "Automatic emergency block ran; log status 401. Not restored manually."
+  },
+  "database_read_only": {
+    "transaction_read_only": "on",
+    "method": "既存SSH接続、PGOPTIONS default_transaction_read_only=on、SHOWとSELECTのみ",
+    "products": [
+      {
+        "code": "PM0264",
+        "actual_title": "30th CELEBRATION FUTURISTIC BOX",
+        "migration_expected_title": "FUTURISTIC BOX"
+      },
+      {
+        "code": "PM0265",
+        "actual_title": "30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー",
+        "migration_expected_title": "30th CELEBRATION プレミアムデッキセット"
+      }
+    ],
+    "other_checked_fields": "Box / active=true / DIV01 / IP001 / MK001 / PC_BOX / 箱系は一致",
+    "bundle_PM0297": "既に存在"
+  },
+  "decision": "公開配布物は反映済み、リリース完了は保留。既存移行処理と編集後データの不整合を別便で解消する範囲判断待ち。商品名巻戻し・migrationスキップ・ガード解除・無条件再実行は未実施。"
+}

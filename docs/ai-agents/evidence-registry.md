@@ -3005,3 +3005,8 @@ EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。�
 ### EV-20260914-FRONTEND-AO-RELEASE
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### EV-20260914-PRODUCT-DETAIL-RELEASE-BLOCKED
+
+PR3492をPO原文「進めるGO #3492」に基づきe39fa65aへマージ。最終CI3647成功/95skip、ローカル384単体/22ブラウザー成功。公開7項目一致・health正常、backup7.2M取得。ただし配備34794455633は既存migrationのPM0264旧名固定チェックで失敗、smoke/Verify未実行、設計図書サイトは既存自動遮断。読取専用SELECTでPM0264/PM0265の本番名が期待より詳しいと確認。実装公開済み・リリース完了保留。詳細/証跡はrecon同日節とdetail-production-verification.json。修正範囲のPO判断待ち、移行処理修正/手動DB更新/ガード解除未実施。
