@@ -431,3 +431,9 @@ backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行�
 PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+
+## Gemini試行記録SSOT・画面接続（2026-09-14）
+公式new-worktreeでrelease/gemini-error-visibilityをorigin/main7b3aea8cから作成。reaper読取と公式実行とも削除対象0。PR3494（252d240f）に既存extraction_attemptsと管理者一覧APIがあることを発見し、別保存先の案は撤回。read_attempts:177-199/router:111-127の概要一覧だけを表示する設計。独立担当の核心コード読取REVISE: migration:74-94のFK/同名CHECK定義検査不足、recorder:140/155-169のPARSED_TOO_LARGE時実測サイズ未保存。試験再実行はしておらず、既存CI成功と区別する。UI限定設計はroot自己審査APPROVE、card-error-visibility.mdを正式lint exit0で担当へ交付。既存PRのmerge/書換えや番号付きGO発行はなし。
+
+UI完了: 担当unit54/54、build/check exit0、390/1440px E2E2/2 exit0。初回E2Eの旧文言fixture timeoutは修正して再検証。独立レビューのコピー通知競合を修正・再審査APPROVE、rootが主要4ファイルのSHA一致を直接確認。対象正本のデータ書込0、現在状態の推定0。製品backend/DB/本番変更0。

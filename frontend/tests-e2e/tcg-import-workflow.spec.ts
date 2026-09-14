@@ -394,3 +394,37 @@ for (const configuration of [{ width: 1440, locale: "ja", theme: "light" }, { wi
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   });
 }
+
+for (const width of [390, 1440]) {
+  test(`attempt history is read-only at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 });
+    await installAuthBypass(page);
+    const job = "22222222-2222-4222-8222-222222222222";
+    let historyGets = 0;
+    const mutations: string[] = [];
+    page.on("request", request => { if (request.method() !== "GET" && request.url().includes("/tcg/")) mutations.push(request.url()); });
+    await mockApi(page, {
+      ...baseMocks(true),
+      [`GET /tcg/line-import/${importId}/progress`]: { ...progress, extraction: { ...progress.extraction, failed: 1 } },
+      [`GET /tcg/line-import/${importId}/items`]: items(0),
+      [`GET /tcg/line-import/${importId}/extraction-jobs`]: { ...items(0), unit: "extraction_job", total: 1, jobs: [{ id: job, source_message_id: "33333333-3333-4333-8333-333333333333", status: "error", created_at: "2026-09-14T00:00:00Z", extracted_at: null, raw_text: "fixture source", supplier_name: "fixture supplier", item_count: 0, error_reason_code: "unclassified" }] },
+      [`GET /tcg/diagnostics/extraction-jobs/${job}/attempts`]: route => {
+        historyGets += 1;
+        expect(new URL(route.request().url()).searchParams.get("limit")).toBe("25");
+        return route.fulfill({ contentType: "application/json", body: JSON.stringify({ extraction_job_id: job, attempts: [{ id: "44444444-4444-4444-8444-444444444444", extraction_job_id: job, phase: "failed", completion: "failed", error_code: "SOFT_TIME_LIMIT", started_at: "2026-09-14T00:00:00Z", finished_at: "2026-09-14T00:05:00Z", response_received_at: null, input_payload: "PRIVATE_FIXTURE" }] }) });
+      },
+    });
+    await page.goto(`/super-admin/tcg-line-import?import_job_id=${importId}`);
+    await page.getByRole("button", { name: "エラー1件の原因と対処を確認" }).click();
+    await page.locator(".pmg-workflow__detail details summary").first().click();
+    expect(historyGets).toBe(0);
+    const action = page.getByRole("button", { name: "試行履歴と原因を確認" });
+    await action.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByText("試行失敗", { exact: true })).toBeVisible();
+    await expect(page.getByText(/提供元と通信のどちらで遅延/)).toBeVisible();
+    await expect(page.getByText("PRIVATE_FIXTURE")).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    expect(mutations).toEqual([]);
+  });
+}

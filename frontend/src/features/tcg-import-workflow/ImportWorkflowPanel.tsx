@@ -6,6 +6,7 @@ import { Select } from "../../components/Select";
 import { type Coverage, type ImportItemFilter } from "./importWorkflowApi";
 import { useImportWorkflow } from "./useImportWorkflow";
 import { useImportStageDetails } from "./useImportStageDetails";
+import { ExtractionAttemptHistory } from "./ExtractionAttemptHistory";
 import "./import-workflow.css";
 
 const LIMIT = 25;
@@ -105,7 +106,7 @@ export function ImportWorkflowPanel({ importJobId }: { importJobId: string | nul
       {stageDetails.coverage && stageDetails.coverage !== "complete" && <p>{coverageLabel(stageDetails.coverage)}: {reasonLabel(stageDetails.reason)}</p>}
       {stageDetails.rows?.length === 0 && <p>{t("pmgWorkflow.noItems")}</p>}
       {stageDetails.rows?.map(row => <details key={row.id}><summary>{row.supplier_name ?? t("pmgWorkflow.unknown")}{"status" in row && <> · {extractionStatusLabel(row.status)} · {t("pmgWorkflow.detailItems", { count: row.item_count })}</>}</summary>
-        {"status" in row && <><p>{t("pmgWorkflow.errorUnknown")}</p><p>{t("pmgWorkflow.errorNext")}</p></>}
+        {"status" in row && <>{row.status === "error" && <><p>{t("pmgWorkflow.errorUnknown")}</p><p>{t("pmgWorkflow.errorNext")}</p></>}<ExtractionAttemptHistory key={`${importJobId}:${row.id}`} jobId={row.id} /></>}
         <p>{t("pmgWorkflow.detailId")}: {row.id}</p>
         {"source_message_id" in row ? <p>{t("pmgWorkflow.sourceId")}: {row.source_message_id}</p> : <><p>{t(row.is_active ? "pmgWorkflow.activePost" : "pmgWorkflow.inactivePost")}</p><p>{t(row.relation_kind === "reused" ? "pmgWorkflow.messagesReused" : "pmgWorkflow.messagesCreated")}</p><p>{t("pmgWorkflow.receivedAt")}: {row.received_at ? new Intl.DateTimeFormat(i18n.language, { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(row.received_at)) : t("pmgWorkflow.unknown")}</p></>}<p className="pmg-workflow__raw">{row.raw_text}</p>
       </details>)}

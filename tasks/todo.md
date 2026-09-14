@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| Gemini抽出原因・試行履歴の表示 | root設計 / error_visibility_recon実装 / attempt_record_reviewレビュー | 既存試行記録を読むUI実装・独立レビュー合格。担当unit54/build/check成功 | 担当E2E2件も成功。PR提出へ。依存3494は制約/容量記録2件REVISE、本番未反映 | EV-20260914-GEMINI-VISIBILITY / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-14 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
 | Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | カード08実装:個別3既存再利用/9種集合1追加と相互除外。PR3483改訂準備 | 改訂後正式CI/PGを確認し番号付きGOへ。再解析/配信未実施 | 設計PR3462 commit3b40ceea / CARD08 / recon実装着手節 | 2026-09-13 |
