@@ -241,11 +241,6 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                     consumer = ""
 
                     async def execute(self, statement, parameters=None):
-                        if self.consumer == "review_before":
-                            from app.services.tcg_result_order import result_order_sql
-                            statement = text(str(statement).replace(
-                                "ORDER BY " + result_order_sql(),
-                                "ORDER BY sm.received_at DESC, ei.line_start ASC"))
                         estimated = (await db.execute(text("EXPLAIN (FORMAT JSON) " + str(statement)),
                                                        parameters)).scalar_one()[0]
                         try:
@@ -267,11 +262,6 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                         return result
 
                 measured = MeasuredSession()
-                # API limits are 500 review rows and 100 import rows. The full
-                # 4,097-row unbounded-review timeout remains documented evidence.
-                measured.consumer = "review_before"
-                original_page = await review.fetch_analysis_results(measured, limit=500)
-                assert original_page["total"] == 4097 and len(original_page["items"]) == 500
                 measured.consumer = "review"
                 reviewed = [await review.fetch_analysis_results(measured, limit=500, offset=offset)
                             for offset in (0, 4000)]
@@ -293,7 +283,7 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
         assert [r["id"] for r in import_page["items"]] == [r[2] for r in expected[offset:offset+100]]
     assert [r[7] for r in output] == [r[3] for r in expected]
     assert snapshot(pg) == before
-    assert {p["consumer"] for p in plans} == {"review_before", "review", "import", "distribution"}
+    assert {p["consumer"] for p in plans} == {"review", "import", "distribution"}
     # pytest-xdist does not forward worker stdout; a warning preserves the
     # bounded measurements in the existing CI log without changing CI settings.
     warnings.warn("RESULT_ORDER_QUERY_PLANS " + json.dumps({"rows": 4097, "sources": 4097,

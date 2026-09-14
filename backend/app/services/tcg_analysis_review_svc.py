@@ -180,6 +180,13 @@ async def fetch_analysis_results(
 
     # アイテム一覧
     items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+        , result_order_page AS MATERIALIZED (
+            SELECT ei.id
+            {_BASE_FROM}
+            {where}
+            ORDER BY {result_order_sql()}
+            LIMIT :limit OFFSET :offset
+        )
         SELECT
             ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
@@ -217,9 +224,9 @@ async def fetch_analysis_results(
                 FALSE
             )                                    AS product_confirmed
         {_BASE_FROM}
+        JOIN result_order_page ON result_order_page.id = ei.id
         {where}
         ORDER BY {result_order_sql()}
-        LIMIT :limit OFFSET :offset
     """
     item_params = dict(params, limit=limit, offset=offset)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()

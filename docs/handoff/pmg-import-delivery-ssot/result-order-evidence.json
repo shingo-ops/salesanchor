@@ -183,5 +183,15 @@
       "distribution full set"
     ],
     "log_sha256": "817f01cdc4df316f391e6419de548e49f1ad30faa3324050c9d5ce26b8eccf2e"
+  },
+  "public_page_repeat": {
+    "head": "7c775cc6c8d442f9dd5f8a545b2876b45500977d",
+    "job": 103866365374,
+    "failed": 1,
+    "passed": 3720,
+    "skipped": 95,
+    "seconds": 268.47,
+    "failure": "same review offset4000 limit500 timeout",
+    "log_sha256": "220ceaadab6f900d25ef0a5340dacaca0f24a4bc2b94264fc6013904f8f9c038"
   }
 }

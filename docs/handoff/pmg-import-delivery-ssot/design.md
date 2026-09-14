@@ -1224,3 +1224,21 @@ HEAD179f95d1、job103864100083: 変更前ORDERの先頭500件、変更後先頭5
 実装役への確定手順: items_sqlのsource_cte直後へresult_order_page AS MATERIALIZEDを追加し、既存_BASE_FROM/WHERE/共通ORDER/LIMIT/OFFSETでei.idだけを選ぶ。外側の既存全SELECT列とWHEREを保持、_BASE_FROMの直後へページID JOINを挿入し、外側LIMIT/OFFSETだけを除く。API型・条件共通関数・DB/CI設定は変更しない。負荷試験のreview_beforeは新構造へORDERだけ置換して旧SQLと誤表示しないよう削除し、旧SQLの観測結果は前節のCI証跡に保持する。4097行・各SQL10秒・公開上限500/100・offset4000・配信全件・保存値比較は残す。
 
 同一AIの限定補正設計審査APPROVEは、試験用実装方針の審査であり実装成功の判定ではない。実装検収REVISE・PR未マージ・本番/シート未変更。権限拒否とSQL負荷失敗は別の停止理由として扱う。
+
+
+### RESULT-ORDER 実装担当への限定引き継ぎ（2026-09-14）
+
+POへ「実装担当への正式引き継ぎ確認待ち」を説明した後、原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ」を受領。直前に説明した引き継ぎを進める指示として、rootは設計担当のまま、実装担当result_order_page_fix（Terra）へ限定カードを渡した。番号付きマージGOとして扱わない。
+
+所有: 実装担当はtcg_analysis_review_svc.pyとtest_tcg_result_order.pyの2ファイルのみ。rootは文書/証跡/台帳と差分/CI照合。担当によるcommit/push/PR変更、追加エージェント、DB/本番/シート/CI/運用変更は禁止。設計に不明点がある場合、または担当の操作にも自動承認拒否が出た場合は、その操作を停止し親へ報告する。以前拒否されたrootの製品編集は再試行していない。
+
+開始HEAD7c775cc6。preflight成功・作業台cleanを確認。親が最新CI job103866365374の原ログを取得し、同じoffset4000/末尾97件で10秒timeoutの再現を確認した。1 failed/3720 passed/95 skipped、268.47秒。修正方針は前節のページID先行化に限定し、速度改善や検収完了をまだ宣言しない。
+
+
+### RESULT-ORDER 実装担当の補正差分受領（2026-09-14）
+
+result_order_page_fixが指定2ファイルの補正を実装。rootが実diffを直接確認し、result_order_page AS MATERIALIZED内の既存FROM/WHERE/ORDER/LIMIT/OFFSET、外側ID JOINとLIMIT/OFFSET除去のみであることを照合した。外側表示列・WHERE・ORDER、count/providers、共有状態判定の製品差分なし。試験のreview_before削除は、新構造へORDERだけ置換して旧SQLと誤記しないための設計指定どおり。
+
+担当実行: diff検査/AST構文確認成功、Ruffは担当環境で未実行。root直接実行: ruff check --no-cache 対象2ファイル成功、git diff --check成功、check-task-state.sh成功。Docker未接続なので手元pytest未実行。正式CIで4097明細の公開ページ/配信全件/内容保持が通るまでは実装検収REVISE。
+
+rootは製品ファイルを編集せず、担当成果物の照合と文書保存を実施。同一AIの設計自己審査と、担当実装差分の親による確認を区別する。独立した第二者レビューや本番改善実証とは称さない。
