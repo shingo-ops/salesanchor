@@ -3107,3 +3107,10 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
 
 同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。
+
+
+### 2026-09-14 PM0264配備障害の復旧確認
+
+修正PR3500のmain 70d145f090e122dd36e4a39b4928e13cc0dae613について、deploy34804164057/job103852603870がsuccess、03:57:47 UTC完了とGitHub APIで直接確認。原ログでは従前失敗の231番がDO/COMMIT成功、233/233まで完走しMigrations done、SA-19 smoke全成功、Verify deployment成功。事前バックアップsalesanchor_db_20260914_125456.sql.gz/6.7M。確認時点の公開App/APIはTLS検証有効のcurlで200、DB/Redis/Celery connected。
+
+修正差分は既存商品の固定日本語名照合を外し、構造属性の照合を維持。対象の既存seedは非NULL値の保持等に変更。全CSV更新の保全や本番の商品名そのものは直接SELECT/往復試験していないため未検証。AP対象2ページ・共有21ファイルの基準から最新mainへの変化は0。PM0264による配備保留は解消。AP3497の最新main統合・確認と番号付きGOは別途必要で、今回マージ/本番反映は行っていない。根拠: ap-release-prerequisite.json recoveryVerification。前節は復旧前の履歴として保持する。
