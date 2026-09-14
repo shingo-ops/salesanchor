@@ -23,6 +23,25 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260914-TCG-RESULT-ORDER
+date: 2026-09-14
+agent: Codex (design partner; same-AI self-review)
+task: 解析結果・配信を発売日/商品ID/状態/数値価格の順へ
+scope: 3読み取り経路の設計・実装・試験準備。絞り込みの選択肢は後続。
+evidence:
+  - type: file
+    reference: docs/handoff/pmg-import-delivery-ssot/recon.md RESULT-ORDER
+    summary: 固定HEAD70d145f0。配信は提供者優先、解析2経路は原文/作成時刻優先。
+  - type: command
+    reference: docs/handoff/pmg-import-delivery-ssot/result-order-evidence.json
+    summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
+confidence: medium
+tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
+decision: 8状態PO合意・方式の自己審査APPROVE。実装6ファイルのRuffと台帳/差分検査成功。実PG/CI未実行。本番未反映。
+follow_up: 正式CIで実PG検証。手元Python3.14ではBandit内部例外のためlint-ci全合格とは扱わない。条件付き本番許可を番号付きGOと偽らない。
+```
+
+```text
 id: EV-20260910-LINE-ACCURACY-02
 date: 2026-09-10
 agent: Codex (design partner)

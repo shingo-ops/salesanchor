@@ -431,3 +431,58 @@ backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行�
 PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+
+## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
+
+この節は、商品・状態・価格順を共通化するための実物確認を記録する。
+親: [提供元フィード翻訳](../../specs/inventory-management/feed-translation/README.md)。設計: [design.md](design.md) の同日RESULT-ORDER節。
+固定HEAD: 70d145f090e122dd36e4a39b4928e13cc0dae613。正規worktree: release/tcg-result-order-design。
+ここでの共用部品は、一覧取得SQL・状態確定SQL・画面の配列描画を指す。
+
+### 1. 全体像
+
+- backend/app/services/tcg_distribution_svc.py:246 は発売日降順→提供者名→商品コード順。この順序では提供者が商品を分断する。:257 は12列出力、:481 はclear後に取得順で書き込む。
+- backend/app/services/tcg_analysis_review_svc.py:220 は投稿日時降順→原文行番号順、:221 はその後にLIMIT/OFFSET。
+- backend/app/services/tcg_import_progress.py:107 の取込内明細はcreated_at/id順。:120 のページ抽出と:126 のjsonb_agg両方に順序指定がある。
+- frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:68 は最大500行取得、:79 は20行ずつ表示。サーバー順を再ソートしない。
+- frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx:117 はAPI順のmap。解析結果の対象は仕入元別と取込別の2経路。原文・抽出ジョブの履歴順は対象外。
+
+### 2. 共用部品
+
+- backend/app/services/tcg_condition_review_svc.py:77 のreview_joinsは表示時の確定状態を返す。:165 のcr.canonicalが解析レビューと配信の表示値。保存済みar.condition_canonicalだけをソートすると人手確認後の値と不一致になり得る。
+- migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:283 はanalysis_resultsのUUID主キー、product_idのFK、extraction_item_idのUNIQUE、NUMERIC(14,2)価格を定義。
+
+### 3. 非共用部品
+
+- 上記3取得経路のORDER BYは別々。文字列化した12列の配信結果には商品UUIDが含まれないため、シート商品名だけで商品ID単位の保証はできない。
+- frontend/src/features/tcg-analysis-review/ItemComparison.tsx:24 は原文価格を表示。backend/app/services/tcg_analyzer_svc.py:1298 はraw_priceを数値化して保存。並べ替えはprice_normalizedを使い、元文字列は保持する。
+
+### 4. ルールの所在
+
+- STANDARD-WORKFLOW、ADR-113 handoff、ADR-154、feed-translation KGI-3/8/9を参照。未特定行の削除や名称での商品同一性推定は禁止。
+- Context7 MCPは利用不可。PO起動指示の代替許可により PostgreSQL 16公式ORDER BY / LIMIT資料を参照した。
+- https://www.postgresql.org/docs/16/queries-order.html と https://www.postgresql.org/docs/16/queries-limit.html は複数キー・NULL順・一意なページ順の必要性を確認する根拠。
+
+### 5. 維持の仕組み
+
+- .github/workflows/test.yml:206 はPostgreSQLを含む全pytest、:241 が実行行。既存test_tcg_distribution_pg.pyは精度ゲート中心で新しい順序の保証ではない。
+- backend/tests/test_tcg_condition_review.py:36 は独立CI PostgreSQL用DBを使う。test_tcg_import_progress_pg.py:34 は限定ローカル試験DBと専用schemaを前提にする。無関係な共有DBで既存fixtureを走らせない。
+
+### 6. 設計図との対照
+
+| 合意した条件 | 現状 | 判定 |
+|---|---|---|
+| 発売日の新しい順 | 配信のみ実装 | 不足 |
+| 商品IDで連続 | 配信は提供者優先・解析は原文順 | 不足 |
+| 8状態の指定順 | 3経路に指定なし | 不足 |
+| 同商品同状態で数値価格昇順 | 指定なし | 不足 |
+| 原文・IDを保持 | 既存のFKとレスポンスが保持 | 一致・維持 |
+| 絞り込み選択肢の順序 | 別処理。後続とPO指定 | 対象外として維持 |
+
+### 7. ノイズと境界
+
+- 公開シート https://docs.google.com/spreadsheets/d/1unwFM3MZikSmQjZ744uxhvzG2ENhuhcDsvse1dfSrm4/edit?gid=0 のCSV取得607行。30thの通常/プレミアムは各11行・各6か所に分散。これは名称一致の計数で、UUID一致の実測ではない。
+- 状態8種類・Damaged case 2行・発売日空欄4行。POはDamaged caseをCaseとSealed boxの間と明示した。正規化順以外の価格/数量/商品登録/解析再実行は変更しない。
+- ローカルPostgreSQL16.15でBEGIN READ ONLYを確認、合成292行×10並べ替えを別Python計算と照合し不一致0。証跡[result-order-evidence.json](result-order-evidence.json)。本番データや実サービスのJOIN試験ではない。
+- 指定GASの配信中HTMLを直接取得し、発売日初期sortと商品名日英検索を確認した。サーバー側getInventoryDataは未取得、実ブラウザーのデータ取得・検索再現は未実施。

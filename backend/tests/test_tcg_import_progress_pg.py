@@ -31,6 +31,7 @@ def provision_tcg(cursor,schema):
     # Execute canonical migrations, changing only the isolated test schema target.
     migrations=Path(__file__).resolve().parents[2]/"migrations"
     for name in ("20260831_110000_create_tcg_analysis_tables_t004.sql",
+                 "20260903_170000_item_corrections_t004.sql",
                  "20260905_140000_import_jobs_review_stage_t004.sql"):
         cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
 

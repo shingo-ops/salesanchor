@@ -1085,3 +1085,80 @@ backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行�
 PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+
+## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
+
+この節は、解析結果の確認時点から同じ商品の行をまとめ、配信まで同じ規則を使う設計。
+mode: handoff
+親: [提供元フィード翻訳](../../specs/inventory-management/feed-translation/README.md)。recon: docs/handoff/pmg-import-delivery-ssot/recon.md の同日節。対象ADR: ADR-113, ADR-154。
+既存テーマの延長。原文の履歴順・保存場所の変更ではなく、結果一覧の取得順を定義する。
+
+### PO合意と承認の区別
+
+POは発売日降順→商品IDで集合→状態順→同商品同状態の価格昇順を合意し、解析結果側から共通化する案へ「進める」と回答した。
+PO原文「進める、離席するので推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映して良い」。本件の条件付き実施・本番反映許可として記録し、番号付きGOやGO委任の有効化を創作しない。
+PO原文「Damaged caseはCaseとSealed boxの間に配置」。8状態の順位はこの追補で確定。コンディション絞り込みの並び変更は後続。
+
+### 契約と変更前後
+
+1. 共通SQL順序の定義をbackend/app/services/tcg_result_order.pyに1か所置く。全呼出元のSQLエイリアスp/ar/ei/crを揃え、入力値や外部文字列は受け取らない。
+2. 順序は p.release_date DESC NULLS LAST → p.code ASC NULLS LAST → p.id ASC NULLS LAST → cr.canonicalの状態順位 → cr.canonical COLLATE "C" ASC NULLS LAST → ar.price_normalized ASC NULLS LAST → ei.id ASC。商品コードは同じ発売日の別商品の決定的順序、UUIDを状態より先に置き同名商品を混合しない。codeを変更する処理は含めない。
+3. 状態順位は Case / Damaged case / Sealed box / Damaged sealed box / No shrink box / Opened box / Unsearched pack / Searched pack の0〜7。将来の指定外状態はその後ろに名称順、NULLは最後。これは未知状態の価値を推定する順位ではなく行を消さない退避規則。既存Empty box等も保存・表示・配信可否を変更しない。
+4. 発売日未設定は現行配信と同じ末尾。価格NULLは同商品同状態の最後。商品未特定はp.code/idがNULLの末尾に保持し、名称からUUIDを仮定しない。
+5. tcg_analysis_review_svc.fetch_analysis_resultsとtcg_distribution_svc.fetch_output_rowsのORDER BYだけを共通定義へ置換。WHERE、JOIN、12列、ID/原文位置、件数を維持。
+6. tcg_import_progress.read_itemsは、既存filteredの集合から並べ替え専用JOINを作り、row_numberでordinalを付けてからページ分割する。JOINはar/ei/ej/sm/pを用意し既存review_joinsのcr.canonicalを使う。状態判定は並び順にのみ使用し、既存needs_review値・フィルタ契約を変更しない。jsonb_aggもordinalで並べ、返却JSONから並べ替え用列を除く。
+7. 共通_scope_ctes/read_progress/read_messages/read_extraction_jobsは変更しない。非アクティブ原文や解析結果なしの取込行を消さない。取込内と全体配信は対象集合が違うため、比較時は共通の明細に限定する。
+8. 画面の元配列順を維持。原文行番号・extraction_item_id・source_message_idの変更、再解析、商品/状態マスタの優先順位変更、GAS編集は含めない。
+
+### 受入基準と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 新しい発売日が上・NULLは末尾 | PostgreSQL実サービスで3日付（NULL含む）を照合 |
+| 同日別商品が混ざらない | 同名異IDを含め商品IDの再出現区間が0、商品ごと1区間 |
+| 状態8種類が指定順 | 全8状態を逆順挿入し期待順と比較 |
+| 9/100/1000の価格が数値昇順 | 同商品同状態・別提供者で比較、NULL最後 |
+| 同条件でも取得が安定 | UUIDを最終キーとして再取得・ページを連結し全件結果に一致 |
+| ページ先頭だけの並べ替えにならない | ページ境界を越える商品、複数LIMIT/OFFSETで欠落重複0 |
+| 解析/配信の同一明細は同順 | 同一fixtureを3経路で取得、配信適格集合に絞り相対順一致 |
+| 内容の変更がない | IDで対応付けた前後の全フィールドと12列の多重集合一致 |
+| 未特定・未解析・原文無効の扱い維持 | 既存取込filterと件数/coverage/原文リンクの回帰試験 |
+| 人手確認後の状態に追従 | cr.canonicalと保存状態が異なるfixtureで表示値の順位を検証 |
+| 正式品質チェックを通る | 実PostgreSQL試験・lint・全必須CI。skipを成功としない |
+| 本番反映の確認 | 最新HEADのCI・通常deployのバックアップ/HEAD/health、認証済みAPIと対象シートの実データ順を照合 |
+
+### トレードオフと維持
+
+- SQL取得前の全体ソートによりページ内だけの整列では消せない分散を防ぐ。SQL JOIN/ソートの負荷が増えるため本番相当の件数で計画・時間を実測し、欠落のないLIMITを維持する。
+- 商品群がページ境界をまたぐことは許容する。全件を連結したとき別商品が割り込むことを禁止し、商品全体を1ページへ詰める変更はしない。
+- 元投稿と同じ行順にはならないため、原文への移動を必ずID/行番号で検証する。
+- 守り手: .github/workflows/test.yml とbackend/testsの実PostgreSQL回帰試験。並びは共通関数に集約し、絞り込みの選択肢だけを後続で扱う。
+- 外部導入事例は不要。局所的な読み取り順の修正であり、根拠は実データの分散・3経路のSQL・PostgreSQL公式仕様・292行の独立計算照合。実装成功や本番改善の証明に代用しない。
+
+### 接触面6面
+
+人: 解析確認/配信確認の順序変更。エージェント: 本節をhandoffにし、原文順を保存順と混同しない。機械: APIのORDER BY/JSON集約とpytest。データ: 読み取り順のみ、保存値とFK保持。本番: 既存通常deployと配信手順を使用、secret/CI/運用変更なし。外部: 配信先の行順のみ、列/値/送信対象を変えない。
+
+### 自己審査と次の工程
+
+Plannerの方式を同一AIがArchitectとして審査。独立した第二者レビューではない。順序・未知値・ページ・非変更契約は具体化済み。設計判定は実装前のSQL/JOIN照合を完了してから確定する。現時点はREVISE（取込内の並べ替え専用JOINの実検証と正式カード検査が残る）。実装/マージ/本番配備/実配信は未実施。
+
+
+### RESULT-ORDER 自己審査の補正と実装境界
+
+review_joinsの先頭はcondition_review_sourcesへのINNER JOINであり、既定source_cteは有効原文だけを選ぶ（tcg_condition_review_svc.py:38,101）。取込明細へそのまま付ける案は非アクティブ原文を欠落させるため不採用。
+取込read_itemsだけは既存messages CTEから全取込原文のid/source_hashを持つcondition_review_sourcesを作る。既存digest_sqlを使用し、解析結果なしもLEFT JOIN arで保持する。共通_scope_ctesと既存状態判定の関数は変更しない。解析/配信側の有効原文制約も変更しない。
+取得順の一意キーはei.id。取込pageのJSONは既存列のみとし、sort_ordinalを除いてjsonb_aggで同じordinal順を保持する。
+この補正で既存の表示対象を減らす原因を設計段階で除いた。方式の自己審査はAPPROVE（設計合格、独立第二者審査ではない）。実PostgreSQLの3経路比較・ページ・無効原文・未解析の検証を実装の必須条件とし、通過前に実装合格/本番反映可能としない。
+
+実装前のfixture照合: test_tcg_import_progress_pg.pyのprovision_tcgは初期TCG表のみでitem_correctionsが無い。状態確認JOINを試験するため既存20260903_170000の正規migrationをfixtureへ追加する。製品migration追加や本番DB変更は無い。カード許可範囲へ同テストファイルを追加。
+
+
+### RESULT-ORDER 実装準備と検証の限界（2026-09-14）
+
+上の初回REVISEは補正節の設計APPROVEで更新済み。カードは[card-result-order.md](card-result-order.md)、正式card-lint終了0。4サービスと2テストファイルを変更し、状態順位にDamaged caseを2番目として組み込んだ。実装者と審査者は同一AI。
+
+直接実行: 対象6ファイルのruff check --no-cache成功、git diff --check成功、check-task-state.sh成功、対象Pythonコンパイル成功。make lint-ciのRuffは全app成功したが、Python3.14のast.Num廃止でBandit内部例外が多発。mypyも診断を出しており、終了コードだけで全品質合格とは宣言しない。Docker daemon未接続のため、ルールに従い手元pytestは実行していない。
+
+実PostgreSQL試験は96明細（4商品×8状態×3価格）とページ7/25/50、未解析/非active/未特定/NULL/未知状態、人手確定状態/同価格UUIDを検証するコードを用意した段階。正式CIの隔離DBで実行しskipを成功と扱わない。合成292行の先行READ ONLY検算とも区別する。実装検収・PR CI・本番反映は未完了。実シートを書き換えていない。

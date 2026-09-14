@@ -12,6 +12,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
+from app.services.tcg_result_order import result_order_sql
 from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
@@ -217,7 +218,7 @@ async def fetch_analysis_results(
             )                                    AS product_confirmed
         {_BASE_FROM}
         {where}
-        ORDER BY sm.received_at DESC, ei.line_start ASC
+        ORDER BY {result_order_sql()}
         LIMIT :limit OFFSET :offset
     """
     item_params = dict(params, limit=limit, offset=offset)
