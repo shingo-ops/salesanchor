@@ -77,7 +77,7 @@ def load_lookup_maps(
     """
     # --- 商品コード → UUID ---
     rows = session.execute(
-        text(f"SELECT code, id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE")
+        text("SELECT product_code AS code, tcg_uuid AS id FROM public.products WHERE is_active = TRUE")
     ).fetchall()
     product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
 
@@ -160,8 +160,8 @@ def load_product_kubun_type_map(session: Session) -> dict[str, str]:
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, pc.kubun_type
-            FROM {TCG_SCHEMA}.tcg_products p
+            SELECT p.product_code AS code, pc.kubun_type
+            FROM public.products p
             JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
             WHERE p.is_active = TRUE
               AND p.product_category_id IS NOT NULL
@@ -185,11 +185,11 @@ def load_product_keywords(
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, psk.keyword
+            SELECT p.product_code AS code, psk.keyword
             FROM {TCG_SCHEMA}.product_search_keywords psk
-            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = psk.product_id
+            JOIN public.products p ON p.tcg_uuid = psk.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.code, psk.position
+            ORDER BY p.product_code, psk.position
             """
         )
     ).fetchall()
@@ -203,11 +203,11 @@ def load_product_keywords(
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, pek.keyword
+            SELECT p.product_code AS code, pek.keyword
             FROM {TCG_SCHEMA}.product_exclude_keywords pek
-            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = pek.product_id
+            JOIN public.products p ON p.tcg_uuid = pek.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.code, pek.position
+            ORDER BY p.product_code, pek.position
             """
         )
     ).fetchall()
@@ -1156,7 +1156,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     works = load_work_master(session)
     work_rows = session.execute(text(
-        f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+        "SELECT product_code AS code, work_id, category_class FROM public.products WHERE is_active = TRUE"
     )).fetchall()
     product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
     # Registration stores the work label in category_class. The referenced product

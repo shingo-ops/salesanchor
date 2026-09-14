@@ -156,7 +156,7 @@ def test_reference_change_preserves_response_but_rejects_items(pg, monkeypatch):
 
     def change():
         with pg[0].cursor() as cur:
-            cur.execute(f"UPDATE {SCHEMA}.tcg_products SET mark='changed' WHERE code='PM0123'")
+            cur.execute("UPDATE public.products SET mark='changed' WHERE product_code='PM0123'")
 
     fake_model(monkeypatch, action=change)
     result = run(pg, sid)
