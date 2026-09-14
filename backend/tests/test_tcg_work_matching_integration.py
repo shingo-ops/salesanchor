@@ -1015,12 +1015,17 @@ def seed_cardset_dictionary(connection, schema):
         ] + [(f"PM{276+i:04d}", "カードセット " + kind, ["カードセット " + kind], [])
              for i, kind in enumerate(CARDSET_KINDS)]
         for code, title, search, exclude in products:
-            cursor.execute(sql.SQL("""INSERT INTO public.products
-                (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
-                {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid""").format(
-                    *[sql.Identifier(schema)] * 2), (code, title))
-            pid = cursor.fetchone()[0]
+            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            existing = cursor.fetchone()
+            if existing:
+                pid = existing[0]
+            else:
+                cursor.execute(sql.SQL("""INSERT INTO public.products
+                    (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
+                    SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
+                    {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid""").format(
+                        *[sql.Identifier(schema)] * 2), (code, title))
+                pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(keywords, 5):
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
@@ -1240,14 +1245,19 @@ def seed_bundle_dictionary(connection, schema):
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_rewire_keyword_fks(schema))
         for code, title, search, exclude in BUNDLE_SEEDS:
-            cursor.execute(sql.SQL("""INSERT INTO public.products
-                (product_code,name,category_class,is_active,tcg_uuid,division_id,work_id,manufacturer_id,product_category_id)
-                SELECT %s,%s,'Box',true,gen_random_uuid(),d.id,w.id,m.id,c.id
-                FROM {}.tcg_major_categories d, {}.tcg_series w, {}.tcg_manufacturers m,
-                     {}.tcg_product_categories c
-                WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code='PC_BOX'
-                RETURNING tcg_uuid""").format(*[sql.Identifier(schema)] * 4), (code, title))
-            pid = cursor.fetchone()[0]
+            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            existing = cursor.fetchone()
+            if existing:
+                pid = existing[0]
+            else:
+                cursor.execute(sql.SQL("""INSERT INTO public.products
+                    (product_code,name,category_class,is_active,tcg_uuid,division_id,work_id,manufacturer_id,product_category_id)
+                    SELECT %s,%s,'Box',true,gen_random_uuid(),d.id,w.id,m.id,c.id
+                    FROM {}.tcg_major_categories d, {}.tcg_series w, {}.tcg_manufacturers m,
+                         {}.tcg_product_categories c
+                    WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code='PC_BOX'
+                    RETURNING tcg_uuid""").format(*[sql.Identifier(schema)] * 4), (code, title))
+                pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):
                     cursor.execute(sql.SQL("INSERT INTO {}.{} (id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(

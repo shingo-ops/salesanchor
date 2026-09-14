@@ -356,9 +356,9 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
         with connection.cursor() as cursor:
             cursor.execute("SET lock_timeout='100ms'")
             query = (
-                "UPDATE public.products SET mark='competing'"
+                "UPDATE public.products SET mark='competing' WHERE product_code LIKE 'RT%'"
                 if target == "product"
-                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT tcg_uuid,'competing',99 FROM public.products"
+                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT tcg_uuid,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
             )
             if blocked:
                 with pytest.raises(psycopg2.errors.LockNotAvailable):
