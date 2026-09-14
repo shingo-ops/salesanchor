@@ -1052,7 +1052,7 @@ PO原文「進めるGO #3492」に基づき、最終HEAD `56eaa09aacfc091d6f12ea
 
 配備run34794455633/job103824761091は **failure**。新規バックアップ `salesanchor_db_20260914_100047.sql.gz`（7.2M）成功、配備ログHEAD `e39fa65a`、コード切替とFinalize health成功。231番目の既存migration `migrations/20260913_210000_tcg_cardset_bundle_registration.sql` が `cardset bundle: identity mismatch PM0264` で停止。後続smoke/Verifyはskip。失敗時の既存自動処理が設計図書サイト `/design/` を遮断し、ログで401を確認。手動復元は未実施。
 
-2026-09-14 10:06 JST、公開 `index-Df5nDPe6.js` / `index-CMN3I7-n.css` をcurlで取得。詳細API/保存/競合/破棄の接続、日英名の縦並び・英語のcaptionサイズ、検索/除外件数、既存CSV出力を7項目照合して全一致。API healthはok、database/redis/celeryはconnected。認証付き本番画面の保存操作、PO目視、バックアップ復元試験は未実施。証跡: `detail-production-verification.json`。
+2026-09-14 10:06 JST、公開 [index-Df5nDPe6.js](https://app.salesanchor.jp/assets/index-Df5nDPe6.js) / [index-CMN3I7-n.css](https://app.salesanchor.jp/assets/index-CMN3I7-n.css) をcurlで取得。詳細API/保存/競合/破棄の接続、日英名の縦並び・英語のcaptionサイズ、検索/除外件数、既存CSV出力を7項目照合して全一致。API healthはok、database/redis/celeryはconnected。認証付き本番画面の保存操作、PO目視、バックアップ復元試験は未実施。証跡: `docs/handoff/tcg-product-import/detail-production-verification.json`。
 
 原因の読み取り: 既存SSH定型で `SHOW transaction_read_only=on` を確認後、SELECTのみ実施。PM0264の本番名は「30th CELEBRATION FUTURISTIC BOX」、既存migration:41の期待は「FUTURISTIC BOX」。PM0265の本番名も「30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー」で、:42の期待より詳しい。Box/active/分類コードは期待一致、PM0297も存在。:55-62は名称等の完全一致を毎回要求するため、現在値で再実行しても停止する。名称変更の実行者・経路・時刻は未調査であり、誰かの破壊とは断定しない。
 
