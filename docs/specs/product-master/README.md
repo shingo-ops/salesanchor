@@ -166,3 +166,7 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 ### CSV出力・編集・更新往復（2026-09-13）
 
 PO合意の目標：登録商品をCSVに出し、編集して戻しても重複追加せず同じ商品を更新し、商品情報・検索語・除外語を維持する。既存の新規登録CSVは継続する。実装/PR/通常マージ/配備の作業依頼を受領。設計とR1–R11: [既存設計§21](../../handoff/tcg-product-import/design.md#21-商品csvの出力編集更新往復2026-09-13)、[調査記録](../../handoff/tcg-product-import/recon.md)。設計自己審査済み、実装未着手。
+
+### 商品CSV更新とmigration再実行の分離（2026-09-14）
+
+CSVを日常更新に使う方向はPO合意済み。実DB履歴12商品/34項目を照合し10項目の差を確認。構造を維持し過去データ整備を分離する[設計草案](../../handoff/tcg-product-import/design.md#csvとmigrationの責務分離案2026-09-14草案)は自己審査REVISE。[調査と証跡](../../handoff/tcg-product-import/recon.md#2026-09-14-csv更新とmigration再実行の分離調査)を参照。実装・DB変更は未着手。

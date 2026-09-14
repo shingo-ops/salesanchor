@@ -1,0 +1,4746 @@
+{
+  "base": "59f644cd545d9481ed3460ad5c1dfeefd8c2df56",
+  "registered_count": 232,
+  "items": [
+    {
+      "order": 1,
+      "runner_line": 83,
+      "kind": "py",
+      "path": "scripts/migrate_meta.py",
+      "sha256": "10fd0751eca59b963db663474719e2741574c62d9c4c6f78796dae89627db6ff",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 2,
+      "runner_line": 84,
+      "kind": "sql",
+      "path": "migrations/013_add_meta_webhook_idempotency.sql",
+      "sha256": "4b575b6ee4e57af35931f6c9e1e3243685b19d45caebc1d5df98ac3fa0411e69",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 3,
+      "runner_line": 87,
+      "kind": "sql",
+      "path": "migrations/014_create_current_tenant_id_function.sql",
+      "sha256": "e1d23d83ffdb0c6697fe5b4061b414a9e4ec9a699bed6d4455926c8c34033e80",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 4,
+      "runner_line": 88,
+      "kind": "sql",
+      "path": "migrations/018_extend_permissions_with_menu_grain.sql",
+      "sha256": "1389d38cc65d82127593d609e0195c4ce025a6d9468e18dd6c82eb3cb4908863",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 5,
+      "runner_line": 89,
+      "kind": "sql",
+      "path": "migrations/023_fix_system_admin_is_system_flag.sql",
+      "sha256": "f51666cb31426d4c309b4ebda8287ed7e7c845826b7c1cf773122625a88f1fd1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 6,
+      "runner_line": 90,
+      "kind": "sql",
+      "path": "migrations/024_add_staff_bots_permissions.sql",
+      "sha256": "be6b65d58587532341e325559e39bcf0c07f7ea299d61cef005f802c09f272f4",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 7,
+      "runner_line": 91,
+      "kind": "sql",
+      "path": "migrations/025_resync_owner_admin_all_permissions.sql",
+      "sha256": "803cd28e0257774c3b57950656ee102be746601ac44d94f2c12838a49c8977f2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 8,
+      "runner_line": 94,
+      "kind": "sql",
+      "path": "migrations/026_create_customer_contact_channels.sql",
+      "sha256": "abb74441700f499514ce26a58680ffc40829d9628b4e6930b7100023c3733718",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 9,
+      "runner_line": 95,
+      "kind": "sql",
+      "path": "migrations/027_backfill_customer_contact_channels.sql",
+      "sha256": "364f609830a48878513ab15b7d0fce11d09cca8f888be68dc820a7c5f6d6afcf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 10,
+      "runner_line": 98,
+      "kind": "sql",
+      "path": "migrations/028_create_companies.sql",
+      "sha256": "c5ff91a89b33cb198f9ded281a0e7f5f498ba6271f11742f545a1fdec6d4afe3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 11,
+      "runner_line": 99,
+      "kind": "sql",
+      "path": "migrations/029_create_contacts.sql",
+      "sha256": "ff82bbee9373e8257deda2d267188475076d7a357a28d8995a0fadc97908ba12",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 12,
+      "runner_line": 100,
+      "kind": "sql",
+      "path": "migrations/030_create_company_contact_subtables.sql",
+      "sha256": "192b663818a810f6abe6fc2058b9448fc366fb1028f560aeb81cafb913a30f2b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 13,
+      "runner_line": 101,
+      "kind": "sql",
+      "path": "migrations/031_create_customer_migration_map.sql",
+      "sha256": "ddbb0071108e0950089889a556e58d33db7cb2d2b0e10dbd05899ddeb01d7218",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 14,
+      "runner_line": 102,
+      "kind": "sql",
+      "path": "migrations/032_add_company_contact_to_downstream.sql",
+      "sha256": "6b18408519b4b828ed6f79cd2bb97d16242cb121d8c7ec385962fd00ab68a309",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 15,
+      "runner_line": 103,
+      "kind": "sql",
+      "path": "migrations/033_drop_companies_is_individual.sql",
+      "sha256": "de4f1058e26c4f1eb7f26c713934e206f22ad35034159be56ad632f09b701d8d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 16,
+      "runner_line": 104,
+      "kind": "sql",
+      "path": "migrations/034_add_unique_new_contact_id_to_customer_migration_map.sql",
+      "sha256": "538dff6d34b9bfdd281a0909d4b6deff56370832b280de1a1914f7abbdda8e88",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 17,
+      "runner_line": 105,
+      "kind": "sql",
+      "path": "migrations/035_drop_customer_id_from_downstream.sql",
+      "sha256": "6210725575f13bb9fda91cb2ebad9f869679c24025ad5c56469023d7eabad101",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 18,
+      "runner_line": 106,
+      "kind": "sql",
+      "path": "migrations/036_drop_customer_migration_map.sql",
+      "sha256": "58ca671bdeb216976a25d3b8603f7d570400f0cb0d847997aa59c2950587c97c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 19,
+      "runner_line": 107,
+      "kind": "sql",
+      "path": "migrations/037_add_pending_dedup_review_to_contacts_check.sql",
+      "sha256": "6d8ecef1864cce236ec93a01f34ec2047d354a5ecc494ed168ce3b9f0f99d1ce",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 20,
+      "runner_line": 108,
+      "kind": "sql",
+      "path": "migrations/038_add_products_phase1c_columns.sql",
+      "sha256": "744f369f016caec9c385b69f144bdd15efad9ee60fa9ff34a68ce26cdf2a53b1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 21,
+      "runner_line": 111,
+      "kind": "sql",
+      "path": "migrations/039_create_data_deletion_logs.sql",
+      "sha256": "85116dbcbfffe9f165afd8c8634902b63109e3555b5ac07b64b570a84a855b79",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 22,
+      "runner_line": 114,
+      "kind": "py",
+      "path": "scripts/migrate_meta_inbox_phase1d.py",
+      "sha256": "5b44195117c88bede92e612a7b6e8e92b1f9a7fc9cec244a16b355b0df418bd6",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 23,
+      "runner_line": 115,
+      "kind": "py",
+      "path": "scripts/migrate_meta_inbox_phase1d_sprint4.py",
+      "sha256": "d82c4ff86a02b49b45613d08b592e8f74b9647478d5a3a12cf6ced1cb3354cdf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 24,
+      "runner_line": 116,
+      "kind": "py",
+      "path": "scripts/migrate_meta_page_routing.py",
+      "sha256": "a103ea89489d1666a69c80a3a4311c1c87be8d01fb9327ff0360c3c7e442b620",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 25,
+      "runner_line": 117,
+      "kind": "py",
+      "path": "scripts/migrate_meta_messages_page_id.py",
+      "sha256": "b3663baa9c0e7649331799d0068b3bab79d267b452433cf0621259ea4b75a034",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 26,
+      "runner_line": 120,
+      "kind": "py",
+      "path": "scripts/migrate_adr015_lead_foundation.py",
+      "sha256": "73f7ed4328ea0ced36ba64ef55e05929c7f09ccdc7fbe04cd5d4f2d521cf68b8",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 27,
+      "runner_line": 138,
+      "kind": "py",
+      "path": "scripts/migrate_adr021_sprint2_financials.py",
+      "sha256": "ca9b83fa45c432bbc8356bfa9d37cd6327b0669c78f5cb08b08fca7904e2776f",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 28,
+      "runner_line": 139,
+      "kind": "py",
+      "path": "scripts/migrate_adr021_sprint3_shipping.py",
+      "sha256": "741b2c2038f9093940a036ed5b83c3137fffcb7e47c8d46f36a8000e94c28102",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 29,
+      "runner_line": 140,
+      "kind": "py",
+      "path": "scripts/migrate_adr021_sprint4_purchase.py",
+      "sha256": "b25d6ec9ccd15517252670fdaf3073aa92037dc11e7eaab7e6f0f9a8f2f52cc2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 30,
+      "runner_line": 141,
+      "kind": "py",
+      "path": "scripts/migrate_adr021_sprint5_commissions.py",
+      "sha256": "637baa7362d6eb045ea1992fa12aeba39d750b723cdda5895f1e3a5f9741f8cf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 31,
+      "runner_line": 142,
+      "kind": "py",
+      "path": "scripts/migrate_adr021_remove_confirmed_status.py",
+      "sha256": "67dfe367a5e77744ba2932413b091bb5ba6bff6a74af2724d742dea97d3033a3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 32,
+      "runner_line": 145,
+      "kind": "py",
+      "path": "scripts/migrate_meta_messages_message_id_to_text.py",
+      "sha256": "2af68ec412759529806a20b0ef262b363df1dfd7fd6718b8ddb6c4185675e002",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 33,
+      "runner_line": 146,
+      "kind": "sql",
+      "path": "migrations/053_add_users_locale.sql",
+      "sha256": "935f5a4e2d5d40095ba38d2fb62fcd803d5916efcd200aeec542841b3c9e4465",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 34,
+      "runner_line": 147,
+      "kind": "sql",
+      "path": "migrations/054_add_users_theme.sql",
+      "sha256": "9a522eb5676d33217b4fb0152c1fb917beb2b3a29c778d9c58e3a61e0e2867cc",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 35,
+      "runner_line": 150,
+      "kind": "py",
+      "path": "scripts/migrate_adr041_granted_scopes.py",
+      "sha256": "e3c5392f739d50469967568b1c575e67968eee68b56f6673b8013c24b243cf7a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 36,
+      "runner_line": 153,
+      "kind": "py",
+      "path": "scripts/migrate_009_phase4_tenant_tables.py",
+      "sha256": "349bda711c4ad6d532e3b8f90994ad4b89e8485d08ded04d1c1de3617d5ad09a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 37,
+      "runner_line": 154,
+      "kind": "py",
+      "path": "scripts/migrate_011_phase5_tenant_tables.py",
+      "sha256": "c83d7709d7e1c857935914a348ab0ab22f662d62149ec6c6f4a524dde25012d4",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 38,
+      "runner_line": 157,
+      "kind": "py",
+      "path": "scripts/migrate_inventory_sprint1.py",
+      "sha256": "44a97824c768afdd96e817e6c46bf3f119d18e406cbd11b1e795c4b7be472e3e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 39,
+      "runner_line": 158,
+      "kind": "py",
+      "path": "scripts/migrate_inventory_sprint2.py",
+      "sha256": "376c588ff4a02e5807888ebf90f6342ef57d79d25b68b695f0a473895d620825",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 40,
+      "runner_line": 159,
+      "kind": "py",
+      "path": "scripts/migrate_inventory_sprint5_to_7.py",
+      "sha256": "5b2575dc33f286ac972fd76a0e1df7c25efad8e9af37e6766fc593ded7f84096",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 41,
+      "runner_line": 160,
+      "kind": "py",
+      "path": "scripts/migrate_inventory_sprint8.py",
+      "sha256": "fe396d7891c1af5d70326ee91c440a7589b552cb3772a2cbd1dfaea0d5c5ca2d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 42,
+      "runner_line": 161,
+      "kind": "py",
+      "path": "scripts/migrate_inventory_sprint9.py",
+      "sha256": "2a73977cc447019a1a3db26d1f9761a05554859e32c49f7cb3a20920c3050f92",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 43,
+      "runner_line": 164,
+      "kind": "sql",
+      "path": "migrations/071_create_data_access_events.sql",
+      "sha256": "5a8a6d982face7a47dc7dd2ff3244d9b36ef83f177bd7b87305ab0654082313d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 44,
+      "runner_line": 165,
+      "kind": "sql",
+      "path": "migrations/072_add_retention_indexes.sql",
+      "sha256": "9585afa76d63023491987b386dc1c66fe5c949b1797112532df2399d7e2584c4",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 45,
+      "runner_line": 168,
+      "kind": "py",
+      "path": "scripts/migrate_073_lead_status.py",
+      "sha256": "a1e1aa52eb5e07ae075dd586f1677931f5e6c95ccde1161c5f235e422df53110",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 46,
+      "runner_line": 169,
+      "kind": "py",
+      "path": "scripts/migrate_074_rename_english_name_to_nickname.py",
+      "sha256": "a3973db7b2d418658ecc246c3d48e954bfc7bf93156266ebdc826596a26b8657",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 47,
+      "runner_line": 170,
+      "kind": "sql",
+      "path": "migrations/075_create_goals.sql",
+      "sha256": "02d5d7516142ace007463502c9630b3958e07dcabc5d4f2c4165be19a0bcb062",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 48,
+      "runner_line": 171,
+      "kind": "sql",
+      "path": "migrations/076_add_google_calendar_config.sql",
+      "sha256": "85171d29d8a2f846bf903618bd4220e69706106e20bc0ff6a60b428fd6851d8b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 49,
+      "runner_line": 172,
+      "kind": "sql",
+      "path": "migrations/077_calendar_sync_mode_and_webhook_subscriptions.sql",
+      "sha256": "f861bd15664e66c70b4e44618305afc31f362b447fae549de5e036f30c219e77",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 50,
+      "runner_line": 173,
+      "kind": "sql",
+      "path": "migrations/078_create_calendar_events_tenant.sql",
+      "sha256": "e565e367e7bf5f3ba713b5c6da5fe9b96be0bef81ff10973b8a47203c0460c35",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 51,
+      "runner_line": 174,
+      "kind": "py",
+      "path": "scripts/migrate_20260620_080000_calendar_category_backfill.py",
+      "sha256": "b428865f5786b44b04ae10da020f4207e2ed399b22c9f47c3b9a48ffb6dccc74",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 52,
+      "runner_line": 175,
+      "kind": "sql",
+      "path": "migrations/080_phase_b_migration.sql",
+      "sha256": "9ff3c11b47aa8a3cb823f67a40332c83e8443f267d5733669daf67586fe8faad",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 53,
+      "runner_line": 178,
+      "kind": "sql",
+      "path": "migrations/081_create_inventory.sql",
+      "sha256": "899d86e8882b5fef3fb1c76fd722be06eaade83dbe41c170c5a06561132f0d8b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 54,
+      "runner_line": 179,
+      "kind": "sql",
+      "path": "migrations/082_extend_products_box_attributes.sql",
+      "sha256": "8da2a8c3fb2fd0d263978e3afaa15118050ae30b9bc500f9f302d4d2f2adb98a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 55,
+      "runner_line": 180,
+      "kind": "sql",
+      "path": "migrations/083_add_staff_phone.sql",
+      "sha256": "a5535afa1440f36cacc2d7ad39276d39e9cd3b160deb16a8a397157f33ce07ec",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 56,
+      "runner_line": 181,
+      "kind": "sql",
+      "path": "migrations/084_add_unit_to_inventory.sql",
+      "sha256": "6819ee056bf5b0318538afa9a8759e7a75dd8ebbed82a393e79b9d7934f09411",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 57,
+      "runner_line": 182,
+      "kind": "sql",
+      "path": "migrations/20260620_010000_create_inventory_aggregation_rules.sql",
+      "sha256": "cae052d9600ad30ce5df6a8ed635d1950fa2f26d34b6f02ae88e7d01eeddce88",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 58,
+      "runner_line": 183,
+      "kind": "sql",
+      "path": "migrations/20260622_020000_add_inventory_raw_condition.sql",
+      "sha256": "1508af6ce0e25137c50ccaeaddee8507089c1b5e42f1670349436ec6a1423995",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 59,
+      "runner_line": 184,
+      "kind": "sql",
+      "path": "migrations/20260623_010000_add_inventory_axes_columns.sql",
+      "sha256": "f15bc399c655407e8a4c20935eee7e7710408d5462fafd6fcbd02cc49360bde2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 60,
+      "runner_line": 185,
+      "kind": "sql",
+      "path": "migrations/20260623_040000_make_inventory_condition_nullable.sql",
+      "sha256": "516926de41e41c92a1040aca98de71afda2a416caf1957dea34e20cd846b3adf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 61,
+      "runner_line": 186,
+      "kind": "sql",
+      "path": "migrations/20260623_020000_create_inventory_offer_v2_unique_key.sql",
+      "sha256": "71889f2c1b43bb9338dc6fd64366dd2be49d50d4113602e39665a4f9cb474db1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 62,
+      "runner_line": 191,
+      "kind": "sql",
+      "path": "migrations/20260623_020000_drop_products_category_classification.sql",
+      "sha256": "9eb729ebac75df90bfdf09b0e9f538f603dbb86260aa70ab46297d7741b9cbe7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 63,
+      "runner_line": 192,
+      "kind": "sql",
+      "path": "migrations/085_create_tcg_type_master.sql",
+      "sha256": "44e82698dbbfc8a6c0d298ac3a0ef25a17f15bb72ef173b9ecdc708b550d28ec",
+      "exists": true,
+      "hits": [
+        {
+          "line": 2,
+          "text": "-- Migration 085: public.tcg_type_master 新設 + tcg_series_master の tcg_type CHECK 撤廃"
+        },
+        {
+          "line": 27,
+          "text": "-- 既存 tcg_series_master.tcg_type と一致する 6 種別を seed（旧 CHECK の許可値）。"
+        },
+        {
+          "line": 53,
+          "text": "'ADR-083: TCG 種別マスタ。UI から増減可能。tcg_series_master.tcg_type の値集合の正本。';"
+        },
+        {
+          "line": 55,
+          "text": "-- === 2. tcg_series_master の固定 CHECK 制約を撤廃 ==="
+        },
+        {
+          "line": 56,
+          "text": "-- 種別を自由に増減可能にするため。tcg_series_master が存在する環境でのみ実行"
+        },
+        {
+          "line": 60,
+          "text": "IF to_regclass('public.tcg_series_master') IS NOT NULL THEN"
+        },
+        {
+          "line": 61,
+          "text": "ALTER TABLE public.tcg_series_master"
+        },
+        {
+          "line": 62,
+          "text": "DROP CONSTRAINT IF EXISTS tcg_series_master_tcg_type_check;"
+        },
+        {
+          "line": 63,
+          "text": "RAISE NOTICE 'tcg_series_master_tcg_type_check dropped (or already absent)';"
+        },
+        {
+          "line": 65,
+          "text": "RAISE NOTICE 'public.tcg_series_master not present; skipping CHECK drop';"
+        },
+        {
+          "line": 71,
+          "text": "--   ALTER TABLE public.tcg_series_master ADD CONSTRAINT tcg_series_master_tcg_type_check"
+        }
+      ]
+    },
+    {
+      "order": 64,
+      "runner_line": 193,
+      "kind": "sql",
+      "path": "migrations/086_seed_additional_tcg_types.sql",
+      "sha256": "bd71a67679026077255a6a640a7229126157a85cface7bd0b605cecfa4536461",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 65,
+      "runner_line": 194,
+      "kind": "sql",
+      "path": "migrations/087_create_supplier_prompts.sql",
+      "sha256": "376a6f92febdb98b7a588633daeb21034f08a43b643af451e3d17a8a5ac72b3c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 66,
+      "runner_line": 197,
+      "kind": "sql",
+      "path": "migrations/090_add_lead_contact_links.sql",
+      "sha256": "456c928d5d1ea3c2932488f62ac1d1f791c19e8458ca31e42946f67a5ee9d5e8",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 67,
+      "runner_line": 198,
+      "kind": "sql",
+      "path": "migrations/091_add_leads_discord_messaging_columns.sql",
+      "sha256": "2e706e0d8360410fbf83c3136e54c42e4063819a494326b6ef1fd7b8f7e1d54a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 68,
+      "runner_line": 199,
+      "kind": "sql",
+      "path": "migrations/092_add_meta_messages_discord_index.sql",
+      "sha256": "e3296db5fb8f676039e6674468f50506316e7f9b5c7bf9db0c81bbc8d781d5fd",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 69,
+      "runner_line": 200,
+      "kind": "sql",
+      "path": "migrations/093_rename_order_statuses.sql",
+      "sha256": "d7d0a4f2f0d1ce1cdd078a714695185c831eaf23d61a1ce5d4cab6d0a4407953",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 70,
+      "runner_line": 201,
+      "kind": "sql",
+      "path": "migrations/094_create_message_translations.sql",
+      "sha256": "bd3306b73da7fa9b3dd4c98b0b02fb50939eb4b6785503a20bff6a18bbc93dcf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 71,
+      "runner_line": 202,
+      "kind": "sql",
+      "path": "migrations/20260623_040000_add_tenant_id_to_message_translations.sql",
+      "sha256": "28dcadf552479d19be29be31320fcc34af52b499e79a9c7467e7d66aa710ba6e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 72,
+      "runner_line": 203,
+      "kind": "sql",
+      "path": "migrations/095_add_lead_social_links.sql",
+      "sha256": "e9dcd8725753c8361ae1ac864133c56f2728630a554ce26a0b1b4736abbbf070",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 73,
+      "runner_line": 204,
+      "kind": "sql",
+      "path": "migrations/096_add_deal_lead_source.sql",
+      "sha256": "a9862ea9f993387cc09c933cc37d3fbae92da0f27a9096bf05fbdf1cebdc3796",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 74,
+      "runner_line": 207,
+      "kind": "sql",
+      "path": "migrations/097_create_company_discord.sql",
+      "sha256": "fe737becac8625c745d54c75e7ea00bf59dd680fa60a4ad3e5483ade44202b58",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 75,
+      "runner_line": 208,
+      "kind": "sql",
+      "path": "migrations/098_migrate_customer_discord_to_company_discord.sql",
+      "sha256": "f012b19fb02d2f3c3a49f9049e7d9a170c91c65e8c292e97e90acb74e25b51ae",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 76,
+      "runner_line": 209,
+      "kind": "sql",
+      "path": "migrations/099_add_discord_guild_config.sql",
+      "sha256": "5fc94798b50271d3a78162db5316c83958b64bf1ec85f42264ee7b731f20fa07",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 77,
+      "runner_line": 212,
+      "kind": "sql",
+      "path": "migrations/100_add_meta_messages_image_columns.sql",
+      "sha256": "697976655e18889f8696df2e2cb98c735e7c13e59881927cba2ce880f0f1864b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 78,
+      "runner_line": 215,
+      "kind": "sql",
+      "path": "migrations/20260601_140000_drop_customers_tables.sql",
+      "sha256": "ebd1297f9e8cc046540721257357717fb5996cb7fb617585c79d99219bb171bd",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 79,
+      "runner_line": 216,
+      "kind": "sql",
+      "path": "migrations/20260602_000000_add_products_central_columns.sql",
+      "sha256": "c5454bfc4599888f2bad91a7fb020caaec619ca26878b365227dd54ba7d131c5",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 80,
+      "runner_line": 217,
+      "kind": "sql",
+      "path": "migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql",
+      "sha256": "457953b2776bdf2ae7d2c13650d2d7f2a333e2d40fc74b83563e23473c995bdd",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 81,
+      "runner_line": 218,
+      "kind": "sql",
+      "path": "migrations/20260602_020000_add_products_tcg_type.sql",
+      "sha256": "e78b80722d2421255c649d522cb6b571dc586daf2544e3c0e7217d4144bf0e37",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 82,
+      "runner_line": 219,
+      "kind": "sql",
+      "path": "migrations/20260602_030000_add_products_unit.sql",
+      "sha256": "2ebef7e26ee3f143d5456b05218caa3d712fa666b355f72cee00d6c65efec5b3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 83,
+      "runner_line": 220,
+      "kind": "sql",
+      "path": "migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql",
+      "sha256": "0d1753e142543cf1bbbdad11fdfc99d90bed9a550f3465d4a4f0cdbfaf4e6a1a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 84,
+      "runner_line": 221,
+      "kind": "sql",
+      "path": "migrations/20260602_120000_add_discord_ticket_config.sql",
+      "sha256": "64dc16b1702761e76afeee3c1c5541b3332895f29c2b203e645b24fb620eb955",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 85,
+      "runner_line": 224,
+      "kind": "sql",
+      "path": "migrations/20260602_150000_add_discord_scale_channels.sql",
+      "sha256": "2a0a207b2e479e109bcafffd9d123e2c2badbb129f26ca8e47ad365a4a24e5a0",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 86,
+      "runner_line": 227,
+      "kind": "sql",
+      "path": "migrations/20260602_160000_add_discord_role_names.sql",
+      "sha256": "29fbf1fe310fb34ed35d3729a70563645874ac500f5e5b32a7ba03621d726bd2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 87,
+      "runner_line": 230,
+      "kind": "sql",
+      "path": "migrations/20260602_170000_add_products_master_label_columns.sql",
+      "sha256": "571e2b0c3ce4c967c5657d7bd464cc32e858335d470aeec293bcc4fde78cdb57",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 88,
+      "runner_line": 233,
+      "kind": "sql",
+      "path": "migrations/20260602_180000_add_inventory_offer_type_ship_timing.sql",
+      "sha256": "67d3f19c2ea3d39a899c2c58833a443d3df85aff1a74e15435bc7b0bf7677b76",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 89,
+      "runner_line": 236,
+      "kind": "sql",
+      "path": "migrations/20260602_190000_create_user_inventory_filters.sql",
+      "sha256": "7a0a060731de012d2a82b80dfba70c9e3eb3852793937627080f41cd53dcc635",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 90,
+      "runner_line": 239,
+      "kind": "sql",
+      "path": "migrations/20260602_200000_add_discord_config_connected_by_staff.sql",
+      "sha256": "4fe53ca98fe92222ae9ca017c79130bff691a6c406031d5e09e25af4ebe62331",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 91,
+      "runner_line": 249,
+      "kind": "sql",
+      "path": "migrations/20260603_000000_add_products_product_kind.sql",
+      "sha256": "19548387cdf2eecfa83a661f090ff94fbb9ce42cce560fb2507abd57a6a3da54",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 92,
+      "runner_line": 252,
+      "kind": "sql",
+      "path": "migrations/20260603_010000_add_suppliers_line_and_address.sql",
+      "sha256": "ec8cb7c87077c9f0541756883617df265d6d5d6e8442c1d8c0b5b670af7fd7b2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 93,
+      "runner_line": 255,
+      "kind": "sql",
+      "path": "migrations/20260604_050000_add_tenant_policy_columns.sql",
+      "sha256": "9748959a021b9afe819576b1b9b703f5e583e733990af9a1ac6b5b51f01325a7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 94,
+      "runner_line": 258,
+      "kind": "sql",
+      "path": "migrations/20260603_030000_seed_dragonball_products.sql",
+      "sha256": "f1278834865cfa29cb1baa9527e82e437d40b4f3b31cc3c0d6baf36051942997",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 95,
+      "runner_line": 261,
+      "kind": "sql",
+      "path": "migrations/20260603_040000_add_products_set_type.sql",
+      "sha256": "137ed73bb91d1c117bcdb25d76c3ccd8b449d5ce158e14b9af9e8d581ea80364",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 96,
+      "runner_line": 264,
+      "kind": "sql",
+      "path": "migrations/20260604_010000_seed_product_marks.sql",
+      "sha256": "4cad8e75870b0f683b981b0d883e32dc2de170411f99d82603a2d7cee32295c4",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 97,
+      "runner_line": 267,
+      "kind": "sql",
+      "path": "migrations/20260604_020000_backfill_products_shipping_defaults.sql",
+      "sha256": "e01886b1667f0c8fe08ed2bd061ea7d239b600e17833525dedc9b0764c36cf22",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 98,
+      "runner_line": 270,
+      "kind": "sql",
+      "path": "migrations/20260604_030000_add_quote_invoice_item_overseas_columns.sql",
+      "sha256": "618036c248316233ba4482449951990a5ae906f598c46fedbce24fefb3e2c4a3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 99,
+      "runner_line": 273,
+      "kind": "sql",
+      "path": "migrations/20260604_040000_seed_tcg_products_8series.sql",
+      "sha256": "d50e9ee2fd9ba24f8b06cea37a9293fc229d11ba4382c0a6609f2cf37ffc6161",
+      "exists": true,
+      "hits": [
+        {
+          "line": 27,
+          "text": "-- 本ファイルは Python(/tmp/gen_tcg_products_migration.py)で JSON から自動生成。手書き禁止。"
+        }
+      ]
+    },
+    {
+      "order": 100,
+      "runner_line": 276,
+      "kind": "sql",
+      "path": "migrations/20260604_050000_add_orders_paid_at.sql",
+      "sha256": "65868e6ee0d1776aefc1de6af60c1e2a064b5f8a1ccad7de942c0cb99be03c98",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 101,
+      "runner_line": 279,
+      "kind": "sql",
+      "path": "migrations/20260604_060000_add_lost_reason_code.sql",
+      "sha256": "641930e2ddea4c831dedcf4757e32a38349d807822e18d5bde94372bbd527b4b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 102,
+      "runner_line": 282,
+      "kind": "sql",
+      "path": "migrations/20260604_070000_deprecate_columns.sql",
+      "sha256": "5e6bb2d959e34acac6d932acdd69373b172f458cdfdb8c89cab7dbeb171ee38f",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 103,
+      "runner_line": 285,
+      "kind": "sql",
+      "path": "migrations/20260604_140000_create_own_inventory.sql",
+      "sha256": "10c356f8d7b2b1cb699628122b6ccca2ecacdfa6e90e38a11c8d7a6cb8508872",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 104,
+      "runner_line": 286,
+      "kind": "sql",
+      "path": "migrations/20260604_150000_add_inventory_source_kind.sql",
+      "sha256": "f6281cc0545e5c9adf9077ba25ab6da8a11dcae15878e01af98fb2368a1e2665",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 105,
+      "runner_line": 289,
+      "kind": "sql",
+      "path": "migrations/20260604_110000_create_ingestion_jobs.sql",
+      "sha256": "c0ca18268c7636d2bfa7abc48ebb54ad871cc2b7a4864870b19a4c6f2373421c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 106,
+      "runner_line": 290,
+      "kind": "sql",
+      "path": "migrations/20260604_120000_create_parse_logs.sql",
+      "sha256": "756adb58c81f5149dc217d274ce467fdbe81951b1ef52fb120ac74a14b3370cf",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 107,
+      "runner_line": 291,
+      "kind": "sql",
+      "path": "migrations/20260604_130000_create_supplier_parse_stats_view.sql",
+      "sha256": "5202d6498e66fd9fcd6339e708819d123e1e69a5084759cdece5ce9265b7345c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 108,
+      "runner_line": 294,
+      "kind": "sql",
+      "path": "migrations/20260604_090000_create_conversation_logs.sql",
+      "sha256": "476a52c57aaedc68df7452a88f71a9a933c94050356541d1663743a550f7e01e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 109,
+      "runner_line": 295,
+      "kind": "sql",
+      "path": "migrations/20260604_100000_create_company_stats_view.sql",
+      "sha256": "fe8a8c6e72c9ec1a9db95d6418c0f55ee0bc5f042afdb79b968961efdc0a260e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 110,
+      "runner_line": 298,
+      "kind": "sql",
+      "path": "migrations/20260604_080000_create_registration_tokens.sql",
+      "sha256": "a67d6b9bd0d28fd90ba9c2901345131667e57f68f4a79daeca877c3f0dd2eb77",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 111,
+      "runner_line": 301,
+      "kind": "sql",
+      "path": "migrations/20260604_160000_add_invoice_snapshot_columns.sql",
+      "sha256": "08e85c1f41367c79fe87b6fe9cdf4bcfb4cae90bf731aa782b60270ed4faca8c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 112,
+      "runner_line": 304,
+      "kind": "sql",
+      "path": "migrations/20260604_090000_create_link_templates.sql",
+      "sha256": "091d017ff42a56291a3609f469bee9b6afab347b3e09b6f8ac0fc51f3d7040a1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 113,
+      "runner_line": 305,
+      "kind": "sql",
+      "path": "migrations/20260604_100000_add_guild_id_to_contact_channels.sql",
+      "sha256": "775ef18b0b8d1de212849ceb12fd0d41c8b199bf3dd5f51e65e7651287382648",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 114,
+      "runner_line": 309,
+      "kind": "sql",
+      "path": "migrations/20260604_170000_create_product_attribute_masters.sql",
+      "sha256": "8552c249e988673c7399862fe7444be5a61cf82eb1d92b4de6f0918d7ccf0442",
+      "exists": true,
+      "hits": [
+        {
+          "line": 13,
+          "text": "--   ※ TCGシリーズは既存 public.tcg_type_master / tcg_series_master で管理するため対象外。"
+        }
+      ]
+    },
+    {
+      "order": 115,
+      "runner_line": 312,
+      "kind": "sql",
+      "path": "migrations/20260604_180000_analytics_agent_a_tables.sql",
+      "sha256": "3434f9a79093f0cebf3460fe5eebe4b9ac678dd4c143c7dcae37585e9296e0a3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 116,
+      "runner_line": 315,
+      "kind": "sql",
+      "path": "migrations/20260604_220000_create_translation_glossary.sql",
+      "sha256": "49ffe19b4a930a4372009fe071ee8083f9a1588e1e15cbd0d8794447202ee2b9",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 117,
+      "runner_line": 318,
+      "kind": "sql",
+      "path": "migrations/20260605_000000_add_products_display_order.sql",
+      "sha256": "5f7bf5970b04ee6e4f90e6ea2bc15eb47d9af916981ca3fa33fd220ca7995e61",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 118,
+      "runner_line": 321,
+      "kind": "sql",
+      "path": "migrations/20260605_010000_rls_translation_glossary.sql",
+      "sha256": "91352453917ccace3c6e77a44f1b6dd01733af6c60c3aab2f2b88d3e5111ce78",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 119,
+      "runner_line": 324,
+      "kind": "sql",
+      "path": "migrations/20260605_020000_fix_translation_glossary_rls_cast.sql",
+      "sha256": "34425945e444641657fa8ccb8b7b157087e9d8ea34debb379ffa34341df58c57",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 120,
+      "runner_line": 327,
+      "kind": "sql",
+      "path": "migrations/20260605_030000_create_salesanchor_app_role.sql",
+      "sha256": "d9077e52b46f60ded293d6fc255d27ff69f266276f7cc6deb7946f82d82fd020",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 121,
+      "runner_line": 330,
+      "kind": "sql",
+      "path": "migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql",
+      "sha256": "6f74bb7e714ab6c366d6366f3aec9694236775cff0cfb7dcace5ae67db66effb",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 122,
+      "runner_line": 333,
+      "kind": "sql",
+      "path": "migrations/20260606_010000_add_google_drive_config.sql",
+      "sha256": "d8dbaab1c5e03a1aab415f6da35d10acc25bea09408f8d9bd483e2a45d6d3c61",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 123,
+      "runner_line": 336,
+      "kind": "sql",
+      "path": "migrations/20260607_000000_fix_rls_policy_variable_name.sql",
+      "sha256": "b1919581c836f984c9f50692672c0abe2ab393e1f3968485e38084507d449cf1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 124,
+      "runner_line": 339,
+      "kind": "py",
+      "path": "scripts/migrate_adr109_status_codes.py",
+      "sha256": "227622a063eea14a35ee849f7421a6f2d967767f3790300ee010d95f9c038750",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 125,
+      "runner_line": 342,
+      "kind": "sql",
+      "path": "migrations/20260607_120000_create_lead_channels.sql",
+      "sha256": "dc588604613fe0d7b019b43cc289595ac26214d8dd0b6b4df5b76756bf0c8a1d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 126,
+      "runner_line": 345,
+      "kind": "py",
+      "path": "scripts/migrate_adr119_lead_channels_backfill.py",
+      "sha256": "cbe7b35106c2f0abe1ce15b4023798667d5bd7a8c0a6c6cc019941b7e0844516",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 127,
+      "runner_line": 348,
+      "kind": "sql",
+      "path": "migrations/20260608_080000_add_carrier_credentials.sql",
+      "sha256": "81b2b3ed97e0bb99bc466cf48ca164b4dd350bbb4acd301ab0b3b6d775a4752c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 128,
+      "runner_line": 351,
+      "kind": "sql",
+      "path": "migrations/20260609_090000_add_carrier_credentials_rls.sql",
+      "sha256": "5b17edc45a1d4fbd3988e6679d6659c4d9c0fa97b7c7043e916072bc12267623",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 129,
+      "runner_line": 355,
+      "kind": "sql",
+      "path": "migrations/20260609_100000_add_carrier_account_number.sql",
+      "sha256": "ec5039eedf2bcacb880882f78ff66de0e64ce98531e653ce4fde80cd436acd2f",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 130,
+      "runner_line": 358,
+      "kind": "sql",
+      "path": "migrations/20260610_071110_add_paypal_config.sql",
+      "sha256": "f2697c43ae4f49c7bf525f6becb8c974aea50c486496dae92a58e4968f3e4efd",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 131,
+      "runner_line": 361,
+      "kind": "sql",
+      "path": "migrations/20260611_010000_fix_owner_role_color.sql",
+      "sha256": "2a26068d02fcfefff771ad479d5800bd5628c427402e564716be6bff58d0b6dc",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 132,
+      "runner_line": 364,
+      "kind": "sql",
+      "path": "migrations/20260611_020000_add_invoice_paypal_columns.sql",
+      "sha256": "4a382d8639cafa30758c40acfbf07f4a4adc433579708125403c463ada363fc7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 133,
+      "runner_line": 367,
+      "kind": "sql",
+      "path": "migrations/20260611_100000_create_channel_masters.sql",
+      "sha256": "eb9f59224081014ae3418f828e8af104e2b89eab018baafc944d133d969901f7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 134,
+      "runner_line": 370,
+      "kind": "sql",
+      "path": "migrations/20260611_110000_extend_order_shipping_for_ship_api.sql",
+      "sha256": "1a5e0cb7b2d381e4b8fdec8b157d124415eb5c778b5ca276bfe54ca18bae7b79",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 135,
+      "runner_line": 373,
+      "kind": "sql",
+      "path": "migrations/20260611_120000_add_conv_log_manual_columns.sql",
+      "sha256": "b8f6372626b0a97ccacfe96251fd8f6c5da378ad2a9c9c65667f9076dc73e789",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 136,
+      "runner_line": 377,
+      "kind": "sql",
+      "path": "migrations/20260611_130000_fix_v_company_stats_deleted_at.sql",
+      "sha256": "071e95c969f1e604f0b5eff0dfe757749ecebdab69a190a7cf52dd25b25e8474",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 137,
+      "runner_line": 380,
+      "kind": "sql",
+      "path": "migrations/20260611_140000_add_conv_log_is_manual.sql",
+      "sha256": "2ba304d04f94f8b4392a3c6a7cb95b578ff7c0c412d2cdffbab01534ac4049a9",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 138,
+      "runner_line": 383,
+      "kind": "sql",
+      "path": "migrations/20260611_150000_add_paypal_webhook_id.sql",
+      "sha256": "ab784faba2a36a5d69db165d4a736d398a9727757a1cd19780acc296ce15fa45",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 139,
+      "runner_line": 386,
+      "kind": "sql",
+      "path": "migrations/20260612_090000_extend_registration_tokens_change_billing.sql",
+      "sha256": "01e2e42dc7a8d18d84675bd00dd92be7f57687617090c49e23c3917fa36196b3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 140,
+      "runner_line": 389,
+      "kind": "sql",
+      "path": "migrations/20260612_131520_add_invoice_copypdf.sql",
+      "sha256": "f9fa9cdedb2c30da36733880e3c2de034f6770a8f06d8de7a7756254e7866e9d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 141,
+      "runner_line": 392,
+      "kind": "sql",
+      "path": "migrations/20260612_200000_fedex_creds_unique_env.sql",
+      "sha256": "1102ad071976f86f3f3ec63391fb28817d7352fb5776130a926d0d9d6003262b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 142,
+      "runner_line": 395,
+      "kind": "sql",
+      "path": "migrations/20260612_100000_add_contact_channel_unique.sql",
+      "sha256": "3a6cfb22f23089aca0cbde267a8fd94ea5b1c9748cbba5e2b13ee5cff7cb8b32",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 143,
+      "runner_line": 398,
+      "kind": "sql",
+      "path": "migrations/20260612_110000_add_company_discord_guild_id.sql",
+      "sha256": "28c8493f7f91ae0c25fdb006996cb95e7d554e94aab18957c5b0954e1c301966",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 144,
+      "runner_line": 401,
+      "kind": "sql",
+      "path": "migrations/20260612_154322_create_paypal_disputes.sql",
+      "sha256": "d20604651a618ea0c4e8ab3f1b5dab31a3d20d7157bdb1df8492c2112d0955b8",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 145,
+      "runner_line": 404,
+      "kind": "sql",
+      "path": "migrations/20260612_050000_backfill_invoice_timestamps.sql",
+      "sha256": "1c1dc1568b04128391bf52bcead6a3e483d86eb94a80963bb51fa35693a90404",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 146,
+      "runner_line": 407,
+      "kind": "sql",
+      "path": "migrations/20260612_120000_fix_company_stats_ssot.sql",
+      "sha256": "06d95ed2724e4cfa5041027d27c6d6a5bd076782b17a66d927a6907626b5c793",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 147,
+      "runner_line": 410,
+      "kind": "sql",
+      "path": "migrations/20260612_150000_drop_password_hash.sql",
+      "sha256": "7280b3f01d4e5c3cb00daa1c3a2e4d3896d87889fbd51f7578c11ad6e90261f2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 148,
+      "runner_line": 415,
+      "kind": "sql",
+      "path": "migrations/20260613_010000_funnel_deals_closed_at.sql",
+      "sha256": "f1db2467eb12532c0e6d22b6244a0a61bc55c6847905f4c290186f547eb9dc5e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 149,
+      "runner_line": 418,
+      "kind": "sql",
+      "path": "migrations/20260613_020000_funnel_close_reasons.sql",
+      "sha256": "7564856d5381168c35ed6222f4ac5d96b7c82afe42d8a231147d9baeb4b53f4b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 150,
+      "runner_line": 421,
+      "kind": "sql",
+      "path": "migrations/20260613_030000_funnel_leads_initiative_channel.sql",
+      "sha256": "9254bf4c822b1dea84b20f9908c4ae13c8a73785277c3e6d1192906e60c390d2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 151,
+      "runner_line": 424,
+      "kind": "sql",
+      "path": "migrations/20260613_040000_funnel_goals_kpi_extend.sql",
+      "sha256": "da322543225c4cce449f81bd68c01f49f7874412e8672cc3b7f7aa5f5c981ad8",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 152,
+      "runner_line": 427,
+      "kind": "sql",
+      "path": "migrations/20260613_050000_funnel_purchase_cost_nullable.sql",
+      "sha256": "a818d248667b3947d7fd4a6d65038379180bb5b928903901b4d005e6bfa136f5",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 153,
+      "runner_line": 430,
+      "kind": "sql",
+      "path": "migrations/20260614_030000_add_carrier_test_result.sql",
+      "sha256": "b1b28ff1d5310349209f8b339d86a3cbd80ac0207e1f5d408a34022bee002e37",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 154,
+      "runner_line": 433,
+      "kind": "sql",
+      "path": "migrations/20260614_040137_add_tenant_deletion_audit.sql",
+      "sha256": "692ee4e2832808110223fd35f39d899323340210c0cb4f6d2d64c45f5fe0aa6e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 155,
+      "runner_line": 436,
+      "kind": "sql",
+      "path": "migrations/20260614_100000_create_sales_form_tables.sql",
+      "sha256": "759c5078195cba83de564e9867db4a7b82622ef8dccaa2a1dddb4882b6e50cf1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 156,
+      "runner_line": 439,
+      "kind": "sql",
+      "path": "migrations/20260615_235900_seed_pokemon_mega_products.sql",
+      "sha256": "b48f26d898e6dce8b68f612332cd24487a796bc0ade438ca65dbd00f64b3c182",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 157,
+      "runner_line": 442,
+      "kind": "sql",
+      "path": "migrations/20260616_000000_fix_tcg_type_dedup.sql",
+      "sha256": "4291b1ab581fa2b436b620ef208167ebd24b0e1841258a076445e6bb7c74a793",
+      "exists": true,
+      "hits": [
+        {
+          "line": 7,
+          "text": "--   20260604_040000_seed_tcg_products_8series.sql が上記と重複する"
+        }
+      ]
+    },
+    {
+      "order": 158,
+      "runner_line": 445,
+      "kind": "sql",
+      "path": "migrations/20260621_010000_create_countries_master.sql",
+      "sha256": "46d17280bdc853a2f83c94e8fa43f8d2b30d4701721c43d06ceb21b4603468bd",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 159,
+      "runner_line": 448,
+      "kind": "sql",
+      "path": "migrations/20260622_010000_add_meta_messages_master_history_columns.sql",
+      "sha256": "1b116356959b8448e7ef25ee6d19c4b699e10b31a2e53c922b029c64484bc69a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 160,
+      "runner_line": 451,
+      "kind": "sql",
+      "path": "migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql",
+      "sha256": "1b4cabfb24c179673864a36f2314411757296174321e7e81dbe95aa57835ef87",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 161,
+      "runner_line": 454,
+      "kind": "py",
+      "path": "scripts/migrate_20260621_020000_backfill_lead_country.py",
+      "sha256": "7dcf807bae9a0050aa91ec4897157683086e3d50997f8dfe0c1a9f056441d4e0",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 162,
+      "runner_line": 458,
+      "kind": "sql",
+      "path": "migrations/20260623_060000_add_products_tcg_type_fk.sql",
+      "sha256": "19bb5e0b019cf72d071846e89e4a5e8379acda74670ad1dc88777d747aaf13ac",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 163,
+      "runner_line": 461,
+      "kind": "sql",
+      "path": "migrations/20260623_100000_rls_message_translations.sql",
+      "sha256": "810e7f2546e103c23d72ef4d2ab9abcdf378a3e98b8776f3fe082157c9142b79",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 164,
+      "runner_line": 464,
+      "kind": "sql",
+      "path": "migrations/20260624_120000_backfill_meta_messages_original_language.sql",
+      "sha256": "119b0fe2b415392413f2258dfdff2b96df2f09607d0aff57b6149940fe266a84",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 165,
+      "runner_line": 467,
+      "kind": "sql",
+      "path": "migrations/20260624_140000_converge_inventory_v2.sql",
+      "sha256": "616a4c651f89be5a7b1e06c675b8f728a1989f4e23527fead48205fed4b013cb",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 166,
+      "runner_line": 470,
+      "kind": "sql",
+      "path": "migrations/20260626_100000_add_outbound_draft_message_link.sql",
+      "sha256": "22b1934c6f9f3be74600aca300ccd345594c89f7e08836df952e3bbc4fa580e3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 167,
+      "runner_line": 473,
+      "kind": "sql",
+      "path": "migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql",
+      "sha256": "2092c34be7c52ce472b9e7c68a0b9ed61d55ccdb859b733a5aeb333321c57fd2",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 168,
+      "runner_line": 476,
+      "kind": "sql",
+      "path": "migrations/20260626_130000_force_rls_public_products.sql",
+      "sha256": "580397e9463c4a405979be01f66831ca95e8830dc27de2b0ed05ecd4bedbeaf7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 169,
+      "runner_line": 479,
+      "kind": "sql",
+      "path": "migrations/20260627_120000_add_tenant_features_table.sql",
+      "sha256": "160ff9586c5f885ac4c93db93ad5ff23f3debb207bd5395bb1a3374a8af28a87",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 170,
+      "runner_line": 482,
+      "kind": "sql",
+      "path": "migrations/20260629_010000_backfill_inventory_unit_from_products.sql",
+      "sha256": "08178fcdd3ad6cc0a72fcef722554cfeb1e70c72221ea8b8beb7ded6ef7a40e6",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 171,
+      "runner_line": 485,
+      "kind": "sql",
+      "path": "migrations/20260628_170000_add_app_fx_rates.sql",
+      "sha256": "f0f240e45490d263ccb2e123195c148ed8411511ba42c038f105284121552b29",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 172,
+      "runner_line": 488,
+      "kind": "sql",
+      "path": "migrations/20260703_010000_txn_backbone_ben1a.sql",
+      "sha256": "a159e8c5591e355448886583c8f3724ce6fd9b3d982d4798d16f4cb114a64b8a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 173,
+      "runner_line": 491,
+      "kind": "sql",
+      "path": "migrations/20260629_020000_drop_products_condition_unit.sql",
+      "sha256": "fe012d58aba89025fd1c5be3c076501b8f2e257119366e2866651bd625ed6bbe",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 174,
+      "runner_line": 494,
+      "kind": "sql",
+      "path": "migrations/20260703_020000_conv_backbone_ben1b.sql",
+      "sha256": "0e036bdabc4d0887588b16720a115a9b93fed056e3ebe49cee708e2e653acc5a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 175,
+      "runner_line": 495,
+      "kind": "sql",
+      "path": "migrations/20260715_100000_add_conversation_logs_lead_fk.sql",
+      "sha256": "333560b72125074b0d2ec88a4fce5b71f5aaf90f04933017e6fa9e0b32f5eae3",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 176,
+      "runner_line": 497,
+      "kind": "sql",
+      "path": "migrations/20260718_100000_leads_add_deal_columns.sql",
+      "sha256": "5a41bb90549da7bb8bac508768b8209c59a3510bf0e49d6fada21d54b3f2290d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 177,
+      "runner_line": 500,
+      "kind": "sql",
+      "path": "migrations/20260720_100000_orders_deal_id_drop_not_null.sql",
+      "sha256": "18bff68d329526cbfe4887aed2fac62c289647da82c782efe4aaafdaeab4b59b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 178,
+      "runner_line": 501,
+      "kind": "sql",
+      "path": "migrations/20260721_100000_close_reasons_quotes_add_lead_id.sql",
+      "sha256": "f69f89f9499e341c19fe305a1d616b09f7a033046cba56e1f9d6b503b07fbd0d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 179,
+      "runner_line": 502,
+      "kind": "sql",
+      "path": "migrations/20260721_120000_close_reasons_quotes_leadid_notnull.sql",
+      "sha256": "972f894a943bed8429d856fcbac949be0528329a78b13e695030ad0ee286124e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 180,
+      "runner_line": 503,
+      "kind": "sql",
+      "path": "migrations/20260723_120000_dcr_dealid_nullable.sql",
+      "sha256": "61a1ffe28585cf5e74e0f335e6b1f574fc6480078386d7d7f3e66b5d76f0ab1b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 181,
+      "runner_line": 506,
+      "kind": "sql",
+      "path": "migrations/20260703_030000_order_items_ben2.sql",
+      "sha256": "647266cf666f972a2de7512022914229f28112c26881adf9c4f115c8c70c5f44",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 182,
+      "runner_line": 509,
+      "kind": "sql",
+      "path": "migrations/20260724_074500_drop_orders_deal_id.sql",
+      "sha256": "1b6476b9807c9cccbc59bd4aa5bf976eeedb8774c3ee943a28be079c91370b77",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 183,
+      "runner_line": 512,
+      "kind": "sql",
+      "path": "migrations/20260724_131500_quotes_drop_deal_id.sql",
+      "sha256": "ebd5d9d86127d7314faaa0081e95ba189372efa7c68cad62cda693ab230c3542",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 184,
+      "runner_line": 515,
+      "kind": "sql",
+      "path": "migrations/20260724_170000_dcr_drop_deal_id.sql",
+      "sha256": "3a34497381705498510fe5ab4bc9172e2298d7465f29d78b18e02686e5a7b240",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 185,
+      "runner_line": 518,
+      "kind": "sql",
+      "path": "migrations/20260726_180000_leads_drop_converted_deal_id.sql",
+      "sha256": "13142cc2766e0d320129cf1f7a93a41bc367a984b27162ba12d9b83b9fe67ecc",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 186,
+      "runner_line": 521,
+      "kind": "sql",
+      "path": "migrations/20260729_043520_drop_deals.sql",
+      "sha256": "a02100cf07032fafdef7922b458dc90b06399ea69c2053444cf90f4a21438176",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 187,
+      "runner_line": 524,
+      "kind": "sql",
+      "path": "migrations/20260831_110000_create_tcg_analysis_tables_t004.sql",
+      "sha256": "46f05828c20298fcc932ee9094fdeb6caf59d417a9400099bec592e49413feda",
+      "exists": true,
+      "hits": [
+        {
+          "line": 80,
+          "text": "-- 1-3. tcg_products: TCG商品マスタ"
+        },
+        {
+          "line": 82,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_products ("
+        },
+        {
+          "line": 125,
+          "text": "-- 2. 第1階層 FK（親: conditions / tcg_products / tcg_suppliers / units）"
+        },
+        {
+          "line": 145,
+          "text": "-- 2-2. product_exclude_keywords: 除外キーワード"
+        },
+        {
+          "line": 147,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_exclude_keywords ("
+        },
+        {
+          "line": 150,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 157,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_exclude_keywords_product_id"
+        },
+        {
+          "line": 158,
+          "text": "ON %I.product_exclude_keywords (product_id)"
+        },
+        {
+          "line": 161,
+          "text": "-- 2-3. product_search_keywords: 検索キーワード"
+        },
+        {
+          "line": 163,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_search_keywords ("
+        },
+        {
+          "line": 166,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 173,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_search_keywords_product_id"
+        },
+        {
+          "line": 174,
+          "text": "ON %I.product_search_keywords (product_id)"
+        },
+        {
+          "line": 181,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 278,
+          "text": "-- 6. 第5階層 FK（親: extraction_items / tcg_products / units / conditions）"
+        },
+        {
+          "line": 288,
+          "text": "REFERENCES %I.tcg_products (id),"
+        }
+      ]
+    },
+    {
+      "order": 188,
+      "runner_line": 527,
+      "kind": "sql",
+      "path": "migrations/20260901_090000_add_condition_resolution_columns.sql",
+      "sha256": "8b11dc58690101666bf30b66a5ed15fbd0c736127c8a0f9c0d5ea4cf72ce0da1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 189,
+      "runner_line": 530,
+      "kind": "sql",
+      "path": "migrations/20260831_110000_create_tcg_analysis_tables_t004.sql",
+      "sha256": "46f05828c20298fcc932ee9094fdeb6caf59d417a9400099bec592e49413feda",
+      "exists": true,
+      "hits": [
+        {
+          "line": 80,
+          "text": "-- 1-3. tcg_products: TCG商品マスタ"
+        },
+        {
+          "line": 82,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_products ("
+        },
+        {
+          "line": 125,
+          "text": "-- 2. 第1階層 FK（親: conditions / tcg_products / tcg_suppliers / units）"
+        },
+        {
+          "line": 145,
+          "text": "-- 2-2. product_exclude_keywords: 除外キーワード"
+        },
+        {
+          "line": 147,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_exclude_keywords ("
+        },
+        {
+          "line": 150,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 157,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_exclude_keywords_product_id"
+        },
+        {
+          "line": 158,
+          "text": "ON %I.product_exclude_keywords (product_id)"
+        },
+        {
+          "line": 161,
+          "text": "-- 2-3. product_search_keywords: 検索キーワード"
+        },
+        {
+          "line": 163,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_search_keywords ("
+        },
+        {
+          "line": 166,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 173,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_search_keywords_product_id"
+        },
+        {
+          "line": 174,
+          "text": "ON %I.product_search_keywords (product_id)"
+        },
+        {
+          "line": 181,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 278,
+          "text": "-- 6. 第5階層 FK（親: extraction_items / tcg_products / units / conditions）"
+        },
+        {
+          "line": 288,
+          "text": "REFERENCES %I.tcg_products (id),"
+        }
+      ]
+    },
+    {
+      "order": 190,
+      "runner_line": 533,
+      "kind": "sql",
+      "path": "migrations/20260901_120000_add_unit_inference_columns_t004.sql",
+      "sha256": "e81f4f2df119bcd6e1967ffdffd5637e3556524fa1836ec25cd489312e3db8fa",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 191,
+      "runner_line": 536,
+      "kind": "sql",
+      "path": "migrations/20260902_100000_create_lead_attachments.sql",
+      "sha256": "fb9eb94ecb20218ef8346806079a0af60f08c9247077355321288162ffa5e64a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 192,
+      "runner_line": 539,
+      "kind": "sql",
+      "path": "migrations/20260902_110000_tcg_classification_masters.sql",
+      "sha256": "5585e3fd3c9d9f06d015a1c0edea532b36691ee115a77dafc68ee72c89a370a9",
+      "exists": true,
+      "hits": [
+        {
+          "line": 5,
+          "text": "--   大分類マスタ (tcg_major_categories)  : 3 行"
+        },
+        {
+          "line": 6,
+          "text": "--   作品マスタ   (tcg_series)             : 11 行"
+        },
+        {
+          "line": 7,
+          "text": "--   メーカーマスタ (tcg_manufacturers)    : 5 行"
+        },
+        {
+          "line": 8,
+          "text": "--   商品区分マスタ (tcg_product_categories): 2 行"
+        },
+        {
+          "line": 22,
+          "text": "-- 1. tcg_major_categories (大分類マスタ)"
+        },
+        {
+          "line": 25,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_major_categories ("
+        },
+        {
+          "line": 36,
+          "text": "-- 2. tcg_series (作品マスタ)"
+        },
+        {
+          "line": 39,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_series ("
+        },
+        {
+          "line": 50,
+          "text": "-- 3. tcg_manufacturers (メーカーマスタ)"
+        },
+        {
+          "line": 53,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_manufacturers ("
+        },
+        {
+          "line": 64,
+          "text": "-- 4. tcg_product_categories (商品区分マスタ)"
+        },
+        {
+          "line": 69,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_product_categories ("
+        },
+        {
+          "line": 83,
+          "text": "-- tcg_major_categories: 3 行"
+        },
+        {
+          "line": 85,
+          "text": "INSERT INTO %I.tcg_major_categories (code, display_name, description) VALUES"
+        },
+        {
+          "line": 92,
+          "text": "-- tcg_series: 11 行"
+        },
+        {
+          "line": 94,
+          "text": "INSERT INTO %I.tcg_series (code, display_name, alt_name) VALUES"
+        },
+        {
+          "line": 109,
+          "text": "-- tcg_manufacturers: 5 行"
+        },
+        {
+          "line": 111,
+          "text": "INSERT INTO %I.tcg_manufacturers (code, display_name, alt_name) VALUES"
+        },
+        {
+          "line": 120,
+          "text": "-- tcg_product_categories: 2 行（GAS 実データ）"
+        },
+        {
+          "line": 122,
+          "text": "INSERT INTO %I.tcg_product_categories (code, display_name, kubun_type) VALUES"
+        }
+      ]
+    },
+    {
+      "order": 193,
+      "runner_line": 542,
+      "kind": "sql",
+      "path": "migrations/20260902_110100_tcg_products_classification_ids.sql",
+      "sha256": "f91ecf158dc21559739b7ed70382bc6655b4dc4221570afb37a21a57f7c820db",
+      "exists": true,
+      "hits": [
+        {
+          "line": 1,
+          "text": "-- Migration: 20260902_110100_tcg_products_classification_ids"
+        },
+        {
+          "line": 2,
+          "text": "-- 目的: tcg_products の UUID 4 列に FK 制約を追加し、GAS 実データで全 268 行を埋める"
+        },
+        {
+          "line": 19,
+          "text": "-- 1. tcg_products 4 UUID 列に FK 制約を追加（IF NOT EXISTS）"
+        },
+        {
+          "line": 23,
+          "text": "WHERE conrelid = format('%I.tcg_products', _schema)::regclass"
+        },
+        {
+          "line": 24,
+          "text": "AND conname = 'fk_tcg_products_division_id'"
+        },
+        {
+          "line": 27,
+          "text": "ALTER TABLE %I.tcg_products"
+        },
+        {
+          "line": 28,
+          "text": "ADD CONSTRAINT fk_tcg_products_division_id"
+        },
+        {
+          "line": 30,
+          "text": "REFERENCES %I.tcg_major_categories (id)"
+        },
+        {
+          "line": 36,
+          "text": "WHERE conrelid = format('%I.tcg_products', _schema)::regclass"
+        },
+        {
+          "line": 37,
+          "text": "AND conname = 'fk_tcg_products_work_id'"
+        },
+        {
+          "line": 40,
+          "text": "ALTER TABLE %I.tcg_products"
+        },
+        {
+          "line": 41,
+          "text": "ADD CONSTRAINT fk_tcg_products_work_id"
+        },
+        {
+          "line": 43,
+          "text": "REFERENCES %I.tcg_series (id)"
+        },
+        {
+          "line": 49,
+          "text": "WHERE conrelid = format('%I.tcg_products', _schema)::regclass"
+        },
+        {
+          "line": 50,
+          "text": "AND conname = 'fk_tcg_products_manufacturer_id'"
+        },
+        {
+          "line": 53,
+          "text": "ALTER TABLE %I.tcg_products"
+        },
+        {
+          "line": 54,
+          "text": "ADD CONSTRAINT fk_tcg_products_manufacturer_id"
+        },
+        {
+          "line": 56,
+          "text": "REFERENCES %I.tcg_manufacturers (id)"
+        },
+        {
+          "line": 62,
+          "text": "WHERE conrelid = format('%I.tcg_products', _schema)::regclass"
+        },
+        {
+          "line": 63,
+          "text": "AND conname = 'fk_tcg_products_product_category_id'"
+        },
+        {
+          "line": 66,
+          "text": "ALTER TABLE %I.tcg_products"
+        },
+        {
+          "line": 67,
+          "text": "ADD CONSTRAINT fk_tcg_products_product_category_id"
+        },
+        {
+          "line": 69,
+          "text": "REFERENCES %I.tcg_product_categories (id)"
+        },
+        {
+          "line": 78,
+          "text": "UPDATE %I.tcg_products AS p"
+        },
+        {
+          "line": 354,
+          "text": "JOIN %I.tcg_major_categories    mc ON mc.code = m.div_code"
+        },
+        {
+          "line": 355,
+          "text": "JOIN %I.tcg_series              s  ON s.code  = m.series_code"
+        },
+        {
+          "line": 356,
+          "text": "JOIN %I.tcg_manufacturers       mf ON mf.code = m.mfr_code"
+        },
+        {
+          "line": 357,
+          "text": "JOIN %I.tcg_product_categories  pc ON pc.code = m.pc_code"
+        },
+        {
+          "line": 369,
+          "text": "FROM %I.tcg_products"
+        }
+      ]
+    },
+    {
+      "order": 194,
+      "runner_line": 546,
+      "kind": "sql",
+      "path": "migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql",
+      "sha256": "7e641e7f7cb1098cd2a7605810f0b1014926b332dcdc25d58a99f2db9a5ce71c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 195,
+      "runner_line": 549,
+      "kind": "sql",
+      "path": "migrations/20260903_130000_tcg_note_master_t004.sql",
+      "sha256": "b93f98437268995d2b5535515139cfe5300fe7d9a9cce0ba8f95a86bd75a16d5",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 196,
+      "runner_line": 551,
+      "kind": "sql",
+      "path": "migrations/20260903_150000_tcg_status_master_t004.sql",
+      "sha256": "85a1582921bb6a69a9246d9359933a79251246930f97e5bccdb185330085c6ed",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 197,
+      "runner_line": 554,
+      "kind": "sql",
+      "path": "migrations/20260903_160000_tcg_normalization_rules_t004.sql",
+      "sha256": "73a23d27f9d08aba878c3e73c891fd48b81e154f13e193a720089590163e787a",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 198,
+      "runner_line": 557,
+      "kind": "sql",
+      "path": "migrations/20260903_180000_tcg_products_mark_en_t004.sql",
+      "sha256": "630362eadfdb2794f1035060e802432f76360276932bc046c807664a79ded79e",
+      "exists": true,
+      "hits": [
+        {
+          "line": 1,
+          "text": "-- PARITY-03 Phase 3: tcg_products に mark / english_title 列を追加し"
+        },
+        {
+          "line": 31,
+          "text": "AND table_name   = 'tcg_products'"
+        },
+        {
+          "line": 34,
+          "text": "EXECUTE format('ALTER TABLE %I.tcg_products ADD COLUMN mark VARCHAR', _schema);"
+        },
+        {
+          "line": 44,
+          "text": "AND table_name   = 'tcg_products'"
+        },
+        {
+          "line": 47,
+          "text": "EXECUTE format('ALTER TABLE %I.tcg_products ADD COLUMN english_title VARCHAR', _schema);"
+        },
+        {
+          "line": 55,
+          "text": "UPDATE %I.tcg_products AS t"
+        }
+      ]
+    },
+    {
+      "order": 199,
+      "runner_line": 560,
+      "kind": "sql",
+      "path": "migrations/20260903_170000_item_corrections_t004.sql",
+      "sha256": "aa4a14a48027944f0eafa2895861da1596cac7624219ba917851c679cc49efe7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 200,
+      "runner_line": 563,
+      "kind": "sql",
+      "path": "migrations/20260903_190000_tcg_normalization_rules_nr0136.sql",
+      "sha256": "44e9c85fa58357a9babc66010c9e45b5bb7de77cd67d35906bfbfc2c515a7652",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 201,
+      "runner_line": 566,
+      "kind": "sql",
+      "path": "migrations/20260903_200000_tcg_distribution_targets_t004.sql",
+      "sha256": "3224d1ed1f5dff56922fda273e3113275d106eff555f2b0b194afef1b8b32a7c",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 202,
+      "runner_line": 569,
+      "kind": "sql",
+      "path": "migrations/20260903_210000_tcg_distribution_settings_t004.sql",
+      "sha256": "f4de1489de40943f6020b980d852e2c3361c1bef578a957f0c2ab884487a28f9",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 203,
+      "runner_line": 572,
+      "kind": "sql",
+      "path": "migrations/20260903_220000_create_tcg_analysis_history_t004.sql",
+      "sha256": "c55c86b79c76c7c1c7ad6e5bc810de95e278c634d0a75b492b46a03480f46881",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 204,
+      "runner_line": 573,
+      "kind": "sql",
+      "path": "migrations/20260904_160000_tcg_magazine_promo_products_t004.sql",
+      "sha256": "c66fa6df92c97d3d94a24c34180d1f6708612f69715b1a3dfab51b3d11bd9a22",
+      "exists": true,
+      "hits": [
+        {
+          "line": 6,
+          "text": "--   tenant_004.tcg_products_bak_20260904              (268)"
+        },
+        {
+          "line": 7,
+          "text": "--   tenant_004.product_search_keywords_bak_20260904   (593)"
+        },
+        {
+          "line": 8,
+          "text": "--   tenant_004.product_exclude_keywords_bak_20260904  (128)"
+        },
+        {
+          "line": 37,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_major_categories  WHERE code = 'DIV01'$q$,     _schema) INTO v_div_tcg;"
+        },
+        {
+          "line": 38,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_series             WHERE code = 'IP002'$q$,     _schema) INTO v_work_op;"
+        },
+        {
+          "line": 39,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_manufacturers      WHERE code = 'MK002'$q$,     _schema) INTO v_mfr_bandai;"
+        },
+        {
+          "line": 40,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_product_categories WHERE code = 'PC_SINGLE'$q$, _schema) INTO v_cat_single;"
+        },
+        {
+          "line": 48,
+          "text": "UPDATE %I.tcg_products"
+        },
+        {
+          "line": 58,
+          "text": "UPDATE %I.tcg_products"
+        },
+        {
+          "line": 68,
+          "text": "INSERT INTO %I.tcg_products"
+        },
+        {
+          "line": 85,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_products WHERE code = 'PM0190'$q$, _schema) INTO v_pm0190;"
+        },
+        {
+          "line": 86,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_products WHERE code = 'PM0269'$q$, _schema) INTO v_pm0269;"
+        },
+        {
+          "line": 87,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_products WHERE code = 'PM0270'$q$, _schema) INTO v_pm0270;"
+        },
+        {
+          "line": 88,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_products WHERE code = 'PM0271'$q$, _schema) INTO v_pm0271;"
+        },
+        {
+          "line": 96,
+          "text": "INSERT INTO %I.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 110,
+          "text": "INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 112,
+          "text": "FROM %I.product_exclude_keywords"
+        },
+        {
+          "line": 119,
+          "text": "SELECT count(*) FROM %I.tcg_products"
+        },
+        {
+          "line": 127,
+          "text": "SELECT count(*) FROM %I.tcg_products p"
+        },
+        {
+          "line": 130,
+          "text": "SELECT 1 FROM %I.product_search_keywords k WHERE k.product_id = p.id"
+        },
+        {
+          "line": 138,
+          "text": "SELECT count(*) FROM %I.tcg_products"
+        }
+      ]
+    },
+    {
+      "order": 205,
+      "runner_line": 574,
+      "kind": "sql",
+      "path": "migrations/20260905_010000_tcg_pokemon_master_batch1_t004.sql",
+      "sha256": "5274436c08a71e9136aa67bc2d1b059964339bd1d9843261c39b355341bb4616",
+      "exists": true,
+      "hits": [
+        {
+          "line": 8,
+          "text": "--   tenant_004.tcg_products_bak_20260904b              (271)"
+        },
+        {
+          "line": 9,
+          "text": "--   tenant_004.product_search_keywords_bak_20260904b   (600)"
+        },
+        {
+          "line": 10,
+          "text": "--   tenant_004.product_exclude_keywords_bak_20260904b  (129)"
+        },
+        {
+          "line": 35,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_major_categories  WHERE code = 'DIV01'$q$,     _schema) INTO v_div;"
+        },
+        {
+          "line": 36,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_series             WHERE code = 'IP001'$q$,     _schema) INTO v_work;"
+        },
+        {
+          "line": 37,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_manufacturers      WHERE code = 'MK001'$q$,     _schema) INTO v_mfr;"
+        },
+        {
+          "line": 38,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_product_categories WHERE code = 'PC_BOX'$q$,    _schema) INTO v_cat;"
+        },
+        {
+          "line": 46,
+          "text": "INSERT INTO %I.tcg_products"
+        },
+        {
+          "line": 114,
+          "text": "INSERT INTO %I.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 115,
+          "text": "SELECT p.id, $2, $3 FROM %I.tcg_products p WHERE p.code = $1"
+        },
+        {
+          "line": 129,
+          "text": "INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 130,
+          "text": "SELECT p.id, $2, COALESCE((SELECT MAX(k.position) FROM %I.product_exclude_keywords k WHERE k.product_id = p.id), 0) + 1"
+        },
+        {
+          "line": 131,
+          "text": "FROM %I.tcg_products p WHERE p.code = $1"
+        },
+        {
+          "line": 137,
+          "text": "EXECUTE format($q$SELECT id FROM %I.tcg_products WHERE code = 'PM0200'$q$, _schema) INTO v_pm0200;"
+        },
+        {
+          "line": 145,
+          "text": "INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 146,
+          "text": "SELECT $1, $2, COALESCE((SELECT MAX(k.position) FROM %I.product_exclude_keywords k WHERE k.product_id = $1), 0) + 1"
+        },
+        {
+          "line": 153,
+          "text": "SELECT count(*) FROM %I.tcg_products WHERE code BETWEEN 'PM0272' AND 'PM0296'"
+        },
+        {
+          "line": 160,
+          "text": "SELECT count(*) FROM %I.tcg_products p"
+        },
+        {
+          "line": 162,
+          "text": "AND NOT EXISTS (SELECT 1 FROM %I.product_search_keywords k WHERE k.product_id = p.id)"
+        },
+        {
+          "line": 169,
+          "text": "SELECT count(*) FROM %I.product_exclude_keywords k"
+        },
+        {
+          "line": 170,
+          "text": "JOIN %I.tcg_products p ON p.id = k.product_id"
+        }
+      ]
+    },
+    {
+      "order": 206,
+      "runner_line": 575,
+      "kind": "sql",
+      "path": "migrations/20260905_020000_tcg_fix_product_names_t004.sql",
+      "sha256": "39cd91e24e76c9ce86d6b8c6399f6b7aed8846ed6a8c5f15b808786399f2efb4",
+      "exists": true,
+      "hits": [
+        {
+          "line": 8,
+          "text": "-- バックアップ: tenant_004.tcg_products_bak_20260905 (296)"
+        },
+        {
+          "line": 38,
+          "text": "UPDATE %I.tcg_products SET japanese_title = $2 WHERE code = $1"
+        },
+        {
+          "line": 44,
+          "text": "UPDATE %I.tcg_products SET mark = 'MC' WHERE code = 'PM0200'"
+        },
+        {
+          "line": 49,
+          "text": "SELECT count(*) FROM %I.tcg_products"
+        },
+        {
+          "line": 58,
+          "text": "SELECT count(*) FROM %I.tcg_products WHERE code = 'PM0200' AND mark = 'MC'"
+        },
+        {
+          "line": 66,
+          "text": "SELECT count(*) FROM %I.tcg_products WHERE japanese_title LIKE 'スペシャリティボックス%%'"
+        },
+        {
+          "line": 74,
+          "text": "SELECT count(*) FROM %I.product_search_keywords k"
+        },
+        {
+          "line": 75,
+          "text": "JOIN %I.tcg_products p ON p.id = k.product_id"
+        }
+      ]
+    },
+    {
+      "order": 207,
+      "runner_line": 578,
+      "kind": "sql",
+      "path": "migrations/20260905_140000_import_jobs_review_stage_t004.sql",
+      "sha256": "31a3322a75ed52795085c70ace5445a9ca40479325aa2e83fdb95eae7fc2a05e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 208,
+      "runner_line": 581,
+      "kind": "sql",
+      "path": "migrations/20260905_120000_register_15_suppliers_t004.sql",
+      "sha256": "8b4caf8d58202e54b917be8addabc55a2be9beea1ca4a204681321728ad80e04",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 209,
+      "runner_line": 584,
+      "kind": "sql",
+      "path": "migrations/20260905_150000_record_manual_supplier_fixes_t004.sql",
+      "sha256": "9bbff9834eb09ec0477a14fdac84fabb6567fa9327947b74abef22953b6e86f1",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 210,
+      "runner_line": 588,
+      "kind": "sql",
+      "path": "migrations/20260906_120000_create_tcg_tables_t001.sql",
+      "sha256": "e3d84e6a2a9de0b4746b8fb19397885be695aa495a870b30fbce29707161eb24",
+      "exists": true,
+      "hits": [
+        {
+          "line": 81,
+          "text": "-- 1-3. 分類マスタ 4 テーブル（tcg_products の FK に必要なため先に作成）"
+        },
+        {
+          "line": 83,
+          "text": "-- tcg_major_categories: 大分類マスタ"
+        },
+        {
+          "line": 85,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_major_categories ("
+        },
+        {
+          "line": 95,
+          "text": "-- tcg_series: 作品マスタ"
+        },
+        {
+          "line": 97,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_series ("
+        },
+        {
+          "line": 107,
+          "text": "-- tcg_manufacturers: メーカーマスタ"
+        },
+        {
+          "line": 109,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_manufacturers ("
+        },
+        {
+          "line": 119,
+          "text": "-- tcg_product_categories: 商品区分マスタ"
+        },
+        {
+          "line": 121,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_product_categories ("
+        },
+        {
+          "line": 131,
+          "text": "-- 1-4. tcg_products: TCG商品マスタ（最終形: mark/english_title + FK 制約を含む）"
+        },
+        {
+          "line": 133,
+          "text": "CREATE TABLE IF NOT EXISTS %I.tcg_products ("
+        },
+        {
+          "line": 139,
+          "text": "division_id           UUID        REFERENCES %I.tcg_major_categories (id),"
+        },
+        {
+          "line": 140,
+          "text": "work_id               UUID        REFERENCES %I.tcg_series (id),"
+        },
+        {
+          "line": 141,
+          "text": "manufacturer_id       UUID        REFERENCES %I.tcg_manufacturers (id),"
+        },
+        {
+          "line": 142,
+          "text": "product_category_id   UUID        REFERENCES %I.tcg_product_categories (id),"
+        },
+        {
+          "line": 257,
+          "text": "-- 2. 第1階層 FK（親: conditions / tcg_products / tcg_suppliers / units）"
+        },
+        {
+          "line": 276,
+          "text": "-- 2-2. product_exclude_keywords"
+        },
+        {
+          "line": 278,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_exclude_keywords ("
+        },
+        {
+          "line": 281,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 287,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_exclude_keywords_product_id"
+        },
+        {
+          "line": 288,
+          "text": "ON %I.product_exclude_keywords (product_id)"
+        },
+        {
+          "line": 291,
+          "text": "-- 2-3. product_search_keywords"
+        },
+        {
+          "line": 293,
+          "text": "CREATE TABLE IF NOT EXISTS %I.product_search_keywords ("
+        },
+        {
+          "line": 296,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 302,
+          "text": "CREATE INDEX IF NOT EXISTS ix_product_search_keywords_product_id"
+        },
+        {
+          "line": 303,
+          "text": "ON %I.product_search_keywords (product_id)"
+        },
+        {
+          "line": 310,
+          "text": "REFERENCES %I.tcg_products (id) ON DELETE CASCADE,"
+        },
+        {
+          "line": 405,
+          "text": "-- 6. 第5階層 FK（親: extraction_items / tcg_products / units / conditions）"
+        },
+        {
+          "line": 415,
+          "text": "REFERENCES %I.tcg_products (id),"
+        },
+        {
+          "line": 559,
+          "text": "INSERT INTO %I.tcg_major_categories (code, display_name, description) VALUES"
+        },
+        {
+          "line": 567,
+          "text": "INSERT INTO %I.tcg_series (code, display_name, alt_name) VALUES"
+        },
+        {
+          "line": 583,
+          "text": "INSERT INTO %I.tcg_manufacturers (code, display_name, alt_name) VALUES"
+        },
+        {
+          "line": 593,
+          "text": "INSERT INTO %I.tcg_product_categories (code, display_name, kubun_type) VALUES"
+        },
+        {
+          "line": 599,
+          "text": "RAISE NOTICE '20260906_120000: 分類マスタ seed 完了（tcg_major_categories:3 / tcg_series:11 / tcg_manufacturers:5 / tcg_product_categories:2）';"
+        },
+        {
+          "line": 636,
+          "text": "--       product_exclude_keywords, product_search_keywords, products_logistics,"
+        },
+        {
+          "line": 639,
+          "text": "--       tcg_major_categories, tcg_manufacturers, tcg_product_categories,"
+        },
+        {
+          "line": 640,
+          "text": "--       tcg_products, tcg_series, tcg_suppliers,"
+        },
+        {
+          "line": 658,
+          "text": "'product_exclude_keywords', 'product_search_keywords', 'products_logistics',"
+        },
+        {
+          "line": 661,
+          "text": "'tcg_major_categories', 'tcg_manufacturers', 'tcg_product_categories',"
+        },
+        {
+          "line": 662,
+          "text": "'tcg_products', 'tcg_series', 'tcg_suppliers',"
+        }
+      ]
+    },
+    {
+      "order": 211,
+      "runner_line": 591,
+      "kind": "sql",
+      "path": "migrations/20260906_230000_redact_extraction_error_keys_t004.sql",
+      "sha256": "9c47b2685b39a3e9205abd4a76f87a7abab6817c619a6e4543727a4f4834794f",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 212,
+      "runner_line": 594,
+      "kind": "sql",
+      "path": "migrations/20260907_100000_tcg_note_master_expand_t004.sql",
+      "sha256": "75a58329b2cbd7e9c62740d01a5ed701188a5a3272a11e3a301aa3730d2af330",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 213,
+      "runner_line": 595,
+      "kind": "sql",
+      "path": "migrations/20260907_120000_tcg_dist_stale_jobs_terminate_t004.sql",
+      "sha256": "6a1d640de92ecdc5c6f03d792af21e4e4e2dfbd39cb1f69af2faafd5f8e70113",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 214,
+      "runner_line": 598,
+      "kind": "sql",
+      "path": "migrations/20260907_140000_tcg_keyword_hygiene_t004.sql",
+      "sha256": "2ae5c2d533c99b1cd49c3a0c62f6c0149941bcf4ba430b9bcce7af0a6aed3235",
+      "exists": true,
+      "hits": [
+        {
+          "line": 36,
+          "text": "WHERE table_schema = _schema AND table_name = 'product_exclude_keywords_bak_20260907'"
+        },
+        {
+          "line": 39,
+          "text": "CREATE TABLE %I.product_exclude_keywords_bak_20260907 AS"
+        },
+        {
+          "line": 40,
+          "text": "SELECT * FROM %I.product_exclude_keywords"
+        },
+        {
+          "line": 46,
+          "text": "WHERE table_schema = _schema AND table_name = 'tcg_products_bak_20260907'"
+        },
+        {
+          "line": 49,
+          "text": "CREATE TABLE %I.tcg_products_bak_20260907 AS"
+        },
+        {
+          "line": 50,
+          "text": "SELECT * FROM %I.tcg_products"
+        },
+        {
+          "line": 65,
+          "text": "DELETE FROM %I.product_exclude_keywords"
+        },
+        {
+          "line": 67,
+          "text": "AND product_id = (SELECT id FROM %I.tcg_products WHERE code = $1)"
+        },
+        {
+          "line": 73,
+          "text": "UPDATE %I.product_exclude_keywords"
+        },
+        {
+          "line": 76,
+          "text": "AND product_id = (SELECT id FROM %I.tcg_products WHERE code = 'PM0071')"
+        },
+        {
+          "line": 92,
+          "text": "INSERT INTO %I.product_exclude_keywords (id, product_id, keyword, position)"
+        },
+        {
+          "line": 94,
+          "text": "FROM %I.tcg_products p"
+        },
+        {
+          "line": 97,
+          "text": "SELECT 1 FROM %I.product_exclude_keywords e"
+        },
+        {
+          "line": 105,
+          "text": "UPDATE %I.tcg_products SET is_active = FALSE WHERE code = 'PM0146'"
+        },
+        {
+          "line": 110,
+          "text": "SELECT count(*) FROM %I.product_exclude_keywords e"
+        },
+        {
+          "line": 111,
+          "text": "JOIN %I.tcg_products p ON p.id = e.product_id"
+        },
+        {
+          "line": 124,
+          "text": "SELECT count(*) FROM %I.product_exclude_keywords e"
+        },
+        {
+          "line": 125,
+          "text": "JOIN %I.tcg_products p ON p.id = e.product_id"
+        },
+        {
+          "line": 136,
+          "text": "SELECT count(*) FROM %I.product_exclude_keywords e"
+        },
+        {
+          "line": 137,
+          "text": "JOIN %I.tcg_products p ON p.id = e.product_id"
+        },
+        {
+          "line": 146,
+          "text": "SELECT count(*) FROM %I.tcg_products WHERE code = 'PM0146' AND is_active = FALSE"
+        }
+      ]
+    },
+    {
+      "order": 215,
+      "runner_line": 601,
+      "kind": "sql",
+      "path": "migrations/20260906_130000_create_tcg_product_import_history_t004.sql",
+      "sha256": "fc3f089a8cd132fa1f0081a620a377da97ba1b5217d793740d4c9a77a8bfc2eb",
+      "exists": true,
+      "hits": [
+        {
+          "line": 10,
+          "text": "--     product_code VARCHAR(20) は tcg_products.code と同じ、mark は tcg_products.mark が"
+        }
+      ]
+    },
+    {
+      "order": 216,
+      "runner_line": 604,
+      "kind": "sql",
+      "path": "migrations/20260906_130100_create_tcg_product_import_history_t001.sql",
+      "sha256": "cb5fbdd4b85f7f46d0ce65fcf938e1c55af71416d45529095f0de226a26fcc3f",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 217,
+      "runner_line": 612,
+      "kind": "sql",
+      "path": "migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql",
+      "sha256": "ed8132dae5542cd73995bf48d80f8800fa002816318f1a78458800be43b2096b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 218,
+      "runner_line": 613,
+      "kind": "sql",
+      "path": "migrations/20260908_170000_tcg_keyword_v4_t004.sql",
+      "sha256": "fd51319f98e1a0d8b7e980b175bc6ba213c50754397c16a8f81ef640d8dd2e20",
+      "exists": true,
+      "hits": [
+        {
+          "line": 34,
+          "text": "IF to_regclass(_schema || '.tcg_products') IS NULL"
+        },
+        {
+          "line": 35,
+          "text": "OR to_regclass(_schema || '.product_search_keywords') IS NULL"
+        },
+        {
+          "line": 36,
+          "text": "OR to_regclass(_schema || '.product_exclude_keywords') IS NULL THEN"
+        },
+        {
+          "line": 55,
+          "text": "WHERE NOT EXISTS (SELECT 1 FROM %I.tcg_products p WHERE p.code = t.c)"
+        },
+        {
+          "line": 66,
+          "text": "INSERT INTO %I.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 70,
+          "text": "FROM %I.product_search_keywords k2"
+        },
+        {
+          "line": 109,
+          "text": "JOIN %I.tcg_products p ON p.code = v.code"
+        },
+        {
+          "line": 111,
+          "text": "SELECT 1 FROM %I.product_search_keywords k"
+        },
+        {
+          "line": 124,
+          "text": "DELETE FROM %I.product_exclude_keywords k"
+        },
+        {
+          "line": 125,
+          "text": "USING %I.tcg_products p"
+        },
+        {
+          "line": 133,
+          "text": "INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 170,
+          "text": "JOIN %I.tcg_products p ON p.code = v.code"
+        },
+        {
+          "line": 177,
+          "text": "INSERT INTO %I.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 181,
+          "text": "FROM %I.product_exclude_keywords k2"
+        },
+        {
+          "line": 191,
+          "text": "JOIN %I.tcg_products p ON p.code = v.code"
+        },
+        {
+          "line": 193,
+          "text": "SELECT 1 FROM %I.product_exclude_keywords k"
+        },
+        {
+          "line": 202,
+          "text": "SELECT count(*) FROM %I.product_search_keywords k"
+        },
+        {
+          "line": 203,
+          "text": "JOIN %I.tcg_products p ON p.id = k.product_id"
+        },
+        {
+          "line": 213,
+          "text": "SELECT count(*) FROM %I.product_exclude_keywords k"
+        },
+        {
+          "line": 214,
+          "text": "JOIN %I.tcg_products p ON p.id = k.product_id"
+        }
+      ]
+    },
+    {
+      "order": 219,
+      "runner_line": 616,
+      "kind": "sql",
+      "path": "migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql",
+      "sha256": "a419b9dfeed3815ac2c8b6ea52a2f778c551484ae8e24e1edfc1b60393a9420b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 220,
+      "runner_line": 619,
+      "kind": "sql",
+      "path": "migrations/20260909_130000_tcg_note_b2_t004.sql",
+      "sha256": "5f6256ec756b9eb0bb65a79b8341bcd42416b3b39e1ea8c11833b6c2487db86d",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 221,
+      "runner_line": 622,
+      "kind": "sql",
+      "path": "migrations/20260910_010000_tcg_import_message_links.sql",
+      "sha256": "e126b6c99a6e830c9963f1b3d62382a0352849e89384583abcba2c0cb00d456e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 222,
+      "runner_line": 625,
+      "kind": "sql",
+      "path": "migrations/20260910_160000_tcg_work_evidence.sql",
+      "sha256": "afdfbf530d075b1beba5d9d91cc2110da1588e94120d8342a041f479a6b72b28",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 223,
+      "runner_line": 626,
+      "kind": "sql",
+      "path": "migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql",
+      "sha256": "458857fd40b5dfefd07a0a4b602197f0215ae5a24cf88d582c54bc51deb1c149",
+      "exists": true,
+      "hits": [
+        {
+          "line": 15,
+          "text": "FROM %I.tcg_products p LEFT JOIN %I.tcg_series w ON w.id=p.work_id"
+        },
+        {
+          "line": 24,
+          "text": "EXECUTE format('INSERT INTO %I.product_exclude_keywords (id, product_id, keyword, position)"
+        },
+        {
+          "line": 26,
+          "text": "FROM %I.product_exclude_keywords"
+        },
+        {
+          "line": 28,
+          "text": "HAVING NOT EXISTS (SELECT 1 FROM %I.product_exclude_keywords"
+        }
+      ]
+    },
+    {
+      "order": 224,
+      "runner_line": 627,
+      "kind": "sql",
+      "path": "migrations/20260910_170000_tcg_keyword_false_positive_guards.sql",
+      "sha256": "e47727f5d9dadd520a06e820dc288d55c78652354c0cf6de0e25c434f92a450c",
+      "exists": true,
+      "hits": [
+        {
+          "line": 14,
+          "text": "FROM unnest(ARRAY['tcg_products', 'tcg_series', 'tcg_product_categories',"
+        },
+        {
+          "line": 15,
+          "text": "'product_search_keywords', 'product_exclude_keywords']) AS t(name)"
+        },
+        {
+          "line": 23,
+          "text": "LOCK TABLE tenant_004.tcg_products, tenant_004.tcg_series,"
+        },
+        {
+          "line": 24,
+          "text": "tenant_004.tcg_product_categories, tenant_004.product_search_keywords,"
+        },
+        {
+          "line": 25,
+          "text": "tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;"
+        },
+        {
+          "line": 28,
+          "text": "('PM0230', 'トライアルデッキ 【推しの子】', 'IP007', 'PC_SINGLE', 'product_search_keywords', 'vol.1'),"
+        },
+        {
+          "line": 29,
+          "text": "('PM0104', 'ポケモンカード151', 'IP001', 'PC_BOX', 'product_exclude_keywords', 'マスターボールミラー'),"
+        },
+        {
+          "line": 30,
+          "text": "('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', 'product_exclude_keywords', 'スペシャルデッキセット')"
+        },
+        {
+          "line": 35,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 36,
+          "text": "LEFT JOIN tenant_004.tcg_series w ON w.id = p.work_id"
+        },
+        {
+          "line": 37,
+          "text": "LEFT JOIN tenant_004.tcg_product_categories c ON c.id = p.product_category_id"
+        },
+        {
+          "line": 51,
+          "text": "DELETE FROM tenant_004.product_search_keywords"
+        },
+        {
+          "line": 52,
+          "text": "WHERE product_id = (SELECT id FROM tenant_004.tcg_products WHERE code='PM0230')"
+        },
+        {
+          "line": 59,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (id, product_id, keyword, position)"
+        },
+        {
+          "line": 61,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 62,
+          "text": "LEFT JOIN tenant_004.product_exclude_keywords e ON e.product_id=p.id"
+        },
+        {
+          "line": 64,
+          "text": "AND NOT EXISTS (SELECT 1 FROM tenant_004.product_exclude_keywords existing"
+        }
+      ]
+    },
+    {
+      "order": 225,
+      "runner_line": 628,
+      "kind": "sql",
+      "path": "migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql",
+      "sha256": "e49af6affa628f1a8f8dc6251769b4b30e3e187e2afa344aed761b21b3abedd7",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 226,
+      "runner_line": 629,
+      "kind": "sql",
+      "path": "migrations/20260910_200000_tcg_condition_note_delivery_t004.sql",
+      "sha256": "216f6a8dc2ef4032bae53dd20e08623426caa731193b8573f3a3994a16b7426e",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 227,
+      "runner_line": 632,
+      "kind": "sql",
+      "path": "migrations/20260913_010000_seed_dragonball_products_v2.sql",
+      "sha256": "64e8499d2fe96f06e1710646cb74e3406aba8f682bd771579730154e601c4673",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 228,
+      "runner_line": 633,
+      "kind": "sql",
+      "path": "migrations/20260913_020000_seed_onepiece_products.sql",
+      "sha256": "72f4ef9ca6779abbcb86f8cd993478684164b05a944a238d6099c132406bea8b",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 229,
+      "runner_line": 634,
+      "kind": "sql",
+      "path": "migrations/20260913_030000_seed_unregistered_products.sql",
+      "sha256": "c5833479d07fad1b7b52512ee237f8f8d6202cca570e9cea2c7db80c90d666ba",
+      "exists": true,
+      "hits": []
+    },
+    {
+      "order": 230,
+      "runner_line": 635,
+      "kind": "sql",
+      "path": "migrations/20260913_200000_tcg_cardset_exclusion.sql",
+      "sha256": "ba03492e5e079e65d88806310f5ecc95e543e2ff5ecea22971bfa341bf6a271d",
+      "exists": true,
+      "hits": [
+        {
+          "line": 12,
+          "text": "FROM unnest(ARRAY['tcg_products', 'tcg_series', 'tcg_product_categories',"
+        },
+        {
+          "line": 13,
+          "text": "'product_search_keywords', 'product_exclude_keywords']) AS t(name)"
+        },
+        {
+          "line": 21,
+          "text": "LOCK TABLE tenant_004.tcg_products, tenant_004.tcg_series,"
+        },
+        {
+          "line": 22,
+          "text": "tenant_004.tcg_product_categories, tenant_004.product_search_keywords,"
+        },
+        {
+          "line": 23,
+          "text": "tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;"
+        },
+        {
+          "line": 28,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 29,
+          "text": "LEFT JOIN tenant_004.tcg_series w ON w.id = p.work_id"
+        },
+        {
+          "line": 30,
+          "text": "LEFT JOIN tenant_004.tcg_product_categories c ON c.id = p.product_category_id"
+        },
+        {
+          "line": 41,
+          "text": "FROM tenant_004.product_exclude_keywords"
+        },
+        {
+          "line": 46,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (id, product_id, keyword, position)"
+        },
+        {
+          "line": 48,
+          "text": "FROM tenant_004.product_exclude_keywords WHERE product_id = product.id;"
+        }
+      ]
+    },
+    {
+      "order": 231,
+      "runner_line": 636,
+      "kind": "sql",
+      "path": "migrations/20260913_210000_tcg_cardset_bundle_registration.sql",
+      "sha256": "8444f3637ae75bdce87532dd4cd406b4e87efa8b5f9f69ecdb1a35b398997a2c",
+      "exists": true,
+      "hits": [
+        {
+          "line": 15,
+          "text": "FROM unnest(ARRAY['tcg_products', 'tcg_major_categories', 'tcg_series',"
+        },
+        {
+          "line": 16,
+          "text": "'tcg_manufacturers', 'tcg_product_categories',"
+        },
+        {
+          "line": 17,
+          "text": "'product_search_keywords', 'product_exclude_keywords']) AS t(name)"
+        },
+        {
+          "line": 23,
+          "text": "LOCK TABLE tenant_004.tcg_products, tenant_004.tcg_major_categories,"
+        },
+        {
+          "line": 24,
+          "text": "tenant_004.tcg_series, tenant_004.tcg_manufacturers,"
+        },
+        {
+          "line": 25,
+          "text": "tenant_004.tcg_product_categories, tenant_004.product_search_keywords,"
+        },
+        {
+          "line": 26,
+          "text": "tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;"
+        },
+        {
+          "line": 30,
+          "text": "FROM tenant_004.tcg_major_categories d, tenant_004.tcg_series w,"
+        },
+        {
+          "line": 31,
+          "text": "tenant_004.tcg_manufacturers m, tenant_004.tcg_product_categories c"
+        },
+        {
+          "line": 54,
+          "text": "SELECT * INTO product FROM tenant_004.tcg_products WHERE code = expected.code;"
+        },
+        {
+          "line": 67,
+          "text": "IF EXISTS (SELECT 1 FROM tenant_004.tcg_products"
+        },
+        {
+          "line": 73,
+          "text": "SELECT * INTO product FROM tenant_004.tcg_products WHERE code = 'PM0297';"
+        },
+        {
+          "line": 75,
+          "text": "INSERT INTO tenant_004.tcg_products"
+        },
+        {
+          "line": 92,
+          "text": "('PM0263', 'カードセット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 93,
+          "text": "('PM0264', 'カードセット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 94,
+          "text": "('PM0265', 'カードセット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 95,
+          "text": "('PM0276', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 96,
+          "text": "('PM0277', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 97,
+          "text": "('PM0278', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 98,
+          "text": "('PM0279', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 99,
+          "text": "('PM0280', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 100,
+          "text": "('PM0281', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 101,
+          "text": "('PM0282', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 102,
+          "text": "('PM0283', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 103,
+          "text": "('PM0284', '種セット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 104,
+          "text": "('PM0297', 'FUTURISTIC', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 105,
+          "text": "('PM0297', 'プレミアムデッキセット', 'product_exclude_keywords'),"
+        },
+        {
+          "line": 106,
+          "text": "('PM0297', '30th CELEBRATION カードセット (9種セット)', 'product_search_keywords')"
+        },
+        {
+          "line": 109,
+          "text": "SELECT id INTO product FROM tenant_004.tcg_products WHERE code = term.code;"
+        }
+      ]
+    },
+    {
+      "order": 232,
+      "runner_line": 639,
+      "kind": "sql",
+      "path": "migrations/20260914_080000_add_abbreviation_keywords_t004.sql",
+      "sha256": "ab4c478823a04ef02767023c88597bbd649d4af5517c9c77b03a97d4aa1074d5",
+      "exists": true,
+      "hits": [
+        {
+          "line": 5,
+          "text": "--   TCG解析エンジンが読む tenant_004.product_search_keywords /"
+        },
+        {
+          "line": 6,
+          "text": "--   product_exclude_keywords に略語キーワードを追加する。"
+        },
+        {
+          "line": 14,
+          "text": "--   tenant_004.product_search_keywords  — 検索語（網）"
+        },
+        {
+          "line": 15,
+          "text": "--   tenant_004.product_exclude_keywords — 除外語（壁）"
+        },
+        {
+          "line": 28,
+          "text": "IF to_regclass(_schema || '.tcg_products') IS NULL"
+        },
+        {
+          "line": 29,
+          "text": "OR to_regclass(_schema || '.product_search_keywords') IS NULL"
+        },
+        {
+          "line": 30,
+          "text": "OR to_regclass(_schema || '.product_exclude_keywords') IS NULL THEN"
+        },
+        {
+          "line": 40,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 42,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 51,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 53,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 61,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 63,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 72,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 74,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 83,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 85,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 94,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 96,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 105,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 107,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 115,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 117,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 125,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 127,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 135,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 137,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 146,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 148,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 157,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 159,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 168,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 170,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 179,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 181,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 193,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 195,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 204,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 206,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 215,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 217,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 225,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 227,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 235,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 237,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 245,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 247,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 255,
+          "text": "INSERT INTO tenant_004.product_search_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 257,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 269,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 271,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 279,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 281,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 289,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 291,
+          "text": "FROM tenant_004.tcg_products p"
+        },
+        {
+          "line": 304,
+          "text": "INSERT INTO tenant_004.product_exclude_keywords (product_id, keyword, position)"
+        },
+        {
+          "line": 306,
+          "text": "FROM tenant_004.tcg_products p"
+        }
+      ]
+    }
+  ],
+  "scan_limit": "Literal target-table references in registered files; dynamic and transitive references require separate verification. Not proof of exhaustive runtime writes.",
+  "python_indirect": {
+    "python_count": 26,
+    "sql_edges": 32,
+    "unique_sql_count": 32,
+    "items": [
+      {
+        "caller": "scripts/migrate_meta.py",
+        "sha256": "10fd0751eca59b963db663474719e2741574c62d9c4c6f78796dae89627db6ff",
+        "imports": [
+          {
+            "line": 3,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 4,
+            "source": "import asyncio, logging, os, sys"
+          },
+          {
+            "line": 5,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 11,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 12,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/012_add_meta_tenant_tables.sql",
+            "sha256": "c1af523bd4b2db585c6d2af8dede8a140d44fcf7eeb417caa5fb6b8ed3b3d66a"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_meta_inbox_phase1d.py",
+        "sha256": "5b44195117c88bede92e612a7b6e8e92b1f9a7fc9cec244a16b355b0df418bd6",
+        "imports": [
+          {
+            "line": 26,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 28,
+            "source": "import asyncio"
+          },
+          {
+            "line": 29,
+            "source": "import logging"
+          },
+          {
+            "line": 30,
+            "source": "import os"
+          },
+          {
+            "line": 31,
+            "source": "import sys"
+          },
+          {
+            "line": 32,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 38,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 39,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/040_create_tenant_meta_config.sql",
+            "sha256": "e73cfee616137cb573b6dc3919c98c8fc0e4b48a29e563191bb12e3c5cbb0ef5"
+          },
+          {
+            "path": "migrations/042_seed_meta_inbox_permissions.sql",
+            "sha256": "ab2f2cfc7538680f184e9724dd857f2e7ba2914006f63ee917c4f045239c99df"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_meta_inbox_phase1d_sprint4.py",
+        "sha256": "d82c4ff86a02b49b45613d08b592e8f74b9647478d5a3a12cf6ced1cb3354cdf",
+        "imports": [
+          {
+            "line": 23,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 25,
+            "source": "import asyncio"
+          },
+          {
+            "line": 26,
+            "source": "import logging"
+          },
+          {
+            "line": 27,
+            "source": "import os"
+          },
+          {
+            "line": 28,
+            "source": "import sys"
+          },
+          {
+            "line": 29,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 35,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 36,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/041_extend_meta_messages.sql",
+            "sha256": "58c2c19a6a70eedda3e0a870b44cc2dca050680a23fe52ce6dfe2eff0bac113a"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_meta_page_routing.py",
+        "sha256": "a103ea89489d1666a69c80a3a4311c1c87be8d01fb9327ff0360c3c7e442b620",
+        "imports": [
+          {
+            "line": 20,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 22,
+            "source": "import asyncio"
+          },
+          {
+            "line": 23,
+            "source": "import logging"
+          },
+          {
+            "line": 24,
+            "source": "import os"
+          },
+          {
+            "line": 25,
+            "source": "import sys"
+          },
+          {
+            "line": 26,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 33,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/043_create_meta_page_routing.sql",
+            "sha256": "bb67d28a9ce063bf636510b21301cdc63c145b358546c1f75a2e8571fe1e4e93"
+          },
+          {
+            "path": "migrations/044_create_meta_page_routing_trigger.sql",
+            "sha256": "cd37c3876a993b9f536e8a90750bbc711530c8c4815043e211999c395365154e"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_meta_messages_page_id.py",
+        "sha256": "b3663baa9c0e7649331799d0068b3bab79d267b452433cf0621259ea4b75a034",
+        "imports": [
+          {
+            "line": 18,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 20,
+            "source": "import asyncio"
+          },
+          {
+            "line": 21,
+            "source": "import logging"
+          },
+          {
+            "line": 22,
+            "source": "import os"
+          },
+          {
+            "line": 23,
+            "source": "import sys"
+          },
+          {
+            "line": 24,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 30,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 31,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/045_add_meta_messages_page_id.sql",
+            "sha256": "39318e193673657d468278a43acdebd97d7d3e2a8b6dc049c1a548294083e1e5"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr015_lead_foundation.py",
+        "sha256": "73f7ed4328ea0ced36ba64ef55e05929c7f09ccdc7fbe04cd5d4f2d521cf68b8",
+        "imports": [
+          {
+            "line": 23,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 25,
+            "source": "import asyncio"
+          },
+          {
+            "line": 26,
+            "source": "import logging"
+          },
+          {
+            "line": 27,
+            "source": "import os"
+          },
+          {
+            "line": 28,
+            "source": "import sys"
+          },
+          {
+            "line": 29,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 35,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 36,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/046_adr015_lead_foundation.sql",
+            "sha256": "d2cc003da92afe77c16b2b16da1aad1d8ba6377fac0a2df391d47fa512c5e9ba"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr021_sprint2_financials.py",
+        "sha256": "ca9b83fa45c432bbc8356bfa9d37cd6327b0669c78f5cb08b08fca7904e2776f",
+        "imports": [
+          {
+            "line": 19,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 21,
+            "source": "import asyncio"
+          },
+          {
+            "line": 22,
+            "source": "import logging"
+          },
+          {
+            "line": 23,
+            "source": "import os"
+          },
+          {
+            "line": 24,
+            "source": "import sys"
+          },
+          {
+            "line": 25,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 31,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/047_create_order_financials.sql",
+            "sha256": "a8123ff55a54e92f5fe6b87077133a2e5b4849c6412c29dfdd0b43564a609caa"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr021_sprint3_shipping.py",
+        "sha256": "741b2c2038f9093940a036ed5b83c3137fffcb7e47c8d46f36a8000e94c28102",
+        "imports": [
+          {
+            "line": 19,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 21,
+            "source": "import asyncio"
+          },
+          {
+            "line": 22,
+            "source": "import logging"
+          },
+          {
+            "line": 23,
+            "source": "import os"
+          },
+          {
+            "line": 24,
+            "source": "import sys"
+          },
+          {
+            "line": 25,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 31,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/048_create_order_shipping_details.sql",
+            "sha256": "511ef23439340680ec2b7c48c38c7411e6d2db30cbf96d329d0c2e57065ed03f"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr021_sprint4_purchase.py",
+        "sha256": "b25d6ec9ccd15517252670fdaf3073aa92037dc11e7eaab7e6f0f9a8f2f52cc2",
+        "imports": [
+          {
+            "line": 19,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 21,
+            "source": "import asyncio"
+          },
+          {
+            "line": 22,
+            "source": "import logging"
+          },
+          {
+            "line": 23,
+            "source": "import os"
+          },
+          {
+            "line": 24,
+            "source": "import sys"
+          },
+          {
+            "line": 25,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 31,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/049_create_order_purchase_details.sql",
+            "sha256": "15115cb59799aec9bfac7d7a48a522ba556723e8491c3f1492025a6efd7fa232"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr021_sprint5_commissions.py",
+        "sha256": "637baa7362d6eb045ea1992fa12aeba39d750b723cdda5895f1e3a5f9741f8cf",
+        "imports": [
+          {
+            "line": 24,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 26,
+            "source": "import asyncio"
+          },
+          {
+            "line": 27,
+            "source": "import logging"
+          },
+          {
+            "line": 28,
+            "source": "import os"
+          },
+          {
+            "line": 29,
+            "source": "import sys"
+          },
+          {
+            "line": 30,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 36,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 37,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/050_add_commissions.sql",
+            "sha256": "01e56a10a28eddac795e5d220cab8fe38be86d6ae7050b042fa79fb1b44549fd"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr021_remove_confirmed_status.py",
+        "sha256": "67dfe367a5e77744ba2932413b091bb5ba6bff6a74af2724d742dea97d3033a3",
+        "imports": [
+          {
+            "line": 21,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 23,
+            "source": "import asyncio"
+          },
+          {
+            "line": 24,
+            "source": "import logging"
+          },
+          {
+            "line": 25,
+            "source": "import os"
+          },
+          {
+            "line": 26,
+            "source": "import sys"
+          },
+          {
+            "line": 27,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 33,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 34,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/051_remove_confirmed_status.sql",
+            "sha256": "08b98b1b92c995fe8b532ce1706f7b82538889e3185732e9a4a472d0863a9fd5"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_meta_messages_message_id_to_text.py",
+        "sha256": "2af68ec412759529806a20b0ef262b363df1dfd7fd6718b8ddb6c4185675e002",
+        "imports": [
+          {
+            "line": 32,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 34,
+            "source": "import argparse"
+          },
+          {
+            "line": 35,
+            "source": "import asyncio"
+          },
+          {
+            "line": 36,
+            "source": "import logging"
+          },
+          {
+            "line": 37,
+            "source": "import os"
+          },
+          {
+            "line": 38,
+            "source": "import sys"
+          },
+          {
+            "line": 39,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 45,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 46,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/052_alter_meta_messages_message_id_to_text.sql",
+            "sha256": "6b4be3a259db95d6cbf0ae9ad91bd8d56883ef4156f7c6291cae5ccd5a3b9bfa"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_adr041_granted_scopes.py",
+        "sha256": "e3c5392f739d50469967568b1c575e67968eee68b56f6673b8013c24b243cf7a",
+        "imports": [
+          {
+            "line": 24,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 26,
+            "source": "import asyncio"
+          },
+          {
+            "line": 27,
+            "source": "import logging"
+          },
+          {
+            "line": 28,
+            "source": "import os"
+          },
+          {
+            "line": 29,
+            "source": "import sys"
+          },
+          {
+            "line": 30,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 36,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 37,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/055_add_granted_scopes.sql",
+            "sha256": "d4d3919a07d1ab4f02099b52fd6bac8df256e0fd84ddd45a1a95b7a230e37d3d"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_009_phase4_tenant_tables.py",
+        "sha256": "349bda711c4ad6d532e3b8f90994ad4b89e8485d08ded04d1c1de3617d5ad09a",
+        "imports": [
+          {
+            "line": 20,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 22,
+            "source": "import asyncio"
+          },
+          {
+            "line": 23,
+            "source": "import logging"
+          },
+          {
+            "line": 24,
+            "source": "import os"
+          },
+          {
+            "line": 25,
+            "source": "import sys"
+          },
+          {
+            "line": 26,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 33,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/009_add_phase4_tenant_tables.sql",
+            "sha256": "f0575d6c6583833dbca05bf84b4873f65ea6a5700f3e84f3c38cef2f75b7d211"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_011_phase5_tenant_tables.py",
+        "sha256": "c83d7709d7e1c857935914a348ab0ab22f662d62149ec6c6f4a524dde25012d4",
+        "imports": [
+          {
+            "line": 32,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 34,
+            "source": "import asyncio"
+          },
+          {
+            "line": 35,
+            "source": "import logging"
+          },
+          {
+            "line": 36,
+            "source": "import os"
+          },
+          {
+            "line": 37,
+            "source": "import sys"
+          },
+          {
+            "line": 38,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 44,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 45,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/011_add_phase5_tenant_tables.sql",
+            "sha256": "990e44d84972d66876abe5ce7e19a321ce0fd5b87f70381f472db5532975816a"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_inventory_sprint1.py",
+        "sha256": "44a97824c768afdd96e817e6c46bf3f119d18e406cbd11b1e795c4b7be472e3e",
+        "imports": [
+          {
+            "line": 29,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 31,
+            "source": "import asyncio"
+          },
+          {
+            "line": 32,
+            "source": "import logging"
+          },
+          {
+            "line": 33,
+            "source": "import os"
+          },
+          {
+            "line": 34,
+            "source": "import sys"
+          },
+          {
+            "line": 35,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 41,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 42,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/056_add_suppliers_type_and_promote_public.sql",
+            "sha256": "71b92d9cfb99025dc79032c1e1f5bebc9451466a8edd3eb288c6b0c26511bd1d"
+          },
+          {
+            "path": "migrations/057_create_supplier_aliases.sql",
+            "sha256": "7a8de30bcf0b801fcf5e6e8c2e4fe3e8b83eca4d8aef05dc9ddcdc8cb88f4123"
+          },
+          {
+            "path": "migrations/058_create_knowledge_rules.sql",
+            "sha256": "73c9b95645afd7b82d2f15c90ac346310c02c9560389b842ef4b8cad03e748d7"
+          },
+          {
+            "path": "migrations/059_create_discord_inbound_messages.sql",
+            "sha256": "7538166fdda85bfcbe092f2537cb3bfdba2564f45f01e1f3f00d94ff71823bdc"
+          },
+          {
+            "path": "migrations/060_create_supplier_discord_routing.sql",
+            "sha256": "edb579684cf4f69540299eaeff9cc3f5214d858792aa0f75099abb68dcbe3bbb"
+          },
+          {
+            "path": "migrations/061_create_tcg_and_dex_masters.sql",
+            "sha256": "7b7d2deaa6a89f6bbd0fe10189565f922da4ae93831a279c591448bc294719a0"
+          },
+          {
+            "path": "migrations/062_create_inventory_movements_and_budget.sql",
+            "sha256": "1df590cc5f9f1f46c20c7e51200b7ced2320f042a3e1c3a149534a21be9f1948"
+          },
+          {
+            "path": "migrations/063_tenant_rbac_extensions.sql",
+            "sha256": "677e98852df47066f0a5ed165cef008566b08db73d52ab4eb51633d2a9538d6e"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_inventory_sprint2.py",
+        "sha256": "376c588ff4a02e5807888ebf90f6342ef57d79d25b68b695f0a473895d620825",
+        "imports": [
+          {
+            "line": 30,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 32,
+            "source": "import asyncio"
+          },
+          {
+            "line": 33,
+            "source": "import logging"
+          },
+          {
+            "line": 34,
+            "source": "import os"
+          },
+          {
+            "line": 35,
+            "source": "import sys"
+          },
+          {
+            "line": 36,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 42,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 43,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/064_add_users_is_super_admin.sql",
+            "sha256": "2c7cb53b2afeb07f08df9a6ace2e5f513822a6438e3bd1c6b95bd57ba7ecaaeb"
+          },
+          {
+            "path": "migrations/065_seed_central_admin_permissions.sql",
+            "sha256": "ad98e234bd5bdcb78070d10ad4bcdc96a3ce51394258a7a4b082085bac98d28d"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_inventory_sprint5_to_7.py",
+        "sha256": "5b2575dc33f286ac972fd76a0e1df7c25efad8e9af37e6766fc593ded7f84096",
+        "imports": [
+          {
+            "line": 54,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 56,
+            "source": "import asyncio"
+          },
+          {
+            "line": 57,
+            "source": "import logging"
+          },
+          {
+            "line": 58,
+            "source": "import os"
+          },
+          {
+            "line": 59,
+            "source": "import sys"
+          },
+          {
+            "line": 60,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 66,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 67,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/066_add_tenant_llm_budgets_notification_dedupe.sql",
+            "sha256": "b6e7e33f700b0de24b025d43c0cdbf9ddb36bcc87b30266f33328956765ec619"
+          },
+          {
+            "path": "migrations/067_add_inbound_review_version_and_permissions.sql",
+            "sha256": "1d7424409a25077830ee41bc9b7e64e1dfd0636628f0f355fe248155e758f76b"
+          },
+          {
+            "path": "migrations/068_add_inventory_search_indexes.sql",
+            "sha256": "9df9bf567d0dd464f1cea8c4842efdd4ec65910b8ea4446535d4bf41c9b57385"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_inventory_sprint8.py",
+        "sha256": "fe396d7891c1af5d70326ee91c440a7589b552cb3772a2cbd1dfaea0d5c5ca2d",
+        "imports": [
+          {
+            "line": 31,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 33,
+            "source": "import asyncio"
+          },
+          {
+            "line": 34,
+            "source": "import logging"
+          },
+          {
+            "line": 35,
+            "source": "import os"
+          },
+          {
+            "line": 36,
+            "source": "import sys"
+          },
+          {
+            "line": 37,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 43,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 44,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/069_create_tenant_profile.sql",
+            "sha256": "82774fe90c8946ee06e2be20443aa894ffcd56e1cc02ec431e249aa160126dd7"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_inventory_sprint9.py",
+        "sha256": "2a73977cc447019a1a3db26d1f9761a05554859e32c49f7cb3a20920c3050f92",
+        "imports": [
+          {
+            "line": 30,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 32,
+            "source": "import asyncio"
+          },
+          {
+            "line": 33,
+            "source": "import logging"
+          },
+          {
+            "line": 34,
+            "source": "import os"
+          },
+          {
+            "line": 35,
+            "source": "import sys"
+          },
+          {
+            "line": 36,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 42,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 43,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": [
+          {
+            "path": "migrations/070_add_spreadsheet_phase.sql",
+            "sha256": "f44f603c9487c88c77113911df664fd26d6a00713ebdc03a220253d80e4d7b02"
+          }
+        ]
+      },
+      {
+        "caller": "scripts/migrate_073_lead_status.py",
+        "sha256": "a1e1aa52eb5e07ae075dd586f1677931f5e6c95ccde1161c5f235e422df53110",
+        "imports": [
+          {
+            "line": 17,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 19,
+            "source": "import asyncio"
+          },
+          {
+            "line": 20,
+            "source": "import logging"
+          },
+          {
+            "line": 21,
+            "source": "import os"
+          },
+          {
+            "line": 22,
+            "source": "import sys"
+          },
+          {
+            "line": 23,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 29,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 30,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": []
+      },
+      {
+        "caller": "scripts/migrate_074_rename_english_name_to_nickname.py",
+        "sha256": "a3973db7b2d418658ecc246c3d48e954bfc7bf93156266ebdc826596a26b8657",
+        "imports": [
+          {
+            "line": 16,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 18,
+            "source": "import asyncio"
+          },
+          {
+            "line": 19,
+            "source": "import logging"
+          },
+          {
+            "line": 20,
+            "source": "import os"
+          },
+          {
+            "line": 21,
+            "source": "import sys"
+          },
+          {
+            "line": 22,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 28,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 29,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": []
+      },
+      {
+        "caller": "scripts/migrate_20260620_080000_calendar_category_backfill.py",
+        "sha256": "b428865f5786b44b04ae10da020f4207e2ed399b22c9f47c3b9a48ffb6dccc74",
+        "imports": [
+          {
+            "line": 19,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 21,
+            "source": "import asyncio"
+          },
+          {
+            "line": 22,
+            "source": "import logging"
+          },
+          {
+            "line": 23,
+            "source": "import os"
+          },
+          {
+            "line": 24,
+            "source": "import re"
+          },
+          {
+            "line": 25,
+            "source": "import sys"
+          },
+          {
+            "line": 26,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 27,
+            "source": "from typing import Literal, Mapping"
+          },
+          {
+            "line": 29,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 30,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": []
+      },
+      {
+        "caller": "scripts/migrate_adr109_status_codes.py",
+        "sha256": "227622a063eea14a35ee849f7421a6f2d967767f3790300ee010d95f9c038750",
+        "imports": [
+          {
+            "line": 29,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 31,
+            "source": "import asyncio"
+          },
+          {
+            "line": 32,
+            "source": "import logging"
+          },
+          {
+            "line": 33,
+            "source": "import os"
+          },
+          {
+            "line": 34,
+            "source": "import sys"
+          },
+          {
+            "line": 35,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 41,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 42,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": []
+      },
+      {
+        "caller": "scripts/migrate_adr119_lead_channels_backfill.py",
+        "sha256": "cbe7b35106c2f0abe1ce15b4023798667d5bd7a8c0a6c6cc019941b7e0844516",
+        "imports": [
+          {
+            "line": 23,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 25,
+            "source": "import asyncio"
+          },
+          {
+            "line": 26,
+            "source": "import logging"
+          },
+          {
+            "line": 27,
+            "source": "import os"
+          },
+          {
+            "line": 28,
+            "source": "import re"
+          },
+          {
+            "line": 29,
+            "source": "import sys"
+          },
+          {
+            "line": 30,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 36,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 37,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          }
+        ],
+        "sql": []
+      },
+      {
+        "caller": "scripts/migrate_20260621_020000_backfill_lead_country.py",
+        "sha256": "7dcf807bae9a0050aa91ec4897157683086e3d50997f8dfe0c1a9f056441d4e0",
+        "imports": [
+          {
+            "line": 16,
+            "source": "from __future__ import annotations"
+          },
+          {
+            "line": 18,
+            "source": "import asyncio"
+          },
+          {
+            "line": 19,
+            "source": "import json"
+          },
+          {
+            "line": 20,
+            "source": "import logging"
+          },
+          {
+            "line": 21,
+            "source": "import os"
+          },
+          {
+            "line": 22,
+            "source": "import sys"
+          },
+          {
+            "line": 23,
+            "source": "from collections import Counter"
+          },
+          {
+            "line": 24,
+            "source": "from datetime import datetime, timezone"
+          },
+          {
+            "line": 25,
+            "source": "from pathlib import Path"
+          },
+          {
+            "line": 31,
+            "source": "from sqlalchemy import text"
+          },
+          {
+            "line": 32,
+            "source": "from sqlalchemy.ext.asyncio import create_async_engine"
+          },
+          {
+            "line": 34,
+            "source": "from app.services.country_codes import parse_country_code"
+          }
+        ],
+        "sql": []
+      }
+    ],
+    "method": "Python AST imports and literal SQL file operands, plus dynamic SQL identifier review. Only application import is country_codes.parse_country_code; inspected helper is a country-code normalizer, not a database writer.",
+    "limits": "Static dependency evidence at fixed SHA; not a full runner execution or proof about unregistered manual scripts."
+  },
+  "latest_main_delta": {
+    "head": "e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea",
+    "registered_count": 233,
+    "added_order": 233,
+    "added_sql": "migrations/20260914_010000_tcg_extraction_attempts.sql",
+    "added_sha256": "5a2929621bd10f67af29138499e93920c971961e82dcad985527f20e4a2d2160",
+    "runner_sha256": "7ff6ddf46a9d3a9deed5da0673465e32bb799f86b60c108d7cdabfc2c900c8dc",
+    "fixture_sha256": "39bb2117d5e648f3d57d6ac091e18744e0a8968a234e34cb8aa2fb3a7677816b",
+    "classification": "extraction_attempts structure only; no product/keyword mutation; retain in normal migrations",
+    "fixture_delta": "adds extraction_attempts migration and monkeypatch of extraction_records TCG_SCHEMA",
+    "unique_sql_total_after_delta": 238
+  },
+  "pr3500_delta": {
+    "head": "70d145f090e122dd36e4a39b4928e13cc0dae613",
+    "registered_count": 233,
+    "files": [
+      {
+        "path": "migrations/20260903_180000_tcg_products_mark_en_t004.sql",
+        "sha256": "2a44eb1f7bb7538b4fcc761db34511299c4edc07bff72ce332b9064663189080"
+      },
+      {
+        "path": "migrations/20260905_020000_tcg_fix_product_names_t004.sql",
+        "sha256": "6cdd2b0a466850a86dce24536b7781668cc31043088f006ebbc77cea2e3c7819"
+      },
+      {
+        "path": "migrations/20260913_210000_tcg_cardset_bundle_registration.sql",
+        "sha256": "3199a1f6658ef9bac16d5c3cb77e2e7807e6257ad40a30e9820f03f2981c7691"
+      },
+      {
+        "path": "backend/tests/test_tcg_work_matching_integration.py",
+        "sha256": "3f77fd7bf5245e8693a40bac7d3ec26ab513e23e77b132b0833456d354d75a3d"
+      }
+    ],
+    "meaning": "Name guard removed, fill-only non-NULL mark/English, conditional legacy name repair; no separation of keyword/classification replay."
+  }
+}

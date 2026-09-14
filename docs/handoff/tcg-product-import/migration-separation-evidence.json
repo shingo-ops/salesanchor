@@ -1,0 +1,834 @@
+{
+  "base": "59f644cd545d9481ed3460ad5c1dfeefd8c2df56",
+  "scope": "Read-only production observations; no product, database, CI or deployment changes in this design turn",
+  "csv_job": "                  id                  |                   filename                    | total_rows | created_rows | skipped_rows | status |          started_at          |         completed_at         \n--------------------------------------+-----------------------------------------------+------------+--------------+--------------+--------+------------------------------+------------------------------\n 9f74c3c8-443b-4069-9d48-e260a63cf643 | tcg-products-update - tcg-products-update.csv |        297 |            0 |          285 | ok     | 2026-09-13 22:44:18.35659+00 | 2026-09-13 22:44:18.35659+00\n(1 row)\n\n",
+  "csv_comparison": {
+    "differences": [
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th チコリータ",
+          "30thチコリータ"
+        ],
+        "product_code": "PM0277",
+        "current_value": [
+          "30th チコリータ",
+          "カードセット チコリータ",
+          "30thチコリータ"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th フシギダネ",
+          "30thフシギダネ"
+        ],
+        "product_code": "PM0276",
+        "current_value": [
+          "カードセット フシギダネ",
+          "30th フシギダネ",
+          "30thフシギダネ"
+        ]
+      },
+      {
+        "field": "exclude_keywords",
+        "csv_value": [
+          "FUTURISTIC",
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ"
+        ],
+        "product_code": "PM0263",
+        "current_value": [
+          "FUTURISTIC",
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ",
+          "カードセット"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th ニャオハ",
+          "30thニャオハ"
+        ],
+        "product_code": "PM0284",
+        "current_value": [
+          "30th ニャオハ",
+          "カードセット ニャオハ",
+          "30thニャオハ"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th サルノリ",
+          "30thサルノリ"
+        ],
+        "product_code": "PM0283",
+        "current_value": [
+          "30th サルノリ",
+          "カードセット サルノリ",
+          "30thサルノリ"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th モクロー",
+          "30thモクロー"
+        ],
+        "product_code": "PM0282",
+        "current_value": [
+          "30th モクロー",
+          "カードセット モクロー",
+          "30thモクロー"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th ハリマロン",
+          "30thハリマロン"
+        ],
+        "product_code": "PM0281",
+        "current_value": [
+          "カードセット ハリマロン",
+          "30th ハリマロン",
+          "30thハリマロン"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th ツタージャ",
+          "30thツタージャ"
+        ],
+        "product_code": "PM0280",
+        "current_value": [
+          "30th ツタージャ",
+          "カードセット ツタージャ",
+          "30thツタージャ"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th ナエトル",
+          "30thナエトル"
+        ],
+        "product_code": "PM0279",
+        "current_value": [
+          "30th ナエトル",
+          "カードセット ナエトル",
+          "30thナエトル"
+        ]
+      },
+      {
+        "field": "search_keywords",
+        "csv_value": [
+          "30th キモリ",
+          "30thキモリ"
+        ],
+        "product_code": "PM0278",
+        "current_value": [
+          "カードセット キモリ",
+          "30th キモリ",
+          "30thキモリ"
+        ]
+      }
+    ],
+    "observed_at": "2026-09-14T01:37:49.329719+00:00",
+    "changed_fields": 34,
+    "matching_fields": 24,
+    "different_fields": 10
+  },
+  "snapshot": {
+    "tables": [
+      {
+        "rows": 0,
+        "table": "tcg_products",
+        "schema": "tenant_001",
+        "content_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "rows": 0,
+        "table": "product_search_keywords",
+        "schema": "tenant_001",
+        "content_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "rows": 0,
+        "table": "product_exclude_keywords",
+        "schema": "tenant_001",
+        "content_md5": "d41d8cd98f00b204e9800998ecf8427e"
+      },
+      {
+        "rows": 3,
+        "table": "tcg_major_categories",
+        "schema": "tenant_001",
+        "content_md5": "8c1f9567ee17c9415a96bd84d317f3ca"
+      },
+      {
+        "rows": 11,
+        "table": "tcg_series",
+        "schema": "tenant_001",
+        "content_md5": "af8f38952cb5656c9f7580c2cfc94e4b"
+      },
+      {
+        "rows": 5,
+        "table": "tcg_manufacturers",
+        "schema": "tenant_001",
+        "content_md5": "e56b0e3fba6985093cfc4284cddf976f"
+      },
+      {
+        "rows": 2,
+        "table": "tcg_product_categories",
+        "schema": "tenant_001",
+        "content_md5": "2b90a5961b30e3867db34ab9054cd970"
+      },
+      {
+        "rows": 297,
+        "table": "tcg_products",
+        "schema": "tenant_004",
+        "content_md5": "c00fb8bed27a674ab85e3d27ea3752d8"
+      },
+      {
+        "rows": 676,
+        "table": "product_search_keywords",
+        "schema": "tenant_004",
+        "content_md5": "1c5aae1f7c51f8c5e2aeac92bfcddf78"
+      },
+      {
+        "rows": 285,
+        "table": "product_exclude_keywords",
+        "schema": "tenant_004",
+        "content_md5": "58596316ca848c35c96c5c06ee7dd84c"
+      },
+      {
+        "rows": 3,
+        "table": "tcg_major_categories",
+        "schema": "tenant_004",
+        "content_md5": "e403863e2f8a2718828793dbbf4fcf0a"
+      },
+      {
+        "rows": 11,
+        "table": "tcg_series",
+        "schema": "tenant_004",
+        "content_md5": "577c35bb8b8d07fb0de98db71b3eba53"
+      },
+      {
+        "rows": 5,
+        "table": "tcg_manufacturers",
+        "schema": "tenant_004",
+        "content_md5": "b863359e1bb8f530553f14e8ee9de6f6"
+      },
+      {
+        "rows": 2,
+        "table": "tcg_product_categories",
+        "schema": "tenant_004",
+        "content_md5": "50dfff088ae987af24d0f7f21df4a48d"
+      }
+    ],
+    "observed_at": "2026-09-14T01:39:00.994003+00:00"
+  },
+  "triggers": {
+    "observed_at": "2026-09-14T01:46:43.212648+00:00",
+    "read_only": "on",
+    "triggers": []
+  },
+  "limitations": [
+    "The snapshot is time-specific and is not a backup.",
+    "Matching migration code and deployment logs establish a reproducible mechanism, not exclusive actor attribution for each changed row.",
+    "No isolated restore or post-CSV deployment test was executed in this design turn."
+  ],
+  "followup_20260914": {
+    "projection": {
+      "observed_at": "2026-09-14T01:56:24.683292+00:00",
+      "read_only": "on",
+      "classification_matched": 268,
+      "classification_different": [
+        {
+          "code": "PM0267",
+          "division_changed": false,
+          "work_changed": false,
+          "manufacturer_changed": false,
+          "product_category_changed": true
+        }
+      ],
+      "names_matched": 268,
+      "names_different": [
+        {
+          "code": "PM0190",
+          "mark_changed": true,
+          "english_changed": true
+        },
+        {
+          "code": "PM0200",
+          "mark_changed": true,
+          "english_changed": false
+        },
+        {
+          "code": "PM0267",
+          "mark_changed": false,
+          "english_changed": true
+        }
+      ]
+    },
+    "projection_method": "Exact VALUES blocks extracted from fixed-SHA migrations and compared through SELECT joins only; not migration execution or cumulative final effect.",
+    "projection_sources": {
+      "classification": {
+        "path": "migrations/20260902_110100_tcg_products_classification_ids.sql",
+        "sha256": "f91ecf158dc21559739b7ed70382bc6655b4dc4221570afb37a21a57f7c820db"
+      },
+      "names": {
+        "path": "migrations/20260903_180000_tcg_products_mark_en_t004.sql",
+        "sha256": "630362eadfdb2794f1035060e802432f76360276932bc046c807664a79ded79e"
+      }
+    },
+    "bundle_title_comparison": {
+      "observed_at": "2026-09-14T01:57:48.391816+00:00",
+      "read_only": "on",
+      "total": 12,
+      "matching_titles": 1,
+      "different_titles": [
+        {
+          "code": "PM0277",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ",
+          "actual": "MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ"
+        },
+        {
+          "code": "PM0276",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ",
+          "actual": "MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ"
+        },
+        {
+          "code": "PM0284",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス",
+          "actual": "MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス"
+        },
+        {
+          "code": "PM0283",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン",
+          "actual": "MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン"
+        },
+        {
+          "code": "PM0282",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ",
+          "actual": "MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ"
+        },
+        {
+          "code": "PM0281",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ",
+          "actual": "MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ"
+        },
+        {
+          "code": "PM0280",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル",
+          "actual": "MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル"
+        },
+        {
+          "code": "PM0279",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ",
+          "actual": "MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ"
+        },
+        {
+          "code": "PM0278",
+          "expected": "ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ",
+          "actual": "MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ"
+        },
+        {
+          "code": "PM0264",
+          "expected": "FUTURISTIC BOX",
+          "actual": "30th CELEBRATION FUTURISTIC BOX"
+        },
+        {
+          "code": "PM0265",
+          "expected": "30th CELEBRATION プレミアムデッキセット",
+          "actual": "30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー"
+        }
+      ]
+    },
+    "bundle_source_sha256": "8444f3637ae75bdce87532dd4cd406b4e87efa8b5f9f69ecdb1a35b398997a2c",
+    "constraints": {
+      "observed_at": "2026-09-14T01:59:11.961345+00:00",
+      "read_only": "on",
+      "server_version": "16.13 (Debian 16.13-1.pgdg13+1)",
+      "constraints": [
+        {
+          "table": "tenant_004.analysis_results",
+          "name": "analysis_results_product_id_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (product_id) REFERENCES tenant_004.tcg_products(id)"
+        },
+        {
+          "table": "tenant_004.product_exclude_keywords",
+          "name": "product_exclude_keywords_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.product_exclude_keywords",
+          "name": "product_exclude_keywords_product_id_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (product_id) REFERENCES tenant_004.tcg_products(id) ON DELETE CASCADE"
+        },
+        {
+          "table": "tenant_004.product_exclude_keywords",
+          "name": "uq_ek_product_keyword",
+          "validated": true,
+          "definition": "UNIQUE (product_id, keyword)"
+        },
+        {
+          "table": "tenant_004.product_search_keywords",
+          "name": "product_search_keywords_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.product_search_keywords",
+          "name": "product_search_keywords_product_id_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (product_id) REFERENCES tenant_004.tcg_products(id) ON DELETE CASCADE"
+        },
+        {
+          "table": "tenant_004.product_search_keywords",
+          "name": "uq_sk_product_keyword",
+          "validated": true,
+          "definition": "UNIQUE (product_id, keyword)"
+        },
+        {
+          "table": "tenant_004.products_logistics",
+          "name": "products_logistics_product_id_fkey",
+          "validated": true,
+          "definition": "FOREIGN KEY (product_id) REFERENCES tenant_004.tcg_products(id) ON DELETE CASCADE"
+        },
+        {
+          "table": "tenant_004.tcg_major_categories",
+          "name": "tcg_major_categories_code_key",
+          "validated": true,
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "table": "tenant_004.tcg_major_categories",
+          "name": "tcg_major_categories_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.tcg_manufacturers",
+          "name": "tcg_manufacturers_code_key",
+          "validated": true,
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "table": "tenant_004.tcg_manufacturers",
+          "name": "tcg_manufacturers_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.tcg_product_categories",
+          "name": "tcg_product_categories_code_key",
+          "validated": true,
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "table": "tenant_004.tcg_product_categories",
+          "name": "tcg_product_categories_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "fk_tcg_products_division_id",
+          "validated": true,
+          "definition": "FOREIGN KEY (division_id) REFERENCES tenant_004.tcg_major_categories(id)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "fk_tcg_products_manufacturer_id",
+          "validated": true,
+          "definition": "FOREIGN KEY (manufacturer_id) REFERENCES tenant_004.tcg_manufacturers(id)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "fk_tcg_products_product_category_id",
+          "validated": true,
+          "definition": "FOREIGN KEY (product_category_id) REFERENCES tenant_004.tcg_product_categories(id)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "fk_tcg_products_work_id",
+          "validated": true,
+          "definition": "FOREIGN KEY (work_id) REFERENCES tenant_004.tcg_series(id)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "tcg_products_code_key",
+          "validated": true,
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "table": "tenant_004.tcg_products",
+          "name": "tcg_products_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        },
+        {
+          "table": "tenant_004.tcg_series",
+          "name": "tcg_series_code_key",
+          "validated": true,
+          "definition": "UNIQUE (code)"
+        },
+        {
+          "table": "tenant_004.tcg_series",
+          "name": "tcg_series_pkey",
+          "validated": true,
+          "definition": "PRIMARY KEY (id)"
+        }
+      ],
+      "missing_classification": 0
+    },
+    "local_environment": {
+      "docker": "daemon socket unavailable; docker info exit 1",
+      "postgres": "PostgreSQL 16.15 Homebrew binaries present; no instance initialized or started",
+      "existing_pg_fixture": "requires genuine GITHUB_ACTIONS=true and localhost jarvis_test_db; not bypassed"
+    },
+    "official_documentation": {
+      "context7": "No matching tool in ALL_TOOLS",
+      "fallback": "https://www.postgresql.org/docs/16/sql-insert.html#SQL-ON-CONFLICT",
+      "accessed_on": "2026-09-14",
+      "finding": "Explicit conflict target requires matching unique index inference; inference failure raises an error."
+    }
+  },
+  "latest_deployment": {
+    "head": "e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea",
+    "run_id": 34797490804,
+    "conclusion": "failure",
+    "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34797490804",
+    "failed_at": "2026-09-14T01:58:57.1911901Z",
+    "failed_order": 231,
+    "total": 233,
+    "error": "cardset bundle: identity mismatch PM0264",
+    "not_reached": [
+      232,
+      233
+    ],
+    "log_sha256": "b647f733bef4c312f8b8c1570b621663650ca260c7809e3c99b9b19d508256c7"
+  },
+  "post_pr3500_csv": {
+    "observed_at": "2026-09-14T04:06:03.391946+00:00",
+    "read_only": "on",
+    "changed_fields": 34,
+    "matching_fields": 23,
+    "different_fields": 11,
+    "differences": [
+      {
+        "product_code": "PM0277",
+        "field": "search_keywords",
+        "expected": [
+          "30th チコリータ",
+          "30thチコリータ"
+        ],
+        "actual": [
+          "30th チコリータ",
+          "カードセット チコリータ",
+          "30thチコリータ"
+        ]
+      },
+      {
+        "product_code": "PM0276",
+        "field": "search_keywords",
+        "expected": [
+          "30th フシギダネ",
+          "30thフシギダネ"
+        ],
+        "actual": [
+          "カードセット フシギダネ",
+          "30th フシギダネ",
+          "30thフシギダネ"
+        ]
+      },
+      {
+        "product_code": "PM0263",
+        "field": "exclude_keywords",
+        "expected": [
+          "FUTURISTIC",
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ"
+        ],
+        "actual": [
+          "FUTURISTIC",
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ",
+          "カードセット"
+        ]
+      },
+      {
+        "product_code": "PM0284",
+        "field": "search_keywords",
+        "expected": [
+          "30th ニャオハ",
+          "30thニャオハ"
+        ],
+        "actual": [
+          "30th ニャオハ",
+          "カードセット ニャオハ",
+          "30thニャオハ"
+        ]
+      },
+      {
+        "product_code": "PM0283",
+        "field": "search_keywords",
+        "expected": [
+          "30th サルノリ",
+          "30thサルノリ"
+        ],
+        "actual": [
+          "30th サルノリ",
+          "カードセット サルノリ",
+          "30thサルノリ"
+        ]
+      },
+      {
+        "product_code": "PM0282",
+        "field": "search_keywords",
+        "expected": [
+          "30th モクロー",
+          "30thモクロー"
+        ],
+        "actual": [
+          "30th モクロー",
+          "カードセット モクロー",
+          "30thモクロー"
+        ]
+      },
+      {
+        "product_code": "PM0281",
+        "field": "search_keywords",
+        "expected": [
+          "30th ハリマロン",
+          "30thハリマロン"
+        ],
+        "actual": [
+          "カードセット ハリマロン",
+          "30th ハリマロン",
+          "30thハリマロン"
+        ]
+      },
+      {
+        "product_code": "PM0280",
+        "field": "search_keywords",
+        "expected": [
+          "30th ツタージャ",
+          "30thツタージャ"
+        ],
+        "actual": [
+          "30th ツタージャ",
+          "カードセット ツタージャ",
+          "30thツタージャ"
+        ]
+      },
+      {
+        "product_code": "PM0279",
+        "field": "search_keywords",
+        "expected": [
+          "30th ナエトル",
+          "30thナエトル"
+        ],
+        "actual": [
+          "30th ナエトル",
+          "カードセット ナエトル",
+          "30thナエトル"
+        ]
+      },
+      {
+        "product_code": "PM0278",
+        "field": "search_keywords",
+        "expected": [
+          "30th キモリ",
+          "30thキモリ"
+        ],
+        "actual": [
+          "カードセット キモリ",
+          "30th キモリ",
+          "30thキモリ"
+        ]
+      },
+      {
+        "product_code": "PM0264",
+        "field": "exclude_keywords",
+        "expected": [
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ"
+        ],
+        "actual": [
+          "プレミアム",
+          "種セット",
+          "ニャオハ",
+          "サルノリ",
+          "モクロー",
+          "ハリマロン",
+          "ツタージャ",
+          "ナエトル",
+          "キモリ",
+          "チコリータ",
+          "カードセット"
+        ]
+      }
+    ],
+    "import_jobs": 1
+  },
+  "deployment_pr3500": {
+    "head": "70d145f090e122dd36e4a39b4928e13cc0dae613",
+    "run_id": 34804164057,
+    "conclusion": "success",
+    "reached_orders": [
+      231,
+      232,
+      233
+    ],
+    "log_sha256": "eb8ae8365e6ea53f25fb84f43406d9b10e3d0d5ac654dc474a633cc1aad12a1c"
+  },
+  "verification_ci_attempts": [
+    {
+      "run_id": 34806371166,
+      "job_id": 103858961380,
+      "head": "ebf217765b547078d6744c518836521f63766e04",
+      "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34806371166/job/103858961380",
+      "conclusion": "failure",
+      "passed": 3725,
+      "failed": 1,
+      "skipped": 95,
+      "seconds": 277.88,
+      "failure": "test_v2_structure_fragments_preserve_csv_equivalent_edits_twice:360 IndexError: tuple index out of range",
+      "metrics_visible": false,
+      "observed_by": "root directly downloaded failed-job log",
+      "log_sha256": "50ba39ad5ba5c95bd1b9ee099d8f1177725b00f91206533e54ba2029cf8449f1"
+    },
+    {
+      "run_id": 34807228083,
+      "job_id": 103861391011,
+      "head": "9e954af8cdaaa7a7031c524c7839a83a8077d758",
+      "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34807228083/job/103861391011",
+      "conclusion": "success",
+      "passed": 3726,
+      "failed": 0,
+      "skipped": 95,
+      "seconds": 444.97,
+      "new_cases_passed": 9,
+      "new_cases_skipped": 0,
+      "test_sha256": "99e30fc0095d89344a3c390b317104357275aa02e520b2754d5b262b408a712d",
+      "observed_by": "root directly downloaded full CI log and parsed nine unique case records; every emit follows assertions",
+      "log_sha256": "730b1463b1b23e8c3af5088625ad0d9218a8b96af95f45c59c3a35539a569d05",
+      "observations": [
+        {
+          "case": "V1",
+          "initial_constraints": 20,
+          "missing_unique": 2,
+          "production_constraints": 22
+        },
+        {
+          "case": "V2-structure",
+          "editable_fields": 10,
+          "row_differences": 0,
+          "runs": 2,
+          "source_sha256": {
+            "20260831_110000_create_tcg_analysis_tables_t004.sql": "46f05828c20298fcc932ee9094fdeb6caf59d417a9400099bec592e49413feda",
+            "20260902_110000_tcg_classification_masters.sql": "5585e3fd3c9d9f06d015a1c0edea532b36691ee115a77dafc68ee72c89a370a9",
+            "20260902_110100_tcg_products_classification_ids.sql": "f91ecf158dc21559739b7ed70382bc6655b4dc4221570afb37a21a57f7c820db",
+            "20260903_180000_tcg_products_mark_en_t004.sql": "2a44eb1f7bb7538b4fcc761db34511299c4edc07bff72ce332b9064663189080"
+          }
+        },
+        {
+          "case": "V2-coalesce",
+          "nonnull_preserved": 2,
+          "null_refilled": 2,
+          "source_sha256": "2a44eb1f7bb7538b4fcc761db34511299c4edc07bff72ce332b9064663189080"
+        },
+        {
+          "bundle_created": 1,
+          "case": "V3-title",
+          "edited_titles_accepted": 11,
+          "identities_preserved": 11
+        },
+        {
+          "case": "V3-rollback",
+          "changed_rows_after_failure": 0,
+          "structural_fault": "PM0276.work_id=NULL"
+        },
+        {
+          "case": "V4",
+          "classification_fields_restored": 4,
+          "exclude_words_restored": 1,
+          "search_words_restored": 9
+        },
+        {
+          "case": "V4-bundle",
+          "pm0264_exclude_words_restored": 1,
+          "product_identity_preserved": true
+        },
+        {
+          "case": "V5",
+          "databases": 2,
+          "with_unique_migrations": 2,
+          "without_unique_failures": 2
+        },
+        {
+          "case": "V6",
+          "compared_tables": 11,
+          "differences": 0,
+          "pg_dump": "pg_dump (PostgreSQL) 16.15 (Ubuntu 16.15-1.pgdg24.04+2)",
+          "pg_restore": "pg_restore (PostgreSQL) 16.15 (Ubuntu 16.15-1.pgdg24.04+2)",
+          "server_major": 16,
+          "snapshot_sha256": "e91ac6a9b95ac5620805d337810086426d547aaab8fbc5deca8474cfc5727f32"
+        }
+      ],
+      "limits": [
+        "isolated artificial CI data, not production writes",
+        "structure fragments, not full 233 registration runner",
+        "artificial dump/restore, not production backup restoration"
+      ]
+    }
+  ]
+}
