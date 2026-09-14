@@ -43,15 +43,24 @@ def provision(cursor, schema):
 _PUBLIC_PRODUCTS_DDL = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text()
 
 def _mirror_to_tcg_products(schema: str) -> str:
-    """Mirror public.products rows into {schema}.tcg_products for migration compatibility."""
+    """Mirror public.products rows into {schema}.tcg_products for migration compatibility.
+    Only copies rows whose FK references exist in the target schema."""
     return f"""
         INSERT INTO {schema}.tcg_products
             (id, code, japanese_title, division_id, work_id,
              manufacturer_id, product_category_id, category_class, is_active)
-        SELECT tcg_uuid, product_code, name, division_id, work_id,
-               manufacturer_id, product_category_id, category_class, is_active
-        FROM public.products
-        WHERE tcg_uuid IS NOT NULL
+        SELECT p.tcg_uuid, p.product_code, p.name, p.division_id, p.work_id,
+               p.manufacturer_id, p.product_category_id, p.category_class, p.is_active
+        FROM public.products p
+        WHERE p.tcg_uuid IS NOT NULL
+          AND (p.division_id IS NULL OR EXISTS (
+              SELECT 1 FROM {schema}.tcg_major_categories d WHERE d.id = p.division_id))
+          AND (p.work_id IS NULL OR EXISTS (
+              SELECT 1 FROM {schema}.tcg_series w WHERE w.id = p.work_id))
+          AND (p.manufacturer_id IS NULL OR EXISTS (
+              SELECT 1 FROM {schema}.tcg_manufacturers m WHERE m.id = p.manufacturer_id))
+          AND (p.product_category_id IS NULL OR EXISTS (
+              SELECT 1 FROM {schema}.tcg_product_categories c WHERE c.id = p.product_category_id))
         ON CONFLICT DO NOTHING
     """
 
