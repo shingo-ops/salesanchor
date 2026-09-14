@@ -1085,3 +1085,42 @@ backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行�
 PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+
+## Gemini原因表示・既存試行記録への接続（2026-09-14）
+
+POの依頼: 原因が分かる表示、本番反映まで。実装・レビュー担当への委任確認に「進める」、追加条件「データのSSOTは遵守」を受領。番号付きGOや委任モードの自己有効化とは区別する。
+
+正本: PR3494（release/line-extraction-attempt-record、252d240f）のextraction_attemptsと既存管理者一覧APIを再利用する。本書の別作業台に残る独自attempt列/履歴API案、および調査途中のerror_messageへの別形式保存案は、本便の実装根拠にしない。新しい記録表・保存列・状態の複製は0。現在のjob状態は既存取り込みAPI、試行履歴はextraction_attemptsに役割を分ける。別取得の履歴から現在の成功/失敗を上書きしない。
+
+観測根拠: PR3494 tcg_extraction_record_svc.py:177-199の一覧はID/時刻/phase/error_code/completion等の概要だけ。詳細はinput_payload/response_textも含むため呼ばない。router:111-127はsuper-admin/UUID/limit最大100/no-store。ImportWorkflowPanel.tsx:108はstatusがある全行に失敗文面を表示するためerror行だけへ修正する。main 7b3aea8cにこの記録APIは未導入。PR3494のコード審査は別担当による読取REVISE（既存不正制約の検出と解析JSON超過サイズの2点）。本便の画面完成を依存PRの本番適用完了と称さない。
+
+目的と受入: エラー行から1操作で試行ごとの理由/記録時刻/確認方法へ進む。再抽出後の過去失敗を現在の失敗と誤表示0。原文・応答本文・prompt・仕入元名のコピー混入0。追加の変更系API呼出0。
+
+対象はフロントエンドの既存取込画面に「試行履歴と原因を確認」ボタンと読み取り履歴を追加すること。新画面ルート/DB/抽出判定/SDK/配信/自動再抽出/残り時間予測/仕入元集計の定義変更は対象外。履歴が必要なjobは既存import APIの行から渡す。全TCGを閲覧できる既存super-admin APIの権限は維持し、import限定APIとして偽装しない。
+
+GET /tcg/diagnostics/extraction-jobs/{job_id}/attempts?limit=25&offset=Nだけを明示操作後に取得する。詳細APIは使用0。レスポンスのextraction_job_idと各行job_idが要求と一致しなければ取得失敗とする。未知型/未知phase/未知error_codeは固定unknown表示、生文字列を文面やコピーへ混入しない。IDはUUIDとして検証する。時刻不正は未記録。0件の正常応答だけ記録なし、404/403/503/通信不明は取得できないと表示し再取得ボタンを置く。
+
+履歴はAPI順のまま表示し、最新/current/試行番号を独自採番しない。started/received又はcompletion=unconfirmedは「終了未確認」。completedは「抽出の検証完了」で、解析成功や配信成功とは表示しない。failedは「試行失敗」。開始/応答記録/終了時刻は各ラベルでJST表示し、差から通信所要時間を推定しない。未記録は未記録。過去記録が残っていることを説明し、現在のjob状態は別欄のままとする。
+
+原因の対応文面: SOFT_TIME_LIMIT=処理制限時間に到達、提供元/通信の遅延原因は未特定。API_ERROR=API呼出に失敗、通信・認証・提供元のどれかはこの記録では未特定。INVALID_RESPONSE=返答/照合の検証を完了できない。REFERENCE_CHANGED=参照マスタ変更、WORK_ID_CONFLICT=原文の作品情報との不一致、RECORD_WRITE_FAILED/RESPONSE_NOT_RECORDED=必要な記録を確定できない、INPUT_TOO_LARGE/RESPONSE_TOO_LARGE/PARSED_TOO_LARGE=記録容量上限、CLAIM_CONFLICT/ATTEMPT_CONFLICT=別処理との競合。その他unknown。API_ERRORをHTTP429などへ推測分類しない。
+
+対応CTAは「調査用情報をコピー」「表示を更新」。コピー内容は検証済みjob/attempt ID、許可コード又はunknown、許可phase、正常時刻のみ。秘密・本文・原文・model文字列は含めない。Clipboard失敗は完了表示せずエラーとし、コピー成功/失敗のフィードバックを日英で出す。再抽出ボタンや外部送信は追加しない。
+
+ページングは25件、前へ/次へ、応答25件なら次へ有効（総数不明）。空の次ページでも前へ戻れる。job/import変更・unmount・ページ/再取得の競合時は前の要求を無効化し、旧応答が新表示/コピーを上書きしない。取得中と取得失敗では古いデータのコピーを無効化し、成功済みと誤認させない。CSSトークン/共通Button/既存PageLayout/日英t()、390pxとPC、キーボード操作を維持する。
+
+実装担当はerror_visibility_recon、UI差分のみ。独立レビュー担当attempt_record_reviewは後続の読み取り差分審査を担当できる。rootはPlanner→Architectの同一AI自己審査、正式カード/文書/検証結果確認を所有する。担当は同じ作業台で他者の編集を戻さない。
+
+検証: 模擬APIで正常/空/未導入/権限/通信失敗、未知値、private追加field、別job混入、job変更遅延応答、ページング、再取得失敗、Clipboard失敗、成功/running行失敗文面なしを確認。日英unit、build/check:all、ブラウザ狭幅を実施。製品の実抽出は呼ばない。既存backend試験成功を本便のUI検証へ計上しない。
+
+代替案: 独立error保存はSSOT重複になるため不採用。詳細本文の自動取得は原因の概要表示に不要で不採用。APIを追加して現在jobと最新attemptを合成する案は未導入の所有/現在定義を広げるため後続。履歴として読む本案は現在データを変更せず、既存API契約だけで試験可能。
+
+Architect自己審査: このUI読み取り契約のみAPPROVE。依存API未配備は明示的失敗表示で扱い、PR3494のREVISEを覆さない。全体の本番反映は依存の修正・レビュー/CI・正式GOが前提。番号付きGOをPO発話から創作しない。維持は既存APIの型/未知値fixtureとUI日英テストを変更時に更新。外部事例不要、自社実コードが直接根拠。新ライブラリ/API仕様は追加せず既存内部HTTP契約を再利用する。
+
+
+### UI実装・独立レビュー途中結果
+担当error_visibility_reconが既存一覧だけを使うcomponent/API adapter・日英文面・unit/E2Eを実装。別担当attempt_record_reviewがSSOT・機密投影・取得競合・コピーを読取審査し、コピー操作同士の完了通知競合をREVISE。操作別連番と逆順完了テストを追加後APPROVE。rootはcomponent f9e97e20/API c5ffd224/component test 4d1fef1d/Panel f131f546のSHA256一致を直接照合した。設計はroot自己審査、コードは別担当レビューである。
+担当実行: unit54/54（6 files）、build exit0（既存chunk警告）、check:all exit0（lint 0error/218warnings）。root直接実行: diff --check、task-state、card-lint成功。追加E2E2件は古いCTAを指定した初回失敗があり、fixtureの文言を実UIに合わせ修正後の再実行中。結果未確定を成功扱いしない。依存3494の修正/レビュー/GO、今回PR/CI/GO/本番反映はまだ未完了。
+
+
+最終E2E追補: 担当が修正後の追加2件を390px/1440pxで実行、2/2成功・exit0を報告。横overflowなし、キーボード操作、private追加field非表示、変更API呼出0。対話ブラウザ/本番試験ではなく、模擬APIのPlaywright試験。frontend編集停止済み。unit54/54/build/checkの最終結果と併せてPR提出カード02を検査済み（違反0、長行警告1）。依存PR3494のREVISEと未配備は解決済みと扱わない。

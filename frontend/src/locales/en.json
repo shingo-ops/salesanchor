@@ -3581,7 +3581,7 @@
     "viewMessages": "View imported messages",
     "viewItems": "View extracted items",
     "viewResults": "View all {{total}} analysis result(s)",
-    "errorUnknown": "The cause of this failure is not available on this screen.",
+    "errorUnknown": "Check attempt history for recorded reasons. Records may not be available.",
     "filterResults": "Analysis results present",
     "errorDetails": "Extraction errors: causes and actions",
     "errorNext": "Request an investigation with the source post and extraction ID.",
@@ -3619,6 +3619,52 @@
       "note_unmatched": "The note still requires review.",
       "pid_unresolved": "The product is not identified.",
       "multi_candidate": "More than one product matched."
+    }
+  },
+  "pmgAttempt": {
+    "open": "View attempt history and causes",
+    "title": "Extraction attempt history",
+    "historyNote": "These are historical attempt records, not the current import, analysis or delivery status.",
+    "refresh": "Refresh history",
+    "loading": "Loading attempt history",
+    "unavailable": "Attempt history could not be retrieved. Refresh to try again.",
+    "empty": "There are no attempt records on this page.",
+    "unrecorded": "Not recorded",
+    "copy": "Copy diagnostic information",
+    "copied": "Diagnostic information copied",
+    "copyFailed": "Copy failed. Check your browser clipboard permissions.",
+    "id": "Attempt record ID",
+    "phaseLabel": "Recorded stage",
+    "started": "Attempt record started (JST)",
+    "received": "Response recorded (JST)",
+    "finished": "Attempt record finished (JST)",
+    "phase": {
+      "started": "Start recorded",
+      "received": "Response recorded",
+      "completed": "Validation completed",
+      "failed": "Failure recorded",
+      "unknown": "Unknown"
+    },
+    "completion": {
+      "unconfirmed": "Completion unconfirmed",
+      "completed": "Extraction validation completed",
+      "failed": "Attempt failed",
+      "unknown": "Status unconfirmed"
+    },
+    "reason": {
+      "SOFT_TIME_LIMIT": "The processing time limit was reached. Provider or network delay has not been identified. Copy diagnostic information and request investigation.",
+      "API_ERROR": "The API call failed. This record does not identify a network, authentication or provider cause. Copy diagnostic information and request investigation.",
+      "INVALID_RESPONSE": "Response format or source validation could not be completed. Request review with diagnostic information.",
+      "REFERENCE_CHANGED": "The reference master changed during processing. Request a review of the reference data.",
+      "WORK_ID_CONFLICT": "The result conflicts with work information in the source. Request a review of the original post.",
+      "RECORD_WRITE_FAILED": "Required records could not be confirmed as saved. Request a storage investigation with diagnostic information.",
+      "RESPONSE_NOT_RECORDED": "The response record could not be confirmed. Request investigation with diagnostic information.",
+      "INPUT_TOO_LARGE": "The input exceeded the record size limit. Request investigation with diagnostic information.",
+      "RESPONSE_TOO_LARGE": "The response exceeded the record size limit. Request investigation with diagnostic information.",
+      "PARSED_TOO_LARGE": "The parsed response exceeded the record size limit. Request investigation with diagnostic information.",
+      "CLAIM_CONFLICT": "Another processing operation conflicted. Refresh, and request investigation if unresolved.",
+      "ATTEMPT_CONFLICT": "Attempt ownership conflicted. Refresh, and request investigation if unresolved.",
+      "unknown": "The cause cannot be identified from this record. Copy diagnostic information and request investigation."
     }
   }
 }
