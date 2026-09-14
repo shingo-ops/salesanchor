@@ -3082,7 +3082,12 @@ EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。�
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
 
+EV-20260914-PRODUCT-ALL-TERMS: design§24にPO実装依頼・契約・自己審査を記録。最新1504明細全区分一致。固定正解4/全差分/品質検査/正式CIを公開条件とする。公開未実施。
+
+EV-20260914-PRODUCT-ALL-TERMS-LOCAL: 実装5ファイル。純関数48/48、ruff成功。固定正解0→4/4、全1504の既存特定喪失0/別商品変更0。品質規則全文不変。根拠docs/handoff/tcg-product-import/all-terms-result.json。正式DB試験/本番反映未完了。
 
 ### EV-20260914-LINE-ATTEMPT-IMPLEMENTED
 
 CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
+
+EV-20260914-PRODUCT-ALL-TERMS-CI: PR3499 HEAD9f96d682、正式CI34798680670の実ログで3718成功/95skip/失敗0、coverage65.05%、265.85秒。固定正解4件改善/他1500判定不変。自己レビュー、独立審査ではない。GO記録検査と既存PM0264配備障害で本番未反映。根拠docs/handoff/tcg-product-import/all-terms-result.json。

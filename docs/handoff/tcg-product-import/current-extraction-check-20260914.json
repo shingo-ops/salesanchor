@@ -1,0 +1,229 @@
+{
+  "purpose": "PO要求: 推測なしで現抽出データに対するCSV変更後の商品特定動作を安全に確認",
+  "verdict": "NOT_READY_FOR_BULK_REANALYSIS",
+  "method": "PGOPTIONS default_transaction_read_only=onの単一SELECTで全入力同時点取得。稼働4ファイルとローカルSHA一致。既存old_work/match_itemと依存純関数をASTから無改変抽出、ローカル再現。analyze_extraction_job全体/DB保存は実行しない。",
+  "snapshot_at": "2026-09-14T01:01:14.661571+00:00",
+  "first_summary": {
+    "at": "2026-09-14T01:01:14.661571+00:00",
+    "engine": "name-first-v8-product-space-runs",
+    "reference_sha256": "d9000231fed39ee090c4482a79a555afb54a543f46cce79aa4f4837797eb8686",
+    "counts": {
+      "all_items": 1504,
+      "replayed": 711,
+      "unresolved": 220,
+      "resolved": 491,
+      "INVALID_SAVED_REFERENCE": 793,
+      "changed_with_csv_keywords": 10
+    },
+    "target_codes": [
+      "PM0263",
+      "PM0264",
+      "PM0265",
+      "PM0276",
+      "PM0277",
+      "PM0278",
+      "PM0279",
+      "PM0280",
+      "PM0281",
+      "PM0282",
+      "PM0283",
+      "PM0284"
+    ],
+    "matched_current_master_fields": {
+      "PM0263": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0264": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0265": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0276": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0277": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0278": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0279": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0280": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0281": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0282": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0283": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      },
+      "PM0284": {
+        "search": true,
+        "exclude": true,
+        "title": true
+      }
+    }
+  },
+  "result_counts": {
+    "related_replayed": 23,
+    "PM0263_unique": 13,
+    "PM0265_unique": 9,
+    "PM0264_unresolved": 1,
+    "outcome_changes_from_old_csv": 1,
+    "basis_only_changes": 9,
+    "all_other_outcomes_unchanged": 710
+  },
+  "regression": {
+    "item_id": "a27d6734-25cf-4e97-a92a-53706de72503",
+    "code": "PM0264",
+    "raw_product_name": "30th CELEBRATION FUTURISTIC BOX",
+    "source_lines": [
+      31,
+      33
+    ],
+    "old_csv_candidates": [
+      "PM0264"
+    ],
+    "current_candidates": [],
+    "why": "現検索語30th FUTURISTIC/30thFUTURISTICは純ASCIIの連続フレーズ照合であり、中間CELEBRATIONを許容しない。日本語候補も原名に存在しない。原文31行と現マスタの日本語商品名が一致。"
+  },
+  "proposal_test": {
+    "scope": "private in-memory keyword proposal only; no DB or CSV modification",
+    "checked": 711,
+    "unchanged": 710,
+    "changes": [
+      {
+        "item_id": "a27d6734-25cf-4e97-a92a-53706de72503",
+        "raw_name": "30th CELEBRATION FUTURISTIC BOX",
+        "before": {
+          "product_id": null,
+          "pid_resolved": false,
+          "basis": "NONE",
+          "candidates": [],
+          "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd"
+        },
+        "after": {
+          "product_id": "e75e1178-e295-422d-9ec2-d74258129b43",
+          "pid_resolved": true,
+          "basis": "WORK:2fe437c0-5a47-4311-9b94-0c107f64adcd|SK:30th CELEBRATION FUTURISTIC BOX",
+          "candidates": [
+            "PM0264"
+          ],
+          "work_id": "2fe437c0-5a47-4311-9b94-0c107f64adcd"
+        }
+      }
+    ]
+  },
+  "proposal_status": "ローカル入力コピーのみ。PO承認/本番適用なし。711明細限定・全1504明細の精度や状態/数量/価格の検証ではない。",
+  "concurrent_change": {
+    "after_at": "2026-09-14T01:05:01.073899+00:00",
+    "unchanged_sections": [
+      "sources",
+      "jobs",
+      "items",
+      "analyses",
+      "corrections"
+    ],
+    "search_keyword_additions": "PM0276〜PM0284にカードセット＋各種類を1語ずつ追加",
+    "exclusion_change": "PM0263にカードセットを追加、他除外行は同語再作成を含む",
+    "actor": "未確認。本調査は本番書込0。",
+    "latest_reference_check": {
+      "at": "2026-09-14T01:05:01.073899+00:00",
+      "counts": {
+        "eligible": 478,
+        "INVALID_SAVED_REFERENCE": 1026
+      },
+      "reference_sha256": "a4d1df56b608e96c5dc6186a0bc11bb8e58ee66dc0585a32cc6c8c2d153ea675"
+    }
+  },
+  "unverified": [
+    "全明細の独立した正解ラベル",
+    "マスタ不一致1026明細の現行経路での商品再照合",
+    "既存状態/数量/価格/配信の再検証",
+    "欠落guard原因調査"
+  ],
+  "safety": {
+    "read_only_before": "on",
+    "read_only_after": "on",
+    "production_writes": 0,
+    "model_calls": 0,
+    "distribution_calls": 0,
+    "new_agents": 0
+  },
+  "private_artifacts": [
+    {
+      "path": "/tmp/sa-current-extraction-20260914.json",
+      "sha256": "0f946d906b2562f016b7ccc981b62fb12f5909dff282069693b8b453f8e305d2"
+    },
+    {
+      "path": "/tmp/sa-current-extraction-20260914-after.json",
+      "sha256": "a3398eb0c39b0e5e54c37cc6e262b2c069da5e41cca025a12bc0960ba2b6a418"
+    },
+    {
+      "path": "/tmp/sa-replay-current-extraction.py",
+      "sha256": "bc78bd9ccf6d5d34082b65e8c6c3a1baf812c719373239f4bc26fdb99b174218"
+    },
+    {
+      "path": "/tmp/sa-replay-current-results-private.json",
+      "sha256": "a0c41769f8d6b3d7afda6e7ec0c3f93baa35f2378a3966332d9cddc8501677e0"
+    },
+    {
+      "path": "/tmp/sa-futuristic-candidate-check.py",
+      "sha256": "2cfb920b6390a999fa9eb257fca7f9714b627b198427b781bcf94e9a38b03b2a"
+    },
+    {
+      "path": "/tmp/sa-futuristic-candidate-result.json",
+      "sha256": "9e1c7d83255f6e1a7e07175cab59b704bc6e81686692d48f6b9cf723cd0c134b"
+    }
+  ],
+  "source_checksums": [
+    {
+      "path": "backend/app/services/tcg_analyzer_svc.py",
+      "sha256": "d0c5f1eec36e06469864833fe1076e7f240268016b1afe6fb413c4ddb0f687d0",
+      "runtime_matched_before_and_after": true
+    },
+    {
+      "path": "backend/app/services/tcg_product_guards.py",
+      "sha256": "3a0a3a5c637ef1ad05445e8b8fd2df31011043b3192a73c2168988cb05af41a3",
+      "runtime_matched_before_and_after": true
+    },
+    {
+      "path": "backend/app/services/tcg_work_reference.py",
+      "sha256": "265084cccedf9966045163199b1b5a63ffd9e5f664c9e30177d9522d81129db9",
+      "runtime_matched_before_and_after": true
+    },
+    {
+      "path": "backend/app/services/tcg_work_comparison_svc.py",
+      "sha256": "c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002dda",
+      "runtime_matched_before_and_after": true
+    }
+  ]
+}

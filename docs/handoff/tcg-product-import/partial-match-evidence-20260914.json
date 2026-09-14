@@ -1,0 +1,258 @@
+{
+  "at": "2026-09-14T01:31:12.704351+00:00",
+  "items": 1504,
+  "snapshot_sha256": "9b729fb1f0a58e148cba14d3b65e3efb26eb22492bdd7c854002fd029dfc3eb5",
+  "reference_sha256": "a4d1df56b608e96c5dc6186a0bc11bb8e58ee66dc0585a32cc6c8c2d153ea675",
+  "job_state_counts": {
+    "legacy": 478,
+    "stale": 1026
+  },
+  "scope": "Private product-match component comparison using fixed saved work IDs. Stale-reference rows are diagnostic only, NOT eligible production reanalysis. No model/DB write. Search-positive call only changed; exclusions/other guards unchanged.",
+  "variants": {
+    "and": {
+      "changed_tuple": 8,
+      "changed_outcome": 4,
+      "resolved_before": 1144,
+      "resolved_after": 1148,
+      "lost_resolution": 0,
+      "resolved_code_switch": 0
+    },
+    "ordered": {
+      "changed_tuple": 7,
+      "changed_outcome": 4,
+      "resolved_before": 1144,
+      "resolved_after": 1148,
+      "lost_resolution": 0,
+      "resolved_code_switch": 0
+    },
+    "or": {
+      "changed_tuple": 211,
+      "changed_outcome": 206,
+      "resolved_before": 1144,
+      "resolved_after": 1060,
+      "lost_resolution": 117,
+      "resolved_code_switch": 0
+    }
+  },
+  "verification_after": {
+    "at": "2026-09-14T01:34:52.917306+00:00",
+    "readonly_before": "on",
+    "readonly_after": "on",
+    "identical_sections": {
+      "sources": true,
+      "jobs": true,
+      "items": true,
+      "analyses": true,
+      "corrections": true,
+      "masters": true
+    }
+  },
+  "boundary_cases": [
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "30th CELEBRATION FUTURISTIC BOX",
+      "and_expected": true,
+      "ordered_expected": true,
+      "result": {
+        "and": true,
+        "ordered": true,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "FUTURISTIC BOX 30th CELEBRATION",
+      "and_expected": true,
+      "ordered_expected": false,
+      "result": {
+        "and": true,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "30th CELEBRATION BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "FUTURISTIC BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "130th FUTURISTIC BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "30th FUTURISTICAL BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "OP-01 BOX",
+      "text": "OP-010 Booster BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "OP-01 BOX",
+      "text": "OP-01 Booster BOX",
+      "and_expected": true,
+      "ordered_expected": true,
+      "result": {
+        "and": true,
+        "ordered": true,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "AR BOX",
+      "text": "SAR Booster BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "AR BOX",
+      "text": "AR Booster BOX",
+      "and_expected": true,
+      "ordered_expected": true,
+      "result": {
+        "and": true,
+        "ordered": true,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "M6",
+      "text": "SM6",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": false
+      },
+      "pass": true
+    },
+    {
+      "kw": "151",
+      "text": "1510",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": false
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "30th\nFUTURISTIC",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": false
+      },
+      "pass": true
+    },
+    {
+      "kw": "30th FUTURISTIC",
+      "text": "30th\tFUTURISTIC",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": false
+      },
+      "pass": true
+    },
+    {
+      "kw": "BOX BOX",
+      "text": "BOX",
+      "and_expected": false,
+      "ordered_expected": false,
+      "result": {
+        "and": false,
+        "ordered": false,
+        "or": true
+      },
+      "pass": true
+    },
+    {
+      "kw": "BOX BOX",
+      "text": "BOX other BOX",
+      "and_expected": true,
+      "ordered_expected": true,
+      "result": {
+        "and": true,
+        "ordered": true,
+        "or": true
+      },
+      "pass": true
+    }
+  ],
+  "private_artifact_sha256": {
+    "sa-partial-match-study.py": "eeb477066a22fae740f11f1c9e19085d301fd338a27cfbaee49c8d0c68fcb59b",
+    "sa-partial-match-study-private.json": "ea323b29384eb5316334cdbf933cab17a474efa80f19f31826d65e112646fc2f",
+    "sa-partial-match-positive-proof.json": "22275fd37d2b243c8cc1f2f478969e5c814e3e41a267533bd924e8daf75b2546",
+    "sa-partial-match-after.json": "15cfe1d2493dfcf8351ae7167ebee0ddd8d5e8a5630c4fc4eb46bf47f801f7e8",
+    "sa-replay-current-extraction.py": "bc78bd9ccf6d5d34082b65e8c6c3a1baf812c719373239f4bc26fdb99b174218"
+  },
+  "status": "Feasibility established by local component comparison; full implementation design REVISE; production unchanged.",
+  "limits": [
+    "No full-dataset truth labels; resolved count is not accuracy.",
+    "1026 stale-reference items are diagnostic only.",
+    "Keyword lint and database integration have not been validated under proposed semantics.",
+    "No product implementation, model invocation, production reanalysis or delivery."
+  ]
+}
