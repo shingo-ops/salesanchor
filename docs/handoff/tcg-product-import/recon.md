@@ -1042,3 +1042,20 @@ PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落�
 既存作業台/.pr-number3492を直接確認、公式ledger-lookupが未登録exit1だったため同じブランチの.d登録を復元した。再登録日は本日、旧開始日時を新しい観測と混同しない。GOはチャット原文を転記し、GO委任の自己有効化はしない。
 
 復旧後ローカル検証: npm run test:coverageは30ファイル384件成功（/tmp/product-detail-restored-unit.log）、Playwright詳細/CSV統合22件成功（/tmp/product-detail-restored-e2e.log）。これらのAPIは模擬であり実DBは新HEADのCIで確認する。
+
+
+## DETAIL-01 マージ・公開確認と既存移行処理の停止（2026-09-14）
+
+PO原文「進めるGO #3492」に基づき、最終HEAD `56eaa09aacfc091d6f12ea4d815ecdcff4eda680` のCI全40成功・6対象外、CLEANを直接確認。既存mainの記録競合は双方保持して統合。`gh-pr-merge-safe.sh --merge --match-head-commit` でPR #3492を2026-09-14 10:00:06 JSTにマージした。GitHub APIのmergeCommitは `e39fa65abb83837a7909290b993a8cd363a11ef9`。自動片付けは本便作業台のみ。
+
+直接確認した検証: ローカル単体384件、モックAPIのPlaywright22件、build/check:all成功。実PG付きCI run34794038412/job103823630794の原ログは3647 passed / 95 skipped、詳細保存サービス97%。本便31ケースはCIの実行条件を満たす。全体95skipを「skip0」と称しない。同一AIの設計/実装自己審査であり独立レビューではない。
+
+配備run34794455633/job103824761091は **failure**。新規バックアップ `salesanchor_db_20260914_100047.sql.gz`（7.2M）成功、配備ログHEAD `e39fa65a`、コード切替とFinalize health成功。231番目の既存migration `migrations/20260913_210000_tcg_cardset_bundle_registration.sql` が `cardset bundle: identity mismatch PM0264` で停止。後続smoke/Verifyはskip。失敗時の既存自動処理が設計図書サイト `/design/` を遮断し、ログで401を確認。手動復元は未実施。
+
+2026-09-14 10:06 JST、公開 `index-Df5nDPe6.js` / `index-CMN3I7-n.css` をcurlで取得。詳細API/保存/競合/破棄の接続、日英名の縦並び・英語のcaptionサイズ、検索/除外件数、既存CSV出力を7項目照合して全一致。API healthはok、database/redis/celeryはconnected。認証付き本番画面の保存操作、PO目視、バックアップ復元試験は未実施。証跡: `detail-production-verification.json`。
+
+原因の読み取り: 既存SSH定型で `SHOW transaction_read_only=on` を確認後、SELECTのみ実施。PM0264の本番名は「30th CELEBRATION FUTURISTIC BOX」、既存migration:41の期待は「FUTURISTIC BOX」。PM0265の本番名も「30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー」で、:42の期待より詳しい。Box/active/分類コードは期待一致、PM0297も存在。:55-62は名称等の完全一致を毎回要求するため、現在値で再実行しても停止する。名称変更の実行者・経路・時刻は未調査であり、誰かの破壊とは断定しない。
+
+本便の差分にはmigration/運用/CI変更なし。公開自体は確認できたが、再配備可能性を含む完了判定は **保留（REVISE）**。推奨は現在の登録内容を維持し、既存の一度きり登録処理と後からの編集を両立させる限定修正。旧名への書戻し、ガード解除、migrationスキップ、同じ配備の無条件再実行は採用しない。既存登録処理の修正まで対象を広げるPO判断を求める。方式の正式設計・審査・実装カード・検証を経て修正し、通常配備・smoke・設計図書サイト回復まで確認する。修正実装は未着手。
+
+調査操作の制約: Python3.14 urllibはローカルCA証明書不足で失敗し、証明書検証を維持する通常curlで取得。検索語の正規表現がpsql-write-guardの「pipe to psql」に誤検知された1回はDB接続を伴わない文書検索で、別の非該当検索語で読み取りを継続。ガード・証明書検証・承認条件の変更なし。
