@@ -1,4 +1,5 @@
 """CARD09 PostgreSQL acceptance in disposable CI databases. Never live Gemini."""
+import hashlib
 import json
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
@@ -10,7 +11,7 @@ import psycopg2
 import pytest
 from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
-from sqlalchemy import MetaData, Table, text
+from sqlalchemy import MetaData, Table
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
@@ -238,6 +239,76 @@ def test_byte_boundary_counts_utf8(monkeypatch):
         records.bounded("あx", "TOO_LARGE")
 
 
+@pytest.mark.parametrize("stage", ["input", "response", "parsed"])
+@pytest.mark.parametrize("extra", [0, 1])
+def test_actual_8mib_pg_boundaries(pg, monkeypatch, stage, extra):
+    """Isolate storage boundaries from model parsing; exercise real task transactions."""
+    assert records.MAX_BYTES == 8_388_608
+    seed_products(pg[0])
+    sid, jid = source(pg)
+    sent = []
+    captured = {}
+    item = {"line_start": 1, "line_end": 1, "raw_product_name": "匿名商品",
+            "raw_quantity": "2", "raw_price": "1000", "raw_unit": "BOX",
+            "raw_state": "未開封", "raw_memo": "あ", "raw_work_name": None,
+            "raw_work_source_line_span": None, "resolved_work_id": None}
+    target = records.MAX_BYTES + extra
+    if stage == "parsed":
+        measured = [{**item, "extraction_item_id": str(uuid4()), "response_item_number": 1}]
+        item["raw_memo"] += "x" * (target - len(records.encoded(measured).encode()))
+        measured[0]["raw_memo"] = item["raw_memo"]
+        assert len(records.encoded(measured).encode()) == target
+
+    def synthetic_extract(raw_text, *, work_reference, recorder):
+        payload = {"model": "synthetic", "contents": "あ", "config": {"temperature": 0}}
+        if stage == "input":
+            size = len(records.encoded({**payload, "reference": work_reference}).encode())
+            payload["contents"] += "x" * (target - size)
+        captured["input"] = records.encoded({**payload, "reference": work_reference})
+        response = "あ"
+        if stage == "response":
+            response += "x" * (target - len(response.encode()))
+        captured["response"] = response
+        recorder.before_send(payload)
+        sent.append(True)
+        recorder.on_response(response)
+        return {"status": "done", "items": [item], "prompt_version": extraction.WORK_ID_PROMPT_VERSION,
+                "error_message": None}
+
+    monkeypatch.setattr(extraction, "extract_message", synthetic_extract)
+    monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")
+    analyzed = []
+    monkeypatch.setattr(extraction, "analyze_extraction_job", lambda *args, **kwargs: analyzed.append(True))
+    result = run(pg, sid)
+    attempt, = rows(pg, jid)
+    assert len(sent) == (0 if stage == "input" and extra else 1)
+    if extra:
+        code = {"input": "INPUT_TOO_LARGE", "response": "RESPONSE_TOO_LARGE", "parsed": "PARSED_TOO_LARGE"}[stage]
+        assert result["status"] == "error" and result["error_message"] == code
+        assert attempt["phase"] == "failed" and attempt["error_code"] == code
+        assert item_count(pg, jid) == 0 and analyzed == []
+        if stage == "input":
+            assert attempt["input_payload"] is None and attempt["response_text"] is None
+        elif stage == "response":
+            assert attempt["response_text"] is None and attempt["response_received_at"] is not None
+        else:
+            assert attempt["response_text"] == captured["response"] and attempt["parsed_items"] is None
+    else:
+        assert result["status"] == "done" and attempt["phase"] == "completed"
+        assert item_count(pg, jid) == 1 and analyzed == [True]
+        assert attempt["input_payload"] == json.loads(captured["input"])
+        assert attempt["response_text"] == captured["response"]
+        if stage == "parsed":
+            assert attempt["parsed_bytes"] == target
+            assert len(records.encoded(attempt["parsed_items"]).encode()) == target
+            with pg[0].cursor() as cur:
+                cur.execute(f"SELECT raw_memo FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s", (jid,))
+                assert cur.fetchone()[0] == item["raw_memo"]
+    if stage in ("input", "response"):
+        assert attempt[f"{stage}_bytes"] == target
+        assert attempt[f"{stage}_sha256"] == records.digest(captured[stage])
+
+
 def test_migration_idempotent_and_parent_lifecycle(pg, monkeypatch):
     seed_products(pg[0])
     sid, jid = source(pg)
@@ -293,22 +364,61 @@ async def test_private_detail_is_job_scoped_and_summary_omits_payload(pg, monkey
         await engine.dispose()
 
 
-def test_fixed_scale_44_attempts_storage_budget(pg):
-    durations = []
-    for _ in range(44):
+def test_fixed_scale_44_attempts_storage_budget(pg, monkeypatch, capsys):
+    """Synthetic upper input envelope, full reference copies and 729 actual inserts."""
+    seed_products(pg[0])
+    with Session(pg[1]) as session:
+        reference = extraction.load_work_reference(session, SCHEMA)
+    remaining = 83_610 - len(records.encoded(reference).encode())
+    assert remaining >= 0
+    reference["products"][0]["english_title"] = (reference["products"][0]["english_title"] or "")
+    # Recalculate after normalizing a nullable title; use non-repeating anonymous data.
+    remaining = 83_610 - len(records.encoded(reference).encode())
+    reference["products"][0]["english_title"] += hashlib.shake_256(b"CARD09-reference").hexdigest(remaining)[:remaining]
+    assert len(records.encoded(reference).encode()) == 83_610
+    monkeypatch.setattr(extraction, "load_work_reference", lambda *_: reference)
+    original_send = records.AttemptRecorder.before_send
+
+    def sized_send(self, payload):
+        missing = 99_099 - len(payload["contents"].encode())
+        assert missing >= 0
+        payload["contents"] += hashlib.shake_256(b"CARD09-input").hexdigest(missing)[:missing]
+        original_send(self, payload)
+
+    monkeypatch.setattr(records.AttemptRecorder, "before_send", sized_send)
+    durations, stored_counts, input_sizes = [], [], []
+    for index in range(44):
+        count = 17 if index < 25 else 16
         sid, jid = source(pg)
-        payload = {"model": "synthetic", "contents": "a" * 99_099, "config": {"temperature": 0}}
-        with Session(pg[1]) as session:
-            rec = records.AttemptRecorder(session, jid, sid, {"works": [], "products": []}, "synthetic")
-            started = perf_counter()
-            rec.before_send(payload)
-            rec.on_response(HEADER)
-            rec.prepare_items([])
-            rec.complete([])
-            session.execute(text(f"UPDATE {SCHEMA}.extraction_jobs SET status='empty' WHERE id=:job"), {'job':jid})
-            session.commit()
-            durations.append(perf_counter() - started)
+        raw = "\n".join(f"◆匿名商品{i} 2BOX 1,000円 未開封 翌日発送" for i in range(count))
+        response = HEADER + "\n" + "\n".join(
+            f"◆匿名商品{i}｜2｜1,000円｜BOX｜未開封｜翌日発送｜L{i+1:04d}｜｜｜" for i in range(count)
+        )
+        with pg[0].cursor() as cur:
+            cur.execute(f"UPDATE {SCHEMA}.source_messages SET raw_text=%s WHERE id=%s", (raw, sid))
+        calls = fake_model(monkeypatch, response)
+        started = perf_counter()
+        result = run(pg, sid)
+        durations.append(perf_counter() - started)
+        assert result["status"] == "done", result
+        assert len(calls) == 1 and len(calls[0]["contents"].encode()) == 99_099
+        attempt, = rows(pg, jid)
+        assert attempt["phase"] == "completed" and attempt["response_text"] == response
+        assert attempt["input_payload"]["reference"] == reference
+        assert len(attempt["parsed_items"]) == count and attempt["item_count"] == count
+        with pg[0].cursor() as cur:
+            cur.execute(f"SELECT work_reference_snapshot FROM {SCHEMA}.extraction_jobs WHERE id=%s", (jid,))
+            assert cur.fetchone()[0] == reference
+            cur.execute(f"SELECT id FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s", (jid,))
+            assert {str(row[0]) for row in cur.fetchall()} == {x["extraction_item_id"] for x in attempt["parsed_items"]}
+        stored_counts.append(item_count(pg, jid))
+        input_sizes.append(attempt["input_bytes"])
+    assert sum(stored_counts) == 729
     assert max(durations) <= 5, json.dumps(durations)
+    with capsys.disabled():
+        print("CARD09_STORAGE_SCALE " + json.dumps({"attempts": 44, "items": sum(stored_counts),
+              "reference_bytes": 83_610, "sdk_contents_bytes_each": 99_099,
+              "input_json_bytes_max": max(input_sizes), "task_seconds_max": max(durations)}))
 
 
 def test_analysis_failure_does_not_reclassify_committed_extraction(pg, monkeypatch):
