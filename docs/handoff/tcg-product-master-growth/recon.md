@@ -1047,7 +1047,7 @@ API非使用の独立プロセスで、Client破棄時に接続を閉じるモ�
 
 一次資料: https://github.com/googleapis/python-genai/blob/v2.8.0/google/genai/client.py （2026-09-13確認、Client.close/__enter__/__exit__/__del__）。Context7利用可能ツール0のため、PO起動指示の代替許可で公式ソースを直接確認。本番実物と一致。新モデル仕様を推測して変更しない。
 
-CIが見逃した範囲: tests/test_tcg_work_comparison.py:21で実clientを禁止し、比較テストはmodel_call自体を模擬値へ置換。call_work_modelのClient寿命を検査していなかった。今回の比較用アダプタの実装不具合であり、Geminiの商品判断精度の証拠にはならない。新取込error1のSoftTimeLimitExceededの原因と同一視しない。通常抽出gemini_extraction_svc.py:185はclient変数を保持している。
+CIが見逃した範囲: backend/tests/test_tcg_work_comparison.py:21で実clientを禁止し、比較テストはmodel_call自体を模擬値へ置換。call_work_modelのClient寿命を検査していなかった。今回の比較用アダプタの実装不具合であり、Geminiの商品判断精度の証拠にはならない。新取込error1のSoftTimeLimitExceededの原因と同一視しない。通常抽出gemini_extraction_svc.py:185はclient変数を保持している。
 
 ## 2026-09-13 CARD-LINE-WORK-CLIENT-04実装
 
