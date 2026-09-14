@@ -149,5 +149,39 @@
     "plan_sha256": "50c55b441f71864ac8f79433871f5ed50beb7a501c872db94de9fc82e371c799",
     "log_sha256": "aa00c88f567b415f3f4f59c562dc15bc460bef04b22729c46654cc536082d5ee",
     "interpretation": "ANALYZE alone did not resolve the timeout; root cause unconfirmed"
+  },
+  "sheet_recheck": {
+    "data_rows": 612,
+    "columns": 12,
+    "conditions": {
+      "Sealed box": 418,
+      "No shrink box": 27,
+      "Damaged sealed box": 79,
+      "Damaged case": 2,
+      "Case": 77,
+      "Searched pack": 7,
+      "Unsearched pack": 1,
+      "Opened box": 1
+    },
+    "sha256": "26b0ced2a8b8c88f83fdbcfad4e8f5ce22d853797cfa3c5e5744704d08c9cce0",
+    "local_capture_utc": "2026-09-14T05:03:33.728066+00:00",
+    "method": "public CSV GET via curl with TLS verification; no write"
+  },
+  "public_page_probe": {
+    "head": "179f95d114bb54269b15012412419d16375a1c98",
+    "job": 103864100083,
+    "result": "FAILED",
+    "rows": 4097,
+    "statement_timeout_ms": 10000,
+    "passed_before_failure": [
+      "old-order review first 500",
+      "new-order review first 500"
+    ],
+    "failed": "new-order review offset4000 limit500 (97 remaining)",
+    "not_reached": [
+      "import public pages",
+      "distribution full set"
+    ],
+    "log_sha256": "817f01cdc4df316f391e6419de548e49f1ad30faa3324050c9d5ce26b8eccf2e"
   }
 }

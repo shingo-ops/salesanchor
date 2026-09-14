@@ -4,12 +4,13 @@
 受領確認: 本カード名と対象を確認して開始する。
 mode: handoff
 対象は解析結果と配信の並び順の共通化1件。
+現時点は性能補正の実装役への明示委任待ち。設計担当自身の製品編集は自動承認レビューで拒否済み。
 根拠は docs/handoff/pmg-import-delivery-ssot/design.md のRESULT-ORDER節と自己審査補正。
 事業条件はPO合意済み8状態。条件付き本番許可は原文記録どおりであり番号付きGOを創作しない。
 
 許可する製品差分:
 - backend/app/services/tcg_result_order.py 新規: 固定SQLエイリアス専用の共通ORDER BY。
-- backend/app/services/tcg_analysis_review_svc.py: ORDER BYの共通化。
+- backend/app/services/tcg_analysis_review_svc.py: ORDER BY共通化とitems_sqlのページID先行MATERIALIZED化。表示列/WHERE/count/providersを保持。
 - backend/app/services/tcg_distribution_svc.py: ORDER BYの共通化。
 - backend/app/services/tcg_import_progress.py: read_items内のみ、取込限定source hash/順位を追加しページ/JSON両方を同順にする。
 - backend/tests/test_tcg_result_order.py 新規: 実PostgreSQLで順序と集合/ページを検証する。
@@ -30,11 +31,11 @@ mode: handoff
 手順1
 設計補正を含めて読む。各変更先の現行ブロックを照合し、合意済みORDER BY以外の契約を保持する。
 手順2
-上記6製品/テストファイルを実装。価格は文字列でなくar.price_normalized。順位は8状態、その他は末尾、NULL末尾。
+既存PR差分を保持し、design末尾のページID先行補正を実装。上記6製品/テストファイルが許可対象。価格は文字列でなくar.price_normalized。順位は8状態、その他は末尾、NULL末尾。
 手順3
 実PostgreSQLで3経路を同一fixtureへ通し、IDに対応する値と件数不変、並べ替えの前後で集合一致を検証する。
 既存本番DBは試験に使わない。正式CIの独立試験DBを使いskipを成功としない。
-追加負荷確認は同テストファイル内、4097原文/明細、READ ONLY、各SQL10秒上限。EXPLAIN ANALYZEの実測を記録し、本番速度の保証とはしない。
+追加負荷確認は同テストファイル内、4097原文/明細、READ ONLY、各SQL10秒上限。解析500/取込100で先頭/offset4000と配信全件を確認。review_beforeの新構造への誤流用は禁止。EXPLAIN ANALYZEの実測を記録し、本番速度の保証とはしない。
 手順4
 既存の正規PR手順でreadyのPRを作成し、必須CIの最新HEAD結果を記録する。
 手順5

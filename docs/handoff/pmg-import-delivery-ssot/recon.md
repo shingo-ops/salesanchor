@@ -486,3 +486,10 @@ CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/p
 - 状態8種類・Damaged case 2行・発売日空欄4行。POはDamaged caseをCaseとSealed boxの間と明示した。正規化順以外の価格/数量/商品登録/解析再実行は変更しない。
 - ローカルPostgreSQL16.15でBEGIN READ ONLYを確認、合成292行×10並べ替えを別Python計算と照合し不一致0。証跡[result-order-evidence.json](result-order-evidence.json)。本番データや実サービスのJOIN試験ではない。
 - 指定GASの配信中HTMLを直接取得し、発売日初期sortと商品名日英検索を確認した。サーバー側getInventoryDataは未取得、実ブラウザーのデータ取得・検索再現は未実施。
+
+
+### RESULT-ORDER 公開シート再取得（2026-09-14）
+
+公開CSVをTLS検証有効のcurlで再取得し、612行/12列を確認。状態はSealed box418、No shrink box27、Damaged sealed box79、Damaged case2、Case77、Searched pack7、Unsearched pack1、Opened box1。初回607行と異なるため、配備後の確認に初回の行数・価格等を現行値として流用しない。差分を生じさせた処理主体は未確認。本セッションからシートへの書き込みは0。
+
+CSV SHA256: 26b0ced2a8b8c88f83fdbcfad4e8f5ce22d853797cfa3c5e5744704d08c9cce0。保存/tmp/sa-result-order-sheet-current.csv、集計とローカル取得時刻はresult-order-evidence.jsonのsheet_recheck。Python3.14 urllibの初回取得はCA証明書エラーで失敗したため、証明書検証を無効化せずOSのcurlで取得した。

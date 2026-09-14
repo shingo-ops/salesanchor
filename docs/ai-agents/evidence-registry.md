@@ -37,8 +37,8 @@ evidence:
     summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
 confidence: medium
 tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
-decision: 先行CI3720成功だが、追加4097行試験が10秒上限で失敗（HEAD f982978e）。実装検収REVISE、本番未反映。
-follow_up: 隔離fixtureの統計前後/実行計画を記録し10秒上限で再検証。製品SQL/本番設定は未変更。条件付き許可を番号付きGOと偽らない。
+decision: HEAD179f95d1の公開API末尾ページも10秒超。補正設計自己審査済みだが製品編集は自動承認レビュー拒否。実装検収REVISE、本番未反映。
+follow_up: POによる実装役への明示委任後、正式カードでページID先行補正を実装・同条件CI。権限拒否を迂回しない。
 ```
 
 ```text

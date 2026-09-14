@@ -1202,3 +1202,25 @@ HEAD490e3961、job103862564543: 同じreview items SQLが10秒で停止。1 fail
 API契約の事実: reviewは上限500、importは100。失敗したlimit8192は公開APIから要求できない。次の受入試験は4097原文/明細を保持し、review500/import100の先頭とoffset4000の末尾、distribution4097全件を確認する。レビュー変更前のORDER BYだけを復元した同一SELECTの500件取得も比較する。SQL上限10秒は維持。上限外一括取得失敗を合格へ書き換えず、公開API条件の成否を別判定にする。96行試験の全ページ連結検査も維持する。
 
 pytest-xdistのstdout制約は公式 https://pytest-xdist.readthedocs.io/en/stable/known-limitations.html のOutput節で照合済み。失敗時の実行計画warningはCI原ログに実際に残り、rootがJSONとして抽出した。Context7不在時の許可済み公式資料確認による。
+
+
+### RESULT-ORDER 末尾ページの失敗とページ先行設計（2026-09-14）
+
+HEAD179f95d1、job103864100083: 変更前ORDERの先頭500件、変更後先頭500件は通過したが、変更後offset4000/limit500（残97件）の実SELECTが10秒で停止。取込/配信の追加負荷測定は未到達。1 failed / 3720 passed / 95 skipped。公開API条件でも未合格と確定し、上限外だけの制約とは扱わない。
+
+非実行計画はLimit97の下にResult4097→Sort4097があり、表示用計算を含むResultがOFFSETより内側にある。各ノードの実時間は未取得なので主因の断定は避ける。対処として、review items_sql内だけにresult_order_page AS MATERIALIZEDを追加し、既存_BASE_FROM/WHERE/共通ORDER BYでei.idのページを先に確定する。外側はそのIDへJOINし、元の全SELECT列・WHERE・共通ORDERを保持。外側LIMIT/OFFSETを除き、表示用review_version/product_confirmed等をページ対象のみに計算する。count/providers/共有状態判定/DB/API型は変更しない。
+
+同一SQL内の一意ei.idページを結合するため、集合・状態・順序を同じスナップショットで保持する。トレードオフはページ対象行について状態JOINを2回評価すること。全件の表示用計算をOFFSETで捨てる処理を防ぎ、96行の全ページ一致と4097行の先頭/末尾・保存値保持を同条件で再検証する。数値改善は合格前に主張しない。
+
+公式PostgreSQL16 WITH §7.8.3（https://www.postgresql.org/docs/16/queries-with.html）でMATERIALIZEDの分離評価を確認。Context7不在の許可済み代替。Planner→Architectを同一AIで審査し、この限定補正設計はAPPROVE。初期「reviewはORDER BYだけ」契約を本節で補正し、実装検収は試験成功までREVISE。既存カードの同ファイル許可を更新、正式card-lint後に変更する。新たなDB操作/共通状態サービス変更は含めない。
+
+
+### RESULT-ORDER 性能補正の実装拒否・正式引き継ぎ待ち（2026-09-14）
+
+ページID先行化の製品編集をsandboxの自動承認レビューが実行前に拒否した。理由原文「専用ブランチ上の可逆的な製品コード変更ですが、設計担当セッションでは製品コード編集が明示的に禁止され、実装GO・実装役への正式移行も確認できません。」。別コマンドや別実行経路で同じ編集を再試行していない。git diff --statで拒否後の未保存差分は文書4ファイルのみと確認し、性能補正コード/試験変更は未実行。
+
+最初の並び順実装はPR3501に存在するが、今回の性能補正は設計とカードだけ。最新製品/試験HEAD179f95d1は負荷試験失敗の状態。設計担当の範囲を自動的に実装役へ拡張しない。次はPOによる本補正の実装役への明示委任を受領し、実装役へCARD-TCG-RESULT-ORDER-01と本節を渡す。性能補正の検証前にマージGOを求めない。
+
+実装役への確定手順: items_sqlのsource_cte直後へresult_order_page AS MATERIALIZEDを追加し、既存_BASE_FROM/WHERE/共通ORDER/LIMIT/OFFSETでei.idだけを選ぶ。外側の既存全SELECT列とWHEREを保持、_BASE_FROMの直後へページID JOINを挿入し、外側LIMIT/OFFSETだけを除く。API型・条件共通関数・DB/CI設定は変更しない。負荷試験のreview_beforeは新構造へORDERだけ置換して旧SQLと誤表示しないよう削除し、旧SQLの観測結果は前節のCI証跡に保持する。4097行・各SQL10秒・公開上限500/100・offset4000・配信全件・保存値比較は残す。
+
+同一AIの限定補正設計審査APPROVEは、試験用実装方針の審査であり実装成功の判定ではない。実装検収REVISE・PR未マージ・本番/シート未変更。権限拒否とSQL負荷失敗は別の停止理由として扱う。
