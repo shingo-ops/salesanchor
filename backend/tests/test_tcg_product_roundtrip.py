@@ -19,6 +19,7 @@ def snapshot():
     return {
         "product": {
             "id": "00000000-0000-4000-8000-000000000001",
+            "tcg_uuid": "00000000-0000-4000-8000-000000000001",
             "product_code": "PM001",
             "name": "商品",
             "mark": None,

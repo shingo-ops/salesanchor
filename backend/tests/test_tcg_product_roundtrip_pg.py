@@ -116,7 +116,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
         engine = create_async_engine(url)
         try:
             async with AsyncSession(engine) as db:
-                original = await svc.export_csv(db)
+                original = await svc.export_csv(db, "商品")
                 changes = {
                     "japanese_title": "編集商品",
                     "english_title": " new title ",
@@ -168,7 +168,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     assert [r for r in before[table] if r[0]["product_id"] in untouched] == [
                         r for r in after[table] if r[0]["product_id"] in untouched
                     ]
-                next_raw = await svc.export_csv(db)
+                next_raw = await svc.export_csv(db, "商品")
                 assert (await svc.preview_update(db, next_raw, "again.csv"))["unchanged"] == 2
         finally:
             await engine.dispose()
@@ -186,7 +186,7 @@ def test_other_field_edit_keeps_inactive_reference_and_word_rows(atomic_pg, monk
         engine = create_async_engine(url)
         try:
             async with AsyncSession(engine) as db:
-                raw = edit(await svc.export_csv(db), {"mark": "new"}, single=True)
+                raw = edit(await svc.export_csv(db, "商品"), {"mark": "new"}, single=True)
                 assert (await submit(db, raw))["updated"] == 1
             after = observe(connection, False)
             for table in svc.WORDS.values():
@@ -214,7 +214,7 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
         engine = create_async_engine(url)
         try:
             async with AsyncSession(engine) as db:
-                raw = await svc.export_csv(db)
+                raw = await svc.export_csv(db, "商品")
                 await svc.preview_update(db, raw, "x.csv")
                 with connection.cursor() as cursor:
                     if mode in ["search", "exclude"]:
@@ -227,7 +227,7 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
                             "active": "is_active=true",
                             "hidden": "required_output_value='changed'",
                         }[mode]
-                        cursor.execute(f"UPDATE public.products SET {assignment}")
+                        cursor.execute(f"UPDATE public.products SET {assignment} WHERE product_code LIKE 'RT%%'")
                 if mode in ["unknown", "date", "reference"]:
                     raw = edit(
                         raw,
@@ -301,7 +301,7 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
         engine = create_async_engine(url)
         try:
             async with Writer(engine) as db:
-                records = svc.read_records(await svc.export_csv(db))
+                records = svc.read_records(await svc.export_csv(db, "商品"))
                 for row in records[1:]:
                     row[records[0].index("japanese_title")] = "Changed"
                     row[records[0].index("search_keywords")] = "new,word"
@@ -319,8 +319,9 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                     and len(after["tcg_product_import_jobs"]) == 1
                     and len(after["tcg_product_import_rows"]) == 2
                 )
-                assert all(r[0]["name"] == "Changed" for r in after["products"])
-                for product in after["products"]:
+                seeded = [r for r in after["products"] if r[0]["product_code"].startswith("RT")]
+                assert all(r[0]["name"] == "Changed" for r in seeded)
+                for product in seeded:
                     pid = product[0]["tcg_uuid"]
                     assert sorted(
                         (r[0]["position"], r[0]["keyword"])
@@ -374,7 +375,7 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
         engine = create_async_engine(url)
         try:
             async with Writer(engine) as db:
-                await submit(db, edit(await svc.export_csv(db), {"japanese_title": "new"}))
+                await submit(db, edit(await svc.export_csv(db, "商品"), {"japanese_title": "new"}))
             await asyncio.wait_for(asyncio.to_thread(competing, False), 5)
         finally:
             await engine.dispose()

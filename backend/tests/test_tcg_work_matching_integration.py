@@ -688,12 +688,17 @@ def seed_guard_dictionary(connection, schema):
         products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
                     [("vol.1", 3)], [("マスターボールミラー", 8)])]
         for code, title, work, category, search, exclude in products:
-            cursor.execute(sql.SQL("""INSERT INTO public.products
-                (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
-                {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING tcg_uuid""").format(
-                    *[sql.Identifier(schema)] * 2), (code, title, work, category))
-            pid = cursor.fetchone()[0]
+            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            existing = cursor.fetchone()
+            if existing:
+                pid = existing[0]
+            else:
+                cursor.execute(sql.SQL("""INSERT INTO public.products
+                    (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
+                    SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
+                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING tcg_uuid""").format(
+                        *[sql.Identifier(schema)] * 2), (code, title, work, category))
+                pid = cursor.fetchone()[0]
             for table, entries in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for word, position in entries:
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
@@ -1000,6 +1005,8 @@ CARDSET_KINDS = ["フシギダネ", "チコリータ", "キモリ", "ナエト�
 def seed_cardset_dictionary(connection, schema):
     with connection.cursor() as cursor:
         provision(cursor, schema)
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks(schema))
         products = [
             ("PM0263", "30th CELEBRATION", ["30th CELEBRATION"],
              ["FUTURISTIC", "プレミアムデッキセット", "エーフィ"]),
@@ -1230,6 +1237,8 @@ BUNDLE_BOUNDARIES = [('MEGA 30th CELEBRATION カードセット (1種セット)'
 def seed_bundle_dictionary(connection, schema):
     with connection.cursor() as cursor:
         provision(cursor, schema)
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks(schema))
         for code, title, search, exclude in BUNDLE_SEEDS:
             cursor.execute(sql.SQL("""INSERT INTO public.products
                 (product_code,name,category_class,is_active,tcg_uuid,division_id,work_id,manufacturer_id,product_category_id)
