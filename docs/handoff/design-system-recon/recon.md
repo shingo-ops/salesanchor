@@ -761,3 +761,12 @@ AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非los
 
 
 AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### 2026-09-14 配備前提の停止
+
+AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合。evidence-registryの追記競合は双方保持、main全行の包含と製品3hash一致を確認。製品HEAD f3598fb2のCIは38成功/8対象外、process-artifactsだけ今回GO未受領のため停止している。
+
+別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
+
+同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。

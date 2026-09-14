@@ -1,0 +1,43 @@
+{
+  "checked_at": "2026-09-14T02:05:41.014092+00:00",
+  "implementationHead": "f3598fb240107396e265f3edc93d9367f33154f1",
+  "implementationCi": {
+    "success": 38,
+    "skipped": 8,
+    "failure": {
+      "name": "process-artifacts gate",
+      "reason": "GO section missing; no PO GO received",
+      "run": 34797819740,
+      "job": 103834237322
+    }
+  },
+  "priorDeployment": {
+    "head": "e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea",
+    "run": 34797490804,
+    "job": 103833308323,
+    "conclusion": "failure",
+    "failedStep": "Run database migrations",
+    "migration": "migrations/20260913_210000_tcg_cardset_bundle_registration.sql",
+    "error": "cardset bundle: identity mismatch PM0264",
+    "backup": {
+      "file": "salesanchor_db_20260914_105621.sql.gz",
+      "size": "7.2M"
+    },
+    "finalHealthStep": "passed",
+    "rawLogSha256": "70f974ba1be30b0bac2d2009ea7500c29f412f890ed399ccb24aa8ce11aa1e09"
+  },
+  "publicHealth": {
+    "transport": "curl with TLS verification enabled",
+    "appHttp": 200,
+    "apiHttp": 200,
+    "apiBody": {
+      "status": "ok",
+      "database": "connected",
+      "redis": "connected",
+      "celery": "connected"
+    },
+    "initialPythonAttempt": "local CA trust lookup failed; not counted as service failure"
+  },
+  "relatedRecordPr": "https://github.com/shingo-ops/salesanchor/pull/3496",
+  "action": "Hold AP merge/deploy. No repeated production deployment, migration changes, or data-name rollback."
+}

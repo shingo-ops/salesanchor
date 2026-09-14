@@ -35,3 +35,12 @@ LeadsPage登録/DrawerとLeadEditPageの取消/送信6件のみ既存Buttonへ�
 ## 審査と次の一手
 
 実装検収APPROVE。同一設計AIによる自己審査・直接検証であり、独立した第二者レビューとは称しない。3送信契約/原文の維持と最終240表示・47操作前後組の成功を根拠に、保存・PR更新へ進む。設計段階の既存3試験と、今回担当実行70/451の区別を保持。最新mainの影響を再照合してCI確認、今回番号付きGOをPOへ依頼する。新規GOの代筆・マージ・本番操作は行わない。
+
+
+### 2026-09-14 配備前提の停止
+
+AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合。evidence-registryの追記競合は双方保持、main全行の包含と製品3hash一致を確認。製品HEAD f3598fb2のCIは38成功/8対象外、process-artifactsだけ今回GO未受領のため停止している。
+
+別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
+
+同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。
