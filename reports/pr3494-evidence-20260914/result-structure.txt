@@ -1,0 +1,89 @@
+{
+  "server": "postgres (PostgreSQL) 16.15 (Homebrew)",
+  "source_sha256": "5a2929621bd10f67af29138499e93920c971961e82dcad985527f20e4a2d2160",
+  "cases": [
+    {
+      "case": "normal_other_schema",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "migration_repeat",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "search_path=public",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "search_path=tenant_probe, public",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "search_path=tenant_reference, public",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "search_path=pg_catalog",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "whitespace_parentheses",
+      "accepted": true,
+      "rows_unchanged": true
+    },
+    {
+      "case": "wrong_check",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "missing_check",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "wrong_fk_column",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "wrong_fk_delete",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "unvalidated_fk",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "deferred_fk",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "wrong_unique_column",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "wrong_fk_schema",
+      "accepted": false,
+      "rows_unchanged": true
+    },
+    {
+      "case": "equivalent_rewritten_expression",
+      "accepted": false,
+      "rows_unchanged": true
+    }
+  ],
+  "passed": 16,
+  "note": "Semantic equivalent rewritten expression is conservatively rejected; no general semantic equivalence guarantee. Catalog comparator only, not integrated migration."
+}
+isolated_postgres=STOPPED; production_connections=0; tcp_disabled=true
