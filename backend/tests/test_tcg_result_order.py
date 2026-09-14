@@ -175,9 +175,10 @@ def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
     assert snapshot(pg) == before
 
 
-def test_larger_result_set_query_plans_and_read_only_delivery(pg, capsys):
+def test_larger_result_set_query_plans_and_read_only_delivery(pg):
     """Measure real queries over 4,097 rows; this is not production telemetry."""
     import json
+    import warnings
 
     from psycopg2.extras import execute_values
     from sqlalchemy import text
@@ -211,6 +212,20 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg, capsys):
                        "condition_id,condition_canonical,condition_basis,quantity_normalized,price_normalized,"
                        "note_ja,status,needs_review,engine_version) VALUES %s", values)
     import_id = link_import(pg, [baseline, *entries])
+    statistics = {}
+    with pg["connection"].cursor() as cursor:
+        for phase in ("before_analyze", "after_analyze"):
+            if phase == "after_analyze":
+                # Prepare planner statistics only in the disposable fixture DB.
+                # This does not change production settings or the 10-second bound.
+                for table in ("source_messages", "extraction_jobs", "extraction_items", "analysis_results",
+                              "import_jobs", "import_job_messages", "tcg_products", "conditions",
+                              "item_corrections", "supplier_channels", "tcg_suppliers", "tcg_series"):
+                    cursor.execute(f"ANALYZE tenant_004.{table}")
+            cursor.execute("SELECT relname,reltuples FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
+                           "WHERE n.nspname='tenant_004' AND relname IN "
+                           "('source_messages','extraction_jobs','extraction_items','analysis_results') ORDER BY relname")
+            statistics[phase] = cursor.fetchall()
     before = snapshot(pg)
     plans = []
 
@@ -226,7 +241,15 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg, capsys):
                     consumer = ""
 
                     async def execute(self, statement, parameters=None):
-                        result = await db.execute(statement, parameters)
+                        estimated = (await db.execute(text("EXPLAIN (FORMAT JSON) " + str(statement)),
+                                                       parameters)).scalar_one()[0]
+                        try:
+                            result = await db.execute(statement, parameters)
+                        except Exception:
+                            warnings.warn("RESULT_ORDER_QUERY_TIMEOUT_PLAN " + json.dumps({
+                                "consumer": self.consumer, "statistics": statistics,
+                                "plan": estimated}), UserWarning, stacklevel=2)
+                            raise
                         explanation = await db.execute(text("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) "
                                                             + str(statement)), parameters)
                         plan = explanation.scalar_one()[0]
@@ -254,7 +277,9 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg, capsys):
     assert [r[7] for r in output] == [r[3] for r in expected]
     assert snapshot(pg) == before
     assert {p["consumer"] for p in plans} == {"review", "import", "distribution"}
-    with capsys.disabled():
-        print("RESULT_ORDER_QUERY_PLANS " + json.dumps({"rows": 4097, "sources": 4097,
-              "transaction_read_only": True, "statement_timeout_ms": 10000,
-              "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI", "plans": plans}))
+    # pytest-xdist does not forward worker stdout; a warning preserves the
+    # bounded measurements in the existing CI log without changing CI settings.
+    warnings.warn("RESULT_ORDER_QUERY_PLANS " + json.dumps({"rows": 4097, "sources": 4097,
+                  "transaction_read_only": True, "statement_timeout_ms": 10000,
+                  "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI",
+                  "statistics": statistics, "plans": plans}), UserWarning, stacklevel=1)

@@ -80,5 +80,20 @@
     "failure": "process-artifacts gate: missing PR-specific GO record",
     "pytest_log_sha256": "6e204ad053134c4f1636b78c4627cac9b16f3f9b064ef6c8655ff55c21c1a334",
     "production_changed": false
+  },
+  "load_probe_initial": {
+    "head": "f982978e3840efd7054498196b9a856c735831df",
+    "job": 103860869068,
+    "rows": 4097,
+    "sources": 4097,
+    "result": "FAILED",
+    "cause_observed": "analysis review items SQL canceled by 10s statement_timeout; root cause not yet established",
+    "suite": {
+      "failed": 1,
+      "passed": 3720,
+      "skipped": 95,
+      "seconds": 277.76
+    },
+    "log_sha256": "e1ac76d5e8f9bc0a56d5743ff10dff30b72536bf7c1ca313d5996b9df3cee016"
   }
 }

@@ -1182,3 +1182,14 @@ PO原文「推測は禁止して事実確認を怠らずに確実性を重視し
 負荷の未確認を補うため、既存試験ファイルに4,097明細/4,097原文の隔離CI試験を追加。3サービス実SQLをREAD ONLY・各SQL10秒上限で実行し、EXPLAIN ANALYZEの時間/行数を記録する。全件の順序と保存値の前後一致も検証。公開CSV607行の約6.7倍だが、実本番の件数/分布/設備と同一ではない。温まったキャッシュの測定であり、本番応答時間の保証としない。試験作成時点では未実行。
 
 本番ブラウザー読取は既存Chrome Profile 34が使用中のため失敗し、閉じる/ロック解除/別人セッション利用はしていない。過去の人間用SSH鍵許可は別診断限定と文書に明記されており、本件へ流用していない。本番相当EXPLAINと認証済み本番API照合は引き続き未確認。
+
+
+### RESULT-ORDER 負荷試験失敗・実装検収保留（2026-09-14）
+
+HEAD f982978e、CI job103860869068の追加試験で解析レビューitems SQLが10秒statement_timeoutに達した。1 failed / 3720 passed / 95 skipped、277.76秒。通常APIの上限500を超える4097件一括取得なので、本番障害や本変更だけの退行と断定しない。だが負荷検証は不合格であり、先行CI成功をもって本番反映可とはしない。実装検収REVISE、マージ/本番停止。原ログ /tmp/sa-result-order-load-ci.txt と証跡jsonにhash保存。
+
+隔離fixtureの統計情報が実行計画へ影響する可能性を切り分ける。Context7ツール0件を再確認し、許可済み代替で公式 https://www.postgresql.org/docs/16/sql-analyze.html と https://www.postgresql.org/docs/16/using-explain.html を読了。統計値の整備は計画選択に必要だが、この失敗原因が統計不足と確定したわけではない。
+
+次の診断はfixture内の対象12表にANALYZE、前後reltuplesを記録、同じ4097件/10秒上限を保持して3経路を実行する。失敗時は非実行EXPLAINの計画を記録して例外を再送出する。成功時もCIのwarning summaryへ実測を記録し、pytest-xdistのworker stdout非転送に依存しない。製品SQL・本番設定を変更しない。
+
+本番確認経路: main.py:570,600,605のprefixは/api/v1。解析GETはtcg_analysis_review.py:91（上限500）、取込GETはtcg_line_import.py:663（上限100）。配信previewは件数/除外内訳のみ（tcg_distribution.py:156）、行値の確認APIではない。実配信は別POSTであり、コード配備だけでシート更新済みと扱わない。

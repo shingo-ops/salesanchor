@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| 解析結果・配信の共通並び順 | Agent | PR #3501・先行CI3720成功/95skip。4097行READ ONLY負荷試験を追加、CI再確認待ち | 追加CIの実測後、番号付きGO/本番確認条件を再照合。未マージ・本番未反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-14 |
+| 解析結果・配信の共通並び順 | Agent | PR #3501・負荷試験4097行の解析GETが10秒で停止。3720成功/追加1失敗、実装検収保留 | 隔離DBの統計/実行計画で原因切分。10秒上限維持。未マージ・本番未反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-14 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
 | Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | 25明細再解析済み（既知15商品15/15、要確認17→13）。通常記録A/CARD09実装・PR3494提出、main59f644cd統合/競合解消。最新検証はPR本文参照 | PO指定最終レビューとGO #3494待ち。13明細保留・単位/フラグ不整合は未解消。配信未実施 | run00b3d27e/67245fc0・snapshot25 / CARD09旧CI34767671465・再開統合9f251926 / PR3494・recon | 2026-09-14 |
