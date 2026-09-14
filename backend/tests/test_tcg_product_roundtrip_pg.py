@@ -40,7 +40,7 @@ def seed(connection, count=2):
                 "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id,tcg_uuid) "
                 f"VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'),gen_random_uuid()) RETURNING tcg_uuid",
                 (
-                    "SENTINEL" if index == 0 else f"RT{index:03}",
+                    "RTSENT" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
                     None if index == 0 else "",
                     None if index == 0 else "",

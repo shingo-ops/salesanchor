@@ -25,10 +25,12 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposabl
 
 async def create_schema(conn, schema, corrections=True):
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
+    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
     for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
         stmt = stmt.strip()
         if stmt:
             await conn.exec_driver_sql(stmt)
+    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",

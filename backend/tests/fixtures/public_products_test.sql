@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     manufacturer_id      UUID,
     product_category_id  UUID,
     category_class       TEXT,
+    required_output_value VARCHAR(255),
     is_active            BOOLEAN DEFAULT true,
     is_archived          BOOLEAN NOT NULL DEFAULT FALSE,
     created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -33,5 +34,6 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_category_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_class TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS required_output_value VARCHAR(255);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_tcg_uuid
-    ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
+    ON public.products (tcg_uuid);

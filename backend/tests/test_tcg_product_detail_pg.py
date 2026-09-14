@@ -31,8 +31,8 @@ async def detail_db(product_db, monkeypatch):
     monkeypatch.setattr(details, "TCG_SCHEMA", schema)
     await db.execute(text(
         "INSERT INTO public.products "
-        "(product_code,name,name_en,mark,category_class,is_active,tcg_uuid) "
-        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,gen_random_uuid())"
+        "(product_code,name,name_en,mark,category_class,is_active,tcg_uuid,required_output_value) "
+        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,gen_random_uuid(),'Keep this')"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_search_keywords(product_id,keyword,position) "
@@ -99,8 +99,8 @@ def edit_pg(pg, monkeypatch):
         for code in ("DETAIL", "SENTINEL"):
             cur.execute(
                 "INSERT INTO public.products "
-                "(product_code,name,category_class,is_active,tcg_uuid) "
-                "VALUES (%s,'Original','Keep category',true,gen_random_uuid()) RETURNING tcg_uuid", (code,))
+                "(product_code,name,category_class,is_active,tcg_uuid,required_output_value) "
+                "VALUES (%s,'Original','Keep category',true,gen_random_uuid(),'Keep output') RETURNING tcg_uuid", (code,))
             pid = cur.fetchone()[0]
             for table in details.WORD_TABLES.values():
                 cur.execute(f"INSERT INTO {durable.SCHEMA}.{table}(product_id,keyword,position) "
