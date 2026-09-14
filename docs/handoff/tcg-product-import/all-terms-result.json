@@ -620,7 +620,9 @@
     "ruff": "passed",
     "database_tests": "not run locally; Docker unavailable; formal CI required",
     "real_module_python312_tests": 48,
-    "lint_ci": "exit 0; ruff passed; bandit/mypy findings are tolerated by existing Makefile, not claimed clean"
+    "lint_ci": "exit 0; ruff passed; bandit/mypy findings are tolerated by existing Makefile, not claimed clean",
+    "saved_catalog_fixtures": 293,
+    "guard_tests": 12
   },
   "hashes": {
     "backend/app/services/tcg_analyzer_svc.py": "49f5c8ed5ea317ddd381c8b7fc80f432f53d42aaba7710954ae87c0aaa9bfe8e",
@@ -634,5 +636,61 @@
   "review": "same-AI self-review; no independent second reviewer",
   "release": "not deployed; official CI/release conditions pending",
   "pr": 3499,
-  "integration": "Merged main e69da6ed; evidence registry conflict resolved by retaining both entries; product matcher unchanged"
+  "integration": "Merged main e69da6ed; evidence registry conflict resolved by retaining both entries; product matcher unchanged",
+  "ci_first": {
+    "run": 34798116160,
+    "head": "f5fdf8a21cfae30a04df0adb433e9a6ec13953f6",
+    "passed": 3714,
+    "skipped": 95,
+    "failed": 4,
+    "coverage_percent": 65.05,
+    "failures": [
+      "PM0179 basis changed",
+      "PM0256 now matches its title",
+      "PM0257 now matches its title",
+      "AST guard test omitted new functions"
+    ],
+    "resolution": "design section 24-5; product logic unchanged; full CI rerun required"
+  },
+  "latest_snapshot": {
+    "at": "2026-09-14T02:05:10.850978+00:00",
+    "snapshot_sha256": "6f9ea66653986fc4cd95753d1b910fe665aa29a4644bc388ff029cdd934bfde9",
+    "reference_sha256": "a4d1df56b608e96c5dc6186a0bc11bb8e58ee66dc0585a32cc6c8c2d153ea675",
+    "variants": {
+      "and": {
+        "changed_tuple": 8,
+        "changed_outcome": 4,
+        "resolved_before": 1144,
+        "resolved_after": 1148,
+        "lost_resolution": 0,
+        "resolved_code_switch": 0
+      }
+    },
+    "fixed_truth": {
+      "items": 4,
+      "before_correct": 0,
+      "after_correct": 4,
+      "scope": "Four source/master-verified regression cases; NOT population accuracy."
+    }
+  },
+  "snapshot_changes": "49 exclusion row IDs replaced externally; every non-ID field and all other tables unchanged; latest replay identical",
+  "timing": {
+    "items": 200,
+    "baseline_seconds": 0.5082603773626033,
+    "all_terms_seconds": 0.556712875055382,
+    "scope": "uncached local component, not production latency"
+  },
+  "production": {
+    "matcher_sha256": "d0c5f1eec36e06469864833fe1076e7f240268016b1afe6fb413c4ddb0f687d0",
+    "still_old": true,
+    "latest_deploy_failure": 34797490804,
+    "failure": "cardset bundle: identity mismatch PM0264",
+    "backup_report": "salesanchor_db_20260914_105621.sql.gz (7.2M), successful backup step of run34797490804; restore not tested",
+    "writes_by_this_task": 0
+  },
+  "release_blockers": [
+    "process-artifacts gate34798116217: missing numbered PO GO record",
+    "existing deployment failure PM0264 identity mismatch",
+    "full CI rerun pending"
+  ]
 }
