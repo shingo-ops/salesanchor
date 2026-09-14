@@ -432,6 +432,47 @@ PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取�
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
 
+## 抽出試行記録2件の限定是正・実装開始（2026-09-14）
+EV-20260914-ATTEMPT-INTEGRITY。PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映、でーたのSSOTは厳守」。検証後反映の意図を受領。新規PR番号のGO原文は未受領で創作しない。
+既存担当error_visibility_reconにCARD-PMG-ATTEMPT-RECORD-FIX-01を交付、正式card-lint exit0。rootは設計/文書/本番read-only照合を担当、製品は担当が所有。他者変更を戻さない。公式new-worktreeでrelease/attempt-record-integrity-fix、base5afb5af1、UUID98aa2dcc-41fc-4469-a375-b259b8df81ec。未保存作業を保護する公式回収の既定安全検査を維持。
+旧PR3494は別操作でマージ済み。main5afb5af1の対象2ファイルはe594d3efと同一。rootの実PG再現/候補比較をreports/pr3494-evidence-20260914へ保存。限定修正設計はdesign.md同日末尾、同一AI自己審査APPROVE。製品実装・正式PG/CI/コードレビューはこれから。
+root本番read-onlyでgitHEAD5afb5af1、backend/workerの対象serviceSHA28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4一致。PG16.13、2schema各9制約がPG16.15期待値と一致。本番の具体的な件数は非公開の調査記録に保持し、この公開候補文書には転記しない。この照合は将来の不具合不存在の証明ではない。実本番DML/再抽出/Sheets呼出0。
+run34804870906のdeploy成功とbackup生成ログを確認、実ファイルの存在とgzip -t exit0を確認。復元試験は未実施。公開health status ok・database/redis/celery connected。今回の追加修正反映はまだ未実施。
+
+### 正式CIによる並行検証へ進む判断（2026-09-14）
+別担当コードレビューは製品service4d255b7c/migration0c39573b、最終testfe5f2593でAPPROVE。root hash照合成功。担当の初回対象試験73成功/1失敗は専用DBにsalesanchor_appがない権限fixture不足、実CI test.yml:180–203のロール定義をroot照合。対象だけで全app coverage測定した初回閾値未達を全体試験の合格にしない。
+最終版は実行途中17/74で専用PG空き789→645MBを担当が観測。以前の2走行の保持DBも同専用環境に残る。容量不足を確定エラーと断定せず、不足予防で試験中断・専用profile拡張を指示。本番/他者DBは変更せず、保持fixtureを削除しない。
+ローカル全試験完了をPR提出前の必須条件にしていたカード02を改訂。これはローカル環境都合で正式CIも止めないためで、レビュー/試験/GOのマージ基準は緩和しない。未完了をPR本文に記載し、正式Backend CI全体とMigration SQLの成功を必須とする。commit/PRは検証対象を固定する手順、本番反映の合格ではない。
+
+## 公開前停止（2026-09-14・ローカル追補）
+本便commit e9ac6ef6c0db9232f4a471db9f0f207c3549ab36、16files/+854-4、root実在確認。製品service4d255b7c/migration0c39573b、最終testfe5f2593のコードレビューAPPROVE、担当はpytest未再実行のread-onlyレビュー。担当Docker最終版は33成功途中で容量不足予防のためSIGINT/exit2、初回73成功1失敗（専用DBロール不足）と区別。全74件成功/全体coverage合格/正式CI成功ではない。
+自動承認審査は通常pushを実行前に拒否。理由は、新しいバックエンド修正・migration・証跡16ファイルを公開repoへ送信する具体payload/公開先の明示承認がないこと。公開先 https://github.com/shingo-ops/salesanchor 、承認対象commit上記。操作実行0、PR未作成、CI未開始、本便本番反映0。再試行・別経路・ガード変更なし。POの公開承認を求める前に具体差分/レビューと保存を完了。
+専用試験環境は本便のみ停止/default context復元を担当へ指示。ホスト空き727MiBの実測低下を受け、VM容量拡張はしない。ログ保持と本便新規profile以外0の確認後、自作合成試験環境だけ公式回収する限定cleanupを許可。他者DB/本番/既存profileの変更は禁止。cleanup完了は別途実測する。
+本追補は未コミットで、既存e9の16ファイルへ自動的に追加公開しない。
+
+限定cleanup結果: 担当が本便専用pmg-integrity-20260914の停止exit0、default復元後、公式colima delete --profile pmg-integrity-20260914 --dataを通常確認で実行しexit0。途中unlock警告あり、追加unlock/迂回なし。最終colima listは既存3profileのみ全Stopped、context default。host空き727MiBから4.9GiBへ回復と担当報告。rootもlist/context/dfを直接再確認。専用PG/Python2containerの合成試験環境だけを回収、既存環境/本番未変更。ローカルログ・未投稿PR案はreports/attempt-integrity-local-validationへ保存、これはe9の公開16ファイルに含めない。リモート新branchはgit ls-remoteで不在確認。次はe9ac6ef6の16ファイルを公開originへpush/PR提出する明示承認。その後正式CIで全体試験を実行し、新PRの番号付きGOを含む既存承認経路を確認する。
+
+## 公開承認解消・PR3504正式検証（2026-09-14・ローカル追補）
+公開先shingo-ops/salesanchorへe9ac6ef6の16ファイルをpush/PR提出する具体的質問に、PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したならGO」を受領。通常push成功、PR https://github.com/shingo-ops/salesanchor/pull/3504 提出済み。前節の公開承認待ち/未提出は解消。本回答を未発言の「GO #3504」に変換しない。
+初回CIのtest-schema-dupは試験内に本番テーブル定義2コピーを検出して失敗。CARD-PMG-ATTEMPT-RECORD-FIX-03により既存正本provision()を利用する試験1ファイルのみ修正。47f72ab3674eba06e28f1cef86b1757986995750を通常commit/push。製品2ファイルのハッシュは前節から不変。別担当attempt_record_reviewは最終test c21ad750d340cb87e735def748eab54d57137fd776a0a19cc0d1bc5afb6d7344をread-only確認しAPPROVE（本人による試験再実行はなし）。rootはコミット/PR HEAD一致と差分1file +7/-3を直接確認。
+最新HEADのschema-dup job103863928255 SUCCESS、lint-backend-internal103863947122 SUCCESS、実DB全件dryrun103863945900 SUCCESS、migration SQL実DB103864084307 SUCCESS、tenant構造103864074976 SUCCESS。Backend pytest103863947027は確認時実行中で合格未確定。
+rootはprocess-artifacts job103863928473の失敗ログを直接取得。理由はPR本文のGO記録セクション欠落のみで、番号付きGO受領後の転記を要求。本便マージ/本番反映は未実施。ガード迂回は行わない。本追補とCARD03・ローカルログは未コミットであり公開済みpayloadに追加されていない。
+本追補の初回保存コマンドは作業ディレクトリがmainを指していたため保護hookが実行前に拒否。専用release worktreeを明示する正式な実行場所へ修正し、保護設定は変更しない。
+
+### 最新HEAD正式CI完了（2026-09-14 14:07 JST以降確認）
+rootがBackend job103863947027のGitHub実行ログを直接取得。3746 passed / 95 skipped / 309 warnings / 失敗0、268.95秒、coverage65.07%（基準60%合格）。HEAD47f72ab3674eba06e28f1cef86b1757986995750に対するPR全checksは37SUCCESS/4SKIPPED/1FAILURE、実行中0。4SKIPPEDを試験合格数に含めない。唯一FAILUREは前述process-artifactsのGO記録欠落。実DB移行・保存先整合・schema-dup・backend lintは成功済み。
+現状のコード修正/差分レビュー/正式CIの技術検証は完了。CLAUDE.md:57（ADR-136）は番号必須・番号なし曖昧肯定は無効と規定しており、POの未発言のGO #3504を創作しない。番号付きGO受領と最新HEAD/CI/バックアップ照合の後に正式経路で反映する。本便未マージ・未配備。これはGemini障害全般の解決保証ではなく、容量超過記録と構造検証の2点の限定検証。
+
+### GO #3504受領・反映前確認（2026-09-14 14:11 JST記録）
+- GO発行者: Shingo（shingo-ops、PO本人）
+- 日時: 2026-09-14 14:11 JST（受領後の記録時刻）
+- GO原文: GO #3504
+- バックアップ確認: あり。既存の2026-09-14 13:07 JST生成分について14:11 JSTに本番で存在とgzip -t終了0を再確認。復元試験は未実施。通常配備の事前バックアップも成功を確認する。
+対象PR3504承認時HEAD47f72ab3674eba06e28f1cef86b1757986995750。本便製品は容量超過時の実測サイズ記録・既存9制約の実構造照合の2点のみ。既存extraction_attemptsを記録正本として維持し、追加保存先/推測補完/過去データ書換え/再抽出/配信は行わない。対象migrationは20260914_010000_tcg_extraction_attempts.sqlのみ、相乗りPRなし。
+rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed28ea691ea93b04e4245afa8d744d85。本番backend/workerの対象serviceSHAはいずれも旧版28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4。現時点は本便未反映。
+CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
+
+
 
 ## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
 

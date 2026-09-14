@@ -54,6 +54,7 @@ class AttemptRecorder:
         self.reference = reference
         self.prompt_version = prompt_version
         self.response_saved = False
+        self._oversized_parsed_bytes: int | None = None
 
     def before_send(self, payload: dict) -> None:
         """The payload is exactly the model/contents/config passed to the SDK."""
@@ -132,19 +133,26 @@ class AttemptRecorder:
             raise RecordError("RESPONSE_TOO_LARGE")
         self.response_saved = True
 
+    def _parsed_size(self, body: str) -> int:
+        size = len(body.encode("utf-8"))
+        if size > MAX_BYTES:
+            self._oversized_parsed_bytes = size
+            raise RecordError("PARSED_TOO_LARGE")
+        return size
+
     def prepare_items(self, items: list[dict]) -> list[dict]:
         if not self.response_saved:
             raise RecordError("RESPONSE_NOT_RECORDED")
         rows = [{**item, "extraction_item_id": str(uuid4()), "response_item_number": i}
                 for i, item in enumerate(items, 1)]
-        bounded(encoded(rows), "PARSED_TOO_LARGE")
+        self._parsed_size(encoded(rows))
         self._owned()
         return rows
 
     def complete(self, items: list[dict]) -> None:
         """Do not commit here: caller commits items, job and this row together."""
         body = encoded(items)
-        size = bounded(body, "PARSED_TOO_LARGE")
+        size = self._parsed_size(body)
         self.session.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts
             SET phase='completed',finished_at=clock_timestamp(),parsed_items=CAST(:items AS JSONB),
                 parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb
@@ -160,9 +168,11 @@ class AttemptRecorder:
             if self._owned(required=False):
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
                     finished_at=clock_timestamp(),error_code=:code,
+                    parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
                     validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
                     WHERE id=:id
-                """), {"id": self.id, "code": code})
+                """), {"id": self.id, "code": code,
+                         "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})

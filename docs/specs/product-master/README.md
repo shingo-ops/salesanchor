@@ -156,6 +156,8 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 
 - [PC/Androidの仕入先名の照合](../../handoff/line-supplier-aliases/design.md): 保存投稿の指紋を用いた読取調査。
 
+- [保存済み原文を固定する作品ID比較](../../handoff/tcg-product-master-growth/design-keyword.md#17-保存済み原文を固定した作品id比較2026-09-13-設計見直し): 比較の設計・検証経緯。最新の実施結果と未解決事項は[調査記録](../../handoff/tcg-product-master-growth/recon.md)を参照。
+
 
 ### 抽出待ち時間の限定是正案（2026-09-13・未実装）
 

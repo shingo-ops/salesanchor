@@ -11,7 +11,7 @@
 | 解析結果・配信の共通並び順 | Agent | PR #3501・実装担当のページID先行補正受領。親差分/Ruff確認済み、正式CI待ち | 4097行の末尾ページ/配信全件を同条件CIで検証。実装検収REVISE・本番未反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-14 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
-| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | 25明細再解析済み（既知15商品15/15、要確認17→13）。通常記録A/CARD09実装・PR3494提出、main59f644cd統合/競合解消。最新検証はPR本文参照 | PO指定最終レビューとGO #3494待ち。13明細保留・単位/フラグ不整合は未解消。配信未実施 | run00b3d27e/67245fc0・snapshot25 / CARD09旧CI34767671465・再開統合9f251926 / PR3494・recon | 2026-09-14 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション | 初回新規23job:22成功/1作品矛盾。全入力応答23保存、682明細7502照合一致。要確認120 | 記録機能検証完了・文書PR3462保存。矛盾1job/要確認120と従前13明細保留・単位/フラグを後続設計へ。配信未実行 | recon CARD09初回実投稿 / import a56cd32a | 2026-09-14 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
@@ -101,6 +101,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
+| 抽出試行記録の構造検証・容量超過記録是正 | root設計 / error_visibility_recon実装 / attempt_record_review検収 | PR #3504 HEAD47f72ab3公開、コードレビューAPPROVE。実DB移行/静的検査成功、Backend3746成功/95skip・coverage65.07% | GO #3504受領・backup再確認済。承認文書保存/最新CI→正式merge・通常配備・実機照合。本便反映前 | EV-20260914-ATTEMPT-INTEGRITY / PR #3504 / recon.md | 2026-09-14 |
 | ワンピース商品追加・解析対策 | 設計・実装担当 | PR #3434提出、GitHub2586成功/95skip、必須13成功。登録26候補静的検査成功 | 番号付きGO記録で手順検査を解消しマージ/配備。書籍区分など33候補の確認継続 | docs/handoff/tcg-product-master-growth/design-keyword.md §15 | 2026-09-11 |
 | TCG 人確認後配信の検証記録 | 設計担当 | 実コードの人工192条件・修正関数7ケース照合済み。文書自己レビューAPPROVE、製品設計REVISE | 文書PRチェック後に条件付き許可の範囲で保存。共通判定/全項目確認/配信接続の正式設計は未完了 | docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」/EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED | 2026-09-12 |
 | guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |

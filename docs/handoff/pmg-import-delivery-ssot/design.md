@@ -1086,6 +1086,31 @@ PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取�
 
 CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
 
+## 抽出試行記録2件の限定是正案（2026-09-14・草案）
+目的: 上限超過の調査に必要な実測サイズを既存試行行へ保存し、不正な既存構造を正常扱いしない。POは事実確認と安全な前進を指示。既存GO3494はマージ済み便の承認であり、新規修正PRのGOではない。
+根拠: 同recon「実DB追加検証と状態訂正」、固定e594d3ef/後続deploy70d145f0の対象2ファイル一致。reports/pr3494-evidence-20260914/result-real-db.txt。現行MAX_BYTES=8388608、通常同値保存・超過1byteでNULLを実PG再現。制約内容2異常は個別に受入を再現。
+対象: tcg_extraction_record_svc.py、既存試行表migrationの検証処理、対応PG試験・既存文書。対象外: 商品特定/状態判定、UI/API契約変更、新保存表、新列、過去行補完、Gemini自動再試行、配信操作、secrets/CI/deploy変更。
+記録修正案: prepare_itemsでUUID/行番号追加後の最終JSON UTF-8長を測定。上限超過時のみ測定値を当該recorderの一時状態に保持し、既存fail()の所有確認成功後、同じ既存試行行のparsed_bytesへ保存する。本文はNULL、PARSED_TOO_LARGEを維持。別job/後続試行/終了済み行へ書かず、新しい永続的SSOTを作らない。DB自体が書けない場合は従来の保存失敗を成功扱いしない。
+この記録案の検証用コピーを実PGで比較: 上限ちょうどcompleted/parsed_bytes8388608を維持、上限+1はfailed/parsed_bytes8388609/本文NULL。probe-candidate.py/result-candidate.txt。製品追跡ファイルは未変更、task/analyzer全体回帰は未実施。complete()単独経路と旧試行競合/保存失敗時の回帰は受入必須。
+構造修正案: 必要制約を名前/件数のみで合格にしない。PK/UNIQUE/FKの対象列・参照schema/table/column・削除動作・検証済み・延期設定、CHECKの実定義を期待定義と照合する。列位置は列名から引く。CHECK(true)や別列FKは例外停止し、不正制約の自動書換え/既存行削除はしない。CHECKはPG16のpg_get_constraintdef(...,false)による定義取得を候補とし、search_path差、同じ意味で表記だけ異なる定義、PGminor差で正しい表を拒否しないか隔離試験で確認する。比較方式の最終固定前に設計合格を出さない。
+適用経路: 最新mainのrun_all_migrations.sh:run_sqlはpsql ON_ERROR_STOP=1で登録SQLを逐次実行し、対象は642行に登録。旧SQL修正の再実行経路は存在するが、先行migration失敗時は到達しない。新しい本番migrationを増やすか既存検証を強化するかは正式修正設計で固定し、未確認の自動適用成功を主張しない。
+代替比較: 超過本文の切捨て保存は全文誤認を生み不採用。別診断表はSSOT重複で不採用。不正構造を自動修復する案は既存データへの影響が未確認で不採用。既存記録の数値保存と読取検証の強化を推奨する。
+受入: 実PGで正常/再適用成功、不正CHECK/FK各個別拒否、正しい別schema受入・部分構造拒否・失敗時既存行不変。8MiB±境界、超過時値保持/本文NULL/新明細0/解析0、旧試行と同時実行の隔離、記録失敗/soft中断、input/response保存と管理者API回帰。既存Backend CI/Migration SQLを使用し成功件数とskipを区別。正式カードは方式確定・整合検査後に発行。
+維持: backend担当が既存PG受入試験へ否定例を追加、reviewerが既存行不変とSSOTを確認。人手の反映確認では実稼働版/DB構造/既存backupを確認する。
+外部資料: Context7ツールなしを確認。PO許可済み公式代替として https://www.postgresql.org/docs/16/catalog-pg-constraint.html と https://www.postgresql.org/docs/16/functions-info.html を2026-09-14参照。外部成功事例は本変更の成否を証明しないため不使用。
+Architect自己審査: REVISE（同一AI、独立第二者レビューではない）。記録修正案は限定比較で有効性を実測。構造比較方式/正常表誤拒否の否定試験/正式適用方式は未確定のため、2件まとめた実装可能設計としてAPPROVEしない。未決は技術検証であり追加PO事業判断は現時点不要。設計草案保存済み・検証コピーのみ・製品修正未着手。
+
+### 構造照合方式の確定と限定設計審査（2026-09-14追補）
+根拠更新: main5afb5af1ed28ea691ea93b04e4245afa8d744d85の対象service/migrationは固定e594d3efとSHA256一致。root実PG16.15、reports/pr3494-evidence-20260914/probe-structure.py/result-structure.txt/structure-expected.json。正常7ケース受入、不正8ケース拒否、意味等価だが式を書換えた1ケース拒否。計16期待assert成功・比較前後の試行行一致16/16・exit0・DB停止。これはcatalog比較候補の試験で、製品migrationへ組み込んだ試験ではない。
+正式な成功条件を限定: バージョン管理された正規DDLが作る構造を受け入れる。任意の論理等価DDLまで受入保証はしない。正規定義不一致は既存行/制約を自動修正せず例外停止。これにより未知構造を推測で正常扱いしない。人による独自DDLや別PG版の同値表記は反映前の読み取り照合で差分として提示する。
+比較契約: conrelidで対象表を限定し、制約名/種類/検証済/延期可否・初期延期/noinherit、conkeyの列名順序、CHECKのpg_get_constraintdef(false)、FKの参照schema/table/confkey列順・更新/削除/match動作を照合。検索パスは照合中のみpg_catalogへ固定し復元。同一schemaへの参照は自己schemaとして比較、他schema参照は拒否。比較する期待値は正規DDLから独立した隔離基準表を作って出力した構造（structure-expected.json）を元にコードへ明示し、検査対象の本番表から期待値を学習しない。基準表は検証専用で本番へ追加しない。PK/UNIQUE/CHECK/FKの余剰/不足も差分。列型/NULL/索引の既存検査は維持する。正式実装の期待値とversion管理DDLの一致を実PG回帰で常に確認する。
+適用案: 既存20260914_010000_tcg_extraction_attempts.sqlの検査を強化する。既存runnerは毎回run_sqlで当該登録を実行するため登録追加・新DDL・新表なし。既存BEGIN内で全schemaを検査し、差分時には失敗して確定しない。既存データ/制約の自動修理は対象外。scripts/CI/deployは本修正で編集しない。
+記録側の正式実装は上の最小候補を元に、prepare_itemsの測定値が同じ当該試行のfail()でのみ保存されることを守る。complete()から直接上限超過が出る場合も含め、測定値が保持される経路を統一する。旧試行/他job/既存成功を上書きしない。旧値の推測補完なし。
+必要な実装後受入: 候補の7正常/8不正/1未知式の判定を実migrationで再現、反復適用・複数schema・ロールバック・既存行不変、実taskで8MiB境界と超過サイズ保存/本文NULL/新明細0/解析0、所有権/競合/終了行/DB記録失敗の回帰、既存Backend CIとMigration SQL成功。候補単体16成功をこれらの代わりにしない。
+反映前照合: 実稼働コードとDB版・制約一覧・旧workerの版・バックアップの証跡を読取り確認する。今回は実本番照合未実施。過去のGO3494を新PR番号のGOへ転記しない。
+Architect最終自己審査: APPROVE（上記限定の修正設計、同一AI自己審査で独立第二者レビューではない）。先のREVISEは比較の成功条件・期待値の出所・既存runner適用経路を確定して解消。根拠は2件の現行再現＋記録候補2境界＋構造候補16ケース。正式コード/統合試験/本番検収の合格ではない。POの新たな設計承認・実装開始・PR/マージGOを創作しない。現在は設計文書と隔離候補のみ、製品修正未着手。実装カードは別途正式チェックして発行し、本追補だけで実装役への自動切替をしない。
+
+
 
 ## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
 
