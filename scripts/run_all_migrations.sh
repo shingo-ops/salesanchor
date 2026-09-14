@@ -635,5 +635,8 @@ run_sql migrations/20260913_030000_seed_unregistered_products.sql
 run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
 run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
 
+# ABBREV-01: tenant_004 略語キーワード追加（検索語・除外語）— PR #3495
+run_sql migrations/20260914_080000_add_abbreviation_keywords_t004.sql
+
 # CARD09: persist extraction attempts before adopting new results.
 run_sql migrations/20260914_010000_tcg_extraction_attempts.sql

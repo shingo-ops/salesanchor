@@ -11,11 +11,12 @@ import { EmptyState } from "../../components/EmptyState";
 import { TextField } from "../../components/TextField";
 import { Tabs } from "../../components/Tabs";
 
+import { TcgProductDetailDrawer } from "../../features/tcg-product-import/TcgProductDetailDrawer";
 import "../../features/tcg-product-import/product-csv.css";
 
 interface ProductRow {
-  code: string; japanese_title: string; mark: string;
-  release_date: string; keyword_count: number;
+  code: string; japanese_title: string; english_title: string; mark: string;
+  release_date: string; keyword_count: number; exclude_keyword_count: number;
 }
 interface ProductWork { id: string; code: string; display_name: string; alt_name: string }
 interface ProductList { total: number; items: ProductRow[]; works: ProductWork[] }
@@ -32,6 +33,7 @@ export default function TcgProductMasterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
   const exportLock = useRef(false);
@@ -68,11 +70,14 @@ export default function TcgProductMasterPage() {
   const visibleWorks = selectedWork && selectedWork.id === filter.workId && !works.some(work => work.id === filter.workId) ? [...works, selectedWork] : works;
   const workLabel = (work: ProductWork) => i18n.language.startsWith("ja") ? work.alt_name.trim() || work.display_name : work.display_name;
   const columns: DataTableColumn<ProductRow>[] = [
-    { key: "code", header: t("productCsv.code") },
-    { key: "japanese_title", header: t("productCsv.title") },
     { key: "mark", header: t("productCsv.mark") },
+    { key: "japanese_title", header: t("productCsv.title"), renderCell: row => <div className="product-detail__name">
+      <span>{row.japanese_title}</span>
+      {row.english_title && <span className="product-detail__english">{row.english_title}</span>}
+    </div> },
     { key: "release_date", header: t("productCsv.releaseDate") },
-    { key: "keyword_count", header: t("productCsv.keywords"), renderCell: row => row.keyword_count === 0 ? <span className="product-csv__warning">{t("productCsv.noKeywords")}</span> : row.keyword_count },
+    { key: "keyword_count", header: t("productDetail.searchCount") },
+    { key: "exclude_keyword_count", header: t("productDetail.excludeCount") },
   ];
   return <PageLayout navKey="nav.superAdminTcgProductMaster" headerAction={isSuperAdmin ? <><HeaderButton variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>{t(exporting ? "common.loading" : "productCsv.export")}</HeaderButton><HeaderButton variant="primary" onClick={() => navigate("/super-admin/tcg-product-master/import")}>{t("productCsv.openImport")}</HeaderButton></> : undefined}>
     {authLoading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <>
@@ -82,8 +87,9 @@ export default function TcgProductMasterPage() {
       <ContentToolbar left={<TextField type="search" label={t("productCsv.search")} value={filter.query} onChange={e => setFilter(value => ({ ...value, query: e.target.value, page: 1 }))} />} />
       {loading ? <p>{t("common.loading")}</p> : error ? <div role="alert"><p>{t("productCsv.loadError")}</p><HeaderButton variant="secondary" onClick={() => setRetry(value => value + 1)}>{t("productCsv.retry")}</HeaderButton></div> : data && <>
         <p role="status">{t("productCsv.total", { count: data.total })}</p>
-        <DataTable columns={columns} data={data.items} rowKey={row => row.code} emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />} page={filter.page} hasNextPage={filter.page * PAGE_SIZE < data.total} onPageChange={page => setFilter(value => ({ ...value, page }))} prevPageLabel={t("productCsv.previous")} nextPageLabel={t("productCsv.next")} />
+        <DataTable columns={columns} data={data.items} rowKey={row => row.code} onRowClick={row => setSelectedProduct(row.code)} emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />} page={filter.page} hasNextPage={filter.page * PAGE_SIZE < data.total} onPageChange={page => setFilter(value => ({ ...value, page }))} prevPageLabel={t("productCsv.previous")} nextPageLabel={t("productCsv.next")} />
       </>}
+      <TcgProductDetailDrawer productCode={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
     </>}
   </PageLayout>;
 }
