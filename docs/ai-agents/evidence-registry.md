@@ -3090,6 +3090,15 @@ EV-20260914-PRODUCT-ALL-TERMS-LOCAL: 実装5ファイル。純関数48/48、ruff
 
 CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
 
+
+### EV-20260914-CARD09-MERGED-DEPLOY-BLOCKED
+
+PO原文GO #3494、review_card09 APPROVE、e594d3efの正式PG3692成功/95skip/失敗0。正規merge e69da6ed・2026-09-14T01:55:43Z。deploy34797490804/job103833308323は旧カードセットSQLのPM0264名称不一致で失敗。新backup7,500,696bytes/gzip読取成功、コード主要4x2SHA一致、新履歴表001/004不存在、待機実行0、App/API HTTP200。新記録機能は未開通、追加本番変更/実Gemini/再解析/配信0。詳細と直接証拠: recon『CARD09最終レビュー・GO・マージ・配備停止』。旧SQLチェックの迂回や商品名書戻しはしていない。
+
+### EV-20260914-CARD09-PRODUCTION-VERIFIED
+
+PR3494の通常記録AはPR3500後に配備確認。Deploy34804164057/34804870906成功。本番import a56cd32a-434d-4b3d-996e-1e46b044a8c6新規23jobを04:36:49Zまで直接READ ONLY監視。入力/応答23保存、completed22/failed1、682明細7502項目照合不一致0。failedはWORK_ID_CONFLICT、応答保持/明細0、純関数で5矛盾再現。商品特定583/要確認120はシステム判定で正答率ではない。原文/マスタ更新・追加API・配信0。recon「CARD09初回実投稿・通常抽出の読取検証」「CARD09完了範囲と引き継ぎ審査」を正式根拠とする。文書自己審査APPROVE、PR3462マージ承認は別。
+
 EV-20260914-PRODUCT-ALL-TERMS-CI: PR3499 HEAD9f96d682、正式CI34798680670の実ログで3718成功/95skip/失敗0、coverage65.05%、265.85秒。固定正解4件改善/他1500判定不変。自己レビュー、独立審査ではない。GO記録検査と既存PM0264配備障害で本番未反映。根拠docs/handoff/tcg-product-import/all-terms-result.json。
 
 ## 抽出試行記録2件の限定是正・実装開始（2026-09-14）
