@@ -83,6 +83,7 @@ import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
 import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
+import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
@@ -271,6 +272,7 @@ function App() {
                     path="/super-admin/inbound/:id/review"
                     element={<ParseReviewPage />}
                   />
+                  <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
                   <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
                   {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
