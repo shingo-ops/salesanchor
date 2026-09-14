@@ -47,6 +47,7 @@ def atomic_pg(pg, monkeypatch):
     with connection.cursor() as cur:
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", SCHEMA))
         work_fixture.provision(cur, "tenant_990")
+        cur.execute(work_fixture._rewire_keyword_fks("tenant_990"))
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", "tenant_990"))
         cur.execute("INSERT INTO public.products (product_code,name,category_class,is_active,tcg_uuid) VALUES ('SENTINEL','unchanged','Box',true,gen_random_uuid()) RETURNING tcg_uuid")
         product_id = cur.fetchone()[0]

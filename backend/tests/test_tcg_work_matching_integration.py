@@ -40,7 +40,69 @@ def provision(cursor, schema):
     cursor.execute((MIGRATIONS / "20260906_120000_create_tcg_tables_t001.sql").read_text().replace("tenant_001", schema))
 
 
+_PUBLIC_PRODUCTS_DDL = """
+CREATE TABLE IF NOT EXISTS public.products (
+    id                   SERIAL PRIMARY KEY,
+    tenant_id            INTEGER,
+    product_code         VARCHAR(50),
+    name                 VARCHAR(255) NOT NULL,
+    name_en              VARCHAR(255),
+    mark                 VARCHAR(100),
+    release_date         DATE,
+    tcg_uuid             UUID UNIQUE,
+    division_id          UUID,
+    work_id              UUID,
+    manufacturer_id      UUID,
+    product_category_id  UUID,
+    category_class       TEXT,
+    is_active            BOOLEAN DEFAULT true,
+    is_archived          BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_code
+    ON public.products (product_code) WHERE product_code IS NOT NULL;
+"""
+
+def _rewire_keyword_fks(schema: str) -> str:
+    """Return SQL that drops tcg_products FKs and adds public.products FKs."""
+    return f"""
+DO $rw$
+DECLARE
+    _rec RECORD;
+BEGIN
+    FOR _rec IN
+        SELECT c.conname, rel.relname AS tbl
+        FROM pg_constraint c
+        JOIN pg_class rel ON c.conrelid = rel.oid
+        JOIN pg_namespace ns ON rel.relnamespace = ns.oid
+        JOIN pg_class ref ON c.confrelid = ref.oid
+        WHERE ns.nspname = '{schema}'
+          AND rel.relname IN ('product_search_keywords', 'product_exclude_keywords',
+                              'analysis_results')
+          AND ref.relname = 'tcg_products'
+          AND c.contype = 'f'
+    LOOP
+        EXECUTE format('ALTER TABLE {schema}.%I DROP CONSTRAINT %I',
+                       _rec.tbl, _rec.conname);
+    END LOOP;
+    ALTER TABLE {schema}.product_search_keywords
+        ADD CONSTRAINT fk_psk_public_products
+        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
+    ALTER TABLE {schema}.product_exclude_keywords
+        ADD CONSTRAINT fk_pek_public_products
+        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
+    ALTER TABLE {schema}.analysis_results
+        ADD CONSTRAINT fk_ar_public_products
+        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid);
+END;
+$rw$;
+"""
+
+
 def migrate(cursor):
+    cursor.execute(_PUBLIC_PRODUCTS_DDL)
+    cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / DICTIONARY).read_text())
