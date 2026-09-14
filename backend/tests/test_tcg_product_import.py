@@ -348,11 +348,11 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
         calls += 1
         if calls == 1:
             return result(SimpleNamespace(display_name="One Piece"))
-        if calls == 2:
+        if calls == 3:
             return result(SimpleNamespace(id="product"))
-        if calls == 5:
+        if calls == 6:
             assert db.commit.await_count == (0 if commit is False else 1)
-            return result(None if verify_fails else SimpleNamespace(code="PM0001"))
+            return result(None if verify_fails else SimpleNamespace(product_code="PM0001"))
         return result(None)
     db.execute = AsyncMock(side_effect=execute)
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))

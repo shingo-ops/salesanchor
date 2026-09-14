@@ -20,3 +20,18 @@ CREATE TABLE IF NOT EXISTS public.products (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_code
     ON public.products (product_code) WHERE product_code IS NOT NULL;
+
+-- Ensure Phase 2b columns exist even if table was pre-created by migration 062
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS name_en VARCHAR(255);
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS mark VARCHAR(100);
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS release_date DATE;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS division_id UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer_id UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_category_id UUID;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_class TEXT;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
+ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
+CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_tcg_uuid
+    ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;

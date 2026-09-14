@@ -26,7 +26,7 @@ from app.services import tcg_condition_review_svc as condition
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
-from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, provision
+from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 MIGRATION = MIGRATIONS / "20260913_150000_tcg_empty_box_condition.sql"
@@ -56,6 +56,7 @@ def pg():
         with connection.cursor() as cursor:
             provision(cursor, SCHEMA)
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
+            cursor.execute(_rewire_keyword_fks(SCHEMA))
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
             provision(cursor, "tenant_006")

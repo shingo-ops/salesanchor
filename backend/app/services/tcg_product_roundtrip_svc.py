@@ -120,6 +120,7 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
 
 # public.products のカラム名 → CSV CSV_COLUMNS 名へのマッピング
 _PRODUCT_FIELD_MAP = {
+    "code": "product_code",
     "japanese_title": "name",
     "english_title": "name_en",
 }

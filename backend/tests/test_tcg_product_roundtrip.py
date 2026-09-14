@@ -19,10 +19,10 @@ def snapshot():
     return {
         "product": {
             "id": "00000000-0000-4000-8000-000000000001",
-            "code": "PM001",
-            "japanese_title": "商品",
+            "product_code": "PM001",
+            "name": "商品",
             "mark": None,
-            "english_title": "",
+            "name_en": "",
             "release_date": None,
             "is_active": False,
             "required_output_value": "private",
