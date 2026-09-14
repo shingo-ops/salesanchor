@@ -30,17 +30,17 @@ async def detail_db(product_db, monkeypatch):
     db, schema = product_db
     monkeypatch.setattr(details, "TCG_SCHEMA", schema)
     await db.execute(text(
-        f"INSERT INTO {schema}.tcg_products "
-        "(code,japanese_title,english_title,mark,category_class,is_active,required_output_value) "
-        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,'Keep this')"
+        "INSERT INTO public.products "
+        "(product_code,name,name_en,mark,category_class,is_active,tcg_uuid) "
+        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,gen_random_uuid())"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_search_keywords(product_id,keyword,position) "
-        f"SELECT id,'Alpha, Beta',1 FROM {schema}.tcg_products WHERE code='DETAIL'"
+        f"SELECT tcg_uuid,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT id,'Exclude one',1 FROM {schema}.tcg_products WHERE code='DETAIL'"
+        f"SELECT tcg_uuid,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     return db, schema
 
@@ -60,7 +60,7 @@ async def test_detail_contains_stored_values_words_and_revision(detail_db):
     assert set(before["lookups"]) == {"division_id", "work_id", "manufacturer_id", "product_category_id"}
     await db.execute(text(
         f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT id,'Exclude two',2 FROM {schema}.tcg_products WHERE code='DETAIL'"
+        f"SELECT tcg_uuid,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
     ))
     assert before["revision"] != (await details.get_product_detail(db, "DETAIL"))["revision"]
 
@@ -97,9 +97,10 @@ def edit_pg(pg, monkeypatch):
         monkeypatch.setattr(module, "TCG_SCHEMA", durable.SCHEMA)
     with connection.cursor() as cur:
         for code in ("DETAIL", "SENTINEL"):
-            cur.execute(f"INSERT INTO {durable.SCHEMA}.tcg_products "
-                        "(code,japanese_title,category_class,is_active,required_output_value) "
-                        "VALUES (%s,'Original','Keep category',true,'Keep output') RETURNING id", (code,))
+            cur.execute(
+                "INSERT INTO public.products "
+                "(product_code,name,category_class,is_active,tcg_uuid) "
+                "VALUES (%s,'Original','Keep category',true,gen_random_uuid()) RETURNING tcg_uuid", (code,))
             pid = cur.fetchone()[0]
             for table in details.WORD_TABLES.values():
                 cur.execute(f"INSERT INTO {durable.SCHEMA}.{table}(product_id,keyword,position) "
@@ -114,7 +115,7 @@ def edit_pg(pg, monkeypatch):
         item = cur.fetchone()[0]
         cur.execute(f"INSERT INTO {durable.SCHEMA}.analysis_results "
                     "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version) "
-                    f"SELECT %s,id,true,false,true,'fixture' FROM {durable.SCHEMA}.tcg_products WHERE code='DETAIL'", (item,))
+                    "SELECT %s,tcg_uuid,true,false,true,'fixture' FROM public.products WHERE product_code='DETAIL'", (item,))
         durable.provision(cur, "tenant_990")
         cur.execute("INSERT INTO tenant_990.tcg_products(code,japanese_title,category_class,is_active) "
                     "VALUES ('DETAIL','Other tenant','Other',true) RETURNING id")
@@ -136,7 +137,9 @@ def edit_pg(pg, monkeypatch):
 def observed(connection):
     with connection.cursor() as cur:
         result = {}
-        for table in ("tcg_products", *details.WORD_TABLES.values(), "audit_log", "analysis_results"):
+        cur.execute("SELECT row_to_json(t) FROM public.products t ORDER BY t.id")
+        result["products"] = [r[0] for r in cur.fetchall()]
+        for table in (*details.WORD_TABLES.values(), "audit_log", "analysis_results"):
             cur.execute(f"SELECT row_to_json(t) FROM {durable.SCHEMA}.{table} t ORDER BY id")
             result[table] = [r[0] for r in cur.fetchall()]
         return result
@@ -169,11 +172,11 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         assert product["english_title"] == "English edited"
         assert product["search_keywords"] == ["A, B", "C"] and product["exclude_keywords"] == []
         assert result["revision"] != snapshot["revision"]
-        sentinel = next(p for p in before["tcg_products"] if p["code"] == "SENTINEL")
-        assert sentinel in after["tcg_products"]
+        sentinel = next(p for p in before["products"] if p["product_code"] == "SENTINEL")
+        assert sentinel in after["products"]
         for table in details.WORD_TABLES.values():
-            assert [r for r in before[table] if r["product_id"] == sentinel["id"]] == [
-                r for r in after[table] if r["product_id"] == sentinel["id"]]
+            assert [r for r in before[table] if r["product_id"] == sentinel["tcg_uuid"]] == [
+                r for r in after[table] if r["product_id"] == sentinel["tcg_uuid"]]
         assert after["analysis_results"] == before["analysis_results"]
         assert len(after["audit_log"]) == 1
         audit = after["audit_log"][0]

@@ -48,7 +48,7 @@ def atomic_pg(pg, monkeypatch):
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", SCHEMA))
         work_fixture.provision(cur, "tenant_990")
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", "tenant_990"))
-        cur.execute("INSERT INTO tenant_990.tcg_products (code,japanese_title,category_class,is_active) VALUES ('SENTINEL','unchanged','Box',true) RETURNING id")
+        cur.execute("INSERT INTO public.products (product_code,name,category_class,is_active,tcg_uuid) VALUES ('SENTINEL','unchanged','Box',true,gen_random_uuid()) RETURNING tcg_uuid")
         product_id = cur.fetchone()[0]
         for table in ("product_search_keywords", "product_exclude_keywords"):
             cur.execute(f"INSERT INTO tenant_990.{table}(product_id,keyword,position) VALUES (%s,'unchanged',1)", (product_id,))
@@ -64,7 +64,10 @@ def sentinel_snapshot(connection):
     """All stored columns in the other tenant's real product/word/history tables."""
     rows = {}
     with connection.cursor() as cur:
-        for table in ("tcg_products", "product_search_keywords", "product_exclude_keywords",
+        cur.execute("SELECT row_to_json(t) FROM public.products t WHERE t.product_code='SENTINEL' ORDER BY t.id")
+        rows["tcg_products"] = cur.fetchall()
+        assert len(rows["tcg_products"]) == 1
+        for table in ("product_search_keywords", "product_exclude_keywords",
                       "tcg_product_import_jobs", "tcg_product_import_rows"):
             cur.execute(f"SELECT row_to_json(t) FROM tenant_990.{table} t ORDER BY id")
             rows[table] = cur.fetchall()
@@ -75,17 +78,17 @@ def sentinel_snapshot(connection):
 def observe(connection):
     """Independent committed view of every product/word/receipt/job, C1/C9."""
     with connection.cursor() as cur:
-        cur.execute(f"SELECT japanese_title,code FROM {SCHEMA}.tcg_products ORDER BY japanese_title")
+        cur.execute(f"SELECT p.name AS japanese_title,p.product_code AS code FROM public.products p ORDER BY p.name")
         products = dict(cur.fetchall())
         words = {}
         for table in ("product_search_keywords", "product_exclude_keywords"):
-            cur.execute(f"SELECT p.japanese_title,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN {SCHEMA}.tcg_products p ON p.id=k.product_id ORDER BY p.japanese_title,k.position")
+            cur.execute(f"SELECT p.name,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN public.products p ON p.tcg_uuid=k.product_id ORDER BY p.name,k.position")
             words[table] = cur.fetchall()
         cur.execute(f"SELECT row_no,japanese_title,result,product_code FROM {SCHEMA}.tcg_product_import_rows ORDER BY row_no")
         rows = cur.fetchall()
         cur.execute(f"SELECT total_rows,created_rows,skipped_rows,status FROM {SCHEMA}.tcg_product_import_jobs")
         jobs = cur.fetchall()
-        cur.execute("SELECT japanese_title FROM tenant_990.tcg_products WHERE code='SENTINEL'")
+        cur.execute("SELECT name FROM public.products WHERE product_code='SENTINEL'")
         assert cur.fetchall() == [("unchanged",)]
     return products, words, rows, jobs
 
@@ -120,11 +123,11 @@ def failing_session(connection, mode, target):
         async def execute(self, statement, params=None, **kwargs):
             query = str(statement)
             # These services may only touch the intended tenant's tables.
-            for table in ("tcg_products", "product_search_keywords", "product_exclude_keywords",
+            for table in ("product_search_keywords", "product_exclude_keywords",
                           "tcg_product_import_jobs", "tcg_product_import_rows"):
                 if table in query:
                     assert f"{SCHEMA}.{table}" in query
-            if f"INSERT INTO {SCHEMA}.tcg_products" in query:
+            if "INSERT INTO public.products" in query:
                 self.current = int(params["japanese_title"].removeprefix("原子商品"))
                 if self.current == target:
                     if mode == "before_value":
@@ -133,7 +136,7 @@ def failing_session(connection, mode, target):
                         raise asyncio.CancelledError("cancelled creation")
                     if mode == "collision":
                         params = dict(params, code="PM0001")
-            if self.current == target and f"SELECT code FROM {SCHEMA}.tcg_products WHERE id" in query:
+            if self.current == target and "SELECT product_code FROM public.products WHERE tcg_uuid" in query:
                 if mode in ("verify_value", "rollback_failure"):
                     raise ValueError("post-write verification")
             if f"INSERT INTO {SCHEMA}.tcg_product_import_rows" in query:

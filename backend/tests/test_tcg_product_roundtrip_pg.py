@@ -20,13 +20,16 @@ pg = atomic_fixture.pg
 
 def observe(connection, history=True):
     result = {}
-    tables = ["tcg_products", "product_search_keywords", "product_exclude_keywords"]
-    if history:
-        tables += ["tcg_product_import_jobs", "tcg_product_import_rows"]
     with connection.cursor() as cursor:
-        for table in tables:
+        cursor.execute("SELECT to_jsonb(t) FROM public.products t ORDER BY t.id")
+        result["products"] = cursor.fetchall()
+        for table in ["product_search_keywords", "product_exclude_keywords"]:
             cursor.execute(f"SELECT to_jsonb(t) FROM {SCHEMA}.{table} t ORDER BY id")
             result[table] = cursor.fetchall()
+        if history:
+            for table in ["tcg_product_import_jobs", "tcg_product_import_rows"]:
+                cursor.execute(f"SELECT to_jsonb(t) FROM {SCHEMA}.{table} t ORDER BY id")
+                result[table] = cursor.fetchall()
     return result
 
 
@@ -34,8 +37,8 @@ def seed(connection, count=2):
     with connection.cursor() as cursor:
         for index in range(count):
             cursor.execute(
-                f"INSERT INTO {SCHEMA}.tcg_products(code,japanese_title,english_title,mark,category_class,is_active,required_output_value,work_id) "
-                f"VALUES (%s,%s,%s,%s,'private category',false,'keep me',(SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002')) RETURNING id",
+                "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id,tcg_uuid) "
+                f"VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'),gen_random_uuid()) RETURNING tcg_uuid",
                 (
                     "SENTINEL" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
@@ -138,7 +141,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     assert actual[code][field] == value
                 after = observe(connection, False)
                 with connection.cursor() as cursor:
-                    cursor.execute(f"SELECT category_class FROM {SCHEMA}.tcg_products WHERE code=%s", (code,))
+                    cursor.execute("SELECT category_class FROM public.products WHERE product_code=%s", (code,))
                     assert cursor.fetchone()[0] == "Pokemon"
                     cursor.execute(
                         f"SELECT messages FROM {SCHEMA}.tcg_product_import_rows WHERE product_code=%s", (code,)
@@ -153,14 +156,14 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                         )
                         expected_after = svc.decode_words(value) if field in svc.WORDS else value
                         assert messages[field] == {"field": field, "before": expected_before, "after": expected_after}
-                old = {row[0]["id"]: row[0] for row in before["tcg_products"]}
-                for row in after["tcg_products"]:
+                old = {row[0]["tcg_uuid"]: row[0] for row in before["products"]}
+                for row in after["products"]:
                     product = row[0]
-                    if product["code"] != code:
-                        assert product == old[product["id"]]
-                    for field in ["code", "id", "created_at", "required_output_value", "is_active"]:
-                        assert product[field] == old[product["id"]][field]
-                untouched = {pid for pid, p in old.items() if p["code"] != code}
+                    if product["product_code"] != code:
+                        assert product == old[product["tcg_uuid"]]
+                    for field in ["product_code", "tcg_uuid", "created_at"]:
+                        assert product[field] == old[product["tcg_uuid"]][field]
+                untouched = {pid for pid, p in old.items() if p["product_code"] != code}
                 for table in svc.WORDS.values():
                     assert [r for r in before[table] if r[0]["product_id"] in untouched] == [
                         r for r in after[table] if r[0]["product_id"] in untouched
@@ -188,11 +191,11 @@ def test_other_field_edit_keeps_inactive_reference_and_word_rows(atomic_pg, monk
             after = observe(connection, False)
             for table in svc.WORDS.values():
                 assert after[table] == before[table]
-            old = {r[0]["id"]: r[0] for r in before["tcg_products"]}
-            for row in after["tcg_products"]:
+            old = {r[0]["tcg_uuid"]: r[0] for r in before["products"]}
+            for row in after["products"]:
                 value = dict(row[0])
-                value["mark"] = old[value["id"]]["mark"]
-                assert value == old[value["id"]]
+                value["mark"] = old[value["tcg_uuid"]]["mark"]
+                assert value == old[value["tcg_uuid"]]
         finally:
             await engine.dispose()
 
@@ -220,11 +223,11 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
                         )
                     elif mode in ["title", "active", "hidden"]:
                         assignment = {
-                            "title": "japanese_title='changed'",
+                            "title": "name='changed'",
                             "active": "is_active=true",
                             "hidden": "required_output_value='changed'",
                         }[mode]
-                        cursor.execute(f"UPDATE {SCHEMA}.tcg_products SET {assignment}")
+                        cursor.execute(f"UPDATE public.products SET {assignment}")
                 if mode in ["unknown", "date", "reference"]:
                     raw = edit(
                         raw,
@@ -272,10 +275,10 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
 
         async def execute(self, statement, params=None, **kwargs):
             query = str(statement)
-            if query.startswith(f"UPDATE {SCHEMA}.tcg_products"):
+            if query.startswith("UPDATE public.products"):
                 self.current += 1
             if self.current == 2 and (
-                (mode in ["product", "cancel", "rollback"] and query.startswith(f"UPDATE {SCHEMA}.tcg_products"))
+                (mode in ["product", "cancel", "rollback"] and query.startswith("UPDATE public.products"))
                 or (mode == "words" and query.startswith(f"INSERT INTO {SCHEMA}.product_search_keywords"))
                 or (mode == "history" and query.startswith(f"INSERT INTO {SCHEMA}.tcg_product_import_rows"))
             ):
@@ -316,9 +319,9 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                     and len(after["tcg_product_import_jobs"]) == 1
                     and len(after["tcg_product_import_rows"]) == 2
                 )
-                assert all(r[0]["japanese_title"] == "Changed" for r in after["tcg_products"])
-                for product in after["tcg_products"]:
-                    pid = product[0]["id"]
+                assert all(r[0]["name"] == "Changed" for r in after["products"])
+                for product in after["products"]:
+                    pid = product[0]["tcg_uuid"]
                     assert sorted(
                         (r[0]["position"], r[0]["keyword"])
                         for r in after["product_search_keywords"]
@@ -352,9 +355,9 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
         with connection.cursor() as cursor:
             cursor.execute("SET lock_timeout='100ms'")
             query = (
-                f"UPDATE {SCHEMA}.tcg_products SET mark='competing'"
+                "UPDATE public.products SET mark='competing'"
                 if target == "product"
-                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM {SCHEMA}.tcg_products"
+                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT tcg_uuid,'competing',99 FROM public.products"
             )
             if blocked:
                 with pytest.raises(psycopg2.errors.LockNotAvailable):

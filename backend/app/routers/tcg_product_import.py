@@ -93,14 +93,14 @@ async def list_products(
     _user: User = Depends(require_super_admin),
 ) -> ProductListResponse:
     like = "%" + query.strip() + "%" if query.strip() else "%"
-    condition = "(p.japanese_title ILIKE :like OR p.english_title ILIKE :like OR p.mark ILIKE :like OR p.code ILIKE :like)"
+    condition = "(p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like)"
     params = {"like": like}
     if work_id is not None:
         condition += " AND p.work_id = CAST(:work_id AS uuid)"
         params["work_id"] = str(work_id)
     total_row = await db.execute(
         text(
-            f"SELECT count(*) FROM {TCG_SCHEMA}.tcg_products p WHERE {condition}"
+            f"SELECT count(*) FROM public.products p WHERE {condition}"
         ),
         params,
     )
@@ -108,14 +108,14 @@ async def list_products(
 
     rows = await db.execute(
         text(
-            f"SELECT p.code, p.japanese_title, p.english_title, p.mark, p.release_date, "
+            f"SELECT p.product_code, p.name, p.name_en, p.mark, p.release_date, "
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"WHERE k.product_id = p.id) AS keyword_count, "
+            f"WHERE k.product_id = p.tcg_uuid) AS keyword_count, "
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_exclude_keywords k "
-            f"WHERE k.product_id = p.id) AS exclude_keyword_count "
-            f"FROM {TCG_SCHEMA}.tcg_products p "
+            f"WHERE k.product_id = p.tcg_uuid) AS exclude_keyword_count "
+            f"FROM public.products p "
             f"WHERE {condition} "
-            f"ORDER BY p.release_date DESC NULLS LAST, p.code DESC LIMIT :limit OFFSET :offset"
+            f"ORDER BY p.release_date DESC NULLS LAST, p.product_code DESC LIMIT :limit OFFSET :offset"
         ),
         {**params, "limit": limit, "offset": offset},
     )
@@ -133,7 +133,7 @@ async def list_products(
     ]
     work_rows = await db.execute(text(
         f"SELECT s.id, s.code, s.display_name, s.alt_name FROM {TCG_SCHEMA}.tcg_series s "
-        f"WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM {TCG_SCHEMA}.tcg_products p "
+        f"WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))
     works = [

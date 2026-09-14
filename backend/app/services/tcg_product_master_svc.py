@@ -124,20 +124,20 @@ async def search_products_by_name(
         text(
             f"""
             SELECT
-                p.code          AS product_id,
-                p.id::text      AS product_uuid,
-                p.japanese_title,
+                p.product_code  AS product_id,
+                p.tcg_uuid::text AS product_uuid,
+                p.name          AS japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
                     ''
                 )               AS search_keywords
-            FROM {TCG_SCHEMA}.tcg_products p
+            FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
-                ON psk.product_id = p.id
+                ON psk.product_id = p.tcg_uuid
             WHERE p.is_active = TRUE
-              AND p.japanese_title ILIKE :query
-            GROUP BY p.id, p.code, p.japanese_title
-            ORDER BY p.japanese_title
+              AND p.name ILIKE :query
+            GROUP BY p.tcg_uuid, p.product_code, p.name
+            ORDER BY p.name
             LIMIT 10
             """
         ),
@@ -218,8 +218,8 @@ async def check_duplicates(
         text(
             f"""
             SELECT
-                p.code::text              AS product_id,
-                p.japanese_title,
+                p.product_code::text      AS product_id,
+                p.name                    AS japanese_title,
                 p.work_id::text           AS work_id,
                 p.manufacturer_id::text   AS manufacturer_id,
                 p.product_category_id::text AS product_category_id,
@@ -228,12 +228,12 @@ async def check_duplicates(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
                     ''
                 )                         AS search_keywords
-            FROM {TCG_SCHEMA}.tcg_products p
+            FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
-                ON psk.product_id = p.id
+                ON psk.product_id = p.tcg_uuid
             WHERE p.is_active = TRUE
               AND (
-                p.japanese_title ILIKE :title_pattern
+                p.name ILIKE :title_pattern
                 OR (
                     p.work_id::text = :work_id
                     AND p.manufacturer_id::text = :manufacturer_id
@@ -241,9 +241,9 @@ async def check_duplicates(
                 )
               )
             GROUP BY
-                p.id, p.code, p.japanese_title,
+                p.tcg_uuid, p.product_code, p.name,
                 p.work_id, p.manufacturer_id, p.product_category_id, p.mark
-            ORDER BY p.japanese_title
+            ORDER BY p.name
             LIMIT 20
             """
         ),
@@ -278,11 +278,11 @@ async def _next_pm_code(db: AsyncSession) -> str:
     """
     result = await db.execute(
         text(
-            f"""
-            SELECT code
-            FROM {TCG_SCHEMA}.tcg_products
-            WHERE code ~ '^PM[0-9]{{4}}$'
-            ORDER BY code DESC
+            """
+            SELECT product_code
+            FROM public.products
+            WHERE product_code ~ '^PM[0-9]{4}$'
+            ORDER BY product_code DESC
             LIMIT 1
             """
         )
@@ -322,7 +322,7 @@ async def create_product(
 
     1. 重複チェック（重複あり かつ force=False → 早期 return）
     2. PM コード採番
-    3. tcg_products に INSERT
+    3. public.products に INSERT
     4. product_search_keywords / product_exclude_keywords に INSERT
     5. post-write gate
 
@@ -360,19 +360,20 @@ async def create_product(
 
     rd = release_date if release_date else None
 
-    # tcg_products INSERT
+    # public.products INSERT
+    await db.execute(text("SET LOCAL app.is_operator = 'true'"))
     product_row = await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.tcg_products
-                (code, japanese_title, release_date, category_class,
+            """
+            INSERT INTO public.products
+                (product_code, name, release_date, category_class,
                  division_id, work_id, manufacturer_id, product_category_id,
-                 mark, english_title, is_active)
+                 mark, name_en, is_active, tcg_uuid)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
-                 :mark, :english_title, TRUE)
-            RETURNING id::text AS id
+                 :mark, :english_title, TRUE, gen_random_uuid())
+            RETURNING tcg_uuid::text AS id, id AS int_id
             """
         ),
         {
@@ -431,12 +432,12 @@ async def create_product(
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            f"SELECT code FROM {TCG_SCHEMA}.tcg_products WHERE id = :id"
+            "SELECT product_code FROM public.products WHERE tcg_uuid = CAST(:id AS uuid)"
         ),
         {"id": product_uuid},
     )
     vr = verify.fetchone()
-    if vr is None or vr.code != pm_code:
+    if vr is None or vr.product_code != pm_code:
         raise ValueError("PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED")
 
     return {"ok": True, "product_id": pm_code}
@@ -465,10 +466,10 @@ async def add_search_keyword(
     # product_id 取得
     pid_row = await db.execute(
         text(
-            f"""
-            SELECT id::text AS id
-            FROM {TCG_SCHEMA}.tcg_products
-            WHERE code = :code AND is_active = TRUE
+            """
+            SELECT tcg_uuid::text AS id
+            FROM public.products
+            WHERE product_code = :code AND is_active = TRUE
             FOR UPDATE
             """
         ),
