@@ -173,7 +173,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     if len(records) == 1:
         response["file_errors"] = ["CSV_EMPTY"]
         return response, []
-    current = {s["product"]["code"]: s for s in await snapshots(db)}
+    current = {s["product"]["product_code"]: s for s in await snapshots(db)}
     references = {}
     for field, table in LOOKUP_TABLES.items():
         result = await db.execute(text(f"SELECT to_jsonb(r) FROM {TCG_SCHEMA}.{table} r WHERE r.is_active=TRUE"))

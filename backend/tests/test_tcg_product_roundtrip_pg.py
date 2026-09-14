@@ -83,7 +83,7 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
         try:
             async with AsyncSession(engine) as db:
                 raw = await svc.export_csv(db)
-                assert len(svc.read_records(raw)) == count + 1
+                assert len(svc.read_records(raw)) == count + 2
                 empty = await svc.export_csv(db, "not found")
                 assert len(svc.read_records(empty)) == 1
                 with connection.cursor() as cur:
@@ -92,9 +92,9 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
                 selected = await svc.export_csv(db, "商品0", work)
                 assert len(svc.read_records(selected)) == 2
                 checked = await svc.preview_update(db, raw, "roundtrip.csv")
-                assert checked["unchanged"] == count and checked["blocked"] == 0
+                assert checked["unchanged"] == count + 1 and checked["blocked"] == 0
                 result = await submit(db, raw)
-                assert result["created"] == result["updated"] == 0 and result["unchanged"] == count
+                assert result["created"] == result["updated"] == 0 and result["unchanged"] == count + 1
                 assert observe(connection, False) == before
                 receipt = observe(connection)
                 with pytest.raises(svc.RoundtripError, match="ALREADY_IMPORTED"):

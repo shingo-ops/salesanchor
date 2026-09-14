@@ -181,8 +181,8 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         assert len(after["audit_log"]) == 1
         audit = after["audit_log"][0]
         assert audit["changed_by"] == "ci-reviewer" and audit["record_id"] == product["id"]
-        assert json.loads(audit["old_values"])["product"]["japanese_title"] == "Original"
-        assert json.loads(audit["new_values"])["product"]["japanese_title"] == "Edited"
+        assert json.loads(audit["old_values"])["product"]["name"] == "Original"
+        assert json.loads(audit["new_values"])["product"]["name"] == "Edited"
     finally:
         await engine.dispose()
 

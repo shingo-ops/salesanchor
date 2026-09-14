@@ -449,6 +449,8 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / STRUCTURE).read_text())
         cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
         cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,tcg_uuid,work_id) SELECT %s,%s,'Box',true,gen_random_uuid(),id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING tcg_uuid", (code, name))
             pid = cursor.fetchone()[0]
@@ -681,6 +683,8 @@ def test_interrupted_recovery_lock_timeout_and_settings(pg):
 def seed_guard_dictionary(connection, schema):
     with connection.cursor() as cursor:
         provision(cursor, schema)
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks(schema))
         products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
                     [("vol.1", 3)], [("マスターボールミラー", 8)])]
         for code, title, work, category, search, exclude in products:
@@ -1078,6 +1082,8 @@ def test_cardset_duplicate_target_preserves_keywords(pg):
     for schema in ("tenant_004", "tenant_903"):
         seed_cardset_dictionary(connection, schema)
     with connection.cursor() as cursor:
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks("tenant_004"))
         for position in (8, 9):
             cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'カードセット',%s FROM public.products WHERE product_code='PM0263'", (str(uuid4()), position))
     before = guard_snapshot(connection)
@@ -1340,6 +1346,8 @@ def test_bundle_collision_and_late_failure_are_atomic(pg, fault):
         seed_bundle_dictionary(connection, schema)
     with connection.cursor() as cursor:
         if fault == "late_duplicate":
+            cursor.execute(_PUBLIC_PRODUCTS_DDL)
+            cursor.execute(_rewire_keyword_fks("tenant_004"))
             for position in (10, 11):
                 cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'種セット',%s FROM public.products WHERE product_code='PM0284'", (str(uuid4()), position))
             message = "duplicate keyword"
