@@ -74,7 +74,7 @@ def test_expected_catalog_matches_independent_canonical_ddl(pg):
     ddl = sql.split("EXECUTE format($ddl$", 1)[1].split("$ddl$,", 1)[0]
     expected = json.loads(re.search(r"\$expected\$(.*?)\$expected\$", sql, re.S).group(1))
     with pg[0].cursor() as cur:
-        cur.execute("CREATE SCHEMA tenant_baseline; CREATE TABLE tenant_baseline.extraction_jobs(id uuid PRIMARY KEY)")
+        provision(cur, "tenant_baseline")
         cur.execute(ddl.replace("%I", "tenant_baseline"))
     assert fingerprint(pg[0], "tenant_baseline") == expected
     assert len(expected) == 9
@@ -127,8 +127,12 @@ def test_rejects_noncanonical_constraints_atomically(pg, case, alter):
         if case == "wrong_fk_column":
             cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (recorder.source_id, recorder.source_id))
         if case == "wrong_fk_schema":
-            cur.execute("CREATE SCHEMA tenant_foreign; CREATE TABLE tenant_foreign.extraction_jobs(id uuid PRIMARY KEY)")
-            cur.execute("INSERT INTO tenant_foreign.extraction_jobs VALUES (%s)", (jid,))
+            provision(cur, "tenant_foreign")
+            cur.execute(f"""INSERT INTO tenant_foreign.source_messages(id,raw_text,raw_sha256,is_active)
+                SELECT id,raw_text,raw_sha256,is_active FROM {SCHEMA}.source_messages WHERE id=%s""",
+                        (recorder.source_id,))
+            cur.execute("INSERT INTO tenant_foreign.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')",
+                        (jid, recorder.source_id))
         cur.execute(f"ALTER TABLE {SCHEMA}.extraction_attempts {alter}")
         # This earlier valid schema would be provisioned before the incompatible later table.
         provision(cur, "tenant_000")
