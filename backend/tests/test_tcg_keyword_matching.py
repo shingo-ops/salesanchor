@@ -3757,7 +3757,7 @@ def test_product_space_runs_exclusion_in_each_field(field, spaces):
                                raw_memo=values["memo"]) == (None, "NONE", False, [])
 
 
-@pytest.mark.parametrize("name", ["ALPHABETA", "ALPHA\tBETA", "ALPHA\nBETA", "ALPHA　BETA"])
+@pytest.mark.parametrize("name", ["ALPHABETA", "ALPHA\tBETA", "ALPHA\nBETA"])
 def test_product_space_runs_do_not_erase_separators(name):
     assert match_pid_with_work(name, ["A"], {"A": ["ALPHA BETA"]}, {},
                                work_id=None, product_work_ids={}) == (None, "NONE", False, [])
@@ -3777,3 +3777,57 @@ def test_product_space_runs_preserve_ambiguity_and_legacy_matching():
 def test_product_space_runs_preserve_numeric_boundary(name, expected):
     from app.services.tcg_analyzer_svc import match_product_keyword
     assert match_product_keyword("SET 100", normalize_en(name)) is expected
+
+
+@pytest.mark.parametrize("keyword,name,expected", [
+    ("30th FUTURISTIC", "30th CELEBRATION FUTURISTIC BOX", True),
+    ("30th FUTURISTIC", "FUTURISTIC BOX 30th CELEBRATION", True),
+    ("30th FUTURISTIC", "30th CELEBRATION BOX", False),
+    ("30th FUTURISTIC", "FUTURISTIC BOX", False),
+    ("30th FUTURISTIC", "130th FUTURISTIC BOX", False),
+    ("30th FUTURISTIC", "30th FUTURISTICAL BOX", False),
+    ("OP-01 BOX", "OP-010 Booster BOX", False),
+    ("OP-01 BOX", "OP-01 Booster BOX", True),
+    ("AR BOX", "SAR Booster BOX", False),
+    ("AR BOX", "AR Booster BOX", True),
+    ("M6", "SM6", False),
+    ("151", "1510", False),
+    ("30th FUTURISTIC", "30th\nFUTURISTIC", False),
+    ("30th FUTURISTIC", "30th\tFUTURISTIC", False),
+    ("BOX BOX", "BOX", False),
+    ("BOX BOX", "BOX other BOX", True),
+    ("Pokemon GO", "⭐Pokemon　GO", True),
+    (" 30th  FUTURISTIC ", "３０ＴＨ　CELEBRATION FUTURISTIC", True),
+])
+def test_product_all_terms_boundaries(keyword, name, expected):
+    from app.services.tcg_analyzer_svc import match_product_search_keyword
+    assert match_product_search_keyword(keyword, normalize_en(name)) is expected
+
+
+@pytest.mark.parametrize("keyword", ["OP-01", "151", "スターターセットV 草", "A & B", "", "ALPHA"])
+def test_product_all_terms_ineligible_keeps_existing_contract(keyword):
+    from app.services.tcg_analyzer_svc import match_product_keyword, match_product_search_keyword
+    for name in [keyword, "other " + keyword, "", "SM6", "スターターセットV　草"]:
+        norm = normalize_en(name)
+        assert match_product_search_keyword(keyword, norm) == match_product_keyword(keyword, norm)
+
+
+def test_product_all_terms_only_changes_positive_name_search():
+    search = {"A": ["30th FUTURISTIC"]}
+    def match(name, exclude=None, **kwargs):
+        return match_pid_with_work(name, ["A"], search, exclude or {}, work_id="work",
+                                   product_work_ids={"A": "work"}, **kwargs)
+    name = "30th CELEBRATION FUTURISTIC BOX"
+    assert match(name)[0:3] == ("A", "WORK:work|SK:30th FUTURISTIC", True)
+    # An exclusion phrase still needs contiguous words, including in state/memo.
+    assert match(name, {"A": ["30th FUTURISTIC"]})[2] is True
+    assert match(name, {"A": ["30th FUTURISTIC"]}, raw_memo="30th FUTURISTIC")[2] is False
+    assert match("other", raw_memo=name)[2] is False
+    assert match(name, product_category_classes={"A": "Box"}, raw_state="PSA10")[2] is False
+    assert match_pid_with_work(name, ["A"], search, {}, work_id="other",
+                               product_work_ids={"A": "work"})[2] is False
+    actual = match_pid_with_work(name, ["A", "B"], {**search, "B": search["A"]}, {},
+                                 work_id="work", product_work_ids={"A": "work", "B": "work"})
+    assert actual[2] is False and set(actual[3]) == {"A", "B"}
+    assert search == {"A": ["30th FUTURISTIC"]}
+    assert match_one_kw("30th FUTURISTIC", normalize_en(name)) is False

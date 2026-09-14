@@ -191,3 +191,14 @@ def test_space_runs_quality_keeps_single_space_distinct_from_no_space():
     assert check_r3_shared_kw({"A": ["ALPHA BETA"], "B": ["ALPHABETA"]}) == []
     assert check_r4_self_kill({"A": ["ALPHABETA"]}, {"A": ["ALPHA BETA"]}) == []
     assert check_r5_piggyback({"A": ["ALPHA BETA"], "B": ["ALPHABETA"]}, {}) == []
+
+
+def test_r5_all_terms_search_and_contiguous_exclusion():
+    search = {"A": ["30th FUTURISTIC"], "B": ["30th CELEBRATION FUTURISTIC BOX"]}
+    from app.services.tcg_keyword_lint import check_r5_piggyback
+    assert check_r5_piggyback(search, {}) == [
+        "A:'30th FUTURISTIC' rides B:'30th CELEBRATION FUTURISTIC BOX'"]
+    assert check_r5_piggyback(search, {"A": ["30th FUTURISTIC"]})
+    assert check_r5_piggyback(search, {"A": ["CELEBRATION"]}) == []
+    assert check_r5_piggyback({"A": search["A"], "B": ["FUTURISTIC BOX"]}, {}) == []
+    assert len(check_r5_piggyback({"A": ["ALPHA BETA"], "B": ["BETA ALPHA"]}, {})) == 2

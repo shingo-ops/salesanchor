@@ -250,7 +250,7 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT p.code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
-        assert cursor.fetchone() == ("PM0123", True, "name-first-v8-product-space-runs")
+        assert cursor.fetchone() == ("PM0123", True, "name-first-v9-product-all-terms")
 
 
 RECOVERY = "20260910_180000_tcg_interrupted_jobs_recovery_t004.sql"
@@ -1320,3 +1320,45 @@ def test_bundle_runner_registration_after_cardset_exclusion():
     target = "run_sql migrations/" + BUNDLE_MIGRATION
     assert lines.count(target) == 1
     assert lines.index("run_sql migrations/" + CARDSET_MIGRATION) < lines.index(target)
+
+
+def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute(f"""INSERT INTO {SCHEMA}.tcg_products
+            (code,japanese_title,category_class,is_active,work_id,product_category_id)
+            SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,w.id,c.id
+            FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
+            WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id,work_id""")
+        pid, work = cursor.fetchone()
+        for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
+                               ("product_exclude_keywords", "LIMITED EDITION")]:
+            cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
+                           (str(uuid4()), pid, keyword))
+    cases = [
+        ("30th CELEBRATION FUTURISTIC BOX", "", "", True),
+        ("FUTURISTIC BOX 30th CELEBRATION", "", "", True),
+        ("30th　FUTURISTIC", "", "", True),
+        ("FUTURISTIC BOX", "", "", False),
+        ("130th FUTURISTIC", "", "", False),
+        ("30th FUTURISTIC", "PSA10", "", False),
+        ("other", "", "30th FUTURISTIC", False),
+        ("30th FUTURISTIC", "", "LIMITED EDITION", False),
+        ("30th FUTURISTIC", "", "LIMITED special EDITION", True),
+    ]
+    raw = "\n".join(name + " 1BOX 1000円 " + state + " " + memo for name, state, memo, _ in cases)
+    records = [record(name, line, state=state, memo=memo) + [str(work)]
+               for line, (name, state, memo, _) in enumerate(cases, 1)]
+    _, jobid, result = run_message(connection, engine, monkeypatch, raw, records, work_id_mode=True)
+    assert result["status"] == "done" and result["items_count"] == len(cases)
+    with connection.cursor() as cursor:
+        cursor.execute(f"""SELECT ei.raw_product_name, ar.pid_resolved, p.code, ar.engine_version
+            FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id
+            LEFT JOIN {SCHEMA}.tcg_products p ON p.id=ar.product_id
+            WHERE ei.extraction_job_id=%s ORDER BY ei.line_start""", (jobid,))
+        rows = cursor.fetchall()
+    assert len(rows) == len(cases)
+    for row, (name, _, _, expected) in zip(rows, cases):
+        assert row == (name, expected, "TERMS_A" if expected else None, analyzer.ENGINE_VERSION)
+    assert analyzer.ENGINE_VERSION == "name-first-v9-product-all-terms"

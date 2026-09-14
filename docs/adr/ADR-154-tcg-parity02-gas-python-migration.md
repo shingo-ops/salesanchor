@@ -120,3 +120,7 @@ POは連続空白を1個へまとめる導入方針と、既存PR3473の反映�
 ### Why追補案: 商品CSVの出力・既存更新往復（2026-09-13）
 
 旧IMPORT-01は10列の新規採番のみで、parse_rowsのstrip/単純comma分割と既存create呼出では出力データの無変更往復/同一商品更新を保証できない。design§21は別12列形式と更新専用サービス、商品code+現物状態revision、確認後の全対象再照合と商品/語/履歴の1回commitを採用する。旧新規行単位契約は維持。既存DDLで履歴を残せるためmigrationなし。根拠: docs/handoff/tcg-product-import/roundtrip-design-evidence.json / recon.md / design.md§21。POは3条件の目標と実装〜配備を依頼済み、同一AI設計自己審査APPROVE、番号付きGO原文は未受領。
+
+## 2026-09-14 全語一致のWhy追補
+
+POは30thとFUTURISTICの両方を含む照合と、精度改善を条件とする公開を依頼。現英字フレーズ一致では中間CELEBRATIONを拾えない。固定1504明細の全語試作で一意特定1144→1148、既存特定喪失0、ORでは117件喪失。境界16/16。肯定検索だけをv9へ更新し、除外/状態/作品/旧参照検査は維持する。全件正答率は未確立。契約・公開条件はdocs/handoff/tcg-product-import/design.md§24、実測は同partial-match-evidence-20260914.json。

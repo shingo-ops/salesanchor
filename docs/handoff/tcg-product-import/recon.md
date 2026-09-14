@@ -1042,3 +1042,7 @@ PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落�
 既存作業台/.pr-number3492を直接確認、公式ledger-lookupが未登録exit1だったため同じブランチの.d登録を復元した。再登録日は本日、旧開始日時を新しい観測と混同しない。GOはチャット原文を転記し、GO委任の自己有効化はしない。
 
 復旧後ローカル検証: npm run test:coverageは30ファイル384件成功（/tmp/product-detail-restored-unit.log）、Playwright詳細/CSV統合22件成功（/tmp/product-detail-restored-e2e.log）。これらのAPIは模擬であり実DBは新HEADのCIで確認する。
+
+2026-09-14 全語一致実装前確認: preflight成功、origin/main=59f644cd。10:52:17 JSTのreadonly取得で1504明細/辞書/原文/訂正/解析が10:31版と全一致。肯定商品照合はanalyzer:554、除外は:550、品質R5はtcg_keyword_lint.py:96。design§23/24とpartial-match-evidence-20260914.jsonに対照と契約を保存。PR3492はmerged、deploy34794455633=failureをGitHubで直接確認。PR3486は辞書migration2ファイルのみ。別担当の配備障害を本件に混在させない。
+
+実装後検証: all-terms-result.json。固定正解0→4/4、1504明細の結果変化4/根拠のみ変化4、既存特定喪失0/別商品化0。実装AST純関数48成功、ruff成功、品質規則全文不変（既存STOP9）。DockerなしのためDB pytest未実行、正式CI待ち。Python3.14依存導入はpydantic-coreで失敗、スタックに合う3.12で再準備。自己レビューは肯定呼出し1か所/版/R5とガード不変を確認、独立レビューではない。最初の保存コマンドは本店mainと判定されガード停止、専用worktreeを先頭cdで明示して保存。

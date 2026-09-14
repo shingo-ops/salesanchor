@@ -17,6 +17,7 @@ from app.services.tcg_analyzer_svc import (
     collapse_product_spaces,
     match_one_kw,
     match_product_name_space,
+    match_product_search_keyword,
     normalize_en,
 )
 
@@ -93,7 +94,7 @@ def check_r5_piggyback(search_kw: dict, exclude_kw: dict) -> list[str]:
                     if collapse_product_spaces(normalize_en(a_kw)) == collapse_product_spaces(normalize_en(b_kw)):
                         continue
                     b_norm = normalize_en(b_kw)
-                    if not (match_one_kw(collapse_product_spaces(a_kw), collapse_product_spaces(b_norm))
+                    if not (match_product_search_keyword(a_kw, b_norm)
                             or match_product_name_space(a_kw, b_norm)):
                         continue
                     guarded = any(
