@@ -3086,3 +3086,9 @@ EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。�
 ### EV-20260914-LINE-ATTEMPT-IMPLEMENTED
 
 CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
+
+EV-20260914-PRODUCT-MIGRATION-SEPARATION: 方針合意に基づく設計調査。main59f644cd/preflight終了0、専用作業台。登録232(SQL206/Python26)とSHAを保存。読取専用の本番CSV履歴12商品34項目を照合し24一致10差、14表件数/指紋と非内部trigger0を確認。旧語再投入・混在268行書換え・固定名停止、CI2周の202609対象漏れを直接確認。設計草案は同一AI自己審査REVISE。間接呼出網羅/新規環境/復元/編集後2回実行は未実証。製品/DB/CI/配備変更0。根拠: docs/handoff/tcg-product-import/migration-separation-evidence.json / migration-separation-inventory.json / recon.md / design.md。
+
+EV-20260914-PRODUCT-MIGRATION-SEPARATION 追加照合: Python26→間接SQL32、直接と合計237固有SQLの静的依存証跡を追加。本番readonly SELECTで固定名12対象中11不一致、268分類/型番英語の投影で3商品5差、22制約validated/分類NULL0を確認。本番語unique2と初期DDLの差、旧復元手順の接続/QA用途不一致を識別。Docker接続不可・既存PG fixtureのCI制約を維持しDB試験未実施。切替自己審査REVISE、検証専用便V1–V6の計画のみAPPROVE・委任未実施。recon/designと証跡JSON followup_20260914参照。
+
+EV-20260914-PRODUCT-MIGRATION-VERIFY-START: POの限定検証委任への進行指示に基づき70d145f起点の専用作業台で検証役1名へ新規test1本のみ委任。正式カードlint違反0・検証自己設計審査合格。親はPR3500と配備34804164057成功/233到達を直接確認、readonly CSV再照合34項目中23一致11差。製品切替はREVISE、既存製品/DB/CI変更なし。recon委任節と証跡post_pr3500_csv参照。
