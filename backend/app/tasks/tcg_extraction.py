@@ -20,19 +20,20 @@ from __future__ import annotations
 
 import logging
 import os
-import uuid
 from datetime import datetime, timezone
 
+from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app.services.gemini_extraction_svc import _safe_error_message, extract_message
+from app.services.gemini_extraction_svc import extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
+from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
 from app.services.tcg_work_reference import (
+    WORK_ID_PROMPT_VERSION,
     WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
-    reference_json,
 )
 
 logger = logging.getLogger(__name__)
@@ -89,16 +90,14 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
     session = _get_sync_session()
     try:
         return _run_extraction(session, source_message_id)
-    except Exception as exc:
-        logger.exception(
-            "[tcg_extraction] unexpected error for sm=%s: %s", source_message_id, exc
-        )
+    except Exception:
+        logger.error("[tcg_extraction] unexpected error for sm=%s", source_message_id)
         return {
             "extraction_job_id": None,
             "status": "error",
             "items_count": 0,
             "analysis_stats": None,
-            "error_message": _safe_error_message(exc),
+            "error_message": "EXTRACTION_FAILED",
         }
     finally:
         session.close()
@@ -146,36 +145,39 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "error_message": "pending extraction_job が見つかりません",
         }
 
-    if not work_schema_ready(session):
+    if not work_schema_ready(session) or not schema_ready(session):
         return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
-                "analysis_stats": None, "error_message": "Work-ID schema migration is not ready"}
+                "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
     reference = load_work_reference(session, TCG_SCHEMA)
-    digest = reference_digest(reference)
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
-    # --- 2. status = 'running' に更新 ---
-    session.execute(
-        text(
-            f"UPDATE {TCG_SCHEMA}.extraction_jobs SET status = 'running', "
-            "work_reference_snapshot=CAST(:reference AS JSONB), work_reference_sha256=:digest "
-            "WHERE id = :ej_id"
-        ),
-        {"ej_id": extraction_job_id, "reference": reference_json(reference), "digest": digest},
-    )
-    session.commit()
+    recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
+    try:
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder)
+    except SoftTimeLimitExceeded:
+        code = "SOFT_TIME_LIMIT"
+    except RecordError as exc:
+        code = str(exc)
+    except Exception:
+        code = "RECORD_WRITE_FAILED"
+    recorder.fail(code)
+    message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
+    return {"extraction_job_id": extraction_job_id, "status": "error", "items_count": 0,
+            "analysis_stats": None, "error_message": message}
 
-    # --- 3. Gemini 抽出 ---
-    logger.info(
-        "[tcg_extraction] calling Gemini for ej=%s", extraction_job_id
-    )
-    result = extract_message(raw_text, work_reference=reference)
+
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder):
+    result = extract_message(raw_text, work_reference=reference, recorder=recorder)
+    if result["status"] == "error":
+        raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
+    digest = reference_digest(reference)
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
         try:
             current = load_work_reference(session, TCG_SCHEMA)
             if reference_digest(current) != digest:
-                raise ValueError("Product/work reference changed during extraction")
+                raise RecordError("REFERENCE_CHANGED")
             if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:
                 for item in result["items"]:
                     explicit = resolve_work_evidence(
@@ -183,13 +185,17 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                         None, None, reference["works"],
                     )
                     if explicit and item.get("resolved_work_id") not in (None, explicit):
-                        raise ValueError("Work ID contradicts explicit source evidence")
+                        raise RecordError("WORK_ID_CONFLICT")
+        except SoftTimeLimitExceeded:
+            raise
         except Exception as exc:
             session.rollback()
             result = {**result, "status": "error", "items": [],
-                      "error_message": _safe_error_message(exc)}
+                      "error_message": str(exc) if isinstance(exc, RecordError) else "INVALID_RESPONSE"}
 
-    items = result["items"]
+    if result["status"] == "error":
+        raise RecordError(result["error_message"])
+    items = recorder.prepare_items(result["items"])
     final_status = result["status"]  # done / empty / error
     prompt_version = result["prompt_version"]
     error_message = result["error_message"]
@@ -198,7 +204,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     items_inserted = 0
     if items:
         for item in items:
-            item_id = str(uuid.uuid4())
+            item_id = item["extraction_item_id"]
             session.execute(
                 text(
                     f"""
@@ -238,6 +244,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             )
             items_inserted += 1
 
+    recorder.complete(items)
+
     # --- 5. extraction_jobs を更新 ---
     now = datetime.now(timezone.utc)
     session.execute(
@@ -269,7 +277,12 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             logger.info(
                 "[tcg_extraction] starting analysis for ej=%s", extraction_job_id
             )
-            analysis_stats = analyze_extraction_job(session, extraction_job_id)
+            try:
+                analysis_stats = analyze_extraction_job(session, extraction_job_id)
+            except Exception:
+                session.rollback()
+                logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
+                analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
         else:
             logger.info(
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id

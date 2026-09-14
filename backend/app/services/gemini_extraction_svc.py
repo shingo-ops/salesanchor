@@ -19,7 +19,11 @@ from __future__ import annotations
 import logging
 import os
 import re
+from typing import Any
 
+from celery.exceptions import SoftTimeLimitExceeded
+
+from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
     reference_json,
@@ -167,7 +171,7 @@ _GEMINI_MODEL = "gemini-3.6-flash"
 
 
 def call_gemini_extraction(
-    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None,
+    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None, recorder=None,
 ) -> str:
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
@@ -181,8 +185,6 @@ def call_gemini_extraction(
         RuntimeError: GEMINI_API_KEY 未設定 / API 呼び出し失敗
     """
     from google.genai import types as genai_types  # type: ignore[import-untyped]
-
-    client = _get_genai_client()
 
     prompt_input = format_prompt_input(raw_text)
     # v3作品参照の付加前の原文連結: PROMPT_TEXT + '\n\n原文:\n' + input
@@ -199,6 +201,11 @@ def call_gemini_extraction(
         full_prompt = (f"{WORK_ID_PROMPT_TEXT}\n商品・作品マスタ（参照値）:"
                        f"{reference_json(work_reference)}\n\n原文:\n{prompt_input}")
 
+    payload: dict[str, Any] = {"model": _GEMINI_MODEL, "contents": full_prompt, "config": {"temperature": 0}}
+    if recorder is not None:
+        recorder.before_send(payload)
+    client = _get_genai_client()
+
     logger.info(
         "[gemini_extraction] calling Gemini API, model=%s text_len=%d",
         _GEMINI_MODEL,
@@ -207,15 +214,21 @@ def call_gemini_extraction(
 
     try:
         response = client.models.generate_content(
-            model=_GEMINI_MODEL,
-            contents=full_prompt,
-            config=genai_types.GenerateContentConfig(temperature=0),
+            model=payload["model"],
+            contents=payload["contents"],
+            config=genai_types.GenerateContentConfig(**payload["config"]),
         )
+    except SoftTimeLimitExceeded:
+        raise
     except Exception as exc:
+        if recorder is not None:
+            raise RecordError("API_ERROR") from None
         logger.exception("[gemini_extraction] API call failed: %s", _safe_error_message(exc))
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
+    if recorder is not None:
+        recorder.on_response(result_text)
     logger.info(
         "[gemini_extraction] API response received, response_len=%d", len(result_text)
     )
@@ -350,7 +363,7 @@ def parse_extraction_response(
 
 
 def extract_message(
-    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None,
+    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None, recorder=None,
 ) -> dict:
     """
     1 通の raw_text を Gemini で抽出する。
@@ -365,11 +378,15 @@ def extract_message(
       }
     """
     prompt_version = WORK_ID_PROMPT_VERSION if work_reference is not None else PROMPT_VERSION
+    response_text = ""
+    error_code = "API_ERROR"
     try:
+        kwargs = {"recorder": recorder} if recorder is not None else {}
         if work_reference is None:
-            response_text = call_gemini_extraction(raw_text, works=works)
+            response_text = call_gemini_extraction(raw_text, works=works, **kwargs)
         else:
-            response_text = call_gemini_extraction(raw_text, works=works, work_reference=work_reference)
+            response_text = call_gemini_extraction(raw_text, works=works, work_reference=work_reference, **kwargs)
+        error_code = "INVALID_RESPONSE"
         items = parse_extraction_response(response_text, raw_text, version=4 if work_reference is not None else 3)
         if work_reference is not None:
             for item in items:
@@ -382,14 +399,22 @@ def extract_message(
             "raw_response": response_text,
             "error_message": None,
         }
+    except SoftTimeLimitExceeded:
+        raise
     except Exception as exc:  # noqa: BLE001
-        logger.exception("[gemini_extraction] extract_message failed: %s", _safe_error_message(exc))
+        if isinstance(exc, RecordError):
+            error_code = str(exc)
+        if recorder is None:
+            logger.exception("[gemini_extraction] extract_message failed: %s", _safe_error_message(exc))
+        else:
+            logger.error("extraction_attempt=%s code=%s", recorder.id, error_code)
         return {
             "status": "error",
             "prompt_version": prompt_version,
             "items": [],
-            "raw_response": "",
-            "error_message": _safe_error_message(exc),
+            "raw_response": response_text if recorder is not None else "",
+            "error_message": error_code if recorder is not None else _safe_error_message(exc),
+            "error_code": error_code,
         }
 
 
