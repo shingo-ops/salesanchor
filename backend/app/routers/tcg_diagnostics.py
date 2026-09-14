@@ -17,14 +17,16 @@ TCG 診断 API。
 from __future__ import annotations
 
 from typing import Literal
+from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Path
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Response
 from pydantic import BaseModel, model_validator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_diagnostics_svc import get_allowed_keys, retry_extraction, run_diagnostic
+from app.services.tcg_extraction_record_svc import read_attempts
 
 router = APIRouter()
 
@@ -104,3 +106,22 @@ async def post_retry_extraction(
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return RetryExtractionResponse(**result)
+
+
+@router.get("/tcg/diagnostics/extraction-jobs/{job_id}/attempts")
+async def get_extraction_attempts(
+    job_id: UUID, response: Response, limit: int = Query(25, ge=1, le=100),
+    offset: int = Query(0, ge=0), db: AsyncSession = Depends(get_db),
+    _user=Depends(require_super_admin),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return await read_attempts(db, str(job_id), limit=limit, offset=offset)
+
+
+@router.get("/tcg/diagnostics/extraction-jobs/{job_id}/attempts/{attempt_id}")
+async def get_extraction_attempt(
+    job_id: UUID, attempt_id: UUID, response: Response, db: AsyncSession = Depends(get_db),
+    _user=Depends(require_super_admin),
+):
+    response.headers["Cache-Control"] = "no-store"
+    return await read_attempts(db, str(job_id), attempt_id=str(attempt_id))

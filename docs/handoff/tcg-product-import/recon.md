@@ -1046,3 +1046,5 @@ PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落�
 2026-09-14 全語一致実装前確認: preflight成功、origin/main=59f644cd。10:52:17 JSTのreadonly取得で1504明細/辞書/原文/訂正/解析が10:31版と全一致。肯定商品照合はanalyzer:554、除外は:550、品質R5はtcg_keyword_lint.py:96。design§23/24とpartial-match-evidence-20260914.jsonに対照と契約を保存。PR3492はmerged、deploy34794455633=failureをGitHubで直接確認。PR3486は辞書migration2ファイルのみ。別担当の配備障害を本件に混在させない。
 
 実装後検証: all-terms-result.json。固定正解0→4/4、1504明細の結果変化4/根拠のみ変化4、既存特定喪失0/別商品化0。実装AST純関数48成功、ruff成功、品質規則全文不変（既存STOP9）。DockerなしのためDB pytest未実行、正式CI待ち。Python3.14依存導入はpydantic-coreで失敗、スタックに合う3.12で再準備。自己レビューは肯定呼出し1か所/版/R5とガード不変を確認、独立レビューではない。最初の保存コマンドは本店mainと判定されガード停止、専用worktreeを先頭cdで明示して保存。
+
+PR3499作成後mainがe69da6edに進み根拠登録の末尾追記が競合。両方の記録を保持して統合。商品照合/R5本体は統合による変更なし。Python3.12の実import版48検査も成功。make lint-ciはexit0だが既存Makefileがbandit/mypyを許容するため無指摘とは称さず、正式CIを確認する。

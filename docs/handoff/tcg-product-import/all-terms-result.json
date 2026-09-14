@@ -618,7 +618,9 @@
     "pure_function_tests": 48,
     "passed": 48,
     "ruff": "passed",
-    "database_tests": "not run locally; Docker unavailable; formal CI required"
+    "database_tests": "not run locally; Docker unavailable; formal CI required",
+    "real_module_python312_tests": 48,
+    "lint_ci": "exit 0; ruff passed; bandit/mypy findings are tolerated by existing Makefile, not claimed clean"
   },
   "hashes": {
     "backend/app/services/tcg_analyzer_svc.py": "49f5c8ed5ea317ddd381c8b7fc80f432f53d42aaba7710954ae87c0aaa9bfe8e",
@@ -630,5 +632,7 @@
     "sa-allterms-implemented-private.json": "327143ff6ea5e68d595747261812b4b2337b433d30686f487d729fbbf2366987"
   },
   "review": "same-AI self-review; no independent second reviewer",
-  "release": "not deployed; official CI/release conditions pending"
+  "release": "not deployed; official CI/release conditions pending",
+  "pr": 3499,
+  "integration": "Merged main e69da6ed; evidence registry conflict resolved by retaining both entries; product matcher unchanged"
 }
