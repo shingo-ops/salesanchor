@@ -97,3 +97,23 @@ commit message: chore: sync verification branch with reviewed main
 通常のgit push origin release/product-migration-verificationを実施する。forceは禁止。
 HEAD、PR状態、差分、検査結果を親へ報告し待機する。
 END OF CARD
+
+# CARD-PRODUCT-MIGRATION-VERIFY-REPAIR1
+本追補はtest1本の検証不備修正を許可する。安全ガード/製品/CI/元SQL/期待値の緩和は禁止。
+根拠: CI34806371166は3725pass/95skip/1fail、V2の360行executeでIndexError。LIKE内の%と引数schemaが混在する。
+Psycopg公式usageの引数仕様（https://www.psycopg.org/docs/usage.html#passing-parameters-to-sql-queries）を確認済み。
+V2のLIKEパターンを別の%s引数として渡す。期待するFK4件と編集10項目保持を変更しない。
+数値ログはxdist下のcapsys.disabled出力がCIに現れなかった。emitで専用Warningを使い、pytestのwarnings summaryへ検証結果JSONを出す。
+公式根拠: https://docs.pytest.org/en/stable/how-to/capture-warnings.html 。既存警告を隠す設定変更は禁止。
+所有はbackend/tests/test_tcg_migration_separation_pg.pyのみ。他者の変更を戻さない。修正後ruff/format/compile/collect/diffを実施する。
+親へ差分とSHAを報告して停止する。commit/pushは次の読取確認後に行う。
+END OF CARD
+
+# CARD-PRODUCT-MIGRATION-VERIFY-REPAIR1-PUBLISH
+親が修正版test SHA256 99e30fc0095d89344a3c390b317104357275aa02e520b2754d5b262b408a712dと全差分を確認。
+実装役のcompile/ruff/format/diff/9件collectは成功報告、実PGは未検証。
+本追補は修正testと親のcard/recon/migration-separation-evidence.jsonの4ファイルのみstage/commit/通常pushを許可する。
+commit message: test: fix migration verification query binding and observations
+公開前にgit diff --check、card-lint、check-task-stateを通す。製品/CI/SQL変更禁止、PRのマージ・本番操作禁止は維持。
+push後はHEADを親へ返して待機する。
+END OF CARD

@@ -1134,3 +1134,5 @@ CSVを日常更新に使い、DB構造変更と初期登録を分ける方向へ
 公開前確認: 親がtest SHA256 4bc7e4c9e27866591f79ca77b940aa583deb4880fb6af296340cd071ac47f1eeを直接照合、9ケース/接続制限/元SQL/V2初期化/V3明示rollback/V4対象を審査。親diff終了0、担当の静的/9件collect成功、PG未実行。公開カードは検証PRのみ許可。カード文書作成コマンドが内容中のcommit表記によりmain操作と判定され一度拒否されたが、作業先をコマンド冒頭へ明記して再試行。ガード変更なし。
 
 検証PR3502/57f2ad07提出後のCI: guard34805799525はerror、通常Backend workflowは未起動。GitHubでbase5afb5af1、PR CONFLICTINGを直接確認。run-guard-evaluation.jsはbaseがheadの祖先であることを要求する。main更新を取り込み、末尾追記競合3文書を双方の原文保持で解消。main変更は対象SQL10本/再利用PG生成helper/接続制限に差分なしと担当が確認。親は文書3件の両側全文保持を機械照合。ガード・CI変更なし、再実行結果待ち。
+
+初回実PG CI34806371166 / job103858961380 / HEAD ebf21776: 3725pass/95skip/1fail、277.88秒。V2のSQLにLIKEのliteral %とbind引数が混在しIndexError（test:360）。親が実ログを取得し原因箇所を照合。9件すべて成功とはしない。capsys.disabledの数値printはxdistのCIログに現れず、検証根拠の出力方式も修正する。Context7利用不可のためPsycopg公式usageのliteral %/bind仕様とpytest公式warnings captureを直接確認。修正対象は検証test1本だけ。

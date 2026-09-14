@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import tempfile
+import warnings
 from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
@@ -133,9 +134,13 @@ V4_SEARCH_WORDS = {
 }
 
 
-def emit(capsys: pytest.CaptureFixture[str], case: str, **observations: object) -> None:
-    with capsys.disabled():
-        print(json.dumps({"case": case, **observations}, ensure_ascii=False, sort_keys=True))
+class MigrationVerificationObservation(UserWarning):
+    """Structured, non-sensitive observation retained in pytest's warning summary."""
+
+
+def emit(case: str, **observations: object) -> None:
+    payload = json.dumps({"case": case, **observations}, ensure_ascii=False, sort_keys=True)
+    warnings.warn(payload, MigrationVerificationObservation, stacklevel=2)
 
 
 def migration(name: str) -> str:
@@ -270,7 +275,7 @@ def additional_database(source_url: URL, prefix: str):
         connection.close()
 
 
-def test_v1_initial_ddl_has_twenty_of_twenty_two_product_constraints(pg, capsys):
+def test_v1_initial_ddl_has_twenty_of_twenty_two_product_constraints(pg):
     connection, _, _ = pg
     migration(INITIAL)
     with connection.cursor() as cursor:
@@ -320,10 +325,10 @@ def test_v1_initial_ddl_has_twenty_of_twenty_two_product_constraints(pg, capsys)
         "mark",
         "english_title",
     ]
-    emit(capsys, "V1", initial_constraints=20, production_constraints=22, missing_unique=2)
+    emit("V1", initial_constraints=20, production_constraints=22, missing_unique=2)
 
 
-def test_v2_structure_fragments_preserve_csv_equivalent_edits_twice(pg, capsys):
+def test_v2_structure_fragments_preserve_csv_equivalent_edits_twice(pg):
     connection, _, _ = pg
     schema = "tenant_902"
     with connection.cursor() as cursor:
@@ -362,13 +367,12 @@ def test_v2_structure_fragments_preserve_csv_equivalent_edits_twice(pg, capsys):
                JOIN pg_class r ON r.oid=c.conrelid
                JOIN pg_namespace n ON n.oid=r.relnamespace
                WHERE n.nspname=%s AND r.relname='tcg_products'
-                 AND c.conname LIKE 'fk_tcg_products_%_id'""",
-            (schema,),
+                 AND c.conname LIKE %s""",
+            (schema, "fk_tcg_products_%_id"),
         )
         assert cursor.fetchone()[0] == 4
     assert product_snapshot(connection, schema, "PM0001") == before
     emit(
-        capsys,
         "V2-structure",
         runs=2,
         editable_fields=10,
@@ -382,7 +386,7 @@ def test_v2_structure_fragments_preserve_csv_equivalent_edits_twice(pg, capsys):
     )
 
 
-def test_v2_current_mark_english_coalesce_preserves_nonnull_and_refills_null(pg, capsys):
+def test_v2_current_mark_english_coalesce_preserves_nonnull_and_refills_null(pg):
     connection, _, _ = pg
     with connection.cursor() as cursor:
         seed_product(cursor, SCHEMA, "PM0001", "人工検証商品", english="keep english", mark="KEEP")
@@ -409,10 +413,10 @@ def test_v2_current_mark_english_coalesce_preserves_nonnull_and_refills_null(pg,
             assert refilled["product"][key] == value
     assert refilled["product_search_keywords"] == null_snapshot["product_search_keywords"]
     assert refilled["product_exclude_keywords"] == null_snapshot["product_exclude_keywords"]
-    emit(capsys, "V2-coalesce", nonnull_preserved=2, null_refilled=2, source_sha256=SOURCE_SHA256[MARK_ENGLISH])
+    emit("V2-coalesce", nonnull_preserved=2, null_refilled=2, source_sha256=SOURCE_SHA256[MARK_ENGLISH])
 
 
-def test_v3_current_bundle_accepts_eleven_title_edits(pg, capsys):
+def test_v3_current_bundle_accepts_eleven_title_edits(pg):
     connection, _, _ = pg
     work_fixture.seed_bundle_dictionary(connection, "tenant_004")
     with connection.cursor() as cursor:
@@ -441,10 +445,10 @@ def test_v3_current_bundle_accepts_eleven_title_edits(pg, capsys):
         assert dict(cursor.fetchall()) == CURRENT_TITLE_EDITS
         cursor.execute("SELECT count(*) FROM tenant_004.tcg_products WHERE code='PM0297'")
         assert cursor.fetchone()[0] == 1
-    emit(capsys, "V3-title", edited_titles_accepted=11, identities_preserved=11, bundle_created=1)
+    emit("V3-title", edited_titles_accepted=11, identities_preserved=11, bundle_created=1)
 
 
-def test_v3_structural_mismatch_rolls_back_transaction(pg, capsys):
+def test_v3_structural_mismatch_rolls_back_transaction(pg):
     connection, _, _ = pg
     work_fixture.seed_bundle_dictionary(connection, "tenant_004")
     tables = (
@@ -465,10 +469,10 @@ def test_v3_structural_mismatch_rolls_back_transaction(pg, capsys):
         cursor.execute("ROLLBACK")
         assert connection.get_transaction_status() == psycopg2.extensions.TRANSACTION_STATUS_IDLE
     assert schema_snapshot(connection, "tenant_004", tables) == before
-    emit(capsys, "V3-rollback", structural_fault="PM0276.work_id=NULL", changed_rows_after_failure=0)
+    emit("V3-rollback", structural_fault="PM0276.work_id=NULL", changed_rows_after_failure=0)
 
 
-def test_v4_legacy_keyword_and_classification_replay_restores_edits(pg, capsys):
+def test_v4_legacy_keyword_and_classification_replay_restores_edits(pg):
     connection, _, _ = pg
     with connection.cursor() as cursor:
         work_fixture.provision(cursor, "tenant_004")
@@ -532,10 +536,10 @@ def test_v4_legacy_keyword_and_classification_replay_restores_edits(pg, capsys):
     expected.add(("PM0263", "exclude", "カードセット", 0))
     assert restored == expected
     assert edited_words < after_words
-    emit(capsys, "V4", search_words_restored=9, exclude_words_restored=1, classification_fields_restored=4)
+    emit("V4", search_words_restored=9, exclude_words_restored=1, classification_fields_restored=4)
 
 
-def test_v4_current_bundle_readds_pm0264_cardset_exclusion(pg, capsys):
+def test_v4_current_bundle_readds_pm0264_cardset_exclusion(pg):
     connection, _, _ = pg
     work_fixture.seed_bundle_dictionary(connection, "tenant_004")
     with connection.cursor() as cursor:
@@ -576,10 +580,10 @@ def test_v4_current_bundle_readds_pm0264_cardset_exclusion(pg, capsys):
     assert replayed["tcg_products"] == edited["tcg_products"]
     assert replayed["product_search_keywords"] == edited["product_search_keywords"]
     assert len(replayed["product_exclude_keywords"]) == len(edited["product_exclude_keywords"]) + 1
-    emit(capsys, "V4-bundle", pm0264_exclude_words_restored=1, product_identity_preserved=True)
+    emit("V4-bundle", pm0264_exclude_words_restored=1, product_identity_preserved=True)
 
 
-def test_v5_explicit_conflict_targets_require_keyword_uniques(pg, capsys):
+def test_v5_explicit_conflict_targets_require_keyword_uniques(pg):
     _, _, source_url = pg
     with (
         additional_database(source_url, "tcg_migration_without_unique") as (plain, _),
@@ -627,7 +631,7 @@ def test_v5_explicit_conflict_targets_require_keyword_uniques(pg, capsys):
                 ("search", "決戦"),
                 ("search", "頂上"),
             ]
-    emit(capsys, "V5", databases=2, without_unique_failures=2, with_unique_migrations=2)
+    emit("V5", databases=2, without_unique_failures=2, with_unique_migrations=2)
 
 
 V6_TABLES = (
@@ -645,7 +649,7 @@ V6_TABLES = (
 )
 
 
-def test_v6_artificial_dump_restore_preserves_product_graph_and_history(pg, capsys):
+def test_v6_artificial_dump_restore_preserves_product_graph_and_history(pg):
     connection, _, source_url = pg
     with connection.cursor() as cursor:
         cursor.execute(for_schema(HISTORY, SCHEMA))
@@ -766,7 +770,6 @@ def test_v6_artificial_dump_restore_preserves_product_graph_and_history(pg, caps
     assert after == before
     digest = hashlib.sha256(json.dumps(before, sort_keys=True).encode()).hexdigest()
     emit(
-        capsys,
         "V6",
         compared_tables=len(V6_TABLES),
         differences=0,
