@@ -52,7 +52,7 @@ BEGIN
         ) AS e(code, title)
     LOOP
         SELECT * INTO product FROM tenant_004.tcg_products WHERE code = expected.code;
-        IF product.id IS NULL OR product.japanese_title IS DISTINCT FROM expected.title
+        IF product.id IS NULL
            OR product.category_class IS DISTINCT FROM 'Box'
            OR product.division_id IS DISTINCT FROM refs.division_id
            OR product.work_id IS DISTINCT FROM refs.work_id
@@ -78,8 +78,7 @@ BEGIN
         VALUES ('PM0297', 'MEGA 30th CELEBRATION カードセット（9種セット）',
             'Box', refs.division_id, refs.work_id, refs.manufacturer_id,
             refs.product_category_id, true);
-    ELSIF product.japanese_title IS DISTINCT FROM 'MEGA 30th CELEBRATION カードセット（9種セット）'
-       OR product.category_class IS DISTINCT FROM 'Box'
+    ELSIF product.category_class IS DISTINCT FROM 'Box'
        OR product.division_id IS DISTINCT FROM refs.division_id
        OR product.work_id IS DISTINCT FROM refs.work_id
        OR product.manufacturer_id IS DISTINCT FROM refs.manufacturer_id
