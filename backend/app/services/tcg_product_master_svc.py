@@ -469,6 +469,7 @@ async def add_search_keyword(
             SELECT id::text AS id
             FROM {TCG_SCHEMA}.tcg_products
             WHERE code = :code AND is_active = TRUE
+            FOR UPDATE
             """
         ),
         {"code": product_code},
