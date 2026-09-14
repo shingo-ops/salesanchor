@@ -54,6 +54,16 @@ def _revision(snapshot: dict[str, Any]) -> str:
 
 async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any]:
     product = dict(snapshot["product"])
+    # API backward compatibility: public.products columns → API field names
+    product.pop("id", None)  # Remove SERIAL integer PK (not exposed in API)
+    if "tcg_uuid" in product:
+        product["id"] = str(product.pop("tcg_uuid"))
+    if "name" in product:
+        product["japanese_title"] = product.pop("name")
+    if "name_en" in product:
+        product["english_title"] = product.pop("name_en")
+    if "product_code" in product:
+        product["code"] = product.pop("product_code")
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
     lookups = {}

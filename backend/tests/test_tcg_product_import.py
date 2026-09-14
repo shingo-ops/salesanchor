@@ -343,7 +343,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
         return SimpleNamespace(fetchone=MagicMock(return_value=row))
     db = SimpleNamespace(commit=AsyncMock())
     calls = 0
-    async def execute(query, params):
+    async def execute(query, params=None):
         nonlocal calls
         calls += 1
         if calls == 1:

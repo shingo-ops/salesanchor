@@ -243,7 +243,7 @@ async def fetch_output_rows(
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
-        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.code NULLS LAST
+        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.product_code NULLS LAST
     """)
 
     result = await db.execute(sql)
