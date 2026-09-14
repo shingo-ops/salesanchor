@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-09-14 / ADR 総数: 155 件
+最終更新: 2026-09-14 / ADR 総数: 156 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -174,6 +174,7 @@
 | [ADR-154](./ADR-154-tcg-parity02-gas-python-migration.md) | ADR-154: TCG PARITY-02 — GAS Phase 3 解析パイプラインを Python サーバーへ移植する | Accepted | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
+| [ADR-1001](./ADR-1001-deprecate-tcg-products-unify-to-public.md) | ADR-1001: tenant_004.tcg_products を廃止し public.products に統合する | Proposed | — | — |
 
 ## ステータス凡例
 
