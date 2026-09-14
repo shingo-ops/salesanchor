@@ -22,16 +22,22 @@ tcg_product_import_svc から既存の create_product を呼ぶ。
 """
 from __future__ import annotations
 
+import csv
+from datetime import date
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
-from pydantic import BaseModel
+from fastapi.responses import Response
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
+from app.services import tcg_product_roundtrip_svc as roundtrip
+from app.services.tcg_product_detail_svc import ProductDetailError, get_product_detail, update_product_detail
 from app.services.tcg_product_import_svc import commit_import, preview
 from app.tcg_config import TCG_SCHEMA
 
@@ -52,6 +58,7 @@ class ProductListItem(BaseModel):
     mark: str = ""
     release_date: str = ""
     keyword_count: int = 0
+    exclude_keyword_count: int = 0
 
 
 class ProductWork(BaseModel):
@@ -86,7 +93,7 @@ async def list_products(
     _user: User = Depends(require_super_admin),
 ) -> ProductListResponse:
     like = "%" + query.strip() + "%" if query.strip() else "%"
-    condition = "(p.japanese_title ILIKE :like OR p.code ILIKE :like)"
+    condition = "(p.japanese_title ILIKE :like OR p.english_title ILIKE :like OR p.mark ILIKE :like OR p.code ILIKE :like)"
     params = {"like": like}
     if work_id is not None:
         condition += " AND p.work_id = CAST(:work_id AS uuid)"
@@ -103,7 +110,9 @@ async def list_products(
         text(
             f"SELECT p.code, p.japanese_title, p.english_title, p.mark, p.release_date, "
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"WHERE k.product_id = p.id) AS keyword_count "
+            f"WHERE k.product_id = p.id) AS keyword_count, "
+            f"(SELECT count(*) FROM {TCG_SCHEMA}.product_exclude_keywords k "
+            f"WHERE k.product_id = p.id) AS exclude_keyword_count "
             f"FROM {TCG_SCHEMA}.tcg_products p "
             f"WHERE {condition} "
             f"ORDER BY p.release_date DESC NULLS LAST, p.code DESC LIMIT :limit OFFSET :offset"
@@ -118,6 +127,7 @@ async def list_products(
             mark=str(r[3] or ""),
             release_date=str(r[4] or ""),
             keyword_count=int(r[5] or 0),
+            exclude_keyword_count=int(r[6] or 0),
         )
         for r in rows.fetchall()
     ]
@@ -136,6 +146,24 @@ async def list_products(
 # ---------------------------------------------------------------------------
 # 取り込み
 # ---------------------------------------------------------------------------
+
+@router.get("/tcg/products/export")
+async def export_products(
+    query: str = Query(default=""),
+    work_id: UUID | None = Query(default=None),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> Response:
+    try:
+        raw = await roundtrip.export_csv(db, query, str(work_id) if work_id else None)
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
+    return Response(raw, media_type="text/csv; charset=utf-8", headers={
+        "Content-Disposition": 'attachment; filename="tcg-products-update.csv"',
+        "Cache-Control": "no-store",
+    })
 
 
 async def _read_csv(file: UploadFile) -> bytes:
@@ -172,7 +200,14 @@ async def preview_import(
     画面はこの結果を確認の段で見せる。止める判定のある行は登録されない。
     """
     raw = await _read_csv(file)
-    return await preview(db, raw, file.filename or "")
+    try:
+        if roundtrip.is_update(raw):
+            return await roundtrip.preview_update(db, raw, file.filename or "")
+        return await preview(db, raw, file.filename or "")
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
 
 
 @router.post(
@@ -192,7 +227,15 @@ async def commit_import_endpoint(
     同じものを必ず受け取る。一致しない場合は書き込まない。
     """
     raw = await _read_csv(file)
-    checked = await preview(db, raw, file.filename or "")
+    try:
+        if roundtrip.is_update(raw):
+            return await roundtrip.commit_update(db, raw, file.filename or "", str(user.email or user.id or ""), confirmed_digest)
+    except roundtrip.RoundtripError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    try:
+        checked = await preview(db, raw, file.filename or "")
+    except csv.Error as exc:
+        raise HTTPException(status_code=422, detail="ROUNDTRIP_CSV_INVALID") from exc
     if checked["file_errors"]:
         raise HTTPException(status_code=422, detail=checked["file_errors"])
     if confirmed_digest != checked["digest"]:
@@ -202,3 +245,57 @@ async def commit_import_endpoint(
         return await commit_import(db, raw, file.filename or "", executed_by)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/tcg/products/detail/{product_code}", summary="商品マスタ詳細（DETAIL-01）")
+async def product_detail(
+    product_code: str,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> dict:
+    try:
+        return await get_product_detail(db, product_code)
+    except ProductDetailError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+
+
+DetailWord = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
+
+
+class ProductDetailUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    revision: str = Field(pattern=r"^[a-f0-9]{64}$")
+    japanese_title: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=5000)]
+    english_title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
+    mark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
+    release_date: str | None
+    division_id: UUID | None
+    work_id: UUID | None
+    manufacturer_id: UUID | None
+    product_category_id: UUID | None
+    search_keywords: list[DetailWord] = Field(max_length=1000)
+    exclude_keywords: list[DetailWord] = Field(max_length=1000)
+
+    @field_validator("release_date")
+    @classmethod
+    def calendar_date(cls, value: str | None) -> str | None:
+        if value is not None and date.fromisoformat(value).isoformat() != value:
+            raise ValueError("Expected YYYY-MM-DD")
+        return value
+
+
+@router.put("/tcg/products/detail/{product_code}", summary="商品マスタ詳細保存（DETAIL-01）")
+async def save_product_detail(
+    product_code: str,
+    payload: ProductDetailUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_super_admin),
+) -> dict:
+    values = payload.model_dump(mode="json", exclude={"revision"})
+    try:
+        return await update_product_detail(
+            db, product_code, values, payload.revision, str(user.email or user.id or ""),
+        )
+    except ProductDetailError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc

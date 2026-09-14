@@ -124,3 +124,7 @@ POは連続空白を1個へまとめる導入方針と、既存PR3473の反映�
 ### Why追補案: 通常抽出の試行記録（2026-09-14）
 
 通常taskは参照/抽出値/作品IDを保存するが加工前の応答を保存せず、形式不正時はサービスのraw_responseも空になる。抽出をやり直しても過去の回答は復元できないため、送信前・受信後・明細確定を試行IDで結ぶ追加履歴を設ける設計。固定44投稿を実helperで再構成した入力は最大99,099 bytes/合計3,886,828 bytes（実送信記録ではない）。本番READ ONLYで対象schema001/004、所有者jarvis、実行者salesanchor_appを確認。保存失敗時の新結果停止はPO質問への「進める」を根拠とする。現行の作品IDのみ判断/10列を保ち、商品候補や内部思考は追加しない。詳細・8MiB境界・保持/権限/中断/試験・自己審査APPROVEはdesign-keyword.md「通常記録A・実装引継ぎ版」。この追補は提案でありADR全体の承認状態変更や製品実装承認ではない。
+
+### Why追補案: 商品CSVの出力・既存更新往復（2026-09-13）
+
+旧IMPORT-01は10列の新規採番のみで、parse_rowsのstrip/単純comma分割と既存create呼出では出力データの無変更往復/同一商品更新を保証できない。design§21は別12列形式と更新専用サービス、商品code+現物状態revision、確認後の全対象再照合と商品/語/履歴の1回commitを採用する。旧新規行単位契約は維持。既存DDLで履歴を残せるためmigrationなし。根拠: docs/handoff/tcg-product-import/roundtrip-design-evidence.json / recon.md / design.md§21。POは3条件の目標と実装〜配備を依頼済み、同一AI設計自己審査APPROVE、番号付きGO原文は未受領。

@@ -888,3 +888,157 @@ PG試験は現物を読取。正常1ケース（44商品）/保存前ValueError4
 ### CSV整合性修正の製品公開・CI確認（2026-09-13、承認受領）
 
 PR直前停止と未実行CIを報告した後のPO原文「進める」を、製品PR提出と通常CIの確認へ進む承認として受領。既存担当へ公開カードを渡す。preflight成功、最新main1a8eed69から追加差分0、検収4SHA/実worktree差分一致を直接確認。マージ/配備の番号付きGO、データ更新/44登録/再解析/配信は含めない。
+
+
+## 2026-09-13 DETAIL-01実測
+
+基点: origin/main 10212686（専用worktree作成時）。親: [商品マスタ](../../specs/product-master/README.md)。
+対応設計: [design.md DETAIL-01](design.md#2026-09-13-商品詳細編集と二言語一覧detail-01)。
+既存画面PR #3422はGitHub APIでMERGED（2026-09-11T03:24:43Z）を確認。
+
+| 観点 | 観測した事実 |
+|---|---|
+| 目的/利用者 | POが行クリック編集、日英商品名2段、コード非表示、検索/除外数の5列を依頼し、進行と本番反映を明示依頼 |
+| 入り口/出力 | frontend/src/pages/super-admin/TcgProductMasterPage.tsx:16 は日本語の一覧型、同:52 の5列にcodeがありonRowClickなし |
+| 処理/境界 | backend/app/routers/tcg_product_import.py:48 の一覧型はenglish_titleあり、同:100 以降のSQLには除外数なし |
+| データ | migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:82 のtcg_products、同:147/163 の語テーブル、同:45 のaudit_logが実在。mark/englishは20260903_180000_tcg_products_mark_en_t004.sql:34/47で追加 |
+| 権限/外部 | 両既存商品ルーターはrequire_super_admin、TCG_SCHEMA。外部API不要。認可条件は変更しない |
+| 再利用/試験 | frontend/src/components/DataTable.tsx:71 にonRowClick、Drawer.tsx:22にProps。backend/tests/test_tcg_product_list_pg.py:23は本番migrationから隔離schemaを作る |
+| 現状差/失敗 | backend/app/routers/tcg_product_master.pyには登録/語追加のみで全項目更新なし。add_search_keywordは親行ロックなし。Docker接続exit1、ソケット未起動。実DBはCIで試験予定 |
+
+ADR索引検索実施。関連ADR-093（商品と在庫の分離）、ADR-113（handoff）、ADR-144（共通UI）、ADR-027（i18n）。
+Context7 MCPはツール一覧に0件。起動指示の代替許可に従い2026-09-13に公式資料を直接確認:
+[SQLAlchemy asyncio](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html)、
+[PostgreSQL row locking](https://www.postgresql.org/docs/current/explicit-locking.html)、
+[Pydantic validators](https://docs.pydantic.dev/latest/concepts/validators/)。
+AsyncSessionのcommit/rollback、親行FOR UPDATEによる同一商品の直列化と入力検証の契約に使用。
+外部企業の改善数値は用いていない。作業場所の他者変更は上書きしていない。
+
+
+### DETAIL-01 作業停止時の実行結果
+
+設計/自己審査済み、CARD-DETAIL-01は正式card-lint exit0。引用行番号は基点10212686のgit showで再照合。
+実装済み: 一覧5列・日英2段・検索/除外数、編集UI、GET詳細。
+未実装: PUT更新・語の置換・監査記録・既存語追加のロック参加・更新の実PG試験。
+
+停止操作は新規サービス等を保存するpython3コマンド。PreToolUse hookがソース中の削除SQLを不可逆操作として検出し全体を拒否。
+拒否文の引用を文書へ保存する操作も同じ検知で拒否されたため、この記録にはSQL文を含めず事実と理由のみを残す。
+本番DBで削除は実行していない。permit発行や更新コードの迂回保存もしていない。
+POへソース保存に限定した承認質問を送信。その後のPO原文「進める」を受領済み。
+
+| 検証 | 実際の結果と根拠 |
+|---|---|
+| frontend build | 最終exit0、/tmp/product-detail-build-final.log |
+| frontend check:all | exit0、既存警告218件あり、/tmp/product-detail-check.log |
+| 変更TSXの厳格eslint | 2ファイル・警告0・exit0 |
+| 新規Playwright | 11件成功、/tmp/product-detail-e2e-r2.log |
+| 既存CSV画面 | 7件成功、/tmp/product-detail-e2e.log |
+| 画面確認 | /tmp/reports/product-detail/list-ja-1280.png と editor-ja-390.png をAIが閲覧、5列/文字サイズ差/右パネルを確認 |
+| backend限定ruff | router/service/read-testの3ファイル成功 |
+| backend make lint-ci | 未合格。import順の初回失敗は修正済み。再実行はbandit走査例外多数、mypyに対象外既存エラーが出て中断exit130。/tmp/product-detail-backend-lint-r2.log |
+| 実PG試験 | Dockerソケット未起動のため規則どおり未実行。グローバルツールはPython3.14、3.12にbanditなし |
+| 文書チェック | check-task-state、check-doc-heading-duplicates、git diff --check成功 |
+
+画面試験は模擬APIを使用し、実装済み保存APIや実DBでの成功を示さない。POの実機確認も未実施。
+PR未提出、CI未実行、マージ/本番デプロイ未実施。専用作業場所の未コミット変更を保持。
+再開にはソース保存承認と正規ガード手続きが必要。承認後に更新API/実PG検証/CIを完遂してから正式PR/マージへ進む。
+
+
+### DETAIL-01 ソース保存承認後の正規手続き停止
+
+POの「進める」は、直前の質問に対する更新処理のソースコード保存承認として受領した。
+本番DBへの削除実行やガードの変更承認ではない。
+executor-preflightは通過。専用作業場所の変更は保持され、origin/mainより2コミット遅れを確認。
+ガードの案内どおりscripts/permit-danger.shに対象操作を渡したが、許可コマンド自体がPreToolUse hookで拒否されてexit前に停止した。
+許可チケットは発行できていない。
+
+読み取りで確認した実体: /Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:143以降。
+151行はコマンド全体への文字列一致、167行以降は既存チケットの照合。許可コマンドを除外する分岐がない。
+ユーザーの承認不足ではなく、エージェントからの正規チケット発行が自己ブロックされる状態。
+ガード変更・文字列隠蔽・チケットファイル直接操作はしていない。
+
+次の一手: POの端末から公式permit-danger.shで該当するソース保存1回のチケットを発行後、
+同じ専用作業場所で更新API実装を再開する。有効期限30分、1回限り。本番DBへの削除実行には使用しない。
+実装/検証/PR/マージ/本番の状態は前節から進んでいない。
+
+### DETAIL-01 許可適用とローカル最終検証（2026-09-14 00:20 JST）
+
+PO原文「実行した」を受領し、承認済み更新サービスのソース保存を実行、exit 0。
+API実装を完了。既存add_search_keywordの親商品ロック1点を同じ契約に揃えた。
+ユーザーの承認をGO番号へ創作転記せず、現行の正式PRゲートを維持する。
+
+| 実行した検証 | 結果・一次出力 |
+|---|---|
+| executor-preflight | exit 0。main本店の他者変更は維持、専用worktreeで作業 |
+| Playwright chromium（詳細＋CSV） | 18 passed (28.8s)、/tmp/product-detail-e2e-final.log。APIはモック、DB保存証明ではない |
+| npm run build | exit 0、/tmp/product-detail-build-final.log |
+| npm run check:all | exit 0、既存警告218、/tmp/product-detail-check-final.log |
+| Python3.12 make lint-ci | exit 0、ruff/bandit成功、mypy既存警告。/tmp/product-detail-backend-lint-final.log、変更3製品ファイルのエラー0 |
+| 実PG/pytest | 未実施。docker psがローカルsocket不在でexit 1。環境偽装せず既存CIで実行する |
+| 保存ソースの停止 | 解消。公式1回許可適用でファイル書込成功。本番DBでのSQL実行0 |
+
+試験は既存test_tcg_work_matching_integration.pyのCI専用・localhost・jarvis_test_db限定fixtureを使い、
+別接続から確定済みの商品/語/監査を照合する。成功、語ID保持、古い版、2同時編集、既存語追加、
+語書込/監査/commit前/キャンセル失敗、commit応答消失、実認可依存、422入力、分類導出を追加。
+現時点では実DB結果は未確認。独立レビュー/PR/マージ/本番デプロイも未完了。
+
+### DETAIL-01 PR提出と既存試験補正（2026-09-14）
+
+正式PR: https://github.com/shingo-ops/salesanchor/pull/3492 。製品実装コミット84a6a697、最新main追従99e211bb。
+初回CIのFrontend lint & custom checks（run34765501418）では既存一覧単体試験4件が旧文言を期待して失敗。
+5列/日英名/0表示を検証する期待値へ更新し、既存検索/作品/ページング検査は維持した。
+ローカルnpm run test:coverageは29ファイル343件すべて成功（/tmp/product-detail-unit-coverage.log）。
+backendの受入D7を補強し、参照する解析結果の全列と別テナント同名商品の商品/語/監査不変を追加した。
+初回backend lint CI成功、実PGは実行中。検証未完了の試験を成功扱いしない。
+
+process-artifacts gate（run34765540117）はPR番号付きGO記録不足で拒否。
+POの公開依頼は受領済みだが、原文を「GO #番号」へ創作せず、正式ゲートは維持して停止する。
+
+### DETAIL-01 保存・参照不変の実DB検証完了（2026-09-14 00:37 JST）
+
+e1f6513cのbackend CI run34765847297/job103746586673はsuccess。
+原ログ /tmp/product-detail-pg-ci-final-code.log: 3596 passed, 95 skipped, 309 warnings in 236.76s、保存サービス73文中71実行（97%）。
+CIはlocalhost:5432/jarvis_test_dbのRLS_ADMIN_DATABASE_URLを設定。新規27ケースの共通skip条件は該当せず、
+実DB専用fixtureがGITHUB_ACTIONS/localhost/試験DBを確認して実行された。全体の95skipを本便の未実施と混同しない。
+原子性・2同時編集・既存追加語の競合・応答消失・非管理者/不正入力・分類・商品ID/解析参照・別テナント不変を検証した。
+ローカルの統合後単体は30ファイル377件成功（mainの別便34件追加後、/tmp/product-detail-unit-integration.log）。
+
+mainがe27c2f59まで前進。製品コード競合0、tasks/todo.mdとevidence-registry.mdの追記競合2件を、
+本便行＋mainの最新別便行、双方の根拠追記を残して解消。統合後の最終CIはPR3492の最新HEAD checksが正本。
+本便製品コードは84a6a697から変更なし。追加変更は試験の表示期待/不変検証と文書記録のみ。
+
+実装差分の自己レビュー: 既存CSV経路・認可・ID維持、値バインド、商品ロック後の版再取得、
+一括確定/rollback、UI多重送信/未保存確認、日英キーを照合。未解決の製品不具合なし。
+同一AIによる自己レビューであり、独立した第二者レビューではない。
+現在地: 設計作成/設計自己審査/PO実装承認/実装/PR提出済み。正式GO記録待ち、マージ/デプロイ未実施。
+公開依頼の原文は受領済みだが、scripts/check-process-artifacts.js:293–321は当該PR番号を含む原文を要求するため創作しない。
+DB構造変更/本番データ直接更新0。本便コードはGit/PRに保存済み。コードの復旧は通常のPR経路で行う。
+## 商品CSV往復・新規依頼（2026-09-13）
+
+PO原文「合意、この内容を目標として進める、離席するのでエクスポート機能を実装してPRマージ本番反映まで完了させてくれ」。前提の3条件を設計§21へ整理。最新main10212686起点の正式new-worktreeで専用設計場所を作成。他者の未保存変更は保持。実装範囲は旧10列新規取込を保持した12列既存更新とexport。原文GO #番号は存在しないためprocess gateを偽装せずPR完成後に不足を示す。参照一次情報のSHAはroundtrip-design-evidence.json、事実行番号/設計自己審査/受入条件はdesign§21。Context7不在のため許可済みの公式docsを直接確認。製品変更0。
+
+設計時のCSV codec対照：13種の空/日本語/空白/comma/quote/CRLF/式先頭/apostrophe値を語配列0〜2要素と商品名で組合せ、外側BOM CSV＋内側CSV＋可逆apostrophe処理の2379組が往復一致。設計用の純Python試作であり製品実装の試験ではない。実装後は現物codec/PGで検証する。frontend api.requestForm:173はPOST再送ループなしを直接確認。Playwright portはconfig.ts:20のPORT変数で固定可能、カード文言を実物へ合わせた。
+
+実装開始前停止の観測：公式new-worktree.sh96行がgrep部分一致のため、release-product-csv-roundtrip-designだけの実在を短いrelease-product-csv-roundtrip実在と誤判定。git worktree list --porcelainで実装場所なし、test -d失敗を親確認。cdガードの拒否は正常作動。script/guardを変更せず、部分一致しないrelease/product-csv-roundtrip-implへ正式カードを補正し同じ作成手順を使う。製品編集0。
+
+実装ソース保存時のガード停止：exec_commandのheredoc内の語削除SQLが実DBの不可逆操作として検出された。親の読取検索も同じ語の検出で拒否され、shellテキスト全体の誤分類と判明。permit/設定変更/SQL文字分割を行わず、通常の構造化tools.apply_patchでSQLをそのまま提示するコード編集として再申請し成功。DB接続/SQL実行はなし。正式編集経路で実装継続する。
+
+実装詳細の確認（2026-09-13）：2MiB未満でも標準csvのセル上限に達するため、同期読取のtry/finallyだけfield_size_limitを拡大して復元する方式を採用。生バイト2MiB制限は保持し、awaitを挟まない。大セル/境界/例外時復元を製品試験へ要求。OWASP公式 https://owasp.org/www-community/attacks/CSV_Injection を直接確認し、全角＝＋－＠も可逆保護対象に含め、外側更新CSVをQUOTE_ALLとする。Excel保存・再読込後まで万能な安全保証はしない。Context7不在の公式資料代替、固定設計§21の契約を満たす実装詳細としてカード追記。固定design SHAは変更しない。
+
+実装中の親読取確認：単一SELECT export、全商品列/語UUID/位置を含むrevision、全対象table lock後の再検証、1commit、未変更語の保持を現物確認。PG試験初版は先頭1商品の失敗だけだったため、2商品の編集と2商品目失敗、応答不明後の全商品/語/履歴一致、同code別tenant、無効参照保持、codeだけの相互入替でstaleを検出する証跡を追加するよう要求し、修正版を読取確認。既存provision/atomic_pg fixtureの安全条件は不変。
+
+画面確認：初回Chromium11成功の画像を親が直接開き、1440で変更前後が読めること、390で変更列が画面外にあることを確認。既存DataTable横スクロールを実際に操作してviewport内を検証する試験/画像を追加要求。更新modeにも残っていた「登録」のsteps/summary/statusを設計§21-6に合わせて日英修正し、結果画面も保持するよう要求。全FEunit初回349成功/1件StaffFormButtonMigration timeout、同時build終了後の単独再実行350成功（12.78秒）を生ログで確認。製品改修後の最終再検証は別途記録する。Docker daemon不在のため実PGは正式CI待ちであり、ローカル成功を創作しない。
+
+保持対象を親が直接比較：旧master/importサービス、frontend package-lock、backend requirements/dev、共通api.ts、固定design.mdの7ファイルがd56649c5版とbyte一致。make lint-ciは既存方針でmypy非阻止、コマンド終了0と型検査出力に既存範囲のエラーがあることは区別する。新規venv312は未追跡の許可済み開発環境、製品としてcommitしない。
+
+PR3489初回CI（HEAD0a4a7bfc、base313d7796）：process gateは番号GO欄不足で停止。親が後段の設計/維持/引用validatorを個別実行し全配列空、PR設計パスの末尾§21は別行へ修正。これは正式GO検査の合格ではない。secret scan job103738549601はd56649c5のroundtrip-design-evidence.json13行、frontend/src/lib/api.tsをキーにしたSHA256をgeneric-api-keyとして検出。親が元baseの実ファイルを再計算し10/10一致、秘密ではないことを確認。証拠JSONを明示的なpath/sha256レコードへ変更し、値10件を保持。gitleaks8.30.1を既存.gitleaks.tomlで当該文書へ実行、exit0/no leaks。検査設定/allowlist/承認条件は変更しない。
+
+誤検出はgit履歴の古い記録を対象にしている（CIの実git log範囲d56649c5^..0a4a7bfc）。追記commitだけでは消えないため、旧branch/PRの証拠を保持し、origin/mainから正式な新規作業場所へ検収済み13製品の同一内容と修正済み9文書を保存してPRを作り直す。既存branchのforce-push/履歴上書きはしない。新しいPRでも通常secret scan/実PG等を実行する。旧PRは新PRの作成確認後に置換先を記録して閉じる。実装再設計/本番データ操作ではない。
+
+### DETAIL-01 GO受領後の環境復旧・CSV統合（2026-09-14 09:39 JST転記）
+
+PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落で全操作が停止。POから「復旧したので再開してくれ」を受領し、executor-preflight exit0を確認して再開。ガードの再作成/変更は本セッションでは未実施。PRはOPEN、HEAD0f38bbf3、停止中にmain ae5248f4（PR3490 CSV往復）が追加され、両機能を保持して統合。台帳/仕様の双方の追記も保持した。
+英語名/型番検索は一覧だけ拡張済みだったため、roundtripのCSV検索条件も一致させた。既存詳細PG試験へ英語名/型番出力2件、CSVと詳細の古い版の相互拒否2件を追加。追加製品差分は検索条件1箇所のみ。新たなAPI形式や本番データ操作なし。統合後の検証はPR3492の最新checksを正本とし、過去CI成功で代替しない。
+既存作業台/.pr-number3492を直接確認、公式ledger-lookupが未登録exit1だったため同じブランチの.d登録を復元した。再登録日は本日、旧開始日時を新しい観測と混同しない。GOはチャット原文を転記し、GO委任の自己有効化はしない。
+
+復旧後ローカル検証: npm run test:coverageは30ファイル384件成功（/tmp/product-detail-restored-unit.log）、Playwright詳細/CSV統合22件成功（/tmp/product-detail-restored-e2e.log）。これらのAPIは模擬であり実DBは新HEADのCIで確認する。

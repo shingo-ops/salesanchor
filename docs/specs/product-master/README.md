@@ -162,3 +162,9 @@ Termuxログイン補完: [設計](../../handoff/line-android-login/design.md)�
 ### 抽出待ち時間の限定是正案（2026-09-13・未実装）
 
 [設計・審査](../../handoff/tcg-product-master-growth/design-keyword.md) と [実測](../../handoff/tcg-product-master-growth/recon.md) の「シンソク抽出の時間制限見直し」を参照。300/330秒の限定実装は2026-09-13にPO承認済み。実装/検証中で本番未反映。型番3商品の不整合は別の未解決事項。
+
+- [商品マスタ一覧・詳細編集（DETAIL-01）](../../handoff/tcg-product-import/design.md#2026-09-13-商品詳細編集と二言語一覧detail-01)（2026-09-13、完成条件PO合意・自己審査合格、実装・検証済み、PR3492のPO GO受領・統合検証中）
+
+### CSV出力・編集・更新往復（2026-09-13）
+
+PO合意の目標：登録商品をCSVに出し、編集して戻しても重複追加せず同じ商品を更新し、商品情報・検索語・除外語を維持する。既存の新規登録CSVは継続する。実装/PR/通常マージ/配備の作業依頼を受領。設計とR1–R11: [既存設計§21](../../handoff/tcg-product-import/design.md#21-商品csvの出力編集更新往復2026-09-13)、[調査記録](../../handoff/tcg-product-import/recon.md)。設計自己審査済み、実装未着手。

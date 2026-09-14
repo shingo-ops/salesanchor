@@ -3041,6 +3041,27 @@ EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する�
 
 2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
 
+
+## EV-20260913-PRODUCT-DETAIL
+
+商品マスタDETAIL-01。POの一覧/詳細編集条件と進行依頼を受領。origin/main 10212686起点で公式worktree作成。
+設計・自己審査は docs/handoff/tcg-product-import/design.md DETAIL-01、実測はrecon.mdの同日節。
+実装・CI・本番の検証結果は現時点で未取得。状態を完了としない。
+
+
+EV-20260913-PRODUCT-DETAIL 追記: 一覧/GET詳細/編集UIを作成。新規画面11件と既存CSV7件成功（模擬API）、frontend build/check:all/限定eslint成功、backend限定ruff成功。
+更新APIコード保存がPreToolUse hookで拒否され、POへソース保存の承認質問を送信。解除・迂回なし。
+backend全体lintは走査例外/既存型エラーで中断、実PG/CI未実施。PR未提出、マージ/デプロイ未実施。
+根拠: docs/handoff/tcg-product-import/recon.md「DETAIL-01 作業停止時の実行結果」。
+
+
+EV-20260913-PRODUCT-DETAIL 再開試行: ソース保存承認「進める」受領後、公式permit-danger.shの呼出し自体が自動ガードで拒否。許可は未発行。ガード実体151行のコマンド全文一致と例外分岐なしを読み取り確認。PO端末での正規手続き待ち。更新API/PR/マージ/本番は未完了。
+
+EV-20260913-PRODUCT-DETAIL 2026-09-14追記: PO原文「実行した」、公式許可でソース保存exit 0。GET/PUTと競合/一括確定を実装。UI18件、build/check:all、Python3.12 make lint-ci成功。実PGはDocker不在のためCI待ち。詳細はrecon.md「許可適用とローカル最終検証」。マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL PR追記: PR3492正式提出、84a6a697/99e211bb。既存単体4件の旧文言期待を補正しローカル343件成功。CI実PG進行中、run34765540117は番号付きGO記録不足で停止。
+EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN: PO原文と合意3条件をdesign§21へ保存。main10212686/10一次情報SHA/旧10列新規専用・非可逆strip/split/既存履歴型を実物確認。12列更新専用・revision/全行同時確定・13製品ファイル/R1–R11を同一AI自己審査APPROVE。Context7不在、公式資料代替確認。既存担当の実装13SHAと親の直接算出が13/13一致、読取レビュー/画像確認済み、FE350/E2E11成功。Backend22unit+23PGは定義済み・実行待ち。正式CI/番号付きGO原文なし。最新main313d7796の非競合2ファイルを保持して公開へ。根拠roundtrip-design-evidence.json/recon/roundtrip-parent-review.json。
+
 ### EV-20260913-FRONTEND-AO-DESIGN
 
 2026-09-13 AO次便設計草案: チーム3フォーム6ボタン（TeamsPage200/203/221/224、TeamEditPage67/74）。基準116b1cf6で共通120/旧293→期待126/287、2ページ/共有12hash・対象外6原文を直接保存。3項目送信と保存中ロックなし、メンバー処理の対象外境界を確認。設計はdocs/specs/design-system/design.md§AO、根拠evidence-20260910/ao-team-button-audit.json。製品未変更・実装承認未受領・144表示組未実行。表/報酬3/カレンダー色保留、新CI最後。
@@ -3053,3 +3074,20 @@ AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件の実装�
 ### EV-20260914-FRONTEND-AO-IMPLEMENTATION
 
 AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL 実DB検証: e1f6513c/run34765847297/job103746586673成功、3596 passed/全体95skip、保存サービス97%。本便27ケースskip条件非該当、参照/別テナント不変含む。統合単体377件成功。PR3492正式GO記録待ち、最新HEAD checks正本、マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。起動ガードはPO復旧報告後preflight成功。PR3490を保持して統合、CSV検索条件1点整合・相互競合試験4件追加。最終CI/本番はこれから確認。recon同名節参照。
+### EV-20260914-FRONTEND-AO-RELEASE
+
+2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### EV-20260914-LINE-ATTEMPT-IMPLEMENTED
+
+CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
+
+
+### EV-20260914-CARD09-MERGED-DEPLOY-BLOCKED
+
+PO原文GO #3494、review_card09 APPROVE、e594d3efの正式PG3692成功/95skip/失敗0。正規merge e69da6ed・2026-09-14T01:55:43Z。deploy34797490804/job103833308323は旧カードセットSQLのPM0264名称不一致で失敗。新backup7,500,696bytes/gzip読取成功、コード主要4x2SHA一致、新履歴表001/004不存在、待機実行0、App/API HTTP200。新記録機能は未開通、追加本番変更/実Gemini/再解析/配信0。詳細と直接証拠: recon『CARD09最終レビュー・GO・マージ・配備停止』。旧SQLチェックの迂回や商品名書戻しはしていない。

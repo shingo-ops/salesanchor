@@ -1466,3 +1466,56 @@ PO「進める」を直前の記録保存失敗時の停止方針への合意と
 ### 文書PR3462のmain競合解消（2026-09-14）
 
 main e27c2f599dc81aa28c32f21bb13fbdf3920c7144を文書専用枝へ統合。7文書の追加節競合は双方の調査/設計/証跡を保持し、完全重複するADR集合節は1つへ統合。CARD08の割当て時刻注記はmainの明確な記述を採用しCARD09を保持。todoの同テーマ行だけはmainの過去の実装準備状態でなく、直接検証済み再解析/最新カード09状態を維持。他者の製品差分はmainからの内容を変更しない。
+
+
+### CARD09実装担当切替（2026-09-14）
+
+明示質問「このセッションを実装担当へ切り替え、カード09を実装してよいですか？」に対するPO原文「進める」を受領。公式new-worktree.shでrelease/line-extraction-attempt-recordをmain e27c2f59から作成し、実在/git登録確認。対象3製品ファイルは設計基準313d7796から差分0。既存release/line-extraction-prompt-retentionは原文保持の旧設計BLOCKED/PR3417で、本カードとは別の役割。未保存変更を上書きしない。サブエージェント起動0。本番操作/Gemini呼出は許可範囲外。
+
+
+### CARD09実装差分・初回検証（2026-09-14）
+
+新履歴service、送受信hook、taskの条件付き取得/保存、管理者限定API、追加migration/runner、PGとAPI試験を実装。既存9列回帰は実service+偽transportで記録境界を通すよう更新。解析後の例外を抽出明細0と誤報告しないよう、確定済み抽出と解析エラーを区別した（設計の別状態契約）。実装初回のテスト自動編集で余分なmigration行を挿入した構文エラーを静的検査で検出・修正済み。ruff成功、Bandit High0、mypyは既存の警告運用。Docker socket不在につきローカルpytest未実行、正式PG/CI待ち。実Gemini/本番操作0。
+
+
+CARD09初回CI: PR3494、HEAD5cca283e、Backend run34767132247/job103750026968は3失敗/3647成功/95skip、257.14秒。追加記録serviceのcoverage92%。3件は従来のエラー応答非公開契約、作品矛盾の固定文言互換、旧004切替試験で追加service/schema適用を追従していなかったfixture。返答全文の保存は記録付き通常処理に限定し、記録なしの既存エラー戻り値は空を維持。作品矛盾は固定WORK_ID_CONFLICTコードと従来固定文言を分離。004試験に正式migration/追加serviceのschema切替を追加。新テストの本番DDL複製1件は正式migration由来fixtureへ修正済み、schema-dup検査成功。実Gemini0。失敗を合格扱いせず、修正後のCIを実施する。
+
+
+### CARD09実装・正式CI結果（2026-09-14）
+
+製品HEAD c4624ec17e89a747f13558c926470d191f140923、PR https://github.com/shingo-ops/salesanchor/pull/3494 。Backend run34767671465/job103751462713の完了ログを直接取得し、3654 passed / 96 skipped / 0 failed / 309 warnings、270.82秒、全体coverage64.85%（基準60%）、新記録service94%を確認。skipは成功件数に含めない。Migration SQL run34767671414の実DB全件ドライラン/追加SQL、Tenant Schema Integrity、test-schema-dup、backend lintは成功。ローカルDocker不在につきローカルpytestは未実行。
+
+偽SDK応答と隔離PGで、入力・応答・明細UUIDの対応、各保存段階の通常例外/soft中断、失敗時の新明細0、再試行履歴、同時取得、容量境界、管理者閲覧、親削除連鎖、部分schema拒否、44試行の保存I/O条件を検証。SystemExitによる中断2ケースは保存済みstarted/receivedが終了未確認で残ることを確認した模擬試験であり、OS強制終了や本番負荷試験ではない。prompt/modelの定数3件は基準から不変、300/330秒制限も維持。実Gemini呼出0、本番接続/更新/再解析/配信0。
+
+同一AIによる実装差分の自己確認では、カード16ファイルの範囲、記録前の結果確定防止、終端履歴の上書き防止、非公開本文を一般エラーへ出さない契約を照合。独立した第二者レビューやPO指定の最終レビューとは称しない。今回の試験は記録・失敗制御の検証であり、Geminiの商品正答率の測定ではない。
+
+Process Artifacts Gate run34767671426/job103751447251はPR本文のGO記録欠落のみで失敗。POのGO #3494未受領のため、記録を創作せず保持する。全CI合格/マージ可能承認済みとは宣言しない。状態: 設計自己審査済み・実装開始承認済み・実装/正式PG検証済み・PR3494提出済み。次はPO指定の最終レビューと本PRの番号付きGO。マージ/本番反映未実施。従前の13明細保留、単位と要確認フラグの不整合は未解消。
+
+
+### CARD09中断後の再開（2026-09-14）
+
+PO「報告をした、このセッションの続きを再開してくれ」を受領。安全フック復旧後preflight成功、専用worktree252d240fは未保存変更0、PR3494はOPEN/レビュー0/番号付きGO未受領。main59f644cdを取得し、記録機能の製品service/router/taskは重複変更なし。evidence-registryとmigration runnerの追加箇所だけ競合したため双方を保持、CARD09追加SQLはrunner末尾を維持。共有本店での更新/掃除は行わず専用枝内で統合。旧HEADのCI合格を統合後の合格には読み替えず、新HEADで正式CIを確認する。消失した当該枝の台帳は実在worktree/UUID/PRに基づく現在状態だけを再登録し、他者台帳は復元しない。実Gemini/本番/マージ操作0。
+
+
+### CARD09別担当レビューと受入補完（2026-09-14）
+
+最終レビュー担当1名の起動質問へのPO原文「進める」でreview_card09を起動。3ddb3568へのreview-package-v1はREVISE。P2は(1)44回性能試験が空参照/0明細で固定規模負荷の証明不足、(2)3領域の8MiBちょうど/+1byteを実PG経路で確認していない、の2点。3686成功というCI結果は有効だが、必須受入を満たしたとはしない。製品不具合の指摘ではない。
+
+親が許可済みPG試験を補完。性能は匿名化参照83,610bytesのjob/attempt重複保持、SDK contents各99,099bytes、44試行/729明細を実taskのINSERT/完了経路で測る。投稿ごとの元分布を復元したものではなく、全44件を観測最大入力に合わせた保守的な合成規模（17明細25件+16明細19件）であり、実投稿そのものの再実行ではない。偽SDK・参照load固定、task全体時間で5秒以内を確認するためAPI待機0、parser/明細保存も計測範囲に含む。
+
+上限は定数8,388,608を変えず入力JSON/応答UTF-8/parsed JSONごとにexact/+1の6PGケースを追加。モデル構文解析を合成extract境界で分離し、実recorderとtask transaction、本文保持/不保持・byte/hash・新明細0/1・自動解析0/1を検証する。既存のparser/偽SDK経路と縮小上限fail試験は維持。製品コード変更0。ローカルruff成功、正式CIと同担当の再審査待ち。今回の試験を実Gemini精度や実負荷の完全再現とは称さない。
+
+
+### CARD09最終レビュー・GO・マージ・配備停止（2026-09-14）
+
+POが最終レビュー担当1名の起動に「進める」と回答。review_card09は受入不足2点を指摘し、PG補完後のe594d3ef49f7c5627300ed0169468a9e5b45f810をAPPROVE（実装レビュー）と判定。Backend34796842208/job103831526386は3692成功/95skip/失敗0、261.89秒、coverage65.02%。Migration34796842083成功。44試行/729明細/参照83,610bytes重複の合成負荷で各試行5秒以内のassert成功、最大秒数の生値はログ未取得。3領域の8MiB exact/+1も成功。別AIの読取レビューであり独立した人間レビューではない。
+
+PO原文「GO #3494」を受領。2026-09-14 10:52 JST以降に受領後の実時刻を確認しPRへ逐語記録、受領そのものの正確な時刻は創作しない。GO後・マージ前のREAD ONLYで基礎3表x2schemaのowner jarvis、app USAGE、待機/実行中0、新表不存在、空き27,259,416,576bytesを確認。backup salesanchor_db_20260914_101413.sql.gz / 7,501,093bytesはgzip全体読取成功。承認ゲート34797428191成功、HEAD固定・CLEAN確認後に正規gh-pr-merge-safe.shでマージ。GitHub API: mergedAt2026-09-14T01:55:43Z、mergeCommit e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea。公式cleanupは当該worktree/ローカル枝のみ削除、REVIEW札は自動DONE条件外だったためledger-updateでDONEへ更新。
+
+Deploy34797490804/job103833308323は失敗。新backup salesanchor_db_20260914_105621.sql.gz（7,500,696bytes、mtime01:56:24.820841Z）は生成・gzip全体読取確認済み。コード/コンテナ更新後、233件中231番の既存migrations/20260913_210000_tcg_cardset_bundle_registration.sql:54–62で『cardset bundle: identity mismatch PM0264』。新しい記録表SQLより前で止まった。旧SQLはPM0264の名称FUTURISTIC BOXを要求するが、実DBは30th CELEBRATION FUTURISTIC BOX。category Box/active true/DIV01/IP001/MK001/PC_BOX/箱系は期待と一致。名称変更の実行者・時刻は未確定で、対象audit_logの照会は0件。ユーザー編集や特定PRを変更原因と断定しない。
+
+失敗後のREAD ONLY: 本番HEAD e69da6ed、backend/worker双方の主要4ファイルSHA（8照合）がe594d3efの検証版と一致。tenant_001/004のextraction_attemptsはともに不存在。待機/実行中抽出0。App HTTP200、API /api/health HTTP200・DB/Redis/Celery connected。最初の /health 照会は404で正しい /api/health へ修正、API障害と誤認しない。deployのFinalizeもhealth成功のため自動rollbackは実行されていない。コードは配備済みだが記録機能は未開通。tcg_extraction.pyのschema_readyで新抽出はpendingを保って停止する。実Gemini/再抽出/再解析/配信は今回0。以前の13明細保留・単位/フラグ問題も未解消。
+
+新表のSQLを手で先行実行、旧チェックを削除、商品名を書き戻し、失敗deployを反復する操作はしていない。230番までの既存SQLは実行されているのでDB全体不変とは宣言しない。旧登録処理の不変前提と、現在の編集可能商品マスタとの整合を別の修正設計/レビューで解決する必要がある。今回GOを未レビューの旧SQL変更の承認へ拡張しない。
+
+状態: PR3494マージ済み・実装レビュー合格・配備失敗/部分反映・新記録未利用。次は旧商品登録SQLの再実行条件の是正または旧版復旧の手順を事実ベースで選定する。追加本番変更は停止中。証跡はPR3494本文、Actions上記run/job、ローカル /tmp/card09-merge-result.txt・card09-deploy-log.txt・card09-after-failed-deploy-readonly.txt・card09-deploy-failure-inspect-result.txt・card09-title-audit-readonly-result.txt。main→developの旧PR2649にも同SHAの別検査が発生したが本件deployと混同しない。
