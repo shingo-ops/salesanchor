@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -34,6 +34,24 @@ export default function TcgProductMasterPage() {
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
+  const exportLock = useRef(false);
+  async function downloadExport() {
+    if (authLoading || !isSuperAdmin || exportLock.current) return;
+    exportLock.current = true; setExporting(true); setExportError(false);
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const params = new URLSearchParams({ query: filter.query });
+      if (filter.workId) params.set("work_id", filter.workId);
+      const blob = await api.getBlob(`/tcg/products/export?${params}`);
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "tcg-products-update.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch { setExportError(true); }
+    finally { anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false); }
+  }
   useEffect(() => {
     if (authLoading || !isSuperAdmin) return;
     let cancelled = false;
@@ -61,8 +79,10 @@ export default function TcgProductMasterPage() {
     { key: "keyword_count", header: t("productDetail.searchCount") },
     { key: "exclude_keyword_count", header: t("productDetail.excludeCount") },
   ];
-  return <PageLayout navKey="nav.superAdminTcgProductMaster" headerAction={isSuperAdmin ? <HeaderButton variant="primary" onClick={() => navigate("/super-admin/tcg-product-master/import")}>{t("productCsv.openImport")}</HeaderButton> : undefined}>
+  return <PageLayout navKey="nav.superAdminTcgProductMaster" headerAction={isSuperAdmin ? <><HeaderButton variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>{t(exporting ? "common.loading" : "productCsv.export")}</HeaderButton><HeaderButton variant="primary" onClick={() => navigate("/super-admin/tcg-product-master/import")}>{t("productCsv.openImport")}</HeaderButton></> : undefined}>
     {authLoading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <>
+      <p>{t("productCsv.exportHint")}</p>
+      {exportError && <p role="alert">{t("productCsv.exportError")}</p>}
       <Tabs items={[{ key: "", label: t("productCsv.allWorks") }, ...visibleWorks.map(work => ({ key: work.id, label: workLabel(work) }))]} activeKey={filter.workId} onChange={workId => { setSelectedWork(visibleWorks.find(work => work.id === workId) ?? null); setFilter(value => ({ ...value, workId, page: 1 })); }} variant="underline" size="md" />
       <ContentToolbar left={<TextField type="search" label={t("productCsv.search")} value={filter.query} onChange={e => setFilter(value => ({ ...value, query: e.target.value, page: 1 }))} />} />
       {loading ? <p>{t("common.loading")}</p> : error ? <div role="alert"><p>{t("productCsv.loadError")}</p><HeaderButton variant="secondary" onClick={() => setRetry(value => value + 1)}>{t("productCsv.retry")}</HeaderButton></div> : data && <>

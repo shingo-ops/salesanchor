@@ -13,7 +13,7 @@
 | Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション実装担当 | カード08実装:個別3既存再利用/9種集合1追加と相互除外。PR3483改訂準備 | 改訂後正式CI/PGを確認し番号付きGOへ。再解析/配信未実施 | 設計PR3462 commit3b40ceea / CARD08 / recon実装着手節 | 2026-09-13 |
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
-| 商品マスタ詳細編集・二言語一覧 | GO待ち | PR #3492。実PG3596成功/全体95skip、UI18件/統合単体377件成功。正式GO記録待ち・本番未反映 | 最新HEAD checks照合→番号付きGO原文を記録→正規マージ/配備 | PR #3492 / run34765847297 / docs/handoff/tcg-product-import/recon.md / EV-20260913-PRODUCT-DETAIL | 2026-09-14 |
+| 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
 | フロントエンド金型化・再測定 | 設計/実装担当 | AOチーム6ボタン実装検収済み。144表示/37操作前後組、34新規/377全体試験・品質成功 | PR3487実装保存、最新main/CI確認後に今回番号付きGO判断。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md / EV-20260914-FRONTEND-AO-IMPLEMENTATION | 2026-09-14 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
@@ -150,4 +150,5 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
+| 商品CSV出力・編集・更新往復 | 設計担当/既存実装担当 | PO目標合意・実装〜配備依頼、設計自己審査済み。13製品差分/親読取レビュー済み、FE350/E2E11成功、Backend22unit+23PG定義済みで実行待ち | 最新main313d7796の非競合2ファイルを保持し公開カードでPR/正式CIへ進む。番号付きGO原文は未受領、代筆しない | docs/handoff/tcg-product-import/roundtrip-parent-review.json / EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN | 2026-09-13 |
 | 実商品CSV登録前確認 | 設計担当 | A便設計自己審査APPROVE・PO承認・実装・正式CI・PR3473マージ/本番配備完了。B便8商品更新/44登録はREVISE | B便§19/180例はREVISE。CSVの行単位整合対策§20・4ファイル案/C1–C11を設計自己審査APPROVEでローカル保存。PO承認4ファイル実装差分/静的検査/親レビュー済み。親AST354/直接unit25成功、PG228追加は未実行。PR直前停止、次は公開許可後の正式CI（15分内未測定）。個別値/正解例・運用QAは未完了 | docs/handoff/tcg-product-import/product-name-space-release-result.json / EV-20260913-PRODUCT-NAME-SPACE-RELEASE | 2026-09-13 |

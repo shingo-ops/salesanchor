@@ -5,10 +5,10 @@ import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
 import TcgProductMasterPage from "./TcgProductMasterPage";
-vi.mock("../../lib/api", () => ({ api: { get: vi.fn() } }));
+vi.mock("../../lib/api", () => ({ api: { get: vi.fn(), getBlob: vi.fn() } }));
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage("en"); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true }); });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const view = () => render(<MemoryRouter><TcgProductMasterPage /></MemoryRouter>);
 const works = [
   // eslint-disable-next-line local/no-japanese-literal -- DB value: Japanese alternate work name fixture
@@ -17,6 +17,36 @@ const works = [
 ];
 const empty = { total: 0, items: [], works };
 const lastParams = () => new URL(String(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]), "http://test").searchParams;
+it("R10 exports all filtered rows once and releases its download URL", async () => {
+  vi.mocked(api.get).mockResolvedValue(empty);
+  const blob = new Blob(["exact CSV bytes"]);
+  let finish!: (value: Blob) => void;
+  vi.mocked(api.getBlob).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const create = vi.fn(() => "blob:export"); const revoke = vi.fn();
+  vi.stubGlobal("URL", class extends URL { static createObjectURL = create; static revokeObjectURL = revoke; });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  view(); await screen.findByText("Products: 0");
+  fireEvent.click(screen.getByRole("tab", { name: "Pokemon" }));
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "A & B" } });
+  const button = screen.getByRole("button", { name: "Export update CSV" });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(api.getBlob).toHaveBeenCalledTimes(1);
+  const params = new URL(vi.mocked(api.getBlob).mock.calls[0][0], "http://test").searchParams;
+  expect(params.get("query")).toBe("A & B"); expect(params.get("work_id")).toBe(works[0].id);
+  expect(params.has("limit")).toBe(false); expect(params.has("offset")).toBe(false);
+  await act(async () => finish(blob));
+  expect(create).toHaveBeenCalledWith(blob); expect(click).toHaveBeenCalledOnce();
+  expect(revoke).toHaveBeenCalledWith("blob:export"); expect(document.querySelector('a[download]')).toBeNull();
+});
+it("R10 export failure permits retry and denied users cannot export", async () => {
+  vi.mocked(api.get).mockResolvedValue(empty); vi.mocked(api.getBlob).mockRejectedValue(new Error("413"));
+  view(); fireEvent.click(screen.getByRole("button", { name: "Export update CSV" }));
+  await screen.findByRole("alert"); expect(screen.getByRole("alert").textContent).toContain("narrow");
+  expect((screen.getByRole("button", { name: "Export update CSV" }) as HTMLButtonElement).disabled).toBe(false);
+  cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); view();
+  expect(screen.queryByRole("button", { name: "Export update CSV" })).toBeNull();
+  expect(api.getBlob).toHaveBeenCalledTimes(1);
+});
 it("does not request or expose import for non-admin", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); view();
   expect(api.get).not.toHaveBeenCalled();

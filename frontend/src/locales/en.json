@@ -69,8 +69,40 @@
       "keywordShared": "This search keyword also matches another product: {{value}}",
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
       "referenceCode": "Check the {{field}} code against the registered master.",
-      "unknown": "The file could not be validated. Ask an administrator to check it."
-    }
+      "unknown": "The file could not be validated. Ask an administrator to check it.",
+      "stale": "The product changed after export. Export it again.",
+      "unknownCode": "The product code is empty or unknown.",
+      "duplicateCode": "This product code appears more than once.",
+      "invalidWords": "Use a CSV record for keywords and do not include blank-only keywords.",
+      "updateInvalid": "Correct the update file before continuing."
+    },
+    "export": "Export update CSV",
+    "exportHint": "Export all products matching the search and work, including inactive products, across every page.",
+    "exportError": "Could not export. Try again or narrow the search if the file is too large.",
+    "changes": "Changes",
+    "updated": "Update",
+    "unchanged": "Unchanged",
+    "before": "Before",
+    "after": "After",
+    "updateCounts": "Updates: {{updated}} · Unchanged: {{unchanged}}",
+    "updateHint": "To edit existing products, use the exported update CSV. Keep product_code and revision unchanged. Open code and model columns as text. Blank optional cells clear values or keywords; removing a row does not delete a product. If someone changes a product after export, export it again. Spreadsheet software may change text when saving; check the preview before updating.",
+    "updateConfirm": "Check every change. All rows will be saved together only after you confirm.",
+    "commitUpdate": "Confirm updates",
+    "updateRejected": "No updates were applied. Export a fresh CSV or choose a corrected file and review it again.",
+    "updateFields": {
+      "mark": "Model",
+      "japanese_title": "Japanese name",
+      "english_title": "English name",
+      "release_date": "Release date",
+      "search_keywords": "Search keywords",
+      "exclude_keywords": "Exclude keywords",
+      "division_code": "Division",
+      "work_code": "Work",
+      "manufacturer_code": "Manufacturer",
+      "product_category_code": "Product category"
+    },
+    "updateSteps": "1. Choose file → 2. Review → 3. Update",
+    "updateSummary": "Total: {{total}} / Valid: {{ready}} / Blocked: {{blocked}}"
   },
   "common": {
     "loading": "Loading...",

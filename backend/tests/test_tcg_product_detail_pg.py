@@ -1,5 +1,8 @@
 """DETAIL-01 read/write contracts in disposable PostgreSQL only."""
 import asyncio
+import csv
+import hashlib
+import io
 import json
 from types import SimpleNamespace
 
@@ -14,6 +17,7 @@ from app.auth.dependencies import get_current_user
 from app.routers import tcg_product_import as routes
 from app.services import tcg_product_detail_svc as details
 from app.services import tcg_product_master_svc as master
+from app.services import tcg_product_roundtrip_svc as roundtrip
 from tests import test_tcg_product_list_pg as fixtures
 from tests import test_tcg_work_matching_integration as durable
 
@@ -360,5 +364,55 @@ async def test_lost_commit_response_keeps_one_atomic_change_and_stale_retry_fail
                 await details.update_product_detail(reader, "DETAIL", values, snapshot["revision"], "test")
             assert caught.value.status == 409
         assert observed(connection) == after
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("query", ["english DETAIL", "MODEL-DETAIL"])
+async def test_export_matches_english_and_model_list_filter(detail_db, monkeypatch, query):
+    db, schema = detail_db
+    monkeypatch.setattr(roundtrip, "TCG_SCHEMA", schema)
+    result = await routes.list_products(query=query, limit=50, offset=0, work_id=None, db=db, _user={})
+    raw = await roundtrip.export_csv(db, query)
+    records = list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"))))
+    assert [row["product_code"] for row in records] == [row.code for row in result.items] == ["DETAIL"]
+
+
+@pytest.mark.parametrize("csv_first", [True, False])
+async def test_detail_and_csv_reject_each_others_stale_drafts(edit_pg, monkeypatch, csv_first):
+    connection, url = edit_pg
+    monkeypatch.setattr(roundtrip, "TCG_SCHEMA", durable.SCHEMA)
+    with connection.cursor() as cur:
+        cur.execute((durable.MIGRATIONS / "20260906_130000_create_tcg_product_import_history_t004.sql").read_text().replace("tenant_004", durable.SCHEMA))
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            snapshot = await details.get_product_detail(db, "DETAIL")
+            raw = await roundtrip.export_csv(db)
+        records = list(csv.reader(io.StringIO(raw.decode("utf-8-sig"))))
+        title_index = records[0].index("english_title")
+        for row in records[1:]:
+            if row[0] == "DETAIL":
+                row[title_index] = "CSV change"
+        out = io.StringIO(newline="")
+        csv.writer(out).writerows(records)
+        edited = out.getvalue().encode("utf-8-sig")
+        digest = hashlib.sha256(edited).hexdigest()
+        values = edit_values(snapshot)
+        values["english_title"] = "Drawer change"
+        async with AsyncSession(engine) as db:
+            if csv_first:
+                await roundtrip.commit_update(db, edited, "edit.csv", "test", digest)
+            else:
+                await details.update_product_detail(db, "DETAIL", values, snapshot["revision"], "test")
+        before = observed(connection)
+        async with AsyncSession(engine) as db:
+            with pytest.raises(details.ProductDetailError if csv_first else roundtrip.RoundtripError) as caught:
+                if csv_first:
+                    await details.update_product_detail(db, "DETAIL", values, snapshot["revision"], "test")
+                else:
+                    await roundtrip.commit_update(db, edited, "edit.csv", "test", digest)
+            assert caught.value.status == 409
+        assert observed(connection) == before
     finally:
         await engine.dispose()

@@ -2984,6 +2984,8 @@ EV-20260913-PRODUCT-DETAIL 再開試行: ソース保存承認「進める」受
 EV-20260913-PRODUCT-DETAIL 2026-09-14追記: PO原文「実行した」、公式許可でソース保存exit 0。GET/PUTと競合/一括確定を実装。UI18件、build/check:all、Python3.12 make lint-ci成功。実PGはDocker不在のためCI待ち。詳細はrecon.md「許可適用とローカル最終検証」。マージ/本番未実施。
 
 EV-20260913-PRODUCT-DETAIL PR追記: PR3492正式提出、84a6a697/99e211bb。既存単体4件の旧文言期待を補正しローカル343件成功。CI実PG進行中、run34765540117は番号付きGO記録不足で停止。
+EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN: PO原文と合意3条件をdesign§21へ保存。main10212686/10一次情報SHA/旧10列新規専用・非可逆strip/split/既存履歴型を実物確認。12列更新専用・revision/全行同時確定・13製品ファイル/R1–R11を同一AI自己審査APPROVE。Context7不在、公式資料代替確認。既存担当の実装13SHAと親の直接算出が13/13一致、読取レビュー/画像確認済み、FE350/E2E11成功。Backend22unit+23PGは定義済み・実行待ち。正式CI/番号付きGO原文なし。最新main313d7796の非競合2ファイルを保持して公開へ。根拠roundtrip-design-evidence.json/recon/roundtrip-parent-review.json。
+
 ### EV-20260913-FRONTEND-AO-DESIGN
 
 2026-09-13 AO次便設計草案: チーム3フォーム6ボタン（TeamsPage200/203/221/224、TeamEditPage67/74）。基準116b1cf6で共通120/旧293→期待126/287、2ページ/共有12hash・対象外6原文を直接保存。3項目送信と保存中ロックなし、メンバー処理の対象外境界を確認。設計はdocs/specs/design-system/design.md§AO、根拠evidence-20260910/ao-team-button-audit.json。製品未変更・実装承認未受領・144表示組未実行。表/報酬3/カレンダー色保留、新CI最後。
@@ -2998,3 +3000,5 @@ AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件の実装�
 AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
 
 EV-20260913-PRODUCT-DETAIL 実DB検証: e1f6513c/run34765847297/job103746586673成功、3596 passed/全体95skip、保存サービス97%。本便27ケースskip条件非該当、参照/別テナント不変含む。統合単体377件成功。PR3492正式GO記録待ち、最新HEAD checks正本、マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。起動ガードはPO復旧報告後preflight成功。PR3490を保持して統合、CSV検索条件1点整合・相互競合試験4件追加。最終CI/本番はこれから確認。recon同名節参照。

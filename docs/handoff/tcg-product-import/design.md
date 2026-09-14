@@ -1046,3 +1046,98 @@ Docker接続不可のためローカルpytestは未実施。実PGの原子性/�
 DETAIL-01試験対象の補足（2026-09-14）: CIが既存一覧単体試験4件の旧文言期待を検出。TcgProductMasterPage.test.tsxを対象に加え、D1/D2の5列・数値0・二言語名へ期待値を更新する。既存検索/作品/ページングの検査は維持。追加の製品仕様変更なし。同一AIの設計整合審査APPROVE。
 
 DETAIL-01検証追記（2026-09-14）: e1f6513cの実PG CIは3596成功/全体95skip、保存サービス97%実行。参照不変を含む新規27ケースのskip条件は該当せず。統合後ローカル単体377件成功。詳細な一次結果はrecon.md「保存・参照不変の実DB検証完了」。正式GO待ちで公開未実施。統合後の最新CI状態はPR3492のchecksを正本とする。
+## 21. 商品CSVの出力・編集・更新往復（2026-09-13）
+
+### 21-1. 目的・承認範囲
+
+PO原文：「合意、この内容を目標として進める、離席するのでエクスポート機能を実装してPRマージ本番反映まで完了させてくれ」。合意対象は直前提示の3条件（登録商品をCSV出力、編集して戻しても重複新規登録せず既存更新、商品情報/検索語/除外語の往復維持）。設計・自己審査後に既存担当へ実装を委任し、検証/PR/通常マージ/配備へ進める作業承認。番号付きGO原文はまだ存在せず、GO #番号を創作しない。実在ゲートが要求する最終承認は別途満たす。
+
+これは既存商品マスタテーマの延長。親は docs/specs/product-master/README.md、契約はmode: handoff。44商品個別値の整備/8商品の一括修正/再解析/配信は対象外。親が設計・同一AI自己審査、既存/root/csv_card_executorが製品実装。新規AIを起動しない。
+
+### 21-2. 成功条件と境界
+
+1. 一覧の検索/作品条件に合う全商品（画面の50件制限なし、無効商品も含む）をCSVへ出せる。無権限利用は拒否。
+2. そのCSVを無変更で戻すと商品全列/語全列（UUID・位置・順序を含む）に変更0、新商品0。
+3. 編集した日本語名/英語名/型番/日付/参照4コード/検索語/除外語だけが、同一商品のまま更新される。id/code/created_at/required_output_value/is_activeなど未公開列は維持。作品を変更したときだけcategory_classを既存create_productと同じ作品display_nameへ導出する。
+4. 他者変更後の古いCSV、未知商品、商品コード差替え、同コード重複、無効な日付/分類は書込0で止まる。行削除は対象から外すだけで商品削除しない。更新CSVの空コードを新規作成に読み替えない。
+5. 更新はファイル内全行・関連語・履歴を1回で確定。失敗時に途中更新を残さない。commit応答不明に自動再送しない。既存10列新規取込とPR3484の行単位契約は維持。
+6. UIに更新前後・更新件数/変更なし件数を示し、明示確認前のPOST commitは0。日英/幅390/1440・キーボード操作を検証。
+
+### 21-3. 確認した実物とWhy
+
+基点origin/main1021268623f2dba566d953fea056ff548ae28f3a。router tcg_product_import.py:77/161/179は一覧/preview/commit、MAX_UPLOAD_BYTESは2MiB、require_super_admin。サービスCSV_COLUMNS:40は10列限定、parse_rows:118は全セルstrip、split_keywords:100は単純comma split、start_job:379/finish_job:421は内部commit。create_product:302以降は新規採番のみ、category_class:349は作品display_name由来。DDL migrations/20260906_120000_create_tcg_tables_t001.sql:133はid/code/未公開業務列・語テーブル293はid/keyword/position。履歴DDL20260906_130000:37/62はupdated等を格納可能な文字列result、追加カラム不要。
+
+根拠：既存parse/splitをそのまま使うと前後空白・語内commaが失われ、新規create呼出では商品が重複する。更新専用サービスを追加して旧新規経路を維持する。revisionと原本照合を持たない更新は出力後の他者変更を上書きするため採用しない。revisionに商品UUID/code/スキーマ・全商品状態・語id/位置/値を含めて別商品の取り違えと関連語変更も検出する。
+
+同一リポジトリPR3484は商品/履歴の原子性を実PGで確認済み。全suite3569成功95skip、coverage64.39%。本機能の実装合格とは扱わない。外部導入事例は不要（既存CSV/SQL契約の拡張）。Context7 MCPは利用不可を実ツール一覧で確認。代替許可に基づきPython3.12 csv、PostgreSQL16 Explicit Locking、FastAPI Custom Responseの公式資料を2026-09-13直接確認。URLと固定ソースSHAはroundtrip-design-evidence.json。新依存追加なし。
+
+### 21-4. CSVとAPI契約
+
+新しい更新CSVの列順はproduct_code,revisionに既存CSV_COLUMNS10列を続けた12列。ヘッダ順を固定、UTF-8 BOM・CRLF、固定名tcg-products-update.csv。旧10列テンプレートは新規登録用のまま。更新CSVは既存商品専用で新規作成/削除/有効無効の変更機能を含まない。
+
+GET /api/v1/tcg/products/export?query=&work_id=UUID を既存tcg_product_import routerへ追加。同じsuper_admin依存、同じ一覧WHERE/順序、ページングなし。1回のSELECTで商品と両語（position,idで順序固定）と4参照コードを取得し、一貫したスナップショットを出力。Response contentはbytes、text/csv;charset=utf-8、Content-Disposition attachmentの固定名、Cache-Control:no-store。出力が2MiBを超える場合は413 ROUNDTRIP_EXPORT_TOO_LARGE、途中までのCSVを返さない。検索/作品で絞って出す。ユーザー任意パス/ファイル名をヘッダに埋め込まない。
+
+revisionはv1:＋SHA256。正規JSON(sort_keys/compact/UTF8)にTCG_SCHEMA・商品UUID/code/全商品列と2語テーブルのid/product_id/keyword/positionを含める。同一SQLスナップショットから作る。identity列は編集しない。APIはrevisionの一致を実DB状態で照合し、任意code指定だけでは更新しない。
+
+更新CSVの値は無条件stripしない。nullable列の空文字表示とDB NULLの差は無変更時に保持し、編集した列だけSQL SET対象にする。発売日は空又は実在するYYYY-MM-DD。新しい日本語名は空白のみを拒否。変更した参照コードは非空かつ有効な現物を要求し、未変更の欠損/無効参照は既存値を保持する。変更した作品codeのみcategory_classを導出する。
+
+検索語/除外語はセル内もcsv.reader/writerで扱う1レコード（通常は語をcommaで並べ、comma/改行/quoteを含む1語はquoteで囲む）。外側CSVとは別に解釈し、split(',')を使わない。空セルは0語。既存の語順/重複/空白/空語は無変更時に完全保持。変更した語リストに空白だけの語は拒否、勝手なdedup/stripはしない。既存同値の語テーブルは書き換えず、変更した側だけ全語を置換してposition1から順序付ける。
+
+表計算で数式として実行されうるセル（先頭空白を除いた先頭が=,+,-,@、または先頭にtab/CR/LF）と先頭apostropheは、出力時apostropheを1個前置。入力は自分のescape形式に該当する場合だけ前置1個を戻し、元apostropheも可逆にする。式を実行する機能は持たない。検証は式先頭/先頭空白/quoteを含む対照で行う。表計算ソフトによる自動型変換はCSVだけでは防げないため、編集案内で型番/コード列を文字列として開くことを示す。
+
+既存POST /tcg/products/import/preview, /commitでヘッダを識別。12列更新形式（又はproduct_code/revisionを含む壊れた更新見出し）は新サービスへ渡し、旧10列は旧サービスのまま。CSV parse例外は422、500へ漏らさない。confirmed_digestは既存と同じ生バイトSHAで必須。
+
+更新previewの共通filename/digest/file_errors/total/ok/blocked/rowsにmode:'update',updated,unchangedを追加。各rowにproduct_code,action:'updated'|'unchanged',changes:[{field,before,after}]を持たせる。文字列/語配列の差分を返し、内部revisionやUUIDの変更前後をUIに出さない。stale/code不明/重複code/値不正はblocking。更新モードではblockingが1つでもあれば全体commit不可。無変更のみも確認して履歴を残すことは可。
+
+更新commit応答はjob_id/filename/total/created:0/skipped:0/updated/unchanged/rows/mode:'update'。既取込同digestは409 ROUNDTRIP_ALREADY_IMPORTED、無変更0行ファイルは422。登録済みか不明な通信失敗/5xxは既存uncertain表示で再送を出さない。確定的4xx（digest不一致/stale/already imported/validation）は更新未実行の説明と再出力/再選択を提示可。旧経路の返却とuncertain動作を壊さない。
+
+### 21-5. 更新トランザクション・保存範囲
+
+新サービスtcg_product_roundtrip_svc.pyが更新のみを所有。旧start_job/record_row/finish_jobの内部commitは呼ばず、新サービス内でjob/row SQLを既存テーブルへ発行する。DB migrationなし。
+
+commitでは同一sessionでlock_timeout5秒/statement_timeout30秒をSET LOCAL。商品と検索/除外テーブルをSHARE ROW EXCLUSIVEでロックし、4参照マスタもSHAREでロックする。既存の別経路が商品行ロックに協力しなくても語の書込と競合するため、revision照合から更新確定まで他者の書込を止める。コードは固定TCG_SCHEMA・固定テーブル名のみ、値はbind。プレビューは書込/ロック0。
+
+ロック後に全対象と分類を再読込し、digest/各revision/重複/値の全検査をやり直す。1件でも不正ならjobを含む書込0、rollbackして409又は422。空コード/未知コードは新規作成しない。商品全件を消したり書き戻したりしない。変更列だけUPDATE、変更した語テーブルの当該product_idだけ置換。これは指定商品の編集として許可される限定削除で、全商品DELETEは不可。
+
+履歴は1jobに全対象行を格納。result='updated'又は'unchanged'、product_codeは元code、messagesには変更field/before/afterのJSON。job.total_rows=対象数、created_rows=0、skipped_rows=unchanged、status='ok'。追加専用列なしのためupdated件数は履歴resultから数える。全処理成功後commit1回。途中のSQL/履歴失敗/cancelはrollback、元例外保持。commit応答不明は再試行しない。rollbackも失敗なら元例外を保持して停止。変更なしの語のUUID/位置と未対象行/他tenantは不変。成功後新exportでrevisionが更新される。
+
+ロックは更新中の商品マスタ書込を待たせる。2MiB上限/5秒lock timeout/明示確認により対象を限定する。頻繁な大量同時更新が必要になれば行ロック協調を別設計する。今回CI/保護設定/timeout上限は変更しない。
+
+### 21-6. UI契約
+
+既存TcgProductMasterPageのHeaderButtonにエクスポートを追加。既存importボタンと識別できる日英名にする。現在query/work_idをGETへ渡し、全該当件数出力（ページだけではない）を短く示す。api.getBlob→objectURL→a.download、finallyでURL/要素を解放。busy/errorの二重実行防止、権限拒否時にAPIを呼ばない。既存PageLayout/ContentToolbar/HeaderButton/i18nを利用し、デザイントークン新設不要。
+
+既存ImportPanelはpreview.modeに応じて新規登録と既存更新の文言/件数を出す。更新previewはコード・項目名・変更前後を見せ、unchangedも区別。商品コード/revisionを編集しない、空欄は任意値/語の消去、行削除は削除操作にならない、出力後に他者変更があれば再出力という案内を日英で付ける。内部SQL/テーブル名/ハッシュ詳細を画面文言に出さない。旧テンプレDLと新規登録フローを維持。
+
+### 21-7. 対象ファイル・受入検証
+
+製品対象は13ファイル：backend新roundtrip service、既存import router、新unit test、新PG test、frontend既存MasterPage/ImportPanel/ImportPreview/importMessages、ja/en、MasterPage.test/ImportPanel.test、既存tests-e2e/tcg-product-import.spec.ts。詳細パスは実装カード。master service/既存import service/DB/CI/運用scripts/secretsは変更なし。
+
+| ID | 合格条件 | 実検証と維持先 |
+|---|---|---|
+| R1 | BOM/12列/全対象/作品・検索/空一覧/2MiB超過、read-only/非管理者拒否 | 新unit/HTTP test、PG60件以上で50件ページ外も含む |
+| R2 | 無変更往復で商品/語の全列変更0、NULL/空/位置隙間/無効/欠損参照保持 | 新PG別接続snapshot前後比較 |
+| R3 | 日本語/英語/型番/日付/分類/両語を編集、同一id/code、再export同内容 | 新PG実export→csv編集→preview→commit→export |
+| R4 | comma/quote/CRLF/日本語/先頭空白/式先頭/apostrophe/語順を往復維持 | 新unit実codec＋PG保存の対照 |
+| R5 | stale（商品/検索語/除外語/有効状態）、コード差替え/不明/重複、無効日付/分類を拒否し書込0 | 新PG検査前後snapshot・HTTP422/409 |
+| R6 | preview後競合をcommitで拒否、別接続keyword追加/商品変更がロックに競合、解放確認 | 新PG実2接続/短いlock timeout。スレッド待ちを無限にしない |
+| R7 | 更新途中/語置換/履歴/commit前失敗/cancelで全rollback、応答不明commit後は一括状態、再送新規追加0 | 新PGfault injection、別接続商品+語+履歴照合 |
+| R8 | 別tenantの同code商品/語/履歴、未対象行、未公開列が不変 | 既存provision/HISTORY再利用のPG snapshot、独自DDLコピー0 |
+| R9 | 旧10列/PR3484の253追加ケース・既存HTTP/単品登録が回帰しない | 既存Backend全suiteとcoverage60%以上、PG追加skip0 |
+| R10 | 日英download実バイト・フィルタ伝達・前後表示・確認前commit0・二重クリック1・409再出力/5xx再送不可 | 既存FEunit＋Playwright、幅390/1440の画像を親確認 |
+| R11 | 正式CIと本番公開HTTP、認証なしexport拒否、反映HEADとbackup確認 | PRの実CIログと既存配備ログ。人の認証付き本番操作は未実施と区別 |
+
+実装担当はDocker不在ならローカルpytestを偽装せず、既存CI postgres16の独立pg fixtureを再利用。テスト定義は正式migration読込、GITHUB_ACTIONSとlocalhost/専用DB条件は維持。新PGは必要十分なケースをまとめ、228DBの再追加をしない。frontendcheck:all/build/unitと既存E2E＋追加ケース、backendmake lint-ci/正式pytest、cardlint/process/tenant/schema-dupを確認。既存CI15分内に収まらなければ原因を設計へ戻しskip/CI変更しない。
+
+### 21-8. Architect整合検査（同一AI自己審査）
+
+判定：APPROVE（実装へ渡す設計。実装合格や番号付きGOではない）。既存schemaと履歴result型で成立しmigration不要、旧経路を分離維持、同一statementexport＋全対象lock/revision再照合で読取/更新競合を検証できる。API/CSV/UI/13ファイル範囲とR1–R11を固定した。未確認の本番個別値へ依存しない。
+
+代替：出力だけでは再取込新規重複が残るため不採用。全CSVを旧createへ渡す方式も不採用。更新列を増やすmigration/全schemaコピーは不要。主な対価は更新中の短い表ロック、古い出力の再取得、語にcommaを含む場合の引用符入力である。
+
+未決：PR番号付きGOの最終原文（PO不在中に生成しない）、人の本番画面操作。機能実装/検証/PRは既承認範囲で進める。維持担当は商品マスタ機能担当、守り手は既存.github/workflows/test.yml / .github/workflows/e2e.yml と追加unit/PG/E2E。
+
+### DETAIL-01とCSV往復の統合（GO3492受領後）
+
+PO原文「進めるGO #3492」を受領。ガード欠落による停止後、POの復旧報告とexecutor-preflight exit0で再開。main ae5248f4のCSV往復を保持する。
+一覧の英語名/型番検索をCSV出力でも同じ対象にするため、backend/app/services/tcg_product_roundtrip_svc.pyのsnapshots検索条件1箇所を一覧と一致させる。API/CSV形式変更なし。既存検索語追加ロック・CSV一括ロックを維持。詳細保存後の古いCSVとCSV更新後の古い詳細編集が相互に409となることを既存詳細PG試験へ追加する。編集10項目/5列表現/CSV出力・更新の受入契約は不変。自己設計審査APPROVE（独立レビューではない）。
