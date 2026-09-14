@@ -39,7 +39,7 @@
     "initialPythonAttempt": "local CA trust lookup failed; not counted as service failure"
   },
   "relatedRecordPr": "https://github.com/shingo-ops/salesanchor/pull/3496",
-  "action": "PM0264 deployment blocker resolved. AP still awaits latest-main integration/checks and separate GO #3497.",
+  "action": "GO #3497 received; hold AP merge/deploy for new PR3503 migration failure. No new main integration or production operation performed this turn.",
   "recoveryVerification": {
     "checkedAt": "2026-09-14T04:01:57.960797+00:00",
     "pr": 3500,
@@ -84,5 +84,34 @@
     "poRequest": "推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら\n本番反映",
     "gateRemaining": "Numbered GO #3497 original required by scripts/check-process-artifacts.js:291-322; not fabricated",
     "ci": "Latest candidate checks pending; no production operation performed"
+  },
+  "poGo": {
+    "issuer": "Shingo (shingo-ops)",
+    "original": "GO #3497",
+    "recordedAt": "2026-09-14T06:52:48Z",
+    "targetHead": "af3734c94a49ca7633a05c78edd95a5ab9d01b4c"
+  },
+  "newDeploymentBlocker": {
+    "main": "180c0f38aefc2c727a3133a4e84fa8f4aec3b893",
+    "pr": 3503,
+    "run": 34810423329,
+    "job": 103870490025,
+    "conclusion": "failure",
+    "step": "Run database migrations",
+    "migration": "20260914_140000_unify_tcg_products_to_public.sql",
+    "position": "234/234",
+    "error": "there is no unique constraint matching given keys for referenced table \"products\"",
+    "statement": "ALTER TABLE tenant_001.product_search_keywords ADD CONSTRAINT fk_product_search_keywords_product_public FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE",
+    "backup": "salesanchor_db_20260914_144003.sql.gz (7.9M)",
+    "finalHealth": "passed",
+    "publicApp": 200,
+    "publicApi": 200,
+    "connections": [
+      "database connected",
+      "redis connected",
+      "celery connected"
+    ],
+    "rawLogSha256": "fd5a655a7302a0c6c89eae196219b7a9194bff0b14e22782434d2def538a1fce",
+    "limits": "No direct database inspection; do not treat 297 upserts printed before transaction failure as committed data"
   }
 }

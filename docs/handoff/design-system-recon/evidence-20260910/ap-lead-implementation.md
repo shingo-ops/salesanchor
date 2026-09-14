@@ -56,3 +56,10 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 ### 2026-09-14 本番反映指示後の統合確認
 
 POから根拠確立後の本番反映指示を受領（逐語はap-release-prerequisite.json）。main95daf966を37193080へ通常統合、mainのdeploy34808959394成功を直接確認。基準2ページ/共有21のmain変化0、製品3hash不変。evidence-registryの追記競合は両親コミット全文を保持。初回の可変origin/main参照検算は並行更新により不一致となったため、固定した両親SHAで再確認して成功した。製品への独自変更なし。統合後の正式CIを確認中。scripts/check-process-artifacts.js:291–322は番号付きGO原文を要求しており、今回の指示を「GO #3497」へ改作しない。マージ/本番反映は未実施。
+
+
+### 2026-09-14 GO3497受領・別件DB移行による再停止
+
+GO原文「GO #3497」をPOから受領しPR本文へ逐語転記（記録時刻15:52 JST、対象af3734c9）。代理GOではない。直前確認で最新main180c0f38（PR3503）のdeploy34810423329/job103870490025が失敗と判明。234/234の20260914_140000_unify_tcg_products_to_public.sqlが、tenant_001.product_search_keywordsからpublic.products(tcg_uuid)への外部キー追加で「there is no unique constraint matching given keys for referenced table products」と停止。従前PM0264の231番は成功。バックアップ14:40/7.9M、Finalize health成功、root curlでApp/API200・DB/Redis/Celery connected。処理途中の297 upsertログをコミット済みとは断定せず、直接DB検査は未実施。
+
+GO受領済みと配備可能性を区別し、APマージ/配備を停止。今回製品変更・新main統合・本番操作なし。別件修復を本GOの対象へ拡張しない。次はPR3503復旧担当を確認し、復旧成功後に最新main統合/製品照合/CIを再確認する。GO #3497は保持し再承認を要求しない。根拠ap-release-prerequisite.json newDeploymentBlocker。
