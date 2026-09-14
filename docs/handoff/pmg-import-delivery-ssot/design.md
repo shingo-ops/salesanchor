@@ -1267,3 +1267,35 @@ result_order_page_fixが指定2ファイルの補正を実装。rootが実diff�
 担当実行: diff検査/AST構文確認成功、Ruffは担当環境で未実行。root直接実行: ruff check --no-cache 対象2ファイル成功、git diff --check成功、check-task-state.sh成功。Docker未接続なので手元pytest未実行。正式CIで4097明細の公開ページ/配信全件/内容保持が通るまでは実装検収REVISE。
 
 rootは製品ファイルを編集せず、担当成果物の照合と文書保存を実施。同一AIの設計自己審査と、担当実装差分の親による確認を区別する。独立した第二者レビューや本番改善実証とは称さない。
+
+
+### RESULT-ORDER 性能補正の正式CI検収（2026-09-14）
+
+検証HEAD90c1ea2518b20b5e9a671b45309c74dcbfdb9d57、PR3501 OPEN/MERGEABLE（未マージ）。実装担当の補正commit9e4c547eへ最新main f9f08f20を統合した。競合は本design/reconの別テーマ追記のみで、双方の原文を保持。今回の6製品/試験ファイルが統合前後で同一であることをrootがgit diffで確認。
+
+rootが直接取得した正式CI job103869063278: 3750 passed / 95 skipped / 310 warnings、201.23秒、coverage65.09%。新しい4試験はスキップなし。元の96行の全ページ連結・8状態・同名異ID・数値価格・未知/NULL/未解析/無効原文・人手確定状態と、4097明細/4097原文の公開APIページ/配信全件・保存値前後一致が通過した。
+
+| 4097行fixtureの処理 | EXPLAIN ANALYZE実行時間 | 結果 |
+|---|---|---|
+| 解析レビュー先頭500件 | 1824.873ms | 500件・期待順一致 |
+| 解析レビューoffset4000/limit500 | 1429.450ms | 残97件・期待順一致 |
+| 取込先頭100件 | 2496.161ms | 件数/期待ID順一致 |
+| 取込offset4000/limit100 | 2403.759ms | 残97件・期待ID順一致 |
+| 配信全4097件 | 3026.776ms | 全件・期待順/値一致 |
+
+いずれもREAD ONLY、各SQL10秒上限を維持。時間は隔離CIで同じSQL取得直後の温まったキャッシュをEXPLAIN ANALYZEしたもの。画面の通信/描画時間や本番設備/分布を含まない。修正前の通常末尾ページは2つのCIで10秒timeout、修正後は同じ件数/上限/offsetで成功した。上限外の4097件一括レビュー取得の過去失敗は履歴として保持し、修正後の同取得は再測定していない。
+
+限定実装の検収判定APPROVE。過去の実装検収REVISEはこの公開API条件の検証で解消した。全チェック35SUCCESS/8SKIPPED/2FAILURE（同じGO記録検査の2履歴）、待機0。最新job103869185102の失敗理由は「### GO記録」欠落のみで、GO #<PR番号>原文の転記を要求。番号付きGO未受領のため、マージ/本番反映は停止したまま。GO委任の有効化もしていない。
+
+設計自己審査・実装担当作業・親の差分照合・GitHub正式CIを区別する。親は手元pytestを実行しておらず、正式CI原ログと計測JSONを直接確認。証跡result-order-evidence.jsonのfixed_public_page_ci、原ログ/tmp/sa-result-order-fixed-ci.txt、計測/tmp/sa-result-order-fixed-plans.json。本結果追補はローカル保存、同じ結果をPR本文へ反映し、次の正式GO記録とともに文書commitする。
+
+
+### RESULT-ORDER GO受領と本番反映停止（2026-09-14）
+
+- PO原文: `GO #3501`。発行者: PO（Shingo）。記録確認日時: 2026-09-14 14:45 JST（チャット送信時刻の推定ではない）。対象はPR3501の合意済み並び順変更。AI委任の有効化ではない。
+- GO受領時のPR HEAD: `90c1ea2518b20b5e9a671b45309c74dcbfdb9d57`。既存CI3750成功/95skip。PRはOPEN、mergeStateStatus=BEHIND。
+- origin/main取得結果: `180c0f38aefc2c727a3133a4e84fa8f4aec3b893`、別件PR3503が追加。5ファイルに商品統合migration・登録script・ADR・gate変更あり。本便へのmain取り込み、マージ、本番操作は行っていない。
+- 本番Deploy run [34810423329](https://github.com/shingo-ops/salesanchor/actions/runs/34810423329) はfailure。失敗ログを直接確認: 2026-09-14T05:42:18Z、`20260914_140000_unify_tcg_products_to_public.sql` の `tenant_001.product_search_keywords` 外部キー追加で `there is no unique constraint matching given keys for referenced table "products"`。参照先は `public.products(tcg_uuid)`。
+- 同runのPre-deploy DB backupとコード配備stepはsuccess、Run database migrationsはfailure、Post-deploy smoke/Verify deploymentはskipped。Finalizeはsuccessだが、DB整合性・全体復旧の確認とは扱わない。現在のDB内容は直接未検証。
+- バックアップ確認: 本便はDB変更なし（該当なし）。上記既存runのbackup成功は本便の将来反映直前backupの保証に転用しない。
+- 判定: PO承認済み・技術検証済み、別件本番migration失敗により反映BLOCKED。GO不足という以前の停止理由は解消。障害復旧と最新main統合後の再検証が必要。別件DB修正・migration編集・再実行・ガード迂回を本便GOに含めない。

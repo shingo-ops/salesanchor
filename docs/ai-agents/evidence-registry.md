@@ -37,8 +37,8 @@ evidence:
     summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
 confidence: medium
 tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
-decision: 末尾ページ10秒超を7c775cc6でも再現。PO続行指示後、実装担当の限定補正を受領し親差分/Ruff確認済み。正式CI前につき実装検収REVISE。
-follow_up: 4097行の公開ページ/配信全件・値保持を正式CIで再検証。rootは製品未編集、担当成果物を照合。本番未反映。
+decision: 実装担当の限定補正後HEAD90c1ea25でCI3750成功/95skip。4097行の末尾97件SQL1429.450ms。限定実装検収APPROVE、本番未反映。
+follow_up: PO原文GO #3501を受領。別件PR3503のDeploy34810423329が商品統合migration外部キーで失敗しており反映停止。復旧後に最新main/CIを再照合。未マージ・本番未反映。
 ```
 
 ```text

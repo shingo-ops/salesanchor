@@ -193,5 +193,152 @@
     "seconds": 268.47,
     "failure": "same review offset4000 limit500 timeout",
     "log_sha256": "220ceaadab6f900d25ef0a5340dacaca0f24a4bc2b94264fc6013904f8f9c038"
+  },
+  "fixed_public_page_ci": {
+    "head": "90c1ea2518b20b5e9a671b45309c74dcbfdb9d57",
+    "job": 103869063278,
+    "passed": 3750,
+    "skipped": 95,
+    "warnings": 310,
+    "seconds": 201.23,
+    "coverage_percent": 65.09,
+    "measurement": {
+      "rows": 4097,
+      "sources": 4097,
+      "transaction_read_only": true,
+      "statement_timeout_ms": 10000,
+      "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI",
+      "statistics": {
+        "before_analyze": [
+          [
+            "analysis_results",
+            -1.0
+          ],
+          [
+            "extraction_items",
+            -1.0
+          ],
+          [
+            "extraction_jobs",
+            -1.0
+          ],
+          [
+            "source_messages",
+            4097.0
+          ]
+        ],
+        "after_analyze": [
+          [
+            "analysis_results",
+            4097.0
+          ],
+          [
+            "extraction_items",
+            4097.0
+          ],
+          [
+            "extraction_jobs",
+            4097.0
+          ],
+          [
+            "source_messages",
+            4097.0
+          ]
+        ]
+      },
+      "plans": [
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 106.622,
+          "planning_ms": 5.801,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 112.079,
+          "planning_ms": 4.605,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": 500,
+          "offset": 0,
+          "execution_ms": 1824.873,
+          "planning_ms": 13.335,
+          "actual_rows": 500
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 119.3,
+          "planning_ms": 5.66,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 103.595,
+          "planning_ms": 5.122,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": 500,
+          "offset": 4000,
+          "execution_ms": 1429.45,
+          "planning_ms": 14.923,
+          "actual_rows": 97
+        },
+        {
+          "consumer": "import",
+          "limit": 100,
+          "offset": 0,
+          "execution_ms": 2496.161,
+          "planning_ms": 9.782,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "import",
+          "limit": 100,
+          "offset": 4000,
+          "execution_ms": 2403.759,
+          "planning_ms": 6.898,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "distribution",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 3026.776,
+          "planning_ms": 9.882,
+          "actual_rows": 4097
+        }
+      ]
+    },
+    "log_sha256": "f4f4e3caa4ad3ac5c9f1ad2c16de07369f93c316ab170957243b62a227320264",
+    "checks": {
+      "success": 35,
+      "skipped": 8,
+      "failure": 2,
+      "failure_detail": "two process-artifacts GO-record checks; same missing numbered GO"
+    },
+    "production_changed": false
+  },
+  "go_3501_received": {
+    "raw": "GO #3501",
+    "issuer": "PO (Shingo)",
+    "recorded_at": "2026-09-14T14:45:00+09:00",
+    "tested_head": "90c1ea2518b20b5e9a671b45309c74dcbfdb9d57",
+    "current_main": "180c0f38aefc2c727a3133a4e84fa8f4aec3b893",
+    "blocked_by_deploy_run": 34810423329,
+    "reason": "PR3503 migration FK references public.products(tcg_uuid) without matching unique constraint",
+    "merged": false,
+    "production_changed_by_this_task": false
   }
 }
