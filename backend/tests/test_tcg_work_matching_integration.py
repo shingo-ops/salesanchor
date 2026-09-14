@@ -40,29 +40,7 @@ def provision(cursor, schema):
     cursor.execute((MIGRATIONS / "20260906_120000_create_tcg_tables_t001.sql").read_text().replace("tenant_001", schema))
 
 
-_PUBLIC_PRODUCTS_DDL = """
-CREATE TABLE IF NOT EXISTS public.products (
-    id                   SERIAL PRIMARY KEY,
-    tenant_id            INTEGER,
-    product_code         VARCHAR(50),
-    name                 VARCHAR(255) NOT NULL,
-    name_en              VARCHAR(255),
-    mark                 VARCHAR(100),
-    release_date         DATE,
-    tcg_uuid             UUID UNIQUE,
-    division_id          UUID,
-    work_id              UUID,
-    manufacturer_id      UUID,
-    product_category_id  UUID,
-    category_class       TEXT,
-    is_active            BOOLEAN DEFAULT true,
-    is_archived          BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_code
-    ON public.products (product_code) WHERE product_code IS NOT NULL;
-"""
+_PUBLIC_PRODUCTS_DDL = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text()
 
 def _rewire_keyword_fks(schema: str) -> str:
     """Return SQL that drops tcg_products FKs and adds public.products FKs."""
