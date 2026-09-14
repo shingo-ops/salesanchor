@@ -278,8 +278,12 @@ def test_stale_seven_item_changed_reference_and_db_unchanged(pg, monkeypatch):
     """7-item stale job with changed master produces comparison_complete_unverified, reference_diff.changed=True, and leaves DB unchanged."""
     connection, engine, jobid, item_ids, _ = _setup_workid_stale(pg, monkeypatch, n_items=7)
 
+    sessions = []
+
     def factory():
-        return Session(engine)
+        s = Session(engine)
+        sessions.append(s)
+        return s
 
     # Insert a new series BEFORE taking snapshot to create the stale-reference condition.
     # The job's saved work_reference_sha256 was captured above; the current reference now differs.
@@ -293,7 +297,8 @@ def test_stale_seven_item_changed_reference_and_db_unchanged(pg, monkeypatch):
     assert snap["data"]["reference_diff"]["changed"] is True  # stale reference confirmed
 
     def model(prompt):
-        assert all(not s.in_transaction() for s in [])
+        assert sessions, "factory must have been called at least once before model"
+        assert all(not s.in_transaction() for s in sessions)
         rows = [item["id"] + "｜" for item in snap["data"]["items"]]
         return comparison.HEADER + "\n" + "\n".join(rows)
 
@@ -337,7 +342,7 @@ def test_stale_pre_model_conditions_give_input_changed(pg, monkeypatch, change):
     assert model_calls[0] == 0
 
 
-@pytest.mark.parametrize("change", ["raw", "job", "item", "analysis", "correction", "master"])
+@pytest.mark.parametrize("change", ["source", "job", "item", "analysis", "correction", "master"])
 def test_stale_input_changed_during_model_call(pg, monkeypatch, change):
     """DB changes during model call → INPUT_CHANGED at post-model unchanged() via real DB re-read."""
     connection, engine, jobid, item_ids, _ = _setup_workid_stale(pg, monkeypatch)
@@ -349,8 +354,12 @@ def test_stale_input_changed_during_model_call(pg, monkeypatch, change):
 
     def model(prompt):
         with connection.cursor() as cursor:
-            if change == "raw":
-                cursor.execute(f"UPDATE {SCHEMA}.extraction_items SET raw_memo='changed' WHERE extraction_job_id=%s", (jobid,))
+            if change == "source":
+                cursor.execute(
+                    f"UPDATE {SCHEMA}.source_messages SET raw_text='changed' WHERE id="
+                    f"(SELECT source_message_id FROM {SCHEMA}.extraction_jobs WHERE id=%s)",
+                    (jobid,),
+                )
             elif change == "job":
                 cursor.execute(f"UPDATE {SCHEMA}.extraction_jobs SET work_reference_sha256=%s WHERE id=%s", ("0" * 64, jobid))
             elif change == "item":
