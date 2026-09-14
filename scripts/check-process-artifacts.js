@@ -272,10 +272,10 @@ function parseGORecord(prBody) {
   if (!sectionMatch) return null;
   const section = sectionMatch[1];
 
-  const issuerMatch = section.match(/GO発行者:\s*(.+)/);
-  const dateMatch = section.match(/日時:\s*(.+)/);
-  const goTextMatch = section.match(/GO原文:\s*(.+)/);
-  const backupMatch = section.match(/バックアップ確認:\s*(.+)/);
+  const issuerMatch = section.match(/(?:\*\*)?GO発行者(?:\*\*)?\s*:\s*(.+)/);
+  const dateMatch = section.match(/(?:\*\*)?日時(?:\*\*)?\s*:\s*(.+)/);
+  const goTextMatch = section.match(/(?:\*\*)?GO原文(?:\*\*)?\s*:\s*(.+)/);
+  const backupMatch = section.match(/(?:\*\*)?バックアップ確認(?:\*\*)?\s*:\s*(.+)/);
 
   return {
     issuer: issuerMatch ? issuerMatch[1].trim() : null,
