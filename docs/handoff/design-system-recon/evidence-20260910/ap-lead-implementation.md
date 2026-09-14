@@ -51,3 +51,8 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 修正PR3500のmain 70d145f090e122dd36e4a39b4928e13cc0dae613について、deploy34804164057/job103852603870がsuccess、03:57:47 UTC完了とGitHub APIで直接確認。原ログでは従前失敗の231番がDO/COMMIT成功、233/233まで完走しMigrations done、SA-19 smoke全成功、Verify deployment成功。事前バックアップsalesanchor_db_20260914_125456.sql.gz/6.7M。確認時点の公開App/APIはTLS検証有効のcurlで200、DB/Redis/Celery connected。
 
 修正差分は既存商品の固定日本語名照合を外し、構造属性の照合を維持。対象の既存seedは非NULL値の保持等に変更。全CSV更新の保全や本番の商品名そのものは直接SELECT/往復試験していないため未検証。AP対象2ページ・共有21ファイルの基準から最新mainへの変化は0。PM0264による配備保留は解消。AP3497の最新main統合・確認と番号付きGOは別途必要で、今回マージ/本番反映は行っていない。根拠: ap-release-prerequisite.json recoveryVerification。前節は復旧前の履歴として保持する。
+
+
+### 2026-09-14 本番反映指示後の統合確認
+
+POから根拠確立後の本番反映指示を受領（逐語はap-release-prerequisite.json）。main95daf966を37193080へ通常統合、mainのdeploy34808959394成功を直接確認。基準2ページ/共有21のmain変化0、製品3hash不変。evidence-registryの追記競合は両親コミット全文を保持。初回の可変origin/main参照検算は並行更新により不一致となったため、固定した両親SHAで再確認して成功した。製品への独自変更なし。統合後の正式CIを確認中。scripts/check-process-artifacts.js:291–322は番号付きGO原文を要求しており、今回の指示を「GO #3497」へ改作しない。マージ/本番反映は未実施。

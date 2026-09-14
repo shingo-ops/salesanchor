@@ -71,5 +71,18 @@
       "No direct production product-name SELECT or CSV round-trip test performed",
       "No AP merge or deployment; no GO #3497 received"
     ]
+  },
+  "integrationVerification": {
+    "head": "3719308070cae60dca77fdfe02a2278ff252ac09",
+    "main": "95daf966103d8023d9388ebe75764476645fc1ba",
+    "mainDeployRun": 34808959394,
+    "mainDeployConclusion": "success",
+    "baselineFilesUnchanged": 23,
+    "productHashesUnchanged": 3,
+    "conflicts": "Only evidence-registry append conflicts; both fixed parents retained",
+    "initialVerificationFailure": "First check referenced mutable origin/main which advanced concurrently; fixed HEAD/MERGE_HEAD checks passed. No product edits.",
+    "poRequest": "推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら\n本番反映",
+    "gateRemaining": "Numbered GO #3497 original required by scripts/check-process-artifacts.js:291-322; not fabricated",
+    "ci": "Latest candidate checks pending; no production operation performed"
   }
 }
