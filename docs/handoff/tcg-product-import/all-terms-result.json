@@ -634,7 +634,7 @@
     "sa-allterms-implemented-private.json": "327143ff6ea5e68d595747261812b4b2337b433d30686f487d729fbbf2366987"
   },
   "review": "same-AI self-review; no independent second reviewer",
-  "release": "not deployed; official CI/release conditions pending",
+  "release": "implementation and full CI verified; NOT merged or deployed",
   "pr": 3499,
   "integration": "Merged main e69da6ed; evidence registry conflict resolved by retaining both entries; product matcher unchanged",
   "ci_first": {
@@ -689,8 +689,26 @@
     "writes_by_this_task": 0
   },
   "release_blockers": [
-    "process-artifacts gate34798116217: missing numbered PO GO record",
-    "existing deployment failure PM0264 identity mismatch",
-    "full CI rerun pending"
-  ]
+    "PR3499: missing numbered PO GO record; delegation mechanism not active",
+    "existing deployment failure: cardset bundle identity mismatch PM0264"
+  ],
+  "ci_verified": {
+    "run": 34798680670,
+    "job": 103836767094,
+    "head": "9f96d682d75845c7d62771e4bf434153de72613f",
+    "passed": 3718,
+    "skipped": 95,
+    "failed": 0,
+    "coverage_percent": 65.05,
+    "duration_seconds": 265.85,
+    "log_sha256": "fd3364129bab51d62fea6716c1da221e60e4bec82f53bf6aea3e108b77f3762b",
+    "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34798680670"
+  },
+  "checks_at_verified_head": {
+    "success": 34,
+    "skipped": 8,
+    "failure": 1,
+    "failure_name": "process-artifacts gate",
+    "failure_reason": "missing numbered PO GO record"
+  }
 }
