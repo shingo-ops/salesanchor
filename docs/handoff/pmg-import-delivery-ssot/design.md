@@ -1193,3 +1193,12 @@ HEAD f982978e、CI job103860869068の追加試験で解析レビューitems SQL�
 次の診断はfixture内の対象12表にANALYZE、前後reltuplesを記録、同じ4097件/10秒上限を保持して3経路を実行する。失敗時は非実行EXPLAINの計画を記録して例外を再送出する。成功時もCIのwarning summaryへ実測を記録し、pytest-xdistのworker stdout非転送に依存しない。製品SQL・本番設定を変更しない。
 
 本番確認経路: main.py:570,600,605のprefixは/api/v1。解析GETはtcg_analysis_review.py:91（上限500）、取込GETはtcg_line_import.py:663（上限100）。配信previewは件数/除外内訳のみ（tcg_distribution.py:156）、行値の確認APIではない。実配信は別POSTであり、コード配備だけでシート更新済みと扱わない。
+
+
+### RESULT-ORDER 統計整備後も失敗・API条件との分離（2026-09-14）
+
+HEAD490e3961、job103862564543: 同じreview items SQLが10秒で停止。1 failed / 3720 passed / 95 skipped、268.38秒。fixtureのreltuplesはanalysis_results/extraction_items/extraction_jobsが-1→4097、source_messagesは4097→4097。統計不足だけで解消するとの仮説は支持されなかった。非実行計画はLimit4097/TotalCost36077.28、内側Sort4097/9116.56。これは見積りであり、各部分の実時間ではない。実装検収REVISE継続。
+
+API契約の事実: reviewは上限500、importは100。失敗したlimit8192は公開APIから要求できない。次の受入試験は4097原文/明細を保持し、review500/import100の先頭とoffset4000の末尾、distribution4097全件を確認する。レビュー変更前のORDER BYだけを復元した同一SELECTの500件取得も比較する。SQL上限10秒は維持。上限外一括取得失敗を合格へ書き換えず、公開API条件の成否を別判定にする。96行試験の全ページ連結検査も維持する。
+
+pytest-xdistのstdout制約は公式 https://pytest-xdist.readthedocs.io/en/stable/known-limitations.html のOutput節で照合済み。失敗時の実行計画warningはCI原ログに実際に残り、rootがJSONとして抽出した。Context7不在時の許可済み公式資料確認による。

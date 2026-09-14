@@ -175,7 +175,7 @@ def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
     assert snapshot(pg) == before
 
 
-def test_larger_result_set_query_plans_and_read_only_delivery(pg):
+def test_larger_result_set_public_pages_and_read_only_delivery(pg):
     """Measure real queries over 4,097 rows; this is not production telemetry."""
     import json
     import warnings
@@ -241,6 +241,11 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg):
                     consumer = ""
 
                     async def execute(self, statement, parameters=None):
+                        if self.consumer == "review_before":
+                            from app.services.tcg_result_order import result_order_sql
+                            statement = text(str(statement).replace(
+                                "ORDER BY " + result_order_sql(),
+                                "ORDER BY sm.received_at DESC, ei.line_start ASC"))
                         estimated = (await db.execute(text("EXPLAIN (FORMAT JSON) " + str(statement)),
                                                        parameters)).scalar_one()[0]
                         try:
@@ -253,16 +258,26 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg):
                         explanation = await db.execute(text("EXPLAIN (ANALYZE, BUFFERS, FORMAT JSON) "
                                                             + str(statement)), parameters)
                         plan = explanation.scalar_one()[0]
-                        plans.append({"consumer": self.consumer, "execution_ms": plan["Execution Time"],
+                        plans.append({"consumer": self.consumer,
+                                      "limit": (parameters or {}).get("limit"),
+                                      "offset": (parameters or {}).get("offset"),
+                                      "execution_ms": plan["Execution Time"],
                                       "planning_ms": plan["Planning Time"],
                                       "actual_rows": plan["Plan"]["Actual Rows"]})
                         return result
 
                 measured = MeasuredSession()
+                # API limits are 500 review rows and 100 import rows. The full
+                # 4,097-row unbounded-review timeout remains documented evidence.
+                measured.consumer = "review_before"
+                original_page = await review.fetch_analysis_results(measured, limit=500)
+                assert original_page["total"] == 4097 and len(original_page["items"]) == 500
                 measured.consumer = "review"
-                reviewed = await review.fetch_analysis_results(measured, limit=8192)
+                reviewed = [await review.fetch_analysis_results(measured, limit=500, offset=offset)
+                            for offset in (0, 4000)]
                 measured.consumer = "import"
-                imported = await progress.read_items(measured, import_id, 8192, 0, "all")
+                imported = [await progress.read_items(measured, import_id, 100, offset, "all")
+                            for offset in (0, 4000)]
                 measured.consumer = "distribution"
                 output = await distribution.fetch_output_rows(measured)
                 return reviewed, imported, output
@@ -271,12 +286,14 @@ def test_larger_result_set_query_plans_and_read_only_delivery(pg):
 
     reviewed, imported, output = asyncio.run(run())
     expected.sort()
-    assert reviewed["total"] == imported["total"] == len(output) == 4097
-    assert [r["extraction_item_id"] for r in reviewed["items"]] == [r[2] for r in expected]
-    assert [r["id"] for r in imported["items"]] == [r[2] for r in expected]
+    assert len(output) == 4097
+    for offset, review_page, import_page in zip((0, 4000), reviewed, imported):
+        assert review_page["total"] == import_page["total"] == 4097
+        assert [r["extraction_item_id"] for r in review_page["items"]] == [r[2] for r in expected[offset:offset+500]]
+        assert [r["id"] for r in import_page["items"]] == [r[2] for r in expected[offset:offset+100]]
     assert [r[7] for r in output] == [r[3] for r in expected]
     assert snapshot(pg) == before
-    assert {p["consumer"] for p in plans} == {"review", "import", "distribution"}
+    assert {p["consumer"] for p in plans} == {"review_before", "review", "import", "distribution"}
     # pytest-xdist does not forward worker stdout; a warning preserves the
     # bounded measurements in the existing CI log without changing CI settings.
     warnings.warn("RESULT_ORDER_QUERY_PLANS " + json.dumps({"rows": 4097, "sources": 4097,

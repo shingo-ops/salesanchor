@@ -95,5 +95,59 @@
       "seconds": 277.76
     },
     "log_sha256": "e1ac76d5e8f9bc0a56d5743ff10dff30b72536bf7c1ca313d5996b9df3cee016"
+  },
+  "load_probe_statistics": {
+    "head": "490e396175459191c336d1fa27bafca118df3966",
+    "job": 103862564543,
+    "result": "FAILED",
+    "rows": 4097,
+    "statement_timeout_ms": 10000,
+    "consumer": "review unbounded items",
+    "statistics": {
+      "before_analyze": [
+        [
+          "analysis_results",
+          -1.0
+        ],
+        [
+          "extraction_items",
+          -1.0
+        ],
+        [
+          "extraction_jobs",
+          -1.0
+        ],
+        [
+          "source_messages",
+          4097.0
+        ]
+      ],
+      "after_analyze": [
+        [
+          "analysis_results",
+          4097.0
+        ],
+        [
+          "extraction_items",
+          4097.0
+        ],
+        [
+          "extraction_jobs",
+          4097.0
+        ],
+        [
+          "source_messages",
+          4097.0
+        ]
+      ]
+    },
+    "plan_root": {
+      "Node Type": "Limit",
+      "Plan Rows": 4097,
+      "Total Cost": 36077.28
+    },
+    "plan_sha256": "50c55b441f71864ac8f79433871f5ed50beb7a501c872db94de9fc82e371c799",
+    "log_sha256": "aa00c88f567b415f3f4f59c562dc15bc460bef04b22729c46654cc536082d5ee",
+    "interpretation": "ANALYZE alone did not resolve the timeout; root cause unconfirmed"
   }
 }
