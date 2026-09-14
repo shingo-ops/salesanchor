@@ -224,6 +224,7 @@ function parseSOPDeclaration(prBody) {
         .map(f => f.replace(/^[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
         .filter(f => f.length > 0 && f !== 'なし')
     : [];
+  const hasDeleteFilesDeclared = !!deleteFilesMatch;
 
   return {
     isExempt,
@@ -234,6 +235,7 @@ function parseSOPDeclaration(prBody) {
     mode: modeMatch ? modeMatch[1] : null,
     touchFiles,
     deleteFiles,
+    hasDeleteFilesDeclared,
   };
 }
 
@@ -804,7 +806,7 @@ function main() {
 
       if (deletedFiles.length > 0) {
         const deleteErrors = [];
-        if (!declaration || !declaration.deleteFiles || declaration.deleteFiles.length === 0) {
+        if (!declaration || !declaration.hasDeleteFilesDeclared) {
           deleteErrors.push('❌ PR本文に「削除するファイル:」の宣言がありません（PR番号2600以上で必須）');
           deleteErrors.push('   → 「### 標準ワークフロー確認」の「削除するファイル:」にリポジトリ相対パスを記入してください');
           deleteErrors.push('   ※「削除するファイル」とは、丸ごと消したファイルだけでなく、1行でも削除・変更した行があるファイルを指します');
