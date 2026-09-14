@@ -100,7 +100,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
-| 抽出試行記録の構造検証・容量超過記録是正 | root設計 / error_visibility_recon実装 / attempt_record_review検収 | 限定設計自己審査APPROVE・実装開始。既存SSOT維持 | 専用実PG試験・コードレビュー・正式CI後に新PRの承認経路確認 | EV-20260914-ATTEMPT-INTEGRITY / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-14 |
+| 抽出試行記録の構造検証・容量超過記録是正 | root設計 / error_visibility_recon実装 / attempt_record_review検収 | PR #3504 HEAD47f72ab3公開、コードレビューAPPROVE。実DB移行/静的検査成功、Backend3746成功/95skip・coverage65.07% | GO #3504受領・backup再確認済。承認文書保存/最新CI→正式merge・通常配備・実機照合。本便反映前 | EV-20260914-ATTEMPT-INTEGRITY / PR #3504 / recon.md | 2026-09-14 |
 | ワンピース商品追加・解析対策 | 設計・実装担当 | PR #3434提出、GitHub2586成功/95skip、必須13成功。登録26候補静的検査成功 | 番号付きGO記録で手順検査を解消しマージ/配備。書籍区分など33候補の確認継続 | docs/handoff/tcg-product-master-growth/design-keyword.md §15 | 2026-09-11 |
 | TCG 人確認後配信の検証記録 | 設計担当 | 実コードの人工192条件・修正関数7ケース照合済み。文書自己レビューAPPROVE、製品設計REVISE | 文書PRチェック後に条件付き許可の範囲で保存。共通判定/全項目確認/配信接続の正式設計は未完了 | docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」/EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED | 2026-09-12 |
 | guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
