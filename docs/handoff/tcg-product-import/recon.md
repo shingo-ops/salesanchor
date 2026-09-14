@@ -1043,6 +1043,16 @@ PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落�
 
 復旧後ローカル検証: npm run test:coverageは30ファイル384件成功（/tmp/product-detail-restored-unit.log）、Playwright詳細/CSV統合22件成功（/tmp/product-detail-restored-e2e.log）。これらのAPIは模擬であり実DBは新HEADのCIで確認する。
 
+2026-09-14 全語一致実装前確認: preflight成功、origin/main=59f644cd。10:52:17 JSTのreadonly取得で1504明細/辞書/原文/訂正/解析が10:31版と全一致。肯定商品照合はanalyzer:554、除外は:550、品質R5はtcg_keyword_lint.py:96。design§23/24とpartial-match-evidence-20260914.jsonに対照と契約を保存。PR3492はmerged、deploy34794455633=failureをGitHubで直接確認。PR3486は辞書migration2ファイルのみ。別担当の配備障害を本件に混在させない。
+
+実装後検証: all-terms-result.json。固定正解0→4/4、1504明細の結果変化4/根拠のみ変化4、既存特定喪失0/別商品化0。実装AST純関数48成功、ruff成功、品質規則全文不変（既存STOP9）。DockerなしのためDB pytest未実行、正式CI待ち。Python3.14依存導入はpydantic-coreで失敗、スタックに合う3.12で再準備。自己レビューは肯定呼出し1か所/版/R5とガード不変を確認、独立レビューではない。最初の保存コマンドは本店mainと判定されガード停止、専用worktreeを先頭cdで明示して保存。
+
+PR3499作成後mainがe69da6edに進み根拠登録の末尾追記が競合。両方の記録を保持して統合。商品照合/R5本体は統合による変更なし。Python3.12の実import版48検査も成功。make lint-ciはexit0だが既存Makefileがbandit/mypyを許容するため無指摘とは称さず、正式CIを確認する。
+
+正式CI初回4失敗をdesign§24-5に分類。3件は正式商品名に含まれる語による期待変化（PM0179根拠のみ/PM0256・257新規特定）、1件はAST接続テストの関数読込不足。固定fixtureは変更せず明示的v9期待値を追加。製品ロジックは変更なし。11:05再取得では除外語49行のidのみ変化、他列は全一致。最新データで再対照し結果/品質指摘がすべて再現した。
+
+最終実装検証: PR3499 HEAD9f96d682、正式Backend34798680670/job103836767094は3718成功/95skip/失敗0、265.85秒、coverage65.05%。Checks34成功/8対象外/1失敗。唯一の失敗は番号付きPO GO記録不足で、GO原文は創作しない。最新本番配備34797490804はPM0264 identity mismatchで失敗、通常配備停止の解消は別担当の設計。バックアップ105621.sql.gz 7.2M成功ログ確認、復元未検証。本件の製品実装・実測・自己レビュー・PR提出済み、マージ/本番反映/再解析/配信未実施。次は配備障害解消を確認し、正規GOと最新HEADチェックを満たして通常経路で公開する。本結果保存は製品6ファイルを変えない文書差分。
+
 ## 2026-09-14 CSV更新とmigration再実行の分離調査
 
 対象基点: origin/main `59f644cd545d9481ed3460ad5c1dfeefd8c2df56`。公式preflight終了0、専用worktree `release-product-master-migration-design` を同基点から作成し開始時cleanを確認。GO委任正式ファイルは確認できず有効化待ち。本便は設計のみ。PR3492のGOを本便に転用しない。
@@ -1122,3 +1132,5 @@ CSVを日常更新に使い、DB構造変更と初期登録を分ける方向へ
 検証実装の読取審査: 親は初稿のV4が193の補完対象外PM0276を戻ると期待していた点を検出し、実物VALUESに存在するPM0200への是正を依頼した。V2はQA完成形での再実行だけでは新規初期化を証明しないため、元187/192と193/198の構造部分から空schemaを作り、編集後2回再実行する検証へ補強する。担当が指摘を修正中で、まだPG成功とは扱わない。文書検査の省略引用2件とADR表記を正式パス/番号へ修正後、process-artifactsのローカル本文検算は成功（正式CIではない）。
 
 公開前確認: 親がtest SHA256 4bc7e4c9e27866591f79ca77b940aa583deb4880fb6af296340cd071ac47f1eeを直接照合、9ケース/接続制限/元SQL/V2初期化/V3明示rollback/V4対象を審査。親diff終了0、担当の静的/9件collect成功、PG未実行。公開カードは検証PRのみ許可。カード文書作成コマンドが内容中のcommit表記によりmain操作と判定され一度拒否されたが、作業先をコマンド冒頭へ明記して再試行。ガード変更なし。
+
+検証PR3502/57f2ad07提出後のCI: guard34805799525はerror、通常Backend workflowは未起動。GitHubでbase5afb5af1、PR CONFLICTINGを直接確認。run-guard-evaluation.jsはbaseがheadの祖先であることを要求する。main更新を取り込み、末尾追記競合3文書を双方の原文保持で解消。main変更は対象SQL10本/再利用PG生成helper/接続制限に差分なしと担当が確認。親は文書3件の両側全文保持を機械照合。ガード・CI変更なし、再実行結果待ち。

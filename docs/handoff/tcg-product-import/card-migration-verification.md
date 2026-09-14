@@ -74,3 +74,26 @@ guards/00-common.mdとguards/10-executor.mdを適用。文書内容を独断変�
   cd /Users/tanizawashingo/worktrees/salesanchor/release-product-migration-verification && gh pr view --json number,url,headRefOid,state
 ここで親にPR URL/HEADを報告して待機する。実PG成功はCIログ確認まで主張しない。
 END OF CARD
+
+# CARD-PRODUCT-MIGRATION-VERIFY-SYNC
+本追補は検証ブランチへのmain取り込みだけを許可する。PRのmainへのマージ・本番操作は禁止を維持する。
+目的: PR #3502の競合とguard評価の祖先条件を解消し、実CIを起動する。
+対象main: 5afb5af1ed28ea691ea93b04e4245afa8d744d85。別のHEADなら停止する。
+実装役は単独ではない。他者の変更を取り消さない。製品コード・CI設定を編集しない。
+手順1: preflightとgit statusを確認し、本カードのみ未commitであることを確認する。
+手順2: git merge --no-commit --no-ff 5afb5af1ed28ea691ea93b04e4245afa8d744d85 を検証ブランチで実行する。
+手順3: 競合パスとgit statusを親に報告して停止する。競合の文書編集は親が担当する。
+既存PG fixtureに入ったmain変更は読み取り確認し、今回の9試験への影響を報告する。
+本追補ではcommit/pushをまだ実行しない。
+END OF CARD
+
+# CARD-PRODUCT-MIGRATION-VERIFY-SYNC-PUBLISH
+本追補は前追補のcommit/push待機だけを上書きする。mainへのPRマージ・配備は禁止。
+親が文書3件の競合を双方の追記原文を一切削らず解消済み。取り込むmain SHAは前追補と同一。
+実装役はgit addで競合解消3文書と本カードのみをstageし、git diff --checkを実施する。
+対象test SHAとmainとの差分が当初9ファイルのみであることを確認する。main由来の製品変更は編集しない。
+check-task-stateとcard-lintを実行し、成功したらmerge状態をcommitする。
+commit message: chore: sync verification branch with reviewed main
+通常のgit push origin release/product-migration-verificationを実施する。forceは禁止。
+HEAD、PR状態、差分、検査結果を親へ報告し待機する。
+END OF CARD

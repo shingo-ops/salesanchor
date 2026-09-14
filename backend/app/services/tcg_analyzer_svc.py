@@ -49,7 +49,7 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v8-product-space-runs"
+ENGINE_VERSION = "name-first-v9-product-all-terms"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -522,6 +522,30 @@ def match_product_keyword(kw: str, normalized_text: str) -> bool:
 
 
 
+def product_search_tokens(kw: str) -> list[str]:
+    """Eligible ASCII multiword searches; model-only and mixed scripts keep their rules."""
+    if not _RE_PURE_ASCII.fullmatch(kw) or is_model_keyword(kw):
+        return []
+    tokens = collapse_product_spaces(normalize_en(kw)).strip().split(" ")
+    if len(tokens) < 2 or any(not re.fullmatch(r"[a-z0-9][a-z0-9./-]*", token) for token in tokens):
+        return []
+    return tokens
+
+
+def match_product_search_keyword(kw: str, normalized_text: str) -> bool:
+    """Positive product search only: every ASCII word, in any order, at token boundaries."""
+    tokens = product_search_tokens(kw)
+    if not tokens:
+        return match_product_keyword(kw, normalized_text)
+    if any(separator in normalized_text for separator in ("\n", "\r", "\t")):
+        return False
+    for token in dict.fromkeys(tokens):
+        pattern = r"(?<![a-z0-9])" + re.escape(token) + r"(?![a-z0-9])"
+        if sum(1 for _ in re.finditer(pattern, normalized_text)) < tokens.count(token):
+            return False
+    return True
+
+
 def match_product_name_space(kw: str, normalized_name: str) -> bool:
     """Additional search-only equality; name has already passed normalize_en."""
     if not kw or re.search(r"\s", kw) or not re.search(r"[぀-ヿ㐀-鿿]", kw):
@@ -550,7 +574,7 @@ def match_pid_with_work(
                for kw in exclude_kw.get(code, []) for field in fields):
             continue
         matched = [kw for kw in search_kw.get(code, [])
-                   if kw and match_product_keyword(kw, fields[0])
+                   if kw and match_product_search_keyword(kw, fields[0])
                    and (work_id is not None or not is_model_keyword(kw))]
         if not matched:
             matched = [kw for kw in search_kw.get(code, [])
