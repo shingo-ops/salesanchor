@@ -47,6 +47,10 @@ def mock_read(monkeypatch, snap):
     monkeypatch.setattr(comparison, "read_snapshot", lambda *a: deepcopy(snap))
 
 
+def mock_job_read(monkeypatch, snap):
+    monkeypatch.setattr(comparison, "read_job_snapshot", lambda *a: deepcopy(snap))
+
+
 def test_reordered_ids_and_null_work_are_accepted():
     result = comparison.parse_decisions(comparison.HEADER + f"\n{ITEM2}｜\n{ITEM}｜{ONE}", [ITEM, ITEM2], REF)
     assert result == {ITEM2: None, ITEM: ONE}
@@ -295,12 +299,13 @@ def job_snap(n_items: int = 1, resolved_work_id: str | None = ONE,
 
 
 # ① done job with 7 items → 7 candidates, non-adoptable, snapshot preserved
-def test_stale_seven_items_all_candidates_created():
+def test_stale_seven_items_all_candidates_created(monkeypatch):
     snap = job_snap(n_items=7)
+    mock_job_read(monkeypatch, snap)
     original = deepcopy(snap)
     ids = [i["id"] for i in snap["data"]["items"]]
     model = Mock(return_value=comparison.HEADER + "\n" + "\n".join(f"{iid}｜{ONE}" for iid in ids))
-    report = comparison.compare_stale_job_snapshot(snap, model_call=model)
+    report = comparison.compare_stale_job_snapshot(snap, None, model_call=model)
     assert report["status"] == "comparison_complete_unverified"
     assert len(report["results"]) == 7
     assert report["model_calls"] == 1 and report["db_writes"] == 0
@@ -347,22 +352,23 @@ def test_old_entry_rejects_changed_reference(monkeypatch):
     model.assert_not_called()
 
 
-# ③ corrupted fingerprint → SNAPSHOT_CORRUPTED before model
+# ③ corrupted fingerprint → SNAPSHOT_CORRUPTED before model (before unchanged())
 def test_stale_corrupted_fingerprint_stops_before_model():
     snap = job_snap()
     snap["sha256"] = "0" * 64
     model = Mock(side_effect=AssertionError("must not call"))
     with pytest.raises(comparison.ComparisonError, match="SNAPSHOT_CORRUPTED"):
-        comparison.compare_stale_job_snapshot(snap, model_call=model)
+        comparison.compare_stale_job_snapshot(snap, None, model_call=model)
     model.assert_not_called()
 
 
-# ③ corrupt saved SHA → INVALID_SAVED_REFERENCE before model
-def test_stale_invalid_saved_reference_stops_before_model():
+# ③ corrupt saved SHA → INVALID_SAVED_REFERENCE (detected after unchanged() passes)
+def test_stale_invalid_saved_reference_stops_before_model(monkeypatch):
     snap = job_snap(corrupt_saved_sha=True)
+    mock_job_read(monkeypatch, snap)
     model = Mock(side_effect=AssertionError("must not call"))
     with pytest.raises(comparison.ComparisonError, match="INVALID_SAVED_REFERENCE"):
-        comparison.compare_stale_job_snapshot(snap, model_call=model)
+        comparison.compare_stale_job_snapshot(snap, None, model_call=model)
     model.assert_not_called()
 
 
@@ -373,17 +379,19 @@ def test_stale_invalid_saved_reference_stops_before_model():
     comparison.HEADER,
     comparison.HEADER + "\nnot-a-uuid｜",
 ])
-def test_stale_bad_response_is_rejected(bad_response):
+def test_stale_bad_response_is_rejected(bad_response, monkeypatch):
     snap = job_snap()
-    report = comparison.compare_stale_job_snapshot(snap, model_call=lambda _: bad_response)
+    mock_job_read(monkeypatch, snap)
+    report = comparison.compare_stale_job_snapshot(snap, None, model_call=lambda _: bad_response)
     assert report["status"] == "response_rejected"
     assert report["adoptable"] is False and report["db_writes"] == 0
     assert report["results"][ITEM_IDS[0]]["candidate"] is None
 
 
 # ⑤ snapshot data mutated during model call → SNAPSHOT_CORRUPTED post-call
-def test_stale_mutation_after_model_call_stops():
+def test_stale_mutation_after_model_call_stops(monkeypatch):
     snap = job_snap()
+    mock_job_read(monkeypatch, snap)
     data = snap["data"]
 
     def corrupt_model(prompt):
@@ -391,11 +399,11 @@ def test_stale_mutation_after_model_call_stops():
         return comparison.HEADER + f"\n{data['items'][0]['id']}｜{ONE}"
 
     with pytest.raises(comparison.ComparisonError, match="SNAPSHOT_CORRUPTED"):
-        comparison.compare_stale_job_snapshot(snap, model_call=corrupt_model)
+        comparison.compare_stale_job_snapshot(snap, None, model_call=corrupt_model)
 
 
 # ⑥ model raises → MODEL_CALL_FAILED, exactly one call, no retry
-def test_stale_model_exception_stops_without_retry():
+def test_stale_model_exception_stops_without_retry(monkeypatch):
     call_count = [0]
 
     def failing_model(_prompt):
@@ -403,14 +411,16 @@ def test_stale_model_exception_stops_without_retry():
         raise RuntimeError("synthetic failure")
 
     snap = job_snap()
+    mock_job_read(monkeypatch, snap)
     with pytest.raises(comparison.ComparisonError, match="MODEL_CALL_FAILED"):
-        comparison.compare_stale_job_snapshot(snap, model_call=failing_model)
+        comparison.compare_stale_job_snapshot(snap, None, model_call=failing_model)
     assert call_count[0] == 1
 
 
 # ⑧ model payload carries fixed ITEM_ID + raw fields; resolved_work_id excluded
-def test_stale_payload_excludes_resolved_work_id():
+def test_stale_payload_excludes_resolved_work_id(monkeypatch):
     snap = job_snap(resolved_work_id=ONE)
+    mock_job_read(monkeypatch, snap)
     captured: dict = {}
 
     def capture_model(prompt):
@@ -420,7 +430,7 @@ def test_stale_payload_excludes_resolved_work_id():
         iid = snap["data"]["items"][0]["id"]
         return comparison.HEADER + f"\n{iid}｜{ONE}"
 
-    comparison.compare_stale_job_snapshot(snap, model_call=capture_model)
+    comparison.compare_stale_job_snapshot(snap, None, model_call=capture_model)
     fixed = captured["payload"]["items"][0]
     assert "ITEM_ID" in fixed
     assert "resolved_work_id" not in fixed
@@ -428,32 +438,34 @@ def test_stale_payload_excludes_resolved_work_id():
 
 
 # No model_call → snapshot_ready, nothing adopted
-def test_stale_no_model_returns_snapshot_ready():
+def test_stale_no_model_returns_snapshot_ready(monkeypatch):
     snap = job_snap()
-    report = comparison.compare_stale_job_snapshot(snap)
+    mock_job_read(monkeypatch, snap)
+    report = comparison.compare_stale_job_snapshot(snap, None)
     assert report["status"] == "snapshot_ready"
     assert report["model_calls"] == 0 and report["db_writes"] == 0 and report["adoptable"] is False
     assert report["results"][ITEM_IDS[0]]["candidate"] is None
 
 
-# Over 7 items → TOO_MANY_ITEMS before model
+# Over 7 items → TOO_MANY_ITEMS before unchanged()
 def test_stale_over_seven_items_rejected():
     snap = job_snap(n_items=8)
     model = Mock(side_effect=AssertionError("must not call"))
     with pytest.raises(comparison.ComparisonError, match="TOO_MANY_ITEMS"):
-        comparison.compare_stale_job_snapshot(snap, model_call=model)
+        comparison.compare_stale_job_snapshot(snap, None, model_call=model)
     model.assert_not_called()
 
 
 # Work conflict → work_conflict, no candidate set
-def test_stale_work_conflict_stops_without_candidate():
+def test_stale_work_conflict_stops_without_candidate(monkeypatch):
     data = job_snap()["data"]
     data["items"][0]["raw_product_name"] = "One Piece EB01"
     data["source"]["raw_text"] = "One Piece EB01 1BOX"
     data["context"]["works"] = [{"id": ONE, "display_name": "One Piece"}]
     snap = {"data": data, "sha256": comparison.fingerprint(data)}
+    mock_job_read(monkeypatch, snap)
     iid = snap["data"]["items"][0]["id"]
     report = comparison.compare_stale_job_snapshot(
-        snap, model_call=lambda _: comparison.HEADER + f"\n{iid}｜{OTHER}")
+        snap, None, model_call=lambda _: comparison.HEADER + f"\n{iid}｜{OTHER}")
     assert report["status"] == "work_conflict"
     assert report["results"][iid]["candidate"] is None

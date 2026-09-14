@@ -351,7 +351,7 @@ def read_job_snapshot(session_factory: Callable, job_id: str) -> dict:
     return {"data": data, "sha256": fingerprint(data)}
 
 
-def compare_stale_job_snapshot(snapshot: dict, *, model_call: Callable | None = None) -> dict:
+def compare_stale_job_snapshot(snapshot: dict, session_factory: Callable, *, model_call: Callable | None = None) -> dict:
     """Non-adopting comparison of a single stale extraction job snapshot.
     Separates saved values, v9+saved-work diagnostics, and fresh-reference candidates.
     Always adoptable=False, db_writes=0. Raw source and model response stay private."""
@@ -361,6 +361,18 @@ def compare_stale_job_snapshot(snapshot: dict, *, model_call: Callable | None = 
     items = data["items"]
     if len(items) > MAX_STALE_JOB_ITEMS:
         raise ComparisonError("TOO_MANY_ITEMS")
+
+    def unchanged():
+        if fingerprint(data) != snapshot["sha256"]:
+            raise ComparisonError("SNAPSHOT_CORRUPTED")
+        try:
+            fresh = read_job_snapshot(session_factory, data["job_id"])
+        except ComparisonError:
+            raise ComparisonError("INPUT_CHANGED") from None
+        if fresh["sha256"] != snapshot["sha256"]:
+            raise ComparisonError("INPUT_CHANGED")
+
+    unchanged()
     job = data["job"]
     source = data["source"]
     saved_reference = data.get("saved_reference")
@@ -385,8 +397,7 @@ def compare_stale_job_snapshot(snapshot: dict, *, model_call: Callable | None = 
     }
     if model_call is None:
         return report
-    if fingerprint(data) != snapshot["sha256"]:
-        raise ComparisonError("SNAPSHOT_CORRUPTED")
+    unchanged()
     source_text = source["raw_text"]
     fixed_items = [{"ITEM_ID": item["id"], **{k: v for k, v in item.items()
                    if k.startswith("raw_") or k in {"line_start", "line_end"}}} for item in items]
@@ -396,8 +407,7 @@ def compare_stale_job_snapshot(snapshot: dict, *, model_call: Callable | None = 
         response = model_call(PROMPT + canonical(payload))
     except Exception:
         raise ComparisonError("MODEL_CALL_FAILED") from None
-    if fingerprint(data) != snapshot["sha256"]:
-        raise ComparisonError("SNAPSHOT_CORRUPTED")
+    unchanged()
     try:
         decisions = parse_decisions(response, [i["id"] for i in items], data["reference"])
     except ComparisonError as exc:
@@ -411,5 +421,6 @@ def compare_stale_job_snapshot(snapshot: dict, *, model_call: Callable | None = 
             return report
     for item in items:
         results[item["id"]]["candidate"] = match_item(item, decisions[item["id"]], data["context"])
+    unchanged()
     report["status"] = "comparison_complete_unverified"
     return report
