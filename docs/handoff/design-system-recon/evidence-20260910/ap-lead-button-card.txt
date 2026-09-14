@@ -1,9 +1,9 @@
-CARD-AP-LEADS-01（未発行・担当委任待ち）
+CARD-AP-LEADS-01（発行済み）
 本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
 受領確認: 報告冒頭に「本報告はカードCARD-AP-LEADS-01の実行結果である」と記載する。
 読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。cd/実在/原文/L32を照合。
-開始条件: 設計§APの自己審査合格とPOの本便担当への明示委任。委任未確定なので現時点は実行禁止。
-担当: 明示委任された実装担当1名。製品3ファイルを所有。他者も作業中、他者変更を戻さない。新AI起動禁止。
+開始条件: 設計§AP自己審査合格。既存実装担当1名への本便6件実装・検証の委任質問にPO原文「進める」を受領。
+担当: 既存team_button_generator。製品3ファイルを所有。他者も作業中、他者変更を戻さない。新AI起動禁止。
 根拠: docs/specs/design-system/design.md§AP、ap-lead-button-audit.json。基準e39fa65abb83837a7909290b993a8cd363a11ef9。
 所有: frontend/src/pages/leads/LeadsPage.tsx、frontend/src/pages/leads/LeadEditPage.tsx、新規frontend/src/components/LeadFormButtonMigration.test.tsx。
 許可: 指定6件移管・回帰試験・ローカル品質検証。合成fixtureと原ログは/tmp。パスは一字一句そのまま使う。

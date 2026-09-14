@@ -1,0 +1,22 @@
+CARD-AP-SAVE-03（発行済み）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 本報告はカードCARD-AP-SAVE-03の実行結果である、と報告冒頭へ記載。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。保存対象と原ログ/manifestを照合。
+担当: 既存team_button_generator。他者も作業中、root文書を変更/差戻ししない。新AI起動禁止。
+前提: rootの240表示/47操作前後組成功、逆変換2/共有21/対象外6一致、担当70/451試験と品質成功を原ログ確認済み。
+許可: 指定15ファイルの保存前照合とgit add/commit/pushのみ。
+禁止: 製品再編集/文書独断編集/PR編集/GO/merge/本番/外部サービス操作/新AI起動。
+手順0: status、ap-implementation-manifest.jsonの製品3/archive1/格納44証跡hashを照合。不一致は停止。
+frontend/coverageはrootが/tmp/ap-impl-validation/coverage-outputへ退避済み。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && bash scripts/check-task-state.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git add docs/ai-agents/evidence-registry.md docs/handoff/design-system-recon/evidence-20260910/ap-lead-button-card.txt docs/handoff/design-system-recon/recon.md docs/specs/design-system/design.md docs/specs/design-system/migration.md frontend/src/pages/leads/LeadEditPage.tsx frontend/src/pages/leads/LeadsPage.tsx tasks/todo.md docs/handoff/design-system-recon/evidence-20260910/ap-focus-precondition-probe.json docs/handoff/design-system-recon/evidence-20260910/ap-implementation-checkpoint.tar.gz docs/handoff/design-system-recon/evidence-20260910/ap-implementation-manifest.json docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md docs/handoff/design-system-recon/evidence-20260910/ap-test-fix-card.txt frontend/src/components/LeadFormButtonMigration.test.tsx docs/handoff/design-system-recon/evidence-20260910/ap-save-card.txt
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git commit -m "feat: unify six lead form action buttons"
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git log -1 --format=%H
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git push -u origin HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git ls-remote origin refs/heads/release/frontend-next-form-design
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design && git status --short
+手順1: commit/remoteHEAD/status、製品3/archive1/格納44hash照合結果をroot宛完了報告本文へ生出力で返して停止。
+停止時は手順番号/最後のコマンド/対象名/理由を記載する。
+END OF CARD

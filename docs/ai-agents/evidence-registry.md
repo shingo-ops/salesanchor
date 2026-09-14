@@ -3012,3 +3012,9 @@ EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。�
 APリード6件の原文/21hash/対象外6/他候補5画面を直接監査。基準e39fa65a、共通131/旧287。既存失注試験1ファイル3件をroot直接実行し成功。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-button-audit.json、ap-existing-lead-test.txt、設計docs/specs/design-system/design.md§AP。条件付き続行指示を受領、担当委任・番号付きGOは未取得。製品実装/表示240組は未実施。
 
 AP設計自己審査APPROVE（同一AI）。原文12件各1出現、23ファイルhash一致、形式エラー0。カードは未発行、実装担当への本便委任を確認する段階。
+
+
+2026-09-14 AP実装委任承認: 直前の「既存の実装担当1名へ、この6件の実装・検証を委任してよいですか？」にPO原文「進める」を受領。CARD-AP-LEADS-01を既存team_button_generatorへ発行。対象は指定製品3ファイルと品質検証、rootは表示/操作検収と文書を担当。新AI起動なし。発行直前の最新main 59f644cd545d9481ed3460ad5c1dfeefd8c2df56と2ページ/共有21hash一致。今回番号付きGO/マージ/本番反映の承認は含まない。
+
+
+AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。

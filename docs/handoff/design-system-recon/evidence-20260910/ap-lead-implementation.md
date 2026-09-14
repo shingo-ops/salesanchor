@@ -1,0 +1,37 @@
+# APリード6ボタン実装・検収
+
+この文書は、リード3フォームの変更内容と、どの条件で検証できたかを追跡する記録です。
+親: [design-system](../../../specs/design-system/README.md)。設計: [design.md §AP](../../../specs/design-system/design.md)。調査: [recon](../recon.md)。対象ADR: ADR-113/067/027/073/122/109/119。
+
+## 状態と承認
+
+設計自己審査合格後、既存実装担当1名への6件実装・検証の委任質問へPO原文「進める」を受領。CARD-AP-LEADS-01を既存team_button_generatorへ発行。rootは設計/実物照合/表示操作検収を担当し、新AI起動なし。今回番号付きGO/マージ/本番反映は未承認・未実施。
+
+## 実装範囲・結果
+
+LeadsPage登録/DrawerとLeadEditPageの取消/送信6件のみ既存Buttonへ移管。新規LeadFormButtonMigration.test.tsxを追加。2ページの逆変換は全byte一致、対象外6原文維持、共有21hash不変。共通131→137、旧287→281。raw countの対象と除外は監査JSON参照。入力/送信/失注/権限/SSE/共有CSS/翻訳/依存/DB/CIの製品変更なし。
+
+## rootが直接実行した検収
+
+| 観測 | 結果・証跡 |
+|---|---|
+| 実表示 | 5構成×6幅×日英×明暗×通常/pendingの240前後組=480観測、最終違反0。browser-result.json |
+| 基本操作 | 3フォーム×8操作の24前後組=48観測、URL/全payload/閉鎖/reset/GET/焦点が一致。operations-result.json |
+| 閉鎖・再開 | Modal/Drawer×通常X/pendingEsc/pendingXの6前後組=12観測、全一致。closing-result.json |
+| 追加操作 | 連投/textarea Enter/国チャネル候補/専用遷移/SSE ping-update/失注3分岐の17前後組=34観測、全一致。extra-result.json |
+| 実物照合 | 2ページ逆変換・共有21hash・対象外6原文、最終3ファイルhash。inverse.json、ap-generator-hashes.json |
+| 品質原ログの確認 | 担当実行のstrict警告0、70試験、全体31ファイル451試験/coverage19.99%、check:all/build/storybook全exit0を読み取り確認。全体lint既存218警告は保持 |
+
+実ページ/入力/Select/Combobox/Button/Modal/Drawer/Router/翻訳/usePermissions/useSSE/UiPrefsProviderを使用。合成した境界は認証入口/API/SSE transport。外部通信遮断、本番書込0。代表スクリーンショットはrootが画像として確認。全App/sidebar/実認証/本番送信/PO目視/本番配備は未検証。幅640pxを実200%zoomとはしない。
+
+## 初回失敗と切り分け（削除しない）
+
+1. root先行表示20観測中2失敗。390px非lost専用の自然Tabでfocus輪郭欠け。390/1280×前後4ケースで変更前にも同じ欠けを確認。390はscroll486/max518から実wheelで下端518へ進めると輪郭が収まる。設計で指定した実scroll工程の不足を補い、新規自然Tab欠け0も追加比較した。自然Tabの既存制約は残存し、修正済みとはしない。browser-initial-smoke.json/focus-probe.jsonを保存。
+2. 担当unit70中45失敗/25成功。登録Modalタイトルの取り違え（newLead/newLeadTitle）と前ケースSSE controller持越し。root実物照合後CARD-AP-TEST-02で新規試験だけ補正。再実行70/70成功、例外握り潰し/skip/期待値削除なし。unit-initial-failure.logを保存。
+3. root追加操作で国候補4タイムアウト（drawer/full前後）。6ケースの観測で、既存値があるinputへの直接fillは焦点時の表示切替と重なりJapanUnitedとなることを確認。実click→文字置換→入力文字検算→候補選択に補正して17組成功。製品変更なし。extra-initial-result.json/combo-probe.jsonを保存。
+
+上記はrootの検証前提/新規fixtureの補正。製品仕様・受入範囲を広げず、失敗記録を成功記録と分ける。再現用script/最終結果/初回失敗/スクリーンショット/担当原ログはap-implementation-checkpoint.tar.gz内、全hashはap-implementation-manifest.json。
+
+## 審査と次の一手
+
+実装検収APPROVE。同一設計AIによる自己審査・直接検証であり、独立した第二者レビューとは称しない。3送信契約/原文の維持と最終240表示・47操作前後組の成功を根拠に、保存・PR更新へ進む。設計段階の既存3試験と、今回担当実行70/451の区別を保持。最新mainの影響を再照合してCI確認、今回番号付きGOをPOへ依頼する。新規GOの代筆・マージ・本番操作は行わない。
