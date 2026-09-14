@@ -1268,7 +1268,9 @@ def test_bundle_invalid_reference_rolls_back(pg, table, fault):
     assert bundle_snapshot(connection) == before
 
 
-@pytest.mark.parametrize("field,value", [("japanese_title", "別商品"), ("is_active", False),
+@pytest.mark.parametrize("field,value", [
+    # japanese_title is CSV-managed (ADR-XXX): migration allows edits, skips identity check
+    ("is_active", False),
     ("division_id", None), ("work_id", None), ("manufacturer_id", None), ("product_category_id", None),
     ("category_class", "Single")])
 def test_bundle_existing_identity_preserved_on_failure(pg, field, value):
