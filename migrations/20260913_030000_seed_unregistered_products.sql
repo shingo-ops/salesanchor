@@ -47,7 +47,7 @@ BEGIN
 
     ('DB-FB09', 'ブースターパック DUAL EVOLUTION', 'Booster Pack -DUAL EVOLUTION-',
      'Dragon Ball', 'dragon_ball', 'FB09', 'TCG', 'booster', 'active', 220, DATE '2026-03-14', 0, 24, 12,
-     'FB-09,FB09,DUAL EVOLUTION,DUAL',
+     'FB-09,FB09,DUAL EVOLUTION',
      'スリーブ,プレイマット,カードケース,シングル,中古,オリパ,ワンピース,ワンピースカード,ポケモン,ポケモンカード,遊戯王,デュエマ,ヴァイス,バトスピ,ヒーローズ,SDBH,ダイバーズ,超カードゲーム,ガンダム'),
 
     ('DB-FB10', 'ブースターパック CROSS FORCE', 'Booster Pack -CROSS FORCE-',
