@@ -134,6 +134,25 @@ seed_guard_dictionary() の FK rewire 済みテストでも、FK 以外の理由
 | test_false_positive_guards_duplicate×3 | Regex pattern not match | 出力形式の変化（カラム名変更影響） |
 | test_false_positive_guards_lock_timeout | PM0230 identity mismatch | identity check のカラム名変更影響 |
 
+### K. マイグレーションSQL内の tcg_products 参照（第3回調査で発見）
+
+テストから呼ばれるマイグレーションSQL自体が `tenant_004.tcg_products` を参照していた。
+seed 関数が public.products にデータを投入しても、マイグレーション側が旧テーブルを見るため identity check が失敗。
+
+| ファイル | 行 | 参照 | 修正 |
+|---------|-----|------|------|
+| 20260913_200000_tcg_cardset_exclusion.sql | 28 | `FROM tenant_004.tcg_products p` | → `FROM public.products p` + カラム名マッピング |
+| 20260913_200000_tcg_cardset_exclusion.sql | 21 | `LOCK TABLE tenant_004.tcg_products` | → `LOCK TABLE public.products` |
+| 20260913_210000_tcg_cardset_bundle_registration.sql | 54 | `FROM tenant_004.tcg_products WHERE code =` | → `FROM public.products WHERE product_code =` |
+| 20260913_210000_tcg_cardset_bundle_registration.sql | 67-71 | `FROM tenant_004.tcg_products` (EXISTS) | → `FROM public.products` + name マッピング |
+| 20260913_210000_tcg_cardset_bundle_registration.sql | 73-79 | SELECT/INSERT `tenant_004.tcg_products` | → `public.products` + tcg_uuid 追加 |
+| 20260913_210000_tcg_cardset_bundle_registration.sql | 108 | `SELECT id FROM tenant_004.tcg_products` | → `SELECT tcg_uuid AS id FROM public.products` |
+
+影響: 12テスト FAIL（PM0263 identity mismatch）+ cardset/bundle の全パラメトライズドテスト
+
+修正パターン: 先に修正した 20260910_160100 / 20260910_170000 と同一（カラム名マッピング + テーブル参照先変更）。
+コミット: 6d227cc5
+
 ---
 
 ## 教訓
@@ -144,6 +163,7 @@ seed_guard_dictionary() の FK rewire 済みテストでも、FK 以外の理由
 4. **Phase 2c（DROP tcg_products）の前提**: FK rewire 済みスキーマの網羅確認が必要。未 rewire のスキーマがあると DROP 時に FK エラー。
 5. **SENTINEL パターンの脆弱性**: canary 商品が public.products に入ると、フィルタなしの CSV 操作・SQL UPDATE で意図せず変更される。テストの操作対象を明示的にフィルタするか、SENTINEL を操作から除外する仕組みが必要。
 6. **mock と実構造の同期**: mock snapshot が本番テーブル構造と乖離すると、列追加（tcg_uuid）や列名変更（code→product_code）で一斉に壊れる。mock の形状を実テーブルの DDL から自動生成する仕組みがあればリスク低減。
+7. **マイグレーションSQL自体も SSOT 対象**: seed 関数だけでなく、テストから実行されるマイグレーションSQL内の参照先も Phase 2b に追従が必要。本番コード・テストコード・マイグレーションSQLの三層すべてが public.products を参照すること。
 
 ---
 
@@ -153,3 +173,4 @@ DROP tcg_products を実行するためには、以下が前提：
 - 全テナントスキーマの keyword FK が public.products(tcg_uuid) を参照していること
 - tcg_products への参照が本番コード・テストコードともにゼロであること
 - テスト fixture の seed 関数すべてが public.products 前提であること
+- テストから実行されるマイグレーションSQLすべてが public.products を参照していること
