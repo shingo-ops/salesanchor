@@ -174,3 +174,68 @@ def test_changes_during_model_call_invalidate_entire_result(pg, monkeypatch, cha
         return comparison.HEADER
     with pytest.raises(comparison.ComparisonError, match="INPUT_CHANGED"):
         comparison.compare_snapshot(snap, factory, model_call=model)
+
+
+# ---------------------------------------------------------------------------
+# §25-4 A便 PG tests: ⑦ DB unchanged, ⑧ no new IDs / no RAW writes
+# ---------------------------------------------------------------------------
+
+def _stale_fixture(pg, monkeypatch):
+    """One extraction_job with 7 items; normalization rules applied."""
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        migration = Path(__file__).resolve().parents[2] / "migrations/20260903_160000_tcg_normalization_rules_t004.sql"
+        cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
+    raw = "\n".join("EB01 1BOX 1000円" for _ in range(7))
+    rows = [record("EB01", i + 1) for i in range(7)]
+    _, jobid, result = run_message(connection, engine, monkeypatch, raw, rows)
+    assert result["status"] == "done"
+    return connection, engine, jobid
+
+
+def test_stale_read_and_compare_leaves_all_tables_unchanged(pg, monkeypatch):
+    """⑦ All DB tables are bit-identical before and after read_job_snapshot + compare_stale_job_snapshot."""
+    connection, engine, jobid = _stale_fixture(pg, monkeypatch)
+    sessions = []
+
+    def factory():
+        s = Session(engine)
+        sessions.append(s)
+        return s
+
+    before = all_tables(connection)
+    snap = comparison.read_job_snapshot(factory, jobid)
+    assert snap["sha256"] == comparison.fingerprint(snap["data"])
+    assert len(snap["data"]["items"]) == 7  # ① 7 items read
+
+    snap_item_ids = {i["id"] for i in snap["data"]["items"]}
+
+    def model(prompt):
+        assert all(not s.in_transaction() for s in sessions)
+        rows = [item["id"] + "｜" for item in snap["data"]["items"]]
+        return comparison.HEADER + "\n" + "\n".join(rows)
+
+    report = comparison.compare_stale_job_snapshot(snap, model_call=model)
+    assert report["status"] == "comparison_complete_unverified"
+    assert report["model_calls"] == 1 and report["db_writes"] == 0 and not report["adoptable"]
+    assert set(report["results"]) == snap_item_ids  # ⑧ no new IDs
+    assert all_tables(connection) == before  # ⑦ DB unchanged
+
+
+def test_stale_read_job_snapshot_rejects_dml(pg, monkeypatch):
+    """⑦ read_job_snapshot transaction blocks any write attempt (pgcode 25006)."""
+    connection, engine, jobid = _stale_fixture(pg, monkeypatch)
+    before = all_tables(connection)
+
+    class AttemptWrite(Session):
+        def execute(self, statement, *args, **kwargs):
+            result = super().execute(statement, *args, **kwargs)
+            if str(statement).startswith("SET TRANSACTION"):
+                super().execute(text(f"UPDATE {SCHEMA}.analysis_results SET needs_review=false"))
+            return result
+
+    with pytest.raises(DBAPIError) as exc:
+        comparison.read_job_snapshot(lambda: AttemptWrite(engine), jobid)
+    assert exc.value.orig.pgcode == "25006"
+    assert all_tables(connection) == before
