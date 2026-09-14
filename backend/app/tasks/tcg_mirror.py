@@ -109,7 +109,7 @@ def _get_or_add_worksheet(sh: Any, title: str, rows: int = 300, cols: int = 30) 
 async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             p.product_code AS product_id,
             p.name AS product_name,
