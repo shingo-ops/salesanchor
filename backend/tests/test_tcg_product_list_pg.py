@@ -29,7 +29,10 @@ from tests.test_tcg_work_matching_integration import (
 async def create_product_schema(conn, schema):
     """Build every disposable schema from the same production migrations."""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
-    await conn.exec_driver_sql(_PUBLIC_PRODUCTS_DDL)
+    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            await conn.exec_driver_sql(stmt)
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     for name in (
         "20260831_110000_create_tcg_analysis_tables_t004.sql",

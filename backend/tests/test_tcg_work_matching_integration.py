@@ -64,12 +64,15 @@ BEGIN
         EXECUTE format('ALTER TABLE {schema}.%I DROP CONSTRAINT %I',
                        _rec.tbl, _rec.conname);
     END LOOP;
+    ALTER TABLE {schema}.product_search_keywords DROP CONSTRAINT IF EXISTS fk_psk_public_products;
     ALTER TABLE {schema}.product_search_keywords
         ADD CONSTRAINT fk_psk_public_products
         FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
+    ALTER TABLE {schema}.product_exclude_keywords DROP CONSTRAINT IF EXISTS fk_pek_public_products;
     ALTER TABLE {schema}.product_exclude_keywords
         ADD CONSTRAINT fk_pek_public_products
         FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
+    ALTER TABLE {schema}.analysis_results DROP CONSTRAINT IF EXISTS fk_ar_public_products;
     ALTER TABLE {schema}.analysis_results
         ADD CONSTRAINT fk_ar_public_products
         FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid);
