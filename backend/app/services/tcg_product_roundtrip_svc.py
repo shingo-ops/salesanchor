@@ -109,7 +109,7 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
         text(
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
             f"{','.join(keyword_sql)} FROM {TCG_SCHEMA}.tcg_products p {' '.join(joins)} "
-            "WHERE (p.japanese_title ILIKE :like OR p.code ILIKE :like) "
+            "WHERE (p.japanese_title ILIKE :like OR p.english_title ILIKE :like OR p.mark ILIKE :like OR p.code ILIKE :like) "
             "AND (CAST(:work_id AS uuid) IS NULL OR p.work_id=CAST(:work_id AS uuid)) "
             "ORDER BY p.release_date DESC NULLS LAST,p.code DESC"
         ),

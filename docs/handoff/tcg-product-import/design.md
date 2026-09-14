@@ -925,6 +925,127 @@ B便の個別値/実投稿正解/運用QA/8商品更新設計は未完了で**RE
 「この方式を採用し、実装担当へ4ファイルの修正を委任してよいですか？」へのPO回答原文「進める」を受領。§20の方式採用と4ファイル実装/検証を既存/root/csv_card_executorへ委任する承認。実装結果を確認するまでpush/PR提出を行わず、マージ/本番/8商品更新/44登録/再解析/配信は含めない。設計担当は自動で実装役へ切り替わらない。
 
 
+## 2026-09-13 商品詳細・編集と二言語一覧（DETAIL-01）
+
+この節は、一覧から商品を開いて登録内容を確認・修正する実装契約。
+親: [商品マスタ](../../specs/product-master/README.md)。実測: [recon.md](recon.md#2026-09-13-detail-01実測)。
+既存テーマの延長。PO原文は「進めてくれ」、追加依頼は「離席するのでPRマージして本番デプロイまで完了させてくれ」。
+一覧とパネルの完成条件はPO合意済み。技術設計は下記の自己審査対象。GO委任の自己有効化はしない。
+
+### 完成条件と検証
+
+| ID | 利用者が確認する条件 | 検証方法 |
+|---|---|---|
+| D1 | 列が型番・商品名・発売日・検索・除外の5列。商品コード列なし | frontend/tests-e2e/tcg-product-import.spec.ts と新規詳細試験 |
+| D2 | 日本語名の下に小さい英語名。英語未登録は空欄、検索/除外は0を含む数字だけ | 新規一覧・詳細画面試験、desktop/mobileの目視 |
+| D3 | 行クリックとEnter/Spaceで右側Drawerが開き選択商品の登録情報を表示 | 新規詳細画面試験 |
+| D4 | 編集10項目を保存後、一覧の名前・日付・件数に反映し、再度開いて保存値一致 | API実PG試験＋画面試験 |
+| D5 | 閉じる/X/Esc/背景クリックで未保存確認。取り消すと入力保持 | Drawer操作の画面試験 |
+| D6 | 保存失敗・競合時は入力保持、二重送信なし、古い内容を無断上書きしない | API競合/原子性試験＋画面試験 |
+| D7 | 非管理者拒否、対象商品以外の行と解析結果の参照ID不変 | 実認可依存を使うAPI実PG試験 |
+
+### Why・現状との差分・代替案
+
+一覧5列のうち商品名は日本語のみ、行イベント未接続。APIはenglish_titleを返すが除外数は返さない。
+商品登録10項目は既存DBにあり、新規登録と検索語追加のAPIは存在するが編集APIはない。
+既存DataTableは行クリック/キー操作を提供し、Drawerは右スライド・フォーカス制御を提供する。
+全画面への遷移案は一覧の作業位置を失うため採用せず、共通Drawerを使う。共通部品の再設計は不要。
+外部導入事例は不要。既存部品2点と実DBスキーマ/既存試験を直接照合し、同一製品内の不足を埋めるため。
+新規ADRは増設せず、このWhyをADR追記が必要な際の根拠にする。ADR-113、ADR-144、ADR-027の範囲内。
+
+### API・データ契約
+
+- 既存GET /tcg/products/listにexclude_keyword_count整数を追加。keyword_countは検索数として維持。
+  英語名・型番も既存query検索の対象に加える。作品フィルタ、全件対象、50件ページング、発売日降順は維持。
+- 同じtcg_product_importルーターにGET/PUT /tcg/products/detail/{product_code}を追加。
+  静的list/importルートと衝突しない。全ルートrequire_super_admin、全SQLをTCG_SCHEMAで修飾。
+- 詳細はproduct（id/code/作成日時/有効状態/既存category_class/required_output_valueを含む登録値）と
+  revision、lookups（分類4種の有効候補と現在参照中の候補）を返す。
+- 編集10項目: japanese_title、english_title、mark、release_date、division_id、work_id、manufacturer_id、
+  product_category_id、search_keywords、exclude_keywords。キーワードは順序を保持した文字列配列。
+  商品ID/コード・作成日時・有効状態・判定出力値は読取専用。商品削除/アーカイブ・在庫/解析の再実行は対象外。
+- PUTは10項目すべてとrevisionを必須にし、余分なキーを拒否。日本語名は空白のみ不可。
+  日付はYYYY-MM-DDまたはnull、分類はUUIDまたはnull。既存null/非アクティブ参照は未変更なら保持可能。
+  新たな分類先は同じスキーマの有効な候補のみ。未登録・無効候補は422。
+  文字列上限5000字、各キーワード配列上限1000語、空白だけの語は拒否。語の大文字小文字は変更しない。
+- 詳細のrevisionは商品行と両キーワード列（ID・語・position）の正規化JSONのSHA-256。
+  更新時は商品行FOR UPDATEの後に再取得・照合し、不一致なら409 PRODUCT_DETAIL_CONFLICT。
+  既存add_search_keywordも同一商品行をFOR UPDATEで取得して競合制御に参加させる。
+- 更新・当該商品の語の置換・既存audit_logへの旧新値/実行者の記録を1トランザクションで確定。
+  途中例外/キャンセルはrollback。商品UUIDとcodeは変更せず、変更していない語の行は保持する。
+  work_id変更時のみcategory_classを選択先のdisplay_nameから導出。元の重複候補判定は新規登録向けのまま維持。
+  編集は同名商品を禁止しない（既存登録でも候補はソフト警告・同名が許容されるため）。
+- GETの詳細は商品と両語を1SQLスナップショットで取得。PUT成功はcommit後に成功レスポンス。
+  404は対象なし、422は入力不正、409は競合。失敗に自動再送はしない。
+
+### 画面契約
+
+TcgProductMasterPageの列を合意済み5列に変更し、商品コードはrowKey/API識別に保持。
+商品名セルは日本語を上段、英語を下段のブロック表示。英語は既存role-caption-size・role-caption-colorトークン。
+新規TcgProductDetailDrawerは既存Drawer/TextField/Select/Buttonを使用。語は1行1語の共通Textareaで編集する。
+詳細取得に失敗したら再読込ボタンを表示し、空の編集フォームを保存させない。
+読込結果の取り違えをキャンセルフラグで防ぐ。選択商品の変更でフォームを初期化。
+保存中は入力/保存/閉じるを抑止し同期refでも多重送信を拒否。成功後は保存済み値を基準に更新し、一覧を再取得。
+一覧の検索・作品・ページは保持する。保存した商品が検索対象外になった場合は行が消えることを許容する。
+未保存確認はDrawer内の確認表示にして、重ねたモーダルとのフォーカストラップ競合を避ける。
+変更を破棄/編集に戻るを表示。ブラウザ離脱はbeforeunloadで未保存警告。保存失敗時はフォームを保持。
+競合時は自動再保存不可。編集内容を保持したまま、破棄を確認して最新データを読み直す。
+全UI文字列は日英同一キーでt経由。API内部コードは画面にそのまま表示しない。
+
+### 対象ファイル・影響・維持
+
+backend/app/routers/tcg_product_import.py、backend/app/services/tcg_product_detail_svc.py、
+backend/app/services/tcg_product_master_svc.py（検索語追加の行ロック1点）、backend/tests/test_tcg_product_detail_pg.py、
+backend/tests/test_tcg_product_list_pg.py。
+frontend/src/pages/super-admin/TcgProductMasterPage.tsx、同TcgProductMasterPage.test.tsx、frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx、
+同ディレクトリのproduct-csv.css、frontend/src/locales/ja.json/en.json、frontend/tests-e2e/tcg-product-import.spec.ts、
+frontend/tests-e2e/tcg-product-detail.spec.ts。
+本節/recon/cardとtasks/todo.md/evidence-registry/親の開発履歴リンクのみ記録更新。
+DB migration、CI設定、運用スクリプト、認証・secrets・既存CSV登録処理は変更しない。
+
+接触面: 人=管理者の操作、エージェント=本契約とカード、機械=既存frontend/pytest CI、
+データ=当該商品と両語とaudit_log、本番=通常PRデプロイ、外部=新規API連携なし。
+リスク: 編集した語は以後の商品判定に影響する。過去解析を再計算せず、監査ログで変更前後を追跡する。
+競合時は入力のやり直しが必要だが、上書き消失を避ける。既存部品の金型は変更しない。
+維持担当は既存コードレビュー/CIの担当。後続変更でも受入試験を維持する。
+
+### Architect 自己審査
+
+判定: APPROVE（設計合格、同一AIによる自己審査、独立した第二者レビューではない）。
+根拠: 10編集項目は既存列/語テーブルに対応、DB追加0、認可の変更0、共通UI2点を再利用。
+D1〜D7すべてに検証方法を指定。失敗時の一括rollbackとrevision契約を先に固定。
+未解決の設計前提なし。実装/実DB試験/CI/本番反映は未実施で、設計合格から成功を推定しない。
+
+## 維持の仕組み
+
+守り手: backend/tests/test_tcg_product_list_pg.py / frontend/tests-e2e/tcg-product-import.spec.ts。
+対象: 全件一覧・検索/作品/日付順序、CSV既存導線の維持。詳細/編集試験を本便で追加して継続する。
+
+
+### DETAIL-01 過去の停止記録（2026-09-13、翌日再開）
+
+一覧/GET詳細/編集UIは作成済み。PUT更新のコード保存を自動ガードが拒否し、明示承認待ち。
+実装全体・実DB試験・PR・マージ・デプロイは未完了。自己審査合格は設計の状態のみ。
+実行結果と次の一手はrecon.md「DETAIL-01 作業停止時の実行結果」を参照。
+
+
+DETAIL-01承認追記: 更新ソース保存へのPO原文「進める」を受領済み。正規チケット発行も自動ガードに拒否され、PO端末での手続き待ち。製品更新・本番適用は未完了。
+
+### DETAIL-01 実装再開と検証（2026-09-14 00:20 JST）
+
+PO原文「実行した」により公式の1回許可発行を受領。更新サービスのソース保存がexit 0で成功し、停止を解除した。
+GET/PUT、10項目の入力検査、親商品行ロック、同時保存/追加語の競合検査、監査を含む1回の確定を実装済み。
+未編集の語配列はUIでも保存値を保持する。発売日はDBドライバーにdate型で渡す。
+途中失敗時と保存応答消失時は区別し、後者は再読込で確認する。成功を推測して自動再送しない。
+
+ローカル: Playwright詳細11件＋CSV既存7件=18件成功、frontend build/check:all成功（既存lint警告218）。
+Python3.12専用一時環境でmake lint-ci exit 0、ruff/bandit成功。mypyは既存方針で警告扱い、変更対象のエラーなし。
+Docker接続不可のためローカルpytestは未実施。実PGの原子性/同時更新/認可/分類/入力検査/応答消失は既存CIで実行待ち。
+設計作成/同一AIの自己審査/実装済み、PR/マージ/本番反映は未完了。独立した第二者レビューとは称さない。
+
+DETAIL-01試験対象の補足（2026-09-14）: CIが既存一覧単体試験4件の旧文言期待を検出。TcgProductMasterPage.test.tsxを対象に加え、D1/D2の5列・数値0・二言語名へ期待値を更新する。既存検索/作品/ページングの検査は維持。追加の製品仕様変更なし。同一AIの設計整合審査APPROVE。
+
+DETAIL-01検証追記（2026-09-14）: e1f6513cの実PG CIは3596成功/全体95skip、保存サービス97%実行。参照不変を含む新規27ケースのskip条件は該当せず。統合後ローカル単体377件成功。詳細な一次結果はrecon.md「保存・参照不変の実DB検証完了」。正式GO待ちで公開未実施。統合後の最新CI状態はPR3492のchecksを正本とする。
 ## 21. 商品CSVの出力・編集・更新往復（2026-09-13）
 
 ### 21-1. 目的・承認範囲
@@ -1015,3 +1136,8 @@ commitでは同一sessionでlock_timeout5秒/statement_timeout30秒をSET LOCAL�
 代替：出力だけでは再取込新規重複が残るため不採用。全CSVを旧createへ渡す方式も不採用。更新列を増やすmigration/全schemaコピーは不要。主な対価は更新中の短い表ロック、古い出力の再取得、語にcommaを含む場合の引用符入力である。
 
 未決：PR番号付きGOの最終原文（PO不在中に生成しない）、人の本番画面操作。機能実装/検証/PRは既承認範囲で進める。維持担当は商品マスタ機能担当、守り手は既存.github/workflows/test.yml / .github/workflows/e2e.yml と追加unit/PG/E2E。
+
+### DETAIL-01とCSV往復の統合（GO3492受領後）
+
+PO原文「進めるGO #3492」を受領。ガード欠落による停止後、POの復旧報告とexecutor-preflight exit0で再開。main ae5248f4のCSV往復を保持する。
+一覧の英語名/型番検索をCSV出力でも同じ対象にするため、backend/app/services/tcg_product_roundtrip_svc.pyのsnapshots検索条件1箇所を一覧と一致させる。API/CSV形式変更なし。既存検索語追加ロック・CSV一括ロックを維持。詳細保存後の古いCSVとCSV更新後の古い詳細編集が相互に409となることを既存詳細PG試験へ追加する。編集10項目/5列表現/CSV出力・更新の受入契約は不変。自己設計審査APPROVE（独立レビューではない）。
