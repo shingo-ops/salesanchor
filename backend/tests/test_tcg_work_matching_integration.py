@@ -42,6 +42,20 @@ def provision(cursor, schema):
 
 _PUBLIC_PRODUCTS_DDL = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text()
 
+def _mirror_to_tcg_products(schema: str) -> str:
+    """Mirror public.products rows into {schema}.tcg_products for migration compatibility."""
+    return f"""
+        INSERT INTO {schema}.tcg_products
+            (id, code, japanese_title, division_id, work_id,
+             manufacturer_id, product_category_id, category_class, is_active)
+        SELECT tcg_uuid, product_code, name, division_id, work_id,
+               manufacturer_id, product_category_id, category_class, is_active
+        FROM public.products
+        WHERE tcg_uuid IS NOT NULL
+        ON CONFLICT DO NOTHING
+    """
+
+
 def _rewire_keyword_fks(schema: str) -> str:
     """Return SQL that drops tcg_products FKs and adds public.products FKs."""
     return f"""
@@ -144,6 +158,7 @@ def seed_products(connection):
         cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
         cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
+        cursor.execute(_mirror_to_tcg_products(SCHEMA))
         migrate(cursor)
 
 
@@ -703,6 +718,7 @@ def seed_guard_dictionary(connection, schema):
                 for word, position in entries:
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+        cursor.execute(_mirror_to_tcg_products(schema))
 
 
 def guard_snapshot(connection, schemas=("tenant_004", "tenant_903")):
@@ -1030,6 +1046,7 @@ def seed_cardset_dictionary(connection, schema):
                 for position, word in enumerate(keywords, 5):
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+        cursor.execute(_mirror_to_tcg_products(schema))
 
 
 def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
@@ -1262,6 +1279,7 @@ def seed_bundle_dictionary(connection, schema):
                 for position, word in enumerate(words, 4):
                     cursor.execute(sql.SQL("INSERT INTO {}.{} (id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
+        cursor.execute(_mirror_to_tcg_products(schema))
 
 
 def bundle_snapshot(connection):
