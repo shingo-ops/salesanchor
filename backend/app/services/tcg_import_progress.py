@@ -122,7 +122,7 @@ async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, fil
             JOIN jobs ej ON ej.id = ei.extraction_job_id
             JOIN messages sm ON sm.id = ej.source_message_id
             LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
-            LEFT JOIN public.products p ON p.tcg_uuid = ar.product_id
+            LEFT JOIN public.products p ON p.id = ar.product_id
             {review_joins(schema=TCG_SCHEMA)}
         ), page AS (
             SELECT f.id, f.extraction_job_id, f.source_message_id, f.extraction_status,

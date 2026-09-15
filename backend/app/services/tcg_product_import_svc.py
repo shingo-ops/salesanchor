@@ -285,7 +285,7 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     result = await db.execute(
         text(
             f"SELECT k.keyword, p.product_code FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"JOIN public.products p ON p.tcg_uuid = k.product_id "
+            f"JOIN public.products p ON p.id = k.product_id "
             f"WHERE p.is_active = TRUE"
         )
     )

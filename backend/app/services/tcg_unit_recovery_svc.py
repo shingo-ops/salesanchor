@@ -278,7 +278,7 @@ def recover_unit_from_product_name(
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
             LEFT JOIN public.products tp
-                ON tp.tcg_uuid = ar.product_id
+                ON tp.id = ar.product_id
             ORDER BY ar.id
             """
         )
@@ -793,7 +793,7 @@ def apply_unit_recovery_for_job(
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
             LEFT JOIN public.products tp
-                ON tp.tcg_uuid = ar.product_id
+                ON tp.id = ar.product_id
             WHERE ei.extraction_job_id = :job_id
             ORDER BY ar.id
             """

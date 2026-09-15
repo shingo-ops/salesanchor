@@ -77,9 +77,9 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
             cur.execute(f'INSERT INTO {SCHEMA}.condition_aliases(condition_id,alias_text,lang) VALUES (%s,%s,\'ja\')',(cid,canonical))
         status_migration = work_fixture.MIGRATIONS / "20260903_150000_tcg_status_master_t004.sql"
         cur.execute(status_migration.read_text().replace("tenant_004", SCHEMA))
-        cur.execute(f'''INSERT INTO public.products(product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,gen_random_uuid(),w.id,c.id FROM {SCHEMA}.tcg_series w,
-            {SCHEMA}.tcg_product_categories c WHERE w.code='IP002' AND c.code='PC_BOX' RETURNING tcg_uuid''')
+        cur.execute(f'''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
+            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM {SCHEMA}.tcg_series w,
+            {SCHEMA}.tcg_product_categories c WHERE w.code='IP002' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
         cur.execute(f'INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,%s,0)',(str(uuid4()),pid,'架空検証商品'))
         smid, jobid = str(uuid4()), str(uuid4())

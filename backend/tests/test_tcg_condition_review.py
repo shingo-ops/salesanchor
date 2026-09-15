@@ -68,9 +68,9 @@ def pg():
             cursor.execute("INSERT INTO tenant_004.units(id,code,canonical,kubun,is_active) VALUES ('8e980434-eeff-4233-be5c-bcd0ba1db992','UN0002','Box','箱系',true) RETURNING id")
             unit = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
-            cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                SELECT 'PM0900','Test Booster','Box',true,gen_random_uuid(),w.id,c.id FROM tenant_004.tcg_series w,tenant_004.tcg_product_categories c
-                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid""")
+            cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
+                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM tenant_004.tcg_series w,tenant_004.tcg_product_categories c
+                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,'Test Booster',0)", (str(uuid4()),product))
         yield {"connection": connection, "engine": engine,
@@ -304,7 +304,7 @@ def test_product_confirmation_skip_and_unit_change_invalidate(pg):
 def test_product_category_changes_binding(pg):
     item=seed(pg);save(pg,item)
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE public.products SET product_category_id=NULL WHERE tcg_uuid=%s",(pg['product'],))
+        cursor.execute("UPDATE public.products SET product_category_id=NULL WHERE id=%s",(pg['product'],))
     assert context(pg,item)['needs_review'] is True
 
 
@@ -381,7 +381,7 @@ def test_migration_partial_structure_rejects_before_insert(pg):
 def test_product_correction_changes_binding_and_retains_manual_product(pg):
     item=seed(pg);save(pg,item)
     with pg['connection'].cursor() as cursor:
-        cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,tcg_uuid) VALUES ('PM0901','Other product','Box',true,gen_random_uuid()) RETURNING tcg_uuid")
+        cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active) VALUES ('PM0901','Other product','Box',true) RETURNING id")
         other=str(cursor.fetchone()[0])
     async def run():
         engine=create_async_engine(pg['url'])

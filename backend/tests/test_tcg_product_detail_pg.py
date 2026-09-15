@@ -31,16 +31,16 @@ async def detail_db(product_db, monkeypatch):
     monkeypatch.setattr(details, "TCG_SCHEMA", schema)
     await db.execute(text(
         "INSERT INTO public.products "
-        "(product_code,name,name_en,mark,category_class,is_active,tcg_uuid,required_output_value) "
-        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,gen_random_uuid(),'Keep this')"
+        "(product_code,name,name_en,mark,category_class,is_active,required_output_value) "
+        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,'Keep this')"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_search_keywords(product_id,keyword,position) "
-        f"SELECT tcg_uuid,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
+        f"SELECT id,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT tcg_uuid,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
+        f"SELECT id,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     return db, schema
 
@@ -60,7 +60,7 @@ async def test_detail_contains_stored_values_words_and_revision(detail_db):
     assert set(before["lookups"]) == {"division_id", "work_id", "manufacturer_id", "product_category_id"}
     await db.execute(text(
         f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT tcg_uuid,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
+        f"SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
     ))
     assert before["revision"] != (await details.get_product_detail(db, "DETAIL"))["revision"]
 
@@ -99,8 +99,8 @@ def edit_pg(pg, monkeypatch):
         for code in ("DETAIL", "SENTINEL"):
             cur.execute(
                 "INSERT INTO public.products "
-                "(product_code,name,category_class,is_active,tcg_uuid,required_output_value) "
-                "VALUES (%s,'Original','Keep category',true,gen_random_uuid(),'Keep output') RETURNING tcg_uuid", (code,))
+                "(product_code,name,category_class,is_active,required_output_value) "
+                "VALUES (%s,'Original','Keep category',true,'Keep output') RETURNING id", (code,))
             pid = cur.fetchone()[0]
             for table in details.WORD_TABLES.values():
                 cur.execute(f"INSERT INTO {durable.SCHEMA}.{table}(product_id,keyword,position) "
@@ -115,7 +115,7 @@ def edit_pg(pg, monkeypatch):
         item = cur.fetchone()[0]
         cur.execute(f"INSERT INTO {durable.SCHEMA}.analysis_results "
                     "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version) "
-                    "SELECT %s,tcg_uuid,true,false,true,'fixture' FROM public.products WHERE product_code='DETAIL'", (item,))
+                    "SELECT %s,id,true,false,true,'fixture' FROM public.products WHERE product_code='DETAIL'", (item,))
         durable.provision(cur, "tenant_990")
         cur.execute("INSERT INTO tenant_990.tcg_products(code,japanese_title,category_class,is_active) "
                     "VALUES ('DETAIL','Other tenant','Other',true) RETURNING id")
@@ -175,12 +175,12 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         sentinel = next(p for p in before["products"] if p["product_code"] == "SENTINEL")
         assert sentinel in after["products"]
         for table in details.WORD_TABLES.values():
-            assert [r for r in before[table] if r["product_id"] == sentinel["tcg_uuid"]] == [
-                r for r in after[table] if r["product_id"] == sentinel["tcg_uuid"]]
+            assert [r for r in before[table] if r["product_id"] == sentinel["id"]] == [
+                r for r in after[table] if r["product_id"] == sentinel["id"]]
         assert after["analysis_results"] == before["analysis_results"]
         assert len(after["audit_log"]) == 1
         audit = after["audit_log"][0]
-        assert audit["changed_by"] == "ci-reviewer" and audit["record_id"] == product["id"]
+        assert audit["changed_by"] == "ci-reviewer" and audit["record_id"] == product.get("tcg_uuid")
         assert json.loads(audit["old_values"])["product"]["name"] == "Original"
         assert json.loads(audit["new_values"])["product"]["name"] == "Edited"
     finally:

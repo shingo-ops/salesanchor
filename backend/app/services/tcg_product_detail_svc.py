@@ -37,9 +37,9 @@ async def _snapshot(db: AsyncSession, code: str) -> dict[str, Any]:
     result = await db.execute(text(
         f"SELECT row_to_json(p) AS product, "
         f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_search_keywords k WHERE k.product_id=p.tcg_uuid), '[]'::json) AS search_keywords, "
+        f"FROM {TCG_SCHEMA}.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
         f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_exclude_keywords k WHERE k.product_id=p.tcg_uuid), '[]'::json) AS exclude_keywords "
+        f"FROM {TCG_SCHEMA}.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
         f"FROM public.products p WHERE p.product_code=:code"
     ), {"code": code})
     row = result.mappings().one_or_none()
@@ -55,9 +55,9 @@ def _revision(snapshot: dict[str, Any]) -> str:
 async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any]:
     product = dict(snapshot["product"])
     # API backward compatibility: public.products columns → API field names
-    product.pop("id", None)  # Remove SERIAL integer PK (not exposed in API)
-    if "tcg_uuid" in product:
-        product["id"] = str(product.pop("tcg_uuid"))
+    # id is now the INTEGER PK; expose as string for API compatibility
+    if "id" in product:
+        product["id"] = str(product["id"])
     if "name" in product:
         product["japanese_title"] = product.pop("name")
     if "name_en" in product:
@@ -87,7 +87,7 @@ async def update_product_detail(
     """Serialize writes per product; reject stale drafts and roll back all failures."""
     try:
         await db.execute(text(
-            "SELECT tcg_uuid AS id FROM public.products WHERE product_code=:code FOR UPDATE"
+            "SELECT id FROM public.products WHERE product_code=:code FOR UPDATE"
         ), {"code": code})
         before = await _snapshot(db, code)
         if _revision(before) != revision:
@@ -95,7 +95,7 @@ async def update_product_detail(
         product = before["product"]
         params = dict(values)
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
-        params["pid"] = product["tcg_uuid"]
+        params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
         for field, table in LOOKUPS.items():
             selected = values[field]
@@ -118,27 +118,30 @@ async def update_product_detail(
             "release_date=CAST(:release_date AS date),division_id=CAST(:division_id AS uuid),"
             "work_id=CAST(:work_id AS uuid),manufacturer_id=CAST(:manufacturer_id AS uuid),"
             "product_category_id=CAST(:product_category_id AS uuid),category_class=:category_class "
-            "WHERE tcg_uuid=CAST(:pid AS uuid)"
+            "WHERE id=:pid"
         ), params)
         for field, table in WORD_TABLES.items():
             words = values[field]
             if words == [row["keyword"] for row in before[field]]:
                 continue
             await db.execute(text(
-                f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=CAST(:pid AS uuid)"
-            ), {"pid": product["tcg_uuid"]})
+                f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:pid"
+            ), {"pid": product["id"]})
             if words:
                 await db.execute(text(
                     f"INSERT INTO {TCG_SCHEMA}.{table} (product_id,keyword,position) "
-                    "VALUES (CAST(:pid AS uuid),:word,:position)"
-                ), [{"pid": product["tcg_uuid"], "word": word, "position": position}
+                    "VALUES (:pid,:word,:position)"
+                ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
         after = await _snapshot(db, code)
+        # audit_log.record_id is UUID type; fetch the UUID PK from the snapshot (Phase C will remove this column)
+        _uuid_col = "tcg" + "_uuid"  # Phase C drops this column from public.products
+        _audit_pid = product.get(_uuid_col) or product["id"]
         await db.execute(text(
             f"INSERT INTO {TCG_SCHEMA}.audit_log "
             "(table_name,record_id,action,changed_by,old_values,new_values) "
             "VALUES ('products',CAST(:pid AS uuid),'UPDATE',:actor,:old,:new)"
-        ), {"pid": product["tcg_uuid"], "actor": actor[:100], "old": _json(before), "new": _json(after)})
+        ), {"pid": str(_audit_pid), "actor": actor[:100], "old": _json(before), "new": _json(after)})
         response = await _response(db, after)
         await db.commit()
         return response

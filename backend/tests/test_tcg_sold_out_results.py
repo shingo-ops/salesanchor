@@ -133,7 +133,7 @@ async def pg(monkeypatch):
             cursor.execute("INSERT INTO tenant_951.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'LINE',true) RETURNING id", (supplier,))
             channel = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_951.tcg_products(id,code,japanese_title,category_class,is_active) VALUES (%s,'P','Legacy title','Box',true)", (str(PRODUCT_UUID),))
-            cursor.execute("INSERT INTO public.products(tcg_uuid,product_code,name,category_class,is_active) VALUES (%s,'P','Master','Box',true) RETURNING tcg_uuid", (str(PRODUCT_UUID),))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active) VALUES ('P','Master','Box',true) RETURNING id")
             product = cursor.fetchone()[0]
             for index in range(6):
                 cursor.execute("INSERT INTO tenant_951.source_messages(supplier_channel_id,raw_text,raw_sha256,is_active,line_posted_at) VALUES (%s,%s,%s,%s,%s) RETURNING id",

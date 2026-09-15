@@ -234,7 +234,7 @@ async def fetch_output_rows(
         LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
             ON ts.id = sc.supplier_id
         LEFT JOIN public.products p
-            ON p.tcg_uuid = ar.product_id
+            ON p.id = ar.product_id
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}

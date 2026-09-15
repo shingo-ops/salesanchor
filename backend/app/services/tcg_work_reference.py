@@ -45,9 +45,9 @@ def load_work_reference(session: Session, schema: str) -> dict:
             'code', p.product_code, 'japanese_title', p.name,
             'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
             'search_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_search_keywords k WHERE k.product_id=p.tcg_uuid),
+                FROM {schema}.product_search_keywords k WHERE k.product_id=p.id),
             'exclude_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.tcg_uuid))
+                FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.id))
             ORDER BY p.product_code), '[]'::jsonb)
             FROM public.products p WHERE p.is_active))
     """)).scalar_one()
