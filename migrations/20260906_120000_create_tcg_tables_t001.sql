@@ -33,9 +33,12 @@ BEGIN
         RETURN;
     END IF;
 
-    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
-    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
-        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ: %', _schema;
+    -- ADR-1002: Phase 2c 完了判定（tcg_products 不在 + public.products に PM 商品移行済み）
+    -- 新規 DB では public.products に PM 商品がないため、テーブル作成が正常実行される
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL
+       AND to_regclass('public.products') IS NOT NULL
+       AND EXISTS (SELECT 1 FROM public.products WHERE product_code LIKE 'PM%' LIMIT 1) THEN
+        RAISE NOTICE 'ADR-1002: Phase 2c 完了済み（tcg_products → public.products 統合済み）、スキップ: %', _schema;
         RETURN;
     END IF;
 
