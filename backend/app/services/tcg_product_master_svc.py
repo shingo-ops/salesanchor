@@ -398,8 +398,7 @@ async def create_product(
     new_row = product_row.fetchone()
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
-    product_int_id = new_row.id      # integer as text, e.g. "123"
-    product_id_int = new_row.int_id  # integer for keyword FK references
+    product_id_int = new_row.int_id  # integer for keyword FK references and post-write gate
 
     # search_keywords INSERT
     if search_keywords.strip():
