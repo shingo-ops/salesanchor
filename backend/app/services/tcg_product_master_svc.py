@@ -125,7 +125,7 @@ async def search_products_by_name(
             f"""
             SELECT
                 p.product_code  AS product_id,
-                p.tcg_uuid::text AS product_uuid,
+                p.id::text AS product_uuid,
                 p.name          AS japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
@@ -133,10 +133,10 @@ async def search_products_by_name(
                 )               AS search_keywords
             FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
-                ON psk.product_id = p.tcg_uuid
+                ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND p.name ILIKE :query
-            GROUP BY p.tcg_uuid, p.product_code, p.name
+            GROUP BY p.id, p.product_code, p.name
             ORDER BY p.name
             LIMIT 10
             """
@@ -230,7 +230,7 @@ async def check_duplicates(
                 )                         AS search_keywords
             FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
-                ON psk.product_id = p.tcg_uuid
+                ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND (
                 p.name ILIKE :title_pattern
@@ -241,7 +241,7 @@ async def check_duplicates(
                 )
               )
             GROUP BY
-                p.tcg_uuid, p.product_code, p.name,
+                p.id, p.product_code, p.name,
                 p.work_id, p.manufacturer_id, p.product_category_id, p.mark
             ORDER BY p.name
             LIMIT 20
@@ -273,30 +273,36 @@ async def check_duplicates(
 
 async def _next_pm_code(db: AsyncSession) -> str:
     """
-    GAS productMasterV2RegistrationNextId_ 相当。
-    PM0001〜PM9999 形式で現在の最大番号 +1 を採番する。
+    ADR-1002 Phase B: PostgreSQL SEQUENCE で採番する（冪等・競合なし）。
+    SEQUENCE が存在しない環境（テスト等）では MAX+1 フォールバックを使う。
     """
-    result = await db.execute(
-        text(
-            """
-            SELECT product_code
-            FROM public.products
-            WHERE product_code ~ '^PM[0-9]{4}$'
-            ORDER BY product_code DESC
-            LIMIT 1
-            """
+    # Try SEQUENCE first (production, post-Phase-B migration)
+    try:
+        result = await db.execute(text("SELECT nextval('public.product_code_seq')"))
+        num = result.scalar_one()
+        return f"PM{num:04d}"
+    except Exception:
+        # Fallback: MAX+1 approach (test environments without migration)
+        await db.rollback()
+        result = await db.execute(
+            text(
+                """
+                SELECT product_code FROM public.products
+                WHERE product_code ~ '^PM[0-9]{4}$'
+                ORDER BY product_code DESC LIMIT 1
+                """
+            )
         )
-    )
-    row = result.fetchone()
-    if row is None:
-        return "PM0001"
-    m = _PM_CODE_RE.match(row[0])
-    if m is None:
-        return "PM0001"
-    num = int(m.group(1)) + 1
-    if num > 9999:
-        raise ValueError("PRODUCT_MASTER_V2_PM_CODE_EXHAUSTED")
-    return f"PM{num:04d}"
+        row = result.fetchone()
+        if row is None:
+            return "PM0001"
+        m = _PM_CODE_RE.match(row[0])
+        if m is None:
+            return "PM0001"
+        num = int(m.group(1)) + 1
+        if num > 9999:
+            raise ValueError("PRODUCT_MASTER_V2_PM_CODE_EXHAUSTED")
+        return f"PM{num:04d}"
 
 
 async def create_product(
@@ -368,12 +374,12 @@ async def create_product(
             INSERT INTO public.products
                 (product_code, name, release_date, category_class,
                  division_id, work_id, manufacturer_id, product_category_id,
-                 mark, name_en, is_active, tcg_uuid)
+                 mark, name_en, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
-                 :mark, :english_title, TRUE, gen_random_uuid())
-            RETURNING tcg_uuid::text AS id, id AS int_id
+                 :mark, :english_title, TRUE)
+            RETURNING id::text AS id, id AS int_id
             """
         ),
         {
@@ -392,7 +398,7 @@ async def create_product(
     new_row = product_row.fetchone()
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
-    product_uuid = new_row.id
+    product_id_int = new_row.int_id  # integer for keyword FK references and post-write gate
 
     # search_keywords INSERT
     if search_keywords.strip():
@@ -407,7 +413,7 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
     # exclude_keywords INSERT
@@ -423,7 +429,7 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
     if commit:
@@ -432,9 +438,9 @@ async def create_product(
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE tcg_uuid = CAST(:id AS uuid)"
+            "SELECT product_code FROM public.products WHERE id = :id"
         ),
-        {"id": product_uuid},
+        {"id": product_id_int},
     )
     vr = verify.fetchone()
     if vr is None or vr.product_code != pm_code:
@@ -467,7 +473,7 @@ async def add_search_keyword(
     pid_row = await db.execute(
         text(
             """
-            SELECT tcg_uuid::text AS id
+            SELECT id
             FROM public.products
             WHERE product_code = :code AND is_active = TRUE
             FOR UPDATE

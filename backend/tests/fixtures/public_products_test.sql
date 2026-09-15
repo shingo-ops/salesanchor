@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS public.products (
     name_en              VARCHAR(255),
     mark                 VARCHAR(100),
     release_date         DATE,
-    tcg_uuid             UUID UNIQUE,
+    tcg_uuid             UUID UNIQUE DEFAULT gen_random_uuid(),
     division_id          UUID,
     work_id              UUID,
     manufacturer_id      UUID,

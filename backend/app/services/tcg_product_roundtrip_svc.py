@@ -103,7 +103,7 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     for field, table in WORDS.items():
         keyword_sql.append(
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
-            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.tcg_uuid),'[]'::jsonb) AS {field}"
+            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
         )
     result = await db.execute(
         text(
@@ -208,7 +208,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
         elif row["revision"] != revision(snapshot):
             errors.append("ROUNDTRIP_STALE")
         else:
-            plan["id"] = snapshot["product"]["tcg_uuid"]
+            plan["id"] = snapshot["product"]["id"]
             old = values(snapshot)
             for field in CSV_COLUMNS:
                 if row[field] == old[field]:
@@ -321,7 +321,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 await db.execute(text("SET LOCAL app.is_operator = 'true'"))
                 await db.execute(
                     text(
-                        f"UPDATE public.products SET {','.join(assignments)} WHERE tcg_uuid=CAST(:product_id AS uuid)"
+                        f"UPDATE public.products SET {','.join(assignments)} WHERE id=:product_id"
                     ),
                     {**plan["sets"], "product_id": plan["id"]},
                 )
@@ -354,19 +354,19 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         raise
 
 
-async def replace_words(db: AsyncSession, product_id: str, table: str, words: list[str]) -> None:
+async def replace_words(db: AsyncSession, product_id: int, table: str, words: list[str]) -> None:
     """Replace only the selected product's edited keyword side, without commit."""
     if table not in ("product_search_keywords", "product_exclude_keywords"):
         raise ValueError("Invalid keyword table")
     await db.execute(
-        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=CAST(:product_id AS uuid)"),
+        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:product_id"),
         {"product_id": product_id},
     )
     for position, word in enumerate(words, 1):
         await db.execute(
             text(
                 f"INSERT INTO {TCG_SCHEMA}.{table}(product_id,keyword,position) "
-                "VALUES (CAST(:product_id AS uuid),:keyword,:position)"
+                "VALUES (:product_id,:keyword,:position)"
             ),
             {"product_id": product_id, "keyword": word, "position": position},
         )

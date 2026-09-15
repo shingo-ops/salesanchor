@@ -658,3 +658,6 @@ run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
+# ADR-1002 Phase B: FK付替え UUID→INTEGER + SEQUENCE（冪等）
+run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql

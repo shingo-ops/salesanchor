@@ -49,7 +49,7 @@ def atomic_pg(pg, monkeypatch):
         work_fixture.provision(cur, "tenant_990")
         cur.execute(work_fixture._rewire_keyword_fks("tenant_990"))
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", "tenant_990"))
-        cur.execute("INSERT INTO public.products (product_code,name,category_class,is_active,tcg_uuid) VALUES ('SENTINEL','unchanged','Box',true,gen_random_uuid()) RETURNING tcg_uuid")
+        cur.execute("INSERT INTO public.products (product_code,name,category_class,is_active) VALUES ('SENTINEL','unchanged','Box',true) RETURNING id")
         product_id = cur.fetchone()[0]
         for table in ("product_search_keywords", "product_exclude_keywords"):
             cur.execute(f"INSERT INTO tenant_990.{table}(product_id,keyword,position) VALUES (%s,'unchanged',1)", (product_id,))
@@ -83,7 +83,7 @@ def observe(connection):
         products = dict(cur.fetchall())
         words = {}
         for table in ("product_search_keywords", "product_exclude_keywords"):
-            cur.execute(f"SELECT p.name,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN public.products p ON p.tcg_uuid=k.product_id ORDER BY p.name,k.position")
+            cur.execute(f"SELECT p.name,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN public.products p ON p.id=k.product_id ORDER BY p.name,k.position")
             words[table] = cur.fetchall()
         cur.execute(f"SELECT row_no,japanese_title,result,product_code FROM {SCHEMA}.tcg_product_import_rows ORDER BY row_no")
         rows = cur.fetchall()
@@ -137,7 +137,7 @@ def failing_session(connection, mode, target):
                         raise asyncio.CancelledError("cancelled creation")
                     if mode == "collision":
                         params = dict(params, code="PM0001")
-            if self.current == target and "SELECT product_code FROM public.products WHERE tcg_uuid" in query:
+            if self.current == target and "SELECT product_code FROM public.products WHERE id" in query:
                 if mode in ("verify_value", "rollback_failure"):
                     raise ValueError("post-write verification")
             if f"INSERT INTO {SCHEMA}.tcg_product_import_rows" in query:
