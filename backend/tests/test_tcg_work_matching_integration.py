@@ -121,6 +121,28 @@ BEGIN
     ALTER TABLE {schema}.analysis_results
         ADD CONSTRAINT fk_ar_public_products
         FOREIGN KEY (product_id) REFERENCES public.products (id);
+
+    -- Convert analysis_run_snapshots.product_id UUID → INTEGER (if table exists)
+    IF to_regclass('{schema}.analysis_run_snapshots') IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM pg_attribute a
+            JOIN pg_class c ON a.attrelid = c.oid
+            JOIN pg_namespace n ON c.relnamespace = n.oid
+            WHERE n.nspname = '{schema}'
+              AND c.relname = 'analysis_run_snapshots'
+              AND a.attname = 'product_id'
+              AND a.atttypid != 23
+        ) THEN
+            ALTER TABLE {schema}.analysis_run_snapshots
+                ADD COLUMN IF NOT EXISTS product_int_id INTEGER;
+            UPDATE {schema}.analysis_run_snapshots ars
+                SET product_int_id = p.id
+                FROM public.products p
+                WHERE p.tcg_uuid = ars.product_id;
+            ALTER TABLE {schema}.analysis_run_snapshots DROP COLUMN product_id;
+            ALTER TABLE {schema}.analysis_run_snapshots RENAME COLUMN product_int_id TO product_id;
+        END IF;
+    END IF;
 END;
 $rw$;
 """

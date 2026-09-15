@@ -9,6 +9,7 @@ DECLARE
     target record;
     product record;
     keyword_count integer;
+    _pid_col TEXT;
 BEGIN
     -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
     IF to_regclass('tenant_004.tcg_products') IS NULL THEN
@@ -16,7 +17,7 @@ BEGIN
         RETURN;
     END IF;
 
-    -- ADR-1002 Phase B: product_id が INTEGER に変換済みならスキップ
+    -- Detect Phase B: product_id INTEGER → use p.id; else → use p.tcg_uuid
     IF EXISTS (
         SELECT 1 FROM pg_attribute a
         JOIN pg_class c ON a.attrelid = c.oid
@@ -24,10 +25,11 @@ BEGIN
         WHERE n.nspname = 'tenant_004'
           AND c.relname = 'product_search_keywords'
           AND a.attname = 'product_id'
-          AND a.atttypid = 23  -- int4 = Phase B already converted UUID to INTEGER
+          AND a.atttypid = 23
     ) THEN
-        RAISE NOTICE 'ADR-1002 Phase B: product_id は INTEGER に変換済み、スキップ';
-        RETURN;
+        _pid_col := 'id';
+    ELSE
+        _pid_col := 'tcg_uuid';
     END IF;
 
     SELECT count(*) INTO table_count
@@ -50,12 +52,11 @@ BEGIN
         ('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', 'product_exclude_keywords', 'スペシャルデッキセット')
     ) AS v(code, title, work_code, category_code, keyword_table, keyword)
     LOOP
-        SELECT p.tcg_uuid AS id, p.name AS japanese_title, w.code AS work_code, c.code AS category_code
-        INTO product
+        EXECUTE format('SELECT p.%I AS id, p.name AS japanese_title, w.code AS work_code, c.code AS category_code
         FROM public.products p
         LEFT JOIN tenant_004.tcg_series w ON w.id = p.work_id
         LEFT JOIN tenant_004.tcg_product_categories c ON c.id = p.product_category_id
-        WHERE p.product_code = target.code;
+        WHERE p.product_code = $1', _pid_col) INTO product USING target.code;
         IF product.id IS NULL OR product.japanese_title IS DISTINCT FROM target.title
            OR product.work_code IS DISTINCT FROM target.work_code
            OR product.category_code IS DISTINCT FROM target.category_code THEN
@@ -68,22 +69,21 @@ BEGIN
         END IF;
     END LOOP;
 
-    DELETE FROM tenant_004.product_search_keywords
-    WHERE product_id = (SELECT tcg_uuid FROM public.products WHERE product_code='PM0230')
-      AND keyword = 'vol.1';
+    EXECUTE format('DELETE FROM tenant_004.product_search_keywords WHERE product_id = (SELECT %I FROM public.products WHERE product_code=''PM0230'') AND keyword = ''vol.1''', _pid_col);
     FOR target IN SELECT * FROM (VALUES
         ('PM0104', 'マスターボールミラー'),
         ('PM0184', 'スペシャルデッキセット')
     ) AS v(code, keyword)
     LOOP
-        INSERT INTO tenant_004.product_exclude_keywords (id, product_id, keyword, position)
-        SELECT gen_random_uuid(), p.tcg_uuid, target.keyword, COALESCE(MAX(e.position), -1)+1
+        EXECUTE format('INSERT INTO tenant_004.product_exclude_keywords (id, product_id, keyword, position)
+        SELECT gen_random_uuid(), p.%I, $1, COALESCE(MAX(e.position), -1)+1
         FROM public.products p
-        LEFT JOIN tenant_004.product_exclude_keywords e ON e.product_id=p.tcg_uuid
-        WHERE p.product_code=target.code
+        LEFT JOIN tenant_004.product_exclude_keywords e ON e.product_id=p.%I
+        WHERE p.product_code=$2
           AND NOT EXISTS (SELECT 1 FROM tenant_004.product_exclude_keywords existing
-                          WHERE existing.product_id=p.tcg_uuid AND existing.keyword=target.keyword)
-        GROUP BY p.tcg_uuid;
+                          WHERE existing.product_id=p.%I AND existing.keyword=$1)
+        GROUP BY p.%I', _pid_col, _pid_col, _pid_col, _pid_col)
+        USING target.keyword, target.code;
     END LOOP;
 END;
 $body$;

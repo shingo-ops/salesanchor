@@ -10,8 +10,23 @@ DECLARE
     product record;
     term record;
     term_count integer;
+    _pid_col TEXT;
 BEGIN
     IF to_regclass('public.products') IS NULL THEN RETURN; END IF;
+    -- Detect Phase B: product_id INTEGER → use p.id; else → use p.tcg_uuid
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = 'tenant_004'
+          AND c.relname = 'product_search_keywords'
+          AND a.attname = 'product_id'
+          AND a.atttypid = 23
+    ) THEN
+        _pid_col := 'id';
+    ELSE
+        _pid_col := 'tcg_uuid';
+    END IF;
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['tcg_major_categories', 'tcg_series',
         'tcg_manufacturers', 'tcg_product_categories',
@@ -52,7 +67,7 @@ BEGIN
             ('PM0284', 'ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス')
         ) AS e(code, title)
     LOOP
-        SELECT tcg_uuid AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active INTO product FROM public.products WHERE product_code = expected.code;
+        EXECUTE format('SELECT %I AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active FROM public.products WHERE product_code = $1', _pid_col) INTO product USING expected.code;
         IF product.id IS NULL
            OR product.category_class IS DISTINCT FROM 'Box'
            OR product.division_id IS DISTINCT FROM refs.division_id
@@ -71,7 +86,7 @@ BEGIN
           AND name ~ '(^|[^0-9０-９])[9９][[:space:]　]*種') THEN
         RAISE EXCEPTION 'cardset bundle: assortment already exists under another code';
     END IF;
-    SELECT tcg_uuid AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active INTO product FROM public.products WHERE product_code = 'PM0297';
+    EXECUTE format('SELECT %I AS id, product_code AS code, name AS japanese_title, category_class, division_id, work_id, manufacturer_id, product_category_id, is_active FROM public.products WHERE product_code = $1', _pid_col) INTO product USING 'PM0297';
     IF product.id IS NULL THEN
         INSERT INTO public.products
             (product_code, name, category_class, division_id, work_id,
@@ -106,7 +121,7 @@ BEGIN
         ('PM0297', '30th CELEBRATION カードセット (9種セット)', 'product_search_keywords')
     ) AS k(code, keyword, table_name)
     LOOP
-        SELECT tcg_uuid AS id INTO product FROM public.products WHERE product_code = term.code;
+        EXECUTE format('SELECT %I AS id FROM public.products WHERE product_code = $1', _pid_col) INTO product USING term.code;
         EXECUTE format('SELECT count(*) FROM tenant_004.%I WHERE product_id=$1 AND keyword=$2', term.table_name)
             INTO term_count USING product.id, term.keyword;
         IF term_count > 1 THEN

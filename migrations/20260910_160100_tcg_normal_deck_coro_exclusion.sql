@@ -3,6 +3,7 @@ DO $body$
 DECLARE
     target RECORD;
     product RECORD;
+    _pid_col TEXT;
 BEGIN
     FOR target IN SELECT nspname FROM pg_namespace
                   WHERE nspname LIKE 'tenant_%' ORDER BY nspname
@@ -11,9 +12,23 @@ BEGIN
            OR to_regclass(format('%I.extraction_jobs', target.nspname)) IS NULL THEN
             CONTINUE;
         END IF;
-        EXECUTE format('SELECT p.tcg_uuid AS id, p.name AS japanese_title, w.code AS work_code, p.work_id
+        -- Detect Phase B: product_id INTEGER → use p.id; else → use p.tcg_uuid
+        IF EXISTS (
+            SELECT 1 FROM pg_attribute a
+            JOIN pg_class c ON a.attrelid = c.oid
+            JOIN pg_namespace n ON c.relnamespace = n.oid
+            WHERE n.nspname = target.nspname
+              AND c.relname = 'product_search_keywords'
+              AND a.attname = 'product_id'
+              AND a.atttypid = 23
+        ) THEN
+            _pid_col := 'id';
+        ELSE
+            _pid_col := 'tcg_uuid';
+        END IF;
+        EXECUTE format('SELECT p.%I AS id, p.name AS japanese_title, w.code AS work_code, p.work_id
                         FROM public.products p LEFT JOIN %I.tcg_series w ON w.id=p.work_id
-                        WHERE p.product_code=''PM0200''', target.nspname) INTO product;
+                        WHERE p.product_code=''PM0200''', _pid_col, target.nspname) INTO product;
         IF product.id IS NULL THEN
             CONTINUE;
         END IF;
