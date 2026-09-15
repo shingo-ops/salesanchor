@@ -329,6 +329,19 @@ DECLARE
     public_count  BIGINT;
     total_tcg     BIGINT := 0;
 BEGIN
+    -- ADR-1002: Phase 2c で tcg_products が全テナントから DROP 済みの場合、
+    -- データは過去のデプロイで移行完了しているため件数照合をスキップする。
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_namespace n
+        JOIN pg_class c ON c.relnamespace = n.oid
+        WHERE n.nspname LIKE 'tenant_%'
+          AND c.relname = 'tcg_products'
+          AND c.relkind = 'r'
+    ) THEN
+        RAISE NOTICE 'Step4: tcg_products が全テナントで不在（Phase 2c 完了済み）— 件数照合をスキップ';
+        RETURN;
+    END IF;
+
     FOR schema_record IN
         SELECT n.nspname AS schema_name
         FROM pg_namespace n
