@@ -379,7 +379,7 @@ async def create_product(
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
                  :mark, :english_title, TRUE)
-            RETURNING id::text AS id
+            RETURNING id::text AS id, tcg_uuid
             """
         ),
         {
@@ -398,7 +398,8 @@ async def create_product(
     new_row = product_row.fetchone()
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
-    product_uuid = new_row.id
+    product_int_id = new_row.id      # integer as text, e.g. "123"
+    product_uuid = new_row.tcg_uuid  # UUID for keyword FK references
 
     # search_keywords INSERT
     if search_keywords.strip():
@@ -438,9 +439,9 @@ async def create_product(
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE id = :id::uuid"
+            "SELECT product_code FROM public.products WHERE id = CAST(:id AS integer)"
         ),
-        {"id": product_uuid},
+        {"id": product_int_id},
     )
     vr = verify.fetchone()
     if vr is None or vr.product_code != pm_code:
