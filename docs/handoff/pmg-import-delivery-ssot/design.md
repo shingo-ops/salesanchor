@@ -1318,3 +1318,10 @@ rootが直接取得した正式CI job103869063278: 3750 passed / 95 skipped / 31
 Deploy34914789016/head26032c74はbackup/migrations/smoke/Verify deployment成功を直接確認。以前の本番障害による停止は解消。POのGO #3501と「解消したので進めてくれ」を受領済み。
 mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/p.idとimport read_itemsのtcg_products参照、試験fixtureは旧構造のまま。共通順序の商品コードはproduct_code、商品UUIDはtcg_uuidに対応させ、合意済み順序・8状態・ページ性能・保存値不変を維持する。旧p.idをpublic.products.idに機械的移植しない。
 既存実装担当へ同一テーマの統合補正を引き継ぐ。対象は既存6製品/試験ファイルのみ。最新mainの参照変更を保持、DB/migration/CI/scripts/状態UIは変更禁止。文書競合は親が双方を保持して解決する。実装後に現行fixtureで機能4試験・4097行負荷と正式CIを再確認するまで実装検収保留。
+
+
+### RESULT-ORDER 統合CIと試験DB隔離補正（2026-09-15）
+
+統合048aff3e/run34916372465/job104214798768は3 failed /3743 passed /95 skipped /3 errors、267.73秒。失敗はinventory_aggregatedのtcg_type欠落3件とrls_bootstrap_ordering/products_tcg_type_fkのjan_code欠落3件。新しい順序4試験の失敗なし。一方main対照PR3512/job104208324418は3745成功/95skip270.81秒。
+実装担当の読み取り診断: 今回のimport PG fixtureが共有jarvis_test_dbで_PUBLIC_PRODUCTS_DDLを実行し、tenant schemaだけ破棄するためpublic.productsの不足列定義が残り得る。既存condition/work_matching fixtureはランダム専用DB内で同正本DDLを使う。観測エラーと一致する有力原因であり、対照再実行前に因果を断定しない。
+補正設計: test_tcg_import_progress_pg.pyだけを既存専用DBパターンへ整合。元URLの共有DBは変更しない。テストの全準備・実行・破棄を固有一時DB内に限定し、接続を閉じて終了時/例外時cleanupする。DDL正本・製品・CI・本番は変更しない。判定基準は既存全テスト成功、並び/値保持/4097負荷成功。実装担当へ限定引き継ぎ済み、現状検収REVISE、マージ停止。
