@@ -650,3 +650,6 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
+
+# UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
+run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
