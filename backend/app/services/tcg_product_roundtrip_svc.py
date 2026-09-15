@@ -354,19 +354,19 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         raise
 
 
-async def replace_words(db: AsyncSession, product_id: str, table: str, words: list[str]) -> None:
+async def replace_words(db: AsyncSession, product_id: int, table: str, words: list[str]) -> None:
     """Replace only the selected product's edited keyword side, without commit."""
     if table not in ("product_search_keywords", "product_exclude_keywords"):
         raise ValueError("Invalid keyword table")
     await db.execute(
-        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=CAST(:product_id AS uuid)"),
+        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:product_id"),
         {"product_id": product_id},
     )
     for position, word in enumerate(words, 1):
         await db.execute(
             text(
                 f"INSERT INTO {TCG_SCHEMA}.{table}(product_id,keyword,position) "
-                "VALUES (CAST(:product_id AS uuid),:keyword,:position)"
+                "VALUES (:product_id,:keyword,:position)"
             ),
             {"product_id": product_id, "keyword": word, "position": position},
         )

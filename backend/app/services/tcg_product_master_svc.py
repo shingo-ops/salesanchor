@@ -474,7 +474,7 @@ async def add_search_keyword(
     pid_row = await db.execute(
         text(
             """
-            SELECT id::text AS id
+            SELECT id
             FROM public.products
             WHERE product_code = :code AND is_active = TRUE
             FOR UPDATE
