@@ -177,6 +177,7 @@ def seed_products(connection):
         ("PM0285", "スタートデッキ100 コロちゃおVer.", "IP001", ["コロちゃお", "コロチャオ"], []),
     ]
     with connection.cursor() as cursor:
+        migrate(cursor)
         for code, title, work, search, exclude in products:
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
@@ -189,7 +190,6 @@ def seed_products(connection):
         cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
         cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
-        migrate(cursor)
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
@@ -729,19 +729,18 @@ def seed_guard_dictionary(connection, schema):
     with connection.cursor() as cursor:
         provision(cursor, schema)
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
-        cursor.execute(_rewire_keyword_fks(schema))
         products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
                     [("vol.1", 3)], [("マスターボールミラー", 8)])]
         for code, title, work, category, search, exclude in products:
-            cursor.execute("SELECT id FROM public.products WHERE product_code=%s", (code,))
+            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
             existing = cursor.fetchone()
             if existing:
                 pid = existing[0]
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
-                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING id""").format(
+                    (product_code,name,category_class,is_active,work_id,product_category_id,tcg_uuid)
+                    SELECT %s,%s,'Box',true,w.id,c.id,gen_random_uuid() FROM {}.tcg_series w,
+                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING tcg_uuid""").format(
                         *[sql.Identifier(schema)] * 2), (code, title, work, category))
                 pid = cursor.fetchone()[0]
             for table, entries in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
