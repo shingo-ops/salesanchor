@@ -26,7 +26,7 @@
 | └ アイコン色の用途別トークン集約（10箇所の色決定ポイントをカテゴリ別に束ねる） | [design-tokens-ssot/color/icon/README.md](design-tokens-ssot/color/icon/README.md) | 公開 |
 | 在庫管理 | [inventory-management/README.md](inventory-management/README.md) | 親のあるべき姿・KGI確定 2026-07-12・A/B/C/feed-translation/inventory-analytics すべて あるべき姿・KGI・To-Be完成 |
 | ├ 提供元フィード翻訳（feed-translation） | [inventory-management/feed-translation/README.md](inventory-management/feed-translation/README.md) | あるべき姿・KGI完成 2026-07-05 |
-| ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C14合意・Q03から残り順次確認。ルール管理の正式設計/実装は未完了 |
+| ├ LINE完売ルールの認識合わせ・引き継ぎ | [合意と未決事項](../handoff/tcg-import-latest-only/sold-out-rules-handoff.md) | C01〜C15合意・Q05から残り順次確認。ルール管理の正式設計/実装は未完了 |
 | └ 在庫解析（inventory-analytics） | [inventory-management/inventory-analytics/README.md](inventory-management/inventory-analytics/README.md) | あるべき姿・KGI・To-Be完成 2026-07-15 |
 | 管理センター（management-center。全データの基盤管理＝データセンターの役割。CRM等の分析機能とは意図的に別役割） | [management-center/README.md](management-center/README.md) | あるべき姿・KGI・To-Be確定 2026-07-15 |
 | ├ 種類分けマスタ（tcg_type） | （作成予定） | 未 |
