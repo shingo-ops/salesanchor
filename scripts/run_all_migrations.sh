@@ -520,6 +520,11 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
+# ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
+# 前回失敗デプロイで再作成された空の tcg_products を除去する。
+# 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
+run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
 # TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 
@@ -653,3 +658,9 @@ run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
+# ADR-1002 Phase B: FK付替え UUID→INTEGER + SEQUENCE（冪等）
+run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql
+
+# ADR-1002 Phase C: public.products.tcg_uuid カラム・制約・インデックス削除
+run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql

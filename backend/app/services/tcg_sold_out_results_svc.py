@@ -28,7 +28,7 @@ async def fetch_sold_out_results(
     statement = text(f"""
         WITH joined AS (
             SELECT ar.id AS analysis_result_id, ei.id AS extraction_item_id,
-                sm.id AS source_message_id, ts.id AS supplier_id, p.tcg_uuid AS product_id,
+                sm.id AS source_message_id, ts.id AS supplier_id, p.id AS product_id,
                 COALESCE(ts.name, '') AS provider,
                 COALESCE(p.name, '') AS product_title,
                 COALESCE(ei.raw_product_name, '') AS raw_product_name,
@@ -46,7 +46,7 @@ async def fetch_sold_out_results(
             LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
             LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-            LEFT JOIN public.products p ON p.tcg_uuid = ar.product_id
+            LEFT JOIN public.products p ON p.id = ar.product_id
             WHERE ar.status = 'Sold out'
         ), filtered AS (
             SELECT * FROM joined

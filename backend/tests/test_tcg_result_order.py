@@ -68,9 +68,9 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     with pg["connection"].cursor() as cursor:
         for n, date in enumerate(("2026-10-16", "2026-10-16", "2026-09-16", None)):
             cursor.execute("INSERT INTO public.products "
-                           "(product_code,name,release_date,category_class,is_active,tcg_uuid,work_id,product_category_id) "
-                           "SELECT %s,'Same title',%s,category_class,true,gen_random_uuid(),work_id,product_category_id "
-                           "FROM public.products WHERE tcg_uuid=%s RETURNING tcg_uuid",
+                           "(product_code,name,release_date,category_class,is_active,work_id,product_category_id) "
+                           "SELECT %s,'Same title',%s,category_class,true,work_id,product_category_id "
+                           "FROM public.products WHERE id=%s RETURNING id",
                            (f"PM09{n+10}", date, pg["product"]))
             products.append(str(cursor.fetchone()[0]))
         cursor.execute("INSERT INTO tenant_004.tcg_suppliers(code,name,is_active) "

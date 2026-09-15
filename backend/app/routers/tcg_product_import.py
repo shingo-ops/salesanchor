@@ -110,9 +110,9 @@ async def list_products(
         text(
             f"SELECT p.product_code, p.name, p.name_en, p.mark, p.release_date, "
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"WHERE k.product_id = p.tcg_uuid) AS keyword_count, "
+            f"WHERE k.product_id = p.id) AS keyword_count, "
             f"(SELECT count(*) FROM {TCG_SCHEMA}.product_exclude_keywords k "
-            f"WHERE k.product_id = p.tcg_uuid) AS exclude_keyword_count "
+            f"WHERE k.product_id = p.id) AS exclude_keyword_count "
             f"FROM public.products p "
             f"WHERE {condition} "
             f"ORDER BY p.release_date DESC NULLS LAST, p.product_code DESC LIMIT :limit OFFSET :offset"

@@ -43,12 +43,93 @@ def provision(cursor, schema):
 _PUBLIC_PRODUCTS_DDL = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text()
 
 def _rewire_keyword_fks(schema: str) -> str:
-    """Return SQL that drops tcg_products FKs and adds public.products FKs."""
+    """Return SQL that drops tcg_products FKs, converts product_id UUID→INTEGER, and adds public.products(id) FKs.
+
+    ADR-1002 Phase B: keyword/analysis tables now reference public.products(id) (INTEGER).
+    """
     return f"""
 DO $rw$
 DECLARE
     _rec RECORD;
 BEGIN
+    -- Skip if product_id is already INTEGER (Phase B migration already ran)
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = '{schema}'
+          AND c.relname = 'product_search_keywords'
+          AND a.attname = 'product_id'
+          AND a.atttypid = 23  -- int4
+    ) THEN
+        RETURN;
+    END IF;
+
+    -- Phase C path: tcg_uuid dropped from public.products
+    -- Tables are empty after provision(), so direct column type swap is safe
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) THEN
+        -- Drop any existing FKs
+        FOR _rec IN
+            SELECT c.conname, rel.relname AS tbl
+            FROM pg_constraint c
+            JOIN pg_class rel ON c.conrelid = rel.oid
+            JOIN pg_namespace ns ON rel.relnamespace = ns.oid
+            JOIN pg_class ref ON c.confrelid = ref.oid
+            WHERE ns.nspname = '{schema}'
+              AND rel.relname IN ('product_search_keywords', 'product_exclude_keywords',
+                                  'analysis_results')
+              AND c.contype = 'f'
+        LOOP
+            EXECUTE format('ALTER TABLE {schema}.%I DROP CONSTRAINT %I',
+                           _rec.tbl, _rec.conname);
+        END LOOP;
+
+        -- product_search_keywords: swap to INTEGER
+        ALTER TABLE {schema}.product_search_keywords DROP COLUMN product_id;
+        ALTER TABLE {schema}.product_search_keywords ADD COLUMN product_id INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE {schema}.product_search_keywords ALTER COLUMN product_id DROP DEFAULT;
+        ALTER TABLE {schema}.product_search_keywords
+            ADD CONSTRAINT fk_psk_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+        -- product_exclude_keywords: swap to INTEGER
+        ALTER TABLE {schema}.product_exclude_keywords DROP COLUMN product_id;
+        ALTER TABLE {schema}.product_exclude_keywords ADD COLUMN product_id INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE {schema}.product_exclude_keywords ALTER COLUMN product_id DROP DEFAULT;
+        ALTER TABLE {schema}.product_exclude_keywords
+            ADD CONSTRAINT fk_pek_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+        -- analysis_results: swap to INTEGER (nullable)
+        ALTER TABLE {schema}.analysis_results DROP COLUMN product_id;
+        ALTER TABLE {schema}.analysis_results ADD COLUMN product_id INTEGER;
+        ALTER TABLE {schema}.analysis_results
+            ADD CONSTRAINT fk_ar_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id);
+
+        -- analysis_run_snapshots: swap if table exists
+        IF to_regclass('{schema}.analysis_run_snapshots') IS NOT NULL THEN
+            IF EXISTS (
+                SELECT 1 FROM pg_attribute a
+                JOIN pg_class c ON a.attrelid = c.oid
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE n.nspname = '{schema}'
+                  AND c.relname = 'analysis_run_snapshots'
+                  AND a.attname = 'product_id'
+                  AND a.atttypid != 23
+            ) THEN
+                ALTER TABLE {schema}.analysis_run_snapshots DROP COLUMN product_id;
+                ALTER TABLE {schema}.analysis_run_snapshots ADD COLUMN product_id INTEGER;
+            END IF;
+        END IF;
+
+        RETURN;
+    END IF;
+
+    -- Drop any existing FKs referencing tcg_products or public.products on these tables
     FOR _rec IN
         SELECT c.conname, rel.relname AS tbl
         FROM pg_constraint c
@@ -58,24 +139,74 @@ BEGIN
         WHERE ns.nspname = '{schema}'
           AND rel.relname IN ('product_search_keywords', 'product_exclude_keywords',
                               'analysis_results')
-          AND ref.relname = 'tcg_products'
           AND c.contype = 'f'
     LOOP
         EXECUTE format('ALTER TABLE {schema}.%I DROP CONSTRAINT %I',
                        _rec.tbl, _rec.conname);
     END LOOP;
-    ALTER TABLE {schema}.product_search_keywords DROP CONSTRAINT IF EXISTS fk_psk_public_products;
+
+    -- Convert product_search_keywords.product_id UUID → INTEGER
+    ALTER TABLE {schema}.product_search_keywords
+        ADD COLUMN IF NOT EXISTS product_int_id INTEGER;
+    UPDATE {schema}.product_search_keywords sk
+        SET product_int_id = p.id
+        FROM public.products p
+        WHERE p.tcg_uuid = sk.product_id;
+    ALTER TABLE {schema}.product_search_keywords DROP COLUMN product_id;
+    ALTER TABLE {schema}.product_search_keywords RENAME COLUMN product_int_id TO product_id;
+    ALTER TABLE {schema}.product_search_keywords ALTER COLUMN product_id SET NOT NULL;
     ALTER TABLE {schema}.product_search_keywords
         ADD CONSTRAINT fk_psk_public_products
-        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
-    ALTER TABLE {schema}.product_exclude_keywords DROP CONSTRAINT IF EXISTS fk_pek_public_products;
+        FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+    -- Convert product_exclude_keywords.product_id UUID → INTEGER
+    ALTER TABLE {schema}.product_exclude_keywords
+        ADD COLUMN IF NOT EXISTS product_int_id INTEGER;
+    UPDATE {schema}.product_exclude_keywords ek
+        SET product_int_id = p.id
+        FROM public.products p
+        WHERE p.tcg_uuid = ek.product_id;
+    ALTER TABLE {schema}.product_exclude_keywords DROP COLUMN product_id;
+    ALTER TABLE {schema}.product_exclude_keywords RENAME COLUMN product_int_id TO product_id;
+    ALTER TABLE {schema}.product_exclude_keywords ALTER COLUMN product_id SET NOT NULL;
     ALTER TABLE {schema}.product_exclude_keywords
         ADD CONSTRAINT fk_pek_public_products
-        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE;
-    ALTER TABLE {schema}.analysis_results DROP CONSTRAINT IF EXISTS fk_ar_public_products;
+        FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+    -- Convert analysis_results.product_id UUID → INTEGER (NULLABLE)
+    ALTER TABLE {schema}.analysis_results
+        ADD COLUMN IF NOT EXISTS product_int_id INTEGER;
+    UPDATE {schema}.analysis_results ar
+        SET product_int_id = p.id
+        FROM public.products p
+        WHERE p.tcg_uuid = ar.product_id;
+    ALTER TABLE {schema}.analysis_results DROP COLUMN product_id;
+    ALTER TABLE {schema}.analysis_results RENAME COLUMN product_int_id TO product_id;
     ALTER TABLE {schema}.analysis_results
         ADD CONSTRAINT fk_ar_public_products
-        FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid);
+        FOREIGN KEY (product_id) REFERENCES public.products (id);
+
+    -- Convert analysis_run_snapshots.product_id UUID → INTEGER (if table exists)
+    IF to_regclass('{schema}.analysis_run_snapshots') IS NOT NULL THEN
+        IF EXISTS (
+            SELECT 1 FROM pg_attribute a
+            JOIN pg_class c ON a.attrelid = c.oid
+            JOIN pg_namespace n ON c.relnamespace = n.oid
+            WHERE n.nspname = '{schema}'
+              AND c.relname = 'analysis_run_snapshots'
+              AND a.attname = 'product_id'
+              AND a.atttypid != 23
+        ) THEN
+            ALTER TABLE {schema}.analysis_run_snapshots
+                ADD COLUMN IF NOT EXISTS product_int_id INTEGER;
+            UPDATE {schema}.analysis_run_snapshots ars
+                SET product_int_id = p.id
+                FROM public.products p
+                WHERE p.tcg_uuid = ars.product_id;
+            ALTER TABLE {schema}.analysis_run_snapshots DROP COLUMN product_id;
+            ALTER TABLE {schema}.analysis_run_snapshots RENAME COLUMN product_int_id TO product_id;
+        END IF;
+    END IF;
 END;
 $rw$;
 """
@@ -132,11 +263,12 @@ def seed_products(connection):
         ("PM0285", "スタートデッキ100 コロちゃおVer.", "IP001", ["コロちゃお", "コロチャオ"], []),
     ]
     with connection.cursor() as cursor:
+        migrate(cursor)
         for code, title, work, search, exclude in products:
             cursor.execute(f"""INSERT INTO public.products
-                (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {SCHEMA}.tcg_series w,
-                {SCHEMA}.tcg_product_categories c WHERE w.code=%s AND c.code='PC_BOX' RETURNING tcg_uuid""", (code, title, work))
+                (product_code,name,category_class,is_active,work_id,product_category_id)
+                SELECT %s,%s,'Box',true,w.id,c.id FROM {SCHEMA}.tcg_series w,
+                {SCHEMA}.tcg_product_categories c WHERE w.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, work))
             pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, keyword in enumerate(keywords):
@@ -144,7 +276,9 @@ def seed_products(connection):
         cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
         cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
-        migrate(cursor)
+        # DICTIONARY migration depends on PM0200 existing in public.products;
+        # migrate() ran before INSERT so re-run now that products are seeded
+        cursor.execute((MIGRATIONS / DICTIONARY).read_text())
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
@@ -196,7 +330,7 @@ def test_dictionary_idempotent_and_identity_guard(pg):
     seed_products(connection)
     with connection.cursor() as cursor:
         migrate(cursor)
-        cursor.execute(f"SELECT keyword,position FROM {SCHEMA}.product_exclude_keywords e JOIN public.products p ON p.tcg_uuid=e.product_id WHERE p.product_code='PM0200' ORDER BY position")
+        cursor.execute(f"SELECT keyword,position FROM {SCHEMA}.product_exclude_keywords e JOIN public.products p ON p.id=e.product_id WHERE p.product_code='PM0200' ORDER BY position")
         assert cursor.fetchall() == [(word, i) for i, word in enumerate(["Generations", "ex", "コロコロ", "コロちゃお", "コロチャオ", "コロ"])]
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 3
@@ -245,12 +379,12 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
     smid, jobid, result = run_message(connection, engine, monkeypatch, "\n".join(names), records)
     assert result["analysis_stats"]["pid_resolved"] == 3
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT ei.id,ei.line_start,p.product_code,ar.pid_resolved,ar.pid_basis,ar.needs_review FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id LEFT JOIN public.products p ON p.tcg_uuid=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start", (jobid,))
+        cursor.execute(f"SELECT ei.id,ei.line_start,p.product_code,ar.pid_resolved,ar.pid_basis,ar.needs_review FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id LEFT JOIN public.products p ON p.id=ar.product_id WHERE ei.extraction_job_id=%s ORDER BY ei.line_start", (jobid,))
         rows = cursor.fetchall()
         assert [r[2] for r in rows] == ['PM0200', None, None, 'PM0285', 'PM0285', None, None]
         assert rows[1][3:] == (False, 'NONE', True)
         corrected = rows[1][0]
-        cursor.execute(f"UPDATE {SCHEMA}.analysis_results SET product_id=(SELECT tcg_uuid FROM public.products WHERE product_code='PM0285'),pid_resolved=true,pid_basis='HUMAN:confirmed' WHERE extraction_item_id=%s", (corrected,))
+        cursor.execute(f"UPDATE {SCHEMA}.analysis_results SET product_id=(SELECT id FROM public.products WHERE product_code='PM0285'),pid_resolved=true,pid_basis='HUMAN:confirmed' WHERE extraction_item_id=%s", (corrected,))
         cursor.execute(f"INSERT INTO {SCHEMA}.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by) VALUES (%s,%s,'product_id','PM0285','test')", (corrected, smid))
         cursor.execute(f"SELECT product_id,pid_resolved,pid_basis FROM {SCHEMA}.analysis_results WHERE extraction_item_id=%s", (corrected,))
         before = cursor.fetchone()
@@ -298,7 +432,7 @@ def test_onepiece_code_positive_with_verified_work(pg, monkeypatch):
         "ワンピース EB01", [record("ワンピース EB01", 1, "ワンピース", "L0001")])
     assert result["analysis_stats"]["pid_resolved"] == 1
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT p.product_code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN public.products p ON p.tcg_uuid=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
+        cursor.execute(f"SELECT p.product_code,ar.pid_resolved,ar.engine_version FROM {SCHEMA}.analysis_results ar JOIN public.products p ON p.id=ar.product_id JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s", (jobid,))
         assert cursor.fetchone() == ("PM0123", True, "name-first-v9-product-all-terms")
 
 
@@ -452,7 +586,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,tcg_uuid,work_id) SELECT %s,%s,'Box',true,gen_random_uuid(),id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING tcg_uuid", (code, name))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
@@ -688,15 +822,15 @@ def seed_guard_dictionary(connection, schema):
         products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
                     [("vol.1", 3)], [("マスターボールミラー", 8)])]
         for code, title, work, category, search, exclude in products:
-            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            cursor.execute("SELECT id FROM public.products WHERE product_code=%s", (code,))
             existing = cursor.fetchone()
             if existing:
                 pid = existing[0]
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
-                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING tcg_uuid""").format(
+                    (product_code,name,category_class,is_active,work_id,product_category_id)
+                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
+                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING id""").format(
                         *[sql.Identifier(schema)] * 2), (code, title, work, category))
                 pid = cursor.fetchone()[0]
             for table, entries in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
@@ -710,7 +844,7 @@ def guard_snapshot(connection, schemas=("tenant_004", "tenant_903")):
     with connection.cursor() as cursor:
         for schema in schemas:
             for table in ("product_search_keywords", "product_exclude_keywords"):
-                cursor.execute(sql.SQL("SELECT k.id,k.product_id,k.keyword,k.position,p.product_code FROM {}.{} k JOIN public.products p ON p.tcg_uuid=k.product_id ORDER BY k.id").format(
+                cursor.execute(sql.SQL("SELECT k.id,k.product_id,k.keyword,k.position,p.product_code FROM {}.{} k JOIN public.products p ON p.id=k.product_id ORDER BY k.id").format(
                     sql.Identifier(schema), sql.Identifier(table)))
                 result[schema, table] = cursor.fetchall()
     return result
@@ -791,7 +925,7 @@ def test_false_positive_guards_duplicate_preserves_all(pg, code, table, word):
     seed_guard_dictionary(connection, "tenant_004")
     with connection.cursor() as cursor:
         for _ in range(1 if code == "PM0230" else 2):
-            cursor.execute(sql.SQL("INSERT INTO tenant_004.{}(id,product_id,keyword,position) SELECT %s,tcg_uuid,%s,99 FROM public.products WHERE product_code=%s").format(sql.Identifier(table)),
+            cursor.execute(sql.SQL("INSERT INTO tenant_004.{}(id,product_id,keyword,position) SELECT %s,id,%s,99 FROM public.products WHERE product_code=%s").format(sql.Identifier(table)),
                            (str(uuid4()), word, code))
         before = guard_snapshot(connection, ("tenant_004",))
         with pytest.raises(psycopg2.errors.RaiseException, match="duplicate target keyword"):
@@ -965,10 +1099,10 @@ def test_space_product_match_saved_in_isolated_database(
     with connection.cursor() as cursor:
         for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
             cursor.execute(f"""INSERT INTO public.products
-                (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                SELECT %s,'スターターセットV 草','Box',true,gen_random_uuid(),w.id,c.id
+                (product_code,name,category_class,is_active,work_id,product_category_id)
+                SELECT %s,'スターターセットV 草','Box',true,w.id,c.id
                 FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
-                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid""", (code,))
+                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
@@ -985,7 +1119,7 @@ def test_space_product_match_saved_in_isolated_database(
         cursor.execute(f"""SELECT p.product_code,ar.pid_resolved,ar.pid_basis,ar.needs_review
             FROM {SCHEMA}.analysis_results ar
             JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
-            LEFT JOIN public.products p ON p.tcg_uuid=ar.product_id
+            LEFT JOIN public.products p ON p.id=ar.product_id
             WHERE ei.extraction_job_id=%s""", (jobid,))
         code, resolved, basis, needs_review = cursor.fetchone()
         assert resolved is (expected == "resolved")
@@ -1015,15 +1149,15 @@ def seed_cardset_dictionary(connection, schema):
         ] + [(f"PM{276+i:04d}", "カードセット " + kind, ["カードセット " + kind], [])
              for i, kind in enumerate(CARDSET_KINDS)]
         for code, title, search, exclude in products:
-            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            cursor.execute("SELECT id FROM public.products WHERE product_code=%s", (code,))
             existing = cursor.fetchone()
             if existing:
                 pid = existing[0]
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,gen_random_uuid(),w.id,c.id FROM {}.tcg_series w,
-                    {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid""").format(
+                    (product_code,name,category_class,is_active,work_id,product_category_id)
+                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
+                    {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""").format(
                         *[sql.Identifier(schema)] * 2), (code, title))
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
@@ -1097,7 +1231,7 @@ def test_cardset_duplicate_target_preserves_keywords(pg):
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for position in (8, 9):
-            cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'カードセット',%s FROM public.products WHERE product_code='PM0263'", (str(uuid4()), position))
+            cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'カードセット',%s FROM public.products WHERE product_code='PM0263'", (str(uuid4()), position))
     before = guard_snapshot(connection)
     with connection.cursor() as cursor:
         with pytest.raises(psycopg2.errors.RaiseException, match="duplicate cardset"):
@@ -1245,18 +1379,18 @@ def seed_bundle_dictionary(connection, schema):
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_rewire_keyword_fks(schema))
         for code, title, search, exclude in BUNDLE_SEEDS:
-            cursor.execute("SELECT tcg_uuid FROM public.products WHERE product_code=%s", (code,))
+            cursor.execute("SELECT id FROM public.products WHERE product_code=%s", (code,))
             existing = cursor.fetchone()
             if existing:
                 pid = existing[0]
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,tcg_uuid,division_id,work_id,manufacturer_id,product_category_id)
-                    SELECT %s,%s,'Box',true,gen_random_uuid(),d.id,w.id,m.id,c.id
+                    (product_code,name,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
+                    SELECT %s,%s,'Box',true,d.id,w.id,m.id,c.id
                     FROM {}.tcg_major_categories d, {}.tcg_series w, {}.tcg_manufacturers m,
                          {}.tcg_product_categories c
                     WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code='PC_BOX'
-                    RETURNING tcg_uuid""").format(*[sql.Identifier(schema)] * 4), (code, title))
+                    RETURNING id""").format(*[sql.Identifier(schema)] * 4), (code, title))
                 pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):
@@ -1368,11 +1502,11 @@ def test_bundle_collision_and_late_failure_are_atomic(pg, fault):
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
             cursor.execute(_rewire_keyword_fks("tenant_004"))
             for position in (10, 11):
-                cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'種セット',%s FROM public.products WHERE product_code='PM0284'", (str(uuid4()), position))
+                cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'種セット',%s FROM public.products WHERE product_code='PM0284'", (str(uuid4()), position))
             message = "duplicate keyword"
         else:
             code, title = ("PM0297", "別商品") if fault == "code_collision" else ("PM0999", "MEGA 30th CELEBRATION カードセット（９種セット）")
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,tcg_uuid) VALUES (%s,%s,'Box',true,gen_random_uuid())", (code, title))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active) VALUES (%s,%s,'Box',true)", (code, title))
             message = "code collision" if fault == "code_collision" else "already exists under another code"
     before = bundle_snapshot(connection)
     with connection.cursor() as cursor:
@@ -1409,10 +1543,10 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
     seed_products(connection)
     with connection.cursor() as cursor:
         cursor.execute(f"""INSERT INTO public.products
-            (product_code,name,category_class,is_active,tcg_uuid,work_id,product_category_id)
-            SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,gen_random_uuid(),w.id,c.id
+            (product_code,name,category_class,is_active,work_id,product_category_id)
+            SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,w.id,c.id
             FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
-            WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING tcg_uuid,work_id""")
+            WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id,work_id""")
         pid, work = cursor.fetchone()
         for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
                                ("product_exclude_keywords", "LIMITED EDITION")]:
@@ -1437,7 +1571,7 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
     with connection.cursor() as cursor:
         cursor.execute(f"""SELECT ei.raw_product_name, ar.pid_resolved, p.product_code, ar.engine_version
             FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id
-            LEFT JOIN public.products p ON p.tcg_uuid=ar.product_id
+            LEFT JOIN public.products p ON p.id=ar.product_id
             WHERE ei.extraction_job_id=%s ORDER BY ei.line_start""", (jobid,))
         rows = cursor.fetchall()
     assert len(rows) == len(cases)
