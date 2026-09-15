@@ -3192,3 +3192,5 @@ EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74の
 EV-20260914-TCG-RESULT-ORDER 配備結果: PR3501/d29c1ab5マージ済み。最終HEAD1863072a/CI34918256994は3763成功95skip。Deploy34918739146はbackup/code step成功、既存migration20260904_160000の商品ID取得失敗で停止、smoke/Verify未実施。公開healthは全接続正常。現在DB整合・実データ画面未検証。本番検収BLOCKED、旧表削除後の全過去migration再実行互換の棚卸しが次。根拠design末尾/result-order-evidence.json。
 
 RESULT-ORDER再開照合: 最新deploy34918739146 failure継続。runner573旧商品処理→652統合→655旧表削除、run_sqlは毎回実行。PR3502既存inventory232件と現行240件の8追加を直接比較。既存9試験成功を移行後再実行完了に転用せず、4コード/現行FK/途中失敗差分の本番読取票と3状態×2周の隔離検証条件をdesignへ保存。自己審査REVISE、本番再開根拠未確立。
+
+RESULT-ORDER鍵許可読取実証2026-09-15: prod1既存鍵の使用許可受領。READ ONLY=on/10秒上限SELECTで新商品297/旧表0、対象4コードは新各1旧0、4種FKは新表向き・未対応参照0。旧表RLSなしを確認。本番HEADd29c1ab5と稼働4製品hashは検証済みと一致。旧表削除NOTICEも直前Deploy34918150510実ログにあり。新4商品の欠落ではなく旧処理との不整合を原因分類。全データ保持と実画面順序、復旧再実行は未検証。設計・数値正本はdesign末尾/result-order-evidence.json。本番変更なし。

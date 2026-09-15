@@ -1371,3 +1371,25 @@ fd3cec1f/run34917101528/job104217035550: 3749 passed/95 skipped/失敗0、290.51
 - 技術検証と正式な復旧承認が揃ってから本番再実行し、migration/smoke/Verify全成功と解析実データの順序/値保持を検収する。
 
 自己審査: REVISE。本番4コード/参照状態・途中失敗による変更範囲・240処理の移行後2周実測が未確認であるため、本番再開の根拠は未確立。読み取り調査と設計整理は継続できるが、再配備はしない。
+
+
+### RESULT-ORDER 許可済み鍵による本番読み取り実証（2026-09-15 11:38 JST記録）
+
+PO原文「自由鍵の仕様を許可するので調査してくれ…確立したなら報告」を今回の鍵使用調査の許可として受領。既存SSH alias prod1とその既存鍵を使用。秘密鍵本文・認証情報を出力せず、BatchMode/StrictHostKeyChecking=yesを維持。サブエージェントの新規起動、本番変更はしていない。
+
+初回のpsql標準入力方式はPreToolUse psql-write-guardに拒否され未実行。ガードが明示許可するpsql -c SELECT形式を使用し、docker execのPGOPTIONSでdefault_transaction_read_only=on/statement_timeout=10000を設定。current_setting('transaction_read_only')=onをDB自身に確認。ガード解除やpermit-dangerは使用していない。
+
+直接観測した結果:
+- 本番git HEADはd29c1ab5ebd24fbf5dfdcced2008f933f3313392でPR3501 merge SHAと一致。
+- 稼働backendコンテナのtcg_result_order.py/tcg_analysis_review_svc.py/tcg_distribution_svc.py/tcg_import_progress.pyのSHA256がローカル検証済み4ファイルと4/4一致。配備工程の成功だけでなく実コードの一致を確認。
+- public.productsのtcg_uuid非NULL商品は297件。tenant_004.tcg_productsは存在するが0件。
+- PM0190/PM0269/PM0270/PM0271はpublic.productsに各1件、旧表に各0件。4商品のUUIDはresult-order-evidence.jsonへ記録。
+- 旧表relrowsecurity=false/relforcerowsecurity=false、接続役割jarvisのrolsuper=true/rolbypassrls=true。旧表0件を行制限による見かけの欠落とは扱わない。public.productsはRLS/FORCE RLSともtrueだが、この読取役割はbypass属性を持つ。
+- keyword/exclude/analysis/logisticsの4種類のproduct_id FKはpublic.products(tcg_uuid)を参照。新表に対応する商品がない参照件数は4種類とも0件（analysisのNULL product_idは未確定として除外）。
+- 直前の成功Deploy34918150510実ログに2026-09-15T01:42:53Zのtenant_001/tenant_004.tcg_products削除NOTICEがある。削除後に旧表が再び存在することは確認済み。どの処理が再作成したかは未特定。
+
+判断: 今回の停止は、新保管先の対象4商品消失ではなく、旧表削除後にも旧表からIDを得ようとする過去migrationと移行後構造の不整合で説明できる。実物migration85–91行の停止条件、失敗ログ、現在の旧表0件/新4商品存在を照合した。失敗時点にNULLだった変数をログ以上に断定しない。
+
+確認の限界: 297商品の全項目が配備前と同一か、全migration1〜203番の変更影響、認証済み画面の実際の並び順は未検証。4種参照0件と4コード存在だけで全データ無変更とはしない。再配備/DB更新/配信は未実行。
+
+状態: 調査根拠確立（停止原因の分類と現在4コード/参照整合）、本番の並び順コード実配備確認済み。復旧設計はREVISEを維持。次は既存PR3502調査を現行240処理へ更新し、移行後再実行を安全にする復旧設計・隔離検証。旧表へ商品を戻す・エラー箇所を単にskipする・DB処理をそのまま再実行する案は、この読取結果だけでは承認しない。

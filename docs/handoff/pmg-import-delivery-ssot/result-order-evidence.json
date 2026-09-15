@@ -381,5 +381,40 @@
     "authenticated_data_verification": false,
     "sheet_write_by_agent": false,
     "failure_log_sha256": "2916c9f978c5f29d47a97515235ddcbd5caa79539340be0c330fa327694f5125"
+  },
+  "production_readonly_20260915": {
+    "recorded_at": "2026-09-15T11:38:07+09:00",
+    "authorization": "PO許可済みの既存鍵による調査",
+    "read_only_confirmed": true,
+    "statement_timeout_ms": 10000,
+    "host_git_sha": "d29c1ab5ebd24fbf5dfdcced2008f933f3313392",
+    "current_product_count": 297,
+    "old_product_count": 0,
+    "old_table_rls": false,
+    "old_table_force_rls": false,
+    "reader_superuser": true,
+    "reader_bypassrls": true,
+    "target_current_ids": {
+      "PM0190": "db3921b5-22fa-4256-857c-1272f446322c",
+      "PM0269": "4d4fe19c-943c-49e2-a933-ccc97ec1305b",
+      "PM0270": "cc7dd169-b04a-4d26-9e84-4e6da1cbe701",
+      "PM0271": "72bb42ed-5c38-4450-8224-2d677c2ef93c"
+    },
+    "target_old_rows": 0,
+    "orphan_counts": {
+      "keywords": 0,
+      "excludes": 0,
+      "analysis_nonnull": 0,
+      "logistics": 0
+    },
+    "runtime_hashes_match": {
+      "tcg_result_order.py": "5a96446a03fc1d007687e7bcb470ee4eb0eef72d7f046827317975816b07d9cc",
+      "tcg_analysis_review_svc.py": "eed8ed8a9e3cd97a657e5757db9a7e38f42f9e0b1d22318e3040805b12eb4437",
+      "tcg_distribution_svc.py": "e014546759ae8f8e81080a5cf786449759f93355f24a136e8b5b7e83f0287229",
+      "tcg_import_progress.py": "42f924df5be66a56f72753929985742209f8b8814bea129430fbbe5173a761a1"
+    },
+    "changes_to_production": false,
+    "full_data_preservation_verified": false,
+    "live_order_verified": false
   }
 }
