@@ -11,6 +11,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
+from psycopg2 import sql
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +22,7 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
+from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="PMG_TEST_PG_URL must identify a disposable test database")
@@ -31,6 +33,7 @@ def provision_tcg(cursor,schema):
     # Execute canonical migrations, changing only the isolated test schema target.
     migrations=Path(__file__).resolve().parents[2]/"migrations"
     for name in ("20260831_110000_create_tcg_analysis_tables_t004.sql",
+                 "20260903_170000_item_corrections_t004.sql",
                  "20260905_140000_import_jobs_review_stage_t004.sql"):
         cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
 
@@ -40,30 +43,47 @@ async def pg(monkeypatch):
     url = make_url(URL)
     assert url.database in ("pmg_import_ssot_test", "jarvis_test_db"), "Refuse non-disposable database"
     assert url.host in ("127.0.0.1", "localhost"), "Local test database only"
-    conn = psycopg2.connect(host=url.host, port=url.port, dbname=url.database, user=url.username, password=url.password)
-    conn.autocommit = True
-    with conn.cursor() as c:
-        # These schemas belong only to this per-task disposable database.
-        c.execute("DROP SCHEMA IF EXISTS tenant_871 CASCADE; DROP SCHEMA IF EXISTS tenant_872 CASCADE")
-        c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
-        for schema in (SCHEMA, "tenant_872"):
-            provision_tcg(c,schema)
-            c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
-            c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
-        migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
-        c.execute(migration.read_text())
-        c.execute(migration.read_text())
-    for module in (svc, routes, progress):
-        monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
-    enqueue=MagicMock()
-    monkeypatch.setattr(svc,"_enqueue_extraction",enqueue)
-    monkeypatch.setattr(routes,"_enqueue_extraction",enqueue)
-    engine=create_async_engine(URL)
-    yield engine, conn, enqueue
-    await engine.dispose()
-    with conn.cursor() as c:
-        c.execute("DROP SCHEMA tenant_871 CASCADE; DROP SCHEMA tenant_872 CASCADE")
-    conn.close()
+    kwargs = dict(host=url.host, port=url.port, user=url.username, password=url.password)
+    name = "tcg_import_progress_test_" + uuid4().hex
+    admin = psycopg2.connect(dbname=url.database, **kwargs)
+    admin.autocommit = True
+    conn = engine = None
+    created = False
+    try:
+        with admin.cursor() as c:
+            c.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+        created = True
+        conn = psycopg2.connect(dbname=name, **kwargs)
+        conn.autocommit = True
+        with conn.cursor() as c:
+            c.execute("SELECT current_database()")
+            assert c.fetchone()[0] == name
+            c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
+            c.execute(_PUBLIC_PRODUCTS_DDL)
+            for schema in (SCHEMA, "tenant_872"):
+                provision_tcg(c,schema)
+                c.execute(_rewire_keyword_fks(schema))
+                c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
+                c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
+            migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
+            c.execute(migration.read_text())
+            c.execute(migration.read_text())
+        for module in (svc, routes, progress):
+            monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
+        enqueue=MagicMock()
+        monkeypatch.setattr(svc,"_enqueue_extraction",enqueue)
+        monkeypatch.setattr(routes,"_enqueue_extraction",enqueue)
+        engine=create_async_engine(url.set(database=name, drivername="postgresql+asyncpg"))
+        yield engine, conn, enqueue
+    finally:
+        if engine:
+            await engine.dispose()
+        if conn:
+            conn.close()
+        if created:
+            with admin.cursor() as c:
+                c.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
+        admin.close()
 
 
 async def upload(engine, content):

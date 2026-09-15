@@ -34,6 +34,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
+from app.services.tcg_result_order import result_order_sql
 from app.tcg_config import TCG_SCHEMA
 
 # 安全装置 #5: 書き込み行数上限
@@ -243,7 +244,7 @@ async def fetch_output_rows(
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
-        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.product_code NULLS LAST
+        ORDER BY {result_order_sql()}
     """)
 
     result = await db.execute(sql)

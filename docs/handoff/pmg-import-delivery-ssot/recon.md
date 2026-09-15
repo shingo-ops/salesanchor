@@ -471,3 +471,66 @@ rootがBackend job103863947027のGitHub実行ログを直接取得。3746 passed
 対象PR3504承認時HEAD47f72ab3674eba06e28f1cef86b1757986995750。本便製品は容量超過時の実測サイズ記録・既存9制約の実構造照合の2点のみ。既存extraction_attemptsを記録正本として維持し、追加保存先/推測補完/過去データ書換え/再抽出/配信は行わない。対象migrationは20260914_010000_tcg_extraction_attempts.sqlのみ、相乗りPRなし。
 rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed28ea691ea93b04e4245afa8d744d85。本番backend/workerの対象serviceSHAはいずれも旧版28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4。現時点は本便未反映。
 CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
+
+
+
+## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
+
+この節は、商品・状態・価格順を共通化するための実物確認を記録する。
+親: [提供元フィード翻訳](../../specs/inventory-management/feed-translation/README.md)。設計: [design.md](design.md) の同日RESULT-ORDER節。
+固定HEAD: 70d145f090e122dd36e4a39b4928e13cc0dae613。正規worktree: release/tcg-result-order-design。
+ここでの共用部品は、一覧取得SQL・状態確定SQL・画面の配列描画を指す。
+
+### 1. 全体像
+
+- backend/app/services/tcg_distribution_svc.py:246 は発売日降順→提供者名→商品コード順。この順序では提供者が商品を分断する。:257 は12列出力、:481 はclear後に取得順で書き込む。
+- backend/app/services/tcg_analysis_review_svc.py:220 は投稿日時降順→原文行番号順、:221 はその後にLIMIT/OFFSET。
+- backend/app/services/tcg_import_progress.py:107 の取込内明細はcreated_at/id順。:120 のページ抽出と:126 のjsonb_agg両方に順序指定がある。
+- frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx:68 は最大500行取得、:79 は20行ずつ表示。サーバー順を再ソートしない。
+- frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx:117 はAPI順のmap。解析結果の対象は仕入元別と取込別の2経路。原文・抽出ジョブの履歴順は対象外。
+
+### 2. 共用部品
+
+- backend/app/services/tcg_condition_review_svc.py:77 のreview_joinsは表示時の確定状態を返す。:165 のcr.canonicalが解析レビューと配信の表示値。保存済みar.condition_canonicalだけをソートすると人手確認後の値と不一致になり得る。
+- migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:283 はanalysis_resultsのUUID主キー、product_idのFK、extraction_item_idのUNIQUE、NUMERIC(14,2)価格を定義。
+
+### 3. 非共用部品
+
+- 上記3取得経路のORDER BYは別々。文字列化した12列の配信結果には商品UUIDが含まれないため、シート商品名だけで商品ID単位の保証はできない。
+- frontend/src/features/tcg-analysis-review/ItemComparison.tsx:24 は原文価格を表示。backend/app/services/tcg_analyzer_svc.py:1298 はraw_priceを数値化して保存。並べ替えはprice_normalizedを使い、元文字列は保持する。
+
+### 4. ルールの所在
+
+- STANDARD-WORKFLOW、ADR-113 handoff、ADR-154、feed-translation KGI-3/8/9を参照。未特定行の削除や名称での商品同一性推定は禁止。
+- Context7 MCPは利用不可。PO起動指示の代替許可により PostgreSQL 16公式ORDER BY / LIMIT資料を参照した。
+- https://www.postgresql.org/docs/16/queries-order.html と https://www.postgresql.org/docs/16/queries-limit.html は複数キー・NULL順・一意なページ順の必要性を確認する根拠。
+
+### 5. 維持の仕組み
+
+- .github/workflows/test.yml:206 はPostgreSQLを含む全pytest、:241 が実行行。既存test_tcg_distribution_pg.pyは精度ゲート中心で新しい順序の保証ではない。
+- backend/tests/test_tcg_condition_review.py:36 は独立CI PostgreSQL用DBを使う。test_tcg_import_progress_pg.py:34 は限定ローカル試験DBと専用schemaを前提にする。無関係な共有DBで既存fixtureを走らせない。
+
+### 6. 設計図との対照
+
+| 合意した条件 | 現状 | 判定 |
+|---|---|---|
+| 発売日の新しい順 | 配信のみ実装 | 不足 |
+| 商品IDで連続 | 配信は提供者優先・解析は原文順 | 不足 |
+| 8状態の指定順 | 3経路に指定なし | 不足 |
+| 同商品同状態で数値価格昇順 | 指定なし | 不足 |
+| 原文・IDを保持 | 既存のFKとレスポンスが保持 | 一致・維持 |
+| 絞り込み選択肢の順序 | 別処理。後続とPO指定 | 対象外として維持 |
+
+### 7. ノイズと境界
+
+- 公開シート https://docs.google.com/spreadsheets/d/1unwFM3MZikSmQjZ744uxhvzG2ENhuhcDsvse1dfSrm4/edit?gid=0 のCSV取得607行。30thの通常/プレミアムは各11行・各6か所に分散。これは名称一致の計数で、UUID一致の実測ではない。
+- 状態8種類・Damaged case 2行・発売日空欄4行。POはDamaged caseをCaseとSealed boxの間と明示した。正規化順以外の価格/数量/商品登録/解析再実行は変更しない。
+- ローカルPostgreSQL16.15でBEGIN READ ONLYを確認、合成292行×10並べ替えを別Python計算と照合し不一致0。証跡[result-order-evidence.json](result-order-evidence.json)。本番データや実サービスのJOIN試験ではない。
+- 指定GASの配信中HTMLを直接取得し、発売日初期sortと商品名日英検索を確認した。サーバー側getInventoryDataは未取得、実ブラウザーのデータ取得・検索再現は未実施。
+
+
+### RESULT-ORDER 公開シート再取得（2026-09-14）
+
+公開CSVをTLS検証有効のcurlで再取得し、612行/12列を確認。状態はSealed box418、No shrink box27、Damaged sealed box79、Damaged case2、Case77、Searched pack7、Unsearched pack1、Opened box1。初回607行と異なるため、配備後の確認に初回の行数・価格等を現行値として流用しない。差分を生じさせた処理主体は未確認。本セッションからシートへの書き込みは0。
+
+CSV SHA256: 26b0ced2a8b8c88f83fdbcfad4e8f5ce22d853797cfa3c5e5744704d08c9cce0。保存/tmp/sa-result-order-sheet-current.csv、集計とローカル取得時刻はresult-order-evidence.jsonのsheet_recheck。Python3.14 urllibの初回取得はCA証明書エラーで失敗したため、証明書検証を無効化せずOSのcurlで取得した。

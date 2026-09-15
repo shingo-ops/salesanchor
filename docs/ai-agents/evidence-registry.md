@@ -23,6 +23,25 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260914-TCG-RESULT-ORDER
+date: 2026-09-14
+agent: Codex (design partner; same-AI self-review)
+task: 解析結果・配信を発売日/商品ID/状態/数値価格の順へ
+scope: 3読み取り経路の設計・実装・試験準備。絞り込みの選択肢は後続。
+evidence:
+  - type: file
+    reference: docs/handoff/pmg-import-delivery-ssot/recon.md RESULT-ORDER
+    summary: 固定HEAD70d145f0。配信は提供者優先、解析2経路は原文/作成時刻優先。
+  - type: command
+    reference: docs/handoff/pmg-import-delivery-ssot/result-order-evidence.json
+    summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
+confidence: medium
+tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
+decision: 実装担当の限定補正後HEAD90c1ea25でCI3750成功/95skip。4097行の末尾97件SQL1429.450ms。限定実装検収APPROVE、本番未反映。
+follow_up: PO原文GO #3501を受領。別件PR3503のDeploy34810423329が商品統合migration外部キーで失敗しており反映停止。GO/文書gate34815204127成功、Backend job103872217191は3750成功/95skip。部分UNIQUE INDEXとFK参照の不整合を実物・PG16公式で照合。復旧後に最新main/CIを再照合。未マージ・本番未反映。
+```
+
+```text
 id: EV-20260910-LINE-ACCURACY-02
 date: 2026-09-10
 agent: Codex (design partner)
@@ -3167,3 +3186,5 @@ rootがBackend job103863947027のGitHub実行ログを直接取得。3746 passed
 対象PR3504承認時HEAD47f72ab3674eba06e28f1cef86b1757986995750。本便製品は容量超過時の実測サイズ記録・既存9制約の実構造照合の2点のみ。既存extraction_attemptsを記録正本として維持し、追加保存先/推測補完/過去データ書換え/再抽出/配信は行わない。対象migrationは20260914_010000_tcg_extraction_attempts.sqlのみ、相乗りPRなし。
 rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed28ea691ea93b04e4245afa8d744d85。本番backend/workerの対象serviceSHAはいずれも旧版28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4。現時点は本便未反映。
 CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
+
+EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74のbackup/migrations/smoke/Verify全成功を親直接確認。PO続行指示受領、GO #3501保持。mainの商品統合へ合わせる既存6ファイルの補正を既存実装担当へ依頼。共通UUIDはtcg_uuidを維持しpublic.products数値idと混同しない。正式CI再確認まで検収保留、未マージ。
