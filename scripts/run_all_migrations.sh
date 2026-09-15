@@ -661,3 +661,6 @@ run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
 
 # ADR-1002 Phase B: FK付替え UUID→INTEGER + SEQUENCE（冪等）
 run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql
+
+# ADR-1002 Phase C: public.products.tcg_uuid カラム・制約・インデックス削除
+run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql

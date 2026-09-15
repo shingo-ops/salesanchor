@@ -142,7 +142,7 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
             'search' AS keyword_type,
             k.keyword
         FROM {TCG_SCHEMA}.product_search_keywords k
-        JOIN public.products p ON p.tcg_uuid = k.product_id
+        JOIN public.products p ON p.id = k.product_id
         ORDER BY p.product_code, k.keyword
         UNION ALL
         SELECT
@@ -151,7 +151,7 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
             'exclude',
             k.keyword
         FROM {TCG_SCHEMA}.product_exclude_keywords k
-        JOIN public.products p ON p.tcg_uuid = k.product_id
+        JOIN public.products p ON p.id = k.product_id
         ORDER BY p.product_code, k.keyword
     """))
     rows = result.fetchall()

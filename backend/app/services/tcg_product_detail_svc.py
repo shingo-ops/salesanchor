@@ -135,9 +135,7 @@ async def update_product_detail(
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
         after = await _snapshot(db, code)
-        # audit_log.record_id is UUID type; use tcg_uuid if available, else generate one
-        _uuid_col = "tcg" + "_uuid"  # Phase C drops this column from public.products
-        _audit_pid = product.get(_uuid_col) or str(uuid4())
+        _audit_pid = str(uuid4())
         await db.execute(text(
             f"INSERT INTO {TCG_SCHEMA}.audit_log "
             "(table_name,record_id,action,changed_by,old_values,new_values) "

@@ -37,3 +37,4 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS required_output_value VARCHAR(255);
 CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_tcg_uuid
     ON public.products (tcg_uuid);
+
