@@ -145,3 +145,22 @@ origin/main b4e1456cを読取確認。tcg_diagnostics_svc.py:99–114のanalysis
 frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx:182–208の再実行ボタンはretry-extractionへ送信し、:248–273は抽出エラー/待機/長期実行/解析欠落の既存区分を表示する。完売専用runの再試行ボタンはこのファイルにはない。backend/app/routers/tcg_diagnostics.py:71–108はSaaS管理者限定。既存の診断画面をそのまま使えば抽出0件の完売候補も見える、とは言えない。
 
 これはコード照合であり、実ブラウザ試験ではない。個別確認画面を本便へ追加せず、T02の確認先/再実行経路を明示してから設計を確定する。製品/DB変更0、モデル要求0。
+
+## 10. 接続トランザクションの追加調査（2026-09-15）
+
+基点origin/main b4e1456cfdb999323c683af8b67985526f34a3c2、preflight成功。対象backend/appはこの基点との差分0。今回の本番照会/モデル要求/製品変更は0。
+
+| 事実 | ファイル:行 | 設計への影響 |
+|---|---|---|
+| analyzerの実呼出元は通常抽出と手動再解析の2か所 | tasks/tcg_extraction.py:281、services/tcg_product_master_svc.py:644。git grepでapp全域照合 | 2入口を同じ適用関数へ置換する。直接呼出しはテストで拒否を検証 |
+| 本体内commit3か所、マスタ読込のrollback3か所 | tcg_analyzer_svc.py:1462/1477/1488、:894/956/1060 | 外側のbeginだけでは不十分。内側commitと握り潰すrollbackの契約を変更 |
+| 3つのloaderは任意Exceptionを捕捉して空集合を返す | 同:877–910、942–970、1047–1073 | 新経路では例外伝播を必須にし、DB障害を既定判定に変えない |
+| 後処理モジュール内のcommit/rollback呼出0 | tcg_unit_recovery_svc.py全AST走査 | 既存後処理を外側トランザクションへ含める案の根拠。ただし下位関数の動的挙動試験を代替しない |
+| reanalysis_conditionはSELECTし辞書を返す | tcg_condition_review_svc.py:186–196 | 呼び出される読取関数はcommitしない。別のsave_condition_reviewのcommitとは区別 |
+| 既存の手動再解析はanalyzer後にanalysis_runs完了記録を別commit | tcg_product_master_svc.py:644,663–688 | 新経路では解析結果とこの完了記録も同一トランザクションに含める |
+| 診断欄の設置先はTcgSupplierQualityPage | frontend/src/pages/super-admin/TcgSupplierQualityPage.tsx:19,38–56 | 0明細/判定失敗の追加表示先候補が具体化。範囲追加のPO回答待ち |
+| SQLAlchemy固定依存2.0.38 | backend/requirements.txt:4 | 2.0系トランザクション契約を参照。最新版へ更新する作業ではない |
+
+ASTによる実測: analyzer本体commit=3、loader rollback=3、unit_recovery全関数commit/rollback=0、reanalysis_condition=0。これは構造検査であり、実DBロールバック試験ではない。
+
+Context7ツールは探索結果0件。起動指示が許可した代替として[SQLAlchemy 2.0公式](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)と[PostgreSQL 16公式](https://www.postgresql.org/docs/16/transaction-iso.html)を2026-09-15に確認。Session.beginの正常終了commit/例外rollbackと、Session.commitが外側トランザクションをcommitすることから、内側commit温存案を不採用とする。外部事例の成功率は接続の根拠にならないため使用しない。
