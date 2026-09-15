@@ -43,3 +43,5 @@ PO合意: 指定商品の〆は数量0・在庫表示から除外、他商品と
 - [DB SSOT・画面保守・判定接続の設計案](../../../handoff/tcg-import-latest-only/sold-out-rules-design.md)
 
 完売判断のみを管理する4タブのページ。DBを唯一の正本とし、指示/検索/除外を画面で保守する。詳細設計は草案、同一AIの自己審査REVISE、実装未着手。既存の完売結果閲覧便の完了とは区別する。
+
+- [完売管理の本番DB・抽出接続の実測](../../../handoff/tcg-import-latest-only/sold-out-rules-recon.md)（2026-09-15、読取のみ。実装合格とは区別）

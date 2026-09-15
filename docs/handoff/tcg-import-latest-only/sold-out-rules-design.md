@@ -8,7 +8,7 @@ status: Draft
 
 更新日: 2026-09-15。担当: 同一AIがPlanner→Architectの順で作成・自己審査。独立レビューではない。
 親: [提供元フィード翻訳](../../specs/inventory-management/feed-translation/README.md)。上位原則: [DB SSOT](../../specs/db-ssot/ideal-state.md)。
-合意正本: [C01〜C43・未決事項](sold-out-rules-handoff.md)。recon: [既存調査](recon.md)、[最新照合](sold-out-rules-handoff.md#6-q19の追加実物調査と次の確認2026-09-15)。
+合意正本: [C01〜C43・未決事項](sold-out-rules-handoff.md)。recon: [本番DBとコード接続の実測](sold-out-rules-recon.md)、[既存調査](recon.md)、[最新照合](sold-out-rules-handoff.md#6-q19の追加実物調査と次の確認2026-09-15)。
 経路: [ADR-113](../../adr/ADR-113-two-mode-dev-flow.md)のhandoff。手順は[STANDARD-WORKFLOW](../../STANDARD-WORKFLOW.md)を優先。
 
 **状態: 設計案作成済み、自己審査REVISE。POの業務要件合意と、以下の技術設計案の承認は区別する。実装カード未発行、製品/DB/CI/運用スクリプト変更なし、Gemini呼出し0回。**
@@ -44,7 +44,7 @@ SaaS管理者が「完売ルール」ページの4タブから完売判断の指
 | E09 | backend/app/services/tcg_extraction_record_svc.py:49-102 | 送信前に要求をDB記録し、通信中のDBトランザクションを閉じる既存例。完売判定にも送信前の版固定が必要 |
 | E10 | migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:55-74 | audit_logが既存。新たな独立履歴正本を作らず版ID参照を保存する |
 
-既存本番9行の観測は合意正本§4の過去記録。今回は本番DBカタログ/所有者を再照会していない。現時点の本番状態と断言しない。
+追加実測: [本番照合記録](sold-out-rules-recon.md)で2026-09-15のDBカタログ/所有者/権限/9ルールを再確認。コード基点は189cd338へ更新。以下の初稿E01〜E10は35a3b527時点の記録として保持し、接続の最新判断は追加実測を優先する。
 
 Context7ツールは利用不可。起動指示の代替許可により2026-09-15に公式資料を確認した。
 - [PostgreSQL16行ロック](https://www.postgresql.org/docs/16/explicit-locking.html#LOCKING-ROWS): FOR UPDATEは競合する更新を待たせる。DB版比較と組み合わせて古い画面からの上書きを拒否する。
@@ -67,14 +67,14 @@ Context7ツールは利用不可。起動指示の代替許可により2026-09-1
 
 配置案は既存TCG_SCHEMA内。全仕入元共通で1つのpolicyを参照し、supplier_id別の設定を作らない。「全仕入元」を「全SaaSテナント」へ拡張しない。共通public配置が必要という実カタログ/親仕様の根拠が出た場合は自己判断で複製せず再設計する。
 
-以下の物理名は提案名。実DB上の同名オブジェクト/所有者/権限/新規テナント経路を照合後にDDLへ確定する。既存のstatus masterをそのままCRUDする案は版・履歴・削除維持を満たさないため、完売判断の責任を追加専用の版構造へ移管し旧完売条件を引退させる。稼働中の二重正本は作らない。
+以下の物理名は提案名。本番で同名sold_out_%表0、対象表所有者jarvis、アプリsalesanchor_appのCREATE不可を実確認。新版はmigrationで作る。新規テナントへのDDL/権限適用は試験後に確定する。既存のstatus masterをそのままCRUDする案は版・履歴・削除維持を満たさないため、完売判断の責任を追加専用の版構造へ移管し旧完売条件を引退させる。稼働中の二重正本は作らない。
 
 | テーブル案 | 保持する事実・主要列 | 制約/参照 |
 |---|---|---|
 | sold_out_policies | policy_id、active_revision_id、draft_revision_id、current_suite_revision_id、lock_version、activation_state | policy行が本番参照の唯一の入口。IDは同じpolicy配下の版へのFK、CAS更新 |
 | sold_out_policy_revisions | revision_id、policy_id、parent_revision_id、instruction_version_id、profile_version_id、created_by、created_at、content_digest | 保存のたびに新しい不変版を作る。語句全文をJSONコピーしない |
 | sold_out_instruction_versions | version_id、policy_id、body、created_by、created_at | 完売判断の指示本文。未保存入力以外に第二の本文正本なし |
-| sold_out_execution_profile_versions | version_id、policy_id、model_id、generation_config、output_schema、input_limits、sold_out_status_ref、created_at | モデル/出力契約/上限はDB。status_refは既存DBの正式な完売表示値を参照し、コードに表示値を重複定義しない。具体初期値は実機確認後 |
+| sold_out_execution_profile_versions | version_id、policy_id、model_id、generation_config、output_schema、input_limits、compatibility_output、created_at | モデル/出力契約/上限はDB。旧status表への必須FK案はQAで同表がないため撤回。互換出力値は旧DBから移行した値を新版の正本で保持する修正案。旧完売行は稼働判定から引退させ歴史として保持し、同期更新する第二正本にしない。具体移行契約は要確定 |
 | sold_out_rules | rule_id、policy_id、legacy_status_id（移行元のみ） | 検索/除外をまとめる不変の識別子。物理削除しない |
 | sold_out_rule_versions | rule_version_id、rule_id、title、context_instruction、created_by、created_at | ルールの説明/適用文脈もDB。語句追加/削除/説明変更で新規版 |
 | sold_out_rule_words | word_id、rule_version_id、kind、text、position | 1語/1行。kindは検索/除外を区別する構造。CSV文字列を正本にしない。空文字不可、同版/種別/同一語の重複不可 |
@@ -85,9 +85,9 @@ Context7ツールは利用不可。起動指示の代替許可により2026-09-1
 | sold_out_run_results | run_id、case_version_idまたはextraction_item_id、decision、source_spans、rule_version_refs、validation_error | 正規化した判断結果。対象/原文/版のFKと一致検証。生レスポンスは実行証跡領域で保持、ここから再判定しない |
 | audit_log（既存） | table_name、record_id、action、changed_by、changed_at、old_values/new_values | old/newは変更前後のrevision ID等を記録。変更と同一トランザクションで書込。独立した監査正本を増やさない |
 
-実行証跡: 抽出専用AttemptRecorderをそのまま呼ぶとextraction_jobsをrunningにするため、テストから流用しない。完売用runに従属するattempt表/共通の保存専用部品のどちらで実送信を保存するか、現行証跡保管・所有者を確認して確定する（未決T02）。モデルに送る構造は同じ生成関数、永続化アダプタと適用先は分離する。
+実行証跡: 抽出専用AttemptRecorderはextraction_jobsをrunningにし、失敗時にerrorへ戻すことを実物で確認。テスト/完売だけの通信にそのまま流用しない。完売用runに従属する専用attempt記録を追加する案へ絞る。既存jobを更新せずに送信前入力/受信内容/検証/失敗を保存する。原文削除時の保管/FK契約はT02に残す。モデルに送る構造は同じ生成関数、永続化アダプタと適用先は分離する。
 
-不変版のDB保証は、参照後のUPDATE/DELETE拒否をDB権限またはtriggerで実装する。権限の実在が未確認のため具体GRANT文をここで創作しない。アプリの画面禁止だけでは保証としない。削除済みルールの最後の版はrevision参照から求め、可変の復元用コピーは置かない。
+不変版のDB保証は、参照後のUPDATE/DELETE拒否をDB権限またはtriggerで実装する。実測でアプリroleは既存表の更新/削除が可能、独自triggerは0。不変性が既にあると扱わず、新版への改変拒否制約をmigrationとPostgreSQL試験で追加する。アプリの画面禁止だけでは保証としない。削除済みルールの最後の版はrevision参照から求め、可変の復元用コピーは置かない。
 
 ## 5. フロントエンド契約
 
@@ -166,7 +166,7 @@ DBに有効版がない/読めない、実行設定欠落、モデル通信失�
 
 新経路の完売判断はこのDB版と検証済みrun結果だけが担当する。既存resolve_status_v2のEXCLUDE語句一致を重ねて適用しない。非完売の結果は「在庫あり」の断定ではない。予約/在庫の既存OUTPUT処理を使う際も、完売専用の入力とは区別する。null/欠落/不正結果は確認待ちとし、旧完売判定やIn Stockへのfallbackを使わない。
 
-analysis_results.status等は既存解析出力として扱い、判定runへの参照を持たせて再現可能にする。本便は在庫数や配信を変更する新処理を実装しない。test-purposeのrunからanalysis_results/extraction_jobs/在庫へ書き込む関数を呼ばない。通常接続の正確な呼出位置、既存ジョブの再解析互換とDB参照制約はT02の実機照合で確定するまで実装カードにしない。
+analysis_results.status等は既存解析出力として扱い、判定runへの参照を持たせて再現可能にする。本便は在庫数や配信を変更する新処理を実装しない。test-purposeのrunからanalysis_results/extraction_jobs/在庫へ書き込む関数を呼ばない。通常接続位置は抽出明細commit後・analyzerのロック前と特定した（追加実測§4）。手動再解析の別入口、手動訂正明細のskip、empty原文、原文削除時のFKと失敗再実行の契約はT02に残す。実装カードは未発行。
 
 ## 9. 移行・初期値・二重正本の廃止
 
@@ -228,9 +228,22 @@ analysis_results.status等は既存解析出力として扱い、判定runへの
 | 未解決ID | 内容 | 解消方法/担当 |
 |---|---|---|
 | Q24 | 本番ルール削除もテスト合格を必要とするか。C27とC30の接点 | POへ一問で確認済み・回答待ち。推奨は削除も合格後反映 |
-| T01 | 実DBの新旧オブジェクト/所有者/権限/全対象schema/新規tenantへの適用契約 | 設計担当の読み取り調査。未確認DDLを実装役へ委ねない |
-| T02 | 完売用実送信証跡、通常runからanalysis_resultsへのFK/呼出位置、旧job再解析・原文削除時の参照保全 | 既存実機とコード照合後に物理契約を確定 |
-| T03 | 実モデル/SDKの出力契約対応、追加1要求/投稿の費用/遅延/上限、実行設定の初期値と保守先 | DB/CLI等実設定を確認し公式仕様と照合。実呼出しは許可を確認して実測。業務選択が必要ならPOへ |
+| T01（一部解消） | 本番所有者/role権限/キー/新版表0/QAで旧status表不在を実測。残りは新版DDLと新規tenantの適用契約 | 実測recon§2〜3。旧status必須FKを撤回し、migration/不変制約を確定して実PostgreSQLで検証 |
+| T02（一部解消） | 通常接続位置と手動再解析の別入口を特定。専用attempt案へ絞った。手動訂正明細/empty/失敗再実行/削除連鎖の最終契約が残る | 実測recon§4。商品訂正を上書きせず、抽出済みjobを再抽出しない設計を確定 |
+| T03（一部解消） | SDK2.8.0の構造化設定欄、既存64件のモデル名を確認。新契約のモデル試験/費用/遅延/上限は未実測 | 既存抽出の平均37.28秒を追加判定の見積りに流用しない。許可を確認して別途モデル試験 |
 | Q07b/Q18b | 未合意の語句/曖昧表現をどう扱うか | 原文例を調査して一問ずつ確認。未承認語を初期版へ登録しない |
 
 設計承認前にこの表を閉じ、同じ版の文書で再審査する。既存GO3505/委任入口を新機能の実装承認に転用しない。文書保存/設計合格/PO承認/実装/本番適用を別々に報告する。
+
+## 13. 実測後の接続プラン（2026-09-15改訂）
+
+1. 既存の原文→job→明細→解析結果のID連鎖をそのまま使う。31,676明細/解析結果の関連切れ0を確認した。商品/原文の新正本は作らない。
+2. 完売判断の指示/語句をDBの版構造へ保存し、4タブの画面から保守する。QAには旧status表がないので、旧表への必須FKを新機能の動作条件にしない。新機能の初期値は画面/正式移行で登録し、コードで補わない。
+3. workerは既存抽出を完了して明細を保存した後、DBの有効版で完売判断を記録する。通信中に既存の原文/解析行ロックを持たない。extractジョブのdoneと完売runの成功は別々に管理する。
+4. 既存analyzerには完了済みrunのIDを渡し、原文hash/明細ID/版を検証して完売結果だけを採用する。旧完売語句一致を二重適用しない。商品・価格・数量等の処理を完売プロンプトで書き換えない。
+5. 別入口の手動再解析、商品手動訂正の保護、0明細原文、失敗再実行を接続試験に追加する。現状のcontinue分岐やerror→pendingの再抽出を無条件流用しない。
+6. 削除・復元・再配備、同時編集、DB障害を実PostgreSQLで検証し、原文テスト合格後に本番切替する。実測を伴わない設計合格/正答率100%を出さない。
+
+追加受入条件: AC17=通常/手動/直接呼出しの3入口でrun検証を迂回できない、AC18=モデル通信中の原文/job/解析行ロック0、AC19=手動商品訂正の前後値を保持し完売確認理由を欠落させない、AC20=QAの旧status表不在でも新版構造を構築できる、AC21=0明細/完売run失敗を通常判断完了と表示しない。いずれも未実行の試験計画。
+
+判定はREVISE継続。基礎の接続場所・既存DBとの関係を根拠付きで示すことはできたが、上記T01〜T03の残件を完了した意味ではない。
