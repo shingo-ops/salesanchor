@@ -379,7 +379,7 @@ async def create_product(
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
                  :mark, :english_title, TRUE)
-            RETURNING id::text AS id, tcg_uuid
+            RETURNING id::text AS id, id AS int_id
             """
         ),
         {
@@ -399,7 +399,7 @@ async def create_product(
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
     product_int_id = new_row.id      # integer as text, e.g. "123"
-    product_uuid = new_row.tcg_uuid  # UUID for keyword FK references
+    product_id_int = new_row.int_id  # integer for keyword FK references
 
     # search_keywords INSERT
     if search_keywords.strip():
@@ -414,7 +414,7 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
     # exclude_keywords INSERT
@@ -430,7 +430,7 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
     if commit:
