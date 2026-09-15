@@ -11,10 +11,13 @@ BEGIN
            OR to_regclass(format('%I.extraction_jobs', target.nspname)) IS NULL THEN
             CONTINUE;
         END IF;
-        EXECUTE format('SELECT p.tcg_uuid AS id, p.name AS japanese_title, w.code AS work_code
+        EXECUTE format('SELECT p.tcg_uuid AS id, p.name AS japanese_title, w.code AS work_code, p.work_id
                         FROM public.products p LEFT JOIN %I.tcg_series w ON w.id=p.work_id
                         WHERE p.product_code=''PM0200''', target.nspname) INTO product;
-        IF product.id IS NULL OR product.work_code IS NULL THEN
+        IF product.id IS NULL THEN
+            CONTINUE;
+        END IF;
+        IF product.work_id IS NOT NULL AND product.work_code IS NULL THEN
             CONTINUE;
         END IF;
         IF product.japanese_title IS DISTINCT FROM 'MEGA スタートデッキ100 バトルコレクション'
