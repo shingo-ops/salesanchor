@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
+from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
 URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 if not URL and os.getenv("CI"):
@@ -24,6 +25,16 @@ pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposabl
 
 async def create_schema(conn, schema, corrections=True):
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
+    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+    try:
+        await conn.exec_driver_sql("SAVEPOINT public_products_ddl")
+        for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+            stmt = stmt.strip()
+            if stmt:
+                await conn.exec_driver_sql(stmt)
+    except Exception:
+        await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
+    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",

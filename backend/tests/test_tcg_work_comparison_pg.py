@@ -55,11 +55,11 @@ def fixture_data(pg, monkeypatch):
     with connection.cursor() as cursor:
         migration = Path(__file__).resolve().parents[2] / "migrations/20260903_160000_tcg_normalization_rules_t004.sql"
         cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'共通商品',99 FROM {SCHEMA}.tcg_products WHERE code='PM0200'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'共通商品',99 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'共通商品',99 FROM public.products WHERE product_code='PM0200'", (str(uuid4()),))
     with connection.cursor() as cursor:
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,id,'ALPHA BETA',100 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'LIMITED EDITION',100 FROM {SCHEMA}.tcg_products WHERE code='PM0123'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'ALPHA BETA',100 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
+        cursor.execute(f"INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'LIMITED EDITION',100 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
     cases = [
         ("EB01 1BOX 1000円", record("EB01", 1)),
         ("メモリアルコレクション 1BOX 1000円", record("メモリアルコレクション", 1)),
@@ -165,7 +165,7 @@ def test_changes_during_model_call_invalidate_entire_result(pg, monkeypatch, cha
             if change == "raw":
                 cursor.execute(f"UPDATE {SCHEMA}.extraction_items SET raw_memo='changed'")
             elif change == "master":
-                cursor.execute(f"UPDATE {SCHEMA}.tcg_products SET japanese_title='changed' WHERE code='PM0123'")
+                cursor.execute("UPDATE public.products SET name='changed' WHERE product_code='PM0123'")
             elif change == "correction":
                 cursor.execute(f"INSERT INTO {SCHEMA}.item_corrections(extraction_item_id,source_message_id,field_name,human_value,corrected_by) SELECT i.id,j.source_message_id,'raw_memo','changed','fixture' FROM {SCHEMA}.extraction_items i JOIN {SCHEMA}.extraction_jobs j ON j.id=i.extraction_job_id LIMIT 1")
             elif change == "analysis":

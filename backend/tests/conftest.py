@@ -724,6 +724,7 @@ async def setup_test_db(test_engine):
                 product_code VARCHAR(20),
                 category VARCHAR(100),
                 mark VARCHAR(100),
+                name VARCHAR(255),
                 name_en VARCHAR(255),
                 name_ja VARCHAR(255) NOT NULL,
                 status VARCHAR(20) DEFAULT 'active',
@@ -763,7 +764,14 @@ async def setup_test_db(test_engine):
                 search_keywords TEXT,
                 exclude_keywords TEXT,
                 related_series VARCHAR(255),
-                display_order INTEGER
+                display_order INTEGER,
+                tcg_uuid UUID,
+                division_id UUID,
+                work_id UUID,
+                manufacturer_id UUID,
+                product_category_id UUID,
+                category_class TEXT,
+                is_active BOOLEAN DEFAULT true
             )
         """))
         await conn.execute(text("""

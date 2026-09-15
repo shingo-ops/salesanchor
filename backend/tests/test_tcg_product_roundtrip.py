@@ -19,10 +19,11 @@ def snapshot():
     return {
         "product": {
             "id": "00000000-0000-4000-8000-000000000001",
-            "code": "PM001",
-            "japanese_title": "商品",
+            "tcg_uuid": "00000000-0000-4000-8000-000000000001",
+            "product_code": "PM001",
+            "name": "商品",
             "mark": None,
-            "english_title": "",
+            "name_en": "",
             "release_date": None,
             "is_active": False,
             "required_output_value": "private",
@@ -105,7 +106,7 @@ def test_revision_covers_all_stored_identity(part, field, value):
 @pytest.mark.asyncio
 async def test_export_and_unchanged_preview_large_cells(monkeypatch):
     snap = snapshot()
-    snap["product"]["english_title"] = "x" * 150000
+    snap["product"]["name_en"] = "x" * 150000
     monkeypatch.setattr(svc, "snapshots", AsyncMock(return_value=[snap]))
     db = AsyncMock()
     db.execute.return_value.fetchall = lambda: []
@@ -114,7 +115,7 @@ async def test_export_and_unchanged_preview_large_cells(monkeypatch):
     checked, plans = await svc.inspect_update(db, raw, "export.csv")
     assert checked["unchanged"] == 1 and checked["blocked"] == 0
     assert plans[0]["sets"] == plans[0]["words"] == {}
-    snap["product"]["english_title"] = "x" * svc.MAX_BYTES
+    snap["product"]["name_en"] = "x" * svc.MAX_BYTES
     with pytest.raises(svc.RoundtripError) as error:
         await svc.export_csv(db)
     assert error.value.status == 413
