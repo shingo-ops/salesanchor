@@ -1325,3 +1325,9 @@ mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/
 統合048aff3e/run34916372465/job104214798768は3 failed /3743 passed /95 skipped /3 errors、267.73秒。失敗はinventory_aggregatedのtcg_type欠落3件とrls_bootstrap_ordering/products_tcg_type_fkのjan_code欠落3件。新しい順序4試験の失敗なし。一方main対照PR3512/job104208324418は3745成功/95skip270.81秒。
 実装担当の読み取り診断: 今回のimport PG fixtureが共有jarvis_test_dbで_PUBLIC_PRODUCTS_DDLを実行し、tenant schemaだけ破棄するためpublic.productsの不足列定義が残り得る。既存condition/work_matching fixtureはランダム専用DB内で同正本DDLを使う。観測エラーと一致する有力原因であり、対照再実行前に因果を断定しない。
 補正設計: test_tcg_import_progress_pg.pyだけを既存専用DBパターンへ整合。元URLの共有DBは変更しない。テストの全準備・実行・破棄を固有一時DB内に限定し、接続を閉じて終了時/例外時cleanupする。DDL正本・製品・CI・本番は変更しない。判定基準は既存全テスト成功、並び/値保持/4097負荷成功。実装担当へ限定引き継ぎ済み、現状検収REVISE、マージ停止。
+
+
+### RESULT-ORDER 隔離補正の正式検収（2026-09-15）
+
+fd3cec1f/run34917101528/job104217035550: 3749 passed/95 skipped/失敗0、290.51秒。前回の3failure/3errorは解消。4097行全経路SQL10秒以内、review先頭4082.721ms/末尾97件3029.845ms、import先頭4880.161ms/末尾5094.540ms、配信4097件6954.285ms。試験DBのwarm-cache EXPLAIN ANALYZE値であり本番画面速度ではない。機能/値保持/負荷の限定検収APPROVE（親の読み取り確認、同一AI検収）。
+試験中mainにPR3497/3505が入りa7188a13となったため正式手順で追従。今回6製品/試験ファイルはfd3cec1fから差分0を直接確認。最終統合HEADで必須CIを再確認後にGO #3501の範囲でマージ・配備へ進む。未マージ/未配備。

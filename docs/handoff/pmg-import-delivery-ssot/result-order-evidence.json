@@ -340,5 +340,18 @@
     "reason": "PR3503 migration FK references public.products(tcg_uuid) without matching unique constraint",
     "merged": false,
     "production_changed_by_this_task": false
+  },
+  "isolated_fixture_ci": {
+    "head": "fd3cec1f7114d3f168bdf8059e5742e0e464c00e",
+    "run": 34917101528,
+    "job": 104217035550,
+    "passed": 3749,
+    "skipped": 95,
+    "failed": 0,
+    "errors": 0,
+    "seconds": 290.51,
+    "review_tail_ms": 3029.845,
+    "distribution_4097_ms": 6954.285,
+    "production_changed": false
   }
 }
