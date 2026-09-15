@@ -67,7 +67,7 @@ def _binding(selected: str) -> str:
         pairs[key] = f"cr_data.ar->'{key}'"
     for key in ("quantity_normalized", "price_normalized"):
         pairs[key] = f"trim_scale((cr_data.ar->>'{key}')::numeric(14,2))"
-    pairs.update({"product_title": "cr_product.japanese_title", "product_work": "cr_product.work_id",
+    pairs.update({"product_title": "cr_product.name", "product_work": "cr_product.work_id",
                   "product_category": "to_jsonb(cr_product)->'product_category_id'",
                   "product_category_class": "to_jsonb(cr_product)->'category_class'",
                   "selected_condition": _definition(selected), "empty_condition": _definition("to_jsonb(cr_empty)")})
@@ -101,7 +101,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     return f"""
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
     CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar) cr_data
-    LEFT JOIN {schema}.tcg_products cr_product ON cr_product.id::text = cr_data.ar->>'product_id'
+    LEFT JOIN public.products cr_product ON cr_product.tcg_uuid::text = cr_data.ar->>'product_id'
     LEFT JOIN {schema}.conditions cr_empty ON cr_empty.code = 'CN0011'
     LEFT JOIN {schema}.conditions cr_selected ON cr_selected.id::text = ({selected})
     LEFT JOIN LATERAL (
@@ -229,8 +229,8 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         # Lock all definitions used by either current or acknowledged bindings. No gaps
         # are accepted: absent CN0011 with mentions remains fail-closed at read time.
         await db.execute(text(f"SELECT id FROM {TCG_SCHEMA}.conditions ORDER BY id FOR SHARE"))
-        await db.execute(text(f"SELECT p.id FROM {TCG_SCHEMA}.tcg_products p "
-            f"JOIN {TCG_SCHEMA}.analysis_results ar ON ar.product_id=p.id "
+        await db.execute(text("SELECT p.tcg_uuid FROM public.products p "
+            f"JOIN {TCG_SCHEMA}.analysis_results ar ON ar.product_id=p.tcg_uuid "
             "WHERE ar.extraction_item_id=CAST(:eid AS uuid) FOR SHARE OF p"), params)
         fingerprint = (await db.execute(text("SELECT " + digest_sql("CAST(:request AS jsonb)")),
             {"request": json.dumps(request, sort_keys=True)})).scalar_one()

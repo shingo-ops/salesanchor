@@ -36,7 +36,7 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
     JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-    LEFT JOIN {TCG_SCHEMA}.tcg_products p ON p.id = ar.product_id
+    LEFT JOIN public.products p ON p.tcg_uuid = ar.product_id
     {review_joins(schema=TCG_SCHEMA)}
 """
 
@@ -62,7 +62,7 @@ def _build_where(
         conditions.append(
             "(ei.raw_product_name ILIKE :query"
             " OR COALESCE(ts.name, '') ILIKE :query"
-            " OR COALESCE(p.code, '') ILIKE :query)"
+            " OR COALESCE(p.product_code, '') ILIKE :query)"
         )
         params["query"] = f"%{query}%"
 
@@ -192,8 +192,8 @@ async def fetch_analysis_results(
             ei.raw_memo,
             ei.line_start,
             ei.line_end,
-            p.code                               AS product_code,
-            p.japanese_title                     AS product_title,
+            p.product_code                       AS product_code,
+            p.name                               AS product_title,
             ar.product_id::text                  AS product_uuid,
             ar.pid_resolved,
             ar.pid_basis,

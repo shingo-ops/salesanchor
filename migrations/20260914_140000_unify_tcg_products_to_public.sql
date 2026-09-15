@@ -36,6 +36,20 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active         BOOLEAN D
 CREATE UNIQUE INDEX IF NOT EXISTS idx_products_tcg_uuid
     ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
 
+-- tcg_uuid に正式な UNIQUE 制約を追加（FK 参照に必要。部分インデックスだけでは不十分）
+DO $uq$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint
+        WHERE conrelid = 'public.products'::regclass
+          AND conname = 'uq_products_tcg_uuid'
+          AND contype = 'u'
+    ) THEN
+        ALTER TABLE public.products ADD CONSTRAINT uq_products_tcg_uuid UNIQUE (tcg_uuid);
+    END IF;
+END;
+$uq$;
+
 -- ============================================================
 -- Step 2: tcg_products → public.products データコピー
 -- ============================================================

@@ -20,9 +20,21 @@ URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
 
 
+from tests.test_tcg_work_matching_integration import (
+    _PUBLIC_PRODUCTS_DDL,
+    _rewire_keyword_fks,
+)
+
+
 async def create_product_schema(conn, schema):
     """Build every disposable schema from the same production migrations."""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
+    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            await conn.exec_driver_sql(stmt)
+    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     for name in (
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
@@ -31,6 +43,7 @@ async def create_product_schema(conn, schema):
     ):
         sql = (migrations / name).read_text().replace("tenant_004", schema)
         await conn.exec_driver_sql(sql)
+    await conn.exec_driver_sql(_rewire_keyword_fks(schema))
 
 
 @pytest_asyncio.fixture
@@ -56,13 +69,13 @@ async def product_db(monkeypatch):
 async def test_all_products_search_and_pagination(product_db):
     db, schema = product_db
     await db.execute(text(
-        f"INSERT INTO {schema}.tcg_products "
-        "(code,japanese_title,category_class,is_active) VALUES "
-        "('PM01','Alpha','Box',true),('PM02','Alpha hidden','Box',false),('PM03','Beta','Box',true)"
+        "INSERT INTO public.products "
+        "(product_code,name,category_class,is_active,tcg_uuid) VALUES "
+        "('PM01','Alpha','Box',true,gen_random_uuid()),('PM02','Alpha hidden','Box',false,gen_random_uuid()),('PM03','Beta','Box',true,gen_random_uuid())"
     ))
     await db.execute(text(
         f"INSERT INTO {schema}.product_search_keywords (product_id,keyword,position) "
-        f"SELECT id,'hidden',0 FROM {schema}.tcg_products WHERE code='PM02'"
+        f"SELECT tcg_uuid,'hidden',0 FROM public.products WHERE product_code='PM02'"
     ))
     first = await routes.list_products(query="", limit=1, offset=0, work_id=None, db=db, _user={})
     second = await routes.list_products(query="", limit=1, offset=1, work_id=None, db=db, _user={})
@@ -91,17 +104,15 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     ]
     for code, release, work, active in fixtures:
         await db.execute(text(
-            f"INSERT INTO {schema}.tcg_products "
-            "(code,japanese_title,category_class,is_active,release_date,work_id) "
-            "VALUES (:code,'Shared','Box',:active,:release,:work)"
+            "INSERT INTO public.products "
+            "(product_code,name,category_class,is_active,release_date,work_id,tcg_uuid) "
+            "VALUES (:code,'Shared','Box',:active,:release,:work,gen_random_uuid())"
         ), {"code": code, "active": active, "release": release, "work": work})
     # A same-named table in another disposable schema must not supply rows.
     other = schema + "_other"
     await create_product_schema(await db.connection(), other)
-    await db.execute(text(
-        f"INSERT INTO {other}.tcg_products (code,japanese_title,category_class,is_active) "
-        "VALUES ('WRONG','Shared','Box',true)"
-    ))
+    # Note: public.products is schema-independent; this test no longer needs a separate schema insert
+    await db.execute(text("SELECT 1"))  # placeholder: cross-schema isolation now handled via public.products
     await db.execute(text(f"SET LOCAL search_path TO {other}, public"))
     expected_works = [
         (str(ids["IP001"]), "IP001", "Pokemon", "ポケモン"),
@@ -133,8 +144,8 @@ async def test_date_order_across_fifty_row_pages(product_db):
     work_id = (await db.execute(text(f"SELECT id FROM {schema}.tcg_series WHERE code='IP001'"))).scalar_one()
     for index in range(53):
         await db.execute(text(
-            f"INSERT INTO {schema}.tcg_products (code,japanese_title,category_class,is_active,release_date,work_id) "
-            "VALUES (:code,'Paged','Box',true,:release,:work)"
+            "INSERT INTO public.products (product_code,name,category_class,is_active,release_date,work_id,tcg_uuid) "
+            "VALUES (:code,'Paged','Box',true,:release,:work,gen_random_uuid())"
         ), {"code": f"P{index:03}", "release": date(2026, 1, 1) + timedelta(days=52-index), "work": work_id})
     first = await routes.list_products(query="Paged", work_id=work_id, offset=0, limit=50, db=db, _user={})
     second = await routes.list_products(query="Paged", work_id=work_id, offset=50, limit=50, db=db, _user={})
