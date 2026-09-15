@@ -38,7 +38,7 @@ main7b3aea8cの既存analysis-results APIには売り切れ専用フィルター
 
 ### 正本・対象・表示
 
-現在のanalysis_results.statusに保存された値が厳密にSold outの明細だけを対象とする。判定をページ/新サービスで再計算せず、空欄やexclusionのある行から完売を推測しない。DB新表/列/移行/在庫更新/モデル呼出し不要。原文はsource_messages、原文の数量/価格/単位/状態/メモはextraction_items、商品名は既存tcg_products（なければ原文名）、仕入元は既存のチャネル/仕入元マスタをLEFT JOINする。未登録マスタによる行落ちを起こさない。
+現在のanalysis_results.statusに保存された値が厳密にSold outの明細だけを対象とする。判定をページ/新サービスで再計算せず、空欄やexclusionのある行から完売を推測しない。DB新表/列/移行/在庫更新/モデル呼出し不要。原文はsource_messages、原文の数量/価格/単位/状態/メモはextraction_items、商品名はpublic.products（なければ原文名）、仕入元は既存のチャネル/仕入元マスタをLEFT JOINする。未登録マスタによる行落ちを起こさない。
 
 SaaS管理者メニューのLINE取込直後、メニュー名・タイトル「完売ルール」（英語Sold-out rules）。URLは/super-admin/tcg-sold-out、navKeyはnav.superAdminTcgSoldOut。副説明は「保存された解析結果の売り切れ判定を確認できます。現在の在庫数・反映状況を示す一覧ではありません。」とし、画面に現在庫や反映済みを捏造しない。初期範囲はすべての原文。絞込みは「すべて/有効な原文/過去の原文」と商品名・仕入元名の検索。原文が有効であることと商品が在庫ありであることを混同しない。
 
@@ -50,13 +50,13 @@ SaaS管理者メニューのLINE取込直後、メニュー名・タイトル「
 
 既存tcg_analysis_review routerにGET `/api/v1/tcg/sold-out-results`を追加し、require_super_admin/get_db/TCG_SCHEMAを再利用。新しい読み取り専用サービスへSQLを集約し、既存analysis-resultsの既定条件/型を変えない。
 
-入力はq（string任意、最大100文字、前後空白を除去、空なら無条件）、source_scope（all/active/history、既定all）、offset（整数0以上、既定0）、limit（整数1〜100、既定50）の4件。未知scope/不正数値は422。qはei.raw_product_name/p.japanese_title/ts.nameの部分一致。ワイルドカード%/_/エスケープ文字は文字として扱い、サーバーでLIKE用エスケープしてbindする。クライアントがstatusを指定する口は作らず、WHERE ar.status='Sold out'をサーバーで固定する。
+入力はq（string任意、最大100文字、前後空白を除去、空なら無条件）、source_scope（all/active/history、既定all）、offset（整数0以上、既定0）、limit（整数1〜100、既定50）の4件。未知scope/不正数値は422。qはei.raw_product_name/p.name/ts.nameの部分一致。ワイルドカード%/_/エスケープ文字は文字として扱い、サーバーでLIKE用エスケープしてbindする。クライアントがstatusを指定する口は作らず、WHERE ar.status='Sold out'をサーバーで固定する。
 
 成功JSONはitems、total（0以上integer）、offset、limit、as_of（timezone付きISO日時）の5キー。1明細のキー/型は以下で固定する。
 
 - analysis_result_id/extraction_item_id/source_message_id: UUID string。
-- supplier_id/product_id: UUID string|null。仕入元はsc.supplier_idの参照先の実在ts.id、商品は実在p.id。原文の所属を別の商品へ書き換えない。
-- provider/product_title/raw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_text: string（SQL NULLは空文字）。product_titleはp.japanese_title、なければ空文字。UIで原文名fallbackを行い、原文採用と分かる表示にする。
+- supplier_id/product_id: UUID string|null。仕入元はsc.supplier_idの参照先の実在ts.id、商品は実在p.tcg_uuid。原文の所属を別の商品へ書き換えない。
+- provider/product_title/raw_product_name/raw_quantity/raw_price/raw_unit/raw_state/raw_memo/raw_text: string（SQL NULLは空文字）。product_titleはp.name、なければ空文字。UIで原文名fallbackを行い、原文採用と分かる表示にする。
 - status: literal Sold out。
 - source_is_active: boolean|null。nullは「原文状態不明」、history条件はFALSE、active条件はTRUE、allはすべて。
 - line_posted_at: timezone付きISO日時|null。UIはJST表示。
@@ -93,3 +93,13 @@ Planner: 既存DBだけで提供できる閲覧ページの仕様を確定。Arc
 ## 継続
 
 DB正本: docs/specs/db-ssot/README.md。新テーブル、マスタコピー、ブラウザーへの業務データ永続化を作らない。現在庫の自動反映・完売解除・分類精度変更は後続設計。本便でモデルの正答率改善を称さない。
+
+## 2026-09-15 商品正本移行への追従（SSOT04）
+
+POの「解消したので進めてくれ」とGO #3505の範囲で、閲覧仕様を維持して正本変更へ追従する。PR3507/3512と本番HEAD26032c74、Deploy34914789016成功をroot実確認。read-only SQLでanalysis_resultsの商品FK先public.products、UUID付き商品297件、Sold out591行・商品JOIN518行を確認。残り73行を落とさない。これは確認時点の値であり固定期待値ではない。
+
+商品名の正本はpublic.products.name。商品JOINはLEFT JOIN public.products p ON p.tcg_uuid=ar.product_id、返却product_idはp.tcg_uuid（UUID/null）。整数PKのp.idを返さない。旧tcg_productsへの二重参照・コピー・同期・fallbackは追加しない。商品なし時の原文名表示と全既存契約を保持。根拠: ADR-1001、main backend/app/services/tcg_analysis_review_svc.py:39/:196、現行routerのUUID契約。ADRのStatusはProposedのままであるが、PR3507/3512のマージと本番実物を状態根拠とする。
+
+受入試験: 既存2migrationによる原文/解析構造の作成は保持。新商品表はmainの共通backend/tests/fixtures/public_products_test.sqlとtest_tcg_work_matching_integrationのFK配線関数を再利用する。試験専用使い捨てCI DBのみで構築し、実SQL読取はREAD ONLY。移行全体を試すと称さない。旧表と新表の同UUIDの商品名を相違させ、新正本名だけが表示/検索されること、返却UUID、完売4行/他状態除外/未登録2行維持/原文/ページングを検証。新たなDDLコピーは作らない。
+
+Planner: 本番正本への参照追従はサービス3箇所と既存試験/仕様2文書で足りる。Architect（同一AI自己審査）: APPROVE。現行本番FKと名称/UUID型に一致、書込0、全件維持を実PG試験で検証可能。実装/最新CI/配備検収は別途必要。外部事例は不要（実DBと既存実装の直接照合）。

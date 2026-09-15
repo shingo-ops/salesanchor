@@ -46,3 +46,13 @@
 ## PR3505 UIゲート指摘の修正（2026-09-14）
 
 既存CIのUI governanceが新規の生search入力を検出したため、検索欄を既存標準TextFieldへ置換。例外コメントやガードは変更していない。担当再実行: UI8件成功、check:all終了0（eslint既存警告218、error0）、build終了0（既存chunk警告）。実PGの成否はこのUI検査では判定しない。
+
+## 2026-09-15 商品正本移行への追従（SSOT04）
+
+POの「解消したので進めてくれ」とGO #3505の範囲で、閲覧仕様を維持して正本変更へ追従する。PR3507/3512と本番HEAD26032c74、Deploy34914789016成功をroot実確認。read-only SQLでanalysis_resultsの商品FK先public.products、UUID付き商品297件、Sold out591行・商品JOIN518行を確認。残り73行を落とさない。これは確認時点の値であり固定期待値ではない。
+
+商品名の正本はpublic.products.name。商品JOINはLEFT JOIN public.products p ON p.tcg_uuid=ar.product_id、返却product_idはp.tcg_uuid（UUID/null）。整数PKのp.idを返さない。旧tcg_productsへの二重参照・コピー・同期・fallbackは追加しない。商品なし時の原文名表示と全既存契約を保持。根拠: ADR-1001、main backend/app/services/tcg_analysis_review_svc.py:39/:196、現行routerのUUID契約。ADRのStatusはProposedのままであるが、PR3507/3512のマージと本番実物を状態根拠とする。
+
+受入試験: 既存2migrationによる原文/解析構造の作成は保持。新商品表はmainの共通backend/tests/fixtures/public_products_test.sqlとtest_tcg_work_matching_integrationのFK配線関数を再利用する。試験専用使い捨てCI DBのみで構築し、実SQL読取はREAD ONLY。移行全体を試すと称さない。旧表と新表の同UUIDの商品名を相違させ、新正本名だけが表示/検索されること、返却UUID、完売4行/他状態除外/未登録2行維持/原文/ページングを検証。新たなDDLコピーは作らない。
+
+Planner: 本番正本への参照追従はサービス3箇所と既存試験/仕様2文書で足りる。Architect（同一AI自己審査）: APPROVE。現行本番FKと名称/UUID型に一致、書込0、全件維持を実PG試験で検証可能。実装/最新CI/配備検収は別途必要。外部事例は不要（実DBと既存実装の直接照合）。

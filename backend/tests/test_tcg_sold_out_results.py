@@ -21,8 +21,10 @@ from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.routers import tcg_analysis_review as routes
 from app.services import tcg_sold_out_results_svc as service
+from tests.test_tcg_work_matching_integration import _rewire_keyword_fks
 
 STAMP = datetime(2026, 9, 14, tzinfo=timezone.utc)
+PRODUCT_UUID = UUID("b3505000-0000-4000-8000-000000000001")
 
 
 def empty():
@@ -124,11 +126,14 @@ async def pg(monkeypatch):
             migrations = Path(__file__).resolve().parents[2] / "migrations"
             for filename in ("20260831_110000_create_tcg_analysis_tables_t004.sql", "20260910_010000_tcg_import_message_links.sql"):
                 cursor.execute((migrations / filename).read_text().replace("tenant_004", "tenant_951"))
+            cursor.execute((Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text())
+            cursor.execute(_rewire_keyword_fks("tenant_951"))
             cursor.execute("INSERT INTO tenant_951.tcg_suppliers(code,name,is_active) VALUES ('S','Supplier percent%',true) RETURNING id")
             supplier = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_951.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'LINE',true) RETURNING id", (supplier,))
             channel = cursor.fetchone()[0]
-            cursor.execute("INSERT INTO tenant_951.tcg_products(code,japanese_title,category_class,is_active) VALUES ('P','Master','Box',true) RETURNING id")
+            cursor.execute("INSERT INTO tenant_951.tcg_products(id,code,japanese_title,category_class,is_active) VALUES (%s,'P','Legacy title','Box',true)", (str(PRODUCT_UUID),))
+            cursor.execute("INSERT INTO public.products(tcg_uuid,product_code,name,category_class,is_active) VALUES (%s,'P','Master','Box',true) RETURNING tcg_uuid", (str(PRODUCT_UUID),))
             product = cursor.fetchone()[0]
             for index in range(6):
                 cursor.execute("INSERT INTO tenant_951.source_messages(supplier_channel_id,raw_text,raw_sha256,is_active,line_posted_at) VALUES (%s,%s,%s,%s,%s) RETURNING id",
@@ -176,13 +181,17 @@ async def test_pg_scopes_paging_and_authoritative_values(pg):
     second = await service.fetch_sold_out_results(pg, limit=1, offset=1)
     assert first["total"] == second["total"] == 4
     assert first["items"][0]["analysis_result_id"] != second["items"][0]["analysis_result_id"]
+    known = [row for row in all_rows["items"] if row["product_id"] is not None]
+    assert len(known) == 2
+    assert {row["product_id"] for row in known} == {str(PRODUCT_UUID)}
+    assert {row["product_title"] for row in known} == {"Master"}
     routes.SoldOutResultsResponse.model_validate(all_rows)
 
 
 @pytest.mark.asyncio
 async def test_pg_literal_search_and_read_only(pg):
     assert (await pg.execute(text("SHOW transaction_read_only"))).scalar_one() == "on"
-    for q, expected in (("%_\\", 1), ("percent%", 3), ("Master", 2), (" Shared ", 3), ("' OR 1=1 --", 0), ("missing", 0)):
+    for q, expected in (("%_\\", 1), ("percent%", 3), ("Master", 2), ("Legacy title", 0), (" Shared ", 3), ("' OR 1=1 --", 0), ("missing", 0)):
         result = await service.fetch_sold_out_results(pg, q=q)
         assert result["total"] == expected
     result = await service.fetch_sold_out_results(pg)
