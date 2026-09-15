@@ -11,6 +11,7 @@
  *     このマップには登録しない（各ページで個別に対応）
  */
 export const ROUTE_TITLE_KEYS: Record<string, string> = {
+  "/super-admin/tcg-sold-out": "nav.superAdminTcgSoldOut",
   "/":                           "nav.dashboard",
   "/lead-chat":                  "nav.leadChat",
   "/crm/leads":                  "nav.leads",

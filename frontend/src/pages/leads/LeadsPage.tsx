@@ -24,6 +24,7 @@ import { Select } from "../../components/Select";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -436,8 +437,8 @@ export default function LeadsPage() {
             />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>
@@ -537,8 +538,8 @@ export default function LeadsPage() {
             closeReasonOptions={closeReasonOptions}
           />
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-              <button type="submit" className="btn-primary">{t("common.update")}</button>
+              <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>{t("common.cancel")}</Button>
+              <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
             </div>
           </form>
         )}
