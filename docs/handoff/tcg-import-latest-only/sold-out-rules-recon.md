@@ -164,3 +164,18 @@ frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx:182–208の再�
 ASTによる実測: analyzer本体commit=3、loader rollback=3、unit_recovery全関数commit/rollback=0、reanalysis_condition=0。これは構造検査であり、実DBロールバック試験ではない。
 
 Context7ツールは探索結果0件。起動指示が許可した代替として[SQLAlchemy 2.0公式](https://docs.sqlalchemy.org/en/20/orm/session_transaction.html)と[PostgreSQL 16公式](https://www.postgresql.org/docs/16/transaction-iso.html)を2026-09-15に確認。Session.beginの正常終了commit/例外rollbackと、Session.commitが外側トランザクションをcommitすることから、内側commit温存案を不採用とする。外部事例の成功率は接続の根拠にならないため使用しない。
+
+## 11. Phase B配備後の基点と未確定結果の保管（2026-09-15）
+
+直前ターンに実確認: PR3522 mergedAt=2026-09-15T13:31:50Z、merge=4e0c808316f50d74292f50699b6092486b2bb7bb、Deploy34975588763 success。API/workerの関連7ファイルずつをマージcommitとSHA256照合し14/14一致。tenant_004の商品参照4列はinteger、analysis_results→public.products.idの孤児0。これはその確認時点の実測で、将来の配備状態保証ではない。
+
+今回preflight成功、origin/main=同merge。追加本番照会はdefault_transaction_read_only=on / statement_timeout=5000、SHOW transaction_read_only=onを確認して実施。
+
+- analysis_results.product_id: integer nullable、status: character varying nullable、exclusion/review_reasons: text nullable、needs_review: boolean NOT NULL。
+- analysis_resultsのitem参照はUUID、UNIQUE(extraction_item_id)を確認。source_messages/extraction_jobs/extraction_itemsのIDは前回照会でもUUID。
+- item_corrections.human_value/system_valueはtext。現在のproduct_id訂正記録件数0。過去UUID訂正値が本番に残っていると断定しない。ただし回帰試験では既存/新規訂正を作って検証する必要がある。
+- item_corrections_svc.py:63–74の実装はhuman_valueをintにしてproduct_idへ保存する。コメントの「product UUID文字列」は古い。コメントを型の根拠にしない。
+- tcg_distribution_svc.py:241–245,299–303はcr.needs_review IS FALSEを配信対象条件に持つ。同:694–708の未完了ジョブゲートはextraction_jobsのpending/running/extractedのみ。新設する完売runの状態を検査する既存コードではない。
+- tcg_condition_review_svc.py:133–160は既存review_reasonsを取り込み、未解決理由があればneeds_reviewを返す。null statusだけでは配信除外の保証にならないため、確認理由を同時に保持する必要がある。
+
+実行したものはカタログ/件数SELECTとコード読取。Gemini要求/DB変更/製品変更0。配信試験や新機能の実DB障害試験は未実行。
