@@ -351,7 +351,7 @@ def test_stale_pre_model_conditions_give_input_changed(pg, monkeypatch, change):
     assert model_calls[0] == 0
 
 
-@pytest.mark.parametrize("change", ["source", "job", "item", "analysis", "correction", "master"])
+@pytest.mark.parametrize("change", ["source", "job", "item", "analysis", "correction", "master", "updated_at"])
 def test_stale_input_changed_during_model_call(pg, monkeypatch, change):
     """DB changes during model call → INPUT_CHANGED at post-model unchanged() via real DB re-read."""
     connection, engine, jobid, item_ids, _ = _setup_workid_stale(pg, monkeypatch)
@@ -382,6 +382,8 @@ def test_stale_input_changed_during_model_call(pg, monkeypatch, change):
                     f"FROM {SCHEMA}.extraction_items i JOIN {SCHEMA}.extraction_jobs j ON j.id=i.extraction_job_id WHERE j.id=%s LIMIT 1",
                     (jobid,),
                 )
+            elif change == "updated_at":
+                cursor.execute("UPDATE public.products SET updated_at = updated_at + interval '1 second' WHERE product_code='PM0123'")
             else:
                 cursor.execute("UPDATE public.products SET product_code='PM0999' WHERE product_code='PM0123'")
         return comparison.HEADER + "\n" + "\n".join(iid + "｜" for iid in item_ids)

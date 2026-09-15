@@ -333,12 +333,10 @@ def read_job_snapshot(session_factory: Callable, job_id: str) -> dict:
             if not saved_reference or reference_digest(saved_reference) != saved_sha:
                 raise ComparisonError("INVALID_SAVED_REFERENCE")
         masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
-        # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
+        # public.products is outside TCG_SCHEMA; read all columns and add 'code' alias for compatibility
         masters["products"] = _records(
             session,
-            "SELECT to_jsonb(jsonb_build_object("
-            "'code', p.product_code, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
-            ")) FROM public.products p",
+            "SELECT to_jsonb(p) || jsonb_build_object('code', p.product_code) FROM public.products p",
             {},
         )
         product_ids, _, _, _, _, units = analyzer.load_lookup_maps(session)
