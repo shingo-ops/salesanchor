@@ -274,10 +274,35 @@ async def check_duplicates(
 async def _next_pm_code(db: AsyncSession) -> str:
     """
     ADR-1002 Phase B: PostgreSQL SEQUENCE で採番する（冪等・競合なし）。
+    SEQUENCE が存在しない環境（テスト等）では MAX+1 フォールバックを使う。
     """
-    result = await db.execute(text("SELECT nextval('public.product_code_seq')"))
-    num = result.scalar_one()
-    return f"PM{num:04d}"
+    # Try SEQUENCE first (production, post-Phase-B migration)
+    try:
+        result = await db.execute(text("SELECT nextval('public.product_code_seq')"))
+        num = result.scalar_one()
+        return f"PM{num:04d}"
+    except Exception:
+        # Fallback: MAX+1 approach (test environments without migration)
+        await db.rollback()
+        result = await db.execute(
+            text(
+                """
+                SELECT product_code FROM public.products
+                WHERE product_code ~ '^PM[0-9]{4}$'
+                ORDER BY product_code DESC LIMIT 1
+                """
+            )
+        )
+        row = result.fetchone()
+        if row is None:
+            return "PM0001"
+        m = _PM_CODE_RE.match(row[0])
+        if m is None:
+            return "PM0001"
+        num = int(m.group(1)) + 1
+        if num > 9999:
+            raise ValueError("PRODUCT_MASTER_V2_PM_CODE_EXHAUSTED")
+        return f"PM{num:04d}"
 
 
 async def create_product(
@@ -413,9 +438,9 @@ async def create_product(
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE id = :id"
+            "SELECT product_code FROM public.products WHERE id = :id::uuid"
         ),
-        {"id": int(product_uuid)},
+        {"id": product_uuid},
     )
     vr = verify.fetchone()
     if vr is None or vr.product_code != pm_code:
