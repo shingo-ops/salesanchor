@@ -33,19 +33,9 @@ BEGIN
         RETURN;
     END IF;
 
-    -- ADR-1002: Phase 2c 完了判定（tcg_products 不在 + public.products に PM 商品移行済み）
-    -- 新規 DB では public.products に PM 商品がないため、テーブル作成が正常実行される
-    -- ネスト IF: PostgreSQL はプラン時に全テーブル参照を検証するため、
-    --           PERFORM を to_regclass 確認後にのみ到達させる
-    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
-        IF to_regclass('public.products') IS NOT NULL THEN
-            PERFORM 1 FROM public.products WHERE product_code LIKE 'PM%' LIMIT 1;
-            IF FOUND THEN
-                RAISE NOTICE 'ADR-1002: Phase 2c 完了済み（tcg_products → public.products 統合済み）、スキップ: %', _schema;
-                RETURN;
-            END IF;
-        END IF;
-    END IF;
+    -- ADR-1002: この migration は CREATE TABLE IF NOT EXISTS / ON CONFLICT DO NOTHING で全文冪等。
+    -- Phase 2c で tcg_products が DROP 済みでも、IF NOT EXISTS により既存テーブルは no-op、
+    -- tcg_products は空で再作成される（Phase C で再 DROP）。ガード不要。
 
     RAISE NOTICE '20260906_120000: schema % confirmed', _schema;
 
