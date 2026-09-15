@@ -95,7 +95,7 @@ TARGETS = [
     ("backend/app/services/tcg_line_import_svc.py",
      ["import_jobs", "source_messages", "supplier_channels", "extraction_jobs"]),
     (_PRODUCT_SERVICE,
-     ["tcg_products", "product_search_keywords", "tcg_product_import_jobs",
+     ["product_search_keywords", "tcg_product_import_jobs",
       "tcg_product_import_rows", "{table}", *_LOOKUP_TABLES.values()]),
 ]
 
@@ -197,7 +197,7 @@ def test_product_schema_removal_is_detected():
     calls = _text_calls(source)
     assert len(calls) == 6, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
-    assert len(positions) == 7, "review changed schema reference inventory"
+    assert len(positions) == 5, "review changed schema reference inventory"
     for match in positions:
         changed = source[:match.start()] + source[match.end():]
         assert _schema_errors(changed, tables), f"missed schema removal at {match.start()}"

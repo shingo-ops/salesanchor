@@ -615,6 +615,9 @@ run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
 # LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
 run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
 
+# PHASE-2B: public.products Phase 2b columns prerequisite (work_id, unit, condition, etc.)
+run_sql migrations/20260909_000000_public_products_phase2b_columns.sql
+
 # NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
 run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
 
@@ -627,11 +630,15 @@ run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
 run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
 run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
 run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
+run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
+run_sql migrations/20260912_160000_line_import_devices.sql
+run_sql migrations/20260912_170000_line_supplier_source_names.sql
 
 # ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
 run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
 run_sql migrations/20260913_020000_seed_onepiece_products.sql
 run_sql migrations/20260913_030000_seed_unregistered_products.sql
+run_sql migrations/20260913_150000_tcg_empty_box_condition.sql
 run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
 run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
 
@@ -640,3 +647,6 @@ run_sql migrations/20260914_080000_add_abbreviation_keywords_t004.sql
 
 # CARD09: persist extraction attempts before adopting new results.
 run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
+
+# UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
+run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql

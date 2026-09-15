@@ -109,20 +109,19 @@ def _get_or_add_worksheet(sh: Any, title: str, rows: int = 300, cols: int = 30) 
 async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
-            p.product_id,
-            p.product_name,
-            p.series_name,
-            p.category,
-            p.subcategory,
-            p.rarity,
-            u.name AS unit_name,
-            p.standard_purchase_price,
-            p.note
-        FROM {TCG_SCHEMA}.tcg_products p
-        LEFT JOIN {TCG_SCHEMA}.units u ON u.id = p.unit_id
-        ORDER BY p.product_id
+            p.product_code AS product_id,
+            p.name AS product_name,
+            p.category_class AS series_name,
+            NULL AS category,
+            NULL AS subcategory,
+            NULL AS rarity,
+            NULL AS unit_name,
+            NULL AS standard_purchase_price,
+            NULL AS note
+        FROM public.products p
+        ORDER BY p.product_code
     """))
     rows = result.fetchall()
     headers = [
@@ -138,22 +137,22 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text(f"""
         SELECT
-            p.product_id,
-            p.product_name,
+            p.product_code AS product_id,
+            p.name AS product_name,
             'search' AS keyword_type,
             k.keyword
         FROM {TCG_SCHEMA}.product_search_keywords k
-        JOIN {TCG_SCHEMA}.tcg_products p ON p.id = k.product_id
-        ORDER BY p.product_id, k.keyword
+        JOIN public.products p ON p.tcg_uuid = k.product_id
+        ORDER BY p.product_code, k.keyword
         UNION ALL
         SELECT
-            p.product_id,
-            p.product_name,
+            p.product_code AS product_id,
+            p.name AS product_name,
             'exclude',
             k.keyword
         FROM {TCG_SCHEMA}.product_exclude_keywords k
-        JOIN {TCG_SCHEMA}.tcg_products p ON p.id = k.product_id
-        ORDER BY p.product_id, k.keyword
+        JOIN public.products p ON p.tcg_uuid = k.product_id
+        ORDER BY p.product_code, k.keyword
     """))
     rows = result.fetchall()
     headers = ["product_id", "product_name", "keyword_type", "keyword"]
@@ -221,7 +220,7 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
         WHERE t.table_schema = '{TCG_SCHEMA}'
           AND t.table_name IN (
-            'tcg_suppliers', 'supplier_channels', 'tcg_products',
+            'tcg_suppliers', 'supplier_channels',
             'product_search_keywords', 'product_exclude_keywords',
             'units', 'unit_aliases', 'conditions', 'condition_aliases',
             'source_messages', 'extraction_jobs', 'extraction_items',

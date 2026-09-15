@@ -42,14 +42,14 @@ def load_work_reference(session: Session, schema: str) -> dict:
             ORDER BY s.id), '[]'::jsonb)
             FROM {schema}.tcg_series s WHERE s.is_active),
           'products', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'code', p.code, 'japanese_title', p.japanese_title,
-            'english_title', p.english_title, 'mark', p.mark, 'work_id', p.work_id,
+            'code', p.product_code, 'japanese_title', p.name,
+            'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
             'search_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_search_keywords k WHERE k.product_id=p.id),
+                FROM {schema}.product_search_keywords k WHERE k.product_id=p.tcg_uuid),
             'exclude_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.id))
-            ORDER BY p.code), '[]'::jsonb)
-            FROM {schema}.tcg_products p WHERE p.is_active))
+                FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.tcg_uuid))
+            ORDER BY p.product_code), '[]'::jsonb)
+            FROM public.products p WHERE p.is_active))
     """)).scalar_one()
     ids = work_ids(row)
     if not row["products"] or not ids:

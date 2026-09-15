@@ -103,31 +103,41 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     for field, table in WORDS.items():
         keyword_sql.append(
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
-            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
+            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.tcg_uuid),'[]'::jsonb) AS {field}"
         )
     result = await db.execute(
         text(
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
-            f"{','.join(keyword_sql)} FROM {TCG_SCHEMA}.tcg_products p {' '.join(joins)} "
-            "WHERE (p.japanese_title ILIKE :like OR p.english_title ILIKE :like OR p.mark ILIKE :like OR p.code ILIKE :like) "
+            f"{','.join(keyword_sql)} FROM public.products p {' '.join(joins)} "
+            "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like) "
             "AND (CAST(:work_id AS uuid) IS NULL OR p.work_id=CAST(:work_id AS uuid)) "
-            "ORDER BY p.release_date DESC NULLS LAST,p.code DESC"
+            "ORDER BY p.release_date DESC NULLS LAST,p.product_code DESC"
         ),
         {"like": "%" + query.strip() + "%", "work_id": work_id},
     )
     return [dict(row) for row in result.mappings().all()]
 
 
+# public.products のカラム名 → CSV CSV_COLUMNS 名へのマッピング
+_PRODUCT_FIELD_MAP = {
+    "code": "product_code",
+    "japanese_title": "name",
+    "english_title": "name_en",
+}
+
+
 def values(snapshot: dict) -> dict[str, str]:
     product = snapshot["product"]
-    result = {
-        field: str(product.get(field) or "")
-        for field in CSV_COLUMNS
-        if field not in WORDS and field not in LOOKUP_TABLES
-    }
+    result = {}
+    for field in CSV_COLUMNS:
+        if field in WORDS or field in LOOKUP_TABLES:
+            continue
+        # CSV フィールド名と public.products カラム名が異なる場合はマップする
+        product_field = _PRODUCT_FIELD_MAP.get(field, field)
+        result[field] = str(product.get(product_field) or "")
     result.update({key: str(snapshot["refs"].get(key) or "") for key in LOOKUP_TABLES})
     result.update({key: encode_words([word["keyword"] for word in snapshot[key]]) for key in WORDS})
-    return {"product_code": product["code"], "revision": revision(snapshot), **result}
+    return {"product_code": product["product_code"], "revision": revision(snapshot), **result}
 
 
 async def export_csv(db: AsyncSession, query: str = "", work_id: str | None = None) -> bytes:
@@ -163,7 +173,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     if len(records) == 1:
         response["file_errors"] = ["CSV_EMPTY"]
         return response, []
-    current = {s["product"]["code"]: s for s in await snapshots(db)}
+    current = {s["product"]["product_code"]: s for s in await snapshots(db)}
     references = {}
     for field, table in LOOKUP_TABLES.items():
         result = await db.execute(text(f"SELECT to_jsonb(r) FROM {TCG_SCHEMA}.{table} r WHERE r.is_active=TRUE"))
@@ -198,7 +208,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
         elif row["revision"] != revision(snapshot):
             errors.append("ROUNDTRIP_STALE")
         else:
-            plan["id"] = snapshot["product"]["id"]
+            plan["id"] = snapshot["product"]["tcg_uuid"]
             old = values(snapshot)
             for field in CSV_COLUMNS:
                 if row[field] == old[field]:
@@ -228,13 +238,15 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                 else:
                     if field == "japanese_title" and not row[field].strip():
                         errors.append("JAPANESE_TITLE_REQUIRED")
-                    plan["sets"][field] = row[field] or None
+                    # CSV フィールド名を public.products カラム名にマッピング
+                    db_field = _PRODUCT_FIELD_MAP.get(field, field)
+                    plan["sets"][db_field] = row[field] or None
                     if field == "release_date" and row[field]:
                         try:
                             parsed_date = date.fromisoformat(row[field])
                             if parsed_date.isoformat() != row[field]:
                                 raise ValueError("date format")
-                            plan["sets"][field] = parsed_date
+                            plan["sets"][db_field] = parsed_date
                         except ValueError:
                             errors.append("RELEASE_DATE_FORMAT")
                 item["changes"].append({"field": field, "before": before, "after": after})
@@ -261,7 +273,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         await db.execute(text("SET LOCAL statement_timeout = '30s'"))
         await db.execute(
             text(
-                f"LOCK TABLE {TCG_SCHEMA}.tcg_products, "
+                f"LOCK TABLE public.products, "
                 f"{TCG_SCHEMA}.product_search_keywords, {TCG_SCHEMA}.product_exclude_keywords "
                 "IN SHARE ROW EXCLUSIVE MODE"
             )
@@ -306,9 +318,10 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                         else f":{field}"
                     )
                     assignments.append(f"{field}={cast}")
+                await db.execute(text("SET LOCAL app.is_operator = 'true'"))
                 await db.execute(
                     text(
-                        f"UPDATE {TCG_SCHEMA}.tcg_products SET {','.join(assignments)} WHERE id=CAST(:product_id AS uuid)"
+                        f"UPDATE public.products SET {','.join(assignments)} WHERE tcg_uuid=CAST(:product_id AS uuid)"
                     ),
                     {**plan["sets"], "product_id": plan["id"]},
                 )
