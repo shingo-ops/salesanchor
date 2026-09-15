@@ -1299,3 +1299,22 @@ rootが直接取得した正式CI job103869063278: 3750 passed / 95 skipped / 31
 - 同runのPre-deploy DB backupとコード配備stepはsuccess、Run database migrationsはfailure、Post-deploy smoke/Verify deploymentはskipped。Finalizeはsuccessだが、DB整合性・全体復旧の確認とは扱わない。現在のDB内容は直接未検証。
 - バックアップ確認: 本便はDB変更なし（該当なし）。上記既存runのbackup成功は本便の将来反映直前backupの保証に転用しない。
 - 判定: PO承認済み・技術検証済み、別件本番migration失敗により反映BLOCKED。GO不足という以前の停止理由は解消。障害復旧と最新main統合後の再検証が必要。別件DB修正・migration編集・再実行・ガード迂回を本便GOに含めない。
+
+
+### RESULT-ORDER 再開時の根拠追加（2026-09-14）
+
+- GOは既存原文を維持。最新製品検証: HEAD f14cab161b76680085010850cfb5af74b1ad786d、Backend job103872217191の実ログで3750 passed / 95 skipped / 297.54秒。製品差分なし。
+- process-artifacts job103872213652はGO確認pass、ADR名の相互参照だけfailure。PRの対象ADRをファイル名から設計書と同じADR-113/ADR-154へ統一。チェックのコードは変更していない。run34815204127が同HEADでsuccess。
+- 本番の最新Deployは引き続き34810423329 failure。復旧成功の記録なし。
+- 根本原因の照合: origin/mainのmigrations/20260914_140000_unify_tcg_products_to_public.sql Step1はtcg_uuidにWHERE tcg_uuid IS NOT NULL付き部分UNIQUE INDEXを作成。Step3は同列を外部キー参照先にする。PostgreSQL16公式§5.4.5では参照先は主キー・UNIQUE制約・非部分UNIQUE INDEXのいずれかを要求する。実ログの一意制約不足と実装の不整合が一致する。Context7ツールは利用可能一覧に0件であり、起動指示の代替許可に従い公式資料 https://www.postgresql.org/docs/16/ddl-constraints.html を直接確認した。
+- 修復候補（未承認・未実装）: 外部キー参照に適合する非部分の一意性を用意する。ただし本番の現在制約/重複/実行済み状態の読取確認、隔離PGで失敗再現→修復→同migration再実行の検証が先。SQLの局所修正だけで全migration成功とは判定しない。
+- PR3507本文はPhase2a移行済みと記載しているが、上記本番失敗記録から完了根拠には採用しない。今回と同じ解析/配信serviceも変更対象として記載されており、取り込み時に再照合が必要。他者のPR/実装は変更していない。
+- 継続条件: 別件migration復旧の検証・本番成功記録、最新main追従、今回の全必須CI確認、配備後の実データ順序と保持確認。現時点は反映BLOCKED。
+- 本追記はローカル文書保存。外部への正式記録はPR3501本文にも保存し、結果追記だけによる未検証HEADの増加を避ける。
+
+
+### RESULT-ORDER 復旧後の統合方針（2026-09-15）
+
+Deploy34914789016/head26032c74はbackup/migrations/smoke/Verify deployment成功を直接確認。以前の本番障害による停止は解消。POのGO #3501と「解消したので進めてくれ」を受領済み。
+mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/p.idとimport read_itemsのtcg_products参照、試験fixtureは旧構造のまま。共通順序の商品コードはproduct_code、商品UUIDはtcg_uuidに対応させ、合意済み順序・8状態・ページ性能・保存値不変を維持する。旧p.idをpublic.products.idに機械的移植しない。
+既存実装担当へ同一テーマの統合補正を引き継ぐ。対象は既存6製品/試験ファイルのみ。最新mainの参照変更を保持、DB/migration/CI/scripts/状態UIは変更禁止。文書競合は親が双方を保持して解決する。実装後に現行fixtureで機能4試験・4097行負荷と正式CIを再確認するまで実装検収保留。
