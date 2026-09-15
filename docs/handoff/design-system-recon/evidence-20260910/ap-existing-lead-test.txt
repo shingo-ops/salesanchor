@@ -1,0 +1,13 @@
+
+> salesanchor-frontend@1.0.0 test:unit
+> vitest run --config vitest.unit.config.ts --project unit src/pages/leads/LeadFormFields.test.tsx
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-form-design/frontend
+
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  10:07:45
+   Duration  3.44s (transform 208ms, setup 142ms, import 536ms, tests 127ms, environment 2.17s)
+

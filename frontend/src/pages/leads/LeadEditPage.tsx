@@ -8,6 +8,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
@@ -286,8 +287,8 @@ export default function LeadEditPage() {
             />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate("/crm/leads")}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => navigate("/crm/leads")}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       )}
