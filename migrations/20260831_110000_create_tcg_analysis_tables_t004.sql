@@ -36,11 +36,16 @@ BEGIN
 
     -- ADR-1002: Phase 2c 完了判定（tcg_products 不在 + public.products に PM 商品移行済み）
     -- 新規 DB では public.products に PM 商品がないため、テーブル作成が正常実行される
-    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL
-       AND to_regclass('public.products') IS NOT NULL
-       AND EXISTS (SELECT 1 FROM public.products WHERE product_code LIKE 'PM%' LIMIT 1) THEN
-        RAISE NOTICE 'ADR-1002: Phase 2c 完了済み（tcg_products → public.products 統合済み）、スキップ: %', _schema;
-        RETURN;
+    -- ネスト IF: PostgreSQL はプラン時に全テーブル参照を検証するため、
+    --           PERFORM を to_regclass 確認後にのみ到達させる
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        IF to_regclass('public.products') IS NOT NULL THEN
+            PERFORM 1 FROM public.products WHERE product_code LIKE 'PM%' LIMIT 1;
+            IF FOUND THEN
+                RAISE NOTICE 'ADR-1002: Phase 2c 完了済み（tcg_products → public.products 統合済み）、スキップ: %', _schema;
+                RETURN;
+            END IF;
+        END IF;
     END IF;
 
     RAISE NOTICE 'migration 20260831_110000: creating TCG analysis tables in schema %', _schema;
