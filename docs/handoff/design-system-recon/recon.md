@@ -729,3 +729,44 @@ AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン�
 ## AO 本番反映結果
 
 2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### APリード6ボタン・選定recon（2026-09-14）
+
+基準e39fa65abb83837a7909290b993a8cd363a11ef9。設計はdocs/specs/design-system/design.md§AP。部品=UI部品/共有hook/helper/トークン・CSS。監査原文と21hashはevidence-20260910/ap-lead-button-audit.json、再測定器ap-lead-audit.cjs。
+
+1. 全体像: App.tsx:163/178から一覧/専用編集へ。LeadsPage.tsx:187/218、LeadEditPage.tsx:129に登録15/簡易7/専用15項目送信（編集lost時+2）。一覧SSE更新はLeadsPage.tsx:180。案件化/統合/削除は別の処理。
+2. 共用部品: Button.tsx:38/49、LeadFormFields.tsx:44/95、CountryCombobox.tsx:35、ChannelTypeCombobox.tsx:35、useRecordDrawer.ts:39、useSSE.ts:25を直接照合。国/チャネルの入力は検索queryで、確定値は候補クリック時のみ変わる。
+3. 非共用部品: LeadsPage.tsx:439/440/540/541、LeadEditPage.tsx:289/290の旧6件。原文type6/6、対象外6件。初回監査は案件化取消を含む7件となりassertで停止、親formのperformConvertを構文で除外して6件を原文照合。未保存の誤集計を確定値へ採用しない。
+4. ルールの所在: ADR索引から113/067/027/073/122、lead索引から109/119を確認。既存design-systemの延長。Button.cssとcomponents.cssの外観/配置を変更しない。正式カードは設計パートナー§5.5とcard-lintで検査。
+5. 維持の仕組み: frontend/vitest.unit.config.ts:36のsrc/**/*.test対象にLeadFormFields.test.tsxが含まれる。実行1ファイル3件成功（ap-existing-lead-test.txt）、CountryComboboxは当該既存試験ではmock。LeadsPage/LeadEditPageを直接importする既存ページ回帰は検索0。新規LeadFormButtonMigration.test.tsxと既存frontend品質CIで補う計画。実装後の試験は未実施。
+6. 設計図との対照:
+
+| 親の目的 | 現状 | 判定 |
+|---|---|---|
+| ボタン外観を共通部品に集約 | 共通131/旧287、今回6件は旧実装 | 不足6件を今回対象 |
+| 既存の操作・業務内容保持 | type/onClick/入力/送信契約を特定 | 一致、変換対象外の本文維持 |
+| 表/報酬3/カレンダー色保留・新CI最後 | 今回製品/CI未変更 | 一致、対象外 |
+
+余剰の新機能追加なし。利用回数・事業効果は未測定。比較対象は5別画面の各2件（JSONに原文/行/hash）。リードは1領域2ページで6件を揃えるため選定。安全性や効果の全候補中最大を測定したとはしない。
+
+7. ノイズと境界: 構文でbutton/Link/aのbtn-*だけを旧数としstories/test/spec/design-previewを除外。現mainの共通+5はPR3492の商品詳細Drawerで、APの成果へ加算しない。監査共有21以外も製品許可3ファイル以外は変更禁止。本番書込/実認証/外部通信0。GO委任正式文書はdraft/REVISE、有効化を確認できず代理GOを使わない。
+
+外部事例なし: 新仕様/新ライブラリ導入ではなく既存部品への移管。npm ci成功の既存依存監査出力（24件）はap-npm-ci.txtへ保存し、本便で依存更新はしない。旧3試験の成功とAP製品実装・表示240組の合格を混同しない。runbook検索では今回AP固有スプリントなし、既存todo行/recon/migrationへ保存する。
+
+
+AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非lostの通常/pendingで2失敗。担当を停止し、rootが390/1280×前後の4ケースを測定した。390pxは変更前後とも自然TabでscrollY486/max518、ボタン下端899.875/viewport900でfocus輪郭が欠け、実wheelで下端までscrollY518にすると下端867.875となり輪郭が収まる。1280pxは前後とも自然Tab時点で収まる。根拠ap-focus-precondition-probe.json。これは変更前からある自然Tabの表示上の制約で、本番App全体での実測ではない。
+
+分類: root検収手順の不足（設計APの「下部まで実scroll」を未実施）と既存挙動の観測。製品変更なし。受入条件の四辺欠け0は実scroll後に検査する指定を維持し、自然Tabの前後観測も保存して新規欠け0を追加検査する。既存の自然Tab欠けを解消済みとは記録しない。CSS/ラベル/入力/製品範囲の変更0。初回失敗ログを残し、手順補正後の結果と分ける。
+
+
+AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### 2026-09-14 配備前提の停止
+
+AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合。evidence-registryの追記競合は双方保持、main全行の包含と製品3hash一致を確認。製品HEAD f3598fb2のCIは38成功/8対象外、process-artifactsだけ今回GO未受領のため停止している。
+
+別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
+
+同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。

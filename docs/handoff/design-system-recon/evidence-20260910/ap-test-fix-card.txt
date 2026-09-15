@@ -1,0 +1,18 @@
+CARD-AP-TEST-02（発行済み）
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 本報告はカードCARD-AP-TEST-02の実行結果である、と報告冒頭に記載。
+読んだ節: design-partner.md §5.5、guards/00-common.md、03-file.md、11-lint.md。実物行/初回原ログを照合。
+根拠: 初回unit70中45失敗/25成功。rootも新規試験56/87、LeadsPage324を直接確認。
+担当: 既存team_button_generator。所有は新規`frontend/src/components/LeadFormButtonMigration.test.tsx`のみ。
+他者も作業中。root文書/検収を戻さず対応する。製品2ページ/共有21の追加変更0。
+手順1: 登録Modalの検索nameだけ実物の`leads.newLeadTitle`へ。起動ボタン`leads.newLead`は維持。
+手順2: 合成SSE controllerを各試験のbeforeEachで未接続へ初期化し、ケース間持越しをなくす。
+nullable型と明示的な接続済みチェックでenqueueを維持。afterEachはcleanup後、そのケースで生成したcontrollerだけcloseして参照を解除する。
+例外の無視/try-catchで握り潰す/実hookをmock化する/期待値削除/skip追加は禁止。
+手順3: 原カードAP-LEADS-01のstrict/new+existing unit/coverage/check:all/build/storybook/diff検査を同じコマンドで再開。
+初回ログ`/tmp/ap-generator-unit.log`を保存して別名へ、新結果で上書きしない。失敗は原ログ/対象名/理由を返し停止。
+成功: strict警告0、回帰70/70、後続全exit0、製品2ページhash維持、共有21hash一致。
+禁止: 製品追加変更、文書/台帳/GO編集、commit/push/PR/merge/本番/外部通信/新AI起動。
+完了報告本文へ全結果の生出力・ログの場所・件数・hashをroot宛に返して停止。
+停止時は手順番号/最後のコマンド/理由/対象を記載する。
+END OF CARD
