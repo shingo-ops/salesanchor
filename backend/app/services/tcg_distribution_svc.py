@@ -212,8 +212,8 @@ async def fetch_output_rows(
             COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
             COALESCE(p.mark, '')                                    AS mark,
-            COALESCE(p.japanese_title, '')                          AS japanese_title,
-            COALESCE(p.english_title, '')                           AS english_title,
+            COALESCE(p.name, '')                                    AS japanese_title,
+            COALESCE(p.name_en, '')                                 AS english_title,
             cr.canonical                                   AS condition,
             COALESCE(ROUND(ar.price_normalized)::bigint::text, '')  AS unit_price,
             COALESCE(ROUND(ar.quantity_normalized)::bigint::text, '') AS quantity,
@@ -233,8 +233,8 @@ async def fetch_output_rows(
             ON sc.id = sm.supplier_channel_id
         LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
             ON ts.id = sc.supplier_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_products p
-            ON p.id = ar.product_id
+        LEFT JOIN public.products p
+            ON p.tcg_uuid = ar.product_id
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}

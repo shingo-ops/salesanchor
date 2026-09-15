@@ -36,7 +36,7 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     """照合に必要なマスタをロードする（AsyncSession 版）。"""
     # 商品コード → UUID
     rows = (
-        await db.execute(text(f"SELECT code, id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"))
+        await db.execute(text("SELECT product_code AS code, tcg_uuid AS id FROM public.products WHERE is_active = TRUE"))
     ).fetchall()
     product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
 
@@ -88,11 +88,11 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
         await db.execute(
             text(
                 f"""
-                SELECT p.code, psk.keyword
+                SELECT p.product_code AS code, psk.keyword
                 FROM {TCG_SCHEMA}.product_search_keywords psk
-                JOIN {TCG_SCHEMA}.tcg_products p ON p.id = psk.product_id
+                JOIN public.products p ON p.tcg_uuid = psk.product_id
                 WHERE p.is_active = TRUE
-                ORDER BY p.code, psk.position
+                ORDER BY p.product_code, psk.position
                 """
             )
         )
@@ -106,11 +106,11 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
         await db.execute(
             text(
                 f"""
-                SELECT p.code, pek.keyword
+                SELECT p.product_code AS code, pek.keyword
                 FROM {TCG_SCHEMA}.product_exclude_keywords pek
-                JOIN {TCG_SCHEMA}.tcg_products p ON p.id = pek.product_id
+                JOIN public.products p ON p.tcg_uuid = pek.product_id
                 WHERE p.is_active = TRUE
-                ORDER BY p.code, pek.position
+                ORDER BY p.product_code, pek.position
                 """
             )
         )

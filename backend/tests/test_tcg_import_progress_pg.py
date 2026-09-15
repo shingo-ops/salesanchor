@@ -21,6 +21,7 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
+from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="PMG_TEST_PG_URL must identify a disposable test database")
@@ -47,8 +48,10 @@ async def pg(monkeypatch):
         # These schemas belong only to this per-task disposable database.
         c.execute("DROP SCHEMA IF EXISTS tenant_871 CASCADE; DROP SCHEMA IF EXISTS tenant_872 CASCADE")
         c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
+        c.execute(_PUBLIC_PRODUCTS_DDL)
         for schema in (SCHEMA, "tenant_872"):
             provision_tcg(c,schema)
+            c.execute(_rewire_keyword_fks(schema))
             c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
             c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
         migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
