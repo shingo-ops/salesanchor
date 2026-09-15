@@ -1,0 +1,35 @@
+/* 操作台（ContentToolbar）— page-header-v2 §2.5・第3の金型
+   余白は便3a page-content-actions（margin-bottom: space-3）を継承。
+   共有CSSに置かず本ファイルに同梱＝別セッションのpages-layout.css編集と衝突しない。 */
+.content-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-right: var(--space-3);
+  /* 中身の有無に関わらず場所を確保する（全ページで表の開始位置を揃える） */
+  min-height: var(--field-h-md);
+  /* 切り詰めて改行させない（2段になるのを防ぐ） */
+  flex-wrap: nowrap;
+}
+.content-toolbar__left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.content-toolbar__right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-shrink: 0;
+  /* 左スロットが空でもボタンを右端へ固定（フィルタ有無で配置を統一） */
+  margin-left: auto;
+}
+/* 空スロットは場所を取らない（フィルタ無しページ＝右ボタンだけ右端） */
+.content-toolbar__left:empty,
+.content-toolbar__right:empty {
+  min-height: var(--field-h-md);
+}

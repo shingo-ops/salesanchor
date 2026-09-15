@@ -1,0 +1,19 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "files": [
+    {
+      "path": "frontend/src/components/Modal.css",
+      "lines": 110,
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "path": "frontend/src/components/Modal.stories.tsx",
+      "lines": 106,
+      "sha256": "15589cf2d1b39367c5c76858518e9e47fc5654ee54d5a51a3de8465eb87498da"
+    }
+  ],
+  "cssOnlyWrapAdded": true,
+  "existingFourStoriesUnchanged": true,
+  "productFiles": 2,
+  "diffCheckExit": 0
+}

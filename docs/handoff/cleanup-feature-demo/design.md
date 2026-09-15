@@ -4,6 +4,7 @@
 
 - recon: `docs/handoff/cleanup-feature-demo/recon.md`
 - ADR-027: `docs/adr/ADR-027-ui-internationalization.md`（i18n キー削除の根拠）
+- ADR-143: `docs/adr/ADR-143-send-guard.md`（Phase B cherry-pick: dangling-route gate 解消のため取り込み）
 - 機能スイッチ実装 PR: #2631（スイッチ本体は残す）
 
 ## 目的

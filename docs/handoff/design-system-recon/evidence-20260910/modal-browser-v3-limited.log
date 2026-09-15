@@ -1,0 +1,14 @@
+Error: page.evaluate: Error: Natural width probe did not restore original
+    at eval (eval at evaluate (:302:30), <anonymous>:1:1855)
+    at async <anonymous>:328:30
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: Error: Natural width probe did not restore original
+    at eval (eval at evaluate (:302:30), <anonymous>:1:1855)
+    at async <anonymous>:328:30
+    at natural (/private/tmp/frontend-raw-buttons-20260911/modal-browser-v3.mjs:7:61)
+    at async file:///private/tmp/frontend-raw-buttons-20260911/modal-browser-v3.mjs:12:420
+
+Node.js v24.12.0

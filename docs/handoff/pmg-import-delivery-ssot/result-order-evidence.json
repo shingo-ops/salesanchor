@@ -1,0 +1,357 @@
+{
+  "kind": "design-only SQL experiment; not implemented service tests",
+  "observed_at": "2026-09-14T03:58:29Z",
+  "source_sha": "70d145f090e122dd36e4a39b4928e13cc0dae613",
+  "postgres_version_num": 160015,
+  "transaction_read_only": true,
+  "fixture_rows": 292,
+  "permutation_seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "sql_vs_python_mismatches": 0,
+  "condition_order": [
+    "Case",
+    "Damaged case",
+    "Sealed box",
+    "Damaged sealed box",
+    "No shrink box",
+    "Opened box",
+    "Unsearched pack",
+    "Searched pack"
+  ],
+  "draft_unlisted_policy": "after approved states, canonical text order, null last; not a PO value ranking",
+  "service_join_tests": "not executed",
+  "page_boundary_tests": "not executed",
+  "production_writes": 0,
+  "sheet_rows": 607,
+  "sheet_release_date_missing": 4,
+  "sheet_condition_counts": {
+    "Sealed box": 375,
+    "No shrink box": 23,
+    "Case": 115,
+    "Damaged case": 2,
+    "Damaged sealed box": 67,
+    "Searched pack": 23,
+    "Unsearched pack": 1,
+    "Opened box": 1
+  },
+  "sheet_title_groups": [
+    {
+      "title": "30th CELEBRATION",
+      "rows": 11,
+      "segments": 6
+    },
+    {
+      "title": "30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー",
+      "rows": 11,
+      "segments": 6
+    }
+  ],
+  "limitations": [
+    "CSV has no product UUID; same title does not prove same product ID",
+    "SQL experiment uses synthetic rows, not production or service joins",
+    "Initial save failed with filesystem PermissionError after successful experiment; this file records those observed results"
+  ],
+  "implementation_ci": {
+    "head": "fc059880505b734533d46c480c23ed54c25caf8b",
+    "pr": "https://github.com/shingo-ops/salesanchor/pull/3501",
+    "backend_job": 103857564620,
+    "passed": 3720,
+    "skipped": 95,
+    "warnings": 309,
+    "seconds": 235.56,
+    "coverage_percent": 65.07,
+    "new_tests": 3,
+    "new_test_skip_paths": 0,
+    "checks": {
+      "success": 34,
+      "skipped": 8,
+      "failure": 1
+    },
+    "failure": "process-artifacts gate: missing PR-specific GO record",
+    "pytest_log_sha256": "6e204ad053134c4f1636b78c4627cac9b16f3f9b064ef6c8655ff55c21c1a334",
+    "production_changed": false
+  },
+  "load_probe_initial": {
+    "head": "f982978e3840efd7054498196b9a856c735831df",
+    "job": 103860869068,
+    "rows": 4097,
+    "sources": 4097,
+    "result": "FAILED",
+    "cause_observed": "analysis review items SQL canceled by 10s statement_timeout; root cause not yet established",
+    "suite": {
+      "failed": 1,
+      "passed": 3720,
+      "skipped": 95,
+      "seconds": 277.76
+    },
+    "log_sha256": "e1ac76d5e8f9bc0a56d5743ff10dff30b72536bf7c1ca313d5996b9df3cee016"
+  },
+  "load_probe_statistics": {
+    "head": "490e396175459191c336d1fa27bafca118df3966",
+    "job": 103862564543,
+    "result": "FAILED",
+    "rows": 4097,
+    "statement_timeout_ms": 10000,
+    "consumer": "review unbounded items",
+    "statistics": {
+      "before_analyze": [
+        [
+          "analysis_results",
+          -1.0
+        ],
+        [
+          "extraction_items",
+          -1.0
+        ],
+        [
+          "extraction_jobs",
+          -1.0
+        ],
+        [
+          "source_messages",
+          4097.0
+        ]
+      ],
+      "after_analyze": [
+        [
+          "analysis_results",
+          4097.0
+        ],
+        [
+          "extraction_items",
+          4097.0
+        ],
+        [
+          "extraction_jobs",
+          4097.0
+        ],
+        [
+          "source_messages",
+          4097.0
+        ]
+      ]
+    },
+    "plan_root": {
+      "Node Type": "Limit",
+      "Plan Rows": 4097,
+      "Total Cost": 36077.28
+    },
+    "plan_sha256": "50c55b441f71864ac8f79433871f5ed50beb7a501c872db94de9fc82e371c799",
+    "log_sha256": "aa00c88f567b415f3f4f59c562dc15bc460bef04b22729c46654cc536082d5ee",
+    "interpretation": "ANALYZE alone did not resolve the timeout; root cause unconfirmed"
+  },
+  "sheet_recheck": {
+    "data_rows": 612,
+    "columns": 12,
+    "conditions": {
+      "Sealed box": 418,
+      "No shrink box": 27,
+      "Damaged sealed box": 79,
+      "Damaged case": 2,
+      "Case": 77,
+      "Searched pack": 7,
+      "Unsearched pack": 1,
+      "Opened box": 1
+    },
+    "sha256": "26b0ced2a8b8c88f83fdbcfad4e8f5ce22d853797cfa3c5e5744704d08c9cce0",
+    "local_capture_utc": "2026-09-14T05:03:33.728066+00:00",
+    "method": "public CSV GET via curl with TLS verification; no write"
+  },
+  "public_page_probe": {
+    "head": "179f95d114bb54269b15012412419d16375a1c98",
+    "job": 103864100083,
+    "result": "FAILED",
+    "rows": 4097,
+    "statement_timeout_ms": 10000,
+    "passed_before_failure": [
+      "old-order review first 500",
+      "new-order review first 500"
+    ],
+    "failed": "new-order review offset4000 limit500 (97 remaining)",
+    "not_reached": [
+      "import public pages",
+      "distribution full set"
+    ],
+    "log_sha256": "817f01cdc4df316f391e6419de548e49f1ad30faa3324050c9d5ce26b8eccf2e"
+  },
+  "public_page_repeat": {
+    "head": "7c775cc6c8d442f9dd5f8a545b2876b45500977d",
+    "job": 103866365374,
+    "failed": 1,
+    "passed": 3720,
+    "skipped": 95,
+    "seconds": 268.47,
+    "failure": "same review offset4000 limit500 timeout",
+    "log_sha256": "220ceaadab6f900d25ef0a5340dacaca0f24a4bc2b94264fc6013904f8f9c038"
+  },
+  "fixed_public_page_ci": {
+    "head": "90c1ea2518b20b5e9a671b45309c74dcbfdb9d57",
+    "job": 103869063278,
+    "passed": 3750,
+    "skipped": 95,
+    "warnings": 310,
+    "seconds": 201.23,
+    "coverage_percent": 65.09,
+    "measurement": {
+      "rows": 4097,
+      "sources": 4097,
+      "transaction_read_only": true,
+      "statement_timeout_ms": 10000,
+      "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI",
+      "statistics": {
+        "before_analyze": [
+          [
+            "analysis_results",
+            -1.0
+          ],
+          [
+            "extraction_items",
+            -1.0
+          ],
+          [
+            "extraction_jobs",
+            -1.0
+          ],
+          [
+            "source_messages",
+            4097.0
+          ]
+        ],
+        "after_analyze": [
+          [
+            "analysis_results",
+            4097.0
+          ],
+          [
+            "extraction_items",
+            4097.0
+          ],
+          [
+            "extraction_jobs",
+            4097.0
+          ],
+          [
+            "source_messages",
+            4097.0
+          ]
+        ]
+      },
+      "plans": [
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 106.622,
+          "planning_ms": 5.801,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 112.079,
+          "planning_ms": 4.605,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": 500,
+          "offset": 0,
+          "execution_ms": 1824.873,
+          "planning_ms": 13.335,
+          "actual_rows": 500
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 119.3,
+          "planning_ms": 5.66,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 103.595,
+          "planning_ms": 5.122,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "review",
+          "limit": 500,
+          "offset": 4000,
+          "execution_ms": 1429.45,
+          "planning_ms": 14.923,
+          "actual_rows": 97
+        },
+        {
+          "consumer": "import",
+          "limit": 100,
+          "offset": 0,
+          "execution_ms": 2496.161,
+          "planning_ms": 9.782,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "import",
+          "limit": 100,
+          "offset": 4000,
+          "execution_ms": 2403.759,
+          "planning_ms": 6.898,
+          "actual_rows": 1
+        },
+        {
+          "consumer": "distribution",
+          "limit": null,
+          "offset": null,
+          "execution_ms": 3026.776,
+          "planning_ms": 9.882,
+          "actual_rows": 4097
+        }
+      ]
+    },
+    "log_sha256": "f4f4e3caa4ad3ac5c9f1ad2c16de07369f93c316ab170957243b62a227320264",
+    "checks": {
+      "success": 35,
+      "skipped": 8,
+      "failure": 2,
+      "failure_detail": "two process-artifacts GO-record checks; same missing numbered GO"
+    },
+    "production_changed": false
+  },
+  "go_3501_received": {
+    "raw": "GO #3501",
+    "issuer": "PO (Shingo)",
+    "recorded_at": "2026-09-14T14:45:00+09:00",
+    "tested_head": "90c1ea2518b20b5e9a671b45309c74dcbfdb9d57",
+    "current_main": "180c0f38aefc2c727a3133a4e84fa8f4aec3b893",
+    "blocked_by_deploy_run": 34810423329,
+    "reason": "PR3503 migration FK references public.products(tcg_uuid) without matching unique constraint",
+    "merged": false,
+    "production_changed_by_this_task": false
+  },
+  "isolated_fixture_ci": {
+    "head": "fd3cec1f7114d3f168bdf8059e5742e0e464c00e",
+    "run": 34917101528,
+    "job": 104217035550,
+    "passed": 3749,
+    "skipped": 95,
+    "failed": 0,
+    "errors": 0,
+    "seconds": 290.51,
+    "review_tail_ms": 3029.845,
+    "distribution_4097_ms": 6954.285,
+    "production_changed": false
+  }
+}

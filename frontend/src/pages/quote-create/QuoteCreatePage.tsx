@@ -16,6 +16,7 @@ import { useState, FormEvent } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { FedExRateModal } from "../../components/FedExRateModal";
@@ -134,11 +135,7 @@ export default function QuoteCreatePage() {
   };
 
   return (
-    <div className="page">
-      <div className="page-header">
-        {/* eslint-disable-next-line no-restricted-syntax */}
-        <h2>{t("quotes.newQuote")}</h2>
-      </div>
+    <PageLayout titleText={t("quotes.newQuote")} subtitleKey="quotes.createSubtitle">
 
       {error && <div className="error-message">{error}</div>}
 
@@ -292,6 +289,6 @@ export default function QuoteCreatePage() {
         weightKg={totalWeight}
         onSelectRate={(fee) => setShippingFee(String(Math.round(fee)))}
       />
-    </div>
+    </PageLayout>
   );
 }

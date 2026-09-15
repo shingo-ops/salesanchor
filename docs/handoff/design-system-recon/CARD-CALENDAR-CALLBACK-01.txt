@@ -1,0 +1,42 @@
+CARD-CALENDAR-CALLBACK-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-CALENDAR-CALLBACK-01
+照合§5.5: 1○実パス、2○本便PRなし、3○親へ全文、4○callback依存修正、5○公式origin/main作業台、6○AF具体契約、7○同値base blob/製品2file。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、design-partner.md§5.5（guardsはdocs/handoff/design-partner-card-ops配下）。
+担当Generator。あなたは他者と並行、他者変更を戻さない。rootは文書/台帳を所有。本便製品2ファイルだけ所有。
+作業場所: `/Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback`
+基準HEAD: `eefa9143df4ba47b5f3854b222df595b302b503c`（origin/main起点、root文書差分あり）。前Icon便のtreeを変更しない。
+正本: `docs/specs/design-system/design.md` §AF（同一AI自己審査APPROVE）、`docs/handoff/design-system-recon/evidence-20260910/calendar-callback-recheck.md`。
+対象: `frontend/src/components/GoogleCalendarStatusBar.tsx` と新規 `frontend/src/components/GoogleCalendarStatusBar.test.tsx`。
+許可: この2ファイルの実装/回帰試験、既存lockでnpm ci、ログを `/tmp/calendar-status-callback-20260911/` に保存。
+禁止: その他製品、Icon/色/配置/翻訳/依存manifest/lock/CI/backend/API/DB/secrets変更、旧Icon便のstage変更、GO創作、commit/push/PR/merge/deploy、別AI起動。
+正規require_escalatedは利用可。自動承認レビュー拒否を回避せず親へ停止報告。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && git rev-parse HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && git diff --exit-code HEAD -- frontend
+期待: 基準一致・製品差分0。root文書保持。
+
+手順1
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend && npm ci
+期待: exit0、既存manifest/lock変更0。
+実装手順: 先にAFの回帰試験を新規test.tsxへ作り、変更前TSXで実行。callbackだけを新しい関数へ差し替えた時に新しい関数へ状態が届くテストが失敗することを確認し赤ログ保存。その後useCallback末尾の `[onStatusChange]` だけを `[onStatusChange, onSyncStatusChange]` へ1行変更する。既存effect/通信/分岐/interval/再接続を再設計しない。
+試験手順: mock APIとfake timersでconnected/disconnected/not_linked通知とboolean互換、callback省略、通知先差替え、依存不変rerenderの余計な取得0、差替え後interval1本・30秒ごとGET1回、解決済み状態でunmount後timer0/定期GET0、再接続処理中disabledと完了後の状態再取得を検査する。未解決GETの取消を新規実装したり保証したりしない。
+初回の想定された回帰赤と、実装後の予期せぬ失敗を区別。fixture誤り等で赤なら不具合再現の証拠にせず親へ原因を報告。既存部品はmockせずAPI/翻訳のみ必要最小限のmock可。
+
+手順2
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend && npm run test:unit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend && node node_modules/eslint/bin/eslint.js src/components/GoogleCalendarStatusBar.tsx src/components/GoogleCalendarStatusBar.test.tsx --max-warnings=0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend && npm run build
+期待: 全exit0、対象eslint0errors/0warnings。既存全体警告と新エラーは分ける。見た目変更なしのため新ブラウザー比較は要求しない。
+
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && git diff --numstat -- frontend
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback && git diff --exit-code HEAD -- frontend/package.json frontend/package-lock.json frontend/src/constants/icons.tsx frontend/src/index.css frontend/src/tokens.css
+期待: 既存TSXは1行追加/1行削除のみ、新規test1file、ファイル削除0。名前/行数/hashと赤→緑/全検査のログを保存。想定外の差分/失敗/不明は手順番号/最後のコマンド/理由とともに親へ停止報告し、独断で範囲を広げない。
+報告冒頭: 本報告はカード CARD-CALENDAR-CALLBACK-01 の実行結果である。
+親への完了報告本文に生出力全文、長いログは `/tmp/calendar-status-callback-20260911/` の実在ファイルを添える。commit/PR/マージ未実施を明示。
+END OF CARD

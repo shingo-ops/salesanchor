@@ -1,0 +1,27 @@
+.product-csv__warning {
+  color: var(--color-warning);
+}
+
+.product-detail__name {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.product-detail__english {
+  font-size: var(--role-caption-size);
+  color: var(--role-caption-color);
+}
+
+.product-detail__form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.product-detail__actions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

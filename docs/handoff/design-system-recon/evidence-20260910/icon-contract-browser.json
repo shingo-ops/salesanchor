@@ -1,0 +1,269 @@
+{
+  "baseline": "76c6dff98e3fa68f47c381d044e86fd0564d9509",
+  "method": "Actual before/after Icon TSX compiled in memory with real Heroicons; server-rendered SVG inspected in Chromium. No client React entry or hydration.",
+  "comparisons": [
+    {
+      "theme": "light",
+      "width": 390,
+      "status": "connected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(30, 126, 52)",
+        "fill": "rgb(30, 126, 52)",
+        "parentColor": "rgb(30, 126, 52)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(30, 126, 52)",
+        "fill": "rgb(30, 126, 52)",
+        "parentColor": "rgb(30, 126, 52)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "light",
+      "width": 390,
+      "status": "disconnected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(197, 34, 31)",
+        "fill": "rgb(197, 34, 31)",
+        "parentColor": "rgb(197, 34, 31)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(197, 34, 31)",
+        "fill": "rgb(197, 34, 31)",
+        "parentColor": "rgb(197, 34, 31)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "status": "connected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(30, 126, 52)",
+        "fill": "rgb(30, 126, 52)",
+        "parentColor": "rgb(30, 126, 52)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(30, 126, 52)",
+        "fill": "rgb(30, 126, 52)",
+        "parentColor": "rgb(30, 126, 52)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "light",
+      "width": 1280,
+      "status": "disconnected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(197, 34, 31)",
+        "fill": "rgb(197, 34, 31)",
+        "parentColor": "rgb(197, 34, 31)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(197, 34, 31)",
+        "fill": "rgb(197, 34, 31)",
+        "parentColor": "rgb(197, 34, 31)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "status": "connected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(74, 222, 128)",
+        "fill": "rgb(74, 222, 128)",
+        "parentColor": "rgb(74, 222, 128)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(74, 222, 128)",
+        "fill": "rgb(74, 222, 128)",
+        "parentColor": "rgb(74, 222, 128)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 390,
+      "status": "disconnected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(248, 113, 113)",
+        "fill": "rgb(248, 113, 113)",
+        "parentColor": "rgb(248, 113, 113)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(248, 113, 113)",
+        "fill": "rgb(248, 113, 113)",
+        "parentColor": "rgb(248, 113, 113)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "status": "connected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(74, 222, 128)",
+        "fill": "rgb(74, 222, 128)",
+        "parentColor": "rgb(74, 222, 128)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(74, 222, 128)",
+        "fill": "rgb(74, 222, 128)",
+        "parentColor": "rgb(74, 222, 128)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    },
+    {
+      "theme": "dark",
+      "width": 1280,
+      "status": "disconnected",
+      "before": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(248, 113, 113)",
+        "fill": "rgb(248, 113, 113)",
+        "parentColor": "rgb(248, 113, 113)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      },
+      "after": {
+        "width": "14px",
+        "height": "14px",
+        "marginRight": "8px",
+        "flexShrink": "0",
+        "color": "rgb(248, 113, 113)",
+        "fill": "rgb(248, 113, 113)",
+        "parentColor": "rgb(248, 113, 113)",
+        "hidden": "true",
+        "tag": "svg",
+        "paths": 1
+      }
+    }
+  ],
+  "aria": [
+    {
+      "side": "before",
+      "value": {
+        "aria-hidden": "true",
+        "aria-label": null,
+        "aria-labelledby": null,
+        "aria-describedby": null,
+        "role": null,
+        "focusable": null
+      }
+    },
+    {
+      "side": "after",
+      "value": {
+        "aria-hidden": "false",
+        "aria-label": "Done",
+        "aria-labelledby": "caption",
+        "aria-describedby": "description",
+        "role": "img",
+        "focusable": "false"
+      }
+    }
+  ],
+  "diagnostics": {
+    "documentEntryRequests": 1,
+    "clientModuleEntries": 0,
+    "pageerror": [],
+    "consoleErrors": []
+  },
+  "status": "PASS"
+}

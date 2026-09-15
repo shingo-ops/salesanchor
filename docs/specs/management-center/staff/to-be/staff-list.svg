@@ -1,0 +1,43 @@
+
+<svg width="820" height="360" viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="820" height="360" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="328" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">管理センター</text>
+  <text x="36" y="66" font-size="9" fill="#888780" letter-spacing="0.5">チーム管理</text>
+  <rect x="16" y="76" width="200" height="30" fill="#e6f1fb"/>
+  <rect x="16" y="76" width="3" height="30" fill="#378add"/>
+  <text x="40" y="95" font-size="12" fill="#0c447c" font-weight="600">スタッフ</text>
+  <text x="40" y="126" font-size="12" fill="#5f5e5a">ロール</text>
+  <text x="40" y="152" font-size="12" fill="#5f5e5a">シフト</text>
+
+  <text x="236" y="42" font-size="16" font-weight="600" fill="#2c2c2a">スタッフ</text>
+  <rect x="720" y="26" width="100" height="26" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="770" y="43" font-size="10" fill="#0c447c" text-anchor="middle">+ スタッフを追加</text>
+
+  <line x1="236" y1="70" x2="800" y2="70" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="242" y="90" font-size="10" fill="#888780">氏名</text>
+  <text x="420" y="90" font-size="10" fill="#888780">メールアドレス</text>
+  <text x="640" y="90" font-size="10" fill="#888780">ロール</text>
+  <line x1="236" y1="98" x2="800" y2="98" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="122" font-size="12" fill="#2c2c2a">田中 太郎</text>
+  <text x="420" y="122" font-size="11" fill="#5f5e5a">tanaka@salesanchor.jp</text>
+  <rect x="636" y="110" width="60" height="20" rx="4" fill="#e6f1fb"/>
+  <text x="666" y="124" font-size="10" fill="#0c447c" text-anchor="middle">オーナー</text>
+  <text x="790" y="122" font-size="12" fill="#888780" text-anchor="end">&#8250;</text>
+  <line x1="236" y1="140" x2="800" y2="140" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="164" font-size="12" fill="#2c2c2a">佐藤 花子</text>
+  <text x="420" y="164" font-size="11" fill="#5f5e5a">sato@salesanchor.jp</text>
+  <rect x="636" y="152" width="76" height="20" rx="4" fill="#f1efe8"/>
+  <text x="674" y="166" font-size="10" fill="#5f5e5a" text-anchor="middle">営業担当</text>
+  <text x="790" y="164" font-size="12" fill="#888780" text-anchor="end">&#8250;</text>
+  <line x1="236" y1="182" x2="800" y2="182" stroke="#e3e1d9" stroke-width="1"/>
+
+  <text x="242" y="206" font-size="12" fill="#a8a6a0">鈴木 次郎</text>
+  <text x="420" y="206" font-size="11" fill="#a8a6a0">suzuki@salesanchor.jp</text>
+  <text x="636" y="206" font-size="10" fill="#a8a6a0">未設定</text>
+
+  <text x="518" y="320" font-size="10" fill="#888780" text-anchor="middle">CSVインポート・エクスポートは無し。オーナー・ロール付与済みの行のみクリックして編集ページへ</text>
+</svg>

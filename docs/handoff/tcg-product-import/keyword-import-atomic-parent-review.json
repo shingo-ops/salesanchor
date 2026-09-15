@@ -1,0 +1,3208 @@
+{
+  "mode": "actual AST service functions with memory DB, not pytest/PostgreSQL",
+  "cases": 354,
+  "source_sha256": {
+    "backend/app/services/tcg_product_master_svc.py": "ce0861d18c4f6700be23c5bd67c53fd2726bf0e26292437205793dfd3420d50d",
+    "backend/app/services/tcg_product_import_svc.py": "d443ec8fba4d12ef334900e00d245030888eccd687affbcbcbb4c72ded5fce5d"
+  },
+  "default_contract": [
+    {
+      "commit": true,
+      "commits": 1,
+      "saved_products": 1
+    },
+    {
+      "commit": false,
+      "commits": 0,
+      "saved_products": 0
+    }
+  ],
+  "results": [
+    {
+      "kind": "normal",
+      "row": 0,
+      "products": 44,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "finish",
+      "row": 0,
+      "products": 44,
+      "history": 44,
+      "error": "finish",
+      "commits": 45,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 1,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 2,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 3,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 4,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 5,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 6,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 7,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 8,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 9,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 10,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 11,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 12,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 13,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 14,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 15,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 16,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 17,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 18,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 19,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 20,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 21,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 22,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 23,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 24,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 25,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 26,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 27,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 28,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 29,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 30,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 31,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 32,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 33,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 34,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 35,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 36,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 37,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 38,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 39,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 40,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 41,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 42,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 43,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "create_value",
+      "row": 44,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 1,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 2,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 3,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 4,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 5,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 6,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 7,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 8,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 9,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 10,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 11,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 12,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 13,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 14,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 15,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 16,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 17,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 18,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 19,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 20,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 21,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 22,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 23,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 24,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 25,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 26,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 27,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 28,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 29,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 30,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 31,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 32,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 33,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 34,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 35,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 36,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 37,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 38,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 39,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 40,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 41,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 42,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 43,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_value",
+      "row": 44,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 1,
+      "products": 0,
+      "history": 0,
+      "error": "verify",
+      "commits": 1,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 2,
+      "products": 1,
+      "history": 1,
+      "error": "verify",
+      "commits": 2,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 3,
+      "products": 2,
+      "history": 2,
+      "error": "verify",
+      "commits": 3,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 4,
+      "products": 3,
+      "history": 3,
+      "error": "verify",
+      "commits": 4,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 5,
+      "products": 4,
+      "history": 4,
+      "error": "verify",
+      "commits": 5,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 6,
+      "products": 5,
+      "history": 5,
+      "error": "verify",
+      "commits": 6,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 7,
+      "products": 6,
+      "history": 6,
+      "error": "verify",
+      "commits": 7,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 8,
+      "products": 7,
+      "history": 7,
+      "error": "verify",
+      "commits": 8,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 9,
+      "products": 8,
+      "history": 8,
+      "error": "verify",
+      "commits": 9,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 10,
+      "products": 9,
+      "history": 9,
+      "error": "verify",
+      "commits": 10,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 11,
+      "products": 10,
+      "history": 10,
+      "error": "verify",
+      "commits": 11,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 12,
+      "products": 11,
+      "history": 11,
+      "error": "verify",
+      "commits": 12,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 13,
+      "products": 12,
+      "history": 12,
+      "error": "verify",
+      "commits": 13,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 14,
+      "products": 13,
+      "history": 13,
+      "error": "verify",
+      "commits": 14,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 15,
+      "products": 14,
+      "history": 14,
+      "error": "verify",
+      "commits": 15,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 16,
+      "products": 15,
+      "history": 15,
+      "error": "verify",
+      "commits": 16,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 17,
+      "products": 16,
+      "history": 16,
+      "error": "verify",
+      "commits": 17,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 18,
+      "products": 17,
+      "history": 17,
+      "error": "verify",
+      "commits": 18,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 19,
+      "products": 18,
+      "history": 18,
+      "error": "verify",
+      "commits": 19,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 20,
+      "products": 19,
+      "history": 19,
+      "error": "verify",
+      "commits": 20,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 21,
+      "products": 20,
+      "history": 20,
+      "error": "verify",
+      "commits": 21,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 22,
+      "products": 21,
+      "history": 21,
+      "error": "verify",
+      "commits": 22,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 23,
+      "products": 22,
+      "history": 22,
+      "error": "verify",
+      "commits": 23,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 24,
+      "products": 23,
+      "history": 23,
+      "error": "verify",
+      "commits": 24,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 25,
+      "products": 24,
+      "history": 24,
+      "error": "verify",
+      "commits": 25,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 26,
+      "products": 25,
+      "history": 25,
+      "error": "verify",
+      "commits": 26,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 27,
+      "products": 26,
+      "history": 26,
+      "error": "verify",
+      "commits": 27,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 28,
+      "products": 27,
+      "history": 27,
+      "error": "verify",
+      "commits": 28,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 29,
+      "products": 28,
+      "history": 28,
+      "error": "verify",
+      "commits": 29,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 30,
+      "products": 29,
+      "history": 29,
+      "error": "verify",
+      "commits": 30,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 31,
+      "products": 30,
+      "history": 30,
+      "error": "verify",
+      "commits": 31,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 32,
+      "products": 31,
+      "history": 31,
+      "error": "verify",
+      "commits": 32,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 33,
+      "products": 32,
+      "history": 32,
+      "error": "verify",
+      "commits": 33,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 34,
+      "products": 33,
+      "history": 33,
+      "error": "verify",
+      "commits": 34,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 35,
+      "products": 34,
+      "history": 34,
+      "error": "verify",
+      "commits": 35,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 36,
+      "products": 35,
+      "history": 35,
+      "error": "verify",
+      "commits": 36,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 37,
+      "products": 36,
+      "history": 36,
+      "error": "verify",
+      "commits": 37,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 38,
+      "products": 37,
+      "history": 37,
+      "error": "verify",
+      "commits": 38,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 39,
+      "products": 38,
+      "history": 38,
+      "error": "verify",
+      "commits": 39,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 40,
+      "products": 39,
+      "history": 39,
+      "error": "verify",
+      "commits": 40,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 41,
+      "products": 40,
+      "history": 40,
+      "error": "verify",
+      "commits": 41,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 42,
+      "products": 41,
+      "history": 41,
+      "error": "verify",
+      "commits": 42,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 43,
+      "products": 42,
+      "history": 42,
+      "error": "verify",
+      "commits": 43,
+      "rollbacks": 1
+    },
+    {
+      "kind": "verify_io",
+      "row": 44,
+      "products": 43,
+      "history": 43,
+      "error": "verify",
+      "commits": 44,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 1,
+      "products": 0,
+      "history": 0,
+      "error": "history",
+      "commits": 1,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 2,
+      "products": 1,
+      "history": 1,
+      "error": "history",
+      "commits": 2,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 3,
+      "products": 2,
+      "history": 2,
+      "error": "history",
+      "commits": 3,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 4,
+      "products": 3,
+      "history": 3,
+      "error": "history",
+      "commits": 4,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 5,
+      "products": 4,
+      "history": 4,
+      "error": "history",
+      "commits": 5,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 6,
+      "products": 5,
+      "history": 5,
+      "error": "history",
+      "commits": 6,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 7,
+      "products": 6,
+      "history": 6,
+      "error": "history",
+      "commits": 7,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 8,
+      "products": 7,
+      "history": 7,
+      "error": "history",
+      "commits": 8,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 9,
+      "products": 8,
+      "history": 8,
+      "error": "history",
+      "commits": 9,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 10,
+      "products": 9,
+      "history": 9,
+      "error": "history",
+      "commits": 10,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 11,
+      "products": 10,
+      "history": 10,
+      "error": "history",
+      "commits": 11,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 12,
+      "products": 11,
+      "history": 11,
+      "error": "history",
+      "commits": 12,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 13,
+      "products": 12,
+      "history": 12,
+      "error": "history",
+      "commits": 13,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 14,
+      "products": 13,
+      "history": 13,
+      "error": "history",
+      "commits": 14,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 15,
+      "products": 14,
+      "history": 14,
+      "error": "history",
+      "commits": 15,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 16,
+      "products": 15,
+      "history": 15,
+      "error": "history",
+      "commits": 16,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 17,
+      "products": 16,
+      "history": 16,
+      "error": "history",
+      "commits": 17,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 18,
+      "products": 17,
+      "history": 17,
+      "error": "history",
+      "commits": 18,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 19,
+      "products": 18,
+      "history": 18,
+      "error": "history",
+      "commits": 19,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 20,
+      "products": 19,
+      "history": 19,
+      "error": "history",
+      "commits": 20,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 21,
+      "products": 20,
+      "history": 20,
+      "error": "history",
+      "commits": 21,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 22,
+      "products": 21,
+      "history": 21,
+      "error": "history",
+      "commits": 22,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 23,
+      "products": 22,
+      "history": 22,
+      "error": "history",
+      "commits": 23,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 24,
+      "products": 23,
+      "history": 23,
+      "error": "history",
+      "commits": 24,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 25,
+      "products": 24,
+      "history": 24,
+      "error": "history",
+      "commits": 25,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 26,
+      "products": 25,
+      "history": 25,
+      "error": "history",
+      "commits": 26,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 27,
+      "products": 26,
+      "history": 26,
+      "error": "history",
+      "commits": 27,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 28,
+      "products": 27,
+      "history": 27,
+      "error": "history",
+      "commits": 28,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 29,
+      "products": 28,
+      "history": 28,
+      "error": "history",
+      "commits": 29,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 30,
+      "products": 29,
+      "history": 29,
+      "error": "history",
+      "commits": 30,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 31,
+      "products": 30,
+      "history": 30,
+      "error": "history",
+      "commits": 31,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 32,
+      "products": 31,
+      "history": 31,
+      "error": "history",
+      "commits": 32,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 33,
+      "products": 32,
+      "history": 32,
+      "error": "history",
+      "commits": 33,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 34,
+      "products": 33,
+      "history": 33,
+      "error": "history",
+      "commits": 34,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 35,
+      "products": 34,
+      "history": 34,
+      "error": "history",
+      "commits": 35,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 36,
+      "products": 35,
+      "history": 35,
+      "error": "history",
+      "commits": 36,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 37,
+      "products": 36,
+      "history": 36,
+      "error": "history",
+      "commits": 37,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 38,
+      "products": 37,
+      "history": 37,
+      "error": "history",
+      "commits": 38,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 39,
+      "products": 38,
+      "history": 38,
+      "error": "history",
+      "commits": 39,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 40,
+      "products": 39,
+      "history": 39,
+      "error": "history",
+      "commits": 40,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 41,
+      "products": 40,
+      "history": 40,
+      "error": "history",
+      "commits": 41,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 42,
+      "products": 41,
+      "history": 41,
+      "error": "history",
+      "commits": 42,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 43,
+      "products": 42,
+      "history": 42,
+      "error": "history",
+      "commits": 43,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_io",
+      "row": 44,
+      "products": 43,
+      "history": 43,
+      "error": "history",
+      "commits": 44,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 1,
+      "products": 0,
+      "history": 0,
+      "error": "history",
+      "commits": 1,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 2,
+      "products": 1,
+      "history": 1,
+      "error": "history",
+      "commits": 2,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 3,
+      "products": 2,
+      "history": 2,
+      "error": "history",
+      "commits": 3,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 4,
+      "products": 3,
+      "history": 3,
+      "error": "history",
+      "commits": 4,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 5,
+      "products": 4,
+      "history": 4,
+      "error": "history",
+      "commits": 5,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 6,
+      "products": 5,
+      "history": 5,
+      "error": "history",
+      "commits": 6,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 7,
+      "products": 6,
+      "history": 6,
+      "error": "history",
+      "commits": 7,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 8,
+      "products": 7,
+      "history": 7,
+      "error": "history",
+      "commits": 8,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 9,
+      "products": 8,
+      "history": 8,
+      "error": "history",
+      "commits": 9,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 10,
+      "products": 9,
+      "history": 9,
+      "error": "history",
+      "commits": 10,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 11,
+      "products": 10,
+      "history": 10,
+      "error": "history",
+      "commits": 11,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 12,
+      "products": 11,
+      "history": 11,
+      "error": "history",
+      "commits": 12,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 13,
+      "products": 12,
+      "history": 12,
+      "error": "history",
+      "commits": 13,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 14,
+      "products": 13,
+      "history": 13,
+      "error": "history",
+      "commits": 14,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 15,
+      "products": 14,
+      "history": 14,
+      "error": "history",
+      "commits": 15,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 16,
+      "products": 15,
+      "history": 15,
+      "error": "history",
+      "commits": 16,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 17,
+      "products": 16,
+      "history": 16,
+      "error": "history",
+      "commits": 17,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 18,
+      "products": 17,
+      "history": 17,
+      "error": "history",
+      "commits": 18,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 19,
+      "products": 18,
+      "history": 18,
+      "error": "history",
+      "commits": 19,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 20,
+      "products": 19,
+      "history": 19,
+      "error": "history",
+      "commits": 20,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 21,
+      "products": 20,
+      "history": 20,
+      "error": "history",
+      "commits": 21,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 22,
+      "products": 21,
+      "history": 21,
+      "error": "history",
+      "commits": 22,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 23,
+      "products": 22,
+      "history": 22,
+      "error": "history",
+      "commits": 23,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 24,
+      "products": 23,
+      "history": 23,
+      "error": "history",
+      "commits": 24,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 25,
+      "products": 24,
+      "history": 24,
+      "error": "history",
+      "commits": 25,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 26,
+      "products": 25,
+      "history": 25,
+      "error": "history",
+      "commits": 26,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 27,
+      "products": 26,
+      "history": 26,
+      "error": "history",
+      "commits": 27,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 28,
+      "products": 27,
+      "history": 27,
+      "error": "history",
+      "commits": 28,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 29,
+      "products": 28,
+      "history": 28,
+      "error": "history",
+      "commits": 29,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 30,
+      "products": 29,
+      "history": 29,
+      "error": "history",
+      "commits": 30,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 31,
+      "products": 30,
+      "history": 30,
+      "error": "history",
+      "commits": 31,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 32,
+      "products": 31,
+      "history": 31,
+      "error": "history",
+      "commits": 32,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 33,
+      "products": 32,
+      "history": 32,
+      "error": "history",
+      "commits": 33,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 34,
+      "products": 33,
+      "history": 33,
+      "error": "history",
+      "commits": 34,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 35,
+      "products": 34,
+      "history": 34,
+      "error": "history",
+      "commits": 35,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 36,
+      "products": 35,
+      "history": 35,
+      "error": "history",
+      "commits": 36,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 37,
+      "products": 36,
+      "history": 36,
+      "error": "history",
+      "commits": 37,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 38,
+      "products": 37,
+      "history": 37,
+      "error": "history",
+      "commits": 38,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 39,
+      "products": 38,
+      "history": 38,
+      "error": "history",
+      "commits": 39,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 40,
+      "products": 39,
+      "history": 39,
+      "error": "history",
+      "commits": 40,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 41,
+      "products": 40,
+      "history": 40,
+      "error": "history",
+      "commits": 41,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 42,
+      "products": 41,
+      "history": 41,
+      "error": "history",
+      "commits": 42,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 43,
+      "products": 42,
+      "history": 42,
+      "error": "history",
+      "commits": 43,
+      "rollbacks": 1
+    },
+    {
+      "kind": "history_value",
+      "row": 44,
+      "products": 43,
+      "history": 43,
+      "error": "history",
+      "commits": 44,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 1,
+      "products": 0,
+      "history": 0,
+      "error": "commit before",
+      "commits": 1,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 2,
+      "products": 1,
+      "history": 1,
+      "error": "commit before",
+      "commits": 2,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 3,
+      "products": 2,
+      "history": 2,
+      "error": "commit before",
+      "commits": 3,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 4,
+      "products": 3,
+      "history": 3,
+      "error": "commit before",
+      "commits": 4,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 5,
+      "products": 4,
+      "history": 4,
+      "error": "commit before",
+      "commits": 5,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 6,
+      "products": 5,
+      "history": 5,
+      "error": "commit before",
+      "commits": 6,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 7,
+      "products": 6,
+      "history": 6,
+      "error": "commit before",
+      "commits": 7,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 8,
+      "products": 7,
+      "history": 7,
+      "error": "commit before",
+      "commits": 8,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 9,
+      "products": 8,
+      "history": 8,
+      "error": "commit before",
+      "commits": 9,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 10,
+      "products": 9,
+      "history": 9,
+      "error": "commit before",
+      "commits": 10,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 11,
+      "products": 10,
+      "history": 10,
+      "error": "commit before",
+      "commits": 11,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 12,
+      "products": 11,
+      "history": 11,
+      "error": "commit before",
+      "commits": 12,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 13,
+      "products": 12,
+      "history": 12,
+      "error": "commit before",
+      "commits": 13,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 14,
+      "products": 13,
+      "history": 13,
+      "error": "commit before",
+      "commits": 14,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 15,
+      "products": 14,
+      "history": 14,
+      "error": "commit before",
+      "commits": 15,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 16,
+      "products": 15,
+      "history": 15,
+      "error": "commit before",
+      "commits": 16,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 17,
+      "products": 16,
+      "history": 16,
+      "error": "commit before",
+      "commits": 17,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 18,
+      "products": 17,
+      "history": 17,
+      "error": "commit before",
+      "commits": 18,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 19,
+      "products": 18,
+      "history": 18,
+      "error": "commit before",
+      "commits": 19,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 20,
+      "products": 19,
+      "history": 19,
+      "error": "commit before",
+      "commits": 20,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 21,
+      "products": 20,
+      "history": 20,
+      "error": "commit before",
+      "commits": 21,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 22,
+      "products": 21,
+      "history": 21,
+      "error": "commit before",
+      "commits": 22,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 23,
+      "products": 22,
+      "history": 22,
+      "error": "commit before",
+      "commits": 23,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 24,
+      "products": 23,
+      "history": 23,
+      "error": "commit before",
+      "commits": 24,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 25,
+      "products": 24,
+      "history": 24,
+      "error": "commit before",
+      "commits": 25,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 26,
+      "products": 25,
+      "history": 25,
+      "error": "commit before",
+      "commits": 26,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 27,
+      "products": 26,
+      "history": 26,
+      "error": "commit before",
+      "commits": 27,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 28,
+      "products": 27,
+      "history": 27,
+      "error": "commit before",
+      "commits": 28,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 29,
+      "products": 28,
+      "history": 28,
+      "error": "commit before",
+      "commits": 29,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 30,
+      "products": 29,
+      "history": 29,
+      "error": "commit before",
+      "commits": 30,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 31,
+      "products": 30,
+      "history": 30,
+      "error": "commit before",
+      "commits": 31,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 32,
+      "products": 31,
+      "history": 31,
+      "error": "commit before",
+      "commits": 32,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 33,
+      "products": 32,
+      "history": 32,
+      "error": "commit before",
+      "commits": 33,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 34,
+      "products": 33,
+      "history": 33,
+      "error": "commit before",
+      "commits": 34,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 35,
+      "products": 34,
+      "history": 34,
+      "error": "commit before",
+      "commits": 35,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 36,
+      "products": 35,
+      "history": 35,
+      "error": "commit before",
+      "commits": 36,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 37,
+      "products": 36,
+      "history": 36,
+      "error": "commit before",
+      "commits": 37,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 38,
+      "products": 37,
+      "history": 37,
+      "error": "commit before",
+      "commits": 38,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 39,
+      "products": 38,
+      "history": 38,
+      "error": "commit before",
+      "commits": 39,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 40,
+      "products": 39,
+      "history": 39,
+      "error": "commit before",
+      "commits": 40,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 41,
+      "products": 40,
+      "history": 40,
+      "error": "commit before",
+      "commits": 41,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 42,
+      "products": 41,
+      "history": 41,
+      "error": "commit before",
+      "commits": 42,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 43,
+      "products": 42,
+      "history": 42,
+      "error": "commit before",
+      "commits": 43,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_before",
+      "row": 44,
+      "products": 43,
+      "history": 43,
+      "error": "commit before",
+      "commits": 44,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 1,
+      "products": 1,
+      "history": 1,
+      "error": "commit acknowledged lost",
+      "commits": 2,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 2,
+      "products": 2,
+      "history": 2,
+      "error": "commit acknowledged lost",
+      "commits": 3,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 3,
+      "products": 3,
+      "history": 3,
+      "error": "commit acknowledged lost",
+      "commits": 4,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 4,
+      "products": 4,
+      "history": 4,
+      "error": "commit acknowledged lost",
+      "commits": 5,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 5,
+      "products": 5,
+      "history": 5,
+      "error": "commit acknowledged lost",
+      "commits": 6,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 6,
+      "products": 6,
+      "history": 6,
+      "error": "commit acknowledged lost",
+      "commits": 7,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 7,
+      "products": 7,
+      "history": 7,
+      "error": "commit acknowledged lost",
+      "commits": 8,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 8,
+      "products": 8,
+      "history": 8,
+      "error": "commit acknowledged lost",
+      "commits": 9,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 9,
+      "products": 9,
+      "history": 9,
+      "error": "commit acknowledged lost",
+      "commits": 10,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 10,
+      "products": 10,
+      "history": 10,
+      "error": "commit acknowledged lost",
+      "commits": 11,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 11,
+      "products": 11,
+      "history": 11,
+      "error": "commit acknowledged lost",
+      "commits": 12,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 12,
+      "products": 12,
+      "history": 12,
+      "error": "commit acknowledged lost",
+      "commits": 13,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 13,
+      "products": 13,
+      "history": 13,
+      "error": "commit acknowledged lost",
+      "commits": 14,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 14,
+      "products": 14,
+      "history": 14,
+      "error": "commit acknowledged lost",
+      "commits": 15,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 15,
+      "products": 15,
+      "history": 15,
+      "error": "commit acknowledged lost",
+      "commits": 16,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 16,
+      "products": 16,
+      "history": 16,
+      "error": "commit acknowledged lost",
+      "commits": 17,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 17,
+      "products": 17,
+      "history": 17,
+      "error": "commit acknowledged lost",
+      "commits": 18,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 18,
+      "products": 18,
+      "history": 18,
+      "error": "commit acknowledged lost",
+      "commits": 19,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 19,
+      "products": 19,
+      "history": 19,
+      "error": "commit acknowledged lost",
+      "commits": 20,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 20,
+      "products": 20,
+      "history": 20,
+      "error": "commit acknowledged lost",
+      "commits": 21,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 21,
+      "products": 21,
+      "history": 21,
+      "error": "commit acknowledged lost",
+      "commits": 22,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 22,
+      "products": 22,
+      "history": 22,
+      "error": "commit acknowledged lost",
+      "commits": 23,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 23,
+      "products": 23,
+      "history": 23,
+      "error": "commit acknowledged lost",
+      "commits": 24,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 24,
+      "products": 24,
+      "history": 24,
+      "error": "commit acknowledged lost",
+      "commits": 25,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 25,
+      "products": 25,
+      "history": 25,
+      "error": "commit acknowledged lost",
+      "commits": 26,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 26,
+      "products": 26,
+      "history": 26,
+      "error": "commit acknowledged lost",
+      "commits": 27,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 27,
+      "products": 27,
+      "history": 27,
+      "error": "commit acknowledged lost",
+      "commits": 28,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 28,
+      "products": 28,
+      "history": 28,
+      "error": "commit acknowledged lost",
+      "commits": 29,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 29,
+      "products": 29,
+      "history": 29,
+      "error": "commit acknowledged lost",
+      "commits": 30,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 30,
+      "products": 30,
+      "history": 30,
+      "error": "commit acknowledged lost",
+      "commits": 31,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 31,
+      "products": 31,
+      "history": 31,
+      "error": "commit acknowledged lost",
+      "commits": 32,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 32,
+      "products": 32,
+      "history": 32,
+      "error": "commit acknowledged lost",
+      "commits": 33,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 33,
+      "products": 33,
+      "history": 33,
+      "error": "commit acknowledged lost",
+      "commits": 34,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 34,
+      "products": 34,
+      "history": 34,
+      "error": "commit acknowledged lost",
+      "commits": 35,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 35,
+      "products": 35,
+      "history": 35,
+      "error": "commit acknowledged lost",
+      "commits": 36,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 36,
+      "products": 36,
+      "history": 36,
+      "error": "commit acknowledged lost",
+      "commits": 37,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 37,
+      "products": 37,
+      "history": 37,
+      "error": "commit acknowledged lost",
+      "commits": 38,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 38,
+      "products": 38,
+      "history": 38,
+      "error": "commit acknowledged lost",
+      "commits": 39,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 39,
+      "products": 39,
+      "history": 39,
+      "error": "commit acknowledged lost",
+      "commits": 40,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 40,
+      "products": 40,
+      "history": 40,
+      "error": "commit acknowledged lost",
+      "commits": 41,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 41,
+      "products": 41,
+      "history": 41,
+      "error": "commit acknowledged lost",
+      "commits": 42,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 42,
+      "products": 42,
+      "history": 42,
+      "error": "commit acknowledged lost",
+      "commits": 43,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 43,
+      "products": 43,
+      "history": 43,
+      "error": "commit acknowledged lost",
+      "commits": 44,
+      "rollbacks": 1
+    },
+    {
+      "kind": "commit_after",
+      "row": 44,
+      "products": 44,
+      "history": 44,
+      "error": "commit acknowledged lost",
+      "commits": 45,
+      "rollbacks": 1
+    },
+    {
+      "kind": "blocked",
+      "row": 1,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 2,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 3,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 4,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 5,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 6,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 7,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 8,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 9,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 10,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 11,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 12,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 13,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 14,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 15,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 16,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 17,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 18,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 19,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 20,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 21,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 22,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 23,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 24,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 25,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 26,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 27,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 28,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 29,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 30,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 31,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 32,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 33,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 34,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 35,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 36,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 37,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 38,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 39,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 40,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 41,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 42,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 43,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    },
+    {
+      "kind": "blocked",
+      "row": 44,
+      "products": 43,
+      "history": 44,
+      "error": null,
+      "commits": 46,
+      "rollbacks": 0
+    }
+  ]
+}

@@ -1,0 +1,198 @@
+import { readFileSync } from "node:fs";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api, ApiError } from "../../lib/api";
+import i18n from "../../i18n";
+import { TcgProductImportPanel } from "./TcgProductImportPanel";
+vi.mock("../../lib/api", async importOriginal => ({ ...await importOriginal<typeof import("../../lib/api")>(), api: { postForm: vi.fn() } }));
+const sample = () => new File(["mark,japanese_title\nA,Fixture"], "products.csv", { type: "text/csv" });
+const preview = { filename: "products.csv", digest: "a".repeat(64), file_errors: [], total: 2, ok: 1, blocked: 1, rows: [
+  { row_no: "2", japanese_title: "Fixture", mark: "A", blocking: [], warnings: ["NO_SEARCH_KEYWORD"] },
+  { row_no: "3", japanese_title: "Invalid", mark: "B", blocking: ["RELEASE_DATE_FORMAT"], warnings: [] },
+] };
+async function review() {
+  fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [sample()] } });
+  fireEvent.click(screen.getByRole("button", { name: "Review contents" }));
+  await screen.findByRole("region", { name: "Review contents" });
+}
+beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage("en"); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+const updatePreview = { ...preview, mode: "update", ok: 2, blocked: 0, updated: 1, unchanged: 1, rows: [
+  { row_no: "1", japanese_title: "Changed", mark: "A", product_code: "PM01", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old title", after: "Changed" }] },
+  { row_no: "2", japanese_title: "Same", mark: "B", product_code: "PM02", action: "unchanged", blocking: [], warnings: [], changes: [] },
+] };
+it("R10 shows changes and sends one update only after confirmation", async () => {
+  vi.mocked(api.postForm).mockResolvedValueOnce(updatePreview).mockResolvedValueOnce({ job_id: "updated", total: 2, mode: "update", created: 0, skipped: 0, updated: 1, unchanged: 1 });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect(screen.getByText(/Old title/)).toBeTruthy(); expect(screen.getByText("PM01")).toBeTruthy();
+  expect(screen.getByText("1. Choose file → 2. Review → 3. Update")).toBeTruthy();
+  expect(screen.getByText("Total: 2 / Valid: 2 / Blocked: 0")).toBeTruthy();
+  expect(api.postForm).toHaveBeenCalledTimes(1);
+  const button = screen.getByRole("button", { name: "Confirm updates" }); fireEvent.click(button); fireEvent.click(button);
+  await screen.findByRole("status"); expect(api.postForm).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("status").textContent).toContain("Updates: 1");
+  expect(screen.getByText("1. Choose file → 2. Review → 3. Update")).toBeTruthy();
+});
+it("R10 blocks the entire update file when one row fails", async () => {
+  vi.mocked(api.postForm).mockResolvedValue({ ...updatePreview, blocked: 1, ok: 1 });
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  expect((screen.getByRole("button", { name: "Confirm updates" }) as HTMLButtonElement).disabled).toBe(true);
+  expect(api.postForm).toHaveBeenCalledTimes(1);
+});
+it.each([409, 422, 500])("R10 distinguishes definite rejection from uncertain response %s", async status => {
+  vi.mocked(api.postForm).mockResolvedValueOnce(updatePreview).mockRejectedValueOnce(new ApiError("ROUNDTRIP_STALE", status, null));
+  render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm updates" })); await screen.findByRole("alert");
+  if (status < 500) expect(screen.getByLabelText("CSV file")).toBeTruthy();
+  else expect(screen.queryByLabelText("CSV file")).toBeNull();
+  expect(api.postForm).toHaveBeenCalledTimes(2);
+});
+describe("product import confirmation", () => {
+  it("does not send until review, then submits the exact file and digest once", async () => {
+    vi.mocked(api.postForm).mockResolvedValueOnce(preview).mockResolvedValueOnce({ job_id: "receipt-1", total: 2, created: 1, skipped: 1 });
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    expect(api.postForm).not.toHaveBeenCalled();
+    await review();
+    expect(screen.queryByRole("button", { name: "Download blank sample CSV" })).toBeNull();
+    expect(api.postForm).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("No search keywords are specified.")).toBeTruthy();
+    expect(screen.getByText("Use YYYY-MM-DD for the release date.")).toBeTruthy();
+    const button = screen.getByRole("button", { name: "Confirm warnings and import" });
+    fireEvent.click(button); fireEvent.click(button);
+    await screen.findByText("Total: 2 / Registered: 1 / Skipped: 1");
+    expect(screen.queryByRole("button", { name: "Download blank sample CSV" })).toBeNull();
+    expect(api.postForm).toHaveBeenCalledTimes(2);
+    const submitted = vi.mocked(api.postForm).mock.calls[1];
+    expect(submitted[0]).toBe("/tcg/products/import/commit");
+    expect(submitted[1].get("confirmed_digest")).toBe(preview.digest);
+    expect(submitted[1].get("file")).toBe(vi.mocked(api.postForm).mock.calls[0][1].get("file"));
+  });
+  it("invalidates confirmation when choosing a replacement", async () => {
+    vi.mocked(api.postForm).mockResolvedValue(preview);
+    render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+    fireEvent.click(screen.getByRole("button", { name: "Choose another file" }));
+    expect(screen.queryByRole("button", { name: "Confirm warnings and import" })).toBeNull();
+    expect((screen.getByRole("button", { name: "Review contents" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(api.postForm).toHaveBeenCalledTimes(1);
+  });
+  it("refuses to register when all rows are blocked", async () => {
+    vi.mocked(api.postForm).mockResolvedValue({ ...preview, ok: 0 });
+    render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+    expect((screen.getByRole("button", { name: "Confirm warnings and import" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+  it("locks registration after an uncertain response without retrying", async () => {
+    vi.mocked(api.postForm).mockResolvedValueOnce(preview).mockRejectedValueOnce(new Error("network"));
+    render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
+    fireEvent.click(screen.getByRole("button", { name: "Confirm warnings and import" }));
+    await screen.findByRole("alert");
+    expect(screen.queryByRole("button", { name: "Download blank sample CSV" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Confirm warnings and import" })).toBeNull();
+    expect(screen.queryByLabelText("CSV file")).toBeNull();
+    expect(api.postForm).toHaveBeenCalledTimes(2);
+  });
+  it("rejects wrong extension, empty and oversized files before requests", () => {
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    for (const file of [new File(["x"], "a.txt"), new File([], "a.csv"), new File([new Uint8Array(2097153)], "a.csv")]) {
+      fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [file] } });
+      expect(screen.getByRole("alert")).toBeTruthy();
+    }
+    expect(api.postForm).not.toHaveBeenCalled();
+  });
+  it("takes a dropped file and ignores drops while the request is pending", async () => {
+    let finish!: (value: typeof preview) => void;
+    vi.mocked(api.postForm).mockImplementation(() => new Promise(resolve => { finish = resolve as typeof finish; }));
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    const region = screen.getByRole("region");
+    fireEvent.drop(region, { dataTransfer: { files: [sample()] } });
+    fireEvent.click(screen.getByRole("button", { name: "Review contents" }));
+    fireEvent.drop(region, { dataTransfer: { files: [sample(), sample()] } });
+    finish(preview);
+    await screen.findByRole("region", { name: "Review contents" });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(api.postForm).toHaveBeenCalledTimes(1);
+  });
+  it("keeps preview errors separate from a successful empty result", async () => {
+    vi.mocked(api.postForm).mockRejectedValue(new Error("offline"));
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [sample()] } });
+    fireEvent.click(screen.getByRole("button", { name: "Review contents" }));
+    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("No products have been registered"));
+    expect(screen.queryByRole("button", { name: "Confirm warnings and import" })).toBeNull();
+  });
+});
+
+describe("blank CSV template", () => {
+  it("matches the backend column order with BOM, CRLF and no product rows", () => {
+    const bytes = readFileSync("public/templates/tcg-product-import-template.csv");
+    const service = readFileSync("../backend/app/services/tcg_product_import_svc.py", "utf8");
+    const declaration = service.match(/^CSV_COLUMNS:\s*list\[str\]\s*=\s*\[([\s\S]*?)^\]/m);
+    expect(declaration).not.toBeNull();
+    const columns = Array.from(declaration![1].matchAll(/["']([^"']+)["']/g), match => match[1]);
+    expect(columns).toHaveLength(10);
+    expect(Array.from(bytes.subarray(0, 3))).toEqual([0xef, 0xbb, 0xbf]);
+    expect(bytes.subarray(3).toString("utf8")).toBe(columns.join(",") + "\r\n");
+    expect(bytes.subarray(3).toString("utf8").split("\r\n")).toHaveLength(2);
+  });
+
+  it("downloads a same-origin asset without requests or replacing the selected file", async () => {
+    const clicked: HTMLAnchorElement[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (this: HTMLAnchorElement) {
+      expect(this.isConnected).toBe(true);
+      clicked.push(this);
+    });
+    vi.mocked(api.postForm).mockResolvedValue(preview);
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    const selected = sample();
+    fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [selected] } });
+    fireEvent.click(screen.getByRole("button", { name: "Download blank sample CSV" }));
+    expect(clicked).toHaveLength(1);
+    expect(clicked[0].getAttribute("href")).toBe("/templates/tcg-product-import-template.csv");
+    expect(new URL(clicked[0].href).origin).toBe(window.location.origin);
+    expect(clicked[0].download).toBe("tcg-product-import-template.csv");
+    expect(clicked[0].isConnected).toBe(false);
+    expect(api.postForm).not.toHaveBeenCalled();
+    expect(screen.getByText(selected.name)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Review contents" }));
+    await screen.findByRole("region", { name: "Review contents" });
+    expect(vi.mocked(api.postForm).mock.calls[0][1].get("file")).toBe(selected);
+  });
+
+  it("preserves an existing validation error when downloading", () => {
+    vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [new File(["x"], "a.txt")] } });
+    const message = screen.getByRole("alert").textContent;
+    fireEvent.click(screen.getByRole("button", { name: "Download blank sample CSV" }));
+    expect(screen.getByRole("alert").textContent).toBe(message);
+    expect(api.postForm).not.toHaveBeenCalled();
+  });
+
+  it("disables downloading while preview is pending and hides it in preview", async () => {
+    let finish!: (value: typeof preview) => void;
+    vi.mocked(api.postForm).mockImplementation(() => new Promise(resolve => { finish = resolve as typeof finish; }));
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+    render(<TcgProductImportPanel onDone={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("CSV file"), { target: { files: [sample()] } });
+    fireEvent.click(screen.getByRole("button", { name: "Review contents" }));
+    const button = screen.getByRole("button", { name: "Download blank sample CSV" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+    fireEvent.click(button);
+    expect(click).not.toHaveBeenCalled();
+    finish(preview);
+    await screen.findByRole("region", { name: "Review contents" });
+    expect(screen.queryByRole("button", { name: "Download blank sample CSV" })).toBeNull();
+  });
+
+  for (const locale of ["ja", "en"]) {
+    it("shows the template instructions and required column names in " + locale, async () => {
+      await i18n.changeLanguage(locale);
+      render(<TcgProductImportPanel onDone={vi.fn()} />);
+      expect(screen.getByRole("button", { name: i18n.t("productCsv.downloadTemplate") })).toBeTruthy();
+      for (const key of ["templateIntro", "templateOptional"]) expect(screen.getByText(i18n.t("productCsv." + key))).toBeTruthy();
+      expect(screen.getByText(i18n.t("productCsv.templateRequired"), { exact: false })).toBeTruthy();
+      for (const column of ["japanese_title", "division_code", "work_code", "manufacturer_code", "product_category_code"]) {
+        expect(screen.getByText(column, { exact: true }).tagName).toBe("CODE");
+      }
+    });
+  }
+});

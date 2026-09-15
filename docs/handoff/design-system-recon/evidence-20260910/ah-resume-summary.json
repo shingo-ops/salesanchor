@@ -1,0 +1,53 @@
+{
+  "head": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "remoteMainObserved": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "Button": {
+    "sha": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+    "Button": 70,
+    "ButtonFiles": 18,
+    "attributes": {
+      "className": 0,
+      "style": 0,
+      "ref": 0,
+      "spread": 0,
+      "type": 26
+    },
+    "types": {
+      "\"button\"": 21,
+      "\"submit\"": 5,
+      "omitted": 44
+    },
+    "nativeButtons": 488,
+    "rawLegacyJsx": 352,
+    "rawLegacyFiles": 89,
+    "legacyCssRules": 28
+  },
+  "rawCount": 352,
+  "rawKinds": {
+    "btn-prefix": 332,
+    "dedicated-btn-substring": 20
+  },
+  "AHCount": 16,
+  "AHBSAIds": [
+    "BSA-005",
+    "BSA-006",
+    "BSA-002",
+    "BSA-003",
+    "BSA-004",
+    "BSA-027",
+    "BSA-028",
+    "BSA-029",
+    "BSA-025",
+    "BSA-026",
+    "BSA-030",
+    "BSA-031",
+    "BSA-032",
+    "BSA-033",
+    "BSA-034",
+    "BSA-035"
+  ],
+  "changedPreconditions": [
+    "frontend/src/components/Modal.css"
+  ]
+}

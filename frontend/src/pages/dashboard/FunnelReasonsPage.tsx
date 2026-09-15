@@ -6,7 +6,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
 import { getReasons, type ReasonsResponse } from "../../api/funnel";
 import "./FunnelReasonsPage.css";
@@ -15,7 +14,6 @@ type ReasonType = "won" | "lost";
 
 export default function FunnelReasonsPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [reasonType, setReasonType] = useState<ReasonType>("won");
   const [data, setData] = useState<ReasonsResponse | null>(null);
@@ -37,15 +35,6 @@ export default function FunnelReasonsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.reasonsPageTitle"
-      headerAction={
-        <button
-          type="button"
-          className="frr-back-btn"
-          onClick={() => navigate("/")}
-        >
-          ← {t("nav.dashboard")}
-        </button>
-      }
     >
       {/* タブ切替 */}
       <div className="frr-tabs">

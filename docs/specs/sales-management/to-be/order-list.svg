@@ -1,0 +1,51 @@
+<svg width="760" height="300" viewBox="0 0 760 300" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="760" height="300" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="16" font-weight="600" fill="#2c2c2a">売上一覧（Order単位）</text>
+  <rect x="580" y="18" width="156" height="30" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="594" y="38" font-size="12" fill="#5f5e5a">2026-04-01 〜 07-09  &#9660;</text>
+
+  <text x="30" y="66" font-size="10" fill="#888780">ステータス</text>
+  <text x="94" y="66" font-size="10" fill="#888780">Order No.</text>
+  <text x="164" y="66" font-size="10" fill="#888780">取引先名</text>
+  <text x="330" y="66" font-size="10" fill="#888780">請求書発行日</text>
+  <text x="470" y="66" font-size="10" fill="#0c447c" text-anchor="end" font-weight="600">売上 &#9660;</text>
+  <text x="560" y="66" font-size="10" fill="#888780" text-anchor="end">利益</text>
+  <text x="650" y="66" font-size="10" fill="#888780" text-anchor="end">還付金額</text>
+  <text x="736" y="66" font-size="10" fill="#5f5e5a" text-anchor="end" font-weight="600">合計利益</text>
+  <line x1="24" y1="76" x2="736" y2="76" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="24" y="86" width="72" height="18" rx="5" fill="#e1f5ee"/>
+  <text x="60" y="99" font-size="10" fill="#0f6e56" text-anchor="middle">完了</text>
+  <text x="164" y="99" font-size="12" fill="#2c2c2a">Pokemon Cards USA LLC</text>
+  <text x="94" y="99" font-size="11" fill="#5f5e5a">INV-1042</text>
+  <text x="330" y="99" font-size="11" fill="#5f5e5a">2026-06-14</text>
+  <text x="470" y="99" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥210,000</text>
+  <text x="560" y="99" font-size="11" fill="#5f5e5a" text-anchor="end">¥52,000</text>
+  <text x="650" y="99" font-size="11" fill="#5f5e5a" text-anchor="end">¥16,800</text>
+  <text x="736" y="99" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥68,800</text>
+  <line x1="24" y1="112" x2="736" y2="112" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="24" y="122" width="72" height="18" rx="5" fill="#faeeda"/>
+  <text x="60" y="135" font-size="10" fill="#854f0b" text-anchor="middle">発送済</text>
+  <text x="164" y="135" font-size="12" fill="#2c2c2a">TCG Traders EU</text>
+  <text x="94" y="135" font-size="11" fill="#5f5e5a">INV-1038</text>
+  <text x="330" y="135" font-size="11" fill="#5f5e5a">2026-06-02</text>
+  <text x="470" y="135" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥185,000</text>
+  <text x="560" y="135" font-size="11" fill="#5f5e5a" text-anchor="end">¥41,000</text>
+  <text x="650" y="135" font-size="11" fill="#5f5e5a" text-anchor="end">¥0</text>
+  <text x="736" y="135" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥41,000</text>
+  <line x1="24" y1="148" x2="736" y2="148" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="24" y="158" width="72" height="18" rx="5" fill="#e1f5ee"/>
+  <text x="60" y="171" font-size="10" fill="#0f6e56" text-anchor="middle">完了</text>
+  <text x="164" y="171" font-size="12" fill="#2c2c2a">Card Kingdom AU</text>
+  <text x="94" y="171" font-size="11" fill="#5f5e5a">INV-1021</text>
+  <text x="330" y="171" font-size="11" fill="#5f5e5a">2026-05-19</text>
+  <text x="470" y="171" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥120,000</text>
+  <text x="560" y="171" font-size="11" fill="#5f5e5a" text-anchor="end">¥28,500</text>
+  <text x="650" y="171" font-size="11" fill="#5f5e5a" text-anchor="end">¥9,600</text>
+  <text x="736" y="171" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥38,100</text>
+
+  <text x="380" y="210" font-size="11" fill="#888780" text-anchor="middle">合計利益＝利益＋還付金額（自動計算）／ 行をクリックするとOrder詳細ページへ</text>
+</svg>

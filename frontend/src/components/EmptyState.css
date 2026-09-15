@@ -29,7 +29,7 @@
    ---------------------------------------------------------------- */
 
 .comp-empty__icon {
-  color: var(--text-muted);
+  color: var(--icon-empty);
   flex-shrink: 0;
   line-height: 1;
 }

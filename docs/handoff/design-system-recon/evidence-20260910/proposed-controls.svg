@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1280" viewBox="0 0 1280 1280"><style>text{font-family:"Hiragino Sans","Yu Gothic",sans-serif}</style>
+<rect x="0" y="0" width="1280" height="1280" rx="0" fill="#f5f7fa"/>
+<text x="40" y="53" fill="#1a202c" font-size="28" font-weight="600">Sales Anchor  共通部品の見本案</text>
+<text x="40" y="88" fill="#1a202c" font-size="17" font-weight="400">同じ用途の部品は、どのページでも同じ色・形に。</text>
+<text x="40" y="117" fill="#4a5568" font-size="14" font-weight="400">外観の提案です。実画面の再現・動作検証ではありません。</text>
+<rect x="40" y="148" width="584" height="642" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="64" y="188" fill="#1a202c" font-size="21" font-weight="600">ライト表示</text>
+<text x="64" y="230" fill="#1a202c" font-size="16" font-weight="600">ボタン</text>
+<rect x="64" y="248" width="122" height="36" rx="6" fill="#1e3a8a"/>
+<text x="82" y="272" fill="#ffffff" font-size="14" font-weight="500">保存</text>
+<rect x="201" y="248" width="122" height="36" rx="6" fill="#ffffff" stroke="#e2e8f0"/>
+<text x="219" y="272" fill="#4a5568" font-size="14" font-weight="500">キャンセル</text>
+<rect x="338" y="248" width="122" height="36" rx="6" fill="#ffffff"/>
+<text x="356" y="272" fill="#4a5568" font-size="14" font-weight="500">設定</text>
+<rect x="475" y="248" width="122" height="36" rx="6" fill="#ffffff" stroke="#e53e3e"/>
+<text x="493" y="272" fill="#9b2c2c" font-size="14" font-weight="500">削除</text>
+<text x="64" y="309" fill="#4a5568" font-size="13" font-weight="400">同じ角丸。用途は色と文言で区別。</text>
+<text x="64" y="354" fill="#1a202c" font-size="16" font-weight="600">トグル</text>
+<rect x="64" y="374" width="40" height="22" rx="11" fill="#e2e8f0"/>
+<circle cx="75" cy="385" r="8" fill="#ffffff"/>
+<text x="118" y="391" fill="#1a202c" font-size="14" font-weight="400">オフ</text>
+<rect x="274" y="374" width="40" height="22" rx="11" fill="#1e3a8a"/>
+<circle cx="303" cy="385" r="8" fill="#ffffff"/>
+<text x="328" y="391" fill="#1a202c" font-size="14" font-weight="400">オン</text>
+<text x="64" y="423" fill="#4a5568" font-size="13" font-weight="400">見える形と、押せる範囲を分けて確保。</text>
+<text x="64" y="468" fill="#1a202c" font-size="16" font-weight="600">データテーブル</text>
+<rect x="64" y="488" width="536" height="220" rx="8" fill="#ffffff" stroke="#e2e8f0"/>
+<rect x="65" y="489" width="534" height="43" rx="7" fill="#f7fafc"/>
+<text x="80" y="516" fill="#718096" font-size="13" font-weight="600">取引先</text>
+<text x="295" y="516" fill="#718096" font-size="13" font-weight="600">状態</text>
+<text x="486" y="516" fill="#718096" font-size="13" font-weight="600">金額</text>
+<path d="M65 532 H599" stroke="#e2e8f0"/>
+<text x="80" y="566" fill="#4a5568" font-size="14" font-weight="400">取引先 A</text>
+<text x="295" y="566" fill="#4a5568" font-size="14" font-weight="400">確認中</text>
+<text x="470" y="566" fill="#4a5568" font-size="14" font-weight="400">¥128,000</text>
+<path d="M65 588 H599" stroke="#e2e8f0"/>
+<text x="80" y="622" fill="#4a5568" font-size="14" font-weight="400">取引先 B</text>
+<text x="295" y="622" fill="#4a5568" font-size="14" font-weight="400">対応済み</text>
+<text x="470" y="622" fill="#4a5568" font-size="14" font-weight="400">¥64,000</text>
+<path d="M65 644 H599" stroke="#e2e8f0"/>
+<text x="80" y="678" fill="#4a5568" font-size="14" font-weight="400">取引先 C</text>
+<text x="295" y="678" fill="#4a5568" font-size="14" font-weight="400">確認中</text>
+<text x="470" y="678" fill="#4a5568" font-size="14" font-weight="400">¥32,000</text>
+<text x="64" y="748" fill="#4a5568" font-size="13" font-weight="400">列の内容や操作が違っても、表の外観は共通。</text>
+<rect x="656" y="148" width="584" height="642" rx="8" fill="#1e293b" stroke="#334155"/>
+<text x="680" y="188" fill="#f1f5f9" font-size="21" font-weight="600">ダーク表示</text>
+<text x="680" y="230" fill="#f1f5f9" font-size="16" font-weight="600">ボタン</text>
+<rect x="680" y="248" width="122" height="36" rx="6" fill="#5b8dd9"/>
+<text x="698" y="272" fill="#0f172a" font-size="14" font-weight="500">保存</text>
+<rect x="817" y="248" width="122" height="36" rx="6" fill="#1e293b" stroke="#334155"/>
+<text x="835" y="272" fill="#cbd5e1" font-size="14" font-weight="500">キャンセル</text>
+<rect x="954" y="248" width="122" height="36" rx="6" fill="#1e293b"/>
+<text x="972" y="272" fill="#cbd5e1" font-size="14" font-weight="500">設定</text>
+<rect x="1091" y="248" width="122" height="36" rx="6" fill="#1e293b" stroke="#f87171"/>
+<text x="1109" y="272" fill="#f87171" font-size="14" font-weight="500">削除</text>
+<text x="680" y="309" fill="#cbd5e1" font-size="13" font-weight="400">同じ角丸。用途は色と文言で区別。</text>
+<text x="680" y="354" fill="#f1f5f9" font-size="16" font-weight="600">トグル</text>
+<rect x="680" y="374" width="40" height="22" rx="11" fill="#334155"/>
+<circle cx="691" cy="385" r="8" fill="#1e293b"/>
+<text x="734" y="391" fill="#f1f5f9" font-size="14" font-weight="400">オフ</text>
+<rect x="890" y="374" width="40" height="22" rx="11" fill="#5b8dd9"/>
+<circle cx="919" cy="385" r="8" fill="#1e293b"/>
+<text x="944" y="391" fill="#f1f5f9" font-size="14" font-weight="400">オン</text>
+<text x="680" y="423" fill="#cbd5e1" font-size="13" font-weight="400">見える形と、押せる範囲を分けて確保。</text>
+<text x="680" y="468" fill="#f1f5f9" font-size="16" font-weight="600">データテーブル</text>
+<rect x="680" y="488" width="536" height="220" rx="8" fill="#1e293b" stroke="#334155"/>
+<rect x="681" y="489" width="534" height="43" rx="7" fill="#243046"/>
+<text x="696" y="516" fill="#94a3b8" font-size="13" font-weight="600">取引先</text>
+<text x="911" y="516" fill="#94a3b8" font-size="13" font-weight="600">状態</text>
+<text x="1102" y="516" fill="#94a3b8" font-size="13" font-weight="600">金額</text>
+<path d="M681 532 H1215" stroke="#334155"/>
+<text x="696" y="566" fill="#cbd5e1" font-size="14" font-weight="400">取引先 A</text>
+<text x="911" y="566" fill="#cbd5e1" font-size="14" font-weight="400">確認中</text>
+<text x="1086" y="566" fill="#cbd5e1" font-size="14" font-weight="400">¥128,000</text>
+<path d="M681 588 H1215" stroke="#334155"/>
+<text x="696" y="622" fill="#cbd5e1" font-size="14" font-weight="400">取引先 B</text>
+<text x="911" y="622" fill="#cbd5e1" font-size="14" font-weight="400">対応済み</text>
+<text x="1086" y="622" fill="#cbd5e1" font-size="14" font-weight="400">¥64,000</text>
+<path d="M681 644 H1215" stroke="#334155"/>
+<text x="696" y="678" fill="#cbd5e1" font-size="14" font-weight="400">取引先 C</text>
+<text x="911" y="678" fill="#cbd5e1" font-size="14" font-weight="400">確認中</text>
+<text x="1086" y="678" fill="#cbd5e1" font-size="14" font-weight="400">¥32,000</text>
+<text x="680" y="748" fill="#cbd5e1" font-size="13" font-weight="400">列の内容や操作が違っても、表の外観は共通。</text>
+<text x="40" y="830" fill="#1a202c" font-size="15" font-weight="600">読みやすさの調整案</text>
+<text x="40" y="858" fill="#4a5568" font-size="14" font-weight="400">ダークの保存ボタンは濃い文字に。ライトの削除文字は濃い赤に。既存の色を用途別に参照します。</text>
+</svg>

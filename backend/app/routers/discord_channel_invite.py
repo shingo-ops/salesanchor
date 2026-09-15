@@ -30,7 +30,6 @@ from app.auth.dependencies import (
     tenant_table_ref,
 )
 from app.database import get_db
-from app.discord_gateway.config import load_tenant_bot_configs
 from app.models import User
 from app.services.audit import record_audit_log
 
@@ -45,12 +44,9 @@ _SCALE_LABEL: dict[str, str] = {
 }
 
 
-def _get_bot_token(tenant_id: int) -> str | None:
-    token = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
-    if token:
-        return token
-    cfg = next((c for c in load_tenant_bot_configs() if c.tenant_id == tenant_id), None)
-    return cfg.bot_token if cfg else None
+def _get_bot_token() -> str | None:
+    """共通 Bot Token を取得する (ADR-146 B方式)."""
+    return os.environ.get("DISCORD_BOT_TOKEN") or None
 
 
 class ChannelInviteResponse(BaseModel):
@@ -132,7 +128,7 @@ async def send_channel_invite(
         )
 
     # Bot トークン取得
-    bot_token = _get_bot_token(tenant_id)
+    bot_token = _get_bot_token()
     if not bot_token:
         raise HTTPException(
             status_code=503,

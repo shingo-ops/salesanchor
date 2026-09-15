@@ -40,21 +40,21 @@ class TestCalculateCost:
     def test_zero_tokens_returns_zero(self) -> None:
         assert calculate_cost(0, 0) == Decimal("0")
 
-    def test_input_only_gemini_2_5_flash(self) -> None:
-        # 1M input tokens * $0.075 = $0.075
+    def test_input_only_default_model(self) -> None:
+        # 1M input tokens * $0.30 = $0.30
         cost = calculate_cost(1_000_000, 0)
-        assert cost == Decimal("0.075")
-
-    def test_output_only_gemini_2_5_flash(self) -> None:
-        # 1M output tokens * $0.30 = $0.30
-        cost = calculate_cost(0, 1_000_000)
         assert cost == Decimal("0.30")
+
+    def test_output_only_default_model(self) -> None:
+        # 1M output tokens * $2.50 = $2.50
+        cost = calculate_cost(0, 1_000_000)
+        assert cost == Decimal("2.50")
 
     def test_typical_inventory_message(self) -> None:
         # 2000 input + 800 output (typical 1 メッセージ)
-        # 2000 * 0.075e-6 = 0.00015 + 800 * 0.30e-6 = 0.00024 → 0.00039
+        # 2000 * 0.30e-6 = 0.00060 + 800 * 2.50e-6 = 0.00200 → 0.00260
         cost = calculate_cost(2000, 800)
-        assert cost == Decimal("0.000390")  # Decimal precise
+        assert cost == Decimal("0.002600")  # Decimal precise
 
     def test_unknown_model_raises(self) -> None:
         with pytest.raises(ValueError, match="unknown LLM model"):
@@ -221,8 +221,8 @@ class TestRecordCost:
         db = AsyncMock()
         db.execute = AsyncMock()
         cost = await record_cost(db, tenant_id=6, input_tokens=2000, output_tokens=800)
-        # 2000 * 0.075e-6 + 800 * 0.30e-6 = 0.000150 + 0.000240 = 0.000390
-        assert cost == Decimal("0.0004")  # NUMERIC(10,4) で 0.0004 に丸まる
+        # 2000 * 0.30e-6 + 800 * 2.50e-6 = 0.000600 + 0.002000 = 0.002600
+        assert cost == Decimal("0.0026")  # NUMERIC(10,4) で 0.0026 に丸まる
         db.execute.assert_called_once()
 
     @pytest.mark.asyncio
@@ -235,8 +235,8 @@ class TestRecordCost:
 
     @pytest.mark.asyncio
     async def test_high_volume_accumulation(self) -> None:
-        """5M input + 5M output で 0.375 + 1.50 = 1.875 USD"""
+        """5M input + 5M output で 1.50 + 12.50 = 14.00 USD"""
         db = AsyncMock()
         db.execute = AsyncMock()
         cost = await record_cost(db, tenant_id=6, input_tokens=5_000_000, output_tokens=5_000_000)
-        assert cost == Decimal("1.8750")
+        assert cost == Decimal("14.0000")

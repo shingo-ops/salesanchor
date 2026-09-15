@@ -1,0 +1,6054 @@
+{
+  "defs": [
+    {
+      "file": "frontend/src/features/tcg-analysis-review/source-raw-pane.css",
+      "line": 8,
+      "name": "--tcg-ar-source-min-h",
+      "value": "420px",
+      "selector": ".comparison-sheet .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/source-raw-pane.css",
+      "line": 43,
+      "name": "--tcg-ar-match-min-h",
+      "value": "18px",
+      "selector": ".source-search output",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 42,
+      "name": "--tcg-sq-source-min-h",
+      "value": "420px",
+      "selector": ".supplier-detail-view-body .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 43,
+      "name": "--tcg-sq-sticky-offset",
+      "value": "140px",
+      "selector": ".supplier-detail-view-body .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 112,
+      "name": "--pmd-max-w",
+      "value": "480px",
+      "selector": ".pmd-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 113,
+      "name": "--pmd-textarea-min-h",
+      "value": "72px",
+      "selector": ".pmd-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 90,
+      "name": "--dist-result-max-w",
+      "value": "220px",
+      "selector": ".dist-result--error",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 198,
+      "name": "--dist-drawer-max-w",
+      "value": "480px",
+      "selector": ".dist-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 384,
+      "name": "--dist-dialog-max-w",
+      "value": "440px",
+      "selector": ".dist-dialog",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 10,
+      "name": "--bg-primary",
+      "value": "#f5f7fa",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 11,
+      "name": "--bg-surface",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 12,
+      "name": "--bg-subtle",
+      "value": "#f7fafc",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 13,
+      "name": "--bg-hover",
+      "value": "#e2e8f0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 14,
+      "name": "--bg-active",
+      "value": "#cbd5e0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 17,
+      "name": "--text-primary",
+      "value": "#1a202c",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 18,
+      "name": "--text-secondary",
+      "value": "#4a5568",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 19,
+      "name": "--text-muted",
+      "value": "#718096",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 22,
+      "name": "--border",
+      "value": "#e2e8f0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 23,
+      "name": "--border-strong",
+      "value": "#cbd5e0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 24,
+      "name": "--border-icon",
+      "value": "#000000",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 27,
+      "name": "--accent",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 28,
+      "name": "--accent-hover",
+      "value": "#163171",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 29,
+      "name": "--link",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 30,
+      "name": "--link-active-bg",
+      "value": "#ebeff8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 31,
+      "name": "--avatar-bg",
+      "value": "#f1f4f7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 32,
+      "name": "--indicator",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 35,
+      "name": "--sidebar-bg",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 36,
+      "name": "--sidebar-border",
+      "value": "#E4E4E7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 37,
+      "name": "--sidebar-item-hover-bg",
+      "value": "#ebeff8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 38,
+      "name": "--sidebar-item-active-bg",
+      "value": "#ebeff8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 39,
+      "name": "--sidebar-item-active-color",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 40,
+      "name": "--sidebar-item-active-border",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 41,
+      "name": "--sidebar-width-collapsed",
+      "value": "54px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 42,
+      "name": "--sidebar-width-expanded",
+      "value": "240px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 45,
+      "name": "--danger",
+      "value": "#e53e3e",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 46,
+      "name": "--danger-bg",
+      "value": "#fed7d7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 47,
+      "name": "--danger-text",
+      "value": "#9b2c2c",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 48,
+      "name": "--warning-bg",
+      "value": "#fefcbf",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 49,
+      "name": "--warning-text",
+      "value": "#744210",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 50,
+      "name": "--success-bg",
+      "value": "#c6f6d5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 51,
+      "name": "--success-text",
+      "value": "#22543d",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 54,
+      "name": "--banner-success-bg",
+      "value": "#e6f4ea",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 55,
+      "name": "--banner-success-text",
+      "value": "#137333",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 56,
+      "name": "--banner-warning-bg",
+      "value": "#fff4e5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 57,
+      "name": "--banner-warning-text",
+      "value": "#a45a00",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 58,
+      "name": "--banner-error-bg",
+      "value": "#fdecea",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 59,
+      "name": "--banner-error-text",
+      "value": "#a50e0e",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 62,
+      "name": "--shadow-xs",
+      "value": "0 1px 2px rgba(0, 0, 0, 0.05)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 63,
+      "name": "--shadow-sm",
+      "value": "0 1px 3px rgba(0, 0, 0, 0.08)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 64,
+      "name": "--shadow-md",
+      "value": "0 4px 12px rgba(0, 0, 0, 0.08)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 65,
+      "name": "--shadow-lg",
+      "value": "0 10px 15px rgba(0, 0, 0, 0.08), 0 4px 6px rgba(0, 0, 0, 0.05)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 66,
+      "name": "--shadow-xl",
+      "value": "0 20px 25px rgba(0, 0, 0, 0.08), 0 8px 10px rgba(0, 0, 0, 0.04)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 67,
+      "name": "--shadow-modal",
+      "value": "0 8px 32px rgba(0, 0, 0, 0.2)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 68,
+      "name": "--shadow-dropdown",
+      "value": "0 2px 12px rgba(0, 0, 0, 0.15)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 69,
+      "name": "--shadow-drop-sm",
+      "value": "0 2px 4px rgba(0, 0, 0, 0.2)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 70,
+      "name": "--shadow-accent-hover",
+      "value": "0 2px 6px rgba(30, 58, 138, 0.15)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 73,
+      "name": "--overlay-bg",
+      "value": "rgba(0, 0, 0, 0.4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 76,
+      "name": "--danger-bg-subtle",
+      "value": "rgba(229, 62, 62, 0.06)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 77,
+      "name": "--accent-bg-subtle",
+      "value": "rgba(30, 58, 138, 0.06)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 78,
+      "name": "--warning-bg-subtle",
+      "value": "rgba(183, 121, 31, 0.06)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 79,
+      "name": "--success-bg-subtle",
+      "value": "rgba(72, 187, 120, 0.05)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 82,
+      "name": "--color-hover-overlay",
+      "value": "rgba(0, 0, 0, 0.05)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 83,
+      "name": "--color-chip-count-bg",
+      "value": "rgba(255, 255, 255, 0.25)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 84,
+      "name": "--color-separator-subtle",
+      "value": "rgba(203, 210, 217, 0.6)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 87,
+      "name": "--focus-ring-shadow",
+      "value": "0 0 0 3px rgba(30, 58, 138, 0.15)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 89,
+      "name": "--search-focus-glow",
+      "value": "0 0 0 3px rgba(30, 58, 138, 0.15), 0 0 10px 1px rgba(30, 58, 138, 0.18)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 92,
+      "name": "--row-hover",
+      "value": "#edf2f7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 95,
+      "name": "--bubble-inbound-bg",
+      "value": "#EFEFEF",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 96,
+      "name": "--bubble-outbound-bg",
+      "value": "#8B2EF5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 99,
+      "name": "--rank-bg",
+      "value": "#FFF3E0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 100,
+      "name": "--rank-text",
+      "value": "#E65100",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 103,
+      "name": "--info-bg",
+      "value": "#bee3f8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 104,
+      "name": "--info-text",
+      "value": "#2b6cb0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 107,
+      "name": "--neutral-bg",
+      "value": "#e2e8f0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 108,
+      "name": "--neutral-text",
+      "value": "#4a5568",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 109,
+      "name": "--neutral",
+      "value": "#718096",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 110,
+      "name": "--info",
+      "value": "#2563eb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 111,
+      "name": "--warning",
+      "value": "#d97706",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 113,
+      "name": "--comp-badge-success-solid",
+      "value": "var(--success)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 115,
+      "name": "--comp-badge-danger-solid",
+      "value": "var(--danger)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 118,
+      "name": "--purple-bg",
+      "value": "#e9d8fd",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 119,
+      "name": "--purple-text",
+      "value": "#553c9a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 122,
+      "name": "--inbox-separator",
+      "value": "#e4e6eb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 123,
+      "name": "--inbox-hover",
+      "value": "#f2f3f5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 124,
+      "name": "--inbox-action-icon-color",
+      "value": "var(--text-secondary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 125,
+      "name": "--inbox-bulk-icon-color",
+      "value": "var(--text-primary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 128,
+      "name": "--on-accent",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 129,
+      "name": "--spinner-on-accent-track",
+      "value": "rgba(255, 255, 255, 0.4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 130,
+      "name": "--spinner-on-accent-head",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 133,
+      "name": "--lead-contact-bg",
+      "value": "#fbd38d",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 134,
+      "name": "--lead-contact-text",
+      "value": "#744210",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 137,
+      "name": "--success",
+      "value": "#2e7d32",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 138,
+      "name": "--color-error-bg-subtle",
+      "value": "rgba(220, 38, 38, 0.07)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 139,
+      "name": "--color-warning",
+      "value": "#c08a00",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 140,
+      "name": "--bg-disabled",
+      "value": "#f7f7f7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 143,
+      "name": "--bg-row-zero-stock",
+      "value": "#e3e8f0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 144,
+      "name": "--bg-row-zero-stock-hover",
+      "value": "#d6dde8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 145,
+      "name": "--border-color",
+      "value": "#cccccc",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 146,
+      "name": "--border-light",
+      "value": "#eeeeee",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 147,
+      "name": "--accent-bg",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 148,
+      "name": "--bg-badge",
+      "value": "#eeeeff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 151,
+      "name": "--color-blue-100",
+      "value": "#dbeafe",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 152,
+      "name": "--color-blue-700",
+      "value": "#1d4ed8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 153,
+      "name": "--color-gray-100",
+      "value": "#f3f4f6",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 154,
+      "name": "--color-gray-600",
+      "value": "#4b5563",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 155,
+      "name": "--color-red-50",
+      "value": "#fef2f2",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 156,
+      "name": "--color-red-700",
+      "value": "#b91c1c",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 157,
+      "name": "--color-amber-50",
+      "value": "#fffbeb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 158,
+      "name": "--color-amber-800",
+      "value": "#92400e",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 159,
+      "name": "--color-border-subtle",
+      "value": "#f3f4f6",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 162,
+      "name": "--platform-mail-bg",
+      "value": "#ea4335",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 163,
+      "name": "--platform-unknown-bg",
+      "value": "#999999",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 166,
+      "name": "--inbox-bg-gradient",
+      "value": "radial-gradient(103.89% 81.75% at 95.41% 106.34%,\n      rgb(234, 248, 239) 6%, rgba(234, 248, 239, 0) 79.68%),\n    radial-gradient(297.85% 151.83% at -21.39% 8.81%,\n      rgb(250, 241, 241) 0%, rgb(250, 241, 241) 15.29%,\n      rgb(243, 237, 245) 21.39%, rgb(229, 240, 250) 40.79%)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 174,
+      "name": "--tooltip-bg",
+      "value": "rgba(26, 32, 44, 0.92)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 175,
+      "name": "--tooltip-text",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 178,
+      "name": "--calendar-google-blue",
+      "value": "#1a73e8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 179,
+      "name": "--calendar-google-blue-light",
+      "value": "#e8f0fe",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 180,
+      "name": "--calendar-today-bg",
+      "value": "#1a73e8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 181,
+      "name": "--calendar-today-text",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 182,
+      "name": "--calendar-today-cell-bg",
+      "value": "#e8f0fe",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 183,
+      "name": "--calendar-grid-border",
+      "value": "#dadce0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 184,
+      "name": "--calendar-status-ok-bg",
+      "value": "#e6f4ea",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 185,
+      "name": "--calendar-status-ok-text",
+      "value": "#1e7e34",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 186,
+      "name": "--calendar-status-error-bg",
+      "value": "#fce8e6",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 187,
+      "name": "--calendar-status-error-text",
+      "value": "#c5221f",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 188,
+      "name": "--accent-bright",
+      "value": "var(--calendar-today-bg)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 189,
+      "name": "--schedule-calendar-item-swatch-shadow",
+      "value": "inset 0 0 0 1px rgba(255, 255, 255, 0.4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 190,
+      "name": "--schedule-color-swatch-shadow",
+      "value": "inset 0 0 0 1px rgba(255, 255, 255, 0.16)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 191,
+      "name": "--schedule-overlay-scrim",
+      "value": "rgba(15, 23, 42, 0.12)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 207,
+      "name": "--bg-primary",
+      "value": "#0f172a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 208,
+      "name": "--bg-surface",
+      "value": "#1e293b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 209,
+      "name": "--bg-subtle",
+      "value": "#243046",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 210,
+      "name": "--bg-hover",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 211,
+      "name": "--bg-active",
+      "value": "#475569",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 213,
+      "name": "--text-primary",
+      "value": "#f1f5f9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 214,
+      "name": "--text-secondary",
+      "value": "#cbd5e1",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 215,
+      "name": "--text-muted",
+      "value": "#94a3b8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 217,
+      "name": "--border",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 218,
+      "name": "--border-strong",
+      "value": "#475569",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 219,
+      "name": "--border-icon",
+      "value": "#e2e8f0",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 221,
+      "name": "--accent",
+      "value": "#5b8dd9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 222,
+      "name": "--accent-hover",
+      "value": "#4d7fc8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 223,
+      "name": "--link",
+      "value": "#7baee0",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 224,
+      "name": "--link-active-bg",
+      "value": "#1e3a8a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 225,
+      "name": "--avatar-bg",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 226,
+      "name": "--indicator",
+      "value": "#5b8dd9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 228,
+      "name": "--danger",
+      "value": "#f87171",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 229,
+      "name": "--danger-bg",
+      "value": "#4c1d1d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 230,
+      "name": "--danger-text",
+      "value": "#fecaca",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 231,
+      "name": "--warning-bg",
+      "value": "#3d2f0c",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 232,
+      "name": "--warning-text",
+      "value": "#fde68a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 233,
+      "name": "--success-bg",
+      "value": "#14432b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 234,
+      "name": "--success-text",
+      "value": "#bbf7d0",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 237,
+      "name": "--banner-success-bg",
+      "value": "#1a3a25",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 238,
+      "name": "--banner-success-text",
+      "value": "#86efac",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 239,
+      "name": "--banner-warning-bg",
+      "value": "#3a2300",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 240,
+      "name": "--banner-warning-text",
+      "value": "#fcd34d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 241,
+      "name": "--banner-error-bg",
+      "value": "#3a1515",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 242,
+      "name": "--banner-error-text",
+      "value": "#fca5a5",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 244,
+      "name": "--shadow-xs",
+      "value": "0 1px 2px rgba(0, 0, 0, 0.3)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 245,
+      "name": "--shadow-sm",
+      "value": "0 1px 3px rgba(0, 0, 0, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 246,
+      "name": "--shadow-md",
+      "value": "0 4px 12px rgba(0, 0, 0, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 247,
+      "name": "--shadow-lg",
+      "value": "0 10px 15px rgba(0, 0, 0, 0.4), 0 4px 6px rgba(0, 0, 0, 0.3)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 248,
+      "name": "--shadow-xl",
+      "value": "0 20px 25px rgba(0, 0, 0, 0.5), 0 8px 10px rgba(0, 0, 0, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 249,
+      "name": "--shadow-modal",
+      "value": "0 8px 32px rgba(0, 0, 0, 0.5)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 250,
+      "name": "--shadow-dropdown",
+      "value": "0 2px 12px rgba(0, 0, 0, 0.35)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 251,
+      "name": "--shadow-drop-sm",
+      "value": "0 2px 4px rgba(0, 0, 0, 0.35)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 252,
+      "name": "--shadow-accent-hover",
+      "value": "0 2px 6px rgba(91, 141, 217, 0.2)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 254,
+      "name": "--overlay-bg",
+      "value": "rgba(0, 0, 0, 0.6)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 257,
+      "name": "--danger-bg-subtle",
+      "value": "rgba(229, 62, 62, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 258,
+      "name": "--accent-bg-subtle",
+      "value": "rgba(91, 141, 217, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 259,
+      "name": "--warning-bg-subtle",
+      "value": "rgba(253, 230, 138, 0.10)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 260,
+      "name": "--success-bg-subtle",
+      "value": "rgba(74, 222, 128, 0.10)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 262,
+      "name": "--color-hover-overlay",
+      "value": "rgba(255, 255, 255, 0.06)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 263,
+      "name": "--color-chip-count-bg",
+      "value": "rgba(255, 255, 255, 0.25)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 264,
+      "name": "--color-separator-subtle",
+      "value": "rgba(148, 163, 184, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 267,
+      "name": "--focus-ring-shadow",
+      "value": "0 0 0 3px rgba(91, 141, 217, 0.3)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 269,
+      "name": "--search-focus-glow",
+      "value": "0 0 0 3px rgba(91, 141, 217, 0.25), 0 0 12px 2px rgba(91, 141, 217, 0.3)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 271,
+      "name": "--row-hover",
+      "value": "#2d3b52",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 274,
+      "name": "--bubble-inbound-bg",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 275,
+      "name": "--bubble-outbound-bg",
+      "value": "#6d28d9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 278,
+      "name": "--rank-bg",
+      "value": "#3d2200",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 279,
+      "name": "--rank-text",
+      "value": "#fb923c",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 282,
+      "name": "--info-bg",
+      "value": "#1e3a5f",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 283,
+      "name": "--info-text",
+      "value": "#93c5fd",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 286,
+      "name": "--neutral-bg",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 287,
+      "name": "--neutral-text",
+      "value": "#94a3b8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 288,
+      "name": "--neutral",
+      "value": "#64748b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 289,
+      "name": "--info",
+      "value": "#3b82f6",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 290,
+      "name": "--warning",
+      "value": "#d97706",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 292,
+      "name": "--comp-badge-success-solid",
+      "value": "#15803d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 294,
+      "name": "--comp-badge-danger-solid",
+      "value": "#dc2626",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 297,
+      "name": "--purple-bg",
+      "value": "#3b1f6e",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 298,
+      "name": "--purple-text",
+      "value": "#d8b4fe",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 301,
+      "name": "--inbox-separator",
+      "value": "#374151",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 302,
+      "name": "--inbox-hover",
+      "value": "#243046",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 303,
+      "name": "--inbox-action-icon-color",
+      "value": "var(--text-secondary)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 304,
+      "name": "--inbox-bulk-icon-color",
+      "value": "var(--text-primary)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 307,
+      "name": "--sidebar-bg",
+      "value": "#1e293b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 308,
+      "name": "--sidebar-border",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 309,
+      "name": "--sidebar-item-hover-bg",
+      "value": "#1e3a8a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 310,
+      "name": "--sidebar-item-active-bg",
+      "value": "#1e3a8a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 311,
+      "name": "--sidebar-item-active-color",
+      "value": "#93c5fd",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 312,
+      "name": "--sidebar-item-active-border",
+      "value": "#5b8dd9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 313,
+      "name": "--sidebar-width-collapsed",
+      "value": "54px",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 314,
+      "name": "--sidebar-width-expanded",
+      "value": "240px",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 317,
+      "name": "--on-accent",
+      "value": "#ffffff",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 318,
+      "name": "--spinner-on-accent-track",
+      "value": "rgba(255, 255, 255, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 319,
+      "name": "--spinner-on-accent-head",
+      "value": "#ffffff",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 322,
+      "name": "--lead-contact-bg",
+      "value": "#3d2b00",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 323,
+      "name": "--lead-contact-text",
+      "value": "#fbd38d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 326,
+      "name": "--success",
+      "value": "#4ade80",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 327,
+      "name": "--color-error-bg-subtle",
+      "value": "rgba(248, 113, 113, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 328,
+      "name": "--color-warning",
+      "value": "#fde68a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 329,
+      "name": "--bg-disabled",
+      "value": "#2d3b52",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 333,
+      "name": "--bg-row-zero-stock",
+      "value": "#131c2c",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 334,
+      "name": "--bg-row-zero-stock-hover",
+      "value": "#1b2536",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 335,
+      "name": "--border-color",
+      "value": "#475569",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 336,
+      "name": "--border-light",
+      "value": "#334155",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 337,
+      "name": "--accent-bg",
+      "value": "#5b8dd9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 338,
+      "name": "--bg-badge",
+      "value": "#3b2d5c",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 341,
+      "name": "--color-blue-100",
+      "value": "#1e3a5f",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 342,
+      "name": "--color-blue-700",
+      "value": "#93c5fd",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 343,
+      "name": "--color-gray-100",
+      "value": "#1f2937",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 344,
+      "name": "--color-gray-600",
+      "value": "#9ca3af",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 345,
+      "name": "--color-red-50",
+      "value": "#450a0a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 346,
+      "name": "--color-red-700",
+      "value": "#fca5a5",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 347,
+      "name": "--color-amber-50",
+      "value": "#431407",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 348,
+      "name": "--color-amber-800",
+      "value": "#fcd34d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 349,
+      "name": "--color-border-subtle",
+      "value": "#374151",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 352,
+      "name": "--platform-mail-bg",
+      "value": "#ea4335",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 353,
+      "name": "--platform-unknown-bg",
+      "value": "#999999",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 356,
+      "name": "--inbox-bg-gradient",
+      "value": "radial-gradient(103.89% 81.75% at 95.41% 106.34%,\n      rgb(20, 40, 30) 6%, rgba(20, 40, 30, 0) 79.68%),\n    radial-gradient(297.85% 151.83% at -21.39% 8.81%,\n      rgb(30, 20, 20) 0%, rgb(30, 20, 20) 15.29%,\n      rgb(25, 20, 35) 21.39%, rgb(15, 30, 45) 40.79%)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 364,
+      "name": "--tooltip-bg",
+      "value": "rgba(241, 245, 249, 0.94)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 365,
+      "name": "--tooltip-text",
+      "value": "#0f172a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 368,
+      "name": "--calendar-google-blue",
+      "value": "#8ab4f8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 369,
+      "name": "--calendar-google-blue-light",
+      "value": "#1e3a5f",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 370,
+      "name": "--calendar-today-bg",
+      "value": "#8ab4f8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 371,
+      "name": "--calendar-today-text",
+      "value": "#0f172a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 372,
+      "name": "--calendar-today-cell-bg",
+      "value": "#1e3a5f",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 373,
+      "name": "--calendar-grid-border",
+      "value": "#3c4043",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 374,
+      "name": "--calendar-status-ok-bg",
+      "value": "#14432b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 375,
+      "name": "--calendar-status-ok-text",
+      "value": "#4ade80",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 376,
+      "name": "--calendar-status-error-bg",
+      "value": "#4c1d1d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 377,
+      "name": "--calendar-status-error-text",
+      "value": "#f87171",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 378,
+      "name": "--accent-bright",
+      "value": "var(--calendar-today-bg)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 379,
+      "name": "--schedule-calendar-item-swatch-shadow",
+      "value": "inset 0 0 0 1px rgba(255, 255, 255, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 380,
+      "name": "--schedule-color-swatch-shadow",
+      "value": "inset 0 0 0 1px rgba(255, 255, 255, 0.16)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/index.css",
+      "line": 381,
+      "name": "--schedule-overlay-scrim",
+      "value": "rgba(15, 23, 42, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/loading-animations.css",
+      "line": 188,
+      "name": "--progress-pct",
+      "value": "0",
+      "selector": ".sa-progress-circular",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 71,
+      "name": "--dp-label-w",
+      "value": "80px",
+      "selector": ".dp-row",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 218,
+      "name": "--dp-mobile-demo-w",
+      "value": "375px",
+      "selector": ".dp-mobile-demo",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.css",
+      "line": 69,
+      "name": "--etd-dot-size",
+      "value": "calc(var(--icon-lg) * 1.5)",
+      "selector": ".etd-stepper",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 5,
+      "name": "--schedule-shell-gap",
+      "value": "var(--space-5)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 6,
+      "name": "--schedule-shell-radius",
+      "value": "var(--radius-lg)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 7,
+      "name": "--schedule-popover-width",
+      "value": "20rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 8,
+      "name": "--schedule-popover-max-h",
+      "value": "34rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 9,
+      "name": "--schedule-month-cell-min-h",
+      "value": "7.5rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 10,
+      "name": "--schedule-rail-bg",
+      "value": "var(--bg-surface)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 11,
+      "name": "--schedule-rail-border",
+      "value": "var(--border)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 12,
+      "name": "--schedule-cell-border",
+      "value": "var(--schedule-gridline)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 13,
+      "name": "--schedule-hour-bg",
+      "value": "var(--bg-surface)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 14,
+      "name": "--schedule-hour-label",
+      "value": "var(--text-muted)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 15,
+      "name": "--schedule-day-min-w",
+      "value": "10rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 16,
+      "name": "--schedule-event-gap",
+      "value": "var(--space-1)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 17,
+      "name": "--schedule-empty-icon-bg",
+      "value": "var(--calendar-google-blue-light)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 18,
+      "name": "--schedule-empty-icon-color",
+      "value": "var(--calendar-google-blue)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 19,
+      "name": "--schedule-control-border",
+      "value": "var(--border)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 21,
+      "name": "--schedule-day-head-h",
+      "value": "82px",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 23,
+      "name": "--schedule-header-z",
+      "value": "2",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 24,
+      "name": "--schedule-allday-z",
+      "value": "1",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 13,
+      "name": "--font-2xs",
+      "value": "0.7rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 14,
+      "name": "--font-xs",
+      "value": "0.75rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 15,
+      "name": "--font-sm",
+      "value": "0.85rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 16,
+      "name": "--font-base",
+      "value": "0.9rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 17,
+      "name": "--font-md",
+      "value": "1rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 18,
+      "name": "--font-lg",
+      "value": "1.1rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 19,
+      "name": "--font-xl",
+      "value": "1.25rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 20,
+      "name": "--font-2xl",
+      "value": "1.5rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 21,
+      "name": "--font-3xl",
+      "value": "2rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 24,
+      "name": "--font-sidebar-brand",
+      "value": "1.6rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 25,
+      "name": "--font-display",
+      "value": "1.6rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 28,
+      "name": "--font-weight-normal",
+      "value": "400",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 29,
+      "name": "--font-weight-medium",
+      "value": "500",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 30,
+      "name": "--font-weight-semi",
+      "value": "600",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 31,
+      "name": "--font-weight-bold",
+      "value": "700",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 34,
+      "name": "--line-height-tight",
+      "value": "1.25",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 35,
+      "name": "--line-height-base",
+      "value": "1.5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 42,
+      "name": "--role-page-title-size",
+      "value": "var(--font-2xl)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 43,
+      "name": "--role-page-title-weight",
+      "value": "var(--font-weight-semi)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 44,
+      "name": "--role-page-title-color",
+      "value": "var(--text-primary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 45,
+      "name": "--role-page-title-lh",
+      "value": "var(--line-height-tight)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 48,
+      "name": "--role-section-title-size",
+      "value": "var(--font-lg)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 49,
+      "name": "--role-section-title-weight",
+      "value": "var(--font-weight-semi)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 50,
+      "name": "--role-section-title-color",
+      "value": "var(--text-primary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 53,
+      "name": "--role-card-title-size",
+      "value": "var(--font-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 54,
+      "name": "--role-card-title-weight",
+      "value": "var(--font-weight-semi)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 55,
+      "name": "--role-card-title-color",
+      "value": "var(--text-primary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 58,
+      "name": "--role-body-size",
+      "value": "var(--font-base)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 59,
+      "name": "--role-body-weight",
+      "value": "var(--font-weight-normal)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 60,
+      "name": "--role-body-color",
+      "value": "var(--text-secondary)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 63,
+      "name": "--role-caption-size",
+      "value": "var(--font-xs)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 64,
+      "name": "--role-caption-weight",
+      "value": "var(--font-weight-normal)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 65,
+      "name": "--role-caption-color",
+      "value": "var(--text-muted)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 68,
+      "name": "--space-1",
+      "value": "4px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 69,
+      "name": "--space-2",
+      "value": "8px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 70,
+      "name": "--space-3",
+      "value": "12px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 71,
+      "name": "--space-4",
+      "value": "16px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 72,
+      "name": "--space-5",
+      "value": "20px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 73,
+      "name": "--space-6",
+      "value": "24px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 74,
+      "name": "--space-8",
+      "value": "32px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 75,
+      "name": "--space-9",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 76,
+      "name": "--space-10",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 77,
+      "name": "--space-12",
+      "value": "48px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 80,
+      "name": "--space-1px",
+      "value": "1px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 81,
+      "name": "--space-2px",
+      "value": "2px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 82,
+      "name": "--space-3px",
+      "value": "3px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 83,
+      "name": "--space-6px",
+      "value": "6px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 84,
+      "name": "--space-10px",
+      "value": "10px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 85,
+      "name": "--space-14px",
+      "value": "14px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 88,
+      "name": "--radius-2xs",
+      "value": "3px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 89,
+      "name": "--radius-xs",
+      "value": "2px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 90,
+      "name": "--radius-sm",
+      "value": "4px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 91,
+      "name": "--radius-md",
+      "value": "6px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 92,
+      "name": "--radius-lg",
+      "value": "8px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 93,
+      "name": "--radius-xl",
+      "value": "12px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 94,
+      "name": "--radius-badge",
+      "value": "10px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 95,
+      "name": "--radius-pill",
+      "value": "20px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 96,
+      "name": "--radius-full",
+      "value": "9999px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 97,
+      "name": "--radius-bubble-out",
+      "value": "20.8px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 98,
+      "name": "--radius-bubble-in",
+      "value": "20.8px 20.8px 20.8px 4.8px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 113,
+      "name": "--breakpoint-mobile-max",
+      "value": "767px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 114,
+      "name": "--breakpoint-tablet-min",
+      "value": "768px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 115,
+      "name": "--breakpoint-tablet-max",
+      "value": "1279px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 116,
+      "name": "--breakpoint-desktop-min",
+      "value": "1280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 117,
+      "name": "--breakpoint-xl-min",
+      "value": "1440px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 120,
+      "name": "--z-base",
+      "value": "10",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 121,
+      "name": "--z-dropdown",
+      "value": "50",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 122,
+      "name": "--z-topbar",
+      "value": "100",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 123,
+      "name": "--z-sidebar",
+      "value": "200",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 124,
+      "name": "--z-sidebar-overlay",
+      "value": "210",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 125,
+      "name": "--z-backdrop",
+      "value": "298",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 126,
+      "name": "--z-drawer",
+      "value": "301",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 127,
+      "name": "--z-avatar",
+      "value": "300",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 128,
+      "name": "--z-modal",
+      "value": "400",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 129,
+      "name": "--z-toast",
+      "value": "500",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 133,
+      "name": "--duration-base",
+      "value": "200ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 134,
+      "name": "--duration-spinner",
+      "value": "800ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 135,
+      "name": "--duration-shimmer",
+      "value": "1500ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 136,
+      "name": "--duration-striped",
+      "value": "700ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 137,
+      "name": "--duration-bounce",
+      "value": "1300ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 138,
+      "name": "--duration-blink",
+      "value": "1300ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 139,
+      "name": "--duration-toast-in",
+      "value": "350ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 140,
+      "name": "--duration-toast-out",
+      "value": "300ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 141,
+      "name": "--duration-fade-up",
+      "value": "400ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 142,
+      "name": "--transition-micro",
+      "value": "100ms ease",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 143,
+      "name": "--transition-fast",
+      "value": "150ms ease",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 144,
+      "name": "--transition-base",
+      "value": "200ms ease",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 145,
+      "name": "--transition-highlight",
+      "value": "600ms ease",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 146,
+      "name": "--transition-sidebar",
+      "value": "250ms ease",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 147,
+      "name": "--transition-slow",
+      "value": "280ms cubic-bezier(0.4, 0, 0.2, 1)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 150,
+      "name": "--ease-standard",
+      "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 151,
+      "name": "--ease-enter",
+      "value": "cubic-bezier(0, 0, 0.2, 1)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 152,
+      "name": "--ease-exit",
+      "value": "cubic-bezier(0.4, 0, 1, 1)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 153,
+      "name": "--toast-slide-distance",
+      "value": "120%",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 154,
+      "name": "--splash-dot-delay-step",
+      "value": "180ms",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 158,
+      "name": "--btn-min-height-md",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 159,
+      "name": "--size-icon-btn",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 160,
+      "name": "--size-icon-btn-sm",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 161,
+      "name": "--size-icon-btn-lg",
+      "value": "44px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 162,
+      "name": "--field-h-sm",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 163,
+      "name": "--field-h-md",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 164,
+      "name": "--field-h-lg",
+      "value": "44px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 165,
+      "name": "--field-w-sm",
+      "value": "160px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 166,
+      "name": "--field-w-md",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 167,
+      "name": "--field-w-lg-max",
+      "value": "480px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 168,
+      "name": "--size-msg-attach-w",
+      "value": "240px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 169,
+      "name": "--size-msg-attach-h",
+      "value": "200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 170,
+      "name": "--textarea-min-h",
+      "value": "80px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 171,
+      "name": "--topbar-height",
+      "value": "56px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 172,
+      "name": "--drawer-width",
+      "value": "300px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 173,
+      "name": "--logo-size",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 180,
+      "name": "--sidebar-nav-icon-center-x",
+      "value": "33px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 183,
+      "name": "--max-width-page",
+      "value": "1200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 184,
+      "name": "--max-width-setup-guide",
+      "value": "900px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 185,
+      "name": "--max-width-truncate",
+      "value": "200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 188,
+      "name": "--page-padding-x",
+      "value": "var(--space-6)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 189,
+      "name": "--page-padding-y",
+      "value": "10px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 190,
+      "name": "--page-header-mb",
+      "value": "var(--space-5)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 195,
+      "name": "--avatar-zone-top",
+      "value": "var(--space-3)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 196,
+      "name": "--avatar-zone-right",
+      "value": "var(--space-4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 197,
+      "name": "--avatar-zone-width",
+      "value": "var(--size-avatar-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 198,
+      "name": "--avatar-zone-z",
+      "value": "var(--z-avatar)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 201,
+      "name": "--page-header-avatar-clearance",
+      "value": "calc(var(--avatar-zone-width) + var(--avatar-zone-right) + var(--space-3))",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 214,
+      "name": "--icon-sm",
+      "value": "14px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 215,
+      "name": "--icon-md",
+      "value": "16px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 216,
+      "name": "--icon-base",
+      "value": "20px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 217,
+      "name": "--icon-lg",
+      "value": "24px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 218,
+      "name": "--icon-xl",
+      "value": "48px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 222,
+      "name": "--size-checkbox",
+      "value": "16px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 223,
+      "name": "--size-checkbox-sm",
+      "value": "14px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 224,
+      "name": "--size-check-mark-w",
+      "value": "5px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 227,
+      "name": "--size-avatar-sm",
+      "value": "32px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 228,
+      "name": "--size-avatar-md",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 229,
+      "name": "--size-avatar-lg",
+      "value": "48px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 232,
+      "name": "--size-toggle-w",
+      "value": "44px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 233,
+      "name": "--size-toggle-knob",
+      "value": "18px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 236,
+      "name": "--size-lang-select-min",
+      "value": "120px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 237,
+      "name": "--size-carrier-label-col",
+      "value": "120px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 238,
+      "name": "--size-substep-nav",
+      "value": "160px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 239,
+      "name": "--size-drawer-label-min",
+      "value": "100px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 240,
+      "name": "--size-split-label-min",
+      "value": "60px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 243,
+      "name": "--opacity-full",
+      "value": "1",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 244,
+      "name": "--opacity-muted",
+      "value": "0.7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 245,
+      "name": "--opacity-dim",
+      "value": "0.8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 246,
+      "name": "--opacity-soft",
+      "value": "0.9",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 247,
+      "name": "--opacity-secondary",
+      "value": "0.85",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 248,
+      "name": "--opacity-hover",
+      "value": "0.75",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 249,
+      "name": "--opacity-disabled",
+      "value": "0.6",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 250,
+      "name": "--opacity-skipped",
+      "value": "0.55",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 251,
+      "name": "--opacity-archived",
+      "value": "0.5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 252,
+      "name": "--opacity-faint",
+      "value": "0.35",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 255,
+      "name": "--height-tab-bar",
+      "value": "54px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 256,
+      "name": "--height-tab-item",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 257,
+      "name": "--width-inbox-panel",
+      "value": "443px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 258,
+      "name": "--min-height-conv-item",
+      "value": "92px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 259,
+      "name": "--min-width-dropdown",
+      "value": "180px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 260,
+      "name": "--selection-strip-w",
+      "value": "2px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 261,
+      "name": "--platform-dot-offset",
+      "value": "-2px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 264,
+      "name": "--send-top-row-padding",
+      "value": "var(--space-10px) var(--space-10px) var(--space-6px)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 265,
+      "name": "--center-header-min-h",
+      "value": "81px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 266,
+      "name": "--toggle-width",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 267,
+      "name": "--toggle-height",
+      "value": "22px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 268,
+      "name": "--toggle-thumb-size",
+      "value": "16px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 269,
+      "name": "--toggle-thumb-offset",
+      "value": "3px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 270,
+      "name": "--toggle-translate",
+      "value": "18px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 271,
+      "name": "--right-panel-avatar-size",
+      "value": "var(--size-avatar-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 272,
+      "name": "--mc-subnav-width",
+      "value": "200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 275,
+      "name": "--max-width-modal-sm",
+      "value": "420px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 276,
+      "name": "--modal-max-w",
+      "value": "500px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 277,
+      "name": "--modal-max-w-sm",
+      "value": "420px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 278,
+      "name": "--modal-max-w-md",
+      "value": "600px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 279,
+      "name": "--modal-max-w-lg",
+      "value": "800px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 280,
+      "name": "--modal-profile-min-w",
+      "value": "480px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 281,
+      "name": "--max-width-form",
+      "value": "560px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 282,
+      "name": "--modal-profile-max-w",
+      "value": "640px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 283,
+      "name": "--inbox-settings-min-w",
+      "value": "320px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 284,
+      "name": "--inbox-settings-max-w",
+      "value": "480px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 287,
+      "name": "--inbox-panel-label-size",
+      "value": "var(--font-xs)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 288,
+      "name": "--inbox-panel-group-heading-size",
+      "value": "var(--font-2xs)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 291,
+      "name": "--inbox-left-panel-min-w",
+      "value": "220px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 292,
+      "name": "--inbox-collapsed-panel-w",
+      "value": "360px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 293,
+      "name": "--inbox-center-min-h",
+      "value": "300px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 294,
+      "name": "--inbox-textarea-min-h",
+      "value": "60px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 297,
+      "name": "--karte-panel-width",
+      "value": "396px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 298,
+      "name": "--karte-h-pad",
+      "value": "18px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 299,
+      "name": "--karte-field-py",
+      "value": "7px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 300,
+      "name": "--karte-field-px",
+      "value": "9px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 301,
+      "name": "--karte-tab-py",
+      "value": "11px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 302,
+      "name": "--karte-section-pb",
+      "value": "7px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 303,
+      "name": "--karte-font-tab",
+      "value": "13px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 304,
+      "name": "--karte-font-sec",
+      "value": "11px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 305,
+      "name": "--karte-overflow-px",
+      "value": "13px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 306,
+      "name": "--karte-hd-gap",
+      "value": "11px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 308,
+      "name": "--karte-field-bg",
+      "value": "#fafbfc",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 309,
+      "name": "--karte-field-bd",
+      "value": "#dde0e4",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 310,
+      "name": "--karte-ok",
+      "value": "#0f9d77",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 311,
+      "name": "--karte-ok-bg",
+      "value": "#e7f6f0",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 314,
+      "name": "--sidebar-logo-h",
+      "value": "64px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 315,
+      "name": "--sidebar-logo-text-h",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 316,
+      "name": "--sidebar-logo-max-w",
+      "value": "160px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 317,
+      "name": "--sidebar-item-padding-v",
+      "value": "11px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 318,
+      "name": "--sidebar-sub-item-indent",
+      "value": "56px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 319,
+      "name": "--nav-badge-size",
+      "value": "18px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 322,
+      "name": "--search-bar-max-w",
+      "value": "480px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 323,
+      "name": "--topnav-email-max-w",
+      "value": "140px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 326,
+      "name": "--card-login-max-w",
+      "value": "400px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 327,
+      "name": "--login-logo-max-w",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 330,
+      "name": "--coming-soon-max-w",
+      "value": "600px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 331,
+      "name": "--coming-soon-icon-size",
+      "value": "64px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 332,
+      "name": "--coming-soon-margin-top",
+      "value": "80px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 335,
+      "name": "--filter-pill-h",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 336,
+      "name": "--input-select-min-w",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 337,
+      "name": "--dropdown-max-h",
+      "value": "200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 340,
+      "name": "--dashboard-badge-min-w",
+      "value": "38px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 341,
+      "name": "--progress-bar-h",
+      "value": "4px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 342,
+      "name": "--dashboard-rank-badge",
+      "value": "20px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 345,
+      "name": "--ds-swatch-size",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 348,
+      "name": "--schedule-mini-size",
+      "value": "46px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 349,
+      "name": "--schedule-cell-icon-size",
+      "value": "24px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 350,
+      "name": "--schedule-min-h",
+      "value": "500px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 351,
+      "name": "--schedule-mini-col-min-w",
+      "value": "100px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 352,
+      "name": "--schedule-slot-h",
+      "value": "60px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 353,
+      "name": "--schedule-nav-btn-size",
+      "value": "32px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 354,
+      "name": "--schedule-allday-row-h",
+      "value": "24px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 355,
+      "name": "--schedule-day-num-size",
+      "value": "1.625rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 356,
+      "name": "--schedule-today",
+      "value": "var(--accent-bright)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 357,
+      "name": "--schedule-gridline",
+      "value": "var(--calendar-grid-border)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 358,
+      "name": "--schedule-now-line",
+      "value": "#ea4335",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 359,
+      "name": "--schedule-slot-hover",
+      "value": "rgba(37, 99, 235, .045)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 360,
+      "name": "--schedule-row-height",
+      "value": "48px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 361,
+      "name": "--schedule-row-height-compact",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 362,
+      "name": "--schedule-time-gutter-width",
+      "value": "60px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 363,
+      "name": "--schedule-leftpanel-width",
+      "value": "256px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 364,
+      "name": "--schedule-event-radius",
+      "value": "6px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 365,
+      "name": "--schedule-shell-gap",
+      "value": "var(--space-5)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 366,
+      "name": "--schedule-shell-radius",
+      "value": "var(--radius-lg)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 367,
+      "name": "--schedule-popover-width",
+      "value": "20rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 368,
+      "name": "--schedule-popover-max-h",
+      "value": "34rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 369,
+      "name": "--schedule-month-cell-min-h",
+      "value": "7.5rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 370,
+      "name": "--schedule-rail-bg",
+      "value": "var(--bg-surface)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 371,
+      "name": "--schedule-rail-border",
+      "value": "var(--border)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 372,
+      "name": "--schedule-cell-border",
+      "value": "var(--schedule-gridline)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 373,
+      "name": "--schedule-hour-bg",
+      "value": "var(--bg-surface)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 374,
+      "name": "--schedule-hour-label",
+      "value": "var(--text-muted)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 375,
+      "name": "--schedule-day-min-w",
+      "value": "10rem",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 376,
+      "name": "--schedule-empty-icon-bg",
+      "value": "var(--calendar-google-blue-light)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 377,
+      "name": "--schedule-empty-icon-color",
+      "value": "var(--calendar-google-blue)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 378,
+      "name": "--schedule-control-border",
+      "value": "var(--border)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 381,
+      "name": "--cal-personal",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 381,
+      "name": "--cal-personal-tint",
+      "value": "#e9edf7",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 381,
+      "name": "--cal-personal-text",
+      "value": "#1e3a8a",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 382,
+      "name": "--cal-meeting",
+      "value": "#2563eb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 382,
+      "name": "--cal-meeting-tint",
+      "value": "#e7eefc",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 382,
+      "name": "--cal-meeting-text",
+      "value": "#1d4ed8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 383,
+      "name": "--cal-purchase",
+      "value": "#2e7d32",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 383,
+      "name": "--cal-purchase-tint",
+      "value": "#e6f3e8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 383,
+      "name": "--cal-purchase-text",
+      "value": "#22613f",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 384,
+      "name": "--cal-shipping",
+      "value": "#7c3aed",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 384,
+      "name": "--cal-shipping-tint",
+      "value": "#efe8fb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 384,
+      "name": "--cal-shipping-text",
+      "value": "#5b3aa8",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 385,
+      "name": "--cal-billing",
+      "value": "#d97706",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 385,
+      "name": "--cal-billing-tint",
+      "value": "#fbeede",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 385,
+      "name": "--cal-billing-text",
+      "value": "#9a5800",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 386,
+      "name": "--cal-release",
+      "value": "#0d9488",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 386,
+      "name": "--cal-release-tint",
+      "value": "#e0f1ef",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 386,
+      "name": "--cal-release-text",
+      "value": "#0b6e66",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 387,
+      "name": "--cal-holiday",
+      "value": "#64748b",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 387,
+      "name": "--cal-holiday-tint",
+      "value": "#eef1f4",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 387,
+      "name": "--cal-holiday-text",
+      "value": "#475569",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 390,
+      "name": "--min-width-input-sm",
+      "value": "120px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 393,
+      "name": "--size-thread-avatar",
+      "value": "36px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 394,
+      "name": "--input-width-qty",
+      "value": "70px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 395,
+      "name": "--input-width-product-name",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 396,
+      "name": "--table-col-product-name-min-w",
+      "value": "320px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 397,
+      "name": "--input-width-weight",
+      "value": "80px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 398,
+      "name": "--input-width-year",
+      "value": "90px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 399,
+      "name": "--input-width-month",
+      "value": "60px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 402,
+      "name": "--table-min-width-base",
+      "value": "720px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 403,
+      "name": "--table-col-min-width",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 404,
+      "name": "--col-width-checkbox",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 405,
+      "name": "--col-width-medium",
+      "value": "200px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 406,
+      "name": "--col-width-wide",
+      "value": "360px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 407,
+      "name": "--col-width-url",
+      "value": "300px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 410,
+      "name": "--modal-wide-w",
+      "value": "880px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 411,
+      "name": "--modal-xwide-w",
+      "value": "1100px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 412,
+      "name": "--modal-commission-w",
+      "value": "760px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 413,
+      "name": "--modal-detail-max-w",
+      "value": "720px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 414,
+      "name": "--dropdown-list-h",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 415,
+      "name": "--dropdown-results-max-h",
+      "value": "320px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 416,
+      "name": "--dropdown-min-width",
+      "value": "400px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 417,
+      "name": "--textarea-min-h-lg",
+      "value": "120px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 420,
+      "name": "--ds-preview-width",
+      "value": "320px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 421,
+      "name": "--ds-panel-size",
+      "value": "120px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 422,
+      "name": "--story-width-sm",
+      "value": "280px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 431,
+      "name": "--comp-btn-radius",
+      "value": "var(--radius-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 434,
+      "name": "--comp-card-radius",
+      "value": "var(--radius-lg)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 437,
+      "name": "--comp-card-padding",
+      "value": "var(--space-6)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 438,
+      "name": "--comp-card-padding-compact",
+      "value": "var(--space-4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 441,
+      "name": "--comp-card-gap",
+      "value": "var(--space-6)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 449,
+      "name": "--comp-input-radius",
+      "value": "var(--radius-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 452,
+      "name": "--comp-input-height-sm",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 453,
+      "name": "--comp-input-height-mobile",
+      "value": "44px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 461,
+      "name": "--on-solid",
+      "value": "#ffffff",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 464,
+      "name": "--comp-badge-radius",
+      "value": "var(--radius-full)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 467,
+      "name": "--comp-badge-height-sm",
+      "value": "20px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 468,
+      "name": "--comp-badge-height-md",
+      "value": "24px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 471,
+      "name": "--comp-badge-dot-size",
+      "value": "var(--space-6px)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 479,
+      "name": "--comp-table-row-h-compact",
+      "value": "32px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 480,
+      "name": "--comp-table-row-h-default",
+      "value": "44px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 481,
+      "name": "--comp-table-row-h-relaxed",
+      "value": "56px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 484,
+      "name": "--comp-table-cell-px",
+      "value": "var(--space-4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 487,
+      "name": "--comp-table-check-col-w",
+      "value": "var(--col-width-checkbox)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 490,
+      "name": "--comp-table-radius",
+      "value": "var(--radius-lg)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 493,
+      "name": "--comp-table-min-width",
+      "value": "480px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 497,
+      "name": "--comp-tab-h-sm",
+      "value": "28px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 498,
+      "name": "--comp-tab-h-md",
+      "value": "var(--height-tab-item)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 501,
+      "name": "--comp-tab-px-sm",
+      "value": "var(--space-3)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 502,
+      "name": "--comp-tab-px-md",
+      "value": "var(--space-4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 505,
+      "name": "--comp-tab-underline-w",
+      "value": "2px",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 508,
+      "name": "--comp-tab-pill-radius",
+      "value": "var(--radius-md)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 512,
+      "name": "--comp-subnav-w",
+      "value": "var(--mc-subnav-width)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 515,
+      "name": "--comp-subnav-item-h",
+      "value": "var(--height-tab-item)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 518,
+      "name": "--comp-subnav-px",
+      "value": "var(--space-4)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 521,
+      "name": "--comp-subnav-group-title-fs",
+      "value": "var(--font-xs)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 524,
+      "name": "--color-error",
+      "value": "#b91c1c",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 525,
+      "name": "--color-error-bg",
+      "value": "var(--color-red-50)",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 526,
+      "name": "--color-error-border",
+      "value": "#fca5a5",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 527,
+      "name": "--color-success",
+      "value": "#15803d",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 528,
+      "name": "--color-success-bg",
+      "value": "#f0fdf4",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 529,
+      "name": "--color-success-border",
+      "value": "#86efac",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 530,
+      "name": "--color-warning-bg",
+      "value": "#fffbeb",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 531,
+      "name": "--color-warning-border",
+      "value": "#fcd34d",
+      "selector": ":root",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 541,
+      "name": "--schedule-slot-h",
+      "value": "40px",
+      "selector": ":root",
+      "conditions": [
+        "@media (max-width: 1279px)"
+      ]
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 542,
+      "name": "--schedule-allday-row-h",
+      "value": "14px",
+      "selector": ":root",
+      "conditions": [
+        "@media (max-width: 1279px)"
+      ]
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 548,
+      "name": "--cal-personal",
+      "value": "#6f8fd6",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 548,
+      "name": "--cal-personal-tint",
+      "value": "#1c2742",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 548,
+      "name": "--cal-personal-text",
+      "value": "#aac3ef",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 549,
+      "name": "--cal-meeting",
+      "value": "#5b8dd9",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 549,
+      "name": "--cal-meeting-tint",
+      "value": "#16263f",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 549,
+      "name": "--cal-meeting-text",
+      "value": "#9dc0ef",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 550,
+      "name": "--cal-purchase",
+      "value": "#5bb36a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 550,
+      "name": "--cal-purchase-tint",
+      "value": "#142c1b",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 550,
+      "name": "--cal-purchase-text",
+      "value": "#a7e0b2",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 551,
+      "name": "--cal-shipping",
+      "value": "#a78bfa",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 551,
+      "name": "--cal-shipping-tint",
+      "value": "#271a45",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 551,
+      "name": "--cal-shipping-text",
+      "value": "#cdb6fb",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 552,
+      "name": "--cal-billing",
+      "value": "#e0a35a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 552,
+      "name": "--cal-billing-tint",
+      "value": "#3a2a10",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 552,
+      "name": "--cal-billing-text",
+      "value": "#f1c48e",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 553,
+      "name": "--cal-release",
+      "value": "#2dd4bf",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 553,
+      "name": "--cal-release-tint",
+      "value": "#0c322d",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 553,
+      "name": "--cal-release-text",
+      "value": "#8de6da",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 554,
+      "name": "--cal-holiday",
+      "value": "#94a3b8",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 554,
+      "name": "--cal-holiday-tint",
+      "value": "#1f2a3a",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 554,
+      "name": "--cal-holiday-text",
+      "value": "#c2cdda",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 556,
+      "name": "--schedule-gridline",
+      "value": "#2d3b52",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 557,
+      "name": "--schedule-slot-hover",
+      "value": "rgba(91, 141, 217, .10)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 560,
+      "name": "--color-error",
+      "value": "#f87171",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 561,
+      "name": "--color-error-bg",
+      "value": "rgba(239, 68, 68, 0.15)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 562,
+      "name": "--color-error-border",
+      "value": "rgba(239, 68, 68, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 563,
+      "name": "--color-success",
+      "value": "var(--success)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 564,
+      "name": "--color-success-bg",
+      "value": "rgba(34, 197, 94, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 565,
+      "name": "--color-success-border",
+      "value": "rgba(34, 197, 94, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 566,
+      "name": "--color-warning-bg",
+      "value": "rgba(251, 191, 36, 0.12)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "line": 567,
+      "name": "--color-warning-border",
+      "value": "rgba(251, 191, 36, 0.4)",
+      "selector": ":root.force-dark",
+      "conditions": []
+    }
+  ],
+  "rules": [
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 17,
+      "selector": ".comp-btn--sm"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 24,
+      "selector": ".comp-btn--lg"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 31,
+      "selector": ".btn-tab"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 42,
+      "selector": ".btn-tab:focus"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 47,
+      "selector": ".btn-tab:hover:not(:disabled)"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 51,
+      "selector": ".btn-tab.comp-btn--active"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 60,
+      "selector": ".btn-primary,\n  .btn-secondary,\n  .btn-ghost,\n  .btn-danger,\n  .btn-outline"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 73,
+      "selector": ".comp-btn--full"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 83,
+      "selector": "button.comp-btn--icon-only"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 95,
+      "selector": ".comp-btn--sm.comp-btn--icon-only"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 101,
+      "selector": ".comp-btn--lg.comp-btn--icon-only"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "line": 110,
+      "selector": ".comp-btn--loading"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 20,
+      "selector": ".comp-card"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 29,
+      "selector": ".comp-card--compact"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 35,
+      "selector": ".comp-card"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 45,
+      "selector": ".comp-card--container"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 50,
+      "selector": ".comp-card--interactive"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 55,
+      "selector": ".comp-card--interactive:hover"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 60,
+      "selector": ".comp-card--interactive:focus-visible"
+    },
+    {
+      "file": "frontend/src/components/Card.css",
+      "line": 66,
+      "selector": ".comp-card--metric"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 12,
+      "selector": ".comp-table"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 21,
+      "selector": ".comp-table__table"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 30,
+      "selector": ".comp-table__th"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 41,
+      "selector": ".comp-table__th--check"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 46,
+      "selector": ".comp-table__td"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 53,
+      "selector": ".comp-table__td--check"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 59,
+      "selector": ".comp-table--compact .comp-table__th,\n.comp-table--compact .comp-table__td"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 64,
+      "selector": ".comp-table--relaxed .comp-table__th,\n.comp-table--relaxed .comp-table__td"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 70,
+      "selector": ".comp-table__head-row"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 76,
+      "selector": ".comp-table__sort-btn"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 92,
+      "selector": ".comp-table__sort-btn:hover"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 96,
+      "selector": ".comp-table__sort-btn--active"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 100,
+      "selector": ".comp-table__sort-icon"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 106,
+      "selector": ".comp-table__sort-btn--active .comp-table__sort-icon"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 112,
+      "selector": ".comp-table__row"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 117,
+      "selector": ".comp-table__row:last-child"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 121,
+      "selector": ".comp-table__row:hover"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 126,
+      "selector": ".comp-table__row--selected"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 130,
+      "selector": ".comp-table__row--selected:hover"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 136,
+      "selector": ".comp-table__check"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 144,
+      "selector": ".comp-table__empty"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 152,
+      "selector": ".comp-table__row--danger"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 153,
+      "selector": ".comp-table__row--warning"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 156,
+      "selector": ".comp-table__row--clickable"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 160,
+      "selector": ".comp-table__row--clickable:focus-visible"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 166,
+      "selector": ".comp-table__pagination"
+    },
+    {
+      "file": "frontend/src/components/DataTable.css",
+      "line": 175,
+      "selector": ".comp-table__page-info"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 54,
+      "selector": ".btn-primary"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 65,
+      "selector": ".btn-primary:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 66,
+      "selector": ".btn-primary:disabled"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 68,
+      "selector": ".btn-secondary"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 78,
+      "selector": ".btn-secondary:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 81,
+      "selector": ".btn-ghost"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 93,
+      "selector": ".btn-ghost:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 95,
+      "selector": ".btn-sm"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 105,
+      "selector": ".btn-sm:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 107,
+      "selector": ".btn-danger"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 122,
+      "selector": ".btn-danger:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 127,
+      "selector": ".btn-outline"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 140,
+      "selector": ".btn-outline:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 141,
+      "selector": ".btn-outline:active"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 142,
+      "selector": ".btn-outline:focus-visible"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 143,
+      "selector": ".btn-outline:disabled"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 149,
+      "selector": ".btn-sm.btn-secondary,\n.btn-sm.btn-danger"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 157,
+      "selector": ".btn-sm.btn-primary"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 163,
+      "selector": ".btn-sm.btn-primary:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 208,
+      "selector": ".data-table"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 217,
+      "selector": ".data-table th"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 229,
+      "selector": ".data-table td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 236,
+      "selector": ".data-table tr:hover td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 244,
+      "selector": ".data-table tr[data-zero-stock=\"true\"] td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 248,
+      "selector": ".data-table tr[data-zero-stock=\"true\"]:hover td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 252,
+      "selector": ".data-table .actions"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 261,
+      "selector": ".data-table tr.product-row-top > td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 266,
+      "selector": ".data-table tr.product-row-bottom > td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 274,
+      "selector": ".data-table tr[data-product-stripe=\"odd\"] > td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 278,
+      "selector": ".data-table tr[data-product-stripe]:hover > td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 283,
+      "selector": ".data-table .empty"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 299,
+      "selector": ".products-master-table-wrap > .data-table"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 304,
+      "selector": ".products-master-table-wrap > .data-table thead"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 346,
+      "selector": ".card"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 354,
+      "selector": ".card h3"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 361,
+      "selector": ".card table"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 366,
+      "selector": ".card th"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 375,
+      "selector": ".card td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 433,
+      "selector": ".data-table tr.row-pending-dedup:hover td,\n.comp-table__row.row-pending-dedup:hover .comp-table__td"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 537,
+      "selector": ".modal-icon-btn--danger:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 688,
+      "selector": ".page-header-actions .btn-ghost,\n.page-header-actions .icon-btn"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 692,
+      "selector": ".page-header-actions .btn-ghost:hover,\n.page-header-actions .icon-btn:hover"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 697,
+      "selector": ".page-header-actions .btn-ghost,\n.page-header-actions .btn-primary,\n.page-header-actions .btn-secondary"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 905,
+      "selector": ".toggle-switch"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 907,
+      "selector": ".toggle-switch input"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 908,
+      "selector": ".toggle-switch-slider"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 913,
+      "selector": ".toggle-switch-slider::before"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 919,
+      "selector": ".toggle-switch input:checked + .toggle-switch-slider"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "line": 920,
+      "selector": ".toggle-switch input:checked + .toggle-switch-slider::before"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 160,
+      "selector": ".dist-btn--primary"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 165,
+      "selector": ".dist-btn--primary:hover:not(:disabled)"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 169,
+      "selector": ".dist-btn--ghost"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 175,
+      "selector": ".dist-btn--ghost:hover:not(:disabled)"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 179,
+      "selector": ".dist-btn--danger"
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 185,
+      "selector": ".dist-btn--danger:hover:not(:disabled)"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 97,
+      "selector": ".toggle-switch"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 106,
+      "selector": ".toggle-switch input"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 113,
+      "selector": ".toggle-slider"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 121,
+      "selector": ".toggle-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 134,
+      "selector": ".toggle-switch input:checked + .toggle-slider"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 138,
+      "selector": ".toggle-switch input:checked + .toggle-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/account-settings.css",
+      "line": 142,
+      "selector": ".toggle-switch input:focus-visible + .toggle-slider"
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 36,
+      "selector": ".dp-band-btn--active"
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 225,
+      "selector": ".dp-icon-btn-bar"
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 236,
+      "selector": ".dp-icon-btn-bar--pill"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.css",
+      "line": 123,
+      "selector": ".gs-advisor__toggle"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.css",
+      "line": 133,
+      "selector": ".gs-advisor__toggle-btn"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.css",
+      "line": 145,
+      "selector": ".gs-advisor__toggle-btn.is-active"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.css",
+      "line": 281,
+      "selector": ".gs-advisor__toggle-btn:focus-visible,\n.gs-advisor__run-btn:focus-visible,\n.gs-advisor__metric-input:focus-visible"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1022,
+      "selector": ".karte-toggle-btn"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1036,
+      "selector": ".karte-toggle-btn"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1045,
+      "selector": ".karte-toggle-btn:hover"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1448,
+      "selector": ".inbox-toggle"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1449,
+      "selector": ".inbox-toggle input"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1450,
+      "selector": ".inbox-toggle-slider"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1455,
+      "selector": ".inbox-toggle-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1461,
+      "selector": ".inbox-toggle input:checked + .inbox-toggle-slider"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1462,
+      "selector": ".inbox-toggle input:checked + .inbox-toggle-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1728,
+      "selector": ".send-guard-btn--translate"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1732,
+      "selector": ".send-guard-btn--asis"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1737,
+      "selector": ".send-guard-btn--cancel"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.css",
+      "line": 1743,
+      "selector": ":root.force-dark .send-guard-btn--asis"
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 1258,
+      "selector": ".schedule-settings .toggle-switch,\n.schedule-page .toggle-switch"
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 1264,
+      "selector": ".schedule-settings .toggle-switch-slider::before,\n.schedule-page .toggle-switch-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 1272,
+      "selector": ".schedule-settings .toggle-switch input:checked + .toggle-switch-slider,\n.schedule-page .toggle-switch input:checked + .toggle-switch-slider"
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 1277,
+      "selector": ".schedule-settings .toggle-switch input:checked + .toggle-switch-slider::before,\n.schedule-page .toggle-switch input:checked + .toggle-switch-slider::before"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.css",
+      "line": 126,
+      "selector": ".review-table-scroll .data-table[data-testid=\"review-table\"]"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.css",
+      "line": 131,
+      "selector": ".review-table-scroll .data-table[data-testid=\"review-table\"] thead th"
+    },
+    {
+      "file": "frontend/src/pages-layout.css",
+      "line": 262,
+      "selector": ".login-card .btn-primary"
+    },
+    {
+      "file": "frontend/src/pages-layout.css",
+      "line": 275,
+      "selector": ".login-card .btn-primary:hover:not(:disabled)"
+    },
+    {
+      "file": "frontend/src/pages-layout.css",
+      "line": 546,
+      "selector": ".btn-block"
+    },
+    {
+      "file": "frontend/src/pages-layout.css",
+      "line": 618,
+      "selector": ".permission-group-toggles"
+    },
+    {
+      "file": "frontend/src/topbar.css",
+      "line": 75,
+      "selector": ".btn-signout"
+    },
+    {
+      "file": "frontend/src/topbar.css",
+      "line": 90,
+      "selector": ".btn-signout:hover"
+    }
+  ],
+  "duplicated": [],
+  "other": [
+    {
+      "file": "frontend/src/features/tcg-analysis-review/source-raw-pane.css",
+      "line": 8,
+      "name": "--tcg-ar-source-min-h",
+      "value": "420px",
+      "selector": ".comparison-sheet .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/source-raw-pane.css",
+      "line": 43,
+      "name": "--tcg-ar-match-min-h",
+      "value": "18px",
+      "selector": ".source-search output",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 42,
+      "name": "--tcg-sq-source-min-h",
+      "value": "420px",
+      "selector": ".supplier-detail-view-body .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 43,
+      "name": "--tcg-sq-sticky-offset",
+      "value": "140px",
+      "selector": ".supplier-detail-view-body .source-raw",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 112,
+      "name": "--pmd-max-w",
+      "value": "480px",
+      "selector": ".pmd-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/supplier-detail-view.css",
+      "line": 113,
+      "name": "--pmd-textarea-min-h",
+      "value": "72px",
+      "selector": ".pmd-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 90,
+      "name": "--dist-result-max-w",
+      "value": "220px",
+      "selector": ".dist-result--error",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 198,
+      "name": "--dist-drawer-max-w",
+      "value": "480px",
+      "selector": ".dist-drawer",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/distribution.css",
+      "line": 384,
+      "name": "--dist-dialog-max-w",
+      "value": "440px",
+      "selector": ".dist-dialog",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/loading-animations.css",
+      "line": 188,
+      "name": "--progress-pct",
+      "value": "0",
+      "selector": ".sa-progress-circular",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 71,
+      "name": "--dp-label-w",
+      "value": "80px",
+      "selector": ".dp-row",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/design-preview/DesignPreviewPage.css",
+      "line": 218,
+      "name": "--dp-mobile-demo-w",
+      "value": "375px",
+      "selector": ".dp-mobile-demo",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.css",
+      "line": 69,
+      "name": "--etd-dot-size",
+      "value": "calc(var(--icon-lg) * 1.5)",
+      "selector": ".etd-stepper",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 5,
+      "name": "--schedule-shell-gap",
+      "value": "var(--space-5)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 6,
+      "name": "--schedule-shell-radius",
+      "value": "var(--radius-lg)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 7,
+      "name": "--schedule-popover-width",
+      "value": "20rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 8,
+      "name": "--schedule-popover-max-h",
+      "value": "34rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 9,
+      "name": "--schedule-month-cell-min-h",
+      "value": "7.5rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 10,
+      "name": "--schedule-rail-bg",
+      "value": "var(--bg-surface)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 11,
+      "name": "--schedule-rail-border",
+      "value": "var(--border)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 12,
+      "name": "--schedule-cell-border",
+      "value": "var(--schedule-gridline)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 13,
+      "name": "--schedule-hour-bg",
+      "value": "var(--bg-surface)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 14,
+      "name": "--schedule-hour-label",
+      "value": "var(--text-muted)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 15,
+      "name": "--schedule-day-min-w",
+      "value": "10rem",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 16,
+      "name": "--schedule-event-gap",
+      "value": "var(--space-1)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 17,
+      "name": "--schedule-empty-icon-bg",
+      "value": "var(--calendar-google-blue-light)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 18,
+      "name": "--schedule-empty-icon-color",
+      "value": "var(--calendar-google-blue)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 19,
+      "name": "--schedule-control-border",
+      "value": "var(--border)",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 21,
+      "name": "--schedule-day-head-h",
+      "value": "82px",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 23,
+      "name": "--schedule-header-z",
+      "value": "2",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    },
+    {
+      "file": "frontend/src/pages/schedule.css",
+      "line": 24,
+      "name": "--schedule-allday-z",
+      "value": "1",
+      "selector": ".schedule-page,\n.schedule-settings",
+      "conditions": []
+    }
+  ]
+}

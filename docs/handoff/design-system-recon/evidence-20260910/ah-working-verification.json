@@ -1,0 +1,4806 @@
+{
+  "base": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "tree": "/Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration",
+  "heldManifest": "/tmp/frontend-raw-buttons-20260911/held-raw-shared/manifest.json",
+  "method": "same JSX/fixture/btn substring and prefix rules as saved audit; whole TS AST printer comparison after ONLY before button tag/class mapping and removing Button import; no business code normalization",
+  "beforeCounts": {
+    "Button": 70,
+    "rawBroad": 352,
+    "rawBtnPrefix": 332,
+    "dedicated": 20,
+    "links": 8
+  },
+  "afterCounts": {
+    "Button": 86,
+    "rawBroad": 336,
+    "rawBtnPrefix": 316,
+    "dedicated": 20,
+    "links": 8
+  },
+  "norms": [
+    {
+      "file": "frontend/src/components/ConfirmModal.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9",
+      "afterSHA256": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "419dfa1af6b2955c556f527b7f282cb45434b64fc86616c1bcfe47fc9b64e6d0",
+      "normalizedAfterSHA256": "419dfa1af6b2955c556f527b7f282cb45434b64fc86616c1bcfe47fc9b64e6d0",
+      "ASTEqualExceptAuthorizedChanges": true
+    },
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e",
+      "afterSHA256": "00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "725659089ffd797f7fd512707108d9f3031b60426c29bf57e31b6341aa272043",
+      "normalizedAfterSHA256": "725659089ffd797f7fd512707108d9f3031b60426c29bf57e31b6341aa272043",
+      "ASTEqualExceptAuthorizedChanges": true
+    },
+    {
+      "file": "frontend/src/components/PriorityScoreOverride.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc",
+      "afterSHA256": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "568b831aaa82671cd9b56cdfa05fe5e7c1c84e4e5ba7a32cfcb75c09dc732b19",
+      "normalizedAfterSHA256": "568b831aaa82671cd9b56cdfa05fe5e7c1c84e4e5ba7a32cfcb75c09dc732b19",
+      "ASTEqualExceptAuthorizedChanges": true
+    },
+    {
+      "file": "frontend/src/components/OrderFinancialPanel.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8",
+      "afterSHA256": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "439875fe2e42e33b70b2bbda929f2fc3fa95bcf37fe028a735acd9b3a23e4ec3",
+      "normalizedAfterSHA256": "439875fe2e42e33b70b2bbda929f2fc3fa95bcf37fe028a735acd9b3a23e4ec3",
+      "ASTEqualExceptAuthorizedChanges": true
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441",
+      "afterSHA256": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "ce8121afd1410dc5e680c9754e3527dc4620661ad7257dcaedb316f5fd82ea55",
+      "normalizedAfterSHA256": "ce8121afd1410dc5e680c9754e3527dc4620661ad7257dcaedb316f5fd82ea55",
+      "ASTEqualExceptAuthorizedChanges": true
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "beforeSHA": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+      "heldBase": "7606ca9a041e315b81040373e8f4ddebbc562133",
+      "heldSHA256": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639",
+      "afterSHA256": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639",
+      "heldMatches": true,
+      "normalizedBeforeSHA256": "2a1f675323aae0576b232cfca52dbcf5cbb44424451f4248c513b19ddd861633",
+      "normalizedAfterSHA256": "2a1f675323aae0576b232cfca52dbcf5cbb44424451f4248c513b19ddd861633",
+      "ASTEqualExceptAuthorizedChanges": true
+    }
+  ],
+  "rows": [
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "line": 228,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "type": "\"button\"",
+        "data-testid": "{`commission-unassign-${key}`}",
+        "disabled": "{savingRole === key}",
+        "onClick": "{() => handleUnassign(key)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "line": 255,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"primary\"",
+        "onClick": "{handleRecalc}",
+        "disabled": "{recalcing}",
+        "data-testid": "\"commission-recalc\""
+      }
+    },
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "line": 264,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ConfirmModal.tsx",
+      "line": 34,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ConfirmModal.tsx",
+      "line": 35,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "{danger ? \"danger\" : \"primary\"}",
+        "onClick": "{onConfirm}",
+        "autoFocus": true
+      }
+    },
+    {
+      "file": "frontend/src/components/ContactChannelForm.tsx",
+      "line": 257,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => onRequestMerge(duplicate.contact_id)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ContactChannelForm.tsx",
+      "line": 266,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"ghost\"",
+        "onClick": "{() => setForceWithAudit(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ContactChannelForm.tsx",
+      "line": 299,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ContactChannelForm.tsx",
+      "line": 302,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "variant": "\"primary\"",
+        "disabled": "{submitting || !channel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ContactChannelForm.tsx",
+      "line": 315,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 197,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "{[\n                      'comp-table__sort-btn',\n                      sortKey === col.key ? 'comp-table__sort-btn--active' : '',\n                    ].filter(Boolean).join(' ')}",
+        "onClick": "{() => handleSort(col.key)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 286,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "onClick": "{() => onPageChange(Math.max(1, page - 1))}",
+        "disabled": "{page <= 1}",
+        "aria-label": "\"previous page\""
+      }
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 298,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "onClick": "{() => onPageChange(page + 1)}",
+        "disabled": "{!hasNextPage}",
+        "aria-label": "\"next page\""
+      }
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "line": 139,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"suppliers.openFullPage\")}",
+        "onClick": "{onOpenFullPage}",
+        "data-testid": "\"drawer-open-fullpage\""
+      }
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "line": 150,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"common.close\")}",
+        "onClick": "{onClose}",
+        "data-testid": "\"drawer-close\""
+      }
+    },
+    {
+      "file": "frontend/src/components/FedExRateModal.tsx",
+      "line": 221,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "loading": "{loading}",
+        "onClick": "{handleGetQuote}",
+        "disabled": "{loading || !originCountryCode || !destCC}"
+      }
+    },
+    {
+      "file": "frontend/src/components/FedExRateModal.tsx",
+      "line": 364,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"outline\"",
+        "onClick": "{() => {\n                          onSelectRate(r.fee, r.currency, r.service_type);\n                          handleClose();\n                        }}"
+      }
+    },
+    {
+      "file": "frontend/src/components/FedExRateModal.tsx",
+      "line": 384,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{handleClose}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeCompanyModal.tsx",
+      "line": 256,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeCompanyModal.tsx",
+      "line": 259,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "disabled": "{!selected}",
+        "onClick": "{() => setStage(\"confirm\")}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeCompanyModal.tsx",
+      "line": 317,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => setStage(\"select\")}",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeCompanyModal.tsx",
+      "line": 325,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "variant": "\"danger\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeContactModal.tsx",
+      "line": 255,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeContactModal.tsx",
+      "line": 258,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"primary\"",
+        "disabled": "{!selected}",
+        "onClick": "{() => setStage(\"confirm\")}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeContactModal.tsx",
+      "line": 314,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => setStage(\"select\")}",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeContactModal.tsx",
+      "line": 322,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "variant": "\"danger\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 246,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{!selected}",
+        "onClick": "{() => setStage(\"confirm\")}"
+      }
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 309,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-danger\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "line": 130,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"common.close\")}",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/components/OrderFinancialPanel.tsx",
+      "line": 277,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onClose}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/components/OrderFinancialPanel.tsx",
+      "line": 285,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "variant": "\"primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"fin-save\""
+      }
+    },
+    {
+      "file": "frontend/src/components/PriorityScoreOverride.tsx",
+      "line": 67,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{() => setOpen(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/PriorityScoreOverride.tsx",
+      "line": 102,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => setOpen(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/components/PriorityScoreOverride.tsx",
+      "line": 109,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "variant": "\"primary\"",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "line": 265,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{handleConfirm}",
+        "disabled": "{!existing || confirming}",
+        "data-testid": "\"pur-confirm\"",
+        "title": "{\n          existing\n            ? t(\"purchase.confirmTitle\")\n            : t(\"purchase.confirmTitleDisabled\")\n        }"
+      }
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "line": 279,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onClose}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "line": 287,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "form": "\"purchase-detail-form\"",
+        "type": "\"submit\"",
+        "variant": "\"primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"pur-save\""
+      }
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "line": 338,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{handleDownloadCsv}",
+        "disabled": "{!existing || downloading}",
+        "data-testid": "\"ship-download-csv\"",
+        "title": "{\n          existing\n            ? t(\"shipping.downloadCsvTitle\")\n            : t(\"shipping.downloadCsvTitleDisabled\")\n        }"
+      }
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "line": 352,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onClose}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/components/ShippingDetailPanel.tsx",
+      "line": 360,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "form": "\"shipping-detail-form\"",
+        "type": "\"submit\"",
+        "variant": "\"primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"ship-save\""
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+      "line": 89,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{handleRetryClick}",
+        "loading": "{retrying}",
+        "disabled": "{retrying}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 121,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{() => setShowConfirm(true)}",
+        "disabled": "{running || preview.output_count === 0}",
+        "aria-label": "{t(\"distributionTarget.preview.runAllLabel\")}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 174,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "onClick": "{() => setShowConfirm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 181,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{handleRunAll}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 156,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "style": "{{ fontSize: \"var(--font-xs)\", padding: \"2px var(--space-2)\" }}",
+        "onClick": "{handleCopy}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 248,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 251,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{handleSave}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 157,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "onClick": "{() => setEditTarget(target)}",
+        "title": "{t(\"common.edit\")}",
+        "aria-label": "{`${t(\"common.edit\")}: ${target.name}`}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 170,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{() => setConfirm({ type: \"run\", target })}",
+        "disabled": "{running === target.id}",
+        "title": "{t(\"distributionTarget.list.runBtn\")}",
+        "aria-label": "{`${t(\"distributionTarget.list.runBtn\")}: ${target.name}`}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 184,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--danger\"",
+        "onClick": "{() => setConfirm({ type: \"disable\", target })}",
+        "title": "{t(\"distributionTarget.list.disableBtn\")}",
+        "aria-label": "{`${t(\"distributionTarget.list.disableBtn\")}: ${target.name}`}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 222,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "onClick": "{() => setConfirm(null)}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 229,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{() => handleRun(confirm.target)}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 249,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--ghost\"",
+        "onClick": "{() => setConfirm(null)}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 256,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--danger\"",
+        "onClick": "{() => handleDisable(confirm.target)}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionWorkspace.tsx",
+      "line": 53,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{() => setShowNewForm(true)}",
+        "aria-label": "{t(\"distributionTarget.page.newBtn\")}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 251,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{mode === \"assign\"}",
+        "onClick": "{() =>\n                      setModes((prev) => ({\n                        ...prev,\n                        [name]: prev[name] === \"assign\" ? undefined as unknown as \"assign\" : \"assign\",\n                      }))\n                    }"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 265,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{() => void handleCreate(name)}",
+        "disabled": "{isResolving}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 323,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "key": "{s.code}",
+        "variant": "\"secondary\"",
+        "onClick": "{() => void handleAssign(name, s.code)}",
+        "disabled": "{isResolving}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 351,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "onClick": "{() => void handleCommit()}",
+        "disabled": "{!allResolved || committing || commitSuccess}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+      "line": 67,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{refresh}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+      "line": 70,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{() => setFilterAndReset(\"needs_review\")}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+      "line": 71,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{() => setFilterAndReset(\"extraction_error\")}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+      "line": 81,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "disabled": "{offset === 0}",
+        "onClick": "{() => setOffset(Math.max(0, offset - LIMIT))}"
+      }
+    },
+    {
+      "file": "frontend/src/features/tcg-import-workflow/ImportWorkflowPanel.tsx",
+      "line": 81,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "disabled": "{items?.items === null || offset + LIMIT >= (items?.total ?? 0)}",
+        "onClick": "{() => setOffset(offset + LIMIT)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+      "line": 124,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+      "line": 104,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{changing}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+      "line": 115,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleSend}",
+        "disabled": "{sending || !channelId.trim() || !message.trim()}",
+        "className": "\"btn btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 278,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleSave}",
+        "disabled": "{saving}",
+        "className": "\"btn btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 300,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleAutoSetup}",
+        "disabled": "{!guildId || autoSetupRunning}",
+        "className": "\"btn btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 541,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleTicketSave}",
+        "disabled": "{ticketSaving}",
+        "className": "\"btn btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 557,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleDeployButton}",
+        "disabled": "{deploying}",
+        "className": "\"btn btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+      "line": 161,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => saveRole(row)}",
+        "className": "\"btn-primary\"",
+        "disabled": "{savingFor === row.role_id}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 304,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"tenant-policy-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "line": 249,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"tenant-profile-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/archives/ArchivesPage.tsx",
+      "line": 60,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-primary\"",
+        "onClick": "{() => restore(a.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "line": 48,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => setShowForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "line": 66,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "line": 67,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotEditPage.tsx",
+      "line": 88,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/bots\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotEditPage.tsx",
+      "line": 95,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 202,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 212,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setNewApiKey(null)}",
+        "style": "{{ marginTop: \"var(--space-2)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 259,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 260,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 281,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 282,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 310,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(b); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 311,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); setRotateTarget(b); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 312,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(b); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "line": 53,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => setShowForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "line": 67,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "line": 68,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "line": 84,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => endPair(p.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 386,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{handleConnect}",
+        "disabled": "{connecting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 404,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "style": "{{ marginLeft: \"var(--space-2)\" }}",
+        "onClick": "{loadChannels}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 435,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "onClick": "{handleConnect}",
+        "disabled": "{connecting}",
+        "style": "{{ fontSize: \"var(--font-md)\", padding: \"var(--space-3) var(--space-6)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 521,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => setDisconnectTarget(ch)}",
+        "disabled": "{disconnecting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 557,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "onClick": "{handleDiscordConnect}",
+        "disabled": "{discordConnecting}",
+        "style": "{{ fontSize: \"var(--font-md)\", padding: \"var(--space-3) var(--space-6)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 600,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-ghost\"",
+        "onClick": "{() => navigate(\"/admin/discord-config\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 607,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => setDiscordDisconnectOpen(true)}",
+        "disabled": "{discordDisconnecting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "line": 251,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}",
+        "data-testid": "\"settings-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+      "line": 226,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "data-testid": "{`commissions-assign-${o.order_id}`}",
+        "onClick": "{() => setAssigning(o)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 358,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => {\n        setCreateForm(emptyForm);\n        setActiveTab(\"basic\");\n        setPhoneError(null);\n        setAddressesDirty(false);\n        setShowCreate(true);\n      }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 407,
+      "tag": "Link",
+      "kind": "raw",
+      "attrs": {
+        "to": "{`/companies/${c.id}`}",
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => e.stopPropagation()}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 409,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(c); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 412,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(c); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 551,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 572,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 573,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressModal.tsx",
+      "line": 153,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onClose}",
+        "disabled": "{addrSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressModal.tsx",
+      "line": 154,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "disabled": "{!canEdit || addrSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 52,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => openAddressEdit(a)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 53,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => setAddrDeleteTarget(a)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 73,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "style": "{{ marginLeft: \"var(--space-3)\" }}",
+        "onClick": "{() => openAddressNew(\"billing\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 87,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "style": "{{ marginLeft: \"var(--space-3)\" }}",
+        "onClick": "{() => openAddressNew(\"delivery\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 97,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{!basicDirty || basicSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 126,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{() => setDedupConfirmOpen(true)}",
+        "disabled": "{dedupSubmitting || basicDirty}",
+        "title": "{basicDirty ? t(\"companies.dedupUnsavedHint\") : \"\"}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 135,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-danger\"",
+        "onClick": "{() => setMergeModalOpen(true)}",
+        "disabled": "{!canMerge || dedupSubmitting || basicDirty}",
+        "title": "{\n                !canMerge\n                  ? t(\"companies.dedupMergeNoPermission\")\n                  : basicDirty\n                    ? t(\"companies.dedupUnsavedHint\")\n                    : t(\"companies.dedupMergeHint\")\n              }"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyChannelsTab.tsx",
+      "line": 37,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{!channelsDirty || channelsSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 93,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{openContactNew}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 124,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => openChannelForm(c)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 129,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => openContactEdit(c)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 132,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => openMergeModal(c)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 136,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "size": "\"sm\"",
+        "variant": "\"danger\"",
+        "onClick": "{() => setContactDeleteTarget(c)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 216,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{onCloseModal}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+      "line": 219,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"submit\"",
+        "size": "\"sm\"",
+        "variant": "\"primary\"",
+        "disabled": "{contactSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 104,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"basic\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"basic\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 107,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"addresses\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"addresses\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 110,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"contacts\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"contacts\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 113,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"channels\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"channels\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 116,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"discord\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"discord\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDetailPage.tsx",
+      "line": 119,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"tab\"",
+        "active": "{activeTab === \"convHistory\"}",
+        "aria-pressed": "{undefined}",
+        "onClick": "{() => switchTab(\"convHistory\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "line": 90,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-sm btn-primary\"",
+        "disabled": "{!discordDirty || discordSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "line": 97,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{handleDiscordDelete}",
+        "style": "{{ marginLeft: \"var(--space-2)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "line": 198,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{handleResolveAsDistinct}",
+        "disabled": "{dedupSubmitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "line": 209,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/contacts\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "line": 210,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 252,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => {\n        setCreateForm({ ...emptyCreateForm, company_id: companyFilter });\n        setShowCreate(true);\n      }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 351,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 373,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 374,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 396,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(c); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 399,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 404,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(c); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 378,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{() => beginFollowUp(item)}",
+        "data-testid": "\"priority-followup-open\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 437,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "onClick": "{() => saveFollowUp(item)}",
+        "loading": "{composer.saving}",
+        "disabled": "{composer.loadingLead}",
+        "data-testid": "\"priority-followup-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 447,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => closeComposer(item)}",
+        "disabled": "{composer.saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/PriorityProspectsSection.tsx",
+      "line": 465,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"ghost\"",
+        "layoutClassName": "\"db-priority-edit-btn\"",
+        "onClick": "{() => beginFollowUp(item)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 337,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{() => beginFollowUp(action)}",
+        "data-testid": "\"weekly-followup-open\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 349,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{() => navigate(`/companies/${action.company_id}`)}",
+        "data-testid": "\"weekly-company-open\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 408,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "onClick": "{() => saveFollowUp(action)}",
+        "loading": "{composer.saving}",
+        "disabled": "{composer.loadingLead}",
+        "data-testid": "\"weekly-followup-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 418,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"secondary\"",
+        "onClick": "{() => closeComposer(action)}",
+        "disabled": "{composer.saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/dashboard/WeeklyAdvisorSection.tsx",
+      "line": 436,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "type": "\"button\"",
+        "size": "\"sm\"",
+        "variant": "\"ghost\"",
+        "layoutClassName": "\"db-weekly-edit-btn\"",
+        "onClick": "{() => beginFollowUp(action)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 166,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 167,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 168,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 169,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 412,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-ghost\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 429,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-ghost\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/erp/ERPPage.tsx",
+      "line": 58,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{exportInvoices}",
+        "disabled": "{exporting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 201,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary gs-save-btn\"",
+        "onClick": "{onSave}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 360,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary gs-advisor__run-btn\"",
+        "data-testid": "\"goal-advisor-generate\"",
+        "onClick": "{fetchAdvice}",
+        "disabled": "{loadingAdvice}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 318,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "style": "{{ marginLeft: \"var(--spacing-1)\" }}",
+        "onClick": "{() => { navigator.clipboard.writeText(regLink); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 733,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleSend}",
+        "disabled": "{sending}",
+        "className": "\"btn btn-secondary text-xs\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 791,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{handleResync}",
+        "disabled": "{syncing}",
+        "className": "\"btn btn-secondary text-xs\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 834,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => handleAction(\"remove-from-channel\")}",
+        "disabled": "{loading !== null}",
+        "className": "\"btn btn-secondary text-xs\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 842,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => handleAction(\"kick\")}",
+        "disabled": "{loading !== null}",
+        "className": "\"btn btn-secondary text-xs\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 849,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => handleAction(\"ban\")}",
+        "disabled": "{loading !== null}",
+        "className": "\"btn btn-danger text-xs\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 579,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"send-guard-btn send-guard-btn--translate\"",
+        "onClick": "{() => {\n                  setShowSendGuardDialog(false);\n                  setShowOutboundPreview(true);\n                }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 589,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"send-guard-btn send-guard-btn--asis\"",
+        "onClick": "{() => {\n                  setShowSendGuardDialog(false);\n                  submitSend();\n                }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 599,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"send-guard-btn send-guard-btn--cancel\"",
+        "onClick": "{() => setShowSendGuardDialog(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 46,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-ghost\"",
+        "onClick": "{() => navigate(\"/templates\")}",
+        "aria-label": "{t(\"nav.templates\")}",
+        "data-tooltip": "{t(\"nav.templates\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 55,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-ghost\"",
+        "onClick": "{() => navigate(\"/faq\")}",
+        "aria-label": "{t(\"faq.title\")}",
+        "data-tooltip": "{t(\"faq.title\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "line": 136,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{onCancel}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "line": 143,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy || !clientId || !clientSecret}",
+        "onClick": "{handleSaveAndTest}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 205,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{() => openEdit(env)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 269,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{() => handleTest(env)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 276,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{() => openEdit(env)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 279,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-ghost carrier-env-card__delete-btn\"",
+        "disabled": "{busy}",
+        "onClick": "{() => setDeleteConfirmEnv(env)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 297,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "href": "{`/management-center/integrations/${carrier}/setup-guide`}",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\"",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 146,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{onAdvance}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 474,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "type": "\"button\"",
+        "onClick": "{onOpenCredentialsTab}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 513,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "disabled": "{uploadBusy.letterhead}",
+        "onClick": "{() => void handleUpload(\"LETTERHEAD\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 542,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "disabled": "{uploadBusy.signature}",
+        "onClick": "{() => void handleUpload(\"SIGNATURE\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 590,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{advance}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 184,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "href": "\"https://developer.fedex.com/api/ja-jp/home.html\"",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 252,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{labelBusy}",
+        "onClick": "{handleIssueLabels}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 269,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary btn-sm\"",
+        "onClick": "{() => handleDownloadPdf(label)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 366,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{coverBusy || !contactName || !printerModel || !printerCount}",
+        "onClick": "{handleDownloadCoverSheet}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 382,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{emailBusy}",
+        "onClick": "{handleGetEmailTemplate}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 402,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "onClick": "{handleCopyEmailBody}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 417,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "href": "{mailtoHref}",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 130,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy}",
+        "onClick": "{handleConnect}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 149,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{handleDisconnect}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 173,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy}",
+        "onClick": "{handleTest}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 173,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{busy}",
+        "onClick": "{handleDisconnect}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 177,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy || !clientId || !clientSecret}",
+        "onClick": "{handleSave}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 192,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy || !status?.configured}",
+        "onClick": "{handleTest}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 220,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{busy}",
+        "onClick": "{handlePaymentTest}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 231,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "href": "{payTest.approval_url}",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 234,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "href": "{`/invoices/${payTest.invoice_id}`}",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+      "line": 304,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 394,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary btn-sm field-h-md\"",
+        "data-testid": "\"inventory-search-btn\"",
+        "onClick": "{runSearch}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 397,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary btn-sm field-h-md\"",
+        "data-testid": "\"inventory-reset-sort\"",
+        "onClick": "{resetAll}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 400,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "{filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}",
+        "data-testid": "\"inventory-filter-toggle\"",
+        "aria-expanded": "{showFilterPanel}",
+        "aria-pressed": "{filterEnabled}",
+        "onClick": "{() => setShowFilterPanel((v) => !v)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 602,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => setPage(Math.max(1, page - 1))}",
+        "disabled": "{page <= 1 || loading}",
+        "data-testid": "\"inventory-prev\"",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 608,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => setPage(Math.min(totalPages, page + 1))}",
+        "disabled": "{page >= totalPages || loading}",
+        "data-testid": "\"inventory-next\"",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 168,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-sm btn-primary\"",
+        "onClick": "{() => openAction(row, \"reserve\")}",
+        "aria-label": "{t(\"ownInventory.reserve\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 176,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-sm btn-secondary\"",
+        "onClick": "{() => openAction(row, \"release\")}",
+        "aria-label": "{t(\"ownInventory.release\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 184,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-sm btn-danger\"",
+        "onClick": "{() => openAction(row, \"ship\")}",
+        "aria-label": "{t(\"ownInventory.ship\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 223,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/management-center/tenant-profile\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 233,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "{mode === \"inventory\" ? \"btn-primary\" : \"btn-secondary\"}",
+        "onClick": "{() => setMode(\"inventory\")}",
+        "data-testid": "\"invoice-mode-inventory\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 240,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "{mode === \"quote\" ? \"btn-primary\" : \"btn-secondary\"}",
+        "onClick": "{() => { setSourceQuoteCode(null); setMode(\"quote\"); }}",
+        "data-testid": "\"invoice-mode-quote\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 271,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-primary\"",
+        "disabled": "{saving}",
+        "onClick": "{() => loadQuoteForEdit(q.id)}",
+        "data-testid": "{`invoice-edit-from-quote-${q.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 393,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => removeItem(i)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 403,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{addItem}",
+        "data-testid": "\"invoice-add-blank\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 434,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/invoices\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 435,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 194,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => doAction(\"issue\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 197,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => doAction(\"pay\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 200,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary field-h-md\"",
+        "onClick": "{() => doAction(\"paypal-link\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 203,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => doAction(\"paypal-confirm\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 206,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-danger field-h-md\"",
+        "onClick": "{() => setShowVoidForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 208,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary field-h-md\"",
+        "onClick": "{handleDownloadPdf}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 221,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "href": "{invoice.paypal_approval_url}",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 231,
+      "tag": "a",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "href": "{invoice.paypal_invoicer_view_url}",
+        "target": "\"_blank\"",
+        "rel": "\"noopener noreferrer\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 234,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "onClick": "{handleDownloadCopyPdf}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 272,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowVoidForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 273,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-danger\"",
+        "onClick": "{handleVoid}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 113,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => navigate(`/invoices/${inv.id}`)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 140,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => navigate(\"/invoices/new\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "line": 289,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/crm/leads\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "line": 290,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 313,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 439,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 440,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 469,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeConvert}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 470,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 500,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-primary\"",
+        "onClick": "{(e) => { e.stopPropagation(); setConvertTarget(l); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 503,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); setMergeSource(l); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 505,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(l); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 540,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 541,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 119,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{loading}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 144,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{loading}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "line": 51,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => setShowForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "line": 65,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "line": 66,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "line": 98,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => handleDelete(ch.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "line": 96,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "line": 99,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "line": 48,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => {\n        setShowForm(true);\n        setEditId(null);\n        setForm(emptyForm);\n        resetSelector();\n      }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 139,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => handleEdit(o)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 143,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPaidOrder(o, true)}",
+        "data-testid": "{`mark-paid-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 152,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPurchaseTarget(o)}",
+        "data-testid": "{`mark-purchased-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 161,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setShippingTarget(o)}",
+        "data-testid": "{`issue-label-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 171,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPaidOrder(o, false)}",
+        "data-testid": "{`mark-unpaid-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 181,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setShippingTarget(o)}",
+        "data-testid": "{`open-shipping-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 184,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPurchaseTarget(o)}",
+        "data-testid": "{`open-purchase-${o.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 187,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => setDeleteTarget(o)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "line": 175,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary field-h-md\"",
+        "onClick": "{() => navigate(-1)}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "line": 183,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "form": "\"product-edit-page-form\"",
+        "type": "\"submit\"",
+        "className": "\"btn-primary field-h-md\"",
+        "disabled": "{saving || loading}",
+        "data-testid": "\"product-edit-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 190,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{() => navigate(\"/admin/products/new\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 199,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-danger\"",
+        "disabled": "{selectedIds.size === 0}",
+        "onClick": "{() => setConfirmBulkDelete(true)}",
+        "data-testid": "\"products-bulk-delete\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 234,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "{reorderMode ? \"btn-primary btn-sm\" : \"btn-sm\"}",
+        "onClick": "{toggleReorderMode}",
+        "aria-pressed": "{reorderMode}",
+        "data-testid": "\"products-reorder-toggle\"",
+        "title": "{t(\"products.reorderHint\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 268,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary btn-sm\"",
+        "onClick": "{() => goCreate(\"/quotes/new\")}",
+        "data-testid": "\"create-quote-from-products\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 271,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary btn-sm\"",
+        "onClick": "{() => goCreate(\"/invoices/new\")}",
+        "data-testid": "\"create-invoice-from-products\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 274,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setSelectedIds(new Set())}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 422,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPage((p) => Math.max(1, p - 1))}",
+        "disabled": "{page <= 1}",
+        "data-testid": "\"products-page-prev\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 435,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPage((p) => p + 1)}",
+        "disabled": "{!hasNext}",
+        "data-testid": "\"products-page-next\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 134,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{onClose}",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 137,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "form": "\"po-form\"",
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 201,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => removeItem(i)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 209,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{addItem}",
+        "style": "{{ marginTop: \"var(--space-2)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 198,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "data-testid": "\"po-new-btn\"",
+        "onClick": "{() => { setPoInitial(null); setShowNewModal(true); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 242,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-primary\"",
+        "onClick": "{() => doAction(p.id, \"receive\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 246,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-secondary\"",
+        "data-testid": "{`po-unreceive-${p.id}`}",
+        "onClick": "{() => doAction(p.id, \"unreceive\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 255,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => doAction(p.id, \"cancel\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 259,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-secondary\"",
+        "data-testid": "{`po-pdf-${p.id}`}",
+        "onClick": "{() => downloadPdf(p.id, p.po_number, p.status)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 268,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-secondary\"",
+        "data-testid": "{`po-send-email-${p.id}`}",
+        "onClick": "{() => sendEmail(p.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 277,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-primary\"",
+        "data-testid": "{`po-resend-email-${p.id}`}",
+        "onClick": "{() => resendEmail(p.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 242,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => removeItem(i)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 252,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{addItem}",
+        "data-testid": "\"quote-add-blank\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 267,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm btn-secondary\"",
+        "onClick": "{() => setShowFedExModal(true)}",
+        "data-testid": "\"fedex-estimate-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 282,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/quotes\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 283,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{saving}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 133,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => doAction(\"send\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 137,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => doAction(\"approve\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 138,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-danger field-h-md\"",
+        "onClick": "{() => doAction(\"reject\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 142,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{convertToInvoice}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 145,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary field-h-md\"",
+        "onClick": "{handleFetchFxRate}",
+        "disabled": "{fxLoading}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 149,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary field-h-md\"",
+        "onClick": "{handleDownloadPdf}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 100,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "{statusFilter === \"\" ? \"btn-primary btn-sm\" : \"btn-secondary btn-sm\"}",
+        "data-testid": "\"quotes-filter-all\"",
+        "aria-pressed": "{statusFilter === \"\"}",
+        "onClick": "{() => setStatusFilter(\"\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 137,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => navigate(\"/quotes/new\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 167,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => navigate(`/quotes/${q.id}`)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "line": 294,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-ghost\"",
+        "onClick": "{toggleLang}",
+        "style": "{{ fontSize: \"var(--font-size-sm)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "line": 461,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn btn-primary\"",
+        "disabled": "{submitting}",
+        "style": "{{ width: \"100%\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "line": 227,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-ghost\"",
+        "onClick": "{toggleLang}",
+        "style": "{{ fontSize: \"var(--font-size-sm)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "line": 407,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn btn-primary\"",
+        "disabled": "{submitting}",
+        "style": "{{ width: \"100%\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "line": 279,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn btn-ghost\"",
+        "onClick": "{toggleLang}",
+        "style": "{{ fontSize: \"var(--font-size-sm)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "line": 538,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn btn-primary\"",
+        "disabled": "{submitting}",
+        "style": "{{ width: \"100%\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 339,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary btn-sm\"",
+        "onClick": "{openCreateRole}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 365,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary btn-block\"",
+        "onClick": "{() => setUserAssignOpen(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 397,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => openEditRole(selectedRole)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 399,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => setDeleteTarget(selectedRole)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 403,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary\"",
+        "disabled": "{!dirty || savingPerms}",
+        "onClick": "{cancelEdits}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 406,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary\"",
+        "disabled": "{!dirty || savingPerms || !canEditPerms}",
+        "onClick": "{savePermissions}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 540,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowRoleForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 541,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 566,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeUserAssign}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 567,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "onClick": "{saveUserRoles}",
+        "disabled": "{!targetUserId}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/sales/SalesPage.tsx",
+      "line": 167,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "data-testid": "{`sales-edit-${o.order_id}`}",
+        "onClick": "{() => setEditing(o)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 230,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"modal-icon-btn modal-icon-btn--danger\"",
+        "onClick": "{onDelete}",
+        "aria-label": "{t(\"schedule.deleteEvent\")}",
+        "title": "{t(\"schedule.deleteEvent\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 390,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "onClick": "{onSave}",
+        "disabled": "{!draft.title.trim()}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 393,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 400,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "onClick": "{onSave}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 404,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "onClick": "{onClose}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 447,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "fullWidth": true,
+        "onClick": "{onCreate}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 457,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"sm\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"schedule.prevMonth\")}",
+        "onClick": "{() => onShiftMonth(-1)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 466,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"sm\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"schedule.nextMonth\")}",
+        "onClick": "{() => onShiftMonth(1)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1108,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "size": "\"sm\"",
+        "onClick": "{() => navigatePeriod(\"today\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1109,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"sm\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"schedule.prevPeriod\")}",
+        "onClick": "{() => navigatePeriod(\"prev\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1112,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"sm\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"schedule.nextPeriod\")}",
+        "onClick": "{() => navigatePeriod(\"next\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1121,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"common.search\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1130,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "iconOnly": true,
+        "aria-label": "{t(\"schedule.settings\")}",
+        "onClick": "{() => navigate(\"/schedule/settings\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 179,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{() => saveOwner(selfOwner)}",
+        "loading": "{savingStaffId === selfOwner.staffId}",
+        "loadingText": "{t(\"common.saving\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 234,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{() => saveOwner(owner)}",
+        "loading": "{savingStaffId === owner.staffId}",
+        "loadingText": "{t(\"common.saving\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "line": 52,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => setShowForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "line": 79,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "line": 80,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "line": 113,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => handleDelete(s.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "line": 68,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => setShowForm(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "line": 93,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "line": 94,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+      "line": 225,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/staff\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffEditPage.tsx",
+      "line": 226,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 219,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 299,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 300,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{submitting}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 321,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 322,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 365,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(s); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 366,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(s); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 173,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => startEdit(it)}",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 206,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{load}",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 222,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "disabled": "{importing}",
+        "onClick": "{runImportPreview}",
+        "data-testid": "\"dex-import-preview-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 276,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{importing}",
+        "onClick": "{runImportApply}",
+        "data-testid": "\"dex-import-apply-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 321,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 324,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "onClick": "{() => setEditing(null)}",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+      "line": 93,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{handleRefresh}",
+        "disabled": "{refreshing}",
+        "data-testid": "\"fx-rate-refresh-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 336,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => loadRules(ruleSearch)}",
+        "className": "\"btn-secondary btn-sm\"",
+        "data-testid": "\"rules-search-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 339,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{openCreateRule}",
+        "className": "\"btn-primary btn-sm\"",
+        "data-testid": "\"rules-new\"",
+        "style": "{{ marginLeft: \"auto\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 342,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => setRuleConfirmDelete(true)}",
+        "className": "\"btn-danger btn-sm\"",
+        "disabled": "{ruleSelected.size === 0}",
+        "data-testid": "\"rules-bulk-delete\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 387,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => openEditRule(r)}",
+        "data-testid": "{`rule-edit-${r.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 414,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => loadAliases(aliasSearch)}",
+        "className": "\"btn-secondary btn-sm\"",
+        "data-testid": "\"aliases-search-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 417,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{openCreateAlias}",
+        "className": "\"btn-primary btn-sm\"",
+        "data-testid": "\"aliases-new\"",
+        "style": "{{ marginLeft: \"auto\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 420,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => setAliasConfirmDelete(true)}",
+        "className": "\"btn-danger btn-sm\"",
+        "disabled": "{aliasSelected.size === 0}",
+        "data-testid": "\"aliases-bulk-delete\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 459,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => openEditAlias(a)}",
+        "data-testid": "{`alias-edit-${a.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 508,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary\"",
+        "disabled": "{promptSupplierId === null || promptSaving}",
+        "onClick": "{savePrompt}",
+        "data-testid": "\"supplier-prompt-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 578,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowRuleForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 579,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "data-testid": "\"rule-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 631,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowAliasForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 632,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "data-testid": "\"alias-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "line": 148,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => startEdit(b)}",
+        "data-testid": "{`llm-budget-edit-${b.tenant_id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "line": 226,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\"",
+        "data-testid": "\"llm-budget-save\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "line": 233,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{cancelEdit}",
+        "style": "{{ marginLeft: \"var(--space-2)\" }}",
+        "data-testid": "\"llm-budget-cancel\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 844,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => void handleApprove()}",
+        "disabled": "{isFinal || submitting}",
+        "data-testid": "\"review-approve-btn\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 852,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => setShowRejectDialog(true)}",
+        "disabled": "{isFinal || submitting}",
+        "data-testid": "\"review-reject-btn\"",
+        "className": "\"btn-danger\"",
+        "style": "{{ marginLeft: \"var(--space-2)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 890,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => void handleReject()}",
+        "disabled": "{submitting}",
+        "data-testid": "\"review-reject-confirm-btn\"",
+        "className": "\"btn-danger\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 898,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => {\n                    setShowRejectDialog(false);\n                    setRejectReason(\"\");\n                  }}",
+        "className": "\"btn-secondary\"",
+        "style": "{{ marginLeft: \"var(--space-2)\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 228,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-secondary field-h-md\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 230,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "onClick": "{() => { setSearch(\"\"); setSearchInput(\"\"); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 256,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 260,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{cancelEdit}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 295,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-secondary btn-sm\"",
+        "onClick": "{() => startEdit(r)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 298,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-danger btn-sm\"",
+        "onClick": "{() => remove(r.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 332,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "key": "{a.key}",
+        "role": "\"tab\"",
+        "aria-selected": "{attr === a.key}",
+        "className": "{attr === a.key ? \"btn-primary\" : \"btn-secondary\"}",
+        "onClick": "{() => setAttr(a.key)}",
+        "style": "{{ padding: \"var(--space-1) var(--space-3)\" }}",
+        "data-testid": "{`attr-master-tab-${a.key}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 235,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary btn-sm\"",
+        "onClick": "{runSearch}",
+        "data-testid": "\"suppliers-search-btn\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 236,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-primary btn-sm\"",
+        "onClick": "{openCreate}",
+        "data-testid": "\"suppliers-new\"",
+        "style": "{{ marginLeft: \"auto\" }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 237,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-danger btn-sm\"",
+        "disabled": "{selectedIds.size === 0}",
+        "onClick": "{() => setConfirmDelete(true)}",
+        "data-testid": "\"suppliers-bulk-delete\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 265,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "onClick": "{() => openEdit(s)}",
+        "data-testid": "{`supplier-edit-${s.id}`}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 275,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "disabled": "{page <= 1}",
+        "onClick": "{() => setPage((p) => Math.max(1, p - 1))}",
+        "data-testid": "\"suppliers-prev\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 277,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-sm\"",
+        "disabled": "{items.length < PER_PAGE}",
+        "onClick": "{() => setPage((p) => p + 1)}",
+        "data-testid": "\"suppliers-next\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 323,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary btn-sm\"",
+        "onClick": "{openRouting}",
+        "data-testid": "\"supplier-open-routing\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 330,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowForm(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 331,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 346,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 362,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "onClick": "{() => deleteRouting(r.id)}",
+        "className": "\"btn-sm btn-danger\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+      "line": 370,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "onClick": "{() => setRoutingFor(null)}",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgDistributionPage.tsx",
+      "line": 41,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"dist-btn dist-btn--primary\"",
+        "onClick": "{() => workspaceRef.current?.openNewTargetForm()}",
+        "aria-label": "{t(\"distributionTarget.page.newBtn\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 261,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"secondary\"",
+        "onClick": "{openUpload}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 394,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"primary\"",
+        "onClick": "{handleUpload}",
+        "disabled": "{uploading || !selectedFile}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 197,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowTypeManager((v) => !v)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 243,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 276,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-danger-link\"",
+        "aria-label": "{`${t(\"common.delete\")} ${tp.name_ja}`}",
+        "onClick": "{() => removeType(tp.id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 326,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 359,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => startEdit(it)}",
+        "className": "\"btn-secondary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 364,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "onClick": "{() => remove(it.id)}",
+        "className": "\"btn-danger-link\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSupplierQualityPage.tsx",
+      "line": 40,
+      "tag": "Button",
+      "kind": "Button",
+      "attrs": {
+        "variant": "\"ghost\"",
+        "size": "\"md\"",
+        "onClick": "{() => setDiagOpen(true)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierEditPage.tsx",
+      "line": 79,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/suppliers\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierEditPage.tsx",
+      "line": 86,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 107,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => { setShowCreate(true); setCreateForm(emptyForm); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 124,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 125,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 143,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 144,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 158,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(s); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 159,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(s); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 194,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPage((p) => Math.max(1, p - 1))}",
+        "disabled": "{page <= 1}",
+        "data-testid": "\"suppliers-page-prev\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 207,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{() => setPage((p) => p + 1)}",
+        "disabled": "{!hasNext}",
+        "data-testid": "\"suppliers-page-next\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "line": 67,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => navigate(\"/teams\")}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamEditPage.tsx",
+      "line": 74,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 180,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-primary field-h-md\"",
+        "onClick": "{() => { setShowCreate(true); setCreateForm(emptyForm); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 200,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{() => setShowCreate(false)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 203,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 221,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"button\"",
+        "className": "\"btn-secondary\"",
+        "onClick": "{closeDrawer}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 224,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 243,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "type": "\"submit\"",
+        "className": "\"btn-primary\""
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 253,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{() => removeMember(m.user_id)}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 280,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); openMembers(team); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 282,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm\"",
+        "onClick": "{(e) => { e.stopPropagation(); handleRowClick(team); }}"
+      }
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 285,
+      "tag": "button",
+      "kind": "raw",
+      "attrs": {
+        "className": "\"btn-sm btn-danger\"",
+        "onClick": "{(e) => { e.stopPropagation(); setDeleteTarget(team); }}"
+      }
+    }
+  ]
+}

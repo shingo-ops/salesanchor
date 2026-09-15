@@ -1,0 +1,21 @@
+CARD-AL-SAVE-02
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-AL-SAVE-02
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。所有/実在/原文/L32照合。
+担当: 既存button_generator。他者の変更を戻さない。root検収・文書保存完了。
+許可: 以下13ファイルの既存内容を検算してstage/commit/push。製品再編集なし。新AIを起動しない。
+禁止: GO作成、merge/本番/CI変更、対象外ファイル追加。PR本文更新はroot担当。
+根拠: al-fullpage-implementation.md、al-implementation-manifest.json。266試験/72表示組/24操作組成功。
+手順0: statusを読み、下記リスト以外の変更があれば停止。manifest製品3hash/19証跡hashを照合してから保存する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git status --short
+手順1: 指定リストだけstage。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git add docs/ai-agents/evidence-registry.md docs/handoff/design-system-recon/evidence-20260910/al-fullpage-button-card.txt docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md docs/handoff/design-system-recon/evidence-20260910/al-implementation-checkpoint.tar.gz docs/handoff/design-system-recon/evidence-20260910/al-implementation-manifest.json docs/handoff/design-system-recon/evidence-20260910/al-save-card.txt docs/handoff/design-system-recon/recon.md docs/specs/design-system/design.md docs/specs/design-system/migration.md frontend/src/pages/contacts/ContactEditPage.tsx frontend/src/pages/suppliers/SupplierEditPage.tsx frontend/src/components/FullPageFormButtonMigration.test.tsx tasks/todo.md
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git diff --cached --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git commit -m "feat: unify four full-page form action buttons"
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git log -1 --format=%H
+手順2: 保存済みcommitの実在確認後にpush。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git push -u origin HEAD
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git ls-remote origin refs/heads/release/frontend-fullpage-button-design
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-fullpage-button-design && git status --short
+失敗時は最後のコマンドと原ログをrootへ返して停止。push後のSHA/空status/製品hashを報告して停止。
+END OF CARD

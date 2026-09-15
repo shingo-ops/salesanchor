@@ -1,0 +1,18 @@
+CARD-BUTTON-APPEARANCE-03
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-BUTTON-APPEARANCE-03
+照合§5.5: 1○実tree、2○PRなし、3○親へ全文、4○遷移中測定の切分け、5○同tree、6○期待不変、7○製品修正0。
+読んだ節: guards/00-common.md、11-lint.md、design-partner.md§5.5。
+担当Generator。root文書/他者の変更を保持、別AI禁止。
+正しい作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance
+許可: /tmp/frontend-button-appearance-20260911内の検証原稿だけ修正/再測定。製品/正式文書/台帳/依存/CI/GO/commit/push/PR/merge/deployの変更禁止。
+根拠: components.css:91に既存background transition、tokens.css:143でtransition-fast=150ms ease。旧browser.mjs:37はhover直後computedを読んでおり終了待ちなし。実装不良と断定せず遷移後比較で切り分ける。
+rootがMDN Element.getAnimations/Animation.finishedの公式資料を確認。getAnimationsはCSS transitionを含み、finishedは完了Promise。Context7未提供の許可済み代替、ブラウザー現物でもtimingを記録する。
+1. 旧browser.mjs/log/result.jsonをそのまま保持。新browser-settled.mjsと別出力browser-settled-result.json/logへ。期待値/分母190/1080/440を変更しない。必要なら検証結果のfilenameだけ変更。
+2. raw要素のnormal/hover/active/disabled測定前、CSSのstyleを確定して対象要素getAnimations({subtree:false})からanimationsを取得。constructor/transitionProperty/currentTime/timing/durationを保存し、Promise.all(animation.finished)で有限遷移完了を待つ。requestAnimationFrameでスタイル反映も確認する。予期せぬ無限animation/拒否/timeoutは停止。transition:none・animation.cancel/finish・製品CSS/期待値の変更・失敗の握りつぶし禁止。
+3. 原失敗したlight390 btn-ghost hoverで、実在するtransitionの前後timingと終了後computedが一致するか記録。終了後も不一致なら製品を変えず差分を報告する。遷移時間とpropertyもbefore/after同一を確認。
+4. 全raw440pairを同じ比較項目で再測定。既存4用途色aliasの明暗同値を明示確認、元カードのreduced-motion/読み込み色/操作/サイズ/色190/focusの残項目を満たす（先行成功結果は保持し組合せてよい）。
+5. 14製品hash/行数を最終manifestへ保存し、旧レビュー13hash＋修正Storyhashと一致確認。git diff --check、対象範囲14/依存CIbackend差分0。docs隔離成功は既存別結果を使用する。
+報告冒頭: 本報告はカード CARD-BUTTON-APPEARANCE-03 の実行結果である。
+親へ生出力全文と実在ログ、実行/未実行を区別。正規require_escalated可、拒否/不明/失敗は停止。
+END OF CARD

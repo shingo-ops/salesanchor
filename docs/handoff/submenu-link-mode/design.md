@@ -1,7 +1,7 @@
 # design: submenu-link-mode
 
 **対象:** PR #2650 — SubMenu にリンク型（ドア型）対応を追加
-**対象ADR:** ADR-148
+**対象ADR:** ADR-149
 **recon:** docs/handoff/submenu-link-mode/recon.md
 
 ---

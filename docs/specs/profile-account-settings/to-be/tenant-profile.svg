@@ -1,0 +1,41 @@
+<svg width="720" height="560" viewBox="0 0 720 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="560" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">プロフィール</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">テナント（会社）全体の情報です</text>
+
+  <rect x="24" y="70" width="672" height="112" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="13" font-weight="600" fill="#2c2c2a">会社情報</text>
+  <text x="38" y="116" font-size="10" fill="#888780">会社名</text>
+  <rect x="38" y="122" width="290" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="48" y="140" font-size="12" fill="#2c2c2a">合同会社 Sales Anchor</text>
+  <text x="360" y="116" font-size="10" fill="#888780">代表者名</text>
+  <rect x="360" y="122" width="290" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="370" y="140" font-size="12" fill="#2c2c2a">しんご</text>
+  <text x="38" y="164" font-size="10" fill="#888780">所在地</text>
+  <rect x="38" y="170" width="612" height="0" rx="0"/>
+  <text x="48" y="178" font-size="12" fill="#2c2c2a" opacity="0">.</text>
+
+  <rect x="24" y="192" width="672" height="80" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="214" font-size="13" font-weight="600" fill="#2c2c2a">連絡先</text>
+  <text x="38" y="238" font-size="10" fill="#888780">代表メールアドレス</text>
+  <text x="38" y="256" font-size="12" fill="#5f5e5a">info@salesanchor.jp</text>
+  <text x="360" y="238" font-size="10" fill="#888780">電話番号</text>
+  <text x="360" y="256" font-size="12" fill="#5f5e5a">090-xxxx-xxxx</text>
+
+  <rect x="24" y="282" width="672" height="150" rx="8" fill="#ffffff" stroke="#378add" stroke-width="1.5"/>
+  <text x="38" y="304" font-size="13" font-weight="600" fill="#2c2c2a">オーナー設定</text>
+
+  <text x="38" y="330" font-size="11" fill="#5f5e5a">支払い方法</text>
+  <rect x="38" y="338" width="400" height="28" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="50" y="356" font-size="11" fill="#2c2c2a">クレジットカード •••• 4821</text>
+  <rect x="360" y="344" width="66" height="16" rx="4" fill="#f1efe8"/>
+  <text x="393" y="356" font-size="9" fill="#888780" text-anchor="middle">既定</text>
+
+  <rect x="38" y="376" width="150" height="26" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="113" y="393" font-size="10" fill="#2c2c2a" text-anchor="middle">+ 支払い方法を追加</text>
+
+  <text x="38" y="418" font-size="10" fill="#888780">オーナー設定カードは、テナントオーナー以外のスタッフの画面には表示されない（オーナーだけがこの欄を見る）</text>
+
+  <text x="360" y="460" font-size="11" fill="#888780" text-anchor="middle">会社名・代表者名・所在地・連絡先は編集可能／オーナー設定はオーナーのみ編集可能</text>
+</svg>

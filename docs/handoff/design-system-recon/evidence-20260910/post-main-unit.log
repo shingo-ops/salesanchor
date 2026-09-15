@@ -1,0 +1,12 @@
+
+> salesanchor-frontend@1.0.0 test:unit
+> vitest run --config vitest.unit.config.ts --project unit
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared/frontend
+
+
+ Test Files  22 passed (22)
+      Tests  200 passed (200)
+   Start at  17:39:42
+   Duration  6.52s (transform 6.26s, setup 3.10s, import 9.89s, tests 4.93s, environment 21.47s)

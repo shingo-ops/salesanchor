@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  jp.salesanchor.stop-log-digest-daily.plist — 毎朝の停止要約 Discord 送信
+  対象: Shingo-Mac-Temp (user: tanizawashingo)
+
+  配置コマンド:
+    cp ops/launchd/jp.salesanchor.stop-log-digest-daily.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/jp.salesanchor.stop-log-digest-daily.plist
+
+  動作確認:
+    launchctl list | grep stop-log-digest
+    tail ~/Library/Logs/stop-log-digest-daily.log
+
+  無効化:
+    launchctl unload ~/Library/LaunchAgents/jp.salesanchor.stop-log-digest-daily.plist
+
+  PO確認事項:
+    - 発火時刻は仮置きで 07:30 JST
+    - StartCalendarInterval は睡眠中の時刻を次回 wake 時に 1 回 coalesce して実行する
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>jp.salesanchor.stop-log-digest-daily</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>/Users/tanizawashingo/salesanchor/scripts/notify/stop-log-digest-to-discord.sh</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/tanizawashingo/salesanchor</string>
+
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>7</integer>
+    <key>Minute</key>
+    <integer>30</integer>
+  </dict>
+
+  <key>StandardOutPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/stop-log-digest-daily.log</string>
+
+  <key>StandardErrorPath</key>
+  <string>/Users/tanizawashingo/Library/Logs/stop-log-digest-daily.err</string>
+</dict>
+</plist>

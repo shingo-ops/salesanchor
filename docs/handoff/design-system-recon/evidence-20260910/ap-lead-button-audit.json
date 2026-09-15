@@ -1,0 +1,249 @@
+{
+  "candidates": [
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "sha256": "55f5c02938bc537fb04a37ce668123e4d575adb155a95fd42df033515b0995c0",
+      "buttons": [
+        {
+          "line": 66,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 67,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.create\")}</button>"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "sha256": "549d355e62606df42c40c7bede53e8f0438a8c1a266567ea1f3e13010da4639f",
+      "buttons": [
+        {
+          "line": 67,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 68,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.create\")}</button>"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "sha256": "7ffe902966a373c7898097be97652ffdb6aca5a9ba52952a01410f82df6a61bb",
+      "buttons": [
+        {
+          "line": 65,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 66,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "sha256": "c2db0d23978f84591ba686aa924ea7c4c0301e8c6e39a3ab6b03dfa6dd659eb9",
+      "buttons": [
+        {
+          "line": 79,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 80,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.register\")}</button>"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "sha256": "c14a8ee81aa8fd2602d5f9a85583ca9f2df80dc816bf2e9b9228b8b5887ea8a5",
+      "buttons": [
+        {
+          "line": 93,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+        },
+        {
+          "line": 94,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>"
+        }
+      ]
+    }
+  ],
+  "base": "e39fa65abb83837a7909290b993a8cd363a11ef9",
+  "counts": {
+    "common": 131,
+    "legacy": 287
+  },
+  "expected": {
+    "common": 137,
+    "legacy": 281
+  },
+  "pages": [
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "sha256": "2e98cc377e5e46a93092d4d86ed83f59be182ed74d1d437ce77c9871d6fab6cb"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "sha256": "f8e3c8738918fca2d85c989410c03a6f4551655c77f4972aea98549164584e8b"
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Drawer.tsx",
+      "sha256": "ad0a218807e7ec52d25495cb00b05148cc1c05cb40424bf16da3c5b1990ab7a8"
+    },
+    {
+      "file": "frontend/src/components/Drawer.css",
+      "sha256": "5cc3e35c7c303ca498d6d06833bb92a26b26173baf0f333c1f2b7681a997d195"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadFormFields.tsx",
+      "sha256": "f134348bcf9172290cf24a8a2c2a2a00564759f15f66b2feed5bc8e74bcce8ac"
+    },
+    {
+      "file": "frontend/src/hooks/useRecordDrawer.ts",
+      "sha256": "d1d511bdab408034b8b1689fdcf963f050bb53181e2e172f86db1dccf4d8bfa0"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "sha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263"
+    },
+    {
+      "file": "frontend/src/components/CountryCombobox.tsx",
+      "sha256": "fe6f25b3649e8aa6d43b0bea9bc0b0fb6634da06834bde9a5286df9cea93a295"
+    },
+    {
+      "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+      "sha256": "0e0c0de57755b2e9d4eefdf2500a6420de55c87723b2f5a04d1ed68f0b076bad"
+    },
+    {
+      "file": "frontend/src/hooks/useSSE.ts",
+      "sha256": "2e1cfc5683003bcd41889f2a79e48d95d83e1919dd9d89a718d0ee0ffc46466e"
+    },
+    {
+      "file": "frontend/src/api/closeReasons.ts",
+      "sha256": "cff567467e17706bb87b50c6fd12d38792fe1ec07f9957be7763f5eb50e8d13f"
+    },
+    {
+      "file": "frontend/src/constants/leadStatus.ts",
+      "sha256": "4a5ed18382ff9a9dfbc2c111415afe4e199bfa7d0094f8dbd7432be9e9345ca5"
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "sha256": "ba9b31d0a1edb14e3e920ff25d2c00371c2d07d1095ef8f8d42f835d0148d438"
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "sha256": "9b14e66bce3724bc1d7cc6f72b44c397c13faaba074d2748120753fbb6733668"
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "sha256": "80ff7fcc88ab4afaf615b19fbdce15a4759ecb0e79d27f3d6d392367de8fb10c"
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "sha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597"
+    },
+    {
+      "file": "frontend/src/App.tsx",
+      "sha256": "0544680ef2929b52fccb2fa7c3485af81ac6a2cede2bb3efe0da51f98d970826"
+    }
+  ],
+  "targets": [
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 439,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowCreate(false)}>{t(\"common.cancel\")}</button>",
+      "id": "AP-01"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 440,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.register\")}</button>",
+      "id": "AP-02"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 540,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={closeDrawer}>{t(\"common.cancel\")}</button>",
+      "id": "AP-03"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 541,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "id": "AP-04"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "line": 289,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => navigate(\"/crm/leads\")}>{t(\"common.cancel\")}</button>",
+      "id": "AP-05"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "line": 290,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.update\")}</button>",
+      "id": "AP-06"
+    }
+  ],
+  "nonTargets": [
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 313,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t(\"leads.newLead\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 469,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={closeConvert}>{t(\"common.cancel\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 470,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"leads.convert\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 500,
+      "raw": "<button className=\"btn-sm btn-primary\" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t(\"leads.convert\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 503,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t(\"leads.merge\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 505,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t(\"common.delete\")}</button>"
+    }
+  ]
+}

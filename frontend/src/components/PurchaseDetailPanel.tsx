@@ -23,6 +23,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -261,9 +262,9 @@ export default function PurchaseDetailPanel({
 
   const footer = (
     <>
-      <button
+      <Button
         type="button"
-        className="btn-secondary"
+        variant="secondary"
         onClick={handleConfirm}
         disabled={!existing || confirming}
         data-testid="pur-confirm"
@@ -274,24 +275,24 @@ export default function PurchaseDetailPanel({
         }
       >
         {confirming ? t("purchase.confirming") : t("purchase.confirm")}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="btn-secondary"
+        variant="secondary"
         onClick={onClose}
         disabled={saving}
       >
         {t("common.cancel")}
-      </button>
-      <button
+      </Button>
+      <Button
         form="purchase-detail-form"
         type="submit"
-        className="btn-primary"
+        variant="primary"
         disabled={saving}
         data-testid="pur-save"
       >
         {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
-      </button>
+      </Button>
     </>
   );
 

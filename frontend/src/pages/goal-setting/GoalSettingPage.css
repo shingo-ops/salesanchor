@@ -4,25 +4,6 @@
    Dark mode: :root.force-dark で同名トークンが上書き済み
    ============================================================ */
 
-.gs-back-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: none;
-  background: transparent;
-  color: var(--accent);
-  font-size: var(--font-sm);
-  cursor: pointer;
-  margin-bottom: var(--space-4);
-  border-radius: var(--radius-md);
-  transition: background 0.15s;
-}
-
-.gs-back-btn:hover {
-  background: var(--bg-hover);
-}
-
 .gs-advisor {
   position: relative;
   overflow: hidden;

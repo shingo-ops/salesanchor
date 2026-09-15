@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 275" font-family="sans-serif">
+  <title>不具合が仕組みを育てる回路</title>
+  <g stroke="#3d8b7d" fill="#eaf3f0"><rect x="50" y="30" width="180" height="56" rx="8"/><rect x="250" y="30" width="180" height="56" rx="8"/></g>
+  <rect x="450" y="30" width="180" height="56" rx="8" stroke="#b85c5c" fill="#faecec"/>
+  <g fill="#333" font-size="14" text-anchor="middle">
+    <text x="140" y="52">開発中に捕捉</text><text x="340" y="52">関所で捕捉</text><text x="540" y="52">本番で捕捉</text>
+  </g>
+  <g fill="#666" font-size="11" text-anchor="middle">
+    <text x="140" y="72">テスト・実装中の失敗</text><text x="340" y="72">CIが赤で止めた</text><text x="540" y="72">deploy後の想定外</text>
+  </g>
+  <g stroke="#888" fill="none"><path d="M140 86 L140 146"/><path d="M340 86 L340 146"/><path d="M540 86 L540 146"/></g>
+  <g fill="#888"><path d="M135 144 L140 152 L145 144 Z"/><path d="M335 144 L340 152 L345 144 Z"/><path d="M535 144 L540 152 L545 144 Z"/></g>
+  <rect x="50" y="152" width="580" height="56" rx="8" stroke="#c99a3d" fill="#fcf3dc"/>
+  <text x="340" y="174" fill="#333" font-size="14" text-anchor="middle">蓄積層＝リポジトリ（文書と関所）</text>
+  <text x="340" y="194" fill="#666" font-size="11" text-anchor="middle">track-recordの1行・5W2H・§6教訓・関所の強化・designの改訂</text>
+  <text x="340" y="245" fill="#555" font-size="12" text-anchor="middle">↻ 次の便の設計・指示・検査に自動で効く — エージェント本人は毎回リセット、育つのはここ</text>
+</svg>

@@ -1,0 +1,20 @@
+{
+  "asset": "/assets/index-CZh0eB0x.js",
+  "sha256": "077d10fdaeaf624d6c4bbac983a0fee655ccfe2ef9a489b66b89104320c6b312",
+  "targetForms": 2,
+  "targetButtons": 4,
+  "excerpts": [
+    "form-actions`,children:[(0,G.jsx)(J,{type:`button`,variant:`secondary`,size:`md`,onClick:()=>n(`/contacts`),children:e(`common.cancel`)}),(0,G.jsx)(J,{type:`submit`,variant:`primary`,size:`md`,children:e(`common.update`)})]})]})]})}var l2=[{value:``,labelKey:`shipping.carrierUnspecified`},{value:`elogi`,labelKey:`shipping.carrierElogi`},{value:`fedex`,labelKey:`shipping.carrierFedex`},{value:`dhl`,labelKey:`shipping.carrierDhl",
+    "form-actions`,children:[(0,G.jsx)(J,{type:`button`,variant:`secondary`,size:`md`,onClick:()=>n(`/suppliers`),children:e(`common.cancel`)}),(0,G.jsx)(J,{type:`submit`,variant:`primary`,size:`md`,children:e(`common.update`)})]})]})]})}var h3=250,g3=20;function _3({onSelect:e,disabled:t=!1,placeholder:n,debounceMs:r=h3,testIdPrefix:i=`inventory-picker`,initialQuery:a,showStockGuide:o=!0}){let{t:s}=V(),[c,l]=(0,_.useState)(a??``),"
+  ],
+  "appHTTP": 200,
+  "apiHTTP": 200,
+  "apiPath": "/api/health",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "limits": "公開資産とhealthの読取確認。本番認証付きフォーム送信は未実施。"
+}

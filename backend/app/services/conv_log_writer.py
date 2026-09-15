@@ -4,7 +4,7 @@
 - 呼び出し前に set_tenant_context 済みのセッションを受け取る（search_path が確定している前提）。
   db.commit() 後は reset_tenant_context を呼んでから本関数を呼ぶこと。
 - external_message_id の UNIQUE 制約で冪等を保証（ON CONFLICT DO NOTHING → None 返却）。
-- company_id は deals テーブルから lead の最新案件を参照して補完する（案件なければ NULL）。
+- company_id は companies テーブルの lead_id を使って補完する（会社未登録なら NULL）。
   v_company_stats VIEW が company_id で集計するため、案件紐づけ後は自動で集計される。
 - contact_id は contacts テーブルから lead の primary contact を参照して補完する（なければ NULL）。
   呼び出し元が contact_id を明示した場合はそちらを優先する（渡せば確定）。
@@ -32,7 +32,7 @@ async def write_conversation_log(
     db: AsyncSession,
     *,
     tenant_id: int,
-    lead_id: int | None,
+    lead_id: int,
     contact_id: int | None = None,
     channel_type: str,
     channel_identity: str | None = None,
@@ -48,7 +48,7 @@ async def write_conversation_log(
     Args:
         db: テナントコンテキスト設定済みの AsyncSession。
         tenant_id: テナント ID（RLS カラム用）。
-        lead_id: リード ID。案件未紐づけの場合も受け付ける（company_id は deals から補完）。
+        lead_id: リード ID。会社未紐づけの場合も受け付ける（company_id は companies から補完）。
         contact_id: コンタクト ID。省略時は contacts から lead の primary contact を自動補完。
         channel_type: チャネル種別（'messenger' / 'instagram' / 'discord' / 'phone' 等）。
         channel_identity: 送受信相手のチャネル固有 ID（PSID / Discord UID 等）。
@@ -62,8 +62,11 @@ async def write_conversation_log(
     Returns:
         挿入された id。external_message_id 重複でスキップした場合は None。
     """
-    company_id = await _get_company_id_for_lead(db, lead_id) if lead_id else None
-    if contact_id is None and lead_id:
+    if lead_id is None:  # 型上は来ないが動的呼び出しの防波堤（便1b）
+        raise ValueError("conversation_logs は lead_id 必須です（便1b: 背骨）")
+
+    company_id = await _get_company_id_for_lead(db, lead_id)
+    if contact_id is None:
         contact_id = await _get_contact_id_for_lead(db, lead_id)
     raw_json = json.dumps(raw_payload) if raw_payload else None
 
@@ -76,7 +79,7 @@ async def write_conversation_log(
             ) VALUES (
                 :tenant_id, :lead_id, :contact_id, :company_id,
                 :channel_type, :channel_identity, :direction, :sender,
-                :content_text, :external_message_id, :raw_payload::jsonb, :occurred_at
+                :content_text, :external_message_id, :raw_payload, :occurred_at
             )
             ON CONFLICT (external_message_id) WHERE external_message_id IS NOT NULL
             DO NOTHING
@@ -112,14 +115,13 @@ async def write_conversation_log(
 
 
 async def _get_company_id_for_lead(db: AsyncSession, lead_id: int) -> int | None:
-    """lead_id に紐づく最新案件の company_id を返す。案件がなければ None。"""
+    """lead_id に直接紐づく会社の id を返す。会社がなければ None。"""
     result = await db.execute(
         text("""
-            SELECT company_id
-            FROM deals
+            SELECT id
+            FROM companies
             WHERE lead_id = :lead_id
-              AND company_id IS NOT NULL
-            ORDER BY created_at DESC
+            ORDER BY id ASC
             LIMIT 1
         """),
         {"lead_id": lead_id},

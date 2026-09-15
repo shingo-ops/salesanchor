@@ -1,0 +1,14 @@
+{
+  "base": "739f772d4cf55c1b3972c02c086a7c77b807d293",
+  "archive_sha256": "4e0b32fe7a59248fbd85511453c645a32f3d1b8d96ab48245b5e7a97418cf925",
+  "files": {
+    "ak-raw-audit.cjs": "243a04beb95b4d007153f00a88e98410ad8685655f880a760e704d328a9f5587",
+    "ak-raw-audit.json": "7c76a706bacbecdd45ee4eb8ca5b33be36e0c1e93628d57dac7fc0bbe635d6d4",
+    "ak-form-audit.cjs": "194fe543fa40ac226de3eceb745ddb0a1fc97dc28e633b938da8a1c7838876f8",
+    "ak-form-audit.json": "eb8d8992366339e1451e1c693b3a3700abd09dfdca4ca61e47377f68e39ee13d",
+    "ak-layout-probe.cjs": "5487da7765e68f32234ca1d12d029f7cfe891392a96bdbf899e8bd6f81bc3868",
+    "ak-layout-probe.json": "7d3045bdd3d52a5aa714dc19e66c70002a76d3dc031c6c78a5cf873cfb938896",
+    "ak-layout-probe-initial.cjs": "1bc4dacdf77d595a14fde2a0c2b8f1aae8cbb87f2e03f8d4cbc38d17d35ff51d",
+    "ak-layout-probe-initial.json": "d7afe900f3a3dbcfe3c596189df8c0727fd33781445800831ed26fdbcb7e65bb"
+  }
+}

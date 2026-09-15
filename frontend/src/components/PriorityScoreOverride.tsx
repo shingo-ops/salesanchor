@@ -11,6 +11,7 @@ import { api } from "../lib/api";
 import { usePermissions } from "../hooks/usePermissions";
 import type { CustomerScoreData } from "./PriorityScoreBadge";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 interface Props {
   leadId: number;
@@ -63,9 +64,9 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
 
   return (
     <>
-      <button className="btn-sm" onClick={() => setOpen(true)}>
+      <Button variant="secondary" size="sm" onClick={() => setOpen(true)}>
         {t("priority.overrideTitle")}
-      </button>
+      </Button>
 
       <Modal open={open} onClose={() => setOpen(false)} title={t("priority.overrideTitle")} size="md">
             <p className="text-muted">{t("priority.overrideWarning")}</p>
@@ -98,16 +99,16 @@ export default function PriorityScoreOverride({ leadId, currentScore, onUpdated 
               {error && <div className="error-message">{error}</div>}
 
               <div className="form-actions">
-                <button
+                <Button
                   type="button"
-                  className="btn-secondary"
+                  variant="secondary"
                   onClick={() => setOpen(false)}
                 >
                   {t("common.cancel")}
-                </button>
-                <button type="submit" className="btn-primary" disabled={saving}>
+                </Button>
+                <Button type="submit" variant="primary" disabled={saving}>
                   {saving ? t("common.saving") : t("common.save")}
-                </button>
+                </Button>
               </div>
             </form>
       </Modal>

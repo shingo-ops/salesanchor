@@ -58,6 +58,13 @@ STATUS_MAP = [
     ("new", "lead"),
     ("in_progress", "negotiating"),
     ("converted", "existing_customer"),
+    # Non-standard value found in tenant_006 (2026-08-31 deploy block).
+    # ADR-109 defines 7 immutable codes; 'disqualified' is absent.
+    # goals.py excludes both 'out_of_scope' and 'disqualified' in the same NOT IN filter
+    # (commit 98ba6555, 2026-07-26), so mapping to 'out_of_scope' is semantically correct
+    # and has zero impact on aggregate counts.
+    # See: docs/handoff/adr109-disqualified-cleanup/record.md
+    ("disqualified", "out_of_scope"),
 ]
 
 # The 7 valid ADR-109 codes — used for comprehensive post-migration verification
@@ -148,6 +155,28 @@ async def main() -> None:
                 async with engine.begin() as conn:
                     counts = {}
                     for old_val, new_val in STATUS_MAP:
+                        # Audit: log row details before converting 'disqualified'
+                        # so the affected records can be reconstructed from deploy logs.
+                        if old_val == "disqualified":
+                            audit_rows = await conn.execute(
+                                text(
+                                    f"SELECT id, status, created_at, updated_at FROM {schema}.leads "
+                                    f"WHERE status = :old_val ORDER BY id"
+                                ),
+                                {"old_val": old_val},
+                            )
+                            audit_data = audit_rows.fetchall()
+                            if audit_data:
+                                logger.info(
+                                    "[AUDIT] tenant %s: '%s' → '%s' 変換対象 %d 件:",
+                                    schema, old_val, new_val, len(audit_data),
+                                )
+                                for row in audit_data:
+                                    logger.info(
+                                        "  [AUDIT]   id=%s status=%s created_at=%s updated_at=%s",
+                                        row.id, row.status, row.created_at, row.updated_at,
+                                    )
+
                         result = await conn.execute(
                             text(
                                 f"UPDATE {schema}.leads SET status = :new_val, updated_at = NOW() "

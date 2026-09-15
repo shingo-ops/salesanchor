@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -203,9 +203,8 @@ async def calibrate_tenant_weights(
                 COUNT(DISTINCT ml.lead_id)                AS sample_leads
             FROM message_labels ml
             JOIN leads l ON l.id = ml.lead_id
-            JOIN deals d ON d.lead_id = l.id
             WHERE ml.direction = 'inbound'
-              AND d.status = 'lost'
+              AND l.status = 'lost'
             """
         )
     )
@@ -405,7 +404,7 @@ async def _compute_and_persist(
         won_deals_ref_count=won_n,
     )
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     await db.execute(
         text(
             """

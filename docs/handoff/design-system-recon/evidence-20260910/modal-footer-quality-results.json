@@ -1,0 +1,48 @@
+[
+  {
+    "name": "eslint",
+    "command": [
+      "npx",
+      "eslint",
+      "--max-warnings=0",
+      "src/components/Modal.stories.tsx"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "coverage",
+    "command": [
+      "npm",
+      "run",
+      "test:coverage"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "check-all",
+    "command": [
+      "npm",
+      "run",
+      "check:all"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "storybook",
+    "command": [
+      "npm",
+      "run",
+      "build-storybook"
+    ],
+    "exit": 0
+  }
+]

@@ -23,10 +23,11 @@ SQLite モック禁止条項 (feedback_evaluator_gap_2026_05_15.md) に従い、
 from __future__ import annotations
 
 import os
-import sys
 from pathlib import Path
 
 import pytest
+
+from tests.rls_bootstrap import public_bootstrap_lock
 
 # 実 Postgres URL が指定されていない場合はモジュール全体を skip
 TEST_PG_URL = os.getenv("TEST_PG_URL")
@@ -98,22 +99,23 @@ async def engine():
 
 async def _apply_public_migrations(eng) -> None:
     """public 系 migration 056-062 を順に適用 (冪等)。"""
-    public_files = [
-        "056_add_suppliers_type_and_promote_public.sql",
-        "057_create_supplier_aliases.sql",
-        "058_create_knowledge_rules.sql",
-        "059_create_discord_inbound_messages.sql",
-        "060_create_supplier_discord_routing.sql",
-        "061_create_tcg_and_dex_masters.sql",
-        "062_create_inventory_movements_and_budget.sql",
-    ]
-    for fn in public_files:
-        sql = (MIGRATIONS_DIR / fn).read_text("utf-8")
-        async with eng.begin() as conn:
-            for stmt in _split_sql_preserving_do_blocks(sql):
-                stmt = stmt.strip()
-                if stmt:
-                    await conn.exec_driver_sql(stmt)
+    async with public_bootstrap_lock(eng):
+        public_files = [
+            "056_add_suppliers_type_and_promote_public.sql",
+            "057_create_supplier_aliases.sql",
+            "058_create_knowledge_rules.sql",
+            "059_create_discord_inbound_messages.sql",
+            "060_create_supplier_discord_routing.sql",
+            "061_create_tcg_and_dex_masters.sql",
+            "062_create_inventory_movements_and_budget.sql",
+        ]
+        for fn in public_files:
+            sql = (MIGRATIONS_DIR / fn).read_text("utf-8")
+            async with eng.begin() as conn:
+                for stmt in _split_sql_preserving_do_blocks(sql):
+                    stmt = stmt.strip()
+                    if stmt:
+                        await conn.exec_driver_sql(stmt)
 
 
 # ---------------------------------------------------------------------------

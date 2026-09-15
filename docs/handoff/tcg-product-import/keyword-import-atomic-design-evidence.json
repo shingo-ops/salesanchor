@@ -1,0 +1,35 @@
+{
+  "scope": "design evidence only; no product edits",
+  "base_main": "1a8eed69a8d4e1c17cefc7dcef579f63493b17dd",
+  "source_sha256": {
+    "backend/app/services/tcg_product_master_svc.py": "ec12593ef7d6ea90920a32518450b97ecd74821d415dcb5acdfcef5aac02af53",
+    "backend/app/services/tcg_product_import_svc.py": "05bfc76682b28776b2fb3f5595dc91e1b782e1976bfe14003e4dc0f89a5f1366",
+    "backend/app/routers/tcg_product_master.py": "b5e269734505bf554c13e8f4d110b120b345ab64fc20b9b43bf32e3ab5e92440",
+    "backend/app/database.py": "6d6c733565147b24d4d71441bdd0c88ad5ca398265b6927bc8bcbb66ea8055b4",
+    "backend/tests/test_tcg_completion_safety.py": "f114c54da59596f1bb7d6320e90886c128365af935ecaf79d11b3a6df90d02f3",
+    "backend/tests/test_tcg_product_import.py": "695e72688ca6d5f8d1c524a795ac73cbb24ef631b9433ca39f21f9b151b0b9be",
+    "backend/tests/test_tcg_work_matching_integration.py": "36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551",
+    ".github/workflows/test.yml": "6b0bf8f4e93ff7ac5f206b016857949e5d2bd4f8faac6e002894500ad4345e49",
+    "backend/requirements.txt": "d445cee7ab8e5882fa0842563d017e87e8f2c1db6edee269c745b915bc7b3aba"
+  },
+  "direct_product_callers": [
+    "backend/app/routers/tcg_product_master.py:220",
+    "backend/app/services/tcg_product_import_svc.py:469"
+  ],
+  "current_library_pin": "SQLAlchemy 2.0.38",
+  "context7_available": false,
+  "official_sources_checked_20260913": [
+    "https://docs.sqlalchemy.org/en/20/orm/session_transaction.html",
+    "https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html",
+    "https://raw.githubusercontent.com/sqlalchemy/sqlalchemy/rel_2_0_38/lib/sqlalchemy/ext/asyncio/session.py"
+  ],
+  "implementation_files_proposed": [
+    "backend/app/services/tcg_product_master_svc.py",
+    "backend/app/services/tcg_product_import_svc.py",
+    "backend/tests/test_tcg_product_import.py",
+    "backend/tests/test_tcg_product_import_atomicity_pg.py"
+  ],
+  "product_changed": false,
+  "real_pg_executed": false,
+  "po_design_approved": false
+}

@@ -1,0 +1,46 @@
+$ git diff --check
+EXIT 0
+$ git diff --stat -- frontend
+ frontend/src/components.css                    |  6 ++---
+ frontend/src/components/EmptyState.css         |  2 +-
+ frontend/src/constants/icons.tsx               |  2 +-
+ frontend/src/constants/platform-icon.css       |  1 +
+ frontend/src/index.css                         | 34 +++++++++++++++++++-------
+ frontend/src/pages/dashboard/DashboardPage.css |  2 +-
+ frontend/src/pages/inbox/InboxPage.css         |  4 +--
+ 7 files changed, 34 insertions(+), 17 deletions(-)
+EXIT 0
+$ git diff --exit-code HEAD -- frontend/package.json frontend/package-lock.json frontend/src/tokens.css frontend/src/constants/iconSizes.ts
+EXIT 0
+$ git status --short
+ M docs/ai-agents/evidence-registry.md
+ M docs/handoff/design-system-recon/recon.md
+ M docs/specs/design-system/design.md
+ M docs/specs/design-system/migration.md
+ M frontend/src/components.css
+ M frontend/src/components/EmptyState.css
+ M frontend/src/constants/icons.tsx
+ M frontend/src/constants/platform-icon.css
+ M frontend/src/index.css
+ M frontend/src/pages/dashboard/DashboardPage.css
+ M frontend/src/pages/inbox/InboxPage.css
+ M tasks/todo.md
+?? docs/handoff/design-system-recon/CARD-COLOR-SOURCE-IMPLEMENT-01.txt
+?? docs/handoff/design-system-recon/CARD-COLOR-SOURCE-PREP-01.txt
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-audit.json
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-audit.md
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-browser-install-mismatch.txt
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-gates.md
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-payload-manifest.json
+?? docs/handoff/design-system-recon/evidence-20260910/color-source-supplemental-browser.txt
+?? docs/handoff/design-system-recon/evidence-20260910/verify-color-source.mjs
+?? frontend/coverage/
+EXIT 0
+frontend/src/components/EmptyState.css: 75 lines, SHA256 810e8464b4f728fdfc30210606b334c1e6d90ab4ec4ad1b0e37445f8c41e91a3 MATCH
+frontend/src/components.css: 920 lines, SHA256 b5825713fb365cba07f60b00dc589b638e21d859dd34c5163202be89d0c833d4 MATCH
+frontend/src/constants/icons.tsx: 409 lines, SHA256 0217103b0de96319d1d6feec8e236c2702c5f069d9fd8556064f3c7d1c536395 MATCH
+frontend/src/constants/platform-icon.css: 30 lines, SHA256 c5cb3bf24a0d94e32d02d0245d3a34b11aa3f5fda38d027b00ad0e95bd5d0d26 MATCH
+frontend/src/index.css: 426 lines, SHA256 51cf670b4f617e0da642caab8e597ec435e11bc569969fc91998d9509ddb0537 MATCH
+frontend/src/pages/dashboard/DashboardPage.css: 555 lines, SHA256 680c81426cdf6fb40faa16b05df515306e1fedbcb9945d93505baeb2aeedb6ca MATCH
+frontend/src/pages/inbox/InboxPage.css: 1747 lines, SHA256 c63ac05ad99d8e9f8fea52ddd0a40864665025dc4dd29c60796d3c7ff5c26a95 MATCH
+PRODUCT CHANGED FILES: exactly 7, manifest/lock/tokens/numeric ICON unchanged

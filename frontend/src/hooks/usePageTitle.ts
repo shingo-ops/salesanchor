@@ -6,7 +6,8 @@
  *
  * 注意:
  *   - 詳細ページ (/companies/:id など) では空文字を返す。
- *     詳細ページはデータ名をそのまま h2 に使うため、このフックは使わないこと。
+ *     詳細ページは PageLayout の titleText にデータ名を渡すこと（生の h1/h2 直書きは禁止。
+ *     design: docs/specs/design-system/component-ssot/page-title/design.md D1）。
  */
 import { useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";

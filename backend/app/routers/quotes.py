@@ -13,8 +13,11 @@ from __future__ import annotations
     （resolver / customer 経路廃止、company_id + contact_id を唯一の正に）
 """
 
-from datetime import date, timedelta
+from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
+
+_JST = ZoneInfo("Asia/Tokyo")
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import text
@@ -41,7 +44,7 @@ from app.services.audit import record_audit_log
 router = APIRouter()
 
 _QUOTE_COLUMNS = """
-    id, quote_code, deal_id, company_id, contact_id, currency,
+    id, quote_code, lead_id, company_id, contact_id, currency,
     subtotal, shipping_fee, tax_amount, total_amount,
     status, validity_date, shipping_country, shipping_carrier,
     delivery_info, pdf_url, notes, created_by,
@@ -77,7 +80,6 @@ async def list_quotes(
     status_filter: str | None = Query(default=None, alias="status"),
     company_id: int | None = Query(default=None),
     contact_id: int | None = Query(default=None),
-    deal_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
@@ -95,10 +97,6 @@ async def list_quotes(
     if contact_id:
         conditions.append("q.contact_id = :contact_id")
         params["contact_id"] = contact_id
-    if deal_id:
-        conditions.append("q.deal_id = :did")
-        params["did"] = deal_id
-
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     # 見積履歴の「顧客」「営業担当」表示用に会社名 / 担当者名 / 起票ユーザー名を JOIN で付与する。
     # companies / contacts はテナントスキーマ（search_path 解決）、users は public 固定。
@@ -158,6 +156,15 @@ async def create_quote(
     current_user: User = Depends(get_current_user),
 ):
     """見積もりを作成する（明細を含む一括登録）"""
+    company_check = await db.execute(
+        text("SELECT lead_id FROM companies WHERE id = :id"),
+        {"id": data.company_id},
+    )
+    company_row = company_check.first()
+    if not company_row:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された会社が見つかりません")
+    company_lead_id = company_row[0]
+
     # Step 5d: contact / company の存在 + 所属一致確認のみ
     contact_check = await db.execute(
         text("SELECT company_id FROM contacts WHERE id = :id"),
@@ -172,36 +179,34 @@ async def create_quote(
             detail="指定された担当者は指定会社に所属していません",
         )
 
-    # 案件存在確認（指定時のみ）
-    if data.deal_id:
-        deal = await db.execute(text("SELECT id FROM deals WHERE id = :id"), {"id": data.deal_id})
-        if not deal.first():
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された案件が見つかりません")
+    quote_lead_id = company_lead_id
+    if quote_lead_id is None:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="見積もりには lead_id が必要です")
 
     # 小計計算
     subtotal = sum(item.quantity * item.unit_price for item in data.items)
     shipping = data.shipping_fee or Decimal(0)
     tax = data.tax_amount or Decimal(0)
     total = subtotal + shipping + tax
-    validity = date.today() + timedelta(days=data.validity_days)
+    validity = datetime.now(_JST).date() + timedelta(days=data.validity_days)
 
     # ヘッダー作成
     header_result = await db.execute(
         text("""
             INSERT INTO quotes (
-                tenant_id, deal_id, company_id, contact_id, currency,
+                tenant_id, lead_id, company_id, contact_id, currency,
                 subtotal, shipping_fee, tax_amount, total_amount,
                 status, validity_date, shipping_country, shipping_carrier,
                 delivery_info, notes, created_by
             ) VALUES (
-                :tid, :did, :company_id, :contact_id, :currency,
+                :tid, :lid, :company_id, :contact_id, :currency,
                 :subtotal, :shipping, :tax, :total,
                 'draft', :validity, :country, :carrier,
                 :delivery, :notes, :created_by
             ) RETURNING id
         """),
         {
-            "tid": tenant_id, "did": data.deal_id,
+            "tid": tenant_id, "lid": quote_lead_id,
             "company_id": data.company_id, "contact_id": data.contact_id,
             "currency": data.currency, "subtotal": subtotal, "shipping": shipping,
             "tax": tax, "total": total, "validity": validity,
@@ -238,6 +243,7 @@ async def create_quote(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="create", table_name="quotes", record_id=quote_id,
         new_data={
+            "lead_id": quote_lead_id,
             "company_id": data.company_id,
             "contact_id": data.contact_id,
             "items_count": len(data.items),

@@ -1,0 +1,272 @@
+{
+  "checkedAtUTC": "2026-09-13T10:51:58.889576+00:00",
+  "asset": "/assets/index-DgcOKiDe.js",
+  "assetHTTP": 200,
+  "sha256": "b0a3b61c918aadbc2f9743e561d4551adf593bef0120e9b5f816dad59fe23eeb",
+  "targetForms": 3,
+  "targetButtons": 6,
+  "excerpts": [
+    "form-actions`,children:[(0,G.jsx)(J,{type:`button`,variant:`secondary`,size:`md`,onClick:()=>c(!1),disabled:S,children:e(`common.cancel`)}),(0,G.jsx)(J,{type:`submit`,variant:`primary`,size:`md`,disabled:S,children:e(S?`common.submitting`:`bots.registerIssueKey`)})",
+    "form-actions`,children:[(0,G.jsx)(J,{type:`button`,variant:`secondary`,size:`md`,onClick:g,children:e(`common.cancel`)}),(0,G.jsx)(J,{type:`submit`,variant:`primary`,size:`md`,children:e(`common.update`)})",
+    "form-actions`,children:[(0,G.jsx)(J,{type:`button`,variant:`secondary`,size:`md`,onClick:()=>n(`/bots`),children:e(`common.cancel`)}),(0,G.jsx)(J,{type:`submit`,variant:`primary`,size:`md`,children:e(`common.update`)})"
+  ],
+  "appHTTP": 200,
+  "apiHTTP": 200,
+  "apiPath": "/api/health",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "limits": "公開資産とhealthの読取確認。本番認証付きフォーム送信・PO目視は未実施。",
+  "pr": 3480,
+  "goOriginal": "GO #3480",
+  "goRecordedAt": "2026-09-13 19:47 JST",
+  "reviewedHead": "7533edcfbb96376f9299dbdea5bdaed933487cdc",
+  "merge": "615ba615dad82d95754c5fffc32989d810c49f91",
+  "mergedAt": "2026-09-13T10:48:12Z",
+  "deployRun": 34752797542,
+  "deployJob": 103712050698,
+  "deployConclusion": "success",
+  "backup": "salesanchor_db_20260913_194851.sql.gz",
+  "backupSize": "6.6M",
+  "backupRestoreTested": false,
+  "ci": [
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34752774242/job/103711991130",
+      "name": "process-artifacts gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34752774305/job/103711991343",
+      "name": "base-branch-guard",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525832/job/103708985340",
+      "name": "Karte Visual Gate (chromium)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525810/job/103708862393",
+      "name": "Lint & Dark Mode Check (ADR-067)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708814250",
+      "name": "マイグレーションSQL 実行テスト（実DB）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708815794",
+      "name": "マイグレーションSQL 実行（内部）",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708814503",
+      "name": "マイグレーション全件ドライラン（実DB）",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708814649",
+      "name": "マイグレーション登録ファイル存在点検",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525796/job/103708802526",
+      "name": "テナントスキーマ整合性チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525832/job/103708802379",
+      "name": "karte-gate-run",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525894/job/103708784412",
+      "name": "test-schema-dup gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525810/job/103708797525",
+      "name": "Lint & Dark Mode Check（内部）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525776/job/103708798169",
+      "name": "pytest (SQLite + PostgreSQL RLS)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525833/job/103708784051",
+      "name": "models.py に新 Column → deploy.yml にマイグレーション追記必須",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708784096",
+      "name": "マイグレーション変更検出",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525796/job/103708802888",
+      "name": "テナントスキーマ整合性チェック（実行）",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525814/job/103708784031",
+      "name": "check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525842/job/103708784149",
+      "name": "guard-hex-increase",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525815/job/103708783930",
+      "name": "warn-direct-lesson-edit",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525841/job/103708784182",
+      "name": "size-check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525791/job/103708784073",
+      "name": "External API gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525849/job/103708784285",
+      "name": "CLAUDE.md line count check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525776/job/103708798490",
+      "name": "pytest-run-internal",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525776/job/103708798319",
+      "name": "lint-backend-internal",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525811/job/103708784139",
+      "name": "マイグレーション登録ファイル存在点検 回帰テスト",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525796/job/103708783873",
+      "name": "スキーマ関連ファイル変更検出",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525832/job/103708784016",
+      "name": "detect-changes",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525827/job/103708784005",
+      "name": "condition vocab gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525785/job/103708783939",
+      "name": "Frontend lint & custom checks",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525819/job/103708784056",
+      "name": "監視スタック整合性チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525812/job/103708783906",
+      "name": "ADR index is up to date",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525829/job/103708783926",
+      "name": "ADR-072 tenant schema lint (strict mode)",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525770/job/103708783765",
+      "name": "format-check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525785/job/103708784035",
+      "name": "Storybook build check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525776/job/103708783875",
+      "name": "Detect backend changes",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525822/job/103708783842",
+      "name": "UI governance gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525821/job/103708783868",
+      "name": "gitleaks（シークレット漏洩検出）",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525766/job/103708783777",
+      "name": "CI設定整合性チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525810/job/103708784063",
+      "name": "フロントエンド変更検出",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525771/job/103708783729",
+      "name": "deprecated 列の新規参照チェック",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525774/job/103708783845",
+      "name": "dangling-route gate",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751524759/job/103708781395",
+      "name": "evaluate guard authoring from main",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751525810/job/103708784684",
+      "name": "Playwright E2E (chromium)",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751524023/job/103708778969",
+      "name": "check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751524051/job/103708779199",
+      "name": "format-check",
+      "state": "SUCCESS"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751524759/job/103708781949",
+      "name": "guard-authoring unit tests",
+      "state": "SKIPPED"
+    },
+    {
+      "link": "https://github.com/shingo-ops/salesanchor/actions/runs/34751524759",
+      "name": "guard-authoring/evaluation",
+      "state": "SUCCESS"
+    }
+  ]
+}

@@ -1,0 +1,83 @@
+CARD-FRONTEND-MOLD-CI-RECON-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+
+状態: 設計担当が作成した実装前の読み取り確認カード。製品実装の許可ではない。
+目的: 実装役の環境で、第一便の比較対象・検査・再現が設計根拠と一致するか確認する。
+読んだ節: guards/00-common.md、guards/01-read.md、guards/11-lint.md。
+いずれも docs/handoff/design-partner-card-ops/ 配下。
+
+発行前照合（docs/ai-agents/design-partner.md §5.5）:
+1 ○ 記号・パスはコード表記、コマンドは固定値。
+2 ○ PR起票なし。後続起票はreadyとし下書き禁止。
+3 ○ 完了報告本文に各手順の生出力と終了値を全文含める。
+4 ○ 目的は実装前の読み取り照合だけ。
+5 ○ 既存本店で読み取り。ブランチ作成・切替・他者worktree操作なし。
+6 ○ 報告形式の良い例と禁止例を末尾に記載。
+7 ○ 対象3ファイルの名前・行数・SHA・内容差分と検査結果を出す。
+   製品書換えなしのため完成コードの行数検算は本カードの対象外。
+8 ○ 件数だけでなく対象ファイル名を必ず出す。
+9 ○ 読み取るファイルと出力範囲を限定。
+10 ○ 受領確認・停止箇所・終端合図・報告冒頭を指定。
+
+受領確認: 最初に「受領。CARD-FRONTEND-MOLD-CI-RECON-01」と返す。
+許可: 下記コマンドの実行、既存preflight、リモートmainのSHA照合、結果報告。
+禁止: 製品・文書・台帳編集、commit、push、PR起票、merge、deploy、GO記録、
+      evidence-registryへの追記、/review、別AI起動、依存インストール。
+パスは一字一句そのまま使用する。
+
+進行条件: 各手順が期待どおりに完了した場合のみ次へ進む。
+停止条件: コマンド実行失敗、手順4に差分、手順5が22 passed / 0 failedでない、
+手順6または7の結果が記載した期待と異なる場合は停止して報告する。
+この停止は対象が悪いという判定ではなく、設計根拠の再確認が必要という意味。
+
+手順0
+  cd /Users/tanizawashingo/salesanchor && ./scripts/dev/executor-preflight.sh
+期待する出力: PREFLIGHT OK。exit0。
+
+手順1
+  cd /Users/tanizawashingo/salesanchor && git branch --show-current
+期待する出力: 現在ブランチ名。記録のみ。切替しない。
+
+手順2
+  cd /Users/tanizawashingo/salesanchor && git ls-remote origin refs/heads/main
+期待する出力: リモートmainのSHAとrefs/heads/main、exit0。参照の書き込みなし。
+
+手順3
+  cd /Users/tanizawashingo/salesanchor && git rev-parse HEAD origin/main
+期待する出力: HEADとorigin/mainの2つのSHA。origin/mainと手順2のSHAが一致すること。
+両者が不一致の場合は対象が最新か確認できないため停止して報告する。取得の再試行はしない。
+
+手順4
+  cd /Users/tanizawashingo/salesanchor && git diff --exit-code origin/main -- scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml
+期待する出力: 空、exit0。対象の保存済み変更・未保存変更を合わせて比較する。
+
+手順5
+  cd /Users/tanizawashingo/salesanchor && node scripts/tests/test-ui-governance.js
+期待する出力: 既存22ケースの名前と結果、22 passed / 0 failed。exit0。
+
+手順6
+  cd /Users/tanizawashingo/salesanchor && env BASE_SHA=0000000000000000000000000000000000000000 HEAD_SHA=HEAD node scripts/check-ui-governance.js
+期待する出力: 現行不具合の再現として対象0・変更なしskip、exit0。
+これは検査が正常という合格ではない。第一便の修正対象である。
+
+手順7
+  cd /Users/tanizawashingo/salesanchor && env BASE_SHA=HEAD HEAD_SHA=HEAD node scripts/check-ui-governance.js
+期待する出力: 正常対照として対象0・変更なしskip、exit0。
+
+手順8
+  cd /Users/tanizawashingo/salesanchor && wc -l scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml
+期待する出力: 3つのファイル名と行数。設計時398/221/39。行数だけで停止しない。
+
+手順9
+  cd /Users/tanizawashingo/salesanchor && git status --short -- scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml
+期待する出力: 当該3ファイルの状態。リポジトリ全体がcleanとは宣言しない。
+
+完了報告:
+冒頭は「本報告はカード CARD-FRONTEND-MOLD-CI-RECON-01 の実行結果である」。
+各手順の番号、コマンド、生出力、終了値を完了報告本文に全文含める。
+道具がstdout/stderrを結合した場合は「結合出力」と記し、分離を推測しない。
+良い例: 手順4: exit=0、stdout空、stderr空。
+禁止例: 「全部問題なし」のみで原出力を省略。
+停止時は停止した手順番号／最後に実行したコマンド／停止した理由を加える。
+本カード完了後も実装へ移行しない。設計担当が結果を確認して実装カードを確定する。
+END OF CARD

@@ -1,0 +1,37 @@
+name: PMG Cutover Isolation Probe
+
+on:
+  pull_request:
+    paths:
+      - tests/pmg_cutover_probe.py
+      - .github/workflows/pmg-cutover-probe.yml
+  push:
+    branches:
+      - release/pmg-cutover-rehearsal
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Docker version and nginx image digest
+        run: |
+          docker --version
+          docker pull nginx:1.31.1
+          docker image inspect nginx:1.31.1 --format '{{index .RepoDigests 0}}'
+      - name: Run isolated cutover probe
+        run: python3.12 tests/pmg_cutover_probe.py
+      - name: Upload probe evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pmg-cutover-probe-evidence
+          path: /tmp/pmg-cutover-probe-*/
+          retention-days: 7

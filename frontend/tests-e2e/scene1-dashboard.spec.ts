@@ -518,8 +518,6 @@ test.describe("Scene 1: Dashboard Overview", () => {
         discord: null,
         created_at: "2026-06-01T00:00:00Z",
         updated_at: "2026-06-01T00:00:00Z",
-        total_deal_amount: null,
-        deal_count: 0,
         conversation_count: 0,
         last_conversation_at: null,
       },

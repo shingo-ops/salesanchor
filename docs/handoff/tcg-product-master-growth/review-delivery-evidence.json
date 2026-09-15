@@ -1,0 +1,70 @@
+{
+  "method": "Actual Python functions with SQL captured; WHERE predicates on synthetic SQLite table. No Postgres, network, product writes, or model calls. Counts are combinations, not production incidents.",
+  "source_commit": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "matrix": {
+    "synthetic_combinations": 192,
+    "review_tab": 176,
+    "distribution_default": 8,
+    "both_review_and_distributed": 4,
+    "needs_review_true_but_distributed": 4,
+    "quantity_null_but_distributed": 4,
+    "excluded_from_distribution_but_absent_review": 12
+  },
+  "corrections": [
+    {
+      "field": "product_id",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 1,
+      "commits": 1
+    },
+    {
+      "field": "product_id",
+      "changed": false,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    },
+    {
+      "field": "unit",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    },
+    {
+      "field": "condition",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    },
+    {
+      "field": "price",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    },
+    {
+      "field": "quantity",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    },
+    {
+      "field": "memo",
+      "changed": true,
+      "inserts": 1,
+      "analysis_updates": 0,
+      "commits": 1
+    }
+  ],
+  "files": {
+    "backend/app/services/tcg_analysis_review_svc.py": "edb4020a8907c820ad4959f912929a59c49989f3063fdd827d8d9000f2960071",
+    "backend/app/services/tcg_distribution_svc.py": "3c4a7afea4ed210d744f37d2331d0862d57de0bd8c3655a0e34e6ab618e525f1",
+    "backend/app/services/item_corrections_svc.py": "83ba12642b145b0f605bdb5980c2a5a6dda106b2672741afde39617167c86ab6"
+  },
+  "verified_against_main": "4afb81c398d26f4c9b1321a4c70f21c50e8211fb"
+}

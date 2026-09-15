@@ -37,6 +37,7 @@ from app.schemas.lead import (
     LeadCreate,
     LeadResponse,
     LeadStatsResponse,
+    LeadStatus,
     LeadUpdate,
     SalesFormOptionResponse,
     SalesFormSelectionResponse,
@@ -63,8 +64,8 @@ router = APIRouter()
 _LEAD_COLUMNS = """
     id, lead_code, customer_name, company_name, email, phone,
     channel_type, initiative, type, status, temperature, estimated_scale, customer_type,
-    response_speed, monthly_forecast, prospect_rank, assigned_to,
-    converted_deal_id, notes, created_at, updated_at,
+    response_speed, monthly_forecast, amount, currency, expected_close_date, prospect_rank, assigned_to,
+    notes, created_at, updated_at,
     next_action, next_action_date, challenge, meeting_memo, meeting_impression,
     cs_memo, sales_form, competitor_check, per_order_amount, monthly_frequency,
     nickname, country, target_titles,
@@ -510,8 +511,10 @@ async def update_lead(
     update_data = data.model_dump(exclude_unset=True)
     # ADR-108 Phase B-1: sales_form_selections は _UPDATABLE_COLUMNS 外で個別処理
     sales_form_selections_data = update_data.pop("sales_form_selections", None)
+    close_reason_memo = update_data.pop("close_reason_memo", None)
+    close_reasons_input = update_data.pop("close_reasons", None)
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE_COLUMNS}
-    if not update_data and sales_form_selections_data is None:
+    if not update_data and sales_form_selections_data is None and close_reasons_input is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
 
     # Enum→文字列変換
@@ -527,6 +530,29 @@ async def update_lead(
             update_data["channel_type"],
             existing_value=old_row["channel_type"],
         )
+
+    new_status_raw = update_data.get("status")
+    new_status = _enum_to_str(new_status_raw)
+    old_status = old_row["status"]
+    is_lost_transition = new_status == LeadStatus.lost.value and old_status != LeadStatus.lost.value
+
+    if is_lost_transition:
+        if not close_reasons_input:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="失注遷移時は close_reasons（主因1件必須）が必要です",
+            )
+        primary_count = sum(1 for r in close_reasons_input if r.get("is_primary"))
+        if primary_count != 1:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"主因（is_primary: true）はちょうど1件必要です（{primary_count}件指定）",
+            )
+        if not close_reason_memo:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="失注遷移時は close_reason_memo が必要です",
+            )
 
     # prospect_rank再計算（リード属性のいずれかが変わった場合）
     rank_fields = {"temperature", "estimated_scale", "customer_type", "response_speed", "monthly_forecast"}
@@ -564,6 +590,32 @@ async def update_lead(
         )
         row = result.mappings().first()
         update_data["id"] = lead_id
+
+    if close_reasons_input and is_lost_transition:
+        close_reasons_t = tenant_table_ref(db, tenant_id, "close_reasons")
+        deal_close_reasons_t = tenant_table_ref(db, tenant_id, "deal_close_reasons")
+
+        await db.execute(
+            text(f"DELETE FROM {deal_close_reasons_t} WHERE lead_id = :lid"),
+            {"lid": lead_id},
+        )
+        for reason in close_reasons_input:
+            reason_check = await db.execute(
+                text(f"SELECT id FROM {close_reasons_t} WHERE id = :rid AND is_active = true"),
+                {"rid": reason["reason_id"]},
+            )
+            if not reason_check.first():
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"close_reason id={reason['reason_id']} が見つかりません",
+                )
+            await db.execute(
+                text(f"""
+                    INSERT INTO {deal_close_reasons_t} (lead_id, reason_id, is_primary)
+                    VALUES (:lid, :rid, :is_primary)
+                """),
+                {"lid": lead_id, "rid": reason["reason_id"], "is_primary": reason["is_primary"]},
+            )
 
     # ADR-108 Phase B-1: sales_form_selections 更新
     if sales_form_selections_data is not None:
@@ -634,6 +686,10 @@ async def update_lead(
     audit_new_data = dict(update_data)
     if sales_form_selections_data is not None:
         audit_new_data["sales_form_selections"] = sales_form_selections_data
+    if close_reason_memo is not None:
+        audit_new_data["close_reason_memo"] = close_reason_memo
+    if close_reasons_input is not None:
+        audit_new_data["close_reasons"] = close_reasons_input
     await record_audit_log(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="update", table_name="leads", record_id=lead_id,
@@ -724,16 +780,13 @@ async def convert_lead(
     current_user: User = Depends(get_current_user),
 ):
     """
-    リードを商談化する。新しいdealを作成し、leadを'negotiating'ステータスに更新＋リンクする。
+    リードを商談化する。deals は作成せず、lead に商談情報を直接保存する。
 
     同時実行対策:
-      - deal作成後、`UPDATE leads ... WHERE converted_deal_id IS NULL` で
-        アトミックにクレーム。並行変換でクレームに失敗した場合は
-        作成済みdealと共にrollbackして409を返す。
+      - `UPDATE leads ... WHERE status != 'negotiating'` でアトミックにクレーム。
+        並行変換でクレームに失敗した場合は rollback して 409 を返す。
     """
     leads_t = tenant_table_ref(db, tenant_id, "leads")
-    contacts_t = tenant_table_ref(db, tenant_id, "contacts")
-    deals_t = tenant_table_ref(db, tenant_id, "deals")
     lead_result = await db.execute(
         text(f"SELECT {_LEAD_COLUMNS} FROM {leads_t} WHERE id = :id"),
         {"id": lead_id},
@@ -741,69 +794,27 @@ async def convert_lead(
     lead_row = lead_result.mappings().first()
     if not lead_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="リードが見つかりません")
-    if lead_row["converted_deal_id"] is not None:
+    if lead_row["status"] == "negotiating":
         # 早期409（UXのため）。完全な保証は下のUPDATEで行う。
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="このリードは既に商談中です")
 
-    # Step 5d: contact / company の存在 + 所属一致確認のみ
-    contact_check = await db.execute(
-        text(f"SELECT company_id FROM {contacts_t} WHERE id = :id"),
-        {"id": data.contact_id},
-    )
-    contact_row = contact_check.first()
-    if not contact_row:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された担当者が見つかりません")
-    if contact_row[0] != data.company_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="指定された担当者は指定会社に所属していません",
-        )
-
-    # 新案件作成（company_id + contact_id ベース）
-    deal_result = await db.execute(
-        text(f"""
-            INSERT INTO {deals_t} (
-                tenant_id, company_id, contact_id, lead_id, title, amount,
-                currency, status, stage, probability, assigned_to, notes
-            )
-            VALUES (
-                :tenant_id, :company_id, :contact_id, :lead_id, :title, :amount,
-                'JPY', 'open', 'open', 10, :assigned_to, :notes
-            )
-            RETURNING id
-        """),
-        {
-            "tenant_id": tenant_id,
-            "company_id": data.company_id,
-            "contact_id": data.contact_id,
-            "lead_id": lead_id,
-            "title": data.title,
-            "amount": data.amount,
-            # 担当者はリクエストで指定されたもの優先、省略時はリードの担当者を引き継ぐ
-            "assigned_to": data.assigned_to if data.assigned_to is not None else lead_row["assigned_to"],
-            "notes": data.notes,
-        },
-    )
-    new_deal_id = deal_result.scalar_one()
-    await db.execute(
-        text(f"UPDATE {deals_t} SET deal_code = :code WHERE id = :id"),
-        {"code": f"DL-{new_deal_id:05d}", "id": new_deal_id},
-    )
-
-    # アトミッククレーム: converted_deal_id IS NULL の場合のみ更新する
-    # 並行リクエストで既に商談中になっていた場合は0行返却 → 例外で全ロールバック
     updated = await db.execute(
         text(f"""
             UPDATE {leads_t}
-            SET status = 'negotiating', converted_deal_id = :deal_id, updated_at = NOW()
-            WHERE id = :id AND converted_deal_id IS NULL
+            SET status = 'negotiating', amount = :amount, currency = :currency,
+                expected_close_date = :expected_close_date, updated_at = NOW()
+            WHERE id = :id AND status != 'negotiating'
             RETURNING {_LEAD_COLUMNS}
         """),
-        {"id": lead_id, "deal_id": new_deal_id},
+        {
+            "id": lead_id,
+            "amount": data.amount,
+            "currency": data.currency,
+            "expected_close_date": data.expected_close_date,
+        },
     )
     row = updated.mappings().first()
     if not row:
-        # 並行リクエストが先にクレームした。作成したdealも一緒にrollbackする。
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
@@ -814,17 +825,11 @@ async def convert_lead(
         db=db, tenant_id=tenant_id, user_id=current_user.id,
         action="convert", table_name="leads", record_id=lead_id,
         old_data=dict(lead_row),
-        new_data={"converted_deal_id": new_deal_id, "status": "negotiating"},
-    )
-    await record_audit_log(
-        db=db, tenant_id=tenant_id, user_id=current_user.id,
-        action="create", table_name="deals", record_id=new_deal_id,
         new_data={
-            "title": data.title,
-            "company_id": data.company_id,
-            "contact_id": data.contact_id,
-            "lead_id": lead_id,
-            "amount": str(data.amount) if data.amount is not None else None,
+            "status": "negotiating",
+            "amount": data.amount,
+            "currency": data.currency,
+            "expected_close_date": data.expected_close_date,
         },
     )
     await db.commit()
@@ -1263,6 +1268,257 @@ async def translate_message_endpoint(
     }
 
 
+@router.get(
+    "/leads/{lead_id}/attachments/{attachment_id}",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def serve_lead_attachment(
+    lead_id: int,
+    attachment_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+):
+    """自社ディスクに保管した添付ファイルを返す（attachment-storage 便4）。
+
+    Discord CDN の署名付きURLはブラウザから読めず約24時間で失効するため、
+    受信時に自社へ保存した実体をこのAPI経由で配信する。
+
+    RLS により他テナントの行は見えない。
+    実体が存在しない場合は 404。
+    """
+    from pathlib import Path as _Path
+
+    from starlette.responses import FileResponse
+
+    attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
+    row_q = await db.execute(
+        text(
+            f"SELECT file_path, content_type, original_filename"
+            f" FROM {attachments_t}"
+            f" WHERE id = :id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"id": attachment_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    row = row_q.first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="attachment_not_found",
+        )
+
+    import os as _os
+
+    root = _os.environ.get("ATTACHMENT_ROOT", "/data/attachments")
+    abs_path = _Path(root) / str(row[0])
+    if not abs_path.is_file():
+        logger.warning(
+            "[attachment-serve] 実体が不在 tenant=%s lead=%s id=%s path=%s",
+            tenant_id, lead_id, attachment_id, row[0],
+        )
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="attachment_file_missing",
+        )
+
+    return FileResponse(
+        path=str(abs_path),
+        media_type=row[1] or "application/octet-stream",
+        filename=row[2] or abs_path.name,
+        headers={"Cache-Control": "private, max-age=3600"},
+    )
+
+
+@router.get(
+    "/leads/{lead_id}/messages/{message_id}/attachment-url",
+    dependencies=[Depends(require_permission("messaging.view"))],
+)
+async def get_message_attachment_url(
+    lead_id: int,
+    message_id: str,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """受信メッセージの添付画像 URL を取り直す（Meta CDN URL 期限切れ対応）。
+
+    フロントが <img onError> で呼ぶ。
+    成功時: {"url": "..."} を返し、meta_messages.attachment_url を最新値で UPDATE する。
+    失敗時: 404 + {"reason": "expired_or_unavailable"}。
+    IG の場合は直近 20 件/スレッド制限により古いメッセージは取れない場合がある。
+    """
+    if not message_id or message_id.strip() == "":
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="message_id is required",
+        )
+
+    # lead 存在確認
+    leads_t = tenant_table_ref(db, tenant_id, "leads")
+    lead_q = await db.execute(
+        text(f"SELECT id FROM {leads_t} WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": lead_id, "tenant_id": tenant_id},
+    )
+    if lead_q.first() is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="リードが見つかりません",
+        )
+
+    # message 存在確認 + platform 取得
+    meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
+    msg_q = await db.execute(
+        text(
+            f"SELECT platform FROM {meta_messages_t} "
+            "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    msg_row = msg_q.first()
+    if msg_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="メッセージが見つかりません",
+        )
+    platform = msg_row[0]
+
+    # Discord は Bot Token でメッセージを取り直す（CDN URL 期限切れ対応）。
+    # Meta と認証方式・エンドポイントが異なるため、入口を共有したまま処理を分岐する。
+    if platform == "discord":
+        import os as _os
+
+        from app.services.discord_rest import DiscordAPIError, discord_api_request
+
+        bot_token = _os.environ.get("DISCORD_BOT_TOKEN") or None
+        if not bot_token:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Discord Bot Token が設定されていません",
+            )
+
+        ch_q = await db.execute(
+            text(
+                f"SELECT discord_guild_channel_id FROM {leads_t} "
+                "WHERE id = :id AND tenant_id = :tenant_id"
+            ),
+            {"id": lead_id, "tenant_id": tenant_id},
+        )
+        ch_row = ch_q.first()
+        if ch_row is None or not ch_row[0]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+        channel_id = str(ch_row[0])
+
+        try:
+            dc_msg = await discord_api_request(
+                method="GET",
+                path=f"/channels/{channel_id}/messages/{message_id}",
+                bot_token=bot_token,
+                expected_statuses=(200,),
+            )
+        except DiscordAPIError as exc:
+            logger.warning("[attachment-url] Discord 取得失敗 msg=%s: %s", message_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+
+        attachments = (dc_msg or {}).get("attachments") or []
+        fresh_discord_url = attachments[0].get("url") if attachments else None
+        if not fresh_discord_url:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="expired_or_unavailable",
+            )
+
+        await db.execute(
+            text(
+                f"UPDATE {meta_messages_t} SET attachment_url = :url "
+                "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+            ),
+            {
+                "url": fresh_discord_url,
+                "message_id": message_id,
+                "lead_id": lead_id,
+                "tenant_id": tenant_id,
+            },
+        )
+        await db.commit()
+        from app.auth.dependencies import reset_tenant_context as _reset_ctx
+        await _reset_ctx(db, tenant_id)
+
+        return {"url": fresh_discord_url}
+
+    # tenant_meta_config から page_access_token を取得・復号
+    tenant_meta_config_t = tenant_table_ref(db, tenant_id, "tenant_meta_config")
+    if platform == "messenger":
+        token_q = await db.execute(
+            text(f"""
+                SELECT page_access_token_encrypted
+                FROM {tenant_meta_config_t}
+                WHERE tenant_id = :tenant_id AND is_active = TRUE
+                ORDER BY connected_at DESC, id DESC
+                LIMIT 1
+            """),
+            {"tenant_id": tenant_id},
+        )
+    else:
+        token_q = await db.execute(
+            text(f"""
+                SELECT page_access_token_encrypted
+                FROM {tenant_meta_config_t}
+                WHERE tenant_id = :tenant_id
+                  AND is_active = TRUE
+                  AND instagram_business_account_id IS NOT NULL
+                ORDER BY connected_at DESC, id DESC
+                LIMIT 1
+            """),
+            {"tenant_id": tenant_id},
+        )
+    token_row = token_q.first()
+    if token_row is None:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Meta 接続が見つかりません（Channels 設定で接続してください）",
+        )
+
+    try:
+        page_access_token = encryption.decrypt(_decode_token_blob(token_row[0]))
+    except Exception as exc:
+        logger.error("[attachment-url] page_access_token 復号失敗: %s", exc)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="保存トークンの復号に失敗しました",
+        ) from exc
+
+    # Meta Graph API で URL を取り直す
+    fresh_url = await meta_graph.fetch_attachment_url(
+        page_access_token=page_access_token,
+        message_id=message_id,
+    )
+
+    if not fresh_url:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="expired_or_unavailable",
+        )
+
+    # DB の attachment_url を最新値で UPDATE（次回即時表示用）
+    await db.execute(
+        text(
+            f"UPDATE {meta_messages_t} SET attachment_url = :url "
+            "WHERE message_id = :message_id AND lead_id = :lead_id AND tenant_id = :tenant_id"
+        ),
+        {"url": fresh_url, "message_id": message_id, "lead_id": lead_id, "tenant_id": tenant_id},
+    )
+    await db.commit()
+    from app.auth.dependencies import reset_tenant_context
+    await reset_tenant_context(db, tenant_id)
+
+    return {"url": fresh_url}
+
+
 # ---------------------------------------------------------------------------
 # Phase 1-D Sprint 5: メッセージ送信
 # ---------------------------------------------------------------------------
@@ -1533,7 +1789,7 @@ async def send_lead_message(
                 "meta_error": e.to_audit_dict(),
             },
         )
-        rate_detail: dict = {"message": "Meta APIのレート制限に達しました"}
+        rate_detail: dict = {"message": "Meta APIのレート制限に達しました", "reason": "rate_limited"}
         if e.retry_after:
             rate_detail["retry_after"] = e.retry_after
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=rate_detail)
@@ -1556,7 +1812,19 @@ async def send_lead_message(
         )
     except MetaGraphAPIError as e:
         meta_error_payload = e.to_audit_dict()
-        logger.warning("Meta Send API error for lead %s: %s", lead_id, e.error_type)
+        logger.warning(
+            "Meta Send API error for lead %s: type=%s code=%s subcode=%s msg=%s trace=%s",
+            lead_id, e.error_type, e.error_code, e.error_subcode,
+            (e.message or "")[:150], e.fbtrace_id,
+        )
+        if e.error_code == 10 and e.error_subcode in (2018278, 2534022):
+            send_error_reason = "window_closed"
+        elif e.error_code == 10 and e.error_subcode == 2534044:
+            send_error_reason = "permission_denied"
+        elif e.error_code in (4, 32, 613, 17):
+            send_error_reason = "rate_limited"
+        else:
+            send_error_reason = "generic"
         await _record_send_audit_safely(
             db, tenant_id=tenant_id, user_id=current_user.id,
             action="meta_message_send_failed", record_id=config_id,
@@ -1574,6 +1842,7 @@ async def send_lead_message(
                 "detail": "Meta Send API がエラーを返しました",
                 "error_code": e.error_code,
                 "error_type": e.error_type,
+                "reason": send_error_reason,
             },
         )
     except MetaGraphError as e:
@@ -1744,12 +2013,14 @@ async def _send_discord_message(
     text_body: str,
     current_user,
 ) -> dict:
-    """Discord DM 経由でメッセージを送信し、meta_messages に outbound 行を INSERT して返す。
+    """Discord のチケット専用チャンネルへ送信し、meta_messages に outbound 行を INSERT して返す。
 
     messaging_window 制約なし（Discord は 24h 制限を持たない）。
-    discord_dm_channel_id が未設定（顧客からのメッセージ受信前）の場合は 409。
+    discord_guild_channel_id が未設定（顧客がチケットを開く前）の場合は 409。
     Bot Token が未設定の場合も 409。
     Discord API エラーは 502。
+
+    DM 経路は廃止方針のため discord_dm_channel_id は参照しない。
     """
     from app.services.discord_sender import DiscordSendError, send_discord_dm
 
@@ -1757,10 +2028,14 @@ async def _send_discord_message(
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
     staff_t = tenant_table_ref(db, tenant_id, "staff")
 
-    # discord_dm_channel_id を leads から取得
+    # 送信先はチケット専用チャンネル（discord_guild_channel_id）のみ。
+    # Discord API は /channels/{id}/messages で送信できる。
     ch_q = await db.execute(
-        text(f"SELECT discord_user_id, discord_dm_channel_id FROM {leads_t} "
-             "WHERE id = :id AND tenant_id = :tenant_id"),
+        text(
+            f"SELECT discord_user_id,"
+            f" discord_guild_channel_id FROM {leads_t}"
+            f" WHERE id = :id AND tenant_id = :tenant_id"
+        ),
         {"id": lead_id, "tenant_id": tenant_id},
     )
     ch_row = ch_q.first()
@@ -1768,8 +2043,8 @@ async def _send_discord_message(
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail=(
-                "Discord DM チャンネルが設定されていません。"
-                "顧客から先にメッセージを受信すると自動設定されます。"
+                "Discord の送信先チャンネルが設定されていません。"
+                "顧客がチケットを開くと自動設定されます。"
             ),
         )
     discord_user_id = ch_row[0]
@@ -1941,10 +2216,232 @@ async def send_lead_image_message(
         platform = channel_type_str
 
     if platform == "discord":
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Discord への画像送信はサポートされていません",
+        import os as _os
+
+        from app.services.discord_rest import DiscordAPIError, discord_api_request_with_file
+
+        bot_token = _os.environ.get("DISCORD_BOT_TOKEN") or None
+        if not bot_token:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Discord Bot Token が設定されていません",
+            )
+
+        ch_q = await db.execute(
+            text(
+                f"SELECT discord_guild_channel_id FROM {leads_t} "
+                "WHERE id = :id AND tenant_id = :tenant_id"
+            ),
+            {"id": lead_id, "tenant_id": tenant_id},
         )
+        ch_row = ch_q.first()
+        if ch_row is None or not ch_row[0]:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Discord チャンネルが設定されていません",
+            )
+        channel_id = str(ch_row[0])
+
+        dc_filename = image.filename or f"image.{content_type.split('/')[-1]}"
+
+        try:
+            dc_msg = await discord_api_request_with_file(
+                channel_id=channel_id,
+                bot_token=bot_token,
+                file_bytes=file_bytes,
+                filename=dc_filename,
+                content_type=content_type,
+            )
+        except DiscordAPIError as exc:
+            logger.warning("Discord image send failed lead=%s: %s", lead_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="Discord への画像送信に失敗しました",
+            )
+
+        dc_msg_id = dc_msg.get("id")
+
+        # sent_by_staff_id 解決
+        dc_sent_by_staff_id: Optional[int] = None
+        if current_user.email:
+            try:
+                sr = await db.execute(
+                    text(f"SELECT id FROM {staff_t} WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
+                    {"email": current_user.email},
+                )
+                row = sr.first()
+                if row:
+                    dc_sent_by_staff_id = int(row[0])
+            except Exception:
+                dc_sent_by_staff_id = None
+
+        dc_insert_params = {
+            "tenant_id": tenant_id,
+            "lead_id": lead_id,
+            "platform": "discord",
+            # meta_messages.sender_id は NOT NULL である。
+            # 既存のテキスト送信と同じ値を入れる（2026-09-04 に None で 500 を実測）。
+            "sender_id": f"bot:{tenant_id}",
+            "message_id": dc_msg_id,
+            "recipient_id": channel_id,
+            "messaging_type": None,
+            "message_tag": None,
+            "sent_by_staff_id": dc_sent_by_staff_id,
+            "page_id": None,
+            "attachment_type": "image",
+        }
+        dc_insert_result = await db.execute(
+            text(f"""
+                INSERT INTO {meta_messages_t} (
+                    tenant_id, lead_id, platform, sender_id, message_text,
+                    direction, message_id, recipient_id,
+                    messaging_type, message_tag, sent_by_staff_id, page_id,
+                    attachment_type, created_at
+                )
+                VALUES (
+                    :tenant_id, :lead_id, :platform, :sender_id, '',
+                    'outbound', :message_id, :recipient_id,
+                    :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
+                    :attachment_type, NOW()
+                )
+                RETURNING id, created_at
+            """),
+            dc_insert_params,
+        )
+        dc_new_row = dc_insert_result.first()
+        if dc_new_row is None:
+            await db.execute(
+                text(f"""
+                    INSERT INTO {meta_messages_t} (
+                        tenant_id, lead_id, platform, sender_id, message_text,
+                        direction, message_id, recipient_id,
+                        messaging_type, message_tag, sent_by_staff_id, page_id,
+                        attachment_type, created_at
+                    )
+                    VALUES (
+                        :tenant_id, :lead_id, :platform, :sender_id, '',
+                        'outbound', :message_id, :recipient_id,
+                        :messaging_type, :message_tag, :sent_by_staff_id, :page_id,
+                        :attachment_type, NOW()
+                    )
+                """),
+                dc_insert_params,
+            )
+            last_id_row = await db.execute(text("SELECT last_insert_rowid(), CURRENT_TIMESTAMP"))
+            new_id_row = last_id_row.first()
+            dc_new_id = int(new_id_row[0]) if new_id_row else 0
+            dc_new_created_at = new_id_row[1] if new_id_row else None
+        else:
+            dc_new_id = int(dc_new_row[0])
+            dc_new_created_at = dc_new_row[1]
+
+        # 送信画像も自社ディスクへ保存する（attachment-storage 便6・PO決定 2026-09-03）。
+        # 受信と同じ形式で置き、lead_attachments に記録する。
+        # 保存に失敗しても送信は成功として扱う。受信側と同じ設計。
+        dc_attachment_saved = False
+        if dc_msg_id:
+            try:
+                from pathlib import Path
+                _att_root = _os.environ.get("ATTACHMENT_ROOT", "/data/attachments")
+                _ext = ""
+                if dc_filename and "." in dc_filename:
+                    _ext = "." + dc_filename.rsplit(".", 1)[1][:10]
+                _rel_path = f"tenant_{tenant_id:03d}/lead_{lead_id}/{dc_msg_id}{_ext}"
+                _abs_path = Path(_att_root) / _rel_path
+                _abs_path.parent.mkdir(parents=True, exist_ok=True)
+                _abs_path.write_bytes(file_bytes)
+
+                attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
+                await db.execute(
+                    text(f"""
+                        INSERT INTO {attachments_t}
+                            (tenant_id, lead_id, message_id, platform,
+                             file_path, file_size, content_type, original_filename)
+                        VALUES
+                            (:tenant_id, :lead_id, :message_id, 'discord',
+                             :file_path, :file_size, :content_type, :original_filename)
+                        ON CONFLICT (message_id) DO NOTHING
+                    """),
+                    {
+                        "tenant_id": tenant_id,
+                        "lead_id": lead_id,
+                        "message_id": str(dc_msg_id),
+                        "file_path": _rel_path,
+                        "file_size": len(file_bytes),
+                        "content_type": content_type,
+                        "original_filename": dc_filename,
+                    },
+                )
+                dc_attachment_saved = True
+
+                # 保存した画像を受信箱に表示するため、配信URLを設定する。
+                # 受信時と同じ形式（API_BASE はクライアント側が付ける）。
+                _att_row = await db.execute(
+                    text(f"""
+                        SELECT id FROM {attachments_t}
+                         WHERE message_id = :message_id
+                           AND tenant_id = :tenant_id
+                    """),
+                    {"message_id": str(dc_msg_id), "tenant_id": tenant_id},
+                )
+                _att_first = _att_row.first()
+                if _att_first is not None:
+                    _serve_url = (
+                        f"/leads/{lead_id}/attachments/{int(_att_first[0])}"
+                    )
+                    await db.execute(
+                        text(f"""
+                            UPDATE {meta_messages_t}
+                               SET attachment_url = :url
+                             WHERE message_id = :message_id
+                               AND tenant_id = :tenant_id
+                        """),
+                        {
+                            "url": _serve_url,
+                            "message_id": str(dc_msg_id),
+                            "tenant_id": tenant_id,
+                        },
+                    )
+                    logger.info(
+                        "[attachment-save] 送信画像の配信URL設定 tenant=%s lead=%s url=%s",
+                        tenant_id, lead_id, _serve_url,
+                    )
+                logger.info(
+                    "[attachment-save] 送信画像を保存 tenant=%s lead=%s msg=%s bytes=%s path=%s",
+                    tenant_id, lead_id, dc_msg_id, len(file_bytes), _rel_path,
+                )
+            except Exception:
+                logger.warning(
+                    "[attachment-save] 送信画像の保存失敗 tenant=%s lead=%s msg=%s",
+                    tenant_id, lead_id, dc_msg_id, exc_info=True,
+                )
+
+        await _record_send_audit_safely(
+            db, tenant_id=tenant_id, user_id=current_user.id,
+            action="discord_image_sent", record_id=dc_new_id,
+            new_data={
+                "lead_id": lead_id,
+                "platform": "discord",
+                "message_id": dc_msg_id,
+                "attachment_type": "image",
+            },
+        )
+        await db.commit()
+        from app.auth.dependencies import reset_tenant_context as _reset_ctx
+        await _reset_ctx(db, tenant_id)
+
+        return {
+            "id": dc_new_id,
+            "message_id": dc_msg_id,
+            "messaging_type": None,
+            "message_tag": None,
+            "sent_at": _meta_msg_format_dt(dc_new_created_at),
+            "lead_id": lead_id,
+            "platform": "discord",
+            "attachment_type": "image",
+            "attachment_saved": dc_attachment_saved,
+        }
+
     if platform not in ("messenger", "instagram"):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -2280,14 +2777,14 @@ async def merge_leads(
     認可: `leads.delete` 権限が必要（統合は実質 loser の DELETE を含むため）。
 
     guard（v1）:
-        loser.converted_deal_id IS NOT NULL → 400 ブロック。
-        master が existing_customer / converted_deal_id 非NULL は許可（＝既存客への再接続）。
+        loser.status != 'lead' → 400 ブロック。
+        master の状態は許可。
 
     処理順序（同一トランザクション）:
       1. master / loser を FOR UPDATE ロック（昇順 ID・デッドロック防止）
       2. guard チェック
       3. loser の lead_channels 行を補完（lead_channels から gap 分を拾う）
-      4. FK 付け替え: companies / contacts / deals の lead_id → master
+      4. FK 付け替え: companies / contacts の lead_id → master
       5. meta_messages の lead_id → master（SET NULL 任せにしない・履歴保持）
       6. lead_channels の lead_id → master（重複は DO NOTHING で吸収）
       7. loser 削除
@@ -2306,7 +2803,6 @@ async def merge_leads(
     mm_t = tenant_table_ref(db, tenant_id, "meta_messages")
     co_t = tenant_table_ref(db, tenant_id, "companies")
     ct_t = tenant_table_ref(db, tenant_id, "contacts")
-    dl_t = tenant_table_ref(db, tenant_id, "deals")
 
     # 1) master / loser を昇順 FOR UPDATE ロック（デッドロック防止）
     low_id, high_id = min(master_id, loser_id), max(master_id, loser_id)
@@ -2336,19 +2832,17 @@ async def merge_leads(
             detail=f"loser リード (id={loser_id}) が見つかりません",
         )
 
-    # 2) guard: loser が converted 済みなら v1 ブロック
-    #    master が existing_customer / converted_deal_id 非NULL は許可（既存客への再接続）
-    if loser_row["converted_deal_id"] is not None:
+    # 2) guard: lead 状態以外の loser は統合しない
+    if loser_row["status"] != "lead":
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=(
-                f"loser リード (id={loser_id}) は既に案件化済みです（converted_deal_id="
-                f"{loser_row['converted_deal_id']}）。"
-                "成約済みリードを loser にすることは v1 ではサポートしていません。"
+                f"loser リード (id={loser_id}) は統合できない状態です（status={loser_row['status']}）。"
+                "lead 状態以外のリードを loser にすることはサポートしていません。"
             ),
         )
 
-    # 3) FK 付け替え: companies / contacts / deals（NO ON DELETE のため先に付け替え）
+    # 3) FK 付け替え: companies / contacts（NO ON DELETE のため先に付け替え）
     reassigned_companies = (await db.execute(
         text(f"UPDATE {co_t} SET lead_id = :master WHERE lead_id = :loser"),
         {"master": master_id, "loser": loser_id},
@@ -2356,11 +2850,6 @@ async def merge_leads(
 
     reassigned_contacts = (await db.execute(
         text(f"UPDATE {ct_t} SET lead_id = :master WHERE lead_id = :loser"),
-        {"master": master_id, "loser": loser_id},
-    )).rowcount or 0
-
-    reassigned_deals = (await db.execute(
-        text(f"UPDATE {dl_t} SET lead_id = :master WHERE lead_id = :loser"),
         {"master": master_id, "loser": loser_id},
     )).rowcount or 0
 
@@ -2401,7 +2890,7 @@ async def merge_leads(
         {"master": master_id, "loser": loser_id},
     )).rowcount or 0
 
-    # 7) loser 削除（converted_deal_id は guard で NULL を確認済み）
+    # 7) loser 削除（status が lead であることを guard 済み）
     await db.execute(
         text(f"DELETE FROM {leads_t} WHERE id = :loser AND tenant_id = :tenant_id"),
         {"loser": loser_id, "tenant_id": tenant_id},
@@ -2420,7 +2909,6 @@ async def merge_leads(
         "loser_customer_name": loser_row["customer_name"],
         "reassigned_companies": reassigned_companies,
         "reassigned_contacts": reassigned_contacts,
-        "reassigned_deals": reassigned_deals,
         "reassigned_messages": reassigned_messages,
         "reassigned_channels": reassigned_channels,
         "reason": body.reason,
@@ -2443,9 +2931,9 @@ async def merge_leads(
 
     logger.info(
         "[merge_leads] tenant=%d master=%d ← loser=%d "
-        "(companies=%d contacts=%d deals=%d messages=%d channels=%d)",
+        "(companies=%d contacts=%d messages=%d channels=%d)",
         tenant_id, master_id, loser_id,
-        reassigned_companies, reassigned_contacts, reassigned_deals,
+        reassigned_companies, reassigned_contacts,
         reassigned_messages, reassigned_channels,
     )
 

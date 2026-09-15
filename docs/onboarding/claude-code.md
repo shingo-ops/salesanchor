@@ -116,12 +116,12 @@ AEON ルートを使う場合は、まず [AEON Operation Guide](../ai-agents/ae
 
 詳細は `<repo>/CLAUDE.md` の「ブランチ運用ルール」を読むこと。要点:
 
-1. `develop` から `feature/morimoto/<topic>` を切る（`<topic>` は作業内容を英語で簡潔に）
+1. 最新 `origin/main` から `release/<topic>` を切る（`bash scripts/new-worktree.sh release/<topic>`。`<topic>` は作業内容を英語で簡潔に）
    - ADR pipeline 経由の自動実装は別途 `feature/shingo/adr-NNN-impl` が自動生成される
-2. 直接 `develop` / `main` にコミットしない
+2. 直接 `main` にコミットしない（`develop` は新規作業で使わない）
 3. PO Approval → Generator → Reviewer → Evaluator → GitHub CI の順で進める
 4. Reviewer / Evaluator の結果を確認してから PR を起票・マージする
-5. `develop → main` も必ず PR 経由（Branch Protection で物理ブロック）
+5. `release/* → main` は必ず PR 経由（Branch Protection で物理ブロック）
 6. 不可逆操作（DROP TABLE / `rm -rf` / force-push 等）は **PO 確認必須**
 
 ### タスク台帳（全員共通・必読）

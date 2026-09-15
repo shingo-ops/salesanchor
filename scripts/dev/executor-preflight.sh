@@ -11,7 +11,6 @@
 set -uo pipefail
 
 EXPECTED_USER="shingo-cc"
-CRED_FILE="${HOME}/.claude-access.env"
 MODE="fix"; [ "${1:-}" = "--check" ] && MODE="check"
 
 fail=0
@@ -32,24 +31,22 @@ fi
 
 # 2) gh 認証 = shingo-cc
 echo "[2/3] gh auth = ${EXPECTED_USER}"
-if gh auth status 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
+if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
   ok "gh は ${EXPECTED_USER}"
-elif [ "$MODE" = "fix" ] && [ -f "$CRED_FILE" ]; then
-  warn "gh が ${EXPECTED_USER} でない。${CRED_FILE} からブートストラップ試行..."
-  # shellcheck disable=SC1090
-  source "$CRED_FILE"
-  if [ -n "${SHINGO_CC_PAT:-}" ]; then
-    printf '%s' "$SHINGO_CC_PAT" | gh auth login --hostname github.com --with-token >/dev/null 2>&1
-    if gh auth status 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
-      ok "ブートストラップ成功: gh は ${EXPECTED_USER}"
+elif [ "$MODE" = "fix" ]; then
+  warn "gh の active account が ${EXPECTED_USER} でない。gh auth switch で切り替え試行..."
+  # 3アカウント同居環境では、login ではなく active account の明示切替を使う。
+  if gh auth switch --hostname github.com --user "${EXPECTED_USER}" >/dev/null 2>&1; then
+    if gh auth status --active 2>&1 | grep -qF "account ${EXPECTED_USER}"; then
+      ok "gh auth switch 成功: gh は ${EXPECTED_USER}"
     else
-      bad "ブートストラップ後も ${EXPECTED_USER} にならず。PATの有効期限 / スコープ(repo) を確認。"
+      bad "gh auth switch 後も active account が ${EXPECTED_USER} にならず。gh auth status --active を確認。"
     fi
   else
-    bad "${CRED_FILE} に SHINGO_CC_PAT が無い。設定してから再実行(チャットに貼らない)。"
+    bad "gh auth switch --hostname github.com --user ${EXPECTED_USER} に失敗。gh auth status --active で現状を確認。"
   fi
 else
-  bad "gh が ${EXPECTED_USER} でない。対策: source ${CRED_FILE}; echo \"\$SHINGO_CC_PAT\" | gh auth login --hostname github.com --with-token"
+  bad "gh が ${EXPECTED_USER} でない。対策: gh auth switch --hostname github.com --user ${EXPECTED_USER}"
 fi
 
 # 3) git identity = shingo-cc
@@ -68,17 +65,32 @@ else
 fi
 [ -z "$(git config user.email 2>/dev/null || true)" ] && warn "git user.email 未設定。shingo-cc 対応アドレスを設定推奨。"
 
-# 4) 長命ブランチの存在確認
-echo "[4/4] long-lived branches -> origin/main and origin/develop"
-remote_heads="$(git ls-remote --heads origin main develop 2>/dev/null || true)"
-if printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/main' && printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/develop'; then
-  ok "origin/main と origin/develop は存在"
+# 4) 長命ブランチ(main)の存在確認
+echo "[4/4] long-lived branch -> origin/main"
+remote_heads="$(git ls-remote --heads origin main 2>/dev/null || true)"
+if printf '%s\n' "$remote_heads" | grep -q $'\trefs/heads/main'; then
+  ok "origin/main は存在"
 else
-  bad "origin/main または origin/develop が欠落。長命ブランチは消失させない運用に戻してから再実行。"
+  bad "origin/main が欠落。main は消失させない運用に戻してから再実行。"
 fi
 
 echo "=============================================="
 if [ "$fail" -eq 0 ]; then
+# --- G2.2: 本店鮮度検査（警告のみ・停止しない。設計: docs/specs/ledger-guard/design-g2.md §G2.2） ---
+GIT_COMMON_DIR="$(git rev-parse --git-common-dir 2>/dev/null)"
+if [[ "${GIT_COMMON_DIR}" = /* ]]; then HONTEN="$(dirname "${GIT_COMMON_DIR}")"; else HONTEN="$(git rev-parse --show-toplevel 2>/dev/null)"; fi
+git -C "${HONTEN}" fetch --prune --quiet 2>/dev/null || true
+BEHIND="$(git -C "${HONTEN}" rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+FRESH_THRESHOLD="${G22_THRESHOLD:-30}"
+if [ "${BEHIND}" -gt "${FRESH_THRESHOLD}" ]; then
+  echo "[G2.2 WARN] 本店(${HONTEN})が origin/main より ${BEHIND} コミット遅れています"
+  DIRTY="$(git -C "${HONTEN}" status --porcelain | grep -vc "active-work" || true)"
+  if [ "${DIRTY}" -gt 0 ]; then
+    echo "[G2.2 WARN] 本店に台帳以外の未保存 ${DIRTY} 件あり — ff-pull不能の可能性。本店掃除便を検討してください"
+  else
+    echo "[G2.2 INFO] 未保存は台帳系のみ — 本店で git pull --ff-only origin main で追従可能"
+  fi
+fi
   echo "PREFLIGHT OK — 作業続行可"
   exit 0
 else

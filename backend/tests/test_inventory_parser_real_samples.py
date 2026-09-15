@@ -29,10 +29,9 @@ import os
 import pathlib
 
 import pytest
+from app.services.inventory_parser import parse_inventory_message
 
-from app.services.inventory_parser import parse_inventory_message, parse_raw_content
-from app.services.inventory_parser import AliasRow, RuleRow
-
+from tests.rls_bootstrap import public_bootstrap_lock
 
 # 実 Postgres URL が指定されていない場合はモジュール全体を skip
 TEST_PG_URL = os.getenv("TEST_PG_URL") or os.getenv("RLS_TEST_DATABASE_URL")
@@ -215,28 +214,29 @@ async def _ensure_inventory_schema(engine) -> None:
       「冪等系 duplicate エラー」だけ pass し、それ以外は raise する
       ホワイトリスト方式に変更。
     """
-    MIGRATIONS_DIR = pathlib.Path(__file__).parents[2] / "migrations"
-    needed = [
-        "056_add_suppliers_type_and_promote_public.sql",
-        "057_create_supplier_aliases.sql",
-        "058_create_knowledge_rules.sql",
-    ]
-    for fn in needed:
-        sql = (MIGRATIONS_DIR / fn).read_text("utf-8")
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if not stmt:
-                continue
-            try:
-                async with engine.begin() as conn:
-                    await conn.exec_driver_sql(stmt)
-            except Exception as exc:
-                # 既知の冪等性違反（duplicate_table/object/column）だけ無視。
-                # それ以外（FK 違反 / syntax error / data type mismatch 等）は
-                # 本物のバグなので raise する。
-                if _is_idempotent_migration_error(exc):
+    async with public_bootstrap_lock(engine):
+        MIGRATIONS_DIR = pathlib.Path(__file__).parents[2] / "migrations"
+        needed = [
+            "056_add_suppliers_type_and_promote_public.sql",
+            "057_create_supplier_aliases.sql",
+            "058_create_knowledge_rules.sql",
+        ]
+        for fn in needed:
+            sql = (MIGRATIONS_DIR / fn).read_text("utf-8")
+            for stmt in _split_sql_preserving_do_blocks(sql):
+                stmt = stmt.strip()
+                if not stmt:
                     continue
-                raise
+                try:
+                    async with engine.begin() as conn:
+                        await conn.exec_driver_sql(stmt)
+                except Exception as exc:
+                    # 既知の冪等性違反（duplicate_table/object/column）だけ無視。
+                    # それ以外（FK 違反 / syntax error / data type mismatch 等）は
+                    # 本物のバグなので raise する。
+                    if _is_idempotent_migration_error(exc):
+                        continue
+                    raise
 
 
 async def _seed_supplier_with_aliases(
@@ -352,7 +352,6 @@ async def test_ac3_2_parse_real_supplier_sample(admin_engine, engine, fixture_sa
 
 async def test_ac3_2_db_wrapper_loads_aliases_and_rules(admin_engine, engine):
     """AC3.2 派生: DB ラッパが aliases / rules を正しく読み込む。"""
-    from sqlalchemy import text
     from sqlalchemy.ext.asyncio import AsyncSession
     from sqlalchemy.orm import sessionmaker
 

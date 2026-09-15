@@ -1,0 +1,18 @@
+[
+  {
+    "case": "invalid-base",
+    "base": "0000000000000000000000000000000000000000",
+    "head": "HEAD",
+    "exit": 0,
+    "stdout": "[INFO] BASE_SHA=0000000000000000000000000000000000000000 HEAD_SHA=HEAD\n[INFO] 対象ファイル数: 0\n✅ UI governance: pages/ への変更なし。チェックをスキップします。\n",
+    "stderr": ""
+  },
+  {
+    "case": "valid-no-diff",
+    "base": "HEAD",
+    "head": "HEAD",
+    "exit": 0,
+    "stdout": "[INFO] BASE_SHA=HEAD HEAD_SHA=HEAD\n[INFO] 対象ファイル数: 0\n✅ UI governance: pages/ への変更なし。チェックをスキップします。\n",
+    "stderr": ""
+  }
+]
