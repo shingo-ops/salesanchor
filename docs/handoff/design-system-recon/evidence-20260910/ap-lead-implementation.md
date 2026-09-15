@@ -63,3 +63,8 @@ POから根拠確立後の本番反映指示を受領（逐語はap-release-prer
 GO原文「GO #3497」をPOから受領しPR本文へ逐語転記（記録時刻15:52 JST、対象af3734c9）。代理GOではない。直前確認で最新main180c0f38（PR3503）のdeploy34810423329/job103870490025が失敗と判明。234/234の20260914_140000_unify_tcg_products_to_public.sqlが、tenant_001.product_search_keywordsからpublic.products(tcg_uuid)への外部キー追加で「there is no unique constraint matching given keys for referenced table products」と停止。従前PM0264の231番は成功。バックアップ14:40/7.9M、Finalize health成功、root curlでApp/API200・DB/Redis/Celery connected。処理途中の297 upsertログをコミット済みとは断定せず、直接DB検査は未実施。
 
 GO受領済みと配備可能性を区別し、APマージ/配備を停止。今回製品変更・新main統合・本番操作なし。別件修復を本GOの対象へ拡張しない。次はPR3503復旧担当を確認し、復旧成功後に最新main統合/製品照合/CIを再確認する。GO #3497は保持し再承認を要求しない。根拠ap-release-prerequisite.json newDeploymentBlocker。
+
+
+### 2026-09-15 復旧確認・配備再開
+
+PO原文「解消したので進めてくれ」を受領。PR3512/main26032c74のdeploy34914789016/job104209960597成功、移行完走とSA-19成功を原ログで確認。バックアップ09:50/9.9M。main通常統合は競合0、基準23と製品3hash一致。GO #3497は保持。最終CI確認後に通常マージ・本番配備を監視し結果をPR/台帳へ残す。過去の停止記録は履歴。

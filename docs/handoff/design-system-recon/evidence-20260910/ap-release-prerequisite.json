@@ -39,7 +39,7 @@
     "initialPythonAttempt": "local CA trust lookup failed; not counted as service failure"
   },
   "relatedRecordPr": "https://github.com/shingo-ops/salesanchor/pull/3496",
-  "action": "GO #3497 received; hold AP merge/deploy for new PR3503 migration failure. No new main integration or production operation performed this turn.",
+  "action": "GO #3497 retained; recovery verified, main integrated; final CI before merge/deploy.",
   "recoveryVerification": {
     "checkedAt": "2026-09-14T04:01:57.960797+00:00",
     "pr": 3500,
@@ -113,5 +113,18 @@
     ],
     "rawLogSha256": "fd5a655a7302a0c6c89eae196219b7a9194bff0b14e22782434d2def538a1fce",
     "limits": "No direct database inspection; do not treat 297 upserts printed before transaction failure as committed data"
+  },
+  "recovery20260915": {
+    "main": "26032c7440395f0cecd064af2d382d26a1ac824b",
+    "pr": 3512,
+    "run": 34914789016,
+    "job": 104209960597,
+    "conclusion": "success",
+    "migrations": "Migrations done",
+    "smoke": "All SA-19 smoke tests passed",
+    "backup": "salesanchor_db_20260915_095032.sql.gz (9.9M)",
+    "baselineFilesUnchanged": 23,
+    "productFilesUnchanged": 3,
+    "rawLogSha256": "478d3b778fe183c0fc6fe04c0197b54497bf8ece82bf44fb7dd71b05738147d5"
   }
 }
