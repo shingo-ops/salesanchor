@@ -110,3 +110,30 @@ loaderの返却にexclude_patternなしを実確認。これだけで「原文�
 ## 7. 調査中の保護チェック
 
 権限を確認するSELECTの別名と、コード検索文字列に削除操作の語が含まれ、保護チェックが不可逆操作として拒否した。SQLは実行されていない。許可解除は使わず、information_schema.role_table_grantsの読取と必要箇所のgit showへ変更して確認できた。保護設定/権限の変更0。
+
+## 8. 接続の例外経路と固定応答の実測（2026-09-15）
+
+調査基点 `b4e1456cfdb999323c683af8b67985526f34a3c2`。前回基点189cd338からanalyzer/gemini_extraction/task/unit_recovery/condition_review/diagnosticsの6ファイル差分0をgit diffで確認。前回の本番照合を新しい配備確認と呼ばない。
+
+| 確認した事実 | 一次根拠 | 影響 |
+|---|---|---|
+| 人の商品訂正を再確認した明細はcondition/reviewのみ更新してcontinue | tcg_analyzer_svc.py:1244–1257 | 商品訂正保護を外さず、完売の限定更新を別契約にする |
+| 解析本体commit後、単位/状態の後処理でさらに条件付きcommitが2箇所 | tcg_analyzer_svc.py:1462–1488 | 関数全体を1トランザクションと断定できない。途中失敗を適用完了にしない |
+| E3bはunit_basisだけ更新 | tcg_unit_recovery_svc.py:1026–1074 | この処理がreview_reasonsを消すという仮説は不採用。他の更新との競合検証は必要 |
+| 既存再試行はpending/error対象。errorをpendingへ戻し抽出taskを起動 | tcg_diagnostics_svc.py:138,207–227 | 完売判定失敗を抽出errorへ変更すると不要な再抽出。専用再試行が必要 |
+| 抽出taskの上限は330秒/soft300秒 | app/tasks/tcg_extraction.py（task定義） | 追加判定を同じtask時間枠に無検証で加算しない |
+
+固定応答試験はgit showで取得したgemini_extraction_svc.pyからASTで`parse_extraction_response`と`_PIPE`/`_SPAN_RE`のみを取り出し、Pythonで実行。version=4、原文は人工の「商品A 完売」1行、正規10列ヘッダーを使用。新コードの実装や外部送信なし。
+
+| ケース | 観測結果 | 期待との一致 |
+|---|---|---|
+| 商品名/完売/L1あり、数量/価格/単位/作品欄空 | 1明細、raw_quantity/raw_price空・raw_state完売を保持 | ○ |
+| 正規ヘッダーのみ | 0明細 | ○ |
+| 空応答 | ValueError | ○ |
+| 不正ヘッダー | ValueError | ○ |
+| 範囲表記[L1] | ValueError | ○ |
+| 1行原文にL2 | ValueError | ○ |
+
+実行結果: `passed=6/6; Gemini calls=0; DB writes=0`。根拠: 同サービス:241–358。6/6はパーサの固定応答検査であり、原文抽出の正答率ではない。空数量/価格がパーサで除去されるという仮説は否定できるが、Geminiが完売明細を漏らさず出力する証拠ではない。
+
+既存試験を読取確認: test_tcg_completion_safety.py:65–125（手動商品訂正/replay）、test_tcg_extraction_record_pg.py:423–439（解析失敗でも抽出done/attempt completed保持）。今回は実行していない。ローカルDocker接続は/var/run/docker.sock不在で不可。実PostgreSQL試験未実行を本番DB書込試験で代替しない。
