@@ -65,6 +65,70 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Phase C path: tcg_uuid dropped from public.products
+    -- Tables are empty after provision(), so direct column type swap is safe
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) THEN
+        -- Drop any existing FKs
+        FOR _rec IN
+            SELECT c.conname, rel.relname AS tbl
+            FROM pg_constraint c
+            JOIN pg_class rel ON c.conrelid = rel.oid
+            JOIN pg_namespace ns ON rel.relnamespace = ns.oid
+            JOIN pg_class ref ON c.confrelid = ref.oid
+            WHERE ns.nspname = '{schema}'
+              AND rel.relname IN ('product_search_keywords', 'product_exclude_keywords',
+                                  'analysis_results')
+              AND c.contype = 'f'
+        LOOP
+            EXECUTE format('ALTER TABLE {schema}.%I DROP CONSTRAINT %I',
+                           _rec.tbl, _rec.conname);
+        END LOOP;
+
+        -- product_search_keywords: swap to INTEGER
+        ALTER TABLE {schema}.product_search_keywords DROP COLUMN product_id;
+        ALTER TABLE {schema}.product_search_keywords ADD COLUMN product_id INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE {schema}.product_search_keywords ALTER COLUMN product_id DROP DEFAULT;
+        ALTER TABLE {schema}.product_search_keywords
+            ADD CONSTRAINT fk_psk_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+        -- product_exclude_keywords: swap to INTEGER
+        ALTER TABLE {schema}.product_exclude_keywords DROP COLUMN product_id;
+        ALTER TABLE {schema}.product_exclude_keywords ADD COLUMN product_id INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE {schema}.product_exclude_keywords ALTER COLUMN product_id DROP DEFAULT;
+        ALTER TABLE {schema}.product_exclude_keywords
+            ADD CONSTRAINT fk_pek_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id) ON DELETE CASCADE;
+
+        -- analysis_results: swap to INTEGER (nullable)
+        ALTER TABLE {schema}.analysis_results DROP COLUMN product_id;
+        ALTER TABLE {schema}.analysis_results ADD COLUMN product_id INTEGER;
+        ALTER TABLE {schema}.analysis_results
+            ADD CONSTRAINT fk_ar_public_products
+            FOREIGN KEY (product_id) REFERENCES public.products (id);
+
+        -- analysis_run_snapshots: swap if table exists
+        IF to_regclass('{schema}.analysis_run_snapshots') IS NOT NULL THEN
+            IF EXISTS (
+                SELECT 1 FROM pg_attribute a
+                JOIN pg_class c ON a.attrelid = c.oid
+                JOIN pg_namespace n ON c.relnamespace = n.oid
+                WHERE n.nspname = '{schema}'
+                  AND c.relname = 'analysis_run_snapshots'
+                  AND a.attname = 'product_id'
+                  AND a.atttypid != 23
+            ) THEN
+                ALTER TABLE {schema}.analysis_run_snapshots DROP COLUMN product_id;
+                ALTER TABLE {schema}.analysis_run_snapshots ADD COLUMN product_id INTEGER;
+            END IF;
+        END IF;
+
+        RETURN;
+    END IF;
+
     -- Drop any existing FKs referencing tcg_products or public.products on these tables
     FOR _rec IN
         SELECT c.conname, rel.relname AS tbl
@@ -764,8 +828,8 @@ def seed_guard_dictionary(connection, schema):
                 pid = existing[0]
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,work_id,product_category_id,tcg_uuid)
-                    SELECT %s,%s,'Box',true,w.id,c.id,gen_random_uuid() FROM {}.tcg_series w,
+                    (product_code,name,category_class,is_active,work_id,product_category_id)
+                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
                     {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING id""").format(
                         *[sql.Identifier(schema)] * 2), (code, title, work, category))
                 pid = cursor.fetchone()[0]

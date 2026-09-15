@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS public.products (
     name_en              VARCHAR(255),
     mark                 VARCHAR(100),
     release_date         DATE,
-    tcg_uuid             UUID UNIQUE DEFAULT gen_random_uuid(),
     division_id          UUID,
     work_id              UUID,
     manufacturer_id      UUID,
@@ -26,7 +25,6 @@ CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_code
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS name_en VARCHAR(255);
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS mark VARCHAR(100);
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS release_date DATE;
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS division_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer_id UUID;
@@ -35,5 +33,4 @@ ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_class TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_archived BOOLEAN DEFAULT FALSE;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS required_output_value VARCHAR(255);
-CREATE UNIQUE INDEX IF NOT EXISTS uq_public_products_tcg_uuid
-    ON public.products (tcg_uuid);
+

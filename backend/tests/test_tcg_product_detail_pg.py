@@ -180,7 +180,8 @@ async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
         assert after["analysis_results"] == before["analysis_results"]
         assert len(after["audit_log"]) == 1
         audit = after["audit_log"][0]
-        assert audit["changed_by"] == "ci-reviewer" and audit["record_id"] == product.get("tcg_uuid")
+        assert audit["changed_by"] == "ci-reviewer"
+        import uuid as _uuid_mod; _uuid_mod.UUID(audit["record_id"])  # valid UUID
         assert json.loads(audit["old_values"])["product"]["name"] == "Original"
         assert json.loads(audit["new_values"])["product"]["name"] == "Edited"
     finally:

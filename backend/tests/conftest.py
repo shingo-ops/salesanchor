@@ -765,7 +765,6 @@ async def setup_test_db(test_engine):
                 exclude_keywords TEXT,
                 related_series VARCHAR(255),
                 display_order INTEGER,
-                tcg_uuid UUID,
                 division_id UUID,
                 work_id UUID,
                 manufacturer_id UUID,
