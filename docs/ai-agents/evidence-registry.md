@@ -3190,3 +3190,5 @@ CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。�
 EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74のbackup/migrations/smoke/Verify全成功を親直接確認。PO続行指示受領、GO #3501保持。mainの商品統合へ合わせる既存6ファイルの補正を既存実装担当へ依頼。共通UUIDはtcg_uuidを維持しpublic.products数値idと混同しない。正式CI再確認まで検収保留、未マージ。
 
 EV-20260914-TCG-RESULT-ORDER 配備結果: PR3501/d29c1ab5マージ済み。最終HEAD1863072a/CI34918256994は3763成功95skip。Deploy34918739146はbackup/code step成功、既存migration20260904_160000の商品ID取得失敗で停止、smoke/Verify未実施。公開healthは全接続正常。現在DB整合・実データ画面未検証。本番検収BLOCKED、旧表削除後の全過去migration再実行互換の棚卸しが次。根拠design末尾/result-order-evidence.json。
+
+RESULT-ORDER再開照合: 最新deploy34918739146 failure継続。runner573旧商品処理→652統合→655旧表削除、run_sqlは毎回実行。PR3502既存inventory232件と現行240件の8追加を直接比較。既存9試験成功を移行後再実行完了に転用せず、4コード/現行FK/途中失敗差分の本番読取票と3状態×2周の隔離検証条件をdesignへ保存。自己審査REVISE、本番再開根拠未確立。
