@@ -52,6 +52,19 @@ DO $rw$
 DECLARE
     _rec RECORD;
 BEGIN
+    -- Skip if product_id is already INTEGER (Phase B migration already ran)
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = '{schema}'
+          AND c.relname = 'product_search_keywords'
+          AND a.attname = 'product_id'
+          AND a.atttypid = 23  -- int4
+    ) THEN
+        RETURN;
+    END IF;
+
     -- Drop any existing FKs referencing tcg_products or public.products on these tables
     FOR _rec IN
         SELECT c.conname, rel.relname AS tbl

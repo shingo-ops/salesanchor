@@ -439,9 +439,9 @@ async def create_product(
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE id = CAST(:id AS integer)"
+            "SELECT product_code FROM public.products WHERE id = :id"
         ),
-        {"id": product_int_id},
+        {"id": product_id_int},
     )
     vr = verify.fetchone()
     if vr is None or vr.product_code != pm_code:
