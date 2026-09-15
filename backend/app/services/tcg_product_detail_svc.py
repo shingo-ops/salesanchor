@@ -5,6 +5,7 @@ import hashlib
 import json
 from datetime import date
 from typing import Any
+from uuid import uuid4
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -134,9 +135,9 @@ async def update_product_detail(
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
         after = await _snapshot(db, code)
-        # audit_log.record_id is UUID type; fetch the UUID PK from the snapshot (Phase C will remove this column)
+        # audit_log.record_id is UUID type; use tcg_uuid if available, else generate one
         _uuid_col = "tcg" + "_uuid"  # Phase C drops this column from public.products
-        _audit_pid = product.get(_uuid_col) or product["id"]
+        _audit_pid = product.get(_uuid_col) or str(uuid4())
         await db.execute(text(
             f"INSERT INTO {TCG_SCHEMA}.audit_log "
             "(table_name,record_id,action,changed_by,old_values,new_values) "

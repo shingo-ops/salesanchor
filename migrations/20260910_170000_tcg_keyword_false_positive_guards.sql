@@ -16,6 +16,20 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002 Phase B: product_id が INTEGER に変換済みならスキップ
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON a.attrelid = c.oid
+        JOIN pg_namespace n ON c.relnamespace = n.oid
+        WHERE n.nspname = 'tenant_004'
+          AND c.relname = 'product_search_keywords'
+          AND a.attname = 'product_id'
+          AND a.atttypid = 23  -- int4 = Phase B already converted UUID to INTEGER
+    ) THEN
+        RAISE NOTICE 'ADR-1002 Phase B: product_id は INTEGER に変換済み、スキップ';
+        RETURN;
+    END IF;
+
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['tcg_products', 'tcg_series', 'tcg_product_categories',
                       'product_search_keywords', 'product_exclude_keywords']) AS t(name)
