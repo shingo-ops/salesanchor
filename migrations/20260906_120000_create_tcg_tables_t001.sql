@@ -32,6 +32,11 @@ BEGIN
         RAISE NOTICE '20260906_120000: schema % does not exist, skipping', _schema;
         RETURN;
     END IF;
+
+    -- ADR-1002: この migration は CREATE TABLE IF NOT EXISTS / ON CONFLICT DO NOTHING で全文冪等。
+    -- Phase 2c で tcg_products が DROP 済みでも、IF NOT EXISTS により既存テーブルは no-op、
+    -- tcg_products は空で再作成される（Phase C で再 DROP）。ガード不要。
+
     RAISE NOTICE '20260906_120000: schema % confirmed', _schema;
 
     -- ================================================================

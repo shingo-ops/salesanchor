@@ -10,6 +10,12 @@ DECLARE
     product record;
     keyword_count integer;
 BEGIN
+    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
+    IF to_regclass('tenant_004.tcg_products') IS NULL THEN
+        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ';
+        RETURN;
+    END IF;
+
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['tcg_products', 'tcg_series', 'tcg_product_categories',
                       'product_search_keywords', 'product_exclude_keywords']) AS t(name)

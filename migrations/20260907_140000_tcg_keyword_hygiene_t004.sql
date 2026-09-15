@@ -30,6 +30,12 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ: %', _schema;
+        RETURN;
+    END IF;
+
     -- 0. バックアップ（既に存在する場合は作り直さない）
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.tables

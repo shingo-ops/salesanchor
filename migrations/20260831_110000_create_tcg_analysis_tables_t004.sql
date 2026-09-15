@@ -34,6 +34,10 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: この migration は CREATE TABLE IF NOT EXISTS で全文冪等。
+    -- Phase 2c で tcg_products が DROP 済みでも、IF NOT EXISTS により既存テーブルは no-op、
+    -- tcg_products は空で再作成される（Phase C で再 DROP）。ガード不要。
+
     RAISE NOTICE 'migration 20260831_110000: creating TCG analysis tables in schema %', _schema;
 
     -- ================================================================
