@@ -222,3 +222,9 @@ tcg_uuid UUID,  →  残す（Phase C で削除）
 - Phase C（tcg_uuid DROP）は Phase B 完了後に別 PR で実施
 - Phase D（残存参照クリーンアップ）は Phase C 後
 - product_code SEQUENCE は DB 側で自動管理（Python 側の _next_pm_code は廃止）
+
+## 削除するファイル:
+- migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql（行変更: Phase B _pid_col 対応で旧ハードコード行を置換）
+- migrations/20260910_170000_tcg_keyword_false_positive_guards.sql（行変更: Phase B _pid_col 対応で旧ハードコード行を置換）
+- migrations/20260913_200000_tcg_cardset_exclusion.sql（行変更: Phase B _pid_col 対応で旧ハードコード行を置換）
+- migrations/20260913_210000_tcg_cardset_bundle_registration.sql（行変更: Phase B _pid_col 対応で旧ハードコード行を置換）

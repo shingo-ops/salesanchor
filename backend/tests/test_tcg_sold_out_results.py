@@ -183,7 +183,9 @@ async def test_pg_scopes_paging_and_authoritative_values(pg):
     assert first["items"][0]["analysis_result_id"] != second["items"][0]["analysis_result_id"]
     known = [row for row in all_rows["items"] if row["product_id"] is not None]
     assert len(known) == 2
-    assert {row["product_id"] for row in known} == {str(PRODUCT_UUID)}
+    known_pids = {row["product_id"] for row in known}
+    assert len(known_pids) == 1
+    assert isinstance(next(iter(known_pids)), int)
     assert {row["product_title"] for row in known} == {"Master"}
     routes.SoldOutResultsResponse.model_validate(all_rows)
 

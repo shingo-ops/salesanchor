@@ -212,6 +212,9 @@ def seed_products(connection):
         cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
         cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
+        # DICTIONARY migration depends on PM0200 existing in public.products;
+        # migrate() ran before INSERT so re-run now that products are seeded
+        cursor.execute((MIGRATIONS / DICTIONARY).read_text())
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
