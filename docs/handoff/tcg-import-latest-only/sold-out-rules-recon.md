@@ -105,7 +105,7 @@ loaderの返却にexclude_patternなしを実確認。これだけで「原文�
 - tenant.py:1629以降の新tenant作成はadmin_dbによるDDL、scripts/db/sync_tenant_schema.pyはtenant_004を基準にする。新表/不変制約/権限が新tenantでも同じになることは新migration試験で確認する。既存同期のコメントだけで保証しない。
 - 今回の完売管理ページはsource_messages.is_activeの採用方式を変えない。現行import:388-395,427-437は同仕入元の旧有効原文を非アクティブ化する。ページ完成だけで「他商品在庫の維持」全体を達成したと報告しない。
 
-自己審査: REVISE継続。基礎のDB整合と接続箇所は観測事実で示せた。残る契約を閉じる前に実装/本番GOへ進めない。削除時のテスト条件Q24はPO未回答のまま保持する。
+自己審査: REVISE継続。基礎のDB整合と接続箇所は観測事実で示せた。残る契約を閉じる前に実装/本番GOへ進めない。本節の調査時点ではQ24未回答。後に合意正本C44で削除もテスト合格後反映と確定。
 
 ## 7. 調査中の保護チェック
 
@@ -137,3 +137,11 @@ loaderの返却にexclude_patternなしを実確認。これだけで「原文�
 実行結果: `passed=6/6; Gemini calls=0; DB writes=0`。根拠: 同サービス:241–358。6/6はパーサの固定応答検査であり、原文抽出の正答率ではない。空数量/価格がパーサで除去されるという仮説は否定できるが、Geminiが完売明細を漏らさず出力する証拠ではない。
 
 既存試験を読取確認: test_tcg_completion_safety.py:65–125（手動商品訂正/replay）、test_tcg_extraction_record_pg.py:423–439（解析失敗でも抽出done/attempt completed保持）。今回は実行していない。ローカルDocker接続は/var/run/docker.sock不在で不可。実PostgreSQL試験未実行を本番DB書込試験で代替しない。
+
+## 9. 抽出0件の既存診断経路（2026-09-15）
+
+origin/main b4e1456cを読取確認。tcg_diagnostics_svc.py:99–114のanalysis-missingはextraction_jobs.status=doneかつextraction_itemsの内部結合を条件とする。emptyかつ0明細はこの条件で取得されない。同:69–96の他エラー/待機/長期実行中の抽出診断もそれぞれerror/pending/runningが対象。
+
+frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx:182–208の再実行ボタンはretry-extractionへ送信し、:248–273は抽出エラー/待機/長期実行/解析欠落の既存区分を表示する。完売専用runの再試行ボタンはこのファイルにはない。backend/app/routers/tcg_diagnostics.py:71–108はSaaS管理者限定。既存の診断画面をそのまま使えば抽出0件の完売候補も見える、とは言えない。
+
+これはコード照合であり、実ブラウザ試験ではない。個別確認画面を本便へ追加せず、T02の確認先/再実行経路を明示してから設計を確定する。製品/DB変更0、モデル要求0。
