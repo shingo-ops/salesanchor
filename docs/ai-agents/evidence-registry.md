@@ -3188,3 +3188,5 @@ rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed2
 CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
 
 EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74のbackup/migrations/smoke/Verify全成功を親直接確認。PO続行指示受領、GO #3501保持。mainの商品統合へ合わせる既存6ファイルの補正を既存実装担当へ依頼。共通UUIDはtcg_uuidを維持しpublic.products数値idと混同しない。正式CI再確認まで検収保留、未マージ。
+
+EV-20260914-TCG-RESULT-ORDER 配備結果: PR3501/d29c1ab5マージ済み。最終HEAD1863072a/CI34918256994は3763成功95skip。Deploy34918739146はbackup/code step成功、既存migration20260904_160000の商品ID取得失敗で停止、smoke/Verify未実施。公開healthは全接続正常。現在DB整合・実データ画面未検証。本番検収BLOCKED、旧表削除後の全過去migration再実行互換の棚卸しが次。根拠design末尾/result-order-evidence.json。

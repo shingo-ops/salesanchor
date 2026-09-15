@@ -1331,3 +1331,15 @@ mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/
 
 fd3cec1f/run34917101528/job104217035550: 3749 passed/95 skipped/失敗0、290.51秒。前回の3failure/3errorは解消。4097行全経路SQL10秒以内、review先頭4082.721ms/末尾97件3029.845ms、import先頭4880.161ms/末尾5094.540ms、配信4097件6954.285ms。試験DBのwarm-cache EXPLAIN ANALYZE値であり本番画面速度ではない。機能/値保持/負荷の限定検収APPROVE（親の読み取り確認、同一AI検収）。
 試験中mainにPR3497/3505が入りa7188a13となったため正式手順で追従。今回6製品/試験ファイルはfd3cec1fから差分0を直接確認。最終統合HEADで必須CIを再確認後にGO #3501の範囲でマージ・配備へ進む。未マージ/未配備。
+
+
+### RESULT-ORDER マージ・本番配備の結果（2026-09-15）
+
+- PR3501は2026-09-15T01:48:46ZにMERGED、merge SHA `d29c1ab5ebd24fbf5dfdcced2008f933f3313392`。PO原文GO #3501に基づく公式手順・merge commit。対象HEAD `1863072afb766427ad9bb09373c69de1703f972c`、run34918256994/job104220567007は3763 passed/95 skipped/失敗0、289.09秒。全チェック成功・CLEANを直接確認してマージした。
+- 途中main前進で公式scriptが追従した際は、指定HEAD不一致でマージ停止した。新HEADで再検証後に実行しており、CI失敗を省略していない。
+- 対応Deploy [34918739146](https://github.com/shingo-ops/salesanchor/actions/runs/34918739146) はfailure。Pre-deploy DB backup/Deploy to VPS/Finalizeはsuccess、Run database migrationsはfailure、Post-deploy smoke/Verify deploymentはskipped。コード配備工程は成功だが、本番反映の検収完了とは扱わない。
+- 失敗実ログ: 2026-09-15T01:51:41Z、204/240番の `migrations/20260904_160000_tcg_magazine_promo_products_t004.sql`、`商品IDの取得に失敗しました`、process status3。実物85–91行は旧tenant_004.tcg_productsからPM0190/PM0269/PM0270/PM0271を取得し、いずれかNULLで停止する。どのIDが欠落したかはログにないため未特定。
+- 直前main PR3513は旧tcg_products削除を含み、その配備34918150510はsuccessだった。旧テーブル削除後の過去migration再実行との不整合が疑われるが、現在DBの各商品/制約/以前のmigration適用結果を直接未確認。失敗したSQLだけの局所修正で全体復旧を保証しない。
+- 配備失敗後の公開 `https://api.salesanchor.jp/api/health` はstatus ok、database/redis/celery connected。これは稼働性の確認のみで商品データ整合・画面順序確認ではない。
+- GAS/シートへの直接書込み・手動配信実行なし。認証済み実データ画面での並びと値保持は未検証。ブラウザskillの実行に必要なNodeツールが利用可能一覧にないため、このセッションで認証済みブラウザ確認は行っていない。
+- 最終状態: 実装検収済み・PO承認済み・マージ済み・コード配備工程成功・本番検収BLOCKED。次は旧商品テーブル削除後の過去migration再実行の互換性を棚卸しし、隔離環境の初回/繰返し/移行後再実行を検証した復旧案へ渡す。本便GOを別件DB修正や危険操作へ拡張しない。
