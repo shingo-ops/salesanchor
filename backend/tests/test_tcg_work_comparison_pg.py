@@ -49,6 +49,13 @@ def all_tables(connection):
         return result
 
 
+def public_products_rows(connection):
+    """Capture all rows of public.products for before/after invariant checks (disposable DB only)."""
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT to_jsonb(t)::text FROM public.products t ORDER BY to_jsonb(t)::text")
+        return cursor.fetchall()
+
+
 def fixture_data(pg, monkeypatch):
     connection, engine, _ = pg
     seed_products(connection)
@@ -293,6 +300,7 @@ def test_stale_seven_item_changed_reference_and_db_unchanged(pg, monkeypatch):
             (str(uuid4()),),
         )
     before = all_tables(connection)
+    before_public_products = public_products_rows(connection)
     snap = comparison.read_job_snapshot(factory, jobid)
     assert snap["data"]["reference_diff"]["changed"] is True  # stale reference confirmed
 
@@ -307,6 +315,7 @@ def test_stale_seven_item_changed_reference_and_db_unchanged(pg, monkeypatch):
     assert report["model_calls"] == 1 and report["db_writes"] == 0 and not report["adoptable"]
     assert set(report["results"]) == set(item_ids)
     assert all_tables(connection) == before
+    assert public_products_rows(connection) == before_public_products
 
 
 @pytest.mark.parametrize("change", ["correction", "non_done", "broken_reference"])
@@ -374,7 +383,7 @@ def test_stale_input_changed_during_model_call(pg, monkeypatch, change):
                     (jobid,),
                 )
             else:
-                cursor.execute(f"UPDATE {SCHEMA}.tcg_products SET japanese_title='changed' WHERE code='PM0123'")
+                cursor.execute("UPDATE public.products SET product_code='PM0999' WHERE product_code='PM0123'")
         return comparison.HEADER + "\n" + "\n".join(iid + "｜" for iid in item_ids)
 
     with pytest.raises(comparison.ComparisonError, match="INPUT_CHANGED"):

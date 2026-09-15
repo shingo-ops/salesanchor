@@ -333,6 +333,14 @@ def read_job_snapshot(session_factory: Callable, job_id: str) -> dict:
             if not saved_reference or reference_digest(saved_reference) != saved_sha:
                 raise ComparisonError("INVALID_SAVED_REFERENCE")
         masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
+        masters["products"] = _records(
+            session,
+            "SELECT to_jsonb(jsonb_build_object("
+            "'code', p.product_code, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
+            ")) FROM public.products p",
+            {},
+        )
         product_ids, _, _, _, _, units = analyzer.load_lookup_maps(session)
         search, exclude = analyzer.load_product_keywords(session)
         categories = analyzer.load_product_kubun_type_map(session)
@@ -340,10 +348,10 @@ def read_job_snapshot(session_factory: Callable, job_id: str) -> dict:
             "product_ids": product_ids, "units": units, "search": search, "exclude": exclude,
             "categories": categories, "normalization": analyzer.load_normalization_rules(session),
             "works": analyzer.load_work_master(session),
-            "work_ids": {p["code"]: str(p["work_id"]) if p["work_id"] else None for p in masters["tcg_products"] if p["is_active"]},
+            "work_ids": {p["code"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
             "classes": {p["code"]: ("Box" if categories[p["code"]] in {"箱系", "箱系大"} else "")
                         if p["code"] in categories else (p["category_class"] or "")
-                        for p in masters["tcg_products"] if p["is_active"]},
+                        for p in masters["products"] if p["is_active"]},
         }
         reference = load_work_reference(session, TCG_SCHEMA)
         if session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
