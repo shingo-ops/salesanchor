@@ -79,7 +79,7 @@ def load_lookup_maps(
     rows = session.execute(
         text("SELECT product_code AS code, id FROM public.products WHERE is_active = TRUE")
     ).fetchall()
-    product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
+    product_code_to_uuid: dict[str, int] = {r[0]: r[1] for r in rows}
 
     # --- 単位エイリアス → canonical + UUID ---
     rows = session.execute(
