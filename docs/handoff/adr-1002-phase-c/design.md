@@ -137,6 +137,7 @@ import uuid; uuid.UUID(audit["record_id"])
 ## 4. 触るファイル
 
 - `migrations/20260916_120000_phase_c_drop_tcg_uuid.sql`（新規）
+- `migrations/20260916_130000_work_id_not_null.sql`（新規）
 - `backend/app/tasks/tcg_mirror.py`
 - `backend/app/services/tcg_product_detail_svc.py`
 - `backend/tests/fixtures/public_products_test.sql`
@@ -144,6 +145,8 @@ import uuid; uuid.UUID(audit["record_id"])
 - `backend/tests/test_tcg_work_matching_integration.py`
 - `backend/tests/test_tcg_product_detail_pg.py`
 - `backend/tests/test_tcg_product_roundtrip.py`
+- `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx`
+- `scripts/run_all_migrations.sh`
 - `docs/handoff/adr-1002-phase-c/recon.md`（新規）
 - `docs/handoff/adr-1002-phase-c/design.md`（新規）
 
