@@ -141,7 +141,7 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
           const options = detail.lookups[field].map(option => ({ value: option.id, label: option.name, disabled: !option.is_active && option.id !== detail.product[field] }));
           if (draft[field] && !options.some(option => option.value === draft[field])) options.push({ value: draft[field], label: t("productDetail.missingClassification", { id: draft[field] }), disabled: true });
           return <Select key={field} label={t(`productDetail.${field}`)} value={draft[field]} options={options}
-            placeholder={t("productDetail.unset")} required={detail.product[field] !== null}
+            placeholder={t("productDetail.unset")} required={field === "work_id" || detail.product[field] !== null}
             onChange={e => change(field, e.target.value)} disabled={saving} fullWidth />;
         })}
         <Textarea label={t("productDetail.search_keywords")} helperText={t("productDetail.wordsHint")}
