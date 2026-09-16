@@ -1331,3 +1331,65 @@ mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/
 
 fd3cec1f/run34917101528/job104217035550: 3749 passed/95 skipped/失敗0、290.51秒。前回の3failure/3errorは解消。4097行全経路SQL10秒以内、review先頭4082.721ms/末尾97件3029.845ms、import先頭4880.161ms/末尾5094.540ms、配信4097件6954.285ms。試験DBのwarm-cache EXPLAIN ANALYZE値であり本番画面速度ではない。機能/値保持/負荷の限定検収APPROVE（親の読み取り確認、同一AI検収）。
 試験中mainにPR3497/3505が入りa7188a13となったため正式手順で追従。今回6製品/試験ファイルはfd3cec1fから差分0を直接確認。最終統合HEADで必須CIを再確認後にGO #3501の範囲でマージ・配備へ進む。未マージ/未配備。
+
+
+### RESULT-ORDER マージ・本番配備の結果（2026-09-15）
+
+- PR3501は2026-09-15T01:48:46ZにMERGED、merge SHA `d29c1ab5ebd24fbf5dfdcced2008f933f3313392`。PO原文GO #3501に基づく公式手順・merge commit。対象HEAD `1863072afb766427ad9bb09373c69de1703f972c`、run34918256994/job104220567007は3763 passed/95 skipped/失敗0、289.09秒。全チェック成功・CLEANを直接確認してマージした。
+- 途中main前進で公式scriptが追従した際は、指定HEAD不一致でマージ停止した。新HEADで再検証後に実行しており、CI失敗を省略していない。
+- 対応Deploy [34918739146](https://github.com/shingo-ops/salesanchor/actions/runs/34918739146) はfailure。Pre-deploy DB backup/Deploy to VPS/Finalizeはsuccess、Run database migrationsはfailure、Post-deploy smoke/Verify deploymentはskipped。コード配備工程は成功だが、本番反映の検収完了とは扱わない。
+- 失敗実ログ: 2026-09-15T01:51:41Z、204/240番の `migrations/20260904_160000_tcg_magazine_promo_products_t004.sql`、`商品IDの取得に失敗しました`、process status3。実物85–91行は旧tenant_004.tcg_productsからPM0190/PM0269/PM0270/PM0271を取得し、いずれかNULLで停止する。どのIDが欠落したかはログにないため未特定。
+- 直前main PR3513は旧tcg_products削除を含み、その配備34918150510はsuccessだった。旧テーブル削除後の過去migration再実行との不整合が疑われるが、現在DBの各商品/制約/以前のmigration適用結果を直接未確認。失敗したSQLだけの局所修正で全体復旧を保証しない。
+- 配備失敗後の公開 `https://api.salesanchor.jp/api/health` はstatus ok、database/redis/celery connected。これは稼働性の確認のみで商品データ整合・画面順序確認ではない。
+- GAS/シートへの直接書込み・手動配信実行なし。認証済み実データ画面での並びと値保持は未検証。ブラウザskillの実行に必要なNodeツールが利用可能一覧にないため、このセッションで認証済みブラウザ確認は行っていない。
+- 最終状態: 実装検収済み・PO承認済み・マージ済み・コード配備工程成功・本番検収BLOCKED。次は旧商品テーブル削除後の過去migration再実行の互換性を棚卸しし、隔離環境の初回/繰返し/移行後再実行を検証した復旧案へ渡す。本便GOを別件DB修正や危険操作へ拡張しない。
+
+
+### RESULT-ORDER 再開条件の追加照合（2026-09-15）
+
+最新Deploy一覧は34918739146 failureが最新で、復旧成功記録なし。公開PR3502（product-migration-verification）の既存調査を参照し、別の文書体系や修復実装を増やしていない。
+
+観測事実:
+- scripts/run_all_migrations.sh:53–69は登録順にrun_py/run_sqlを実行し、run_sqlは毎回psqlへファイル全体を渡す。実行済みmigration台帳によるskipはこの関数にない。失敗時停止はset -e/ON_ERROR_STOP=1。
+- 同573行が今回失敗した旧商品登録、652行が商品統合、655行が旧表削除。旧処理→統合→削除の順序。
+- PR3502の固定inventory本体は232件（base59f644cd）、現在runnerは240件、追加パス8件。追補には233件時点の記録もあるが、現在240件と旧表削除後の再実行成功を証明しない。
+- PR3502本文の9試験成功は過去時点の検証。全実行対象2周・実CSV往復・本番backup隔離復元は未実施と明記されている。PR3502のマージ/本番切替は対象外という制限を保持する。
+
+不足を埋める読み取り確認票（本番操作担当への引き継ぎ案、実施前）:
+1. 同一時点の稼働コードSHAとDB名、接続役割、旧tenant_004.tcg_productsとpublic.productsの存在を記録する。接続秘密値を出力しない。
+2. public.productsのPM0190/PM0269/PM0270/PM0271についてproduct_code/tcg_uuid/件数を取得。旧表が存在する場合のみ同じ4コードのcode/id/件数を取得し、欠落・UUID不一致を分ける。商品名や価格の変更はしない。
+3. product_search_keywords/product_exclude_keywords/analysis_results/products_logisticsの現行FK参照先と未対応ID件数を確認。表の存在を先に確認し、不在を推測で補わない。
+4. 失敗前の1〜203番がどの状態を変更したかを、直前backupと現在値の読み取り比較で特定。全体rollback済みとは仮定しない。
+
+接続後はBEGIN TRANSACTION READ ONLYと短いstatement_timeoutを使用し、SELECT/EXPLAIN（ANALYZEなし）のみ。ROLLBACKで終了。DDL/DML、migration再実行、ジョブ実行、配信、認証情報表示は禁止。4コードの結果だけで全商品整合は合格にしない。
+
+修復設計の受入条件（草案・未検収）:
+- 現行240処理とその依存先を固定SHAで更新棚卸しし、構造準備と過去データ再投入を区別する。
+- 旧表ありの移行前、移行済み旧表なし、今回の途中失敗後の3状態を隔離PGで再現する。
+- 各状態で実際の全登録順序を2回ずつ実行（最低6実行）し、エラー0、商品UUIDと参照先の対応一致、承認済み編集値の上書き0、未対応参照0を確認する。
+- 本番backupの隔離復元と復旧前後の値保持を確認する。失敗1箇所をskipするだけの対応は採用しない。
+- 技術検証と正式な復旧承認が揃ってから本番再実行し、migration/smoke/Verify全成功と解析実データの順序/値保持を検収する。
+
+自己審査: REVISE。本番4コード/参照状態・途中失敗による変更範囲・240処理の移行後2周実測が未確認であるため、本番再開の根拠は未確立。読み取り調査と設計整理は継続できるが、再配備はしない。
+
+
+### RESULT-ORDER 許可済み鍵による本番読み取り実証（2026-09-15 11:38 JST記録）
+
+PO原文「自由鍵の仕様を許可するので調査してくれ…確立したなら報告」を今回の鍵使用調査の許可として受領。既存SSH alias prod1とその既存鍵を使用。秘密鍵本文・認証情報を出力せず、BatchMode/StrictHostKeyChecking=yesを維持。サブエージェントの新規起動、本番変更はしていない。
+
+初回のpsql標準入力方式はPreToolUse psql-write-guardに拒否され未実行。ガードが明示許可するpsql -c SELECT形式を使用し、docker execのPGOPTIONSでdefault_transaction_read_only=on/statement_timeout=10000を設定。current_setting('transaction_read_only')=onをDB自身に確認。ガード解除やpermit-dangerは使用していない。
+
+直接観測した結果:
+- 本番git HEADはd29c1ab5ebd24fbf5dfdcced2008f933f3313392でPR3501 merge SHAと一致。
+- 稼働backendコンテナのtcg_result_order.py/tcg_analysis_review_svc.py/tcg_distribution_svc.py/tcg_import_progress.pyのSHA256がローカル検証済み4ファイルと4/4一致。配備工程の成功だけでなく実コードの一致を確認。
+- public.productsのtcg_uuid非NULL商品は297件。tenant_004.tcg_productsは存在するが0件。
+- PM0190/PM0269/PM0270/PM0271はpublic.productsに各1件、旧表に各0件。4商品のUUIDはresult-order-evidence.jsonへ記録。
+- 旧表relrowsecurity=false/relforcerowsecurity=false、接続役割jarvisのrolsuper=true/rolbypassrls=true。旧表0件を行制限による見かけの欠落とは扱わない。public.productsはRLS/FORCE RLSともtrueだが、この読取役割はbypass属性を持つ。
+- keyword/exclude/analysis/logisticsの4種類のproduct_id FKはpublic.products(tcg_uuid)を参照。新表に対応する商品がない参照件数は4種類とも0件（analysisのNULL product_idは未確定として除外）。
+- 直前の成功Deploy34918150510実ログに2026-09-15T01:42:53Zのtenant_001/tenant_004.tcg_products削除NOTICEがある。削除後に旧表が再び存在することは確認済み。どの処理が再作成したかは未特定。
+
+判断: 今回の停止は、新保管先の対象4商品消失ではなく、旧表削除後にも旧表からIDを得ようとする過去migrationと移行後構造の不整合で説明できる。実物migration85–91行の停止条件、失敗ログ、現在の旧表0件/新4商品存在を照合した。失敗時点にNULLだった変数をログ以上に断定しない。
+
+確認の限界: 297商品の全項目が配備前と同一か、全migration1〜203番の変更影響、認証済み画面の実際の並び順は未検証。4種参照0件と4コード存在だけで全データ無変更とはしない。再配備/DB更新/配信は未実行。
+
+状態: 調査根拠確立（停止原因の分類と現在4コード/参照整合）、本番の並び順コード実配備確認済み。復旧設計はREVISEを維持。次は既存PR3502調査を現行240処理へ更新し、移行後再実行を安全にする復旧設計・隔離検証。旧表へ商品を戻す・エラー箇所を単にskipする・DB処理をそのまま再実行する案は、この読取結果だけでは承認しない。
