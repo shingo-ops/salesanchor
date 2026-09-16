@@ -389,3 +389,86 @@ jobs:
           echo "前例: ADR-089（DROP customers）、ADR-1002（DROP tcg_uuid）"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           exit 1
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック7: 商品マスタテーブルへのデータ操作禁止
+      #
+      # 背景: 商品データの更新手段は CSV 取り込みとアプリ画面に一本化する。
+      #       マイグレーションで INSERT/UPDATE/DELETE すると、CSV/アプリ経由の
+      #       データと重複・競合が発生する（ムニキスゼロ 3件重複の教訓）。
+      #       構造変更（ALTER TABLE, CREATE INDEX 等）は許可する。
+      # 保護対象:
+      #   - public.products（商品マスタ本体）
+      #   - tcg_products（テナント別商品マスタ）
+      #   - product_search_keywords（検索キーワード）
+      #   - product_exclude_keywords（除外キーワード）
+      # ──────────────────────────────────────────────────────────────────────
+      - name: 商品マスタテーブルへのデータ操作禁止チェック
+        if: steps.detect_sql.outputs.new_sql == 'true'
+        run: |
+          set -euo pipefail
+
+          FAILED=0
+          VIOLATIONS=""
+
+          # 保護対象テーブル（スキーマ修飾の有無・テナントスキーマ名を問わず検出）
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords"
+
+          IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
+          for sql_path in "${SQL_FILES[@]}"; do
+            # 追加行のみ抽出（SQL コメント行を除外）
+            ADDED_LINES=$(git diff "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}" -- "$sql_path" \
+              | grep '^+' | grep -v '^+++' \
+              | grep -v '^\+[[:space:]]*--' || true)
+
+            if [ -z "$ADDED_LINES" ]; then
+              continue
+            fi
+
+            # INSERT INTO ... 保護テーブル
+            INSERT_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "INSERT[[:space:]]+INTO[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            # UPDATE ... 保護テーブル（SET が後続する行）
+            UPDATE_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "UPDATE[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            # DELETE FROM ... 保護テーブル
+            DELETE_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "DELETE[[:space:]]+FROM[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            HITS="${INSERT_HIT}${UPDATE_HIT}${DELETE_HIT}"
+            if [ -n "$HITS" ]; then
+              FAILED=1
+              VIOLATIONS="${VIOLATIONS}\n--- $(basename $sql_path) ---\n${HITS}"
+            fi
+          done
+
+          if [ "$FAILED" -eq 0 ]; then
+            echo "✅ 商品マスタテーブルへのデータ操作なし — チェック7 通過"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック7)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "商品マスタ関連テーブルへの INSERT / UPDATE / DELETE が検出されました。"
+          echo ""
+          echo -e "検出箇所:$VIOLATIONS"
+          echo ""
+          echo "商品データの更新は CSV 取り込みまたはアプリ画面からのみ行えます。"
+          echo "マイグレーションで値を操作することは禁止されています。"
+          echo ""
+          echo "【許可される操作】"
+          echo "  ALTER TABLE ... ADD COLUMN（列の追加）"
+          echo "  ALTER TABLE ... ALTER COLUMN（型の変更）"
+          echo "  CREATE INDEX（索引の追加）"
+          echo ""
+          echo "【禁止される操作】"
+          echo "  INSERT INTO products / tcg_products / product_search_keywords / product_exclude_keywords"
+          echo "  UPDATE products / tcg_products / product_search_keywords / product_exclude_keywords"
+          echo "  DELETE FROM products / tcg_products / product_search_keywords / product_exclude_keywords"
+          echo ""
+          echo "保護対象テーブル: products, tcg_products, product_search_keywords, product_exclude_keywords"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
