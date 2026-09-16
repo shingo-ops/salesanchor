@@ -8,8 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-WORK_ID_PROMPT_VERSION = "raw-extraction-v4-work-id-p2"
-WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", WORK_ID_PROMPT_VERSION})
+WORK_ID_PROMPT_VERSION = "raw-extraction-v5-product-p1"
+WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", WORK_ID_PROMPT_VERSION})
 
 
 def reference_json(reference: dict) -> str:
@@ -31,6 +31,18 @@ def validate_work_id(value: str | None, reference: dict) -> str | None:
     if canonical not in work_ids(reference):
         raise ValueError("Work ID is not in the supplied reference")
     return canonical
+
+
+def product_codes(reference: dict) -> set[str]:
+    return {p["code"] for p in reference["products"] if p.get("code")}
+
+
+def validate_product_code(value: str | None, reference: dict) -> str | None:
+    if not value:
+        return None
+    if value not in product_codes(reference):
+        raise ValueError("Product code is not in the supplied reference")
+    return value
 
 
 def load_work_reference(session: Session, schema: str) -> dict:
