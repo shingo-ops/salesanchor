@@ -219,6 +219,7 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / DICTIONARY).read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
 
 
 @pytest.fixture
@@ -581,6 +582,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / STRUCTURE).read_text())
         cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
         cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
+        cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
