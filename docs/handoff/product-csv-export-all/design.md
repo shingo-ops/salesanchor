@@ -1,6 +1,6 @@
 # design.md — product-csv-export-all
 
-参照: [recon.md](./recon.md) / ADR-155（マージ済み）
+参照: [recon.md](docs/handoff/product-csv-export-all/recon.md) / ADR-155（マージ済み）
 
 ---
 
@@ -58,6 +58,7 @@ ADR-155 で商品マスタの更新手段をCSV取り込みとアプリ画面に
 
 ## 維持の仕組み（守り手）
 
-- バックエンドの `MAX_BYTES = 2MB` 制限が全件出力時のサイズ超過を防止
-- `TcgProductMasterPage.test.tsx` のR10テストがエクスポートAPIの呼び出し方法を検証
+守り手:
+- バックエンドの `MAX_BYTES = 2MB` 制限が全件出力時のサイズ超過を防止（関所パス: `backend/app/services/tcg_product_roundtrip_svc.py`）
+- `TcgProductMasterPage.test.tsx` のR10テストがエクスポートAPIの呼び出し方法を検証（関所パス: `frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx`）
 - TypeScript コンパイルチェック（CI）
