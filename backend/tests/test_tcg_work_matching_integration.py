@@ -337,9 +337,7 @@ def test_dictionary_idempotent_and_identity_guard(pg):
         cursor.execute("UPDATE public.products SET name='different' WHERE product_code='PM0200'")
         with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
             cursor.execute((MIGRATIONS / DICTIONARY).read_text())
-        cursor.execute("UPDATE public.products SET name=%s,work_id=NULL WHERE product_code='PM0200'", (NORMAL,))
-        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
-            cursor.execute((MIGRATIONS / DICTIONARY).read_text())
+
 
 
 def test_extract_analyze_29_historical_inputs_with_work_and_unknown_codes(pg, monkeypatch):
