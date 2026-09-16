@@ -301,6 +301,82 @@ async def save_product_detail(
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
 
 
+# ---------------------------------------------------------------------------
+# 分類マスタ一覧（作成フォーム用）
+# ---------------------------------------------------------------------------
+
+
+@router.get("/tcg/products/lookups", summary="商品マスタ分類選択肢一覧（CREATE-01）")
+async def get_product_lookups(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> dict:
+    """作成フォーム用の分類マスタ選択肢を返す。"""
+    lookups: dict[str, list[dict]] = {}
+    for key, table, name_col in [
+        ("division_id", "tcg_major_categories", "display_name"),
+        ("work_id", "tcg_series", "display_name"),
+        ("manufacturer_id", "tcg_manufacturers", "display_name"),
+        ("product_category_id", "tcg_product_categories", "display_name"),
+    ]:
+        rows = await db.execute(
+            text(
+                f"SELECT id::text AS id, {name_col} AS name "
+                f"FROM {TCG_SCHEMA}.{table} "
+                f"WHERE is_active = TRUE "
+                f"ORDER BY {name_col}"
+            )
+        )
+        lookups[key] = [{"id": r.id, "name": r.name} for r in rows.fetchall()]
+    return {"lookups": lookups}
+
+
+# ---------------------------------------------------------------------------
+# 商品マスタ新規作成（独立エンドポイント）
+# ---------------------------------------------------------------------------
+
+
+class CreateProductBody(BaseModel):
+    japanese_title: str
+    mark: str = ""
+    english_title: str = ""
+    release_date: str | None = None
+    division_id: str
+    work_id: str
+    manufacturer_id: str
+    product_category_id: str
+    search_keywords: str = ""
+    exclude_keywords: str = ""
+
+
+@router.post("/tcg/products/create", summary="商品マスタ新規追加（CREATE-01）")
+async def create_product_standalone(
+    body: CreateProductBody,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> dict:
+    from app.services.tcg_product_master_svc import create_product
+    result = await create_product(
+        db,
+        extraction_item_id="",
+        source_message_id="",
+        division_id=body.division_id,
+        work_id=body.work_id,
+        manufacturer_id=body.manufacturer_id,
+        product_category_id=body.product_category_id,
+        japanese_title=body.japanese_title,
+        release_date=body.release_date,
+        search_keywords=body.search_keywords,
+        exclude_keywords=body.exclude_keywords,
+        mark=body.mark,
+        english_title=body.english_title,
+        force=True,
+    )
+    if not result.get("ok"):
+        raise HTTPException(status_code=409, detail=result.get("code", "CREATE_FAILED"))
+    return result
+
+
 @router.delete("/tcg/products/detail/{product_code}", summary="商品マスタ削除（DETAIL-02）")
 async def delete_product_detail(
     product_code: str,

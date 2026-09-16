@@ -23,6 +23,8 @@ type Draft = Record<Classification, string> & {
   japanese_title: string; english_title: string; mark: string; release_date: string;
   search_keywords: string; exclude_keywords: string;
 };
+type LookupOption = { id: string; name: string };
+type LookupsMap = Record<Classification, LookupOption[]>;
 function draftFrom(result: Detail): Draft {
   const p = result.product;
   if (!/^[0-9a-f]{64}$/.test(result.revision) || typeof p?.code !== "string" ||
@@ -38,15 +40,22 @@ function draftFrom(result: Detail): Draft {
     search_keywords: p.search_keywords.join("\n"), exclude_keywords: p.exclude_keywords.join("\n") };
 }
 const words = (value: string) => value.split("\n").map(word => word.trim()).filter(Boolean);
+const emptyDraft: Draft = {
+  japanese_title: "", english_title: "", mark: "", release_date: "",
+  division_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
+  search_keywords: "", exclude_keywords: "",
+};
 
-export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
+export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: openProp, mode = "edit" }: {
   productCode: string | null; onClose: () => void; onSaved: () => void;
+  open?: boolean; mode?: "edit" | "create";
 }) {
   const { t } = useTranslation();
   const formId = useId();
   const [detail, setDetail] = useState<Detail | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [initial, setInitial] = useState<Draft | null>(null);
+  const [createLookups, setCreateLookups] = useState<LookupsMap | null>(null);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const inFlight = useRef(false);
@@ -58,7 +67,11 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(initial);
+  const isOpen = openProp !== undefined ? openProp : productCode !== null;
+
+  // 編集モード: 詳細ロード
   useEffect(() => {
+    if (mode !== "edit") return;
     let cancelled = false;
     setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false);
     setBlocked(false); setConfirmation(null);
@@ -72,7 +85,23 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
     }).catch(() => { if (!cancelled) setError("productDetail.loadError"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [productCode, reload]);
+  }, [productCode, reload, mode]);
+
+  // 作成モード: 分類マスタ取得 + 空フォーム初期化
+  useEffect(() => {
+    if (mode !== "create" || !isOpen) return;
+    let cancelled = false;
+    setError(""); setSaved(false); setBlocked(false); setConfirmation(null);
+    setDraft(emptyDraft); setInitial(emptyDraft);
+    setLoading(true);
+    void api.get<{ lookups: LookupsMap }>("/tcg/products/lookups").then(result => {
+      if (cancelled) return;
+      setCreateLookups(result.lookups);
+    }).catch(() => { if (!cancelled) setError("productDetail.loadError"); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [mode, isOpen]);
+
   useEffect(() => {
     if (!dirty) return;
     const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
@@ -89,6 +118,13 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
     setSaved(false);
   }
   async function save() {
+    if (mode === "create") {
+      await saveCreate();
+    } else {
+      await saveEdit();
+    }
+  }
+  async function saveEdit() {
     if (!draft || !detail || !productCode || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
     inFlight.current = true; setSaving(true); setError(""); setSaved(false);
@@ -109,6 +145,32 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
       setBlocked(!invalid);
       setError(err instanceof ApiError && err.status === 409 ? "productDetail.conflict" :
         invalid ? "productDetail.invalid" : "productDetail.saveError");
+    } finally { inFlight.current = false; setSaving(false); }
+  }
+  async function saveCreate() {
+    if (!draft || !dirty || blocked || inFlight.current) return;
+    if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
+    inFlight.current = true; setSaving(true); setError(""); setSaved(false);
+    try {
+      await api.post("/tcg/products/create", {
+        japanese_title: draft.japanese_title,
+        english_title: draft.english_title,
+        mark: draft.mark,
+        release_date: draft.release_date || null,
+        division_id: draft.division_id,
+        work_id: draft.work_id,
+        manufacturer_id: draft.manufacturer_id,
+        product_category_id: draft.product_category_id,
+        search_keywords: words(draft.search_keywords).join(","),
+        exclude_keywords: words(draft.exclude_keywords).join(","),
+      });
+      setSaved(true);
+      onSaved();
+      onClose();
+    } catch (err) {
+      const invalid = err instanceof ApiError && err.status === 422;
+      setBlocked(!invalid);
+      setError(invalid ? "productDetail.invalid" : "productDetail.saveError");
     } finally { inFlight.current = false; setSaving(false); }
   }
   const confirmDiscard = () => {
@@ -133,11 +195,17 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
       setConfirmDelete(false);
     }
   }
-  return <><Drawer open={productCode !== null} onClose={requestClose} title={t("productDetail.title")}
+  const activeLookups: LookupsMap | null = mode === "create"
+    ? createLookups
+    : detail ? (detail.lookups as unknown as LookupsMap) : null;
+
+  return <><Drawer open={isOpen} onClose={requestClose} title={t("productDetail.title")}
     footer={draft && !confirmation ? <div className="product-detail__actions">
-      <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>{t("productDetail.delete")}</Button>
+      {mode === "edit" && <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>{t("productDetail.delete")}</Button>}
       <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>{t("common.close")}</Button>
-      <Button type="submit" form={formId} disabled={saving || blocked || !dirty}>{t(saving ? "productDetail.saving" : "productDetail.save")}</Button>
+      <Button type="submit" form={formId} disabled={saving || blocked || !dirty}>
+        {t(saving ? "productDetail.saving" : mode === "create" ? "productDetail.create" : "productDetail.save")}
+      </Button>
     </div> : undefined}>
     {confirmation ? <div className="product-detail__confirmation" role="alert">
       <p>{t("productDetail.discardMessage")}</p>
@@ -148,36 +216,40 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
     </div> : <>
       {loading && <p role="status">{t("common.loading")}</p>}
       {error && <p role="alert">{t(error)}</p>}
-      {!loading && (blocked || (!detail && error)) && <Button type="button" variant="secondary" onClick={() => {
+      {mode === "edit" && !loading && (blocked || (!detail && error)) && <Button type="button" variant="secondary" onClick={() => {
         if (dirty) setConfirmation("reload"); else setReload(value => value + 1);
       }}>{t("productDetail.reload")}</Button>}
       {saved && <p role="status">{t("productDetail.saved")}</p>}
-      {detail && draft && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
-        <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />
+      {draft && (mode === "create" ? activeLookups : detail) && <form id={formId} className="product-detail__form" onSubmit={event => { event.preventDefault(); void save(); }}>
+        {mode === "edit" && detail && <TextField label={t("productDetail.code")} value={detail.product.code} readOnly fullWidth />}
         <TextField label={t("productDetail.japanese_title")} value={draft.japanese_title} onChange={e => change("japanese_title", e.target.value)} required maxLength={5000} disabled={saving} fullWidth />
         <TextField label={t("productDetail.english_title")} value={draft.english_title} onChange={e => change("english_title", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
         <TextField label={t("productDetail.mark")} value={draft.mark} onChange={e => change("mark", e.target.value)} maxLength={5000} disabled={saving} fullWidth />
         <TextField label={t("productDetail.release_date")} type="date" value={draft.release_date} onChange={e => change("release_date", e.target.value)} disabled={saving} fullWidth />
-        {classificationFields.map(field => {
-          const options = detail.lookups[field].map(option => ({ value: option.id, label: option.name, disabled: !option.is_active && option.id !== detail.product[field] }));
-          if (draft[field] && !options.some(option => option.value === draft[field])) options.push({ value: draft[field], label: t("productDetail.missingClassification", { id: draft[field] }), disabled: true });
+        {activeLookups && classificationFields.map(field => {
+          const options = activeLookups[field].map(option => ({ value: option.id, label: option.name, disabled: false }));
+          if (mode === "edit" && detail && draft[field] && !options.some(option => option.value === draft[field])) {
+            options.push({ value: draft[field], label: t("productDetail.missingClassification", { id: draft[field] }), disabled: true });
+          }
           return <Select key={field} label={t(`productDetail.${field}`)} value={draft[field]} options={options}
-            placeholder={t("productDetail.unset")} required={field === "work_id" || detail.product[field] !== null}
+            placeholder={t("productDetail.unset")} required={field === "work_id" || (mode === "edit" && detail ? detail.product[field] !== null : false)}
             onChange={e => change(field, e.target.value)} disabled={saving} fullWidth />;
         })}
         <Textarea label={t("productDetail.search_keywords")} helperText={t("productDetail.wordsHint")}
           value={draft.search_keywords} onChange={e => change("search_keywords", e.target.value)} rows={5} disabled={saving} fullWidth />
         <Textarea label={t("productDetail.exclude_keywords")} helperText={t("productDetail.wordsHint")}
           value={draft.exclude_keywords} onChange={e => change("exclude_keywords", e.target.value)} rows={4} disabled={saving} fullWidth />
-        <TextField label={t("productDetail.id")} value={detail.product.id} readOnly fullWidth />
-        <TextField label={t("productDetail.categoryClass")} value={detail.product.category_class} readOnly fullWidth />
-        <TextField label={t("productDetail.requiredOutput")} value={detail.product.required_output_value ?? ""} readOnly fullWidth />
-        <TextField label={t("productDetail.active")} value={t(detail.product.is_active ? "productDetail.activeYes" : "productDetail.activeNo")} readOnly fullWidth />
-        <TextField label={t("productDetail.createdAt")} value={detail.product.created_at} readOnly fullWidth />
+        {mode === "edit" && detail && <>
+          <TextField label={t("productDetail.id")} value={detail.product.id} readOnly fullWidth />
+          <TextField label={t("productDetail.categoryClass")} value={detail.product.category_class} readOnly fullWidth />
+          <TextField label={t("productDetail.requiredOutput")} value={detail.product.required_output_value ?? ""} readOnly fullWidth />
+          <TextField label={t("productDetail.active")} value={t(detail.product.is_active ? "productDetail.activeYes" : "productDetail.activeNo")} readOnly fullWidth />
+          <TextField label={t("productDetail.createdAt")} value={detail.product.created_at} readOnly fullWidth />
+        </>}
       </form>}
     </>}
   </Drawer>
-  <ConfirmModal
+  {mode === "edit" && <ConfirmModal
     open={confirmDelete}
     title={t("productDetail.deleteTitle")}
     message={t("productDetail.deleteConfirm")}
@@ -185,5 +257,6 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
     danger
     onConfirm={() => void handleDelete()}
     onCancel={() => setConfirmDelete(false)}
-  /></>
+  />}
+  </>
 }
