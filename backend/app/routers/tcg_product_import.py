@@ -299,3 +299,54 @@ async def save_product_detail(
         )
     except ProductDetailError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+
+
+@router.delete("/tcg/products/detail/{product_code}", summary="商品マスタ削除（DETAIL-02）")
+async def delete_product_detail(
+    product_code: str,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> dict:
+    """商品マスタから商品を削除する。
+
+    FK制約:
+    - product_search_keywords, product_exclude_keywords: ON DELETE CASCADE（自動削除）
+    - analysis_results: product_id を NULL に設定してから削除
+    - inventory, parse_logs, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
+    """
+    # 商品を検索
+    row = await db.execute(
+        text("SELECT id FROM public.products WHERE product_code = :code"),
+        {"code": product_code},
+    )
+    product = row.fetchone()
+    if product is None:
+        raise HTTPException(status_code=404, detail="PRODUCT_NOT_FOUND")
+
+    product_id = product.id
+
+    # analysis_results の product_id を NULL に設定（NO ACTION制約の事前対処）
+    await db.execute(
+        text(f"UPDATE {TCG_SCHEMA}.analysis_results SET product_id = NULL WHERE product_id = :pid"),
+        {"pid": product_id},
+    )
+
+    # 商品を削除（keywords は CASCADE で自動削除）
+    try:
+        await db.execute(
+            text("DELETE FROM public.products WHERE id = :pid"),
+            {"pid": product_id},
+        )
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        # FK制約違反（inventory等が参照中）
+        raise HTTPException(
+            status_code=409,
+            detail="PRODUCT_IN_USE",
+        ) from exc
+
+    from app.services.tenant_context import reset_tenant_context
+    await reset_tenant_context(db)
+
+    return {"ok": True, "deleted": product_code}

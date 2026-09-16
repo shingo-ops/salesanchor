@@ -5,6 +5,7 @@ import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
 import { Select } from "../../components/Select";
 import { Button } from "../../components/Button";
+import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
 
 const classificationFields = ["division_id", "work_id", "manufacturer_id", "product_category_id"] as const;
@@ -54,6 +55,8 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
   const [blocked, setBlocked] = useState(false);
   const [confirmation, setConfirmation] = useState<"close" | "reload" | null>(null);
   const [reload, setReload] = useState(0);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(initial);
   useEffect(() => {
     let cancelled = false;
@@ -113,8 +116,26 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
     if (action === "reload") setReload(value => value + 1);
     else onClose();
   };
-  return <Drawer open={productCode !== null} onClose={requestClose} title={t("productDetail.title")}
+  async function handleDelete() {
+    if (!productCode || deleting) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/tcg/products/detail/${encodeURIComponent(productCode)}`);
+      onSaved();
+      onClose();
+    } catch (e: unknown) {
+      const detail = e instanceof ApiError && e.status === 409
+        ? t("productDetail.deleteInUse")
+        : t("productDetail.deleteError");
+      setError(detail);
+    } finally {
+      setDeleting(false);
+      setConfirmDelete(false);
+    }
+  }
+  return <><Drawer open={productCode !== null} onClose={requestClose} title={t("productDetail.title")}
     footer={draft && !confirmation ? <div className="product-detail__actions">
+      <Button type="button" variant="danger" onClick={() => setConfirmDelete(true)} disabled={deleting || saving}>{t("productDetail.delete")}</Button>
       <Button type="button" variant="secondary" onClick={requestClose} disabled={saving}>{t("common.close")}</Button>
       <Button type="submit" form={formId} disabled={saving || blocked || !dirty}>{t(saving ? "productDetail.saving" : "productDetail.save")}</Button>
     </div> : undefined}>
@@ -155,5 +176,14 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved }: {
         <TextField label={t("productDetail.createdAt")} value={detail.product.created_at} readOnly fullWidth />
       </form>}
     </>}
-  </Drawer>;
+  </Drawer>
+  <ConfirmModal
+    open={confirmDelete}
+    title={t("productDetail.deleteTitle")}
+    message={t("productDetail.deleteConfirm")}
+    confirmLabel={t("productDetail.deleteAction")}
+    danger
+    onConfirm={() => void handleDelete()}
+    onCancel={() => setConfirmDelete(false)}
+  /></>
 }
