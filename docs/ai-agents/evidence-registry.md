@@ -3188,3 +3188,7 @@ rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed2
 CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
 
 EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74のbackup/migrations/smoke/Verify全成功を親直接確認。PO続行指示受領、GO #3501保持。mainの商品統合へ合わせる既存6ファイルの補正を既存実装担当へ依頼。共通UUIDはtcg_uuidを維持しpublic.products数値idと混同しない。正式CI再確認まで検収保留、未マージ。
+
+EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を受領、追加「データのSSOTは遵守」。PR3494の既存試行記録を正本としUIカード発行/検査exit0、実装担当へ委任。依存PRの独立読取レビューはREVISE2件。設計/根拠はPMG既存handoff。新規保存表/バックエンド/本番変更0。
+
+EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
