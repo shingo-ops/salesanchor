@@ -153,10 +153,9 @@ jobs:
       #         テスト速度への影響はゼロです。
       #
       # 現在登録済みのテーブル:
-      #   public:    tenants / users / permissions / tenant_discord_config / inventory / products
+      #   public:    tenants / users / permissions / tenant_discord_config / inventory
       #   tenant_001: role_permissions / staff / leads / deals / message_translations (tenant_id ③-a 適用後)
-      #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）だが、
-      #      products を参照する SQL migration のために最小定義を事前登録する
+      #   ※ public.products は migrate_inventory_sprint1.py が作成（Sprint 1 ステップ）
       #   ※ public.inventory は PUBLIC_SQL セクションに最小定義を登録（migration 081 相当）
       #   ※ tenant_001.own_inventory は 20260604_140000_create_own_inventory.sql が CREATE（移行自体が作成）
       # ──────────────────────────────────────────────────────────────────────
@@ -474,17 +473,9 @@ jobs:
           );
           INSERT INTO public.tenant_settings (tenant_id) VALUES (1) ON CONFLICT DO NOTHING;
 
-          -- public.products（migrate_inventory_sprint1.py が本来作成するテーブルの最小定義）
-          -- migration-test で products を参照する SQL migration が動作するために必要
-          CREATE TABLE IF NOT EXISTS public.products (
-              id          SERIAL PRIMARY KEY,
-              product_code VARCHAR(50) UNIQUE,
-              name        VARCHAR(255) NOT NULL DEFAULT '',
-              work_id     UUID,
-              is_active   BOOLEAN NOT NULL DEFAULT TRUE,
-              created_at  TIMESTAMPTZ DEFAULT NOW(),
-              updated_at  TIMESTAMPTZ DEFAULT NOW()
-          );
+          -- NOTE: public.suppliers / public.products は migrate_inventory_sprint1.py が
+          --       CREATE TABLE するため、ここでは作成しない。
+          --       スクリプト実行前に列が欠けた状態で存在するとエラーになる。
 
           -- public.inventory: migration 081 で作成。ADR SA-05 の source_kind 追加 migration が
           --   ALTER TABLE public.inventory を実行するため、前提として最小定義を登録する。
