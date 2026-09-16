@@ -43,9 +43,7 @@ export default function TcgProductMasterPage() {
     let url: string | undefined;
     const anchor = document.createElement("a");
     try {
-      const params = new URLSearchParams({ query: filter.query });
-      if (filter.workId) params.set("work_id", filter.workId);
-      const blob = await api.getBlob(`/tcg/products/export?${params}`);
+      const blob = await api.getBlob("/tcg/products/export");
       url = URL.createObjectURL(blob); anchor.href = url;
       anchor.download = "tcg-products-update.csv";
       document.body.appendChild(anchor); anchor.click();
