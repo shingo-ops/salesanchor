@@ -534,3 +534,8 @@ CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。�
 公開CSVをTLS検証有効のcurlで再取得し、612行/12列を確認。状態はSealed box418、No shrink box27、Damaged sealed box79、Damaged case2、Case77、Searched pack7、Unsearched pack1、Opened box1。初回607行と異なるため、配備後の確認に初回の行数・価格等を現行値として流用しない。差分を生じさせた処理主体は未確認。本セッションからシートへの書き込みは0。
 
 CSV SHA256: 26b0ced2a8b8c88f83fdbcfad4e8f5ce22d853797cfa3c5e5744704d08c9cce0。保存/tmp/sa-result-order-sheet-current.csv、集計とローカル取得時刻はresult-order-evidence.jsonのsheet_recheck。Python3.14 urllibの初回取得はCA証明書エラーで失敗したため、証明書検証を無効化せずOSのcurlで取得した。
+
+## Gemini試行記録SSOT・画面接続（2026-09-14）
+公式new-worktreeでrelease/gemini-error-visibilityをorigin/main7b3aea8cから作成。reaper読取と公式実行とも削除対象0。PR3494（252d240f）に既存extraction_attemptsと管理者一覧APIがあることを発見し、別保存先の案は撤回。read_attempts:177-199/router:111-127の概要一覧だけを表示する設計。独立担当の核心コード読取REVISE: migration:74-94のFK/同名CHECK定義検査不足、recorder:140/155-169のPARSED_TOO_LARGE時実測サイズ未保存。試験再実行はしておらず、既存CI成功と区別する。UI限定設計はroot自己審査APPROVE、card-error-visibility.mdを正式lint exit0で担当へ交付。既存PRのmerge/書換えや番号付きGO発行はなし。
+
+UI完了: 担当unit54/54、build/check exit0、390/1440px E2E2/2 exit0。初回E2Eの旧文言fixture timeoutは修正して再検証。独立レビューのコピー通知競合を修正・再審査APPROVE、rootが主要4ファイルのSHA一致を直接確認。対象正本のデータ書込0、現在状態の推定0。製品backend/DB/本番変更0。
