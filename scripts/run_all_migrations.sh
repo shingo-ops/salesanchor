@@ -667,3 +667,6 @@ run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql
 
 # work_id NOT NULL 制約追加
 run_sql migrations/20260916_130000_work_id_not_null.sql
+
+# Gemini v5: extraction_items に resolved_product_code 列追加
+run_sql migrations/20260917_010000_add_product_code_to_extraction.sql
