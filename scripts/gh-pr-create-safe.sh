@@ -23,6 +23,24 @@ if [ -n "${GITHUB_ACTIONS}" ]; then
   exit $?
 fi
 
+# ── ローカル process-artifacts チェック（CI往復を削減） ────────────────────
+# PR本文の書式（触るファイル・削除するファイル・GO記録）をCIと同じチェッカーで事前検証する。
+# check-process-artifacts.js がローカルで実行できない場合（node未インストール等）はスキップして
+# CI側で捕捉する（安全側に倒す）。
+if command -v node >/dev/null 2>&1 && [ -f "scripts/check-process-artifacts.js" ]; then
+  echo "🔍 process-artifacts ローカルチェックを実行中..."
+  if ! node scripts/check-process-artifacts.js; then
+    echo ""
+    echo "🚫 process-artifacts チェックに失敗しました"
+    echo "   PR本文の「触るファイル」「削除するファイル」「GO記録」を確認してください"
+    echo "   参照: docs/ai-agents/executor-checklist.md §0"
+    echo ""
+    exit 1
+  fi
+  echo "✅ process-artifacts ローカルチェック通過"
+  echo ""
+fi
+
 # ── 引数パース: --base と --head の値を抽出 ────────────────────────────────
 BASE_VALUE=""
 HEAD_VALUE=""
