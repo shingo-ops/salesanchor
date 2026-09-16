@@ -330,3 +330,62 @@ jobs:
             exit 1
           fi
           echo "✅ タイムスタンプ重複なし"
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック6（新規）: DROP COLUMN / DROP TABLE — ADR 承認必須
+      #
+      # 背景: backend/CLAUDE.md「Migration は additive-only（追加専用）」ルールにより
+      #       カラム削除・テーブル削除は原則禁止、ADR 承認が必須。
+      #       しかし機械的に止める仕組みがなく、ルールを知らない AI が
+      #       DROP を含む migration を出しても CI は素通りしていた。
+      #       ADR-1002 Phase C 振り返りで対策として特定。
+      # ──────────────────────────────────────────────────────────────────────
+      - name: DROP COLUMN / DROP TABLE — ADR 承認必須チェック
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # PR差分から追加行のみ抽出（削除行・SQLコメント行・Pythonコメント行を除外）
+          # 対象: migrations/*.sql と scripts/migrate_*.py
+          DESTRUCTIVE=$(git diff "$BASE" "$HEAD" -- 'migrations/*.sql' 'scripts/migrate_*.py' \
+            | grep '^+' | grep -v '^+++' \
+            | grep -v '^\+[[:space:]]*--' \
+            | grep -v '^\+[[:space:]]*#' \
+            | grep -iE 'DROP[[:space:]]+(COLUMN|TABLE)' || true)
+
+          if [ -z "$DESTRUCTIVE" ]; then
+            echo "✅ DROP COLUMN / DROP TABLE なし — チェック6 スキップ"
+            exit 0
+          fi
+
+          echo "🔍 破壊的変更を検出:"
+          echo "$DESTRUCTIVE"
+          echo ""
+
+          # PR本文からADR参照を確認
+          PR_BODY=$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq '.body')
+          ADR_REF=$(echo "$PR_BODY" | grep -oiE 'ADR-[0-9]+' | head -1 || true)
+
+          if [ -n "$ADR_REF" ]; then
+            echo "✅ PR本文に ADR 参照を確認: $ADR_REF"
+            echo "   ⚠️  ADR の承認状態は人間が確認してください"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック6)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "DROP COLUMN / DROP TABLE は破壊的変更です。"
+          echo "backend/CLAUDE.md の「Migration は additive-only」ルールにより"
+          echo "ADR 承認が必須です。"
+          echo ""
+          echo "【対応手順】"
+          echo "1. docs/adr/ に ADR を起案して PO 承認を得る"
+          echo "2. PR 本文に ADR-NNN を明記する"
+          echo ""
+          echo "参考: backend/CLAUDE.md「## Migration は additive-only（追加専用）」"
+          echo "前例: ADR-089（DROP customers）、ADR-1002（DROP tcg_uuid）"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
