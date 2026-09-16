@@ -22,8 +22,8 @@ from tests.test_tcg_work_matching_integration import MIGRATIONS, SCHEMA, provisi
 from tests.test_tcg_work_matching_integration import pg as pg
 
 MIGRATION = MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql"
-HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID"
-VALID = HEADER + "\n◆原文商品｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜"
+HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE"
+VALID = HEADER + "\n◆原文商品｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜｜"
 RAW = "◆原文商品 2BOX 1,000円 未開封 翌日発送"
 
 
@@ -392,7 +392,7 @@ def test_fixed_scale_44_attempts_storage_budget(pg, monkeypatch, capsys):
         sid, jid = source(pg)
         raw = "\n".join(f"◆匿名商品{i} 2BOX 1,000円 未開封 翌日発送" for i in range(count))
         response = HEADER + "\n" + "\n".join(
-            f"◆匿名商品{i}｜2｜1,000円｜BOX｜未開封｜翌日発送｜L{i+1:04d}｜｜｜" for i in range(count)
+            f"◆匿名商品{i}｜2｜1,000円｜BOX｜未開封｜翌日発送｜L{i+1:04d}｜｜｜｜" for i in range(count)
         )
         with pg[0].cursor() as cur:
             cur.execute(f"UPDATE {SCHEMA}.source_messages SET raw_text=%s WHERE id=%s", (raw, sid))
