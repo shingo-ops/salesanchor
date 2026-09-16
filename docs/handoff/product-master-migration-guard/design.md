@@ -59,6 +59,17 @@
 | 正規表現が広すぎて関係ない SQL をブロック | テーブル名を完全一致（`products` 等 4 つのみ）で検出。`product_categories` 等は対象外 |
 | 初期データ投入ができなくなる | 新規テナント立ち上げ時は CSV 取り込みを使う |
 
+## 外部・過去事例の参照と我々への応用
+
+自プロジェクト内の前例のみ。外部事例は不要。
+
+- migration-guard.yml チェック 1〜6 が同一方式で稼働中。チェック 6（DROP COLUMN guard）は ADR-1002 Phase C で追加し、PR #3526 で main マージ済み。同じ grep + exit 1 パターンを踏襲する。
+- ADR-025（手動 DB INSERT 原則禁止）が方針の先行決定。本 ADR-155 はその延長で、CI 自動ブロックによる技術的強制を追加する。
+
+## 維持の仕組み
+
+守り手: `.github/workflows/migration-guard.yml`（CI 自動実行 — PRごとに毎回チェック）
+
 ## 参照
 
 - recon: `docs/handoff/product-master-migration-guard/recon.md`
