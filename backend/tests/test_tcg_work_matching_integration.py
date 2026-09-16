@@ -289,7 +289,7 @@ def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=F
             SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
                        (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
         cursor.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
-    header = HEADER + ("｜RESOLVED_WORK_ID" if work_id_mode else "")
+    header = HEADER + ("｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE" if work_id_mode else "")
     response = header + "\n" + "\n".join("｜".join(row) for row in records)
     if not work_id_mode:
         # Keep legacy 9-column end-to-end regressions while new jobs use v4.
@@ -1028,7 +1028,7 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_
         wid = str(cursor.fetchone()[0])
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
-        [record("◆EB01", 1) + [wid]], work_id_mode=True)
+        [record("◆EB01", 1) + [wid, ""]], work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s", (saved_version, jid))
@@ -1110,7 +1110,7 @@ def test_space_product_match_saved_in_isolated_database(
         work_id = str(cursor.fetchone()[0])
     _, jobid, result = run_message(connection, engine, monkeypatch,
         name + " 1BOX 1000円 " + state + " " + memo,
-        [record(name, 1, state=state, memo=memo) + [work_id]], work_id_mode=True)
+        [record(name, 1, state=state, memo=memo) + [work_id, ""]], work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == 1
     assert result["analysis_stats"]["pid_resolved"] == int(expected == "resolved")
     with connection.cursor() as cursor:
@@ -1562,7 +1562,7 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         ("30th FUTURISTIC", "", "LIMITED special EDITION", True),
     ]
     raw = "\n".join(name + " 1BOX 1000円 " + state + " " + memo for name, state, memo, _ in cases)
-    records = [record(name, line, state=state, memo=memo) + [str(work)]
+    records = [record(name, line, state=state, memo=memo) + [str(work), ""]
                for line, (name, state, memo, _) in enumerate(cases, 1)]
     _, jobid, result = run_message(connection, engine, monkeypatch, raw, records, work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == len(cases)
