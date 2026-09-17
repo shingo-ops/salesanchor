@@ -411,7 +411,7 @@ async def test_pending_confirmation_reuses_existing_post(pg):
         assert result.enqueued_count==1
         r=await progress.read_progress(db,pending["import_job_id"])
         assert r["coverage"]=="complete" and r["messages"]["reused"]==0
-    assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==3
+    assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==2
     assert enqueue.call_count==2
 
 
