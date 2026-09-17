@@ -46,14 +46,31 @@ supplier_channels.supplier_id (INTEGER) → public.suppliers.id (SERIAL)
 
 ### 原則
 
-- テーブル構造の変更のみ。値のINSERT/UPDATE/DELETEは行わない
-- 例外: supplier_channels.supplier_id のデータマッピング（FK型変更に伴う一回限りの移行処理）
+- 日常のデータ管理: アプリ画面とCSVで人間が行う。migrationでの値操作は禁止
+- 初回の引っ越し: tcg_suppliers → public.suppliers へのデータコピーは一回限りの移行処理として例外的にmigrationで行う（ADR-090の商品マスタ中央化と同じ方法）
+- FK型変更: supplier_channels.supplier_id のUUID→INTEGERマッピングは構造変更に伴う付随処理
 
 ### 手順
 
 ```sql
--- 1. supplier_channels.supplier_id を UUID → INTEGER に変更
---    tcg_suppliers.id → public.suppliers.id へのマッピング
+-- 1. tcg_suppliers のデータを public.suppliers に引っ越し（一回限り）
+--    code SP0188 → supplier_code SP-00188
+--    name → name（ビジネス名）と line_name（LINE照合用）の両方に設定
+INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
+SELECT
+  'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
+  ts.name,
+  ts.name,
+  'corporate',
+  ts.is_active,
+  ts.created_at,
+  NOW()
+FROM {schema}.tcg_suppliers ts
+ON CONFLICT (supplier_code) DO UPDATE SET
+  line_name = EXCLUDED.line_name
+WHERE public.suppliers.line_name IS NULL;
+
+-- 2. supplier_channels.supplier_id を UUID → INTEGER に変更
 ALTER TABLE {schema}.supplier_channels
   ADD COLUMN supplier_int_id INTEGER;
 
@@ -64,7 +81,7 @@ UPDATE {schema}.supplier_channels sc
     ON ps.supplier_code = 'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0')
   WHERE sc.supplier_id = ts.id;
 
--- supplier_int_id が NULL の行がないことを確認（マッピング漏れ防止）
+-- マッピング漏れがないことを確認（1件でもNULLがあれば停止）
 DO $$ BEGIN
   IF EXISTS (
     SELECT 1 FROM {schema}.supplier_channels WHERE supplier_int_id IS NULL
@@ -85,15 +102,16 @@ ALTER TABLE {schema}.supplier_channels
   ADD CONSTRAINT supplier_channels_supplier_id_fkey
     FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE CASCADE;
 
--- 2. 別名テーブル廃止
+-- 3. 別名テーブル廃止
 DROP TABLE IF EXISTS public.line_supplier_source_names;
 ```
 
-### 前提条件
+### 補足: 初回引っ越しと日常管理の区別
 
-- `tcg_suppliers` の全仕入元が `public.suppliers` に `line_name` 付きで登録済みであること
-- 登録はアプリ画面またはCSVで行う（migrationではない）
-- `supplier_code` のマッピング: `SP0188` → `SP-00188`
+| 区分 | 方法 | 理由 |
+|------|------|------|
+| 初回引っ越し（この migration） | 自動スクリプトで1回だけ | データが無い状態では配線を繋ぎ直せない。商品マスタ（ADR-090）でも同じ方法を採用 |
+| 以降の追加・修正・削除 | アプリ画面 + CSV | 人間が日常的に管理。migrationでの値操作はCIガード（フェーズ5）で禁止 |
 
 ## コード変更（12ファイル + 5テスト）
 
