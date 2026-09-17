@@ -217,6 +217,7 @@ async def test_invalidated_at_excluded_in_rules():
     db = AsyncMock()
     db.execute = AsyncMock()
     db.commit = AsyncMock()
+    db.begin_nested = MagicMock(return_value=AsyncMock())
 
     await save_corrections(
         db,

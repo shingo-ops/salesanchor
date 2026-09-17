@@ -414,6 +414,7 @@ class TestFlow2InvalidationOnCorrection(TestCase):
 
         db = AsyncMock()
         db.execute = AsyncMock()
+        db.begin_nested = MagicMock(return_value=AsyncMock())
         db.commit = AsyncMock()
 
         extraction_item_id = str(uuid.uuid4())
@@ -491,6 +492,7 @@ class TestFlow2InvalidationOnCorrection(TestCase):
         db = AsyncMock()
         db.execute = AsyncMock()
         db.commit = AsyncMock()
+        db.begin_nested = MagicMock(return_value=AsyncMock())
 
         self._run_async(save_corrections(
             db,
