@@ -74,16 +74,18 @@ async def save_corrections(
             # 無効化された結果は配信クエリから除外される（invalidated_at IS NULL が条件）
             # 設計書: sold-out-rules-design.md §14.1.1
             # テーブル未作成時（マイグレーション未適用）は安全にスキップ
+            # SAVEPOINT で囲む: テーブル不在エラーが外側トランザクションを壊さないため
             try:
-                await db.execute(
-                    text(
-                        f"UPDATE {_SCHEMA}.analysis_rule_run_results "
-                        "SET invalidated_at = NOW() "
-                        "WHERE extraction_item_id = CAST(:eid AS uuid) "
-                        "  AND invalidated_at IS NULL"
-                    ),
-                    {"eid": extraction_item_id},
-                )
+                async with db.begin_nested():
+                    await db.execute(
+                        text(
+                            f"UPDATE {_SCHEMA}.analysis_rule_run_results "
+                            "SET invalidated_at = NOW() "
+                            "WHERE extraction_item_id = CAST(:eid AS uuid) "
+                            "  AND invalidated_at IS NULL"
+                        ),
+                        {"eid": extraction_item_id},
+                    )
             except Exception:
                 pass
 
