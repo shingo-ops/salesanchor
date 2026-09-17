@@ -111,7 +111,7 @@ async def link_pending(db, data):
         LIMIT 10001'''), {'times': times})).mappings().all()
     if len(sources) > 10000:
         raise ValueError('evidence query truncated')
-    proof = history_proof(messages, name, data['supplier_code'], suppliers, sources)
+    history_proof(messages, name, data['supplier_code'], suppliers, sources)
     await db.execute(text('UPDATE public.suppliers SET line_name=:name WHERE id=:supplier_id'),
         {'name': name, 'supplier_id': target[0]['id']})
     tagged = [{**m, '_line_source_format': MARKER} for m in messages]
