@@ -22,20 +22,8 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
-
-_PUBLIC_SUPPLIERS_DDL = """
-CREATE TABLE IF NOT EXISTS public.suppliers (
-    id            SERIAL PRIMARY KEY,
-    supplier_code VARCHAR(20) UNIQUE,
-    name          VARCHAR(255) NOT NULL,
-    line_name     VARCHAR(255),
-    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
-    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
-);
-"""
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="PMG_TEST_PG_URL must identify a disposable test database")

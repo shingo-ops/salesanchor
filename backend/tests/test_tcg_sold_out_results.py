@@ -21,7 +21,7 @@ from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.routers import tcg_analysis_review as routes
 from app.services import tcg_sold_out_results_svc as service
-from tests.test_tcg_import_progress_pg import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 from tests.test_tcg_work_matching_integration import _rewire_keyword_fks
 
 STAMP = datetime(2026, 9, 14, tzinfo=timezone.utc)

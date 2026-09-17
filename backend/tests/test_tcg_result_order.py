@@ -15,7 +15,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_import_progress as progress
 from tests.test_tcg_condition_review import pg as condition_pg
 from tests.test_tcg_condition_review import request, save, seed
-from tests.test_tcg_import_progress_pg import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 
 # Reuse the existing isolated-CI database fixture with its safety checks intact.
 pg = condition_pg
