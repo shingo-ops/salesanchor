@@ -126,7 +126,7 @@ async def test_link_writes_alias_and_pending_metadata_but_not_master_or_source_m
     response = await svc.link_pending(db, data())
     assert response == {'status': 'linked', 'supplier_code': 'SP0001', 'linked_message_count': 1, 'remaining_count': 1}
     queries = [str(c.args[0]) for c in db.execute.call_args_list]
-    assert not any('UPDATE' in q and 'tcg_suppliers' in q for q in queries)
+    assert not any('UPDATE' in q and 'public.suppliers' in q for q in queries)
     assert not any('INSERT' in q and 'source_messages' in q for q in queries)
     last = db.execute.call_args.args[1]
     assert json.loads(last['names']) == ['Unknown']

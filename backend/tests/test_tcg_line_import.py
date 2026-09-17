@@ -535,7 +535,7 @@ async def test_source_message_insert_before_update_supersede():
         if "import_jobs" in sql and "raw_sha256" in sql:
             # 冪等化チェック: 未取り込み
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             # サプライヤー一覧（プレフィックス一致で "仕入元A" を解決）
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
@@ -603,7 +603,7 @@ async def test_enqueue_called_after_commit():
         sql = str(stmt)
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -741,7 +741,7 @@ async def test_received_at_stored_as_jst_in_insert():
             received_at_params.append(params["received_at"])
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -860,7 +860,7 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
         result = MagicMock()
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None          # 未取り込み
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = supplier_rows
         elif "supplier_channels" in sql and "SELECT" in sql:
             result.fetchone.return_value = ("test-channel-id",)

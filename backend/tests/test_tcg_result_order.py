@@ -15,6 +15,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_import_progress as progress
 from tests.test_tcg_condition_review import pg as condition_pg
 from tests.test_tcg_condition_review import request, save, seed
+from tests.test_tcg_import_progress_pg import _PUBLIC_SUPPLIERS_DDL
 
 # Reuse the existing isolated-CI database fixture with its safety checks intact.
 pg = condition_pg
@@ -73,9 +74,13 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
                            "FROM public.products WHERE id=%s RETURNING id",
                            (f"PM09{n+10}", date, pg["product"]))
             products.append(str(cursor.fetchone()[0]))
-        cursor.execute("INSERT INTO tenant_004.tcg_suppliers(code,name,is_active) "
-                       "VALUES ('SP9999','Earlier Supplier',true) RETURNING id")
-        supplier = str(cursor.fetchone()[0])
+        cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+        # Sprint 1: run supplier SSOT migration to convert supplier_channels.supplier_id UUID→INTEGER
+        sprint1 = MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql"
+        cursor.execute(sprint1.read_text())
+        cursor.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                       "VALUES ('SP-09999','Earlier Supplier','Earlier Supplier','corporate',true) RETURNING id")
+        supplier = cursor.fetchone()[0]
         cursor.execute("INSERT INTO tenant_004.supplier_channels(supplier_id,channel,is_active) "
                        "VALUES (%s,'line',true) RETURNING id", (supplier,))
         channel = str(cursor.fetchone()[0])
@@ -220,7 +225,7 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                 # This does not change production settings or the 10-second bound.
                 for table in ("source_messages", "extraction_jobs", "extraction_items", "analysis_results",
                               "import_jobs", "import_job_messages", "conditions",
-                              "item_corrections", "supplier_channels", "tcg_suppliers", "tcg_series"):
+                              "item_corrections", "supplier_channels", "tcg_series"):
                     cursor.execute(f"ANALYZE tenant_004.{table}")
                 cursor.execute("ANALYZE public.products")
             cursor.execute("SELECT relname,reltuples FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace "
