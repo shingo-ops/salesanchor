@@ -26,6 +26,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 SCHEMA = "tenant_901"
@@ -214,6 +215,7 @@ $rw$;
 
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
+    cursor.execute(_PUBLIC_SUPPLIERS_DDL)
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
