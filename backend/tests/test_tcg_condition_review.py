@@ -61,6 +61,8 @@ def pg():
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
+            # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+            cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             provision(cursor, "tenant_006")
             cursor.execute("INSERT INTO tenant_006.conditions (code,canonical,is_active) VALUES ('CN0099','untouched',true)")
             cursor.execute("INSERT INTO tenant_004.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) VALUES ('CN0003','Sealed box',4,'箱系','未開封','',true) RETURNING id")

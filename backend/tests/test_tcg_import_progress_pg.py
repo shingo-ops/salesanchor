@@ -66,6 +66,9 @@ async def pg(monkeypatch):
                 provision_tcg(c,schema)
                 c.execute(_rewire_keyword_fks(schema))
                 c.execute(f"INSERT INTO {schema}.tcg_suppliers(code,name,is_active) VALUES ('SP1','Alice',true)")
+                # Insert supplier_channels row with UUID supplier_id (before Sprint 1 migration converts it)
+                c.execute(f"INSERT INTO {schema}.supplier_channels(supplier_id,channel,is_active) "
+                          f"SELECT id,'line',true FROM {schema}.tcg_suppliers WHERE code='SP1'")
             # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             c.execute(sprint1.read_text())
@@ -155,7 +158,11 @@ async def test_pending_commit_and_concurrent_commit(pg):
     assert duplicate["review_status"]=="pending_review"
     assert count(conn,"source_messages")==0
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99999','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     async def commit():
         async with AsyncSession(engine) as db:
             try:
@@ -316,7 +323,11 @@ async def test_pending_rollback_retains_pending_payload(pg,monkeypatch):
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99998','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     original=svc._link_message
     async def fail(*args):
         await original(*args)
@@ -389,7 +400,11 @@ async def test_pending_confirmation_reuses_existing_post(pg):
     await upload(engine,export())
     pending=await upload(engine,export(sender="Bob"))
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99997','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     async with AsyncSession(engine) as db:
         result=await routes.commit_pending_job(pending["import_job_id"],db)
         assert result.enqueued_count==0

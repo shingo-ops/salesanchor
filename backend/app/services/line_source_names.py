@@ -103,7 +103,7 @@ async def link_pending(db, data):
         raise ValueError('active nonconflicting supplier required')
     times = sorted({datetime.fromisoformat(m['timestamp']).replace(tzinfo=JST)
                     for m in messages if m['display_name'] == name})
-    sources = (await db.execute(text(f'''SELECT s.code,sm.raw_text,sm.line_posted_at
+    sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
         FROM {TCG_SCHEMA}.source_messages sm
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
         JOIN public.suppliers ps ON ps.id=sc.supplier_id
@@ -114,8 +114,10 @@ async def link_pending(db, data):
     history_proof(messages, name, data['supplier_code'], suppliers, sources)
     await db.execute(text('UPDATE public.suppliers SET line_name=:name WHERE id=:supplier_id'),
         {'name': name, 'supplier_id': target[0]['id']})
+    # Re-fetch suppliers so the updated line_name is reflected in resolve_android
+    suppliers_updated = (await db.execute(text('SELECT id, supplier_code AS code, line_name AS name FROM public.suppliers WHERE is_active=TRUE AND line_name IS NOT NULL'))).mappings().all()
     tagged = [{**m, '_line_source_format': MARKER} for m in messages]
-    resolved, missing = resolve_android(tagged, suppliers, await load_aliases(db))
+    resolved, missing = resolve_android(tagged, suppliers_updated, await load_aliases(db))
     mapped = [m for m in resolved if m['display_name'] == name]
     if not mapped or any(m['sp_code'] != data['supplier_code'] for m in mapped):
         raise ValueError('alias resolution verification failed')

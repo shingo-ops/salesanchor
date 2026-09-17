@@ -222,6 +222,8 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / DICTIONARY).read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
     cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
+    # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+    cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
 
 
 @pytest.fixture

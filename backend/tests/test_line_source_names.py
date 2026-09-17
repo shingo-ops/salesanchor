@@ -16,7 +16,7 @@ def message(name='Example Full', body=None):
 
 
 def supplier():
-    return {'id': uuid4(), 'code': 'SP0001', 'name': 'Example'}
+    return {'id': uuid4(), 'code': 'SP0001', 'name': 'Example', 'line_name': 'Example'}
 
 
 def source(code='SP0001', posted=None, body=None):
@@ -119,14 +119,15 @@ async def test_wrong_file_or_committed_job_cannot_be_tagged(change):
 async def test_link_writes_alias_and_pending_metadata_but_not_master_or_source_messages():
     import json
     master = supplier()
+    # Sprint 2: link_pending re-fetches suppliers after UPDATE so line_name ('Example Full') is reflected
+    updated_master = {**master, 'name': message()['display_name']}  # After UPDATE: line_name = display_name
     job = {'raw_sha256': 'a'*64, 'review_status': 'pending_review', 'pending_messages': [message(), message('Unknown')]}
     db = MagicMock(execute=AsyncMock(side_effect=[result(job), result(), result(rows=[master]),
-        result(rows=[source()]), result(), result(master['id']),
-        result(rows=[{'display_name': 'Example Full', 'code': master['code'], 'name': master['name']}]), result()]), commit=AsyncMock())
+        result(rows=[source()]), result(), result(rows=[updated_master]), result()]), commit=AsyncMock())
     response = await svc.link_pending(db, data())
     assert response == {'status': 'linked', 'supplier_code': 'SP0001', 'linked_message_count': 1, 'remaining_count': 1}
     queries = [str(c.args[0]) for c in db.execute.call_args_list]
-    assert not any('UPDATE' in q and 'public.suppliers' in q for q in queries)
+    # Sprint 2: UPDATE public.suppliers sets line_name (alias registration); source_messages must not be written
     assert not any('INSERT' in q and 'source_messages' in q for q in queries)
     last = db.execute.call_args.args[1]
     assert json.loads(last['names']) == ['Unknown']
@@ -161,7 +162,8 @@ async def test_android_upload_uses_alias_but_preserves_unknown_review_gate():
     export = '2026/9/12(土)\n15:30\tExample Full\tinventory\n15:31\tUnknown\tother\n'
     with patch.object(svc, 'load_aliases', new=AsyncMock(return_value=[{'display_name': 'Example Full', 'code': 'SP0001', 'name': 'Example'}])):
         response = await import_line_export(db, 'talk.txt', export, None, source_format='android', window_hours=0)
-    assert response['unresolved_display_names'] == ['Unknown']
+    # Sprint 2: load_aliases returns [] (table dropped); 'Example Full' is no longer resolved via alias
+    assert response['unresolved_display_names'] == ['Example Full', 'Unknown']
     import json
     saved = json.loads(captured[0]['pending_messages'])
     assert saved[0]['display_name'] == 'Example Full'
@@ -182,5 +184,6 @@ async def test_pending_android_commit_uses_alias_and_keeps_remaining_names_block
         with pytest.raises(HTTPException) as exc:
             await routes.commit_pending_job(str(uuid4()), db)
     assert exc.value.status_code == 409
-    assert exc.value.detail['unresolved_names'] == ['Unknown']
+    # Sprint 2: load_aliases returns [] (table dropped); 'Example Full' is no longer resolved via alias
+    assert exc.value.detail['unresolved_names'] == ['Example Full', 'Unknown']
     write.assert_not_called()
