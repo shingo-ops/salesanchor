@@ -85,6 +85,7 @@ import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
 import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
+import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -299,6 +300,11 @@ function App() {
                   <Route
                     path="/super-admin/tcg-line-import"
                     element={<TcgLineImportPage />}
+                  />
+                  {/* CARD-ANALYSIS-RULE-P6-UI: 解析管理（完売ルール・日付ルール） (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/analysis-rules"
+                    element={<AnalysisRulesPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>

@@ -146,6 +146,12 @@
 |------|------|------|------|------|------|
 | 商品マスタ一覧・CSV画面 | Agent | PR #3422はdd9d3abfマージ・deploy34558334380成功、公開資産の2ルート/health確認済み。PO指定で既存サイドメニューを解析精度管理直下へ移動 | 配置変更PR #3429提出、eslint/build成功。最新CIと番号付きGOを確認して本番反映。CSV試行/44件登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
 
+## LINE在庫・〆・混在投稿の商品単位反映（2026-09-13）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| LINEの〆による他商品消失を防ぐ設計 | stock_contract_01 / 設計担当 | PR3479公開HEAD9711cc40はCI3267成功/95skip/1失敗。残る接続不備を7b172c46でローカル修正・静的検査成功 | PO離席指示に従い追加push/PR更新前で停止。実PG再検証は未実施、全体検収REVISE。境界変更後に正式カードと8群再CI | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-LOCAL-READY | 2026-09-13 |
+
 
 ## 商品CSVサンプルと登録者情報（2026-09-11）
 
