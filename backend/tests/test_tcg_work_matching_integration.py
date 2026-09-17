@@ -1441,9 +1441,11 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
     # All 3 PM0297 keywords (1 search + 2 exclude) are skipped gracefully via RAISE NOTICE.
     new = [r for r in after["public", "products"] if r not in before["public", "products"]]
     assert len(new) == 0, f"Migration must not create new products (ADR-155), got: {[r['product_code'] for r in new]}"
-    # search_keywords: PM0297 search skipped (+0). exclude_keywords: 12 for PM0263-PM0284 (+12).
+    # search_keywords: PM0297 search skipped (+0). exclude_keywords: 11 for PM0263-PM0284.
+    # PM0263 カードセット already added by cardset_exclusion (skip). PM0264-PM0265 (2) + PM0276-PM0284 (9) = 11 new.
+    # PM0297 keywords skipped (product absent, ADR-155).
     assert len(after["tenant_004", "product_search_keywords"]) - len(before["tenant_004", "product_search_keywords"]) == 0
-    assert len(after["tenant_004", "product_exclude_keywords"]) - len(before["tenant_004", "product_exclude_keywords"]) == 12
+    assert len(after["tenant_004", "product_exclude_keywords"]) - len(before["tenant_004", "product_exclude_keywords"]) == 11
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
     with Session(engine) as session:
         search, exclude = analyzer.load_product_keywords(session)
