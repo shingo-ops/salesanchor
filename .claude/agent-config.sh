@@ -20,6 +20,11 @@
 # scripts/validate-pr-ownership.sh と validate-worktree-start.sh が参照する
 AGENT_WORKTREE_BASE="${HOME}/worktrees"
 
+# ── Claude Code EnterWorktree 用の第2許可パス ────────────────────────────────
+# Claude Code の EnterWorktree ツールは <repo>/.claude/worktrees/ に作成する
+# new-worktree.sh 経由でない worktree もこのパス配下なら許可する
+AGENT_WORKTREE_BASE_ALT="${MAIN_REPO_ROOT:-.}/.claude/worktrees"
+
 # ── フィーチャーブランチのベース ─────────────────────────────────────────────
 # git rebase・divergence チェックで使用するブランチ名
 # origin/$AGENT_BASE_BRANCH との乖離を validate-pr-ownership.sh が確認する

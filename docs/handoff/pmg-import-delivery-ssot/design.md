@@ -983,3 +983,389 @@ rootが直接見た画像: /tmp/reports/pmg-progress-visual/tcg-import-workflow-
 表示改善のコード/視覚レビューAPPROVE（root、実装Terraと区別）。親の新履歴/切替REVISEは継続。設計・実装・ローカル検証完了、PR/CI確認へ進む。番号付きGOは創作せず、本番反映済みとは宣言しない。
 
 PR #3424提出済み: https://github.com/shingo-ops/salesanchor/pull/3424 。製品HEAD 0856c66f984e6ddd815168019513d5f4364356b8で40 checks成功・8 skipped、process-artifacts gateのみ失敗（初回の見出し不一致はPR本文修正済み、再実行job103077880628はGO記録未受領だけを報告）。GO #3424未受領のためマージ/本番反映未実施。包括的な事前承認を番号付きGOへ代筆しない。次はGO受領後に最新HEADのCI確認。
+
+## 2026-09-13 3段階カードCTAの製品実装設計
+
+### 目的・承認・対象
+
+PO原文「この表示に変更してくれ」を受領。直前に確認用error.htmlで提示した取り込み/抽出/解析結果の3枚と下部CTAを製品へ反映する実装依頼。PO本人のマージGO・本番反映GOは別。mode: handoff（本書既存front matter）で本節の契約を引き渡す。再抽出デモや架空データは製品に入れない。
+
+目的: 各段階の件数と次の確認操作を同じカード内で結び付ける。取込の44投稿、抽出の44job、解析結果の762明細の異なる単位を保持し、成功37/対象なし6/失敗1を44成功と誤表示しない。例示数値をハードコードしない。
+
+対象: ImportWorkflowPanel、専用CSS/API/hooks、ja/en辞書、必要な取込スコープのSELECT endpoint/既存itemsフィルター拡張、回帰試験。対象外: DB migration、認証規則変更、解析アルゴリズム、配信候補集計修正、ダッシュボード全体、再抽出POST・配信POST、原文と確定商品マスタの全面比較機能。
+
+### Why・既存との照合
+
+ImportWorkflowPanel.tsx:68-87は上部actionsと3stageが別領域、エラーCTAはitemsをextraction_errorで絞るだけ。tcg_import_progress.py:25-32,108-132はextraction_items起点なので明細0件エラーは出せない。import_job_messagesで取込に属する投稿は既に固定されている（_scope_ctes:13-24）。source_messages.raw_text/is_active/received_atとextraction_jobs.status/error_messageが正規migrationに存在する。新しいSELECTのみにより画面から実物の投稿へ進める。error_messageはサービス例外を含み得るため生出力せず定型の未確認理由を用いる。従来の全体診断APIは取込の境界を持たず本カードには不適合。
+
+代替A: フロントのボタン配置だけ→投稿一覧と0明細エラーが確認不能なので不採用。代替B: 新しい書込/再試行UIまで同時実装→取消/二重受付/費用/進行中処理との整合の証拠が不足するため範囲外。代替C: 仕入元名で原文を引く→同じ名前の別取込と混線するため不採用。推奨は取込IDに属する投稿/jobの読み取りだけを追加する。
+
+### How：API契約
+
+すべて既存require_super_admin依存、UUIDの取込ID、TCG_SCHEMA、バインドパラメータを利用。認証実装やRLSを緩めない。SELECT1文で各応答のas_of/件数/ページを取得。既存_envelope同様、存在しない取込404、coverage未completeはtotalと配列null。pending_review/discarded/legacy_unknownを空0へ置換しない。
+
+1. GET /tcg/line-import/{import_job_id}/messages?limit=25&offset=0。limit1..100/既定25、offset>=0。
+返却: scope/as_of/coverage/review_status/reason、unit=source_message、limit/offset、total、messages配列。
+配列項目: id、raw_text、received_at、created_at、is_active、relation_kind、supplier_name（NULL可）。取込リンクから投稿を選び、supplier_channels/tcg_suppliersはLEFT JOIN。削除された仕入元で投稿を落とさない。ORDER BY created_at,idで安定ページング。本文はReactのテキスト表示、HTMLとして挿入しない。本文全体の表示はdetailsなどで折り畳む。
+2. GET /tcg/line-import/{import_job_id}/extraction-jobs?filter=error&limit=25&offset=0。filter=all|error、既定all。単位extraction_job、同じenvelope、jobs配列。
+配列項目: id、source_message_id、status、created_at、extracted_at、raw_text、supplier_name（NULL可）、item_count、error_reason_code。job起点でエラーはstatus=error、0明細も保持。item_countは相関COUNT等で件数膨張を回避。error_reason_codeはerror時unclassified、それ以外NULL。error_message/traceback/raw exceptionは返さない。ORDER BY created_at,id。
+3. 既存GET itemsのfilterにresults_presentを追加しanalysis_result_id IS NOT NULLに限定。all/needs_review/extraction_error既存互換。解析結果の全件CTAはresults_present、要確認CTAは既存needs_review。解析結果なしを全解析結果へ混ぜない。
+
+### How：UI契約
+
+既存PageLayout/Panel内に3カード、下部にCTAを同じ高さで配置、狭幅は縦並び。既存Button/Badgeと色/文字/余白トークンを利用。全UI文言はt()、ja/en同一キー。試作の独自ブランド/架空数字/原因切替は製品に含めない。
+
+- 取り込み: 「取り込んだ投稿を確認」でmessagesへ。
+- 抽出: failed>0なら主CTA「エラーN件の原因と対処を確認」でextraction-jobs/errorへ。副CTA「抽出結果をすべて見る」で既存items/allへ。エラーなしは副CTAを主の位置へ。0明細エラーもjobと原文を表示。原因「この画面では失敗理由を確認できません」、対処「対象の投稿と抽出IDを添えて調査を依頼してください」。IDは開いた詳細にだけ示す。再実行ボタンなし。
+- 解析: needs_review>0なら主CTA「要確認N明細を確認」、副CTA「解析結果N明細をすべて見る」。0要確認なら全結果CTAを主へ。欠測件数を0に置換しない。
+- 上部に重複するCTAは置かずエラー/進行中等の結論と対象カード案内を維持。「再取得」を「表示を更新」に変更。全読取だけが実行される。
+- 抽出バー: 成功/対象なし/失敗/進行中または待機の区分を色と文字で併記。完了数=成功+対象なし+失敗、総数=完了+pending+running、unknown/欠測/負数/非整数/内訳不整合時は既存と同様バーを出さない。色は既存success/error/muted/info系トークン。
+- CTA選択時はカード下の共通詳細領域の内容を切り替え、見出しへスクロールとフォーカス（tabIndex=-1）。選択中の段階と取込を明確にし、ページングoffsetを0へ戻す。
+- 取込変更時に旧データ/遅延応答を表示しない。新しいページ取得でstaleデータを新対象として使わない。GETの失敗は空0と区別、読込/再取得を表示。post/job一覧はCTA後に取得し、既存5秒ポーリングに全原文取得を追加しない。手動表示更新で開いている詳細も更新。document.hidden/cleanupの既存契約は保持する。
+- 既存items表とページングは利用可能なまま保持。抽出全件・解析全件・要確認では見出しとfilterを明示。原文/抽出値/正規化結果の関係を誤って商品マスタ正式名と称さない。
+
+### 受入条件と検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 3カード各下部CTA、日英/明暗/1440・390pxでレイアウトと操作可 | unit+Playwright画面操作/スクリーンショット |
+| 44=37+6+1を分割、欠測/不整合で成功バーなし | 既存unit回帰と追加内訳検査 |
+| 投稿CTAは取込所属原文のみ、再利用/非active/仕入元NULL保持 | 実PostgreSQL fixtureで別取込/別tenantを混ぜ検査 |
+| エラー0明細と残存明細ありの両方をjob1件ずつ表示 | 実PG検査、UI fixtureで件数/原文/未確認理由照合 |
+| 解析全件=results_present、要確認=needs_review | 実PGで結果あり/なし混在、UI送信filter検査 |
+| 404/422、limit/offset境界、未認証/非super_admin拒否 | API試験 |
+| NULL coverage/初回失敗/同対象再取得失敗/対象切替の遅延応答を区別 | hook/unit/E2E fixture |
+| 生error_messageを応答しない、原文のHTMLは実行されない | 機密らしいdummy文字列とHTMLをfixtureへ投入 |
+| CTAでPOST0回、取込/設定/解析/配信データの変更0 | E2Eリクエスト捕捉、PG前後件数/値照合 |
+| 既存必須品質検査成功 | frontend build/check:all/対象unit/E2E、backend lint-ci/実PG対象試験、PR CI |
+
+### Architect整合検査・維持
+
+判定APPROVE（この限定実装設計）。基準origin/main dd1df11cで、Terraの読み取り調査とも照合し既存との矛盾なし。根拠は既存取込リンク/coverage/正規migration/実PG fixture/既存unit・E2Eと本節の追加受入条件。新規GETを固定ルートより後に置き、試験で認証・scope・0明細を検証する。 broaderなダッシュボード/再試行/原文と商品マスタの全面比較設計のREVISEを解除しない。rootがPlannerとArchitectを順に担う同一AI自己審査であり、独立第二者レビューとは称さない。維持は既存tcg-import-workflowのunit/E2Eとtcg_import_progressのPG試験。実装はPO指定Terra、rootが最終差分/証跡照合。外部事例不要（自社API契約と回帰fixtureが直接根拠）。新ライブラリ/APIの外部仕様採用はないためContext7調査対象なし。
+
+
+### 3段階カードCTA・実装検収（2026-09-13）
+
+担当交代: POの新規担当1名への委任承認「進める」を受け、pmg_cta_completionが同じカード/作業台の未完差分を継承して完成。rootは製品を編集せず、差分・試験ログ・画像を審査した。
+
+実装: 3カード下部に主CTAの高さを揃えた確認操作、成功/対象なし/エラーの分割バー。投稿と抽出jobの取込限定GET、results_presentフィルター、詳細のページング/表示更新/遅延応答除外を追加。投稿の再利用・現在無効・受信日時を表示。明細0件の抽出エラーを表示し、生例外を公開しない。詳細の原因不明と調査依頼の重複文言を画像審査で解消。
+
+実装担当実行・root原ログ確認: frontend全unit26ファイル273件成功（対象3ファイル29件を含む）、実PostgreSQL18件成功/skip0、Playwright12件成功33.1秒、build/check:all/backend lint-ci終了0。check:allは218警告/0errors。backend lint-ciはRuff成功・Bandit high0、mypy非blocking診断532件を含むため型診断全解消とはしない。追加サービスの診断0、routerのfilename型診断は追加GET外の既存行。rootが直接git diff --check終了0、製品差分/試験コードと保存ログを照合した。rootは試験そのものの再実行を行っていない。
+
+画面は模擬APIのPC1440/狭幅390・日本語light/英語darkで確認。rootはcards-{1440,390}-{ja,en}.pngとanalysis-action-390-ja.png等を直接閲覧。縦並びの解析CTAはスクロール後viewport到達・クリック成功を試験。CTAからPOST0、JS error0、横溢れ0、原文HTML非実行。初回390jaの1失敗は辞書編集中の同URL再読み込みと重なり、固定差分では12/12成功。待機追加による試験基準緩和なし。画像の44/1019/313等はfixtureであり本番実数ではない。
+
+証跡保存先: reports/pmg-stage-card-actions/{all-unit,pg,check-final,build,backend-lint,e2e,colima-stop}.txt、cards/error/analysis-actionのPNG、verification-manifest.json（各SHA256）。専用Colima dist01-3258停止ログ確認、他者profile/本番変更なし。Gitには正式設計・試験コードを保存し、旧unfinished差分/キャッシュは含めない。
+
+最終差分/視覚審査: APPROVE（root、担当実装と照合）。限定設計の受入を満たし、PR/CI確認へ進める。新GO未受領、未マージ・本番未反映。設計審査は同一AI自己審査であり独立第二者レビューとは称さない。配信候補集計の不一致、再抽出操作、全体ダッシュボードの残設計は今回解消していない。
+
+
+### 公開pushの承認待ち（2026-09-13）
+
+ローカル実装commit8bb8df00、最新main af269ae2の文書変更を統合したHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8。統合は文書のみ、双方の根拠登録を保持。通常pushは実行前の自動承認レビューで2回拒否された。読み取り照合でorigin=https://github.com/shingo-ops/salesanchor.git、GitHub owner/name一致、isPrivate=falseを確認。拒否理由は「公開GitHubへの送信についてユーザー本人の明示承認が必要。表示変更依頼・担当カード/root指示では不足」。制限解除・別送信経路・force等の迂回はしない。
+
+現在地: 実装/ローカル検証/審査/ローカルコミット済み。push未実施、PR未提出、PR CI未実行、マージ/本番未実施。次はPOの公開push・PR提出の明示承認を受領後に通常手順を再開。マージには別途新PR番号のGOが必要。検証ログと画面20ファイルは親引継ぎ作業台reports/pmg-stage-card-actions-final-20260913にもSHA256照合して複製済み。
+
+
+### 公開push・PR提出の本人承認受領（2026-09-13）
+
+直前の質問「公開GitHubリポジトリへ変更をpushし、PRを提出してよいですか？」に、PO原文「進めてくれ」を受領。公開送信先shingo-ops/salesanchorのrelease/pmg-stage-card-actionsへの通常pushとmain向けPR提出を承認した回答として記録する。上の公開送信承認待ちは解消。preflight終了0、ローカル検収済み差分と最新mainを照合して通常手順を再開する。これは新PR番号のマージGOではなく、本番反映は未承認・未実施。
+
+
+### PR #3467提出・CI完了（2026-09-13）
+
+公開push承認後の通常push・PR提出・register-pr完了。PR https://github.com/shingo-ops/salesanchor/pull/3467 、HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100。最新main9f5415c3統合で製品差分は検収時から変更0、対象unit29件/Ruff/台帳検査成功。rootがGitHubの最新HEAD・全チェック完了を直接確認: 41SUCCESS/6SKIPPED/1FAILURE。失敗はprocess-artifacts gate job103667191630の「### GO記録なし」のみ。番号付きGO未受領なので記録を創作しない。
+
+backend CI job103667224344は2763passed/95skipped、coverage63%。担当実行の保存ログをrootが確認。Frontend E2E GitHub jobはSKIPPEDであり、ローカルPlaywright12成功と区別する。証跡reports/pmg-stage-card-actions/ci-3467.json、ci-pytest-3467.txt、verification-manifest.json。親作業台reports/pmg-stage-card-actions-pr3467にもハッシュ照合して保存。
+
+現在地: 設計・実装・審査・公開push・PR提出・CI照合済み。新番号付きGO未受領、未マージ・本番未反映。次はPOへ3カードCTA変更/検証結果/DB変更なしを提示しGO #3467を受領後、最新HEADとCIを再確認する。今回の公開送信承認をマージGOへ読み替えない。本節と台帳の結果追補はローカル保存し、次の承認記録と同時に通常コミットする。
+
+
+### GO #3467受領（2026-09-13 12:45:59 JST 記録）
+
+PO本人原文「GO #3467」を受領。対象はPR #3467の3カードCTA・取込限定閲覧API、直前提示のマージ/本番反映を承認した回答。承認時HEAD11970e3e16c08e09a5887ddbca6fbc8b0bc74100、CI41SUCCESS/6SKIPPED/GO未記録1FAILUREをrootが確認済み。DB構造/本番データの手動変更なし。通常自動deployの既存事前バックアップの成功をログで確認する。PO本人のGOを転記するもので、委任AI発行やGO委任モード有効化ではない。
+
+CARD-PMG-STAGE-CTA-02によりpmg_cta_completionが正式GO記録/文書commit/push、最新HEADのCI全成功確認、通常merge commitと自動deploy読取監視を実行。rootは公開HTTP/資産確認を担当。製品コード追加変更、DB操作、再解析、配信、secrets/CI/運用変更は禁止。現時点では未マージ・本番未反映、終了時はGitHub/配備ログで結果を確定する。
+
+## 抽出試行記録2件の限定是正案（2026-09-14・草案）
+目的: 上限超過の調査に必要な実測サイズを既存試行行へ保存し、不正な既存構造を正常扱いしない。POは事実確認と安全な前進を指示。既存GO3494はマージ済み便の承認であり、新規修正PRのGOではない。
+根拠: 同recon「実DB追加検証と状態訂正」、固定e594d3ef/後続deploy70d145f0の対象2ファイル一致。reports/pr3494-evidence-20260914/result-real-db.txt。現行MAX_BYTES=8388608、通常同値保存・超過1byteでNULLを実PG再現。制約内容2異常は個別に受入を再現。
+対象: tcg_extraction_record_svc.py、既存試行表migrationの検証処理、対応PG試験・既存文書。対象外: 商品特定/状態判定、UI/API契約変更、新保存表、新列、過去行補完、Gemini自動再試行、配信操作、secrets/CI/deploy変更。
+記録修正案: prepare_itemsでUUID/行番号追加後の最終JSON UTF-8長を測定。上限超過時のみ測定値を当該recorderの一時状態に保持し、既存fail()の所有確認成功後、同じ既存試行行のparsed_bytesへ保存する。本文はNULL、PARSED_TOO_LARGEを維持。別job/後続試行/終了済み行へ書かず、新しい永続的SSOTを作らない。DB自体が書けない場合は従来の保存失敗を成功扱いしない。
+この記録案の検証用コピーを実PGで比較: 上限ちょうどcompleted/parsed_bytes8388608を維持、上限+1はfailed/parsed_bytes8388609/本文NULL。probe-candidate.py/result-candidate.txt。製品追跡ファイルは未変更、task/analyzer全体回帰は未実施。complete()単独経路と旧試行競合/保存失敗時の回帰は受入必須。
+構造修正案: 必要制約を名前/件数のみで合格にしない。PK/UNIQUE/FKの対象列・参照schema/table/column・削除動作・検証済み・延期設定、CHECKの実定義を期待定義と照合する。列位置は列名から引く。CHECK(true)や別列FKは例外停止し、不正制約の自動書換え/既存行削除はしない。CHECKはPG16のpg_get_constraintdef(...,false)による定義取得を候補とし、search_path差、同じ意味で表記だけ異なる定義、PGminor差で正しい表を拒否しないか隔離試験で確認する。比較方式の最終固定前に設計合格を出さない。
+適用経路: 最新mainのrun_all_migrations.sh:run_sqlはpsql ON_ERROR_STOP=1で登録SQLを逐次実行し、対象は642行に登録。旧SQL修正の再実行経路は存在するが、先行migration失敗時は到達しない。新しい本番migrationを増やすか既存検証を強化するかは正式修正設計で固定し、未確認の自動適用成功を主張しない。
+代替比較: 超過本文の切捨て保存は全文誤認を生み不採用。別診断表はSSOT重複で不採用。不正構造を自動修復する案は既存データへの影響が未確認で不採用。既存記録の数値保存と読取検証の強化を推奨する。
+受入: 実PGで正常/再適用成功、不正CHECK/FK各個別拒否、正しい別schema受入・部分構造拒否・失敗時既存行不変。8MiB±境界、超過時値保持/本文NULL/新明細0/解析0、旧試行と同時実行の隔離、記録失敗/soft中断、input/response保存と管理者API回帰。既存Backend CI/Migration SQLを使用し成功件数とskipを区別。正式カードは方式確定・整合検査後に発行。
+維持: backend担当が既存PG受入試験へ否定例を追加、reviewerが既存行不変とSSOTを確認。人手の反映確認では実稼働版/DB構造/既存backupを確認する。
+外部資料: Context7ツールなしを確認。PO許可済み公式代替として https://www.postgresql.org/docs/16/catalog-pg-constraint.html と https://www.postgresql.org/docs/16/functions-info.html を2026-09-14参照。外部成功事例は本変更の成否を証明しないため不使用。
+Architect自己審査: REVISE（同一AI、独立第二者レビューではない）。記録修正案は限定比較で有効性を実測。構造比較方式/正常表誤拒否の否定試験/正式適用方式は未確定のため、2件まとめた実装可能設計としてAPPROVEしない。未決は技術検証であり追加PO事業判断は現時点不要。設計草案保存済み・検証コピーのみ・製品修正未着手。
+
+### 構造照合方式の確定と限定設計審査（2026-09-14追補）
+根拠更新: main5afb5af1ed28ea691ea93b04e4245afa8d744d85の対象service/migrationは固定e594d3efとSHA256一致。root実PG16.15、reports/pr3494-evidence-20260914/probe-structure.py/result-structure.txt/structure-expected.json。正常7ケース受入、不正8ケース拒否、意味等価だが式を書換えた1ケース拒否。計16期待assert成功・比較前後の試行行一致16/16・exit0・DB停止。これはcatalog比較候補の試験で、製品migrationへ組み込んだ試験ではない。
+正式な成功条件を限定: バージョン管理された正規DDLが作る構造を受け入れる。任意の論理等価DDLまで受入保証はしない。正規定義不一致は既存行/制約を自動修正せず例外停止。これにより未知構造を推測で正常扱いしない。人による独自DDLや別PG版の同値表記は反映前の読み取り照合で差分として提示する。
+比較契約: conrelidで対象表を限定し、制約名/種類/検証済/延期可否・初期延期/noinherit、conkeyの列名順序、CHECKのpg_get_constraintdef(false)、FKの参照schema/table/confkey列順・更新/削除/match動作を照合。検索パスは照合中のみpg_catalogへ固定し復元。同一schemaへの参照は自己schemaとして比較、他schema参照は拒否。比較する期待値は正規DDLから独立した隔離基準表を作って出力した構造（structure-expected.json）を元にコードへ明示し、検査対象の本番表から期待値を学習しない。基準表は検証専用で本番へ追加しない。PK/UNIQUE/CHECK/FKの余剰/不足も差分。列型/NULL/索引の既存検査は維持する。正式実装の期待値とversion管理DDLの一致を実PG回帰で常に確認する。
+適用案: 既存20260914_010000_tcg_extraction_attempts.sqlの検査を強化する。既存runnerは毎回run_sqlで当該登録を実行するため登録追加・新DDL・新表なし。既存BEGIN内で全schemaを検査し、差分時には失敗して確定しない。既存データ/制約の自動修理は対象外。scripts/CI/deployは本修正で編集しない。
+記録側の正式実装は上の最小候補を元に、prepare_itemsの測定値が同じ当該試行のfail()でのみ保存されることを守る。complete()から直接上限超過が出る場合も含め、測定値が保持される経路を統一する。旧試行/他job/既存成功を上書きしない。旧値の推測補完なし。
+必要な実装後受入: 候補の7正常/8不正/1未知式の判定を実migrationで再現、反復適用・複数schema・ロールバック・既存行不変、実taskで8MiB境界と超過サイズ保存/本文NULL/新明細0/解析0、所有権/競合/終了行/DB記録失敗の回帰、既存Backend CIとMigration SQL成功。候補単体16成功をこれらの代わりにしない。
+反映前照合: 実稼働コードとDB版・制約一覧・旧workerの版・バックアップの証跡を読取り確認する。今回は実本番照合未実施。過去のGO3494を新PR番号のGOへ転記しない。
+Architect最終自己審査: APPROVE（上記限定の修正設計、同一AI自己審査で独立第二者レビューではない）。先のREVISEは比較の成功条件・期待値の出所・既存runner適用経路を確定して解消。根拠は2件の現行再現＋記録候補2境界＋構造候補16ケース。正式コード/統合試験/本番検収の合格ではない。POの新たな設計承認・実装開始・PR/マージGOを創作しない。現在は設計文書と隔離候補のみ、製品修正未着手。実装カードは別途正式チェックして発行し、本追補だけで実装役への自動切替をしない。
+
+
+
+## 2026-09-14 解析結果と配信の共通順序（RESULT-ORDER）
+
+この節は、解析結果の確認時点から同じ商品の行をまとめ、配信まで同じ規則を使う設計。
+mode: handoff
+親: [提供元フィード翻訳](../../specs/inventory-management/feed-translation/README.md)。recon: docs/handoff/pmg-import-delivery-ssot/recon.md の同日節。対象ADR: ADR-113, ADR-154。
+既存テーマの延長。原文の履歴順・保存場所の変更ではなく、結果一覧の取得順を定義する。
+
+### PO合意と承認の区別
+
+POは発売日降順→商品IDで集合→状態順→同商品同状態の価格昇順を合意し、解析結果側から共通化する案へ「進める」と回答した。
+PO原文「進める、離席するので推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映して良い」。本件の条件付き実施・本番反映許可として記録し、番号付きGOやGO委任の有効化を創作しない。
+PO原文「Damaged caseはCaseとSealed boxの間に配置」。8状態の順位はこの追補で確定。コンディション絞り込みの並び変更は後続。
+
+### 契約と変更前後
+
+1. 共通SQL順序の定義をbackend/app/services/tcg_result_order.pyに1か所置く。全呼出元のSQLエイリアスp/ar/ei/crを揃え、入力値や外部文字列は受け取らない。
+2. 順序は p.release_date DESC NULLS LAST → p.code ASC NULLS LAST → p.id ASC NULLS LAST → cr.canonicalの状態順位 → cr.canonical COLLATE "C" ASC NULLS LAST → ar.price_normalized ASC NULLS LAST → ei.id ASC。商品コードは同じ発売日の別商品の決定的順序、UUIDを状態より先に置き同名商品を混合しない。codeを変更する処理は含めない。
+3. 状態順位は Case / Damaged case / Sealed box / Damaged sealed box / No shrink box / Opened box / Unsearched pack / Searched pack の0〜7。将来の指定外状態はその後ろに名称順、NULLは最後。これは未知状態の価値を推定する順位ではなく行を消さない退避規則。既存Empty box等も保存・表示・配信可否を変更しない。
+4. 発売日未設定は現行配信と同じ末尾。価格NULLは同商品同状態の最後。商品未特定はp.code/idがNULLの末尾に保持し、名称からUUIDを仮定しない。
+5. tcg_analysis_review_svc.fetch_analysis_resultsとtcg_distribution_svc.fetch_output_rowsのORDER BYだけを共通定義へ置換。WHERE、JOIN、12列、ID/原文位置、件数を維持。
+6. tcg_import_progress.read_itemsは、既存filteredの集合から並べ替え専用JOINを作り、row_numberでordinalを付けてからページ分割する。JOINはar/ei/ej/sm/pを用意し既存review_joinsのcr.canonicalを使う。状態判定は並び順にのみ使用し、既存needs_review値・フィルタ契約を変更しない。jsonb_aggもordinalで並べ、返却JSONから並べ替え用列を除く。
+7. 共通_scope_ctes/read_progress/read_messages/read_extraction_jobsは変更しない。非アクティブ原文や解析結果なしの取込行を消さない。取込内と全体配信は対象集合が違うため、比較時は共通の明細に限定する。
+8. 画面の元配列順を維持。原文行番号・extraction_item_id・source_message_idの変更、再解析、商品/状態マスタの優先順位変更、GAS編集は含めない。
+
+### 受入基準と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 新しい発売日が上・NULLは末尾 | PostgreSQL実サービスで3日付（NULL含む）を照合 |
+| 同日別商品が混ざらない | 同名異IDを含め商品IDの再出現区間が0、商品ごと1区間 |
+| 状態8種類が指定順 | 全8状態を逆順挿入し期待順と比較 |
+| 9/100/1000の価格が数値昇順 | 同商品同状態・別提供者で比較、NULL最後 |
+| 同条件でも取得が安定 | UUIDを最終キーとして再取得・ページを連結し全件結果に一致 |
+| ページ先頭だけの並べ替えにならない | ページ境界を越える商品、複数LIMIT/OFFSETで欠落重複0 |
+| 解析/配信の同一明細は同順 | 同一fixtureを3経路で取得、配信適格集合に絞り相対順一致 |
+| 内容の変更がない | IDで対応付けた前後の全フィールドと12列の多重集合一致 |
+| 未特定・未解析・原文無効の扱い維持 | 既存取込filterと件数/coverage/原文リンクの回帰試験 |
+| 人手確認後の状態に追従 | cr.canonicalと保存状態が異なるfixtureで表示値の順位を検証 |
+| 正式品質チェックを通る | 実PostgreSQL試験・lint・全必須CI。skipを成功としない |
+| 本番反映の確認 | 最新HEADのCI・通常deployのバックアップ/HEAD/health、認証済みAPIと対象シートの実データ順を照合 |
+
+### トレードオフと維持
+
+- SQL取得前の全体ソートによりページ内だけの整列では消せない分散を防ぐ。SQL JOIN/ソートの負荷が増えるため本番相当の件数で計画・時間を実測し、欠落のないLIMITを維持する。
+- 商品群がページ境界をまたぐことは許容する。全件を連結したとき別商品が割り込むことを禁止し、商品全体を1ページへ詰める変更はしない。
+- 元投稿と同じ行順にはならないため、原文への移動を必ずID/行番号で検証する。
+- 守り手: .github/workflows/test.yml とbackend/testsの実PostgreSQL回帰試験。並びは共通関数に集約し、絞り込みの選択肢だけを後続で扱う。
+- 外部導入事例は不要。局所的な読み取り順の修正であり、根拠は実データの分散・3経路のSQL・PostgreSQL公式仕様・292行の独立計算照合。実装成功や本番改善の証明に代用しない。
+
+### 接触面6面
+
+人: 解析確認/配信確認の順序変更。エージェント: 本節をhandoffにし、原文順を保存順と混同しない。機械: APIのORDER BY/JSON集約とpytest。データ: 読み取り順のみ、保存値とFK保持。本番: 既存通常deployと配信手順を使用、secret/CI/運用変更なし。外部: 配信先の行順のみ、列/値/送信対象を変えない。
+
+### 自己審査と次の工程
+
+Plannerの方式を同一AIがArchitectとして審査。独立した第二者レビューではない。順序・未知値・ページ・非変更契約は具体化済み。設計判定は実装前のSQL/JOIN照合を完了してから確定する。現時点はREVISE（取込内の並べ替え専用JOINの実検証と正式カード検査が残る）。実装/マージ/本番配備/実配信は未実施。
+
+
+### RESULT-ORDER 自己審査の補正と実装境界
+
+review_joinsの先頭はcondition_review_sourcesへのINNER JOINであり、既定source_cteは有効原文だけを選ぶ（tcg_condition_review_svc.py:38,101）。取込明細へそのまま付ける案は非アクティブ原文を欠落させるため不採用。
+取込read_itemsだけは既存messages CTEから全取込原文のid/source_hashを持つcondition_review_sourcesを作る。既存digest_sqlを使用し、解析結果なしもLEFT JOIN arで保持する。共通_scope_ctesと既存状態判定の関数は変更しない。解析/配信側の有効原文制約も変更しない。
+取得順の一意キーはei.id。取込pageのJSONは既存列のみとし、sort_ordinalを除いてjsonb_aggで同じordinal順を保持する。
+この補正で既存の表示対象を減らす原因を設計段階で除いた。方式の自己審査はAPPROVE（設計合格、独立第二者審査ではない）。実PostgreSQLの3経路比較・ページ・無効原文・未解析の検証を実装の必須条件とし、通過前に実装合格/本番反映可能としない。
+
+実装前のfixture照合: test_tcg_import_progress_pg.pyのprovision_tcgは初期TCG表のみでitem_correctionsが無い。状態確認JOINを試験するため既存20260903_170000の正規migrationをfixtureへ追加する。製品migration追加や本番DB変更は無い。カード許可範囲へ同テストファイルを追加。
+
+
+### RESULT-ORDER 実装準備と検証の限界（2026-09-14）
+
+上の初回REVISEは補正節の設計APPROVEで更新済み。カードは[card-result-order.md](card-result-order.md)、正式card-lint終了0。4サービスと2テストファイルを変更し、状態順位にDamaged caseを2番目として組み込んだ。実装者と審査者は同一AI。
+
+直接実行: 対象6ファイルのruff check --no-cache成功、git diff --check成功、check-task-state.sh成功、対象Pythonコンパイル成功。make lint-ciのRuffは全app成功したが、Python3.14のast.Num廃止でBandit内部例外が多発。mypyも診断を出しており、終了コードだけで全品質合格とは宣言しない。Docker daemon未接続のため、ルールに従い手元pytestは実行していない。
+
+実PostgreSQL試験は96明細（4商品×8状態×3価格）とページ7/25/50、未解析/非active/未特定/NULL/未知状態、人手確定状態/同価格UUIDを検証するコードを用意した段階。正式CIの隔離DBで実行しskipを成功と扱わない。合成292行の先行READ ONLY検算とも区別する。実装検収・PR CI・本番反映は未完了。実シートを書き換えていない。
+
+
+### RESULT-ORDER PR #3501・正式CI確認（2026-09-14）
+
+PR https://github.com/shingo-ops/salesanchor/pull/3501 。HEAD fc059880505b734533d46c480c23ed54c25caf8b。初回CIのguard-authoring errorは最新mainを祖先に要求する検査に対してmainが進んでいたため発生。最新main5afb5af1を通常mergeし、両側の文書・製品差分を保持、競合なし。追従後の検査成功をGitHub APIで確認した。
+
+rootが直接取得した正式CI backend job103857564620: 3720 passed / 95 skipped / 309 warnings、235.56秒、coverage65.07%。今回追加3試験はskip処理なし、96行の3経路・ページ7/25/50・保存値不変・未解析/無効原文保持・人手確定状態・UUID順を検証。既存95スキップと区別する。Backend lint成功。全チェック34SUCCESS/8SKIPPED/1FAILURE、MERGEABLE（競合なしであって承認済みではない）。本番相当負荷のEXPLAIN/実測、認証済み本番APIと実配信後の照合は未実施。
+
+失敗1件はprocess-artifacts gate job103857514230: PR本文に「### GO記録」なし、「GO #<PR番号>」受領後の転記を要求。既受領の条件付き本番許可にPR番号を補筆せず、マージ/本番配備を停止。GO委任は有効化していない。
+
+現在地: 8状態PO合意、設計/実装自己審査、文書/コードcommit/push、PR提出、正式CIの技術検証済み。新番号付きGO未受領、未マージ・本番/シート未変更。CI結果はresult-order-evidence.jsonとPR本文へ保存。原ログは/tmp/sa-result-order-pytest-ci.txt、同jsonにSHA256。通常deployは既存Pre-deploy DB backupとhealth確認を持つ（.github/workflows/deploy.yml:127,530）が、今回の実バックアップ成功はまだ観測していない。
+
+
+### RESULT-ORDER 追加確認の指示受領と負荷試験（2026-09-14）
+
+PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら進める」を受領。条件付き続行指示として扱い、GO #3501という原文に書き換えない。PRの最新HEAD fc059880・OPEN/未マージと技術検査成功を再確認。
+
+負荷の未確認を補うため、既存試験ファイルに4,097明細/4,097原文の隔離CI試験を追加。3サービス実SQLをREAD ONLY・各SQL10秒上限で実行し、EXPLAIN ANALYZEの時間/行数を記録する。全件の順序と保存値の前後一致も検証。公開CSV607行の約6.7倍だが、実本番の件数/分布/設備と同一ではない。温まったキャッシュの測定であり、本番応答時間の保証としない。試験作成時点では未実行。
+
+本番ブラウザー読取は既存Chrome Profile 34が使用中のため失敗し、閉じる/ロック解除/別人セッション利用はしていない。過去の人間用SSH鍵許可は別診断限定と文書に明記されており、本件へ流用していない。本番相当EXPLAINと認証済み本番API照合は引き続き未確認。
+
+
+### RESULT-ORDER 負荷試験失敗・実装検収保留（2026-09-14）
+
+HEAD f982978e、CI job103860869068の追加試験で解析レビューitems SQLが10秒statement_timeoutに達した。1 failed / 3720 passed / 95 skipped、277.76秒。通常APIの上限500を超える4097件一括取得なので、本番障害や本変更だけの退行と断定しない。だが負荷検証は不合格であり、先行CI成功をもって本番反映可とはしない。実装検収REVISE、マージ/本番停止。原ログ /tmp/sa-result-order-load-ci.txt と証跡jsonにhash保存。
+
+隔離fixtureの統計情報が実行計画へ影響する可能性を切り分ける。Context7ツール0件を再確認し、許可済み代替で公式 https://www.postgresql.org/docs/16/sql-analyze.html と https://www.postgresql.org/docs/16/using-explain.html を読了。統計値の整備は計画選択に必要だが、この失敗原因が統計不足と確定したわけではない。
+
+次の診断はfixture内の対象12表にANALYZE、前後reltuplesを記録、同じ4097件/10秒上限を保持して3経路を実行する。失敗時は非実行EXPLAINの計画を記録して例外を再送出する。成功時もCIのwarning summaryへ実測を記録し、pytest-xdistのworker stdout非転送に依存しない。製品SQL・本番設定を変更しない。
+
+本番確認経路: main.py:570,600,605のprefixは/api/v1。解析GETはtcg_analysis_review.py:91（上限500）、取込GETはtcg_line_import.py:663（上限100）。配信previewは件数/除外内訳のみ（tcg_distribution.py:156）、行値の確認APIではない。実配信は別POSTであり、コード配備だけでシート更新済みと扱わない。
+
+
+### RESULT-ORDER 統計整備後も失敗・API条件との分離（2026-09-14）
+
+HEAD490e3961、job103862564543: 同じreview items SQLが10秒で停止。1 failed / 3720 passed / 95 skipped、268.38秒。fixtureのreltuplesはanalysis_results/extraction_items/extraction_jobsが-1→4097、source_messagesは4097→4097。統計不足だけで解消するとの仮説は支持されなかった。非実行計画はLimit4097/TotalCost36077.28、内側Sort4097/9116.56。これは見積りであり、各部分の実時間ではない。実装検収REVISE継続。
+
+API契約の事実: reviewは上限500、importは100。失敗したlimit8192は公開APIから要求できない。次の受入試験は4097原文/明細を保持し、review500/import100の先頭とoffset4000の末尾、distribution4097全件を確認する。レビュー変更前のORDER BYだけを復元した同一SELECTの500件取得も比較する。SQL上限10秒は維持。上限外一括取得失敗を合格へ書き換えず、公開API条件の成否を別判定にする。96行試験の全ページ連結検査も維持する。
+
+pytest-xdistのstdout制約は公式 https://pytest-xdist.readthedocs.io/en/stable/known-limitations.html のOutput節で照合済み。失敗時の実行計画warningはCI原ログに実際に残り、rootがJSONとして抽出した。Context7不在時の許可済み公式資料確認による。
+
+
+### RESULT-ORDER 末尾ページの失敗とページ先行設計（2026-09-14）
+
+HEAD179f95d1、job103864100083: 変更前ORDERの先頭500件、変更後先頭500件は通過したが、変更後offset4000/limit500（残97件）の実SELECTが10秒で停止。取込/配信の追加負荷測定は未到達。1 failed / 3720 passed / 95 skipped。公開API条件でも未合格と確定し、上限外だけの制約とは扱わない。
+
+非実行計画はLimit97の下にResult4097→Sort4097があり、表示用計算を含むResultがOFFSETより内側にある。各ノードの実時間は未取得なので主因の断定は避ける。対処として、review items_sql内だけにresult_order_page AS MATERIALIZEDを追加し、既存_BASE_FROM/WHERE/共通ORDER BYでei.idのページを先に確定する。外側はそのIDへJOINし、元の全SELECT列・WHERE・共通ORDERを保持。外側LIMIT/OFFSETを除き、表示用review_version/product_confirmed等をページ対象のみに計算する。count/providers/共有状態判定/DB/API型は変更しない。
+
+同一SQL内の一意ei.idページを結合するため、集合・状態・順序を同じスナップショットで保持する。トレードオフはページ対象行について状態JOINを2回評価すること。全件の表示用計算をOFFSETで捨てる処理を防ぎ、96行の全ページ一致と4097行の先頭/末尾・保存値保持を同条件で再検証する。数値改善は合格前に主張しない。
+
+公式PostgreSQL16 WITH §7.8.3（https://www.postgresql.org/docs/16/queries-with.html）でMATERIALIZEDの分離評価を確認。Context7不在の許可済み代替。Planner→Architectを同一AIで審査し、この限定補正設計はAPPROVE。初期「reviewはORDER BYだけ」契約を本節で補正し、実装検収は試験成功までREVISE。既存カードの同ファイル許可を更新、正式card-lint後に変更する。新たなDB操作/共通状態サービス変更は含めない。
+
+
+### RESULT-ORDER 性能補正の実装拒否・正式引き継ぎ待ち（2026-09-14）
+
+ページID先行化の製品編集をsandboxの自動承認レビューが実行前に拒否した。理由原文「専用ブランチ上の可逆的な製品コード変更ですが、設計担当セッションでは製品コード編集が明示的に禁止され、実装GO・実装役への正式移行も確認できません。」。別コマンドや別実行経路で同じ編集を再試行していない。git diff --statで拒否後の未保存差分は文書4ファイルのみと確認し、性能補正コード/試験変更は未実行。
+
+最初の並び順実装はPR3501に存在するが、今回の性能補正は設計とカードだけ。最新製品/試験HEAD179f95d1は負荷試験失敗の状態。設計担当の範囲を自動的に実装役へ拡張しない。次はPOによる本補正の実装役への明示委任を受領し、実装役へCARD-TCG-RESULT-ORDER-01と本節を渡す。性能補正の検証前にマージGOを求めない。
+
+実装役への確定手順: items_sqlのsource_cte直後へresult_order_page AS MATERIALIZEDを追加し、既存_BASE_FROM/WHERE/共通ORDER/LIMIT/OFFSETでei.idだけを選ぶ。外側の既存全SELECT列とWHEREを保持、_BASE_FROMの直後へページID JOINを挿入し、外側LIMIT/OFFSETだけを除く。API型・条件共通関数・DB/CI設定は変更しない。負荷試験のreview_beforeは新構造へORDERだけ置換して旧SQLと誤表示しないよう削除し、旧SQLの観測結果は前節のCI証跡に保持する。4097行・各SQL10秒・公開上限500/100・offset4000・配信全件・保存値比較は残す。
+
+同一AIの限定補正設計審査APPROVEは、試験用実装方針の審査であり実装成功の判定ではない。実装検収REVISE・PR未マージ・本番/シート未変更。権限拒否とSQL負荷失敗は別の停止理由として扱う。
+
+
+### RESULT-ORDER 実装担当への限定引き継ぎ（2026-09-14）
+
+POへ「実装担当への正式引き継ぎ確認待ち」を説明した後、原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ」を受領。直前に説明した引き継ぎを進める指示として、rootは設計担当のまま、実装担当result_order_page_fix（Terra）へ限定カードを渡した。番号付きマージGOとして扱わない。
+
+所有: 実装担当はtcg_analysis_review_svc.pyとtest_tcg_result_order.pyの2ファイルのみ。rootは文書/証跡/台帳と差分/CI照合。担当によるcommit/push/PR変更、追加エージェント、DB/本番/シート/CI/運用変更は禁止。設計に不明点がある場合、または担当の操作にも自動承認拒否が出た場合は、その操作を停止し親へ報告する。以前拒否されたrootの製品編集は再試行していない。
+
+開始HEAD7c775cc6。preflight成功・作業台cleanを確認。親が最新CI job103866365374の原ログを取得し、同じoffset4000/末尾97件で10秒timeoutの再現を確認した。1 failed/3720 passed/95 skipped、268.47秒。修正方針は前節のページID先行化に限定し、速度改善や検収完了をまだ宣言しない。
+
+
+### RESULT-ORDER 実装担当の補正差分受領（2026-09-14）
+
+result_order_page_fixが指定2ファイルの補正を実装。rootが実diffを直接確認し、result_order_page AS MATERIALIZED内の既存FROM/WHERE/ORDER/LIMIT/OFFSET、外側ID JOINとLIMIT/OFFSET除去のみであることを照合した。外側表示列・WHERE・ORDER、count/providers、共有状態判定の製品差分なし。試験のreview_before削除は、新構造へORDERだけ置換して旧SQLと誤記しないための設計指定どおり。
+
+担当実行: diff検査/AST構文確認成功、Ruffは担当環境で未実行。root直接実行: ruff check --no-cache 対象2ファイル成功、git diff --check成功、check-task-state.sh成功。Docker未接続なので手元pytest未実行。正式CIで4097明細の公開ページ/配信全件/内容保持が通るまでは実装検収REVISE。
+
+rootは製品ファイルを編集せず、担当成果物の照合と文書保存を実施。同一AIの設計自己審査と、担当実装差分の親による確認を区別する。独立した第二者レビューや本番改善実証とは称さない。
+
+
+### RESULT-ORDER 性能補正の正式CI検収（2026-09-14）
+
+検証HEAD90c1ea2518b20b5e9a671b45309c74dcbfdb9d57、PR3501 OPEN/MERGEABLE（未マージ）。実装担当の補正commit9e4c547eへ最新main f9f08f20を統合した。競合は本design/reconの別テーマ追記のみで、双方の原文を保持。今回の6製品/試験ファイルが統合前後で同一であることをrootがgit diffで確認。
+
+rootが直接取得した正式CI job103869063278: 3750 passed / 95 skipped / 310 warnings、201.23秒、coverage65.09%。新しい4試験はスキップなし。元の96行の全ページ連結・8状態・同名異ID・数値価格・未知/NULL/未解析/無効原文・人手確定状態と、4097明細/4097原文の公開APIページ/配信全件・保存値前後一致が通過した。
+
+| 4097行fixtureの処理 | EXPLAIN ANALYZE実行時間 | 結果 |
+|---|---|---|
+| 解析レビュー先頭500件 | 1824.873ms | 500件・期待順一致 |
+| 解析レビューoffset4000/limit500 | 1429.450ms | 残97件・期待順一致 |
+| 取込先頭100件 | 2496.161ms | 件数/期待ID順一致 |
+| 取込offset4000/limit100 | 2403.759ms | 残97件・期待ID順一致 |
+| 配信全4097件 | 3026.776ms | 全件・期待順/値一致 |
+
+いずれもREAD ONLY、各SQL10秒上限を維持。時間は隔離CIで同じSQL取得直後の温まったキャッシュをEXPLAIN ANALYZEしたもの。画面の通信/描画時間や本番設備/分布を含まない。修正前の通常末尾ページは2つのCIで10秒timeout、修正後は同じ件数/上限/offsetで成功した。上限外の4097件一括レビュー取得の過去失敗は履歴として保持し、修正後の同取得は再測定していない。
+
+限定実装の検収判定APPROVE。過去の実装検収REVISEはこの公開API条件の検証で解消した。全チェック35SUCCESS/8SKIPPED/2FAILURE（同じGO記録検査の2履歴）、待機0。最新job103869185102の失敗理由は「### GO記録」欠落のみで、GO #<PR番号>原文の転記を要求。番号付きGO未受領のため、マージ/本番反映は停止したまま。GO委任の有効化もしていない。
+
+設計自己審査・実装担当作業・親の差分照合・GitHub正式CIを区別する。親は手元pytestを実行しておらず、正式CI原ログと計測JSONを直接確認。証跡result-order-evidence.jsonのfixed_public_page_ci、原ログ/tmp/sa-result-order-fixed-ci.txt、計測/tmp/sa-result-order-fixed-plans.json。本結果追補はローカル保存、同じ結果をPR本文へ反映し、次の正式GO記録とともに文書commitする。
+
+
+### RESULT-ORDER GO受領と本番反映停止（2026-09-14）
+
+- PO原文: `GO #3501`。発行者: PO（Shingo）。記録確認日時: 2026-09-14 14:45 JST（チャット送信時刻の推定ではない）。対象はPR3501の合意済み並び順変更。AI委任の有効化ではない。
+- GO受領時のPR HEAD: `90c1ea2518b20b5e9a671b45309c74dcbfdb9d57`。既存CI3750成功/95skip。PRはOPEN、mergeStateStatus=BEHIND。
+- origin/main取得結果: `180c0f38aefc2c727a3133a4e84fa8f4aec3b893`、別件PR3503が追加。5ファイルに商品統合migration・登録script・ADR・gate変更あり。本便へのmain取り込み、マージ、本番操作は行っていない。
+- 本番Deploy run [34810423329](https://github.com/shingo-ops/salesanchor/actions/runs/34810423329) はfailure。失敗ログを直接確認: 2026-09-14T05:42:18Z、`20260914_140000_unify_tcg_products_to_public.sql` の `tenant_001.product_search_keywords` 外部キー追加で `there is no unique constraint matching given keys for referenced table "products"`。参照先は `public.products(tcg_uuid)`。
+- 同runのPre-deploy DB backupとコード配備stepはsuccess、Run database migrationsはfailure、Post-deploy smoke/Verify deploymentはskipped。Finalizeはsuccessだが、DB整合性・全体復旧の確認とは扱わない。現在のDB内容は直接未検証。
+- バックアップ確認: 本便はDB変更なし（該当なし）。上記既存runのbackup成功は本便の将来反映直前backupの保証に転用しない。
+- 判定: PO承認済み・技術検証済み、別件本番migration失敗により反映BLOCKED。GO不足という以前の停止理由は解消。障害復旧と最新main統合後の再検証が必要。別件DB修正・migration編集・再実行・ガード迂回を本便GOに含めない。
+
+
+### RESULT-ORDER 再開時の根拠追加（2026-09-14）
+
+- GOは既存原文を維持。最新製品検証: HEAD f14cab161b76680085010850cfb5af74b1ad786d、Backend job103872217191の実ログで3750 passed / 95 skipped / 297.54秒。製品差分なし。
+- process-artifacts job103872213652はGO確認pass、ADR名の相互参照だけfailure。PRの対象ADRをファイル名から設計書と同じADR-113/ADR-154へ統一。チェックのコードは変更していない。run34815204127が同HEADでsuccess。
+- 本番の最新Deployは引き続き34810423329 failure。復旧成功の記録なし。
+- 根本原因の照合: origin/mainのmigrations/20260914_140000_unify_tcg_products_to_public.sql Step1はtcg_uuidにWHERE tcg_uuid IS NOT NULL付き部分UNIQUE INDEXを作成。Step3は同列を外部キー参照先にする。PostgreSQL16公式§5.4.5では参照先は主キー・UNIQUE制約・非部分UNIQUE INDEXのいずれかを要求する。実ログの一意制約不足と実装の不整合が一致する。Context7ツールは利用可能一覧に0件であり、起動指示の代替許可に従い公式資料 https://www.postgresql.org/docs/16/ddl-constraints.html を直接確認した。
+- 修復候補（未承認・未実装）: 外部キー参照に適合する非部分の一意性を用意する。ただし本番の現在制約/重複/実行済み状態の読取確認、隔離PGで失敗再現→修復→同migration再実行の検証が先。SQLの局所修正だけで全migration成功とは判定しない。
+- PR3507本文はPhase2a移行済みと記載しているが、上記本番失敗記録から完了根拠には採用しない。今回と同じ解析/配信serviceも変更対象として記載されており、取り込み時に再照合が必要。他者のPR/実装は変更していない。
+- 継続条件: 別件migration復旧の検証・本番成功記録、最新main追従、今回の全必須CI確認、配備後の実データ順序と保持確認。現時点は反映BLOCKED。
+- 本追記はローカル文書保存。外部への正式記録はPR3501本文にも保存し、結果追記だけによる未検証HEADの増加を避ける。
+
+
+### RESULT-ORDER 復旧後の統合方針（2026-09-15）
+
+Deploy34914789016/head26032c74はbackup/migrations/smoke/Verify deployment成功を直接確認。以前の本番障害による停止は解消。POのGO #3501と「解消したので進めてくれ」を受領済み。
+mainは商品参照をpublic.productsへ変更済み。今回のhelperのp.code/p.idとimport read_itemsのtcg_products参照、試験fixtureは旧構造のまま。共通順序の商品コードはproduct_code、商品UUIDはtcg_uuidに対応させ、合意済み順序・8状態・ページ性能・保存値不変を維持する。旧p.idをpublic.products.idに機械的移植しない。
+既存実装担当へ同一テーマの統合補正を引き継ぐ。対象は既存6製品/試験ファイルのみ。最新mainの参照変更を保持、DB/migration/CI/scripts/状態UIは変更禁止。文書競合は親が双方を保持して解決する。実装後に現行fixtureで機能4試験・4097行負荷と正式CIを再確認するまで実装検収保留。
+
+
+### RESULT-ORDER 統合CIと試験DB隔離補正（2026-09-15）
+
+統合048aff3e/run34916372465/job104214798768は3 failed /3743 passed /95 skipped /3 errors、267.73秒。失敗はinventory_aggregatedのtcg_type欠落3件とrls_bootstrap_ordering/products_tcg_type_fkのjan_code欠落3件。新しい順序4試験の失敗なし。一方main対照PR3512/job104208324418は3745成功/95skip270.81秒。
+実装担当の読み取り診断: 今回のimport PG fixtureが共有jarvis_test_dbで_PUBLIC_PRODUCTS_DDLを実行し、tenant schemaだけ破棄するためpublic.productsの不足列定義が残り得る。既存condition/work_matching fixtureはランダム専用DB内で同正本DDLを使う。観測エラーと一致する有力原因であり、対照再実行前に因果を断定しない。
+補正設計: test_tcg_import_progress_pg.pyだけを既存専用DBパターンへ整合。元URLの共有DBは変更しない。テストの全準備・実行・破棄を固有一時DB内に限定し、接続を閉じて終了時/例外時cleanupする。DDL正本・製品・CI・本番は変更しない。判定基準は既存全テスト成功、並び/値保持/4097負荷成功。実装担当へ限定引き継ぎ済み、現状検収REVISE、マージ停止。
+
+
+### RESULT-ORDER 隔離補正の正式検収（2026-09-15）
+
+fd3cec1f/run34917101528/job104217035550: 3749 passed/95 skipped/失敗0、290.51秒。前回の3failure/3errorは解消。4097行全経路SQL10秒以内、review先頭4082.721ms/末尾97件3029.845ms、import先頭4880.161ms/末尾5094.540ms、配信4097件6954.285ms。試験DBのwarm-cache EXPLAIN ANALYZE値であり本番画面速度ではない。機能/値保持/負荷の限定検収APPROVE（親の読み取り確認、同一AI検収）。
+試験中mainにPR3497/3505が入りa7188a13となったため正式手順で追従。今回6製品/試験ファイルはfd3cec1fから差分0を直接確認。最終統合HEADで必須CIを再確認後にGO #3501の範囲でマージ・配備へ進む。未マージ/未配備。
+
+## Gemini原因表示・既存試行記録への接続（2026-09-14）
+
+POの依頼: 原因が分かる表示、本番反映まで。実装・レビュー担当への委任確認に「進める」、追加条件「データのSSOTは遵守」を受領。番号付きGOや委任モードの自己有効化とは区別する。
+
+正本: PR3494（release/line-extraction-attempt-record、252d240f）のextraction_attemptsと既存管理者一覧APIを再利用する。本書の別作業台に残る独自attempt列/履歴API案、および調査途中のerror_messageへの別形式保存案は、本便の実装根拠にしない。新しい記録表・保存列・状態の複製は0。現在のjob状態は既存取り込みAPI、試行履歴はextraction_attemptsに役割を分ける。別取得の履歴から現在の成功/失敗を上書きしない。
+
+観測根拠: PR3494 tcg_extraction_record_svc.py:177-199の一覧はID/時刻/phase/error_code/completion等の概要だけ。詳細はinput_payload/response_textも含むため呼ばない。router:111-127はsuper-admin/UUID/limit最大100/no-store。ImportWorkflowPanel.tsx:108はstatusがある全行に失敗文面を表示するためerror行だけへ修正する。main 7b3aea8cにこの記録APIは未導入。PR3494のコード審査は別担当による読取REVISE（既存不正制約の検出と解析JSON超過サイズの2点）。本便の画面完成を依存PRの本番適用完了と称さない。
+
+目的と受入: エラー行から1操作で試行ごとの理由/記録時刻/確認方法へ進む。再抽出後の過去失敗を現在の失敗と誤表示0。原文・応答本文・prompt・仕入元名のコピー混入0。追加の変更系API呼出0。
+
+対象はフロントエンドの既存取込画面に「試行履歴と原因を確認」ボタンと読み取り履歴を追加すること。新画面ルート/DB/抽出判定/SDK/配信/自動再抽出/残り時間予測/仕入元集計の定義変更は対象外。履歴が必要なjobは既存import APIの行から渡す。全TCGを閲覧できる既存super-admin APIの権限は維持し、import限定APIとして偽装しない。
+
+GET /tcg/diagnostics/extraction-jobs/{job_id}/attempts?limit=25&offset=Nだけを明示操作後に取得する。詳細APIは使用0。レスポンスのextraction_job_idと各行job_idが要求と一致しなければ取得失敗とする。未知型/未知phase/未知error_codeは固定unknown表示、生文字列を文面やコピーへ混入しない。IDはUUIDとして検証する。時刻不正は未記録。0件の正常応答だけ記録なし、404/403/503/通信不明は取得できないと表示し再取得ボタンを置く。
+
+履歴はAPI順のまま表示し、最新/current/試行番号を独自採番しない。started/received又はcompletion=unconfirmedは「終了未確認」。completedは「抽出の検証完了」で、解析成功や配信成功とは表示しない。failedは「試行失敗」。開始/応答記録/終了時刻は各ラベルでJST表示し、差から通信所要時間を推定しない。未記録は未記録。過去記録が残っていることを説明し、現在のjob状態は別欄のままとする。
+
+原因の対応文面: SOFT_TIME_LIMIT=処理制限時間に到達、提供元/通信の遅延原因は未特定。API_ERROR=API呼出に失敗、通信・認証・提供元のどれかはこの記録では未特定。INVALID_RESPONSE=返答/照合の検証を完了できない。REFERENCE_CHANGED=参照マスタ変更、WORK_ID_CONFLICT=原文の作品情報との不一致、RECORD_WRITE_FAILED/RESPONSE_NOT_RECORDED=必要な記録を確定できない、INPUT_TOO_LARGE/RESPONSE_TOO_LARGE/PARSED_TOO_LARGE=記録容量上限、CLAIM_CONFLICT/ATTEMPT_CONFLICT=別処理との競合。その他unknown。API_ERRORをHTTP429などへ推測分類しない。
+
+対応CTAは「調査用情報をコピー」「表示を更新」。コピー内容は検証済みjob/attempt ID、許可コード又はunknown、許可phase、正常時刻のみ。秘密・本文・原文・model文字列は含めない。Clipboard失敗は完了表示せずエラーとし、コピー成功/失敗のフィードバックを日英で出す。再抽出ボタンや外部送信は追加しない。
+
+ページングは25件、前へ/次へ、応答25件なら次へ有効（総数不明）。空の次ページでも前へ戻れる。job/import変更・unmount・ページ/再取得の競合時は前の要求を無効化し、旧応答が新表示/コピーを上書きしない。取得中と取得失敗では古いデータのコピーを無効化し、成功済みと誤認させない。CSSトークン/共通Button/既存PageLayout/日英t()、390pxとPC、キーボード操作を維持する。
+
+実装担当はerror_visibility_recon、UI差分のみ。独立レビュー担当attempt_record_reviewは後続の読み取り差分審査を担当できる。rootはPlanner→Architectの同一AI自己審査、正式カード/文書/検証結果確認を所有する。担当は同じ作業台で他者の編集を戻さない。
+
+検証: 模擬APIで正常/空/未導入/権限/通信失敗、未知値、private追加field、別job混入、job変更遅延応答、ページング、再取得失敗、Clipboard失敗、成功/running行失敗文面なしを確認。日英unit、build/check:all、ブラウザ狭幅を実施。製品の実抽出は呼ばない。既存backend試験成功を本便のUI検証へ計上しない。
+
+代替案: 独立error保存はSSOT重複になるため不採用。詳細本文の自動取得は原因の概要表示に不要で不採用。APIを追加して現在jobと最新attemptを合成する案は未導入の所有/現在定義を広げるため後続。履歴として読む本案は現在データを変更せず、既存API契約だけで試験可能。
+
+Architect自己審査: このUI読み取り契約のみAPPROVE。依存API未配備は明示的失敗表示で扱い、PR3494のREVISEを覆さない。全体の本番反映は依存の修正・レビュー/CI・正式GOが前提。番号付きGOをPO発話から創作しない。維持は既存APIの型/未知値fixtureとUI日英テストを変更時に更新。外部事例不要、自社実コードが直接根拠。新ライブラリ/API仕様は追加せず既存内部HTTP契約を再利用する。
+
+
+### UI実装・独立レビュー途中結果
+担当error_visibility_reconが既存一覧だけを使うcomponent/API adapter・日英文面・unit/E2Eを実装。別担当attempt_record_reviewがSSOT・機密投影・取得競合・コピーを読取審査し、コピー操作同士の完了通知競合をREVISE。操作別連番と逆順完了テストを追加後APPROVE。rootはcomponent f9e97e20/API c5ffd224/component test 4d1fef1d/Panel f131f546のSHA256一致を直接照合した。設計はroot自己審査、コードは別担当レビューである。
+担当実行: unit54/54（6 files）、build exit0（既存chunk警告）、check:all exit0（lint 0error/218warnings）。root直接実行: diff --check、task-state、card-lint成功。追加E2E2件は古いCTAを指定した初回失敗があり、fixtureの文言を実UIに合わせ修正後の再実行中。結果未確定を成功扱いしない。依存3494の修正/レビュー/GO、今回PR/CI/GO/本番反映はまだ未完了。
+
+
+最終E2E追補: 担当が修正後の追加2件を390px/1440pxで実行、2/2成功・exit0を報告。横overflowなし、キーボード操作、private追加field非表示、変更API呼出0。対話ブラウザ/本番試験ではなく、模擬APIのPlaywright試験。frontend編集停止済み。unit54/54/build/checkの最終結果と併せてPR提出カード02を検査済み（違反0、長行警告1）。依存PR3494のREVISEと未配備は解決済みと扱わない。

@@ -31,6 +31,8 @@ async def save_corrections(
     Returns:
         {"saved": <挿入行数>}
     """
+    if any(field["field_name"] == "condition_review" for field in fields):
+        raise ValueError("condition_review requires the versioned review API")
     if not fields:
         return {"saved": 0}
 
@@ -61,12 +63,12 @@ async def save_corrections(
             await db.execute(
                 text(
                     f"UPDATE {_SCHEMA}.analysis_results "
-                    "SET product_id   = :new_pid::uuid, "
+                    "SET product_id   = :new_pid, "
                     "    pid_basis    = 'MANUAL', "
                     "    pid_resolved = TRUE "
-                    "WHERE extraction_item_id = :eid::uuid"
+                    "WHERE extraction_item_id = CAST(:eid AS uuid)"
                 ),
-                {"new_pid": field["human_value"], "eid": extraction_item_id},
+                {"new_pid": int(field["human_value"]), "eid": extraction_item_id},
             )
             # C93: product_id 変更時に analysis_rule_run_results の invalidated_at を記録する
             # 無効化された結果は配信クエリから除外される（invalidated_at IS NULL が条件）

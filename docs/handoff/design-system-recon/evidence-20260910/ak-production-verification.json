@@ -1,0 +1,39 @@
+{
+  "asset": "/assets/index-qPEhx4EM.js",
+  "sha256": "20c931c9d4925e6771c7d4d992789b799e615298a150d9c8b871c1775549ce11",
+  "sixForms": [
+    {
+      "offset": 1101675,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:()=>c(!1),disabled:O,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,disabled:O,children:e(O?`common.saving`:`common.register`)})]})]})]})}),(0,G.jsx)(j1,{open:v,onClose:C,title:e(`companies.editCompany`),onOpenFullPage:y?()=>{C(),n(`/crm/companies/${y}`)}:void 0,children:(0,G.jsxs)(`form`,{onSubmit:F,children:[(0,G.jsx)(s0,{form:b,onChange:(e,t)=>x(n=>({...n,[e]:t}))}),(0,G.jsxs)(`div`,{className:`form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:C,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.update`)})]})]})}),(0,G.jsx"
+    },
+    {
+      "offset": 1102203,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:C,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.update`)})]})]})}),(0,G.jsx)(cv,{open:A!==null,title:e(`companies.deleteCompany`),message:A?e(`companies.deleteConfirmMessage`,{name:h0(A),code:A.company_code}):``,confirmLabel:e(`common.delete`),onConfirm:I,onCancel:()=>j(null)})]})}function y0({label:e,helperText:t,error:n,size:r=`md`,fullWidth:i=!1,className:a,id:o,...s}){let c=(0,_.useId)(),l=o??c;return(0,G.jsxs)(`div`,{className:[`comp-field`,r===`md`?``:`comp-field--${r}`,i?`comp-field--full`:``,n?`comp-field--error`:``,a??``].filter(Boolean).join(` `),children:[e!=null&&(0,G.jsxs)(`label`,{h"
+    },
+    {
+      "offset": 1167818,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:()=>p(!1),disabled:D,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,disabled:D,children:e(D?`common.saving`:`common.register`)})]})]})})}),(0,G.jsx)(j1,{open:g,onClose:S,title:e(`contacts.editContact`),onOpenFullPage:v?()=>{S(),n(`/contacts/${v}/edit`)}:void 0,children:(0,G.jsxs)(`form`,{onSubmit:B,children:[(0,G.jsx)(t2,{form:y,onChange:(e,t)=>b(n=>({...n,[e]:t})),companies:o}),(0,G.jsxs)(`div`,{className:`form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:S,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.update`)})]})]})}"
+    },
+    {
+      "offset": 1168356,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:S,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.update`)})]})]})}),T?(0,G.jsx)(`p`,{children:e(`common.loading`)}):(0,G.jsx)(A1,{columns:[{key:`name`,header:e(`common.name`),renderCell:e=>a2(e)},{key:`company_id`,header:e(`common.company`),renderCell:e=>L(e.company_id)},{key:`job_title`,header:e(`contacts.position`),renderCell:e=>e.job_title||`-`},{key:`primary_email`,header:e(`common.email`),renderCell:e=>e.primary_email||`-`},{key:`primary_phone`,header:e(`common.phone`),renderCell:e=>e.primary_phone||`-`},{key:`is_primary_contact`,header:e(`contacts.isPrimary`),renderCell:e=>e.is_primary_conta"
+    },
+    {
+      "offset": 1378216,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:()=>o(!1),children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.register`)})]})]})}),(0,G.jsx)(j1,{open:l,onClose:m,title:e(`suppliers.editSupplier`),onOpenFullPage:u?()=>{m(),n(`/suppliers/${u}/edit`)}:void 0,children:(0,G.jsxs)(`form`,{onSubmit:async t=>{if(t.preventDefault(),g(``),!u)return;let n=e=>e||null,r={name:d.name,contact_name:n(d.contact_name),email:n(d.email),phone:n(d.phone),address:n(d.address),notes:n(d.notes)};try{await K.patch(`/suppliers/${u}`,r),m(),E()}catch(t){g(t instanceof Error?t.message:e(`common.saveError`))}},children:[(0,G.jsx)(l3,{form:d,onChange:(e,t)=>f(n=>({...n,[e]:t}))}"
+    },
+    {
+      "offset": 1378997,
+      "excerpt": "form-actions`,children:[(0,G.jsx)(J,{variant:`secondary`,size:`md`,type:`button`,onClick:m,children:e(`common.cancel`)}),(0,G.jsx)(J,{variant:`primary`,size:`md`,type:`submit`,children:e(`common.update`)})]})]})}),v?(0,G.jsx)(`div`,{className:`loading`,children:e(`common.loading`)}):(0,G.jsx)(A1,{columns:[{key:`supplier_code`,header:e(`common.code`),renderCell:e=>(0,G.jsx)(`span`,{className:`mono`,children:e.supplier_code||`-`})},{key:`name`,header:e(`suppliers.supplierName`)},{key:`contact_name`,header:e(`suppliers.colContact`),renderCell:e=>e.contact_name||`-`},{key:`email`,header:e(`common.email`),renderCell:e=>e.email||`-`},{key:`phone`,header:e(`common.phone`),renderCell:e=>e.phone||`-`},{key:`actions`,header:e(`common.actions`),render"
+    }
+  ],
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "appHTTP": 200,
+  "apiHTTP": 200,
+  "limits": "本番認証付きフォーム送信なし。APIの正規healthは/api/health。初回Python証明書エラー後、検証有効のcurlを使用。"
+}

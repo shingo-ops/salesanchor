@@ -33,6 +33,12 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ: %', _schema;
+        RETURN;
+    END IF;
+
     -- 参照マスタの取得
     EXECUTE format($q$SELECT id FROM %I.tcg_major_categories  WHERE code = 'DIV01'$q$,     _schema) INTO v_div_tcg;
     EXECUTE format($q$SELECT id FROM %I.tcg_series             WHERE code = 'IP002'$q$,     _schema) INTO v_work_op;

@@ -8,6 +8,10 @@ export function importMessage(code: string, t: TFunction): string {
     PRODUCT_IMPORT_NOT_CSV: "notCsv", PRODUCT_IMPORT_EMPTY_FILE: "csvEmpty",
     PRODUCT_IMPORT_FILE_TOO_LARGE: "tooLarge", PRODUCT_IMPORT_NOT_UTF8: "utf8",
     PRODUCT_IMPORT_DIGEST_MISMATCH: "changed", PRODUCT_IMPORT_ALREADY_IMPORTED: "duplicateFile",
+    ROUNDTRIP_CSV_INVALID: "headerError", ROUNDTRIP_EXPORT_TOO_LARGE: "tooLarge",
+    ROUNDTRIP_ALREADY_IMPORTED: "duplicateFile", ROUNDTRIP_STALE: "stale",
+    ROUNDTRIP_UNKNOWN_CODE: "unknownCode", ROUNDTRIP_DUPLICATE_CODE: "duplicateCode",
+    ROUNDTRIP_KEYWORDS_INVALID: "invalidWords", ROUNDTRIP_VALIDATION: "updateInvalid",
   };
   if (exact[code]) return t(`productCsv.messages.${exact[code]}`);
   const prefixes: [string, string][] = [

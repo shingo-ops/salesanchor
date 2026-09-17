@@ -13,7 +13,6 @@ MIG-04 Stage 2: gemini_extraction_svc / tcg_extraction の単体テスト（DB �
 from __future__ import annotations
 
 import inspect
-import os
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -32,6 +31,7 @@ from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
 def isolated_reference(monkeypatch):
     # This legacy task unit suite isolates the reference DB queries.
     monkeypatch.setattr("app.tasks.tcg_extraction.work_schema_ready", lambda _: True)
+    monkeypatch.setattr("app.tasks.tcg_extraction.schema_ready", lambda _: True)
     monkeypatch.setattr("app.tasks.tcg_extraction.load_work_reference", lambda *_: {"works": [], "products": []})
 
 
@@ -79,11 +79,6 @@ def test_full_prompt_contains_genshi_prefix():
     call_gemini_extraction 内で組み立てられるプロンプトが
     '原文:\\n' セパレーターを含むことを確認する。
     """
-    raw_text = "商品X 10個 500円"
-    prompt_input = format_prompt_input(raw_text)
-    # GAS と同じ連結式
-    expected_full = f"{PROMPT_TEXT}\n\n原文:\n{prompt_input}"
-
     # ソースコードを直接検査して連結式が一致することを確認
     import app.services.gemini_extraction_svc as svc_mod
 
@@ -248,6 +243,9 @@ def test_auto_analyze_off_skips_analyze(monkeypatch):
     monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
 
     mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
     analyze_called = []
 
     def mock_extract(raw_text, **kwargs):
@@ -289,6 +287,9 @@ def test_auto_analyze_on_calls_analyze(monkeypatch):
     monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")
 
     mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
     analyze_called = []
 
     def mock_extract(raw_text, **kwargs):

@@ -1,0 +1,213 @@
+{
+  "base": "e39fa65abb83837a7909290b993a8cd363a11ef9",
+  "products": [
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "sha256": "92bf192004f12f4f4c66e624808667e077634c633099419a11d80bbc36535ace"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadEditPage.tsx",
+      "sha256": "25cd73252333963115331ba26bc3bd002b26b655d0a2083f461a7022fa157667"
+    },
+    {
+      "file": "frontend/src/components/LeadFormButtonMigration.test.tsx",
+      "sha256": "b350128ded4c4bce68917eb23f6e9d84e3ee1439a882c1c985ad5d46b9707b70"
+    }
+  ],
+  "archive": "ap-implementation-checkpoint.tar.gz",
+  "archiveSha256": "c6a39e0d2263d687d8d1b4823e02c71e742be2978ba596cd75393b7548514303",
+  "files": [
+    {
+      "file": "ap-generator-build.log",
+      "sha256": "fed4431fa1ef966e973bfba542f3edc18d75b6ffdf9ecde0f17147514f65b294"
+    },
+    {
+      "file": "ap-generator-checkall.log",
+      "sha256": "cf1972e4380573956790aef3a87963a49dbef60b0c653d16731a46064a972652"
+    },
+    {
+      "file": "ap-generator-coverage.log",
+      "sha256": "694e9fc10225999f45dad699dc6da1a0dfd73aa2579d18349a9bd275b123f38a"
+    },
+    {
+      "file": "ap-generator-eslint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "ap-generator-hashes.json",
+      "sha256": "27cb95af99484bae3da0705fce6a95c2f167892a2c4441504a9bce786d56a1bc"
+    },
+    {
+      "file": "ap-generator-storybook.log",
+      "sha256": "56faa932308d0f53db1934158904af267c520d7dc5fb6b943502947ec0293159"
+    },
+    {
+      "file": "ap-generator-unit-initial-failure.log",
+      "sha256": "46e7e70826de9d5a72ab4f79d412b1762ae155c0973593e0de2122d95d77c414"
+    },
+    {
+      "file": "ap-generator-unit.log",
+      "sha256": "0a171821b2a7ce88721366b3d1ab539191ce317ac4d5a8f67e7e1288ea400c37"
+    },
+    {
+      "file": "browser-initial-smoke.json",
+      "sha256": "d922b27abd49c14c9cbe9d552f0bd296bcf964542070b876adaad4e723e872e4"
+    },
+    {
+      "file": "browser-initial.cjs",
+      "sha256": "e47ecc7545c7d4d3ddcf85e6cbf2dfea97a2944ffe2b77d51ccada1c0e8a70ec"
+    },
+    {
+      "file": "browser-result.json",
+      "sha256": "f093195eb87b78e268a6c2a883dde6737c189baf858d76322d22adfff19a4804"
+    },
+    {
+      "file": "browser-smoke.json",
+      "sha256": "d5a00f14daae181cd71773a36158b685ec3e7c76510be9bb4812873f9a3fb3cf"
+    },
+    {
+      "file": "browser.cjs",
+      "sha256": "5af0c627bd23b5da6166351b16436c64bbdf7ac2794f50dc9ed104966f81c7f6"
+    },
+    {
+      "file": "closing-result.json",
+      "sha256": "2d86751863b5b1cb56a6b892ae804e94686ce92c9fee529572af38b811318333"
+    },
+    {
+      "file": "closing.cjs",
+      "sha256": "4961cfd2d2202795ccb583743ab41585bf9c949f5d1fb70db02f3ec3d1b7a141"
+    },
+    {
+      "file": "combo-probe.cjs",
+      "sha256": "6d5fe394c443935cdfcb1c3c7c52a7da481dc4876349ef6da00b78f69321b571"
+    },
+    {
+      "file": "combo-probe.json",
+      "sha256": "300ed45ee9c6a266bc775981a1e272b718928053d64405f06ae60c4aa2940370"
+    },
+    {
+      "file": "counts.cjs",
+      "sha256": "0e98cb6c4992a34fda5a73f55862c8da7011efaa014ed4c1a18a9792d0cab0ce"
+    },
+    {
+      "file": "counts.json",
+      "sha256": "f765f079ac54fced6c46bb694c986f26a6484f66a1b9a1cfd31a0b5873fe8136"
+    },
+    {
+      "file": "create-pending.png",
+      "sha256": "e05930ead046fe4fd49f6cc11d2c4e8b42cbc7b8e10f75e0ff0e6929e22ff3a0"
+    },
+    {
+      "file": "create.png",
+      "sha256": "ab9437e7c9740ea5e0932d68500bade75b16e4f3c55fd1fba72a87689788e194"
+    },
+    {
+      "file": "drawer-lost-pending.png",
+      "sha256": "dfa39bae37aeff7c10e5f48c3ef660fa21706c1b0f4d8a3a31558c830b832bcc"
+    },
+    {
+      "file": "drawer-lost.png",
+      "sha256": "db67f7aa97afbda20d463c54db1389bdaeabb4227d487232c2e7b25917ffd889"
+    },
+    {
+      "file": "drawer-pending.png",
+      "sha256": "b22f60060514e4a4b5d1680963a4586610867f2e718d3571efa7f8b8520e560a"
+    },
+    {
+      "file": "drawer.png",
+      "sha256": "9e72811dd056e8b5408c30723a20e22dc5ff23cc0389a8e859718e215bc8c455"
+    },
+    {
+      "file": "extra-initial-result.json",
+      "sha256": "d192a9576b7ca77bb79b72d01296604e196ba052268d779ccdfcb39bc1422fc2"
+    },
+    {
+      "file": "extra-initial.cjs",
+      "sha256": "1c6d1127e629d8e55f5f83d9f393763c93ca05d11c61e8c8dd08963e0a98ea29"
+    },
+    {
+      "file": "extra-result.json",
+      "sha256": "b20af2f26832a911c9a3addc650ecc411d770b19961034b20b2ebb6f1b49e6d4"
+    },
+    {
+      "file": "extra.cjs",
+      "sha256": "404f286bca275033e67c93c1b5e170cb57dee3142814e053f225c91aecad4b02"
+    },
+    {
+      "file": "focus-1280-after.png",
+      "sha256": "af485ce558770858b872271fa642acadef87d79227d080c39bd0fc1d680449fa"
+    },
+    {
+      "file": "focus-1280-before.png",
+      "sha256": "053f3137b62d078221c3ee77e89f469238d8ca58cfea9324cea8411e42331ed2"
+    },
+    {
+      "file": "focus-390-after.png",
+      "sha256": "8ae23858fe2b309ce947d3f47b8b435d7d9755751412cb9d448f93936762a146"
+    },
+    {
+      "file": "focus-390-before.png",
+      "sha256": "79b416ad1993a0cdce3caa58330abfe15d36ebe95bee177687fefc62d655b12b"
+    },
+    {
+      "file": "focus-probe.cjs",
+      "sha256": "3ef7ca38afc0463d6debcdc849f7e7e2e5ff742b2e8b9631dff6ad64e0118440"
+    },
+    {
+      "file": "focus-probe.json",
+      "sha256": "ef248e8f28fc26f3ee27344643fc5fe18ec3142c66ba277adfd66aa7d774b722"
+    },
+    {
+      "file": "full-lost-pending.png",
+      "sha256": "94834263e7798c56747737710ed611d061ddfb16a562facfb1c162a4f11ab165"
+    },
+    {
+      "file": "full-lost.png",
+      "sha256": "54581286ad7bf371b1d3956543fb0241b1b1e8ac1c7bf0c713f895e52f4910aa"
+    },
+    {
+      "file": "full-pending.png",
+      "sha256": "e44240aa8d2f0745e434726bd9460cf2a6c1116366a2bbc5da0108db00c83ee4"
+    },
+    {
+      "file": "full.png",
+      "sha256": "ce4e1383cdc48aecbdb367dd4f711bf981a61bd3dbc90ea911f0648a4a06f0c5"
+    },
+    {
+      "file": "inverse.json",
+      "sha256": "a3752d2ad7ebef9e6544eed51cd8fb1e5c9f2df494e96c743aed2bf54b11b058"
+    },
+    {
+      "file": "operations-result.json",
+      "sha256": "c2fff1393af3433f747b46b274e867c7ecf627ef5b2336258f53fe88149488f3"
+    },
+    {
+      "file": "operations.cjs",
+      "sha256": "7fc5fdf6c1533f0f7de7e92acdfbd3c55daf14f13aca4d4e5a0443c53e72a632"
+    },
+    {
+      "file": "prepare.cjs",
+      "sha256": "20712cb053b7d26112aac5826e756c98cc4e304bcac301ef0493aa0016fb945c"
+    },
+    {
+      "file": "server.cjs",
+      "sha256": "5731cf160b9ba5b5f10d0953c8dd7bac4b6fdfe86b6a03f410f779058f55120f"
+    }
+  ],
+  "results": {
+    "displayPairs": 240,
+    "operationPairs": 47,
+    "unit": 70,
+    "newTests": 67,
+    "allTests": 451,
+    "counts": {
+      "common": 137,
+      "legacy": 281
+    }
+  },
+  "limits": [
+    "local synthetic I/O, real pages; not production authenticated test",
+    "natural Tab clipping at 390px existed before and remains; actual bottom scroll fits",
+    "initial smoke2, initial extra4 and initial unit45 failures preserved"
+  ]
+}

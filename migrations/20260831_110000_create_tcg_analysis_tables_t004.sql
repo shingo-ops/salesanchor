@@ -34,6 +34,16 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: Phase 2c 完了判定
+    -- audit_log が存在 = この migration は過去に実行済み。
+    -- かつ tcg_products が不在 = Phase 2c で意図的に DROP 済み。
+    -- → 空の tcg_products を再作成しないようスキップ（他テーブルは IF NOT EXISTS で no-op）。
+    IF to_regclass(format('%I.audit_log', _schema)) IS NOT NULL
+       AND to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        RAISE NOTICE 'ADR-1002: Phase 2c 完了済み（audit_log あり・tcg_products なし）、スキップ: %', _schema;
+        RETURN;
+    END IF;
+
     RAISE NOTICE 'migration 20260831_110000: creating TCG analysis tables in schema %', _schema;
 
     -- ================================================================

@@ -23,6 +23,25 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260914-TCG-RESULT-ORDER
+date: 2026-09-14
+agent: Codex (design partner; same-AI self-review)
+task: 解析結果・配信を発売日/商品ID/状態/数値価格の順へ
+scope: 3読み取り経路の設計・実装・試験準備。絞り込みの選択肢は後続。
+evidence:
+  - type: file
+    reference: docs/handoff/pmg-import-delivery-ssot/recon.md RESULT-ORDER
+    summary: 固定HEAD70d145f0。配信は提供者優先、解析2経路は原文/作成時刻優先。
+  - type: command
+    reference: docs/handoff/pmg-import-delivery-ssot/result-order-evidence.json
+    summary: PostgreSQL16.15 READ ONLY、合成292行×10順列で独立計算と不一致0。実API試験ではない。
+confidence: medium
+tradeoff: 全体ソートでページを跨ぐ分散防止。SQL結合負荷と原文リンクを実装後検証する。
+decision: 実装担当の限定補正後HEAD90c1ea25でCI3750成功/95skip。4097行の末尾97件SQL1429.450ms。限定実装検収APPROVE、本番未反映。
+follow_up: PO原文GO #3501を受領。別件PR3503のDeploy34810423329が商品統合migration外部キーで失敗しており反映停止。GO/文書gate34815204127成功、Backend job103872217191は3750成功/95skip。部分UNIQUE INDEXとFK参照の不整合を実物・PG16公式で照合。復旧後に最新main/CIを再照合。未マージ・本番未反映。
+```
+
+```text
 id: EV-20260910-LINE-ACCURACY-02
 date: 2026-09-10
 agent: Codex (design partner)
@@ -2478,123 +2497,19 @@ PR #3447最終CI2660 passed/95 skipped、deploy34678372849成功、inspect346785
 
 全員照合の中間結果: 1163投稿/124名、直近500件に対して本文日時一致56、名前一致のみ34、未確定33、同名マスタ重複1。端末内all-senders-comparison.json。範囲拡張は docs/handoff/line-supplier-aliases/design.md / recon.md。
 
-```text
-id: EV-20260913-LINE-STOCK-MESSAGES
-date: 2026-09-13
-agent: Codex design partner (Planner -> Architect, same-AI self-review)
-task: LINE在庫・〆・無関係・混在投稿の商品単位反映設計
-scope: docs-only; current-code read and synthetic pure-function probe
-evidence:
-  - type: command
-    reference: git ls-remote origin refs/heads/main / git rev-parse origin/main
-    summary: both 5b21b3b8f12d8c3c443da6cc4bb7c7d1c49ccc15; preflight PASS; own worktree created with existing worktrees preserved
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json
-    summary: AST-isolated current build_provider_entries; 3 synthetic cases each retain only latest body, skipped_message_count=1; DB/API access=0
-  - type: file
-    reference: backend/app/services/tcg_line_import_svc.py:273,327,426; backend/app/services/tcg_distribution_svc.py:229,463
-    summary: latest-only selection, channel-wide source supersede, active-source output, full-sheet replacement
-  - type: adr
-    reference: docs/adr/ADR-154-tcg-parity02-gas-python-migration.md
-    summary: append proposed change and Why, preserve historical accepted migration contract
-confidence: high
-tradeoff: high applies only to fixed-code path and synthetic probe; actual production incidents, classification accuracy, live schema and rollout are unverified
-decision: PO meaning agreement recorded; technical draft self-review REVISE; docs PR https://github.com/shingo-ops/salesanchor/pull/3456 OPEN; no implementation card or production operation
-follow_up: inspect real-message ground truth and offer identity duplicates; finalize DDL/API/UI/rollout then re-review
-```
 
-```text
-id: EV-20260913-LINE-STOCK-VOCAB
-date: 2026-09-13
-agent: Codex design partner (same-AI Planner/Architect)
-task: PO提供LINE原文から売切候補と誤判定防止条件を設計登録
-scope: two user-provided files read-only; aggregate/hash evidence; docs PR #3456
-evidence:
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json vocabulary_corpus
-    summary: 2 sources; 1106390 lines; 20 literal search terms; 13105 matching-line union; 14 reviewed context positions with line hashes; no public raw transcript
-  - type: command
-    reference: same JSON status_exclusion_probe; backend/app/services/tcg_analyzer_svc.py:979-1060
-    summary: SELECT exclude_pattern discarded in loader and unused in resolver; synthetic 3 states all excluded including 2 negative/conditional cases; real DB/API calls=0
-confidence: high
-tradeoff: counts describe retrieval only and include reposts/cross-file overlaps; manual context boundary examples are not a complete labeled evaluation set or live offer mapping
-decision: register 11 candidate groups, 8 scoped blocking conditions and 12 regression cases in design only; runtime registration=0; self-review REVISE
-follow_up: establish gold labels and price/shipping/condition/unit-specific offer identity, then finalize scoped exclusion logic, DDL/API and rollout before implementation card
-```
+### EV-20260913-FRONTEND-AK-DESIGN
 
-```text
-id: EV-20260913-LINE-STOCK-DISPLAY
-date: 2026-09-13
-agent: Codex design partner
-task: 締切の適用範囲・発送枠の既存対応・完売行の表示を確認
-scope: user-supplied files and current code read-only; design PR #3456
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/recon.md additional cutoff audit
-    summary: exact display-name headers A28/B372=400 posts, 17:30 clause in 1; explicit same-day-shipping clause in 121 posts/141 lines; 115 dates and 12 multi-time candidate dates, not a semantic inconsistency rate
-  - type: command
-    reference: current parse_extraction_response AST-isolated synthetic 2-row response
-    summary: preserves 2 rows and separate memos; AI extraction, persistent shipping-slot matching and production update not tested
-  - type: file
-    reference: backend/app/services/tcg_analysis_review_svc.py:35,72-84,238-256; backend/app/services/tcg_analyzer_svc.py:918-954
-    summary: status/note/raw memo output fields exist; active-source filtering, exclusion-to-review classification, dictionary-only note generation need explicit integration for requested display
-confidence: high
-tradeoff: same display name is not verified supplier identity; repeated posts/cross-file overlaps retained; no all-supplier uniformity or model-accuracy claim
-decision: record requested sold-out row retention in analysis list with sold-out status and possible-additional-stock memo; keep stock output excluded, self-review REVISE
-follow_up: finalize shipping-slot identity and status/note/history UI contracts and verify on labeled examples before implementation
-```
+固定739f772dの構文監査: 共通84、旧prefix319/専用20/リンク8、次便3ページ12件（旧10/裸2）。配置予備192前後組のafter欠け0、初回原稿不備144失敗も保存。実ページ/API/キーボード検収とは区別。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-buttons.md、docs/specs/design-system/design.md§AK。製品未変更、実装承認未取得。
 
-```text
-id: EV-20260913-LINE-RESTOCK-DATE-PROBE
-date: 2026-09-13
-agent: Codex design partner
-task: PO確定の追加予定あり表示・日付保持を現行部品で検証
-scope: read-only source corpus and unchanged code; synthetic in-memory master; design PR #3456
-evidence:
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_date_component_probe
-    summary: 5 real memo fragments and 4 synthetic cases; raw memo preserved 9/9, candidate note matches 6/9, mismatches 3/9; no model API/DB/UI/sheets
-confidence: high
-tradeoff: manually prepared extraction response and synthetic dictionary do not measure model or production performance; initial reservation arrival is not evidence of replenishment
-decision: PO display/date requirements fixed; self-review REVISE; candidate dictionaries remain unregistered
-follow_up: date context, scoped negation, calendar validation, offer linking and implementation acceptance tests
-```
+AK追記: Planner案の作成後、同一AI Architect自己審査APPROVE。設計/維持/引用検査エラー0、カード正式lint exit0、archive8hash/CSS9hash/製品原hash3件一致。PO実装承認・製品検収とは区別。
 
-```text
-id: EV-20260913-LINE-RESTOCK-NEGATIVE-STOCK
-date: 2026-09-13
-agent: Codex design partner
-task: 再入荷予定なしの数量・状態・備考の分離をPO合意し追加部品検証
-scope: design PR #3456; no product changes
-evidence:
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json restock_negative_stock_probe
-    summary: 3 synthetic manually extracted cases; raw quantity retained 3/3; synthetic status matches 3/3; candidate memo mismatches 3/3; no DB/UI/model invocation
-confidence: high
-tradeoff: status default active is not permission to restore old sold-out inventory; actual update behavior untested
-decision: retain explicit stock quantity and existing quantity when absent; sold-out requires separate evidence; suppress only related negative restock memo; self-review REVISE
-follow_up: scoped negation, event absence semantics, persistent offer matching and implementation acceptance tests
-```
 
-```text
-id: EV-20260913-LINE-IMPLEMENTATION-INTENT
-date: 2026-09-13
-agent: Codex design partner
-task: PO実装移行承認と未解決の設計引継ぎ条件を記録
-scope: design PR #3456; product unchanged
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/design.md section 15
-    summary: exact user request retained; design review REVISE, card not issued
-  - type: command
-    reference: gh pr view 3456 --json state,headRefOid,mergeStateStatus
-    summary: OPEN, b4f0af7b108a46276cec80c740e5c9c97c2471af, DIRTY
-confidence: high
-tradeoff: implementation authorization does not fill missing technical contracts or authorize production changes
-decision: preserve authorization without asking again; separate design readiness from post-implementation test gates; do not switch roles automatically
-follow_up: finalize offer/schema/API/rollout contracts, resolve document conflicts, self-review and formal card validation
-```
+### EV-20260913-FRONTEND-AK-IMPLEMENTATION
 
+PO原文「進める」で12ボタン実装承認。共通96/旧309、指定外業務本文0。root実ブラウザー通常144/pending48/操作36/再開6前後組成功。実装担当254試験と品質成功を原ログ照合。root検収APPROVE、PR/番号付きGO/本番未実施。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-implementation-manifest.json。
+
+Android別名紐付け: 同日時・長文一致の5名を既存マスタへ対応付ける。設計/検証: docs/handoff/line-supplier-aliases/design.md / recon.md。元マスタ名上書き0、未知の人の新規作成0。実DB検証・本番保存はCI/反映後に確認。
 ```text
 id: EV-20260911-PRODUCT-CSV-TEMPLATE-DESIGN
 date: 2026-09-11
@@ -2771,285 +2686,509 @@ follow_up: 本便の製品作業なし。実登録/再解析/配信は別依頼
 
 2026-09-13 PR #3441 GO受領: POの今回メッセージ原文は「「GO #3441」（先頭の鉤括弧を含む）。対象番号3441を確認。2af2270cのCI2679成功/95skip、最新main99a008a7へ追従して再検査。マージ・本番反映・再解析・配信は未実施、最終結果はPR参照。
 
+EV-20260912-LINE-WORK-ID本番結果: PR3441 merge ee455fb1、CI34729142077 2698成功/95skip、deploy34729320369成功。実Gemini1回はinvalid product source spanで停止。旧結果更新0・配信0、精度未確認・結果採用保留。詳細はdocs/handoff/tcg-product-master-growth/recon.md「2026-09-13 PR #3441本番反映・再抽出停止記録」。
+
+EV-20260912-LINE-WORK-ID行番号修正: PO修正承認、設計§16.12自己審査APPROVE/後続カード検査終了0。p2出力契約/p1互換/形状診断を実装。静的検査終了0（mypy警告）、実PGは後続PR CI。追加実Gemini0・本番更新0・配信0。
+
+### EV-20260913-FRONTEND-AK-RELEASE
+
+PO原文GO #3457受領。HEAD3d6923ba全CI完了/失敗0→merge d9f8629c、deploy34731608784成功。実ログでbackup7.2Mと配備HEAD確認、root公開HTTP200/API connected・公開資産6組12ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/ak-page-form-implementation.md / ak-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+EV-20260912-LINE-WORK-ID最終反映: GO3458本人原文受領、HEADcb2ef474 CI34732415064 2733成功/95skip/失敗0、mergecacc889e・Deploy34732557622成功。本番p2/p1互換・health connected確認。最新取込1f6e72acはpending_review/仕入先38/原文リンク0、直近確定536422edは44投稿。比較対象をPOへ質問中、追加Gemini/再解析/配信0。PR3458本文とrecon「GO受領後の最終結果」参照。
+
+EV-20260912-LINE-WORK-ID p2実抽出: POが確定済み44投稿の比較を承認。p2初回1投稿はdone/items1、行番号受理。raw_priceの¥脱落、raw_memoの残り→残り22でRAW一致条件不成立・停止。新作品はマスタOne Pieceと一致、旧要確認はnote_unmatchedなので商品確定改善の証拠ではない。DB更新0/配信0。recon同日比較再開節、非公開JSON SHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38。
+
+EV-20260912-LINE-WORK-ID設計見直し: PO「進める」でRAW固定作品比較への設計見直し着手を承認。READ ONLY実測762固有ID/空名0/不正位置0/訂正0、602既特定/160未特定/要確認166。有効商品293/作品NULL0。設計§17の2列ID契約・商品照合READ ONLYは自己APPROVE、全再解析/採用/配信REVISE。実装・追加Gemini0。recon同日設計棚卸し参照。
+
+### EV-20260913-FRONTEND-AL-DESIGN
+
+基準9e0406ee、専用編集2ページのform-actions4原文/hashをal-fullpage-button-audit.jsonへ保存。native type4/4、対象外重複確認2、業務処理・共有契約照合。docs/specs/design-system/design.md§ALで72前後表示組と送信/取消の受入を設定、同一AI自己審査APPROVE。実装承認/実装/実表示検収は未実施。
+
+### EV-20260913-FRONTEND-AL-IMPLEMENTATION
+
+PO原文「進めてくれ」で4件実装承認。root実2ページの72表示前後組/24操作前後組成功、逆変換2原文一致、共通100/旧305。実装担当266試験/品質成功を原ログ確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-implementation-manifest.json。root検収APPROVE、PR3461新GO/マージ/本番未実施。
+
+
+### EV-20260913-PMG-STAGE-CTA
+
+PO原文「この表示に変更してくれ」で3カード下部CTA実装を承認、新規担当委任「進める」でpmg_cta_completionが完成。root差分/画像審査APPROVE、担当実行のunit273/実PG18skip0/E2E12成功とbuild/check/lint終了0を原ログ照合。mypy532診断は非blockingとして明記。正本docs/handoff/pmg-import-delivery-ssot/design.md/recon.md「3段階カードCTA・実装検収」、CARD-PMG-STAGE-CTA-01。reports/pmg-stage-card-actions/verification-manifest.jsonにログ/画面SHA256保存。新PR/CI確認へ。新番号付きGO未受領、マージ/本番反映未実施。
+
+### EV-20260913-LINE-WORK-COMPARE
+
+作品ID読取比較の実装着手。根拠: docs/handoff/tcg-product-master-growth/recon.md「2026-09-13 作品ID読取比較の実装検証」、設計PR #3462 HEAD 2fc9e647。make lint-ci終了0（mypy既存警告あり）、実PG試験未実行。実モデル/本番書込/配信0。
+
+### EV-20260913-FRONTEND-AL-RELEASE
+
+PO原文「「GO #3461」（先頭鉤括弧含む）受領、最新CI39成功/8対象外。merge dd1df11c、deploy34733817710成功。rootログ確認backup7.2M/配備HEAD一致、直接HTTP200/公開4ボタン確認。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md / al-production-verification.json。本番フォーム送信・PO目視は未実施。
+
+
+### EV-20260913-FRONTEND-AM-DESIGN
+基準af269ae2、6原文/2ページ+共有7hashを保存。type6/6、登録disabled2、3payloadと実UiPrefsProvider契約を照合。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
+
+EV-20260913-LINE-WORK-COMPARE検証完了: PR3465製品HEAD d8ff688f、CI34735091935は2759成功/95skip/失敗0、coverage63.26%。初回6失敗は試験DB正規化表の不足で既存migrationによる構築で解消。番号付きGO未受領・未マージ・本番比較/採用/配信未実施。詳細reconのPR3465節参照。
+
 ```text
-id: EV-20260913-LINE-DESIGN-MAIN-SYNC
+id: EV-20260913-FRONTEND-AM-IMPLEMENTATION
+date: 2026-09-13
+agent: root design partner / existing button_generator
+task: スタッフ3フォーム6ボタン移管
+scope: StaffPage/StaffEditPage/StaffFormButtonMigration.test.tsx
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md
+    summary: root直接96表示/29操作前後組・2ページ逆変換/共有7hash一致。担当32新規/298全体試験品質原ログ確認
+confidence: high
+tradeoff: 合成認証/API、実UiPrefsProvider。本番PO目視未実施。初回検収器class差検出も保存
+decision: 実装検収APPROVE、設計自己審査を独立第二者レビューと区別
+follow_up: PR3468実装更新・統合後品質/CI、今回番号付きGO待ち。merge/本番未実施
+```
+
+EV-20260913-PMG-STAGE-CTA提出停止: ローカルHEAD f17d9c349eff0e1ae9c3b4360e12b366852273d8、通常pushの自動承認拒否2回。origin/owner一致・public確認済み、公開送信のPO明示承認が必要との理由。PR未提出/CI未実行/本番未反映、迂回なし。design/reconの「公開pushの承認待ち」参照。
+
+
+EV-20260913-PMG-STAGE-CTA公開承認: 公開GitHubへのpush/PR提出を明示質問し、PO原文「進めてくれ」を受領。対象shingo-ops/salesanchor、release/pmg-stage-card-actions。公開送信承認待ち解消、通常PR提出/CIへ。新番号付きGO/マージ/本番反映は別。
+
+
+EV-20260913-LINE-WORK-COMPARE本番反映: PO原文GO #3465受領、merge9f5415c3、Deploy34735713952成功。backup7.2M、稼働HEAD/比較サービスSHA一致、API connected。実Gemini追加/採用/配信0。正式証跡はrecon「2026-09-13 GO #3465・比較実装の本番反映」。
+
+EV-20260913-LINE-WORK-COMPARE本番比較停止: 762明細の対照不一致0・前後全入力SHA一致。実callback初回1試行/応答0でMODEL_CALL_FAILED、診断根拠不足。キー設定/SDK/クライアント生成を生成APIなしで確認。原因未確定、診断付き同一投稿再試行はPO承認待ち。設計§17.9/recon停止節。採用/配信0。
+
+EV-20260913-LINE-WORK-COMPARE対象変更: 診断再試行はINACTIVE_SOURCEでAPI0。旧44中18無効/置換先18は新確定取込にリンク、新44有効/観測時7ジョブ未終端。対象切替PO判断待ち。recon13:41/設計§17.10参照。
+
+EV-20260913-LINE-WORK-COMPARE-CLIENT: 新取込729明細/対照不一致0、診断RuntimeError。実SDK2.8.0と公式Client.__del__確認、temporary閉鎖/held未閉鎖。配備済みadapterの寿命Fake再現とwith保持の4確認true、追加生成API0。修正設計§17.12自己APPROVE、実装承認待ち。
+
+
+EV-20260913-PMG-STAGE-CTA提出完了: PR #3467、HEAD11970e3e、root GitHub直接確認でCI41成功/6対象外/番号付きGO未記録1失敗。backend2763passed/95skip、ローカルE2E12成功はCI skipと区別。公開push承認ブロック解消、マージ/本番未実施。design/recon「PR #3467提出・CI完了」参照。
+
+
+EV-20260913-PMG-STAGE-CTA GO受領: PO原文「GO #3467」、2026-09-13 12:45:59 JST記録、承認時HEAD11970e3e。通常マージ/自動deployを承認。最新CIとバックアップ/配備/公開HTTP確認へ。詳細はdesign/reconのGO受領節。
+
+```text
+id: EV-20260913-PRODUCT-CSV-PREFLIGHT
+date: 2026-09-13
+agent: Codex design partner (Planner then Architect self-review)
+task: 実商品44候補のCSV登録前調査
+scope: docs/handoff/tcg-product-import/recon.md とタスク台帳。商品登録なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/recon.md 2026-09-13実商品CSVの登録前調査
+    summary: 公式発売日43一致/1不一致、公式画像で37番SN、候補名の包含3組、現行parserとスキーマ設定を直接照合
+confidence: 発売日の根拠は個別公式資料。登録可否は未確認
+tradeoff: CSV作成機能とブラウザー接続が利用できず、代替書き出しの回答待ち。英語名等の未確定値・最新DB・QA確認が残る
+decision: REVISE。同一AIの自己審査。登録可能判定・PO値承認・登録GOなし
+follow_up: 書き出し方法回答後にレビュー用CSVと静的検証。本番実登録は別承認
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-DRAFT
+date: 2026-09-13
+agent: Codex design partner (same-AI self-review)
+task: Python標準CSV機能で確認用44件を作成
+scope: 確認用CSVと検証JSON・既存recon・台帳。商品登録なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-review-validation.json
+    summary: 44行10列BOM/CRLF・現行parserで44行・必須欠落0・重複0・実在日43。簡易名称比較1892組で他商品hit0
+confidence: 形式検査は直接実測。本番判定は未確認
+tradeoff: 発売日1件とmark1件は未確定空欄、英語名等は既存候補。除外語3件は提案段階
+decision: 書出方法のPO回答受領・CSV作成済み。登録可否の自己審査REVISEを維持
+follow_up: 値/検索語と最新DB・QA・実画面を照合してから登録便判断
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-KEYWORDS
 date: 2026-09-13
 agent: Codex design partner
-task: 設計PRの文書競合解消と現行v4互換・予定/数量イベント分離の具体化
-scope: design-only changes relative to origin/main ee455fb1ba4c7ad407ed6506ee4fe515fce371a8
+task: 空欄方針の承認記録・既存品質検査
+scope: 既存候補44件の読み取り検証と文書保存
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-keyword-validation.json
+    summary: 既存純関数のR1–R7を実行。1文字トークンSTOP5件/2文字WARN2件。候補内R3–R6は0
+confidence: 直接検証。本番データとの照合は未実施
+tradeoff: CSV形式検査では検索語品質を保証しない。本番鍵はタスク単位の許可が必要
+decision: 空欄方針はPO回答受領。REVISEを維持
+follow_up: 記録した読み取りSQLの鍵使用許可後に最新マスタ照合と検索語案の修正
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-LIVE-READ
+date: 2026-09-13
+agent: Codex design partner
+task: PO許可済み鍵による商品マスタ読取と44候補比較
+scope: 本番商品/分類/検索語/除外語のみ、SQL読み取り専用
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-live-snapshot.json
+    summary: SHOW transaction_read_only=on確認後、PGOPTIONS指定の7SELECTすべてexit0。商品296/有効293・分類4コード有効
+  - type: file
+    reference: docs/handoff/tcg-product-import/sword-shield-44-live-comparison.json
+    summary: 商品名一致0/同mark9行。既存との差分はR2-stop5/R3-stop1/R5-warn45組。新旧スタートデッキに同語あり
+confidence: 読取結果の直接比較。別接続7問・実原文の誤判定件数ではない
+tradeoff: 既存側の検索語も見直し対象になるがDB変更権限なし。登録直前再照合必要
+decision: 読取承認受領・照合完了、REVISE維持。本登録なし
+follow_up: 原文例と現行制約を含めた検索語競合の修正設計
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-KEYWORD-DESIGN
+date: 2026-09-13
+agent: Codex design partner (same-AI Planner then Architect)
+task: 既存8商品とCSV候補の検索語修正草案
+scope: design/recon・対照検算資料のみ、DB/CSV/製品コード変更なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-revision-experiment.json
+    summary: 入力349。既存正解256名称の劣化0・候補43確定/世代不明1保留・追加R3/R5は0。R2停止5残存
+confidence: 既存純関数のオフライン対照。期待値は設計例、実原文/PO正解ではない
+tradeoff: 短縮名は確認待ち増加。1文字規則と実原文試験、QA/反映順序は未確立
+decision: 草案作成・自己審査REVISE。略称方針と既存DB変更は未承認
+follow_up: 曖昧な略称の扱いについてPO判断後に残件設計
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-SPACE-DESIGN
+date: 2026-09-13
+agent: Codex design partner (same-AI self-review)
+task: 略称方針記録と商品名の空白差だけを扱う追加案
+scope: 設計/検算資料のみ。製品/CSV/DBの変更0
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-space-design-experiment.json
+    summary: データだけの削除案で7名称未確定。限定一致試作389入力・96期待例不一致0・既存正解256名称劣化0。品質意味合わせ後も追加R1–R6停止/警告0
+confidence: 設計用合成例の試作。実原文精度/実装/CIではない
+tradeoff: 製品判定と品質R5の限定変更が必要。正式設計承認・QA/反映順序は未了
+decision: 略称方針のPO回答受領。追加案作成、全体REVISE維持
+follow_up: 正式受入条件と反映順序を設計して承認提示
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-DESIGN-GATE
+date: 2026-09-13
+agent: Codex Planner then Architect (same-AI self-review)
+task: 判定処理の受入条件とQA/反映順序を確定
+scope: design/recon/ADR追加案/検算/台帳のみ
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md §18
+    summary: 製品6ファイル・A1–A8・隔離CI fixtureを照合。B0–B6はデータ別便に分離
+  - type: file
+    reference: docs/handoff/tcg-product-import/keyword-reducer-equivalence.json
+    summary: 既存候補選択との300例tuple比較で不一致0
+confidence: A便の設計実行可能性。正式pytest/実装結果は未取得
+tradeoff: B便は値/実原文/QA先/部分失敗の検証待ちで登録不可
+decision: A便のみ設計APPROVE、B便REVISE。PO設計/実装承認は未受領
+follow_up: A便のPO設計承認後、正式保存・カード検査
+```
+
+
+```text
+id: EV-20260913-PRODUCT-CSV-PO-DESIGN-APPROVAL
+date: 2026-09-13
+agent: Codex design partner
+task: A便正式設計承認の永続化と実装引き継ぎ準備
+scope: 設計文書・カード・根拠・台帳。製品変更なし
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-import/design.md §18-7
+    summary: A便の正式設計承認を求めた質問へのPO回答原文「進める」を対象とともに記録
+confidence: 設計承認の記録。実装承認・委任・マージGOではない
+tradeoff: B便はREVISE、製品の正式試験は実装後に必要
+decision: A便を承認済み設計として文書PR保存。実装未着手
+follow_up: 正式カード検査と文書PR提出後、実装開始・担当への委任をPOへ提示
+```
+
+
+EV-20260913-PRODUCT-CSV-PUBLISH-HOLD: A便設計/カード/調査証拠を0ceb2a16、main追従を0eb20160にローカル保存。card-lint違反0。公開リポジトリshingo-ops/salesanchorへのpushは自動承認レビューが資料の機密性/公開承認未確認として拒否。gh repo viewでPUBLICを確認し送信停止。内部商品ID/有効状態/検索除外語を含むためPOへ公開可否を提示。PR未提出・実装未着手。詳細はdocs/handoff/tcg-product-import/recon.md「文書PR提出前の停止」。
+
+
+EV-20260913-PRODUCT-CSV-PUBLISH-APPROVAL: 公開先shingo-ops/salesanchorと内部商品ID/検索語/除外語の公開を明示した質問に、PO原文「進めてくれ」を受領。本便17文書ファイル/調査証拠のpush・文書PR提出を承認。実装・委任・マージGOではない。根拠はdocs/handoff/tcg-product-import/recon.md「公開送信のPO承認」。
+
+
+EV-20260913-PRODUCT-CSV-DESIGN-PR: 公開承認に基づく通常push成功、公式ラッパーで文書PR #3466提出（初回HEAD7316bdfb）、.pr-number一致を直接確認。カード違反0/台帳検査成功。設計自己審査済み・PO設計/資料公開承認済み・文書保存/PR提出済み。実装/委任・マージ・本番反映は未実施。PR: https://github.com/shingo-ops/salesanchor/pull/3466
+
+
+EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-APPROVAL: 既存担当へのカード委任・対象6ファイルの実装検証開始の質問にPO原文「進める」を受領。正式カードを/root/csv_card_executorへ引き継ぎ済み。専用worktree status空/preflight成功、HEAD af269ae2とorigin/main9f5415c3の対象6ファイル差分0を直接確認。カード再検査違反0（長行警告4）。製品commit/push/PR/マージ/DB/本番はカード対象外。根拠: docs/handoff/tcg-product-import/recon.md「A便の実装開始・既存担当への委任承認」。
+
+
+EV-20260913-PRODUCT-NAME-SPACE-IMPLEMENT-REVIEW: 既存実装担当が許可6ファイルの修正/試験追加、make lint-ci/4テストruff/diff-check終了0（mypy警告扱い）。親は生報告と実6SHA一致を直接確認。AST純関数検算は293名称期待tuple不一致0・従来確定劣化0・既存正解256保持・旧public関数500例不一致0・境界10一致・96設計例不一致0・R5方向別6成功。追加テストの作品ID誤りと既存import整形を限定修正して再確認。pytest/PG/CI未実施、製品公開/マージ/本番変更なし。根拠: docs/handoff/tcg-product-import/recon.md「A便の実装受領・読取確認」。
+
+EV-20260913-LINE-WORK-CLIENT-04: PO修正承認後、call_work_modelのwith保持と寿命回帰6試験を実装。base56a1661d、make lint-ci終了0（mypy既存警告）、Docker不在でpytestは既存CI待ち。実Gemini0/本番変更0。reconのCARD-LINE-WORK-CLIENT-04実装節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04検証: PR3472製品HEAD01971092、CI34739377763は2819成功/95skip/失敗0、coverage63.80%。寿命回帰6件を含む。GO未受領・未マージ、実Gemini/本番変更0。reconのPR3472 CI節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04本番反映: PO GO3472、mergeb52a4def、Deploy34740608928成功、backup7.6M。稼働HEAD/ファイルSHA一致、API connected、本番Fake寿命確認成功/生成API0。再比較・採用・配信未実施。reconのGO3472節参照。
+
+EV-20260913-LINE-WORK-CLIENT-04実応答: 新固定対象1投稿13明細、アプリ呼出し1・応答13/13、全入力SHA前後一致、作品ID変化0、商品特定3→3。生成APIなしの入力コピー空白差対照は3→13、既特定3の商品変更0。原因再現であり本番改善ではない。DB書込/採用/配信0。recon14:49節参照。
+
+EV-20260913-LINE-SPACE-DESIGN: 固定729件の連続半角空白局所コピー検算552→562、既特定552の変更0、basis表記のみ5。DB/Gemini0。本番改善ではない。PR3473 a618c147との同関数重複をledger/GitHub/git showで確認、追加設計REVISE・カード未発行。recon連続空白節参照。
+
+EV-20260913-LINE-SPACE-FINAL: PR3473 MERGED/配備成功と稼働analyzer SHA一致。固定729件は新版553→563、既特定変更0、basisのみ1。品質R3/R4/R5/R6の指摘集合増減0。設計自己APPROVE、CARD-LINE-PRODUCT-SPACE-06正式検査終了0（長行警告のみ）、実装未着手。recon/ADR154 Why追補案参照。
+
+EV-20260913-LINE-SPACE-CI: PR3481 HEAD89d4b699、Backend CI34748717910/job103701245040実ログ3286成功/95skip/失敗0、coverage63.83%。33成功8skip、唯一の失敗はGO未記録ゲート。19件正答8→18、既存誤商品1残存。本番変更0。recon正式CI節参照。
+
+- EV-20260913-LINE-CARDSET-07: PR3481 merge6326115c/Deploy34750745805成功を直接確認。追加PR3483は固定729件で誤商品1→未特定、個別9→各正しい候補、他719不変。Backend CI34751619981は3295成功/95skip/coverage63.83%、Migration CI34751619987成功。GO未受領。根拠: docs/handoff/tcg-product-master-growth/recon.md「PR3481本番反映とカードセット対策PR3483」。
+
+- EV-20260913-LINE-CARDSET-08: 本番個別3登録済み/集合0をREAD ONLY確認。新集合1と相互除外のコピー検算で商品28/28、境界58/58、他719不変。設計自己APPROVE/カード08担当待ち、製品実装・本番登録は未実施。根拠: recon「カードセット登録・改訂2の事実確認と設計検算」。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: POの明示切替承認で本セッションがカード08を実装。PR3483 HEADda948509、商品新規1と相互除外/安全性/商品86入力のPG試験を追加。静的チェック成功、正式CI確認中。本番未反映。
+
+- EV-20260913-LINE-CARDSET-08-CI: PR3483 HEADe6e5d463、Backend CI34754328005/job103716059145を直接確認、3316成功/95skip/coverage63.83%。Migration34754327876成功。38success/4skip、唯一のfailureはGO未記録。バックアップ6.6M生成ログ確認。本番未登録/再解析未実施、recon正式CI節。
+
+- EV-20260913-LINE-CARDSET-08-PROD: GO #3483受領、merge116b1cf6、Deploy34758371227成功、backup6.6M生成。PM0297新規1・個別9UUID保持・本番辞書で28商品名/28、58境界/58一致、health正常を直接確認。旧明細9d2b898eの解析結果は未更新。再解析/配信未実施。recon「PR3483 GO・本番登録完了」。
+
+- EV-20260913-LINE-CARDSET-REANALYSIS: PO「再解析してテストしてみて」。既存serviceで2ジョブ25明細を再解析、run2完了/snapshot25、raw/訂正不変。既知15商品正答5→15、商品特定9→18、要確認17→13。残13は参照digest不一致で書込前停止。単位補完後も理由残存1件を確認、再抽出/配信未実施。recon再解析テスト節。
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-RECORD-DRAFT
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 商品マスタ参照テーマ・通常抽出記録の設計
+scope: 未承認設計案、製品変更0
+evidence:
+  - type: file
+    reference: docs/handoff/tcg-product-master-growth/design-keyword.md / 通常記録Aの具体化
+    summary: tcg_diagnosticsの管理者認証、taskの送受信記録不足、backup.shのDB全体dumpを確認。根拠行は設計本文に記載。
+confidence: medium
+tradeoff: 記録障害で当該投稿の完了が遅れる停止案。容量/親削除/保持は追加確認が必要。
+decision: 自己審査REVISE。新候補判断を通常promptへ追加しない。
+follow_up: POへ保存障害時の停止方針を提示。残る技術確認後に正式カード検査。
+```
+
+
+```text
+id: EV-20260914-GEMINI-ATTEMPT-DESIGN-REVIEW
+date: 2026-09-14
+agent: Planner/Architect（同一AI）
+task: 通常記録Aの限定設計審査
+scope: 設計、製品実装0、Gemini呼出0
 evidence:
   - type: command
-    reference: git merge-tree and merge origin/main; docs/handoff/tcg-import-latest-only/probe-20260913.json main_sync_retest
-    summary: 3 append-only document conflicts resolved retaining both sides; 9+3 component cases rerun with same outcomes; no production connection
+    reference: prod1 backend SQLAlchemy read-only connection / 2026-09-14
+    summary: jarvis_db、salesanchor_app、TCG_SCHEMA004、抽出3表は001/004・所有者jarvis、新履歴0。
+  - type: command
+    reference: fixed snapshot f8e3b354 + 実format_prompt_input helper
+    summary: 44投稿入力再構成最大99099 bytes/合計3886828 bytes。実送信記録ではない。
+  - type: external
+    reference: https://docs.celeryq.dev/en/stable/userguide/workers.html#time-limits (2026-09-14)
+    summary: soft例外は捕捉可、hard強制終了は捕捉不可。Context7利用不可の公式代替。
 confidence: high
-tradeoff: live inventory mapping remains unverified because allowed SSH key is monitoring-only; former manual-key template is not task authorization
-decision: retain v2/v3/v4 compatibility; separate explicit stock events from restock events and uncertain dates; self-review REVISE
-follow_up: physical schema/API, baseline mapping via authorized read path, and self-review before card issuance
+tradeoff: 保存障害/上限超過は当該新結果を止める。容量増、実装後性能試験が必要。
+decision: 通常記録Aの自己審査APPROVE。実装/CI/本番成功とは区別。
+follow_up: 正式カード検査と実装担当への明示承認。Bの商品候補判断は別設計。
 ```
 
+EV-20260913-FRONTEND-AM-IMPLEMENTATION統合後: b52a4def→ad093b7b、製品3/共有7hash不変。root直接311試験/checkall/build/Storybook成功、共通108→114/旧305→299。原ログ・manifestはam-staff-implementation.md参照。PR3468最新CI/今回番号付きGO待ち、マージ/本番未実施。
+
+
 ```text
-id: EV-20260913-LINE-DATE-CONTRACT
+id: EV-20260913-SHINSOKU-TIMEOUT-01
 date: 2026-09-13
-agent: Codex design partner
-task: 否定と予定日だけの保留契約・受入例の具体化
-scope: design-only PR #3456
+agent: Codex design partner / same-AI self-review
+task: 長文抽出100秒超過と原文精度の限定検証
+scope: docs/handoff/tcg-product-master-growth/design-keyword.md 時間制限節
 evidence:
   - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json date_calendar_oracle
-    summary: 6 next-day and 3 calendar-validity expected values independently checked using local Python stdlib; 9/9 agree; no product implementation test
-confidence: high
-tradeoff: local Python 3.14.3 calendar calculation is not production Python 3.12 or model evaluation; prior 3 component mismatches remain unresolved
-decision: draft semantic contract and 14 implementation acceptance cases recorded in design section 17; same-AI self-review REVISE
-follow_up: physical DDL/API, offer generation identity, initial stock migration and manual resolution UI before implementation card
+    reference: docs/handoff/tcg-product-master-growth/recon.md 時間制限節
+    summary: API99.842/136.291秒、解析0.554/0.683秒、147件/1176照合一致、DB更新0、前後SHA一致
+confidence: high for measured sample; unknown for population
+tradeoff: 有限300/330秒案は占有増。型番3商品不整合・統合配信未検証は分離
+decision: 設計自己審査APPROVE、数値/実装PO承認待ち、カード草案
+follow_up: card-lint/文書検査、PO承認後の限定実装
 ```
 
-```text
-id: EV-20260913-LINE-STOCK-STORAGE-UI
-date: 2026-09-13
-agent: Codex design partner
-task: 保存・解析画面・配信への接続設計
-scope: code/schema read-only; design PR #3456
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/recon.md 保存・画面・配信の再照合
-    summary: analysis rows belong to extraction items; review/distribution filter active source; UI quantity uses extraction and state uses condition; sheet clear precedes write
-confidence: high
-tradeoff: new storage adds migration and audit responsibility; immutable publication does not itself guarantee atomic sheet visibility
-decision: draft 4 tables, per-field event updates, stock_effects API and fixed 12-column publication contract in design section 18; self-review REVISE
-follow_up: extraction operation format, manual resolution authorization, history compatibility, publication API safety and initial-stock reconciliation
-```
+EV-20260913-SHINSOKU-TIMEOUT-01 後続: 2026-09-13 14:44 JST、PO原文「進める」を受領し300/330秒の実装と実装役への委任を承認。マージ/本番反映は未承認。カード発行・成果物確認へ進む。
 
-```text
-id: EV-20260913-LINE-PUBLICATION-RECOVERY
-date: 2026-09-13
-agent: Codex design partner
-task: 配信失敗復旧と手動解決・初期切替の契約
-scope: local simulated writer and official Google docs; no external writes
-evidence:
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json sheet_write_failure_probe
-    summary: old writer success/error cases both clear then append; injected append failure leaves 0 visible rows
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/recon.md 配信失敗の模擬実行と公式仕様確認
-    summary: Context7 unavailable; authorized direct Google docs confirm per-spreadsheet atomic batch, UpdateCells range clearing, recommended 2MB and 180s processing limit
-confidence: high
-tradeoff: API atomicity is not cross-spreadsheet atomicity or collaborator isolation; candidate publication not live-tested
-decision: design sections 19-21 specify one-call replacement, readback/retry, super-admin resolution and shadow cutover; same-AI review REVISE
-follow_up: extraction event contract, history version selection and full DDL constraints; measure live counts/size during authorized rehearsal
-```
+EV-20260913-SHINSOKU-TIMEOUT-01 実装追記: 委任実装役が2定数を変更、設計担当が製品diff2行を直接確認。登録taskのsoft300/hard330とruff成功は実装役報告。ローカルBanditはPython3.14非互換で不完全、mypy既存警告あり。Backend CI未確認、本番変更0。
 
-```text
-id: EV-20260913-LINE-EXTRACTION-HISTORY-CONTRACT
-date: 2026-09-13
-agent: Codex design partner
-task: 抽出版互換・履歴原文・DB制約の整合
-scope: read-only code/schema; design PR #3456
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/recon.md 抽出版・原文表示・テナント設定の照合
-    summary: v4 retains raw fields and separate work ID; supplier view loads only one latest source; TCG_SCHEMA is validated environment config, not unconditionally tenant_004
-confidence: high
-tradeoff: exact source spans prove verbatim text but not correct semantic ownership; RESTRICT/constraint triggers can conflict with existing correction/deletion
-decision: draft v5 evidence schema, versioned history/source API and storage constraints; current contract index in design section 24; same-AI review REVISE
-follow_up: source/channel mutation and delete-path audit, boundary gold labels and complete UI callers before card
-```
-
-```text
-id: EV-20260913-LINE-SLOT-NUMERIC-REFERENCE
-date: 2026-09-13
-agent: Codex design partner
-task: 発送枠の参照正解と数量変換の反例
-scope: 3 private-source posts manually labelled; unchanged numeric helper AST; no DB/API writes
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json shipping_slot_reference_labels
-    summary: 13 offers; 4 sold-out, 9 positive quantities, 6 positive quantities without unit; 2 restock possibilities; no catalog/offer ID mapping
-  - type: command
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json numeric_boundary_probe
-    summary: 5 helper cases, 2 match and 3 mismatch; circled quantity is lost and arrow expression becomes concatenated number
-confidence: high
-tradeoff: manual labels are same-AI development references, not held-out model evaluation; denied SQL keyword audit was not executed
-decision: add single-number grammar, scoped circled-number handling and ambiguous-expression hold; self-review REVISE
-follow_up: independent nonduplicate evaluation fixtures and final DDL/operation compatibility
-```
-
-```text
-id: EV-20260913-LINE-RUNTIME-DRIFT
-date: 2026-09-13
-agent: Codex design partner
-task: 別実例とruntime更新の追加査定
-scope: AST metadata read only across backend/app; manual corpus labels
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json runtime_table_reference_audit
-    summary: 245 Python files, 0 syntax failures, 73 target-table string references; 35 SELECT, 9 UPDATE, 5 INSERT and 1 FROM plus documentation strings; no SQL executed
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/probe-20260913.json additional_acceptance_labels
-    summary: 3 additional posts/8 offers, exact full-message matches 0 against 17 prior references; not sender/template-independent model evaluation
-confidence: high
-tradeoff: static strings exclude dynamic/external SQL; postprocessing and manual product correction change results without master-input changes
-decision: add final analysis result snapshot/digest and drift hold to event/publication contract; self-review REVISE
-follow_up: consolidate final columns and shared caller contract; executable product acceptance follows implementation
-```
-
-```text
-id: EV-20260913-LINE-CONTRACT-CONSOLIDATION
-date: 2026-09-13
-agent: Codex design partner
-task: 保存・再解析確認・配信の契約統合
-scope: documentation only; same-AI self-review, not independent review
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/design.md section 27
-    summary: former sections 27-29 consolidated; 2 omitted columns included; before/after fixed to 3 keys; contributing field references and read-only digest comparison defined
-  - type: design_counterexample
-    reference: docs/handoff/tcg-import-latest-only/design.md section 27 event transitions
-    summary: 10:00 quantity 10, 12:00 quantity 10, delayed 11:00 quantity 5 must retain 10; acceptance specification, not an executed product test
-confidence: high for documented structure, product behavior unverified
-tradeoff: per-field evidence adds audit storage and can hold publication when current analysis changes; complete historical master replay remains out of scope
-validation: git diff --check, task-state, ADR-index, process-artifact format/citations/maintenance, legacy suffix preservation and consolidated key checks passed
-decision: APPROVE only for consolidated contract consistency; overall formal review remains incomplete, no implementation card
-follow_up: one final whole-design consistency review and formal card checks; product acceptance after implementation
-```
-
-```text
-id: EV-20260913-LINE-CONTRACT-CARD-01
-date: 2026-09-13
-agent: Codex design partner
-task: 全体最終査定と独立した第1便のカード作成
-scope: docs only, no agent spawn, no product implementation
-evidence:
-  - type: command
-    reference: git fetch origin main and git diff HEAD...origin/main
-    summary: latest main af269ae20ed2f52e6cd49ba0403ad7799e3a3870; preserve v4 p1/p2 and Android sender-resolution changes
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/design.md sections 11 and 15
-    summary: whole design REVISE; stage 1 only APPROVE with 4 new files, 2 pure functions and 6 acceptance groups; same-AI review
-  - type: command
-    reference: bash scripts/card-lint.sh docs/handoff/tcg-import-latest-only/card-stock-contract-01.md
-    summary: exit 0, zero violations, L24 long-line warning only; manual path/hash/scope/stop-condition checks completed
-validation: process-artifact design/citations/maintenance checks passed; product tests not executed
-tradeoff: stage 1 is intentionally not connected to inventory; it cannot yet prevent production stock loss, but its contract does not depend on unresolved inventory APIs or cutover storage
-decision: prepare bounded implementation card without launching an executor or issuing GO
-follow_up: executor implements stage 1 and returns code/test evidence; finalize remaining whole-design contracts before subsequent cards
-```
-
-```text
-id: EV-20260913-LINE-FINAL-DESIGN-REVIEW
-date: 2026-09-13
-agent: Codex design partner
-task: 在庫操作・再解析解決・初回切替の契約を完成
-scope: design review only; no implementation, DB, external delivery or new executor
-evidence:
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/recon.md 残る操作契約の接続確認
-    summary: verified current main af269ae2; existing preview/run and import-job source links inspected
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/design.md sections 20.1, 20.2, 21.1 and 27
-    summary: reconciliation/API shapes, control/inbox and cutover watermark defined; six total new tables; old publication and source history retained
-confidence: design contracts reviewed; implementation behavior unverified
-tradeoff: storage and short control-row serialization increase; identity-changing reinterpretation remains pending rather than moving stock across products; production cutover needs separate concrete card and PO GO
-validation: diff whitespace, card-lint, task-state, ADR-index, design/citation/maintenance, unchanged stage-1 contract, card hash and legacy preservation passed; two draft table-count assertions included an existing table and caller-list rows; corrected the inspection to the schema table only and verified six new tables
-decision: overall design APPROVE by same-AI self-review; not independent review or PO approval; stage-1 card scope remains four new pure-component files
-follow_up: execute and review authorized stage-1 card through designated executor; issue later bounded cards and run K1-K10 product acceptance before production
-```
-
-```text
-id: EV-20260913-LINE-STORAGE-CARD-DRAFT
-date: 2026-09-13
-agent: Codex design partner
-task: 後続便の開始条件と第2便草案
-scope: docs only; no executor started
-evidence:
-  - type: command
-    reference: origin/main 9f5415c31104e325b38da03df8ef9acdc5973066 tree/diff
-    summary: new migration filename unused; existing source-name migration registration must be preserved; CI-only PostgreSQL fixture must not be enabled by spoofing GITHUB_ACTIONS locally
-  - type: file
-    reference: docs/handoff/tcg-import-latest-only/card-stock-storage-02.md
-    summary: unissued draft, three planned files and eight PostgreSQL acceptance groups; no execution commands or start authorization
-validation: both card-lint checks exit 0 with long-line warnings; design/citation/maintenance and whitespace checks passed; stage-1 contract byte content unchanged, pinned hash refreshed, legacy suffixes retained
-tradeoff: draft format pass is not executable-card approval; first-stage implementation evidence and exact isolated PostgreSQL path are still required
-request: explicit delegation of stage 1 to another executor requested from PO; no response recorded at this save point
-follow_up: stage-1 delegation and implementation evidence; finalize storage card only after prerequisites
-```
-
-```text
-id: EV-20260913-LINE-STAGE1-REVIEW
-date: 2026-09-13
-agent: Codex design partner / delegated stock_contract_01
-scope: four new pure-component files and tests; no existing product integration
-request: PO original reply 進める to explicit stage-1 delegation question; no proxy GO
-reference: docs/handoff/tcg-import-latest-only/recon.md and probe-20260913.json stage1_component_review
-validation: worker reports six unittest groups and two-module mypy passed; root directly reran six groups, targeted ruff/mypy/Bandit, all passed; full lint-ci exit 0 on Python3.12 tooling environment with 153 advisory mypy errors outside new modules; full Bandit High0/skip0
-failure: original cache permission and Python3.14 Bandit internal error not treated as pass; three new mypy errors fixed under formally linted follow-up card
-decision: stage-1 component review APPROVE; same-session parent review, not independent third-party review
-state: product files local/untracked, no product commit or PR; docs PR3456; no DB, K1-K10, AI/UI, production or distribution verification
-follow_up: formal product handoff and stage-2 latest-main/isolated-PostgreSQL prerequisites; stage2 remains unissued
-```
-
-```text
-id: EV-20260913-LINE-HANDOFF-PREP
-date: 2026-09-13
-agent: Codex design partner
-scope: read-only verification and documentation; no executor resumed
-reference: docs/handoff/tcg-import-latest-only/recon.md and design.md section15; card-stock-storage-02.md
-observed: main API and origin/main 0002d110 match; docs PR3456 at0242a98e has3 successful checks and1 skipped;4 product SHA256 match; target migration filename absent
-validation_path: existing test.yml PostgreSQL16 service and CI-only random-database fixture pattern; 8 schema acceptance groups specified; no CI changes
-limitation: local Docker socket absent, PostgreSQL not executed; automatic future TCG provisioning not verified
-review: same-AI APPROVE for CI validation-path design only; stage2 remains unissued
-next_decision: extend existing stage1 executor delegation to isolated worktree/copy/verification/product commit/push/PR only; no merge, DB or stage2 implementation
-```
-
-```text
-id: EV-20260913-LINE-PRODUCT-SUBMITTED
-date: 2026-09-13
-reference: docs/handoff/tcg-import-latest-only/probe-20260913.json stage1_product_submission
-observed: product PR3471 OPEN/main/HEAD53479dbf directly verified; four product hashes match0c90de21; same executor reused under explicit additional PO delegation
-validation: worker six groups and target mypy passed; parent verified commit/file hashes and full lint log, CI36success8skip1failure; parent read pytest job103675515859:2769passed95skipped309warnings,63.46%coverage
-block: actual process gate log requires numbered PO GO; not fabricated
-state: product PR submitted; stage2/DB/merge/production/reanalysis/distribution not executed
-next: CI completion and PO-designated final review
-```
-
-```text
-id: EV-20260913-LINE-STORAGE-PREFLIGHT
-agent: design partner
-date: 2026-09-13
-reference: docs/handoff/tcg-import-latest-only/recon.md and design.md section27
-observed: main56a1661d includes condition-review PR3470; item_corrections.id BIGSERIAL in two canonical migrations; stage1 four paths unchanged
-external: Context7 unavailable; PostgreSQL16 official numeric/constraints/datetime docs directly checked, no SQL run
-correction: correction_ids decimal strings instead of UUID; finite quantity/price/date constraints; preserve effective condition review in later integration
-review: same-AI Planner correction then Architect APPROVE for these corrections; no independent review
-state: stage2 draft updated,3 files and8 PG groups; no stage2 delegation/implementation/DB/merge/production
-next: PO decision on bounded stage2 delegation to existing executor through PR/CI
-```
-
-```text
-id: EV-20260913-LINE-STORAGE-DELEGATED
-date: 2026-09-13
-agent: design partner / existing stock_contract_01
-request: PO original 進める to explicit stage2 three-file implementation/testing/PR delegation
-reference: docs/handoff/tcg-import-latest-only/design.md section15,27 and card-stock-storage-02.md
-observed: dedicated worktree based on main56a1661d; migration/test paths absent; previous registry line retained
-state: design documents prepared, product not yet implemented; no merge or production
-next: three-file implementation and parent review, then product PR and existing CI real-PG tests
-```
-
-EV-20260913-LINE-STORAGE-DELEGATED 追記: 担当はJSON契約不足で製品未編集停止。既存配信先6列と更新5項目を照合し、design §27を補正、同一AI自己査定APPROVE。実PG未実施。正式カード再発行で同じ担当へ戻す。
-
-EV-20260913-LINE-STORAGE-DELEGATED 再照合: 日付period/unspecifiedとselector根拠の設計不足で未編集停止。design §27へ組合せ4行と7/5キーを固定し自己査定APPROVE。実PG未実施、同じ担当の再開準備。
-
-EV-20260913-LINE-STORAGE-GUARD-STOP: 第2便製品commit3250e829、旧先端47ee5114保全。担当のAST8関数/ruff/bash/登録1行検査成功、親がhash/差分/定義コピー0を確認。未公開ブランチ追従1/8の文書競合は親解決・stage済み。続行カード保存と原文削除負例保存がPreToolUse hook拒否で停止。実PG/PR未実施、全体検収REVISE。限定PO承認待ち。詳細reconの保全・承認停止節。
-
-EV-20260913-LINE-STORAGE-GUARD-STOP 追記: PO原文「進める」で直前の限定2操作の再開承認を受領。正規チケット発行コマンド自体がPreToolUseに拒否。ローカルhook144〜151行の部分一致と発行例外なしを読取確認。承認未受領ではなく承認登録ブロック。追従1/8と解決済みindexを保全、DB実行0。通常ターミナルから正規発行を依頼。
-
-EV-20260913-LINE-STORAGE-RESUMED: PO限定承認と通常ターミナルでの登録完了報告後、正式ガード下で追従完了HEAD bc33aa37。SQLhash0c68042e保持、承認済み原文削除拒否テスト保存・commit ad0d9fc7を親が直接確認。試験hash a5227daa、ruff成功。過去の保存停止は解消、実PG未実施のため検収REVISEを継続。既承認の通常push/検証PRへ。代理GO/マージ/本番なし。
+EV-20260913-SHINSOKU-TIMEOUT-01 PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、実装7db0997c。初回のprocess-artifacts gateは番号付きGO記録待ち。CIはPR最新HEADで確認し、実装承認をマージGOへ転用しない。
 
 
-EV-20260913-LINE-STORAGE-PR: PR3479 HEAD5edbe183をGitHub/.pr-number/remoteで直接確認。提出直前のmain更新で共通台帳2件が競合。自記録のみ追記位置を既存本文中へ調整し、他者記録を保持して読取統合検査。実PG開始待ち、検収REVISE/GO未発行/マージと本番なし。
+EV-20260913-SHINSOKU-TIMEOUT-01 完了追記: PO原文「GO #3476」を2026-09-13 15:14 JST受領、PR #3476を15:16:21 JSTに正規マージ（c22ad508）。Backend CI34741872204・GO gate34742291130・配備34742337546成功を直接確認。本番worker再起動15:18:34 JST、task属性300/330秒をSSH読み取りで直接確認。対象投稿の再抽出は未実施。詳細はrecon.mdのPR #3476マージ・配備確認節。
 
-EV-20260913-LINE-STORAGE-CI-01: PR3479 eab1609bのCI実ログで3260成功/95skip/新規8群setup error、coverage63.82%。queryの空tuple渡しを公式仕様で照合、1行修正へ。全件dryrun128SQL2周成功だが新SQL対象外、合格根拠には不採用。main通常統合3c0bc15eで製品hash保持、GO/本番なし。
+EV-20260913-SHINSOKU-TIMEOUT-01 再抽出完了: PO原文「次を進める」に基づき固定job713b8823を既存retry_extractionで1回投入、enqueued1。2026-09-13 15:33:13 JST、通常Celery taskが146.425139秒でdone。DBで明細147/解析147/要確認0/エラーNULL。原文数量価格単位等735照合一致、欠落重複0。原文不変、配信未実行、全投稿の保証ではない。根拠はrecon.mdの本番1件再抽出節、worker task91ff4091ログと非公開の前後スナップショットを設計担当が直接確認。
+EV-20260913-FRONTEND-AM-GO: PO原文「GO #3468」、2026-09-13 15:26 JST記録。承認時1c5cccf2、main c22ad508統合89d4a624、製品3/共有7hash一致。最新CI後に公式merge/本番反映、backup/health/公開6件確認へ。代理発行ではない。根拠am-staff-implementation.md GO節。
 
-EV-20260913-LINE-STORAGE-CI-02: PR3479 HEAD79890cfc、job103688678583で3260成功/95skip/8setup error/coverage63.82%。空tuple問題解消、新SQLのcontrol初期化が索引作成前で遅延FK検査待ちとなる。DDL後の初期化とファイル単位反復へ設計追補、自己審査APPROVE。制約/8群の受入は不変。実装検収REVISE、GO/本番なし。
+### EV-20260913-FRONTEND-AM-RELEASE
 
-EV-20260913-LINE-STORAGE-LOCAL-READY: POの離席・PR直前まで指示を受け、追加公開を停止。既提出PR3479は9711cc40、実PG3267成功/95skip/1失敗。残る第4群の接続認証を同じ担当が7b172c46へ保存、親の差分/ruff/構文/8名と全assert不変確認。修正未push・再実PG未実施、全体検収REVISE。新規PR/GO/マージ/本番なし。
+PO原文GO #3468受領。0829affd最新CI38成功/8対象外・CLEAN→merge c50d719b、deploy34742996601成功。root実ログで新規backup7.6M/配備HEAD一致、直接HTTP200/DBRedisCelery connected/公開3フォーム6ボタン属性を確認。根拠docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。検収器修正履歴保存。本番認証付きフォーム送信・PO目視・復元試験は未実施。本便完了、残存旧299の次便設計は別。
+
+EV-20260913-PRODUCT-NAME-SPACE-PUBLISH-APPROVAL: 製品PR作成とCI正式検証の質問にPO原文「進める進める」を受領。公開カード違反0、既存/root/csv_card_executorへ委任継続。検収済み6製品ファイルと固定版d11d27b7の17文書を対象にcommit/push/PR/通常CIを許可、マージ/本番/データ変更は禁止。最新main56a1661dの空箱/状態保護は保持。根拠: docs/handoff/tcg-product-import/card-product-name-space-publish.md とreconの公開承認節。
+
+EV-20260913-PRODUCT-NAME-SPACE-CI: 製品PR3473/HEADe484f168、6製品+17文書/cleanを親が直接確認。Backend run34740813915/job103680104043実ログ3260passed/95skip/coverage63.82%。36チェック成功/8対象外、唯一の失敗はprocess gateの番号付きGO未記録。親もCIログと固定旧基点AST293/500/境界検算を確認。最新main配備34740608928の直近backup7.6M生成を読取確認（今回配備用ではない）。技術検証済み・GO未受領・未マージ/本番未反映。根拠: docs/handoff/tcg-product-import/recon.md「製品PR3473・正式CI完了」。
+
+EV-20260913-PRODUCT-NAME-SPACE-GO: PO原文「GO #3473」を受領、承認時HEADe484f168。親がpreflight/clean/.pr-number/HEADを直接照合し、確認済みmainc22ad508（6製品変更0）追従と通常merge/autodeployのカードを既存担当へ引き継ぎ。カード違反0。PO本人の承認でありAI代理GOではない。文書PR3466/B便データ操作は対象外。結果未確認、reconのGO3473節参照。
+
+EV-20260913-PRODUCT-NAME-SPACE-RELEASE: PO GO3473に基づき正式merge8d5aa581（15:39:45 JST）/配備34743294988成功。親もPR API・実pytestログ3260passed/95skip/63.82%・配備HEAD・今回backup7.6M生成・公開HTTP200/DB等connectedを直接確認。6製品SHA維持は既存担当が照合。実投稿再解析/精度測定/商品登録/3シート配信/復元試験なし。文書PR3466は別途未マージ。根拠: docs/handoff/tcg-product-import/product-name-space-release-result.json とrecon完了節。
+
+EV-20260913-PRODUCT-CSV-B-PREP: PR直前までのPO指示に基づく文書準備。実取込4関数AST/メモリモデル180例期待値一致、DB接続0。商品commitと履歴commitの間、post-write ValueError時の返却件数不一致を識別。8商品変更前後と候補上書き草案を固定。実PG/QA/個別値PO確認未完了、同一AI自己審査REVISE、実行カード未発行。design§19/reconとkeyword-import-partial-audit.jsonを根拠とする。push/PR更新/製品/本番操作なし。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-DESIGN: 実呼出元2箇所・commit順・pinSQLAlchemy2.0.38公式ソース・実CI一時DBfixtureを確認。CSV行の商品/語/履歴を同時確定する4ファイル案とC1–C11をdesign§20に保存。限定技術設計は同一AI自己審査APPROVE、PO採用/実装/新PG試験未実施。B便データ登録はREVISE維持。Context7不在は公式資料代替で確認。根拠keyword-import-atomic-design-evidence.json/recon。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-APPROVAL: PO原文「進める」を受領、方式採用/4ファイル実装を既存担当へ委任。公式専用作業台main1a8eed69/clean/preflight成功、正式カード違反0。Docker未接続でpytest/PGは未実施。push/PR直前停止、本番/データ変更は対象外。根拠design§20-7/recon/card-product-csv-atomic-impl.md。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-IMPL-REVIEW: 既存担当4ファイル差分/静的検査受領。親が2サービスと新規PG現物/4SHA/範囲/diff検査を直接確認。旧版不整合を検出する実AST検算は新版354ケース全一致、unit関数直接呼出25成功。PG228ケース追加は未実行、CI15分内未測定。製品未commit/push/PR前停止、本番変更なし。根拠recon実装受領節とkeyword-import-atomic-implementation-result.json。
+
+EV-20260913-PRODUCT-CSV-ATOMIC-PUBLISH: PR直前停止の報告後にPO原文「進める」を受領し製品PR提出/通常CI確認へ進行。最新main1a8eed69追加差分0/4SHA一致、正式公開カードへ。ADR154 Whyへ確定境界と旧版不一致/新版メモリ354・直接unit25の根拠を保存。実PG未実施、マージGOなし。根拠recon公開承認節。
+
+### EV-20260913-FRONTEND-AN-DESIGN
+
+固定1a8eed69でBot3フォーム6原文・2ページ/共有10hash・共通114/旧299を直接監査。期待120/293。type6/6、disabled2、対象外5ボタン/ConfirmModal2。POST成功のキー表示と2PATCHの契約・権限・長い登録ラベルを照合。docs/specs/design-system/design.md§ANで96組検収と合成APIのみの検証条件、失敗時REVISEを規定。同一AI自己審査APPROVE、製品変更0、実装承認未受領。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-button-audit.json。外部事例/新API調査不要（既存native部品契約の移管）。
+
+### EV-20260913-FRONTEND-AN-IMPLEMENTATION
+
+PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致・96表示/24操作+6閉鎖前後組成功。初回試験4誤前提を8実観測で確定し試験のみ修正。担当32新規/343全体試験・品質成功の原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md / an-implementation-manifest.json。実装検収APPROVE、PR3480最新CIへ。今回GO/merge/本番未実施、合成キーだけで実キー操作0。
+
+EV-20260913-LINE-SPACE-IMPLEMENTED: CARD06をmain1a8eed69起点で実装。商品専用連続半角空白と品質R3〜R6/版v8。純関数直接照合457成功（既存431/追加26）、lint終了0、mypy警告あり。Docker不在/PR未作成で正式pytest/PG/CI未実施。PO指示によりPR直前停止。recon実装確認節参照。
+
+EV-20260913-LINE-SPACE-ACCURACY: 実装2534ca14/親1a8eed69、固定729件で全差分11を含む2投稿全19明細を同一AIが原文/マスタからラベル。正答8→18（42.1→94.7%）、未特定10→0、誤商品1→1。非盲検・全体精度ではない。9種セット誤商品を残存課題として記録。product-space-accuracy.json/recon参照。DB/Gemini/本番変更0。
+
+EV-20260913-LINE-SPACE-PR: 続行指示で正式PR3481作成。GraphQL/502後にOPEN/ready/base mainを直接確認し公式登録。実装2534ca14、正式CIはPR本文に実測記録。GO未受領/本番変更0。
+
+EV-20260913-CARDSET-GUARD: PM0263除外語カードセット1行を追加する限定実装。固定729件で個別9種の誤候補除去/集合1件を保留、他719不変。正式CI未実行、ローカルlint/runner構文/diff成功。GO3481転用なし、本番未適用。recon CARD07節参照。
+
+- EV-20260913-LINE-CARDSET-08-IMPL: PO「進める」で本セッション実装担当へ割当て。改訂2/カード08（設計PR3462 commit3b40ceea）に基づき新集合1/相互除外/登録安全性と商品86入力を実装。正式PG/CI待ち、本番登録・マージ・再解析未実施。recon CARD08実装着手節。
+
+### EV-20260913-FRONTEND-AN-RELEASE
+
+2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+## EV-20260913-PRODUCT-DETAIL
+
+商品マスタDETAIL-01。POの一覧/詳細編集条件と進行依頼を受領。origin/main 10212686起点で公式worktree作成。
+設計・自己審査は docs/handoff/tcg-product-import/design.md DETAIL-01、実測はrecon.mdの同日節。
+実装・CI・本番の検証結果は現時点で未取得。状態を完了としない。
+
+
+EV-20260913-PRODUCT-DETAIL 追記: 一覧/GET詳細/編集UIを作成。新規画面11件と既存CSV7件成功（模擬API）、frontend build/check:all/限定eslint成功、backend限定ruff成功。
+更新APIコード保存がPreToolUse hookで拒否され、POへソース保存の承認質問を送信。解除・迂回なし。
+backend全体lintは走査例外/既存型エラーで中断、実PG/CI未実施。PR未提出、マージ/デプロイ未実施。
+根拠: docs/handoff/tcg-product-import/recon.md「DETAIL-01 作業停止時の実行結果」。
+
+
+EV-20260913-PRODUCT-DETAIL 再開試行: ソース保存承認「進める」受領後、公式permit-danger.shの呼出し自体が自動ガードで拒否。許可は未発行。ガード実体151行のコマンド全文一致と例外分岐なしを読み取り確認。PO端末での正規手続き待ち。更新API/PR/マージ/本番は未完了。
+
+EV-20260913-PRODUCT-DETAIL 2026-09-14追記: PO原文「実行した」、公式許可でソース保存exit 0。GET/PUTと競合/一括確定を実装。UI18件、build/check:all、Python3.12 make lint-ci成功。実PGはDocker不在のためCI待ち。詳細はrecon.md「許可適用とローカル最終検証」。マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL PR追記: PR3492正式提出、84a6a697/99e211bb。既存単体4件の旧文言期待を補正しローカル343件成功。CI実PG進行中、run34765540117は番号付きGO記録不足で停止。
+EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN: PO原文と合意3条件をdesign§21へ保存。main10212686/10一次情報SHA/旧10列新規専用・非可逆strip/split/既存履歴型を実物確認。12列更新専用・revision/全行同時確定・13製品ファイル/R1–R11を同一AI自己審査APPROVE。Context7不在、公式資料代替確認。既存担当の実装13SHAと親の直接算出が13/13一致、読取レビュー/画像確認済み、FE350/E2E11成功。Backend22unit+23PGは定義済み・実行待ち。正式CI/番号付きGO原文なし。最新main313d7796の非競合2ファイルを保持して公開へ。根拠roundtrip-design-evidence.json/recon/roundtrip-parent-review.json。
+
+### EV-20260913-FRONTEND-AO-DESIGN
+
+2026-09-13 AO次便設計草案: チーム3フォーム6ボタン（TeamsPage200/203/221/224、TeamEditPage67/74）。基準116b1cf6で共通120/旧293→期待126/287、2ページ/共有12hash・対象外6原文を直接保存。3項目送信と保存中ロックなし、メンバー処理の対象外境界を確認。設計はdocs/specs/design-system/design.md§AO、根拠evidence-20260910/ao-team-button-audit.json。製品未変更・実装承認未受領・144表示組未実行。表/報酬3/カレンダー色保留、新CI最後。
+
+AO審査追記: 同一AIによる設計自己審査APPROVE。原文6/type6/対象外6・2ページ/共有12hash一致、製品差分0。design/maintenanceエラー0、task-state/diff-check成功、未発行カード草案のcard-lint exit0（長行警告1のみ）。実装承認待ち、実装/144表示組未実行。
+
+
+AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件の実装承認質問へのPO原文「進める」を受領。AOの製品3ファイル・品質検証を承認済み。最新main1021268623f2dba566d953fea056ff548ae28f3aまでfrontend差分0、対象2ページ/共有12hash一致を直接確認。collaboration.list_agentsではrootのみで、従前の実装担当は現存しない。起動指示の新サブエージェント暗黙起動禁止に従い、新担当1名の委任確認待ち。rootは製品実装へ切替しない。カードは担当確定後の正式発行待ち、製品変更0。今回番号付きGO/マージ/本番承認は含まない。
+
+### EV-20260914-FRONTEND-AO-IMPLEMENTATION
+
+AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL 実DB検証: e1f6513c/run34765847297/job103746586673成功、3596 passed/全体95skip、保存サービス97%。本便27ケースskip条件非該当、参照/別テナント不変含む。統合単体377件成功。PR3492正式GO記録待ち、最新HEAD checks正本、マージ/本番未実施。
+
+EV-20260913-PRODUCT-DETAIL GO受領/復旧: PO原文「進めるGO #3492」。起動ガードはPO復旧報告後preflight成功。PR3490を保持して統合、CSV検索条件1点整合・相互競合試験4件追加。最終CI/本番はこれから確認。recon同名節参照。
+### EV-20260914-FRONTEND-AO-RELEASE
+
+2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+EV-20260914-PRODUCT-ALL-TERMS: design§24にPO実装依頼・契約・自己審査を記録。最新1504明細全区分一致。固定正解4/全差分/品質検査/正式CIを公開条件とする。公開未実施。
+
+EV-20260914-PRODUCT-ALL-TERMS-LOCAL: 実装5ファイル。純関数48/48、ruff成功。固定正解0→4/4、全1504の既存特定喪失0/別商品変更0。品質規則全文不変。根拠docs/handoff/tcg-product-import/all-terms-result.json。正式DB試験/本番反映未完了。
+
+### EV-20260914-FRONTEND-AP-DESIGN
+
+APリード6件の原文/21hash/対象外6/他候補5画面を直接監査。基準e39fa65a、共通131/旧287。既存失注試験1ファイル3件をroot直接実行し成功。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-button-audit.json、ap-existing-lead-test.txt、設計docs/specs/design-system/design.md§AP。条件付き続行指示を受領、担当委任・番号付きGOは未取得。製品実装/表示240組は未実施。
+
+AP設計自己審査APPROVE（同一AI）。原文12件各1出現、23ファイルhash一致、形式エラー0。カードは未発行、実装担当への本便委任を確認する段階。
+
+
+2026-09-14 AP実装委任承認: 直前の「既存の実装担当1名へ、この6件の実装・検証を委任してよいですか？」にPO原文「進める」を受領。CARD-AP-LEADS-01を既存team_button_generatorへ発行。対象は指定製品3ファイルと品質検証、rootは表示/操作検収と文書を担当。新AI起動なし。発行直前の最新main 59f644cd545d9481ed3460ad5c1dfeefd8c2df56と2ページ/共有21hash一致。今回番号付きGO/マージ/本番反映の承認は含まない。
+
+
+AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+### EV-20260914-LINE-ATTEMPT-IMPLEMENTED
+
+CARD09、PO明示切替質問への「進める」で本セッションが実装。PR3494 / 製品c4624ec17e89a747f13558c926470d191f140923。Backend34767671465/job103751462713の直接取得ログ:3654成功/96skip/失敗0、270.82秒、coverage64.85%。実DB migration34767671414成功。記録段階の失敗・競合・容量・認可・模擬中断を偽SDK/隔離PGで確認、実Gemini0。本番操作0。自己確認であり独立レビューではない。Process Artifacts34767671426はGO #3494未受領で停止。根拠: recon.md「CARD09実装・正式CI結果」。従前13明細保留等は未解消。
+
+
+### 2026-09-14 配備前提の停止
+
+AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合。evidence-registryの追記競合は双方保持、main全行の包含と製品3hash一致を確認。製品HEAD f3598fb2のCIは38成功/8対象外、process-artifactsだけ今回GO未受領のため停止している。
+
+別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
+
+同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。
+
+
+### 2026-09-14 PM0264配備障害の復旧確認
+
+修正PR3500のmain 70d145f090e122dd36e4a39b4928e13cc0dae613について、deploy34804164057/job103852603870がsuccess、03:57:47 UTC完了とGitHub APIで直接確認。原ログでは従前失敗の231番がDO/COMMIT成功、233/233まで完走しMigrations done、SA-19 smoke全成功、Verify deployment成功。事前バックアップsalesanchor_db_20260914_125456.sql.gz/6.7M。確認時点の公開App/APIはTLS検証有効のcurlで200、DB/Redis/Celery connected。
+
+修正差分は既存商品の固定日本語名照合を外し、構造属性の照合を維持。対象の既存seedは非NULL値の保持等に変更。全CSV更新の保全や本番の商品名そのものは直接SELECT/往復試験していないため未検証。AP対象2ページ・共有21ファイルの基準から最新mainへの変化は0。PM0264による配備保留は解消。AP3497の最新main統合・確認と番号付きGOは別途必要で、今回マージ/本番反映は行っていない。根拠: ap-release-prerequisite.json recoveryVerification。前節は復旧前の履歴として保持する。
+
+### EV-20260914-CARD09-MERGED-DEPLOY-BLOCKED
+
+PO原文GO #3494、review_card09 APPROVE、e594d3efの正式PG3692成功/95skip/失敗0。正規merge e69da6ed・2026-09-14T01:55:43Z。deploy34797490804/job103833308323は旧カードセットSQLのPM0264名称不一致で失敗。新backup7,500,696bytes/gzip読取成功、コード主要4x2SHA一致、新履歴表001/004不存在、待機実行0、App/API HTTP200。新記録機能は未開通、追加本番変更/実Gemini/再解析/配信0。詳細と直接証拠: recon『CARD09最終レビュー・GO・マージ・配備停止』。旧SQLチェックの迂回や商品名書戻しはしていない。
+
+### EV-20260914-CARD09-PRODUCTION-VERIFIED
+
+PR3494の通常記録AはPR3500後に配備確認。Deploy34804164057/34804870906成功。本番import a56cd32a-434d-4b3d-996e-1e46b044a8c6新規23jobを04:36:49Zまで直接READ ONLY監視。入力/応答23保存、completed22/failed1、682明細7502項目照合不一致0。failedはWORK_ID_CONFLICT、応答保持/明細0、純関数で5矛盾再現。商品特定583/要確認120はシステム判定で正答率ではない。原文/マスタ更新・追加API・配信0。recon「CARD09初回実投稿・通常抽出の読取検証」「CARD09完了範囲と引き継ぎ審査」を正式根拠とする。文書自己審査APPROVE、PR3462マージ承認は別。
+
+EV-20260914-PRODUCT-ALL-TERMS-CI: PR3499 HEAD9f96d682、正式CI34798680670の実ログで3718成功/95skip/失敗0、coverage65.05%、265.85秒。固定正解4件改善/他1500判定不変。自己レビュー、独立審査ではない。GO記録検査と既存PM0264配備障害で本番未反映。根拠docs/handoff/tcg-product-import/all-terms-result.json。
+
+## 抽出試行記録2件の限定是正・実装開始（2026-09-14）
+EV-20260914-ATTEMPT-INTEGRITY。PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら本番に反映、でーたのSSOTは厳守」。検証後反映の意図を受領。新規PR番号のGO原文は未受領で創作しない。
+既存担当error_visibility_reconにCARD-PMG-ATTEMPT-RECORD-FIX-01を交付、正式card-lint exit0。rootは設計/文書/本番read-only照合を担当、製品は担当が所有。他者変更を戻さない。公式new-worktreeでrelease/attempt-record-integrity-fix、base5afb5af1、UUID98aa2dcc-41fc-4469-a375-b259b8df81ec。未保存作業を保護する公式回収の既定安全検査を維持。
+旧PR3494は別操作でマージ済み。main5afb5af1の対象2ファイルはe594d3efと同一。rootの実PG再現/候補比較をreports/pr3494-evidence-20260914へ保存。限定修正設計はdesign.md同日末尾、同一AI自己審査APPROVE。製品実装・正式PG/CI/コードレビューはこれから。
+root本番read-onlyでgitHEAD5afb5af1、backend/workerの対象serviceSHA28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4一致。PG16.13、2schema各9制約がPG16.15期待値と一致。本番の具体的な件数は非公開の調査記録に保持し、この公開候補文書には転記しない。この照合は将来の不具合不存在の証明ではない。実本番DML/再抽出/Sheets呼出0。
+run34804870906のdeploy成功とbackup生成ログを確認、実ファイルの存在とgzip -t exit0を確認。復元試験は未実施。公開health status ok・database/redis/celery connected。今回の追加修正反映はまだ未実施。
+
+### 正式CIによる並行検証へ進む判断（2026-09-14）
+別担当コードレビューは製品service4d255b7c/migration0c39573b、最終testfe5f2593でAPPROVE。root hash照合成功。担当の初回対象試験73成功/1失敗は専用DBにsalesanchor_appがない権限fixture不足、実CI test.yml:180–203のロール定義をroot照合。対象だけで全app coverage測定した初回閾値未達を全体試験の合格にしない。
+最終版は実行途中17/74で専用PG空き789→645MBを担当が観測。以前の2走行の保持DBも同専用環境に残る。容量不足を確定エラーと断定せず、不足予防で試験中断・専用profile拡張を指示。本番/他者DBは変更せず、保持fixtureを削除しない。
+ローカル全試験完了をPR提出前の必須条件にしていたカード02を改訂。これはローカル環境都合で正式CIも止めないためで、レビュー/試験/GOのマージ基準は緩和しない。未完了をPR本文に記載し、正式Backend CI全体とMigration SQLの成功を必須とする。commit/PRは検証対象を固定する手順、本番反映の合格ではない。
+
+## 公開前停止（2026-09-14・ローカル追補）
+本便commit e9ac6ef6c0db9232f4a471db9f0f207c3549ab36、16files/+854-4、root実在確認。製品service4d255b7c/migration0c39573b、最終testfe5f2593のコードレビューAPPROVE、担当はpytest未再実行のread-onlyレビュー。担当Docker最終版は33成功途中で容量不足予防のためSIGINT/exit2、初回73成功1失敗（専用DBロール不足）と区別。全74件成功/全体coverage合格/正式CI成功ではない。
+自動承認審査は通常pushを実行前に拒否。理由は、新しいバックエンド修正・migration・証跡16ファイルを公開repoへ送信する具体payload/公開先の明示承認がないこと。公開先 https://github.com/shingo-ops/salesanchor 、承認対象commit上記。操作実行0、PR未作成、CI未開始、本便本番反映0。再試行・別経路・ガード変更なし。POの公開承認を求める前に具体差分/レビューと保存を完了。
+専用試験環境は本便のみ停止/default context復元を担当へ指示。ホスト空き727MiBの実測低下を受け、VM容量拡張はしない。ログ保持と本便新規profile以外0の確認後、自作合成試験環境だけ公式回収する限定cleanupを許可。他者DB/本番/既存profileの変更は禁止。cleanup完了は別途実測する。
+本追補は未コミットで、既存e9の16ファイルへ自動的に追加公開しない。
+
+限定cleanup結果: 担当が本便専用pmg-integrity-20260914の停止exit0、default復元後、公式colima delete --profile pmg-integrity-20260914 --dataを通常確認で実行しexit0。途中unlock警告あり、追加unlock/迂回なし。最終colima listは既存3profileのみ全Stopped、context default。host空き727MiBから4.9GiBへ回復と担当報告。rootもlist/context/dfを直接再確認。専用PG/Python2containerの合成試験環境だけを回収、既存環境/本番未変更。ローカルログ・未投稿PR案はreports/attempt-integrity-local-validationへ保存、これはe9の公開16ファイルに含めない。リモート新branchはgit ls-remoteで不在確認。次はe9ac6ef6の16ファイルを公開originへpush/PR提出する明示承認。その後正式CIで全体試験を実行し、新PRの番号付きGOを含む既存承認経路を確認する。
+
+## 公開承認解消・PR3504正式検証（2026-09-14・ローカル追補）
+公開先shingo-ops/salesanchorへe9ac6ef6の16ファイルをpush/PR提出する具体的質問に、PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したならGO」を受領。通常push成功、PR https://github.com/shingo-ops/salesanchor/pull/3504 提出済み。前節の公開承認待ち/未提出は解消。本回答を未発言の「GO #3504」に変換しない。
+初回CIのtest-schema-dupは試験内に本番テーブル定義2コピーを検出して失敗。CARD-PMG-ATTEMPT-RECORD-FIX-03により既存正本provision()を利用する試験1ファイルのみ修正。47f72ab3674eba06e28f1cef86b1757986995750を通常commit/push。製品2ファイルのハッシュは前節から不変。別担当attempt_record_reviewは最終test c21ad750d340cb87e735def748eab54d57137fd776a0a19cc0d1bc5afb6d7344をread-only確認しAPPROVE（本人による試験再実行はなし）。rootはコミット/PR HEAD一致と差分1file +7/-3を直接確認。
+最新HEADのschema-dup job103863928255 SUCCESS、lint-backend-internal103863947122 SUCCESS、実DB全件dryrun103863945900 SUCCESS、migration SQL実DB103864084307 SUCCESS、tenant構造103864074976 SUCCESS。Backend pytest103863947027は確認時実行中で合格未確定。
+rootはprocess-artifacts job103863928473の失敗ログを直接取得。理由はPR本文のGO記録セクション欠落のみで、番号付きGO受領後の転記を要求。本便マージ/本番反映は未実施。ガード迂回は行わない。本追補とCARD03・ローカルログは未コミットであり公開済みpayloadに追加されていない。
+本追補の初回保存コマンドは作業ディレクトリがmainを指していたため保護hookが実行前に拒否。専用release worktreeを明示する正式な実行場所へ修正し、保護設定は変更しない。
+
+### 最新HEAD正式CI完了（2026-09-14 14:07 JST以降確認）
+rootがBackend job103863947027のGitHub実行ログを直接取得。3746 passed / 95 skipped / 309 warnings / 失敗0、268.95秒、coverage65.07%（基準60%合格）。HEAD47f72ab3674eba06e28f1cef86b1757986995750に対するPR全checksは37SUCCESS/4SKIPPED/1FAILURE、実行中0。4SKIPPEDを試験合格数に含めない。唯一FAILUREは前述process-artifactsのGO記録欠落。実DB移行・保存先整合・schema-dup・backend lintは成功済み。
+現状のコード修正/差分レビュー/正式CIの技術検証は完了。CLAUDE.md:57（ADR-136）は番号必須・番号なし曖昧肯定は無効と規定しており、POの未発言のGO #3504を創作しない。番号付きGO受領と最新HEAD/CI/バックアップ照合の後に正式経路で反映する。本便未マージ・未配備。これはGemini障害全般の解決保証ではなく、容量超過記録と構造検証の2点の限定検証。
+
+### GO #3504受領・反映前確認（2026-09-14 14:11 JST記録）
+- GO発行者: Shingo（shingo-ops、PO本人）
+- 日時: 2026-09-14 14:11 JST（受領後の記録時刻）
+- GO原文: GO #3504
+- バックアップ確認: あり。既存の2026-09-14 13:07 JST生成分について14:11 JSTに本番で存在とgzip -t終了0を再確認。復元試験は未実施。通常配備の事前バックアップも成功を確認する。
+対象PR3504承認時HEAD47f72ab3674eba06e28f1cef86b1757986995750。本便製品は容量超過時の実測サイズ記録・既存9制約の実構造照合の2点のみ。既存extraction_attemptsを記録正本として維持し、追加保存先/推測補完/過去データ書換え/再抽出/配信は行わない。対象migrationは20260914_010000_tcg_extraction_attempts.sqlのみ、相乗りPRなし。
+rootの14:11 JST直接読取: GitHub mainと本番HEADはいずれも5afb5af1ed28ea691ea93b04e4245afa8d744d85。本番backend/workerの対象serviceSHAはいずれも旧版28b5e79a227807f9a2d6333c901a0a2fdbf7048f73cb0bc931bc2fe2d788a9c4。現時点は本便未反映。
+CARD-PMG-ATTEMPT-RECORD-FIX-04を既存担当error_visibility_reconへ交付。許可は本便承認文書保存/PR本文GO転記/CI確認/rootの最新照合後の正式merge commit/通常自動deployの読取監視。製品追加変更・手動DB書込・再抽出・配信・secrets/CI/運用変更・ガード迂回は禁止。rootは最終状態を本番read-onlyで照合する。これはPO本人の承認転記であり、GO委任モードの有効化ではない。
+
+EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74のbackup/migrations/smoke/Verify全成功を親直接確認。PO続行指示受領、GO #3501保持。mainの商品統合へ合わせる既存6ファイルの補正を既存実装担当へ依頼。共通UUIDはtcg_uuidを維持しpublic.products数値idと混同しない。正式CI再確認まで検収保留、未マージ。
+
+EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を受領、追加「データのSSOTは遵守」。PR3494の既存試行記録を正本としUIカード発行/検査exit0、実装担当へ委任。依存PRの独立読取レビューはREVISE2件。設計/根拠はPMG既存handoff。新規保存表/バックエンド/本番変更0。
+
+EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。

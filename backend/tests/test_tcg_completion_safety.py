@@ -77,7 +77,7 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
             cur.execute(f'INSERT INTO {SCHEMA}.condition_aliases(condition_id,alias_text,lang) VALUES (%s,%s,\'ja\')',(cid,canonical))
         status_migration = work_fixture.MIGRATIONS / "20260903_150000_tcg_status_master_t004.sql"
         cur.execute(status_migration.read_text().replace("tenant_004", SCHEMA))
-        cur.execute(f'''INSERT INTO {SCHEMA}.tcg_products(code,japanese_title,category_class,is_active,work_id,product_category_id)
+        cur.execute(f'''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
             SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM {SCHEMA}.tcg_series w,
             {SCHEMA}.tcg_product_categories c WHERE w.code='IP002' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
@@ -146,7 +146,7 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             await ae.dispose()
     code = asyncio.run(register())
     with connection.cursor() as cur:
-        cur.execute(f'SELECT category_class FROM {SCHEMA}.tcg_products WHERE code=%s',(code,))
+        cur.execute(f'SELECT category_class FROM public.products WHERE product_code=%s',(code,))
         assert cur.fetchone()[0]=='One Piece'  # Existing registration contract; not the Box/Single column.
     _, jobid, result = work_fixture.run_message(connection, engine, monkeypatch,
         'ワンピース\n架空の登録検証デッキ PSA10',

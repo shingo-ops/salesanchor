@@ -203,7 +203,9 @@ async def test_source_comparison_exports_only_fingerprints_inside_encrypted_repo
     suppliers, sources = MagicMock(), MagicMock()
     suppliers.mappings.return_value.all.return_value = [{'code': 'SP1', 'name': 'PRIVATE', 'is_active': True}]
     sources.mappings.return_value.all.return_value = [{'code': 'SP1', 'raw_text': 'private\n body', 'line_posted_at': None, 'is_active': True}] * source_count
-    db.execute = AsyncMock(side_effect=[suppliers, sources])
+    alias_result = MagicMock()
+    alias_result.mappings.return_value.all.return_value = []
+    db.execute = AsyncMock(side_effect=[suppliers, sources, alias_result])
     with patch.object(admin, 'authorize', new=AsyncMock(return_value={'unresolved_names': ['PRIVATE'], 'message_count': 1})), \
          patch.object(admin, 'read_progress', new=AsyncMock(return_value=ready())), \
          patch.object(admin.distribution, 'list_targets', new=AsyncMock(return_value=[])), \
@@ -220,7 +222,8 @@ async def test_source_comparison_exports_only_fingerprints_inside_encrypted_repo
     assert data['sources_truncated'] is truncated
     assert len(data['source_fingerprints']) == min(source_count, 2)
     assert 'private' not in str(result).replace('private_report', '')
-    assert 'LIMIT 3' in str(db.execute.call_args.args[0])
+    assert 'LIMIT 3' in str(db.execute.call_args_list[-2].args[0])
+    assert data['source_aliases'] == []
 
 
 def test_large_report_roundtrips_through_bounded_log_lines(capsys):

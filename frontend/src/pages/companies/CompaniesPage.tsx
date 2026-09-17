@@ -14,6 +14,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
@@ -547,10 +548,10 @@ export default function CompaniesPage() {
               })()}
 
               <div className="form-actions">
-                <button type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" disabled={submitting}>
+                <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
+                <Button variant="primary" size="md" type="submit" disabled={submitting}>
                   {submitting ? t("common.saving") : t("common.register")}
-                </button>
+                </Button>
               </div>
             </form>
         </div>
@@ -569,8 +570,8 @@ export default function CompaniesPage() {
             onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

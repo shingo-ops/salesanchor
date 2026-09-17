@@ -27,6 +27,7 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services import line_source_names
 from app.services.tcg_line_android_parser import parse_android_export
 
 # ---------------------------------------------------------------------------
@@ -567,7 +568,11 @@ async def import_line_export(
     message_count = len(messages)
 
     # --- 4. サプライヤー解決 ---
-    resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
+    if source_format == "android":
+        messages = [{**m, '_line_source_format': line_source_names.MARKER} for m in messages]
+        resolved_msgs, unresolved = line_source_names.resolve_android(messages, db_suppliers, await line_source_names.load_aliases(db))
+    else:
+        resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
     unresolved_count = len(unresolved)
     unresolved_display_names = [u["display_name"] for u in unresolved]
 

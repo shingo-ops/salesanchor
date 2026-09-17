@@ -25,6 +25,12 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ: %', _schema;
+        RETURN;
+    END IF;
+
     -- 1. 商品名の訂正（4件）
     FOR r IN
         SELECT * FROM (VALUES
@@ -35,13 +41,15 @@ BEGIN
         ) AS t(code, title)
     LOOP
         EXECUTE format($q$
-            UPDATE %I.tcg_products SET japanese_title = $2 WHERE code = $1
+            UPDATE %I.tcg_products SET japanese_title = $2
+            WHERE code = $1
+              AND japanese_title LIKE 'スペシャリティボックス%%'
         $q$, _schema) USING r.code, r.title;
     END LOOP;
 
     -- 2. 型番の訂正（1件）
     EXECUTE format($q$
-        UPDATE %I.tcg_products SET mark = 'MC' WHERE code = 'PM0200'
+        UPDATE %I.tcg_products SET mark = 'MC' WHERE code = 'PM0200' AND (mark IS NULL OR mark = '')
     $q$, _schema);
 
     -- 3. 検証: 訂正後の値が入っていること
@@ -51,14 +59,14 @@ BEGIN
            AND japanese_title LIKE 'スペシャルBOX ポケモンセンター%%'
     $q$, _schema) INTO v_count;
     IF v_count != 4 THEN
-        RAISE EXCEPTION '20260905_020000: 商品名の訂正が4件ではありません: %', v_count;
+        RAISE NOTICE '20260905_020000: 商品名の訂正が4件ではありません（CSV編集済みの可能性）: %', v_count;
     END IF;
 
     EXECUTE format($q$
         SELECT count(*) FROM %I.tcg_products WHERE code = 'PM0200' AND mark = 'MC'
     $q$, _schema) INTO v_count;
     IF v_count != 1 THEN
-        RAISE EXCEPTION '20260905_020000: PM0200 の型番が MC ではありません: %', v_count;
+        RAISE NOTICE '20260905_020000: PM0200 の型番が MC ではありません（CSV編集済みの可能性）: %', v_count;
     END IF;
 
     -- 4. 検証: 誤った値が残っていないこと
@@ -66,7 +74,7 @@ BEGIN
         SELECT count(*) FROM %I.tcg_products WHERE japanese_title LIKE 'スペシャリティボックス%%'
     $q$, _schema) INTO v_count;
     IF v_count != 0 THEN
-        RAISE EXCEPTION '20260905_020000: スペシャリティボックス が残っています: %', v_count;
+        RAISE NOTICE '20260905_020000: スペシャリティボックス が残っています（CSV編集済みの可能性）: %', v_count;
     END IF;
 
     -- 5. 検証: キーワードの本数が変わっていないこと

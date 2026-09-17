@@ -17,6 +17,9 @@
 -- ============================================================================
 
 DO $$
+DECLARE
+    v_work_id UUID;
+    v_schema  TEXT;
 BEGIN
     -- 列ガード: 全中央カタログ列が揃っていない CI baseline ではスキップ
     IF to_regclass('public.products') IS NULL
@@ -26,6 +29,27 @@ BEGIN
                                  'product_kind', 'release_date', 'set_type')
           ) < 7 THEN
         RAISE NOTICE 'public.products central columns not present (migration-test baseline) -- skipping';
+        RETURN;
+    END IF;
+
+    -- work_id 動的取得（テナント tcg_series から IP001=Pokemon）
+    SELECT nspname INTO v_schema
+    FROM pg_namespace n
+    JOIN pg_class c ON c.relnamespace = n.oid AND c.relname = 'tcg_series' AND c.relkind = 'r'
+    WHERE n.nspname LIKE 'tenant_%'
+    ORDER BY n.nspname LIMIT 1;
+
+    IF v_schema IS NOT NULL THEN
+        EXECUTE format('SELECT id FROM %I.tcg_series WHERE code = $1', v_schema) INTO v_work_id USING 'IP001';
+    END IF;
+
+    -- work_id NOT NULL 制約が存在するのにシリーズが見つからない場合はスキップ
+    IF v_work_id IS NULL AND EXISTS (
+        SELECT 1 FROM pg_attribute
+        WHERE attrelid = 'public.products'::regclass
+          AND attname = 'work_id' AND attnotnull
+    ) THEN
+        RAISE NOTICE 'work_id NOT NULL active but Pokemon series not found — skipping pokemon-mega seed';
         RETURN;
     END IF;
 
@@ -64,22 +88,22 @@ BEGIN
     -- =========================================================================
     INSERT INTO public.products
         (product_code, name, name_en, category, tcg_type, mark, product_kind,
-         set_type, status, unit_price, release_date, stock_quantity)
+         set_type, status, unit_price, release_date, stock_quantity, work_id)
     VALUES
-        ('PKM-M1L',  '拡張パック メガブレイブ',                          'Mega Brave',                     'ポケモンカードゲーム', 'pokemon', 'M1L',  'TCG', 'booster', 'active',  180,   DATE '2025-08-01', 0),
-        ('PKM-M1S',  '拡張パック メガシンフォニア',                        'Mega Symphonia',                 'ポケモンカードゲーム', 'pokemon', 'M1S',  'TCG', 'booster', 'active',  180,   DATE '2025-08-01', 0),
-        ('PKM-MA',   'プレミアムトレーナーボックス MEGA',                   'Premium Trainer Box MEGA',       'ポケモンカードゲーム', 'pokemon', 'MA',   'TCG', 'deck',    'active',  6350,  DATE '2025-08-01', 0),
-        ('PKM-MBG',  'スターターセットMEGA メガゲンガーex',                 'MEGA Starter Set Mega Gengar ex','ポケモンカードゲーム', 'pokemon', 'MBG',  'TCG', 'deck',    'active',  1800,  DATE '2025-09-05', 0),
-        ('PKM-MBD',  'スターターセットMEGA メガディアンシーex',              'MEGA Starter Set Mega Diancie ex','ポケモンカードゲーム','pokemon', 'MBD',  'TCG', 'deck',    'active',  NULL,  DATE '2025-12-19', 0),
-        ('PKM-M2',   '拡張パック インフェルノX',                           'Inferno X',                      'ポケモンカードゲーム', 'pokemon', 'M2',   'TCG', 'booster', 'active',  180,   DATE '2025-09-26', 0),
-        ('PKM-M2a',  'ハイクラスパック MEGAドリームex',                     NULL,                             'ポケモンカードゲーム', 'pokemon', 'M2a',  'TCG', 'booster', 'active',  550,   DATE '2025-11-28', 0),
-        ('PKM-MC',   'スタートデッキ100 バトルコレクション',                 NULL,                             'ポケモンカードゲーム', 'pokemon', 'MC',   'TCG', 'deck',    'active',  891,   DATE '2025-12-19', 0),
-        ('PKM-MP1',  'スタートデッキ100 バトルコレクション コロちゃおVer.', NULL,                             'ポケモンカードゲーム', 'pokemon', 'MP1',  'TCG', 'deck',    'active',  NULL,  DATE '2025-12-19', 0),
-        ('PKM-M3',   '拡張パック ムニキスゼロ',                            NULL,                             'ポケモンカードゲーム', 'pokemon', 'M3',   'TCG', 'booster', 'active',  180,   DATE '2026-01-23', 0),
-        ('PKM-M4',   '拡張パック ニンジャスピナー',                         NULL,                             'ポケモンカードゲーム', 'pokemon', 'M4',   'TCG', 'booster', 'active',  180,   DATE '2026-03-13', 0),
-        ('PKM-M5',   '拡張パック アビスアイ',                              NULL,                             'ポケモンカードゲーム', 'pokemon', 'M5',   'TCG', 'booster', 'active',  200,   DATE '2026-05-22', 0),
-        ('PKM-M6a',  '拡張パック 30th CELEBRATION',                       '30th Celebration',               'ポケモンカードゲーム', 'pokemon', 'M6a',  'TCG', 'booster', 'active',  360,   DATE '2026-09-16', 0),
-        ('PKM-MF',   '30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー', NULL,                  'ポケモンカードゲーム', 'pokemon', 'MF',   'TCG', 'deck',    'active',  6200,  DATE '2026-09-16', 0)
+        ('PKM-M1L',  '拡張パック メガブレイブ',                          'Mega Brave',                     'ポケモンカードゲーム', 'pokemon', 'M1L',  'TCG', 'booster', 'active',  180,   DATE '2025-08-01', 0, v_work_id),
+        ('PKM-M1S',  '拡張パック メガシンフォニア',                        'Mega Symphonia',                 'ポケモンカードゲーム', 'pokemon', 'M1S',  'TCG', 'booster', 'active',  180,   DATE '2025-08-01', 0, v_work_id),
+        ('PKM-MA',   'プレミアムトレーナーボックス MEGA',                   'Premium Trainer Box MEGA',       'ポケモンカードゲーム', 'pokemon', 'MA',   'TCG', 'deck',    'active',  6350,  DATE '2025-08-01', 0, v_work_id),
+        ('PKM-MBG',  'スターターセットMEGA メガゲンガーex',                 'MEGA Starter Set Mega Gengar ex','ポケモンカードゲーム', 'pokemon', 'MBG',  'TCG', 'deck',    'active',  1800,  DATE '2025-09-05', 0, v_work_id),
+        ('PKM-MBD',  'スターターセットMEGA メガディアンシーex',              'MEGA Starter Set Mega Diancie ex','ポケモンカードゲーム','pokemon', 'MBD',  'TCG', 'deck',    'active',  NULL,  DATE '2025-12-19', 0, v_work_id),
+        ('PKM-M2',   '拡張パック インフェルノX',                           'Inferno X',                      'ポケモンカードゲーム', 'pokemon', 'M2',   'TCG', 'booster', 'active',  180,   DATE '2025-09-26', 0, v_work_id),
+        ('PKM-M2a',  'ハイクラスパック MEGAドリームex',                     NULL,                             'ポケモンカードゲーム', 'pokemon', 'M2a',  'TCG', 'booster', 'active',  550,   DATE '2025-11-28', 0, v_work_id),
+        ('PKM-MC',   'スタートデッキ100 バトルコレクション',                 NULL,                             'ポケモンカードゲーム', 'pokemon', 'MC',   'TCG', 'deck',    'active',  891,   DATE '2025-12-19', 0, v_work_id),
+        ('PKM-MP1',  'スタートデッキ100 バトルコレクション コロちゃおVer.', NULL,                             'ポケモンカードゲーム', 'pokemon', 'MP1',  'TCG', 'deck',    'active',  NULL,  DATE '2025-12-19', 0, v_work_id),
+        ('PKM-M3',   '拡張パック ムニキスゼロ',                            NULL,                             'ポケモンカードゲーム', 'pokemon', 'M3',   'TCG', 'booster', 'active',  180,   DATE '2026-01-23', 0, v_work_id),
+        ('PKM-M4',   '拡張パック ニンジャスピナー',                         NULL,                             'ポケモンカードゲーム', 'pokemon', 'M4',   'TCG', 'booster', 'active',  180,   DATE '2026-03-13', 0, v_work_id),
+        ('PKM-M5',   '拡張パック アビスアイ',                              NULL,                             'ポケモンカードゲーム', 'pokemon', 'M5',   'TCG', 'booster', 'active',  200,   DATE '2026-05-22', 0, v_work_id),
+        ('PKM-M6a',  '拡張パック 30th CELEBRATION',                       '30th Celebration',               'ポケモンカードゲーム', 'pokemon', 'M6a',  'TCG', 'booster', 'active',  360,   DATE '2026-09-16', 0, v_work_id),
+        ('PKM-MF',   '30th CELEBRATION プレミアムデッキセット エーフィ・ブラッキー', NULL,                  'ポケモンカードゲーム', 'pokemon', 'MF',   'TCG', 'deck',    'active',  6200,  DATE '2026-09-16', 0, v_work_id)
     ON CONFLICT (product_code) WHERE product_code IS NOT NULL DO UPDATE SET
         name         = EXCLUDED.name,
         name_en      = COALESCE(EXCLUDED.name_en, public.products.name_en),
@@ -89,6 +113,7 @@ BEGIN
         set_type     = EXCLUDED.set_type,
         release_date = COALESCE(EXCLUDED.release_date, public.products.release_date),
         unit_price   = COALESCE(EXCLUDED.unit_price, public.products.unit_price),
+        work_id      = COALESCE(EXCLUDED.work_id, products.work_id),
         updated_at   = NOW();
 
     -- =========================================================================
@@ -98,9 +123,9 @@ BEGIN
     -- =========================================================================
     INSERT INTO public.products
         (name, name_en, category, tcg_type, product_kind,
-         set_type, status, unit_price, release_date, stock_quantity)
+         set_type, status, unit_price, release_date, stock_quantity, work_id)
     SELECT v.name, NULL, 'ポケモンカードゲーム', 'pokemon', 'TCG',
-           v.set_type, 'active', v.unit_price, v.release_date, 0
+           v.set_type, 'active', v.unit_price, v.release_date, 0, v_work_id
     FROM (VALUES
         ('スペシャルカードセット メガエルレイドex',                               'deck',  1980,   DATE '2026-01-23'),
         ('30th CELEBRATION FUTURISTIC BOX',                                   'deck',  27500,  DATE '2026-09-16'),

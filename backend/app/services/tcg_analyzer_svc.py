@@ -30,9 +30,18 @@ from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.tcg_condition_review_svc import digest_sql, reanalysis_condition
+from app.services.tcg_empty_box_rules import (
+    EMPTY_CANONICAL,
+    EMPTY_CODE,
+    classify_empty_box,
+    consumes_empty_memo,
+    mentions_empty_box,
+    valid_empty_definition,
+)
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
-    WORK_ID_PROMPT_VERSION,
+    WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
     validate_work_id,
@@ -40,7 +49,7 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
-ENGINE_VERSION = "name-first-v7-gemini-work-id"
+ENGINE_VERSION = "name-first-v9-product-all-terms"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
@@ -68,9 +77,9 @@ def load_lookup_maps(
     """
     # --- 商品コード → UUID ---
     rows = session.execute(
-        text(f"SELECT code, id FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE")
+        text("SELECT product_code AS code, id FROM public.products WHERE is_active = TRUE")
     ).fetchall()
-    product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
+    product_code_to_uuid: dict[str, int] = {r[0]: r[1] for r in rows}
 
     # --- 単位エイリアス → canonical + UUID ---
     rows = session.execute(
@@ -151,8 +160,8 @@ def load_product_kubun_type_map(session: Session) -> dict[str, str]:
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, pc.kubun_type
-            FROM {TCG_SCHEMA}.tcg_products p
+            SELECT p.product_code AS code, pc.kubun_type
+            FROM public.products p
             JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
             WHERE p.is_active = TRUE
               AND p.product_category_id IS NOT NULL
@@ -176,11 +185,11 @@ def load_product_keywords(
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, psk.keyword
+            SELECT p.product_code AS code, psk.keyword
             FROM {TCG_SCHEMA}.product_search_keywords psk
-            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = psk.product_id
+            JOIN public.products p ON p.id = psk.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.code, psk.position
+            ORDER BY p.product_code, psk.position
             """
         )
     ).fetchall()
@@ -194,11 +203,11 @@ def load_product_keywords(
     rows = session.execute(
         text(
             f"""
-            SELECT p.code, pek.keyword
+            SELECT p.product_code AS code, pek.keyword
             FROM {TCG_SCHEMA}.product_exclude_keywords pek
-            JOIN {TCG_SCHEMA}.tcg_products p ON p.id = pek.product_id
+            JOIN public.products p ON p.id = pek.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.code, pek.position
+            ORDER BY p.product_code, pek.position
             """
         )
     ).fetchall()
@@ -384,6 +393,13 @@ def match_pid_name_first(
 
         candidates.append((code, matched_kw, len(matched_kw)))
 
+    return select_product_candidates(candidates)
+
+
+def select_product_candidates(
+    candidates: list[tuple[str, str, int]],
+) -> tuple[Optional[str], str, bool, list[str]]:
+    """Reduce validated hits, preserving stable order and the legacy full tuple."""
     if not candidates:
         return (None, "NONE", False, [])
 
@@ -484,8 +500,15 @@ def is_model_keyword(keyword: str) -> bool:
                 and re.search(r"[a-z]", normalized) and re.search(r"[0-9]", normalized))
 
 
+def collapse_product_spaces(value: str) -> str:
+    """Collapse repeated ASCII spaces only in product comparison copies."""
+    return re.sub(r" {2,}", " ", value)
+
+
 def match_product_keyword(kw: str, normalized_text: str) -> bool:
     """Keep number-suffixed product tokens distinct without changing note/state matching."""
+    kw = collapse_product_spaces(kw)
+    normalized_text = collapse_product_spaces(normalized_text)
     if not match_one_kw(kw, normalized_text):
         return False
     normalized = normalize_en(kw)
@@ -498,6 +521,39 @@ def match_product_keyword(kw: str, normalized_text: str) -> bool:
     return True
 
 
+
+def product_search_tokens(kw: str) -> list[str]:
+    """Eligible ASCII multiword searches; model-only and mixed scripts keep their rules."""
+    if not _RE_PURE_ASCII.fullmatch(kw) or is_model_keyword(kw):
+        return []
+    tokens = collapse_product_spaces(normalize_en(kw)).strip().split(" ")
+    if len(tokens) < 2 or any(not re.fullmatch(r"[a-z0-9][a-z0-9./-]*", token) for token in tokens):
+        return []
+    return tokens
+
+
+def match_product_search_keyword(kw: str, normalized_text: str) -> bool:
+    """Positive product search only: every ASCII word, in any order, at token boundaries."""
+    tokens = product_search_tokens(kw)
+    if not tokens:
+        return match_product_keyword(kw, normalized_text)
+    if any(separator in normalized_text for separator in ("\n", "\r", "\t")):
+        return False
+    for token in dict.fromkeys(tokens):
+        pattern = r"(?<![a-z0-9])" + re.escape(token) + r"(?![a-z0-9])"
+        if sum(1 for _ in re.finditer(pattern, normalized_text)) < tokens.count(token):
+            return False
+    return True
+
+
+def match_product_name_space(kw: str, normalized_name: str) -> bool:
+    """Additional search-only equality; name has already passed normalize_en."""
+    if not kw or re.search(r"\s", kw) or not re.search(r"[぀-ヿ㐀-鿿]", kw):
+        return False
+    if any(char in normalized_name for char in ("\n", "\r", "\t")):
+        return False
+    return normalize_en(kw) == normalized_name.replace(" ", "").replace("\u3000", "")
+
 def match_pid_with_work(
     raw_name: str, product_codes: list[str], search_kw: dict, exclude_kw: dict,
     *, work_id: str | None, product_work_ids: dict[str, str | None],
@@ -506,7 +562,7 @@ def match_pid_with_work(
 ) -> tuple[Optional[str], str, bool, list[str]]:
     """v3 product-only constraint; legacy callers and condition matching stay unchanged."""
     fields = [normalize_en(value) for value in (raw_name, raw_state, raw_memo)]
-    eligible: dict[str, list[str]] = {}
+    eligible: list[tuple[str, str, int]] = []
     single_marker = single_card_marker(raw_name, raw_state, raw_memo)
     for code in product_codes:
         category = (product_category_classes or {}).get(code, "") or ""
@@ -518,13 +574,15 @@ def match_pid_with_work(
                for kw in exclude_kw.get(code, []) for field in fields):
             continue
         matched = [kw for kw in search_kw.get(code, [])
-                   if kw and match_product_keyword(kw, fields[0])
+                   if kw and match_product_search_keyword(kw, fields[0])
                    and (work_id is not None or not is_model_keyword(kw))]
+        if not matched:
+            matched = [kw for kw in search_kw.get(code, [])
+                       if match_product_name_space(kw, fields[0])
+                       and (work_id is not None or not is_model_keyword(kw))]
         if matched:
-            eligible[code] = matched
-    matched_code, basis, resolved, candidates = match_pid_name_first(
-        raw_name, list(eligible), eligible, {},
-    )
+            eligible.append((code, matched[0], len(matched[0])))
+    matched_code, basis, resolved, candidates = select_product_candidates(eligible)
     if basis == "NONE":
         return matched_code, basis, resolved, candidates  # review UI uses exact NONE
     constraint = f"WORK:{work_id}" if work_id else "WORK:UNKNOWN"
@@ -711,6 +769,10 @@ def resolve_condition_v2(
     R4a(priority=4): data-driven（通常品 / 未開封等）
     R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
     """
+    empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+    if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+        return (EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit")
+    cond_entries = [entry for entry in cond_entries if entry["code"] != EMPTY_CODE]
     text_combined = (raw_state or "") + " " + (raw_product_name or "")
     is_box_or_case = "箱系" in kubun  # 箱系大 も '箱系' を含む
 
@@ -972,7 +1034,7 @@ def build_review_reasons(
         reasons.append("pid_unresolved")
     if len(candidates) > 1:
         reasons.append("multi_candidate")
-    if raw_memo.strip() and not note_ja:
+    if raw_memo.strip() and not note_ja and not consumes_empty_memo(raw_memo):
         reasons.append("note_unmatched")
     return reasons
 
@@ -1094,7 +1156,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     works = load_work_master(session)
     work_rows = session.execute(text(
-        f"SELECT code, work_id, category_class FROM {TCG_SCHEMA}.tcg_products WHERE is_active = TRUE"
+        "SELECT product_code AS code, work_id, category_class FROM public.products WHERE is_active = TRUE"
     )).fetchall()
     product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
     # Registration stores the work label in category_class. The referenced product
@@ -1115,7 +1177,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
                                {"id": extraction_job_id}).scalar_one_or_none()
     work_decisions: dict[str, str | None] | None = None
-    if metadata and metadata.get("prompt_version") == WORK_ID_PROMPT_VERSION:
+    if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
         reference = metadata.get("work_reference_snapshot")
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:
@@ -1143,11 +1205,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             WHERE ei.extraction_job_id = :ej_id
             ORDER BY ei.line_start, ei.id
+            FOR SHARE OF ei, ej, sm
             """
         ),
         {"ej_id": extraction_job_id},
     ).fetchall()
 
+    # Hash this source once and reuse it across all item binding comparisons.
+    source_hash = session.execute(text(f"""SELECT {digest_sql('sm.raw_text')}
+        FROM {TCG_SCHEMA}.source_messages sm JOIN {TCG_SCHEMA}.extraction_jobs ej
+        ON ej.source_message_id=sm.id WHERE ej.id=CAST(:job AS uuid)"""),
+        {"job": extraction_job_id}).scalar_one_or_none()
     now = datetime.now(timezone.utc)
     stats = {"total": 0, "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0,
              "skipped_product_corrections": 0}
@@ -1170,8 +1238,22 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         ) = row
 
         stats["total"] += 1
+        session.execute(text(f"SELECT id FROM {TCG_SCHEMA}.analysis_results "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) FOR UPDATE"), {"eid": str(item_id)})
+        # A product correction may have committed after the initial extraction read.
+        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections "
+            "WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='product_id')"),
+            {"eid": str(item_id)}).scalar_one()
         if has_product_correction:
             stats["skipped_product_corrections"] += 1
+            effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
+            if effective:
+                session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+                    condition_id=CAST(:condition_id AS uuid), condition_canonical=:canonical,
+                    condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
+                    updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
+                    dict(effective, eid=str(item_id), updated_at=now))
+                stats["needs_review"] += int(effective["needs_review"])
             continue
         raw_product_name = raw_product_name or ""
         raw_unit = raw_unit or ""
@@ -1224,9 +1306,16 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 状態解決 v2 — 正規化済み norm_condition を使用
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
-            norm_condition, norm_product_name, kubun, cond_entries, cond_canonical_to_uuid,
+            norm_condition, norm_product_name, kubun, [e for e in cond_entries if e["code"] != EMPTY_CODE], cond_canonical_to_uuid,
             raw_memo=condition_memo,
         )
+
+        empty_class = classify_empty_box(raw_product_name, raw_state, raw_memo)
+        empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
+        if empty_class == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
+            condition_canonical, condition_uuid, condition_basis_str = (
+                EMPTY_CANONICAL, empty_entry["cond_id"], "EMPTY_BOX:explicit"
+            )
 
         # 数量・価格正規化
         quantity_normalized = _parse_numeric(raw_quantity or "")
@@ -1247,7 +1336,25 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         review_reasons = build_review_reasons(
             pid_resolved, candidates, raw_memo, note_ja
         )
-        needs_review = len(review_reasons) > 0
+        if mentions_empty_box(raw_product_name, raw_state, raw_memo) and not valid_empty_definition(empty_entry):
+            review_reasons.append("empty_box_master_unavailable")
+        elif empty_class != "none":
+            review_reasons.append("empty_box" if empty_class == "positive" else "empty_box_ambiguous")
+        # Check the saved chosen condition against new values before the UPSERT.
+        effective = reanalysis_condition(session, str(item_id), {
+            "product_id": product_uuid, "pid_resolved": pid_resolved, "unit_id": unit_uuid, "unit_canonical": unit_canonical,
+            "unit_resolved": unit_resolved, "quantity_normalized": quantity_normalized,
+            "price_normalized": price_normalized, "condition_id": condition_uuid,
+            "condition_canonical": condition_canonical, "condition_basis": condition_basis_str,
+            "review_reasons": ",".join(review_reasons), "needs_review": bool(review_reasons),
+        }, schema=TCG_SCHEMA, source_hash=source_hash)
+        if effective:
+            if effective["valid_ack"]:
+                condition_uuid, condition_canonical, condition_basis_str = (
+                    effective["condition_id"], effective["canonical"], effective["basis"]
+                )
+            review_reasons = [reason for reason in effective["review_reasons"].split(",") if reason]
+        needs_review = bool(review_reasons) or bool(effective and effective["needs_review"])
 
         if needs_review:
             stats["needs_review"] += 1

@@ -1,0 +1,1118 @@
+[
+  {
+    "width": 390,
+    "mode": "before",
+    "sequence": [
+      {
+        "label": "natural-tab",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 184.734375,
+              "right": 271.5625,
+              "top": 855.875,
+              "bottom": 899.875,
+              "width": 86.828125,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 205.734375,
+              "right": 250.5625,
+              "top": 869.875,
+              "bottom": 885.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": false,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 279.5625,
+              "right": 366,
+              "top": 855.875,
+              "bottom": 899.875,
+              "width": 86.4375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 299.5625,
+              "right": 346,
+              "top": 869.875,
+              "bottom": 885.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": false,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 486,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -486,
+            "width": 390,
+            "height": 1417.875,
+            "top": -486,
+            "right": 390,
+            "bottom": 931.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -486,
+            "width": 390,
+            "height": 1417.875,
+            "top": -486,
+            "right": 390,
+            "bottom": 931.875,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "wheel-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 184.734375,
+              "right": 271.5625,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 86.828125,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 205.734375,
+              "right": 250.5625,
+              "top": 837.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 279.5625,
+              "right": 366,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 86.4375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 299.5625,
+              "right": 346,
+              "top": 837.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 518,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "retab-after-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 184.734375,
+              "right": 271.5625,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 86.828125,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 205.734375,
+              "right": 250.5625,
+              "top": 837.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 279.5625,
+              "right": 366,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 86.4375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 299.5625,
+              "right": 346,
+              "top": 837.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 518,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "width": 390,
+    "mode": "after",
+    "sequence": [
+      {
+        "label": "natural-tab",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 178.015625,
+              "right": 266.5,
+              "top": 855.875,
+              "bottom": 899.875,
+              "width": 88.484375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 199.015625,
+              "right": 245.5,
+              "top": 868.875,
+              "bottom": 885.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": false,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 274.5,
+              "right": 366,
+              "top": 855.875,
+              "bottom": 899.875,
+              "width": 91.5,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 295.5,
+              "right": 345,
+              "top": 868.875,
+              "bottom": 885.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": false,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 486,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -486,
+            "width": 390,
+            "height": 1417.875,
+            "top": -486,
+            "right": 390,
+            "bottom": 931.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -486,
+            "width": 390,
+            "height": 1417.875,
+            "top": -486,
+            "right": 390,
+            "bottom": 931.875,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "wheel-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 178.015625,
+              "right": 266.5,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 88.484375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 199.015625,
+              "right": 245.5,
+              "top": 836.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 274.5,
+              "right": 366,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 91.5,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 295.5,
+              "right": 345,
+              "top": 836.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 518,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "retab-after-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 178.015625,
+              "right": 266.5,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 88.484375,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 199.015625,
+              "right": 245.5,
+              "top": 836.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 274.5,
+              "right": 366,
+              "top": 823.875,
+              "bottom": 867.875,
+              "width": 91.5,
+              "height": 44
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 390,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 295.5,
+              "right": 345,
+              "top": 836.875,
+              "bottom": 853.875
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 518,
+          "maxScroll": 518,
+          "root": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -518,
+            "width": 390,
+            "height": 1417.875,
+            "top": -518,
+            "right": 390,
+            "bottom": 899.875,
+            "left": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "mode": "before",
+    "sequence": [
+      {
+        "label": "natural-tab",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 442.734375,
+              "right": 529.5625,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.828125,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 463.734375,
+              "right": 508.5625,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 537.5625,
+              "right": 624,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.4375,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 557.5625,
+              "right": 604,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 477,
+          "maxScroll": 477,
+          "root": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "wheel-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 442.734375,
+              "right": 529.5625,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.828125,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 463.734375,
+              "right": 508.5625,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 537.5625,
+              "right": 624,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.4375,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 557.5625,
+              "right": 604,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 477,
+          "maxScroll": 477,
+          "root": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "retab-after-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 442.734375,
+              "right": 529.5625,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.828125,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 463.734375,
+              "right": 508.5625,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "1px",
+            "offset": "0px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 537.5625,
+              "right": 624,
+              "top": 834.140625,
+              "bottom": 868.140625,
+              "width": 86.4375,
+              "height": 34
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 557.5625,
+              "right": 604,
+              "top": 843.140625,
+              "bottom": 859.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 477,
+          "maxScroll": 477,
+          "root": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -477,
+            "width": 1280,
+            "height": 1377.140625,
+            "top": -477,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      }
+    ]
+  },
+  {
+    "width": 1280,
+    "mode": "after",
+    "sequence": [
+      {
+        "label": "natural-tab",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 436.015625,
+              "right": 524.5,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 88.484375,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 457.015625,
+              "right": 503.5,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 532.5,
+              "right": 624,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 91.5,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 553.5,
+              "right": 603,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 479,
+          "maxScroll": 479,
+          "root": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "wheel-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 436.015625,
+              "right": 524.5,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 88.484375,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 457.015625,
+              "right": 503.5,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 532.5,
+              "right": 624,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 91.5,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 553.5,
+              "right": 603,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 479,
+          "maxScroll": 479,
+          "root": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      },
+      {
+        "label": "retab-after-bottom",
+        "metrics": [
+          {
+            "text": "Cancel",
+            "disabled": false,
+            "active": true,
+            "rect": {
+              "left": 436.015625,
+              "right": 524.5,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 88.484375,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 457.015625,
+              "right": 503.5,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "2px",
+            "offset": "2px",
+            "type": "button"
+          },
+          {
+            "text": "Update",
+            "disabled": false,
+            "active": false,
+            "rect": {
+              "left": 532.5,
+              "right": 624,
+              "top": 832.140625,
+              "bottom": 868.140625,
+              "width": 91.5,
+              "height": 36
+            },
+            "clip": {
+              "l": 0,
+              "t": 0,
+              "right": 1280,
+              "bottom": 900
+            },
+            "textRect": {
+              "left": 553.5,
+              "right": 603,
+              "top": 841.140625,
+              "bottom": 858.140625
+            },
+            "textFits": true,
+            "bodyFits": true,
+            "ringFits": true,
+            "outline": "3px",
+            "offset": "0px",
+            "type": "submit"
+          }
+        ],
+        "layout": {
+          "scrollY": 479,
+          "maxScroll": 479,
+          "root": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          },
+          "page": {
+            "x": 0,
+            "y": -479,
+            "width": 1280,
+            "height": 1379.140625,
+            "top": -479,
+            "right": 1280,
+            "bottom": 900.140625,
+            "left": 0
+          }
+        }
+      }
+    ]
+  }
+]

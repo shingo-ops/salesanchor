@@ -5,6 +5,7 @@ import hashlib
 import json
 import logging
 import os
+import re
 import sys
 from uuid import UUID
 
@@ -16,6 +17,7 @@ from sqlalchemy import text
 from app.database import AsyncSessionLocal
 from app.routers.tcg_line_import import ResolveRequest, commit_pending_job, resolve_supplier
 from app.services import line_import_devices as devices
+from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
 from app.tcg_config import TCG_SCHEMA
@@ -27,16 +29,19 @@ def name_hash(name):
 
 
 def validate(data):
-    if not isinstance(data, dict) or data.get('action') not in ('inspect', 'create', 'commit', 'distribute'):
+    if not isinstance(data, dict) or data.get('action') not in ('inspect', 'create', 'commit', 'distribute', 'link'):
         raise ValueError('invalid action')
-    if set(data) - {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm', 'report_public_key'}:
+    if set(data) - {'action', 'device_id', 'import_job_id', 'name_hash', 'target_id', 'confirm', 'report_public_key', 'supplier_code', 'android_sha256'}:
         raise ValueError('unexpected fields')
     for key in ('device_id', 'import_job_id'):
         data[key] = str(UUID(data[key]))
-    if data['action'] == 'create':
+    if data['action'] in ('create', 'link'):
         value = data.get('name_hash', '')
         if len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
             raise ValueError('invalid name hash')
+    if data['action'] == 'link':
+        if not re.fullmatch(r'SP[0-9]{4,8}', data.get('supplier_code', '')) or not re.fullmatch(r'[0-9a-f]{64}', data.get('android_sha256', '')):
+            raise ValueError('supplier code and Android file digest required')
     if data['action'] == 'distribute':
         data['target_id'] = str(UUID(data['target_id']))
         if data.get('confirm') != 'existing-global-inventory-to-selected-target':
@@ -121,6 +126,7 @@ async def operate(db, data):
                             for r in sources[:SOURCE_REPORT_LIMIT]]
             private = seal_report({'unresolved_names': names, 'suppliers': [dict(r) for r in suppliers],
                                    'source_fingerprints': fingerprints, 'source_limit': SOURCE_REPORT_LIMIT,
+                                   'source_aliases': await line_source_names.load_aliases(db),
                                    'sources_truncated': len(sources) > SOURCE_REPORT_LIMIT,
                                    'targets': [{k: t[k] for k in ('id', 'name', 'spreadsheet_id', 'sheet_name', 'is_active')} for t in targets]}, data['report_public_key'])
         return {'status': 'inspected', 'private_report': private, 'job_id': job_id, 'progress': progress,
@@ -131,6 +137,8 @@ async def operate(db, data):
                              'last_distributed_at': str(t['last_distributed_at']),
                              'last_distributed_count': t['last_distributed_count'],
                              'last_result_ok': t['last_result'] == 'ok'} for t in targets]}
+    if action == 'link':
+        return await line_source_names.link_pending(db, data)
     if action == 'create':
         matching = [n for n in names if name_hash(n) == data['name_hash']]
         if len(matching) != 1 or job['review_status'] != 'pending_review':

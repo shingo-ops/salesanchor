@@ -933,3 +933,633 @@ SQLはPGOPTIONS=-c default_transaction_read_only=onを使用（上記名称1件�
 PO原文「進めてくれ」を受領。gh pr viewでOPEN、HEAD e25b09a9887cde20b0c2a561e681b50baf850c28、mergedAt null、mergeStateStatus DIRTYを確認。前回Backend CI34663978933は2606 passed/95 skipped、失敗0、coverage62.53%。番号付きGOの承認経路は未充足。
 
 origin/main 5b21b3b8の追従でevidence-registry、商品マスタREADME、tasks/todoの3ファイルに追記位置の競合を確認。両方のテーマを保持して解消。製品コードの競合なし。runnerは双方のmigration登録を自動統合。追従後HEADのCIで再検証し、結果はPR #3441本文に記録する。Gemini実呼出し・本番再解析・配信は未実施。
+
+
+## 2026-09-13 PR #3441本番反映・再抽出停止記録
+
+POから番号付きGO #3441を受領（実メッセージ先頭に鉤括弧あり、PR本文に原文保持）。最終HEAD5c96611fのBackend CI34729142077は2698 passed/95 skipped、失敗0、coverage62.94%。全必須チェック成功を確認後、gh-pr-merge-safe.sh --mergeで09:58 JSTにマージ。merge SHA ee455fb1ba4c7ad407ed6506ee4fe515fce371a8。Deploy34729320369はsuccess。本番git HEAD一致、backend ENGINE_VERSION=name-first-v7-gemini-work-id、prompt=raw-extraction-v4-work-id-p1、追加列参照成功を直接確認。正式/api/healthはDB/Redis/Celery connected。最初に誤った/healthへ確認し404、その後正規パスをスクリプトから確認して成功した。
+
+変更前: 最新import_job536422ed-79c7-4a87-a887-09a02b97968f（09:31 JST）は44有効投稿、done37/empty6/error1、762解析/要確認166。error1はSoftTimeLimitExceeded。3配信接続を確認。9表の追加退避18558933 bytes、SHA256 cfb28a14f61a09841d190712b7b8c21df1bdfba7c30a002a93893f48127f5fa4。取込リンク・原文・3接続設定もローカル非公開で退避。退避SQLとレポートは/tmp保存であり長期保管とは称さない。
+
+本番反映後10:02:55 JST: 最新取込内でOP型番・要確認を含む投稿を明細数・ID昇順で選択。source8eff4338-34a8-4ea1-9d89-b6a99edd8350、旧1明細/要確認1。SELECT限定・READ ONLY接続で旧抽出/解析と現マスタを読み、transaction終了後にGemini実呼出し1回。呼出し前後マスタSHA一致。戻り値error/items0、error_message=`v3 extraction has an invalid product source span`。v4も共通パーサーのこの文言を使うため旧prompt動作とは判断しない。
+
+観測事実: パーサーはL0001またはL0001-L0005形式を要求。新promptはLine ID範囲と入力の[L0001]を指示するが、厳密な出力形式の例がない。既存extract_messageは例外時raw_responseを空にするため、今回の応答表記そのものは未確認。特定の括弧/区切り記号が原因とは断定しない。抽出エラーによりRAW一致比較と作品IDの正誤判定は成立していない。
+
+結果: 本番コード反映済み。新結果DB保存0、旧明細/訂正/解析更新0、配信0。精度向上未確認・結果採用保留。追加Gemini呼出しと再解析を停止。保留を解く設計は、行番号出力契約の明確化と非公開の診断記録、模擬応答の否定試験。POの検証失敗時停止指示により、本便では追加修正/再反映しない。同一AIの実装/自己確認であり独立レビューではない。
+
+一次根拠: PR https://github.com/shingo-ops/salesanchor/pull/3441 （GO原文・最終結果記録）、CI34729142077、Deploy34729320369、ローカル比較JSON SHA256 48b573dcc561e37db160c225afd5305c55524cdeac5ab06ab866165cdc9fd715。比較JSONは顧客情報を含むためリポジトリへ入れない。本番稼働と今回のデータ採用/配信を区別して保存した。
+
+
+## 2026-09-13 行番号修正の着手・ローカル検査
+
+POが前述の停止報告と修正質問へ「進めてくれ」と回答。設計§16.12の自己審査APPROVE、CARD-LINE-WORK-SPAN-02を既存カード末尾へ発行。card-lint終了0、長行9警告。p2プロンプト・p1互換・形状のみ診断を実装。make lint-ci終了0、ruff/Bandit成功。mypyは依存不足を含む既存警告のため完全な型検査成功とは扱わない。Docker不在でローカルpytest未実施、実PGはCIへ。追加Gemini実呼出し0、追加本番更新/配信0。後続PRへGO3441を流用しない。
+
+
+## 2026-09-13 GO #3458受領
+
+PO原文「GO #3458」を11:04 JSTに受領確認。HEAD44fac147のCI34731045931は2710 passed/95 skipped、失敗0、coverage62.95%。最新main d9f8629cへ追従、台帳競合は本件とAndroid側の各最新行を保持。本番9表を再退避18652912 bytes、SHA256 5ea522ebb075c0b8a1dd6c7cab981b502b7eed66da95c29edb9194b3a6fa8c35。最終CI/マージ/本番反映/比較結果はPR3458本文へ実測で追記する。受領時点の追加Gemini呼出し・配信0。
+
+
+## GO受領後の最終結果（2026-09-13）
+
+最終HEAD cb2ef47465b6b4e0b560e2a1006a716a912ea50e。
+[CI34732415064](https://github.com/shingo-ops/salesanchor/actions/runs/34732415064): **2733 passed / 95 skipped / 失敗0 / coverage63.10%**、全必須チェック成功。先行629b7e5fのCI成功後にmainが前進し、merge-safeが文書競合で停止したため双方保持で追従、最終HEADを再検証した。
+2026-09-13 11:14 JST 正規merge-safeでマージ、merge SHA cacc889e0e44ed647fbd0a7d1c110ab11f86aec5。
+[Deploy34732557622](https://github.com/shingo-ops/salesanchor/actions/runs/34732557622)成功。本番git HEAD一致、prompt=raw-extraction-v4-work-id-p2、受理版p1/p2を直接確認。/api/healthはDB/Redis/Celery connected。
+
+比較対象の未決: 実行前に最新取込を再照会したところ、10:43 JSTのimport1f6e72ac-733f-41b8-bd1f-7256f77dcc53が新規追加されていた。仕入先38件未確定、pending_review、リンク済み原文0。9:31 JSTの直近確定済み取込536422ed-79c7-4a87-a887-09a02b97968fは44投稿。POに「確定済み44投稿で比較継続／新取込の確定を待つ」を質問中、回答未受領。新取込を確定済みと読み替えず、追加Gemini呼出し・再解析・結果上書き・配信は0のまま停止。修正版の実抽出精度は未確認。コード反映済みと結果採用・配信未完了を区別する。
+
+
+## 2026-09-13 確定済み44投稿の比較再開・原文差異で停止
+
+POは「直近の確定済み44投稿（9:31取込）で精度比較を続けてよいか」の質問へ「進めてくれ」と回答。対象import536422ed-79c7-4a87-a887-09a02b97968fに固定し、review_status ok/未確定0/有効44をREAD ONLYで再確認。10:43のpending取込へ切り替えていない。
+本番p2版をassertし、前回停止source8eff4338-34a8-4ea1-9d89-b6a99edd8350で実Gemini1回（p2では初回）。時刻2026-09-13T02:27:20Z。原文/旧明細/旧解析/参照マスタを非公開レポートに退避。API中DB transactionなし、前後の参照SHA一致。result done/items1、旧1明細と件数一致、明示作品矛盾0。
+実測差分: raw_priceは旧「¥220,000」→新「220,000」、raw_memoは旧「残り」→新「残り22」。元投稿には「カートン/¥220,000」「残り22」がある。数値が同じでも通貨記号が消えておりRAW一致ではない。メモ拡張の意味が誤りとは断定しないが旧RAW一致条件を満たさない。行番号エラーは今回1件で解消、全体の成功保証ではない。
+新作品ID c6acce0e-fe08-446a-adae-8e9bc946b8b0は参照マスタのOne Piece/ワンピースと一致。OP-17（PM0266）のwork_idにも一致。旧解析は既にpid_resolved true、condition Case、needs_review true、review_reasons note_unmatched。この標本は商品未特定改善の証拠にならず、作品選択と行番号の動作確認にとどまる。
+停止結果: DB書込み0、旧抽出/訂正/解析変更0、残り43投稿の追加API0、配信0。抽出方式の全体精度改善は未確認・結果採用保留。比較レポートSHA256 f0b3860cb33fb12583c3919266b99bd4044309d9efc64ddb079c8fb8ff762a38、/tmp/line-3458-candidate-result.json（非公開、長期保管ではない）。
+次の提案（未承認）: 既存の原文抽出欄を固定し、商品名・位置等で曖昧さなく1対1対応する明細について作品IDだけを比較する設計へ見直す。対応曖昧は停止。再抽出のRAW差異を黙って採用しない。今回は設計§16.10のRAW差異時停止条件を維持し、条件変更や追加実行は行っていない。POへ比較方式の判断を求める。
+
+
+## 2026-09-13 作品IDのみ比較の設計棚卸し
+
+POは設計見直しの質問に「進める」と回答。scopeは既存RAW固定・作品IDだけの比較方式。本番SELECTで762/商品既特定602/未特定160/要確認166/訂正0、固有item ID762/商品名空0/位置不正0、有効商品293/作品NULL0を再照会。理由内訳pid128、pid+multi19、pid+note12、pid+multi+note1、noteのみ6。PGはREAD ONLY。最初のSELECTの小なり記号がhookにリダイレクト扱いで拒否されたため、意味が同じBETWEEN条件を使う読み取りに分割して成功。ガードの解除・DB書込みなし。
+コード照合: tcg_analyzer_svc.py:501–531はDB非依存商品照合、:1180–1217は正規化/単位区分経路、:1261はupsert、:1355/1370/1381はcommit。比較を既存全再解析に混ぜるrollback案は不可。item_corrections_svc.pyも保存commitあり。docker infoはdaemon未接続、実PG検査は未実行。新規SDK仕様調査なし。
+設計§17は明細IDの完全対応・2列作品判断・全入力SHA・比較READ ONLYと商品照合結果に限定。比較設計自己APPROVE、採用/全再解析/配信REVISE。手続きなしの採用や追加Geminiはしない。現在のp2新規抽出のRAW忠実性を修復済みとは主張しない。
+
+## 2026-09-13 作品ID読取比較の実装検証
+
+比較専用設計は未マージPR #3462、HEAD 2fc9e64755ebc69be31781d1b1a6332ccf9068f0 の design-keyword.md §17 / CARD-LINE-WORK-COMPARE-03 を参照。後続のPO「進める」を受け、origin/main dd1df11c 起点の専用机 release/line-work-id-comparison に新サービスと試験2ファイルを追加。既存製品コード変更0。本記録は設計PRのマージやGO委任有効化を意味しない。
+
+実装は保存RAW・明細IDを固定し、2列の作品判断だけを受け付ける。保存商品結果と旧作品判断の対照不一致時はモデル呼出し0。READ ONLYの専用トランザクションを毎回閉じ、モデル前後の全入力/マスタSHA不一致で停止。訂正済みを除外し、候補は常にadoptable=false・正誤未検証。
+
+ローカル make lint-ci 終了0、ruff成功、Bandit高重大度0。mypyは既存エラーを警告扱いにするMakefileのため完全な型検査成功とは称さない。Docker未稼働につきpytest未実行、合成データ・模擬モデル・隔離PostgreSQL試験はGitHub CIで検証する。実Gemini呼出し0、本番更新0、候補採用0、配信0。実装自己確認であり独立レビューではない。CI結果は実装PRで記録する。
+
+
+### PR #3465 比較実装のCI結果
+
+製品HEAD d8ff688f5f57d0ada396f0fa0fd76de1717d1399。Backend CI34735091935 / job103664991919: 2759 passed、95 skipped、失敗0、coverage63.26%、95.38秒。全表不変、READ ONLYによるDML拒否、API中transactionなし、RAW/マスタ/訂正/解析/リンク変更時停止、実analyzer内の候補集合との一致を合成データで検証。初回CI34734918033は2753成功/6失敗、共通原因は試験DBの正規化表未構築。既存migrationで試験環境を補完して解消、製品側の厳格な表存在検査は維持。
+
+追加のローカル単独mypyは2.3.1内部エラーで終了2。型検査の完全成功とは称さない。実装自己レビューは比較カードの範囲で合格、独立レビューなし。gh pr checks実測で番号付きGO未受領のprocess-artifacts gateだけ失敗、他に失敗/実行中なし。PR #3465提出済み・未マージ、比較用の本番モデル実行/再解析/採用/配信は未実施。比較結果の正誤判定・安全な採用保存・配信設計はこの試験の合格対象外。
+
+
+## 2026-09-13 GO #3465・比較実装の本番反映
+
+PO原文「GO #3465」を12:30 JSTに受領確認、PR本文へ正式転記。HEAD94037515のBackend CI34735261457は2759成功/95skip/失敗0、coverage63.26%。GOチェック34735678099成功、全チェック失敗/実行中0、main包含と対象HEAD一致を確認し、gh-pr-merge-safe.sh --merge --match-head-commitで実行。GitHub mergedAt=2026-09-13T03:31:48Z、mergedBy=shingo-cc、mergeCommit=9f5415c31104e325b38da03df8ef9acdc5973066 を実測。公式スクリプトが対象机・ローカルブランチを削除し占有台帳DONEを記録。以後の証跡は既存の設計PR3462へ保存し、マージ済み机へ追加pushしない。
+
+Deploy34735713952 / job103666657661成功。ログで03:32:32 UTCにsalesanchor_db_20260913_123227.sql.gz（7.2M）取得、03:35:25 UTCにDeployment completed successfullyを確認。復元試験は未実施。SSH読取で本番git HEADがmergeCommitに一致、稼働backend内の比較サービスSHA256はdb603a598d1d3a3dd74d92f04c11ac31445d6126cfd7925ce909f9c91893143c、ローカル同ファイルと一致。公開/api/healthはstatus ok、database/redis/celery connected。
+
+状態: 比較設計自己審査済み、比較実装PO承認済み、実装PR3465マージ/本番反映済み。設計文書PR3462は未マージ。本番比較用Gemini追加0、結果保存/採用0、配信0。GO委任は未有効。全再解析と採用/配信の設計はREVISEを維持。次の一手は既存RAWを固定した読取比較の別手順を設計・検査すること。今回の配備成功や模擬試験を、実データ精度向上の証拠にはしない。
+
+
+## 2026-09-13 本番比較のAPI前対照
+
+配備済み比較サービスを利用し、Session READ ONLYに加え接続default_transaction_read_only=on/statement_timeout=60000で調査。取込536422ed-79c7-4a87-a887-09a02b97968fの44原文/762明細、訂正0、保存商品確定602、旧作品判断対照不一致0。done37/empty6/error1は以前の観測と同じ。全入力SHA26923e04d50d83c4649c2b833fd71b6f6a48bbe3181cb42b67e79972abf7e3ecが前後一致。ローカル非公開/tmp/line-work-control-private.jsonに固定入力と全対照を保存（長期保存とは称さない）。モデル呼出し0、DB書込0。設計§17.8の実行前根拠。
+
+
+### 本番比較の停止・診断不足（12:41 JST）
+
+§17.8に従い配備ファイルSHAと固定入力SHAを確認し、compare_snapshotの実モデルcallbackを開始。最初の2明細1投稿でMODEL_CALL_FAILEDとなり停止。callback試行1、取得応答0、比較完了0。以降のcallback実行/手動再試行0。SDK内部のHTTP送信回数・課金有無は未確認で、callback試行数と同一視しない。
+
+実測診断: 本番GEMINI_API_KEY設定あり、google.genai存在、GenerateContentConfig生成と_get_genai_client生成成功、models.generate_contentメソッド存在。診断では生成APIを呼んでいない。原因をAPIキー未設定や商品判断能力と断定できない。compare_snapshotのexcept Exceptionが元の例外をMODEL_CALL_FAILEDへ置換し、今回callbackでも元例外を保存していなかったため、HTTP状態/認証/通信/制限などの切り分け根拠が失われた。診断設計不足として記録する。
+
+停止後に同一READ ONLY対照を再実行し、全入力SHA26923e04d50d83c4649c2b833fd71b6f6a48bbe3181cb42b67e79972abf7e3ec一致、762明細/保存確定602/対照不一致0/訂正0を再確認。既存入力/解析/マスタ変更0。モデル出力未取得、作品ID候補0、採用0、配信0。非公開証跡/tmp/line-work-live-private.jsonl、停止後照合/tmp/line-work-control-after-private.json。永続保管とは称さない。
+
+
+## 2026-09-13 13:41 診断再試行のAPI前停止
+
+PO「進める」で同一2明細の診断付き再試行を承認。配備ファイルSHA一致後、read_snapshotがINACTIVE_SOURCEで停止。attempts0、DB書込/採用/配信0。今回のAPI原因診断には未到達。
+READ ONLY追加調査: 旧取込536422ed-79c7-4a87-a887-09a02b97968fは44リンク/26有効/18無効かつsuperseded_byあり。旧snapshotとの差は18原文のis_active/superseded_by。対象2明細の原文8242110d-729a-43a8-a5f9-465091329c5cも無効、置換先cced581f-7368-4767-8927-710a86c0b4c1。旧ジョブdone37/empty6/error1。
+新取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0は13:36:33 JST作成、review_status=ok/unresolved_count=0、リンク確定13:36:38。観測時44リンク/44有効、done33/empty4/running2/pending5。旧18原文の置換先18件すべてが新取込にリンク。操作主体・事業理由は未確認。新対象も処理中につき比較不可。
+非公開証跡: /tmp/line-work-one-diagnostic-private.json、/tmp/line-cohort-state-private.json、/tmp/line-new-cohort-state-private.json（恒久保管ではない）。旧対象の無効解除や別対象への自動切替はしない。新確定取込の処理完了後に対象/基準を取り直す案をPOへ確認する。
+
+
+## 2026-09-13 新確定取込の比較基準
+
+POが対象切替に「合意」。READ ONLYで新取込44有効、done38/empty5/error1（保存error_messageはGemini API 呼び出し失敗: SoftTimeLimitExceeded()）、全ジョブ終端を確認。配備済みサービスによる新基準729明細/確定552/未確定177/訂正0、対照不一致0。全入力SHA719788e246589c708f66ead2d74040f6125cb254c576e3e6e53584fe823c72ccが前後一致。モデル0/DB書込0。非公開/tmp/line-new-work-control-private.json。superseded_byの実DB参照から新診断原文cced581f-7368-4767-8927-710a86c0b4c1を特定、新保存13明細と確認。旧2明細との対応を推測せず、新13明細IDで診断1投稿を固定する。
+
+
+### 新対象の診断結果・通信クライアント寿命の不具合
+
+新13明細の診断は2026-09-13T04:47:09〜04:47:14Z、アプリ試行1、builtins.RuntimeError、整数code/status_codeなし、応答なし、前後全入力SHA一致。非公開/tmp/line-new-one-diagnostic-private.json。追加生成APIは停止、候補/採用/配信0。
+原因の読み取り検証: 本番google-genai=2.8.0。Client.__del__はself.close()を呼ぶ。tcg_work_comparison_svc.py:85は_get_genai_client().models.generate_contentでClientを変数に保持しない。本番プロセスで生成メソッドを取得するだけの検査ではtemporaryの_httpx_client.is_closed=True、held変数の同値=False。閉じたHTTPクライアントは送信前にRuntimeError「Cannot send a request, as the client has been closed.」を返すことを、127.0.0.1:1宛のリクエストオブジェクトとclosed事前assertで確認。Gemini生成API0。
+
+API非使用の独立プロセスで、Client破棄時に接続を閉じるモデルを使い配備済みcall_work_model自体を呼ぶとclosed_before_callを再現。Clientをwithで保持する案は応答取得成功、成功後close=True、例外後close=True。4確認すべてtrue、Gemini API0。/tmp/line-lifecycle-offline-proof.jsonに保存。製品ファイルや稼働サービス設定は変更していない。
+
+一次資料: https://github.com/googleapis/python-genai/blob/v2.8.0/google/genai/client.py （2026-09-13確認、Client.close/__enter__/__exit__/__del__）。Context7利用可能ツール0のため、PO起動指示の代替許可で公式ソースを直接確認。本番実物と一致。新モデル仕様を推測して変更しない。
+
+CIが見逃した範囲: backend/tests/test_tcg_work_comparison.py:21で実clientを禁止し、比較テストはmodel_call自体を模擬値へ置換。call_work_modelのClient寿命を検査していなかった。今回の比較用アダプタの実装不具合であり、Geminiの商品判断精度の証拠にはならない。新取込error1のSoftTimeLimitExceededの原因と同一視しない。通常抽出gemini_extraction_svc.py:185はclient変数を保持している。
+
+## 2026-09-13 CARD-LINE-WORK-CLIENT-04実装
+
+POが限定修正・テスト追加の確認に「進める」と回答。設計PR3462 HEAD2665d8e9、design-keyword.md §17.12とCARD-LINE-WORK-CLIENT-04を読んで実装。最新origin/main 56a1661d起点の専用release/line-work-client-lifetimeを公式手順で作成。製品差分はcall_work_model内のwith保持・text取得後closeのみ、他関数/モデル/プロンプト/DB変更0。
+
+寿命感知FakeClientはfactoryごと新規生成、ModelsはClient本体を保持しない。旧式の早期close検出1、text正常/空/None3、generate/text例外時close2の計6試験を既存比較テストへ追加。生成API使用0。make lint-ci終了0、ruff成功/Bandit高重大度0、mypyは既存警告（当該既存unused-ignoreを含む）で完全合格とは称さない。Docker未稼働につきローカルpytest未実行、実PG/単体は既存GitHub CIで確認する。
+
+POからシンソクerror713b8823のSoftTimeLimitExceeded報告について関係を質問された。通常抽出はgemini_extraction_svc.py:185でclient変数保持、tcg_extraction.pyの100秒soft limit経路。比較サービスは通常抽出から参照されない（rgでcall_work_model定義1件のみ）。今回の接続保持不具合とは別の停止である。商品マスタを含むprompt追加が応答時間へ与えた影響は未測定で、因果を断定しない。タイムアウト修正/再抽出はこのカードに追加しない。
+
+
+### PR #3472 CI確認
+
+製品HEAD0197109272bdcfefab0cc1e447bdb7ad5d636552、Backend CI34739377763/job103676363729は2819 passed/95 skipped/失敗0、119.19秒、coverage63.80%。追加6試験を含め成功。自己確認APPROVE（Client寿命限定）、独立レビューではない。PR3472提出済み、GO未受領のprocess-artifacts gate以外失敗/実行中0を確認。実Gemini/本番変更/採用/配信0。最新HEADの最終検証結果はPR本文へ記録する。
+
+
+## 2026-09-13 GO #3472・Client寿命修正の本番反映
+
+PO原文GO #3472を14:32 JST受領確認しPR本文へ転記。HEAD833cf7b5、Backend CI34739556003は2819成功/95skip/失敗0、coverage63.80%。GO評価34740572926成功後、全チェック失敗/実行中0とmain包含・HEAD一致を確認。公式gh-pr-merge-safe.sh --merge --match-head-commitで実行し、GitHub mergedAt=2026-09-13T05:33:51Z、mergedBy=shingo-cc、mergeCommit=b52a4def309d20d09f327ab19efcea0ccaacf3e5を直接確認。公式処理が対象机/ローカルブランチを回収し、占有台帳DONEを記録。
+
+Deploy34740608928/job103679559392成功。ログで05:34:52 UTC、salesanchor_db_20260913_143449.sql.gz（7.6M）取得、05:37:32 UTC Deployment completed successfully。復元試験は未実施。SSH読取で本番git HEAD一致、稼働backend比較サービスSHA256=c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002dda、マージ版と一致。公開/api/healthはstatus ok/database・redis・celery connected。
+
+本番の隔離Pythonプロセスで寿命感知Fakeを使い配備済みcall_work_modelを検査。adapter_failed_before_send=false、adapter_response_correct=true、正常/異常close=true、生成API0。/tmp/line-lifecycle-postdeploy-proof.jsonに記録。製品ファイル変更や実Gemini再試行ではない。通常抽出の100秒タイムアウトを解消したとは称さない。
+
+状態: 限定修正設計/PO承認/実装/CI/マージ/本番反映完了。実データの再比較・精度評価・採用・配信は未実施、次は固定対象の現在状態を再確認した上で診断付き本番比較の手順へ進む。GO委任は有効化していない。証跡保存は既存の文書PR3462、同PR自体は未マージ。
+
+
+## 2026-09-13 14:45 確認結果の再調査
+
+PO「確認結果を調査」を受け、追加Geminiを呼ばずPR/API/本番DBを再確認。PR3472はMERGED、merge b52a4def、Deploy34740608928はsuccess。本番git HEAD一致、比較サービスSHA c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002dda一致。公開healthはDB/Redis/Celery connected。既実行のCI34739556003ログ2819 passed/95skip/coverage63.80%、本番Fake検査結果を読み取り照合した。CIやFakeをこの調査で再実行したとは称さない。
+
+新確定取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0を配備済みread_snapshot/old_work/match_itemでREAD ONLY再調査。44有効/38done/5empty/1error、729明細/商品特定552/未特定177/要確認260/訂正0、保存商品ID・確定flag対照不一致0。要確認260は商品特定済みの明細も含む。シンソクjob713b8823（source27a4b1fc）は現在もerror、保存理由SoftTimeLimitExceeded、extracted_at NULL。商品精度改善やタイムアウト解消の実績はない。
+
+今回の読み取り前後SHAはf8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385で一致。前回719788e2版から変わった区分はmastersのみ。conditionsは10→11（CN0011/Empty box追加）、product_exclude_keywordsは156→156で49ID入替。ただし(product_id,keyword,position)の多重集合は完全一致（内容追加/削除0）。items/analyses/sources/jobs/correctionsは前回と全件一致。旧全入力SHAの流用は禁止、新たな本番比較では現在版を固定し直す。
+
+一次資料: /tmp/line-review-current-control.json（非公開・恒久保存ではない）、PR3472、Deploy34740608928。今回の生成API0、本番DML0、結果採用0、配信0。確認済みは修正の配備・稼働と保存対照の再現。Gemini実応答/精度改善は別の未実施工程である。
+
+
+## 2026-09-13 14:49 修正後の実Gemini応答と商品照合の切り分け
+
+PO「進める」を受け、設計§17.11の新対象1投稿13明細に限定して実行。直前のREAD ONLY全729明細対照は不一致0。基準SHA f8e3b354284b91aa2be374e8fde57e2d5e5d8c1f2382f58bc7da2bf4745a1385、配備ファイルSHA c77c3660070847bb9bf1ccc3528a886b2c3871e081be1a574c5c45331e002ddaを検査。対象取込c0d933e7-d9f2-48b8-ac88-66c62da1b1b0、原文cced581f-7368-4767-8927-710a86c0b4c1、抽出df42518d-711a-48aa-afc4-e41c5c8960f1。
+
+診断全体05:49:35.270241〜05:49:54.202775 UTC（18.93秒。API単独所要時間ではない）、アプリ呼出し1、応答取得成功、13明細IDの完全対応を検証。SDK内部HTTP試行数は未測定。前後全入力SHA一致、DB書込0。全13作品IDは既存と同じPokemon（ポケモン）。保存商品特定3/13、旧判断対照3/13、新判断候補3/13、商品ID変更0。作品判断だけの変更による改善は当該投稿では確認できない。ワンピースの性能・全729件の精度・タイムアウト解消の証拠にはならない。候補はlabel=unverified、adoptable=falseを維持。
+
+追加の生成APIなし切り分け: 保存入力のコピーと同じマスタを稼働コードの純粋関数match_itemへ渡す。raw_product_name内の連続半角空白だけを1個へまとめたコピーでは商品候補が3→13件。既特定3件の商品ID変更0、未特定10件すべてに単一候補（PM0263が8件、PM0264が2件）。作品ID、価格、数量、状態、マスタは固定。DB接続0、生成API0、製品ファイル変更0。これは仮の入力による原因再現であり、本番改善・採用・商品正解率100%ではない。
+
+根拠: tcg_analyzer_svc.py:238 normalize_enは英数幅と大小文字を変換するが連続空白を畳まない。同:274 match_one_kwは純ASCIIキーワードをescapeして空白も逐語で照合。同:516 match_pid_with_work、tcg_work_comparison_svc.py:179 match_item経路。登録検索語はPM0263「30th CELEBRATION」、PM0264「30th CELEBRATION FUTURISTIC」。原文抽出10件の「30th  CELEBRATION」は半角空白2個であり、商品マスタ不存在や作品ID未判定ではなく照合の空白差で候補0となることを再現した。正規化を共通関数へ直接追加すると状態/除外語等にも影響するため、修正設計では商品照合への適用範囲と誤一致防止を先に確認する。
+
+非公開一時証跡: /tmp/line-postfix-baseline-private.json、/tmp/line-postfix-one-diagnostic-private.json、/tmp/line-space-only-proof-private.json。顧客原文・価格をPRへ転載しない。一時領域のため恒久保存とは称さない。外部事例は不要（当該入力・稼働コードによる原因再現を根拠とする）。状態: PR3472実装/マージ/本番反映済み、実応答確認済み、当該作品ID比較の改善0、空白差の原因調査済み・修正設計未承認、採用/全再解析/配信未実施。次は原文を保持した商品照合の空白差対処について影響範囲と誤一致を調査する。新規GOや委任有効化はない。
+
+
+## 2026-09-13 連続空白対応の導入依頼と並行作業確認
+
+PO原文「とりあえず連続する空白は1つにする仕組みを導入して様子見」。連続空白対応の導入意思を受領。設計セッションの自動実装役化・新エージェント起動・番号付きマージGOとは扱わない。
+preflight成功、本店はorigin/mainより196コミット遅れ・台帳以外未保存30件。専用文書机96fe0894はclean。origin/main c22ad508にはPR3476時間制限修正が含まれていることをgit logで確認。本セッションによる本番配備確認は未実施。過去の「100秒未修正」は過去観測であり最新状態を断定する根拠にしない。
+
+固定729明細の非公開コピー（recon14:49と同じSHA）で設計案を検算。隔離Pythonプロセス内でmatch_pid_with_workの局所入力だけを変更し、連続半角空白U+0020の2個以上を1個へ変換。商品名・商品除外照合に使う状態/メモと検索/除外語のコピーへ同じ変換、RAW/マスタ本体は変更しない。結果: 商品特定552→562、既特定552の商品ID/特定boolean変更0、入力保持true、DB接続0、Gemini0。戻り値差分15件中、10件は前回の未特定からPM0263が8/PM0264が2、5件は同商品同候補でbasisの空白表記のみ変化。正解ラベル・状態/要確認全体・本番改善は未検証。非公開証跡/tmp/line-space-design-cohort-private.json（恒久保存ではない）。
+
+公式ledger-viewでrelease/product-name-space-match-implがREVIEW/PR3473と確認。GitHub直接読取ではOPEN、HEAD a618c147bac99296c46cd4647d7cec0e0ff456a6、main c22ad508取込済み。製品6ファイル中tcg_analyzer_svc.pyが本案と重複。別担当がGO3473を受領して最終CI/反映を進めている記録あり。本セッションでそのGOを流用しない。
+PR3473版tcg_analyzer_svc.py:518 match_product_name_spaceは検索語に日本語を含み空白なしの場合だけ、商品名から半角/全角空白を除いた全体一致を追加する。今回の30th CELEBRATIONは検索語に空白があり日本語がなく、この追加経路の対象外。同:527のmatch_pid_with_workは候補選択をselect_product_candidatesへ分離しており、旧版に対する本案をそのまま適用してよいとは判定しない。根拠はgit show origin/release/product-name-space-match-implの該当関数とgh pr view 3473。台帳の重複時停止規則に従い製品実装/カード発行を停止。推奨順序は3473反映後の実物を基点に本案を追加し、既存293名称/96設計例・除外/R5を回帰確認すること。
+
+
+## 2026-09-13 連続空白対応・3473反映後の実物照合
+
+PR3473: GitHub MERGED/mergedAt2026-09-13T06:39:45Z/merge8d5aa581。Deploy34743294988成功、後続62e22f8cのDeploy34744293217成功。本番gitHEAD62e22f8c、稼働analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52、3473マージ版と一致。main push上の他チェックにはfailureもあり、全CI成功とは称さない。本調査でそれらを修復していない。
+
+新案は辞書コピーを変換する前案から、match_product_keywordの局所2変数だけを変換する方式へ修正。稼働関数を隔離プロセスのメモリ内だけで置換し固定729件を検算、商品特定553→563、既特定変更0、全結果差分11（10商品追加、1basisのみ）。旧552基準との1差を本案の効果としない。API/DB接続/製品ファイル変更0、入力保持true。非公開/tmp/line-space-post3473-proof-private.json。過去取込コピーの検算であり本番保存結果ではない。
+
+実物根拠: 3473版analyzer:503 match_product_keyword、:518 match_product_name_space、:526 match_pid_with_work。既存品質lint:57 R3、:68 R4、:79 R5、:101 R6、:115 R7。R3/6同語とR4/5検索除外を対称化し、日本語fallbackとR1/2/7を維持する必要を確認。analyzer ENGINE_VERSIONを期待する実PG試験あり。product_guardsはASTで関数を選ぶため新helperもローダーへ加える。Context7を要するライブラリ仕様調査は今回なし（既存Python正規表現と自社契約の局所設計）。
+
+品質検算追補: 固定マスタと稼働lint関数を使いR3/R4/R5/R6の空白対称化を隔離メモリで検算。指摘件数は順に1→1、0→0、15→15、2→2、各指摘集合の追加/削除0。既存指摘を解消したとは称さない。/tmp/line-space-quality-proof-private.jsonl、DB/Gemini0。正式card-lint終了0（長行37警告）、task-state/diff検査成功。製品コード/DB変更0、カード発行済み・実装担当未起動。
+
+
+## 連続空白対応 PR3481・正式CI合格（2026-09-13）
+
+PO「進めてくれ」でPR直前停止から提出/正式CIへ進行。実装2534ca14、商品正答率評価b9d4b66a、提出記録後の最終HEAD89d4b699f0ace4b352a022d96c5caba438f06440。製品コード2ファイル/試験5ファイルと文書差分。正式gh-pr-create-safe.shはGraphQL/502を返したがGitHub直接読取でPR3481 OPEN/ready/base mainを確認し、重複作成せずregister-pr.shで登録。遅延後にpull_requestのCIが起動した。原因は未確定、保護解除やCI設定変更は行っていない。
+
+Backend CI34748717910/job103701245040のログを直接取得。3286 passed、95 skipped、309 warnings、121.55秒、失敗0。coverage63.83%（必須60%）。新規26ケースを含む正式pytest/隔離PostgreSQL経路の成功であり、実Geminiの正答率ではない。ローカル457直接照合や過去CI3260成功と区別する。全チェックは33成功/8対象外skip/1失敗、実行中0。唯一の失敗はprocess-artifacts gate34748717897/job103701224510の「GO記録セクションなし」。設計/コード検証失敗ではなく番号付きGO未受領の承認待ち。
+
+商品IDの正答率は実装PR内product-space-accuracy.jsonに記録。固定729件中、全差分11を含む2投稿全19明細を原文/マスタから同一AIがラベル。正答8→18（42.1%→94.7%）、未特定10→0、既存誤商品1→1。9種セットをPM0263に結ぶ既存誤判定は未修正。無作為/盲検/独立レビューではなく、未ラベル710件を含む全体正答率ではない。
+
+本番再解析/採用/配信0、GO未受領・未マージ。CI結果はPR3481本文にも保存し、製品PRのHEADを証跡追記だけで変更しない。本記録は既存設計PR3462への追記であり、同PRのマージ承認ではない。次は対象HEADの番号付きGO確認とマージ前再検査。実装/CI成功を残存誤判定の解消と扱わない。
+
+## シンソク抽出の時間制限見直し（2026-09-13）
+
+原文照合と待ち時間の根拠。親: [商品マスタ](../../specs/product-master/README.md)。設計: [design-keyword.md](./design-keyword.md) の同名節。ADR-154/ADR-113。
+
+- 本番job 713b8823-3148-4aec-bf43-0621fc470eb0、原文27a4b1fc-19bc-4367-8da3-cae3ba44f729。13:41:02 JST API開始、13:42:42にSoftTimeLimitExceeded。HTTP応答ヘッダ受信待ちで停止。本番 backend/app/tasks/tcg_extraction.py:299–300 はhard120/soft100。gemini_extraction_svc.py:198–212 は参照全体＋原文を生成する。
+- PO「これをまず実行」「抽出できたのであれば解析まで進めて結果を確認」、続く精度確認への「進める」を受領。GO委任の有効化や本番変更承認とは扱わない。
+- 原文5256文字/497行、293商品/11作品、prompt79749文字/99099bytes、37687入力トークン。prompt SHA f2d0fb1a142e84f9320f7f2d2225c0d9582e0e0aaf4da2c425089bdd9e1d0626。
+- 14:20 JST: API99.842秒、純関数解析0.554秒、147件。思考17762/回答11491トークン。
+- 14:28 JST: API136.291秒、純関数解析0.683秒、147件。思考30469/回答11606、Google側cache32740入力トークン。原文/参照/prompt/temperature同一。cache/思考量は固定しておらず時間差全体の原因を断定しない。
+- 各回API1回、SDK attempts=1、検証上限300秒。DBはREPEATABLE READ/READ ONLY、API中接続閉鎖。job/原文/明細/解析/訂正と照合マスタの前後SHA一致。DB更新/設定変更/配信0。現行の照合・正規化純関数で計算し、保存再解析関数は呼んでいない。
+- 原文147価格行を独立した形式読み取りで採番しモデル行番号へ一対一対応。商品名転記・数量・価格・単位・状態タグ・Condition・Status・行位置の8項目×147=1176照合一致。欠落/重複0。全件In Stock、Sealed box73/Damaged sealed box74。
+- 商品名による特定を84商品147明細で目視確認。138件はマスタ日本語名の原文一致、9件はDX/デラックス・英字大小・正式名接頭辞・OP17表記を対照。商品名の誤特定は検出0。同一AIの自己確認であり独立レビューではない。
+- 型番不整合: PM0198（2明細）原文M2a/マスタM3、PM0041（2明細）SM10b/SM10a、PM0024（1明細）SM5S/SM5M。3商品5明細は未修正。商品名特定とマスタ全項目の正しさを分離する。
+- 旧統合規則の期待値135行。A−/B混在12商品で数量合算・最高単価を原文側と解析側から独立計算し一致。配信プログラム自体の統合出力は未実行。予約/発送条件/他仕入先/全体精度は未測定。
+- 非公開原本: /private/tmp/shinsoku-accuracy-20260913.jsonl（0600）、全明細対照表 /private/tmp/shinsoku-accuracy-20260913.md（0600）。内容を公開repo/PRへ貼らない。入力SHA 37c9c5a54be517513aaf6d06856c9a8bc4676a44f04d4d36f92838be26ed8cb8。
+- 文書worktreeは公式new-worktree.shでorigin/main b52a4defから作成。事前/作成時の回収対象0、製品コード変更0。
+
+結論: 今回は100/120秒では不足する。解析方式変更の根拠はない。2回の成功で全投稿300秒以内を保証せず、有限延長だけを設計する。
+
+文書保存後の直接検証: check-task-state.sh終了0、card-lint.sh終了0（既存カードを含む200字超30行の警告のみ）、git diff --check終了0。差分6ファイルは文書のみ。カードは機械検査済み草案・未発行、PO数値/実装承認待ち。未コミット・未push・未PR。
+
+実装承認受領（2026-09-13 14:44 JST）: PO原文「進める」。直前の300/330秒の限定変更を実装役へ渡す承認依頼への応答。時間制限2定数の実装・検証・PR提出を1名へ委任し、設計担当が成果物確認を行う。マージ/本番反映/実Gemini/DB更新は承認対象外。過去の未承認記録は当時の状態。
+
+実装確認（2026-09-13）: POの明示委任により実装役1名がtask定義の2行のみ変更。設計担当はgit diffを直接確認し、hard120→330/soft100→300以外の製品変更0を確認。実装役の登録task読取報告は名称tcg.extract_source_message、soft300/hard330。既存API timeout試験がerror/items0を検証するため新規テストなし。ruff成功は実装役報告。ローカルPython3.14とBanditの非互換でスキャン不完全、mypyも既存警告のため完全な静的検査成功とはしない。正式Backend CIはPR提出後に確認。マージ/本番変更/今回の実Gemini呼出し0。
+
+実装役の最終ローカル報告: make lint-ciはPython3.14/Bandit非互換（241ファイルskip）、mypy既存エラー出力中に中断しexit130。全lint完走ではない。全app ruffと変更ファイルruffは成功。既存Python3.12には検査/SQLAlchemy依存がなく追加installせず、Backend CIで確認する。登録task属性soft300/hard330、diff/task-state/card-lintは終了0。ローカルpytest未実行。
+
+PR提出: https://github.com/shingo-ops/salesanchor/pull/3476、製品/設計commit 7db0997c8675e32715805cc0b31bcf46fb32b4c2。製品差分2定数のみ。初回process-artifacts gateはPR本文の番号付きGO記録未受領で失敗（run34741434114）。これは実装承認とは別のマージ承認待ちであり、原文を創作して解消しない。Backend CIはPRの最新HEADを参照。commit直前の保護停止はtool workdirが判定されず本店main扱いになったもの。公式card書式と既存guardが認識する先頭cdで実際のrelease worktreeを明示し、guard変更/解除なしで正規commit/push/PRが成功した。マージ/本番反映0。
+
+
+### PR #3476 マージ・配備確認（2026-09-13）
+
+- PO原文「GO #3476」を2026-09-13 15:14 JSTに受領し、PR本文のGO記録へ逐語転記。委任GOの自己有効化は行っていない。
+- HEAD bd8306ed52ecd86b947d505773bdf9ccdf2c19c1 の製品差分は時間制限2行のみ。Backend CI 34741872204成功、承認チェック34742291130成功を設計担当がGitHubから直接確認。
+- 正規マージラッパー実行成功。PR #3476は2026-09-13 15:16:21 JSTマージ済み、merge SHA c22ad508993a1c7df679d51e01f08080dc3c341d。
+- 自動配備 https://github.com/shingo-ops/salesanchor/actions/runs/34742337546 はsuccessを直接確認。
+- 本番workerへの読み取り確認で、task属性は `tcg.extract_source_message 300 330`。コンテナはrunning、起動日時2026-09-13 15:18:34 JSTでマージ後の再起動を確認。抽出APIを追加実行せず、DB・投稿状態は更新していない。
+- 状態: 設計自己審査済み／PO実装・マージ承認済み／実装・マージ・本番設定反映済み。対象投稿の本番再抽出は未実施、実投稿の解消判定は未完了。次は対象1件の再抽出完了・明細・所要時間を確認する。
+
+### 本番1件の再抽出・解析完了（2026-09-13）
+
+- 前節の次の一手に対しPO原文「次を進める」を受領。対象job713b8823-3148-4aec-bf43-0621fc470eb0、source27a4b1fc-19bc-4367-8da3-cae3ba44f729の再実行と結果確認に限定。追加配信・他job・製品変更は実施していない。
+- 事前SELECTでerror、items0、原文is_active=true/superseded_by=NULL。原文は先行private_snapshotと完全一致（raw単体SHA d4c1491e462e78e683c157b1b04cc57655381552834852e2a71655d4274890e2。先行input_sha256は入力集合のハッシュで別物）。Celery active/reserved/scheduledで対象0、auto_analyze=1、soft300/hard330を直接確認。
+- 管理画面のブラウザー接続は既存プロファイル使用中、browser skillに必要な実行ツールも未提供。既存設計§12.3と同じretry_extraction(job_ids=[固定ID],scope=None)をSSH経由で1回呼び出した。直前にID/状態/原文/明細0を再照合。独自SQLで成功状態を作らず、既存関数によるerror→pendingと通常Celery処理を使用。
+- 15:30:46 JST、enqueued=1/skipped=0。task91ff4091-5f77-4187-89b0-7df75b5b3870のworkerログを直接取得。15:30:47.640抽出呼出し、15:33:08.440解析開始、15:33:13.837成功、task所要146.425139秒。抽出呼出しから解析開始まで約140.8秒（保存を含む）、解析・保存約5.4秒。純粋なAPI通信時間とは区別する。
+- 事後DB確認: job=done/error_message=NULL、extraction_items147、analysis_results147、pid_resolved147/unit_resolved147/needs_review0。Condition内訳Sealed box73、Damaged sealed box74、StatusはIn Stock147。
+- 原文の独立した価格行抽出147件とline_end集合が一致、欠落・重複0。数量・価格・単位・解析後数量・解析後価格の5項目×147=735照合は差異0。事前原文行全体も不変。前回の原文照合済み抽出との商品名/数量/単位/状態/備考/行終端/作品IDは同一。raw価格のカンマ表記だけ差があり、数値147件は一致。解析の数量・価格・Condition・Status・備考・商品/単位特定フラグは前回純関数検証と一致。
+- 状態: 当該1件は通常の本番経路で抽出・解析まで完了、100秒制限による失敗の解消を実測。全投稿の300秒以内・全体正答率を保証するものではない。既知マスタ型番3商品5明細の不整合は別課題。配信処理は未実行。
+- 非公開の前後スナップショット: /private/tmp/shinsoku-retry-before-20260913.json、/private/tmp/shinsoku-retry-after-20260913.json（0600）。原文や全明細をrepoへ公開しない。
+
+
+## CARD-LINE-PRODUCT-SPACE-06 実装・PR作成直前の確認（2026-09-13）
+
+PO原文「離席するので最後まで進めてくれPRの直前まで進めて結果を報告してくれ」を、本カードの限定実装・検証までの明示許可として受領。設計専任の前提に対する今回の追加指示として扱い、本人セッションで実装。サブエージェント起動0。PR作成・マージ・本番反映は許可範囲外として停止する。
+設計の正式参照版は文書PR3462 HEAD75b90916、designの連続空白最終契約とカード06を本ブランチにも保存。前提となるPR3473はMERGED/merge8d5aa581、Deploy34743294988成功。稼働analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52一致は設計時直接確認済み。新規ライブラリ/API仕様変更なし。
+
+preflight成功、本店はorigin/mainより223コミット遅れ・台帳以外未保存30件。公式new-worktree.shでorigin/main1a8eed69起点、専用release/product-space-runsを作成。製品実装はanalyzer/helper/品質R3〜R6と解析版v8、試験5ファイル。共通normalize_en・match_one_kw・日本語fallback・候補順位/元検索語を保持。新しい状態/価格/数量/DB/CI変更なし。
+
+検証結果: make lint-ci終了0、ruff app成功、Bandit高重大度0。mypyは既存エラーをMakefileが警告扱いとするため型検査完全成功ではない。変更試験5ファイルのruff成功。DB/pytestを起動せず既存ASTローダーで製品純関数を読込み、固定期待値293名称/96設計例を含む既存431ケースと追加26ケース、計457の直接照合を実行し失敗0。正式pytestとは区別する。初回の非公開検算ドライバーはdeepcopyの読込み不足9件を出したが、製品試験コードはimport済み。ドライバー補完後457成功。ruff初回は作業机外のcache書込み拒否、no-cacheで再実行成功。制限変更なし。
+
+PostgreSQL比較fixtureに連続空白の一致/除外2ケースを追加、保存RAWの空白保持と比較の特定結果を検証するassertを追加。既存の訂正保護試験は維持。ローカルDocker daemonに接続不可、PG fixtureも隔離GitHub CI専用を要求するため、pytest/実PG未実行。PRを作らない今回の指示によりPR起動CIも未実施。GITHUB_ACTIONSの偽装や外部DBへの代用なし。
+
+自己差分確認: 製品ファイル2・既存試験5の範囲。原文保存/解析結果の大量更新/モデル設定/配信処理の変更0。正式CI未完了なのでマージ可能・本番改善完了とは宣言しない。PR作成前で停止する。実Gemini呼出し0、本番変更/再解析/採用/配信0。
+非公開検証ログ: /tmp/product-space-lint.log、/tmp/product-space-direct-result.json。一時領域であり恒久保管ではない。次はPOのPR作成指示後に正式CIを起動し、失敗があれば本カード範囲で修正する。
+
+
+## 連続空白修正の商品正答率評価（2026-09-13）
+
+PO「正答率テストを実施」を受領。コード2534ca14とその親1a8eed69の実analyzer純関数、および実comparison.match_itemをAST読込し、同一の固定729明細/マスタ/旧作品IDで再実行。DB/pytest/Geminiは使わない。前後全入力同一をassert。今回は「特定されたか」だけでなく、2投稿の全文と商品マスタから明細ごとに正解基準を付けてから評価を実行した。
+
+評価母集団は全戻り値差分11件を含む2投稿の保存済み全19明細。増えた10件だけを選ばず、同投稿の未変化8件も含む。729件中710件は未ラベルで全体正答率は出さない。原文参照行/本文hash/期待商品コード/前後判定は [product-space-accuracy.json](./product-space-accuracy.json)。個別価格/連絡先/原文全文はこの成果物に含めない。過去の保存コピーを固定した評価であり、現本番DBの更新後件数ではない。
+
+正解基準: 原文の商品名をマスタの定義へ照合し、発送日/状態/数量では商品IDを変えない。通常30th CELEBRATIONはPM0263、FUTURISTICはPM0264、プレミアムデッキセットはPM0265、ストームエメラルダはPM0219。原文9ece68fbの17行目は「MEGA 30th CELEBRATION カードセット (9種セット)」。マスタには個別のカードセット9種（PM0276〜PM0284）はあるが集合を表す単一商品を確認できないため、通常商品PM0263へ代替確定せず未特定に留めるのを正解とする。検索関数の出力を正解ラベルとしてコピーしていない。
+
+| 指標（19件限定） | 修正前 | 修正後 |
+|---|---:|---:|
+| 正答 | 8 | 18 |
+| 未特定（正解商品あり） | 10 | 0 |
+| 誤商品 | 1 | 1 |
+| 正答率（正答/19、未特定も分母に含む） | 42.1% | 94.7% |
+
+増分は10件/52.6ポイント、修正で新たに発生した誤商品0。全729件の機械対照は553→563、既特定553の商品ID変更0。これは553件すべての正しさを証明するものではない。実際、未変更群から誤商品1件を発見した。残存は抽出明細9d2b898e-5b8a-4ca0-89bc-d73127251f3a、上記9種セット→PM0263。保存時needs_review=falseの観測もあり、要確認以外だけの配信でも誤商品を除ける保証にはならない。本番の現存/配信履歴は今回未調査。
+
+評価者は実装と同一AI。出力を過去に見ており非盲検、無作為標本でも独立第二者レビューでもない。商品ID限定で、状態/価格/数量/抽出漏れの正答率は未評価。今回の結果で全体精度・本番採用合格を宣言しない。誤商品1件は空白修正とは別の既存問題として残し、無断で辞書/製品コードを追加修正しない。PR直前停止を継続。本番変更/再解析/配信0、正式pytest/PG/CIは未実施。
+
+
+## PR #3481 提出（2026-09-13）
+
+PO「進めてくれ」に基づき、PR直前停止から提出/正式CIの段階へ進行。preflight成功、latest origin/main包含、作業机clean、card-lint終了0（長行警告のみ）。公式gh-pr-create-safe.shの初回はGraphQL実行エラーで未作成確認、再実行はHTTP502を返したがGitHubの実読取でPR3481 OPEN/ready/base main/HEADb9d4b66aの作成を確認。重複PRは作成せずregister-pr.shとledger-updateで登録した。
+実装内容は2534ca14と同じ。正答率は19件限定で8→18、既存9種セット誤商品1件は残存。マージGO未受領、本番変更/再解析/配信0。正式CI結果は当該PR本文に実行ID/HEADとともに記録し、未完了を成功扱いしない。
+
+
+## 9種セット対策の事前調査（2026-09-13）
+
+該当明細9d2b898e-5b8a-4ca0-89bc-d73127251f3aは本番READ ONLY再確認でもactive/done・PM0263・needs_review=false、supersededなし。対象商品/9個別/関連2商品計12件と検索/除外語を取得。PM0263の除外語は3件でカードセットなし。非公開/tmp/nine-set-current-private.json。
+固定729件のコピーで除外語カードセットをPM0263だけに追加しv8の実関数を使う検算。変化10件（個別9種MULTI→各単一、集合1件PM0263→NONE）、他719件の全商品照合戻り値同一。19ラベルは19正答、特定数563→571。原文/辞書コピー元の変更0、DB/Gemini0。/tmp/nine-set-exclusion-proof-private.json。個別9種は原文の共通見出し19行と内訳9行に分かれ、完全名単一行一致はfalseだったため全文を読み直して対応を確認。原文根拠の不足を文字列完全一致で隠さない。
+実装経路は既存migrations/20260910_170000_tcg_keyword_false_positive_guards.sqlとcard-keyword-false-positive-guards.md。既存runnerは明示run_sql登録方式、migrationファイルだけでは配備されない。今回も専用migration/登録1行/既存PG試験の3製品ファイルに限定。新規API/ライブラリ仕様確認なし。
+
+
+## PR3481本番反映とカードセット対策PR3483（2026-09-13）
+PO原文GO #3481を最終HEAD89d4b699f0ace4b352a022d96c5caba438f06440へ照合。35success/8skip/未完了0を確認し公式merge wrapperで2026-09-13T10:00:45Zにマージ。merge SHA6326115cc946605eebaeaeded00898f09803670a。Deploy34750745805/job103706745148はsuccess、10:04:32.5844414Z完了。backupは10:01:26.5190599Zにsalesanchor_db_20260913_190123.sql.gz（6.6M）生成を直接ログ確認。復元試験なし。
+SSH読取時点の本番HEAD6326115c、engine name-first-v8-product-space-runs、稼働analyzer SHA256 d0c5f1eec36e06469864833fe1076e7f240268016b1afe6fb413c4ddb0f687d0がgit show同commitと一致。公開health status ok/database・redis・celery connected。後続の別PR3482も10:12:31Zにマージされており、現在のHEADを6326115cと固定して宣言しない。既存データ再解析/採用/3シート配信0。GO委任の自己有効化なし。
+追加依頼の対策はPR3483（release/cardset-exclusion）。初回0fe723b8の提出後、mainのPR3482（ワンピース商品マスタ、5c0704df）との差が登録runnerで競合。mainの登録/削除をそのまま保持してカードセットmigration1行だけを追加する形で解消（2e906fd8）。mainからの実差分は許可9ファイルのみ。guard-authoringは古いbase包含不足によるerrorからsuccessへ。
+初回CIのtest-schema-dupは部分構造試験用の独自CREATE TABLEを拒否。正式provisionから作った隔離CI表の1表を別名にして欠落を再現する試験へ修正（fb41b645）。製品SQL変更なし。process-artifacts gateは新番号のGO記録欠落で停止。正式全テストの最終結果は追記待ち。
+固定コピーの追加照合10件（商品だけの非盲検同一AI評価、顧客原文/金額を転載しない）。原文根拠: 集合1件はsource9ece68fb L17-L19、個別9件はsourcedd423a78の共通見出しL19と各内訳。次表の期待商品コードは既存マスタと内訳を直接照合したもの。未特定は正しい商品登録の創作を避ける期待棄権であり商品特定成功に数えない。
+| 明細ID | 修正前候補 | 修正後/期待 |
+|---|---|---|
+| 16e6cd9e-f665-4fd9-abb1-363ebfad179e | PM0263/PM0277 | PM0277 |
+| 2751bfa0-1de7-4a59-9de4-cec05dd7e2cc | PM0263/PM0282 | PM0282 |
+| 2c7ab86e-2d33-4c7f-8b36-217a251175cd | PM0263/PM0280 | PM0280 |
+| 481b9ba9-733c-4350-b5af-a7aab74610c0 | PM0263/PM0281 | PM0281 |
+| 5bb34f3a-6b59-4a95-b28b-226e2c1434e0 | PM0263/PM0279 | PM0279 |
+| 8ac48018-317e-4ec6-8c10-cab9bce5ce60 | PM0263/PM0278 | PM0278 |
+| ce265e7a-5cca-4ea9-9196-f33f09c4f022 | PM0263/PM0284 | PM0284 |
+| ceb6e570-351a-4e41-84bd-5216d98aa38f | PM0263/PM0283 | PM0283 |
+| ee813a51-d30a-4340-a19f-b134cb48f6d9 | PM0263/PM0276 | PM0276 |
+| 9d2b898e-5b8a-4ca0-89bc-d73127251f3a | PM0263 | NONE（未特定） |
+
+
+### PR3483最終検証結果
+
+最終HEAD fb41b64538d8fb8fa4c429e4b79ef3aba105e13e、main5c0704df包含・GitHub mergeable。Backend CI34751619981/job103709049740の直接ログ: 3295 passed / 95 skipped / 309 warnings / 115.30秒 / coverage63.83%。追加9ケースも正式PostgreSQLで成功。Migration CI34751619987の実SQL/全件ドライラン/登録点検成功。全チェック37success/4skip/1failure、未完了0（PR本文追記前の観測）。唯一の失敗はprocess-artifacts gateの新番号GO記録なし。修正前テスト定義を使ったCI34751560833も3295成功だが最終確認根拠は34751619981とする。
+
+正式証跡をPR3483本文へ保存。GO #3483未受領・未マージ・本番未反映・保存済み結果未修復・再解析/配信未実施。設計自己審査と直接読んだCIログを区別し、第二者レビューとは称さない。次は対象HEADとチェック/バックアップを再確認した上でPO本人の番号付きGOを受けること。PR3481のGOと配備成功は追加PRの承認に転用しない。
+
+### CARD-LINE-CARDSET-07 実装検証
+
+GO3481の空白修正はmerge6326115c/Deploy34750745805で本番反映済み。今回は同merge起点のrelease/cardset-exclusionで追加依頼を実装。新語1行を追加する単一transaction、同一性/重複/構造ガード、既存run_sql登録1行、既存PG試験9ケース。原文/既存結果/他商品/他テナントを更新しない。本人実装でサブエージェント0。
+make lint-ci終了0、ruff/Bandit高重大度0、mypyは既存エラーを警告扱いとするため型検査完全成功ではない。変更試験ruff、runner構文検査、diff検査成功。ローカルDocker不在につきpytest/PG未実行、正式CIで9ケースと既存回帰を検証する。固定コピー729件の除外語対照は個別9種の誤候補除去と9種集合1件の適切な保留、他719件不変。19ラベル正答19件は「商品未特定が正解」の1件を含む。19商品すべてを特定できたとの意味ではない。
+自己差分確認は追加migration/runner登録/既存試験の3製品ファイルに限定。実装PRのGOは未受領で本番未適用、既存誤結果の再解析も未実施。正式CIの実行HEAD/結果は本PR本文へ保存する。
+
+
+## カードセット登録・改訂2の事実確認と設計検算（2026-09-13）
+
+PO最新依頼: 個別3名称と「MEGA 30th CELEBRATION カードセット（9種セット）」を登録し、検索/除外語で誤採用を防ぎ、正答率100%を目指す。本人のマージGOや実装担当への切替許可を補って記録しない。
+
+本番READ ONLY再読取で個別3はPM0276/277/278として有効、同系列9個別も存在。9種/９種/CELEBRATIONを含む名前を全商品から確認して集合商品の登録0、PM最大0296。個別3の名称から先頭のブランド名を省いたPO表記は既存検索語に一致するため新規重複登録不要。単一の集合商品1件の追加が必要。商品区分は現存PC_BOX（Box/箱系）、9個別の参照はDIV01/IP001/MK001。根拠SQLはSELECTとSHOW read_onlyのみ。途中でcategoryのlabel_ja列がないためSELECT失敗、正式定義とSELECT *でdisplay_nameとkubun_typeを確認し直した。DB変更なし。
+
+コード根拠: tcg_analyzer_svc.py:258 token_and_matchは日本語混在検索語の空白区切りAND部分一致。単独9種セットでは19種への部分一致の危険があるため括弧込み/商品系列込みの検索語に限定。normalize_en:238は全角英数/括弧を半角へ正規化。match_pid_with_workと比較match_itemの実関数を隔離プロセスへ読み込み、マスタコピーだけ変更。tcg_product_master_svc.py:274はPM最大+1採番。20260905_010000_tcg_pokemon_master_batch1_t004.sql:62以降が個別9既存登録と同系列集合の根拠。
+
+固定729件は従来と同じコピー。原文に基づく19件+個別9件、計28件で新設計の商品ID正答28/28。今回の集合商品新設に伴い1件の期待値を未特定から予定PM0297へ変更（製品登録IDは検算用の仮UUID）。他の期待商品を結果に合わせて書き換えていない。同一AIの非盲検検算であり独立評価ではない。商品特定563→572、戻り値変更10件、他719件不変。状態/数量/価格の正答率、全729件の正答率、本番改善とは称さない。
+
+原文に基づく28件の期待値と検算結果（顧客原文/価格は保存しない）:
+
+| 明細ID | 原文ID | 行 | 期待=結果 | 原文SHA256 |
+|---|---|---|---|---|
+| 4f44e328-306d-472e-8dd4-4715dc9188a3 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 27–31 | PM0219 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 75b6d982-bb9d-43c2-831e-af34aa1f0951 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 11–15 | PM0263 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 9cd43dc9-a8eb-4b77-8923-4af0bf515839 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 1–3 | PM0264 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 9d2b898e-5b8a-4ca0-89bc-d73127251f3a | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 17–19 | PM0297 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| a27a51d4-009c-47aa-9753-a22252d0cb6f | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 21–25 | PM0265 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| b65dd482-1e90-4fc9-ba35-fbd909b63513 | 9ece68fb-f35f-49ec-86cf-e4c73fa38bc6 | 5–9 | PM0263 | cae5a0f6c40361c026d161bbcbcb23b100c4c7e13c55e414971629544f86e269 |
+| 037a85a0-1b58-40a1-9731-9b83b6620c17 | cced581f-7368-4767-8927-710a86c0b4c1 | 37–39 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 1e7790c1-e6dd-469c-a7c5-07b34a0935c5 | cced581f-7368-4767-8927-710a86c0b4c1 | 45–47 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 31f8b5ba-7f28-4279-9248-2e3960a2eec6 | cced581f-7368-4767-8927-710a86c0b4c1 | 5–7 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 459cfa30-6a5e-4cc2-8729-c97cdb4f00ee | cced581f-7368-4767-8927-710a86c0b4c1 | 53–55 | PM0264 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 4736b1e3-cddd-455d-9c1e-46ccdf4f4546 | cced581f-7368-4767-8927-710a86c0b4c1 | 49–51 | PM0264 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 4d316b32-e13c-4d50-a7fb-976ad542769b | cced581f-7368-4767-8927-710a86c0b4c1 | 17–19 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 5b0e62cd-03b6-46c9-be80-fbfc84e2ca9f | cced581f-7368-4767-8927-710a86c0b4c1 | 21–23 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 6543a13f-a308-461b-a83c-0cdc15eab4bd | cced581f-7368-4767-8927-710a86c0b4c1 | 29–31 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 9afe0c82-74de-406d-b241-1102764625eb | cced581f-7368-4767-8927-710a86c0b4c1 | 33–35 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 9e79b83d-423c-4c27-a3a3-5d1243a761b3 | cced581f-7368-4767-8927-710a86c0b4c1 | 41–43 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| a16d09e2-775c-4673-9a4d-6da9d084b52c | cced581f-7368-4767-8927-710a86c0b4c1 | 13–15 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| ad87e9be-f941-41d7-85cc-4f6258f5b302 | cced581f-7368-4767-8927-710a86c0b4c1 | 9–11 | PM0265 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| fd0bb4f2-c6b1-445e-a2ac-6c28f4e9fef6 | cced581f-7368-4767-8927-710a86c0b4c1 | 25–27 | PM0263 | ee3998fb8e2953623ef84e77994bc7785870336a6f870658b79b2cef17b87369 |
+| 16e6cd9e-f665-4fd9-abb1-363ebfad179e | dd423a78-efb0-4d63-ab68-806d37a763d6 | 45–47 | PM0277 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 2751bfa0-1de7-4a59-9de4-cec05dd7e2cc | dd423a78-efb0-4d63-ab68-806d37a763d6 | 41–43 | PM0282 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 2c7ab86e-2d33-4c7f-8b36-217a251175cd | dd423a78-efb0-4d63-ab68-806d37a763d6 | 29–31 | PM0280 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 481b9ba9-733c-4350-b5af-a7aab74610c0 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 37–39 | PM0281 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 5bb34f3a-6b59-4a95-b28b-226e2c1434e0 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 33–35 | PM0279 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| 8ac48018-317e-4ec6-8c10-cab9bce5ce60 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 19–23 | PM0278 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ce265e7a-5cca-4ea9-9196-f33f09c4f022 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 49–51 | PM0284 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ceb6e570-351a-4e41-84bd-5216d98aa38f | dd423a78-efb0-4d63-ab68-806d37a763d6 | 25–27 | PM0283 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+| ee813a51-d30a-4340-a19f-b134cb48f6d9 | dd423a78-efb0-4d63-ab68-806d37a763d6 | 53–55 | PM0276 | c5a0dee91a8b0ea7106c9022cb7ff7c58fff2c57a646680df7a709289394d328 |
+
+設計の境界58例: 58/58期待一致。未特定を正解とする例を含む。テスト入力は下表の合成名、work_id=None/raw_state空/raw_memo空、単位は固定コピーのBOX。
+
+| 合成商品名 | 期待=結果 |
+|---|---|
+| MEGA 30th CELEBRATION カードセット (1種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (2種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (3種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (4種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (5種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (6種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (7種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (8種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) | PM0297 |
+| MEGA 30th CELEBRATION カードセット (10種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (11種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (12種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (13種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (14種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (15種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (16種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (17種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (18種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (19種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット (20種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (1種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (2種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (3種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (4種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (5種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (6種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (7種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (8種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (9種セット) | PM0297 |
+| 30th  CELEBRATION カードセット (10種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (11種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (12種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (13種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (14種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (15種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (16種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (17種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (18種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (19種セット) | 未特定 |
+| 30th  CELEBRATION カードセット (20種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット（９種セット） | PM0297 |
+| ◆MEGA 30th CELEBRATION カードセット (9種セット) | PM0297 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット フシギダネ・ヒトカゲ・ゼニガメ | PM0276 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット チコリータ・ヒノアラシ・ワニノコ | PM0277 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット キモリ・アチャモ・ミズゴロウ | PM0278 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ナエトル・ヒコザル・ポッチャマ | PM0279 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ツタージャ・ポカブ・ミジュマル | PM0280 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ハリマロン・フォッコ・ケロマツ | PM0281 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット モクロー・ニャビー・アシマリ | PM0282 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット サルノリ・ヒバニー・メッソン | PM0283 |
+| ポケモンカードゲーム MEGA 30th CELEBRATION カードセット ニャオハ・ホゲータ・クワッス | PM0284 |
+| 30th CELEBRATION | PM0263 |
+| 30th CELEBRATION FUTURISTIC | PM0264 |
+| 30th CELEBRATION プレミアムデッキセット | PM0265 |
+| 別作品 カードセット (9種セット) | 未特定 |
+| MEGA 30th CELEBRATION カードセット | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) FUTURISTIC | 未特定 |
+| MEGA 30th CELEBRATION カードセット (9種セット) プレミアムデッキセット | 未特定 |
+
+状態: 設計改訂/自己審査APPROVE/設計検算済み、カード08担当割当て待ち。製品実装/新商品本番登録/改訂後正式PG/マージ/再解析/配信は未実施。PR3483は旧HEADのまま、改訂実装と再検証が終わるまで旧版へのGOを求めない。次は明示された実装担当へカード08を引き継ぐ。
+
+
+### CARD08実装着手と検証準備
+
+POが本セッションの実装担当への切替を「進める」で明示承認。preflight成功、既存PR3483の机を引継ぎ、最新mainを通常merge（先行Bot UI差分を保持）。追加SQLは既存12商品の同一性/参照有効性/予定コード衝突/別番号の集合重複を検査し、新集合1と検索1/除外追加をatomicに保存。個別3重複0、保存結果の更新0。正式migration由来のCI表で登録/再実行/別tenant保持/28商品名+58合成入力/参照8障害/商品7障害/衝突と遅い失敗3/空・部分構造/runner順序を検査する試験を追加。
+
+28件についてCIへ持ち込むのは原文から抽出済みの商品名と商品期待IDだけ（状態/メモは空）。前段のコピー検算では実際の保存入力を使用した。CIの86商品名照合を、28明細の状態・数量・全原文の再抽出成功とは称さない。ローカルpytest/実Gemini0。正式CI結果はPR本文と既存設計PR3462へ追記予定。
+
+実装commit da9485090868d56a014b493a358e1bec445f70faとしてPR3483を改訂。現在の実装は集合登録を含む。旧HEADへのGO待ち撤回状態から、改訂後正式CI確認中へ遷移した。make lint-ci終了0（ruff/Bandit重大度High0、mypy既存警告）、変更試験ruff・カード違反0・ADR索引・task-state・schema複製・diff/bash構文成功。新集合登録/本番再解析はまだ実行していない。
+
+
+### CARD08改訂後の正式CI合格
+
+製品実装da948509、最終HEAD e6e5d463c71f4b46de88412353022c3dfc9ab763。PR3485がmainへ入り証跡追記で競合したため、双方の記録を残して通常merge、main87d29d72を包含。製品コードの競合0。GitHub mergeable確認。
+
+Backend CI34754328005/job103716059145の直接ログ: 3316 passed / 95 skipped / 309 warnings / 122.21秒 / coverage63.83%。カード08追加21ケースを含む正式PGに成功。28商品名+58合成例の保存辞書照合、初回1/再実行0、他tenant・既存商品/語保持、各障害/rollback/登録順序に成功。Migration CI34754327876の実SQL/全件ドライラン/登録点検もsuccess。38success/4skip/1failure、未完了0（PR本文結果追記前）。唯一のfailureはprocess-artifacts gateのGO記録なしとjob103716033488の実ログで確認。
+
+Backup: Deploy34752797542/job103712050698の2026-09-13T10:48:54.5504702Zログでsalesanchor_db_20260913_194851.sql.gz（6.6M）の生成を直接確認。復元未試験。今回配備前backupは既存手順で生成/確認する。
+
+PR3483本文へ最終HEADと正式CIを保存。状態は改訂設計/実装/正式CI済み、番号付きGO未受領、未マージ・本番未登録・既存結果再解析/配信未実施。次はPOのGO #3483受領後にHEAD/CI/main/backupを再確認して公式merge経路へ進む。新たなGO発行や委任有効化はしていない。
+
+
+## PR3483 GO・本番登録完了（2026-09-13）
+
+PO原文 **GO #3483** を受領。2026-09-13T12:53:34Zに実時刻確認しPR本文へ逐語転記。preflight成功、ローカル/PR HEAD e6e5d463一致、origin/main87d29d72包含、GO記録反映後gh pr checksで失敗/未完了なしを確認。公式gh-pr-merge-safe.sh --merge --match-head-commit e6e5d463c71f4b46de88412353022c3dfc9ab763でマージ。GitHub mergedAt12:54:30Z、merge116b1cf667addd0b6d3b68a574641e0081dc4517。机/ブランチは公式wrapperで自動削除。
+
+Deploy34758371227/job103726640926 success。配備前backupは12:55:15.5722715Zにsalesanchor_db_20260913_215511.sql.gz（6.6M）生成。SQL登録229/230は12:57:50.2222539Z、230/230は12:57:50.3636728Zに実行、12:58:10.9715915ZにDeployment completed successfully。復元試験未実施。SSHで稼働git HEAD116b1cf6一致、公開health status ok/database・redis・celery connected。
+
+本番DBのSHOW transaction_read_only=onをassertして照合。新商品PM0297「MEGA 30th CELEBRATION カードセット（9種セット）」UUID59535ce4-3268-4a8a-a51e-4075d499f23b、同系列9種集合登録は1件。既存個別9商品のUUIDすべて同一。配備前後に取得した共通11商品の全保存フィールド一致（PM0264の配備前全フィールドは今回比較集合に含めていない）。通常3のカードセット除外と個別9の種セット除外、新集合検索1/除外2を確認。
+
+稼働analyzer name-first-v8-product-space-runsと全本番商品検索/除外辞書を使い、保存結果へ書き込まず28商品名+58合成例を照合: 28/28・58/58期待一致。work_id=None、状態/メモ空の照合で、既存28明細の再解析や状態/価格/数量の正答率ではない。実Gemini呼出し0。非公開/tmp/cardset3483-production-private.json、/tmp/cardset3483-before-private.json。重要な数値とIDは本節に保存済み。
+
+保存済みの誤判定対象9d2b898e-5b8a-4ca0-89bc-d73127251f3aは旧PM0263 UUID e5e0b8da-820b-40ca-9af6-110f0d81855e、pid_resolved=true、needs_review=falseのまま。今回migrationは過去結果を書き換えない契約どおり。既存結果の再解析・配信は未実施。
+
+参考: merge SHAにぶら下がる別PR2649（main→develop）のpull_request実行に失敗が表示された。Actions run34758374030のevent/head/base/pull_requestsを直接確認し、今回の承認済みPR3483の検査やpush Deployと区別した。別PRのCI/ブランチには変更0。
+
+状態: 設計/自己審査/PO実装承認/正式CI/番号付きGO/マージ/本番新商品登録/稼働照合確認まで完了。GO委任有効化なし。再解析/3シート配信は未実施。次は既存結果を更新する別手順を対象・訂正保持条件込みで確認する。
+
+
+## PR3483後・保存抽出の再解析テスト（2026-09-13）
+
+PO原文「再解析してテストしてみて」を受領。過去カードの再解析未承認状態は今回の対象限定再解析について更新。Gemini再抽出/全取込再解析/配信をこの指示から追加しない。preflight成功。関連原文3件はジョブ単位で19+13+6=38明細（既存の正解ラベル28を含む）と読取確認した。
+
+実行前に3ジョブの全raw/source/analysis/corrections/runsをREAD ONLYで取得、done/原文有効/未完了run0/訂正0。前処理のlatest job照合・入力SHA一致・engine v8を確認し、既存_run_reanalyze_syncだけを固定2ジョブへ実行。SQL直書きによる解析結果の更新やガード解除はない。元GAS退避表analysis_results_gas_baseline_20260903実在、直近配備backupに加え今回runのbefore snapshot25件を確認した。
+
+| 対象ジョブ | 明細 | run ID | 完了UTC | 商品特定 前→後 | 要確認 前→後（最終DB） |
+|---|---|---|---|---|---|
+| ebfe8c27-a61f-4058-a940-95db84d1eee4 | 6 | 00b3d27e-ee87-48fe-880f-3994204c6fd5 | 2026-09-13 13:11:17.839535 | 6→6 | 1→6 |
+| 25d73a0f-2cb3-489b-b8de-c6c661c8f071 | 19 | 67245fc0-6229-4978-98ac-162951262c0f | 2026-09-13 13:11:19.205416 | 3→12 | 16→7 |
+
+合計25明細、商品特定9→18、要確認17→13、単位確定19→19。件数は最終DBから再集計。wrapper戻り値afterは後処理前のunit_resolved=0を含む（6件ジョブの最終DBは1）ため最終値として流用しない。run snapshotは各6/19、runは2/2 completed_atあり。追加明細/欠落0、対象25と保留13すべてで原文/抽出全フィールド/訂正不変。状態/数量/価格等の保存値に変更なし、差分は商品・照合根拠・要確認/理由・計算日時/版。
+
+正解ラベルのある実行対象15件は商品正答5→15（33.3%→100%）。内訳は集合を含む6件と個別9件。対象9d2b898e-5b8a-4ca0-89bc-d73127251f3aはPM0263からPM0297 UUID59535ce4-3268-4a8a-a51e-4075d499f23bへ実際に保存変更された。個別9件はMULTIから各PM0276〜0284へ確定し、各needs_reviewがfalse。全25件の正答率や状態/数量等を含む100%ではない。
+
+### 今回判明した単位/確認フラグの課題
+
+6明細投稿は抽出raw_unitが6/6空。最終DBでは5件がunit_resolved=false、末尾BOXのb65dd482-1e90-4fc9-ba35-fbd909b63513だけE3a後処理でBox/true。全6件にunit_unresolvedが残り、以前要確認falseだった5件がtrueとなった。9種セットも商品は正しいが単位未確定で要確認。抽出値が空という事実であり、原文に単位が存在しないと断定しない。
+
+コード根拠（稼働相当116b1cf6）: tcg_condition_review_svc.py:136はunit未確定時の理由を生成。tcg_analyzer_svcはこの状態を保存してからE3a/E5/E3b/E4を実行。tcg_unit_recovery_svc.py:867以降E3a UPDATEはunit_id/canonical/resolved/basisだけでreview_reasons/needs_reviewを再計算しない。b65dd482は単位確定後もunit_unresolved理由が残る不整合を直接確認。19件投稿の既存未特定1件9d056b75にもunit_unresolved理由追加があるがneeds_reviewは元からtrue。フラグ解除や単位の推測補完は未実施。
+
+### 保留13明細
+
+ジョブdf42518d-711a-48aa-afc4-e41c5c8960f1はraw-extraction-v4-work-id-p2。保存参照digest5e7682fdba3437c06cc737353225f75f116e25fc92015f3d9e82df18bcc3c924と現在698d626dc1a95a72f2a31146d72c8683376256aa4f2f48bb7e35f775a816eb3aが不一致。既存analyzerの「Work reference changed; re-extraction required」に該当するため、書込関数を呼ぶ前に停止。この13件のanalysis/runsは前後完全一致、未完了runの新設0。tcg_work_reference.py:36以降の参照は作品だけでなく商品名/検索語/除外語も含む。今回以外の商品マスタ更新も含まれ得るため、差分を今回集合追加1件だけに帰属させない。
+
+稼働HEADを再確認したところ1021268623f2dba566d953fea056ff548ae28f3a（別PR3484のCSV原子化）が反映済み。master service差分はcreate_productのcommit引数のみで、再解析経路は変更なしとGitHub patchで照合。analyzer/condition_review/unit_recovery/work_referenceの4ファイルSHA256は116b1cf6と本番で一致。最新HEADをチャット履歴で固定しなかった。
+
+非公開証跡: /tmp/cardset-reanalysis-before-private.json、after-private.json、final-private.json、executed.jsonl、gold-result.json、execute.py。snapshot件数確認の初回READ ONLY SELECTは列名analysis_run_id誤りで失敗、サービスの正本INSERT列run_idを読み直して修正し6/19を取得。DB更新は再実行していない。
+
+状態: 25明細再解析・結果検証済み、商品誤判定の対象1件修正/個別9確定を確認。13明細は参照変更で保留。単位未確定と後処理後フラグ不整合を新しい課題として記録。実Gemini/配信0。次は単位確認フラグの整合と、参照変更時に13明細を扱う正式な再抽出手順を整理する。全体100%や配信可能な状態とは宣言しない。
+
+
+## 判断記録の検討（2026-09-14）
+
+依頼「記録方法を検討してくれ」。根拠と提案はdesign-keyword.md「Gemini判断の記録方法・検討草案」。通常taskの応答保存欠落、既存比較の作品ID限定を確認。前回の文書保存は自動承認の利用上限で拒否され未保存だった。再開時git status clean・草案見出しなし・preflight成功を確認。Planner草案/Architect自己審査REVISE。製品変更/実Gemini/本番更新なし。25件再解析と残る13件保留・単位フラグ問題は解消扱いにしない。
+
+
+### 記録設計の追加調査（2026-09-14）
+
+既存診断APIの管理者認証、TCG_SCHEMAのサーバ固定、抽出例外の戻り値化、DB全体/テナント単位backupと通常backupの設定値30日を実物確認。通常記録Aの保存構造・3段階transaction・終了未確認・読取API・試験条件をdesign-keyword.md「通常記録Aの具体化」に保存。PO判断候補は記録障害時に当該新結果を止める方針。実装可能性審査はREVISEを維持。削除処理の読取検索が禁止語フックに拒否され、解除せず未確認を記録。他の直接ファイル閲覧は継続した。新SDK仕様調査/実Gemini/製品変更/本番操作は0。
+
+
+### 通常記録Aの限定設計審査（2026-09-14）
+
+PO「進める」を直前の記録保存失敗時の停止方針への合意として受領。GitHub main313d7796を再確認。本番read-onlyでjarvis_db/salesanchor_app/tenant_004、対象3表は001/004所有者jarvis、新extraction_attempts0を確認。列実物とDBサイズ94,567,447 bytesを確認。固定44投稿を実format helperで再構成し入力最大99,099 bytes、合計3,886,828 bytes。容量検算でありAPI呼出なし。Context7なし→Celery公式time-limits資料を直接参照（2026-09-14）。限定設計の停止境界、8MiB上限、FK/保持、新schema適用、soft/hard中断とPG受入を具体化して自己審査APPROVE。実装/CI/本番反映の成功ではない。
+
+
+保存検査: CARD09交付準備を既存card-gemini-work-id.mdへ追加。card-lintは違反0（L24長文警告67件のみ）、check-task-state成功、ADR索引check成功、git diff --check成功。製品試験/CI/復元試験は今回未実行。文書は専用worktreeへ保存、今回分のcommit/push/PR更新は未実施。CARD09の実装割当て/開始承認は未受領。
+
+
+### CARD09実装開始承認の受領（2026-09-14）
+
+直前の案内「次は、実装担当の指定と実装開始承認です」に対してPO原文「進める」。カード09の実装開始承認として受領し、担当指定を質問した。起動指示の自動実装切替禁止を維持し、回答前に本セッションを実装役へ切り替えず、別エージェントも起動しない。過去カードやPRへのGOを転用しない。
+
+
+### 文書PR3462のmain競合解消（2026-09-14）
+
+main e27c2f599dc81aa28c32f21bb13fbdf3920c7144を文書専用枝へ統合。7文書の追加節競合は双方の調査/設計/証跡を保持し、完全重複するADR集合節は1つへ統合。CARD08の割当て時刻注記はmainの明確な記述を採用しCARD09を保持。todoの同テーマ行だけはmainの過去の実装準備状態でなく、直接検証済み再解析/最新カード09状態を維持。他者の製品差分はmainからの内容を変更しない。
+
+
+### CARD09実装担当切替（2026-09-14）
+
+明示質問「このセッションを実装担当へ切り替え、カード09を実装してよいですか？」に対するPO原文「進める」を受領。公式new-worktree.shでrelease/line-extraction-attempt-recordをmain e27c2f59から作成し、実在/git登録確認。対象3製品ファイルは設計基準313d7796から差分0。既存release/line-extraction-prompt-retentionは原文保持の旧設計BLOCKED/PR3417で、本カードとは別の役割。未保存変更を上書きしない。サブエージェント起動0。本番操作/Gemini呼出は許可範囲外。
+
+
+### CARD09実装差分・初回検証（2026-09-14）
+
+新履歴service、送受信hook、taskの条件付き取得/保存、管理者限定API、追加migration/runner、PGとAPI試験を実装。既存9列回帰は実service+偽transportで記録境界を通すよう更新。解析後の例外を抽出明細0と誤報告しないよう、確定済み抽出と解析エラーを区別した（設計の別状態契約）。実装初回のテスト自動編集で余分なmigration行を挿入した構文エラーを静的検査で検出・修正済み。ruff成功、Bandit High0、mypyは既存の警告運用。Docker socket不在につきローカルpytest未実行、正式PG/CI待ち。実Gemini/本番操作0。
+
+
+CARD09初回CI: PR3494、HEAD5cca283e、Backend run34767132247/job103750026968は3失敗/3647成功/95skip、257.14秒。追加記録serviceのcoverage92%。3件は従来のエラー応答非公開契約、作品矛盾の固定文言互換、旧004切替試験で追加service/schema適用を追従していなかったfixture。返答全文の保存は記録付き通常処理に限定し、記録なしの既存エラー戻り値は空を維持。作品矛盾は固定WORK_ID_CONFLICTコードと従来固定文言を分離。004試験に正式migration/追加serviceのschema切替を追加。新テストの本番DDL複製1件は正式migration由来fixtureへ修正済み、schema-dup検査成功。実Gemini0。失敗を合格扱いせず、修正後のCIを実施する。
+
+
+### CARD09実装・正式CI結果（2026-09-14）
+
+製品HEAD c4624ec17e89a747f13558c926470d191f140923、PR https://github.com/shingo-ops/salesanchor/pull/3494 。Backend run34767671465/job103751462713の完了ログを直接取得し、3654 passed / 96 skipped / 0 failed / 309 warnings、270.82秒、全体coverage64.85%（基準60%）、新記録service94%を確認。skipは成功件数に含めない。Migration SQL run34767671414の実DB全件ドライラン/追加SQL、Tenant Schema Integrity、test-schema-dup、backend lintは成功。ローカルDocker不在につきローカルpytestは未実行。
+
+偽SDK応答と隔離PGで、入力・応答・明細UUIDの対応、各保存段階の通常例外/soft中断、失敗時の新明細0、再試行履歴、同時取得、容量境界、管理者閲覧、親削除連鎖、部分schema拒否、44試行の保存I/O条件を検証。SystemExitによる中断2ケースは保存済みstarted/receivedが終了未確認で残ることを確認した模擬試験であり、OS強制終了や本番負荷試験ではない。prompt/modelの定数3件は基準から不変、300/330秒制限も維持。実Gemini呼出0、本番接続/更新/再解析/配信0。
+
+同一AIによる実装差分の自己確認では、カード16ファイルの範囲、記録前の結果確定防止、終端履歴の上書き防止、非公開本文を一般エラーへ出さない契約を照合。独立した第二者レビューやPO指定の最終レビューとは称しない。今回の試験は記録・失敗制御の検証であり、Geminiの商品正答率の測定ではない。
+
+Process Artifacts Gate run34767671426/job103751447251はPR本文のGO記録欠落のみで失敗。POのGO #3494未受領のため、記録を創作せず保持する。全CI合格/マージ可能承認済みとは宣言しない。状態: 設計自己審査済み・実装開始承認済み・実装/正式PG検証済み・PR3494提出済み。次はPO指定の最終レビューと本PRの番号付きGO。マージ/本番反映未実施。従前の13明細保留、単位と要確認フラグの不整合は未解消。
+
+
+### CARD09中断後の再開（2026-09-14）
+
+PO「報告をした、このセッションの続きを再開してくれ」を受領。安全フック復旧後preflight成功、専用worktree252d240fは未保存変更0、PR3494はOPEN/レビュー0/番号付きGO未受領。main59f644cdを取得し、記録機能の製品service/router/taskは重複変更なし。evidence-registryとmigration runnerの追加箇所だけ競合したため双方を保持、CARD09追加SQLはrunner末尾を維持。共有本店での更新/掃除は行わず専用枝内で統合。旧HEADのCI合格を統合後の合格には読み替えず、新HEADで正式CIを確認する。消失した当該枝の台帳は実在worktree/UUID/PRに基づく現在状態だけを再登録し、他者台帳は復元しない。実Gemini/本番/マージ操作0。
+
+
+### CARD09別担当レビューと受入補完（2026-09-14）
+
+最終レビュー担当1名の起動質問へのPO原文「進める」でreview_card09を起動。3ddb3568へのreview-package-v1はREVISE。P2は(1)44回性能試験が空参照/0明細で固定規模負荷の証明不足、(2)3領域の8MiBちょうど/+1byteを実PG経路で確認していない、の2点。3686成功というCI結果は有効だが、必須受入を満たしたとはしない。製品不具合の指摘ではない。
+
+親が許可済みPG試験を補完。性能は匿名化参照83,610bytesのjob/attempt重複保持、SDK contents各99,099bytes、44試行/729明細を実taskのINSERT/完了経路で測る。投稿ごとの元分布を復元したものではなく、全44件を観測最大入力に合わせた保守的な合成規模（17明細25件+16明細19件）であり、実投稿そのものの再実行ではない。偽SDK・参照load固定、task全体時間で5秒以内を確認するためAPI待機0、parser/明細保存も計測範囲に含む。
+
+上限は定数8,388,608を変えず入力JSON/応答UTF-8/parsed JSONごとにexact/+1の6PGケースを追加。モデル構文解析を合成extract境界で分離し、実recorderとtask transaction、本文保持/不保持・byte/hash・新明細0/1・自動解析0/1を検証する。既存のparser/偽SDK経路と縮小上限fail試験は維持。製品コード変更0。ローカルruff成功、正式CIと同担当の再審査待ち。今回の試験を実Gemini精度や実負荷の完全再現とは称さない。
+
+
+### CARD09最終レビュー・GO・マージ・配備停止（2026-09-14）
+
+POが最終レビュー担当1名の起動に「進める」と回答。review_card09は受入不足2点を指摘し、PG補完後のe594d3ef49f7c5627300ed0169468a9e5b45f810をAPPROVE（実装レビュー）と判定。Backend34796842208/job103831526386は3692成功/95skip/失敗0、261.89秒、coverage65.02%。Migration34796842083成功。44試行/729明細/参照83,610bytes重複の合成負荷で各試行5秒以内のassert成功、最大秒数の生値はログ未取得。3領域の8MiB exact/+1も成功。別AIの読取レビューであり独立した人間レビューではない。
+
+PO原文「GO #3494」を受領。2026-09-14 10:52 JST以降に受領後の実時刻を確認しPRへ逐語記録、受領そのものの正確な時刻は創作しない。GO後・マージ前のREAD ONLYで基礎3表x2schemaのowner jarvis、app USAGE、待機/実行中0、新表不存在、空き27,259,416,576bytesを確認。backup salesanchor_db_20260914_101413.sql.gz / 7,501,093bytesはgzip全体読取成功。承認ゲート34797428191成功、HEAD固定・CLEAN確認後に正規gh-pr-merge-safe.shでマージ。GitHub API: mergedAt2026-09-14T01:55:43Z、mergeCommit e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea。公式cleanupは当該worktree/ローカル枝のみ削除、REVIEW札は自動DONE条件外だったためledger-updateでDONEへ更新。
+
+Deploy34797490804/job103833308323は失敗。新backup salesanchor_db_20260914_105621.sql.gz（7,500,696bytes、mtime01:56:24.820841Z）は生成・gzip全体読取確認済み。コード/コンテナ更新後、233件中231番の既存migrations/20260913_210000_tcg_cardset_bundle_registration.sql:54–62で『cardset bundle: identity mismatch PM0264』。新しい記録表SQLより前で止まった。旧SQLはPM0264の名称FUTURISTIC BOXを要求するが、実DBは30th CELEBRATION FUTURISTIC BOX。category Box/active true/DIV01/IP001/MK001/PC_BOX/箱系は期待と一致。名称変更の実行者・時刻は未確定で、対象audit_logの照会は0件。ユーザー編集や特定PRを変更原因と断定しない。
+
+失敗後のREAD ONLY: 本番HEAD e69da6ed、backend/worker双方の主要4ファイルSHA（8照合）がe594d3efの検証版と一致。tenant_001/004のextraction_attemptsはともに不存在。待機/実行中抽出0。App HTTP200、API /api/health HTTP200・DB/Redis/Celery connected。最初の /health 照会は404で正しい /api/health へ修正、API障害と誤認しない。deployのFinalizeもhealth成功のため自動rollbackは実行されていない。コードは配備済みだが記録機能は未開通。tcg_extraction.pyのschema_readyで新抽出はpendingを保って停止する。実Gemini/再抽出/再解析/配信は今回0。以前の13明細保留・単位/フラグ問題も未解消。
+
+新表のSQLを手で先行実行、旧チェックを削除、商品名を書き戻し、失敗deployを反復する操作はしていない。230番までの既存SQLは実行されているのでDB全体不変とは宣言しない。旧登録処理の不変前提と、現在の編集可能商品マスタとの整合を別の修正設計/レビューで解決する必要がある。今回GOを未レビューの旧SQL変更の承認へ拡張しない。
+
+状態: PR3494マージ済み・実装レビュー合格・配備失敗/部分反映・新記録未利用。次は旧商品登録SQLの再実行条件の是正または旧版復旧の手順を事実ベースで選定する。追加本番変更は停止中。証跡はPR3494本文、Actions上記run/job、ローカル /tmp/card09-merge-result.txt・card09-deploy-log.txt・card09-after-failed-deploy-readonly.txt・card09-deploy-failure-inspect-result.txt・card09-title-audit-readonly-result.txt。main→developの旧PR2649にも同SHAの別検査が発生したが本件deployと混同しない。
+
+
+### CARD09本番再確認（2026-09-14 13:04 JST）
+POの事実確認・報告依頼に基づく読み取り調査。前節の停止状態は過去の観測で、現時点では解消を確認。別便PR #3500が03:54:17Zにmerge70d145f090e122dd36e4a39b4928e13cc0dae613へ統合され、Deploy34804164057/job103852603870はsuccess。ログ03:57:10Zに233/233のextraction_attempts SQL実行、03:57:34Zにhealth成功。現行SQLでは商品名の固定比較を除外し、分類・作品等の構造照合は維持。このセッションが修正・承認・マージしたものではない。
+
+直接SSH読取（transaction_read_only=on）で本番HEAD一致、tenant_001/004のextraction_attempts存在・owner jarvis、004のpending/running job0、attempt全件0を確認。backend/worker各4ファイルのSHA256計8比較はCARD09検証版と一致。PM0264は30th CELEBRATION FUTURISTIC BOXを維持。App / とAPI /api/healthはHTTP200。backup salesanchor_db_20260914_125456.sql.gzは7,016,580bytes、gzip全体読取成功（復元試験ではない）。全商品の編集値保持は今回未検証。
+
+結論: 配備停止の解消と記録用基盤の存在は確認済み。実Geminiによる記録保存・解析精度は未検証。次の一手は対象を固定した通常抽出で入力/応答/明細の保存と対応関係を確認すること。今回の本番書込・Gemini呼出し・再解析・配信は0。初回集計SQLは存在しないstatus列を参照して失敗し、count(*)へ修正して成功。根拠は/tmp/card09-recheck-current.txt、/tmp/card09-recheck-detail.txt、/tmp/card09-new-deploy.logおよび https://github.com/shingo-ops/salesanchor/actions/runs/34804164057 。
+
+
+### CARD09通常抽出の対象選定・安全停止（2026-09-14 13:09 JST）
+PO原文「推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら進める」を、直前に説明した対象限定の通常抽出・記録確認を進める指示として受領。GO委任の有効化や配信許可には扱わない。
+
+SSH READ ONLYの再照会: extraction_jobsはdone1268/empty110/error61、pending/running0。error/pendingかつ原文is_active=trueかつsuperseded_by=NULLの対象は0件。attempt0。既存retry_extractionはpending/errorだけを対象とする（tcg_diagnostics_svc.py:138,186）。doneをpendingへ直書きして再処理する操作は既存の再試行手順にない。インポートの同一原文再利用は新jobを作成しない（tcg_line_import_svc.py:375–383）。新規原文の登録では旧原文のis_activeを変更するため、試験目的の原文改変・架空新規登録は行わない。
+
+同時に本番HEADが5afb5af1ed28ea691ea93b04e4245afa8d744d85へ進み、別便PR3499（商品検索語の全語一致）のDeploy34804870906は調査時in_progress。以前の解析器と同一と仮定した精度比較は不可。対象不在のため実Gemini/本番書込/再解析/配信0。次は通常業務の新規LINE投稿で自動抽出された1jobを読取観測する。受入はattempt completed、入力/応答のbyte/hash一致、parsed_itemsのitem UUID集合と実明細の一致、原文行と作品ID等の対応確認。記録成功と商品精度は別判定とし、正解ラベルがない商品を正解扱いしない。追加モデル呼出しで検証用投稿を作らない。既存doneを対象にする場合は既存結果保存と再抽出経路の別設計が必要。
+
+一次根拠: /tmp/card09-candidate-check.txt、/tmp/card09-active-candidate-check.txt、GitHub Deploy34804870906/job103854659447、commit5afb5af1の変更一覧。今回の対象選定結果を記録し、対象不在を実抽出成功と扱わない。
+
+追認: Deploy34804870906は04:10:31Z更新でcompleted/successをGitHub API直接確認。待機中だった配備は完了。新規投稿の記録検証未実施は変わらない。
+
+
+### SSOT条件の再確認（2026-09-14 13:22 JST）
+POは根拠確立後の本番反映とデータSSOT厳守を指示。新たな製品変更の範囲や番号付きGOは創作しない。SSH READ ONLYで本番HEAD5afb5af1、done1268/empty110/error61、有効な再試行対象0、attempt0を再確認。Deploy34804870906 success。既存通常記録Aは配備済みで、追加反映対象は現時点で確定していない。
+
+設計design-keyword.md通常記録Aと実装tcg_extraction.py/_run_recorded_extraction、AttemptRecorderを照合。記録された入力内の参照マスタは当時の判断を追跡する履歴であり、編集用商品マスタの代替正本にしない。抽出時参照と応答後の現行参照が異なる場合REFERENCE_CHANGEDで停止する実装を維持。今回、原文/商品マスタ/既存明細の更新0。全システムのSSOT適合を監査したという結論ではない。次の通常新規投稿について記録と正本明細のUUID対応を確認する待機条件は継続。一次根拠/tmp/card09-ssot-recheck.txt（04:22:10Z）。
+
+
+### CARD09初回実投稿・通常抽出の読取検証（2026-09-14 13:35 JST）
+PO「先ほどインポートをして現在geminiが抽出中」を受領し、追加enqueueをせず通常処理をREAD ONLY監視。対象import a56cd32a-434d-4b3d-996e-1e46b044a8c6は13:26:35作成、status/review_status ok、message_count100/provider_count47/unresolved0。リンク47件の内訳は新規23・再利用24。今回の検証範囲はcreated_at 04:26:46.129464Zの新規23jobであり、既存再利用24件を新抽出成功数に含めない。本番HEAD5afb5af1。追加Gemini呼出し・手動再抽出・本番DB書込・配信は本セッション0。
+
+04:35:36Z全件終了観測（04:36:49Z再確認でも同数）: 23job全終了、done22/error1、attempt completed22/failed1。成功分items682/analysis682、pid_resolved583/未特定99、needs_review120（非要確認562）。理由組合せはnote_unmatched21、pid_unresolved91、pid_unresolved+multi_candidate3、pid_unresolved+note_unmatched4、pid_unresolved+multi_candidate+note_unmatched1。システムの特定フラグを人の正解ラベルとはみなさず、583/682を正答率と呼ばない。過去の別投稿との単純比較による精度向上は未判定。
+
+保存検証: 全23入力と応答のUTF8 bytes/SHA256再計算不一致0、全23原文を行番号付きに再構成した入力末尾との不一致0、全23入力内参照とjob参照snapshotの不一致0。成功22のparsed JSON byte数、item_count/UUID集合/元投稿ID対応の不一致0。682明細×11保存項目=7502照合で不一致0。既存taskのraw6項目で空文字→NULLとなる1343箇所は実装仕様に従って照合。初回の単純比較では349差を検出したが、既存INSERT変換を確認し比較を補正した（原記録/tmp/card09-monitor-proof.txtを保持）。この照合は保存整合性の検証であり原文抽出全項目の意味上の正解を保証しない。
+
+失敗job859533e6-7cd4-4feb-9856-82014c4a4de9、attempt ca4a265a-9022-48db-b66b-df5f1b9433c3はWORK_ID_CONFLICT。応答は保存済みで、実APIを呼ばず配備済みparse/resolve純関数で23応答行中5矛盾を再現。ホロライブプロダクションL75–77はGemini Weiss Schwarz/システムhololive。サマー・ホログラムL87–89、クインテッドスペクトラムL91–93、ディーヴァフィーバーL95–97、バウンサーバウンドL99–101はGemini hololive/システムLORCANA。後4件はシステムが原文79行目を見出し根拠として返すことを確認。どちらの作品IDが正しいかはこの再現のみで断定しない。失敗jobの保存明細0は04:36:49Zのjob別件数で確認、再試行0。文脈調査の初回補助コードは文字列改行のSyntaxErrorで失敗し、splitlinesへ修正後読取再現成功（製品コード変更なし）。
+
+結論: 通常記録Aの初回実投稿で入力/返答保存23/23と成功明細対応22/22を確認。失敗応答も失わず原因再現できた。作品矛盾1job・要確認120明細は未解消。次の一手は失敗1jobの原文見出し範囲・マスタ同名関係の照合設計。正本マスタ・原文・既存解析結果を調査目的で書き換えない。根拠/tmp/card09-import-scope.txt、/tmp/card09-monitor-corrected-proof.txt、/tmp/card09-conflict-proof.txt、/tmp/card09-conflict-context.txt。顧客原文/応答全文はリポジトリへ保存していない。
+
+
+### CARD09完了範囲と引き継ぎ審査（2026-09-14）
+POの「確立したなら完了まで進める」を受け、本便の文書保存を完結する。通常記録Aは設計/実装レビュー済み、PR3494マージ済み、別便PR3500後に本番配備確認、初回実投稿23件の入力/応答保存と成功22件の明細対応確認済み。文書の自己審査APPROVE（独立第二者レビューではない）: 観測時刻・失敗から復旧の経緯・実投稿と模擬試験の区別・SSOT・未解消課題を照合。PR3462のマージGOは別途未受領であり、今回の一般的な完了指示を番号付きGOへ変換しない。
+
+後続設計の担当は設計パートナー、対象は作品矛盾1jobと要確認120明細。過去の13明細参照変更保留、単位/フラグ不整合も解消確認をしていないため残存として引き継ぐ。再抽出・マスタ変更・配信は別の対象限定手順が必要。今回の検証から精度100%・全データ配信可能と判定しない。

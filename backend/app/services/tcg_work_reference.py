@@ -8,7 +8,8 @@ from uuid import UUID
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-WORK_ID_PROMPT_VERSION = "raw-extraction-v4-work-id-p1"
+WORK_ID_PROMPT_VERSION = "raw-extraction-v5-product-p1"
+WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", WORK_ID_PROMPT_VERSION})
 
 
 def reference_json(reference: dict) -> str:
@@ -32,6 +33,18 @@ def validate_work_id(value: str | None, reference: dict) -> str | None:
     return canonical
 
 
+def product_codes(reference: dict) -> set[str]:
+    return {p["code"] for p in reference["products"] if p.get("code")}
+
+
+def validate_product_code(value: str | None, reference: dict) -> str | None:
+    if not value:
+        return None
+    if value not in product_codes(reference):
+        raise ValueError("Product code is not in the supplied reference")
+    return value
+
+
 def load_work_reference(session: Session, schema: str) -> dict:
     """One statement sees a consistent snapshot; no network call holds its transaction."""
     row = session.execute(text(f"""
@@ -41,14 +54,14 @@ def load_work_reference(session: Session, schema: str) -> dict:
             ORDER BY s.id), '[]'::jsonb)
             FROM {schema}.tcg_series s WHERE s.is_active),
           'products', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'code', p.code, 'japanese_title', p.japanese_title,
-            'english_title', p.english_title, 'mark', p.mark, 'work_id', p.work_id,
+            'code', p.product_code, 'japanese_title', p.name,
+            'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
             'search_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
                 FROM {schema}.product_search_keywords k WHERE k.product_id=p.id),
             'exclude_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
                 FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.id))
-            ORDER BY p.code), '[]'::jsonb)
-            FROM {schema}.tcg_products p WHERE p.is_active))
+            ORDER BY p.product_code), '[]'::jsonb)
+            FROM public.products p WHERE p.is_active))
     """)).scalar_one()
     ids = work_ids(row)
     if not row["products"] or not ids:

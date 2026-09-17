@@ -260,7 +260,7 @@ def recover_unit_from_product_name(
             "details": [],
         }
 
-    # Load analysis_results joined with extraction_items and tcg_products
+    # Load analysis_results joined with extraction_items and public.products
     rows = session.execute(
         text(
             f"""
@@ -272,12 +272,12 @@ def recover_unit_from_product_name(
                 ar.product_id,
                 ei.raw_unit,
                 ei.raw_product_name,
-                tp.code              AS product_code,
-                tp.japanese_title
+                tp.product_code      AS product_code,
+                tp.name              AS japanese_title
             FROM {tenant_schema}.analysis_results ar
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
-            LEFT JOIN {tenant_schema}.tcg_products tp
+            LEFT JOIN public.products tp
                 ON tp.id = ar.product_id
             ORDER BY ar.id
             """
@@ -788,11 +788,11 @@ def apply_unit_recovery_for_job(
                 ar.product_id,
                 ei.raw_unit,
                 ei.raw_product_name,
-                tp.japanese_title
+                tp.name              AS japanese_title
             FROM {tenant_schema}.analysis_results ar
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
-            LEFT JOIN {tenant_schema}.tcg_products tp
+            LEFT JOIN public.products tp
                 ON tp.id = ar.product_id
             WHERE ei.extraction_job_id = :job_id
             ORDER BY ar.id

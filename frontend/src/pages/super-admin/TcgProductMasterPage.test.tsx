@@ -1,14 +1,14 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import i18n from "../../i18n";
 import TcgProductMasterPage from "./TcgProductMasterPage";
-vi.mock("../../lib/api", () => ({ api: { get: vi.fn() } }));
+vi.mock("../../lib/api", () => ({ api: { get: vi.fn(), getBlob: vi.fn() } }));
 vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage("en"); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: true }); });
-afterEach(cleanup);
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 const view = () => render(<MemoryRouter><TcgProductMasterPage /></MemoryRouter>);
 const works = [
   // eslint-disable-next-line local/no-japanese-literal -- DB value: Japanese alternate work name fixture
@@ -17,24 +17,54 @@ const works = [
 ];
 const empty = { total: 0, items: [], works };
 const lastParams = () => new URL(String(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]), "http://test").searchParams;
+it("R10 exports all filtered rows once and releases its download URL", async () => {
+  vi.mocked(api.get).mockResolvedValue(empty);
+  const blob = new Blob(["exact CSV bytes"]);
+  let finish!: (value: Blob) => void;
+  vi.mocked(api.getBlob).mockImplementation(() => new Promise(resolve => { finish = resolve; }));
+  const create = vi.fn(() => "blob:export"); const revoke = vi.fn();
+  vi.stubGlobal("URL", class extends URL { static createObjectURL = create; static revokeObjectURL = revoke; });
+  const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  view(); await screen.findByText("Products: 0");
+  fireEvent.click(screen.getByRole("tab", { name: "Pokemon" }));
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "A & B" } });
+  const button = screen.getByRole("button", { name: "Export update CSV" });
+  fireEvent.click(button); fireEvent.click(button);
+  expect(api.getBlob).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(api.getBlob).mock.calls[0][0]).toMatch(/\/tcg\/products\/export/);
+  await act(async () => finish(blob));
+  expect(create).toHaveBeenCalledWith(blob); expect(click).toHaveBeenCalledOnce();
+  expect(revoke).toHaveBeenCalledWith("blob:export"); expect(document.querySelector('a[download]')).toBeNull();
+});
+it("R10 export failure permits retry and denied users cannot export", async () => {
+  vi.mocked(api.get).mockResolvedValue(empty); vi.mocked(api.getBlob).mockRejectedValue(new Error("413"));
+  view(); fireEvent.click(screen.getByRole("button", { name: "Export update CSV" }));
+  await screen.findByRole("alert"); expect(screen.getByRole("alert").textContent).toContain("narrow");
+  expect((screen.getByRole("button", { name: "Export update CSV" }) as HTMLButtonElement).disabled).toBe(false);
+  cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); view();
+  expect(screen.queryByRole("button", { name: "Export update CSV" })).toBeNull();
+  expect(api.getBlob).toHaveBeenCalledTimes(1);
+});
 it("does not request or expose import for non-admin", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); view();
   expect(api.get).not.toHaveBeenCalled();
   expect(screen.queryByRole("button", { name: "Import CSV" })).toBeNull();
 });
 it("shows total, pages through results and resets offset on search", async () => {
-  vi.mocked(api.get).mockResolvedValue({ total: 51, works, items: [{ code: "PM51", japanese_title: "Fixture", keyword_count: 0 }] }); view();
+  vi.mocked(api.get).mockResolvedValue({ total: 51, works, items: [{ code: "PM51", japanese_title: "Fixture", english_title: "English fixture", mark: "MODEL", release_date: "2026-09-14", keyword_count: 0, exclude_keyword_count: 0 }] }); view();
   await screen.findByText("Products: 51");
-  expect(screen.getByText("No search keywords")).toBeTruthy();
+  expect(screen.getAllByRole("columnheader").map(cell => cell.textContent)).toEqual(["Mark", "Product name", "Release date", "Search", "Exclude"]);
+  expect(within(screen.getAllByRole("row")[1]).getAllByRole("cell").map(cell => cell.textContent)).toEqual(["MODEL", "FixtureEnglish fixture", "2026-09-14", "0", "0"]);
+  expect(screen.queryByText("PM51")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "next page" }));
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]).toContain("offset=50"));
-  fireEvent.change(screen.getByLabelText("Search by name or code"), { target: { value: "A & B" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "A & B" } });
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]).toContain("query=A+%26+B&limit=50&offset=0"));
 });
 it("discards an older response that arrives after a new search", async () => {
   let old!: (value: unknown) => void;
   vi.mocked(api.get).mockImplementationOnce(() => new Promise(resolve => { old = resolve; })).mockResolvedValue(empty); view();
-  fireEvent.change(screen.getByLabelText("Search by name or code"), { target: { value: "new" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "new" } });
   await screen.findByText("Products: 0"); await act(async () => old({ total: 99, items: [], works }));
   await waitFor(() => expect(screen.queryByText("Products: 99")).toBeNull());
 });
@@ -48,7 +78,7 @@ it("AC6 combines work and search, resets page and omits work for All", async () 
   fireEvent.click(screen.getByRole("tab", { name: "Pokemon" }));
   await waitFor(() => expect(lastParams().get("work_id")).toBe(works[0].id));
   expect(lastParams().get("offset")).toBe("0");
-  fireEvent.change(screen.getByLabelText("Search by name or code"), { target: { value: "Shared" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "Shared" } });
   await waitFor(() => expect(lastParams().get("query")).toBe("Shared"));
   expect(lastParams().get("work_id")).toBe(works[0].id);
   await screen.findByText("Products: 51");
@@ -121,7 +151,7 @@ it("AC7 keeps candidates on empty/error and keeps a disappeared selected work", 
   expect(screen.getByRole("tab", { name: "Pokemon" }).getAttribute("aria-selected")).toBe("true");
   expect(lastParams().get("work_id")).toBe(works[0].id);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("failed"));
-  fireEvent.change(screen.getByLabelText("Search by name or code"), { target: { value: "absent" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "absent" } });
   await screen.findByRole("alert");
   expect(screen.getByRole("tab", { name: "Pokemon" })).toBeTruthy();
   expect(screen.getByRole("tab", { name: "One Piece" })).toBeTruthy();
@@ -132,7 +162,7 @@ it("AC7 keeps candidates on empty/error and keeps a disappeared selected work", 
 });
 
 it("AC8 uses Japanese alternate name, English display name and unshifted DATE", async () => {
-  vi.mocked(api.get).mockResolvedValue({ works, total: 1, items: [{ code: "A", japanese_title: "Date fixture", release_date: "2099-01-01", keyword_count: 1 }] });
+  vi.mocked(api.get).mockResolvedValue({ works, total: 1, items: [{ code: "A", japanese_title: "Date fixture", release_date: "2099-01-01", keyword_count: 1, exclude_keyword_count: 0, english_title: "", mark: "" }] });
   await i18n.changeLanguage("ja"); view();
   await screen.findByRole("tab", { name: works[0].alt_name.trim() });
   expect(screen.getByRole("tab", { name: "One Piece" })).toBeTruthy();

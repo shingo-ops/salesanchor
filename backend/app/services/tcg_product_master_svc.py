@@ -124,20 +124,20 @@ async def search_products_by_name(
         text(
             f"""
             SELECT
-                p.code          AS product_id,
-                p.id::text      AS product_uuid,
-                p.japanese_title,
+                p.product_code  AS product_id,
+                p.id::text AS product_uuid,
+                p.name          AS japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
                     ''
                 )               AS search_keywords
-            FROM {TCG_SCHEMA}.tcg_products p
+            FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
-              AND p.japanese_title ILIKE :query
-            GROUP BY p.id, p.code, p.japanese_title
-            ORDER BY p.japanese_title
+              AND p.name ILIKE :query
+            GROUP BY p.id, p.product_code, p.name
+            ORDER BY p.name
             LIMIT 10
             """
         ),
@@ -218,8 +218,8 @@ async def check_duplicates(
         text(
             f"""
             SELECT
-                p.code::text              AS product_id,
-                p.japanese_title,
+                p.product_code::text      AS product_id,
+                p.name                    AS japanese_title,
                 p.work_id::text           AS work_id,
                 p.manufacturer_id::text   AS manufacturer_id,
                 p.product_category_id::text AS product_category_id,
@@ -228,12 +228,12 @@ async def check_duplicates(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
                     ''
                 )                         AS search_keywords
-            FROM {TCG_SCHEMA}.tcg_products p
+            FROM public.products p
             LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND (
-                p.japanese_title ILIKE :title_pattern
+                p.name ILIKE :title_pattern
                 OR (
                     p.work_id::text = :work_id
                     AND p.manufacturer_id::text = :manufacturer_id
@@ -241,9 +241,9 @@ async def check_duplicates(
                 )
               )
             GROUP BY
-                p.id, p.code, p.japanese_title,
+                p.id, p.product_code, p.name,
                 p.work_id, p.manufacturer_id, p.product_category_id, p.mark
-            ORDER BY p.japanese_title
+            ORDER BY p.name
             LIMIT 20
             """
         ),
@@ -273,30 +273,36 @@ async def check_duplicates(
 
 async def _next_pm_code(db: AsyncSession) -> str:
     """
-    GAS productMasterV2RegistrationNextId_ 相当。
-    PM0001〜PM9999 形式で現在の最大番号 +1 を採番する。
+    ADR-1002 Phase B: PostgreSQL SEQUENCE で採番する（冪等・競合なし）。
+    SEQUENCE が存在しない環境（テスト等）では MAX+1 フォールバックを使う。
     """
-    result = await db.execute(
-        text(
-            f"""
-            SELECT code
-            FROM {TCG_SCHEMA}.tcg_products
-            WHERE code ~ '^PM[0-9]{{4}}$'
-            ORDER BY code DESC
-            LIMIT 1
-            """
+    # Try SEQUENCE first (production, post-Phase-B migration)
+    try:
+        result = await db.execute(text("SELECT nextval('public.product_code_seq')"))
+        num = result.scalar_one()
+        return f"PM{num:04d}"
+    except Exception:
+        # Fallback: MAX+1 approach (test environments without migration)
+        await db.rollback()
+        result = await db.execute(
+            text(
+                """
+                SELECT product_code FROM public.products
+                WHERE product_code ~ '^PM[0-9]{4}$'
+                ORDER BY product_code DESC LIMIT 1
+                """
+            )
         )
-    )
-    row = result.fetchone()
-    if row is None:
-        return "PM0001"
-    m = _PM_CODE_RE.match(row[0])
-    if m is None:
-        return "PM0001"
-    num = int(m.group(1)) + 1
-    if num > 9999:
-        raise ValueError("PRODUCT_MASTER_V2_PM_CODE_EXHAUSTED")
-    return f"PM{num:04d}"
+        row = result.fetchone()
+        if row is None:
+            return "PM0001"
+        m = _PM_CODE_RE.match(row[0])
+        if m is None:
+            return "PM0001"
+        num = int(m.group(1)) + 1
+        if num > 9999:
+            raise ValueError("PRODUCT_MASTER_V2_PM_CODE_EXHAUSTED")
+        return f"PM{num:04d}"
 
 
 async def create_product(
@@ -315,16 +321,18 @@ async def create_product(
     mark: str = "",
     english_title: str = "",
     force: bool = False,
+    commit: bool = True,
 ) -> dict[str, Any]:
     """
     GAS: createProductMasterV2FromAnalysisReview 相当。
 
     1. 重複チェック（重複あり かつ force=False → 早期 return）
     2. PM コード採番
-    3. tcg_products に INSERT
+    3. public.products に INSERT
     4. product_search_keywords / product_exclude_keywords に INSERT
     5. post-write gate
 
+    commit=False: caller owns commit/rollback, including the post-write check.
     force=True: GAS ソフトブロック準拠。重複候補があっても登録を続行する。
     """
     # 重複チェック（force=True なら DUPLICATE_CANDIDATE で弾かない）
@@ -358,19 +366,20 @@ async def create_product(
 
     rd = release_date if release_date else None
 
-    # tcg_products INSERT
+    # public.products INSERT
+    await db.execute(text("SET LOCAL app.is_operator = 'true'"))
     product_row = await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.tcg_products
-                (code, japanese_title, release_date, category_class,
+            """
+            INSERT INTO public.products
+                (product_code, name, release_date, category_class,
                  division_id, work_id, manufacturer_id, product_category_id,
-                 mark, english_title, is_active)
+                 mark, name_en, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
                  :division_id, :work_id, :manufacturer_id, :product_category_id,
                  :mark, :english_title, TRUE)
-            RETURNING id::text AS id
+            RETURNING id::text AS id, id AS int_id
             """
         ),
         {
@@ -389,7 +398,7 @@ async def create_product(
     new_row = product_row.fetchone()
     if new_row is None:
         raise ValueError("PRODUCT_MASTER_V2_INSERT_FAILED")
-    product_uuid = new_row.id
+    product_id_int = new_row.int_id  # integer for keyword FK references and post-write gate
 
     # search_keywords INSERT
     if search_keywords.strip():
@@ -404,7 +413,7 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
     # exclude_keywords INSERT
@@ -420,20 +429,21 @@ async def create_product(
                     VALUES (:pid, :kw, :pos)
                     """
                 ),
-                {"pid": product_uuid, "kw": kw, "pos": pos},
+                {"pid": product_id_int, "kw": kw, "pos": pos},
             )
 
-    await db.commit()
+    if commit:
+        await db.commit()
 
     # post-write gate: code が実際に存在するか確認
     verify = await db.execute(
         text(
-            f"SELECT code FROM {TCG_SCHEMA}.tcg_products WHERE id = :id"
+            "SELECT product_code FROM public.products WHERE id = :id"
         ),
-        {"id": product_uuid},
+        {"id": product_id_int},
     )
     vr = verify.fetchone()
-    if vr is None or vr.code != pm_code:
+    if vr is None or vr.product_code != pm_code:
         raise ValueError("PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED")
 
     return {"ok": True, "product_id": pm_code}
@@ -462,10 +472,11 @@ async def add_search_keyword(
     # product_id 取得
     pid_row = await db.execute(
         text(
-            f"""
-            SELECT id::text AS id
-            FROM {TCG_SCHEMA}.tcg_products
-            WHERE code = :code AND is_active = TRUE
+            """
+            SELECT id
+            FROM public.products
+            WHERE product_code = :code AND is_active = TRUE
+            FOR UPDATE
             """
         ),
         {"code": product_code},

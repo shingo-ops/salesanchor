@@ -8,10 +8,14 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| Geminiの商品マスタ参照・作品IDのみ判断 | Agent | PR #3441の番号付きGO受領。2af2270cのCI2679成功/失敗0、最新main追従 | 最新HEADのCI合格後に正規マージ・反映確認、最新取込の比較。原文差異は停止、精度向上時のみ要確認以外を3シート配信 | PR #3441 / docs/handoff/tcg-product-master-growth/recon.md / EV-20260912-LINE-WORK-ID | 2026-09-13 |
-| Android LINE専用API・Termux送信 | Codex | 最新1163投稿/124名を照合。直近500件で56名本文一致、34名名一致のみ、33名未確定、1名同名重複 | 過去投稿の指紋照会を10000件へ拡張し全員の根拠を再集計。照合完了後に名前対応 | Issue #3437 / docs/handoff/line-supplier-aliases/recon.md | 2026-09-12 |
+| 解析結果・配信の共通並び順 | Agent | GO #3501受領済み。Deploy34914789016復旧成功確認。現行商品構造への統合補正中 | 最新main統合後に順序・値保持・負荷試験と必須CIを再検証し反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-15 |
+| シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
+| PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション | 初回新規23job:22成功/1作品矛盾。全入力応答23保存、682明細7502照合一致。要確認120 | 記録機能検証完了・文書PR3462保存。矛盾1job/要確認120と従前13明細保留・単位/フラグを後続設計へ。配信未実行 | recon CARD09初回実投稿 / import a56cd32a | 2026-09-14 |
+| Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
-| フロントエンド金型化・再測定 | 設計/実装担当 | PR #3442。PO原文GO #3442受領、main統合後も製品7hash保持。220試験・表示120組/実Confirm60/キー10成功 | 最新のマージ/本番反映状態はPR #3442本文の実測記録を参照。CI通過後マージ・deployと公開配布物を照合。PO目視別、報酬3保留、新CI最後 | PR #3442 / docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md / EV-20260912-FRONTEND-AJ-PR | 2026-09-13 |
+| 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
+| フロントエンド金型化・再測定 | 設計/実装担当 | APリード6件実装検収合格。240表示/47操作前後組・70/451試験成功、共通137/旧281 | PR3500配備34804164057成功・233移行完走・App/API200でPM0264復旧確認済。PR3497 GO受領済。PR3512復旧配備成功確認、main26032c74統合・基準23/製品3一致。最終CI後に配備確認。マージ/配備未実施。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md / PR3497 | 2026-09-14 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
@@ -97,6 +101,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|------|------|------|
+| 抽出試行記録の構造検証・容量超過記録是正 | root設計 / error_visibility_recon実装 / attempt_record_review検収 | PR #3504 HEAD47f72ab3公開、コードレビューAPPROVE。実DB移行/静的検査成功、Backend3746成功/95skip・coverage65.07% | GO #3504受領・backup再確認済。承認文書保存/最新CI→正式merge・通常配備・実機照合。本便反映前 | EV-20260914-ATTEMPT-INTEGRITY / PR #3504 / recon.md | 2026-09-14 |
 | ワンピース商品追加・解析対策 | 設計・実装担当 | PR #3434提出、GitHub2586成功/95skip、必須13成功。登録26候補静的検査成功 | 番号付きGO記録で手順検査を解消しマージ/配備。書籍区分など33候補の確認継続 | docs/handoff/tcg-product-master-growth/design-keyword.md §15 | 2026-09-11 |
 | TCG 人確認後配信の検証記録 | 設計担当 | 実コードの人工192条件・修正関数7ケース照合済み。文書自己レビューAPPROVE、製品設計REVISE | 文書PRチェック後に条件付き許可の範囲で保存。共通判定/全項目確認/配信接続の正式設計は未完了 | docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」/EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED | 2026-09-12 |
 | guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
@@ -153,3 +158,11 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
+| 商品CSV出力・編集・更新往復 | 設計担当/既存実装担当 | PO目標合意・実装〜配備依頼、設計自己審査済み。13製品差分/親読取レビュー済み、FE350/E2E11成功、Backend22unit+23PG定義済みで実行待ち | 最新main313d7796の非競合2ファイルを保持し公開カードでPR/正式CIへ進む。番号付きGO原文は未受領、代筆しない | docs/handoff/tcg-product-import/roundtrip-parent-review.json / EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN | 2026-09-13 |
+| 実商品CSV登録前確認 | 設計担当 | A便設計自己審査APPROVE・PO承認・実装・正式CI・PR3473マージ/本番配備完了。B便8商品更新/44登録はREVISE | B便§19/180例はREVISE。CSVの行単位整合対策§20・4ファイル案/C1–C11を設計自己審査APPROVEでローカル保存。PO承認4ファイル実装差分/静的検査/親レビュー済み。親AST354/直接unit25成功、PG228追加は未実行。PR直前停止、次は公開許可後の正式CI（15分内未測定）。個別値/正解例・運用QAは未完了 | docs/handoff/tcg-product-import/product-name-space-release-result.json / EV-20260913-PRODUCT-NAME-SPACE-RELEASE | 2026-09-13 |
+
+## 商品検索語の全語一致（2026-09-14）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 商品検索語の全語一致 | 設計/実装担当 | PR3499実装済み。固定正解0→4/4、正式3718成功/95skip/失敗0 | 番号付きGOと既存PM0264配備障害解消待ち。本番未反映 | docs/handoff/tcg-product-import/design.md§24 | 2026-09-14 |

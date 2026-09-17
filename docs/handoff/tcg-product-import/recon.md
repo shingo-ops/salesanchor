@@ -477,3 +477,578 @@ GO転記後に親が本文とparseGORecordを照合し、発行者欄名が「GO
 ### 2026-09-13 文書PR3436のマージ承認
 
 製品反映完了と文書PR3436未マージの説明後、PO原文「マージしてくれ」を受領。残る文書PR3436のマージ指示として扱う。直前確認はPR3436 OPEN/CLEAN、main739f772d、差分は文書6本のみ、実行CIすべて成功。製品コード変更なし。設計担当がこの明示指示に基づき正式マージ手順を行い、製品実装役への自動切替はしない。最終マージSHA/日時はGitHub PR3436を一次情報とする。以前の未マージ記録は当時の状態であり、この承認後の状態とは区別する。
+
+
+## 2026-09-13 実商品CSVの登録前調査（未登録・審査REVISE）
+
+本節は、空サンプルとUser型修正の反映完了後にPOが「進める」と依頼した、画面確認・実商品CSV準備の再開記録。商品登録GOではない。親は[商品マスタ仕様](../../specs/product-master/README.md)、対象一覧は[既存44件カタログ](../tcg-product-master-growth/sword-shield-catalog.md)。登録可の判定は未了。
+
+### 作業場所と一次情報
+
+- 専用ブランチ `release/product-csv-registration-preflight`、開始HEAD `ee455fb1ba4c7ad407ed6506ee4fe515fce371a8`。公式new-worktree手順で作成し、executor-preflightはexit 0。開始時の本ブランチ差分0。本店mainの未保存変更を保持した。
+- 公式ledger-viewで既存商品CSV設計/実装がDONEであることを確認。旧master-fill-recordはIN_PROGRESS表記が残るが、同ブランチのorigin/mainとの独自差分0、実worktreeの未保存差分0を確認。本便はそのカタログ・growth側文書を更新せず、import側の読み取り調査記録に限定する。旧台帳の表示だけで完了とは断定しない。
+- PR3438の反映結果は[release-result.json](release-result.json)が正本。今回のCSV準備は別工程。文書PR3436もマージ済みであるが、商品登録・再解析・配信の承認には用いない。
+- `rg`で関連runbookを検索し、tcg-product-import / tcg-product-master-growthの一致0。既存reconとタスク台帳に記録する。
+
+### 公式情報との発売日照合
+
+確認日2026-09-13。商品名の短縮表記・空白差を含む既存44件を対象とし、範囲を拡張していない。以下は発売日の裏付けであり、英語名・マーク・現在のDB未登録を一括して確定する表ではない。43/44件は既存の日付と一致、1/44件は不一致。各リンクは株式会社ポケモンの公式商品情報・当時の告知であり、外部導入成功事例ではない。導入事例は不要（既存機能に渡す商品事実の確認で、採用方式の変更なし）。
+
+| カタログ番号 | 照合した発売日 | 一次資料 |
+|---|---|---|
+| 1–5 | 2019-11-29 | [スターターセットV5種の発売日明記](https://www.pokemon-card.com/info/2019/20191204_002212.html)、[各商品](https://www.pokemon-card.com/ex/sa/) |
+| 6 | 2019-11-29 | [V5コンプリート](https://www.pokemon-card.com/info/2019/20191127_002200.html) |
+| 7 | 2019-11-29 | [トイザらス限定](https://www.pokemon-card.com/info/2019/20191110_002165.html) |
+| 8 | 2019-11-29 | [セブン限定](https://www.pokemon-card.com/info/2019/20191025_002144.html) |
+| 9 | 2019-12-06 | [プレミアムトレーナーボックス](https://www.pokemon-card.com/info/2019/20191110_002152.html) |
+| 10 | 2019-12-27 | [ザシアン＋ザマゼンタ](https://www.pokemon-card.com/info/2019/20191213_002222.html) |
+| 11–12 | 2020-03-27 | [スターターセットVMAX](https://www.pokemon-card.com/products/s/sc.html) |
+| 13–21 | 2020-07-10 | [2020年告知](https://www.pokemon-card.com/info/2020/20200703_002473.html)、[9種類の商品](https://www.pokemon-card.com/ex/sd/index.html) |
+| 22 | 2020-10-23 | [VMAXスペシャルセット](https://www.pokemon-card.com/products/s/sp2.html) |
+| 23–25 | 2020-12-04 | [2種と対戦トリプル](https://www.pokemon-card.com/products/s/SE.html) |
+| 26–27 | 2021-01-22 | [ICHIGEKI・RENGEKI](https://www.pokemon-card.com/info/2020/20201215_002714.html) |
+| 28 | 2021-04-23 | [ジャンボパック](https://www.pokemon-card.com/info/2021/20210312_002830.html) |
+| 29 | 2021-05-28 | [イーブイヒーローズ](https://www.pokemon-card.com/products/s/sp4.html) |
+| 30–31 | 2021-07-09 | [ファミリー2商品](https://www.pokemon-card.com/ex/sh/index.html) |
+| 32–34 | 2021-08-20 | [V-UNION3商品](https://www.pokemon-card.com/products/s/sp5.html) |
+| 35 | 2021-11-05 | [ザシアン・ザマゼンタ vs ムゲンダイナ](https://www.pokemon-card.com/products/s/sj.html) |
+| 36 | 2021-12-17 | [通常版と同日発売の明記](https://www.pokemon-card.com/info/003185.html) |
+| 37 | 不一致：公式は2022-01-15頃 | [コロコロ版商品情報](https://www.pokemon-card.com/info/003230.html) |
+| 38 | 2022-01-14 | [VSTARトレーナーボックス](https://www.pokemon-card.com/products/s/sk.html) |
+| 39–40 | 2022-02-25 | [VSTARルカリオ・ダークライ](https://www.pokemon-card.com/products/s/sl.html) |
+| 41–42 | 2022-07-15 | [ハイクラスデッキ2商品](https://www.pokemon-card.com/products/s/sp.html) |
+| 43 | 2022-08-05 | [VSTARスペシャルセット](https://www.pokemon-card.com/products/s/sp6.html) |
+| 44 | 2022-11-04 | [リザードン vs レックウザ](https://www.pokemon-card.com/products/s/so.html) |
+
+### 未確定値と誤判定の前提
+
+- #37：公式は発売日を概日、配送を2022年3月下旬頃/8月下旬頃と分けている。旧一覧の2021-12-17を流用しない。日付空欄案は可能だが、PO承認済みではない。発売日を2022-01-15と断定することも、配送月の任意の日に置き換えることもしない。
+- #37：同公式ページがリンクする[ピカチュウV画像](https://www.pokemon-card.com/info/2021/12/images/1448_001a_PIKACHUv.png)を取得しview_imageで目視。左下に `sN` と `001/024` を確認。旧一覧のSIは一致しない。マーク修正案はSN。画像は一時保存のみでリポジトリへ複製しない。
+- #25：公式は3デッキ同梱と説明する。SEFだけを商品の専用マークとする根拠は今回も未確認。空欄案を含め要整理。
+- 英語名は今回の日本語公式資料で確定していない（#31だけでなく全行の英語表記の採用根拠を区別する）。#37以外のマークも今回の発売日照合だけで確定したとはしない。
+- ローカルの既存Markdown表を解析し44行を確認。日本語名＋マークの完全一致重複0。NFKC→空白除去→casefoldによる商品名の包含比較では3組：#2→#8、#22→#29、#36→#37。これは候補名だけの簡易比較で、製品の判定ロジック再現や本番原文1792行の検証ではない。
+- 単品側の除外語「種セット」は既存PO方針を維持するが、限定版やイーブイヒーローズ版を区別できる証明にはならない。検索語・除外語の案を作成後、肯定例/否定例と既存商品への影響を照合する必要がある。
+
+### 実コードとの照合と検証の限界
+
+`backend/app/services/tcg_product_import_svc.py:40` のCSV_COLUMNSは10列、同:54の必須項目は日本語名と4分類コード。同:95はUTF-8 BOMを許容、同:100は検索語/除外語をセル内カンマで分割、同:105は発売日空欄を許容する。日付判定は字形のみのため、候補CSV作成時には別途カレンダー上の実在日も検算する。同:230のファイル内重複キーは日本語名＋mark。同:313の既存検索語比較は文字列完全一致であり、上記3組の包含関係の不存在を証明しない。
+
+分類コードDIV01/IP001/MK001/PC_BOXは旧設計の候補値。最新DBに有効な4コードがあること・既存商品との差分・検索語衝突は未検証。今回、本番認証付きpreview/commitは0回、DB/製品コード変更0、再解析0、シート配信0。ローカルの模擬lookupを本番検証として扱わない。
+
+`backend/app/tcg_config.py:19` はTCG_SCHEMAを環境値から読み、既定tenant_004。ログインテナントを切り替えただけではQAのtenant_001へ向く証拠にならない。QA試行前に専用実行先と実スキーマを読み取りで確認する。既存の別便スキーマ検証設計を参照し、本番設定変更で代用しない。
+
+### 実画面とCSV書き出しの停止理由
+
+- 本番ボタンから保存する実画面確認は未実施。Playwright MCPの接続は既存Chromeプロファイル使用中で失敗。その後Browserスキルを確認し、指定の接続用jsツールと発見用ツールが利用できないことを確認した。他プロファイルの終了・設定変更・認証情報取得はしていない。既に確認済みの公開CSV HTTP200/バイト一致を実画面操作成功に読み替えない。
+- spreadsheetsスキル指定のload_workspace_dependencies/artifact-toolが利用できない。標準CSV機能で書き出す代替方法についてPOへの確認を提示済み、回答未受領。したがって実商品CSVファイルの作成・静的検証は未了。調査Markdownは保存する。
+
+### Planner整理とArchitect自己審査
+
+目的は44商品の正しい候補を作り、実行前にPOが内容と警告を確認できる状態にすること。正式な取り込みカードは未発行。
+
+判定 **REVISE**（同一AIの自己審査）。公式発売日43件一致・1件不一致と#37マーク不一致を確認できたが、全行の値採用、検索語と除外語、最新DB重複、QA実行先、CSV実ファイル検査、実画面操作が未解決である。設計合格・POによる値承認・登録GOを宣言しない。
+
+次の順序：書き出し方法の回答受領→未確定値を明示したレビュー用CSV作成→10列/BOM/CRLF/件数/実在日/重複/検索語の検査→認証付き読み取り確認と警告一覧化→POの値判断と登録便承認。CSVは登録可能版と区別し、未確定行を黙って除外して44/44としない。実登録・再解析・配信は本便の対象外。
+
+維持する担当は本設計担当（候補値・出典・未決の更新）と後続の実装/検証担当（承認済みカードの実行と結果保存）。判定を更新する時は検証日時・対象ファイルSHA256・件数と不合格行を本節へ追記する。
+
+文書保存の検証：`git diff --check`、`bash scripts/check-task-state.sh`、`bash scripts/check-doc-heading-duplicates.sh` はexit 0。後者の対象はSTANDARD-WORKFLOW/design-partnerの節番号。製品テスト・実CSV検証を実行した結果ではない。本便の文書は専用worktree保存済み、未コミット・PR未提出。
+
+
+## 2026-09-13 確認用44件CSV作成・静的検証完了
+
+POの「進めてくれ」を、直前に確認したPython標準CSV機能による確認用CSV作成への回答として受領。書き出し方法の回答待ちは解消。商品値の採用・登録GOとは区別する。executor-preflightはexit 0、HEADとローカルorigin/mainの距離0/0。前便の文書3ファイルの差分を保持して作業した。
+
+成果物：[確認用CSV](sword-shield-44-review-draft.csv)／[検証結果](sword-shield-44-review-validation.json)。CSVは44商品すべてを含むレビュー用草案。**登録承認済みファイルではない**。本番preview/commit・商品登録・再解析・配信はすべて未実施。
+
+### CSVへ入れた値と未決事項
+
+| 項目 | 草案での扱い | 登録前の確認 |
+|---|---|---|
+| 日本語名 | 既存44件の表記を保持 | 正式表記/略称と検索の取りこぼし |
+| 英語名 | 既存カタログの44件を保持 | 既存調査由来の表記であり、今回の公式再確認済みではない |
+| マーク | #37は公式画像に基づくSN案、#25は空欄、残りは既存値 | #25の採用値と残りの根拠。空欄を承認済み扱いしない |
+| 発売日 | 43件は照合値、#37は空欄 | 概日を任意の確定日へ置き換えない。空欄採用は未承認 |
+| 検索語 | 日本語名そのまま＋空白除去した日本語名（同一なら1語）。マークだけの検索語なし | 限定版の区別と実際の略称・原文に対する適合 |
+| 除外語 | 単独デッキ22件（#1–5/#11–21/#23–24/#39–42）に既存方針の「種セット」。#2に「セブン」、#22に「イーブイヒーローズ」、#36に「コロコロ」を追加案として設定 | 除外語追加3件は設計案で、PO採用済みではない。複数商品を含む原文で必要な単品まで除外しないか検証する |
+| 分類4コード | DIV01/IP001/MK001/PC_BOX | 旧設計の値。最新参照マスタとの照合は未実施 |
+
+### 親が直接実行した検証
+
+Python標準csvで生成後、出力バイトを読み直して確認。10列の見出しは現行サービスのCSV_COLUMNSをASTから取得した。現行`decode_csv`/`parse_rows`の2関数だけをASTから取り出して実行し、44行と全セルの一致、file_errors空を確認した。サービス全体を起動した検証やDB照合ではない。
+
+- 44商品、見出し込み45行、10列、UTF-8 BOM付き、改行CRLFのみ、9,798バイト。
+- 必須5項目の空欄0、商品名＋mark重複0、日付43件はPython date.fromisoformatで実在日と形式を検査。発売日空欄は#37のみ、mark空欄は#25のみ。
+- CSVの書き出し/読み戻しは全セル一致。検索語3文字以下0、数式開始記号のセル0。
+- 候補名だけの簡易比較：NFKC→空白除去→casefold後、検索語のいずれかが含まれ、除外語が含まれない場合をhitとした。自己名44/44件hit、他商品名へのhitは1,892比較中0件、単独デッキ名＋「9種セット」の否定例22/22件は非hit。
+- 上記簡易比較は、本番の商品照合処理・実原文・既存商品との競合を検証した結果ではない。略称の再現率、備考を含む実際の除外判定、本番DB重複/分類コード、QAスキーマ、認証付き画面確認は未検証。
+
+SHA256: `c4ba5619b293bd222bce0c65d1faab48059d5b3a24ea46c4b12eb5540eaffa1b`。検証結果JSONに作成時刻・入力カタログ/サービスのSHA256も保存した。
+
+### 自己審査と引き継ぎ
+
+判定は **REVISEを維持**。CSV作成と形式検査は完了し、書き出し方法に関する確認は解消した。未確定値・本番データとの比較・実画面確認が残るため、登録可能判定は出していない。新たな実装カード・サブエージェント起動・PR提出・マージはなし。
+
+次は本節の未確定値と検索語案を確定し、承認済みの読み取り経路で最新DB/QA実行先/画面previewの警告を照合する。その結果と同じCSVのSHA256を示して登録便の判断へ進む。今回の確認用CSV作成承認を本番登録承認に読み替えない。
+
+
+## 2026-09-13 空欄方針のPO回答・既存品質検査・DB照合準備
+
+直前の「発売日1件・マーク1件を空欄のまま扱う方針で確定してよいですか」に対するPO原文「進める」を受領。#37発売日と#25マークを空欄とする方針はPO承認済み。英語名、その他のマーク、検索語採用、本登録の承認を含まない。CSV自体の変更なし、SHA256は前節と同一。
+
+preflight成功。本店の他者変更を保持。origin/mainに後続差分があり、`git diff --name-only HEAD..origin/main`で商品CSVサービス/キーワード品質検査/解析サービスの変更0を確認した。実ブラウザー用のjsツールは引き続き利用不可。
+
+### 既存の品質検査を直接実行した結果
+
+[品質検査の実測JSON](sword-shield-44-keyword-validation.json)。`backend/app/services/tcg_analyzer_svc.py:229`のnormalize_en、:247のtoken_and_match、:265のmatch_one_kwと依存定数をASTで抽出し、そのまま実行。`backend/app/services/tcg_keyword_lint.py`の既存R1–R7とrun_allを同じ関数へ接続した。DBやサービス全体は起動していない。
+
+- STOP：R2-stop 5件。#1–5の空白付き検索語は草/炎/水/雷/闘の1文字トークンに分かれる。
+- WARN：R2-warn 2件。#35/#44の空白付き検索語に2文字のvsが含まれる。
+- R1/R3/R4/R5/R6の検出は各0。候補44件の内側だけの検査で、既存本番商品を含まない。
+- R7は空白付き検索語の情報表示。詳細はJSON。
+
+前節の形式検査・簡易名称比較の合格を、この既存品質検査の合格としない。CSVは変更せず停止5件を明示して保持。単に空白付き語を削除すると、空白を含む実際の商品名を拾えなくなる可能性がある。検索語修正は肯定例/否定例を揃えてから行い、品質規則を緩めない。設計自己審査はREVISEを維持。
+
+### 本番読み取りの準備（未実行）
+
+CLAUDE.md:28–30はエージェントの鍵を制限付きとし、無制限鍵は「人間の明示許可があるタスクでのみ使用可」「許可は都度・タスク単位」と定める。監視runbookの制限付き経路はdocker stats/free/df/uptimeを返す経路で、DB照合用ではない。新たな認証情報の探索や制限変更で解決しない。
+
+許可を求める具体的範囲：既存 `~/.ssh/manual-only/id_ed25519` を今回の商品CSV照合に限り使用し、`ubuntu@app.salesanchor.jp` の既存postgresコンテナへ読み取り専用のSQLのみを実行する。新規鍵・権限/設定変更・商品/履歴/解析への書き込みなし。商品名/分類コード/検索語等の必要情報だけを取得し、顧客・メッセージ本文・認証情報は取得しない。
+
+手順は既存card-templates.md §2の接続定型を使用。各呼出しでPGOPTIONS `-c default_transaction_read_only=on` を指定する。最初に `SHOW transaction_read_only` がonであることを確認し、不一致・エラー・対象コンテナ不明で停止する。実行SQLを示す（本節は読み取り計画で、実行済みカードではない）。
+
+```sql
+SHOW transaction_read_only;
+SELECT code, id, display_name, is_active FROM tenant_004.tcg_series ORDER BY code;
+SELECT code, id, is_active FROM tenant_004.tcg_major_categories ORDER BY code;
+SELECT code, id, is_active FROM tenant_004.tcg_manufacturers ORDER BY code;
+SELECT code, id, is_active FROM tenant_004.tcg_product_categories ORDER BY code;
+SELECT code, japanese_title, english_title, mark, release_date, work_id, manufacturer_id, product_category_id, is_active FROM tenant_004.tcg_products ORDER BY code;
+SELECT p.code, k.keyword FROM tenant_004.product_search_keywords k JOIN tenant_004.tcg_products p ON p.id = k.product_id ORDER BY p.code, k.keyword;
+SELECT p.code, k.keyword FROM tenant_004.product_exclude_keywords k JOIN tenant_004.tcg_products p ON p.id = k.product_id ORDER BY p.code, k.keyword;
+```
+
+4分類のコード存在・有効状態を確認し、取得商品と候補CSVの日本語名/マーク/分類/検索語をローカル比較する。取得結果の時刻とSHA256を保存し、CSVに対する重複疑いと検索語衝突を一覧化する。本番プレビュー・QA環境への接続・登録実行は本SQL群に含めない。
+
+状態：空欄方針PO承認済み／CSV保存済み／形式検査済み／既存品質検査はSTOP5件／設計REVISE／本番読み取り未実行・鍵使用の許可待ち／本登録未着手。次は許可された読取結果との照合と検索語の修正案を作る。
+
+
+## 2026-09-13 本番マスタ読み取り・44候補照合完了
+
+PO原文「進めてくれ」を、直前に提示した今回の商品マスタ照合専用の既存manual-only鍵使用への回答として受領。設定/権限変更や書き込みの承認ではない。
+
+executor-preflight成功。既存鍵で指定ホスト・postgresコンテナへ接続し、PGOPTIONS default_transaction_read_only=onを指定したSHOW transaction_read_onlyの出力はon、exit 0。続く前節の7本のSELECTも各接続に同じPGOPTIONSとON_ERROR_STOP=1を付与し、すべてexit 0。JSONで取得するため外側をSELECT json_agg(q) FROM (...) qで包んだ。書き込みSQL0、商品登録/認証付きpreview/再解析/配信0。
+
+保存：[取得マスタと時刻・指紋](sword-shield-44-live-snapshot.json)／[比較結果](sword-shield-44-live-comparison.json)。7問は別接続であり単一トランザクションの同時点スナップショットではない。登録直前には再照合が必要。
+
+### 今回確認できたこと
+
+| 項目 | 実測 |
+|---|---|
+| 商品 | 全296件、有効293件 |
+| マスタ件数 | 作品11・大分類3・メーカー5・商品区分2 |
+| キーワード行数 | 検索657・除外156（全商品） |
+| CSVが参照する4コード | DIV01/IP001/MK001/PC_BOXすべて存在し有効 |
+| 44候補と既存商品名の完全一致 | 0。NFKC/空白除去/casefold後の一致も0 |
+| 同じマーク | #13–21のSDがPM0004 Sカードと一致（9行）。既存側の区分はPC_BOXとは異なる。マーク一致を同一商品と断定しない |
+
+名前の一致0は意味上の重複不存在の証明ではない。分類・名称・年違い・検索語をあわせて見る。
+
+### 既存有効293件＋44候補による品質検査
+
+既存純関数を同じ手順で実行し、既存293件のみの結果と337件の結果の差分を取った。既存起因の問題と追加候補に伴う問題を分けた。
+
+| 規則 | 既存のみ | 候補追加で増えた指摘 |
+|---|---:|---:|
+| R1 検索語なし | 0 | 0 |
+| R2 1文字トークン（停止） | 6 | 5 |
+| R2 2文字トークン（警告） | 41 | 2 |
+| R3 複数商品で同じ検索語（停止） | 1 | 1 |
+| R4 自分を除外 | 0 | 0 |
+| R5 別商品への相乗り（警告） | 15 | 45 |
+| R6 商品内の正規化重複 | 2 | 0 |
+
+R5追加45件はキーワード対の数であり、45商品ではない。候補19商品と既存8商品に関係する。すべて検索語同士の検査であり、実原文で45件誤判定したという意味ではない。
+
+- R3：#36の「スタートデッキ100」がPM0200「MEGA スタートデッキ100 バトルコレクション」（DB発売日2025-12-19）の既存検索語と同一。2021年版を追加する前に世代の区別が必要。
+- R5：既存PM0048の「シールド」、PM0060の「白銀」、PM0061の「漆黒」、PM0062の「イーブイヒーローズ」、PM0074の「VMAX」、PM0087の「VSTAR」が新しいセット名にも当たる。
+- PM0126は2024年の「いつでもどこでもバトルアカデミー」。既存検索語「いつでもどこでも」が#31の2021年ファミリーポケモンカードゲームへ当たる。完全一致する商品名がないだけでは回避できない。
+- 候補側の除外語だけでは、既存商品側の広い検索語による相乗りを止められない。既存DBは変更しない。
+
+終盤にorigin/mainはcacc889e0e44ed647fbd0a7d1c110ab11f86aec5へ進んでいた。解析サービスの差分はプロンプト版定数のimportと実行条件だけで、今回実行したnormalize_en/token_and_match/match_one_kwおよび品質検査サービスの差分0。これはremote refとのソース照合で、本番コンテナの実HEADを観測した結果ではない。
+
+### 次の設計へ渡す修正案と自己審査
+
+1. #1–5の1文字トークン：単純な語削除だけでは元の商品名に含まれる空白表記を拾えなくなる。空白あり/なし・別タイプ・VMAX版を肯定/否定例にし、既存品質規則を満たす候補語を設計する。規則の閾値変更は行わない。
+2. #36とPM0200：2021年版/2025年版/コロコロ版を別々の正解として固定し、共通の「スタートデッキ100」だけの投稿を曖昧と扱う案を検討する。既存PM0200側の語と除外条件の変更が必要なら別設計・承認対象にする。候補だけを変更して解消したと称さない。
+3. 既存8商品に関する相乗り：拡張パック単品/セット商品を区別する肯定・否定例を用意し、既存側の広い語の見直しと除外条件を設計する。作品・商品区分など後段制約の影響も含めて検証し、R5件数だけで実原文の誤判定件数を推定しない。
+
+Architect自己審査はREVISE。4コードの実在・有効性と最新マスタとの照合は完了。新規R2-stop5件/R3-stop1件を解消する前に登録しない。既存データ修正は本便の読み取り承認外。空欄2項目はPO承認済み、CSV保存済み、登録設計合格/本登録GO/本登録は未了。
+
+文書はローカル専用worktreeに保存。新たなサブエージェント・製品コード/DB変更・PR/マージなし。
+
+
+## 2026-09-13 検索語修正のオフライン対照設計
+
+POの「進める」に従い[design §16](design.md#16-44候補登録前の検索語修正案2026-09-13草案revise)を草案として追加。[実験JSON](keyword-revision-experiment.json)と[再現コード資料](keyword-revision-experiment.py.txt)を保存。メモリ上だけで既存8商品と候補6商品の語を変更した。CSV/製品コード/DBは変更0。
+
+既存のmatch_pid_with_workまで含む純関数を実行。入力349件（候補名44、既存名293、設計例12）。候補名の正しい確定は25→43、#36の世代不明名は意図して未確定。既存のみで正しく確定していた256名称の劣化0。候補44＋設計例12の期待値不一致0。追加のR3停止1/R5警告45は各0になった。R2停止5/警告2は残る。実原文への適合・略称の取りこぼしの許容は未確認。
+
+自己審査REVISE。新しい略称方針と既存8商品のDB変更はPO承認前。正式実装カード未発行・新規PR未提出。次のPO判断は「商品や世代を識別できない略称は確認待ち」の方針1件とする。
+
+
+## 2026-09-13 略称方針の承認と空白差の限定設計実験
+
+PO原文「進める」は、直前に提示した曖昧な略称を確認待ちにする方針への回答。正式な実装承認ではない。design §17へ承認範囲を記録した。
+
+データだけで空白付き語を削ると対象7件すべての元の名称が未確定になる。商品名全体の半角/全角スペース差だけを追加一致とするメモリ上の試作を実行。入力389件、期待値付き96件の不一致0、既存正解256名称の劣化0。追加一致へ合わせた品質R5試作を含め、R1–R6の既存からの追加停止/警告0。相乗り対照2表記も検出した。
+
+[結果](keyword-space-design-experiment.json)と[再現資料](keyword-space-design-experiment.py.txt)に保存。元のCSV/製品コード/DBは変更0。既存の実験349件は拡張検算の前提読み込みとして再実行した。無関係な全テストの繰り返しではない。
+
+参照したremote mainとの差分はプロンプト版定数と条件のみで、今回の純関数の差分0。既存pytestの数字境界/作品/フィールド分離を読んで受入条件へ反映した。全体自己審査REVISEを維持。次は正式受入条件と安全な反映順序の設計。文書チェックはdiff --checkとtask-state-checkを実行する。
+
+
+## 2026-09-13 受入条件・QA・反映順序の確定と限定審査
+
+[design §18](design.md)でA便（判定/品質機械だけ、6製品ファイル）とB便（既存8商品/新規44件のデータ）を分けた。A1–A8と既存CIの隔離PG fixtureを直接照合し、AST読込試験の追加依存も実装範囲へ含めた。B便はQA実行先とデータ部分失敗の前提が未確立のため、引き続き未合格。
+
+[同値検算](keyword-reducer-equivalence.json)は300例、候補0–6の返却tuple不一致0。これは設計用の旧関数対照で、正式pytestではない。共有選択により旧契約が維持できる根拠を追加した。
+
+最新main取得は最初にFETCH_HEADのsandbox書込制限で失敗。同じgit fetchを正規の権限審査へ提出して成功。制限や接続先の変更なし。取得main af269ae20ed2f52e6cd49ba0403ad7799e3a3870。対象純関数の差分0、ADR-154の他者による行番号契約追補5行を確認し、その最新本文を保持した上で本件の未承認追加決定案を末尾へ保存した。
+
+Architect自己審査：A便APPROVE、B便と登録全体REVISE。PO設計承認/実装承認は未受領、正式カード未発行。製品実装/DB書込/本番反映は未着手。次はA便の限定設計をPO承認へ提示し、承認済み文書の保存と正式カード検査を行う。
+
+
+A便単独検算の追補：既存293名称、従来確定済みのtuple変更0、既存正解256名称の劣化0。PM0191だけNONE→同商品確定。初回試作のPM0152の根拠語変更を、各商品の通常一致を優先する仕様で解消した。design §17-2/18-6と実験資料を修正版へ更新、389入力も再検算。未承認草案の検算上の修正で、製品コード/DBには適用していない。
+
+
+## 2026-09-13 A便設計承認の保存
+
+POへA便だけの正式設計承認を尋ねた応答「進める」をdesign §18-7へ記録した。ADR-154の追加決定と台帳を同じ範囲で更新。過去の未承認時点の記録は経緯として残す。これは実装開始承認や代理GOではない。B便の商品データ変更と44件登録は引き続きREVISE。
+
+製品コード・DB・CI・運用設定は変更していない。設計検算の96期待例/既存293名称/300同値例は前節の設計実験であり、正式pytestと通常CIの合格を代替しない。
+
+
+実装カード準備の実測：公式new-worktree.shでrelease/product-name-space-match-implを作成。HEAD/origin/mainはaf269ae20ed2f52e6cd49ba0403ad7799e3a3870、status空、preflight成功。作業場所だけを準備し実装役は起動していない。対象6ファイルの最新差分はWORK_ID_PROMPT_VERSIONS対応とp1/p2統合試験で、これを維持する条件をカードへ記載した。
+
+Docker CLIは存在するがdocker infoは/var/run/docker.sock不在で終了1。ローカルpytest/PGは実施せず既存CIで確認する契約を維持。card-lintは終了0・違反0（L24長行警告2件）、diff --checkとtask-state-checkは終了0。カードの作業場所・基点・入力設計SHA・停止条件・6ファイルとA1–A8を同一AIで照合した。
+
+先約の確認：PR3465はOPENだが対象は比較専用サービス/試験で本便6ファイルと重ならない。旧台帳のPR3400はAPIでMERGED確認（2026-09-10T07:24:27Z）。release/line-box-heading-guardsは同名PRなし、ローカル作業の先約が残るため実装開始直前にも対象の重複を確認する。古い台帳だけで未実施/完了を断定しない。
+
+
+### 文書PR提出前の停止（2026-09-13）
+
+承認済み設計とカード/証拠17ファイルを0ceb2a16に保存し、0eb20160で最新mainを統合。ADR/evidenceの末尾競合は両側を保持し、mainの全行を順序込みで維持した。PR差分はdocs配下16ファイルとtasks/todo.mdのみ、製品差分0。
+
+PR全差分への通常diff --checkはCSVの規定CRLFを45行のtrailing whitespaceとして検出した（終了2）。CSV以外16ファイルの同検査は成功、CSVはBOM/45 CRLF/44商品と保存SHA c4ba5619b293bd222bce0c65d1faab48059d5b3a24ea46c4b12eb5540eaffa1bの一致を別途確認。通常チェック全体成功とは記録しない。card-lint終了0（長行警告2）、task-state-check終了0、全JSON構文検査成功。
+
+自動承認レビューがgit push -u origin HEADを実行前に拒否。理由は全17ファイルに含むlive snapshot/CSVの送信先・機密性・個別承認が確認できず、未承認データの外部送信となる可能性があるため。拒否後のgh repo viewで送信先shingo-ops/salesanchorがPUBLICであることを確認した。
+
+本番マスタ資料には商品名だけでなく内部商品ID・有効状態・検索語・除外語が含まれる。設計保存の承認と、この内容の一般公開承認を混同せずpushを停止。履歴からの間接送信や別経路での送信は行っていない。文書PR未提出、実装未着手。次はPOへ当該資料を含む公開送信の可否を1件提示する。
+
+
+### 公開送信のPO承認（2026-09-13）
+
+「内部商品ID・検索語・除外語を含む調査資料を公開し、文書PRを提出してよいですか？」と送信先が公開リポジトリであることを明示して確認し、PO回答原文「進めてくれ」を受領した。対象はshingo-ops/salesanchorへの本便17文書ファイルとその調査証拠のpush/文書PR提出。先の自動承認レビュー拒否を保持したうえで、追加された明示承認を根拠に通常の承認経路で再申請する。実装開始・担当への委任・マージ・本番変更の承認には拡張しない。
+
+
+### 文書PR提出結果（2026-09-13）
+
+POの追加公開承認を明示した通常の承認経路でgit push -u origin HEADが成功。公式gh-pr-create-safe.shで文書PR https://github.com/shingo-ops/salesanchor/pull/3466 を提出し、.pr-numberの3466登録を直接確認した。初回提出HEADは7316bdfb。mainとの差分は17文書/証拠ファイルのみ。カード検査は再実行して終了0（L24警告2）、task-state-check成功。実装開始/委任・マージ・本番変更は未実施。次はPRチェックを確認し、実装カードの実行承認を別途提示する。
+
+PR3466初回process-artifacts gateはrecon内の省略ファイルパス2件を実在確認できず失敗（job103667019390）。リポジトリ相対パスへ訂正して再検査する。製品コード/CIの変更はない。
+
+
+### A便の実装開始・既存担当への委任承認（2026-09-13）
+
+「既存の実装担当へカードを渡し、対象6ファイルの実装と検証を開始してよいですか？」へのPO回答原文「進める」を受領。既存/root/csv_card_executorへCARD-PRODUCT-NAME-SPACE-IMPL-01を引き継ぐ。製品公開/マージ/本番データ変更や新規エージェント起動へ拡張しない。
+
+実装worktreeでpreflight成功、未保存変更0、HEAD af269ae2、origin/main 9f5415c3を直接確認。両者の対象6ファイル差分0を確認したためカード基点欄へ両値を記録。旧release/line-box-heading-guardsの未保存作業は保持。対応PR3430はMERGED（6c55e40d）、旧単品ガード本体と作品根拠関数が現mainに存在することを照合した。本便は別worktreeの現行コードを基に進め、旧作業の上書き/清掃/台帳変更を行わない。
+
+文書PR3466のHEAD5622b793はチェック33成功/10対象外/失敗0を直接確認。これを製品のpytest合格には読み替えない。
+
+
+### 実装差分の途中審査とカード補正（2026-09-13）
+
+親のAST純関数検算は既存293名称の期待tuple不一致0、旧確定tuple劣化0、既存正解256維持、旧関数との500対照不一致0、境界10例一致。正式pytestではない。追加テストを読むとR5逆方向の従来一致を消す期待値を発見し、方向別の検査へ修正を依頼した。
+
+次に96例fixtureを製品純関数へ渡して1例不一致を実測。test_space_96_designed_inputsのpokemonがPM0191（One Piece）のIDを参照していた。保存資料のIP001と一致するPM0048へ訂正しPM0200と同一作品をassertする指示をカード手順15へ追加した。設計期待値やマスタ変更は不要。
+
+実装担当はmake lint-ci終了0後、補助ruffで既存test_tcg_keyword_matching.pyの途中importにI001を検出し規定停止。親のruff --diff読取で3識別子を1名1行に整形するだけと確認し、許可ファイル内のその箇所に限る補正をカード化。既存問題全般の修正へ広げず、テスト誤りと整形の2点だけを追加指示する。
+
+
+### A便の実装受領・読取確認（2026-09-13）
+
+既存実装担当から手順15完了を受領し、対象worktreeのstatusで製品6ファイルだけの差分（2705追加/9削除）を直接確認した。変更は候補選択の共有化、通常成立語0のときだけの完全一致追加、R5検索側への同関数接続、既存試験群への固定例追加。旧作品/単品/除外/状態/注記経路とp1/p2対応を維持している。
+
+実装担当が実行した検証（親は生ログを読取確認）：make lint-ci終了0（ruff app/bandit成功、mypyは既存Makefileの警告扱い）、4テストのruff終了0、diff --check終了0。補助ruffの途中停止は手順15で対象importだけを整形して解消した。
+
+親が直接実行した検証：実装ソースから純関数だけをAST抽出。既存293名称は保存済みA単独期待tupleに全一致、従来resolved tuple劣化0、既存正解256維持。旧public関数とのseed913・500例対照はtuple不一致0。追加経路の境界10例一致、追加テストから固定データを取り出した96期待例は修正後不一致0、R5検索/除外/制御文字の方向別6検査成功。最初の96例検算で1例不一致を見つけ作品IDを訂正させ、期待値は変えていない。親検算はpytest/DBではない。
+
+A1〜A6のコード・固定試験・純関数検算は設計と整合。A7の隔離PG保存試験8例を追加済みだが実行は未確認。A8の正式pytest/PG/通常CIも未実施のため、製品公開可能・本番品質合格とは判定しない。現在は実装差分準備済み／読取審査済み／正式検証待ち。製品commit/push/PR・マージ・本番データ変更はなし。B便はREVISE。
+
+生報告：/tmp/reports/CARD-PRODUCT-NAME-SPACE-IMPL-01.txt。親検算：/tmp/sa-space-parent-review.json。次はこの6ファイルを製品PRへ保存し、既存CIで全pytest/隔離PGを確認する公開便。マージは番号/HEADを示す別のPO GOが必要。
+
+最終ファイルSHA256（生報告と実ファイルの一致を親が直接確認）:
+
+- backend/app/services/tcg_analyzer_svc.py: `7ffaabe42b21c3ab16ddd2db91297ca35b0eeefd2370595c7d5ebd06015f8220`
+- backend/app/services/tcg_keyword_lint.py: `16582096369e3462cf08e2e58ac4b1afe63f2f0df0be45a4e76de017eae848e8`
+- backend/tests/test_tcg_keyword_matching.py: `c3dd87a86e19c72c86da84e612e4ccbae1094543260964d46e4b457aeeefdfff`
+- backend/tests/test_tcg_keyword_lint.py: `70980eace0bab9d2e427f5ad9ac6b697c3e87b28b27b1d74bc9766535a572429`
+- backend/tests/test_tcg_product_guards.py: `0ab1b9b4661ddd96a1fc0dca14e9160f7179d12da16a7ba7885d511eada27645`
+- backend/tests/test_tcg_work_matching_integration.py: `36583202fa8225e47dc44b3f48ae235c0d9f859cc4e8c0130f3397b797a03551`
+
+
+### 製品PR公開・正式CIの承認（2026-09-13）
+
+「製品PRを作成してCIで正式検証を進めてよいですか？」へのPO回答原文「進める進める」を受領。既存実装担当へ公開用カードを渡す。文書PR3466の確認済みd11d27b7の17文書と、検収済み6製品差分を製品PRへ載せる。製品6ファイルの初期SHAは直前の記録と同一を確認する。マージ/本番/データ変更は対象外。
+
+最新origin/main56a1661dは空箱条件/状態再解析の保護をanalyzerへ追加している。商品名照合とは別箇所の変更を現物で確認した。既存main内容を保持し、今回の6ファイルを越える修正が必要なら停止する条件をカードへ入れた。組合せの正式PGはCIで確認する。
+
+
+### 製品PR3473・正式CI完了（2026-09-13）
+
+製品PR https://github.com/shingo-ops/salesanchor/pull/3473 を既存実装担当が公式wrapperで提出。親はPR API・.pr-number・実worktreeの状態と差分を直接確認。HEAD e484f168c757d9b46869895d1d70d96451f22ae0、main b52a4def取り込み済み、6製品＋固定版17文書の計23ファイル、未保存変更0。既存空箱/状態再解析保護・LINE client寿命修正を維持し、analyzerのmainとの差分は商品照合部分だけ。
+
+正式Backend CI: https://github.com/shingo-ops/salesanchor/actions/runs/34740813915/job/103680104043 。GitHub実行の全pytest＋PostgreSQL RLSは **3260 passed / 95 skipped / 309 warnings / 116.55秒、coverage63.82%（必須60%）**。実装担当の報告だけでなく親もAPIから実ログを保存し、試験ステップsuccessと完了件数を直接確認した。新規PG8例は既存収集対象・追加skipなし。quietログに個別テスト名は表示されないため8例別々の実行ログを取得したとはしない。
+
+チェック集計は36成功・8対象外・1失敗。唯一の失敗は https://github.com/shingo-ops/salesanchor/actions/runs/34740813907/job/103680092020 のGO記録欠落で、親が実ログで確認。技術検証の失敗と混同せず、GOを創作して通さない。
+
+main統合後も親AST検算を再実行。基準は固定旧基点af269ae2であり、実装後HEAD同士の自己比較ではない。analyzer SHA3b674c3ee92ce333161fbedd02db3f5ea94a69bdb24ca1c83b108e579e704d52で293名称の期待tuple不一致0、従来確定劣化0、旧関数500対照不一致0、境界10一致を確認した。
+
+現在地：A便設計自己審査済み／PO設計・実装・公開承認済み／実装と読取審査済み／製品PR提出・正式CI成功／マージGO未受領／未マージ・本番未反映。B便の既存8商品更新・44登録はREVISE、再解析・3シート配信も未実施。文書PR3466は後続の承認/検証記録を保持する別PRであり、本製品PRのGOに含めない。
+
+マージ判断前の読取確認：最新main b52a4defのdeploy34740608928/job103679559392はsuccess。実ログ2026-09-13T05:34:52Zでsalesanchor_db_20260913_143449.sql.gz (7.6M)の生成成功を確認。これは直近配備時のバックアップでありPR3473用の新規バックアップではない。番号付きGO後の配備では通常手順の新バックアップ成功を別途確認する。復元試験を行った記録ではない。
+
+次の判断はPR3473のHEAD e484f168について、通常マージと自動本番配備のPO GO。CI成功はこの承認を兼ねない。
+
+
+### PO GO3473受領（2026-09-13）
+
+PO原文「GO #3473」を受領。対象は製品PR3473、承認時HEAD e484f168c757d9b46869895d1d70d96451f22ae0。通常マージと自動配備・バックアップ/配備HEAD/公開HTTPの確認を既存担当へ引き継ぐ。AI代理GOではなくPO本人の原文承認。文書PR3466やB便のデータ登録は含めない。
+
+開始時preflight成功・製品worktree clean・.pr-number3473・HEAD一致を直接確認。最新main c22ad508は抽出タスクの待ち時間延長、public.products向けseed55件と登録、所有権等の補助と文書を追加。今回6製品へのmain側変更0を確認。seedはtenant側tcg_productsとは別であることをSQL対象から確認した。これらを保持した通常追従をカードで指定し、未知main/製品競合/CI失敗なら停止する。
+
+GO記録更新により旧process run34742742062がcancelled、後続34742756998はsuccessだったがPR rollupに取消が残り、手順7の全成功確認で停止。製品HEADa618c147不変で旧runだけ通常再実行できる条件をカード手順6へ追記しcard-lint終了0。取消を成功に読み替えず、再実行結果の反映を待つ。親も最終Backend job103685126791の実ログで3260passed/95skipped/309warnings/114.97秒、coverage63.82%を直接確認した。
+
+マージ直前にmainがc50d719bへ進んだため実装担当は停止。親がc22ad508..c50d719b実diffを確認：既承認PR3468のスタッフ6ボタン共通化2画面・追加試験1・文書11、計14ファイル。今回6製品/DB/CI/運用スクリプトへの追加変更0。既存main変更を保持する通常追従としてカードのmain基点を更新し、新HEADのCIを再確認する。PO GO対象/製品SHA/業務範囲は拡張していない。
+
+
+### PR3473 マージ・本番配備完了（2026-09-13）
+
+既存実装担当が正式wrapperでmerge commit、cleanup終了0を報告。親もPR APIで2026-09-13 15:39:45 JSTのMERGED、merge8d5aa58146dc81bc84ef5db0e60f835d23d17d29を直接確認。最終HEADb59c923c、mainc50d719b統合後も6製品SHA/23ファイル境界は担当が照合、全36チェック成功/8対象外。取消された旧GO gateは通常再実行成功後に進めた。
+
+最終Backend run34743123495/job103686128008は3260passed/95skipped/309warnings/122.94秒、coverage63.82%。親が実ログを直接取得して確認。配備run34743294988/job103686551222はsuccess、親の実ログ1035行に配備HEAD8d5aa581、588行に今回backup salesanchor_db_20260913_154016.sql.gz (7.6M)、4660行にhealth成功を確認した。コマンドのecho行ではなく日時付き実出力を根拠とする。復元試験は未実施。
+
+親が公開API/画面へ直接curlし双方HTTP200、database/redis/celery connected。実装担当だけの検証報告と混同しない。設計は同一AIによる自己審査で、独立第二者審査ではない。状態：A便設計審査/PO承認/実装/正式CI/マージ/本番配備完了。商品名全体の半角・全角スペース差への対応が反映済み。実投稿の再解析・本番精度測定は行っていないため、既存解析結果が改善済みとはしない。
+
+詳細はproduct-name-space-release-result.json。旧release-result.jsonはPR3438用のまま保持。B便8商品更新/44登録はREVISE、再解析/3シート配信未実施。文書PR3466は後続の承認/公開・配備カード/検証記録だけのPRへmain同期し、保存更新する。文書PRのマージGOは未受領。次の一手はB便の未解決受入条件を設計相談で確定すること。
+
+後処理：製品PR本文への内部backup名等の詳細追記は実装担当側の自動承認審査で公開範囲を理由に拒否された。制限を変更せず、公開済みPR/merge/run成功と公開HTTP成功だけの追記へ縮小し、通常審査で承認・反映済みとの担当報告を受領。生報告はCARD-PRODUCT-NAME-SPACE-RELEASE-01-public-final.json。文書PR3466ではtasks/todo.mdの1行更新を削除宣言へ含め忘れprocess gateが失敗したため、実numstatに基づき本文の宣言を修正。検査設定の変更なし。
+
+
+### B便・離席中のPR直前準備（2026-09-13）
+
+POのPR直前まで進行指示を受領。preflight成功、本店dirty30/226behindを保持し既存専用文書worktreeで継続。最新main1a8eed69a8d4e1c17cefc7dcef579f63493b17ddの追加8文書を同期し、証拠台帳の双方追記を保持。既存PR3466はOPEN、今回の変更はpush/PR提出しない。
+
+設計§19に制御経路・三者照合・実行前条件・代替案・自己審査REVISEを保存。実取込4関数のASTとメモリ永続化モデルで180ケースを直接実行、期待値一致/DB接続0。実体だけ保存済み、44件保存済みでも返却43件、履歴44件でもjob runningをモデルで識別。実PG/本番障害の実測ではない。8商品変更前後と候補修正案をkeyword-b-review-plan.jsonへ固定。元CSVは不変。正式カード未発行、実装役は起動せず、製品/DB/本番変更なし。
+
+保存物はkeyword-import-partial-audit.json/.py.txt、keyword-b-review-plan.json、既存design/recon/台帳。未完了は個別値と実投稿正解、稼働QA隔離、原子的更新と実PG部分失敗検証。これらを完了と創作せず、登録可能の合格は保留。
+
+
+### CSV行単位整合性の対策設計（2026-09-13）
+
+PO原文「進めてくれ」を受領し、PR直前停止を維持して§20を設計。preflight成功、本店dirty31を保持。main1a8eed69に対する未取込差分0、製品未保存変更0。create_productの実呼出元2箇所、履歴helperの呼出元、commit/rollbackと現行採番、既存PG fixture/CIを直接読取。Context7未提供のため公式SQLAlchemy2.0資料とpin2.0.38ソースへ代替アクセスし、内部commitを残すnested案を除外。
+
+推奨はCSVの1行の商品・全語・created履歴を同時確定、単品の既定動作維持。commit応答不明をrollback成功と誤認しない契約、4製品ファイル案、別接続PGでC1–C11を確認する試験仕様を保存。設計限定の同一AI審査APPROVE、PO方式承認/製品実装/PG実行なし。B便はREVISE。証拠shaはkeyword-import-atomic-design-evidence.json。製品ファイルを変更せず、push/PR更新/新規PR/本番操作なし。
+
+
+### CSV整合性修正の実装委任承認（2026-09-13）
+
+方式採用と4ファイル修正の委任質問にPO原文「進める」を受領。正式カードcard-product-csv-atomic-impl.mdを作成しcard-lint終了0（長行警告2）、既存/root/csv_card_executorへ委任継続。公式new-worktreeでrelease/product-csv-atomicityを作成、HEAD/main1a8eed69一致/clean/preflight成功を直接確認。本店dirty31は保持、reaper削除対象0。Dockerはsocket未存在で接続失敗を直接確認し、pytest/実PG未実施を維持。設計SHA0806d0eb64d9d81c364f871e84e75952012794b851585952823d011457e5a8f6を固定。製品commit/push/PR作成なしで4ファイル差分・静的検査・親レビューまで。
+
+
+### CSV整合性修正・実装受領とPR直前停止（2026-09-13）
+
+既存担当の4ファイル差分を受領。2サービスのdiffを親が直接読み、create_product/record_rowの既定True維持、CSVのFalse指定と商品/全語/created履歴のcommit1回、create呼出だけのValueError継続、失敗時rollback・元例外保持、成功後のカウンタ更新を確認。単品既定経路の既存確定後エラーまで解消したとはしない。
+
+担当報告：make lint-ci終了0（mypyは既定の警告扱い）、変更2試験ruff終了0、diff --check終了0。初回ruffは新規試験の未使用import1件を検出、同ファイル内で除去して再検査成功。親も4SHAと実ファイルの一致、指定4ファイル以外の差分0、diff --check終了0を直接確認。新規PG試験は未追跡263行のためtrackedだけのdiff統計に含まれないことを確認した。
+
+親自身の検算：旧基点1a8eed69から固定抽出した実サービスはverify_valueの1行目で商品/履歴不一致を検出。最終2サービスの実ASTをメモリDBで実行した354ケース（8種×44位置＋正常/finish）は不整合0、検索語/除外語の残存0、同digest再送追加0。既定Trueのcommit1/Falseのcommit0も直接確認。最終SHAは同検算時から不変。
+
+さらに追加unitの実関数をASTで抽出し直接呼び出した25ケースが成功。pytest runner/DBは実行せず、socket.connectを拒否した。初回は開発依存だけのvenvにSQLAlchemyがなくImportErrorとなったため、親用/tmpへ既定2.0.38を導入して再実行。製品venv/依存定義を親が変更したものではない。直接呼出はfixture収集・pytestフック・全suiteの保証ではない。
+
+PG試験は現物を読取。正常1ケース（44商品）/保存前ValueError44/確認ValueError44/履歴失敗44/commit前44/commit後44/追加7の計228ケース、各fixtureの独立DB。C1–C11対応を確認。別接続で実体/語/履歴を照合し、PGをskipする追加条件や安全ガード緩和なし。既存CI timeout15分に収まるかは未測定で、成功と宣言しない。pytest/実PG/coverageは未実施。
+
+状態：方式の設計自己審査/PO承認/既存担当への実装委任済み、製品差分準備済み・静的検査済み・親の読取レビュー済み。正式CI待ち。生報告と4SHA、再現資料はkeyword-import-atomic-implementation-result.json/keyword-import-atomic-parent-review.json/keyword-import-atomic-direct-unit.jsonと対応.py.txt。製品worktreeのHEADは1a8eed69、4ファイルは未コミットで保持。文書だけローカルコミットへ保存する。push/PR更新/新規PR/本番変更はなし。
+
+再開手順：専用製品worktreeと4SHAを照合→PR提出の許可範囲を確認→製品公開カードを作成/検査→通常CIでC1–C11・228PGケース実行と所要時間を確認。時間超過や実PG失敗は原因を読み取り、必要な設計へ戻す。skip/CIガード緩和で通さない。B便の実商品値/実投稿正解/運用QA/8商品更新は引き続きREVISE、データ登録と再解析/配信の承認は含めない。
+
+
+### CSV整合性修正の製品公開・CI確認（2026-09-13、承認受領）
+
+PR直前停止と未実行CIを報告した後のPO原文「進める」を、製品PR提出と通常CIの確認へ進む承認として受領。既存担当へ公開カードを渡す。preflight成功、最新main1a8eed69から追加差分0、検収4SHA/実worktree差分一致を直接確認。マージ/配備の番号付きGO、データ更新/44登録/再解析/配信は含めない。
+
+
+## 2026-09-13 DETAIL-01実測
+
+基点: origin/main 10212686（専用worktree作成時）。親: [商品マスタ](../../specs/product-master/README.md)。
+対応設計: [design.md DETAIL-01](design.md#2026-09-13-商品詳細編集と二言語一覧detail-01)。
+既存画面PR #3422はGitHub APIでMERGED（2026-09-11T03:24:43Z）を確認。
+
+| 観点 | 観測した事実 |
+|---|---|
+| 目的/利用者 | POが行クリック編集、日英商品名2段、コード非表示、検索/除外数の5列を依頼し、進行と本番反映を明示依頼 |
+| 入り口/出力 | frontend/src/pages/super-admin/TcgProductMasterPage.tsx:16 は日本語の一覧型、同:52 の5列にcodeがありonRowClickなし |
+| 処理/境界 | backend/app/routers/tcg_product_import.py:48 の一覧型はenglish_titleあり、同:100 以降のSQLには除外数なし |
+| データ | migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:82 のtcg_products、同:147/163 の語テーブル、同:45 のaudit_logが実在。mark/englishは20260903_180000_tcg_products_mark_en_t004.sql:34/47で追加 |
+| 権限/外部 | 両既存商品ルーターはrequire_super_admin、TCG_SCHEMA。外部API不要。認可条件は変更しない |
+| 再利用/試験 | frontend/src/components/DataTable.tsx:71 にonRowClick、Drawer.tsx:22にProps。backend/tests/test_tcg_product_list_pg.py:23は本番migrationから隔離schemaを作る |
+| 現状差/失敗 | backend/app/routers/tcg_product_master.pyには登録/語追加のみで全項目更新なし。add_search_keywordは親行ロックなし。Docker接続exit1、ソケット未起動。実DBはCIで試験予定 |
+
+ADR索引検索実施。関連ADR-093（商品と在庫の分離）、ADR-113（handoff）、ADR-144（共通UI）、ADR-027（i18n）。
+Context7 MCPはツール一覧に0件。起動指示の代替許可に従い2026-09-13に公式資料を直接確認:
+[SQLAlchemy asyncio](https://docs.sqlalchemy.org/en/20/orm/extensions/asyncio.html)、
+[PostgreSQL row locking](https://www.postgresql.org/docs/current/explicit-locking.html)、
+[Pydantic validators](https://docs.pydantic.dev/latest/concepts/validators/)。
+AsyncSessionのcommit/rollback、親行FOR UPDATEによる同一商品の直列化と入力検証の契約に使用。
+外部企業の改善数値は用いていない。作業場所の他者変更は上書きしていない。
+
+
+### DETAIL-01 作業停止時の実行結果
+
+設計/自己審査済み、CARD-DETAIL-01は正式card-lint exit0。引用行番号は基点10212686のgit showで再照合。
+実装済み: 一覧5列・日英2段・検索/除外数、編集UI、GET詳細。
+未実装: PUT更新・語の置換・監査記録・既存語追加のロック参加・更新の実PG試験。
+
+停止操作は新規サービス等を保存するpython3コマンド。PreToolUse hookがソース中の削除SQLを不可逆操作として検出し全体を拒否。
+拒否文の引用を文書へ保存する操作も同じ検知で拒否されたため、この記録にはSQL文を含めず事実と理由のみを残す。
+本番DBで削除は実行していない。permit発行や更新コードの迂回保存もしていない。
+POへソース保存に限定した承認質問を送信。その後のPO原文「進める」を受領済み。
+
+| 検証 | 実際の結果と根拠 |
+|---|---|
+| frontend build | 最終exit0、/tmp/product-detail-build-final.log |
+| frontend check:all | exit0、既存警告218件あり、/tmp/product-detail-check.log |
+| 変更TSXの厳格eslint | 2ファイル・警告0・exit0 |
+| 新規Playwright | 11件成功、/tmp/product-detail-e2e-r2.log |
+| 既存CSV画面 | 7件成功、/tmp/product-detail-e2e.log |
+| 画面確認 | /tmp/reports/product-detail/list-ja-1280.png と editor-ja-390.png をAIが閲覧、5列/文字サイズ差/右パネルを確認 |
+| backend限定ruff | router/service/read-testの3ファイル成功 |
+| backend make lint-ci | 未合格。import順の初回失敗は修正済み。再実行はbandit走査例外多数、mypyに対象外既存エラーが出て中断exit130。/tmp/product-detail-backend-lint-r2.log |
+| 実PG試験 | Dockerソケット未起動のため規則どおり未実行。グローバルツールはPython3.14、3.12にbanditなし |
+| 文書チェック | check-task-state、check-doc-heading-duplicates、git diff --check成功 |
+
+画面試験は模擬APIを使用し、実装済み保存APIや実DBでの成功を示さない。POの実機確認も未実施。
+PR未提出、CI未実行、マージ/本番デプロイ未実施。専用作業場所の未コミット変更を保持。
+再開にはソース保存承認と正規ガード手続きが必要。承認後に更新API/実PG検証/CIを完遂してから正式PR/マージへ進む。
+
+
+### DETAIL-01 ソース保存承認後の正規手続き停止
+
+POの「進める」は、直前の質問に対する更新処理のソースコード保存承認として受領した。
+本番DBへの削除実行やガードの変更承認ではない。
+executor-preflightは通過。専用作業場所の変更は保持され、origin/mainより2コミット遅れを確認。
+ガードの案内どおりscripts/permit-danger.shに対象操作を渡したが、許可コマンド自体がPreToolUse hookで拒否されてexit前に停止した。
+許可チケットは発行できていない。
+
+読み取りで確認した実体: /Users/tanizawashingo/.claude/scripts/agent-danger-hook.sh:143以降。
+151行はコマンド全体への文字列一致、167行以降は既存チケットの照合。許可コマンドを除外する分岐がない。
+ユーザーの承認不足ではなく、エージェントからの正規チケット発行が自己ブロックされる状態。
+ガード変更・文字列隠蔽・チケットファイル直接操作はしていない。
+
+次の一手: POの端末から公式permit-danger.shで該当するソース保存1回のチケットを発行後、
+同じ専用作業場所で更新API実装を再開する。有効期限30分、1回限り。本番DBへの削除実行には使用しない。
+実装/検証/PR/マージ/本番の状態は前節から進んでいない。
+
+### DETAIL-01 許可適用とローカル最終検証（2026-09-14 00:20 JST）
+
+PO原文「実行した」を受領し、承認済み更新サービスのソース保存を実行、exit 0。
+API実装を完了。既存add_search_keywordの親商品ロック1点を同じ契約に揃えた。
+ユーザーの承認をGO番号へ創作転記せず、現行の正式PRゲートを維持する。
+
+| 実行した検証 | 結果・一次出力 |
+|---|---|
+| executor-preflight | exit 0。main本店の他者変更は維持、専用worktreeで作業 |
+| Playwright chromium（詳細＋CSV） | 18 passed (28.8s)、/tmp/product-detail-e2e-final.log。APIはモック、DB保存証明ではない |
+| npm run build | exit 0、/tmp/product-detail-build-final.log |
+| npm run check:all | exit 0、既存警告218、/tmp/product-detail-check-final.log |
+| Python3.12 make lint-ci | exit 0、ruff/bandit成功、mypy既存警告。/tmp/product-detail-backend-lint-final.log、変更3製品ファイルのエラー0 |
+| 実PG/pytest | 未実施。docker psがローカルsocket不在でexit 1。環境偽装せず既存CIで実行する |
+| 保存ソースの停止 | 解消。公式1回許可適用でファイル書込成功。本番DBでのSQL実行0 |
+
+試験は既存test_tcg_work_matching_integration.pyのCI専用・localhost・jarvis_test_db限定fixtureを使い、
+別接続から確定済みの商品/語/監査を照合する。成功、語ID保持、古い版、2同時編集、既存語追加、
+語書込/監査/commit前/キャンセル失敗、commit応答消失、実認可依存、422入力、分類導出を追加。
+現時点では実DB結果は未確認。独立レビュー/PR/マージ/本番デプロイも未完了。
+
+### DETAIL-01 PR提出と既存試験補正（2026-09-14）
+
+正式PR: https://github.com/shingo-ops/salesanchor/pull/3492 。製品実装コミット84a6a697、最新main追従99e211bb。
+初回CIのFrontend lint & custom checks（run34765501418）では既存一覧単体試験4件が旧文言を期待して失敗。
+5列/日英名/0表示を検証する期待値へ更新し、既存検索/作品/ページング検査は維持した。
+ローカルnpm run test:coverageは29ファイル343件すべて成功（/tmp/product-detail-unit-coverage.log）。
+backendの受入D7を補強し、参照する解析結果の全列と別テナント同名商品の商品/語/監査不変を追加した。
+初回backend lint CI成功、実PGは実行中。検証未完了の試験を成功扱いしない。
+
+process-artifacts gate（run34765540117）はPR番号付きGO記録不足で拒否。
+POの公開依頼は受領済みだが、原文を「GO #番号」へ創作せず、正式ゲートは維持して停止する。
+
+### DETAIL-01 保存・参照不変の実DB検証完了（2026-09-14 00:37 JST）
+
+e1f6513cのbackend CI run34765847297/job103746586673はsuccess。
+原ログ /tmp/product-detail-pg-ci-final-code.log: 3596 passed, 95 skipped, 309 warnings in 236.76s、保存サービス73文中71実行（97%）。
+CIはlocalhost:5432/jarvis_test_dbのRLS_ADMIN_DATABASE_URLを設定。新規27ケースの共通skip条件は該当せず、
+実DB専用fixtureがGITHUB_ACTIONS/localhost/試験DBを確認して実行された。全体の95skipを本便の未実施と混同しない。
+原子性・2同時編集・既存追加語の競合・応答消失・非管理者/不正入力・分類・商品ID/解析参照・別テナント不変を検証した。
+ローカルの統合後単体は30ファイル377件成功（mainの別便34件追加後、/tmp/product-detail-unit-integration.log）。
+
+mainがe27c2f59まで前進。製品コード競合0、tasks/todo.mdとevidence-registry.mdの追記競合2件を、
+本便行＋mainの最新別便行、双方の根拠追記を残して解消。統合後の最終CIはPR3492の最新HEAD checksが正本。
+本便製品コードは84a6a697から変更なし。追加変更は試験の表示期待/不変検証と文書記録のみ。
+
+実装差分の自己レビュー: 既存CSV経路・認可・ID維持、値バインド、商品ロック後の版再取得、
+一括確定/rollback、UI多重送信/未保存確認、日英キーを照合。未解決の製品不具合なし。
+同一AIによる自己レビューであり、独立した第二者レビューではない。
+現在地: 設計作成/設計自己審査/PO実装承認/実装/PR提出済み。正式GO記録待ち、マージ/デプロイ未実施。
+公開依頼の原文は受領済みだが、scripts/check-process-artifacts.js:293–321は当該PR番号を含む原文を要求するため創作しない。
+DB構造変更/本番データ直接更新0。本便コードはGit/PRに保存済み。コードの復旧は通常のPR経路で行う。
+## 商品CSV往復・新規依頼（2026-09-13）
+
+PO原文「合意、この内容を目標として進める、離席するのでエクスポート機能を実装してPRマージ本番反映まで完了させてくれ」。前提の3条件を設計§21へ整理。最新main10212686起点の正式new-worktreeで専用設計場所を作成。他者の未保存変更は保持。実装範囲は旧10列新規取込を保持した12列既存更新とexport。原文GO #番号は存在しないためprocess gateを偽装せずPR完成後に不足を示す。参照一次情報のSHAはroundtrip-design-evidence.json、事実行番号/設計自己審査/受入条件はdesign§21。Context7不在のため許可済みの公式docsを直接確認。製品変更0。
+
+設計時のCSV codec対照：13種の空/日本語/空白/comma/quote/CRLF/式先頭/apostrophe値を語配列0〜2要素と商品名で組合せ、外側BOM CSV＋内側CSV＋可逆apostrophe処理の2379組が往復一致。設計用の純Python試作であり製品実装の試験ではない。実装後は現物codec/PGで検証する。frontend api.requestForm:173はPOST再送ループなしを直接確認。Playwright portはconfig.ts:20のPORT変数で固定可能、カード文言を実物へ合わせた。
+
+実装開始前停止の観測：公式new-worktree.sh96行がgrep部分一致のため、release-product-csv-roundtrip-designだけの実在を短いrelease-product-csv-roundtrip実在と誤判定。git worktree list --porcelainで実装場所なし、test -d失敗を親確認。cdガードの拒否は正常作動。script/guardを変更せず、部分一致しないrelease/product-csv-roundtrip-implへ正式カードを補正し同じ作成手順を使う。製品編集0。
+
+実装ソース保存時のガード停止：exec_commandのheredoc内の語削除SQLが実DBの不可逆操作として検出された。親の読取検索も同じ語の検出で拒否され、shellテキスト全体の誤分類と判明。permit/設定変更/SQL文字分割を行わず、通常の構造化tools.apply_patchでSQLをそのまま提示するコード編集として再申請し成功。DB接続/SQL実行はなし。正式編集経路で実装継続する。
+
+実装詳細の確認（2026-09-13）：2MiB未満でも標準csvのセル上限に達するため、同期読取のtry/finallyだけfield_size_limitを拡大して復元する方式を採用。生バイト2MiB制限は保持し、awaitを挟まない。大セル/境界/例外時復元を製品試験へ要求。OWASP公式 https://owasp.org/www-community/attacks/CSV_Injection を直接確認し、全角＝＋－＠も可逆保護対象に含め、外側更新CSVをQUOTE_ALLとする。Excel保存・再読込後まで万能な安全保証はしない。Context7不在の公式資料代替、固定設計§21の契約を満たす実装詳細としてカード追記。固定design SHAは変更しない。
+
+実装中の親読取確認：単一SELECT export、全商品列/語UUID/位置を含むrevision、全対象table lock後の再検証、1commit、未変更語の保持を現物確認。PG試験初版は先頭1商品の失敗だけだったため、2商品の編集と2商品目失敗、応答不明後の全商品/語/履歴一致、同code別tenant、無効参照保持、codeだけの相互入替でstaleを検出する証跡を追加するよう要求し、修正版を読取確認。既存provision/atomic_pg fixtureの安全条件は不変。
+
+画面確認：初回Chromium11成功の画像を親が直接開き、1440で変更前後が読めること、390で変更列が画面外にあることを確認。既存DataTable横スクロールを実際に操作してviewport内を検証する試験/画像を追加要求。更新modeにも残っていた「登録」のsteps/summary/statusを設計§21-6に合わせて日英修正し、結果画面も保持するよう要求。全FEunit初回349成功/1件StaffFormButtonMigration timeout、同時build終了後の単独再実行350成功（12.78秒）を生ログで確認。製品改修後の最終再検証は別途記録する。Docker daemon不在のため実PGは正式CI待ちであり、ローカル成功を創作しない。
+
+保持対象を親が直接比較：旧master/importサービス、frontend package-lock、backend requirements/dev、共通api.ts、固定design.mdの7ファイルがd56649c5版とbyte一致。make lint-ciは既存方針でmypy非阻止、コマンド終了0と型検査出力に既存範囲のエラーがあることは区別する。新規venv312は未追跡の許可済み開発環境、製品としてcommitしない。
+
+PR3489初回CI（HEAD0a4a7bfc、base313d7796）：process gateは番号GO欄不足で停止。親が後段の設計/維持/引用validatorを個別実行し全配列空、PR設計パスの末尾§21は別行へ修正。これは正式GO検査の合格ではない。secret scan job103738549601はd56649c5のroundtrip-design-evidence.json13行、frontend/src/lib/api.tsをキーにしたSHA256をgeneric-api-keyとして検出。親が元baseの実ファイルを再計算し10/10一致、秘密ではないことを確認。証拠JSONを明示的なpath/sha256レコードへ変更し、値10件を保持。gitleaks8.30.1を既存.gitleaks.tomlで当該文書へ実行、exit0/no leaks。検査設定/allowlist/承認条件は変更しない。
+
+誤検出はgit履歴の古い記録を対象にしている（CIの実git log範囲d56649c5^..0a4a7bfc）。追記commitだけでは消えないため、旧branch/PRの証拠を保持し、origin/mainから正式な新規作業場所へ検収済み13製品の同一内容と修正済み9文書を保存してPRを作り直す。既存branchのforce-push/履歴上書きはしない。新しいPRでも通常secret scan/実PG等を実行する。旧PRは新PRの作成確認後に置換先を記録して閉じる。実装再設計/本番データ操作ではない。
+
+### DETAIL-01 GO受領後の環境復旧・CSV統合（2026-09-14 09:39 JST転記）
+
+PO原文「進めるGO #3492」を受領後、ローカル起動ガード欠落で全操作が停止。POから「復旧したので再開してくれ」を受領し、executor-preflight exit0を確認して再開。ガードの再作成/変更は本セッションでは未実施。PRはOPEN、HEAD0f38bbf3、停止中にmain ae5248f4（PR3490 CSV往復）が追加され、両機能を保持して統合。台帳/仕様の双方の追記も保持した。
+英語名/型番検索は一覧だけ拡張済みだったため、roundtripのCSV検索条件も一致させた。既存詳細PG試験へ英語名/型番出力2件、CSVと詳細の古い版の相互拒否2件を追加。追加製品差分は検索条件1箇所のみ。新たなAPI形式や本番データ操作なし。統合後の検証はPR3492の最新checksを正本とし、過去CI成功で代替しない。
+既存作業台/.pr-number3492を直接確認、公式ledger-lookupが未登録exit1だったため同じブランチの.d登録を復元した。再登録日は本日、旧開始日時を新しい観測と混同しない。GOはチャット原文を転記し、GO委任の自己有効化はしない。
+
+復旧後ローカル検証: npm run test:coverageは30ファイル384件成功（/tmp/product-detail-restored-unit.log）、Playwright詳細/CSV統合22件成功（/tmp/product-detail-restored-e2e.log）。これらのAPIは模擬であり実DBは新HEADのCIで確認する。
+
+2026-09-14 全語一致実装前確認: preflight成功、origin/main=59f644cd。10:52:17 JSTのreadonly取得で1504明細/辞書/原文/訂正/解析が10:31版と全一致。肯定商品照合はanalyzer:554、除外は:550、品質R5はtcg_keyword_lint.py:96。design§23/24とpartial-match-evidence-20260914.jsonに対照と契約を保存。PR3492はmerged、deploy34794455633=failureをGitHubで直接確認。PR3486は辞書migration2ファイルのみ。別担当の配備障害を本件に混在させない。
+
+実装後検証: all-terms-result.json。固定正解0→4/4、1504明細の結果変化4/根拠のみ変化4、既存特定喪失0/別商品化0。実装AST純関数48成功、ruff成功、品質規則全文不変（既存STOP9）。DockerなしのためDB pytest未実行、正式CI待ち。Python3.14依存導入はpydantic-coreで失敗、スタックに合う3.12で再準備。自己レビューは肯定呼出し1か所/版/R5とガード不変を確認、独立レビューではない。最初の保存コマンドは本店mainと判定されガード停止、専用worktreeを先頭cdで明示して保存。
+
+PR3499作成後mainがe69da6edに進み根拠登録の末尾追記が競合。両方の記録を保持して統合。商品照合/R5本体は統合による変更なし。Python3.12の実import版48検査も成功。make lint-ciはexit0だが既存Makefileがbandit/mypyを許容するため無指摘とは称さず、正式CIを確認する。
+
+正式CI初回4失敗をdesign§24-5に分類。3件は正式商品名に含まれる語による期待変化（PM0179根拠のみ/PM0256・257新規特定）、1件はAST接続テストの関数読込不足。固定fixtureは変更せず明示的v9期待値を追加。製品ロジックは変更なし。11:05再取得では除外語49行のidのみ変化、他列は全一致。最新データで再対照し結果/品質指摘がすべて再現した。
+
+最終実装検証: PR3499 HEAD9f96d682、正式Backend34798680670/job103836767094は3718成功/95skip/失敗0、265.85秒、coverage65.05%。Checks34成功/8対象外/1失敗。唯一の失敗は番号付きPO GO記録不足で、GO原文は創作しない。最新本番配備34797490804はPM0264 identity mismatchで失敗、通常配備停止の解消は別担当の設計。バックアップ105621.sql.gz 7.2M成功ログ確認、復元未検証。本件の製品実装・実測・自己レビュー・PR提出済み、マージ/本番反映/再解析/配信未実施。次は配備障害解消を確認し、正規GOと最新HEADチェックを満たして通常経路で公開する。本結果保存は製品6ファイルを変えない文書差分。

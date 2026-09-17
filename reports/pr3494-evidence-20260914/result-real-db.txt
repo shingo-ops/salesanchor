@@ -1,0 +1,7 @@
+migration_normal_and_repeat=PASS
+extraction_attempts_phase_check_incorrect_definition=ACCEPTED
+extraction_attempts_job_fk_incorrect_definition=ACCEPTED
+parsed_target=8388608; saved={"phase": "completed", "parsed_bytes": 8388608, "parsed_missing": false, "error_code": null}
+parsed_target=8388609; saved={"phase": "failed", "parsed_bytes": null, "parsed_missing": true, "error_code": "PARSED_TOO_LARGE"}
+recorder=ACTUAL_SOURCE; ownership=ACTUAL; sql_session=ACTUAL; task_and_analyzer=NOT_EXECUTED; gemini_calls=0
+isolated_postgres=STOPPED; tcp_disabled=true

@@ -659,3 +659,114 @@ Architect判定: **APPROVE（分割作業カードの整合性のみ）**。Plan
 13移管分割実行済み。設計担当がAST差分・Button83/旧319・全体220試験・表示120組/実Confirm60条件/キー操作10条件を直接確認。限定読取担当の報告とroot直接検証を区別した。
 詳細は [実装検収](evidence-20260910/shared-button-implementation.md) の2026-09-12節と保存manifest参照。
 POからPR/マージ/本番反映の依頼を受領。現行validateGORecordは受領原文にPR番号がないため拒否することを直接確認。番号付きGOを代筆せず、PR/CIまで進め正式承認待ちとする。
+
+
+### 2026-09-13 AKの対象選定
+
+固定739f772dで旧319・共通84を再計測。3ページ6フォームの12ボタン（旧10/裸2）を次便候補とした。実物のtype/属性/原hash、局所配置192組と失敗原稿は[evidence-20260910/ak-page-form-buttons.md](evidence-20260910/ak-page-form-buttons.md)へ保存。詳細設計はdesign.md§AK。製品差分0、PO実装承認未取得。
+
+
+### 2026-09-13 AK実装承認・検収
+
+PO原文「進める」（12件の実装承認質問への返信）を受領。CARD-AK-PAGE-FORMS-01を既存担当へ発行。製品3ページ12個とページ試験1ファイルを実装。共通96/旧309/専用20/リンク8、業務本文差分0。root直接ブラウザーは通常144・pending48・操作36・再開6の前後組全成功。実装担当品質254試験/checkall/build/Storybook成功を原ログ確認。実装検収APPROVE、詳細はak-page-form-implementation.md。今回PR/新番号GO/マージ/本番は未実施。
+
+### 2026-09-13 AL次便調査
+
+AK製品PR3457本番成功、結果文書PR3460 merge9e0406ee。専用編集2ページのform-actions4件を実物調査。ContactEditPage:209/210、SupplierEditPage:79/86、type明示4/4、対象外連絡先重複確認2。原文/hashはevidence-20260910/al-fullpage-button-audit.json。専用画面の前後表示は未検証、設計はdocs/specs/design-system/design.md§AL。今回4件の実装承認未受領。
+
+2026-09-13 AL実装検収済み: PO原文「進めてくれ」で実装承認。4ボタン移管、root逆変換2ページ一致・実表示72前後組/操作24前後組成功、実装担当266試験/品質成功を原ログ確認。共通100/旧305。根拠: docs/handoff/design-system-recon/evidence-20260910/al-fullpage-implementation.md。PR3461実装更新へ、今回番号付きGO/マージ/本番未実施。
+
+
+2026-09-13 AM実物調査: StaffPage:299〜302/321〜322、StaffEditPage:225〜226の6ボタン。登録POST・簡易PATCH6項目・専用PATCH全項目の差と本人refresh条件を確認。UiPrefsProvider外no-opを検収に使わず実Provider必須。 設計はdocs/specs/design-system/design.md§AM、根拠はdocs/handoff/design-system-recon/evidence-20260910/am-staff-button-audit.json。自己審査APPROVE、実装承認/実装/96組検証は未実施。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AM実装検収: PO原文「進める進める」で承認、6ボタン移管。root逆変換2ページ/共有7hash一致、96表示/29操作前後組成功。担当32新規/298全体試験と品質成功を原ログ確認。共通106/旧299（最新main統合前）。根拠: docs/handoff/design-system-recon/evidence-20260910/am-staff-implementation.md。実装検収APPROVE。PR3468実装更新・統合後品質/CIへ、今回番号付きGO/マージ/本番未実施。
+
+
+2026-09-13 統合後確認: main b52a4defを通常merge（ad093b7b）。台帳末尾競合は両側の記録を保持し、完全同文の重複1件だけ整理。製品3hash/共有7hash不変。root直接実行で28files/311tests（coverage statements15.1%）、check:all（218warnings/0errors）、build、Storybookすべてexit0。ログはcheckpoint内am-integrated-*.log。merge時フックの対象外ItemComparison/reviewIssues既存59warningsは記録し、チェック無効化/製品修正なし。統合後の構文母数はmain108/305→本便114/299（本便+6/-6、他便追加8）。元の106/299検収結果を上書きしない。PR3468へ保存、最新GitHub CIと今回番号付きGO待ち。マージ/本番反映は未実施。
+
+
+## GO #3468受領（2026-09-13 15:26 JST記録）
+
+PO原文「GO #3468」を今回チャットで受領。承認時HEAD1c5cccf2、対象はスタッフ3フォーム6ボタンのPR3468マージと自動本番反映・反映後確認。PO本人のGOであり、未有効のAI委任による発行ではない。
+最新main c22ad508を通常統合（89d4a624）、台帳末尾競合は両側の根拠を保持。製品3/共有7hashは検収版と一致。新規API/DB/CI変更0、他便を本PRの変更と扱わない。CIが最新HEADで成功後、公式merge wrapperを使用。配備時新規backup/HEAD/health/公開6ボタンを確認する。現時点でマージ/本番未実施、反映結果はPR3468の本番反映欄へ保存する。
+
+
+## AM本番反映完了（2026-09-13）
+
+PO原文「GO #3468」に基づき、最新HEAD0829affdのCI38成功/8対象外・CLEAN、mainとの差分先行0、製品3/共有7hash一致を確認。公式wrapperでPR3468をmerge commitし本番反映を完了した。
+
+- PR: https://github.com/shingo-ops/salesanchor/pull/3468 （MERGED、2026-09-13T06:32:24Z）
+- merge: c50d719b2505c3e1d1977c4f36bdae39f14dae22
+- deploy: https://github.com/shingo-ops/salesanchor/actions/runs/34742996601 （SUCCESS、job103685769339）
+- root原ログ確認: salesanchor_db_20260913_153301.sql.gz 7.6M新規取得、配備HEAD c50d719b一致、Finalize/Verify成功。バックアップ復元試験は未実施。
+- root直接公開確認: App/公開JS/API /api/healthすべてHTTP200、database/redis/celery connected。公開/assets/index-An53UlbI.jsの3フォーム6件に取消secondary/送信primary/size md、登録disabled2・pending文言、専用編集取消先/staffを確認。SHA256 ff0f29a262ab54b44330959f9d98b49a3f0c82563183374d2734c7baca236d26。
+
+根拠と再現検査器: docs/handoff/design-system-recon/evidence-20260910/am-production-verification.json。初回ローカルPython CA不足は検証を無効化せずsystem curlへ、見出し数固定の検収器仮定は取消先との一意対応へ修正。失敗履歴をJSONに残し製品は変更していない。
+設計自己審査・PO実装承認・root検収・GO受領・実装保存・マージ・本番反映済み。本番認証付きフォーム送信とPO目視は未実施。LINE再解析/3シート配信は本便対象外。残存旧299の次便選定は別の設計作業、表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AN次便設計案: Bot3フォーム6ボタンを実物監査（BotsPage:259/260/281/282、BotEditPage:88/95）。共通114/旧299→期待120/293、共有10hashを保存。キー表示を伴う登録と通常編集の差を分離、96表示組は未実行。設計はdesign.md§AN、根拠evidence-20260910/an-bot-button-audit.json。同一AI自己審査APPROVE、今回実装承認待ち・製品未変更。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-13 AN実装検収: PO原文「進める」で6件実装承認。root逆変換2ページ/共有10hash一致、最終96表示・24操作+6閉鎖再開前後組成功。試験前提8観測で初回4失敗を試験のみ補正、担当32新規/343全体試験・品質成功を原ログ確認。共通120/旧293。根拠docs/handoff/design-system-recon/evidence-20260910/an-bot-implementation.md。実装検収APPROVE、PR3480実装更新と最新main/CIへ、今回番号付きGO/マージ/本番未実施。
+
+## AN 本番反映結果
+
+2026-09-13 PO原文「GO #3480」を19:47 JST記録。HEAD7533edcfのCI39成功/8対象外・CLEANを直接確認し、19:48:12 JSTに正規merge615ba615。deploy34752797542/job103712050698成功、原ログで配備HEAD一致・新規backup salesanchor_db_20260913_194851.sql.gz（6.6M）確認。19:51:58 JST、公開index-DgcOKiDe.jsのBot3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡an-production-verification.json、再確認器an-verify-production.py。認証付き本番フォーム送信・実キー発行・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+2026-09-13 AO次便設計草案: チーム3フォーム6ボタン（TeamsPage200/203/221/224、TeamEditPage67/74）。基準116b1cf6で共通120/旧293→期待126/287、2ページ/共有12hash・対象外6原文を直接保存。3項目送信と保存中ロックなし、メンバー処理の対象外境界を確認。設計はdocs/specs/design-system/design.md§AO、根拠evidence-20260910/ao-team-button-audit.json。製品未変更・実装承認未受領・144表示組未実行。表/報酬3/カレンダー色保留、新CI最後。
+
+AO審査追記: 同一AIによる設計自己審査APPROVE。原文6/type6/対象外6・2ページ/共有12hash一致、製品差分0。design/maintenanceエラー0、task-state/diff-check成功、未発行カード草案のcard-lint exit0（長行警告1のみ）。実装承認待ち、実装/144表示組未実行。
+
+
+AO実装承認・担当引き継ぎ: 2026-09-13 22:34 JST、今回6件の実装承認質問へのPO原文「進める」を受領。AOの製品3ファイル・品質検証を承認済み。最新main1021268623f2dba566d953fea056ff548ae28f3aまでfrontend差分0、対象2ページ/共有12hash一致を直接確認。collaboration.list_agentsではrootのみで、従前の実装担当は現存しない。起動指示の新サブエージェント暗黙起動禁止に従い、新担当1名の委任確認待ち。rootは製品実装へ切替しない。カードは担当確定後の正式発行待ち、製品変更0。今回番号付きGO/マージ/本番承認は含まない。
+
+
+AO実装検収完了: POの実装/新担当1名の委任承認後、6ボタン移管と34回帰を実装。root逆変換2ページ/共有12hash一致、144表示・37操作前後組全成功。担当377試験・品質成功の原ログを確認。起動前EPERMと利用上限の中断履歴を保持。共通126/旧287。根拠docs/handoff/design-system-recon/evidence-20260910/ao-team-implementation.md。PR3487へ保存・最新main統合/CI確認、今回GO/マージ/本番未実施。
+
+## AO 本番反映結果
+
+2026-09-14 PO原文「進める GO #3487」を00:29 JST記録。承認時119001f3へmain3c96b7dcを通常統合、製品3/共有12hash一致、統合HEAD1fe89649のCI37成功/8対象外・CLEANを直接確認。00:32:51 JSTに正規merge e27c2f59。deploy34765930372/job103746764247成功、原ログで配備HEAD一致と新規backup salesanchor_db_20260914_003329.sql.gz（7.0M）を確認。00:36:37 JST、公開index-CGyiwluk.jsのチーム3フォーム6ボタン属性、App/API HTTP200、DB/Redis/Celery connectedをroot直接確認。証跡ao-production-verification.json、再確認器ao-verify-production.py。認証付き本番フォーム送信・実チーム/メンバー書込・PO目視・復元試験は未実施。製品便完了、結果文書の保存PRは別。
+
+
+### APリード6ボタン・選定recon（2026-09-14）
+
+基準e39fa65abb83837a7909290b993a8cd363a11ef9。設計はdocs/specs/design-system/design.md§AP。部品=UI部品/共有hook/helper/トークン・CSS。監査原文と21hashはevidence-20260910/ap-lead-button-audit.json、再測定器ap-lead-audit.cjs。
+
+1. 全体像: App.tsx:163/178から一覧/専用編集へ。LeadsPage.tsx:187/218、LeadEditPage.tsx:129に登録15/簡易7/専用15項目送信（編集lost時+2）。一覧SSE更新はLeadsPage.tsx:180。案件化/統合/削除は別の処理。
+2. 共用部品: Button.tsx:38/49、LeadFormFields.tsx:44/95、CountryCombobox.tsx:35、ChannelTypeCombobox.tsx:35、useRecordDrawer.ts:39、useSSE.ts:25を直接照合。国/チャネルの入力は検索queryで、確定値は候補クリック時のみ変わる。
+3. 非共用部品: LeadsPage.tsx:439/440/540/541、LeadEditPage.tsx:289/290の旧6件。原文type6/6、対象外6件。初回監査は案件化取消を含む7件となりassertで停止、親formのperformConvertを構文で除外して6件を原文照合。未保存の誤集計を確定値へ採用しない。
+4. ルールの所在: ADR索引から113/067/027/073/122、lead索引から109/119を確認。既存design-systemの延長。Button.cssとcomponents.cssの外観/配置を変更しない。正式カードは設計パートナー§5.5とcard-lintで検査。
+5. 維持の仕組み: frontend/vitest.unit.config.ts:36のsrc/**/*.test対象にLeadFormFields.test.tsxが含まれる。実行1ファイル3件成功（ap-existing-lead-test.txt）、CountryComboboxは当該既存試験ではmock。LeadsPage/LeadEditPageを直接importする既存ページ回帰は検索0。新規LeadFormButtonMigration.test.tsxと既存frontend品質CIで補う計画。実装後の試験は未実施。
+6. 設計図との対照:
+
+| 親の目的 | 現状 | 判定 |
+|---|---|---|
+| ボタン外観を共通部品に集約 | 共通131/旧287、今回6件は旧実装 | 不足6件を今回対象 |
+| 既存の操作・業務内容保持 | type/onClick/入力/送信契約を特定 | 一致、変換対象外の本文維持 |
+| 表/報酬3/カレンダー色保留・新CI最後 | 今回製品/CI未変更 | 一致、対象外 |
+
+余剰の新機能追加なし。利用回数・事業効果は未測定。比較対象は5別画面の各2件（JSONに原文/行/hash）。リードは1領域2ページで6件を揃えるため選定。安全性や効果の全候補中最大を測定したとはしない。
+
+7. ノイズと境界: 構文でbutton/Link/aのbtn-*だけを旧数としstories/test/spec/design-previewを除外。現mainの共通+5はPR3492の商品詳細Drawerで、APの成果へ加算しない。監査共有21以外も製品許可3ファイル以外は変更禁止。本番書込/実認証/外部通信0。GO委任正式文書はdraft/REVISE、有効化を確認できず代理GOを使わない。
+
+外部事例なし: 新仕様/新ライブラリ導入ではなく既存部品への移管。npm ci成功の既存依存監査出力（24件）はap-npm-ci.txtへ保存し、本便で依存更新はしない。旧3試験の成功とAP製品実装・表示240組の合格を混同しない。runbook検索では今回AP固有スプリントなし、既存todo行/recon/migrationへ保存する。
+
+
+AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非lostの通常/pendingで2失敗。担当を停止し、rootが390/1280×前後の4ケースを測定した。390pxは変更前後とも自然TabでscrollY486/max518、ボタン下端899.875/viewport900でfocus輪郭が欠け、実wheelで下端までscrollY518にすると下端867.875となり輪郭が収まる。1280pxは前後とも自然Tab時点で収まる。根拠ap-focus-precondition-probe.json。これは変更前からある自然Tabの表示上の制約で、本番App全体での実測ではない。
+
+分類: root検収手順の不足（設計APの「下部まで実scroll」を未実施）と既存挙動の観測。製品変更なし。受入条件の四辺欠け0は実scroll後に検査する指定を維持し、自然Tabの前後観測も保存して新規欠け0を追加検査する。既存の自然Tab欠けを解消済みとは記録しない。CSS/ラベル/入力/製品範囲の変更0。初回失敗ログを残し、手順補正後の結果と分ける。
+
+
+AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### 2026-09-14 配備前提の停止
+
+AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合。evidence-registryの追記競合は双方保持、main全行の包含と製品3hash一致を確認。製品HEAD f3598fb2のCIは38成功/8対象外、process-artifactsだけ今回GO未受領のため停止している。
+
+別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
+
+同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。

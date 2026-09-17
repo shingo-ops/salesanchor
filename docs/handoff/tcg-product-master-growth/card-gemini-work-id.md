@@ -29,3 +29,147 @@ mode: handoff
 CIで模擬Geminiと隔離PostgreSQLによる正常/不正ID/型番作品限定/旧版/配信要確認除外/未migration/参照変更の試験を行う。実行件数と成否を生出力から記録。未実行を成功扱いにしない。
 停止時は手順番号・最後のコマンド・理由を完了報告へ記す。本報告はカードCARD-LINE-GEMINI-WORK-ID-01の実行結果である、と冒頭に記す。完了報告の本文に検証の生出力を全文含める（POへの説明は要点を併記可）。
 END OF CARD
+
+
+## 後続カード CARD-LINE-WORK-SPAN-02
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: guards/04-worktree.md、guards/11-lint.md。設計はdesign-keyword.md §16.12、自己審査APPROVE。PO修正着手承認「進めてくれ」。
+作業場所: release/line-work-id-production-record（origin/main ee455fb1起点、既存2709f628は本番証跡の文書のみ）。
+許可: gemini_extraction_svc.py、tcg_work_reference.py、tcg_analyzer_svc.py、tasks/tcg_extraction.py、tests/test_tcg_work_id.py、tests/test_tcg_work_matching_integration.py、既存design-keyword.md/recon.md、ADR154のWhyと生成索引、evidence-registry.md、tasks/todo.md、本カード。
+手順1 span出力契約・p2版・p1互換・内容を含まない診断を設計どおり実装。
+手順2 make lint-ci、check-task-state.sh、card-lint.sh、diff --check。Docker不在では実PGはCIで実行。Gemini実呼出しは禁止。
+手順3 ready PR作成、正式カード検査違反0を先に確認。設計の再解釈・推測補正・DB/CI/secrets変更・追加本番操作は禁止。
+期待: 模擬8種拒否/正常span、p1/p2実PG互換が成功。報告は本カードの実行結果として自己レビューとCI実行結果を区別する。GO3441を追加PRへ流用しない。
+END OF CARD
+
+
+## 実行承認待ちカード CARD-LINE-WORK-COMPARE-03
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。照合: 1記号○/2ready PR○/3報告宛先○/4読取比較1目的○/5起点○/6書式○/7合格条件○。本カードの発行は実装開始の承認ではない。
+受領確認: CARD-LINE-WORK-COMPARE-03。設計design-keyword.md §17、recon「作品IDのみ比較の設計棚卸し」。自己審査APPROVEは読取商品比較のみ。既存設計文書のPR/版を読んで、POが比較実装を明示承認した後に開始する。
+手順0: executor-preflightを実行し、最新origin/main起点のrelease/line-work-id-comparisonをnew-worktree.shで準備する。既存同名の有無/台帳先約を先に調べる。机作成の完了と実在確認は分ける。既存セッションの机へ無断で入らない。エージェントは追加起動しない。
+許可ファイル: backend/app/services/tcg_work_comparison_svc.py、backend/tests/test_tcg_work_comparison.py、backend/tests/test_tcg_work_comparison_pg.py、既存design-keyword.md/recon.md、tasks/todo.md/evidence-registry.md、本カード。実装差分は新サービスと新試験のみ、既存製品コードの変更/削除0。本番の判定ルールに修正が必要なら本カードを止めて設計へ戻す。
+手順1: 入力固定・2列応答の厳格parser・既存純粋商品照合呼出し・非公開比較レポートを実装する。DB接続はREAD ONLY、API中transaction保持なし、入力/マスタの再読取SHA一致必須。書込み再解析関数を呼ばない。RAW欄や行番号を応答へ要求しない。欠落/余剰/重複/未知ITEM_IDやUUIDは拒否する。
+API前の対照計算は、同一マスタ/RAW/処理で旧作品判断の商品結果を再現する。保存結果/旧判断対照/新判断候補を分離し、対照不一致なら原因未確定のまま実APIへ進まない。
+手順2: 合成データで正常順/逆順、欠落/余剰/重複/不正UUID、未知/空WORK_ID、同名異ID、訂正発生、参照変更、RAW変更、ID集合変更を検証する。模擬モデル以外の呼出しはテスト失敗にする。
+手順3: PostgreSQLで比較前後の全既存表内容一致とDBロール/transactionによるDML拒否、実analyzerとの差を検査する。商品名/型番限定/作品不明/複数候補/単位区分/Single除外を含む合成ケースで商品IDと候補集合の一致を確認する。本番analyzerを使う比較対照の書込みは隔離したCI DBだけ。全状態再解析一致とは称さない。
+手順4: make lint-ci、check-task-state、card-lint、git diff --check。Docker不在では実PG試験はGitHub CIへ。期待は模擬/実PG試験が全成功、差分対象外0、既存製品変更/削除0。失敗項目はIDと理由を非公開証跡で特定する。
+手順5: gh-pr-create-safe.shでready PRを作成する。--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。禁止形は架空URLや未保存文書への参照。今回のGO番号は未採番。3441/3458を流用しない。
+禁止: 実装テストでGemini実呼出し、本番DML/再解析/結果採用/配信、DB/CI/deploy/secrets変更、既存RAWの更新、判定不能の推測補完、承認ガード解除。後段の実Gemini比較も、CI合格・正規マージ/本番反映確認後の別手順とする。
+完了報告の冒頭は「本報告はカード CARD-LINE-WORK-COMPARE-03 の実行結果である」。本文に検証の生出力を全文含め、停止時は手順番号/最後のコマンド/理由を記す。PO説明では比較設計合格・実装/CI・本番比較未実施・採用/配信未完了を分ける。
+END OF CARD
+
+
+## 実装承認待ち CARD-LINE-WORK-CLIENT-04
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-WORK-CLIENT-04。設計design-keyword.md §17.12、reconのClient寿命不具合節。自己審査APPROVE、PO実装承認待ち。
+手順0: POが修正実装を承認した場合のみ、executor-preflight後に最新origin/main起点の専用release/line-work-client-lifetimeを公式new-worktreeで準備する。先約確認必須。新エージェント自動起動禁止。
+許可ファイル: backend/app/services/tcg_work_comparison_svc.py、backend/tests/test_tcg_work_comparison.py、既存design-keyword.md/recon.md、本カード、tasks/todo.md、docs/ai-agents/evidence-registry.md。
+手順1: call_work_modelのclientをwithで保持し、応答text取得後/例外時にclose。ほかの関数やモデル設定を変えない。
+手順2: 毎回新規FakeClientを生成する寿命感知試験を追加。旧実装失敗/修正後成功、正常/例外時解放、引数/text契約を確認。Gemini実通信禁止。
+手順3: make lint-ci、既存Backend CI、check-task-state、card-lint、diff --check。Docker不在のローカルpytestは禁止、実PGは既存CI。合格は試験全成功と対象外差分0。
+手順4: gh-pr-create-safe.shでready PR、--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。正式card-lint違反0を先に確認。GO3465の転用禁止。
+禁止: DB/CI/secrets/配信仕様変更、本番修正直書き、修正前後のGemini試験実呼出し、自動再試行追加、採用/全再解析/配信、未確認成功宣言。新設計へ広げる必要がある場合は停止する。
+本報告はカード CARD-LINE-WORK-CLIENT-04 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別し、停止時は手順番号/コマンド/理由を記録する。
+END OF CARD
+
+
+## 実装承認済み CARD-LINE-EXTRACTION-TIMEOUT-05
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+mode: handoff。状態: 実装承認済み・発行。読んだ節: guards/04-worktree.md、guards/11-lint.md。受領確認: CARD-LINE-EXTRACTION-TIMEOUT-05。design-keyword.md/recon.md「シンソク抽出の時間制限見直し」、ADR-154/ADR-113に従う。
+手順0: POが300/330秒の限定実装と実装役への委任を承認した。受領記録2026-09-13 14:44 JST、PO原文「進める」。マージ・本番反映の承認ではない。公式作成済みrelease/shinsoku-extraction-timeout-designを使用し、preflightと現在HEAD/先約を確認する。実装担当1名へbackendの許可ファイルだけを委任。設計担当は文書を所有し、相互の変更を戻さない。
+許可ファイル: backend/app/tasks/tcg_extraction.py、backend/tests/test_tcg_gemini_extraction.py（既存試験不足時のみ）、design-keyword.md、recon.md、本カード、tasks/todo.md、docs/ai-agents/evidence-registry.md。
+手順1: tcg.extract_source_messageだけsoft_time_limit=300、time_limit=330にする。他の設定・処理は変更しない。
+手順2: 登録task属性を確認。make lint-ciと既存Backend CIで通常抽出/例外処理の回帰0を確認。Dockerなしのローカルpytestは禁止。模擬応答のみ。
+手順3: check-task-state.sh、card-lint.sh、git diff --check。期待: 違反0・対象外製品差分0・原文/解析サービス差分0。結果を設計/recon/台帳へ追記。
+手順4: 正式レビュー手順でPR提出。本カードはマージ/本番反映/再抽出/配信を許可しない。番号付きGOの創作・転用は禁止。
+禁止: 本番DML、実Gemini試験、マスタ修正、モデル/prompt/SDK再試行/配信変更、全taskの時間制限変更、CI/deploy/scripts/secrets変更、ガード解除。設計範囲で進められる場合のみ続行。
+本報告はカード CARD-LINE-EXTRACTION-TIMEOUT-05 の実行結果である、と冒頭に記す。検証の生出力を添え、停止時は手順番号・コマンド・理由を記す。
+END OF CARD
+
+
+## CARD-LINE-PRODUCT-SPACE-06
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-PRODUCT-SPACE-06。
+設計: design-keyword.md「連続空白案の最終契約（PR3473反映後）」、recon同名の照合節。mode: handoff、ADR113/154、自己審査APPROVE。POは導入方針と3473後の順序を承認済み。設計担当の自動実装役化と新エージェント起動は禁止。
+手順0: 担当を割り当てられた実装役がpreflight/台帳を確認し、最新origin/mainから公式new-worktree.shでrelease/product-space-runsを準備する。同名/同対象の占有があれば停止、他者の変更を触らない。3473マージ8d5aa581の包含とanalyzerの契約を照合する。
+許可ファイル: backend/app/services/tcg_analyzer_svc.py、backend/app/services/tcg_keyword_lint.py、backend/tests/test_tcg_keyword_matching.py、backend/tests/test_tcg_keyword_lint.py、backend/tests/test_tcg_product_guards.py、backend/tests/test_tcg_work_matching_integration.py、backend/tests/test_tcg_work_comparison_pg.py。
+文書許可: 既存design-keyword.md/recon.md、本カード、docs/adr/ADR-154-tcg-parity02-gas-python-migration.mdのWhy、docs/ai-agents/evidence-registry.md、tasks/todo.md。設計証跡はPR3462の今回版を参照し、実装PRからその版を識別可能にする。
+手順1: 商品専用連続半角空白helperとmatch_product_keyword入口2変数への適用、品質R3/R4/R5/R6の同じ空白契約、ENGINE_VERSIONのv8を実装。最終契約の通り、共通文字正規化と日本語fallback、検索語元値/順序/長さは保持する。
+手順2: 2個/3個・片側/両側・除外・複数候補・作品/Single/数字境界・原文不変・basis/順序・品質検査の方向別ケースを合成試験へ追加。既存293名称/96例を維持。ASTローダーと版期待値を合わせる。実PGでRAW/訂正保持と比較の候補一致を確認。
+手順3: make lint-ci、check-task-state.sh、card-lint.sh、git diff --check。Docker不在のローカルpytestは禁止、正式pytest/PGは既存Backend CIで実行。期待は対象試験/既存回帰全成功、対象外差分0、実Gemini0。新規品質違反を黙って無視しない。
+手順4: git logと差分一覧を確認し公式gh-pr-create-safe.shでready PR作成。--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。別便GOの流用禁止、マージは本カード外。
+禁止: 保存原文の空白除去・全空白削除・状態/単位/価格/数量の変更・マスタ登録更新・DB/migration/CI/secrets変更・実Gemini試験・本番再解析/採用/配信・未確認成功宣言。
+本報告はカード CARD-LINE-PRODUCT-SPACE-06 の実行結果である、と冒頭に記す。検証の生出力と自己確認/CIを区別する。停止時は手順番号/最後のコマンド/理由をPOへ報告する。
+END OF CARD
+
+
+## CARD-LINE-CARDSET-07
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-CARDSET-07。mode handoff、ADR113/154。
+設計: design-keyword.md「カードセットの通常商品への誤一致防止」。PO追加依頼は9種セット誤判定対策、自己審査APPROVE。本人セッションで限定実装し、追加エージェントは起動しない。
+手順0: preflightと台帳/重複確認、最新origin/mainの3481マージ6326115c包含を確認。公式new-worktree.shでrelease/cardset-exclusionを用意する。既存の他者の変更を戻さない。
+許可ファイル: migrations/20260913_200000_tcg_cardset_exclusion.sql、scripts/run_all_migrations.shの登録1行、backend/tests/test_tcg_work_matching_integration.py。文書は既存design-keyword/recon、本カード、ADR154 Why、evidence-registry、tasks/todo。
+手順1: tenant_004のPM0263に除外語1行だけを追加するmigrationを最終設計どおり実装。BEGIN/局所timeout/5表の状態/同一性/重複/ロック/既登録時変更0を保持する。既存run_sqlへ末尾の登録1行追加。
+手順2: 隔離CI PostgreSQLで初回追加1/2回目0/別商品と別tenant保持/対象同一性不一致/重複/部分構造/空構造を検査。商品期待例を固定し、集合は未確定・個別9種は正しい商品・正常商品維持を確認。実Geminiを呼ばない。
+手順3: make lint-ci、card-lint.sh、check-task-state.sh、diff --check、migration lintの既存チェック。Docker不在のローカルpytestは禁止、正式PGは既存CIで確認。
+手順4: git log/許可差分を確認して正式gh-pr-create-safe.shでready PR提出。--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。正式card-lint違反0が前提。新PRのGO未受領、GO3481転用禁止。
+禁止: 本番DB直接更新、既存解析行/手動訂正/数量の上書き、新しい集合商品作成、既存データ再解析、配信、CI/deploy/secrets変更、追加スキーマ/他tenant変更、ガード迂回。
+本報告はカード CARD-LINE-CARDSET-07 の実行結果である、と冒頭に記す。停止時は手順番号/最後のコマンド/理由をPOへ報告。自己確認・正式CI・未実行を分ける。
+END OF CARD
+
+
+## CARD-LINE-CARDSET-08（本セッションへの実装割当て済み）
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+読んだ節: docs/handoff/design-partner-card-ops/guards/04-worktree.md、11-lint.md。受領確認: CARD-LINE-CARDSET-08。mode handoff、ADR113/154。設計はdesign-keyword.md「カードセット登録と相互除外・改訂2」。自己審査APPROVEは独立レビューではない。
+手順0: POから実装担当を明示された者がpreflightと台帳を確認。既存PR3483のHEAD fb41b645と改訂設計を照合し、担当引継ぎが成立したrelease/cardset-exclusionで作業する。自動実装役化/エージェント起動は禁止。同じ机を複数担当で同時編集しない。最新mainの包含と先行変更を確認する。
+許可ファイル: migrations/20260913_210000_tcg_cardset_bundle_registration.sql、scripts/run_all_migrations.shの追加登録1行、backend/tests/test_tcg_work_matching_integration.py。文書は既存design-keyword/recon、本カード、ADR154 Why、evidence-registry、tasks/todo。
+手順1: 改訂2の同一性/参照/コード衝突/別コード同一商品の重複チェックとatomicな追加migrationを実装する。個別3は既存UUIDのまま、新集合1、通常3と個別9と集合1の検索/除外契約を実装。CARD07のSQLを消さず冪等に接続する。別テナント/数量/英名/発売日/入数の推測更新は禁止。
+手順2: 隔離CI PGで新規1/再実行0/既存保持/コード衝突/別コード同一商品/不完全構造/参照欠落や無効/対象不一致/rollbackを確認。正式migrationで構築した表を使い、テスト専用DDL複製禁止。商品期待28と境界58を正式辞書から再照合する。28明細はコピー/原文根拠、58は合成入力と明記。
+手順3: make lint-ci、check-task-state.sh、card-lint.sh、ADR索引、diff --check、既存Backend CIとmigration検査をすべて確認。Docker不在でローカルpytestを実行しない。実Gemini呼出しは禁止。失敗時は受入条件を緩めず原因を記録する。
+手順4: 正式カード検査違反0の後、既存ready PR3483を改訂内容に合わせて更新する。新規PRが必要なら公式gh-pr-create-safe.shでready PR、--draft禁止。本文の良い例「- 設計: docs/handoff/tcg-product-master-growth/design-keyword.md」。旧HEADの3295成功を新HEADへ流用しない。番号付きGOは未受領、GO3481転用禁止。
+禁止: 本番DB直書き、既存解析/訂正/数量の上書き、9倍や9明細への分割、原文変更、CI/deploy/secrets変更、実Gemini試験、承認ガード迂回、マージ/配備/再解析/配信の独断実行。衝突や分類不明があればその操作を停止して設計へ戻す。
+本報告はカード CARD-LINE-CARDSET-08 の実行結果である、と冒頭に記す。停止時は手順番号/コマンド/理由をPOへ報告。設計検算・正式CI・本番確認を区別する。
+END OF CARD
+
+PO割当て追記: 本セッションの実装担当への切替とPR3483改訂を確認する質問に対し、PO原文「進める」を受領。2026-09-13T11:17:55Zに作業中実時刻を確認。受領そのものの正確な時刻は未取得、同時刻を受領時刻としない。新エージェント起動なし、マージGOとは扱わない。
+
+
+
+# CARD-LINE-EXTRACTION-RECORD-09（実装開始承認済み・本セッション担当）
+
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 本カードは通常記録Aの実装準備用。設計自己審査APPROVE、停止方針はPO合意済み。2026-09-14の「次は、実装担当の指定と実装開始承認です」へのPO原文「進める」を実装開始承認として受領。その後「このセッションを実装担当へ切り替え、カード09を実装してよいですか？」へのPO原文「進める」を受領。本セッションを実装担当に割当て済み。過去CARD08の実装承認や番号付きGOを流用しない。新しいサブエージェントは起動しない。
+
+mode: handoff。親 docs/specs/product-master/README.md、設計 design-keyword.md「通常記録A・実装引継ぎ版」、根拠 recon.md「通常記録Aの限定設計審査」、ADR113/154。上記の最終節がAの過去草案より優先。Bの商品候補判断は対象外。
+
+作業場所: 実装承認後、公式new-worktree.shでその時点のorigin/mainからrelease/line-extraction-attempt-recordを作成する。設計文書枝の古いtaskをコピーしない。開始時にmain313d7796からの対象差分を確認し、契約に影響する変更/採番衝突は設計へ戻す。他者変更の上書き・本店での製品編集は禁止。
+
+製品許可ファイル（実装承認後のみ）: backend/app/services/gemini_extraction_svc.py、backend/app/tasks/tcg_extraction.py、backend/app/services/tcg_extraction_record_svc.py（新規）、backend/app/routers/tcg_diagnostics.py、migrations/20260914_010000_tcg_extraction_attempts.sql（新規）、scripts/run_all_migrations.sh、backend/tests/test_tcg_extraction_record_pg.py（新規）、backend/tests/test_tcg_extraction_record_api.py（新規）、backend/tests/test_tcg_gemini_extraction.py、backend/tests/test_tcg_work_matching_integration.py。
+文書許可: 本カード、design-keyword.md、recon.md、ADR154のWhy追補案、evidence-registry.md、tasks/todo.md、当該枝のactive-work.d記録。正式な状態変更を根拠とともに更新する。
+
+禁止: Gemini実呼出、prompt/作品ID判断/10列/数量価格状態の変更、商品候補判断、配信変更、商品辞書更新、secrets/認証基盤/CI/deploy設定/運用スクリプトの独断変更（許可したmigration runner登録1行以外）、本番接続・DB更新・再解析・シート配信・マージ・GO代筆。本カードを使った実装セッション開始だけで本番操作は許可されない。
+
+手順1 設計に従って開始/受信/完了の保存と条件付きjob取得、同一jobの試行紐付け、soft中断分類、8MiB境界、管理者限定読取APIを実装。一般例外処理による応答消失を直し、保存失敗時は当該新明細/自動解析を確定しない。既存300/330秒は維持。未完了を成功/未送信と表示しない。
+手順2 新migrationを末尾登録し、001/004と将来TCG基礎表を用意したschemaへ適用できることを隔離PGで検証。無関係schemaにTCGを作らない。所有者/権限/部分不足/冪等/親削除連鎖を設計どおり確認する。
+手順3 指定のPG/権限/失敗境界と既存回帰を実行する。実Geminiは偽応答に置換。Docker不在ならローカルpytestを行わずBackend CIで実施。CI実行前の純関数確認をPG合格と称しない。保存I/O性能条件に失敗したら閾値を変えず設計へ戻す。
+手順4 make lint-ci、正式card-lint、check-task-state、ADR索引、diff検査を実行し、公式safe経路でmain宛PRを起票する。CI/自己レビュー結果を実行根拠と区別して報告し、マージせず停止する。
+
+停止条件: 不明なスキーマ/権限/現在の差分、試験失敗、採番衝突、保存と結果の紐付け不整合、削除/保持契約の不整合がある場合は設計へ戻す。既存保護の解除・迂回をしない。
+報告先: PO/設計パートナー。本番採用ではなく実装PRの結果として、差分HEAD、正式PG/CI、未実行検証、記録なしで確定された新明細0、実Gemini呼出0を明示する。生の顧客原文/応答をPRへ貼らない。
+END OF CARD
+
+
+CARD09実施結果（2026-09-14）: PR3494、製品HEAD c4624ec17e89a747f13558c926470d191f140923。正式Backend CI3654成功/96skip/失敗0、migration実DB成功。詳細と未実行範囲はrecon「CARD09実装・正式CI結果」。マージGO未受領、マージ/本番操作なし。自己確認済み、PO指定最終レビュー待ち。
+
+
+CARD09後続結果（2026-09-14）: POは最終レビュー1名の起動へ「進める」、受入補完e594d3efへのAPPROVE後に原文「GO #3494」を発行。実装試験3692成功/95skip、merge e69da6ed確認済み。Deploy34797490804は旧PM0264名称チェックで停止し新記録表なし。マージと配備成功を分け、旧SQL変更/再抽出/配信へGOを転用しない。詳細recon同日最終節。
+
+CARD09完了検証（2026-09-14）: 先行の配備停止は別便PR3500で解消。新規23投稿の通常処理を読取確認し、全23入力/返答保存、成功22投稿682明細の7502項目照合不一致0。1投稿のWORK_ID_CONFLICTも応答保存済み。通常記録Aの実投稿検証完了。要確認120明細/作品矛盾1投稿・既知13明細保留等は後続課題。精度向上/配信完了を意味しない。正式結果はrecon「CARD09初回実投稿」「CARD09完了範囲と引き継ぎ審査」。

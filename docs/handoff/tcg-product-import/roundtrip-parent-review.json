@@ -1,0 +1,65 @@
+{
+  "date": "2026-09-13",
+  "role": "設計担当による実装差分・試験・画像の読取レビュー。設計自己審査は同一AIであり独立した第二者設計レビューではない。",
+  "verdict": "APPROVE_FOR_PR_AND_CI",
+  "scope": "商品CSVエクスポートと12列再インポート更新。旧10列新規登録保持。実商品44件の整備は別範囲。",
+  "design_sha256": "7fbc9e44e9aff1166f5335a41951c56f90282b5f65651807889330f8cf3b85ab",
+  "implementation_base": "d56649c5",
+  "latest_main_observed": "313d7796bac62c45067c61dab23180acabc4b979",
+  "latest_main_review": "#3488: public.products seedと呼出追加の2ファイル、13製品範囲に重複なし。通常mergeで保持。",
+  "product_sha256": {
+    "backend/app/routers/tcg_product_import.py": "2cc1990c472ee5e4b4f2aa055026f7fcf6f1c5a58e2f8ae53436242652e92464",
+    "backend/app/services/tcg_product_roundtrip_svc.py": "64dd27f3e62d06ad5cfe208979e358eaed182c9f2636a603aed2f50d3cb87aeb",
+    "backend/tests/test_tcg_product_roundtrip.py": "99aa2b498e15f9f25d84a3ca42efba2a8746a98fa1b301a00fa6136ae6fe675e",
+    "backend/tests/test_tcg_product_roundtrip_pg.py": "39e696a9e8c1563241ea09a6ab401026f73a7e0facb360316316db3765c681b9",
+    "frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx": "0e2a53b9b6a3e4906bbbaa91375f56fef2f52cf79b30536627d575dbb2e49c64",
+    "frontend/src/features/tcg-product-import/TcgProductImportPanel.tsx": "756d92aaf5bfbfe6364ccff2e6acdd715b505027cbd9f82bd2effa057a0d951b",
+    "frontend/src/features/tcg-product-import/TcgProductImportPreview.tsx": "a3785d9fd0f34e98ae4bef01a55734f427ac38ebd11dcb9193f1aa500d605fb4",
+    "frontend/src/features/tcg-product-import/importMessages.ts": "a63556d13de60fb04753b7ff79e26302c9fefb68390e0add3636886f0549c842",
+    "frontend/src/locales/en.json": "7e2e9373050fa42c23a5e44d370ea684d855f0a4746859d92c08cdb126e6e47b",
+    "frontend/src/locales/ja.json": "2275e585778d42887eb07acf4d6aa6ff0a45672741a9b6b51008bb6d23647e03",
+    "frontend/src/pages/super-admin/TcgProductMasterPage.test.tsx": "b719550ca0dfba295478ca7e7ecc586d6e5a1d6aa714d59d03d8767efdcdd9ab",
+    "frontend/src/pages/super-admin/TcgProductMasterPage.tsx": "2b6ad77bc47a4819d92bf439fbd60b2157f03735eea5ab07453774584a440002",
+    "frontend/tests-e2e/tcg-product-import.spec.ts": "fc60ef00430d2877cbcd103ccb262971c83444d678749155495e287ef7f42047"
+  },
+  "review_findings_resolved": [
+    "PG障害注入を2件目へ移し先行商品のrollbackを検証",
+    "応答不明commit後の全商品/検索語/除外語/履歴と再送拒否を検証",
+    "同code別tenant・無効参照保持・code相互交換のstale検出を検証",
+    "未認証/非super-adminのHTTP認可試験を追加",
+    "大セルと例外時parser上限復元、全角式先頭の可逆保護を試験",
+    "更新modeの文言を分離、390幅は横スクロール後viewport内を検証"
+  ],
+  "parent_direct_checks": [
+    "service/router/UI/単体/PG/E2E差分読取",
+    "旧2サービス・依存3ファイル・api.ts・固定designの7ファイルbyte一致",
+    "日英1440と390横スクロール後の画像4枚をview_imageで確認",
+    "実FE unit/E2E/build/lintログ末尾の結果を読取"
+  ],
+  "executor_reported_checks": {
+    "frontend_unit": "29 files / 350 passed、final3実ログ10.70秒。初回他画面timeout1件、単独再実行で解消。",
+    "frontend_e2e": "Chromium 11 passed、日英390/1440・download bytes・確認前POST0・横スクロールviewport確認",
+    "frontend_static": "check:all/build終了0、既存warningを成功と別記",
+    "backend_static": "make lint-ci終了0。ruff/bandit成功、mypyは既定の非阻止エラー出力あり。型検査全件成功とはしない。"
+  },
+  "not_executed": [
+    "ローカルpytest/実PostgreSQL（Docker daemon不在）",
+    "正式CI",
+    "PR提出",
+    "マージ・配備",
+    "認証付き本番更新・44商品整備・再解析・3シート配信"
+  ],
+  "remaining_gates": [
+    "正式CIでR1–R9実pytest/PGと回帰合格",
+    "最新main取込後の製品差分/13SHA再照合",
+    "PR番号付きGO原文を正式process gateへ記録（現時点未受領、代筆禁止）",
+    "許可された経路でmerge/deploy後、実HEAD/backup/HTTPと未認証export拒否を確認"
+  ],
+  "artifacts": [
+    "/tmp/reports/CARD-PRODUCT-CSV-ROUNDTRIP-IMPL-01.txt",
+    "/tmp/reports/roundtrip-e2e-final2.txt",
+    "/tmp/reports/roundtrip-fe-unit-final3.txt",
+    "/tmp/reports/roundtrip-fe-build-final3.txt",
+    "/tmp/reports/roundtrip-fe-check-final3.txt"
+  ]
+}

@@ -520,6 +520,11 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
+# ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
+# 前回失敗デプロイで再作成された空の tcg_products を除去する。
+# 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
+run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
 # TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 
@@ -615,6 +620,9 @@ run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
 # LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
 run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
 
+# PHASE-2B: public.products Phase 2b columns prerequisite (work_id, unit, condition, etc.)
+run_sql migrations/20260909_000000_public_products_phase2b_columns.sql
+
 # NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
 run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
 
@@ -623,11 +631,42 @@ run_sql migrations/20260910_010000_tcg_import_message_links.sql
 
 # LINE work evidence before v3 code; dictionary filter is independently idempotent.
 run_sql migrations/20260910_160000_tcg_work_evidence.sql
-run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
 run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
 run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
 run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
 run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
-
-# Android LINE import-only device authorization (public; all tenants)
+run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
 run_sql migrations/20260912_160000_line_import_devices.sql
+run_sql migrations/20260912_170000_line_supplier_source_names.sql
+
+# ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
+run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
+run_sql migrations/20260913_020000_seed_onepiece_products.sql
+run_sql migrations/20260913_030000_seed_unregistered_products.sql
+run_sql migrations/20260913_150000_tcg_empty_box_condition.sql
+run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
+run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
+
+# ABBREV-01: tenant_004 略語キーワード追加（検索語・除外語）— PR #3495
+run_sql migrations/20260914_080000_add_abbreviation_keywords_t004.sql
+
+# CARD09: persist extraction attempts before adopting new results.
+run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
+
+# UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
+run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
+
+# UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
+run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
+# ADR-1002 Phase B: FK付替え UUID→INTEGER + SEQUENCE（冪等）
+run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql
+
+# ADR-1002 Phase C: public.products.tcg_uuid カラム・制約・インデックス削除
+run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql
+
+# work_id NOT NULL 制約追加
+run_sql migrations/20260916_130000_work_id_not_null.sql
+
+# Gemini v5: extraction_items に resolved_product_code 列追加
+run_sql migrations/20260917_010000_add_product_code_to_extraction.sql

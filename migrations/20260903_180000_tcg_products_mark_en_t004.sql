@@ -24,6 +24,12 @@ BEGIN
         RETURN;
     END IF;
 
+    -- ADR-1002: tcg_products が Phase 2c で削除済みの場合はスキップ
+    IF to_regclass(format('%I.tcg_products', _schema)) IS NULL THEN
+        RAISE NOTICE 'ADR-1002: tcg_products は Phase 2c で削除済み、スキップ: %', _schema;
+        RETURN;
+    END IF;
+
     -- mark 列追加（既存なら skip）
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.columns
@@ -54,8 +60,8 @@ BEGIN
     EXECUTE format($dml$
         UPDATE %I.tcg_products AS t
         SET
-            mark          = v.mark,
-            english_title = v.english_title
+            mark          = COALESCE(t.mark, v.mark),
+            english_title = COALESCE(t.english_title, v.english_title)
         FROM (VALUES
         ('PM0001', 'MMD', 'Monster ball Miror duplicate bulk set'),
         ('PM0002', 'RRD', 'RR duplicate bulk set'),

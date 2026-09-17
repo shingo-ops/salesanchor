@@ -7,6 +7,8 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_condition_review_svc import digest_sql, review_joins
+from app.services.tcg_result_order import result_order_sql
 from app.tcg_config import TCG_SCHEMA
 
 
@@ -106,23 +108,37 @@ async def read_progress(db: AsyncSession, job_id: str) -> dict[str, Any]:
 
 async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, filter_by: str) -> dict[str, Any]:
     result = await db.execute(text(f"""
-        WITH {_scope_ctes()}, filtered AS (
+        WITH {_scope_ctes()}, condition_review_sources AS MATERIALIZED (
+            SELECT id, {digest_sql("raw_text")} AS source_hash FROM messages
+        ), filtered AS (
             SELECT * FROM items WHERE :filter_by = 'all'
                 OR (:filter_by = 'needs_review' AND needs_review)
                 OR (:filter_by = 'extraction_error' AND extraction_status = 'error')
+                OR (:filter_by = 'results_present' AND analysis_result_id IS NOT NULL)
+        ), ordered AS (
+            SELECT ei.id, row_number() OVER (ORDER BY {result_order_sql()}) AS sort_ordinal
+            FROM filtered f
+            JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = f.id
+            JOIN jobs ej ON ej.id = ei.extraction_job_id
+            JOIN messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
+            LEFT JOIN public.products p ON p.id = ar.product_id
+            {review_joins(schema=TCG_SCHEMA)}
         ), page AS (
-            SELECT id, extraction_job_id, source_message_id, extraction_status,
-                   analysis_result_id, raw_product_name, raw_quantity, raw_price, raw_unit,
-                   raw_state, raw_memo, note_ja, needs_review, review_reasons, analysis_status,
-                   exclusion, quantity_normalized, price_normalized, created_at,
-                   'unrecorded'::text AS analysis_execution_state
-            FROM filtered ORDER BY created_at, id LIMIT :limit OFFSET :offset
+            SELECT f.id, f.extraction_job_id, f.source_message_id, f.extraction_status,
+                   f.analysis_result_id, f.raw_product_name, f.raw_quantity, f.raw_price, f.raw_unit,
+                   f.raw_state, f.raw_memo, f.note_ja, f.needs_review, f.review_reasons, f.analysis_status,
+                   f.exclusion, f.quantity_normalized, f.price_normalized, f.created_at,
+                   'unrecorded'::text AS analysis_execution_state, ordered.sort_ordinal
+            FROM filtered f JOIN ordered ON ordered.id = f.id
+            ORDER BY ordered.sort_ordinal LIMIT :limit OFFSET :offset
         )
         SELECT jsonb_build_object(
             'as_of', statement_timestamp(), 'review_status', job.review_status,
             'linked', job.messages_linked_at IS NOT NULL,
             'total', (SELECT count(*) FROM filtered),
-            'items', COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page), '[]'::jsonb)
+            'items', COALESCE((SELECT jsonb_agg(to_jsonb(page) - 'sort_ordinal' ORDER BY sort_ordinal)
+                               FROM page), '[]'::jsonb)
         ) FROM job
     """), {"job_id": job_id, "limit": limit, "offset": offset, "filter_by": filter_by})
     row = result.scalar_one_or_none()
@@ -132,4 +148,48 @@ async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, fil
     response.update(limit=limit, offset=offset, filter=filter_by, unit="extraction_item")
     if response["coverage"] != "complete":
         response.update(total=None, items=None)
+    return response
+
+
+async def read_messages(db: AsyncSession, job_id: str, limit: int, offset: int) -> dict[str, Any]:
+    result = await db.execute(text(f"""
+        WITH {_scope_ctes()}, page AS (
+          SELECT m.id::text, m.raw_text, m.received_at, m.created_at, m.is_active,
+                 m.relation_kind, ts.name AS supplier_name
+          FROM messages m LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id
+          LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          ORDER BY m.created_at, m.id LIMIT :limit OFFSET :offset
+        ) SELECT jsonb_build_object('as_of', statement_timestamp(), 'review_status', job.review_status,
+          'linked', job.messages_linked_at IS NOT NULL, 'total',(SELECT count(*) FROM messages),
+          'messages',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job
+    """), {"job_id": job_id, "limit": limit, "offset": offset})
+    row = result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Import job not found")
+    response = _envelope(row, job_id)
+    response.update(limit=limit, offset=offset, unit="source_message")
+    if response["coverage"] != "complete":
+        response.update(total=None, messages=None)
+    return response
+
+
+async def read_extraction_jobs(db: AsyncSession, job_id: str, limit: int, offset: int, filter_by: str) -> dict[str, Any]:
+    result = await db.execute(text(f"""
+        WITH {_scope_ctes()}, filtered AS (SELECT * FROM jobs WHERE :filter_by='all' OR status='error'), page AS (
+          SELECT j.id::text, j.source_message_id::text, j.status, j.created_at, j.extracted_at, m.raw_text,
+                 ts.name AS supplier_name, (SELECT count(*) FROM {TCG_SCHEMA}.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
+                 CASE WHEN j.status='error' THEN 'unclassified' ELSE NULL END AS error_reason_code
+          FROM filtered j JOIN messages m ON m.id=j.source_message_id
+          LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          ORDER BY j.created_at,j.id LIMIT :limit OFFSET :offset
+        ) SELECT jsonb_build_object('as_of',statement_timestamp(),'review_status',job.review_status,'linked',job.messages_linked_at IS NOT NULL,
+          'total',(SELECT count(*) FROM filtered),'jobs',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job
+    """), {"job_id": job_id, "limit": limit, "offset": offset, "filter_by": filter_by})
+    row=result.scalar_one_or_none()
+    if row is None:
+        raise HTTPException(status_code=404, detail="Import job not found")
+    response = _envelope(row, job_id)
+    response.update(limit=limit, offset=offset, filter=filter_by, unit="extraction_job")
+    if response["coverage"] != "complete":
+        response.update(total=None, jobs=None)
     return response

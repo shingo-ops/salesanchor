@@ -149,3 +149,16 @@ async def test_save_corrections_filters_empty_human_value(super_admin_override):
     # 空 / 空白のみは除外されるので name のみ残る
     assert len(captured) == 1
     assert captured[0]["field_name"] == "name"
+
+
+@pytest.mark.parametrize("extra", [
+    {"fields": [{"field_name": "condition_review", "human_value": "{}"}]},
+    {"fields": [], "condition_review": {"request_id": _EXTRACTION_ITEM_ID,
+        "expected_review_version": "a" * 64, "decision": "confirm", "condition_id": _EXTRACTION_ITEM_ID}},
+])
+async def test_condition_review_cannot_use_legacy_fields(super_admin_override, extra):
+    from app.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        result = await client.post(f"/api/v1/tcg/items/{_EXTRACTION_ITEM_ID}/corrections",
+            json={"source_message_id": _SOURCE_MESSAGE_ID, **extra})
+    assert result.status_code == 422

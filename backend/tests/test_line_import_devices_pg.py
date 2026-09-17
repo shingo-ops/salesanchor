@@ -1,20 +1,20 @@
 """Migration and device lifecycle checks in a disposable CI PostgreSQL database."""
 import asyncio
 import os
+import uuid
 from pathlib import Path
 from types import SimpleNamespace
 from urllib.parse import urlsplit, urlunsplit
-import uuid
 
 import asyncpg
 import pytest
 import pytest_asyncio
 from fastapi import HTTPException
+from sqlalchemy.dialects import postgresql
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.schema import CreateTable
-from sqlalchemy.dialects import postgresql
-from app.models import Tenant, User
 
+from app.models import Tenant, User
 from app.services import line_import_devices as svc
 
 ADMIN = os.getenv('RLS_ADMIN_DATABASE_URL', '')
@@ -118,3 +118,27 @@ async def test_registration_rate_limit_is_database_enforced(pg):
         with pytest.raises(HTTPException) as error:
             await svc.start(db, svc.digest('over-limit'), 'phone', 'same-peer')
         assert error.value.status_code == 429
+
+
+async def test_source_alias_migration_is_idempotent_scoped_and_insert_only(pg):
+    from sqlalchemy import text
+    sessions, owner = pg
+    migration = (Path(__file__).resolve().parents[2]/'migrations/20260912_170000_line_supplier_source_names.sql').read_text()
+    await owner.execute(migration)
+    await owner.execute(migration)
+    columns = await owner.fetch("SELECT column_name FROM information_schema.columns WHERE table_schema='public' AND table_name='line_supplier_source_names'")
+    assert {'tcg_schema', 'source_format', 'display_name', 'supplier_id', 'evidence_sha256'} <= {r[0] for r in columns}
+    assert not await owner.fetchval("SELECT has_table_privilege('salesanchor_app','public.line_supplier_source_names','UPDATE')")
+    assert not await owner.fetchval("SELECT has_table_privilege('salesanchor_app','public.line_supplier_source_names','DELETE')")
+    async with sessions() as db:
+        for schema, fmt in [('tenant_001', 'android'), ('tenant_002', 'android'), ('tenant_001', 'pc')]:
+            await db.execute(text('''INSERT INTO public.line_supplier_source_names
+                (tcg_schema,source_format,display_name,supplier_id,evidence_sha256)
+                VALUES (:schema,:fmt,'Example Full',:supplier,:proof)'''),
+                {'schema': schema, 'fmt': fmt, 'supplier': uuid.uuid4(), 'proof': 'a'*64})
+        await db.commit()
+        assert (await db.execute(text('SELECT count(*) FROM public.line_supplier_source_names'))).scalar_one() == 3
+    with pytest.raises(asyncpg.UniqueViolationError):
+        await owner.execute("INSERT INTO public.line_supplier_source_names SELECT * FROM public.line_supplier_source_names LIMIT 1")
+    with pytest.raises(asyncpg.CheckViolationError):
+        await owner.execute("INSERT INTO public.line_supplier_source_names (tcg_schema,source_format,display_name,supplier_id,evidence_sha256) VALUES ('public','android','x',$1,$2)", uuid.uuid4(), 'a'*64)

@@ -47,8 +47,10 @@ ACTIVE_WORK_FILE="${MAIN_REPO_ROOT}/${AGENT_ACTIVE_WORK_REL}"
 # 各エージェントは AGENT_WORKTREE_BASE/<repo>/<branch>/ で作業する規約
 # メインリポジトリから push すると他エージェントの変更が混入する可能性がある
 
+AGENT_WORKTREE_BASE_ALT="${AGENT_WORKTREE_BASE_ALT:-${MAIN_REPO_ROOT:-.}/.claude/worktrees}"
 case "${ACTUAL_ROOT}" in
   "${AGENT_WORKTREE_BASE}/"*) ;;  # OK: 個室（worktree）内で作業している
+  "${AGENT_WORKTREE_BASE_ALT}/"*) ;;  # OK: Claude Code EnterWorktree で作成された個室
   *)
     echo ""
     echo "🚫 push を中断しました: worktree 外での作業は禁止されています。"

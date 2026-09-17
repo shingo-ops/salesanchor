@@ -5,6 +5,7 @@ import { ItemComparison, type AnalysisReviewItem } from './ItemComparison';
 import { ProductMasterDrawer } from './ProductMasterDrawer';
 import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
 import './supplier-detail-view.css';
+import { ConditionReviewPanel } from './ConditionReviewPanel';
 
 const PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const [rawText, setRawText] = useState('');
   const [sourceMessageId, setSourceMessageId] = useState('');
   const [items, setItems] = useState<AnalysisReviewItem[]>([]);
+  const [itemTotal, setItemTotal] = useState(0);
   const [displayCount, setDisplayCount] = useState(PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -42,9 +44,8 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
 
   const refreshItems = () => {
     const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
-    api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
-      .then((res) => { setItems(res.items || []); })
-      .catch(() => {});
+    return api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
+      .then((res) => { setItems(res.items || []); setItemTotal(res.total); });
   };
 
   useEffect(() => {
@@ -65,7 +66,7 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
 
     const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
     api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
-      .then((res) => { setItems(res.items || []); })
+      .then((res) => { setItems(res.items || []); setItemTotal(res.total); })
       .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { itemsLoaded.current = true; checkDone(); });
   }, [supplierId, supplierName, refreshKey]);
@@ -89,12 +90,13 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
         {error   && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
         {!loading && !error && (
           <div className="supplier-detail-view-body">
-            <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={items.length} jump={jump} />
+            <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={itemTotal} jump={jump} />
             <section className="supplier-detail-items">
               {items.length === 0 && <p>{t("superAdmin.supplierQuality.noItems")}</p>}
               {visibleItems.map((item) => (
                 <div key={item.extraction_item_id} className="supplier-detail-item-row">
                   <ItemComparison item={item} readOnly={true} onJumpToSourceLine={jumpToLine} />
+                  <ConditionReviewPanel item={item} onRefresh={refreshItems} />
                   <div className="supplier-detail-item-actions">
                     <button type="button" className="supplier-detail-correct-btn" onClick={() => setMasterDrawerItem(item)}>{t("superAdmin.supplierQuality.correctPhase3")}</button>
                   </div>
