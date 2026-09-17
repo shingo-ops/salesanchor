@@ -671,5 +671,8 @@ run_sql migrations/20260916_130000_work_id_not_null.sql
 # Gemini v5: extraction_items に resolved_product_code 列追加
 run_sql migrations/20260917_010000_add_product_code_to_extraction.sql
 
+# C92: 完売ルール・日付ルール共通テーブル 13表（tenant_001 専用・冪等）
+run_sql migrations/20260917_000000_create_analysis_rule_tables.sql
+
 # 仕入元マスタ SSOT Sprint 1: tcg_suppliers → public.suppliers コピー + supplier_channels FK UUID→INTEGER + line_supplier_source_names DROP
 run_sql migrations/20260917_020000_supplier_ssot_migration.sql

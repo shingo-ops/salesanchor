@@ -716,6 +716,36 @@ async def run_distribution(
             "errors": [{"target_id": None, "error": msg}],
         }
 
+    # 0-c. 完売判断ルール実行中チェック（安全装置 #8c）
+    # analysis_rule_runs に pending/running の行があれば配信を中止する。
+    # 判断結果が確定する前に配信すると、最新の判断が反映されない行が含まれる可能性がある。
+    pending_rule_runs = (
+        await db.execute(
+            text(
+                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_rule_runs"
+                " WHERE state IN ('pending', 'running')"
+                " ORDER BY started_at LIMIT 10"
+            )
+        )
+    ).mappings().all()
+    if pending_rule_runs:
+        details = [
+            {"run_id": str(r["id"]), "started_at": r["started_at"].isoformat()}
+            for r in pending_rule_runs
+        ]
+        msg = (
+            f"安全装置 #8c: 完売判断ルール実行中の runs が {len(pending_rule_runs)} 件あります。"
+            f" 完了を待ってから配信を実行してください。実行中: {details}"
+        )
+        logger.warning("[dist] %s", msg)
+        return {
+            "run_id": None,
+            "started_at": started_at.isoformat(),
+            "output_count": 0,
+            "results": [],
+            "errors": [{"target_id": None, "error": msg}],
+        }
+
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
@@ -770,23 +800,45 @@ async def run_distribution(
             "errors": [{"target_id": None, "error": f"SA 認証失敗: {exc}"}],
         }
 
-    # 4. 各配信先へ書き込み（thread executor）
+    # 4. 各配信先へ書き込み（thread executor・リトライあり）
+    # リトライ設定: 最大4回・指数バックオフ 1→2→4→8 秒（設計 §14.1.4 C96）
+    _RETRY_MAX = 4
+    _RETRY_DELAYS = [1, 2, 4, 8]
+
     loop = asyncio.get_event_loop()
     results = []
     errors = []
 
     for target in targets:
-        write_result = await loop.run_in_executor(
-            None,
-            _write_to_target_sync,
-            gc,
-            creds,
-            target,
-            rows,
-        )
+        write_result: dict | None = None
+        last_error: str = ""
+        for attempt in range(_RETRY_MAX):
+            write_result = await loop.run_in_executor(
+                None,
+                _write_to_target_sync,
+                gc,
+                creds,
+                target,
+                rows,
+            )
+            if write_result["status"] == "ok":
+                break
+            last_error = write_result.get("error", "unknown error")
+            if attempt < _RETRY_MAX - 1:
+                delay = _RETRY_DELAYS[attempt]
+                logger.warning(
+                    "[dist] 書き込み失敗（%d/%d回目）: target=%s error=%s 次のリトライまで%d秒待機",
+                    attempt + 1, _RETRY_MAX, target["name"], last_error, delay,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    "[dist] 書き込み失敗（%d/%d回目・最終）: target=%s error=%s",
+                    attempt + 1, _RETRY_MAX, target["name"], last_error,
+                )
 
         # 5. 配信履歴を DB に記録（安全装置 #7）
-        if write_result["status"] == "ok":
+        if write_result and write_result["status"] == "ok":
             await _record_distribution_result(db, target["id"], "ok", write_result["rows_written"])
             results.append({
                 "target_id": str(target["id"]),
@@ -796,12 +848,12 @@ async def run_distribution(
             })
         else:
             await _record_distribution_result(
-                db, target["id"], write_result["error"], None
+                db, target["id"], last_error, None
             )
             errors.append({
                 "target_id": str(target["id"]),
                 "target_name": target["name"],
-                "error": write_result["error"],
+                "error": last_error,
             })
 
     # 6. 失敗時 Discord 通知（安全装置 #6）

@@ -3,7 +3,8 @@
 -- 設計: docs/handoff/tcg-product-master-growth/design.md
 -- 対象ADR: ADR-154
 -- 冪等: 再実行時は既に error のため WHERE の status 条件に合致せず、更新は起きない
--- 件数確認は本ファイルが対象とする12件の範囲のみを数える（テーブル全体は数えない）
+-- 件数確認は対象IDのうちテーブルに存在するレコードが全て error であることを検証する
+-- レコードが削除済みの場合は存在数=error数で合格とする
 
 DO $body$
 DECLARE
@@ -23,6 +24,7 @@ DECLARE
         '0713391d-d0d6-4163-b726-61741b3b1a51'
     ]::UUID[];
     _count INTEGER;
+    _existing INTEGER;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = _schema) THEN
         RAISE NOTICE 'migration DIST-STALE-A: schema % does not exist, skipping', _schema;
@@ -38,13 +40,18 @@ BEGIN
     $q$, _schema) USING _ids;
 
     EXECUTE format(
+        'SELECT count(*) FROM %I.extraction_jobs WHERE id = ANY($1)',
+        _schema
+    ) INTO _existing USING _ids;
+
+    EXECUTE format(
         'SELECT count(*) FROM %I.extraction_jobs WHERE id = ANY($1) AND status = ''error''',
         _schema
     ) INTO _count USING _ids;
 
-    IF _count != 12 THEN
-        RAISE EXCEPTION 'DIST-STALE-A: 期待12件、実際%件', _count;
+    IF _count != _existing THEN
+        RAISE EXCEPTION 'DIST-STALE-A: 存在%件中error%件（全件errorであるべき）', _existing, _count;
     END IF;
 
-    RAISE NOTICE 'DIST-STALE-A: % 件終端化 OK', _count;
+    RAISE NOTICE 'DIST-STALE-A: 存在%件/%件中 %件 error OK', _existing, 12, _count;
 END $body$;
