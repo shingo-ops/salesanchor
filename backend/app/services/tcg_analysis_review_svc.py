@@ -38,6 +38,7 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
+    LEFT JOIN {TCG_SCHEMA}.tcg_series ws ON ws.id = p.work_id
     {review_joins(schema=TCG_SCHEMA)}
 """
 
@@ -54,6 +55,7 @@ def _build_where(
     review_only: bool,
     unregistered_only: bool,
     unresolved_unit_only: bool,
+    work_id: str | None = None,
 ) -> tuple[str, dict]:
     """フィルタ条件を WHERE 句と bind パラメータに変換する。"""
     conditions: list[str] = []
@@ -97,6 +99,9 @@ def _build_where(
         conditions.append("ar.pid_basis = 'NONE'")
     if unresolved_unit_only:
         conditions.append("NOT ar.unit_resolved")
+    if work_id:
+        conditions.append("p.work_id = :work_id")
+        params["work_id"] = work_id
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     return where, params
@@ -148,6 +153,7 @@ async def fetch_analysis_results(
     unregistered_only: bool = False,
     unresolved_unit_only: bool = False,
     strip_raw_text: bool = False,
+    work_id: str | None = None,
 ) -> dict:
     """
     解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
@@ -162,6 +168,7 @@ async def fetch_analysis_results(
         review_only=review_only,
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
+        work_id=work_id,
     )
 
     # 総件数
@@ -200,6 +207,9 @@ async def fetch_analysis_results(
             ei.raw_memo,
             ei.line_start,
             ei.line_end,
+            p.work_id::text                      AS work_id,
+            ws.display_name                      AS work_name,
+            ws.alt_name                          AS work_alt_name,
             p.product_code                       AS product_code,
             p.name                               AS product_title,
             ar.product_id::text                  AS product_uuid,
@@ -254,6 +264,8 @@ async def fetch_analysis_results(
                     "span": span,
                 },
                 "system": {
+                    "work_id": row.work_id or "",
+                    "work_name": row.work_name or "",
                     "product_id": row.product_code or "",
                     "product_title": row.product_title or "",
                     "product_uuid": row.product_uuid or "",
@@ -286,6 +298,17 @@ async def fetch_analysis_results(
         for item in items:
             item["raw_text"] = ""
 
+    # works 一覧取得（tcg_product_import.py:134-142 と同一パターン）
+    work_rows = await db.execute(text(
+        f"SELECT s.id, s.code, s.display_name, s.alt_name FROM {TCG_SCHEMA}.tcg_series s "
+        f"WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
+        "WHERE p.work_id = s.id) ORDER BY s.code ASC"
+    ))
+    works = [
+        {"id": str(r.id), "code": r.code, "display_name": r.display_name or "", "alt_name": r.alt_name or ""}
+        for r in work_rows.fetchall()
+    ]
+
     return {
         "items": items,
         "total": total,
@@ -293,4 +316,5 @@ async def fetch_analysis_results(
         "offset": offset,
         "limit": limit,
         "providers": providers,
+        "works": works,
     }

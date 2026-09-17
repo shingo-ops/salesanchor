@@ -56,6 +56,7 @@ _DUMMY_FETCH_RESULT = {
     "offset": 0,
     "limit": 10,
     "providers": ["仕入元A"],
+    "works": [],
 }
 
 

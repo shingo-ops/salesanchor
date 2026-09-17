@@ -191,7 +191,8 @@
     "noResults": "No results",
     "authTimeout": "Authentication timed out",
     "page": "Page {{page}}",
-    "unitDay": " days"
+    "unitDay": " days",
+    "unresolved": "Unresolved"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -2359,6 +2360,8 @@
       "superAdminOnly": "This page is restricted to super_admin.",
       "loadMore": "Load more ({{remaining}} left)",
       "showingCount": "Showing {{shown}} / {{total}}",
+      "workName": "Series",
+      "allWorks": "All series",
       "productAssign": {
         "title": "Change Product Assignment",
         "currentProduct": "Current product",
@@ -3750,7 +3753,7 @@
       "unknown": "The cause cannot be identified from this record. Copy diagnostic information and request investigation."
     }
   },
-  "analysisRules": {
+"analysisRules": {
     "page": {
       "title": "Analysis Management",
       "subtitle": "Manage sold-out rules and date rules"
@@ -3866,6 +3869,41 @@
       "unauthorized": "You are not authorized.",
       "serverUnavailable": "Server is unavailable. Please try again later.",
       "unknown": "An error occurred."
+    }
+  },
+  "tcgAnalysisReview": {
+    "unresolved": "Unresolved",
+    "none": "None",
+    "geminiExtraction": "Gemini Extraction",
+    "systemFinalResult": "System Final Result",
+    "manualCorrection": "Manual Correction {{field}}",
+    "hasCorrected": "Has corrections",
+    "uncorrected": "Uncorrected",
+    "sourcePosition": "Source position",
+    "productId": "Product ID",
+    "saleStatus": "Sale Status",
+    "yourMemo": "Your memo",
+    "noCorrection": "No correction",
+    "geminiExtracted": "Using Gemini extracted value",
+    "systemConfirmed": "System confirmed",
+    "saving": "Saving…",
+    "saveCorrected": "Save corrections",
+    "saveMemo": "Save memo",
+    "correctionSaved": "Corrections saved",
+    "correctionSaveError": "Failed to save corrections",
+    "memoSaved": "Saved",
+    "memoSaveError": "Failed to save",
+    "error": "Error",
+    "process": "Process",
+    "targetId": "Target ID",
+    "requestId": "Request ID",
+    "fieldLabels": {
+      "productName": "Product name",
+      "quantity": "Quantity",
+      "price": "Unit price",
+      "unit": "Unit",
+      "condition": "Condition",
+      "memo": "Memo"
     }
   }
 }

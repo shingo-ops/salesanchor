@@ -191,7 +191,8 @@
     "noResults": "該当データなし",
     "authTimeout": "認証がタイムアウトしました",
     "page": "{{page}}ページ",
-    "unitDay": "日"
+    "unitDay": "日",
+    "unresolved": "未解決"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -2359,6 +2360,8 @@
       "superAdminOnly": "このページは super_admin 専用です。",
       "loadMore": "さらに読み込む（{{remaining}}件）",
       "showingCount": "{{shown}} / {{total}} 件表示中",
+      "workName": "作品",
+      "allWorks": "すべての作品",
       "productAssign": {
         "title": "商品の割り当て変更",
         "currentProduct": "現在の商品",
@@ -3750,7 +3753,7 @@
       "unknown": "この記録では原因を特定できません。調査用情報をコピーして確認を依頼してください。"
     }
   },
-  "analysisRules": {
+"analysisRules": {
     "page": {
       "title": "解析管理",
       "subtitle": "完売ルール・日付ルールを管理します"
@@ -3866,6 +3869,41 @@
       "unauthorized": "権限がありません。",
       "serverUnavailable": "サーバーが利用できません。しばらくしてから再試行してください。",
       "unknown": "エラーが発生しました。"
+    }
+  },
+  "tcgAnalysisReview": {
+    "unresolved": "未解決",
+    "none": "なし",
+    "geminiExtraction": "Gemini抽出",
+    "systemFinalResult": "システム最終結果",
+    "manualCorrection": "手動修正 {{field}}",
+    "hasCorrected": "手動修正あり",
+    "uncorrected": "未修正",
+    "sourcePosition": "原文位置",
+    "productId": "商品ID",
+    "saleStatus": "販売状況",
+    "yourMemo": "あなたのメモ",
+    "noCorrection": "修正なし",
+    "geminiExtracted": "Gemini抽出値を採用",
+    "systemConfirmed": "System確定",
+    "saving": "保存中…",
+    "saveCorrected": "修正内容を保存",
+    "saveMemo": "メモを保存",
+    "correctionSaved": "修正内容を保存しました",
+    "correctionSaveError": "修正内容の保存に失敗しました",
+    "memoSaved": "保存しました",
+    "memoSaveError": "保存に失敗しました",
+    "error": "エラー",
+    "process": "処理",
+    "targetId": "対象ID",
+    "requestId": "要求ID",
+    "fieldLabels": {
+      "productName": "商品名",
+      "quantity": "数量",
+      "price": "単価",
+      "unit": "単位",
+      "condition": "状態",
+      "memo": "メモ"
     }
   }
 }
