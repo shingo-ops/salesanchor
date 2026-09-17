@@ -976,6 +976,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 supplier_code VARCHAR(20),
                 name VARCHAR(255) NOT NULL,
+                line_name VARCHAR(255),
                 contact_name VARCHAR(255),
                 email VARCHAR(255),
                 phone VARCHAR(50),
