@@ -42,23 +42,23 @@ _ALLOWED_KEYS: frozenset[str] = frozenset(
 
 _QUERIES: dict[str, str] = {
     "suppliers": f"""
-        SELECT code, name, is_active
-        FROM {TCG_SCHEMA}.tcg_suppliers
-        ORDER BY code
+        SELECT supplier_code AS code, name, is_active
+        FROM public.suppliers
+        ORDER BY supplier_code
     """,
     "supplier-name-dupes": f"""
         SELECT LOWER(name) AS name_lower, COUNT(*) AS cnt
-        FROM {TCG_SCHEMA}.tcg_suppliers
+        FROM public.suppliers
         GROUP BY LOWER(name)
         HAVING COUNT(*) BETWEEN 2 AND 9999
         ORDER BY cnt DESC
     """,
     "supplier-channels": f"""
-        SELECT ts.code AS supplier_code, ts.name AS supplier_name, COUNT(sc.id) AS channel_count
+        SELECT ps.supplier_code AS supplier_code, ps.name AS supplier_name, COUNT(sc.id) AS channel_count
         FROM {TCG_SCHEMA}.supplier_channels sc
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-        GROUP BY ts.code, ts.name
-        ORDER BY ts.code
+        LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
+        GROUP BY ps.supplier_code, ps.name
+        ORDER BY ps.supplier_code
     """,
     "orphan-messages": f"""
         SELECT COUNT(*) AS null_channel_count

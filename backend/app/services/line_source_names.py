@@ -24,12 +24,8 @@ def is_android(messages):
 
 
 async def load_aliases(db):
-    rows = (await db.execute(text(f'''SELECT a.display_name,s.code,s.name
-        FROM public.line_supplier_source_names a
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id=a.supplier_id AND s.is_active=TRUE
-        WHERE a.tcg_schema=:schema AND a.source_format='android' '''),
-        {'schema': TCG_SCHEMA})).mappings().all()
-    return [dict(r) for r in rows]
+    # line_supplier_source_names は Sprint 1 で DROP 済み。空リストを返す
+    return []
 
 
 def resolve_android(messages, suppliers, aliases):
@@ -100,8 +96,8 @@ async def link_pending(db, data):
         raise ValueError('unique sender required')
     name = names.pop()
     # Protect name/code selection against concurrent master renames/deactivation.
-    await db.execute(text(f'LOCK TABLE {TCG_SCHEMA}.tcg_suppliers IN SHARE MODE'))
-    suppliers = (await db.execute(text(f'SELECT id,code,name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active=TRUE'))).mappings().all()
+    await db.execute(text('LOCK TABLE public.suppliers IN SHARE MODE'))
+    suppliers = (await db.execute(text('SELECT id, supplier_code AS code, line_name AS name FROM public.suppliers WHERE is_active=TRUE AND line_name IS NOT NULL'))).mappings().all()
     target = [s for s in suppliers if s['code'] == data['supplier_code']]
     if len(target) != 1 or any(s['name'] == name and s['code'] != data['supplier_code'] for s in suppliers):
         raise ValueError('active nonconflicting supplier required')
@@ -110,7 +106,7 @@ async def link_pending(db, data):
     sources = (await db.execute(text(f'''SELECT s.code,sm.raw_text,sm.line_posted_at
         FROM {TCG_SCHEMA}.source_messages sm
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id=sc.supplier_id
+        JOIN public.suppliers ps ON ps.id=sc.supplier_id
         WHERE sc.channel='line' AND sm.line_posted_at=ANY(CAST(:times AS timestamptz[]))
         LIMIT 10001'''), {'times': times})).mappings().all()
     if len(sources) > 10000:

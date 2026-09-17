@@ -172,8 +172,8 @@ async def build_parallel_report(db: AsyncSession) -> dict:
             text(
                 f"""
                 SELECT
-                    ts.code AS sp_code,
-                    ts.name AS supplier_name,
+                    ps.supplier_code AS sp_code,
+                    ps.name AS supplier_name,
                     ei.id AS item_id,
                     ei.raw_product_name,
                     ei.raw_unit,
@@ -183,12 +183,12 @@ async def build_parallel_report(db: AsyncSession) -> dict:
                 JOIN {TCG_SCHEMA}.extraction_jobs ej ON ei.extraction_job_id = ej.id
                 JOIN {TCG_SCHEMA}.source_messages sm ON ej.source_message_id = sm.id
                 JOIN {TCG_SCHEMA}.supplier_channels sc ON sm.supplier_channel_id = sc.id
-                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON sc.supplier_id = ts.id
+                JOIN public.suppliers ps ON sc.supplier_id = ps.id
                 LEFT JOIN {TCG_SCHEMA}.analysis_results ar
                     ON ar.extraction_item_id = ei.id
                     AND ar.engine_version = 'compat-v1'
                 WHERE sm.is_active = TRUE
-                ORDER BY ts.code, ei.id
+                ORDER BY ps.supplier_code, ei.id
                 """
             )
         )
