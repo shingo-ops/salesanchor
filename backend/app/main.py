@@ -93,6 +93,7 @@ from app.routers import (
     super_admin_tenants,
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
+    tcg_analysis_rule,  # ANALYSIS-RULE P5: 完売・日付ルール管理 API
     tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
     tcg_distribution,  # DIST-01: TCG 在庫配信
     tcg_line_import,  # MIG-04 Stage 1: LINE エクスポート取り込み
@@ -563,6 +564,11 @@ app.include_router(
 # PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
 app.include_router(
     item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# ANALYSIS-RULE P5: 完売・日付ルール管理 API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_rule.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）

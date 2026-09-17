@@ -154,6 +154,26 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
+    # C94: 空テキストチェック（len(raw_text.strip()) == 0 → status='empty' で Gemini スキップ）
+    # 設計書: sold-out-rules-design.md §14.1.2
+    if len(raw_text.strip()) == 0:
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
+                "SET status = 'empty', extracted_at = NOW(), error_message = NULL "
+                "WHERE id = :ej_id"
+            ),
+            {"ej_id": extraction_job_id},
+        )
+        session.commit()
+        return {
+            "extraction_job_id": extraction_job_id,
+            "status": "empty",
+            "items_count": 0,
+            "analysis_stats": None,
+            "error_message": None,
+        }
+
     # --- 2. status = 'running' に更新 ---
     session.execute(
         text(
