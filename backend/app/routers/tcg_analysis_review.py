@@ -45,6 +45,8 @@ class GeminiFields(BaseModel):
 
 
 class SystemFields(BaseModel):
+    work_id: str = ""
+    work_name: str = ""
     product_title: str = ""
     product_uuid: str = ""
     product_id: str
@@ -85,6 +87,7 @@ class AnalysisResultsResponse(BaseModel):
     offset: int
     limit: int
     providers: list[str]
+    works: list[dict] = []
 
 
 # ---------------------------------------------------------------------------
@@ -112,6 +115,7 @@ async def list_analysis_results(
     unregistered_only: bool = Query(default=False),
     unresolved_unit_only: bool = Query(default=False),
     strip_raw_text: bool = Query(default=False, description="raw_text を省略（SupplierDetailPage 用）"),
+    work_id: str | None = Query(default=None, description="作品IDで絞り込み"),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> AnalysisResultsResponse:
@@ -129,6 +133,7 @@ async def list_analysis_results(
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
         strip_raw_text=strip_raw_text,
+        work_id=work_id,
     )
     return AnalysisResultsResponse(
         items=data["items"],
@@ -137,6 +142,7 @@ async def list_analysis_results(
         offset=data["offset"],
         limit=data["limit"],
         providers=data["providers"],
+        works=data["works"],
     )
 
 
