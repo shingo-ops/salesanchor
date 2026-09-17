@@ -11,8 +11,8 @@ ADR-155 で商品マスタの更新手段を CSV + アプリ画面に一本化�
 | 要因 | 詳細 |
 |------|------|
 | 作成機能なし | 既存の `POST /tcg/products` は LINE 解析連携用で `extraction_item_id` が必須。独立した作成経路がない |
-| 削除機能なし | `tcg_product_import.py` に DELETE エンドポイントが存在しない |
-| UI未対応 | `TcgProductDetailDrawer` は編集（PUT）のみ。作成モード・削除ボタンなし |
+| 削除機能なし | tcg_product_import.py に DELETE エンドポイントが存在しない |
+| UI未対応 | TcgProductDetailDrawer は編集（PUT）のみ。作成モード・削除ボタンなし |
 
 根拠:
 - `backend/app/routers/tcg_product_import.py:150-286`（PUT のみ、DELETE なし）
@@ -26,7 +26,7 @@ ADR-155 で商品マスタの更新手段を CSV + アプリ画面に一本化�
 | `backend/app/routers/tcg_product_import.py` | 商品マスタ API | エンドポイント追加 |
 | `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx` | 商品詳細ドロワー | 作成モード・削除機能追加 |
 | `frontend/src/pages/super-admin/TcgProductMasterPage.tsx` | 商品マスタ一覧 | 新規追加ボタン追加 |
-| `frontend/src/locales/en.json` / `ja.json` | i18n | キー追加 |
+| `frontend/src/locales/en.json` / `frontend/src/locales/ja.json` | i18n | キー追加 |
 
 ## FK 制約（削除時）
 
@@ -39,7 +39,7 @@ ADR-155 で商品マスタの更新手段を CSV + アプリ画面に一本化�
 | parse_logs | NO ACTION | 参照あれば 409 エラー返却 |
 | own_inventory | NO ACTION | 参照あれば 409 エラー返却 |
 
-根拠: `migrations/20260915_120000_*.sql`（Phase B マイグレーション）の ON DELETE 定義
+根拠: migrations/20260915_120000 系マイグレーション（Phase B）の ON DELETE 定義
 
 ## ADR 参照
 
