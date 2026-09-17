@@ -11,7 +11,7 @@
 
     <uses-sdk
         android:minSdkVersion="23"
-        android:targetSdkVersion="23" />
+        android:targetSdkVersion="24" />
 
     <!-- 画面ウェイク（PowerManager.WakeLock）に必要。dangerous permission ではないためインストール時に自動付与される。 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
