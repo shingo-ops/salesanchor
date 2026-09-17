@@ -25,6 +25,26 @@
 
 ## 変更箇所
 
+触るファイル:
+- `backend/app/services/tcg_analysis_review_svc.py`
+- `backend/app/routers/tcg_analysis_review.py`
+- `backend/tests/test_tcg_analysis_review.py`
+- `frontend/src/features/tcg-analysis-review/ItemComparison.tsx`
+- `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx`
+- `frontend/src/locales/en.json`
+- `frontend/src/locales/ja.json`
+- `docs/handoff/analysis-work-id-filter/recon.md`
+- `docs/handoff/analysis-work-id-filter/design.md`
+
+削除するファイル:
+- `backend/app/services/tcg_analysis_review_svc.py`（既存行の変更）
+- `backend/app/routers/tcg_analysis_review.py`（既存行の変更）
+- `backend/tests/test_tcg_analysis_review.py`（既存行の変更）
+- `frontend/src/features/tcg-analysis-review/ItemComparison.tsx`（既存行の変更）
+- `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx`（既存行の変更）
+- `frontend/src/locales/en.json`（既存行の変更）
+- `frontend/src/locales/ja.json`（既存行の変更）
+
 ### バックエンド
 
 | ファイル | 変更内容 |
