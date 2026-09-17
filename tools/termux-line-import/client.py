@@ -189,6 +189,12 @@ class Outbox:
             self.db.execute('INSERT OR IGNORE INTO jobs (digest,state) VALUES (?,?)', (digest, 'queued'))
             self.db.execute('UPDATE jobs SET received_at=? WHERE digest=?', (now, digest))
         self.record('store', 'ok', digest=digest, detected_by=detected_by)
+        state = self.db.execute('SELECT state FROM jobs WHERE digest=?', (digest,)).fetchone()[0]
+        if state in ('accepted', 'pending_review'):
+            # Same bytes were already imported: nothing to send, but the share still gets a result.
+            reason = '同じ内容を取り込み済みのため送信なし'
+            self.record('send', 'duplicate', digest=digest, reason=reason, detected_by=detected_by)
+            self._notify(NOTIFY_PROGRESS, 'LINE取込：取り込み済み', reason, digest=digest)
         self.supersede_and_cleanup(digest)
         return {'digest': digest, 'messages': len(messages), 'bytes': len(raw)}
 

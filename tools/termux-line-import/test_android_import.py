@@ -108,6 +108,16 @@ class OutboxTests(unittest.TestCase):
         copy = next((self.outbox.base / 'originals').glob('*.txt'))
         self.assertEqual(copy.read_bytes(), self.source.read_bytes())
 
+    def test_duplicate_of_imported_file_is_notified(self):
+        self.outbox.send(transport=lambda raw, token: self.result())
+        self.notifier.calls.clear()
+        self.outbox.enqueue(self.source)
+        self.assertEqual(self.notifier.calls[-1][:2], (NOTIFY_PROGRESS, 'LINE取込：取り込み済み'))
+        row = self.outbox.db.execute(
+            "SELECT result FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()
+        self.assertEqual(row[0], 'duplicate')
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1})
+
     def test_pending_review_is_not_accepted(self):
         result = self.outbox.send(lambda raw, token: (200, json.dumps(
             {'status': 'imported', 'review_status': 'pending_review', 'import_job_id': 'test-job'})))
