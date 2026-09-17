@@ -102,7 +102,8 @@
       "product_category_code": "Product category"
     },
     "updateSteps": "1. Choose file → 2. Review → 3. Update",
-    "updateSummary": "Total: {{total}} / Valid: {{ready}} / Blocked: {{blocked}}"
+    "updateSummary": "Total: {{total}} / Valid: {{ready}} / Blocked: {{blocked}}",
+    "addProduct": "Add product"
   },
   "common": {
     "loading": "Loading...",
@@ -3658,7 +3659,14 @@
     "reload": "Load latest values",
     "discardMessage": "You have unsaved changes. Discard them?",
     "keepEditing": "Keep editing",
-    "discard": "Discard changes"
+    "discard": "Discard changes",
+    "delete": "Delete",
+    "deleteTitle": "Delete product",
+    "deleteConfirm": "Are you sure you want to delete this product? This action cannot be undone.",
+    "deleteAction": "Delete",
+    "deleteInUse": "This product is referenced by inventory and cannot be deleted.",
+    "deleteError": "Failed to delete the product.",
+    "create": "Create"
   },
   "soldOut": {
     "searchAction": "Search",

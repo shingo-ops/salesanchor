@@ -102,7 +102,8 @@
       "product_category_code": "商品分類"
     },
     "updateSteps": "1. ファイル選択 → 2. 内容確認 → 3. 更新",
-    "updateSummary": "全{{total}}件 / 更新可能{{ready}}件 / 要修正{{blocked}}件"
+    "updateSummary": "全{{total}}件 / 更新可能{{ready}}件 / 要修正{{blocked}}件",
+    "addProduct": "新規追加"
   },
   "common": {
     "loading": "読み込み中...",
@@ -3658,7 +3659,14 @@
     "reload": "最新の内容を読み直す",
     "discardMessage": "未保存の変更があります。変更を破棄しますか？",
     "keepEditing": "編集に戻る",
-    "discard": "変更を破棄"
+    "discard": "変更を破棄",
+    "delete": "削除",
+    "deleteTitle": "商品を削除",
+    "deleteConfirm": "この商品を削除しますか？この操作は元に戻せません。",
+    "deleteAction": "削除",
+    "deleteInUse": "この商品は在庫に使用されているため削除できません。",
+    "deleteError": "商品の削除に失敗しました。",
+    "create": "作成"
   },
   "soldOut": {
     "searchAction": "検索",
