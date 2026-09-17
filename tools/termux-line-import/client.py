@@ -373,6 +373,7 @@ class Outbox:
                 self.record('check', 'failed', reason=reason, detected_by='check')
                 self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
         self._check_stall()
+        self.record('check', 'ok', detected_by='check')
 
     def _check_stall(self):
         stall_seconds = self._load_config().get('stall_seconds')
@@ -501,8 +502,10 @@ def main():
                 print('詰まり判定時間を設定しました。')
             elif args.action == 'schedule':
                 result = subprocess.run(
+                    # Offline or low battery must not suppress the stall check itself.
                     [TERMUX_JOB_SCHEDULER, '--job-id', str(JOB_ID), '--period-ms', '900000',
-                     '--persisted', 'true', '--script', str(Path.home() / 'bin/line-import-check')],
+                     '--persisted', 'true', '--network', 'none', '--battery-not-low', 'false',
+                     '--script', str(Path.home() / 'bin/line-import-check')],
                     timeout=20, capture_output=True, text=True)
                 print(result.stdout.strip() or f'登録結果コード: {result.returncode}')
         except AuthError as error:
