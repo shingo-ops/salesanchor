@@ -1,0 +1,4 @@
+# app-debug.apk (署名済み最終成果物) のみコミット対象。中間生成物は無視する。
+app-unsigned.apk
+app-aligned.apk
+app-debug.apk.idsig

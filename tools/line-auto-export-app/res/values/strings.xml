@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">SA LINE Export</string>
+    <string name="settings_title">PIN設定</string>
+    <string name="pin_hint">ロック画面PINを入力</string>
+    <string name="save_button">保存</string>
+    <string name="pin_status_saved">PIN: 保存済み</string>
+    <string name="pin_status_unsaved">PIN: 未設定</string>
+    <string name="pin_invalid">PINは4桁以上の数字で入力してください</string>
+    <string name="pin_saved">PINを保存しました</string>
+    <string name="accessibility_service_description">SA LINE Export のロック解除自動化サービス（当該アプリの操作のみに使用）</string>
+</resources>
