@@ -107,11 +107,11 @@ def work_schema_ready(session: Session) -> bool:
     count = session.execute(text(f"""
         SELECT count(*) FROM pg_attribute
         WHERE NOT attisdropped AND (
-            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname = 'resolved_work_id')
+            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
             OR (attrelid = '{TCG_SCHEMA}.extraction_jobs'::regclass
                 AND attname IN ('work_reference_snapshot', 'work_reference_sha256')))
     """)).scalar_one()
-    return count == 3
+    return count == 4
 
 
 def _run_extraction(session: Session, source_message_id: str) -> dict:
@@ -214,6 +214,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
                         raw_work_name, raw_work_source_line_span, resolved_work_id,
+                        resolved_product_code,
                         created_at
                     )
                     VALUES (
@@ -222,6 +223,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
                         :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
+                        :resolved_product_code,
                         now()
                     )
                     """
@@ -240,6 +242,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                     "resolved_work_id": item.get("resolved_work_id"),
                     "raw_work_name": item.get("raw_work_name"),
                     "raw_work_source_line_span": item.get("raw_work_source_line_span"),
+                    "resolved_product_code": item.get("resolved_product_code"),
                 },
             )
             items_inserted += 1
