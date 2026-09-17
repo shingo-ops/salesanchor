@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { api } from '../../lib/api';
+import { Tabs } from '../../components/Tabs';
 import { ItemComparison, type AnalysisReviewItem } from './ItemComparison';
 import { ProductMasterDrawer } from './ProductMasterDrawer';
 import { SourceRawPane, type SourceLineJump } from './SourceRawPane';
@@ -24,6 +25,7 @@ interface ItemsApiResponse {
   offset: number;
   limit: number;
   providers: string[];
+  works: { id: string; code: string; display_name: string; alt_name: string }[];
 }
 
 export function SupplierDetailView({ supplierId, supplierName, onBack }: { supplierId: string; supplierName: string; onBack: () => void }) {
@@ -37,6 +39,8 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
   const [error, setError] = useState('');
   const [jump, setJump] = useState<SourceLineJump | undefined>();
   const [masterDrawerItem, setMasterDrawerItem] = useState<AnalysisReviewItem | undefined>();
+  const [works, setWorks] = useState<{ id: string; code: string; display_name: string; alt_name: string }[]>([]);
+  const [selectedWorkId, setSelectedWorkId] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
   const jumpSequence = useRef(0);
   const sourceLoaded = useRef(false);
@@ -44,8 +48,9 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
 
   const refreshItems = () => {
     const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
+    if (selectedWorkId) params.set('work_id', selectedWorkId);
     return api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
-      .then((res) => { setItems(res.items || []); setItemTotal(res.total); });
+      .then((res) => { setItems(res.items || []); setItemTotal(res.total); setWorks(res.works || []); });
   };
 
   useEffect(() => {
@@ -65,11 +70,12 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
       .finally(() => { sourceLoaded.current = true; checkDone(); });
 
     const params = new URLSearchParams({ provider: supplierName, offset: '0', limit: '500', strip_raw_text: 'true' });
+    if (selectedWorkId) params.set('work_id', selectedWorkId);
     api.get<ItemsApiResponse>(`/tcg/analysis-results?${params.toString()}`)
-      .then((res) => { setItems(res.items || []); setItemTotal(res.total); })
+      .then((res) => { setItems(res.items || []); setItemTotal(res.total); setWorks(res.works || []); })
       .catch((e: unknown) => { setError(e instanceof Error ? e.message : String(e)); })
       .finally(() => { itemsLoaded.current = true; checkDone(); });
-  }, [supplierId, supplierName, refreshKey]);
+  }, [supplierId, supplierName, refreshKey, selectedWorkId]);
 
   const jumpToLine = (line: number) => {
     jumpSequence.current += 1;
@@ -88,6 +94,18 @@ export function SupplierDetailView({ supplierId, supplierName, onBack }: { suppl
         </div>
         {loading && <p>{t("common.loading")}</p>}
         {error   && <p style={{ color: 'var(--color-error)' }}>{error}</p>}
+        {!loading && works.length > 0 && (
+          <Tabs
+            items={[
+              { key: "", label: t("superAdmin.supplierQuality.allWorks") },
+              ...works.map((w) => ({ key: w.id, label: w.alt_name || w.display_name })),
+            ]}
+            activeKey={selectedWorkId}
+            onChange={(key) => { setSelectedWorkId(key); setDisplayCount(PAGE_SIZE); }}
+            variant="underline"
+            size="sm"
+          />
+        )}
         {!loading && !error && (
           <div className="supplier-detail-view-body">
             <SourceRawPane sourceMessageId={sourceMessageId} rawText={rawText} itemCount={itemTotal} jump={jump} />
