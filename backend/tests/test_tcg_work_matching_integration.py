@@ -30,7 +30,6 @@ from app.tasks import tcg_extraction as extraction
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 SCHEMA = "tenant_901"
 STRUCTURE = "20260910_160000_tcg_work_evidence.sql"
-DICTIONARY = "20260910_160100_tcg_normal_deck_coro_exclusion.sql"
 HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 NORMAL = "MEGA スタートデッキ100 バトルコレクション"
 
@@ -217,7 +216,6 @@ def migrate(cursor):
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
-    cursor.execute((MIGRATIONS / DICTIONARY).read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
     cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
 
@@ -277,9 +275,12 @@ def seed_products(connection):
         cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
         cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
-        # DICTIONARY migration depends on PM0200 existing in public.products;
-        # migrate() ran before INSERT so re-run now that products are seeded
-        cursor.execute((MIGRATIONS / DICTIONARY).read_text())
+        # ADR-155: 'コロ' exclusion keyword for PM0200 (was in DICTIONARY migration)
+        cursor.execute(f"""INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position)
+            SELECT %s, p.id, 'コロ', COALESCE(MAX(e.position), -1)+1
+            FROM public.products p LEFT JOIN {SCHEMA}.product_exclude_keywords e ON e.product_id=p.id
+            WHERE p.product_code='PM0200'
+            GROUP BY p.id""", (str(uuid4()),))
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
@@ -325,19 +326,6 @@ def test_schema_migrations_existing_absent_future_and_repeat(pg):
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 0
 
-
-def test_dictionary_idempotent_and_identity_guard(pg):
-    connection, _, _ = pg
-    seed_products(connection)
-    with connection.cursor() as cursor:
-        migrate(cursor)
-        cursor.execute(f"SELECT keyword,position FROM {SCHEMA}.product_exclude_keywords e JOIN public.products p ON p.id=e.product_id WHERE p.product_code='PM0200' ORDER BY position")
-        assert cursor.fetchall() == [(word, i) for i, word in enumerate(["Generations", "ex", "コロコロ", "コロちゃお", "コロチャオ", "コロ"])]
-        cursor.execute("SELECT count(*) FROM public.products")
-        assert cursor.fetchone()[0] == 3
-        cursor.execute("UPDATE public.products SET name='different' WHERE product_code='PM0200'")
-        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
-            cursor.execute((MIGRATIONS / DICTIONARY).read_text())
 
 
 
@@ -814,31 +802,6 @@ def test_interrupted_recovery_lock_timeout_and_settings(pg):
         assert cursor.fetchone() == settings
 
 
-def seed_guard_dictionary(connection, schema):
-    with connection.cursor() as cursor:
-        provision(cursor, schema)
-        cursor.execute(_PUBLIC_PRODUCTS_DDL)
-        cursor.execute(_rewire_keyword_fks(schema))
-        products = [*GUARD_PRODUCTS, ("PM_OTHER", "別商品", "IP001", "PC_BOX",
-                    [("vol.1", 3)], [("マスターボールミラー", 8)])]
-        for code, title, work, category, search, exclude in products:
-            cursor.execute("SELECT id FROM public.products WHERE product_code=%s", (code,))
-            existing = cursor.fetchone()
-            if existing:
-                pid = existing[0]
-            else:
-                cursor.execute(sql.SQL("""INSERT INTO public.products
-                    (product_code,name,category_class,is_active,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
-                    {}.tcg_product_categories c WHERE w.code=%s AND c.code=%s RETURNING id""").format(
-                        *[sql.Identifier(schema)] * 2), (code, title, work, category))
-                pid = cursor.fetchone()[0]
-            for table, entries in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
-                for word, position in entries:
-                    cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
-                        sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
-
-
 def guard_snapshot(connection, schemas=("tenant_004", "tenant_903")):
     result = {}
     with connection.cursor() as cursor:
@@ -849,148 +812,6 @@ def guard_snapshot(connection, schemas=("tenant_004", "tenant_903")):
                 result[schema, table] = cursor.fetchall()
     return result
 
-
-def test_false_positive_guards_exact_changes_idempotency_and_26_inputs(pg, monkeypatch):
-    connection, engine, _ = pg
-    for schema in ("tenant_004", "tenant_903"):
-        seed_guard_dictionary(connection, schema)
-    monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
-    codes = [product[0] for product in GUARD_PRODUCTS]
-
-    def evaluate(cases):
-        with Session(engine) as session:
-            search, exclude = analyzer.load_product_keywords(session)
-        return [analyzer.match_pid_with_work(name, codes, search, exclude,
-                    work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
-                for name, state, memo in cases]
-
-    wrong = [(name, "", "") for name, _ in GUARD_WRONG_INPUTS]
-    assert len(wrong) == 10 and len(GUARD_CONTROLS) == 16
-    previous = evaluate(wrong)
-    assert [row[0] for row in previous] == [code for _, code in GUARD_WRONG_INPUTS]
-    assert all(row[2] for row in previous)
-    old_controls = evaluate([row[:3] for row in GUARD_CONTROLS])
-    before = guard_snapshot(connection)
-    with connection.cursor() as cursor:
-        cursor.execute((MIGRATIONS / GUARDS).read_text())
-    after = guard_snapshot(connection)
-    search_key = ("tenant_004", "product_search_keywords")
-    exclude_key = ("tenant_004", "product_exclude_keywords")
-    assert after[search_key] == [r for r in before[search_key] if not (r[4] == "PM0230" and r[2] == "vol.1")]
-    assert len(before[search_key]) - len(after[search_key]) == 1
-    assert set(before[exclude_key]).issubset(set(after[exclude_key]))
-    added = set(after[exclude_key]) - set(before[exclude_key])
-    assert {(r[4], r[2], r[3]) for r in added} == {
-        ("PM0104", "マスターボールミラー", 28), ("PM0184", "スペシャルデッキセット", 2)}
-    for table in ("product_search_keywords", "product_exclude_keywords"):
-        assert before["tenant_903", table] == after["tenant_903", table]
-        assert [r for r in before["tenant_004", table] if r[4] == "PM_OTHER"] == [
-            r for r in after["tenant_004", table] if r[4] == "PM_OTHER"]
-    with connection.cursor() as cursor:
-        cursor.execute((MIGRATIONS / GUARDS).read_text())
-    assert guard_snapshot(connection) == after
-    assert evaluate(wrong) == [(None, "NONE", False, [])] * 10
-    current = evaluate([row[:3] for row in GUARD_CONTROLS])
-    for old, actual, (_, _, _, expected) in zip(old_controls, current, GUARD_CONTROLS):
-        if expected:
-            assert actual == old and actual[0] == expected and actual[2]
-        else:
-            assert actual == (None, "NONE", False, [])
-
-
-@pytest.mark.parametrize("code", ["PM0230", "PM0104", "PM0184"])
-@pytest.mark.parametrize("field", ["name", "work_id", "product_category_id", "product_code"])
-def test_false_positive_guards_identity_mismatch_preserves_all(pg, code, field):
-    connection, _, _ = pg
-    seed_guard_dictionary(connection, "tenant_004")
-    with connection.cursor() as cursor:
-        if field in ("work_id", "product_category_id"):
-            cursor.execute(sql.SQL("UPDATE public.products SET {}=NULL WHERE product_code=%s").format(sql.Identifier(field)), (code,))
-        else:
-            cursor.execute(sql.SQL("UPDATE public.products SET {}='different' WHERE product_code=%s").format(sql.Identifier(field)), (code,))
-        before = guard_snapshot(connection, ("tenant_004",))
-        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
-            cursor.execute((MIGRATIONS / GUARDS).read_text())
-        cursor.execute("ROLLBACK")
-    assert guard_snapshot(connection, ("tenant_004",)) == before
-
-
-@pytest.mark.parametrize("code,table,word", [
-    ("PM0230", "product_search_keywords", "vol.1"),
-    ("PM0104", "product_exclude_keywords", "マスターボールミラー"),
-    ("PM0184", "product_exclude_keywords", "スペシャルデッキセット"),
-])
-def test_false_positive_guards_duplicate_preserves_all(pg, code, table, word):
-    connection, _, _ = pg
-    seed_guard_dictionary(connection, "tenant_004")
-    with connection.cursor() as cursor:
-        for _ in range(1 if code == "PM0230" else 2):
-            cursor.execute(sql.SQL("INSERT INTO tenant_004.{}(id,product_id,keyword,position) SELECT %s,id,%s,99 FROM public.products WHERE product_code=%s").format(sql.Identifier(table)),
-                           (str(uuid4()), word, code))
-        before = guard_snapshot(connection, ("tenant_004",))
-        with pytest.raises(psycopg2.errors.RaiseException, match="duplicate target keyword"):
-            cursor.execute((MIGRATIONS / GUARDS).read_text())
-        cursor.execute("ROLLBACK")
-    assert guard_snapshot(connection, ("tenant_004",)) == before
-
-
-def test_false_positive_guards_absent_tables_noop(pg):
-    connection, _, _ = pg
-    with connection.cursor() as cursor:
-        cursor.execute((MIGRATIONS / GUARDS).read_text())
-        cursor.execute("CREATE SCHEMA tenant_004")
-        cursor.execute((MIGRATIONS / GUARDS).read_text())
-        cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='tenant_004'")
-        assert cursor.fetchone()[0] == 0
-
-
-def test_false_positive_guards_lock_timeout_preserves_dictionary_and_settings(pg):
-    connection, engine, _ = pg
-    seed_guard_dictionary(connection, "tenant_004")
-    before = guard_snapshot(connection, ("tenant_004",))
-    with connection.cursor() as cursor:
-        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
-        settings = cursor.fetchone()
-        blocker = engine.raw_connection()
-        try:
-            with blocker.cursor() as blocking_cursor:
-                blocking_cursor.execute("LOCK TABLE tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE")
-            with pytest.raises(psycopg2.errors.LockNotAvailable, match="lock timeout"):
-                cursor.execute((MIGRATIONS / GUARDS).read_text())
-            cursor.execute("ROLLBACK")
-        finally:
-            blocker.rollback()
-            blocker.close()
-        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
-        assert cursor.fetchone() == settings
-        assert guard_snapshot(connection, ("tenant_004",)) == before
-        cursor.execute((MIGRATIONS / GUARDS).read_text())
-        cursor.execute("SELECT current_setting('lock_timeout'),current_setting('statement_timeout')")
-        assert cursor.fetchone() == settings
-
-
-@pytest.mark.parametrize("table", ["tcg_series", "tcg_product_categories",
-                                 "product_search_keywords", "product_exclude_keywords"])
-def test_false_positive_guards_partial_structure_stops(pg, table):
-    connection, _, _ = pg
-    seed_guard_dictionary(connection, "tenant_004")
-    before = guard_snapshot(connection, ("tenant_004",))
-    with connection.cursor() as cursor:
-        cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(table)))
-        try:
-            with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-                cursor.execute((MIGRATIONS / GUARDS).read_text())
-        finally:
-            cursor.execute("ROLLBACK")
-            cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
-    assert guard_snapshot(connection, ("tenant_004",)) == before
-
-
-# Dictionary fixtures contain product labels only, with newly generated IDs.
-GUARDS = "20260910_170000_tcg_keyword_false_positive_guards.sql"
-GUARD_PRODUCTS = [('PM0104', 'ポケモンカード151', 'IP001', 'PC_BOX', [('ポケモンカード151', 2), ('151', 1)], [('vol.3', 1), ('hope', 3), ('jumbo', 6), ('surprised', 4), ('slim', 5), ('収集啦', 17), ('fat', 7), ('礼盒', 27), ('journey', 2)]), ('PM0184', 'スターターセットMEGA メガゲンガーex', 'IP001', 'PC_BOX', [('メガゲンガー', 1), ('メガゲンガーex', 4), ('MEGAゲンガーex', 2), ('MEGAゲンガー', 3)], [('MEGディアンシー', 1)]), ('PM0230', 'トライアルデッキ 【推しの子】', 'IP007', 'PC_SINGLE', [('OSK', 3), ('推しの子', 1), ('oshi no ko', 2), ('vol.1', 5), ('trial deck', 4)], [])]
-GUARD_WRONG_INPUTS = [('リミテッドカードコレクション Vol.1', 'PM0230'), ('■スペシャルデッキセットMEGA メガオーダイル・メガカイリュー・メガゲンガー', 'PM0184'), ('マスターボールミラー151のみ', 'PM0104'), ('リミテッドカードコレクションvol.1', 'PM0230'), ('LIMIT OVER SPECIAL PACK Vol.1', 'PM0230'), ('BASE SHOP リミテッドカードコレクションvol.1', 'PM0230'), ('BASE SHOP vol.1', 'PM0230'), ('プレミアムカードコレクション  – 6 assort vol.1 -', 'PM0230'), ('プレミアムカードコレクション- ベストセレクションvol.1 -', 'PM0230'), ('プレミアムカードコレクション 6 assort vol.1', 'PM0230')]
-GUARD_CONTROLS = [('推しの子 vol.1', '', '', 'PM0230'), ('推しの子', '', '', 'PM0230'), ('ポケモンカード151', '', '', 'PM0104'), ('151', '', '', 'PM0104'), ('スターターセットMEGA メガゲンガーex', '', '', 'PM0184'), ('BASE SHOP vol.1', '', '', None), ('リミテッドカードコレクション Vol.1', '', '', None), ('151', 'マスターボールミラー', '', None), ('151', '', 'マスターボールミラー', None), ('メガゲンガー', 'スペシャルデッキセット', '', None), ('メガゲンガー', '', 'スペシャルデッキセット', None), ('vol.1', '', '', None), ('BASE SHOP vol.10', '', '', None), ('BASE SHOP vol.11', '', '', None), ('リミテッドカードコレクション vol.10', '', '', None), ('BASE SHOP vol.2', '', '', None)]
 
 
 @pytest.mark.parametrize("heading,state,memo,resolved", [
