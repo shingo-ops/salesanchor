@@ -56,14 +56,14 @@
 | `backend/app/routers/tcg_analysis_review.py:47-58` | SystemFields に `work_id: str = ""`, `work_name: str = ""` 追加 |
 | `backend/app/routers/tcg_analysis_review.py:105-116` | エンドポイントに `work_id: str \| None = None` パラメータ追加 |
 | `backend/app/routers/tcg_analysis_review.py:81-87` | AnalysisResultsResponse に `works: list` 追加 |
-| `backend/app/routers/tcg_analysis_review.py` | works 一覧取得SQL追加（`tcg_product_import.py:134-142` と同一クエリ） |
+| `backend/app/routers/tcg_analysis_review.py` | works 一覧取得SQL追加（`backend/app/routers/tcg_product_import.py:134-142` と同一クエリ） |
 
 ### フロントエンド
 
 | ファイル | 変更内容 |
 |---------|---------|
 | `frontend/src/features/tcg-analysis-review/ItemComparison.tsx:31` | `<ComparisonMetadataRow label={t("superAdmin.supplierQuality.workName")} value={item.system.work_name \|\| t("common.unresolved")} />` 追加 |
-| `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx` | works 一覧を API レスポンスから取得、Tabs 金型（`components/Tabs.tsx`）で作品フィルタ追加、work_id パラメータを API 呼び出しに追加 |
+| `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx` | works 一覧を API レスポンスから取得、Tabs 金型（`frontend/src/components/Tabs.tsx`）で作品フィルタ追加、work_id パラメータを API 呼び出しに追加 |
 | `frontend/src/locales/en.json` | キー追加: `superAdmin.supplierQuality.workName`, `superAdmin.supplierQuality.allWorks` |
 | `frontend/src/locales/ja.json` | キー追加: `superAdmin.supplierQuality.workName` → "作品", `superAdmin.supplierQuality.allWorks` → "すべての作品" |
 
@@ -110,7 +110,7 @@ ws.alt_name     AS work_alt_name,
 
 ### フロントエンド: SupplierDetailView（フィルタ追加）
 
-Tabs 金型（`components/Tabs.tsx`）を使用。TcgProductMasterPage.tsx:84 と同一パターン。
+Tabs 金型（`frontend/src/components/Tabs.tsx`）を使用。`frontend/src/pages/super-admin/TcgProductMasterPage.tsx:84` と同一パターン。
 
 ---
 
@@ -139,9 +139,9 @@ Tabs 金型（`components/Tabs.tsx`）を使用。TcgProductMasterPage.tsx:84 �
 ## 外部・過去事例の参照と我々への応用
 
 自プロジェクト内の既存設計のみ参照。
-- `TcgProductMasterPage.tsx:84`: Tabs 金型による works フィルタの実装先例
-- `tcg_product_import.py:134-142`: works 一覧取得 SQL の先例
-- `components/Tabs.tsx`: 金型コンポーネント（variant: underline/pill、size: sm/md）
+- `frontend/src/pages/super-admin/TcgProductMasterPage.tsx:84`: Tabs 金型による works フィルタの実装先例
+- `backend/app/routers/tcg_product_import.py:134-142`: works 一覧取得 SQL の先例
+- `frontend/src/components/Tabs.tsx`: 金型コンポーネント（variant: underline/pill、size: sm/md）
 
 ---
 

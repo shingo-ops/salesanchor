@@ -11,13 +11,13 @@ analysis_results → フロント表示の経路で作品情報が欠落して�
 
 | 要因 | 詳細 |
 |------|------|
-| SELECT に work_id なし | `tcg_analysis_review_svc.py:200-201` で `p.product_code`, `p.name` のみ取得。`p.work_id` 未取得 |
-| tcg_series JOIN なし | `tcg_analysis_review_svc.py:40` で `LEFT JOIN public.products p` はあるが、tcg_series への JOIN がない |
-| API レスポンスに work_id なし | `tcg_analysis_review_svc.py:256-268` の system dict に work_id/work_name フィールドなし |
-| Pydantic スキーマに work_id なし | `tcg_analysis_review.py:47-58` の SystemFields に work_id/work_name なし |
-| エンドポイントに work_id フィルタなし | `tcg_analysis_review.py:105-116` のクエリパラメータに work_id なし |
-| フロント表示に作品名なし | `ItemComparison.tsx:31` に作品名の ComparisonMetadataRow なし |
-| フロントにフィルタ UI なし | `SupplierDetailView.tsx` に作品フィルタなし |
+| SELECT に work_id なし | `backend/app/services/tcg_analysis_review_svc.py:200-201` で p.product_code, p.name のみ取得。p.work_id 未取得 |
+| tcg_series JOIN なし | `backend/app/services/tcg_analysis_review_svc.py:40` で LEFT JOIN public.products p はあるが、tcg_series への JOIN がない |
+| API レスポンスに work_id なし | `backend/app/services/tcg_analysis_review_svc.py:256-268` の system dict に work_id/work_name フィールドなし |
+| Pydantic スキーマに work_id なし | `backend/app/routers/tcg_analysis_review.py:47-58` の SystemFields に work_id/work_name なし |
+| エンドポイントに work_id フィルタなし | `backend/app/routers/tcg_analysis_review.py:105-116` のクエリパラメータに work_id なし |
+| フロント表示に作品名なし | `frontend/src/features/tcg-analysis-review/ItemComparison.tsx:31` に作品名の ComparisonMetadataRow なし |
+| フロントにフィルタ UI なし | `frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx` に作品フィルタなし |
 
 根拠:
 - `backend/app/services/tcg_analysis_review_svc.py:33-42`（_BASE_FROM: LEFT JOIN public.products p のみ）
