@@ -316,7 +316,7 @@ BEGIN
             FOREIGN KEY (current_suite_revision_id) REFERENCES %I.analysis_test_suites (id)
     $q$, _schema, _schema);
 
-    RAISE NOTICE '20260917_000000: FK後付け完了 (analysis_policies 自己参照3本)', _schema;
+    RAISE NOTICE '20260917_000000: FK後付け完了 (analysis_policies 自己参照3本, schema %)', _schema;
 
     -- ====================================================
     -- 初期データ: analysis_policies に sold_out / date_format の2行
