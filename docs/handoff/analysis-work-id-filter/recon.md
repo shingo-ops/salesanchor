@@ -47,9 +47,9 @@ public.products.work_id (UUID NOT NULL)
 
 | 画面 | 実装方法 | 根拠 |
 |------|---------|------|
-| 商品マスタ一覧 | Tabs 金型 + works 配列 + URLパラメータ work_id | `TcgProductMasterPage.tsx:84` |
-| works 一覧 API | `/tcg/products/list` レスポンスに works フィールド | `tcg_product_import.py:134-142` |
-| works 型定義 | ProductWork(id, code, display_name, alt_name) | `tcg_product_import.py:71-74` |
+| 商品マスタ一覧 | Tabs 金型 + works 配列 + URLパラメータ work_id | TcgProductMasterPage.tsx:84 |
+| works 一覧 API | `/tcg/products/list` レスポンスに works フィールド | tcg_product_import.py:134-142 |
+| works 型定義 | ProductWork(id, code, display_name, alt_name) | tcg_product_import.py:71-74 |
 
 ## 影響範囲
 
