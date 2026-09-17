@@ -1205,11 +1205,15 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     assert guard_snapshot(connection) == after
 
 
-@pytest.mark.parametrize("field,value", [
-    ("name", "別商品"), ("work_id", None), ("product_category_id", None),
-    ("product_code", "PM_CHANGED"), ("is_active", False),
+@pytest.mark.parametrize("field,value,should_add_keyword", [
+    # ADR-155: identity check removed; migration succeeds or skips gracefully
+    ("name", "別商品", True),             # product found by product_code, keyword added
+    ("work_id", None, True),              # product found, keyword added
+    ("product_category_id", None, True),  # product found, keyword added
+    ("product_code", "PM_CHANGED", False), # PM0263 no longer found by product_code, skip
+    ("is_active", False, True),           # product found, keyword added
 ])
-def test_cardset_identity_failure_preserves_keywords(pg, field, value):
+def test_cardset_graceful_skip_on_product_change(pg, field, value, should_add_keyword):
     connection, _, _ = pg
     for schema in ("tenant_004", "tenant_903"):
         seed_cardset_dictionary(connection, schema)
@@ -1217,10 +1221,14 @@ def test_cardset_identity_failure_preserves_keywords(pg, field, value):
         cursor.execute(sql.SQL("UPDATE public.products SET {}=%s WHERE product_code='PM0263'").format(sql.Identifier(field)), (value,))
     before = guard_snapshot(connection)
     with connection.cursor() as cursor:
-        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch"):
-            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
-    assert guard_snapshot(connection) == before
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+    after = guard_snapshot(connection)
+    key = ("tenant_004", "product_exclude_keywords")
+    added = set(after[key]) - set(before[key])
+    if should_add_keyword:
+        assert len(added) == 1, f"Expected 1 keyword added, got {len(added)}"
+    else:
+        assert len(added) == 0, f"Expected skip (0 keywords added), got {len(added)}"
 
 
 def test_cardset_duplicate_target_preserves_keywords(pg):
@@ -1428,26 +1436,32 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
         if key[0] == "tenant_903" or key[1] not in ("product_search_keywords", "product_exclude_keywords"):
             if key != ("public", "products"):
                 assert rows == after[key]
+    # ADR-155: PM0297 is no longer created by migration (INSERT removed).
+    # PM0297 is absent from BUNDLE_SEEDS so seed_bundle_dictionary also does not create it.
+    # All 3 PM0297 keywords (1 search + 2 exclude) are skipped gracefully via RAISE NOTICE.
     new = [r for r in after["public", "products"] if r not in before["public", "products"]]
-    assert len(new) == 1 and new[0]["product_code"] == "PM0297"
-    assert new[0]["name"] == "MEGA 30th CELEBRATION カードセット（9種セット）"
-    assert new[0]["name_en"] is None and new[0]["release_date"] is None and new[0]["mark"] is None
-    assert len(after["tenant_004", "product_search_keywords"]) - len(before["tenant_004", "product_search_keywords"]) == 1
-    assert len(after["tenant_004", "product_exclude_keywords"]) - len(before["tenant_004", "product_exclude_keywords"]) == 13
+    assert len(new) == 0, f"Migration must not create new products (ADR-155), got: {[r['product_code'] for r in new]}"
+    # search_keywords: PM0297 search skipped (+0). exclude_keywords: 12 for PM0263-PM0284 (+12).
+    assert len(after["tenant_004", "product_search_keywords"]) - len(before["tenant_004", "product_search_keywords"]) == 0
+    assert len(after["tenant_004", "product_exclude_keywords"]) - len(before["tenant_004", "product_exclude_keywords"]) == 12
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
     with Session(engine) as session:
         search, exclude = analyzer.load_product_keywords(session)
-    assert search["PM0297"] == ["30th CELEBRATION カードセット (9種セット)"]
+    assert "PM0297" not in search, "PM0297 has no search keyword (product absent)"
+    assert "PM0297" not in exclude, "PM0297 has no exclude keyword (product absent)"
     for code in ("PM0263", "PM0264", "PM0265"):
         assert exclude[code].count("カードセット") == 1
     for number in range(276, 285):
         assert exclude[f"PM{number:04d}"].count("種セット") == 1
-    assert set(exclude["PM0297"]) == {"FUTURISTIC", "プレミアムデッキセット"}
     assert len(BUNDLE_SOURCE_NAMES) == 28 and len(BUNDLE_BOUNDARIES) == 58
     for name, expected in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES:
         actual, _, resolved, _ = analyzer.match_pid_with_work(name, list(search), search, exclude,
             work_id=None, product_work_ids={}, raw_state="", raw_memo="")
-        assert (actual if resolved else None) == expected, name
+        # PM0297-mapped names cannot resolve because PM0297 has no keywords loaded
+        if expected == "PM0297":
+            assert (actual if resolved else None) is None, name
+        else:
+            assert (actual if resolved else None) == expected, name
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
     assert bundle_snapshot(connection) == after
@@ -1474,11 +1488,11 @@ def test_bundle_invalid_reference_rolls_back(pg, table, fault):
 
 
 @pytest.mark.parametrize("field,value", [
-    # japanese_title is CSV-managed (ADR-XXX): migration allows edits, skips identity check
+    # ADR-155: identity check removed; migration succeeds and adds keywords regardless of field changes
     ("is_active", False),
     ("division_id", None), ("work_id", None), ("manufacturer_id", None), ("product_category_id", None),
     ("category_class", "Single")])
-def test_bundle_existing_identity_preserved_on_failure(pg, field, value):
+def test_bundle_graceful_with_modified_product(pg, field, value):
     connection, _, _ = pg
     for schema in ("tenant_004", "tenant_903"):
         seed_bundle_dictionary(connection, schema)
@@ -1486,31 +1500,31 @@ def test_bundle_existing_identity_preserved_on_failure(pg, field, value):
         cursor.execute(sql.SQL("UPDATE public.products SET {}=%s WHERE product_code='PM0276'").format(sql.Identifier(field)), (value,))
     before = bundle_snapshot(connection)
     with connection.cursor() as cursor:
-        with pytest.raises(psycopg2.errors.RaiseException, match="identity mismatch PM0276"):
-            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
-    assert bundle_snapshot(connection) == before
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+    after = bundle_snapshot(connection)
+    # PM0276 exists (only field modified, product_code unchanged), so keywords are added
+    before_count = len(before["tenant_004", "product_exclude_keywords"])
+    after_count = len(after["tenant_004", "product_exclude_keywords"])
+    assert after_count > before_count, "PM0276 種セット keyword should be added (product found by product_code)"
 
 
-@pytest.mark.parametrize("fault", ["code_collision", "same_product_other_code", "late_duplicate"])
-def test_bundle_collision_and_late_failure_are_atomic(pg, fault):
+def test_bundle_late_duplicate_keyword_is_atomic(pg):
+    # ADR-155: code_collision and same_product_other_code checks removed from migration.
+    # Only the duplicate-keyword guard remains; verify it raises and rolls back.
     connection, _, _ = pg
     for schema in ("tenant_004", "tenant_903"):
         seed_bundle_dictionary(connection, schema)
     with connection.cursor() as cursor:
-        if fault == "late_duplicate":
-            cursor.execute(_PUBLIC_PRODUCTS_DDL)
-            cursor.execute(_rewire_keyword_fks("tenant_004"))
-            for position in (10, 11):
-                cursor.execute("INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,id,'種セット',%s FROM public.products WHERE product_code='PM0284'", (str(uuid4()), position))
-            message = "duplicate keyword"
-        else:
-            code, title = ("PM0297", "別商品") if fault == "code_collision" else ("PM0999", "MEGA 30th CELEBRATION カードセット（９種セット）")
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active) VALUES (%s,%s,'Box',true)", (code, title))
-            message = "code collision" if fault == "code_collision" else "already exists under another code"
+        cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_rewire_keyword_fks("tenant_004"))
+        for position in (10, 11):
+            cursor.execute(
+                "INSERT INTO tenant_004.product_exclude_keywords(id,product_id,keyword,position) "
+                "SELECT %s,id,'種セット',%s FROM public.products WHERE product_code='PM0284'",
+                (str(uuid4()), position))
     before = bundle_snapshot(connection)
     with connection.cursor() as cursor:
-        with pytest.raises(psycopg2.errors.RaiseException, match=message):
+        with pytest.raises(psycopg2.errors.RaiseException, match="duplicate keyword"):
             cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
         cursor.execute("ROLLBACK")
     assert bundle_snapshot(connection) == before
