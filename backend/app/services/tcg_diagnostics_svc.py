@@ -41,12 +41,12 @@ _ALLOWED_KEYS: frozenset[str] = frozenset(
 # ---------------------------------------------------------------------------
 
 _QUERIES: dict[str, str] = {
-    "suppliers": f"""
+    "suppliers": """
         SELECT supplier_code AS code, name, is_active
         FROM public.suppliers
         ORDER BY supplier_code
     """,
-    "supplier-name-dupes": f"""
+    "supplier-name-dupes": """
         SELECT LOWER(name) AS name_lower, COUNT(*) AS cnt
         FROM public.suppliers
         GROUP BY LOWER(name)
