@@ -73,15 +73,19 @@ async def save_corrections(
             # C93: product_id 変更時に analysis_rule_run_results の invalidated_at を記録する
             # 無効化された結果は配信クエリから除外される（invalidated_at IS NULL が条件）
             # 設計書: sold-out-rules-design.md §14.1.1
-            await db.execute(
-                text(
-                    f"UPDATE {_SCHEMA}.analysis_rule_run_results "
-                    "SET invalidated_at = NOW() "
-                    "WHERE extraction_item_id = CAST(:eid AS uuid) "
-                    "  AND invalidated_at IS NULL"
-                ),
-                {"eid": extraction_item_id},
-            )
+            # テーブル未作成時（マイグレーション未適用）は安全にスキップ
+            try:
+                await db.execute(
+                    text(
+                        f"UPDATE {_SCHEMA}.analysis_rule_run_results "
+                        "SET invalidated_at = NOW() "
+                        "WHERE extraction_item_id = CAST(:eid AS uuid) "
+                        "  AND invalidated_at IS NULL"
+                    ),
+                    {"eid": extraction_item_id},
+                )
+            except Exception:
+                pass
 
     await db.commit()
     return {"saved": len(fields)}

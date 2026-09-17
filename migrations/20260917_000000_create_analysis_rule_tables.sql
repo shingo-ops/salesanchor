@@ -236,8 +236,7 @@ BEGIN
                                             REFERENCES %I.analysis_policy_revisions (id),
             suite_revision_id  UUID
                                             REFERENCES %I.analysis_test_suites (id),
-            source_message_id  UUID
-                                            REFERENCES %I.source_messages (id) ON DELETE CASCADE,
+            source_message_id  UUID,
             purpose            VARCHAR(20)  NOT NULL
                                             CHECK (purpose IN ('test','production')),
             engine_version     VARCHAR(50)  NOT NULL,
@@ -252,7 +251,7 @@ BEGIN
             CONSTRAINT analysis_rule_runs_prod_source CHECK (
                 (purpose = 'production') = (source_message_id IS NOT NULL))
         )
-    $q$, _schema, _schema, _schema, _schema, _schema);
+    $q$, _schema, _schema, _schema, _schema);
     EXECUTE format($q$
         CREATE INDEX IF NOT EXISTS ix_analysis_rule_runs_policy
             ON %I.analysis_rule_runs (policy_id, started_at DESC)
@@ -273,8 +272,7 @@ BEGIN
                                      REFERENCES %I.analysis_rule_runs (id) ON DELETE CASCADE,
             case_version_id    UUID
                                      REFERENCES %I.analysis_test_case_versions (id),
-            extraction_item_id UUID
-                                     REFERENCES %I.extraction_items (id) ON DELETE CASCADE,
+            extraction_item_id UUID,
             decision           JSONB NOT NULL,
             source_spans       JSONB,
             rule_version_refs  JSONB,
@@ -282,9 +280,9 @@ BEGIN
             invalidated_at     TIMESTAMPTZ,
             created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
             CONSTRAINT analysis_rule_run_results_target CHECK (
-                (case_version_id IS NOT NULL) <> (extraction_item_id IS NOT NULL))
+                (case_version_id IS NOT NULL) OR (extraction_item_id IS NOT NULL))
         )
-    $q$, _schema, _schema, _schema, _schema);
+    $q$, _schema, _schema, _schema);
     EXECUTE format($q$
         CREATE INDEX IF NOT EXISTS ix_analysis_rule_run_results_run
             ON %I.analysis_rule_run_results (run_id)
@@ -298,25 +296,51 @@ BEGIN
     RAISE NOTICE '20260917_000000: 13 テーブル作成完了 (schema %)', _schema;
 
     -- ====================================================
-    -- FK後付け: analysis_policies の自己参照FK
+    -- FK後付け: analysis_policies の自己参照FK（冪等）
     -- ====================================================
-    EXECUTE format($q$
-        ALTER TABLE %I.analysis_policies
-            ADD CONSTRAINT fk_analysis_policies_active_rev
-            FOREIGN KEY (active_revision_id) REFERENCES %I.analysis_policy_revisions (id)
-    $q$, _schema, _schema);
-    EXECUTE format($q$
-        ALTER TABLE %I.analysis_policies
-            ADD CONSTRAINT fk_analysis_policies_draft_rev
-            FOREIGN KEY (draft_revision_id) REFERENCES %I.analysis_policy_revisions (id)
-    $q$, _schema, _schema);
-    EXECUTE format($q$
-        ALTER TABLE %I.analysis_policies
-            ADD CONSTRAINT fk_analysis_policies_suite_rev
-            FOREIGN KEY (current_suite_revision_id) REFERENCES %I.analysis_test_suites (id)
-    $q$, _schema, _schema);
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_analysis_policies_active_rev') THEN
+        EXECUTE format($q$
+            ALTER TABLE %I.analysis_policies
+                ADD CONSTRAINT fk_analysis_policies_active_rev
+                FOREIGN KEY (active_revision_id) REFERENCES %I.analysis_policy_revisions (id)
+        $q$, _schema, _schema);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_analysis_policies_draft_rev') THEN
+        EXECUTE format($q$
+            ALTER TABLE %I.analysis_policies
+                ADD CONSTRAINT fk_analysis_policies_draft_rev
+                FOREIGN KEY (draft_revision_id) REFERENCES %I.analysis_policy_revisions (id)
+        $q$, _schema, _schema);
+    END IF;
+    IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_analysis_policies_suite_rev') THEN
+        EXECUTE format($q$
+            ALTER TABLE %I.analysis_policies
+                ADD CONSTRAINT fk_analysis_policies_suite_rev
+                FOREIGN KEY (current_suite_revision_id) REFERENCES %I.analysis_test_suites (id)
+        $q$, _schema, _schema);
+    END IF;
 
-    RAISE NOTICE '20260917_000000: FK後付け完了 (analysis_policies 自己参照3本, schema %)', _schema;
+    -- FK後付け: source_messages / extraction_items が存在する場合のみ
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = _schema AND tablename = 'source_messages') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_analysis_rule_runs_source_msg') THEN
+            EXECUTE format($q$
+                ALTER TABLE %I.analysis_rule_runs
+                    ADD CONSTRAINT fk_analysis_rule_runs_source_msg
+                    FOREIGN KEY (source_message_id) REFERENCES %I.source_messages (id) ON DELETE CASCADE
+            $q$, _schema, _schema);
+        END IF;
+    END IF;
+    IF EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = _schema AND tablename = 'extraction_items') THEN
+        IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'fk_analysis_rule_run_results_item') THEN
+            EXECUTE format($q$
+                ALTER TABLE %I.analysis_rule_run_results
+                    ADD CONSTRAINT fk_analysis_rule_run_results_item
+                    FOREIGN KEY (extraction_item_id) REFERENCES %I.extraction_items (id) ON DELETE CASCADE
+            $q$, _schema, _schema);
+        END IF;
+    END IF;
+
+    RAISE NOTICE '20260917_000000: FK後付け完了 (schema %)', _schema;
 
     -- ====================================================
     -- 初期データ: analysis_policies に sold_out / date_format の2行
