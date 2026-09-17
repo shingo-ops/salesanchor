@@ -24,13 +24,22 @@ pytestmark = pytest.mark.asyncio
 # ---------------------------------------------------------------------------
 
 
+class _MockRow(dict):
+    """
+    mappings().all() / .first() が返す行モック。
+    dict のサブクラスなので dict(row) が正しく機能し、
+    row["key"] / row.key 両方アクセスを提供する。
+    """
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+
 def _make_mock_mapping(**kwargs):
     """mappings().all() / .first() が返す行モックを作る。"""
-    row = MagicMock()
-    row.__getitem__ = lambda self, key: kwargs.get(key)
-    for k, v in kwargs.items():
-        setattr(row, k, v)
-    return row
+    return _MockRow(kwargs)
 
 
 def _execute_result_empty():
@@ -38,6 +47,7 @@ def _execute_result_empty():
     r = MagicMock()
     r.mappings.return_value.all.return_value = []
     r.mappings.return_value.first.return_value = None
+    r.mappings.return_value.__iter__ = lambda self: iter([])
     r.scalar.return_value = 0
     return r
 
@@ -48,6 +58,7 @@ def _execute_result_rows(rows: list[dict]):
     mock_rows = [_make_mock_mapping(**row) for row in rows]
     r.mappings.return_value.all.return_value = mock_rows
     r.mappings.return_value.first.return_value = mock_rows[0] if mock_rows else None
+    r.mappings.return_value.__iter__ = lambda self: iter(mock_rows)
     r.scalar.return_value = len(mock_rows)
     return r
 

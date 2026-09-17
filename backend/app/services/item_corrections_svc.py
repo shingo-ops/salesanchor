@@ -77,7 +77,7 @@ async def save_corrections(
                 text(
                     f"UPDATE {_SCHEMA}.analysis_rule_run_results "
                     "SET invalidated_at = NOW() "
-                    "WHERE extraction_item_id = :eid::uuid "
+                    "WHERE extraction_item_id = CAST(:eid AS uuid) "
                     "  AND invalidated_at IS NULL"
                 ),
                 {"eid": extraction_item_id},

@@ -27,19 +27,28 @@ pytestmark = pytest.mark.asyncio
 # ---------------------------------------------------------------------------
 
 
+class _MockRow(dict):
+    """
+    mappings().first() が返す行モック。
+    dict のサブクラスなので dict(row) が正しく機能し、
+    row["key"] / row.key 両方アクセスを提供する。
+    """
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError:
+            raise AttributeError(name) from None
+
+
 def _make_mock_row(**kwargs):
-    """mappings().first() が返すような MagicMock を作る。"""
-    row = MagicMock()
-    row.__getitem__ = lambda self, key: kwargs.get(key)
-    for k, v in kwargs.items():
-        setattr(row, k, v)
-    return row
+    """mappings().first() が返すような行モックを作る。"""
+    return _MockRow(kwargs)
 
 
 def _mock_db_with_row(row_data: dict | None):
     """単一行を返すモック DB を作成する。"""
     db = AsyncMock()
-    execute_result = AsyncMock()
+    execute_result = MagicMock()
     if row_data is None:
         execute_result.mappings.return_value.first.return_value = None
         execute_result.scalar_one_or_none.return_value = None
@@ -136,7 +145,7 @@ async def test_create_draft_revision_lock_version_conflict():
     for k, v in policy_data.items():
         setattr(policy_row, k, v)
 
-    execute_result = AsyncMock()
+    execute_result = MagicMock()
     execute_result.mappings.return_value.first.return_value = policy_row
     db.execute.return_value = execute_result
 
@@ -216,8 +225,8 @@ async def test_invalidated_at_excluded_in_rules():
         fields=[
             {
                 "field_name": "product_id",
-                "system_value": "old-uuid",
-                "human_value": "new-uuid",
+                "system_value": "100",
+                "human_value": "200",
             }
         ],
         corrected_by="admin@example.com",
@@ -271,7 +280,6 @@ async def test_empty_text_check_returns_empty_status():
         patch("app.tasks.tcg_extraction.work_schema_ready", return_value=True),
         patch("app.tasks.tcg_extraction.load_work_reference", return_value={"works": []}),
         patch("app.tasks.tcg_extraction.reference_digest", return_value="abc123"),
-        patch("app.tasks.tcg_extraction.reference_json", return_value="{}"),
     ):
         session.execute.return_value = fetch_none
 
@@ -304,7 +312,7 @@ async def test_get_latest_job_items_uses_latest_done_job():
     from app.services.tcg_analysis_rule_svc import get_latest_job_items
 
     db = AsyncMock()
-    execute_result = AsyncMock()
+    execute_result = MagicMock()
     execute_result.mappings.return_value.all.return_value = []
     db.execute.return_value = execute_result
 

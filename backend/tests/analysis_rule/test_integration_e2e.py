@@ -425,8 +425,8 @@ class TestFlow2InvalidationOnCorrection(TestCase):
             fields=[
                 {
                     "field_name": "product_id",
-                    "system_value": "old-product-uuid",
-                    "human_value": "new-product-uuid",
+                    "system_value": "100",
+                    "human_value": "200",
                 }
             ],
             corrected_by="admin@example.com",
@@ -496,7 +496,7 @@ class TestFlow2InvalidationOnCorrection(TestCase):
             db,
             extraction_item_id=str(uuid.uuid4()),
             source_message_id=str(uuid.uuid4()),
-            fields=[{"field_name": "product_id", "system_value": "old", "human_value": "new"}],
+            fields=[{"field_name": "product_id", "system_value": "100", "human_value": "200"}],
             corrected_by="admin@example.com",
         ))
 
@@ -546,7 +546,6 @@ class TestFlow3EmptyTextRejection(TestCase):
             patch("app.tasks.tcg_extraction.work_schema_ready", return_value=True),
             patch("app.tasks.tcg_extraction.load_work_reference", return_value={"works": []}),
             patch("app.tasks.tcg_extraction.reference_digest", return_value="abc123"),
-            patch("app.tasks.tcg_extraction.reference_json", return_value="{}"),
         ):
             session.execute.return_value = fetch_result
             result = _run_extraction(session, "sm-empty-001")
