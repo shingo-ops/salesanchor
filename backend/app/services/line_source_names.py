@@ -112,15 +112,8 @@ async def link_pending(db, data):
     if len(sources) > 10000:
         raise ValueError('evidence query truncated')
     proof = history_proof(messages, name, data['supplier_code'], suppliers, sources)
-    await db.execute(text('''INSERT INTO public.line_supplier_source_names
-        (tcg_schema,source_format,display_name,supplier_id,evidence_sha256)
-        VALUES (:schema,'android',:name,:supplier,:proof) ON CONFLICT DO NOTHING'''),
-        {'schema': TCG_SCHEMA, 'name': name, 'supplier': target[0]['id'], 'proof': proof})
-    existing = (await db.execute(text('''SELECT supplier_id FROM public.line_supplier_source_names
-        WHERE tcg_schema=:schema AND source_format='android' AND display_name=:name'''),
-        {'schema': TCG_SCHEMA, 'name': name})).scalar_one()
-    if existing != target[0]['id']:
-        raise ValueError('alias already belongs to another supplier')
+    await db.execute(text('UPDATE public.suppliers SET line_name=:name WHERE id=:supplier_id'),
+        {'name': name, 'supplier_id': target[0]['id']})
     tagged = [{**m, '_line_source_format': MARKER} for m in messages]
     resolved, missing = resolve_android(tagged, suppliers, await load_aliases(db))
     mapped = [m for m in resolved if m['display_name'] == name]
