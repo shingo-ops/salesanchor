@@ -472,3 +472,100 @@ jobs:
           echo "保護対象テーブル: products, tcg_products, product_search_keywords, product_exclude_keywords"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           exit 1
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック8（新規）: 商品マスタテーブルへのデータ参照禁止（ADR-155）
+      #
+      # 背景: チェック7は INSERT/UPDATE/DELETE を検出するが、SELECT（データ存在前提
+      #       の読み取り）を見逃す。20260913_210000_tcg_cardset_bundle_registration.sql
+      #       が SELECT ... FROM public.products WHERE product_code = $1 で商品データの
+      #       存在を前提とし、本番デプロイがブロックされた。
+      #       商品マスタテーブルへの参照は構造変更（ALTER TABLE, CREATE INDEX 等）の
+      #       みを許可し、データの読み書きを含む全参照をブロックする。
+      # 詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md
+      # ──────────────────────────────────────────────────────────────────────
+      - name: 商品マスタテーブルへのデータ参照禁止チェック（ADR-155）
+        if: steps.detect_sql.outputs.new_sql == 'true'
+        run: |
+          set -euo pipefail
+
+          FAILED=0
+
+          # 保護対象テーブル（チェック7と同じリスト）
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords"
+
+          IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
+          for sql_path in "${SQL_FILES[@]}"; do
+            fname=$(basename "$sql_path")
+
+            # コメント行（-- で始まる行）を除外してファイル全体を処理
+            # 保護対象テーブル名が出現する行を検出
+            MATCHED_LINES=$(grep -v '^\s*--' "$sql_path" \
+              | grep -nE "(${PROTECTED_TABLES})" || true)
+
+            if [ -z "$MATCHED_LINES" ]; then
+              echo "✅ $fname — 商品マスタテーブルへの参照なし"
+              continue
+            fi
+
+            # 許可パターンに該当する行を除外して違反行を絞り込む
+            # 許可: ALTER TABLE, CREATE [UNIQUE] INDEX ... ON, DROP INDEX, COMMENT ON,
+            #       ADD COLUMN, DROP COLUMN, ALTER COLUMN, information_schema 参照,
+            #       pg_namespace / pg_class / to_regclass での存在チェック
+            VIOLATIONS=""
+            while IFS= read -r line; do
+              line_num=$(echo "$line" | cut -d: -f1)
+              line_content=$(echo "$line" | cut -d: -f2-)
+
+              # 許可パターンチェック（いずれかに該当すれば許可）
+              if echo "$line_content" | grep -qiE \
+                'ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|information_schema|pg_namespace|pg_class|to_regclass'; then
+                continue
+              fi
+
+              # 許可パターン非該当 = 違反
+              VIOLATIONS="${VIOLATIONS}   行 ${line_num}: ${line_content}\n"
+            done <<< "$MATCHED_LINES"
+
+            if [ -n "$VIOLATIONS" ]; then
+              FAILED=1
+              echo "❌ Check 8 FAIL: migration が商品マスタデータに依存しています (ADR-155 違反)"
+              echo "   ファイル: $fname"
+              echo ""
+              printf "%b" "$VIOLATIONS"
+              echo ""
+              echo "   商品マスタテーブル (products, tcg_products 等) への参照は"
+              echo "   構造変更 (ALTER TABLE, CREATE INDEX) のみ許可されています。"
+              echo "   データの読み書き (SELECT/INSERT/UPDATE/DELETE) は禁止です。"
+              echo "   詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md"
+              echo ""
+            else
+              echo "✅ $fname — 商品マスタテーブルへの参照はすべて構造変更のみ（許可）"
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "❌ MIGRATION GUARD FAILED (チェック8)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "商品マスタ関連テーブルへのデータ参照が検出されました。"
+            echo ""
+            echo "【許可される操作】"
+            echo "  ALTER TABLE ... ADD COLUMN / DROP COLUMN / ALTER COLUMN"
+            echo "  CREATE [UNIQUE] INDEX ... ON products / tcg_products ..."
+            echo "  DROP INDEX"
+            echo "  COMMENT ON TABLE / COLUMN"
+            echo "  information_schema / pg_namespace / pg_class / to_regclass での存在チェック"
+            echo ""
+            echo "【禁止される操作】"
+            echo "  SELECT ... FROM products / tcg_products（データ存在前提の参照）"
+            echo "  INSERT INTO / UPDATE / DELETE FROM（チェック7でも検出）"
+            echo "  上記テーブルを参照する EXECUTE format(...) 内の動的 SQL"
+            echo ""
+            echo "保護対象テーブル: products, tcg_products, product_search_keywords, product_exclude_keywords"
+            echo "詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md"
+            echo "前例: 20260913_210000_tcg_cardset_bundle_registration.sql（本番デプロイブロック）"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 1
+          fi
+
+          echo "✅ チェック8 通過: 商品マスタテーブルへのデータ参照なし"
