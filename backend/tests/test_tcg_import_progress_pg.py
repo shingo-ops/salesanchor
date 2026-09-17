@@ -407,11 +407,12 @@ async def test_pending_confirmation_reuses_existing_post(pg):
         c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     async with AsyncSession(engine) as db:
         result=await routes.commit_pending_job(pending["import_job_id"],db)
-        assert result.enqueued_count==0
+        # Sprint 2: Bob has a dedicated channel; message is new (not reused from Alice's channel)
+        assert result.enqueued_count==1
         r=await progress.read_progress(db,pending["import_job_id"])
-        assert r["coverage"]=="complete" and r["messages"]["reused"]==1
-    assert count(conn,"source_messages")==1 and count(conn,"import_job_messages")==2
-    assert enqueue.call_count==1
+        assert r["coverage"]=="complete" and r["messages"]["reused"]==0
+    assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==3
+    assert enqueue.call_count==2
 
 
 async def test_stage_details_mixed_results_counts_null_supplier_and_reuse(pg):

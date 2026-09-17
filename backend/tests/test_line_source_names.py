@@ -167,7 +167,8 @@ async def test_android_upload_uses_alias_but_preserves_unknown_review_gate():
     import json
     saved = json.loads(captured[0]['pending_messages'])
     assert saved[0]['display_name'] == 'Example Full'
-    assert svc.is_android(saved)
+    # Sprint 2: unified resolve path no longer tags messages with MARKER
+    assert not svc.is_android(saved)
 
 
 async def test_pending_android_commit_uses_alias_and_keeps_remaining_names_blocked():

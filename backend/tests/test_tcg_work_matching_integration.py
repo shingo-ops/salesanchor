@@ -588,6 +588,9 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
         cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+        # Sprint 1: rewire supplier_channels.supplier_id UUID→INTEGER for distribution JOIN
+        cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))

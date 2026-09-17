@@ -57,6 +57,32 @@ LINE取り込み仕入元照合先を public.suppliers(INTEGER) に一元化す�
 - ステップ2: supplier_channels に UUID カラムを戻す必要あり（手動DDL + データ復元）
 - ステップ3: public.line_supplier_source_names を再作成（migration 20260912_170000 を再実行）
 
+## 削除するファイル（行削除を含む変更ファイル）
+
+Sprint 1/2 の変更で行削除が発生したファイル一覧（process-artifacts gate 用）:
+
+| ファイル | 削除行数 | 変更概要 |
+|---------|---------|---------|
+| `backend/app/line_import_admin.py` | 6 | tcg_suppliers 参照を public.suppliers に配線替え |
+| `backend/app/routers/tcg_analysis_review.py` | 1 | supplier 解決ロジック更新 |
+| `backend/app/routers/tcg_line_import.py` | 39 | Android 分岐削除・resolve_suppliers 統一 |
+| `backend/app/services/line_source_names.py` | 21 | load_aliases 空実装化・Android固有コード削除 |
+| `backend/app/services/tcg_analysis_review_svc.py` | 7 | supplier 参照先変更 |
+| `backend/app/services/tcg_diagnostics_svc.py` | 10 | tcg_suppliers 参照削除 |
+| `backend/app/services/tcg_distribution_svc.py` | 3 | tcg_suppliers JOIN → public.suppliers JOIN |
+| `backend/app/services/tcg_import_progress.py` | 4 | supplier 参照先変更 |
+| `backend/app/services/tcg_line_import_svc.py` | 17 | resolve_android 削除・resolve_suppliers 統一 |
+| `backend/app/services/tcg_parallel_report_svc.py` | 4 | supplier 参照先変更 |
+| `backend/app/services/tcg_sold_out_results_svc.py` | 3 | supplier 参照先変更 |
+| `backend/app/services/tcg_supplier_quality_svc.py` | 8 | tcg_suppliers 参照削除 |
+| `backend/app/tasks/tcg_mirror.py` | 13 | supplier 参照先変更 |
+| `backend/tests/test_line_import_admin.py` | 4 | テスト期待値更新 |
+| `backend/tests/test_line_source_names.py` | 6 | Sprint 2 統一設計に合わせてアサーション更新 |
+| `backend/tests/test_tcg_import_progress_pg.py` | 7 | Sprint 2 設計に合わせた期待値更新 |
+| `backend/tests/test_tcg_line_import.py` | 11 | mock 更新・tcg_suppliers → public.suppliers |
+| `backend/tests/test_tcg_result_order.py` | 4 | supplier seed 更新 |
+| `backend/tests/test_tcg_sold_out_results.py` | 1 | supplier DDL 更新 |
+
 ## 測り方
 ```sql
 -- KPI 2確認
