@@ -274,7 +274,8 @@
     "commissions": "Commissions",
     "channelMasters": "Channel Management",
     "openDrawer": "Open navigation",
-    "closeDrawer": "Close navigation"
+    "closeDrawer": "Close navigation",
+    "masterManagement": "Master Management"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -2668,6 +2669,11 @@
         "csv_import": "CSV import",
         "f6_approved": "Parse approval"
       }
+    },
+    "masters": {
+      "title": "Master Management",
+      "productTab": "Product Masters",
+      "supplierTab": "Supplier Masters"
     }
   },
   "schedule": {
@@ -3753,7 +3759,7 @@
       "unknown": "The cause cannot be identified from this record. Copy diagnostic information and request investigation."
     }
   },
-"analysisRules": {
+  "analysisRules": {
     "page": {
       "title": "Analysis Management",
       "subtitle": "Manage sold-out rules and date rules"
