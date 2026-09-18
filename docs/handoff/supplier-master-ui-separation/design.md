@@ -3,6 +3,10 @@
 recon: `docs/handoff/supplier-master-ui-separation/recon.md`
 ADR: ADR-093（在庫テーブル・商品マスタ再設計）
 
+## 外部・過去事例の参照と我々への応用
+
+該当なし：今回は既存の MasterListEditor 金型（ProductMastersTab 内部実装）を抽出・再利用する社内リファクタであり、外部事例の参照は不要と判断
+
 ## 目的
 
 仕入元マスタを用途別に2画面に分離し、MasterListEditor 金型で統一する。
@@ -40,7 +44,7 @@ ADR: ADR-093（在庫テーブル・商品マスタ再設計）
 
 ### Sprint 1: MasterListEditor 共有化
 
-`MasterListEditor` を `ProductMastersTab.tsx` 内部から独立コンポーネントに抽出する。
+`MasterListEditor` を `frontend/src/pages/super-admin/ProductMastersTab.tsx` 内部から独立コンポーネントに抽出する。
 
 - 抽出先: `frontend/src/components/master-list-editor/MasterListEditor.tsx`
 - `MasterDataSource` インターフェースはそのまま維持
@@ -99,8 +103,8 @@ ADR: ADR-093（在庫テーブル・商品マスタ再設計）
 | MasterListEditor 抽出で商品マスタの動作が変わる | 抽出は純粋なリファクタ。既存テストで回帰確認 |
 | SuppliersAdminTab の Discord routing 機能が MasterListEditor に収まらない | MasterListEditor を拡張するか、Discord routing は別モーダルとして維持 |
 
-## 維持する担当・仕組み
+## 維持の仕組み
 
-- MasterListEditor: フロントエンド共通部品として `components/` に配置。変更時は商品マスタ・仕入元マスタ両方を確認
-- tenant_id フィルタ: バックエンドの `/suppliers` エンドポイントで強制。フロントエンドに依存しない
-- CI: 既存の i18n チェック・UI ガバナンスチェック・テナントスキーマ整合性チェックで継続監視
+- 守り手: `frontend/src/components/master-list-editor/MasterListEditor.tsx` — 共通金型。変更時は商品マスタ・仕入元マスタ両方を確認
+- 守り手: `backend/app/routers/suppliers.py` — tenant_id フィルタをバックエンドで強制。フロントエンドに依存しない
+- 守り手: CI の既存 i18n チェック・UI ガバナンスチェック・テナントスキーマ整合性チェックで継続監視
