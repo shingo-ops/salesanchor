@@ -86,7 +86,7 @@ import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // C
 import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
-import SuperAdminMastersPage from "./pages/super-admin/SuperAdminMastersPage";  // Sprint 2: マスタ管理
+import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -307,10 +307,9 @@ function App() {
                     path="/super-admin/analysis-rules"
                     element={<AnalysisRulesPage />}
                   />
-                  {/* Sprint 2: マスタ管理（商品マスタ + 仕入元マスタ is_super_admin 限定） */}
                   <Route
-                    path="/super-admin/masters"
-                    element={<SuperAdminMastersPage />}
+                    path="/super-admin/supplier-master"
+                    element={<SupplierMasterPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
