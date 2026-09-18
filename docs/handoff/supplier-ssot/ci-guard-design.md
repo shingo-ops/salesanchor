@@ -1,5 +1,7 @@
 # CI Guard Design — supplier_channels.supplier_id SSOT 保護
 
+対象ADR: ADR-095 (sa-ssot-two-backbone-architecture)
+
 ## 目的
 supplier SSOT 移行（PR #3539）により `supplier_channels.supplier_id` は
 `INTEGER` 型（`public.suppliers` FK）に統一された。
