@@ -100,42 +100,26 @@ supplier_prompts.supplier_id → public.suppliers(id)  [変更なし]
 
 ## マイグレーション計画
 
-### Sprint 1: DDL + データ移行（SSH 手動 + マイグレーション）
+### Sprint 1: DDL（マイグレーション）+ テストデータ削除（SSH 手動）
 
-**Step 1: public.suppliers に tenant_id 追加**
+**PO確認済み（2026-09-18）**: tenant_006 のデータは全てテスト用。データ移行不要、削除して構わない。
+他テナント（001,003,004,005）は suppliers 0件のためスキップ。
+
+**Step 1: テストデータ削除（SSH 手動・事前実行）**
+```sql
+-- tenant_006 の purchase_order_items → purchase_orders → suppliers は全テストデータ
+DELETE FROM tenant_006.purchase_order_items
+WHERE purchase_order_id IN (SELECT id FROM tenant_006.purchase_orders);
+DELETE FROM tenant_006.purchase_orders;
+```
+
+**Step 2: public.suppliers に tenant_id 追加（マイグレーション）**
 ```sql
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
 CREATE INDEX IF NOT EXISTS idx_suppliers_tenant_id ON public.suppliers (tenant_id);
 ```
 
-**Step 2: データ移行（SSH 手動実行）**
-```sql
--- tenant_NNN.suppliers → public.suppliers にコピー
--- supplier_code 重複チェック後、新 id を発番
-INSERT INTO public.suppliers (tenant_id, supplier_code, name, contact_name, email, phone, address, notes, is_active, created_at, updated_at)
-SELECT tenant_id, supplier_code, name, contact_name, email, phone, address, notes, is_active, created_at, updated_at
-FROM tenant_NNN.suppliers
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.suppliers p
-    WHERE p.supplier_code = tenant_NNN.suppliers.supplier_code
-    AND p.tenant_id = tenant_NNN.suppliers.tenant_id
-);
-```
-
-**Step 3: purchase_orders.supplier_id の値更新（SSH 手動実行）**
-```sql
--- 旧 tenant id → 新 public id にマッピング
-UPDATE tenant_NNN.purchase_orders po
-SET supplier_id = (
-    SELECT p.id FROM public.suppliers p
-    WHERE p.supplier_code = ts.supplier_code
-    AND p.tenant_id = :tenant_id
-)
-FROM tenant_NNN.suppliers ts
-WHERE ts.id = po.supplier_id;
-```
-
-**Step 4: FK 張り替え（マイグレーション DDL）**
+**Step 3: FK 張り替え（マイグレーション DDL）**
 ```sql
 -- purchase_orders FK: tenant.suppliers → public.suppliers
 ALTER TABLE tenant_NNN.purchase_orders DROP CONSTRAINT purchase_orders_supplier_id_fkey;
@@ -176,7 +160,7 @@ DROP TABLE IF EXISTS tenant_NNN.tcg_suppliers CASCADE;
 
 | リスク | 影響 | 対処 |
 |---|---|---|
-| supplier_code 重複（テナント間で同一コード） | データ移行時に衝突 | **本番確認済み: 重複なし（0件）**。単純コピーで対応 |
+| supplier_code 重複（テナント間で同一コード） | データ移行時に衝突 | **不要**: tenant データは全テストデータのため移行せず削除（PO承認済み） |
 | purchase_orders FK 張り替え中のダウンタイム | 発注機能停止 | 1トランザクション内で DROP→ADD |
 | products.supplier_default_id の旧id参照 | 商品マスタ不整合 | **本番確認済み: products 0行**。DDL のみで対応 |
 | tcg_suppliers の UUID→INTEGER id 変換 | supplier_channels 経由の参照崩壊 | Phase 1 で解決済み（supplier_channels は既に public.suppliers.id 参照） |

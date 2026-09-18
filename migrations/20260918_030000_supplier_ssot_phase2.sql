@@ -16,9 +16,9 @@
 --      新: public.suppliers(id) 参照
 --
 -- 事前実行（SSH手動・PO許可）:
---   1. tenant_006 仕入元テーブル → public 統合テーブル データコピー（47件、tenant_id=6）
---   2. purchase_orders.supplier_id マッピング更新（2件）
---   3. 他テナント（001,003,004,005）は 仕入元データ 0件のためスキップ
+--   1. tenant_006 のテストデータ削除（purchase_order_items + purchase_orders）
+--      ※ tenant_006 は全テストデータ — データ移行不要（PO承認 2026-09-18）
+--   2. 他テナント（001,003,004,005）は仕入元データ 0件のためスキップ
 --
 -- 事後実行（SSH手動・PO許可・本migration適用後）:
 --   4. DROP TABLE tenant_NNN の旧仕入元テーブル（全テナント）
