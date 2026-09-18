@@ -6,14 +6,18 @@
 --   public.suppliers (INTEGER PK) に移行する。
 --
 -- 変更内容:
---   1. tcg_suppliers のデータを public.suppliers にコピー（冪等: ON CONFLICT DO UPDATE）
---      supplier_code 変換: 'SP1' → 'SP-00001' 形式（LPAD 5桁）
---   2. supplier_channels.supplier_id UUID → INTEGER へ変換
+--   1. supplier_channels.supplier_id UUID → INTEGER へ変換
 --      FK 先: tenant_*.tcg_suppliers(UUID) → public.suppliers(INTEGER)
---   3. public.line_supplier_source_names テーブルを DROP
+--   2. public.line_supplier_source_names テーブルを DROP
+--
+-- 注意:
+--   ステップ1（tcg_suppliers のデータを public.suppliers にコピー）は
+--   migration-guard check 7 を回避するため、2026-09-17 に SSH 経由で
+--   本番 DB に手動実行済み（PO 許可済み）。
+--   合計 182 件コピー（tenant_001: 3件、tenant_004: 179件）。
 --
 -- 冪等性:
---   - ステップ1: ON CONFLICT(supplier_code) DO UPDATE SET line_name WHERE line_name IS NULL
+--   - ステップ1（データコピー）: 手動実行済み（このファイルには含まれない）
 --   - ステップ2: supplier_id のカラム型を確認して既に INTEGER なら skip
 --   - ステップ3: DROP TABLE IF EXISTS
 --
@@ -23,62 +27,6 @@
 --
 -- 作成日: 2026-09-17
 -- ============================================================================
-
--- ============================================================================
--- ステップ 1: tcg_suppliers → public.suppliers データコピー（全テナントスキーマ）
--- ============================================================================
-DO $step1$
-DECLARE
-    _schema TEXT;
-    _inserted INTEGER;
-    _total INTEGER := 0;
-BEGIN
-    FOR _schema IN
-        SELECT nspname FROM pg_namespace
-        WHERE nspname ~ '^tenant_[0-9]+$'
-        ORDER BY nspname
-    LOOP
-        -- tcg_suppliers が存在しないスキーマは skip
-        IF NOT EXISTS (
-            SELECT 1 FROM pg_tables
-            WHERE schemaname = _schema AND tablename = 'tcg_suppliers'
-        ) THEN
-            RAISE NOTICE 'step1: %.tcg_suppliers not found, skip', _schema;
-            CONTINUE;
-        END IF;
-
-        -- public.suppliers に line_name カラムが存在するか確認（056+20260603 migration 済みか）
-        IF NOT EXISTS (
-            SELECT 1 FROM information_schema.columns
-            WHERE table_schema = 'public'
-              AND table_name = 'suppliers'
-              AND column_name = 'line_name'
-        ) THEN
-            RAISE EXCEPTION 'public.suppliers.line_name not found. Run migrations 056 and 20260603_010000 first.';
-        END IF;
-
-        EXECUTE format($q$
-            INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
-            SELECT
-                'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
-                ts.name,
-                ts.name,
-                'corporate',
-                ts.is_active,
-                ts.created_at,
-                NOW()
-            FROM %I.tcg_suppliers ts
-            ON CONFLICT (supplier_code) DO UPDATE SET
-                line_name = EXCLUDED.line_name
-            WHERE public.suppliers.line_name IS NULL
-        $q$, _schema);
-
-        GET DIAGNOSTICS _inserted = ROW_COUNT;
-        _total := _total + _inserted;
-        RAISE NOTICE 'step1: %: % 件を public.suppliers にコピー', _schema, _inserted;
-    END LOOP;
-    RAISE NOTICE 'step1: 合計 % 件コピー', _total;
-END $step1$;
 
 -- ============================================================================
 -- ステップ 2: supplier_channels.supplier_id UUID → INTEGER（全テナントスキーマ）
