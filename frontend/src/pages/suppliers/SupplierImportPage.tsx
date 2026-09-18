@@ -128,7 +128,7 @@ export default function SupplierImportTenantPage() {
   const { hasPermission, loading } = usePermissions();
   const canImport = hasPermission("suppliers.create");
   return (
-    <PageLayout titleText={t("supplierCsv.importTitle")}>
+    <PageLayout titleText={t("supplierCsv.importTitle")} subtitleKey="supplierCsv.importSubtitle">
       {loading ? <p>{t("common.loading")}</p>
        : !canImport ? <p role="alert">{t("productCsv.denied")}</p>
        : <SupplierImportPanel onDone={() => navigate("/suppliers")} />}
