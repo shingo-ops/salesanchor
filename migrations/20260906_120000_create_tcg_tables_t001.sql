@@ -613,28 +613,33 @@ BEGIN
     -- 9. Seed: テスト仕入元 3 件 + LINE チャンネル（QA 専用）
     -- ================================================================
 
-    EXECUTE format($q$
-        INSERT INTO %I.tcg_suppliers (code, name, is_active) VALUES
-            ('SP9001', 'QAテスト仕入元A', TRUE),
-            ('SP9002', 'QAテスト仕入元B', TRUE),
-            ('SP9003', 'QAテスト仕入元C', TRUE)
-        ON CONFLICT (code) DO NOTHING
-    $q$, _schema);
+    IF to_regclass(format('%I.tcg_suppliers', _schema)) IS NULL THEN
+        RAISE NOTICE '20260906_120000: %I.tcg_suppliers does not exist, skipping seed', _schema;
+        -- Skip to validation section
+    ELSE
+        EXECUTE format($q$
+            INSERT INTO %I.tcg_suppliers (code, name, is_active) VALUES
+                ('SP9001', 'QAテスト仕入元A', TRUE),
+                ('SP9002', 'QAテスト仕入元B', TRUE),
+                ('SP9003', 'QAテスト仕入元C', TRUE)
+            ON CONFLICT (code) DO NOTHING
+        $q$, _schema);
 
-    EXECUTE format($q$
-        INSERT INTO %I.supplier_channels (supplier_id, channel, external_id, is_active)
-        SELECT s.id, 'line', NULL, TRUE
-        FROM   %I.tcg_suppliers s
-        WHERE  s.code IN ('SP9001', 'SP9002', 'SP9003')
-          AND  NOT EXISTS (
-              SELECT 1 FROM %I.supplier_channels sc
-              WHERE  sc.supplier_id = s.id
-                AND  sc.channel     = 'line'
-                AND  sc.external_id IS NULL
-          )
-    $q$, _schema, _schema, _schema);
+        EXECUTE format($q$
+            INSERT INTO %I.supplier_channels (supplier_id, channel, external_id, is_active)
+            SELECT s.id, 'line', NULL, TRUE
+            FROM   %I.tcg_suppliers s
+            WHERE  s.code IN ('SP9001', 'SP9002', 'SP9003')
+              AND  NOT EXISTS (
+                  SELECT 1 FROM %I.supplier_channels sc
+                  WHERE  sc.supplier_id = s.id
+                    AND  sc.channel     = 'line'
+                    AND  sc.external_id IS NULL
+              )
+        $q$, _schema, _schema, _schema);
 
-    RAISE NOTICE '20260906_120000: テスト仕入元 seed 完了（SP9001/SP9002/SP9003 + LINE チャンネル各 1 件）';
+        RAISE NOTICE '20260906_120000: テスト仕入元 seed 完了（SP9001/SP9002/SP9003 + LINE チャンネル各 1 件）';
+    END IF;
 
     -- ================================================================
     -- 10. 検算: 今回作成した TCG 27 テーブルのみをカウント
