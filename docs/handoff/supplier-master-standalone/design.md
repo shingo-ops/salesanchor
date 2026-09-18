@@ -30,9 +30,15 @@
 - ADR-027: i18n強制
 - ADR-144: UIガバナンス
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-TcgProductMasterPage.tsx が同プロジェクト内の直接参照先。
+同プロジェクト内の TcgProductMasterPage.tsx が直接参照先。同じ金型セット（PageLayout/ContentToolbar/HeaderButton/DataTable/EmptyState/TextField）と useSuperAdmin パターンをそのまま適用する。
+
+## 維持の仕組み
+
+- ADR-027 の i18n チェック（ESLint ルール）が日本語ハードコードを検出
+- ADR-144 の UIガバナンスチェックが生 input/button を検出
+- PR本文の標準ワークフロー確認セクションで毎回確認
 
 ## 触らない範囲
 

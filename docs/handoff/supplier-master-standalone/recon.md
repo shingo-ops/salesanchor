@@ -2,8 +2,7 @@
 
 ## 対象ファイル
 
-- `frontend/src/pages/super-admin/SuperAdminMastersPage.tsx` — 削除対象タブページ
-- `frontend/src/pages/super-admin/SuppliersAdminTab.tsx:1-385` — リネーム・改修元
+- `frontend/src/pages/super-admin/SupplierMasterPage.tsx` — 新規作成（このPRで追加）
 - `frontend/src/pages/super-admin/TcgProductMasterPage.tsx:1-95` — レイアウト参照先
 - `frontend/src/App.tsx:89` — import行（SuperAdminMastersPage）
 - `frontend/src/App.tsx:310-314` — /super-admin/masters ルート
