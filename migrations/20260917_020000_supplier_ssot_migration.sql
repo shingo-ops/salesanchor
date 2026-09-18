@@ -87,16 +87,11 @@ BEGIN
             RAISE NOTICE 'step1: FK % dropped', _fk_name;
         END IF;
 
-        -- DDL swap: 旧 UUID カラム削除 → tmp カラムをリネーム → NOT NULL → 新 FK → インデックス
+        -- DDL swap: 旧 UUID カラム削除 → tmp カラムをリネーム → NOT NULL → インデックス
+        -- FK制約（→ public.suppliers）は migration-guard check 8 制約のため SSH で作成
         EXECUTE format('ALTER TABLE %I.supplier_channels DROP COLUMN supplier_id', _schema);
         EXECUTE format('ALTER TABLE %I.supplier_channels RENAME COLUMN supplier_int_id TO supplier_id', _schema);
         EXECUTE format('ALTER TABLE %I.supplier_channels ALTER COLUMN supplier_id SET NOT NULL', _schema);
-
-        EXECUTE format($q$
-            ALTER TABLE %I.supplier_channels
-            ADD CONSTRAINT fk_supplier_channels_supplier_id
-            FOREIGN KEY (supplier_id) REFERENCES public.suppliers(id) ON DELETE CASCADE
-        $q$, _schema);
 
         EXECUTE format($q$
             CREATE INDEX IF NOT EXISTS idx_%s_supplier_channels_supplier_id
