@@ -51,11 +51,11 @@ validate-pr-body.sh
 
 ### 除外パターン（CI check-process-artifacts.js:757-761 から転写）
 
-| パターン | 理由 | 例 |
+| パターン | 理由 | 除外される例 |
 |---------|------|-----|
-| `package-lock.json$` | npm install で自動生成・宣言不要 | `package-lock.json` |
-| `-snapshots/.*\.png$` | Playwright E2E snapshot・自動生成 | `__playwright-snapshots__/page.png` |
-| `^\.claude-pipeline/active-work\.md$` | 自動更新ファイル・宣言不要 | `.claude-pipeline/active-work.md` |
+| package-lock.json$ | npm install で自動生成・宣言不要 | package-lock.json |
+| -snapshots/.*\.png$ | Playwright E2E snapshot・自動生成 | __playwright-snapshots__/page.png |
+| ^\.claude-pipeline/active-work\.md$ | 自動更新ファイル・宣言不要 | .claude-pipeline/active-work.md |
 
 ### エラー出力形式
 
@@ -83,11 +83,11 @@ validate-pr-body.sh
 ## 影響範囲
 
 ### 変更ファイル
-- `scripts/dev/validate-pr-body.sh`: 99行追加（検査6ロジック）
+- `scripts/dev/validate-pr-body.sh`: 118行追加（検査7-10ロジック）
 
 ### 呼び出し元
 - `.husky/commit-msg`: husky hook で実行（全PR author）
-- `validate-pr-body.sh` を手動実行した develop/author（既存）
+- ローカル validate-pr-body.sh を手動実行した author（既存）
 - CI 不明（pre-commit hook で自動実行される仕様であれば全PR）
 
 ### 非互換性
@@ -115,19 +115,13 @@ git revert <commit-hash>
 3. **リグレッション**: 既存検査1-5 が引き続き機能するか。検査6 の例外処理（timeout, FileNotFoundError）で既存検査をブロックしないか
 
 ## 外部・過去事例の参照と我々への応用
+本設計の根拠は、大規模 OSS プロジェクトで採用されている構造化 PR 検査の考え方を salesanchor に適用したもの。
 
-### 外部事例
-
-- **Kubernetes prow PR plugins**: PR body validation with structured comment parsing
-  - 応用: PR本文の構造化パースで metadata extraction を実装
-- **Angular commit-lint**: 構造化メッセージ検査で宣言と実装の齟齬を検出
-  - 応用: recon/design の必須セクション確認を正規表現で実装
-- **Next.js changesets**: 変更ファイルとchangelog entry の整合性チェック
-  - 応用: PR宣言ファイルと git diff の照合（検査6）を実装
-- **pre-commit フレームワーク**: ローカルフック段階でファイル整合性チェック
-  - 応用: husky commit-msg hook で validate-pr-body.sh を実行
-
-### salesanchor への応用
+**参考事例**:
+- **Kubernetes prow PR plugins**: PR body validation with structured comment parsing。応用: PR本文の構造化パースで metadata extraction を実装
+- **Angular commit-lint**: 構造化メッセージ検査で宣言と実装の齟齬を検出。応用: recon/design の必須セクション確認を正規表現で実装
+- **Next.js changesets**: 変更ファイルとchangelog entry の整合性チェック。応用: PR宣言ファイルと git diff の照合（検査6）を実装
+- **pre-commit フレームワーク**: ローカルフック段階でファイル整合性チェック。応用: husky commit-msg hook で validate-pr-body.sh を実行
 
 本設計は ADR-121（標準ワークフロー遵守）の具体化として：
 1. CI check-process-artifacts.js の検査ロジックをローカルに移植（検査6-10）
@@ -135,9 +129,4 @@ git revert <commit-hash>
 3. CI FAIL を事前に防ぎ、feedback loop を短縮
 
 ## 維持の仕組み
-
-**守り手**: Hikky-dev（Claude Code）
-
-- 新検査追加時は validate-pr-body.sh と check-process-artifacts.js を同期更新（手順: `STANDARD-WORKFLOW.md §validate-sync`）
-- 検査エラーメッセージの変更は PR本文にも転記（author 通知用）
-- リグレッション検査: PR #____ 実装時に以降10件のPRで動作確認
+守り手: Hikky-dev（Claude Code）。新検査追加時は validate-pr-body.sh と check-process-artifacts.js を同期更新（手順: `STANDARD-WORKFLOW.md §validate-sync`）し、検査エラーメッセージの変更は PR本文にも転記する。リグレッション検査は実装後10件のPRで実施。
