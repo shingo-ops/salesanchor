@@ -62,7 +62,25 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
 def _supplier_ssot_premigration(cursor, schema: str):
     """Pre-migration value operations for supplier SSOT.
     Copies tcg_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
-    Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql."""
+    Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql.
+    Idempotent: skips if supplier_id is already INTEGER."""
+    # Check if supplier_id is already INTEGER (conversion already done)
+    cursor.execute("""
+        SELECT a.atttypid = 'integer'::regtype::oid
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = %s
+          AND c.relname = 'supplier_channels'
+          AND a.attname = 'supplier_id'
+          AND a.attnum > 0
+    """, (schema,))
+    row = cursor.fetchone()
+    if row and row[0]:
+        return  # Already INTEGER, skip
+    # Also skip if supplier_channels table doesn't exist in this schema
+    if not row:
+        return
     # Step 1: Copy tcg_suppliers → public.suppliers
     cursor.execute(f"""
         INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
