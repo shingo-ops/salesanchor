@@ -91,7 +91,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
     try:
         return _run_extraction(session, source_message_id)
     except Exception:
-        logger.error("[tcg_extraction] unexpected error for sm=%s", source_message_id)
+        logger.exception("[tcg_extraction] unexpected error for sm=%s", source_message_id)
         return {
             "extraction_job_id": None,
             "status": "error",
