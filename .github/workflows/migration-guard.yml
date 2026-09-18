@@ -581,4 +581,73 @@ jobs:
             exit 1
           fi
 
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック 9: supplier_channels.supplier_id 保護（SSOT ガード）
+      #
+      # 背景: supplier SSOT 移行により supplier_channels.supplier_id は
+      #        INTEGER (→ public.suppliers FK) に統一済み。
+      #        この列の削除・型変更はシステム全体のエラーを引き起こす。
+      # ──────────────────────────────────────────────────────────────────────
+      - name: supplier_channels.supplier_id 保護チェック（SSOT ガード）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # PR差分から追加行のみ抽出（コメント行除外）
+          DIFF_LINES=$(git diff "$BASE" "$HEAD" -- 'migrations/*.sql' \
+            | grep '^+' | grep -v '^+++' \
+            | grep -v '^\+[[:space:]]*--' \
+            | grep -v '^\+[[:space:]]*#' || true)
+
+          if [ -z "$DIFF_LINES" ]; then
+            echo "✅ migration 変更なし — チェック9 スキップ"
+            exit 0
+          fi
+
+          # supplier_channels を含むか確認
+          HAS_TABLE=$(echo "$DIFF_LINES" | grep -i 'supplier_channels' || true)
+          if [ -z "$HAS_TABLE" ]; then
+            echo "✅ supplier_channels への変更なし — チェック9 スキップ"
+            exit 0
+          fi
+
+          # 危険パターン検出
+          DANGEROUS=$(echo "$DIFF_LINES" | grep -iE 'DROP[[:space:]]+COLUMN[[:space:]]+(IF[[:space:]]+EXISTS[[:space:]]+)?supplier_id|ALTER[[:space:]]+COLUMN[[:space:]]+supplier_id[[:space:]]+TYPE' || true)
+
+          if [ -z "$DANGEROUS" ]; then
+            echo "✅ supplier_channels.supplier_id への破壊的変更なし — チェック9 通過"
+            exit 0
+          fi
+
+          echo "🔍 supplier_channels.supplier_id への破壊的変更を検出:"
+          echo "$DANGEROUS"
+          echo ""
+
+          # PR本文からADR参照を確認
+          PR_BODY=$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq '.body')
+          ADR_REF=$(echo "$PR_BODY" | grep -oiE 'ADR-[0-9]+' | head -1 || true)
+
+          if [ -n "$ADR_REF" ]; then
+            echo "✅ PR本文に ADR 参照を確認: $ADR_REF"
+            echo "   ⚠️  ADR の承認状態は人間が確認してください"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック9)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "supplier_channels.supplier_id は SSOT 移行により"
+          echo "INTEGER 型 (→ public.suppliers FK) に統一済みです。"
+          echo "この列の削除・型変更はシステム全体のエラーを引き起こします。"
+          echo ""
+          echo "【対応手順】"
+          echo "1. docs/adr/ に ADR を起案して PO 承認を得る"
+          echo "2. PR 本文に ADR-NNN を明記する"
+          echo ""
+          echo "背景: PR #3539 (supplier SSOT migration)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
+
           echo "✅ チェック8 通過: 共用マスタテーブルへのデータ参照なし"

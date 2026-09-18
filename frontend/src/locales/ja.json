@@ -274,7 +274,8 @@
     "commissions": "報酬管理",
     "channelMasters": "チャネル管理",
     "openDrawer": "ナビゲーションを開く",
-    "closeDrawer": "ナビゲーションを閉じる"
+    "closeDrawer": "ナビゲーションを閉じる",
+    "masterManagement": "マスタ管理"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -2668,6 +2669,11 @@
         "csv_import": "CSV 取込",
         "f6_approved": "解析承認"
       }
+    },
+    "masters": {
+      "title": "マスタ管理",
+      "productTab": "商品マスタ",
+      "supplierTab": "仕入元マスタ"
     }
   },
   "schedule": {
@@ -3753,7 +3759,7 @@
       "unknown": "この記録では原因を特定できません。調査用情報をコピーして確認を依頼してください。"
     }
   },
-"analysisRules": {
+  "analysisRules": {
     "page": {
       "title": "解析管理",
       "subtitle": "完売ルール・日付ルールを管理します"
