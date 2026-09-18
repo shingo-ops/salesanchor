@@ -27,7 +27,6 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import line_source_names
 from app.services.tcg_line_android_parser import parse_android_export
 
 # ---------------------------------------------------------------------------
@@ -70,7 +69,7 @@ def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
 
     Args:
         tail:         時刻行から時刻部分を除いた残り文字列（例: "倉田 和博 本文..."）
-        sorted_names: tcg_suppliers.name を長さ降順に並べたリスト
+        sorted_names: public.suppliers.line_name を長さ降順に並べたリスト
 
     Returns:
         (display_name, body)
@@ -129,7 +128,7 @@ def parse_line_export(
 
     Args:
         export_text:    LINE エクスポートファイルの全文字列
-        supplier_names: tcg_suppliers.name の一覧（長さ降順ソート済み）。
+        supplier_names: public.suppliers.line_name の一覧（長さ降順ソート済み）。
                         渡すと GAS の latest24SplitHeader_ と同等の送信者名切り出しを行う。
                         None または空リストの場合は最初のスペースで分割（後方互換）。
 
@@ -227,7 +226,7 @@ def resolve_suppliers(
 
     Args:
         messages: parse_line_export の戻り値（is_system_event=False のみを渡すこと）
-        db_suppliers: [{"code": str, "name": str}, ...] — tcg_suppliers is_active=TRUE 全件
+        db_suppliers: [{"code": str, "line_name": str}, ...] — public.suppliers is_active=TRUE 全件
 
     Returns:
         (resolved, unresolved)
@@ -235,7 +234,7 @@ def resolve_suppliers(
         unresolved: [{"display_name": str, "timestamps": list[str]}]
     """
     # 完全一致辞書（GAS の byName と同等）
-    name_to_supplier: dict[str, dict] = {s["name"]: s for s in db_suppliers}
+    name_to_supplier: dict[str, dict] = {s["line_name"]: s for s in db_suppliers}
 
     resolved: list[dict] = []
     unresolved_map: dict[str, list[str]] = {}  # display_name → timestamp list
@@ -244,7 +243,7 @@ def resolve_suppliers(
         dn = msg["display_name"]
         sup = name_to_supplier.get(dn)
         matched_code: str | None = sup["code"] if sup else None
-        matched_name: str | None = sup["name"] if sup else None
+        matched_name: str | None = sup["line_name"] if sup else None
 
         if matched_code:
             resolved.append(
@@ -348,8 +347,8 @@ async def _write_source_messages(
                 f"""
                 SELECT sc.id
                 FROM {TCG_SCHEMA}.supplier_channels sc
-                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-                WHERE ts.code = :code
+                JOIN public.suppliers ps ON ps.id = sc.supplier_id
+                WHERE ps.supplier_code = :code
                   AND sc.channel = 'line'
                   AND sc.is_active = TRUE
                 ORDER BY sc.id
@@ -487,7 +486,7 @@ async def import_line_export(
     LINE エクスポートファイルを取り込む。
 
     1. ファイル全体の sha256 で冪等化チェック
-    2. tcg_suppliers 先行取得（parse_line_export に渡す名前リストを構築）
+    2. public.suppliers 先行取得（parse_line_export に渡す名前リストを構築）
     3. parse_line_export → システムイベント除外 → JST 基準窓フィルタ
     4. サプライヤー解決（完全一致）→ resolved / unresolved に分ける
     5-a. unresolved 0 件: source_messages INSERT + commit + エンキュー
@@ -546,10 +545,10 @@ async def import_line_export(
 
     # --- 2. マスタ先行取得 ---
     suppliers_rows = await db.execute(
-        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
+        text("SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL")
     )
-    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
-    supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
+    db_suppliers = [{"code": r[0], "line_name": r[1]} for r in suppliers_rows.fetchall()]
+    supplier_names = sorted((s["line_name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
     all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
@@ -568,11 +567,7 @@ async def import_line_export(
     message_count = len(messages)
 
     # --- 4. サプライヤー解決 ---
-    if source_format == "android":
-        messages = [{**m, '_line_source_format': line_source_names.MARKER} for m in messages]
-        resolved_msgs, unresolved = line_source_names.resolve_android(messages, db_suppliers, await line_source_names.load_aliases(db))
-    else:
-        resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
+    resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
     unresolved_count = len(unresolved)
     unresolved_display_names = [u["display_name"] for u in unresolved]
 

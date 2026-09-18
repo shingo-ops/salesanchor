@@ -26,6 +26,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_extraction_record_svc as extraction_records
 from app.services import tcg_product_master_svc as product_master
 from app.tasks import tcg_extraction as extraction
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
 SCHEMA = "tenant_901"
@@ -213,11 +214,15 @@ $rw$;
 
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
+    cursor.execute(_PUBLIC_SUPPLIERS_DDL)
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
     cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
+    # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+    _supplier_ssot_premigration(cursor, SCHEMA)
+    cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
 
 
 @pytest.fixture
@@ -572,6 +577,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
         cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
+        cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+        # Sprint 1: rewire supplier_channels.supplier_id UUID→INTEGER for distribution JOIN
+        _supplier_ssot_premigration(cursor, "tenant_004")
+        cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))

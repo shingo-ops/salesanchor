@@ -158,7 +158,7 @@ class SoldOutResultItem(BaseModel):
     analysis_result_id: UUID
     extraction_item_id: UUID
     source_message_id: UUID
-    supplier_id: UUID | None
+    supplier_id: int | None
     product_id: int | None
     provider: str
     product_title: str

@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
 URL = os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -29,6 +30,10 @@ async def create_schema(conn, schema, corrections=True):
     try:
         await conn.exec_driver_sql("SAVEPOINT public_products_ddl")
         for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+            stmt = stmt.strip()
+            if stmt:
+                await conn.exec_driver_sql(stmt)
+        for stmt in _PUBLIC_SUPPLIERS_DDL.split(';'):
             stmt = stmt.strip()
             if stmt:
                 await conn.exec_driver_sql(stmt)
