@@ -119,9 +119,9 @@ it("places the menu after LINE import only for SaaS administrators", async () =>
   const links = screen.getAllByRole("link");
   const index = links.findIndex(link => link.getAttribute("href") === "/super-admin/tcg-line-import");
   expect(index).toBeGreaterThanOrEqual(0);
-  expect(links[index + 1].getAttribute("href")).toBe("/super-admin/tcg-sold-out");
-  expect(links[index + 1].textContent).toBe("Sold-out rules");
+  expect(links[index + 1].getAttribute("href")).toBe("/super-admin/analysis-rules");
+  expect(links[index + 1].textContent).toBe("Analysis Management");
   cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); shell();
   expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
-  expect(screen.queryByRole("link", { name: "Sold-out rules" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();
 });
