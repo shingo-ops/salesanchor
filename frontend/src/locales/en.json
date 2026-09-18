@@ -2473,7 +2473,20 @@
       "addRouting": "Add Discord Routing",
       "guildId": "Guild ID",
       "channelId": "Channel ID",
-      "bulkDeleteConfirm": "Delete the {{count}} selected suppliers. Are you sure?"
+      "bulkDeleteConfirm": "Delete the {{count}} selected suppliers. Are you sure?",
+      "loadError": "Could not load supplier details. Please try again.",
+      "saveError": "The save result could not be confirmed. Keep a copy of your edits before retrying.",
+      "saved": "Saved.",
+      "saving": "Saving…",
+      "discardMessage": "You have unsaved changes. Discard them?",
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing",
+      "reload": "Load latest values",
+      "nameRequired": "Enter a supplier name.",
+      "deleteTitle": "Delete Supplier",
+      "deleteConfirm": "Are you sure you want to delete this supplier? This action cannot be undone.",
+      "deleteAction": "Delete",
+      "deleteError": "Failed to delete the supplier."
     },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",
