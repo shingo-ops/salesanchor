@@ -61,7 +61,7 @@ def pg():
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
-            # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+            # Sprint 1: copy tcg_suppliers (later renamed to tenant_suppliers) → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
             _supplier_ssot_premigration(cursor, SCHEMA)
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             provision(cursor, "tenant_006")

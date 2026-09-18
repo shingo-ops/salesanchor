@@ -69,7 +69,7 @@ async def pg(monkeypatch):
                 # Insert supplier_channels row with UUID supplier_id (before Sprint 1 migration converts it)
                 c.execute(f"INSERT INTO {schema}.supplier_channels(supplier_id,channel,is_active) "
                           f"SELECT id,'line',true FROM {schema}.tcg_suppliers WHERE code='SP1'")
-            # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+            # Sprint 1 migration: copy tcg_suppliers (later renamed to tenant_suppliers) → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             for s in (SCHEMA, "tenant_872"):
                 _supplier_ssot_premigration(c, s)

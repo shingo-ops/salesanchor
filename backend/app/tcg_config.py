@@ -10,7 +10,7 @@ TCG_SCHEMA 環境変数からスキーマ名を読み取る。
 
 使用例:
     from app.tcg_config import TCG_SCHEMA
-    sql = f"SELECT * FROM {TCG_SCHEMA}.tcg_suppliers"
+    sql = f"SELECT * FROM {TCG_SCHEMA}.tenant_suppliers"
 """
 from __future__ import annotations
 

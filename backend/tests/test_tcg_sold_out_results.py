@@ -131,7 +131,7 @@ async def pg(monkeypatch):
             cursor.execute(_rewire_keyword_fks("tenant_951"))
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute("INSERT INTO tenant_951.tcg_suppliers(code,name,is_active) VALUES ('S','Supplier percent%',true)")
-            # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+            # Sprint 1 migration: copy tcg_suppliers (later renamed to tenant_suppliers) → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             _supplier_ssot_premigration(cursor, "tenant_951")
             cursor.execute(sprint1.read_text())
