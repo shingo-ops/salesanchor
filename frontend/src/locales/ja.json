@@ -3925,5 +3925,25 @@
       "condition": "状態",
       "memo": "メモ"
     }
+  },
+  "supplierCsv": {
+    "exportButton": "CSVエクスポート",
+    "importButton": "CSVインポート",
+    "importTitle": "仕入元マスタ インポート",
+    "selectFile": "CSVファイルを選択",
+    "preview": "プレビュー",
+    "commit": "確定",
+    "cancel": "キャンセル",
+    "total": "合計",
+    "inserts": "新規追加",
+    "updates": "更新",
+    "errors": "エラー",
+    "noErrors": "エラーなし",
+    "commitSuccess": "インポートが完了しました",
+    "commitFail": "インポートに失敗しました",
+    "digestMismatch": "ファイルが変更されています。再度プレビューしてください",
+    "fileTooLarge": "ファイルサイズが2MBを超えています",
+    "invalidFormat": "CSVファイルのみアップロード可能です",
+    "backToList": "一覧に戻る"
   }
 }
