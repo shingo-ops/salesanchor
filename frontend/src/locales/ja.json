@@ -275,7 +275,8 @@
     "channelMasters": "チャネル管理",
     "openDrawer": "ナビゲーションを開く",
     "closeDrawer": "ナビゲーションを閉じる",
-    "masterManagement": "マスタ管理"
+    "masterManagement": "マスタ管理",
+    "superAdminSupplierMaster": "仕入元マスタ"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
