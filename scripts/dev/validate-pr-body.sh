@@ -205,6 +205,124 @@ if repo_root and touch_match:
     except (subprocess.TimeoutExpired, FileNotFoundError):
         pass  # git が使えない環境ではスキップ
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 検査7: 設計docの「外部・過去事例の参照と我々への応用」セクション
+# CIの check-process-artifacts.js 行437-450 と同じロジック
+# ──────────────────────────────────────────────────────────────────────────────
+if repo_root and design_match and design_raw and not re.match(r'^_+$', design_raw) and not re.search(r'<[^>]+>', design_raw):
+    design_full_path = os.path.join(repo_root, design_raw)
+    if os.path.isfile(design_full_path):
+        with open(design_full_path, encoding='utf-8', errors='replace') as f:
+            design_content = f.read()
+        case_heading_match = re.search(r'^##[^\n]*外部[・\u30fb]過去事例[^\n]*', design_content, re.MULTILINE)
+        if not case_heading_match:
+            errors.append('❌ 設計docに「外部・過去事例の参照と我々への応用」欄がありません（空欄不可）')
+        else:
+            after_heading = design_content[case_heading_match.end():]
+            next_section_match = re.search(r'\n##', after_heading)
+            section_content = after_heading[:next_section_match.start()] if next_section_match else after_heading
+            if len(section_content.strip()) < 5:
+                errors.append('❌ 「外部・過去事例と応用」欄が空欄です（「該当なし＋理由」でも必要）')
+    else:
+        design_content = None  # ファイル不在は検査4で既にエラー
+else:
+    design_content = None
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 検査8: 設計docの「## 維持の仕組み」セクション（警告モード）
+# CIの check-process-artifacts.js 行455-489 と同じロジック
+# ──────────────────────────────────────────────────────────────────────────────
+if design_content is not None:
+    maintenance_heading_match = re.search(r'^##[^\n]*維持の仕組み[^\n]*$', design_content, re.MULTILINE)
+    if not maintenance_heading_match:
+        print('⚠️  設計docに「## 維持の仕組み」欄がありません（正本§1.7・将来 fail に引き上げ予定）', file=sys.stderr)
+    else:
+        after_maint = design_content[maintenance_heading_match.end():]
+        next_maint_section = re.search(r'\n##', after_maint)
+        maint_section_content = after_maint[:next_maint_section.start()] if next_maint_section else after_maint
+        guardian_match = re.search(r'守り手:\s*([^\n]*)', maint_section_content)
+        guardian_value = guardian_match.group(1).strip() if guardian_match else ''
+        if not guardian_value:
+            print('⚠️  「維持の仕組み」欄の「守り手:」が空欄です（将来 fail に引き上げ予定）', file=sys.stderr)
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 検査9: バッククォート内パスの実在確認
+# 設計doc と recon.md のバッククォート内テキストをチェック
+# ──────────────────────────────────────────────────────────────────────────────
+if repo_root:
+    CITATION_EXTENSIONS = re.compile(r'\.(tsx|ts|py|sql|yml|yaml|json|md|sh)$', re.IGNORECASE)
+    backtick_re = re.compile(r'`([^`\s]+?)(?::[\d]+(?:-[\d]+)?)?`')
+
+    def check_backtick_paths(content, label):
+        citation_errors = []
+        for m in backtick_re.finditer(content):
+            raw = m.group(1)
+            if re.match(r'^https?://', raw):
+                continue
+            normalized = raw[2:] if raw.startswith('./') else raw
+            if not CITATION_EXTENSIONS.search(normalized):
+                continue
+            full = os.path.join(repo_root, normalized)
+            if not os.path.isfile(full):
+                citation_errors.append(f'❌ {label}: `{normalized}` — ファイルが存在しません')
+        return citation_errors
+
+    # 設計docのチェック
+    if design_content is not None:
+        errors.extend(check_backtick_paths(design_content, '設計doc'))
+
+    # recon.md のチェック
+    if recon_match and not re.search(r'<[^>]+>', recon_path):
+        recon_full_path = os.path.join(repo_root, recon_path)
+        if os.path.isfile(recon_full_path):
+            with open(recon_full_path, encoding='utf-8', errors='replace') as f:
+                recon_content = f.read()
+            errors.extend(check_backtick_paths(recon_content, 'recon.md'))
+
+# ──────────────────────────────────────────────────────────────────────────────
+# 検査10: ユーザー影響変更時のGO記録チェック
+# CIの check-process-artifacts.js 行849-866 と同じロジック
+# ──────────────────────────────────────────────────────────────────────────────
+if repo_root:
+    USER_IMPACT_PATTERNS = [
+        re.compile(r'^frontend/src/'),
+        re.compile(r'^backend/app/routers/'),
+        re.compile(r'^backend/app/services/'),
+    ]
+    try:
+        import subprocess as _subprocess
+        diff_result = _subprocess.run(
+            ['git', 'diff', '--numstat', 'origin/main...HEAD'],
+            cwd=repo_root, capture_output=True, text=True, timeout=30
+        )
+        has_user_impacting = False
+        if diff_result.returncode == 0 and diff_result.stdout.strip():
+            for line in diff_result.stdout.strip().split('\n'):
+                parts = line.split('\t')
+                if len(parts) == 3:
+                    _, _, fpath = parts
+                    if any(p.search(fpath) for p in USER_IMPACT_PATTERNS):
+                        has_user_impacting = True
+                        break
+
+        if has_user_impacting:
+            go_section_match = re.search(r'###\s*GO記録\s*\n([\s\S]*?)(?=\n###|\n##|\n#|$)', pr_body)
+            if not go_section_match:
+                errors.append('❌ ユーザー影響変更があります。PR本文に「### GO記録」セクションがありません')
+                errors.append('   → frontend/src / backend/app/routers / backend/app/services の変更は Shingo の GO 記録が必要です')
+            else:
+                go_section = go_section_match.group(1)
+                go_errors = []
+                if not re.search(r'GO発行者\s*:', go_section):
+                    go_errors.append('❌ GO記録に「GO発行者:」がありません')
+                if not re.search(r'GO原文\s*:', go_section):
+                    go_errors.append('❌ GO記録に「GO原文:」がありません')
+                if not re.search(r'GO\s*#\d+', go_section):
+                    go_errors.append('❌ GO記録に「GO #<PR番号>」形式の番号がありません（番号のないGOは無効）')
+                errors.extend(go_errors)
+    except (Exception,):
+        pass  # git が使えない環境ではスキップ
+
 # 結果出力
 for e in errors:
     print(e)
