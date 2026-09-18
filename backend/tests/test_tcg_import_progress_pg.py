@@ -37,6 +37,9 @@ def provision_tcg(cursor,schema):
                  "20260903_170000_item_corrections_t004.sql",
                  "20260905_140000_import_jobs_review_stage_t004.sql"):
         cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
+    # Migration 20260831_110000 creates tcg_suppliers; production DB was renamed to
+    # tenant_suppliers (ADR-155). Align test schema to match renamed table.
+    cursor.execute(f"ALTER TABLE IF EXISTS {schema}.tcg_suppliers RENAME TO tenant_suppliers")
 
 
 @pytest_asyncio.fixture
