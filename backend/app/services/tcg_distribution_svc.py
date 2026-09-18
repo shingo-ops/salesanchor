@@ -221,7 +221,7 @@ async def fetch_output_rows(
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
             COALESCE(ser.display_name, '')                          AS series,
-            COALESCE(ts.name, '')                                   AS provider
+            COALESCE(ps.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -231,8 +231,8 @@ async def fetch_output_rows(
             ON sm.id = ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
-            ON ts.id = sc.supplier_id
+        LEFT JOIN public.suppliers ps
+            ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
         LEFT JOIN {TCG_SCHEMA}.tcg_series ser

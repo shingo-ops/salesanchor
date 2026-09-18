@@ -155,9 +155,9 @@ async def read_messages(db: AsyncSession, job_id: str, limit: int, offset: int) 
     result = await db.execute(text(f"""
         WITH {_scope_ctes()}, page AS (
           SELECT m.id::text, m.raw_text, m.received_at, m.created_at, m.is_active,
-                 m.relation_kind, ts.name AS supplier_name
+                 m.relation_kind, ps.name AS supplier_name
           FROM messages m LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id
-          LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          LEFT JOIN public.suppliers ps ON ps.id=sc.supplier_id
           ORDER BY m.created_at, m.id LIMIT :limit OFFSET :offset
         ) SELECT jsonb_build_object('as_of', statement_timestamp(), 'review_status', job.review_status,
           'linked', job.messages_linked_at IS NOT NULL, 'total',(SELECT count(*) FROM messages),
@@ -177,10 +177,10 @@ async def read_extraction_jobs(db: AsyncSession, job_id: str, limit: int, offset
     result = await db.execute(text(f"""
         WITH {_scope_ctes()}, filtered AS (SELECT * FROM jobs WHERE :filter_by='all' OR status='error'), page AS (
           SELECT j.id::text, j.source_message_id::text, j.status, j.created_at, j.extracted_at, m.raw_text,
-                 ts.name AS supplier_name, (SELECT count(*) FROM {TCG_SCHEMA}.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
+                 ps.name AS supplier_name, (SELECT count(*) FROM {TCG_SCHEMA}.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
                  CASE WHEN j.status='error' THEN 'unclassified' ELSE NULL END AS error_reason_code
           FROM filtered j JOIN messages m ON m.id=j.source_message_id
-          LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+          LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN public.suppliers ps ON ps.id=sc.supplier_id
           ORDER BY j.created_at,j.id LIMIT :limit OFFSET :offset
         ) SELECT jsonb_build_object('as_of',statement_timestamp(),'review_status',job.review_status,'linked',job.messages_linked_at IS NOT NULL,
           'total',(SELECT count(*) FROM filtered),'jobs',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job

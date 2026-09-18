@@ -201,7 +201,7 @@ def test_resolve_exact_match():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 1
     assert resolved[0]["sp_code"] == "SP0001"
@@ -218,7 +218,7 @@ def test_resolve_prefix_match():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 0
     assert len(unresolved) == 1
@@ -236,11 +236,11 @@ def test_resolve_longest_prefix_wins():
         }
     ]
     db_suppliers = [
-        {"code": "SP0001", "name": "仕入元A"},
-        {"code": "SP0002", "name": "仕入元AB"},
+        {"code": "SP0001", "line_name": "仕入元A"},
+        {"code": "SP0002", "line_name": "仕入元AB"},
     ]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
-    assert resolved[0]["sp_code"] == "SP0002"  # 最長一致
+    assert resolved[0]["sp_code"] == "SP0002"  # 完全一致
 
 
 def test_resolve_unknown_sender():
@@ -253,7 +253,7 @@ def test_resolve_unknown_sender():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 0
     assert len(unresolved) == 1
@@ -278,7 +278,7 @@ def test_resolve_mixed_resolved_unresolved():
         {"timestamp": "2026-08-01 10:00:00", "display_name": "既知の仕入元", "body": "商品A", "is_system_event": False},
         {"timestamp": "2026-08-01 10:01:00", "display_name": "未知のユーザー", "body": "何か", "is_system_event": False},
     ]
-    db_suppliers = [{"code": "SP0001", "name": "既知の仕入元"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "既知の仕入元"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 1
     assert len(unresolved) == 1
@@ -535,7 +535,7 @@ async def test_source_message_insert_before_update_supersede():
         if "import_jobs" in sql and "raw_sha256" in sql:
             # 冪等化チェック: 未取り込み
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             # サプライヤー一覧（プレフィックス一致で "仕入元A" を解決）
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
@@ -603,7 +603,7 @@ async def test_enqueue_called_after_commit():
         sql = str(stmt)
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -741,7 +741,7 @@ async def test_received_at_stored_as_jst_in_insert():
             received_at_params.append(params["received_at"])
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -860,7 +860,7 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
         result = MagicMock()
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None          # 未取り込み
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = supplier_rows
         elif "supplier_channels" in sql and "SELECT" in sql:
             result.fetchone.return_value = ("test-channel-id",)

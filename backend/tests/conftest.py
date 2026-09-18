@@ -42,6 +42,68 @@ import app.auth.dependencies  # noqa: F401
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 
+# PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
+# SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
+# check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
+_PUBLIC_SUPPLIERS_DDL = """
+CREATE TABLE IF NOT EXISTS public.suppliers (
+    id            SERIAL PRIMARY KEY,
+    supplier_code VARCHAR(20) UNIQUE,
+    name          VARCHAR(255) NOT NULL,
+    line_name     VARCHAR(255),
+    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+"""
+
+
+def _supplier_ssot_premigration(cursor, schema: str):
+    """Pre-migration value operations for supplier SSOT.
+    Copies tcg_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
+    Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql.
+    Idempotent: skips if supplier_id is already INTEGER."""
+    # Check if supplier_id is already INTEGER (conversion already done)
+    cursor.execute("""
+        SELECT a.atttypid = 'integer'::regtype::oid
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = %s
+          AND c.relname = 'supplier_channels'
+          AND a.attname = 'supplier_id'
+          AND a.attnum > 0
+    """, (schema,))
+    row = cursor.fetchone()
+    if row and row[0]:
+        return  # Already INTEGER, skip
+    # Also skip if supplier_channels table doesn't exist in this schema
+    if not row:
+        return
+    # Step 1: Copy tcg_suppliers → public.suppliers
+    cursor.execute(f"""
+        INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
+        SELECT
+            'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
+            ts.name, ts.name, 'corporate', ts.is_active, ts.created_at, NOW()
+        FROM {schema}.tcg_suppliers ts
+        ON CONFLICT (supplier_code) DO UPDATE SET
+            line_name = EXCLUDED.line_name
+        WHERE public.suppliers.line_name IS NULL
+    """)
+    # Step 2: Add tmp column and map UUID → INTEGER
+    cursor.execute(f"ALTER TABLE {schema}.supplier_channels ADD COLUMN IF NOT EXISTS supplier_int_id INTEGER")
+    cursor.execute(f"""
+        UPDATE {schema}.supplier_channels sc
+        SET supplier_int_id = ps.id
+        FROM {schema}.tcg_suppliers ts
+        JOIN public.suppliers ps
+          ON ps.supplier_code = 'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0')
+        WHERE ts.id = sc.supplier_id
+    """)
+
+
 def _load_country_seed_rows() -> list[tuple[str, str, str]]:
     """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
     import re
@@ -959,6 +1021,7 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 supplier_code VARCHAR(20),
                 name VARCHAR(255) NOT NULL,
+                line_name VARCHAR(255),
                 contact_name VARCHAR(255),
                 email VARCHAR(255),
                 phone VARCHAR(50),

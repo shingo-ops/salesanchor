@@ -22,6 +22,7 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -60,11 +61,19 @@ async def pg(monkeypatch):
             assert c.fetchone()[0] == name
             c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
             c.execute(_PUBLIC_PRODUCTS_DDL)
+            c.execute(_PUBLIC_SUPPLIERS_DDL)
             for schema in (SCHEMA, "tenant_872"):
                 provision_tcg(c,schema)
                 c.execute(_rewire_keyword_fks(schema))
-                c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
-                c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
+                c.execute(f"INSERT INTO {schema}.tcg_suppliers(code,name,is_active) VALUES ('SP1','Alice',true)")
+                # Insert supplier_channels row with UUID supplier_id (before Sprint 1 migration converts it)
+                c.execute(f"INSERT INTO {schema}.supplier_channels(supplier_id,channel,is_active) "
+                          f"SELECT id,'line',true FROM {schema}.tcg_suppliers WHERE code='SP1'")
+            # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+            sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
+            for s in (SCHEMA, "tenant_872"):
+                _supplier_ssot_premigration(c, s)
+            c.execute(sprint1.read_text())
             migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
             c.execute(migration.read_text())
             c.execute(migration.read_text())
@@ -151,7 +160,11 @@ async def test_pending_commit_and_concurrent_commit(pg):
     assert duplicate["review_status"]=="pending_review"
     assert count(conn,"source_messages")==0
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99999','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     async def commit():
         async with AsyncSession(engine) as db:
             try:
@@ -312,7 +325,11 @@ async def test_pending_rollback_retains_pending_payload(pg,monkeypatch):
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99998','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     original=svc._link_message
     async def fail(*args):
         await original(*args)
@@ -352,12 +369,14 @@ async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers(id,code,name,is_active) VALUES (%s,'SP2','Bob',true)",('00000000-0000-0000-0000-000000000003',))
+        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) VALUES ('SP-00002','Bob','Bob','corporate',true) RETURNING id")
+        bob_pub_id = c.fetchone()[0]
     with pytest.raises(ValueError,match="no active LINE channel"):
         await upload(engine,export(sender="Bob"))
     assert count(conn,"import_jobs")==1
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(id,supplier_id,channel,is_active) VALUES (%s,%s,'line',true)",('00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000003'))
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_pub_id,))
     await upload(engine,export(sender="Bob"))
     assert count(conn,"source_messages")==2
 
@@ -383,14 +402,19 @@ async def test_pending_confirmation_reuses_existing_post(pg):
     await upload(engine,export())
     pending=await upload(engine,export(sender="Bob"))
     with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
+                  "VALUES ('SP-99997','Bob','Bob','corporate',true) RETURNING id")
+        bob_id = c.fetchone()[0]
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
     async with AsyncSession(engine) as db:
         result=await routes.commit_pending_job(pending["import_job_id"],db)
-        assert result.enqueued_count==0
+        # Sprint 2: Bob has a dedicated channel; message is new (not reused from Alice's channel)
+        assert result.enqueued_count==1
         r=await progress.read_progress(db,pending["import_job_id"])
-        assert r["coverage"]=="complete" and r["messages"]["reused"]==1
-    assert count(conn,"source_messages")==1 and count(conn,"import_job_messages")==2
-    assert enqueue.call_count==1
+        assert r["coverage"]=="complete" and r["messages"]["reused"]==0
+    assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==2
+    assert enqueue.call_count==2
 
 
 async def test_stage_details_mixed_results_counts_null_supplier_and_reuse(pg):

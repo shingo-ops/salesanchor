@@ -165,14 +165,14 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text(f"""
         SELECT
-            s.code,
-            s.name,
-            s.contact_name,
+            ps.supplier_code AS code,
+            ps.name,
+            NULL AS contact_name,
             sc.channel_type,
             sc.channel_identifier
-        FROM {TCG_SCHEMA}.tcg_suppliers s
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = s.id
-        ORDER BY s.code, sc.channel_type
+        FROM public.suppliers ps
+        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
+        ORDER BY ps.supplier_code, sc.channel_type
     """))
     rows = result.fetchall()
     headers = ["code", "name", "contact_name", "channel_type", "channel_identifier"]
@@ -185,19 +185,19 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text(f"""
         SELECT
-            s.code,
-            s.name,
+            ps.supplier_code AS code,
+            ps.name,
             COUNT(DISTINCT ei.id) AS extraction_items,
             COUNT(DISTINCT ar.id) AS analysis_results,
             SUM(CASE WHEN ar.needs_review THEN 1 ELSE 0 END) AS needs_review
-        FROM {TCG_SCHEMA}.tcg_suppliers s
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = s.id
+        FROM public.suppliers ps
+        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
         LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id
         LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
         LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
         LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
-        GROUP BY s.code, s.name
-        ORDER BY s.code
+        GROUP BY ps.supplier_code, ps.name
+        ORDER BY ps.supplier_code
     """))
     rows = result.fetchall()
     headers = ["code", "name", "extraction_items", "analysis_results", "needs_review"]
@@ -220,7 +220,7 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
         WHERE t.table_schema = '{TCG_SCHEMA}'
           AND t.table_name IN (
-            'tcg_suppliers', 'supplier_channels',
+            'supplier_channels',
             'product_search_keywords', 'product_exclude_keywords',
             'units', 'unit_aliases', 'conditions', 'condition_aliases',
             'source_messages', 'extraction_jobs', 'extraction_items',
