@@ -36,8 +36,8 @@
 
 ### 金型（MasterListEditor）
 
-- 場所: `ProductMastersTab.tsx:116-312`（内部コンポーネント）
-- インターフェース `MasterDataSource`（`ProductMastersTab.tsx:27-33`）:
+- 場所: `frontend/src/pages/super-admin/ProductMastersTab.tsx:116-312`（内部コンポーネント）
+- インターフェース `MasterDataSource`（`frontend/src/pages/super-admin/ProductMastersTab.tsx:27-33`）:
   - `list()`, `create()`, `update()`, `remove()`, `reorder()`
 - 機能: 検索、追加、編集、削除、ドラッグ並び替え
 - PO指示: この金型を仕入元マスタでも使用して統一感を出す
