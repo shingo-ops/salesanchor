@@ -17,6 +17,18 @@ BEGIN
         RETURN;
     END IF;
 
+    -- tcg_suppliers テーブルが存在しない場合もスキップ（SSOT Phase 2 で DROP 済みの場合）
+    IF to_regclass(_schema || '.tcg_suppliers') IS NULL THEN
+        RAISE NOTICE '20260905_120000: %.tcg_suppliers does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
+    -- supplier_channels テーブルが存在しない場合もスキップ
+    IF to_regclass(_schema || '.supplier_channels') IS NULL THEN
+        RAISE NOTICE '20260905_120000: %.supplier_channels does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     -- =========================================================
     -- 1. tcg_suppliers: 15件 新規登録（SP0188〜SP0202）
     -- =========================================================
