@@ -1,5 +1,7 @@
 # design: 仕入元マスタ独立ページ化
 
+recon: `docs/handoff/supplier-master-standalone/recon.md`
+
 ## KGI
 
 `/super-admin/supplier-master` にアクセスすると TcgProductMasterPage と同じ構成部品でレンダリングされる。
@@ -39,7 +41,7 @@
 - ADR-027 の i18n チェック（ESLint ルール）が日本語ハードコードを検出
 - ADR-144 の UIガバナンスチェックが生 input/button を検出
 - PR本文の標準ワークフロー確認セクションで毎回確認
-- 守り手: Hikky-dev（コードレビュー時にUIガバナンス・i18n遵守を確認）
+- 守り手: `frontend/src/pages/super-admin/SupplierMasterPage.tsx` — Hikky-dev（コードレビュー時にUIガバナンス・i18n遵守を確認）
 
 ## 触らない範囲
 
