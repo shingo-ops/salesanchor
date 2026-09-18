@@ -13,6 +13,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
+import { TextField } from "../../components/TextField";
 
 interface Supplier {
   id: number; supplier_code: string | null; name: string; contact_name: string | null;
@@ -121,9 +122,9 @@ export default function SuppliersPage() {
               setSearch(searchInput.trim());
             }}
           >
-            <input
-              className="field-h-md field-w-sm"
+            <TextField
               type="text"
+              size="md"
               placeholder={t("common.search")}
               aria-label={t("common.search")}
               value={searchInput}
