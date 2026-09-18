@@ -1,17 +1,17 @@
-# Design: PR本文 diff照合チェック追加（検査6）
+# Design: PR本文バリデーション拡張（検査1-10）
 
 ## 設計目標
 
-**KGI**: PR author がローカルで PR本文 の「触るファイル:」「削除するファイル:」宣言漏れを即座に検出し、CI FAIL を事前に防ぐ
+**KGI**: PR author がローカルで PR本文の構造・内容エラーを即座に検出し、CI FAIL を事前に防ぐ
 
 **KPI**:
-- ローカル validation スクリプト実行時、宣言漏れがあれば exit 1 で返す
-- CI check-process-artifacts.js と同一の除外ルールを適用し、偽陽性を最小化
-- エラーメッセージで具体的なファイル名を表示（修正指示を含む）
+- ローカル validation スクリプト実行時、エラーがあれば exit 1 で返す
+- CI check-process-artifacts.js と同一のロジックを実装し、乖離を排除
+- エラーメッセージで具体的な修正指示を提示
 
 ## 実装方針
 
-### 検査6 の位置づけ
+### バリデーション検査体系
 
 ```
 validate-pr-body.sh
@@ -20,7 +20,11 @@ validate-pr-body.sh
 ├─ 検査3: 設計doc パス存在確認（必須）
 ├─ 検査4: 「触るファイル:」セクション存在確認（必須）
 ├─ 検査5: 「削除するファイル:」セクション存在確認（必須）
-└─ 検査6: git diff vs 宣言 照合（必須） ← 追加
+├─ 検査6: git diff vs 宣言 照合（必須）
+├─ 検査7: 設計docの「外部・過去事例」セクション確認（必須）
+├─ 検査8: 設計docの「維持の仕組み」セクション確認（警告）
+├─ 検査9: バッククォート内ファイルパス存在確認（必須）
+└─ 検査10: ユーザー影響変更時のGO記録チェック（必須）
 ```
 
 ### 照合ロジック
@@ -110,8 +114,30 @@ git revert <commit-hash>
 
 3. **リグレッション**: 既存検査1-5 が引き続き機能するか。検査6 の例外処理（timeout, FileNotFoundError）で既存検査をブロックしないか
 
-## 外部事例・参考
+## 外部・過去事例の参照と我々への応用
+
+### 外部事例
 
 - **Kubernetes prow PR plugins**: PR body validation with structured comment parsing
+  - 応用: PR本文の構造化パースで metadata extraction を実装
 - **Angular commit-lint**: 構造化メッセージ検査で宣言と実装の齟齬を検出
+  - 応用: recon/design の必須セクション確認を正規表現で実装
 - **Next.js changesets**: 変更ファイルとchangelog entry の整合性チェック
+  - 応用: PR宣言ファイルと git diff の照合（検査6）を実装
+- **pre-commit フレームワーク**: ローカルフック段階でファイル整合性チェック
+  - 応用: husky commit-msg hook で validate-pr-body.sh を実行
+
+### salesanchor への応用
+
+本設計は ADR-121（標準ワークフロー遵守）の具体化として：
+1. CI check-process-artifacts.js の検査ロジックをローカルに移植（検査6-10）
+2. PR author が push 前に宣言漏れ・セクション欠落を検出
+3. CI FAIL を事前に防ぎ、feedback loop を短縮
+
+## 維持の仕組み
+
+**守り手**: Hikky-dev（Claude Code）
+
+- 新検査追加時は validate-pr-body.sh と check-process-artifacts.js を同期更新（手順: `STANDARD-WORKFLOW.md §validate-sync`）
+- 検査エラーメッセージの変更は PR本文にも転記（author 通知用）
+- リグレッション検査: PR #____ 実装時に以降10件のPRで動作確認
