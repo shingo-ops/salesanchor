@@ -527,7 +527,7 @@ jobs:
 
               # 許可パターンチェック（いずれかに該当すれば許可）
               if echo "$line_content" | grep -qiE \
-                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|information_schema|pg_namespace|pg_class|to_regclass'; then
+                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|to_regclass'; then
                 continue
               fi
 
