@@ -33,12 +33,21 @@ supplier SSOT 移行（PR #3539）により `supplier_channels.supplier_id` は
 | supplier_channels に無関係な migration は影響なし | supplier_channels 未参照ならスキップ |
 | migration 変更なし PR は影響なし | DIFF_LINES が空ならスキップ |
 
-## 外部事例
-- Check 6 (DROP COLUMN/TABLE) が先例：ADR参照による意図的変更は許可する保守的ガードパターン
-- 同プロジェクト ADR-155（チェック7-8）もマスタSSoT保護として同様アプローチ
+## 外部・過去事例の参照と我々への応用
 
-## 守り手
-- 破壊: なし（YAML追加のみ・アプリコード無変更）
+チェック6（`.github/workflows/migration-guard.yml:343-391`）がプロジェクト内の先例。
+`DROP COLUMN / DROP TABLE` を検出し、PR 本文に ADR 番号がなければ `exit 1` するパターンを
+すでに本番運用している。今回のチェック9はこれと同構造で `supplier_channels.supplier_id`
+に特化した絞り込みを追加したもの。
+
+- 同プロジェクト ADR-155（チェック7-8）もマスタSSoT保護として同様アプローチを採用済み
+- 外部に同等の公開事例は不要（内部先例が十分に成熟している）
+
+## 維持の仕組み
+
+守り手: `.github/workflows/migration-guard.yml` チェック9（CI自動実行）
+
+- 破壊リスク: なし（YAML追加のみ・アプリコード無変更）
 - 戻し方: チェック9ブロック（`- name: supplier_channels...` から `exit 1` まで）を削除
 - 測り方: migration-guard CI が当該パターンを含む PR で exit 1 を返すことを確認
 
