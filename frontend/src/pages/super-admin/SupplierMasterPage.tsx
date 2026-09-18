@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
@@ -65,9 +66,12 @@ const PER_PAGE = 50;
 
 export default function SupplierMasterPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
   const [items, setItems] = useState<CentralSupplier[]>([]);
   const [error, setError] = useState("");
+  const [exporting, setExporting] = useState(false);
+  const exportLock = useRef(false);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -88,6 +92,23 @@ export default function SupplierMasterPage() {
 
   const supplierFormRef = useRef<HTMLFormElement>(null);
   const routingFormRef = useRef<HTMLFormElement>(null);
+
+  async function downloadExport() {
+    if (authLoading || !isSuperAdmin || exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/suppliers/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "suppliers-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const load = useCallback(async () => {
     if (authLoading || !isSuperAdmin) return;
@@ -228,6 +249,12 @@ export default function SupplierMasterPage() {
       navKey="nav.superAdminSupplierMaster"
       headerAction={isSuperAdmin ? (
         <>
+          <HeaderButton variant="secondary" disabled={exporting} data-testid="suppliers-export" onClick={() => void downloadExport()}>
+            {t(exporting ? "common.loading" : "supplierCsv.exportButton")}
+          </HeaderButton>
+          <HeaderButton variant="secondary" data-testid="suppliers-import" onClick={() => navigate("/super-admin/masters/suppliers/import")}>
+            {t("supplierCsv.importButton")}
+          </HeaderButton>
           <HeaderButton variant="primary" data-testid="suppliers-new" onClick={openCreate}>
             {t("superAdmin.suppliersAdmin.newSupplier")}
           </HeaderButton>

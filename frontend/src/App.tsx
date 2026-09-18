@@ -87,6 +87,7 @@ import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
 import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
+import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -310,6 +311,10 @@ function App() {
                   <Route
                     path="/super-admin/supplier-master"
                     element={<SupplierMasterPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/suppliers/import"
+                    element={<SupplierImportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>

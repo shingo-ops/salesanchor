@@ -3912,5 +3912,25 @@
       "condition": "Condition",
       "memo": "Memo"
     }
+  },
+  "supplierCsv": {
+    "exportButton": "Export CSV",
+    "importButton": "Import CSV",
+    "importTitle": "Supplier Master Import",
+    "selectFile": "Select CSV file",
+    "preview": "Preview",
+    "commit": "Commit",
+    "cancel": "Cancel",
+    "total": "Total",
+    "inserts": "New",
+    "updates": "Updates",
+    "errors": "Errors",
+    "noErrors": "No errors",
+    "commitSuccess": "Import completed",
+    "commitFail": "Import failed",
+    "digestMismatch": "File has changed. Please preview again",
+    "fileTooLarge": "File size exceeds 2MB",
+    "invalidFormat": "Only CSV files can be uploaded",
+    "backToList": "Back to list"
   }
 }
