@@ -676,3 +676,6 @@ run_sql migrations/20260917_000000_create_analysis_rule_tables.sql
 
 # 仕入元マスタ SSOT Sprint 1: tcg_suppliers → public.suppliers コピー + supplier_channels FK UUID→INTEGER + line_supplier_source_names DROP
 run_sql migrations/20260917_020000_supplier_ssot_migration.sql
+
+# 仕入元マスタ SSOT Phase 2 Sprint 1: public.suppliers に tenant_id 追加 + purchase_orders/products FK 張り替え
+run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
