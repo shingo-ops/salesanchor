@@ -679,3 +679,9 @@ run_sql migrations/20260917_020000_supplier_ssot_migration.sql
 
 # 仕入元マスタ SSOT Phase 2 Sprint 1: public.suppliers に tenant_id 追加 + purchase_orders/products FK 張り替え
 run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
+
+# Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
+run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
+
+# Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
+run_sql migrations/20260919_020000_master_ssot_public_tables.sql
