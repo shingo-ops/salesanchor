@@ -68,7 +68,8 @@ async def list_suppliers(
     db: AsyncSession = Depends(get_db),
 ):
     offset = (page - 1) * per_page
-    conditions: list[str] = []
+    # LINE 解析用マスタ（tenant_id IS NULL）のみを対象とする。
+    conditions: list[str] = ["tenant_id IS NULL"]
     params: dict = {"limit": per_page, "offset": offset}
     if q:
         # ADR-093 改修: 検索は仕入元名のみ（UI の検索窓仕様に一致）。
@@ -80,7 +81,7 @@ async def list_suppliers(
     if is_active is not None:
         conditions.append("is_active = :is_active")
         params["is_active"] = is_active
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    where = f"WHERE {' AND '.join(conditions)}"
     # Discord ID 列表示用に、紐付け済み routing の channel_id を相関サブクエリで付与
     # （複数紐付けがある場合は最初の有効分。編集は従来の紐付けUIで行う）。
     result = await db.execute(
@@ -113,10 +114,10 @@ async def create_supplier(
             text(
                 f"INSERT INTO public.suppliers "
                 f"(name, supplier_type, default_language, contact_name, email, phone, "
-                f" address, notes, is_active, created_by, "
+                f" address, notes, is_active, created_by, tenant_id, "
                 f" line_name, postal_code, prefecture, city, address1, address2) "
                 f"VALUES (:name, :supplier_type, :default_language, :contact_name, :email, "
-                f"        :phone, :address, :notes, :is_active, :uid, "
+                f"        :phone, :address, :notes, :is_active, :uid, NULL, "
                 f"        :line_name, :postal_code, :prefecture, :city, :address1, :address2) "
                 f"RETURNING {_SUPPLIER_COLS}"
             ),
