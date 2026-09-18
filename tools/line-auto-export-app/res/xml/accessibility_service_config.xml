@@ -1,16 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  android:canPerformGestures はAPI24で追加された属性のため、API23のandroid.jarを
-  リンクするこのビルド環境のaaptでは名前解決できず宣言できない（実測済み。報告参照）。
-  そのためOSがCAPABILITY_CAN_PERFORM_GESTURESを許可しない可能性が高く、
-  UnlockAccessibilityServiceのdispatchGestureフォールバックは実機で機能しない
-  おそれがある。ノードクリック（canRetrieveWindowContent経由）が主経路。
+  android:canPerformGestures はAPI24で追加された属性。API23のandroid.jarをリンクする
+  aaptでは名前解決できず宣言が落ち、端末側の capabilities が 1（画面取得のみ）のままに
+  なる＝タップが一切効かない（2026-09-18 実機の dumpsys accessibility で確認）。
+  build.sh は aapt のリソース解決に API34 の android.jar を使う。
 -->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
     android:accessibilityEventTypes="typeAllMask"
     android:accessibilityFeedbackType="feedbackGeneric"
     android:accessibilityFlags="flagRetrieveInteractiveWindows|flagReportViewIds"
     android:canRetrieveWindowContent="true"
+    android:canPerformGestures="true"
     android:notificationTimeout="100"
     android:description="@string/accessibility_service_description"
     android:settingsActivity="jp.salesanchor.lineexport.SettingsActivity" />

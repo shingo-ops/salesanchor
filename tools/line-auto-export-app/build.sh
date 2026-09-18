@@ -11,7 +11,14 @@ set -euo pipefail
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+# javac は API23 でコンパイルする（minSdk 23 に合わせ、新しいAPIを誤って使わないため）。
+# aapt のリソース解決だけは API34 を使う。API23 では accessibility-service の
+# android:canPerformGestures（API24 で追加）が解決できず、宣言が落ちてしまうため
+# （2026-09-18 実測: API23 は "No resource identifier found for attribute
+# 'canPerformGestures'"、API34 はエラーなし）。権限が落ちると端末側の
+# capabilities が 1 のままになり、タップが一切効かない。
 ANDROID_JAR="/usr/lib/android-sdk/platforms/android-23/android.jar"
+AAPT_JAR="$APP_DIR/sdk/android-34.jar"
 BUILD_DIR="$APP_DIR/build"
 OUT_DIR="$APP_DIR/out"
 GEN_DIR="$BUILD_DIR/gen"
@@ -28,6 +35,11 @@ if [ ! -f "$ANDROID_JAR" ]; then
   exit 1
 fi
 
+if [ ! -f "$AAPT_JAR" ]; then
+  echo "ERROR: android-34.jar not found at $AAPT_JAR (aaptのリソース解決に必要)" >&2
+  exit 1
+fi
+
 rm -rf "$GEN_DIR" "$CLASSES_DIR" "$DEX_FILE" \
   "$OUT_DIR/app-unsigned.apk" "$OUT_DIR/app-aligned.apk" "$OUT_DIR/app-debug.apk"
 mkdir -p "$GEN_DIR" "$CLASSES_DIR" "$OUT_DIR"
@@ -36,7 +48,7 @@ echo "-- [1/8] aapt package -m -J (R.java生成) --"
 aapt package -f -m -J "$GEN_DIR" \
   -M AndroidManifest.xml \
   -S res \
-  -I "$ANDROID_JAR"
+  -I "$AAPT_JAR"
 echo "OK: $GEN_DIR"
 
 echo "-- [2/8] javac --release 8 --"
@@ -52,7 +64,7 @@ echo "-- [4/8] aapt package (resources + manifest -> app-unsigned.apk) --"
 aapt package -f \
   -M AndroidManifest.xml \
   -S res \
-  -I "$ANDROID_JAR" \
+  -I "$AAPT_JAR" \
   -F "$OUT_DIR/app-unsigned.apk"
 echo "OK: $OUT_DIR/app-unsigned.apk"
 

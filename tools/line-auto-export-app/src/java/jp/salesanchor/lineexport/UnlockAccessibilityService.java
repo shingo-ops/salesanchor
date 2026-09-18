@@ -37,9 +37,13 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private static final int NOTIFICATION_ID = 1001;
     private static final String WAKE_LOCK_TAG = "SALineExport:unlock";
 
-    private static final long POST_WAKE_DELAY_MS = 1200L;
-    private static final long DIGIT_CLICK_INTERVAL_MS = 350L;
-    private static final long RESULT_CHECK_DELAY_MS = 3000L;
+    // ロック画面は画面消灯までが約5秒（端末の「画面消灯時間」を60秒にしても
+    // activityTimeoutWM=5000 が効く。2026-09-18 実機ログで確認）。PIN入力が
+    // その窓に確実に収まるよう、待ち時間を詰めてある。
+    private static final long POST_WAKE_DELAY_MS = 600L;
+    private static final long DIGIT_CLICK_INTERVAL_MS = 200L;
+    private static final long KEYPAD_REVEAL_DELAY_MS = 700L;
+    private static final long RESULT_CHECK_DELAY_MS = 1500L;
     private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 10000L;
 
     private static final String[] ENTER_LABELS = {
@@ -47,6 +51,10 @@ public class UnlockAccessibilityService extends AccessibilityService {
     };
 
     private static volatile UnlockAccessibilityService sInstance;
+
+    /** 動作の記録。ログが端末で抑止されるため、通知に載せる唯一の手がかり（PINは載せない）。 */
+    private StringBuilder trace;
+    private long flowStartedAt;
 
     private final Handler handler = new Handler();
     private final AtomicBoolean running = new AtomicBoolean(false);
@@ -99,6 +107,17 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
 
         failureReasons = new StringBuilder();
+        trace = new StringBuilder();
+        flowStartedAt = System.currentTimeMillis();
+
+        // ロックされていないときに数字を打つと、前面のアプリを誤タップする（ADB版の
+        // 「使用中は見送り」と同じ判定）。
+        KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
+        if (km == null || !km.isKeyguardLocked()) {
+            running.set(false);
+            postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中）");
+            return;
+        }
 
         String pin = PinStore.loadPin(this);
         if (pin == null || pin.length() == 0) {
@@ -112,9 +131,29 @@ public class UnlockAccessibilityService extends AccessibilityService {
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                clickDigit(0);
+                revealKeypadThenEnterPin();
             }
         }, POST_WAKE_DELAY_MS);
+    }
+
+    /**
+     * 画面をつけただけではロック画面（時計）が出るだけで、数字キーは現れない。
+     * 上スワイプで数字キー（Bouncer）を出してからPINを打つ（2026-09-18 実機で確認）。
+     */
+    private void revealKeypadThenEnterPin() {
+        Point size = getScreenSize();
+        boolean swiped = size.y > 0 && GestureCompat.swipe(this,
+                size.x * 0.5f, size.y * 0.81f, size.x * 0.5f, size.y * 0.26f, 250L);
+        traceAppend(swiped ? "スワイプ" : "スワイプ失敗");
+        if (!swiped) {
+            failureReasons.append("数字キーを出せない ");
+        }
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                clickDigit(0);
+            }
+        }, KEYPAD_REVEAL_DELAY_MS);
     }
 
     private void clickDigit(final int index) {
@@ -148,10 +187,20 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private boolean clickDigitKey(String digit) {
         AccessibilityNodeInfo node = findNodeByLabel(digit);
         if (node != null && clickNode(node)) {
+            traceAppend("ノード");
             return true;
         }
         // フォールバック: ノードが見つからない/クリックできない場合の座標タップ（実測グリッド）。
-        return tapDigitByMeasuredGrid(digit);
+        boolean tapped = tapDigitByMeasuredGrid(digit);
+        traceAppend(tapped ? "座標" : "失敗");
+        return tapped;
+    }
+
+    /** 記録は手段のみ。どの数字をどこに打ったかは通知に出さない（PIN露出になるため）。 */
+    private void traceAppend(String what) {
+        if (trace != null) {
+            trace.append(what).append(' ');
+        }
     }
 
     private void clickEnter() {
@@ -163,9 +212,15 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 break;
             }
         }
-        if (!clicked) {
+        if (clicked) {
+            traceAppend("Enter:ノード");
+        } else {
             failureReasons.append("Enter未検出 ");
             clicked = tapEnterByGridGuess();
+            Point size = getScreenSize();
+            traceAppend(clicked
+                    ? "Enter:座標(" + Math.round(size.x * 0.5f) + "," + Math.round(size.y * 0.95f) + ")"
+                    : "Enter:失敗");
             if (!clicked) {
                 failureReasons.append("Enterフォールバックも失敗 ");
             }
@@ -187,13 +242,17 @@ public class UnlockAccessibilityService extends AccessibilityService {
         currentPin = null;
         running.set(false);
 
+        long elapsed = System.currentTimeMillis() - flowStartedAt;
+        Point screen = getScreenSize();
+        String detail = (trace == null ? "" : trace.toString().trim())
+                + " / " + elapsed + "ms / 画面" + screen.x + "x" + screen.y;
         if (!locked) {
-            postSuccessNotification(this);
+            postNotification(this, "ロック解除: 成功", detail);
         } else {
             String reason = failureReasons.length() > 0
                     ? failureReasons.toString().trim()
                     : "PIN入力後もロック中";
-            postFailureNotification(this, reason);
+            postFailureNotification(this, reason + " / " + detail);
         }
     }
 
@@ -314,12 +373,18 @@ public class UnlockAccessibilityService extends AccessibilityService {
         return GestureCompat.tap(this, x, y, 80L);
     }
 
+    /**
+     * 画面全体の大きさ（装飾を除かない実サイズ）。getSize() はナビゲーションバー等を
+     * 除いた値を返すことがあり、同じ端末で 2340 と 2184 の2通りが観測された
+     * （2026-09-18 実機。高さが6.7%変わると数字キーの位置が約110px＝キー半個分ずれる）。
+     * キー座標は実画面サイズに対する比率で測ってあるため、必ず getRealSize() を使う。
+     */
     @SuppressWarnings("deprecation")
     private Point getScreenSize() {
         Point size = new Point();
         WindowManager wm = (WindowManager) getSystemService(Context.WINDOW_SERVICE);
         if (wm != null) {
-            wm.getDefaultDisplay().getSize(size);
+            wm.getDefaultDisplay().getRealSize(size);
         }
         return size;
     }

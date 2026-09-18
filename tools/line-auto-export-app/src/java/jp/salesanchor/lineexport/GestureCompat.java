@@ -34,10 +34,24 @@ final class GestureCompat {
 
     /** Attempts a single tap at (x, y). Returns false if unsupported or it fails. */
     static boolean tap(AccessibilityService service, float x, float y, long durationMs) {
-        try {
-            Path path = new Path();
-            path.moveTo(x, y);
+        Path path = new Path();
+        path.moveTo(x, y);
+        return dispatch(service, path, durationMs);
+    }
 
+    /**
+     * Attempts a swipe from (x1, y1) to (x2, y2). ロック画面では上スワイプで数字キー
+     * （Bouncer）を出す必要がある（2026-09-18 実機で確認）。
+     */
+    static boolean swipe(AccessibilityService service, float x1, float y1, float x2, float y2, long durationMs) {
+        Path path = new Path();
+        path.moveTo(x1, y1);
+        path.lineTo(x2, y2);
+        return dispatch(service, path, durationMs);
+    }
+
+    private static boolean dispatch(AccessibilityService service, Path path, long durationMs) {
+        try {
             Class<?> strokeClass = Class.forName("android.accessibilityservice.GestureDescription$StrokeDescription");
             Constructor<?> strokeCtor = strokeClass.getConstructor(Path.class, long.class, long.class);
             Object stroke = strokeCtor.newInstance(path, 0L, durationMs);
