@@ -1,5 +1,7 @@
 # design: 仕入元マスタ Drawer化・ボタン整理
 
+recon: `docs/handoff/supplier-master-drawer/recon.md`
+
 ## 参照 ADR
 
 - ADR-027: i18n強制（全UI文字列 `t()` 経由）
@@ -39,7 +41,7 @@
 
 ## 維持の仕組み
 
-守り手: Hikky-dev (Claude Code)
+守り手: `frontend/src/pages/super-admin/SupplierMasterPage.tsx`, `frontend/src/features/supplier-master/SupplierDetailDrawer.tsx` — Hikky-dev（コードレビュー時にUIガバナンス・i18n遵守を確認）
 
 - SupplierDetailDrawer は frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx と同じコンポーネント構造・ファイル配置規約に従う。新規フィールド追加時は Draft 型と draftFromSupplier() 関数を更新する。
 - i18n キーは superAdmin.suppliersAdmin.* 名前空間に集約。新規 UI テキスト追加時は ja.json / en.json 両方に同一キーを追加する（ADR-027）。
