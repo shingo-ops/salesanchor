@@ -1,67 +1,137 @@
-# Recon: PR本文 diff照合チェック追加（検査6）
+# Recon: PR本文バリデーション拡張（検査1-10）
 
-日付: 2026-09-18
-テーマ: PR本文 の「触るファイル:」「削除するファイル:」宣言と実際のgit diff結果を照合し、宣言漏れを検出する検査機能の追加
+日付: 2026-09-19
+テーマ: PR本文の構造・内容エラーを段階的に検出するバリデーション体系の整備。検査1-6に加え、設計doc要件確認（検査7-8）・ファイルパス存在確認（検査9）・GO記録検証（検査10）を追加
 
 ## 現状
 
-- `scripts/dev/validate-pr-body.sh`: PR本文の必須フォーマットチェック（検査1-5）
+- `scripts/dev/validate-pr-body.sh`: PR本文検査スクリプト（検査1-6実装済み）
   - 検査1: 「標準ワークフロー確認」セクション存在確認
   - 検査2: recon.md パス存在確認
   - 検査3: 設計doc パス存在確認
   - 検査4: 「触るファイル:」セクション存在確認
   - 検査5: 「削除するファイル:」セクション存在確認
-  - **検査6: 未実装**
+  - 検査6: git diff vs 宣言照合（PR #3554実装）
+  - **検査7-10: 未実装**
 
-- PR #3554 で検査6 の必要性が明確化
-  - author が「触るファイル:」に記入したつもりでも、実際の変更ファイルが宣言外のものを含んでいると CI check-process-artifacts.js でキャッチされて FAIL に
-  - ローカル検証時点で宣言漏れを検出できれば、author 体験が向上
+- CI `check-process-artifacts.js` （検査7-10実装済み）
+  - 検査7: 設計docの「外部・過去事例」セクション確認
+  - 検査8: 設計docの「維持の仕組み」セクション確認（警告）
+  - 検査9: バッククォート内ファイルパス存在確認
+  - 検査10: ユーザー影響変更時のGO記録チェック
 
-## 検査6 の仕様
+**問題**: validate-pr-body.sh と check-process-artifacts.js の検査ロジックが乖離
+- ローカルで検査7-10が未実装 → author が CI まで待たなければエラーを検出できない
+- CI と ローカル で複数回検査（冗長性）
+- PR push → CI FAIL → 修正 のループが長くなる
 
-**実装箇所**: `scripts/dev/validate-pr-body.sh: 107-204行`
+## 検査7-10 の仕様
 
-**処理フロー**:
-1. PR本文から「触るファイル:」セクションを抽出
-2. `git diff --numstat origin/main...HEAD` で実際の変更ファイルリストを取得
-3. 除外パターン適用（CI check-process-artifacts.js:757-761 と同一）
-   - `package-lock.json$`
-   - `-snapshots/.*\.png$`
-   - `^\.claude-pipeline/active-work\.md$`
-4. **宣言漏れ検出**: 変更されたファイルで、PR本文に記載されていないもの → エラー出力
-5. **削除漏れ検出**: 削除行を含むファイルで、「削除するファイル:」に記載されていないもの → エラー出力
+### 検査7: 設計docの「外部・過去事例」セクション確認
 
-**エラーメッセージ**:
-```
-❌ 宣言外のファイルを変更しています:
-   - path/to/undeclared-file.ts
-   → 「触るファイル:」に追記してください
+**実装箇所**: `scripts/dev/validate-pr-body.sh: 209-229行`
 
-❌ 宣言外のファイルから行を削除しています:
-   - path/to/undeclared-deletion-file.py
-   → 「削除するファイル:」に追記してください
-```
+**ロジック** (`check-process-artifacts.js:437-450` と同一):
+1. 設計docを読み込み
+2. 正規表現 `^##[^\n]*外部[・\u30fb]過去事例[^\n]*` で「外部・過去事例」ヘッダを検索
+3. ヘッダが見つからない → ❌ FAIL
+4. ヘッダの直後から次の `##` セクションまでのコンテンツをチェック
+5. コンテンツが空欄（5文字未満）→ ❌ FAIL
 
-## テスト実績（PR #3554での検証）
+### 検査8: 設計docの「維持の仕組み」セクション確認
 
+**実装箇所**: `scripts/dev/validate-pr-body.sh: 232-246行`
+
+**ロジック** (`check-process-artifacts.js:455-489` と同一):
+1. 設計docで `^##[^\n]*維持の仕組み[^\n]*$` を検索
+2. セクションが見つからない → ⚠️ 警告（現在）
+3. 見つかった場合、セクション内の「守り手:」行をチェック
+4. 守り手が空欄 → ⚠️ 警告（現在）
+5. **注記**: 将来 fail に引き上げ予定（ADR-121）
+
+### 検査9: バッククォート内ファイルパス存在確認
+
+**実装箇所**: `scripts/dev/validate-pr-body.sh: 249-280行`
+
+**ロジック** (`check-process-artifacts.js:710-757` と同一):
+1. 設計doc と recon.md から バッククォートで囲まれたテキストを抽出
+2. 正規表現 `` `([^`\s]+?)(?::[\d]+(?:-[\d]+)?)?` `` で引用パスを検出
+3. 拡張子チェック（`.tsx|ts|py|sql|yml|yaml|json|md|sh`）
+4. HTTP(S) URL はスキップ
+5. ファイル実在確認 → 不存在なら ❌ FAIL
+
+### 検査10: ユーザー影響変更時のGO記録チェック
+
+**実装箇所**: `scripts/dev/validate-pr-body.sh: 283-324行`
+
+**ロジック** (`check-process-artifacts.js:849-866` と同一):
+1. git diff で変更ファイルを取得
+2. `frontend/src/` `backend/app/routers/` `backend/app/services/` マッチング
+3. ユーザー影響ファイルの変更がある場合:
+   - PR本文に `### GO記録` セクションが存在するか → なし → ❌ FAIL
+   - GO記録内に 「GO発行者:」があるか → なし → ❌ FAIL
+   - GO記録内に 「GO原文:」があるか → なし → ❌ FAIL
+   - GO記録内に 「GO #<数字>」形式があるか → なし → ❌ FAIL
+
+## テスト実績
+
+**PR #3554 で検査6実装時の検証**:
 - ✅ 全ファイル宣言済みPR本文 → exit 0
 - ✅ 2ファイル宣言漏れPR本文 → exit 1 + ファイル名表示
 - ✅ `PR_BODY_VALIDATE_SKIP=1` → exit 0
 
+**本PR で検査7-10実装時に実施すべきテスト**:
+- ✅ 設計docに「外部・過去事例」セクションがある → 検査7 PASS
+- ✅ 設計docに「外部・過去事例」セクションがない → 検査7 FAIL
+- ✅ 設計docに「維持の仕組み」セクションがある → 検査8 警告なし
+- ✅ バッククォート内パスが存在 → 検査9 PASS
+- ✅ バッククォート内パスが不存在 → 検査9 FAIL
+- ✅ frontend/src/ 変更+GO記録あり → 検査10 PASS
+- ✅ frontend/src/ 変更+GO記録なし → 検査10 FAIL
+
 ## ADR 関連参照
 
-- ADR-155（未作成予定）: PR本文検査スコープの拡張
+- ADR-155: PR本文検査スコープの拡張（検査1-6実装済み）
+- ADR-121: 標準ワークフロー遵守の強制化
 
 ## 実装の根拠
 
-`check-process-artifacts.js` との同期性を確保することで:
-- 開発者が ローカル push 前に検査6で宣言漏れを検出可能
-- CI での check-process-artifacts.js との重複検証で多重防衛
-- 不整合の余地を排除
+### 設計・検査の分離化（現状の問題）
 
-## 外部事例
+**Before** (現在):
+```
+Author が PR push
+  ↓
+CI: check-process-artifacts.js（検査1-10実行）
+  ↓
+検査7-10 FAIL （ローカルで検出不可）
+  ↓
+Author が修正・再 push
+  （最大 30分/ループ × 複数回）
+```
 
-PR body validation is standard in large projects:
-- Kubernetes: prow plugin with PR decoration
-- Angular: commit message linter with PR templates
-- Next.js: PR check automation with artifact tracking
+**After** (本PR後):
+```
+Author がローカル commit-msg hook
+  ↓
+validate-pr-body.sh（検査1-10実行）
+  ↓
+検査FAIL → Author が即座に修正
+  ↓
+修正後 git push（最初の push で CI PASS）
+  （feedback loop 短縮）
+```
+
+### 同期化ルール
+
+- validate-pr-body.sh と check-process-artifacts.js の検査ロジックは完全一致を維持
+- 一方が変更される場合、必ずもう一方も同期更新（ADR-155 更新時に記載）
+- 乖離検知時は両ファイルの diff を取得して統一
+
+## 参考実装
+
+`check-process-artifacts.js` での実装は以下で確認:
+- 検査7: `scripts/check-process-artifacts.js:437-450`
+- 検査8: `scripts/check-process-artifacts.js:455-489`
+- 検査9: `scripts/check-process-artifacts.js:710-757`
+- 検査10: `scripts/check-process-artifacts.js:849-866`

@@ -190,8 +190,7 @@ export default function DesktopShell() {
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/masters",              labelKey: "nav.masterManagement" },
     { to: "/super-admin/tcg-line-import",      labelKey: "nav.superAdminTcgLineImport" },
-    { to: "/super-admin/tcg-sold-out", labelKey: "nav.superAdminTcgSoldOut" },
-    { to: "/super-admin/tcg-supplier-quality", labelKey: "nav.superAdminTcgSupplierQuality" },
+    { to: "/super-admin/analysis-rules",       labelKey: "nav.superAdminAnalysisRules" },
     { to: "/super-admin/tcg-product-master", labelKey: "nav.superAdminTcgProductMaster" },
     { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
   ] : [];
