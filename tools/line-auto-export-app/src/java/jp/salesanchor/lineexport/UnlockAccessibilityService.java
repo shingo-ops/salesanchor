@@ -150,8 +150,8 @@ public class UnlockAccessibilityService extends AccessibilityService {
         if (node != null && clickNode(node)) {
             return true;
         }
-        // フォールバック: ノードが見つからない/クリックできない場合の座標タップ（推測グリッド）。
-        return tapDigitByGridGuess(digit);
+        // フォールバック: ノードが見つからない/クリックできない場合の座標タップ（実測グリッド）。
+        return tapDigitByMeasuredGrid(digit);
     }
 
     private void clickEnter() {
@@ -259,25 +259,33 @@ public class UnlockAccessibilityService extends AccessibilityService {
         return false;
     }
 
-    // ---- Coordinate-tap fallback (heuristic, needs on-device calibration) ------------
+    // ---- Coordinate-tap fallback (measured on the target device) -----------------------
+
+    /*
+     * 数字キーの中心位置（画面サイズに対する比率）。2026-09-18 に対象端末（画面 1080x2340）の
+     * ロック画面で実測した値。ロック画面はスクリーンショットが真っ黒になるため、getevent で
+     * タップを記録して求めた（1・3・7・9・0 を実測し、2・4・5・6・8 は格子計算による導出）。
+     * 測定手順と注意点は docs/handoff/line-auto-export-app/design.md の「追補 2026-09-18」。
+     */
+    private static final float[] KEY_COL_X_RATIO = {0.2917f, 0.5231f, 0.7556f}; // x = 315 / 565 / 816 px
+    private static final float[] KEY_ROW_Y_RATIO = {0.5051f, 0.6013f, 0.6974f}; // y = 1182 / 1407 / 1632 px
+    private static final float KEY_ZERO_Y_RATIO = 0.7966f;                      // 0 は中央列、y = 1864 px
 
     /**
-     * 最終手段: ノードが全く見つからない場合の推測グリッドタップ。標準的な3列x4行の
-     * 数字キーパッド（1 2 3 / 4 5 6 / 7 8 9 / _ 0 _）が画面下側にあると仮定した座標。
-     * 実機のOEM/スキンによりレイアウトは異なるため、段階1の実機検証後に要調整
-     * （docs/handoff/line-auto-export-app/design.md 段階1）。
+     * ノードが見つからない場合の座標タップ。実測した比率から数字キーの中心を求める。
+     * 画面サイズは実行時に取得するため、同じレイアウトであれば解像度が違っても追従する。
      */
-    private boolean tapDigitByGridGuess(String digit) {
+    private boolean tapDigitByMeasuredGrid(String digit) {
         Point size = getScreenSize();
         if (size.x == 0 || size.y == 0) {
             return false;
         }
 
-        int row;
-        int col;
+        float x;
+        float y;
         if ("0".equals(digit)) {
-            row = 3;
-            col = 1;
+            x = size.x * KEY_COL_X_RATIO[1];
+            y = size.y * KEY_ZERO_Y_RATIO;
         } else {
             int d;
             try {
@@ -288,18 +296,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
             if (d < 0 || d > 8) {
                 return false;
             }
-            row = d / 3;
-            col = d % 3;
+            x = size.x * KEY_COL_X_RATIO[d % 3];
+            y = size.y * KEY_ROW_Y_RATIO[d / 3];
         }
-
-        float keypadTop = size.y * 0.42f;
-        float keypadBottom = size.y * 0.95f;
-        float keypadLeft = size.x * 0.08f;
-        float keypadRight = size.x * 0.92f;
-        float cellW = (keypadRight - keypadLeft) / 3f;
-        float cellH = (keypadBottom - keypadTop) / 4f;
-        float x = keypadLeft + cellW * (col + 0.5f);
-        float y = keypadTop + cellH * (row + 0.5f);
 
         return GestureCompat.tap(this, x, y, 80L);
     }
