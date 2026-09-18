@@ -106,6 +106,105 @@ delete_match = re.search(r'削除するファイル:\s*', pr_body)
 if not delete_match:
     errors.append('❌ 「削除するファイル:」の宣言がありません（必須）')
 
+# ──────────────────────────────────────────────────────────────────────────────
+# 検査6: 触るファイル宣言 vs git diff の照合
+# CIスクリプト check-process-artifacts.js:760-826 と同じロジック
+# ──────────────────────────────────────────────────────────────────────────────
+if repo_root and touch_match:
+    import subprocess
+
+    # 除外パターン（CI と同一: check-process-artifacts.js:757-761）
+    EXCLUDE_PATTERNS = [
+        r'package-lock\.json$',
+        r'-snapshots/.*\.png$',
+        r'^\.claude-pipeline/active-work\.md$',
+    ]
+
+    try:
+        # git fetch して最新の origin/main を取得
+        subprocess.run(['git', 'fetch', 'origin', 'main', '--quiet'],
+                       cwd=repo_root, capture_output=True, timeout=30)
+
+        # git diff --numstat origin/main...HEAD
+        result = subprocess.run(
+            ['git', 'diff', '--numstat', 'origin/main...HEAD'],
+            cwd=repo_root, capture_output=True, text=True, timeout=30
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            # 変更ファイル一覧を取得
+            diff_files = []
+            delete_files = []
+            for line in result.stdout.strip().split('\n'):
+                parts = line.split('\t')
+                if len(parts) == 3:
+                    added, deleted, path = parts
+                    if added == '-' and deleted == '-':
+                        continue  # binary
+                    # 除外パターン適用
+                    if any(re.search(p, path) for p in EXCLUDE_PATTERNS):
+                        continue
+                    diff_files.append(path)
+                    if int(deleted) > 0:
+                        delete_files.append(path)
+
+            # PR本文から「触るファイル」リストを抽出
+            touch_section = pr_body[touch_match.end():]
+            # セクション終了まで取得（次の非リスト行 or 末尾）
+            touch_lines_raw = re.match(r'((?:[\s\S]*?)(?=\n[^\s\-*]|\n*$))', touch_section)
+            declared_touch = set()
+            if touch_lines_raw:
+                for tl in touch_lines_raw.group(1).split('\n'):
+                    tl = re.sub(r'^\s*[-*]\s*', '', tl).strip()
+                    # カンマ区切り対応
+                    for part in tl.split(','):
+                        part = part.strip()
+                        if part and part != 'なし':
+                            declared_touch.add(part)
+            # 同一行のカンマ区切りも対応
+            same_line_touch = touch_section.split('\n')[0].strip()
+            if same_line_touch:
+                for part in same_line_touch.split(','):
+                    part = part.strip()
+                    if part and part != 'なし':
+                        declared_touch.add(part)
+
+            # 宣言外の変更ファイルを検出
+            undeclared = [f for f in diff_files if f not in declared_touch]
+            if undeclared:
+                errors.append('❌ 宣言外のファイルを変更しています:')
+                for uf in undeclared:
+                    errors.append(f'   - {uf}')
+                errors.append('   → 「触るファイル:」に追記してください')
+
+            # PR本文から「削除するファイル」リストを抽出
+            if delete_match and delete_files:
+                del_section = pr_body[delete_match.end():]
+                del_lines_raw = re.match(r'((?:[\s\S]*?)(?=\n[^\s\-*]|\n*$))', del_section)
+                declared_delete = set()
+                if del_lines_raw:
+                    for dl in del_lines_raw.group(1).split('\n'):
+                        dl = re.sub(r'^\s*[-*]\s*', '', dl).strip()
+                        for part in dl.split(','):
+                            part = part.strip()
+                            if part and part != 'なし':
+                                declared_delete.add(part)
+                same_line_del = del_section.split('\n')[0].strip()
+                if same_line_del and same_line_del != 'なし':
+                    for part in same_line_del.split(','):
+                        part = part.strip()
+                        if part and part != 'なし':
+                            declared_delete.add(part)
+
+                undeclared_del = [f for f in delete_files if f not in declared_delete]
+                if undeclared_del:
+                    errors.append('❌ 宣言外のファイルから行を削除しています:')
+                    for ud in undeclared_del:
+                        errors.append(f'   - {ud}')
+                    errors.append('   → 「削除するファイル:」に追記してください')
+
+    except (subprocess.TimeoutExpired, FileNotFoundError):
+        pass  # git が使えない環境ではスキップ
+
 # 結果出力
 for e in errors:
     print(e)
