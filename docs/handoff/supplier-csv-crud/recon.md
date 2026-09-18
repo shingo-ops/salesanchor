@@ -19,7 +19,7 @@
 | `frontend/src/pages/super-admin/SuppliersAdminTab.tsx:1` | 中央管理仕入元UI（SuperAdminMastersPageタブ内、CSVボタンなし） |
 | `frontend/src/pages/suppliers/SuppliersPage.tsx:1` | テナント用仕入元UI（CSVボタンなし） |
 | `frontend/src/pages/super-admin/TcgProductMasterPage.tsx:1` | 商品マスタUI（Export/Importボタンあり — 目標UI） |
-| `frontend/src/pages/super-admin/TcgProductImportPanel.tsx:1` | 商品CSV import パネル（ファイル選択→プレビュー→確定） |
+| `frontend/src/pages/super-admin/TcgProductImportPage.tsx:1` | 商品CSV import ページ（ファイル選択→プレビュー→確定） |
 | `migrations/20260918_030000_supplier_ssot_phase2.sql:1` | Phase 2 統合migration（tenant_id列追加、FK張り替え） |
 
 ---
