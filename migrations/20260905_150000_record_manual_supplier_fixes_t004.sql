@@ -29,6 +29,11 @@ BEGIN
         RETURN;
     END IF;
 
+    IF to_regclass(_schema || '.tcg_suppliers') IS NULL THEN
+        RAISE NOTICE '20260905_150000: %s.tcg_suppliers does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     -- =========================================================
     -- 1. SP0007: name を '倉田 和博' に復旧
     --    #3306/#3309 の確認画面で「既存仕入元に割り当て」を誤操作し、
