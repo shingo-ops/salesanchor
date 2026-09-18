@@ -31,7 +31,13 @@
 | Drawer 内で保存・削除・Discord routing が動作する | UI で確認 |
 | ハードコード日本語なし | grep で確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-- 同プロジェクト内: TcgProductDetailDrawer.tsx（同パターン）
-- 同プロジェクト内: TcgProductMasterPage.tsx（ページ側の Drawer 使用パターン）
+- 同プロジェクト内 `TcgProductDetailDrawer.tsx`: Drawer + dirty チェック + 削除確認 + 作成/編集切り替えの実績パターン。同じ構造で SupplierDetailDrawer を作成。
+- 同プロジェクト内 `TcgProductMasterPage.tsx`: ページ側の `selectedProduct` + `creating` state 2つの Drawer 制御パターン。同様に `selectedSupplierId` + `creating` に適用。
+- Notion「サイドピーク」パターン（`Drawer.tsx` コメントに記載）: 右スライドパネルで詳細表示する UX パターンの先行事例。
+
+## 維持の仕組み
+
+- `SupplierDetailDrawer` は `TcgProductDetailDrawer` と同じコンポーネント構造・ファイル配置規約に従う。新規フィールド追加時は `Draft` 型と `draftFromSupplier()` 関数を更新する。
+- i18n キーは `superAdmin.suppliersAdmin.*` 名前空間に集約。新規 UI テキスト追加時は ja.json / en.json 両方に同一キーを追加する（ADR-027）。
