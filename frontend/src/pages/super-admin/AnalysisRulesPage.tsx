@@ -12,6 +12,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import {
   AnalysisRulesSidebar,
@@ -19,33 +20,45 @@ import {
 } from "./components/AnalysisRulesSidebar";
 import { SoldOutRulesPanel } from "./components/SoldOutRulesPanel";
 import { DateRulesPanel } from "./components/DateRulesPanel";
+import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
+import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
+import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
+import type { SupplierQualitySummary } from "../../features/tcg-analysis-review/supplierQuality";
 
 // ---------------------------------------------------------------------------
-// プレースホルダーパネル（未実装ページ）
+// 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
 // ---------------------------------------------------------------------------
 
 function AccuracyManagementPanel() {
   const { t } = useTranslation();
+  const [selected, setSelected] = useState<SupplierQualitySummary | null>(null);
+  const [diagOpen, setDiagOpen] = useState(false);
+
   return (
-    <div
-      style={{
-        padding: "var(--space-6)",
-        color: "var(--text-muted)",
-        fontSize: "var(--font-sm)",
-      }}
-    >
-      <h3
+    <>
+      <div
         style={{
-          margin: "0 0 var(--space-2)",
-          fontSize: "var(--font-lg)",
-          fontWeight: "var(--font-weight-bold)",
-          color: "var(--text-primary)",
+          display: "flex",
+          justifyContent: "flex-end",
+          padding: "var(--space-3) var(--space-4)",
+          borderBottom: "1px solid var(--border)",
         }}
       >
-        {t("analysisRules.accuracyManagement.title")}
-      </h3>
-      <p>{t("analysisRules.accuracyManagement.comingSoon")}</p>
-    </div>
+        <Button variant="ghost" size="md" onClick={() => setDiagOpen(true)}>
+          {t("superAdmin.diagnostics.buttonLabel")}
+        </Button>
+      </div>
+      {selected ? (
+        <SupplierDetailView
+          supplierId={selected.supplierId}
+          supplierName={selected.supplierName}
+          onBack={() => setSelected(null)}
+        />
+      ) : (
+        <SupplierQualityList onSelectSupplier={setSelected} />
+      )}
+      <DiagnosticsDrawer open={diagOpen} onClose={() => setDiagOpen(false)} />
+    </>
   );
 }
 
