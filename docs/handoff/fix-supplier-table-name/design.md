@@ -1,5 +1,7 @@
 # design: fix-supplier-table-name
 
+**recon**: `docs/handoff/fix-supplier-table-name/recon.md`
+
 ## KGI
 
 解析精度管理パネルで「データベースエラー」（relation "tcg_suppliers" does not exist）が0件になること。
