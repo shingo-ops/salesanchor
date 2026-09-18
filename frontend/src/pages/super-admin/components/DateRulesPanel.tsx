@@ -15,6 +15,7 @@ import type { TabItem } from "../../../components/Tabs";
 import { Button } from "../../../components/Button";
 import { TextField } from "../../../components/TextField";
 import { Textarea } from "../../../components/Textarea";
+import { api, ApiError } from "../../../lib/api";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -64,82 +65,50 @@ interface TestRunResult {
 // API フェッチヘルパー
 // ---------------------------------------------------------------------------
 
-const BASE = "/api/v1/super-admin/analysis-policies/date-format";
+const POLICY_PATH = "/super-admin/analysis-policies/date-format";
 
 async function fetchCurrent(): Promise<PolicyCurrentResponse> {
-  const res = await fetch(`${BASE}/current`, { credentials: "include" });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return api.get<PolicyCurrentResponse>(`${POLICY_PATH}/current`);
 }
 
 async function fetchFormats(revisionId: string): Promise<FormatRule[]> {
-  const res = await fetch(`${BASE}/revisions/${revisionId}/rules?word_kind=format_template`, { credentials: "include" });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return api.get<FormatRule[]>(`${POLICY_PATH}/revisions/${revisionId}/rules?word_kind=format_template`);
 }
 
 async function fetchHistory(): Promise<HistoryEntry[]> {
-  const res = await fetch(`${BASE}/history`, { credentials: "include" });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return api.get<HistoryEntry[]>(`${POLICY_PATH}/history`);
 }
 
 async function postTestRun(revisionId: string, suiteRevisionId: string): Promise<{ run_id: string }> {
-  const body = {
+  return api.post<{ run_id: string }>(`${POLICY_PATH}/test-runs`, {
     revision_id: revisionId,
     suite_revision_id: suiteRevisionId,
     request_key: crypto.randomUUID(),
-  };
-  const res = await fetch(`${BASE}/test-runs`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
 }
 
 async function fetchTestRun(runId: string): Promise<TestRunResult> {
-  const res = await fetch(`${BASE}/test-runs/${runId}`, { credentials: "include" });
-  if (!res.ok) throw new Error(`${res.status}`);
-  return res.json();
+  return api.get<TestRunResult>(`${POLICY_PATH}/test-runs/${runId}`);
 }
 
 async function postActivate(revisionId: string, runId: string, current: PolicyCurrentResponse): Promise<void> {
-  const body = {
+  await api.post<void>(`${POLICY_PATH}/activate`, {
     revision_id: revisionId,
     run_id: runId,
     expected_active_id: current.active_revision_id,
     lock_version: current.lock_version,
     request_key: crypto.randomUUID(),
-  };
-  const res = await fetch(`${BASE}/activate`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
-  if (res.status === 409) throw new Error("conflict");
-  if (!res.ok) throw new Error(`${res.status}`);
 }
 
 async function postDraftRevision(current: PolicyCurrentResponse, instruction: string): Promise<void> {
-  const body = {
+  await api.post<void>(`${POLICY_PATH}/draft-revisions`, {
     expected_draft_id: current.draft_revision_id,
     expected_active_id: current.active_revision_id,
     lock_version: current.lock_version,
     changes: [{ type: "instruction", value: instruction }],
     request_key: crypto.randomUUID(),
-  };
-  const res = await fetch(`${BASE}/draft-revisions`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
   });
-  if (res.status === 409) throw new Error("conflict");
-  if (!res.ok) throw new Error(`${res.status}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -171,7 +140,7 @@ function InstructionTab({ current, loading, error, onReload }: InstructionTabPro
       await postDraftRevision(current, draft);
       onReload();
     } catch (e) {
-      const msg = e instanceof Error && e.message === "conflict"
+      const msg = e instanceof ApiError && e.status === 409
         ? t("analysisRules.errors.conflict")
         : t("analysisRules.errors.unknown");
       setSaveError(msg);
@@ -506,7 +475,7 @@ function ActivateSection({ current, loading, error, lastRunId, lastRunPassed, on
       await postActivate(revisionId, lastRunId, current);
       onActivated();
     } catch (e) {
-      const msg = e instanceof Error && e.message === "conflict"
+      const msg = e instanceof ApiError && e.status === 409
         ? t("analysisRules.errors.conflict")
         : t("analysisRules.errors.unknown");
       setActivateError(msg);
@@ -559,10 +528,10 @@ export function DateRulesPanel() {
       const data = await fetchCurrent();
       setCurrent(data);
     } catch (e) {
-      const status = e instanceof Error ? e.message : "";
-      if (status === "401" || status === "403") {
+      const status = e instanceof ApiError ? e.status : 0;
+      if (status === 401 || status === 403) {
         setError(t("analysisRules.errors.unauthorized"));
-      } else if (status === "503") {
+      } else if (status === 503) {
         setError(t("analysisRules.errors.serverUnavailable"));
       } else {
         setError(t("analysisRules.errors.unknown"));
