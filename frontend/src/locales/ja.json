@@ -2473,7 +2473,20 @@
       "addRouting": "Discord紐付け追加",
       "guildId": "Guild ID",
       "channelId": "Channel ID",
-      "bulkDeleteConfirm": "選択した {{count}} 件の仕入元を削除します。よろしいですか？"
+      "bulkDeleteConfirm": "選択した {{count}} 件の仕入元を削除します。よろしいですか？",
+      "loadError": "仕入元の詳細を取得できませんでした。もう一度読み込んでください。",
+      "saveError": "保存結果を確認できませんでした。入力内容を控えてから再度お試しください。",
+      "saved": "保存しました。",
+      "saving": "保存中…",
+      "discardMessage": "未保存の変更があります。変更を破棄しますか？",
+      "discard": "変更を破棄",
+      "keepEditing": "編集に戻る",
+      "reload": "最新の内容を読み直す",
+      "nameRequired": "仕入元名を入力してください。",
+      "deleteTitle": "仕入元を削除",
+      "deleteConfirm": "この仕入元を削除しますか？この操作は元に戻せません。",
+      "deleteAction": "削除",
+      "deleteError": "仕入元の削除に失敗しました。"
     },
     "fxRate": {
       "title": "為替レート管理（SSOT）",
