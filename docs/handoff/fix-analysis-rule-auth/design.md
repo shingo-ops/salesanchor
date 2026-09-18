@@ -37,3 +37,13 @@
 ## リスクと対処
 - リスク: なし（認証方式の統一のみ、ロジック変更なし）
 - ロールバック: git revert で即時可能
+
+## recon参照
+- recon: docs/handoff/fix-analysis-rule-auth/recon.md
+
+## 外部・過去事例の参照と我々への応用
+- 該当なし。本修正はプロジェクト内部の認証方式統一（生fetch→apiクライアント）であり、外部事例の参照は不要。他ページ（useSuperAdmin等）は既にapi.get()を使用しており、そのパターンへの統一。
+
+## 維持の仕組み
+- ESLint / TypeScript型チェックにより、api.tsのApiError型を使わないcatchブロックは型エラーで検出される
+- 今後のsuper-admin配下の新規ページはapi.get()/api.post()を使用すること（生fetchは使用しない）
