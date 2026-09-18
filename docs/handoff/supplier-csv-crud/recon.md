@@ -16,10 +16,10 @@
 | `backend/app/routers/super_admin_aliases.py:213` | supplier_aliases CSV export 実装（参考パターン） |
 | `backend/app/routers/tcg_product_import.py:1` | 商品マスタCSV import backend（preview/commit 4エンドポイント — 最も近い参考） |
 | `backend/app/routers/tcg_product_import.py:169` | CSV検証ロジック（.csv, UTF-8+BOM, ≤2MB） |
-| `frontend/src/pages/super-admin/SuppliersAdminTab.tsx:1` | 中央管理仕入元UI（SuperAdminMastersPageタブ内、CSVボタンなし） |
+| `frontend/src/pages/super-admin/SupplierMasterPage.tsx:1` | 中央管理仕入元UI（独立ページ化済、CSVボタンなし — Sprint 3 対象） |
 | `frontend/src/pages/suppliers/SuppliersPage.tsx:1` | テナント用仕入元UI（CSVボタンなし） |
 | `frontend/src/pages/super-admin/TcgProductMasterPage.tsx:1` | 商品マスタUI（Export/Importボタンあり — 目標UI） |
-| `frontend/src/pages/super-admin/TcgProductImportPanel.tsx:1` | 商品CSV import パネル（ファイル選択→プレビュー→確定） |
+| `frontend/src/pages/super-admin/TcgProductImportPage.tsx:1` | 商品CSV import ページ（ファイル選択→プレビュー→確定） |
 | `migrations/20260918_030000_supplier_ssot_phase2.sql:1` | Phase 2 統合migration（tenant_id列追加、FK張り替え） |
 
 ---

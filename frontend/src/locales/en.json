@@ -275,7 +275,8 @@
     "channelMasters": "Channel Management",
     "openDrawer": "Open navigation",
     "closeDrawer": "Close navigation",
-    "masterManagement": "Master Management"
+    "masterManagement": "Master Management",
+    "superAdminSupplierMaster": "Supplier Master"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
