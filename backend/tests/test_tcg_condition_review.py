@@ -26,7 +26,7 @@ from app.services import tcg_condition_review_svc as condition
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -62,6 +62,7 @@ def pg():
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
             # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+            _supplier_ssot_premigration(cursor, SCHEMA)
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             provision(cursor, "tenant_006")
             cursor.execute("INSERT INTO tenant_006.conditions (code,canonical,is_active) VALUES ('CN0099','untouched',true)")

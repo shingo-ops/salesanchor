@@ -21,7 +21,7 @@ from app.auth.dependencies import get_current_user
 from app.database import get_db
 from app.routers import tcg_analysis_review as routes
 from app.services import tcg_sold_out_results_svc as service
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.test_tcg_work_matching_integration import _rewire_keyword_fks
 
 STAMP = datetime(2026, 9, 14, tzinfo=timezone.utc)
@@ -133,6 +133,7 @@ async def pg(monkeypatch):
             cursor.execute("INSERT INTO tenant_951.tcg_suppliers(code,name,is_active) VALUES ('S','Supplier percent%',true)")
             # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
+            _supplier_ssot_premigration(cursor, "tenant_951")
             cursor.execute(sprint1.read_text())
             cursor.execute("SELECT id FROM public.suppliers WHERE supplier_code='SP-00000'")
             supplier = cursor.fetchone()[0]

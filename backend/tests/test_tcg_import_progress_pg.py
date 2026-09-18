@@ -22,7 +22,7 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
@@ -71,6 +71,8 @@ async def pg(monkeypatch):
                           f"SELECT id,'line',true FROM {schema}.tcg_suppliers WHERE code='SP1'")
             # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
+            for s in (SCHEMA, "tenant_872"):
+                _supplier_ssot_premigration(c, s)
             c.execute(sprint1.read_text())
             migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
             c.execute(migration.read_text())

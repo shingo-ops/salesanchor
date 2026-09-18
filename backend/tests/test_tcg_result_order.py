@@ -15,7 +15,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_import_progress as progress
 from tests.test_tcg_condition_review import pg as condition_pg
 from tests.test_tcg_condition_review import request, save, seed
-from tests.conftest import _PUBLIC_SUPPLIERS_DDL
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
 
 # Reuse the existing isolated-CI database fixture with its safety checks intact.
 pg = condition_pg
@@ -77,6 +77,7 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
         cursor.execute(_PUBLIC_SUPPLIERS_DDL)
         # Sprint 1: run supplier SSOT migration to convert supplier_channels.supplier_id UUID→INTEGER
         sprint1 = MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql"
+        _supplier_ssot_premigration(cursor, "tenant_004")
         cursor.execute(sprint1.read_text())
         cursor.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
                        "VALUES ('SP-09999','Earlier Supplier','Earlier Supplier','corporate',true) RETURNING id")
