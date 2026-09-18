@@ -52,10 +52,15 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
   const [hasNext, setHasNext] = useState(false);
+  // 検索（MasterListEditor パターンと統一）
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     try {
-      const data = await api.get<Supplier[]>(`/suppliers?page=${page}&per_page=${PER_PAGE}`);
+      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+      if (search.trim()) params.set("search", search.trim());
+      const data = await api.get<Supplier[]>(`/suppliers?${params.toString()}`);
       setSuppliers(data);
       setHasNext(data.length === PER_PAGE);
     } catch (e) {
@@ -65,7 +70,7 @@ export default function SuppliersPage() {
     }
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, search]);
 
   /* ── 新規作成（Modal） ── */
   const handleCreateSubmit = async (e: FormEvent) => {
@@ -103,11 +108,54 @@ export default function SuppliersPage() {
       subtitleKey="suppliers.subtitle"
     >
       {error && <div className="error-message">{error}</div>}
-      {hasPermission("suppliers.create") ? (
-        <ContentToolbar
-          right={<button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>}
-        />
-      ) : undefined}
+
+      {/* 検索バー + 新規作成ボタン（MasterListEditor パターンと統一） */}
+      <ContentToolbar
+        left={
+          <form
+            className="search-bar"
+            style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPage(1);
+              setSearch(searchInput.trim());
+            }}
+          >
+            <input
+              className="field-h-md field-w-sm"
+              type="text"
+              placeholder={t("common.search")}
+              aria-label={t("common.search")}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              data-testid="suppliers-search"
+            />
+            <button type="submit" className="btn-secondary field-h-md" data-testid="suppliers-search-btn">
+              {t("common.search")}
+            </button>
+            {search && (
+              <button
+                type="button"
+                className="btn-sm"
+                onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
+              >
+                {t("common.clear")}
+              </button>
+            )}
+          </form>
+        }
+        right={
+          hasPermission("suppliers.create") ? (
+            <button
+              className="btn-primary field-h-md"
+              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+              data-testid="suppliers-new"
+            >
+              {t("suppliers.newSupplier")}
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal

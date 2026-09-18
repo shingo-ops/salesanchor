@@ -43,14 +43,14 @@ async def list_suppliers(
     current_user: User = Depends(get_current_user),
 ):
     offset = (page - 1) * per_page
-    conditions = []
-    params: dict = {"limit": per_page, "offset": offset}
+    conditions = ["tenant_id = :tenant_id"]
+    params: dict = {"tenant_id": tenant_id, "limit": per_page, "offset": offset}
     if active_only:
         conditions.append("is_active = TRUE")
     if search:
         conditions.append("(name ILIKE :search OR contact_name ILIKE :search OR supplier_code ILIKE :search)")
         params["search"] = f"%{search}%"
-    where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+    where = f"WHERE {' AND '.join(conditions)}"
     result = await db.execute(
         text(f"SELECT {_COLS} FROM suppliers {where} ORDER BY name LIMIT :limit OFFSET :offset"), params)
     return [SupplierResponse(**row) for row in result.mappings().all()]
@@ -87,7 +87,10 @@ async def list_supplier_catalog(
 async def get_supplier(supplier_id: int, db: AsyncSession = Depends(get_db),
                        tenant_id: int = Depends(get_current_tenant),
                        current_user: User = Depends(get_current_user)):
-    result = await db.execute(text(f"SELECT {_COLS} FROM suppliers WHERE id = :id"), {"id": supplier_id})
+    result = await db.execute(
+        text(f"SELECT {_COLS} FROM suppliers WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": supplier_id, "tenant_id": tenant_id},
+    )
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
@@ -127,7 +130,10 @@ async def update_supplier(supplier_id: int, data: SupplierUpdate,
                           db: AsyncSession = Depends(get_db),
                           tenant_id: int = Depends(get_current_tenant),
                           current_user: User = Depends(get_current_user)):
-    old = await db.execute(text(f"SELECT {_COLS} FROM suppliers WHERE id = :id"), {"id": supplier_id})
+    old = await db.execute(
+        text(f"SELECT {_COLS} FROM suppliers WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": supplier_id, "tenant_id": tenant_id},
+    )
     old_row = old.mappings().first()
     if not old_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
@@ -137,8 +143,9 @@ async def update_supplier(supplier_id: int, data: SupplierUpdate,
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="更新するフィールドを指定してください")
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = supplier_id
+    update_data["tenant_id"] = tenant_id
     result = await db.execute(
-        text(f"UPDATE suppliers SET {set_clauses}, updated_at = NOW() WHERE id = :id RETURNING {_COLS}"),
+        text(f"UPDATE suppliers SET {set_clauses}, updated_at = NOW() WHERE id = :id AND tenant_id = :tenant_id RETURNING {_COLS}"),
         update_data)
     row = result.mappings().first()
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
@@ -154,12 +161,17 @@ async def update_supplier(supplier_id: int, data: SupplierUpdate,
 async def delete_supplier(supplier_id: int, db: AsyncSession = Depends(get_db),
                           tenant_id: int = Depends(get_current_tenant),
                           current_user: User = Depends(get_current_user)):
-    old = await db.execute(text(f"SELECT {_COLS} FROM suppliers WHERE id = :id"), {"id": supplier_id})
+    old = await db.execute(
+        text(f"SELECT {_COLS} FROM suppliers WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": supplier_id, "tenant_id": tenant_id},
+    )
     old_row = old.mappings().first()
     if not old_row:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="仕入先が見つかりません")
-    await db.execute(text("UPDATE suppliers SET is_active = FALSE, updated_at = NOW() WHERE id = :id"),
-                     {"id": supplier_id})
+    await db.execute(
+        text("UPDATE suppliers SET is_active = FALSE, updated_at = NOW() WHERE id = :id AND tenant_id = :tenant_id"),
+        {"id": supplier_id, "tenant_id": tenant_id},
+    )
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="soft_delete", table_name="suppliers", record_id=supplier_id,
                            old_data=dict(old_row))
