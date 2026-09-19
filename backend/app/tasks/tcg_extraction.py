@@ -180,6 +180,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     except RecordError as exc:
         code = str(exc)
     except Exception:
+        logger.exception("[tcg_extraction] record write failed for ej=%s", extraction_job_id)
         code = "RECORD_WRITE_FAILED"
     recorder.fail(code)
     message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
