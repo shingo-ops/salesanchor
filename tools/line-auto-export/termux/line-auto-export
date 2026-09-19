@@ -1,0 +1,3 @@
+#!/data/data/com.termux/files/usr/bin/bash
+# Started hourly by termux-job-scheduler (job 4203); runs the exporter inside the Ubuntu proot.
+exec /data/data/com.termux/files/usr/bin/proot-distro login ubuntu -- bash /root/line-auto-export/auto-export.sh
