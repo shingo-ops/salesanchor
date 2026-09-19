@@ -1433,7 +1433,8 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
     records = [record(name, line, state=state, memo=memo) + [str(work), ""]
                for line, (name, state, memo, _) in enumerate(cases, 1)]
     _, jobid, result = run_message(connection, engine, monkeypatch, raw, records, work_id_mode=True)
-    assert result["status"] == "done" and result["items_count"] == len(cases)
+    assert result["status"] == "done" and result["items_count"] == len(cases), \
+        f"status={result['status']} error_message={result.get('error_message')} items_count={result.get('items_count')}"
     with connection.cursor() as cursor:
         cursor.execute(f"""SELECT ei.raw_product_name, ar.pid_resolved, p.product_code, ar.engine_version
             FROM {SCHEMA}.extraction_items ei JOIN {SCHEMA}.analysis_results ar ON ar.extraction_item_id=ei.id
