@@ -1059,6 +1059,10 @@ def seed_cardset_dictionary(connection, schema):
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(keywords, 5):
+                    # ADR-155 Phase 3: insert into public (SSOT for load_product_keywords)
+                    cursor.execute(sql.SQL("INSERT INTO public.{}(product_id,keyword,position) VALUES (%s,%s,%s)").format(
+                        sql.Identifier(table)), (pid, word, position))
+                    # Also insert into tenant schema for migration guard checks (guard_snapshot reads tenant tables)
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
 
@@ -1299,6 +1303,10 @@ def seed_bundle_dictionary(connection, schema):
                 pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):
+                    # ADR-155 Phase 3: insert into public (SSOT for load_product_keywords)
+                    cursor.execute(sql.SQL("INSERT INTO public.{} (product_id,keyword,position) VALUES (%s,%s,%s)").format(
+                        sql.Identifier(table)), (pid, word, position))
+                    # Also insert into tenant schema for migration guard checks (bundle_snapshot reads tenant tables)
                     cursor.execute(sql.SQL("INSERT INTO {}.{} (id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
 

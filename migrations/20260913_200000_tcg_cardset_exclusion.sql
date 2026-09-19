@@ -56,6 +56,17 @@ BEGIN
         SELECT gen_random_uuid(), product.pid, 'カードセット', COALESCE(MAX(position), -1) + 1
         FROM tenant_004.product_exclude_keywords WHERE product_id = product.pid;
     END IF;
+    -- ADR-155 Phase 3: mirror to public.product_exclude_keywords (SSOT for analyzer)
+    IF to_regclass('public.product_exclude_keywords') IS NOT NULL THEN
+        IF NOT EXISTS (
+            SELECT 1 FROM public.product_exclude_keywords
+            WHERE product_id = product.pid AND keyword = 'カードセット'
+        ) THEN
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product.pid, 'カードセット', COALESCE(MAX(position), -1) + 1
+            FROM public.product_exclude_keywords WHERE product_id = product.pid;
+        END IF;
+    END IF;
 END;
 $body$;
 COMMIT;

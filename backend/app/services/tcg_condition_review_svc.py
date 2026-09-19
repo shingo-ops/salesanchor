@@ -211,8 +211,11 @@ def _response(row: Mapping, *, saved: int, replayed: bool) -> dict:
 
 async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, source_message_id: str,
                                 request: dict, corrected_by: str) -> dict:
+    # ADR-155 Phase 3: condition_id is now INTEGER in analysis_results and public.conditions.
+    # Keep condition_id as string in params (context_sql uses it in text comparisons: id::text = :condition_id).
+    # Use CAST(:condition_id AS INTEGER) in direct SELECT/UPDATE statements targeting INTEGER columns.
     params = {"eid": extraction_item_id, "smid": source_message_id,
-              "condition_id": request["condition_id"], "request_id": request["request_id"]}
+              "condition_id": str(request["condition_id"]), "request_id": request["request_id"]}
     try:
         # Protect raw/source/job membership during both version checking and commit.
         item = (await db.execute(text(f"""SELECT ei.id FROM {TCG_SCHEMA}.extraction_items ei
@@ -250,7 +253,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
         target = (await db.execute(text("SELECT id FROM public.conditions "
-            "WHERE id = :condition_id AND is_active IS TRUE"), params)).scalar_one_or_none()
+            "WHERE id = CAST(:condition_id AS INTEGER) AND is_active IS TRUE"), params)).scalar_one_or_none()
         if target is None:
             raise HTTPException(422, "Condition is not active")
         if row["mentions"] and not row["master_valid"]:
@@ -268,8 +271,8 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), 'condition_review', :old, :new, :actor)"""),
             dict(params, old=json.dumps(dict(row), default=str), new=json.dumps(history), actor=corrected_by))
         await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
-            condition_id = :condition_id,
-            condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id),
+            condition_id = CAST(:condition_id AS INTEGER),
+            condition_canonical = (SELECT canonical FROM public.conditions WHERE id=CAST(:condition_id AS INTEGER)),
             condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
             WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
         effective = (await db.execute(text(context_sql()), params)).mappings().one()

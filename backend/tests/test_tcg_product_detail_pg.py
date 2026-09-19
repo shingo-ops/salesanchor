@@ -151,7 +151,7 @@ def edit_values(snapshot):
     p = snapshot["product"]
     return {field: (p.get(field) or "") if field in ("english_title", "mark") else p.get(field)
             for field in ("japanese_title", "english_title", "mark", "release_date", *details.LOOKUPS,
-                          *details.WORD_TABLES)}
+                          *details.PUBLIC_INTEGER_LOOKUPS, *details.WORD_TABLES)}
 
 
 async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
