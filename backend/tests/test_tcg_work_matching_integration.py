@@ -631,12 +631,19 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         _supplier_ssot_premigration(cursor, "tenant_004")
         cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
         cursor.execute(_rewire_keyword_fks("tenant_004"))
+        # Phase 3 FK rewire: convert tenant_004.analysis_results.unit_id/condition_id UUID→INTEGER.
+        # tenant_004 was provisioned by seed_condition_note() after migrate() ran, so the rewire
+        # migration must be applied explicitly here to match what pg fixture does for tenant_901.
+        cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
-        for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
-            cursor.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id", (code, canonical, kubun))
+        # Insert units with explicit IDs matching _UNIT_MASTER_ROWS (9-16) so that
+        # apply_unit_recovery_for_job() FK references resolve correctly.
+        # UN0001=Case(9), UN0002=BOX(10), UN0003=Pack(11)
+        for unit_id, code, canonical, kubun in [(9, "UN0001", "CASE", "箱系大"), (10, "UN0002", "BOX", "箱系"), (11, "UN0003", "Pack", "パック系")]:
+            cursor.execute("INSERT INTO public.units(id,code,canonical,kubun,is_active) VALUES (%s,%s,%s,%s,true) RETURNING id", (unit_id, code, canonical, kubun))
             cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
     records = [record("匿名パック", 1, memo="※未サーチ品"), record("匿名箱", 2, state="伝票剥がし跡あり")]
     records[0][3], records[1][3] = "Pack", "CASE"
@@ -1034,11 +1041,10 @@ def seed_cardset_dictionary(connection, schema):
             if existing:
                 pid = existing[0]
             else:
-                cursor.execute(sql.SQL("""INSERT INTO public.products
+                cursor.execute("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,work_id,product_category_id)
                     SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
-                    {}.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""").format(
-                        sql.Identifier(schema)), (code, title))
+                    public.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code, title))
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(keywords, 5):
@@ -1276,9 +1282,9 @@ def seed_bundle_dictionary(connection, schema):
                     (product_code,name,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
                     SELECT %s,%s,'Box',true,d.id,tm.id,m.id,c.id
                     FROM {}.tcg_major_categories d, public.tcg_type_master tm, {}.tcg_manufacturers m,
-                         {}.tcg_product_categories c
+                         public.tcg_product_categories c
                     WHERE d.code='DIV01' AND tm.code='pokemon_booster_box' AND m.code='MK001' AND c.code='PC_BOX'
-                    RETURNING id""").format(*[sql.Identifier(schema)] * 3), (code, title))
+                    RETURNING id""").format(*[sql.Identifier(schema)] * 2), (code, title))
                 pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):

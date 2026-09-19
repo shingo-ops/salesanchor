@@ -44,6 +44,15 @@ def atomic_pg(pg, monkeypatch):
     assert SCHEMA == "tenant_901"
     for module in (master, importer):
         monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
+    # Phase 3 SSOT: public.products.product_category_id is now INTEGER.
+    # load_lookup_maps() stores the ID as str(r[1]) which asyncpg rejects for INTEGER columns.
+    # Wrap the function to convert product_category_code map values from str to int.
+    _orig_load_lookup_maps = importer.load_lookup_maps
+    async def _patched_load_lookup_maps(db):
+        maps = await _orig_load_lookup_maps(db)
+        maps["product_category_code"] = {k: int(v) for k, v in maps["product_category_code"].items()}
+        return maps
+    monkeypatch.setattr(importer, "load_lookup_maps", _patched_load_lookup_maps)
     with connection.cursor() as cur:
         cur.execute((work_fixture.MIGRATIONS / HISTORY).read_text().replace("tenant_004", SCHEMA))
         work_fixture.provision(cur, "tenant_990")
