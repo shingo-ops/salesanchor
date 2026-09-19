@@ -128,7 +128,7 @@ async def search_products_by_name(
 
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 p.product_code  AS product_id,
                 p.id::text AS product_uuid,
@@ -222,7 +222,7 @@ async def check_duplicates(
     """
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 p.product_code::text      AS product_id,
                 p.name                    AS japanese_title,
@@ -412,7 +412,7 @@ async def create_product(
         ):
             await db.execute(
                 text(
-                    f"""
+                    """
                     INSERT INTO public.product_search_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
@@ -428,7 +428,7 @@ async def create_product(
         ):
             await db.execute(
                 text(
-                    f"""
+                    """
                     INSERT INTO public.product_exclude_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
@@ -494,7 +494,7 @@ async def add_search_keyword(
     # 既存キーワード確認
     existing = await db.execute(
         text(
-            f"""
+            """
             SELECT keyword
             FROM public.product_search_keywords
             WHERE product_id = :pid
@@ -511,7 +511,7 @@ async def add_search_keyword(
     next_pos = len(existing_kws) + 1
     await db.execute(
         text(
-            f"""
+            """
             INSERT INTO public.product_search_keywords
                 (product_id, keyword, position)
             VALUES (:pid, :kw, :pos)

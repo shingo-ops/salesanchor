@@ -35,12 +35,12 @@ def _json(value: Any) -> str:
 
 async def _snapshot(db: AsyncSession, code: str) -> dict[str, Any]:
     result = await db.execute(text(
-        f"SELECT row_to_json(p) AS product, "
-        f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
-        f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
-        f"FROM public.products p WHERE p.product_code=:code"
+        "SELECT row_to_json(p) AS product, "
+        "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
+        "FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
+        "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
+        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
+        "FROM public.products p WHERE p.product_code=:code"
     ), {"code": code})
     row = result.mappings().one_or_none()
     if row is None:

@@ -1099,7 +1099,7 @@ def apply_unit_from_condition_for_job(
     # condition canonical → 先頭 kubun
     cond_rows = session.execute(
         text(
-            f"""
+            """
             SELECT canonical, app_kubun
             FROM public.conditions
             WHERE is_active = TRUE
@@ -1120,7 +1120,7 @@ def apply_unit_from_condition_for_job(
     # kubun → (unit_id, unit_canonical) — 衝突時は None でマーク
     unit_rows = session.execute(
         text(
-            f"""
+            """
             SELECT kubun, id, canonical
             FROM public.units
             WHERE is_active = TRUE AND kubun IS NOT NULL

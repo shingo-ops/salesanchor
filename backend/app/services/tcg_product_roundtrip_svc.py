@@ -283,8 +283,8 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         await db.execute(text("SET LOCAL statement_timeout = '30s'"))
         await db.execute(
             text(
-                f"LOCK TABLE public.products, "
-                f"public.product_search_keywords, public.product_exclude_keywords "
+                "LOCK TABLE public.products, "
+                "public.product_search_keywords, public.product_exclude_keywords "
                 "IN SHARE ROW EXCLUSIVE MODE"
             )
         )

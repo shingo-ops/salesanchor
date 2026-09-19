@@ -135,7 +135,7 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             p.product_code AS product_id,
             p.name AS product_name,

@@ -46,7 +46,7 @@ def validate_product_code(value: str | None, reference: dict) -> str | None:
 
 def load_work_reference(session: Session, schema: str) -> dict:
     """One statement sees a consistent snapshot; no network call holds its transaction."""
-    row = session.execute(text(f"""
+    row = session.execute(text("""
         SELECT jsonb_build_object(
           'works', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', s.id, 'display_name', s.name_ja, 'alt_name', s.name_en)

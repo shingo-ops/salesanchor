@@ -292,9 +292,9 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     """検索キーワードと、それを持つ商品コードの対応を引く。"""
     result = await db.execute(
         text(
-            f"SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
-            f"JOIN public.products p ON p.id = k.product_id "
-            f"WHERE p.is_active = TRUE"
+            "SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
+            "JOIN public.products p ON p.id = k.product_id "
+            "WHERE p.is_active = TRUE"
         )
     )
     owners: dict[str, list[str]] = {}
