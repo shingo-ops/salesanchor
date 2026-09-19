@@ -53,6 +53,7 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
     line_name     VARCHAR(255),
     supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id     INTEGER,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

@@ -165,6 +165,7 @@ async def seed_aggregated_dataset():
                     name            TEXT      NOT NULL,
                     supplier_type   TEXT      NOT NULL DEFAULT 'corporate',
                     default_language TEXT     NOT NULL DEFAULT 'ja',
+                    tenant_id       INTEGER,
                     created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
                     updated_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
                 )
