@@ -3776,15 +3776,18 @@
   "analysisRules": {
     "page": {
       "title": "解析管理",
-      "subtitle": "完売ルール・日付ルールを管理します"
+      "subtitle": "解析ルール・マスタデータを管理します"
     },
     "sidebar": {
       "groupAnalysisStatus": "解析状況",
       "groupRuleManagement": "ルール管理",
+      "groupMasterManagement": "マスタ管理",
       "accuracyManagement": "解析精度管理",
       "needsReview": "要確認",
       "soldOut": "完売ルール",
-      "dateRule": "日付ルール"
+      "dateRule": "日付ルール",
+      "productMaster": "商品マスタ",
+      "supplierMaster": "仕入元マスタ"
     },
     "tabs": {
       "instruction": "指示文",
