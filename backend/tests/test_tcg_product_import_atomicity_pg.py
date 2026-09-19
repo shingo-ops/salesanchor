@@ -29,7 +29,7 @@ def csv_input():
     for n in range(1, 45):
         writer.writerow([f"ATOMIC{n:02}", f"原子商品{n:02}", "", "",
                          f"検索語{n:02},別名{n:02}", f"除外語{n:02}",
-                         "DIV01", "IP002", "MK002", "PC_BOX"])
+                         "DIV01", "one_piece", "MK002", "PC_BOX"])
     return out.getvalue().encode("utf-8")
 
 

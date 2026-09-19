@@ -57,6 +57,8 @@ def pg():
         with connection.cursor() as cursor:
             provision(cursor, SCHEMA)
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
+            cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
+            cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
@@ -74,8 +76,8 @@ def pg():
             unit = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
             cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM tenant_004.tcg_series w,tenant_004.tcg_product_categories c
-                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""")
+                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,tenant_004.tcg_product_categories c
+                WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,'Test Booster',0)", (str(uuid4()),product))
         yield {"connection": connection, "engine": engine,
