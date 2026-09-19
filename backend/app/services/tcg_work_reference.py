@@ -46,7 +46,7 @@ def validate_product_code(value: str | None, reference: dict) -> str | None:
 
 def load_work_reference(session: Session, schema: str) -> dict:
     """One statement sees a consistent snapshot; no network call holds its transaction."""
-    row = session.execute(text(f"""
+    row = session.execute(text("""
         SELECT jsonb_build_object(
           'works', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', s.id, 'display_name', s.name_ja, 'alt_name', s.name_en)
@@ -56,9 +56,9 @@ def load_work_reference(session: Session, schema: str) -> dict:
             'code', p.product_code, 'japanese_title', p.name,
             'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
             'search_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_search_keywords k WHERE k.product_id=p.id),
+                FROM public.product_search_keywords k WHERE k.product_id=p.id),
             'exclude_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
-                FROM {schema}.product_exclude_keywords k WHERE k.product_id=p.id))
+                FROM public.product_exclude_keywords k WHERE k.product_id=p.id))
             ORDER BY p.product_code), '[]'::jsonb)
             FROM public.products p WHERE p.is_active))
     """)).scalar_one()

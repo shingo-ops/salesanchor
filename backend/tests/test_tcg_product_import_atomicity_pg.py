@@ -83,7 +83,7 @@ def observe(connection):
         products = dict(cur.fetchall())
         words = {}
         for table in ("product_search_keywords", "product_exclude_keywords"):
-            cur.execute(f"SELECT p.name,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN public.products p ON p.id=k.product_id ORDER BY p.name,k.position")
+            cur.execute(f"SELECT p.name,k.keyword,k.position FROM public.{table} k JOIN public.products p ON p.id=k.product_id ORDER BY p.name,k.position")
             words[table] = cur.fetchall()
         cur.execute(f"SELECT row_no,japanese_title,result,product_code FROM {SCHEMA}.tcg_product_import_rows ORDER BY row_no")
         rows = cur.fetchall()
@@ -124,10 +124,13 @@ def failing_session(connection, mode, target):
         async def execute(self, statement, params=None, **kwargs):
             query = str(statement)
             # These services may only touch the intended tenant's tables.
-            for table in ("product_search_keywords", "product_exclude_keywords",
-                          "tcg_product_import_jobs", "tcg_product_import_rows"):
+            for table in ("tcg_product_import_jobs", "tcg_product_import_rows"):
                 if table in query:
                     assert f"{SCHEMA}.{table}" in query
+            # product_search_keywords and product_exclude_keywords are now in public schema (SSOT Phase 3)
+            for table in ("product_search_keywords", "product_exclude_keywords"):
+                if table in query:
+                    assert f"public.{table}" in query
             if "INSERT INTO public.products" in query:
                 self.current = int(params["japanese_title"].removeprefix("原子商品"))
                 if self.current == target:

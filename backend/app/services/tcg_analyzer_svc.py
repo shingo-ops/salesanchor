@@ -84,10 +84,10 @@ def load_lookup_maps(
     # --- 単位エイリアス → canonical + UUID ---
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ua.alias_text, u.canonical, u.id
-            FROM {TCG_SCHEMA}.unit_aliases ua
-            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            FROM public.unit_aliases ua
+            JOIN public.units u ON u.id = ua.unit_id
             WHERE u.is_active = TRUE
             """
         )
@@ -105,10 +105,10 @@ def load_lookup_maps(
     # --- 単位エイリアス → (canonical, kubun) --- ※ resolve_unit_v2 用
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ua.alias_text, u.canonical, u.kubun, u.id
-            FROM {TCG_SCHEMA}.unit_aliases ua
-            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            FROM public.unit_aliases ua
+            JOIN public.units u ON u.id = ua.unit_id
             WHERE u.is_active = TRUE
             """
         )
@@ -122,10 +122,10 @@ def load_lookup_maps(
     # --- 状態エイリアス → canonical + UUID ---
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ca.alias_text, c.canonical, c.id
-            FROM {TCG_SCHEMA}.condition_aliases ca
-            JOIN {TCG_SCHEMA}.conditions c ON c.id = ca.condition_id
+            FROM public.condition_aliases ca
+            JOIN public.conditions c ON c.id = ca.condition_id
             WHERE c.is_active = TRUE
             """
         )
@@ -159,10 +159,10 @@ def load_product_kubun_type_map(session: Session) -> dict[str, str]:
     """
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT p.product_code AS code, pc.kubun_type
             FROM public.products p
-            JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
+            JOIN public.tcg_product_categories pc ON pc.id = p.product_category_id
             WHERE p.is_active = TRUE
               AND p.product_category_id IS NOT NULL
             """
@@ -184,9 +184,9 @@ def load_product_keywords(
     # 検索キーワード
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT p.product_code AS code, psk.keyword
-            FROM {TCG_SCHEMA}.product_search_keywords psk
+            FROM public.product_search_keywords psk
             JOIN public.products p ON p.id = psk.product_id
             WHERE p.is_active = TRUE
             ORDER BY p.product_code, psk.position
@@ -202,9 +202,9 @@ def load_product_keywords(
     # 除外キーワード
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT p.product_code AS code, pek.keyword
-            FROM {TCG_SCHEMA}.product_exclude_keywords pek
+            FROM public.product_exclude_keywords pek
             JOIN public.products p ON p.id = pek.product_id
             WHERE p.is_active = TRUE
             ORDER BY p.product_code, pek.position
@@ -661,10 +661,10 @@ def load_condition_entries(session: Session) -> list[dict]:
     """
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT c.id, c.code, c.canonical, c.priority,
                    c.app_kubun, c.search_kw, c.exclude_kw
-            FROM {TCG_SCHEMA}.conditions c
+            FROM public.conditions c
             WHERE c.is_active = TRUE
               AND c.priority IS NOT NULL
               AND c.priority > 0
@@ -944,10 +944,10 @@ def load_note_master(session: Session) -> list[dict]:
     try:
         rows = session.execute(
             text(
-                f"""
+                """
                 SELECT id, label_ja, search_keywords, exclude_keywords, priority,
                        match_type, search_pattern, label_template
-                FROM {TCG_SCHEMA}.tcg_note_master
+                FROM public.tcg_note_master
                 WHERE enabled = TRUE ORDER BY priority ASC, id ASC
                 """
             )
@@ -1049,9 +1049,9 @@ def load_status_master(session: Session) -> list[dict]:
     try:
         rows = session.execute(
             text(
-                f"""
+                """
                 SELECT status_id, canonical, search_pattern, exclude_pattern, priority, match_type, effect
-                FROM {TCG_SCHEMA}.tcg_status_master
+                FROM public.tcg_status_master
                 WHERE enabled = TRUE ORDER BY effect ASC, priority ASC
                 """
             )
@@ -1251,7 +1251,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
             if effective:
                 session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
-                    condition_id=CAST(:condition_id AS uuid), condition_canonical=:canonical,
+                    condition_id=:condition_id, condition_canonical=:canonical,
                     condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
                     updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
                     dict(effective, eid=str(item_id), updated_at=now))

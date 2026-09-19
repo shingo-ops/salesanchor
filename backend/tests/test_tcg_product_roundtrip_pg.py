@@ -24,7 +24,7 @@ def observe(connection, history=True):
         cursor.execute("SELECT to_jsonb(t) FROM public.products t ORDER BY t.id")
         result["products"] = cursor.fetchall()
         for table in ["product_search_keywords", "product_exclude_keywords"]:
-            cursor.execute(f"SELECT to_jsonb(t) FROM {SCHEMA}.{table} t ORDER BY id")
+            cursor.execute(f"SELECT to_jsonb(t) FROM public.{table} t ORDER BY id")
             result[table] = cursor.fetchall()
         if history:
             for table in ["tcg_product_import_jobs", "tcg_product_import_rows"]:
@@ -50,7 +50,7 @@ def seed(connection, count=2):
             for table in svc.WORDS.values():
                 for position, word in [(3, ""), (7, ' =,全角＝\r\n"quote"'), (19, " duplicate "), (23, " duplicate ")]:
                     cursor.execute(
-                        f"INSERT INTO {SCHEMA}.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
+                        f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
                         (pid, word, position),
                     )
         cursor.execute("UPDATE public.tcg_type_master SET is_active=false WHERE code='one_piece'")
@@ -219,7 +219,7 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
                 with connection.cursor() as cursor:
                     if mode in ["search", "exclude"]:
                         cursor.execute(
-                            f"UPDATE {SCHEMA}.product_{mode}_keywords SET keyword='changed' WHERE position=7"
+                            f"UPDATE public.product_{mode}_keywords SET keyword='changed' WHERE position=7"
                         )
                     elif mode in ["title", "active", "hidden"]:
                         assignment = {
@@ -279,7 +279,7 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                 self.current += 1
             if self.current == 2 and (
                 (mode in ["product", "cancel", "rollback"] and query.startswith("UPDATE public.products"))
-                or (mode == "words" and query.startswith(f"INSERT INTO {SCHEMA}.product_search_keywords"))
+                or (mode == "words" and query.startswith("INSERT INTO public.product_search_keywords"))
                 or (mode == "history" and query.startswith(f"INSERT INTO {SCHEMA}.tcg_product_import_rows"))
             ):
                 raise failure
@@ -358,7 +358,7 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
             query = (
                 "UPDATE public.products SET mark='competing' WHERE product_code LIKE 'RT%'"
                 if target == "product"
-                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
+                else "INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
             )
             if blocked:
                 with pytest.raises(psycopg2.errors.LockNotAvailable):
