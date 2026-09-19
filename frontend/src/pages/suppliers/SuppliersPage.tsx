@@ -137,6 +137,11 @@ export default function SuppliersPage() {
             </HeaderButton>
           )}
           {hasPermission("suppliers.create") && (
+            <HeaderButton variant="primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }} data-testid="suppliers-new">
+              {t("suppliers.newSupplier")}
+            </HeaderButton>
+          )}
+          {hasPermission("suppliers.create") && (
             <HeaderButton variant="primary" onClick={() => navigate("/suppliers/import")} data-testid="suppliers-import">
               {t("supplierCsv.importButton")}
             </HeaderButton>
@@ -181,17 +186,7 @@ export default function SuppliersPage() {
             )}
           </form>
         }
-        right={
-          hasPermission("suppliers.create") ? (
-            <button
-              className="btn-primary field-h-md"
-              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-              data-testid="suppliers-new"
-            >
-              {t("suppliers.newSupplier")}
-            </button>
-          ) : undefined
-        }
+        right={undefined}
       />
 
       {/* 新規作成 Modal（既存 UX 保持） */}
