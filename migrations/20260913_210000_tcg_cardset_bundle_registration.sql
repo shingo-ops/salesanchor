@@ -86,28 +86,6 @@ BEGIN
                 FROM tenant_004.%I WHERE product_id=$1', term.table_name, term.table_name)
                 USING product.id, term.keyword;
         END IF;
-        -- ADR-155 Phase 3: mirror to public keyword tables (SSOT for analyzer)
-        IF term.table_name = 'product_exclude_keywords'
-           AND to_regclass('public.product_exclude_keywords') IS NOT NULL THEN
-            IF NOT EXISTS (
-                SELECT 1 FROM public.product_exclude_keywords
-                WHERE product_id = product.id AND keyword = term.keyword
-            ) THEN
-                INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
-                SELECT product.id, term.keyword, COALESCE(MAX(position), -1) + 1
-                FROM public.product_exclude_keywords WHERE product_id = product.id;
-            END IF;
-        ELSIF term.table_name = 'product_search_keywords'
-              AND to_regclass('public.product_search_keywords') IS NOT NULL THEN
-            IF NOT EXISTS (
-                SELECT 1 FROM public.product_search_keywords
-                WHERE product_id = product.id AND keyword = term.keyword
-            ) THEN
-                INSERT INTO public.product_search_keywords (product_id, keyword, position)
-                SELECT product.id, term.keyword, COALESCE(MAX(position), -1) + 1
-                FROM public.product_search_keywords WHERE product_id = product.id;
-            END IF;
-        END IF;
     END LOOP;
 END;
 $body$;
