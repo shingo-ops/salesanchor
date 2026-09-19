@@ -33,7 +33,7 @@ def snapshot():
         "reference": deepcopy(REF),
         "context": {"product_ids": {"P1": PRODUCT}, "units": {"BOX": ["BOX", "箱系"]}, "search": {"P1": ["EB01"]},
                     "exclude": {}, "categories": {"P1": "箱系"}, "normalization": {}, "works": REF["works"],
-                    "work_ids": {"P1": ONE}, "classes": {"P1": "Box"}},
+                    "work_ids": {"P1": str(ONE)}, "classes": {"P1": "Box"}},
     }
     return seal(data)
 
@@ -48,7 +48,7 @@ def mock_read(monkeypatch, snap):
 
 def test_reordered_ids_and_null_work_are_accepted():
     result = comparison.parse_decisions(comparison.HEADER + f"\n{ITEM2}｜\n{ITEM}｜{ONE}", [ITEM, ITEM2], REF)
-    assert result == {ITEM2: None, ITEM: ONE}
+    assert result == {ITEM2: None, ITEM: str(ONE)}
 
 
 @pytest.mark.parametrize("body", [

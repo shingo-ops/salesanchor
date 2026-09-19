@@ -24,6 +24,18 @@ if not URL and os.getenv("CI"):
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required locally")]
 
 
+async def _exec_multi_stmt(conn, sql: str) -> None:
+    """Execute multi-statement SQL via asyncpg Simple Query protocol.
+
+    asyncpg's exec_driver_sql() uses the Prepared Statement protocol which
+    rejects multi-statement SQL (including DO $$ ... $$ blocks).  Dropping
+    to the raw driver connection and calling .execute() uses the Simple Query
+    protocol instead, which handles multiple statements in one call.
+    """
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
+
+
 async def create_schema(conn, schema, corrections=True):
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
     await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
@@ -47,7 +59,7 @@ async def create_schema(conn, schema, corrections=True):
     for sql_file in ("085_create_tcg_type_master.sql", "086_seed_additional_tcg_types.sql"):
         sql_path = migrations / sql_file
         if sql_path.exists():
-            await conn.exec_driver_sql(sql_path.read_text())
+            await _exec_multi_stmt(conn, sql_path.read_text())
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
         "20260903_210000_tcg_distribution_settings_t004.sql",
