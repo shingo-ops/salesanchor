@@ -149,26 +149,37 @@ async def test_existing_alias_is_not_reassigned():
 
 
 async def test_android_upload_uses_alias_but_preserves_unknown_review_gate():
+    """Auto-register: 未解決送信者（'Example Full', 'Unknown'）は public.suppliers に
+    自動登録されるため review_status='ok'・unresolved_display_names=[] になる。"""
     from app.services.tcg_line_import_svc import import_line_export
     captured = []
+    auto_register_call_count = [0]
     async def execute(sql, params=None):
+        sql_str = str(sql)
         r = MagicMock()
         r.fetchone.return_value = None
         r.fetchall.return_value = [('SP0001', 'Example')]
-        if 'INSERT INTO' in str(sql) and 'import_jobs' in str(sql):
+        # auto-register INSERT INTO public.suppliers RETURNING id → scalar_one() が整数を返す
+        if 'INSERT INTO public.suppliers' in sql_str and 'RETURNING id' in sql_str:
+            auto_register_call_count[0] += 1
+            r.scalar_one.return_value = auto_register_call_count[0]
+        # _write_source_messages で supplier_channels を引く → channel_id を返す
+        if 'supplier_channels' in sql_str and 'supplier_code' in sql_str:
+            channel_id = MagicMock()
+            r.fetchone.return_value = (channel_id,)
+        if 'INSERT INTO' in sql_str and 'import_jobs' in sql_str:
             captured.append(params)
         return r
     db = MagicMock(execute=execute, commit=AsyncMock())
     export = '2026/9/12(土)\n15:30\tExample Full\tinventory\n15:31\tUnknown\tother\n'
     with patch.object(svc, 'load_aliases', new=AsyncMock(return_value=[{'display_name': 'Example Full', 'code': 'SP0001', 'name': 'Example'}])):
         response = await import_line_export(db, 'talk.txt', export, None, source_format='android', window_hours=0)
-    # Sprint 2: load_aliases returns [] (table dropped); 'Example Full' is no longer resolved via alias
-    assert response['unresolved_display_names'] == ['Example Full', 'Unknown']
-    import json
-    saved = json.loads(captured[0]['pending_messages'])
-    assert saved[0]['display_name'] == 'Example Full'
-    # Sprint 2: unified resolve path no longer tags messages with MARKER
-    assert not svc.is_android(saved)
+    # auto-register により両名が自動登録され pending_review にはならない
+    assert response['review_status'] == 'ok'
+    assert response['unresolved_display_names'] == []
+    assert response['unresolved_count'] == 0
+    # 2名分の auto-register INSERT が実行されたことを確認
+    assert auto_register_call_count[0] == 2
 
 
 async def test_pending_android_commit_uses_alias_and_keeps_remaining_names_blocked():

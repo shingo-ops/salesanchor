@@ -153,28 +153,21 @@ async def test_concurrent_file_and_post_retries(pg):
     assert enqueue.call_count==1
 
 
-async def test_pending_commit_and_concurrent_commit(pg):
+async def test_auto_register_and_duplicate_dedup(pg):
+    """Auto-register: 未解決送信者 Bob は upload 時に public.suppliers へ自動登録され
+    review_status='ok' になる。同一ファイルの再 upload は already_imported を返す。"""
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
-    duplicate=await upload(engine,export(sender="Bob"))
-    assert duplicate["review_status"]=="pending_review"
-    assert count(conn,"source_messages")==0
-    with conn.cursor() as c:
-        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
-        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
-                  "VALUES ('SP-99999','Bob','Bob','corporate',true) RETURNING id")
-        bob_id = c.fetchone()[0]
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
-    async def commit():
-        async with AsyncSession(engine) as db:
-            try:
-                return await routes.commit_pending_job(job["import_job_id"],db)
-            except HTTPException as e:
-                return e.status_code
-    result=await asyncio.gather(commit(),commit())
-    assert sum(x==409 for x in result)==1
+    # auto-register により Bob は即座に ok になる
+    assert job["review_status"]=="ok"
     assert count(conn,"source_messages")==1
-    assert count(conn,"import_job_messages")==1
+    assert enqueue.call_count==1
+    # 同一ファイルの再 upload は already_imported（sha256 重複）を返す
+    duplicate=await upload(engine,export(sender="Bob"))
+    assert duplicate["status"]=="already_imported"
+    assert duplicate["import_job_id"]==job["import_job_id"]
+    # source_messages は増えない
+    assert count(conn,"source_messages")==1
     assert enqueue.call_count==1
 
 
@@ -209,9 +202,12 @@ async def test_constraints_and_cross_schema_fk(pg):
 
 
 async def test_unknown_zero_pending_and_foreign_id(pg):
+    """Auto-register: 未解決送信者 'Unknown' は自動登録されるため review_status='ok'・
+    coverage='complete' になる。legacy_unknown と foreign id の挙動は変わらない。"""
     engine,conn,_=pg
     zero=await upload(engine,"empty file")
-    pending=await upload(engine,export(sender="Unknown"))
+    # auto-register により 'Unknown' は即座に登録されて ok になる
+    registered=await upload(engine,export(sender="Unknown"))
     legacy=str(uuid4())
     foreign=str(uuid4())
     with conn.cursor() as c:
@@ -220,11 +216,15 @@ async def test_unknown_zero_pending_and_foreign_id(pg):
     async with AsyncSession(engine) as db:
         z=await progress.read_progress(db,zero["import_job_id"])
         assert z["coverage"]=="complete" and z["messages"]["total"]==0
-        for jid,coverage in ((legacy,"legacy_unknown"),(pending["import_job_id"],"pending_review")):
-            r=await progress.read_progress(db,jid)
-            assert r["coverage"]==coverage and r["extraction"]["total"] is None
-            page=await progress.read_items(db,jid,50,0,"all")
-            assert page["total"] is None and page["items"] is None
+        # auto-register 後は coverage='complete'、messages が紐付き済み
+        r=await progress.read_progress(db,registered["import_job_id"])
+        assert r["coverage"]=="complete" and r["review_status"]=="ok"
+        assert r["messages"]["total"]==1
+        # legacy_unknown: messages_linked_at=NULL かつ review_status='ok' → legacy_unknown
+        rl=await progress.read_progress(db,legacy)
+        assert rl["coverage"]=="legacy_unknown" and rl["extraction"]["total"] is None
+        page=await progress.read_items(db,legacy,50,0,"all")
+        assert page["total"] is None and page["items"] is None
         with pytest.raises(HTTPException) as e:
             await progress.read_progress(db,foreign)
         assert e.value.status_code==404
@@ -321,30 +321,22 @@ async def test_api_auth_validation_and_db_errors(pg):
         await progress.read_progress(Broken(),str(uuid4()))
 
 
-async def test_pending_rollback_retains_pending_payload(pg,monkeypatch):
+async def test_auto_register_job_commit_returns_409(pg,monkeypatch):
+    """Auto-register: upload 時に Bob が自動登録されて review_status='ok' になるため、
+    commit_pending_job は 409 を返す（pending_review でないジョブはコミット不可）。"""
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
-    with conn.cursor() as c:
-        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
-        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
-                  "VALUES ('SP-99998','Bob','Bob','corporate',true) RETURNING id")
-        bob_id = c.fetchone()[0]
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
-    original=svc._link_message
-    async def fail(*args):
-        await original(*args)
-        raise RuntimeError("injected pending link")
-    monkeypatch.setattr(svc,"_link_message",fail)
+    # auto-register により Bob は即座に登録され ok になる
+    assert job["review_status"]=="ok"
+    assert count(conn,"source_messages")==1
+    # ok ジョブへの commit_pending_job は 409 を返す
     async with AsyncSession(engine) as db:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(HTTPException) as exc:
             await routes.commit_pending_job(job["import_job_id"],db)
-        await db.rollback()
-    assert count(conn,"source_messages")==0 and count(conn,"import_job_messages")==0
-    with conn.cursor() as c:
-        c.execute(f"SELECT review_status,pending_messages,messages_linked_at FROM {SCHEMA}.import_jobs")
-        state,payload,linked=c.fetchone()
-        assert state=="pending_review" and payload and linked is None
-    enqueue.assert_not_called()
+        assert exc.value.status_code==409
+    # source_messages は変わらない
+    assert count(conn,"source_messages")==1
+    assert enqueue.call_count==1
 
 
 async def test_link_retry_preserves_created_and_enqueue_sees_commit(pg,monkeypatch):
@@ -397,24 +389,21 @@ async def test_later_tcg_schema_provisioning(pg):
             c.execute("DROP SCHEMA tenant_873 CASCADE")
 
 
-async def test_pending_confirmation_reuses_existing_post(pg):
+async def test_auto_register_two_senders_each_get_own_source_message(pg):
+    """Auto-register: 未解決送信者 Bob も upload 時に即座に登録され、
+    Alice と Bob それぞれが独立した source_message を持つ。commit_pending_job 不要。"""
     engine,conn,enqueue=pg
-    await upload(engine,export())
-    pending=await upload(engine,export(sender="Bob"))
-    with conn.cursor() as c:
-        # Sprint 2: supplier resolution uses public.suppliers.line_name; register Bob there
-        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) "
-                  "VALUES ('SP-99997','Bob','Bob','corporate',true) RETURNING id")
-        bob_id = c.fetchone()[0]
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_id,))
-    async with AsyncSession(engine) as db:
-        result=await routes.commit_pending_job(pending["import_job_id"],db)
-        # Sprint 2: Bob has a dedicated channel; message is new (not reused from Alice's channel)
-        assert result.enqueued_count==1
-        r=await progress.read_progress(db,pending["import_job_id"])
-        assert r["coverage"]=="complete" and r["messages"]["reused"]==0
+    alice_job=await upload(engine,export())
+    bob_job=await upload(engine,export(sender="Bob"))
+    # 両方とも auto-register により即座に ok になる
+    assert alice_job["review_status"]=="ok"
+    assert bob_job["review_status"]=="ok"
     assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==2
     assert enqueue.call_count==2
+    async with AsyncSession(engine) as db:
+        r=await progress.read_progress(db,bob_job["import_job_id"])
+        assert r["coverage"]=="complete" and r["messages"]["reused"]==0
+        assert r["messages"]["total"]==1
 
 
 async def test_stage_details_mixed_results_counts_null_supplier_and_reuse(pg):
