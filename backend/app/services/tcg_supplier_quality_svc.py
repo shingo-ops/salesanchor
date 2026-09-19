@@ -28,8 +28,8 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     """
     sql = f"""
         SELECT
-            COALESCE(ts.code, sc.id::text)  AS supplier_id,
-            COALESCE(ts.name, '不明')        AS supplier_name,
+            COALESCE(ps.supplier_code, sc.id::text)  AS supplier_id,
+            COALESCE(ps.name, '不明')        AS supplier_name,
             COUNT(ei.id)                     AS analysis_count,
             COUNT(CASE
                 WHEN NOT ar.pid_resolved
