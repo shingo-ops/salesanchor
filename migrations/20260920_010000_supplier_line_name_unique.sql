@@ -14,8 +14,6 @@ BEGIN
     ) INTO col_exists;
 
     IF to_regclass('public.suppliers') IS NOT NULL AND col_exists THEN
-        CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
-            ON public.suppliers (line_name)
-            WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique ON public.suppliers (line_name) WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
     END IF;
 END $$;
