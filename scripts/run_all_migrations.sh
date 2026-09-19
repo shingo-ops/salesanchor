@@ -691,3 +691,6 @@ run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
 
 # Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
 run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
+
+# Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
+run_sql migrations/20260920_010000_supplier_line_name_unique.sql
