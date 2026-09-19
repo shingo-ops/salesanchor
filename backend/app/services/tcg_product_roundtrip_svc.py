@@ -18,6 +18,9 @@ from app.tcg_config import TCG_SCHEMA
 COLUMNS = ["product_code", "revision", *CSV_COLUMNS]
 MAX_BYTES = 2 * 1024 * 1024
 WORDS = {"search_keywords": "product_search_keywords", "exclude_keywords": "product_exclude_keywords"}
+# Phase 3 SSOT: these lookup tables moved to public schema (INTEGER PK).
+# Keys match the LOOKUP_TABLES keys whose backing table is now in public.
+_PUBLIC_LOOKUP_TABLES: set[str] = {"product_category_code"}
 
 
 class RoundtripError(ValueError):
@@ -100,7 +103,10 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     references.append("'work_code', work.code")
     for field, table in LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
-        joins.append(f"LEFT JOIN {TCG_SCHEMA}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
+        # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK);
+        # public.products.product_category_id is now INTEGER.
+        schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
+        joins.append(f"LEFT JOIN {schema_prefix}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
         references.append(f"'{field}', {alias}.code")
     keyword_sql = []
     for field, table in WORDS.items():
@@ -186,7 +192,9 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.tcg_type_master r WHERE r.is_active=TRUE"))
     references["work_code"] = {row[0]["code"]: row[0] for row in work_result.fetchall()}
     for field, table in LOOKUP_TABLES.items():
-        result = await db.execute(text(f"SELECT to_jsonb(r) FROM {TCG_SCHEMA}.{table} r WHERE r.is_active=TRUE"))
+        # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
+        schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
+        result = await db.execute(text(f"SELECT to_jsonb(r) FROM {schema_prefix}.{table} r WHERE r.is_active=TRUE"))
         references[field] = {row[0]["code"]: row[0] for row in result.fetchall()}
     plans = []
     seen = set()

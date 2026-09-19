@@ -240,6 +240,25 @@ def migrate(cursor):
         FROM {SCHEMA}.tcg_product_categories
         ON CONFLICT (code) DO NOTHING
     """)
+    # Phase 3 SSOT: seed public.conditions with the standard condition master so the analyzer
+    # can resolve condition_id (INTEGER FK NOT NULL in analysis_results after Phase 3 migration).
+    # Unit seeding is intentionally deferred to test-specific setup (tests like
+    # test_tcg_completion_safety.py seed their own UN-coded units after migrate()).
+    # Condition codes use CN-prefix to avoid conflicts with test fixtures that use C1/C2/C3.
+    cursor.execute("""
+        INSERT INTO public.conditions (code, canonical, priority, app_kubun, search_kw, exclude_kw, is_active) VALUES
+            ('CN0001', 'Case',               4, '箱系大',       '',       '',  true),
+            ('CN0002', 'Damaged case',       2, '箱系大',       'ダメ,傷', '', true),
+            ('CN0003', 'Sealed box',         4, '箱系',         '未開封',  '', true),
+            ('CN0004', 'Damaged sealed box', 2, '箱系',         'ダメ,傷', '', true),
+            ('CN0005', 'No shrink box',      3, '',             'シュリなし', '', true),
+            ('CN0006', 'Opened box',         3, '',             '開封',    '', true),
+            ('CN0007', 'Unsearched pack',    3, '',             '未サーチ', '', true),
+            ('CN0008', 'FLAG_SINGLE',        1, '枚系,単位不明', '単品',   '', true),
+            ('CN0009', 'Opened case',        2, '箱系大',       '開封',    '', true),
+            ('CN0010', 'Searched pack',      2, 'パック系',     'サーチ済み', '', true)
+        ON CONFLICT (code) DO NOTHING
+    """)
     # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
     cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
