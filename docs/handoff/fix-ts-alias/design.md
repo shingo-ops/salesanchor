@@ -1,5 +1,7 @@
 # Design: Fix Undefined Table Alias in Supplier Quality Query
 
+**recon**: docs/handoff/fix-ts-alias/recon.md
+
 ## Overview
 Simple bug fix: SQL query uses undefined table alias `ts` when the correct alias is `ps` (public.suppliers).
 
@@ -57,7 +59,7 @@ COALESCE(ps.name, '不明')        AS supplier_name,
 - No new test needed; existing endpoints should pass
 - Migration tests do not apply (query-only, no schema change)
 
-## Rollback
+## 守り手（ロールバック）
 If error occurs after fix:
 ```sql
 -- Revert single commit

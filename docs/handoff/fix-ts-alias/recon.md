@@ -56,3 +56,7 @@ When frontend calls GET `/api/v1/tcg/supplier-quality-summaries`, query should:
 2. Aggregate extraction_items and analysis_results
 3. Return supplier summaries with counts (analysis_count, needs_review_count, etc.)
 4. No SQL error should occur
+
+---
+
+**設計**: docs/handoff/fix-ts-alias/design.md
