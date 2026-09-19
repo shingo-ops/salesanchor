@@ -65,10 +65,10 @@ dedup/duplicate に関する ADR: 直接仕入元を扱うものは **なし**
 
 ### 重複発生の経路（観測事実）
 
-1. **LINE トーク履歴のアップロード時**（`tcg_line_import_svc.py:580`）:
-   - `resolve_suppliers()` が `line_name` で既存仕入元を検索（L547）
+1. **LINE トーク履歴のアップロード時**（tcg_line_import_svc.py:580）:
+   - resolve_suppliers() が line_name で既存仕入元を検索（L547）
    - 見つからない → unresolved リストへ（L243）
-   - unresolved → `INSERT INTO public.suppliers (name, line_name, ...) VALUES (:name, :line_name, ...)` で新規作成（L580）
+   - unresolved → INSERT INTO public.suppliers (name, line_name, ...) VALUES (:name, :line_name, ...) で新規作成（L580）
    - **ON CONFLICT なし** → 同じ line_name が複数回 INSERT される
 
 2. **重複が発生する条件**:
@@ -89,8 +89,8 @@ dedup/duplicate に関する ADR: 直接仕入元を扱うものは **なし**
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|---|---|---|
-| 1 | テナント側 CSV インポート（`suppliers.py:472`）で line_name 重複は起きうるか | UNIQUE 制約は `WHERE tenant_id IS NULL` なのでテナント側は対象外。テナント側の line_name 重複は別件 | ✅ 対象外と判断 |
-| 2 | super_admin の IntegrityError catch（`:122`）は line_name 重複を防げるか | catch はあるが UNIQUE 制約がないため line_name 重複では発火しない。supplier_code 重複等の他制約用 | ✅ 防げない |
+| 1 | テナント側 CSV インポート（suppliers.py:472）で line_name 重複は起きうるか | UNIQUE 制約は WHERE tenant_id IS NULL なのでテナント側は対象外。テナント側の line_name 重複は別件 | ✅ 対象外と判断 |
+| 2 | super_admin の IntegrityError catch（:122）は line_name 重複を防げるか | catch はあるが UNIQUE 制約がないため line_name 重複では発火しない。supplier_code 重複等の他制約用 | ✅ 防げない |
 | 3 | 並行リクエストでの race condition | READ COMMITTED では SELECT → INSERT の間に他トランザクションが INSERT 可能。UNIQUE 制約なしでは防げない | ✅ UNIQUE 制約で解決 |
 
 **未解決ゼロ確認**: 全て解消済み
@@ -103,9 +103,9 @@ dedup/duplicate に関する ADR: 直接仕入元を扱うものは **なし**
 
 | 箇所 | テーブル | line_name | ON CONFLICT | UNIQUE制約の影響 | 修正要否 |
 |------|---------|-----------|-------------|-----------------|---------|
-| `tcg_line_import_svc.py:580` | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
-| `tcg_line_import.py:486` | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
-| `super_admin_suppliers.py:122` | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
-| `super_admin_suppliers.py:479` | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
-| `suppliers.py:266` | suppliers (tenant) | ❌ なし | ❌ なし | ❌ 対象外 | ❌ 不要 |
-| `suppliers.py:472` | suppliers (tenant) | ✅ あり | ❌ なし | ❌ 対象外（tenant_id≠NULL） | ❌ 不要 |
+| tcg_line_import_svc.py:580 | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
+| tcg_line_import.py:486 | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
+| super_admin_suppliers.py:122 | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
+| super_admin_suppliers.py:479 | public.suppliers | ✅ あり | ❌ なし | ✅ 影響あり | ✅ UPSERT化 |
+| suppliers.py:266 | suppliers (tenant) | ❌ なし | ❌ なし | ❌ 対象外 | ❌ 不要 |
+| suppliers.py:472 | suppliers (tenant) | ✅ あり | ❌ なし | ❌ 対象外（tenant_id≠NULL） | ❌ 不要 |
