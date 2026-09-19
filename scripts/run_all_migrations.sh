@@ -691,3 +691,6 @@ run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
 
 # Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
 run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
+
+# Master SSOT Phase 3: unit_id/condition_id FK UUID→INTEGER + product_category_id UUID→INTEGER（冪等）
+run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql

@@ -59,6 +59,8 @@ async def create_product_schema(conn, schema):
     await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
     await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
+    await _exec_multi_stmt(conn, (migrations / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
 
 
 @pytest_asyncio.fixture
