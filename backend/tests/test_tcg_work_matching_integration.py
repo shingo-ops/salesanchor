@@ -238,6 +238,10 @@ def migrate(cursor):
     # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
     _supplier_ssot_premigration(cursor, SCHEMA)
     cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
+    # product_code_seq: created by phase_b migration in prod, add idempotently for test DB
+    cursor.execute(
+        "CREATE SEQUENCE IF NOT EXISTS public.product_code_seq START WITH 1"
+    )
 
 
 @pytest.fixture
