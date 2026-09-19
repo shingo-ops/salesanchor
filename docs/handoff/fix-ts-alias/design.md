@@ -3,13 +3,13 @@
 **recon**: docs/handoff/fix-ts-alias/recon.md
 
 ## Overview
-Simple bug fix: SQL query uses undefined table alias `ts` when the correct alias is `ps` (public.suppliers).
+Simple bug fix: SQL query uses undefined table alias `ts` when the correct alias is `ps` (public.suppliers). Related to ADR-1001 phase of migrating from legacy tcg_suppliers to public.suppliers unified master.
 
-## KGI / KPI
-| Criterion | Measurement |
-|-----------|-------------|
-| **KGI**: API returns supplier quality summaries without error | GET /api/v1/tcg/supplier-quality-summaries returns 200 with valid JSON array |
-| **KPI**: No 500 error due to SQL syntax | Response status ≠ 500; response body has no "UndefinedTableError" or "missing FROM-clause" |
+## 受け入れ基準
+| 基準 | 検証方法 |
+|------|---------|
+| API returns supplier quality summaries without error | GET /api/v1/tcg/supplier-quality-summaries returns 200 with valid JSON array |
+| No 500 error due to SQL syntax | Response status ≠ 500; response body has no "UndefinedTableError" or "missing FROM-clause" |
 
 ## Implementation Plan
 
@@ -40,6 +40,8 @@ COALESCE(ps.name, '不明')        AS supplier_name,
 - No cascading alias issues detected
 
 ## Risk Assessment
+
+This fix is part of the ADR-1001 unified master data migration strategy, which deprecates the legacy `tcg_suppliers` schema in favor of `public.suppliers`. The undefined alias `ts` was a remnant from legacy code that was never updated after the schema consolidation.
 
 | Risk | Likelihood | Mitigation |
 |------|------------|-----------|
@@ -95,8 +97,12 @@ When reviewing similar queries:
 - PostgreSQL type checking at runtime prevents deployment of broken queries
 - No additional test infrastructure needed (query validation happens at execution)
 
-## Implementation Notes
-- No migrations required
-- No config changes required
-- No frontend changes required
-- Single backend service file change (2 lines)
+## 触らないもの
+
+The following should NOT be modified as part of this fix:
+- Database schema / migrations (query-only fix, no schema changes)
+- Table definitions in public.suppliers or tenant schemas
+- Frontend code (no UI changes needed)
+- API contract / response schema (same columns, same types)
+- Other query endpoints or services (no cross-cutting impact)
+- Cache invalidation (not applicable to query fix)
