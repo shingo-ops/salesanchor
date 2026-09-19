@@ -421,14 +421,12 @@ export default function TcgLineImportPage() {
             marginBottom: "2rem",
             padding: "1rem 1.25rem",
             borderRadius: "8px",
-            border: `1px solid ${result.status === "already_imported" ? "var(--color-warning-border)" : "var(--color-success-border)"}`,
-            background: result.status === "already_imported" ? "var(--color-warning-bg)" : "var(--color-success-bg)",
+            border: "1px solid var(--color-success-border)",
+            background: "var(--color-success-bg)",
           }}
         >
           <h3 style={{ fontSize: "1rem", fontWeight: 600, marginBottom: "0.75rem" }}>
-            {result.status === "already_imported"
-              ? t("tcgLineImport.alreadyImported")
-              : t("tcgLineImport.importComplete")}
+            {t("tcgLineImport.importComplete")}
           </h3>
           {result.status === "imported" && (
             <ul style={{ margin: "0 0 0.75rem 0", paddingLeft: "1.25rem" }}>

@@ -15,7 +15,7 @@ MIG-04 Stage 1 & REVIEW-STAGE: tcg_line_import_svc の単体テスト（DB 不�
   - import_line_export: _enqueue_extraction は db.commit() の後に呼ばれること
   [REVIEW-STAGE]
   - 未解決0件 → 従来どおり source_messages が書かれ、エンキューされる（review_status='ok'）
-  - 未解決1件以上 → source_messages が1件も書かれない、review_status='pending_review'、エンキューされない
+  - 未解決1件以上 → 自動登録（public.suppliers INSERT）して全件 source_messages に書く（review_status='ok'）
   - 窓が JST 基準であること（_compute_window 境界テスト）
   - 破棄タスク → 24h 超の pending_review が discarded になる
 """
@@ -854,12 +854,20 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
     """
     import_line_export 用の DB モックを生成する。
     supplier_rows: [(code, name), ...]
+
+    自動登録（INSERT INTO public.suppliers RETURNING id）に対応するため、
+    scalar_one() が 99999 を返す result を用意する。
     """
+    _auto_supplier_id = 99999
+
     async def tracked_execute(stmt, params=None):
         sql = str(stmt)
         result = MagicMock()
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None          # 未取り込み
+        elif "INSERT INTO public.suppliers" in sql and "RETURNING id" in sql:
+            # 自動登録: INSERT RETURNING id → scalar_one() = 99999
+            result.scalar_one.return_value = _auto_supplier_id
         elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = supplier_rows
         elif "supplier_channels" in sql and "SELECT" in sql:
@@ -915,16 +923,16 @@ async def test_import_zero_unresolved_writes_source_messages():
     db.commit.assert_called_once()
 
 
-async def test_import_unresolved_does_not_write_source_messages():
+async def test_import_unresolved_auto_creates_supplier_and_writes_source_messages():
     """
-    未解決1件以上のとき source_messages が1件も書かれず、
-    エンキューされず、review_status='pending_review' が返ること。
+    未解決仕入元があるとき自動登録され、source_messages が書かれ、
+    エンキューされ、review_status='ok' が返ること（自動登録フロー）。
     """
     export_text = (
         "2026.08.01 金曜日\n"
         "10:00 未登録ユーザー 商品X 100円\n"
     )
-    db = _make_db_mock([])   # 仕入元マスタ空 → 全員未解決
+    db = _make_db_mock([])   # 仕入元マスタ空 → 自動登録対象
     sqls: list[str] = []
 
     orig_execute = db.execute
@@ -944,24 +952,25 @@ async def test_import_unresolved_does_not_write_source_messages():
             window_hours=0,
         )
 
-    assert result["review_status"] == "pending_review"
-    assert result["unresolved_count"] == 1
-    assert result["provider_count"] == 0
-    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
-        "pending_review なのに source_messages への INSERT が実行された"
-    mock_enqueue.assert_not_called()
-    db.commit.assert_called_once()   # import_jobs 保存の commit は1回
+    assert result["review_status"] == "ok", "自動登録後は review_status='ok' になること"
+    assert result["unresolved_count"] == 0, "自動登録後は unresolved_count=0 になること"
+    assert any("INSERT INTO public.suppliers" in s for s in sqls), \
+        "未登録仕入元の自動 INSERT が実行されていない"
+    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+        "自動登録後に source_messages への INSERT が実行されていない"
+    mock_enqueue.assert_called_once()
+    db.commit.assert_called_once()
 
 
-async def test_import_partial_unresolved_also_blocks():
+async def test_import_partial_unresolved_auto_creates_and_writes_all():
     """
-    解決済み仕入元が混在していても、未解決が1件でもあれば保留になること。
-    （解決済みの分も含めて全件保留）
+    解決済み仕入元と未解決仕入元が混在するとき、
+    未解決仕入元が自動登録されて全件 source_messages に書き込まれること。
     """
     export_text = (
         "2026.08.01 金曜日\n"
-        "10:00 仕入元A 商品X 100円\n"   # 解決済み
-        "10:05 未登録ユーザー 商品Y\n"  # 未解決
+        "10:00 仕入元A 商品X 100円\n"   # 既存解決済み
+        "10:05 未登録ユーザー 商品Y\n"  # 自動登録対象
     )
     db = _make_db_mock([("SP0001", "仕入元A")])
     sqls: list[str] = []
@@ -983,34 +992,39 @@ async def test_import_partial_unresolved_also_blocks():
             window_hours=0,
         )
 
-    assert result["review_status"] == "pending_review"
-    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls)
-    mock_enqueue.assert_not_called()
+    assert result["review_status"] == "ok", "自動登録後は review_status='ok' になること"
+    assert result["unresolved_count"] == 0
+    assert any("INSERT INTO public.suppliers" in s for s in sqls), \
+        "未登録仕入元の自動 INSERT が実行されていない"
+    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+        "source_messages への INSERT が実行されていない"
+    mock_enqueue.assert_called()
 
 
-async def test_import_unresolved_stores_pending_messages():
+async def test_import_unresolved_auto_registers_with_correct_name():
     """
-    保留時に pending_messages（JSON）と unresolved_names が import_jobs に渡されること。
+    自動登録時に public.suppliers の INSERT パラメータが
+    display_name と一致する name / line_name になること。
     """
     export_text = (
         "2026.08.01 金曜日\n"
         "10:00 未登録ユーザー 商品X 100円\n"
     )
     db = _make_db_mock([])
-    captured_params: list[dict] = []
+    captured_insert_params: list[dict] = []
 
     orig_execute = db.execute
 
     async def capturing_execute(stmt, params=None):
         sql = str(stmt)
-        if params and "pending_messages" in sql:
-            captured_params.append(dict(params))
+        if params and "INSERT INTO public.suppliers" in sql:
+            captured_insert_params.append(dict(params) if params else {})
         return await orig_execute(stmt, params)
 
     db.execute = capturing_execute
 
     with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
-        await import_line_export(
+        result = await import_line_export(
             db=db,
             filename="test.txt",
             export_text=export_text,
@@ -1018,14 +1032,11 @@ async def test_import_unresolved_stores_pending_messages():
             window_hours=0,
         )
 
-    assert len(captured_params) == 1, "pending_messages を含む INSERT が1件実行されていない"
-    p = captured_params[0]
-    assert p["pending_messages"] is not None
-    msgs = json.loads(p["pending_messages"])
-    assert len(msgs) == 1
-    assert msgs[0]["display_name"] == "未登録ユーザー"
-    names = json.loads(p["unresolved_names"])
-    assert names == ["未登録ユーザー"]
+    assert result["review_status"] == "ok"
+    assert len(captured_insert_params) == 1, "suppliers への INSERT が1件実行されていない"
+    p = captured_insert_params[0]
+    assert p["name"] == "未登録ユーザー"
+    assert p["line_name"] == "未登録ユーザー"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
