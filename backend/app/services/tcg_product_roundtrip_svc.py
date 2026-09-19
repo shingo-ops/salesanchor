@@ -106,7 +106,7 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     for field, table in WORDS.items():
         keyword_sql.append(
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
-            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
+            f"FROM public.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
         )
     work_id_int = int(work_id) if work_id else None
     result = await db.execute(
@@ -284,7 +284,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         await db.execute(
             text(
                 f"LOCK TABLE public.products, "
-                f"{TCG_SCHEMA}.product_search_keywords, {TCG_SCHEMA}.product_exclude_keywords "
+                f"public.product_search_keywords, public.product_exclude_keywords "
                 "IN SHARE ROW EXCLUSIVE MODE"
             )
         )
@@ -371,13 +371,13 @@ async def replace_words(db: AsyncSession, product_id: int, table: str, words: li
     if table not in ("product_search_keywords", "product_exclude_keywords"):
         raise ValueError("Invalid keyword table")
     await db.execute(
-        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:product_id"),
+        text(f"DELETE FROM public.{table} WHERE product_id=:product_id"),
         {"product_id": product_id},
     )
     for position, word in enumerate(words, 1):
         await db.execute(
             text(
-                f"INSERT INTO {TCG_SCHEMA}.{table}(product_id,keyword,position) "
+                f"INSERT INTO public.{table}(product_id,keyword,position) "
                 "VALUES (:product_id,:keyword,:position)"
             ),
             {"product_id": product_id, "keyword": word, "position": position},

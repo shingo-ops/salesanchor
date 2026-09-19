@@ -231,6 +231,8 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
     cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
+    # Master SSOT Phase 3: public schema tables for 9 master tables
+    cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
@@ -291,20 +293,20 @@ def seed_products(connection):
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
                 SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
-                {SCHEMA}.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
+                public.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
             pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, keyword in enumerate(keywords):
-                    cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)", (str(uuid4()), pid, keyword, position))
-        cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
+                    cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)", (pid, keyword, position))
+        cursor.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
-        cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
+        cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
         # ADR-155: 'コロ' exclusion keyword for PM0200 (was in DICTIONARY migration)
-        cursor.execute(f"""INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position)
-            SELECT %s, p.id, 'コロ', COALESCE(MAX(e.position), -1)+1
-            FROM public.products p LEFT JOIN {SCHEMA}.product_exclude_keywords e ON e.product_id=p.id
+        cursor.execute("""INSERT INTO public.product_exclude_keywords(product_id,keyword,position)
+            SELECT p.id, 'コロ', COALESCE(MAX(e.position), -1)+1
+            FROM public.products p LEFT JOIN public.product_exclude_keywords e ON e.product_id=p.id
             WHERE p.product_code='PM0200'
-            GROUP BY p.id""", (str(uuid4()),))
+            GROUP BY p.id""")
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
@@ -604,10 +606,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
-            cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
+            cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
-            cursor.execute("INSERT INTO tenant_004.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id", (code, canonical, kubun))
-            cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
+            cursor.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id", (code, canonical, kubun))
+            cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
     records = [record("匿名パック", 1, memo="※未サーチ品"), record("匿名箱", 2, state="伝票剥がし跡あり")]
     records[0][3], records[1][3] = "Pack", "CASE"
     records += [record("匿名箱", i) for i in range(3, 19)]
@@ -950,13 +952,13 @@ def test_space_product_match_saved_in_isolated_database(
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
                 SELECT %s,'スターターセットV 草','Box',true,m.id,c.id
-                FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+                FROM public.tcg_type_master m,public.tcg_product_categories c
                 WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
-                cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
-                               (str(uuid4()), product_id, keyword))
+                cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
+                               (product_id, keyword))
         cursor.execute("SELECT id FROM public.tcg_type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
         row = cursor.fetchone()
         work_id = str(row[0]) if row else "0"
@@ -1411,13 +1413,13 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         cursor.execute(f"""INSERT INTO public.products
             (product_code,name,category_class,is_active,work_id,product_category_id)
             SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,m.id,c.id
-            FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+            FROM public.tcg_type_master m,public.tcg_product_categories c
             WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id,work_id""")
         pid, work = cursor.fetchone()
         for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
                                ("product_exclude_keywords", "LIMITED EDITION")]:
-            cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
-                           (str(uuid4()), pid, keyword))
+            cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
+                           (pid, keyword))
     cases = [
         ("30th CELEBRATION FUTURISTIC BOX", "", "", True),
         ("FUTURISTIC BOX 30th CELEBRATION", "", "", True),

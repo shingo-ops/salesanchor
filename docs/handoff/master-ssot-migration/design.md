@@ -248,7 +248,7 @@ PostgreSQL スキーママイグレーション、Shopify Product Model SSOT、S
 | Step 1-1: work_id 型変更 | ✓ 完了 | #3565 |
 | Step 1-2: 1,528件 work_id 張替 | ✓ 完了（SSH） | — |
 | Step 1-3: 97件 NULL 分類 | ✓ 完了（SSH） | — |
-| Step 1-4: 9テーブル public コピー | 未実施（SSH接続待ち） | — |
+| Step 1-4: 9テーブル public コピー | ✓ 完了（SSH 2026-09-20） | — |
 | Step 2-1: コード配線変更（10ファイル） | ✓ 完了 | Phase 2 PR |
 | Step 2-2: FK制約追加 | ✓ 完了 | Phase 2 PR |
 | Step 2-3: 旧列・旧テーブル処理 | PO判断待ち | — |

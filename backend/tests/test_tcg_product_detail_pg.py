@@ -35,12 +35,12 @@ async def detail_db(product_db, monkeypatch):
         "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,'Keep this')"
     ))
     await db.execute(text(
-        f"INSERT INTO {schema}.product_search_keywords(product_id,keyword,position) "
-        f"SELECT id,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
+        "INSERT INTO public.product_search_keywords(product_id,keyword,position) "
+        "SELECT id,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     await db.execute(text(
-        f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT id,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
+        "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
+        "SELECT id,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
     ))
     return db, schema
 
@@ -59,8 +59,8 @@ async def test_detail_contains_stored_values_words_and_revision(detail_db):
     assert before["revision"] == (await details.get_product_detail(db, "DETAIL"))["revision"]
     assert set(before["lookups"]) == {"division_id", "work_id", "manufacturer_id", "product_category_id"}
     await db.execute(text(
-        f"INSERT INTO {schema}.product_exclude_keywords(product_id,keyword,position) "
-        f"SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
+        "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
+        "SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
     ))
     assert before["revision"] != (await details.get_product_detail(db, "DETAIL"))["revision"]
 

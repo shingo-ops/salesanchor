@@ -67,21 +67,22 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
     # No extractor is invoked. The input is inserted directly as synthetic extracted data.
     with connection.cursor() as cur:
         for i, unit in enumerate(recovery._UNIT_MASTER_ROWS, 1):
-            cur.execute(f'INSERT INTO {SCHEMA}.units(id,code,canonical,kubun,is_active) VALUES (%s,%s,%s,%s,true)',
-                        (unit['unit_id'], f'UN{i:04d}', unit['canonical'], unit['kubun']))
+            cur.execute('INSERT INTO public.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id',
+                        (f'UN{i:04d}', unit['canonical'], unit['kubun']))
+            uid = cur.fetchone()[0]
             for alias in set([unit['canonical']] + unit['aliases'].split(',')) - {''}:
-                cur.execute(f'INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,\'ja\')', (unit['unit_id'], alias))
+                cur.execute('INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,\'ja\')', (uid, alias))
         for code, canonical, kubun in [('C1','Case','箱系大'),('C2','Sealed box','箱系'),('C3','FLAG_SINGLE','単位不明')]:
-            cur.execute(f'INSERT INTO {SCHEMA}.conditions(code,canonical,app_kubun,is_active,priority) VALUES (%s,%s,%s,true,1) RETURNING id', (code,canonical,kubun))
+            cur.execute('INSERT INTO public.conditions(code,canonical,app_kubun,is_active,priority) VALUES (%s,%s,%s,true,1) RETURNING id', (code,canonical,kubun))
             cid = cur.fetchone()[0]
-            cur.execute(f'INSERT INTO {SCHEMA}.condition_aliases(condition_id,alias_text,lang) VALUES (%s,%s,\'ja\')',(cid,canonical))
+            cur.execute('INSERT INTO public.condition_aliases(condition_id,alias_text,lang) VALUES (%s,%s,\'ja\')',(cid,canonical))
         status_migration = work_fixture.MIGRATIONS / "20260903_150000_tcg_status_master_t004.sql"
         cur.execute(status_migration.read_text().replace("tenant_004", SCHEMA))
-        cur.execute(f'''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
+        cur.execute('''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
             SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.tcg_type_master w,
-            {SCHEMA}.tcg_product_categories c WHERE w.code='one_piece' AND c.code='PC_BOX' RETURNING id''')
+            public.tcg_product_categories c WHERE w.code='one_piece' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
-        cur.execute(f'INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,%s,0)',(str(uuid4()),pid,'架空検証商品'))
+        cur.execute('INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,0)',(pid,'架空検証商品'))
         smid, jobid = str(uuid4()), str(uuid4())
         original='ワンピース\n架空検証商品 カートン\n架空検証商品 BOX\n架空検証商品 カートン(10BOX入り)\n架空検証商品'
         cur.execute(f'''INSERT INTO {SCHEMA}.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
@@ -135,7 +136,7 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             async with AsyncSession(ae) as session:
                 from sqlalchemy import text
                 refs = {}
-                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.tcg_type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id',f'{SCHEMA}.tcg_product_categories','PC_BOX')]:
+                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.tcg_type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
                     refs[key] = str((await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one())
                 args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date=None,search_keywords='架空の登録検証デッキ',exclude_keywords='',**refs)
                 first = await master.create_product(session, **args)

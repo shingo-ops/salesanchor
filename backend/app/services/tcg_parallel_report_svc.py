@@ -44,10 +44,10 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT ua.alias_text, u.canonical, u.id
-                FROM {TCG_SCHEMA}.unit_aliases ua
-                JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+                FROM public.unit_aliases ua
+                JOIN public.units u ON u.id = ua.unit_id
                 WHERE u.is_active = TRUE
                 """
             )
@@ -60,10 +60,10 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT ca.alias_text, c.canonical, c.id
-                FROM {TCG_SCHEMA}.condition_aliases ca
-                JOIN {TCG_SCHEMA}.conditions c ON c.id = ca.condition_id
+                FROM public.condition_aliases ca
+                JOIN public.conditions c ON c.id = ca.condition_id
                 WHERE c.is_active = TRUE
                 """
             )
@@ -87,9 +87,9 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT p.product_code AS code, psk.keyword
-                FROM {TCG_SCHEMA}.product_search_keywords psk
+                FROM public.product_search_keywords psk
                 JOIN public.products p ON p.id = psk.product_id
                 WHERE p.is_active = TRUE
                 ORDER BY p.product_code, psk.position
@@ -105,9 +105,9 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT p.product_code AS code, pek.keyword
-                FROM {TCG_SCHEMA}.product_exclude_keywords pek
+                FROM public.product_exclude_keywords pek
                 JOIN public.products p ON p.id = pek.product_id
                 WHERE p.is_active = TRUE
                 ORDER BY p.product_code, pek.position

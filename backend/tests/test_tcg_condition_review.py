@@ -61,6 +61,8 @@ def pg():
             cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
+            # Master SSOT Phase 3: public schema tables for 9 master tables
+            cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
             cursor.execute((MIGRATIONS / "20260910_160000_tcg_work_evidence.sql").read_text())
             cursor.execute(MIGRATION.read_text())
             # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
@@ -68,18 +70,19 @@ def pg():
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             provision(cursor, "tenant_006")
             cursor.execute("INSERT INTO tenant_006.conditions (code,canonical,is_active) VALUES ('CN0099','untouched',true)")
-            cursor.execute("INSERT INTO tenant_004.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) VALUES ('CN0003','Sealed box',4,'箱系','未開封','',true) RETURNING id")
+            cursor.execute("INSERT INTO public.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) VALUES ('CN0003','Sealed box',4,'箱系','未開封','',true) RETURNING id")
             normal = str(cursor.fetchone()[0])
-            cursor.execute("SELECT id FROM tenant_004.conditions WHERE code='CN0011'")
+            # CN0011 is inserted by MIGRATION into tenant_004.conditions; mirror to public for service access
+            cursor.execute("INSERT INTO public.conditions (code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active) SELECT code,canonical,priority,app_kubun,search_kw,exclude_kw,is_active FROM tenant_004.conditions WHERE code='CN0011' RETURNING id")
             empty = str(cursor.fetchone()[0])
-            cursor.execute("INSERT INTO tenant_004.units(id,code,canonical,kubun,is_active) VALUES ('8e980434-eeff-4233-be5c-bcd0ba1db992','UN0002','Box','箱系',true) RETURNING id")
+            cursor.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN0002','Box','箱系',true) RETURNING id")
             unit = str(cursor.fetchone()[0])
-            cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
+            cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
             cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,tenant_004.tcg_product_categories c
+                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,public.tcg_product_categories c
                 WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
-            cursor.execute("INSERT INTO tenant_004.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,'Test Booster',0)", (str(uuid4()),product))
+            cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,'Test Booster',0)", (product,))
         yield {"connection": connection, "engine": engine,
                "url": url.set(database=name, drivername="postgresql+asyncpg"), "empty": empty,
                "normal": normal, "unit": unit, "product": product}
@@ -190,7 +193,7 @@ def test_15_confirmation_states(pg):
             'changed-unit':("UPDATE tenant_004.analysis_results SET unit_canonical='Case' WHERE extraction_item_id=%s",item['eid']),
             'changed-quantity':("UPDATE tenant_004.analysis_results SET quantity_normalized=2 WHERE extraction_item_id=%s",item['eid']),
             'changed-price':("UPDATE tenant_004.analysis_results SET price_normalized=20 WHERE extraction_item_id=%s",item['eid']),
-            'changed-condition_def':("UPDATE tenant_004.conditions SET search_kw='altered' WHERE id=%s",pg['empty']),
+            'changed-condition_def':("UPDATE public.conditions SET search_kw='altered' WHERE id=%s",pg['empty']),
         }
         if label in changes:
             with pg['connection'].cursor() as cursor: cursor.execute(changes[label][0],(changes[label][1],))
@@ -202,7 +205,7 @@ def test_15_confirmation_states(pg):
             eligible=not row['needs_review'] and ar['pid_resolved'] and ar['unit_resolved'] and ar['price_normalized'] is not None and ar['exclusion']!='excluded'
         assert eligible == (label in ('confirmed-empty','same-input-reanalysis')),label
         if label=='changed-condition_def':
-            with pg['connection'].cursor() as cursor: cursor.execute("UPDATE tenant_004.conditions SET search_kw='空箱' WHERE id=%s",(pg['empty'],))
+            with pg['connection'].cursor() as cursor: cursor.execute("UPDATE public.conditions SET search_kw='空箱' WHERE id=%s",(pg['empty'],))
 
 
 def test_rejections_replay_and_concurrent_requests(pg):
@@ -330,7 +333,7 @@ def test_remaining_issue_in_confirmation_response(pg,column,value,reason):
 def test_master_missing_or_disabled_holds_historical_rows(pg):
     item=seed(pg,name='Test Booster',memo='空箱',reasons='',condition_id=pg['normal'],condition_canonical='Sealed box')
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.conditions SET is_active=false WHERE code='CN0011'")
+        cursor.execute("UPDATE public.conditions SET is_active=false WHERE code='CN0011'")
     assert 'empty_box_master_unavailable' in context(pg,item)['review_reasons']
     assert output(pg)==[]
     with pytest.raises(HTTPException) as error: save(pg,item)
@@ -417,7 +420,7 @@ def test_real_input_change_rejects_old_screen_without_writes(pg):
 def test_missing_empty_definition_holds(pg):
     item=seed(pg,condition_id=pg['normal'],condition_canonical='Sealed box',reasons='')
     with pg['connection'].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.conditions SET code='CN0098' WHERE code='CN0011'")
+        cursor.execute("UPDATE public.conditions SET code='CN0098' WHERE code='CN0011'")
     assert 'empty_box_master_unavailable' in context(pg,item)['review_reasons']
     assert output(pg)==[]
 

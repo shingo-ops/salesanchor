@@ -37,9 +37,9 @@ async def _snapshot(db: AsyncSession, code: str) -> dict[str, Any]:
     result = await db.execute(text(
         f"SELECT row_to_json(p) AS product, "
         f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
+        f"FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
         f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
+        f"FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
         f"FROM public.products p WHERE p.product_code=:code"
     ), {"code": code})
     row = result.mappings().one_or_none()
@@ -149,11 +149,11 @@ async def update_product_detail(
             if words == [row["keyword"] for row in before[field]]:
                 continue
             await db.execute(text(
-                f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:pid"
+                f"DELETE FROM public.{table} WHERE product_id=:pid"
             ), {"pid": product["id"]})
             if words:
                 await db.execute(text(
-                    f"INSERT INTO {TCG_SCHEMA}.{table} (product_id,keyword,position) "
+                    f"INSERT INTO public.{table} (product_id,keyword,position) "
                     "VALUES (:pid,:word,:position)"
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])

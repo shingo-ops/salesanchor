@@ -279,7 +279,7 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                 self.current += 1
             if self.current == 2 and (
                 (mode in ["product", "cancel", "rollback"] and query.startswith("UPDATE public.products"))
-                or (mode == "words" and query.startswith(f"INSERT INTO {SCHEMA}.product_search_keywords"))
+                or (mode == "words" and query.startswith("INSERT INTO public.product_search_keywords"))
                 or (mode == "history" and query.startswith(f"INSERT INTO {SCHEMA}.tcg_product_import_rows"))
             ):
                 raise failure
@@ -358,7 +358,7 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
             query = (
                 "UPDATE public.products SET mark='competing' WHERE product_code LIKE 'RT%'"
                 if target == "product"
-                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
+                else "INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
             )
             if blocked:
                 with pytest.raises(psycopg2.errors.LockNotAvailable):

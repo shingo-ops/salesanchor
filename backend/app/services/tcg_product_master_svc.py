@@ -138,7 +138,7 @@ async def search_products_by_name(
                     ''
                 )               AS search_keywords
             FROM public.products p
-            LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
+            LEFT JOIN public.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND p.name ILIKE :query
@@ -235,7 +235,7 @@ async def check_duplicates(
                     ''
                 )                         AS search_keywords
             FROM public.products p
-            LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
+            LEFT JOIN public.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND (
@@ -413,7 +413,7 @@ async def create_product(
             await db.execute(
                 text(
                     f"""
-                    INSERT INTO {TCG_SCHEMA}.product_search_keywords
+                    INSERT INTO public.product_search_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
                     """
@@ -429,7 +429,7 @@ async def create_product(
             await db.execute(
                 text(
                     f"""
-                    INSERT INTO {TCG_SCHEMA}.product_exclude_keywords
+                    INSERT INTO public.product_exclude_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
                     """
@@ -496,7 +496,7 @@ async def add_search_keyword(
         text(
             f"""
             SELECT keyword
-            FROM {TCG_SCHEMA}.product_search_keywords
+            FROM public.product_search_keywords
             WHERE product_id = :pid
             ORDER BY position
             """
@@ -512,7 +512,7 @@ async def add_search_keyword(
     await db.execute(
         text(
             f"""
-            INSERT INTO {TCG_SCHEMA}.product_search_keywords
+            INSERT INTO public.product_search_keywords
                 (product_id, keyword, position)
             VALUES (:pid, :kw, :pos)
             """
