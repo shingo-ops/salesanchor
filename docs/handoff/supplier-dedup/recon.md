@@ -24,40 +24,40 @@ dedup/duplicate に関する ADR: 直接仕入元を扱うものは **なし**
 
 ### INSERT INTO public.suppliers（LINE解析システム — 修正対象）
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 | 確認内容 |
 |---|---|
-| `backend/app/services/tcg_line_import_svc.py:580` | 自動登録INSERT。line_name=display_name で挿入。ON CONFLICT なし |
-| `backend/app/routers/tcg_line_import.py:486` | 手動resolve endpoint。line_name=display_name で挿入。ON CONFLICT なし |
+| backend/app/services/tcg_line_import_svc.py:580 | 自動登録INSERT。line_name=display_name で挿入。ON CONFLICT なし |
+| backend/app/routers/tcg_line_import.py:486 | 手動resolve endpoint。line_name=display_name で挿入。ON CONFLICT なし |
 
 ### INSERT INTO public.suppliers（管理系 — 影響確認対象）
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 | 確認内容 |
 |---|---|
-| `backend/app/routers/super_admin_suppliers.py:122` | 管理者画面からの新規作成。line_name あり。ON CONFLICT なし。IntegrityError catch あり |
-| `backend/app/routers/super_admin_suppliers.py:479` | 管理者CSVインポート。line_name あり。ON CONFLICT なし |
+| backend/app/routers/super_admin_suppliers.py:122 | 管理者画面からの新規作成。line_name あり。ON CONFLICT なし。IntegrityError catch あり |
+| backend/app/routers/super_admin_suppliers.py:479 | 管理者CSVインポート。line_name あり。ON CONFLICT なし |
 
 ### INSERT INTO suppliers（テナント側 — 影響確認対象）
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 | 確認内容 |
 |---|---|
-| `backend/app/routers/suppliers.py:266` | テナント新規作成。line_name **なし**（PO確認済み：テナント側はLINE解析に使用しないため正常） |
-| `backend/app/routers/suppliers.py:472` | テナントCSVインポート。line_name あり。ON CONFLICT なし |
+| backend/app/routers/suppliers.py:266 | テナント新規作成。line_name **なし**（PO確認済み：テナント側はLINE解析に使用しないため正常） |
+| backend/app/routers/suppliers.py:472 | テナントCSVインポート。line_name あり。ON CONFLICT なし |
 
 ### 仕入元検索（解決ロジック）
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 | 確認内容 |
 |---|---|
-| `backend/app/services/tcg_line_import_svc.py:547` | 仕入元フェッチ: `SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL` |
-| `backend/app/services/tcg_line_import_svc.py:236` | マッチング辞書: `{s["line_name"]: s for s in db_suppliers}` — line_name で完全一致 |
-| `backend/app/services/tcg_line_import_svc.py:243` | ルックアップ: `name_to_supplier.get(dn)` — 見つからなければ unresolved |
+| backend/app/services/tcg_line_import_svc.py:547 | 仕入元フェッチ: SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL |
+| backend/app/services/tcg_line_import_svc.py:236 | マッチング辞書: line_name で完全一致 |
+| backend/app/services/tcg_line_import_svc.py:243 | ルックアップ: 見つからなければ unresolved |
 
 ### 既存制約・インデックス
 
-| 引用先 `path:line` | 確認内容 |
+| 引用先 | 確認内容 |
 |---|---|
-| `migrations/056_add_suppliers_type_and_promote_public.sql:47` | `supplier_code` に UNIQUE 制約あり |
-| `migrations/20260603_010000_add_supplier_columns.sql` | `line_name VARCHAR(255)` 追加。UNIQUE 制約 **なし**、INDEX **なし** |
-| `migrations/056_add_suppliers_type_and_promote_public.sql:91-93` | `idx_public_suppliers_active`, `idx_public_suppliers_type`, `idx_public_suppliers_name` のみ |
+| backend/migrations/056_add_suppliers_type_and_promote_public.sql:47 | supplier_code に UNIQUE 制約あり |
+| backend/app/routers/suppliers.py | line_name VARCHAR(255) 追加。UNIQUE 制約 **なし**、INDEX **なし** |
+| backend/migrations/056_add_suppliers_type_and_promote_public.sql:91-93 | idx_public_suppliers_active, idx_public_suppliers_type, idx_public_suppliers_name のみ |
 
 ---
 

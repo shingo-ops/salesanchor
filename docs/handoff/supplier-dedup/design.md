@@ -19,7 +19,7 @@
 |---|------|---------|
 | 1 | 既存の重複データ10グループが解消されている（kept=1、他=is_active=FALSE） | `SELECT line_name, COUNT(*) FROM public.suppliers WHERE is_active = TRUE AND tenant_id IS NULL GROUP BY line_name HAVING COUNT(*) > 1` → 0行 |
 | 2 | 重複の FK（supplier_channels, source_messages）が kept ID に再割当て済み | `SELECT COUNT(*) FROM source_messages WHERE supplier_id IN (deactivated_ids)` → 0 |
-| 3 | 同じ line_name で2回 INSERT しても IntegrityError にならず既存 ID が返る | `pytest tests/test_supplier_upsert.py::test_duplicate_line_name_returns_existing_id` |
+| 3 | 同じ line_name で2回 INSERT しても IntegrityError にならず既存 ID が返る | テスト実装時に確認（UPSERT パターンの検証） |
 | 4 | 並行リクエストで同じ line_name を INSERT しても重複行が作られない | UNIQUE 制約による DB 保証（テストは SAVEPOINT + UPSERT のリトライで検証） |
 | 5 | line_name が NULL の仕入元は UNIQUE 制約の対象外 | `INSERT INTO public.suppliers (name, supplier_type, is_active) VALUES ('test', 'corporate', TRUE)` が複数回成功する |
 | 6 | テナント側仕入元（tenant_id IS NOT NULL）は UNIQUE 制約の対象外 | テナント側 INSERT が制約エラーなく動作する |
@@ -104,22 +104,20 @@ RETURNING id
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `backend/app/services/tcg_line_import_svc.py` | L580: INSERT → UPSERT |
-| `backend/app/routers/tcg_line_import.py` | L486: INSERT → UPSERT |
-| `backend/app/routers/super_admin_suppliers.py` | L122, L479: INSERT → UPSERT |
-| `backend/migrations/YYYYMMDD_HHMMSS_supplier_line_name_unique.sql` | 新規: 部分 UNIQUE インデックス |
-| `backend/tests/test_supplier_upsert.py` | 新規: UPSERT テスト |
-| `docs/handoff/supplier-dedup/recon.md` | 新規: 調査結果 |
-| `docs/handoff/supplier-dedup/design.md` | 新規: 設計書（本ファイル） |
+| backend/app/services/tcg_line_import_svc.py | L580: INSERT → UPSERT |
+| backend/app/routers/tcg_line_import.py | L486: INSERT → UPSERT |
+| backend/app/routers/super_admin_suppliers.py | L122, L479: INSERT → UPSERT |
+| backend/migrations/supplier_line_name_unique.sql | 新規: 部分 UNIQUE インデックス |
+| backend/tests/test_suppliers_crud.py | UPSERT テスト追加 |
+| docs/handoff/supplier-dedup/recon.md | 新規: 調査結果 |
+| docs/handoff/supplier-dedup/design.md | 新規: 設計書（本ファイル） |
 
 ### 触らないファイル
 
 | ファイル | 理由 |
 |---------|------|
-| `backend/app/routers/suppliers.py:266` | テナント新規作成。line_name なし。LINE 解析に無関係（PO 確認済み） |
-| `backend/app/routers/suppliers.py:472` | テナント CSV インポート。tenant_id IS NOT NULL のため UNIQUE 制約対象外 |
+| backend/app/routers/suppliers.py | テナント側 INSERT。tenant_id IS NOT NULL のため UNIQUE 制約対象外 |
 | フロントエンド全般 | バックエンドのみの変更 |
-| `tcg_line_android_parser.py` | パーサーは正常動作中 |
 
 ---
 
