@@ -696,4 +696,4 @@ run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
 run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
 
 # Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
-run_sql migrations/20260920_010000_supplier_line_name_unique.sql
+run_sql migrations/20260920_020000_supplier_line_name_unique.sql
