@@ -1,5 +1,8 @@
 # 設計: LINE取り込み自動化 3改修
 
+recon: `docs/handoff/line-import-reprocess/recon.md`
+対象ADR: ADR-027（i18n強制）、ADR-072（テナントスキーマプレフィクス強制）
+
 ## 変更1: already_imported を成功表示
 
 ### How
@@ -52,8 +55,20 @@ TCG_AUTO_DISTRIBUTE=1 環境下で extraction 完了後に run_distribution() �
 - asyncio.run() での async → sync 呼び出しは Python 公式推奨パターン（Celery worker は同期コンテキストのため）。
 - 守り手: run_distribution() の安全装置 #8/#8b/#8c が外部事例として機能（未完了ジョブがあれば自動スキップ）。
 
+## 受入条件と検証方法
+
+| # | 基準 | 検証方法 |
+|---|------|---------|
+| 1 | 同一ファイル再アップロードで成功色バナー表示 | 同じ .txt を2回アップロード → 2回目に緑色バナー表示 |
+| 2 | 未登録仕入元が自動登録される | 未登録の display_name を含む .txt アップロード → `SELECT * FROM public.suppliers WHERE line_name = '対象名'` で1行取得 |
+| 3 | 自動登録後 review_status='ok' | 上記アップロードの API レスポンスで `review_status === 'ok'` |
+| 4 | TCG_AUTO_DISTRIBUTE=1 で解析後自動配信 | 環境変数設定下で extraction 完了 → Celery ログに run_distribution 呼び出し記録 |
+| 5 | needs_review=TRUE アイテムは配信されない | 要確認アイテム含む解析結果 → 配信後のシートに該当行なし |
+| 6 | 既存テスト全通過 | CI green |
+
 ## 維持の仕組み
 
-- 既存の resolve/commit エンドポイントは維持するため、手動登録フローは引き続き使用可能。
-- TCG_AUTO_DISTRIBUTE 環境変数を 0 または未設定にすることで自動配信を無効化できる。
-- test_tcg_line_import.py の自動登録フローテストが CI で継続的に動作確認を行う。
+- 守り手: `backend/tests/test_tcg_line_import.py` — 自動登録フローの CI 回帰テスト
+- 守り手: `backend/app/services/tcg_distribution_svc.py:run_distribution()` — 安全装置 #8/#8b/#8c で未完了ジョブ・needs_review をブロック
+- TCG_AUTO_DISTRIBUTE 環境変数を 0 または未設定にすることで自動配信を無効化できる
+- 既存の resolve/commit エンドポイントは維持するため、手動登録フローは引き続き使用可能
