@@ -14,8 +14,16 @@ DO $fk$
 DECLARE
     _tbl  TEXT := 'pro' || 'ducts';
     _con  TEXT := 'fk_' || _tbl || '_work_id';
+    _ref_exists BOOLEAN;
 BEGIN
-    IF NOT EXISTS (
+    -- tcg_type_master が存在するか確認（CI テスト環境では未作成の場合がある）
+    SELECT EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master'
+    ) INTO _ref_exists;
+
+    IF _ref_exists AND NOT EXISTS (
         SELECT 1 FROM pg_constraint WHERE conname = _con
     ) THEN
         EXECUTE format(
