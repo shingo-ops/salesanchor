@@ -35,8 +35,14 @@
 - DesktopShell のリンク削除により既存ブックマークが切れる可能性あり → スタンドアロンルートは維持するため直打ちは引き続き動作
 - SupplierMasterPanel から `authLoading || !isSuperAdmin` ガードを除去 → 親 AnalysisRulesPage が同等チェックを実施済みのため問題なし
 
-## 外部事例
-- 既存の SoldOutRulesPanel / DateRulesPanel が同パターン（hub-content 内パネル）の先例として機能
+## 外部・過去事例の参照と我々への応用
+
+- 既存の `frontend/src/pages/super-admin/components/SoldOutRulesPanel.tsx` および `frontend/src/pages/super-admin/components/DateRulesPanel.tsx` が同パターン（hub-content 内パネル・PageLayout なし・useSuperAdmin ガードなし）の先例として機能。同じ設計を踏襲した。
+- AnalysisRulesPage 内の AccuracyManagementPanel（同ファイル内インライン定義）も先例。
+
+## 維持の仕組み
+
+守り手: AnalysisRulesSidebar.tsx の AnalysisRulesSidebarKey 型 — 新規キーを追加した際にパネルの条件レンダリングが漏れると TypeScript が型エラーを出す。lint CI（0 errors 必須）が守り手として機能。
 
 ## 戻し方
 - DesktopShell の 2 項目を元に戻す（git revert または手動編集）
