@@ -3776,15 +3776,18 @@
   "analysisRules": {
     "page": {
       "title": "Analysis Management",
-      "subtitle": "Manage sold-out rules and date rules"
+      "subtitle": "Manage analysis rules and master data"
     },
     "sidebar": {
       "groupAnalysisStatus": "Analysis Status",
       "groupRuleManagement": "Rule Management",
+      "groupMasterManagement": "Master Management",
       "accuracyManagement": "Accuracy Management",
       "needsReview": "Needs Review",
       "soldOut": "Sold-Out Rules",
-      "dateRule": "Date Rules"
+      "dateRule": "Date Rules",
+      "productMaster": "Product Master",
+      "supplierMaster": "Supplier Master"
     },
     "tabs": {
       "instruction": "Instructions",

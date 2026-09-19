@@ -2,12 +2,13 @@
  * AnalysisRulesPage — 解析管理ページ（/super-admin/analysis-rules）
  *
  * レイアウト: hub-shell（左200px固定サブナビ＋右コンテンツ）
- * 左: AnalysisRulesSidebar（4項目: 解析精度管理、要確認、完売ルール、日付ルール）
+ * 左: AnalysisRulesSidebar（6項目: 解析精度管理、要確認、完売ルール、日付ルール、商品マスタ、仕入元マスタ）
  * 右: 選択に応じたパネル
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: hub-shell.css の金型クラスのみ使用。
  * 設計§5 C90 準拠。
+ * 2026-09-19: マスタ管理パネル（商品マスタ・仕入元マスタ）を追加。
  */
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +21,8 @@ import {
 } from "./components/AnalysisRulesSidebar";
 import { SoldOutRulesPanel } from "./components/SoldOutRulesPanel";
 import { DateRulesPanel } from "./components/DateRulesPanel";
+import { ProductMasterPanel } from "./components/ProductMasterPanel";
+import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
 import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
@@ -133,6 +136,8 @@ export default function AnalysisRulesPage() {
           {activeSection === "needs-review" && <NeedsReviewPanel />}
           {activeSection === "sold-out" && <SoldOutRulesPanel />}
           {activeSection === "date-rule" && <DateRulesPanel />}
+          {activeSection === "product-master" && <ProductMasterPanel />}
+          {activeSection === "supplier-master" && <SupplierMasterPanel />}
         </div>
       </div>
     </PageLayout>
