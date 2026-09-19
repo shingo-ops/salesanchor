@@ -159,6 +159,10 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
 
     Returns:
       {"division_code": {"DIV01": "uuid", ...}, "work_code": {"SV": "1", ...}, ...}
+
+    Phase 3 SSOT: tcg_product_categories は public スキーマへ移動（INTEGER PK）。
+    public.products.product_category_id は UUID→INTEGER に変換済み。
+    work_code と同様に public スキーマから引く。
     """
     maps: dict[str, dict[str, str]] = {}
     # work_code → public.tcg_type_master (SSOT, INTEGER PK)
@@ -171,6 +175,12 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
             text(f"SELECT code, id FROM {TCG_SCHEMA}.{table} WHERE is_active = TRUE")
         )
         maps[column] = {str(r[0]): str(r[1]) for r in result.fetchall()}
+    # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
+    # Override the tenant-schema result with the canonical public-schema integer IDs.
+    pc_result = await db.execute(
+        text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
+    )
+    maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
     return maps
 
 
@@ -292,9 +302,9 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     """検索キーワードと、それを持つ商品コードの対応を引く。"""
     result = await db.execute(
         text(
-            f"SELECT k.keyword, p.product_code FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"JOIN public.products p ON p.id = k.product_id "
-            f"WHERE p.is_active = TRUE"
+            "SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
+            "JOIN public.products p ON p.id = k.product_id "
+            "WHERE p.is_active = TRUE"
         )
     )
     owners: dict[str, list[str]] = {}

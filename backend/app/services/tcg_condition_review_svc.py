@@ -102,8 +102,8 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     JOIN {_SOURCE_CTE_NAME} cr_source ON cr_source.id = sm.id
     CROSS JOIN LATERAL (SELECT {analysis_expression} AS ar) cr_data
     LEFT JOIN public.products cr_product ON cr_product.id::text = cr_data.ar->>'product_id'
-    LEFT JOIN {schema}.conditions cr_empty ON cr_empty.code = 'CN0011'
-    LEFT JOIN {schema}.conditions cr_selected ON cr_selected.id::text = ({selected})
+    LEFT JOIN public.conditions cr_empty ON cr_empty.code = 'CN0011'
+    LEFT JOIN public.conditions cr_selected ON cr_selected.id::text = ({selected})
     LEFT JOIN LATERAL (
         SELECT id FROM {schema}.item_corrections WHERE extraction_item_id = ei.id ORDER BY id DESC LIMIT 1
     ) cr_latest ON TRUE
@@ -114,7 +114,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
         FROM {schema}.item_corrections
         WHERE extraction_item_id = ei.id AND field_name = 'condition_review' ORDER BY id DESC LIMIT 1
     ) cr_event ON TRUE
-    LEFT JOIN {schema}.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
+    LEFT JOIN public.conditions cr_ack_condition ON cr_ack_condition.id::text = cr_event.value->>'condition_id'
     CROSS JOIN LATERAL (SELECT {classification} AS classification, ({mentions}) AS mentions,
         {valid_master} AS master_valid) cr_input
     CROSS JOIN LATERAL (SELECT {binding} AS binding_hash, {ack_binding} AS ack_binding_hash) cr_hash
@@ -196,7 +196,7 @@ def reanalysis_condition(session: Session, item_id: str, candidate: dict | None 
 
 
 async def condition_options(db: AsyncSession) -> list[dict]:
-    rows = await db.execute(text(f"SELECT id::text, code, canonical FROM {TCG_SCHEMA}.conditions "
+    rows = await db.execute(text("SELECT id::text, code, canonical FROM public.conditions "
                                  "WHERE is_active IS TRUE ORDER BY priority NULLS LAST, code"))
     return [dict(row) for row in rows.mappings()]
 
@@ -211,8 +211,14 @@ def _response(row: Mapping, *, saved: int, replayed: bool) -> dict:
 
 async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, source_message_id: str,
                                 request: dict, corrected_by: str) -> dict:
+    try:
+        _cid_int = int(request["condition_id"])
+    except (ValueError, TypeError):
+        _cid_int = -1  # Sentinel; will fail the SELECT and return 422 "Condition is not active"
     params = {"eid": extraction_item_id, "smid": source_message_id,
-              "condition_id": request["condition_id"], "request_id": request["request_id"]}
+              "condition_id": str(request["condition_id"]),
+              "condition_id_int": _cid_int,
+              "request_id": request["request_id"]}
     try:
         # Protect raw/source/job membership during both version checking and commit.
         item = (await db.execute(text(f"""SELECT ei.id FROM {TCG_SCHEMA}.extraction_items ei
@@ -228,7 +234,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             raise HTTPException(404, "Condition review analysis not found")
         # Lock all definitions used by either current or acknowledged bindings. No gaps
         # are accepted: absent CN0011 with mentions remains fail-closed at read time.
-        await db.execute(text(f"SELECT id FROM {TCG_SCHEMA}.conditions ORDER BY id FOR SHARE"))
+        await db.execute(text("SELECT id FROM public.conditions ORDER BY id FOR SHARE"))
         await db.execute(text("SELECT p.id FROM public.products p "
             f"JOIN {TCG_SCHEMA}.analysis_results ar ON ar.product_id=p.id "
             "WHERE ar.extraction_item_id=CAST(:eid AS uuid) FOR SHARE OF p"), params)
@@ -249,8 +255,8 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         row = (await db.execute(text(context_sql()), params)).mappings().one()
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
-        target = (await db.execute(text(f"SELECT id FROM {TCG_SCHEMA}.conditions "
-            "WHERE id = CAST(:condition_id AS uuid) AND is_active IS TRUE"), params)).scalar_one_or_none()
+        target = (await db.execute(text("SELECT id FROM public.conditions "
+            "WHERE id = :condition_id_int AND is_active IS TRUE"), params)).scalar_one_or_none()
         if target is None:
             raise HTTPException(422, "Condition is not active")
         if row["mentions"] and not row["master_valid"]:
@@ -268,8 +274,8 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), 'condition_review', :old, :new, :actor)"""),
             dict(params, old=json.dumps(dict(row), default=str), new=json.dumps(history), actor=corrected_by))
         await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
-            condition_id = CAST(:condition_id AS uuid),
-            condition_canonical = (SELECT canonical FROM {TCG_SCHEMA}.conditions WHERE id=CAST(:condition_id AS uuid)),
+            condition_id = :condition_id_int,
+            condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id_int),
             condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
             WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
         effective = (await db.execute(text(context_sql()), params)).mappings().one()
