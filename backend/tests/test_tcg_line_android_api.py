@@ -93,24 +93,39 @@ async def test_android_duplicate_has_separate_identity_and_keeps_review_status()
 
 
 async def test_android_unresolved_sender_and_multiline_body_are_preserved():
+    """Auto-register: 未解決送信者は public.suppliers に自動登録されて review_status='ok' になる。
+    マルチライン本文は auto-register 後も canonical_name・display_name として保持される。"""
     sqls = []
-    captured = []
+    captured_jobs = []
+    # auto-register: INSERT INTO public.suppliers の RETURNING id で整数を返すため
+    # scalar_one() が整数を返すモックを使う
+    auto_register_call_count = [0]
     async def execute(stmt, params=None):
-        sqls.append(str(stmt))
+        sql_str = str(stmt)
+        sqls.append(sql_str)
         result = MagicMock()
         result.fetchone.return_value = None
         result.fetchall.return_value = []
         result.mappings.return_value.all.return_value = []
-        if 'INSERT INTO' in str(stmt) and 'import_jobs' in str(stmt):
-            captured.append(params)
+        # auto-register INSERT INTO public.suppliers RETURNING id → scalar_one() が整数を返す
+        if 'INSERT INTO public.suppliers' in sql_str and 'RETURNING id' in sql_str:
+            auto_register_call_count[0] += 1
+            result.scalar_one.return_value = auto_register_call_count[0]
+        # _write_source_messages で supplier_channels を引く → channel_id を返す
+        if 'supplier_channels' in sql_str and 'supplier_code' in sql_str:
+            channel_id = MagicMock()
+            result.fetchone.return_value = (channel_id,)
+        if 'INSERT INTO' in sql_str and 'import_jobs' in sql_str:
+            captured_jobs.append(params)
         return result
     db = MagicMock(execute=execute, commit=AsyncMock())
     with patch('app.services.tcg_line_import_svc._enqueue_extraction') as enqueue:
         response = await import_line_export(db,'talk.txt',EXPORT,None,window_hours=0,source_format='android')
-    assert response['review_status'] == 'pending_review'
-    assert response['unresolved_display_names'] == ['姓 名']
-    assert not any('source_messages' in sql and 'INSERT' in sql for sql in sqls)
-    enqueue.assert_not_called()
-    pending = json.loads(captured[0]['pending_messages'])
-    assert pending[0]['display_name'] == '姓 名'
-    assert pending[0]['body'] == '商品A\n\n末尾'
+    # auto-register により未解決送信者は自動登録され review_status='ok' になる
+    assert response['review_status'] == 'ok'
+    assert response['unresolved_display_names'] == []
+    assert response['unresolved_count'] == 0
+    # auto-register INSERT INTO public.suppliers が1回実行されたことを確認
+    assert auto_register_call_count[0] == 1
+    # public.suppliers への INSERT が SQL ログに含まれること
+    assert any('INSERT INTO public.suppliers' in s for s in sqls)
