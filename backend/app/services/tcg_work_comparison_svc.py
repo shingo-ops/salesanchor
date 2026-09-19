@@ -29,7 +29,7 @@ PROMPT = (
     "1行目はITEM_ID｜WORK_ID。以降はこの2列を全角パイプで区切る。説明・Markdown・JSONは禁止。\n"
 )
 MASTER_TABLES = (
-    "tcg_series", "product_search_keywords", "product_exclude_keywords",
+    "product_search_keywords", "product_exclude_keywords",
     "tcg_product_categories", "units", "unit_aliases", "conditions", "condition_aliases",
     "tcg_normalization_rules",
 )
@@ -116,6 +116,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
         masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
             session,

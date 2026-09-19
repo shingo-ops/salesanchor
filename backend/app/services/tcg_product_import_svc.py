@@ -62,7 +62,6 @@ REQUIRED_COLUMNS: list[str] = [
 # コード列 → 参照マスタのテーブル名
 LOOKUP_TABLES: dict[str, str] = {
     "division_code": "tcg_major_categories",
-    "work_code": "tcg_series",
     "manufacturer_code": "tcg_manufacturers",
     "product_category_code": "tcg_product_categories",
 }
@@ -156,12 +155,17 @@ def parse_rows(raw: bytes) -> tuple[list[dict[str, str]], list[str]]:
 
 async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     """
-    参照マスタ4本から、コードと uuid の対応を引く。
+    参照マスタから、コードと id の対応を引く。
 
     Returns:
-      {"division_code": {"DIV01": "uuid", ...}, "work_code": {...}, ...}
+      {"division_code": {"DIV01": "uuid", ...}, "work_code": {"SV": "1", ...}, ...}
     """
     maps: dict[str, dict[str, str]] = {}
+    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    work_result = await db.execute(
+        text("SELECT code, id FROM public.tcg_type_master WHERE is_active = TRUE")
+    )
+    maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():
         result = await db.execute(
             text(f"SELECT code, id FROM {TCG_SCHEMA}.{table} WHERE is_active = TRUE")

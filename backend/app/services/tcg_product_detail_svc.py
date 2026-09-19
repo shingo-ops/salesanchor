@@ -14,7 +14,6 @@ from app.tcg_config import TCG_SCHEMA
 
 LOOKUPS = {
     "division_id": "tcg_major_categories",
-    "work_id": "tcg_series",
     "manufacturer_id": "tcg_manufacturers",
     "product_category_id": "tcg_product_categories",
 }
@@ -68,6 +67,15 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
     lookups = {}
+    # work_id → public.tcg_type_master (INTEGER, SSOT)
+    work_rows = await db.execute(text(
+        "SELECT id::text AS id, name_ja AS name, is_active "
+        "FROM public.tcg_type_master "
+        "WHERE is_active = TRUE OR id = :selected "
+        "ORDER BY name_ja, id"
+    ), {"selected": product["work_id"]})
+    lookups["work_id"] = [dict(row) for row in work_rows.mappings()]
+    # Other lookups (tenant_004, UUID)
     for field, table in LOOKUPS.items():
         rows = await db.execute(text(
             f"SELECT id::text AS id,display_name AS name,is_active "

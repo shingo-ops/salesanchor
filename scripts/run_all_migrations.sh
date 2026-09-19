@@ -685,3 +685,6 @@ run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
 
 # Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
 run_sql migrations/20260919_020000_master_ssot_public_tables.sql
+
+# Master SSOT Phase 2: FK work_id → tcg_type_master（冪等）
+run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql

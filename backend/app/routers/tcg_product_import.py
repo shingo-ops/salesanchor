@@ -88,7 +88,7 @@ async def list_products(
     query: str = Query(default=""),
     limit: int = Query(default=100, ge=1, le=500),
     offset: int = Query(default=0, ge=0),
-    work_id: UUID | None = Query(default=None),
+    work_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_super_admin),
 ) -> ProductListResponse:
@@ -96,8 +96,8 @@ async def list_products(
     condition = "(p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like)"
     params = {"like": like}
     if work_id is not None:
-        condition += " AND p.work_id = CAST(:work_id AS uuid)"
-        params["work_id"] = str(work_id)
+        condition += " AND p.work_id = :work_id"
+        params["work_id"] = work_id
     total_row = await db.execute(
         text(
             f"SELECT count(*) FROM public.products p WHERE {condition}"
@@ -132,8 +132,8 @@ async def list_products(
         for r in rows.fetchall()
     ]
     work_rows = await db.execute(text(
-        f"SELECT s.id, s.code, s.display_name, s.alt_name FROM {TCG_SCHEMA}.tcg_series s "
-        f"WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.tcg_type_master s "
+        "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))
     works = [
@@ -150,7 +150,7 @@ async def list_products(
 @router.get("/tcg/products/export")
 async def export_products(
     query: str = Query(default=""),
-    work_id: UUID | None = Query(default=None),
+    work_id: int | None = Query(default=None),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_super_admin),
 ) -> Response:
@@ -313,9 +313,15 @@ async def get_product_lookups(
 ) -> dict:
     """作成フォーム用の分類マスタ選択肢を返す。"""
     lookups: dict[str, list[dict]] = {}
+    # work_id → public.tcg_type_master (SSOT)
+    work_rows = await db.execute(text(
+        "SELECT id::text AS id, name_ja AS name "
+        "FROM public.tcg_type_master "
+        "WHERE is_active = TRUE ORDER BY name_ja"
+    ))
+    lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
     for key, table, name_col in [
         ("division_id", "tcg_major_categories", "display_name"),
-        ("work_id", "tcg_series", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:

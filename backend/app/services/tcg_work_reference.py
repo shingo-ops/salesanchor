@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-from uuid import UUID
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -20,14 +19,14 @@ def reference_digest(reference: dict) -> str:
     return hashlib.sha256(reference_json(reference).encode("utf-8")).hexdigest()
 
 
-def work_ids(reference: dict) -> set[str]:
-    return {str(UUID(work["id"])) for work in reference["works"]}
+def work_ids(reference: dict) -> set[int]:
+    return {int(work["id"]) for work in reference["works"]}
 
 
-def validate_work_id(value: str | None, reference: dict) -> str | None:
-    if not value:
+def validate_work_id(value: str | int | None, reference: dict) -> int | None:
+    if value is None or value == "":
         return None
-    canonical = str(UUID(value))
+    canonical = int(value)
     if canonical not in work_ids(reference):
         raise ValueError("Work ID is not in the supplied reference")
     return canonical
@@ -50,9 +49,9 @@ def load_work_reference(session: Session, schema: str) -> dict:
     row = session.execute(text(f"""
         SELECT jsonb_build_object(
           'works', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'id', s.id, 'display_name', s.display_name, 'alt_name', s.alt_name)
+            'id', s.id, 'display_name', s.name_ja, 'alt_name', s.name_en)
             ORDER BY s.id), '[]'::jsonb)
-            FROM {schema}.tcg_series s WHERE s.is_active),
+            FROM public.tcg_type_master s WHERE s.is_active),
           'products', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'code', p.product_code, 'japanese_title', p.name,
             'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
@@ -66,6 +65,6 @@ def load_work_reference(session: Session, schema: str) -> dict:
     ids = work_ids(row)
     if not row["products"] or not ids:
         raise ValueError("Product/work reference is empty")
-    if any(str(p["work_id"]) not in ids for p in row["products"]):
+    if any(p["work_id"] not in ids for p in row["products"]):
         raise ValueError("Active product has no active work reference")
     return row

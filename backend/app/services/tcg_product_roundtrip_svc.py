@@ -95,6 +95,9 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     # One statement produces the complete product/words/reference snapshot.
     joins = []
     references = []
+    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    joins.append("LEFT JOIN public.tcg_type_master work ON work.id=p.work_id")
+    references.append("'work_code', work.code")
     for field, table in LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
         joins.append(f"LEFT JOIN {TCG_SCHEMA}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
@@ -105,15 +108,16 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
             f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
         )
+    work_id_int = int(work_id) if work_id else None
     result = await db.execute(
         text(
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
             f"{','.join(keyword_sql)} FROM public.products p {' '.join(joins)} "
             "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like) "
-            "AND (CAST(:work_id AS uuid) IS NULL OR p.work_id=CAST(:work_id AS uuid)) "
+            "AND (:work_id IS NULL OR p.work_id = :work_id) "
             "ORDER BY p.release_date DESC NULLS LAST,p.product_code DESC"
         ),
-        {"like": "%" + query.strip() + "%", "work_id": work_id},
+        {"like": "%" + query.strip() + "%", "work_id": work_id_int},
     )
     return [dict(row) for row in result.mappings().all()]
 

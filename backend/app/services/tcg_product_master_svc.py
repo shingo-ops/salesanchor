@@ -80,9 +80,15 @@ async def fetch_registration_form(
     # ── 分類マスタ一覧（有効行のみ） ──────────────────────────────────────
     lookups: dict[str, list[dict]] = {}
 
+    # work_id → public.tcg_type_master (SSOT)
+    work_rows = await db.execute(text(
+        "SELECT id::text AS id, name_ja AS name "
+        "FROM public.tcg_type_master "
+        "WHERE is_active = TRUE ORDER BY name_ja"
+    ))
+    lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
     for key, table, name_col in [
         ("division_id", "tcg_major_categories", "display_name"),
-        ("work_id", "tcg_series", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
@@ -311,7 +317,7 @@ async def create_product(
     extraction_item_id: str,
     source_message_id: str,
     division_id: str,
-    work_id: str,
+    work_id: str | int,
     manufacturer_id: str,
     product_category_id: str,
     japanese_title: str,
@@ -354,15 +360,14 @@ async def create_product(
 
     pm_code = await _next_pm_code(db)
 
-    # category_class: work_id（tcg_series.display_name）から導出
+    work_id_int = int(work_id)
+    # category_class: work_id（tcg_type_master.name_ja）から導出
     series_row = await db.execute(
-        text(
-            f"SELECT display_name FROM {TCG_SCHEMA}.tcg_series WHERE id = :id"
-        ),
-        {"id": work_id},
+        text("SELECT name_ja FROM public.tcg_type_master WHERE id = :id"),
+        {"id": work_id_int},
     )
     sr = series_row.fetchone()
-    category_class = sr.display_name if sr else ""
+    category_class = sr.name_ja if sr else ""
 
     rd = release_date if release_date else None
 
@@ -388,7 +393,7 @@ async def create_product(
             "release_date": rd,
             "category_class": category_class,
             "division_id": division_id,
-            "work_id": work_id,
+            "work_id": work_id_int,
             "manufacturer_id": manufacturer_id,
             "product_category_id": product_category_id,
             "mark": mark.strip() or None,
