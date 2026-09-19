@@ -48,7 +48,7 @@ TCG_SCHEMA = "tenant_004"
 # ---------------------------------------------------------------------------
 # source_messages は自己参照FK (superseded_by) があるため専用処理
 TABLE_ORDER = [
-    "tcg_suppliers",
+    "tenant_suppliers",
     "supplier_channels",
     "tcg_products",
     "products_logistics",
@@ -241,7 +241,7 @@ def _ingest_source_messages(
 # ---------------------------------------------------------------------------
 
 SUMMARY_TABLES = [
-    "tcg_suppliers",
+    "tenant_suppliers",
     "supplier_channels",
     "tcg_products",
     "product_search_keywords",

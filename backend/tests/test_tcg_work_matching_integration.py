@@ -38,6 +38,9 @@ NORMAL = "MEGA スタートデッキ100 バトルコレクション"
 def provision(cursor, schema):
     cursor.execute(sql.SQL("CREATE SCHEMA {}").format(sql.Identifier(schema)))
     cursor.execute((MIGRATIONS / "20260906_120000_create_tcg_tables_t001.sql").read_text().replace("tenant_001", schema))
+    # Migration 20260906_120000 creates tcg_suppliers; production DB was renamed to
+    # tenant_suppliers (ADR-155). Align test schema to match renamed table.
+    cursor.execute(sql.SQL("ALTER TABLE IF EXISTS {}.tcg_suppliers RENAME TO tenant_suppliers").format(sql.Identifier(schema)))
 
 
 _PUBLIC_PRODUCTS_DDL = (Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text()
@@ -220,7 +223,7 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
     cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
-    # Sprint 1: copy tcg_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
+    # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
     _supplier_ssot_premigration(cursor, SCHEMA)
     cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
 

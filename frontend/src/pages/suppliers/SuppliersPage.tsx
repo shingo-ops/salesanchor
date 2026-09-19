@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
@@ -14,6 +14,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
 import { TextField } from "../../components/TextField";
+import { HeaderButton } from "../../components/HeaderButton";
 
 interface Supplier {
   id: number; supplier_code: string | null; name: string; contact_name: string | null;
@@ -38,6 +39,7 @@ export default function SuppliersPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  const exportLock = useRef(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
@@ -103,10 +105,49 @@ export default function SuppliersPage() {
     catch (e) { setError(e instanceof Error ? e.message : t("common.deleteError")); }
   };
 
+  async function handleExport() {
+    if (exportLock.current) return;
+    exportLock.current = true;
+    try {
+      const blob = await api.getBlob("/suppliers/export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `suppliers_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      exportLock.current = false;
+    }
+  }
+
   return (
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
+      headerAction={
+        <>
+          {hasPermission("suppliers.view") && (
+            <HeaderButton variant="secondary" onClick={() => void handleExport()} data-testid="suppliers-export">
+              {t("supplierCsv.exportButton")}
+            </HeaderButton>
+          )}
+          {hasPermission("suppliers.create") && (
+            <HeaderButton variant="primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }} data-testid="suppliers-new">
+              {t("suppliers.newSupplier")}
+            </HeaderButton>
+          )}
+          {hasPermission("suppliers.create") && (
+            <HeaderButton variant="primary" onClick={() => navigate("/suppliers/import")} data-testid="suppliers-import">
+              {t("supplierCsv.importButton")}
+            </HeaderButton>
+          )}
+        </>
+      }
     >
       {error && <div className="error-message">{error}</div>}
 
@@ -145,17 +186,7 @@ export default function SuppliersPage() {
             )}
           </form>
         }
-        right={
-          hasPermission("suppliers.create") ? (
-            <button
-              className="btn-primary field-h-md"
-              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-              data-testid="suppliers-new"
-            >
-              {t("suppliers.newSupplier")}
-            </button>
-          ) : undefined
-        }
+        right={undefined}
       />
 
       {/* 新規作成 Modal（既存 UX 保持） */}

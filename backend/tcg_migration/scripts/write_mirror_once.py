@@ -58,7 +58,7 @@ README_BODY = (
 
 # DB 構造タブ: テーブル日本語説明（旧シートとの対応付き）
 DB_TABLE_DESCRIPTIONS = {
-    "tcg_suppliers":            ("仕入元マスタ",        "旧: 仕入元マスタ シート"),
+    "tenant_suppliers":            ("仕入元マスタ",        "旧: 仕入元マスタ シート"),
     "supplier_channels":        ("仕入元チャネル",       "旧: 仕入元マスタ シート（LINE ID 列）"),
     "tcg_products":             ("商品マスタ",           "旧: 商品マスタV2 シート"),
     "products_logistics":       ("商品物流情報",         "旧: 商品マスタV2 シート（物流列）"),
@@ -225,7 +225,7 @@ def _fetch_suppliers(cur: Any) -> tuple[list[str], list[list]]:
             sc.external_id     AS "外部ID（LINE ID等）",
             CASE WHEN sc.is_active THEN '有効' ELSE '無効' END AS "チャネル状態",
             CASE WHEN s.is_active THEN '有効' ELSE '無効' END AS "仕入元状態"
-        FROM tcg_suppliers s
+        FROM tenant_suppliers s
         LEFT JOIN supplier_channels sc ON sc.supplier_id = s.id
         ORDER BY s.code, sc.channel
     """)
@@ -246,7 +246,7 @@ def _fetch_supplier_summary(cur: Any) -> tuple[list[str], list[list]]:
             SUM(CASE WHEN ar.unit_resolved = FALSE THEN 1 ELSE 0 END) AS "単位未解決",
             SUM(CASE WHEN ar.pid_resolved = FALSE AND ar.unit_resolved = FALSE
                      THEN 1 ELSE 0 END) AS "両方未解決(N&U)"
-        FROM tcg_suppliers s
+        FROM tenant_suppliers s
         LEFT JOIN supplier_channels sc ON sc.supplier_id = s.id
         LEFT JOIN source_messages sm ON sm.supplier_channel_id = sc.id
         LEFT JOIN extraction_jobs ej ON ej.source_message_id = sm.id
@@ -275,7 +275,7 @@ def _fetch_db_structure(cur: Any) -> tuple[list[str], list[list]]:
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
         WHERE t.table_schema = 'public'
           AND t.table_name IN (
-            'tcg_suppliers','supplier_channels','tcg_products',
+            'tenant_suppliers','supplier_channels','tcg_products',
             'products_logistics','product_search_keywords','product_exclude_keywords',
             'units','unit_aliases','conditions','condition_aliases',
             'source_messages','extraction_jobs','extraction_items',
