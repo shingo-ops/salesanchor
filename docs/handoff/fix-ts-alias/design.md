@@ -68,6 +68,8 @@ Change 2 lines back to original aliases. No migration needed.
 
 ## 外部・過去事例の参照と我々への応用
 
+PostgreSQL公式ドキュメント（FROM句のテーブル別名）: JOINで定義した別名のみSELECT/WHERE/GROUP BYで使用可能。未定義別名は `missing FROM-clause entry for table` エラー。本件も同パターン。
+
 ### PostgreSQL Column Alias Guidelines
 - Table aliases must be defined in FROM/JOIN clauses before use in SELECT/WHERE/GROUP BY
 - Undefined alias references result in `ProgrammingError: missing FROM-clause entry for table`
@@ -77,6 +79,8 @@ Change 2 lines back to original aliases. No migration needed.
 This fix applies the standard PostgreSQL pattern: ensuring all column references use the correct, defined alias. No special treatment needed—just correct the alias name.
 
 ## 維持の仕組み
+
+守り手: shingo-ops (PO)
 
 ### Code Review Checklist
 When reviewing similar queries:
