@@ -26,6 +26,18 @@ from tests.test_tcg_work_matching_integration import (
 )
 
 
+async def _exec_multi_stmt(conn, sql: str) -> None:
+    """Execute multi-statement SQL via asyncpg Simple Query protocol.
+
+    asyncpg's exec_driver_sql() uses the Prepared Statement protocol which
+    rejects multi-statement SQL (including DO $$ ... $$ blocks).  Dropping
+    to the raw driver connection and calling .execute() uses the Simple Query
+    protocol instead, which handles multiple statements in one call.
+    """
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
+
+
 async def create_product_schema(conn, schema):
     """Build every disposable schema from the same production migrations."""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
@@ -42,10 +54,10 @@ async def create_product_schema(conn, schema):
         "20260902_110000_tcg_classification_masters.sql",
     ):
         sql = (migrations / name).read_text().replace("tenant_004", schema)
-        await conn.exec_driver_sql(sql)
-    await conn.exec_driver_sql((migrations / "085_create_tcg_type_master.sql").read_text())
-    await conn.exec_driver_sql((migrations / "086_seed_additional_tcg_types.sql").read_text())
-    await conn.exec_driver_sql(_rewire_keyword_fks(schema))
+        await _exec_multi_stmt(conn, sql)
+    await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
+    await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
+    await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
 
 
 @pytest_asyncio.fixture
