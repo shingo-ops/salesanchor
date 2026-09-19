@@ -40,6 +40,7 @@ import InvoiceCreatePage from "./pages/invoice-create/InvoiceCreatePage";
 import InvoiceDetailPage from "./pages/invoice-detail/InvoiceDetailPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
+import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
 import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
@@ -237,6 +238,7 @@ function App() {
                   <Route path="/roles" element={<RolesPage />} />
                   <Route path="/data" element={<ERPPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
                   <Route
                     path="/purchase-orders"

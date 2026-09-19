@@ -3944,6 +3944,7 @@
     "digestMismatch": "File has changed. Please preview again",
     "fileTooLarge": "File size exceeds 2MB",
     "invalidFormat": "Only CSV files can be uploaded",
-    "backToList": "Back to list"
+    "backToList": "Back to list",
+    "importSubtitle": "Bulk import suppliers from CSV"
   }
 }

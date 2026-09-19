@@ -3944,6 +3944,7 @@
     "digestMismatch": "ファイルが変更されています。再度プレビューしてください",
     "fileTooLarge": "ファイルサイズが2MBを超えています",
     "invalidFormat": "CSVファイルのみアップロード可能です",
-    "backToList": "一覧に戻る"
+    "backToList": "一覧に戻る",
+    "importSubtitle": "CSVファイルから仕入元を一括登録"
   }
 }
