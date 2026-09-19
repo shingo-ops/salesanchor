@@ -44,9 +44,9 @@ WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
 ```
 
 理由:
-- `line_name IS NOT NULL`: NULL の仕入元（テナント画面からの登録等）は制約対象外
-- `is_active = TRUE`: 論理削除済みレコードは制約対象外（重複解消時に is_active=FALSE にした旧レコードがブロックしない）
-- `tenant_id IS NULL`: テナント固有の仕入元は制約対象外（共用マスタのみ保護）
+- line_name IS NOT NULL: NULL の仕入元（テナント画面からの登録等）は制約対象外
+- is_active = TRUE: 論理削除済みレコードは制約対象外（重複解消時に is_active=FALSE にした旧レコードがブロックしない）
+- tenant_id IS NULL: テナント固有の仕入元は制約対象外（共用マスタのみ保護）
 
 **2. UPSERT パターン**
 
@@ -59,8 +59,8 @@ RETURNING id
 ```
 
 理由:
-- `DO UPDATE SET line_name = EXCLUDED.line_name`: 実質的に何も変えないが、`RETURNING id` で既存レコードの ID を取得できる
-- `DO NOTHING` は `RETURNING` が空を返すため不採用（呼び出し元が ID を必要とする）
+- DO UPDATE SET line_name = EXCLUDED.line_name: 実質的に何も変えないが、RETURNING id で既存レコードの ID を取得できる
+- DO NOTHING は RETURNING が空を返すため不採用（呼び出し元が ID を必要とする）
 - エラーで停止しないため、システムの可用性を維持
 
 **3. データクリーンアップ（手動 SQL）**
@@ -75,9 +75,9 @@ RETURNING id
 
 | リスク | 影響 | 対策 |
 |--------|------|------|
-| UPSERT の `DO UPDATE` で意図しないカラム更新 | line_name を同値で上書きするだけなので実害なし | SET 対象を line_name のみに限定 |
+| UPSERT の DO UPDATE で意図しないカラム更新 | line_name を同値で上書きするだけなので実害なし | SET 対象を line_name のみに限定 |
 | 並行トランザクションで UNIQUE 違反の IntegrityError | UPSERT なら DB が自動で ON CONFLICT 分岐するため発生しない | UPSERT パターンの徹底 |
-| テナント側 INSERT で制約に引っかかる | 部分インデックスが `tenant_id IS NULL` 条件付きのため、テナント側は影響なし | WHERE 条件で保護済み |
+| テナント側 INSERT で制約に引っかかる | 部分インデックスが tenant_id IS NULL 条件付きのため、テナント側は影響なし | WHERE 条件で保護済み |
 | クリーンアップ SQL で FK 再割当て漏れ | deactivated ID を参照する行が残る | クリーンアップ後に残件チェッククエリを実行（受入基準 #2） |
 | supplier_code の重複 | kept ID の supplier_code は変更しない。deactivated ID の supplier_code は is_active=FALSE で UNIQUE 制約対象外 | supplier_code の UNIQUE 制約は部分インデックスではないため、deactivated 側の supplier_code を NULL に変更 |
 
@@ -124,16 +124,11 @@ RETURNING id
 ## 継続
 
 ### 完了後の監視
-- デプロイ後1週間、LINE インポートのたびに重複チェッククエリを実行:
-  ```sql
-  SELECT line_name, COUNT(*) FROM public.suppliers
-  WHERE is_active = TRUE AND tenant_id IS NULL AND line_name IS NOT NULL
-  GROUP BY line_name HAVING COUNT(*) > 1;
-  ```
+- デプロイ後1週間、LINE インポートのたびに重複チェッククエリを実行
 - 結果が0行であることを確認
 
 ### 守り手
-- `backend/migrations/YYYYMMDD_HHMMSS_supplier_line_name_unique.sql` — 部分 UNIQUE インデックスが DB レベルで重複を防止
+- backend/migrations/supplier_line_name_unique.sql — 部分 UNIQUE インデックスが DB レベルで重複を防止
 - UPSERT パターンがコードレベルで IntegrityError を回避
 
 ### 次フェーズへの引き継ぎ
