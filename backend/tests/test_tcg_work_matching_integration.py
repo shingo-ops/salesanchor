@@ -233,6 +233,13 @@ def migrate(cursor):
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    # Seed public.tcg_product_categories from tenant schema so seed_products() can resolve PC_BOX
+    cursor.execute(f"""
+        INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active)
+        SELECT code, display_name, kubun_type, is_active
+        FROM {SCHEMA}.tcg_product_categories
+        ON CONFLICT (code) DO NOTHING
+    """)
     # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
     cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
