@@ -227,16 +227,16 @@ BEGIN
     JOIN pg_class c ON c.oid = a.attrelid
     JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = 'public'
-      AND c.relname = 'products'
+      AND c.relname = _tbl_p
       AND a.attname = 'product_category_id'
       AND a.attnum > 0;
 
     IF _atttypid IS NULL THEN
-        RAISE NOTICE 'public.products.product_category_id does not exist, skip';
+        RAISE NOTICE 'public.%.product_category_id does not exist, skip', _tbl_p;
     ELSIF _atttypid = _int_oid THEN
-        RAISE NOTICE 'public.products.product_category_id already INTEGER, skip';
+        RAISE NOTICE 'public.%.product_category_id already INTEGER, skip', _tbl_p;
     ELSE
-        RAISE NOTICE 'Converting public.products.product_category_id UUID->INTEGER (NULLABLE)';
+        RAISE NOTICE 'Converting public.%.product_category_id UUID->INTEGER (NULLABLE)', _tbl_p;
 
         -- Step 1: ADD tmp INTEGER column
         EXECUTE format('ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS product_category_int_id INTEGER', 'products');
@@ -255,8 +255,8 @@ BEGIN
         -- Step 3: Verify no orphaned rows (NULLABLE: only non-NULL rows must be converted)
         EXECUTE format('SELECT COUNT(*) FROM public.%I WHERE product_category_id IS NOT NULL AND product_category_int_id IS NULL', _tbl_p) INTO _bad_count;
         IF _bad_count > 0 THEN
-            RAISE EXCEPTION 'Phase 3B: % rows in public.products have product_category_id NOT NULL but product_category_int_id IS NULL',
-                _bad_count;
+            RAISE EXCEPTION 'Phase 3B: % rows in public.% have product_category_id NOT NULL but product_category_int_id IS NULL',
+                _bad_count, _tbl_p;
         END IF;
 
         -- Step 4: Drop old FK referencing tenant categories (UUID), if any
@@ -282,7 +282,7 @@ BEGIN
         -- Step 7: Add new FK referencing public.tcg_product_categories(id)
         EXECUTE format('ALTER TABLE public.%I ADD CONSTRAINT fk_products_product_category_id FOREIGN KEY (product_category_id) REFERENCES public.tcg_product_categories(id)', 'products');
 
-        RAISE NOTICE 'public.products.product_category_id done';
+        RAISE NOTICE 'public.%.product_category_id done', _tbl_p;
     END IF;
 END;
 $phase3b$;
