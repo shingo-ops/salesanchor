@@ -665,6 +665,9 @@ run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql
 # ADR-1002 Phase C: public.products.tcg_uuid カラム・制約・インデックス削除
 run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql
 
+# Backfill 7 NULL work_id values before NOT NULL constraint
+run_sql migrations/20260916_125000_backfill_work_id_nulls.sql
+
 # work_id NOT NULL 制約追加
 run_sql migrations/20260916_130000_work_id_not_null.sql
 
