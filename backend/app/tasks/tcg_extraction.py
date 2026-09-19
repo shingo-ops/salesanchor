@@ -91,7 +91,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
     try:
         return _run_extraction(session, source_message_id)
     except Exception:
-        logger.error("[tcg_extraction] unexpected error for sm=%s", source_message_id)
+        logger.exception("[tcg_extraction] unexpected error for sm=%s", source_message_id)
         return {
             "extraction_job_id": None,
             "status": "error",
@@ -180,6 +180,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     except RecordError as exc:
         code = str(exc)
     except Exception:
+        logger.exception("[tcg_extraction] record write failed for ej=%s", extraction_job_id)
         code = "RECORD_WRITE_FAILED"
     recorder.fail(code)
     message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
