@@ -218,6 +218,9 @@ $rw$;
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+    # Master SSOT Phase 2: tcg_type_master must exist before code queries it
+    cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
+    cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
