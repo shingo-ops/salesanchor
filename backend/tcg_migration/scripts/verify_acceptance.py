@@ -47,8 +47,8 @@ TCG_SCHEMA = "tenant_004"
 CHECKS = [
     # (ラベル, SQL, 期待値)
     (
-        "tcg_suppliers = 45",
-        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.tcg_suppliers",
+        "tenant_suppliers = 45",
+        f"SELECT COUNT(*) FROM {TCG_SCHEMA}.tenant_suppliers",
         45,
     ),
     (
@@ -99,7 +99,7 @@ CHECKS = [
         JOIN {TCG_SCHEMA}.extraction_jobs  ej ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages  sm ON sm.id = ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
+        JOIN {TCG_SCHEMA}.tenant_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0023'
         """,
         198,
@@ -111,7 +111,7 @@ CHECKS = [
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
+        JOIN {TCG_SCHEMA}.tenant_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0057'
         """,
         0,
@@ -123,7 +123,7 @@ CHECKS = [
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
+        JOIN {TCG_SCHEMA}.tenant_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0004'
         """,
         91,
@@ -135,7 +135,7 @@ CHECKS = [
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        JOIN {TCG_SCHEMA}.tcg_suppliers s ON s.id = sc.supplier_id
+        JOIN {TCG_SCHEMA}.tenant_suppliers s ON s.id = sc.supplier_id
         WHERE s.code = 'SP0011'
         """,
         14,

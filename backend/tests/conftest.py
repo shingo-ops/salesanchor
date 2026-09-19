@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
 
 def _supplier_ssot_premigration(cursor, schema: str):
     """Pre-migration value operations for supplier SSOT.
-    Copies tcg_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
+    Copies tenant_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
     Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql.
     Idempotent: skips if supplier_id is already INTEGER."""
     # Check if supplier_id is already INTEGER (conversion already done)
@@ -81,13 +81,13 @@ def _supplier_ssot_premigration(cursor, schema: str):
     # Also skip if supplier_channels table doesn't exist in this schema
     if not row:
         return
-    # Step 1: Copy tcg_suppliers → public.suppliers
+    # Step 1: Copy tenant_suppliers → public.suppliers
     cursor.execute(f"""
         INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
         SELECT
             'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
             ts.name, ts.name, 'corporate', ts.is_active, ts.created_at, NOW()
-        FROM {schema}.tcg_suppliers ts
+        FROM {schema}.tenant_suppliers ts
         ON CONFLICT (supplier_code) DO UPDATE SET
             line_name = EXCLUDED.line_name
         WHERE public.suppliers.line_name IS NULL
@@ -97,7 +97,7 @@ def _supplier_ssot_premigration(cursor, schema: str):
     cursor.execute(f"""
         UPDATE {schema}.supplier_channels sc
         SET supplier_int_id = ps.id
-        FROM {schema}.tcg_suppliers ts
+        FROM {schema}.tenant_suppliers ts
         JOIN public.suppliers ps
           ON ps.supplier_code = 'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0')
         WHERE ts.id = sc.supplier_id

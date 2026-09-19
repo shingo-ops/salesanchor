@@ -37,6 +37,9 @@ def provision_tcg(cursor,schema):
                  "20260903_170000_item_corrections_t004.sql",
                  "20260905_140000_import_jobs_review_stage_t004.sql"):
         cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
+    # Migration 20260831_110000 creates tcg_suppliers; production DB was renamed to
+    # tenant_suppliers (ADR-155). Align test schema to match renamed table.
+    cursor.execute(f"ALTER TABLE IF EXISTS {schema}.tcg_suppliers RENAME TO tenant_suppliers")
 
 
 @pytest_asyncio.fixture
@@ -65,11 +68,11 @@ async def pg(monkeypatch):
             for schema in (SCHEMA, "tenant_872"):
                 provision_tcg(c,schema)
                 c.execute(_rewire_keyword_fks(schema))
-                c.execute(f"INSERT INTO {schema}.tcg_suppliers(code,name,is_active) VALUES ('SP1','Alice',true)")
+                c.execute(f"INSERT INTO {schema}.tenant_suppliers(code,name,is_active) VALUES ('SP1','Alice',true)")
                 # Insert supplier_channels row with UUID supplier_id (before Sprint 1 migration converts it)
                 c.execute(f"INSERT INTO {schema}.supplier_channels(supplier_id,channel,is_active) "
-                          f"SELECT id,'line',true FROM {schema}.tcg_suppliers WHERE code='SP1'")
-            # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+                          f"SELECT id,'line',true FROM {schema}.tenant_suppliers WHERE code='SP1'")
+            # Sprint 1 migration: copy tenant_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             for s in (SCHEMA, "tenant_872"):
                 _supplier_ssot_premigration(c, s)
@@ -369,7 +372,7 @@ async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
+        c.execute(f"INSERT INTO {SCHEMA}.tenant_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
         c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) VALUES ('SP-00002','Bob','Bob','corporate',true) RETURNING id")
         bob_pub_id = c.fetchone()[0]
     with pytest.raises(ValueError,match="no active LINE channel"):

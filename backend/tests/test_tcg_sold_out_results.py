@@ -127,11 +127,14 @@ async def pg(monkeypatch):
             migrations = Path(__file__).resolve().parents[2] / "migrations"
             for filename in ("20260831_110000_create_tcg_analysis_tables_t004.sql", "20260910_010000_tcg_import_message_links.sql"):
                 cursor.execute((migrations / filename).read_text().replace("tenant_004", "tenant_951"))
+            # Migration 20260831_110000 creates tcg_suppliers; production DB was renamed to
+            # tenant_suppliers (ADR-155). Align test schema to match renamed table.
+            cursor.execute("ALTER TABLE IF EXISTS tenant_951.tcg_suppliers RENAME TO tenant_suppliers")
             cursor.execute((Path(__file__).parent / "fixtures" / "public_products_test.sql").read_text())
             cursor.execute(_rewire_keyword_fks("tenant_951"))
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
-            cursor.execute("INSERT INTO tenant_951.tcg_suppliers(code,name,is_active) VALUES ('S','Supplier percent%',true)")
-            # Sprint 1 migration: copy tcg_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+            cursor.execute("INSERT INTO tenant_951.tenant_suppliers(code,name,is_active) VALUES ('S','Supplier percent%',true)")
+            # Sprint 1 migration: copy tenant_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
             sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
             _supplier_ssot_premigration(cursor, "tenant_951")
             cursor.execute(sprint1.read_text())
