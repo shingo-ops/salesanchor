@@ -126,6 +126,9 @@ async def create_supplier(
                 f"VALUES (:name, :supplier_type, :default_language, :contact_name, :email, "
                 f"        :phone, :address, :notes, :is_active, :uid, NULL, "
                 f"        :line_name, :postal_code, :prefecture, :city, :address1, :address2) "
+                f"ON CONFLICT (line_name) "
+                f"    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL "
+                f"DO UPDATE SET line_name = EXCLUDED.line_name "
                 f"RETURNING {_SUPPLIER_COLS}"
             ),
             {**data.model_dump(), "uid": current_user.id},
@@ -483,6 +486,9 @@ async def import_suppliers_commit(
                     "VALUES (:name, :supplier_type, :line_name, :contact_name, :email, :phone, "
                     "        :postal_code, :prefecture, :city, :address1, :address2, :notes, "
                     "        :is_active, NULL) "
+                    "ON CONFLICT (line_name) "
+                    "    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL "
+                    "DO UPDATE SET line_name = EXCLUDED.line_name "
                     "RETURNING id"
                 ),
                 insert_data,

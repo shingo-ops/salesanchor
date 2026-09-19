@@ -579,6 +579,9 @@ async def import_line_export(
                 text("""
                     INSERT INTO public.suppliers (name, line_name, supplier_type, is_active)
                     VALUES (:name, :line_name, 'corporate', TRUE)
+                    ON CONFLICT (line_name)
+                        WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL
+                    DO UPDATE SET line_name = EXCLUDED.line_name
                     RETURNING id
                 """),
                 {"name": dn, "line_name": dn},

@@ -131,6 +131,10 @@ RETURNING id
 - backend/migrations/supplier_line_name_unique.sql — 部分 UNIQUE インデックスが DB レベルで重複を防止
 - UPSERT パターンがコードレベルで IntegrityError を回避
 
+## 維持の仕組み
+
+守り手: `migrations/20260920_020000_supplier_line_name_unique.sql`（部分 UNIQUE インデックス）、UPSERT パターン（4箇所のコード変更）
+
 ### 次フェーズへの引き継ぎ
 - テナント側仕入元の line_name 重複防止は別件（現時点では問題なし）
 - supplier_code の欠番（SERIAL 特性）は運用上問題なし。連番リセットは不要

@@ -53,9 +53,13 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
     line_name     VARCHAR(255),
     supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
     is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id     INTEGER,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
+    ON public.suppliers (line_name)
+    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
 """
 
 
