@@ -211,9 +211,13 @@ def _response(row: Mapping, *, saved: int, replayed: bool) -> dict:
 
 async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, source_message_id: str,
                                 request: dict, corrected_by: str) -> dict:
+    try:
+        _cid_int = int(request["condition_id"])
+    except (ValueError, TypeError):
+        _cid_int = -1  # Sentinel; will fail the SELECT and return 422 "Condition is not active"
     params = {"eid": extraction_item_id, "smid": source_message_id,
               "condition_id": str(request["condition_id"]),
-              "condition_id_int": int(request["condition_id"]),
+              "condition_id_int": _cid_int,
               "request_id": request["request_id"]}
     try:
         # Protect raw/source/job membership during both version checking and commit.

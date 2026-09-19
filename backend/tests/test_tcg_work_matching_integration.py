@@ -673,6 +673,19 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
     before = values()
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        # Phase 3 SSOT: load_tcg_note_master() reads from public.tcg_note_master.
+        # Mirror tenant_004 note master to public so the analyzer can find NJ079 ('伝票剥がし跡あり').
+        cursor.execute("""
+            INSERT INTO public.tcg_note_master
+                (label_ja, label_en, enabled, search_keywords, exclude_keywords,
+                 category, priority, match_type, search_pattern, label_template)
+            SELECT label_ja, label_en, enabled, search_keywords, exclude_keywords,
+                   category, priority, match_type, search_pattern, label_template
+            FROM tenant_004.tcg_note_master tnm
+            WHERE NOT EXISTS (
+                SELECT 1 FROM public.tcg_note_master pnm WHERE pnm.label_ja = tnm.label_ja
+            )
+        """)
     first = asyncio.run(product_master.reanalyze_extraction_job(jobid))
     after = values()
     assert before[0][6] == "Searched pack" and after[0][6] == "Unsearched pack"
