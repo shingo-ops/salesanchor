@@ -113,9 +113,11 @@ def edit_pg(pg, monkeypatch):
         job = cur.fetchone()[0]
         cur.execute(f"INSERT INTO {durable.SCHEMA}.extraction_items(extraction_job_id) VALUES (%s) RETURNING id", (job,))
         item = cur.fetchone()[0]
+        cur.execute("SELECT id FROM public.conditions LIMIT 1")
+        cond_id = cur.fetchone()[0]
         cur.execute(f"INSERT INTO {durable.SCHEMA}.analysis_results "
-                    "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version) "
-                    "SELECT %s,id,true,false,true,'fixture' FROM public.products WHERE product_code='DETAIL'", (item,))
+                    "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version,condition_id) "
+                    "SELECT %s,id,true,false,true,'fixture',%s FROM public.products WHERE product_code='DETAIL'", (item, cond_id))
         durable.provision(cur, "tenant_990")
         cur.execute("INSERT INTO tenant_990.tcg_products(code,japanese_title,category_class,is_active) "
                     "VALUES ('DETAIL','Other tenant','Other',true) RETURNING id")

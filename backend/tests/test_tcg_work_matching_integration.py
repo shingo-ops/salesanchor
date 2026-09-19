@@ -635,6 +635,17 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # tenant_004 was provisioned by seed_condition_note() after migrate() ran, so the rewire
         # migration must be applied explicitly here to match what pg fixture does for tenant_901.
         cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
+        # Phase 3 rewire also covers analysis_run_snapshots which stores a copy of analysis_results columns.
+        # The base migration creates unit_id/condition_id as UUID; convert to INTEGER so that
+        # reanalyze_extraction_job() can copy INTEGER values from analysis_results without type mismatch.
+        cursor.execute("""
+            ALTER TABLE tenant_004.analysis_run_snapshots
+                DROP COLUMN IF EXISTS unit_id,
+                ADD COLUMN unit_id INTEGER;
+            ALTER TABLE tenant_004.analysis_run_snapshots
+                DROP COLUMN IF EXISTS condition_id,
+                ADD COLUMN condition_id INTEGER;
+        """)
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]

@@ -210,7 +210,7 @@ async def check_duplicates(
     japanese_title: str,
     work_id: str,
     manufacturer_id: str,
-    product_category_id: str,
+    product_category_id: str | int,
     mark: str = "",
     search_keywords: str = "",
 ) -> dict[str, Any]:
@@ -243,7 +243,7 @@ async def check_duplicates(
                 OR (
                     p.work_id::text = :work_id
                     AND p.manufacturer_id::text = :manufacturer_id
-                    AND p.product_category_id::text = :product_category_id
+                    AND p.product_category_id = :product_category_id
                 )
               )
             GROUP BY
@@ -319,7 +319,7 @@ async def create_product(
     division_id: str,
     work_id: str | int,
     manufacturer_id: str,
-    product_category_id: str,
+    product_category_id: str | int,
     japanese_title: str,
     release_date: str | None,
     search_keywords: str,

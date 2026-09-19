@@ -82,6 +82,7 @@ def pg():
             cursor.execute("INSERT INTO public.units(id,code,canonical,kubun,is_active) VALUES (10,'UN0002','Box','箱系',true) RETURNING id")
             unit = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
+            cursor.execute("INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active) VALUES ('PC_BOX', 'Box', '箱系', true) ON CONFLICT (code) DO NOTHING")
             cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
                 SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,public.tcg_product_categories c
                 WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")

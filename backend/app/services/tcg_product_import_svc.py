@@ -180,7 +180,7 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     pc_result = await db.execute(
         text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
     )
-    maps["product_category_code"] = {str(r[0]): str(r[1]) for r in pc_result.fetchall()}
+    maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
     return maps
 
 
