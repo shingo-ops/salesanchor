@@ -321,7 +321,9 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 assignments = []
                 for field in plan["sets"]:
                     cast = (
-                        f"CAST(:{field} AS uuid)"
+                        f"CAST(:{field} AS INTEGER)"
+                        if field == "work_id"
+                        else f"CAST(:{field} AS uuid)"
                         if field in LOOKUP_ARGS.values()
                         else f"CAST(:{field} AS date)"
                         if field == "release_date"

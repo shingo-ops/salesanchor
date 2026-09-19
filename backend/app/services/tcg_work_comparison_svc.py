@@ -260,7 +260,7 @@ def compare_snapshot(snapshot: dict, session_factory: Callable, *, model_call: C
         for item in items:
             work = decisions[item["id"]]
             explicit = analyzer.resolve_work_evidence(item["raw_product_name"], source_text, item["line_start"], item["line_end"], None, None, data["context"]["works"])
-            if explicit and work not in (None, explicit):
+            if explicit is not None and work is not None and work != int(explicit):
                 report.update(status="work_conflict", failed_item_id=item["id"])
                 return report
         for item in items:

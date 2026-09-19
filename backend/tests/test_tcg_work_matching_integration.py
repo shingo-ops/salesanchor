@@ -922,7 +922,7 @@ def test_work_id_schema_existing_future_and_repeat(pg):
         cursor.execute("SELECT table_schema,column_name,data_type FROM information_schema.columns WHERE table_schema IN ('tenant_901','tenant_907') AND column_name IN ('resolved_work_id','work_reference_snapshot','work_reference_sha256') ORDER BY 1,2")
         rows = cursor.fetchall()
         assert len(rows) == 6
-        assert {r[1:] for r in rows} == {('resolved_work_id','uuid'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
+        assert {r[1:] for r in rows} == {('resolved_work_id','integer'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
 
 
 
