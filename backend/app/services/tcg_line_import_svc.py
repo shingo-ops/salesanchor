@@ -18,7 +18,6 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -568,7 +567,6 @@ async def import_line_export(
 
     # --- 4. サプライヤー解決 ---
     resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
-    unresolved_display_names = [u["display_name"] for u in unresolved]
 
     # --- 4b. 未解決仕入元の自動登録 ---
     # display_name を name / line_name として新規 supplier + supplier_channel を作成し、
