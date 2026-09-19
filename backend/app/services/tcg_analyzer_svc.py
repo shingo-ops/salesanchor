@@ -1188,7 +1188,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
             FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
         """), {"id": extraction_job_id}).fetchall()
-        work_decisions = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        _raw = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        # match_pid_with_work expects str work_id (same type as product_work_ids values)
+        work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
 
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
