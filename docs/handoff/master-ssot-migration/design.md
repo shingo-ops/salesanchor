@@ -1,6 +1,6 @@
 # マスタSSOT移行 — 設計書
 
-> 状態: 設計確定・Architect審査APPROVE・実装カード作成中
+> 状態: Phase 2 実装済み・PR作成中（Step 1-4 データコピーはSSH復旧待ち）
 > recon: [recon.md](./recon.md)
 
 ## 目的
@@ -241,4 +241,14 @@ PostgreSQL スキーママイグレーション、Shopify Product Model SSOT、S
 
 ---
 
-## 実装完了
+## 実装状況
+
+| ステップ | 状態 | PR |
+|---------|------|-----|
+| Step 1-1: work_id 型変更 | ✓ 完了 | #3565 |
+| Step 1-2: 1,528件 work_id 張替 | ✓ 完了（SSH） | — |
+| Step 1-3: 97件 NULL 分類 | ✓ 完了（SSH） | — |
+| Step 1-4: 9テーブル public コピー | 未実施（SSH接続待ち） | — |
+| Step 2-1: コード配線変更（10ファイル） | ✓ 完了 | Phase 2 PR |
+| Step 2-2: FK制約追加 | ✓ 完了 | Phase 2 PR |
+| Step 2-3: 旧列・旧テーブル処理 | PO判断待ち | — |

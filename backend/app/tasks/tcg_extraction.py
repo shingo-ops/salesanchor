@@ -205,7 +205,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         item["raw_product_name"], raw_text, item["line_start"], item["line_end"],
                         None, None, reference["works"],
                     )
-                    if explicit and item.get("resolved_work_id") not in (None, explicit):
+                    if explicit and item.get("resolved_work_id") not in (None, int(explicit)):
                         raise RecordError("WORK_ID_CONFLICT")
         except SoftTimeLimitExceeded:
             raise

@@ -33,6 +33,15 @@ SCHEMA = "tenant_901"
 STRUCTURE = "20260910_160000_tcg_work_evidence.sql"
 HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 NORMAL = "MEGA スタートデッキ100 バトルコレクション"
+# Phase 2 SSOT: tcg_series.code → public.tcg_type_master.code mapping
+_SERIES_CODE_TO_TYPE = {
+    "IP001": "pokemon_booster_box",
+    "IP002": "one_piece",
+    "IP003": "dragon_ball",
+    "IP004": "yugioh",
+    "IP005": "union_arena",
+    "IP006": "gundam",
+}
 
 
 def provision(cursor, schema):
@@ -218,6 +227,9 @@ $rw$;
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+    # Master SSOT Phase 2: tcg_type_master must exist before code queries it
+    cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
+    cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
@@ -226,6 +238,10 @@ def migrate(cursor):
     # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
     _supplier_ssot_premigration(cursor, SCHEMA)
     cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
+    # product_code_seq: created by phase_b migration in prod, add idempotently for test DB
+    cursor.execute(
+        "CREATE SEQUENCE IF NOT EXISTS public.product_code_seq START WITH 1"
+    )
 
 
 @pytest.fixture
@@ -274,8 +290,8 @@ def seed_products(connection):
         for code, title, work, search, exclude in products:
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,w.id,c.id FROM {SCHEMA}.tcg_series w,
-                {SCHEMA}.tcg_product_categories c WHERE w.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, work))
+                SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
+                {SCHEMA}.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
             pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, keyword in enumerate(keywords):
@@ -586,7 +602,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
         cursor.execute(_rewire_keyword_fks("tenant_004"))
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM tenant_004.tcg_series WHERE code='IP001' RETURNING id", (code, name))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
@@ -859,7 +875,7 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_
     connection, engine, async_url = pg
     seed_products(connection)
     with connection.cursor() as cursor:
-        cursor.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'")
+        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
         wid = str(cursor.fetchone()[0])
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
@@ -910,7 +926,7 @@ def test_work_id_schema_existing_future_and_repeat(pg):
         cursor.execute("SELECT table_schema,column_name,data_type FROM information_schema.columns WHERE table_schema IN ('tenant_901','tenant_907') AND column_name IN ('resolved_work_id','work_reference_snapshot','work_reference_sha256') ORDER BY 1,2")
         rows = cursor.fetchall()
         assert len(rows) == 6
-        assert {r[1:] for r in rows} == {('resolved_work_id','uuid'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
+        assert {r[1:] for r in rows} == {('resolved_work_id','integer'),('work_reference_snapshot','jsonb'),('work_reference_sha256','text')}
 
 
 
@@ -933,16 +949,17 @@ def test_space_product_match_saved_in_isolated_database(
         for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT %s,'スターターセットV 草','Box',true,w.id,c.id
-                FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
-                WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""", (code,))
+                SELECT %s,'スターターセットV 草','Box',true,m.id,c.id
+                FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+                WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
                 cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
                                (str(uuid4()), product_id, keyword))
-        cursor.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code=%s", (work_code,))
-        work_id = str(cursor.fetchone()[0])
+        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
+        row = cursor.fetchone()
+        work_id = str(row[0]) if row else "0"
     _, jobid, result = run_message(connection, engine, monkeypatch,
         name + " 1BOX 1000円 " + state + " " + memo,
         [record(name, 1, state=state, memo=memo) + [work_id, ""]], work_id_mode=True)
@@ -989,9 +1006,9 @@ def seed_cardset_dictionary(connection, schema):
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,w.id,c.id FROM {}.tcg_series w,
-                    {}.tcg_product_categories c WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id""").format(
-                        *[sql.Identifier(schema)] * 2), (code, title))
+                    SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
+                    {}.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""").format(
+                        sql.Identifier(schema)), (code, title))
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(keywords, 5):
@@ -1227,11 +1244,11 @@ def seed_bundle_dictionary(connection, schema):
             else:
                 cursor.execute(sql.SQL("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
-                    SELECT %s,%s,'Box',true,d.id,w.id,m.id,c.id
-                    FROM {}.tcg_major_categories d, {}.tcg_series w, {}.tcg_manufacturers m,
+                    SELECT %s,%s,'Box',true,d.id,tm.id,m.id,c.id
+                    FROM {}.tcg_major_categories d, public.tcg_type_master tm, {}.tcg_manufacturers m,
                          {}.tcg_product_categories c
-                    WHERE d.code='DIV01' AND w.code='IP001' AND m.code='MK001' AND c.code='PC_BOX'
-                    RETURNING id""").format(*[sql.Identifier(schema)] * 4), (code, title))
+                    WHERE d.code='DIV01' AND tm.code='pokemon_booster_box' AND m.code='MK001' AND c.code='PC_BOX'
+                    RETURNING id""").format(*[sql.Identifier(schema)] * 3), (code, title))
                 pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):
@@ -1393,9 +1410,9 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
     with connection.cursor() as cursor:
         cursor.execute(f"""INSERT INTO public.products
             (product_code,name,category_class,is_active,work_id,product_category_id)
-            SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,w.id,c.id
-            FROM {SCHEMA}.tcg_series w,{SCHEMA}.tcg_product_categories c
-            WHERE w.code='IP001' AND c.code='PC_BOX' RETURNING id,work_id""")
+            SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,m.id,c.id
+            FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+            WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id,work_id""")
         pid, work = cursor.fetchone()
         for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
                                ("product_exclude_keywords", "LIMITED EDITION")]:
@@ -1408,7 +1425,7 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         ("FUTURISTIC BOX", "", "", False),
         ("130th FUTURISTIC", "", "", False),
         ("30th FUTURISTIC", "PSA10", "", False),
-        ("other", "", "30th FUTURISTIC", False),
+        ("unrelated_product", "", "30th FUTURISTIC", False),
         ("30th FUTURISTIC", "", "LIMITED EDITION", False),
         ("30th FUTURISTIC", "", "LIMITED special EDITION", True),
     ]

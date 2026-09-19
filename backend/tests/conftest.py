@@ -829,7 +829,7 @@ async def setup_test_db(test_engine):
                 display_order INTEGER,
                 tcg_uuid UUID,
                 division_id UUID,
-                work_id UUID,
+                work_id INTEGER,
                 manufacturer_id UUID,
                 product_category_id UUID,
                 category_class TEXT,

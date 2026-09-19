@@ -38,7 +38,7 @@ def seed(connection, count=2):
         for index in range(count):
             cursor.execute(
                 "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id) "
-                f"VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002')) RETURNING id",
+                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.tcg_type_master WHERE code='one_piece')) RETURNING id",
                 (
                     "RTSENT" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
@@ -53,7 +53,7 @@ def seed(connection, count=2):
                         f"INSERT INTO {SCHEMA}.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
                         (pid, word, position),
                     )
-        cursor.execute(f"UPDATE {SCHEMA}.tcg_series SET is_active=false WHERE code='IP002'")
+        cursor.execute("UPDATE public.tcg_type_master SET is_active=false WHERE code='one_piece'")
 
 
 def edit(raw, changes, *, single=False):
@@ -87,7 +87,7 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
                 empty = await svc.export_csv(db, "not found")
                 assert len(svc.read_records(empty)) == 1
                 with connection.cursor() as cur:
-                    cur.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'")
+                    cur.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
                     work = str(cur.fetchone()[0])
                 selected = await svc.export_csv(db, "商品0", work)
                 assert len(svc.read_records(selected)) == 2
@@ -123,7 +123,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     "mark": "=001",
                     "release_date": "2028-02-29",
                     "division_code": "DIV01",
-                    "work_code": "IP001",
+                    "work_code": "pokemon_booster_box",
                     "manufacturer_code": "MK001",
                     "product_category_code": "PC_BOX",
                     "search_keywords": svc.encode_words([" a,b ", '"quoted"', "\r\nword", "＝1"]),
@@ -142,7 +142,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                 after = observe(connection, False)
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT category_class FROM public.products WHERE product_code=%s", (code,))
-                    assert cursor.fetchone()[0] == "Pokemon"
+                    assert cursor.fetchone()[0] == "ポケモンカード"
                     cursor.execute(
                         f"SELECT messages FROM {SCHEMA}.tcg_product_import_rows WHERE product_code=%s", (code,)
                     )

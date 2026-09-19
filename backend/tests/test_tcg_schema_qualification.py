@@ -11,7 +11,6 @@ _REPO_ROOT = Path(__file__).parents[2]
 _PRODUCT_SERVICE = "backend/app/services/tcg_product_import_svc.py"
 _LOOKUP_TABLES = {
     "division_code": "tcg_major_categories",
-    "work_code": "tcg_series",
     "manufacturer_code": "tcg_manufacturers",
     "product_category_code": "tcg_product_categories",
 }
@@ -195,7 +194,7 @@ def test_product_schema_removal_is_detected():
     source = (_REPO_ROOT / _PRODUCT_SERVICE).read_text(encoding="utf-8")
     tables = next(tables for path, tables in TARGETS if path == _PRODUCT_SERVICE)
     calls = _text_calls(source)
-    assert len(calls) == 6, "review new/removed SQL calls and update inventory"
+    assert len(calls) == 7, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
     assert len(positions) == 5, "review changed schema reference inventory"
     for match in positions:
