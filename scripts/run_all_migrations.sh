@@ -688,3 +688,6 @@ run_sql migrations/20260919_020000_master_ssot_public_tables.sql
 
 # Master SSOT Phase 2: FK work_id → tcg_type_master（冪等）
 run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
+
+# Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
+run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
