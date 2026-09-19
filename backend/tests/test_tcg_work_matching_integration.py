@@ -1086,6 +1086,12 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     before = guard_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords
+            WHERE keyword = 'カードセット'
+            ON CONFLICT DO NOTHING
+        """)
     after = guard_snapshot(connection)
     key = ("tenant_004", "product_exclude_keywords")
     added = set(after[key]) - set(before[key])
@@ -1331,9 +1337,24 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
         seed_bundle_dictionary(connection, schema)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords pek
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_exclude_keywords ppek WHERE ppek.product_id = pek.product_id AND ppek.keyword = pek.keyword)
+        """)
     before = bundle_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_search_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_search_keywords psk
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_search_keywords ppsk WHERE ppsk.product_id = psk.product_id AND ppsk.keyword = psk.keyword)
+        """)
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords pek
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_exclude_keywords ppek WHERE ppek.product_id = pek.product_id AND ppek.keyword = pek.keyword)
+        """)
     after = bundle_snapshot(connection)
     for key, rows in before.items():
         for row in rows:
