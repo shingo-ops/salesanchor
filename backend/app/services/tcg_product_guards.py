@@ -44,9 +44,11 @@ def work_heading_evidence(raw_text: str, line_start: int, line_end: int,
         for name in (work["display_name"], work.get("alt_name")):
             if name:
                 aliases.setdefault(_plain_heading(name), set()).add(str(work["id"]))
-        # Observed heading 【ワンピ在庫商品】; bind to catalog One Piece only.
-        if _plain_heading(work["display_name"]) == "one piece":
+        # Observed heading 【ワンピ在庫商品】 / 🟡ONE PIECE在庫🟡; bind to catalog One Piece only.
+        _all_names = " ".join(filter(None, [work["display_name"], work.get("alt_name")]))
+        if "one piece" in _plain_heading(_all_names):
             aliases.setdefault("ワンピ", set()).add(str(work["id"]))
+            aliases.setdefault("one piece", set()).add(str(work["id"]))
     headings: dict[str, set[str]] = {}
     for alias, ids in aliases.items():
         for suffix in ("", *_SUFFIXES):

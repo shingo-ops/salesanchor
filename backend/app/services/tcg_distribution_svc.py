@@ -220,7 +220,7 @@ async def fetch_output_rows(
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
-            COALESCE(ser.display_name, '')                          AS series,
+            COALESCE(ser.name_ja, '')                               AS series,
             COALESCE(ps.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
@@ -235,7 +235,7 @@ async def fetch_output_rows(
             ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_series ser
+        LEFT JOIN public.tcg_type_master ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE

@@ -26,6 +26,18 @@ from tests.test_tcg_work_matching_integration import (
 )
 
 
+async def _exec_multi_stmt(conn, sql: str) -> None:
+    """Execute multi-statement SQL via asyncpg Simple Query protocol.
+
+    asyncpg's exec_driver_sql() uses the Prepared Statement protocol which
+    rejects multi-statement SQL (including DO $$ ... $$ blocks).  Dropping
+    to the raw driver connection and calling .execute() uses the Simple Query
+    protocol instead, which handles multiple statements in one call.
+    """
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
+
+
 async def create_product_schema(conn, schema):
     """Build every disposable schema from the same production migrations."""
     await conn.execute(text(f"CREATE SCHEMA {schema}"))
@@ -42,8 +54,10 @@ async def create_product_schema(conn, schema):
         "20260902_110000_tcg_classification_masters.sql",
     ):
         sql = (migrations / name).read_text().replace("tenant_004", schema)
-        await conn.exec_driver_sql(sql)
-    await conn.exec_driver_sql(_rewire_keyword_fks(schema))
+        await _exec_multi_stmt(conn, sql)
+    await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
+    await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
+    await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
 
 
 @pytest_asyncio.fixture
@@ -89,18 +103,19 @@ async def test_all_products_search_and_pagination(product_db):
 
 
 async def test_date_order_work_search_candidates_and_schema_boundary(product_db):
-    """AC1/3/4/5: real DATE/UUID semantics and independent work candidates."""
+    """AC1/3/4/5: real DATE/INTEGER semantics and independent work candidates."""
     db, schema = product_db
-    ids = dict((await db.execute(text(f"SELECT code,id FROM {schema}.tcg_series"))).all())
-    await db.execute(text(f"UPDATE {schema}.tcg_series SET is_active = code IN ('IP001','IP002','IP003')"))
+    ids = dict((await db.execute(text(
+        "SELECT code,id FROM public.tcg_type_master WHERE code IN ('pokemon_booster_box','one_piece','dragon_ball','yugioh')"
+    ))).all())
     fixtures = [
-        ("A", date(2099, 1, 1), ids["IP001"], True),
-        ("C", date(2026, 1, 1), ids["IP001"], True),
-        ("B", date(2026, 1, 1), ids["IP001"], False),
-        ("Z", date(2025, 1, 1), ids["IP002"], True),
-        ("N2", None, ids["IP004"], False),
+        ("A", date(2099, 1, 1), ids["pokemon_booster_box"], True),
+        ("C", date(2026, 1, 1), ids["pokemon_booster_box"], True),
+        ("B", date(2026, 1, 1), ids["pokemon_booster_box"], False),
+        ("Z", date(2025, 1, 1), ids["one_piece"], True),
+        ("N2", None, ids["yugioh"], False),
         ("N1", None, None, True),
-        ("N0", None, uuid4(), True),
+        ("N0", None, 999999, True),
     ]
     for code, release, work, active in fixtures:
         await db.execute(text(
@@ -114,25 +129,24 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     # Note: public.products is schema-independent; this test no longer needs a separate schema insert
     await db.execute(text("SELECT 1"))  # placeholder: cross-schema isolation now handled via public.products
     await db.execute(text(f"SET LOCAL search_path TO {other}, public"))
-    expected_works = [
-        (str(ids["IP001"]), "IP001", "Pokemon", "ポケモン"),
-        (str(ids["IP002"]), "IP002", "One Piece", "ワンピース"),
-        (str(ids["IP003"]), "IP003", "Dragon Ball", "ドラゴンボール"),
-        (str(ids["IP004"]), "IP004", "Yu-Gi-Oh", "遊戯王"),
-    ]
     for query, work_id, offset, expected, total in [
         ("", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
         ("sHaReD", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
-        ("Shared", ids["IP001"], 0, ["A", "C", "B"], 3),
-        ("Shared", ids["IP002"], 0, ["Z"], 1),
-        ("Shared", ids["IP001"], 100, [], 3),
-        ("absent", ids["IP001"], 0, [], 0),
-        ("", uuid4(), 0, [], 0),
+        ("Shared", ids["pokemon_booster_box"], 0, ["A", "C", "B"], 3),
+        ("Shared", ids["one_piece"], 0, ["Z"], 1),
+        ("Shared", ids["pokemon_booster_box"], 100, [], 3),
+        ("absent", ids["pokemon_booster_box"], 0, [], 0),
+        ("", 888888, 0, [], 0),
     ]:
         result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
         assert result.total == total
         assert [item.code for item in result.items] == expected
-        assert [(w.id, w.code, w.display_name, w.alt_name) for w in result.works] == expected_works
+        # works list contains all active tcg_type_master entries; verify key entries are present
+        work_codes = {w.code for w in result.works}
+        assert "pokemon_booster_box" in work_codes
+        assert "one_piece" in work_codes
+        assert "dragon_ball" in work_codes
+        assert "yugioh" in work_codes
     result = await routes.list_products(query="", work_id=None, offset=0, limit=50, db=db, _user={})
     assert result.items[0].release_date == "2099-01-01"
     assert result.items[-1].release_date == ""
@@ -141,7 +155,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
 async def test_date_order_across_fifty_row_pages(product_db):
     """AC2: compare both pages against independently generated chronological order."""
     db, schema = product_db
-    work_id = (await db.execute(text(f"SELECT id FROM {schema}.tcg_series WHERE code='IP001'"))).scalar_one()
+    work_id = (await db.execute(text("SELECT id FROM public.tcg_type_master WHERE code='pokemon_booster_box'"))).scalar_one()
     for index in range(53):
         await db.execute(text(
             "INSERT INTO public.products (product_code,name,category_class,is_active,release_date,work_id) "
@@ -155,8 +169,8 @@ async def test_date_order_across_fifty_row_pages(product_db):
     assert first.works == second.works
 
 
-@pytest.mark.parametrize("work_id", ["", "not-a-uuid"])
-async def test_invalid_work_uuid_is_rejected_before_sql(product_db, work_id):
+@pytest.mark.parametrize("work_id", ["", "not-a-number"])
+async def test_invalid_work_id_is_rejected_before_sql(product_db, work_id):
     """AC5: mount the actual router; do not replace require_super_admin."""
     db, _ = product_db
     app = FastAPI()

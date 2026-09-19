@@ -14,7 +14,6 @@ from app.tcg_config import TCG_SCHEMA
 
 LOOKUPS = {
     "division_id": "tcg_major_categories",
-    "work_id": "tcg_series",
     "manufacturer_id": "tcg_manufacturers",
     "product_category_id": "tcg_product_categories",
 }
@@ -68,6 +67,15 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
     lookups = {}
+    # work_id → public.tcg_type_master (INTEGER, SSOT)
+    work_rows = await db.execute(text(
+        "SELECT id::text AS id, name_ja AS name, is_active "
+        "FROM public.tcg_type_master "
+        "WHERE is_active = TRUE OR id = :selected "
+        "ORDER BY name_ja, id"
+    ), {"selected": product["work_id"]})
+    lookups["work_id"] = [dict(row) for row in work_rows.mappings()]
+    # Other lookups (tenant_004, UUID)
     for field, table in LOOKUPS.items():
         rows = await db.execute(text(
             f"SELECT id::text AS id,display_name AS name,is_active "
@@ -98,9 +106,26 @@ async def update_product_detail(
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
         params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
+        # work_id → public.tcg_type_master (INTEGER, SSOT); validated separately from LOOKUPS
+        new_work_id = values.get("work_id")
+        if new_work_id is not None and str(new_work_id) != str(product.get("work_id") or ""):
+            try:
+                new_work_id_int = int(new_work_id)
+            except (TypeError, ValueError):
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            work_row = (await db.execute(text(
+                "SELECT name_ja FROM public.tcg_type_master "
+                "WHERE id=:id AND is_active=TRUE FOR SHARE"
+            ), {"id": new_work_id_int})).one_or_none()
+            if work_row is None:
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            params["category_class"] = work_row[0]
+            params["work_id"] = new_work_id_int
+        else:
+            params["work_id"] = product.get("work_id")
         for field, table in LOOKUPS.items():
-            selected = values[field]
-            if selected == product[field]:
+            selected = values.get(field)
+            if selected == product.get(field):
                 continue
             if selected is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
@@ -110,14 +135,12 @@ async def update_product_detail(
             ), {"id": selected})).one_or_none()
             if row is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
-            if field == "work_id":
-                params["category_class"] = row[0]
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
         await db.execute(text(
             "UPDATE public.products SET "
             "name=:japanese_title,name_en=:english_title,mark=:mark,"
             "release_date=CAST(:release_date AS date),division_id=CAST(:division_id AS uuid),"
-            "work_id=CAST(:work_id AS uuid),manufacturer_id=CAST(:manufacturer_id AS uuid),"
+            "work_id=:work_id,manufacturer_id=CAST(:manufacturer_id AS uuid),"
             "product_category_id=CAST(:product_category_id AS uuid),category_class=:category_class "
             "WHERE id=:pid"
         ), params)

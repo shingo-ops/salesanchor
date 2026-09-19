@@ -78,8 +78,8 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
         status_migration = work_fixture.MIGRATIONS / "20260903_150000_tcg_status_master_t004.sql"
         cur.execute(status_migration.read_text().replace("tenant_004", SCHEMA))
         cur.execute(f'''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
-            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM {SCHEMA}.tcg_series w,
-            {SCHEMA}.tcg_product_categories c WHERE w.code='IP002' AND c.code='PC_BOX' RETURNING id''')
+            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.tcg_type_master w,
+            {SCHEMA}.tcg_product_categories c WHERE w.code='one_piece' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
         cur.execute(f'INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) VALUES (%s,%s,%s,0)',(str(uuid4()),pid,'架空検証商品'))
         smid, jobid = str(uuid4()), str(uuid4())
@@ -135,8 +135,8 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             async with AsyncSession(ae) as session:
                 from sqlalchemy import text
                 refs = {}
-                for key, table, code in [('division_id','tcg_major_categories','DIV01'),('work_id','tcg_series','IP002'),('manufacturer_id','tcg_manufacturers','MK002'),('product_category_id','tcg_product_categories','PC_BOX')]:
-                    refs[key] = str((await session.execute(text(f'SELECT id FROM {SCHEMA}.{table} WHERE code=:code'),{'code':code})).scalar_one())
+                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.tcg_type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id',f'{SCHEMA}.tcg_product_categories','PC_BOX')]:
+                    refs[key] = str((await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one())
                 args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date=None,search_keywords='架空の登録検証デッキ',exclude_keywords='',**refs)
                 first = await master.create_product(session, **args)
                 second = await master.create_product(session, **args)
@@ -147,7 +147,7 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
     code = asyncio.run(register())
     with connection.cursor() as cur:
         cur.execute(f'SELECT category_class FROM public.products WHERE product_code=%s',(code,))
-        assert cur.fetchone()[0]=='One Piece'  # Existing registration contract; not the Box/Single column.
+        assert cur.fetchone()[0]=='ワンピース'  # Existing registration contract; not the Box/Single column.
     _, jobid, result = work_fixture.run_message(connection, engine, monkeypatch,
         'ワンピース\n架空の登録検証デッキ PSA10',
         [work_fixture.record('架空の登録検証デッキ',2,state='PSA10')])

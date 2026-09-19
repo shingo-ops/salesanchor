@@ -29,7 +29,7 @@ PROMPT = (
     "1行目はITEM_ID｜WORK_ID。以降はこの2列を全角パイプで区切る。説明・Markdown・JSONは禁止。\n"
 )
 MASTER_TABLES = (
-    "tcg_series", "product_search_keywords", "product_exclude_keywords",
+    "product_search_keywords", "product_exclude_keywords",
     "tcg_product_categories", "units", "unit_aliases", "conditions", "condition_aliases",
     "tcg_normalization_rules",
 )
@@ -70,7 +70,9 @@ def parse_decisions(response: str, expected_ids: list[str], reference: dict) -> 
             raise ComparisonError("UNKNOWN_OR_DUPLICATE_ITEM")
         _uuid(item_id)
         try:
-            result[item_id] = validate_work_id(work_id or None, reference)
+            _wid = validate_work_id(work_id or None, reference)
+            # match_pid_with_work and product_work_ids expect str; convert for consistency
+            result[item_id] = str(_wid) if _wid is not None else None
         except (ValueError, TypeError, KeyError):
             raise ComparisonError("INVALID_WORK_ID") from None
     if set(result) != set(expected_ids):
@@ -116,6 +118,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
         masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
             session,
@@ -176,7 +179,9 @@ def old_work(item: dict, job: dict, source: dict, data: dict) -> str | None:
         if not reference or reference_digest(reference) != job.get("work_reference_sha256") or reference_digest(data["reference"]) != job["work_reference_sha256"]:
             raise ComparisonError("INVALID_SAVED_REFERENCE")
         try:
-            return validate_work_id(item.get("resolved_work_id"), reference)
+            _wid = validate_work_id(item.get("resolved_work_id"), reference)
+            # match_pid_with_work expects str; convert for consistency with product_work_ids
+            return str(_wid) if _wid is not None else None
         except ValueError:
             raise ComparisonError("INVALID_SAVED_WORK") from None
     return analyzer.resolve_work_evidence(item["raw_product_name"], source["raw_text"],
@@ -259,7 +264,7 @@ def compare_snapshot(snapshot: dict, session_factory: Callable, *, model_call: C
         for item in items:
             work = decisions[item["id"]]
             explicit = analyzer.resolve_work_evidence(item["raw_product_name"], source_text, item["line_start"], item["line_end"], None, None, data["context"]["works"])
-            if explicit and work not in (None, explicit):
+            if explicit is not None and work is not None and work != explicit:
                 report.update(status="work_conflict", failed_item_id=item["id"])
                 return report
         for item in items:

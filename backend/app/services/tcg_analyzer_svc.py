@@ -422,7 +422,7 @@ def select_product_candidates(
 def load_work_master(session: Session) -> list[dict]:
     """Active game/work names only; alt_name is a single value, never a list."""
     rows = session.execute(text(
-        f"SELECT id, display_name, alt_name FROM {TCG_SCHEMA}.tcg_series WHERE is_active = TRUE"
+        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.tcg_type_master WHERE is_active = TRUE"
     )).fetchall()
     return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
 
@@ -1188,7 +1188,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
             FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
         """), {"id": extraction_job_id}).fetchall()
-        work_decisions = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        _raw = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        # match_pid_with_work expects str work_id (same type as product_work_ids values)
+        work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
 
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
