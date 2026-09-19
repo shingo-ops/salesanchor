@@ -3927,7 +3927,7 @@
     }
   },
   "supplierCsv": {
-    "exportButton": "Export CSV",
+    "exportButton": "Export CSV for update",
     "importButton": "Import CSV",
     "importTitle": "Supplier Master Import",
     "selectFile": "Select CSV file",

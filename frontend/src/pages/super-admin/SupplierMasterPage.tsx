@@ -252,11 +252,11 @@ export default function SupplierMasterPage() {
           <HeaderButton variant="secondary" disabled={exporting} data-testid="suppliers-export" onClick={() => void downloadExport()}>
             {t(exporting ? "common.loading" : "supplierCsv.exportButton")}
           </HeaderButton>
-          <HeaderButton variant="secondary" data-testid="suppliers-import" onClick={() => navigate("/super-admin/masters/suppliers/import")}>
-            {t("supplierCsv.importButton")}
-          </HeaderButton>
           <HeaderButton variant="primary" data-testid="suppliers-new" onClick={openCreate}>
             {t("superAdmin.suppliersAdmin.newSupplier")}
+          </HeaderButton>
+          <HeaderButton variant="primary" data-testid="suppliers-import" onClick={() => navigate("/super-admin/masters/suppliers/import")}>
+            {t("supplierCsv.importButton")}
           </HeaderButton>
           <HeaderButton variant="secondary" disabled={selectedKeys.size === 0} data-testid="suppliers-bulk-delete" onClick={() => setConfirmDelete(true)}>
             {t("common.delete")}
