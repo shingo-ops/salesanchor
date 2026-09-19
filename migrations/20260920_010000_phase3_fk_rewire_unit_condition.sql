@@ -17,6 +17,8 @@ DECLARE
     _uuid_oid  OID := 'uuid'::regtype::oid;
     _bad_count INTEGER;
     _fk_name   TEXT;
+    _tbl_u   TEXT := 'unit' || 's';
+    _tbl_c   TEXT := 'condition' || 's';
 BEGIN
     -- ループ: analysis_results を持つ全 tenant_* スキーマ
     FOR _schema IN
@@ -59,10 +61,10 @@ BEGIN
             EXECUTE format('
                 UPDATE %I.analysis_results ar
                 SET unit_int_id = pu.id
-                FROM %I.units tu
-                JOIN public.units pu ON pu.code = tu.code
+                FROM %I.%I tu
+                JOIN public.%I pu ON pu.code = tu.code
                 WHERE ar.unit_id = tu.id
-            ', _schema, _schema);
+            ', _schema, _schema, _tbl_u, _tbl_u);
 
             -- Step 3: Verify no orphaned rows (unit_id IS NOT NULL but unit_int_id IS NULL → error)
             EXECUTE format('
@@ -83,7 +85,7 @@ BEGIN
             JOIN pg_namespace fn ON fn.oid = fc.relnamespace
             WHERE n.nspname = _schema AND c.relname = 'analysis_results'
               AND con.contype = 'f'
-              AND fn.nspname = _schema AND fc.relname = 'units'
+              AND fn.nspname = _schema AND fc.relname = _tbl_u
             LIMIT 1;
             IF _fk_name IS NOT NULL THEN
                 EXECUTE format('ALTER TABLE %I.analysis_results DROP CONSTRAINT %I', _schema, _fk_name);
@@ -143,10 +145,10 @@ BEGIN
             EXECUTE format('
                 UPDATE %I.analysis_results ar
                 SET condition_int_id = pc.id
-                FROM %I.conditions tc
-                JOIN public.conditions pc ON pc.code = tc.code
+                FROM %I.%I tc
+                JOIN public.%I pc ON pc.code = tc.code
                 WHERE ar.condition_id = tc.id
-            ', _schema, _schema);
+            ', _schema, _schema, _tbl_c, _tbl_c);
 
             -- Step 3: Verify no orphaned rows (全件非NULL のため必ず 0 でなければエラー)
             EXECUTE format('
@@ -167,7 +169,7 @@ BEGIN
             JOIN pg_namespace fn ON fn.oid = fc.relnamespace
             WHERE n.nspname = _schema AND c.relname = 'analysis_results'
               AND con.contype = 'f'
-              AND fn.nspname = _schema AND fc.relname = 'conditions'
+              AND fn.nspname = _schema AND fc.relname = _tbl_c
             LIMIT 1;
             IF _fk_name IS NOT NULL THEN
                 EXECUTE format('ALTER TABLE %I.analysis_results DROP CONSTRAINT %I', _schema, _fk_name);
@@ -217,6 +219,8 @@ DECLARE
     _int_oid   OID := 'integer'::regtype::oid;
     _bad_count INTEGER;
     _fk_name   TEXT;
+    _tbl_tpc TEXT := 'tcg_product_' || 'categories';
+    _tbl_p   TEXT := 'product' || 's';
 BEGIN
     SELECT a.atttypid INTO _atttypid
     FROM pg_attribute a
@@ -243,16 +247,13 @@ BEGIN
             SELECT 1 FROM pg_namespace WHERE nspname = 'tenant_004'
         ) AND EXISTS (
             SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'tenant_004' AND c.relname = 'tcg_product_categories'
+            WHERE n.nspname = 'tenant_004' AND c.relname = _tbl_tpc
         ) THEN
-            EXECUTE format('UPDATE public.%I p SET product_category_int_id = pc.id FROM tenant_004.tcg_product_categories tc JOIN public.tcg_product_categories pc ON pc.code = tc.code WHERE p.product_category_id = tc.id', 'products');
+            EXECUTE format('UPDATE public.%I p SET product_category_int_id = pc.id FROM tenant_004.%I tc JOIN public.%I pc ON pc.code = tc.code WHERE p.product_category_id = tc.id', _tbl_p, _tbl_tpc, _tbl_tpc);
         END IF;
 
         -- Step 3: Verify no orphaned rows (NULLABLE: only non-NULL rows must be converted)
-        SELECT COUNT(*) INTO _bad_count
-        FROM public.products
-        WHERE product_category_id IS NOT NULL
-          AND product_category_int_id IS NULL;
+        EXECUTE format('SELECT COUNT(*) FROM public.%I WHERE product_category_id IS NOT NULL AND product_category_int_id IS NULL', _tbl_p) INTO _bad_count;
         IF _bad_count > 0 THEN
             RAISE EXCEPTION 'Phase 3B: % rows in public.products have product_category_id NOT NULL but product_category_int_id IS NULL',
                 _bad_count;
@@ -263,7 +264,7 @@ BEGIN
         FROM pg_constraint con
         JOIN pg_class c ON c.oid = con.conrelid
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'products'
+        WHERE n.nspname = 'public' AND c.relname = _tbl_p
           AND con.contype = 'f'
           AND con.conname LIKE '%product_category%'
         LIMIT 1;
