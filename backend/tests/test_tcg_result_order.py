@@ -158,7 +158,7 @@ def test_unknown_state_missing_values_and_inactive_source_remain(pg):
 
 def test_same_price_uuid_tiebreak_and_current_confirmed_condition(pg):
     with pg["connection"].cursor() as cursor:
-        cursor.execute("INSERT INTO tenant_004.conditions(code,canonical,priority,app_kubun,is_active) "
+        cursor.execute("INSERT INTO public.conditions(code,canonical,priority,app_kubun,is_active) "
                        "VALUES ('CN0098','Case',1,'箱系',true) RETURNING id")
         case_id = str(cursor.fetchone()[0])
     confirmed = seed(pg, name="Test Booster", reasons="", condition_id=pg["normal"],

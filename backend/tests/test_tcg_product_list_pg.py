@@ -58,6 +58,12 @@ async def create_product_schema(conn, schema):
     await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
     await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
     await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
+    await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
+    # Strip BEGIN/COMMIT: this runs inside an outer transaction managed by product_db fixture.
+    _phase3_sql = (migrations / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text()
+    _phase3_sql = _phase3_sql.replace("BEGIN;", "").replace("COMMIT;", "")
+    await _exec_multi_stmt(conn, _phase3_sql)
 
 
 @pytest_asyncio.fixture
@@ -88,8 +94,8 @@ async def test_all_products_search_and_pagination(product_db):
         "('PM01','Alpha','Box',true),('PM02','Alpha hidden','Box',false),('PM03','Beta','Box',true)"
     ))
     await db.execute(text(
-        f"INSERT INTO {schema}.product_search_keywords (product_id,keyword,position) "
-        f"SELECT id,'hidden',0 FROM public.products WHERE product_code='PM02'"
+        "INSERT INTO public.product_search_keywords (product_id,keyword,position) "
+        "SELECT id,'hidden',0 FROM public.products WHERE product_code='PM02'"
     ))
     first = await routes.list_products(query="", limit=1, offset=0, work_id=None, db=db, _user={})
     second = await routes.list_products(query="", limit=1, offset=1, work_id=None, db=db, _user={})

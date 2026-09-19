@@ -135,13 +135,13 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             p.product_code AS product_id,
             p.name AS product_name,
             'search' AS keyword_type,
             k.keyword
-        FROM {TCG_SCHEMA}.product_search_keywords k
+        FROM public.product_search_keywords k
         JOIN public.products p ON p.id = k.product_id
         ORDER BY p.product_code, k.keyword
         UNION ALL
@@ -150,7 +150,7 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
             p.name AS product_name,
             'exclude',
             k.keyword
-        FROM {TCG_SCHEMA}.product_exclude_keywords k
+        FROM public.product_exclude_keywords k
         JOIN public.products p ON p.id = k.product_id
         ORDER BY p.product_code, k.keyword
     """))

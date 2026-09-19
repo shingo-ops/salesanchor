@@ -60,6 +60,9 @@ async def create_schema(conn, schema, corrections=True):
         sql_path = migrations / sql_file
         if sql_path.exists():
             await _exec_multi_stmt(conn, sql_path.read_text())
+    # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
+    # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
+    await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
         "20260903_210000_tcg_distribution_settings_t004.sql",

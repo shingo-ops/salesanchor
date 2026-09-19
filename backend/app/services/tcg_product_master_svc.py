@@ -128,7 +128,7 @@ async def search_products_by_name(
 
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 p.product_code  AS product_id,
                 p.id::text AS product_uuid,
@@ -138,7 +138,7 @@ async def search_products_by_name(
                     ''
                 )               AS search_keywords
             FROM public.products p
-            LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
+            LEFT JOIN public.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND p.name ILIKE :query
@@ -210,7 +210,7 @@ async def check_duplicates(
     japanese_title: str,
     work_id: str,
     manufacturer_id: str,
-    product_category_id: str,
+    product_category_id: str | int,
     mark: str = "",
     search_keywords: str = "",
 ) -> dict[str, Any]:
@@ -222,7 +222,7 @@ async def check_duplicates(
     """
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 p.product_code::text      AS product_id,
                 p.name                    AS japanese_title,
@@ -235,7 +235,7 @@ async def check_duplicates(
                     ''
                 )                         AS search_keywords
             FROM public.products p
-            LEFT JOIN {TCG_SCHEMA}.product_search_keywords psk
+            LEFT JOIN public.product_search_keywords psk
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND (
@@ -243,7 +243,7 @@ async def check_duplicates(
                 OR (
                     p.work_id::text = :work_id
                     AND p.manufacturer_id::text = :manufacturer_id
-                    AND p.product_category_id::text = :product_category_id
+                    AND p.product_category_id = :product_category_id
                 )
               )
             GROUP BY
@@ -319,7 +319,7 @@ async def create_product(
     division_id: str,
     work_id: str | int,
     manufacturer_id: str,
-    product_category_id: str,
+    product_category_id: str | int,
     japanese_title: str,
     release_date: str | None,
     search_keywords: str,
@@ -412,8 +412,8 @@ async def create_product(
         ):
             await db.execute(
                 text(
-                    f"""
-                    INSERT INTO {TCG_SCHEMA}.product_search_keywords
+                    """
+                    INSERT INTO public.product_search_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
                     """
@@ -428,8 +428,8 @@ async def create_product(
         ):
             await db.execute(
                 text(
-                    f"""
-                    INSERT INTO {TCG_SCHEMA}.product_exclude_keywords
+                    """
+                    INSERT INTO public.product_exclude_keywords
                         (product_id, keyword, position)
                     VALUES (:pid, :kw, :pos)
                     """
@@ -494,9 +494,9 @@ async def add_search_keyword(
     # 既存キーワード確認
     existing = await db.execute(
         text(
-            f"""
+            """
             SELECT keyword
-            FROM {TCG_SCHEMA}.product_search_keywords
+            FROM public.product_search_keywords
             WHERE product_id = :pid
             ORDER BY position
             """
@@ -511,8 +511,8 @@ async def add_search_keyword(
     next_pos = len(existing_kws) + 1
     await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.product_search_keywords
+            """
+            INSERT INTO public.product_search_keywords
                 (product_id, keyword, position)
             VALUES (:pid, :kw, :pos)
             """

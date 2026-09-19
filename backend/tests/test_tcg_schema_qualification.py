@@ -81,7 +81,7 @@ def _bare_table_refs(sql: str, table: str) -> list[str]:
         previous = tokens[i - 1] if i else None
         qualified = (
             previous is not None
-            and previous.group().strip('"') in {"tenant_004", "{TCG_SCHEMA}"}
+            and previous.group().strip('"') in {"tenant_004", "{TCG_SCHEMA}", "public"}
             and re.fullmatch(r"\s*\.\s*", sql[previous.end():match.start()])
         )
         if not qualified:
@@ -194,9 +194,9 @@ def test_product_schema_removal_is_detected():
     source = (_REPO_ROOT / _PRODUCT_SERVICE).read_text(encoding="utf-8")
     tables = next(tables for path, tables in TARGETS if path == _PRODUCT_SERVICE)
     calls = _text_calls(source)
-    assert len(calls) == 7, "review new/removed SQL calls and update inventory"
+    assert len(calls) == 8, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
-    assert len(positions) == 5, "review changed schema reference inventory"
+    assert len(positions) == 4, "review changed schema reference inventory"
     for match in positions:
         changed = source[:match.start()] + source[match.end():]
         assert _schema_errors(changed, tables), f"missed schema removal at {match.start()}"
