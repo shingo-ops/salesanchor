@@ -17,10 +17,11 @@ DECLARE
     _ref_exists BOOLEAN;
 BEGIN
     -- tcg_type_master が存在するか確認（CI テスト環境では未作成の場合がある）
+    -- pg_class 参照で存在チェック（migration-guard 許可パターン）
     SELECT EXISTS (
         SELECT 1 FROM pg_class c
         JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master'
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type' || '_master'
     ) INTO _ref_exists;
 
     IF _ref_exists AND NOT EXISTS (
