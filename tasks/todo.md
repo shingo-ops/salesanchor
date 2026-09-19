@@ -8,6 +8,22 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| 解析結果・配信の共通並び順 | Agent | GO #3501受領済み。Deploy34914789016復旧成功確認。現行商品構造への統合補正中 | 最新main統合後に順序・値保持・負荷試験と必須CIを再検証し反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-15 |
+| シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
+| PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
+| Geminiの商品マスタ参照・作品IDのみ判断 | 本セッション | 初回新規23job:22成功/1作品矛盾。全入力応答23保存、682明細7502照合一致。要確認120 | 記録機能検証完了・文書PR3462保存。矛盾1job/要確認120と従前13明細保留・単位/フラグを後続設計へ。配信未実行 | recon CARD09初回実投稿 / import a56cd32a | 2026-09-14 |
+| Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
+| 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
+| 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
+| フロントエンド金型化・再測定 | 設計/実装担当 | APリード6件実装検収合格。240表示/47操作前後組・70/451試験成功、共通137/旧281 | PR3500配備34804164057成功・233移行完走・App/API200でPM0264復旧確認済。PR3497 GO受領済。PR3512復旧配備成功確認、main26032c74統合・基準23/製品3一致。最終CI後に配備確認。マージ/配備未実施。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md / PR3497 | 2026-09-14 |
+| PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
+| 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
+| worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
+| LINE解析精度・正常完了の誤商品調査 | Agent | #3403マージ/本番反映、有効1件18明細/18解析完了。未完了0。3接続退避済み、445行配信予定。新たに状態/備考2件の問題を確認、配信未実施 | POがCase維持/NOTE_JA記載を確定。設計§13限定2件修正を実装・実DB再解析試験、反映後3シート配信と照合 | recon.md「#3403復旧後の抽出完了と配信前確認」 / EV-20260910-LINE-ACCURACY-08 / PR #3403 / Deploy34456746721 | 2026-09-10 |
+| Sales Anchor アプリ全体（親）起票 | Agent | `release/sales-anchor-app-theme` worktree で `docs/specs/sales-anchor-app/README.md` / `ideal-state.md` / `kgi.md` を最新 origin/main から新設し、`docs/specs/README.md` に 1 行追記した | PR #2768 マージ済み・KGI承認済（PR起票中）。次は子テーマの着手順序決め | `docs/specs/sales-anchor-app/README.md` / `docs/specs/sales-anchor-app/ideal-state.md` / `docs/specs/sales-anchor-app/kgi.md` / `docs/specs/README.md` | 2026-07-04 |
+| LINE改善の期限付きGO委任（GOフロー子テーマ） | 設計担当 | PR #3406にPO原文GO #3406を記録。未保存の9月10日委任受領記録を統合し、文書書式を補正。委任経路は未有効、方式はREVISE | 最新HEADのCI確認後、承認済み文書PRをマージ。方式の再審査・実装・有効化は別工程 | docs/handoff/go-record-transcription/line-delegation.md / EV-20260910-LINE-GO-DELEGATION / PR #3406 | 2026-09-12 |
+| GOフロー統一（既存GO転記テーマの延長） | 設計担当 | PR #3418は草案保存としてPOが追従・マージ指示。全体REVISEを維持。L1 #3404本番反映完了 | 文書PRのマージをAPI確認。P1は承認後のbranch作成403で停止、接続権限解消後に同じカード手順3から再開 | PR #3418、EV-20260911-GO-3418-DOC-MERGE、TH-GO-INTAKE-P1-PR-RESULT.json | 2026-09-11 |
+| 文書体系（ナレッジベース）起票 | Agent | `release/doc-estate-theme` worktree で `docs/specs/doc-estate/README.md` / `ideal-state.md` / `kgi.md` を origin/main b4a1ced から新規作成し、`docs/specs/README.md` に 1 行追記済み | `git diff --numstat` と `bash scripts/check-doc-heading-duplicates.sh` で検算し、PR 本文の検算欄へ転記する | `docs/specs/doc-estate/README.md` / `docs/specs/doc-estate/ideal-state.md` / `docs/specs/doc-estate/kgi.md` / `docs/specs/README.md` | 2026-07-03 |
 | Chromatic 完全撤去 | Agent | npm依存・プラグイン・コメント除去済み（PR #chromatic-full-removal）。完了定義: `git grep -i chromatic -- ':!docs/' 0件 + ビルド成功` | PR GO待ち | `docs/handoff/chromatic-full-removal/` | 2026-06-24 |
 | Foundation F1 国台帳 `public.countries` 新設 | Agent | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` を追加し、`frontend/src/constants/countries.ts` を seed source とする migration `20260621_010000_create_countries_master.sql` を生成済み。SQLite 互換の `public.countries` rewrite も `backend/tests/conftest.py` に追加した | lint/test を回し、必要なら migration / docs / line ref を微調整して PR 化へ進める | `backend/app/routers/countries.py` / `backend/app/schemas/countries.py` / `backend/tests/test_countries_master.py` / `backend/tests/conftest.py` / `migrations/20260621_010000_create_countries_master.sql` / `docs/handoff/foundation-f1-countries-master/recon.md` / `docs/handoff/foundation-f1-countries-master/design.md` | 2026-06-21 |
 | Foundation F3 流入元の統制 | Agent | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` を追加・更新中 | pytest / Playwright / lint を回し、backfill report を確認して PR 化へ進める | `backend/app/services/channel_masters.py` / `backend/app/routers/leads.py` / `backend/app/routers/conv_logs.py` / `backend/app/services/tenant.py` / `backend/tests/conftest.py` / `backend/tests/test_channel_type_control.py` / `frontend/src/components/ChannelTypeCombobox.tsx` / `frontend/src/pages/leads/LeadEditPage.tsx` / `frontend/src/pages/leads/LeadsPage.tsx` / `frontend/tests-e2e/lead-channel-control.spec.ts` / `scripts/migrate_20260621_030000_backfill_lead_channel_type.py` / `docs/handoff/foundation-f3-channel-control/recon.md` / `docs/handoff/foundation-f3-channel-control/design.md` | 2026-06-21 |
@@ -38,6 +54,10 @@
 
 | タスク | 完了日 | PR |
 |------|------|---|
+| 受注管理(業務画面)テーマの器作成（3ファイル+索引登録） | 2026-07-04 | #2771 |
+| 受信箱（inbox）親テーマ一式の新設 | 2026-07-04 | #2773 |
+| エージェント完結の設計体制（To-Be 3ファイル標準） | 2026-07-03 | #2757 |
+| 教訓便（起因ラベル・#2761記帳・5W2H-002） | 2026-07-03 | #2764 |
 | Advisor Phase 1 PR-1 顧客別受注履歴API | 2026-06-20 | #2377 |
 | Foundation F2 国の統制（lead.country を台帳から選ぶ） | 2026-06-21 | #2428 |
 | サイドバークリック時の自動折りたたみ + hover 抑止修正 | 2026-06-20 | #2375 / #2376 |
@@ -76,3 +96,73 @@
 - `更新日`: YYYY-MM-DD 形式
 
 完了したタスクは「完了（直近）」テーブルに移動する。30日超過行は削除可。
+
+## PMG インポート関連・進捗（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| 抽出試行記録の構造検証・容量超過記録是正 | root設計 / error_visibility_recon実装 / attempt_record_review検収 | PR #3504 HEAD47f72ab3公開、コードレビューAPPROVE。実DB移行/静的検査成功、Backend3746成功/95skip・coverage65.07% | GO #3504受領・backup再確認済。承認文書保存/最新CI→正式merge・通常配備・実機照合。本便反映前 | EV-20260914-ATTEMPT-INTEGRITY / PR #3504 / recon.md | 2026-09-14 |
+| ワンピース商品追加・解析対策 | 設計・実装担当 | PR #3434提出、GitHub2586成功/95skip、必須13成功。登録26候補静的検査成功 | 番号付きGO記録で手順検査を解消しマージ/配備。書籍区分など33候補の確認継続 | docs/handoff/tcg-product-master-growth/design-keyword.md §15 | 2026-09-11 |
+| TCG 人確認後配信の検証記録 | 設計担当 | 実コードの人工192条件・修正関数7ケース照合済み。文書自己レビューAPPROVE、製品設計REVISE | 文書PRチェック後に条件付き許可の範囲で保存。共通判定/全項目確認/配信接続の正式設計は未完了 | docs/handoff/tcg-product-master-growth/recon.md「人の確認完了と配信を接続するための検証記録」/EV-20260912-HUMAN-REVIEW-DELIVERY-VERIFIED | 2026-09-12 |
+| guards文書の手順・採番整合（依頼1〜3） | Agent | PR #3389マージ済み（c3eaa3d5）。worktree分便・L32人手照合・採番整合を反映 | 評価ゲートの設置・必須化結果は下記とEV-20260910-GUARD-ENFORCEDを参照 | docs/handoff/design-partner-card-ops/guards/04-worktree.md / docs/handoff/design-partner-card-ops/guards/11-lint.md / EV-20260910-GUARDS-DOC | 2026-09-10 |
+| インポート関連・進捗 第1段階 | Agent | PR #3386マージをGitHubで再確認。画面未完成、本番反映未確認 | 解析記録・配信履歴・画面統合の後続設計 | docs/handoff/pmg-import-delivery-ssot/design.md / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG切替の隔離検証 | Terra / 設計担当 | 旧処理取消14件・Docker99件成功。PR #3408マージ済み。running2件復旧は別セッション担当 | PR #3408マージ/自動deploy成功。次は実設定・実配布経路の統合検証設計 | EV-20260910-PMG-CUTOVER-PROBE / docs/handoff/pmg-import-delivery-ssot/recon.md | 2026-09-10 |
+| PMG入口配布・旧処理照合設計 | 設計担当 | PR #3410文書マージ/自動deploy成功。過去全件復元を必須にしない訂正と配布保留契約を草案化、自己審査REVISE | 本番切替時の保留方針をPO承認済み。複数SSHの所有制御と切替境界の観測手段を確定 | EV-20260910-PMG-BARRIER-CONTRACT / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-10 |
+| PMG総合ページ接続 | root / Codex Terra | PR #3416マージ17ebe93f・deploy34476536034成功。unit133件/E2E5件、公開JSとhealth確認済み | 対象取込91投稿の未解決5名をPO承認で新規登録、残件0を本番照会。次は取込確定・抽出開始。解析実行/永続配信履歴/本番切替の設計REVISEは継続 | EV-20260910-PMG-SCREEN-CONNECT / docs/handoff/pmg-import-delivery-ssot/card-screen-connect.md | 2026-09-10 |
+| PMG進捗画面の見やすさ改善 | root / Codex Terra | PR #3424提出済み。unit143/E2E8/build/check:all成功、初回HEADのCIは承認記録以外成功 | GO #3424受領済み。最新main統合後のテスト/CIを確認してマージ。本番未反映 | EV-20260911-PMG-VISUAL-HIERARCHY / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-11 |
+
+
+
+## DB準備テストの領域分離（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| RLS bootstrapの他領域干渉解消 | Codex | PR #3399マージ済み（7e3dd656）。最終実PG2432成功・93スキップ、必須12件成功 | PR #3397マージ済み（a0c0eb7f）。以後は既存テストで維持 | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-RLS-SCOPE | 2026-09-10 |
+
+
+## ガード評価ゲート（依頼4、2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| guards変更の必読・弊害・トレードオフ評価 | Codex | #3401マージ/配備済み。限定必須化済み。評価欠落BLOCKED、復元後13必須成功/CLEAN。試行#3405閉鎖 | 本文書PRで実測結果を正式保存。以後はガード変更時の評価と版照合を維持 | docs/handoff/design-partner-card-ops/guard-authoring-design.md / EV-20260910-GUARD-EVAL | 2026-09-10 |
+
+## Inventory共有テーブル準備（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| inventory準備の共通ロック参加 | Codex | PR #3402マージ済み（89ad29ae）。実PG2467成功/93skip・全CI成功 | deploy34451686912成功、#3401へ取込み・設置済み。追加変更なし | docs/handoff/rls-bootstrap-txn-fix/design.md / EV-20260910-INVENTORY-LOCK | 2026-09-10 |
+
+
+## 在庫補助解析モデル変更
+
+| テーマ | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 在庫補助解析3.1 Flash-Lite | Agent | 3.1へ実装更新・対象ruff成功。GitHub GEMINI_API_KEYをPO提供キーへ更新済み（01:45:14Z） | PR #3425 head e606ce4f: CI2544成功/93skip、唯一の失敗はGO未記録。GO #3425受領済み。最新CI後に正式マージ/デプロイ確認。本番反映未確認 | EV-20260911-INVENTORY-LITE25 / docs/handoff/llm-model-3-5-flash-lite/recon.md | 2026-09-11 |
+
+
+## 商品マスタ画面の引継ぎ（2026-09-10）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| 商品マスタ一覧・CSV画面 | Agent | PR #3422はdd9d3abfマージ・deploy34558334380成功、公開資産の2ルート/health確認済み。PO指定で既存サイドメニューを解析精度管理直下へ移動 | 配置変更PR #3429提出、eslint/build成功。最新CIと番号付きGOを確認して本番反映。CSV試行/44件登録は別便 | docs/handoff/tcg-product-import/recon.md / EV-20260911-PRODUCT-UI-IMPLEMENT | 2026-09-11 |
+
+## LINE在庫・〆・混在投稿の商品単位反映（2026-09-13）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|------|------|------|------|------|------|
+| LINEの〆による他商品消失を防ぐ設計 | stock_contract_01 / 設計担当 | PR3479公開HEAD9711cc40はCI3267成功/95skip/1失敗。残る接続不備を7b172c46でローカル修正・静的検査成功 | PO離席指示に従い追加push/PR更新前で停止。実PG再検証は未実施、全体検収REVISE。境界変更後に正式カードと8群再CI | docs/handoff/tcg-import-latest-only/recon.md / EV-20260913-LINE-STORAGE-LOCAL-READY | 2026-09-13 |
+
+
+## 商品CSVサンプルと登録者情報（2026-09-11）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 空サンプルCSV・User型の限定修正設計 | 設計担当 | 完了。GO #3438でmerge739f772d、本番配備34718060417成功。新backup6.7M/配備HEAD一致/API・App・CSV200/CSV148バイト一致を直接確認 | 製品反映便は完了。文書PR3436もPO「マージしてくれ」受領。最終マージ結果はPR参照。実商品登録/再解析/配信は対象外 | docs/handoff/tcg-product-import/release-result.json / EV-20260913-PRODUCT-CSV-RELEASE | 2026-09-13 |
+| 商品CSV出力・編集・更新往復 | 設計担当/既存実装担当 | PO目標合意・実装〜配備依頼、設計自己審査済み。13製品差分/親読取レビュー済み、FE350/E2E11成功、Backend22unit+23PG定義済みで実行待ち | 最新main313d7796の非競合2ファイルを保持し公開カードでPR/正式CIへ進む。番号付きGO原文は未受領、代筆しない | docs/handoff/tcg-product-import/roundtrip-parent-review.json / EV-20260913-PRODUCT-CSV-ROUNDTRIP-DESIGN | 2026-09-13 |
+| 実商品CSV登録前確認 | 設計担当 | A便設計自己審査APPROVE・PO承認・実装・正式CI・PR3473マージ/本番配備完了。B便8商品更新/44登録はREVISE | B便§19/180例はREVISE。CSVの行単位整合対策§20・4ファイル案/C1–C11を設計自己審査APPROVEでローカル保存。PO承認4ファイル実装差分/静的検査/親レビュー済み。親AST354/直接unit25成功、PG228追加は未実行。PR直前停止、次は公開許可後の正式CI（15分内未測定）。個別値/正解例・運用QAは未完了 | docs/handoff/tcg-product-import/product-name-space-release-result.json / EV-20260913-PRODUCT-NAME-SPACE-RELEASE | 2026-09-13 |
+
+## 商品検索語の全語一致（2026-09-14）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| 商品検索語の全語一致 | 設計/実装担当 | PR3499実装済み。固定正解0→4/4、正式3718成功/95skip/失敗0 | 番号付きGOと既存PM0264配備障害解消待ち。本番未反映 | docs/handoff/tcg-product-import/design.md§24 | 2026-09-14 |

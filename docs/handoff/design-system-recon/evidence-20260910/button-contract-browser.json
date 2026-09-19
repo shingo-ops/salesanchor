@@ -1,0 +1,400 @@
+{
+  "operations": [
+    {
+      "variant": "primary",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "secondary",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "ghost",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "danger",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "outline",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "tab",
+      "mode": "normal",
+      "clickCount": 1,
+      "enterCount": 2,
+      "spaceCount": 3
+    },
+    {
+      "variant": "primary",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "secondary",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "ghost",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "danger",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "outline",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "tab",
+      "mode": "disabled",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "primary",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "secondary",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "ghost",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "danger",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "outline",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    },
+    {
+      "variant": "tab",
+      "mode": "loading",
+      "additionalCount": 0,
+      "sameRef": true
+    }
+  ],
+  "spinners": [
+    {
+      "theme": "light",
+      "id": "inherited",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(26, 32, 44)",
+      "bottom": "rgb(26, 32, 44)",
+      "left": "rgb(26, 32, 44)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "light",
+      "id": "normal",
+      "top": "rgb(30, 58, 138)",
+      "right": "rgb(226, 232, 240)",
+      "bottom": "rgb(226, 232, 240)",
+      "left": "rgb(226, 232, 240)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "light",
+      "id": "on-accent",
+      "top": "rgb(255, 255, 255)",
+      "right": "rgba(255, 255, 255, 0.4)",
+      "bottom": "rgba(255, 255, 255, 0.4)",
+      "left": "rgba(255, 255, 255, 0.4)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "light",
+      "variant": "primary",
+      "parent": "rgb(255, 255, 255)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(255, 255, 255)",
+      "bottom": "rgb(255, 255, 255)",
+      "left": "rgb(255, 255, 255)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "light",
+      "variant": "secondary",
+      "parent": "rgb(74, 85, 104)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(74, 85, 104)",
+      "bottom": "rgb(74, 85, 104)",
+      "left": "rgb(74, 85, 104)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "light",
+      "variant": "ghost",
+      "parent": "rgb(26, 32, 44)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(26, 32, 44)",
+      "bottom": "rgb(26, 32, 44)",
+      "left": "rgb(26, 32, 44)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "light",
+      "variant": "danger",
+      "parent": "rgb(229, 62, 62)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(229, 62, 62)",
+      "bottom": "rgb(229, 62, 62)",
+      "left": "rgb(229, 62, 62)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "light",
+      "variant": "outline",
+      "parent": "rgb(26, 32, 44)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(26, 32, 44)",
+      "bottom": "rgb(26, 32, 44)",
+      "left": "rgb(26, 32, 44)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "light",
+      "variant": "tab",
+      "parent": "rgb(74, 85, 104)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(74, 85, 104)",
+      "bottom": "rgb(74, 85, 104)",
+      "left": "rgb(74, 85, 104)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "id": "inherited",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(241, 245, 249)",
+      "bottom": "rgb(241, 245, 249)",
+      "left": "rgb(241, 245, 249)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "dark",
+      "id": "normal",
+      "top": "rgb(91, 141, 217)",
+      "right": "rgb(51, 65, 85)",
+      "bottom": "rgb(51, 65, 85)",
+      "left": "rgb(51, 65, 85)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "dark",
+      "id": "on-accent",
+      "top": "rgb(255, 255, 255)",
+      "right": "rgba(255, 255, 255, 0.4)",
+      "bottom": "rgba(255, 255, 255, 0.4)",
+      "left": "rgba(255, 255, 255, 0.4)",
+      "animation": "sa-spin"
+    },
+    {
+      "theme": "dark",
+      "variant": "primary",
+      "parent": "rgb(255, 255, 255)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(255, 255, 255)",
+      "bottom": "rgb(255, 255, 255)",
+      "left": "rgb(255, 255, 255)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "variant": "secondary",
+      "parent": "rgb(203, 213, 225)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(203, 213, 225)",
+      "bottom": "rgb(203, 213, 225)",
+      "left": "rgb(203, 213, 225)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "variant": "ghost",
+      "parent": "rgb(241, 245, 249)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(241, 245, 249)",
+      "bottom": "rgb(241, 245, 249)",
+      "left": "rgb(241, 245, 249)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "variant": "danger",
+      "parent": "rgb(229, 62, 62)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(229, 62, 62)",
+      "bottom": "rgb(229, 62, 62)",
+      "left": "rgb(229, 62, 62)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "variant": "outline",
+      "parent": "rgb(241, 245, 249)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(241, 245, 249)",
+      "bottom": "rgb(241, 245, 249)",
+      "left": "rgb(241, 245, 249)",
+      "hidden": "true",
+      "role": null
+    },
+    {
+      "theme": "dark",
+      "variant": "tab",
+      "parent": "rgb(203, 213, 225)",
+      "top": "rgba(0, 0, 0, 0)",
+      "right": "rgb(203, 213, 225)",
+      "bottom": "rgb(203, 213, 225)",
+      "left": "rgb(203, 213, 225)",
+      "hidden": "true",
+      "role": null
+    }
+  ],
+  "reducedMotion": [
+    {
+      "id": "primary",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "secondary",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "ghost",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "danger",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "outline",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "tab",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "inherited",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "normal",
+      "name": "none",
+      "animations": 0
+    },
+    {
+      "id": "on-accent",
+      "name": "none",
+      "animations": 0
+    }
+  ],
+  "diagnostics": [
+    {
+      "source": "entry-request",
+      "url": "http://127.0.0.1:5173/entry.tsx"
+    },
+    {
+      "source": "console",
+      "type": "debug",
+      "text": "[vite] connecting...",
+      "location": {
+        "url": "http://127.0.0.1:5173/@vite/client",
+        "line": 850,
+        "column": 8,
+        "lineNumber": 850,
+        "columnNumber": 8
+      }
+    },
+    {
+      "source": "websocket",
+      "payload": "{\"type\":\"connected\"}"
+    },
+    {
+      "source": "console",
+      "type": "debug",
+      "text": "[vite] connected.",
+      "location": {
+        "url": "http://127.0.0.1:5173/@vite/client",
+        "line": 954,
+        "column": 11,
+        "lineNumber": 954,
+        "columnNumber": 11
+      }
+    },
+    {
+      "source": "console",
+      "type": "info",
+      "text": "%cDownload the React DevTools for a better development experience: https://reactjs.org/link/react-devtools font-weight:bold",
+      "location": {
+        "url": "http://127.0.0.1:5173/@fs/private/tmp/frontend-button-contract-20260911/vite-cache/deps/react-dom-CcnZupb6.js?v=a350dedd",
+        "line": 17231,
+        "column": 51,
+        "lineNumber": 17231,
+        "columnNumber": 51
+      }
+    }
+  ],
+  "status": "PASS"
+}

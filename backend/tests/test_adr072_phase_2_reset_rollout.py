@@ -39,8 +39,8 @@ _EXPECTED_RESET_CALLS = {
     # staff.py: create / update / delete / patch-me-profile の 4 箇所
     #   (L228 / L252 は public.users 操作なので Phase 2 対象外)
     "staff": 4,
-    # suppliers.py: create / update / delete の 3 箇所
-    "suppliers": 3,
+    # suppliers.py: create / update / delete / csv_import_commit の 4 箇所
+    "suppliers": 4,
     # roles.py: create / update / delete / set_permissions / set_user_roles の 5 箇所
     "roles": 5,
     # shifts.py: create / delete の 2 箇所

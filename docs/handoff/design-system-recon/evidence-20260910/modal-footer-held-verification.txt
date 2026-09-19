@@ -1,0 +1,1 @@
+Generator保存をroot再検算: backup SHA256 7/7、tracked HEAD一致6/6、新規test作業tree不在。草案本体とpatchは /tmp/frontend-raw-buttons-20260911/held-raw-shared に保持。未検証草案は今回PR製品差分に含めない。

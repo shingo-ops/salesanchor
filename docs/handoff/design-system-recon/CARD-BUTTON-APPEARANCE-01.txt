@@ -1,0 +1,45 @@
+CARD-BUTTON-APPEARANCE-01
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-BUTTON-APPEARANCE-01
+照合§5.5: 1○実パス、2○まだPRなし、3○親へ全文、4○次便Button外観GO受領、5○公式origin/main起点、6○AG/14files、7○70利用/18class/352raw実測。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、11-lint.md、design-partner.md§5.5、frontend/AGENTS.md。
+担当Generator。あなたは他者と並行、他者変更を戻さない。rootは文書のみ所有。製品実装/検証は下記14filesだけ所有。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance
+設計正本: docs/specs/design-system/design.md §AG（全文厳守）、§P/Q/Z/AA/AC。
+根拠: docs/handoff/design-system-recon/evidence-20260910/button-appearance-usage.md とJSON。baseline origin/main e81dd3ec。旧監査b16a4224とのfrontend差分0。
+所有14files（frontend/src/以下）: components/Button.tsx、components/Button.css、components/Button.test.tsx、components/Button.stories.tsx、components.css、tokens.css、index.css、pages/company-detail/CompanyDetailPage.tsx、pages/dashboard/PriorityProspectsSection.tsx、pages/dashboard/WeeklyAdvisorSection.tsx、pages/dashboard/PriorityProspectsSection.css、pages/dashboard/WeeklyAdvisorSection.css、pages/schedule/SchedulePageImpl.tsx、pages/schedule.css。
+禁止: 正式文書/台帳編集、他製品/backend/API/DB/依存/CI変更、GO創作、commit/push/PR/merge/deploy、別AI起動。失敗/不明/範囲違い/自動承認審査拒否は親へ停止報告。正規require_escalated申請可。
+保存先: /tmp/frontend-button-appearance-20260911/ 以下。過去別便のログ上書き禁止。
+
+手順0
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance && ./scripts/dev/executor-preflight.sh
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance && git status --short
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance && git rev-parse HEAD
+期待: baseline一致、root文書のみ変更、他者保持。正式設計AGを全文読んで矛盾/不明があれば実装前に止める。
+
+手順1 実装
+- AGの新comp-btn基底/variantへ切替、className/styleを型から閉鎖、layoutClassName同button、native rest順/ref/type省略/loading処理は保持。新イベントハンドラ/検索機能は追加しない。
+- CSSの通常/hover/active/selected/disabled/loading/focus、sm/md/lg/iconOnly/mobileはAG数値・トークンに厳密一致。旧raw352へ適用しない。Button.css旧mobile btn44pxルールはcomponents.cssへ同値移管。未使用旧spinner CSSのみ除去。
+- indexに2素材をテーマごと1回、AG既存4用途を同値aliasへ。新4用途color token両テーマ、48/2/2の非色tokenはtokens.css。色本文/hex数を増やす迂回禁止。
+- CompanyDetail6をtab/active/aria-pressed undefined、onClick switchTabと未保存確認を保持。Company側旧tab CSSとraw3は非接触。
+- dashboard3nowrap class除去/2autoをlayoutClassNameへ。schedule7class除去、create fullWidth。該当旧CSSは全src利用0を確認したクラスだけ消す。別用途ルールを消さない。
+- unit旧style透過試験は配置入口とstyle/className拒否の型試験へ更新。native操作/aria override/ref/disabled保持。Storybookに明暗/状態確認できる既存方式の見本を追加、UI文言は既存i18nと規則を維持。
+
+手順2 検証
+- node_modulesが無ければ既存lockを使うnpm ci（lock/manifest変更禁止）。/tmp以外のfixtureを新設しない。
+- 型宣言出所監査原稿をコピーしてbefore/afterを同方式で比較。元Button70欠落0、外部class/style0、イベント/type/既存aria原文保持。AGのCompany6 aria-pressed undefinedだけ明示差分。raw352の変更0を実物対応で確認。rootのaudit.cjsをそのまま型名文字列マッチで0件誤検出にしない。
+- 実Button+実CSS Chromiumで§AG配色190組を実測（hover/mousedown、selected優先、5surface合成）、全4.5以上。指定色だけ計算して実表示と称しない。focus2px/offset2px/色、表スクロール端/モーダル端/隣接buttonの輪郭欠けを限定fixtureで確認。
+- 390/767/768/1279/1280pxの寸法、6variant/3size/長い日英の名前、iconOnly正方形、loading通常色/disabled hover不変、reduced motion、Tab/ShiftTab/Enter/Space各1回・disabled/loading0回。SSR限定の検証と実React操作検証を区別、console/pageerror0。
+- 旧raw各variant/btn-sm複合の前後computed幅/高/最小高/色/角丸を同じviewportテーマで比較（旧mobile移管で退行0）。index既存4用途の色同値。import順を実App/Storybookに合わせる。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend && npm run test:unit
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend && npm run check:all
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend && npm run build
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance/frontend && npm run build-storybook
+- 変更TS/TSXはeslint --max-warnings=0、CSSは保存前と同じ既存検査。hex数は既存ratchetと同じ正規表現でbaselineと比較し各ファイル増加0。全コマンドexit/実数/hashを保存。
+手順3
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance && git diff --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-button-appearance && git diff --stat -- frontend
+期待: 許可14製品以内、他者/root文書不変。製品SHA256/行数と検証ログのmanifestを保存。未実施の全画面統一・PO目視を明示。
+報告冒頭: 本報告はカード CARD-BUTTON-APPEARANCE-01 の実行結果である。
+親へ生出力全文、長いログは保存先の実在ファイル。失敗時は手順番号/最後のコマンド/理由を省略しない。
+END OF CARD

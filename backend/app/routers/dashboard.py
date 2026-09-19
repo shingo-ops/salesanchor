@@ -98,16 +98,18 @@ async def get_dashboard(
     result = await db.execute(text("""
         SELECT
             COUNT(*) AS total,
-            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'out_of_scope')) AS open_count,
+            COUNT(*) FILTER (WHERE status NOT IN ('negotiating', 'existing_customer', 'lost', 'follow_up_short', 'follow_up_long', 'lead_out_of_scope', 'negotiating_out_of_scope')) AS open_count,
             COUNT(*) FILTER (WHERE type = 'Inbound') AS inbound,
             COUNT(*) FILTER (WHERE type = 'Outbound') AS outbound,
-            COUNT(*) FILTER (WHERE converted_deal_id IS NOT NULL) AS converted
+            COUNT(*) FILTER (WHERE status IN ('negotiating', 'existing_customer', 'lost', 'negotiating_out_of_scope')) AS converted,
+            COUNT(*) FILTER (WHERE status NOT IN ('lead_out_of_scope', 'negotiating_out_of_scope')) AS conversion_denominator
         FROM leads
     """))
     lead_row = result.mappings().first() or {}
     lead_total = lead_row.get("total", 0) or 0
     lead_converted = lead_row.get("converted", 0) or 0
-    conversion_rate = round((lead_converted / lead_total * 100), 1) if lead_total > 0 else 0.0
+    conversion_denominator = lead_row.get("conversion_denominator", 0) or 0
+    conversion_rate = round((lead_converted / conversion_denominator * 100), 1) if conversion_denominator > 0 else 0.0
 
     # 注文集計
     result = await db.execute(text("""

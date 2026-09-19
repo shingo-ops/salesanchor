@@ -1,0 +1,6 @@
+{
+  "mode": "direct invocation of AST-selected actual test functions, not pytest runner",
+  "passed": 25,
+  "network_guard": "socket.connect rejected",
+  "source_sha256": "4e7537cc17502989b930a3d671e90f86bf291238cb26f872d0c5b96f8caabfdf"
+}

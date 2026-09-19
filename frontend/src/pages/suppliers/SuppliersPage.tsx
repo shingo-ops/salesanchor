@@ -1,16 +1,20 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
+import { TextField } from "../../components/TextField";
+import { HeaderButton } from "../../components/HeaderButton";
 
 interface Supplier {
   id: number; supplier_code: string | null; name: string; contact_name: string | null;
@@ -35,6 +39,7 @@ export default function SuppliersPage() {
   const { t } = useTranslation();
   const { hasPermission } = usePermissions();
   const navigate = useNavigate();
+  const exportLock = useRef(false);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   // 新規作成モーダル
   const [showCreate, setShowCreate] = useState(false);
@@ -50,10 +55,15 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const PER_PAGE = 100;
   const [hasNext, setHasNext] = useState(false);
+  // 検索（MasterListEditor パターンと統一）
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
 
   const load = async () => {
     try {
-      const data = await api.get<Supplier[]>(`/suppliers?page=${page}&per_page=${PER_PAGE}`);
+      const params = new URLSearchParams({ page: String(page), per_page: String(PER_PAGE) });
+      if (search.trim()) params.set("search", search.trim());
+      const data = await api.get<Supplier[]>(`/suppliers?${params.toString()}`);
       setSuppliers(data);
       setHasNext(data.length === PER_PAGE);
     } catch (e) {
@@ -63,7 +73,7 @@ export default function SuppliersPage() {
     }
   };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [page]);
+  useEffect(() => { load(); }, [page, search]);
 
   /* ── 新規作成（Modal） ── */
   const handleCreateSubmit = async (e: FormEvent) => {
@@ -95,17 +105,89 @@ export default function SuppliersPage() {
     catch (e) { setError(e instanceof Error ? e.message : t("common.deleteError")); }
   };
 
+  async function handleExport() {
+    if (exportLock.current) return;
+    exportLock.current = true;
+    try {
+      const blob = await api.getBlob("/suppliers/export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `suppliers_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      exportLock.current = false;
+    }
+  }
+
   return (
     <PageLayout
       navKey="nav.suppliers"
       subtitleKey="suppliers.subtitle"
-      headerAction={hasPermission("suppliers.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>{t("suppliers.newSupplier")}</button>
-        </div>
-      ) : undefined}
+      headerAction={
+        <>
+          {hasPermission("suppliers.view") && (
+            <HeaderButton variant="secondary" onClick={() => void handleExport()} data-testid="suppliers-export">
+              {t("supplierCsv.exportButton")}
+            </HeaderButton>
+          )}
+          {hasPermission("suppliers.create") && (
+            <HeaderButton variant="primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }} data-testid="suppliers-new">
+              {t("suppliers.newSupplier")}
+            </HeaderButton>
+          )}
+          {hasPermission("suppliers.create") && (
+            <HeaderButton variant="primary" onClick={() => navigate("/suppliers/import")} data-testid="suppliers-import">
+              {t("supplierCsv.importButton")}
+            </HeaderButton>
+          )}
+        </>
+      }
     >
       {error && <div className="error-message">{error}</div>}
+
+      {/* 検索バー + 新規作成ボタン（MasterListEditor パターンと統一） */}
+      <ContentToolbar
+        left={
+          <form
+            className="search-bar"
+            style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}
+            onSubmit={(e) => {
+              e.preventDefault();
+              setPage(1);
+              setSearch(searchInput.trim());
+            }}
+          >
+            <TextField
+              type="text"
+              size="md"
+              placeholder={t("common.search")}
+              aria-label={t("common.search")}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              data-testid="suppliers-search"
+            />
+            <button type="submit" className="btn-secondary field-h-md" data-testid="suppliers-search-btn">
+              {t("common.search")}
+            </button>
+            {search && (
+              <button
+                type="button"
+                className="btn-sm"
+                onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
+              >
+                {t("common.clear")}
+              </button>
+            )}
+          </form>
+        }
+        right={undefined}
+      />
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal
@@ -120,8 +202,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setCreateForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>
@@ -139,8 +221,8 @@ export default function SuppliersPage() {
             onChange={(field, value) => setEditForm(prev => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button variant="secondary" size="md" type="button" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

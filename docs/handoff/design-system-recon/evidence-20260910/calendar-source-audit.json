@@ -1,0 +1,50 @@
+{
+  "baseline": "a5e5a250aabe2e244ebf64c24bef40b5db40541c",
+  "rows": [
+    {
+      "id": "meeting",
+      "colorVar": "#1a73e8",
+      "tintVar": "#e8f0fe",
+      "textVar": "#174ea6"
+    },
+    {
+      "id": "personal",
+      "colorVar": "#9333ea",
+      "tintVar": "#f3e8ff",
+      "textVar": "#6b21a8"
+    },
+    {
+      "id": "procurement",
+      "colorVar": "#0f9d58",
+      "tintVar": "#e6f4ea",
+      "textVar": "#166534"
+    },
+    {
+      "id": "shipping",
+      "colorVar": "#d93025",
+      "tintVar": "#fce8e6",
+      "textVar": "#b91c1c"
+    },
+    {
+      "id": "billing",
+      "colorVar": "#f29900",
+      "tintVar": "#fef3c7",
+      "textVar": "#92400e"
+    },
+    {
+      "id": "release",
+      "colorVar": "#5f6368",
+      "tintVar": "#f3f4f6",
+      "textVar": "#374151"
+    },
+    {
+      "id": "holiday",
+      "colorVar": "#7e22ce",
+      "tintVar": "#f5f3ff",
+      "textVar": "#6b21a8"
+    }
+  ],
+  "properties": 21,
+  "distinctColors": 20,
+  "implementationStarted": false
+}

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" font-family="sans-serif">
+  <title>テーマフォルダの構成（3ファイル標準＋定点観測台帳）</title>
+  <rect x="60" y="30" width="560" height="210" rx="14" fill="none" stroke="#999" stroke-dasharray="6 4"/>
+  <text x="84" y="58" fill="#333" font-size="13">docs/specs/&lt;テーマ名&gt;/（1テーマ1フォルダ）</text>
+  <g font-size="14" text-anchor="middle" fill="#333">
+    <rect x="90" y="76" width="250" height="52" rx="8" stroke="#888" fill="#f2f2f2"/><text x="215" y="98">README.md（表紙・案内）</text>
+    <rect x="360" y="76" width="230" height="52" rx="8" stroke="#7d6fae" fill="#efeaf7"/><text x="475" y="98">ideal-state.md</text>
+    <rect x="90" y="148" width="250" height="52" rx="8" stroke="#7d6fae" fill="#efeaf7"/><text x="215" y="170">kgi.md（合格条件と進捗）</text>
+    <rect x="360" y="148" width="230" height="52" rx="8" stroke="#c99a3d" fill="#fcf3dc"/><text x="475" y="170">track-record.md</text>
+  </g>
+  <g font-size="11" text-anchor="middle" fill="#666">
+    <text x="475" y="116">POの言葉のみ・書換禁止</text><text x="475" y="188">1便＝1行の定点観測</text>
+  </g>
+  <text x="340" y="270" fill="#555" font-size="12" text-anchor="middle">全便が track-record に1行記帳 → どのPRが0で完了し、どこで不具合が出たかを誰でも遡れる</text>
+</svg>

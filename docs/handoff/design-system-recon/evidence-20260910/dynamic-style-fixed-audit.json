@@ -1,0 +1,2888 @@
+{
+  "summary": {
+    "sha": "3bdf33d55d1dc7ee90a7eea7fd112dc76d51b1fe",
+    "files": 232,
+    "styles": 924,
+    "dynamicEntries": 172,
+    "styleExpression": 52,
+    "dynamicProperty": 103,
+    "styleSpread": 17,
+    "jsxSpreads": 6,
+    "specialEntries": 0
+  },
+  "rows": [
+    {
+      "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+      "line": 191,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: channel.platform === value ? \"var(--bg-muted)\" : \"transparent\"",
+      "id": "DS-001",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ChannelTypeCombobox"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/CountryCombobox.tsx",
+      "line": 190,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: country.code === value ? \"var(--bg-muted)\" : \"transparent\"",
+      "id": "DS-002",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "CountryCombobox"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 189,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "col.width ? { width: col.width } : undefined",
+      "id": "DS-003",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "DataTable"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+      "line": 160,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "background",
+      "expression": "background: cfg.bg",
+      "id": "DS-004",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "GoogleCalendarStatusBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+      "line": 161,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "color",
+      "expression": "color: cfg.color",
+      "id": "DS-005",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "GoogleCalendarStatusBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventoryPicker.tsx",
+      "line": 255,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "top",
+      "expression": "top: `${rect.top}px`",
+      "id": "DS-006",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPicker"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventoryPicker.tsx",
+      "line": 256,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "left",
+      "expression": "left: `${rect.left}px`",
+      "id": "DS-007",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPicker"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventoryPicker.tsx",
+      "line": 257,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "width",
+      "expression": "width: `${Math.max(rect.width, Math.min(560, Math.max(0, window.innerWidth - rect.left - 16)))}px`",
+      "id": "DS-008",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPicker"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventoryPicker.tsx",
+      "line": 311,
+      "kind": "dynamic-property",
+      "tag": "li",
+      "property": "background",
+      "expression": "background: isActive ? \"var(--bg-hover)\" : \"transparent\"",
+      "id": "DS-009",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPicker"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventoryPicker.tsx",
+      "line": 370,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: isZero ? \"var(--color-warning)\" : \"inherit\"",
+      "id": "DS-010",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPicker"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 297,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "opacity",
+      "expression": "opacity: opToggleDisabled ? \"var(--opacity-disabled)\" : 1",
+      "id": "DS-011",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 310,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: op === \"and\" ? \"var(--accent-bg)\" : \"transparent\"",
+      "id": "DS-012",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 311,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "color",
+      "expression": "color: op === \"and\" ? \"var(--on-accent)\" : \"inherit\"",
+      "id": "DS-013",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 312,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "cursor",
+      "expression": "cursor: opToggleDisabled ? \"not-allowed\" : \"pointer\"",
+      "id": "DS-014",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 326,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: op === \"or\" ? \"var(--accent-bg)\" : \"transparent\"",
+      "id": "DS-015",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 327,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "color",
+      "expression": "color: op === \"or\" ? \"var(--on-accent)\" : \"inherit\"",
+      "id": "DS-016",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 328,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "cursor",
+      "expression": "cursor: opToggleDisabled ? \"not-allowed\" : \"pointer\"",
+      "id": "DS-017",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 363,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "top",
+      "expression": "top: `${dropdownRect.top}px`",
+      "id": "DS-018",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 364,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "left",
+      "expression": "left: `${dropdownRect.left}px`",
+      "id": "DS-019",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 368,
+      "kind": "dynamic-property",
+      "tag": "ul",
+      "property": "width",
+      "expression": "width: `${Math.max(dropdownRect.width, Math.min(720, Math.max(0, window.innerWidth - dropdownRect.left - 16)))}px`",
+      "id": "DS-020",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 421,
+      "kind": "dynamic-property",
+      "tag": "li",
+      "property": "background",
+      "expression": "background: isActive\n                      ? \"var(--bg-hover)\"\n                      : \"transparent\"",
+      "id": "DS-021",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 424,
+      "kind": "dynamic-property",
+      "tag": "li",
+      "property": "opacity",
+      "expression": "opacity: isZero ? 'var(--opacity-skipped)' : 'var(--opacity-full)'",
+      "id": "DS-022",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 497,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: isZero ? \"var(--color-warning)\" : \"inherit\"",
+      "id": "DS-023",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventorySearchBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/MergeCompanyModal.tsx",
+      "line": 216,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "background",
+      "expression": "background: c.id === selectedId ? \"var(--warning-bg)\" : undefined",
+      "id": "DS-024",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "MergeCompanyModal"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/MergeContactModal.tsx",
+      "line": 214,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "background",
+      "expression": "background: c.id === selectedId ? \"var(--warning-bg)\" : undefined",
+      "id": "DS-025",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "MergeContactModal"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 203,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "background",
+      "expression": "background: c.id === selectedId ? \"var(--warning-bg)\" : undefined",
+      "id": "DS-026",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "MergeLeadModal"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/components/loading/ProgressBar.tsx",
+      "line": 29,
+      "kind": "style-expression",
+      "tag": "div",
+      "expression": "style",
+      "id": "DS-027",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProgressBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/loading/ProgressBar.tsx",
+      "line": 59,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${pct}%`",
+      "id": "DS-028",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProgressBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/loading/Skeleton.tsx",
+      "line": 14,
+      "kind": "style-expression",
+      "tag": "span",
+      "expression": "style",
+      "id": "DS-029",
+      "category": "existing-common-component-props",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "bar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/components/loading/Spinner.tsx",
+      "line": 26,
+      "kind": "style-expression",
+      "tag": "span",
+      "expression": "style",
+      "id": "DS-030",
+      "category": "existing-common-component-props",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "Spinner"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 106,
+      "kind": "style-expression",
+      "tag": "HeroIcon",
+      "expression": "style",
+      "id": "DS-031",
+      "category": "existing-common-component-props",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "hi"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 319,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "width",
+      "expression": "width: size",
+      "id": "DS-032",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 319,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "height",
+      "expression": "height: size",
+      "id": "DS-033",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 329,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "width",
+      "expression": "width: size",
+      "id": "DS-034",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 329,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "height",
+      "expression": "height: size",
+      "id": "DS-035",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 343,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "width",
+      "expression": "width: size",
+      "id": "DS-036",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/constants/icons.tsx",
+      "line": 343,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "height",
+      "expression": "height: size",
+      "id": "DS-037",
+      "category": "icon-size",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "PlatformIcon"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+      "line": 147,
+      "kind": "style-expression",
+      "tag": "tr",
+      "expression": "isHighlighted\n                        ? { color: \"var(--color-error)\", fontWeight: 500 }\n                        : undefined",
+      "id": "DS-038",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。",
+      "existingOwnerChain": [
+        "DiagnosticsSection"
+      ]
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/components/DataList.tsx",
+      "line": 8,
+      "kind": "style-expression",
+      "tag": "div",
+      "expression": "{ '--data-list-column-count': visibleColumns.length } as React.CSSProperties",
+      "id": "DS-039",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "DataList"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/components/DataList.tsx",
+      "line": 8,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "minWidth",
+      "expression": "minWidth: column.minWidth",
+      "id": "DS-040",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "DataList"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/components/DataList.tsx",
+      "line": 8,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "minWidth",
+      "expression": "minWidth: column.minWidth",
+      "id": "DS-041",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "DataList"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 181,
+      "kind": "style-expression",
+      "tag": "section",
+      "expression": "sectionStyle",
+      "id": "DS-042",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 189,
+      "kind": "style-expression",
+      "tag": "section",
+      "expression": "sectionStyle",
+      "id": "DS-043",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 196,
+      "kind": "style-expression",
+      "tag": "section",
+      "expression": "sectionStyle",
+      "id": "DS-044",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 225,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "border",
+      "expression": "border: `1px solid ${isResolved ? \"var(--color-success-border)\" : \"var(--border-color)\"}`",
+      "id": "DS-045",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 227,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "background",
+      "expression": "background: isResolved ? \"var(--color-success-bg)\" : \"var(--bg-secondary)\"",
+      "id": "DS-046",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/features/tcg-import-review/ReviewSection.tsx",
+      "line": 230,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "marginBottom",
+      "expression": "marginBottom: isResolved ? 0 : \"0.5rem\"",
+      "id": "DS-047",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewSection"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "line": 81,
+      "kind": "dynamic-property",
+      "tag": "td",
+      "property": "fontWeight",
+      "expression": "fontWeight: i < 3 ? \"var(--font-weight-bold)\" : \"var(--font-weight-normal)\"",
+      "id": "DS-048",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "BadgesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 338,
+      "kind": "style-expression",
+      "tag": "div",
+      "expression": "bannerStyle",
+      "id": "DS-049",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ChannelsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 508,
+      "kind": "style-expression",
+      "tag": "div",
+      "expression": "tokenWarn ? { color: \"var(--warning-text)\", fontWeight: \"var(--font-weight-semi)\" } : undefined",
+      "id": "DS-050",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ChannelsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 221,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${clamped}%`",
+      "id": "DS-051",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "AchievementBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 221,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "background",
+      "expression": "background: color",
+      "id": "DS-052",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "AchievementBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 262,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color:\n            g.achievement_rate >= 100\n              ? \"var(--success)\"\n              : g.achievement_rate >= 70\n              ? \"var(--accent)\"\n              : \"var(--danger)\"",
+      "id": "DS-053",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "GoalRow"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelRevenuePage.tsx",
+      "line": 79,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${Math.min(achievePct, 100)}%`",
+      "id": "DS-054",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "FunnelRevenuePage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelRevenuePage.tsx",
+      "line": 112,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${Math.round((split.new / totalSplit) * 100)}%`",
+      "id": "DS-055",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "FunnelRevenuePage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 76,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${clamped}%`",
+      "id": "DS-056",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "AchievementBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 76,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "background",
+      "expression": "background: color",
+      "id": "DS-057",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "AchievementBar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 279,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${Math.min(achievePct, 100)}%`",
+      "id": "DS-058",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RevenueSummaryCard"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 291,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "width",
+      "expression": "width: `${Math.round((split.new / totalSplit) * 100)}%`",
+      "id": "DS-059",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RevenueSummaryCard"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 114,
+      "kind": "dynamic-property",
+      "tag": "aside",
+      "property": "display",
+      "expression": "display: inboxSettings.showRightPanel ? undefined : \"none\"",
+      "id": "DS-060",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InboxKartePanel"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 336,
+      "kind": "dynamic-property",
+      "tag": "th",
+      "property": "textAlign",
+      "expression": "textAlign: align ?? \"left\"",
+      "id": "DS-061",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "sortTh",
+        "InventoryPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 360,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: active ? \"var(--accent)\" : \"var(--text-muted)\"",
+      "id": "DS-062",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "sortTh",
+        "InventoryPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 455,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "visibility",
+      "expression": "visibility: loading ? \"visible\" : \"hidden\"",
+      "id": "DS-063",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "InventoryPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 342,
+      "kind": "style-spread",
+      "tag": "tr",
+      "expression": "...rowStyle",
+      "id": "DS-064",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProductsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 342,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "cursor",
+      "expression": "cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined)",
+      "id": "DS-065",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProductsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 377,
+      "kind": "style-spread",
+      "tag": "tr",
+      "expression": "...rowStyle",
+      "id": "DS-066",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProductsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 377,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "cursor",
+      "expression": "cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined)",
+      "id": "DS-067",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ProductsPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 124,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "opacity",
+      "expression": "opacity: statusFilter === \"\" || active ? 1 : 0.4",
+      "id": "DS-068",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "QuotesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 125,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "outline",
+      "expression": "outline: active ? \"2px solid var(--accent)\" : \"none\"",
+      "id": "DS-069",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "QuotesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 352,
+      "kind": "dynamic-property",
+      "tag": "li",
+      "property": "marginLeft",
+      "expression": "marginLeft: `${level * 16}px`",
+      "id": "DS-070",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 355,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "borderLeft",
+      "expression": "borderLeft: `4px solid ${r.color || \"var(--border-color)\"}`",
+      "id": "DS-071",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 381,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: selectedRole.color || \"var(--bg-hover)\"",
+      "id": "DS-072",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 500,
+      "kind": "dynamic-property",
+      "tag": "label",
+      "property": "background",
+      "expression": "background: roleForm.color",
+      "id": "DS-073",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 516,
+      "kind": "dynamic-property",
+      "tag": "label",
+      "property": "background",
+      "expression": "background: c",
+      "id": "DS-074",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 560,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: r.color || \"var(--bg-hover)\"",
+      "id": "DS-075",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "RolesPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 203,
+      "kind": "style-expression",
+      "tag": "div",
+      "expression": "position",
+      "id": "DS-076",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "SchedulePopover"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 212,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: cssVar(meta.tintVar)",
+      "id": "DS-077",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "SchedulePopover"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 212,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: cssVar(meta.textVar)",
+      "id": "DS-078",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "SchedulePopover"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 517,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: owner.color",
+      "id": "DS-079",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleSidebar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 525,
+      "kind": "dynamic-property",
+      "tag": "input",
+      "property": "accentColor",
+      "expression": "accentColor: owner.color",
+      "id": "DS-080",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleSidebar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 548,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: owner.color",
+      "id": "DS-081",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleSidebar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 556,
+      "kind": "dynamic-property",
+      "tag": "input",
+      "property": "accentColor",
+      "expression": "accentColor: owner.color",
+      "id": "DS-082",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleSidebar"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 638,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: ownerMeta.color",
+      "id": "DS-083",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 645,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: cssVar(meta.tintVar)",
+      "id": "DS-084",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 645,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: cssVar(meta.textVar)",
+      "id": "DS-085",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 674,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "top",
+      "expression": "top: `calc(${currentTime.getHours() + currentTime.getMinutes() / 60} * var(--schedule-row-height))`",
+      "id": "DS-086",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 684,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "top",
+      "expression": "top: `calc(${hour} * var(--schedule-row-height))`",
+      "id": "DS-087",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 700,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "top",
+      "expression": "top: `calc(${laneItem.top} * 1px)`",
+      "id": "DS-088",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 701,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "left",
+      "expression": "left: `calc(${laneItem.left}% + var(--space-1))`",
+      "id": "DS-089",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 702,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "width",
+      "expression": "width: `calc(${laneItem.width}% - var(--space-2))`",
+      "id": "DS-090",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 703,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "height",
+      "expression": "height: `calc(${laneItem.height} * 1px)`",
+      "id": "DS-091",
+      "category": "existing-geometry",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 704,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: ownerMeta.color",
+      "id": "DS-092",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 715,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: cssVar(meta.tintVar)",
+      "id": "DS-093",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 715,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: cssVar(meta.textVar)",
+      "id": "DS-094",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleWeekGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 788,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: ownerMeta.color",
+      "id": "DS-095",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleMonthGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 798,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: cssVar(meta.tintVar)",
+      "id": "DS-096",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleMonthGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 798,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: cssVar(meta.textVar)",
+      "id": "DS-097",
+      "category": "calendar-category-token",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ScheduleMonthGrid"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "4-semantic-color-tokens",
+      "mappingRule": "既存関数とcategory処理を保持し、参照先をカレンダー用途色正本に接続。"
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 20,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: owner.color",
+      "id": "DS-098",
+      "category": "user-configurable-color",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "OwnerBadge"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "3-existing-user-color-entry",
+      "mappingRule": "既存関数に名前付き色入口を持たせ色のみ保持。型/値/fallback/clamp/入力挙動を変更しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 334,
+      "kind": "dynamic-property",
+      "tag": "input",
+      "property": "width",
+      "expression": "width: SEARCH_WIDTH",
+      "id": "DS-099",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "KnowledgeAliasesTab"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 412,
+      "kind": "dynamic-property",
+      "tag": "input",
+      "property": "width",
+      "expression": "width: SEARCH_WIDTH",
+      "id": "DS-100",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "KnowledgeAliasesTab"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "2-retain-existing-layout-owner",
+      "mappingRule": "既存関数/計算/配置指定を保持。新adapterなし。数値直値の材料規則は別途維持。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 525,
+      "kind": "style-expression",
+      "tag": "tr",
+      "expression": "row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined",
+      "id": "DS-101",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。",
+      "existingOwnerChain": [
+        "ParseReviewPage"
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 698,
+      "kind": "style-expression",
+      "tag": "tr",
+      "expression": "row.skipped\n                                ? { opacity: \"var(--opacity-skipped)\", background: \"var(--bg-disabled)\" }\n                                : undefined",
+      "id": "DS-102",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。",
+      "existingOwnerChain": [
+        "ParseReviewPage"
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 742,
+      "kind": "style-expression",
+      "tag": "tr",
+      "expression": "row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined",
+      "id": "DS-103",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。",
+      "existingOwnerChain": [
+        "ParseReviewPage"
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 290,
+      "kind": "style-expression",
+      "tag": "tr",
+      "expression": "canDrag ? { cursor: \"grab\" } : undefined",
+      "id": "DS-104",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "MasterListEditor"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 242,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "border",
+      "expression": "border: `2px dashed ${isDragging ? \"var(--accent)\" : \"var(--border-color)\"}`",
+      "id": "DS-105",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 247,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "background",
+      "expression": "background: isDragging ? \"var(--accent-bg-subtle)\" : \"var(--bg-subtle)\"",
+      "id": "DS-106",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 371,
+      "kind": "dynamic-property",
+      "tag": "section",
+      "property": "border",
+      "expression": "border: `1px solid ${result.status === \"already_imported\" ? \"var(--color-warning-border)\" : \"var(--color-success-border)\"}`",
+      "id": "DS-107",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 372,
+      "kind": "dynamic-property",
+      "tag": "section",
+      "property": "background",
+      "expression": "background: result.status === \"already_imported\" ? \"var(--color-warning-bg)\" : \"var(--color-success-bg)\"",
+      "id": "DS-108",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 434,
+      "kind": "dynamic-property",
+      "tag": "div",
+      "property": "borderRadius",
+      "expression": "borderRadius: selectedPendingId === job.id ? \"6px 6px 0 0\" : \"6px\"",
+      "id": "DS-109",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 461,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "background",
+      "expression": "background: selectedPendingId === job.id ? \"var(--color-warning)\" : \"var(--bg-primary)\"",
+      "id": "DS-110",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 462,
+      "kind": "dynamic-property",
+      "tag": "button",
+      "property": "color",
+      "expression": "color: selectedPendingId === job.id ? \"var(--on-accent)\" : \"var(--text-primary)\"",
+      "id": "DS-111",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 524,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-112",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 525,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-113",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 526,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-114",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 527,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-115",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 528,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-116",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 529,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-117",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 530,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-118",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 531,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-119",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 540,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-120",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 543,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-121",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 544,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-122",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 547,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-123",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 549,
+      "kind": "dynamic-property",
+      "tag": "td",
+      "property": "color",
+      "expression": "color: job.unresolved_count > 0 ? \"var(--color-warning)\" : undefined",
+      "id": "DS-124",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 554,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-125",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 555,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-126",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 561,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: job.status === \"ok\" ? \"var(--color-success-bg)\" : \"var(--color-error-bg)\"",
+      "id": "DS-127",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 562,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: job.status === \"ok\" ? \"var(--color-success)\" : \"var(--color-error)\"",
+      "id": "DS-128",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 563,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "border",
+      "expression": "border: `1px solid ${job.status === \"ok\" ? \"var(--color-success-border)\" : \"var(--color-error-border)\"}`",
+      "id": "DS-129",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 569,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-130",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 572,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-131",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgLineImportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 637,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "background",
+      "expression": "background: c.bg",
+      "id": "DS-132",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewStatusBadge"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 638,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "color",
+      "expression": "color: c.color",
+      "id": "DS-133",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewStatusBadge"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 639,
+      "kind": "dynamic-property",
+      "tag": "span",
+      "property": "border",
+      "expression": "border: `1px solid ${c.border}`",
+      "id": "DS-134",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "ReviewStatusBadge"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 159,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-135",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 160,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-136",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 161,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-137",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 162,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-138",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 167,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-139",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 168,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-140",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 169,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-141",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 172,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-142",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 173,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-143",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 174,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-144",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 175,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-145",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 175,
+      "kind": "dynamic-property",
+      "tag": "td",
+      "property": "color",
+      "expression": "color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct)",
+      "id": "DS-146",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 180,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-147",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 181,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-148",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 182,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-149",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 183,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-150",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 183,
+      "kind": "dynamic-property",
+      "tag": "td",
+      "property": "color",
+      "expression": "color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct)",
+      "id": "DS-151",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 188,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-152",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 189,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-153",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 190,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-154",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 205,
+      "kind": "style-spread",
+      "tag": "th",
+      "expression": "...thStyle",
+      "id": "DS-155",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 210,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-156",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 212,
+      "kind": "style-spread",
+      "tag": "th",
+      "expression": "...thStyle",
+      "id": "DS-157",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 217,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-158",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 218,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-159",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 220,
+      "kind": "style-spread",
+      "tag": "th",
+      "expression": "...thStyle",
+      "id": "DS-160",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 225,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-161",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 226,
+      "kind": "style-expression",
+      "tag": "th",
+      "expression": "thStyle",
+      "id": "DS-162",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 233,
+      "kind": "dynamic-property",
+      "tag": "tr",
+      "property": "background",
+      "expression": "background: i % 2 === 0 ? \"var(--bg-surface)\" : \"var(--bg-subtle)\"",
+      "id": "DS-163",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 235,
+      "kind": "style-expression",
+      "tag": "td",
+      "expression": "tdStyle",
+      "id": "DS-164",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 236,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-165",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 239,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-166",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 240,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-167",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 241,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-168",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 242,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-169",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 242,
+      "kind": "dynamic-property",
+      "tag": "td",
+      "property": "color",
+      "expression": "color: diffColor(row.pid_pct_diff)",
+      "id": "DS-170",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 245,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-171",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 248,
+      "kind": "style-spread",
+      "tag": "td",
+      "expression": "...tdStyle",
+      "id": "DS-172",
+      "category": "state-or-static-appearance",
+      "classification": "mapped design responsibility; not implementation/visual verification",
+      "existingOwnerChain": [
+        "TcgParallelReportPage"
+      ],
+      "ownerResolution": "named enclosing functions",
+      "finalMapping": "1-common-appearance-props",
+      "mappingRule": "状態の条件は現状保持。共通外観props/所有CSSへ接続。表なら既存TA対応に統合。自由styleを共通部品へ透過しない。"
+    }
+  ],
+  "special": [],
+  "classificationSummary": {
+    "state-or-static-appearance": 116,
+    "existing-geometry": 26,
+    "existing-common-component-props": 3,
+    "icon-size": 6,
+    "user-configurable-color": 13,
+    "calendar-category-token": 8
+  },
+  "classificationLimits": "全172項目を4責任へ対応付け。既存配置に新adapter不要。共通部品propsの具体名はroot設計とTA表の契約に従う。実装/表示検証ではない。",
+  "finalMappingSummary": {
+    "1-common-appearance-props": 113,
+    "2-retain-existing-layout-owner": 38,
+    "3-existing-user-color-entry": 13,
+    "4-semantic-color-tokens": 8
+  }
+}

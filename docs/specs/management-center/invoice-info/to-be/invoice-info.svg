@@ -1,0 +1,65 @@
+<svg width="820" height="560" viewBox="0 0 820 560" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="820" height="560" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="378" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">管理センター</text>
+  <text x="36" y="66" font-size="9" fill="#888780" letter-spacing="0.5">チーム管理</text>
+  <text x="40" y="88" font-size="12" fill="#5f5e5a">スタッフ</text>
+  <text x="40" y="114" font-size="12" fill="#5f5e5a">ロール</text>
+  <text x="40" y="140" font-size="12" fill="#5f5e5a">シフト</text>
+  <text x="40" y="166" font-size="12" fill="#5f5e5a">レポート</text>
+  <text x="40" y="192" font-size="12" fill="#5f5e5a">報酬管理</text>
+  <rect x="16" y="202" width="200" height="30" fill="#e6f1fb"/>
+  <rect x="16" y="202" width="3" height="30" fill="#378add"/>
+  <text x="40" y="221" font-size="11" fill="#0c447c" font-weight="600">請求書発行情報</text>
+
+  <text x="236" y="34" font-size="16" font-weight="600" fill="#2c2c2a">請求書発行情報</text>
+  <text x="236" y="54" font-size="11" fill="#5f5e5a">見積もり・請求書の発行時に自動で差し込まれる、発行者（自社）情報</text>
+
+  <rect x="236" y="66" width="568" height="430" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="252" y="92" font-size="9" fill="#888780">発行者氏名（会社名 または 個人名）</text>
+  <rect x="252" y="98" width="536" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="260" y="114" font-size="11" fill="#2c2c2a">HIGH LIFE JAPAN</text>
+
+  <text x="252" y="146" font-size="9" fill="#888780">住所1</text>
+  <rect x="252" y="152" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="260" y="168" font-size="10" fill="#2c2c2a">2F, Nishishinjuku Mizuma Building</text>
+  <text x="528" y="146" font-size="9" fill="#888780">住所2（任意）</text>
+  <rect x="528" y="152" width="260" height="24" rx="5" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="536" y="168" font-size="10" fill="#888780">3-3-13 Nishishinjuku</text>
+
+  <text x="252" y="200" font-size="9" fill="#888780">市町村区</text>
+  <rect x="252" y="206" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="260" y="222" font-size="11" fill="#2c2c2a">Shinjuku-ku</text>
+  <text x="528" y="200" font-size="9" fill="#888780">都道府県</text>
+  <rect x="528" y="206" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="536" y="222" font-size="11" fill="#2c2c2a">Tokyo</text>
+
+  <text x="252" y="254" font-size="9" fill="#888780">国（プルダウン・デフォルト: 日本）</text>
+  <rect x="252" y="260" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="260" y="276" font-size="11" fill="#2c2c2a">日本 &#9660;</text>
+  <text x="528" y="254" font-size="9" fill="#888780">郵便番号</text>
+  <rect x="528" y="260" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="536" y="276" font-size="11" fill="#2c2c2a">1600023</text>
+
+  <text x="252" y="308" font-size="9" fill="#888780">電話番号（国番号は国選択と連動）</text>
+  <rect x="252" y="314" width="50" height="24" rx="5" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="264" y="330" font-size="10" fill="#5f5e5a">+81</text>
+  <rect x="306" y="314" width="206" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="314" y="330" font-size="11" fill="#2c2c2a">9060727767</text>
+  <text x="528" y="308" font-size="9" fill="#888780">メールアドレス</text>
+  <rect x="528" y="314" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="536" y="330" font-size="10" fill="#2c2c2a">payment@treasureislandjp.com</text>
+
+  <text x="252" y="362" font-size="9" fill="#888780">事業者登録番号</text>
+  <rect x="252" y="368" width="260" height="24" rx="5" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="260" y="384" font-size="11" fill="#2c2c2a">T3810449547408</text>
+
+  <rect x="252" y="420" width="90" height="28" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="297" y="438" font-size="11" fill="#0c447c" text-anchor="middle">保存する</text>
+  <rect x="350" y="420" width="90" height="28" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="395" y="438" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+
+  <text x="520" y="524" font-size="10" fill="#888780" text-anchor="middle">保存すると、見積もり・請求書の発行時にこの情報が自動で差し込まれます</text>
+</svg>

@@ -75,6 +75,9 @@ async def engine():
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 lead_code VARCHAR(20),
                 customer_name VARCHAR(200),
+                amount NUMERIC(15,2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 channel_type VARCHAR(30),
                 initiative VARCHAR(10),
                 status VARCHAR(50),
@@ -126,6 +129,8 @@ async def engine():
                 seen_at TIMESTAMP,
                 seen_by_staff_id INTEGER,
                 page_id VARCHAR(50),
+                attachment_url TEXT,
+                attachment_type VARCHAR(20),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))

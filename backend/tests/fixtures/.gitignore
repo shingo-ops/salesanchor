@@ -1,0 +1,2 @@
+# Allow SQL fixture files (root .gitignore excludes *.sql globally)
+!*.sql

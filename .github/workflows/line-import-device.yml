@@ -1,0 +1,69 @@
+name: LINE import device (manual)
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        type: choice
+        options: [approve, revoke]
+        required: true
+      user_email:
+        type: string
+        required: true
+      user_code:
+        type: string
+        required: false
+      device_id:
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: line-import-device-admin
+  cancel-in-progress: false
+
+jobs:
+  device:
+    if: github.ref == 'refs/heads/main' && (github.actor == 'shingo-cc' || github.actor == 'shingo-ops')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Validate scoped request
+        id: request
+        env:
+          DEVICE_ACTION: ${{ inputs.action }}
+          DEVICE_EMAIL: ${{ inputs.user_email }}
+          DEVICE_CODE: ${{ inputs.user_code }}
+          DEVICE_ID: ${{ inputs.device_id }}
+        run: |
+          python3 - <<'PY'
+          import base64, json, os, re, uuid
+          action = os.environ['DEVICE_ACTION']
+          email = os.environ['DEVICE_EMAIL'].strip()
+          assert action in ('approve', 'revoke')
+          assert re.fullmatch(r'[^\s@]{1,100}@[^\s@]{1,150}', email)
+          data = {'action': action, 'user_email': email}
+          if action == 'approve':
+              code = os.environ['DEVICE_CODE'].strip().upper()
+              assert re.fullmatch(r'[A-Z2-9]{4}-[A-Z2-9]{4}', code)
+              data['user_code'] = code
+          else:
+              data['device_id'] = str(uuid.UUID(os.environ['DEVICE_ID']))
+          encoded = base64.b64encode(json.dumps(data).encode()).decode()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('request=' + encoded + '\n')
+          PY
+      - name: Provision import-only device on VPS
+        uses: appleboy/ssh-action@v1
+        env:
+          DEVICE_REQUEST_B64: ${{ steps.request.outputs.request }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: DEVICE_REQUEST_B64
+          script: |
+            set -e
+            printf '%s' "$DEVICE_REQUEST_B64" | base64 -d | docker exec -i -w /app astro-webapp-backend-1 python -m app.line_device_admin

@@ -10,6 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import { BotFormFields, type BotFormState, type BotStaff } from "./BotFormFields";
 
@@ -85,16 +86,16 @@ export default function BotEditPage() {
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <BotFormFields form={form} onChange={(f, v) => setForm((p) => ({ ...p, [f]: v }))} staff={staff} />
           <div className="form-actions">
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="secondary" size="md"
               onClick={() => navigate("/bots")}
             >
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">
+            </Button>
+            <Button type="submit" variant="primary" size="md">
               {t("common.update")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

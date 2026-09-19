@@ -47,7 +47,7 @@ _PO_COLS = """
 
 async def _get_po_items(db: AsyncSession, po_id: int) -> list[dict]:
     result = await db.execute(
-        text("SELECT id, product_id, quantity, unit_cost, subtotal, sort_order FROM purchase_order_items WHERE purchase_order_id = :pid ORDER BY sort_order, id"),
+        text("SELECT id, product_id, quantity, unit_cost, subtotal, sort_order, order_item_id FROM purchase_order_items WHERE purchase_order_id = :pid ORDER BY sort_order, id"),
         {"pid": po_id},
     )
     return [dict(row) for row in result.mappings().all()]
@@ -186,13 +186,21 @@ async def create_po(
                      {"code": f"PO-{po_id:05d}", "id": po_id})
 
     for i, item in enumerate(data.items):
+        if item.order_item_id is not None:
+            found = await db.execute(
+                text("SELECT id FROM order_items WHERE id = :id"),
+                {"id": item.order_item_id},
+            )
+            if found.first() is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="指定された受注明細が見つかりません")
         await db.execute(
             text("""
-                INSERT INTO purchase_order_items (purchase_order_id, product_id, quantity, unit_cost, subtotal, sort_order)
-                VALUES (:pid, :prod, :qty, :cost, :sub, :sort)
+                INSERT INTO purchase_order_items (purchase_order_id, product_id, quantity, unit_cost, subtotal, sort_order, order_item_id)
+                VALUES (:pid, :prod, :qty, :cost, :sub, :sort, :order_item_id)
             """),
             {"pid": po_id, "prod": item.product_id, "qty": item.quantity,
-             "cost": item.unit_cost, "sub": item.quantity * item.unit_cost, "sort": i},
+             "cost": item.unit_cost, "sub": item.quantity * item.unit_cost, "sort": i,
+             "order_item_id": item.order_item_id},
         )
 
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,

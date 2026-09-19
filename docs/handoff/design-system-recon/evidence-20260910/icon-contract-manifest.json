@@ -1,0 +1,18 @@
+{
+  "frontend/src/constants/icons.tsx": {
+    "sha256": "93bf947fd2c2230abe2ab4610fed2409bbf39b02fb1414c0cf172d9f8055c752",
+    "lines": 412
+  },
+  "frontend/src/components/GoogleCalendarStatusBar.tsx": {
+    "sha256": "4728cb46cd9da6a9d6ff942def7b0ed0ddde7269123aa9ba8b8fe16417d93169",
+    "lines": 179
+  },
+  "frontend/src/components/GoogleCalendarStatusBar.css": {
+    "sha256": "c2e9f8d80cf2f40f5b74a546571dfb8949daa47e9b8b70c44765924403524443",
+    "lines": 4
+  },
+  "frontend/src/constants/icons.test.tsx": {
+    "sha256": "a990e716140f783b25e1683e52f583266256e7f2e5458ddd6037bd73dcdb3820",
+    "lines": 64
+  }
+}

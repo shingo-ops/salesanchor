@@ -1,0 +1,10 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "cases": [],
+  "future": [],
+  "keyboard": [],
+  "errors": [],
+  "externalRequests": [],
+  "status": "FAIL",
+  "failure": "Error: page.evaluate: Error: Natural width probe did not restore original {\"before\":[{\"x\":24,\"y\":278,\"width\":69.6875,\"height\":62},{\"x\":105.6875,\"y\":278,\"width\":110.625,\"height\":62},{\"x\":228.3125,\"y\":279,\"width\":67.6875,\"height\":60}],\"after\":[{\"x\":24,\"y\":278,\"width\":69.6875,\"height\":62},{\"x\":105.6875,\"y\":278,\"width\":110.625,\"height\":62},{\"x\":228.3125,\"y\":279,\"width\":67.6875,\"height\":60}],\"snapshots\":[null,null,null],\"restoredStyles\":[\"\",\"\",\"\"],\"measurement\":{\"original\":[{\"grow\":\"0\",\"basis\":\"auto\",\"shrink\":\"1\",\"marginLeft\":\"0px\",\"marginRight\":\"0px\",\"inlineMarginLeft\":\"\",\"inlineMarginRight\":\"\"},{\"grow\":\"0\",\"basis\":\"auto\",\"shrink\":\"1\",\"marginLeft\":\"0px\",\"marginRight\":\"0px\",\"inlineMarginLeft\":\"\",\"inlineMarginRight\":\"\"},{\"grow\":\"0\",\"basis\":\"auto\",\"shrink\":\"1\",\"marginLeft\":\"0px\",\"marginRight\":\"0px\",\"inlineMarginLeft\":\"\",\"inlineMarginRight\":\"\"}],\"childrenWidths\":[{\"width\":70.8125,\"marginLeft\":0,\"marginRight\":0},{\"width\":113.4375,\"marginLeft\":0,\"marginRight\":0},{\"width\":68.8125,\"marginLeft\":0,\"marginRight\":0}],\"gap\":12,\"required\":277.0625,\"available\":272,\"fits\":false},\"active\":\"<button class=\\\"comp-btn comp-btn--ghost comp-btn--icon-only\\\" aria-label=\\\"閉じる\\\"><svg xmlns=\\\"http://www.w3.org/2000/svg\\\" viewBox=\\\"0 0 24 24\\\" fill=\\\"currentColor\\\" aria-hidden=\\\"true\\\" data-slot=\\\"icon\\\" width=\\\"20\\\" height=\\\"20\\\"><path fill-rule=\\\"evenodd\\\" d=\\\"M5.47 5.47a.75.75 0 0 1 1.06 0L12 10.94l5.47-5.47a.75.\",\"scroll\":[0,0],\"animations\":[]}\n    at eval (eval at evaluate (:302:30), <anonymous>:1:1855)\n    at async <anonymous>:328:30"
+}

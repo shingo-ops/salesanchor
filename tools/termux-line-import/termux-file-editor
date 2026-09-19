@@ -1,0 +1,25 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -eu
+umask 077
+if [ "$#" -ne 1 ] || [ ! -f "$1" ] || [ ! -r "$1" ]; then
+    printf '%s\n' '受信ファイルを読み取れません。LINEから再度共有してください。' >&2
+    exit 1
+fi
+case "$1" in
+    *.txt|*.TXT) ;;
+    *) printf '%s\n' 'LINEのトーク履歴（.txt）を共有してください。' >&2; exit 2 ;;
+esac
+inbox='/data/data/com.termux/files/home/line-import/inbox'
+mkdir -p -- "$inbox"
+received_dir=$(mktemp -d "$inbox/received-XXXXXXXXXX")
+if ! cp -- "$1" "$received_dir/talk.txt"; then
+    printf '%s\n' '保存に失敗しました。元の共有ファイルは残っています。' >&2
+    exit 1
+fi
+printf 'トーク履歴を保存しました。\n保存先: %s\n' "$received_dir/talk.txt"
+if ! /data/data/com.termux/files/usr/bin/python \
+    /data/data/com.termux/files/home/line-import/lib/client.py \
+    --state-dir /data/data/com.termux/files/home/line-import/state \
+    enqueue "$received_dir/talk.txt"; then
+    printf '%s\n' '送信準備を完了できませんでした。原本は上の保存先に残っています。'
+fi

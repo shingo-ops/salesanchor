@@ -1,0 +1,59 @@
+<svg width="920" height="420" viewBox="0 0 920 420" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="920" height="420" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="16" y="16" width="200" height="388" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="36" y="42" font-size="11" fill="#888780">在庫解析機能</text>
+  <text x="40" y="80" font-size="12" fill="#5f5e5a">商品マスタ</text>
+  <rect x="16" y="104" width="200" height="36" fill="#e6f1fb"/>
+  <rect x="16" y="104" width="3" height="36" fill="#378add"/>
+  <text x="40" y="126" font-size="12" fill="#0c447c" font-weight="600">解析結果</text>
+  <text x="40" y="172" font-size="12" fill="#5f5e5a">確認待ち一覧</text>
+  <circle cx="196" cy="167" r="8" fill="#f1efe8"/>
+  <text x="196" y="171" font-size="9" fill="#5f5e5a" text-anchor="middle">3</text>
+  <text x="40" y="218" font-size="12" fill="#5f5e5a">仕入元別プロンプト</text>
+
+  <text x="236" y="34" font-size="16" font-weight="600" fill="#2c2c2a">解析結果</text>
+  <text x="236" y="54" font-size="11" fill="#5f5e5a">原文と整形後の結果を並べて確認できます（行クリックで詳細・修正）</text>
+
+  <line x1="236" y1="70" x2="900" y2="70" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="248" y="90" font-size="9" fill="#888780">原文</text>
+  <text x="440" y="90" font-size="9" fill="#378add">商品名</text>
+  <text x="530" y="90" font-size="9" fill="#378add">状態</text>
+  <text x="600" y="90" font-size="9" fill="#378add" text-anchor="end">数量</text>
+  <text x="680" y="90" font-size="9" fill="#378add" text-anchor="end">価格</text>
+  <text x="890" y="90" font-size="9" fill="#888780" text-anchor="end">信頼値</text>
+  <line x1="236" y1="98" x2="900" y2="98" stroke="#e3e1d9" stroke-width="1"/>
+  <line x1="420" y1="70" x2="420" y2="330" stroke="#d3d1c7" stroke-width="1"/>
+
+  <circle cx="248" cy="118" r="4" fill="#2e9e5b"/>
+  <text x="260" y="122" font-size="10" fill="#5f5e5a">「ARバルク 20個 3200円」</text>
+  <text x="440" y="122" font-size="11" fill="#2c2c2a">ARバルク</text>
+  <text x="530" y="122" font-size="10" fill="#5f5e5a">未開封</text>
+  <text x="600" y="122" font-size="11" fill="#2c2c2a" text-anchor="end">20</text>
+  <text x="680" y="122" font-size="10" fill="#5f5e5a" text-anchor="end">¥3,200</text>
+  <rect x="852" y="112" width="38" height="18" rx="4" fill="#dff3e6"/>
+  <text x="871" y="125" font-size="10" fill="#0f6e56" text-anchor="middle">98%</text>
+  <line x1="236" y1="140" x2="900" y2="140" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="236" y="148" width="664" height="34" fill="#faeeda"/>
+  <circle cx="248" cy="166" r="4" fill="#c98a1f"/>
+  <text x="260" y="170" font-size="10" fill="#854f0b">「PSA10 ARバルク 数量要相談」</text>
+  <text x="440" y="170" font-size="11" fill="#854f0b">PSA10 ARバルク</text>
+  <text x="530" y="170" font-size="10" fill="#854f0b">PSA10</text>
+  <text x="600" y="170" font-size="11" fill="#854f0b" text-anchor="end">?</text>
+  <text x="680" y="170" font-size="10" fill="#854f0b" text-anchor="end">?</text>
+  <rect x="852" y="158" width="38" height="18" rx="4" fill="#faeeda" stroke="#c98a1f" stroke-width="1"/>
+  <text x="871" y="171" font-size="10" fill="#854f0b" text-anchor="middle" font-weight="600">42%</text>
+  <line x1="236" y1="182" x2="900" y2="182" stroke="#e3e1d9" stroke-width="1"/>
+
+  <circle cx="248" cy="202" r="4" fill="#2e9e5b"/>
+  <text x="260" y="206" font-size="10" fill="#5f5e5a">「スカバイBOX 8箱 14500」</text>
+  <text x="440" y="206" font-size="11" fill="#2c2c2a">スカーレット&amp;バイオレット BOX</text>
+  <text x="530" y="206" font-size="10" fill="#5f5e5a">シュリンク付き</text>
+  <text x="600" y="206" font-size="11" fill="#2c2c2a" text-anchor="end">8</text>
+  <text x="680" y="206" font-size="10" fill="#5f5e5a" text-anchor="end">¥14,500</text>
+  <rect x="852" y="196" width="38" height="18" rx="4" fill="#dff3e6"/>
+  <text x="871" y="209" font-size="10" fill="#0f6e56" text-anchor="middle">95%</text>
+
+  <text x="568" y="392" font-size="10" fill="#888780" text-anchor="middle">緑=解析成功・棚へ反映済み／黄=要確認（信頼値90%未満は自動で要確認へ）</text>
+</svg>

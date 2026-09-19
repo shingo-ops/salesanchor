@@ -23,8 +23,8 @@ jobs:
             exit 0
           fi
 
-          # develop または hotfix/* または release/* → リリース/ホットフィックスPRとして許可
-          if [ "${HEAD}" = "develop" ] || echo "${HEAD}" | grep -qE '^hotfix/' || echo "${HEAD}" | grep -qE '^release/'; then
+          # release/* または hotfix/* → リリース/ホットフィックスPRとして許可
+          if echo "${HEAD}" | grep -qE '^release/' || echo "${HEAD}" | grep -qE '^hotfix/'; then
             echo "✅ ${HEAD} → main のリリース/ホットフィックスPR: 許可"
             exit 0
           fi
@@ -35,11 +35,11 @@ jobs:
           echo "   head : ${HEAD}"
           echo "   base : main"
           echo ""
-          echo "   main を向く PR は develop / hotfix/* / release/* からのみ許可されています。"
-          echo "   feature ブランチは --base develop で PR を作成してください。"
+          echo "   main を向く PR は release/* / hotfix/* からのみ許可されています。"
+          echo "   通常の開発は release/* ブランチから PR を作成してください。"
           echo ""
           echo "   修正方法:"
-          echo "     gh pr edit --base develop"
+          echo "     ブランチ名を release/* に変更して PR を作り直してください。"
           echo "   または PR をクローズして以下で作り直し:"
           echo "     bash scripts/gh-pr-create-safe.sh --title \"...\" ..."
           echo ""

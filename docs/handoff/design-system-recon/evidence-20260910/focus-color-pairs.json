@@ -1,0 +1,72 @@
+[
+  {
+    "theme": "light",
+    "surface": "--bg-primary",
+    "fg": "#1a202c",
+    "bg": "#f5f7fa",
+    "ratio": 15.204967560885033
+  },
+  {
+    "theme": "light",
+    "surface": "--bg-surface",
+    "fg": "#1a202c",
+    "bg": "#ffffff",
+    "ratio": 16.31832264981189
+  },
+  {
+    "theme": "light",
+    "surface": "--bg-subtle",
+    "fg": "#1a202c",
+    "bg": "#f7fafc",
+    "ratio": 15.568246453146601
+  },
+  {
+    "theme": "light",
+    "surface": "--bg-hover",
+    "fg": "#1a202c",
+    "bg": "#e2e8f0",
+    "ratio": 13.236995488634799
+  },
+  {
+    "theme": "light",
+    "surface": "--bg-active",
+    "fg": "#1a202c",
+    "bg": "#cbd5e0",
+    "ratio": 10.982515235474306
+  },
+  {
+    "theme": "dark",
+    "surface": "--bg-primary",
+    "fg": "#f1f5f9",
+    "bg": "#0f172a",
+    "ratio": 16.295987899750777
+  },
+  {
+    "theme": "dark",
+    "surface": "--bg-surface",
+    "fg": "#f1f5f9",
+    "bg": "#1e293b",
+    "ratio": 13.35325281838611
+  },
+  {
+    "theme": "dark",
+    "surface": "--bg-subtle",
+    "fg": "#f1f5f9",
+    "bg": "#243046",
+    "ratio": 12.084616750879219
+  },
+  {
+    "theme": "dark",
+    "surface": "--bg-hover",
+    "fg": "#f1f5f9",
+    "bg": "#334155",
+    "ratio": 9.451924418631656
+  },
+  {
+    "theme": "dark",
+    "surface": "--bg-active",
+    "fg": "#f1f5f9",
+    "bg": "#475569",
+    "ratio": 6.916973995632248
+  }
+]

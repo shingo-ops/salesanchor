@@ -16,7 +16,9 @@ import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
@@ -171,15 +173,17 @@ export default function TeamsPage() {
     <PageLayout
       navKey="nav.teams"
       subtitleKey="teams.subtitle"
-      headerAction={hasPermission("teams.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
-            {t("teams.newTeam")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("teams.create") ? (
+        <ContentToolbar
+          right={
+            <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>
+              {t("teams.newTeam")}
+            </button>
+          }
+        />
+      ) : undefined}
 
       {/* 新規作成 Modal（既存 UX 保持） */}
       <Modal
@@ -194,10 +198,10 @@ export default function TeamsPage() {
             onChange={(field, value) => setCreateForm((prev) => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">{t("common.create")}</button>
+            </Button>
+            <Button type="submit" variant="primary" size="md">{t("common.create")}</Button>
           </div>
         </form>
       </Modal>
@@ -215,10 +219,10 @@ export default function TeamsPage() {
             onChange={(field, value) => setEditForm((prev) => ({ ...prev, [field]: value }))}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>
+            <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            </Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

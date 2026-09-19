@@ -221,7 +221,7 @@ jobs:
         run: |
           # public スキーマに実際に存在するテーブルの許可リスト
           # 新しいテーブルを public に追加した場合はここを更新すること（SSoT）
-          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master tcg_type_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters ingestion_jobs parse_logs link_templates registration_tokens"
+          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master tcg_type_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters ingestion_jobs parse_logs link_templates registration_tokens units unit_aliases conditions condition_aliases tcg_note_master tcg_status_master tcg_product_categories"
 
           FAILED=0
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
@@ -330,3 +330,324 @@ jobs:
             exit 1
           fi
           echo "✅ タイムスタンプ重複なし"
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック6（新規）: DROP COLUMN / DROP TABLE — ADR 承認必須
+      #
+      # 背景: backend/CLAUDE.md「Migration は additive-only（追加専用）」ルールにより
+      #       カラム削除・テーブル削除は原則禁止、ADR 承認が必須。
+      #       しかし機械的に止める仕組みがなく、ルールを知らない AI が
+      #       DROP を含む migration を出しても CI は素通りしていた。
+      #       ADR-1002 Phase C 振り返りで対策として特定。
+      # ──────────────────────────────────────────────────────────────────────
+      - name: DROP COLUMN / DROP TABLE — ADR 承認必須チェック
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # PR差分から追加行のみ抽出（削除行・SQLコメント行・Pythonコメント行を除外）
+          # 対象: migrations/*.sql と scripts/migrate_*.py
+          DESTRUCTIVE=$(git diff "$BASE" "$HEAD" -- 'migrations/*.sql' 'scripts/migrate_*.py' \
+            | grep '^+' | grep -v '^+++' \
+            | grep -v '^\+[[:space:]]*--' \
+            | grep -v '^\+[[:space:]]*#' \
+            | grep -iE 'DROP[[:space:]]+(COLUMN|TABLE)' || true)
+
+          if [ -z "$DESTRUCTIVE" ]; then
+            echo "✅ DROP COLUMN / DROP TABLE なし — チェック6 スキップ"
+            exit 0
+          fi
+
+          echo "🔍 破壊的変更を検出:"
+          echo "$DESTRUCTIVE"
+          echo ""
+
+          # PR本文からADR参照を確認
+          PR_BODY=$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq '.body')
+          ADR_REF=$(echo "$PR_BODY" | grep -oiE 'ADR-[0-9]+' | head -1 || true)
+
+          if [ -n "$ADR_REF" ]; then
+            echo "✅ PR本文に ADR 参照を確認: $ADR_REF"
+            echo "   ⚠️  ADR の承認状態は人間が確認してください"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック6)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "DROP COLUMN / DROP TABLE は破壊的変更です。"
+          echo "backend/CLAUDE.md の「Migration は additive-only」ルールにより"
+          echo "ADR 承認が必須です。"
+          echo ""
+          echo "【対応手順】"
+          echo "1. docs/adr/ に ADR を起案して PO 承認を得る"
+          echo "2. PR 本文に ADR-NNN を明記する"
+          echo ""
+          echo "参考: backend/CLAUDE.md「## Migration は additive-only（追加専用）」"
+          echo "前例: ADR-089（DROP customers）、ADR-1002（DROP tcg_uuid）"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック7: 共用マスタテーブルへのデータ操作禁止（ADR-155）
+      #
+      # 背景: マスタデータの更新手段は CSV 取り込みとアプリ画面に一本化する。
+      #       マイグレーションで INSERT/UPDATE/DELETE すると、CSV/アプリ経由の
+      #       データと重複・競合が発生する（ムニキスゼロ 3件重複の教訓）。
+      #       構造変更（ALTER TABLE, CREATE INDEX 等）は許可する。
+      # 保護対象（14テーブル）:
+      #   商品系: products, tcg_products, product_search_keywords,
+      #           product_exclude_keywords, product_attribute_masters
+      #   マスタ系: permissions, tcg_type_master, meta_page_routing,
+      #            countries, link_templates, inventory_aggregation_rules,
+      #            suppliers, tenant_settings, tenant_llm_budgets
+      # ──────────────────────────────────────────────────────────────────────
+      - name: 共用マスタテーブルへのデータ操作禁止チェック（ADR-155）
+        if: steps.detect_sql.outputs.new_sql == 'true'
+        run: |
+          set -euo pipefail
+
+          FAILED=0
+          VIOLATIONS=""
+
+          # 保護対象テーブル（スキーマ修飾の有無・テナントスキーマ名を問わず検出）
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|tcg_type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories"
+
+          IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
+          for sql_path in "${SQL_FILES[@]}"; do
+            # 追加行のみ抽出（SQL コメント行を除外）
+            ADDED_LINES=$(git diff "${{ github.event.pull_request.base.sha }}" \
+              "${{ github.event.pull_request.head.sha }}" -- "$sql_path" \
+              | grep '^+' | grep -v '^+++' \
+              | grep -v '^\+[[:space:]]*--' || true)
+
+            if [ -z "$ADDED_LINES" ]; then
+              continue
+            fi
+
+            # INSERT INTO ... 保護テーブル
+            INSERT_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "INSERT[[:space:]]+INTO[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            # UPDATE ... 保護テーブル（SET が後続する行）
+            UPDATE_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "UPDATE[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            # DELETE FROM ... 保護テーブル
+            DELETE_HIT=$(echo "$ADDED_LINES" \
+              | grep -iE "DELETE[[:space:]]+FROM[[:space:]]+(public\.|tenant_[0-9]+\.)?($PROTECTED_TABLES)" || true)
+
+            HITS="${INSERT_HIT}${UPDATE_HIT}${DELETE_HIT}"
+            if [ -n "$HITS" ]; then
+              FAILED=1
+              VIOLATIONS="${VIOLATIONS}\n--- $(basename $sql_path) ---\n${HITS}"
+            fi
+          done
+
+          if [ "$FAILED" -eq 0 ]; then
+            echo "✅ 共用マスタテーブルへのデータ操作なし — チェック7 通過"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック7)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "共用マスタテーブルへの INSERT / UPDATE / DELETE が検出されました。"
+          echo ""
+          echo -e "検出箇所:$VIOLATIONS"
+          echo ""
+          echo "マスタデータの更新は CSV 取り込みまたはアプリ画面からのみ行えます。"
+          echo "マイグレーションで値を操作することは禁止されています（ADR-155）。"
+          echo ""
+          echo "【許可される操作】"
+          echo "  ALTER TABLE ... ADD COLUMN（列の追加）"
+          echo "  ALTER TABLE ... ALTER COLUMN（型の変更）"
+          echo "  CREATE INDEX（索引の追加）"
+          echo ""
+          echo "【禁止される操作】"
+          echo "  INSERT INTO 保護対象テーブル"
+          echo "  UPDATE 保護対象テーブル"
+          echo "  DELETE FROM 保護対象テーブル"
+          echo ""
+          echo "保護対象テーブル（14個）:"
+          echo "  商品系: products, tcg_products, product_search_keywords,"
+          echo "          product_exclude_keywords, product_attribute_masters"
+          echo "  マスタ系: permissions, tcg_type_master, meta_page_routing,"
+          echo "           countries, link_templates, inventory_aggregation_rules,"
+          echo "           suppliers, tenant_settings, tenant_llm_budgets"
+          echo ""
+          echo "参考: ADR-155-product-master-ssot-csv-app.md"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック8: 共用マスタテーブルへのデータ参照禁止（ADR-155）
+      #
+      # 背景: チェック7は INSERT/UPDATE/DELETE を検出するが、SELECT（データ存在前提
+      #       の読み取り）を見逃す。20260913_210000_tcg_cardset_bundle_registration.sql
+      #       が SELECT ... FROM public.products WHERE product_code = $1 で商品データの
+      #       存在を前提とし、本番デプロイがブロックされた。
+      #       マスタテーブルへの参照は構造変更（ALTER TABLE, CREATE INDEX 等）の
+      #       みを許可し、データの読み書きを含む全参照をブロックする。
+      # 詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md
+      # ──────────────────────────────────────────────────────────────────────
+      - name: 共用マスタテーブルへのデータ参照禁止チェック（ADR-155）
+        if: steps.detect_sql.outputs.new_sql == 'true'
+        run: |
+          set -euo pipefail
+
+          FAILED=0
+
+          # 保護対象テーブル（チェック7と同じリスト）
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|tcg_type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories"
+
+          IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
+          for sql_path in "${SQL_FILES[@]}"; do
+            fname=$(basename "$sql_path")
+
+            # コメント行（-- で始まる行）を除外してファイル全体を処理
+            # 保護対象テーブル名が出現する行を検出
+            MATCHED_LINES=$(grep -v '^\s*--' "$sql_path" \
+              | grep -nE "(${PROTECTED_TABLES})" || true)
+
+            if [ -z "$MATCHED_LINES" ]; then
+              echo "✅ $fname — マスタテーブルへの参照なし"
+              continue
+            fi
+
+            # 許可パターンに該当する行を除外して違反行を絞り込む
+            # 許可: ALTER TABLE, CREATE [UNIQUE] INDEX ... ON, DROP INDEX, COMMENT ON,
+            #       ADD COLUMN, DROP COLUMN, ALTER COLUMN, information_schema 参照,
+            #       pg_namespace / pg_class / to_regclass での存在チェック
+            VIOLATIONS=""
+            while IFS= read -r line; do
+              line_num=$(echo "$line" | cut -d: -f1)
+              line_content=$(echo "$line" | cut -d: -f2-)
+
+              # 許可パターンチェック（いずれかに該当すれば許可）
+              if echo "$line_content" | grep -qiE \
+                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|to_regclass'; then
+                continue
+              fi
+
+              # 許可パターン非該当 = 違反
+              VIOLATIONS="${VIOLATIONS}   行 ${line_num}: ${line_content}\n"
+            done <<< "$MATCHED_LINES"
+
+            if [ -n "$VIOLATIONS" ]; then
+              FAILED=1
+              echo "❌ Check 8 FAIL: migration がマスタテーブルデータに依存しています (ADR-155 違反)"
+              echo "   ファイル: $fname"
+              echo ""
+              printf "%b" "$VIOLATIONS"
+              echo ""
+              echo "   マスタテーブルへの参照は構造変更 (ALTER TABLE, CREATE INDEX) のみ許可。"
+              echo "   データの読み書き (SELECT/INSERT/UPDATE/DELETE) は禁止です。"
+              echo "   詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md"
+              echo ""
+            else
+              echo "✅ $fname — マスタテーブルへの参照はすべて構造変更のみ（許可）"
+            fi
+          done
+
+          if [ "$FAILED" -ne 0 ]; then
+            echo "❌ MIGRATION GUARD FAILED (チェック8)"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo "共用マスタテーブルへのデータ参照が検出されました（ADR-155 違反）。"
+            echo ""
+            echo "【許可される操作】"
+            echo "  ALTER TABLE ... ADD COLUMN / DROP COLUMN / ALTER COLUMN"
+            echo "  CREATE [UNIQUE] INDEX ... ON マスタテーブル"
+            echo "  DROP INDEX"
+            echo "  COMMENT ON TABLE / COLUMN"
+            echo "  information_schema / pg_namespace / pg_class / to_regclass での存在チェック"
+            echo ""
+            echo "【禁止される操作】"
+            echo "  SELECT ... FROM マスタテーブル（データ存在前提の参照）"
+            echo "  INSERT INTO / UPDATE / DELETE FROM（チェック7でも検出）"
+            echo "  上記テーブルを参照する EXECUTE format(...) 内の動的 SQL"
+            echo ""
+            echo "保護対象テーブル（14個）:"
+            echo "  商品系: products, tcg_products, product_search_keywords,"
+            echo "          product_exclude_keywords, product_attribute_masters"
+            echo "  マスタ系: permissions, tcg_type_master, meta_page_routing,"
+            echo "           countries, link_templates, inventory_aggregation_rules,"
+            echo "           suppliers, tenant_settings, tenant_llm_budgets"
+            echo ""
+            echo "詳細: docs/adr/ADR-155-product-master-ssot-csv-app.md"
+            echo "前例: 20260913_210000_tcg_cardset_bundle_registration.sql（本番デプロイブロック）"
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            exit 1
+          fi
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック 9: supplier_channels.supplier_id 保護（SSOT ガード）
+      #
+      # 背景: supplier SSOT 移行により supplier_channels.supplier_id は
+      #        INTEGER (→ public.suppliers FK) に統一済み。
+      #        この列の削除・型変更はシステム全体のエラーを引き起こす。
+      # ──────────────────────────────────────────────────────────────────────
+      - name: supplier_channels.supplier_id 保護チェック（SSOT ガード）
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          BASE="${{ github.event.pull_request.base.sha }}"
+          HEAD="${{ github.event.pull_request.head.sha }}"
+
+          # PR差分から追加行のみ抽出（コメント行除外）
+          DIFF_LINES=$(git diff "$BASE" "$HEAD" -- 'migrations/*.sql' \
+            | grep '^+' | grep -v '^+++' \
+            | grep -v '^\+[[:space:]]*--' \
+            | grep -v '^\+[[:space:]]*#' || true)
+
+          if [ -z "$DIFF_LINES" ]; then
+            echo "✅ migration 変更なし — チェック9 スキップ"
+            exit 0
+          fi
+
+          # supplier_channels を含むか確認
+          HAS_TABLE=$(echo "$DIFF_LINES" | grep -i 'supplier_channels' || true)
+          if [ -z "$HAS_TABLE" ]; then
+            echo "✅ supplier_channels への変更なし — チェック9 スキップ"
+            exit 0
+          fi
+
+          # 危険パターン検出
+          DANGEROUS=$(echo "$DIFF_LINES" | grep -iE 'DROP[[:space:]]+COLUMN[[:space:]]+(IF[[:space:]]+EXISTS[[:space:]]+)?supplier_id|ALTER[[:space:]]+COLUMN[[:space:]]+supplier_id[[:space:]]+TYPE' || true)
+
+          if [ -z "$DANGEROUS" ]; then
+            echo "✅ supplier_channels.supplier_id への破壊的変更なし — チェック9 通過"
+            exit 0
+          fi
+
+          echo "🔍 supplier_channels.supplier_id への破壊的変更を検出:"
+          echo "$DANGEROUS"
+          echo ""
+
+          # PR本文からADR参照を確認
+          PR_BODY=$(gh pr view "${{ github.event.pull_request.number }}" --json body --jq '.body')
+          ADR_REF=$(echo "$PR_BODY" | grep -oiE 'ADR-[0-9]+' | head -1 || true)
+
+          if [ -n "$ADR_REF" ]; then
+            echo "✅ PR本文に ADR 参照を確認: $ADR_REF"
+            echo "   ⚠️  ADR の承認状態は人間が確認してください"
+            exit 0
+          fi
+
+          echo "❌ MIGRATION GUARD FAILED (チェック9)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "supplier_channels.supplier_id は SSOT 移行により"
+          echo "INTEGER 型 (→ public.suppliers FK) に統一済みです。"
+          echo "この列の削除・型変更はシステム全体のエラーを引き起こします。"
+          echo ""
+          echo "【対応手順】"
+          echo "1. docs/adr/ に ADR を起案して PO 承認を得る"
+          echo "2. PR 本文に ADR-NNN を明記する"
+          echo ""
+          echo "背景: PR #3539 (supplier SSOT migration)"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          exit 1
+
+          echo "✅ チェック8 通過: 共用マスタテーブルへのデータ参照なし"

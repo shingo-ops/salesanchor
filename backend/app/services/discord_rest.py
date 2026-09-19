@@ -134,3 +134,102 @@ async def discord_api_request(
             f"Discord API エラー: HTTP {http_status}: {body}",
             status_code=http_status,
         )
+
+
+async def discord_api_request_with_file(
+    *,
+    channel_id: str,
+    bot_token: str,
+    file_bytes: bytes,
+    filename: str,
+    content_type: str,
+) -> dict[str, Any]:
+    """Discord チャンネルへファイル付きメッセージを送信する。
+
+    POST /channels/{channel_id}/messages (multipart/form-data)
+    429 / 5xx リトライは discord_api_request と同一ロジック。
+
+    Returns:
+        Discord Message オブジェクト dict（id, channel_id, attachments 等を含む）
+
+    Raises:
+        DiscordAPIError: 最大リトライ消費後、または非リトライエラー。
+    """
+    url = f"{_DISCORD_API_BASE}/channels/{channel_id}/messages"
+    headers = {"Authorization": f"Bot {bot_token}"}
+
+    backoff = _BACKOFF_BASE_SEC
+    attempt = 0
+
+    while True:
+        attempt += 1
+        try:
+            async with httpx.AsyncClient(timeout=_TIMEOUT_SEC) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    files={"files[0]": (filename, file_bytes, content_type)},
+                )
+        except httpx.RequestError as exc:
+            logger.warning(
+                "[discord_rest] network error (file) channel=%s attempt=%d/%d: %s",
+                channel_id, attempt, _MAX_RETRIES, exc,
+            )
+            if attempt >= _MAX_RETRIES:
+                raise DiscordAPIError(
+                    f"Discord API ネットワークエラー: {exc}"
+                ) from exc
+            await asyncio.sleep(min(backoff, _BACKOFF_MAX_SEC))
+            backoff = min(backoff * 2, _BACKOFF_MAX_SEC)
+            continue
+
+        http_status = response.status_code
+
+        if http_status in (200, 201):
+            logger.info(
+                "[discord_rest] file sent channel=%s status=%d attempt=%d",
+                channel_id, http_status, attempt,
+            )
+            return response.json()
+
+        if http_status == 429:
+            try:
+                retry_after = float(response.json().get("retry_after", 1.0))
+            except Exception:
+                retry_after = 1.0
+            logger.warning(
+                "[discord_rest] rate limited (file) channel=%s retry_after=%.1fs attempt=%d/%d",
+                channel_id, retry_after, attempt, _MAX_RETRIES,
+            )
+            if attempt >= _MAX_RETRIES:
+                raise DiscordAPIError(
+                    f"Discord API レートリミット: {_MAX_RETRIES}回リトライ後も超過",
+                    status_code=429,
+                )
+            await asyncio.sleep(retry_after)
+            continue
+
+        if 500 <= http_status < 600:
+            body = response.text[:200]
+            logger.warning(
+                "[discord_rest] server error (file) channel=%s status=%d attempt=%d/%d body=%s",
+                channel_id, http_status, attempt, _MAX_RETRIES, body,
+            )
+            if attempt >= _MAX_RETRIES:
+                raise DiscordAPIError(
+                    f"Discord API サーバーエラー: HTTP {http_status}",
+                    status_code=http_status,
+                )
+            await asyncio.sleep(min(backoff, _BACKOFF_MAX_SEC))
+            backoff = min(backoff * 2, _BACKOFF_MAX_SEC)
+            continue
+
+        body = response.text[:300]
+        logger.error(
+            "[discord_rest] api error (file) channel=%s status=%d body=%s",
+            channel_id, http_status, body,
+        )
+        raise DiscordAPIError(
+            f"Discord API エラー: HTTP {http_status}: {body}",
+            status_code=http_status,
+        )

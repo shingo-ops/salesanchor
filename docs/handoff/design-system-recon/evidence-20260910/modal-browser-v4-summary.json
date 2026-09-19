@@ -1,0 +1,386 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "status": "PASS",
+  "errors": [],
+  "externalRequests": [],
+  "future": [
+    {
+      "lang": "ja",
+      "footer": {
+        "left": 0,
+        "right": 390,
+        "top": 764,
+        "bottom": 900,
+        "width": 390,
+        "height": 136
+      },
+      "content": {
+        "left": 24,
+        "right": 366,
+        "paddingLeft": "24px",
+        "paddingRight": "24px",
+        "borderLeft": "0px",
+        "borderRight": "0px",
+        "flexWrap": "wrap"
+      },
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 618.40625,
+        "bottom": 900,
+        "width": 390,
+        "height": 281.59375
+      },
+      "children": [
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--secondary"
+          },
+          "tag": "BUTTON",
+          "text": "eLogi CSV ダウンロード",
+          "left": 50.453125,
+          "right": 245.515625,
+          "top": 780,
+          "bottom": 824,
+          "width": 195.0625,
+          "height": 44,
+          "color": "rgb(203, 213, 225)",
+          "background": "rgb(30, 41, 59)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 193,
+          "clientWidth": 193,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        },
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--secondary"
+          },
+          "tag": "BUTTON",
+          "text": "キャンセル",
+          "left": 257.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "width": 108.484375,
+          "height": 44,
+          "color": "rgb(203, 213, 225)",
+          "background": "rgb(30, 41, 59)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 106,
+          "clientWidth": 106,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        },
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--primary"
+          },
+          "tag": "BUTTON",
+          "text": "更新",
+          "left": 297.40625,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "width": 68.59375,
+          "height": 44,
+          "color": "rgb(15, 23, 42)",
+          "background": "rgb(91, 141, 217)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 67,
+          "clientWidth": 67,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        }
+      ],
+      "overlaps": [],
+      "body": {
+        "height": 66,
+        "scrollHeight": 66,
+        "scrollTop": 0,
+        "overflow": "auto"
+      },
+      "calls": [],
+      "counts": {
+        "closes": 0,
+        "saves": 0
+      }
+    },
+    {
+      "lang": "en",
+      "footer": {
+        "left": 0,
+        "right": 390,
+        "top": 764,
+        "bottom": 900,
+        "width": 390,
+        "height": 136
+      },
+      "content": {
+        "left": 24,
+        "right": 366,
+        "paddingLeft": "24px",
+        "paddingRight": "24px",
+        "borderLeft": "0px",
+        "borderRight": "0px",
+        "flexWrap": "wrap"
+      },
+      "dialog": {
+        "left": 0,
+        "right": 390,
+        "top": 618.40625,
+        "bottom": 900,
+        "width": 390,
+        "height": 281.59375
+      },
+      "children": [
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--secondary"
+          },
+          "tag": "BUTTON",
+          "text": "eLogi CSV Download",
+          "left": 83.015625,
+          "right": 265.515625,
+          "top": 780,
+          "bottom": 824,
+          "width": 182.5,
+          "height": 44,
+          "color": "rgb(203, 213, 225)",
+          "background": "rgb(30, 41, 59)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 181,
+          "clientWidth": 181,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        },
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--secondary"
+          },
+          "tag": "BUTTON",
+          "text": "Cancel",
+          "left": 277.515625,
+          "right": 366,
+          "top": 780,
+          "bottom": 824,
+          "width": 88.484375,
+          "height": 44,
+          "color": "rgb(203, 213, 225)",
+          "background": "rgb(30, 41, 59)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 86,
+          "clientWidth": 86,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        },
+        {
+          "attributes": {
+            "class": "comp-btn comp-btn--primary"
+          },
+          "tag": "BUTTON",
+          "text": "Update",
+          "left": 274.5,
+          "right": 366,
+          "top": 836,
+          "bottom": 880,
+          "width": 91.5,
+          "height": 44,
+          "color": "rgb(15, 23, 42)",
+          "background": "rgb(91, 141, 217)",
+          "font": "14.4px",
+          "radius": "6px",
+          "padding": "8px 20px",
+          "insideContent": true,
+          "inside": true,
+          "internalText": true,
+          "scrollWidth": 90,
+          "clientWidth": 90,
+          "disabled": false,
+          "form": null,
+          "withinForm": null
+        }
+      ],
+      "overlaps": [],
+      "body": {
+        "height": 66,
+        "scrollHeight": 66,
+        "scrollTop": 0,
+        "overflow": "auto"
+      },
+      "calls": [],
+      "counts": {
+        "closes": 0,
+        "saves": 0
+      }
+    }
+  ],
+  "keyboard": [
+    {
+      "kind": "purchase",
+      "ids": [
+        "Confirm",
+        "Cancel",
+        "Update"
+      ],
+      "form": {
+        "id": "purchase-detail-form",
+        "inside": false
+      },
+      "calls": [
+        [
+          "get",
+          "/orders/7/purchase"
+        ],
+        [
+          "patch",
+          "/orders/7/purchase",
+          {
+            "purchase_staff": null,
+            "transaction_no": null,
+            "supplier_name": null,
+            "supplier_url": null,
+            "carrier_name": null,
+            "waybill_no": null,
+            "purchase_date": null,
+            "purchase_note": null,
+            "purchase_status": null,
+            "purchase_amount": null,
+            "purchase_quantity": null,
+            "purchase_total": null,
+            "purchase_shipping": null
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "shipping",
+      "ids": [
+        "eLogi CSV Download",
+        "Cancel",
+        "Update"
+      ],
+      "form": {
+        "id": "shipping-detail-form",
+        "inside": false
+      },
+      "calls": [
+        [
+          "get",
+          "/orders/7/shipping"
+        ],
+        [
+          "patch",
+          "/orders/7/shipping",
+          {
+            "recipient_name": null,
+            "phone": null,
+            "email": null,
+            "tax_number": null,
+            "address1": null,
+            "address2": null,
+            "address3": null,
+            "city": null,
+            "state_code": null,
+            "zip_code": null,
+            "country_code": null,
+            "packing_memo": null,
+            "packing_type": null,
+            "inspection_status": null,
+            "item_description": null,
+            "hs_code": null,
+            "tax_id": null,
+            "fedex_id": null,
+            "ship_method": null,
+            "tracking_number": null,
+            "carrier": null,
+            "ship_date": null,
+            "ship_memo": null,
+            "length_cm": null,
+            "width_cm": null,
+            "height_cm": null,
+            "weight_kg": null,
+            "volume_g": null,
+            "box_count": null,
+            "item_price_usd": null,
+            "exchange_rate": null,
+            "est_shipping_fee": null
+          }
+        ]
+      ]
+    },
+    {
+      "kind": "orders",
+      "ids": [
+        "Cancel",
+        "Save"
+      ],
+      "form": {
+        "id": "po-form",
+        "inside": false
+      },
+      "calls": [
+        [
+          "get",
+          "/suppliers/catalog"
+        ],
+        [
+          "post",
+          "/purchase-orders",
+          {
+            "supplier_id": 2,
+            "notes": null,
+            "items": [
+              {
+                "product_id": 3,
+                "quantity": 1,
+                "unit_cost": 123450
+              }
+            ]
+          }
+        ]
+      ]
+    }
+  ],
+  "pairs": 560,
+  "naturalFits": 448,
+  "changedLayout": 112,
+  "referenceMatched": 560,
+  "beforeUnchanged": 560,
+  "rawResult": {
+    "path": "/tmp/frontend-raw-buttons-20260911/modal-browser-v4-result.json",
+    "bytes": 7228145,
+    "sha256": "56a932a6c4305c9e4fca7a29bbc04eeb03d96b9f13e60e35860212432dba225a"
+  },
+  "sourceNote": "Full raw JSON retained locally; canonical CSV derives every condition. Actual reproducibility scripts and mocks accompany this report; environment paths are snapshot-specific."
+}

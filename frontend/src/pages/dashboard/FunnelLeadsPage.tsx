@@ -6,7 +6,6 @@
 
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { api } from "../../lib/api";
@@ -29,7 +28,6 @@ function fmtMoney(n: number): string {
 
 export default function FunnelLeadsPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [rows, setRows] = useState<ChannelRowWithId[]>([]);
   const [summary, setSummary] = useState<LeadSummaryResponse | null>(null);
@@ -104,16 +102,6 @@ export default function FunnelLeadsPage() {
     <PageLayout
       navKey="nav.dashboard"
       subtitleKey="funnel.leadsPageTitle"
-      headerAction={
-        <button
-          type="button"
-          className="fu-back-btn"
-          onClick={() => navigate("/")}
-          style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)", padding: "var(--space-2) var(--space-3)", border: "none", background: "var(--bg-primary)", color: "var(--text-secondary)", fontSize: "var(--font-sm)", borderRadius: "var(--radius-md)", cursor: "pointer" }}
-        >
-          ← {t("nav.dashboard")}
-        </button>
-      }
     >
       {loading ? (
         <div style={{ padding: "var(--space-6) 0", color: "var(--text-secondary)", fontSize: "var(--font-sm)" }}>

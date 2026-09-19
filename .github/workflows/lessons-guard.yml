@@ -1,0 +1,40 @@
+name: Lessons Guard
+# 教訓の直接追記検知: 全PRで起動し、design-partner.md の教訓ゾーン(§6〜§7手前)への箇条書き追記のみ停止する（他セクションは素通し・lessons-cleanupラベルで清書便は例外・2026-07-22 範囲限定化）
+# 設計: docs/specs/lessons-guard/design.md §1（KGI-L5の実体）
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+permissions:
+  pull-requests: write
+jobs:
+  warn-direct-lesson-edit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect §6 body additions
+        id: detect
+        run: |
+          git fetch origin ${{ github.base_ref }} --quiet
+          OUT=$(bash scripts/check-lessons-section.sh "origin/${{ github.base_ref }}")
+          echo "$OUT"
+          SEC6_ADDED=$(echo "$OUT" | grep '^SEC6_ADDED=' | cut -d= -f2)
+          echo "sec6_added=${SEC6_ADDED}" >> "$GITHUB_OUTPUT"
+      - name: Enforce (block direct §6 edits unless cleanup-labeled)
+        if: steps.detect.outputs.sec6_added != '0' && !contains(github.event.pull_request.labels.*.name, 'lessons-cleanup')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.setFailed('❌ Lessons Guard: design-partner.md §6本文への直接追記は禁止です。教訓は docs/ai-agents/lessons.d/ へ1便1ファイルのポストで追加してください（docs/specs/lessons-guard/design.md）。§6本文への正当な移植（清書便）の場合のみ、このPRに lessons-cleanup ラベルを付けてください。');
+      - name: Note cleanup-labeled pass
+        if: steps.detect.outputs.sec6_added != '0' && contains(github.event.pull_request.labels.*.name, 'lessons-cleanup')
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: '✅ Lessons Guard: lessons-cleanup ラベルを確認。清書便として§6本文追記を許可します。'
+            })

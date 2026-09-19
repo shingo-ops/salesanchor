@@ -1,0 +1,17 @@
+CARD-MODAL-FOOTER-03
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-MODAL-FOOTER-03
+読んだ節: guards/00-common.md、03-file.md、11-lint.md、design.md§AI。
+照合§5.5: 1○実tree、2○PRなし、3○親へ全文、4○測定分類棚卸し、5○既存基準、6○一時検査のみ、7○原物と分類を別検算。
+Generator担当、他者と並行。root文書/製品変更禁止、新AI起動禁止。
+作業tree `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared`。基準HEADは次行の全文と照合。
+HEAD `7606ca9a041e315b81040373e8f4ddebbc562133`。
+根拠: v2ではbeforeがflex-shrinkで高さ62/62/60、after44の2行。W3C Flex §9.3は行分割を縮小前寸法で決め、その後縮小。read-only担当も一致。従来の『内容内なら同値』分類を廃止。
+許可は `/tmp/frontend-raw-buttons-20260911` の新v3原稿/ログ/結果と補助測定のみ。v1/v2失敗原本は保持。製品/正式文書/台帳/GO/commit/push/PR/merge変更禁止。localhost＋通信モックのみ。正規require_escalated可。
+手順1: v2をv3別名にして結果出力もv3へ。before実DOMで別の寸法測定を行う。全子のcomputed flex-grow=0/flex-basis=autoを確認し、各style属性を完全保存、測定中だけflex-shrink:0を指定。全子border-box幅＋固定margin＋gapを合計、auto marginは0扱い（既存orders span marginRight:auto、その他marginも記録して現物照合）。footer内容幅との比較で『縮まず1行に収まる』を分類する。測定後style属性を完全復元、フォント・有限animation/transition終了待ち、通常beforeの座標が測定前と同じことを確認。afterの結果を分類の根拠にしない。
+手順2: まず既知の失敗条件320x360日英Purchaseと、十分な幅1280の実3componentに限定して分類・復元の正しさを検算、結果を親へ速報。未知の計算値/幅差は隠さず停止。縮小前必要幅が収まる条件のみ前後rect/色/寸法同値。他全条件のafter内容領域内/dialog/viewport/内部文字/重なり/スクロールの検査は維持。
+手順3: 保存中判定の `disabled || 文言一致` は削除（文言が同じならdisabled不正も通る誤検査）。before/afterのdisabled配列同一を全条件で要求。saving時purchase/shippingはconfirm又はCSV=false、cancel=true、submit=true。ordersはcancel=true、submit=true。new時purchase/shipping先頭=true、通常既存false。現fixtureのconfirming/downloading=false前提も記録。保存中再クリックでmock送信が増えないことを実測する。
+手順4: 手順2の限定検算が通ればCARD01全条件をv3で実行。フォント・有限animation/transition終了後に測定。focus輪郭はoutlineの幅/offsetとdialog/viewport/隣接要素との境界を別測定。Tab順/外部form送信1回、将来Shipping Button3、Story実表示も完了まで。rootの品質5チェックは全exit0なので重複不要。
+手順5: 2製品hashと実行範囲を報告。失敗は原ログ保持し設計へ返す。後続PRはready、draft禁止、本カードのPR作成は許可なし。
+完了報告冒頭「本報告はカード CARD-MODAL-FOOTER-03 の実行結果である」。親へ生出力全文と実在ログリンク。停止時は手順番号/最後のコマンド/理由/対象名。未実行を合格にしない。
+END OF CARD

@@ -61,7 +61,6 @@ const CATEGORY_META: Record<string, { icon: LucideIcon; order: number }> = {
 const MENU_VIEW_KEY: Record<string, string[]> = {
   "顧客": ["customers.view"],
   "リード": ["leads.view"],
-  "案件": ["deals.view"],
   "注文": ["orders.view"],
   "チーム": ["teams.view"],
   "ロール": ["roles.view"],

@@ -40,12 +40,36 @@
 set -euo pipefail
 export TZ=Asia/Tokyo
 
+REPO_DIR="${REPO_DIR:-/home/ubuntu/salesanchor}"
+
+# AWS CLI v2 がホームディレクトリインストールの場合に PATH を補完（cron環境対応）
+export PATH="/home/ubuntu/.local/bin:${PATH}"
+
+# .env を読み込み（DISCORD_WEBHOOK_OPS 等を環境変数に反映）
+if [ -f "${REPO_DIR}/.env" ]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "${REPO_DIR}/.env"
+  set +a
+fi
+
 # 失敗時にDiscord通知（DISCORD_WEBHOOK_OPS が設定されている場合のみ）
-trap 'if [ -n "${DISCORD_WEBHOOK_OPS:-}" ]; then
-  curl -s -X POST "$DISCORD_WEBHOOK_OPS" \
+notify_failure() {
+  if [ -z "${DISCORD_WEBHOOK_OPS:-}" ]; then
+    return 0
+  fi
+  local when
+  when=$(date +'%Y-%m-%d %H:%M')
+  local body
+  body=$(printf '{"content":"[ALERT] S3バックアップ失敗: %s"}' "${when}")
+  local code
+  code=$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$DISCORD_WEBHOOK_OPS" \
     -H "Content-Type: application/json" \
-    -d "{\"content\":\"⚠️ [ALERT] S3バックアップ失敗: $(date +\"%Y-%m-%d %H:%M\")\"}"
-fi' ERR
+    -d "${body}" 2>/dev/null || echo "000")
+  echo "  Discord通知の応答コード: ${code}"
+}
+
+trap 'notify_failure' ERR
 
 # --- 設定 ---
 S3_BUCKET="${S3_BACKUP_BUCKET:-salesanchor-backups}"

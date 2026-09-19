@@ -22,7 +22,7 @@ from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-os.environ["DISCORD_BOT_TOKEN_999"] = "test-bot-token"
+os.environ["DISCORD_BOT_TOKEN"] = "test-bot-token"
 
 import pytest
 from fastapi import FastAPI
@@ -343,13 +343,14 @@ async def test_no_guild_id_returns_422() -> None:
 
 @pytest.mark.asyncio
 async def test_no_bot_token_returns_503() -> None:
-    """DISCORD_BOT_TOKEN_{tenant_id} が未設定の場合は 503 を返すこと。"""
-    # テナント 998 にはトークンが設定されていない
+    """DISCORD_BOT_TOKEN が未設定の場合は 503 を返すこと（ADR-146 B方式: 共通 Token）。"""
     mock_db = _make_mock_db(guild_id="GUILD-998")
     app = _build_app(mock_db, tenant_id=998)
 
     with ExitStack() as stack:
         _common_patches(stack)
+        # B方式: 共通 DISCORD_BOT_TOKEN を空にして 503 を確認（patch.dict がテスト後に自動復元）
+        stack.enter_context(patch.dict(os.environ, {"DISCORD_BOT_TOKEN": ""}))
         transport = ASGITransport(app=app)
         async with AsyncClient(transport=transport, base_url="http://test") as ac:
             resp = await ac.post("/api/v1/admin/discord/auto-setup")

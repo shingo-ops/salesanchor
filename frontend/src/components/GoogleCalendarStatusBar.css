@@ -1,0 +1,4 @@
+.google-calendar-status-icon-layout {
+  margin-right: var(--space-2);
+  flex-shrink: 0;
+}

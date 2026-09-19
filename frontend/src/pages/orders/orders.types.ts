@@ -6,7 +6,6 @@ export interface OrderListItem {
   id: number;
   company_id: number;
   contact_id: number | null;
-  deal_id: number | null;
   invoice_id: number | null;
   order_number: string;
   total_amount: number | null;
@@ -48,7 +47,6 @@ export const STATUSES = [
 ] as const;
 
 export const emptyForm = {
-  deal_id: "",
   order_number: "",
   total_amount: "",
   status: "awaiting_payment",

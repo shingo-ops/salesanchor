@@ -1,0 +1,7 @@
+{
+  "status": "PASS",
+  "merge": "3935e17da88485f9977da612b4bae72f16357e07",
+  "tasks": "all latest-main table rows preserved, except frontend replaced with exact reviewed local row",
+  "registry": "all lines from both parents preserved",
+  "priorAssertion": "Union of old and new tasks incorrectly expected product-design row that main intentionally removed; latest main task rows are authoritative outside frontend."
+}

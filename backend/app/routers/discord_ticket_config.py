@@ -36,7 +36,6 @@ from app.auth.dependencies import (
     reset_tenant_context,
 )
 from app.database import get_db
-from app.discord_gateway.config import load_tenant_bot_configs
 from app.models import User
 from app.services.audit import record_audit_log
 
@@ -55,7 +54,7 @@ class DiscordTicketConfigResponse(BaseModel):
     ticket_category_id: str | None = None
     ticket_button_channel_id: str | None = None
     staff_role_id: str | None = None
-    welcome_template: str = "ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。"
+    welcome_template: str = "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
     small_channel_id: str | None = None
     large_channel_id: str | None = None
     # KPI7 拡張: ロール名設定（Small→Member, Large→Partner がデフォルト）
@@ -68,7 +67,7 @@ class DiscordTicketConfigUpdate(BaseModel):
     ticket_button_channel_id: str = Field(..., min_length=17, max_length=20)
     staff_role_id: str | None = Field(default=None, min_length=17, max_length=20)
     welcome_template: str = Field(
-        default="ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。",
+        default="Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
         max_length=_WELCOME_TEMPLATE_MAX,
     )
     small_channel_id: str | None = Field(default=None, min_length=17, max_length=20)
@@ -229,7 +228,7 @@ async def deploy_ticket_button(
     """チケット開始ボタンを Discord チャンネルに投稿する (Phase 3).
 
     ticket_button_channel_id に「チケットを開く」ボタン付きメッセージを POST する。
-    Bot トークンは環境変数 DISCORD_BOT_TOKEN_{tenant_id} から取得する。
+    Bot トークンは環境変数 DISCORD_BOT_TOKEN から取得する (ADR-146 B方式)。
     """
     # 設定取得
     result = await db.execute(
@@ -247,15 +246,11 @@ async def deploy_ticket_button(
     channel_id = str(row[0])
 
     # Bot トークン取得
-    bot_token: str | None = os.environ.get(f"DISCORD_BOT_TOKEN_{tenant_id}")
-    if not bot_token:
-        # load_tenant_bot_configs() でフォールバック検索
-        configs = load_tenant_bot_configs()
-        cfg = next((c for c in configs if c.tenant_id == tenant_id), None)
-        bot_token = cfg.bot_token if cfg else None
+    # ADR-146 B方式: 共通 Bot Token
+    bot_token: str | None = os.environ.get("DISCORD_BOT_TOKEN") or None
 
     if not bot_token:
-        raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN_{tenant_id} を確認してください。")
+        raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。")
 
     # Discord REST API でボタンメッセージを投稿
     payload = {

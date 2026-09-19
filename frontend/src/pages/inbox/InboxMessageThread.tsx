@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useTranslation } from "react-i18next";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { api } from "../../lib/api";
 import type { Conversation, MessagesResponse } from "../../lib/messages";
 import { translateMessage } from "../../lib/messages";
 import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
@@ -30,9 +31,11 @@ interface Props {
   setDraft: (v: string) => void;
   sending: boolean;
   sendError: string | null;
+  sendErrorReason: string;
+  sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
-  discordDmChannelMissing: boolean;
+  discordChannelMissing: boolean;
   trimmedDraft: string;
   submitSend: (opts?: { draftId?: number }) => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
@@ -57,7 +60,7 @@ export function InboxMessageThread({
   handleMarkUnread, handleExclude, handleDeleteLead,
   showKartePanel, openKartePanel, closeKartePanel, inboxSettings,
   messageListRef,
-  draft, setDraft, sending, sendError, sendDisabled, canSend, discordDmChannelMissing,
+  draft, setDraft, sending, sendError, sendErrorReason, sendErrorCode, sendDisabled, canSend, discordChannelMissing,
   trimmedDraft, submitSend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
@@ -68,6 +71,10 @@ export function InboxMessageThread({
 
   // 画像添付（ファイル選択 UI）
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // 添付後に入力欄へフォーカスを戻すための参照。
+  // クリップボタンにフォーカスが残ると Enter がボタン押下になり、
+  // ファイル選択が再度開く（2026-09-04 に実測）。
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputId = useId();
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -81,12 +88,65 @@ export function InboxMessageThread({
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
     setAttachedFile(file);
     e.target.value = "";
+    textareaRef.current?.focus();
   }, [setAttachedFile]);
+
+  // ドラッグ&ドロップでの画像添付（PO決定 2026-09-04）。
+  // スレッド全体を対象にし、ドラッグ中はオーバーレイを出す。
+  // 画像以外のファイルは無視する。
+  const [dragActive, setDragActive] = useState(false);
+  const dragCounterRef = useRef(0);
+
+  const acceptDroppedFile = useCallback((file: File) => {
+    if (!file.type.startsWith("image/")) return;
+    setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return URL.createObjectURL(file); });
+    setAttachedFile(file);
+    textareaRef.current?.focus();
+  }, [setAttachedFile]);
+
+  const handleDragEnter = useCallback((e: React.DragEvent<HTMLElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+    dragCounterRef.current += 1;
+    setDragActive(true);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent<HTMLElement>) => {
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault();
+  }, []);
+
+  // dragleave は子要素をまたぐたびに発火するため、
+  // 出入りを数えて 0 になったときだけオーバーレイを消す。
+  const handleDragLeave = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+    if (dragCounterRef.current === 0) {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent<HTMLElement>) => {
+    e.preventDefault();
+    dragCounterRef.current = 0;
+    setDragActive(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) acceptDroppedFile(file);
+  }, [acceptDroppedFile]);
 
   const handleClearAttachment = useCallback(() => {
     setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
     clearAttachment();
   }, [clearAttachment]);
+
+  // 送信後に attachedFile が消えたらプレビューも消す。
+  // clearAttachment は useInboxState 側で attachedFile のみを消すため、
+  // ここで previewUrl を追従させる（2026-09-04 に残留を実測）。
+  useEffect(() => {
+    if (attachedFile === null) {
+      setPreviewUrl((prev) => { if (prev) URL.revokeObjectURL(prev); return null; });
+    }
+  }, [attachedFile]);
 
   // 会話切り替えで添付プレビューをリセット
   useEffect(() => {
@@ -95,6 +155,18 @@ export function InboxMessageThread({
 
   // Translation state: keyed by message_id
   const [translations, setTranslations] = useState<Record<string, TranslationState>>({});
+
+  // 受信画像 URL 再取得（CDN 期限切れ対応）
+  const [resolvedUrl, setResolvedUrl] = useState<Record<number, string>>({});
+  const retriedRef = useRef<Set<number>>(new Set());
+  // 自社配信APIの画像は Authorization ヘッダーが要るため img src に直接渡せない。
+  // Blob で取得して objectURL に変換したものをここへ入れる（attachment-storage 便4b）。
+  const [blobUrl, setBlobUrl] = useState<Record<number, string>>({});
+  const blobFetchedRef = useRef<Set<number>>(new Set());
+  // ライトボックス（原寸表示）
+  const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+  const openLightbox = useCallback((url: string) => setLightboxUrl(url), []);
+  const closeLightbox = useCallback(() => setLightboxUrl(null), []);
 
   // ADR-110: 送信下訳プレビュー表示
   const [showOutboundPreview, setShowOutboundPreview] = useState(false);
@@ -137,6 +209,62 @@ export function InboxMessageThread({
   useEffect(() => {
     setTranslations({});
   }, [selectedLeadId]);
+
+  // Reset resolved URLs and retry tracking on conversation change
+  useEffect(() => {
+    setResolvedUrl({});
+    retriedRef.current = new Set();
+  }, [selectedLeadId]);
+
+  // 自社配信APIの添付を Blob で取得して objectURL 化する。
+  // 取得済みのものは再取得しない。アンマウント時に objectURL を解放する。
+  useEffect(() => {
+    const messages = messagesData?.messages ?? [];
+    for (const m of messages) {
+      const url = m.attachment_url;
+      if (!url || !url.startsWith("/leads/")) continue;
+      if (blobFetchedRef.current.has(m.id)) continue;
+      blobFetchedRef.current.add(m.id);
+      api
+        .getBlob(url)
+        .then((blob) => {
+          setBlobUrl((prev) => ({ ...prev, [m.id]: URL.createObjectURL(blob) }));
+        })
+        .catch(() => {
+          // 取得できなければプレースホルダのまま
+        });
+    }
+  }, [messagesData]);
+
+  useEffect(() => {
+    return () => {
+      for (const u of Object.values(blobUrl)) {
+        URL.revokeObjectURL(u);
+      }
+    };
+  }, [blobUrl]);
+
+  const handleAttachmentError = useCallback(
+    async (msgDbId: number, msgMetaId: string | null) => {
+      if (!msgMetaId || !selectedLeadId) return;
+      if (retriedRef.current.has(msgDbId)) return;
+      retriedRef.current.add(msgDbId);
+      try {
+        const res = await fetch(
+          `/api/v1/leads/${selectedLeadId}/messages/${encodeURIComponent(msgMetaId)}/attachment-url`,
+          { credentials: "include" },
+        );
+        if (res.ok) {
+          const data: { url: string } = await res.json();
+          setResolvedUrl((prev) => ({ ...prev, [msgDbId]: data.url }));
+        }
+        // 404 = 期限切れ → 何もしない（期限切れ表示へフォールバック）
+      } catch {
+        // ネットワークエラーも同様に無視（期限切れ表示）
+      }
+    },
+    [selectedLeadId],
+  );
 
   const handleTranslate = useCallback(async (messageId: string | null) => {
     if (!messageId || !selectedLeadId) return;
@@ -194,7 +322,21 @@ export function InboxMessageThread({
   }
 
   return (
-    <main className="inbox-center">
+    <main
+      className="inbox-center"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {dragActive && (
+        <div className="inbox-drop-overlay" aria-hidden="true">
+          <div className="inbox-drop-overlay-inner">
+            <INBOX_ACTION_ICONS.attach size={ICON.xl} aria-hidden="true" />
+            <span>{t("inbox.dropImageHere")}</span>
+          </div>
+        </div>
+      )}
       {/* ヘッダ */}
       <header className="inbox-center-header">
         <div className="conv-avatar" style={{ flexShrink: 0 }}>
@@ -330,12 +472,37 @@ export function InboxMessageThread({
                     Send failed ({msg.error_code})
                   </div>
                 )}
-                {msg.attachment_type === "image" && msg.attachment_url ? (
-                  <img
-                    src={msg.attachment_url}
-                    alt={t("inbox.imagePreviewAlt")}
-                    className="msg-attachment-img"
-                  />
+                {msg.attachment_type === "image" && (msg.attachment_url || resolvedUrl[msg.id]) ? (
+                  msg.attachment_url?.startsWith("/leads/") ? (
+                    blobUrl[msg.id] ? (
+                      <img
+                        src={blobUrl[msg.id]}
+                        alt={t("inbox.imagePreviewAlt")}
+                        className="msg-attachment-img"
+                        style={{ cursor: "zoom-in" }}
+                        onClick={() => openLightbox(blobUrl[msg.id])}
+                      />
+                    ) : (
+                      <span className="msg-attachment-placeholder">
+                        <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+                        {t("inbox.imagePreviewAlt")}
+                      </span>
+                    )
+                  ) : retriedRef.current.has(msg.id) && !resolvedUrl[msg.id] ? (
+                    <span className="msg-attachment-placeholder">
+                      <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
+                      {t("inbox.imageExpired")}
+                    </span>
+                  ) : (
+                    <img
+                      src={resolvedUrl[msg.id] ?? msg.attachment_url!}
+                      alt={t("inbox.imagePreviewAlt")}
+                      className="msg-attachment-img"
+                      style={{ cursor: "zoom-in" }}
+                      onClick={() => openLightbox(resolvedUrl[msg.id] ?? msg.attachment_url!)}
+                      onError={() => handleAttachmentError(msg.id, msg.message_id ?? null)}
+                    />
+                  )
                 ) : msg.attachment_type === "image" && !msg.attachment_url ? (
                   <span className="msg-attachment-placeholder">
                     <INBOX_ACTION_ICONS.attach size={ICON.sm} aria-hidden="true" />
@@ -445,7 +612,16 @@ export function InboxMessageThread({
       <div className="inbox-send-area sticky-bottom-bar">
         {sendError && (
           <div className="inbox-send-error" role="alert">
-            Send error: {sendError}
+            {sendErrorReason === "attachment_not_saved"
+              ? t("inbox.sendError.attachmentNotSaved")
+              : sendErrorReason === "window_closed"
+                ? t("inbox.sendError.windowClosed")
+                : sendErrorReason === "permission_denied"
+                ? t("inbox.sendError.permissionDenied")
+                : sendErrorReason === "rate_limited"
+                  ? t("inbox.sendError.rateLimited")
+                  : t("inbox.sendError.generic")}
+            {sendErrorCode != null && t("inbox.sendError.codeSuffix", { code: sendErrorCode })}
           </div>
         )}
         <div className="send-card">
@@ -470,13 +646,14 @@ export function InboxMessageThread({
             </div>
             <div className="send-input-wrap">
               <textarea
+                ref={textareaRef}
                 className="inbox-textarea"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={handleKeyDownGuarded}
                 placeholder={
-                  discordDmChannelMissing
-                    ? t("inbox.discordDmChannelMissing")
+                  discordChannelMissing
+                    ? t("inbox.discordChannelMissing")
                     : canSend
                       ? t("inbox.messagePlaceholder")
                       : t("inbox.sendDisabled7d")
@@ -527,8 +704,8 @@ export function InboxMessageThread({
               onClick={checkAndSend}
               disabled={sendDisabled && !attachedFile}
               title={
-                discordDmChannelMissing
-                  ? t("inbox.discordDmChannelMissing")
+                discordChannelMissing
+                  ? t("inbox.discordChannelMissing")
                   : !canSend
                     ? t("inbox.sendDisabled7d")
                     : trimmedDraft.length === 0 && !attachedFile
@@ -549,6 +726,28 @@ export function InboxMessageThread({
           leadId={selectedLeadId}
           currentPlatform={selectedConversation?.platform ?? null}
         />
+      )}
+
+      {/* 受信画像 原寸ライトボックス（G2） */}
+      {lightboxUrl && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("inbox.imagePreviewAlt")}
+          style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "var(--overlay-bg)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+          }}
+          onClick={closeLightbox}
+        >
+          <img
+            src={lightboxUrl}
+            alt={t("inbox.imagePreviewAlt")}
+            style={{ maxWidth: "90vw", maxHeight: "90vh", objectFit: "contain" }}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
       )}
     </main>
   );

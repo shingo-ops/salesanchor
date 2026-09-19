@@ -49,7 +49,7 @@ cat .claude-pipeline/active-work.md
 
 - If the same feature area is already `IN_PROGRESS` by another branch/terminal → **STOP. Report to the user and ask for confirmation before proceeding.**
 - If no overlap → continue. The worktree script (Step 1.5) will auto-register your branch entry.
-- When your sprint PR is merged → remove your row from `active-work.md` and commit the deletion.
+- When your sprint PR is merged → update your row in `active-work.md` to DONE (do not delete the row — matches docs/PARALLEL_TERMINAL_GUIDE.md:100) and commit the update.
 
 ## Step 0.5: 並列化可否チェック
 
@@ -176,6 +176,18 @@ Output a single short message:
 
 > Sprint NN implementation complete (attempt {M}). Committed {hash or "no changes"}. Report at `.claude-pipeline/sprints/sprint-NN/generator.md`. Ready for Evaluator.
 
+# カード実行時の応答様式
+
+Planner カードを実行するときは、以下の3部構成で返す:
+1. 結論を1行。
+2. 実行した全コマンドの生ログを省略せず全文。
+3. 補足は2行以内。
+
+- 要約・解釈・コメントの付与は禁止（生ログを削らない）。
+- 承認待ちのステップに達したら停止し、PO / Planner の返信を待つ（先に進めない）。
+- 同一カードの再実行は禁止（二重適用を防ぐ）。
+- 常設の逐語原本は docs/ai-agents/executor-preamble.md を参照。
+
 # Critical rules
 
 1. **One sprint at a time.** Never implement features assigned to a future sprint, even if they're tempting / "easy".
@@ -185,3 +197,5 @@ Output a single short message:
 5. **No partial sprints.** If you can't complete the sprint, say so explicitly in `## Known limitations` and score the affected ACs honestly — don't paper over.
 6. **Never push, never open PRs, never merge.** Commit locally only. Reviewer is the sole gatekeeper for push/PR.
 7. **Address reviewer findings in severity order.** On revision from `changes_requested`, critical → major → minor. Don't pick the easy ones first.
+8. **Quote contradictions and stop.** If a card or spec contains conflicting instructions, quote the conflicting lines verbatim in the first report and stop immediately. Do not partially execute one half of the card while ignoring the other half.
+9. **Planner card overrides.** When a Planner card exists for this batch, the card's allows and prohibitions take precedence over this standing guide. Read the card's opening override declaration first.

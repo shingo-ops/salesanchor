@@ -1,0 +1,22 @@
+-- ポケモン商品マスタ 25商品の新規登録（tenant_004 専用・冪等）
+--
+-- 内訳: MEGA スターターセットex 4 / 30th CELEBRATION カードセット 9
+--       スタートデッキ100 コロちゃおVer. 1 / SVD exスタートデッキ 11
+-- 既存への変更: PM0200 に除外キーワード「コロちゃお」「コロチャオ」を追加するのみ
+-- 承認: Shingo 2026-09-04
+-- バックアップ:
+--   tenant_004.tcg_products_bak_20260904b              (271)
+--   tenant_004.product_search_keywords_bak_20260904b   (600)
+--   tenant_004.product_exclude_keywords_bak_20260904b  (129)
+--
+-- 設計判断:
+--   - 既存キーワードは1本も削除しない（追加のみ）
+--   - 単品3種には除外キーワード「種セット」を付け、N種セットを拾わせない
+--   - 検証は担当範囲（PM0272〜PM0296）だけを数える
+--
+-- NEUTRALIZED (ADR-155, 2026-09-18):
+-- 商品マスタデータはアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'ADR-155 neutralized: Pokemon batch1 product+keyword seed removed — manage via app/CSV'; END $$;

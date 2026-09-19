@@ -1,0 +1,22 @@
+手順0 executor-preflight.sh exit0
+== executor preflight (identity=shingo-cc, mode=fix) ==
+[1/3] network -> api.github.com
+  [OK]   GitHub API 到達
+[2/3] gh auth = shingo-cc
+  [OK]   gh は shingo-cc
+[3/3] git config user.name = shingo-cc
+  [OK]   git user.name は shingo-cc
+[4/4] long-lived branch -> origin/main
+  [OK]   origin/main は存在
+==============================================
+PREFLIGHT OK — 作業続行可
+
+手順1 git status --short --untracked-files=no
+ M docs/ai-agents/evidence-registry.md
+ M frontend/AGENTS.md
+ M tasks/todo.md
+
+手順2 exit1
+cp: frontend/scripts/generate-icon-sizes.js: Operation not permitted
+cp: frontend/scripts/test-generate-icon-sizes.js: Operation not permitted
+[Errno 1] Operation not permitted: '/Users/tanizawashingo/worktrees/salesanchor/release-frontend-icon-source/frontend/.icon-package-zgrhkgm3'

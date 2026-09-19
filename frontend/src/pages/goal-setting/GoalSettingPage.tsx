@@ -13,7 +13,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { STATUS_ICONS } from "../../constants/icons";
@@ -501,7 +500,6 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
 
 export default function GoalSettingPage() {
   const { t } = useTranslation();
-  const navigate = useNavigate();
 
   const [teams, setTeams] = useState<Team[]>([]);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -645,14 +643,6 @@ export default function GoalSettingPage() {
   return (
     <PageLayout navKey="nav.goalSettings" subtitleKey="goals.subtitle">
       {error && <div className="error-message">{error}</div>}
-
-      {/* 戻るボタン */}
-      <button
-        className="gs-back-btn"
-        onClick={() => navigate("/")}
-      >
-        ← {t("goals.backToDashboard")}
-      </button>
 
       <GoalAdvisorPanel defaultMonthlyKgi={monthlyAdvisorSeed} t={t} />
 

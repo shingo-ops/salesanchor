@@ -1,0 +1,88 @@
+{
+  "date": "2026-09-10",
+  "source": "Delegated agent /root/ci_preflight_readonly report; parent transcribed. Not parent test execution or independent design review.",
+  "authorization": "PO 合意進める: 読み取り確認カードの委任のみ",
+  "card": "CARD-FRONTEND-MOLD-CI-RECON-01 revised 83 lines",
+  "cwd": "/Users/tanizawashingo/salesanchor",
+  "streams": "combined; separation not verified",
+  "initial_stop": {
+    "step": 2,
+    "command": "git fetch origin main",
+    "exit": 255,
+    "output": "error: cannot open '.git/FETCH_HEAD': Operation not permitted\n",
+    "resolution": "カード側の不要な書き込みを除去。ls-remoteとローカル参照一致を確認。権限拡張なし。自動承認レビュー拒否ではない。"
+  },
+  "steps": [
+    {
+      "step": 0,
+      "command": "./scripts/dev/executor-preflight.sh",
+      "output": "== executor preflight (identity=shingo-cc, mode=fix) ==\n[1/3] network -> api.github.com\n  [OK]   GitHub API 到達\n[2/3] gh auth = shingo-cc\n  [OK]   gh は shingo-cc\n[3/3] git config user.name = shingo-cc\n  [OK]   git user.name は shingo-cc\n[4/4] long-lived branch -> origin/main\n  [OK]   origin/main は存在\n==============================================\nPREFLIGHT OK — 作業続行可\n",
+      "exit": 0,
+      "previous_run": true
+    },
+    {
+      "step": 1,
+      "command": "git branch --show-current",
+      "output": "main\n",
+      "exit": 0,
+      "previous_run": true
+    },
+    {
+      "step": 2,
+      "command": "git ls-remote origin refs/heads/main",
+      "output": "7e3dd6565bc8b239ee09967961326fd096fb72fe\trefs/heads/main\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 3,
+      "command": "git rev-parse HEAD origin/main",
+      "output": "7e3dd6565bc8b239ee09967961326fd096fb72fe\n7e3dd6565bc8b239ee09967961326fd096fb72fe\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 4,
+      "command": "git diff --exit-code origin/main -- scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml",
+      "output": "",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 5,
+      "command": "node scripts/tests/test-ui-governance.js",
+      "output": "\n=== UI Governance Gate: 自動テスト ===\n\nT1: 生 <select> 検出\n  ✅ 生 <select> は検出される\nT2: 複数行 <input type=\"search\"> 検出（F-E1 回帰テスト）\n  ✅ 複数行 type=\"search\" は検出される\nT3: <input type=\"checkbox\"> 非検出\n  ✅ type=\"checkbox\" は検出されない\nT4: className=\"data-table\" 非検出（table 除外）\n  ✅ \"data-table\" は検出されない\nT5: className=\"my-tabs\" 検出\n  ✅ \"my-tabs\" は検出される\nT6: 有効な ui-allow 付き生select → 除外\n  ✅ 有効な ui-allow 付き生select は除外される\nT7: 番号なし ui-allow → 無効＝除外されない\n  ✅ 番号なし ui-allow は無効で除外されない\n\n追加テスト:\n  ✅ type 省略の <input> は検出される\n  ✅ type=\"text\" は検出される\n  ✅ type=\"date\" は非検出\n  ✅ type=\"number\" は非検出\n  ✅ type=\"time\" は非検出\n  ✅ 複数行 type=\"text\" は検出される\n  ✅ \"tab-nav\" は検出される\n  ✅ \"table-container\" は非検出\n  ✅ template literal \"db-tab...\" は検出される\n  ✅ 同行 ui-allow は除外される（同行コメントも有効）\n  ✅ ui-allow: 理由 (#123) → 有効\n  ✅ ui-allow: 番号なし → 無効\n  ✅ ui-allow: 理由なし → 無効\n  ✅ <InputField> コンポーネントは非検出\n  ✅ <Selection> コンポーネントは非検出\n\n=== 結果: 22 passed / 0 failed ===\n\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 6,
+      "command": "env BASE_SHA=0000000000000000000000000000000000000000 HEAD_SHA=HEAD node scripts/check-ui-governance.js",
+      "output": "[INFO] BASE_SHA=0000000000000000000000000000000000000000 HEAD_SHA=HEAD\n[INFO] 対象ファイル数: 0\n✅ UI governance: pages/ への変更なし。チェックをスキップします。\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 7,
+      "command": "env BASE_SHA=HEAD HEAD_SHA=HEAD node scripts/check-ui-governance.js",
+      "output": "[INFO] BASE_SHA=HEAD HEAD_SHA=HEAD\n[INFO] 対象ファイル数: 0\n✅ UI governance: pages/ への変更なし。チェックをスキップします。\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 8,
+      "command": "wc -l scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml",
+      "output": "     398 scripts/check-ui-governance.js\n     221 scripts/tests/test-ui-governance.js\n      39 .github/workflows/ui-governance-gate.yml\n     658 total\n",
+      "exit": 0,
+      "previous_run": false
+    },
+    {
+      "step": 9,
+      "command": "git status --short -- scripts/check-ui-governance.js scripts/tests/test-ui-governance.js .github/workflows/ui-governance-gate.yml",
+      "output": "",
+      "exit": 0,
+      "previous_run": false
+    }
+  ],
+  "conclusion": "手順0〜9の報告受領。現行誤合格再現。実装未着手。対象3ファイルのみ状態確認。"
+}
