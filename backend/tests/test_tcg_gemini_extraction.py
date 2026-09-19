@@ -391,9 +391,10 @@ def test_tcg_line_import_svc_sql_has_schema_prefix():
     sqls = _extract_sql_strings_from_source(source)
 
     # tcg_line_import_svc は text(f"...") 形式を使用
+    # auto-register コードは public.suppliers を使うため public. も有効なスキーマ修飾子として許容する
     for sql in sqls:
-        assert f"{_TCG_SCHEMA}." in sql, (
-            f"tcg_line_import_svc.py の SQL に '{_TCG_SCHEMA}.' が含まれていない:\n{sql[:200]}"
+        assert f"{_TCG_SCHEMA}." in sql or "public." in sql, (
+            f"tcg_line_import_svc.py の SQL に '{_TCG_SCHEMA}.' も 'public.' も含まれていない:\n{sql[:200]}"
         )
         assert "{TCG_SCHEMA}" not in sql, (
             f"tcg_line_import_svc.py の SQL に未展開の '{{TCG_SCHEMA}}' が残っている:\n{sql[:200]}"

@@ -91,7 +91,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
     try:
         return _run_extraction(session, source_message_id)
     except Exception:
-        logger.error("[tcg_extraction] unexpected error for sm=%s", source_message_id)
+        logger.exception("[tcg_extraction] unexpected error for sm=%s", source_message_id)
         return {
             "extraction_job_id": None,
             "status": "error",
@@ -306,6 +306,11 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                 session.rollback()
                 logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
                 analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
+
+            # 解析完了後に自動配信をトリガー（TCG_AUTO_DISTRIBUTE=1 のときのみ）
+            auto_distribute = os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() == "1"
+            if auto_distribute and (analysis_stats is None or analysis_stats.get("status") != "error"):
+                _enqueue_auto_distribute()
         else:
             logger.info(
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id
@@ -318,6 +323,24 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
         "analysis_stats": analysis_stats,
         "error_message": error_message,
     }
+
+
+# ---------------------------------------------------------------------------
+# 自動配信エンキュー（Redis 未起動時は no-op）
+# ---------------------------------------------------------------------------
+
+
+def _enqueue_auto_distribute() -> None:
+    """
+    auto_distribute_after_analysis_task を非同期でエンキューする。
+
+    Redis が起動していない場合は握りつぶしてスキップする。
+    """
+    try:
+        if auto_distribute_after_analysis_task is not None:
+            auto_distribute_after_analysis_task.delay()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] auto_distribute enqueue skipped: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -349,15 +372,50 @@ try:
             )
             raise self.retry(exc=exc) from exc
 
+    @celery_app.task(
+        name="tcg.auto_distribute_after_analysis",
+        bind=True,
+        max_retries=1,
+        default_retry_delay=60,
+        time_limit=600,
+        soft_time_limit=540,
+    )
+    def auto_distribute_after_analysis_task(self) -> dict:
+        """
+        Celery タスク: 解析完了後の自動配信。
+
+        run_distribution() の安全装置（#8/#8b/#8c）が pending job の残存を検知した場合は
+        スキップ扱いとなり、次の extraction 完了時に再トリガーされる。
+        Redis 起動時のみ .delay() で非同期実行可能。
+        """
+        import asyncio  # noqa: PLC0415
+
+        from app.database import AsyncSessionLocal  # noqa: PLC0415
+        from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
+
+        async def _run() -> dict:
+            async with AsyncSessionLocal() as db:
+                return await run_distribution(db)
+
+        try:
+            result = asyncio.run(_run())
+            logger.info("[tcg_extraction] auto_distribute result: %s", result)
+            return result
+        except Exception as exc:
+            logger.exception("[tcg_extraction] auto_distribute failed: %s", exc)
+            raise self.retry(exc=exc) from exc
+
 except Exception as _celery_init_err:  # noqa: BLE001
     # Redis 未起動 / Celery 初期化失敗時はタスクなしでモジュールのみ提供
     logger.warning(
         "[tcg_extraction] Celery task registration skipped: %s", _celery_init_err
     )
     extract_source_message_task = None  # type: ignore[assignment]
+    auto_distribute_after_analysis_task = None  # type: ignore[assignment]
 
 
 __all__ = [
     "extract_and_analyze_source_message",
     "extract_source_message_task",
+    "auto_distribute_after_analysis_task",
 ]
