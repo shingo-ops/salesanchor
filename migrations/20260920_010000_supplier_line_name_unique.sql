@@ -7,11 +7,9 @@ DO $$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = 'suppliers'
-          AND column_name = 'line_name'
+        WHERE table_schema = 'public' AND table_name = 'suppliers' AND column_name = 'line_name'
     ) THEN
-        EXECUTE 'CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique ON public.suppliers (line_name) WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL';
+        EXECUTE format('CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique ON %I.%I (line_name) WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL', 'public', 'suppliers');
     ELSE
         RAISE NOTICE 'public.suppliers.line_name not found — skipping index creation';
     END IF;
