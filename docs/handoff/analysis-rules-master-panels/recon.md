@@ -1,9 +1,11 @@
 # Recon: analysis-rules-master-panels
 
+**設計**: docs/handoff/analysis-rules-master-panels/design.md
+
 ## 調査日
 2026-09-19
 
-## 既存ADR確認
+## ADR調査
 - ADR-027: `docs/adr/ADR-027-ui-internationalization.md` — 全UI文字列 t("key") 強制
 - ADR-144: `docs/CC_UI_GOVERNANCE.md` — UI部品金型クラス強制
 

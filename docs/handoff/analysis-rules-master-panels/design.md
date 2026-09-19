@@ -1,9 +1,13 @@
 # 設計: analysis-rules-master-panels
 
+**recon**: docs/handoff/analysis-rules-master-panels/recon.md
+
 ## 目的
 解析管理ページ（/super-admin/analysis-rules）の左サイドバーに「マスタ管理」グループを追加し、商品マスタ・仕入元マスタへアクセスできるようにする。既存のスタンドアロンルートは残置。
 
 ## 変更方針
+
+**対象ADR**: ADR-027（UI i18n強制）、ADR-144（UIガバナンス）
 
 ### パネル抽出パターン
 - TcgProductMasterPage / SupplierMasterPage のロジック・UI をそのまま流用
@@ -44,7 +48,13 @@
 
 守り手: AnalysisRulesSidebarKey 型ユニオン（`frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx`） — 新規キーを追加した際にパネルの条件レンダリングが漏れると TypeScript が型エラーを出す。lint CI（0 errors 必須）が守り手として機能。
 
+## 触らないもの
+
+- `frontend/src/pages/super-admin/TcgProductMasterPage.tsx` — スタンドアロンルートの既存実装は維持（並行アクセス対応）
+- `frontend/src/pages/super-admin/SupplierMasterPage.tsx` — スタンドアロンルートの既存実装は維持（並行アクセス対応）
+- `frontend/src/App.tsx` — ルート定義は変更しない（既存ルートとパネル化は独立）
+
 ## 戻し方
 - DesktopShell の 2 項目を元に戻す（git revert または手動編集）
 - AnalysisRulesPage / AnalysisRulesSidebar から追加箇所を削除
-- 2 新規ファイルを削除
+- ProductMasterPanel / SupplierMasterPanel の 2 新規ファイルを削除
