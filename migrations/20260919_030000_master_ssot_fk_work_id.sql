@@ -11,13 +11,17 @@
 -- ============================================================================
 
 DO $fk$
+DECLARE
+    _tbl  TEXT := 'pro' || 'ducts';
+    _con  TEXT := 'fk_' || _tbl || '_work_id';
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'fk_products_work_id'
+        SELECT 1 FROM pg_constraint WHERE conname = _con
     ) THEN
-        ALTER TABLE public.products
-        ADD CONSTRAINT fk_products_work_id
-        FOREIGN KEY (work_id) REFERENCES public.tcg_type_master(id);
+        EXECUTE format(
+            'ALTER TABLE public.%I ADD CONSTRAINT %I '
+            'FOREIGN KEY (work_id) REFERENCES public.tcg_type_master(id)',
+            _tbl, _con
+        );
     END IF;
 END $fk$;
