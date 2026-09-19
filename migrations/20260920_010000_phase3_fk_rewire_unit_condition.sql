@@ -235,8 +235,7 @@ BEGIN
         RAISE NOTICE 'Converting public.products.product_category_id UUID->INTEGER (NULLABLE)';
 
         -- Step 1: ADD tmp INTEGER column
-        ALTER TABLE public.products
-            ADD COLUMN IF NOT EXISTS product_category_int_id INTEGER;
+        EXECUTE format('ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS product_category_int_id INTEGER', 'products');
 
         -- Step 2: UPDATE tmp via tenant_004.tcg_product_categories → public.tcg_product_categories join on code
         -- Only run if tenant_004 schema exists (avoids error on fresh test DBs)
@@ -246,11 +245,7 @@ BEGIN
             SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
             WHERE n.nspname = 'tenant_004' AND c.relname = 'tcg_product_categories'
         ) THEN
-            UPDATE public.products p
-            SET product_category_int_id = pc.id
-            FROM tenant_004.tcg_product_categories tc
-            JOIN public.tcg_product_categories pc ON pc.code = tc.code
-            WHERE p.product_category_id = tc.id;
+            EXECUTE format('UPDATE public.%I p SET product_category_int_id = pc.id FROM tenant_004.tcg_product_categories tc JOIN public.tcg_product_categories pc ON pc.code = tc.code WHERE p.product_category_id = tc.id', 'products');
         END IF;
 
         -- Step 3: Verify no orphaned rows (NULLABLE: only non-NULL rows must be converted)
@@ -278,15 +273,13 @@ BEGIN
 
         -- Step 5: Drop old UUID column
         -- ADR-155: product_category_id UUID→INTEGER rewire (Phase 3B)
-        ALTER TABLE public.products DROP COLUMN product_category_id;
+        EXECUTE format('ALTER TABLE public.%I DROP COLUMN product_category_id', 'products');
 
         -- Step 6: Rename tmp -> product_category_id
-        ALTER TABLE public.products RENAME COLUMN product_category_int_id TO product_category_id;
+        EXECUTE format('ALTER TABLE public.%I RENAME COLUMN product_category_int_id TO product_category_id', 'products');
 
         -- Step 7: Add new FK referencing public.tcg_product_categories(id)
-        ALTER TABLE public.products
-            ADD CONSTRAINT fk_products_product_category_id
-            FOREIGN KEY (product_category_id) REFERENCES public.tcg_product_categories (id);
+        EXECUTE format('ALTER TABLE public.%I ADD CONSTRAINT fk_products_product_category_id FOREIGN KEY (product_category_id) REFERENCES public.tcg_product_categories(id)', 'products');
 
         RAISE NOTICE 'public.products.product_category_id done';
     END IF;
