@@ -271,7 +271,7 @@ class ProductDetailUpdate(BaseModel):
     mark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
     release_date: str | None
     division_id: UUID | None
-    work_id: UUID | None
+    work_id: int | None = None
     manufacturer_id: UUID | None
     product_category_id: UUID | None
     search_keywords: list[DetailWord] = Field(max_length=1000)

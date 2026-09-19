@@ -114,7 +114,7 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
             f"{','.join(keyword_sql)} FROM public.products p {' '.join(joins)} "
             "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like) "
-            "AND (:work_id IS NULL OR p.work_id = :work_id) "
+            "AND (CAST(:work_id AS INTEGER) IS NULL OR p.work_id = CAST(:work_id AS INTEGER)) "
             "ORDER BY p.release_date DESC NULLS LAST,p.product_code DESC"
         ),
         {"like": "%" + query.strip() + "%", "work_id": work_id_int},
@@ -130,16 +130,19 @@ _PRODUCT_FIELD_MAP = {
 }
 
 
+_ALL_REF_COLUMNS = {"work_code", *LOOKUP_TABLES}
+
+
 def values(snapshot: dict) -> dict[str, str]:
     product = snapshot["product"]
     result = {}
     for field in CSV_COLUMNS:
-        if field in WORDS or field in LOOKUP_TABLES:
+        if field in WORDS or field in _ALL_REF_COLUMNS:
             continue
         # CSV フィールド名と public.products カラム名が異なる場合はマップする
         product_field = _PRODUCT_FIELD_MAP.get(field, field)
         result[field] = str(product.get(product_field) or "")
-    result.update({key: str(snapshot["refs"].get(key) or "") for key in LOOKUP_TABLES})
+    result.update({key: str(snapshot["refs"].get(key) or "") for key in _ALL_REF_COLUMNS})
     result.update({key: encode_words([word["keyword"] for word in snapshot[key]]) for key in WORDS})
     return {"product_code": product["product_code"], "revision": revision(snapshot), **result}
 
@@ -179,6 +182,9 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
         return response, []
     current = {s["product"]["product_code"]: s for s in await snapshots(db)}
     references = {}
+    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.tcg_type_master r WHERE r.is_active=TRUE"))
+    references["work_code"] = {row[0]["code"]: row[0] for row in work_result.fetchall()}
     for field, table in LOOKUP_TABLES.items():
         result = await db.execute(text(f"SELECT to_jsonb(r) FROM {TCG_SCHEMA}.{table} r WHERE r.is_active=TRUE"))
         references[field] = {row[0]["code"]: row[0] for row in result.fetchall()}
@@ -231,14 +237,14 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                     if any(not word.strip() for word in after):
                         errors.append("ROUNDTRIP_KEYWORDS_INVALID")
                     plan["words"][field] = after
-                elif field in LOOKUP_TABLES:
+                elif field in references:  # work_code + LOOKUP_TABLES
                     ref = references[field].get(row[field])
                     if ref is None:
                         errors.append(f"UNKNOWN_{field.upper()}_{row[field]}")
                     else:
                         plan["sets"][LOOKUP_ARGS[field]] = ref["id"]
                         if field == "work_code":
-                            plan["sets"]["category_class"] = ref["display_name"]
+                            plan["sets"]["category_class"] = ref.get("name_ja") or ref.get("display_name", "")
                 else:
                     if field == "japanese_title" and not row[field].strip():
                         errors.append("JAPANESE_TITLE_REQUIRED")

@@ -6,8 +6,8 @@ import pytest
 
 from app.services import tcg_work_comparison_svc as comparison
 
-ONE = "11111111-1111-4111-8111-111111111111"
-OTHER = "22222222-2222-4222-8222-222222222222"
+ONE = 1
+OTHER = 2
 ITEM = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
 ITEM2 = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
 SOURCE = "cccccccc-cccc-4ccc-8ccc-cccccccccccc"

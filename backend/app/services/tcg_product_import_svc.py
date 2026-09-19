@@ -196,9 +196,13 @@ async def load_existing_marks(db: AsyncSession) -> dict[str, str]:
 
 
 def check_codes(row: dict[str, str], lookups: dict[str, dict[str, str]]) -> list[str]:
-    """4つのコード列が空でなく、参照マスタに実在することを見る。"""
+    """4つのコード列が空でなく、参照マスタに実在することを見る。
+
+    lookups は load_lookup_maps が返す辞書（work_code を含む全コード列）。
+    LOOKUP_TABLES は TCG スキーマのテーブルのみのため、ここでは lookups のキーを使う。
+    """
     errors: list[str] = []
-    for column in LOOKUP_TABLES:
+    for column in lookups:
         code = row.get(column, "")
         if not code:
             errors.append("MISSING_" + column.upper())
