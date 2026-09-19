@@ -3,7 +3,7 @@
 **recon**: docs/handoff/backfill-work-id-nulls/recon.md
 
 ## KGI
-デプロイ時に `20260916_130000_work_id_not_null.sql` が成功し、全商品の work_id が NOT NULL になること。
+デプロイ時に `migrations/20260916_130000_work_id_not_null.sql` が成功し、全商品の work_id が NOT NULL になること。
 
 ## 変更方針
 NOT NULL マイグレーション直前に、7件の NULL work_id を既存の UUID→INTEGER 対応表で埋める。
