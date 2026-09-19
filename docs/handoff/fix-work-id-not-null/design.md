@@ -3,7 +3,7 @@
 **recon**: docs/handoff/fix-work-id-not-null/recon.md
 
 ## KGI
-デプロイ時に `20260916_130000_work_id_not_null.sql` が成功し、全商品の work_id が NOT NULL になること。
+デプロイ時に `migrations/20260916_130000_work_id_not_null.sql` が成功し、全商品の work_id が NOT NULL になること。
 
 ## 変更方針
 既存の未適用マイグレーションを修正し、バックフィル（Phase 1）→ NOT NULL 適用（Phase 2）の2段階にする。
@@ -22,3 +22,4 @@ NOT NULL 制約追加前のデータ補完は標準的なマイグレーショ�
 
 ## 維持の仕組み
 NOT NULL 制約適用後は新規 NULL 挿入が DB レベルで阻止される。
+守り手: `ALTER TABLE public.products ALTER COLUMN work_id DROP NOT NULL` + UPDATE SET work_id = NULL WHERE id IN (127269,127270,127271,127272,127273,440585,440586) で即時復元可能
