@@ -45,3 +45,13 @@
 ## KPI測定方法
 
 本番デプロイ後、`extraction_jobs` テーブルで `status='error'` かつ `error_message LIKE 'WORK_ID%'` のレコード数がゼロになることを確認。
+
+## 外部・過去事例の参照と我々への応用
+
+- 内部ロジック修正のため外部事例は不要
+- 過去事例: tcg_analyzer_svc.py が resolved_work_id=None を既に正常処理している実装パターンをそのまま踏襲
+
+## 維持の仕組み
+
+- 新規テスト `test_tcg_work_reference.py` が ValueError の再発を防ぐ（CI で常時実行）
+- validate_work_id / validate_product_code が None を返すことを regression テストで固定
