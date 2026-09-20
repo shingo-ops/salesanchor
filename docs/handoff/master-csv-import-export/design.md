@@ -1,5 +1,7 @@
 # design: master-csv-import-export
 
+**recon**: docs/handoff/master-csv-import-export/recon.md
+
 ## KGI
 - 4マスタテーブル（units, conditions, tcg_status_master, tcg_note_master）にCSVエクスポート/インポート機能を追加
 - super-admin および テナント管理者の両方がCSVでマスタを一括管理できる
@@ -42,6 +44,7 @@
 - 社内事例: `frontend/src/pages/super-admin/SupplierImportPage.tsx` — preview→diff表示→commit フロー。同パターンを8ページに複製。
 
 ## 維持の仕組み
+- 守り手: .github/workflows/test.yml（Backend Tests / pytest-run が毎 PR で suppliers_csv パターン互換性を検査）
 - ruff CI: Python コードの品質チェック（毎PR）
 - i18n キーパリティ: ja.json / en.json のキー数一致チェック（CI）
 - ADR-072 準拠: backend/app/routers に write エンドポイントを追加する際は reset_tenant_context 必須（このファイルとチェックリストで継続担保）
