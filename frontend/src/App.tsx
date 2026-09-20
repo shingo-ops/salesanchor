@@ -40,6 +40,7 @@ import InvoiceCreatePage from "./pages/invoice-create/InvoiceCreatePage";
 import InvoiceDetailPage from "./pages/invoice-detail/InvoiceDetailPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import StatusMasterPage from "./pages/status-master/StatusMasterPage";
+import ConditionsPage from "./pages/conditions/ConditionsPage";
 import UnitsPage from "./pages/units/UnitsPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
 import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
@@ -358,6 +359,7 @@ function App() {
                     <Route path="bots"                element={<BotsPage />} />
                     <Route path="suppliers"           element={<SuppliersPage />} />
                     <Route path="status-master"       element={<StatusMasterPage />} />
+                    <Route path="conditions"          element={<ConditionsPage />} />
                     <Route path="units"              element={<UnitsPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
