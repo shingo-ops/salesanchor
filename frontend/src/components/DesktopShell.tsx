@@ -188,7 +188,6 @@ export default function DesktopShell() {
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
-    { to: "/super-admin/tcg-line-import",      labelKey: "nav.superAdminTcgLineImport" },
     { to: "/super-admin/analysis-rules",       labelKey: "nav.superAdminAnalysisRules" },
     { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
   ] : [];

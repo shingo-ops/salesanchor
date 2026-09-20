@@ -8,6 +8,7 @@
 import { useTranslation } from "react-i18next";
 
 export type AnalysisRulesSidebarKey =
+  | "import"
   | "accuracy-management"
   | "needs-review"
   | "sold-out"
@@ -61,6 +62,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         <span className="hub-subnav-title">
           {t("analysisRules.sidebar.groupAnalysisStatus")}
         </span>
+        {navItem("import", t("analysisRules.sidebar.import"))}
         {navItem("accuracy-management", t("analysisRules.sidebar.accuracyManagement"))}
         {navItem("needs-review", t("analysisRules.sidebar.needsReview"), needsReviewCount)}
       </div>
