@@ -28,6 +28,6 @@ PR #3604 でDesktopShell.tsxは修正済み。モバイル側の対応。
 - frontend/src/locales/en.json:262 — `"superAdminAnalysisRules": "Analysis Management"` — 既存（パスは frontend/src/locales/en.json）
 
 ## 触らないファイル
-- `frontend/src/locales/ja.json` / `en.json` — i18nキーは既に存在
+- `frontend/src/locales/ja.json` / frontend/src/locales/en.json — i18nキーは既に存在
 - `frontend/src/hooks/useSuperAdmin.ts` — 変更不要
 - `frontend/src/components/DesktopShell.tsx` — PR #3604 で修正済み
