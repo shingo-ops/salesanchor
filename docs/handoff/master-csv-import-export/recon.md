@@ -27,8 +27,8 @@
 
 ### ADR確認
 - ADR-027: 全UI文字列は `t("key")` 経由 — `docs/adr/ADR-027-ui-internationalization.md`
-- ADR-072: write endpoint 後に `reset_tenant_context` 必須 — `docs/adr/ADR-072-multi-tenant-rls-hardening.md`
-- ADR-144: デザインシステムコンポーネントのみ使用
+- ADR-072: write endpoint 後に `reset_tenant_context` 必須 — `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md`
+- ADR-144: デザインシステムコンポーネントのみ使用 — `docs/adr/ADR-144-ui-component-governance.md`
 
 ### 既存フロントエンドページ確認
 - `frontend/src/pages/units/UnitsPage.tsx:53` — UnitsPage コンポーネント（export ボタン追加対象）

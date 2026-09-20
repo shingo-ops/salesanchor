@@ -30,15 +30,21 @@
 
 ## 参照ADR
 - ADR-027: `docs/adr/ADR-027-ui-internationalization.md`
-- ADR-072: `docs/adr/ADR-072-multi-tenant-rls-hardening.md`
-- ADR-144: `docs/CC_UI_GOVERNANCE.md`
+- ADR-072: `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md`
+- ADR-144: `docs/adr/ADR-144-ui-component-governance.md`
 
 ## 弊害・リスク
 - DB migration なし（既存テーブルへの新エンドポイント追加のみ）
 - マッチキーの選択: units/conditions=`code`、status_master=`status_id`、note_master=`label_ja` — label_ja は一意であることを前提
 
-## 外部事例
-- 社内パターン: super_admin_suppliers.py (既存)
+## 外部・過去事例の参照と我々への応用
+- 社内事例: `backend/app/routers/super_admin_suppliers.py` — SHA-256 digest preview/commit パターン。同じ構造を4テーブルに適用。
+- 社内事例: `frontend/src/pages/super-admin/SupplierImportPage.tsx` — preview→diff表示→commit フロー。同パターンを8ページに複製。
+
+## 維持の仕組み
+- ruff CI: Python コードの品質チェック（毎PR）
+- i18n キーパリティ: ja.json / en.json のキー数一致チェック（CI）
+- ADR-072 準拠: backend/app/routers に write エンドポイントを追加する際は reset_tenant_context 必須（このファイルとチェックリストで継続担保）
 
 ## 設計仕様書
 対象外（既存パターンの追加適用）
