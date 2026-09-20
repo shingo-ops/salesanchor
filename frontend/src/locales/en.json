@@ -3843,7 +3843,7 @@
       "accuracyManagement": "Accuracy Management",
       "needsReview": "Needs Review",
       "soldOut": "Sold-Out Rules",
-      "dateRule": "Date Rules",
+      "dateRule": "Reservation Rules",
       "productMaster": "Product Master",
       "statusMaster": "Status Master",
       "supplierMaster": "Supplier Master",
@@ -3906,7 +3906,7 @@
       "lastDistributionError": "Last distribution error"
     },
     "dateRule": {
-      "title": "Date Rules",
+      "title": "Reservation Rules",
       "instructionLabel": "Date Instruction",
       "draftBadge": "Draft",
       "activeBadge": "Active",
