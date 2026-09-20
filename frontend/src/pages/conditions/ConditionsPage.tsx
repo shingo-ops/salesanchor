@@ -349,7 +349,7 @@ export default function ConditionsPage() {
         right={
           selected.size > 0 && hasPermission("conditions.delete") ? (
             <HeaderButton
-              variant="danger"
+              variant="secondary"
               onClick={() => setShowBulkDelete(true)}
               data-testid="conditions-bulk-delete"
             >
