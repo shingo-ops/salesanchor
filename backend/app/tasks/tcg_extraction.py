@@ -206,7 +206,11 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         None, None, reference["works"],
                     )
                     if explicit and item.get("resolved_work_id") not in (None, int(explicit)):
-                        raise RecordError("WORK_ID_CONFLICT")
+                        logger.warning(
+                            "[tcg_extraction] WORK_ID_CONFLICT for ej=%s: gemini=%s evidence=%s, setting to None",
+                            extraction_job_id, item.get("resolved_work_id"), explicit,
+                        )
+                        item["resolved_work_id"] = None
         except SoftTimeLimitExceeded:
             raise
         except Exception as exc:
