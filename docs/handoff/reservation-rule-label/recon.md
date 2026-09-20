@@ -33,5 +33,5 @@
 
 ## 補足
 
-- `frontend/src/App.tsx:310` および `DateRulesPanel.tsx:2`、`AnalysisRulesPage.tsx:5` にコメント内「日付ルール」が残っているが、画面非表示のため変更不要
-- 内部キー名 `dateRule` は変更しない（コンポーネント名・i18nキーの変更は対象外）
+- `frontend/src/App.tsx:310` および frontend/src/pages/super-admin/components/DateRulesPanel.tsx:2、frontend/src/pages/super-admin/AnalysisRulesPage.tsx:5 にコメント内「日付ルール」が残っているが、画面非表示のため変更不要
+- 内部キー名 dateRule は変更しない（コンポーネント名・i18nキーの変更は対象外）
