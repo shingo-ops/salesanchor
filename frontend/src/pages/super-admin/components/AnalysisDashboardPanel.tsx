@@ -17,7 +17,7 @@
  * ADR-067: 色・サイズはデザイントークンのみ
  * ADR-144: Card / Badge / DataTable / Tabs / recharts 金型のみ使用
  */
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -37,6 +37,7 @@ import type { DataTableColumn } from "../../../components/DataTable";
 import { Tabs } from "../../../components/Tabs";
 import type { TabItem } from "../../../components/Tabs";
 import { DashboardIcons } from "../../../constants/icons";
+import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import "./AnalysisDashboardPanel.css";
 
@@ -295,7 +296,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   return (
     <div className="analysis-dashboard">
       {/* タブナビゲーション */}
-      <div className="analysis-dashboard-tabs">
+      <div className="analysis-dashboard-nav">
         <Tabs
           items={tabItems}
           activeKey={activeTab}
@@ -378,7 +379,7 @@ interface ImportTabContentProps {
   error: string | null;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
-  ArrowRightIcon: React.ComponentType<{ size?: number }>;
+  ArrowRightIcon: Icon;
 }
 
 function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
@@ -531,7 +532,7 @@ interface ExtractionTabContentProps {
   trend: TrendDay[];
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
-  ArrowRightIcon: React.ComponentType<{ size?: number }>;
+  ArrowRightIcon: Icon;
 }
 
 function ExtractionTabContent({ data, trend, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
@@ -748,7 +749,7 @@ interface AnalysisTabContentProps {
   trend: TrendDay[];
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
-  ArrowRightIcon: React.ComponentType<{ size?: number }>;
+  ArrowRightIcon: Icon;
 }
 
 function AnalysisTabContent({ data, trend, t, onNavigate, ArrowRightIcon }: AnalysisTabContentProps) {

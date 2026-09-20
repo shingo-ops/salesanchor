@@ -21,7 +21,7 @@
    タブナビゲーション
 ────────────────────────────────────────────────────────────────────────────── */
 
-.analysis-dashboard-tabs {
+.analysis-dashboard-nav {
   border-bottom: 1px solid var(--border-primary);
   margin-bottom: var(--space-1);
 }

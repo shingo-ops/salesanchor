@@ -15,7 +15,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
-from app.services.tcg_analysis_dashboard_svc import get_pipeline_summary, get_pipeline_trend, get_import_summary, get_distribution_summary
+from app.services.tcg_analysis_dashboard_svc import (
+    get_distribution_summary,
+    get_import_summary,
+    get_pipeline_summary,
+    get_pipeline_trend,
+)
 
 router = APIRouter()
 
