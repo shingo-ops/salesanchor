@@ -2508,6 +2508,20 @@
       "deleteAction": "Delete",
       "deleteError": "Failed to delete the supplier."
     },
+    "conditionsAdmin": {
+      "title": "Condition Master Management",
+      "newCondition": "Add New Condition",
+      "bulkDeleteConfirm": "Deactivate selected conditions?",
+      "fields": {
+        "code": "Condition Code",
+        "canonical": "Display Name",
+        "appKubun": "App Classification",
+        "priority": "Priority",
+        "searchKw": "Search Keywords",
+        "excludeKw": "Exclude Keywords",
+        "isActive": "Active"
+      }
+    },
     "fxRate": {
       "title": "FX Rate Management (SSOT)",
       "subtitle": "USD/JPY rate is automatically fetched twice a day from an external API.",
@@ -3808,6 +3822,7 @@
       "dateRule": "Date Rules",
       "productMaster": "Product Master",
       "supplierMaster": "Supplier Master",
+      "conditionsMaster": "Condition Master",
       "unitMaster": "Unit Master",
       "import": "Import"
     },

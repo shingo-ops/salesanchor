@@ -2508,6 +2508,20 @@
       "deleteAction": "削除",
       "deleteError": "仕入元の削除に失敗しました。"
     },
+    "conditionsAdmin": {
+      "title": "状態マスタ管理",
+      "newCondition": "新規状態を追加",
+      "bulkDeleteConfirm": "選択した状態を非アクティブにしますか？",
+      "fields": {
+        "code": "状態コード",
+        "canonical": "表示名",
+        "appKubun": "アプリ区分",
+        "priority": "優先度",
+        "searchKw": "検索キーワード",
+        "excludeKw": "除外キーワード",
+        "isActive": "有効"
+      }
+    },
     "fxRate": {
       "title": "為替レート管理（SSOT）",
       "subtitle": "USD/JPY レートを外部 API から1日2回自動取得しています。",
@@ -3808,6 +3822,7 @@
       "dateRule": "日付ルール",
       "productMaster": "商品マスタ",
       "supplierMaster": "仕入元マスタ",
+      "conditionsMaster": "状態マスタ",
       "unitMaster": "単位マスタ",
       "import": "インポート"
     },

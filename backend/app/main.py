@@ -30,6 +30,7 @@ from app.routers import (
     bots,
     close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
+    conditions,  # 状態マスタ CRUD（テナント版）
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
@@ -82,6 +83,7 @@ from app.routers import (
     staff,
     staff_reports,
     super_admin_aliases,
+    super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
@@ -374,6 +376,10 @@ app.include_router(
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
+    conditions.router, prefix="/api/v1", tags=["conditions"],
+    dependencies=[Depends(get_current_tenant)],
+)
+app.include_router(
     purchase_orders.router, prefix="/api/v1", tags=["purchase_orders"],
     dependencies=[Depends(get_current_tenant)],
 )
@@ -460,6 +466,10 @@ app.include_router(
 )
 app.include_router(
     super_admin_aliases.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 状態マスタ SSOT admin CRUD
+app.include_router(
+    super_admin_conditions.router, prefix="/api/v1", tags=["super-admin"],
 )
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
