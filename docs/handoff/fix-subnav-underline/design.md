@@ -6,7 +6,8 @@ SubMenu コンポーネントの NavLink 項目からブラウザデフォルト
 
 ## recon 相互参照
 
-- [recon.md](./recon.md) — 原因調査・影響範囲・ADR検索結果
+- [docs/handoff/fix-subnav-underline/recon.md](./recon.md) — 原因調査・影響範囲・ADR検索結果
+- ADR-144（UIガバナンス）: コンポーネント金型 `.comp-subnav__item` の修正であり新設ではない
 
 ## 対象と対象外
 
@@ -60,6 +61,8 @@ background: none;
 いずれもナビゲーション用 `<a>` タグの下線除去として同一手法を採用。SubMenu も同じパターンに統一する。
 
 ## 維持の仕組み
+
+守り手: stylelint（CI自動検査） + ADR-067 darkmode check（CI自動検査）
 
 - SubMenu.css は stylelint で CI 監視中（プロパティ順序・詳細度違反を自動検出）
 - ADR-067 darkmode check で色トークンの `:root` / `force-dark` 両方宣言を検証
