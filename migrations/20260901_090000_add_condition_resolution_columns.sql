@@ -88,75 +88,7 @@ BEGIN
         RAISE NOTICE 'migration 20260901_090000: created idx_conditions_priority';
     END IF;
 
-    -- ----------------------------------------------------------------
-    -- Step 3: 既存列 app_kubun + 新列 priority / search_kw / exclude_kw を seed
-    --
-    -- 冪等: WHERE code IN (...) で対象を限定。
-    --        既存値を上書きする（priority/search_kw/exclude_kw は新規追加列なので NULL or ''）。
-    --        app_kubun は既存列だが全行空欄のため上書き安全（バックアップ確認済み）。
-    -- ----------------------------------------------------------------
-    EXECUTE format($seed$
-        UPDATE %I.conditions
-        SET
-            app_kubun  = CASE code
-                WHEN 'CN0001' THEN '箱系大'
-                WHEN 'CN0002' THEN '箱系大'
-                WHEN 'CN0003' THEN '箱系'
-                WHEN 'CN0004' THEN '箱系'
-                WHEN 'CN0005' THEN ''
-                WHEN 'CN0006' THEN ''
-                WHEN 'CN0007' THEN ''
-                WHEN 'CN0008' THEN '枚系,単位不明'
-                WHEN 'CN0009' THEN '箱系大'
-                WHEN 'CN0010' THEN 'パック系'
-                ELSE app_kubun
-            END,
-            priority   = CASE code
-                WHEN 'CN0001' THEN 4
-                WHEN 'CN0002' THEN 2
-                WHEN 'CN0003' THEN 4
-                WHEN 'CN0004' THEN 2
-                WHEN 'CN0005' THEN 3
-                WHEN 'CN0006' THEN 3
-                WHEN 'CN0007' THEN 3
-                WHEN 'CN0008' THEN 1
-                WHEN 'CN0009' THEN 2
-                WHEN 'CN0010' THEN 2
-                ELSE priority
-            END,
-            search_kw  = CASE code
-                WHEN 'CN0001' THEN '通常品,[通常品]'
-                WHEN 'CN0002' THEN '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B'
-                WHEN 'CN0003' THEN '通常品,[通常品],未開封,新品未開封,新品,シュリンク付き,シュリ付,シュリ付き,シュリンクあり,シュリ有り,シュリ有'
-                WHEN 'CN0004' THEN '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B'
-                WHEN 'CN0005' THEN 'シュリなし,シュリ無し,シュリ無,シュリンクなし,シュリンク無し,シュリンク無,no shrink'
-                WHEN 'CN0006' THEN 'ペリ無,ペリなし,ペリ無し,ぺりぺり無し,ぺりぺり無,検品のため一度開封済み,確認のため開封済み'
-                WHEN 'CN0007' THEN '未サーチ,サーチなし,サーチ痕なし,サーチ痕無し,サーチ無し'
-                WHEN 'CN0008' THEN 'PSA,BGS,CGC,ARS,鑑定,SAR,SR,UR,CHR,プロモ,連番,単品,枚'
-                WHEN 'CN0009' THEN 'カートンテープカット,テープカット済,テープカット,テープ切'
-                WHEN 'CN0010' THEN 'サーチ済,サーチ済み'
-                ELSE search_kw
-            END,
-            exclude_kw = CASE code
-                WHEN 'CN0001' THEN '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B'
-                WHEN 'CN0002' THEN ''
-                WHEN 'CN0003' THEN '傷み,箱痛み,痛み,凹み,へこみ,潰れ,つぶれ,破れ,シュリンク破れ,汚れ,スレ,ダメージ,ダメ,難あり,日焼け,色褪せ,折れ,欠け,割れ,状態A-,状態B'
-                WHEN 'CN0004' THEN ''
-                WHEN 'CN0005' THEN ''
-                WHEN 'CN0006' THEN ''
-                WHEN 'CN0007' THEN '[サーチ済み]'
-                WHEN 'CN0008' THEN ''
-                WHEN 'CN0009' THEN ''
-                WHEN 'CN0010' THEN '未サーチ,サーチ痕なし'
-                ELSE exclude_kw
-            END
-        WHERE code IN (
-            'CN0001','CN0002','CN0003','CN0004','CN0005',
-            'CN0006','CN0007','CN0008','CN0009','CN0010'
-        )
-    $seed$, _schema);
-
-    RAISE NOTICE 'migration 20260901_090000: seeded conditions R1-R4 columns (10 rows)';
+    -- DEPRECATED: values now managed via app UI/CSV per ADR-155
 
 END;
 $$;
