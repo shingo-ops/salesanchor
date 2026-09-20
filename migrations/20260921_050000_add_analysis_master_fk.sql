@@ -1,0 +1,31 @@
+-- ============================================================================
+-- Migration 20260921_050000: 解析マスタに定義マスタへの FK 追加
+--
+-- ADR-156: 商品分類ツリー Phase 1
+--   解析マスタ（conditions, units）から定義マスタへの参照 FK を追加。
+--   - conditions.condition_def_id → condition_definitions(id)
+--   - units.line_id              → product_lines(id)
+--
+-- 依存: 20260919_020000_master_ssot_public_tables.sql (conditions, units)
+--        20260921_040000_create_condition_definitions.sql (condition_definitions)
+--        20260920_130000_create_product_classification.sql (product_lines)
+--
+-- ADR-155 準拠: seed なし
+-- 冪等性: ADD COLUMN IF NOT EXISTS / CREATE INDEX IF NOT EXISTS
+-- ============================================================================
+
+-- conditions → condition_definitions マッピング
+ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_conditions_condition_def_id ON public.conditions (condition_def_id);
+
+-- units → product_lines マッピング
+ALTER TABLE public.units ADD COLUMN IF NOT EXISTS line_id INTEGER REFERENCES public.product_lines(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_units_line_id ON public.units (line_id);
+
+-- ============================================================================
+-- Rollback:
+--   DROP INDEX IF EXISTS idx_units_line_id;
+--   ALTER TABLE public.units DROP COLUMN IF EXISTS line_id;
+--   DROP INDEX IF EXISTS idx_conditions_condition_def_id;
+--   ALTER TABLE public.conditions DROP COLUMN IF EXISTS condition_def_id;
+-- ============================================================================
