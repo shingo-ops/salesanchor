@@ -42,13 +42,15 @@
 | 既存の信号灯・CTA・トレンドグラフが維持 | Extraction/Analysis タブで従来の機能が使える |
 | i18nキー完全一致 | ja.json と en.json の追加キーが一致する |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（既存ダッシュボードのタブ分割のみ、新しい技術選定なし）
+該当なし。既存ダッシュボードのタブ分割のみで新規技術選定はなし。
+参照元: 本プロジェクトで既採用の `frontend/src/components/Tabs.tsx` 金型（ADR-144）をそのまま適用。
 
-## 守り手
+## 維持の仕組み
 
-- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:47` — DashboardTab 型で4タブを型安全に管理（文字列リテラル型）
-- `backend/app/services/tcg_analysis_dashboard_svc.py:1` — SELECT のみ制約（INSERT/UPDATE/DELETE/DDL 実行しない）
-- `backend/app/routers/tcg_analysis_dashboard.py:91` — require_super_admin で全エンドポイントを保護
+守り手: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:47` — DashboardTab 型で4タブを型安全に管理（文字列リテラル型）
+
+- `backend/app/services/tcg_analysis_dashboard_svc.py` — SELECT のみ制約（INSERT/UPDATE/DELETE/DDL 実行しない）コメントで明記
+- `backend/app/routers/tcg_analysis_dashboard.py` — require_super_admin で全エンドポイントを保護
 - 遅延読み込みにより、Import/Distribution は初回タブ訪問時のみAPIコール（パフォーマンス影響を最小化）
