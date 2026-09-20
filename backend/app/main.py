@@ -93,7 +93,6 @@ from app.routers import (
     super_admin_tenants,
     super_admin_units,  # 単位マスタ中央 admin
     suppliers,
-    units,  # 単位マスタ テナント用
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_analysis_rule,  # ANALYSIS-RULE P5: 完売・日付ルール管理 API
     tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
@@ -109,6 +108,7 @@ from app.routers import (
     tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
+    units,  # 単位マスタ テナント用
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD

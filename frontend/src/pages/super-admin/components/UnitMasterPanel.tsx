@@ -15,7 +15,7 @@ import { TextField } from "../../../components/TextField";
 import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { STATUS_ICONS } from "../../../constants/icons";
-import { ICON } from "../../../constants/layout";
+import { ICON } from "../../../constants/iconSizes";
 
 interface CentralUnit {
   id: number;

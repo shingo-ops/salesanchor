@@ -16,7 +16,7 @@ import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
 import { STATUS_ICONS } from "../../constants/icons";
-import { ICON } from "../../constants/layout";
+import { ICON } from "../../constants/iconSizes";
 
 interface Unit {
   id: number;
