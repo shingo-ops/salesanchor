@@ -23,6 +23,7 @@ from app.services.gemini_extraction_svc import (
     extract_message,
     format_prompt_input,
     parse_extraction_response,
+    strip_emoji,
 )
 from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
 
@@ -400,6 +401,35 @@ def test_tcg_line_import_svc_sql_has_schema_prefix():
             f"tcg_line_import_svc.py の SQL に未展開の '{{TCG_SCHEMA}}' が残っている:\n{sql[:200]}"
         )
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# strip_emoji
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestStripEmoji:
+    def test_removes_common_emoji(self):
+        assert strip_emoji("在庫リスト🔥✨") == "在庫リスト"
+
+    def test_preserves_cjk_symbols(self):
+        assert strip_emoji("◆ポケモン■遊戯王") == "◆ポケモン■遊戯王"
+
+    def test_preserves_newlines(self):
+        text = "行1🔥\n行2✨\n行3"
+        result = strip_emoji(text)
+        assert result.count("\n") == 2
+        assert result == "行1\n行2\n行3"
+
+    def test_empty_string(self):
+        assert strip_emoji("") == ""
+
+    def test_no_emoji(self):
+        original = "ポケモン BOX 5000円"
+        assert strip_emoji(original) == original
+
+    def test_preserves_fullwidth_pipe(self):
+        """全角パイプはGemini出力の区切り文字なので保持される"""
+        assert strip_emoji("商品名｜数量｜価格") == "商品名｜数量｜価格"
 
 _V3_HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 
