@@ -34,6 +34,46 @@ from app.services.tcg_work_reference import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# 絵文字除去
+# ---------------------------------------------------------------------------
+
+# Unicode Emoji ranges — covers emoticons, symbols, pictographs, transport,
+# flags, and supplemental symbols commonly found in LINE messages.
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F600-\U0001F64F"  # emoticons
+    "\U0001F300-\U0001F5FF"  # misc symbols & pictographs
+    "\U0001F680-\U0001F6FF"  # transport & map symbols
+    "\U0001F700-\U0001F77F"  # alchemical symbols
+    "\U0001F780-\U0001F7FF"  # geometric shapes extended
+    "\U0001F800-\U0001F8FF"  # supplemental arrows-C
+    "\U0001F900-\U0001F9FF"  # supplemental symbols & pictographs
+    "\U0001FA00-\U0001FA6F"  # chess symbols
+    "\U0001FA70-\U0001FAFF"  # symbols & pictographs extended-A
+    "\U00002702-\U000027B0"  # dingbats
+    "\U0000FE00-\U0000FE0F"  # variation selectors
+    "\U0000200D"             # zero width joiner
+    "\U000020E3"             # combining enclosing keycap
+    "\U00002600-\U000026FF"  # misc symbols (but preserve ◆●■ etc.)
+    "\U00002700-\U000027BF"  # dingbats
+    "\U0000231A-\U0000231B"  # watch, hourglass
+    "\U000023E9-\U000023F3"  # media control
+    "\U000023F8-\U000023FA"  # media control
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def strip_emoji(text: str) -> str:
+    """Remove emoji from text before sending to Gemini.
+
+    Preserves line structure (newlines) so L0001-style line IDs remain aligned.
+    Common CJK symbols used in inventory lists (◆●■▲ etc.) are NOT removed.
+    """
+    return _EMOJI_RE.sub("", text)
+
+
+# ---------------------------------------------------------------------------
 # プロンプト定数
 # ---------------------------------------------------------------------------
 
@@ -141,7 +181,8 @@ def annotate_lines(raw_text: str) -> list[dict]:
 
 def format_prompt_input(raw_text: str) -> str:
     """raw_text を [L0001] 行テキスト 形式に変換してプロンプト入力を作る。"""
-    annotated = annotate_lines(raw_text)
+    cleaned = strip_emoji(raw_text)
+    annotated = annotate_lines(cleaned)
     return "\n".join(f'[{item["id"]}] {item["text"]}' for item in annotated)
 
 
@@ -434,5 +475,6 @@ __all__ = [
     "extract_message",
     "annotate_lines",
     "format_prompt_input",
+    "strip_emoji",
     "_safe_error_message",
 ]
