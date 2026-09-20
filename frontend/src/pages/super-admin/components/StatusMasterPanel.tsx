@@ -282,6 +282,7 @@ export function StatusMasterPanel() {
             </div>
             <div className="form-group">
               <label className="field-label">{t(`${f}.matchType`)} *</label>
+              {/* ui-allow: enum select for status match_type; no SelectControl variant with option map (#3594) */}
               <select
                 className="field field-h-md"
                 value={form.match_type}
@@ -295,6 +296,7 @@ export function StatusMasterPanel() {
             </div>
             <div className="form-group">
               <label className="field-label">{t(`${f}.effect`)} *</label>
+              {/* ui-allow: enum select for status effect; no SelectControl variant with option map (#3594) */}
               <select
                 className="field field-h-md"
                 value={form.effect}

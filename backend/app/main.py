@@ -82,6 +82,7 @@ from app.routers import (
     shipping,
     staff,
     staff_reports,
+    status_master,  # ステータスマスタ テナント用
     super_admin_aliases,
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
@@ -90,10 +91,10 @@ from app.routers import (
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_phase_switch,
+    super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
-    super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_units,  # 単位マスタ中央 admin
     suppliers,
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
@@ -111,7 +112,6 @@ from app.routers import (
     tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
-    status_master,  # ステータスマスタ テナント用
     units,  # 単位マスタ テナント用
     webhook,
 )
