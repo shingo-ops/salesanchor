@@ -21,8 +21,8 @@
 SQLカラム名誤りはよくある実装バグ。PostgreSQL `information_schema.columns` でDB DDLを直接確認するアプローチが標準的な解決策。本件もVPS本番DBに対して実測確認を行い、正しいカラム名を特定した。
 
 ## 影響範囲
-- 呼び出し元: `backend/app/routers/tcg_analysis_dashboard.py`（router）
-- 変更ファイル: `backend/app/services/tcg_analysis_dashboard_svc.py`（2行のみ）
+- 呼び出し元: backend/app/routers/tcg_analysis_dashboard.py（router）
+- 変更ファイル: backend/app/services/tcg_analysis_dashboard_svc.py（2行のみ）
 - 触らない範囲: 他のサービス・テーブル・マイグレーション
 
 ## 戻し方
