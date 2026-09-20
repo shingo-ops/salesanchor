@@ -718,3 +718,6 @@ run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
 
 # 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
 run_sql migrations/20260920_130000_create_product_classification.sql
+
+# tcg_status_master SSOT統合: 完売検索ワード6件追加 + 除外パターン2件有効化
+run_sql migrations/20260921_000000_status_master_soldout_ssot.sql
