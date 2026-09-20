@@ -16,7 +16,7 @@
 
 | コンポーネント | 要素 | text-decoration: none | 下線 |
 |---|---|---|---|
-| AnalysisRulesSidebar (`super-admin/components/AnalysisRulesSidebar.tsx:37`) | `<button>` | hub-shell.css:53 で宣言 | なし |
+| AnalysisRulesSidebar (`frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:37`) | `<button>` | hub-shell.css:53 で宣言 | なし |
 | SubMenu (NavLink mode) | `<a>` (NavLink) | **なし** | **あり** ← 問題 |
 | sidebar.css:138 `.sidebar-item` | `<a>` | 宣言あり | なし |
 

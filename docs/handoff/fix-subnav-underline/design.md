@@ -49,10 +49,18 @@ background: none;
 | B. `index.css` で `a { text-decoration: none }` | グローバルリセット | 不採用 — 他の `<a>` タグへの影響が広すぎる |
 | C. NavLink に inline style | 各使用箇所で個別指定 | 不採用 — DRY 違反・デザインシステム違反 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-CSS 修正1行のため外部事例は不要。
+本リポジトリ内の既存パターンが直接の根拠であり、外部事例は不要。
 
-## 守り手
+- `frontend/src/hub-shell.css:53` — `.hub-subnav-item` に `text-decoration: none` を宣言（AnalysisRulesSidebar 用）
+- `frontend/src/sidebar.css:138` — `.sidebar-item` に `text-decoration: none` を宣言
+- `frontend/src/mobile-shell.css:144` — モバイルナビにも同様の宣言あり
 
-SubMenu.css は stylelint + ADR-067 darkmode check で CI 監視中。
+いずれもナビゲーション用 `<a>` タグの下線除去として同一手法を採用。SubMenu も同じパターンに統一する。
+
+## 維持の仕組み
+
+- SubMenu.css は stylelint で CI 監視中（プロパティ順序・詳細度違反を自動検出）
+- ADR-067 darkmode check で色トークンの `:root` / `force-dark` 両方宣言を検証
+- `text-decoration: none` は非色プロパティのため darkmode check の対象外（追加作業不要）
