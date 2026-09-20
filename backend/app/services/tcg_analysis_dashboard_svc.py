@@ -110,7 +110,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
             text(
                 f"SELECT requested_model, prompt_version"
                 f" FROM {TCG_SCHEMA}.extraction_attempts"
-                f" ORDER BY created_at DESC"
+                f" ORDER BY started_at DESC"
                 f" LIMIT 1"
             )
         )
@@ -118,7 +118,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
 
     engine_version_row = (
         await db.execute(
-            text(f"SELECT engine_version FROM {TCG_SCHEMA}.analysis_results ORDER BY created_at DESC LIMIT 1")
+            text(f"SELECT engine_version FROM {TCG_SCHEMA}.analysis_results ORDER BY computed_at DESC LIMIT 1")
         )
     ).fetchone()
 
