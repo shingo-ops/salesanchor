@@ -395,12 +395,33 @@ try:
         """
         import asyncio  # noqa: PLC0415
 
-        from app.database import AsyncSessionLocal  # noqa: PLC0415
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
+
+        from app.database import DATABASE_URL  # noqa: PLC0415
         from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
 
         async def _run() -> dict:
-            async with AsyncSessionLocal() as db:
-                return await run_distribution(db)
+            # asyncio.run() は新規イベントループを作成するため、
+            # モジュールレベルの AsyncSessionLocal（エンジンが旧ループに紐付き）を
+            # そのまま使うと RuntimeError: attached to a different loop が発生する。
+            # 回避策: ワンショット用エンジン＋セッションをここで生成し、finally で確実に破棄する。
+            _connect_args: dict = {
+                "prepared_statement_cache_size": 0,
+                "server_settings": {"application_name": "salesanchor_celery_distribute"},
+            }
+            _engine = create_async_engine(
+                DATABASE_URL,
+                pool_pre_ping=True,
+                pool_size=2,
+                max_overflow=0,
+                connect_args=_connect_args,
+            )
+            _Session = async_sessionmaker(_engine, expire_on_commit=False)
+            try:
+                async with _Session() as db:
+                    return await run_distribution(db)
+            finally:
+                await _engine.dispose()
 
         try:
             result = asyncio.run(_run())

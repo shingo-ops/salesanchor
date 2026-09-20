@@ -219,8 +219,11 @@ services:
       - REVIEW_MAIL_DISCORD_MENTION=${REVIEW_MAIL_DISCORD_MENTION:-}
       # TCG スキーマ名（TENANT-01: 環境変数化・未設定時は tenant_004）
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
+      # Google Sheets SA キーファイル（backend サービスと同パターン）
+      - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
+      - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
     depends_on:
       postgres:
         condition: service_healthy
