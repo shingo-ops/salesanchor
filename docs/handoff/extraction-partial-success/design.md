@@ -12,17 +12,17 @@
 
 ## 変更内容
 
-### 変更1: tcg_work_reference.py
+### 変更1: backend/app/services/tcg_work_reference.py
 
-- `validate_work_id`: `raise ValueError` → `logger.warning` + `return None`
-- `validate_work_id`: non-integer入力の `int(value)` が TypeError/ValueError になる場合も `return None`
-- `validate_product_code`: `raise ValueError` → `logger.warning` + `return None`
-- `import logging` と `logger = logging.getLogger(__name__)` を追加
+- validate_work_id: raise ValueError → logger.warning + return None
+- validate_work_id: non-integer入力の int(value) が TypeError/ValueError になる場合も return None
+- validate_product_code: raise ValueError → logger.warning + return None
+- import logging と logger = logging.getLogger(__name__) を追加
 
-### 変更2: tcg_extraction.py
+### 変更2: backend/app/tasks/tcg_extraction.py
 
-- WORK_ID_CONFLICT セクション: `raise RecordError("WORK_ID_CONFLICT")` → `item["resolved_work_id"] = None` + `logger.warning`
-- `logger` は既に定義済み（`logger = logging.getLogger(__name__)` at line 39）
+- WORK_ID_CONFLICT セクション: raise RecordError("WORK_ID_CONFLICT") → item["resolved_work_id"] = None + logger.warning
+- logger は既に定義済み（line 39）
 
 ## 影響範囲
 
@@ -53,5 +53,7 @@
 
 ## 維持の仕組み
 
-- 新規テスト `test_tcg_work_reference.py` が ValueError の再発を防ぐ（CI で常時実行）
+守り手: CI（backend/tests/test_tcg_work_reference.py が ValueError の再発を検知）
+
+- 新規テスト backend/tests/test_tcg_work_reference.py が ValueError の再発を防ぐ（CI で常時実行）
 - validate_work_id / validate_product_code が None を返すことを regression テストで固定
