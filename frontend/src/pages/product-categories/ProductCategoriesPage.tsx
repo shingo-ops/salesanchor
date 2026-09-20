@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
@@ -52,6 +53,7 @@ const toForm = (c: ProductCategoryEntry): CategoryFormState => ({
 
 export default function ProductCategoriesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
   const [items, setItems] = useState<ProductCategoryEntry[]>([]);
   const [error, setError] = useState("");
@@ -75,6 +77,20 @@ export default function ProductCategoriesPage() {
   const editFormRef = useRef<HTMLFormElement>(null);
 
   const f = "productCategoriesMaster";
+
+  const downloadExport = async () => {
+    try {
+      const blob = await api.getBlob("/product-categories/export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "product-categories.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -219,15 +235,33 @@ export default function ProductCategoriesPage() {
       navKey="nav.productCategories"
       subtitleKey={`${f}.subtitle`}
       headerAction={
-        hasPermission("product_categories.edit") ? (
+        <>
           <HeaderButton
-            variant="primary"
-            onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-            data-testid="product-categories-new"
+            variant="secondary"
+            data-testid="product-categories-export"
+            onClick={() => { void downloadExport(); }}
           >
-            {t(`${f}.newCategory`)}
+            {t("productCategoriesCsv.exportButton")}
           </HeaderButton>
-        ) : undefined
+          {hasPermission("product_categories.edit") && (
+            <HeaderButton
+              variant="secondary"
+              data-testid="product-categories-import"
+              onClick={() => navigate("/management-center/product-categories/import")}
+            >
+              {t("productCategoriesCsv.importButton")}
+            </HeaderButton>
+          )}
+          {hasPermission("product_categories.edit") && (
+            <HeaderButton
+              variant="primary"
+              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+              data-testid="product-categories-new"
+            >
+              {t(`${f}.newCategory`)}
+            </HeaderButton>
+          )}
+        </>
       }
     >
       {error && <div className="error-message">{error}</div>}
