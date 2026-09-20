@@ -6,7 +6,11 @@ ADR-072: write endpoint の db.commit() 直後に reset_tenant_context() 必須�
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import csv
+import hashlib
+import io
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,6 +32,60 @@ router = APIRouter()
 
 _COLS = "id, code, display_name, kubun_type, is_active, tenant_id, created_at, updated_at"
 _UPDATABLE = {"code", "display_name", "kubun_type", "is_active"}
+_BOOL_TRUE = {"true", "1", "yes"}
+MAX_CSV_BYTES = 2 * 1024 * 1024
+_PC_REQUIRED_COLS = {"code", "display_name"}
+
+
+def _compute_digest(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()[:16]
+
+
+async def _read_pc_upload(file: UploadFile) -> bytes:
+    name = (file.filename or "").lower()
+    if not name.endswith(".csv"):
+        raise HTTPException(status_code=422, detail="PRODUCT_CATEGORIES_IMPORT_NOT_CSV")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=422, detail="PRODUCT_CATEGORIES_IMPORT_EMPTY_FILE")
+    if len(raw) > MAX_CSV_BYTES:
+        raise HTTPException(status_code=413, detail="PRODUCT_CATEGORIES_IMPORT_FILE_TOO_LARGE")
+    try:
+        raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=422, detail="PRODUCT_CATEGORIES_IMPORT_NOT_UTF8") from exc
+    return raw
+
+
+def _parse_product_categories(raw: bytes) -> tuple[list[dict], list[str]]:
+    text_content = raw.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text_content))
+    rows: list[dict] = []
+    errors: list[str] = []
+    if not reader.fieldnames:
+        return [], ["Empty CSV"]
+    missing = _PC_REQUIRED_COLS - set(reader.fieldnames)
+    if missing:
+        return [], [f"Missing columns: {', '.join(sorted(missing))}"]
+    for line_num, raw_row in enumerate(reader, start=2):
+        code = (raw_row.get("code") or "").strip()
+        display_name = (raw_row.get("display_name") or "").strip()
+        if not code:
+            errors.append(f"L{line_num}: code is required")
+            continue
+        if not display_name:
+            errors.append(f"L{line_num}: display_name is required")
+            continue
+        is_active_raw = (raw_row.get("is_active") or "true").strip().lower()
+        is_active = is_active_raw in _BOOL_TRUE
+        rows.append({
+            "code": code,
+            "display_name": display_name,
+            "kubun_type": (raw_row.get("kubun_type") or "").strip() or None,
+            "is_active": is_active,
+            "_line": line_num,
+        })
+    return rows, errors
 
 
 @router.get(
@@ -89,6 +147,144 @@ async def create_product_category(
     await db.commit()
     await reset_tenant_context(db, tenant_id)  # ADR-072
     return ProductCategoryResponse(**dict(row))
+
+
+@router.get(
+    "/product-categories/export",
+    dependencies=[Depends(require_permission("product_categories.view"))],
+    summary="テナント 商品カテゴリマスタ CSVエクスポート",
+)
+async def export_product_categories_csv(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> Response:
+    result = await db.execute(
+        text(
+            "SELECT code, display_name, kubun_type, is_active "
+            "FROM public.tcg_product_categories "
+            "WHERE tenant_id = :tenant_id "
+            "ORDER BY id"
+        ),
+        {"tenant_id": tenant_id},
+    )
+    rows = result.mappings().all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["code", "display_name", "kubun_type", "is_active"])
+    for r in rows:
+        writer.writerow([
+            r["code"] or "",
+            r["display_name"] or "",
+            r["kubun_type"] or "",
+            str(r["is_active"]).lower() if r["is_active"] is not None else "true",
+        ])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=product-categories.csv"},
+    )
+
+
+@router.post(
+    "/product-categories/import/preview",
+    dependencies=[Depends(require_permission("product_categories.edit"))],
+    summary="テナント 商品カテゴリマスタ CSVインポート プレビュー",
+)
+async def import_product_categories_preview(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> dict:
+    raw = await _read_pc_upload(file)
+    rows, errors = _parse_product_categories(raw)
+    digest = _compute_digest(raw)
+
+    inserts = 0
+    updates = 0
+    for row in rows:
+        res = await db.execute(
+            text(
+                "SELECT 1 FROM public.tcg_product_categories "
+                "WHERE code = :code AND tenant_id = :tenant_id"
+            ),
+            {"code": row["code"], "tenant_id": tenant_id},
+        )
+        if res.fetchone():
+            updates += 1
+        else:
+            inserts += 1
+
+    preview_rows = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
+    return {
+        "digest": digest,
+        "total": len(rows),
+        "inserts": inserts,
+        "updates": updates,
+        "errors": errors,
+        "preview_rows": preview_rows,
+    }
+
+
+@router.post(
+    "/product-categories/import/commit",
+    dependencies=[Depends(require_permission("product_categories.edit"))],
+    summary="テナント 商品カテゴリマスタ CSVインポート 確定",
+)
+async def import_product_categories_commit(
+    file: UploadFile = File(...),
+    digest: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+) -> dict:
+    raw = await _read_pc_upload(file)
+    actual_digest = _compute_digest(raw)
+    if actual_digest != digest:
+        raise HTTPException(status_code=409, detail="PRODUCT_CATEGORIES_IMPORT_DIGEST_MISMATCH")
+
+    rows, errors = _parse_product_categories(raw)
+    if errors:
+        return {"inserted": 0, "updated": 0, "errors": errors}
+
+    inserted = updated = 0
+    try:
+        for row in rows:
+            data = {k: v for k, v in row.items() if not k.startswith("_")}
+            exists_result = await db.execute(
+                text(
+                    "SELECT id FROM public.tcg_product_categories "
+                    "WHERE code = :code AND tenant_id = :tenant_id"
+                ),
+                {"code": data["code"], "tenant_id": tenant_id},
+            )
+            existing = exists_result.fetchone()
+            if existing:
+                await db.execute(
+                    text(
+                        "UPDATE public.tcg_product_categories "
+                        "SET display_name = :display_name, kubun_type = :kubun_type, "
+                        "is_active = :is_active, updated_at = NOW() "
+                        "WHERE id = :id AND tenant_id = :tenant_id"
+                    ),
+                    {**data, "id": existing[0], "tenant_id": tenant_id},
+                )
+                updated += 1
+            else:
+                await db.execute(
+                    text(
+                        "INSERT INTO public.tcg_product_categories "
+                        "(code, display_name, kubun_type, is_active, tenant_id) "
+                        "VALUES (:code, :display_name, :kubun_type, :is_active, :tenant_id)"
+                    ),
+                    {**data, "tenant_id": tenant_id},
+                )
+                inserted += 1
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"PRODUCT_CATEGORIES_IMPORT_COMMIT_ERROR: {exc}") from exc
+
+    return {"inserted": inserted, "updated": updated, "errors": []}
 
 
 @router.patch(

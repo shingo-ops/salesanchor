@@ -102,6 +102,8 @@ import UnitImportPage from "./pages/super-admin/UnitImportPage";
 import ConditionImportPage from "./pages/super-admin/ConditionImportPage";
 import StatusMasterImportPage from "./pages/super-admin/StatusMasterImportPage";
 import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
+import ProductCategoriesImportPage from "./pages/super-admin/ProductCategoriesImportPage";
+import ProductCategoriesImportTenantPage from "./pages/product-categories/ProductCategoriesImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -256,6 +258,7 @@ function App() {
                   <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
                   <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
                   <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
+                  <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
                   <Route
                     path="/purchase-orders"
@@ -350,6 +353,10 @@ function App() {
                   <Route
                     path="/super-admin/masters/note-master/import"
                     element={<NoteMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/product-categories/import"
+                    element={<ProductCategoriesImportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
