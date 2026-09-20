@@ -33,6 +33,8 @@ FastAPI ルート順序: export/import/preview/commit を `/{category_id}` パ�
 
 ### フロントエンド
 
+UI 部品は ADR-144 UIガバナンス に従い `components/` の既存金型（ContentToolbar・PageLayout 等）を使用。新規 select/input は生タグ禁止。
+
 - backend/app/routers/super_admin_product_categories.py — CSV エンドポイント 3 本追加
 - backend/app/routers/product_categories.py — テナント CSV エンドポイント 3 本追加
 - frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx — ContentToolbar に export・import ボタン追加
@@ -40,8 +42,8 @@ FastAPI ルート順序: export/import/preview/commit を `/{category_id}` パ�
 - frontend/src/pages/super-admin/ProductCategoriesImportPage.tsx — 新規作成（UnitImportPage.tsx 踏襲）
 - frontend/src/pages/product-categories/ProductCategoriesImportPage.tsx — 新規作成（テナント用）
 - frontend/src/App.tsx — ルート 2 本追加
-- frontend/src/locales/ja.json — productCategoriesCsv キーセット追加
-- frontend/src/locales/en.json — productCategoriesCsv キーセット追加
+- frontend/src/locales/ja.json — productCategoriesCsv キーセット追加（ADR-027 i18n 準拠・全UI文字列は t("key") 経由）
+- frontend/src/locales/en.json — productCategoriesCsv キーセット追加（ADR-027 i18n 準拠・ja.json と同一キー必須）
 
 ## 弊害と対策
 
@@ -60,11 +62,9 @@ FastAPI ルート順序: export/import/preview/commit を `/{category_id}` パ�
 
 - ruff check が CI で自動実行（バックエンド）
 - TypeScript type check が CI で自動実行（フロントエンド）
-- i18n キーの ja.json / en.json 一致は CI で検証される
+- i18n キーの ja.json / en.json 一致は CI で検証される（ADR-027）
 
-## 守り手
-
-.github/workflows/test.yml — ruff・TypeScript type check が CI で自動実行される。
+守り手: .github/workflows/test.yml
 
 ## 計画フェーズ
 
