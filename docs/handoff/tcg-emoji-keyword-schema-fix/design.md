@@ -1,5 +1,8 @@
 # design: tcg-emoji-keyword-schema-fix
 
+## 参照
+- recon: docs/handoff/tcg-emoji-keyword-schema-fix/recon.md
+
 ## 対象ADR
 既存機能のバグ修正のため新規ADRなし。関連: ADR-072（テナントスキーマ分離）
 
