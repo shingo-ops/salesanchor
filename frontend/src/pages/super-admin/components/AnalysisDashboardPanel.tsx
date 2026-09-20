@@ -13,7 +13,7 @@
  * ADR-144: Card / Badge / DataTable 金型のみ使用
  *
  * NOTE: /tcg/analysis-dashboard/trend は削除済み（backend から除去）。
- *       トレンドグラフは PR #3611 でバックエンドエンドポイント削除に伴い除去。
+ *       トレンドグラフは PR (#3611) でバックエンドエンドポイント削除に伴い除去。
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
