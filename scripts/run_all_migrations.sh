@@ -697,3 +697,6 @@ run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
 
 # Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
 run_sql migrations/20260920_020000_supplier_line_name_unique.sql
+
+# Conditions master SSOT Phase 1: public.conditions に tenant_id 追加 + deal_statuses/work_items FK 張り替え
+run_sql migrations/20260920_030000_conditions_ssot_phase1.sql

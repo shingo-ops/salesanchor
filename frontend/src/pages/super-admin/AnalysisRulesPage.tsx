@@ -23,6 +23,7 @@ import { SoldOutRulesPanel } from "./components/SoldOutRulesPanel";
 import { DateRulesPanel } from "./components/DateRulesPanel";
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
+import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
 import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
@@ -138,6 +139,7 @@ export default function AnalysisRulesPage() {
           {activeSection === "date-rule" && <DateRulesPanel />}
           {activeSection === "product-master" && <ProductMasterPanel />}
           {activeSection === "supplier-master" && <SupplierMasterPanel />}
+          {activeSection === "conditions-master" && <ConditionsMasterPanel />}
         </div>
       </div>
     </PageLayout>
