@@ -707,6 +707,12 @@ run_sql migrations/20260920_030000_units_add_tenant_id.sql
 # ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
 run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
 
+# 備考マスタ public.tcg_note_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_060000_note_master_tenant_id.sql
+
+# product_categories tenant_id
+run_sql migrations/20260920_070000_product_categories_tenant_id.sql
+
 # analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
 run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
 

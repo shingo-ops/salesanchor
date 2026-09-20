@@ -40,3 +40,19 @@ class ConditionResponse(ConditionBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ConditionAliasCreate(BaseModel):
+    condition_id: int
+    alias_text: str = Field(min_length=1, max_length=500)
+    lang: str = Field(default="ja", min_length=2, max_length=5)
+
+
+class ConditionAliasResponse(BaseModel):
+    id: int
+    condition_id: int
+    alias_text: str
+    lang: str
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

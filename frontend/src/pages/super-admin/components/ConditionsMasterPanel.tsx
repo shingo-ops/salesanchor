@@ -16,6 +16,14 @@ import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Check } from "../../../constants/icons";
 
+interface ConditionAlias {
+  id: number;
+  condition_id: number;
+  alias_text: string;
+  lang: string;
+  updated_at: string;
+}
+
 interface CentralCondition {
   id: number;
   code: string;
@@ -64,7 +72,13 @@ export function ConditionsMasterPanel() {
   // 一括削除確認
   const [confirmDelete, setConfirmDelete] = useState(false);
 
+  // 別名管理（編集モーダル内）
+  const [aliasesFor, setAliasesFor] = useState<{ id: number; code: string } | null>(null);
+  const [aliases, setAliases] = useState<ConditionAlias[]>([]);
+  const [aliasForm, setAliasForm] = useState({ alias_text: "", lang: "ja" });
+
   const conditionsFormRef = useRef<HTMLFormElement>(null);
+  const aliasFormRef = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -120,6 +134,43 @@ export function ConditionsMasterPanel() {
     }
   };
 
+  // --- aliases ---
+  const openAliases = async () => {
+    if (editId === null) return;
+    setAliasesFor({ id: editId, code: form.code });
+    try {
+      const data = await api.get<ConditionAlias[]>(`/super-admin/conditions/${editId}/aliases`);
+      setAliases(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    }
+  };
+
+  const addAlias = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!aliasesFor) return;
+    try {
+      await api.post(`/super-admin/conditions/${aliasesFor.id}/aliases`, {
+        condition_id: aliasesFor.id,
+        ...aliasForm,
+      });
+      setAliasForm({ alias_text: "", lang: "ja" });
+      setAliases(await api.get<ConditionAlias[]>(`/super-admin/conditions/${aliasesFor.id}/aliases`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.saveError"));
+    }
+  };
+
+  const deleteAlias = async (id: number) => {
+    if (!aliasesFor) return;
+    try {
+      await api.delete(`/super-admin/conditions/aliases/${id}`);
+      setAliases(await api.get<ConditionAlias[]>(`/super-admin/conditions/${aliasesFor.id}/aliases`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("common.deleteError"));
+    }
+  };
+
   const bulkDelete = async () => {
     setConfirmDelete(false);
     const selectedIds = Array.from(selectedKeys).map(Number);
@@ -138,6 +189,7 @@ export function ConditionsMasterPanel() {
   };
 
   const f = "superAdmin.conditionsAdmin.fields";
+  const fa = "superAdmin.conditionsAdmin";
 
   const columns: DataTableColumn<CentralCondition>[] = [
     { key: "code", header: t(`${f}.code`) },
@@ -257,12 +309,90 @@ export function ConditionsMasterPanel() {
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
               {t(`${f}.isActive`)}
             </label>
+            {editId !== null && (
+              <div style={{ gridColumn: "1 / -1" }}>
+                <HeaderButton
+                  variant="secondary"
+                  data-testid="condition-open-aliases"
+                  onClick={() => { void openAliases(); }}
+                >
+                  {t(`${fa}.aliases`)}
+                </HeaderButton>
+              </div>
+            )}
           </div>
           <div className="form-actions">
             <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</HeaderButton>
             <HeaderButton variant="primary" onClick={() => conditionsFormRef.current?.requestSubmit()}>{editId ? t("common.update") : t("common.create")}</HeaderButton>
           </div>
         </form>
+      </Modal>
+
+      {/* 別名管理モーダル */}
+      <Modal
+        open={!!aliasesFor}
+        onClose={() => setAliasesFor(null)}
+        title={aliasesFor ? `${t(`${fa}.aliases`)} \u2014 ${aliasesFor.code}` : ""}
+        size="md"
+      >
+        {/* ui-allow: alias table is a small inline form, not a data listing */}
+        <form
+          ref={aliasFormRef}
+          onSubmit={e => { void addAlias(e); }}
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "var(--space-2)", margin: "var(--space-2) 0" }}
+        >
+          <TextField
+            label={t(`${fa}.aliasText`)}
+            value={aliasForm.alias_text}
+            onChange={e => setAliasForm({ ...aliasForm, alias_text: e.target.value })}
+            required
+          />
+          <TextField
+            label={t(`${fa}.aliasLang`)}
+            value={aliasForm.lang}
+            onChange={e => setAliasForm({ ...aliasForm, lang: e.target.value })}
+            required
+          />
+          <HeaderButton
+            variant="primary"
+            onClick={() => aliasFormRef.current?.requestSubmit()}
+          >
+            {t(`${fa}.addAlias`)}
+          </HeaderButton>
+        </form>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{t(`${fa}.aliasText`)}</th>
+              <th>{t(`${fa}.aliasLang`)}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {aliases.map(a => (
+              <tr key={a.id}>
+                <td>{a.alias_text}</td>
+                <td>{a.lang}</td>
+                <td style={{ textAlign: "right" }}>
+                  <HeaderButton
+                    variant="secondary"
+                    onClick={() => { void deleteAlias(a.id); }}
+                  >
+                    {t(`${fa}.deleteAlias`)}
+                  </HeaderButton>
+                </td>
+              </tr>
+            ))}
+            {aliases.length === 0 && (
+              <tr><td colSpan={3} className="empty">{t("common.noData")}</td></tr>
+            )}
+          </tbody>
+        </table>
+        <div style={{ marginTop: "var(--space-2)", textAlign: "right" }}>
+          <HeaderButton variant="secondary" onClick={() => setAliasesFor(null)}>
+            {t("common.close")}
+          </HeaderButton>
+        </div>
       </Modal>
 
       <ConfirmModal

@@ -15,6 +15,7 @@ export type AnalysisRulesSidebarKey =
   | "sold-out"
   | "date-rule"
   | "product-master"
+  | "product-categories-master"
   | "status-master"
   | "supplier-master"
   | "conditions-master"
@@ -88,6 +89,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
           {t("analysisRules.sidebar.groupMasterManagement")}
         </span>
         {navItem("product-master", t("analysisRules.sidebar.productMaster"))}
+        {navItem("product-categories-master", t("analysisRules.sidebar.productCategoriesMaster"))}
         {navItem("status-master", t("analysisRules.sidebar.statusMaster"))}
         {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
