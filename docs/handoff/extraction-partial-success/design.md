@@ -1,5 +1,10 @@
 # design: extraction-partial-success
 
+## 参照
+
+- recon: [recon.md](./recon.md)
+- 対象ADR: ADR-100 (`docs/adr/ADR-100-tcg-extraction-pipeline.md`)
+
 ## KGI
 
 1アイテムのvalidation失敗（work_id/product_code不一致）が、抽出ジョブ全体のエラーを引き起こさない。
