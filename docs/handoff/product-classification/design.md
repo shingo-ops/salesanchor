@@ -45,7 +45,7 @@ Sales Anchor の商品マスタにおいて、現状「大分類（product_kind�
 | `public.product_formats` | 存在しない | SERIAL PK / code UNIQUE / name / name_en / line_id FK / display_order / is_active |
 | `public.products.product_line_id` | 存在しない | INTEGER NULL REFERENCES product_lines(id) |
 | `public.products.product_format_id` | 存在しない | INTEGER NULL REFERENCES product_formats(id) |
-| `run_all_migrations.sh` | 最終行 `20260920_120000_analysis_rule_public_tables.sql` | + `20260920_130000_create_product_classification.sql` |
+| scripts/run_all_migrations.sh | 最終行 20260920_120000_analysis_rule_public_tables.sql | + 20260920_130000_create_product_classification.sql |
 
 ---
 
@@ -73,20 +73,21 @@ Sales Anchor の商品マスタにおいて、現状「大分類（product_kind�
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 RDB の分類マスタ設計において「コード + 名前 + 表示順 + 有効フラグ」の構成は業界標準パターン。  
-本プロジェクト内では `migrations/085_create_tcg_type_master.sql` が同一パターンを採用しており、  
-`product_lines` / `product_formats` はそのパターンをそのまま踏襲する。  
-細分類（`product_formats`）が小分類（`product_lines`）への FK を持つ「親子マスタ」構造は  
-ECシステムやMDMの分類テーブルで広く採用される標準設計。
+本プロジェクト内では migrations/085_create_tcg_type_master.sql が同一パターンを採用しており、  
+product_lines / product_formats はそのパターンをそのまま踏襲する。  
+細分類（product_formats）が小分類（product_lines）への FK を持つ「親子マスタ」構造は  
+ECシステムやMDMの分類テーブルで広く採用される標準設計。我々への応用として、将来の  
+アプリ UI から category picker で product_lines → product_formats の連動選択を実現する基盤となる。
 
 ---
 
-## 維持の仕組み（守り手）
+## 維持の仕組み
 
-- **migration**: `migrations/20260920_130000_create_product_classification.sql`  
-  全 DDL が `IF NOT EXISTS` / `DO $$ ... END $$` で冪等。再実行しても安全。
-- **registration**: `scripts/run_all_migrations.sh` の末尾に登録済み。  
-  デプロイ時に自動実行される。
-- **rollback**: migration ファイル末尾の Rollback コメントに手順記載。
+守り手: migrations/20260920_130000_create_product_classification.sql + scripts/run_all_migrations.sh
+
+- migration: 全 DDL が IF NOT EXISTS / DO $$ ... END $$ で冪等。再実行しても安全。
+- registration: scripts/run_all_migrations.sh の末尾に登録済み。デプロイ時に自動実行される。
+- rollback: migration ファイル末尾の Rollback コメントに手順記載。
