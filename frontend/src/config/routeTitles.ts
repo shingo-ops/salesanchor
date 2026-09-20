@@ -42,4 +42,5 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/admin/discord-config":       "nav.discordConfig",
   "/admin/discord-announce":     "nav.discordAnnounce",
   "/management-center/conditions": "nav.conditionsMaster",
+  "/management-center/product-categories": "nav.productCategories",
 };

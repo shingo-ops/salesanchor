@@ -72,6 +72,7 @@ from app.routers import (
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     parse_review,
+    product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
     purchase_orders,
@@ -93,6 +94,7 @@ from app.routers import (
     super_admin_llm_budget,
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
+    super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
@@ -394,6 +396,11 @@ app.include_router(
     conditions.router, prefix="/api/v1", tags=["conditions"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 商品カテゴリマスタ テナント用
+app.include_router(
+    product_categories.router, prefix="/api/v1", tags=["product-categories"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     purchase_orders.router, prefix="/api/v1", tags=["purchase_orders"],
     dependencies=[Depends(get_current_tenant)],
@@ -509,6 +516,10 @@ app.include_router(
 # 備考マスタ中央 admin
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 商品カテゴリマスタ中央 admin
+app.include_router(
+    super_admin_product_categories.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
