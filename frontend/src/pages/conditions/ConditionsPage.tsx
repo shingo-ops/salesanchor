@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
@@ -64,7 +65,10 @@ const toForm = (c: ConditionEntry): ConditionFormState => ({
 
 export default function ConditionsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [items, setItems] = useState<ConditionEntry[]>([]);
   const [catalog, setCatalog] = useState<ConditionEntry[]>([]);
   const [error, setError] = useState("");
@@ -77,6 +81,23 @@ export default function ConditionsPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<ConditionFormState>(emptyForm);
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/conditions/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "conditions-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<ConditionFormState>(emptyForm);
@@ -299,14 +320,24 @@ export default function ConditionsPage() {
       navKey="nav.conditionsMaster"
       subtitleKey={`${f}.subtitle`}
       headerAction={
-        hasPermission("conditions.create") ? (
-          <HeaderButton
-            variant="primary"
-            onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-            data-testid="conditions-new"
-          >
-            {t(`${f}.newCondition`)}
-          </HeaderButton>
+        hasPermission("conditions.view") ? (
+          <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="conditions-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "conditionCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="conditions-import" onClick={() => navigate("/management-center/conditions/import")}>
+              {t("conditionCsv.importButton")}
+            </HeaderButton>
+            {hasPermission("conditions.create") && (
+              <HeaderButton
+                variant="primary"
+                onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+                data-testid="conditions-new"
+              >
+                {t(`${f}.newCondition`)}
+              </HeaderButton>
+            )}
+          </>
         ) : undefined
       }
     >

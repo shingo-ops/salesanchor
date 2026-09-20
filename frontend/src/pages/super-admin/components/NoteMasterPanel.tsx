@@ -6,6 +6,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -82,6 +83,9 @@ const PER_PAGE = 100;
 
 export function NoteMasterPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [items, setItems] = useState<TcgNoteMaster[]>([]);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
@@ -89,6 +93,23 @@ export function NoteMasterPanel() {
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<NoteFormState>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/note-master/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "note-master-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const [confirmDelete, setConfirmDelete] = useState<number | null>(null);
 
@@ -192,9 +213,17 @@ export function NoteMasterPanel() {
     <>
       <ContentToolbar
         right={
-          <HeaderButton variant="primary" data-testid="note-master-new" onClick={openCreate}>
-            {t(`${f}.addNote`)}
-          </HeaderButton>
+          <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "noteMasterCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="note-master-import" onClick={() => navigate("/super-admin/masters/note-master/import")}>
+              {t("noteMasterCsv.importButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="note-master-new" onClick={openCreate}>
+              {t(`${f}.addNote`)}
+            </HeaderButton>
+          </>
         }
       />
       {error && <p role="alert">{error}</p>}

@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -51,10 +52,30 @@ const PER_PAGE = 50;
 
 export function ConditionsMasterPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [items, setItems] = useState<CentralCondition[]>([]);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/conditions/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "conditions-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   // 編集/新規ポップアップ
   const [showForm, setShowForm] = useState(false);
@@ -165,6 +186,12 @@ export function ConditionsMasterPanel() {
       <ContentToolbar
         right={
           <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="conditions-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "conditionCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="conditions-import" onClick={() => navigate("/super-admin/masters/conditions/import")}>
+              {t("conditionCsv.importButton")}
+            </HeaderButton>
             <HeaderButton variant="primary" data-testid="conditions-new" onClick={openCreate}>
               {t("superAdmin.conditionsAdmin.newCondition")}
             </HeaderButton>
