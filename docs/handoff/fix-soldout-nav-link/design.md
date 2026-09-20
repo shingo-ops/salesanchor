@@ -1,5 +1,10 @@
 # 解析管理ナビ リンク先修正 — 設計書
 
+## 現在地把握・関連ADR
+
+- 現在地把握: [recon.md](./recon.md)
+- ADR-087: [hub-shell 共通シェルレイアウト標準](../../adr/ADR-087-hub-shell-layout-standard.md)（DesktopShell の NavItem 構造・hub-shell レイアウト規約）
+
 ## 変更内容
 
 ### DesktopShell.tsx（saasAdminItems）
@@ -26,7 +31,12 @@
 該当なし（UIナビリンク修正のみ。既存パターン踏襲のため外部事例調査不要）
 
 ## 維持の仕組み
-守り手: 既存 `AnalysisRulesSidebar` サブナビ（sold-out・import 等のタブ遷移）が変更なし・`NavItem` 型が型安全を保証
+守り手:
+- `frontend/src/components/DesktopShell.tsx` — saasAdminItems の NavItem リンク先（`to` プロパティ）
+- `frontend/src/config/routeTitles.ts` — ルートタイトルエントリの同期
+- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx` — sold-out・import タブ遷移（変更なし）
+
+注記:
 - routeTitles.ts のエントリはページ追加・削除時にメンテが必要（コメント記載済み）
 - i18n キー `nav.superAdminAnalysisRules` は ja.json/en.json に既存（新規追加なし）
 

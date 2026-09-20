@@ -1,5 +1,7 @@
 # 完売ルール メニュー非表示 — 現在地把握
 
+設計書: [design.md](./design.md)
+
 ## 根本原因
 - `frontend/src/components/DesktopShell.tsx:191` のリンク先が `/super-admin/tcg-line-import`
 - `/super-admin/analysis-rules`（完売ルールを含む統合ハブページ）への導線がグローバルナビに存在しない
