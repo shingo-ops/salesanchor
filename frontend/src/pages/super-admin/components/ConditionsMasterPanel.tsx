@@ -4,7 +4,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { useCallback, useEffect, useState, FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -63,6 +63,8 @@ export function ConditionsMasterPanel() {
 
   // 一括削除確認
   const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const conditionsFormRef = useRef<HTMLFormElement>(null);
 
   const load = useCallback(async () => {
     try {
@@ -196,7 +198,7 @@ export function ConditionsMasterPanel() {
         title={editId ? t("common.edit") : t("common.create")}
         size="lg"
       >
-        <form onSubmit={e => { void submit(e); }}>
+        <form ref={conditionsFormRef} onSubmit={e => { void submit(e); }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
             <div className="form-group">
               <TextField
@@ -258,7 +260,7 @@ export function ConditionsMasterPanel() {
           </div>
           <div className="form-actions">
             <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</HeaderButton>
-            <HeaderButton variant="primary" type="submit">{editId ? t("common.update") : t("common.create")}</HeaderButton>
+            <HeaderButton variant="primary" onClick={() => conditionsFormRef.current?.requestSubmit()}>{editId ? t("common.update") : t("common.create")}</HeaderButton>
           </div>
         </form>
       </Modal>
