@@ -282,9 +282,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   return (
     <div className="analysis-dashboard">
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          1. ボトルネックヒーロー（最悪指標のみ表示・成功時は非表示）
-      ────────────────────────────────────────────────────────────────────── */}
+      {/* 1. ボトルネックヒーロー（最悪指標のみ表示・成功時は非表示） */}
       {bottleneck.level !== "success" && (
         <div className={`analysis-dashboard-hero ${getSignalClass(bottleneck.level)}`}>
           <div className="analysis-dashboard-hero-content">
@@ -314,9 +312,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         </div>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          2. 信号灯KPIカード
-      ────────────────────────────────────────────────────────────────────── */}
+      {/* 2. 信号灯KPIカード */}
       <div className="analysis-dashboard-metrics">
         {/* 総ジョブ数（中立・信号なし） */}
         <Card variant="metric" density="compact">
@@ -377,9 +373,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         </div>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          3. CTAボタン
-      ────────────────────────────────────────────────────────────────────── */}
+      {/* 3. CTAボタン */}
       <div className="analysis-dashboard-ctas">
         <button
           type="button"
@@ -411,9 +405,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         </button>
       </div>
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          4. トレンドグラフ（7日間）
-      ────────────────────────────────────────────────────────────────────── */}
+      {/* 4. トレンドグラフ（7日間） */}
       {chartData.length > 0 && (
         <Card
           variant="container"
@@ -443,7 +435,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
                   type="monotone"
                   dataKey="unitRate"
                   name={t("analysisRules.dashboard.unitResolutionRate")}
-                  stroke="var(--color-info, #3b82f6)"
+                  stroke="var(--color-success)"
                   strokeWidth={2}
                   dot={false}
                 />
@@ -461,9 +453,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         </Card>
       )}
 
-      {/* ──────────────────────────────────────────────────────────────────────
-          5. 詳細セクション（理由内訳・エンジン情報・直近エラー）
-      ────────────────────────────────────────────────────────────────────── */}
+      {/* 5. 詳細セクション（理由内訳・エンジン情報・直近エラー） */}
       <div className="analysis-dashboard-grid">
         {/* 要確認の理由内訳 */}
         <Card variant="container" density="compact">
