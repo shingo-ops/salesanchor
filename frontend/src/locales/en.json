@@ -278,6 +278,7 @@
     "masterManagement": "Master Management",
     "statusMaster": "Status Master",
     "conditionsMaster": "Condition Master",
+    "productCategories": "Product Categories",
     "superAdminSupplierMaster": "Supplier Master",
     "units": "Units",
     "noteMaster": "Note Master"
@@ -2538,6 +2539,11 @@
       "title": "Condition Master Management",
       "newCondition": "Add New Condition",
       "bulkDeleteConfirm": "Deactivate selected conditions?",
+      "aliases": "Aliases",
+      "aliasText": "Alias Text",
+      "aliasLang": "Language",
+      "addAlias": "Add Alias",
+      "deleteAlias": "Delete Alias",
       "fields": {
         "code": "Condition Code",
         "canonical": "Display Name",
@@ -3850,10 +3856,11 @@
       "statusMaster": "Status Master",
       "supplierMaster": "Supplier Master",
       "conditionsMaster": "Condition Master",
+      "productCategoriesMaster": "Product Categories",
       "unitMaster": "Unit Master",
-      "noteMaster": "Note Master",
       "import": "Import",
-      "dashboard": "Dashboard"
+      "dashboard": "Dashboard",
+      "noteMaster": "Note Master"
     },
     "tabs": {
       "instruction": "Instructions",
@@ -3880,6 +3887,32 @@
       "deleteWord": "Delete",
       "restoreWord": "Restore",
       "invalidatedLabel": "Invalidated",
+      "words": {
+        "addButton": "Add word",
+        "editTitle": "Edit word",
+        "addTitle": "Add word",
+        "wordKind": "Kind",
+        "wordText": "Word",
+        "search": "Search word",
+        "exclude": "Exclude word",
+        "save": "Save",
+        "cancel": "Cancel",
+        "confirmDeleteTitle": "Delete word",
+        "confirmDeleteMessage": "Delete this word?",
+        "delete": "Delete",
+        "textColumn": "Text",
+        "kindColumn": "Kind",
+        "actionsColumn": "Actions",
+        "exportCsv": "Export CSV",
+        "importCsv": "Import CSV",
+        "importPreviewTitle": "Import Preview",
+        "importConfirm": "Execute Import",
+        "previewAdd": "Add",
+        "previewUpdate": "Update",
+        "previewDelete": "Delete",
+        "previewNoChanges": "No changes",
+        "importSuccess": "Import complete"
+      },
       "testTitle": "Test",
       "testInputLabel": "Source text",
       "testInputPlaceholder": "Paste source text to test",
@@ -3976,7 +4009,14 @@
       "jobs": "jobs",
       "items": "items",
       "loading": "Loading...",
-      "fetchError": "Failed to fetch data"
+      "fetchError": "Failed to fetch data",
+      "bottleneckLabel": "Bottleneck Detected",
+      "bottleneckDesc": "This metric is below the target. Take action to improve the pipeline.",
+      "trendTitle": "7-Day Trend",
+      "ctaNeedsReview": "Review pending items",
+      "ctaProductMaster": "Update product master",
+      "ctaUnitMaster": "Update unit master",
+      "ctaAccuracy": "Check extraction accuracy"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
@@ -4153,6 +4193,11 @@
     "catalogDescription": "Shared conditions managed by the operator.",
     "noData": "No tenant-specific conditions registered yet.",
     "total": "Conditions: {{count}}",
+    "aliases": "Aliases",
+    "aliasText": "Alias Text",
+    "aliasLang": "Language",
+    "addAlias": "Add Alias",
+    "deleteAlias": "Delete Alias",
     "fields": {
       "code": "Condition Code",
       "canonical": "Display Name",
@@ -4162,5 +4207,21 @@
       "excludeKw": "Exclude Keywords",
       "isActive": "Active"
     }
+  },
+  "productCategoriesMaster": {
+    "title": "Product Category Master",
+    "subtitle": "Manage product categories.",
+    "newCategory": "Add New Category",
+    "createTitle": "Add Category",
+    "editTitle": "Edit Category",
+    "confirmDelete": "Deactivate selected product categories?",
+    "noData": "No product categories registered yet.",
+    "empty": "No matching categories",
+    "total": "Categories: {{count}}",
+    "search": "Search by code or display name",
+    "code": "Code",
+    "displayName": "Display Name",
+    "kubunType": "Classification Type",
+    "isActive": "Active"
   }
 }

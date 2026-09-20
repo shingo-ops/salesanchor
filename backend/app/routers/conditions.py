@@ -16,6 +16,7 @@ import io
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import (
@@ -26,7 +27,13 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
-from app.schemas.condition import ConditionCreate, ConditionResponse, ConditionUpdate
+from app.schemas.condition import (
+    ConditionAliasCreate,
+    ConditionAliasResponse,
+    ConditionCreate,
+    ConditionResponse,
+    ConditionUpdate,
+)
 from app.services.audit import record_audit_log
 
 _BOOL_TRUE = {"true", "1", "yes"}
@@ -99,6 +106,8 @@ def _parse_conditions(raw: bytes) -> tuple[list[dict], list[str]]:
     return rows, errors
 
 router = APIRouter()
+
+_ALIAS_COLS = "id, condition_id, alias_text, lang, updated_at"
 
 _COLS = (
     "id, code, canonical, app_kubun, is_active, priority, "
@@ -478,3 +487,106 @@ async def import_conditions_commit(
         raise HTTPException(status_code=500, detail=f"CONDITION_IMPORT_COMMIT_ERROR: {exc}") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
+
+
+# ----------------------------------------------------------------------------
+# condition_aliases (tenant-scoped via parent condition)
+# ----------------------------------------------------------------------------
+
+
+@router.get(
+    "/conditions/{condition_id}/aliases",
+    response_model=list[ConditionAliasResponse],
+    dependencies=[Depends(require_permission("conditions.view"))],
+)
+async def list_condition_aliases(
+    condition_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    # 親 condition がこのテナントのものであることを確認
+    parent = await db.execute(
+        text("SELECT 1 FROM public.conditions WHERE id = :id AND tenant_id = :tid"),
+        {"id": condition_id, "tid": tenant_id},
+    )
+    if not parent.fetchone():
+        raise HTTPException(status_code=404, detail="状態が見つかりません")
+    result = await db.execute(
+        text(
+            f"SELECT {_ALIAS_COLS} FROM public.condition_aliases "
+            "WHERE condition_id = :cid ORDER BY id"
+        ),
+        {"cid": condition_id},
+    )
+    return [ConditionAliasResponse(**dict(row)) for row in result.mappings().all()]
+
+
+@router.post(
+    "/conditions/{condition_id}/aliases",
+    response_model=ConditionAliasResponse,
+    status_code=201,
+    dependencies=[Depends(require_permission("conditions.update"))],
+)
+async def create_condition_alias(
+    condition_id: int,
+    data: ConditionAliasCreate,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    if data.condition_id != condition_id:
+        raise HTTPException(
+            status_code=400,
+            detail="URL の condition_id と body の condition_id が一致しません",
+        )
+    # 親 condition の所有確認
+    parent = await db.execute(
+        text("SELECT 1 FROM public.conditions WHERE id = :id AND tenant_id = :tid"),
+        {"id": condition_id, "tid": tenant_id},
+    )
+    if not parent.fetchone():
+        raise HTTPException(status_code=404, detail="状態が見つかりません")
+    try:
+        result = await db.execute(
+            text(
+                f"INSERT INTO public.condition_aliases "
+                f"(condition_id, alias_text, lang) "
+                f"VALUES (:condition_id, :alias_text, :lang) "
+                f"RETURNING {_ALIAS_COLS}"
+            ),
+            data.model_dump(),
+        )
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f"重複または FK 違反: {exc.orig}")
+    row = result.mappings().first()
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
+    return ConditionAliasResponse(**dict(row))
+
+
+@router.delete(
+    "/conditions/aliases/{alias_id}",
+    status_code=204,
+    dependencies=[Depends(require_permission("conditions.delete"))],
+)
+async def delete_condition_alias(
+    alias_id: int,
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    # テナントの condition_aliases のみ削除可（JOIN で所有確認）
+    result = await db.execute(
+        text(
+            "DELETE FROM public.condition_aliases ca "
+            "USING public.conditions c "
+            "WHERE ca.id = :id AND ca.condition_id = c.id AND c.tenant_id = :tid"
+        ),
+        {"id": alias_id, "tid": tenant_id},
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="別名が見つかりません")
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072

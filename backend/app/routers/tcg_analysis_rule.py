@@ -25,12 +25,15 @@ from __future__ import annotations
 from typing import Any
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
+from fastapi.responses import Response
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.models import User
+from app.services import tcg_analysis_rule_csv_svc as csv_svc
 from app.services import tcg_analysis_rule_svc as svc
 from app.services.tcg_analysis_rule_svc import ConflictError
 
@@ -345,3 +348,117 @@ async def get_revision_detail(
     if result is None:
         raise HTTPException(status_code=404, detail=f"revision_id={revision_id!r} が見つかりません")
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET {base}/export — CSV エクスポート
+# ---------------------------------------------------------------------------
+
+
+_MAX_UPLOAD_BYTES = 2 * 1024 * 1024
+
+
+@router.get(
+    "/super-admin/analysis-policies/{policy_type}/export",
+    summary="分析ルール語句 CSV エクスポート",
+)
+async def export_analysis_rule_csv(
+    policy_type: str,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> Response:
+    """アクティブ版の語句を BOM 付き UTF-8 CSV でダウンロードする。"""
+    pt = _resolve_policy_type(policy_type)
+    try:
+        raw = await csv_svc.export_csv(db, pt)
+    except csv_svc.AnalysisRuleCsvError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    filename = f"analysis-rules-{policy_type}.csv"
+    return Response(
+        raw,
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST {base}/import/preview — CSV インポートプレビュー
+# ---------------------------------------------------------------------------
+
+
+async def _read_csv_upload(file: UploadFile) -> bytes:
+    name = (file.filename or "").lower()
+    if not name.endswith(".csv"):
+        raise HTTPException(status_code=422, detail="ANALYSIS_RULE_CSV_NOT_CSV")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=422, detail="ANALYSIS_RULE_CSV_EMPTY_FILE")
+    if len(raw) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="ANALYSIS_RULE_CSV_FILE_TOO_LARGE")
+    try:
+        raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=422, detail="ANALYSIS_RULE_CSV_NOT_UTF8") from exc
+    return raw
+
+
+@router.post(
+    "/super-admin/analysis-policies/{policy_type}/import/preview",
+    summary="分析ルール語句 CSV インポートプレビュー",
+)
+async def preview_import_analysis_rule_csv(
+    policy_type: str,
+    file: UploadFile = File(..., description="4列 CSV ファイル（rule_id,title,word_kind,text）"),
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(require_super_admin),
+) -> dict:
+    """CSV をパースして差分（追加/更新/削除件数と詳細）を返す。書き込みなし。"""
+    pt = _resolve_policy_type(policy_type)
+    raw = await _read_csv_upload(file)
+    try:
+        return await csv_svc.preview_import(db, pt, raw)
+    except csv_svc.AnalysisRuleCsvError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+
+
+# ---------------------------------------------------------------------------
+# POST {base}/import/commit — CSV インポートコミット
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/super-admin/analysis-policies/{policy_type}/import/commit",
+    status_code=status.HTTP_201_CREATED,
+    summary="分析ルール語句 CSV インポートコミット",
+)
+async def commit_import_analysis_rule_csv(
+    policy_type: str,
+    file: UploadFile = File(..., description="4列 CSV ファイル"),
+    lock_version: int = Form(..., description="楽観的ロック用バージョン"),
+    draft_revision_id: str | None = Form(default=None),
+    active_revision_id: str | None = Form(default=None),
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_super_admin),
+) -> dict:
+    """差分を changes 配列に変換して draft-revision として保存する。"""
+    pt = _resolve_policy_type(policy_type)
+    raw = await _read_csv_upload(file)
+    try:
+        return await csv_svc.commit_import(
+            db,
+            pt,
+            raw,
+            user_email=str(user.email or user.id or ""),
+            lock_version=lock_version,
+            draft_revision_id=draft_revision_id,
+            active_revision_id=active_revision_id,
+        )
+    except csv_svc.AnalysisRuleCsvError as exc:
+        raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
+    except ConflictError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc

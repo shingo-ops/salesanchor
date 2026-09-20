@@ -4,7 +4,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { useEffect, useRef, useState, FormEvent } from "react";
+import { useEffect, useRef, useState, FormEvent, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
@@ -18,6 +18,14 @@ import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+
+interface ConditionAlias {
+  id: number;
+  condition_id: number;
+  alias_text: string;
+  lang: string;
+  updated_at: string;
+}
 
 interface ConditionEntry {
   id: number;
@@ -108,6 +116,12 @@ export default function ConditionsPage() {
 
   const createFormRef = useRef<HTMLFormElement>(null);
   const editFormRef = useRef<HTMLFormElement>(null);
+  const aliasFormRef = useRef<HTMLFormElement>(null);
+
+  // 別名管理
+  const [aliasesFor, setAliasesFor] = useState<{ id: number; code: string } | null>(null);
+  const [aliases, setAliases] = useState<ConditionAlias[]>([]);
+  const [aliasForm, setAliasForm] = useState({ alias_text: "", lang: "ja" });
 
   const f = "conditionsMaster";
 
@@ -183,6 +197,41 @@ export default function ConditionsPage() {
     setEditId(c.id);
     setEditForm(toForm(c));
     setShowEdit(true);
+  };
+
+  const openAliases = useCallback(async (id: number, code: string) => {
+    setAliasesFor({ id, code });
+    try {
+      const data = await api.get<ConditionAlias[]>(`/conditions/${id}/aliases`);
+      setAliases(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    }
+  }, [t]);
+
+  const addAlias = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!aliasesFor) return;
+    try {
+      await api.post(`/conditions/${aliasesFor.id}/aliases`, {
+        condition_id: aliasesFor.id,
+        ...aliasForm,
+      });
+      setAliasForm({ alias_text: "", lang: "ja" });
+      setAliases(await api.get<ConditionAlias[]>(`/conditions/${aliasesFor.id}/aliases`));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.saveError"));
+    }
+  };
+
+  const deleteAlias = async (aliasId: number) => {
+    if (!aliasesFor) return;
+    try {
+      await api.delete(`/conditions/aliases/${aliasId}`);
+      setAliases(await api.get<ConditionAlias[]>(`/conditions/${aliasesFor.id}/aliases`));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.deleteError"));
+    }
   };
 
   const toggleSelect = (id: number) => {
@@ -419,6 +468,17 @@ export default function ConditionsPage() {
       >
         <form ref={editFormRef} onSubmit={handleEditSubmit}>
           {renderFormFields(editForm, setEditForm)}
+          {editId !== null && hasPermission("conditions.update") && (
+            <div style={{ marginBottom: "var(--space-3)" }}>
+              <HeaderButton
+                variant="secondary"
+                data-testid="condition-open-aliases"
+                onClick={() => { void openAliases(editId, editForm.code); setShowEdit(false); }}
+              >
+                {t(`${f}.aliases`)}
+              </HeaderButton>
+            </div>
+          )}
           <div className="form-actions">
             <HeaderButton variant="secondary" onClick={() => setShowEdit(false)}>
               {t("common.cancel")}
@@ -428,6 +488,75 @@ export default function ConditionsPage() {
             </HeaderButton>
           </div>
         </form>
+      </Modal>
+
+      {/* 別名管理モーダル */}
+      <Modal
+        open={!!aliasesFor}
+        onClose={() => setAliasesFor(null)}
+        title={aliasesFor ? `${t(`${f}.aliases`)} \u2014 ${aliasesFor.code}` : ""}
+        size="md"
+      >
+        {/* ui-allow: alias table is a small inline form, not a data listing */}
+        <form
+          ref={aliasFormRef}
+          onSubmit={e => { void addAlias(e); }}
+          style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "var(--space-2)", margin: "var(--space-2) 0" }}
+        >
+          <TextField
+            label={t(`${f}.aliasText`)}
+            value={aliasForm.alias_text}
+            onChange={e => setAliasForm({ ...aliasForm, alias_text: e.target.value })}
+            required
+          />
+          <TextField
+            label={t(`${f}.aliasLang`)}
+            value={aliasForm.lang}
+            onChange={e => setAliasForm({ ...aliasForm, lang: e.target.value })}
+            required
+          />
+          <HeaderButton
+            variant="primary"
+            onClick={() => aliasFormRef.current?.requestSubmit()}
+          >
+            {t(`${f}.addAlias`)}
+          </HeaderButton>
+        </form>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>{t(`${f}.aliasText`)}</th>
+              <th>{t(`${f}.aliasLang`)}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {aliases.map(a => (
+              <tr key={a.id}>
+                <td>{a.alias_text}</td>
+                <td>{a.lang}</td>
+                <td style={{ textAlign: "right" }}>
+                  {hasPermission("conditions.delete") && (
+                    <HeaderButton
+                      variant="secondary"
+                      onClick={() => { void deleteAlias(a.id); }}
+                    >
+                      {t(`${f}.deleteAlias`)}
+                    </HeaderButton>
+                  )}
+                </td>
+              </tr>
+            ))}
+            {aliases.length === 0 && (
+              <tr><td colSpan={3} className="empty">{t("common.noData")}</td></tr>
+            )}
+          </tbody>
+        </table>
+        <div style={{ marginTop: "var(--space-2)", textAlign: "right" }}>
+          <HeaderButton variant="secondary" onClick={() => setAliasesFor(null)}>
+            {t("common.close")}
+          </HeaderButton>
+        </div>
       </Modal>
 
       {loading ? (

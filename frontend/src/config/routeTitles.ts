@@ -11,7 +11,8 @@
  *     このマップには登録しない（各ページで個別に対応）
  */
 export const ROUTE_TITLE_KEYS: Record<string, string> = {
-  "/super-admin/tcg-sold-out": "nav.superAdminTcgSoldOut",
+  "/super-admin/tcg-sold-out":     "nav.superAdminTcgSoldOut",
+  "/super-admin/analysis-rules":   "nav.superAdminAnalysisRules",
   "/":                           "nav.dashboard",
   "/lead-chat":                  "nav.leadChat",
   "/crm/leads":                  "nav.leads",
@@ -41,4 +42,5 @@ export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/admin/discord-config":       "nav.discordConfig",
   "/admin/discord-announce":     "nav.discordAnnounce",
   "/management-center/conditions": "nav.conditionsMaster",
+  "/management-center/product-categories": "nav.productCategories",
 };
