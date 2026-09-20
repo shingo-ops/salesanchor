@@ -28,4 +28,4 @@
 
 ## 関連ADR
 
-- `docs/adr/ADR-155-*.md` (値管理をapp UI/CSV経由に移行)
+- `docs/adr/ADR-155-product-master-ssot-csv-app.md` (値管理をapp UI/CSV経由に移行)

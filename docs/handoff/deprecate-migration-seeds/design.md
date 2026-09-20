@@ -52,3 +52,11 @@ git revert このコミット。または各ファイルの git diff から値�
 1. `grep -n 'INSERT INTO\|UPDATE.*SET' migrations/2026090*.sql migrations/2026091*.sql` で残存INSERT/UPDATEがないことを確認
 2. `grep -n 'CREATE TABLE\|ALTER TABLE\|CREATE INDEX' migrations/2026090*.sql migrations/2026091*.sql` でDDLが残っていることを確認
 3. CI通過（migration-guard、構文チェック等）
+
+## 維持の仕組み
+
+マイグレーション実行テスト（CI: migration-test.yml）がDDL部分の正常動作を継続検証。run_all_migrations.sh のエントリは変更なし。
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし。マイグレーション内のseed除去は内部運用変更であり、外部事例の参照は不要。
