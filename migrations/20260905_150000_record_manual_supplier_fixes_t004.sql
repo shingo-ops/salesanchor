@@ -35,27 +35,10 @@ BEGIN
     END IF;
 
     -- =========================================================
-    -- 1. SP0007: name を '倉田 和博' に復旧
-    --    #3306/#3309 の確認画面で「既存仕入元に割り当て」を誤操作し、
-    --    SP0007 の name が 'overlap' に上書きされた。正値に戻す。
+    -- 1 & 2: SP0007/SP0184 name 復旧 UPDATE — DEPRECATED per ADR-155
+    --   VALUES now managed via app UI. UPDATE removed to prevent overwrite.
+    --   Original: SP0007 → '倉田 和博', SP0184 → 'overlap'
     -- =========================================================
-    EXECUTE format($q$
-        UPDATE %I.tcg_suppliers
-        SET    name = '倉田 和博'
-        WHERE  code = 'SP0007'
-          AND  name <> '倉田 和博'
-    $q$, _schema);
-
-    -- =========================================================
-    -- 2. SP0184: name を 'overlap' に復旧
-    --    同誤操作で name が別の値に変わっていたため正値に戻す。
-    -- =========================================================
-    EXECUTE format($q$
-        UPDATE %I.tcg_suppliers
-        SET    name = 'overlap'
-        WHERE  code = 'SP0184'
-          AND  name <> 'overlap'
-    $q$, _schema);
 
     -- =========================================================
     -- 3. SP0203: '株式会社AXISグリーン' 新規登録 + LINE チャンネル

@@ -521,24 +521,15 @@ def test_condition_note_master_changes_repeat_partial_and_other_tenant(pg, parti
         if key[0] != "tenant_004":
             assert rows == after[key]
         elif key[1] == "conditions":
-            for old, new in zip(old_rows, new_rows):
-                if old["code"] == "CN0007":
-                    assert len(new["exclude_kw"].split(",")) == 7
-                    new["exclude_kw"] = old["exclude_kw"]
-                assert new == old
+            # ADR-155: migration no longer UPDATEs conditions — CN0007.exclude_kw must remain unchanged
+            assert rows == after[key]
         else:
+            # ADR-155: migration only INSERTs NJ079; NJ041.exclude_keywords must remain unchanged
             assert len(new_rows) == len(old_rows) + 1
             for old in old_rows:
                 new = next(r for r in new_rows if r["id"] == old["id"])
-                if old["id"] == "NJ041":
-                    assert new["exclude_keywords"] == "伝票剥がし跡あり"
-                    new["exclude_keywords"] = old["exclude_keywords"]
                 assert new == old
     with connection.cursor() as cursor:
-        if partial in ("condition", "new_note"):
-            cursor.execute("UPDATE tenant_004.conditions SET exclude_kw='[サーチ済み]' WHERE code='CN0007'")
-        if partial in ("old_note", "new_note"):
-            cursor.execute("UPDATE tenant_004.tcg_note_master SET exclude_keywords='' WHERE id='NJ041'")
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
     assert condition_note_snapshot(connection, ("tenant_004", "tenant_905")) == after
@@ -552,19 +543,28 @@ def test_condition_note_master_changes_repeat_partial_and_other_tenant(pg, parti
     ("collision", "label_ja", "wrong"),
 ])
 def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
+    # ADR-155: pre-UPDATE guards removed together with UPDATE statements.
+    # Only the NJ079 identity-collision guard remains (collision case still raises).
+    # For condition/* and note/* targets the migration now runs without error
+    # (it only INSERTs NJ079 ON CONFLICT DO NOTHING).
     connection, _, _ = pg
     seed_condition_note(connection)
     with connection.cursor() as cursor:
         if target == "collision":
             cursor.execute("INSERT INTO tenant_004.tcg_note_master(id,label_ja,label_en,priority) VALUES ('NJ079','wrong','wrong',1)")
+            before = condition_note_snapshot(connection)
+            with pytest.raises(psycopg2.errors.RaiseException, match="identity collision"):
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+            cursor.execute("ROLLBACK")
+            assert condition_note_snapshot(connection) == before
         else:
             table, key, identity = ("conditions", "code", "CN0007") if target == "condition" else ("tcg_note_master", "id", "NJ041")
             cursor.execute(sql.SQL("UPDATE tenant_004.{} SET {}=%s WHERE {}=%s").format(sql.Identifier(table), sql.Identifier(field), sql.Identifier(key)), (value, identity))
-        before = condition_note_snapshot(connection)
-        with pytest.raises(psycopg2.errors.RaiseException, match="unexpected master|identity collision"):
+            before = condition_note_snapshot(connection)
+            # No exception expected — validation guards were removed per ADR-155
             cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
-        cursor.execute("ROLLBACK")
-    assert condition_note_snapshot(connection) == before
+            # Master rows that were altered must be unchanged (migration doesn't touch them)
+            assert condition_note_snapshot(connection)[("tenant_004", "conditions")] == before[("tenant_004", "conditions")]
 
 
 @pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
