@@ -30,8 +30,14 @@
 | トレンド | なし | 7日間LineChart |
 | API | pipeline-summary のみ | +trend エンドポイント |
 
-### 外部事例
-Datadog/Grafana のダッシュボード設計パターン（信号灯+ヒーロー指標）を参考。
+## 外部・過去事例の参照と我々への応用
+- Datadog/Grafana: 信号灯ステータスページ + ヒーロー指標パターン。最悪値を最上部に配置し、ドリルダウンを下部に置く構成を採用。
+- Google Material Design: コンテキスト色（赤/黄/緑）は「ステータス」を表す標準UXパターン。我々の閾値（80%/60%）は業務SLA感覚に合わせ設定。
+
+## 維持の仕組み
+- 信号灯閾値（80%/60%）は定数で管理（`AnalysisDashboardPanel.tsx`内）。将来の調整は定数変更のみ。
+- トレンドAPI の days パラメータは 1-90 に制限（SQLインジェクション対策）。
+- onNavigate は optional prop（既存の使用箇所に影響なし）。
 
 ## ADR準拠
 - ADR-027, ADR-067, ADR-144
