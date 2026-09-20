@@ -3843,7 +3843,7 @@
       "accuracyManagement": "解析精度管理",
       "needsReview": "要確認",
       "soldOut": "完売ルール",
-      "dateRule": "日付ルール",
+      "dateRule": "予約ルール",
       "productMaster": "商品マスタ",
       "statusMaster": "ステータスマスタ",
       "supplierMaster": "仕入元マスタ",
@@ -3906,7 +3906,7 @@
       "lastDistributionError": "最後の配信エラー"
     },
     "dateRule": {
-      "title": "日付ルール",
+      "title": "予約ルール",
       "instructionLabel": "日付判断指示文",
       "draftBadge": "下書き",
       "activeBadge": "本番",
