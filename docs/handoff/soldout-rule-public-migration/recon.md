@@ -34,15 +34,15 @@
 
 | ファイル | 変更内容 | 行番号 |
 |---------|---------|-------|
-| `migrations/20260920_120000_analysis_rule_public_tables.sql` | 新規作成: 13テーブルをpublic.に作成 | 新規 |
-| `backend/app/services/tcg_analysis_rule_svc.py:93,177-183,236,274,297,340,353,367,397,410,430,448,490,507,522,542,554,593,607,644,669-670,730,754,774,788,802,857-858,897-898,923-926` | `{TCG_SCHEMA}.analysis_*` → `public.analysis_*`（38箇所）| 複数行 |
-| `backend/app/tasks/tcg_analysis_rule.py:93,123,154,185,222-225,302-303,330,399` | `{TCG_SCHEMA}.analysis_*` → `public.analysis_*`（10箇所）| 複数行 |
-| `backend/app/services/item_corrections_svc.py:82` | `{_SCHEMA}.analysis_rule_run_results` → `public.analysis_rule_run_results` | 行82 |
-| `backend/app/services/tcg_distribution_svc.py:725` | `{TCG_SCHEMA}.analysis_rule_runs` → `public.analysis_rule_runs` | 行725 |
+| migrations/20260920_120000_analysis_rule_public_tables.sql | 新規作成: 13テーブルをpublic.に作成 | 新規 |
+| backend/app/services/tcg_analysis_rule_svc.py:93,177-183,236,274,297,340,353,367,397,410,430,448,490,507,522,542,554,593,607,644,669-670,730,754,774,788,802,857-858,897-898,923-926 | `{TCG_SCHEMA}.analysis_*` → `public.analysis_*`（38箇所）| 複数行 |
+| backend/app/tasks/tcg_analysis_rule.py:93,123,154,185,222-225,302-303,330,399 | `{TCG_SCHEMA}.analysis_*` → `public.analysis_*`（10箇所）| 複数行 |
+| backend/app/services/item_corrections_svc.py:82 | `{_SCHEMA}.analysis_rule_run_results` → `public.analysis_rule_run_results` | 行82 |
+| backend/app/services/tcg_distribution_svc.py:725 | `{TCG_SCHEMA}.analysis_rule_runs` → `public.analysis_rule_runs` | 行725 |
 
 ### 変更しないテーブル参照（テナントスキーマのまま）
-- `tcg_analysis_rule_svc.py:960-971`: `{TCG_SCHEMA}.extraction_jobs`, `{TCG_SCHEMA}.extraction_items`
-- `tcg_analysis_rule.py:367-378`: `{TCG_SCHEMA}.extraction_jobs`, `{TCG_SCHEMA}.extraction_items`, `{TCG_SCHEMA}.source_messages`
+- backend/app/services/tcg_analysis_rule_svc.py:960-971 の `{TCG_SCHEMA}.extraction_jobs`, `{TCG_SCHEMA}.extraction_items`
+- backend/app/tasks/tcg_analysis_rule.py:367-378 の `{TCG_SCHEMA}.extraction_jobs`, `{TCG_SCHEMA}.extraction_items`, `{TCG_SCHEMA}.source_messages`
 - これらはテナントスキーマにある実データテーブル。cross-schema FKを避けるため変更しない
 
 ---

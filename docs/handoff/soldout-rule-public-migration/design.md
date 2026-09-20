@@ -46,17 +46,22 @@
 
 ---
 
-## 外部事例欄
+## 外部・過去事例の参照と我々への応用
 
-該当なし（内部スキーマ移行のため）
+- **ADR-090（products統一）**: publicスキーマへの一元化パターンを踏襲。tenant_id列なしで運用可能なことを確認済み
+- **ADR-143（inventory public v2）**: テナントスキーマからpublicへの昇格マイグレーションパターン（既存テーブルは並行残置）を踏襲
+- **ADR-1001（TCG products→public）**: TCG系テーブルのpublic移行実績。cross-schema FK問題の回避策（UUID型保持・FK制約なし）を今回も採用
+- **応用**: 上記3事例とも既存テナントスキーマテーブルを即削除せず並行存在させており、今回も同方針を採用する
 
 ---
 
-## 守り手
+## 維持の仕組み
 
-- **migration-guard CI**: `migrations/` の変更があると自動でCIゲートが起動
+守り手: migration-guard CI（migrations/変更時自動起動）、IF NOT EXISTS冪等性、cross-schema FK省略設計
+
+- **migration-guard CI**: migrations/ の変更があると自動でCIゲートが起動
 - **IF NOT EXISTS 冪等性**: 全DDLに `CREATE TABLE IF NOT EXISTS` / `CREATE INDEX IF NOT EXISTS` を付与
-- **cross-schema FK 省略**: `source_messages` / `extraction_items` への FK は意図的に省略（テナントスキーマ参照回避）
+- **cross-schema FK 省略**: source_messages / extraction_items への FK は意図的に省略（テナントスキーマ参照回避）
 - **データINSERTなし**: migration はテーブルの有無のみ管理。seed データは別途アプリ側または後続migrationで投入
 
 ---
