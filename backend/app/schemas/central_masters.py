@@ -397,3 +397,51 @@ class SupplierPromptResponse(BaseModel):
 class SupplierPromptUpdate(BaseModel):
     prompt: str = Field(default="", max_length=50000)
     is_active: bool = True
+
+
+# ============================================================================
+# public.units / public.unit_aliases
+# ============================================================================
+
+
+class UnitBase(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: bool = True
+
+
+class UnitCreate(UnitBase):
+    pass
+
+
+class UnitUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class UnitResponse(UnitBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UnitAliasBase(BaseModel):
+    unit_id: int
+    alias_text: str = Field(min_length=1, max_length=500)
+    lang: str = Field(default="ja", min_length=2, max_length=5)
+
+
+class UnitAliasCreate(UnitAliasBase):
+    pass
+
+
+class UnitAliasResponse(UnitAliasBase):
+    id: int
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

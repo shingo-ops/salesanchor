@@ -91,7 +91,9 @@ from app.routers import (
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
+    super_admin_units,  # 単位マスタ中央 admin
     suppliers,
+    units,  # 単位マスタ テナント用
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_analysis_rule,  # ANALYSIS-RULE P5: 完売・日付ルール管理 API
     tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
@@ -366,6 +368,11 @@ app.include_router(
     suppliers.router, prefix="/api/v1", tags=["suppliers"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 単位マスタ テナント用
+app.include_router(
+    units.router, prefix="/api/v1", tags=["units"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     purchase_orders.router, prefix="/api/v1", tags=["purchase_orders"],
     dependencies=[Depends(get_current_tenant)],
@@ -466,6 +473,9 @@ app.include_router(
 )
 app.include_router(
     super_admin_suppliers.router, prefix="/api/v1", tags=["super-admin"],
+)
+app.include_router(
+    super_admin_units.router, prefix="/api/v1", tags=["super-admin-units"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
