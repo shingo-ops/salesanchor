@@ -26,7 +26,7 @@ PR #3621 で `tcg_status_master` が SSOT として確立された。`analysis_r
 - i18n: `analysisRules.tabs`, `analysisRules.soldOut`, `analysisRules.dateRule`, `sidebar.soldOut/dateRule/groupRuleManagement` 削除
 
 ### CI
-- `migration-guard.yml` の PUBLIC_TABLES から 13 テーブル除去
+- `.github/workflows/migration-guard.yml` の PUBLIC_TABLES から 13 テーブル除去
 
 ## 基準と検証方法
 
@@ -48,4 +48,4 @@ PR #3621 で `tcg_status_master` が SSOT として確立された。`analysis_r
 
 ## 維持の仕組み
 
-守り手: TypeScript コンパイラ（削除コンポーネントへの参照が残ると TS2307）、Ruff lint（import エラー）、migration-guard CI（DROP テーブルが PUBLIC_TABLES に残るとエラー）
+守り手: TypeScript コンパイラ（削除コンポーネントへの参照が残ると TS2307）、Ruff lint（import エラー）、migration-guard CI（`.github/workflows/migration-guard.yml` — DROP テーブルが PUBLIC_TABLES に残るとエラー）
