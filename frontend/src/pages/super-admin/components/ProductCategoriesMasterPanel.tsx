@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -45,7 +46,22 @@ const PER_PAGE = 50;
 
 export function ProductCategoriesMasterPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const f = "productCategoriesMaster";
+
+  const downloadExport = async () => {
+    try {
+      const blob = await api.getBlob("/super-admin/product-categories/export");
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "product-categories.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    }
+  };
 
   const [items, setItems] = useState<ProductCategory[]>([]);
   const [error, setError] = useState("");
@@ -159,6 +175,20 @@ export function ProductCategoriesMasterPanel() {
       <ContentToolbar
         right={
           <>
+            <HeaderButton
+              variant="secondary"
+              data-testid="product-categories-export"
+              onClick={() => { void downloadExport(); }}
+            >
+              {t("productCategoriesCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton
+              variant="secondary"
+              data-testid="product-categories-import"
+              onClick={() => navigate("/super-admin/masters/product-categories/import")}
+            >
+              {t("productCategoriesCsv.importButton")}
+            </HeaderButton>
             <HeaderButton
               variant="primary"
               data-testid="product-categories-new"

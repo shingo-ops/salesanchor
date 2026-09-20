@@ -4194,6 +4194,27 @@
     "invalidFormat": "Only CSV files can be uploaded",
     "backToList": "Back to list"
   },
+  "productCategoriesCsv": {
+    "exportButton": "Export CSV for update",
+    "importButton": "Import CSV",
+    "importTitle": "Product Categories Import",
+    "importSubtitle": "Bulk register product categories from CSV file",
+    "selectFile": "Select CSV file",
+    "preview": "Preview",
+    "commit": "Commit",
+    "cancel": "Cancel",
+    "total": "Total",
+    "inserts": "New",
+    "updates": "Updates",
+    "errors": "Errors",
+    "noErrors": "No errors",
+    "commitSuccess": "Import completed",
+    "commitFail": "Import failed",
+    "digestMismatch": "File has changed. Please preview again",
+    "fileTooLarge": "File size exceeds 2MB",
+    "invalidFormat": "Only CSV files can be uploaded",
+    "backToList": "Back to list"
+  },
   "noteMasterCsv": {
     "exportButton": "Export CSV for update",
     "importButton": "Import CSV",
