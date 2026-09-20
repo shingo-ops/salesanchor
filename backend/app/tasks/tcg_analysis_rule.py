@@ -89,8 +89,8 @@ def run_analysis_rule(run_id: str) -> dict:
             with _get_sync_session() as err_session:
                 err_session.execute(
                     text(
-                        f"""
-                        UPDATE {TCG_SCHEMA}.analysis_rule_runs
+                        """
+                        UPDATE public.analysis_rule_runs
                         SET state        = 'error',
                             completed_at = NOW()
                         WHERE id = :run_id AND state IN ('pending', 'running')
@@ -117,10 +117,10 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 1. run レコードを取得 ---
     row = session.execute(
         text(
-            f"""
+            """
             SELECT id, policy_id, revision_id, suite_revision_id,
                    source_message_id, purpose, engine_version, state
-            FROM {TCG_SCHEMA}.analysis_rule_runs
+            FROM public.analysis_rule_runs
             WHERE id = :run_id
             """
         ),
@@ -150,8 +150,8 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 2. state を running に更新 ---
     session.execute(
         text(
-            f"""
-            UPDATE {TCG_SCHEMA}.analysis_rule_runs
+            """
+            UPDATE public.analysis_rule_runs
             SET state = 'running'
             WHERE id = :run_id AND state = 'pending'
             """
@@ -181,8 +181,8 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 5. state を passed/failed に更新 ---
     session.execute(
         text(
-            f"""
-            UPDATE {TCG_SCHEMA}.analysis_rule_runs
+            """
+            UPDATE public.analysis_rule_runs
             SET state        = :state,
                 completed_at = NOW()
             WHERE id = :run_id
@@ -208,7 +208,7 @@ def _load_revision_rules(session: Session, revision_id: str) -> list[dict]:
     """指定 revision のルール・語句一覧をロードする。"""
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT
                 ar.id           AS rule_id,
                 arv.id          AS rule_version_id,
@@ -219,10 +219,10 @@ def _load_revision_rules(session: Session, revision_id: str) -> list[dict]:
                 w.kind          AS word_kind,
                 w.text          AS word_text,
                 w.position
-            FROM {TCG_SCHEMA}.analysis_revision_rules arr
-            JOIN {TCG_SCHEMA}.analysis_rules ar ON ar.id = arr.rule_id
-            JOIN {TCG_SCHEMA}.analysis_rule_versions arv ON arv.id = arr.rule_version_id
-            LEFT JOIN {TCG_SCHEMA}.analysis_rule_words w ON w.rule_version_id = arv.id
+            FROM public.analysis_revision_rules arr
+            JOIN public.analysis_rules ar ON ar.id = arr.rule_id
+            JOIN public.analysis_rule_versions arv ON arv.id = arr.rule_version_id
+            LEFT JOIN public.analysis_rule_words w ON w.rule_version_id = arv.id
             WHERE arr.revision_id = :revision_id
               AND arr.is_deleted = FALSE
             ORDER BY arv.id, w.position
@@ -297,10 +297,10 @@ def _run_test_cases(
     """
     cases = session.execute(
         text(
-            f"""
+            """
             SELECT sc.case_id, sc.case_version_id, cv.raw_text, cv.expected
-            FROM {TCG_SCHEMA}.analysis_suite_cases sc
-            JOIN {TCG_SCHEMA}.analysis_test_case_versions cv ON cv.id = sc.case_version_id
+            FROM public.analysis_suite_cases sc
+            JOIN public.analysis_test_case_versions cv ON cv.id = sc.case_version_id
             WHERE sc.suite_id = :suite_id
             ORDER BY sc.case_id
             """
@@ -326,8 +326,8 @@ def _run_test_cases(
         result_id = str(uuid.uuid4())
         session.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_rule_run_results
+                """
+                INSERT INTO public.analysis_rule_run_results
                     (id, run_id, case_version_id, decision, source_spans, rule_version_refs, validation_error)
                 VALUES
                     (:id, :run_id, :case_version_id,
@@ -395,8 +395,8 @@ def _run_production_items(
         result_id = str(uuid.uuid4())
         session.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_rule_run_results
+                """
+                INSERT INTO public.analysis_rule_run_results
                     (id, run_id, extraction_item_id, decision, source_spans, rule_version_refs)
                 VALUES
                     (:id, :run_id, :extraction_item_id,
