@@ -716,36 +716,6 @@ async def run_distribution(
             "errors": [{"target_id": None, "error": msg}],
         }
 
-    # 0-c. 完売判断ルール実行中チェック（安全装置 #8c）
-    # analysis_rule_runs に pending/running の行があれば配信を中止する。
-    # 判断結果が確定する前に配信すると、最新の判断が反映されない行が含まれる可能性がある。
-    pending_rule_runs = (
-        await db.execute(
-            text(
-                "SELECT id, started_at FROM public.analysis_rule_runs"
-                " WHERE state IN ('pending', 'running')"
-                " ORDER BY started_at LIMIT 10"
-            )
-        )
-    ).mappings().all()
-    if pending_rule_runs:
-        details = [
-            {"run_id": str(r["id"]), "started_at": r["started_at"].isoformat()}
-            for r in pending_rule_runs
-        ]
-        msg = (
-            f"安全装置 #8c: 完売判断ルール実行中の runs が {len(pending_rule_runs)} 件あります。"
-            f" 完了を待ってから配信を実行してください。実行中: {details}"
-        )
-        logger.warning("[dist] %s", msg)
-        return {
-            "run_id": None,
-            "started_at": started_at.isoformat(),
-            "output_count": 0,
-            "results": [],
-            "errors": [{"target_id": None, "error": msg}],
-        }
-
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
