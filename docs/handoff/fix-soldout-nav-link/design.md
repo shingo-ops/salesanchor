@@ -2,7 +2,7 @@
 
 ## 現在地把握・関連ADR
 
-- 現在地把握: [recon.md](./recon.md)
+- 現在地把握: [recon.md](docs/handoff/fix-soldout-nav-link/recon.md)
 - ADR-087: [hub-shell 共通シェルレイアウト標準](../../adr/ADR-087-hub-shell-layout-standard.md)（DesktopShell の NavItem 構造・hub-shell レイアウト規約）
 
 ## 変更内容
