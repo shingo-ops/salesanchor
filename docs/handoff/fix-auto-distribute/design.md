@@ -89,4 +89,4 @@ pool_size=2 / max_overflow=0: ワンショット実行のためプールは最�
 
 - celery-worker への環境変数追加が必要になった場合は、常に backend サービスの同行を参照し同パターンで追加すること（コメントに「backend サービスと同パターン」と明記済み）。
 - Celery 同期タスクから非同期処理を呼ぶ場合は必ずワンショットエンジンパターンを使うこと。`AsyncSessionLocal`・`AdminSessionLocal` の直接利用は禁止（ループ不一致リスク）。
-- 守り手: docker-compose.yml の environment/volumes セクションで管理。CI の process-artifacts gate が変更を検出
+- 守り手: .github/workflows/process-artifacts-gate.yml（docker-compose.yml の environment/volumes セクション変更を CI が検出）
