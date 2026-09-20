@@ -18,23 +18,23 @@ ADR 検索: `git grep -i "product.categor" docs/adr/` → 該当なし。`docs/a
 
 ### バックエンド
 
-- `backend/app/routers/super_admin_product_categories.py:1-152` — 中央管理 CRUD ルーター（CSV 未実装）
-- `backend/app/routers/product_categories.py:1-150` — テナント CRUD ルーター（CSV 未実装）
-- `backend/app/routers/super_admin_units.py:44-420` — CSV パターンの参照実装（_compute_digest, _read_unit_upload, _parse_units, export, preview, commit）
+- backend/app/routers/super_admin_product_categories.py:1-152 — 中央管理 CRUD ルーター（CSV 未実装）
+- backend/app/routers/product_categories.py:1-150 — テナント CRUD ルーター（CSV 未実装）
+- backend/app/routers/super_admin_units.py:44-420 — CSV パターンの参照実装（_compute_digest, _read_unit_upload, _parse_units, export, preview, commit）
 
 ### フロントエンド
 
-- `frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx:1-284` — CSV ボタンなし
-- `frontend/src/pages/product-categories/ProductCategoriesPage.tsx:1-378` — CSV ボタンなし
-- `frontend/src/pages/super-admin/UnitImportPage.tsx:1-135` — import ページパターン参照
-- `frontend/src/pages/units/UnitImportPage.tsx:1-142` — テナント import ページパターン参照
-- `frontend/src/App.tsx:101-104` — 既存 import ルート群（UnitImportPage, ConditionImportPage 等）
-- `frontend/src/locales/ja.json:4134-4153` — unitCsv キー群（パターン参照）
+- frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx:1-284 — CSV ボタンなし
+- frontend/src/pages/product-categories/ProductCategoriesPage.tsx:1-378 — CSV ボタンなし
+- frontend/src/pages/super-admin/UnitImportPage.tsx:1-135 — import ページパターン参照
+- frontend/src/pages/units/UnitImportPage.tsx:1-142 — テナント import ページパターン参照
+- frontend/src/App.tsx:101-104 — 既存 import ルート群（UnitImportPage, ConditionImportPage 等）
+- frontend/src/locales/ja.json:4134-4153 — unitCsv キー群（パターン参照）
 
 ### i18n
 
-- `frontend/src/locales/ja.json:4134` — unitCsv キー群
-- `frontend/src/locales/en.json:4134` — unitCsv 対応英語キー
+- frontend/src/locales/ja.json:4134 — unitCsv キー群
+- frontend/src/locales/en.json:4134 — unitCsv 対応英語キー
 
 ## CSV カラム設計
 
@@ -51,20 +51,20 @@ ADR 検索: `git grep -i "product.categor" docs/adr/` → 該当なし。`docs/a
 
 | 変更ファイル | 理由 |
 |------------|------|
-| `backend/app/routers/super_admin_product_categories.py` | エンドポイント追加 |
-| `backend/app/routers/product_categories.py` | エンドポイント追加 |
-| `frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx` | CSV ボタン追加 |
-| `frontend/src/pages/product-categories/ProductCategoriesPage.tsx` | CSV ボタン追加 |
-| `frontend/src/pages/super-admin/ProductCategoriesImportPage.tsx` | 新規作成 |
-| `frontend/src/pages/product-categories/ProductCategoriesImportPage.tsx` | 新規作成 |
-| `frontend/src/App.tsx` | ルート追加 |
-| `frontend/src/locales/ja.json` | i18n キー追加 |
-| `frontend/src/locales/en.json` | i18n キー追加 |
+| backend/app/routers/super_admin_product_categories.py | エンドポイント追加 |
+| backend/app/routers/product_categories.py | エンドポイント追加 |
+| frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx | CSV ボタン追加 |
+| frontend/src/pages/product-categories/ProductCategoriesPage.tsx | CSV ボタン追加 |
+| frontend/src/pages/super-admin/ProductCategoriesImportPage.tsx | 新規作成 |
+| frontend/src/pages/product-categories/ProductCategoriesImportPage.tsx | 新規作成 |
+| frontend/src/App.tsx | ルート追加 |
+| frontend/src/locales/ja.json | i18n キー追加 |
+| frontend/src/locales/en.json | i18n キー追加 |
 
 ## 外部事例
 
-- 単位マスタ CSV (`super_admin_units.py`) — 同一プロジェクト内の直接参照実装
+- 単位マスタ CSV (backend/app/routers/super_admin_units.py) — 同一プロジェクト内の直接参照実装
 
 ## 設計書参照
 
-`docs/handoff/product-categories-csv/design.md`
+docs/handoff/product-categories-csv/design.md
