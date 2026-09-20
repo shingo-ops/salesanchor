@@ -241,3 +241,134 @@ async def get_pipeline_trend(db: AsyncSession, days: int = 7) -> list[dict]:
         }
         for row in rows
     ]
+
+
+async def get_import_summary(db: AsyncSession) -> dict:
+    """インポート工程のサマリーを返す。SELECT のみ。"""
+    # 1. import_jobs stats
+    ij_rows = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  COUNT(*) AS total,"
+                f"  SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,"
+                f"  SUM(CASE WHEN review_status = 'pending_review' THEN 1 ELSE 0 END) AS pending_review_count,"
+                f"  SUM(message_count) AS total_messages,"
+                f"  SUM(unresolved_count) AS total_unresolved,"
+                f"  MAX(created_at) AS latest_import_at"
+                f" FROM {TCG_SCHEMA}.import_jobs"
+            )
+        )
+    ).fetchone()
+
+    total_jobs = int(ij_rows.total or 0)
+    total_messages = int(ij_rows.total_messages or 0)
+    total_unresolved = int(ij_rows.total_unresolved or 0)
+    unresolved_rate = total_unresolved / total_messages if total_messages > 0 else 0.0
+
+    # 2. source_messages stats
+    sm_row = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  COUNT(*) AS total,"
+                f"  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
+                f"  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
+                f" FROM {TCG_SCHEMA}.source_messages"
+            )
+        )
+    ).fetchone()
+
+    total_source = int(sm_row.total or 0)
+    orphan_count = int(sm_row.orphan_count or 0)
+
+    # 3. Recent imports (last 10)
+    recent_rows = (
+        await db.execute(
+            text(
+                f"SELECT id, filename, message_count, unresolved_count, review_status, created_at"
+                f" FROM {TCG_SCHEMA}.import_jobs"
+                f" ORDER BY created_at DESC"
+                f" LIMIT 10"
+            )
+        )
+    ).fetchall()
+
+    recent_imports = [
+        {
+            "id": str(row.id),
+            "filename": row.filename,
+            "message_count": int(row.message_count or 0),
+            "unresolved_count": int(row.unresolved_count or 0),
+            "review_status": row.review_status,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in recent_rows
+    ]
+
+    return {
+        "total_jobs": total_jobs,
+        "ok_count": int(ij_rows.ok_count or 0),
+        "pending_review_count": int(ij_rows.pending_review_count or 0),
+        "total_messages": total_messages,
+        "total_unresolved": total_unresolved,
+        "unresolved_rate": unresolved_rate,
+        "total_source_messages": total_source,
+        "orphan_count": orphan_count,
+        "active_message_count": int(sm_row.active_count or 0),
+        "latest_import_at": ij_rows.latest_import_at.isoformat() if ij_rows.latest_import_at else None,
+        "recent_imports": recent_imports,
+    }
+
+
+async def get_distribution_summary(db: AsyncSession) -> dict:
+    """配信工程のサマリーを返す。SELECT のみ。"""
+    # 1. distribution_targets
+    target_rows = (
+        await db.execute(
+            text(
+                f"SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
+                f" FROM {TCG_SCHEMA}.tcg_distribution_targets"
+                f" ORDER BY name"
+            )
+        )
+    ).fetchall()
+
+    targets = [
+        {
+            "id": str(row.id),
+            "name": row.name,
+            "is_active": row.is_active,
+            "last_distributed_at": row.last_distributed_at.isoformat() if row.last_distributed_at else None,
+            "last_distributed_count": int(row.last_distributed_count) if row.last_distributed_count else 0,
+            "last_result": row.last_result,
+        }
+        for row in target_rows
+    ]
+
+    active_count = sum(1 for t in targets if t["is_active"])
+    total_distributed = sum(t["last_distributed_count"] for t in targets)
+
+    # 2. distribution_settings
+    setting_rows = (
+        await db.execute(
+            text(
+                f"SELECT key, value, note"
+                f" FROM {TCG_SCHEMA}.tcg_distribution_settings"
+                f" ORDER BY key"
+            )
+        )
+    ).fetchall()
+
+    settings = [
+        {"key": row.key, "value": row.value, "note": row.note}
+        for row in setting_rows
+    ]
+
+    return {
+        "targets": targets,
+        "active_target_count": active_count,
+        "total_target_count": len(targets),
+        "total_last_distributed": total_distributed,
+        "settings": settings,
+    }
