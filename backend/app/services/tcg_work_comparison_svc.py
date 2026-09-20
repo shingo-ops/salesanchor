@@ -70,9 +70,17 @@ def parse_decisions(response: str, expected_ids: list[str], reference: dict) -> 
             raise ComparisonError("UNKNOWN_OR_DUPLICATE_ITEM")
         _uuid(item_id)
         try:
-            _wid = validate_work_id(work_id or None, reference)
+            raw_wid = work_id or None
+            _wid = validate_work_id(raw_wid, reference)
+            # validate_work_id returns None for both empty (intentional null) and
+            # invalid values. For comparison decisions, a non-empty value that fails
+            # validation means the model produced an invalid work_id — reject it.
+            if raw_wid is not None and _wid is None:
+                raise ComparisonError("INVALID_WORK_ID")
             # match_pid_with_work and product_work_ids expect str; convert for consistency
             result[item_id] = str(_wid) if _wid is not None else None
+        except ComparisonError:
+            raise
         except (ValueError, TypeError, KeyError):
             raise ComparisonError("INVALID_WORK_ID") from None
     if set(result) != set(expected_ids):
