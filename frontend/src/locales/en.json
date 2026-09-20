@@ -278,6 +278,7 @@
     "masterManagement": "Master Management",
     "statusMaster": "Status Master",
     "conditionsMaster": "Condition Master",
+    "productCategories": "Product Categories",
     "superAdminSupplierMaster": "Supplier Master",
     "units": "Units",
     "noteMaster": "Note Master"
@@ -2538,6 +2539,11 @@
       "title": "Condition Master Management",
       "newCondition": "Add New Condition",
       "bulkDeleteConfirm": "Deactivate selected conditions?",
+      "aliases": "Aliases",
+      "aliasText": "Alias Text",
+      "aliasLang": "Language",
+      "addAlias": "Add Alias",
+      "deleteAlias": "Delete Alias",
       "fields": {
         "code": "Condition Code",
         "canonical": "Display Name",
@@ -3850,6 +3856,7 @@
       "statusMaster": "Status Master",
       "supplierMaster": "Supplier Master",
       "conditionsMaster": "Condition Master",
+      "productCategoriesMaster": "Product Categories",
       "unitMaster": "Unit Master",
       "import": "Import",
       "dashboard": "Dashboard",
@@ -4133,6 +4140,11 @@
     "catalogDescription": "Shared conditions managed by the operator.",
     "noData": "No tenant-specific conditions registered yet.",
     "total": "Conditions: {{count}}",
+    "aliases": "Aliases",
+    "aliasText": "Alias Text",
+    "aliasLang": "Language",
+    "addAlias": "Add Alias",
+    "deleteAlias": "Delete Alias",
     "fields": {
       "code": "Condition Code",
       "canonical": "Display Name",
@@ -4142,5 +4154,21 @@
       "excludeKw": "Exclude Keywords",
       "isActive": "Active"
     }
+  },
+  "productCategoriesMaster": {
+    "title": "Product Category Master",
+    "subtitle": "Manage product categories.",
+    "newCategory": "Add New Category",
+    "createTitle": "Add Category",
+    "editTitle": "Edit Category",
+    "confirmDelete": "Deactivate selected product categories?",
+    "noData": "No product categories registered yet.",
+    "empty": "No matching categories",
+    "total": "Categories: {{count}}",
+    "search": "Search by code or display name",
+    "code": "Code",
+    "displayName": "Display Name",
+    "kubunType": "Classification Type",
+    "isActive": "Active"
   }
 }
