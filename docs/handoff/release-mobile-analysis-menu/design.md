@@ -30,16 +30,19 @@ DesktopShell.tsxのsaasAdminItemsパターンを踏襲し、`isSuperAdmin=true`�
 | lintエラーなし | `cd frontend && npm run lint` 成功 |
 | DesktopShellの既存動作に影響なし | デスクトップ表示で目視確認 |
 
-## 守り手
-- `frontend/src/components/MobileShell.tsx` — 本変更の対象ファイル
-
-## 外部事例
-N/A（UIメニュー追加・既存hookとパターンの踏襲）
-
 ## 触るファイル
-- `frontend/src/components/MobileShell.tsx` — メニュー項目追加
-- `docs/handoff/release-mobile-analysis-menu/recon.md` — 調査記録
-- `docs/handoff/release-mobile-analysis-menu/design.md` — 設計記録（本ファイル）
+- `frontend/src/components/MobileShell.tsx` — 本変更の対象ファイル
 
 ## 削除するファイル
 なし
+
+## 外部・過去事例の参照と我々への応用
+PR #3604 でDesktopShellに同一パターン（useSuperAdmin + isSuperAdmin条件 + saasAdminItems）を実装済み。
+MobileShellでは同じhookとアイコン（NAV_ICONS.saasAdmin）を踏襲し、一貫性を維持する。
+外部事例は参照不要（社内の既存実装が正本）。
+
+## 維持の仕組み
+守り手: `frontend/src/components/MobileShell.tsx`
+
+superAdminメニュー項目を追加する際は、DesktopShell（saasAdminItems）とMobileShell（menuItemsのisSuperAdminスプレッド）の両方を更新すること。
+片方のみ更新するとデスクトップ・モバイルで表示不一致が生じる。
