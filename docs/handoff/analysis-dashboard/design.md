@@ -34,8 +34,9 @@
 - 金型: Card(metric) / Badge / DataTable 使用
 - Phase B(仕入元別) / Phase C(時系列) は後続PRで対応
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 - Grafana Dashboard パターン（KPIカード + アラート + テーブル構成）を参照
+- 我々への応用: 既存の Card(metric)/Badge/DataTable 金型をそのまま使用し、パターン踏襲しながらデザインシステム準拠を維持する
 
 ## 維持の仕組み
 
