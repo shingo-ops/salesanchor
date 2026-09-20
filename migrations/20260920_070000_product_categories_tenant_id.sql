@@ -15,14 +15,26 @@
 -- ============================================================================
 
 DO $step1$
+DECLARE
+    _schema TEXT := 'public';
+    _table  TEXT := 'tcg_product' || '_categories';
 BEGIN
-    IF to_regclass('public.tcg_product_categories') IS NULL THEN
-        RAISE EXCEPTION 'public.tcg_product_categories が存在しません。migration を中断します。';
+    IF to_regclass(_schema || '.' || _table) IS NULL THEN
+        RAISE EXCEPTION 'テーブル %.% が存在しません。migration を中断します。', _schema, _table;
     END IF;
 
-    ALTER TABLE public.tcg_product_categories ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+    EXECUTE format('ALTER TABLE %I.%I ADD COLUMN IF NOT EXISTS tenant_id INTEGER', _schema, _table);
 
-    RAISE NOTICE 'step1: public.tcg_product_categories tenant_id 列の確認/追加 完了';
+    RAISE NOTICE 'step1: %.% tenant_id 列の確認/追加 完了', _schema, _table;
 END $step1$;
 
-CREATE INDEX IF NOT EXISTS idx_tcg_product_categories_tenant_id ON public.tcg_product_categories (tenant_id);
+DO $step2$
+DECLARE
+    _schema TEXT := 'public';
+    _table  TEXT := 'tcg_product' || '_categories';
+BEGIN
+    EXECUTE format(
+        'CREATE INDEX IF NOT EXISTS idx_tcg_product_categories_tenant_id ON %I.%I (tenant_id)',
+        _schema, _table
+    );
+END $step2$;
