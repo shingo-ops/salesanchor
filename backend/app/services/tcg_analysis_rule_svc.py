@@ -81,7 +81,7 @@ async def get_current_state(db: AsyncSession, policy_type: str) -> dict[str, Any
     _validate_policy_type(policy_type)
     row = await db.execute(
         text(
-            f"""
+            """
             SELECT id,
                    active_revision_id,
                    draft_revision_id,
@@ -90,7 +90,7 @@ async def get_current_state(db: AsyncSession, policy_type: str) -> dict[str, Any
                    activation_state,
                    created_at,
                    updated_at
-            FROM {TCG_SCHEMA}.analysis_policies
+            FROM public.analysis_policies
             WHERE policy_type = :policy_type
             """
         ),
@@ -174,12 +174,12 @@ async def get_revision_rules(
             w.text          AS word_text,
             w.position,
             arr.is_deleted
-        FROM {TCG_SCHEMA}.analysis_revision_rules arr
-        JOIN {TCG_SCHEMA}.analysis_rules ar
+        FROM public.analysis_revision_rules arr
+        JOIN public.analysis_rules ar
             ON ar.id = arr.rule_id
-        JOIN {TCG_SCHEMA}.analysis_rule_versions arv
+        JOIN public.analysis_rule_versions arv
             ON arv.id = arr.rule_version_id
-        JOIN {TCG_SCHEMA}.analysis_rule_words w
+        JOIN public.analysis_rule_words w
             ON w.rule_version_id = arv.id
         WHERE arr.revision_id = :revision_id
           {kind_filter}
@@ -231,9 +231,9 @@ async def create_draft_revision(
     # 楽観的ロック確認 + policy 取得
     policy_row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, active_revision_id, draft_revision_id, lock_version
-            FROM {TCG_SCHEMA}.analysis_policies
+            FROM public.analysis_policies
             WHERE policy_type = :policy_type
             """
         ),
@@ -270,8 +270,8 @@ async def create_draft_revision(
     new_revision_id = str(uuid4())
     await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.analysis_policy_revisions
+            """
+            INSERT INTO public.analysis_policy_revisions
                 (id, policy_id, parent_revision_id, instruction_version_id, content_digest, created_by)
             VALUES
                 (:id, :policy_id, :parent_id, :instruction_id, :digest, :created_by)
@@ -293,8 +293,8 @@ async def create_draft_revision(
     # draft 参照を更新（lock_version を +1）
     updated = await db.execute(
         text(
-            f"""
-            UPDATE {TCG_SCHEMA}.analysis_policies
+            """
+            UPDATE public.analysis_policies
             SET draft_revision_id = :new_rev_id,
                 activation_state  = CASE activation_state
                                       WHEN 'active' THEN 'active'
@@ -336,8 +336,8 @@ async def _upsert_instruction_version(
         new_id = str(uuid4())
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_instruction_versions
+                """
+                INSERT INTO public.analysis_instruction_versions
                     (id, policy_id, body, created_by)
                 VALUES (:id, :policy_id, :body, :created_by)
                 """
@@ -349,8 +349,8 @@ async def _upsert_instruction_version(
     # 最新の instruction version を取得
     row = await db.execute(
         text(
-            f"""
-            SELECT id FROM {TCG_SCHEMA}.analysis_instruction_versions
+            """
+            SELECT id FROM public.analysis_instruction_versions
             WHERE policy_id = :policy_id
             ORDER BY created_at DESC LIMIT 1
             """
@@ -363,8 +363,8 @@ async def _upsert_instruction_version(
         new_id = str(uuid4())
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_instruction_versions
+                """
+                INSERT INTO public.analysis_instruction_versions
                     (id, policy_id, body, created_by)
                 VALUES (:id, :policy_id, :body, :created_by)
                 """
@@ -393,8 +393,8 @@ async def _apply_changes_to_revision(
         # rule が存在しなければ作成
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_rules (id, policy_id)
+                """
+                INSERT INTO public.analysis_rules (id, policy_id)
                 VALUES (:id, :policy_id)
                 ON CONFLICT (id) DO NOTHING
                 """
@@ -406,8 +406,8 @@ async def _apply_changes_to_revision(
         rule_version_id = str(uuid4())
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_rule_versions
+                """
+                INSERT INTO public.analysis_rule_versions
                     (id, rule_id, title, context_instruction, created_by)
                 VALUES (:id, :rule_id, :title, :context_instruction, :created_by)
                 """
@@ -426,8 +426,8 @@ async def _apply_changes_to_revision(
             word_id = str(uuid4())
             await db.execute(
                 text(
-                    f"""
-                    INSERT INTO {TCG_SCHEMA}.analysis_rule_words
+                    """
+                    INSERT INTO public.analysis_rule_words
                         (id, rule_version_id, kind, text, position)
                     VALUES (:id, :rule_version_id, :kind, :text, :position)
                     """
@@ -444,8 +444,8 @@ async def _apply_changes_to_revision(
         # revision_rules に追加
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_revision_rules
+                """
+                INSERT INTO public.analysis_revision_rules
                     (revision_id, rule_id, rule_version_id, is_deleted)
                 VALUES (:revision_id, :rule_id, :rule_version_id, :is_deleted)
                 ON CONFLICT (revision_id, rule_id) DO UPDATE
@@ -486,8 +486,8 @@ async def save_test_suite(
     # policy 取得
     policy_row = await db.execute(
         text(
-            f"""
-            SELECT id FROM {TCG_SCHEMA}.analysis_policies
+            """
+            SELECT id FROM public.analysis_policies
             WHERE policy_type = :policy_type
             """
         ),
@@ -503,8 +503,8 @@ async def save_test_suite(
     suite_id = str(uuid4())
     await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.analysis_test_suites (id, policy_id)
+            """
+            INSERT INTO public.analysis_test_suites (id, policy_id)
             VALUES (:id, :policy_id)
             """
         ),
@@ -518,8 +518,8 @@ async def save_test_suite(
 
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_test_case_versions
+                """
+                INSERT INTO public.analysis_test_case_versions
                     (id, case_id, policy_id, raw_text, posted_at, expected, created_by)
                 VALUES
                     (:id, :case_id, :policy_id, :raw_text, :posted_at, :expected::jsonb, :created_by)
@@ -538,8 +538,8 @@ async def save_test_suite(
 
         await db.execute(
             text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_suite_cases
+                """
+                INSERT INTO public.analysis_suite_cases
                     (suite_id, case_id, case_version_id)
                 VALUES (:suite_id, :case_id, :case_version_id)
                 """
@@ -550,8 +550,8 @@ async def save_test_suite(
     # policy の current_suite_revision_id を更新
     await db.execute(
         text(
-            f"""
-            UPDATE {TCG_SCHEMA}.analysis_policies
+            """
+            UPDATE public.analysis_policies
             SET current_suite_revision_id = :suite_id,
                 updated_at                = NOW()
             WHERE policy_type = :policy_type
@@ -589,8 +589,8 @@ async def start_test_run(
     # policy 取得
     policy_row = await db.execute(
         text(
-            f"""
-            SELECT id FROM {TCG_SCHEMA}.analysis_policies
+            """
+            SELECT id FROM public.analysis_policies
             WHERE policy_type = :policy_type
             """
         ),
@@ -603,8 +603,8 @@ async def start_test_run(
     run_id = str(uuid4())
     await db.execute(
         text(
-            f"""
-            INSERT INTO {TCG_SCHEMA}.analysis_rule_runs
+            """
+            INSERT INTO public.analysis_rule_runs
                 (id, policy_id, revision_id, suite_revision_id, purpose,
                  engine_version, request_key, started_by, state)
             VALUES
@@ -638,10 +638,10 @@ async def get_test_run_result(db: AsyncSession, run_id: str) -> dict[str, Any] |
     """
     run_row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, revision_id, suite_revision_id, purpose, engine_version,
                    state, started_at, completed_at, started_by
-            FROM {TCG_SCHEMA}.analysis_rule_runs
+            FROM public.analysis_rule_runs
             WHERE id = :run_id
             """
         ),
@@ -654,7 +654,7 @@ async def get_test_run_result(db: AsyncSession, run_id: str) -> dict[str, Any] |
     # 結果一覧
     results_row = await db.execute(
         text(
-            f"""
+            """
             SELECT r.id,
                    r.case_version_id,
                    r.extraction_item_id,
@@ -666,8 +666,8 @@ async def get_test_run_result(db: AsyncSession, run_id: str) -> dict[str, Any] |
                    r.created_at,
                    cv.raw_text     AS expected_raw_text,
                    cv.expected     AS expected_json
-            FROM {TCG_SCHEMA}.analysis_rule_run_results r
-            LEFT JOIN {TCG_SCHEMA}.analysis_test_case_versions cv
+            FROM public.analysis_rule_run_results r
+            LEFT JOIN public.analysis_test_case_versions cv
                 ON cv.id = r.case_version_id
             WHERE r.run_id = :run_id
             ORDER BY r.created_at
@@ -725,9 +725,9 @@ async def activate_revision(
     # 楽観的ロック確認
     policy_row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, active_revision_id, lock_version, activation_state
-            FROM {TCG_SCHEMA}.analysis_policies
+            FROM public.analysis_policies
             WHERE policy_type = :policy_type
             """
         ),
@@ -749,9 +749,9 @@ async def activate_revision(
     # run 検証
     run_row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, state, purpose, revision_id, suite_revision_id
-            FROM {TCG_SCHEMA}.analysis_rule_runs
+            FROM public.analysis_rule_runs
             WHERE id = :run_id
             """
         ),
@@ -770,8 +770,8 @@ async def activate_revision(
     # 全件通過の確認（invalidated_at IS NULL かつ validation_error IS NULL）
     fail_count_row = await db.execute(
         text(
-            f"""
-            SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_rule_run_results
+            """
+            SELECT COUNT(*) FROM public.analysis_rule_run_results
             WHERE run_id = :run_id
               AND (validation_error IS NOT NULL OR invalidated_at IS NOT NULL)
             """
@@ -784,8 +784,8 @@ async def activate_revision(
 
     total_count_row = await db.execute(
         text(
-            f"""
-            SELECT COUNT(*) FROM {TCG_SCHEMA}.analysis_rule_run_results
+            """
+            SELECT COUNT(*) FROM public.analysis_rule_run_results
             WHERE run_id = :run_id
             """
         ),
@@ -798,8 +798,8 @@ async def activate_revision(
     # active 参照を更新
     updated = await db.execute(
         text(
-            f"""
-            UPDATE {TCG_SCHEMA}.analysis_policies
+            """
+            UPDATE public.analysis_policies
             SET active_revision_id = :revision_id,
                 activation_state   = 'active',
                 lock_version       = lock_version + 1,
@@ -854,8 +854,8 @@ async def get_history(
                 apr.content_digest,
                 apr.created_by,
                 apr.created_at
-            FROM {TCG_SCHEMA}.analysis_policy_revisions apr
-            JOIN {TCG_SCHEMA}.analysis_policies ap ON ap.id = apr.policy_id
+            FROM public.analysis_policy_revisions apr
+            JOIN public.analysis_policies ap ON ap.id = apr.policy_id
             WHERE ap.policy_type = :policy_type
               {cursor_filter}
             ORDER BY apr.created_at DESC
@@ -885,7 +885,7 @@ async def get_revision_detail(db: AsyncSession, revision_id: str) -> dict[str, A
     """
     rev_row = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 apr.id,
                 apr.policy_id,
@@ -894,8 +894,8 @@ async def get_revision_detail(db: AsyncSession, revision_id: str) -> dict[str, A
                 apr.created_by,
                 apr.created_at,
                 aiv.body AS instruction_body
-            FROM {TCG_SCHEMA}.analysis_policy_revisions apr
-            LEFT JOIN {TCG_SCHEMA}.analysis_instruction_versions aiv
+            FROM public.analysis_policy_revisions apr
+            LEFT JOIN public.analysis_instruction_versions aiv
                 ON aiv.id = apr.instruction_version_id
             WHERE apr.id = :revision_id
             """
@@ -909,7 +909,7 @@ async def get_revision_detail(db: AsyncSession, revision_id: str) -> dict[str, A
     # ルールと語句一覧
     rules_row = await db.execute(
         text(
-            f"""
+            """
             SELECT
                 ar.id           AS rule_id,
                 arv.id          AS rule_version_id,
@@ -920,10 +920,10 @@ async def get_revision_detail(db: AsyncSession, revision_id: str) -> dict[str, A
                 w.kind          AS word_kind,
                 w.text          AS word_text,
                 w.position
-            FROM {TCG_SCHEMA}.analysis_revision_rules arr
-            JOIN {TCG_SCHEMA}.analysis_rules ar ON ar.id = arr.rule_id
-            JOIN {TCG_SCHEMA}.analysis_rule_versions arv ON arv.id = arr.rule_version_id
-            LEFT JOIN {TCG_SCHEMA}.analysis_rule_words w ON w.rule_version_id = arv.id
+            FROM public.analysis_revision_rules arr
+            JOIN public.analysis_rules ar ON ar.id = arr.rule_id
+            JOIN public.analysis_rule_versions arv ON arv.id = arr.rule_version_id
+            LEFT JOIN public.analysis_rule_words w ON w.rule_version_id = arv.id
             WHERE arr.revision_id = :revision_id
             ORDER BY arv.id, w.position
             """

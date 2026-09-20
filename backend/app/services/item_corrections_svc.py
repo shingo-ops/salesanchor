@@ -79,7 +79,7 @@ async def save_corrections(
                 async with db.begin_nested():
                     await db.execute(
                         text(
-                            f"UPDATE {_SCHEMA}.analysis_rule_run_results "
+                            "UPDATE public.analysis_rule_run_results "
                             "SET invalidated_at = NOW() "
                             "WHERE extraction_item_id = CAST(:eid AS uuid) "
                             "  AND invalidated_at IS NULL"

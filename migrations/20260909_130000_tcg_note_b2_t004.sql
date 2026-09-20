@@ -18,7 +18,6 @@ DECLARE
     ];
     _note_count INTEGER;
     _rule_count INTEGER;
-    _updated_count INTEGER;
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM pg_namespace WHERE nspname = _schema
@@ -40,16 +39,8 @@ BEGIN
         _schema
     );
 
-    EXECUTE format($q$
-        UPDATE %I.tcg_normalization_rules
-        SET from_val = '(\d{1,2}\/\d{1,2})[^\d\/前後]*発送'
-        WHERE normalization_rule_id = 'NR0126'
-    $q$, _schema);
-
-    GET DIAGNOSTICS _updated_count = ROW_COUNT;
-    IF _updated_count != 1 THEN
-        RAISE EXCEPTION 'NOTE-B2 normalization update: expected 1 row, got %', _updated_count;
-    END IF;
+    -- DEPRECATED: UPDATE NR0126 removed — values now managed via app UI/CSV per ADR-155
+    -- Original UPDATE set from_val = '(\d{1,2}\/\d{1,2})[^\d\/前後]*発送' for NR0126
 
     EXECUTE format($q$
         INSERT INTO %I.tcg_normalization_rules
@@ -104,16 +95,8 @@ BEGIN
         ON CONFLICT (id) DO NOTHING
     $q$, _schema);
 
-    EXECUTE format($q$
-        UPDATE %I.tcg_note_master
-        SET exclude_keywords = '前日,翌日,時まで,注文で,注文確定'
-        WHERE id = 'NJ023'
-    $q$, _schema);
-
-    GET DIAGNOSTICS _updated_count = ROW_COUNT;
-    IF _updated_count != 1 THEN
-        RAISE EXCEPTION 'NOTE-B2 NJ023 update: expected 1 row, got %', _updated_count;
-    END IF;
+    -- DEPRECATED: UPDATE NJ023 excluded_keywords removed — values now managed via app UI/CSV per ADR-155
+    -- Original UPDATE set exclude_keywords = '前日,翌日,時まで,注文で,注文確定' for NJ023
 
     EXECUTE format(
         'SELECT count(*) FROM %I.tcg_note_master WHERE id = ANY($1)',

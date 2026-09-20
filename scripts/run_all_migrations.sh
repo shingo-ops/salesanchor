@@ -712,3 +712,6 @@ run_sql migrations/20260920_060000_note_master_tenant_id.sql
 
 # product_categories tenant_id
 run_sql migrations/20260920_070000_product_categories_tenant_id.sql
+
+# analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
+run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
