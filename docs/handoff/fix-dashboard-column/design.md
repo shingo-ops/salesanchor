@@ -1,7 +1,7 @@
 # design: fix-dashboard-column
 
 ## 問題
-`tcg_analysis_dashboard_svc.py` のSQL文字列内で存在しないカラム名を参照しており、本番APIが「データの取得に失敗しました」エラーを返す。
+tcg_analysis_dashboard_svc.py のSQL文字列内で存在しないカラム名を参照しており、本番APIが「データの取得に失敗しました」エラーを返す。
 
 ## 変更内容
 
