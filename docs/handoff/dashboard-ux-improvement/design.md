@@ -35,7 +35,8 @@
 - Google Material Design: コンテキスト色（赤/黄/緑）は「ステータス」を表す標準UXパターン。我々の閾値（80%/60%）は業務SLA感覚に合わせ設定。
 
 ## 維持の仕組み
-- 信号灯閾値（80%/60%）は定数で管理（`AnalysisDashboardPanel.tsx`内）。将来の調整は定数変更のみ。
+守り手: AnalysisDashboardPanel.tsx の定数 + APIバリデーション
+- 信号灯閾値（80%/60%）は定数で管理（AnalysisDashboardPanel.tsx内）。将来の調整は定数変更のみ。
 - トレンドAPI の days パラメータは 1-90 に制限（SQLインジェクション対策）。
 - onNavigate は optional prop（既存の使用箇所に影響なし）。
 
