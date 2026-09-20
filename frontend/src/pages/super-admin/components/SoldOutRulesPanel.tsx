@@ -12,10 +12,9 @@ import { useTranslation } from "react-i18next";
 import { Tabs } from "../../../components/Tabs";
 import type { TabItem } from "../../../components/Tabs";
 import { Button } from "../../../components/Button";
-import { TextField } from "../../../components/TextField";
 import { Textarea } from "../../../components/Textarea";
-import { Select } from "../../../components/Select";
 import { api, ApiError } from "../../../lib/api";
+import { SoldOutWordsTab } from "./SoldOutWordsTab";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -32,12 +31,7 @@ interface PolicyCurrentResponse {
   draft_instruction?: string;
 }
 
-interface RuleWord {
-  id: string;
-  search_word: string;
-  exclude_word?: string;
-  invalidated_at: string | null;
-}
+// RuleWord は SoldOutWordsTab.tsx の RuleWordRow に移管
 
 interface TestCase {
   id: string;
@@ -73,11 +67,6 @@ const POLICY_PATH = "/super-admin/analysis-policies/sold-out";
 
 async function fetchCurrent(): Promise<PolicyCurrentResponse> {
   return api.get<PolicyCurrentResponse>(`${POLICY_PATH}/current`);
-}
-
-async function fetchWords(revisionId: string, q: string, wordKind: string): Promise<RuleWord[]> {
-  const params = new URLSearchParams({ q, word_kind: wordKind });
-  return api.get<RuleWord[]>(`${POLICY_PATH}/revisions/${revisionId}/rules?${params.toString()}`);
 }
 
 async function fetchHistory(): Promise<HistoryEntry[]> {
@@ -185,110 +174,6 @@ function InstructionTab({ current, loading, error, onReload }: InstructionTabPro
           {t("analysisRules.soldOut.saveDraft")}
         </Button>
       </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// サブコンポーネント: 検索・除外ワードタブ
-// ---------------------------------------------------------------------------
-
-interface WordsTabProps {
-  current: PolicyCurrentResponse | null;
-  loading: boolean;
-  error: string | null;
-}
-
-function WordsTab({ current, loading, error }: WordsTabProps) {
-  const { t } = useTranslation();
-  const [words, setWords] = useState<RuleWord[]>([]);
-  const [wordsLoading, setWordsLoading] = useState(false);
-  const [wordsError, setWordsError] = useState<string | null>(null);
-  const [searchQ, setSearchQ] = useState("");
-  const [wordKind, setWordKind] = useState("both");
-
-  async function loadWords() {
-    if (!current?.draft_revision_id && !current?.active_revision_id) return;
-    const revId = current.draft_revision_id ?? current.active_revision_id ?? "";
-    setWordsLoading(true);
-    setWordsError(null);
-    try {
-      const data = await fetchWords(revId, searchQ, wordKind);
-      setWords(data);
-    } catch {
-      setWordsError(t("analysisRules.errors.unknown"));
-    } finally {
-      setWordsLoading(false);
-    }
-  }
-
-  if (loading) return <p>{t("common.loading")}</p>;
-  if (error) return <p style={{ color: "var(--color-error)" }}>{error}</p>;
-
-  const wordKindOptions = [
-    { value: "both", label: t("analysisRules.soldOut.wordKindAll") },
-    { value: "search", label: t("analysisRules.soldOut.wordKindSearch") },
-    { value: "exclude", label: t("analysisRules.soldOut.wordKindExclude") },
-  ];
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-      <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end" }}>
-        <TextField
-          label={t("analysisRules.soldOut.wordsTitle")}
-          value={searchQ}
-          onChange={(e) => setSearchQ(e.target.value)}
-          placeholder={t("analysisRules.soldOut.wordSearchPlaceholder")}
-        />
-        <Select
-          label=""
-          value={wordKind}
-          onChange={(e) => setWordKind(e.target.value)}
-          options={wordKindOptions}
-        />
-        <Button variant="secondary" onClick={loadWords} loading={wordsLoading}>
-          {t("common.search") ?? "Search"}
-        </Button>
-      </div>
-
-      {wordsError && (
-        <p style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>{wordsError}</p>
-      )}
-
-      {words.length === 0 && !wordsLoading && (
-        <p style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
-          {t("common.noResults") ?? "No results"}
-        </p>
-      )}
-
-      <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
-        {words.map((w) => (
-          <li
-            key={w.id}
-            style={{
-              display: "flex",
-              gap: "var(--space-4)",
-              padding: "var(--space-2) var(--space-3)",
-              borderRadius: "var(--radius-md)",
-              border: "1px solid var(--border)",
-              opacity: w.invalidated_at ? 0.5 : 1,
-              background: "var(--bg-card)",
-            }}
-          >
-            <span style={{ flex: 1, fontSize: "var(--font-sm)", color: "var(--text-primary)" }}>
-              {w.search_word}
-            </span>
-            <span style={{ flex: 1, fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
-              {w.exclude_word ?? "—"}
-            </span>
-            {w.invalidated_at && (
-              <span style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)" }}>
-                {t("analysisRules.soldOut.invalidatedLabel")}
-              </span>
-            )}
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -635,10 +520,11 @@ export function SoldOutRulesPanel() {
           />
         )}
         {activeTab === "words" && (
-          <WordsTab
+          <SoldOutWordsTab
             current={current}
             loading={loading}
             error={error}
+            onCurrentChange={loadCurrent}
           />
         )}
         {activeTab === "test" && (
