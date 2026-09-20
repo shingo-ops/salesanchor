@@ -163,7 +163,7 @@ async def get_revision_rules(
         params["cursor"] = cursor
 
     sql = text(
-        """
+        f"""
         SELECT
             ar.id           AS rule_id,
             arv.id          AS rule_version_id,
@@ -847,7 +847,7 @@ async def get_history(
 
     rows = await db.execute(
         text(
-            """
+            f"""
             SELECT
                 apr.id,
                 apr.parent_revision_id,
@@ -955,7 +955,7 @@ async def get_latest_job_items(
     """
     rows = await db.execute(
         text(
-            """
+            f"""
             WITH latest_job AS (
                 SELECT id FROM {TCG_SCHEMA}.extraction_jobs
                 WHERE source_message_id = :msg_id

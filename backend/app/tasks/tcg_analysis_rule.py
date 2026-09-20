@@ -362,7 +362,7 @@ def _run_production_items(
     # C95: status='done' かつ created_at 最新の 1 job の items を取得
     items = session.execute(
         text(
-            """
+            f"""
             WITH latest_job AS (
                 SELECT id FROM {TCG_SCHEMA}.extraction_jobs
                 WHERE source_message_id = :msg_id
