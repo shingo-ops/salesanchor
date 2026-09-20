@@ -699,7 +699,7 @@ run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
 run_sql migrations/20260920_020000_supplier_line_name_unique.sql
 
 # Conditions master SSOT Phase 1: public.conditions に tenant_id 追加 + deal_statuses/work_items FK 張り替え
-run_sql migrations/20260920_030000_conditions_ssot_phase1.sql
+run_sql migrations/20260920_040000_conditions_ssot_phase1.sql
 
 # 単位マスタ public.units に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
 run_sql migrations/20260920_030000_units_add_tenant_id.sql
