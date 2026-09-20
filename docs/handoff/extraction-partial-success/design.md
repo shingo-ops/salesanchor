@@ -2,7 +2,7 @@
 
 ## 参照
 
-- recon: [recon.md](./recon.md)
+- recon: docs/handoff/extraction-partial-success/recon.md
 - 対象ADR: ADR-100 (`docs/adr/ADR-100-tcg-extraction-pipeline.md`)
 
 ## KGI
