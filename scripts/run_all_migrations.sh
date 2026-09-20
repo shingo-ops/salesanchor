@@ -706,3 +706,6 @@ run_sql migrations/20260920_030000_units_add_tenant_id.sql
 
 # ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
 run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
+
+# 備考マスタ public.tcg_note_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_060000_note_master_tenant_id.sql

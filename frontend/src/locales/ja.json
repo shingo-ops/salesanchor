@@ -279,7 +279,8 @@
     "statusMaster": "ステータスマスタ",
     "conditionsMaster": "状態マスタ",
     "superAdminSupplierMaster": "仕入元マスタ",
-    "units": "単位マスタ"
+    "units": "単位マスタ",
+    "noteMaster": "備考マスタ"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -3850,6 +3851,7 @@
       "supplierMaster": "仕入元マスタ",
       "conditionsMaster": "状態マスタ",
       "unitMaster": "単位マスタ",
+      "noteMaster": "備考マスタ",
       "import": "インポート",
       "dashboard": "ダッシュボード"
     },
@@ -3989,6 +3991,24 @@
       "unauthorized": "権限がありません。",
       "serverUnavailable": "サーバーが利用できません。しばらくしてから再試行してください。",
       "unknown": "エラーが発生しました。"
+    },
+    "noteMaster": {
+      "title": "備考マスタ",
+      "description": "LINE解析の備考判定ルールを管理します",
+      "labelJa": "ラベル（日本語）",
+      "labelEn": "ラベル（英語）",
+      "category": "カテゴリ",
+      "matchType": "マッチタイプ",
+      "priority": "優先度",
+      "enabled": "有効",
+      "searchKeywords": "検索キーワード",
+      "excludeKeywords": "除外キーワード",
+      "searchPattern": "検索パターン",
+      "labelTemplate": "ラベルテンプレート",
+      "addNote": "備考ルール追加",
+      "editNote": "備考ルール編集",
+      "deleteConfirm": "この備考ルールを削除しますか？",
+      "noNotes": "備考ルールがありません"
     }
   },
   "tcgAnalysisReview": {
