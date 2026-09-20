@@ -3893,7 +3893,16 @@
         "delete": "削除",
         "textColumn": "テキスト",
         "kindColumn": "種別",
-        "actionsColumn": "操作"
+        "actionsColumn": "操作",
+        "exportCsv": "CSVエクスポート",
+        "importCsv": "CSVインポート",
+        "importPreviewTitle": "インポートプレビュー",
+        "importConfirm": "インポート実行",
+        "previewAdd": "追加",
+        "previewUpdate": "更新",
+        "previewDelete": "削除",
+        "previewNoChanges": "変更なし",
+        "importSuccess": "インポート完了"
       },
       "testTitle": "テスト",
       "testInputLabel": "原文",

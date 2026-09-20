@@ -3893,7 +3893,16 @@
         "delete": "Delete",
         "textColumn": "Text",
         "kindColumn": "Kind",
-        "actionsColumn": "Actions"
+        "actionsColumn": "Actions",
+        "exportCsv": "Export CSV",
+        "importCsv": "Import CSV",
+        "importPreviewTitle": "Import Preview",
+        "importConfirm": "Execute Import",
+        "previewAdd": "Add",
+        "previewUpdate": "Update",
+        "previewDelete": "Delete",
+        "previewNoChanges": "No changes",
+        "importSuccess": "Import complete"
       },
       "testTitle": "Test",
       "testInputLabel": "Source text",

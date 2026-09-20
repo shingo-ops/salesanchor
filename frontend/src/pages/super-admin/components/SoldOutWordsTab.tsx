@@ -4,7 +4,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型コンポーネントのみ使用。生select/生input禁止。
  */
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../../components/Button";
 import { TextField } from "../../../components/TextField";
@@ -42,6 +42,27 @@ interface WordsApiResponse {
   items: RuleWordRow[];
   has_next: boolean;
   next_cursor: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// 型定義（CSV）
+// ---------------------------------------------------------------------------
+
+interface ImportPreviewItem {
+  rule_id: string;
+  title: string;
+  word_kind: string;
+  text: string;
+  before?: string;
+}
+
+interface ImportPreviewResult {
+  add_count: number;
+  update_count: number;
+  delete_count: number;
+  add: ImportPreviewItem[];
+  update: ImportPreviewItem[];
+  delete: ImportPreviewItem[];
 }
 
 // ---------------------------------------------------------------------------
@@ -115,6 +136,18 @@ export function SoldOutWordsTab({
   // 削除確認モーダル
   const [deleteTarget, setDeleteTarget] = useState<RuleWordRow | null>(null);
   const [deleting, setDeleting] = useState(false);
+
+  // CSV エクスポート/インポート
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState(false);
+  const exportLock = useRef(false);
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const [importPreview, setImportPreview] = useState<ImportPreviewResult | null>(null);
+  const [importPreviewOpen, setImportPreviewOpen] = useState(false);
+  const [importRaw, setImportRaw] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importSuccess, setImportSuccess] = useState(false);
 
   async function loadWords() {
     if (!current?.draft_revision_id && !current?.active_revision_id) return;
@@ -213,6 +246,78 @@ export function SoldOutWordsTab({
     }
   }
 
+  async function handleExportCsv() {
+    if (exportLock.current) return;
+    exportLock.current = true;
+    setExporting(true);
+    setExportError(false);
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob(`${POLICY_PATH}/export`);
+      url = URL.createObjectURL(blob);
+      anchor.href = url;
+      anchor.download = "analysis-rules-sold-out.csv";
+      document.body.appendChild(anchor);
+      anchor.click();
+    } catch {
+      setExportError(true);
+    } finally {
+      anchor.remove();
+      if (url) URL.revokeObjectURL(url);
+      exportLock.current = false;
+      setExporting(false);
+    }
+  }
+
+  async function handleImportFileChange(e: { target: HTMLInputElement }) {
+    const file = e.target.files?.[0];
+    if (!e.target) return;
+    // reset input so same file can be re-selected
+    (e.target as HTMLInputElement).value = "";
+    if (!file) return;
+    setImportError(null);
+    setImportSuccess(false);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const preview = await api.postForm<ImportPreviewResult>(`${POLICY_PATH}/import/preview`, formData);
+      setImportRaw(file);
+      setImportPreview(preview);
+      setImportPreviewOpen(true);
+    } catch {
+      setImportError(t("analysisRules.errors.unknown"));
+    }
+  }
+
+  async function handleImportCommit() {
+    if (!importRaw || !current) return;
+    setImporting(true);
+    setImportError(null);
+    try {
+      const formData = new FormData();
+      formData.append("file", importRaw);
+      formData.append("lock_version", String(current.lock_version));
+      if (current.draft_revision_id) formData.append("draft_revision_id", current.draft_revision_id);
+      if (current.active_revision_id) formData.append("active_revision_id", current.active_revision_id);
+      await api.postForm(`${POLICY_PATH}/import/commit`, formData);
+      setImportPreviewOpen(false);
+      setImportPreview(null);
+      setImportRaw(null);
+      setImportSuccess(true);
+      onCurrentChange();
+      await loadWords();
+    } catch (e) {
+      const msg =
+        e instanceof ApiError && e.status === 409
+          ? t("analysisRules.errors.conflict")
+          : t("analysisRules.errors.unknown");
+      setImportError(msg);
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (loading) return <p>{t("common.loading")}</p>;
   if (error) return <p style={{ color: "var(--color-error)" }}>{error}</p>;
 
@@ -296,11 +401,40 @@ export function SoldOutWordsTab({
         <Button variant="primary" onClick={openAddModal}>
           {t("analysisRules.soldOut.words.addButton")}
         </Button>
+        <Button variant="secondary" disabled={exporting} onClick={() => void handleExportCsv()}>
+          {t(exporting ? "common.loading" : "analysisRules.soldOut.words.exportCsv")}
+        </Button>
+        <Button variant="secondary" onClick={() => importInputRef.current?.click()}>
+          {t("analysisRules.soldOut.words.importCsv")}
+        </Button>
+        {/* hidden file input */}
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".csv"
+          style={{ display: "none" }}
+          onChange={(e) => void handleImportFileChange(e)}
+        />
       </div>
 
       {wordsError && (
         <p style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>
           {wordsError}
+        </p>
+      )}
+      {exportError && (
+        <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>
+          {t("analysisRules.errors.unknown")}
+        </p>
+      )}
+      {importError && (
+        <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>
+          {importError}
+        </p>
+      )}
+      {importSuccess && (
+        <p role="status" style={{ color: "var(--color-success)", fontSize: "var(--font-sm)" }}>
+          {t("analysisRules.soldOut.words.importSuccess")}
         </p>
       )}
 
@@ -368,6 +502,82 @@ export function SoldOutWordsTab({
         onConfirm={handleDelete}
         onCancel={() => setDeleteTarget(null)}
       />
+
+      {/* CSV インポートプレビューモーダル */}
+      <Modal
+        open={importPreviewOpen}
+        onClose={() => { setImportPreviewOpen(false); setImportError(null); }}
+        title={t("analysisRules.soldOut.words.importPreviewTitle")}
+        size="md"
+        footer={
+          <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+            <Button variant="secondary" onClick={() => { setImportPreviewOpen(false); setImportError(null); }}>
+              {t("analysisRules.soldOut.words.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => void handleImportCommit()}
+              loading={importing}
+              disabled={
+                importPreview !== null &&
+                importPreview.add_count === 0 &&
+                importPreview.update_count === 0 &&
+                importPreview.delete_count === 0
+              }
+            >
+              {t("analysisRules.soldOut.words.importConfirm")}
+            </Button>
+          </div>
+        }
+      >
+        {importPreview && (
+          <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+            <div style={{ display: "flex", gap: "var(--space-4)" }}>
+              <span>{t("analysisRules.soldOut.words.previewAdd")}: {importPreview.add_count}</span>
+              <span>{t("analysisRules.soldOut.words.previewUpdate")}: {importPreview.update_count}</span>
+              <span>{t("analysisRules.soldOut.words.previewDelete")}: {importPreview.delete_count}</span>
+            </div>
+            {importPreview.add_count === 0 && importPreview.update_count === 0 && importPreview.delete_count === 0 && (
+              <p style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
+                {t("analysisRules.soldOut.words.previewNoChanges")}
+              </p>
+            )}
+            {importPreview.add.length > 0 && (
+              <div>
+                <p style={{ fontWeight: "bold", fontSize: "var(--font-sm)" }}>{t("analysisRules.soldOut.words.previewAdd")}</p>
+                <ul style={{ fontSize: "var(--font-sm)", margin: 0, paddingLeft: "var(--space-4)" }}>
+                  {importPreview.add.map((item, i) => (
+                    <li key={i}>[{item.word_kind}] {item.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {importPreview.update.length > 0 && (
+              <div>
+                <p style={{ fontWeight: "bold", fontSize: "var(--font-sm)" }}>{t("analysisRules.soldOut.words.previewUpdate")}</p>
+                <ul style={{ fontSize: "var(--font-sm)", margin: 0, paddingLeft: "var(--space-4)" }}>
+                  {importPreview.update.map((item, i) => (
+                    <li key={i}>[{item.word_kind}] {item.before} → {item.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {importPreview.delete.length > 0 && (
+              <div>
+                <p style={{ fontWeight: "bold", fontSize: "var(--font-sm)" }}>{t("analysisRules.soldOut.words.previewDelete")}</p>
+                <ul style={{ fontSize: "var(--font-sm)", margin: 0, paddingLeft: "var(--space-4)" }}>
+                  {importPreview.delete.map((item, i) => (
+                    <li key={i}>[{item.word_kind}] {item.text}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {importError && (
+              <p style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>{importError}</p>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }
