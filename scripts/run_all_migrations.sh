@@ -709,3 +709,6 @@ run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
 
 # analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
 run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
+
+# 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
+run_sql migrations/20260920_130000_create_product_classification.sql
