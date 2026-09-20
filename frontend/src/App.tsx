@@ -41,6 +41,7 @@ import InvoiceDetailPage from "./pages/invoice-detail/InvoiceDetailPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
 import StatusMasterPage from "./pages/status-master/StatusMasterPage";
 import UnitsPage from "./pages/units/UnitsPage";
+import NoteMasterPage from "./pages/note-master/NoteMasterPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
 import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
 import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
@@ -359,6 +360,7 @@ function App() {
                     <Route path="suppliers"           element={<SuppliersPage />} />
                     <Route path="status-master"       element={<StatusMasterPage />} />
                     <Route path="units"              element={<UnitsPage />} />
+                    <Route path="note-master"        element={<NoteMasterPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
                     {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}

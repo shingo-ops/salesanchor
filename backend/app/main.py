@@ -83,6 +83,7 @@ from app.routers import (
     staff,
     staff_reports,
     status_master,  # ステータスマスタ テナント用
+    note_master,  # 備考マスタ テナント用
     super_admin_aliases,
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
@@ -90,6 +91,7 @@ from app.routers import (
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
+    super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
@@ -383,6 +385,11 @@ app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 備考マスタ テナント用
+app.include_router(
+    note_master.router, prefix="/api/v1", tags=["note-master"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     conditions.router, prefix="/api/v1", tags=["conditions"],
     dependencies=[Depends(get_current_tenant)],
@@ -498,6 +505,10 @@ app.include_router(
 # ステータスマスタ中央 admin
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
+)
+# 備考マスタ中央 admin
+app.include_router(
+    super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
