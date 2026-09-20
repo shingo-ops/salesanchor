@@ -3849,7 +3849,8 @@
       "supplierMaster": "仕入元マスタ",
       "conditionsMaster": "状態マスタ",
       "unitMaster": "単位マスタ",
-      "import": "インポート"
+      "import": "インポート",
+      "dashboard": "ダッシュボード"
     },
     "tabs": {
       "instruction": "指示文",
@@ -3947,6 +3948,32 @@
       "title": "要確認",
       "comingSoon": "準備中",
       "count": "{{count}}件"
+    },
+    "dashboard": {
+      "totalJobs": "抽出ジョブ総数",
+      "extractionSuccessRate": "抽出成功率",
+      "pidResolutionRate": "PID解決率",
+      "unitResolutionRate": "Unit解決率",
+      "needsReviewRate": "要確認率",
+      "staleRunning": "フリーズ中",
+      "analysisMissing": "解析未実行",
+      "pending": "処理待ち",
+      "recentErrors": "直近のエラー",
+      "errorMessage": "エラーメッセージ",
+      "errorDate": "日時",
+      "reviewReasons": "要確認の理由内訳",
+      "reason": "理由",
+      "count": "件数",
+      "engineInfo": "エンジン情報",
+      "currentModel": "使用モデル",
+      "promptVersion": "プロンプトバージョン",
+      "engineVersion": "エンジンバージョン",
+      "noData": "データがありません",
+      "noErrors": "エラーはありません",
+      "jobs": "件",
+      "items": "件",
+      "loading": "読み込み中...",
+      "fetchError": "データの取得に失敗しました"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
