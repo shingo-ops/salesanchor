@@ -20,8 +20,6 @@ import {
   AnalysisRulesSidebar,
   type AnalysisRulesSidebarKey,
 } from "./components/AnalysisRulesSidebar";
-import { SoldOutRulesPanel } from "./components/SoldOutRulesPanel";
-import { DateRulesPanel } from "./components/DateRulesPanel";
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { StatusMasterPanel } from "./components/StatusMasterPanel";
@@ -151,8 +149,6 @@ export default function AnalysisRulesPage() {
           {activeSection === "dashboard" && <AnalysisDashboardPanel onNavigate={setActiveSection} />}
           {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
           {activeSection === "needs-review" && <NeedsReviewPanel />}
-          {activeSection === "sold-out" && <SoldOutRulesPanel />}
-          {activeSection === "date-rule" && <DateRulesPanel />}
           {activeSection === "product-master" && <ProductMasterPanel />}
           {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
           {activeSection === "status-master" && <StatusMasterPanel />}
