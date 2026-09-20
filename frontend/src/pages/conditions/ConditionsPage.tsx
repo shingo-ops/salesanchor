@@ -192,8 +192,8 @@ export default function ConditionsPage() {
     { key: "canonical", header: t(`${f}.fields.canonical`) },
     { key: "app_kubun", header: t(`${f}.fields.appKubun`) },
     { key: "priority", header: t(`${f}.fields.priority`) },
-    { key: "search_kw", header: t(`${f}.fields.searchKw`), renderCell: c => <span style={{ whiteSpace: "pre-wrap", maxWidth: 200, display: "inline-block" }}>{c.search_kw}</span> },
-    { key: "exclude_kw", header: t(`${f}.fields.excludeKw`), renderCell: c => <span style={{ whiteSpace: "pre-wrap", maxWidth: 200, display: "inline-block" }}>{c.exclude_kw}</span> },
+    { key: "search_kw", header: t(`${f}.fields.searchKw`), renderCell: c => <span style={{ whiteSpace: "pre-wrap", maxWidth: "var(--modal-wide-w)", display: "inline-block" }}>{c.search_kw}</span> },
+    { key: "exclude_kw", header: t(`${f}.fields.excludeKw`), renderCell: c => <span style={{ whiteSpace: "pre-wrap", maxWidth: "var(--modal-wide-w)", display: "inline-block" }}>{c.exclude_kw}</span> },
     {
       key: "is_active",
       header: t(`${f}.fields.isActive`),
