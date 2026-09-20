@@ -83,6 +83,7 @@ from app.routers import (
     staff,
     staff_reports,
     super_admin_aliases,
+    super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
@@ -90,7 +91,6 @@ from app.routers import (
     super_admin_llm_budget,
     super_admin_phase_switch,
     super_admin_suppliers,
-    super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_tcg,
     super_admin_tenants,
     suppliers,
@@ -460,6 +460,10 @@ app.include_router(
 app.include_router(
     super_admin_aliases.router, prefix="/api/v1", tags=["super-admin"],
 )
+# 状態マスタ SSOT admin CRUD
+app.include_router(
+    super_admin_conditions.router, prefix="/api/v1", tags=["super-admin"],
+)
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
 )
@@ -472,10 +476,6 @@ app.include_router(
 )
 app.include_router(
     super_admin_suppliers.router, prefix="/api/v1", tags=["super-admin"],
-)
-# 状態マスタ SSOT admin CRUD
-app.include_router(
-    super_admin_conditions.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
