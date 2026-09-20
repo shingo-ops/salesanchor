@@ -1,5 +1,10 @@
 # design: revert-keyword-schema
 
+## 相互参照
+
+- recon: docs/handoff/revert-keyword-schema/recon.md
+- 関連ADR: ADR-1001（public.products統合方針・共用マスタ参照原則）
+
 ## 変更内容
 
 `backend/app/services/tcg_work_reference.py` の `load_work_reference()` における
