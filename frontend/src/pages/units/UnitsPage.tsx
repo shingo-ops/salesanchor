@@ -15,6 +15,8 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
+import { STATUS_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/layout";
 
 interface Unit {
   id: number;
@@ -154,7 +156,7 @@ export default function UnitsPage() {
     {
       key: "is_active",
       header: t(`${f}.isActive`),
-      renderCell: u => u.is_active ? "✓" : "-",
+      renderCell: u => u.is_active ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "-",
     },
     {
       key: "actions",

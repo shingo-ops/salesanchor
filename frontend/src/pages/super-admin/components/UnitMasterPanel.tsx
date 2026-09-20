@@ -14,6 +14,8 @@ import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
 import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
+import { STATUS_ICONS } from "../../../constants/icons";
+import { ICON } from "../../../constants/layout";
 
 interface CentralUnit {
   id: number;
@@ -188,7 +190,7 @@ export function UnitMasterPanel() {
     {
       key: "is_active",
       header: t(`${f}.isActive`),
-      renderCell: row => row.is_active ? "✓" : "-",
+      renderCell: row => row.is_active ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" /> : "-",
     },
     {
       key: "_edit",
