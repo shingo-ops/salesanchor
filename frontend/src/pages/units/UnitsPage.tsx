@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
@@ -51,7 +52,10 @@ const toForm = (u: Unit): UnitFormState => ({
 
 export default function UnitsPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [units, setUnits] = useState<Unit[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -63,6 +67,23 @@ export default function UnitsPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [createForm, setCreateForm] = useState<UnitFormState>(emptyForm);
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/units/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "units-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const [editId, setEditId] = useState<number | null>(null);
   const [editForm, setEditForm] = useState<UnitFormState>(emptyForm);
@@ -184,13 +205,21 @@ export default function UnitsPage() {
       subtitleKey="unitMaster.title"
       headerAction={
         hasPermission("suppliers.view") ? (
-          <HeaderButton
-            variant="primary"
-            onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-            data-testid="units-new"
-          >
-            {t("common.create")}
-          </HeaderButton>
+          <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="units-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "unitCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="units-import" onClick={() => navigate("/management-center/units/import")}>
+              {t("unitCsv.importButton")}
+            </HeaderButton>
+            <HeaderButton
+              variant="primary"
+              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+              data-testid="units-new"
+            >
+              {t("common.create")}
+            </HeaderButton>
+          </>
         ) : undefined
       }
     >

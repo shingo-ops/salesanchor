@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
@@ -71,7 +72,10 @@ const toForm = (s: StatusEntry): StatusFormState => ({
 
 export default function StatusMasterPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [items, setItems] = useState<StatusEntry[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -79,6 +83,23 @@ export default function StatusMasterPage() {
   const PER_PAGE = 100;
   const [hasNext, setHasNext] = useState(false);
   const [searchInput, setSearchInput] = useState("");
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/status-master/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "status-master-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
   const [search, setSearch] = useState("");
 
   const [showCreate, setShowCreate] = useState(false);
@@ -293,13 +314,21 @@ export default function StatusMasterPage() {
       subtitleKey="statusMaster.title"
       headerAction={
         hasPermission("suppliers.view") ? (
-          <HeaderButton
-            variant="primary"
-            onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-            data-testid="status-master-new"
-          >
-            {t("common.create")}
-          </HeaderButton>
+          <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="status-master-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "statusMasterCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="status-master-import" onClick={() => navigate("/management-center/status-master/import")}>
+              {t("statusMasterCsv.importButton")}
+            </HeaderButton>
+            <HeaderButton
+              variant="primary"
+              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+              data-testid="status-master-new"
+            >
+              {t("common.create")}
+            </HeaderButton>
+          </>
         ) : undefined
       }
     >

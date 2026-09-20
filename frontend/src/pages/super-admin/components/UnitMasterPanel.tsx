@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -53,6 +54,9 @@ const PER_PAGE = 50;
 
 export function UnitMasterPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [items, setItems] = useState<CentralUnit[]>([]);
   const [error, setError] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -73,6 +77,23 @@ export function UnitMasterPanel() {
 
   const unitFormRef = useRef<HTMLFormElement>(null);
   const aliasFormRef = useRef<HTMLFormElement>(null);
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/units/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "units-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const load = useCallback(async () => {
     try {
@@ -212,6 +233,12 @@ export function UnitMasterPanel() {
       <ContentToolbar
         right={
           <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="units-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "unitCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="units-import" onClick={() => navigate("/super-admin/masters/units/import")}>
+              {t("unitCsv.importButton")}
+            </HeaderButton>
             <HeaderButton
               variant="primary"
               data-testid="units-new"

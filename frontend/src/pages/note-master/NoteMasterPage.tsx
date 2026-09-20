@@ -6,6 +6,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
@@ -83,9 +84,29 @@ const PER_PAGE = 100;
 
 export default function NoteMasterPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { hasPermission } = usePermissions();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const [notes, setNotes] = useState<TcgNoteMaster[]>([]);
   const [error, setError] = useState("");
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/note-master/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "note-master-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(false);
@@ -328,13 +349,21 @@ export default function NoteMasterPage() {
       subtitleKey={`${f}.description`}
       headerAction={
         hasPermission("suppliers.view") ? (
-          <HeaderButton
-            variant="primary"
-            onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
-            data-testid="note-master-new"
-          >
-            {t(`${f}.addNote`)}
-          </HeaderButton>
+          <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="note-master-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "noteMasterCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="note-master-import" onClick={() => navigate("/management-center/note-master/import")}>
+              {t("noteMasterCsv.importButton")}
+            </HeaderButton>
+            <HeaderButton
+              variant="primary"
+              onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}
+              data-testid="note-master-new"
+            >
+              {t(`${f}.addNote`)}
+            </HeaderButton>
+          </>
         ) : undefined
       }
     >

@@ -46,6 +46,10 @@ import UnitsPage from "./pages/units/UnitsPage";
 import NoteMasterPage from "./pages/note-master/NoteMasterPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
 import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
+import UnitImportTenantPage from "./pages/units/UnitImportPage";
+import ConditionImportTenantPage from "./pages/conditions/ConditionImportPage";
+import StatusMasterImportTenantPage from "./pages/status-master/StatusMasterImportPage";
+import NoteMasterImportTenantPage from "./pages/note-master/NoteMasterImportPage";
 import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
@@ -94,6 +98,10 @@ import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-0
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
 import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
 import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
+import UnitImportPage from "./pages/super-admin/UnitImportPage";
+import ConditionImportPage from "./pages/super-admin/ConditionImportPage";
+import StatusMasterImportPage from "./pages/super-admin/StatusMasterImportPage";
+import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
@@ -244,6 +252,10 @@ function App() {
                   <Route path="/data" element={<ERPPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
                   <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
+                  <Route path="/management-center/units/import" element={<UnitImportTenantPage />} />
+                  <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
+                  <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
+                  <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
                   <Route
                     path="/purchase-orders"
@@ -322,6 +334,22 @@ function App() {
                   <Route
                     path="/super-admin/masters/suppliers/import"
                     element={<SupplierImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/units/import"
+                    element={<UnitImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/conditions/import"
+                    element={<ConditionImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/status-master/import"
+                    element={<StatusMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/note-master/import"
+                    element={<NoteMasterImportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>

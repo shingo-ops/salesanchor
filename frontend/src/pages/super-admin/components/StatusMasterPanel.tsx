@@ -5,6 +5,7 @@
  * ADR-144: 金型クラスのみ使用。
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -60,6 +61,9 @@ const PER_PAGE = 50;
 
 export function StatusMasterPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
   const f = "statusMaster";
 
   const [items, setItems] = useState<StatusEntry[]>([]);
@@ -68,6 +72,23 @@ export function StatusMasterPanel() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/status-master/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "status-master-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
 
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<StatusFormState>(emptyForm);
@@ -185,6 +206,12 @@ export function StatusMasterPanel() {
       <ContentToolbar
         right={
           <>
+            <HeaderButton variant="secondary" disabled={exporting} data-testid="status-master-export" onClick={() => void downloadExport()}>
+              {t(exporting ? "common.loading" : "statusMasterCsv.exportButton")}
+            </HeaderButton>
+            <HeaderButton variant="primary" data-testid="status-master-import" onClick={() => navigate("/super-admin/masters/status-master/import")}>
+              {t("statusMasterCsv.importButton")}
+            </HeaderButton>
             <HeaderButton
               variant="primary"
               data-testid="status-master-new"

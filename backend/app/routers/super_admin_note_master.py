@@ -6,10 +6,17 @@ API:
   POST   /api/v1/super-admin/note-master
   PATCH  /api/v1/super-admin/note-master/{id}
   DELETE /api/v1/super-admin/note-master/{id}
+  GET    /api/v1/super-admin/note-master/export
+  POST   /api/v1/super-admin/note-master/import/preview
+  POST   /api/v1/super-admin/note-master/import/commit
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+import csv
+import hashlib
+import io
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -21,6 +28,72 @@ from app.schemas.central_masters import (
     TcgNoteMasterResponse,
     TcgNoteMasterUpdate,
 )
+
+_BOOL_TRUE = {"true", "1", "yes"}
+_BOOL_FALSE = {"false", "0", "no"}
+_MAX_CSV_BYTES = 2 * 1024 * 1024
+_NOTE_REQUIRED_COLS = {"label_ja"}
+
+
+def _compute_digest(raw: bytes) -> str:
+    return hashlib.sha256(raw).hexdigest()
+
+
+async def _read_note_upload(file: UploadFile) -> bytes:
+    name = (file.filename or "").lower()
+    if not name.endswith(".csv"):
+        raise HTTPException(status_code=422, detail="NOTE_IMPORT_NOT_CSV")
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=422, detail="NOTE_IMPORT_EMPTY_FILE")
+    if len(raw) > _MAX_CSV_BYTES:
+        raise HTTPException(status_code=413, detail="NOTE_IMPORT_FILE_TOO_LARGE")
+    try:
+        raw.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise HTTPException(status_code=422, detail="NOTE_IMPORT_NOT_UTF8") from exc
+    return raw
+
+
+def _parse_note_master(raw: bytes) -> tuple[list[dict], list[str]]:
+    text_content = raw.decode("utf-8-sig")
+    reader = csv.DictReader(io.StringIO(text_content))
+    rows: list[dict] = []
+    errors: list[str] = []
+    if not reader.fieldnames:
+        return [], ["Empty CSV"]
+    missing = _NOTE_REQUIRED_COLS - set(reader.fieldnames)
+    if missing:
+        return [], [f"Missing columns: {', '.join(sorted(missing))}"]
+    for line_num, raw_row in enumerate(reader, start=2):
+        label_ja = (raw_row.get("label_ja") or "").strip()
+        if not label_ja:
+            errors.append(f"L{line_num}: label_ja is required")
+            continue
+        enabled_raw = (raw_row.get("enabled") or "true").strip().lower()
+        if enabled_raw not in (_BOOL_TRUE | _BOOL_FALSE):
+            errors.append(f"L{line_num}: invalid enabled '{enabled_raw}' (must be true/false/1/0)")
+            continue
+        priority_raw = (raw_row.get("priority") or "0").strip()
+        try:
+            priority = int(priority_raw)
+        except ValueError:
+            errors.append(f"L{line_num}: invalid priority '{priority_raw}' (must be integer)")
+            continue
+        rows.append({
+            "label_ja": label_ja,
+            "label_en": (raw_row.get("label_en") or "").strip() or None,
+            "enabled": enabled_raw in _BOOL_TRUE,
+            "search_keywords": (raw_row.get("search_keywords") or "").strip() or "",
+            "exclude_keywords": (raw_row.get("exclude_keywords") or "").strip() or "",
+            "category": (raw_row.get("category") or "").strip() or None,
+            "priority": priority,
+            "match_type": (raw_row.get("match_type") or "").strip() or "",
+            "search_pattern": (raw_row.get("search_pattern") or "").strip() or "",
+            "label_template": (raw_row.get("label_template") or "").strip() or None,
+            "_line": line_num,
+        })
+    return rows, errors
 
 router = APIRouter()
 
@@ -160,3 +233,144 @@ async def delete_note_master(
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="備考マスタが見つかりません")
     await db.commit()
+
+
+# ----------------------------------------------------------------------------
+# CSV export / import
+# ----------------------------------------------------------------------------
+
+
+@router.get(
+    "/super-admin/note-master/export",
+    dependencies=[Depends(require_super_admin)],
+    summary="中央管理 備考マスタ CSVエクスポート",
+)
+async def export_note_master_csv(db: AsyncSession = Depends(get_db)) -> Response:
+    result = await db.execute(
+        text(
+            "SELECT label_ja, label_en, enabled, search_keywords, exclude_keywords, "
+            "category, priority, match_type, search_pattern, label_template "
+            "FROM public.tcg_note_master "
+            "WHERE tenant_id IS NULL "
+            "ORDER BY id"
+        )
+    )
+    rows = result.mappings().all()
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["label_ja", "label_en", "enabled", "search_keywords", "exclude_keywords", "category", "priority", "match_type", "search_pattern", "label_template"])
+    for r in rows:
+        writer.writerow([
+            r["label_ja"] or "",
+            r["label_en"] or "",
+            str(r["enabled"]).lower() if r["enabled"] is not None else "true",
+            r["search_keywords"] or "",
+            r["exclude_keywords"] or "",
+            r["category"] or "",
+            r["priority"] if r["priority"] is not None else "0",
+            r["match_type"] or "",
+            r["search_pattern"] or "",
+            r["label_template"] or "",
+        ])
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=note_master.csv"},
+    )
+
+
+@router.post(
+    "/super-admin/note-master/import/preview",
+    dependencies=[Depends(require_super_admin)],
+    summary="中央管理 備考マスタ CSVインポート プレビュー",
+)
+async def import_note_master_preview(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    raw = await _read_note_upload(file)
+    rows, errors = _parse_note_master(raw)
+    digest = _compute_digest(raw)
+
+    inserts = 0
+    updates = 0
+    for row in rows:
+        res = await db.execute(
+            text("SELECT 1 FROM public.tcg_note_master WHERE label_ja = :label_ja AND tenant_id IS NULL"),
+            {"label_ja": row["label_ja"]},
+        )
+        if res.fetchone():
+            updates += 1
+        else:
+            inserts += 1
+
+    preview_rows = [{k: v for k, v in r.items() if not k.startswith("_")} for r in rows]
+    return {
+        "digest": digest,
+        "total": len(rows),
+        "inserts": inserts,
+        "updates": updates,
+        "errors": errors,
+        "preview_rows": preview_rows,
+    }
+
+
+@router.post(
+    "/super-admin/note-master/import/commit",
+    dependencies=[Depends(require_super_admin)],
+    summary="中央管理 備考マスタ CSVインポート 確定",
+)
+async def import_note_master_commit(
+    file: UploadFile = File(...),
+    digest: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    raw = await _read_note_upload(file)
+    actual_digest = _compute_digest(raw)
+    if actual_digest != digest:
+        raise HTTPException(status_code=409, detail="NOTE_IMPORT_DIGEST_MISMATCH")
+
+    rows, errors = _parse_note_master(raw)
+    if errors:
+        return {"inserted": 0, "updated": 0, "errors": errors}
+
+    inserted = updated = 0
+    try:
+        for row in rows:
+            data = {k: v for k, v in row.items() if not k.startswith("_")}
+            exists_result = await db.execute(
+                text("SELECT id FROM public.tcg_note_master WHERE label_ja = :label_ja AND tenant_id IS NULL"),
+                {"label_ja": data["label_ja"]},
+            )
+            existing = exists_result.fetchone()
+            if existing:
+                await db.execute(
+                    text(
+                        "UPDATE public.tcg_note_master SET label_en = :label_en, enabled = :enabled, "
+                        "search_keywords = :search_keywords, exclude_keywords = :exclude_keywords, "
+                        "category = :category, priority = :priority, match_type = :match_type, "
+                        "search_pattern = :search_pattern, label_template = :label_template, "
+                        "updated_at = NOW() "
+                        "WHERE id = :id AND tenant_id IS NULL"
+                    ),
+                    {**data, "id": existing[0]},
+                )
+                updated += 1
+            else:
+                await db.execute(
+                    text(
+                        "INSERT INTO public.tcg_note_master "
+                        "(label_ja, label_en, enabled, search_keywords, exclude_keywords, "
+                        " category, priority, match_type, search_pattern, label_template, tenant_id) "
+                        "VALUES (:label_ja, :label_en, :enabled, :search_keywords, :exclude_keywords, "
+                        "        :category, :priority, :match_type, :search_pattern, :label_template, NULL)"
+                    ),
+                    data,
+                )
+                inserted += 1
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"NOTE_IMPORT_COMMIT_ERROR: {exc}") from exc
+
+    return {"inserted": inserted, "updated": updated, "errors": []}
