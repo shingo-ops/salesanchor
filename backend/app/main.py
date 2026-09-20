@@ -63,6 +63,7 @@ from app.routers import (
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
+    note_master,  # 備考マスタ テナント用
     notifications,
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
@@ -83,7 +84,6 @@ from app.routers import (
     staff,
     staff_reports,
     status_master,  # ステータスマスタ テナント用
-    note_master,  # 備考マスタ テナント用
     super_admin_aliases,
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,

@@ -4,5 +4,4 @@ ALTER TABLE public.tcg_note_master
   ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
 
 -- Index for tenant filtering
-CREATE INDEX IF NOT EXISTS idx_tcg_note_master_tenant
-  ON public.tcg_note_master (tenant_id);
+CREATE INDEX IF NOT EXISTS idx_tcg_note_master_tenant ON public.tcg_note_master (tenant_id);
