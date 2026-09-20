@@ -11,6 +11,7 @@
  * 2026-09-19: マスタ管理パネル（商品マスタ・仕入元マスタ）を追加。
  */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -97,8 +98,17 @@ function NeedsReviewPanel() {
 
 export default function AnalysisRulesPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
   const [activeSection, setActiveSection] = useState<AnalysisRulesSidebarKey>("sold-out");
+
+  const handleSectionChange = (key: AnalysisRulesSidebarKey) => {
+    if (key === "import") {
+      navigate("/super-admin/tcg-line-import");
+      return;
+    }
+    setActiveSection(key);
+  };
 
   if (superAdminLoading) {
     return (
@@ -128,7 +138,7 @@ export default function AnalysisRulesPage() {
         {/* 左サブナビ */}
         <AnalysisRulesSidebar
           activeKey={activeSection}
-          onChange={setActiveSection}
+          onChange={handleSectionChange}
         />
 
         {/* 右コンテンツ */}

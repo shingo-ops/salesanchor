@@ -255,7 +255,7 @@
     "superAdminTcgProductMaster": "Product master",
     "superAdminFxRate": "FX Rate Management",
     "superAdminTcgParallelReport": "Parallel Engine Report",
-    "superAdminTcgLineImport": "Import, Analysis & Distribution",
+    "superAdminTcgLineImport": "Import",
     "superAdminTcgSoldOut": "Sold-out rules",
     "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
@@ -3445,7 +3445,7 @@
     }
   },
   "tcgLineImport": {
-    "pageTitle": "Import, Analysis & Distribution",
+    "pageTitle": "Import",
     "loading": "Loading...",
     "notSuperAdmin": "This page requires central admin permission.",
     "uploadSection": "Upload File",
@@ -3802,7 +3802,8 @@
       "dateRule": "Date Rules",
       "productMaster": "Product Master",
       "supplierMaster": "Supplier Master",
-      "conditionsMaster": "Condition Master"
+      "conditionsMaster": "Condition Master",
+      "import": "Import"
     },
     "tabs": {
       "instruction": "Instructions",

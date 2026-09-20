@@ -255,7 +255,7 @@
     "superAdminTcgProductMaster": "商品マスタ",
     "superAdminFxRate": "為替レート管理",
     "superAdminTcgParallelReport": "並行運用比較レポート",
-    "superAdminTcgLineImport": "取込・解析・配信",
+    "superAdminTcgLineImport": "インポート",
     "superAdminTcgSoldOut": "完売ルール",
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
@@ -3445,7 +3445,7 @@
     }
   },
   "tcgLineImport": {
-    "pageTitle": "取込・解析・配信",
+    "pageTitle": "インポート",
     "loading": "読み込み中...",
     "notSuperAdmin": "この画面には中央 admin 権限が必要です。",
     "uploadSection": "ファイルのアップロード",
@@ -3802,7 +3802,8 @@
       "dateRule": "日付ルール",
       "productMaster": "商品マスタ",
       "supplierMaster": "仕入元マスタ",
-      "conditionsMaster": "状態マスタ"
+      "conditionsMaster": "状態マスタ",
+      "import": "インポート"
     },
     "tabs": {
       "instruction": "指示文",
