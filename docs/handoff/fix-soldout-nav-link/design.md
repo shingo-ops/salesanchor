@@ -22,8 +22,12 @@
 | サイドバー「取り込み」クリックで `/super-admin/tcg-line-import` にリダイレクトされること | AnalysisRulesPage 上のサイドバー「取り込み」をクリックしてリダイレクト確認 |
 | TypeScript 型エラーが発生しないこと | `npx tsc --noEmit` が 0 exit で完了 |
 
-## 外部事例欄
-該当なし（UIナビ修正のため不要）
+## 外部事例・過去事例の参照と我々への応用
+該当なし（UIナビリンク修正のため外部事例不要）
+
+## 維持の仕組み
+- `NavItem` 型を使用しているため、型が変わればコンパイルエラーで検知可能
+- routeTitles.ts のエントリはページ追加・削除時にメンテが必要（コメント記載済み）
 
 ## 守り手
 - 既存の `AnalysisRulesSidebar` サブナビ（sold-out・import 等のタブ遷移）は変更なし
