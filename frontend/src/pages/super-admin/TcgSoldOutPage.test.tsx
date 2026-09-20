@@ -121,5 +121,5 @@ it("shows analysis management menu item only for SaaS administrators", async () 
   cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); shell();
   expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
   expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();
-}); // end: analysis-rules menu link test suite
+}); // end: analysis-rules menu link test suite (analysis-rules route)
 
