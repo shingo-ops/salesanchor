@@ -1,7 +1,7 @@
 # design: tcg-emoji-keyword-schema-fix
 
 ## 対象ADR
-なし（バグ修正）
+既存機能のバグ修正のため新規ADRなし。関連: ADR-072（テナントスキーマ分離）
 
 ## 変更概要
 
@@ -23,9 +23,15 @@
 | 絵文字を含むメッセージが正常に処理される | テスト6件パス確認 |
 | INVALID_RESPONSE 件数の減少 | 本番デプロイ後に tcg_line_extraction_attempts の result カラムを集計 |
 
-## 外部事例
-- SQLAlchemy f-string + `text()`: schema を f-string で埋め込む手法は既存コードでも使用されている
-- 絵文字除去: `emoji` ライブラリ or 正規表現（Unicode範囲）で実装
+## 外部・過去事例の参照と我々への応用
+- SQLAlchemy `text(f"...")` + schema 文字列埋め込み: 既存コード (`tcg_work_reference.py` の `public.products` 参照部分) と同一パターン。schemaは内部定数なのでインジェクションリスクなし。
+- 絵文字除去: Unicodeコードポイント範囲（U+1F300〜U+1FAF8等）の正規表現でフィルタ。外部ライブラリ不要で既存 requirements.txt を変更しない。
+- 過去事例: PR #3495（略称追加）で tenant_004 スキーマへの直接INSERT/UPDATE を実施済み。今回はクエリ側の参照先を揃える修正。
+
+## 維持の仕組み
+- `load_work_reference()` のシグネチャ `schema: str` は既存のまま。呼び出し元は変更不要。
+- テスト (`test_tcg_gemini_extraction.py`) に `strip_emoji` 単体テスト6件を追加。将来の誤退行を防ぐ。
+- スキーマ名は呼び出し元 (`tcg_extraction.py` 等) から渡されるため、新テナント追加時も自動対応。
 
 ## 守り手
 なし（内部バッチ処理のみ・ユーザー向けUIへの影響なし）
