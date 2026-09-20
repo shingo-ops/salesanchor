@@ -111,13 +111,13 @@ vi.mock("../../contexts/UiPrefsContext", () => ({ useUiPrefs: () => ({ prefs: { 
 vi.mock("../../hooks/usePermissions", () => ({ usePermissions: () => ({ hasPermission: () => false, hasAny: () => false, loading: false }) }));
 vi.mock("../../hooks/useSSE", () => ({ useSSE: () => undefined }));
 vi.mock("../../lib/messages", () => ({ listConversations: async () => ({ conversations: [] }) }));
-it("shows analysis-rules menu item only for SaaS administrators", async () => {
+it("shows analysis management menu item only for SaaS administrators", async () => {
   const { default: DesktopShell } = await import("../../components/DesktopShell");
   const shell = () => render(<MemoryRouter><DesktopShell /></MemoryRouter>);
   shell();
   fireEvent.click(screen.getByRole("button", { name: i18n.t("nav.saasAdmin") }));
   const analysisLink = screen.getByRole("link", { name: "Analysis Management" });
-  expect(analysisLink.getAttribute("href")).toBe("/super-admin/analysis-rules");
+  expect(analysisLink.getAttribute("href")).toBe("/super-admin/tcg-line-import");
   cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); shell();
   expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
   expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();
