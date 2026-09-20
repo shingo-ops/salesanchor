@@ -48,9 +48,10 @@
 - UnitMasterPanel → ConditionsMasterPanel・ProductCategoriesMasterPanel のパネル構造を参照
 
 ## 維持の仕組み
-- i18n: CI の `ja.json`/`en.json` キー整合チェックが差異を検出する
+- i18n: CI の i18n キー整合チェック（frontend/src/locales/）が差異を検出する
 - ADR-072: backend/app/routers/ 変更時のチェックリスト（PR テンプレート）が抜け漏れを防ぐ
 - migration-guard: ADD COLUMN IF NOT EXISTS のみ → 冪等・本番 apply 安全
+- 守り手: CI TypeScript tsc / ESLint / i18n key check
 
 ## 守り手
 - CI: TypeScript tsc、ESLint、i18n key check が通ること
