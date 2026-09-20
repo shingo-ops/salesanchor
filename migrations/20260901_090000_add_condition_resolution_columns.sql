@@ -88,7 +88,9 @@ BEGIN
         RAISE NOTICE 'migration 20260901_090000: created idx_conditions_priority';
     END IF;
 
-    -- DEPRECATED: values now managed via app UI/CSV per ADR-155
+    -- DEPRECATED: UPDATE values removed — values now managed via app UI/CSV per ADR-155
+    -- Original UPDATE set app_kubun/priority/search_kw/exclude_kw for CN0001-CN0010
+    -- Kept: DDL (ALTER TABLE ADD COLUMN, CREATE INDEX) above
 
 END;
 $$;

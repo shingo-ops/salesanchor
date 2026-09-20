@@ -76,7 +76,54 @@ BEGIN
         )
     $q$, _schema);
 
-    -- DEPRECATED: values now managed via app UI/CSV per ADR-155
+    -- ================================================================
+    -- Seed data（GAS 実データ 2026-09-02 確認分）
+    -- ================================================================
 
-    RAISE NOTICE '20260902_110000: 4 classification master tables created in schema %', _schema;
+    -- tcg_major_categories: 3 行
+    EXECUTE format($q$
+        INSERT INTO %I.tcg_major_categories (code, display_name, description) VALUES
+            ('DIV01', 'TCG',    'トレーディングカード'),
+            ('DIV02', 'Figure', 'フィギュア'),
+            ('DIV03', 'Goods',  'グッズ・雑貨')
+        ON CONFLICT (code) DO NOTHING
+    $q$, _schema);
+
+    -- tcg_series: 11 行
+    EXECUTE format($q$
+        INSERT INTO %I.tcg_series (code, display_name, alt_name) VALUES
+            ('IP001', 'Pokemon',       'ポケモン'),
+            ('IP002', 'One Piece',     'ワンピース'),
+            ('IP003', 'Dragon Ball',   'ドラゴンボール'),
+            ('IP004', 'Yu-Gi-Oh',      '遊戯王'),
+            ('IP005', 'Union Arena',   'ユニオンアリーナ'),
+            ('IP006', 'GUNDAM',        'ガンダム'),
+            ('IP007', 'Weiss Schwarz', 'Weiss Shwarz'),
+            ('IP008', 'Digimon',       'デジモン'),
+            ('IP009', 'hololive',      'ホロライブ'),
+            ('IP010', 'LORCANA',       'ロルカナ'),
+            ('IP011', 'Xross Stars',   'クロススターズ')
+        ON CONFLICT (code) DO NOTHING
+    $q$, _schema);
+
+    -- tcg_manufacturers: 5 行
+    EXECUTE format($q$
+        INSERT INTO %I.tcg_manufacturers (code, display_name, alt_name) VALUES
+            ('MK001', 'The Pokemon Company', 'ポケモン'),
+            ('MK002', 'Bandai',              'バンダイ'),
+            ('MK003', 'Takara Tomy',         'タカラトミー'),
+            ('MK004', 'Bushiroad',           'ブシロード'),
+            ('MK005', 'Konami',              'コナミ')
+        ON CONFLICT (code) DO NOTHING
+    $q$, _schema);
+
+    -- tcg_product_categories: 2 行（GAS 実データ）
+    EXECUTE format($q$
+        INSERT INTO %I.tcg_product_categories (code, display_name, kubun_type) VALUES
+            ('PC_BOX',    'Box',    '箱系'),
+            ('PC_SINGLE', 'Single', 'シングル系')
+        ON CONFLICT (code) DO NOTHING
+    $q$, _schema);
+
+    RAISE NOTICE '20260902_110000: 4 classification master tables created and seeded in schema %', _schema;
 END $$;

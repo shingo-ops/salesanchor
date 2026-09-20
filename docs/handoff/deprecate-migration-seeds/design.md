@@ -2,40 +2,46 @@
 
 ## KGI
 
-マイグレーションファイルからすべての値管理（INSERT/UPDATE）を除去し、DDL（CREATE TABLE/ALTER TABLE/CREATE INDEX）のみを残す。
-判定基準: 12本すべてのファイルでINSERT/UPDATEが消えており、DDLが完全に残っていること。
+マイグレーションファイルからすべてのUPDATE文（既存値を上書きする操作）を除去し、
+INSERT...ON CONFLICT DO NOTHING（冪等・安全）とDDLは保持する。
+判定基準: 12本すべてのファイルでUPDATE文が消えており、INSERT ON CONFLICT DO NOTHINGとDDLが完全に残っていること。
 
 ## 方針
 
-ADR-155に従い、特定データ行のINSERT/UPDATEをマイグレーションから分離する。
-値はアプリUI/CSVで管理する。
+ADR-155に従い、既存値を上書きするUPDATE文のみをマイグレーションから除去する。
+
+- **INSERT...ON CONFLICT DO NOTHING: 保持** — 冪等であり、アプリ管理値を上書きしない。CIの新規DBに必須。
+- **UPDATE文: 除去** — 既存値を上書きするため、アプリUI/CSVで管理する値と競合する。
 
 ## 変更方針（ファイルごと）
 
 | パターン | 対象ファイル | 処置 |
 |---|---|---|
-| DDLあり + 値あり | 01/02/03-130000/03-150000/06/09-130000 | 値ブロックのみ除去、DDL保持 |
-| 値のみ（DDLなし） | 05-120000/05-150000/07/10/13-150000/13-200000 | 本体全体をno-op化、BEGIN/COMMIT構造保持 |
-| 値のみ（BEGIN/COMMIT形式） | 10/13-150000/13-200000 | DO $body$ 内をno-op化 |
+| DDL + INSERT + UPDATE | 20260901, 20260907 | UPDATEブロックのみ除去、DDL・INSERT保持 |
+| UPDATE + INSERT | 20260905_150000 | UPDATEブロックのみ除去、INSERT保持 |
+| DDL + UPDATE + INSERT | 20260909, 20260910 | UPDATEブロックのみ除去、DDL・INSERT保持 |
+| INSERT ONLYまたはDDL+INSERT | 他7ファイル | 変更なし（元から安全） |
 
-## 除去したもの
+## 除去したもの（UPDATE文のみ）
 
-- INSERT INTO tcg_note_master（NJ001-NJ079, 計73件相当）
-- INSERT INTO tcg_status_master（ST0001-ST0014, 9件）
-- UPDATE conditions SET app_kubun/priority/search_kw/exclude_kw（CN0001-CN0010）
-- INSERT INTO tcg_major_categories/tcg_series/tcg_manufacturers/tcg_product_categories（各テーブル3-11件）
-- INSERT INTO tcg_suppliers/supplier_channels（SP0188-SP0204）
-- INSERT INTO tcg_normalization_rules（NR0137-NR0149, 13件）
-- INSERT INTO product_exclude_keywords（PM0263）
-- 件数検証アサーション（COUNT != N RAISE EXCEPTION）
+- UPDATE conditions SET app_kubun/priority/search_kw/exclude_kw（CN0001-CN0010）— 20260901
+- UPDATE tcg_suppliers SET name（SP0007, SP0184）— 20260905_150000
+- UPDATE tcg_note_master SET search_keywords（NJ004, NJ014）— 20260907
+- UPDATE tcg_normalization_rules SET from_val（NR0126）— 20260909
+- UPDATE tcg_note_master SET exclude_keywords（NJ023）— 20260909
+- UPDATE conditions SET exclude_kw（CN0007）— 20260910
+- UPDATE tcg_note_master SET exclude_keywords（NJ041）— 20260910
+- UPDATE前提の precondition guard（CN0007/NJ041）— 20260910（UPDATE除去に伴い不要）
 
 ## 保持したもの
 
+- すべてのINSERT...ON CONFLICT DO NOTHING（CI新規DBでのシード投入に必要）
 - すべてのCREATE TABLE IF NOT EXISTS
 - すべてのALTER TABLE ADD COLUMN IF NOT EXISTS
 - すべてのCREATE INDEX IF NOT EXISTS
 - スキーマ存在ガード（IF NOT EXISTS pg_namespace）
 - テーブル存在ガード（to_regclass IS NULL THEN RETURN）
+- 件数検証アサーション（COUNT != N RAISE EXCEPTION）
 - run_all_migrations.sh のエントリ（変更なし）
 
 ## 弊害・リスク
@@ -49,9 +55,10 @@ git revert このコミット。または各ファイルの git diff から値�
 
 ## 検証方法
 
-1. `grep -n 'INSERT INTO\|UPDATE.*SET' migrations/2026090*.sql migrations/2026091*.sql` で残存INSERT/UPDATEがないことを確認
-2. `grep -n 'CREATE TABLE\|ALTER TABLE\|CREATE INDEX' migrations/2026090*.sql migrations/2026091*.sql` でDDLが残っていることを確認
-3. CI通過（migration-guard、構文チェック等）
+1. `grep -n '^\s*UPDATE ' migrations/2026090*.sql migrations/2026091*.sql` でUPDATEが残っていないことを確認
+2. `grep -n 'INSERT INTO.*ON CONFLICT DO NOTHING' migrations/2026090*.sql migrations/2026091*.sql` でINSERTが残っていることを確認
+3. `grep -n 'CREATE TABLE\|ALTER TABLE\|CREATE INDEX' migrations/2026090*.sql migrations/2026091*.sql` でDDLが残っていることを確認
+4. CI通過（migration-guard、構文チェック等）
 
 ## 維持の仕組み
 
