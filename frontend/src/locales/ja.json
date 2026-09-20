@@ -276,7 +276,8 @@
     "openDrawer": "ナビゲーションを開く",
     "closeDrawer": "ナビゲーションを閉じる",
     "masterManagement": "マスタ管理",
-    "superAdminSupplierMaster": "仕入元マスタ"
+    "superAdminSupplierMaster": "仕入元マスタ",
+    "units": "単位マスタ"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -1699,6 +1700,25 @@
     "openDetail": "クリックで詳細・編集",
     "pageLabel": "{{page}} ページ目 ({{count}} 件表示中)",
     "openFullPage": "フルページで開く"
+  },
+  "unitMaster": {
+    "title": "単位マスタ",
+    "code": "コード",
+    "canonical": "正規名",
+    "kubun": "区分",
+    "isActive": "有効",
+    "aliases": "別名",
+    "aliasCount": "{{count}}件",
+    "search": "コード・正規名で検索",
+    "empty": "該当する単位はありません",
+    "createTitle": "単位を追加",
+    "editTitle": "単位を編集",
+    "aliasText": "別名テキスト",
+    "aliasLang": "言語",
+    "addAlias": "別名を追加",
+    "deleteAlias": "別名を削除",
+    "confirmDelete": "選択した単位を削除しますか？",
+    "total": "単位数：{{count}}件"
   },
   "purchaseOrders": {
     "title": "発注管理",
@@ -3803,6 +3823,7 @@
       "productMaster": "商品マスタ",
       "supplierMaster": "仕入元マスタ",
       "conditionsMaster": "状態マスタ",
+      "unitMaster": "単位マスタ",
       "import": "インポート"
     },
     "tabs": {
