@@ -276,7 +276,8 @@
     "openDrawer": "Open navigation",
     "closeDrawer": "Close navigation",
     "masterManagement": "Master Management",
-    "superAdminSupplierMaster": "Supplier Master"
+    "superAdminSupplierMaster": "Supplier Master",
+    "units": "Units"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -1699,6 +1700,25 @@
     "openDetail": "Click to view or edit",
     "pageLabel": "Page {{page}} ({{count}} items)",
     "openFullPage": "Open full page"
+  },
+  "unitMaster": {
+    "title": "Unit Master",
+    "code": "Code",
+    "canonical": "Canonical Name",
+    "kubun": "Category",
+    "isActive": "Active",
+    "aliases": "Aliases",
+    "aliasCount": "{{count}} aliases",
+    "search": "Search by code or canonical name",
+    "empty": "No units found",
+    "createTitle": "Add Unit",
+    "editTitle": "Edit Unit",
+    "aliasText": "Alias Text",
+    "aliasLang": "Language",
+    "addAlias": "Add Alias",
+    "deleteAlias": "Delete Alias",
+    "confirmDelete": "Delete selected units?",
+    "total": "Units: {{count}}"
   },
   "purchaseOrders": {
     "title": "Purchase Orders",
@@ -3788,6 +3808,7 @@
       "dateRule": "Date Rules",
       "productMaster": "Product Master",
       "supplierMaster": "Supplier Master",
+      "unitMaster": "Unit Master",
       "import": "Import"
     },
     "tabs": {
