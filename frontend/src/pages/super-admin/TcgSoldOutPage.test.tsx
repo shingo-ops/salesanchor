@@ -117,7 +117,7 @@ it("shows analysis management menu item only for SaaS administrators", async () 
   shell();
   fireEvent.click(screen.getByRole("button", { name: i18n.t("nav.saasAdmin") }));
   const analysisLink = screen.getByRole("link", { name: "Analysis Management" });
-  expect(analysisLink.getAttribute("href")).toBe("/super-admin/tcg-line-import");
+  expect(analysisLink.getAttribute("href")).toBe("/super-admin/analysis-rules");
   cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); shell();
   expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
   expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();

@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
-from app.services.tcg_analysis_dashboard_svc import get_pipeline_summary
+from app.services.tcg_analysis_dashboard_svc import get_pipeline_summary, get_pipeline_trend
 
 router = APIRouter()
 
@@ -93,3 +93,28 @@ async def get_pipeline_summary_endpoint(
 ) -> PipelineSummaryResponse:
     result = await get_pipeline_summary(db)
     return PipelineSummaryResponse(**result)
+
+
+class TrendDayItem(BaseModel):
+    day: str
+    extraction_total: int
+    extraction_done: int
+    extraction_error: int
+    analysis_total: int
+    pid_resolved: int
+    unit_resolved: int
+    needs_review: int
+
+
+@router.get(
+    "/tcg/analysis-dashboard/trend",
+    response_model=list[TrendDayItem],
+    summary="TCG 解析パイプライン 日別トレンド（super_admin 限定）",
+)
+async def get_pipeline_trend_endpoint(
+    days: int = 7,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_super_admin),
+) -> list[TrendDayItem]:
+    result = await get_pipeline_trend(db, days)
+    return [TrendDayItem(**item) for item in result]
