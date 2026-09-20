@@ -3,9 +3,12 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+
+logger = logging.getLogger(__name__)
 
 WORK_ID_PROMPT_VERSION = "raw-extraction-v5-product-p1"
 WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", WORK_ID_PROMPT_VERSION})
@@ -26,9 +29,14 @@ def work_ids(reference: dict) -> set[int]:
 def validate_work_id(value: str | int | None, reference: dict) -> int | None:
     if value is None or value == "":
         return None
-    canonical = int(value)
+    try:
+        canonical = int(value)
+    except (TypeError, ValueError):
+        logger.warning("validate_work_id: non-integer value %r, returning None", value)
+        return None
     if canonical not in work_ids(reference):
-        raise ValueError("Work ID is not in the supplied reference")
+        logger.warning("validate_work_id: %d not in reference, returning None", canonical)
+        return None
     return canonical
 
 
@@ -40,7 +48,8 @@ def validate_product_code(value: str | None, reference: dict) -> str | None:
     if not value:
         return None
     if value not in product_codes(reference):
-        raise ValueError("Product code is not in the supplied reference")
+        logger.warning("validate_product_code: %r not in reference, returning None", value)
+        return None
     return value
 
 

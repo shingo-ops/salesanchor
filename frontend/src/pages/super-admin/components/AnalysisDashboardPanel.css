@@ -1,0 +1,115 @@
+/**
+ * AnalysisDashboardPanel スタイル
+ * ADR-067: 全スタイルはデザイントークンのみ使用。色・サイズ直値禁止。
+ */
+
+.analysis-dashboard {
+  padding: var(--space-6);
+  overflow-y: auto;
+  height: 100%;
+}
+
+.analysis-dashboard-metrics {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-metric-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.analysis-dashboard-metric-value {
+  font-size: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-alerts {
+  display: flex;
+  gap: var(--space-3);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-alert-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-section {
+  margin-top: var(--space-6);
+}
+
+.analysis-dashboard-section-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
+
+.analysis-dashboard-reason-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-reason-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.analysis-dashboard-reason-count {
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-engine-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-engine-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.analysis-dashboard-engine-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.analysis-dashboard-engine-value {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+.analysis-dashboard-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}
+
+.analysis-dashboard-error {
+  color: var(--color-error);
+  font-size: var(--font-sm);
+  padding: var(--space-4);
+}
