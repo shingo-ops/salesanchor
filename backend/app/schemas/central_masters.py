@@ -483,3 +483,60 @@ class UnitAliasResponse(UnitAliasBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_status_master
+# ============================================================================
+
+_VALID_MATCH_TYPES = {"REGEX", "LITERAL", "DEFAULT"}
+_VALID_EFFECTS = {"OUTPUT", "EXCLUDE"}
+
+
+class TcgStatusMasterBase(BaseModel):
+    status_id: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=255)
+    search_pattern: str = Field(default="", max_length=1000)
+    exclude_pattern: str = Field(default="", max_length=1000)
+    priority: int = Field(ge=0, le=10000)
+    enabled: bool = True
+    note: str = Field(default="", max_length=1000)
+    match_type: str = Field(min_length=1, max_length=20)
+    effect: str = Field(min_length=1, max_length=20)
+
+    @field_validator("match_type")
+    @classmethod
+    def _validate_match_type(cls, v: str) -> str:
+        if v not in _VALID_MATCH_TYPES:
+            raise ValueError(f"match_type must be one of {sorted(_VALID_MATCH_TYPES)}")
+        return v
+
+    @field_validator("effect")
+    @classmethod
+    def _validate_effect(cls, v: str) -> str:
+        if v not in _VALID_EFFECTS:
+            raise ValueError(f"effect must be one of {sorted(_VALID_EFFECTS)}")
+        return v
+
+
+class TcgStatusMasterCreate(TcgStatusMasterBase):
+    pass
+
+
+class TcgStatusMasterUpdate(BaseModel):
+    status_id: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    search_pattern: Optional[str] = Field(default=None, max_length=1000)
+    exclude_pattern: Optional[str] = Field(default=None, max_length=1000)
+    priority: Optional[int] = Field(default=None, ge=0, le=10000)
+    enabled: Optional[bool] = None
+    note: Optional[str] = Field(default=None, max_length=1000)
+    match_type: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    effect: Optional[str] = Field(default=None, min_length=1, max_length=20)
+
+
+class TcgStatusMasterResponse(TcgStatusMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)

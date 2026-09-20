@@ -703,3 +703,6 @@ run_sql migrations/20260920_040000_conditions_ssot_phase1.sql
 
 # 単位マスタ public.units に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
 run_sql migrations/20260920_030000_units_add_tenant_id.sql
+
+# ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
