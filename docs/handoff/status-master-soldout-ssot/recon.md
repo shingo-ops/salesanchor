@@ -7,8 +7,8 @@
 `release/status-master-soldout-ssot` (origin/main 起点)
 
 ## 既存 ADR 検索結果
-- `docs/adr/ADR-154-*.md` — tcg_status_master SSOT方針（完売判定の単一源泉）
-- `docs/adr/ADR-109-*.md` — TCG解析パイプライン設計
+- docs/adr/ADR-154-tcg-parity02-gas-python-migration.md — tcg_status_master SSOT方針（完売判定の単一源泉）
+- docs/adr/ADR-109-leads-status-ssot-immutable-codes.md — ステータスコード SSOT 設計
 
 ```
 git grep -i 'status_master\|sold.out\|exclude_pattern' docs/adr/ (→ ADR-154, ADR-109 ヒット)
