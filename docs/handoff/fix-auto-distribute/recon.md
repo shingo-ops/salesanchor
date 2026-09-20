@@ -39,4 +39,4 @@
 
 ## 既存 ADR 調査
 
-- `ADR-100`: TCG 配信パイプライン関連（`docs/adr/ADR-100*.md`）— 本修正の対象 ADR
+- `ADR-100`: TCG 配信パイプライン関連（`docs/adr/ADR-100-sa-ingestion-analysis-pipeline.md`）— 本修正の対象 ADR
