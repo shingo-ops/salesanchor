@@ -1,13 +1,92 @@
 /**
- * AnalysisDashboardPanel スタイル
+ * AnalysisDashboardPanel スタイル（UX改善版）
  * ADR-067: 全スタイルはデザイントークンのみ使用。色・サイズ直値禁止。
+ * ADR-144: 金型クラスのみ。analysis-dashboard- プレフィックス必須。
  */
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   ベースレイアウト
+────────────────────────────────────────────────────────────────────────────── */
 
 .analysis-dashboard {
   padding: var(--space-6);
   overflow-y: auto;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   1. ボトルネックヒーロー
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-hero {
+  border-radius: var(--radius-md, 8px);
+  border-left: var(--space-1) solid;
+  padding: var(--space-4) var(--space-5);
+}
+
+.analysis-dashboard-hero.analysis-dashboard-signal--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.analysis-dashboard-hero.analysis-dashboard-signal--danger {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+}
+
+.analysis-dashboard-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-hero-metric {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.analysis-dashboard-hero-name {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-hero-value {
+  font-size: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-hero-desc {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   2. 信号灯 KPI カード（Card に追加するボーダーカラークラス）
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-signal--success {
+  border-top: 3px solid var(--color-success-border) !important;
+}
+
+.analysis-dashboard-signal--warning {
+  border-top: 3px solid var(--color-warning-border) !important;
+}
+
+.analysis-dashboard-signal--danger {
+  border-top: 3px solid var(--color-error-border) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   KPI メトリクスグリッド
+────────────────────────────────────────────────────────────────────────────── */
 
 .analysis-dashboard-metrics {
   display: flex;
@@ -27,10 +106,20 @@
   color: var(--text-primary);
 }
 
+.analysis-dashboard-metric-unit {
+  font-size: var(--font-sm);
+  margin-left: var(--space-1);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   アラートバッジ行
+────────────────────────────────────────────────────────────────────────────── */
+
 .analysis-dashboard-alerts {
   display: flex;
   gap: var(--space-3);
-  margin-top: var(--space-6);
   flex-wrap: wrap;
 }
 
@@ -40,9 +129,69 @@
   gap: var(--space-2);
 }
 
-.analysis-dashboard-section {
-  margin-top: var(--space-6);
+/* ──────────────────────────────────────────────────────────────────────────────
+   3. CTAボタン群
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-ctas {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
+
+.analysis-dashboard-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.analysis-dashboard-cta-btn:hover {
+  background: var(--surface-secondary, var(--surface-primary));
+  border-color: var(--border-focus, var(--border-primary));
+}
+
+.analysis-dashboard-cta-btn--primary {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
+.analysis-dashboard-cta-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  padding: 0 var(--space-2);
+  min-width: 1.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   4. トレンドグラフ
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-chart-card {
+  width: 100%;
+}
+
+.analysis-dashboard-chart {
+  margin-top: var(--space-3);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   共通セクションタイトル
+────────────────────────────────────────────────────────────────────────────── */
 
 .analysis-dashboard-section-title {
   font-size: var(--font-md);
@@ -51,11 +200,14 @@
   color: var(--text-primary);
 }
 
+/* ──────────────────────────────────────────────────────────────────────────────
+   5. 詳細グリッド（理由内訳・エンジン・エラー）
+────────────────────────────────────────────────────────────────────────────── */
+
 .analysis-dashboard-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--space-4);
-  margin-top: var(--space-6);
 }
 
 .analysis-dashboard-reason-list {
@@ -101,6 +253,10 @@
   color: var(--text-primary);
   font-weight: var(--font-weight-medium);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   状態
+────────────────────────────────────────────────────────────────────────────── */
 
 .analysis-dashboard-empty {
   font-size: var(--font-sm);

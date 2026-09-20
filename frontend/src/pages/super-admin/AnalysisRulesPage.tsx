@@ -146,7 +146,7 @@ export default function AnalysisRulesPage() {
 
         {/* 右コンテンツ */}
         <div className="hub-content">
-          {activeSection === "dashboard" && <AnalysisDashboardPanel />}
+          {activeSection === "dashboard" && <AnalysisDashboardPanel onNavigate={setActiveSection} />}
           {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
           {activeSection === "needs-review" && <NeedsReviewPanel />}
           {activeSection === "sold-out" && <SoldOutRulesPanel />}

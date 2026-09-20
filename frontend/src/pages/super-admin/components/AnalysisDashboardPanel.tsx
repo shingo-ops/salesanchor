@@ -1,22 +1,42 @@
 /**
- * AnalysisDashboardPanel — 解析ダッシュボードパネル
+ * AnalysisDashboardPanel — 解析ダッシュボード（UX改善版）
+ *
+ * 認知科学ベースのレイアウト:
+ * 1. ボトルネックヒーロー（最悪指標を自動検出・最上部に表示）
+ * 2. 信号灯KPIカード（緑/黄/赤のボーダーで健全性を即座に判断）
+ * 3. CTAボタン（次のアクションへ直接遷移）
+ * 4. トレンドグラフ（7日間推移）
+ * 5. 詳細セクション（理由内訳・エンジン・エラー）
  *
  * API: GET /api/v1/tcg/analysis-dashboard/pipeline-summary
- * ADR-027: 全UI文字列は t("key") 経由。ハードコード日本語禁止。
- * ADR-067: 色・サイズはデザイントークンのみ。
- * ADR-144: Card / Badge / DataTable 金型のみ使用。
+ *      GET /api/v1/tcg/analysis-dashboard/trend?days=7
+ * ADR-027: 全UI文字列は t("key") 経由
+ * ADR-067: 色・サイズはデザイントークンのみ
+ * ADR-144: Card / Badge / DataTable / recharts 金型のみ使用
  */
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import { api } from "../../../lib/api";
 import { Card } from "../../../components/Card";
 import { Badge } from "../../../components/Badge";
 import { DataTable } from "../../../components/DataTable";
 import type { DataTableColumn } from "../../../components/DataTable";
+import { DashboardIcons } from "../../../constants/icons";
+import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import "./AnalysisDashboardPanel.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
-// 型定義（API contract に合わせて定義）
+// 型定義
 // ──────────────────────────────────────────────────────────────────────────────
 
 interface ReviewReason {
@@ -69,23 +89,75 @@ interface PipelineSummary {
   recent_errors: RecentError[];
 }
 
+interface TrendDay {
+  day: string;
+  extraction_total: number;
+  extraction_done: number;
+  extraction_error: number;
+  analysis_total: number;
+  pid_resolved: number;
+  unit_resolved: number;
+  needs_review: number;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// 信号灯ヘルパー
+// ──────────────────────────────────────────────────────────────────────────────
+
+type SignalLevel = "success" | "warning" | "danger";
+
+function getSignalLevel(rate: number): SignalLevel {
+  if (rate >= 0.8) return "success";
+  if (rate >= 0.6) return "warning";
+  return "danger";
+}
+
+function getSignalClass(level: SignalLevel): string {
+  return `analysis-dashboard-signal--${level}`;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// ボトルネック検出用の指標定義
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface MetricDef {
+  labelKey: string;
+  rate: number;
+  displayRate: number; // 表示値（needsReviewは反転しない生値を表示）
+  level: SignalLevel;
+  ctaKey: AnalysisRulesSidebarKey;
+  ctaLabelKey: string;
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Props
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface AnalysisDashboardPanelProps {
+  onNavigate?: (key: AnalysisRulesSidebarKey) => void;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // コンポーネント
 // ──────────────────────────────────────────────────────────────────────────────
 
-export function AnalysisDashboardPanel() {
+export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelProps) {
   const { t } = useTranslation();
   const [data, setData] = useState<PipelineSummary | null>(null);
+  const [trend, setTrend] = useState<TrendDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api
-      .get<PipelineSummary>("/tcg/analysis-dashboard/pipeline-summary")
-      .then((res) => {
-        setData(res);
+    Promise.all([
+      api.get<PipelineSummary>("/tcg/analysis-dashboard/pipeline-summary"),
+      api.get<TrendDay[]>("/tcg/analysis-dashboard/trend?days=7"),
+    ])
+      .then(([summaryRes, trendRes]) => {
+        setData(summaryRes);
+        setTrend(trendRes);
       })
       .catch(() => {
         setError(t("analysisRules.dashboard.fetchError"));
@@ -98,9 +170,7 @@ export function AnalysisDashboardPanel() {
   if (loading) {
     return (
       <div className="analysis-dashboard">
-        <p className="analysis-dashboard-empty">
-          {t("analysisRules.dashboard.loading")}
-        </p>
+        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>
       </div>
     );
   }
@@ -115,19 +185,63 @@ export function AnalysisDashboardPanel() {
     );
   }
 
-  // 算出値
+  // 算出値（rate は 0〜1 の小数）
   const extractionSuccessRate =
     data.extraction.total > 0
-      ? (data.extraction.by_status.done / data.extraction.total) * 100
+      ? data.extraction.by_status.done / data.extraction.total
       : 0;
+  const pidRate = data.analysis.pid_resolved_rate;
+  const unitRate = data.analysis.unit_resolved_rate;
+  const needsReviewRate = data.analysis.needs_review_rate;
+  // needsReview: 少ないほど良い → 信号判定は「1 - rate」で健全性に換算
+  const needsReviewHealthRate = 1 - needsReviewRate;
 
-  // エンジン情報が全て null の場合は「データなし」とみなす
+  // ボトルネック検出用指標リスト
+  const metrics: MetricDef[] = [
+    {
+      labelKey: "analysisRules.dashboard.extractionSuccessRate",
+      rate: extractionSuccessRate,
+      displayRate: extractionSuccessRate,
+      level: getSignalLevel(extractionSuccessRate),
+      ctaKey: "accuracy-management",
+      ctaLabelKey: "analysisRules.dashboard.ctaAccuracy",
+    },
+    {
+      labelKey: "analysisRules.dashboard.pidResolutionRate",
+      rate: pidRate,
+      displayRate: pidRate,
+      level: getSignalLevel(pidRate),
+      ctaKey: "product-master",
+      ctaLabelKey: "analysisRules.dashboard.ctaProductMaster",
+    },
+    {
+      labelKey: "analysisRules.dashboard.unitResolutionRate",
+      rate: unitRate,
+      displayRate: unitRate,
+      level: getSignalLevel(unitRate),
+      ctaKey: "unit-master",
+      ctaLabelKey: "analysisRules.dashboard.ctaUnitMaster",
+    },
+    {
+      labelKey: "analysisRules.dashboard.needsReviewRate",
+      rate: needsReviewHealthRate,
+      displayRate: needsReviewRate, // 表示は生の「要確認率」
+      level: getSignalLevel(needsReviewHealthRate),
+      ctaKey: "needs-review",
+      ctaLabelKey: "analysisRules.dashboard.ctaNeedsReview",
+    },
+  ];
+
+  // 最悪指標 = ボトルネック
+  const bottleneck = metrics.reduce((worst, m) =>
+    m.rate < worst.rate ? m : worst
+  );
+
   const hasEngineInfo =
     data.engine.current_model != null ||
     data.engine.current_prompt_version != null ||
     data.engine.current_engine_version != null;
 
-  // エラーテーブル用列定義
   const errorColumns: DataTableColumn<RecentError>[] = [
     {
       key: "error_message",
@@ -140,66 +254,101 @@ export function AnalysisDashboardPanel() {
     },
   ];
 
+  // トレンドチャート用データ（% 換算）
+  const chartData = trend.map((d) => ({
+    day: d.day.slice(5), // "MM-DD"
+    pidRate:
+      d.analysis_total > 0
+        ? Math.round((d.pid_resolved / d.analysis_total) * 100)
+        : 0,
+    unitRate:
+      d.analysis_total > 0
+        ? Math.round((d.unit_resolved / d.analysis_total) * 100)
+        : 0,
+    reviewRate:
+      d.analysis_total > 0
+        ? Math.round((d.needs_review / d.analysis_total) * 100)
+        : 0,
+  }));
+
+  const handleCta = (key: AnalysisRulesSidebarKey) => {
+    if (onNavigate) {
+      onNavigate(key);
+    }
+  };
+
+  const ArrowRightIcon = DashboardIcons.arrowRight;
+
   return (
     <div className="analysis-dashboard">
-      {/* 上段: KPIカード5枚 */}
+
+      {/* ──────────────────────────────────────────────────────────────────────
+          1. ボトルネックヒーロー（最悪指標のみ表示・成功時は非表示）
+      ────────────────────────────────────────────────────────────────────── */}
+      {bottleneck.level !== "success" && (
+        <div className={`analysis-dashboard-hero ${getSignalClass(bottleneck.level)}`}>
+          <div className="analysis-dashboard-hero-content">
+            <Badge variant={bottleneck.level === "danger" ? "danger" : "warning"} dot>
+              {t("analysisRules.dashboard.bottleneckLabel")}
+            </Badge>
+            <div className="analysis-dashboard-hero-metric">
+              <span className="analysis-dashboard-hero-name">
+                {t(bottleneck.labelKey)}
+              </span>
+              <span className="analysis-dashboard-hero-value">
+                {(bottleneck.displayRate * 100).toFixed(1)}%
+              </span>
+            </div>
+            <p className="analysis-dashboard-hero-desc">
+              {t("analysisRules.dashboard.bottleneckDesc")}
+            </p>
+            <button
+              type="button"
+              className="analysis-dashboard-cta-btn analysis-dashboard-cta-btn--primary"
+              onClick={() => handleCta(bottleneck.ctaKey)}
+            >
+              {t(bottleneck.ctaLabelKey)}
+              <ArrowRightIcon size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────────
+          2. 信号灯KPIカード
+      ────────────────────────────────────────────────────────────────────── */}
       <div className="analysis-dashboard-metrics">
+        {/* 総ジョブ数（中立・信号なし） */}
         <Card variant="metric" density="compact">
           <div className="analysis-dashboard-metric-label">
             {t("analysisRules.dashboard.totalJobs")}
           </div>
           <div className="analysis-dashboard-metric-value">
             {data.extraction.total.toLocaleString()}
-            <span
-              style={{
-                fontSize: "var(--font-sm)",
-                marginLeft: "var(--space-1)",
-                color: "var(--text-secondary)",
-              }}
-            >
+            <span className="analysis-dashboard-metric-unit">
               {t("analysisRules.dashboard.jobs")}
             </span>
           </div>
         </Card>
 
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.extractionSuccessRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {extractionSuccessRate.toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.pidResolutionRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(data.analysis.pid_resolved_rate * 100).toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.unitResolutionRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(data.analysis.unit_resolved_rate * 100).toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.needsReviewRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(data.analysis.needs_review_rate * 100).toFixed(1)}%
-          </div>
-        </Card>
+        {metrics.map((m) => (
+          <Card
+            key={m.labelKey}
+            variant="metric"
+            density="compact"
+            className={getSignalClass(m.level)}
+          >
+            <div className="analysis-dashboard-metric-label">
+              {t(m.labelKey)}
+            </div>
+            <div className="analysis-dashboard-metric-value">
+              {(m.displayRate * 100).toFixed(1)}%
+            </div>
+          </Card>
+        ))}
       </div>
 
-      {/* 中段: アラートバッジ */}
+      {/* アラートバッジ */}
       <div className="analysis-dashboard-alerts">
         {data.extraction.stale_running_count > 0 && (
           <div className="analysis-dashboard-alert-item">
@@ -228,9 +377,95 @@ export function AnalysisDashboardPanel() {
         </div>
       </div>
 
-      {/* 下段グリッド */}
+      {/* ──────────────────────────────────────────────────────────────────────
+          3. CTAボタン
+      ────────────────────────────────────────────────────────────────────── */}
+      <div className="analysis-dashboard-ctas">
+        <button
+          type="button"
+          className="analysis-dashboard-cta-btn"
+          onClick={() => handleCta("needs-review")}
+        >
+          {t("analysisRules.dashboard.ctaNeedsReview")}
+          <span className="analysis-dashboard-cta-count">
+            {data.analysis.needs_review_count.toLocaleString()}
+            {t("analysisRules.dashboard.items")}
+          </span>
+          <ArrowRightIcon size={16} />
+        </button>
+        <button
+          type="button"
+          className="analysis-dashboard-cta-btn"
+          onClick={() => handleCta("product-master")}
+        >
+          {t("analysisRules.dashboard.ctaProductMaster")}
+          <ArrowRightIcon size={16} />
+        </button>
+        <button
+          type="button"
+          className="analysis-dashboard-cta-btn"
+          onClick={() => handleCta("accuracy-management")}
+        >
+          {t("analysisRules.dashboard.ctaAccuracy")}
+          <ArrowRightIcon size={16} />
+        </button>
+      </div>
+
+      {/* ──────────────────────────────────────────────────────────────────────
+          4. トレンドグラフ（7日間）
+      ────────────────────────────────────────────────────────────────────── */}
+      {chartData.length > 0 && (
+        <Card
+          variant="container"
+          density="compact"
+          className="analysis-dashboard-chart-card"
+        >
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.trendTitle")}
+          </div>
+          <div className="analysis-dashboard-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" fontSize={12} />
+                <YAxis domain={[0, 100]} unit="%" fontSize={12} />
+                <Tooltip formatter={(value) => `${Number(value)}%`} />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="pidRate"
+                  name={t("analysisRules.dashboard.pidResolutionRate")}
+                  stroke="var(--color-warning)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="unitRate"
+                  name={t("analysisRules.dashboard.unitResolutionRate")}
+                  stroke="var(--color-info, #3b82f6)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="reviewRate"
+                  name={t("analysisRules.dashboard.needsReviewRate")}
+                  stroke="var(--color-error)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
+      )}
+
+      {/* ──────────────────────────────────────────────────────────────────────
+          5. 詳細セクション（理由内訳・エンジン情報・直近エラー）
+      ────────────────────────────────────────────────────────────────────── */}
       <div className="analysis-dashboard-grid">
-        {/* 下段左: 要確認の理由内訳 */}
+        {/* 要確認の理由内訳 */}
         <Card variant="container" density="compact">
           <div className="analysis-dashboard-section-title">
             {t("analysisRules.dashboard.reviewReasons")}
@@ -254,7 +489,7 @@ export function AnalysisDashboardPanel() {
           )}
         </Card>
 
-        {/* 下段中: エンジン情報 */}
+        {/* エンジン情報 */}
         <Card variant="container" density="compact">
           <div className="analysis-dashboard-section-title">
             {t("analysisRules.dashboard.engineInfo")}
@@ -293,7 +528,7 @@ export function AnalysisDashboardPanel() {
           )}
         </Card>
 
-        {/* 下段右: 直近のエラー */}
+        {/* 直近のエラー */}
         <Card variant="container" density="compact">
           <div className="analysis-dashboard-section-title">
             {t("analysisRules.dashboard.recentErrors")}
