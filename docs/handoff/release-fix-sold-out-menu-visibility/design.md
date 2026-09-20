@@ -59,13 +59,14 @@ const { isSuperAdmin } = useSuperAdmin();
 | 非 SuperAdmin: 「解析管理」メニュー非表示 | 一般ユーザーでログイン→メニュー項目が存在しないことを確認 |
 | ESLint: エラーゼロ | `npm run lint` で 0 errors |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-N/A — UIバグ修正（リンク先誤り・メニュー欠落）のため。既存パターン（saasAdminItems / useSuperAdmin / NAV_ICONS.saasAdmin）を踏襲。
+UIバグ修正（リンク先誤り・メニュー欠落）のため外部事例なし。
+既存パターン（`frontend/src/hooks/useSuperAdmin.ts` / `NAV_ICONS.saasAdmin` / `resolveItem`）を踏襲。DesktopShellの `saasAdminItems` パターンをMobileShellに移植した。
 
-## 守り手
-- `useSuperAdmin` hook: `isSuperAdmin` が false のユーザーにはメニュー自体が描画されない
-- App.tsx のルート定義側にも認可ガードが存在（AnalysisRulesPage の実装内）
+## 維持の仕組み
+
+守り手: `useSuperAdmin` hook（isSuperAdmin が false のユーザーにはメニュー自体が描画されない）。App.tsx のルート定義側にも認可ガードが存在（AnalysisRulesPage の実装内）。
 
 ## 戻し方
 ```bash
