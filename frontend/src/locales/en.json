@@ -279,7 +279,8 @@
     "statusMaster": "Status Master",
     "conditionsMaster": "Condition Master",
     "superAdminSupplierMaster": "Supplier Master",
-    "units": "Units"
+    "units": "Units",
+    "noteMaster": "Note Master"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -3850,6 +3851,7 @@
       "supplierMaster": "Supplier Master",
       "conditionsMaster": "Condition Master",
       "unitMaster": "Unit Master",
+      "noteMaster": "Note Master",
       "import": "Import",
       "dashboard": "Dashboard"
     },
@@ -3982,6 +3984,24 @@
       "unauthorized": "You are not authorized.",
       "serverUnavailable": "Server is unavailable. Please try again later.",
       "unknown": "An error occurred."
+    },
+    "noteMaster": {
+      "title": "Note Master",
+      "description": "Manage note detection rules for LINE analysis",
+      "labelJa": "Label (Japanese)",
+      "labelEn": "Label (English)",
+      "category": "Category",
+      "matchType": "Match Type",
+      "priority": "Priority",
+      "enabled": "Enabled",
+      "searchKeywords": "Search Keywords",
+      "excludeKeywords": "Exclude Keywords",
+      "searchPattern": "Search Pattern",
+      "labelTemplate": "Label Template",
+      "addNote": "Add Note Rule",
+      "editNote": "Edit Note Rule",
+      "deleteConfirm": "Are you sure you want to delete this note rule?",
+      "noNotes": "No note rules found"
     }
   },
   "tcgAnalysisReview": {

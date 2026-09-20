@@ -63,6 +63,7 @@ from app.routers import (
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
+    note_master,  # 備考マスタ テナント用
     notifications,
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
@@ -90,6 +91,7 @@ from app.routers import (
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
+    super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
@@ -383,6 +385,11 @@ app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 備考マスタ テナント用
+app.include_router(
+    note_master.router, prefix="/api/v1", tags=["note-master"],
+    dependencies=[Depends(get_current_tenant)],
+)
 app.include_router(
     conditions.router, prefix="/api/v1", tags=["conditions"],
     dependencies=[Depends(get_current_tenant)],
@@ -498,6 +505,10 @@ app.include_router(
 # ステータスマスタ中央 admin
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
+)
+# 備考マスタ中央 admin
+app.include_router(
+    super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
