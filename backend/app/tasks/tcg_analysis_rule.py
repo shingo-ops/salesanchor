@@ -89,7 +89,7 @@ def run_analysis_rule(run_id: str) -> dict:
             with _get_sync_session() as err_session:
                 err_session.execute(
                     text(
-                        f"""
+                        """
                         UPDATE public.analysis_rule_runs
                         SET state        = 'error',
                             completed_at = NOW()
@@ -117,7 +117,7 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 1. run レコードを取得 ---
     row = session.execute(
         text(
-            f"""
+            """
             SELECT id, policy_id, revision_id, suite_revision_id,
                    source_message_id, purpose, engine_version, state
             FROM public.analysis_rule_runs
@@ -150,7 +150,7 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 2. state を running に更新 ---
     session.execute(
         text(
-            f"""
+            """
             UPDATE public.analysis_rule_runs
             SET state = 'running'
             WHERE id = :run_id AND state = 'pending'
@@ -181,7 +181,7 @@ def _execute_analysis_rule_run(session: Session, run_id: str) -> dict:
     # --- 5. state を passed/failed に更新 ---
     session.execute(
         text(
-            f"""
+            """
             UPDATE public.analysis_rule_runs
             SET state        = :state,
                 completed_at = NOW()
@@ -208,7 +208,7 @@ def _load_revision_rules(session: Session, revision_id: str) -> list[dict]:
     """指定 revision のルール・語句一覧をロードする。"""
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT
                 ar.id           AS rule_id,
                 arv.id          AS rule_version_id,
@@ -297,7 +297,7 @@ def _run_test_cases(
     """
     cases = session.execute(
         text(
-            f"""
+            """
             SELECT sc.case_id, sc.case_version_id, cv.raw_text, cv.expected
             FROM public.analysis_suite_cases sc
             JOIN public.analysis_test_case_versions cv ON cv.id = sc.case_version_id
@@ -326,7 +326,7 @@ def _run_test_cases(
         result_id = str(uuid.uuid4())
         session.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.analysis_rule_run_results
                     (id, run_id, case_version_id, decision, source_spans, rule_version_refs, validation_error)
                 VALUES
@@ -362,7 +362,7 @@ def _run_production_items(
     # C95: status='done' かつ created_at 最新の 1 job の items を取得
     items = session.execute(
         text(
-            f"""
+            """
             WITH latest_job AS (
                 SELECT id FROM {TCG_SCHEMA}.extraction_jobs
                 WHERE source_message_id = :msg_id
@@ -395,7 +395,7 @@ def _run_production_items(
         result_id = str(uuid.uuid4())
         session.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.analysis_rule_run_results
                     (id, run_id, extraction_item_id, decision, source_spans, rule_version_refs)
                 VALUES

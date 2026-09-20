@@ -33,8 +33,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
-from app.services import tcg_analysis_rule_svc as svc
 from app.services import tcg_analysis_rule_csv_svc as csv_svc
+from app.services import tcg_analysis_rule_svc as svc
 from app.services.tcg_analysis_rule_svc import ConflictError
 
 router = APIRouter()

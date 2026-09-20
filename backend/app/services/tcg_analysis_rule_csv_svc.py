@@ -201,7 +201,6 @@ async def commit_import(
 ) -> dict[str, Any]:
     """CSV の内容を changes 配列に変換して create_draft_revision を呼ぶ。"""
     rule_svc._validate_policy_type(policy_type)
-    records = _read_csv_records(raw)
 
     # プレビューで差分を計算
     preview = await preview_import(db, policy_type, raw)
