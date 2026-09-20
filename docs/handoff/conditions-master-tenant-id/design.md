@@ -27,10 +27,18 @@ public.conditions に tenant_id 列を追加し、仕入元マスタと同じパ
 | CRUD操作が機能する | POST/PATCH/DELETE API + UI操作 |
 | FK張り替えが冪等 | migration 2回実行でエラーなし |
 
-## 外部事例
-該当なし（既存の仕入元マスタパターンの横展開のため）
+## 外部・過去事例の参照と我々への応用
 
-## 守り手
-- migration-guard CI チェック
-- ADR-155 SSOT ポリシー
-- reset_tenant_context（ADR-072）
+本PRは既存の仕入元マスタ（suppliers）の tenant_id パターンを状態マスタ（conditions）に横展開する。
+- 参照元: PR #3585（supplier-dedup-upsert）で確立した tenant_id NULL/N 分離パターン
+- 参照元: migrations/20260918_030000_supplier_ssot_phase2.sql（ADD COLUMN tenant_id）
+- 応用: 同一DDLパターン・同一API構造・同一UIパネル構造を conditions に適用
+- 外部事例: 不要（社内既存パターンの横展開のため新規調査対象なし）
+
+## 維持の仕組み
+
+- migration-guard CI チェック（DDL安全性）
+- ADR-155 SSOT ポリシー（共用マスタは public スキーマ）
+- reset_tenant_context（ADR-072、テナントコンテキスト汚染防止）
+- i18n CI チェック（ADR-027、ハードコード文字列検出）
+- ADR-144 UI governance（金型コンポーネント強制）
