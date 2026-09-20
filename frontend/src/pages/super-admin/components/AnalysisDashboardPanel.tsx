@@ -118,13 +118,13 @@ interface ImportRecord {
 }
 
 interface ImportSummary {
-  total_imports: number;
+  total_jobs: number;
   total_messages: number;
   unresolved_rate: number;
   pending_review_count: number;
-  orphan_message_count: number;
+  orphan_count: number;
   active_message_count: number;
-  latest_at: string | null;
+  latest_import_at: string | null;
   recent_imports: ImportRecord[];
 }
 
@@ -144,8 +144,9 @@ interface DistributionSetting {
 }
 
 interface DistributionSummary {
-  active_targets_count: number;
-  total_distributed_count: number;
+  active_target_count: number;
+  total_target_count: number;
+  total_last_distributed: number;
   targets: DistributionTarget[];
   settings: DistributionSetting[];
 }
@@ -429,7 +430,7 @@ function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon 
             {t("analysisRules.dashboard.importTotal")}
           </div>
           <div className="analysis-dashboard-metric-value">
-            {data.total_imports.toLocaleString()}
+            {data.total_jobs.toLocaleString()}
             <span className="analysis-dashboard-metric-unit">
               {t("analysisRules.dashboard.items")}
             </span>
@@ -475,7 +476,7 @@ function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon 
       </div>
 
       {/* 孤立メッセージCTA */}
-      {data.orphan_message_count > 0 && (
+      {data.orphan_count > 0 && (
         <div className="analysis-dashboard-ctas">
           <button
             type="button"
@@ -484,7 +485,7 @@ function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon 
           >
             {t("analysisRules.dashboard.importOrphanMessages")}
             <span className="analysis-dashboard-cta-count">
-              {data.orphan_message_count.toLocaleString()}
+              {data.orphan_count.toLocaleString()}
               {t("analysisRules.dashboard.items")}
             </span>
             <ArrowRightIcon size={16} />
@@ -493,12 +494,12 @@ function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon 
       )}
 
       {/* 最新インポート日時 */}
-      {data.latest_at != null && (
+      {data.latest_import_at != null && (
         <div className="analysis-dashboard-import-latest">
           <span className="analysis-dashboard-engine-label">
             {t("analysisRules.dashboard.importLatestAt")}
           </span>
-          <span className="analysis-dashboard-engine-value">{data.latest_at}</span>
+          <span className="analysis-dashboard-engine-value">{data.latest_import_at}</span>
         </div>
       )}
 
@@ -1096,7 +1097,7 @@ function DistributionTabContent({ data, loading, error, t }: DistributionTabCont
             {t("analysisRules.dashboard.distributionActiveTargets")}
           </div>
           <div className="analysis-dashboard-metric-value">
-            {data.active_targets_count.toLocaleString()}
+            {data.active_target_count.toLocaleString()}
             <span className="analysis-dashboard-metric-unit">
               {t("analysisRules.dashboard.items")}
             </span>
@@ -1108,7 +1109,7 @@ function DistributionTabContent({ data, loading, error, t }: DistributionTabCont
             {t("analysisRules.dashboard.distributionTotalDistributed")}
           </div>
           <div className="analysis-dashboard-metric-value">
-            {data.total_distributed_count.toLocaleString()}
+            {data.total_last_distributed.toLocaleString()}
             <span className="analysis-dashboard-metric-unit">
               {t("analysisRules.dashboard.items")}
             </span>
