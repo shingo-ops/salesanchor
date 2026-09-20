@@ -722,7 +722,7 @@ async def run_distribution(
     pending_rule_runs = (
         await db.execute(
             text(
-                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_rule_runs"
+                "SELECT id, started_at FROM public.analysis_rule_runs"
                 " WHERE state IN ('pending', 'running')"
                 " ORDER BY started_at LIMIT 10"
             )
