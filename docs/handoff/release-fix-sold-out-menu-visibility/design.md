@@ -64,9 +64,15 @@ const { isSuperAdmin } = useSuperAdmin();
 UIバグ修正（リンク先誤り・メニュー欠落）のため外部事例なし。
 既存パターン（`frontend/src/hooks/useSuperAdmin.ts` / `NAV_ICONS.saasAdmin` / `resolveItem`）を踏襲。DesktopShellの `saasAdminItems` パターンをMobileShellに移植した。
 
+## 関連ドキュメント
+
+- recon: docs/handoff/release-fix-sold-out-menu-visibility/recon.md
+- ADR-027: docs/adr/ADR-027-ui-internationalization.md
+- ADR-144: docs/CC_UI_GOVERNANCE.md
+
 ## 維持の仕組み
 
-守り手: `useSuperAdmin` hook（isSuperAdmin が false のユーザーにはメニュー自体が描画されない）。App.tsx のルート定義側にも認可ガードが存在（AnalysisRulesPage の実装内）。
+守り手: `frontend/src/hooks/useSuperAdmin.ts`（isSuperAdmin が false のユーザーにはメニュー自体が描画されない）。`frontend/src/App.tsx` のルート定義側にも認可ガードが存在（AnalysisRulesPage の実装内）。
 
 ## 戻し方
 ```bash
