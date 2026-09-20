@@ -1064,6 +1064,7 @@ def load_status_master(session: Session) -> list[dict]:
         {
             "canonical": r[1],
             "search_pattern": r[2] or "",
+            "exclude_pattern": r[3] or "",
             "priority": r[4],
             "match_type": r[5],
             "effect": r[6],
@@ -1109,6 +1110,10 @@ def resolve_status_v2(
             and (raw_memo or "").strip().casefold() == entry["search_pattern"].strip().casefold()
         )
         if memo_exact or _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            if entry.get("exclude_pattern") and _match_status_pattern(
+                text_val, entry["exclude_pattern"], entry["match_type"]
+            ):
+                continue
             return (entry["canonical"], "excluded")
     for entry in sorted(
         (e for e in status_entries if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"),
