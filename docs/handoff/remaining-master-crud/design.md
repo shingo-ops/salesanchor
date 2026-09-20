@@ -42,9 +42,15 @@
 - ADR-144: 金型クラスのみ使用
 - HeaderButton type="submit" 不可 → useRef + requestSubmit() パターン使用
 
-## 外部事例
-- unit_aliases と同一パターン（condition_aliases の alias_text/lang 構造も同一）
-- StatusMasterPage → ProductCategoriesPage のページ構造参照
+## 外部・過去事例の参照と我々への応用
+- unit_aliases（`public.unit_aliases`）と同一構造。alias_text/lang カラム名・FK パターンをそのまま踏襲
+- StatusMasterPage → ProductCategoriesPage のページ構造（PageLayout + DataTable + Modal パターン）を参照
+- UnitMasterPanel → ConditionsMasterPanel・ProductCategoriesMasterPanel のパネル構造を参照
+
+## 維持の仕組み
+- i18n: CI の `ja.json`/`en.json` キー整合チェックが差異を検出する
+- ADR-072: backend/app/routers/ 変更時のチェックリスト（PR テンプレート）が抜け漏れを防ぐ
+- migration-guard: ADD COLUMN IF NOT EXISTS のみ → 冪等・本番 apply 安全
 
 ## 守り手
 - CI: TypeScript tsc、ESLint、i18n key check が通ること
