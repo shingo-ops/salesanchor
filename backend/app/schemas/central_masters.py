@@ -540,3 +540,60 @@ class TcgStatusMasterResponse(TcgStatusMasterBase):
     created_at: datetime
     updated_at: datetime
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_note_master
+# ============================================================================
+
+
+class TcgNoteMasterBase(BaseModel):
+    label_ja: str
+    label_en: str
+    enabled: bool = True
+    search_keywords: str = ""
+    exclude_keywords: str = ""
+    category: str = ""
+    priority: int
+    match_type: str = "LITERAL"
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: str) -> str:
+        if v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterCreate(TcgNoteMasterBase):
+    pass
+
+
+class TcgNoteMasterUpdate(BaseModel):
+    label_ja: Optional[str] = None
+    label_en: Optional[str] = None
+    enabled: Optional[bool] = None
+    search_keywords: Optional[str] = None
+    exclude_keywords: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[int] = None
+    match_type: Optional[str] = None
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterResponse(TcgNoteMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

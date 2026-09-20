@@ -27,6 +27,7 @@ import { StatusMasterPanel } from "./components/StatusMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
+import { NoteMasterPanel } from "./components/NoteMasterPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
@@ -156,6 +157,7 @@ export default function AnalysisRulesPage() {
           {activeSection === "supplier-master" && <SupplierMasterPanel />}
           {activeSection === "conditions-master" && <ConditionsMasterPanel />}
           {activeSection === "unit-master" && <UnitMasterPanel />}
+          {activeSection === "note-master" && <NoteMasterPanel />}
         </div>
       </div>
     </PageLayout>

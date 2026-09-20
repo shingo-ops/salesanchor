@@ -18,7 +18,8 @@ export type AnalysisRulesSidebarKey =
   | "status-master"
   | "supplier-master"
   | "conditions-master"
-  | "unit-master";
+  | "unit-master"
+  | "note-master";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -91,6 +92,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
+        {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
       </div>
     </nav>
   );
