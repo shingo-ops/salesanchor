@@ -122,3 +122,4 @@ it("shows analysis management menu item only for SaaS administrators", async () 
   expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
   expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();
 });
+
