@@ -41,8 +41,7 @@ CREATE TRIGGER trg_condition_definitions_updated_at
     BEFORE UPDATE ON public.condition_definitions
     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_condition_definitions();
 
-COMMENT ON TABLE public.condition_definitions IS
-    'コンディション定義マスタ（ADR-156）。product_lines（小分類）ごとのコンディション定義。解析マスタ conditions の正規化参照元。';
+COMMENT ON TABLE public.condition_definitions IS 'コンディション定義マスタ（ADR-156）。product_lines（小分類）ごとのコンディション定義。解析マスタ（condition 解析テーブル）の正規化参照元。';
 
 -- ============================================================================
 -- Rollback:
