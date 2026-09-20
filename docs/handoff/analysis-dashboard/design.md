@@ -1,5 +1,7 @@
 # design: 解析パイプラインダッシュボード (Phase A)
 
+recon: docs/handoff/analysis-dashboard/recon.md
+
 ## KGI
 解析管理ページを開いた際、デフォルト画面として抽出/解析パイプラインの健全性KPIが表示される。
 
@@ -40,4 +42,4 @@
 
 ## 維持の仕組み
 
-守り手: super-admin のみアクセス可（require_super_admin 依存注入）。DBスキーマ変更時はサービス層のSQLを追従要。
+守り手: backend/app/routers/tcg_analysis_dashboard.py（require_super_admin 依存注入で super-admin のみアクセス可。DBスキーマ変更時はサービス層 backend/app/services/tcg_analysis_dashboard_svc.py のSQLを追従要）
