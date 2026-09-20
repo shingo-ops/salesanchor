@@ -98,11 +98,8 @@ ALTER TABLE public.products
     ADD COLUMN IF NOT EXISTS product_format_id INTEGER
     REFERENCES public.product_formats(id) ON DELETE SET NULL;
 
-CREATE INDEX IF NOT EXISTS idx_products_product_line_id
-    ON public.products (product_line_id);
-
-CREATE INDEX IF NOT EXISTS idx_products_product_format_id
-    ON public.products (product_format_id);
+CREATE INDEX IF NOT EXISTS idx_products_product_line_id ON public.products (product_line_id);
+CREATE INDEX IF NOT EXISTS idx_products_product_format_id ON public.products (product_format_id);
 
 -- ============================================================
 -- Rollback:
