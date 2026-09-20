@@ -277,6 +277,7 @@
     "closeDrawer": "Close navigation",
     "masterManagement": "Master Management",
     "statusMaster": "Status Master",
+    "conditionsMaster": "Condition Master",
     "superAdminSupplierMaster": "Supplier Master",
     "units": "Units"
   },
@@ -4038,5 +4039,24 @@
     "invalidFormat": "Only CSV files can be uploaded",
     "backToList": "Back to list",
     "importSubtitle": "Bulk import suppliers from CSV"
+  },
+  "conditionsMaster": {
+    "title": "Condition Master",
+    "subtitle": "Manage tenant-specific conditions.",
+    "newCondition": "Add New Condition",
+    "bulkDeleteConfirm": "Deactivate selected conditions?",
+    "catalogTitle": "Shared Conditions Catalog",
+    "catalogDescription": "Shared conditions managed by the operator.",
+    "noData": "No tenant-specific conditions registered yet.",
+    "total": "Conditions: {{count}}",
+    "fields": {
+      "code": "Condition Code",
+      "canonical": "Display Name",
+      "appKubun": "App Classification",
+      "priority": "Priority",
+      "searchKw": "Search Keywords",
+      "excludeKw": "Exclude Keywords",
+      "isActive": "Active"
+    }
   }
 }

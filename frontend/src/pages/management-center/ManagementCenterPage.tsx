@@ -48,6 +48,7 @@ export default function ManagementCenterPage() {
       items: [
         { to: "suppliers",      labelKey: "nav.suppliers",      visible: hasPermission("suppliers.view") },
         { to: "status-master",  labelKey: "nav.statusMaster",   visible: hasPermission("suppliers.view") },
+        { to: "conditions",     labelKey: "nav.conditionsMaster", visible: hasPermission("conditions.view") },
         { to: "units",          labelKey: "nav.units",          visible: hasPermission("suppliers.view") },
         { to: "purchase-orders", labelKey: "nav.purchaseOrders", visible: hasPermission("purchase_orders.view") },
         { to: "data",           labelKey: "nav.dataManagement", visible: hasPermission("erp.view") },

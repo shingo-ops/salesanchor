@@ -277,6 +277,7 @@
     "closeDrawer": "ナビゲーションを閉じる",
     "masterManagement": "マスタ管理",
     "statusMaster": "ステータスマスタ",
+    "conditionsMaster": "状態マスタ",
     "superAdminSupplierMaster": "仕入元マスタ",
     "units": "単位マスタ"
   },
@@ -4038,5 +4039,24 @@
     "invalidFormat": "CSVファイルのみアップロード可能です",
     "backToList": "一覧に戻る",
     "importSubtitle": "CSVファイルから仕入元を一括登録"
+  },
+  "conditionsMaster": {
+    "title": "状態マスタ",
+    "subtitle": "テナント固有の状態を管理します。",
+    "newCondition": "新規状態を追加",
+    "bulkDeleteConfirm": "選択した状態を非アクティブにしますか？",
+    "catalogTitle": "共有状態カタログ",
+    "catalogDescription": "運営者が管理する共有状態の一覧です。",
+    "noData": "テナント固有の状態はまだ登録されていません。",
+    "total": "状態数：{{count}}件",
+    "fields": {
+      "code": "状態コード",
+      "canonical": "表示名",
+      "appKubun": "アプリ区分",
+      "priority": "優先度",
+      "searchKw": "検索キーワード",
+      "excludeKw": "除外キーワード",
+      "isActive": "有効"
+    }
   }
 }
