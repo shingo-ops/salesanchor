@@ -4048,6 +4048,7 @@
     "catalogTitle": "Shared Conditions Catalog",
     "catalogDescription": "Shared conditions managed by the operator.",
     "noData": "No tenant-specific conditions registered yet.",
+    "total": "Conditions: {{count}}",
     "fields": {
       "code": "Condition Code",
       "canonical": "Display Name",

@@ -441,7 +441,7 @@ export default function ConditionsPage() {
             </button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="conditions-page-info">
-            {t("common.pageInfo", { page, count: items.length })}
+            {t(`${f}.total`, { count: items.length })}
           </span>
           {(page > 1 || hasNext) && (
             <button

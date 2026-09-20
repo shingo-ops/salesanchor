@@ -4048,6 +4048,7 @@
     "catalogTitle": "共有状態カタログ",
     "catalogDescription": "運営者が管理する共有状態の一覧です。",
     "noData": "テナント固有の状態はまだ登録されていません。",
+    "total": "状態数：{{count}}件",
     "fields": {
       "code": "状態コード",
       "canonical": "表示名",
