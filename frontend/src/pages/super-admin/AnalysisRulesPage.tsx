@@ -23,6 +23,7 @@ import {
 import { SoldOutRulesPanel } from "./components/SoldOutRulesPanel";
 import { DateRulesPanel } from "./components/DateRulesPanel";
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
+import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { StatusMasterPanel } from "./components/StatusMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
@@ -153,6 +154,7 @@ export default function AnalysisRulesPage() {
           {activeSection === "sold-out" && <SoldOutRulesPanel />}
           {activeSection === "date-rule" && <DateRulesPanel />}
           {activeSection === "product-master" && <ProductMasterPanel />}
+          {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
           {activeSection === "status-master" && <StatusMasterPanel />}
           {activeSection === "supplier-master" && <SupplierMasterPanel />}
           {activeSection === "conditions-master" && <ConditionsMasterPanel />}
