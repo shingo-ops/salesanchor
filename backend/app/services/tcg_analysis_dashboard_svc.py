@@ -178,3 +178,66 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         "engine": engine,
         "recent_errors": recent_errors,
     }
+
+
+async def get_pipeline_trend(db: AsyncSession, days: int = 7) -> list[dict]:
+    """
+    日別パイプライン集計を返す。SELECT のみ。
+    """
+    if not (1 <= days <= 90):
+        days = 7
+
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  d.day::date AS day,"
+                f"  COALESCE(e.total, 0) AS extraction_total,"
+                f"  COALESCE(e.done, 0) AS extraction_done,"
+                f"  COALESCE(e.error, 0) AS extraction_error,"
+                f"  COALESCE(a.total, 0) AS analysis_total,"
+                f"  COALESCE(a.pid_resolved, 0) AS pid_resolved,"
+                f"  COALESCE(a.unit_resolved, 0) AS unit_resolved,"
+                f"  COALESCE(a.needs_review, 0) AS needs_review"
+                f" FROM generate_series("
+                f"   CURRENT_DATE - INTERVAL '{days} days',"
+                f"   CURRENT_DATE,"
+                f"   '1 day'"
+                f" ) AS d(day)"
+                f" LEFT JOIN LATERAL ("
+                f"   SELECT"
+                f"     COUNT(*) AS total,"
+                f"     SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done,"
+                f"     SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) AS error"
+                f"   FROM {TCG_SCHEMA}.extraction_jobs"
+                f"   WHERE created_at::date = d.day::date"
+                f" ) e ON TRUE"
+                f" LEFT JOIN LATERAL ("
+                f"   SELECT"
+                f"     COUNT(*) AS total,"
+                f"     SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved,"
+                f"     SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved,"
+                f"     SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review"
+                f"   FROM {TCG_SCHEMA}.analysis_results ar"
+                f"   JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id"
+                f"   JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id"
+                f"   WHERE ej.created_at::date = d.day::date"
+                f" ) a ON TRUE"
+                f" ORDER BY d.day"
+            )
+        )
+    ).fetchall()
+
+    return [
+        {
+            "day": row.day.isoformat(),
+            "extraction_total": int(row.extraction_total),
+            "extraction_done": int(row.extraction_done),
+            "extraction_error": int(row.extraction_error),
+            "analysis_total": int(row.analysis_total),
+            "pid_resolved": int(row.pid_resolved),
+            "unit_resolved": int(row.unit_resolved),
+            "needs_review": int(row.needs_review),
+        }
+        for row in rows
+    ]

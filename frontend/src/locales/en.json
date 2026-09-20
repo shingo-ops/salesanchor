@@ -3976,7 +3976,14 @@
       "jobs": "jobs",
       "items": "items",
       "loading": "Loading...",
-      "fetchError": "Failed to fetch data"
+      "fetchError": "Failed to fetch data",
+      "bottleneckLabel": "Bottleneck Detected",
+      "bottleneckDesc": "This metric is below the target. Take action to improve the pipeline.",
+      "trendTitle": "7-Day Trend",
+      "ctaNeedsReview": "Review pending items",
+      "ctaProductMaster": "Update product master",
+      "ctaUnitMaster": "Update unit master",
+      "ctaAccuracy": "Check extraction accuracy"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
