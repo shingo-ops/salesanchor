@@ -17,8 +17,8 @@
 | API `/api/tcg/dashboard/pipeline-summary` が200を返す | 本番デプロイ後にcurlで確認 |
 | `engine_version` フィールドが返却される | レスポンスJSONのengine.current_engine_versionが非null |
 
-## 外部事例
-SQLカラム名誤りはよくある実装バグ。DB DDL確認による修正が標準アプローチ。
+## 外部・過去事例の参照と我々への応用
+SQLカラム名誤りはよくある実装バグ。PostgreSQL `information_schema.columns` でDB DDLを直接確認するアプローチが標準的な解決策。本件もVPS本番DBに対して実測確認を行い、正しいカラム名を特定した。
 
 ## 影響範囲
 - 呼び出し元: `backend/app/routers/tcg_analysis_dashboard.py`（router）
@@ -28,5 +28,5 @@ SQLカラム名誤りはよくある実装バグ。DB DDL確認による修正�
 ## 戻し方
 git revert で即時ロールバック可能（DDL変更なし）
 
-## 守り手
-ruff lint/format通過確認済み
+## 維持の仕組み
+守り手: ruff lint/format通過確認済み。本番DBのカラム定義がマイグレーションで変更される際は、同ファイルのSQL文字列も合わせて変更すること。
