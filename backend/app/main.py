@@ -97,6 +97,7 @@ from app.routers import (
     super_admin_tenants,
     super_admin_units,  # 単位マスタ中央 admin
     suppliers,
+    tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
     tcg_analysis_rule,  # ANALYSIS-RULE P5: 完売・日付ルール管理 API
     tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
@@ -620,6 +621,11 @@ app.include_router(
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
 app.include_router(
     tcg_supplier_quality.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# ANALYSIS-DASHBOARD: 解析パイプライン サマリー API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_dashboard.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # DB-A2: TCG 診断 API（固定 SQL 方式・require_super_admin 限定）

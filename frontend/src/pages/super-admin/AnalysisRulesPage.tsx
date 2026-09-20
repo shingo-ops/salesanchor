@@ -27,6 +27,7 @@ import { StatusMasterPanel } from "./components/StatusMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
+import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
 import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
@@ -102,7 +103,7 @@ export default function AnalysisRulesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
-  const [activeSection, setActiveSection] = useState<AnalysisRulesSidebarKey>("sold-out");
+  const [activeSection, setActiveSection] = useState<AnalysisRulesSidebarKey>("dashboard");
 
   const handleSectionChange = (key: AnalysisRulesSidebarKey) => {
     if (key === "import") {
@@ -145,6 +146,7 @@ export default function AnalysisRulesPage() {
 
         {/* 右コンテンツ */}
         <div className="hub-content">
+          {activeSection === "dashboard" && <AnalysisDashboardPanel />}
           {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
           {activeSection === "needs-review" && <NeedsReviewPanel />}
           {activeSection === "sold-out" && <SoldOutRulesPanel />}

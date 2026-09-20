@@ -3849,7 +3849,8 @@
       "supplierMaster": "Supplier Master",
       "conditionsMaster": "Condition Master",
       "unitMaster": "Unit Master",
-      "import": "Import"
+      "import": "Import",
+      "dashboard": "Dashboard"
     },
     "tabs": {
       "instruction": "Instructions",
@@ -3947,6 +3948,32 @@
       "title": "Needs Review",
       "comingSoon": "Coming soon",
       "count": "{{count}} items"
+    },
+    "dashboard": {
+      "totalJobs": "Total Extraction Jobs",
+      "extractionSuccessRate": "Extraction Success Rate",
+      "pidResolutionRate": "PID Resolution Rate",
+      "unitResolutionRate": "Unit Resolution Rate",
+      "needsReviewRate": "Needs Review Rate",
+      "staleRunning": "Frozen",
+      "analysisMissing": "Analysis Missing",
+      "pending": "Pending",
+      "recentErrors": "Recent Errors",
+      "errorMessage": "Error Message",
+      "errorDate": "Date",
+      "reviewReasons": "Review Reasons Breakdown",
+      "reason": "Reason",
+      "count": "Count",
+      "engineInfo": "Engine Info",
+      "currentModel": "Current Model",
+      "promptVersion": "Prompt Version",
+      "engineVersion": "Engine Version",
+      "noData": "No data available",
+      "noErrors": "No errors",
+      "jobs": "jobs",
+      "items": "items",
+      "loading": "Loading...",
+      "fetchError": "Failed to fetch data"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
