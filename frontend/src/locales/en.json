@@ -3914,6 +3914,9 @@
       "importLatestAt": "Latest Import",
       "importFilename": "Filename",
       "importMessageCount": "Messages",
+      "importNewCount": "New",
+      "importResolvedCount": "Resolved",
+      "importUnresolvedCount": "Unresolved",
       "importReviewStatus": "Review Status",
       "importDate": "Date",
       "distributionTargets": "Distribution Targets",
@@ -3934,7 +3937,15 @@
       "extractionErrorRate": "Extraction Error Rate",
       "importTrendTitle": "7-Day Import Trend",
       "importTrendJobCount": "Import Count",
-      "importTrendMessageCount": "Message Count"
+      "importTrendMessageCount": "Message Count",
+      "importStatusOk": "Import is healthy",
+      "importStatusWarning": "Attention needed",
+      "importStatusDanger": "Action required",
+      "importProcessedMessages": "Processed messages",
+      "importMatchRate": "Name match rate",
+      "importActionRequired": "Action required",
+      "importNoAction": "None",
+      "importReviewCta": "Review →"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",

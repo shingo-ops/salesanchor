@@ -122,6 +122,11 @@ interface ImportRecord {
   unresolved_count: number;
   review_status: string | null;
   created_at: string | null;
+  created_count: number;
+}
+
+interface ImportTableRow extends ImportRecord {
+  resolved_count: number;
 }
 
 interface ImportSummary {
@@ -408,11 +413,24 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
     );
   }
 
-  const unresolvedLevel: SignalLevel = (() => {
-    return getUnresolvedSignalLevel(data.unresolved_rate);
-  })();
+  // Derived values: match rate (positive framing, flipped from unresolved_rate)
+  const matchRate = (1 - (data.unresolved_rate ?? 0)) * 100;
+  const pendingCount = data.pending_review_count ?? 0;
+  const needsAttention = matchRate < 80 || pendingCount > 0;
+  const headerSignal: SignalLevel =
+    matchRate < 60 ? "danger" : needsAttention ? "warning" : "success";
+  const matchRateSignal: SignalLevel =
+    matchRate >= 80 ? "success" : matchRate >= 60 ? "warning" : "danger";
+  const pendingSignal: SignalLevel = pendingCount === 0 ? "success" : "warning";
 
-  const importColumns: DataTableColumn<ImportRecord>[] = [
+  const headerMessage =
+    matchRate < 60
+      ? t("analysisRules.dashboard.importStatusDanger")
+      : needsAttention
+        ? t("analysisRules.dashboard.importStatusWarning")
+        : t("analysisRules.dashboard.importStatusOk");
+
+  const importColumns: DataTableColumn<ImportTableRow>[] = [
     {
       key: "filename",
       header: t("analysisRules.dashboard.importFilename"),
@@ -420,91 +438,106 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
     {
       key: "message_count",
       header: t("analysisRules.dashboard.importMessageCount"),
-      width: "100px",
+      width: "80px",
+    },
+    {
+      key: "created_count",
+      header: t("analysisRules.dashboard.importNewCount"),
+      width: "80px",
+    },
+    {
+      key: "resolved_count",
+      header: t("analysisRules.dashboard.importResolvedCount"),
+      width: "80px",
+    },
+    {
+      key: "unresolved_count",
+      header: t("analysisRules.dashboard.importUnresolvedCount"),
+      width: "80px",
     },
     {
       key: "review_status",
       header: t("analysisRules.dashboard.importReviewStatus"),
-      width: "120px",
+      width: "100px",
     },
     {
       key: "created_at",
       header: t("analysisRules.dashboard.importDate"),
-      width: "160px",
+      width: "140px",
     },
   ];
 
+  const tableData: ImportTableRow[] = (data.recent_imports ?? []).map((item) => ({
+    ...item,
+    resolved_count: item.message_count - (item.unresolved_count ?? 0),
+  }));
+
   return (
     <>
-      {/* KPIカード */}
-      <div className="analysis-dashboard-metrics">
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.importTotal")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {data.total_jobs.toLocaleString()}
-            <span className="analysis-dashboard-metric-unit">
+      {/* サマリーカード — 信号灯 + 3指標 + CTA */}
+      <Card
+        variant="metric"
+        density="compact"
+        className={getSignalClass(headerSignal)}
+      >
+        <h4 className="analysis-dashboard-import-header">{headerMessage}</h4>
+        <div className="analysis-dashboard-import-summary">
+          {/* 処理済みメッセージ */}
+          <div className="analysis-dashboard-import-row">
+            <span className="analysis-dashboard-import-label">
+              {t("analysisRules.dashboard.importProcessedMessages")}
+            </span>
+            <span className="analysis-dashboard-import-value">
+              {data.active_message_count.toLocaleString()}
               {t("analysisRules.dashboard.items")}
             </span>
           </div>
-        </Card>
 
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.importActiveMessages")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {data.active_message_count.toLocaleString()}
-            <span className="analysis-dashboard-metric-unit">
-              {t("analysisRules.dashboard.items")}
+          {/* 名前の一致率 */}
+          <div className="analysis-dashboard-import-row">
+            <span className="analysis-dashboard-import-label">
+              {t("analysisRules.dashboard.importMatchRate")}
+            </span>
+            <span className="analysis-dashboard-import-value">
+              {matchRate.toFixed(1)}%
+              <Badge variant={matchRateSignal} size="sm">
+                {matchRateSignal === "success"
+                  ? t("analysisRules.dashboard.importStatusOk")
+                  : matchRateSignal === "warning"
+                    ? t("analysisRules.dashboard.importStatusWarning")
+                    : t("analysisRules.dashboard.importStatusDanger")}
+              </Badge>
             </span>
           </div>
-        </Card>
 
-        <Card
-          variant="metric"
-          density="compact"
-          className={getSignalClass(unresolvedLevel)}
-        >
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.importUnresolvedRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(data.unresolved_rate * 100).toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.importPendingReview")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {data.pending_review_count.toLocaleString()}
-            <span className="analysis-dashboard-metric-unit">
-              {t("analysisRules.dashboard.items")}
+          {/* 要対応 */}
+          <div className="analysis-dashboard-import-row">
+            <span className="analysis-dashboard-import-label">
+              {t("analysisRules.dashboard.importActionRequired")}
+            </span>
+            <span className="analysis-dashboard-import-value">
+              {pendingCount === 0
+                ? t("analysisRules.dashboard.importNoAction")
+                : `${pendingCount.toLocaleString()}${t("analysisRules.dashboard.items")}`}
+              <Badge variant={pendingSignal} size="sm">
+                {pendingSignal === "success"
+                  ? t("analysisRules.dashboard.importNoAction")
+                  : `${pendingCount.toLocaleString()}${t("analysisRules.dashboard.items")}`}
+              </Badge>
+              {pendingCount > 0 && (
+                <button
+                  type="button"
+                  className="analysis-dashboard-cta-btn"
+                  onClick={() => onNavigate("needs-review")}
+                >
+                  {t("analysisRules.dashboard.importReviewCta")}
+                  <ArrowRightIcon size={14} />
+                </button>
+              )}
             </span>
           </div>
-        </Card>
-      </div>
-
-      {/* 孤立メッセージCTA */}
-      {data.orphan_count > 0 && (
-        <div className="analysis-dashboard-ctas">
-          <button
-            type="button"
-            className="analysis-dashboard-cta-btn"
-            onClick={() => onNavigate("accuracy-management")}
-          >
-            {t("analysisRules.dashboard.importOrphanMessages")}
-            <span className="analysis-dashboard-cta-count">
-              {data.orphan_count.toLocaleString()}
-              {t("analysisRules.dashboard.items")}
-            </span>
-            <ArrowRightIcon size={16} />
-          </button>
         </div>
-      )}
+      </Card>
 
       {/* 最新インポート日時 */}
       {data.latest_import_at != null && (
@@ -557,12 +590,12 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
         <div className="analysis-dashboard-section-title">
           {t("analysisRules.dashboard.importTotal")}
         </div>
-        {data.recent_imports.length === 0 ? (
+        {tableData.length === 0 ? (
           <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
         ) : (
-          <DataTable<ImportRecord>
+          <DataTable<ImportTableRow>
             columns={importColumns}
-            data={data.recent_imports}
+            data={tableData}
             rowKey={(row) => row.id}
             density="compact"
             emptyState={t("analysisRules.dashboard.noData")}

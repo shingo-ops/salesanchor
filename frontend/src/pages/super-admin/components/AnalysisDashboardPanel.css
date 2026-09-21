@@ -37,6 +37,42 @@
   font-size: var(--font-sm);
 }
 
+/* サマリーカード */
+
+.analysis-dashboard-import-header {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-import-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.analysis-dashboard-import-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analysis-dashboard-import-label {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.analysis-dashboard-import-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
 /* ──────────────────────────────────────────────────────────────────────────────
    1. ボトルネックヒーロー
 ────────────────────────────────────────────────────────────────────────────── */
