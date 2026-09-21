@@ -57,7 +57,8 @@ async def create_product_schema(conn, schema):
         await _exec_multi_stmt(conn, sql)
     await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
     await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
-    # ADR-156 Phase 1: rename tcg_type_master → type_master
+    # ADR-156 Phase 1: product_kinds (required before rename) + rename tcg_type_master → type_master
+    await _exec_multi_stmt(conn, (migrations / "20260921_060000_create_product_kinds.sql").read_text())
     await _exec_multi_stmt(conn, (migrations / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
     await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())

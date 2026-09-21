@@ -60,7 +60,8 @@ async def create_schema(conn, schema, corrections=True):
         sql_path = migrations / sql_file
         if sql_path.exists():
             await _exec_multi_stmt(conn, sql_path.read_text())
-    # ADR-156 Phase 1: rename tcg_type_master → type_master
+    # ADR-156 Phase 1: product_kinds (required before rename) + rename tcg_type_master → type_master
+    await _exec_multi_stmt(conn, (migrations / "20260921_060000_create_product_kinds.sql").read_text())
     await _exec_multi_stmt(conn, (migrations / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
     # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
