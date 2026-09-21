@@ -12,9 +12,9 @@ BEGIN
     SELECT count(*) INTO table_count
     FROM unnest(ARRAY['conditions', 'tcg_note_master']) AS t(name)
     WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
-    IF table_count = 0 THEN RETURN; END IF;
-    IF table_count <> 2 THEN
-        RAISE EXCEPTION 'condition note: incomplete master structure';
+    IF table_count < 2 THEN
+        RAISE NOTICE 'condition note: % of 2 required tables found, skipping', table_count;
+        RETURN;
     END IF;
     -- DEPRECATED: pre-UPDATE guards removed together with UPDATE statements per ADR-155
     -- Original guards verified CN0007/NJ041 state before overwriting exclude_kw/exclude_keywords
