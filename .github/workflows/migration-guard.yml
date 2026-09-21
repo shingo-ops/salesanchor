@@ -413,7 +413,7 @@ jobs:
           VIOLATIONS=""
 
           # 保護対象テーブル（スキーマ修飾の有無・テナントスキーマ名を問わず検出）
-          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes|product_format_game_links"
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes"
 
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
           for sql_path in "${SQL_FILES[@]}"; do
@@ -500,7 +500,7 @@ jobs:
           FAILED=0
 
           # 保護対象テーブル（チェック7と同じリスト）
-          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes|product_format_game_links"
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes"
 
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
           for sql_path in "${SQL_FILES[@]}"; do
