@@ -37,7 +37,7 @@
 - `frontend/src/locales/en.json` — 28キー追加
 
 ### Migrations（新規）
-- `migrations/20260921_140000_create_buyback_tables.sql`
+- `migrations/20260922_000000_create_buyback_tables.sql`
   - `public.buyback_shop_products` テーブル
   - `public.buyback_price_logs` テーブル
 

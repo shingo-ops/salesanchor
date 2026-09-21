@@ -66,7 +66,7 @@ User-Agent: `SalesAnchor-PriceLogger/1.0 (+https://salesanchor.jp)`
 
 ## References
 
-- `migrations/20260921_140000_create_buyback_tables.sql`
+- `migrations/20260922_000000_create_buyback_tables.sql`
 - `backend/app/services/buyback_scraper/`
 - `backend/app/tasks/buyback_scraper.py`
 - `backend/app/routers/buyback_prices.py`
