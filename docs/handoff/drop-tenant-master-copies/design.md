@@ -68,6 +68,12 @@ To recreate tenant_004 copies: re-run `migrations/20260906_120000_create_tcg_tab
 - `tenant_004.item_notes`, `tenant_004.unparsed_lines` (operational)
 - Any other tenant schemas (tenant_003, tenant_006, etc.) — not in scope
 
-## External examples
+## 外部・過去事例の参照と我々への応用
 
-Pattern follows ADR-1002 Phase 4→5 pipeline table migration (identical IF EXISTS CASCADE approach, same repo `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql`).
+**過去事例（同リポジトリ）**: ADR-1002 Phase 4→5 pipeline table migration — `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql`。`DROP TABLE IF EXISTS ... CASCADE` パターンを採用済みで、同一アプローチを本 migration に適用。
+
+## 維持の仕組み
+
+守り手: tcg_work_comparison_svc.py の `MASTER_TABLES` tuple と `_PUBLIC_MASTER` frozenset のコードレビュー（新テーブル追加時は両方更新必須）。
+
+migration 登録漏れ防止: `run_all_migrations.sh` に必ず記載。CI の migration check が登録を検証。
