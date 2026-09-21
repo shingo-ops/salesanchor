@@ -740,3 +740,6 @@ run_sql migrations/20260921_120000_add_products_product_kind_id.sql
 
 # ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
 run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
+
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260921_140000_create_buyback_tables.sql

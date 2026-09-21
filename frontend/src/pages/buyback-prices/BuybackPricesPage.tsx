@@ -366,7 +366,7 @@ export default function BuybackPricesPage() {
                       width={70}
                     />
                     <Tooltip
-                      formatter={(value: number | string) => [`¥${Number(value).toLocaleString()}`, undefined]}
+                      formatter={(value) => [`¥${Number(value ?? 0).toLocaleString()}`, undefined]}
                       contentStyle={{
                         background: "var(--bg-card)",
                         border: "1px solid var(--border)",
