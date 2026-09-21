@@ -50,3 +50,20 @@ EXECUTE format(
 ## 戻し方
 
 revert commit。本番への影響なし（テーブル不在時のスキップ追加のみ）。
+
+## 維持の仕組み
+
+`to_regclass` ガードは冪等。`tenant_004.conditions` が将来再作成された場合も、既存カラムチェックにより二重追加されない（Step 1〜2 の `information_schema.columns` 確認が担保）。
+
+## 外部・過去事例の参照と我々への応用
+
+**同一リポジトリ内の先例 (20260920_040000_conditions_ssot_phase1.sql):**
+```sql
+IF to_regclass('public.conditions') IS NULL THEN
+    RAISE EXCEPTION '統合テーブルが存在しません。migration を中断します。';
+END IF;
+```
+同ファイルが `to_regclass` パターンを採用済み。我々はこれの「エラー停止」ではなく「NOTICE + RETURN」バリアントを適用する（事後 DROP の場合はスキップが正しい動作のため）。
+
+**ADR-1002 Phase A（既存 migration 編集パターン）:**
+「追加するのは先頭のテーブル存在チェックのみ。テーブルが存在する場合の動作は一切変更しない」原則に従う。
