@@ -45,8 +45,14 @@ recon: [recon.md](./recon.md)
 | ハードコード日本語なし | grep -rn '[ぁ-ん]' RuleManagementPanel.tsx で0件（コメント除く） |
 | 既存パネル（マスタ管理）に影響なし | StatusMasterPanel が従来通り動作 |
 
-## 外部事例
-該当なし（既存パターンの再構築のため外部事例不要）
+## 外部・過去事例の参照と我々への応用
+既存パターン（StatusMasterPanel）の再構築。新たな外部ライブラリや独自実装は導入しない。
+DataTable / Badge / ContentToolbar は既にプロジェクト標準として採用済み（ADR-144）。
+
+## 維持の仕組み
+- ADR-027 準拠を CI grep チェック（`grep -n '[ぁ-ん]' RuleManagementPanel.tsx` が UI 文字列で 0 件）で担保
+- ADR-144 準拠は PR レビュー時に金型外コンポーネント使用の有無を確認
+- tcg_status_master 側スキーマ変更時は RuleEntry 型定義の更新が必要（frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:20-33）
 
 ## 守り手
 - `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:37` — 全UI文字列 t() 経由（ADR-027）

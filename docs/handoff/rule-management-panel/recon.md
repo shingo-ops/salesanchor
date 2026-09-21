@@ -7,8 +7,7 @@ PR #3623 で削除されたルール管理UIを、tcg_status_master（SSOT）ベ
 ## 既存資産
 
 ### バックエンド（変更なし・既存API利用）
-- `backend/app/routers/super_admin_status_master.py` — 7エンドポイント（GET/POST/PATCH/DELETE/export/import）
-- `backend/app/services/super_admin_status_master_svc.py` — CRUD + CSV import/export
+- `backend/app/routers/super_admin_status_master.py` — 7エンドポイント（GET/POST/PATCH/DELETE/export/import）。サービス層なし・ルーター内に直接実装
 
 ### フロントエンド（変更対象）
 - `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:10-23` — AnalysisRulesSidebarKey 型定義
