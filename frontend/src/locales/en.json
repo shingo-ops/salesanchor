@@ -192,7 +192,8 @@
     "authTimeout": "Authentication timed out",
     "page": "Page {{page}}",
     "unitDay": " days",
-    "unresolved": "Unresolved"
+    "unresolved": "Unresolved",
+    "required": "This field is required"
   },
   "nav": {
     "dashboard": "Dashboard",

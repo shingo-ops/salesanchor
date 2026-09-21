@@ -192,7 +192,8 @@
     "authTimeout": "認証がタイムアウトしました",
     "page": "{{page}}ページ",
     "unitDay": "日",
-    "unresolved": "未解決"
+    "unresolved": "未解決",
+    "required": "必須項目です"
   },
   "nav": {
     "dashboard": "ダッシュボード",
