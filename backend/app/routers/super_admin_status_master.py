@@ -196,6 +196,24 @@ async def update_status_master(
     update_data = {k: v for k, v in update_data.items() if k in _UPDATABLE}
     if not update_data:
         raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+
+    # Gate: enabled false→true requires latest test run = passed
+    if update_data.get("enabled") is True:
+        # Check current state
+        current = (await db.execute(
+            text("SELECT enabled FROM public.tcg_status_master WHERE id = :id"),
+            {"id": entry_id},
+        )).scalar()
+        if current is False:  # false→true transition
+            latest_state = (await db.execute(
+                text("SELECT state FROM public.rule_test_runs ORDER BY started_at DESC LIMIT 1")
+            )).scalar()
+            if latest_state != "passed":
+                raise HTTPException(
+                    status_code=409,
+                    detail="Cannot enable rule: latest test run must be 'passed'. Please run tests first.",
+                )
+
     set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
     update_data["id"] = entry_id
     try:
