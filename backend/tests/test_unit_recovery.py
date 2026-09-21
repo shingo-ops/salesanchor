@@ -363,10 +363,10 @@ def test_e5_does_not_overwrite_empty_or_manual_condition(basis, request):
 
 
 @pytest.fixture
-def empty_review_pg(request):
+def empty_review_pg(request, monkeypatch):
     # Reuse the scoped CI fixture without introducing another database provider.
     from tests.test_tcg_condition_review import pg
-    generator = pg.__wrapped__()
+    generator = pg.__wrapped__(monkeypatch)
     value = next(generator)
     yield value
     try:
