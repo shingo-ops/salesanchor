@@ -422,7 +422,7 @@ def select_product_candidates(
 def load_work_master(session: Session) -> list[dict]:
     """Active game/work names only; alt_name is a single value, never a list."""
     rows = session.execute(text(
-        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.tcg_type_master WHERE is_active = TRUE"
+        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.type_master WHERE is_active = TRUE"
     )).fetchall()
     return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
 

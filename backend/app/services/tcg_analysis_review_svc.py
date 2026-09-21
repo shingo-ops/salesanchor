@@ -38,7 +38,7 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
-    LEFT JOIN public.tcg_type_master ws ON ws.id = p.work_id
+    LEFT JOIN public.type_master ws ON ws.id = p.work_id
     {review_joins(schema=TCG_SCHEMA)}
 """
 
@@ -300,7 +300,7 @@ async def fetch_analysis_results(
 
     # works 一覧取得（tcg_product_import.py:134-142 と同一パターン）
     work_rows = await db.execute(text(
-        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.tcg_type_master s "
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.type_master s "
         "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))

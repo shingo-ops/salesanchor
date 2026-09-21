@@ -126,7 +126,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
         masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
-        masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
+        masters["type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
             session,

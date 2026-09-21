@@ -165,9 +165,9 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     work_code と同様に public スキーマから引く。
     """
     maps: dict[str, dict[str, str]] = {}
-    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    # work_code → public.type_master (SSOT, INTEGER PK)
     work_result = await db.execute(
-        text("SELECT code, id FROM public.tcg_type_master WHERE is_active = TRUE")
+        text("SELECT code, id FROM public.type_master WHERE is_active = TRUE")
     )
     maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():

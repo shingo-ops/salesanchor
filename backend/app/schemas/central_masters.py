@@ -109,8 +109,8 @@ class SupplierAliasResponse(SupplierAliasBase):
 # tcg_series_master
 # ============================================================================
 
-# ADR-083: TCG 種別は public.tcg_type_master で管理（固定リスト廃止）。
-# tcg_type の値検証は DB 側（tcg_type_master）に委ねる。code は安定キーのため不変。
+# ADR-083: TCG 種別は public.type_master で管理（固定リスト廃止）。
+# tcg_type の値検証は DB 側（type_master）に委ねる。code は安定キーのため不変。
 
 
 class TcgTypeBase(BaseModel):
