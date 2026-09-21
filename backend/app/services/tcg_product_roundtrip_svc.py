@@ -20,7 +20,16 @@ MAX_BYTES = 2 * 1024 * 1024
 WORDS = {"search_keywords": "product_search_keywords", "exclude_keywords": "product_exclude_keywords"}
 # Phase 3 SSOT: these lookup tables moved to public schema (INTEGER PK).
 # Keys match the LOOKUP_TABLES keys whose backing table is now in public.
-_PUBLIC_LOOKUP_TABLES: set[str] = {"product_category_code"}
+# ADR-156 Phase 3A: division_code → public.product_kinds (INTEGER PK)
+_PUBLIC_LOOKUP_TABLES: set[str] = {"product_category_code", "division_code"}
+# ADR-156 Phase 3A: roundtrip snapshot JOINs use public.product_kinds (INTEGER PK)
+# instead of tenant.tcg_major_categories (UUID PK) for division_code.
+# LOOKUP_TABLES from import_svc still maps division_code→tcg_major_categories for the
+# tenant-schema CSV lookup path; here we override for the snapshot SELECT JOINs only.
+_ROUNDTRIP_LOOKUP_TABLES: dict[str, str] = {
+    **LOOKUP_TABLES,
+    "division_code": "product_kinds",
+}
 
 
 class RoundtripError(ValueError):
@@ -101,10 +110,9 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     # work_code → public.type_master (SSOT, INTEGER PK)
     joins.append("LEFT JOIN public.type_master work ON work.id=p.work_id")
     references.append("'work_code', work.code")
-    for field, table in LOOKUP_TABLES.items():
+    for field, table in _ROUNDTRIP_LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
-        # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK);
-        # public.products.product_category_id is now INTEGER.
+        # Phase 3 SSOT: tcg_product_categories + division_code moved to public (INTEGER PK).
         schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
         joins.append(f"LEFT JOIN {schema_prefix}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
         references.append(f"'{field}', {alias}.code")
@@ -191,8 +199,8 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     # work_code → public.type_master (SSOT, INTEGER PK)
     work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.type_master r WHERE r.is_active=TRUE"))
     references["work_code"] = {row[0]["code"]: row[0] for row in work_result.fetchall()}
-    for field, table in LOOKUP_TABLES.items():
-        # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
+    for field, table in _ROUNDTRIP_LOOKUP_TABLES.items():
+        # Phase 3 SSOT: tcg_product_categories + division_code moved to public (INTEGER PK).
         schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
         result = await db.execute(text(f"SELECT to_jsonb(r) FROM {schema_prefix}.{table} r WHERE r.is_active=TRUE"))
         references[field] = {row[0]["code"]: row[0] for row in result.fetchall()}
@@ -297,7 +305,9 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
             )
         )
         await db.execute(
-            text(f"LOCK TABLE {', '.join(f'{TCG_SCHEMA}.{table}' for table in LOOKUP_TABLES.values())} IN SHARE MODE")
+            text(
+                f"LOCK TABLE {', '.join(('public' if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA) + '.' + table for field, table in _ROUNDTRIP_LOOKUP_TABLES.items())} IN SHARE MODE"
+            )
         )
         prior = await db.execute(
             text(f"SELECT id FROM {TCG_SCHEMA}.tcg_product_import_jobs WHERE raw_sha256=:digest"),
@@ -330,7 +340,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 for field in plan["sets"]:
                     cast = (
                         f"CAST(:{field} AS INTEGER)"
-                        if field in ("work_id", "product_category_id")
+                        if field in ("work_id", "product_category_id", "product_kind_id")
                         else f"CAST(:{field} AS uuid)"
                         if field in LOOKUP_ARGS.values()
                         else f"CAST(:{field} AS date)"
