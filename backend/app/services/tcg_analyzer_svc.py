@@ -884,9 +884,9 @@ def load_normalization_rules(session: Session) -> dict[str, list[dict]]:
     try:
         rows = session.execute(
             text(
-                """
+                f"""
                 SELECT field, rule_type, from_val, to_val, priority
-                FROM public.tcg_normalization_rules
+                FROM {TCG_SCHEMA}.tcg_normalization_rules
                 WHERE enabled = TRUE ORDER BY field, priority ASC
                 """
             )

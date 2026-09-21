@@ -16,25 +16,25 @@ TCG_SCHEMA = "public"
 
 
 def _scope_ctes() -> str:
-    return """
+    return f"""
         job AS (
-            SELECT id, review_status, messages_linked_at FROM public.import_jobs
+            SELECT id, review_status, messages_linked_at FROM {TCG_SCHEMA}.import_jobs
             WHERE id = :job_id
         ), messages AS (
-            SELECT sm.*, l.relation_kind FROM public.import_job_messages l
+            SELECT sm.*, l.relation_kind FROM {TCG_SCHEMA}.import_job_messages l
             JOIN job ON job.id = l.import_job_id
-            JOIN public.source_messages sm ON sm.id = l.source_message_id
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = l.source_message_id
         ), jobs AS (
-            SELECT ej.* FROM public.extraction_jobs ej
+            SELECT ej.* FROM {TCG_SCHEMA}.extraction_jobs ej
             WHERE ej.source_message_id IN (SELECT id FROM messages)
         ), items AS (
             SELECT ei.*, ej.status AS extraction_status, ej.source_message_id,
                    ar.id AS analysis_result_id, ar.note_ja, ar.needs_review,
                    ar.review_reasons, ar.status AS analysis_status, ar.exclusion,
                    ar.quantity_normalized, ar.price_normalized
-            FROM public.extraction_items ei
+            FROM {TCG_SCHEMA}.extraction_items ei
             JOIN jobs ej ON ej.id = ei.extraction_job_id
-            LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+            LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
         )
     """
 
@@ -121,12 +121,12 @@ async def read_items(db: AsyncSession, job_id: str, limit: int, offset: int, fil
         ), ordered AS (
             SELECT ei.id, row_number() OVER (ORDER BY {result_order_sql()}) AS sort_ordinal
             FROM filtered f
-            JOIN public.extraction_items ei ON ei.id = f.id
+            JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = f.id
             JOIN jobs ej ON ej.id = ei.extraction_job_id
             JOIN messages sm ON sm.id = ej.source_message_id
-            LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+            LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
             LEFT JOIN public.products p ON p.id = ar.product_id
-            {review_joins(schema="public")}
+            {review_joins(schema=TCG_SCHEMA)}
         ), page AS (
             SELECT f.id, f.extraction_job_id, f.source_message_id, f.extraction_status,
                    f.analysis_result_id, f.raw_product_name, f.raw_quantity, f.raw_price, f.raw_unit,
@@ -159,7 +159,7 @@ async def read_messages(db: AsyncSession, job_id: str, limit: int, offset: int) 
         WITH {_scope_ctes()}, page AS (
           SELECT m.id::text, m.raw_text, m.received_at, m.created_at, m.is_active,
                  m.relation_kind, ps.name AS supplier_name
-          FROM messages m LEFT JOIN public.supplier_channels sc ON sc.id=m.supplier_channel_id
+          FROM messages m LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id
           LEFT JOIN public.suppliers ps ON ps.id=sc.supplier_id
           ORDER BY m.created_at, m.id LIMIT :limit OFFSET :offset
         ) SELECT jsonb_build_object('as_of', statement_timestamp(), 'review_status', job.review_status,
@@ -180,10 +180,10 @@ async def read_extraction_jobs(db: AsyncSession, job_id: str, limit: int, offset
     result = await db.execute(text(f"""
         WITH {_scope_ctes()}, filtered AS (SELECT * FROM jobs WHERE :filter_by='all' OR status='error'), page AS (
           SELECT j.id::text, j.source_message_id::text, j.status, j.created_at, j.extracted_at, m.raw_text,
-                 ps.name AS supplier_name, (SELECT count(*) FROM public.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
+                 ps.name AS supplier_name, (SELECT count(*) FROM {TCG_SCHEMA}.extraction_items ei WHERE ei.extraction_job_id=j.id) AS item_count,
                  CASE WHEN j.status='error' THEN 'unclassified' ELSE NULL END AS error_reason_code
           FROM filtered j JOIN messages m ON m.id=j.source_message_id
-          LEFT JOIN public.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN public.suppliers ps ON ps.id=sc.supplier_id
+          LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=m.supplier_channel_id LEFT JOIN public.suppliers ps ON ps.id=sc.supplier_id
           ORDER BY j.created_at,j.id LIMIT :limit OFFSET :offset
         ) SELECT jsonb_build_object('as_of',statement_timestamp(),'review_status',job.review_status,'linked',job.messages_linked_at IS NOT NULL,
           'total',(SELECT count(*) FROM filtered),'jobs',COALESCE((SELECT jsonb_agg(to_jsonb(page) ORDER BY created_at,id) FROM page),'[]'::jsonb)) FROM job

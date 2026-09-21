@@ -233,8 +233,8 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             item_id = item["extraction_item_id"]
             session.execute(
                 text(
-                    """
-                    INSERT INTO public.extraction_items (
+                    f"""
+                    INSERT INTO {TCG_SCHEMA}.extraction_items (
                         id, extraction_job_id,
                         line_start, line_end,
                         raw_product_name, raw_quantity, raw_price,
