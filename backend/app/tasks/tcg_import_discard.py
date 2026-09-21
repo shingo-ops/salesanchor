@@ -41,7 +41,7 @@ def discard_stale_pending_jobs() -> dict:
     with Session() as db:
         result = db.execute(
             text(
-                f"""
+                """
                 UPDATE public.import_jobs
                 SET review_status    = 'discarded',
                     pending_messages = NULL

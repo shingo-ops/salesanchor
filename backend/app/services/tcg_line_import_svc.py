@@ -343,7 +343,7 @@ async def _write_source_messages(
         # supplier_channel の取得（channel='line', sp_code に対応する channel）
         channel_row = await db.execute(
             text(
-                f"""
+                """
                 SELECT sc.id
                 FROM public.supplier_channels sc
                 JOIN public.suppliers ps ON ps.id = sc.supplier_id
@@ -366,7 +366,7 @@ async def _write_source_messages(
         # Legacy rows have no proven posting timestamp and must not be inferred.
         posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
         reused = await db.execute(
-            text(f"""
+            text("""
                 SELECT id FROM public.source_messages
                 WHERE supplier_channel_id = :scid AND line_posted_at = :posted_at
                   AND raw_sha256 = :sha256 AND raw_text = :body
@@ -383,7 +383,7 @@ async def _write_source_messages(
 
         existing_active = await db.execute(
             text(
-                f"""
+                """
                 SELECT id FROM public.source_messages
                 WHERE supplier_channel_id = :scid AND is_active = TRUE
                 """
@@ -403,7 +403,7 @@ async def _write_source_messages(
 
         await db.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.source_messages
                   (id, supplier_channel_id, raw_text, raw_sha256,
                    received_at, superseded_by, is_active, created_at, line_posted_at)
@@ -426,7 +426,7 @@ async def _write_source_messages(
             old_id = old_rec[0]
             await db.execute(
                 text(
-                    f"""
+                    """
                     UPDATE public.source_messages
                     SET superseded_by = :new_id, is_active = FALSE
                     WHERE id = :old_id
@@ -438,7 +438,7 @@ async def _write_source_messages(
         new_ej_id = uuid.uuid4()
         await db.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.extraction_jobs
                   (id, source_message_id, status, prompt_version, created_at)
                 VALUES
@@ -461,7 +461,7 @@ async def _write_source_messages(
 
 async def _link_message(db: AsyncSession, job_id: str, message_id: str, kind: str) -> None:
     await db.execute(
-        text(f"""
+        text("""
             INSERT INTO public.import_job_messages
                 (import_job_id, source_message_id, relation_kind)
             VALUES (:job_id, :message_id, :kind)
@@ -526,7 +526,7 @@ async def import_line_export(
     )
 
     existing_row = await db.execute(
-        text(f"SELECT id, status, review_status FROM public.import_jobs WHERE raw_sha256 = :sha256"),
+        text("SELECT id, status, review_status FROM public.import_jobs WHERE raw_sha256 = :sha256"),
         {"sha256": file_sha256},
     )
     existing = existing_row.fetchone()
@@ -599,7 +599,7 @@ async def import_line_export(
             new_sc_id = uuid.uuid4()
             await db.execute(
                 text(
-                    f"""
+                    """
                     INSERT INTO public.supplier_channels
                       (id, supplier_id, channel, is_active)
                     VALUES
@@ -634,7 +634,7 @@ async def import_line_export(
 
     await db.execute(
         text(
-            f"""
+            """
             INSERT INTO public.import_jobs
               (id, filename, raw_sha256, message_count, provider_count,
                unresolved_count, uploaded_by, status, review_status, created_at,
@@ -659,7 +659,7 @@ async def import_line_export(
 
     enqueued_ids = await _write_source_messages(db, provider_entries, str(import_job_id))
     await db.execute(
-        text(f"UPDATE public.import_jobs SET messages_linked_at = now() WHERE id = :id"),
+        text("UPDATE public.import_jobs SET messages_linked_at = now() WHERE id = :id"),
         {"id": str(import_job_id)},
     )
     await db.commit()

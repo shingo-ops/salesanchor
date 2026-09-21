@@ -102,7 +102,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
 
 
 def work_schema_ready(session: Session) -> bool:
-    count = session.execute(text(f"""
+    count = session.execute(text("""
         SELECT count(*) FROM pg_attribute
         WHERE NOT attisdropped AND (
             (attrelid = 'public.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
@@ -118,7 +118,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     # --- 1. pending job を取得 ---
     row = session.execute(
         text(
-            f"""
+            """
             SELECT ej.id, sm.raw_text
             FROM public.extraction_jobs ej
             JOIN public.source_messages sm ON sm.id = ej.source_message_id
@@ -155,7 +155,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if len(raw_text.strip()) == 0:
         session.execute(
             text(
-                f"UPDATE public.extraction_jobs "
+                "UPDATE public.extraction_jobs "
                 "SET status = 'empty', extracted_at = NOW(), error_message = NULL "
                 "WHERE id = :ej_id"
             ),
@@ -230,7 +230,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             item_id = item["extraction_item_id"]
             session.execute(
                 text(
-                    f"""
+                    """
                     INSERT INTO public.extraction_items (
                         id, extraction_job_id,
                         line_start, line_end,
@@ -276,7 +276,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     now = datetime.now(timezone.utc)
     session.execute(
         text(
-            f"""
+            """
             UPDATE public.extraction_jobs
             SET status         = :status,
                 extracted_at   = :extracted_at,

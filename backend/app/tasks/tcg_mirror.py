@@ -163,7 +163,7 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             ps.supplier_code AS code,
             ps.name,
@@ -183,7 +183,7 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             ps.supplier_code AS code,
             ps.name,

@@ -35,7 +35,7 @@ def bounded(value: str, code: str) -> int:
 
 def schema_ready(session) -> bool:
     return session.execute(text("SELECT to_regclass(:name) IS NOT NULL"),
-                           {"name": f"public.extraction_attempts"}).scalar_one()
+                           {"name": "public.extraction_attempts"}).scalar_one()
 
 
 def limits(session) -> None:
@@ -62,7 +62,7 @@ class AttemptRecorder:
         s = self.session
         try:
             limits(s)
-            claimed = s.execute(text(f"""
+            claimed = s.execute(text("""
                 UPDATE public.extraction_jobs SET status='running',
                     work_reference_snapshot=CAST(:reference AS JSONB),work_reference_sha256=:sha
                 WHERE id=:job AND source_message_id=:source AND status='pending'
@@ -71,10 +71,10 @@ class AttemptRecorder:
                      "reference": encoded(self.reference), "sha": digest(encoded(self.reference))}).scalar_one_or_none()
             if claimed is None:
                 raise RecordError("CLAIM_CONFLICT")
-            parent = s.execute(text(f"""SELECT id FROM public.extraction_attempts
+            parent = s.execute(text("""SELECT id FROM public.extraction_attempts
                 WHERE extraction_job_id=:job ORDER BY started_at DESC,id DESC LIMIT 1
             """), {"job": self.job_id}).scalar_one_or_none()
-            s.execute(text(f"""INSERT INTO public.extraction_attempts
+            s.execute(text("""INSERT INTO public.extraction_attempts
                 (id,extraction_job_id,source_message_id,parent_attempt_id,input_payload,input_sha256,
                  input_bytes,requested_model,prompt_version)
                 VALUES (:id,:job,:source,:parent,CAST(:body AS JSONB),:sha,:size,:model,:version)
@@ -95,10 +95,10 @@ class AttemptRecorder:
         """Lock the job first, matching claim ordering. A newer child fences this attempt."""
         s = self.session
         limits(s)
-        job = s.execute(text(f"""SELECT status FROM public.extraction_jobs
+        job = s.execute(text("""SELECT status FROM public.extraction_jobs
             WHERE id=:job AND source_message_id=:source FOR UPDATE
         """), {"job": self.job_id, "source": self.source_id}).scalar_one_or_none()
-        row = s.execute(text(f"""SELECT phase FROM public.extraction_attempts a
+        row = s.execute(text("""SELECT phase FROM public.extraction_attempts a
             WHERE a.id=:id AND a.extraction_job_id=:job
             AND NOT EXISTS (SELECT 1 FROM public.extraction_attempts child
                 WHERE child.parent_attempt_id=a.id)
@@ -114,7 +114,7 @@ class AttemptRecorder:
         oversized = size > MAX_BYTES
         try:
             self._owned()
-            s.execute(text(f"""UPDATE public.extraction_attempts SET phase='received',
+            s.execute(text("""UPDATE public.extraction_attempts SET phase='received',
                 response_text=:body,response_bytes=:size,response_sha256=:sha,
                 response_received_at=clock_timestamp() WHERE id=:id AND phase='started'
                 RETURNING id
@@ -151,9 +151,9 @@ class AttemptRecorder:
         """Do not commit here: caller commits items, job and this row together."""
         body = encoded(items)
         size = self._parsed_size(body)
-        self.session.execute(text(f"""UPDATE public.extraction_attempts
+        self.session.execute(text("""UPDATE public.extraction_attempts
             SET phase='completed',finished_at=clock_timestamp(),parsed_items=CAST(:items AS JSONB),
-                parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb
+                parsed_bytes=:size,item_count=:count,validation_result='{"status":"passed"}'::jsonb
             WHERE id=:id AND phase='received' AND response_text IS NOT NULL
             RETURNING id
         """), {"id": self.id, "items": body, "size": size, "count": len(items)}).scalar_one()
@@ -164,14 +164,14 @@ class AttemptRecorder:
         try:
             s.rollback()
             if self._owned(required=False):
-                s.execute(text(f"""UPDATE public.extraction_attempts SET phase='failed',
+                s.execute(text("""UPDATE public.extraction_attempts SET phase='failed',
                     finished_at=clock_timestamp(),error_code=:code,
                     parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
                     validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
                     WHERE id=:id
                 """), {"id": self.id, "code": code,
                          "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
-                s.execute(text(f"""UPDATE public.extraction_jobs SET status='error',
+                s.execute(text("""UPDATE public.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})
                 s.commit()
@@ -187,7 +187,7 @@ async def read_attempts(db, job_id: str, *, attempt_id: str | None = None,
     """Only called by the super-admin router; schema never comes from a request."""
     if not 1 <= limit <= 100 or offset < 0:
         raise HTTPException(status_code=422, detail="Invalid pagination")
-    job = (await db.execute(text(f"SELECT id FROM public.extraction_jobs WHERE id=:job"),
+    job = (await db.execute(text("SELECT id FROM public.extraction_jobs WHERE id=:job"),
                             {"job": job_id})).scalar_one_or_none()
     if job is None:
         raise HTTPException(status_code=404, detail="Extraction job not found")

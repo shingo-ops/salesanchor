@@ -167,7 +167,7 @@ async def build_parallel_report(db: AsyncSession) -> dict:
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT
                     ps.supplier_code AS sp_code,
                     ps.name AS supplier_name,

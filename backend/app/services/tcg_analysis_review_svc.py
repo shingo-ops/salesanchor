@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
+
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数
 # ---------------------------------------------------------------------------

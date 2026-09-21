@@ -12,7 +12,7 @@ from app.services.tcg_result_order import result_order_sql
 
 
 def _scope_ctes() -> str:
-    return f"""
+    return """
         job AS (
             SELECT id, review_status, messages_linked_at FROM public.import_jobs
             WHERE id = :job_id

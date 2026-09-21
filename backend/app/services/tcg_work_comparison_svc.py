@@ -114,13 +114,13 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
             raise ComparisonError("SESSION_NOT_FRESH")
         session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
         params = {"iid": import_id}
-        imports = _records(session, f"SELECT to_jsonb(j) FROM public.import_jobs j WHERE id=:iid", params)
+        imports = _records(session, "SELECT to_jsonb(j) FROM public.import_jobs j WHERE id=:iid", params)
         if len(imports) != 1 or imports[0]["review_status"] != "ok" or imports[0]["unresolved_count"] != 0:
             raise ComparisonError("IMPORT_NOT_CONFIRMED")
-        links = _records(session, f"SELECT to_jsonb(m) FROM public.import_job_messages m WHERE import_job_id=:iid", params)
-        sources = _records(session, f"SELECT to_jsonb(s) FROM public.source_messages s JOIN public.import_job_messages m ON m.source_message_id=s.id WHERE m.import_job_id=:iid", params)
-        jobs = _records(session, f"SELECT to_jsonb(j) FROM public.extraction_jobs j JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid", params)
-        join = f"JOIN public.extraction_jobs j ON j.id=i.extraction_job_id JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid"
+        links = _records(session, "SELECT to_jsonb(m) FROM public.import_job_messages m WHERE import_job_id=:iid", params)
+        sources = _records(session, "SELECT to_jsonb(s) FROM public.source_messages s JOIN public.import_job_messages m ON m.source_message_id=s.id WHERE m.import_job_id=:iid", params)
+        jobs = _records(session, "SELECT to_jsonb(j) FROM public.extraction_jobs j JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid", params)
+        join = "JOIN public.extraction_jobs j ON j.id=i.extraction_job_id JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid"
         items = _records(session, f"SELECT to_jsonb(i) FROM public.extraction_items i {join}", params)
         analyses = _records(session, f"SELECT to_jsonb(a) FROM public.analysis_results a JOIN public.extraction_items i ON i.id=a.extraction_item_id {join}", params)
         corrections = _records(session, f"SELECT to_jsonb(c) FROM public.item_corrections c JOIN public.extraction_items i ON i.id=c.extraction_item_id {join}", params)

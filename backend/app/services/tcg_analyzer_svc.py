@@ -880,7 +880,7 @@ def load_normalization_rules(session: Session) -> dict[str, list[dict]]:
     try:
         rows = session.execute(
             text(
-                f"""
+                """
                 SELECT field, rule_type, from_val, to_val, priority
                 FROM public.tcg_normalization_rules
                 WHERE enabled = TRUE ORDER BY field, priority ASC
@@ -1176,7 +1176,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     status_entries = load_status_master(session)
 
     # to_jsonb keeps old 7/9-column fixtures and saved jobs readable.
-    metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM public.extraction_jobs ej WHERE id=:id"),
+    metadata = session.execute(text("SELECT to_jsonb(ej) FROM public.extraction_jobs ej WHERE id=:id"),
                                {"id": extraction_job_id}).scalar_one_or_none()
     work_decisions: dict[str, str | None] | None = None
     if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
@@ -1186,7 +1186,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             raise ValueError("Work reference is missing or corrupted")
         if reference_digest(load_work_reference(session, "public")) != digest:
             raise ValueError("Work reference changed; re-extraction required")
-        decisions = session.execute(text(f"""
+        decisions = session.execute(text("""
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
             FROM public.extraction_items ei WHERE extraction_job_id=:id
         """), {"id": extraction_job_id}).fetchall()
@@ -1197,7 +1197,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ei.id, ei.raw_product_name, ei.raw_quantity, ei.raw_price,
                    ei.raw_unit, ei.raw_state, ei.raw_memo,
                    ei.raw_work_name, ei.raw_work_source_line_span,
@@ -1242,17 +1242,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         ) = row
 
         stats["total"] += 1
-        session.execute(text(f"SELECT id FROM public.analysis_results "
+        session.execute(text("SELECT id FROM public.analysis_results "
             "WHERE extraction_item_id=CAST(:eid AS uuid) FOR UPDATE"), {"eid": str(item_id)})
         # A product correction may have committed after the initial extraction read.
-        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM public.item_corrections "
+        has_product_correction = session.execute(text("SELECT EXISTS (SELECT 1 FROM public.item_corrections "
             "WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='product_id')"),
             {"eid": str(item_id)}).scalar_one()
         if has_product_correction:
             stats["skipped_product_corrections"] += 1
             effective = reanalysis_condition(session, str(item_id), schema="public", source_hash=source_hash)
             if effective:
-                session.execute(text(f"""UPDATE public.analysis_results SET
+                session.execute(text("""UPDATE public.analysis_results SET
                     condition_id=:condition_id, condition_canonical=:canonical,
                     condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
                     updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
@@ -1368,7 +1368,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         # analysis_results を UPSERT (extraction_item_id に UNIQUE 制約あり)
         session.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.analysis_results (
                     id,
                     extraction_item_id,

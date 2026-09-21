@@ -51,19 +51,19 @@ _QUERIES: dict[str, str] = {
         HAVING COUNT(*) BETWEEN 2 AND 9999
         ORDER BY cnt DESC
     """,
-    "supplier-channels": f"""
+    "supplier-channels": """
         SELECT ps.supplier_code AS supplier_code, ps.name AS supplier_name, COUNT(sc.id) AS channel_count
         FROM public.supplier_channels sc
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         GROUP BY ps.supplier_code, ps.name
         ORDER BY ps.supplier_code
     """,
-    "orphan-messages": f"""
+    "orphan-messages": """
         SELECT COUNT(*) AS null_channel_count
         FROM public.source_messages
         WHERE supplier_channel_id IS NULL
     """,
-    "extraction-errors": f"""
+    "extraction-errors": """
         SELECT ej.id,
                ej.source_message_id,
                ej.error_message,
@@ -74,7 +74,7 @@ _QUERIES: dict[str, str] = {
         ORDER BY ej.created_at DESC
         LIMIT 100
     """,
-    "extraction-pending": f"""
+    "extraction-pending": """
         SELECT ej.id,
                ej.source_message_id,
                ej.created_at
@@ -83,7 +83,7 @@ _QUERIES: dict[str, str] = {
         ORDER BY ej.created_at ASC
         LIMIT 100
     """,
-    "extraction-running-stale": f"""
+    "extraction-running-stale": """
         SELECT ej.id,
                ej.source_message_id,
                ej.created_at,
@@ -93,7 +93,7 @@ _QUERIES: dict[str, str] = {
           AND ej.created_at < NOW() - INTERVAL '10 minutes'
         ORDER BY ej.created_at ASC
     """,
-    "analysis-missing": f"""
+    "analysis-missing": """
         SELECT ej.id AS extraction_job_id,
                ej.source_message_id,
                COUNT(ei.id) AS item_count,
@@ -207,10 +207,10 @@ async def retry_extraction(
     if error_ids:
         await db.execute(
             text(
-                f"UPDATE public.extraction_jobs"
-                f" SET status = 'pending'"
-                f" WHERE id = ANY(:ids)"
-                f" AND status = 'error'"
+                "UPDATE public.extraction_jobs"
+                " SET status = 'pending'"
+                " WHERE id = ANY(:ids)"
+                " AND status = 'error'"
             ),
             {"ids": error_ids},
         )

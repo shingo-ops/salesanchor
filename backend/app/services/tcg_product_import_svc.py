@@ -400,9 +400,9 @@ async def start_job(
     """取り込み1回ぶんの親を作る。同じ指紋のファイルは一意索引が弾く。"""
     result = await db.execute(
         text(
-            f"INSERT INTO public.tcg_product_import_jobs "
-            f"(filename, raw_sha256, total_rows, executed_by, status) "
-            f"VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
+            "INSERT INTO public.tcg_product_import_jobs "
+            "(filename, raw_sha256, total_rows, executed_by, status) "
+            "VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
         ),
         {"filename": filename, "digest": digest, "total": total, "who": executed_by},
     )
@@ -418,9 +418,9 @@ async def record_row(
     """CSV の1行ぶんの結果を残す。"""
     await db.execute(
         text(
-            f"INSERT INTO public.tcg_product_import_rows "
-            f"(job_id, row_no, japanese_title, mark, result, product_code, messages) "
-            f"VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
+            "INSERT INTO public.tcg_product_import_rows "
+            "(job_id, row_no, japanese_title, mark, result, product_code, messages) "
+            "VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
         ),
         {
             "job": job_id,
@@ -442,9 +442,9 @@ async def finish_job(
     """取り込み1回ぶんの親を締める。"""
     await db.execute(
         text(
-            f"UPDATE public.tcg_product_import_jobs "
-            f"SET created_rows = :created, skipped_rows = :skipped, "
-            f"status = :status, completed_at = NOW() WHERE id = :job"
+            "UPDATE public.tcg_product_import_jobs "
+            "SET created_rows = :created, skipped_rows = :skipped, "
+            "status = :status, completed_at = NOW() WHERE id = :job"
         ),
         {"created": created, "skipped": skipped, "status": status, "job": job_id},
     )

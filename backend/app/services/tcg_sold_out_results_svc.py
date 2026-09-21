@@ -23,7 +23,7 @@ async def fetch_sold_out_results(
 ) -> dict[str, Any]:
     """One statement supplies integrity, count, timestamp and the ordered page."""
     search = (q or "").strip()
-    statement = text(f"""
+    statement = text("""
         WITH joined AS (
             SELECT ar.id AS analysis_result_id, ei.id AS extraction_item_id,
                 sm.id AS source_message_id, ps.id AS supplier_id, p.id AS product_id,

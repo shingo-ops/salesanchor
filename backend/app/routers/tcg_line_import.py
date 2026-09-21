@@ -211,7 +211,7 @@ async def list_pending_jobs(
     """review_status='pending_review' のジョブを created_at 降順で最大 100 件返す。"""
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT id, filename, message_count, unresolved_count,
                    unresolved_names,
                    window_start,
@@ -259,7 +259,7 @@ async def list_import_history(
     """import_jobs を created_at 降順で最大 200 件返す。"""
     rows = await db.execute(
         text(
-            f"""
+            """
             SELECT id, filename, raw_sha256, message_count, provider_count,
                    unresolved_count, uploaded_by, status, review_status,
                    created_at
@@ -303,7 +303,7 @@ async def get_latest_unresolved(
     """
     row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, unresolved_count, unresolved_names
             FROM public.import_jobs
             ORDER BY created_at DESC
@@ -345,7 +345,7 @@ async def get_pending_job(
     """
     row = await db.execute(
         text(
-            f"""
+            """
             SELECT id, filename, message_count, unresolved_count,
                    unresolved_names,
                    window_start,
@@ -409,7 +409,7 @@ async def resolve_supplier(
     # ジョブ取得
     job_row = await db.execute(
         text(
-            f"""
+            """
             SELECT review_status, unresolved_names
             FROM public.import_jobs
             WHERE id = :job_id
@@ -504,7 +504,7 @@ async def resolve_supplier(
         new_sc_id = uuid.uuid4()
         await db.execute(
             text(
-                f"""
+                """
                 INSERT INTO public.supplier_channels
                   (id, supplier_id, channel, is_active)
                 VALUES
@@ -524,7 +524,7 @@ async def resolve_supplier(
     remaining = [n for n in current_names if n != body.display_name]
     await db.execute(
         text(
-            f"""
+            """
             UPDATE public.import_jobs
             SET unresolved_names = :names, unresolved_count = :cnt
             WHERE id = :job_id
@@ -565,7 +565,7 @@ async def commit_pending_job(
     # ジョブ取得
     job_row = await db.execute(
         text(
-            f"""
+            """
             SELECT review_status, pending_messages, window_start, window_end
             FROM public.import_jobs
             WHERE id = :job_id
@@ -620,7 +620,7 @@ async def commit_pending_job(
     # import_jobs を更新
     await db.execute(
         text(
-            f"""
+            """
             UPDATE public.import_jobs
             SET review_status = 'ok',
                 provider_count = :prov_count,

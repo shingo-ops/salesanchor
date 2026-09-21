@@ -10,7 +10,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-
 async def get_pipeline_summary(db: AsyncSession) -> dict:
     """
     パイプライン全体のサマリーを返す。
@@ -19,7 +18,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     """
     # 1. extraction_jobs ステータス別件数
     rows_by_status = (
-        await db.execute(text(f"SELECT status, COUNT(*) AS cnt FROM public.extraction_jobs GROUP BY status"))
+        await db.execute(text("SELECT status, COUNT(*) AS cnt FROM public.extraction_jobs GROUP BY status"))
     ).fetchall()
 
     by_status: dict[str, int] = {}
@@ -35,10 +34,10 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         (
             await db.execute(
                 text(
-                    f"SELECT COUNT(*)"
-                    f" FROM public.extraction_jobs"
-                    f" WHERE status = 'running'"
-                    f" AND created_at < NOW() - INTERVAL '10 minutes'"
+                    "SELECT COUNT(*)"
+                    " FROM public.extraction_jobs"
+                    " WHERE status = 'running'"
+                    " AND created_at < NOW() - INTERVAL '10 minutes'"
                 )
             )
         ).scalar()
@@ -49,12 +48,12 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     ar_row = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved_count,"
-                f"  SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved_count,"
-                f"  SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review_count"
-                f" FROM public.analysis_results"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved_count,"
+                "  SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved_count,"
+                "  SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review_count"
+                " FROM public.analysis_results"
             )
         )
     ).fetchone()
@@ -73,14 +72,14 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         (
             await db.execute(
                 text(
-                    f"SELECT COUNT(DISTINCT ej.id)"
-                    f" FROM public.extraction_jobs ej"
-                    f" JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id"
-                    f" WHERE ej.status = 'done'"
-                    f" AND NOT EXISTS ("
-                    f"   SELECT 1 FROM public.analysis_results ar"
-                    f"   WHERE ar.extraction_item_id = ei.id"
-                    f" )"
+                    "SELECT COUNT(DISTINCT ej.id)"
+                    " FROM public.extraction_jobs ej"
+                    " JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id"
+                    " WHERE ej.status = 'done'"
+                    " AND NOT EXISTS ("
+                    "   SELECT 1 FROM public.analysis_results ar"
+                    "   WHERE ar.extraction_item_id = ei.id"
+                    " )"
                 )
             )
         ).scalar()
@@ -91,12 +90,12 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     reason_rows = (
         await db.execute(
             text(
-                f"SELECT unnest(string_to_array(review_reasons, ',')) AS reason,"
-                f"       COUNT(*) AS cnt"
-                f" FROM public.analysis_results"
-                f" WHERE needs_review = TRUE AND review_reasons IS NOT NULL"
-                f" GROUP BY reason"
-                f" ORDER BY cnt DESC"
+                "SELECT unnest(string_to_array(review_reasons, ',')) AS reason,"
+                "       COUNT(*) AS cnt"
+                " FROM public.analysis_results"
+                " WHERE needs_review = TRUE AND review_reasons IS NOT NULL"
+                " GROUP BY reason"
+                " ORDER BY cnt DESC"
             )
         )
     ).fetchall()
@@ -107,17 +106,17 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     attempt_row = (
         await db.execute(
             text(
-                f"SELECT requested_model, prompt_version"
-                f" FROM public.extraction_attempts"
-                f" ORDER BY started_at DESC"
-                f" LIMIT 1"
+                "SELECT requested_model, prompt_version"
+                " FROM public.extraction_attempts"
+                " ORDER BY started_at DESC"
+                " LIMIT 1"
             )
         )
     ).fetchone()
 
     engine_version_row = (
         await db.execute(
-            text(f"SELECT engine_version FROM public.analysis_results ORDER BY computed_at DESC LIMIT 1")
+            text("SELECT engine_version FROM public.analysis_results ORDER BY computed_at DESC LIMIT 1")
         )
     ).fetchone()
 
@@ -131,11 +130,11 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     error_rows = (
         await db.execute(
             text(
-                f"SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version"
-                f" FROM public.extraction_jobs ej"
-                f" WHERE ej.status = 'error'"
-                f" ORDER BY ej.created_at DESC"
-                f" LIMIT 10"
+                "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version"
+                " FROM public.extraction_jobs ej"
+                " WHERE ej.status = 'error'"
+                " ORDER BY ej.created_at DESC"
+                " LIMIT 10"
             )
         )
     ).fetchall()
@@ -248,14 +247,14 @@ async def get_import_summary(db: AsyncSession) -> dict:
     ij_rows = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,"
-                f"  SUM(CASE WHEN review_status = 'pending_review' THEN 1 ELSE 0 END) AS pending_review_count,"
-                f"  SUM(message_count) AS total_messages,"
-                f"  SUM(unresolved_count) AS total_unresolved,"
-                f"  MAX(created_at) AS latest_import_at"
-                f" FROM public.import_jobs"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,"
+                "  SUM(CASE WHEN review_status = 'pending_review' THEN 1 ELSE 0 END) AS pending_review_count,"
+                "  SUM(message_count) AS total_messages,"
+                "  SUM(unresolved_count) AS total_unresolved,"
+                "  MAX(created_at) AS latest_import_at"
+                " FROM public.import_jobs"
             )
         )
     ).fetchone()
@@ -269,11 +268,11 @@ async def get_import_summary(db: AsyncSession) -> dict:
     sm_row = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
-                f"  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
-                f" FROM public.source_messages"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
+                "  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
+                " FROM public.source_messages"
             )
         )
     ).fetchone()
@@ -285,10 +284,10 @@ async def get_import_summary(db: AsyncSession) -> dict:
     recent_rows = (
         await db.execute(
             text(
-                f"SELECT id, filename, message_count, unresolved_count, review_status, created_at"
-                f" FROM public.import_jobs"
-                f" ORDER BY created_at DESC"
-                f" LIMIT 10"
+                "SELECT id, filename, message_count, unresolved_count, review_status, created_at"
+                " FROM public.import_jobs"
+                " ORDER BY created_at DESC"
+                " LIMIT 10"
             )
         )
     ).fetchall()
@@ -357,9 +356,9 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
     target_rows = (
         await db.execute(
             text(
-                f"SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
-                f" FROM public.tcg_distribution_targets"
-                f" ORDER BY name"
+                "SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
+                " FROM public.tcg_distribution_targets"
+                " ORDER BY name"
             )
         )
     ).fetchall()
@@ -383,9 +382,9 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
     setting_rows = (
         await db.execute(
             text(
-                f"SELECT key, value, note"
-                f" FROM public.tcg_distribution_settings"
-                f" ORDER BY key"
+                "SELECT key, value, note"
+                " FROM public.tcg_distribution_settings"
+                " ORDER BY key"
             )
         )
     ).fetchall()

@@ -35,6 +35,7 @@ logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
+
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
@@ -171,7 +172,7 @@ async def verify_spreadsheet_access(spreadsheet_id: str) -> dict:
 async def load_distribution_settings(db: AsyncSession) -> dict[str, str]:
     """tcg_distribution_settings から全設定を取得する。"""
     result = await db.execute(
-        text(f"SELECT key, value FROM public.tcg_distribution_settings")
+        text("SELECT key, value FROM public.tcg_distribution_settings")
     )
     return {row.key: row.value for row in result.mappings()}
 
@@ -382,7 +383,7 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
         }
 
     # 直近30日の FLAG_SINGLE 行と修正件数
-    gate_result = await db.execute(text(f"""
+    gate_result = await db.execute(text("""
         SELECT
             COUNT(*) AS total_flag,
             COUNT(ic.id) AS corrected_count
@@ -494,7 +495,7 @@ def _write_to_target_sync(
 # ---------------------------------------------------------------------------
 
 async def list_targets(db: AsyncSession) -> list[dict]:
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT id, name, spreadsheet_id, sheet_name, is_active,
                sa_key_secret_name, last_distributed_at, last_distributed_count,
                last_result, created_at, updated_at
@@ -506,7 +507,7 @@ async def list_targets(db: AsyncSession) -> list[dict]:
 
 async def get_target(db: AsyncSession, target_id: str) -> dict | None:
     result = await db.execute(
-        text(f"""
+        text("""
             SELECT id, name, spreadsheet_id, sheet_name, is_active,
                    sa_key_secret_name, last_distributed_at, last_distributed_count,
                    last_result, created_at, updated_at
@@ -521,7 +522,7 @@ async def get_target(db: AsyncSession, target_id: str) -> dict | None:
 
 async def create_target(db: AsyncSession, data: dict) -> dict:
     result = await db.execute(
-        text(f"""
+        text("""
             INSERT INTO public.tcg_distribution_targets
                 (name, spreadsheet_id, sheet_name, is_active, sa_key_secret_name)
             VALUES
@@ -572,7 +573,7 @@ async def update_target(db: AsyncSession, target_id: str, data: dict) -> dict | 
 
 async def soft_delete_target(db: AsyncSession, target_id: str) -> bool:
     result = await db.execute(
-        text(f"""
+        text("""
             UPDATE public.tcg_distribution_targets
             SET is_active = FALSE, updated_at = NOW()
             WHERE id = :id
@@ -590,14 +591,14 @@ async def soft_delete_target(db: AsyncSession, target_id: str) -> bool:
 
 async def list_settings(db: AsyncSession) -> list[dict]:
     result = await db.execute(
-        text(f"SELECT key, value, note, updated_at FROM public.tcg_distribution_settings ORDER BY key")
+        text("SELECT key, value, note, updated_at FROM public.tcg_distribution_settings ORDER BY key")
     )
     return [dict(row) for row in result.mappings()]
 
 
 async def update_setting(db: AsyncSession, key: str, value: str) -> dict | None:
     result = await db.execute(
-        text(f"""
+        text("""
             UPDATE public.tcg_distribution_settings
             SET value = :value, updated_at = NOW()
             WHERE key = :key
@@ -622,7 +623,7 @@ async def _record_distribution_result(
 ) -> None:
     last_result = result_status if result_status == "ok" else f"error: {result_status}"
     await db.execute(
-        text(f"""
+        text("""
             UPDATE public.tcg_distribution_targets
             SET last_distributed_at    = NOW(),
                 last_distributed_count = :count,
@@ -663,7 +664,7 @@ async def run_distribution(
     pending_rows = (
         await db.execute(
             text(
-                f"SELECT id, started_at FROM public.analysis_runs"
+                "SELECT id, started_at FROM public.analysis_runs"
                 " WHERE completed_at IS NULL ORDER BY started_at LIMIT 10"
             )
         )
@@ -692,7 +693,7 @@ async def run_distribution(
     unfinished = (
         await db.execute(
             text(
-                f"SELECT status, count(*) AS cnt FROM public.extraction_jobs"
+                "SELECT status, count(*) AS cnt FROM public.extraction_jobs"
                 " WHERE status IN ('pending', 'running', 'extracted')"
                 " GROUP BY status ORDER BY status"
             )

@@ -11,7 +11,6 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
-
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     """
     仕入元品質サマリー一覧を source 起点で取得する（GAS: api_getSupplierQualitySummaries 相当）。
@@ -25,7 +24,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
       excluded            = ar.exclusion IS NOT NULL AND ar.exclusion != ''
       needsReview         = いずれか1つ以上
     """
-    sql = f"""
+    sql = """
         SELECT
             COALESCE(ps.supplier_code, sc.id::text)  AS supplier_id,
             COALESCE(ps.name, '不明')        AS supplier_name,
@@ -69,7 +68,7 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
     items=0 の source でも raw_text を返す。
     supplier_id は public.suppliers.supplier_code（例: 'SP-00057'）。
     """
-    sql = f"""
+    sql = """
         SELECT
             sm.id::text     AS source_message_id,
             ps.supplier_code AS supplier_id,

@@ -20,6 +20,7 @@ from app.services import line_import_devices as devices
 from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
+
 SOURCE_REPORT_LIMIT = 10000
 
 def name_hash(name):
@@ -91,7 +92,7 @@ async def authorize(db, data):
         {'id': data['device_id']})).mappings().one_or_none()
     if row is None or not devices.valid(row):
         raise ValueError('active import device owner required')
-    job = (await db.execute(text(f'''SELECT id,uploaded_by,review_status,unresolved_names,
+    job = (await db.execute(text('''SELECT id,uploaded_by,review_status,unresolved_names,
         message_count,created_at FROM public.import_jobs WHERE id=:id'''),
         {'id': data['import_job_id']})).mappings().one_or_none()
     if job is None or job['uploaded_by'] not in (row['email'], str(row['owner_user_id'])):

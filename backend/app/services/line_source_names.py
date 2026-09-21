@@ -79,7 +79,7 @@ def history_proof(messages, display_name, supplier_code, suppliers, sources):
 
 async def link_pending(db, data):
     # Caller verifies active device owner and import ownership before entering here.
-    job = (await db.execute(text(f'''SELECT raw_sha256,review_status,pending_messages
+    job = (await db.execute(text('''SELECT raw_sha256,review_status,pending_messages
         FROM public.import_jobs WHERE id=:id FOR UPDATE'''),
         {'id': data['import_job_id']})).mappings().one()
     if job['review_status'] != 'pending_review' or job['raw_sha256'] != data['android_sha256']:
@@ -101,7 +101,7 @@ async def link_pending(db, data):
         raise ValueError('active nonconflicting supplier required')
     times = sorted({datetime.fromisoformat(m['timestamp']).replace(tzinfo=JST)
                     for m in messages if m['display_name'] == name})
-    sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
+    sources = (await db.execute(text('''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
         FROM public.source_messages sm
         JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
         JOIN public.suppliers ps ON ps.id=sc.supplier_id
@@ -119,7 +119,7 @@ async def link_pending(db, data):
     mapped = [m for m in resolved if m['display_name'] == name]
     if not mapped or any(m['sp_code'] != data['supplier_code'] for m in mapped):
         raise ValueError('alias resolution verification failed')
-    await db.execute(text(f'''UPDATE public.import_jobs SET pending_messages=CAST(:messages AS jsonb),
+    await db.execute(text('''UPDATE public.import_jobs SET pending_messages=CAST(:messages AS jsonb),
         unresolved_names=CAST(:names AS jsonb),unresolved_count=:count WHERE id=:id'''),
         {'id': data['import_job_id'], 'messages': json.dumps(tagged, ensure_ascii=False),
          'names': json.dumps([m['display_name'] for m in missing], ensure_ascii=False), 'count': len(missing)})
