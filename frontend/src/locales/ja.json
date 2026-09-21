@@ -3934,7 +3934,15 @@
       "extractionErrorRate": "抽出エラー率",
       "importTrendTitle": "7日間のインポート推移",
       "importTrendJobCount": "インポート回数",
-      "importTrendMessageCount": "メッセージ数"
+      "importTrendMessageCount": "メッセージ数",
+      "importStatusOk": "取り込みは正常です",
+      "importStatusWarning": "確認が必要です",
+      "importStatusDanger": "対応が必要です",
+      "importProcessedMessages": "処理済みメッセージ",
+      "importMatchRate": "名前の一致率",
+      "importActionRequired": "要対応",
+      "importNoAction": "なし",
+      "importReviewCta": "確認する →"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
