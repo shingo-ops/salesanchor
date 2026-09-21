@@ -16,6 +16,7 @@ import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { Badge } from "../../../components/Badge";
 import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
+import { Tabs, type TabItem } from "../../../components/Tabs";
 
 interface RuleEntry {
   id: number;
@@ -34,6 +35,8 @@ interface RuleEntry {
 
 const PER_PAGE = 50;
 
+type RuleTab = "sold-out" | "date" | "default";
+
 export function RuleManagementPanel() {
   const { t } = useTranslation();
   const f = "ruleManagement";
@@ -44,6 +47,7 @@ export function RuleManagementPanel() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [toggling, setToggling] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<RuleTab>("sold-out");
 
   const load = useCallback(async () => {
     try {
@@ -59,6 +63,20 @@ export function RuleManagementPanel() {
   useEffect(() => { void load(); }, [load]);
 
   const runSearch = () => { setSearch(searchInput); setPage(1); };
+
+  const filteredItems = items.filter((item) => {
+    switch (activeTab) {
+      case "sold-out": return item.effect === "EXCLUDE";
+      case "date": return item.effect === "OUTPUT" && item.match_type !== "DEFAULT";
+      case "default": return item.match_type === "DEFAULT";
+    }
+  });
+
+  const tabItems: TabItem<RuleTab>[] = [
+    { key: "sold-out", label: t(`${f}.tabs.soldOut`), count: items.filter((i) => i.effect === "EXCLUDE").length },
+    { key: "date", label: t(`${f}.tabs.date`), count: items.filter((i) => i.effect === "OUTPUT" && i.match_type !== "DEFAULT").length },
+    { key: "default", label: t(`${f}.tabs.default`), count: items.filter((i) => i.match_type === "DEFAULT").length },
+  ];
 
   const handleRowClick = async (row: RuleEntry) => {
     const action = row.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`);
@@ -120,6 +138,12 @@ export function RuleManagementPanel() {
 
   return (
     <>
+      <Tabs
+        items={tabItems}
+        activeKey={activeTab}
+        onChange={(key) => { setActiveTab(key); setPage(1); }}
+        variant="underline"
+      />
       <ContentToolbar
         left={
           <TextField
@@ -142,19 +166,19 @@ export function RuleManagementPanel() {
         }
       />
       {error && <p role="alert" style={{ color: "var(--color-error)", padding: "var(--space-2) 0" }}>{error}</p>}
-      {items.length > 0 && (
+      {filteredItems.length > 0 && (
         <p style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
-          {t(`${f}.total`, { count: items.length })}
+          {t(`${f}.total`, { count: filteredItems.length })}
         </p>
       )}
       <DataTable
         columns={columns}
-        data={items}
+        data={filteredItems}
         rowKey={(row) => String(row.id)}
         onRowClick={(row) => { if (toggling === null) void handleRowClick(row); }}
         emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
         page={page}
-        hasNextPage={items.length >= PER_PAGE}
+        hasNextPage={filteredItems.length >= PER_PAGE}
         onPageChange={setPage}
         prevPageLabel={t("common.prevPage")}
         nextPageLabel={t("common.nextPage")}

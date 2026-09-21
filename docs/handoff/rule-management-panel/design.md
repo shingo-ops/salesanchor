@@ -33,6 +33,14 @@ recon: [docs/handoff/rule-management-panel/recon.md](./recon.md)
 - 行クリックで enabled トグル（PATCH /super-admin/status-master/:id）
 - ページネーション（50件/ページ）
 
+## タブ分離（追加仕様）
+- 金型 Tabs コンポーネント（variant="underline"）で3タブ表示
+- 完売ルール: `effect === "EXCLUDE"`（完売・売切等の除外ルール）
+- 日付ルール: `effect === "OUTPUT" && match_type !== "DEFAULT"`（日付・予約パターンルール）
+- デフォルト: `match_type === "DEFAULT"`（デフォルトステータス）
+- タブに件数バッジ表示
+- クライアントサイドフィルタ（全9件のため十分）
+
 ## 受入条件
 
 | 基準 | 検証方法 |
