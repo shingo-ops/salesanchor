@@ -3863,7 +3863,9 @@
       "productLinesMaster": "Product Lines",
       "productFormatsMaster": "Product Formats",
       "quantityUnitsMaster": "Quantity Units",
-      "weightClassesMaster": "Weight Classes"
+      "weightClassesMaster": "Weight Classes",
+      "groupRuleManagement": "Rule Management",
+      "ruleManagement": "Status Rules"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",
@@ -4252,5 +4254,39 @@
     "maxGrams": "Max (g)",
     "displayOrder": "Display Order",
     "isActive": "Active"
+  },
+  "ruleManagement": {
+    "title": "Rule Management",
+    "subtitle": "Manage status judgment rules used by Gemini analysis.",
+    "search": "Search by name or pattern",
+    "noData": "No rules registered yet.",
+    "total": "Rules: {{count}}",
+    "columns": {
+      "canonical": "Display Name",
+      "searchPattern": "Search Pattern",
+      "excludePattern": "Exclude Pattern",
+      "matchType": "Match Type",
+      "effect": "Effect",
+      "priority": "Priority",
+      "enabled": "Enabled"
+    },
+    "effect": {
+      "EXCLUDE": "Exclude",
+      "OUTPUT": "Output"
+    },
+    "matchType": {
+      "REGEX": "Regex",
+      "LITERAL": "Literal",
+      "DEFAULT": "Default"
+    },
+    "enabled": {
+      "true": "Enabled",
+      "false": "Disabled"
+    },
+    "toggleConfirm": "{{action}} rule \"{{name}}\"?",
+    "toggleEnable": "Enable",
+    "toggleDisable": "Disable",
+    "toggleSuccess": "Rule updated",
+    "toggleFail": "Failed to update rule"
   }
 }

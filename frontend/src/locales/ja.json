@@ -3863,7 +3863,9 @@
       "productLinesMaster": "中分類マスタ",
       "productFormatsMaster": "商品形態マスタ",
       "quantityUnitsMaster": "数量単位マスタ",
-      "weightClassesMaster": "重量クラスマスタ"
+      "weightClassesMaster": "重量クラスマスタ",
+      "groupRuleManagement": "ルール管理",
+      "ruleManagement": "ステータスルール"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
@@ -4252,5 +4254,39 @@
     "maxGrams": "上限(g)",
     "displayOrder": "表示順",
     "isActive": "有効"
+  },
+  "ruleManagement": {
+    "title": "ルール管理",
+    "subtitle": "Gemini解析に使用するステータス判定ルールを管理します。",
+    "search": "表示名・パターンで検索",
+    "noData": "ルールはまだ登録されていません。",
+    "total": "ルール数：{{count}}件",
+    "columns": {
+      "canonical": "表示名",
+      "searchPattern": "検索パターン",
+      "excludePattern": "除外パターン",
+      "matchType": "照合方法",
+      "effect": "効果",
+      "priority": "優先度",
+      "enabled": "有効"
+    },
+    "effect": {
+      "EXCLUDE": "除外",
+      "OUTPUT": "出力"
+    },
+    "matchType": {
+      "REGEX": "正規表現",
+      "LITERAL": "完全一致",
+      "DEFAULT": "デフォルト"
+    },
+    "enabled": {
+      "true": "有効",
+      "false": "無効"
+    },
+    "toggleConfirm": "「{{name}}」のルールを{{action}}しますか？",
+    "toggleEnable": "有効化",
+    "toggleDisable": "無効化",
+    "toggleSuccess": "ルールを更新しました",
+    "toggleFail": "ルールの更新に失敗しました"
   }
 }

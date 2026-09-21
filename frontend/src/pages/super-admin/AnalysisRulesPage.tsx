@@ -32,6 +32,7 @@ import { ProductLinesMasterPanel } from "./components/ProductLinesMasterPanel";
 import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
 import { QuantityUnitsMasterPanel } from "./components/QuantityUnitsMasterPanel";
 import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel";
+import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import "./AnalysisRulesPage.css";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
@@ -169,6 +170,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}
               {activeSection === "quantity-units-master" && <QuantityUnitsMasterPanel />}
               {activeSection === "weight-classes-master" && <WeightClassesMasterPanel />}
+              {activeSection === "rule-management" && <RuleManagementPanel />}
             </div>
           )}
         </div>
