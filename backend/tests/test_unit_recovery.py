@@ -352,13 +352,13 @@ def test_e5_does_not_overwrite_empty_or_manual_condition(basis, request):
     pg = request.getfixturevalue("empty_review_pg")
     item = seed(pg, name="Test Booster 空箱 Box", condition_basis=basis, unit_resolved=False, unit_id=None, unit_canonical="")
     with pg["connection"].cursor() as cursor:
-        cursor.execute("UPDATE tenant_004.extraction_items SET raw_unit='' WHERE id=%s", (item["eid"],))
+        cursor.execute("UPDATE public.extraction_items SET raw_unit='' WHERE id=%s", (item["eid"],))
     with Session(pg["engine"]) as db:
-        before = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
-        result = apply_unit_recovery_for_job(db,item["job"],tenant_schema="tenant_004")
+        before = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM public.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        result = apply_unit_recovery_for_job(db,item["job"])
         assert result["e3a_recovered"] == 1
         assert result["e5_changed"] == 0
-        after = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM tenant_004.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
+        after = db.execute(text("SELECT condition_id,condition_canonical,condition_basis FROM public.analysis_results WHERE extraction_item_id=CAST(:eid AS uuid)"),item).one()
         assert after == before
 
 
