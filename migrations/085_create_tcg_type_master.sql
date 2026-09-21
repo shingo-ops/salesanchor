@@ -11,31 +11,65 @@
 -- ============================================================================
 
 -- === 1. 種別マスタ ===
-CREATE TABLE IF NOT EXISTS public.tcg_type_master (
-    id          SERIAL PRIMARY KEY,
-    code        VARCHAR(50)  NOT NULL UNIQUE,
-    name_ja     VARCHAR(100) NOT NULL,
-    name_en     VARCHAR(100),
-    sort_order  INTEGER      NOT NULL DEFAULT 100,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
+-- ADR-156: tcg_type_master が既にビュー（type_master へのリネーム済み）の場合はテーブル作成をスキップ。
+-- テーブルとして存在しない場合のみ CREATE TABLE を実行する（冪等ガード）。
+DO $$ BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'v'
+    ) THEN
+        CREATE TABLE IF NOT EXISTS public.tcg_type_master (
+            id          SERIAL PRIMARY KEY,
+            code        VARCHAR(50)  NOT NULL UNIQUE,
+            name_ja     VARCHAR(100) NOT NULL,
+            name_en     VARCHAR(100),
+            sort_order  INTEGER      NOT NULL DEFAULT 100,
+            is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+            created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        );
+    END IF;
+END $$;
 
-CREATE INDEX IF NOT EXISTS idx_tcg_type_master_sort ON public.tcg_type_master (sort_order, id);
+-- インデックスはテーブルのときのみ作成（ビューには作れない）
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'r'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_tcg_type_master_sort ON public.tcg_type_master (sort_order, id);
+    END IF;
+END $$;
 
 -- 既存 tcg_series_master.tcg_type と一致する 6 種別を seed（旧 CHECK の許可値）。
 -- name_ja は旧 i18n ラベル (superAdmin.tcg.types.*) を踏襲。
-INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
-    ('pokemon_booster_box', 'ポケモンカード',   'Pokémon Card',    10),
-    ('one_piece',           'ワンピース',       'One Piece TCG',   20),
-    ('dragon_ball',         'ドラゴンボール',   'Dragon Ball TCG', 30),
-    ('union_arena',         'ユニオンアリーナ', 'Union Arena',     40),
-    ('yugioh',              '遊戯王',           'Yu-Gi-Oh!',       50),
-    ('other',               'その他',           'Other',           900)
-ON CONFLICT (code) DO NOTHING;
+-- ADR-156: tcg_type_master がビューのとき（type_master リネーム済み）は type_master へ直接 INSERT する。
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'v'
+    ) THEN
+        INSERT INTO public.type_master (code, name_ja, name_en, sort_order) VALUES
+            ('pokemon_booster_box', 'ポケモンカード',   'Pokémon Card',    10),
+            ('one_piece',           'ワンピース',       'One Piece TCG',   20),
+            ('dragon_ball',         'ドラゴンボール',   'Dragon Ball TCG', 30),
+            ('union_arena',         'ユニオンアリーナ', 'Union Arena',     40),
+            ('yugioh',              '遊戯王',           'Yu-Gi-Oh!',       50),
+            ('other',               'その他',           'Other',           900)
+        ON CONFLICT (code) DO NOTHING;
+    ELSE
+        INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
+            ('pokemon_booster_box', 'ポケモンカード',   'Pokémon Card',    10),
+            ('one_piece',           'ワンピース',       'One Piece TCG',   20),
+            ('dragon_ball',         'ドラゴンボール',   'Dragon Ball TCG', 30),
+            ('union_arena',         'ユニオンアリーナ', 'Union Arena',     40),
+            ('yugioh',              '遊戯王',           'Yu-Gi-Oh!',       50),
+            ('other',               'その他',           'Other',           900)
+        ON CONFLICT (code) DO NOTHING;
+    END IF;
+END $$;
 
--- updated_at トリガ（migration 061 と同パターン）
+-- updated_at トリガ（テーブルのときのみ。ビューにはトリガ不要）
 CREATE OR REPLACE FUNCTION public.set_updated_at_tcg_type_master()
 RETURNS TRIGGER AS $upd$
 BEGIN
@@ -44,13 +78,19 @@ BEGIN
 END;
 $upd$ LANGUAGE plpgsql;
 
-DROP TRIGGER IF EXISTS trigger_set_updated_at_tcg_type_master ON public.tcg_type_master;
-CREATE TRIGGER trigger_set_updated_at_tcg_type_master
-    BEFORE UPDATE ON public.tcg_type_master
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_tcg_type_master();
-
-COMMENT ON TABLE public.tcg_type_master IS
-    'ADR-083: TCG 種別マスタ。UI から増減可能。tcg_series_master.tcg_type の値集合の正本。';
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'r'
+    ) THEN
+        DROP TRIGGER IF EXISTS trigger_set_updated_at_tcg_type_master ON public.tcg_type_master;
+        CREATE TRIGGER trigger_set_updated_at_tcg_type_master
+            BEFORE UPDATE ON public.tcg_type_master
+            FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_tcg_type_master();
+        COMMENT ON TABLE public.tcg_type_master IS
+            'ADR-083: TCG 種別マスタ。UI から増減可能。tcg_series_master.tcg_type の値集合の正本。';
+    END IF;
+END $$;
 
 -- === 2. tcg_series_master の固定 CHECK 制約を撤廃 ===
 -- 種別を自由に増減可能にするため。tcg_series_master が存在する環境でのみ実行

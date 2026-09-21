@@ -8,14 +8,31 @@
 --
 -- 冪等: ON CONFLICT (code) DO NOTHING。
 -- ============================================================================
-INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
-    ('gundam',        'ガンダムカードゲーム', 'Gundam Card Game',           60),
-    ('weiss_schwarz', 'ヴァイスシュヴァルツ', 'Weiß Schwarz',               70),
-    ('digimon',       'デジモンカードゲーム', 'Digimon Card Game',          80),
-    ('hololive',      'ホロライブ',           'hololive Official Card Game', 90),
-    ('lorcana',       'ディズニー ロルカナ',  'Disney Lorcana',            100),
-    ('xross_stars',   'クロススタァ',         'Xross Stars',               110)
-ON CONFLICT (code) DO NOTHING;
+-- ADR-156: tcg_type_master がビュー（type_master へリネーム済み）の場合は type_master へ直接 INSERT する。
+DO $$ BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'v'
+    ) THEN
+        INSERT INTO public.type_master (code, name_ja, name_en, sort_order) VALUES
+            ('gundam',        'ガンダムカードゲーム', 'Gundam Card Game',           60),
+            ('weiss_schwarz', 'ヴァイスシュヴァルツ', 'Weiß Schwarz',               70),
+            ('digimon',       'デジモンカードゲーム', 'Digimon Card Game',          80),
+            ('hololive',      'ホロライブ',           'hololive Official Card Game', 90),
+            ('lorcana',       'ディズニー ロルカナ',  'Disney Lorcana',            100),
+            ('xross_stars',   'クロススタァ',         'Xross Stars',               110)
+        ON CONFLICT (code) DO NOTHING;
+    ELSE
+        INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
+            ('gundam',        'ガンダムカードゲーム', 'Gundam Card Game',           60),
+            ('weiss_schwarz', 'ヴァイスシュヴァルツ', 'Weiß Schwarz',               70),
+            ('digimon',       'デジモンカードゲーム', 'Digimon Card Game',          80),
+            ('hololive',      'ホロライブ',           'hololive Official Card Game', 90),
+            ('lorcana',       'ディズニー ロルカナ',  'Disney Lorcana',            100),
+            ('xross_stars',   'クロススタァ',         'Xross Stars',               110)
+        ON CONFLICT (code) DO NOTHING;
+    END IF;
+END $$;
 
 -- ============================================================================
 -- Rollback:

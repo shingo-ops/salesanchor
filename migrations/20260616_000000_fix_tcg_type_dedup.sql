@@ -46,7 +46,15 @@ BEGIN
 
     -- =========================================================================
     -- Step 2: 重複 tcg_type_master 行を削除
+    -- ADR-156: tcg_type_master がビュー（type_master へリネーム済み）の場合は type_master から削除する。
     -- =========================================================================
-    DELETE FROM public.tcg_type_master WHERE code IN ('pokemon', 'weiss');
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'v'
+    ) THEN
+        DELETE FROM public.type_master WHERE code IN ('pokemon', 'weiss');
+    ELSE
+        DELETE FROM public.tcg_type_master WHERE code IN ('pokemon', 'weiss');
+    END IF;
 
 END $$;

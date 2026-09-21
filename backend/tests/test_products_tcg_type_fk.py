@@ -35,8 +35,6 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "082_extend_products_box_attributes.sql",       # products.category 追加（020000 の backfill に必須）
     "085_create_tcg_type_master.sql",
     "086_seed_additional_tcg_types.sql",
-    "20260921_060000_create_product_kinds.sql",  # ADR-156 Phase 1: product_kinds (required before rename)
-    "20260921_070000_rename_tcg_type_master_to_type_master.sql",  # ADR-156 Phase 1: rename tcg_type_master → type_master
     "20260602_000000_add_products_central_columns.sql",
     "20260602_020000_add_products_tcg_type.sql",
     "20260602_030000_add_products_unit.sql",
@@ -46,6 +44,8 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260605_000000_add_products_display_order.sql",   # products.display_order 追加
     "20260616_000000_fix_tcg_type_dedup.sql",
     "20260623_060000_add_products_tcg_type_fk.sql",
+    "20260921_060000_create_product_kinds.sql",  # ADR-156 Phase 1: product_kinds (required before rename)
+    "20260921_070000_rename_tcg_type_master_to_type_master.sql",  # ADR-156 Phase 1: rename after FK creation
 ]
 
 

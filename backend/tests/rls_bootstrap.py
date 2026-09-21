@@ -17,8 +17,6 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "082_extend_products_box_attributes.sql",
     "085_create_tcg_type_master.sql",
     "086_seed_additional_tcg_types.sql",
-    "20260921_060000_create_product_kinds.sql",  # ADR-156 Phase 1: product_kinds (required before rename)
-    "20260921_070000_rename_tcg_type_master_to_type_master.sql",  # ADR-156 Phase 1: rename tcg_type_master → type_master
     "20260602_000000_add_products_central_columns.sql",
     "20260602_020000_add_products_tcg_type.sql",
     "20260602_030000_add_products_unit.sql",
@@ -29,6 +27,9 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "20260616_000000_fix_tcg_type_dedup.sql",
     "20260623_060000_add_products_tcg_type_fk.sql",
     "20260920_020000_supplier_line_name_unique.sql",
+    "20260921_060000_create_product_kinds.sql",
+    # NOTE: 20260921_070000 (tcg_type_master→type_master rename) is applied separately
+    # after FK migration to avoid view-FK conflict (see _ensure_type_master_renamed below)
 ]
 _TENANT_BOOTSTRAP_MIGRATIONS = [
     "20260611_100000_create_channel_masters.sql",
@@ -154,12 +155,36 @@ async def _ensure_public_users(conn) -> None:
     )
 
 
+async def _ensure_type_master_renamed(conn) -> None:
+    """ADR-156 Phase 1: tcg_type_master → type_master rename を冪等に適用する。
+    tcg_type_master がテーブルのときのみ 070000 migration を実行し、
+    ビューの場合や既に type_master が存在する場合はスキップする。
+    """
+    raw = await conn.get_raw_connection()
+    sql = (_MIGRATIONS_DIR / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text("utf-8")
+    # tcg_type_master がテーブル(relkind='r')のときのみ実行
+    row = await conn.execute(
+        text("""
+            SELECT relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master'
+        """)
+    )
+    result = row.fetchone()
+    if result is None or result[0] != 'r':
+        # tcg_type_master が存在しないか既にビュー → リネーム不要
+        return
+    await raw.driver_connection.execute(sql)
+
+
 async def _bootstrap_public_shared(conn) -> None:
     """shared public bootstrap を 1 接続内で適用する。"""
     raw = await conn.get_raw_connection()
     for filename in _PG_BOOTSTRAP_MIGRATIONS:
         sql = (_MIGRATIONS_DIR / filename).read_text("utf-8")
         await raw.driver_connection.execute(sql)
+
+    # ADR-156 Phase 1: tcg_type_master → type_master rename (after FK migration)
+    await _ensure_type_master_renamed(conn)
 
     fk_exists = await conn.scalar(
         text("""
@@ -200,6 +225,8 @@ async def bootstrap_public_products(admin_engine) -> None:
             await _apply_migration(admin_engine, filename)
 
         async with admin_engine.connect() as conn:
+            # ADR-156 Phase 1: tcg_type_master → type_master rename (after FK migration)
+            await _ensure_type_master_renamed(conn)
             fk_exists = await conn.scalar(
                 text("""
                     SELECT 1

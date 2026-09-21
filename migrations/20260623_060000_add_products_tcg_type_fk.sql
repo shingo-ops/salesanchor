@@ -11,9 +11,24 @@
 DO $$
 DECLARE
     invalid_codes TEXT;
+    _fk_target TEXT;
 BEGIN
+    -- ADR-156 Phase 1: tcg_type_master がテーブルならそのまま参照。
+    -- ビュー（type_master へリネーム済み）なら type_master を参照する。
+    -- type_master も tcg_type_master も存在しない場合はスキップ。
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master' AND c.relkind = 'r'
+    ) THEN
+        _fk_target := 'tcg_type_master';
+    ELSIF to_regclass('public.type_master') IS NOT NULL THEN
+        _fk_target := 'type_master';
+    ELSE
+        _fk_target := NULL;
+    END IF;
+
     IF to_regclass('public.products') IS NULL
-       OR to_regclass('public.tcg_type_master') IS NULL
+       OR _fk_target IS NULL
        OR NOT EXISTS (
             SELECT 1
               FROM pg_attribute a
@@ -26,7 +41,7 @@ BEGIN
                AND NOT a.attisdropped
        ) THEN
         RAISE NOTICE
-            'fk_products_tcg_type preflight skipped: public.products / public.products.tcg_type / public.tcg_type_master is missing';
+            'fk_products_tcg_type preflight skipped: public.products / public.products.tcg_type / type master is missing';
     ELSE
         SELECT string_agg(quote_literal(tc), ', ' ORDER BY tc)
           INTO invalid_codes
@@ -51,9 +66,15 @@ BEGIN
                AND rel.relname = 'products'
                AND rel.relnamespace = 'public'::regnamespace
         ) THEN
-            ALTER TABLE public.products
-                ADD CONSTRAINT fk_products_tcg_type
-                FOREIGN KEY (tcg_type) REFERENCES public.tcg_type_master(code);
+            IF _fk_target = 'type_master' THEN
+                ALTER TABLE public.products
+                    ADD CONSTRAINT fk_products_tcg_type
+                    FOREIGN KEY (tcg_type) REFERENCES public.type_master(code);
+            ELSE
+                ALTER TABLE public.products
+                    ADD CONSTRAINT fk_products_tcg_type
+                    FOREIGN KEY (tcg_type) REFERENCES public.tcg_type_master(code);
+            END IF;
         END IF;
     END IF;
 END $$;
