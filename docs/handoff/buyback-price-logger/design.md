@@ -44,9 +44,9 @@ public.buyback_price_logs (
 
 ### スクレイパー設計
 
-- `BaseScraper`: 非同期 fetch + retry ロジック
-- `ShinsokuScraper`: REST API（JSON レスポンス）、5ブランド × 4種別
-- `HomuraScraper`: BeautifulSoup4 で HTML パース、13サブカテゴリ
+- BaseScraper: 非同期 fetch + retry ロジック
+- ShinsokuScraper: REST API（JSON レスポンス）、5ブランド × 4種別
+- HomuraScraper: BeautifulSoup4 で HTML パース、13サブカテゴリ
 
 ### Celery タスク
 
@@ -59,16 +59,16 @@ public.buyback_price_logs (
 
 ### フロントエンド設計
 
-- `BuybackPricesPage.tsx`: DataTable（金型）+ フィルタ（SelectControl 金型）
+- `frontend/src/pages/buyback-prices/BuybackPricesPage.tsx`: DataTable（金型）+ フィルタ（SelectControl 金型）
 - Drawer（金型）: 商品クリックで recharts LineChart 表示
 - ナビゲーション: DesktopShell/MobileShell に「買取相場」リンク追加
 - i18n: ja/en 28キー（buybackPrices.* 名前空間）
 
 ## 外部・過去事例の参照と我々への応用
 
-- スクレイパー定期実行: 既存 Celery beat パターン（`backend/app/celery_app.py` beat_schedule）を踏襲
+- スクレイパー定期実行: 既存 Celery beat パターン（`backend/app/celery_app.py` の beat_schedule）を踏襲
 - BeautifulSoup4: 既存 `backend/requirements.txt` に未記載のため追加（lxml も同様）
-- DataTable + recharts 組み合わせ: `frontend/src/pages/` の既存ページパターン（DesktopShell/Drawer）を踏襲
+- DataTable + recharts 組み合わせ: frontend/src/pages/ の既存ページパターン（DesktopShell/Drawer）を踏襲
 - ADR-072 reset_tenant_context: buyback_prices ルーターは public スキーマのみ使用するため tenant context リセット不要（write エンドポイントなし）
 
 ## 維持の仕組み
