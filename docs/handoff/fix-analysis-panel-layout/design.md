@@ -1,5 +1,10 @@
 # design: analysis panel layout fix
 
+## 関連ドキュメント
+
+- recon: docs/handoff/fix-analysis-panel-layout/recon.md
+- 対象ADR: ADR-027（i18n強制）, ADR-067（デザイントークン）, ADR-144（UIガバナンス）
+
 ## KGI
 
 ダッシュボード以外の全サブメニューパネル（accuracy-management / needs-review / product-master / product-categories-master / product-kinds-master / status-master / supplier-master / conditions-master / unit-master / note-master）で、左パディングが付きスクロールが動作する。
@@ -55,4 +60,4 @@ ManagementCenterPage（frontend/src/pages/management-center/ManagementCenterPage
 
 ## 維持の仕組み
 
-守り手: ADR-144（hub-shell.css 変更禁止）・ADR-067（デザイントークン）。新規パネルを追加した場合は activeSection !== "dashboard" ブランチに列挙するだけでラッパーが自動適用される。
+守り手: docs/adr/ADR-144-ui-component-governance.md（hub-shell.css 変更禁止）・docs/adr/ADR-067-design-token-enforcement.md（デザイントークン）・docs/adr/ADR-027-ui-internationalization.md（i18n強制）。新規パネルを追加した場合は activeSection !== "dashboard" ブランチに列挙するだけでラッパーが自動適用される。
