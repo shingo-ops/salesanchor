@@ -133,6 +133,7 @@ class RecentImportItem(BaseModel):
     unresolved_count: int
     review_status: str | None
     created_at: str | None
+    created_count: int
 
 
 class ImportSummaryResponse(BaseModel):

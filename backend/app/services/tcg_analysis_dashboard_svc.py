@@ -282,13 +282,18 @@ async def get_import_summary(db: AsyncSession) -> dict:
     total_source = int(sm_row.total or 0)
     orphan_count = int(sm_row.orphan_count or 0)
 
-    # 3. Recent imports (last 10)
+    # 3. Recent imports (last 10) with created_count from import_job_messages
     recent_rows = (
         await db.execute(
             text(
-                f"SELECT id, filename, message_count, unresolved_count, review_status, created_at"
-                f" FROM {TCG_SCHEMA}.import_jobs"
-                f" ORDER BY created_at DESC"
+                f"SELECT"
+                f"  ij.id, ij.filename, ij.message_count, ij.unresolved_count,"
+                f"  ij.review_status, ij.created_at,"
+                f"  COALESCE(SUM(CASE WHEN ijm.relation_kind = 'created' THEN 1 ELSE 0 END), 0)::int AS created_count"
+                f" FROM {TCG_SCHEMA}.import_jobs ij"
+                f" LEFT JOIN {TCG_SCHEMA}.import_job_messages ijm ON ijm.import_job_id = ij.id"
+                f" GROUP BY ij.id, ij.filename, ij.message_count, ij.unresolved_count, ij.review_status, ij.created_at"
+                f" ORDER BY ij.created_at DESC"
                 f" LIMIT 10"
             )
         )
@@ -302,6 +307,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
             "unresolved_count": int(row.unresolved_count or 0),
             "review_status": row.review_status,
             "created_at": row.created_at.isoformat() if row.created_at else None,
+            "created_count": int(row.created_count),
         }
         for row in recent_rows
     ]
