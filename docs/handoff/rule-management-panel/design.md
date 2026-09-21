@@ -1,6 +1,6 @@
 # ルール管理パネル — design
 
-recon: [recon.md](./recon.md)
+recon: [docs/handoff/rule-management-panel/recon.md](./recon.md)
 
 ## 概要
 解析管理ページに「ルール管理」グループを追加し、tcg_status_master のルール運用ビューを提供する。
@@ -50,7 +50,7 @@ recon: [recon.md](./recon.md)
 DataTable / Badge / ContentToolbar は既にプロジェクト標準として採用済み（ADR-144）。
 
 ## 維持の仕組み
-守り手: ADR-027（i18n CI lint）・ADR-144（UI金型レビュー）
+守り手: `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:37`（ADR-027 i18n）・`frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:90`（ADR-144 金型）
 
 - ADR-027 準拠を CI grep チェック（`grep -n '[ぁ-ん]' RuleManagementPanel.tsx` が UI 文字列で 0 件）で担保
 - ADR-144 準拠は PR レビュー時に金型外コンポーネント使用の有無を確認
