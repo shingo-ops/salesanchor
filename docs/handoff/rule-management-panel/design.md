@@ -50,9 +50,11 @@ recon: [recon.md](./recon.md)
 DataTable / Badge / ContentToolbar は既にプロジェクト標準として採用済み（ADR-144）。
 
 ## 維持の仕組み
+守り手: ADR-027（i18n CI lint）・ADR-144（UI金型レビュー）
+
 - ADR-027 準拠を CI grep チェック（`grep -n '[ぁ-ん]' RuleManagementPanel.tsx` が UI 文字列で 0 件）で担保
 - ADR-144 準拠は PR レビュー時に金型外コンポーネント使用の有無を確認
-- tcg_status_master 側スキーマ変更時は RuleEntry 型定義の更新が必要（frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:20-33）
+- tcg_status_master 側スキーマ変更時は RuleEntry 型定義の更新が必要（`frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:20-33`）
 
 ## 守り手
 - `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:37` — 全UI文字列 t() 経由（ADR-027）
