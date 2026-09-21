@@ -24,9 +24,6 @@ from app.services.tcg_analyzer_svc import (
 
 logger = logging.getLogger(__name__)
 
-# TCG解析システムは tenant_004 専用スキーマ
-from app.tcg_config import TCG_SCHEMA
-
 # ---------------------------------------------------------------------------
 # ルックアップマップのロード（非同期版）
 # ---------------------------------------------------------------------------
@@ -179,12 +176,12 @@ async def build_parallel_report(db: AsyncSession) -> dict:
                     ei.raw_unit,
                     ar.pid_resolved AS compat_pid_resolved,
                     ar.unit_resolved AS compat_unit_resolved
-                FROM {TCG_SCHEMA}.extraction_items ei
-                JOIN {TCG_SCHEMA}.extraction_jobs ej ON ei.extraction_job_id = ej.id
-                JOIN {TCG_SCHEMA}.source_messages sm ON ej.source_message_id = sm.id
-                JOIN {TCG_SCHEMA}.supplier_channels sc ON sm.supplier_channel_id = sc.id
+                FROM public.extraction_items ei
+                JOIN public.extraction_jobs ej ON ei.extraction_job_id = ej.id
+                JOIN public.source_messages sm ON ej.source_message_id = sm.id
+                JOIN public.supplier_channels sc ON sm.supplier_channel_id = sc.id
                 JOIN public.suppliers ps ON sc.supplier_id = ps.id
-                LEFT JOIN {TCG_SCHEMA}.analysis_results ar
+                LEFT JOIN public.analysis_results ar
                     ON ar.extraction_item_id = ei.id
                     AND ar.engine_version = 'compat-v1'
                 WHERE sm.is_active = TRUE

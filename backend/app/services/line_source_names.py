@@ -6,8 +6,6 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 
-from app.tcg_config import TCG_SCHEMA
-
 MARKER = 'android-v1'
 JST = timezone(timedelta(hours=9))
 
@@ -82,7 +80,7 @@ def history_proof(messages, display_name, supplier_code, suppliers, sources):
 async def link_pending(db, data):
     # Caller verifies active device owner and import ownership before entering here.
     job = (await db.execute(text(f'''SELECT raw_sha256,review_status,pending_messages
-        FROM {TCG_SCHEMA}.import_jobs WHERE id=:id FOR UPDATE'''),
+        FROM public.import_jobs WHERE id=:id FOR UPDATE'''),
         {'id': data['import_job_id']})).mappings().one()
     if job['review_status'] != 'pending_review' or job['raw_sha256'] != data['android_sha256']:
         raise ValueError('pending Android file digest required')
@@ -104,8 +102,8 @@ async def link_pending(db, data):
     times = sorted({datetime.fromisoformat(m['timestamp']).replace(tzinfo=JST)
                     for m in messages if m['display_name'] == name})
     sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
-        FROM {TCG_SCHEMA}.source_messages sm
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        FROM public.source_messages sm
+        JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
         JOIN public.suppliers ps ON ps.id=sc.supplier_id
         WHERE sc.channel='line' AND sm.line_posted_at=ANY(CAST(:times AS timestamptz[]))
         LIMIT 10001'''), {'times': times})).mappings().all()
@@ -121,7 +119,7 @@ async def link_pending(db, data):
     mapped = [m for m in resolved if m['display_name'] == name]
     if not mapped or any(m['sp_code'] != data['supplier_code'] for m in mapped):
         raise ValueError('alias resolution verification failed')
-    await db.execute(text(f'''UPDATE {TCG_SCHEMA}.import_jobs SET pending_messages=CAST(:messages AS jsonb),
+    await db.execute(text(f'''UPDATE public.import_jobs SET pending_messages=CAST(:messages AS jsonb),
         unresolved_names=CAST(:names AS jsonb),unresolved_count=:count WHERE id=:id'''),
         {'id': data['import_job_id'], 'messages': json.dumps(tagged, ensure_ascii=False),
          'names': json.dumps([m['display_name'] for m in missing], ensure_ascii=False), 'count': len(missing)})

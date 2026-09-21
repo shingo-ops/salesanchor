@@ -35,8 +35,6 @@ logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
-
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
@@ -173,7 +171,7 @@ async def verify_spreadsheet_access(spreadsheet_id: str) -> dict:
 async def load_distribution_settings(db: AsyncSession) -> dict[str, str]:
     """tcg_distribution_settings から全設定を取得する。"""
     result = await db.execute(
-        text(f"SELECT key, value FROM {TCG_SCHEMA}.tcg_distribution_settings")
+        text(f"SELECT key, value FROM public.tcg_distribution_settings")
     )
     return {row.key: row.value for row in result.mappings()}
 
@@ -207,7 +205,7 @@ async def fetch_output_rows(
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
 
-    sql = text(f"""{source_cte(schema=TCG_SCHEMA)}
+    sql = text(f"""{source_cte(schema="public")}
         SELECT
             COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
@@ -222,14 +220,14 @@ async def fetch_output_rows(
             COALESCE(p.release_date::text, '')                      AS release_date,
             COALESCE(ser.name_ja, '')                               AS series,
             COALESCE(ps.name, '')                                   AS provider
-        FROM {TCG_SCHEMA}.analysis_results ar
-        JOIN {TCG_SCHEMA}.extraction_items ei
+        FROM public.analysis_results ar
+        JOIN public.extraction_items ei
             ON ei.id = ar.extraction_item_id
-        JOIN {TCG_SCHEMA}.extraction_jobs ej
+        JOIN public.extraction_jobs ej
             ON ej.id = ei.extraction_job_id
-        JOIN {TCG_SCHEMA}.source_messages sm
+        JOIN public.source_messages sm
             ON sm.id = ej.source_message_id AND sm.is_active = TRUE
-        JOIN {TCG_SCHEMA}.supplier_channels sc
+        JOIN public.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps
             ON ps.id = sc.supplier_id
@@ -237,7 +235,7 @@ async def fetch_output_rows(
             ON p.id = ar.product_id
         LEFT JOIN public.tcg_type_master ser
             ON ser.id = p.work_id
-        {review_joins(schema=TCG_SCHEMA)}
+        {review_joins(schema="public")}
         WHERE ar.pid_resolved = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
@@ -288,14 +286,14 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
-    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
+    count_result = await db.execute(text(f"""{source_cte(schema="public")}
         SELECT COUNT(*) AS cnt
-        FROM {TCG_SCHEMA}.analysis_results ar
-        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
-        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
-        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        FROM public.analysis_results ar
+        JOIN public.extraction_items ei ON ei.id=ar.extraction_item_id
+        JOIN public.extraction_jobs ej ON ej.id=ei.extraction_job_id
+        JOIN public.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        {review_joins(schema="public")}
         WHERE ar.pid_resolved = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
@@ -306,7 +304,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
+    excl_result = await db.execute(text(f"""{source_cte(schema="public")}
         SELECT
             COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
                 AS exc_flag,
@@ -331,12 +329,12 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
                   AND cr.canonical NOT LIKE 'FLAG_%'
                   AND ar.price_normalized IS NULL)
                 AS exc_price
-        FROM {TCG_SCHEMA}.analysis_results ar
-        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
-        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
-        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema=TCG_SCHEMA)}
+        FROM public.analysis_results ar
+        JOIN public.extraction_items ei ON ei.id=ar.extraction_item_id
+        JOIN public.extraction_jobs ej ON ej.id=ei.extraction_job_id
+        JOIN public.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
+        {review_joins(schema="public")}
     """))
     excl = excl_result.mappings().one()
 
@@ -370,7 +368,7 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
             SELECT 1 FROM information_schema.tables
             WHERE table_schema = :schema AND table_name = 'item_corrections'
         ) AS exists
-    """), {"schema": TCG_SCHEMA})
+    """), {"schema": "public"})
     has_corrections = tbl_check.scalar()
 
     if not has_corrections:
@@ -388,8 +386,8 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
         SELECT
             COUNT(*) AS total_flag,
             COUNT(ic.id) AS corrected_count
-        FROM {TCG_SCHEMA}.analysis_results ar
-        LEFT JOIN {TCG_SCHEMA}.item_corrections ic
+        FROM public.analysis_results ar
+        LEFT JOIN public.item_corrections ic
             ON ic.extraction_item_id = ar.extraction_item_id
             AND ic.corrected_at >= NOW() - INTERVAL '30 days'
         WHERE ar.condition_canonical = 'FLAG_SINGLE'
@@ -500,7 +498,7 @@ async def list_targets(db: AsyncSession) -> list[dict]:
         SELECT id, name, spreadsheet_id, sheet_name, is_active,
                sa_key_secret_name, last_distributed_at, last_distributed_count,
                last_result, created_at, updated_at
-        FROM {TCG_SCHEMA}.tcg_distribution_targets
+        FROM public.tcg_distribution_targets
         ORDER BY name
     """))
     return [dict(row) for row in result.mappings()]
@@ -512,7 +510,7 @@ async def get_target(db: AsyncSession, target_id: str) -> dict | None:
             SELECT id, name, spreadsheet_id, sheet_name, is_active,
                    sa_key_secret_name, last_distributed_at, last_distributed_count,
                    last_result, created_at, updated_at
-            FROM {TCG_SCHEMA}.tcg_distribution_targets
+            FROM public.tcg_distribution_targets
             WHERE id = :id
         """),
         {"id": target_id},
@@ -524,7 +522,7 @@ async def get_target(db: AsyncSession, target_id: str) -> dict | None:
 async def create_target(db: AsyncSession, data: dict) -> dict:
     result = await db.execute(
         text(f"""
-            INSERT INTO {TCG_SCHEMA}.tcg_distribution_targets
+            INSERT INTO public.tcg_distribution_targets
                 (name, spreadsheet_id, sheet_name, is_active, sa_key_secret_name)
             VALUES
                 (:name, :spreadsheet_id, :sheet_name, :is_active, :sa_key_secret_name)
@@ -558,7 +556,7 @@ async def update_target(db: AsyncSession, target_id: str, data: dict) -> dict | 
 
     result = await db.execute(
         text(f"""
-            UPDATE {TCG_SCHEMA}.tcg_distribution_targets
+            UPDATE public.tcg_distribution_targets
             SET {set_clause}, updated_at = :updated_at
             WHERE id = :id
             RETURNING id, name, spreadsheet_id, sheet_name, is_active,
@@ -575,7 +573,7 @@ async def update_target(db: AsyncSession, target_id: str, data: dict) -> dict | 
 async def soft_delete_target(db: AsyncSession, target_id: str) -> bool:
     result = await db.execute(
         text(f"""
-            UPDATE {TCG_SCHEMA}.tcg_distribution_targets
+            UPDATE public.tcg_distribution_targets
             SET is_active = FALSE, updated_at = NOW()
             WHERE id = :id
             RETURNING id
@@ -592,7 +590,7 @@ async def soft_delete_target(db: AsyncSession, target_id: str) -> bool:
 
 async def list_settings(db: AsyncSession) -> list[dict]:
     result = await db.execute(
-        text(f"SELECT key, value, note, updated_at FROM {TCG_SCHEMA}.tcg_distribution_settings ORDER BY key")
+        text(f"SELECT key, value, note, updated_at FROM public.tcg_distribution_settings ORDER BY key")
     )
     return [dict(row) for row in result.mappings()]
 
@@ -600,7 +598,7 @@ async def list_settings(db: AsyncSession) -> list[dict]:
 async def update_setting(db: AsyncSession, key: str, value: str) -> dict | None:
     result = await db.execute(
         text(f"""
-            UPDATE {TCG_SCHEMA}.tcg_distribution_settings
+            UPDATE public.tcg_distribution_settings
             SET value = :value, updated_at = NOW()
             WHERE key = :key
             RETURNING key, value, note, updated_at
@@ -625,7 +623,7 @@ async def _record_distribution_result(
     last_result = result_status if result_status == "ok" else f"error: {result_status}"
     await db.execute(
         text(f"""
-            UPDATE {TCG_SCHEMA}.tcg_distribution_targets
+            UPDATE public.tcg_distribution_targets
             SET last_distributed_at    = NOW(),
                 last_distributed_count = :count,
                 last_result            = :result,
@@ -665,7 +663,7 @@ async def run_distribution(
     pending_rows = (
         await db.execute(
             text(
-                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_runs"
+                f"SELECT id, started_at FROM public.analysis_runs"
                 " WHERE completed_at IS NULL ORDER BY started_at LIMIT 10"
             )
         )
@@ -694,7 +692,7 @@ async def run_distribution(
     unfinished = (
         await db.execute(
             text(
-                f"SELECT status, count(*) AS cnt FROM {TCG_SCHEMA}.extraction_jobs"
+                f"SELECT status, count(*) AS cnt FROM public.extraction_jobs"
                 " WHERE status IN ('pending', 'running', 'extracted')"
                 " GROUP BY status ORDER BY status"
             )

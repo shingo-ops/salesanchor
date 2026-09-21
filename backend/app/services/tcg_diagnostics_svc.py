@@ -17,8 +17,6 @@ from typing import Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
-
 # ---------------------------------------------------------------------------
 # 許可キー一覧（完全一致のみ受理）
 # ---------------------------------------------------------------------------
@@ -55,14 +53,14 @@ _QUERIES: dict[str, str] = {
     """,
     "supplier-channels": f"""
         SELECT ps.supplier_code AS supplier_code, ps.name AS supplier_name, COUNT(sc.id) AS channel_count
-        FROM {TCG_SCHEMA}.supplier_channels sc
+        FROM public.supplier_channels sc
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         GROUP BY ps.supplier_code, ps.name
         ORDER BY ps.supplier_code
     """,
     "orphan-messages": f"""
         SELECT COUNT(*) AS null_channel_count
-        FROM {TCG_SCHEMA}.source_messages
+        FROM public.source_messages
         WHERE supplier_channel_id IS NULL
     """,
     "extraction-errors": f"""
@@ -71,7 +69,7 @@ _QUERIES: dict[str, str] = {
                ej.error_message,
                ej.prompt_version,
                ej.created_at
-        FROM {TCG_SCHEMA}.extraction_jobs ej
+        FROM public.extraction_jobs ej
         WHERE ej.status = 'error'
         ORDER BY ej.created_at DESC
         LIMIT 100
@@ -80,7 +78,7 @@ _QUERIES: dict[str, str] = {
         SELECT ej.id,
                ej.source_message_id,
                ej.created_at
-        FROM {TCG_SCHEMA}.extraction_jobs ej
+        FROM public.extraction_jobs ej
         WHERE ej.status = 'pending'
         ORDER BY ej.created_at ASC
         LIMIT 100
@@ -90,7 +88,7 @@ _QUERIES: dict[str, str] = {
                ej.source_message_id,
                ej.created_at,
                ROUND(EXTRACT(EPOCH FROM (NOW() - ej.created_at)) / 60) AS age_minutes
-        FROM {TCG_SCHEMA}.extraction_jobs ej
+        FROM public.extraction_jobs ej
         WHERE ej.status = 'running'
           AND ej.created_at < NOW() - INTERVAL '10 minutes'
         ORDER BY ej.created_at ASC
@@ -100,12 +98,12 @@ _QUERIES: dict[str, str] = {
                ej.source_message_id,
                COUNT(ei.id) AS item_count,
                ej.extracted_at
-        FROM {TCG_SCHEMA}.extraction_jobs ej
-        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+        FROM public.extraction_jobs ej
+        JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
         WHERE ej.status = 'done'
           AND NOT EXISTS (
               SELECT 1
-              FROM {TCG_SCHEMA}.analysis_results ar
+              FROM public.analysis_results ar
               WHERE ar.extraction_item_id = ei.id
           )
         GROUP BY ej.id, ej.source_message_id, ej.extracted_at
@@ -176,7 +174,7 @@ async def retry_extraction(
             await db.execute(
                 text(
                     f"SELECT id, source_message_id, status"
-                    f" FROM {TCG_SCHEMA}.extraction_jobs"
+                    f" FROM public.extraction_jobs"
                     f" WHERE id = ANY(:ids)"
                     f" LIMIT {_MAX_JOBS}"
                 ),
@@ -192,7 +190,7 @@ async def retry_extraction(
             await db.execute(
                 text(
                     f"SELECT id, source_message_id, status"
-                    f" FROM {TCG_SCHEMA}.extraction_jobs"
+                    f" FROM public.extraction_jobs"
                     f" WHERE status = 'pending'"
                     f" ORDER BY created_at ASC"
                     f" LIMIT {_MAX_JOBS}"
@@ -209,7 +207,7 @@ async def retry_extraction(
     if error_ids:
         await db.execute(
             text(
-                f"UPDATE {TCG_SCHEMA}.extraction_jobs"
+                f"UPDATE public.extraction_jobs"
                 f" SET status = 'pending'"
                 f" WHERE id = ANY(:ids)"
                 f" AND status = 'error'"

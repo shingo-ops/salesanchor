@@ -171,7 +171,7 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
             sc.channel_type,
             sc.channel_identifier
         FROM public.suppliers ps
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
+        LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
         ORDER BY ps.supplier_code, sc.channel_type
     """))
     rows = result.fetchall()
@@ -191,11 +191,11 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
             COUNT(DISTINCT ar.id) AS analysis_results,
             SUM(CASE WHEN ar.needs_review THEN 1 ELSE 0 END) AS needs_review
         FROM public.suppliers ps
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
-        LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id
-        LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
-        LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
-        LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
+        LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
+        LEFT JOIN public.source_messages sm ON sm.supplier_channel_id = sc.id
+        LEFT JOIN public.extraction_jobs ej ON ej.source_message_id = sm.id
+        LEFT JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
+        LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
         GROUP BY ps.supplier_code, ps.name
         ORDER BY ps.supplier_code
     """))
@@ -218,14 +218,19 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
         FROM information_schema.tables t
         JOIN information_schema.columns c
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
-        WHERE t.table_schema = '{TCG_SCHEMA}'
-          AND t.table_name IN (
-            'supplier_channels',
-            'product_search_keywords', 'product_exclude_keywords',
-            'units', 'unit_aliases', 'conditions', 'condition_aliases',
-            'source_messages', 'extraction_jobs', 'extraction_items',
-            'analysis_results', 'import_jobs', 'audit_log'
-          )
+        WHERE (
+            t.table_schema = 'public'
+            AND t.table_name IN (
+                'supplier_channels', 'source_messages', 'extraction_jobs',
+                'extraction_items', 'analysis_results', 'import_jobs', 'audit_log'
+            )
+        ) OR (
+            t.table_schema = '{TCG_SCHEMA}'
+            AND t.table_name IN (
+                'product_search_keywords', 'product_exclude_keywords',
+                'units', 'unit_aliases', 'conditions', 'condition_aliases'
+            )
+        )
         ORDER BY t.table_name, c.ordinal_position
     """))
     rows = result.fetchall()

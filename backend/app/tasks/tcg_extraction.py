@@ -42,8 +42,6 @@ logger = logging.getLogger(__name__)
 # スキーマ定数（tenant_004 専用）
 # ---------------------------------------------------------------------------
 
-from app.tcg_config import TCG_SCHEMA
-
 # ---------------------------------------------------------------------------
 # 同期 DB エンジン
 # ---------------------------------------------------------------------------
@@ -107,8 +105,8 @@ def work_schema_ready(session: Session) -> bool:
     count = session.execute(text(f"""
         SELECT count(*) FROM pg_attribute
         WHERE NOT attisdropped AND (
-            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
-            OR (attrelid = '{TCG_SCHEMA}.extraction_jobs'::regclass
+            (attrelid = 'public.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
+            OR (attrelid = 'public.extraction_jobs'::regclass
                 AND attname IN ('work_reference_snapshot', 'work_reference_sha256')))
     """)).scalar_one()
     return count == 4
@@ -122,8 +120,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         text(
             f"""
             SELECT ej.id, sm.raw_text
-            FROM {TCG_SCHEMA}.extraction_jobs ej
-            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            FROM public.extraction_jobs ej
+            JOIN public.source_messages sm ON sm.id = ej.source_message_id
             WHERE ej.source_message_id = :smid
               AND ej.status = 'pending'
             ORDER BY ej.created_at DESC
@@ -148,7 +146,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if not work_schema_ready(session) or not schema_ready(session):
         return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
                 "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
-    reference = load_work_reference(session, TCG_SCHEMA)
+    reference = load_work_reference(session, "public")
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
@@ -157,7 +155,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if len(raw_text.strip()) == 0:
         session.execute(
             text(
-                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
+                f"UPDATE public.extraction_jobs "
                 "SET status = 'empty', extracted_at = NOW(), error_message = NULL "
                 "WHERE id = :ej_id"
             ),
@@ -196,7 +194,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
         try:
-            current = load_work_reference(session, TCG_SCHEMA)
+            current = load_work_reference(session, "public")
             if reference_digest(current) != digest:
                 raise RecordError("REFERENCE_CHANGED")
             if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:
@@ -233,7 +231,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             session.execute(
                 text(
                     f"""
-                    INSERT INTO {TCG_SCHEMA}.extraction_items (
+                    INSERT INTO public.extraction_items (
                         id, extraction_job_id,
                         line_start, line_end,
                         raw_product_name, raw_quantity, raw_price,
@@ -279,7 +277,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     session.execute(
         text(
             f"""
-            UPDATE {TCG_SCHEMA}.extraction_jobs
+            UPDATE public.extraction_jobs
             SET status         = :status,
                 extracted_at   = :extracted_at,
                 prompt_version = :prompt_version,

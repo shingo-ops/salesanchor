@@ -54,9 +54,6 @@ ENGINE_VERSION = "name-first-v9-product-all-terms"
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
 
-# TCG解析システムは tenant_004 専用スキーマ
-from app.tcg_config import TCG_SCHEMA
-
 # ---------------------------------------------------------------------------
 # マスタロード
 # ---------------------------------------------------------------------------
@@ -885,7 +882,7 @@ def load_normalization_rules(session: Session) -> dict[str, list[dict]]:
             text(
                 f"""
                 SELECT field, rule_type, from_val, to_val, priority
-                FROM {TCG_SCHEMA}.tcg_normalization_rules
+                FROM public.tcg_normalization_rules
                 WHERE enabled = TRUE ORDER BY field, priority ASC
                 """
             )
@@ -1179,7 +1176,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     status_entries = load_status_master(session)
 
     # to_jsonb keeps old 7/9-column fixtures and saved jobs readable.
-    metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
+    metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM public.extraction_jobs ej WHERE id=:id"),
                                {"id": extraction_job_id}).scalar_one_or_none()
     work_decisions: dict[str, str | None] | None = None
     if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
@@ -1187,11 +1184,11 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:
             raise ValueError("Work reference is missing or corrupted")
-        if reference_digest(load_work_reference(session, TCG_SCHEMA)) != digest:
+        if reference_digest(load_work_reference(session, "public")) != digest:
             raise ValueError("Work reference changed; re-extraction required")
         decisions = session.execute(text(f"""
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
-            FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
+            FROM public.extraction_items ei WHERE extraction_job_id=:id
         """), {"id": extraction_job_id}).fetchall()
         _raw = {str(i): validate_work_id(value, reference) for i, value in decisions}
         # match_pid_with_work expects str work_id (same type as product_work_ids values)
@@ -1205,11 +1202,11 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                    ei.raw_unit, ei.raw_state, ei.raw_memo,
                    ei.raw_work_name, ei.raw_work_source_line_span,
                    ei.line_start, ei.line_end, sm.raw_text,
-                   EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections ic
+                   EXISTS (SELECT 1 FROM public.item_corrections ic
                            WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id')
-            FROM {TCG_SCHEMA}.extraction_items ei
-            JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            FROM public.extraction_items ei
+            JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            JOIN public.source_messages sm ON sm.id = ej.source_message_id
             WHERE ei.extraction_job_id = :ej_id
             ORDER BY ei.line_start, ei.id
             FOR SHARE OF ei, ej, sm
@@ -1220,7 +1217,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     # Hash this source once and reuse it across all item binding comparisons.
     source_hash = session.execute(text(f"""SELECT {digest_sql('sm.raw_text')}
-        FROM {TCG_SCHEMA}.source_messages sm JOIN {TCG_SCHEMA}.extraction_jobs ej
+        FROM public.source_messages sm JOIN public.extraction_jobs ej
         ON ej.source_message_id=sm.id WHERE ej.id=CAST(:job AS uuid)"""),
         {"job": extraction_job_id}).scalar_one_or_none()
     now = datetime.now(timezone.utc)
@@ -1245,17 +1242,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         ) = row
 
         stats["total"] += 1
-        session.execute(text(f"SELECT id FROM {TCG_SCHEMA}.analysis_results "
+        session.execute(text(f"SELECT id FROM public.analysis_results "
             "WHERE extraction_item_id=CAST(:eid AS uuid) FOR UPDATE"), {"eid": str(item_id)})
         # A product correction may have committed after the initial extraction read.
-        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections "
+        has_product_correction = session.execute(text(f"SELECT EXISTS (SELECT 1 FROM public.item_corrections "
             "WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='product_id')"),
             {"eid": str(item_id)}).scalar_one()
         if has_product_correction:
             stats["skipped_product_corrections"] += 1
-            effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
+            effective = reanalysis_condition(session, str(item_id), schema="public", source_hash=source_hash)
             if effective:
-                session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+                session.execute(text(f"""UPDATE public.analysis_results SET
                     condition_id=:condition_id, condition_canonical=:canonical,
                     condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
                     updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
@@ -1354,7 +1351,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             "price_normalized": price_normalized, "condition_id": condition_uuid,
             "condition_canonical": condition_canonical, "condition_basis": condition_basis_str,
             "review_reasons": ",".join(review_reasons), "needs_review": bool(review_reasons),
-        }, schema=TCG_SCHEMA, source_hash=source_hash)
+        }, schema="public", source_hash=source_hash)
         if effective:
             if effective["valid_ack"]:
                 condition_uuid, condition_canonical, condition_basis_str = (
@@ -1372,7 +1369,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         session.execute(
             text(
                 f"""
-                INSERT INTO {TCG_SCHEMA}.analysis_results (
+                INSERT INTO public.analysis_results (
                     id,
                     extraction_item_id,
                     product_id,
@@ -1479,17 +1476,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     )
 
     # E3a + E5: 商品名から unit 復旧 → condition 再計算
-    recovery = apply_unit_recovery_for_job(session, extraction_job_id, TCG_SCHEMA)
+    recovery = apply_unit_recovery_for_job(session, extraction_job_id, "public")
     if recovery["e3a_recovered"] or recovery["e5_changed"]:
         session.commit()
     stats["e3a_recovered"] = recovery["e3a_recovered"]
     stats["e5_changed"] = recovery["e5_changed"]
 
     # E3b: E3a 後も unit_resolved=FALSE の行に UNIT_UNRESOLVED フラグ
-    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, TCG_SCHEMA)
+    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, "public")
 
     # E4: condition_canonical から unit を逆引き
-    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, TCG_SCHEMA)
+    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, "public")
 
     if e3b["flagged"] or e4["resolved"]:
         session.commit()

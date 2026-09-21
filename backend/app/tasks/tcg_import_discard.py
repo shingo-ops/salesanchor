@@ -18,8 +18,6 @@ from sqlalchemy.orm import sessionmaker
 
 logger = logging.getLogger(__name__)
 
-from app.tcg_config import TCG_SCHEMA
-
 _DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
     "postgresql+asyncpg://", "postgresql://"
 )
@@ -44,7 +42,7 @@ def discard_stale_pending_jobs() -> dict:
         result = db.execute(
             text(
                 f"""
-                UPDATE {TCG_SCHEMA}.import_jobs
+                UPDATE public.import_jobs
                 SET review_status    = 'discarded',
                     pending_messages = NULL
                 WHERE review_status = 'pending_review'

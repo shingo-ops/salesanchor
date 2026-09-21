@@ -13,8 +13,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
-
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数
 # ---------------------------------------------------------------------------
@@ -31,15 +29,15 @@ _ISSUE_PRODUCT_CONFIRMED = "PRODUCT_CONFIRMED"
 # ---------------------------------------------------------------------------
 
 _BASE_FROM = f"""
-    FROM {TCG_SCHEMA}.analysis_results ar
-    JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
-    JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-    JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
-    JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+    FROM public.analysis_results ar
+    JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id
+    JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
+    JOIN public.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
+    JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
     LEFT JOIN public.tcg_type_master ws ON ws.id = p.work_id
-    {review_joins(schema=TCG_SCHEMA)}
+    {review_joins(schema="public")}
 """
 
 # ---------------------------------------------------------------------------
@@ -172,11 +170,11 @@ async def fetch_analysis_results(
     )
 
     # 総件数
-    count_sql = f"{source_cte(schema=TCG_SCHEMA)} SELECT COUNT(*) {_BASE_FROM} {where}"
+    count_sql = f"{source_cte(schema="public")} SELECT COUNT(*) {_BASE_FROM} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
 
     # 提供者一覧（フィルタ後の全仕入元）
-    prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    prov_sql = f"""{source_cte(schema="public")}
         SELECT DISTINCT COALESCE(ps.name, '不明') AS name
         {_BASE_FROM}
         {where}
@@ -186,7 +184,7 @@ async def fetch_analysis_results(
     providers = [r[0] for r in provider_rows]
 
     # アイテム一覧
-    items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+    items_sql = f"""{source_cte(schema="public")}
         , result_order_page AS MATERIALIZED (
             SELECT ei.id
             {_BASE_FROM}
@@ -226,7 +224,7 @@ async def fetch_analysis_results(
             (ps.id IS NOT NULL)                  AS supplier_registered,
             COALESCE(
                 (SELECT ic.system_value = ic.human_value
-                 FROM {TCG_SCHEMA}.item_corrections ic
+                 FROM public.item_corrections ic
                  WHERE ic.extraction_item_id = ei.id
                    AND ic.field_name = 'product_id'
                  ORDER BY ic.corrected_at DESC

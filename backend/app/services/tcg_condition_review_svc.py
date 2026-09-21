@@ -24,8 +24,6 @@ from app.services.tcg_empty_box_rules import (
     empty_definition_sql,
     literal,
 )
-from app.tcg_config import TCG_SCHEMA
-
 _UUID_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 _HEX_PATTERN = "^[0-9a-f]{64}$"
 _SOURCE_CTE_NAME = "condition_review_sources"
@@ -36,7 +34,7 @@ def digest_sql(expression: str) -> str:
 
 
 def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None) -> str:
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
              f"JOIN {schema}.extraction_jobs ej ON ej.id=ei.extraction_job_id WHERE ei.id=CAST(:eid AS uuid))"
              if item_only else "WHERE is_active IS TRUE")
@@ -80,7 +78,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     Expressions come exclusively from trusted source code, never request text.
     selected_expression is used for a POST's new binding, after old-version checking.
     """
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     classification = classification_sql("ei.raw_product_name", "ei.raw_state", "ei.raw_memo")
     mentions = " OR ".join(f"strpos(COALESCE(ei.{key}, ''), {literal(EMPTY_WORD)}) > 0"
                            for key in ("raw_product_name", "raw_state", "raw_memo"))
@@ -174,7 +172,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 
 def context_sql(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
                 schema: str | None = None, source_hash: str | None = None) -> str:
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     return f"""{source_cte(schema=schema, item_only=True, source_hash=source_hash)} SELECT cr.* FROM {schema}.analysis_results ar
         JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
         JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -221,14 +219,14 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
               "request_id": request["request_id"]}
     try:
         # Protect raw/source/job membership during both version checking and commit.
-        item = (await db.execute(text(f"""SELECT ei.id FROM {TCG_SCHEMA}.extraction_items ei
-            JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        item = (await db.execute(text(f"""SELECT ei.id FROM public.extraction_items ei
+            JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            JOIN public.source_messages sm ON sm.id = ej.source_message_id
             WHERE ei.id = CAST(:eid AS uuid) AND sm.id = CAST(:smid AS uuid)
             FOR SHARE OF ei, ej, sm"""), params)).scalar_one_or_none()
         if item is None:
             raise HTTPException(404, "Condition review item not found")
-        locked = (await db.execute(text(f"SELECT id FROM {TCG_SCHEMA}.analysis_results "
+        locked = (await db.execute(text(f"SELECT id FROM public.analysis_results "
             "WHERE extraction_item_id = CAST(:eid AS uuid) FOR UPDATE"), params)).scalar_one_or_none()
         if locked is None:
             raise HTTPException(404, "Condition review analysis not found")
@@ -236,14 +234,14 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         # are accepted: absent CN0011 with mentions remains fail-closed at read time.
         await db.execute(text("SELECT id FROM public.conditions ORDER BY id FOR SHARE"))
         await db.execute(text("SELECT p.id FROM public.products p "
-            f"JOIN {TCG_SCHEMA}.analysis_results ar ON ar.product_id=p.id "
+            f"JOIN public.analysis_results ar ON ar.product_id=p.id "
             "WHERE ar.extraction_item_id=CAST(:eid AS uuid) FOR SHARE OF p"), params)
         fingerprint = (await db.execute(text("SELECT " + digest_sql("CAST(:request AS jsonb)")),
             {"request": json.dumps(request, sort_keys=True)})).scalar_one()
         prior = (await db.execute(text(f"""SELECT value FROM (
             SELECT CASE WHEN human_value IS JSON OBJECT AND pg_input_is_valid(human_value, 'jsonb')
                  THEN human_value::jsonb ELSE NULL END AS value
-            FROM {TCG_SCHEMA}.item_corrections
+            FROM public.item_corrections
             WHERE extraction_item_id=CAST(:eid AS uuid) AND field_name='condition_review'
         ) history WHERE value->>'request_id'=:request_id ORDER BY value->>'request_id' LIMIT 1"""), params)).scalar_one_or_none()
         if prior is not None:
@@ -269,17 +267,17 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         history = {"v": 1, "request_id": request["request_id"], "decision": request["decision"],
                    "condition_id": request["condition_id"], "binding_hash": post["binding_hash"],
                    "request_fingerprint": fingerprint}
-        await db.execute(text(f"""INSERT INTO {TCG_SCHEMA}.item_corrections
+        await db.execute(text(f"""INSERT INTO public.item_corrections
             (extraction_item_id, source_message_id, field_name, system_value, human_value, corrected_by)
             VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), 'condition_review', :old, :new, :actor)"""),
             dict(params, old=json.dumps(dict(row), default=str), new=json.dumps(history), actor=corrected_by))
-        await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
+        await db.execute(text(f"""UPDATE public.analysis_results SET
             condition_id = :condition_id_int,
             condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id_int),
             condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
             WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
         effective = (await db.execute(text(context_sql()), params)).mappings().one()
-        await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results
+        await db.execute(text(f"""UPDATE public.analysis_results
             SET needs_review=:needs_review, review_reasons=:review_reasons
             WHERE extraction_item_id=CAST(:eid AS uuid)"""),
             dict(params, needs_review=effective["needs_review"], review_reasons=effective["review_reasons"] or None))

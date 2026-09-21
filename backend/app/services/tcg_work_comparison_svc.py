@@ -114,18 +114,23 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
             raise ComparisonError("SESSION_NOT_FRESH")
         session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
         params = {"iid": import_id}
-        imports = _records(session, f"SELECT to_jsonb(j) FROM {TCG_SCHEMA}.import_jobs j WHERE id=:iid", params)
+        imports = _records(session, f"SELECT to_jsonb(j) FROM public.import_jobs j WHERE id=:iid", params)
         if len(imports) != 1 or imports[0]["review_status"] != "ok" or imports[0]["unresolved_count"] != 0:
             raise ComparisonError("IMPORT_NOT_CONFIRMED")
-        links = _records(session, f"SELECT to_jsonb(m) FROM {TCG_SCHEMA}.import_job_messages m WHERE import_job_id=:iid", params)
-        sources = _records(session, f"SELECT to_jsonb(s) FROM {TCG_SCHEMA}.source_messages s JOIN {TCG_SCHEMA}.import_job_messages m ON m.source_message_id=s.id WHERE m.import_job_id=:iid", params)
-        jobs = _records(session, f"SELECT to_jsonb(j) FROM {TCG_SCHEMA}.extraction_jobs j JOIN {TCG_SCHEMA}.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid", params)
-        join = f"JOIN {TCG_SCHEMA}.extraction_jobs j ON j.id=i.extraction_job_id JOIN {TCG_SCHEMA}.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid"
-        items = _records(session, f"SELECT to_jsonb(i) FROM {TCG_SCHEMA}.extraction_items i {join}", params)
-        analyses = _records(session, f"SELECT to_jsonb(a) FROM {TCG_SCHEMA}.analysis_results a JOIN {TCG_SCHEMA}.extraction_items i ON i.id=a.extraction_item_id {join}", params)
-        corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
+        links = _records(session, f"SELECT to_jsonb(m) FROM public.import_job_messages m WHERE import_job_id=:iid", params)
+        sources = _records(session, f"SELECT to_jsonb(s) FROM public.source_messages s JOIN public.import_job_messages m ON m.source_message_id=s.id WHERE m.import_job_id=:iid", params)
+        jobs = _records(session, f"SELECT to_jsonb(j) FROM public.extraction_jobs j JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid", params)
+        join = f"JOIN public.extraction_jobs j ON j.id=i.extraction_job_id JOIN public.import_job_messages m ON m.source_message_id=j.source_message_id WHERE m.import_job_id=:iid"
+        items = _records(session, f"SELECT to_jsonb(i) FROM public.extraction_items i {join}", params)
+        analyses = _records(session, f"SELECT to_jsonb(a) FROM public.analysis_results a JOIN public.extraction_items i ON i.id=a.extraction_item_id {join}", params)
+        corrections = _records(session, f"SELECT to_jsonb(c) FROM public.item_corrections c JOIN public.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
-        masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        # tcg_normalization_rules migrated to public schema (Step 4/5); remaining MASTER_TABLES stay in TCG_SCHEMA.
+        _PUBLIC_MASTER = frozenset({"tcg_normalization_rules"})
+        masters = {
+            name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
+            for name in MASTER_TABLES
+        }
         masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
@@ -147,7 +152,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
                         if p["code"] in categories else (p["category_class"] or "")
                         for p in masters["products"] if p["is_active"]},
         }
-        reference = load_work_reference(session, TCG_SCHEMA)
+        reference = load_work_reference(session, "public")
         if session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
             raise ComparisonError("READ_ONLY_LOST")
         data = json.loads(canonical(dict(import_id=import_id, import_job=imports[0], links=links,

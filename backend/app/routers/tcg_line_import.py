@@ -42,7 +42,6 @@ from app.database import get_db
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
-    TCG_SCHEMA,
     _enqueue_extraction,
     _write_source_messages,
     build_provider_entries,
@@ -219,7 +218,7 @@ async def list_pending_jobs(
                    window_end,
                    review_status,
                    created_at
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             WHERE review_status = 'pending_review'
             ORDER BY created_at DESC
             LIMIT 100
@@ -264,7 +263,7 @@ async def list_import_history(
             SELECT id, filename, raw_sha256, message_count, provider_count,
                    unresolved_count, uploaded_by, status, review_status,
                    created_at
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             ORDER BY created_at DESC
             LIMIT 200
             """
@@ -306,7 +305,7 @@ async def get_latest_unresolved(
         text(
             f"""
             SELECT id, unresolved_count, unresolved_names
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             ORDER BY created_at DESC
             LIMIT 1
             """
@@ -353,7 +352,7 @@ async def get_pending_job(
                    window_end,
                    review_status,
                    created_at
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             WHERE id = :job_id
             """
         ),
@@ -412,7 +411,7 @@ async def resolve_supplier(
         text(
             f"""
             SELECT review_status, unresolved_names
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             WHERE id = :job_id
             """
         ),
@@ -506,7 +505,7 @@ async def resolve_supplier(
         await db.execute(
             text(
                 f"""
-                INSERT INTO {TCG_SCHEMA}.supplier_channels
+                INSERT INTO public.supplier_channels
                   (id, supplier_id, channel, is_active)
                 VALUES
                   (:id, :supplier_id, 'line', TRUE)
@@ -526,7 +525,7 @@ async def resolve_supplier(
     await db.execute(
         text(
             f"""
-            UPDATE {TCG_SCHEMA}.import_jobs
+            UPDATE public.import_jobs
             SET unresolved_names = :names, unresolved_count = :cnt
             WHERE id = :job_id
             """
@@ -568,7 +567,7 @@ async def commit_pending_job(
         text(
             f"""
             SELECT review_status, pending_messages, window_start, window_end
-            FROM {TCG_SCHEMA}.import_jobs
+            FROM public.import_jobs
             WHERE id = :job_id
             FOR UPDATE
             """
@@ -622,7 +621,7 @@ async def commit_pending_job(
     await db.execute(
         text(
             f"""
-            UPDATE {TCG_SCHEMA}.import_jobs
+            UPDATE public.import_jobs
             SET review_status = 'ok',
                 provider_count = :prov_count,
                 unresolved_count = 0,

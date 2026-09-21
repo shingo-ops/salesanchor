@@ -6,8 +6,6 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
-
 SourceScope = Literal["all", "active", "history"]
 
 
@@ -40,11 +38,11 @@ async def fetch_sold_out_results(
                 COALESCE(sm.raw_text, '') AS raw_text,
                 ar.status, sm.is_active AS source_is_active, sm.line_posted_at,
                 ei.line_start, ei.line_end
-            FROM {TCG_SCHEMA}.analysis_results ar
-            LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
-            LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
-            LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
-            LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+            FROM public.analysis_results ar
+            LEFT JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id
+            LEFT JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            LEFT JOIN public.source_messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
             LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
             LEFT JOIN public.products p ON p.id = ar.product_id
             WHERE ar.status = 'Sold out'
