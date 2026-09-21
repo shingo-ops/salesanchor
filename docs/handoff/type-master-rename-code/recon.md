@@ -6,6 +6,8 @@
 
 ## 変更箇所（フルパス:行番号）
 
+代表引用: `backend/app/routers/products.py:124`, `backend/app/services/tcg_analyzer_svc.py:425`, `.github/workflows/migration-guard.yml:416`
+
 ### Python 本体
 
 **backend/app/routers/products.py:124** — エラーメッセージ `tcg_type_master.code` → `type_master.code`

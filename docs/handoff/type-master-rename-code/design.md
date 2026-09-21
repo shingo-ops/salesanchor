@@ -2,6 +2,8 @@
 
 ## 概要
 
+recon: docs/handoff/type-master-rename-code/recon.md
+
 DB Phase 1（PR #3620）で `public.tcg_type_master` → `public.type_master` リネーム完了。
 本 Phase 2 はコード・コメント・CI設定の全参照を統一するリファクタリング。
 DB 変更なし・migration なし。
