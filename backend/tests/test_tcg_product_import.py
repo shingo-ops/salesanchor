@@ -357,7 +357,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     db.execute = AsyncMock(side_effect=execute)
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
     monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0001"))
-    args = dict(extraction_item_id="", source_message_id="", division_id="d", work_id=1,
+    args = dict(extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
                 manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date=None,
                 search_keywords="検索", exclude_keywords="除外")
     if commit is not None:

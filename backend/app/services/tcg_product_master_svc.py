@@ -87,16 +87,23 @@ async def fetch_registration_form(
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+    # product_kind_id → public.product_kinds (SSOT, INTEGER PK)
+    pk_rows = await db.execute(text(
+        "SELECT id::text AS id, name AS name "
+        "FROM public.product_kinds "
+        "WHERE is_active = TRUE ORDER BY name"
+    ))
+    lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
     for key, table, name_col in [
-        ("division_id", "tcg_major_categories", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
+        schema = "public" if table == "product_kinds" else TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"""
                 SELECT id::text AS id, {name_col} AS name
-                FROM {TCG_SCHEMA}.{table}
+                FROM {schema}.{table}
                 WHERE is_active = TRUE
                 ORDER BY {name_col}
                 """
@@ -316,7 +323,7 @@ async def create_product(
     *,
     extraction_item_id: str,
     source_message_id: str,
-    division_id: str,
+    product_kind_id: str | int,
     work_id: str | int,
     manufacturer_id: str,
     product_category_id: str | int,
@@ -371,6 +378,8 @@ async def create_product(
 
     rd = release_date if release_date else None
 
+    product_kind_id_int = int(product_kind_id) if product_kind_id else None
+
     # public.products INSERT
     await db.execute(text("SET LOCAL app.is_operator = 'true'"))
     product_row = await db.execute(
@@ -378,11 +387,11 @@ async def create_product(
             """
             INSERT INTO public.products
                 (product_code, name, release_date, category_class,
-                 division_id, work_id, manufacturer_id, product_category_id,
+                 product_kind_id, work_id, manufacturer_id, product_category_id,
                  mark, name_en, is_active)
             VALUES
                 (:code, :japanese_title, :release_date, :category_class,
-                 :division_id, :work_id, :manufacturer_id, :product_category_id,
+                 :product_kind_id, :work_id, :manufacturer_id, :product_category_id,
                  :mark, :english_title, TRUE)
             RETURNING id::text AS id, id AS int_id
             """
@@ -392,7 +401,7 @@ async def create_product(
             "japanese_title": japanese_title.strip(),
             "release_date": rd,
             "category_class": category_class,
-            "division_id": division_id,
+            "product_kind_id": product_kind_id_int,
             "work_id": work_id_int,
             "manufacturer_id": manufacturer_id,
             "product_category_id": product_category_id,

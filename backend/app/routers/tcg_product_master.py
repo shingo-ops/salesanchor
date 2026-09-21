@@ -72,7 +72,7 @@ class SearchResponse(BaseModel):
 class DuplicateCheckRequest(BaseModel):
     extraction_item_id: str
     source_message_id: str
-    division_id: str
+    product_kind_id: str = ""
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -90,7 +90,7 @@ class DuplicateCheckResponse(BaseModel):
 class CreateProductRequest(BaseModel):
     extraction_item_id: str
     source_message_id: str
-    division_id: str
+    product_kind_id: str = ""
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -221,7 +221,7 @@ async def create_product_master(
             db,
             extraction_item_id=body.extraction_item_id,
             source_message_id=body.source_message_id,
-            division_id=body.division_id,
+            product_kind_id=body.product_kind_id,
             work_id=body.work_id,
             manufacturer_id=body.manufacturer_id,
             product_category_id=body.product_category_id,

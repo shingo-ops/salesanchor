@@ -122,7 +122,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     "english_title": " new title ",
                     "mark": "=001",
                     "release_date": "2028-02-29",
-                    "division_code": "DIV01",
+                    "division_code": "TCG",
                     "work_code": "pokemon_booster_box",
                     "manufacturer_code": "MK001",
                     "product_category_code": "PC_BOX",

@@ -734,3 +734,6 @@ run_sql migrations/20260921_110000_pipeline_tables_public.sql
 
 # Step 5/5: tenant_004 スキーマのパイプライン 17テーブル + バックアップ 2テーブルを DROP（ADR-1002）
 run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
+
+# ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
+run_sql migrations/20260921_120000_add_products_product_kind_id.sql

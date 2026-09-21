@@ -13,12 +13,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.tcg_config import TCG_SCHEMA
 
 LOOKUPS = {
-    "division_id": "tcg_major_categories",
     "manufacturer_id": "tcg_manufacturers",
 }
 # ADR-155 Phase 3B: product_category_id is now INTEGER FK to public.tcg_product_categories
+# ADR-156 Phase 3A: product_kind_id is INTEGER FK to public.product_kinds
 PUBLIC_INTEGER_LOOKUPS = {
     "product_category_id": "tcg_product_categories",
+    "product_kind_id": "product_kinds",
+}
+# Name column override: tables that use "name" instead of "display_name"
+PUBLIC_INTEGER_NAME_COL: dict[str, str] = {
+    "product_kind_id": "name",
 }
 WORD_TABLES = {
     "search_keywords": "product_search_keywords",
@@ -86,12 +91,13 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
             "WHERE is_active=TRUE OR id=CAST(:selected AS uuid) ORDER BY display_name,id"
         ), {"selected": product[field]})
         lookups[field] = [dict(row) for row in rows.mappings()]
-    # ADR-155 Phase 3B: public INTEGER lookups (product_category_id → public.tcg_product_categories)
+    # ADR-155 Phase 3B / ADR-156 Phase 3A: public INTEGER lookups
     for field, table in PUBLIC_INTEGER_LOOKUPS.items():
+        name_col = PUBLIC_INTEGER_NAME_COL.get(field, "display_name")
         rows = await db.execute(text(
-            f"SELECT id::text AS id,display_name AS name,is_active "
+            f"SELECT id::text AS id,{name_col} AS name,is_active "
             f"FROM public.{table} "
-            "WHERE is_active=TRUE OR id=:selected ORDER BY display_name,id"
+            f"WHERE is_active=TRUE OR id=:selected ORDER BY {name_col},id"
         ), {"selected": product[field]})
         lookups[field] = [dict(row) for row in rows.mappings()]
     return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
@@ -146,15 +152,16 @@ async def update_product_detail(
             ), {"id": selected})).one_or_none()
             if row is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
-        # ADR-155 Phase 3B: validate public INTEGER lookups (product_category_id)
+        # ADR-155 Phase 3B / ADR-156 Phase 3A: validate public INTEGER lookups
         for field, table in PUBLIC_INTEGER_LOOKUPS.items():
             selected = values.get(field)
             if selected == product.get(field):
                 continue
             if selected is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            name_col = PUBLIC_INTEGER_NAME_COL.get(field, "display_name")
             row = (await db.execute(text(
-                f"SELECT display_name FROM public.{table} "
+                f"SELECT {name_col} FROM public.{table} "
                 "WHERE id=:id AND is_active=TRUE FOR SHARE"
             ), {"id": selected})).one_or_none()
             if row is None:
@@ -163,7 +170,8 @@ async def update_product_detail(
         await db.execute(text(
             "UPDATE public.products SET "
             "name=:japanese_title,name_en=:english_title,mark=:mark,"
-            "release_date=CAST(:release_date AS date),division_id=CAST(:division_id AS uuid),"
+            "release_date=CAST(:release_date AS date),"
+            "product_kind_id=:product_kind_id,"
             "work_id=:work_id,manufacturer_id=CAST(:manufacturer_id AS uuid),"
             "product_category_id=:product_category_id,category_class=:category_class "
             "WHERE id=:pid"

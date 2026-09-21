@@ -68,7 +68,7 @@ LOOKUP_TABLES: dict[str, str] = {
 
 # コード列 → create_product に渡す引数名
 LOOKUP_ARGS: dict[str, str] = {
-    "division_code": "division_id",
+    "division_code": "product_kind_id",
     "work_code": "work_id",
     "manufacturer_code": "manufacturer_id",
     "product_category_code": "product_category_id",
@@ -181,6 +181,18 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
         text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
     )
     maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
+    # Phase 3A SSOT: tcg_major_categories moved to public.product_kinds (INTEGER PK).
+    # Override tenant-schema result with canonical public-schema integer IDs.
+    pk_result = await db.execute(
+        text("SELECT code, id FROM public.product_kinds WHERE is_active = TRUE")
+    )
+    pk_map: dict[str, int] = {str(r[0]): int(r[1]) for r in pk_result.fetchall()}
+    # Backward-compatible aliases for legacy CSV division codes
+    _DIVISION_ALIASES = {"DIV01": "TCG", "DIV02": "FIGURE", "DIV03": "GOODS"}
+    for old_code, new_code in _DIVISION_ALIASES.items():
+        if new_code in pk_map:
+            pk_map[old_code] = pk_map[new_code]
+    maps["division_code"] = pk_map  # type: ignore[assignment]
     return maps
 
 
