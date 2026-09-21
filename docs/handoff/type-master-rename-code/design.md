@@ -16,14 +16,15 @@ DB 変更なし・migration なし。
 | migration-guard.yml が type_master を保護対象にしている | `grep type_master .github/workflows/migration-guard.yml` で `PROTECTED_TABLES` 内に確認 |
 | migration-guard.yml PUBLIC_TABLES に tcg_type_master が残っていない | `grep "PUBLIC_TABLES=" .github/workflows/migration-guard.yml \| grep -v tcg_type_master` |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（内部リファクタリング）。
+該当なし（純粋な内部リファクタリング。DB リネーム後のコード統一は標準的なパターン）。
 
-## 守り手
+## 維持の仕組み
 
-互換ビュー `public.tcg_type_master`（旧名 → 新テーブルへのビュー）が3か月間フォールバックとして存在。
-万一見落とした参照があっても本番障害には直結しない。
+- migration-guard.yml の `PROTECTED_TABLES` が `type_master` を保護対象として含む → 新規 migration で誤った INSERT/UPDATE/DELETE をブロック
+- migration-guard.yml の `PUBLIC_TABLES` から `tcg_type_master` が削除済み → 旧名 FK 参照を新規 migration で使うと CI エラーになる
+- 互換ビュー `public.tcg_type_master` が3か月間フォールバックとして残存 → 見落とした参照があっても本番障害に直結しない
 
 ## 影響範囲
 
@@ -33,7 +34,7 @@ DB 変更なし・migration なし。
 
 ## 戻し方
 
-git revert このコミット。DB は Phase 1 の互換ビューが残存するため即時戻し可能。
+`git revert <commit_hash>` で即時戻し可能。DB は Phase 1 の互換ビューが残存するため戻し後も動作継続。
 
 ## ADR 参照
 
