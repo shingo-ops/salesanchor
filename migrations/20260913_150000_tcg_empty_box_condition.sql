@@ -18,14 +18,11 @@ BEGIN
             'product_exclude_keywords','product_search_keywords','products_logistics','supplier_channels',
             'unit_aliases','units','unparsed_lines'))
     ) THEN RETURN; END IF;
-    -- パイプラインテーブルが 20260921_050000 で削除済みの場合はスキップ
-    -- conditions は残存するが analysis_results 等は削除されるため table_count < 6 となる
-    IF to_regclass('tenant_004.analysis_results') IS NULL
-       AND to_regclass('tenant_004.extraction_items') IS NULL
-       AND to_regclass('tenant_004.extraction_jobs') IS NULL
-       AND to_regclass('tenant_004.source_messages') IS NULL
-    THEN
-        RAISE NOTICE 'empty box: pipeline tables dropped (20260921_050000), skipping';
+    -- パイプラインテーブルが部分的または全面的に削除済みの場合はスキップ
+    -- analysis_results が存在しない = pipeline teardown 中（20260921_050000）
+    -- conditions は残存するが analysis_results が削除されると table_count < 6 となる
+    IF to_regclass('tenant_004.analysis_results') IS NULL THEN
+        RAISE NOTICE 'empty box: analysis_results not found (pipeline teardown), skipping';
         RETURN;
     END IF;
     IF table_count <> 6 THEN RAISE EXCEPTION 'empty box: incomplete TCG structure'; END IF;
