@@ -60,10 +60,14 @@ REQUIRED_COLUMNS: list[str] = [
 ]
 
 # コード列 → 参照マスタのテーブル名
+# NOTE: division_code と product_category_code は load_lookup_maps 内で公開スキーマ（public）の
+# SSOT（product_kinds / tcg_product_categories）で上書きされる（ADR-156 Phase 3A/3B）。
+# 初回クエリ（TCG_SCHEMA）は無駄になるが、静的解析ガード（test_tcg_schema_qualification.py）が
+# このマッピングの構造を直接検証するため、後方互換性のため変更しない。
 LOOKUP_TABLES: dict[str, str] = {
-    "division_code": "tcg_major_categories",
+    "division_code": "tcg_major_categories",       # overridden in load_lookup_maps → public.product_kinds
     "manufacturer_code": "tcg_manufacturers",
-    "product_category_code": "tcg_product_categories",
+    "product_category_code": "tcg_product_categories",  # overridden in load_lookup_maps → public.tcg_product_categories
 }
 
 # コード列 → create_product に渡す引数名
