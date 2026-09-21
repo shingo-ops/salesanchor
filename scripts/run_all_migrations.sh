@@ -744,6 +744,9 @@ run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
 # ADR-156 Phase 6: 小分類→大分類FK / 入数マスタ / 重量マスタ / products FK追加
 run_sql migrations/20260921_140000_product_classification_masters.sql
 
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260922_000000_create_buyback_tables.sql
+
 # ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
 run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
 
