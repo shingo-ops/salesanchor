@@ -35,6 +35,7 @@ celery_app = Celery(
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
+        "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
     ],
 )
 

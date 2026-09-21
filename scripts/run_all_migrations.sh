@@ -746,3 +746,6 @@ run_sql migrations/20260921_140000_product_classification_masters.sql
 
 # ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
 run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql

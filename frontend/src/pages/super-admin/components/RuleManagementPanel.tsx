@@ -17,6 +17,7 @@ import { Badge } from "../../../components/Badge";
 import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tabs, type TabItem } from "../../../components/Tabs";
+import { RuleTestPanel } from "./RuleTestPanel";
 
 interface RuleEntry {
   id: number;
@@ -35,7 +36,7 @@ interface RuleEntry {
 
 const PER_PAGE = 50;
 
-type RuleTab = "sold-out" | "date" | "default";
+type RuleTab = "sold-out" | "date" | "default" | "test";
 
 export function RuleManagementPanel() {
   const { t } = useTranslation();
@@ -69,6 +70,7 @@ export function RuleManagementPanel() {
       case "sold-out": return item.effect === "EXCLUDE";
       case "date": return item.effect === "OUTPUT" && item.match_type !== "DEFAULT";
       case "default": return item.match_type === "DEFAULT";
+      case "test": return false;
     }
   });
 
@@ -76,6 +78,7 @@ export function RuleManagementPanel() {
     { key: "sold-out", label: t(`${f}.tabs.soldOut`), count: items.filter((i) => i.effect === "EXCLUDE").length },
     { key: "date", label: t(`${f}.tabs.date`), count: items.filter((i) => i.effect === "OUTPUT" && i.match_type !== "DEFAULT").length },
     { key: "default", label: t(`${f}.tabs.default`), count: items.filter((i) => i.match_type === "DEFAULT").length },
+    { key: "test", label: t(`${f}.tabs.test`) },
   ];
 
   const handleRowClick = async (row: RuleEntry) => {
@@ -144,45 +147,51 @@ export function RuleManagementPanel() {
         onChange={(key) => { setActiveTab(key); setPage(1); }}
         variant="underline"
       />
-      <ContentToolbar
-        left={
-          <TextField
-            type="search"
-            label={t(`${f}.search`)}
-            value={searchInput}
-            onChange={(e) => setSearchInput(e.target.value)}
-            onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
-            data-testid="rule-management-search"
+      {activeTab === "test" ? (
+        <RuleTestPanel />
+      ) : (
+        <>
+          <ContentToolbar
+            left={
+              <TextField
+                type="search"
+                label={t(`${f}.search`)}
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
+                data-testid="rule-management-search"
+              />
+            }
+            right={
+              <HeaderButton
+                variant="primary"
+                data-testid="rule-management-search-btn"
+                onClick={runSearch}
+              >
+                {t("common.search")}
+              </HeaderButton>
+            }
           />
-        }
-        right={
-          <HeaderButton
-            variant="primary"
-            data-testid="rule-management-search-btn"
-            onClick={runSearch}
-          >
-            {t("common.search")}
-          </HeaderButton>
-        }
-      />
-      {error && <p role="alert" style={{ color: "var(--color-error)", padding: "var(--space-2) 0" }}>{error}</p>}
-      {filteredItems.length > 0 && (
-        <p style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
-          {t(`${f}.total`, { count: filteredItems.length })}
-        </p>
+          {error && <p role="alert" style={{ color: "var(--color-error)", padding: "var(--space-2) 0" }}>{error}</p>}
+          {filteredItems.length > 0 && (
+            <p style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)", marginBottom: "var(--space-2)" }}>
+              {t(`${f}.total`, { count: filteredItems.length })}
+            </p>
+          )}
+          <DataTable
+            columns={columns}
+            data={filteredItems}
+            rowKey={(row) => String(row.id)}
+            onRowClick={(row) => { if (toggling === null) void handleRowClick(row); }}
+            emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
+            page={page}
+            hasNextPage={filteredItems.length >= PER_PAGE}
+            onPageChange={setPage}
+            prevPageLabel={t("common.prevPage")}
+            nextPageLabel={t("common.nextPage")}
+          />
+        </>
       )}
-      <DataTable
-        columns={columns}
-        data={filteredItems}
-        rowKey={(row) => String(row.id)}
-        onRowClick={(row) => { if (toggling === null) void handleRowClick(row); }}
-        emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
-        page={page}
-        hasNextPage={filteredItems.length >= PER_PAGE}
-        onPageChange={setPage}
-        prevPageLabel={t("common.prevPage")}
-        nextPageLabel={t("common.nextPage")}
-      />
     </>
   );
 }

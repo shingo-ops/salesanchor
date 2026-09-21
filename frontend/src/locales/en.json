@@ -4291,7 +4291,36 @@
     "tabs": {
       "soldOut": "Sold-out Rules",
       "date": "Date Rules",
-      "default": "Default"
+      "default": "Default",
+      "test": "Test"
+    },
+    "test": {
+      "gateOpen": "Tests passed — rules can be enabled",
+      "gateFailed": "Tests failed",
+      "gateError": "Test error",
+      "gateRunning": "Running tests...",
+      "gateNever": "No tests run yet",
+      "casesTitle": "Test Cases",
+      "addCase": "Add Test Case",
+      "inputText": "Input Text",
+      "expectedCanonical": "Expected Result",
+      "expectedEffect": "Exclude Rule",
+      "expectedEffectExcluded": "Exclude (sold out etc.)",
+      "expectedEffectNone": "Normal output",
+      "note": "Note",
+      "deleteConfirm": "Delete this test case?",
+      "runAll": "Run All Tests",
+      "running": "Running...",
+      "resultsTitle": "Test Results",
+      "resultsPassed": "{{passed}}/{{total}} passed",
+      "actualCanonical": "Actual Result",
+      "actualEffect": "Actual Effect",
+      "match": "Pass",
+      "mismatch": "Fail",
+      "noResults": "No test results",
+      "noCases": "Please add test cases",
+      "runFirst": "Please run tests first",
+      "enableGateError": "Tests must pass before enabling rules"
     }
   }
 }

@@ -99,6 +99,7 @@ from app.routers import (
     super_admin_product_kinds,  # 大分類マスタ中央 admin
     super_admin_product_lines,  # 小分類マスタ中央 admin
     super_admin_quantity_units,  # 数量単位マスタ中央 admin
+    rule_test,  # Rule Test System: ルールテスト実行 API
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
@@ -516,6 +517,10 @@ app.include_router(
 # ステータスマスタ中央 admin
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
+)
+# Rule Test System: ルールテスト実行 API
+app.include_router(
+    rule_test.router, prefix="/api/v1", tags=["rule-test"],
 )
 # 備考マスタ中央 admin
 app.include_router(
