@@ -122,6 +122,11 @@ interface ImportRecord {
   unresolved_count: number;
   review_status: string | null;
   created_at: string | null;
+  created_count: number;
+}
+
+interface ImportTableRow extends ImportRecord {
+  resolved_count: number;
 }
 
 interface ImportSummary {
@@ -425,7 +430,7 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
         ? t("analysisRules.dashboard.importStatusWarning")
         : t("analysisRules.dashboard.importStatusOk");
 
-  const importColumns: DataTableColumn<ImportRecord>[] = [
+  const importColumns: DataTableColumn<ImportTableRow>[] = [
     {
       key: "filename",
       header: t("analysisRules.dashboard.importFilename"),
@@ -433,19 +438,39 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
     {
       key: "message_count",
       header: t("analysisRules.dashboard.importMessageCount"),
-      width: "100px",
+      width: "80px",
+    },
+    {
+      key: "created_count",
+      header: t("analysisRules.dashboard.importNewCount"),
+      width: "80px",
+    },
+    {
+      key: "resolved_count",
+      header: t("analysisRules.dashboard.importResolvedCount"),
+      width: "80px",
+    },
+    {
+      key: "unresolved_count",
+      header: t("analysisRules.dashboard.importUnresolvedCount"),
+      width: "80px",
     },
     {
       key: "review_status",
       header: t("analysisRules.dashboard.importReviewStatus"),
-      width: "120px",
+      width: "100px",
     },
     {
       key: "created_at",
       header: t("analysisRules.dashboard.importDate"),
-      width: "160px",
+      width: "140px",
     },
   ];
+
+  const tableData: ImportTableRow[] = (data.recent_imports ?? []).map((item) => ({
+    ...item,
+    resolved_count: item.message_count - (item.unresolved_count ?? 0),
+  }));
 
   return (
     <>
@@ -565,12 +590,12 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
         <div className="analysis-dashboard-section-title">
           {t("analysisRules.dashboard.importTotal")}
         </div>
-        {data.recent_imports.length === 0 ? (
+        {tableData.length === 0 ? (
           <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
         ) : (
-          <DataTable<ImportRecord>
+          <DataTable<ImportTableRow>
             columns={importColumns}
-            data={data.recent_imports}
+            data={tableData}
             rowKey={(row) => row.id}
             density="compact"
             emptyState={t("analysisRules.dashboard.noData")}
