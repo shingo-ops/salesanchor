@@ -3,11 +3,11 @@
 ## 問題の特定
 
 ### 現象
-deploy が migration 191 (`20260901_120000_add_unit_inference_columns_t004.sql`) で失敗。
+deploy が migration 191 (20260901_120000_add_unit_inference_columns_t004.sql) で失敗。
 
 ### 根本原因
-`scripts/run_all_migrations.sh` は全マイグレーションを毎回実行する（冪等性必須）。
-`20260921_050000_drop_tenant004_pipeline_tables.sql` がパイプラインテーブルを DROP した後、
+scripts/run_all_migrations.sh は全マイグレーションを毎回実行する（冪等性必須）。
+20260921_050000_drop_tenant004_pipeline_tables.sql がパイプラインテーブルを DROP した後、
 先行マイグレーションが再実行されると2箇所で失敗する。
 
 ### 失敗箇所（調査結果）
@@ -29,5 +29,5 @@ PR #3641 は 20260905 〜 20260910 の 6 ファイルを修正したが、上記
 - ADR-082: docs/adr/ADR-082-deploy-skip-migrations-on-frontend-only.md （run_all_migrations.sh 統合ランナー・冪等性必須）
 
 ## 修正方針
-- `20260901_120000`: テーブル存在チェックを追加（スキーマガード直後）
-- `20260913_150000`: パイプラインテーブル全削除時のスキップを追加
+- 20260901_120000: テーブル存在チェックを追加（スキーマガード直後）
+- 20260913_150000: パイプラインテーブル全削除時のスキップを追加
