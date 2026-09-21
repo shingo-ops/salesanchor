@@ -31,11 +31,12 @@ product_categories と type_master の既存パターンをそのまま踏襲。
 
 ## 外部・過去事例の参照と我々への応用
 
-`super_admin_product_categories.py` および `ProductCategoriesMasterPanel.tsx` が直接適用可能な先行事例として存在。
+既存の `backend/app/routers/super_admin_product_categories.py` および `frontend/src/pages/super-admin/components/ProductCategoriesMasterPanel.tsx` が直接適用可能な先行事例として存在。
 API構造（soft delete、IntegrityError→409、生SQL+sqlalchemy.text）をそのまま踏襲。フロントは DataTable + Modal + ConfirmModal の金型パターンを流用。
 
 ## 維持の仕組み
 
+守り手:
 - `require_super_admin` dependency でアクセス制御を維持
 - soft delete（is_active=FALSE）により削除ログが残る
 - i18n: ja.json/en.json の同一キーを CI でチェック（ADR-027）
