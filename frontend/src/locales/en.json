@@ -3946,7 +3946,8 @@
       "importMatchRate": "Name match rate",
       "importActionRequired": "Action required",
       "importNoAction": "None",
-      "importReviewCta": "Review →"
+      "importReviewCta": "Review →",
+      "importCheckSupplierCta": "Check suppliers →"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",

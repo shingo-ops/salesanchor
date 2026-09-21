@@ -518,6 +518,15 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
                     ? t("analysisRules.dashboard.importStatusWarning")
                     : t("analysisRules.dashboard.importStatusDanger")}
               </Badge>
+              {matchRate < 100 && (
+                <button
+                  type="button"
+                  className="analysis-dashboard-cta-btn"
+                  onClick={() => onNavigate("supplier-master")}
+                >
+                  {t("analysisRules.dashboard.importCheckSupplierCta")}
+                </button>
+              )}
             </span>
           </div>
 
