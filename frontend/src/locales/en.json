@@ -4287,6 +4287,11 @@
     "toggleEnable": "Enable",
     "toggleDisable": "Disable",
     "toggleSuccess": "Rule updated",
-    "toggleFail": "Failed to update rule"
+    "toggleFail": "Failed to update rule",
+    "tabs": {
+      "soldOut": "Sold-out Rules",
+      "date": "Date Rules",
+      "default": "Default"
+    }
   }
 }

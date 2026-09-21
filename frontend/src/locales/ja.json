@@ -4287,6 +4287,11 @@
     "toggleEnable": "有効化",
     "toggleDisable": "無効化",
     "toggleSuccess": "ルールを更新しました",
-    "toggleFail": "ルールの更新に失敗しました"
+    "toggleFail": "ルールの更新に失敗しました",
+    "tabs": {
+      "soldOut": "完売ルール",
+      "date": "日付ルール",
+      "default": "デフォルト"
+    }
   }
 }
