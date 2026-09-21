@@ -42,7 +42,6 @@ from app.database import get_db
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
-    TCG_SCHEMA,
     _enqueue_extraction,
     _write_source_messages,
     build_provider_entries,
@@ -51,6 +50,10 @@ from app.services.tcg_line_import_svc import (
 )
 
 router = APIRouter()
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 
 # ---------------------------------------------------------------------------

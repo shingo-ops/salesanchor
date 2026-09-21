@@ -39,10 +39,11 @@ from app.services.tcg_work_reference import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# スキーマ定数（tenant_004 専用）
+# スキーマ定数
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
 # ---------------------------------------------------------------------------
-
-from app.tcg_config import TCG_SCHEMA
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # 同期 DB エンジン
@@ -148,7 +149,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if not work_schema_ready(session) or not schema_ready(session):
         return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
                 "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
-    reference = load_work_reference(session, TCG_SCHEMA)
+    reference = load_work_reference(session, "public")
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
@@ -196,7 +197,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
         try:
-            current = load_work_reference(session, TCG_SCHEMA)
+            current = load_work_reference(session, "public")
             if reference_digest(current) != digest:
                 raise RecordError("REFERENCE_CHANGED")
             if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:

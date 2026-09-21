@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+TCG_SCHEMA = "public"
 
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
@@ -39,7 +39,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
             COUNT(CASE WHEN NOT ar.pid_resolved THEN 1 END)  AS product_id_unresolved_count,
             COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count
         FROM {TCG_SCHEMA}.source_messages sm
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
         LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
@@ -77,7 +77,7 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
             ps.name         AS supplier_name,
             sm.raw_text
         FROM {TCG_SCHEMA}.source_messages sm
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         WHERE ps.supplier_code = :supplier_id
           AND sm.is_active = TRUE
