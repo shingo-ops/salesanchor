@@ -13,7 +13,7 @@ TcgLineImportPage の hub-content div にパディングが欠けているため
 
 ### ADR確認
 - `docs/adr/ADR-067-design-token-enforcement.md` — デザイントークン強制ルール
-- `docs/adr/ADR-144-ui-governance.md` — UIガバナンス
+- `docs/adr/ADR-144-ui-component-governance.md` — UIガバナンス
 
 ### 変更前
 ```tsx

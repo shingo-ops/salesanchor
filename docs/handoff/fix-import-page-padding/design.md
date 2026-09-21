@@ -12,8 +12,8 @@ PR #3645 で AnalysisRulesPage の hub-content にパディングを適用した
 | `frontend/src/pages/super-admin/TcgLineImportPage.tsx:282` | hub-content の style に `padding: "var(--space-6)"` を追加 |
 
 ## ADR参照
-- ADR-067: デザイントークン使用（`var(--space-6)`）
-- ADR-144: 既存コンポーネント金型使用
+- `docs/adr/ADR-067-design-token-enforcement.md` — デザイントークン使用（`var(--space-6)`）
+- `docs/adr/ADR-144-ui-component-governance.md` — UIガバナンス
 
 ## KGI/KPI
 | 基準 | 検証方法 |
@@ -22,11 +22,16 @@ PR #3645 で AnalysisRulesPage の hub-content にパディングを適用した
 | TypeScript コンパイルエラーなし | `npx tsc --noEmit` PASS |
 | ESLint エラーなし | `npx eslint src/pages/super-admin/TcgLineImportPage.tsx` PASS |
 
-## 外部事例
-既存実装: AnalysisRulesPage.tsx（同リポジトリ）が同一パターンで実装済み。
+## 外部・過去事例の参照と我々への応用
+- 同リポジトリ内の `frontend/src/pages/super-admin/AnalysisRulesPage.tsx` が同一パターン（hub-content に var(--space-6)）を実装済み（PR #3645）。
+- 同じ hub-shell / hub-content レイアウトを持つページ間での一貫性適用。
 
 ## 弊害
 なし（単一ファイルの style prop 追加のみ）
 
 ## 戻し方
 `padding: "var(--space-6)"` を削除するだけで元に戻る。
+
+## 維持の仕組み
+- AnalysisRulesPage と同じ `var(--space-6)` を使用しているため、デザイントークン変更時は両ページへ自動適用される。
+- ESLint + TypeScript による静的チェックで回帰防止。
