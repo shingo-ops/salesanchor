@@ -37,11 +37,13 @@ ELSIF to_regclass(format('%I.%I', _schema, _tbl_c)) IS NULL THEN
     RAISE NOTICE '  %.% not found (SSOT-moved to public), skipping condition_id rewire', _schema, _tbl_c;
 ```
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-N/A（内部マイグレーション修正・既存パターンの適用）
+同ファイル内 `$phase3b$` ブロック（L246-253）に `to_regclass` + EXISTS チェックによるテナントテーブル不在ガードが実装済み。同じパターンを `$phase3$` ブロックの unit_id / condition_id に適用した。既存コードベースの実証済みパターンであり外部ライブラリ等の参照は不要。
 
-## 守り手
+## 維持の仕組み
+
+- 守り手: `scripts/run_all_migrations.sh`
 
 - `scripts/run_all_migrations.sh` の実行順序は変更なし
 - `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql` が後続で analysis_results を DROP するため、unit_id/condition_id が UUID のままでもデプロイは完了する
