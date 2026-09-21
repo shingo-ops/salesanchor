@@ -231,6 +231,16 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
     cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+    # Seed public.product_kinds so load_lookup_maps() can resolve division codes (DIV01→TCG etc.)
+    cursor.execute("""
+        INSERT INTO public.product_kinds (code, name, display_order, is_active) VALUES
+            ('TCG',    'トレーディングカードゲーム', 10, true),
+            ('FIGURE', 'フィギュア',               20, true),
+            ('GOODS',  'グッズ',                   30, true)
+        ON CONFLICT (code) DO NOTHING
+    """)
+    # ADR-156 Phase 3A: add product_kind_id FK column to public.products
+    cursor.execute((MIGRATIONS / "20260921_120000_add_products_product_kind_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
