@@ -1,5 +1,12 @@
 # design: import match rate CTA
 
+## 参照
+
+- recon: docs/handoff/import-match-rate-cta/recon.md
+- ADR-027: docs/adr/ADR-027-ui-internationalization.md
+- ADR-067: docs/adr/ADR-067-design-tokens.md
+- ADR-144: docs/CC_UI_GOVERNANCE.md
+
 ## 変更概要
 
 importタブの「名前の一致率」行に、matchRate < 100 のときのみCTAボタンを追加する。
@@ -64,4 +71,4 @@ importタブの「名前の一致率」行に、matchRate < 100 のときのみC
 
 ## 維持の仕組み
 
-守り手: ADR-027（i18n CI チェック）がキー同一性を保証。AnalysisDashboardPanel.tsx の importTabContent 部分は matchRate 計算ロジックが変わらない限りこのCTAは正しく動作する。
+守り手: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` — ADR-027（i18n CI チェック）がキー同一性を保証。importTabContent 部分は matchRate 計算ロジックが変わらない限りこのCTAは正しく動作する。
