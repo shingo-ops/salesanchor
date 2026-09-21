@@ -17,7 +17,7 @@ Phase 2c（`tenant_004.tcg_products` DROP）が成功すること（RAISE EXCEPT
 
 ## 変更内容
 
-1. `migrations/20260922_010000_fix_phase2c_fk_blocker.sql`（新規）
+1. `migrations/20260922_020000_fix_phase2c_fk_blocker.sql`（新規）
    - `public.analysis_results` と `tenant_004.analysis_results` の旧FK DROP
    - `public.analysis_results` に正しいFK（`public.products(tcg_uuid)` 参照）を追加
 2. `scripts/run_all_migrations.sh`
@@ -36,6 +36,8 @@ Phase 2c（`tenant_004.tcg_products` DROP）が成功すること（RAISE EXCEPT
 - Phase 2a が `tenant_%` ループで `public` を漏らした構造的な問題。同手法を `public` にも適用
 
 ## 維持の仕組み
+
+守り手: `scripts/run_all_migrations.sh`（実行順序保証）・`migrations/20260915_010000_drop_tcg_products_phase2c.sql`（FK残存時 RAISE EXCEPTION でブロック）
 
 - 本マイグレーションは冪等（`DROP CONSTRAINT IF EXISTS` + `IF NOT EXISTS` ガード）
 - Phase 2c 直前実行により、デプロイ順序依存の問題を防ぐ
