@@ -92,7 +92,7 @@ END $$;
 
 ### Backend CRUD
 
-4テーブルとも `super_admin_product_kinds.py` と同一パターン:
+4テーブルとも `backend/app/routers/super_admin_product_kinds.py` と同一パターン:
 - GET /super-admin/{resource} — 一覧（is_active フィルタ、ページング）
 - POST /super-admin/{resource} — 新規作成
 - PATCH /super-admin/{resource}/{id} — 部分更新
@@ -103,7 +103,7 @@ weight_classes は min_grams, max_grams カラムを追加。
 
 ### Frontend 管理パネル
 
-ProductKindsMasterPanel.tsx と同一パターンで4パネル作成:
+4パネルを作成（`frontend/src/pages/super-admin/components/ProductKindsMasterPanel.tsx` と同一パターン）:
 - DataTable + Modal + ConfirmModal（ADR-144 金型）
 - 全文字列 t() 経由（ADR-027）
 - quantity_units: value フィールド追加（数値入力）
@@ -127,12 +127,19 @@ Check 4 PUBLIC_TABLES に `quantity_units` `weight_classes` を追加。
 | migration-guard が quantity_units, weight_classes を保護する | テスト migration で CI が赤になる |
 | i18n キーが ja.json, en.json に存在する | grep で確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（内部マスタCRUDの標準パターン踏襲。外部事例が不要な理由: 既存の product_kinds CRUD が本リポジトリ内の実証済みパターン）
+内部マスタCRUDの標準パターン踏襲。本リポジトリ内の product_kinds CRUD（super_admin_product_kinds.py）が実証済みの実装パターンであり、外部事例を参照する必要はない。同一パターンを適用することでコードの一貫性を維持する。
 
 ## 守り手
 
 - migration-guard.yml Check 8: quantity_units, weight_classes への値INSERT を CI で自動ブロック
 - super_admin 権限ガード: 全エンドポイントに require_super_admin 依存
 - 既存パターン踏襲のため新規の仕組み不要
+
+## 維持の仕組み
+
+- migration-guard.yml の PROTECTED_TABLES に quantity_units, weight_classes を追加済み（CI 自動チェック）
+- super_admin 権限ガードにより一般ユーザーからの変更を自動ブロック
+- is_active による soft delete でデータ削除を避け、参照整合性を維持
+- products テーブルの FK は ON DELETE SET NULL（マスタ削除時に既存商品への影響を最小化）
