@@ -1,5 +1,8 @@
 # Design: product_kinds CRUD API + 管理UI
 
+設計日: 2026-09-21
+recon: docs/handoff/product-kinds-crud/recon.md
+
 ## 概要
 
 `public.product_kinds` テーブルの CRUD API と管理UIを追加する。
@@ -37,13 +40,13 @@ API構造（soft delete、IntegrityError→409、生SQL+sqlalchemy.text）をそ
 ## 維持の仕組み
 
 守り手:
-- `require_super_admin` dependency でアクセス制御を維持
-- soft delete（is_active=FALSE）により削除ログが残る
-- i18n: ja.json/en.json の同一キーを CI でチェック（ADR-027）
+- `backend/app/routers/super_admin_product_kinds.py` — `require_super_admin` dependency でアクセス制御を維持
+- `backend/app/routers/super_admin_product_kinds.py` — soft delete（is_active=FALSE）により削除ログが残る
+- `frontend/src/locales/ja.json`, `frontend/src/locales/en.json` — i18n: ja.json/en.json の同一キーを CI でチェック（ADR-027）
 
 ## 守り手
 
-- ADR-027: i18n 強制 → ProductKindsMasterPanel.tsx で全文字列 t() 使用
-- ADR-144: UIガバナンス → DataTable/Modal/HeaderButton/TextField 金型コンポーネント使用
-- soft delete パターン: DELETE は is_active=FALSE（実レコード削除なし）
-- 参照整合性: type_master.kind_id で参照中なら 409 を返す
+- ADR-027: i18n 強制 → `frontend/src/pages/super-admin/components/ProductKindsMasterPanel.tsx` で全文字列 t() 使用
+- ADR-144: UIガバナンス → `frontend/src/pages/super-admin/components/ProductKindsMasterPanel.tsx` — DataTable/Modal/HeaderButton/TextField 金型コンポーネント使用
+- soft delete パターン: `backend/app/routers/super_admin_product_kinds.py` — DELETE は is_active=FALSE（実レコード削除なし）
+- 参照整合性: `backend/app/routers/super_admin_product_kinds.py` — type_master.kind_id で参照中なら 409 を返す
