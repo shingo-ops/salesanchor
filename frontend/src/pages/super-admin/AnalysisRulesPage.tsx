@@ -28,6 +28,10 @@ import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
 import { NoteMasterPanel } from "./components/NoteMasterPanel";
+import { ProductLinesMasterPanel } from "./components/ProductLinesMasterPanel";
+import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
+import { QuantityUnitsMasterPanel } from "./components/QuantityUnitsMasterPanel";
+import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel";
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import "./AnalysisRulesPage.css";
@@ -162,6 +166,10 @@ export default function AnalysisRulesPage() {
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
               {activeSection === "unit-master" && <UnitMasterPanel />}
               {activeSection === "note-master" && <NoteMasterPanel />}
+              {activeSection === "product-lines-master" && <ProductLinesMasterPanel />}
+              {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}
+              {activeSection === "quantity-units-master" && <QuantityUnitsMasterPanel />}
+              {activeSection === "weight-classes-master" && <WeightClassesMasterPanel />}
               {activeSection === "rule-management" && <RuleManagementPanel />}
             </div>
           )}

@@ -96,12 +96,16 @@ from app.routers import (
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
+    super_admin_product_formats,  # フォーマットマスタ中央 admin
     super_admin_product_kinds,  # 大分類マスタ中央 admin
+    super_admin_product_lines,  # 小分類マスタ中央 admin
+    super_admin_quantity_units,  # 数量単位マスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
     super_admin_units,  # 単位マスタ中央 admin
+    super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
     tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
@@ -525,6 +529,22 @@ app.include_router(
 # 大分類マスタ中央 admin
 app.include_router(
     super_admin_product_kinds.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 小分類マスタ中央 admin
+app.include_router(
+    super_admin_product_lines.router, prefix="/api/v1", tags=["super-admin"],
+)
+# フォーマットマスタ中央 admin
+app.include_router(
+    super_admin_product_formats.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 数量単位マスタ中央 admin
+app.include_router(
+    super_admin_quantity_units.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 重量クラスマスタ中央 admin
+app.include_router(
+    super_admin_weight_classes.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(

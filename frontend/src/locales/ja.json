@@ -3888,6 +3888,10 @@
       "dashboard": "ダッシュボード",
       "noteMaster": "備考マスタ",
       "productKindsMaster": "大分類マスタ",
+      "productLinesMaster": "中分類マスタ",
+      "productFormatsMaster": "商品形態マスタ",
+      "quantityUnitsMaster": "数量単位マスタ",
+      "weightClassesMaster": "重量クラスマスタ",
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール"
     },
@@ -4221,6 +4225,64 @@
     "displayOrder": "表示順",
     "isActive": "有効"
   },
+  "productLinesMaster": {
+    "title": "中分類マスタ",
+    "addNew": "中分類を追加",
+    "createTitle": "中分類を追加",
+    "editTitle": "中分類を編集",
+    "confirmDelete": "この中分類を削除しますか？",
+    "noData": "中分類はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "kindId": "大分類",
+    "typeId": "中分類（旧）",
+    "displayOrder": "表示順",
+    "isActive": "有効"
+  },
+  "productFormatsMaster": {
+    "title": "商品形態マスタ",
+    "addNew": "商品形態を追加",
+    "createTitle": "商品形態を追加",
+    "editTitle": "商品形態を編集",
+    "confirmDelete": "この商品形態を削除しますか？",
+    "noData": "商品形態はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "lineId": "小分類",
+    "displayOrder": "表示順",
+    "isActive": "有効"
+  },
+  "quantityUnitsMaster": {
+    "title": "数量単位マスタ",
+    "addNew": "数量単位を追加",
+    "createTitle": "数量単位を追加",
+    "editTitle": "数量単位を編集",
+    "confirmDelete": "この数量単位を削除しますか？",
+    "noData": "数量単位はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "value": "数値",
+    "displayOrder": "表示順",
+    "isActive": "有効"
+  },
+  "weightClassesMaster": {
+    "title": "重量クラスマスタ",
+    "addNew": "重量クラスを追加",
+    "createTitle": "重量クラスを追加",
+    "editTitle": "重量クラスを編集",
+    "confirmDelete": "この重量クラスを削除しますか？",
+    "noData": "重量クラスはまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "minGrams": "下限(g)",
+    "maxGrams": "上限(g)",
+    "displayOrder": "表示順",
+    "isActive": "有効"
+  },
   "ruleManagement": {
     "title": "ルール管理",
     "subtitle": "Gemini解析に使用するステータス判定ルールを管理します。",
@@ -4253,6 +4315,11 @@
     "toggleEnable": "有効化",
     "toggleDisable": "無効化",
     "toggleSuccess": "ルールを更新しました",
-    "toggleFail": "ルールの更新に失敗しました"
+    "toggleFail": "ルールの更新に失敗しました",
+    "tabs": {
+      "soldOut": "完売ルール",
+      "date": "日付ルール",
+      "default": "デフォルト"
+    }
   }
 }
