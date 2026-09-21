@@ -35,7 +35,8 @@ BEGIN
     WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
     IF table_count = 0 THEN RETURN;
     ELSIF table_count <> 6 THEN
-        RAISE EXCEPTION 'cardset bundle: incomplete TCG structure';
+        RAISE NOTICE 'cardset bundle: partial structure (% of 6 tables), skipping (SSOT migration moved to public)', table_count;
+        RETURN;
     END IF;
     LOCK TABLE tenant_004.tcg_major_categories,
         tenant_004.tcg_series, tenant_004.tcg_manufacturers,
