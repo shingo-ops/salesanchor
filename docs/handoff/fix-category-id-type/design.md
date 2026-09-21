@@ -45,8 +45,10 @@ Pydantic v2 では `int` フィールドに文字列を渡すと `ValidationErro
 
 ## 維持の仕組み
 
-- サービス側（`tcg_product_detail_svc.py`）の `PUBLIC_INTEGER_LOOKUPS` dict と `LOOKUPS` dict を見れば、どのフィールドが INTEGER か UUID かが一目で分かる。ルーター変更時はこの dict と照合する。
-- フロントエンド `TcgProductDetailDrawer.tsx` line 134 のパターン（`Number()` 変換）を分類フィールド追加時の標準とする。
+守り手: code-reviewer（ルーター変更時に PUBLIC_INTEGER_LOOKUPS と型の一致を確認）
+
+- サービス側（`backend/app/services/tcg_product_detail_svc.py`）の `PUBLIC_INTEGER_LOOKUPS` dict と `LOOKUPS` dict を見れば、どのフィールドが INTEGER か UUID かが一目で分かる。ルーター変更時はこの dict と照合する。
+- フロントエンド `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx` line 134 のパターン（`Number()` 変換）を分類フィールド追加時の標準とする。
 
 ## 戻し方
 git revert で本 PR コミットを打ち消す。DB スキーマ変更なし。
