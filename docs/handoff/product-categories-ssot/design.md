@@ -48,10 +48,10 @@ _PUBLIC_MASTER = frozenset({"tcg_normalization_rules", "tcg_product_categories"}
 
 | ファイル | 変更種別 | 呼び出し元 |
 |---|---|---|
-| `tcg_product_master_svc.py` | schema 選択ロジック修正 | `tcg_product_import.py` → `create_product_standalone` |
-| `tcg_product_import.py` | schema 選択ロジック修正 | GET `/tcg/products/lookups` |
-| `tcg_work_comparison_svc.py` | `_PUBLIC_MASTER` 追加 | `read_snapshot` → `compare_snapshot` |
-| `tcg_product_import_svc.py` | コメント追加（動作変更なし） | なし |
+| `backend/app/services/tcg_product_master_svc.py` | schema 選択ロジック修正 | `backend/app/routers/tcg_product_import.py` → `create_product_standalone` |
+| `backend/app/routers/tcg_product_import.py` | schema 選択ロジック修正 | GET `/tcg/products/lookups` |
+| `backend/app/services/tcg_work_comparison_svc.py` | `_PUBLIC_MASTER` 追加 | `read_snapshot` → `compare_snapshot` |
+| `backend/app/services/tcg_product_import_svc.py` | コメント追加（動作変更なし） | なし |
 
 ## 検証方法
 
@@ -68,12 +68,18 @@ _PUBLIC_MASTER = frozenset({"tcg_normalization_rules", "tcg_product_categories"}
 
 ## 弊害・リスク
 
-- `tcg_work_comparison_svc.py` の変更はスナップショット内容の変化を伴う。ただし既存の比較ジョブとの後方互換性は、スナップショットの `sha256` が変わることで自動的に検知される（不一致時に `INVALID_SAVED_REFERENCE` エラー）。
+- `backend/app/services/tcg_work_comparison_svc.py` の変更はスナップショット内容の変化を伴う。ただし既存の比較ジョブとの後方互換性は、スナップショットの `sha256` が変わることで自動的に検知される（不一致時に `INVALID_SAVED_REFERENCE` エラー）。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-Phase 3A（ADR-156、PR #3633）で `division_code` → `public.product_kinds` を同様の手法で修正済み。本 PR は同じパターンを `product_category` に適用する。
+ADR-156 Phase 3A（PR #3633）で `division_code` → `public.product_kinds` を同様の手法で修正済み。`schema = "public" if table == "product_kinds" else TCG_SCHEMA` という条件を `in` セットに変えるパターンを確立した。本 PR は同じパターンを `product_category` に適用する。追加の外部事例は不要。
 
 ## 戻し方
 
 コード変更のみのため、git revert で即時ロールバック可能。DB 変更なし。
+
+## 維持の仕組み
+
+- 守り手: backend/tests/test_tcg_schema_qualification.py
+- 対象: LOOKUP_TABLES 構造変更・schema 選択ロジックの退行
+- 関所: `test_product_dynamic_lookup_contract` が LOOKUP_TABLES の構造を静的検証。`test_all_tcg_sql_are_schema_qualified` が schema 修飾の抜けを検出。
