@@ -28,7 +28,8 @@
 
 DO $$
 DECLARE
-    _schema TEXT := 'tenant_004';
+    _schema      TEXT := 'tenant_004';
+    _seed_needed BOOLEAN := FALSE;
 BEGIN
     -- ----------------------------------------------------------------
     -- ガード: tenant_004 が存在しない場合はスキップ
@@ -37,6 +38,16 @@ BEGIN
         SELECT 1 FROM pg_namespace WHERE nspname = _schema
     ) THEN
         RAISE NOTICE 'migration 20260901_090000: schema % does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
+    -- ----------------------------------------------------------------
+    -- ガード: tenant_004.conditions テーブルが存在しない場合はすべてスキップ
+    -- （20260920_040000_conditions_ssot_phase1 の「事後DROP」が先に本番適用された状態で
+    --  このマイグレーションが再実行される場合に対応。to_regclass はテーブル不在時 NULL を返す）
+    -- ----------------------------------------------------------------
+    IF to_regclass(_schema || '.conditions') IS NULL THEN
+        RAISE NOTICE 'migration 20260901_090000: %.conditions does not exist (SSOT Phase 1 DROP 済みと推定), skip all steps', _schema;
         RETURN;
     END IF;
 
@@ -94,10 +105,24 @@ BEGIN
     -- 冪等ガード: CN0001 の search_kw が '' (デフォルト) の場合のみ実行。
     --   - 新規DB / テストDB: search_kw = '' → UPDATE 実行 → テスト通過
     --   - 本番DB: search_kw に値が入っている → UPDATE スキップ → アプリ管理値を保護
+    --   - SSOT Phase 1 移行後: tenant_004.conditions が DROP 済みの場合はスキップ
+    --     （20260920_040000_conditions_ssot_phase1 の「事後DROP」が先に本番適用された場合に対応）
+    --     修正: to_regclass で存在確認してから EXECUTE 経由でクエリ（直接参照=エラー回避）
     -- ----------------------------------------------------------------
-    IF EXISTS (
-        SELECT 1 FROM tenant_004.conditions WHERE code = 'CN0001' AND search_kw = ''
-    ) THEN
+    -- テーブル存在チェック（to_regclass: 存在しなければ NULL を返す・エラーにならない）
+    IF to_regclass(_schema || '.conditions') IS NOT NULL
+       AND EXISTS (
+           SELECT 1 FROM information_schema.columns
+           WHERE table_schema = _schema AND table_name = 'conditions' AND column_name = 'search_kw'
+       )
+    THEN
+        EXECUTE format(
+            'SELECT EXISTS(SELECT 1 FROM %I.conditions WHERE code = $1 AND search_kw = $2)',
+            _schema
+        ) USING 'CN0001', '' INTO _seed_needed;
+    END IF;
+
+    IF _seed_needed THEN
         EXECUTE format($seed$
             UPDATE %I.conditions
             SET
@@ -161,7 +186,11 @@ BEGIN
 
         RAISE NOTICE 'migration 20260901_090000: seeded conditions R1-R4 columns (10 rows)';
     ELSE
-        RAISE NOTICE 'migration 20260901_090000: conditions already populated (search_kw not empty), skipping seed';
+        IF to_regclass(_schema || '.conditions') IS NULL THEN
+            RAISE NOTICE 'migration 20260901_090000: %.conditions does not exist (SSOT Phase 1 DROP 済み), skipping seed', _schema;
+        ELSE
+            RAISE NOTICE 'migration 20260901_090000: conditions already populated (search_kw not empty), skipping seed';
+        END IF;
     END IF;
 
 END;
