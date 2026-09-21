@@ -1,5 +1,8 @@
 # Design: fix-import-active-count
 
+参照 recon: docs/handoff/fix-import-active-count/recon.md
+関連 ADR: ADR-027, ADR-067, ADR-144
+
 ## 変更内容
 インポートタブのKPIカード「メッセージ総数」を「有効メッセージ」に変更。
 
@@ -32,4 +35,4 @@
 該当なし（既存フィールドの表示切り替えのみ・新規設計要素なし）
 
 ## 維持の仕組み
-守り手: TypeScript型チェック（`ImportSummary` インターフェースが `active_message_count` を持つことを保証）
+守り手: frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx（`ImportSummary` インターフェースが `active_message_count` を持つことをTypeScript型チェックで保証）
