@@ -728,3 +728,6 @@ run_sql migrations/20260921_070000_rename_tcg_type_master_to_type_master.sql
 run_sql migrations/20260921_080000_product_lines_add_type_id.sql
 run_sql migrations/20260921_090000_create_condition_definitions.sql
 run_sql migrations/20260921_100000_add_analysis_master_fk.sql
+
+# Step 1/5: パイプライン 17テーブル を public スキーマに作成（DDL-only・冪等）
+run_sql migrations/20260921_010000_pipeline_tables_public.sql

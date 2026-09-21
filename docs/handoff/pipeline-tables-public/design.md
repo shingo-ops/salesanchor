@@ -60,6 +60,4 @@ tenant_004スキーマに残っているパイプラインテーブル17本をpu
 - `migrations/20260921_010000_pipeline_tables_public.sql` が冪等DDLを保持
 - `.github/workflows/migration-guard.yml` の PUBLIC_TABLES allowlist がスキーマ外テーブル参照を CI でブロック
 - Step 2〜5 完了後に tenant_004 側テーブルを DROP して完全移行
-
-## 守り手
-`.github/workflows/migration-guard.yml`
+- 守り手: `.github/workflows/migration-guard.yml`
