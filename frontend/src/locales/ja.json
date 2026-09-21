@@ -3930,7 +3930,10 @@
       "distributionSettingNote": "備考",
       "extractionTitle": "抽出工程",
       "analysisTitle": "解析工程",
-      "extractionErrorRate": "抽出エラー率"
+      "extractionErrorRate": "抽出エラー率",
+      "importTrendTitle": "7日間のインポート推移",
+      "importTrendJobCount": "インポート回数",
+      "importTrendMessageCount": "メッセージ数"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
