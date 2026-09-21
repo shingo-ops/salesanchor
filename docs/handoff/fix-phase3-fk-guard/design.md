@@ -43,6 +43,6 @@ N/A（内部マイグレーション修正・既存パターンの適用）
 
 ## 守り手
 
-- `run_all_migrations.sh` の実行順序は変更なし
-- `20260921_050000_drop_tenant004_pipeline_tables.sql` が後続で analysis_results を DROP するため、unit_id/condition_id が UUID のままでもデプロイは完了する
+- `scripts/run_all_migrations.sh` の実行順序は変更なし
+- `migrations/20260921_050000_drop_tenant004_pipeline_tables.sql` が後続で analysis_results を DROP するため、unit_id/condition_id が UUID のままでもデプロイは完了する
 - `to_regclass` は存在しないテーブルで NULL を返す（例外なし）
