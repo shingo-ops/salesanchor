@@ -1,5 +1,10 @@
 # design: fix-import-date-jst
 
+## 参照
+
+- recon: docs/handoff/fix-import-date-jst/recon.md
+- 対象ADR: ADR-027, ADR-067, ADR-144
+
 ## 目的
 
 インポートタブの最近のインポート DataTable で `created_at` をJST日本語形式（例: `2026年9月21日 13:00`）で表示する。
@@ -57,4 +62,4 @@
 
 ## 維持の仕組み
 
-守り手: TypeScript 型検査 (`renderCell: (row: T, rowKey: string) => ReactNode`)。`ImportTableRow` 型で `created_at: string | null` が保証されるため、型エラーで誤変更を検知できる。
+守り手: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` — TypeScript 型検査 (`renderCell: (row: T, rowKey: string) => ReactNode`)。`ImportTableRow` 型で `created_at: string | null` が保証されるため、型エラーで誤変更を検知できる。
