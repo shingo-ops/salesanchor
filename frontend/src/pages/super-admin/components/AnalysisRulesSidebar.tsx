@@ -19,7 +19,11 @@ export type AnalysisRulesSidebarKey =
   | "supplier-master"
   | "conditions-master"
   | "unit-master"
-  | "note-master";
+  | "note-master"
+  | "product-lines-master"
+  | "product-formats-master"
+  | "quantity-units-master"
+  | "weight-classes-master";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -86,6 +90,10 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
         {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
+        {navItem("product-lines-master", t("analysisRules.sidebar.productLinesMaster"))}
+        {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
+        {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
+        {navItem("weight-classes-master", t("analysisRules.sidebar.weightClassesMaster"))}
       </div>
     </nav>
   );
