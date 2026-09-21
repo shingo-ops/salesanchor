@@ -126,7 +126,8 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
         # tcg_normalization_rules migrated to public schema (Step 4/5); remaining MASTER_TABLES stay in TCG_SCHEMA.
-        _PUBLIC_MASTER = frozenset({"tcg_normalization_rules"})
+        # ADR-156 Phase 3B: tcg_product_categories is now SSOT in public schema (INTEGER PK).
+        _PUBLIC_MASTER = frozenset({"tcg_normalization_rules", "tcg_product_categories"})
         masters = {
             name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
             for name in MASTER_TABLES
