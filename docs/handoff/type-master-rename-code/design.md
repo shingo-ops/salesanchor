@@ -22,6 +22,8 @@ DB 変更なし・migration なし。
 
 ## 維持の仕組み
 
+守り手: migration-guard.yml の PROTECTED_TABLES（type_master を保護対象として含む）
+
 - migration-guard.yml の `PROTECTED_TABLES` が `type_master` を保護対象として含む → 新規 migration で誤った INSERT/UPDATE/DELETE をブロック
 - migration-guard.yml の `PUBLIC_TABLES` から `tcg_type_master` が削除済み → 旧名 FK 参照を新規 migration で使うと CI エラーになる
 - 互換ビュー `public.tcg_type_master` が3か月間フォールバックとして残存 → 見落とした参照があっても本番障害に直結しない
