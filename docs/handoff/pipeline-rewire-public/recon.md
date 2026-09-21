@@ -11,6 +11,16 @@ TCG_SCHEMA参照の全走査結果（`grep -rn "TCG_SCHEMA" backend/app/ --inclu
 - 非移行テーブルへの参照（TCG_SCHEMA維持）: LOOKUP_TABLES（tcg_major_categories, tcg_manufacturers, tcg_product_categories）
 - metadata用途（変更不要）: line_import_devices.tcg_schema列値, Redisキープレフィックス, リビジョンハッシュ
 
+## 変更箇所（file:line引用）
+
+代表的な変更箇所:
+
+- `backend/app/services/tcg_line_import_svc.py:348` — `public.supplier_channels` への参照（変更後）
+- `backend/app/services/tcg_line_import_svc.py:407` — `public.source_messages` INTO句（変更後）
+- `backend/app/tasks/tcg_extraction.py:109` — `public.extraction_jobs` regclass参照（変更後）
+- `backend/app/tasks/tcg_extraction.py:158` — `public.extraction_jobs` UPDATE（変更後）
+- `backend/app/services/tcg_analyzer_svc.py:77` — `public.products` SELECT（変更後）
+
 ## 移行対象17テーブル
 
 supplier_channels, source_messages, import_jobs, import_job_messages,
