@@ -14,6 +14,7 @@ export type AnalysisRulesSidebarKey =
   | "needs-review"
   | "product-master"
   | "product-categories-master"
+  | "product-kinds-master"
   | "status-master"
   | "supplier-master"
   | "conditions-master"
@@ -79,6 +80,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         </span>
         {navItem("product-master", t("analysisRules.sidebar.productMaster"))}
         {navItem("product-categories-master", t("analysisRules.sidebar.productCategoriesMaster"))}
+        {navItem("product-kinds-master", t("analysisRules.sidebar.productKindsMaster"))}
         {navItem("status-master", t("analysisRules.sidebar.statusMaster"))}
         {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}

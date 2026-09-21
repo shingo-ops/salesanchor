@@ -128,15 +128,17 @@ class TcgTypeCreate(TcgTypeBase):
 
 
 class TcgTypeUpdate(BaseModel):
-    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグのみ更新可。
+    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグ・大分類のみ更新可。
     name_ja: Optional[str] = Field(default=None, min_length=1, max_length=100)
     name_en: Optional[str] = Field(default=None, max_length=100)
     sort_order: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    kind_id: Optional[int] = None
 
 
 class TcgTypeResponse(TcgTypeBase):
     id: int
+    kind_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
