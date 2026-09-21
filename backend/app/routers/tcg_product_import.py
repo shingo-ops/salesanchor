@@ -273,7 +273,7 @@ class ProductDetailUpdate(BaseModel):
     product_kind_id: int | None = None
     work_id: int | None = None
     manufacturer_id: UUID | None
-    product_category_id: UUID | None
+    product_category_id: int | None
     search_keywords: list[DetailWord] = Field(max_length=1000)
     exclude_keywords: list[DetailWord] = Field(max_length=1000)
 

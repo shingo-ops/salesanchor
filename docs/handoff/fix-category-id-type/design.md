@@ -1,0 +1,46 @@
+# design: product_category_id type mismatch fix
+
+## recon 参照
+docs/handoff/fix-category-id-type/recon.md
+
+## ADR 参照
+- ADR-155 Phase 3B: product_category_id → public.tcg_product_categories (INTEGER PK) 移行済み
+- ADR-156 Phase 3A: product_kind_id → public.product_kinds (INTEGER PK) 移行済み
+
+## 変更方針
+
+### Backend
+`ProductDetailUpdate.product_category_id: UUID | None` → `int | None`
+
+根拠:
+- DB カラム `public.products.product_category_id` は INTEGER（ADR-155 で移行済み）
+- サービス側 SQL はすでに CAST なしで整数として扱っている
+- manufacturer_id は UUID のまま変更しない（TCG_SCHEMA.tcg_manufacturers は UUID PK）
+
+### Frontend
+`product_category_id: draft.product_category_id || null` → `product_category_id: draft.product_category_id ? Number(draft.product_category_id) : null`
+
+根拠:
+- Select コンポーネントは id を文字列として保持する
+- product_kind_id・work_id は同じパターンで Number() 変換済み（line 134）
+- 文字列のまま送ると Pydantic v2 が int フィールドを拒否する（strict モードでなくても型不一致はエラー）
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| カテゴリーIDを変更して保存しても 422 エラーが発生しない | ブラウザで商品詳細ドロワーを開き、product_category_id を変更して保存 → 200 レスポンス |
+| manufacturer_id の変更が引き続き正常動作する | ブラウザで manufacturer_id を変更して保存 → 200 レスポンス |
+| Pydantic バリデーションエラーが消える | backend ログに `validation error for ProductDetailUpdate` が出ない |
+
+## 影響範囲
+
+- 呼び出し元: `PUT /api/v1/tcg/products/detail/{product_code}` のみ
+- 変更ファイル: 2 ファイル（router + frontend コンポーネント）
+- 削除ファイル: なし
+
+## 外部事例
+なし（ADR 移行済みの DB スキーマに Pydantic 型を合わせる直接修正）
+
+## 戻し方
+git revert で本 PR コミットを打ち消す。DB スキーマ変更なし。
