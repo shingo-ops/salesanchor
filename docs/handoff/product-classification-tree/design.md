@@ -25,11 +25,11 @@ product_kinds（大分類）
 
 | migration | 変更内容 | 依存 |
 |-----------|---------|------|
-| 20260921_010000 | `product_kinds` 新設 | なし |
-| 20260921_020000 | `tcg_type_master` → `type_master` リネーム + 互換ビュー + `kind_id` FK 追加 | product_kinds |
-| 20260921_030000 | `product_lines` に `type_id` FK 追加 | type_master |
-| 20260921_040000 | `condition_definitions` 新設 | product_lines |
-| 20260921_050000 | `conditions.condition_def_id` / `units.line_id` FK 追加 | condition_definitions, product_lines |
+| 20260921_060000 | `product_kinds` 新設 | なし |
+| 20260921_070000 | `tcg_type_master` → `type_master` リネーム + 互換ビュー + `kind_id` FK 追加 | product_kinds |
+| 20260921_080000 | `product_lines` に `type_id` FK 追加 | type_master |
+| 20260921_090000 | `condition_definitions` 新設 | product_lines |
+| 20260921_100000 | `conditions.condition_def_id` / `units.line_id` FK 追加 | condition_definitions, product_lines |
 
 ---
 

@@ -12,6 +12,18 @@
 -- 冪等性: CREATE TABLE IF NOT EXISTS / DROP TRIGGER IF EXISTS
 -- ============================================================================
 
+-- 依存テーブルの存在保証（CI test-run 用: product_lines は PR #3613 が先行する本番では作成済み）
+CREATE TABLE IF NOT EXISTS public.product_lines (
+    id            SERIAL PRIMARY KEY,
+    code          VARCHAR(50)  NOT NULL UNIQUE,
+    name          VARCHAR(100) NOT NULL,
+    name_en       VARCHAR(100),
+    display_order INTEGER      NOT NULL DEFAULT 100,
+    is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+    created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 CREATE TABLE IF NOT EXISTS public.condition_definitions (
     id            SERIAL PRIMARY KEY,
     code          VARCHAR(50)  NOT NULL,

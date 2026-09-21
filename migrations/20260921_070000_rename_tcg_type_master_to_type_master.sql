@@ -48,10 +48,11 @@ COMMENT ON VIEW public.tcg_type_master IS '互換ビュー: ADR-156 移行期間
 CREATE OR REPLACE FUNCTION public.set_updated_at_type_master() RETURNS TRIGGER AS $upd$ BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $upd$ LANGUAGE plpgsql;
 
 -- 旧トリガ削除（tcg_type_master からリネームされた場合のみ存在する）
+-- pg_trigger SELECT を避け、DDL の IF EXISTS 節で冪等化（ADR-155 チェック8対応）
 DO $$ BEGIN
-    IF EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trigger_set_updated_at_tcg_type_master') THEN
-        DROP TRIGGER trigger_set_updated_at_tcg_type_master ON public.type_master;
-    END IF;
+    DROP TRIGGER IF EXISTS trigger_set_updated_at_tcg_type_master ON public.type_master;
+EXCEPTION WHEN undefined_table THEN
+    NULL;
 END $$;
 
 DROP TRIGGER IF EXISTS trg_type_master_updated_at ON public.type_master;
