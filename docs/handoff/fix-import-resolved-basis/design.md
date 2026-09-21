@@ -1,6 +1,7 @@
 # design: 解決/未解決カウントを created_count ベースに変更
 
 recon: docs/handoff/fix-import-resolved-basis/recon.md
+対象ADR: ADR-027, ADR-067, ADR-144
 
 ## KGI
 取り込みテーブルの「解決」「未解決」列が、ファイル全体ではなく新規取り込みメッセージ（created_count）ベースで表示される。
