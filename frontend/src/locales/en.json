@@ -3930,7 +3930,10 @@
       "distributionSettingNote": "Note",
       "extractionTitle": "Extraction Stage",
       "analysisTitle": "Analysis Stage",
-      "extractionErrorRate": "Extraction Error Rate"
+      "extractionErrorRate": "Extraction Error Rate",
+      "importTrendTitle": "7-Day Import Trend",
+      "importTrendJobCount": "Import Count",
+      "importTrendMessageCount": "Message Count"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
