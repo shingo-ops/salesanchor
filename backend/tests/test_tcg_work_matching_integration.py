@@ -228,11 +228,20 @@ def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
     # Master SSOT Phase 2: type_master must exist before code queries it
-    cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
-    cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
-    # ADR-156 Phase 1: product_kinds (required before rename) + rename tcg_type_master → type_master
-    cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
-    cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+    # ADR-156: After Phase 1 rename, tcg_type_master becomes a VIEW.
+    # Skip 085/086 when tcg_type_master is already a view (migrate() called again after rename).
+    cursor.execute("""
+        SELECT relkind FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master'
+    """)
+    row = cursor.fetchone()
+    tcg_type_master_is_view = row is not None and row[0] == 'v'
+    if not tcg_type_master_is_view:
+        cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
+        cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+        # ADR-156 Phase 1: product_kinds (required before rename) + rename tcg_type_master → type_master
+        cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+        cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
