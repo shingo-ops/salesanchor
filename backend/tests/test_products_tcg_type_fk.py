@@ -35,6 +35,7 @@ _PG_BOOTSTRAP_MIGRATIONS = [
     "082_extend_products_box_attributes.sql",       # products.category 追加（020000 の backfill に必須）
     "085_create_tcg_type_master.sql",
     "086_seed_additional_tcg_types.sql",
+    "20260921_070000_rename_tcg_type_master_to_type_master.sql",  # ADR-156 Phase 1
     "20260602_000000_add_products_central_columns.sql",
     "20260602_020000_add_products_tcg_type.sql",
     "20260602_030000_add_products_unit.sql",

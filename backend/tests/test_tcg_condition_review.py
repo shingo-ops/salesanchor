@@ -59,6 +59,8 @@ def pg():
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
             cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
             cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+            # ADR-156 Phase 1: rename tcg_type_master → type_master
+            cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
