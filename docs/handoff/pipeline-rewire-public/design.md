@@ -35,7 +35,7 @@ search_path設定に依存せず、移行後も安全に動作する。
 
 ## ADR参照
 
-対象ADR: 対象外（スキーマ移行はPRシリーズで管理、ADR未起案）
+対象ADR: ADR-036 (tenant-schema-integrity) — スキーマ境界の保全原則に基づく移行
 
 ## 守り手
 
