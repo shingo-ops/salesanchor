@@ -25,7 +25,7 @@ BEGIN
         RAISE NOTICE 'empty box: analysis_results not found (pipeline teardown), skipping';
         RETURN;
     END IF;
-    IF table_count <> 6 THEN RAISE EXCEPTION 'empty box: incomplete TCG structure'; END IF;
+    IF table_count <> 6 THEN RAISE NOTICE 'empty box: partial structure (% of 6 tables), skipping (SSOT migration moved to public)', table_count; RETURN; END IF;
     LOCK TABLE tenant_004.conditions IN SHARE ROW EXCLUSIVE MODE;
     IF (SELECT count(*) FROM tenant_004.conditions WHERE code='CN0011' OR canonical='Empty box') > 1 THEN
         RAISE EXCEPTION 'empty box: conflicting condition identities';
