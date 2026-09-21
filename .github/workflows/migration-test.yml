@@ -623,6 +623,20 @@ jobs:
               updated_at    TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           CREATE UNIQUE INDEX IF NOT EXISTS uq_tcg_product_categories_code ON public.tcg_product_categories (code);
+
+          -- public.product_kinds: 20260921_060000_create_product_kinds.sql で本番作成済み。
+          --   20260921_120000_add_products_product_kind_id.sql が REFERENCES public.product_kinds(id) を
+          --   使用するため、前提として最小定義を登録する。
+          CREATE TABLE IF NOT EXISTS public.product_kinds (
+              id            SERIAL PRIMARY KEY,
+              code          VARCHAR(50)  NOT NULL UNIQUE,
+              name          VARCHAR(100) NOT NULL,
+              name_en       VARCHAR(100),
+              display_order INTEGER      NOT NULL DEFAULT 100,
+              is_active     BOOLEAN      NOT NULL DEFAULT TRUE,
+              created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+              updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
