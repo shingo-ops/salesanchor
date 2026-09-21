@@ -1480,17 +1480,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     )
 
     # E3a + E5: 商品名から unit 復旧 → condition 再計算
-    recovery = apply_unit_recovery_for_job(session, extraction_job_id, "public")
+    recovery = apply_unit_recovery_for_job(session, extraction_job_id, TCG_SCHEMA)
     if recovery["e3a_recovered"] or recovery["e5_changed"]:
         session.commit()
     stats["e3a_recovered"] = recovery["e3a_recovered"]
     stats["e5_changed"] = recovery["e5_changed"]
 
     # E3b: E3a 後も unit_resolved=FALSE の行に UNIT_UNRESOLVED フラグ
-    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, "public")
+    e3b = apply_unit_unresolved_flag_for_job(session, extraction_job_id, TCG_SCHEMA)
 
     # E4: condition_canonical から unit を逆引き
-    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, "public")
+    e4 = apply_unit_from_condition_for_job(session, extraction_job_id, TCG_SCHEMA)
 
     if e3b["flagged"] or e4["resolved"]:
         session.commit()
