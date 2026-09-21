@@ -20,7 +20,11 @@ DROP TABLE IF EXISTS tenant_004.analysis_runs;
 
 -- ============================================================
 -- Category A: extraction tables (children first)
+-- Drop FK constraints from tables NOT in this migration (item_notes, unparsed_lines)
+-- that reference extraction_items before dropping the table.
 -- ============================================================
+ALTER TABLE IF EXISTS tenant_004.item_notes DROP CONSTRAINT IF EXISTS item_notes_extraction_item_id_fkey;
+ALTER TABLE IF EXISTS tenant_004.unparsed_lines DROP CONSTRAINT IF EXISTS unparsed_lines_extraction_item_id_fkey;
 DROP TABLE IF EXISTS tenant_004.extraction_attempts;
 DROP TABLE IF EXISTS tenant_004.extraction_items;
 DROP TABLE IF EXISTS tenant_004.extraction_jobs;
