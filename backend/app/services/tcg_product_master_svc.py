@@ -94,11 +94,13 @@ async def fetch_registration_form(
         "WHERE is_active = TRUE ORDER BY name"
     ))
     lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
+    # ADR-156 Phase 3B: tcg_product_categories is now SSOT in public schema (INTEGER PK).
+    _PUBLIC_TABLES = {"product_kinds", "tcg_product_categories"}
     for key, table, name_col in [
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
-        schema = "public" if table == "product_kinds" else TCG_SCHEMA
+        schema = "public" if table in _PUBLIC_TABLES else TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"""
