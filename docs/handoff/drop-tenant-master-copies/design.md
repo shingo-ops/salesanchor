@@ -76,4 +76,4 @@ To recreate tenant_004 copies: re-run `migrations/20260906_120000_create_tcg_tab
 
 守り手: tcg_work_comparison_svc.py の `MASTER_TABLES` tuple と `_PUBLIC_MASTER` frozenset のコードレビュー（新テーブル追加時は両方更新必須）。
 
-migration 登録漏れ防止: `run_all_migrations.sh` に必ず記載。CI の migration check が登録を検証。
+migration 登録漏れ防止: `scripts/run_all_migrations.sh` に必ず記載。CI の migration check が登録を検証。
