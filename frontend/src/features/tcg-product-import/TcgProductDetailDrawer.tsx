@@ -132,7 +132,7 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
       const result = await api.put<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`, {
         ...draft, revision: detail.revision, release_date: draft.release_date || null,
         product_kind_id: draft.product_kind_id ? Number(draft.product_kind_id) : null, work_id: draft.work_id ? Number(draft.work_id) : null,
-        manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id || null,
+        manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id ? Number(draft.product_category_id) : null,
         search_keywords: draft.search_keywords === initial?.search_keywords ? detail.product.search_keywords : words(draft.search_keywords),
         exclude_keywords: draft.exclude_keywords === initial?.exclude_keywords ? detail.product.exclude_keywords : words(draft.exclude_keywords),
       });
