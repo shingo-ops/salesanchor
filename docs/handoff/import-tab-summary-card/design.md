@@ -41,7 +41,7 @@
 
 ## 影響範囲
 
-- 変更: `ImportTabContent` 関数内のみ（`AnalysisDashboardPanel.tsx:399-574`）
+- 変更: ImportTabContent 関数内のみ（AnalysisDashboardPanel.tsx 399-574行）
 - 影響なし: バックエンド・他タブ・他コンポーネント
 - 触らない範囲: ExtractionTabContent, AnalysisTabContent, DistributionTabContent, 全 API エンドポイント
 

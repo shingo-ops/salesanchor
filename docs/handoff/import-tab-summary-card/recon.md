@@ -5,10 +5,10 @@
 
 ## 対象ファイル（file:line）
 
-- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:399-574` — ImportTabContent 関数（4KPIカード → サマリーカード1枚）
-- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:29-38` — インポートタブのCSS
-- `frontend/src/locales/ja.json` — analysisRules.dashboard キー群
-- `frontend/src/locales/en.json` — analysisRules.dashboard キー群
+- frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:399-574 — ImportTabContent 関数（4KPIカード → サマリーカード1枚）
+- frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:29-38 — インポートタブのCSS
+- frontend/src/locales/ja.json — analysisRules.dashboard キー群
+- frontend/src/locales/en.json — analysisRules.dashboard キー群
 
 ## 既存ADR検索結果
 
