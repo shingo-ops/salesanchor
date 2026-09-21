@@ -31,8 +31,6 @@ CREATE TABLE IF NOT EXISTS public.buyback_price_logs (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_buyback_price_logs_product_time
-  ON public.buyback_price_logs(shop_product_id, fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_buyback_price_logs_product_time ON public.buyback_price_logs(shop_product_id, fetched_at DESC);
 
-CREATE INDEX IF NOT EXISTS idx_buyback_shop_products_shop_game
-  ON public.buyback_shop_products(shop_code, card_game);
+CREATE INDEX IF NOT EXISTS idx_buyback_shop_products_shop_game ON public.buyback_shop_products(shop_code, card_game);
