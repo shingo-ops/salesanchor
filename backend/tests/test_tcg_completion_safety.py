@@ -87,7 +87,7 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
             FROM {SCHEMA}.tcg_status_master
             ON CONFLICT (status_id) DO NOTHING""")
         cur.execute('''INSERT INTO public.products(product_code,name,category_class,is_active,work_id,product_category_id)
-            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.tcg_type_master w,
+            SELECT 'SYN001','ONE PIECE 架空検証商品','Box',true,w.id,c.id FROM public.type_master w,
             public.tcg_product_categories c WHERE w.code='one_piece' AND c.code='PC_BOX' RETURNING id''')
         pid = cur.fetchone()[0]
         cur.execute('INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,0)',(pid,'架空検証商品'))
@@ -144,7 +144,7 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             async with AsyncSession(ae) as session:
                 from sqlalchemy import text
                 refs = {}
-                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.tcg_type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
+                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
                     raw_id = (await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one()
                     # product_category_id is INTEGER after Phase 3B; asyncpg requires int, not str.
                     # division_id / manufacturer_id remain UUID (str). work_id is converted inside create_product.

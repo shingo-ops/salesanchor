@@ -59,6 +59,8 @@ def pg():
             cursor.execute(_PUBLIC_PRODUCTS_DDL)
             cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
             cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+            cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+            cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
@@ -84,7 +86,7 @@ def pg():
             cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'Box','en')", (unit,))
             cursor.execute("INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active) VALUES ('PC_BOX', 'Box', '箱系', true) ON CONFLICT (code) DO NOTHING")
             cursor.execute("""INSERT INTO public.products (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.tcg_type_master w,public.tcg_product_categories c
+                SELECT 'PM0900','Test Booster','Box',true,w.id,c.id FROM public.type_master w,public.tcg_product_categories c
                 WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,'Test Booster',0)", (product,))

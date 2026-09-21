@@ -238,7 +238,7 @@ async def fetch_output_rows(
             ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
-        LEFT JOIN public.tcg_type_master ser
+        LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
         {review_joins(schema="public")}
         WHERE ar.pid_resolved = TRUE

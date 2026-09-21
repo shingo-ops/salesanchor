@@ -131,7 +131,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
             name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
             for name in MASTER_TABLES
         }
-        masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
+        masters["type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
             session,

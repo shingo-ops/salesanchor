@@ -132,7 +132,7 @@ async def list_products(
         for r in rows.fetchall()
     ]
     work_rows = await db.execute(text(
-        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.tcg_type_master s "
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.type_master s "
         "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))
@@ -313,10 +313,10 @@ async def get_product_lookups(
 ) -> dict:
     """作成フォーム用の分類マスタ選択肢を返す。"""
     lookups: dict[str, list[dict]] = {}
-    # work_id → public.tcg_type_master (SSOT)
+    # work_id → public.type_master (SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
