@@ -1,5 +1,8 @@
 # design: import-tab-summary-card
 
+参照: [recon.md](docs/handoff/import-tab-summary-card/recon.md)
+対象ADR: ADR-027, ADR-067, ADR-144
+
 ## 目的・KGI
 
 インポートタブを非エンジニアが一目で状態を把握できるUIに改善する。
