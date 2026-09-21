@@ -48,6 +48,8 @@ BEGIN
             RAISE NOTICE '  analysis_results.unit_id does not exist in schema %, skip', _schema;
         ELSIF _atttypid = _int_oid THEN
             RAISE NOTICE '  analysis_results.unit_id already INTEGER, skip';
+        ELSIF to_regclass(format('%I.%I', _schema, _tbl_u)) IS NULL THEN
+            RAISE NOTICE '  %.% not found (SSOT-moved to public), skipping unit_id rewire', _schema, _tbl_u;
         ELSE
             RAISE NOTICE '  Converting analysis_results.unit_id UUID->INTEGER (NULLABLE)';
 
@@ -132,6 +134,8 @@ BEGIN
             RAISE NOTICE '  analysis_results.condition_id does not exist in schema %, skip', _schema;
         ELSIF _atttypid = _int_oid THEN
             RAISE NOTICE '  analysis_results.condition_id already INTEGER, skip';
+        ELSIF to_regclass(format('%I.%I', _schema, _tbl_c)) IS NULL THEN
+            RAISE NOTICE '  %.% not found (SSOT-moved to public), skipping condition_id rewire', _schema, _tbl_c;
         ELSE
             RAISE NOTICE '  Converting analysis_results.condition_id UUID->INTEGER (全件非NULL)';
 
