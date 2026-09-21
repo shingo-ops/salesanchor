@@ -192,7 +192,8 @@
     "authTimeout": "認証がタイムアウトしました",
     "page": "{{page}}ページ",
     "unitDay": "日",
-    "unresolved": "未解決"
+    "unresolved": "未解決",
+    "required": "必須項目です"
   },
   "nav": {
     "dashboard": "ダッシュボード",
@@ -4319,7 +4320,36 @@
     "tabs": {
       "soldOut": "完売ルール",
       "date": "日付ルール",
-      "default": "デフォルト"
+      "default": "デフォルト",
+      "test": "テスト"
+    },
+    "test": {
+      "gateOpen": "テスト合格 — ルール有効化可能",
+      "gateFailed": "テスト不合格",
+      "gateError": "テストエラー",
+      "gateRunning": "テスト実行中...",
+      "gateNever": "テスト未実行",
+      "casesTitle": "テストケース",
+      "addCase": "テストケースを追加",
+      "inputText": "入力テキスト",
+      "expectedCanonical": "期待される判定結果",
+      "expectedEffect": "除外ルール",
+      "expectedEffectExcluded": "除外（完売等）",
+      "expectedEffectNone": "通常出力",
+      "note": "備考",
+      "deleteConfirm": "このテストケースを削除しますか？",
+      "runAll": "テスト一括実行",
+      "running": "実行中...",
+      "resultsTitle": "テスト結果",
+      "resultsPassed": "{{passed}}/{{total}} 合格",
+      "actualCanonical": "実際の判定結果",
+      "actualEffect": "実際の効果",
+      "match": "合格",
+      "mismatch": "不合格",
+      "noResults": "テスト結果がありません",
+      "noCases": "テストケースを追加してください",
+      "runFirst": "テストを実行してください",
+      "enableGateError": "ルールを有効化するにはテストに合格する必要があります"
     }
   }
 }
