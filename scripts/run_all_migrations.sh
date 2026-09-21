@@ -737,3 +737,6 @@ run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
 
 # ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
 run_sql migrations/20260921_120000_add_products_product_kind_id.sql
+
+# ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
+run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql

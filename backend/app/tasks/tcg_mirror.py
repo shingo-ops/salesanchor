@@ -208,7 +208,7 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             t.table_name,
             c.column_name,
@@ -224,8 +224,9 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
                 'supplier_channels', 'source_messages', 'extraction_jobs',
                 'extraction_items', 'analysis_results', 'import_jobs', 'audit_log'
             )
+        -- ADR-156 Phase 5: keyword/alias master tables moved to public schema (SSOT)
         ) OR (
-            t.table_schema = '{TCG_SCHEMA}'
+            t.table_schema = 'public'
             AND t.table_name IN (
                 'product_search_keywords', 'product_exclude_keywords',
                 'units', 'unit_aliases', 'conditions', 'condition_aliases'
