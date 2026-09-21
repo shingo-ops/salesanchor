@@ -279,7 +279,7 @@ export default function TcgLineImportPage() {
           activeKey="import"
           onChange={handleSidebarChange}
         />
-        <div className="hub-content" style={{ overflowY: "auto" }}>
+        <div className="hub-content" style={{ overflowY: "auto", padding: "var(--space-6)" }}>
           {selectedImportId && <div style={{ display: "flex", justifyContent: "flex-end", padding: "var(--space-3) var(--space-4)" }}><Button variant="secondary" onClick={openUpload}>{t("tcgLineImport.newFileDetails")}</Button></div>}
       {selectedImportId && <section style={{ marginBottom: "2rem" }}>
         <h3>{t("pmgWorkflow.title")}</h3>
