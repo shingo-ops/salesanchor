@@ -29,6 +29,7 @@ import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
 import { NoteMasterPanel } from "./components/NoteMasterPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
+import "./AnalysisRulesPage.css";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
 import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
@@ -148,16 +149,20 @@ export default function AnalysisRulesPage() {
         {/* 右コンテンツ */}
         <div className="hub-content">
           {activeSection === "dashboard" && <AnalysisDashboardPanel onNavigate={setActiveSection} />}
-          {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
-          {activeSection === "needs-review" && <NeedsReviewPanel />}
-          {activeSection === "product-master" && <ProductMasterPanel />}
-          {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
-          {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
-          {activeSection === "status-master" && <StatusMasterPanel />}
-          {activeSection === "supplier-master" && <SupplierMasterPanel />}
-          {activeSection === "conditions-master" && <ConditionsMasterPanel />}
-          {activeSection === "unit-master" && <UnitMasterPanel />}
-          {activeSection === "note-master" && <NoteMasterPanel />}
+          {activeSection !== "dashboard" && (
+            <div className="analysis-panel-content">
+              {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
+              {activeSection === "needs-review" && <NeedsReviewPanel />}
+              {activeSection === "product-master" && <ProductMasterPanel />}
+              {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
+              {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
+              {activeSection === "status-master" && <StatusMasterPanel />}
+              {activeSection === "supplier-master" && <SupplierMasterPanel />}
+              {activeSection === "conditions-master" && <ConditionsMasterPanel />}
+              {activeSection === "unit-master" && <UnitMasterPanel />}
+              {activeSection === "note-master" && <NoteMasterPanel />}
+            </div>
+          )}
         </div>
       </div>
     </PageLayout>
