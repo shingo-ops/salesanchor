@@ -39,8 +39,14 @@ docs/handoff/fix-category-id-type/recon.md
 - 変更ファイル: 2 ファイル（router + frontend コンポーネント）
 - 削除ファイル: なし
 
-## 外部事例
-なし（ADR 移行済みの DB スキーマに Pydantic 型を合わせる直接修正）
+## 外部・過去事例の参照と我々への応用
+
+Pydantic v2 では `int` フィールドに文字列を渡すと `ValidationError` を返す（strict デフォルトでなくても JSON からの文字列は拒否される）。FastAPI の公式ドキュメントでも「JSON body の型は Python 型と一致させる」ことが前提とされている。本件は ADR-155 の DB 移行後にルータースキーマの追従が漏れた典型的なドリフト。同パターンの再発防止は `## 維持の仕組み` 参照。
+
+## 維持の仕組み
+
+- サービス側（`tcg_product_detail_svc.py`）の `PUBLIC_INTEGER_LOOKUPS` dict と `LOOKUPS` dict を見れば、どのフィールドが INTEGER か UUID かが一目で分かる。ルーター変更時はこの dict と照合する。
+- フロントエンド `TcgProductDetailDrawer.tsx` line 134 のパターン（`Number()` 変換）を分類フィールド追加時の標準とする。
 
 ## 戻し方
 git revert で本 PR コミットを打ち消す。DB スキーマ変更なし。
