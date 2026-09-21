@@ -27,7 +27,7 @@ tcg_status_master のルール検証テストシステム。テストケース�
 - `backend/app/celery_app.py` — タスク登録
 - `backend/app/routers/super_admin_status_master.py` — PATCHゲート追加
 - `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx` — テストタブ追加
-- `frontend/src/locales/ja.json` / `en.json` — i18nキー追加
+- `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` — i18nキー追加
 - `scripts/run_all_migrations.sh` — migration登録
 
 ## テスト実行フロー
@@ -59,12 +59,10 @@ tcg_status_master のルール検証テストシステム。テストケース�
 旧システムのポリシー/リビジョン制度（8テーブル）は不要のため3テーブルに削減。
 
 ## 維持の仕組み
-- `backend/app/tasks/rule_test.py:16` — resolve_status_v2 直接インポート（SSOT・変更時は tasks/rule_test.py も連動更新）
-- `backend/app/routers/super_admin_status_master.py:200-214` — enabled ゲートロジック（本ファイル変更時はゲートテストも更新）
-- CI の backend テストが `rule_test.*` エンドポイントをカバー（追加必要）
 
-## 守り手
-- `backend/app/tasks/rule_test.py:16` — resolve_status_v2を直接インポート（本番同一ロジック・SSOT）
-- `backend/app/routers/rule_test.py:17` — require_super_admin 認証（全エンドポイント）
-- `backend/app/routers/super_admin_status_master.py:200-214` — enabled false→true ゲート（テスト合格必須）
-- `frontend/src/pages/super-admin/components/RuleTestPanel.tsx:12` — 全UI文字列 t() 経由（ADR-027）
+守り手: backend/app/tasks/rule_test.py:16 (resolve_status_v2直接インポート・SSOT), backend/app/routers/super_admin_status_master.py:200-214 (enabledゲート), frontend/src/pages/super-admin/components/RuleTestPanel.tsx:12 (全UI文字列t()・ADR-027)
+
+- `backend/app/tasks/rule_test.py` — resolve_status_v2 直接インポート（SSOT・変更時はタスクも連動更新）
+- `backend/app/routers/super_admin_status_master.py` — enabled ゲートロジック（本ファイル変更時はゲートテストも更新）
+- `backend/app/routers/rule_test.py` — require_super_admin 認証（全エンドポイント）
+- `frontend/src/pages/super-admin/components/RuleTestPanel.tsx` — 全UI文字列 t() 経由（ADR-027）
