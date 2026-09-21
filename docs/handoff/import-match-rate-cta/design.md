@@ -58,6 +58,10 @@ importタブの「名前の一致率」行に、matchRate < 100 のときのみC
 | matchRate = 100 のときボタンが表示されない | unresolved_rate = 0 の状態でボタン非表示を目視確認 |
 | ボタンクリックでサプライヤーマスタページへ遷移する | クリック後 sidebar が "supplier-master" に切り替わることを確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-既存の「要対応」行CTA（AnalysisDashboardPanel.tsx:538-545）が直接の参考実装。
+既存の「要対応」行CTA（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` 538-545行目）が直接の参考実装。同一ファイル内の pendingCount > 0 条件ガード + onNavigate("needs-review") パターンをそのまま matchRate < 100 条件 + onNavigate("supplier-master") に置き換えた。新規コンポーネント不要・学習コスト不要。
+
+## 維持の仕組み
+
+守り手: ADR-027（i18n CI チェック）がキー同一性を保証。AnalysisDashboardPanel.tsx の importTabContent 部分は matchRate 計算ロジックが変わらない限りこのCTAは正しく動作する。
