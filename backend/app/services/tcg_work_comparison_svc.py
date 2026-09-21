@@ -294,3 +294,174 @@ def compare_snapshot(snapshot: dict, session_factory: Callable, *, model_call: C
     unchanged()
     report["status"] = "comparison_complete_unverified"
     return report
+
+
+# ---------------------------------------------------------------------------
+# §25-3 A便: non-adopting stale job comparison
+# ---------------------------------------------------------------------------
+
+MAX_STALE_JOB_ITEMS = 7
+
+
+def _saved_work(item: dict, job: dict, saved_reference: dict | None) -> str | None:
+    """Return the saved work ID validated against the saved reference only.
+    Does not touch the current reference, so stale jobs with a changed reference
+    can still compute a diagnostic without updating the saved value."""
+    if job.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
+        if not saved_reference or reference_digest(saved_reference) != job.get("work_reference_sha256"):
+            raise ComparisonError("INVALID_SAVED_REFERENCE")
+        try:
+            return validate_work_id(item.get("resolved_work_id"), saved_reference)
+        except (ValueError, TypeError, KeyError):
+            raise ComparisonError("INVALID_SAVED_WORK") from None
+    return None
+
+
+def read_job_snapshot(session_factory: Callable, job_id: str) -> dict:
+    """Fresh read-only snapshot of a single done extraction job for stale comparison.
+    Validates saved reference integrity and records current-vs-saved diff as evidence
+    without treating the saved reference as updated."""
+    job_id = _uuid(job_id)
+    with session_factory() as session:
+        if session.in_transaction():
+            raise ComparisonError("SESSION_NOT_FRESH")
+        session.execute(text("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY"))
+        params = {"jid": job_id}
+        jobs = _records(session, f"SELECT to_jsonb(j) FROM {TCG_SCHEMA}.extraction_jobs j WHERE id=:jid", params)
+        if len(jobs) != 1:
+            raise ComparisonError("JOB_NOT_FOUND")
+        job = jobs[0]
+        if job["status"] != "done":
+            raise ComparisonError("JOB_NOT_DONE")
+        sources = _records(session, f"SELECT to_jsonb(s) FROM {TCG_SCHEMA}.source_messages s WHERE id=:sid", {"sid": job["source_message_id"]})
+        if len(sources) != 1 or not sources[0]["is_active"] or sources[0].get("superseded_by"):
+            raise ComparisonError("INVALID_SOURCE")
+        source = sources[0]
+        items = _records(session, f"SELECT to_jsonb(i) FROM {TCG_SCHEMA}.extraction_items i WHERE i.extraction_job_id=:jid", params)
+        if not items:
+            raise ComparisonError("NO_ITEMS")
+        item_ids = [i["id"] for i in items]
+        if len(set(item_ids)) != len(item_ids):
+            raise ComparisonError("DUPLICATE_ITEM_IDS")
+        analyses = _records(session, f"SELECT to_jsonb(a) FROM {TCG_SCHEMA}.analysis_results a JOIN {TCG_SCHEMA}.extraction_items i ON i.id=a.extraction_item_id WHERE i.extraction_job_id=:jid", params)
+        if Counter(a["extraction_item_id"] for a in analyses) != Counter(item_ids):
+            raise ComparisonError("ITEM_ANALYSIS_SET_MISMATCH")
+        corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id WHERE i.extraction_job_id=:jid", params)
+        if corrections:
+            raise ComparisonError("JOB_HAS_CORRECTIONS")
+        raw_lines = source["raw_text"].split("\n")
+        for item in items:
+            start, end = item.get("line_start"), item.get("line_end")
+            if not item.get("raw_product_name") or not isinstance(start, int) or not isinstance(end, int) or not (1 <= start <= end <= len(raw_lines)):
+                raise ComparisonError("INVALID_SAVED_ITEM")
+        saved_reference = job.get("work_reference_snapshot")
+        saved_sha = job.get("work_reference_sha256")
+        if job.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
+            if not saved_reference or reference_digest(saved_reference) != saved_sha:
+                raise ComparisonError("INVALID_SAVED_REFERENCE")
+        masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        # public.products is outside TCG_SCHEMA; read all columns and add 'code' alias for compatibility
+        masters["products"] = _records(
+            session,
+            "SELECT to_jsonb(p) || jsonb_build_object('code', p.product_code) FROM public.products p",
+            {},
+        )
+        product_ids, _, _, _, _, units = analyzer.load_lookup_maps(session)
+        search, exclude = analyzer.load_product_keywords(session)
+        categories = analyzer.load_product_kubun_type_map(session)
+        context = {
+            "product_ids": product_ids, "units": units, "search": search, "exclude": exclude,
+            "categories": categories, "normalization": analyzer.load_normalization_rules(session),
+            "works": analyzer.load_work_master(session),
+            "work_ids": {p["code"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
+            "classes": {p["code"]: ("Box" if categories[p["code"]] in {"箱系", "箱系大"} else "")
+                        if p["code"] in categories else (p["category_class"] or "")
+                        for p in masters["products"] if p["is_active"]},
+        }
+        reference = load_work_reference(session, TCG_SCHEMA)
+        if session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
+            raise ComparisonError("READ_ONLY_LOST")
+        current_sha = reference_digest(reference)
+        reference_diff = {"saved_sha256": saved_sha, "current_sha256": current_sha, "changed": saved_sha != current_sha}
+        data = json.loads(canonical(dict(
+            job_id=job_id, job=job, source=source, items=items, analyses=analyses,
+            masters=masters, context=context, reference=reference,
+            saved_reference=saved_reference, reference_diff=reference_diff,
+        )))
+        session.rollback()
+    return {"data": data, "sha256": fingerprint(data)}
+
+
+def compare_stale_job_snapshot(snapshot: dict, session_factory: Callable, *, model_call: Callable | None = None) -> dict:
+    """Non-adopting comparison of a single stale extraction job snapshot.
+    Separates saved values, v9+saved-work diagnostics, and fresh-reference candidates.
+    Always adoptable=False, db_writes=0. Raw source and model response stay private."""
+    data = snapshot["data"]
+    if fingerprint(data) != snapshot["sha256"]:
+        raise ComparisonError("SNAPSHOT_CORRUPTED")
+    items = data["items"]
+    if len(items) > MAX_STALE_JOB_ITEMS:
+        raise ComparisonError("TOO_MANY_ITEMS")
+
+    def unchanged():
+        if fingerprint(data) != snapshot["sha256"]:
+            raise ComparisonError("SNAPSHOT_CORRUPTED")
+        try:
+            fresh = read_job_snapshot(session_factory, data["job_id"])
+        except ComparisonError:
+            raise ComparisonError("INPUT_CHANGED") from None
+        if fresh["sha256"] != snapshot["sha256"]:
+            raise ComparisonError("INPUT_CHANGED")
+
+    unchanged()
+    job = data["job"]
+    source = data["source"]
+    saved_reference = data.get("saved_reference")
+    analyses_by_id = {a["extraction_item_id"]: a for a in data["analyses"]}
+    results = {}
+    for item in items:
+        iid = item["id"]
+        work = _saved_work(item, job, saved_reference)
+        results[iid] = {
+            "item_id": iid,
+            "saved": analyses_by_id[iid],
+            "diagnostic": match_item(item, work, data["context"]),
+            "candidate": None,
+            "label": "unverified",
+        }
+    report = {
+        "prompt_version": PROMPT_VERSION, "engine_version": analyzer.ENGINE_VERSION,
+        "input_sha256": snapshot["sha256"], "reference_diff": data["reference_diff"],
+        "job_id": data["job_id"], "item_count": len(items),
+        "results": results, "model_calls": 0, "db_writes": 0,
+        "adoptable": False, "status": "snapshot_ready",
+    }
+    if model_call is None:
+        return report
+    unchanged()
+    source_text = source["raw_text"]
+    fixed_items = [{"ITEM_ID": item["id"], **{k: v for k, v in item.items()
+                   if k.startswith("raw_") or k in {"line_start", "line_end"}}} for item in items]
+    payload = {"source_lines": gemini.annotate_lines(source_text), "items": fixed_items, "reference": data["reference"]}
+    try:
+        report["model_calls"] += 1
+        response = model_call(PROMPT + canonical(payload))
+    except Exception:
+        raise ComparisonError("MODEL_CALL_FAILED") from None
+    unchanged()
+    try:
+        decisions = parse_decisions(response, [i["id"] for i in items], data["reference"])
+    except ComparisonError as exc:
+        report.update(status="response_rejected", error=str(exc))
+        return report
+    for item in items:
+        explicit = analyzer.resolve_work_evidence(item["raw_product_name"], source_text,
+            item["line_start"], item["line_end"], None, None, data["context"]["works"])
+        if explicit and decisions[item["id"]] not in (None, explicit):
+            report.update(status="work_conflict", failed_item_id=item["id"])
+            return report
+    for item in items:
+        results[item["id"]]["candidate"] = match_item(item, decisions[item["id"]], data["context"])
+    unchanged()
+    report["status"] = "comparison_complete_unverified"
+    return report

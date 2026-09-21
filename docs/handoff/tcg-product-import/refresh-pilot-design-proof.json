@@ -1,0 +1,59 @@
+{
+  "scope": "Current product-only function using saved work IDs; NOT fresh model decision, whole-engine run, or database adoption",
+  "pilot_job": "b9cc6b8e-6b7e-4cdc-b00a-1c7d299ebbf8",
+  "items": [
+    {
+      "item_id": "311d2e5b-391e-4e64-92cd-5776adebf1e8",
+      "expected": "PM0297",
+      "actual": "PM0297",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "31a0a847-7b28-4d2b-aee6-fa67b995353d",
+      "expected": "PM0263",
+      "actual": "PM0263",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "85934a47-2444-4c2e-87f3-b94799de77ee",
+      "expected": "PM0265",
+      "actual": "PM0265",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "90cab527-4fb0-46f1-b5ca-bfa746058087",
+      "expected": "PM0265",
+      "actual": "PM0265",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "93441fc4-7873-460c-b443-fca852c0d7b2",
+      "expected": "PM0263",
+      "actual": "PM0263",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "a27d6734-25cf-4e97-a92a-53706de72503",
+      "expected": "PM0264",
+      "actual": "PM0264",
+      "resolved": true,
+      "pass": true
+    },
+    {
+      "item_id": "d6fc0bdc-2baf-4c4b-bbaa-8bea1960ff95",
+      "expected": "PM0263",
+      "actual": "PM0263",
+      "resolved": true,
+      "pass": true
+    }
+  ],
+  "passed": 7,
+  "corrections": 0,
+  "production_writes": 0,
+  "model_calls": 0
+}
