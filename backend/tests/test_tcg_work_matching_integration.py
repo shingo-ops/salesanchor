@@ -581,6 +581,8 @@ def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
 
 @pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
 def test_condition_note_absent_and_partial_tables(pg, missing):
+    # ADR-155 guard change: migration now silently skips (RAISE NOTICE + RETURN) when
+    # required tables are absent, instead of raising an exception.
     connection, _, _ = pg
     with connection.cursor() as cursor:
         if missing is None:
@@ -590,8 +592,8 @@ def test_condition_note_absent_and_partial_tables(pg, missing):
             before = condition_note_snapshot(connection)
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(missing)))
             try:
-                with pytest.raises(psycopg2.errors.RaiseException, match="incomplete master structure"):
-                    cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+                # No exception expected — migration skips gracefully when tables are absent
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
             finally:
                 cursor.execute("ROLLBACK")
                 cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(missing)))
