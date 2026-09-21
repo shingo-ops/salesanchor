@@ -249,10 +249,10 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         if prior is not None:
             if prior.get("request_fingerprint") != fingerprint:
                 raise HTTPException(409, "Condition review request id reused")
-            row = (await db.execute(text(context_sql()), params)).mappings().one()
+            row = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
             await db.commit()
             return _response(row, saved=0, replayed=True)
-        row = (await db.execute(text(context_sql()), params)).mappings().one()
+        row = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
         target = (await db.execute(text("SELECT id FROM public.conditions "
@@ -265,7 +265,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             row["classification"] == "ambiguous" or request["condition_id"] != row["condition_id"]
         ):
             raise HTTPException(422, "Select and correct the condition")
-        post = (await db.execute(text(context_sql(selected_expression=":condition_id")), params)).mappings().one()
+        post = (await db.execute(text(context_sql(schema=TCG_SCHEMA, selected_expression=":condition_id")), params)).mappings().one()
         history = {"v": 1, "request_id": request["request_id"], "decision": request["decision"],
                    "condition_id": request["condition_id"], "binding_hash": post["binding_hash"],
                    "request_fingerprint": fingerprint}
@@ -278,12 +278,12 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id_int),
             condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
             WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
-        effective = (await db.execute(text(context_sql()), params)).mappings().one()
+        effective = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results
             SET needs_review=:needs_review, review_reasons=:review_reasons
             WHERE extraction_item_id=CAST(:eid AS uuid)"""),
             dict(params, needs_review=effective["needs_review"], review_reasons=effective["review_reasons"] or None))
-        final = (await db.execute(text(context_sql()), params)).mappings().one()
+        final = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         await db.commit()
         return _response(final, saved=1, replayed=False)
     except Exception:
