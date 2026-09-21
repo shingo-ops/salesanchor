@@ -1,5 +1,7 @@
 # design: fix-import-page-padding
 
+- recon: docs/handoff/fix-import-page-padding/recon.md
+
 ## 変更概要
 TcgLineImportPage の hub-content div に `padding: var(--space-6)` を追加する。
 
@@ -33,5 +35,6 @@ PR #3645 で AnalysisRulesPage の hub-content にパディングを適用した
 `padding: "var(--space-6)"` を削除するだけで元に戻る。
 
 ## 維持の仕組み
+- 守り手: UI governance gate（`.github/workflows/`）、TypeScript/ESLint 静的チェック
 - AnalysisRulesPage と同じ `var(--space-6)` を使用しているため、デザイントークン変更時は両ページへ自動適用される。
 - ESLint + TypeScript による静的チェックで回帰防止。
