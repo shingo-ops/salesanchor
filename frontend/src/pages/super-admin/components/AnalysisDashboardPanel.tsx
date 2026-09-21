@@ -463,7 +463,18 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
     {
       key: "created_at",
       header: t("analysisRules.dashboard.importDate"),
-      width: "140px",
+      width: "180px",
+      renderCell: (row: ImportTableRow) => {
+        if (!row.created_at) return "-";
+        return new Date(row.created_at).toLocaleString("ja-JP", {
+          timeZone: "Asia/Tokyo",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
     },
   ];
 
