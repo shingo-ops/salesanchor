@@ -752,3 +752,6 @@ run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_mast
 
 # ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
 run_sql migrations/20260922_020000_product_format_game_links.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql

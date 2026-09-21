@@ -81,6 +81,7 @@ from app.routers import (
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
+    rule_test,  # Rule Test System: ルールテスト実行 API
     shifts,
     shipping,
     staff,
@@ -517,6 +518,10 @@ app.include_router(
 # ステータスマスタ中央 admin
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
+)
+# Rule Test System: ルールテスト実行 API
+app.include_router(
+    rule_test.router, prefix="/api/v1", tags=["rule-test"],
 )
 # 備考マスタ中央 admin
 app.include_router(
