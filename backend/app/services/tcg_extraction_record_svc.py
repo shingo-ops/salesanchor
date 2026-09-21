@@ -10,9 +10,12 @@ from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
 from sqlalchemy import text
 
-from app.tcg_config import TCG_SCHEMA
-
 logger = logging.getLogger(__name__)
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 MAX_BYTES = 8_388_608
 
 
@@ -206,4 +209,4 @@ async def read_attempts(db, job_id: str, *, attempt_id: str | None = None,
     result = [dict(row) for row in rows]
     for row in result:
         row["completion"] = "unconfirmed" if row["phase"] in ("started", "received") else row["phase"]
-    return {"extraction_job_id": job_id, "attempts": result}
+    return {"job_id": job_id, "attempts": result}

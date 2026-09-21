@@ -206,7 +206,8 @@ CREATE TABLE IF NOT EXISTS public.analysis_results (
     unit_infer_reason   TEXT         NOT NULL DEFAULT '',
     product_id          INTEGER      REFERENCES public.products(id),
     unit_id             INTEGER      REFERENCES public.units(id),
-    condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id)
+    condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id),
+    UNIQUE (extraction_item_id)
 );
 
 -- D-3: analysis_run_snapshots (FK → analysis_runs)

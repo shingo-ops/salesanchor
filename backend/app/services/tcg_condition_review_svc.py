@@ -24,7 +24,10 @@ from app.services.tcg_empty_box_rules import (
     empty_definition_sql,
     literal,
 )
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 _UUID_PATTERN = "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
 _HEX_PATTERN = "^[0-9a-f]{64}$"
@@ -36,7 +39,7 @@ def digest_sql(expression: str) -> str:
 
 
 def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None) -> str:
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
              f"JOIN {schema}.extraction_jobs ej ON ej.id=ei.extraction_job_id WHERE ei.id=CAST(:eid AS uuid))"
              if item_only else "WHERE is_active IS TRUE")
@@ -80,7 +83,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
     Expressions come exclusively from trusted source code, never request text.
     selected_expression is used for a POST's new binding, after old-version checking.
     """
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     classification = classification_sql("ei.raw_product_name", "ei.raw_state", "ei.raw_memo")
     mentions = " OR ".join(f"strpos(COALESCE(ei.{key}, ''), {literal(EMPTY_WORD)}) > 0"
                            for key in ("raw_product_name", "raw_state", "raw_memo"))
@@ -174,7 +177,7 @@ def review_joins(*, analysis_expression: str = "to_jsonb(ar)", selected_expressi
 
 def context_sql(*, analysis_expression: str = "to_jsonb(ar)", selected_expression: str | None = None,
                 schema: str | None = None, source_hash: str | None = None) -> str:
-    schema = schema or TCG_SCHEMA
+    schema = schema or "public"
     return f"""{source_cte(schema=schema, item_only=True, source_hash=source_hash)} SELECT cr.* FROM {schema}.analysis_results ar
         JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
         JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
@@ -249,10 +252,10 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
         if prior is not None:
             if prior.get("request_fingerprint") != fingerprint:
                 raise HTTPException(409, "Condition review request id reused")
-            row = (await db.execute(text(context_sql()), params)).mappings().one()
+            row = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
             await db.commit()
             return _response(row, saved=0, replayed=True)
-        row = (await db.execute(text(context_sql()), params)).mappings().one()
+        row = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         if request["expected_review_version"] != row["review_version"]:
             raise HTTPException(409, "Condition review changed; reload before confirming")
         target = (await db.execute(text("SELECT id FROM public.conditions "
@@ -265,7 +268,7 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             row["classification"] == "ambiguous" or request["condition_id"] != row["condition_id"]
         ):
             raise HTTPException(422, "Select and correct the condition")
-        post = (await db.execute(text(context_sql(selected_expression=":condition_id")), params)).mappings().one()
+        post = (await db.execute(text(context_sql(schema=TCG_SCHEMA, selected_expression=":condition_id")), params)).mappings().one()
         history = {"v": 1, "request_id": request["request_id"], "decision": request["decision"],
                    "condition_id": request["condition_id"], "binding_hash": post["binding_hash"],
                    "request_fingerprint": fingerprint}
@@ -278,12 +281,12 @@ async def save_condition_review(db: AsyncSession, *, extraction_item_id: str, so
             condition_canonical = (SELECT canonical FROM public.conditions WHERE id=:condition_id_int),
             condition_basis='MANUAL_CONDITION_REVIEW', updated_at=clock_timestamp()
             WHERE extraction_item_id=CAST(:eid AS uuid)"""), params)
-        effective = (await db.execute(text(context_sql()), params)).mappings().one()
+        effective = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         await db.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results
             SET needs_review=:needs_review, review_reasons=:review_reasons
             WHERE extraction_item_id=CAST(:eid AS uuid)"""),
             dict(params, needs_review=effective["needs_review"], review_reasons=effective["review_reasons"] or None))
-        final = (await db.execute(text(context_sql()), params)).mappings().one()
+        final = (await db.execute(text(context_sql(schema=TCG_SCHEMA)), params)).mappings().one()
         await db.commit()
         return _response(final, saved=1, replayed=False)
     except Exception:

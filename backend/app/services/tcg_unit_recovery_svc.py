@@ -33,6 +33,10 @@ from app.services.tcg_analyzer_svc import (
 
 logger = logging.getLogger(__name__)
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -223,7 +227,7 @@ def find_term(
 
 def recover_unit_from_product_name(
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a: 商品名から単位を復旧する (dry-run — DB 書き込みなし)。
@@ -388,7 +392,7 @@ def recover_unit_from_product_name(
 def recalc_condition_from_recovered_unit(
     e3a_details: list[dict],
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E5: NAME_RECOVERY 行の condition を再計算する (dry-run — DB 書き込みなし)。
@@ -560,7 +564,7 @@ def recalc_condition_from_recovered_unit(
 
 def run_unit_recovery_dry_run(
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a + E5 dry-run: DB 書き込みなし。
@@ -753,7 +757,7 @@ def find_terminal_unit(text_str: str, terms: list[dict]) -> Optional[dict]:
 def apply_unit_recovery_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a + E5 をジョブ単位で実行し、DB に結果を書き込む（本番用）。
@@ -1025,7 +1029,7 @@ def apply_unit_recovery_for_job(
 def apply_unit_unresolved_flag_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3b: E3a 実行後も unit_resolved=FALSE のままの行に unit_basis='UNIT_UNRESOLVED' をセット。
@@ -1084,7 +1088,7 @@ def apply_unit_unresolved_flag_for_job(
 def apply_unit_from_condition_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E4: unit_resolved=FALSE かつ condition_canonical 確定済みの行で、

@@ -125,7 +125,12 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         analyses = _records(session, f"SELECT to_jsonb(a) FROM {TCG_SCHEMA}.analysis_results a JOIN {TCG_SCHEMA}.extraction_items i ON i.id=a.extraction_item_id {join}", params)
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
         # Strict table reads precede loaders with legacy missing-table fallback.
-        masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
+        # tcg_normalization_rules migrated to public schema (Step 4/5); remaining MASTER_TABLES stay in TCG_SCHEMA.
+        _PUBLIC_MASTER = frozenset({"tcg_normalization_rules"})
+        masters = {
+            name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
+            for name in MASTER_TABLES
+        }
         masters["type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
@@ -147,7 +152,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
                         if p["code"] in categories else (p["category_class"] or "")
                         for p in masters["products"] if p["is_active"]},
         }
-        reference = load_work_reference(session, TCG_SCHEMA)
+        reference = load_work_reference(session, "public")
         if session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
             raise ComparisonError("READ_ONLY_LOST")
         data = json.loads(canonical(dict(import_id=import_id, import_job=imports[0], links=links,

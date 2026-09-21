@@ -17,7 +17,9 @@ from typing import Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # 許可キー一覧（完全一致のみ受理）
@@ -210,9 +212,9 @@ async def retry_extraction(
         await db.execute(
             text(
                 f"UPDATE {TCG_SCHEMA}.extraction_jobs"
-                f" SET status = 'pending'"
-                f" WHERE id = ANY(:ids)"
-                f" AND status = 'error'"
+                " SET status = 'pending'"
+                " WHERE id = ANY(:ids)"
+                " AND status = 'error'"
             ),
             {"ids": error_ids},
         )

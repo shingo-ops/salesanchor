@@ -13,7 +13,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
+
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数
@@ -35,7 +36,7 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
     JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
     JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
-    JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
+    JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
     LEFT JOIN public.products p ON p.id = ar.product_id
     LEFT JOIN public.type_master ws ON ws.id = p.work_id

@@ -413,8 +413,8 @@ async def start_job(
     result = await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"(filename, raw_sha256, total_rows, executed_by, status) "
-            f"VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
+            "(filename, raw_sha256, total_rows, executed_by, status) "
+            "VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
         ),
         {"filename": filename, "digest": digest, "total": total, "who": executed_by},
     )
@@ -431,8 +431,8 @@ async def record_row(
     await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_rows "
-            f"(job_id, row_no, japanese_title, mark, result, product_code, messages) "
-            f"VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
+            "(job_id, row_no, japanese_title, mark, result, product_code, messages) "
+            "VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
         ),
         {
             "job": job_id,
@@ -455,8 +455,8 @@ async def finish_job(
     await db.execute(
         text(
             f"UPDATE {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"SET created_rows = :created, skipped_rows = :skipped, "
-            f"status = :status, completed_at = NOW() WHERE id = :job"
+            "SET created_rows = :created, skipped_rows = :skipped, "
+            "status = :status, completed_at = NOW() WHERE id = :job"
         ),
         {"created": created, "skipped": skipped, "status": status, "job": job_id},
     )
