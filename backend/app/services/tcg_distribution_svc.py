@@ -210,7 +210,7 @@ async def fetch_output_rows(
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
 
-    sql = text(f"""{source_cte(schema="public")}
+    sql = text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
             COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
@@ -240,7 +240,7 @@ async def fetch_output_rows(
             ON p.id = ar.product_id
         LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
-        {review_joins(schema="public")}
+        {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
@@ -291,14 +291,14 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
-    count_result = await db.execute(text(f"""{source_cte(schema="public")}
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema="public")}
+        {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
@@ -309,7 +309,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""{source_cte(schema="public")}
+    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
             COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
                 AS exc_flag,
@@ -339,7 +339,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-        {review_joins(schema="public")}
+        {review_joins(schema=TCG_SCHEMA)}
     """))
     excl = excl_result.mappings().one()
 
@@ -373,7 +373,7 @@ async def _fetch_flag_gate_status(db: AsyncSession, settings: dict) -> dict:
             SELECT 1 FROM information_schema.tables
             WHERE table_schema = :schema AND table_name = 'item_corrections'
         ) AS exists
-    """), {"schema": "public"})
+    """), {"schema": TCG_SCHEMA})
     has_corrections = tbl_check.scalar()
 
     if not has_corrections:

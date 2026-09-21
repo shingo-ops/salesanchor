@@ -1254,7 +1254,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             {"eid": str(item_id)}).scalar_one()
         if has_product_correction:
             stats["skipped_product_corrections"] += 1
-            effective = reanalysis_condition(session, str(item_id), schema="public", source_hash=source_hash)
+            effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
             if effective:
                 session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
                     condition_id=:condition_id, condition_canonical=:canonical,
@@ -1355,7 +1355,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             "price_normalized": price_normalized, "condition_id": condition_uuid,
             "condition_canonical": condition_canonical, "condition_basis": condition_basis_str,
             "review_reasons": ",".join(review_reasons), "needs_review": bool(review_reasons),
-        }, schema="public", source_hash=source_hash)
+        }, schema=TCG_SCHEMA, source_hash=source_hash)
         if effective:
             if effective["valid_ack"]:
                 condition_uuid, condition_canonical, condition_basis_str = (

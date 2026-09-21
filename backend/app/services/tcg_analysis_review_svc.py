@@ -173,11 +173,11 @@ async def fetch_analysis_results(
     )
 
     # 総件数
-    count_sql = f"{source_cte(schema="public")} SELECT COUNT(*) {_BASE_FROM} {where}"
+    count_sql = f"{source_cte(schema=TCG_SCHEMA)} SELECT COUNT(*) {_BASE_FROM} {where}"
     total: int = (await db.execute(text(count_sql), params)).scalar_one()
 
     # 提供者一覧（フィルタ後の全仕入元）
-    prov_sql = f"""{source_cte(schema="public")}
+    prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT DISTINCT COALESCE(ps.name, '不明') AS name
         {_BASE_FROM}
         {where}
@@ -187,7 +187,7 @@ async def fetch_analysis_results(
     providers = [r[0] for r in provider_rows]
 
     # アイテム一覧
-    items_sql = f"""{source_cte(schema="public")}
+    items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
         , result_order_page AS MATERIALIZED (
             SELECT ei.id
             {_BASE_FROM}
