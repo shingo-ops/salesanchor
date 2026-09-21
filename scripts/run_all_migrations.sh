@@ -721,3 +721,10 @@ run_sql migrations/20260920_130000_create_product_classification.sql
 
 # analysis_rule 13テーブルを全スキーマから削除（SSOT を tcg_status_master に統合・PR #3621）
 run_sql migrations/20260921_010000_drop_analysis_rule_tables.sql
+
+# ADR-156: 商品分類ツリー Phase 1 — 大分類・type_master rename・小分類FK・コンディション定義・解析マスタFK
+run_sql migrations/20260921_060000_create_product_kinds.sql
+run_sql migrations/20260921_070000_rename_tcg_type_master_to_type_master.sql
+run_sql migrations/20260921_080000_product_lines_add_type_id.sql
+run_sql migrations/20260921_090000_create_condition_definitions.sql
+run_sql migrations/20260921_100000_add_analysis_master_fk.sql
