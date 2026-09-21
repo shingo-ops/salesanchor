@@ -11,6 +11,11 @@ from fastapi import HTTPException
 from sqlalchemy import text
 
 logger = logging.getLogger(__name__)
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 MAX_BYTES = 8_388_608
 
 

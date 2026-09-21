@@ -17,6 +17,10 @@ from typing import Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 # ---------------------------------------------------------------------------
 # 許可キー一覧（完全一致のみ受理）
 # ---------------------------------------------------------------------------

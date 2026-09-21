@@ -49,6 +49,10 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 ENGINE_VERSION = "name-first-v9-product-all-terms"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する

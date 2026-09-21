@@ -51,6 +51,10 @@ from app.services.tcg_line_import_svc import (
 
 router = APIRouter()
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 
 # ---------------------------------------------------------------------------
 # Pydantic schemas

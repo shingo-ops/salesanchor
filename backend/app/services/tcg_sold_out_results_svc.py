@@ -6,6 +6,10 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 SourceScope = Literal["all", "active", "history"]
 
 

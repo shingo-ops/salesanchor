@@ -36,6 +36,10 @@ logger = logging.getLogger(__name__)
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
