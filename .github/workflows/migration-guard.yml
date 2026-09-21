@@ -519,7 +519,9 @@ jobs:
             # 許可パターンに該当する行を除外して違反行を絞り込む
             # 許可: ALTER TABLE, CREATE [UNIQUE] INDEX ... ON, DROP INDEX, COMMENT ON,
             #       ADD COLUMN, DROP COLUMN, ALTER COLUMN, information_schema 参照,
-            #       pg_namespace / pg_class / to_regclass での存在チェック
+            #       pg_namespace / pg_class / to_regclass での存在チェック,
+            #       DROP TRIGGER, CREATE [OR REPLACE] VIEW, CREATE [OR REPLACE] FUNCTION,
+            #       RENAME TO（テーブルリネーム）, table_name / table_schema（存在チェック継続行）
             VIOLATIONS=""
             while IFS= read -r line; do
               line_num=$(echo "$line" | cut -d: -f1)
@@ -527,7 +529,7 @@ jobs:
 
               # 許可パターンチェック（いずれかに該当すれば許可）
               if echo "$line_content" | grep -qiE \
-                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|DROP[[:space:]]+TRIGGER|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|to_regclass|RAISE[[:space:]]+NOTICE|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?VIEW'; then
+                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|DROP[[:space:]]+TRIGGER|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|to_regclass|RAISE[[:space:]]+NOTICE|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?VIEW|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?FUNCTION|RENAME[[:space:]]+TO|table_name|table_schema'; then
                 continue
               fi
 
