@@ -8,6 +8,7 @@
 
 ## recon 参照
 
+- 詳細: docs/handoff/import-trend-graph/recon.md
 - `backend/app/services/tcg_analysis_dashboard_svc.py` の `get_pipeline_trend()` 関数（days バリデーション・f-string INTERVAL パターン）
 - `backend/app/routers/tcg_analysis_dashboard.py` の `TrendDayItem` / `get_pipeline_trend_endpoint` パターン
 - `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` の ExtractionTabContent 内 LineChart 金型
@@ -62,6 +63,6 @@ recharts LineChart — 既存の Extraction タブ・Analysis タブで同一パ
 
 ## 維持の仕組み
 
-- 守り手: Hikky-dev
+- 守り手: backend/tests/test_tcg_analysis_review.py
 - 同じパターン（ExtractionTabContent のグラフ）が壊れたら合わせて修正する
 - i18n キーは ja.json / en.json 同時追加が ADR-027 の要件（CI でチェック済み）
