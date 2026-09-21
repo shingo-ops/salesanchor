@@ -9,7 +9,7 @@
  * データ源:
  *   - 8 区分（商品種類/セット種別/レアリティ/言語/単位/HSコード/品目/素材）
  *     → public.product_attribute_masters（/super-admin/product-masters）
- *   - TCGシリーズ → public.tcg_type_master（/super-admin/tcg/types）
+ *   - TCGシリーズ → public.type_master（/super-admin/tcg/types）
  *     ※ 種別(ポケモンカード等)を名称のみで管理。code は内部自動採番で UI 非表示。
  */
 import { useState } from "react";
@@ -70,7 +70,7 @@ interface TcgTypeApi {
   sort_order: number;
 }
 
-/** public.tcg_type_master（TCG 種別）を name_ja/name_en で管理するデータ源。 */
+/** public.type_master（TCG 種別）を name_ja/name_en で管理するデータ源。 */
 const tcgTypeSource: MasterDataSource = {
   list: async () => {
     const rows = await api.get<TcgTypeApi[]>("/super-admin/tcg/types");

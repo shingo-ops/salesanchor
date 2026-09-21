@@ -119,7 +119,7 @@ def _load_country_seed_rows() -> list[tuple[str, str, str]]:
 
 
 def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """tcg_type_master の seed rows を canonical code に合わせる。"""
+    """type_master の seed rows を canonical code に合わせる。"""
     return [
         ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
         ("one_piece", "ワンピース", "One Piece TCG"),
@@ -173,8 +173,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
-        if "public.tcg_type_master" in statement:
-            statement = statement.replace("public.tcg_type_master", "tcg_type_master")
+        if "public.type_master" in statement:
+            statement = statement.replace("public.type_master", "type_master")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -684,7 +684,7 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS tcg_type_master (
+            CREATE TABLE IF NOT EXISTS type_master (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code VARCHAR(50) NOT NULL UNIQUE,
                 name_ja VARCHAR(100) NOT NULL,
@@ -723,7 +723,7 @@ async def setup_test_db(test_engine):
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
-                INSERT OR IGNORE INTO tcg_type_master (code, name_ja, name_en, sort_order, is_active)
+                INSERT OR IGNORE INTO type_master (code, name_ja, name_en, sort_order, is_active)
                 VALUES (:code, :name_ja, :name_en, 100, 1)
             """), {"code": code, "name_ja": name_ja, "name_en": name_en})
         # ロール
@@ -813,7 +813,7 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES tcg_type_master(code),
+                tcg_type VARCHAR(50) REFERENCES type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),

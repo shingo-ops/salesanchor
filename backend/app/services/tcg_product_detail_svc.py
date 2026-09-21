@@ -70,10 +70,10 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
     lookups = {}
-    # work_id → public.tcg_type_master (INTEGER, SSOT)
+    # work_id → public.type_master (INTEGER, SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name, is_active "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE OR id = :selected "
         "ORDER BY name_ja, id"
     ), {"selected": product["work_id"]})
@@ -117,7 +117,7 @@ async def update_product_detail(
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
         params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
-        # work_id → public.tcg_type_master (INTEGER, SSOT); validated separately from LOOKUPS
+        # work_id → public.type_master (INTEGER, SSOT); validated separately from LOOKUPS
         new_work_id = values.get("work_id")
         if new_work_id is not None and str(new_work_id) != str(product.get("work_id") or ""):
             try:
@@ -125,7 +125,7 @@ async def update_product_detail(
             except (TypeError, ValueError):
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
             work_row = (await db.execute(text(
-                "SELECT name_ja FROM public.tcg_type_master "
+                "SELECT name_ja FROM public.type_master "
                 "WHERE id=:id AND is_active=TRUE FOR SHARE"
             ), {"id": new_work_id_int})).one_or_none()
             if work_row is None:

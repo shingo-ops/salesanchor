@@ -6,7 +6,7 @@
  *   - tcg_type で一覧フィルタ
  *
  * ADR-083 (2026-05-30):
- *   - 種別 (tcg_type) を固定リストから public.tcg_type_master ベースへ移行。
+ *   - 種別 (tcg_type) を固定リストから public.type_master ベースへ移行。
  *     種別自体を UI から増減できる「種別の管理」セクションを追加。
  *   - 種別の表示名は master の name_ja を用いる（旧 i18n 固定ラベルは廃止）。
  *   - 旧実装はフロントが "pokemon" を送る一方 DB は "pokemon_booster_box" を要求し

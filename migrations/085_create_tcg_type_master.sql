@@ -11,46 +11,74 @@
 -- ============================================================================
 
 -- === 1. 種別マスタ ===
-CREATE TABLE IF NOT EXISTS public.tcg_type_master (
-    id          SERIAL PRIMARY KEY,
-    code        VARCHAR(50)  NOT NULL UNIQUE,
-    name_ja     VARCHAR(100) NOT NULL,
-    name_en     VARCHAR(100),
-    sort_order  INTEGER      NOT NULL DEFAULT 100,
-    is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
-    created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-    updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_tcg_type_master_sort ON public.tcg_type_master (sort_order, id);
-
--- 既存 tcg_series_master.tcg_type と一致する 6 種別を seed（旧 CHECK の許可値）。
--- name_ja は旧 i18n ラベル (superAdmin.tcg.types.*) を踏襲。
-INSERT INTO public.tcg_type_master (code, name_ja, name_en, sort_order) VALUES
-    ('pokemon_booster_box', 'ポケモンカード',   'Pokémon Card',    10),
-    ('one_piece',           'ワンピース',       'One Piece TCG',   20),
-    ('dragon_ball',         'ドラゴンボール',   'Dragon Ball TCG', 30),
-    ('union_arena',         'ユニオンアリーナ', 'Union Arena',     40),
-    ('yugioh',              '遊戯王',           'Yu-Gi-Oh!',       50),
-    ('other',               'その他',           'Other',           900)
-ON CONFLICT (code) DO NOTHING;
-
--- updated_at トリガ（migration 061 と同パターン）
-CREATE OR REPLACE FUNCTION public.set_updated_at_tcg_type_master()
-RETURNS TRIGGER AS $upd$
+-- ADR-156 Phase 2 互換ガード: tcg_type_master が VIEW (relkind='v') に変わっている場合は
+-- type_master に対して操作する（CI 並列テスト時に旧 migration が実行される状況への対処）。
+DO $$
+DECLARE
+    _target TEXT;
+    _relkind CHAR(1);
 BEGIN
-    NEW.updated_at = NOW();
-    RETURN NEW;
-END;
-$upd$ LANGUAGE plpgsql;
+    SELECT relkind INTO _relkind
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master';
 
-DROP TRIGGER IF EXISTS trigger_set_updated_at_tcg_type_master ON public.tcg_type_master;
-CREATE TRIGGER trigger_set_updated_at_tcg_type_master
-    BEFORE UPDATE ON public.tcg_type_master
-    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_tcg_type_master();
+    IF _relkind = 'v' THEN
+        -- tcg_type_master はビュー (互換ビュー) → type_master を操作
+        _target := 'type_master';
+    ELSE
+        _target := 'tcg_type_master';
+    END IF;
 
-COMMENT ON TABLE public.tcg_type_master IS
-    'ADR-083: TCG 種別マスタ。UI から増減可能。tcg_series_master.tcg_type の値集合の正本。';
+    EXECUTE format('
+        CREATE TABLE IF NOT EXISTS public.%I (
+            id          SERIAL PRIMARY KEY,
+            code        VARCHAR(50)  NOT NULL UNIQUE,
+            name_ja     VARCHAR(100) NOT NULL,
+            name_en     VARCHAR(100),
+            sort_order  INTEGER      NOT NULL DEFAULT 100,
+            is_active   BOOLEAN      NOT NULL DEFAULT TRUE,
+            created_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+            updated_at  TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+        )', _target);
+
+    EXECUTE format('
+        CREATE INDEX IF NOT EXISTS idx_%s_sort ON public.%I (sort_order, id)',
+        _target, _target);
+
+    EXECUTE format('
+        INSERT INTO public.%I (code, name_ja, name_en, sort_order) VALUES
+            (''pokemon_booster_box'', ''ポケモンカード'',   ''Pokémon Card'',    10),
+            (''one_piece'',           ''ワンピース'',       ''One Piece TCG'',   20),
+            (''dragon_ball'',         ''ドラゴンボール'',   ''Dragon Ball TCG'', 30),
+            (''union_arena'',         ''ユニオンアリーナ'', ''Union Arena'',     40),
+            (''yugioh'',              ''遊戯王'',           ''Yu-Gi-Oh!'',       50),
+            (''other'',               ''その他'',           ''Other'',           900)
+        ON CONFLICT (code) DO NOTHING', _target);
+
+    EXECUTE format('
+        CREATE OR REPLACE FUNCTION public.set_updated_at_%s()
+        RETURNS TRIGGER AS $upd$
+        BEGIN
+            NEW.updated_at = NOW();
+            RETURN NEW;
+        END;
+        $upd$ LANGUAGE plpgsql', _target);
+
+    EXECUTE format('
+        DROP TRIGGER IF EXISTS trigger_set_updated_at_%s ON public.%I',
+        _target, _target);
+
+    EXECUTE format('
+        CREATE TRIGGER trigger_set_updated_at_%s
+            BEFORE UPDATE ON public.%I
+            FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_%s()',
+        _target, _target, _target);
+
+    EXECUTE format('
+        COMMENT ON TABLE public.%I IS
+            ''ADR-083: TCG 種別マスタ。UI から増減可能。tcg_series_master.tcg_type の値集合の正本。''',
+        _target);
+END $$;
 
 -- === 2. tcg_series_master の固定 CHECK 制約を撤廃 ===
 -- 種別を自由に増減可能にするため。tcg_series_master が存在する環境でのみ実行

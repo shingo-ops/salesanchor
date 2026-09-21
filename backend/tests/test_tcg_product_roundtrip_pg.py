@@ -38,7 +38,7 @@ def seed(connection, count=2):
         for index in range(count):
             cursor.execute(
                 "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id) "
-                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.tcg_type_master WHERE code='one_piece')) RETURNING id",
+                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.type_master WHERE code='one_piece')) RETURNING id",
                 (
                     "RTSENT" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
@@ -53,7 +53,7 @@ def seed(connection, count=2):
                         f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
                         (pid, word, position),
                     )
-        cursor.execute("UPDATE public.tcg_type_master SET is_active=false WHERE code='one_piece'")
+        cursor.execute("UPDATE public.type_master SET is_active=false WHERE code='one_piece'")
 
 
 def edit(raw, changes, *, single=False):
@@ -87,7 +87,7 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
                 empty = await svc.export_csv(db, "not found")
                 assert len(svc.read_records(empty)) == 1
                 with connection.cursor() as cur:
-                    cur.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
+                    cur.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
                     work = str(cur.fetchone()[0])
                 selected = await svc.export_csv(db, "商品0", work)
                 assert len(svc.read_records(selected)) == 2

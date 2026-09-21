@@ -98,8 +98,8 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     # One statement produces the complete product/words/reference snapshot.
     joins = []
     references = []
-    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
-    joins.append("LEFT JOIN public.tcg_type_master work ON work.id=p.work_id")
+    # work_code → public.type_master (SSOT, INTEGER PK)
+    joins.append("LEFT JOIN public.type_master work ON work.id=p.work_id")
     references.append("'work_code', work.code")
     for field, table in LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
@@ -188,8 +188,8 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
         return response, []
     current = {s["product"]["product_code"]: s for s in await snapshots(db)}
     references = {}
-    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
-    work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.tcg_type_master r WHERE r.is_active=TRUE"))
+    # work_code → public.type_master (SSOT, INTEGER PK)
+    work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.type_master r WHERE r.is_active=TRUE"))
     references["work_code"] = {row[0]["code"]: row[0] for row in work_result.fetchall()}
     for field, table in LOOKUP_TABLES.items():
         # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).

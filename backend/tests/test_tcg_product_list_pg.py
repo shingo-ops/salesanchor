@@ -112,7 +112,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     """AC1/3/4/5: real DATE/INTEGER semantics and independent work candidates."""
     db, schema = product_db
     ids = dict((await db.execute(text(
-        "SELECT code,id FROM public.tcg_type_master WHERE code IN ('pokemon_booster_box','one_piece','dragon_ball','yugioh')"
+        "SELECT code,id FROM public.type_master WHERE code IN ('pokemon_booster_box','one_piece','dragon_ball','yugioh')"
     ))).all())
     fixtures = [
         ("A", date(2099, 1, 1), ids["pokemon_booster_box"], True),
@@ -147,7 +147,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
         result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
         assert result.total == total
         assert [item.code for item in result.items] == expected
-        # works list contains all active tcg_type_master entries; verify key entries are present
+        # works list contains all active type_master entries; verify key entries are present
         work_codes = {w.code for w in result.works}
         assert "pokemon_booster_box" in work_codes
         assert "one_piece" in work_codes
@@ -161,7 +161,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
 async def test_date_order_across_fifty_row_pages(product_db):
     """AC2: compare both pages against independently generated chronological order."""
     db, schema = product_db
-    work_id = (await db.execute(text("SELECT id FROM public.tcg_type_master WHERE code='pokemon_booster_box'"))).scalar_one()
+    work_id = (await db.execute(text("SELECT id FROM public.type_master WHERE code='pokemon_booster_box'"))).scalar_one()
     for index in range(53):
         await db.execute(text(
             "INSERT INTO public.products (product_code,name,category_class,is_active,release_date,work_id) "
