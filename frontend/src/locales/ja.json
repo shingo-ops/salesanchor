@@ -3946,7 +3946,8 @@
       "importMatchRate": "名前の一致率",
       "importActionRequired": "要対応",
       "importNoAction": "なし",
-      "importReviewCta": "確認する →"
+      "importReviewCta": "確認する →",
+      "importCheckSupplierCta": "サプライヤーを確認 →"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
