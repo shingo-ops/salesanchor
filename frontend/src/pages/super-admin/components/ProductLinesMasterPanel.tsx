@@ -14,6 +14,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
 import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
+import { SelectControl } from "../../../components/Select";
 import { STATUS_ICONS } from "../../../constants/icons";
 import { ICON } from "../../../constants/iconSizes";
 
@@ -279,36 +280,32 @@ export function ProductLinesMasterPanel() {
               />
             </div>
             <div className="form-group">
-              {/* ui-allow: 金型未登録のため生select使用 (#3648) */}
               <label style={{ display: "block", fontSize: "var(--font-sm)", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.kindId`)}
               </label>
-              <select
-                value={form.kind_id ?? ""}
+              <SelectControl
+                options={[
+                  { value: "", label: "—" },
+                  ...kinds.map(k => ({ value: String(k.id), label: k.name })),
+                ]}
+                value={form.kind_id != null ? String(form.kind_id) : ""}
                 onChange={e => setForm({ ...form, kind_id: e.target.value ? Number(e.target.value) : null })}
-                style={{ width: "100%", padding: "var(--space-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
-              >
-                <option value="">—</option>
-                {kinds.map(k => (
-                  <option key={k.id} value={k.id}>{k.name}</option>
-                ))}
-              </select>
+                fullWidth
+              />
             </div>
             <div className="form-group">
-              {/* ui-allow: 金型未登録のため生select使用 (#3648) */}
               <label style={{ display: "block", fontSize: "var(--font-sm)", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.typeId`)}
               </label>
-              <select
-                value={form.type_id ?? ""}
+              <SelectControl
+                options={[
+                  { value: "", label: "—" },
+                  ...types.map(tp => ({ value: String(tp.id), label: tp.name_ja })),
+                ]}
+                value={form.type_id != null ? String(form.type_id) : ""}
                 onChange={e => setForm({ ...form, type_id: e.target.value ? Number(e.target.value) : null })}
-                style={{ width: "100%", padding: "var(--space-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
-              >
-                <option value="">—</option>
-                {types.map(tp => (
-                  <option key={tp.id} value={tp.id}>{tp.name_ja}</option>
-                ))}
-              </select>
+                fullWidth
+              />
             </div>
             <div className="form-group">
               <TextField

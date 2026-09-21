@@ -14,6 +14,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
 import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
+import { SelectControl } from "../../../components/Select";
 import { STATUS_ICONS } from "../../../constants/icons";
 import { ICON } from "../../../constants/iconSizes";
 
@@ -250,20 +251,18 @@ export function ProductFormatsMasterPanel() {
               />
             </div>
             <div className="form-group">
-              {/* ui-allow: 金型未登録のため生select使用 (#3648) */}
               <label style={{ display: "block", fontSize: "var(--font-sm)", marginBottom: "var(--space-1)" }}>
                 {t(`${f}.lineId`)}
               </label>
-              <select
-                value={form.line_id ?? ""}
+              <SelectControl
+                options={[
+                  { value: "", label: "—" },
+                  ...lines.map(l => ({ value: String(l.id), label: l.name })),
+                ]}
+                value={form.line_id != null ? String(form.line_id) : ""}
                 onChange={e => setForm({ ...form, line_id: e.target.value ? Number(e.target.value) : null })}
-                style={{ width: "100%", padding: "var(--space-2)", border: "1px solid var(--border)", borderRadius: "var(--radius-sm)" }}
-              >
-                <option value="">—</option>
-                {lines.map(l => (
-                  <option key={l.id} value={l.id}>{l.name}</option>
-                ))}
-              </select>
+                fullWidth
+              />
             </div>
             <div className="form-group">
               <TextField

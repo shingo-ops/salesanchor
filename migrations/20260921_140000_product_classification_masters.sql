@@ -46,8 +46,7 @@ CREATE TABLE IF NOT EXISTS public.quantity_units (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_quantity_units_sort
-    ON public.quantity_units (display_order, id);
+CREATE INDEX IF NOT EXISTS idx_quantity_units_sort ON public.quantity_units (display_order, id);
 
 ------------------------------------------------------------
 -- 3. weight_classes（重量マスタ）
@@ -64,8 +63,7 @@ CREATE TABLE IF NOT EXISTS public.weight_classes (
     created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
     updated_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
-CREATE INDEX IF NOT EXISTS idx_weight_classes_sort
-    ON public.weight_classes (display_order, id);
+CREATE INDEX IF NOT EXISTS idx_weight_classes_sort ON public.weight_classes (display_order, id);
 
 ------------------------------------------------------------
 -- 4. products に FK 追加
@@ -95,16 +93,12 @@ $$ LANGUAGE plpgsql;
 
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_quantity_units_updated_at') THEN
-        CREATE TRIGGER trg_quantity_units_updated_at
-            BEFORE UPDATE ON public.quantity_units
-            FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+        CREATE TRIGGER trg_quantity_units_updated_at BEFORE UPDATE ON public.quantity_units FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
     END IF;
 END $$;
 
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_weight_classes_updated_at') THEN
-        CREATE TRIGGER trg_weight_classes_updated_at
-            BEFORE UPDATE ON public.weight_classes
-            FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
+        CREATE TRIGGER trg_weight_classes_updated_at BEFORE UPDATE ON public.weight_classes FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
     END IF;
 END $$;
