@@ -55,59 +55,59 @@ _QUERIES: dict[str, str] = {
         HAVING COUNT(*) BETWEEN 2 AND 9999
         ORDER BY cnt DESC
     """,
-    "supplier-channels": """
+    "supplier-channels": f"""
         SELECT ps.supplier_code AS supplier_code, ps.name AS supplier_name, COUNT(sc.id) AS channel_count
-        FROM public.supplier_channels sc
+        FROM {TCG_SCHEMA}.supplier_channels sc
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         GROUP BY ps.supplier_code, ps.name
         ORDER BY ps.supplier_code
     """,
-    "orphan-messages": """
+    "orphan-messages": f"""
         SELECT COUNT(*) AS null_channel_count
-        FROM public.source_messages
+        FROM {TCG_SCHEMA}.source_messages
         WHERE supplier_channel_id IS NULL
     """,
-    "extraction-errors": """
+    "extraction-errors": f"""
         SELECT ej.id,
                ej.source_message_id,
                ej.error_message,
                ej.prompt_version,
                ej.created_at
-        FROM public.extraction_jobs ej
+        FROM {TCG_SCHEMA}.extraction_jobs ej
         WHERE ej.status = 'error'
         ORDER BY ej.created_at DESC
         LIMIT 100
     """,
-    "extraction-pending": """
+    "extraction-pending": f"""
         SELECT ej.id,
                ej.source_message_id,
                ej.created_at
-        FROM public.extraction_jobs ej
+        FROM {TCG_SCHEMA}.extraction_jobs ej
         WHERE ej.status = 'pending'
         ORDER BY ej.created_at ASC
         LIMIT 100
     """,
-    "extraction-running-stale": """
+    "extraction-running-stale": f"""
         SELECT ej.id,
                ej.source_message_id,
                ej.created_at,
                ROUND(EXTRACT(EPOCH FROM (NOW() - ej.created_at)) / 60) AS age_minutes
-        FROM public.extraction_jobs ej
+        FROM {TCG_SCHEMA}.extraction_jobs ej
         WHERE ej.status = 'running'
           AND ej.created_at < NOW() - INTERVAL '10 minutes'
         ORDER BY ej.created_at ASC
     """,
-    "analysis-missing": """
+    "analysis-missing": f"""
         SELECT ej.id AS extraction_job_id,
                ej.source_message_id,
                COUNT(ei.id) AS item_count,
                ej.extracted_at
-        FROM public.extraction_jobs ej
-        JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
+        FROM {TCG_SCHEMA}.extraction_jobs ej
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
         WHERE ej.status = 'done'
           AND NOT EXISTS (
               SELECT 1
-              FROM public.analysis_results ar
+              FROM {TCG_SCHEMA}.analysis_results ar
               WHERE ar.extraction_item_id = ei.id
           )
         GROUP BY ej.id, ej.source_message_id, ej.extracted_at
@@ -178,7 +178,7 @@ async def retry_extraction(
             await db.execute(
                 text(
                     f"SELECT id, source_message_id, status"
-                    f" FROM public.extraction_jobs"
+                    f" FROM {TCG_SCHEMA}.extraction_jobs"
                     f" WHERE id = ANY(:ids)"
                     f" LIMIT {_MAX_JOBS}"
                 ),
@@ -194,7 +194,7 @@ async def retry_extraction(
             await db.execute(
                 text(
                     f"SELECT id, source_message_id, status"
-                    f" FROM public.extraction_jobs"
+                    f" FROM {TCG_SCHEMA}.extraction_jobs"
                     f" WHERE status = 'pending'"
                     f" ORDER BY created_at ASC"
                     f" LIMIT {_MAX_JOBS}"
@@ -211,7 +211,7 @@ async def retry_extraction(
     if error_ids:
         await db.execute(
             text(
-                "UPDATE public.extraction_jobs"
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs"
                 " SET status = 'pending'"
                 " WHERE id = ANY(:ids)"
                 " AND status = 'error'"

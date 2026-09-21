@@ -9,6 +9,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.tcg_config import TCG_SCHEMA
+
 
 async def get_pipeline_summary(db: AsyncSession) -> dict:
     """
@@ -18,7 +20,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     """
     # 1. extraction_jobs ステータス別件数
     rows_by_status = (
-        await db.execute(text("SELECT status, COUNT(*) AS cnt FROM public.extraction_jobs GROUP BY status"))
+        await db.execute(text(f"SELECT status, COUNT(*) AS cnt FROM {TCG_SCHEMA}.extraction_jobs GROUP BY status"))
     ).fetchall()
 
     by_status: dict[str, int] = {}
@@ -35,7 +37,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
             await db.execute(
                 text(
                     "SELECT COUNT(*)"
-                    " FROM public.extraction_jobs"
+                    f" FROM {TCG_SCHEMA}.extraction_jobs"
                     " WHERE status = 'running'"
                     " AND created_at < NOW() - INTERVAL '10 minutes'"
                 )
@@ -53,7 +55,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
                 "  SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved_count,"
                 "  SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved_count,"
                 "  SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review_count"
-                " FROM public.analysis_results"
+                f" FROM {TCG_SCHEMA}.analysis_results"
             )
         )
     ).fetchone()
@@ -73,11 +75,11 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
             await db.execute(
                 text(
                     "SELECT COUNT(DISTINCT ej.id)"
-                    " FROM public.extraction_jobs ej"
-                    " JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id"
+                    f" FROM {TCG_SCHEMA}.extraction_jobs ej"
+                    f" JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id"
                     " WHERE ej.status = 'done'"
                     " AND NOT EXISTS ("
-                    "   SELECT 1 FROM public.analysis_results ar"
+                    f"   SELECT 1 FROM {TCG_SCHEMA}.analysis_results ar"
                     "   WHERE ar.extraction_item_id = ei.id"
                     " )"
                 )
@@ -92,7 +94,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
             text(
                 "SELECT unnest(string_to_array(review_reasons, ',')) AS reason,"
                 "       COUNT(*) AS cnt"
-                " FROM public.analysis_results"
+                f" FROM {TCG_SCHEMA}.analysis_results"
                 " WHERE needs_review = TRUE AND review_reasons IS NOT NULL"
                 " GROUP BY reason"
                 " ORDER BY cnt DESC"
@@ -107,7 +109,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 "SELECT requested_model, prompt_version"
-                " FROM public.extraction_attempts"
+                f" FROM {TCG_SCHEMA}.extraction_attempts"
                 " ORDER BY started_at DESC"
                 " LIMIT 1"
             )
@@ -116,7 +118,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
 
     engine_version_row = (
         await db.execute(
-            text("SELECT engine_version FROM public.analysis_results ORDER BY computed_at DESC LIMIT 1")
+            text(f"SELECT engine_version FROM {TCG_SCHEMA}.analysis_results ORDER BY computed_at DESC LIMIT 1")
         )
     ).fetchone()
 
@@ -131,7 +133,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version"
-                " FROM public.extraction_jobs ej"
+                f" FROM {TCG_SCHEMA}.extraction_jobs ej"
                 " WHERE ej.status = 'error'"
                 " ORDER BY ej.created_at DESC"
                 " LIMIT 10"
@@ -207,7 +209,7 @@ async def get_pipeline_trend(db: AsyncSession, days: int = 7) -> list[dict]:
                 f"     COUNT(*) AS total,"
                 f"     SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) AS done,"
                 f"     SUM(CASE WHEN status = 'error' THEN 1 ELSE 0 END) AS error"
-                f"   FROM public.extraction_jobs"
+                f"   FROM {TCG_SCHEMA}.extraction_jobs"
                 f"   WHERE created_at::date = d.day::date"
                 f" ) e ON TRUE"
                 f" LEFT JOIN LATERAL ("
@@ -216,9 +218,9 @@ async def get_pipeline_trend(db: AsyncSession, days: int = 7) -> list[dict]:
                 f"     SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved,"
                 f"     SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved,"
                 f"     SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review"
-                f"   FROM public.analysis_results ar"
-                f"   JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id"
-                f"   JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id"
+                f"   FROM {TCG_SCHEMA}.analysis_results ar"
+                f"   JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id"
+                f"   JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id"
                 f"   WHERE ej.created_at::date = d.day::date"
                 f" ) a ON TRUE"
                 f" ORDER BY d.day"
@@ -254,7 +256,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
                 "  SUM(message_count) AS total_messages,"
                 "  SUM(unresolved_count) AS total_unresolved,"
                 "  MAX(created_at) AS latest_import_at"
-                " FROM public.import_jobs"
+                f" FROM {TCG_SCHEMA}.import_jobs"
             )
         )
     ).fetchone()
@@ -272,7 +274,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
                 "  COUNT(*) AS total,"
                 "  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
                 "  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
-                " FROM public.source_messages"
+                f" FROM {TCG_SCHEMA}.source_messages"
             )
         )
     ).fetchone()
@@ -285,7 +287,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 "SELECT id, filename, message_count, unresolved_count, review_status, created_at"
-                " FROM public.import_jobs"
+                f" FROM {TCG_SCHEMA}.import_jobs"
                 " ORDER BY created_at DESC"
                 " LIMIT 10"
             )
@@ -331,7 +333,7 @@ async def get_import_trend(db: AsyncSession, days: int = 7) -> list[dict]:
                 f"  COUNT(*)::int AS job_count,"
                 f"  COALESCE(SUM(message_count), 0)::int AS message_count,"
                 f"  COALESCE(SUM(unresolved_count), 0)::int AS unresolved_count"
-                f" FROM public.import_jobs"
+                f" FROM {TCG_SCHEMA}.import_jobs"
                 f" WHERE created_at >= NOW() - INTERVAL '{days} days'"
                 f" GROUP BY DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo')"
                 f" ORDER BY DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo')"
@@ -357,7 +359,7 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 "SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
-                " FROM public.tcg_distribution_targets"
+                f" FROM {TCG_SCHEMA}.tcg_distribution_targets"
                 " ORDER BY name"
             )
         )
@@ -383,7 +385,7 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 "SELECT key, value, note"
-                " FROM public.tcg_distribution_settings"
+                f" FROM {TCG_SCHEMA}.tcg_distribution_settings"
                 " ORDER BY key"
             )
         )

@@ -184,7 +184,7 @@ async def update_product_detail(
         after = await _snapshot(db, code)
         _audit_pid = str(uuid4())
         await db.execute(text(
-            "INSERT INTO public.audit_log "
+            f"INSERT INTO {TCG_SCHEMA}.audit_log "
             "(table_name,record_id,action,changed_by,old_values,new_values) "
             "VALUES ('products',CAST(:pid AS uuid),'UPDATE',:actor,:old,:new)"
         ), {"pid": str(_audit_pid), "actor": actor[:100], "old": _json(before), "new": _json(after)})

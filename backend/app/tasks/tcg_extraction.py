@@ -105,11 +105,11 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
 
 
 def work_schema_ready(session: Session) -> bool:
-    count = session.execute(text("""
+    count = session.execute(text(f"""
         SELECT count(*) FROM pg_attribute
         WHERE NOT attisdropped AND (
-            (attrelid = 'public.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
-            OR (attrelid = 'public.extraction_jobs'::regclass
+            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
+            OR (attrelid = '{TCG_SCHEMA}.extraction_jobs'::regclass
                 AND attname IN ('work_reference_snapshot', 'work_reference_sha256')))
     """)).scalar_one()
     return count == 4
@@ -121,10 +121,10 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     # --- 1. pending job を取得 ---
     row = session.execute(
         text(
-            """
+            f"""
             SELECT ej.id, sm.raw_text
-            FROM public.extraction_jobs ej
-            JOIN public.source_messages sm ON sm.id = ej.source_message_id
+            FROM {TCG_SCHEMA}.extraction_jobs ej
+            JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             WHERE ej.source_message_id = :smid
               AND ej.status = 'pending'
             ORDER BY ej.created_at DESC
@@ -158,7 +158,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if len(raw_text.strip()) == 0:
         session.execute(
             text(
-                "UPDATE public.extraction_jobs "
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
                 "SET status = 'empty', extracted_at = NOW(), error_message = NULL "
                 "WHERE id = :ej_id"
             ),
@@ -279,8 +279,8 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     now = datetime.now(timezone.utc)
     session.execute(
         text(
-            """
-            UPDATE public.extraction_jobs
+            f"""
+            UPDATE {TCG_SCHEMA}.extraction_jobs
             SET status         = :status,
                 extracted_at   = :extracted_at,
                 prompt_version = :prompt_version,

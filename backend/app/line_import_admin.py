@@ -20,6 +20,7 @@ from app.services import line_import_devices as devices
 from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
+from app.tcg_config import TCG_SCHEMA  # noqa: E402
 
 SOURCE_REPORT_LIMIT = 10000
 
@@ -92,8 +93,8 @@ async def authorize(db, data):
         {'id': data['device_id']})).mappings().one_or_none()
     if row is None or not devices.valid(row):
         raise ValueError('active import device owner required')
-    job = (await db.execute(text('''SELECT id,uploaded_by,review_status,unresolved_names,
-        message_count,created_at FROM public.import_jobs WHERE id=:id'''),
+    job = (await db.execute(text(f'''SELECT id,uploaded_by,review_status,unresolved_names,
+        message_count,created_at FROM {TCG_SCHEMA}.import_jobs WHERE id=:id'''),
         {'id': data['import_job_id']})).mappings().one_or_none()
     if job is None or job['uploaded_by'] not in (row['email'], str(row['owner_user_id'])):
         raise ValueError('import owner mismatch')
@@ -115,8 +116,8 @@ async def operate(db, data):
         if data.get('report_public_key'):
             suppliers = (await db.execute(text('SELECT supplier_code AS code,name,is_active FROM public.suppliers ORDER BY supplier_code'))).mappings().all()
             sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at,sm.is_active
-                FROM public.source_messages sm
-                JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
+                FROM {TCG_SCHEMA}.source_messages sm
+                JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
                 JOIN public.suppliers ps ON ps.id=sc.supplier_id
                 WHERE sc.channel='line' ORDER BY sm.created_at DESC,sm.id DESC LIMIT {SOURCE_REPORT_LIMIT + 1}'''))).mappings().all()
             fingerprints = [{'code': r['code'], 'posted_at': str(r['line_posted_at']),

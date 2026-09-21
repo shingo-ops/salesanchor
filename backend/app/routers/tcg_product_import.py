@@ -409,7 +409,7 @@ async def delete_product_detail(
 
     # analysis_results の product_id を NULL に設定（NO ACTION制約の事前対処）
     await db.execute(
-        text("UPDATE public.analysis_results SET product_id = NULL WHERE product_id = :pid"),
+        text(f"UPDATE {TCG_SCHEMA}.analysis_results SET product_id = NULL WHERE product_id = :pid"),
         {"pid": product_id},
     )
 

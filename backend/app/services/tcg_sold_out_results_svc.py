@@ -27,7 +27,7 @@ async def fetch_sold_out_results(
 ) -> dict[str, Any]:
     """One statement supplies integrity, count, timestamp and the ordered page."""
     search = (q or "").strip()
-    statement = text("""
+    statement = text(f"""
         WITH joined AS (
             SELECT ar.id AS analysis_result_id, ei.id AS extraction_item_id,
                 sm.id AS source_message_id, ps.id AS supplier_id, p.id AS product_id,
@@ -42,11 +42,11 @@ async def fetch_sold_out_results(
                 COALESCE(sm.raw_text, '') AS raw_text,
                 ar.status, sm.is_active AS source_is_active, sm.line_posted_at,
                 ei.line_start, ei.line_end
-            FROM public.analysis_results ar
-            LEFT JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id
-            LEFT JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
-            LEFT JOIN public.source_messages sm ON sm.id = ej.source_message_id
-            LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+            FROM {TCG_SCHEMA}.analysis_results ar
+            LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+            LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
             LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
             LEFT JOIN public.products p ON p.id = ar.product_id
             WHERE ar.status = 'Sold out'

@@ -300,7 +300,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
             text(f"LOCK TABLE {', '.join(f'{TCG_SCHEMA}.{table}' for table in LOOKUP_TABLES.values())} IN SHARE MODE")
         )
         prior = await db.execute(
-            text("SELECT id FROM public.tcg_product_import_jobs WHERE raw_sha256=:digest"),
+            text(f"SELECT id FROM {TCG_SCHEMA}.tcg_product_import_jobs WHERE raw_sha256=:digest"),
             {"digest": confirmed_digest},
         )
         if prior.fetchone():
@@ -311,7 +311,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
             raise RoundtripError("ROUNDTRIP_STALE" if stale else "ROUNDTRIP_VALIDATION", 409 if stale else 422)
         job = await db.execute(
             text(
-                "INSERT INTO public.tcg_product_import_jobs "
+                f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_jobs "
                 "(filename,raw_sha256,total_rows,created_rows,skipped_rows,executed_by,status,completed_at) "
                 "VALUES (:filename,:digest,:total,0,:unchanged,:actor,'ok',NOW()) RETURNING id"
             ),
@@ -350,7 +350,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
             row = plan["row"]
             await db.execute(
                 text(
-                    "INSERT INTO public.tcg_product_import_rows "
+                    f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_rows "
                     "(job_id,row_no,japanese_title,mark,result,product_code,messages) "
                     "VALUES(CAST(:job AS uuid),:row_no,:title,:mark,:result,:code,:messages)"
                 ),

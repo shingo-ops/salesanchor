@@ -526,7 +526,7 @@ async def import_line_export(
     )
 
     existing_row = await db.execute(
-        text("SELECT id, status, review_status FROM public.import_jobs WHERE raw_sha256 = :sha256"),
+        text(f"SELECT id, status, review_status FROM {TCG_SCHEMA}.import_jobs WHERE raw_sha256 = :sha256"),
         {"sha256": file_sha256},
     )
     existing = existing_row.fetchone()
@@ -659,7 +659,7 @@ async def import_line_export(
 
     enqueued_ids = await _write_source_messages(db, provider_entries, str(import_job_id))
     await db.execute(
-        text("UPDATE public.import_jobs SET messages_linked_at = now() WHERE id = :id"),
+        text(f"UPDATE {TCG_SCHEMA}.import_jobs SET messages_linked_at = now() WHERE id = :id"),
         {"id": str(import_job_id)},
     )
     await db.commit()
