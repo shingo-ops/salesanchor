@@ -25,7 +25,7 @@
 ```
 
 ```css
-/* AnalysisRulesPage.css */
+/* frontend/src/pages/super-admin/AnalysisRulesPage.css */
 .analysis-panel-content {
   padding: var(--space-6);
   overflow-y: auto;
@@ -35,24 +35,24 @@
 
 ### 不採用案
 
-- `hub-shell.css` に直接追加: 他ページに影響・ADR-144 違反
+- hub-shell.css に直接追加: 他ページに影響・ADR-144 違反
 - 各パネルコンポーネントに追加: パディングが重複する可能性・再利用時に問題
 
 ## 影響範囲
 
-- 変更するファイル: `AnalysisRulesPage.tsx`（1ページのみ）、`AnalysisRulesPage.css`（新規）
+- 変更するファイル: frontend/src/pages/super-admin/AnalysisRulesPage.tsx（1ページのみ）、frontend/src/pages/super-admin/AnalysisRulesPage.css（新規）
 - 影響を受けるパネル: 上記10パネル（全て非ダッシュボード）
-- 影響を受けないパネル: AnalysisDashboardPanel（`activeSection === "dashboard"` の条件が残る）
-- 他ページへの影響: なし（クラス名 `analysis-panel-content` は本ファイル限定）
+- 影響を受けないパネル: AnalysisDashboardPanel（activeSection === "dashboard" の条件が残る）
+- 他ページへの影響: なし（クラス名 analysis-panel-content は本ファイル限定）
 
 ## 戻し方
 
-`AnalysisRulesPage.tsx` の wrapper div を削除し、`AnalysisRulesPage.css` を削除する。
+AnalysisRulesPage.tsx の wrapper div を削除し、AnalysisRulesPage.css を削除する。
 
 ## 外部・過去事例の参照と我々への応用
 
-ManagementCenterPage（`frontend/src/pages/management-center/ManagementCenterPage.css`）は `/* styles moved to frontend/src/hub-shell.css */` のみで、hub-shell.css に移行済み。AnalysisRulesPage は hub-shell クラスを使いつつページ固有のラッパークラスを独自 CSS ファイルに定義する同様の分離パターンを採用する。
+ManagementCenterPage（frontend/src/pages/management-center/ManagementCenterPage.css）は hub-shell.css に移行済みのスタブのみ。AnalysisRulesPage は hub-shell クラスを使いつつページ固有のラッパークラスを独自 CSS ファイルに定義する同様の分離パターンを採用する。
 
 ## 維持の仕組み
 
-守り手: ADR-144（hub-shell.css 変更禁止）・ADR-067（デザイントークン）。新規パネルを追加した場合は `activeSection !== "dashboard"` ブランチに列挙するだけでラッパーが自動適用される。
+守り手: ADR-144（hub-shell.css 変更禁止）・ADR-067（デザイントークン）。新規パネルを追加した場合は activeSection !== "dashboard" ブランチに列挙するだけでラッパーが自動適用される。

@@ -55,7 +55,7 @@
 ```
 
 ### CSS import なし
-`frontend/src/pages/super-admin/AnalysisRulesPage.tsx` に CSS import なし（grep 結果: 0件）。
+frontend/src/pages/super-admin/AnalysisRulesPage.tsx に CSS import なし（grep 結果: 0件）。
 
 ## 関連ADR
 
@@ -64,6 +64,6 @@
 
 ## 変更しないファイル
 
-- `frontend/src/hub-shell.css`: 他ページと共有。変更すると全 hub-shell ページに影響（ADR-144）
-- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css`: ダッシュボードは既存動作維持
+- frontend/src/hub-shell.css: 他ページと共有。変更すると全 hub-shell ページに影響（ADR-144）
+- frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css: ダッシュボードは既存動作維持
 - 各パネルコンポーネント: 再利用可能性を損なわないようパネル側には手を加えない
