@@ -452,10 +452,10 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
 
         <Card variant="metric" density="compact">
           <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.importMessages")}
+            {t("analysisRules.dashboard.importActiveMessages")}
           </div>
           <div className="analysis-dashboard-metric-value">
-            {data.total_messages.toLocaleString()}
+            {data.active_message_count.toLocaleString()}
             <span className="analysis-dashboard-metric-unit">
               {t("analysisRules.dashboard.items")}
             </span>
