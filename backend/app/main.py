@@ -80,6 +80,7 @@ from app.routers import (
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
+    rule_test,  # Rule Test System: ルールテスト実行 API
     shifts,
     shipping,
     staff,
@@ -99,7 +100,6 @@ from app.routers import (
     super_admin_product_kinds,  # 大分類マスタ中央 admin
     super_admin_product_lines,  # 小分類マスタ中央 admin
     super_admin_quantity_units,  # 数量単位マスタ中央 admin
-    rule_test,  # Rule Test System: ルールテスト実行 API
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,

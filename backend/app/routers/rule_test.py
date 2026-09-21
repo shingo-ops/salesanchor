@@ -4,8 +4,7 @@ tcg_status_master (SSOT) のルール検証用テスト実行
 
 ADR-027 準拠: エラーメッセージは i18n キー or 英語定型文
 """
-from datetime import datetime, timezone
-from uuid import UUID
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
@@ -13,8 +12,8 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
-from app.database import get_db
 from app.celery_app import celery_app
+from app.database import get_db
 
 router = APIRouter(tags=["rule-test"])
 

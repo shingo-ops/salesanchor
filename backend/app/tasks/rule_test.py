@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 from celery import shared_task
 from sqlalchemy import create_engine, text
 
-from app.services.tcg_analyzer_svc import resolve_status_v2, load_status_master
+from app.services.tcg_analyzer_svc import load_status_master, resolve_status_v2
 
 logger = logging.getLogger(__name__)
 
