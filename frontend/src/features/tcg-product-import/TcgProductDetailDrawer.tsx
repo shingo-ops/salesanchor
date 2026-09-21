@@ -8,7 +8,7 @@ import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 import { api, ApiError } from "../../lib/api";
 
-const classificationFields = ["division_id", "work_id", "manufacturer_id", "product_category_id"] as const;
+const classificationFields = ["product_kind_id", "work_id", "manufacturer_id", "product_category_id"] as const;
 type Classification = typeof classificationFields[number];
 interface Detail {
   revision: string;
@@ -35,14 +35,14 @@ function draftFrom(result: Detail): Draft {
     throw new Error("Invalid product detail");
   }
   return { japanese_title: p.japanese_title, english_title: p.english_title ?? "", mark: p.mark ?? "",
-    release_date: p.release_date ?? "", division_id: p.division_id ?? "", work_id: p.work_id ?? "",
+    release_date: p.release_date ?? "", product_kind_id: p.product_kind_id ?? "", work_id: p.work_id ?? "",
     manufacturer_id: p.manufacturer_id ?? "", product_category_id: p.product_category_id ?? "",
     search_keywords: p.search_keywords.join("\n"), exclude_keywords: p.exclude_keywords.join("\n") };
 }
 const words = (value: string) => value.split("\n").map(word => word.trim()).filter(Boolean);
 const emptyDraft: Draft = {
   japanese_title: "", english_title: "", mark: "", release_date: "",
-  division_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
+  product_kind_id: "", work_id: "", manufacturer_id: "", product_category_id: "",
   search_keywords: "", exclude_keywords: "",
 };
 
@@ -131,7 +131,7 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     try {
       const result = await api.put<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`, {
         ...draft, revision: detail.revision, release_date: draft.release_date || null,
-        division_id: draft.division_id || null, work_id: draft.work_id || null,
+        product_kind_id: draft.product_kind_id ? Number(draft.product_kind_id) : null, work_id: draft.work_id ? Number(draft.work_id) : null,
         manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id || null,
         search_keywords: draft.search_keywords === initial?.search_keywords ? detail.product.search_keywords : words(draft.search_keywords),
         exclude_keywords: draft.exclude_keywords === initial?.exclude_keywords ? detail.product.exclude_keywords : words(draft.exclude_keywords),
@@ -157,7 +157,7 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
         english_title: draft.english_title,
         mark: draft.mark,
         release_date: draft.release_date || null,
-        division_id: draft.division_id,
+        product_kind_id: draft.product_kind_id,
         work_id: draft.work_id,
         manufacturer_id: draft.manufacturer_id,
         product_category_id: draft.product_category_id,

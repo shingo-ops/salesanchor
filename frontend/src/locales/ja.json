@@ -3721,6 +3721,7 @@
     "mark": "型番",
     "release_date": "発売日",
     "division_id": "大分類",
+    "product_kind_id": "大分類",
     "work_id": "作品",
     "manufacturer_id": "メーカー",
     "product_category_id": "商品区分",

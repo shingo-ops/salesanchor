@@ -3721,6 +3721,7 @@
     "mark": "Model number",
     "release_date": "Release date",
     "division_id": "Division",
+    "product_kind_id": "Product kind",
     "work_id": "Work",
     "manufacturer_id": "Manufacturer",
     "product_category_id": "Product category",

@@ -270,7 +270,7 @@ class ProductDetailUpdate(BaseModel):
     english_title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
     mark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
     release_date: str | None
-    division_id: UUID | None
+    product_kind_id: int | None = None
     work_id: int | None = None
     manufacturer_id: UUID | None
     product_category_id: UUID | None
@@ -320,15 +320,22 @@ async def get_product_lookups(
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+    # product_kind_id → public.product_kinds (SSOT, INTEGER PK)
+    pk_rows = await db.execute(text(
+        "SELECT id::text AS id, name AS name "
+        "FROM public.product_kinds "
+        "WHERE is_active = TRUE ORDER BY name"
+    ))
+    lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
     for key, table, name_col in [
-        ("division_id", "tcg_major_categories", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
+        schema = "public" if table == "product_kinds" else TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"SELECT id::text AS id, {name_col} AS name "
-                f"FROM {TCG_SCHEMA}.{table} "
+                f"FROM {schema}.{table} "
                 f"WHERE is_active = TRUE "
                 f"ORDER BY {name_col}"
             )
@@ -347,7 +354,7 @@ class CreateProductBody(BaseModel):
     mark: str = ""
     english_title: str = ""
     release_date: str | None = None
-    division_id: str
+    product_kind_id: str
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -366,7 +373,7 @@ async def create_product_standalone(
         db,
         extraction_item_id="",
         source_message_id="",
-        division_id=body.division_id,
+        product_kind_id=body.product_kind_id,
         work_id=body.work_id,
         manufacturer_id=body.manufacturer_id,
         product_category_id=body.product_category_id,

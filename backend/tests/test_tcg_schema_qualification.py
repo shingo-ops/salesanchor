@@ -95,7 +95,7 @@ TARGETS = [
      ["import_jobs", "source_messages", "supplier_channels", "extraction_jobs"]),
     (_PRODUCT_SERVICE,
      ["product_search_keywords", "tcg_product_import_jobs",
-      "tcg_product_import_rows", "{table}", *_LOOKUP_TABLES.values()]),
+      "tcg_product_import_rows", "{table}", "product_kinds", *_LOOKUP_TABLES.values()]),
 ]
 
 
@@ -194,7 +194,7 @@ def test_product_schema_removal_is_detected():
     source = (_REPO_ROOT / _PRODUCT_SERVICE).read_text(encoding="utf-8")
     tables = next(tables for path, tables in TARGETS if path == _PRODUCT_SERVICE)
     calls = _text_calls(source)
-    assert len(calls) == 8, "review new/removed SQL calls and update inventory"
+    assert len(calls) == 9, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
     assert len(positions) == 4, "review changed schema reference inventory"
     for match in positions:

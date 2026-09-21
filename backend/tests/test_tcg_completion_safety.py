@@ -144,11 +144,11 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
             async with AsyncSession(ae) as session:
                 from sqlalchemy import text
                 refs = {}
-                for key, table, code in [('division_id',f'{SCHEMA}.tcg_major_categories','DIV01'),('work_id','public.type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
+                for key, table, code in [('product_kind_id','public.product_kinds','TCG'),('work_id','public.type_master','one_piece'),('manufacturer_id',f'{SCHEMA}.tcg_manufacturers','MK002'),('product_category_id','public.tcg_product_categories','PC_BOX')]:
                     raw_id = (await session.execute(text(f'SELECT id FROM {table} WHERE code=:code'),{'code':code})).scalar_one()
-                    # product_category_id is INTEGER after Phase 3B; asyncpg requires int, not str.
-                    # division_id / manufacturer_id remain UUID (str). work_id is converted inside create_product.
-                    refs[key] = int(raw_id) if key == 'product_category_id' else str(raw_id)
+                    # product_category_id / product_kind_id are INTEGER after Phase 3A/3B.
+                    # manufacturer_id remains UUID (str). work_id is converted inside create_product.
+                    refs[key] = int(raw_id) if key in ('product_category_id', 'product_kind_id') else str(raw_id)
                 args = dict(extraction_item_id='',source_message_id='',japanese_title='架空の登録検証デッキ',release_date=None,search_keywords='架空の登録検証デッキ',exclude_keywords='',**refs)
                 first = await master.create_product(session, **args)
                 second = await master.create_product(session, **args)

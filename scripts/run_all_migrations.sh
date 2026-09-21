@@ -731,3 +731,6 @@ run_sql migrations/20260921_100000_add_analysis_master_fk.sql
 
 # Step 1/5: パイプライン 17テーブル を public スキーマに作成（DDL-only・冪等）
 run_sql migrations/20260921_110000_pipeline_tables_public.sql
+
+# ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
+run_sql migrations/20260921_120000_add_products_product_kind_id.sql

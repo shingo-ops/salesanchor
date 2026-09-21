@@ -57,7 +57,7 @@ async def test_detail_contains_stored_values_words_and_revision(detail_db):
     assert product["exclude_keywords"] == ["Exclude one"]
     assert len(before["revision"]) == 64
     assert before["revision"] == (await details.get_product_detail(db, "DETAIL"))["revision"]
-    assert set(before["lookups"]) == {"division_id", "work_id", "manufacturer_id", "product_category_id"}
+    assert set(before["lookups"]) == {"product_kind_id", "work_id", "manufacturer_id", "product_category_id"}
     await db.execute(text(
         "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
         "SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
