@@ -35,7 +35,7 @@ router = APIRouter()
 _COLS = "id, tcg_type, series_code, name_ja, name_en, release_date, category"
 _UPDATABLE = {"tcg_type", "series_code", "name_ja", "name_en", "release_date", "category"}
 
-# ADR-083: TCG 種別マスタ (public.tcg_type_master)
+# ADR-083: TCG 種別マスタ (public.type_master)
 _TYPE_COLS = "id, code, name_ja, name_en, sort_order, is_active"
 _TYPE_UPDATABLE = {"name_ja", "name_en", "sort_order", "is_active"}
 
@@ -146,7 +146,7 @@ async def delete_series(series_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # ============================================================================
-# ADR-083: TCG 種別マスタ (public.tcg_type_master) CRUD
+# ADR-083: TCG 種別マスタ (public.type_master) CRUD
 #   種別自体を UI から増減できるようにする。code は安定キー（不変）。
 # ============================================================================
 @router.get(
@@ -161,7 +161,7 @@ async def list_types(
     where = "" if include_inactive else "WHERE is_active = TRUE"
     result = await db.execute(
         text(
-            f"SELECT {_TYPE_COLS} FROM public.tcg_type_master {where} "
+            f"SELECT {_TYPE_COLS} FROM public.type_master {where} "
             f"ORDER BY sort_order, id"
         )
     )
@@ -180,10 +180,10 @@ async def create_type(data: TcgTypeCreate, db: AsyncSession = Depends(get_db)):
     try:
         result = await db.execute(
             text(
-                f"INSERT INTO public.tcg_type_master "
+                f"INSERT INTO public.type_master "
                 f"(code, name_ja, name_en, sort_order, is_active) VALUES "
                 f"(COALESCE(:code, 'tcgtype_' || "
-                f"(SELECT COALESCE(MAX(id), 0) + 1 FROM public.tcg_type_master)), "
+                f"(SELECT COALESCE(MAX(id), 0) + 1 FROM public.type_master)), "
                 f":name_ja, :name_en, :sort_order, :is_active) "
                 f"RETURNING {_TYPE_COLS}"
             ),
@@ -218,7 +218,7 @@ async def update_type(
     update_data["id"] = type_id
     result = await db.execute(
         text(
-            f"UPDATE public.tcg_type_master SET {set_clauses} "
+            f"UPDATE public.type_master SET {set_clauses} "
             f"WHERE id = :id RETURNING {_TYPE_COLS}"
         ),
         update_data,
@@ -239,7 +239,7 @@ async def delete_type(type_id: int, db: AsyncSession = Depends(get_db)):
     # 削除対象の code を取得
     type_row = (
         await db.execute(
-            text("SELECT code FROM public.tcg_type_master WHERE id = :id"),
+            text("SELECT code FROM public.type_master WHERE id = :id"),
             {"id": type_id},
         )
     ).mappings().first()
@@ -264,7 +264,7 @@ async def delete_type(type_id: int, db: AsyncSession = Depends(get_db)):
             ),
         )
     await db.execute(
-        text("DELETE FROM public.tcg_type_master WHERE id = :id"),
+        text("DELETE FROM public.type_master WHERE id = :id"),
         {"id": type_id},
     )
     await db.commit()

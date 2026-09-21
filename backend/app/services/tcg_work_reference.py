@@ -60,7 +60,7 @@ def load_work_reference(session: Session, schema: str) -> dict:
           'works', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'id', s.id, 'display_name', s.name_ja, 'alt_name', s.name_en)
             ORDER BY s.id), '[]'::jsonb)
-            FROM public.tcg_type_master s WHERE s.is_active),
+            FROM public.type_master s WHERE s.is_active),
           'products', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
             'code', p.product_code, 'japanese_title', p.name,
             'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,

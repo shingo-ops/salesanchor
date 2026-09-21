@@ -80,10 +80,10 @@ async def fetch_registration_form(
     # ── 分類マスタ一覧（有効行のみ） ──────────────────────────────────────
     lookups: dict[str, list[dict]] = {}
 
-    # work_id → public.tcg_type_master (SSOT)
+    # work_id → public.type_master (SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
@@ -361,9 +361,9 @@ async def create_product(
     pm_code = await _next_pm_code(db)
 
     work_id_int = int(work_id)
-    # category_class: work_id（tcg_type_master.name_ja）から導出
+    # category_class: work_id（type_master.name_ja）から導出
     series_row = await db.execute(
-        text("SELECT name_ja FROM public.tcg_type_master WHERE id = :id"),
+        text("SELECT name_ja FROM public.type_master WHERE id = :id"),
         {"id": work_id_int},
     )
     sr = series_row.fetchone()

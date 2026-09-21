@@ -33,7 +33,7 @@ SCHEMA = "tenant_901"
 STRUCTURE = "20260910_160000_tcg_work_evidence.sql"
 HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 NORMAL = "MEGA スタートデッキ100 バトルコレクション"
-# Phase 2 SSOT: tcg_series.code → public.tcg_type_master.code mapping
+# Phase 2 SSOT: tcg_series.code → public.type_master.code mapping
 _SERIES_CODE_TO_TYPE = {
     "IP001": "pokemon_booster_box",
     "IP002": "one_piece",
@@ -227,9 +227,11 @@ $rw$;
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
-    # Master SSOT Phase 2: tcg_type_master must exist before code queries it
+    # Master SSOT Phase 2: type_master must exist before code queries it
     cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
     cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
     # Master SSOT Phase 3: public schema tables for 9 master tables
     cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
@@ -320,7 +322,7 @@ def seed_products(connection):
         for code, title, work, search, exclude in products:
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
+                SELECT %s,%s,'Box',true,m.id,c.id FROM public.type_master m,
                 public.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
             pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
@@ -647,7 +649,7 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
                 ADD COLUMN condition_id INTEGER;
         """)
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
             cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
         # Insert units with explicit IDs matching _UNIT_MASTER_ROWS (9-16) so that
@@ -936,7 +938,7 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_
     connection, engine, async_url = pg
     seed_products(connection)
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
+        cursor.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
         wid = str(cursor.fetchone()[0])
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
@@ -1011,14 +1013,14 @@ def test_space_product_match_saved_in_isolated_database(
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
                 SELECT %s,'スターターセットV 草','Box',true,m.id,c.id
-                FROM public.tcg_type_master m,public.tcg_product_categories c
+                FROM public.type_master m,public.tcg_product_categories c
                 WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
                 cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
                                (product_id, keyword))
-        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
+        cursor.execute("SELECT id FROM public.type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
         row = cursor.fetchone()
         work_id = str(row[0]) if row else "0"
     _, jobid, result = run_message(connection, engine, monkeypatch,
@@ -1067,7 +1069,7 @@ def seed_cardset_dictionary(connection, schema):
             else:
                 cursor.execute("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
+                    SELECT %s,%s,'Box',true,m.id,c.id FROM public.type_master m,
                     public.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code, title))
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
@@ -1315,7 +1317,7 @@ def seed_bundle_dictionary(connection, schema):
                 cursor.execute(sql.SQL("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
                     SELECT %s,%s,'Box',true,d.id,tm.id,m.id,c.id
-                    FROM {}.tcg_major_categories d, public.tcg_type_master tm, {}.tcg_manufacturers m,
+                    FROM {}.tcg_major_categories d, public.type_master tm, {}.tcg_manufacturers m,
                          public.tcg_product_categories c
                     WHERE d.code='DIV01' AND tm.code='pokemon_booster_box' AND m.code='MK001' AND c.code='PC_BOX'
                     RETURNING id""").format(*[sql.Identifier(schema)] * 2), (code, title))
@@ -1500,7 +1502,7 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         cursor.execute(f"""INSERT INTO public.products
             (product_code,name,category_class,is_active,work_id,product_category_id)
             SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,m.id,c.id
-            FROM public.tcg_type_master m,public.tcg_product_categories c
+            FROM public.type_master m,public.tcg_product_categories c
             WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id,work_id""")
         pid, work = cursor.fetchone()
         for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
