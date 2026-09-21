@@ -18,6 +18,16 @@ BEGIN
             'product_exclude_keywords','product_search_keywords','products_logistics','supplier_channels',
             'unit_aliases','units','unparsed_lines'))
     ) THEN RETURN; END IF;
+    -- パイプラインテーブルが 20260921_050000 で削除済みの場合はスキップ
+    -- conditions は残存するが analysis_results 等は削除されるため table_count < 6 となる
+    IF to_regclass('tenant_004.analysis_results') IS NULL
+       AND to_regclass('tenant_004.extraction_items') IS NULL
+       AND to_regclass('tenant_004.extraction_jobs') IS NULL
+       AND to_regclass('tenant_004.source_messages') IS NULL
+    THEN
+        RAISE NOTICE 'empty box: pipeline tables dropped (20260921_050000), skipping';
+        RETURN;
+    END IF;
     IF table_count <> 6 THEN RAISE EXCEPTION 'empty box: incomplete TCG structure'; END IF;
     LOCK TABLE tenant_004.conditions IN SHARE ROW EXCLUSIVE MODE;
     IF (SELECT count(*) FROM tenant_004.conditions WHERE code='CN0011' OR canonical='Empty box') > 1 THEN
