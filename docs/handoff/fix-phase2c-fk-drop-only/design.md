@@ -10,10 +10,10 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-前回の fix (PR #3655) が `ADD CONSTRAINT ... REFERENCES public.products(tcg_uuid)` を実行したが、`tcg_uuid` カラムは `run_all_migrations.sh` の後段で追加される。PostgreSQL は FK 追加時に参照先カラムの実在を即時チェックするため、カラム追加より前に FK を張ることはできない。解決策として ADD FK を削除し DROP のみに限定する（FK 再追加は Phase 2b 完了後に別途対応）。
+前回の fix (PR #3655) が `ADD CONSTRAINT ... REFERENCES public.products(tcg_uuid)` を実行したが、`tcg_uuid` カラムは `scripts/run_all_migrations.sh` の後段で追加される。PostgreSQL は FK 追加時に参照先カラムの実在を即時チェックするため、カラム追加より前に FK を張ることはできない。解決策として ADD FK を削除し DROP のみに限定する（FK 再追加は Phase 2b 完了後に別途対応）。
 
 ## 維持の仕組み
 
-- `scripts/run_all_migrations.sh` の実行順序により冪等性を担保
+- 守り手: `scripts/run_all_migrations.sh` の実行順序
 - `DROP CONSTRAINT IF EXISTS` により二重実行しても無害
 - CI の migration-guard が順序異常を自動検知
