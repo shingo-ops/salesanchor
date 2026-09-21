@@ -581,6 +581,8 @@ def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
 
 @pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
 def test_condition_note_absent_and_partial_tables(pg, missing):
+    # ADR-155 guard change: migration now silently skips (RAISE NOTICE + RETURN) when
+    # required tables are absent, instead of raising an exception.
     connection, _, _ = pg
     with connection.cursor() as cursor:
         if missing is None:
