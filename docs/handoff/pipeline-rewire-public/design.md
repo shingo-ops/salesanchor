@@ -37,7 +37,17 @@ search_path設定に依存せず、移行後も安全に動作する。
 
 対象ADR: ADR-036 (tenant-schema-integrity) — スキーマ境界の保全原則に基づく移行
 
-## 守り手
+## 維持の仕組み
 
-- ruff lint (CI)
-- backend pytestスイート (CI)
+- ruff lint (CI): `{TCG_SCHEMA}.tablename` 形式の新規混入を検知
+- backend pytestスイート (CI): 既存テストが public スキーマ参照で通過することを確認
+
+## 外部・過去事例の参照と我々への応用
+
+PostgreSQL の `search_path` 設定に依存しない明示的なスキーマ修飾 (`public.tablename`) は
+PostgreSQLコミュニティの標準プラクティス。`SET search_path TO public` が設定されている場合でも、
+明示修飾することで将来のsearch_path変更に対して堅牢になる。
+
+本プロジェクトの前例: ADR-036（tenant-schema-integrity）でテナントスキーマの境界を
+明示的に管理する方針が定められており、その延長として public スキーマへの移行も
+明示的な修飾を維持する。
