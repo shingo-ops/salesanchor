@@ -321,6 +321,37 @@ async def get_import_summary(db: AsyncSession) -> dict:
     }
 
 
+async def get_import_trend(db: AsyncSession, days: int = 7) -> list[dict]:
+    """日別インポート集計（import_jobs テーブル）。SELECT のみ。"""
+    days = max(1, min(int(days), 90))
+
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  TO_CHAR(DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo'), 'MM-DD') AS day,"
+                f"  COUNT(*)::int AS job_count,"
+                f"  COALESCE(SUM(message_count), 0)::int AS message_count,"
+                f"  COALESCE(SUM(unresolved_count), 0)::int AS unresolved_count"
+                f" FROM {TCG_SCHEMA}.import_jobs"
+                f" WHERE created_at >= NOW() - INTERVAL '{days} days'"
+                f" GROUP BY DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo')"
+                f" ORDER BY DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo')"
+            )
+        )
+    ).fetchall()
+
+    return [
+        {
+            "day": row.day,
+            "job_count": row.job_count,
+            "message_count": row.message_count,
+            "unresolved_count": row.unresolved_count,
+        }
+        for row in rows
+    ]
+
+
 async def get_distribution_summary(db: AsyncSession) -> dict:
     """配信工程のサマリーを返す。SELECT のみ。"""
     # 1. distribution_targets

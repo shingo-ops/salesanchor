@@ -108,6 +108,13 @@ interface TrendDay {
   needs_review: number;
 }
 
+interface ImportTrendDay {
+  day: string;
+  job_count: number;
+  message_count: number;
+  unresolved_count: number;
+}
+
 interface ImportRecord {
   id: string;
   filename: string | null;
@@ -211,6 +218,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
 
   // Import tab data (lazy)
   const [importData, setImportData] = useState<ImportSummary | null>(null);
+  const [importTrend, setImportTrend] = useState<ImportTrendDay[]>([]);
   const [importLoading, setImportLoading] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
 
@@ -244,10 +252,13 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
     if (activeTab !== "import" || importData !== null || importLoading) return;
     setImportLoading(true);
     setImportError(null);
-    api
-      .get<ImportSummary>("/tcg/analysis-dashboard/import-summary")
-      .then((res) => {
-        setImportData(res);
+    Promise.all([
+      api.get<ImportSummary>("/tcg/analysis-dashboard/import-summary"),
+      api.get<ImportTrendDay[]>("/tcg/analysis-dashboard/import-trend?days=7"),
+    ])
+      .then(([summaryRes, trendRes]) => {
+        setImportData(summaryRes);
+        setImportTrend(trendRes);
       })
       .catch(() => {
         setImportError(t("analysisRules.dashboard.fetchError"));
@@ -311,6 +322,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       {activeTab === "import" && (
         <ImportTabContent
           data={importData}
+          trend={importTrend}
           loading={importLoading}
           error={importError}
           t={t}
@@ -376,6 +388,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
 
 interface ImportTabContentProps {
   data: ImportSummary | null;
+  trend: ImportTrendDay[];
   loading: boolean;
   error: string | null;
   t: (key: string) => string;
@@ -383,7 +396,7 @@ interface ImportTabContentProps {
   ArrowRightIcon: Icon;
 }
 
-function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
+function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -501,6 +514,42 @@ function ImportTabContent({ data, loading, error, t, onNavigate, ArrowRightIcon 
           </span>
           <span className="analysis-dashboard-engine-value">{data.latest_import_at}</span>
         </div>
+      )}
+
+      {/* インポートトレンドグラフ */}
+      {trend.length > 0 && (
+        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.importTrendTitle")}
+          </div>
+          <div className="analysis-dashboard-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={trend}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="day" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="job_count"
+                  name={t("analysisRules.dashboard.importTrendJobCount")}
+                  stroke="var(--color-warning)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="message_count"
+                  name={t("analysisRules.dashboard.importTrendMessageCount")}
+                  stroke="var(--color-success)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </Card>
       )}
 
       {/* 直近インポート一覧 */}

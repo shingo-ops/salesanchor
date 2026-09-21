@@ -9,7 +9,7 @@ TCG 解析ダッシュボード API。
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,6 +18,7 @@ from app.database import get_db
 from app.services.tcg_analysis_dashboard_svc import (
     get_distribution_summary,
     get_import_summary,
+    get_import_trend,
     get_pipeline_summary,
     get_pipeline_trend,
 )
@@ -169,6 +170,27 @@ class DistributionSummaryResponse(BaseModel):
     total_target_count: int
     total_last_distributed: int
     settings: list[DistributionSettingItem]
+
+
+class ImportTrendItem(BaseModel):
+    day: str
+    job_count: int
+    message_count: int
+    unresolved_count: int
+
+
+@router.get(
+    "/tcg/analysis-dashboard/import-trend",
+    response_model=list[ImportTrendItem],
+    summary="TCG インポート工程 日別トレンド（super_admin 限定）",
+)
+async def get_import_trend_endpoint(
+    days: int = Query(default=7, ge=1, le=90),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_super_admin),
+) -> list[ImportTrendItem]:
+    result = await get_import_trend(db, days)
+    return [ImportTrendItem(**item) for item in result]
 
 
 @router.get(
