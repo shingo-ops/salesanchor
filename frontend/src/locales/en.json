@@ -3857,7 +3857,8 @@
       "unitMaster": "Unit Master",
       "import": "Import",
       "dashboard": "Dashboard",
-      "noteMaster": "Note Master"
+      "noteMaster": "Note Master",
+      "productKindsMaster": "Product Kinds"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",
@@ -4160,6 +4161,21 @@
     "code": "Code",
     "displayName": "Display Name",
     "kubunType": "Classification Type",
+    "isActive": "Active"
+  },
+  "productKindsMaster": {
+    "title": "Product Kinds",
+    "subtitle": "Manage product kind master.",
+    "addNew": "Add Product Kind",
+    "createTitle": "Add Product Kind",
+    "editTitle": "Edit Product Kind",
+    "confirmDelete": "Deactivate this product kind?",
+    "deleteBlocked": "This product kind is in use by type masters and cannot be deleted",
+    "noData": "No product kinds registered yet.",
+    "code": "Code",
+    "name": "Name",
+    "nameEn": "English Name",
+    "displayOrder": "Display Order",
     "isActive": "Active"
   }
 }

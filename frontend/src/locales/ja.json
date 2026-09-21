@@ -3857,7 +3857,8 @@
       "unitMaster": "単位マスタ",
       "import": "インポート",
       "dashboard": "ダッシュボード",
-      "noteMaster": "備考マスタ"
+      "noteMaster": "備考マスタ",
+      "productKindsMaster": "大分類マスタ"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
@@ -4160,6 +4161,21 @@
     "code": "コード",
     "displayName": "表示名",
     "kubunType": "区分タイプ",
+    "isActive": "有効"
+  },
+  "productKindsMaster": {
+    "title": "大分類マスタ",
+    "subtitle": "商品大分類を管理します。",
+    "addNew": "大分類を追加",
+    "createTitle": "大分類を追加",
+    "editTitle": "大分類を編集",
+    "confirmDelete": "この大分類を無効化しますか？",
+    "deleteBlocked": "この大分類は中分類で使用中のため削除できません",
+    "noData": "大分類はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "displayOrder": "表示順",
     "isActive": "有効"
   }
 }
