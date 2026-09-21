@@ -1,5 +1,8 @@
 # Design: ADR-156 Phase 3B — tcg_product_categories SSOT to public schema
 
+**対象ADR**: ADR-155, ADR-156
+**recon**: docs/handoff/product-categories-ssot/recon.md
+
 ## KGI
 
 `public.tcg_product_categories`（INTEGER PK）が全ルックアップパスで唯一のソース。
