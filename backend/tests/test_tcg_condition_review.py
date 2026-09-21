@@ -35,7 +35,7 @@ SCHEMA = "tenant_004"
 
 
 @pytest.fixture
-def pg():
+def pg(monkeypatch):
     assert os.getenv("GITHUB_ACTIONS") == "true", "Disposable CI PostgreSQL service required"
     configured = os.getenv("RLS_ADMIN_DATABASE_URL")
     assert configured, "Required PostgreSQL acceptance has no administrator URL"
@@ -90,6 +90,8 @@ def pg():
                 WHERE w.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""")
             product = str(cursor.fetchone()[0])
             cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,'Test Booster',0)", (product,))
+        for module in (condition, analyzer, review, distribution):
+            monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
         yield {"connection": connection, "engine": engine,
                "url": url.set(database=name, drivername="postgresql+asyncpg"), "empty": empty,
                "normal": normal, "unit": unit, "product": product}
