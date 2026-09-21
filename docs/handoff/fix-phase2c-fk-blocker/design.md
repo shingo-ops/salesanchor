@@ -17,7 +17,7 @@ Phase 2c（`tenant_004.tcg_products` DROP）が成功すること（RAISE EXCEPT
 
 ## 変更内容
 
-1. `migrations/20260922_030000_fix_phase2c_fk_blocker.sql`（新規・020000 は rule-test-system と衝突のため 030000 に変更）
+1. `migrations/20260922_040000_fix_phase2c_fk_blocker.sql`（新規・020000 は rule-test-system と衝突のため 030000 に変更）
    - `public.analysis_results` と `tenant_004.analysis_results` の旧FK DROP
    - `public.analysis_results` に正しいFK（`public.products(tcg_uuid)` 参照）を追加
 2. `scripts/run_all_migrations.sh`
