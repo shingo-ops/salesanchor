@@ -36,10 +36,10 @@
 
 ### Frontend
 
-1. `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` に `ImportTrendDay` 型を追加
-2. `importTrend` state を追加
+1. `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` に ImportTrendDay 型を追加
+2. importTrend state を追加
 3. Import タブ lazy-load の useEffect で summary と trend を Promise.all で並列取得
-4. `ImportTabContent` に `trend` prop を追加、グラフを KPI カード後・DataTable 前に挿入
+4. ImportTabContent に trend prop を追加、グラフを KPI カード後・DataTable 前に挿入
 5. LineChart: job_count (--color-warning) / message_count (--color-success)
 
 ### i18n
@@ -54,7 +54,7 @@ recharts LineChart — 既存の Extraction タブ・Analysis タブで同一パ
 
 - 追加のみ（既存機能変更なし）
 - Import タブのレンダリングのみ影響
-- `AnalysisDashboardPanel.tsx` のうち `ImportTabContent` 関数・その props のみ変更
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` のうち ImportTabContent 関数・その props のみ変更
 
 ## 戻し方
 
