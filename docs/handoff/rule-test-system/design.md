@@ -58,6 +58,11 @@ tcg_status_master のルール検証テストシステム。テストケース�
 旧テストシステム（PR #3623で削除）の設計を踏襲し、tcg_status_master SSOTに適合するよう簡素化。
 旧システムのポリシー/リビジョン制度（8テーブル）は不要のため3テーブルに削減。
 
+## 維持の仕組み
+- `backend/app/tasks/rule_test.py:16` — resolve_status_v2 直接インポート（SSOT・変更時は tasks/rule_test.py も連動更新）
+- `backend/app/routers/super_admin_status_master.py:200-214` — enabled ゲートロジック（本ファイル変更時はゲートテストも更新）
+- CI の backend テストが `rule_test.*` エンドポイントをカバー（追加必要）
+
 ## 守り手
 - `backend/app/tasks/rule_test.py:16` — resolve_status_v2を直接インポート（本番同一ロジック・SSOT）
 - `backend/app/routers/rule_test.py:17` — require_super_admin 認証（全エンドポイント）
