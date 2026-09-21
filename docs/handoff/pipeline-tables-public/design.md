@@ -53,8 +53,13 @@ tenant_004スキーマに残っているパイプラインテーブル17本をpu
 | 既存テーブルに影響なし | IF NOT EXISTS で保護 |
 | データ操作なし | migration-guardがINSERT/UPDATE/DELETEをブロック |
 
-## 外部事例
-該当なし（内部スキーマ移行のため外部事例は不要）
+## 外部・過去事例の参照と我々への応用
+先行事例: `migrations/20260919_020000_master_ssot_public_tables.sql` — 同じプロジェクト内で実施済みの master テーブル public 移行。CREATE TABLE IF NOT EXISTS パターン・migration-guard allowlist 更新の両方を踏襲する。
+
+## 維持の仕組み
+- `migrations/20260921_010000_pipeline_tables_public.sql` が冪等DDLを保持
+- `.github/workflows/migration-guard.yml` の PUBLIC_TABLES allowlist がスキーマ外テーブル参照を CI でブロック
+- Step 2〜5 完了後に tenant_004 側テーブルを DROP して完全移行
 
 ## 守り手
 `.github/workflows/migration-guard.yml`
