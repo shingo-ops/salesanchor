@@ -22,6 +22,7 @@ from app.services.tcg_analyzer_svc import (
     resolve_unit,
 )
 
+TCG_SCHEMA = "public"
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
@@ -167,7 +168,7 @@ async def build_parallel_report(db: AsyncSession) -> dict:
     rows = (
         await db.execute(
             text(
-                """
+                f"""
                 SELECT
                     ps.supplier_code AS sp_code,
                     ps.name AS supplier_name,
@@ -176,12 +177,12 @@ async def build_parallel_report(db: AsyncSession) -> dict:
                     ei.raw_unit,
                     ar.pid_resolved AS compat_pid_resolved,
                     ar.unit_resolved AS compat_unit_resolved
-                FROM public.extraction_items ei
-                JOIN public.extraction_jobs ej ON ei.extraction_job_id = ej.id
-                JOIN public.source_messages sm ON ej.source_message_id = sm.id
+                FROM {TCG_SCHEMA}.extraction_items ei
+                JOIN {TCG_SCHEMA}.extraction_jobs ej ON ei.extraction_job_id = ej.id
+                JOIN {TCG_SCHEMA}.source_messages sm ON ej.source_message_id = sm.id
                 JOIN public.supplier_channels sc ON sm.supplier_channel_id = sc.id
                 JOIN public.suppliers ps ON sc.supplier_id = ps.id
-                LEFT JOIN public.analysis_results ar
+                LEFT JOIN {TCG_SCHEMA}.analysis_results ar
                     ON ar.extraction_item_id = ei.id
                     AND ar.engine_version = 'compat-v1'
                 WHERE sm.is_active = TRUE

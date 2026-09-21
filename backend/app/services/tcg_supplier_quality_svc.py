@@ -10,6 +10,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+TCG_SCHEMA = "public"
+
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     """
@@ -24,7 +26,7 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
       excluded            = ar.exclusion IS NOT NULL AND ar.exclusion != ''
       needsReview         = いずれか1つ以上
     """
-    sql = """
+    sql = f"""
         SELECT
             COALESCE(ps.supplier_code, sc.id::text)  AS supplier_id,
             COALESCE(ps.name, '不明')        AS supplier_name,
@@ -36,12 +38,12 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
                 THEN 1 END)                  AS needs_review_count,
             COUNT(CASE WHEN NOT ar.pid_resolved THEN 1 END)  AS product_id_unresolved_count,
             COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count
-        FROM public.source_messages sm
+        FROM {TCG_SCHEMA}.source_messages sm
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
-        LEFT JOIN public.extraction_jobs ej ON ej.source_message_id = sm.id
-        LEFT JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
-        LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+        LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
         WHERE sm.is_active = TRUE
         GROUP BY sc.id, ps.supplier_code, ps.name
         ORDER BY COALESCE(ps.name, '') ASC
@@ -68,13 +70,13 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
     items=0 の source でも raw_text を返す。
     supplier_id は public.suppliers.supplier_code（例: 'SP-00057'）。
     """
-    sql = """
+    sql = f"""
         SELECT
             sm.id::text     AS source_message_id,
             ps.supplier_code AS supplier_id,
             ps.name         AS supplier_name,
             sm.raw_text
-        FROM public.source_messages sm
+        FROM {TCG_SCHEMA}.source_messages sm
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         WHERE ps.supplier_code = :supplier_id

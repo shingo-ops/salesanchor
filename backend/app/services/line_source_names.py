@@ -6,6 +6,7 @@ from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import text
 
+TCG_SCHEMA = "public"
 MARKER = 'android-v1'
 JST = timezone(timedelta(hours=9))
 
@@ -79,8 +80,8 @@ def history_proof(messages, display_name, supplier_code, suppliers, sources):
 
 async def link_pending(db, data):
     # Caller verifies active device owner and import ownership before entering here.
-    job = (await db.execute(text('''SELECT raw_sha256,review_status,pending_messages
-        FROM public.import_jobs WHERE id=:id FOR UPDATE'''),
+    job = (await db.execute(text(f'''SELECT raw_sha256,review_status,pending_messages
+        FROM {TCG_SCHEMA}.import_jobs WHERE id=:id FOR UPDATE'''),
         {'id': data['import_job_id']})).mappings().one()
     if job['review_status'] != 'pending_review' or job['raw_sha256'] != data['android_sha256']:
         raise ValueError('pending Android file digest required')
@@ -101,8 +102,8 @@ async def link_pending(db, data):
         raise ValueError('active nonconflicting supplier required')
     times = sorted({datetime.fromisoformat(m['timestamp']).replace(tzinfo=JST)
                     for m in messages if m['display_name'] == name})
-    sources = (await db.execute(text('''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
-        FROM public.source_messages sm
+    sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at
+        FROM {TCG_SCHEMA}.source_messages sm
         JOIN public.supplier_channels sc ON sc.id=sm.supplier_channel_id
         JOIN public.suppliers ps ON ps.id=sc.supplier_id
         WHERE sc.channel='line' AND sm.line_posted_at=ANY(CAST(:times AS timestamptz[]))

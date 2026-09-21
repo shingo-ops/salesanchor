@@ -183,7 +183,7 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text("""
+    result = await db.execute(text(f"""
         SELECT
             ps.supplier_code AS code,
             ps.name,
@@ -192,10 +192,10 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
             SUM(CASE WHEN ar.needs_review THEN 1 ELSE 0 END) AS needs_review
         FROM public.suppliers ps
         LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
-        LEFT JOIN public.source_messages sm ON sm.supplier_channel_id = sc.id
-        LEFT JOIN public.extraction_jobs ej ON ej.source_message_id = sm.id
-        LEFT JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
-        LEFT JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+        LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
+        LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+        LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
         GROUP BY ps.supplier_code, ps.name
         ORDER BY ps.supplier_code
     """))
