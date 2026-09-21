@@ -31,6 +31,15 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Table guard: extraction_jobs was dropped by migration 20260921_050000
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = _schema AND table_name = 'extraction_jobs'
+    ) THEN
+        RAISE NOTICE 'migration DIST-STALE-A: %.extraction_jobs does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     EXECUTE format($q$
         UPDATE %I.extraction_jobs
         SET status = 'error',

@@ -34,6 +34,15 @@ BEGIN
         RETURN;
     END IF;
 
+    -- Table guard: supplier_channels was dropped by migration 20260921_050000
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = _schema AND table_name = 'supplier_channels'
+    ) THEN
+        RAISE NOTICE '20260905_150000: %.supplier_channels does not exist, skipping', _schema;
+        RETURN;
+    END IF;
+
     -- =========================================================
     -- 1 & 2: SP0007/SP0184 name 復旧 UPDATE — DEPRECATED per ADR-155
     --   VALUES now managed via app UI. UPDATE removed to prevent overwrite.

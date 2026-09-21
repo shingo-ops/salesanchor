@@ -863,15 +863,17 @@ def test_interrupted_recovery_absent_tables_noop(pg):
 
 
 @pytest.mark.parametrize("table", ["source_messages", "extraction_jobs", "extraction_items"])
-def test_interrupted_recovery_partial_tables_fail(pg, table):
+def test_interrupted_recovery_partial_tables_skip(pg, table):
+    """When one pipeline table is absent, the recovery migration should skip gracefully
+    (not raise) because 20260921_050000 may have dropped tables partially or fully."""
     connection, _, _ = pg
     seed_recovery(connection)
     before = recovery_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(table)))
         try:
-            with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-                cursor.execute((MIGRATIONS / RECOVERY).read_text())
+            # Should not raise — migration silently returns when table_count < 3
+            cursor.execute((MIGRATIONS / RECOVERY).read_text())
         finally:
             cursor.execute("ROLLBACK")
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
