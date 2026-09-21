@@ -36,8 +36,8 @@ _COLS = "id, tcg_type, series_code, name_ja, name_en, release_date, category"
 _UPDATABLE = {"tcg_type", "series_code", "name_ja", "name_en", "release_date", "category"}
 
 # ADR-083: TCG 種別マスタ (public.type_master)
-_TYPE_COLS = "id, code, name_ja, name_en, sort_order, is_active"
-_TYPE_UPDATABLE = {"name_ja", "name_en", "sort_order", "is_active"}
+_TYPE_COLS = "id, code, name_ja, name_en, sort_order, is_active, kind_id"
+_TYPE_UPDATABLE = {"name_ja", "name_en", "sort_order", "is_active", "kind_id"}
 
 
 @router.get(
