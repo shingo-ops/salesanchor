@@ -19,17 +19,18 @@
 | 20260913_210000_tcg_cardset_bundle_registration.sql | `RAISE EXCEPTION 'cardset bundle: incomplete TCG structure'` | `RAISE NOTICE '... skipping (SSOT migration moved to public)', table_count; RETURN;` |
 
 ## 影響範囲
-- run_all_migrations.sh の実行順序: 変更なし
+- 実行順序: 変更なし
 - 既存データ: 変更なし（INSERT/UPDATE文は変更していない）
 - 冪等性: 維持（NOTICE+RETURNはロールバック不要）
 
 ## 検証方法
-- `run_all_migrations.sh` がエラーなく完走すること
+- デプロイがエラーなく完走すること
 - NOTICE メッセージがログに出力されること
 
-## 外部事例
-N/A（内部マイグレーション修正）
+## 外部・過去事例の参照と我々への応用
 
-## 守り手
-- run_all_migrations.sh の実行順序（変更なし）
-- CI Backend Tests
+該当なし（内部マイグレーション修正）。既存の同一ファイル内の冪等ガードパターン（`IF table_count = 0 THEN RETURN;` および `IF to_regclass(...) IS NULL THEN RAISE NOTICE ... RETURN;`）をそのまま適用した。
+
+## 維持の仕組み
+
+守り手: CIのBackend Tests（マイグレーション実行確認）
