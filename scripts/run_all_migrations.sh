@@ -719,6 +719,9 @@ run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
 # 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
 run_sql migrations/20260920_130000_create_product_classification.sql
 
+# analysis_rule 13テーブルを全スキーマから削除（SSOT を tcg_status_master に統合・PR #3621）
+run_sql migrations/20260921_010000_drop_analysis_rule_tables.sql
+
 # ADR-156: 商品分類ツリー Phase 1 — 大分類・type_master rename・小分類FK・コンディション定義・解析マスタFK
 run_sql migrations/20260921_010000_create_product_kinds.sql
 run_sql migrations/20260921_020000_rename_tcg_type_master_to_type_master.sql
