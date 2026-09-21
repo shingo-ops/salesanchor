@@ -35,10 +35,21 @@ Phase 2 では Python コード・テスト内の `tcg_type_master` 文字列参
 | 旧 migration が CI 並列テストで VIEW 化後に実行されエラー | relkind チェックを migration に追加して回避（本番はリネーム済みなので実質スキップ） |
 | dict キー `"tcg_type_master"` の変更が下流コードに影響 | `tcg_work_comparison_svc.py` のみ。同ファイル内で参照・消費されており外部影響なし |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 PostgreSQL テーブルリネームの互換ビューパターン（互換ビューで旧名を残しつつコードを順次移行）は
 Rails の rename_table → view migration などで一般的に採用される段階的移行手法。
+我々の適用: Phase 1 で互換ビュー付きリネームを完了し、Phase 2（本 PR）でコードを新名称に統一。
+Phase 3 で互換ビューを DROP することで移行完了とする（後戻り可能な段階的アプローチ）。
+
+## 維持の仕組み
+
+- CI `migration-guard.yml` の `PROTECTED_TABLES` / `PUBLIC_TABLES` を `type_master` に更新済み。
+  新しい migration が旧テーブル名を参照しようとしても保護チェックで検出される。
+- `conftest.py` の SQLite テーブル名も `type_master` に更新済みのため、
+  SQLite テストが `tcg_type_master` を作成しなくなる。互換ビューが不要な新テスト環境を確立。
+- `products.py` の `_type_master_ref()` が参照箇所の SSOT になっているため、
+  将来の変更は 1 箇所の修正で済む。
 
 ## 守り手（rollback）
 
