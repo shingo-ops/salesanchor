@@ -520,8 +520,8 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
-# Fix: Phase 2a missed public.analysis_results FK (blocks Phase 2c)
-run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
+# Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
+run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
 # ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
 # 前回失敗デプロイで再作成された空の tcg_products を除去する。
