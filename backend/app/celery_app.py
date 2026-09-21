@@ -35,6 +35,7 @@ celery_app = Celery(
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
+        "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
     ],
 )
 
@@ -156,5 +157,11 @@ celery_app.conf.beat_schedule = {
     "discard-stale-pending-import-jobs": {
         "task": "app.tasks.tcg_import_discard.discard_stale_pending_jobs",
         "schedule": crontab(minute=0),  # 毎時0分
+    },
+    # ADR-157: 外部買取店（シンソク + 買取ホムラ）の買取価格を 4時間ごとに取得
+    # public.buyback_shop_products / public.buyback_price_logs に蓄積
+    "fetch-buyback-prices": {
+        "task": "buyback.fetch_all_prices",
+        "schedule": crontab(minute=0, hour="*/4"),
     },
 }

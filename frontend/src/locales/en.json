@@ -281,7 +281,35 @@
     "productCategories": "Product Categories",
     "superAdminSupplierMaster": "Supplier Master",
     "units": "Units",
-    "noteMaster": "Note Master"
+    "noteMaster": "Note Master",
+    "buybackPrices": "Buyback Prices"
+  },
+  "buybackPrices": {
+    "subtitle": "Buyback price trends from external shops",
+    "shopFilter": "Shop",
+    "allShops": "All shops",
+    "shinsoku": "Shinsoku",
+    "homura": "Kaitori Homura",
+    "allGames": "All titles",
+    "pokemon": "Pokémon",
+    "onepiece": "One Piece",
+    "yugioh": "Yu-Gi-Oh!",
+    "dragonball": "Dragon Ball",
+    "weiss": "Weiß Schwarz",
+    "lorcana": "Lorcana",
+    "columnShop": "Shop",
+    "columnName": "Product",
+    "columnGame": "Title",
+    "columnType": "Type",
+    "columnPriceS": "S",
+    "columnPriceA": "A",
+    "columnPriceB": "B",
+    "columnLastSeen": "Last fetched",
+    "noData": "No buyback price data available",
+    "priceHistory": "Price History",
+    "historyDays": "Last 30 days",
+    "yen": "¥",
+    "loadError": "Failed to load data"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."

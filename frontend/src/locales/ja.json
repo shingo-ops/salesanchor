@@ -281,7 +281,35 @@
     "productCategories": "商品カテゴリ",
     "superAdminSupplierMaster": "仕入元マスタ",
     "units": "単位マスタ",
-    "noteMaster": "備考マスタ"
+    "noteMaster": "備考マスタ",
+    "buybackPrices": "買取相場"
+  },
+  "buybackPrices": {
+    "subtitle": "外部買取店の買取価格推移",
+    "shopFilter": "買取店",
+    "allShops": "全店舗",
+    "shinsoku": "シンソク",
+    "homura": "買取ホムラ",
+    "allGames": "全タイトル",
+    "pokemon": "ポケモン",
+    "onepiece": "ワンピース",
+    "yugioh": "遊戯王",
+    "dragonball": "ドラゴンボール",
+    "weiss": "ヴァイスシュヴァルツ",
+    "lorcana": "ロルカナ",
+    "columnShop": "買取店",
+    "columnName": "商品名",
+    "columnGame": "タイトル",
+    "columnType": "種別",
+    "columnPriceS": "S",
+    "columnPriceA": "A",
+    "columnPriceB": "B",
+    "columnLastSeen": "最終取得",
+    "noData": "買取価格データがありません",
+    "priceHistory": "価格推移",
+    "historyDays": "過去30日",
+    "yen": "¥",
+    "loadError": "データの取得に失敗しました"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"

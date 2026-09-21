@@ -270,6 +270,17 @@ export default function DesktopShell() {
                 </NavLink>
               )}
 
+              {hasPermission("products.view") && (
+                <NavLink
+                  to="/buyback-prices"
+                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                  onClick={handleSidebarNavClick}
+                >
+                  <span className="sidebar-icon"><NAV_ICONS.sales size={ICON.base} /></span>
+                  <span className="sidebar-label">{t("nav.buybackPrices")}</span>
+                </NavLink>
+              )}
+
               {/* 発注管理（在庫表 ↔ 見積・請求管理 の間）。在庫表を経由せず発注書を確認・管理できる単独導線。 */}
               {hasPermission("purchase_orders.view") && (
                 <NavLink

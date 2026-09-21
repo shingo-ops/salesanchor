@@ -28,6 +28,7 @@ from app.routers import (
     archives,
     auth,
     bots,
+    buyback_prices,  # ADR-157: 買取相場ログ API
     close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
     conditions,  # 状態マスタ CRUD（テナント版）
@@ -691,6 +692,12 @@ app.include_router(
 
 
 app.include_router(line_import_devices.router, prefix="/api/v1")
+
+# ADR-157: 買取相場ログ API（認証必須・テナント横断の public スキーマ参照）
+app.include_router(
+    buyback_prices.router, prefix="/api/v1", tags=["buyback-prices"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

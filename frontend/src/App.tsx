@@ -105,6 +105,7 @@ import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
 import ProductCategoriesImportPage from "./pages/super-admin/ProductCategoriesImportPage";
 import ProductCategoriesImportTenantPage from "./pages/product-categories/ProductCategoriesImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
+import BuybackPricesPage from "./pages/buyback-prices/BuybackPricesPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
 import DesignSystemPage from "./pages/design-system/DesignSystemPage";
@@ -202,6 +203,9 @@ function App() {
                     <Route path="contacts"        element={<ContactsPage />} />
                     <Route path="archive"         element={<ArchivesPage />} />
                   </Route>
+
+                  {/* 外部買取店の買取価格 */}
+                  <Route path="/buyback-prices" element={<BuybackPricesPage />} />
 
                   {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
                   <Route path="/inventory" element={<InventoryPage />} />
