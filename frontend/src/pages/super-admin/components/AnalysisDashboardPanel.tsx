@@ -480,7 +480,7 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
 
   const tableData: ImportTableRow[] = (data.recent_imports ?? []).map((item) => ({
     ...item,
-    resolved_count: item.message_count - (item.unresolved_count ?? 0),
+    resolved_count: (item.created_count ?? 0) - (item.unresolved_count ?? 0),
   }));
 
   return (
