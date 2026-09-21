@@ -29,6 +29,17 @@ TCG中分類（type_master）の上位区分として機能する「大分類」
 
 product_categories と type_master の既存パターンをそのまま踏襲。新規設計不要。
 
+## 外部・過去事例の参照と我々への応用
+
+`super_admin_product_categories.py` および `ProductCategoriesMasterPanel.tsx` が直接適用可能な先行事例として存在。
+API構造（soft delete、IntegrityError→409、生SQL+sqlalchemy.text）をそのまま踏襲。フロントは DataTable + Modal + ConfirmModal の金型パターンを流用。
+
+## 維持の仕組み
+
+- `require_super_admin` dependency でアクセス制御を維持
+- soft delete（is_active=FALSE）により削除ログが残る
+- i18n: ja.json/en.json の同一キーを CI でチェック（ADR-027）
+
 ## 守り手
 
 - ADR-027: i18n 強制 → ProductKindsMasterPanel.tsx で全文字列 t() 使用
