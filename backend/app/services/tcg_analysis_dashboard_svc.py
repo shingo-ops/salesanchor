@@ -9,7 +9,8 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+TCG_SCHEMA = "public"
 
 
 async def get_pipeline_summary(db: AsyncSession) -> dict:
@@ -36,10 +37,10 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         (
             await db.execute(
                 text(
-                    f"SELECT COUNT(*)"
+                    "SELECT COUNT(*)"
                     f" FROM {TCG_SCHEMA}.extraction_jobs"
-                    f" WHERE status = 'running'"
-                    f" AND created_at < NOW() - INTERVAL '10 minutes'"
+                    " WHERE status = 'running'"
+                    " AND created_at < NOW() - INTERVAL '10 minutes'"
                 )
             )
         ).scalar()
@@ -50,11 +51,11 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     ar_row = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved_count,"
-                f"  SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved_count,"
-                f"  SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review_count"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN pid_resolved THEN 1 ELSE 0 END) AS pid_resolved_count,"
+                "  SUM(CASE WHEN unit_resolved THEN 1 ELSE 0 END) AS unit_resolved_count,"
+                "  SUM(CASE WHEN needs_review THEN 1 ELSE 0 END) AS needs_review_count"
                 f" FROM {TCG_SCHEMA}.analysis_results"
             )
         )
@@ -74,14 +75,14 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         (
             await db.execute(
                 text(
-                    f"SELECT COUNT(DISTINCT ej.id)"
+                    "SELECT COUNT(DISTINCT ej.id)"
                     f" FROM {TCG_SCHEMA}.extraction_jobs ej"
                     f" JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id"
-                    f" WHERE ej.status = 'done'"
-                    f" AND NOT EXISTS ("
+                    " WHERE ej.status = 'done'"
+                    " AND NOT EXISTS ("
                     f"   SELECT 1 FROM {TCG_SCHEMA}.analysis_results ar"
-                    f"   WHERE ar.extraction_item_id = ei.id"
-                    f" )"
+                    "   WHERE ar.extraction_item_id = ei.id"
+                    " )"
                 )
             )
         ).scalar()
@@ -92,12 +93,12 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     reason_rows = (
         await db.execute(
             text(
-                f"SELECT unnest(string_to_array(review_reasons, ',')) AS reason,"
-                f"       COUNT(*) AS cnt"
+                "SELECT unnest(string_to_array(review_reasons, ',')) AS reason,"
+                "       COUNT(*) AS cnt"
                 f" FROM {TCG_SCHEMA}.analysis_results"
-                f" WHERE needs_review = TRUE AND review_reasons IS NOT NULL"
-                f" GROUP BY reason"
-                f" ORDER BY cnt DESC"
+                " WHERE needs_review = TRUE AND review_reasons IS NOT NULL"
+                " GROUP BY reason"
+                " ORDER BY cnt DESC"
             )
         )
     ).fetchall()
@@ -108,10 +109,10 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     attempt_row = (
         await db.execute(
             text(
-                f"SELECT requested_model, prompt_version"
+                "SELECT requested_model, prompt_version"
                 f" FROM {TCG_SCHEMA}.extraction_attempts"
-                f" ORDER BY started_at DESC"
-                f" LIMIT 1"
+                " ORDER BY started_at DESC"
+                " LIMIT 1"
             )
         )
     ).fetchone()
@@ -132,11 +133,11 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     error_rows = (
         await db.execute(
             text(
-                f"SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version"
+                "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version"
                 f" FROM {TCG_SCHEMA}.extraction_jobs ej"
-                f" WHERE ej.status = 'error'"
-                f" ORDER BY ej.created_at DESC"
-                f" LIMIT 10"
+                " WHERE ej.status = 'error'"
+                " ORDER BY ej.created_at DESC"
+                " LIMIT 10"
             )
         )
     ).fetchall()
@@ -249,13 +250,13 @@ async def get_import_summary(db: AsyncSession) -> dict:
     ij_rows = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,"
-                f"  SUM(CASE WHEN review_status = 'pending_review' THEN 1 ELSE 0 END) AS pending_review_count,"
-                f"  SUM(message_count) AS total_messages,"
-                f"  SUM(unresolved_count) AS total_unresolved,"
-                f"  MAX(created_at) AS latest_import_at"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN status = 'ok' THEN 1 ELSE 0 END) AS ok_count,"
+                "  SUM(CASE WHEN review_status = 'pending_review' THEN 1 ELSE 0 END) AS pending_review_count,"
+                "  SUM(message_count) AS total_messages,"
+                "  SUM(unresolved_count) AS total_unresolved,"
+                "  MAX(created_at) AS latest_import_at"
                 f" FROM {TCG_SCHEMA}.import_jobs"
             )
         )
@@ -270,10 +271,10 @@ async def get_import_summary(db: AsyncSession) -> dict:
     sm_row = (
         await db.execute(
             text(
-                f"SELECT"
-                f"  COUNT(*) AS total,"
-                f"  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
-                f"  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
+                "SELECT"
+                "  COUNT(*) AS total,"
+                "  SUM(CASE WHEN supplier_channel_id IS NULL THEN 1 ELSE 0 END) AS orphan_count,"
+                "  SUM(CASE WHEN is_active THEN 1 ELSE 0 END) AS active_count"
                 f" FROM {TCG_SCHEMA}.source_messages"
             )
         )
@@ -282,13 +283,18 @@ async def get_import_summary(db: AsyncSession) -> dict:
     total_source = int(sm_row.total or 0)
     orphan_count = int(sm_row.orphan_count or 0)
 
-    # 3. Recent imports (last 10)
+    # 3. Recent imports (last 10) with created_count from import_job_messages
     recent_rows = (
         await db.execute(
             text(
-                f"SELECT id, filename, message_count, unresolved_count, review_status, created_at"
-                f" FROM {TCG_SCHEMA}.import_jobs"
-                f" ORDER BY created_at DESC"
+                f"SELECT"
+                f"  ij.id, ij.filename, ij.message_count, ij.unresolved_count,"
+                f"  ij.review_status, ij.created_at,"
+                f"  COALESCE(SUM(CASE WHEN ijm.relation_kind = 'created' THEN 1 ELSE 0 END), 0)::int AS created_count"
+                f" FROM {TCG_SCHEMA}.import_jobs ij"
+                f" LEFT JOIN {TCG_SCHEMA}.import_job_messages ijm ON ijm.import_job_id = ij.id"
+                f" GROUP BY ij.id, ij.filename, ij.message_count, ij.unresolved_count, ij.review_status, ij.created_at"
+                f" ORDER BY ij.created_at DESC"
                 f" LIMIT 10"
             )
         )
@@ -302,6 +308,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
             "unresolved_count": int(row.unresolved_count or 0),
             "review_status": row.review_status,
             "created_at": row.created_at.isoformat() if row.created_at else None,
+            "created_count": int(row.created_count),
         }
         for row in recent_rows
     ]
@@ -358,9 +365,9 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
     target_rows = (
         await db.execute(
             text(
-                f"SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
+                "SELECT id, name, is_active, last_distributed_at, last_distributed_count, last_result"
                 f" FROM {TCG_SCHEMA}.tcg_distribution_targets"
-                f" ORDER BY name"
+                " ORDER BY name"
             )
         )
     ).fetchall()
@@ -384,9 +391,9 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
     setting_rows = (
         await db.execute(
             text(
-                f"SELECT key, value, note"
+                "SELECT key, value, note"
                 f" FROM {TCG_SCHEMA}.tcg_distribution_settings"
-                f" ORDER BY key"
+                " ORDER BY key"
             )
         )
     ).fetchall()

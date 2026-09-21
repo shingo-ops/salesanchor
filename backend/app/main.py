@@ -95,6 +95,7 @@ from app.routers import (
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
+    super_admin_product_kinds,  # 大分類マスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
@@ -519,6 +520,10 @@ app.include_router(
 # 商品カテゴリマスタ中央 admin
 app.include_router(
     super_admin_product_categories.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 大分類マスタ中央 admin
+app.include_router(
+    super_admin_product_kinds.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(

@@ -20,7 +20,7 @@ from app.services import line_import_devices as devices
 from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
-from app.tcg_config import TCG_SCHEMA
+from app.tcg_config import TCG_SCHEMA  # noqa: E402
 
 SOURCE_REPORT_LIMIT = 10000
 

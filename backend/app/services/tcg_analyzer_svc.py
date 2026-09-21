@@ -49,13 +49,14 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 ENGINE_VERSION = "name-first-v9-product-all-terms"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
-
-# TCG解析システムは tenant_004 専用スキーマ
-from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # マスタロード
@@ -422,7 +423,7 @@ def select_product_candidates(
 def load_work_master(session: Session) -> list[dict]:
     """Active game/work names only; alt_name is a single value, never a list."""
     rows = session.execute(text(
-        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.tcg_type_master WHERE is_active = TRUE"
+        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.type_master WHERE is_active = TRUE"
     )).fetchall()
     return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
 
@@ -1187,7 +1188,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:
             raise ValueError("Work reference is missing or corrupted")
-        if reference_digest(load_work_reference(session, TCG_SCHEMA)) != digest:
+        if reference_digest(load_work_reference(session, "public")) != digest:
             raise ValueError("Work reference changed; re-extraction required")
         decisions = session.execute(text(f"""
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'

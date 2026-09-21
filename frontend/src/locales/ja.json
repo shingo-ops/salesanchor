@@ -3857,7 +3857,8 @@
       "unitMaster": "単位マスタ",
       "import": "インポート",
       "dashboard": "ダッシュボード",
-      "noteMaster": "備考マスタ"
+      "noteMaster": "備考マスタ",
+      "productKindsMaster": "大分類マスタ"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
@@ -3913,6 +3914,9 @@
       "importLatestAt": "最新インポート",
       "importFilename": "ファイル名",
       "importMessageCount": "メッセージ数",
+      "importNewCount": "新規",
+      "importResolvedCount": "解決",
+      "importUnresolvedCount": "未解決",
       "importReviewStatus": "レビュー状態",
       "importDate": "日時",
       "distributionTargets": "配信先",
@@ -3933,7 +3937,15 @@
       "extractionErrorRate": "抽出エラー率",
       "importTrendTitle": "7日間のインポート推移",
       "importTrendJobCount": "インポート回数",
-      "importTrendMessageCount": "メッセージ数"
+      "importTrendMessageCount": "メッセージ数",
+      "importStatusOk": "取り込みは正常です",
+      "importStatusWarning": "確認が必要です",
+      "importStatusDanger": "対応が必要です",
+      "importProcessedMessages": "処理済みメッセージ",
+      "importMatchRate": "名前の一致率",
+      "importActionRequired": "要対応",
+      "importNoAction": "なし",
+      "importReviewCta": "確認する →"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
@@ -4160,6 +4172,21 @@
     "code": "コード",
     "displayName": "表示名",
     "kubunType": "区分タイプ",
+    "isActive": "有効"
+  },
+  "productKindsMaster": {
+    "title": "大分類マスタ",
+    "subtitle": "商品大分類を管理します。",
+    "addNew": "大分類を追加",
+    "createTitle": "大分類を追加",
+    "editTitle": "大分類を編集",
+    "confirmDelete": "この大分類を無効化しますか？",
+    "deleteBlocked": "この大分類は中分類で使用中のため削除できません",
+    "noData": "大分類はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "displayOrder": "表示順",
     "isActive": "有効"
   }
 }

@@ -30,7 +30,7 @@ def test_create_schema_rejects_unknown_attribute():
 
 
 def test_valid_attributes_cover_eight_masters():
-    # TCGシリーズは tcg_type_master 側で管理するため 8 区分。
+    # TCGシリーズは type_master 側で管理するため 8 区分。
     assert VALID_ATTRIBUTES == {
         "product_kind",
         "set_type",

@@ -109,8 +109,8 @@ class SupplierAliasResponse(SupplierAliasBase):
 # tcg_series_master
 # ============================================================================
 
-# ADR-083: TCG 種別は public.tcg_type_master で管理（固定リスト廃止）。
-# tcg_type の値検証は DB 側（tcg_type_master）に委ねる。code は安定キーのため不変。
+# ADR-083: TCG 種別は public.type_master で管理（固定リスト廃止）。
+# tcg_type の値検証は DB 側（type_master）に委ねる。code は安定キーのため不変。
 
 
 class TcgTypeBase(BaseModel):
@@ -128,15 +128,17 @@ class TcgTypeCreate(TcgTypeBase):
 
 
 class TcgTypeUpdate(BaseModel):
-    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグのみ更新可。
+    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグ・大分類のみ更新可。
     name_ja: Optional[str] = Field(default=None, min_length=1, max_length=100)
     name_en: Optional[str] = Field(default=None, max_length=100)
     sort_order: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    kind_id: Optional[int] = None
 
 
 class TcgTypeResponse(TcgTypeBase):
     id: int
+    kind_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 

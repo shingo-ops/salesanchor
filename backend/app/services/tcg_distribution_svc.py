@@ -35,7 +35,10 @@ logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
@@ -235,7 +238,7 @@ async def fetch_output_rows(
             ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
-        LEFT JOIN public.tcg_type_master ser
+        LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE

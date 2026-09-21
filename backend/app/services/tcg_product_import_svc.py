@@ -165,9 +165,9 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     work_code と同様に public スキーマから引く。
     """
     maps: dict[str, dict[str, str]] = {}
-    # work_code → public.tcg_type_master (SSOT, INTEGER PK)
+    # work_code → public.type_master (SSOT, INTEGER PK)
     work_result = await db.execute(
-        text("SELECT code, id FROM public.tcg_type_master WHERE is_active = TRUE")
+        text("SELECT code, id FROM public.type_master WHERE is_active = TRUE")
     )
     maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():
@@ -401,8 +401,8 @@ async def start_job(
     result = await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"(filename, raw_sha256, total_rows, executed_by, status) "
-            f"VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
+            "(filename, raw_sha256, total_rows, executed_by, status) "
+            "VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
         ),
         {"filename": filename, "digest": digest, "total": total, "who": executed_by},
     )
@@ -419,8 +419,8 @@ async def record_row(
     await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_rows "
-            f"(job_id, row_no, japanese_title, mark, result, product_code, messages) "
-            f"VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
+            "(job_id, row_no, japanese_title, mark, result, product_code, messages) "
+            "VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
         ),
         {
             "job": job_id,
@@ -443,8 +443,8 @@ async def finish_job(
     await db.execute(
         text(
             f"UPDATE {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"SET created_rows = :created, skipped_rows = :skipped, "
-            f"status = :status, completed_at = NOW() WHERE id = :job"
+            "SET created_rows = :created, skipped_rows = :skipped, "
+            "status = :status, completed_at = NOW() WHERE id = :job"
         ),
         {"created": created, "skipped": skipped, "status": status, "job": job_id},
     )

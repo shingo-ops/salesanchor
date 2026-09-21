@@ -55,8 +55,13 @@ async def create_schema(conn, schema, corrections=True):
     # Guarantee work_id column exists even if SAVEPOINT rolled back (pre-existing table)
     await conn.exec_driver_sql("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
-    # Phase 2 SSOT: public.tcg_type_master required by fetch_output_rows JOIN
-    for sql_file in ("085_create_tcg_type_master.sql", "086_seed_additional_tcg_types.sql"):
+    # Phase 2 SSOT: public.type_master required by fetch_output_rows JOIN
+    for sql_file in (
+        "085_create_tcg_type_master.sql",
+        "086_seed_additional_tcg_types.sql",
+        "20260921_060000_create_product_kinds.sql",
+        "20260921_070000_rename_tcg_type_master_to_type_master.sql",
+    ):
         sql_path = migrations / sql_file
         if sql_path.exists():
             await _exec_multi_stmt(conn, sql_path.read_text())
