@@ -688,6 +688,9 @@ run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
 # Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
 run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
 
+# VIEW → TABLE 修正: 手動作成VIEWをDROPし実体テーブルをRENAME（本番デプロイ252番失敗の修正）
+run_sql migrations/20260919_015000_fix_view_to_table_rename.sql
+
 # Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
 run_sql migrations/20260919_020000_master_ssot_public_tables.sql
 
@@ -763,3 +766,6 @@ run_sql migrations/20260922_020000_create_rule_test_tables.sql
 
 # 販売単位・状態マスタ連鎖プルダウン基盤
 run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql

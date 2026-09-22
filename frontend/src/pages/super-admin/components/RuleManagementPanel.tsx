@@ -18,6 +18,7 @@ import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { RuleTestPanel } from "./RuleTestPanel";
+import { RuleCreateDrawer } from "./RuleCreateDrawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 
 interface RuleEntry {
@@ -51,6 +52,7 @@ export function RuleManagementPanel() {
   const [toggling, setToggling] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RuleTab>("sold-out");
   const [toggleTarget, setToggleTarget] = useState<RuleEntry | null>(null);
+  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -165,13 +167,22 @@ export function RuleManagementPanel() {
               />
             }
             right={
-              <HeaderButton
-                variant="primary"
-                data-testid="rule-management-search-btn"
-                onClick={runSearch}
-              >
-                {t("common.search")}
-              </HeaderButton>
+              <>
+                <HeaderButton
+                  variant="primary"
+                  data-testid="rule-management-search-btn"
+                  onClick={runSearch}
+                >
+                  {t("common.search")}
+                </HeaderButton>
+                <HeaderButton
+                  variant="secondary"
+                  data-testid="rule-management-create-btn"
+                  onClick={() => setCreateDrawerOpen(true)}
+                >
+                  {t(`${f}.createRule`)}
+                </HeaderButton>
+              </>
             }
           />
           {error && <p role="alert" style={{ color: "var(--color-error)", padding: "var(--space-2) 0" }}>{error}</p>}
@@ -201,6 +212,11 @@ export function RuleManagementPanel() {
         danger={toggleTarget?.enabled === true}
         onConfirm={() => { void handleToggleConfirm(); }}
         onCancel={() => setToggleTarget(null)}
+      />
+      <RuleCreateDrawer
+        open={createDrawerOpen}
+        onClose={() => setCreateDrawerOpen(false)}
+        onCreated={() => { setCreateDrawerOpen(false); void load(); }}
       />
     </>
   );

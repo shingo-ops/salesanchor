@@ -59,17 +59,31 @@ BEGIN;
 -- ============================================================
 DO $$
 BEGIN
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'units') THEN
+  -- VIEW guard: information_schema.tables includes VIEWs; use relkind='r' to target BASE TABLEs only.
+  -- public.units / conditions / unit_aliases / condition_aliases may be VIEWs after rename migration.
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'r') THEN
     COMMENT ON TABLE public.units IS 'LINE解析用 単位マスタ（正式販売単位はquantity_unitsを使用）';
+  ELSE
+    RAISE NOTICE 'public.units is not a BASE TABLE (may be a VIEW) — skipping COMMENT ON TABLE';
   END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'unit_aliases') THEN
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relname = 'unit_aliases' AND c.relkind = 'r') THEN
     COMMENT ON TABLE public.unit_aliases IS 'LINE解析用 単位エイリアス（unitsの表記ゆれ対応）';
+  ELSE
+    RAISE NOTICE 'public.unit_aliases is not a BASE TABLE (may be a VIEW) — skipping COMMENT ON TABLE';
   END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conditions') THEN
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'r') THEN
     COMMENT ON TABLE public.conditions IS 'LINE解析用 状態マスタ（正式状態はcondition_definitionsを使用）';
+  ELSE
+    RAISE NOTICE 'public.conditions is not a BASE TABLE (may be a VIEW) — skipping COMMENT ON TABLE';
   END IF;
-  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'condition_aliases') THEN
+  IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+             WHERE n.nspname = 'public' AND c.relname = 'condition_aliases' AND c.relkind = 'r') THEN
     COMMENT ON TABLE public.condition_aliases IS 'LINE解析用 状態エイリアス（conditionsの表記ゆれ対応）';
+  ELSE
+    RAISE NOTICE 'public.condition_aliases is not a BASE TABLE (may be a VIEW) — skipping COMMENT ON TABLE';
   END IF;
   IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'quantity_units') THEN
     COMMENT ON TABLE public.quantity_units IS '正式販売単位マスタ — 値はアプリ/CSVから登録。value列は換算係数（例: 1ケース=12ボックスなら12）';

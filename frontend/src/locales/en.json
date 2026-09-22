@@ -310,7 +310,10 @@
     "priceHistory": "Price History",
     "historyDays": "Last 30 days",
     "yen": "¥",
-    "loadError": "Failed to load data"
+    "loadError": "Failed to load data",
+    "fetchNow": "Fetch Now",
+    "fetchStarted": "Fetch task started",
+    "fetchFailed": "Failed to start fetch task"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -3892,6 +3895,7 @@
       "productLinesMaster": "Product Lines",
       "productFormatsMaster": "Product Formats",
       "quantityUnitsMaster": "Quantity Units",
+      "conditionDefsMaster": "Condition Definitions",
       "weightClassesMaster": "Weight Classes",
       "groupRuleManagement": "Rule Management",
       "ruleManagement": "Status Rules"
@@ -4260,14 +4264,39 @@
     "addNew": "Add Quantity Unit",
     "createTitle": "Add Quantity Unit",
     "editTitle": "Edit Quantity Unit",
-    "confirmDelete": "Delete this quantity unit?",
+    "confirmDelete": "Deactivate this quantity unit?",
     "noData": "No quantity units registered yet.",
     "code": "Code",
     "name": "Name",
     "nameEn": "English Name",
-    "value": "Value",
+    "value": "Conversion Factor",
     "displayOrder": "Display Order",
-    "isActive": "Active"
+    "isActive": "Active",
+    "conditionCount": "Conditions",
+    "productLineCount": "Product Lines",
+    "search": "Search",
+    "empty": "No quantity units found",
+    "total": "{{count}} total",
+    "linkedConditions": "Linked Conditions",
+    "linkedProductLines": "Linked Product Lines"
+  },
+  "conditionDefMaster": {
+    "title": "Condition Definitions",
+    "addNew": "Add Condition Definition",
+    "createTitle": "Add Condition Definition",
+    "editTitle": "Edit Condition Definition",
+    "confirmDelete": "Deactivate this condition?",
+    "noData": "No condition definitions registered yet.",
+    "code": "Code",
+    "name": "Name",
+    "nameEn": "English Name",
+    "displayOrder": "Display Order",
+    "isActive": "Active",
+    "unitCount": "Units",
+    "search": "Search",
+    "empty": "No condition definitions found",
+    "total": "{{count}} total",
+    "linkedUnits": "Linked Quantity Units"
   },
   "weightClassesMaster": {
     "title": "Weight Classes",
@@ -4356,6 +4385,55 @@
       "inputTextLabel": "Product page text",
       "expectedCanonicalLabel": "Expected status",
       "expectedCanonicalPlaceholder": "Select status..."
+    },
+    "createRule": "Create Rule",
+    "create": {
+      "title": "Create New Rule",
+      "statusId": "Status ID",
+      "canonical": "Display Name",
+      "matchType": "Match Type",
+      "effect": "Effect",
+      "searchPattern": "Search Pattern",
+      "excludePattern": "Exclude Pattern",
+      "priority": "Priority",
+      "note": "Note",
+      "testSection": "Pattern Test",
+      "testInput": "Test Input",
+      "testButton": "Test",
+      "matched": "Matched",
+      "notMatched": "Not Matched",
+      "creating": "Creating...",
+      "created": "Rule created (disabled)",
+      "matchTypeLiteral": "Literal",
+      "matchTypeRegex": "Regex",
+      "matchTypeDefault": "Default",
+      "effectOutput": "Output",
+      "effectExclude": "Exclude"
     }
+  },
+  "reviewIssues": {
+    "productIdUnresolved": "Product ID Unresolved",
+    "unitUnresolved": "Unit Unresolved",
+    "excluded": "Excluded",
+    "productMasterUnregistered": "Product Master Unregistered",
+    "supplierUnregistered": "Supplier Unregistered",
+    "confirmed": "Confirmed"
+  },
+  "tcgParallelReport": {
+    "title": "Parallel Report",
+    "overallSummary": "Overall Summary",
+    "metric": "Metric",
+    "difference": "Difference",
+    "totalItems": "Total Items",
+    "pidResolved": "PID Resolved",
+    "supplierComparison": "Supplier Comparison",
+    "count": "Count",
+    "refreshReport": "Refresh Report",
+    "calculating": "Calculating...",
+    "superAdminOnly": "This page is for super_admin only.",
+    "fetchError": "Failed to fetch report",
+    "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
+    "calculatingDetail": "Calculating (DB read + in-memory matching)...",
+    "readOnlyNote": "* No DB writes. Report is read-only."
   }
 }

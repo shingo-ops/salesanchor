@@ -9,14 +9,17 @@ API:
   GET    /api/v1/super-admin/status-master/export
   POST   /api/v1/super-admin/status-master/import/preview
   POST   /api/v1/super-admin/status-master/import/commit
+  POST   /api/v1/super-admin/status-master/preview  (single rule match preview)
 """
 from __future__ import annotations
 
 import csv
 import hashlib
 import io
+import re
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -393,3 +396,59 @@ async def import_status_master_commit(
         raise HTTPException(status_code=500, detail=f"STATUS_IMPORT_COMMIT_ERROR: {exc}") from exc
 
     return {"inserted": inserted, "updated": updated, "errors": []}
+
+
+# ----------------------------------------------------------------------------
+# Single rule preview (pattern match test)
+# ----------------------------------------------------------------------------
+
+
+class StatusMasterPreview(BaseModel):
+    match_type: str  # LITERAL | REGEX | DEFAULT
+    search_pattern: str = ""
+    input_text: str
+
+
+class StatusMasterPreviewResponse(BaseModel):
+    matched: bool
+    detail: str  # human-readable explanation
+
+
+def _preview_match(match_type: str, search_pattern: str, input_text: str) -> StatusMasterPreviewResponse:
+    """Test if input_text matches the given pattern.
+
+    Uses the same logic as _match_status_pattern in tcg_analyzer_svc.py:1077.
+    """
+    if match_type == "DEFAULT":
+        return StatusMasterPreviewResponse(matched=True, detail="DEFAULT always matches")
+    if match_type == "LITERAL":
+        if not search_pattern:
+            return StatusMasterPreviewResponse(matched=False, detail="Empty pattern never matches")
+        matched = search_pattern.lower() in input_text.lower()
+        return StatusMasterPreviewResponse(
+            matched=matched,
+            detail=f"'{search_pattern}' {'found in' if matched else 'not found in'} '{input_text}'",
+        )
+    if match_type == "REGEX":
+        if not search_pattern:
+            return StatusMasterPreviewResponse(matched=False, detail="Empty pattern never matches")
+        try:
+            matched = bool(re.search(search_pattern, input_text))
+            return StatusMasterPreviewResponse(
+                matched=matched,
+                detail=f"Pattern {'matched' if matched else 'did not match'}",
+            )
+        except re.error as e:
+            return StatusMasterPreviewResponse(matched=False, detail=f"Invalid regex: {e}")
+    return StatusMasterPreviewResponse(matched=False, detail=f"Unknown match_type: {match_type}")
+
+
+@router.post(
+    "/super-admin/status-master/preview",
+    response_model=StatusMasterPreviewResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="単一ルールのパターンマッチプレビュー",
+)
+async def preview_match(body: StatusMasterPreview) -> StatusMasterPreviewResponse:
+    """Test if input_text matches the given pattern (single rule preview)."""
+    return _preview_match(body.match_type, body.search_pattern, body.input_text)
