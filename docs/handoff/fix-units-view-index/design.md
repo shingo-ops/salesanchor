@@ -12,7 +12,7 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| `run_all_migrations.sh` が EXIT 0 で完了する | デプロイログで `[280/280]` まで到達することを確認 |
+| デプロイスクリプト（run_all_migrations.sh）が EXIT 0 で完了する | デプロイログで `[280/280]` まで到達することを確認 |
 | `20260919_020000` 実行時に `ERROR:` 行が出ない | ログに `ERROR: cannot create index on relation` が含まれない |
 | `NOTICE: ... skipping` のみ出て処理継続する | ログに `NOTICE: public.units は TABLE ではありません` が出てもエラー0 |
 
@@ -54,7 +54,7 @@ INDEX の存在確認を `pg_indexes` で行い、既に存在する場合はス
 ### 影響範囲
 
 - 変更ファイル: 1ファイル（`migrations/20260919_020000_master_ssot_public_tables.sql`）
-- 呼び出し元: `scripts/run_all_migrations.sh`（変更なし・行番号はデプロイ側で管理）
+- 呼び出し元: scripts/run_all_migrations.sh（変更なし・行番号はデプロイ側で管理）
 - Step 5〜9（tcg_note_master等）: VIEW化対象外のため変更なし
 
 ### 戻し方
@@ -74,6 +74,8 @@ INDEX の存在確認を `pg_indexes` で行い、既に存在する場合はス
 - `DO $$` ガード内の `pg_indexes` チェックにより二重実行しても安全（冪等性維持）
 - 将来 `public.units` が再度 BASE TABLE になった場合（LINE用VIEWが DROP された場合）、次回実行時に自動で INDEX が作成される
 - CI Migration Guard（ADR-155 Check 7/8）は DDL のみのため引き続き通過
+
+守り手: CI Migration Guard（ADR-155）/ コードレビュー時の relkind ガード確認
 
 ## 弊害・リスク
 
