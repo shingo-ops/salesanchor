@@ -6,7 +6,7 @@ ADR-1002
 
 ## KGI
 
-デプロイが `20260922_040000_fix_phase2c_fk_blocker.sql` でエラーなく完了する（COMMIT が出力される）
+デプロイが `migrations/20260922_040000_fix_phase2c_fk_blocker.sql` でエラーなく完了する（COMMIT が出力される）
 
 | 基準 | 検証方法 |
 |------|---------|

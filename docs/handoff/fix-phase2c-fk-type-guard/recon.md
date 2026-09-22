@@ -16,7 +16,7 @@ DETAIL: Key columns "product_id" and "tcg_uuid" are of incompatible types: integ
 ## 根拠
 
 - `migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql` が `analysis_results.product_id` を UUID → INTEGER に変換済み
-- `20260922_040000_fix_phase2c_fk_blocker.sql` は型チェックなしで FK 追加を試みていた
+- `migrations/20260922_040000_fix_phase2c_fk_blocker.sql` は型チェックなしで FK 追加を試みていた
 - `20260914_140000` の Step3 では同ファイル内で型ガード追加済み（PR #3676）
 - `20260922_040000` は別ファイルのため別途ガード追加が必要
 
