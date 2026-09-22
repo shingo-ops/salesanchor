@@ -8,7 +8,7 @@
 ERROR: foreign key constraint "fk_analysis_results_product_public" cannot be implemented
 DETAIL: Key columns "product_id" and "tcg_uuid" are of incompatible types: integer and uuid.
 ```
-242/279 `20260922_040000_fix_phase2c_fk_blocker.sql` がデプロイ時に失敗。
+242/279 20260922_040000_fix_phase2c_fk_blocker.sql がデプロイ時に失敗。
 
 ## 該当ファイル
 - `migrations/20260922_040000_fix_phase2c_fk_blocker.sql:52-58` — Step 3のFKを無条件で product_id (INTEGER) → public.products(tcg_uuid) (UUID) に張ろうとしていた

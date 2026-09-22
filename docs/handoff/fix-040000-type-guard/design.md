@@ -1,7 +1,7 @@
 # design: fix-040000-type-guard
 
 ## KGI
-`20260922_040000_fix_phase2c_fk_blocker.sql` がデプロイ時に型エラーなしで通過する。
+migrations/20260922_040000_fix_phase2c_fk_blocker.sql がデプロイ時に型エラーなしで通過する。
 
 ## KPI（POが画面・出力で○×を一義に判定できる粒度）
 - CIのMigration SQL Testが 242/279 でエラーなく通過する
@@ -45,7 +45,7 @@ END IF;
 - `public.analysis_results.product_id`はこのmigration実行時点でINTEGERのため、SKIPが正解
 
 ## 影響範囲
-- 触るファイル: `migrations/20260922_040000_fix_phase2c_fk_blocker.sql`（1ファイル・Step 3のみ変更）
+- 触るファイル: migrations/20260922_040000_fix_phase2c_fk_blocker.sql（1ファイル・Step 3のみ変更）
 - 削除ファイル: なし
 - Step 1（public.analysis_resultsFKドロップ）・Step 2（tenant_004.analysis_resultsFKドロップ）は変更なし
 - 冪等性: 維持（SKIPパスが増えただけ）
@@ -62,8 +62,7 @@ END IF;
 - **Phase B（ADR-1002）**（`migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql:267-272`）: 同様の型チェックで冪等性を保証。
 
 ## 維持の仕組み
-- CI Migration SQL Test（`.github/workflows/migration-test.yml`）が毎PR冪等性を自動検証
-- `scripts/check-migration-registration-exists.sh` が scripts/run_all_migrations.sh の登録・ファイル実在を全件点検
+- 守り手: CI Migration SQL Test（.github/workflows/migration-test.yml）が毎PR冪等性を自動検証。scripts/check-migration-registration-exists.sh が run_all_migrations.sh の登録・ファイル実在を全件点検。
 - Phase 2aの型ガードパターンが 040000・20260914_140000・20260915_120000 の3ファイルで一貫適用
 
 ## 守り手
