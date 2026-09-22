@@ -44,7 +44,7 @@
 - ADR-027 CI lint が i18n ハードコードを検出: `.github/workflows/frontend-check.yml`
 - ADR-144 UI governance gate: `.github/workflows/ui-governance-gate.yml`
 
-守り手: ADR-027 i18n lint / ADR-144 UI governance gate CI
+守り手: `.github/workflows/frontend-check.yml` (ADR-027 i18n lint) / `.github/workflows/ui-governance-gate.yml` (ADR-144 UI governance gate)
 
 ## recon 相互参照
 [docs/handoff/rule-test-ux/recon.md](./recon.md)

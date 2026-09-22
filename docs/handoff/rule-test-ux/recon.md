@@ -8,13 +8,13 @@
 - テストケース初期データなし
 
 ## 参照
-- frontend/src/pages/super-admin/components/RuleTestPanel.tsx — テストパネル
-- frontend/src/pages/super-admin/components/RuleManagementPanel.tsx — ルール管理パネル
-- frontend/src/components/Card.tsx — Card 金型
-- frontend/src/components/Select.tsx — Select 金型
-- frontend/src/components/ConfirmModal.tsx — ConfirmModal 金型
-- backend/app/routers/rule_test.py — テスト API
-- backend/app/routers/super_admin_status_master.py — ルール SSOT API
+- `frontend/src/pages/super-admin/components/RuleTestPanel.tsx:1` — テストパネル（テストケース管理+実行UI）
+- `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:1` — ルール管理パネル（window.confirm 使用箇所）
+- `frontend/src/components/Card.tsx:1` — Card 金型
+- `frontend/src/components/Select.tsx:1` — Select 金型
+- `frontend/src/components/ConfirmModal.tsx:1` — ConfirmModal 金型
+- `backend/app/routers/rule_test.py:1` — テスト API
+- `backend/app/routers/super_admin_status_master.py:1` — ルール SSOT API
 
 ## 根拠
 - ADR-027: i18n 強制
