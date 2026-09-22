@@ -310,7 +310,10 @@
     "priceHistory": "価格推移",
     "historyDays": "過去30日",
     "yen": "¥",
-    "loadError": "データの取得に失敗しました"
+    "loadError": "データの取得に失敗しました",
+    "fetchNow": "今すぐ取得",
+    "fetchStarted": "取得タスクを開始しました",
+    "fetchFailed": "取得タスクの開始に失敗しました"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"

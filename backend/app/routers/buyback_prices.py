@@ -27,8 +27,9 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_tenant
+from app.auth.dependencies import get_current_tenant, require_super_admin
 from app.database import get_db
+from app.tasks.buyback_scraper import fetch_all_buyback_prices
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,11 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 # レスポンススキーマ
 # ---------------------------------------------------------------------------
+
+
+class TriggerResponse(BaseModel):
+    task_id: str
+    message: str
 
 
 class BuybackPriceItem(BaseModel):
@@ -83,6 +89,22 @@ class BuybackPriceHistoryResponse(BaseModel):
 # ---------------------------------------------------------------------------
 # エンドポイント
 # ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/buyback-prices/trigger",
+    response_model=TriggerResponse,
+    status_code=202,
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def trigger_fetch() -> TriggerResponse:
+    """買取価格の手動取得を開始する（スーパー管理者のみ）。"""
+    result = fetch_all_buyback_prices.delay()
+    return TriggerResponse(
+        task_id=result.id,
+        message="買取価格取得タスクを開始しました",
+    )
 
 
 @router.get(
