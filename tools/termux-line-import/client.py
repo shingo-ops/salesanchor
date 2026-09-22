@@ -329,6 +329,9 @@ class Outbox:
                         and data['import_job_id']):
                     state = 'pending_review' if data['review_status'] == 'pending_review' else 'accepted'
                     job_id, error = data['import_job_id'], None
+            detail = safe_detail(data)
+            if detail and state not in ('accepted', 'pending_review'):
+                error = f'{error}（サーバー: {detail}）'
             event_reason = '通信できません（圏外・タイムアウト等）' if code == 0 else error
             # Only expected response fields; never persist an arbitrary HTML/error body.
             safe = {key: data.get(key) for key in ('status', 'review_status', 'message_count',
@@ -412,6 +415,18 @@ class Outbox:
                         elapsed=now - received_at, detected_by='check')
 
 
+def safe_detail(data):
+    """サーバーの JSON 応答から detail だけを取り出す。任意のHTML/本文は保存しない方針のため、
+    dict の 'detail' が文字列のときだけ、制御文字を除いて120文字までに切って返す。"""
+    if not isinstance(data, dict):
+        return None
+    detail = data.get('detail')
+    if not isinstance(detail, str):
+        return None
+    cleaned = ''.join(ch for ch in detail if ch.isprintable()).strip()
+    return cleaned[:120] if cleaned else None
+
+
 def post(raw, token):
     boundary = 'line-' + uuid.uuid4().hex
     body = (f'--{boundary}\r\nContent-Disposition: form-data; name="window_hours"\r\n\r\n0\r\n'
@@ -424,7 +439,13 @@ def post(raw, token):
         with urllib.request.build_opener(NoRedirect()).open(request, timeout=60) as response:
             return response.status, response.read(131072).decode('utf-8', errors='replace')
     except urllib.error.HTTPError as error:
-        return error.code, ''
+        # 本文も返す。捨てるとサーバー側の理由が端末に一切残らず、原因調査ができない
+        # （2026-09-21 の500障害では、本文を取り直すまで「通信結果を確認できません」しか
+        # 記録されていなかった）。保存するのは JSON の detail だけに絞る（下の safe_detail）。
+        try:
+            return error.code, error.read(8192).decode('utf-8', errors='replace')
+        except OSError:
+            return error.code, ''
     except (OSError, urllib.error.URLError, TimeoutError):
         return 0, ''
 

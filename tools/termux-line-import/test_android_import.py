@@ -139,6 +139,31 @@ class OutboxTests(unittest.TestCase):
         self.assertEqual(self.counts(self.outbox.send(lambda *_: (0, ''))), {'retry': 1})
         self.assertEqual(self.counts(self.outbox.send(lambda *_: self.result(), force=True)), {'accepted': 1})
 
+    def test_server_error_detail_is_recorded(self):
+        """サーバーの理由が端末に残ること。2026-09-21 の500障害では本文を捨てており、
+        「通信結果を確認できません」しか記録されず原因調査ができなかった。"""
+        body = json.dumps({'detail': 'データベースエラーが発生しました。'})
+        self.assertEqual(self.counts(self.outbox.send(lambda *_: (500, body))), {'retry': 1})
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertIn('データベースエラーが発生しました。', reason)
+
+    def test_server_error_html_body_is_not_recorded(self):
+        """任意のHTML本文は保存しない方針を維持する（JSONのdetailのみ記録する）。"""
+        self.outbox.send(lambda *_: (502, '<html><body>Bad Gateway</body></html>'))
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertNotIn('html', reason.lower())
+        self.assertEqual(reason, '通信結果を確認できません')
+
+    def test_server_error_detail_is_truncated(self):
+        """長い detail は120文字までに切る。"""
+        body = json.dumps({'detail': 'あ' * 500})
+        self.outbox.send(lambda *_: (500, body))
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' ORDER BY id DESC LIMIT 1").fetchone()[0]
+        self.assertEqual(reason.count('あ'), 120)
+
     def test_auth_error_retains_original(self):
         self.assertEqual(self.counts(self.outbox.send(lambda *_: (401, ''))), {'auth_required': 1})
         self.assertEqual(len(list((self.outbox.base / 'originals').glob('*.txt'))), 1)
