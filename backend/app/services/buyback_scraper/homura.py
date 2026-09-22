@@ -16,7 +16,6 @@ ADR-157: 買取相場ログ
 from __future__ import annotations
 
 import logging
-import re
 from datetime import datetime, timezone
 
 import httpx
@@ -51,9 +50,6 @@ _SUBCATEGORIES: dict[int, tuple[str, str]] = {
     189: ("lorcana", "BOX"),
     190: ("lorcana", "CARTON"),
 }
-
-_PRICE_RE = re.compile(r"[\d,]+")
-
 
 async def fetch_homura_prices(db: AsyncSession) -> None:
     """買取ホムラの全サブカテゴリの買取価格を取得して DB に保存する。
@@ -154,47 +150,30 @@ async def _fetch_subcategory(
 def _parse_products(html: str) -> list[dict]:
     """HTML から商品一覧をパースする。
 
+    カート追加ボタンの data 属性から商品情報を取得する。
+    各ボタンには data-product-id / data-product-name / data-product-price が含まれる。
+
     Returns:
         [{"external_id": str, "name": str, "price": int | None}]
     """
     soup = BeautifulSoup(html, "lxml")
     results: list[dict] = []
 
-    # 商品カード: <article> or <div> でリスト表示されていると想定
-    # 商品名は h5 要素、価格は ¥ XX,XXX 形式のテキスト、
-    # 商品 ID はリンク URL /products/{数字} から抽出
-    product_links = soup.select("a[href*='/products/']")
+    buttons = soup.find_all("button", attrs={"data-product-id": True})
 
-    for link in product_links:
-        href: str = link.get("href", "")
-        id_match = re.search(r"/products/(\d+)", href)
-        if not id_match:
-            continue
-        external_id = id_match.group(1)
-
-        # 商品名: 同一 <a> 内の h5、なければ近傍を探す
-        h5 = link.find("h5")
-        if h5 is None:
-            # リンクの親要素の h5 を探す
-            parent = link.parent
-            h5 = parent.find("h5") if parent else None
-        name = h5.get_text(strip=True) if h5 else ""
-        if not name:
+    for btn in buttons:
+        external_id = btn.get("data-product-id", "")
+        name = btn.get("data-product-name", "")
+        if not external_id or not name:
             continue
 
-        # 価格: ¥ XX,XXX テキストを探す
         price: int | None = None
-        price_texts = link.find_all(string=_PRICE_RE)
-        for pt in price_texts:
-            text_str = str(pt)
-            if "¥" in text_str or "円" in text_str:
-                nums = _PRICE_RE.findall(text_str.replace(",", ""))
-                if nums:
-                    try:
-                        price = int(nums[0])
-                        break
-                    except ValueError:
-                        pass
+        price_str = btn.get("data-product-price")
+        if price_str:
+            try:
+                price = int(price_str)
+            except ValueError:
+                pass
 
         # 重複 external_id は最初の 1 件のみ
         if any(r["external_id"] == external_id for r in results):
