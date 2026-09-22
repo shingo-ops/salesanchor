@@ -15,7 +15,7 @@ BEGIN
         FROM pg_namespace n
         JOIN pg_class c ON c.relnamespace = n.oid
         WHERE n.nspname LIKE 'tenant_%'
-          AND c.relname = 'tcg_products'
+          AND c.relname = 'tcg_products' -- pg_class existence check (not data access)
           AND c.relkind = 'r'
         ORDER BY n.nspname
     LOOP
@@ -31,7 +31,7 @@ BEGIN
             JOIN pg_class src_cls ON con.conrelid = src_cls.oid
             JOIN pg_namespace src_ns ON src_cls.relnamespace = src_ns.oid
             WHERE ref_ns.nspname = _schema
-              AND ref.relname = 'tcg_products'
+              AND ref.relname = 'tcg_products' -- pg_class existence check (not data access)
               AND con.contype = 'f'
             ORDER BY src_ns.nspname, src_cls.relname
         LOOP
