@@ -10,7 +10,7 @@
 ## 変更内容
 
 ### 変更ファイル
-- `migrations/20260922_040000_fix_phase2c_fk_blocker.sql` — Step 3に型チェックガードを追加
+- `migrations/20260922_040000_fix_phase2c_fk_blocker.sql:22-59` — Step 3に型チェックガードを追加
 
 ### 変更前後
 
@@ -56,9 +56,15 @@ END IF;
 ## 戻し方
 このファイルへのrevertコミット1本のみ。
 
-## 外部事例
-- Phase 2a（ADR-1001）の `_pid_typid <> _uuid_oid` ガードパターンを直接適用
-- PR #3676で確立済み（merge済み・本番動作確認済み）
+## 外部・過去事例の参照と我々への応用
+- **Phase 2a（ADR-1001）の型ガードパターン**（`migrations/20260914_140000_unify_tcg_products_to_public.sql:333-401`）: pg_attribute.atttypid と 'uuid'::regtype::oid を比較してUUID型でなければスキップ。全4テーブルで採用済み。本PRはまったく同一のパターンを 040000 に移植。
+- **PR #3676（release/fix-unify-step3-type-guard）**: 同根の型不整合問題を Phase 2a Step 3 に修正。本PRはその後発の 040000 に同修正を適用。
+- **Phase B（ADR-1002）**（`migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql:267-272`）: 同様の型チェックで冪等性を保証。
+
+## 維持の仕組み
+- CI Migration SQL Test（`.github/workflows/migration-test.yml`）が毎PR冪等性を自動検証
+- `scripts/check-migration-registration-exists.sh` が scripts/run_all_migrations.sh の登録・ファイル実在を全件点検
+- Phase 2aの型ガードパターンが 040000・20260914_140000・20260915_120000 の3ファイルで一貫適用
 
 ## 守り手
 - CI Migration SQL Testが毎PR冪等性をチェック
@@ -72,5 +78,5 @@ END IF;
 - recon: docs/handoff/fix-040000-type-guard/recon.md
 - 設計: docs/handoff/fix-040000-type-guard/design.md
 - 対象ADR: ADR-1001, ADR-1002
-- 触るファイル: migrations/20260922_040000_fix_phase2c_fk_blocker.sql
-- 削除するファイル: なし
+- 触るファイル: migrations/20260922_040000_fix_phase2c_fk_blocker.sql, docs/handoff/fix-040000-type-guard/recon.md, docs/handoff/fix-040000-type-guard/design.md, .claude-pipeline/active-work.d/release-fix-040000-type-guard.md
+- 削除するファイル: なし（migrations/20260922_040000_fix_phase2c_fk_blocker.sqlのStep 3 DO$$ブロック内の旧コードを新コードに置換）
