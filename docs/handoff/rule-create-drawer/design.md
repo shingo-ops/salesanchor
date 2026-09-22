@@ -47,6 +47,21 @@ tcg_status_master にルールを新規作成するための Drawer UI と、
 
 tcg_analyzer_svc.py `_match_status_pattern` を唯一の正とし、Preview エンドポイントが同一ロジックを実装。ロジックの二重管理なし。
 
+## 外部・過去事例の参照と我々への応用
+
+`backend/app/services/tcg_analyzer_svc.py` の `_match_status_pattern`（line 1077）が既存の照合ロジックの正本。
+Preview エンドポイントはこの関数と同一の分岐（DEFAULT→True / LITERAL→lower in lower / REGEX→re.search）を使用。
+フロントエンド側でロジックを再実装していないため、将来の照合仕様変更は同ファイル1箇所の修正で反映される。
+
+既存ドロワー実装（`frontend/src/features/supplier-master/SupplierDetailDrawer.tsx`）のフォームスペーシングパターン（`var(--space-4)` gap）を踏襲。
+
+## 維持の仕組み
+
+- Preview エンドポイントは `require_super_admin` 認証で保護。DB アクセスなし（ロジックのみ）
+- 作成されたルールは `enabled: false` のため本番解析に影響なし
+- ルール有効化には既存のテストゲート（rule_test_runs）が必要（PATCH エンドポイント側の制約）
+- i18n キーは CI で ja/en 一致チェックが行われる
+
 ## 参照
 
 - recon.md（本ディレクトリ）
