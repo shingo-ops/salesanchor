@@ -181,34 +181,102 @@ CREATE TABLE IF NOT EXISTS public.analysis_runs (
 );
 
 -- D-2: analysis_results (FK → extraction_items, public.conditions, public.units, public.products)
-CREATE TABLE IF NOT EXISTS public.analysis_results (
-    id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
-    extraction_item_id  UUID         NOT NULL REFERENCES public.extraction_items(id) ON DELETE CASCADE,
-    pid_resolved        BOOLEAN      NOT NULL,
-    pid_basis           VARCHAR(100),
-    unit_canonical      VARCHAR(50),
-    unit_resolved       BOOLEAN      NOT NULL,
-    condition_canonical VARCHAR(100),
-    condition_basis     VARCHAR(100),
-    quantity_normalized NUMERIC(14,2),
-    price_normalized    NUMERIC(14,2),
-    note_ja             TEXT,
-    status              VARCHAR(50),
-    exclusion           TEXT,
-    needs_review        BOOLEAN      NOT NULL,
-    review_reasons      TEXT,
-    engine_version      VARCHAR(50)  NOT NULL,
-    computed_at         TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
-    unit_inferred       TEXT         NOT NULL DEFAULT '',
-    unit_basis          TEXT         NOT NULL DEFAULT '',
-    unit_confidence     TEXT         NOT NULL DEFAULT '',
-    unit_infer_reason   TEXT         NOT NULL DEFAULT '',
-    product_id          INTEGER      REFERENCES public.products(id),
-    unit_id             INTEGER      REFERENCES public.units(id),
-    condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id),
-    UNIQUE (extraction_item_id)
-);
+-- VIEW guard: 20260922_080000 が本番で先行デプロイ済みの場合 public.units/conditions は VIEW になっている。
+-- PostgreSQL では VIEW を REFERENCES 先にした CREATE TABLE は不可のため、VIEW の場合は FK なしで作成する。
+-- FK は将来 public.units/conditions が実テーブルに昇格したタイミングで別 migration で追加する。
+DO $analysis_results_ddl$
+DECLARE
+    _units_is_table      BOOLEAN;
+    _conditions_is_table BOOLEAN;
+BEGIN
+    SELECT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'r'
+    ) INTO _units_is_table;
+
+    SELECT EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'r'
+    ) INTO _conditions_is_table;
+
+    -- テーブルが既に存在する場合は CREATE TABLE IF NOT EXISTS が no-op になるため不要
+    IF EXISTS (
+        SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'analysis_results' AND c.relkind = 'r'
+    ) THEN
+        RAISE NOTICE 'D-2: public.analysis_results already exists — skip CREATE TABLE';
+        RETURN;
+    END IF;
+
+    IF _units_is_table AND _conditions_is_table THEN
+        -- 通常パス: units/conditions が実テーブルの場合は FK 付きで作成
+        EXECUTE $sql$
+            CREATE TABLE IF NOT EXISTS public.analysis_results (
+                id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                extraction_item_id  UUID         NOT NULL REFERENCES public.extraction_items(id) ON DELETE CASCADE,
+                pid_resolved        BOOLEAN      NOT NULL,
+                pid_basis           VARCHAR(100),
+                unit_canonical      VARCHAR(50),
+                unit_resolved       BOOLEAN      NOT NULL,
+                condition_canonical VARCHAR(100),
+                condition_basis     VARCHAR(100),
+                quantity_normalized NUMERIC(14,2),
+                price_normalized    NUMERIC(14,2),
+                note_ja             TEXT,
+                status              VARCHAR(50),
+                exclusion           TEXT,
+                needs_review        BOOLEAN      NOT NULL,
+                review_reasons      TEXT,
+                engine_version      VARCHAR(50)  NOT NULL,
+                computed_at         TIMESTAMPTZ  NOT NULL DEFAULT now(),
+                updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
+                unit_inferred       TEXT         NOT NULL DEFAULT '',
+                unit_basis          TEXT         NOT NULL DEFAULT '',
+                unit_confidence     TEXT         NOT NULL DEFAULT '',
+                unit_infer_reason   TEXT         NOT NULL DEFAULT '',
+                product_id          INTEGER      REFERENCES public.products(id),
+                unit_id             INTEGER      REFERENCES public.units(id),
+                condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id),
+                UNIQUE (extraction_item_id)
+            )
+        $sql$;
+        RAISE NOTICE 'D-2: public.analysis_results created with FK constraints';
+    ELSE
+        -- VIEW guard パス: units または conditions が VIEW の場合は FK なしで作成
+        EXECUTE $sql$
+            CREATE TABLE IF NOT EXISTS public.analysis_results (
+                id                  UUID         PRIMARY KEY DEFAULT gen_random_uuid(),
+                extraction_item_id  UUID         NOT NULL REFERENCES public.extraction_items(id) ON DELETE CASCADE,
+                pid_resolved        BOOLEAN      NOT NULL,
+                pid_basis           VARCHAR(100),
+                unit_canonical      VARCHAR(50),
+                unit_resolved       BOOLEAN      NOT NULL,
+                condition_canonical VARCHAR(100),
+                condition_basis     VARCHAR(100),
+                quantity_normalized NUMERIC(14,2),
+                price_normalized    NUMERIC(14,2),
+                note_ja             TEXT,
+                status              VARCHAR(50),
+                exclusion           TEXT,
+                needs_review        BOOLEAN      NOT NULL,
+                review_reasons      TEXT,
+                engine_version      VARCHAR(50)  NOT NULL,
+                computed_at         TIMESTAMPTZ  NOT NULL DEFAULT now(),
+                updated_at          TIMESTAMPTZ  NOT NULL DEFAULT now(),
+                unit_inferred       TEXT         NOT NULL DEFAULT '',
+                unit_basis          TEXT         NOT NULL DEFAULT '',
+                unit_confidence     TEXT         NOT NULL DEFAULT '',
+                unit_infer_reason   TEXT         NOT NULL DEFAULT '',
+                product_id          INTEGER      REFERENCES public.products(id),
+                unit_id             INTEGER,
+                condition_id        INTEGER      NOT NULL,
+                UNIQUE (extraction_item_id)
+            )
+        $sql$;
+        RAISE NOTICE 'D-2: public.analysis_results created WITHOUT unit_id/condition_id FK (units_is_table=%, conditions_is_table=%)',
+            _units_is_table, _conditions_is_table;
+    END IF;
+END $analysis_results_ddl$;
 
 -- D-3: analysis_run_snapshots (FK → analysis_runs)
 -- Note: unit_id/condition_id are UUID here (legacy snapshot format, differs from analysis_results integer)

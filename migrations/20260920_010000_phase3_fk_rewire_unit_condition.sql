@@ -103,13 +103,22 @@ BEGIN
             -- unit_id stays NULLABLE (6,668 / 10,542 件が非NULL)
 
             -- Step 7: Add new FK referencing public.units(id)
-            EXECUTE format('
-                ALTER TABLE %I.analysis_results
-                ADD CONSTRAINT fk_analysis_results_unit_id
-                FOREIGN KEY (unit_id) REFERENCES public.units(id)
-            ', _schema);
+            -- VIEW guard: public.units が VIEW の場合は FK 制約を作成できないためスキップ
+            IF EXISTS (
+                SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = _tbl_u AND c.relkind = 'r'
+            ) THEN
+                EXECUTE format('
+                    ALTER TABLE %I.analysis_results
+                    ADD CONSTRAINT fk_analysis_results_unit_id
+                    FOREIGN KEY (unit_id) REFERENCES public.units(id)
+                ', _schema);
+                RAISE NOTICE '  FK fk_analysis_results_unit_id 追加完了';
+            ELSE
+                RAISE NOTICE '  public.units は BASE TABLE でない（VIEW の可能性）— FK fk_analysis_results_unit_id スキップ';
+            END IF;
 
-            -- Index on unit_id
+            -- Index on unit_id (analysis_results 自身のインデックス: VIEW の影響なし)
             EXECUTE format('
                 CREATE INDEX IF NOT EXISTS idx_%s_ar_unit_id ON %I.analysis_results (unit_id)
             ', _schema, _schema);
@@ -190,13 +199,22 @@ BEGIN
             EXECUTE format('ALTER TABLE %I.analysis_results ALTER COLUMN condition_id SET NOT NULL', _schema);
 
             -- Step 8: Add new FK referencing public.conditions(id)
-            EXECUTE format('
-                ALTER TABLE %I.analysis_results
-                ADD CONSTRAINT fk_analysis_results_condition_id
-                FOREIGN KEY (condition_id) REFERENCES public.conditions(id)
-            ', _schema);
+            -- VIEW guard: public.conditions が VIEW の場合は FK 制約を作成できないためスキップ
+            IF EXISTS (
+                SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = 'public' AND c.relname = _tbl_c AND c.relkind = 'r'
+            ) THEN
+                EXECUTE format('
+                    ALTER TABLE %I.analysis_results
+                    ADD CONSTRAINT fk_analysis_results_condition_id
+                    FOREIGN KEY (condition_id) REFERENCES public.conditions(id)
+                ', _schema);
+                RAISE NOTICE '  FK fk_analysis_results_condition_id 追加完了';
+            ELSE
+                RAISE NOTICE '  public.conditions は BASE TABLE でない（VIEW の可能性）— FK fk_analysis_results_condition_id スキップ';
+            END IF;
 
-            -- Index on condition_id
+            -- Index on condition_id (analysis_results 自身のインデックス: VIEW の影響なし)
             EXECUTE format('
                 CREATE INDEX IF NOT EXISTS idx_%s_ar_condition_id ON %I.analysis_results (condition_id)
             ', _schema, _schema);

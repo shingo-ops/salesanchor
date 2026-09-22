@@ -63,12 +63,39 @@ CREATE TABLE IF NOT EXISTS public.units (
 );
 
 -- conditions → condition_definitions マッピング
-ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL;
-CREATE INDEX IF NOT EXISTS idx_conditions_condition_def_id ON public.conditions (condition_def_id);
+-- VIEW guard: 20260922_080000 が本番で先行デプロイ済みの場合 public.conditions は VIEW になっている。
+-- VIEW に対して ALTER TABLE / CREATE INDEX は不可のため、実テーブルの場合のみ実行する。
+DO $conditions_fk$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'r'
+    ) THEN
+        ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_conditions_condition_def_id ON public.conditions (condition_def_id);
+        RAISE NOTICE 'add_analysis_master_fk: conditions.condition_def_id 追加完了';
+    ELSE
+        RAISE NOTICE 'add_analysis_master_fk: public.conditions は BASE TABLE でない（VIEW の可能性）— condition_def_id 追加スキップ';
+    END IF;
+END $conditions_fk$;
 
 -- units → product_lines マッピング
-ALTER TABLE public.units ADD COLUMN IF NOT EXISTS line_id INTEGER REFERENCES public.product_lines(id) ON DELETE SET NULL;
-CREATE INDEX IF NOT EXISTS idx_units_line_id ON public.units (line_id);
+-- VIEW guard: 20260922_080000 が本番で先行デプロイ済みの場合 public.units は VIEW になっている。
+DO $units_fk$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'r'
+    ) THEN
+        ALTER TABLE public.units ADD COLUMN IF NOT EXISTS line_id INTEGER REFERENCES public.product_lines(id) ON DELETE SET NULL;
+        CREATE INDEX IF NOT EXISTS idx_units_line_id ON public.units (line_id);
+        RAISE NOTICE 'add_analysis_master_fk: units.line_id 追加完了';
+    ELSE
+        RAISE NOTICE 'add_analysis_master_fk: public.units は BASE TABLE でない（VIEW の可能性）— line_id 追加スキップ';
+    END IF;
+END $units_fk$;
 
 -- ============================================================================
 -- Rollback:
