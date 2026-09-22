@@ -3,7 +3,7 @@
 **仕事名**: quantity-condition-admin-ui
 **日付**: 2026-09-22
 **対象ADR**: ADR-027（i18n）, ADR-144（UI金型）
-**recon**: [recon.md](recon.md)
+**recon**: docs/handoff/quantity-condition-admin-ui/recon.md
 **守り手**: ADR-027（i18n強制CI）, ADR-144（UIガバナンスCI）
 
 ---
@@ -32,6 +32,8 @@
 - 既存の WeightClassesMasterPanel, QuantityUnitsMasterPanel が同パターンの先行実装
 
 ## 維持の仕組み
+
+守り手: `.github/workflows/ui-governance-gate.yml`（ADR-144 UI金型強制CI）および `.github/workflows/frontend-check.yml`（ADR-027 i18n強制チェック含む）— 金型外コンポーネント使用・i18n キー不一致を自動ブロック
 
 - ADR-027: i18n キー追加時は ja/en 両ファイルに同一キーを追加するルール
 - ADR-144: 新規 UI コンポーネントは金型コンポーネントのみ使用
