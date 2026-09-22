@@ -512,8 +512,9 @@ async def test_source_message_insert_before_update_supersede():
     先に実行されること。
 
     根拠:
-      backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231
-        superseded_by UUID REFERENCES tenant_004.source_messages(id)
+      migrations/20260921_110000_pipeline_tables_public.sql（public へ移行後の正本。
+      移行前は backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231）
+        superseded_by UUID REFERENCES public.source_messages(id)
       DEFERRABLE 未指定 = NOT DEFERRABLE INITIALLY IMMEDIATE。
       UPDATE で new_sm_id を参照する前に INSERT が済んでいない場合、
       ForeignKeyViolation が発生する。
