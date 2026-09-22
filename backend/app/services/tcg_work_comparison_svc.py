@@ -17,7 +17,8 @@ from app.services.tcg_work_reference import (
     reference_digest,
     validate_work_id,
 )
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 PROMPT_VERSION = "work-id-comparison-v1"
 HEADER = "ITEM_ID｜WORK_ID"

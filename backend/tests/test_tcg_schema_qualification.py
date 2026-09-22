@@ -312,15 +312,7 @@ _MIGRATED_TO_PUBLIC = {
 
 # Step 4 で書き換え漏れた既知のモジュール。別便で解消する（解消したらこの表から消すこと）。
 # 現時点で全て壊れている（参照先テーブルが tenant_004 に無い）。
-_KNOWN_UNMIGRATED = {
-    "backend/app/routers/tcg_product_import.py",
-    "backend/app/services/tcg_product_detail_svc.py",
-    "backend/app/services/tcg_product_import_svc.py",
-    "backend/app/services/tcg_product_master_svc.py",
-    "backend/app/services/tcg_product_roundtrip_svc.py",
-    "backend/app/services/tcg_work_comparison_svc.py",
-    "backend/app/tasks/tcg_mirror.py",
-}
+_KNOWN_UNMIGRATED: set[str] = set()
 
 
 def _modules_referencing_migrated_tables() -> dict[str, set[str]]:
