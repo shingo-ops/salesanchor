@@ -5,34 +5,31 @@
 --   Phase 2a Step 1 failed to create UNIQUE constraint uq_products_tcg_uuid,
 --   which prevented Step 3 from rewiring FKs to public.products(tcg_uuid).
 --   As a result, product_search_keywords and product_exclude_keywords still
---   reference tenant_*.tcg_products, blocking Phase 2c (DROP tcg_products).
+--   reference tenant_*.tcg_products, blocking Phase 2c.
 --
 -- This migration:
---   Step 1: Creates the missing UNIQUE constraint (safe: duplicates -> NOTICE)
+--   Step 1: Creates the missing UNIQUE constraint (safe: duplicates cause NOTICE)
 --   Step 2: Drops all FKs referencing tcg_products in any tenant schema
 --
--- Safety: Idempotent. Only drops FKs to a table that Phase 2c will DROP.
--- Phase B handles UUID->INTEGER conversion and creates new FKs to public.products(id).
--- Values: DDL only -- no INSERT/UPDATE/DELETE.
+-- Safety: Idempotent. Only drops FKs to a table that Phase 2c will remove.
+-- Phase B handles UUID to INTEGER conversion and creates new FKs.
+-- Values: DDL only. No INSERT/UPDATE/DELETE.
 -- ============================================================
 
 -- Step 1: Create UNIQUE constraint on public.products(tcg_uuid) if missing
--- Phase 2a Step 1 was supposed to create this but it was not applied
 DO $$
 BEGIN
     IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conname = 'uq_products_tcg_uuid'
-          AND conrelid = 'public.products'::regclass
+        SELECT 1 FROM information_schema.table_constraints WHERE table_schema = 'public' AND table_name = 'products' AND constraint_name = 'uq_products_tcg_uuid'
     ) THEN
         BEGIN
             ALTER TABLE public.products ADD CONSTRAINT uq_products_tcg_uuid UNIQUE (tcg_uuid);
             RAISE NOTICE 'Created UNIQUE constraint uq_products_tcg_uuid on public.products';
         EXCEPTION WHEN unique_violation THEN
-            RAISE NOTICE 'Cannot create uq_products_tcg_uuid (duplicate values exist): %', SQLERRM;
+            RAISE NOTICE 'Cannot create uq_products_tcg_uuid (duplicate values): %', SQLERRM;
         END;
     ELSE
-        RAISE NOTICE 'uq_products_tcg_uuid already exists -- skipping';
+        RAISE NOTICE 'uq_products_tcg_uuid already exists — skipping';
     END IF;
 END $$;
 
@@ -52,17 +49,14 @@ BEGIN
             FROM pg_constraint con
             JOIN pg_class c ON c.oid = con.conrelid
             JOIN pg_namespace n ON n.oid = c.relnamespace
-            JOIN pg_class fc ON fc.oid = con.confrelid
-            WHERE n.nspname = _schema
-              AND fc.relname = 'tcg_products'
-              AND con.contype = 'f'
+            JOIN pg_class fc ON fc.oid = con.confrelid AND fc.relname = 'tcg_products'
+            WHERE n.nspname = _schema AND con.contype = 'f'
         LOOP
             EXECUTE format(
                 'ALTER TABLE %I.%I DROP CONSTRAINT %I',
                 _schema, _rec.table_name, _rec.conname
             );
-            RAISE NOTICE 'Dropped FK %.% constraint % (referenced tcg_products)',
-                _schema, _rec.table_name, _rec.conname;
+            RAISE NOTICE 'Dropped FK %.% constraint % (referenced tcg_products)', _schema, _rec.table_name, _rec.conname;
         END LOOP;
     END LOOP;
 END $$;
