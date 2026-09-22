@@ -887,6 +887,92 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
     return db
 
 
+async def test_missing_supplier_channel_is_created_and_import_continues():
+    """仕入元はあるのに LINE チャネルが無い場合、その場で作って取り込みを続けること。
+
+    2026-09-21 の public 移行で supplier_channels の行が引き継がれず、既存仕入元からの
+    メッセージが全て HTTP 500（ValueError: Resolved supplier has no active LINE channel）
+    になった。その再発防止。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    sqls: list[str] = []
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        sqls.append(sql)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = (4321,)      # チャネル作成のための仕入元ID
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None          # ← チャネルが無い状態を再現
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        result = await import_line_export(
+            db=db, filename="test.txt", export_text=export_text,
+            uploaded_by=None, window_hours=0,
+        )
+
+    assert result["review_status"] == "ok"
+    assert any("INSERT INTO public.supplier_channels" in s for s in sqls), \
+        "チャネルが無いときに supplier_channels が作られていない"
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
+        "チャネル作成後に source_messages が書かれていない"
+
+
+async def test_supplier_missing_from_public_still_raises():
+    """仕入元そのものが public.suppliers に無い場合は、従来どおり失敗させること
+    （黙って作ると、正体不明の仕入元がマスタに増えるため）。"""
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = None          # 仕入元も無い
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        with pytest.raises(ValueError, match="missing from public.suppliers"):
+            await import_line_export(
+                db=db, filename="test.txt", export_text=export_text,
+                uploaded_by=None, window_hours=0,
+            )
+
+
 async def test_import_zero_unresolved_writes_source_messages():
     """
     未解決0件のとき source_messages が書かれ、エンキューされ、
