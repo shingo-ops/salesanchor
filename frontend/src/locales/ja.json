@@ -310,7 +310,10 @@
     "priceHistory": "価格推移",
     "historyDays": "過去30日",
     "yen": "¥",
-    "loadError": "データの取得に失敗しました"
+    "loadError": "データの取得に失敗しました",
+    "fetchNow": "今すぐ取得",
+    "fetchStarted": "取得タスクを開始しました",
+    "fetchFailed": "取得タスクの開始に失敗しました"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -3891,7 +3894,8 @@
       "productKindsMaster": "大分類マスタ",
       "productLinesMaster": "中分類マスタ",
       "productFormatsMaster": "商品形態マスタ",
-      "quantityUnitsMaster": "数量単位マスタ",
+      "quantityUnitsMaster": "販売単位マスタ",
+      "conditionDefsMaster": "状態定義マスタ",
       "weightClassesMaster": "重量クラスマスタ",
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール"
@@ -4256,18 +4260,43 @@
     "isActive": "有効"
   },
   "quantityUnitsMaster": {
-    "title": "数量単位マスタ",
-    "addNew": "数量単位を追加",
-    "createTitle": "数量単位を追加",
-    "editTitle": "数量単位を編集",
-    "confirmDelete": "この数量単位を削除しますか？",
-    "noData": "数量単位はまだ登録されていません。",
+    "title": "販売単位マスタ",
+    "addNew": "販売単位を追加",
+    "createTitle": "販売単位を追加",
+    "editTitle": "販売単位を編集",
+    "confirmDelete": "この販売単位を無効にしますか？",
+    "noData": "販売単位はまだ登録されていません。",
     "code": "コード",
     "name": "名称",
     "nameEn": "英語名",
-    "value": "数値",
+    "value": "換算係数",
     "displayOrder": "表示順",
-    "isActive": "有効"
+    "isActive": "有効",
+    "conditionCount": "状態数",
+    "productLineCount": "ライン数",
+    "search": "検索",
+    "empty": "販売単位が登録されていません",
+    "total": "全{{count}}件",
+    "linkedConditions": "紐づく状態",
+    "linkedProductLines": "紐づく商品ライン"
+  },
+  "conditionDefMaster": {
+    "title": "状態定義マスタ",
+    "addNew": "状態定義を追加",
+    "createTitle": "状態定義を追加",
+    "editTitle": "状態定義を編集",
+    "confirmDelete": "この状態定義を無効にしますか？",
+    "noData": "状態定義はまだ登録されていません。",
+    "code": "コード",
+    "name": "名称",
+    "nameEn": "英語名",
+    "displayOrder": "表示順",
+    "isActive": "有効",
+    "unitCount": "単位数",
+    "search": "検索",
+    "empty": "状態定義が登録されていません",
+    "total": "全{{count}}件",
+    "linkedUnits": "紐づく販売単位"
   },
   "weightClassesMaster": {
     "title": "重量クラスマスタ",
@@ -4356,6 +4385,30 @@
       "inputTextLabel": "商品ページの文言",
       "expectedCanonicalLabel": "判定されるべきステータス",
       "expectedCanonicalPlaceholder": "ステータスを選択..."
+    },
+    "createRule": "新規作成",
+    "create": {
+      "title": "ルール新規作成",
+      "statusId": "ステータスID",
+      "canonical": "表示名",
+      "matchType": "照合方法",
+      "effect": "効果",
+      "searchPattern": "検索パターン",
+      "excludePattern": "除外パターン",
+      "priority": "優先度",
+      "note": "メモ",
+      "testSection": "パターンテスト",
+      "testInput": "テスト文言",
+      "testButton": "判定",
+      "matched": "マッチ",
+      "notMatched": "不一致",
+      "creating": "作成中...",
+      "created": "ルールを作成しました（無効状態）",
+      "matchTypeLiteral": "完全一致",
+      "matchTypeRegex": "正規表現",
+      "matchTypeDefault": "デフォルト",
+      "effectOutput": "出力",
+      "effectExclude": "除外"
     }
   },
   "reviewIssues": {

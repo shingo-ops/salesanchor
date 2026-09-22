@@ -46,14 +46,34 @@ BEGIN
         RAISE EXCEPTION '統合テーブルが存在しません。migration を中断します。';
     END IF;
 
-    -- ADD COLUMN IF NOT EXISTS: 冪等
-    ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
-
-    RAISE NOTICE 'step1: public スキーマ統合テーブル tenant_id 列の確認/追加 完了';
+    -- VIEW guard: 20260922_080000 が本番で先行デプロイ済みの場合 public.conditions は VIEW になっている。
+    -- VIEW に対して ALTER TABLE は不可のため、実テーブルの場合のみ実行する。
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'r'
+    ) THEN
+        -- ADD COLUMN IF NOT EXISTS: 冪等
+        ALTER TABLE public.conditions ADD COLUMN IF NOT EXISTS tenant_id INTEGER;
+        RAISE NOTICE 'step1: public スキーマ統合テーブル tenant_id 列の確認/追加 完了';
+    ELSE
+        RAISE NOTICE 'step1: public.conditions は BASE TABLE でない（VIEW の可能性）— tenant_id 追加スキップ';
+    END IF;
 END $step1$;
 
--- インデックス（冪等）
-CREATE INDEX IF NOT EXISTS idx_conditions_tenant_id ON public.conditions (tenant_id);
+-- インデックス（冪等）— VIEW guard: 実テーブルの場合のみ作成
+DO $step1_idx$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'r'
+    ) THEN
+        CREATE INDEX IF NOT EXISTS idx_conditions_tenant_id ON public.conditions (tenant_id);
+    ELSE
+        RAISE NOTICE 'step1_idx: public.conditions は BASE TABLE でない — インデックス作成スキップ';
+    END IF;
+END $step1_idx$;
 
 -- ============================================================================
 -- Step 2: deal_statuses.condition_id FK 張り替え（テナント旧テーブル → 公開統合テーブル）
