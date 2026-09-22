@@ -3,7 +3,13 @@
 
 -- Step 1: type_master_id カラム追加（CI test DB 用。本番には既存）
 DO $$ BEGIN
+  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'product_formats'
+  ) THEN
+    RAISE NOTICE 'product_formats table does not exist, skip type_master_id';
+  ELSIF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'type_master_id'
   ) THEN
@@ -16,7 +22,13 @@ END $$;
 
 -- Step 2: kind_id カラム追加（CI test DB 用。本番には既存）
 DO $$ BEGIN
+  -- テーブル自体が存在しない場合はスキップ（CI test DB では product_formats が未作成の場合がある）
   IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public' AND table_name = 'product_formats'
+  ) THEN
+    RAISE NOTICE 'product_formats table does not exist, skip kind_id';
+  ELSIF NOT EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'product_formats' AND column_name = 'kind_id'
   ) THEN
@@ -27,15 +39,14 @@ DO $$ BEGIN
   END IF;
 END $$;
 
--- Step 3: 商品データ実績に基づく type_master_id 設定（9件）
--- 根拠: public.products の product_format_id × type_master_id クロス集計結果
--- ポケモンカード(type_master_id=1): SPECIAL_BOX(17), DECK_BUILD_BOX(18), PREMIUM_TRAINER_BOX(19), COLLECTOR_BOX(20), HIGH_CLASS_DECK(21), BOOSTER_BOX(22)
-UPDATE public.product_formats SET type_master_id = 1, updated_at = NOW() WHERE id IN (17, 18, 19, 20, 21, 22) AND type_master_id IS NULL;
-
--- 遊戯王(type_master_id=5): SPECIAL_SET(23)
-UPDATE public.product_formats SET type_master_id = 5, updated_at = NOW() WHERE id = 23 AND type_master_id IS NULL;
-
--- One Piece(type_master_id=2): ILLUSTRATION_BOX(24), STORAGE_BOX(25)
-UPDATE public.product_formats SET type_master_id = 2, updated_at = NOW() WHERE id IN (24, 25) AND type_master_id IS NULL;
-
--- id 1-16 は商品紐付け0件のため type_master_id = NULL 据置（PO判断待ち）
+-- Step 3: 初期データ設定は migration 外で実施
+-- ADR-155 チェック8: type_master はマスタ保護テーブルのため、
+-- 列名 type_master_id を含む UPDATE 文も保護テーブルへの参照と判定される。
+-- 初期値設定は本番デプロイ後に super-admin 画面（ProductFormatsMasterPanel）から手動設定。
+--
+-- 設定予定値（商品データ実績クロス集計結果）:
+--   ポケモンカード(id=1): SPECIAL_BOX(17), DECK_BUILD_BOX(18), PREMIUM_TRAINER_BOX(19),
+--                         COLLECTOR_BOX(20), HIGH_CLASS_DECK(21), BOOSTER_BOX(22)
+--   遊戯王(id=5):         SPECIAL_SET(23)
+--   One Piece(id=2):      ILLUSTRATION_BOX(24), STORAGE_BOX(25)
+--   id 1-16:              商品紐付け0件のため NULL 据置（PO判断待ち）
