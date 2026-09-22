@@ -581,6 +581,8 @@ def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
 
 @pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
 def test_condition_note_absent_and_partial_tables(pg, missing):
+    # ADR-155 guard change: migration now silently skips (RAISE NOTICE + RETURN) when
+    # required tables are absent, instead of raising an exception.
     connection, _, _ = pg
     with connection.cursor() as cursor:
         if missing is None:
@@ -590,10 +592,9 @@ def test_condition_note_absent_and_partial_tables(pg, missing):
             before = condition_note_snapshot(connection)
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(missing)))
             try:
-                with pytest.raises(psycopg2.errors.RaiseException, match="incomplete master structure"):
-                    cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+                # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
             finally:
-                cursor.execute("ROLLBACK")
                 cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(missing)))
             assert condition_note_snapshot(connection) == before
 
@@ -1190,9 +1191,8 @@ def test_cardset_absent_schema_and_partial_structure(pg):
         assert cursor.fetchone()[0] is None
         provision(cursor, "tenant_004")
         cursor.execute("ALTER TABLE tenant_004.product_search_keywords RENAME TO temporarily_missing_search")
-        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 0
 
@@ -1493,9 +1493,8 @@ def test_bundle_absent_and_partial_schema(pg):
         assert cursor.fetchone()[0] is None
         provision(cursor, "tenant_004")
         cursor.execute("ALTER TABLE tenant_004.tcg_manufacturers RENAME TO temporarily_missing_manufacturers")
-        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 0
 

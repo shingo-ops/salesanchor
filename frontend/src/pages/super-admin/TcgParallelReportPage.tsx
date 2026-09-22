@@ -7,6 +7,7 @@
  *   - is_super_admin=false なら 403 メッセージを表示
  */
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TABLE_ICONS } from "../../constants/icons";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
@@ -54,6 +55,7 @@ interface ParallelReportResponse {
 // ---------------------------------------------------------------------------
 
 export default function TcgParallelReportPage() {
+  const { t } = useTranslation();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
 
   const [report, setReport] = useState<ParallelReportResponse | null>(null);
@@ -72,7 +74,7 @@ export default function TcgParallelReportPage() {
       setReport(res);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(`レポート取得失敗: ${msg}`);
+      setError(`${t("tcgParallelReport.fetchError")}: ${msg}`);
     } finally {
       setLoading(false);
     }
@@ -111,11 +113,11 @@ export default function TcgParallelReportPage() {
     return "var(--text-secondary)";
   };
 
-  if (superAdminLoading) return <PageLayout navKey="nav.superAdminTcgParallelReport">読み込み中…</PageLayout>;
+  if (superAdminLoading) return <PageLayout navKey="nav.superAdminTcgParallelReport">{t("common.loading")}</PageLayout>;
   if (!isSuperAdmin) {
     return (
       <PageLayout navKey="nav.superAdminTcgParallelReport">
-        <p style={{ color: "var(--color-error)" }}>このページは super_admin 専用です。</p>
+        <p style={{ color: "var(--color-error)" }}>{t("tcgParallelReport.superAdminOnly")}</p>
       </PageLayout>
     );
   }
@@ -132,7 +134,7 @@ export default function TcgParallelReportPage() {
             <strong>name-first-v1</strong>: サーバー新エンジン（インメモリ計算・キーワード最長一致）
           </p>
           <p style={{ margin: "4px 0", fontSize: 13, color: "var(--text-muted)" }}>
-            ※ DB への書き込みなし。レポートは読み取り専用。
+            {t("tcgParallelReport.readOnlyNote")}
           </p>
         </div>
 
@@ -142,7 +144,7 @@ export default function TcgParallelReportPage() {
           disabled={loading}
           style={{ marginBottom: 16, padding: "6px 16px", cursor: "pointer" }}
         >
-          {loading ? "計算中…" : "レポートを更新"}
+          {loading ? t("tcgParallelReport.calculating") : t("tcgParallelReport.refreshReport")}
         </button>
 
         {error && (
@@ -152,24 +154,24 @@ export default function TcgParallelReportPage() {
         {/* サマリー */}
         {report && (
           <div style={{ marginBottom: 20 }}>
-            <h3 style={{ margin: "0 0 8px" }}>全体サマリー</h3>
+            <h3 style={{ margin: "0 0 8px" }}>{t("tcgParallelReport.overallSummary")}</h3>
             <table style={{ borderCollapse: "collapse", fontSize: 13 }}>
               <thead>
                 <tr style={{ background: "var(--table-header-bg)" }}>
-                  <th style={thStyle}>指標</th>
+                  <th style={thStyle}>{t("tcgParallelReport.metric")}</th>
                   <th style={thStyle}>compat-v1 (GAS)</th>
                   <th style={thStyle}>name-first-v1 (Server)</th>
-                  <th style={thStyle}>差分</th>
+                  <th style={thStyle}>{t("tcgParallelReport.difference")}</th>
                 </tr>
               </thead>
               <tbody>
                 <tr>
-                  <td style={tdStyle}>総アイテム数</td>
+                  <td style={tdStyle}>{t("tcgParallelReport.totalItems")}</td>
                   <td style={tdStyle} colSpan={2}>{report.summary.total_items.toLocaleString()}</td>
                   <td style={tdStyle}>—</td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>PID解決数</td>
+                  <td style={tdStyle}>{t("tcgParallelReport.pidResolved")}</td>
                   <td style={tdStyle}>{report.summary.compat_v1_pid_resolved.toLocaleString()}</td>
                   <td style={tdStyle}>{report.summary.name_first_v1_pid_resolved.toLocaleString()}</td>
                   <td style={{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}>
@@ -185,7 +187,7 @@ export default function TcgParallelReportPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>仕入元数</td>
+                  <td style={tdStyle}>{t("tcgLineImport.providerCount")}</td>
                   <td style={tdStyle} colSpan={2}>{report.summary.supplier_count}</td>
                   <td style={tdStyle}>—</td>
                 </tr>
@@ -197,7 +199,7 @@ export default function TcgParallelReportPage() {
         {/* 仕入元別テーブル */}
         {report && sortedSuppliers.length > 0 && (
           <div>
-            <h3 style={{ margin: "0 0 8px" }}>仕入元別比較</h3>
+            <h3 style={{ margin: "0 0 8px" }}>{t("tcgParallelReport.supplierComparison")}</h3>
             <table style={{ borderCollapse: "collapse", fontSize: 12, width: "100%" }}>
               <thead>
                 <tr style={{ background: "var(--table-header-bg)" }}>
@@ -207,12 +209,12 @@ export default function TcgParallelReportPage() {
                   >
                     SP_CODE{sortBy === "sp_code" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
-                  <th style={thStyle}>仕入元名</th>
+                  <th style={thStyle}>{t("purchase.supplierName")}</th>
                   <th
                     style={{ ...thStyle, cursor: "pointer" }}
                     onClick={() => handleSort("total")}
                   >
-                    件数{sortBy === "total" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
+                    {t("tcgParallelReport.count")}{sortBy === "total" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
                   <th style={thStyle}>compat-v1 PID%</th>
                   <th style={thStyle}>nf-v1 PID%</th>
@@ -220,7 +222,7 @@ export default function TcgParallelReportPage() {
                     style={{ ...thStyle, cursor: "pointer" }}
                     onClick={() => handleSort("diff")}
                   >
-                    差分{sortBy === "diff" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
+                    {t("tcgParallelReport.difference")}{sortBy === "diff" && (sortDesc ? <TABLE_ICONS.sortDesc size={12} /> : <TABLE_ICONS.sortAsc size={12} />)}
                   </th>
                   <th style={thStyle}>compat unit%</th>
                   <th style={thStyle}>nf unit%</th>
@@ -253,12 +255,12 @@ export default function TcgParallelReportPage() {
               </tbody>
             </table>
             <p style={{ fontSize: 11, color: "var(--text-muted)", marginTop: 8 }}>
-              差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。
+              {t("tcgParallelReport.diffExplanation")}
             </p>
           </div>
         )}
 
-        {loading && <p style={{ color: "var(--text-muted)" }}>計算中（DB 読み取り + インメモリ照合）…</p>}
+        {loading && <p style={{ color: "var(--text-muted)" }}>{t("tcgParallelReport.calculatingDetail")}</p>}
       </div>
     </PageLayout>
   );

@@ -294,3 +294,84 @@ def test_supplier_channels_insert_columns_match_ddl():
         f"DDL 列: {sorted(ddl_columns)}\n"
         f"INSERT 列: {sorted(insert_columns)}"
     )
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ADR-156 Step 4/5: public へ移行したテーブルを tenant_004 のまま参照していないか
+# ─────────────────────────────────────────────────────────────────────────────
+
+# migrations/20260921_050000_drop_tenant004_pipeline_tables.sql で tenant_004 から
+# 削除済み。tenant_004 側には存在しないため、参照するとサーバーエラーになる。
+_MIGRATED_TO_PUBLIC = {
+    "supplier_channels", "source_messages", "import_jobs", "import_job_messages",
+    "extraction_jobs", "extraction_items", "extraction_attempts", "analysis_runs",
+    "analysis_results", "analysis_run_snapshots", "item_corrections",
+    "tcg_normalization_rules", "tcg_distribution_settings", "tcg_distribution_targets",
+    "tcg_product_import_jobs", "tcg_product_import_rows", "audit_log",
+}
+
+# Step 4 で書き換え漏れた既知のモジュール。別便で解消する（解消したらこの表から消すこと）。
+# 現時点で全て壊れている（参照先テーブルが tenant_004 に無い）。
+_KNOWN_UNMIGRATED = {
+    "backend/app/routers/tcg_product_import.py",
+    "backend/app/services/tcg_product_detail_svc.py",
+    "backend/app/services/tcg_product_import_svc.py",
+    "backend/app/services/tcg_product_master_svc.py",
+    "backend/app/services/tcg_product_roundtrip_svc.py",
+    "backend/app/services/tcg_work_comparison_svc.py",
+    "backend/app/tasks/tcg_mirror.py",
+}
+
+
+def _modules_referencing_migrated_tables() -> dict[str, set[str]]:
+    """app.tcg_config（既定 tenant_004）を使ったまま、public へ移したテーブルを
+    参照しているモジュールを返す。"""
+    found: dict[str, set[str]] = {}
+    for path in sorted((_REPO_ROOT / "backend" / "app").rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        if "from app.tcg_config import TCG_SCHEMA" not in source:
+            continue
+        referenced = {
+            name for name in re.findall(r"\{TCG_SCHEMA\}\.(\w+)", source)
+            if name in _MIGRATED_TO_PUBLIC
+        }
+        if referenced:
+            found[str(path.relative_to(_REPO_ROOT))] = referenced
+    return found
+
+
+def test_no_new_module_references_migrated_tables_as_tenant():
+    """public へ移したテーブルを tenant_004 のまま参照するモジュールを増やさないこと。
+
+    2026-09-21 の本番障害（LINE取り込みが HTTP 500）の再発防止。当時の受け入れ基準は
+    「grep で TCG_SCHEMA と対象テーブル名の同時ヒットが 0 件」だったが、書き換えは
+    各モジュールの定数を "public" にする方式で、成功しても文字列は残る。その検査では
+    「public化済み」と「tenant_004のまま」を区別できず、9モジュール・51箇所の
+    取りこぼしを検出できないまま Step 5（DROP）が実行された。
+
+    ここでは文字列の有無ではなく「どのスキーマに解決されるか」を判定する。
+    """
+    offenders = {
+        path: tables for path, tables in _modules_referencing_migrated_tables().items()
+        if path not in _KNOWN_UNMIGRATED
+    }
+    assert not offenders, (
+        "public へ移行済みのテーブルを tenant_004 のまま参照しています"
+        "（参照先は tenant_004 から削除済みで、実行するとサーバーエラーになります）:\n"
+        + "\n".join(f"  {path}: {sorted(tables)}" for path, tables in offenders.items())
+        + '\n対処: そのモジュールの TCG_SCHEMA を "public" に切り替えてください'
+        "（例: backend/app/services/tcg_import_progress.py）。"
+    )
+
+
+def test_known_unmigrated_list_only_shrinks():
+    """既知の書き換え漏れ一覧が現実と一致していること。
+
+    直したのに一覧に残っていると、その後の退行を検出できなくなる。
+    """
+    still_broken = set(_modules_referencing_migrated_tables())
+    stale = _KNOWN_UNMIGRATED - still_broken
+    assert not stale, (
+        "既に public へ移行済みなのに既知一覧に残っています。"
+        f"_KNOWN_UNMIGRATED から削除してください: {sorted(stale)}"
+    )

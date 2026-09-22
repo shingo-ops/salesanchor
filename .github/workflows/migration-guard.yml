@@ -221,7 +221,7 @@ jobs:
         run: |
           # public スキーマに実際に存在するテーブルの許可リスト
           # 新しいテーブルを public に追加した場合はここを更新すること（SSoT）
-          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters ingestion_jobs parse_logs link_templates registration_tokens units unit_aliases conditions condition_aliases tcg_note_master tcg_status_master tcg_product_categories product_lines product_formats product_kinds type_master condition_definitions supplier_channels source_messages import_jobs import_job_messages extraction_jobs extraction_items extraction_attempts analysis_runs analysis_results analysis_run_snapshots item_corrections tcg_normalization_rules tcg_distribution_settings tcg_distribution_targets tcg_product_import_jobs tcg_product_import_rows audit_log"
+          PUBLIC_TABLES="tenants users permissions products suppliers supplier_aliases inventory inventory_movements tcg_series_master pokemon_dex trainer_dex supplier_prompts meta_page_routing tenant_settings tenant_llm_budgets discord_inbound_messages data_access_events data_deletion_logs auth_events tenant_discord_config tenant_discord_ticket_config knowledge_rules supplier_discord_routing discord_webhook_idempotency user_inventory_filters ingestion_jobs parse_logs link_templates quantity_units registration_tokens units unit_aliases conditions condition_aliases tcg_note_master tcg_status_master tcg_product_categories product_lines product_formats product_kinds type_master condition_definitions supplier_channels source_messages import_jobs import_job_messages extraction_jobs extraction_items extraction_attempts analysis_runs analysis_results analysis_run_snapshots item_corrections tcg_normalization_rules tcg_distribution_settings tcg_distribution_targets tcg_product_import_jobs tcg_product_import_rows weight_classes audit_log buyback_shop_products buyback_price_logs product_format_game_links rule_test_cases rule_test_runs rule_test_run_results"
 
           FAILED=0
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
@@ -413,7 +413,7 @@ jobs:
           VIOLATIONS=""
 
           # 保護対象テーブル（スキーマ修飾の有無・テナントスキーマ名を問わず検出）
-          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories"
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes"
 
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
           for sql_path in "${SQL_FILES[@]}"; do
@@ -500,7 +500,7 @@ jobs:
           FAILED=0
 
           # 保護対象テーブル（チェック7と同じリスト）
-          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories"
+          PROTECTED_TABLES="products|tcg_products|product_search_keywords|product_exclude_keywords|product_attribute_masters|permissions|type_master|meta_page_routing|countries|link_templates|inventory_aggregation_rules|suppliers|tenant_settings|tenant_llm_budgets|units|unit_aliases|conditions|condition_aliases|tcg_note_master|tcg_status_master|tcg_product_categories|quantity_units|weight_classes"
 
           IFS='|' read -ra SQL_FILES <<< "${{ steps.detect_sql.outputs.new_sql_files }}"
           for sql_path in "${SQL_FILES[@]}"; do
@@ -517,11 +517,12 @@ jobs:
             fi
 
             # 許可パターンに該当する行を除外して違反行を絞り込む
-            # 許可: ALTER TABLE, CREATE [UNIQUE] INDEX ... ON, DROP INDEX, COMMENT ON,
+            # 許可: CREATE TABLE, ALTER TABLE, DROP TABLE, CREATE [UNIQUE] INDEX ... ON, DROP INDEX, COMMENT ON,
             #       ADD COLUMN, DROP COLUMN, ALTER COLUMN, information_schema 参照,
-            #       pg_namespace / pg_class / to_regclass での存在チェック,
-            #       DROP TRIGGER, CREATE [OR REPLACE] VIEW, CREATE [OR REPLACE] FUNCTION,
+            #       pg_namespace / pg_class / pg_trigger / to_regclass での存在チェック,
+            #       DROP TRIGGER, CREATE [OR REPLACE] TRIGGER, CREATE [OR REPLACE] VIEW, CREATE [OR REPLACE] FUNCTION,
             #       RENAME TO（テーブルリネーム）, table_name / table_schema（存在チェック継続行）
+            #       PRIMARY KEY（テーブル構造定義・カラム名にマスタ名が含まれる場合の誤検知防止）
             VIOLATIONS=""
             while IFS= read -r line; do
               line_num=$(echo "$line" | cut -d: -f1)
@@ -529,7 +530,7 @@ jobs:
 
               # 許可パターンチェック（いずれかに該当すれば許可）
               if echo "$line_content" | grep -qiE \
-                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|DROP[[:space:]]+TRIGGER|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|to_regclass|RAISE[[:space:]]+NOTICE|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?VIEW|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?FUNCTION|RENAME[[:space:]]+TO|table_name|table_schema'; then
+                'CREATE[[:space:]]+TABLE|ALTER[[:space:]]+TABLE|DROP[[:space:]]+TABLE|CREATE[[:space:]]+(UNIQUE[[:space:]]+)?INDEX|DROP[[:space:]]+INDEX|DROP[[:space:]]+TRIGGER|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?TRIGGER|COMMENT[[:space:]]+ON|ADD[[:space:]]+COLUMN|DROP[[:space:]]+COLUMN|ALTER[[:space:]]+COLUMN|REFERENCES|information_schema|pg_namespace|pg_class|pg_trigger|to_regclass|RAISE[[:space:]]+NOTICE|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?VIEW|CREATE[[:space:]]+(OR[[:space:]]+REPLACE[[:space:]]+)?FUNCTION|RENAME[[:space:]]+TO|table_name|table_schema|PRIMARY[[:space:]]+KEY'; then
                 continue
               fi
 

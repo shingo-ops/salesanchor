@@ -19,19 +19,25 @@ DROP TABLE IF EXISTS public.analysis_policy_revisions CASCADE;
 DROP TABLE IF EXISTS public.analysis_policies CASCADE;
 
 -- tenant_004 schema (if exists)
-DROP TABLE IF EXISTS tenant_004.analysis_suite_cases CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_test_case_versions CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_test_suites CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_rule_run_results CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_rule_runs CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_revision_rules CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_rule_words CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_rule_versions CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_rules CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_execution_profile_versions CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_instruction_versions CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_policy_revisions CASCADE;
-DROP TABLE IF EXISTS tenant_004.analysis_policies CASCADE;
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'tenant_004') THEN
+    RAISE NOTICE 'tenant_004 schema does not exist, skipping DROP';
+    RETURN;
+  END IF;
+  DROP TABLE IF EXISTS tenant_004.analysis_suite_cases CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_test_case_versions CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_test_suites CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_rule_run_results CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_rule_runs CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_revision_rules CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_rule_words CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_rule_versions CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_rules CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_execution_profile_versions CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_instruction_versions CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_policy_revisions CASCADE;
+  DROP TABLE IF EXISTS tenant_004.analysis_policies CASCADE;
+END $$;
 
 -- tenant_001 schema (if exists)
 DROP TABLE IF EXISTS tenant_001.analysis_suite_cases CASCADE;

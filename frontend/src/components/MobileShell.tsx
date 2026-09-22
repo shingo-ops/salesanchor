@@ -167,6 +167,12 @@ export default function MobileShell() {
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
                 "/super-admin/analysis-rules",
               ),
+              resolveItem(
+                "buybackPrices",
+                "nav.buybackPrices",
+                <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
+                "/buyback-prices",
+              ),
             ]
           : []),
       ];

@@ -190,6 +190,7 @@ export default function DesktopShell() {
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",         labelKey: "nav.superAdminAnalysisRules" },
     { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
+    { to: "/buyback-prices",                     labelKey: "nav.buybackPrices" },
   ] : [];
 
   const moreItems: NavItem[] = [];

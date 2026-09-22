@@ -28,6 +28,7 @@ from app.routers import (
     archives,
     auth,
     bots,
+    buyback_prices,  # ADR-157: 買取相場ログ API
     close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
     conditions,  # 状態マスタ CRUD（テナント版）
@@ -80,12 +81,14 @@ from app.routers import (
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
+    rule_test,  # Rule Test System: ルールテスト実行 API
     shifts,
     shipping,
     staff,
     staff_reports,
     status_master,  # ステータスマスタ テナント用
     super_admin_aliases,
+    super_admin_condition_defs,  # コンディション定義マスタ中央 admin
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
     super_admin_inbound,
@@ -95,12 +98,16 @@ from app.routers import (
     super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
+    super_admin_product_formats,  # フォーマットマスタ中央 admin
     super_admin_product_kinds,  # 大分類マスタ中央 admin
+    super_admin_product_lines,  # 小分類マスタ中央 admin
+    super_admin_quantity_units,  # 数量単位マスタ中央 admin
     super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
     super_admin_units,  # 単位マスタ中央 admin
+    super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
     tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
     tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
@@ -513,6 +520,10 @@ app.include_router(
 app.include_router(
     super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
 )
+# Rule Test System: ルールテスト実行 API
+app.include_router(
+    rule_test.router, prefix="/api/v1", tags=["rule-test"],
+)
 # 備考マスタ中央 admin
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
@@ -524,6 +535,26 @@ app.include_router(
 # 大分類マスタ中央 admin
 app.include_router(
     super_admin_product_kinds.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 小分類マスタ中央 admin
+app.include_router(
+    super_admin_product_lines.router, prefix="/api/v1", tags=["super-admin"],
+)
+# フォーマットマスタ中央 admin
+app.include_router(
+    super_admin_product_formats.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 数量単位マスタ中央 admin
+app.include_router(
+    super_admin_quantity_units.router, prefix="/api/v1", tags=["super-admin"],
+)
+# コンディション定義マスタ中央 admin
+app.include_router(
+    super_admin_condition_defs.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 重量クラスマスタ中央 admin
+app.include_router(
+    super_admin_weight_classes.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
@@ -671,6 +702,12 @@ app.include_router(
 
 
 app.include_router(line_import_devices.router, prefix="/api/v1")
+
+# ADR-157: 買取相場ログ API（認証必須・テナント横断の public スキーマ参照）
+app.include_router(
+    buyback_prices.router, prefix="/api/v1", tags=["buyback-prices"],
+    dependencies=[Depends(get_current_tenant)],
+)
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

@@ -14,7 +14,8 @@ BEGIN
     WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
     IF table_count = 0 THEN RETURN; END IF;
     IF table_count <> 2 THEN
-        RAISE EXCEPTION 'condition note: incomplete master structure';
+        RAISE NOTICE 'condition note: partial structure (% of 2 tables), skipping (SSOT migration moved to public)', table_count;
+        RETURN;
     END IF;
     -- DEPRECATED: pre-UPDATE guards removed together with UPDATE statements per ADR-155
     -- Original guards verified CN0007/NJ041 state before overwriting exclude_kw/exclude_keywords

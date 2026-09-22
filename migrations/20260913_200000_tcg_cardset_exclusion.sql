@@ -33,7 +33,8 @@ BEGIN
     IF table_count = 0 THEN
         RETURN;
     ELSIF table_count <> 4 THEN
-        RAISE EXCEPTION 'tenant_004 incomplete TCG structure';
+        RAISE NOTICE 'cardset exclusion: partial structure (% of 4 tables), skipping (SSOT migration moved to public)', table_count;
+        RETURN;
     END IF;
 
     LOCK TABLE tenant_004.tcg_series,

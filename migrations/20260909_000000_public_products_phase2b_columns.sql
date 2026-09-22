@@ -47,6 +47,22 @@ BEGIN
     LOOP
         RAISE NOTICE 'Phase2b bootstrap: processing schema %', schema_record.schema_name;
 
+        -- Phase 3 がすでに work_id を INTEGER に変換済みの場合はスキップ
+        -- (UUID型のデータを INTEGER列に INSERT しようとすると型不一致エラーになるため)
+        IF EXISTS (
+            SELECT 1 FROM pg_attribute a
+            JOIN pg_class c ON c.oid = a.attrelid
+            JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = 'public' AND c.relname = 'products'
+              AND a.attname = 'work_id'
+              AND a.atttypid = 'integer'::regtype::oid
+              AND a.attnum > 0
+              AND NOT a.attisdropped
+        ) THEN
+            RAISE NOTICE 'Phase2b bootstrap: public.products.work_id already INTEGER (Phase 3 complete), skipping schema %', schema_record.schema_name;
+            CONTINUE;
+        END IF;
+
         EXECUTE format($dml$
             INSERT INTO public.products (
                 product_code, name, name_en, mark, release_date,

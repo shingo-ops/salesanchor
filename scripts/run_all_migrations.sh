@@ -520,10 +520,11 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
-# ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
-# 前回失敗デプロイで再作成された空の tcg_products を除去する。
-# 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
-run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+
+# Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
+run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
 # TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
@@ -656,6 +657,10 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
+# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
+# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
+run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
+
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
 
@@ -737,3 +742,27 @@ run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
 
 # ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
 run_sql migrations/20260921_120000_add_products_product_kind_id.sql
+
+# ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
+run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
+
+# ADR-156 Phase 6: 小分類→大分類FK / 入数マスタ / 重量マスタ / products FK追加
+run_sql migrations/20260921_140000_product_classification_masters.sql
+
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260922_000000_create_buyback_tables.sql
+
+# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+
+# ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
+run_sql migrations/20260922_030000_product_format_game_links.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql
+
+# 販売単位・状態マスタ連鎖プルダウン基盤
+run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql

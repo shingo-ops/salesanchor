@@ -1,0 +1,15 @@
+/**
+ * AnalysisRulesPage — パネルコンテンツ共通ラッパー
+ *
+ * ダッシュボードパネルは AnalysisDashboardPanel.css が自前で padding/scroll を持つため対象外。
+ * それ以外のパネルは hub-content (overflow:hidden, no-padding) 内でクリップされるため
+ * このラッパーで padding と overflow-y:auto を付与する。
+ *
+ * ADR-067: デザイントークン使用（px値直書き禁止）
+ * ADR-144: hub-shell.css を変更しない（共有クラス汚染防止）
+ */
+.analysis-panel-content {
+  padding: var(--space-6);
+  overflow-y: auto;
+  height: 100%;
+}

@@ -390,8 +390,8 @@ def test_migration_partial_structure_rejects_before_insert(pg):
         provision(cursor, 'tenant_907')
         cursor.execute('CREATE SCHEMA tenant_908')
         cursor.execute('ALTER TABLE tenant_907.extraction_items SET SCHEMA tenant_908')
-        with pytest.raises(psycopg2.Error,match='incomplete TCG structure'): cursor.execute(script)
-        cursor.execute('ROLLBACK')
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute(script)
         cursor.execute('SELECT count(*) FROM tenant_907.conditions')
         assert cursor.fetchone()[0]==0
         # An entirely absent TCG structure is the documented no-op, not partial success.

@@ -199,7 +199,7 @@ describe("MobileShell", () => {
       expect(container.querySelector(".mobile-more-sheet--open")).toBeTruthy();
     });
 
-    it("menu sheet renders 5 navigation items", () => {
+    it("menu sheet renders 5 navigation items (buyback moved to super admin)", () => {
       mockHasPermission.mockReturnValue(true);
       const { container } = renderMobileShell();
       fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));

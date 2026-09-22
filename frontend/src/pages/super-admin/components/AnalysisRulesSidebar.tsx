@@ -12,6 +12,7 @@ export type AnalysisRulesSidebarKey =
   | "import"
   | "accuracy-management"
   | "needs-review"
+  | "rule-management"
   | "product-master"
   | "product-categories-master"
   | "product-kinds-master"
@@ -19,7 +20,12 @@ export type AnalysisRulesSidebarKey =
   | "supplier-master"
   | "conditions-master"
   | "unit-master"
-  | "note-master";
+  | "note-master"
+  | "product-lines-master"
+  | "product-formats-master"
+  | "quantity-units-master"
+  | "condition-defs-master"
+  | "weight-classes-master";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -73,6 +79,14 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("needs-review", t("analysisRules.sidebar.needsReview"), needsReviewCount)}
       </div>
 
+      {/* ルール管理グループ */}
+      <div className="hub-subnav-section">
+        <span className="hub-subnav-title">
+          {t("analysisRules.sidebar.groupRuleManagement")}
+        </span>
+        {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
+      </div>
+
       {/* マスタ管理グループ */}
       <div className="hub-subnav-section">
         <span className="hub-subnav-title">
@@ -86,6 +100,11 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
         {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
+        {navItem("product-lines-master", t("analysisRules.sidebar.productLinesMaster"))}
+        {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
+        {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
+        {navItem("condition-defs-master", t("analysisRules.sidebar.conditionDefsMaster"))}
+        {navItem("weight-classes-master", t("analysisRules.sidebar.weightClassesMaster"))}
       </div>
     </nav>
   );

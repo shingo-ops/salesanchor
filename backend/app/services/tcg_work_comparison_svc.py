@@ -124,10 +124,18 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         items = _records(session, f"SELECT to_jsonb(i) FROM {TCG_SCHEMA}.extraction_items i {join}", params)
         analyses = _records(session, f"SELECT to_jsonb(a) FROM {TCG_SCHEMA}.analysis_results a JOIN {TCG_SCHEMA}.extraction_items i ON i.id=a.extraction_item_id {join}", params)
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
-        # Strict table reads precede loaders with legacy missing-table fallback.
-        # tcg_normalization_rules migrated to public schema (Step 4/5); remaining MASTER_TABLES stay in TCG_SCHEMA.
-        # ADR-156 Phase 3B: tcg_product_categories is now SSOT in public schema (INTEGER PK).
-        _PUBLIC_MASTER = frozenset({"tcg_normalization_rules", "tcg_product_categories"})
+        # ADR-156 Phase 5: all MASTER_TABLES now read from public schema (SSOT).
+        # tenant_004 copies are dropped by migration 20260921_130000_drop_tenant004_master_copies.sql.
+        _PUBLIC_MASTER = frozenset({
+            "tcg_normalization_rules",
+            "tcg_product_categories",
+            "conditions",
+            "units",
+            "condition_aliases",
+            "unit_aliases",
+            "product_search_keywords",
+            "product_exclude_keywords",
+        })
         masters = {
             name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
             for name in MASTER_TABLES
