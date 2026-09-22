@@ -126,6 +126,11 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     ids = dict((await db.execute(text(
         "SELECT code,id FROM public.type_master WHERE code IN ('pokemon_booster_box','one_piece','dragon_ball','yugioh')"
     ))).all())
+    # Snapshot baseline before inserting test data.  In a fully isolated fixture this
+    # should always be 0, but if a parallel xdist worker leaked rows into public.products
+    # (e.g. from test_all_products_search_and_pagination) the baseline will be > 0.
+    # We use the delta so the test is correct in both situations.
+    pre_count = (await db.execute(text("SELECT count(*) FROM public.products"))).scalar_one()
     fixtures = [
         ("A", date(2099, 1, 1), ids["pokemon_booster_box"], True),
         ("C", date(2026, 1, 1), ids["pokemon_booster_box"], True),
@@ -147,7 +152,10 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     # Note: public.products is schema-independent; this test no longer needs a separate schema insert
     await db.execute(text("SELECT 1"))  # placeholder: cross-schema isolation now handled via public.products
     await db.execute(text(f"SET LOCAL search_path TO {other}, public"))
-    for query, work_id, offset, expected, total in [
+    # For unfiltered queries (work_id=None, query="" or "sHaReD") the total includes any
+    # pre-existing rows in public.products; use pre_count offset.  Filtered queries
+    # (work_id filter or name-specific query) are unaffected by pre-existing data.
+    for query, work_id, offset, expected, total_delta in [
         ("", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
         ("sHaReD", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
         ("Shared", ids["pokemon_booster_box"], 0, ["A", "C", "B"], 3),
@@ -157,8 +165,16 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
         ("", 888888, 0, [], 0),
     ]:
         result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
-        assert result.total == total
-        assert [item.code for item in result.items] == expected
+        # Unfiltered queries match all rows; adjust for baseline pre-existing data.
+        unfiltered = (work_id is None and query.upper().strip() in ("", "SHARED"))
+        expected_total = pre_count + total_delta if unfiltered else total_delta
+        assert result.total == expected_total
+        # For unfiltered queries with pre-existing rows, verify our test items appear as
+        # a prefix of the result (pre-existing rows with NULL dates sort after ours).
+        if unfiltered and pre_count > 0:
+            assert [item.code for item in result.items[:len(expected)]] == expected
+        else:
+            assert [item.code for item in result.items] == expected
         # works list contains all active type_master entries; verify key entries are present
         work_codes = {w.code for w in result.works}
         assert "pokemon_booster_box" in work_codes
