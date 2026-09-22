@@ -520,6 +520,9 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+
 # Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
 run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
@@ -653,6 +656,9 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
+
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等・2回目）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
 
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
