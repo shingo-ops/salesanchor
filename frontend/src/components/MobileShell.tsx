@@ -153,16 +153,6 @@ export default function MobileShell() {
               ),
             ]
           : []),
-        ...(hasPermission("products.view")
-          ? [
-              resolveItem(
-                "buybackPrices",
-                "nav.buybackPrices",
-                <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
-                "/buyback-prices",
-              ),
-            ]
-          : []),
         resolveItem(
           "accountSettings",
           "nav.accountSettings",
@@ -176,6 +166,12 @@ export default function MobileShell() {
                 "nav.superAdminAnalysisRules",
                 <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
                 "/super-admin/analysis-rules",
+              ),
+              resolveItem(
+                "buybackPrices",
+                "nav.buybackPrices",
+                <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
+                "/buyback-prices",
               ),
             ]
           : []),
