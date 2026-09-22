@@ -1,5 +1,5 @@
 /**
- * QuantityUnitsMasterPanel — 数量単位マスタパネル（AnalysisRulesPage の hub-content 内で使用）
+ * ConditionDefsMasterPanel — 状態定義マスタパネル（AnalysisRulesPage の hub-content 内で使用）
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
@@ -17,48 +17,45 @@ import ConfirmModal from "../../../components/ConfirmModal";
 import { STATUS_ICONS } from "../../../constants/icons";
 import { ICON } from "../../../constants/iconSizes";
 
-interface QuantityUnit {
+interface ConditionDef {
   id: number;
   code: string;
   name: string;
   name_en: string | null;
-  value: number | null;
+  line_id: number | null;
   display_order: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  condition_count?: number;
-  product_line_count?: number;
+  unit_count?: number;
 }
 
-type UnitFormState = {
+type ConditionDefFormState = {
   code: string;
   name: string;
   name_en: string;
-  value: string;
   display_order: number;
   is_active: boolean;
 };
 
-const emptyForm: UnitFormState = {
+const emptyForm: ConditionDefFormState = {
   code: "",
   name: "",
   name_en: "",
-  value: "",
   display_order: 100,
   is_active: true,
 };
 
 const PER_PAGE = 200;
 
-export function QuantityUnitsMasterPanel() {
+export function ConditionDefsMasterPanel() {
   const { t } = useTranslation();
-  const f = "quantityUnitsMaster";
+  const f = "conditionDefMaster";
 
-  const [items, setItems] = useState<QuantityUnit[]>([]);
+  const [items, setItems] = useState<ConditionDef[]>([]);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
-  const [form, setForm] = useState<UnitFormState>(emptyForm);
+  const [form, setForm] = useState<ConditionDefFormState>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
@@ -66,7 +63,7 @@ export function QuantityUnitsMasterPanel() {
 
   const load = useCallback(async () => {
     try {
-      const data = await api.get<QuantityUnit[]>("/super-admin/quantity-units");
+      const data = await api.get<ConditionDef[]>("/super-admin/condition-definitions");
       setItems(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
@@ -76,13 +73,12 @@ export function QuantityUnitsMasterPanel() {
   useEffect(() => { void load(); }, [load]);
 
   const openCreate = () => { setEditId(null); setForm(emptyForm); setShowForm(true); };
-  const openEdit = (item: QuantityUnit) => {
+  const openEdit = (item: ConditionDef) => {
     setEditId(item.id);
     setForm({
       code: item.code,
       name: item.name,
       name_en: item.name_en || "",
-      value: item.value !== null ? String(item.value) : "",
       display_order: item.display_order,
       is_active: item.is_active,
     });
@@ -96,15 +92,14 @@ export function QuantityUnitsMasterPanel() {
       code: form.code,
       name: form.name,
       name_en: form.name_en || null,
-      value: form.value !== "" ? Number(form.value) : null,
       display_order: form.display_order,
       is_active: form.is_active,
     };
     try {
       if (editId) {
-        await api.patch(`/super-admin/quantity-units/${editId}`, payload);
+        await api.patch(`/super-admin/condition-definitions/${editId}`, payload);
       } else {
-        await api.post("/super-admin/quantity-units", payload);
+        await api.post("/super-admin/condition-definitions", payload);
       }
       setShowForm(false);
       setForm(emptyForm);
@@ -119,7 +114,7 @@ export function QuantityUnitsMasterPanel() {
     if (confirmDeleteId === null) return;
     setError("");
     try {
-      await api.delete(`/super-admin/quantity-units/${confirmDeleteId}`);
+      await api.delete(`/super-admin/condition-definitions/${confirmDeleteId}`);
       setConfirmDeleteId(null);
       await load();
     } catch (e) {
@@ -128,14 +123,12 @@ export function QuantityUnitsMasterPanel() {
     }
   };
 
-  const columns: DataTableColumn<QuantityUnit>[] = [
+  const columns: DataTableColumn<ConditionDef>[] = [
     { key: "code", header: t(`${f}.code`) },
     { key: "name", header: t(`${f}.name`) },
     { key: "name_en", header: t(`${f}.nameEn`), renderCell: row => row.name_en || "-" },
-    { key: "value", header: t(`${f}.value`), renderCell: row => row.value !== null ? String(row.value) : "-" },
     { key: "display_order", header: t(`${f}.displayOrder`) },
-    { key: "condition_count", header: t(`${f}.conditionCount`), renderCell: row => row.condition_count !== undefined ? String(row.condition_count) : "-" },
-    { key: "product_line_count", header: t(`${f}.productLineCount`), renderCell: row => row.product_line_count !== undefined ? String(row.product_line_count) : "-" },
+    { key: "unit_count", header: t(`${f}.unitCount`), renderCell: row => row.unit_count !== undefined ? String(row.unit_count) : "-" },
     {
       key: "is_active",
       header: t(`${f}.isActive`),
@@ -149,7 +142,7 @@ export function QuantityUnitsMasterPanel() {
       renderCell: row => (
         <HeaderButton
           variant="secondary"
-          data-testid={`quantity-unit-edit-${row.id}`}
+          data-testid={`condition-def-edit-${row.id}`}
           onClick={() => openEdit(row)}
         >
           {t("common.edit")}
@@ -162,7 +155,7 @@ export function QuantityUnitsMasterPanel() {
       renderCell: row => (
         <HeaderButton
           variant="secondary"
-          data-testid={`quantity-unit-delete-${row.id}`}
+          data-testid={`condition-def-delete-${row.id}`}
           onClick={() => setConfirmDeleteId(row.id)}
         >
           {t("common.delete")}
@@ -177,7 +170,7 @@ export function QuantityUnitsMasterPanel() {
         right={
           <HeaderButton
             variant="primary"
-            data-testid="quantity-units-new"
+            data-testid="condition-defs-new"
             onClick={openCreate}
           >
             {t(`${f}.addNew`)}
@@ -228,14 +221,6 @@ export function QuantityUnitsMasterPanel() {
                 label={t(`${f}.nameEn`)}
                 value={form.name_en}
                 onChange={e => setForm({ ...form, name_en: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <TextField
-                type="number"
-                label={t(`${f}.value`)}
-                value={form.value}
-                onChange={e => setForm({ ...form, value: e.target.value })}
               />
             </div>
             <div className="form-group">

@@ -2,10 +2,11 @@
 中央 admin 用 public.quantity_units CRUD ルーター。
 
 API:
-  GET    /api/v1/super-admin/quantity-units              — 一覧（is_active フィルタ・ソート対応）
+  GET    /api/v1/super-admin/quantity-units              — 一覧（page/per_page/q/is_active・condition_count/product_line_count 付き）
   POST   /api/v1/super-admin/quantity-units              — 新規作成
   PATCH  /api/v1/super-admin/quantity-units/{unit_id}   — 更新
   DELETE /api/v1/super-admin/quantity-units/{unit_id}   — soft delete (is_active=FALSE)
+  GET    /api/v1/super-admin/quantity-units/{unit_id}/links — 紐づく condition_definitions・product_lines
 """
 from __future__ import annotations
 
@@ -18,8 +19,9 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.schemas.quantity_unit import (
     QuantityUnitCreate,
-    QuantityUnitResponse,
+    QuantityUnitLinksResponse,
     QuantityUnitUpdate,
+    QuantityUnitWithCountsResponse,
 )
 
 router = APIRouter()
@@ -30,10 +32,11 @@ _UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "value"}
 
 @router.get(
     "/super-admin/quantity-units",
-    response_model=list[QuantityUnitResponse],
+    response_model=list[QuantityUnitWithCountsResponse],
     dependencies=[Depends(require_super_admin)],
 )
 async def list_quantity_units(
+    q: str | None = Query(default=None, max_length=255),
     is_active: bool | None = Query(default=None),
     page: int = Query(default=1, ge=1),
     per_page: int = Query(default=200, ge=1, le=500),
@@ -42,24 +45,38 @@ async def list_quantity_units(
     offset = (page - 1) * per_page
     conditions: list[str] = []
     params: dict = {"limit": per_page, "offset": offset}
+    if q:
+        conditions.append("(qu.code ILIKE :q OR qu.name ILIKE :q)")
+        params["q"] = f"%{q}%"
     if is_active is not None:
-        conditions.append("is_active = :is_active")
+        conditions.append("qu.is_active = :is_active")
         params["is_active"] = is_active
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     result = await db.execute(
         text(
-            f"SELECT {_COLS} "
-            f"FROM public.quantity_units {where} "
-            "ORDER BY display_order, id LIMIT :limit OFFSET :offset"
+            f"SELECT qu.{', qu.'.join(_COLS.split(', '))}, "
+            "COALESCE(cond_cnt.cnt, 0) AS condition_count, "
+            "COALESCE(pl_cnt.cnt, 0) AS product_line_count "
+            "FROM public.quantity_units qu "
+            "LEFT JOIN ("
+            "  SELECT quantity_unit_id, COUNT(*) AS cnt"
+            "  FROM public.unit_condition_links GROUP BY quantity_unit_id"
+            ") cond_cnt ON cond_cnt.quantity_unit_id = qu.id "
+            "LEFT JOIN ("
+            "  SELECT quantity_unit_id, COUNT(*) AS cnt"
+            "  FROM public.product_line_available_units GROUP BY quantity_unit_id"
+            ") pl_cnt ON pl_cnt.quantity_unit_id = qu.id "
+            f"{where} "
+            "ORDER BY qu.display_order, qu.id LIMIT :limit OFFSET :offset"
         ),
         params,
     )
-    return [QuantityUnitResponse(**dict(row)) for row in result.mappings().all()]
+    return [QuantityUnitWithCountsResponse(**dict(row)) for row in result.mappings().all()]
 
 
 @router.post(
     "/super-admin/quantity-units",
-    response_model=QuantityUnitResponse,
+    response_model=QuantityUnitWithCountsResponse,
     status_code=201,
     dependencies=[Depends(require_super_admin)],
 )
@@ -85,12 +102,12 @@ async def create_quantity_unit(
         )
     row = result.mappings().first()
     await db.commit()
-    return QuantityUnitResponse(**dict(row))
+    return QuantityUnitWithCountsResponse(**dict(row), condition_count=0, product_line_count=0)
 
 
 @router.patch(
     "/super-admin/quantity-units/{unit_id}",
-    response_model=QuantityUnitResponse,
+    response_model=QuantityUnitWithCountsResponse,
     dependencies=[Depends(require_super_admin)],
 )
 async def update_quantity_unit(
@@ -119,7 +136,20 @@ async def update_quantity_unit(
     if not row:
         raise HTTPException(status_code=404, detail="数量単位が見つかりません")
     await db.commit()
-    return QuantityUnitResponse(**dict(row))
+    # カウントを再取得
+    cond_res = await db.execute(
+        text("SELECT COUNT(*) FROM public.unit_condition_links WHERE quantity_unit_id = :id"),
+        {"id": unit_id},
+    )
+    pl_res = await db.execute(
+        text("SELECT COUNT(*) FROM public.product_line_available_units WHERE quantity_unit_id = :id"),
+        {"id": unit_id},
+    )
+    return QuantityUnitWithCountsResponse(
+        **dict(row),
+        condition_count=cond_res.scalar() or 0,
+        product_line_count=pl_res.scalar() or 0,
+    )
 
 
 @router.delete(
@@ -152,3 +182,47 @@ async def delete_quantity_unit(
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="数量単位が見つかりません")
     await db.commit()
+
+
+@router.get(
+    "/super-admin/quantity-units/{unit_id}/links",
+    response_model=QuantityUnitLinksResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def get_quantity_unit_links(
+    unit_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    """この販売単位に紐づく condition_definitions と product_lines を返す。"""
+    # 存在チェック
+    exists = await db.execute(
+        text("SELECT 1 FROM public.quantity_units WHERE id = :id"),
+        {"id": unit_id},
+    )
+    if not exists.fetchone():
+        raise HTTPException(status_code=404, detail="数量単位が見つかりません")
+
+    cond_res = await db.execute(
+        text(
+            "SELECT cd.id, cd.code, cd.name "
+            "FROM public.condition_definitions cd "
+            "JOIN public.unit_condition_links ucl ON ucl.condition_def_id = cd.id "
+            "WHERE ucl.quantity_unit_id = :id "
+            "ORDER BY cd.display_order, cd.id"
+        ),
+        {"id": unit_id},
+    )
+    pl_res = await db.execute(
+        text(
+            "SELECT pl.id, pl.code, pl.name "
+            "FROM public.product_lines pl "
+            "JOIN public.product_line_available_units plau ON plau.product_line_id = pl.id "
+            "WHERE plau.quantity_unit_id = :id "
+            "ORDER BY pl.display_order, pl.id"
+        ),
+        {"id": unit_id},
+    )
+    return QuantityUnitLinksResponse(
+        conditions=[dict(row) for row in cond_res.mappings().all()],
+        product_lines=[dict(row) for row in pl_res.mappings().all()],
+    )
