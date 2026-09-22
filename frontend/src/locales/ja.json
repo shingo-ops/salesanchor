@@ -4359,6 +4359,30 @@
       "inputTextLabel": "商品ページの文言",
       "expectedCanonicalLabel": "判定されるべきステータス",
       "expectedCanonicalPlaceholder": "ステータスを選択..."
+    },
+    "createRule": "新規作成",
+    "create": {
+      "title": "ルール新規作成",
+      "statusId": "ステータスID",
+      "canonical": "表示名",
+      "matchType": "照合方法",
+      "effect": "効果",
+      "searchPattern": "検索パターン",
+      "excludePattern": "除外パターン",
+      "priority": "優先度",
+      "note": "メモ",
+      "testSection": "パターンテスト",
+      "testInput": "テスト文言",
+      "testButton": "判定",
+      "matched": "マッチ",
+      "notMatched": "不一致",
+      "creating": "作成中...",
+      "created": "ルールを作成しました（無効状態）",
+      "matchTypeLiteral": "完全一致",
+      "matchTypeRegex": "正規表現",
+      "matchTypeDefault": "デフォルト",
+      "effectOutput": "出力",
+      "effectExclude": "除外"
     }
   },
   "reviewIssues": {
