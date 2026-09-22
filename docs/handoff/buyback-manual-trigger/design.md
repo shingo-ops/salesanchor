@@ -14,8 +14,9 @@
 | ボタン | `Button variant="secondary" size="sm"`（金型遵守） |
 | フィードバック | 成功/失敗メッセージを `fetchMsg` state で表示 |
 
-## 外部事例
-既存パターン踏襲のため該当なし。`backend/app/routers/reports.py` が直接の参考実装。
+## 外部・過去事例の参照と我々への応用
+
+既存の `backend/app/routers/reports.py` に `export_csv.delay()` + HTTP 202 + `TriggerResponse` の実装パターンがあり、そのまま踏襲した。新たな外部ライブラリ・サービスの導入なし。我々への応用: 同じ delay + 202 パターンを buyback_prices.py に適用し、タスク起動の一貫性を維持する。
 
 ## 検証方法
 
@@ -31,3 +32,10 @@
 
 ## 弊害
 - なし（既存 GET エンドポイントへの影響なし・ルーター登録順は POST を GET の前に配置）
+
+## 維持の仕組み
+
+- `require_super_admin` dependency により非スーパー管理者からのアクセスは 403 で自動拒否
+- フロントエンドの `useSuperAdmin` フックがボタン表示を制御するため UI レベルでも非表示
+
+守り手: ADR-157 / require_super_admin dependency
