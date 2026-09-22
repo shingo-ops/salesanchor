@@ -39,6 +39,7 @@ from app.models import User
 from app.services import tcg_product_roundtrip_svc as roundtrip
 from app.services.tcg_product_detail_svc import ProductDetailError, get_product_detail, update_product_detail
 from app.services.tcg_product_import_svc import commit_import, preview
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 

@@ -17,6 +17,7 @@ from app.services.tcg_work_reference import (
     reference_digest,
     validate_work_id,
 )
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
