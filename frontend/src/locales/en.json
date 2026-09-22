@@ -4356,6 +4356,30 @@
       "inputTextLabel": "Product page text",
       "expectedCanonicalLabel": "Expected status",
       "expectedCanonicalPlaceholder": "Select status..."
+    },
+    "createRule": "Create Rule",
+    "create": {
+      "title": "Create New Rule",
+      "statusId": "Status ID",
+      "canonical": "Display Name",
+      "matchType": "Match Type",
+      "effect": "Effect",
+      "searchPattern": "Search Pattern",
+      "excludePattern": "Exclude Pattern",
+      "priority": "Priority",
+      "note": "Note",
+      "testSection": "Pattern Test",
+      "testInput": "Test Input",
+      "testButton": "Test",
+      "matched": "Matched",
+      "notMatched": "Not Matched",
+      "creating": "Creating...",
+      "created": "Rule created (disabled)",
+      "matchTypeLiteral": "Literal",
+      "matchTypeRegex": "Regex",
+      "matchTypeDefault": "Default",
+      "effectOutput": "Output",
+      "effectExclude": "Exclude"
     }
   },
   "reviewIssues": {
