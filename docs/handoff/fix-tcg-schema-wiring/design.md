@@ -22,8 +22,13 @@
 | device.tcg_schema = 'public' | psql SELECT from public.line_import_devices |
 | LINE import が正常動作 | import_jobs status=ok |
 
-## 外部事例
-該当なし（内部配線修正のみ）
+## 外部・過去事例の参照と我々への応用
+- ADR-156 パイプライン17テーブルの tenant_004→public 移行（2026-09-21完了）の直接の続き。本PRはその残余配線10ファイルを同方針で統一する。
+- 先行15ファイル（tcg_line_import.py 等）で `TCG_SCHEMA = "public"` ローカルオーバーライドパターンが実績あり。同一手法を適用。
+
+## 維持の仕組み
+- `grep -rn "from app.tcg_config import TCG_SCHEMA" backend/app/` で0件を CI でチェック可能（現状は手動確認）
+- migration で public にコピーした3テーブルは tenant_004 側を将来 DROP する際の前提条件として記録済み（対象外・別PR）
 
 ## 対象ADR
 ADR-156（SSOT migration）
