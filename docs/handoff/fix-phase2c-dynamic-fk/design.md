@@ -38,9 +38,7 @@ DROP CONSTRAINT は不可逆（FK の定義は ADR-1002 Phase 1 で migration �
 ロールバック不要）。tcg_products 自体も Phase 2c で削除するため FK の復元は不要。
 
 ## 維持の仕組み
-- 本マイグレーションは冪等（IF EXISTS）なため再実行しても安全
-- Phase 2c 完了後は tcg_products 自体が消えるため FK も存在しない
-- 追加メンテナンス不要
+守り手: IF EXISTS により冪等実行を保証。Phase 2c 完了後は tcg_products 自体が消えるため本マイグレーションの再実行も無害。追加メンテナンス不要。
 
 ## 外部・過去事例の参照と我々への応用
 - PostgreSQL 公式ドキュメント: pg_constraint カタログを使った動的 DDL は標準パターン
