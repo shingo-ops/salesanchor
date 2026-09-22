@@ -4349,7 +4349,13 @@
       "noResults": "テスト結果がありません",
       "noCases": "テストケースを追加してください",
       "runFirst": "テストを実行してください",
-      "enableGateError": "ルールを有効化するにはテストに合格する必要があります"
+      "enableGateError": "ルールを有効化するにはテストに合格する必要があります",
+      "gateDescription": "全テストに合格するとルールのON/OFFが可能になります",
+      "seedCases": "おすすめテストケースを追加",
+      "seeding": "追加中...",
+      "inputTextLabel": "商品ページの文言",
+      "expectedCanonicalLabel": "判定されるべきステータス",
+      "expectedCanonicalPlaceholder": "ステータスを選択..."
     }
   }
 }

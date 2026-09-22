@@ -4349,7 +4349,13 @@
       "noResults": "No test results",
       "noCases": "Please add test cases",
       "runFirst": "Please run tests first",
-      "enableGateError": "Tests must pass before enabling rules"
+      "enableGateError": "Tests must pass before enabling rules",
+      "gateDescription": "Rules can be enabled/disabled only after all tests pass",
+      "seedCases": "Add recommended test cases",
+      "seeding": "Adding...",
+      "inputTextLabel": "Product page text",
+      "expectedCanonicalLabel": "Expected status",
+      "expectedCanonicalPlaceholder": "Select status..."
     }
   }
 }
