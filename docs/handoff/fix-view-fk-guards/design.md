@@ -28,7 +28,7 @@ END IF;
 ```
 `pg_class.relkind = 'r'` は「base table」のみ一致する。VIEW は `'v'`、Materialized View は `'m'`。
 
-### 変更ファイル（5件）
+### 変更ファイル（6件）
 
 1. **`migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql`**
    - Step 7 (unit_id FK): VIEW guard 追加
@@ -52,8 +52,12 @@ END IF;
    - units/conditions が VIEW の場合: unit_id/condition_id を FK なしの INTEGER で作成
    - テーブルが既に存在する場合は早期 RETURN（冪等性維持）
 
+6. **`migrations/20260922_060000_product_unit_condition_infra.sql`**（main マージ後に追加）
+   - Section 1 の COMMENT ON TABLE 4件（units/unit_aliases/conditions/condition_aliases）
+   - `information_schema.tables` チェックは VIEW も含むため `COMMENT ON TABLE` が VIEW に対して失敗する
+   - `pg_class.relkind = 'r'` チェックに変更し BASE TABLE のみに適用
+
 ### 変更しないもの
-- `product_unit_condition_infra`: COMMENT ON TABLE のみ、VIEW でも動作する（origin/main のみ・本ブランチ外）
 - Phase 3B ($phase3b$): `tcg_product_categories` は VIEW に変換されていない
 - テナントスキーマの FK 張り替え（Step 2/3）: VIEW への参照ではないため安全
 
