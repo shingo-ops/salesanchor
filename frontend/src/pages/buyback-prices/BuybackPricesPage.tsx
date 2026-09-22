@@ -25,6 +25,8 @@ import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { Drawer } from "../../components/Drawer";
+import { Button } from "../../components/Button";
+import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import styles from "./BuybackPricesPage.module.css";
 
 /* ─── 型定義 ─────────────────────────────────────────────────────────── */
@@ -94,6 +96,7 @@ function formatChartDate(iso: string): string {
 
 export default function BuybackPricesPage() {
   const { t } = useTranslation();
+  const { isSuperAdmin } = useSuperAdmin();
 
   const [items, setItems] = useState<BuybackProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -104,6 +107,8 @@ export default function BuybackPricesPage() {
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [fetching, setFetching] = useState(false);
+  const [fetchMsg, setFetchMsg] = useState("");
 
   // Drawer / 価格推移
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -173,6 +178,20 @@ export default function BuybackPricesPage() {
         /* 履歴取得失敗はサイレント。グラフ空表示 */
       })
       .finally(() => setHistoryLoading(false));
+  };
+
+  // ── 手動取得 ───────────────────────────────────────────────────────
+  const handleManualFetch = async () => {
+    setFetching(true);
+    setFetchMsg("");
+    try {
+      await api.post("/buyback-prices/trigger", {});
+      setFetchMsg(t("buybackPrices.fetchStarted"));
+    } catch {
+      setFetchMsg(t("buybackPrices.fetchFailed"));
+    } finally {
+      setFetching(false);
+    }
   };
 
   // ── ソート ────────────────────────────────────────────────────────
@@ -296,6 +315,21 @@ export default function BuybackPricesPage() {
               size="sm"
             />
           </>
+        }
+        right={
+          isSuperAdmin ? (
+            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {fetchMsg && <span className={styles.statusMsg}>{fetchMsg}</span>}
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleManualFetch}
+                disabled={fetching}
+              >
+                {fetching ? "..." : t("buybackPrices.fetchNow")}
+              </Button>
+            </div>
+          ) : undefined
         }
       />
 
