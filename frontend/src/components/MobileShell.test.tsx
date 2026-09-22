@@ -199,14 +199,14 @@ describe("MobileShell", () => {
       expect(container.querySelector(".mobile-more-sheet--open")).toBeTruthy();
     });
 
-    it("menu sheet renders 6 navigation items", () => {
+    it("menu sheet renders 5 navigation items (buyback moved to super admin)", () => {
       mockHasPermission.mockReturnValue(true);
       const { container } = renderMobileShell();
       fireEvent.click(screen.getByRole("button", { name: "nav.menu" }));
 
       expect(
         container.querySelectorAll(".mobile-more-sheet--open .nav-item-list__item").length,
-      ).toBe(6);
+      ).toBe(5);
     });
 
     it("backdrop is visible when more sheet is open", () => {
