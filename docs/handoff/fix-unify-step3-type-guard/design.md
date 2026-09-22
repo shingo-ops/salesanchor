@@ -56,5 +56,7 @@
 
 ## 維持の仕組み
 
+守り手: migrations/20260914_140000_unify_tcg_products_to_public.sql
+
 - 型ガードは冪等。同じマイグレーションを再実行しても安全（すでに UUID 型ならFK作成、INTEGER型ならスキップ）
 - 将来 product_id が UUID に戻された場合、ガードは自動的に FK 作成を実行する
