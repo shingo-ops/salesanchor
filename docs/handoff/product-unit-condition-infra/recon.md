@@ -11,7 +11,7 @@
 
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
-| `migrations/20260922_010000_product_unit_condition_infra.sql:1` | マイグレーションファイル（本PR唯一の変更） |
+| `migrations/20260922_060000_product_unit_condition_infra.sql:1` | マイグレーションファイル（本PR唯一の変更） |
 
 ---
 

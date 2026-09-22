@@ -86,10 +86,8 @@ CREATE TABLE IF NOT EXISTS public.product_line_available_units (
 
 COMMENT ON TABLE public.product_line_available_units IS '小分類→販売可能単位の紐づけ（連鎖プルダウン第1段）';
 
-CREATE INDEX IF NOT EXISTS idx_plau_product_line_id
-    ON public.product_line_available_units (product_line_id);
-CREATE INDEX IF NOT EXISTS idx_plau_quantity_unit_id
-    ON public.product_line_available_units (quantity_unit_id);
+CREATE INDEX IF NOT EXISTS idx_plau_product_line_id ON public.product_line_available_units (product_line_id);
+CREATE INDEX IF NOT EXISTS idx_plau_quantity_unit_id ON public.product_line_available_units (quantity_unit_id);
 
 -- ============================================================
 -- 4. unit_condition_links（販売単位 → 使える状態）
@@ -108,10 +106,8 @@ CREATE TABLE IF NOT EXISTS public.unit_condition_links (
 
 COMMENT ON TABLE public.unit_condition_links IS '販売単位→使える状態の紐づけ（連鎖プルダウン第2段）';
 
-CREATE INDEX IF NOT EXISTS idx_ucl_quantity_unit_id
-    ON public.unit_condition_links (quantity_unit_id);
-CREATE INDEX IF NOT EXISTS idx_ucl_condition_def_id
-    ON public.unit_condition_links (condition_def_id);
+CREATE INDEX IF NOT EXISTS idx_ucl_quantity_unit_id ON public.unit_condition_links (quantity_unit_id);
+CREATE INDEX IF NOT EXISTS idx_ucl_condition_def_id ON public.unit_condition_links (condition_def_id);
 
 -- ============================================================
 -- 5. product_quantity_units（商品 × 販売単位 × 入数）
@@ -132,9 +128,7 @@ CREATE TABLE IF NOT EXISTS public.product_quantity_units (
 COMMENT ON TABLE public.product_quantity_units IS '商品ごとの販売単位と入数（連鎖プルダウン実データ）';
 COMMENT ON COLUMN public.product_quantity_units.value IS '入数（換算係数）。例: 1ケース=12ボックスなら12';
 
-CREATE INDEX IF NOT EXISTS idx_pqu_product_id
-    ON public.product_quantity_units (product_id);
-CREATE INDEX IF NOT EXISTS idx_pqu_quantity_unit_id
-    ON public.product_quantity_units (quantity_unit_id);
+CREATE INDEX IF NOT EXISTS idx_pqu_product_id ON public.product_quantity_units (product_id);
+CREATE INDEX IF NOT EXISTS idx_pqu_quantity_unit_id ON public.product_quantity_units (quantity_unit_id);
 
 COMMIT;
