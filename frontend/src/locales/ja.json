@@ -4381,5 +4381,30 @@
       "effectOutput": "出力",
       "effectExclude": "除外"
     }
+  },
+  "reviewIssues": {
+    "productIdUnresolved": "商品ID未解決",
+    "unitUnresolved": "単位未解決",
+    "excluded": "除外対象",
+    "productMasterUnregistered": "商品マスタ未登録",
+    "supplierUnregistered": "仕入元未登録",
+    "confirmed": "確認済み"
+  },
+  "tcgParallelReport": {
+    "title": "並列レポート",
+    "overallSummary": "全体サマリー",
+    "metric": "指標",
+    "difference": "差分",
+    "totalItems": "総アイテム数",
+    "pidResolved": "PID解決数",
+    "supplierComparison": "仕入元別比較",
+    "count": "件数",
+    "refreshReport": "レポートを更新",
+    "calculating": "計算中…",
+    "superAdminOnly": "このページは super_admin 専用です。",
+    "fetchError": "レポート取得失敗",
+    "diffExplanation": "差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。",
+    "calculatingDetail": "計算中（DB 読み取り + インメモリ照合）…",
+    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。"
   }
 }
