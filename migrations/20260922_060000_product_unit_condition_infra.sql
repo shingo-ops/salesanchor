@@ -55,19 +55,41 @@ BEGIN;
 -- ============================================================
 -- 1. テーブルコメント追加
 --    LINE解析用と正式マスタを区別するため
+--    CI環境では対象テーブルが存在しない場合があるため DO ブロックで条件分岐
 -- ============================================================
-COMMENT ON TABLE public.units IS 'LINE解析用 単位マスタ（正式販売単位はquantity_unitsを使用）';
-COMMENT ON TABLE public.unit_aliases IS 'LINE解析用 単位エイリアス（unitsの表記ゆれ対応）';
-COMMENT ON TABLE public.conditions IS 'LINE解析用 状態マスタ（正式状態はcondition_definitionsを使用）';
-COMMENT ON TABLE public.condition_aliases IS 'LINE解析用 状態エイリアス（conditionsの表記ゆれ対応）';
-COMMENT ON TABLE public.quantity_units IS '正式販売単位マスタ — 値はアプリ/CSVから登録。value列は換算係数（例: 1ケース=12ボックスなら12）';
-COMMENT ON TABLE public.condition_definitions IS '正式状態マスタ — 値はアプリ/CSVから登録';
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'units') THEN
+    COMMENT ON TABLE public.units IS 'LINE解析用 単位マスタ（正式販売単位はquantity_unitsを使用）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'unit_aliases') THEN
+    COMMENT ON TABLE public.unit_aliases IS 'LINE解析用 単位エイリアス（unitsの表記ゆれ対応）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conditions') THEN
+    COMMENT ON TABLE public.conditions IS 'LINE解析用 状態マスタ（正式状態はcondition_definitionsを使用）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'condition_aliases') THEN
+    COMMENT ON TABLE public.condition_aliases IS 'LINE解析用 状態エイリアス（conditionsの表記ゆれ対応）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'quantity_units') THEN
+    COMMENT ON TABLE public.quantity_units IS '正式販売単位マスタ — 値はアプリ/CSVから登録。value列は換算係数（例: 1ケース=12ボックスなら12）';
+  END IF;
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'condition_definitions') THEN
+    COMMENT ON TABLE public.condition_definitions IS '正式状態マスタ — 値はアプリ/CSVから登録';
+  END IF;
+END $$;
 
 -- ============================================================
 -- 2. quantity_units.value: NOT NULL → NULL許可
 --    値はアプリ/CSVから投入するため、初期状態でNULLを許容する
+--    CI環境では quantity_units が存在しない場合があるため DO ブロックで条件分岐
 -- ============================================================
-ALTER TABLE public.quantity_units ALTER COLUMN value DROP NOT NULL;
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'quantity_units' AND column_name = 'value') THEN
+    ALTER TABLE public.quantity_units ALTER COLUMN value DROP NOT NULL;
+  END IF;
+END $$;
 
 -- ============================================================
 -- 3. product_line_available_units（小分類 → 販売可能単位）
