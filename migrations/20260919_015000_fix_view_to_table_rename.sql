@@ -28,11 +28,7 @@
 DO $$
 BEGIN
     -- units: VIEW → TABLE
-    IF EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'v'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'units' AND c.relkind = 'v') THEN
         DROP VIEW public.units CASCADE;
         ALTER TABLE public.line_units RENAME TO units;
         RAISE NOTICE 'Renamed line_units → units (VIEW dropped)';
@@ -41,11 +37,7 @@ BEGIN
     END IF;
 
     -- unit_aliases: VIEW → TABLE
-    IF EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'unit_aliases' AND c.relkind = 'v'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'unit_aliases' AND c.relkind = 'v') THEN
         DROP VIEW public.unit_aliases CASCADE;
         ALTER TABLE public.line_unit_aliases RENAME TO unit_aliases;
         RAISE NOTICE 'Renamed line_unit_aliases → unit_aliases (VIEW dropped)';
@@ -54,11 +46,7 @@ BEGIN
     END IF;
 
     -- conditions: VIEW → TABLE
-    IF EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'v'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'conditions' AND c.relkind = 'v') THEN
         DROP VIEW public.conditions CASCADE;
         ALTER TABLE public.line_conditions RENAME TO conditions;
         RAISE NOTICE 'Renamed line_conditions → conditions (VIEW dropped)';
@@ -67,11 +55,7 @@ BEGIN
     END IF;
 
     -- condition_aliases: VIEW → TABLE
-    IF EXISTS (
-        SELECT 1 FROM pg_class c
-        JOIN pg_namespace n ON n.oid = c.relnamespace
-        WHERE n.nspname = 'public' AND c.relname = 'condition_aliases' AND c.relkind = 'v'
-    ) THEN
+    IF EXISTS (SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace WHERE n.nspname = 'public' AND c.relname = 'condition_aliases' AND c.relkind = 'v') THEN
         DROP VIEW public.condition_aliases CASCADE;
         ALTER TABLE public.line_condition_aliases RENAME TO condition_aliases;
         RAISE NOTICE 'Renamed line_condition_aliases → condition_aliases (VIEW dropped)';
