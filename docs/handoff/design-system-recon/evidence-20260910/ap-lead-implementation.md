@@ -89,3 +89,16 @@ POはOpus設計/Sonnet調査・実装、Haiku禁止、SSOT/デザイントーク
 - ap-opus-review-result.json: claude-opus-4-6 / d9d245a5c8808caa45ea4a5b32ff79627a8447abf118b5e240e7f06d643b6375
 
 次の一手: 対象範囲の回答を得る。回答に依存しない既存記録の照合は実施済み。本番配備は失敗原因の復旧確認後。新しい製品実装や別件DB修復を推測で開始しない。
+
+
+### 2026-09-22 最新main成功確認・PR3514統合
+
+親がGitHub実物で直接確認した事実:
+
+- main `563e46e4aa76b47ab99534a4bbff4c059732db6e` のdeploy `35693536765`/job `106635373292` がsuccess。原ログでRun database migrationsおよびVerify deploymentもsuccess。9/22の先行deploy failure（be414803のfailure）は履歴であり、現在の配備失敗とはしない。
+- PR3514へ最新mainを通常統合、競合0。
+- PR3514の差分はap-lead-implementation.md・ap-release-prerequisite.json・tasks/todo.mdの文書3ファイルのみ（製品/DB/CI変更なし）。
+- POはPRマージ/デプロイまで完走を明示指示、Opus設計・Sonnet調査実装を指定。
+- PR3514の対象は既存の本番完了記録の保存に確定。全画面共通化は本PRとは別件であり、設計・対象・受入条件の確定が別途必要。
+
+未確認: PR3514の最終CI結果・Opus審査結果。これらを確認してから次の判断へ進む。製品変更・GO原文作成・マージ・本番操作は本追記では0。
