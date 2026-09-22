@@ -54,16 +54,26 @@ INDEX の存在確認を `pg_indexes` で行い、既に存在する場合はス
 ### 影響範囲
 
 - 変更ファイル: 1ファイル（`migrations/20260919_020000_master_ssot_public_tables.sql`）
-- 呼び出し元: `scripts/run_all_migrations.sh` 行687（変更なし）
+- 呼び出し元: `scripts/run_all_migrations.sh`（変更なし・行番号はデプロイ側で管理）
 - Step 5〜9（tcg_note_master等）: VIEW化対象外のため変更なし
 
 ### 戻し方
 
 `git revert <commit>` で migration ファイルを元に戻す。ただし本番では既にVIEWが存在するため、戻した場合は同じエラーが再発する。
 
-### 外部事例
+## 外部・過去事例の参照と我々への応用
 
-PostgreSQL公式: `CREATE INDEX` は relkind='r'（ordinary table）にのみ適用可。VIEWはサポートされない。pg_classのrelkindで判定するパターンは標準的な冪等migration手法。
+**PostgreSQL 公式ドキュメント（pg_class）**: `relkind='r'` が ordinary table、`relkind='v'` が view。`CREATE INDEX` は ordinary table にのみ適用可能で VIEW はサポートされない。[公式: System Catalogs pg_class]
+
+**過去事例（このリポジトリ）**: `migrations/20260920_040000_conditions_ssot_phase1.sql` 行45 で `to_regclass('public.conditions') IS NULL` による存在確認パターンを採用済み。本修正は同パターンを `relkind` 判定に拡張したもの。
+
+**応用**: `pg_class.relkind='r'` チェックは一般的な PostgreSQL の冪等 migration パターン。今後 VIEW/TABLE 共存が発生する箇所にも同様のガードを適用できる。
+
+## 維持の仕組み
+
+- `DO $$` ガード内の `pg_indexes` チェックにより二重実行しても安全（冪等性維持）
+- 将来 `public.units` が再度 BASE TABLE になった場合（LINE用VIEWが DROP された場合）、次回実行時に自動で INDEX が作成される
+- CI Migration Guard（ADR-155 Check 7/8）は DDL のみのため引き続き通過
 
 ## 弊害・リスク
 
