@@ -27,7 +27,7 @@
 - 先行15ファイル（tcg_line_import.py 等）で `TCG_SCHEMA = "public"` ローカルオーバーライドパターンが実績あり。同一手法を適用。
 
 ## 維持の仕組み
-- `grep -rn "from app.tcg_config import TCG_SCHEMA" backend/app/` で0件を CI でチェック可能（現状は手動確認）
+守り手: CI grep チェック（`grep -rn "from app.tcg_config import TCG_SCHEMA" backend/app/` が0件であること）
 - migration で public にコピーした3テーブルは tenant_004 側を将来 DROP する際の前提条件として記録済み（対象外・別PR）
 
 ## 対象ADR
