@@ -44,7 +44,7 @@ pg_attribute で実行時に列型を確認する:
 
 ## 削除するファイル
 
-なし（行削除は migration ファイル内の旧コードブロック置換のみ）
+- `migrations/20260914_140000_unify_tcg_products_to_public.sql` — 旧 Step2/Step3/Step4 コードブロックを置換（行削除を伴う）
 
 ## 弊害
 
@@ -57,9 +57,11 @@ pg_attribute で実行時に列型を確認する:
 ## 外部・過去事例の参照と我々への応用
 
 - `migrations/20260919_010000_master_ssot_work_id_recast.sql:38` — 本プロジェクト内で pg_attribute による実行時型チェックを既に採用済み。同パターンを Step2/Step3/Step4 に適用する。
-- PostgreSQL 公式: `pg_attribute.atttypid` を用いた列型判定は `IF NOT EXISTS` よりも型精度が高く、同名で異なる型の列がある場合に確実に分岐できる。
+- PostgreSQL の `pg_attribute.atttypid` を用いた列型判定は ADD COLUMN IF NOT EXISTS よりも型精度が高く、同名で異なる型の列がある場合に確実に分岐できる（PostgreSQL 公式ドキュメント pg_attribute カタログ参照）。
 
 ## 維持の仕組み
 
-- 同様の型ミスマッチが発生した場合は `pg_attribute` チェックを同じパターンで追加する（`migrations/20260919_010000_master_ssot_work_id_recast.sql` が手本）。
+守り手: `migrations/20260919_010000_master_ssot_work_id_recast.sql`（pg_attribute ガードのリファレンス実装）
+
+- 同様の型ミスマッチが発生した場合は pg_attribute チェックを同じパターンで追加する。
 - migration の冪等性テストは手動実行（CI での自動テストは未実装）。

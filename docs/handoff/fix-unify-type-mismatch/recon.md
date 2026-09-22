@@ -25,9 +25,9 @@
 | `migrations/20260914_140000_unify_tcg_products_to_public.sql:79` | Step2 UPSERT — work_id 型チェックなし（修正対象） |
 | `migrations/20260914_140000_unify_tcg_products_to_public.sql:126` | Step3 FK張替え — tcg_uuid 存在前提（修正対象） |
 | `migrations/20260914_140000_unify_tcg_products_to_public.sql:323` | Step4 件数照合 — tcg_uuid 存在前提（修正対象） |
-| `migrations/20260919_010000_master_ssot_work_id_recast.sql:38` | work_id UUID→INTEGER スワップ（pg_attribute ガードパターンの参考） |
-| `migrations/20260916_120000_phase_c_drop_tcg_uuid.sql:7` | tcg_uuid DROP（このmigration適用済みの場合、tcg_uuid列が消える） |
-| `scripts/run_all_migrations.sh:17` | 全 migration を毎デプロイ再実行する設計 |
+| `migrations/20260919_010000_master_ssot_work_id_recast.sql:38` | work_id UUID→INTEGER スワップ — pg_attribute ガードパターンの参考 |
+| `migrations/20260916_120000_phase_c_drop_tcg_uuid.sql:7` | tcg_uuid DROP — このmigration適用済みの場合、tcg_uuid列が消える |
+| `scripts/run_all_migrations.sh:40` | 全 migration を毎デプロイ再実行する設計 |
 
 ## 不明点リスト
 
