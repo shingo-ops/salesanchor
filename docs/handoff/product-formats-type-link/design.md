@@ -26,7 +26,7 @@ ADR-156 の3層商品分類ツリー（product_kinds → type_master → product
 | Backend router | `_COLS` / `_UPDATABLE` に `type_master_id` 追加。GET/POST/PATCH 全対応 |
 | Frontend panel | カードゲームドロップダウン（`SelectControl`）追加・テーブル列追加 |
 | i18n | `productFormatsMaster.typeMasterId` を ja/en 両方に追加 |
-| Migration runner | `run_all_migrations.sh` に `20260923_010000` を追加 |
+| Migration runner | `scripts/run_all_migrations.sh` に `20260923_010000` を追加 |
 
 ## 変更詳細
 
@@ -84,13 +84,14 @@ UPDATE public.product_formats SET type_master_id = NULL WHERE id IN (17,18,19,20
 
 フロントエンドは前コミットにrevertで対応。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-ADR-156 §Phase 1 の DB 設計（3層ツリー）に従った直接結線。同一パターンは `product_lines.type_id` FK 追加（同 ADR Phase 1）で実績あり。
+ADR-156 §Phase 1 の DB 設計（3層ツリー）に従った直接結線。同一パターンは product_lines の `type_id` FK 追加（同 ADR Phase 1・migration 20260921_140000）で実績あり。
+`product_formats.kind_id` も同一 migration 内で同様の FK 追加パターンを踏襲。
 
 ## 維持の仕組み
 
-### 守り手（CI）
+守り手: migration-guard.yml, migration-test.yml, frontend-check.yml, test.yml, ui-governance-gate.yml, schema-check.yml
 
 | workflow | 対象 |
 |---------|-----|

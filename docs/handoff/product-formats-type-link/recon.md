@@ -27,7 +27,7 @@ WHERE table_schema = 'public' AND table_name = 'product_formats'
 
 ### DB クエリ根拠（商品×format×type クロス集計）
 
-migration `migrations/20260923_010000_product_formats_add_type_master_id.sql:21-33` のコメントに証拠あり:
+migration `migrations/20260923_010000_product_formats_add_type_master_id.sql` (lines 21-33) のコメントに証拠あり:
 
 ```sql
 -- 根拠: public.products の product_format_id × type_master_id クロス集計結果
@@ -63,7 +63,7 @@ NULL 据置: 16件（id 1-16、商品実績なし）
 
 ### migration 登録状況
 
-`scripts/run_all_migrations.sh` に `20260923_010000_product_formats_add_type_master_id.sql` 登録済み。
+`scripts/run_all_migrations.sh` に `migrations/20260923_010000_product_formats_add_type_master_id.sql` 登録済み。
 
 ### i18n キー一致確認
 
