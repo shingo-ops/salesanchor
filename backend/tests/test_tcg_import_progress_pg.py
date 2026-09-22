@@ -363,20 +363,32 @@ async def test_link_retry_preserves_created_and_enqueue_sees_commit(pg,monkeypat
         assert r["messages"]["created"]==1 and r["messages"]["reused"]==0
 
 
-async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(pg):
+async def test_different_supplier_does_not_reuse_and_missing_channel_is_created(pg):
+    """仕入元は居るのにチャネルが無い場合、チャネルを作って取り込みを続ける。
+
+    以前は ValueError でロールバックする契約だったが、2026-09-21 の public 移行で
+    既存仕入元のチャネル行が引き継がれず、本番の取り込みが全て HTTP 500 になった
+    （docs/handoff/line-import-missing-channel/recon.md）。未登録送信者に対しては
+    もともと仕入元とチャネルを自動作成する経路があり、身元が確定している既知の
+    仕入元にだけ失敗させる理由がないため、契約を揃えた。
+    """
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
         c.execute(f"INSERT INTO {SCHEMA}.tenant_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
         c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) VALUES ('SP-00002','Bob','Bob','corporate',true) RETURNING id")
         bob_pub_id = c.fetchone()[0]
-    with pytest.raises(ValueError,match="no active LINE channel"):
-        await upload(engine,export(sender="Bob"))
-    assert count(conn,"import_jobs")==1
-    with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_pub_id,))
+    # チャネルが無い状態でも成功し、チャネルが1件作られる
     await upload(engine,export(sender="Bob"))
+    with conn.cursor() as c:
+        c.execute(f"SELECT count(*) FROM {SCHEMA}.supplier_channels WHERE supplier_id=%s AND channel='line' AND is_active", (bob_pub_id,))
+        assert c.fetchone()[0]==1
     assert count(conn,"source_messages")==2
+    # 2回目は作成済みのチャネルを再利用し、重複して作らない
+    await upload(engine,export(sender="Bob",hour="11:00"))
+    with conn.cursor() as c:
+        c.execute(f"SELECT count(*) FROM {SCHEMA}.supplier_channels WHERE supplier_id=%s AND channel='line' AND is_active", (bob_pub_id,))
+        assert c.fetchone()[0]==1
 
 
 async def test_later_tcg_schema_provisioning(pg):
