@@ -4357,5 +4357,30 @@
       "expectedCanonicalLabel": "Expected status",
       "expectedCanonicalPlaceholder": "Select status..."
     }
+  },
+  "reviewIssues": {
+    "productIdUnresolved": "Product ID Unresolved",
+    "unitUnresolved": "Unit Unresolved",
+    "excluded": "Excluded",
+    "productMasterUnregistered": "Product Master Unregistered",
+    "supplierUnregistered": "Supplier Unregistered",
+    "confirmed": "Confirmed"
+  },
+  "tcgParallelReport": {
+    "title": "Parallel Report",
+    "overallSummary": "Overall Summary",
+    "metric": "Metric",
+    "difference": "Difference",
+    "totalItems": "Total Items",
+    "pidResolved": "PID Resolved",
+    "supplierComparison": "Supplier Comparison",
+    "count": "Count",
+    "refreshReport": "Refresh Report",
+    "calculating": "Calculating...",
+    "superAdminOnly": "This page is for super_admin only.",
+    "fetchError": "Failed to fetch report",
+    "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
+    "calculatingDetail": "Calculating (DB read + in-memory matching)...",
+    "readOnlyNote": "* No DB writes. Report is read-only."
   }
 }
