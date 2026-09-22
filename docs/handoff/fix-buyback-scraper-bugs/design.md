@@ -56,15 +56,22 @@ ADR-157 Phase 1 で実装した買取スクレイパーの致命的不具合3件
 | ホムラがボタンの data 属性を変更する | サイト構造変更リスクは元のテキスト解析も同等。data 属性のほうがむしろ安定（Rails のフォームインフラ） |
 | シンソク API 構造が変更される | `has_more` / `items` の構造は変更なし。brands のネスト修正のみ |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（バグ修正のため外部事例は不要）
+バグ修正のため外部事例は不要。類似の先例として、BeautifulSoup の `find_all(string=...)` は要素内のテキストノードのみを対象とし、子要素には適用されないという既知の制約が今回の根本原因。公式ドキュメント（https://beautiful-soup-4.readthedocs.io/en/latest/#the-string-argument）にも記載があり、data 属性ベースのパース（`soup.find_all("button", attrs={"data-product-id": True})`）への切り替えが実績ある回避策。
 
 ## 受入条件
 
 1. デプロイ後、Celery beat の次回実行で buyback_shop_products テーブルにシンソク・ホムラ両方のレコードが作成される
 2. buyback_price_logs テーブルに価格データ（price_s が null でない）が記録される
 3. フロントエンドの買取相場ページでデータが表示される
+
+## 維持の仕組み
+
+守り手: Hikky-dev（スクレイパー改修時にサイト HTML 構造を再確認する）
+
+- シンソク: brands API のレスポンス構造変化は `_fetch_brands` 内の `logger.info` ログで件数を確認
+- ホムラ: `button[data-product-id]` の欠落は `_parse_products` の戻り値が空になることで検知（Celery タスクのログに件数が出力される）
 
 ## recon 相互参照
 
