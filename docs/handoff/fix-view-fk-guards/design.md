@@ -5,13 +5,13 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| `run_all_migrations.sh` が EXIT 0 で完了する | CI `backend-test` / `migration-test` のグリーン確認 |
-| 本番デプロイ後にエラーログが出ない | `deploy.yml` の migration ステップが SUCCESS |
+| `scripts/run_all_migrations.sh` が EXIT 0 で完了する | CI `backend-test` / `migration-test` のグリーン確認 |
+| 本番デプロイ後にエラーログが出ない | `.github/workflows/deploy.yml` の migration ステップが SUCCESS |
 | 既存データが破損していない | Phase 3 の `_bad_count` チェックが 0 のまま |
 
 ## KPI
 - CI グリーン（backend-test・migration-test）: PR マージ前に確認
-- 本番デプロイ EXIT 0: deploy.yml ログで確認
+- 本番デプロイ EXIT 0: `.github/workflows/deploy.yml` ログで確認
 
 ## 変更方針
 
@@ -53,7 +53,7 @@ END IF;
    - テーブルが既に存在する場合は早期 RETURN（冪等性維持）
 
 ### 変更しないもの
-- `20260922_060000_product_unit_condition_infra.sql`: COMMENT ON TABLE のみ、VIEW でも動作する
+- `migrations/20260922_060000_product_unit_condition_infra.sql`: COMMENT ON TABLE のみ、VIEW でも動作する
 - Phase 3B ($phase3b$): `tcg_product_categories` は VIEW に変換されていない
 - テナントスキーマの FK 張り替え（Step 2/3）: VIEW への参照ではないため安全
 
@@ -64,9 +64,19 @@ END IF;
 - **データ変更**: なし（DDL のみ）
 - **ロールバック**: 変更前のコミット SHA に戻して再デプロイ（DDL guard を外すだけ）
 
-## 外部事例
-PostgreSQL 公式: `pg_class.relkind` の値一覧 — `'r'` = ordinary table, `'v'` = view  
-https://www.postgresql.org/docs/current/catalog-pg-class.html
+## 外部・過去事例の参照と我々への応用
+
+PostgreSQL 公式 `pg_class.relkind` カタログ:  
+https://www.postgresql.org/docs/current/catalog-pg-class.html  
+値: `'r'` = ordinary table, `'v'` = view, `'m'` = materialized view  
+
+同プロジェクト先行事例: `migrations/20260919_020000_master_ssot_public_tables.sql:72-86` に同一パターンの VIEW guard が既に実装済み。今回はそのパターンを他の 5 マイグレーションに横展開する。
+
+## 維持の仕組み
+
+- CI `migration-test` が全マイグレーションを本番相当 DB で逐次実行する。VIEW 状態でも通過することを保証。
+- `migrations/20260919_020000_master_ssot_public_tables.sql` の既存 VIEW guard パターンが規約として機能（同パターンを踏襲する）。
+- `migrations/20260922_080000_rename_line_analysis_tables.sql` で `public.units/conditions` が BASE TABLE に昇格した後は、これらの VIEW guard は `ELSE` 分岐に入らず実質無効化される（正常動作）。
 
 ## 守り手
 - CI migration-test: 本番相当の DB で全マイグレーションを順次実行
