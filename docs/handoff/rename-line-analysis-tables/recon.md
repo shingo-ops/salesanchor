@@ -30,23 +30,21 @@ git grep -i 'units\|conditions\|line_analysis' docs/adr/
 - `migrations/20260922_080000_rename_line_analysis_tables.sql`: **今回作成**
 
 ### Layer 2: バックエンド Python
-```
-backend/app/routers/line_analysis.py — units / conditions / unit_aliases / condition_aliases 参照
-backend/app/services/line_parser.py   — 同上
-backend/app/models/line_units.py      — テーブル名 "units" をモデルで定義
-```
+実際のファイル確認結果:
+- `backend/app/routers/tcg_line_import.py` — LINE解析インポートルーター（units/conditions 参照の可能性）
+- `backend/app/services/tcg_line_import_svc.py` — LINE解析サービス（同上）
+- `backend/app/services/tcg_line_android_parser.py` — LINE Android パーサー
+
 Phase 1 では VIEW で後方互換を維持するため変更なし。
 
 ### Layer 3: フロントエンド TypeScript
-```
-frontend/src/api/lineAnalysis.ts — /api/units, /api/conditions エンドポイント呼び出し
-```
+- `frontend/src/pages/super-admin/TcgLineImportPage.tsx` — LINE解析インポートページ
+
 Phase 1 では変更なし（VIEW 経由で動作継続）。
 
 ### Layer 4: テスト
-```
-backend/tests/test_line_parser.py — units / conditions テーブルを直接参照するフィクスチャ
-```
+- `backend/tests/test_tcg_line_import.py` — LINE解析インポートテスト
+
 Phase 1 では変更なし（VIEW 経由で動作継続）。
 
 ### Layer 5: シード・フィクスチャ

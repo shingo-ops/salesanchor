@@ -40,13 +40,12 @@ ADR-156 で新設された正式マスタ `quantity_units` / `condition_definiti
 
 Phase 1 の VIEW が安定稼働確認後（1週間程度）に実施。
 
-### 対象ファイル（予定）
+### 対象ファイル（予定・Phase 2 以降で変更）
 
-- `backend/app/routers/line_analysis.py`: `units` → `line_units`, `conditions` → `line_conditions`
-- `backend/app/services/line_parser.py`: 同上
-- `backend/app/models/line_units.py`: モデル定義のテーブル名変更
-- `frontend/src/api/lineAnalysis.ts`: API エンドポイント名変更（BE と合わせて）
-- `backend/tests/test_line_parser.py`: フィクスチャ更新
+- `backend/app/routers/tcg_line_import.py`: `units` → `line_units`, `conditions` → `line_conditions`
+- `backend/app/services/tcg_line_import_svc.py`: 同上
+- `backend/app/services/tcg_line_android_parser.py`: 同上
+- `backend/tests/test_tcg_line_import.py`: フィクスチャ更新
 
 Phase 2 完了後に VIEW を DROP する Phase 3 も予定。
 
@@ -66,6 +65,20 @@ Phase 2 完了後に VIEW を DROP する Phase 3 も予定。
 
 - [PostgreSQL 公式: ALTER TABLE RENAME](https://www.postgresql.org/docs/current/sql-altertable.html) — FK / INDEX は自動追従
 - [PostgreSQL 公式: CREATE VIEW updatable](https://www.postgresql.org/docs/current/sql-createview.html) — "A simple view is automatically updatable"
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+- PostgreSQL 公式 ALTER TABLE RENAME: FK・INDEX は自動追従するため、既存の参照整合性が失われない。本実装で FK 付きテーブルが存在してもリネーム後も有効。
+- PostgreSQL 公式 CREATE VIEW (updatable views): 全列投影の単純 VIEW は INSERT/UPDATE/DELETE が透過的に動作する。本実装の後方互換 VIEW は WHERE 句・集計なしの `TABLE public.line_units` 形式であり updatable view 条件を満たす。
+- 過去事例: ADR-090 パイプライン tables を tenant_004 から public に移行したとき（PR #3500系）と同じパターン（DDL のみ・後方互換維持）。
+
+---
+
+## 維持の仕組み
+
+Phase 2 でコード更新後、`grep -r 'FROM units\|FROM conditions\|JOIN units\|JOIN conditions' backend/` が 0件 になったことを確認してから VIEW を DROP する。DROP 前にこのチェックを CI gate として追加するかは Phase 2 PR で検討。
 
 ---
 
