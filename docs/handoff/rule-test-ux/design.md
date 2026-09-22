@@ -37,12 +37,14 @@
 | window.confirm が消えている | ルールタブで行クリック→ConfirmModal表示 |
 | i18n キー不足なし | ja/en 両方でキーが表示される |
 
-## 外部事例
-該当なし（内部 UI 改善）
+## 外部・過去事例の参照と我々への応用
+該当なし（内部 UI 改善のため外部事例不要）
 
 ## 維持の仕組み
-- ADR-027 CI lint が i18n ハードコードを検出: `.github/workflows/frontend-checks.yml`
-- ADR-144 UI governance gate: `.github/workflows/ui-governance.yml`
+- ADR-027 CI lint が i18n ハードコードを検出: `.github/workflows/frontend-check.yml`
+- ADR-144 UI governance gate: `.github/workflows/ui-governance-gate.yml`
+
+守り手: ADR-027 i18n lint / ADR-144 UI governance gate CI
 
 ## recon 相互参照
 [docs/handoff/rule-test-ux/recon.md](./recon.md)
