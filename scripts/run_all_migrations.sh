@@ -763,3 +763,6 @@ run_sql migrations/20260922_020000_create_rule_test_tables.sql
 
 # 販売単位・状態マスタ連鎖プルダウン基盤
 run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql
