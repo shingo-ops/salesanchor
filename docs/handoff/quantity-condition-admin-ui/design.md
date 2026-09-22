@@ -15,22 +15,27 @@
 
 ## 変更方針
 
-- `ConditionDefsMasterPanel.tsx` を既存 `QuantityUnitsMasterPanel.tsx` と同パターンで新規作成
-- `AnalysisRulesSidebar` に `condition-defs-master` エントリ追加
-- `AnalysisRulesPage` に `ConditionDefsMasterPanel` 組み込み
+- ConditionDefsMasterPanel.tsx を既存 QuantityUnitsMasterPanel.tsx と同パターンで新規作成
+- AnalysisRulesSidebar に condition-defs-master エントリ追加
+- AnalysisRulesPage に ConditionDefsMasterPanel 組み込み
 - i18n キー追加（ja/en 両方）
 
 ## 影響範囲
 
-- 呼び出し元: `AnalysisRulesPage.tsx` のみ（ルーティングなし）
+- 呼び出し元: AnalysisRulesPage のみ（ルーティングなし）
 - 新規追加のみ。既存コードの動作変更なし
 
 ## 外部・過去事例
 
-- 既存の `WeightClassesMasterPanel.tsx`, `QuantityUnitsMasterPanel.tsx` が同パターンの先行実装
+- 既存の WeightClassesMasterPanel, QuantityUnitsMasterPanel が同パターンの先行実装
+
+## 維持の仕組み
+
+- ADR-027: i18n キー追加時は ja/en 両ファイルに同一キーを追加するルール
+- ADR-144: 新規 UI コンポーネントは金型コンポーネントのみ使用
 
 ## 戻し方
 
-- `ConditionDefsMasterPanel.tsx` 削除
-- `AnalysisRulesSidebar.tsx` / `AnalysisRulesPage.tsx` の追加行を revert
+- ConditionDefsMasterPanel.tsx 削除
+- AnalysisRulesSidebar / AnalysisRulesPage の追加行を revert
 - i18n の追加キーを削除
