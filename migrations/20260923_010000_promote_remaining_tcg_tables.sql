@@ -39,13 +39,15 @@ CREATE TABLE IF NOT EXISTS public.tcg_manufacturers (
 
 COMMENT ON TABLE public.tcg_manufacturers IS 'TCG メーカーマスタ（全テナント共有・公式管理）';
 
--- データプロモート: tenant_004 → public（冪等）
-INSERT INTO public.tcg_manufacturers
-    (id, code, display_name, alt_name, is_active, created_at)
-SELECT
-    id, code, display_name, alt_name, is_active, created_at
-FROM tenant_004.tcg_manufacturers
-ON CONFLICT (id) DO NOTHING;
+-- データプロモート: tenant_004 → public（冪等・CI環境ではスキップ）
+DO $$ BEGIN
+IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'tenant_004' AND table_name = 'tcg_manufacturers') THEN
+    INSERT INTO public.tcg_manufacturers (id, code, display_name, alt_name, is_active, created_at) SELECT id, code, display_name, alt_name, is_active, created_at FROM tenant_004.tcg_manufacturers ON CONFLICT (id) DO NOTHING;
+    RAISE NOTICE 'migration 20260923_010000: tcg_manufacturers データを tenant_004 からコピー';
+ELSE
+    RAISE NOTICE 'migration 20260923_010000: tenant_004.tcg_manufacturers 不在 — スキップ（CI環境）';
+END IF;
+END $$;
 
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_public_tcg_manufacturers_active
@@ -73,13 +75,15 @@ CREATE TABLE IF NOT EXISTS public.tcg_series (
 
 COMMENT ON TABLE public.tcg_series IS 'TCG シリーズ（IP）マスタ（全テナント共有・公式管理）';
 
--- データプロモート: tenant_004 → public（冪等）
-INSERT INTO public.tcg_series
-    (id, code, display_name, alt_name, is_active, created_at)
-SELECT
-    id, code, display_name, alt_name, is_active, created_at
-FROM tenant_004.tcg_series
-ON CONFLICT (id) DO NOTHING;
+-- データプロモート: tenant_004 → public（冪等・CI環境ではスキップ）
+DO $$ BEGIN
+IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'tenant_004' AND table_name = 'tcg_series') THEN
+    INSERT INTO public.tcg_series (id, code, display_name, alt_name, is_active, created_at) SELECT id, code, display_name, alt_name, is_active, created_at FROM tenant_004.tcg_series ON CONFLICT (id) DO NOTHING;
+    RAISE NOTICE 'migration 20260923_010000: tcg_series データを tenant_004 からコピー';
+ELSE
+    RAISE NOTICE 'migration 20260923_010000: tenant_004.tcg_series 不在 — スキップ（CI環境）';
+END IF;
+END $$;
 
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_public_tcg_series_active
@@ -110,17 +114,15 @@ CREATE TABLE IF NOT EXISTS public.tcg_unit_evidence_rules (
 
 COMMENT ON TABLE public.tcg_unit_evidence_rules IS 'TCG 単位証拠ルールマスタ（全テナント共有・公式管理）';
 
--- データプロモート: tenant_004 → public（冪等）
-INSERT INTO public.tcg_unit_evidence_rules
-    (id, evidence_type, priority, enabled,
-     requires_unique_pid, requires_unique_unit_candidate,
-     exclude_product_matched_terms, structure_pattern, note, created_at)
-SELECT
-    id, evidence_type, priority, enabled,
-    requires_unique_pid, requires_unique_unit_candidate,
-    exclude_product_matched_terms, structure_pattern, note, created_at
-FROM tenant_004.tcg_unit_evidence_rules
-ON CONFLICT (id) DO NOTHING;
+-- データプロモート: tenant_004 → public（冪等・CI環境ではスキップ）
+DO $$ BEGIN
+IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'tenant_004' AND table_name = 'tcg_unit_evidence_rules') THEN
+    INSERT INTO public.tcg_unit_evidence_rules (id, evidence_type, priority, enabled, requires_unique_pid, requires_unique_unit_candidate, exclude_product_matched_terms, structure_pattern, note, created_at) SELECT id, evidence_type, priority, enabled, requires_unique_pid, requires_unique_unit_candidate, exclude_product_matched_terms, structure_pattern, note, created_at FROM tenant_004.tcg_unit_evidence_rules ON CONFLICT (id) DO NOTHING;
+    RAISE NOTICE 'migration 20260923_010000: tcg_unit_evidence_rules データを tenant_004 からコピー';
+ELSE
+    RAISE NOTICE 'migration 20260923_010000: tenant_004.tcg_unit_evidence_rules 不在 — スキップ（CI環境）';
+END IF;
+END $$;
 
 -- 索引
 CREATE INDEX IF NOT EXISTS idx_public_tcg_unit_evidence_rules_enabled
