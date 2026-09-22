@@ -20,10 +20,26 @@ ALTER TABLE IF EXISTS tenant_004.analysis_results
   DROP CONSTRAINT IF EXISTS analysis_results_product_id_fkey;
 
 -- 3. Add correct FK on public.analysis_results (same as Phase 2a does for tenant schemas)
--- Only if public.analysis_results exists and has product_id column
+-- Only if public.analysis_results exists, has product_id column, AND product_id is still UUID type.
+-- Guard: 20260915_120000 (phase_b_fk_rewire_uuid_to_int) converts product_id to INTEGER.
+-- If already INTEGER, FK to uuid tcg_uuid would fail with type mismatch.
 DO $$
+DECLARE
+  _pid_type OID;
 BEGIN
-  IF EXISTS (
+  -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+  SELECT a.atttypid INTO _pid_type
+  FROM pg_attribute a
+  JOIN pg_class c ON c.oid = a.attrelid
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+  WHERE n.nspname = 'public'
+    AND c.relname = 'analysis_results'
+    AND a.attname = 'product_id'
+    AND NOT a.attisdropped;
+
+  IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+    RAISE NOTICE 'Skipped: public.analysis_results.product_id is not UUID (atttypid=%). FK rewire not applicable.', _pid_type;
+  ELSIF EXISTS (
     SELECT 1 FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'analysis_results' AND column_name = 'product_id'
   ) AND NOT EXISTS (
