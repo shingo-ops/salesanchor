@@ -14,9 +14,9 @@
 
 `migrations/20260914_140000_unify_tcg_products_to_public.sql` のデプロイが型ミスマッチで失敗した。
 
-- `tenant_004.tcg_products.work_id` は `uuid` 型
-- `public.products.work_id` は `integer` 型（後続 migration `20260919_010000_master_ssot_work_id_recast.sql` で変換済み）
-- `run_all_migrations.sh` が全 migration を毎デプロイ再実行するため、Step2 の INSERT が型ミスマッチで abort
+- tenant_004.tcg_products.work_id は uuid 型
+- public.products.work_id は integer 型（後続 migration 20260919_010000_master_ssot_work_id_recast.sql で変換済み）
+- `scripts/run_all_migrations.sh` が全 migration を毎デプロイ再実行するため、Step2 の INSERT が型ミスマッチで abort
 
 ## file:line 引用表
 

@@ -8,7 +8,7 @@
 
 | 基準 | 検証方法 |
 |------|----------|
-| `run_all_migrations.sh` が型ミスマッチなしで COMMIT まで完走する | deploy ログで COMMIT が出力される |
+| `scripts/run_all_migrations.sh` が型ミスマッチなしで COMMIT まで完走する | deploy ログで COMMIT が出力される |
 | Step2 が abort しない | NOTICE ログに "Step2 complete" または "Step2 をスキップ" が出力される |
 | Step3/Step4 が列不在でクラッシュしない | NOTICE ログに "スキップ" または "OK" が出力される |
 
