@@ -26,11 +26,19 @@ ADR-1002
 
 `product_id` の `atttypid` を `pg_attribute` で取得し、UUID でない場合は FK 追加をスキップして NOTICE を出力。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-同パターンの型ガード:
-- PR #3672: `20260914_140000` Step2 の work_id 型チェック
-- PR #3676: `20260914_140000` Step3 の各テーブル型チェック
+同パターンの型ガード（本プロジェクト内）:
+- PR #3672: `20260914_140000` Step2 の work_id 型チェック（`pg_attribute.atttypid` で UUID 判定）
+- PR #3676: `20260914_140000` Step3 の各テーブル型チェック（product_search_keywords 等 4テーブル）
+
+応用: 同じ `pg_attribute.atttypid = pg_type.oid WHERE typname='uuid'` パターンを `public.analysis_results` の FK 追加前チェックに適用。
+
+## 維持の仕組み
+
+- 本マイグレーションは冪等（FK 存在確認済み・DROP IF EXISTS）
+- 型変換後の状態では「Skipped」NOTICE が出力され、次回デプロイも安全に通過する
+- 将来 `product_id` が UUID に戻ることはないため、このガードは永続的に有効
 
 ## 守り手
 

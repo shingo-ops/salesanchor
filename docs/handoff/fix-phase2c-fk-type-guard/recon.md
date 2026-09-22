@@ -22,4 +22,4 @@ DETAIL: Key columns "product_id" and "tcg_uuid" are of incompatible types: integ
 
 ## 影響ファイル
 
-- `migrations/20260922_040000_fix_phase2c_fk_blocker.sql`: DO ブロックに型チェックガード追加
+- `migrations/20260922_040000_fix_phase2c_fk_blocker.sql`: DO ブロックに型チェックガード追加（line 24-58: DO ブロック全体を置換）
