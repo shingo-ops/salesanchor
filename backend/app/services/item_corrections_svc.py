@@ -1,15 +1,16 @@
 """
 PARITY-03 Phase 3 Stage 3: 修正履歴保存サービス（item_corrections）。
 
-tenant_004.item_corrections に 1フィールド = 1行で append INSERT する。
+public.item_corrections に 1フィールド = 1行で append INSERT する。
 上書きしない（GAS の overwrite 方式は踏襲しない）。
+Step 4/5: TCG テーブルは public スキーマに移行済み。
 """
 from __future__ import annotations
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-_SCHEMA = "tenant_004"
+_SCHEMA = "public"
 
 
 async def save_corrections(
@@ -63,12 +64,12 @@ async def save_corrections(
             await db.execute(
                 text(
                     f"UPDATE {_SCHEMA}.analysis_results "
-                    "SET product_id   = CAST(:new_pid AS uuid), "
+                    "SET product_id   = :new_pid, "
                     "    pid_basis    = 'MANUAL', "
                     "    pid_resolved = TRUE "
                     "WHERE extraction_item_id = CAST(:eid AS uuid)"
                 ),
-                {"new_pid": field["human_value"], "eid": extraction_item_id},
+                {"new_pid": int(field["human_value"]), "eid": extraction_item_id},
             )
 
     await db.commit()

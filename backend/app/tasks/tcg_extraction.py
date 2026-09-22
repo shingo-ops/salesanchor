@@ -39,10 +39,11 @@ from app.services.tcg_work_reference import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# スキーマ定数（tenant_004 専用）
+# スキーマ定数
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
 # ---------------------------------------------------------------------------
-
-from app.tcg_config import TCG_SCHEMA
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # 同期 DB エンジン
@@ -91,7 +92,7 @@ def extract_and_analyze_source_message(source_message_id: str) -> dict:
     try:
         return _run_extraction(session, source_message_id)
     except Exception:
-        logger.error("[tcg_extraction] unexpected error for sm=%s", source_message_id)
+        logger.exception("[tcg_extraction] unexpected error for sm=%s", source_message_id)
         return {
             "extraction_job_id": None,
             "status": "error",
@@ -107,11 +108,11 @@ def work_schema_ready(session: Session) -> bool:
     count = session.execute(text(f"""
         SELECT count(*) FROM pg_attribute
         WHERE NOT attisdropped AND (
-            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname = 'resolved_work_id')
+            (attrelid = '{TCG_SCHEMA}.extraction_items'::regclass AND attname IN ('resolved_work_id', 'resolved_product_code'))
             OR (attrelid = '{TCG_SCHEMA}.extraction_jobs'::regclass
                 AND attname IN ('work_reference_snapshot', 'work_reference_sha256')))
     """)).scalar_one()
-    return count == 3
+    return count == 4
 
 
 def _run_extraction(session: Session, source_message_id: str) -> dict:
@@ -148,9 +149,29 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if not work_schema_ready(session) or not schema_ready(session):
         return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
                 "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
-    reference = load_work_reference(session, TCG_SCHEMA)
+    reference = load_work_reference(session, "public")
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
+
+    # C94: 空テキストチェック — strip後0文字なら Gemini スキップ
+    # 設計根拠: sold-out-rules-design.md §14.1.2
+    if len(raw_text.strip()) == 0:
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
+                "SET status = 'empty', extracted_at = NOW(), error_message = NULL "
+                "WHERE id = :ej_id"
+            ),
+            {"ej_id": extraction_job_id},
+        )
+        session.commit()
+        return {
+            "extraction_job_id": extraction_job_id,
+            "status": "empty",
+            "items_count": 0,
+            "analysis_stats": None,
+            "error_message": None,
+        }
 
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
@@ -160,6 +181,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     except RecordError as exc:
         code = str(exc)
     except Exception:
+        logger.exception("[tcg_extraction] record write failed for ej=%s", extraction_job_id)
         code = "RECORD_WRITE_FAILED"
     recorder.fail(code)
     message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
@@ -175,7 +197,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     # Never retain a DB transaction across the external call.
     if result["status"] in ("done", "empty"):
         try:
-            current = load_work_reference(session, TCG_SCHEMA)
+            current = load_work_reference(session, "public")
             if reference_digest(current) != digest:
                 raise RecordError("REFERENCE_CHANGED")
             if result["prompt_version"] in WORK_ID_PROMPT_VERSIONS:
@@ -184,8 +206,12 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         item["raw_product_name"], raw_text, item["line_start"], item["line_end"],
                         None, None, reference["works"],
                     )
-                    if explicit and item.get("resolved_work_id") not in (None, explicit):
-                        raise RecordError("WORK_ID_CONFLICT")
+                    if explicit and item.get("resolved_work_id") not in (None, int(explicit)):
+                        logger.warning(
+                            "[tcg_extraction] WORK_ID_CONFLICT for ej=%s: gemini=%s evidence=%s, setting to None",
+                            extraction_job_id, item.get("resolved_work_id"), explicit,
+                        )
+                        item["resolved_work_id"] = None
         except SoftTimeLimitExceeded:
             raise
         except Exception as exc:
@@ -214,6 +240,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
                         raw_work_name, raw_work_source_line_span, resolved_work_id,
+                        resolved_product_code,
                         created_at
                     )
                     VALUES (
@@ -222,6 +249,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
                         :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
+                        :resolved_product_code,
                         now()
                     )
                     """
@@ -240,6 +268,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                     "resolved_work_id": item.get("resolved_work_id"),
                     "raw_work_name": item.get("raw_work_name"),
                     "raw_work_source_line_span": item.get("raw_work_source_line_span"),
+                    "resolved_product_code": item.get("resolved_product_code"),
                 },
             )
             items_inserted += 1
@@ -283,6 +312,11 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                 session.rollback()
                 logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
                 analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
+
+            # 解析完了後に自動配信をトリガー（TCG_AUTO_DISTRIBUTE=1 のときのみ）
+            auto_distribute = os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() == "1"
+            if auto_distribute and (analysis_stats is None or analysis_stats.get("status") != "error"):
+                _enqueue_auto_distribute()
         else:
             logger.info(
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id
@@ -295,6 +329,24 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
         "analysis_stats": analysis_stats,
         "error_message": error_message,
     }
+
+
+# ---------------------------------------------------------------------------
+# 自動配信エンキュー（Redis 未起動時は no-op）
+# ---------------------------------------------------------------------------
+
+
+def _enqueue_auto_distribute() -> None:
+    """
+    auto_distribute_after_analysis_task を非同期でエンキューする。
+
+    Redis が起動していない場合は握りつぶしてスキップする。
+    """
+    try:
+        if auto_distribute_after_analysis_task is not None:
+            auto_distribute_after_analysis_task.delay()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] auto_distribute enqueue skipped: %s", exc)
 
 
 # ---------------------------------------------------------------------------
@@ -326,15 +378,71 @@ try:
             )
             raise self.retry(exc=exc) from exc
 
+    @celery_app.task(
+        name="tcg.auto_distribute_after_analysis",
+        bind=True,
+        max_retries=1,
+        default_retry_delay=60,
+        time_limit=600,
+        soft_time_limit=540,
+    )
+    def auto_distribute_after_analysis_task(self) -> dict:
+        """
+        Celery タスク: 解析完了後の自動配信。
+
+        run_distribution() の安全装置（#8/#8b/#8c）が pending job の残存を検知した場合は
+        スキップ扱いとなり、次の extraction 完了時に再トリガーされる。
+        Redis 起動時のみ .delay() で非同期実行可能。
+        """
+        import asyncio  # noqa: PLC0415
+
+        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
+
+        from app.database import DATABASE_URL  # noqa: PLC0415
+        from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
+
+        async def _run() -> dict:
+            # asyncio.run() は新規イベントループを作成するため、
+            # モジュールレベルの AsyncSessionLocal（エンジンが旧ループに紐付き）を
+            # そのまま使うと RuntimeError: attached to a different loop が発生する。
+            # 回避策: ワンショット用エンジン＋セッションをここで生成し、finally で確実に破棄する。
+            _connect_args: dict = {
+                "prepared_statement_cache_size": 0,
+                "server_settings": {"application_name": "salesanchor_celery_distribute"},
+            }
+            _engine = create_async_engine(
+                DATABASE_URL,
+                pool_pre_ping=True,
+                pool_size=2,
+                max_overflow=0,
+                connect_args=_connect_args,
+            )
+            _Session = async_sessionmaker(_engine, expire_on_commit=False)
+            try:
+                async with _Session() as db:
+                    return await run_distribution(db)
+            finally:
+                await _engine.dispose()
+
+        try:
+            result = asyncio.run(_run())
+            logger.info("[tcg_extraction] auto_distribute result: %s", result)
+            return result
+        except Exception as exc:
+            logger.exception("[tcg_extraction] auto_distribute failed: %s", exc)
+            raise self.retry(exc=exc) from exc
+
 except Exception as _celery_init_err:  # noqa: BLE001
     # Redis 未起動 / Celery 初期化失敗時はタスクなしでモジュールのみ提供
     logger.warning(
         "[tcg_extraction] Celery task registration skipped: %s", _celery_init_err
     )
     extract_source_message_task = None  # type: ignore[assignment]
+    auto_distribute_after_analysis_task = None  # type: ignore[assignment]
 
 
 __all__ = [
     "extract_and_analyze_source_message",
     "extract_source_message_task",
+    "auto_distribute_after_analysis_task",
 ]

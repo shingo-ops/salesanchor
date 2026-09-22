@@ -54,11 +54,13 @@ def fixture_data(pg, monkeypatch):
     with connection.cursor() as cursor:
         migration = Path(__file__).resolve().parents[2] / "migrations/20260903_160000_tcg_normalization_rules_t004.sql"
         cursor.execute(migration.read_text().replace("tenant_004", SCHEMA))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'共通商品',99 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'共通商品',99 FROM public.products WHERE product_code='PM0200'", (str(uuid4()),))
+        # tcg_normalization_rules moved to public schema in Step 4/5 migration; tests need it in public too.
+        cursor.execute(migration.read_text().replace("tenant_004", "public"))
+        cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'共通商品',99 FROM public.products WHERE product_code='PM0123'")
+        cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'共通商品',99 FROM public.products WHERE product_code='PM0200'")
     with connection.cursor() as cursor:
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_search_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'ALPHA BETA',100 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
-        cursor.execute(f"INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position) SELECT %s,tcg_uuid,'LIMITED EDITION',100 FROM public.products WHERE product_code='PM0123'", (str(uuid4()),))
+        cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'ALPHA BETA',100 FROM public.products WHERE product_code='PM0123'")
+        cursor.execute("INSERT INTO public.product_exclude_keywords(product_id,keyword,position) SELECT id,'LIMITED EDITION',100 FROM public.products WHERE product_code='PM0123'")
     cases = [
         ("EB01 1BOX 1000円", record("EB01", 1)),
         ("メモリアルコレクション 1BOX 1000円", record("メモリアルコレクション", 1)),

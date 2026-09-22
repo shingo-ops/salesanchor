@@ -42,6 +42,72 @@ import app.auth.dependencies  # noqa: F401
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 
+# PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
+# SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
+# check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
+_PUBLIC_SUPPLIERS_DDL = """
+CREATE TABLE IF NOT EXISTS public.suppliers (
+    id            SERIAL PRIMARY KEY,
+    supplier_code VARCHAR(20) UNIQUE,
+    name          VARCHAR(255) NOT NULL,
+    line_name     VARCHAR(255),
+    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
+    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id     INTEGER,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
+    ON public.suppliers (line_name)
+    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
+"""
+
+
+def _supplier_ssot_premigration(cursor, schema: str):
+    """Pre-migration value operations for supplier SSOT.
+    Copies tenant_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
+    Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql.
+    Idempotent: skips if supplier_id is already INTEGER."""
+    # Check if supplier_id is already INTEGER (conversion already done)
+    cursor.execute("""
+        SELECT a.atttypid = 'integer'::regtype::oid
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = %s
+          AND c.relname = 'supplier_channels'
+          AND a.attname = 'supplier_id'
+          AND a.attnum > 0
+    """, (schema,))
+    row = cursor.fetchone()
+    if row and row[0]:
+        return  # Already INTEGER, skip
+    # Also skip if supplier_channels table doesn't exist in this schema
+    if not row:
+        return
+    # Step 1: Copy tenant_suppliers → public.suppliers
+    cursor.execute(f"""
+        INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
+        SELECT
+            'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
+            ts.name, ts.name, 'corporate', ts.is_active, ts.created_at, NOW()
+        FROM {schema}.tenant_suppliers ts
+        ON CONFLICT (supplier_code) DO UPDATE SET
+            line_name = EXCLUDED.line_name
+        WHERE public.suppliers.line_name IS NULL
+    """)
+    # Step 2: Add tmp column and map UUID → INTEGER
+    cursor.execute(f"ALTER TABLE {schema}.supplier_channels ADD COLUMN IF NOT EXISTS supplier_int_id INTEGER")
+    cursor.execute(f"""
+        UPDATE {schema}.supplier_channels sc
+        SET supplier_int_id = ps.id
+        FROM {schema}.tenant_suppliers ts
+        JOIN public.suppliers ps
+          ON ps.supplier_code = 'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0')
+        WHERE ts.id = sc.supplier_id
+    """)
+
+
 def _load_country_seed_rows() -> list[tuple[str, str, str]]:
     """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
     import re
@@ -53,7 +119,7 @@ def _load_country_seed_rows() -> list[tuple[str, str, str]]:
 
 
 def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """tcg_type_master の seed rows を canonical code に合わせる。"""
+    """type_master の seed rows を canonical code に合わせる。"""
     return [
         ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
         ("one_piece", "ワンピース", "One Piece TCG"),
@@ -107,8 +173,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
-        if "public.tcg_type_master" in statement:
-            statement = statement.replace("public.tcg_type_master", "tcg_type_master")
+        if "public.type_master" in statement:
+            statement = statement.replace("public.type_master", "type_master")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -618,7 +684,7 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS tcg_type_master (
+            CREATE TABLE IF NOT EXISTS type_master (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code VARCHAR(50) NOT NULL UNIQUE,
                 name_ja VARCHAR(100) NOT NULL,
@@ -657,7 +723,7 @@ async def setup_test_db(test_engine):
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
-                INSERT OR IGNORE INTO tcg_type_master (code, name_ja, name_en, sort_order, is_active)
+                INSERT OR IGNORE INTO type_master (code, name_ja, name_en, sort_order, is_active)
                 VALUES (:code, :name_ja, :name_en, 100, 1)
             """), {"code": code, "name_ja": name_ja, "name_en": name_en})
         # ロール
@@ -747,7 +813,7 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES tcg_type_master(code),
+                tcg_type VARCHAR(50) REFERENCES type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),
@@ -767,7 +833,8 @@ async def setup_test_db(test_engine):
                 display_order INTEGER,
                 tcg_uuid UUID,
                 division_id UUID,
-                work_id UUID,
+                product_kind_id INTEGER,
+                work_id INTEGER,
                 manufacturer_id UUID,
                 product_category_id UUID,
                 category_class TEXT,
@@ -959,10 +1026,17 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 supplier_code VARCHAR(20),
                 name VARCHAR(255) NOT NULL,
+                line_name VARCHAR(255),
+                supplier_type VARCHAR(20) DEFAULT 'corporate',
                 contact_name VARCHAR(255),
                 email VARCHAR(255),
                 phone VARCHAR(50),
                 address TEXT,
+                postal_code VARCHAR(20),
+                prefecture VARCHAR(100),
+                city VARCHAR(100),
+                address1 TEXT,
+                address2 TEXT,
                 notes TEXT,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

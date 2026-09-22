@@ -12,7 +12,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
-from app.tcg_config import TCG_SCHEMA
+from app.services.tcg_result_order import result_order_sql
+
+TCG_SCHEMA = "public"
 
 # ---------------------------------------------------------------------------
 # review_issues ラベル定数
@@ -34,9 +36,10 @@ _BASE_FROM = f"""
     JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
     JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
     JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id AND sm.is_active = TRUE
-    JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-    LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-    LEFT JOIN public.products p ON p.tcg_uuid = ar.product_id
+    JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+    LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
+    LEFT JOIN public.products p ON p.id = ar.product_id
+    LEFT JOIN public.type_master ws ON ws.id = p.work_id
     {review_joins(schema=TCG_SCHEMA)}
 """
 
@@ -53,6 +56,7 @@ def _build_where(
     review_only: bool,
     unregistered_only: bool,
     unresolved_unit_only: bool,
+    work_id: str | None = None,
 ) -> tuple[str, dict]:
     """フィルタ条件を WHERE 句と bind パラメータに変換する。"""
     conditions: list[str] = []
@@ -61,13 +65,13 @@ def _build_where(
     if query:
         conditions.append(
             "(ei.raw_product_name ILIKE :query"
-            " OR COALESCE(ts.name, '') ILIKE :query"
+            " OR COALESCE(ps.name, '') ILIKE :query"
             " OR COALESCE(p.product_code, '') ILIKE :query)"
         )
         params["query"] = f"%{query}%"
 
     if provider:
-        conditions.append("ts.name = :provider")
+        conditions.append("ps.name = :provider")
         params["provider"] = provider
 
     # status_tab による絞り込み（review_only より優先）
@@ -78,7 +82,7 @@ def _build_where(
     elif status_tab == "PRODUCT_MASTER_UNREGISTERED":
         conditions.append("ar.pid_basis = 'NONE'")
     elif status_tab == "SUPPLIER_UNREGISTERED":
-        conditions.append("ts.id IS NULL")
+        conditions.append("ps.id IS NULL")
     elif status_tab == "PRODUCT_ID_UNRESOLVED":
         conditions.append("NOT ar.pid_resolved")
     elif status_tab == "NORMAL_COMPLETED":
@@ -96,6 +100,9 @@ def _build_where(
         conditions.append("ar.pid_basis = 'NONE'")
     if unresolved_unit_only:
         conditions.append("NOT ar.unit_resolved")
+    if work_id:
+        conditions.append("p.work_id = :work_id")
+        params["work_id"] = work_id
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
     return where, params
@@ -147,6 +154,7 @@ async def fetch_analysis_results(
     unregistered_only: bool = False,
     unresolved_unit_only: bool = False,
     strip_raw_text: bool = False,
+    work_id: str | None = None,
 ) -> dict:
     """
     解析結果一覧を返す（GAS: getAnalysisReviewPage 相当）。
@@ -161,6 +169,7 @@ async def fetch_analysis_results(
         review_only=review_only,
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
+        work_id=work_id,
     )
 
     # 総件数
@@ -169,7 +178,7 @@ async def fetch_analysis_results(
 
     # 提供者一覧（フィルタ後の全仕入元）
     prov_sql = f"""{source_cte(schema=TCG_SCHEMA)}
-        SELECT DISTINCT COALESCE(ts.name, '不明') AS name
+        SELECT DISTINCT COALESCE(ps.name, '不明') AS name
         {_BASE_FROM}
         {where}
         ORDER BY name
@@ -179,10 +188,17 @@ async def fetch_analysis_results(
 
     # アイテム一覧
     items_sql = f"""{source_cte(schema=TCG_SCHEMA)}
+        , result_order_page AS MATERIALIZED (
+            SELECT ei.id
+            {_BASE_FROM}
+            {where}
+            ORDER BY {result_order_sql()}
+            LIMIT :limit OFFSET :offset
+        )
         SELECT
             ei.id::text                          AS extraction_item_id,
             ej.source_message_id::text           AS source_message_id,
-            COALESCE(ts.name, '不明')            AS provider,
+            COALESCE(ps.name, '不明')            AS provider,
             sm.raw_text,
             ei.raw_product_name,
             ei.raw_quantity,
@@ -192,6 +208,9 @@ async def fetch_analysis_results(
             ei.raw_memo,
             ei.line_start,
             ei.line_end,
+            p.work_id::text                      AS work_id,
+            ws.name_ja                           AS work_name,
+            ws.name_en                           AS work_alt_name,
             p.product_code                       AS product_code,
             p.name                               AS product_title,
             ar.product_id::text                  AS product_uuid,
@@ -205,7 +224,7 @@ async def fetch_analysis_results(
             ar.note_ja,
             ar.status,
             ar.exclusion,
-            (ts.id IS NOT NULL)                  AS supplier_registered,
+            (ps.id IS NOT NULL)                  AS supplier_registered,
             COALESCE(
                 (SELECT ic.system_value = ic.human_value
                  FROM {TCG_SCHEMA}.item_corrections ic
@@ -216,9 +235,9 @@ async def fetch_analysis_results(
                 FALSE
             )                                    AS product_confirmed
         {_BASE_FROM}
+        JOIN result_order_page ON result_order_page.id = ei.id
         {where}
-        ORDER BY sm.received_at DESC, ei.line_start ASC
-        LIMIT :limit OFFSET :offset
+        ORDER BY {result_order_sql()}
     """
     item_params = dict(params, limit=limit, offset=offset)
     rows = (await db.execute(text(items_sql), item_params)).fetchall()
@@ -246,6 +265,8 @@ async def fetch_analysis_results(
                     "span": span,
                 },
                 "system": {
+                    "work_id": row.work_id or "",
+                    "work_name": row.work_name or "",
                     "product_id": row.product_code or "",
                     "product_title": row.product_title or "",
                     "product_uuid": row.product_uuid or "",
@@ -278,6 +299,17 @@ async def fetch_analysis_results(
         for item in items:
             item["raw_text"] = ""
 
+    # works 一覧取得（tcg_product_import.py:134-142 と同一パターン）
+    work_rows = await db.execute(text(
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.type_master s "
+        "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
+        "WHERE p.work_id = s.id) ORDER BY s.code ASC"
+    ))
+    works = [
+        {"id": str(r.id), "code": r.code, "display_name": r.display_name or "", "alt_name": r.alt_name or ""}
+        for r in work_rows.fetchall()
+    ]
+
     return {
         "items": items,
         "total": total,
@@ -285,4 +317,5 @@ async def fetch_analysis_results(
         "offset": offset,
         "limit": limit,
         "providers": providers,
+        "works": works,
     }

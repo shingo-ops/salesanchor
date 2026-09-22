@@ -39,7 +39,17 @@ import InvoicesPage from "./pages/invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/invoice-create/InvoiceCreatePage";
 import InvoiceDetailPage from "./pages/invoice-detail/InvoiceDetailPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
+import StatusMasterPage from "./pages/status-master/StatusMasterPage";
+import ConditionsPage from "./pages/conditions/ConditionsPage";
+import ProductCategoriesPage from "./pages/product-categories/ProductCategoriesPage";
+import UnitsPage from "./pages/units/UnitsPage";
+import NoteMasterPage from "./pages/note-master/NoteMasterPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
+import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
+import UnitImportTenantPage from "./pages/units/UnitImportPage";
+import ConditionImportTenantPage from "./pages/conditions/ConditionImportPage";
+import StatusMasterImportTenantPage from "./pages/status-master/StatusMasterImportPage";
+import NoteMasterImportTenantPage from "./pages/note-master/NoteMasterImportPage";
 import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
@@ -83,8 +93,19 @@ import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
 import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
+import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
+import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
+import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
+import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
+import UnitImportPage from "./pages/super-admin/UnitImportPage";
+import ConditionImportPage from "./pages/super-admin/ConditionImportPage";
+import StatusMasterImportPage from "./pages/super-admin/StatusMasterImportPage";
+import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
+import ProductCategoriesImportPage from "./pages/super-admin/ProductCategoriesImportPage";
+import ProductCategoriesImportTenantPage from "./pages/product-categories/ProductCategoriesImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
+import BuybackPricesPage from "./pages/buyback-prices/BuybackPricesPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
 import DesignSystemPage from "./pages/design-system/DesignSystemPage";
@@ -183,6 +204,9 @@ function App() {
                     <Route path="archive"         element={<ArchivesPage />} />
                   </Route>
 
+                  {/* 外部買取店の買取価格 */}
+                  <Route path="/buyback-prices" element={<BuybackPricesPage />} />
+
                   {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
                   <Route path="/inventory" element={<InventoryPage />} />
                   {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
@@ -233,6 +257,12 @@ function App() {
                   <Route path="/roles" element={<RolesPage />} />
                   <Route path="/data" element={<ERPPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
+                  <Route path="/management-center/units/import" element={<UnitImportTenantPage />} />
+                  <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
+                  <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
+                  <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
+                  <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
                   <Route
                     path="/purchase-orders"
@@ -271,6 +301,7 @@ function App() {
                     path="/super-admin/inbound/:id/review"
                     element={<ParseReviewPage />}
                   />
+                  <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
                   <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
                   {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
@@ -297,6 +328,39 @@ function App() {
                   <Route
                     path="/super-admin/tcg-line-import"
                     element={<TcgLineImportPage />}
+                  />
+                  {/* CARD-ANALYSIS-RULE-P6-UI: 解析管理（完売ルール・日付ルール） (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/analysis-rules"
+                    element={<AnalysisRulesPage />}
+                  />
+                  <Route
+                    path="/super-admin/supplier-master"
+                    element={<SupplierMasterPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/suppliers/import"
+                    element={<SupplierImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/units/import"
+                    element={<UnitImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/conditions/import"
+                    element={<ConditionImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/status-master/import"
+                    element={<StatusMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/note-master/import"
+                    element={<NoteMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/product-categories/import"
+                    element={<ProductCategoriesImportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
@@ -335,6 +399,11 @@ function App() {
                     <Route path="channels"            element={<ChannelsPage />} />
                     <Route path="bots"                element={<BotsPage />} />
                     <Route path="suppliers"           element={<SuppliersPage />} />
+                    <Route path="status-master"       element={<StatusMasterPage />} />
+                    <Route path="conditions"          element={<ConditionsPage />} />
+                    <Route path="product-categories" element={<ProductCategoriesPage />} />
+                    <Route path="units"              element={<UnitsPage />} />
+                    <Route path="note-master"        element={<NoteMasterPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
                     {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}

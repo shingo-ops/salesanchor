@@ -34,6 +34,7 @@ export default function TcgProductMasterPage() {
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
   const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
   const exportLock = useRef(false);
@@ -43,9 +44,7 @@ export default function TcgProductMasterPage() {
     let url: string | undefined;
     const anchor = document.createElement("a");
     try {
-      const params = new URLSearchParams({ query: filter.query });
-      if (filter.workId) params.set("work_id", filter.workId);
-      const blob = await api.getBlob(`/tcg/products/export?${params}`);
+      const blob = await api.getBlob("/tcg/products/export");
       url = URL.createObjectURL(blob); anchor.href = url;
       anchor.download = "tcg-products-update.csv";
       document.body.appendChild(anchor); anchor.click();
@@ -79,7 +78,7 @@ export default function TcgProductMasterPage() {
     { key: "keyword_count", header: t("productDetail.searchCount") },
     { key: "exclude_keyword_count", header: t("productDetail.excludeCount") },
   ];
-  return <PageLayout navKey="nav.superAdminTcgProductMaster" headerAction={isSuperAdmin ? <><HeaderButton variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>{t(exporting ? "common.loading" : "productCsv.export")}</HeaderButton><HeaderButton variant="primary" onClick={() => navigate("/super-admin/tcg-product-master/import")}>{t("productCsv.openImport")}</HeaderButton></> : undefined}>
+  return <PageLayout navKey="nav.superAdminTcgProductMaster" headerAction={isSuperAdmin ? <><HeaderButton variant="secondary" disabled={exporting} onClick={() => void downloadExport()}>{t(exporting ? "common.loading" : "productCsv.export")}</HeaderButton><HeaderButton variant="primary" onClick={() => setCreating(true)}>{t("productCsv.addProduct")}</HeaderButton><HeaderButton variant="primary" onClick={() => navigate("/super-admin/tcg-product-master/import")}>{t("productCsv.openImport")}</HeaderButton></> : undefined}>
     {authLoading ? <p>{t("common.loading")}</p> : !isSuperAdmin ? <p role="alert">{t("productCsv.denied")}</p> : <>
       <p>{t("productCsv.exportHint")}</p>
       {exportError && <p role="alert">{t("productCsv.exportError")}</p>}
@@ -90,6 +89,7 @@ export default function TcgProductMasterPage() {
         <DataTable columns={columns} data={data.items} rowKey={row => row.code} onRowClick={row => setSelectedProduct(row.code)} emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />} page={filter.page} hasNextPage={filter.page * PAGE_SIZE < data.total} onPageChange={page => setFilter(value => ({ ...value, page }))} prevPageLabel={t("productCsv.previous")} nextPageLabel={t("productCsv.next")} />
       </>}
       <TcgProductDetailDrawer productCode={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
+      <TcgProductDetailDrawer productCode={null} open={creating} mode="create" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRetry(v => v + 1); }} />
     </>}
   </PageLayout>;
 }

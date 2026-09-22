@@ -11,6 +11,7 @@ import pytest
 import pytest_asyncio
 from fastapi import FastAPI, HTTPException
 from httpx import ASGITransport, AsyncClient
+from psycopg2 import sql
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import IntegrityError
@@ -21,6 +22,8 @@ from app.database import get_db
 from app.routers import tcg_line_import as routes
 from app.services import tcg_import_progress as progress
 from app.services import tcg_line_import_svc as svc
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks
 
 URL = os.getenv("PMG_TEST_PG_URL") or os.getenv("RLS_ADMIN_DATABASE_URL")
 pytestmark = pytest.mark.skipif(not URL, reason="PMG_TEST_PG_URL must identify a disposable test database")
@@ -31,8 +34,12 @@ def provision_tcg(cursor,schema):
     # Execute canonical migrations, changing only the isolated test schema target.
     migrations=Path(__file__).resolve().parents[2]/"migrations"
     for name in ("20260831_110000_create_tcg_analysis_tables_t004.sql",
+                 "20260903_170000_item_corrections_t004.sql",
                  "20260905_140000_import_jobs_review_stage_t004.sql"):
         cursor.execute((migrations/name).read_text().replace("tenant_004",schema))
+    # Migration 20260831_110000 creates tcg_suppliers; production DB was renamed to
+    # tenant_suppliers (ADR-155). Align test schema to match renamed table.
+    cursor.execute(f"ALTER TABLE IF EXISTS {schema}.tcg_suppliers RENAME TO tenant_suppliers")
 
 
 @pytest_asyncio.fixture
@@ -40,30 +47,58 @@ async def pg(monkeypatch):
     url = make_url(URL)
     assert url.database in ("pmg_import_ssot_test", "jarvis_test_db"), "Refuse non-disposable database"
     assert url.host in ("127.0.0.1", "localhost"), "Local test database only"
-    conn = psycopg2.connect(host=url.host, port=url.port, dbname=url.database, user=url.username, password=url.password)
-    conn.autocommit = True
-    with conn.cursor() as c:
-        # These schemas belong only to this per-task disposable database.
-        c.execute("DROP SCHEMA IF EXISTS tenant_871 CASCADE; DROP SCHEMA IF EXISTS tenant_872 CASCADE")
-        c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
-        for schema in (SCHEMA, "tenant_872"):
-            provision_tcg(c,schema)
-            c.execute(f"INSERT INTO {schema}.tcg_suppliers(id,code,name,is_active) VALUES ('00000000-0000-0000-0000-000000000001','SP1','Alice',true)")
-            c.execute(f"INSERT INTO {schema}.supplier_channels(id,supplier_id,channel,is_active) VALUES ('00000000-0000-0000-0000-000000000002','00000000-0000-0000-0000-000000000001','line',true)")
-        migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
-        c.execute(migration.read_text())
-        c.execute(migration.read_text())
-    for module in (svc, routes, progress):
-        monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
-    enqueue=MagicMock()
-    monkeypatch.setattr(svc,"_enqueue_extraction",enqueue)
-    monkeypatch.setattr(routes,"_enqueue_extraction",enqueue)
-    engine=create_async_engine(URL)
-    yield engine, conn, enqueue
-    await engine.dispose()
-    with conn.cursor() as c:
-        c.execute("DROP SCHEMA tenant_871 CASCADE; DROP SCHEMA tenant_872 CASCADE")
-    conn.close()
+    kwargs = dict(host=url.host, port=url.port, user=url.username, password=url.password)
+    name = "tcg_import_progress_test_" + uuid4().hex
+    admin = psycopg2.connect(dbname=url.database, **kwargs)
+    admin.autocommit = True
+    conn = engine = None
+    created = False
+    try:
+        with admin.cursor() as c:
+            c.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(name)))
+        created = True
+        conn = psycopg2.connect(dbname=name, **kwargs)
+        conn.autocommit = True
+        with conn.cursor() as c:
+            c.execute("SELECT current_database()")
+            assert c.fetchone()[0] == name
+            c.execute("CREATE SCHEMA tenant_871; CREATE SCHEMA tenant_872")
+            c.execute(_PUBLIC_PRODUCTS_DDL)
+            c.execute(_PUBLIC_SUPPLIERS_DDL)
+            for schema in (SCHEMA, "tenant_872"):
+                provision_tcg(c,schema)
+                c.execute(_rewire_keyword_fks(schema))
+                c.execute(f"INSERT INTO {schema}.tenant_suppliers(code,name,is_active) VALUES ('SP1','Alice',true)")
+                # Insert supplier_channels row with UUID supplier_id (before Sprint 1 migration converts it)
+                c.execute(f"INSERT INTO {schema}.supplier_channels(supplier_id,channel,is_active) "
+                          f"SELECT id,'line',true FROM {schema}.tenant_suppliers WHERE code='SP1'")
+            # Master SSOT Phase 3: public schema tables for 9 master tables (public.conditions etc.)
+            migrations_dir = Path(__file__).resolve().parents[2] / "migrations"
+            c.execute((migrations_dir / "20260919_020000_master_ssot_public_tables.sql").read_text())
+            # Sprint 1 migration: copy tenant_suppliers → public.suppliers, rewire supplier_channels FK UUID→INTEGER
+            sprint1 = Path(__file__).resolve().parents[2] / "migrations/20260917_020000_supplier_ssot_migration.sql"
+            for s in (SCHEMA, "tenant_872"):
+                _supplier_ssot_premigration(c, s)
+            c.execute(sprint1.read_text())
+            migration=Path(__file__).resolve().parents[2]/"migrations/20260910_010000_tcg_import_message_links.sql"
+            c.execute(migration.read_text())
+            c.execute(migration.read_text())
+        for module in (svc, routes, progress):
+            monkeypatch.setattr(module, "TCG_SCHEMA", SCHEMA)
+        enqueue=MagicMock()
+        monkeypatch.setattr(svc,"_enqueue_extraction",enqueue)
+        monkeypatch.setattr(routes,"_enqueue_extraction",enqueue)
+        engine=create_async_engine(url.set(database=name, drivername="postgresql+asyncpg"))
+        yield engine, conn, enqueue
+    finally:
+        if engine:
+            await engine.dispose()
+        if conn:
+            conn.close()
+        if created:
+            with admin.cursor() as c:
+                c.execute(sql.SQL("DROP DATABASE {}").format(sql.Identifier(name)))
+        admin.close()
 
 
 async def upload(engine, content):
@@ -124,24 +159,21 @@ async def test_concurrent_file_and_post_retries(pg):
     assert enqueue.call_count==1
 
 
-async def test_pending_commit_and_concurrent_commit(pg):
+async def test_auto_register_and_duplicate_dedup(pg):
+    """Auto-register: 未解決送信者 Bob は upload 時に public.suppliers へ自動登録され
+    review_status='ok' になる。同一ファイルの再 upload は already_imported を返す。"""
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
-    duplicate=await upload(engine,export(sender="Bob"))
-    assert duplicate["review_status"]=="pending_review"
-    assert count(conn,"source_messages")==0
-    with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
-    async def commit():
-        async with AsyncSession(engine) as db:
-            try:
-                return await routes.commit_pending_job(job["import_job_id"],db)
-            except HTTPException as e:
-                return e.status_code
-    result=await asyncio.gather(commit(),commit())
-    assert sum(x==409 for x in result)==1
+    # auto-register により Bob は即座に ok になる
+    assert job["review_status"]=="ok"
     assert count(conn,"source_messages")==1
-    assert count(conn,"import_job_messages")==1
+    assert enqueue.call_count==1
+    # 同一ファイルの再 upload は already_imported（sha256 重複）を返す
+    duplicate=await upload(engine,export(sender="Bob"))
+    assert duplicate["status"]=="already_imported"
+    assert duplicate["import_job_id"]==job["import_job_id"]
+    # source_messages は増えない
+    assert count(conn,"source_messages")==1
     assert enqueue.call_count==1
 
 
@@ -176,9 +208,12 @@ async def test_constraints_and_cross_schema_fk(pg):
 
 
 async def test_unknown_zero_pending_and_foreign_id(pg):
+    """Auto-register: 未解決送信者 'Unknown' は自動登録されるため review_status='ok'・
+    coverage='complete' になる。legacy_unknown と foreign id の挙動は変わらない。"""
     engine,conn,_=pg
     zero=await upload(engine,"empty file")
-    pending=await upload(engine,export(sender="Unknown"))
+    # auto-register により 'Unknown' は即座に登録されて ok になる
+    registered=await upload(engine,export(sender="Unknown"))
     legacy=str(uuid4())
     foreign=str(uuid4())
     with conn.cursor() as c:
@@ -187,11 +222,15 @@ async def test_unknown_zero_pending_and_foreign_id(pg):
     async with AsyncSession(engine) as db:
         z=await progress.read_progress(db,zero["import_job_id"])
         assert z["coverage"]=="complete" and z["messages"]["total"]==0
-        for jid,coverage in ((legacy,"legacy_unknown"),(pending["import_job_id"],"pending_review")):
-            r=await progress.read_progress(db,jid)
-            assert r["coverage"]==coverage and r["extraction"]["total"] is None
-            page=await progress.read_items(db,jid,50,0,"all")
-            assert page["total"] is None and page["items"] is None
+        # auto-register 後は coverage='complete'、messages が紐付き済み
+        r=await progress.read_progress(db,registered["import_job_id"])
+        assert r["coverage"]=="complete" and r["review_status"]=="ok"
+        assert r["messages"]["total"]==1
+        # legacy_unknown: messages_linked_at=NULL かつ review_status='ok' → legacy_unknown
+        rl=await progress.read_progress(db,legacy)
+        assert rl["coverage"]=="legacy_unknown" and rl["extraction"]["total"] is None
+        page=await progress.read_items(db,legacy,50,0,"all")
+        assert page["total"] is None and page["items"] is None
         with pytest.raises(HTTPException) as e:
             await progress.read_progress(db,foreign)
         assert e.value.status_code==404
@@ -288,26 +327,22 @@ async def test_api_auth_validation_and_db_errors(pg):
         await progress.read_progress(Broken(),str(uuid4()))
 
 
-async def test_pending_rollback_retains_pending_payload(pg,monkeypatch):
+async def test_auto_register_job_commit_returns_409(pg,monkeypatch):
+    """Auto-register: upload 時に Bob が自動登録されて review_status='ok' になるため、
+    commit_pending_job は 409 を返す（pending_review でないジョブはコミット不可）。"""
     engine,conn,enqueue=pg
     job=await upload(engine,export(sender="Bob"))
-    with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
-    original=svc._link_message
-    async def fail(*args):
-        await original(*args)
-        raise RuntimeError("injected pending link")
-    monkeypatch.setattr(svc,"_link_message",fail)
+    # auto-register により Bob は即座に登録され ok になる
+    assert job["review_status"]=="ok"
+    assert count(conn,"source_messages")==1
+    # ok ジョブへの commit_pending_job は 409 を返す
     async with AsyncSession(engine) as db:
-        with pytest.raises(RuntimeError):
+        with pytest.raises(HTTPException) as exc:
             await routes.commit_pending_job(job["import_job_id"],db)
-        await db.rollback()
-    assert count(conn,"source_messages")==0 and count(conn,"import_job_messages")==0
-    with conn.cursor() as c:
-        c.execute(f"SELECT review_status,pending_messages,messages_linked_at FROM {SCHEMA}.import_jobs")
-        state,payload,linked=c.fetchone()
-        assert state=="pending_review" and payload and linked is None
-    enqueue.assert_not_called()
+        assert exc.value.status_code==409
+    # source_messages は変わらない
+    assert count(conn,"source_messages")==1
+    assert enqueue.call_count==1
 
 
 async def test_link_retry_preserves_created_and_enqueue_sees_commit(pg,monkeypatch):
@@ -332,12 +367,14 @@ async def test_different_supplier_does_not_reuse_and_missing_channel_rolls_back(
     engine,conn,_=pg
     await upload(engine,export())
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.tcg_suppliers(id,code,name,is_active) VALUES (%s,'SP2','Bob',true)",('00000000-0000-0000-0000-000000000003',))
+        c.execute(f"INSERT INTO {SCHEMA}.tenant_suppliers(code,name,is_active) VALUES ('SP2','Bob',true)")
+        c.execute("INSERT INTO public.suppliers(supplier_code,name,line_name,supplier_type,is_active) VALUES ('SP-00002','Bob','Bob','corporate',true) RETURNING id")
+        bob_pub_id = c.fetchone()[0]
     with pytest.raises(ValueError,match="no active LINE channel"):
         await upload(engine,export(sender="Bob"))
     assert count(conn,"import_jobs")==1
     with conn.cursor() as c:
-        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(id,supplier_id,channel,is_active) VALUES (%s,%s,'line',true)",('00000000-0000-0000-0000-000000000004','00000000-0000-0000-0000-000000000003'))
+        c.execute(f"INSERT INTO {SCHEMA}.supplier_channels(supplier_id,channel,is_active) VALUES (%s,'line',true)", (bob_pub_id,))
     await upload(engine,export(sender="Bob"))
     assert count(conn,"source_messages")==2
 
@@ -358,19 +395,21 @@ async def test_later_tcg_schema_provisioning(pg):
             c.execute("DROP SCHEMA tenant_873 CASCADE")
 
 
-async def test_pending_confirmation_reuses_existing_post(pg):
+async def test_auto_register_two_senders_each_get_own_source_message(pg):
+    """Auto-register: 未解決送信者 Bob も upload 時に即座に登録され、
+    Alice と Bob それぞれが独立した source_message を持つ。commit_pending_job 不要。"""
     engine,conn,enqueue=pg
-    await upload(engine,export())
-    pending=await upload(engine,export(sender="Bob"))
-    with conn.cursor() as c:
-        c.execute(f"UPDATE {SCHEMA}.tcg_suppliers SET name='Bob'")
+    alice_job=await upload(engine,export())
+    bob_job=await upload(engine,export(sender="Bob"))
+    # 両方とも auto-register により即座に ok になる
+    assert alice_job["review_status"]=="ok"
+    assert bob_job["review_status"]=="ok"
+    assert count(conn,"source_messages")==2 and count(conn,"import_job_messages")==2
+    assert enqueue.call_count==2
     async with AsyncSession(engine) as db:
-        result=await routes.commit_pending_job(pending["import_job_id"],db)
-        assert result.enqueued_count==0
-        r=await progress.read_progress(db,pending["import_job_id"])
-        assert r["coverage"]=="complete" and r["messages"]["reused"]==1
-    assert count(conn,"source_messages")==1 and count(conn,"import_job_messages")==2
-    assert enqueue.call_count==1
+        r=await progress.read_progress(db,bob_job["import_job_id"])
+        assert r["coverage"]=="complete" and r["messages"]["reused"]==0
+        assert r["messages"]["total"]==1
 
 
 async def test_stage_details_mixed_results_counts_null_supplier_and_reuse(pg):

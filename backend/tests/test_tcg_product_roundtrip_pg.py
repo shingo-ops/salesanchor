@@ -24,7 +24,7 @@ def observe(connection, history=True):
         cursor.execute("SELECT to_jsonb(t) FROM public.products t ORDER BY t.id")
         result["products"] = cursor.fetchall()
         for table in ["product_search_keywords", "product_exclude_keywords"]:
-            cursor.execute(f"SELECT to_jsonb(t) FROM {SCHEMA}.{table} t ORDER BY id")
+            cursor.execute(f"SELECT to_jsonb(t) FROM public.{table} t ORDER BY id")
             result[table] = cursor.fetchall()
         if history:
             for table in ["tcg_product_import_jobs", "tcg_product_import_rows"]:
@@ -37,8 +37,8 @@ def seed(connection, count=2):
     with connection.cursor() as cursor:
         for index in range(count):
             cursor.execute(
-                "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id,tcg_uuid) "
-                f"VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'),gen_random_uuid()) RETURNING tcg_uuid",
+                "INSERT INTO public.products(product_code,name,name_en,mark,category_class,is_active,work_id) "
+                "VALUES (%s,%s,%s,%s,'private category',false,(SELECT id FROM public.type_master WHERE code='one_piece')) RETURNING id",
                 (
                     "RTSENT" if index == 0 else f"RT{index:03}",
                     f"商品{index}",
@@ -50,10 +50,10 @@ def seed(connection, count=2):
             for table in svc.WORDS.values():
                 for position, word in [(3, ""), (7, ' =,全角＝\r\n"quote"'), (19, " duplicate "), (23, " duplicate ")]:
                     cursor.execute(
-                        f"INSERT INTO {SCHEMA}.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
+                        f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)",
                         (pid, word, position),
                     )
-        cursor.execute(f"UPDATE {SCHEMA}.tcg_series SET is_active=false WHERE code='IP002'")
+        cursor.execute("UPDATE public.type_master SET is_active=false WHERE code='one_piece'")
 
 
 def edit(raw, changes, *, single=False):
@@ -87,7 +87,7 @@ def test_exact_unchanged_snapshot_and_filters(atomic_pg, monkeypatch, count):
                 empty = await svc.export_csv(db, "not found")
                 assert len(svc.read_records(empty)) == 1
                 with connection.cursor() as cur:
-                    cur.execute(f"SELECT id FROM {SCHEMA}.tcg_series WHERE code='IP002'")
+                    cur.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
                     work = str(cur.fetchone()[0])
                 selected = await svc.export_csv(db, "商品0", work)
                 assert len(svc.read_records(selected)) == 2
@@ -122,8 +122,8 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                     "english_title": " new title ",
                     "mark": "=001",
                     "release_date": "2028-02-29",
-                    "division_code": "DIV01",
-                    "work_code": "IP001",
+                    "division_code": "TCG",
+                    "work_code": "pokemon_booster_box",
                     "manufacturer_code": "MK001",
                     "product_category_code": "PC_BOX",
                     "search_keywords": svc.encode_words([" a,b ", '"quoted"', "\r\nword", "＝1"]),
@@ -142,7 +142,7 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                 after = observe(connection, False)
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT category_class FROM public.products WHERE product_code=%s", (code,))
-                    assert cursor.fetchone()[0] == "Pokemon"
+                    assert cursor.fetchone()[0] == "ポケモンカード"
                     cursor.execute(
                         f"SELECT messages FROM {SCHEMA}.tcg_product_import_rows WHERE product_code=%s", (code,)
                     )
@@ -156,13 +156,13 @@ def test_all_editable_fields_and_words_preserve_identity(atomic_pg, monkeypatch)
                         )
                         expected_after = svc.decode_words(value) if field in svc.WORDS else value
                         assert messages[field] == {"field": field, "before": expected_before, "after": expected_after}
-                old = {row[0]["tcg_uuid"]: row[0] for row in before["products"]}
+                old = {row[0]["id"]: row[0] for row in before["products"]}
                 for row in after["products"]:
                     product = row[0]
                     if product["product_code"] != code:
-                        assert product == old[product["tcg_uuid"]]
-                    for field in ["product_code", "tcg_uuid", "created_at"]:
-                        assert product[field] == old[product["tcg_uuid"]][field]
+                        assert product == old[product["id"]]
+                    for field in ["product_code", "id", "created_at"]:
+                        assert product[field] == old[product["id"]][field]
                 untouched = {pid for pid, p in old.items() if p["product_code"] != code}
                 for table in svc.WORDS.values():
                     assert [r for r in before[table] if r[0]["product_id"] in untouched] == [
@@ -191,11 +191,11 @@ def test_other_field_edit_keeps_inactive_reference_and_word_rows(atomic_pg, monk
             after = observe(connection, False)
             for table in svc.WORDS.values():
                 assert after[table] == before[table]
-            old = {r[0]["tcg_uuid"]: r[0] for r in before["products"]}
+            old = {r[0]["id"]: r[0] for r in before["products"]}
             for row in after["products"]:
                 value = dict(row[0])
-                value["mark"] = old[value["tcg_uuid"]]["mark"]
-                assert value == old[value["tcg_uuid"]]
+                value["mark"] = old[value["id"]]["mark"]
+                assert value == old[value["id"]]
         finally:
             await engine.dispose()
 
@@ -219,7 +219,7 @@ def test_stale_and_validation_write_nothing(atomic_pg, monkeypatch, mode):
                 with connection.cursor() as cursor:
                     if mode in ["search", "exclude"]:
                         cursor.execute(
-                            f"UPDATE {SCHEMA}.product_{mode}_keywords SET keyword='changed' WHERE position=7"
+                            f"UPDATE public.product_{mode}_keywords SET keyword='changed' WHERE position=7"
                         )
                     elif mode in ["title", "active", "hidden"]:
                         assignment = {
@@ -279,7 +279,7 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                 self.current += 1
             if self.current == 2 and (
                 (mode in ["product", "cancel", "rollback"] and query.startswith("UPDATE public.products"))
-                or (mode == "words" and query.startswith(f"INSERT INTO {SCHEMA}.product_search_keywords"))
+                or (mode == "words" and query.startswith("INSERT INTO public.product_search_keywords"))
                 or (mode == "history" and query.startswith(f"INSERT INTO {SCHEMA}.tcg_product_import_rows"))
             ):
                 raise failure
@@ -322,7 +322,7 @@ def test_atomic_failures_and_unknown_commit(atomic_pg, monkeypatch, mode):
                 seeded = [r for r in after["products"] if r[0]["product_code"].startswith("RT")]
                 assert all(r[0]["name"] == "Changed" for r in seeded)
                 for product in seeded:
-                    pid = product[0]["tcg_uuid"]
+                    pid = product[0]["id"]
                     assert sorted(
                         (r[0]["position"], r[0]["keyword"])
                         for r in after["product_search_keywords"]
@@ -358,7 +358,7 @@ def test_competing_writer_blocked_and_lock_released(atomic_pg, monkeypatch, targ
             query = (
                 "UPDATE public.products SET mark='competing' WHERE product_code LIKE 'RT%'"
                 if target == "product"
-                else f"INSERT INTO {SCHEMA}.product_search_keywords(product_id,keyword,position) SELECT tcg_uuid,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
+                else "INSERT INTO public.product_search_keywords(product_id,keyword,position) SELECT id,'competing',99 FROM public.products WHERE product_code LIKE 'RT%%'"
             )
             if blocked:
                 with pytest.raises(psycopg2.errors.LockNotAvailable):

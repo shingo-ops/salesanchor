@@ -36,6 +36,8 @@ postgres_data/
 !migrations/*.sql
 # ADR-038: scripts/qa/seed-tenant.sql は QA Smoke Suite に必須のため tracked
 !scripts/qa/*.sql
+# 一回限りクリーンアップスクリプトは tracked (migrations/ 外に置くため除外除外が必要)
+!scripts/one-time/*.sql
 
 # SSL証明書
 certbot/

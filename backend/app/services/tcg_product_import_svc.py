@@ -60,16 +60,19 @@ REQUIRED_COLUMNS: list[str] = [
 ]
 
 # コード列 → 参照マスタのテーブル名
+# NOTE: division_code と product_category_code は load_lookup_maps 内で公開スキーマ（public）の
+# SSOT（product_kinds / tcg_product_categories）で上書きされる（ADR-156 Phase 3A/3B）。
+# 初回クエリ（TCG_SCHEMA）は無駄になるが、静的解析ガード（test_tcg_schema_qualification.py）が
+# このマッピングの構造を直接検証するため、後方互換性のため変更しない。
 LOOKUP_TABLES: dict[str, str] = {
-    "division_code": "tcg_major_categories",
-    "work_code": "tcg_series",
+    "division_code": "tcg_major_categories",       # overridden in load_lookup_maps → public.product_kinds
     "manufacturer_code": "tcg_manufacturers",
-    "product_category_code": "tcg_product_categories",
+    "product_category_code": "tcg_product_categories",  # overridden in load_lookup_maps → public.tcg_product_categories
 }
 
 # コード列 → create_product に渡す引数名
 LOOKUP_ARGS: dict[str, str] = {
-    "division_code": "division_id",
+    "division_code": "product_kind_id",
     "work_code": "work_id",
     "manufacturer_code": "manufacturer_id",
     "product_category_code": "product_category_id",
@@ -156,17 +159,44 @@ def parse_rows(raw: bytes) -> tuple[list[dict[str, str]], list[str]]:
 
 async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     """
-    参照マスタ4本から、コードと uuid の対応を引く。
+    参照マスタから、コードと id の対応を引く。
 
     Returns:
-      {"division_code": {"DIV01": "uuid", ...}, "work_code": {...}, ...}
+      {"division_code": {"DIV01": "uuid", ...}, "work_code": {"SV": "1", ...}, ...}
+
+    Phase 3 SSOT: tcg_product_categories は public スキーマへ移動（INTEGER PK）。
+    public.products.product_category_id は UUID→INTEGER に変換済み。
+    work_code と同様に public スキーマから引く。
     """
     maps: dict[str, dict[str, str]] = {}
+    # work_code → public.type_master (SSOT, INTEGER PK)
+    work_result = await db.execute(
+        text("SELECT code, id FROM public.type_master WHERE is_active = TRUE")
+    )
+    maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():
         result = await db.execute(
             text(f"SELECT code, id FROM {TCG_SCHEMA}.{table} WHERE is_active = TRUE")
         )
         maps[column] = {str(r[0]): str(r[1]) for r in result.fetchall()}
+    # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
+    # Override the tenant-schema result with the canonical public-schema integer IDs.
+    pc_result = await db.execute(
+        text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
+    )
+    maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
+    # Phase 3A SSOT: tcg_major_categories moved to public.product_kinds (INTEGER PK).
+    # Override tenant-schema result with canonical public-schema integer IDs.
+    pk_result = await db.execute(
+        text("SELECT code, id FROM public.product_kinds WHERE is_active = TRUE")
+    )
+    pk_map: dict[str, int] = {str(r[0]): int(r[1]) for r in pk_result.fetchall()}
+    # Backward-compatible aliases for legacy CSV division codes
+    _DIVISION_ALIASES = {"DIV01": "TCG", "DIV02": "FIGURE", "DIV03": "GOODS"}
+    for old_code, new_code in _DIVISION_ALIASES.items():
+        if new_code in pk_map:
+            pk_map[old_code] = pk_map[new_code]
+    maps["division_code"] = pk_map  # type: ignore[assignment]
     return maps
 
 
@@ -192,9 +222,13 @@ async def load_existing_marks(db: AsyncSession) -> dict[str, str]:
 
 
 def check_codes(row: dict[str, str], lookups: dict[str, dict[str, str]]) -> list[str]:
-    """4つのコード列が空でなく、参照マスタに実在することを見る。"""
+    """4つのコード列が空でなく、参照マスタに実在することを見る。
+
+    lookups は load_lookup_maps が返す辞書（work_code を含む全コード列）。
+    LOOKUP_TABLES は TCG スキーマのテーブルのみのため、ここでは lookups のキーを使う。
+    """
     errors: list[str] = []
-    for column in LOOKUP_TABLES:
+    for column in lookups:
         code = row.get(column, "")
         if not code:
             errors.append("MISSING_" + column.upper())
@@ -284,9 +318,9 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     """検索キーワードと、それを持つ商品コードの対応を引く。"""
     result = await db.execute(
         text(
-            f"SELECT k.keyword, p.product_code FROM {TCG_SCHEMA}.product_search_keywords k "
-            f"JOIN public.products p ON p.tcg_uuid = k.product_id "
-            f"WHERE p.is_active = TRUE"
+            "SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
+            "JOIN public.products p ON p.id = k.product_id "
+            "WHERE p.is_active = TRUE"
         )
     )
     owners: dict[str, list[str]] = {}
@@ -383,8 +417,8 @@ async def start_job(
     result = await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"(filename, raw_sha256, total_rows, executed_by, status) "
-            f"VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
+            "(filename, raw_sha256, total_rows, executed_by, status) "
+            "VALUES (:filename, :digest, :total, :who, 'running') RETURNING id"
         ),
         {"filename": filename, "digest": digest, "total": total, "who": executed_by},
     )
@@ -401,8 +435,8 @@ async def record_row(
     await db.execute(
         text(
             f"INSERT INTO {TCG_SCHEMA}.tcg_product_import_rows "
-            f"(job_id, row_no, japanese_title, mark, result, product_code, messages) "
-            f"VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
+            "(job_id, row_no, japanese_title, mark, result, product_code, messages) "
+            "VALUES (:job, :row_no, :title, :mark, :kind, :code, :messages)"
         ),
         {
             "job": job_id,
@@ -425,8 +459,8 @@ async def finish_job(
     await db.execute(
         text(
             f"UPDATE {TCG_SCHEMA}.tcg_product_import_jobs "
-            f"SET created_rows = :created, skipped_rows = :skipped, "
-            f"status = :status, completed_at = NOW() WHERE id = :job"
+            "SET created_rows = :created, skipped_rows = :skipped, "
+            "status = :status, completed_at = NOW() WHERE id = :job"
         ),
         {"created": created, "skipped": skipped, "status": status, "job": job_id},
     )

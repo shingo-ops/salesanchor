@@ -22,10 +22,8 @@ from app.services.tcg_analyzer_svc import (
     resolve_unit,
 )
 
+TCG_SCHEMA = "public"
 logger = logging.getLogger(__name__)
-
-# TCG解析システムは tenant_004 専用スキーマ
-from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # ルックアップマップのロード（非同期版）
@@ -36,7 +34,7 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     """照合に必要なマスタをロードする（AsyncSession 版）。"""
     # 商品コード → UUID
     rows = (
-        await db.execute(text("SELECT product_code AS code, tcg_uuid AS id FROM public.products WHERE is_active = TRUE"))
+        await db.execute(text("SELECT product_code AS code, id FROM public.products WHERE is_active = TRUE"))
     ).fetchall()
     product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
 
@@ -44,10 +42,10 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT ua.alias_text, u.canonical, u.id
-                FROM {TCG_SCHEMA}.unit_aliases ua
-                JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+                FROM public.unit_aliases ua
+                JOIN public.units u ON u.id = ua.unit_id
                 WHERE u.is_active = TRUE
                 """
             )
@@ -60,10 +58,10 @@ async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, d
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT ca.alias_text, c.canonical, c.id
-                FROM {TCG_SCHEMA}.condition_aliases ca
-                JOIN {TCG_SCHEMA}.conditions c ON c.id = ca.condition_id
+                FROM public.condition_aliases ca
+                JOIN public.conditions c ON c.id = ca.condition_id
                 WHERE c.is_active = TRUE
                 """
             )
@@ -87,10 +85,10 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT p.product_code AS code, psk.keyword
-                FROM {TCG_SCHEMA}.product_search_keywords psk
-                JOIN public.products p ON p.tcg_uuid = psk.product_id
+                FROM public.product_search_keywords psk
+                JOIN public.products p ON p.id = psk.product_id
                 WHERE p.is_active = TRUE
                 ORDER BY p.product_code, psk.position
                 """
@@ -105,10 +103,10 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
     rows = (
         await db.execute(
             text(
-                f"""
+                """
                 SELECT p.product_code AS code, pek.keyword
-                FROM {TCG_SCHEMA}.product_exclude_keywords pek
-                JOIN public.products p ON p.tcg_uuid = pek.product_id
+                FROM public.product_exclude_keywords pek
+                JOIN public.products p ON p.id = pek.product_id
                 WHERE p.is_active = TRUE
                 ORDER BY p.product_code, pek.position
                 """
@@ -172,8 +170,8 @@ async def build_parallel_report(db: AsyncSession) -> dict:
             text(
                 f"""
                 SELECT
-                    ts.code AS sp_code,
-                    ts.name AS supplier_name,
+                    ps.supplier_code AS sp_code,
+                    ps.name AS supplier_name,
                     ei.id AS item_id,
                     ei.raw_product_name,
                     ei.raw_unit,
@@ -182,13 +180,13 @@ async def build_parallel_report(db: AsyncSession) -> dict:
                 FROM {TCG_SCHEMA}.extraction_items ei
                 JOIN {TCG_SCHEMA}.extraction_jobs ej ON ei.extraction_job_id = ej.id
                 JOIN {TCG_SCHEMA}.source_messages sm ON ej.source_message_id = sm.id
-                JOIN {TCG_SCHEMA}.supplier_channels sc ON sm.supplier_channel_id = sc.id
-                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON sc.supplier_id = ts.id
+                JOIN public.supplier_channels sc ON sm.supplier_channel_id = sc.id
+                JOIN public.suppliers ps ON sc.supplier_id = ps.id
                 LEFT JOIN {TCG_SCHEMA}.analysis_results ar
                     ON ar.extraction_item_id = ei.id
                     AND ar.engine_version = 'compat-v1'
                 WHERE sm.is_active = TRUE
-                ORDER BY ts.code, ei.id
+                ORDER BY ps.supplier_code, ei.id
                 """
             )
         )

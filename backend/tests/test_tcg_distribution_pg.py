@@ -15,12 +15,25 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from app.routers import tcg_distribution as routes
 from app.services import tcg_distribution_svc as svc
+from tests.conftest import _PUBLIC_SUPPLIERS_DDL
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL
 
 URL = os.getenv("RLS_ADMIN_DATABASE_URL")
 if not URL and os.getenv("CI"):
     raise RuntimeError("RLS_ADMIN_DATABASE_URL is required for PostgreSQL regression tests in CI")
 pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required locally")]
+
+
+async def _exec_multi_stmt(conn, sql: str) -> None:
+    """Execute multi-statement SQL via asyncpg Simple Query protocol.
+
+    asyncpg's exec_driver_sql() uses the Prepared Statement protocol which
+    rejects multi-statement SQL (including DO $$ ... $$ blocks).  Dropping
+    to the raw driver connection and calling .execute() uses the Simple Query
+    protocol instead, which handles multiple statements in one call.
+    """
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
 
 
 async def create_schema(conn, schema, corrections=True):
@@ -32,10 +45,29 @@ async def create_schema(conn, schema, corrections=True):
             stmt = stmt.strip()
             if stmt:
                 await conn.exec_driver_sql(stmt)
+        for stmt in _PUBLIC_SUPPLIERS_DDL.split(';'):
+            stmt = stmt.strip()
+            if stmt:
+                await conn.exec_driver_sql(stmt)
     except Exception:
         await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
     await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
+    # Guarantee work_id column exists even if SAVEPOINT rolled back (pre-existing table)
+    await conn.exec_driver_sql("ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
+    # Phase 2 SSOT: public.type_master required by fetch_output_rows JOIN
+    for sql_file in (
+        "085_create_tcg_type_master.sql",
+        "086_seed_additional_tcg_types.sql",
+        "20260921_060000_create_product_kinds.sql",
+        "20260921_070000_rename_tcg_type_master_to_type_master.sql",
+    ):
+        sql_path = migrations / sql_file
+        if sql_path.exists():
+            await _exec_multi_stmt(conn, sql_path.read_text())
+    # Phase 3 SSOT: public.conditions / public.units required by review_joins() in condition_review_svc.
+    # Only the DDL is needed; seeding data is not required because all JOINs are LEFT JOINs.
+    await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
     names = [
         "20260831_110000_create_tcg_analysis_tables_t004.sql",
         "20260903_210000_tcg_distribution_settings_t004.sql",

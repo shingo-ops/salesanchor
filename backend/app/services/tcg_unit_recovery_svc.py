@@ -33,6 +33,10 @@ from app.services.tcg_analyzer_svc import (
 
 logger = logging.getLogger(__name__)
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
@@ -65,49 +69,49 @@ _CT_BOUNDARY_RE_TEMPLATE = (
 # GAS: 00_Constants.gs / investigate2.gs:5454 _UNIT_MASTER_ROWS_
 _UNIT_MASTER_ROWS = [
     {
-        "unit_id": "c5a6371d-5296-45a3-913f-72f6315b4bb9",  # UN0001 Case
+        "unit_id": 9,  # UN0001 Case
         "canonical": "Case",
         "kubun": "箱系大",
         "aliases": "case,CASE,Case,carton,CARTON,Carton,ct,CT,Ct,カートン,ケース,ｶｰﾄﾝ,ｹｰｽ",
     },
     {
-        "unit_id": "8e980434-eeff-4233-be5c-bcd0ba1db992",  # UN0002 Box
+        "unit_id": 10,  # UN0002 Box
         "canonical": "Box",
         "kubun": "箱系",
         "aliases": "box,BOX,Box,ボックス,箱,ﾎﾞｯｸｽ",
     },
     {
-        "unit_id": "225a8677-b1eb-4cb4-b2f0-4df5827d899a",  # UN0003 Pack
+        "unit_id": 11,  # UN0003 Pack
         "canonical": "Pack",
         "kubun": "パック系",
         "aliases": "pack,PACK,Pack,パック,ﾊﾟｯｸ",
     },
     {
-        "unit_id": "fb707fad-d096-439c-b1af-d411a4a7d18a",  # UN0004 Piece
+        "unit_id": 12,  # UN0004 Piece
         "canonical": "Piece",
         "kubun": "枚系",
         "aliases": "piece,PIECE,Piece,pcs,PCS,Pcs,枚",
     },
     {
-        "unit_id": "9fffcb6c-9a77-4e89-b862-6c9868cfaf34",  # UN0005 Set
+        "unit_id": 13,  # UN0005 Set
         "canonical": "Set",
         "kubun": "セット系",
         "aliases": "set,SET,Set,セット,ｾｯﾄ",
     },
     {
-        "unit_id": "07724cb8-085b-4ed0-b852-84ee20ce9f3c",  # UN0006 本
+        "unit_id": 14,  # UN0006 本
         "canonical": "本",
         "kubun": "除外",
         "aliases": "",
     },
     {
-        "unit_id": "0df9b0c2-ac24-44b6-8dad-a10477c11b76",  # UN0007 点
+        "unit_id": 15,  # UN0007 点
         "canonical": "点",
         "kubun": "数量専用",
         "aliases": "",
     },
     {
-        "unit_id": "599b72ae-0aa2-4b76-b957-e7ce93369bf5",  # UN0008 個
+        "unit_id": 16,  # UN0008 個
         "canonical": "個",
         "kubun": "条件つき",
         "aliases": "",
@@ -223,7 +227,7 @@ def find_term(
 
 def recover_unit_from_product_name(
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a: 商品名から単位を復旧する (dry-run — DB 書き込みなし)。
@@ -278,7 +282,7 @@ def recover_unit_from_product_name(
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
             LEFT JOIN public.products tp
-                ON tp.tcg_uuid = ar.product_id
+                ON tp.id = ar.product_id
             ORDER BY ar.id
             """
         )
@@ -388,7 +392,7 @@ def recover_unit_from_product_name(
 def recalc_condition_from_recovered_unit(
     e3a_details: list[dict],
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E5: NAME_RECOVERY 行の condition を再計算する (dry-run — DB 書き込みなし)。
@@ -560,7 +564,7 @@ def recalc_condition_from_recovered_unit(
 
 def run_unit_recovery_dry_run(
     session: Session,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a + E5 dry-run: DB 書き込みなし。
@@ -753,7 +757,7 @@ def find_terminal_unit(text_str: str, terms: list[dict]) -> Optional[dict]:
 def apply_unit_recovery_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3a + E5 をジョブ単位で実行し、DB に結果を書き込む（本番用）。
@@ -793,7 +797,7 @@ def apply_unit_recovery_for_job(
             JOIN {tenant_schema}.extraction_items ei
                 ON ei.id = ar.extraction_item_id
             LEFT JOIN public.products tp
-                ON tp.tcg_uuid = ar.product_id
+                ON tp.id = ar.product_id
             WHERE ei.extraction_job_id = :job_id
             ORDER BY ar.id
             """
@@ -1025,7 +1029,7 @@ def apply_unit_recovery_for_job(
 def apply_unit_unresolved_flag_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E3b: E3a 実行後も unit_resolved=FALSE のままの行に unit_basis='UNIT_UNRESOLVED' をセット。
@@ -1084,7 +1088,7 @@ def apply_unit_unresolved_flag_for_job(
 def apply_unit_from_condition_for_job(
     session: Session,
     extraction_job_id: str,
-    tenant_schema: str = "tenant_004",
+    tenant_schema: str = "public",
 ) -> dict:
     """
     E4: unit_resolved=FALSE かつ condition_canonical 確定済みの行で、
@@ -1099,9 +1103,9 @@ def apply_unit_from_condition_for_job(
     # condition canonical → 先頭 kubun
     cond_rows = session.execute(
         text(
-            f"""
+            """
             SELECT canonical, app_kubun
-            FROM {tenant_schema}.conditions
+            FROM public.conditions
             WHERE is_active = TRUE
               AND app_kubun IS NOT NULL
               AND app_kubun != ''
@@ -1120,9 +1124,9 @@ def apply_unit_from_condition_for_job(
     # kubun → (unit_id, unit_canonical) — 衝突時は None でマーク
     unit_rows = session.execute(
         text(
-            f"""
+            """
             SELECT kubun, id, canonical
-            FROM {tenant_schema}.units
+            FROM public.units
             WHERE is_active = TRUE AND kubun IS NOT NULL
             """
         )

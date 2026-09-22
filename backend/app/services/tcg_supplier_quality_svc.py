@@ -10,7 +10,7 @@ from __future__ import annotations
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+TCG_SCHEMA = "public"
 
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
@@ -28,8 +28,8 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     """
     sql = f"""
         SELECT
-            COALESCE(ts.code, sc.id::text)  AS supplier_id,
-            COALESCE(ts.name, '不明')        AS supplier_name,
+            COALESCE(ps.supplier_code, sc.id::text)  AS supplier_id,
+            COALESCE(ps.name, '不明')        AS supplier_name,
             COUNT(ei.id)                     AS analysis_count,
             COUNT(CASE
                 WHEN NOT ar.pid_resolved
@@ -39,14 +39,14 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
             COUNT(CASE WHEN NOT ar.pid_resolved THEN 1 END)  AS product_id_unresolved_count,
             COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count
         FROM {TCG_SCHEMA}.source_messages sm
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
+        JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
         LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
         LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
         LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
         WHERE sm.is_active = TRUE
-        GROUP BY sc.id, ts.code, ts.name
-        ORDER BY COALESCE(ts.name, '') ASC
+        GROUP BY sc.id, ps.supplier_code, ps.name
+        ORDER BY COALESCE(ps.name, '') ASC
     """
     rows = (await db.execute(text(sql))).fetchall()
     return [
@@ -68,18 +68,18 @@ async def fetch_supplier_source(db: AsyncSession, *, supplier_id: str) -> dict:
     仕入元の原文 1 件を返す（GAS: api_getSupplierSource 相当）。
 
     items=0 の source でも raw_text を返す。
-    supplier_id は tcg_suppliers.code（例: 'SP0057'）。
+    supplier_id は public.suppliers.supplier_code（例: 'SP-00057'）。
     """
     sql = f"""
         SELECT
             sm.id::text     AS source_message_id,
-            ts.code         AS supplier_id,
-            ts.name         AS supplier_name,
+            ps.supplier_code AS supplier_id,
+            ps.name         AS supplier_name,
             sm.raw_text
         FROM {TCG_SCHEMA}.source_messages sm
-        JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-        WHERE ts.code = :supplier_id
+        JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
+        WHERE ps.supplier_code = :supplier_id
           AND sm.is_active = TRUE
         ORDER BY sm.received_at DESC NULLS LAST
         LIMIT 1

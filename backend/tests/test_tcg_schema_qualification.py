@@ -11,7 +11,6 @@ _REPO_ROOT = Path(__file__).parents[2]
 _PRODUCT_SERVICE = "backend/app/services/tcg_product_import_svc.py"
 _LOOKUP_TABLES = {
     "division_code": "tcg_major_categories",
-    "work_code": "tcg_series",
     "manufacturer_code": "tcg_manufacturers",
     "product_category_code": "tcg_product_categories",
 }
@@ -82,7 +81,7 @@ def _bare_table_refs(sql: str, table: str) -> list[str]:
         previous = tokens[i - 1] if i else None
         qualified = (
             previous is not None
-            and previous.group().strip('"') in {"tenant_004", "{TCG_SCHEMA}"}
+            and previous.group().strip('"') in {"tenant_004", "{TCG_SCHEMA}", "public"}
             and re.fullmatch(r"\s*\.\s*", sql[previous.end():match.start()])
         )
         if not qualified:
@@ -96,7 +95,7 @@ TARGETS = [
      ["import_jobs", "source_messages", "supplier_channels", "extraction_jobs"]),
     (_PRODUCT_SERVICE,
      ["product_search_keywords", "tcg_product_import_jobs",
-      "tcg_product_import_rows", "{table}", *_LOOKUP_TABLES.values()]),
+      "tcg_product_import_rows", "{table}", "product_kinds", *_LOOKUP_TABLES.values()]),
 ]
 
 
@@ -195,9 +194,9 @@ def test_product_schema_removal_is_detected():
     source = (_REPO_ROOT / _PRODUCT_SERVICE).read_text(encoding="utf-8")
     tables = next(tables for path, tables in TARGETS if path == _PRODUCT_SERVICE)
     calls = _text_calls(source)
-    assert len(calls) == 6, "review new/removed SQL calls and update inventory"
+    assert len(calls) == 9, "review new/removed SQL calls and update inventory"
     positions = list(re.finditer(re.escape("{TCG_SCHEMA}."), source))
-    assert len(positions) == 5, "review changed schema reference inventory"
+    assert len(positions) == 4, "review changed schema reference inventory"
     for match in positions:
         changed = source[:match.start()] + source[match.end():]
         assert _schema_errors(changed, tables), f"missed schema removal at {match.start()}"

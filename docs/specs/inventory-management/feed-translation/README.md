@@ -26,3 +26,22 @@
 - 商品マスタの canonical_code 相当・特定キーワード（別名）・除外キーワードの投入実態。
 - v0.1のDB定義（product_alias / parse_result / correction 等）と現SAスキーマの突き合わせ。
 - F6の在庫数直接反映と「A・Cへ配信」構造の差分（届け先のズレ）。
+
+## LINE投稿の〆・混在対応（2026-09-13）
+
+既存の「最新1件採用」から、原文を個別保存して商品ごとに在庫更新/売り切れを反映する改訂案。
+PO合意: 指定商品の〆は数量0・在庫表示から除外、他商品と未記載商品は維持。混在投稿も明細別に判断。
+- [調査と合成検証](../../../handoff/tcg-import-latest-only/recon.md)
+- [設計草案・受入条件・自己審査](../../../handoff/tcg-import-latest-only/design.md)
+状態: 意味と目的はPO合意済み、技術設計は草案/自己審査REVISE、実装未着手。上の2026-07-05の状態は当時の履歴。
+
+2026-09-13追補: PO提供のLINE原文2ファイルを全行検索し、売切候補11群・誤判定防止8条件・回帰12ケースを上記設計§12へ登録。除外パターン列の既存判定への未接続も確認。登録は文書のみ、runtime未変更・REVISE継続。
+
+## 完売判断ルールの管理（2026-09-15）
+
+- [合意・未決事項の正本](../../../handoff/tcg-import-latest-only/sold-out-rules-handoff.md)
+- [DB SSOT・画面保守・判定接続の設計案](../../../handoff/tcg-import-latest-only/sold-out-rules-design.md)
+
+完売判断のみを管理する4タブのページ。DBを唯一の正本とし、指示/検索/除外を画面で保守する。詳細設計は草案、同一AIの自己審査REVISE、実装未着手。既存の完売結果閲覧便の完了とは区別する。
+
+- [完売管理の本番DB・抽出接続の実測](../../../handoff/tcg-import-latest-only/sold-out-rules-recon.md)（2026-09-15、読取のみ。実装合格とは区別）

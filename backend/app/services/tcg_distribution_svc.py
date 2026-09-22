@@ -34,7 +34,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
-from app.tcg_config import TCG_SCHEMA
+from app.services.tcg_result_order import result_order_sql
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
@@ -219,8 +223,8 @@ async def fetch_output_rows(
             COALESCE(ar.note_ja, '')                                AS note_ja,
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
-            COALESCE(ser.display_name, '')                          AS series,
-            COALESCE(ts.name, '')                                   AS provider
+            COALESCE(ser.name_ja, '')                               AS series,
+            COALESCE(ps.name, '')                                   AS provider
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -230,11 +234,11 @@ async def fetch_output_rows(
             ON sm.id = ej.source_message_id AND sm.is_active = TRUE
         JOIN {TCG_SCHEMA}.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_suppliers ts
-            ON ts.id = sc.supplier_id
+        LEFT JOIN public.suppliers ps
+            ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
-            ON p.tcg_uuid = ar.product_id
-        LEFT JOIN {TCG_SCHEMA}.tcg_series ser
+            ON p.id = ar.product_id
+        LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
@@ -243,7 +247,7 @@ async def fetch_output_rows(
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
           AND {cond_filter}
-        ORDER BY p.release_date DESC NULLS LAST, ts.name NULLS LAST, p.product_code NULLS LAST
+        ORDER BY {result_order_sql()}
     """)
 
     result = await db.execute(sql)
@@ -769,23 +773,45 @@ async def run_distribution(
             "errors": [{"target_id": None, "error": f"SA 認証失敗: {exc}"}],
         }
 
-    # 4. 各配信先へ書き込み（thread executor）
+    # 4. 各配信先へ書き込み（thread executor・リトライあり）
+    # リトライ設定: 最大4回・指数バックオフ 1→2→4→8 秒（設計 §14.1.4 C96）
+    _RETRY_MAX = 4
+    _RETRY_DELAYS = [1, 2, 4, 8]
+
     loop = asyncio.get_event_loop()
     results = []
     errors = []
 
     for target in targets:
-        write_result = await loop.run_in_executor(
-            None,
-            _write_to_target_sync,
-            gc,
-            creds,
-            target,
-            rows,
-        )
+        write_result: dict | None = None
+        last_error: str = ""
+        for attempt in range(_RETRY_MAX):
+            write_result = await loop.run_in_executor(
+                None,
+                _write_to_target_sync,
+                gc,
+                creds,
+                target,
+                rows,
+            )
+            if write_result["status"] == "ok":
+                break
+            last_error = write_result.get("error", "unknown error")
+            if attempt < _RETRY_MAX - 1:
+                delay = _RETRY_DELAYS[attempt]
+                logger.warning(
+                    "[dist] 書き込み失敗（%d/%d回目）: target=%s error=%s 次のリトライまで%d秒待機",
+                    attempt + 1, _RETRY_MAX, target["name"], last_error, delay,
+                )
+                await asyncio.sleep(delay)
+            else:
+                logger.error(
+                    "[dist] 書き込み失敗（%d/%d回目・最終）: target=%s error=%s",
+                    attempt + 1, _RETRY_MAX, target["name"], last_error,
+                )
 
         # 5. 配信履歴を DB に記録（安全装置 #7）
-        if write_result["status"] == "ok":
+        if write_result and write_result["status"] == "ok":
             await _record_distribution_result(db, target["id"], "ok", write_result["rows_written"])
             results.append({
                 "target_id": str(target["id"]),
@@ -795,12 +821,12 @@ async def run_distribution(
             })
         else:
             await _record_distribution_result(
-                db, target["id"], write_result["error"], None
+                db, target["id"], last_error, None
             )
             errors.append({
                 "target_id": str(target["id"]),
                 "target_name": target["name"],
-                "error": write_result["error"],
+                "error": last_error,
             })
 
     # 6. 失敗時 Discord 通知（安全装置 #6）

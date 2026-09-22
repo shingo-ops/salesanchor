@@ -9,14 +9,23 @@ PARITY-03 第1段階: 解析レビュー API。
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from typing import Literal
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from pydantic import AwareDatetime, BaseModel, Field, ValidationError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_analysis_review_svc import fetch_analysis_results
 from app.services.tcg_condition_review_svc import condition_options
+from app.services.tcg_sold_out_results_svc import (
+    SoldOutResultsUnavailable,
+    SourceScope,
+    fetch_sold_out_results,
+)
 
 router = APIRouter()
 
@@ -36,6 +45,8 @@ class GeminiFields(BaseModel):
 
 
 class SystemFields(BaseModel):
+    work_id: str = ""
+    work_name: str = ""
     product_title: str = ""
     product_uuid: str = ""
     product_id: str
@@ -76,6 +87,7 @@ class AnalysisResultsResponse(BaseModel):
     offset: int
     limit: int
     providers: list[str]
+    works: list[dict] = []
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +115,7 @@ async def list_analysis_results(
     unregistered_only: bool = Query(default=False),
     unresolved_unit_only: bool = Query(default=False),
     strip_raw_text: bool = Query(default=False, description="raw_text を省略（SupplierDetailPage 用）"),
+    work_id: str | None = Query(default=None, description="作品IDで絞り込み"),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> AnalysisResultsResponse:
@@ -120,6 +133,7 @@ async def list_analysis_results(
         unregistered_only=unregistered_only,
         unresolved_unit_only=unresolved_unit_only,
         strip_raw_text=strip_raw_text,
+        work_id=work_id,
     )
     return AnalysisResultsResponse(
         items=data["items"],
@@ -128,6 +142,7 @@ async def list_analysis_results(
         offset=data["offset"],
         limit=data["limit"],
         providers=data["providers"],
+        works=data["works"],
     )
 
 
@@ -137,3 +152,52 @@ async def list_condition_review_options(
     _user: dict = Depends(require_super_admin),
 ) -> list[dict]:
     return await condition_options(db)
+
+
+class SoldOutResultItem(BaseModel):
+    analysis_result_id: UUID
+    extraction_item_id: UUID
+    source_message_id: UUID
+    supplier_id: int | None
+    product_id: int | None
+    provider: str
+    product_title: str
+    raw_product_name: str
+    raw_quantity: str
+    raw_price: str
+    raw_unit: str
+    raw_state: str
+    raw_memo: str
+    raw_text: str
+    status: Literal["Sold out"]
+    source_is_active: bool | None
+    line_posted_at: AwareDatetime | None
+    line_start: int | None
+    line_end: int | None
+
+
+class SoldOutResultsResponse(BaseModel):
+    items: list[SoldOutResultItem]
+    total: int = Field(ge=0)
+    offset: int = Field(ge=0)
+    limit: int = Field(ge=1, le=100)
+    as_of: AwareDatetime
+
+
+@router.get("/tcg/sold-out-results", response_model=SoldOutResultsResponse)
+async def list_sold_out_results(
+    response: Response,
+    q: str | None = Query(default=None, max_length=100),
+    source_scope: SourceScope = Query(default="all"),
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=100),
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_super_admin),
+) -> SoldOutResultsResponse:
+    response.headers["Cache-Control"] = "no-store"
+    try:
+        data = await fetch_sold_out_results(db, q=q, source_scope=source_scope, offset=offset, limit=limit)
+        return SoldOutResultsResponse.model_validate(data)
+    except (SQLAlchemyError, SoldOutResultsUnavailable, ValidationError):
+        raise HTTPException(status_code=503, detail={"code": "SOLD_OUT_RESULTS_UNAVAILABLE"},
+                            headers={"Cache-Control": "no-store"}) from None

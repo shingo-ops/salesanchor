@@ -347,9 +347,9 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
         nonlocal calls
         calls += 1
         if calls == 1:
-            return result(SimpleNamespace(display_name="One Piece"))
+            return result(SimpleNamespace(name_ja="ワンピース"))
         if calls == 3:
-            return result(SimpleNamespace(id="product"))
+            return result(SimpleNamespace(id="1", int_id=1))
         if calls == 6:
             assert db.commit.await_count == (0 if commit is False else 1)
             return result(None if verify_fails else SimpleNamespace(product_code="PM0001"))
@@ -357,7 +357,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     db.execute = AsyncMock(side_effect=execute)
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
     monkeypatch.setattr(master, "_next_pm_code", AsyncMock(return_value="PM0001"))
-    args = dict(extraction_item_id="", source_message_id="", division_id="d", work_id="w",
+    args = dict(extraction_item_id="", source_message_id="", product_kind_id=1, work_id=1,
                 manufacturer_id="m", product_category_id="c", japanese_title="商品", release_date=None,
                 search_keywords="検索", exclude_keywords="除外")
     if commit is not None:

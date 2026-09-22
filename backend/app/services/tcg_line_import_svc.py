@@ -18,7 +18,6 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 from __future__ import annotations
 
 import hashlib
-import json
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -27,7 +26,6 @@ from typing import Any, Literal
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services import line_source_names
 from app.services.tcg_line_android_parser import parse_android_export
 
 # ---------------------------------------------------------------------------
@@ -70,7 +68,7 @@ def _split_sender(tail: str, sorted_names: list[str]) -> tuple[str, str]:
 
     Args:
         tail:         時刻行から時刻部分を除いた残り文字列（例: "倉田 和博 本文..."）
-        sorted_names: tcg_suppliers.name を長さ降順に並べたリスト
+        sorted_names: public.suppliers.line_name を長さ降順に並べたリスト
 
     Returns:
         (display_name, body)
@@ -129,7 +127,7 @@ def parse_line_export(
 
     Args:
         export_text:    LINE エクスポートファイルの全文字列
-        supplier_names: tcg_suppliers.name の一覧（長さ降順ソート済み）。
+        supplier_names: public.suppliers.line_name の一覧（長さ降順ソート済み）。
                         渡すと GAS の latest24SplitHeader_ と同等の送信者名切り出しを行う。
                         None または空リストの場合は最初のスペースで分割（後方互換）。
 
@@ -227,7 +225,7 @@ def resolve_suppliers(
 
     Args:
         messages: parse_line_export の戻り値（is_system_event=False のみを渡すこと）
-        db_suppliers: [{"code": str, "name": str}, ...] — tcg_suppliers is_active=TRUE 全件
+        db_suppliers: [{"code": str, "line_name": str}, ...] — public.suppliers is_active=TRUE 全件
 
     Returns:
         (resolved, unresolved)
@@ -235,7 +233,7 @@ def resolve_suppliers(
         unresolved: [{"display_name": str, "timestamps": list[str]}]
     """
     # 完全一致辞書（GAS の byName と同等）
-    name_to_supplier: dict[str, dict] = {s["name"]: s for s in db_suppliers}
+    name_to_supplier: dict[str, dict] = {s["line_name"]: s for s in db_suppliers}
 
     resolved: list[dict] = []
     unresolved_map: dict[str, list[str]] = {}  # display_name → timestamp list
@@ -244,7 +242,7 @@ def resolve_suppliers(
         dn = msg["display_name"]
         sup = name_to_supplier.get(dn)
         matched_code: str | None = sup["code"] if sup else None
-        matched_name: str | None = sup["name"] if sup else None
+        matched_name: str | None = sup["line_name"] if sup else None
 
         if matched_code:
             resolved.append(
@@ -348,8 +346,8 @@ async def _write_source_messages(
                 f"""
                 SELECT sc.id
                 FROM {TCG_SCHEMA}.supplier_channels sc
-                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id = sc.supplier_id
-                WHERE ts.code = :code
+                JOIN public.suppliers ps ON ps.id = sc.supplier_id
+                WHERE ps.supplier_code = :code
                   AND sc.channel = 'line'
                   AND sc.is_active = TRUE
                 ORDER BY sc.id
@@ -487,7 +485,7 @@ async def import_line_export(
     LINE エクスポートファイルを取り込む。
 
     1. ファイル全体の sha256 で冪等化チェック
-    2. tcg_suppliers 先行取得（parse_line_export に渡す名前リストを構築）
+    2. public.suppliers 先行取得（parse_line_export に渡す名前リストを構築）
     3. parse_line_export → システムイベント除外 → JST 基準窓フィルタ
     4. サプライヤー解決（完全一致）→ resolved / unresolved に分ける
     5-a. unresolved 0 件: source_messages INSERT + commit + エンキュー
@@ -546,10 +544,10 @@ async def import_line_export(
 
     # --- 2. マスタ先行取得 ---
     suppliers_rows = await db.execute(
-        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
+        text("SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL")
     )
-    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
-    supplier_names = sorted((s["name"] for s in db_suppliers), key=len, reverse=True)
+    db_suppliers = [{"code": r[0], "line_name": r[1]} for r in suppliers_rows.fetchall()]
+    supplier_names = sorted((s["line_name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
     all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
@@ -568,121 +566,117 @@ async def import_line_export(
     message_count = len(messages)
 
     # --- 4. サプライヤー解決 ---
-    if source_format == "android":
-        messages = [{**m, '_line_source_format': line_source_names.MARKER} for m in messages]
-        resolved_msgs, unresolved = line_source_names.resolve_android(messages, db_suppliers, await line_source_names.load_aliases(db))
-    else:
-        resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
-    unresolved_count = len(unresolved)
-    unresolved_display_names = [u["display_name"] for u in unresolved]
+    resolved_msgs, unresolved = resolve_suppliers(messages, db_suppliers)
 
-    # --- 5. 分岐 ---
+    # --- 4b. 未解決仕入元の自動登録 ---
+    # display_name を name / line_name として新規 supplier + supplier_channel を作成し、
+    # resolved_msgs に追加することで unresolved_count を 0 にする。
+    if unresolved:
+        for u_entry in unresolved:
+            dn = u_entry["display_name"]
+            # INSERT RETURNING id で採番
+            ins_result = await db.execute(
+                text("""
+                    INSERT INTO public.suppliers (name, line_name, supplier_type, is_active)
+                    VALUES (:name, :line_name, 'corporate', TRUE)
+                    ON CONFLICT (line_name)
+                        WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL
+                    DO UPDATE SET line_name = EXCLUDED.line_name
+                    RETURNING id
+                """),
+                {"name": dn, "line_name": dn},
+            )
+            new_sup_id = ins_result.scalar_one()
+            new_code = f"SP-{new_sup_id:05d}"
+            await db.execute(
+                text("""
+                    UPDATE public.suppliers SET supplier_code = :code
+                    WHERE id = :id AND supplier_code IS NULL
+                """),
+                {"code": new_code, "id": new_sup_id},
+            )
+            # supplier_channels を1件作成（channel='line'）
+            new_sc_id = uuid.uuid4()
+            await db.execute(
+                text(
+                    f"""
+                    INSERT INTO {TCG_SCHEMA}.supplier_channels
+                      (id, supplier_id, channel, is_active)
+                    VALUES
+                      (:id, :supplier_id, 'line', TRUE)
+                    """
+                ),
+                {"id": str(new_sc_id), "supplier_id": new_sup_id},
+            )
+            # 対象メッセージを resolved_msgs に追加
+            for msg in messages:
+                if msg["display_name"] == dn:
+                    resolved_msgs.append(
+                        {
+                            **msg,
+                            "sp_code": new_code,
+                            "canonical_name": dn,
+                        }
+                    )
+
+    # --- 5. 全件解決済み: 書き込み → commit → エンキュー ---
+    # （4b の自動登録により unresolved は常に 0）
     import_job_id = uuid.uuid4()
 
-    if unresolved_count == 0:
-        # 5-a. 全件解決済み: 書き込み → commit → エンキュー
-        provider_entries = build_provider_entries(resolved_msgs)
-        provider_count = len(provider_entries)
-        skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
+    provider_entries = build_provider_entries(resolved_msgs)
+    provider_count = len(provider_entries)
+    skipped_message_count = sum(e["skipped_message_count"] for e in provider_entries)
 
-        # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す
-        # （asyncpg は文字列を拒否する: IMP-39 で本番障害として発覚）
-        ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
-        we_dt = datetime.strptime(effective_window_end, "%Y-%m-%d %H:%M:%S") if effective_window_end else None
+    # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す
+    # （asyncpg は文字列を拒否する: IMP-39 で本番障害として発覚）
+    ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
+    we_dt = datetime.strptime(effective_window_end, "%Y-%m-%d %H:%M:%S") if effective_window_end else None
 
-        await db.execute(
-            text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.import_jobs
-                  (id, filename, raw_sha256, message_count, provider_count,
-                   unresolved_count, uploaded_by, status, review_status, created_at,
-                   window_start, window_end)
-                VALUES
-                  (:id, :filename, :sha256, :msg_count, :prov_count,
-                   0, :uploaded_by, 'ok', 'ok', now(),
-                   :ws, :we)
-                """
-            ),
-            {
-                "id": str(import_job_id),
-                "filename": filename,
-                "sha256": file_sha256,
-                "msg_count": message_count,
-                "prov_count": provider_count,
-                "uploaded_by": uploaded_by,
-                "ws": ws_dt,
-                "we": we_dt,
-            },
-        )
+    await db.execute(
+        text(
+            f"""
+            INSERT INTO {TCG_SCHEMA}.import_jobs
+              (id, filename, raw_sha256, message_count, provider_count,
+               unresolved_count, uploaded_by, status, review_status, created_at,
+               window_start, window_end)
+            VALUES
+              (:id, :filename, :sha256, :msg_count, :prov_count,
+               0, :uploaded_by, 'ok', 'ok', now(),
+               :ws, :we)
+            """
+        ),
+        {
+            "id": str(import_job_id),
+            "filename": filename,
+            "sha256": file_sha256,
+            "msg_count": message_count,
+            "prov_count": provider_count,
+            "uploaded_by": uploaded_by,
+            "ws": ws_dt,
+            "we": we_dt,
+        },
+    )
 
-        enqueued_ids = await _write_source_messages(db, provider_entries, str(import_job_id))
-        await db.execute(
-            text(f"UPDATE {TCG_SCHEMA}.import_jobs SET messages_linked_at = now() WHERE id = :id"),
-            {"id": str(import_job_id)},
-        )
-        await db.commit()
+    enqueued_ids = await _write_source_messages(db, provider_entries, str(import_job_id))
+    await db.execute(
+        text(f"UPDATE {TCG_SCHEMA}.import_jobs SET messages_linked_at = now() WHERE id = :id"),
+        {"id": str(import_job_id)},
+    )
+    await db.commit()
 
-        for sm_id in enqueued_ids:
-            _enqueue_extraction(sm_id)
+    for sm_id in enqueued_ids:
+        _enqueue_extraction(sm_id)
 
-        return {
-            "status": "imported",
-            "review_status": "ok",
-            "message_count": message_count,
-            "provider_count": provider_count,
-            "unresolved_count": 0,
-            "unresolved_display_names": [],
-            "skipped_message_count": skipped_message_count,
-            "import_job_id": str(import_job_id),
-        }
-
-    else:
-        # 5-b. 未解決あり: source_messages を1件も書かず保留
-        # 解決済みの仕入元も含め全件が保留になる（意図した挙動）
-
-        # TIMESTAMPTZ カラムへは datetime オブジェクトで渡す（IMP-39 是正）
-        ws_dt = datetime.strptime(effective_window_start, "%Y-%m-%d %H:%M:%S") if effective_window_start else None
-        we_dt = datetime.strptime(effective_window_end, "%Y-%m-%d %H:%M:%S") if effective_window_end else None
-
-        await db.execute(
-            text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.import_jobs
-                  (id, filename, raw_sha256, message_count, provider_count,
-                   unresolved_count, uploaded_by, status, review_status, created_at,
-                   window_start, window_end, pending_messages, unresolved_names)
-                VALUES
-                  (:id, :filename, :sha256, :msg_count, 0,
-                   :unresolved_count, :uploaded_by, 'ok', 'pending_review', now(),
-                   :ws, :we, :pending_messages, :unresolved_names)
-                """
-            ),
-            {
-                "id": str(import_job_id),
-                "filename": filename,
-                "sha256": file_sha256,
-                "msg_count": message_count,
-                "unresolved_count": unresolved_count,
-                "uploaded_by": uploaded_by,
-                "ws": ws_dt,
-                "we": we_dt,
-                "pending_messages": json.dumps(messages, ensure_ascii=False),
-                "unresolved_names": json.dumps(unresolved_display_names, ensure_ascii=False),
-            },
-        )
-
-        await db.commit()
-
-        return {
-            "status": "imported",
-            "review_status": "pending_review",
-            "message_count": message_count,
-            "provider_count": 0,
-            "unresolved_count": unresolved_count,
-            "unresolved_display_names": unresolved_display_names,
-            "skipped_message_count": 0,
-            "import_job_id": str(import_job_id),
-        }
+    return {
+        "status": "imported",
+        "review_status": "ok",
+        "message_count": message_count,
+        "provider_count": provider_count,
+        "unresolved_count": 0,
+        "unresolved_display_names": [],
+        "skipped_message_count": skipped_message_count,
+        "import_job_id": str(import_job_id),
+    }
 
 
 # ---------------------------------------------------------------------------
