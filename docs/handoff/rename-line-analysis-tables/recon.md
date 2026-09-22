@@ -27,7 +27,7 @@ git grep -i 'units\|conditions\|line_analysis' docs/adr/
 
 ### Layer 1: マイグレーション
 - `migrations/20260922_060000_product_unit_condition_infra.sql`: `quantity_units` / `condition_definitions` を新設（既存 `units` / `conditions` とは別テーブル）
-- `migrations/20260922_080000_rename_line_analysis_tables.sql`: **今回作成**
+- migrations/20260922_080000_rename_line_analysis_tables.sql: **今回作成**
 
 ### Layer 2: バックエンド Python
 実際のファイル確認結果:
@@ -53,13 +53,11 @@ backend/seeds/ — units.sql, conditions.sql が存在する可能性（未確�
 ```
 
 ### Layer 6: scripts/run_all_migrations.sh
-**今回変更**: 末尾に `20260922_080000_rename_line_analysis_tables.sql` を追加
+**今回変更**: 末尾に migrations/20260922_080000_rename_line_analysis_tables.sql を追加
 
 ### Layer 7: CI
-```
-.github/workflows/migration-lint.yml — マイグレーションファイル名重複チェック
-```
-ファイル名 `20260922_080000` は未使用であることを確認済み。
+- .github/workflows/migration-lint.yml — マイグレーションファイル名重複チェック
+- タイムスタンプ 20260922_080000 は未使用であることを確認済み。
 
 ### Layer 8: RLS / トリガー
 LINE解析テーブルに RLS は設定されていない（public スキーマで全テナント共用）。
