@@ -23,8 +23,11 @@
 | 後続マイグレーションが通る | デプロイ成功（exit 0） |
 | FKが維持される | `pg_constraint` で確認 |
 
-## 外部事例
-該当なし（PostgreSQL標準DDL操作のみ）
+## 外部・過去事例の参照と我々への応用
+該当なし（PostgreSQL標準DDLのRENAME TABLE・DROP VIEW CASCADE は公式仕様どおりの操作のみ）
+
+## 維持の仕組み
+守り手: PO（Shingo）
 
 ## リスクと対処
 - DROP VIEW CASCADE で意図しない依存が消える → 事前に依存確認済み（pg_dependで他テーブルからの依存なし）
