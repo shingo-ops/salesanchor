@@ -116,6 +116,87 @@ async def delete_test_case(case_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post(
+    "/super-admin/rule-tests/cases/seed",
+    response_model=list[TestCaseResponse],
+    status_code=201,
+    dependencies=[Depends(require_super_admin)],
+)
+async def seed_test_cases(db: AsyncSession = Depends(get_db)):
+    """Generate test cases from tcg_status_master (SSOT) rules."""
+    # Get all enabled rules
+    rules = (await db.execute(
+        text("""
+            SELECT status_id, canonical, search_pattern, match_type, effect
+            FROM public.tcg_status_master
+            WHERE enabled = true
+            ORDER BY priority
+        """)
+    )).mappings().all()
+
+    if not rules:
+        raise HTTPException(status_code=400, detail="No enabled rules found in tcg_status_master")
+
+    # Get existing test case input texts to avoid duplicates
+    existing = {row["input_text"] for row in (await db.execute(
+        text("SELECT input_text FROM public.rule_test_cases")
+    )).mappings().all()}
+
+    created = []
+    for rule in rules:
+        # LITERAL: use search_pattern as input_text
+        if rule["match_type"] == "LITERAL" and rule["search_pattern"]:
+            input_text = rule["search_pattern"]
+        # DEFAULT: use a fixed test input
+        elif rule["match_type"] == "DEFAULT":
+            input_text = "通常在庫あり"
+        else:
+            # REGEX: skip (example text is subjective, user adds manually)
+            continue
+
+        if input_text in existing:
+            continue
+
+        expected_effect = "excluded" if rule["effect"] == "EXCLUDE" else None
+        note = f"自動生成: {rule['status_id']} ({rule['match_type']})"
+
+        row = (await db.execute(
+            text("""
+                INSERT INTO public.rule_test_cases (input_text, expected_canonical, expected_effect, note)
+                VALUES (:input_text, :expected_canonical, :expected_effect, :note)
+                RETURNING id, input_text, expected_canonical, expected_effect, note, created_at
+            """),
+            {
+                "input_text": input_text,
+                "expected_canonical": rule["canonical"],
+                "expected_effect": expected_effect,
+                "note": note,
+            },
+        )).mappings().one()
+        created.append(dict(row))
+        existing.add(input_text)
+
+    await db.commit()
+    return created
+
+
+@router.get(
+    "/super-admin/rule-tests/canonicals",
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_canonicals(db: AsyncSession = Depends(get_db)):
+    """Get distinct canonical values and their effects from tcg_status_master."""
+    rows = (await db.execute(
+        text("""
+            SELECT DISTINCT canonical, effect
+            FROM public.tcg_status_master
+            WHERE enabled = true
+            ORDER BY canonical
+        """)
+    )).mappings().all()
+    return [{"canonical": r["canonical"], "effect": r["effect"]} for r in rows]
+
+
+@router.post(
     "/super-admin/rule-tests/run",
     response_model=TestRunStartResponse,
     status_code=202,
