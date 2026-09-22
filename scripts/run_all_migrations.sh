@@ -769,3 +769,12 @@ run_sql migrations/20260922_060000_product_unit_condition_infra.sql
 
 # LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
 run_sql migrations/20260922_080000_rename_line_analysis_tables.sql
+
+# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+
+# 残存 TCG マスタ 3 テーブルを public schema にプロモート
+run_sql migrations/20260923_030000_promote_remaining_tcg_tables.sql
+
+# line_import_devices.tcg_schema を tenant_004 → public に更新
+run_sql migrations/20260923_040000_update_device_tcg_schema.sql

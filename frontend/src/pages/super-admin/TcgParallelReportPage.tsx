@@ -128,10 +128,10 @@ export default function TcgParallelReportPage() {
         {/* ヘッダー説明 */}
         <div style={{ background: "var(--bg-primary)", padding: "10px 14px", borderRadius: 4, marginBottom: 16 }}>
           <p style={{ margin: "4px 0", fontSize: 13 }}>
-            <strong>compat-v1</strong>: GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）
+            <strong>compat-v1</strong>: {t("tcgParallelReport.compatV1Description")}
           </p>
           <p style={{ margin: "4px 0", fontSize: 13 }}>
-            <strong>name-first-v1</strong>: サーバー新エンジン（インメモリ計算・キーワード最長一致）
+            <strong>name-first-v1</strong>: {t("tcgParallelReport.namefirstV1Description")}
           </p>
           <p style={{ margin: "4px 0", fontSize: 13, color: "var(--text-muted)" }}>
             {t("tcgParallelReport.readOnlyNote")}
@@ -179,7 +179,7 @@ export default function TcgParallelReportPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td style={tdStyle}>PID解決率</td>
+                  <td style={tdStyle}>{t("tcgParallelReport.pidResolutionRate")}</td>
                   <td style={tdStyle}>{report.summary.compat_v1_pid_pct}%</td>
                   <td style={tdStyle}>{report.summary.name_first_v1_pid_pct}%</td>
                   <td style={{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}>

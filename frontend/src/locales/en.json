@@ -3893,7 +3893,7 @@
       "noteMaster": "Note Master",
       "productKindsMaster": "Product Kinds",
       "productLinesMaster": "Product Lines",
-      "productFormatsMaster": "Product Formats",
+      "productFormatsMaster": "Sub-categories",
       "quantityUnitsMaster": "Quantity Units",
       "conditionDefsMaster": "Condition Definitions",
       "weightClassesMaster": "Weight Classes",
@@ -4246,16 +4246,17 @@
     "isActive": "Active"
   },
   "productFormatsMaster": {
-    "title": "Product Formats",
-    "addNew": "Add Product Format",
-    "createTitle": "Add Product Format",
-    "editTitle": "Edit Product Format",
-    "confirmDelete": "Delete this product format?",
-    "noData": "No product formats registered yet.",
+    "title": "Sub-categories",
+    "addNew": "Add Sub-category",
+    "createTitle": "Add Sub-category",
+    "editTitle": "Edit Sub-category",
+    "confirmDelete": "Delete this sub-category?",
+    "noData": "No sub-categories registered yet.",
     "code": "Code",
     "name": "Name",
     "nameEn": "English Name",
     "lineId": "Product Line",
+    "typeMasterId": "Card Game",
     "displayOrder": "Display Order",
     "isActive": "Active"
   },
@@ -4434,6 +4435,9 @@
     "fetchError": "Failed to fetch report",
     "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
     "calculatingDetail": "Calculating (DB read + in-memory matching)...",
-    "readOnlyNote": "* No DB writes. Report is read-only."
+    "readOnlyNote": "* No DB writes. Report is read-only.",
+    "compatV1Description": "Legacy GAS matching result (existing DB values, gemini_all.json basis)",
+    "namefirstV1Description": "New server engine (in-memory calculation, keyword longest-match)",
+    "pidResolutionRate": "PID Resolution Rate"
   }
 }

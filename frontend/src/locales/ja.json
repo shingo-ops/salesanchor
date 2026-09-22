@@ -3893,7 +3893,7 @@
       "noteMaster": "備考マスタ",
       "productKindsMaster": "大分類マスタ",
       "productLinesMaster": "中分類マスタ",
-      "productFormatsMaster": "商品形態マスタ",
+      "productFormatsMaster": "細分類マスタ",
       "quantityUnitsMaster": "販売単位マスタ",
       "conditionDefsMaster": "状態定義マスタ",
       "weightClassesMaster": "重量クラスマスタ",
@@ -4246,16 +4246,17 @@
     "isActive": "有効"
   },
   "productFormatsMaster": {
-    "title": "商品形態マスタ",
-    "addNew": "商品形態を追加",
-    "createTitle": "商品形態を追加",
-    "editTitle": "商品形態を編集",
-    "confirmDelete": "この商品形態を削除しますか？",
-    "noData": "商品形態はまだ登録されていません。",
+    "title": "細分類マスタ",
+    "addNew": "細分類を追加",
+    "createTitle": "細分類を追加",
+    "editTitle": "細分類を編集",
+    "confirmDelete": "この細分類を削除しますか？",
+    "noData": "細分類はまだ登録されていません。",
     "code": "コード",
     "name": "名称",
     "nameEn": "英語名",
     "lineId": "小分類",
+    "typeMasterId": "カードゲーム",
     "displayOrder": "表示順",
     "isActive": "有効"
   },
@@ -4434,6 +4435,9 @@
     "fetchError": "レポート取得失敗",
     "diffExplanation": "差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。",
     "calculatingDetail": "計算中（DB 読み取り + インメモリ照合）…",
-    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。"
+    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。",
+    "compatV1Description": "GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）",
+    "namefirstV1Description": "サーバー新エンジン（インメモリ計算・キーワード最長一致）",
+    "pidResolutionRate": "PID解決率"
   }
 }
