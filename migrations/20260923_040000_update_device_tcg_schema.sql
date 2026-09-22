@@ -1,5 +1,5 @@
 -- ============================================================================
--- Migration 20260923_020000: line_import_devices.tcg_schema を
+-- Migration 20260923_040000: line_import_devices.tcg_schema を
 --                            'tenant_004' → 'public' に更新
 --
 -- 経緯:
@@ -23,10 +23,10 @@ BEGIN
         WHERE tcg_schema = 'tenant_004';
 
         GET DIAGNOSTICS updated_count = ROW_COUNT;
-        RAISE NOTICE 'migration 20260923_020000: line_import_devices.tcg_schema を % 行更新 (tenant_004 → public)',
+        RAISE NOTICE 'migration 20260923_040000: line_import_devices.tcg_schema を % 行更新 (tenant_004 → public)',
             updated_count;
     ELSE
-        RAISE NOTICE 'migration 20260923_020000: public.line_import_devices 不在 — スキップ（CI環境）';
+        RAISE NOTICE 'migration 20260923_040000: public.line_import_devices 不在 — スキップ（CI環境）';
     END IF;
 END $$;
 

@@ -16,6 +16,7 @@ class ProductFormatBase(BaseModel):
     display_order: int = Field(default=100, ge=0)
     is_active: bool = True
     line_id: Optional[int] = None
+    type_master_id: Optional[int] = None
 
 
 class ProductFormatCreate(ProductFormatBase):
@@ -29,6 +30,7 @@ class ProductFormatUpdate(BaseModel):
     display_order: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
     line_id: Optional[int] = None
+    type_master_id: Optional[int] = None
 
 
 class ProductFormatResponse(ProductFormatBase):

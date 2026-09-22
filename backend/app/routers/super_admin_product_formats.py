@@ -24,8 +24,8 @@ from app.schemas.product_format import (
 
 router = APIRouter()
 
-_COLS = "id, code, name, name_en, display_order, is_active, line_id, created_at, updated_at"
-_UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id"}
+_COLS = "id, code, name, name_en, display_order, is_active, line_id, type_master_id, created_at, updated_at"
+_UPDATABLE = {"code", "name", "name_en", "display_order", "is_active", "line_id", "type_master_id"}
 
 
 @router.get(
@@ -71,8 +71,8 @@ async def create_product_format(
         result = await db.execute(
             text(
                 "INSERT INTO public.product_formats "
-                "(code, name, name_en, display_order, is_active, line_id) "
-                "VALUES (:code, :name, :name_en, :display_order, :is_active, :line_id) "
+                "(code, name, name_en, display_order, is_active, line_id, type_master_id) "
+                "VALUES (:code, :name, :name_en, :display_order, :is_active, :line_id, :type_master_id) "
                 f"RETURNING {_COLS}"
             ),
             data.model_dump(),
