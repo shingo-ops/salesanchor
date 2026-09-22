@@ -3,6 +3,8 @@
 **仕事名**: quantity-condition-admin-ui
 **日付**: 2026-09-22
 **対象ADR**: ADR-027（i18n）, ADR-144（UI金型）
+**recon**: [recon.md](recon.md)
+**守り手**: ADR-027（i18n強制CI）, ADR-144（UIガバナンスCI）
 
 ---
 
