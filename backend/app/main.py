@@ -88,6 +88,7 @@ from app.routers import (
     staff_reports,
     status_master,  # ステータスマスタ テナント用
     super_admin_aliases,
+    super_admin_condition_defs,  # コンディション定義マスタ中央 admin
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
     super_admin_inbound,
@@ -546,6 +547,10 @@ app.include_router(
 # 数量単位マスタ中央 admin
 app.include_router(
     super_admin_quantity_units.router, prefix="/api/v1", tags=["super-admin"],
+)
+# コンディション定義マスタ中央 admin
+app.include_router(
+    super_admin_condition_defs.router, prefix="/api/v1", tags=["super-admin"],
 )
 # 重量クラスマスタ中央 admin
 app.include_router(
