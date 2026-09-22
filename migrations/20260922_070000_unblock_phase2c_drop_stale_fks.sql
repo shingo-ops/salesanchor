@@ -17,8 +17,15 @@
 -- ============================================================
 
 -- Step 1: Create UNIQUE constraint on public.products(tcg_uuid) if missing
+-- tcg_uuid column may not exist in CI test DB — check first
 DO $$
 BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) THEN
+        RAISE NOTICE 'public.products.tcg_uuid column does not exist — skipping UNIQUE constraint';
+        RETURN;
+    END IF;
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.table_constraints WHERE table_schema = 'public' AND table_name = 'products' AND constraint_name = 'uq_products_tcg_uuid'
     ) THEN
