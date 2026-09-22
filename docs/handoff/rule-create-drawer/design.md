@@ -53,7 +53,7 @@ Preview エンドポイントはこの関数と同一の分岐（DEFAULT→True 
 
 ## 維持の仕組み
 
-守り手: RuleManagementPanel + super_admin_status_master.py の担当者（ADR-144 / ADR-027 遵守者）
+守り手: `frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx`, `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx`, `backend/app/routers/super_admin_status_master.py`（ADR-144 / ADR-027 遵守）
 
 - Preview エンドポイントは `require_super_admin` 認証で保護。DB アクセスなし（ロジックのみ）
 - 作成されたルールは `enabled: false` のため本番解析に影響なし
@@ -62,6 +62,6 @@ Preview エンドポイントはこの関数と同一の分岐（DEFAULT→True 
 
 ## 参照
 
-- recon.md（本ディレクトリ）
+- [recon.md](./recon.md)（調査結果は `docs/handoff/rule-create-drawer/recon.md` を参照）
 - ADR-027: docs/adr/ADR-027-ui-internationalization.md
 - ADR-144: docs/CC_UI_GOVERNANCE.md

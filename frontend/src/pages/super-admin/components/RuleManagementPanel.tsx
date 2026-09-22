@@ -176,6 +176,7 @@ export function RuleManagementPanel() {
                   {t("common.search")}
                 </HeaderButton>
                 <HeaderButton
+                  variant="secondary"
                   data-testid="rule-management-create-btn"
                   onClick={() => setCreateDrawerOpen(true)}
                 >
