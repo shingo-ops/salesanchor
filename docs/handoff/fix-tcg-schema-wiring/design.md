@@ -1,0 +1,32 @@
+# Design: TCG_SCHEMA 配線統一
+
+## 目的
+全TCGコードの TCG_SCHEMA を "public" に統一し、tenant_004 参照を解消する。
+
+## 変更前後
+| 対象 | 変更前 | 変更後 |
+|------|--------|--------|
+| 10ファイルの TCG_SCHEMA | env var "tenant_004" | ローカル "public" |
+| tcg_manufacturers/series/evidence_rules | tenant_004 のみ | public にコピー |
+| line_import_devices.tcg_schema | 'tenant_004' | 'public' |
+
+## 対象と対象外
+- 対象: TCG_SCHEMA import → ローカルオーバーライド、3テーブル promote、デバイスDB更新
+- 対象外: tcg_config.py 自体の変更、環境変数変更、tenant_004 テーブルの DROP
+
+## 受入条件
+| 基準 | 検証方法 |
+|------|----------|
+| tcg_config import がアプリコードに0件 | grep -rn "from app.tcg_config" backend/app/ |
+| 3テーブルが public に存在 | psql SELECT from public.tcg_manufacturers |
+| device.tcg_schema = 'public' | psql SELECT from public.line_import_devices |
+| LINE import が正常動作 | import_jobs status=ok |
+
+## 外部事例
+該当なし（内部配線修正のみ）
+
+## 対象ADR
+ADR-156（SSOT migration）
+
+## recon相互参照
+docs/handoff/fix-tcg-schema-wiring/recon.md
