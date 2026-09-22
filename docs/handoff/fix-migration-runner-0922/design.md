@@ -6,52 +6,48 @@
 
 ## 問題
 
-Migration Guard CIが `20260922_040000_fix_phase2c_fk_blocker.sql` 未登録でfailure。
-`070000` が2重登録。
+Migration Guard CIが 20260922_040000_fix_phase2c_fk_blocker.sql が未登録でfailure。
+070000 が2重登録。
 
 ## 修正方針
 
-`scripts/run_all_migrations.sh` の行661（070000の重複エントリ）を `040000` の登録に変更する。
+scripts/run_all_migrations.sh の行661（070000の重複エントリ）を 040000 の登録に変更する。
 
 ### 選択理由
 
-- `040000` は冪等（BEGIN/COMMIT + IF EXISTS / IF NOT EXISTS ガード付き）
-- 実行順序は問題なし（`050000` が後続で同じ操作をDROP-onlyで行うため安全）
+- 040000 は冪等（BEGIN/COMMIT + IF EXISTS / IF NOT EXISTS ガード付き）
+- 実行順序は問題なし（050000 が後続で同じ操作をDROP-onlyで行うため安全）
 - ファイルを削除する選択肢は Migration Guard が「ファイルが存在するなら登録必須」という要件を持つため不可
 
 ## 変更内容
 
-`scripts/run_all_migrations.sh:661` の変更:
+scripts/run_all_migrations.sh:661 の変更。
 
-変更前:
-```
-# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等・2回目）
-run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
-```
-
-変更後:
-```
-# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
-# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
-run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
-```
+070000 の重複エントリを 040000 の登録に変更した（2行の差分のみ）。
 
 ## KGI / KPI
 
 | 基準 | 検証方法 |
 |------|---------|
-| Migration Guard CIがpassになること | `gh pr checks <PR番号>` で全件pass確認 |
-| `040000` が登録済みになること | `grep 040000 scripts/run_all_migrations.sh` で1件ヒット |
-| `070000` が重複しないこと | `grep -c 070000 scripts/run_all_migrations.sh` が1になること |
+| Migration Guard CIがpassになること | gh pr checks でMigration Guard が pass になること |
+| 040000 が登録済みになること | grep 040000 scripts/run_all_migrations.sh で1件ヒット |
+| 070000 が重複しないこと | grep -c 070000 scripts/run_all_migrations.sh の結果が1であること |
 
 ## 影響範囲
 
-- 触るファイル: `scripts/run_all_migrations.sh` のみ
-- 本番への影響: `040000` は冪等のため重複実行しても安全
+- 触るファイル: scripts/run_all_migrations.sh のみ
+- 本番への影響: 040000 は冪等のため重複実行しても安全
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-Migration Guard は `migrations/` 配下の全 `.sql` ファイルを検出し、`run_all_migrations.sh` または `deploy.yml` への登録を要求する（`.github/workflows/deploy.yml` 内のスクリプト参照）。
+Migration Guard（.github/workflows/ 内）は migrations/ 配下の全 .sql ファイルを列挙し、scripts/run_all_migrations.sh または .github/workflows/deploy.yml への登録を要求する。登録漏れがあると CI が即座に fail する。
+
+本件と同様の「ファイルが存在するが登録されていない」パターンはこれまでも複数回発生しており（#3669 相当）、対策は一貫して「登録追加」で対応している。
+
+## 維持の仕組み
+
+- Migration Guard が main へのマージ後に自動チェックするため、次回以降の漏れも CI で即検出できる
+- ADR-082 の SSoT ルール（run_all_migrations.sh に追記する）を継続する
 
 ## 守り手
 
