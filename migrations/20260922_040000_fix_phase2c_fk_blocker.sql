@@ -20,41 +20,40 @@ ALTER TABLE IF EXISTS tenant_004.analysis_results
   DROP CONSTRAINT IF EXISTS analysis_results_product_id_fkey;
 
 -- 3. Add correct FK on public.analysis_results (same as Phase 2a does for tenant schemas)
--- Only if public.analysis_results exists, has product_id column, AND product_id is UUID type.
--- Type guard required: at this migration step (before Phase B), public.analysis_results.product_id
--- may already be INTEGER. FK to public.products(tcg_uuid) requires UUID type — skip if INTEGER.
--- Phase B (20260915_120000) handles the UUID→INTEGER conversion for tenant_* schemas.
+-- Only if public.analysis_results exists, has product_id column, AND product_id is still UUID type.
+-- Guard: 20260915_120000 (phase_b_fk_rewire_uuid_to_int) converts product_id to INTEGER.
+-- If already INTEGER, FK to uuid tcg_uuid would fail with type mismatch.
 DO $$
 DECLARE
-  _pid_typid OID;
-  _uuid_oid  OID := 'uuid'::regtype::oid;
+  _pid_type OID;
 BEGIN
-  -- Resolve product_id column type
-  SELECT a.atttypid INTO _pid_typid
+  -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+  SELECT a.atttypid INTO _pid_type
   FROM pg_attribute a
   JOIN pg_class c ON c.oid = a.attrelid
   JOIN pg_namespace n ON n.oid = c.relnamespace
   WHERE n.nspname = 'public'
     AND c.relname = 'analysis_results'
     AND a.attname = 'product_id'
-    AND a.attnum > 0;
+    AND NOT a.attisdropped;
 
-  IF _pid_typid IS NULL THEN
-    RAISE NOTICE 'Skipped step 3: public.analysis_results.product_id column not found';
-  ELSIF _pid_typid <> _uuid_oid THEN
-    RAISE NOTICE 'Skipped step 3: public.analysis_results.product_id is not UUID (atttypid=%). Cannot add FK to public.products(tcg_uuid).', _pid_typid;
+  IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+    RAISE NOTICE 'Skipped: public.analysis_results.product_id is not UUID (atttypid=%). FK rewire not applicable.', _pid_type;
   ELSIF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public' AND table_name = 'analysis_results' AND column_name = 'product_id'
+  ) AND NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
     WHERE table_schema = 'public' AND table_name = 'analysis_results'
       AND constraint_name = 'fk_analysis_results_product_public'
   ) THEN
-    RAISE NOTICE 'Skipped step 3: FK fk_analysis_results_product_public already exists on public.analysis_results';
-  ELSE
     ALTER TABLE public.analysis_results
       ADD CONSTRAINT fk_analysis_results_product_public
       FOREIGN KEY (product_id)
       REFERENCES public.products(tcg_uuid);
     RAISE NOTICE 'Added fk_analysis_results_product_public on public.analysis_results';
+  ELSE
+    RAISE NOTICE 'Skipped: FK already exists or table/column not found';
   END IF;
 END $$;
 
