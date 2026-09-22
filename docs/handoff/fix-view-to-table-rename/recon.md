@@ -18,13 +18,13 @@ ERROR: cannot create index on relation "units" / DETAIL: This operation is not s
 - FK: `analysis_results.unit_id` → `line_units`, `analysis_results.condition_id` → `line_conditions`
 
 ### 影響範囲
-252番以降の6ファイルが同じVIEWをTABLEとして操作:
-- migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
-- migrations/20260920_030000_units_add_tenant_id.sql
-- migrations/20260920_040000_conditions_ssot_phase1.sql
-- migrations/20260921_100000_add_analysis_master_fk.sql
-- migrations/20260921_110000_pipeline_tables_public.sql
-- migrations/20260922_060000_product_unit_condition_infra.sql
+252番以降の後続マイグレーションが同じVIEWをTABLEとして操作。
+デプロイ設定: `.github/workflows/deploy.yml:153`（run_all_migrations.sh SSoT方針）
+condition_aliases 参照: `backend/app/routers/conditions.py:493`
+
+### 修正対象
+本PRで新規追加: `docs/handoff/fix-view-to-table-rename/recon.md:1`
+本PRで新規追加: `docs/handoff/fix-view-to-table-rename/design.md:1`
 
 ### アプリ状態
 - コードデプロイは成功（docker compose完了）
