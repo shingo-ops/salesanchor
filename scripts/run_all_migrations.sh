@@ -657,8 +657,9 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
-# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等・2回目）
-run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
+# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
+run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
 
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
