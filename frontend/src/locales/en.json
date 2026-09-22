@@ -4434,6 +4434,9 @@
     "fetchError": "Failed to fetch report",
     "diffExplanation": "Diff = name-first-v1 - compat-v1. Positive = improvement, negative = regression.",
     "calculatingDetail": "Calculating (DB read + in-memory matching)...",
-    "readOnlyNote": "* No DB writes. Report is read-only."
+    "readOnlyNote": "* No DB writes. Report is read-only.",
+    "compatV1Description": "Legacy GAS matching result (existing DB values, gemini_all.json basis)",
+    "namefirstV1Description": "New server engine (in-memory calculation, keyword longest-match)",
+    "pidResolutionRate": "PID Resolution Rate"
   }
 }

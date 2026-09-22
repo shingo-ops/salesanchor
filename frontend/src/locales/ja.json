@@ -4434,6 +4434,9 @@
     "fetchError": "レポート取得失敗",
     "diffExplanation": "差分 = name-first-v1 - compat-v1。正値 = 改善、負値 = 後退。",
     "calculatingDetail": "計算中（DB 読み取り + インメモリ照合）…",
-    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。"
+    "readOnlyNote": "※ DB への書き込みなし。レポートは読み取り専用。",
+    "compatV1Description": "GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）",
+    "namefirstV1Description": "サーバー新エンジン（インメモリ計算・キーワード最長一致）",
+    "pidResolutionRate": "PID解決率"
   }
 }
