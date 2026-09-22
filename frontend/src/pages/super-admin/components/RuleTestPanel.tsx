@@ -18,6 +18,8 @@ import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Modal } from "../../../components/Modal";
 import ConfirmModal from "../../../components/ConfirmModal";
+import { Card } from "../../../components/Card";
+import { Select } from "../../../components/Select";
 
 /* ── 型定義 ──────────────────────────────────────────────────────────────── */
 
@@ -87,6 +89,8 @@ export function RuleTestPanel() {
   const [latestRun, setLatestRun] = useState<TestRun | null>(null);
   const [gate, setGate] = useState<GateStatus>({ gate_open: false, latest_state: null });
   const [error, setError] = useState("");
+  const [seeding, setSeeding] = useState(false);
+  const [canonicals, setCanonicals] = useState<{canonical: string; effect: string}[]>([]);
 
   // 追加モーダル
   const [addOpen, setAddOpen] = useState(false);
@@ -133,11 +137,21 @@ export function RuleTestPanel() {
     }
   }, []);
 
+  const loadCanonicals = useCallback(async () => {
+    try {
+      const data = await api.get<{canonical: string; effect: string}[]>("/super-admin/rule-tests/canonicals");
+      setCanonicals(data);
+    } catch {
+      // fallback: empty list, user types manually
+    }
+  }, []);
+
   useEffect(() => {
     void loadCases();
     void loadLatestRun();
     void loadGate();
-  }, [loadCases, loadLatestRun, loadGate]);
+    void loadCanonicals();
+  }, [loadCases, loadLatestRun, loadGate, loadCanonicals]);
 
   /* ── ポーリング ── */
 
@@ -178,6 +192,21 @@ export function RuleTestPanel() {
     } catch (e) {
       setError(e instanceof Error ? e.message : t("common.fetchError"));
       setRunning(false);
+    }
+  };
+
+  /* ── シードケース追加 ── */
+
+  const handleSeedCases = async () => {
+    setSeeding(true);
+    setError("");
+    try {
+      await api.post("/super-admin/rule-tests/cases/seed", {});
+      await loadCases();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      setSeeding(false);
     }
   };
 
@@ -303,9 +332,14 @@ export function RuleTestPanel() {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-6)" }}>
       {/* ゲートステータス */}
-      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)" }}>
-        <GateBadge state={gate.latest_state} />
-      </div>
+      <Card variant="container">
+        <div style={{ display: "flex", alignItems: "center", gap: "var(--space-3)", padding: "var(--space-4)" }}>
+          <GateBadge state={gate.latest_state} />
+          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-secondary)" }}>
+            {t(`${f}.gateDescription`)}
+          </span>
+        </div>
+      </Card>
 
       {error && (
         <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--font-sm)" }}>
@@ -326,9 +360,14 @@ export function RuleTestPanel() {
           <h3 style={{ fontSize: "var(--font-md)", fontWeight: "var(--font-semibold)", margin: 0 }}>
             {t(`${f}.casesTitle`)}
           </h3>
-          <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
-            {t(`${f}.addCase`)}
-          </Button>
+          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+            <Button variant="secondary" size="sm" onClick={() => { void handleSeedCases(); }} loading={seeding} loadingText={t(`${f}.seeding`)}>
+              {t(`${f}.seedCases`)}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setAddOpen(true)}>
+              {t(`${f}.addCase`)}
+            </Button>
+          </div>
         </div>
         <DataTable
           columns={caseColumns}
@@ -408,19 +447,39 @@ export function RuleTestPanel() {
             </p>
           )}
           <TextField
-            label={t(`${f}.inputText`)}
+            label={t(`${f}.inputTextLabel`)}
             value={addInputText}
             onChange={(e) => setAddInputText(e.target.value)}
             required
             fullWidth
           />
-          <TextField
-            label={t(`${f}.expectedCanonical`)}
-            value={addExpectedCanonical}
-            onChange={(e) => setAddExpectedCanonical(e.target.value)}
-            required
-            fullWidth
-          />
+          {canonicals.length > 0 ? (
+            <Select
+              label={t(`${f}.expectedCanonicalLabel`)}
+              options={[
+                { value: "", label: t(`${f}.expectedCanonicalPlaceholder`) },
+                ...canonicals.map((c) => ({ value: c.canonical, label: `${c.canonical}${c.effect === "EXCLUDE" ? ` (${t(`${f}.expectedEffectExcluded`)})` : ""}` })),
+              ]}
+              value={addExpectedCanonical}
+              onChange={(e) => {
+                const val = e.target.value;
+                setAddExpectedCanonical(val);
+                const match = canonicals.find((c) => c.canonical === val);
+                if (match) {
+                  setAddEffectExcluded(match.effect === "EXCLUDE");
+                }
+              }}
+              fullWidth
+            />
+          ) : (
+            <TextField
+              label={t(`${f}.expectedCanonicalLabel`)}
+              value={addExpectedCanonical}
+              onChange={(e) => setAddExpectedCanonical(e.target.value)}
+              required
+              fullWidth
+            />
+          )}
           <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", cursor: "pointer" }}>
             <input
               type="checkbox"

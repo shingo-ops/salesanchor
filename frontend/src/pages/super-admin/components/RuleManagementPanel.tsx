@@ -18,6 +18,7 @@ import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { RuleTestPanel } from "./RuleTestPanel";
+import ConfirmModal from "../../../components/ConfirmModal";
 
 interface RuleEntry {
   id: number;
@@ -49,6 +50,7 @@ export function RuleManagementPanel() {
   const [page, setPage] = useState(1);
   const [toggling, setToggling] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RuleTab>("sold-out");
+  const [toggleTarget, setToggleTarget] = useState<RuleEntry | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -81,22 +83,22 @@ export function RuleManagementPanel() {
     { key: "test", label: t(`${f}.tabs.test`) },
   ];
 
-  const handleRowClick = async (row: RuleEntry) => {
-    const action = row.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`);
-    const confirmed = window.confirm(
-      t(`${f}.toggleConfirm`, { name: row.canonical, action }),
-    );
-    if (!confirmed) return;
+  const handleRowClick = (row: RuleEntry) => {
+    setToggleTarget(row);
+  };
 
-    setToggling(row.id);
+  const handleToggleConfirm = async () => {
+    if (!toggleTarget) return;
+    setToggling(toggleTarget.id);
     setError("");
     try {
-      await api.patch(`/super-admin/status-master/${row.id}`, { enabled: !row.enabled });
+      await api.patch(`/super-admin/status-master/${toggleTarget.id}`, { enabled: !toggleTarget.enabled });
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : t(`${f}.toggleFail`));
     } finally {
       setToggling(null);
+      setToggleTarget(null);
     }
   };
 
@@ -182,7 +184,7 @@ export function RuleManagementPanel() {
             columns={columns}
             data={filteredItems}
             rowKey={(row) => String(row.id)}
-            onRowClick={(row) => { if (toggling === null) void handleRowClick(row); }}
+            onRowClick={(row) => { if (toggling === null) handleRowClick(row); }}
             emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
             page={page}
             hasNextPage={filteredItems.length >= PER_PAGE}
@@ -192,6 +194,14 @@ export function RuleManagementPanel() {
           />
         </>
       )}
+      <ConfirmModal
+        open={toggleTarget !== null}
+        title={toggleTarget?.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`)}
+        message={toggleTarget ? t(`${f}.toggleConfirm`, { name: toggleTarget.canonical, action: toggleTarget.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`) }) : ""}
+        danger={toggleTarget?.enabled === true}
+        onConfirm={() => { void handleToggleConfirm(); }}
+        onCancel={() => setToggleTarget(null)}
+      />
     </>
   );
 }
