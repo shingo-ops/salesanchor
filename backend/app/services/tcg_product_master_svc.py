@@ -22,7 +22,8 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 _PM_CODE_RE = re.compile(r"^PM(\d{4})$")
 

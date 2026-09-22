@@ -39,7 +39,9 @@ from app.models import User
 from app.services import tcg_product_roundtrip_svc as roundtrip
 from app.services.tcg_product_detail_svc import ProductDetailError, get_product_detail, update_product_detail
 from app.services.tcg_product_import_svc import commit_import, preview
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 router = APIRouter()
 
@@ -327,13 +329,13 @@ async def get_product_lookups(
         "WHERE is_active = TRUE ORDER BY name"
     ))
     lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
-    # ADR-156 Phase 3B: tcg_product_categories is now SSOT in public schema (INTEGER PK).
-    _PUBLIC_TABLES = {"product_kinds", "tcg_product_categories"}
+    # Step 4/5: All referenced tables are now in public schema (tcg_manufacturers promoted
+    # alongside tcg_product_categories). TCG_SCHEMA resolves to "public".
     for key, table, name_col in [
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
-        schema = "public" if table in _PUBLIC_TABLES else TCG_SCHEMA
+        schema = TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"SELECT id::text AS id, {name_col} AS name "

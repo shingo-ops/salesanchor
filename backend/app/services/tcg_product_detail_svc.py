@@ -10,7 +10,8 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 LOOKUPS = {
     "manufacturer_id": "tcg_manufacturers",

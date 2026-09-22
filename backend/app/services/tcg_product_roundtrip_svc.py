@@ -13,7 +13,9 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_import_svc import CSV_COLUMNS, LOOKUP_ARGS, LOOKUP_TABLES
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 COLUMNS = ["product_code", "revision", *CSV_COLUMNS]
 MAX_BYTES = 2 * 1024 * 1024
