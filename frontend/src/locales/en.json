@@ -310,7 +310,10 @@
     "priceHistory": "Price History",
     "historyDays": "Last 30 days",
     "yen": "¥",
-    "loadError": "Failed to load data"
+    "loadError": "Failed to load data",
+    "fetchNow": "Fetch Now",
+    "fetchStarted": "Fetch task started",
+    "fetchFailed": "Failed to start fetch task"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
