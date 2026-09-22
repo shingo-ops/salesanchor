@@ -18,8 +18,8 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 from __future__ import annotations
 
 import hashlib
-import re
 import logging
+import re
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal
