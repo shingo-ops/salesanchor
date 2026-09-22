@@ -190,6 +190,7 @@ export default function DesktopShell() {
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",         labelKey: "nav.superAdminAnalysisRules" },
     { to: "/super-admin/fx-rate",              labelKey: "nav.superAdminFxRate" },
+    { to: "/buyback-prices",                     labelKey: "nav.buybackPrices" },
   ] : [];
 
   const moreItems: NavItem[] = [];
@@ -267,17 +268,6 @@ export default function DesktopShell() {
                 >
                   <span className="sidebar-icon"><NAV_ICONS.inventory size={ICON.base} /></span>
                   <span className="sidebar-label">{t("nav.inventory")}</span>
-                </NavLink>
-              )}
-
-              {hasPermission("products.view") && (
-                <NavLink
-                  to="/buyback-prices"
-                  className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
-                  onClick={handleSidebarNavClick}
-                >
-                  <span className="sidebar-icon"><NAV_ICONS.sales size={ICON.base} /></span>
-                  <span className="sidebar-label">{t("nav.buybackPrices")}</span>
                 </NavLink>
               )}
 

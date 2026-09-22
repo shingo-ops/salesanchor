@@ -31,6 +31,7 @@ _BRAND_TO_GAME: dict[str, str] = {
     "ポケモン": "pokemon",
     "ワンピース": "onepiece",
     "遊戯王": "yugioh",
+    "DB": "dragonball",
     "ドラゴンボール": "dragonball",
     "ヴァイスシュヴァルツ": "weiss",
 }
@@ -84,7 +85,7 @@ async def _fetch_brands(client: httpx.AsyncClient) -> list[dict]:
         response = await rate_limited_get(client, url)
         response.raise_for_status()
         data = response.json()
-        brands: list[dict] = data.get("data", [])
+        brands: list[dict] = data.get("data", {}).get("brands", [])
         logger.info("[shinsoku] ブランド一覧取得: %d 件", len(brands))
         return brands
     except httpx.HTTPError as exc:
