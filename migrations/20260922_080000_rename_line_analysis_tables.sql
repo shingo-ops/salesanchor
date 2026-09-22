@@ -10,6 +10,9 @@
 -- ============================================================
 
 -- Step 1: units → line_units
+-- units: LINEメッセージから抽出した販売単位を格納するマスタ。
+-- 「ボックス」「パック」「カートン」等の単位名と、解析パイプラインでの
+-- 正規化ルールを保持する。正式な販売単位マスタ（quantity_units）とは別物。
 DO $$
 BEGIN
     -- テーブルが存在し、かつまだリネームされていない場合のみ
@@ -35,6 +38,8 @@ BEGIN
 END $$;
 
 -- Step 2: unit_aliases → line_unit_aliases
+-- unit_aliases: LINE解析用単位の別名テーブル。「BOX」「箱」→「ボックス」のように、
+-- 表記揺れを正規の単位名に紐づける。units テーブルの子テーブル。
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'unit_aliases' AND table_type = 'BASE TABLE') THEN
@@ -58,6 +63,9 @@ BEGIN
 END $$;
 
 -- Step 3: conditions → line_conditions
+-- conditions: LINEメッセージから抽出した商品状態を格納するマスタ。
+-- 「未開封」「美品」「傷あり」等の状態名を保持する。
+-- 正式な商品状態マスタ（condition_definitions）とは別物。
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'conditions' AND table_type = 'BASE TABLE') THEN
@@ -81,6 +89,8 @@ BEGIN
 END $$;
 
 -- Step 4: condition_aliases → line_condition_aliases
+-- condition_aliases: LINE解析用状態の別名テーブル。「新品未開封」「シュリンク付き」→「未開封」のように、
+-- 表記揺れを正規の状態名に紐づける。conditions テーブルの子テーブル。
 DO $$
 BEGIN
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'condition_aliases' AND table_type = 'BASE TABLE') THEN
