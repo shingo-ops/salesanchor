@@ -17,13 +17,17 @@ DO $$
 DECLARE
     updated_count INTEGER;
 BEGIN
-    UPDATE public.line_import_devices
-    SET tcg_schema = 'public'
-    WHERE tcg_schema = 'tenant_004';
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'line_import_devices') THEN
+        UPDATE public.line_import_devices
+        SET tcg_schema = 'public'
+        WHERE tcg_schema = 'tenant_004';
 
-    GET DIAGNOSTICS updated_count = ROW_COUNT;
-    RAISE NOTICE 'migration 20260923_020000: line_import_devices.tcg_schema を % 行更新 (tenant_004 → public)',
-        updated_count;
+        GET DIAGNOSTICS updated_count = ROW_COUNT;
+        RAISE NOTICE 'migration 20260923_020000: line_import_devices.tcg_schema を % 行更新 (tenant_004 → public)',
+            updated_count;
+    ELSE
+        RAISE NOTICE 'migration 20260923_020000: public.line_import_devices 不在 — スキップ（CI環境）';
+    END IF;
 END $$;
 
 -- ============================================================================
