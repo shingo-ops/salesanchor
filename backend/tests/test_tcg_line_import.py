@@ -512,8 +512,9 @@ async def test_source_message_insert_before_update_supersede():
     先に実行されること。
 
     根拠:
-      backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231
-        superseded_by UUID REFERENCES tenant_004.source_messages(id)
+      migrations/20260921_110000_pipeline_tables_public.sql（public へ移行後の正本。
+      移行前は backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231）
+        superseded_by UUID REFERENCES public.source_messages(id)
       DEFERRABLE 未指定 = NOT DEFERRABLE INITIALLY IMMEDIATE。
       UPDATE で new_sm_id を参照する前に INSERT が済んでいない場合、
       ForeignKeyViolation が発生する。
@@ -562,7 +563,7 @@ async def test_source_message_insert_before_update_supersede():
         window_hours=0,  # フィルタなし: 全メッセージを取り込む
     )
 
-    from app.tcg_config import TCG_SCHEMA as _SCHEMA
+    from app.services.tcg_line_import_svc import TCG_SCHEMA as _SCHEMA
 
     insert_pos = next(
         (i for i, sql in enumerate(call_sqls) if f"INSERT INTO {_SCHEMA}.source_messages" in sql),
@@ -917,7 +918,7 @@ async def test_import_zero_unresolved_writes_source_messages():
 
     assert result["review_status"] == "ok"
     assert result["unresolved_count"] == 0
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called_once()
     db.commit.assert_called_once()
@@ -956,7 +957,7 @@ async def test_import_unresolved_auto_creates_supplier_and_writes_source_message
     assert result["unresolved_count"] == 0, "自動登録後は unresolved_count=0 になること"
     assert any("INSERT INTO public.suppliers" in s for s in sqls), \
         "未登録仕入元の自動 INSERT が実行されていない"
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "自動登録後に source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called_once()
     db.commit.assert_called_once()
@@ -996,7 +997,7 @@ async def test_import_partial_unresolved_auto_creates_and_writes_all():
     assert result["unresolved_count"] == 0
     assert any("INSERT INTO public.suppliers" in s for s in sqls), \
         "未登録仕入元の自動 INSERT が実行されていない"
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called()
 

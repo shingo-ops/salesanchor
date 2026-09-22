@@ -4,7 +4,7 @@ MIG-04 Phase 2: LINE エクスポートファイル取り込みサービス。
 GAS の Latest24LineImport.js (parseLatest24LineExport / resolveSuppliers /
 buildProviderEntries / importLineExport) と同等のロジックを Python に移植。
 
-TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
+Step 4/5: TCG テーブルは public スキーマに移行済み。全 SQL は public. で修飾する。
 
 【確認工程】
 未解決の仕入元が 1 件以上のとき source_messages を書かず、
@@ -31,7 +31,9 @@ from app.services.tcg_line_android_parser import parse_android_export
 # ---------------------------------------------------------------------------
 # 定数
 # ---------------------------------------------------------------------------
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 JST = timezone(timedelta(hours=9))
 
