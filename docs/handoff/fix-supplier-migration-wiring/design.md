@@ -55,6 +55,13 @@ _VALID = re.compile(r"^(tenant_\d{3}|public)$")
 - `tcg_config.py` を import している他ファイル（9ファイル）は、デフォルト値が安全側（`public`）に変わるのみ。既存動作を壊さない。
 - 旧 `tenant_004` スキーマへの接続が必要な場合は環境変数 `TCG_SCHEMA=tenant_004` で上書き可能（正規表現も許容）。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-前回の移行済みファイルのパターン（PR #3663 で確立済み）を踏襲。
+前回の移行済みファイルのパターン（PR #3663 `release/line-import-schema-rewire` で確立済み）を踏襲。
+同 PR で移行済みの他ファイルと同じローカル定義パターンを適用する。
+
+## 維持の仕組み
+
+守り手: backend CI + ruff（import チェック）
+- `tcg_config.py` のデフォルト値・バリデーション正規表現は環境変数 `TCG_SCHEMA` で制御される
+- 新規ファイルで `TCG_SCHEMA` を参照する場合は、ローカル定義 `TCG_SCHEMA = "public"` パターンを使用すること
