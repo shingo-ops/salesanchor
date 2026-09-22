@@ -96,61 +96,82 @@ END $$;
 --    用途: 小分類を選ぶと、販売単位のプルダウンが絞り込まれる
 --    例: ボックス商品 → ケース/ボックス/パック が選べる
 --    データはアプリ/CSVから登録
+--    CI環境では product_lines / quantity_units が存在しない場合があるため
+--    DO ブロックで条件分岐
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.product_line_available_units (
-    id          SERIAL PRIMARY KEY,
-    product_line_id  INTEGER NOT NULL REFERENCES public.product_lines(id),
-    quantity_unit_id INTEGER NOT NULL REFERENCES public.quantity_units(id),
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (product_line_id, quantity_unit_id)
-);
-
-COMMENT ON TABLE public.product_line_available_units IS '小分類→販売可能単位の紐づけ（連鎖プルダウン第1段）';
-
-CREATE INDEX IF NOT EXISTS idx_plau_product_line_id ON public.product_line_available_units (product_line_id);
-CREATE INDEX IF NOT EXISTS idx_plau_quantity_unit_id ON public.product_line_available_units (quantity_unit_id);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'product_lines')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'quantity_units')
+  THEN
+    CREATE TABLE IF NOT EXISTS public.product_line_available_units (
+        id               SERIAL PRIMARY KEY,
+        product_line_id  INTEGER NOT NULL REFERENCES public.product_lines(id),
+        quantity_unit_id INTEGER NOT NULL REFERENCES public.quantity_units(id),
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (product_line_id, quantity_unit_id)
+    );
+    EXECUTE 'COMMENT ON TABLE public.product_line_available_units IS ''小分類→販売可能単位の紐づけ（連鎖プルダウン第1段）''';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_plau_product_line_id ON public.product_line_available_units (product_line_id)';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_plau_quantity_unit_id ON public.product_line_available_units (quantity_unit_id)';
+  END IF;
+END $$;
 
 -- ============================================================
 -- 4. unit_condition_links（販売単位 → 使える状態）
 --    用途: 販売単位を選ぶと、状態のプルダウンが絞り込まれる
 --    例: ボックス → 未開封/傷あり/シュリンクなし/開封済み/空箱
 --    データはアプリ/CSVから登録
+--    CI環境では quantity_units / condition_definitions が存在しない場合があるため
+--    DO ブロックで条件分岐
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.unit_condition_links (
-    id               SERIAL PRIMARY KEY,
-    quantity_unit_id  INTEGER NOT NULL REFERENCES public.quantity_units(id),
-    condition_def_id  INTEGER NOT NULL REFERENCES public.condition_definitions(id),
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at        TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (quantity_unit_id, condition_def_id)
-);
-
-COMMENT ON TABLE public.unit_condition_links IS '販売単位→使える状態の紐づけ（連鎖プルダウン第2段）';
-
-CREATE INDEX IF NOT EXISTS idx_ucl_quantity_unit_id ON public.unit_condition_links (quantity_unit_id);
-CREATE INDEX IF NOT EXISTS idx_ucl_condition_def_id ON public.unit_condition_links (condition_def_id);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'quantity_units')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'condition_definitions')
+  THEN
+    CREATE TABLE IF NOT EXISTS public.unit_condition_links (
+        id               SERIAL PRIMARY KEY,
+        quantity_unit_id INTEGER NOT NULL REFERENCES public.quantity_units(id),
+        condition_def_id INTEGER NOT NULL REFERENCES public.condition_definitions(id),
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (quantity_unit_id, condition_def_id)
+    );
+    EXECUTE 'COMMENT ON TABLE public.unit_condition_links IS ''販売単位→使える状態の紐づけ（連鎖プルダウン第2段）''';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_ucl_quantity_unit_id ON public.unit_condition_links (quantity_unit_id)';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_ucl_condition_def_id ON public.unit_condition_links (condition_def_id)';
+  END IF;
+END $$;
 
 -- ============================================================
 -- 5. product_quantity_units（商品 × 販売単位 × 入数）
 --    用途: 商品ごとに「何の単位で、入数いくつで売るか」を記録
 --    例: ポケモン151 + ケース + 入数12
 --    データはアプリ/CSVから登録
+--    CI環境では products / quantity_units が存在しない場合があるため
+--    DO ブロックで条件分岐
 -- ============================================================
-CREATE TABLE IF NOT EXISTS public.product_quantity_units (
-    id               SERIAL PRIMARY KEY,
-    product_id       INTEGER NOT NULL REFERENCES public.products(id),
-    quantity_unit_id INTEGER NOT NULL REFERENCES public.quantity_units(id),
-    value            INTEGER,  -- 入数（換算係数）。NULLはアプリ/CSV投入待ち
-    created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
-    UNIQUE (product_id, quantity_unit_id)
-);
-
-COMMENT ON TABLE public.product_quantity_units IS '商品ごとの販売単位と入数（連鎖プルダウン実データ）';
-COMMENT ON COLUMN public.product_quantity_units.value IS '入数（換算係数）。例: 1ケース=12ボックスなら12';
-
-CREATE INDEX IF NOT EXISTS idx_pqu_product_id ON public.product_quantity_units (product_id);
-CREATE INDEX IF NOT EXISTS idx_pqu_quantity_unit_id ON public.product_quantity_units (quantity_unit_id);
+DO $$
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'products')
+     AND EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'quantity_units')
+  THEN
+    CREATE TABLE IF NOT EXISTS public.product_quantity_units (
+        id               SERIAL PRIMARY KEY,
+        product_id       INTEGER NOT NULL REFERENCES public.products(id),
+        quantity_unit_id INTEGER NOT NULL REFERENCES public.quantity_units(id),
+        value            INTEGER,  -- 入数（換算係数）。NULLはアプリ/CSV投入待ち
+        created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        updated_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+        UNIQUE (product_id, quantity_unit_id)
+    );
+    EXECUTE 'COMMENT ON TABLE public.product_quantity_units IS ''商品ごとの販売単位と入数（連鎖プルダウン実データ）''';
+    EXECUTE 'COMMENT ON COLUMN public.product_quantity_units.value IS ''入数（換算係数）。例: 1ケース=12ボックスなら12''';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_pqu_product_id ON public.product_quantity_units (product_id)';
+    EXECUTE 'CREATE INDEX IF NOT EXISTS idx_pqu_quantity_unit_id ON public.product_quantity_units (quantity_unit_id)';
+  END IF;
+END $$;
 
 COMMIT;
