@@ -275,6 +275,7 @@ DECLARE
     old_conname       TEXT;
     new_fk_name       TEXT;
     _tcg_uuid_is_uuid BOOLEAN;
+    _pid_type         OID;
 BEGIN
     -- 型安全ガード: tcg_uuid が UUID 型で存在する場合のみ FK 張替えを実施する。
     -- 20260916_120000（tcg_uuid DROP）が先行済みなら張替えは不要（既に完了 or 不要）。
@@ -329,6 +330,19 @@ BEGIN
         END IF;
 
         -- 新 FK（public.products.tcg_uuid 向け）が未存在なら CREATE
+        -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+        SELECT a.atttypid INTO _pid_type
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_record.schema_name
+          AND c.relname = 'product_search_keywords'
+          AND a.attname = 'product_id'
+          AND NOT a.attisdropped;
+
+        IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+            RAISE NOTICE 'Step3: %.product_search_keywords.product_id is not UUID (atttypid=%). Skipping FK rewire.', schema_record.schema_name, _pid_type;
+        ELSE
         new_fk_name := 'fk_product_search_keywords_product_public';
         IF NOT EXISTS (
             SELECT 1 FROM pg_constraint c
@@ -350,6 +364,7 @@ BEGIN
         ELSE
             RAISE NOTICE 'Step3: FK % already exists on %.product_search_keywords, skipping', new_fk_name, schema_record.schema_name;
         END IF;
+        END IF; -- end UUID type guard for product_search_keywords
 
         -- --------------------------------------------------------
         -- 3-2. product_exclude_keywords
@@ -372,6 +387,19 @@ BEGIN
             RAISE NOTICE 'Step3: dropped FK % on %.product_exclude_keywords', old_conname, schema_record.schema_name;
         END IF;
 
+        -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+        SELECT a.atttypid INTO _pid_type
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_record.schema_name
+          AND c.relname = 'product_exclude_keywords'
+          AND a.attname = 'product_id'
+          AND NOT a.attisdropped;
+
+        IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+            RAISE NOTICE 'Step3: %.product_exclude_keywords.product_id is not UUID (atttypid=%). Skipping FK rewire.', schema_record.schema_name, _pid_type;
+        ELSE
         new_fk_name := 'fk_product_exclude_keywords_product_public';
         IF NOT EXISTS (
             SELECT 1 FROM pg_constraint c
@@ -393,6 +421,7 @@ BEGIN
         ELSE
             RAISE NOTICE 'Step3: FK % already exists on %.product_exclude_keywords, skipping', new_fk_name, schema_record.schema_name;
         END IF;
+        END IF; -- end UUID type guard for product_exclude_keywords
 
         -- --------------------------------------------------------
         -- 3-3. products_logistics
@@ -415,6 +444,19 @@ BEGIN
             RAISE NOTICE 'Step3: dropped FK % on %.products_logistics', old_conname, schema_record.schema_name;
         END IF;
 
+        -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+        SELECT a.atttypid INTO _pid_type
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_record.schema_name
+          AND c.relname = 'products_logistics'
+          AND a.attname = 'product_id'
+          AND NOT a.attisdropped;
+
+        IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+            RAISE NOTICE 'Step3: %.products_logistics.product_id is not UUID (atttypid=%). Skipping FK rewire.', schema_record.schema_name, _pid_type;
+        ELSE
         new_fk_name := 'fk_products_logistics_product_public';
         IF NOT EXISTS (
             SELECT 1 FROM pg_constraint c
@@ -436,6 +478,7 @@ BEGIN
         ELSE
             RAISE NOTICE 'Step3: FK % already exists on %.products_logistics, skipping', new_fk_name, schema_record.schema_name;
         END IF;
+        END IF; -- end UUID type guard for products_logistics
 
         -- --------------------------------------------------------
         -- 3-4. analysis_results（ON DELETE なし）
@@ -458,6 +501,19 @@ BEGIN
             RAISE NOTICE 'Step3: dropped FK % on %.analysis_results', old_conname, schema_record.schema_name;
         END IF;
 
+        -- 型チェック: product_id が UUID 型でなければ FK 作成をスキップ
+        SELECT a.atttypid INTO _pid_type
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = schema_record.schema_name
+          AND c.relname = 'analysis_results'
+          AND a.attname = 'product_id'
+          AND NOT a.attisdropped;
+
+        IF _pid_type IS DISTINCT FROM (SELECT oid FROM pg_type WHERE typname = 'uuid') THEN
+            RAISE NOTICE 'Step3: %.analysis_results.product_id is not UUID (atttypid=%). Skipping FK rewire.', schema_record.schema_name, _pid_type;
+        ELSE
         new_fk_name := 'fk_analysis_results_product_public';
         IF NOT EXISTS (
             SELECT 1 FROM pg_constraint c
@@ -478,6 +534,7 @@ BEGIN
         ELSE
             RAISE NOTICE 'Step3: FK % already exists on %.analysis_results, skipping', new_fk_name, schema_record.schema_name;
         END IF;
+        END IF; -- end UUID type guard for analysis_results
 
     END LOOP;
 
