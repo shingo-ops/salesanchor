@@ -18,12 +18,13 @@
 --   - Python コードの変更は行わない（Phase 2b で別途実施）
 --   - 既存データの DELETE は行わない
 --
--- 型安全ガード（2026-09-22 追加）:
---   後続 migration（20260916_120000, 20260919_010000）が先行適用済みの場合、
+-- 型安全ガード（2026-09-22 追加、2026-09-22 v2: product_category_id 追加）:
+--   後続 migration（20260916_120000, 20260919_010000, 20260920_010000）が先行適用済みの場合、
 --   public.products の列型が変わっているため UPSERT が型ミスマッチで失敗する。
 --   Step2/Step3 の冒頭で pg_attribute を参照し、型が一致しない場合は SKIP する。
 --     - tcg_uuid が UUID で存在しない → Step2/Step3 をスキップ（移行完了扱い）
 --     - work_id が UUID でない（INTEGER 等）→ work_id を NULL キャストして UPSERT
+--     - product_category_id が UUID でない（INTEGER 等）→ product_category_id を NULL キャストして UPSERT
 
 BEGIN;
 
@@ -66,13 +67,15 @@ DECLARE
     schema_record    RECORD;
     upserted_count   INTEGER;
     total_upserted   INTEGER := 0;
-    _tcg_uuid_is_uuid BOOLEAN;
-    _work_id_is_uuid  BOOLEAN;
+    _tcg_uuid_is_uuid            BOOLEAN;
+    _work_id_is_uuid             BOOLEAN;
+    _product_category_id_is_uuid BOOLEAN;
 BEGIN
     -- ---------------------------------------------------------------
     -- 型安全ガード: pg_attribute で public.products の列型を確認する。
     -- 後続 migration（20260916_120000: tcg_uuid DROP,
-    --                  20260919_010000: work_id UUID→INTEGER スワップ）が
+    --                  20260919_010000: work_id UUID→INTEGER スワップ,
+    --                  20260920_010000: product_category_id UUID→INTEGER スワップ）が
     -- 先行適用済みの場合、列型が変わっており UPSERT が型ミスマッチで失敗する。
     -- ---------------------------------------------------------------
 
@@ -113,6 +116,24 @@ BEGIN
         RAISE NOTICE 'Step2: public.products.work_id が UUID 型ではありません（20260919_010000 適用済み）。work_id は NULL でコピーします。';
     END IF;
 
+    -- product_category_id が UUID 型で存在するか確認
+    SELECT EXISTS (
+        SELECT 1
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public'
+          AND c.relname = 'products'
+          AND a.attname = 'product_category_id'
+          AND a.atttypid = 'uuid'::regtype::oid
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+    ) INTO _product_category_id_is_uuid;
+
+    IF NOT _product_category_id_is_uuid THEN
+        RAISE NOTICE 'Step2: public.products.product_category_id が UUID 型ではありません（20260920_010000 適用済み）。product_category_id は NULL でコピーします。';
+    END IF;
+
     -- RLS 対応: jarvis は非 superuser のため operator フラグを立てる
     -- public.products は FORCE ROW LEVEL SECURITY がかかっており、
     -- tenant_id = NULL の INSERT には is_operator = 'true' が必要
@@ -129,8 +150,8 @@ BEGIN
     LOOP
         RAISE NOTICE 'Step2: processing schema %', schema_record.schema_name;
 
-        IF _work_id_is_uuid THEN
-            -- 通常ケース: work_id が UUID 型のまま → そのままコピー
+        IF _work_id_is_uuid AND _product_category_id_is_uuid THEN
+            -- 通常ケース: 両列が UUID 型のまま → そのままコピー
             EXECUTE format($dml$
                 INSERT INTO public.products (
                     product_code, name, name_en, mark, release_date,
@@ -164,9 +185,9 @@ BEGIN
                     category_class       = EXCLUDED.category_class,
                     is_active            = EXCLUDED.is_active
             $dml$, schema_record.schema_name);
-        ELSE
-            -- 型ミスマッチケース: work_id が INTEGER に変わっている → work_id は NULL でコピー
-            -- （INTEGER 値は 20260919_010000 の手動値コピーで後から埋める設計）
+        ELSIF NOT _work_id_is_uuid AND _product_category_id_is_uuid THEN
+            -- work_id が INTEGER に変わっているが product_category_id はまだ UUID
+            -- (20260919 適用済み・20260920 未適用)
             EXECUTE format($dml$
                 INSERT INTO public.products (
                     product_code, name, name_en, mark, release_date,
@@ -196,6 +217,40 @@ BEGIN
                     division_id          = EXCLUDED.division_id,
                     manufacturer_id      = EXCLUDED.manufacturer_id,
                     product_category_id  = EXCLUDED.product_category_id,
+                    category_class       = EXCLUDED.category_class,
+                    is_active            = EXCLUDED.is_active
+            $dml$, schema_record.schema_name);
+        ELSE
+            -- 型ミスマッチケース: work_id と product_category_id の両方が INTEGER に変わっている
+            -- (20260919 + 20260920 適用済み) → 両列とも NULL でコピー
+            EXECUTE format($dml$
+                INSERT INTO public.products (
+                    product_code, name, name_en, mark, release_date,
+                    tcg_uuid, division_id, work_id, manufacturer_id, product_category_id,
+                    category_class, is_active
+                )
+                SELECT
+                    t.code,
+                    t.japanese_title,
+                    t.english_title,
+                    t.mark,
+                    t.release_date,
+                    t.id,
+                    t.division_id,
+                    NULL::INTEGER,
+                    t.manufacturer_id,
+                    NULL::INTEGER,
+                    t.category_class,
+                    t.is_active
+                FROM %I.tcg_products t
+                ON CONFLICT (product_code) WHERE product_code IS NOT NULL DO UPDATE SET
+                    name                 = EXCLUDED.name,
+                    name_en              = EXCLUDED.name_en,
+                    mark                 = EXCLUDED.mark,
+                    release_date         = EXCLUDED.release_date,
+                    tcg_uuid             = EXCLUDED.tcg_uuid,
+                    division_id          = EXCLUDED.division_id,
+                    manufacturer_id      = EXCLUDED.manufacturer_id,
                     category_class       = EXCLUDED.category_class,
                     is_active            = EXCLUDED.is_active
             $dml$, schema_record.schema_name);
