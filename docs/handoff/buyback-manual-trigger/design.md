@@ -30,6 +30,9 @@
 ## ADR参照
 - ADR-157: 買取相場ログ（本機能の親ADR）
 
+## recon参照
+- docs/handoff/buyback-manual-trigger/recon.md
+
 ## 弊害
 - なし（既存 GET エンドポイントへの影響なし・ルーター登録順は POST を GET の前に配置）
 
@@ -38,4 +41,4 @@
 - `require_super_admin` dependency により非スーパー管理者からのアクセスは 403 で自動拒否
 - フロントエンドの `useSuperAdmin` フックがボタン表示を制御するため UI レベルでも非表示
 
-守り手: ADR-157 / require_super_admin dependency
+守り手: backend/app/auth/dependencies.py（require_super_admin）
