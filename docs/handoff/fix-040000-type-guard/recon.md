@@ -33,3 +33,4 @@ DETAIL: Key columns "product_id" and "tcg_uuid" are of incompatible types: integ
 - a16370fa4: 040000ファイル作成（rename from 030000）
 - 7772f3342: PR #3675 マージ（run_all_migrations.shに040000を登録）
 - be414803b: PR #3676 マージ（Phase 2a Step 3の型ガード追加）— 同根問題の修正済み
+
