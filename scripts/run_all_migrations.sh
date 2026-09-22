@@ -523,6 +523,10 @@ run_sql migrations/20260729_043520_drop_deals.sql
 # Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
 run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
+# Definitive fix: dynamically find and drop ALL remaining FKs referencing tcg_products
+# (covers any FK names not caught by the hardcoded fix above)
+run_sql migrations/20260922_060000_drop_all_tcg_products_fks.sql
+
 # ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
 # 前回失敗デプロイで再作成された空の tcg_products を除去する。
 # 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
