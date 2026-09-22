@@ -760,4 +760,4 @@ run_sql migrations/20260922_030000_product_format_game_links.sql
 run_sql migrations/20260922_020000_create_rule_test_tables.sql
 
 # 販売単位・状態マスタ連鎖プルダウン基盤
-run_sql migrations/20260922_010000_product_unit_condition_infra.sql
+run_sql migrations/20260922_060000_product_unit_condition_infra.sql
