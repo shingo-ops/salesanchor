@@ -237,6 +237,7 @@ BEGIN
                 product_id          INTEGER      REFERENCES public.products(id),
                 unit_id             INTEGER      REFERENCES public.units(id),
                 condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id),
+                work_id             INTEGER,
                 UNIQUE (extraction_item_id)
             )
         $sql$;
@@ -270,6 +271,7 @@ BEGIN
                 product_id          INTEGER      REFERENCES public.products(id),
                 unit_id             INTEGER,
                 condition_id        INTEGER      NOT NULL,
+                work_id             INTEGER,
                 UNIQUE (extraction_item_id)
             )
         $sql$;

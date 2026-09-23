@@ -41,9 +41,11 @@ from app.services.tcg_empty_box_rules import (
 )
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
+    PRODUCT_ID_PROMPT_VERSIONS,
     WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
+    validate_product_id,
     validate_work_id,
 )
 
@@ -1185,20 +1187,40 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     metadata = session.execute(text(f"SELECT to_jsonb(ej) FROM {TCG_SCHEMA}.extraction_jobs ej WHERE id=:id"),
                                {"id": extraction_job_id}).scalar_one_or_none()
     work_decisions: dict[str, str | None] | None = None
-    if metadata and metadata.get("prompt_version") in WORK_ID_PROMPT_VERSIONS:
+    # product_decisions: {item_id_str: validated_product_id_str | None}
+    # Populated only for v5+ prompts that include resolved_product_code.
+    product_decisions: dict[str, str | None] | None = None
+    prompt_version = metadata.get("prompt_version") if metadata else None
+    if metadata and prompt_version in WORK_ID_PROMPT_VERSIONS:
         reference = metadata.get("work_reference_snapshot")
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:
             raise ValueError("Work reference is missing or corrupted")
         if reference_digest(load_work_reference(session, "public")) != digest:
             raise ValueError("Work reference changed; re-extraction required")
-        decisions = session.execute(text(f"""
-            SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
-            FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
-        """), {"id": extraction_job_id}).fetchall()
-        _raw = {str(i): validate_work_id(value, reference) for i, value in decisions}
-        # match_pid_with_work expects str work_id (same type as product_work_ids values)
-        work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
+        if prompt_version in PRODUCT_ID_PROMPT_VERSIONS:
+            # v5+: fetch both resolved_work_id and resolved_product_code in one query
+            decisions = session.execute(text(f"""
+                SELECT ei.id, to_jsonb(ei)->>'resolved_work_id', to_jsonb(ei)->>'resolved_product_code'
+                FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
+            """), {"id": extraction_job_id}).fetchall()
+            _raw = {str(i): validate_work_id(wid, reference) for i, wid, _ in decisions}
+            # match_pid_with_work expects str work_id (same type as product_work_ids values)
+            work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
+            # resolved_product_code is already validated at extraction time via validate_product_id,
+            # but we re-validate here against the current reference to guard against stale values.
+            product_decisions = {
+                str(i): validate_product_id(pid, reference)
+                for i, _, pid in decisions
+            }
+        else:
+            # v4: resolved_product_code column not populated; work_id only
+            decisions_v4 = session.execute(text(f"""
+                SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
+                FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
+            """), {"id": extraction_job_id}).fetchall()
+            _raw = {str(i): validate_work_id(value, reference) for i, value in decisions_v4}
+            work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
 
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
@@ -1297,18 +1319,39 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             raw_product_name, source_text or "", line_start, line_end,
             raw_work_name, raw_work_span, works,
         ))
-        matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
-            norm_product_name, filtered_codes, search_kw, exclude_kw,
-            work_id=work_id, product_work_ids=product_work_ids,
-            raw_state=norm_condition, raw_memo=norm_memo,
-            product_category_classes=product_category_classes,
+
+        # Gemini direct hit: Gemini が返した resolved_product_code を第一 SoT として使用する。
+        # product_decisions に有効な ID がある かつ product_code_to_uuid に存在する場合、
+        # キーワード照合をスキップしてそのまま採用する。
+        gemini_product_id = (
+            product_decisions.get(str(item_id))
+            if product_decisions is not None
+            else None
         )
-        if work_decisions is not None and pid_basis != "NONE":
-            pid_basis = ("GEMINI|" + pid_basis)[:100]
-        if work_decisions is None and work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
-            heading = work_heading_evidence(source_text or "", line_start, line_end, works)
-            if heading and heading[0] == work_id:
-                pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]
+        if gemini_product_id and gemini_product_id in product_code_to_uuid:
+            matched_code = gemini_product_id
+            pid_basis = f"GEMINI_DIRECT|WORK:{work_id}|ID:{matched_code}"[:100]
+            pid_resolved = True
+            candidates: list = []
+        else:
+            # Gemini が NULL / 無効 → キーワード照合にフォールバック
+            matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
+                norm_product_name, filtered_codes, search_kw, exclude_kw,
+                work_id=work_id, product_work_ids=product_work_ids,
+                raw_state=norm_condition, raw_memo=norm_memo,
+                product_category_classes=product_category_classes,
+            )
+            if product_decisions is not None and pid_basis != "NONE":
+                # v5 ジョブでフォールバックした場合は FALLBACK プレフィックスで区別する
+                pid_basis = ("FALLBACK|" + pid_basis)[:100]
+            elif work_decisions is not None and pid_basis != "NONE":
+                # v4 ジョブ (work_id のみ) は従来の GEMINI プレフィックスを維持
+                pid_basis = ("GEMINI|" + pid_basis)[:100]
+            if work_decisions is None and work_id and not raw_work_name and not raw_work_span and pid_basis != "NONE":
+                heading = work_heading_evidence(source_text or "", line_start, line_end, works)
+                if heading and heading[0] == work_id:
+                    pid_basis = f"WORK_HEADER:L{heading[1]}|{pid_basis}"[:100]
+
         product_uuid = product_code_to_uuid.get(matched_code) if matched_code else None
 
         if pid_resolved:
@@ -1396,7 +1439,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     review_reasons,
                     engine_version,
                     computed_at,
-                    updated_at
+                    updated_at,
+                    work_id
                 )
                 VALUES (
                     :id,
@@ -1419,7 +1463,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     :review_reasons,
                     :engine_version,
                     :computed_at,
-                    :updated_at
+                    :updated_at,
+                    :work_id
                 )
                 ON CONFLICT (extraction_item_id)
                 DO UPDATE SET
@@ -1441,7 +1486,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     review_reasons      = EXCLUDED.review_reasons,
                     engine_version      = EXCLUDED.engine_version,
                     computed_at         = EXCLUDED.computed_at,
-                    updated_at          = EXCLUDED.updated_at
+                    updated_at          = EXCLUDED.updated_at,
+                    work_id             = EXCLUDED.work_id
                 """
             ),
             {
@@ -1466,6 +1512,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                 "engine_version": ENGINE_VERSION,
                 "computed_at": now,
                 "updated_at": now,
+                "work_id": int(work_id) if work_id else None,
             },
         )
 

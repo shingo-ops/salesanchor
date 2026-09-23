@@ -781,3 +781,6 @@ run_sql migrations/20260923_040000_update_device_tcg_schema.sql
 
 # public.analysis_results に欠落インデックスを追加（ON CONFLICT 修正）
 run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
+
+# public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
+run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql
