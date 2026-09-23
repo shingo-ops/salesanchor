@@ -28,7 +28,6 @@ from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
     reference_json,
     validate_product_id,
-    validate_product_code,
     validate_work_id,
 )
 
