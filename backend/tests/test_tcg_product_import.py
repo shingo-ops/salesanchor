@@ -229,7 +229,7 @@ def atomic_service(monkeypatch):
     monkeypatch.setattr(importer, "start_job", AsyncMock(return_value="job"))
     monkeypatch.setattr(importer, "finish_job", AsyncMock())
     monkeypatch.setattr(importer, "record_row", AsyncMock())
-    monkeypatch.setattr(master, "create_product", AsyncMock(return_value={"ok": True, "product_id": "PM0001"}))
+    monkeypatch.setattr(master, "create_product", AsyncMock(return_value={"ok": True, "product_id": "1"}))
     db = SimpleNamespace(commit=AsyncMock(), rollback=AsyncMock())
     return importer, master, db, checked
 
@@ -326,7 +326,7 @@ async def test_record_row_commit_flag_defaults_to_true(commit):
     db = SimpleNamespace(execute=AsyncMock(), commit=AsyncMock())
     checked = {"row_no": "1", "japanese_title": "商品", "mark": ""}
     options = {} if commit is None else {"commit": commit}
-    await record_row(db, "job", checked, "created", "PM0001", "", **options)
+    await record_row(db, "job", checked, "created", "1", "", **options)
     db.execute.assert_awaited_once()
     assert db.commit.await_count == (0 if commit is False else 1)
 
@@ -352,7 +352,7 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
             return result(SimpleNamespace(id="1", int_id=1))
         if calls == 6:
             assert db.commit.await_count == (0 if commit is False else 1)
-            return result(None if verify_fails else SimpleNamespace(product_code="PM0001"))
+            return result(None if verify_fails else SimpleNamespace(id=1))
         return result(None)
     db.execute = AsyncMock(side_effect=execute)
     monkeypatch.setattr(master, "check_duplicates", AsyncMock(return_value={"candidates": []}))
@@ -366,5 +366,5 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
         with pytest.raises(ValueError, match="POST_WRITE_GATE"):
             await master.create_product(db, **args)
     else:
-        assert await master.create_product(db, **args) == {"ok": True, "product_id": "PM0001"}
+        assert await master.create_product(db, **args) == {"ok": True, "product_id": "1"}
     assert db.commit.await_count == (0 if commit is False else 1)

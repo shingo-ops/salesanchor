@@ -156,9 +156,10 @@ def test_new_product_registration_keeps_box_single_filter(pg, monkeypatch):
                 return first['product_id']
         finally:
             await ae.dispose()
-    code = asyncio.run(register())
+    product_int_id = asyncio.run(register())
     with connection.cursor() as cur:
-        cur.execute(f'SELECT category_class FROM public.products WHERE product_code=%s',(code,))
+        # create_product now returns str(integer id); query by id, not product_code
+        cur.execute(f'SELECT category_class FROM public.products WHERE id=%s',(int(product_int_id),))
         assert cur.fetchone()[0]=='ワンピース'  # Existing registration contract; not the Box/Single column.
     _, jobid, result = work_fixture.run_message(connection, engine, monkeypatch,
         'ワンピース\n架空の登録検証デッキ PSA10',

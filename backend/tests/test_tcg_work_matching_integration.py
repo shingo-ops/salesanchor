@@ -1021,6 +1021,7 @@ def test_space_product_match_saved_in_isolated_database(
 ):
     connection, engine, _ = pg
     seed_products(connection)
+    inserted_product_ids: list[int] = []
     with connection.cursor() as cursor:
         for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
             cursor.execute(f"""INSERT INTO public.products
@@ -1029,6 +1030,7 @@ def test_space_product_match_saved_in_isolated_database(
                 FROM public.type_master m,public.tcg_product_categories c
                 WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
+            inserted_product_ids.append(product_id)
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
                 cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
@@ -1054,7 +1056,9 @@ def test_space_product_match_saved_in_isolated_database(
         elif expected == "none":
             assert code is None and basis == "NONE" and needs_review
         else:
-            assert needs_review and "MULTI(" in basis and "SPACE_A" in basis and "SPACE_B" in basis
+            # MULTI basis uses integer product ids: MULTI(PM.{id_a}/PM.{id_b}):要確認
+            id_a, id_b = inserted_product_ids[0], inserted_product_ids[1]
+            assert needs_review and "MULTI(" in basis and f"PM.{id_a}" in basis and f"PM.{id_b}" in basis
 
 
 CARDSET_MIGRATION = "20260913_200000_tcg_cardset_exclusion.sql"
@@ -1100,13 +1104,18 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     for schema in ("tenant_004", "tenant_903"):
         seed_cardset_dictionary(connection, schema)
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    # Build product_code → str(id) mapping for assertions
+    with connection.cursor() as cursor:
+        all_codes = ["PM0263"] + [f"PM{276+i:04d}" for i in range(len(CARDSET_KINDS))]
+        cursor.execute("SELECT product_code, id FROM public.products WHERE product_code = ANY(%s)", (all_codes,))
+        _code_to_id = {row[0]: str(row[1]) for row in cursor.fetchall()}
     def match(name, state="", memo=""):
         with Session(engine) as session:
             search, exclude = analyzer.load_product_keywords(session)
         return analyzer.match_pid_with_work(name, list(search), search, exclude,
             work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
     bundle = "MEGA 30th CELEBRATION カードセット (9種セット)"
-    assert match(bundle)[0:3:2] == ("PM0263", True)
+    assert match(bundle)[0:3:2] == (_code_to_id["PM0263"], True)
     names = ["30th  CELEBRATION", "30th CELEBRATION FUTURISTIC", "30th CELEBRATION プレミアムデッキセット"]
     controls = [match(name) for name in names]
     individual = ["30th CELEBRATION カードセット " + kind for kind in CARDSET_KINDS]
@@ -1132,7 +1141,8 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     assert [match(name) for name in names] == controls
     for i, name in enumerate(individual):
         result = match(name)
-        assert result[0] == f"PM{276+i:04d}" and result[2] and result[3] == [f"PM{276+i:04d}"]
+        expected_id = _code_to_id[f"PM{276+i:04d}"]
+        assert result[0] == expected_id and result[2] and result[3] == [expected_id]
     assert match("30th CELEBRATION", state="カードセット") == (None, "NONE", False, [])
     assert match("30th CELEBRATION", memo="カードセット") == (None, "NONE", False, [])
     with connection.cursor() as cursor:
@@ -1402,12 +1412,24 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
     with Session(engine) as session:
         search, exclude = analyzer.load_product_keywords(session)
+    # Build product_code → str(id) mapping; search/exclude are keyed by str(integer id)
+    with connection.cursor() as cursor:
+        all_pm_codes = (
+            ["PM0263", "PM0264", "PM0265"]
+            + [f"PM{n:04d}" for n in range(276, 285)]
+            + [s[1] for s in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES if s[1] is not None]
+        )
+        cursor.execute(
+            "SELECT product_code, id FROM public.products WHERE product_code = ANY(%s)",
+            (list(set(all_pm_codes)),),
+        )
+        _bundle_code_to_id = {row[0]: str(row[1]) for row in cursor.fetchall()}
     assert "PM0297" not in search, "PM0297 has no search keyword (product absent)"
     assert "PM0297" not in exclude, "PM0297 has no exclude keyword (product absent)"
     for code in ("PM0263", "PM0264", "PM0265"):
-        assert exclude[code].count("カードセット") == 1
+        assert exclude[_bundle_code_to_id[code]].count("カードセット") == 1
     for number in range(276, 285):
-        assert exclude[f"PM{number:04d}"].count("種セット") == 1
+        assert exclude[_bundle_code_to_id[f"PM{number:04d}"]].count("種セット") == 1
     assert len(BUNDLE_SOURCE_NAMES) == 28 and len(BUNDLE_BOUNDARIES) == 58
     for name, expected in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES:
         actual, _, resolved, _ = analyzer.match_pid_with_work(name, list(search), search, exclude,
@@ -1416,7 +1438,8 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
         if expected == "PM0297":
             assert (actual if resolved else None) is None, name
         else:
-            assert (actual if resolved else None) == expected, name
+            expected_id = _bundle_code_to_id.get(expected) if expected is not None else None
+            assert (actual if resolved else None) == expected_id, name
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
     assert bundle_snapshot(connection) == after

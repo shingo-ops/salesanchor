@@ -142,7 +142,7 @@ async def test_add_keyword_requires_auth():
     from app.main import app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await client.post(
-            "/api/v1/tcg/products/PM0001/search-keywords",
+            "/api/v1/tcg/products/1/search-keywords",
             json={"new_keyword": "sv1a"},
         )
     assert r.status_code in (401, 403)
@@ -371,7 +371,7 @@ async def test_add_keyword_ok(super_admin_override):
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             r = await client.post(
-                "/api/v1/tcg/products/PM0001/search-keywords",
+                "/api/v1/tcg/products/1/search-keywords",
                 json={"new_keyword": "sv1a"},
             )
     assert r.status_code == 200
@@ -416,7 +416,7 @@ async def test_add_keyword_duplicate(super_admin_override):
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             r = await client.post(
-                "/api/v1/tcg/products/PM0001/search-keywords",
+                "/api/v1/tcg/products/1/search-keywords",
                 json={"new_keyword": "sv1a"},
             )
     assert r.status_code == 200
