@@ -778,3 +778,6 @@ run_sql migrations/20260923_030000_promote_remaining_tcg_tables.sql
 
 # line_import_devices.tcg_schema を tenant_004 → public に更新
 run_sql migrations/20260923_040000_update_device_tcg_schema.sql
+
+# public.analysis_results に欠落インデックスを追加（ON CONFLICT 修正）
+run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
