@@ -417,7 +417,7 @@ export default function BuybackPricesPage() {
                       type="monotone"
                       dataKey="S"
                       name={t("buybackPrices.columnPriceS")}
-                      stroke="var(--color-primary)"
+                      stroke="var(--accent)"
                       strokeWidth={2}
                       dot={false}
                       connectNulls
