@@ -33,8 +33,6 @@ Modal(size="lg") でルール一覧表示 + 作成フォーム。全コンポー
 
 **対象ADR**: ADR-157
 
-守り手: `backend/app/routers/buyback_alerts.py`（CRUD API）/ `backend/app/services/buyback_scraper/alert_checker.py`（発火ロジック）
-
 ## 触るファイル
 - `migrations/20260924_000000_create_buyback_alert_rules.sql`（新規）
 - `scripts/run_all_migrations.sh`（登録追加）
@@ -51,9 +49,10 @@ Modal(size="lg") でルール一覧表示 + 作成フォーム。全コンポー
 - `backend/app/services/discord_notifier.py`（既存通知は変更なし、パターンのみ参考）
 
 ## 外部・過去事例の参照と我々への応用
-- 既存の `discord_notifier.py` の de-bounce パターン（`last_hard_stop_notified_at` + UPDATE RETURNING）を `last_notified_at` + `cooldown_minutes` で踏襲
+- 既存の `backend/app/services/discord_notifier.py` の de-bounce パターン（last_hard_stop_notified_at + UPDATE RETURNING）を last_notified_at + cooldown_minutes で踏襲
 
 ## 維持の仕組み
 - アラートチェックはスクレイパータスクに組み込み（別タスク不要）
 - 例外発生時はログ出力のみでスクレイパー本体に影響しない（BLE001）
 - ルール管理はアプリ画面からスーパー管理者が操作
+- 守り手: `backend/app/routers/buyback_alerts.py`（CRUD API）/ `backend/app/services/buyback_scraper/alert_checker.py`（発火ロジック）

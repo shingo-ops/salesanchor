@@ -4,7 +4,7 @@
 
 - 買取価格データ蓄積中（457商品・JST 10:00/13:00/22:00 の3回取得）
 - 価格変動をアプリ画面で検知・通知する仕組みが未実装
-- 既存の通知パターン: `backend/app/services/discord_notifier.py` — Discord Webhook + de-bounce
+- 既存の通知パターン: `backend/app/services/discord_notifier.py` — Discord Webhook + de-bounce（既存・変更しない）
 - 既存の通知チャンネル設定: `notification_channels` テーブル（テナントスキーマ）
 - 買取データは `public` スキーマ → アラートルールも `public` に配置が自然
 - フォーム用金型: `Modal`・`TextField`・`SelectControl`・`Button`・`Card`・`Badge` — 全て存在確認済み
@@ -22,4 +22,4 @@
 - `backend/app/main.py` — ルーター登録追加
 - `backend/app/tasks/buyback_scraper.py` — アラートチェック呼び出し追加
 - `frontend/src/pages/buyback-prices/BuybackPricesPage.tsx` — アラート設定UI追加
-- `frontend/src/locales/ja.json` / `en.json` — i18nキー22件追加
+- `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` — i18nキー22件追加
