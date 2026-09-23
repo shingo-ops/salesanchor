@@ -21,6 +21,7 @@ from app.services.tcg_analysis_dashboard_svc import (
     get_import_trend,
     get_pipeline_summary,
     get_pipeline_trend,
+    get_supplier_pipeline,
 )
 
 router = APIRouter()
@@ -218,3 +219,79 @@ async def get_distribution_summary_endpoint(
 ) -> DistributionSummaryResponse:
     result = await get_distribution_summary(db)
     return DistributionSummaryResponse(**result)
+
+
+# ---------------------------------------------------------------------------
+# 提供者別パイプライン スキーマ
+# ---------------------------------------------------------------------------
+
+
+class SupplierImportInfo(BaseModel):
+    active_messages: int
+    latest_received_at: str | None
+
+
+class SupplierExtractionInfo(BaseModel):
+    done: int
+    empty: int
+    error: int
+    other: int
+    status: str
+
+
+class SupplierAnalysisInfo(BaseModel):
+    total: int
+    pid_resolved: int
+    pid_unresolved: int
+    unit_resolved: int
+    unit_unresolved: int
+    needs_review: int
+    excluded: int
+    price_ok: int
+    price_missing: int
+    distributable: int
+
+
+class SupplierPipelineItem(BaseModel):
+    channel_id: str
+    channel_name: str
+    import_info: SupplierImportInfo  # "import" は Python 予約語なので import_info
+    extraction: SupplierExtractionInfo
+    analysis: SupplierAnalysisInfo
+    severity: str
+
+
+class FunnelDropReasons(BaseModel):
+    pid_unresolved: int
+    unit_unresolved: int
+    needs_review: int
+    excluded: int
+    price_missing: int
+
+
+class FunnelSummary(BaseModel):
+    active_messages: int
+    extraction_done: int
+    extraction_empty: int
+    extraction_error: int
+    analysis_total: int
+    distributable: int
+    drop_reasons: FunnelDropReasons
+
+
+class SupplierPipelineResponse(BaseModel):
+    suppliers: list[SupplierPipelineItem]
+    funnel_summary: FunnelSummary
+
+
+@router.get(
+    "/tcg/analysis-dashboard/supplier-pipeline",
+    response_model=SupplierPipelineResponse,
+    summary="TCG 提供者別パイプライン（super_admin 限定）",
+)
+async def supplier_pipeline(
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_super_admin),
+) -> SupplierPipelineResponse:
+    data = await get_supplier_pipeline(db)
+    return SupplierPipelineResponse(**data)
