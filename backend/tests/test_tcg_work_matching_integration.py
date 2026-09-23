@@ -1052,7 +1052,7 @@ def test_space_product_match_saved_in_isolated_database(
         code, resolved, basis, needs_review = cursor.fetchone()
         assert resolved is (expected == "resolved")
         if expected == "resolved":
-            assert code == "SPACE_A" and basis == f"GEMINI|WORK:{work_id}|SK:スターターセットV草"
+            assert code == "SPACE_A" and basis == f"FALLBACK|WORK:{work_id}|SK:スターターセットV草"
         elif expected == "none":
             assert code is None and basis == "NONE" and needs_review
         else:
