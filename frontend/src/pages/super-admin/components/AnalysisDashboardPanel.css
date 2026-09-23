@@ -325,3 +325,54 @@
   font-size: var(--font-sm);
   padding: var(--space-4);
 }
+
+/* --- Supplier Pipeline --- */
+.analysis-dashboard-problem-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-bg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error-text);
+}
+
+.analysis-dashboard-supplier-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-supplier-section h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.analysis-dashboard-rate-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-rate-cell--danger {
+  color: var(--color-error-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.analysis-dashboard-rate-cell--warning {
+  color: var(--color-warning-text);
+}
+
+.analysis-dashboard-rate-cell--success {
+  color: var(--color-success-text);
+}
+
+.analysis-dashboard-existing-section {
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-5);
+  margin-top: var(--space-2);
+}

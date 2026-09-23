@@ -359,6 +359,181 @@ async def get_import_trend(db: AsyncSession, days: int = 7) -> list[dict]:
     ]
 
 
+async def get_supplier_pipeline(db: AsyncSession) -> dict:
+    """
+    提供者別パイプラインデータを返す。SELECT のみ。
+
+    各 supplier_channel について、インポート・抽出・解析の各段階の集計を
+    1クエリで取得し、severity を付与して返す。
+    """
+    rows = (
+        await db.execute(
+            text(
+                f"""
+SELECT
+    sc.id AS channel_id,
+    sc.name AS channel_name,
+    -- インポート段階
+    COUNT(DISTINCT sm.id) AS active_messages,
+    MAX(sm.received_at) AS latest_received_at,
+    -- 抽出段階
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'done') AS extraction_done,
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'empty') AS extraction_empty,
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'error') AS extraction_error,
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status NOT IN ('done','empty','error')) AS extraction_other,
+    -- 解析段階
+    COUNT(ar.id) AS analysis_total,
+    COUNT(ar.id) FILTER (WHERE ar.pid_resolved = true) AS pid_resolved,
+    COUNT(ar.id) FILTER (WHERE ar.pid_resolved = false) AS pid_unresolved,
+    COUNT(ar.id) FILTER (WHERE ar.unit_resolved = true) AS unit_resolved,
+    COUNT(ar.id) FILTER (WHERE ar.unit_resolved = false) AS unit_unresolved,
+    COUNT(ar.id) FILTER (WHERE ar.needs_review = true) AS needs_review,
+    COUNT(ar.id) FILTER (WHERE ar.exclusion = 'excluded') AS excluded,
+    COUNT(ar.id) FILTER (WHERE ar.price_normalized IS NOT NULL) AS price_ok,
+    COUNT(ar.id) FILTER (WHERE ar.price_normalized IS NULL) AS price_missing,
+    -- 配信可能
+    COUNT(ar.id) FILTER (
+        WHERE ar.pid_resolved = true
+        AND ar.needs_review = false
+        AND COALESCE(ar.exclusion, '') != 'excluded'
+        AND ar.unit_resolved = true
+        AND ar.price_normalized IS NOT NULL
+    ) AS distributable
+FROM {TCG_SCHEMA}.supplier_channels sc
+JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id AND sm.is_active = true
+LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
+LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.source_message_id = sm.id
+GROUP BY sc.id, sc.name
+ORDER BY sc.name
+"""
+            )
+        )
+    ).fetchall()
+
+    def _extraction_status(done: int, empty: int, error: int, other: int) -> str:
+        if error > 0:
+            return "error"
+        if empty > 0 and done == 0 and other == 0:
+            return "empty"
+        if done > 0:
+            return "done"
+        return "pending"
+
+    def _severity(extraction_error: int, analysis_total: int, distributable: int) -> str:
+        if extraction_error > 0:
+            return "danger"
+        if distributable == 0 and analysis_total > 0:
+            return "danger"
+        if analysis_total > 0 and distributable < analysis_total * 0.5:
+            return "warning"
+        return "success"
+
+    _severity_order = {"danger": 0, "warning": 1, "success": 2}
+
+    suppliers = []
+    funnel_active_messages = 0
+    funnel_extraction_done = 0
+    funnel_extraction_empty = 0
+    funnel_extraction_error = 0
+    funnel_analysis_total = 0
+    funnel_distributable = 0
+    funnel_pid_unresolved = 0
+    funnel_unit_unresolved = 0
+    funnel_needs_review = 0
+    funnel_excluded = 0
+    funnel_price_missing = 0
+
+    for row in rows:
+        active_messages = int(row.active_messages or 0)
+        ext_done = int(row.extraction_done or 0)
+        ext_empty = int(row.extraction_empty or 0)
+        ext_error = int(row.extraction_error or 0)
+        ext_other = int(row.extraction_other or 0)
+        analysis_total = int(row.analysis_total or 0)
+        pid_resolved = int(row.pid_resolved or 0)
+        pid_unresolved = int(row.pid_unresolved or 0)
+        unit_resolved = int(row.unit_resolved or 0)
+        unit_unresolved = int(row.unit_unresolved or 0)
+        needs_review = int(row.needs_review or 0)
+        excluded = int(row.excluded or 0)
+        price_ok = int(row.price_ok or 0)
+        price_missing = int(row.price_missing or 0)
+        distributable = int(row.distributable or 0)
+
+        ext_status = _extraction_status(ext_done, ext_empty, ext_error, ext_other)
+        sev = _severity(ext_error, analysis_total, distributable)
+
+        suppliers.append(
+            {
+                "channel_id": str(row.channel_id),
+                "channel_name": row.channel_name,
+                "import_info": {
+                    "active_messages": active_messages,
+                    "latest_received_at": row.latest_received_at.isoformat() if row.latest_received_at else None,
+                },
+                "extraction": {
+                    "done": ext_done,
+                    "empty": ext_empty,
+                    "error": ext_error,
+                    "other": ext_other,
+                    "status": ext_status,
+                },
+                "analysis": {
+                    "total": analysis_total,
+                    "pid_resolved": pid_resolved,
+                    "pid_unresolved": pid_unresolved,
+                    "unit_resolved": unit_resolved,
+                    "unit_unresolved": unit_unresolved,
+                    "needs_review": needs_review,
+                    "excluded": excluded,
+                    "price_ok": price_ok,
+                    "price_missing": price_missing,
+                    "distributable": distributable,
+                },
+                "severity": sev,
+            }
+        )
+
+        funnel_active_messages += active_messages
+        funnel_extraction_done += ext_done
+        funnel_extraction_empty += ext_empty
+        funnel_extraction_error += ext_error
+        funnel_analysis_total += analysis_total
+        funnel_distributable += distributable
+        funnel_pid_unresolved += pid_unresolved
+        funnel_unit_unresolved += unit_unresolved
+        funnel_needs_review += needs_review
+        funnel_excluded += excluded
+        funnel_price_missing += price_missing
+
+    # severity降順（danger→warning→success）、同severity内はanalysis_total降順
+    suppliers.sort(
+        key=lambda s: (
+            _severity_order.get(s["severity"], 9),
+            -s["analysis"]["total"],
+        )
+    )
+
+    return {
+        "suppliers": suppliers,
+        "funnel_summary": {
+            "active_messages": funnel_active_messages,
+            "extraction_done": funnel_extraction_done,
+            "extraction_empty": funnel_extraction_empty,
+            "extraction_error": funnel_extraction_error,
+            "analysis_total": funnel_analysis_total,
+            "distributable": funnel_distributable,
+            "drop_reasons": {
+                "pid_unresolved": funnel_pid_unresolved,
+                "unit_unresolved": funnel_unit_unresolved,
+                "needs_review": funnel_needs_review,
+                "excluded": funnel_excluded,
+                "price_missing": funnel_price_missing,
+            },
+        },
+    }
+
+
 async def get_distribution_summary(db: AsyncSession) -> dict:
     """配信工程のサマリーを返す。SELECT のみ。"""
     # 1. distribution_targets
