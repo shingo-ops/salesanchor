@@ -44,7 +44,7 @@ severity 判定基準:
 
 ### i18n
 
-`frontend/src/locales/ja.json` / `en.json` に 16 キー追加。
+`frontend/src/locales/ja.json` / `frontend/src/locales/en.json` に 16 キー追加。
 全 UI 文字列は `t("key")` 経由。ハードコード禁止。
 
 ## 影響範囲
