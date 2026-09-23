@@ -2,6 +2,8 @@
 
 recon: docs/handoff/fix-buyback-schedule/recon.md
 
+対象ADR: ADR-157
+
 ## 方針
 
 Celery beat スケジュールを `crontab(minute=0, hour="1,4,13")` に変更。
