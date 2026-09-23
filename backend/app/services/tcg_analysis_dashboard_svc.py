@@ -372,7 +372,7 @@ async def get_supplier_pipeline(db: AsyncSession) -> dict:
                 f"""
 SELECT
     sc.id AS channel_id,
-    sc.name AS channel_name,
+    sc.channel AS channel_name,
     -- インポート段階
     COUNT(DISTINCT sm.id) AS active_messages,
     MAX(sm.received_at) AS latest_received_at,
@@ -404,8 +404,8 @@ JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id AND sm.is
 LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
 LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
 LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
-GROUP BY sc.id, sc.name
-ORDER BY sc.name
+GROUP BY sc.id, sc.channel
+ORDER BY sc.channel
 """
             )
         )
