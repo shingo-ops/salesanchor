@@ -111,7 +111,7 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text("""
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             p.category_class AS series_name,
             NULL AS category,
@@ -121,7 +121,7 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
             NULL AS standard_purchase_price,
             NULL AS note
         FROM public.products p
-        ORDER BY p.product_code
+        ORDER BY p.id
     """))
     rows = result.fetchall()
     headers = [
@@ -137,22 +137,22 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text("""
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             'search' AS keyword_type,
             k.keyword
         FROM public.product_search_keywords k
         JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.product_code, k.keyword
+        ORDER BY p.id, k.keyword
         UNION ALL
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             'exclude',
             k.keyword
         FROM public.product_exclude_keywords k
         JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.product_code, k.keyword
+        ORDER BY p.id, k.keyword
     """))
     rows = result.fetchall()
     headers = ["product_id", "product_name", "keyword_type", "keyword"]

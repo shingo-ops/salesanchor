@@ -18,13 +18,13 @@ async function review() {
 beforeEach(async () => { vi.resetAllMocks(); await i18n.changeLanguage("en"); });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const updatePreview = { ...preview, mode: "update", ok: 2, blocked: 0, updated: 1, unchanged: 1, rows: [
-  { row_no: "1", japanese_title: "Changed", mark: "A", product_code: "PM01", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old title", after: "Changed" }] },
-  { row_no: "2", japanese_title: "Same", mark: "B", product_code: "PM02", action: "unchanged", blocking: [], warnings: [], changes: [] },
+  { row_no: "1", japanese_title: "Changed", mark: "A", product_id: "42", action: "updated", blocking: [], warnings: [], changes: [{ field: "japanese_title", before: "Old title", after: "Changed" }] },
+  { row_no: "2", japanese_title: "Same", mark: "B", product_id: "43", action: "unchanged", blocking: [], warnings: [], changes: [] },
 ] };
 it("R10 shows changes and sends one update only after confirmation", async () => {
   vi.mocked(api.postForm).mockResolvedValueOnce(updatePreview).mockResolvedValueOnce({ job_id: "updated", total: 2, mode: "update", created: 0, skipped: 0, updated: 1, unchanged: 1 });
   render(<TcgProductImportPanel onDone={vi.fn()} />); await review();
-  expect(screen.getByText(/Old title/)).toBeTruthy(); expect(screen.getByText("PM01")).toBeTruthy();
+  expect(screen.getByText(/Old title/)).toBeTruthy(); expect(screen.getByText("42")).toBeTruthy();
   expect(screen.getByText("1. Choose file → 2. Review → 3. Update")).toBeTruthy();
   expect(screen.getByText("Total: 2 / Valid: 2 / Blocked: 0")).toBeTruthy();
   expect(api.postForm).toHaveBeenCalledTimes(1);

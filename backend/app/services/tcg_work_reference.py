@@ -40,17 +40,30 @@ def validate_work_id(value: str | int | None, reference: dict) -> int | None:
     return canonical
 
 
+def product_ids(reference: dict) -> set[str]:
+    """Return the set of product id strings present in the reference."""
+    return {str(p["id"]) for p in reference["products"] if p.get("id") is not None}
+
+
+# Keep legacy alias for callers that still use product_codes()
 def product_codes(reference: dict) -> set[str]:
-    return {p["code"] for p in reference["products"] if p.get("code")}
+    return product_ids(reference)
 
 
+def validate_product_id(value: str | int | None, reference: dict) -> str | None:
+    """Validate that value is a products.id string present in the reference."""
+    if value is None or value == "":
+        return None
+    str_val = str(value)
+    if str_val not in product_ids(reference):
+        logger.warning("validate_product_id: %r not in reference, returning None", str_val)
+        return None
+    return str_val
+
+
+# Keep legacy alias for callers that still use validate_product_code()
 def validate_product_code(value: str | None, reference: dict) -> str | None:
-    if not value:
-        return None
-    if value not in product_codes(reference):
-        logger.warning("validate_product_code: %r not in reference, returning None", value)
-        return None
-    return value
+    return validate_product_id(value, reference)
 
 
 def load_work_reference(session: Session, schema: str) -> dict:
@@ -62,13 +75,13 @@ def load_work_reference(session: Session, schema: str) -> dict:
             ORDER BY s.id), '[]'::jsonb)
             FROM public.type_master s WHERE s.is_active),
           'products', (SELECT COALESCE(jsonb_agg(jsonb_build_object(
-            'code', p.product_code, 'japanese_title', p.name,
+            'id', p.id::text, 'japanese_title', p.name,
             'english_title', p.name_en, 'mark', p.mark, 'work_id', p.work_id,
             'search_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
                 FROM public.product_search_keywords k WHERE k.product_id=p.id),
             'exclude_keywords', (SELECT COALESCE(jsonb_agg(k.keyword ORDER BY k.position, k.keyword), '[]'::jsonb)
                 FROM public.product_exclude_keywords k WHERE k.product_id=p.id))
-            ORDER BY p.product_code), '[]'::jsonb)
+            ORDER BY p.id), '[]'::jsonb)
             FROM public.products p WHERE p.is_active))
     """)).scalar_one()
     ids = work_ids(row)

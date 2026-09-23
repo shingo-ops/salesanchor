@@ -140,7 +140,7 @@ def failing_session(connection, mode, target):
                         raise asyncio.CancelledError("cancelled creation")
                     if mode == "collision":
                         params = dict(params, code="PM0001")
-            if self.current == target and "SELECT product_code FROM public.products WHERE id" in query:
+            if self.current == target and "SELECT id FROM public.products WHERE id" in query:
                 if mode in ("verify_value", "rollback_failure"):
                     raise ValueError("post-write verification")
             if f"INSERT INTO {SCHEMA}.tcg_product_import_rows" in query:

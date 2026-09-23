@@ -66,7 +66,7 @@ def _build_where(
         conditions.append(
             "(ei.raw_product_name ILIKE :query"
             " OR COALESCE(ps.name, '') ILIKE :query"
-            " OR COALESCE(p.product_code, '') ILIKE :query)"
+            " OR p.id::text ILIKE :query)"
         )
         params["query"] = f"%{query}%"
 
@@ -211,7 +211,7 @@ async def fetch_analysis_results(
             p.work_id::text                      AS work_id,
             ws.name_ja                           AS work_name,
             ws.name_en                           AS work_alt_name,
-            p.product_code                       AS product_code,
+            p.id::text                           AS product_code,
             p.name                               AS product_title,
             ar.product_id::text                  AS product_uuid,
             ar.pid_resolved,

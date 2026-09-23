@@ -7,7 +7,7 @@ from app.services.tcg_work_reference import validate_product_code, validate_work
 
 REFERENCE = {
     "works": [{"id": 1, "name": "Pokemon"}, {"id": 2, "name": "One Piece"}],
-    "products": [{"code": "PKM-001", "name": "Test"}, {"code": "OP-001", "name": "Test2"}],
+    "products": [{"id": "42", "name": "Test"}, {"id": "99", "name": "Test2"}],
 }
 
 
@@ -58,7 +58,7 @@ def test_validate_work_id_missing_does_not_raise():
 
 
 def test_validate_product_code_valid_returns_code():
-    assert validate_product_code("PKM-001", REFERENCE) == "PKM-001"
+    assert validate_product_code("42", REFERENCE) == "42"
 
 
 def test_validate_product_code_none_returns_none():
@@ -70,14 +70,14 @@ def test_validate_product_code_empty_returns_none():
 
 
 def test_validate_product_code_missing_returns_none():
-    """product_code not in reference must return None instead of raising."""
-    result = validate_product_code("NONEXISTENT-999", REFERENCE)
+    """product_id not in reference must return None instead of raising."""
+    result = validate_product_code("9999", REFERENCE)
     assert result is None
 
 
 def test_validate_product_code_missing_does_not_raise():
     """Regression: ValueError must no longer propagate."""
     try:
-        validate_product_code("DOES-NOT-EXIST", REFERENCE)
+        validate_product_code("0", REFERENCE)
     except ValueError:
-        pytest.fail("validate_product_code raised ValueError for missing code — partial success broken")
+        pytest.fail("validate_product_code raised ValueError for missing id — partial success broken")

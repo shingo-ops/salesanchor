@@ -27,6 +27,7 @@ from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
     reference_json,
+    validate_product_id,
     validate_product_code,
     validate_work_id,
 )
@@ -101,9 +102,9 @@ PROMPT_TEXT = (
 )
 
 WORK_ID_PROMPT_TEXT = (
-    "あなたは商品マスタを参照し、各明細の作品IDと商品コードを判断する。"
+    "あなたは商品マスタを参照し、各明細の作品IDと商品IDを判断する。"
     "判断するIDは参照works内のidをそのまま選ぶ。"
-    "商品コードは参照products内のcodeをそのまま選ぶ。"
+    "商品IDは参照products内のidをそのまま選ぶ。"
     "商品名、型番、検索語(search_keywords)、除外語(exclude_keywords)と当該明細の文脈を照合せよ。"
     "除外語に一致する場合はその商品を選ばない。"
     "型番が複数作品に存在し文脈でも区別できなければ作品IDは空欄。"
@@ -439,7 +440,7 @@ def extract_message(
         if work_reference is not None:
             for item in items:
                 item["resolved_work_id"] = validate_work_id(item["resolved_work_id"], work_reference)
-                item["resolved_product_code"] = validate_product_code(item.get("resolved_product_code"), work_reference)
+                item["resolved_product_code"] = validate_product_id(item.get("resolved_product_code"), work_reference)
         status = "done" if items else "empty"
         return {
             "status": status,
