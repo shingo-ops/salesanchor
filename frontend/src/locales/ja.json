@@ -194,7 +194,9 @@
     "page": "{{page}}ページ",
     "unitDay": "日",
     "unresolved": "未解決",
-    "required": "必須項目です"
+    "required": "必須項目です",
+    "errorLoading": "読み込みエラー",
+    "forbidden": "アクセス権限がありません"
   },
   "nav": {
     "dashboard": "ダッシュボード",

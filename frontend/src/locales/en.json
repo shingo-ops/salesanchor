@@ -194,7 +194,9 @@
     "page": "Page {{page}}",
     "unitDay": " days",
     "unresolved": "Unresolved",
-    "required": "This field is required"
+    "required": "This field is required",
+    "errorLoading": "Error loading",
+    "forbidden": "Access forbidden"
   },
   "nav": {
     "dashboard": "Dashboard",
