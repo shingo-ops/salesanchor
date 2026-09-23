@@ -61,8 +61,23 @@ END $$;
 
 -- tenant_006（撮影/デモ）の products のうち public.products に名前一致が無いもの（5 件想定）を
 -- public 中央へ移行する。冪等: name 完全一致が既にあれば skip。tenant_006 が無い環境（CI 等）は skip。
+-- work_id NOT NULL ガード: public.products.work_id が NOT NULL の場合は INSERT をスキップ。
+-- tenant→public 移行は 20260914_140000_unify_tcg_products_to_public.sql が正式に担当するため不要。
 DO $$
 BEGIN
+    -- Skip if work_id is NOT NULL (handled by later migrations)
+    IF EXISTS (
+        SELECT 1 FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relname = 'products'
+        AND a.attname = 'work_id' AND a.attnotnull = true
+        AND NOT a.attisdropped
+    ) THEN
+        RAISE NOTICE 'public.products.work_id is NOT NULL — skipping tenant_006 INSERT (handled by later migrations)';
+        RETURN;
+    END IF;
+
     IF to_regclass('tenant_006.products') IS NOT NULL THEN
         INSERT INTO public.products (
             name, name_en, category, mark, status, condition,
