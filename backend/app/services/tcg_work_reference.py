@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 WORK_ID_PROMPT_VERSION = "raw-extraction-v5-product-p1"
 WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", WORK_ID_PROMPT_VERSION})
+# Prompt versions that include resolved_product_code (Gemini v5 and later).
+PRODUCT_ID_PROMPT_VERSIONS = frozenset({WORK_ID_PROMPT_VERSION})
 
 
 def reference_json(reference: dict) -> str:
