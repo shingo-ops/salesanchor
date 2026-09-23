@@ -39,7 +39,9 @@ interface BuybackProduct {
   product_type: string;
   price_s: number | null;
   price_a: number | null;
+  price_am: number | null;
   price_b: number | null;
+  price_c: number | null;
   last_seen_at: string | null;
 }
 
@@ -293,7 +295,9 @@ export default function BuybackPricesPage() {
       date: formatChartDate(h.fetched_at),
       S: h.price_s,
       A: h.price_a,
+      AM: h.price_am,
       B: h.price_b,
+      C: h.price_c,
     })) ?? [];
 
   return (
@@ -413,7 +417,7 @@ export default function BuybackPricesPage() {
                       type="monotone"
                       dataKey="S"
                       name={t("buybackPrices.columnPriceS")}
-                      stroke="var(--color-primary)"
+                      stroke="var(--accent)"
                       strokeWidth={2}
                       dot={false}
                       connectNulls
@@ -432,6 +436,24 @@ export default function BuybackPricesPage() {
                       dataKey="B"
                       name={t("buybackPrices.columnPriceB")}
                       stroke="var(--color-warning)"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="AM"
+                      name={t("buybackPrices.columnPriceAM")}
+                      stroke="var(--info)"
+                      strokeWidth={2}
+                      dot={false}
+                      connectNulls
+                    />
+                    <Line
+                      type="monotone"
+                      dataKey="C"
+                      name={t("buybackPrices.columnPriceC")}
+                      stroke="var(--color-error)"
                       strokeWidth={2}
                       dot={false}
                       connectNulls

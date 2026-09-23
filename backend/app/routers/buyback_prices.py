@@ -258,7 +258,7 @@ async def get_price_history(
                 FROM public.buyback_price_logs
                 WHERE shop_product_id = :shop_product_id
                   AND fetched_at >= now() - make_interval(days => :days)
-                ORDER BY fetched_at DESC
+                ORDER BY fetched_at ASC
                 """
             ),
             {"shop_product_id": str(shop_product_id), "days": days},
