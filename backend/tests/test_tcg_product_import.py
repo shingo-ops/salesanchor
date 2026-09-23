@@ -368,3 +368,47 @@ async def test_create_product_commit_flag_and_legacy_postcheck(monkeypatch, comm
     else:
         assert await master.create_product(db, **args) == {"ok": True, "product_id": "1"}
     assert db.commit.await_count == (0 if commit is False else 1)
+
+
+async def test_load_lookup_maps_never_queries_tcg_major_categories():
+    """public.tcg_major_categories はどの migration でも作られておらず、
+    tenant_004.tcg_major_categories も削除済み（確認日 2026-09-23）。
+    division_code / product_category_code は直後の public SSOT
+    （product_kinds / tcg_product_categories）で上書きされる列なので、
+    load_lookup_maps はこれらを LOOKUP_TABLES ループ内で引いてはならない。
+    """
+    from types import SimpleNamespace
+
+    from app.services.tcg_product_import_svc import load_lookup_maps
+
+    executed_sql: list[str] = []
+
+    async def execute(query, params=None):
+        sql = str(query)
+        executed_sql.append(sql)
+        if "public.type_master" in sql:
+            rows = [("IP003", "1")]
+        elif "public.product_kinds" in sql:
+            rows = [("TCG", 10)]
+        elif "public.tcg_product_categories" in sql:
+            rows = [("PC_BOX", 20)]
+        elif "tcg_manufacturers" in sql:
+            rows = [("MK002", "uuid-mk")]
+        else:
+            raise AssertionError(f"unexpected lookup query: {sql}")
+        return SimpleNamespace(fetchall=lambda rows=rows: rows)
+
+    db = SimpleNamespace(execute=AsyncMock(side_effect=execute))
+    maps = await load_lookup_maps(db)
+
+    assert not any("tcg_major_categories" in sql for sql in executed_sql), executed_sql
+
+    # division_code の値は public.product_kinds 由来（凡例エイリアス DIV01 込み）
+    assert maps["division_code"]["TCG"] == 10
+    assert maps["division_code"]["DIV01"] == 10
+
+    # product_category_code の値は public.tcg_product_categories 由来
+    assert maps["product_category_code"] == {"PC_BOX": 20}
+
+    assert maps["manufacturer_code"] == {"MK002": "uuid-mk"}
+    assert maps["work_code"] == {"IP003": "1"}
