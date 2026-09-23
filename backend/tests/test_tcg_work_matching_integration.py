@@ -357,11 +357,11 @@ def seed_products(connection):
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
     smid, jobid = str(uuid4()), str(uuid4())
     with connection.cursor() as cursor:
-        cursor.execute(f"""INSERT INTO public.source_messages
+        cursor.execute(f"""INSERT INTO {SCHEMA}.source_messages
             (id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM public.supplier_channels LIMIT 1""",
+            SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
                        (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
-        cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
+        cursor.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
     header = HEADER + ("｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE" if work_id_mode else "")
     response = header + "\n" + "\n".join("｜".join(row) for row in records)
     if not work_id_mode:
