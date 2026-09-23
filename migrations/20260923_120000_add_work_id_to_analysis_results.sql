@@ -1,8 +1,9 @@
 -- Add work_id column to analysis_results for tracking resolved work (type_master) ID
 -- This enables accuracy measurement of Gemini's work_id extraction
+-- FK constraint omitted: type_master may not exist in all environments
 
 ALTER TABLE public.analysis_results
-  ADD COLUMN IF NOT EXISTS work_id integer REFERENCES public.type_master(id);
+  ADD COLUMN IF NOT EXISTS work_id integer;
 
 CREATE INDEX IF NOT EXISTS idx_analysis_results_work_id
   ON public.analysis_results(work_id);
