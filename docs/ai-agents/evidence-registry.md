@@ -3192,3 +3192,5 @@ EV-20260914-TCG-RESULT-ORDER 2026-09-15再開: Deploy34914789016/head26032c74の
 EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を受領、追加「データのSSOTは遵守」。PR3494の既存試行記録を正本としUIカード発行/検査exit0、実装担当へ委任。依存PRの独立読取レビューはREVISE2件。設計/根拠はPMG既存handoff。新規保存表/バックエンド/本番変更0。
 
 EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
+
+EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、backend/API/DB変更0）。端末実機で人の動作確認を実施。①共有3回（17:58:54/17:59:27/18:00:18）で受信→完了4.4/1.8/0.8秒、結果通知3回表示をPO確認。②送信後の端末原本はoriginals1件・inbox0件。③PO決定で詰まり判定60秒・点検15分周期。termux-job-schedulerの既定条件（ネット接続時のみ・電池低下時停止）を実機で発見し、--network none --battery-not-lowfalseで再登録。点検はevents上18:19:10/18:39:19/…で自動実行を確認（間隔15〜25分）。④機内モードで19:24:51共有→即時失敗通知、19:45:09（20分）/19:48:43（23分）に詰まり検知・通知をPO確認。⑤機内モード解除後、20:03:41の点検で自動再送→pending_review（投稿1,702件・確認待ち33件）。unittest41件OK。未マージ。
