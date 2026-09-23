@@ -1396,7 +1396,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     review_reasons,
                     engine_version,
                     computed_at,
-                    updated_at
+                    updated_at,
+                    work_id
                 )
                 VALUES (
                     :id,
@@ -1419,7 +1420,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     :review_reasons,
                     :engine_version,
                     :computed_at,
-                    :updated_at
+                    :updated_at,
+                    :work_id
                 )
                 ON CONFLICT (extraction_item_id)
                 DO UPDATE SET
@@ -1441,7 +1443,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                     review_reasons      = EXCLUDED.review_reasons,
                     engine_version      = EXCLUDED.engine_version,
                     computed_at         = EXCLUDED.computed_at,
-                    updated_at          = EXCLUDED.updated_at
+                    updated_at          = EXCLUDED.updated_at,
+                    work_id             = EXCLUDED.work_id
                 """
             ),
             {
@@ -1466,6 +1469,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                 "engine_version": ENGINE_VERSION,
                 "computed_at": now,
                 "updated_at": now,
+                "work_id": int(work_id) if work_id else None,
             },
         )
 
