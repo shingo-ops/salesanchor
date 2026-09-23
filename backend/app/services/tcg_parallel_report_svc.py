@@ -32,11 +32,11 @@ logger = logging.getLogger(__name__)
 
 async def _load_lookup_maps_async(db: AsyncSession) -> tuple[dict, dict, dict, dict, dict]:
     """照合に必要なマスタをロードする（AsyncSession 版）。"""
-    # 商品コード → UUID
+    # 商品ID → DB id（整数）
     rows = (
-        await db.execute(text("SELECT product_code AS code, id FROM public.products WHERE is_active = TRUE"))
+        await db.execute(text("SELECT id FROM public.products WHERE is_active = TRUE"))
     ).fetchall()
-    product_code_to_uuid: dict[str, str] = {r[0]: str(r[1]) for r in rows}
+    product_code_to_uuid: dict[str, str] = {str(r[0]): str(r[0]) for r in rows}
 
     # 単位エイリアス
     rows = (
@@ -86,36 +86,36 @@ async def _load_product_keywords_async(db: AsyncSession) -> tuple[dict, dict]:
         await db.execute(
             text(
                 """
-                SELECT p.product_code AS code, psk.keyword
+                SELECT p.id, psk.keyword
                 FROM public.product_search_keywords psk
                 JOIN public.products p ON p.id = psk.product_id
                 WHERE p.is_active = TRUE
-                ORDER BY p.product_code, psk.position
+                ORDER BY p.id, psk.position
                 """
             )
         )
     ).fetchall()
     search_kw: dict[str, list[str]] = {}
-    for code, kw in rows:
-        search_kw.setdefault(code, []).append(kw)
+    for pid, kw in rows:
+        search_kw.setdefault(str(pid), []).append(kw)
 
     # 除外キーワード
     rows = (
         await db.execute(
             text(
                 """
-                SELECT p.product_code AS code, pek.keyword
+                SELECT p.id, pek.keyword
                 FROM public.product_exclude_keywords pek
                 JOIN public.products p ON p.id = pek.product_id
                 WHERE p.is_active = TRUE
-                ORDER BY p.product_code, pek.position
+                ORDER BY p.id, pek.position
                 """
             )
         )
     ).fetchall()
     exclude_kw: dict[str, list[str]] = {}
-    for code, kw in rows:
-        exclude_kw.setdefault(code, []).append(kw)
+    for pid, kw in rows:
+        exclude_kw.setdefault(str(pid), []).append(kw)
 
     return search_kw, exclude_kw
 

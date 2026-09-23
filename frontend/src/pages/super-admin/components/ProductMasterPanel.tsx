@@ -20,7 +20,7 @@ import { TcgProductDetailDrawer } from "../../../features/tcg-product-import/Tcg
 import "../../../features/tcg-product-import/product-csv.css";
 
 interface ProductRow {
-  code: string; japanese_title: string; english_title: string; mark: string;
+  id: number; japanese_title: string; english_title: string; mark: string;
   release_date: string; keyword_count: number; exclude_keyword_count: number;
 }
 interface ProductWork { id: string; code: string; display_name: string; alt_name: string }
@@ -37,7 +37,7 @@ export function ProductMasterPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
@@ -118,8 +118,8 @@ export function ProductMasterPanel() {
         <DataTable
           columns={columns}
           data={data.items}
-          rowKey={row => row.code}
-          onRowClick={row => setSelectedProduct(row.code)}
+          rowKey={row => String(row.id)}
+          onRowClick={row => setSelectedProduct(row.id)}
           emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />}
           page={filter.page}
           hasNextPage={filter.page * PAGE_SIZE < data.total}
@@ -128,8 +128,8 @@ export function ProductMasterPanel() {
           nextPageLabel={t("productCsv.next")}
         />
       </>}
-      <TcgProductDetailDrawer productCode={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
-      <TcgProductDetailDrawer productCode={null} open={creating} mode="create" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRetry(v => v + 1); }} />
+      <TcgProductDetailDrawer productId={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
+      <TcgProductDetailDrawer productId={null} open={creating} mode="create" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRetry(v => v + 1); }} />
     </>
   );
 }

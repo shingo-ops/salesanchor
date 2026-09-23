@@ -140,8 +140,8 @@ async def search_products_by_name(
         text(
             """
             SELECT
-                p.product_code  AS product_id,
-                p.id::text AS product_uuid,
+                p.id::text      AS product_id,
+                p.id::text      AS product_uuid,
                 p.name          AS japanese_title,
                 COALESCE(
                     STRING_AGG(psk.keyword, ',' ORDER BY psk.position),
@@ -152,7 +152,7 @@ async def search_products_by_name(
                 ON psk.product_id = p.id
             WHERE p.is_active = TRUE
               AND p.name ILIKE :query
-            GROUP BY p.id, p.product_code, p.name
+            GROUP BY p.id, p.name
             ORDER BY p.name
             LIMIT 10
             """
@@ -234,7 +234,7 @@ async def check_duplicates(
         text(
             """
             SELECT
-                p.product_code::text      AS product_id,
+                p.id::text                AS product_id,
                 p.name                    AS japanese_title,
                 p.work_id::text           AS work_id,
                 p.manufacturer_id::text   AS manufacturer_id,
@@ -257,7 +257,7 @@ async def check_duplicates(
                 )
               )
             GROUP BY
-                p.id, p.product_code, p.name,
+                p.id, p.name,
                 p.work_id, p.manufacturer_id, p.product_category_id, p.mark
             ORDER BY p.name
             LIMIT 20
@@ -452,18 +452,18 @@ async def create_product(
     if commit:
         await db.commit()
 
-    # post-write gate: code が実際に存在するか確認
+    # post-write gate: 挿入した id が実際に存在するか確認
     verify = await db.execute(
         text(
-            "SELECT product_code FROM public.products WHERE id = :id"
+            "SELECT id FROM public.products WHERE id = :id"
         ),
         {"id": product_id_int},
     )
     vr = verify.fetchone()
-    if vr is None or vr.product_code != pm_code:
+    if vr is None:
         raise ValueError("PRODUCT_MASTER_V2_POST_WRITE_GATE_FAILED")
 
-    return {"ok": True, "product_id": pm_code}
+    return {"ok": True, "product_id": str(product_id_int)}
 
 
 # ---------------------------------------------------------------------------
@@ -474,7 +474,7 @@ async def create_product(
 async def add_search_keyword(
     db: AsyncSession,
     *,
-    product_code: str,
+    product_id: int,
     new_keyword: str,
 ) -> dict[str, Any]:
     """
@@ -486,17 +486,17 @@ async def add_search_keyword(
     if not kw:
         raise ValueError("SEARCH_KEYWORD_EMPTY")
 
-    # product_id 取得
+    # product の存在確認
     pid_row = await db.execute(
         text(
             """
             SELECT id
             FROM public.products
-            WHERE product_code = :code AND is_active = TRUE
+            WHERE id = :pid AND is_active = TRUE
             FOR UPDATE
             """
         ),
-        {"code": product_code},
+        {"pid": product_id},
     )
     pr = pid_row.fetchone()
     if pr is None:

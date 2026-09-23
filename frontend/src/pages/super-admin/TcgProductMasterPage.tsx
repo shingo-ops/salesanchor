@@ -15,7 +15,7 @@ import { TcgProductDetailDrawer } from "../../features/tcg-product-import/TcgPro
 import "../../features/tcg-product-import/product-csv.css";
 
 interface ProductRow {
-  code: string; japanese_title: string; english_title: string; mark: string;
+  id: number; japanese_title: string; english_title: string; mark: string;
   release_date: string; keyword_count: number; exclude_keyword_count: number;
 }
 interface ProductWork { id: string; code: string; display_name: string; alt_name: string }
@@ -33,7 +33,7 @@ export default function TcgProductMasterPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
-  const [selectedProduct, setSelectedProduct] = useState<string | null>(null);
+  const [selectedProduct, setSelectedProduct] = useState<number | null>(null);
   const [creating, setCreating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [exportError, setExportError] = useState(false);
@@ -86,10 +86,10 @@ export default function TcgProductMasterPage() {
       <ContentToolbar left={<TextField type="search" label={t("productCsv.search")} value={filter.query} onChange={e => setFilter(value => ({ ...value, query: e.target.value, page: 1 }))} />} />
       {loading ? <p>{t("common.loading")}</p> : error ? <div role="alert"><p>{t("productCsv.loadError")}</p><HeaderButton variant="secondary" onClick={() => setRetry(value => value + 1)}>{t("productCsv.retry")}</HeaderButton></div> : data && <>
         <p role="status">{t("productCsv.total", { count: data.total })}</p>
-        <DataTable columns={columns} data={data.items} rowKey={row => row.code} onRowClick={row => setSelectedProduct(row.code)} emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />} page={filter.page} hasNextPage={filter.page * PAGE_SIZE < data.total} onPageChange={page => setFilter(value => ({ ...value, page }))} prevPageLabel={t("productCsv.previous")} nextPageLabel={t("productCsv.next")} />
+        <DataTable columns={columns} data={data.items} rowKey={row => String(row.id)} onRowClick={row => setSelectedProduct(row.id)} emptyState={<EmptyState title={t("productCsv.empty")} size="compact" />} page={filter.page} hasNextPage={filter.page * PAGE_SIZE < data.total} onPageChange={page => setFilter(value => ({ ...value, page }))} prevPageLabel={t("productCsv.previous")} nextPageLabel={t("productCsv.next")} />
       </>}
-      <TcgProductDetailDrawer productCode={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
-      <TcgProductDetailDrawer productCode={null} open={creating} mode="create" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRetry(v => v + 1); }} />
+      <TcgProductDetailDrawer productId={selectedProduct} onClose={() => setSelectedProduct(null)} onSaved={() => setRetry(value => value + 1)} />
+      <TcgProductDetailDrawer productId={null} open={creating} mode="create" onClose={() => setCreating(false)} onSaved={() => { setCreating(false); setRetry(v => v + 1); }} />
     </>}
   </PageLayout>;
 }

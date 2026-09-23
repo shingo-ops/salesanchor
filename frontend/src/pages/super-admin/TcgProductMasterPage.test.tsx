@@ -27,7 +27,7 @@ it("R10 exports all filtered rows once and releases its download URL", async () 
   const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   view(); await screen.findByText("Products: 0");
   fireEvent.click(screen.getByRole("tab", { name: "Pokemon" }));
-  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "A & B" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or product ID"), { target: { value: "A & B" } });
   const button = screen.getByRole("button", { name: "Export update CSV" });
   fireEvent.click(button); fireEvent.click(button);
   expect(api.getBlob).toHaveBeenCalledTimes(1);
@@ -58,13 +58,13 @@ it("shows total, pages through results and resets offset on search", async () =>
   expect(screen.queryByText("PM51")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "next page" }));
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]).toContain("offset=50"));
-  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "A & B" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or product ID"), { target: { value: "A & B" } });
   await waitFor(() => expect(vi.mocked(api.get).mock.calls.slice(-1)[0]?.[0]).toContain("query=A+%26+B&limit=50&offset=0"));
 });
 it("discards an older response that arrives after a new search", async () => {
   let old!: (value: unknown) => void;
   vi.mocked(api.get).mockImplementationOnce(() => new Promise(resolve => { old = resolve; })).mockResolvedValue(empty); view();
-  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "new" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or product ID"), { target: { value: "new" } });
   await screen.findByText("Products: 0"); await act(async () => old({ total: 99, items: [], works }));
   await waitFor(() => expect(screen.queryByText("Products: 99")).toBeNull());
 });
@@ -78,7 +78,7 @@ it("AC6 combines work and search, resets page and omits work for All", async () 
   fireEvent.click(screen.getByRole("tab", { name: "Pokemon" }));
   await waitFor(() => expect(lastParams().get("work_id")).toBe(works[0].id));
   expect(lastParams().get("offset")).toBe("0");
-  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "Shared" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or product ID"), { target: { value: "Shared" } });
   await waitFor(() => expect(lastParams().get("query")).toBe("Shared"));
   expect(lastParams().get("work_id")).toBe(works[0].id);
   await screen.findByText("Products: 51");
@@ -151,7 +151,7 @@ it("AC7 keeps candidates on empty/error and keeps a disappeared selected work", 
   expect(screen.getByRole("tab", { name: "Pokemon" }).getAttribute("aria-selected")).toBe("true");
   expect(lastParams().get("work_id")).toBe(works[0].id);
   vi.mocked(api.get).mockRejectedValueOnce(new Error("failed"));
-  fireEvent.change(screen.getByLabelText("Search by name, model number or code"), { target: { value: "absent" } });
+  fireEvent.change(screen.getByLabelText("Search by name, model number or product ID"), { target: { value: "absent" } });
   await screen.findByRole("alert");
   expect(screen.getByRole("tab", { name: "Pokemon" })).toBeTruthy();
   expect(screen.getByRole("tab", { name: "One Piece" })).toBeTruthy();

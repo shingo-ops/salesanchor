@@ -27,7 +27,7 @@ type LookupOption = { id: string; name: string };
 type LookupsMap = Record<Classification, LookupOption[]>;
 function draftFrom(result: Detail): Draft {
   const p = result.product;
-  if (!/^[0-9a-f]{64}$/.test(result.revision) || typeof p?.code !== "string" ||
+  if (!/^[0-9a-f]{64}$/.test(result.revision) ||
       typeof p.japanese_title !== "string" || !Array.isArray(p.search_keywords) ||
       !Array.isArray(p.exclude_keywords) ||
       ![...p.search_keywords, ...p.exclude_keywords].every(word => typeof word === "string") ||
@@ -46,8 +46,8 @@ const emptyDraft: Draft = {
   search_keywords: "", exclude_keywords: "",
 };
 
-export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: openProp, mode = "edit" }: {
-  productCode: string | null; onClose: () => void; onSaved: () => void;
+export function TcgProductDetailDrawer({ productId, onClose, onSaved, open: openProp, mode = "edit" }: {
+  productId: number | null; onClose: () => void; onSaved: () => void;
   open?: boolean; mode?: "edit" | "create";
 }) {
   const { t } = useTranslation();
@@ -67,7 +67,7 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const dirty = draft !== null && JSON.stringify(draft) !== JSON.stringify(initial);
-  const isOpen = openProp !== undefined ? openProp : productCode !== null;
+  const isOpen = openProp !== undefined ? openProp : productId !== null;
 
   // 編集モード: 詳細ロード
   useEffect(() => {
@@ -75,17 +75,17 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     let cancelled = false;
     setDetail(null); setDraft(null); setInitial(null); setError(""); setSaved(false);
     setBlocked(false); setConfirmation(null);
-    if (!productCode) { setLoading(false); return; }
+    if (productId === null) { setLoading(false); return; }
     setLoading(true);
-    void api.get<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`).then(result => {
+    void api.get<Detail>(`/tcg/products/detail/${productId}`).then(result => {
       if (cancelled) return;
-      if (result.product?.code !== productCode) throw new Error("Product mismatch");
+      if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next);
     }).catch(() => { if (!cancelled) setError("productDetail.loadError"); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [productCode, reload, mode]);
+  }, [productId, reload, mode]);
 
   // 作成モード: 分類マスタ取得 + 空フォーム初期化
   useEffect(() => {
@@ -125,18 +125,18 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     }
   }
   async function saveEdit() {
-    if (!draft || !detail || !productCode || !dirty || blocked || inFlight.current) return;
+    if (!draft || !detail || productId === null || !dirty || blocked || inFlight.current) return;
     if (!draft.japanese_title.trim()) { setError("productDetail.titleRequired"); return; }
     inFlight.current = true; setSaving(true); setError(""); setSaved(false);
     try {
-      const result = await api.put<Detail>(`/tcg/products/detail/${encodeURIComponent(productCode)}`, {
+      const result = await api.put<Detail>(`/tcg/products/detail/${productId}`, {
         ...draft, revision: detail.revision, release_date: draft.release_date || null,
         product_kind_id: draft.product_kind_id ? Number(draft.product_kind_id) : null, work_id: draft.work_id ? Number(draft.work_id) : null,
         manufacturer_id: draft.manufacturer_id || null, product_category_id: draft.product_category_id ? Number(draft.product_category_id) : null,
         search_keywords: draft.search_keywords === initial?.search_keywords ? detail.product.search_keywords : words(draft.search_keywords),
         exclude_keywords: draft.exclude_keywords === initial?.exclude_keywords ? detail.product.exclude_keywords : words(draft.exclude_keywords),
       });
-      if (result.product?.code !== productCode) throw new Error("Product mismatch");
+      if (Number(result.product?.id) !== productId) throw new Error("Product mismatch");
       const next = draftFrom(result);
       setDetail(result); setDraft(next); setInitial(next); setSaved(true);
       onSaved();
@@ -179,10 +179,10 @@ export function TcgProductDetailDrawer({ productCode, onClose, onSaved, open: op
     else onClose();
   };
   async function handleDelete() {
-    if (!productCode || deleting) return;
+    if (productId === null || deleting) return;
     setDeleting(true);
     try {
-      await api.delete(`/tcg/products/detail/${encodeURIComponent(productCode)}`);
+      await api.delete(`/tcg/products/detail/${productId}`);
       onSaved();
       onClose();
     } catch (e: unknown) {

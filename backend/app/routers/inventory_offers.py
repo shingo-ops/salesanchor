@@ -226,7 +226,7 @@ async def list_inventory_view(
     if q:
         conditions.append(
             "(s.name ILIKE :q OR p.name ILIKE :q OR p.name_en ILIKE :q "
-            "OR p.product_code ILIKE :q OR p.category ILIKE :q OR p.mark ILIKE :q)"
+            "OR p.id::text ILIKE :q OR p.category ILIKE :q OR p.mark ILIKE :q)"
         )
         params["q"] = f"%{q}%"
     # ADR-093 Phase 4: ユーザー別フィルタ「仕入元 非表示」（CSV → NOT IN、整数のみ採用で SQLi 防止）
@@ -403,7 +403,7 @@ async def list_offers(
         params["status_filter"] = status_filter
     if q:
         conditions.append(
-            "(s.name ILIKE :q OR p.name ILIKE :q OR p.product_code ILIKE :q)"
+            "(s.name ILIKE :q OR p.name ILIKE :q OR p.id::text ILIKE :q)"
         )
         params["q"] = f"%{q}%"
 

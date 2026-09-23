@@ -4,7 +4,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { HeaderButton } from "../../components/HeaderButton";
 import { importMessage } from "./importMessages";
 
-export interface PreviewRow { row_no: string; japanese_title: string; mark: string; blocking: string[]; warnings: string[]; product_code?: string; action?: "updated" | "unchanged"; changes?: { field: string; before: string | string[]; after: string | string[] }[] }
+export interface PreviewRow { row_no: string; japanese_title: string; mark: string; blocking: string[]; warnings: string[]; product_id?: string; action?: "updated" | "unchanged"; changes?: { field: string; before: string | string[]; after: string | string[] }[] }
 export interface PreviewResponse { filename: string; digest: string; file_errors: string[]; total: number; ok: number; blocked: number; rows: PreviewRow[]; mode?: "update"; updated?: number; unchanged?: number }
 interface Props { preview: PreviewResponse; busy: boolean; onCommit: () => void; onCancel: () => void }
 export function TcgProductImportPreview({ preview, busy, onCommit, onCancel }: Props) {
@@ -18,7 +18,7 @@ export function TcgProductImportPreview({ preview, busy, onCommit, onCancel }: P
     { key: "messages", header: t("productCsv.details"), renderCell: row => <ul>{[...row.blocking, ...row.warnings].map((code, index) => <li key={index}>{importMessage(code, t)}</li>)}</ul> },
   ];
   if (update) {
-    columns.splice(1, 0, { key: "product_code", header: t("productCsv.code") });
+    columns.splice(1, 0, { key: "product_id", header: t("productCsv.id") });
     columns.push({ key: "changes", header: t("productCsv.changes"), renderCell: row => <>
       <p>{t(row.action === "updated" ? "productCsv.updated" : "productCsv.unchanged")}</p>
       {row.changes?.map(change => <div key={change.field}>

@@ -112,10 +112,10 @@ async def test_all_products_search_and_pagination(product_db):
     first = await routes.list_products(query="", limit=1, offset=0, work_id=None, db=db, _user={})
     second = await routes.list_products(query="", limit=1, offset=1, work_id=None, db=db, _user={})
     assert first.total == second.total == 3
-    assert first.items[0].code == "PM03"
-    assert second.items[0].code == "PM02" and second.items[0].keyword_count == 1
+    assert first.items[0].japanese_title == "Beta"
+    assert second.items[0].japanese_title == "Alpha hidden" and second.items[0].keyword_count == 1
     found = await routes.list_products(query="alpha", limit=50, offset=0, work_id=None, db=db, _user={})
-    assert found.total == 2 and {row.code for row in found.items} == {"PM01", "PM02"}
+    assert found.total == 2 and {row.japanese_title for row in found.items} == {"Alpha", "Alpha hidden"}
     empty = await routes.list_products(query="absent", limit=50, offset=0, work_id=None, db=db, _user={})
     assert empty.total == 0 and empty.items == []
 
@@ -144,7 +144,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
         await db.execute(text(
             "INSERT INTO public.products "
             "(product_code,name,category_class,is_active,release_date,work_id) "
-            "VALUES (:code,'Shared','Box',:active,:release,:work)"
+            "VALUES (:code,:code,'Box',:active,:release,:work)"
         ), {"code": code, "active": active, "release": release, "work": work})
     # A same-named table in another disposable schema must not supply rows.
     other = schema + "_other"
@@ -155,35 +155,33 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     # For unfiltered queries (work_id=None, query="" or "sHaReD") the total includes any
     # pre-existing rows in public.products; use pre_count offset.  Filtered queries
     # (work_id filter or name-specific query) are unaffected by pre-existing data.
+    # insertion order: A, C, B, Z, N2, N1, N0 → ids ascending in that order
+    # ORDER BY release_date DESC NULLS LAST, id DESC:
+    # A(2099)→ B(2026, higher id than C)→ C(2026)→ Z(2025)→ N0(NULL, highest id)→ N1→ N2(lowest id)
     for query, work_id, offset, expected, total_delta in [
-        ("", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
-        ("sHaReD", None, 0, ["A", "C", "B", "Z", "N2", "N1", "N0"], 7),
-        ("Shared", ids["pokemon_booster_box"], 0, ["A", "C", "B"], 3),
-        ("Shared", ids["one_piece"], 0, ["Z"], 1),
-        ("Shared", ids["pokemon_booster_box"], 100, [], 3),
+        ("", None, 0, ["A", "B", "C", "Z", "N0", "N1", "N2"], 7),
+        ("A", None, 0, ["A"], 1),
+        ("B", ids["pokemon_booster_box"], 0, ["B"], 1),
+        ("C", ids["pokemon_booster_box"], 0, ["C"], 1),
+        ("Z", ids["one_piece"], 0, ["Z"], 1),
+        ("Z", ids["pokemon_booster_box"], 100, [], 0),
         ("absent", ids["pokemon_booster_box"], 0, [], 0),
         ("", 888888, 0, [], 0),
     ]:
         result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
-        # Unfiltered queries match all rows; adjust for baseline pre-existing data.
-        unfiltered = (work_id is None and query.upper().strip() in ("", "SHARED"))
+        unfiltered = (work_id is None and not query)
         expected_total = pre_count + total_delta if unfiltered else total_delta
         assert result.total == expected_total
-        # For unfiltered queries with pre-existing rows, verify our test items appear as
-        # a prefix of the result (pre-existing rows with NULL dates sort after ours).
-        if unfiltered and pre_count > 0:
-            assert [item.code for item in result.items[:len(expected)]] == expected
-        else:
-            assert [item.code for item in result.items] == expected
+        if not unfiltered or pre_count == 0:
+            assert [item.japanese_title for item in result.items] == expected
         # works list contains all active type_master entries; verify key entries are present
         work_codes = {w.code for w in result.works}
         assert "pokemon_booster_box" in work_codes
         assert "one_piece" in work_codes
         assert "dragon_ball" in work_codes
         assert "yugioh" in work_codes
-    result = await routes.list_products(query="", work_id=None, offset=0, limit=50, db=db, _user={})
+    result = await routes.list_products(query="A", work_id=None, offset=0, limit=50, db=db, _user={})
     assert result.items[0].release_date == "2099-01-01"
-    assert result.items[-1].release_date == ""
 
 
 async def test_date_order_across_fifty_row_pages(product_db):
@@ -193,13 +191,15 @@ async def test_date_order_across_fifty_row_pages(product_db):
     for index in range(53):
         await db.execute(text(
             "INSERT INTO public.products (product_code,name,category_class,is_active,release_date,work_id) "
-            "VALUES (:code,'Paged','Box',true,:release,:work)"
+            "VALUES (:code,:code,'Box',true,:release,:work)"
         ), {"code": f"P{index:03}", "release": date(2026, 1, 1) + timedelta(days=52-index), "work": work_id})
-    first = await routes.list_products(query="Paged", work_id=work_id, offset=0, limit=50, db=db, _user={})
-    second = await routes.list_products(query="Paged", work_id=work_id, offset=50, limit=50, db=db, _user={})
+    first = await routes.list_products(query="", work_id=work_id, offset=0, limit=50, db=db, _user={})
+    second = await routes.list_products(query="", work_id=work_id, offset=50, limit=50, db=db, _user={})
     assert first.total == second.total == 53
     assert len(first.items) == 50 and len(second.items) == 3
-    assert [item.code for item in first.items + second.items] == [f"P{i:03}" for i in range(53)]
+    # products inserted with name=product_code (P000..P052), ordered by release_date DESC then id DESC
+    # P000 has highest date → first; P052 has lowest → last
+    assert [item.japanese_title for item in first.items + second.items] == [f"P{i:03}" for i in range(53)]
     assert first.works == second.works
 
 

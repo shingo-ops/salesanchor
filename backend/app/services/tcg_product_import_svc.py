@@ -210,7 +210,7 @@ async def load_existing_marks(db: AsyncSession) -> dict[str, str]:
     """
     result = await db.execute(
         text(
-            "SELECT mark, product_code FROM public.products "
+            "SELECT mark, id::text FROM public.products "
             "WHERE mark IS NOT NULL AND mark <> '' AND is_active = TRUE"
         )
     )
@@ -319,7 +319,7 @@ async def load_keyword_owners(db: AsyncSession) -> dict[str, list[str]]:
     """検索キーワードと、それを持つ商品コードの対応を引く。"""
     result = await db.execute(
         text(
-            "SELECT k.keyword, p.product_code FROM public.product_search_keywords k "
+            "SELECT k.keyword, p.id::text FROM public.product_search_keywords k "
             "JOIN public.products p ON p.id = k.product_id "
             "WHERE p.is_active = TRUE"
         )
