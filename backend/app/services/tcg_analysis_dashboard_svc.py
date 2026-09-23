@@ -402,7 +402,8 @@ SELECT
 FROM {TCG_SCHEMA}.supplier_channels sc
 JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id AND sm.is_active = true
 LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
-LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.source_message_id = sm.id
+LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
+LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id
 GROUP BY sc.id, sc.name
 ORDER BY sc.name
 """
