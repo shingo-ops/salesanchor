@@ -17,8 +17,8 @@
 
 | 基準 | 検証方法 |
 |------|---------|
-| `get_supplier_pipeline()` が `UndefinedColumnError` なく実行される | 本番コンテナでの Python asyncio テスト |
-| `channel_name` フィールドに supplier_channels.channel の値が入る | APIレスポンスのJSON確認 |
+| get_supplier_pipeline() が UndefinedColumnError なく実行される | 本番コンテナでの Python asyncio テスト |
+| channel_name フィールドに supplier_channels.channel の値が入る | APIレスポンスのJSON確認 |
 
 ---
 
@@ -47,5 +47,12 @@
 
 ## 継続
 
-- 完了後の監視: `get_supplier_pipeline()` が正常なJSONを返すことを確認
+- 完了後の監視: get_supplier_pipeline() が正常なJSONを返すことを確認
 - 次フェーズへの引き継ぎ: なし（一度限りの修正）
+
+---
+
+## 維持の仕組み
+
+- supplier_channels テーブルの正しいカラム名は `channel`（`name` ではない）
+- 人手で守る：今後 supplier_channels への SQL 追加時はカラム名を確認すること
