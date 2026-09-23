@@ -254,6 +254,7 @@ export default function SupplierExtractionRulesPage() {
           >
             ← {t("supplierExtractionRules.back")}
           </Button>
+          {/* eslint-disable-next-line no-restricted-syntax */}
           <h2 className="supplier-rules-header-title">{selectedSupplier.name}</h2>
         </div>
 
