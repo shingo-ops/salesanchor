@@ -66,6 +66,7 @@ class BuybackPriceItem(BaseModel):
 class BuybackPriceListResponse(BaseModel):
     items: list[BuybackPriceItem]
     total: int
+    counts_by_game: dict[str, int]
 
 
 class BuybackPriceHistoryEntry(BaseModel):
@@ -118,6 +119,8 @@ async def list_buyback_prices(
     product_type: str | None = Query(default=None, description="商品種別 (例: BOX, CARTON)"),
     limit: int = Query(default=50, ge=1, le=200, description="取得件数上限"),
     offset: int = Query(default=0, ge=0, description="オフセット"),
+    sort: str = Query(default="price_s", description="ソート列"),
+    order: str = Query(default="desc", description="ソート順 (asc/desc)"),
     db: AsyncSession = Depends(get_db),
     _tenant=Depends(get_current_tenant),
 ):
@@ -126,6 +129,17 @@ async def list_buyback_prices(
     buyback_shop_products と最新の buyback_price_logs を JOIN して返す。
     フィルタ: card_game / shop / product_type
     """
+    # ソート列ホワイトリスト（SQLインジェクション対策）
+    _SORT_WHITELIST = {
+        "price_s": "l.price_s",
+        "price_a": "l.price_a",
+        "price_b": "l.price_b",
+        "product_name": "p.product_name",
+        "last_seen_at": "p.last_seen_at",
+    }
+    sort_col = _SORT_WHITELIST.get(sort, "l.price_s")
+    sort_dir = "ASC" if order == "asc" else "DESC"
+
     # 動的 WHERE 句（SQL インジェクション対策としてホワイトリスト値のみ許可）
     conditions = []
     params: dict = {"limit": limit, "offset": offset}
@@ -176,7 +190,7 @@ async def list_buyback_prices(
         FROM public.buyback_shop_products p
         LEFT JOIN latest_logs l ON l.shop_product_id = p.id
         {where_clause}
-        ORDER BY p.card_game, p.shop_code, p.product_name
+        ORDER BY {sort_col} {sort_dir} NULLS LAST
         LIMIT :limit OFFSET :offset
         """
     )
@@ -191,6 +205,25 @@ async def list_buyback_prices(
 
     rows = (await db.execute(query, params)).mappings().all()
     total = (await db.execute(count_query, params)).scalar_one()
+
+    # カードゲーム別件数（タブ用 — shop フィルタのみ反映、card_game フィルタは除外）
+    count_conditions = []
+    count_params: dict = {}
+    if shop is not None:
+        count_conditions.append("shop_code = :count_shop")
+        count_params["count_shop"] = shop
+    if product_type is not None:
+        count_conditions.append("product_type = :count_product_type")
+        count_params["count_product_type"] = product_type
+    count_where = ("WHERE " + " AND ".join(count_conditions)) if count_conditions else ""
+    game_counts_query = text(f"""
+        SELECT card_game, COUNT(*) as cnt
+        FROM public.buyback_shop_products
+        {count_where}
+        GROUP BY card_game
+    """)
+    game_counts_rows = (await db.execute(game_counts_query, count_params)).mappings().all()
+    counts_by_game = {row["card_game"]: row["cnt"] for row in game_counts_rows}
 
     items = [
         BuybackPriceItem(
@@ -212,7 +245,7 @@ async def list_buyback_prices(
         for row in rows
     ]
 
-    return BuybackPriceListResponse(items=items, total=total)
+    return BuybackPriceListResponse(items=items, total=total, counts_by_game=counts_by_game)
 
 
 @router.get(
