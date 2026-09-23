@@ -34,3 +34,4 @@ Celery beat スケジュールを `crontab(minute=0, hour="1,4,13")` に変更�
 
 ## 維持の仕組み
 スケジュール変更は celery_app.py の beat_schedule で一元管理。変更時はデプロイで自動反映。
+守り手: backend/app/celery_app.py（beat_schedule 定義）
