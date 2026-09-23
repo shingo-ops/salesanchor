@@ -224,6 +224,7 @@ def _build_supplier_context_note(supplier_context: dict) -> str:
         "extraction_order_pattern": "注文パターン",
         "extraction_default_unit": "デフォルト単位",
         "extraction_notes": "補足ルール",
+        "extraction_state_format": "状態フォーマット",
     }
     for key, label in label_map.items():
         val = supplier_context.get(key)

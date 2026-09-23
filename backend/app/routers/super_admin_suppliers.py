@@ -745,7 +745,7 @@ async def get_supplier_parse_stats(
 
 _EXTRACTION_RULE_COLS = (
     "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
-    "extraction_default_unit, extraction_notes"
+    "extraction_default_unit, extraction_notes, extraction_state_format"
 )
 
 _EXTRACTION_RULE_UPDATABLE = {
@@ -754,6 +754,7 @@ _EXTRACTION_RULE_UPDATABLE = {
     "extraction_order_pattern",
     "extraction_default_unit",
     "extraction_notes",
+    "extraction_state_format",
 }
 
 
@@ -780,6 +781,7 @@ async def list_supplier_extraction_overview(
                     OR s.extraction_order_pattern IS NOT NULL
                     OR s.extraction_default_unit IS NOT NULL
                     OR s.extraction_notes IS NOT NULL
+                    OR s.extraction_state_format IS NOT NULL
                 ) AS has_extraction_rules,
                 COALESCE(ng.unit_ng_count, 0) AS unit_ng_count
             FROM public.suppliers s
@@ -857,6 +859,7 @@ async def get_supplier_extraction_rules(
         extraction_order_pattern=row["extraction_order_pattern"],
         extraction_default_unit=row["extraction_default_unit"],
         extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
         latest_raw_text=raw_row["raw_text"] if raw_row else None,
     )
 
@@ -905,5 +908,6 @@ async def update_supplier_extraction_rules(
         extraction_order_pattern=row["extraction_order_pattern"],
         extraction_default_unit=row["extraction_default_unit"],
         extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
         latest_raw_text=None,  # PATCH 応答では原文は含まない
     )

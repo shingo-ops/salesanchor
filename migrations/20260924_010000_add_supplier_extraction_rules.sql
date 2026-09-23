@@ -4,3 +4,4 @@ ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_qty_format TEXT
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_order_pattern TEXT;
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_default_unit TEXT;
 ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_notes TEXT;
+ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_state_format TEXT;

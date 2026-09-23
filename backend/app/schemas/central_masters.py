@@ -413,6 +413,7 @@ class SupplierExtractionRulesResponse(BaseModel):
     extraction_order_pattern: Optional[str] = None
     extraction_default_unit: Optional[str] = None
     extraction_notes: Optional[str] = None
+    extraction_state_format: Optional[str] = None
     latest_raw_text: Optional[str] = None  # source_messages.raw_text の最新1件
 
     model_config = ConfigDict(from_attributes=True)
@@ -424,6 +425,7 @@ class SupplierExtractionRulesUpdate(BaseModel):
     extraction_order_pattern: Optional[str] = Field(default=None, max_length=5000)
     extraction_default_unit: Optional[str] = Field(default=None, max_length=100)
     extraction_notes: Optional[str] = Field(default=None, max_length=50000)
+    extraction_state_format: Optional[str] = Field(default=None, max_length=5000)
 
 
 class SupplierExtractionOverviewItem(BaseModel):
