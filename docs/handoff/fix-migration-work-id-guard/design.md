@@ -17,12 +17,12 @@ tenant→public 移行は後続マイグレーション (20260914) が正式に�
 
 ## 外部・過去事例の参照と我々への応用
 
-PostgreSQL の `pg_attribute` を使って列の attnotnull フラグを確認するパターンは、既存マイグレーション `20260916_130000_work_id_not_null.sql` の実装例（ガード付きALTER TABLE）と同様のアプローチ。後続マイグレーションが正式移行を担う場合、前段マイグレーションの INSERT を条件付きスキップする手法はプロジェクト内の migration-guard パターン（ADR-1002）に準拠する。
+PostgreSQL の `pg_attribute` を使って列の attnotnull フラグを確認するパターンは、既存マイグレーション `migrations/20260916_130000_work_id_not_null.sql` の実装例（ガード付きALTER TABLE）と同様のアプローチ。後続マイグレーションが正式移行を担う場合、前段マイグレーションの INSERT を条件付きスキップする手法はプロジェクト内の migration-guard パターン（ADR-1002）に準拠する。
 
 ## 維持の仕組み
 
-守り手: migrations/20260916_130000_work_id_not_null.sql（NOT NULL制約の定義元）
-ガードは `pg_attribute` の `attnotnull = TRUE` を検査するため、将来 work_id の NOT NULL が解除された場合は自動的に INSERT が再発火する。ただしその状況は ADR-090 の方針変更を意味するため、その時点で再評価する。
+守り手: `migrations/20260916_130000_work_id_not_null.sql`（NOT NULL制約の定義元）
+ガードは `pg_attribute` の attnotnull フラグを検査するため、将来 work_id の NOT NULL が解除された場合は自動的に INSERT が再発火する。ただしその状況は ADR-090 の方針変更を意味するため、その時点で再評価する。
 
 ## 触るファイル
 
