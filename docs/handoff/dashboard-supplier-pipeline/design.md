@@ -5,6 +5,18 @@
 提供者別パイプライン可視化により、問題のある提供者をオペレーターが即座に特定できる。
 4タブ全てに提供者テーブルを表示し、severity=danger の提供者が上部に表示されること。
 
+参照: ADR-138, ADR-139, docs/handoff/dashboard-supplier-pipeline/recon.md
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| supplier-pipeline API が提供者一覧を返す | curl /tcg/analysis-dashboard/supplier-pipeline でレスポンス確認 |
+| 4タブ全てに提供者テーブルが表示される | ブラウザで各タブを開き目視確認 |
+| severity=danger の提供者が最上部に表示される | テスト用データで並び順を確認 |
+| 既存KPIカード・トレンドグラフが下部に残る | ページ下部にカードが存在することを目視確認 |
+| i18nキーが正しく解決される | ja/en 切り替えで文字化けがないことを確認 |
+
 ## 変更の設計
 
 ### 新規API: GET /tcg/analysis-dashboard/supplier-pipeline
