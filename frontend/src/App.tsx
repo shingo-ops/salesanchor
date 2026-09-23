@@ -97,6 +97,7 @@ import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
 import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
 import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
+import SupplierExtractionRulesPage from "./pages/super-admin/SupplierExtractionRulesPage";
 import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
 import UnitImportPage from "./pages/super-admin/UnitImportPage";
 import ConditionImportPage from "./pages/super-admin/ConditionImportPage";
@@ -337,6 +338,10 @@ function App() {
                   <Route
                     path="/super-admin/supplier-master"
                     element={<SupplierMasterPage />}
+                  />
+                  <Route
+                    path="/super-admin/supplier-extraction-rules"
+                    element={<SupplierExtractionRulesPage />}
                   />
                   <Route
                     path="/super-admin/masters/suppliers/import"

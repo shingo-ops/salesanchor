@@ -282,6 +282,7 @@
     "conditionsMaster": "状態マスタ",
     "productCategories": "商品カテゴリ",
     "superAdminSupplierMaster": "仕入元マスタ",
+    "superAdminSupplierExtractionRules": "抽出ルール設定",
     "units": "単位マスタ",
     "noteMaster": "備考マスタ",
     "buybackPrices": "買取相場"
@@ -4468,5 +4469,33 @@
     "compatV1Description": "GAS 時代の照合結果（DB 既存値・gemini_all.json 基準）",
     "namefirstV1Description": "サーバー新エンジン（インメモリ計算・キーワード最長一致）",
     "pidResolutionRate": "PID解決率"
+  },
+  "supplierExtractionRules": {
+    "title": "仕入元別 抽出ルール設定",
+    "supplierName": "仕入元名",
+    "totalItems": "解析結果数",
+    "unitNg": "単位未解決",
+    "hasRules": "ルール設定",
+    "configured": "設定済み",
+    "notConfigured": "未設定",
+    "sourceText": "原文",
+    "noSourceText": "有効なメッセージがありません",
+    "priceFormat": "価格フォーマット",
+    "priceFormatHelper": "例: @{price}円、¥{price}、{price}×",
+    "qtyFormat": "数量フォーマット",
+    "qtyFormatHelper": "例: 在庫数：{qty}、{qty}@、×{qty}",
+    "orderPattern": "価格と数量の並び",
+    "orderPriceAtQty": "価格@数量",
+    "orderQtyAtPrice": "数量@価格",
+    "orderUnset": "未設定",
+    "defaultUnit": "デフォルト単位",
+    "defaultUnitHelper": "単位を書かない仕入元のデフォルト（例: BOX）",
+    "stateFormat": "状態フォーマット",
+    "stateFormatHelper": "例: [状態]、（状態）、■状態：",
+    "notes": "Geminiへの追加指示",
+    "notesHelper": "この仕入元特有の抽出ルールを自由記述",
+    "save": "保存",
+    "saved": "保存しました",
+    "back": "一覧に戻る"
   }
 }
