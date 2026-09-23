@@ -47,6 +47,8 @@ def needs_escape(value: str) -> bool:
 
 
 def escape_cell(value: str) -> str:
+    if not value:
+        return ""
     return "'" + value if needs_escape(value) else value
 
 
