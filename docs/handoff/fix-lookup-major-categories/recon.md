@@ -46,7 +46,7 @@ for column, table in LOOKUP_TABLES.items():
 
 - `backend/tests/test_tcg_product_import.py:226` 付近: `load_lookup_maps` 自体を `AsyncMock` に差し替えており実クエリを通さない
 - `backend/tests/test_tcg_product_import_atomicity_pg.py:44-51`: `TCG_SCHEMA` を `tenant_901` に差し替え、旧テナントDDL（`tcg_major_categories` を含む）をリプレイした合成スキーマに対して実行するため、public の実態を再現していない。
-  同じ構造が `test_tcg_product_detail_pg.py`、`test_tcg_product_roundtrip_pg.py`、`test_tcg_work_comparison_pg.py` にもある
+  同じ構造が `backend/tests/test_tcg_product_detail_pg.py`、`backend/tests/test_tcg_product_roundtrip_pg.py`、`backend/tests/test_tcg_work_comparison_pg.py` にもある
 - `backend/tests/test_tcg_schema_qualification.py` は静的検査で、テーブルの実在は検査しない
 
 ## 関連（同ADRの先行対応）
