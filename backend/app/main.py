@@ -28,6 +28,7 @@ from app.routers import (
     archives,
     auth,
     bots,
+    buyback_alerts,  # ADR-157: 買取価格変動アラートルール CRUD
     buyback_prices,  # ADR-157: 買取相場ログ API
     close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
@@ -707,6 +708,11 @@ app.include_router(line_import_devices.router, prefix="/api/v1")
 app.include_router(
     buyback_prices.router, prefix="/api/v1", tags=["buyback-prices"],
     dependencies=[Depends(get_current_tenant)],
+)
+
+# ADR-157: 買取価格変動アラートルール CRUD（super_admin 専用）
+app.include_router(
+    buyback_alerts.router, prefix="/api/v1", tags=["buyback-alerts"],
 )
 
 @app.exception_handler(OperationalError)
