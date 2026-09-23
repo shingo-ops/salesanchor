@@ -41,7 +41,16 @@ unit_ng件数を削減できる基盤を整備する。
 - Migration は additive-only のためロールバック不要（列はNULL許容）
 - コード変更は git revert で戻せる
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - Gemini系の部分保存パターン: エラー行をスキップして続行するアプローチは
-  ChatGPT Batch API などでも採用される標準パターン
+  ChatGPT Batch API などでも採用される標準パターン。
+  今回は行単位 try/except でエラーを `parse_errors` に収集し、成功行は保存する。
+- 仕入元ルール注入: OpenAI Assistants API の System Message 活用パターンと同様に、
+  仕入元固有のコンテキストをシステムプロンプトに注入することで抽出精度を向上させる。
+
+## 維持の仕組み
+
+- `extraction_*` 列は NULL 許容のため、ルール未設定の仕入元は従来通り動作する
+- `supplier_context` パラメータはオプション（`None` デフォルト）のため後方互換
+- `parse_extraction_response` の戻り値変更は全呼び出し元で対応済み
