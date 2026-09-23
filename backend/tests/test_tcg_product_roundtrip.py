@@ -56,6 +56,13 @@ def test_codecs_keep_exact_words_and_spreadsheet_prefixes():
     assert svc.decode_words(svc.encode_words([""])) == [""]
 
 
+def test_escape_cell_handles_none():
+    assert svc.escape_cell(None) == ""
+    assert svc.escape_cell("") == ""
+    assert svc.escape_cell("normal") == "normal"
+    assert svc.escape_cell("=cmd") == "'=cmd"
+
+
 def test_large_cell_limit_and_failure_restore():
     limit = csv.field_size_limit()
     assert svc.read_records(b"a" * svc.MAX_BYTES) == [["a" * svc.MAX_BYTES]]
