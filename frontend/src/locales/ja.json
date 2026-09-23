@@ -315,7 +315,14 @@
     "loadError": "データの取得に失敗しました",
     "fetchNow": "今すぐ取得",
     "fetchStarted": "取得タスクを開始しました",
-    "fetchFailed": "取得タスクの開始に失敗しました"
+    "fetchFailed": "取得タスクの開始に失敗しました",
+    "allTypes": "全種別",
+    "typePack": "パック",
+    "typeCarton": "カートン",
+    "typeShrink": "シュリンク有り",
+    "typeNoShrink": "シュリンク無し",
+    "typeSpecialSet": "スペシャルセット",
+    "typeFilter": "種別"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"

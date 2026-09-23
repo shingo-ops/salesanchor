@@ -315,7 +315,14 @@
     "loadError": "Failed to load data",
     "fetchNow": "Fetch Now",
     "fetchStarted": "Fetch task started",
-    "fetchFailed": "Failed to start fetch task"
+    "fetchFailed": "Failed to start fetch task",
+    "allTypes": "All types",
+    "typePack": "Pack",
+    "typeCarton": "Carton",
+    "typeShrink": "Shrink-wrapped",
+    "typeNoShrink": "No shrink wrap",
+    "typeSpecialSet": "Special set",
+    "typeFilter": "Type"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
