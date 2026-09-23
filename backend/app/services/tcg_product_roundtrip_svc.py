@@ -17,7 +17,7 @@ from app.services.tcg_product_import_svc import CSV_COLUMNS, LOOKUP_ARGS, LOOKUP
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
-COLUMNS = ["product_code", "revision", *CSV_COLUMNS]
+COLUMNS = ["product_id", "revision", *CSV_COLUMNS]
 MAX_BYTES = 2 * 1024 * 1024
 WORDS = {"search_keywords": "product_search_keywords", "exclude_keywords": "product_exclude_keywords"}
 # Phase 3 SSOT: these lookup tables moved to public schema (INTEGER PK).
@@ -94,7 +94,7 @@ def read_records(raw: bytes) -> list[list[str]]:
 
 def is_update(raw: bytes) -> bool:
     records = read_records(raw)
-    return bool(records and any(c in records[0] for c in ("product_code", "revision")))
+    return bool(records and any(c in records[0] for c in ("product_id", "product_code", "revision")))
 
 
 def revision(snapshot: dict) -> str:
@@ -131,9 +131,9 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
         text(
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
             f"{','.join(keyword_sql)} FROM public.products p {' '.join(joins)} "
-            "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like) "
+            "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.id::text ILIKE :like) "
             "AND (CAST(:work_id AS INTEGER) IS NULL OR p.work_id = CAST(:work_id AS INTEGER)) "
-            "ORDER BY p.release_date DESC NULLS LAST,p.product_code DESC"
+            "ORDER BY p.release_date DESC NULLS LAST,p.id DESC"
         ),
         {"like": "%" + query.strip() + "%", "work_id": work_id_int},
     )
@@ -162,7 +162,7 @@ def values(snapshot: dict) -> dict[str, str]:
         result[field] = str(product.get(product_field) or "")
     result.update({key: str(snapshot["refs"].get(key) or "") for key in _ALL_REF_COLUMNS})
     result.update({key: encode_words([word["keyword"] for word in snapshot[key]]) for key in WORDS})
-    return {"product_code": product["product_code"], "revision": revision(snapshot), **result}
+    return {"product_id": str(product["id"]), "revision": revision(snapshot), **result}
 
 
 async def export_csv(db: AsyncSession, query: str = "", work_id: str | None = None) -> bytes:
@@ -198,7 +198,7 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     if len(records) == 1:
         response["file_errors"] = ["CSV_EMPTY"]
         return response, []
-    current = {s["product"]["product_code"]: s for s in await snapshots(db)}
+    current = {str(s["product"]["id"]): s for s in await snapshots(db)}
     references = {}
     # work_code → public.type_master (SSOT, INTEGER PK)
     work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.type_master r WHERE r.is_active=TRUE"))
@@ -220,14 +220,14 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
             "row_no": str(number),
             "japanese_title": row["japanese_title"],
             "mark": row["mark"],
-            "product_code": row["product_code"],
+            "product_id": row["product_id"],
             "action": "unchanged",
             "changes": [],
             "blocking": [],
             "warnings": [],
         }
         errors = item["blocking"]
-        code = row["product_code"]
+        code = row["product_id"]
         if code in seen:
             errors.append("ROUNDTRIP_DUPLICATE_CODE")
         seen.add(code)
@@ -374,7 +374,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                     "title": row["japanese_title"],
                     "mark": row["mark"],
                     "result": row["action"],
-                    "code": row["product_code"],
+                    "code": row["product_id"],
                     "messages": json.dumps(row["changes"], ensure_ascii=False),
                 },
             )

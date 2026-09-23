@@ -147,7 +147,7 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         masters["products"] = _records(
             session,
             "SELECT to_jsonb(jsonb_build_object("
-            "'code', p.product_code, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
+            "'id', p.id::text, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
             ")) FROM public.products p",
             {},
         )
@@ -158,9 +158,9 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
             "product_ids": product_ids, "units": units, "search": search, "exclude": exclude,
             "categories": categories, "normalization": analyzer.load_normalization_rules(session),
             "works": analyzer.load_work_master(session),
-            "work_ids": {p["code"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
-            "classes": {p["code"]: ("Box" if categories[p["code"]] in {"箱系", "箱系大"} else "")
-                        if p["code"] in categories else (p["category_class"] or "")
+            "work_ids": {p["id"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
+            "classes": {p["id"]: ("Box" if categories[p["id"]] in {"箱系", "箱系大"} else "")
+                        if p["id"] in categories else (p["category_class"] or "")
                         for p in masters["products"] if p["is_active"]},
         }
         reference = load_work_reference(session, "public")

@@ -276,7 +276,7 @@ def recover_unit_from_product_name(
                 ar.product_id,
                 ei.raw_unit,
                 ei.raw_product_name,
-                tp.product_code      AS product_code,
+                tp.id::text          AS product_code,
                 tp.name              AS japanese_title
             FROM {tenant_schema}.analysis_results ar
             JOIN {tenant_schema}.extraction_items ei

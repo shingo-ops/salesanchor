@@ -42,15 +42,15 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-async def _snapshot(db: AsyncSession, code: str) -> dict[str, Any]:
+async def _snapshot(db: AsyncSession, product_id: int) -> dict[str, Any]:
     result = await db.execute(text(
         "SELECT row_to_json(p) AS product, "
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
         "FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
         "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
         "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
-        "FROM public.products p WHERE p.product_code=:code"
-    ), {"code": code})
+        "FROM public.products p WHERE p.id=:pid"
+    ), {"pid": product_id})
     row = result.mappings().one_or_none()
     if row is None:
         raise ProductDetailError(404, "PRODUCT_DETAIL_NOT_FOUND")
@@ -104,19 +104,19 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
     return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
 
 
-async def get_product_detail(db: AsyncSession, code: str) -> dict[str, Any]:
-    return await _response(db, await _snapshot(db, code))
+async def get_product_detail(db: AsyncSession, product_id: int) -> dict[str, Any]:
+    return await _response(db, await _snapshot(db, product_id))
 
 
 async def update_product_detail(
-    db: AsyncSession, code: str, values: dict[str, Any], revision: str, actor: str,
+    db: AsyncSession, product_id: int, values: dict[str, Any], revision: str, actor: str,
 ) -> dict[str, Any]:
     """Serialize writes per product; reject stale drafts and roll back all failures."""
     try:
         await db.execute(text(
-            "SELECT id FROM public.products WHERE product_code=:code FOR UPDATE"
-        ), {"code": code})
-        before = await _snapshot(db, code)
+            "SELECT id FROM public.products WHERE id=:pid FOR UPDATE"
+        ), {"pid": product_id})
+        before = await _snapshot(db, product_id)
         if _revision(before) != revision:
             raise ProductDetailError(409, "PRODUCT_DETAIL_CONFLICT")
         product = before["product"]
@@ -190,7 +190,7 @@ async def update_product_detail(
                     "VALUES (:pid,:word,:position)"
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
-        after = await _snapshot(db, code)
+        after = await _snapshot(db, product_id)
         _audit_pid = str(uuid4())
         await db.execute(text(
             f"INSERT INTO {TCG_SCHEMA}.audit_log "
