@@ -17,7 +17,9 @@ from app.services.tcg_work_reference import (
     reference_digest,
     validate_work_id,
 )
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 PROMPT_VERSION = "work-id-comparison-v1"
 HEADER = "ITEM_ID｜WORK_ID"
@@ -70,9 +72,17 @@ def parse_decisions(response: str, expected_ids: list[str], reference: dict) -> 
             raise ComparisonError("UNKNOWN_OR_DUPLICATE_ITEM")
         _uuid(item_id)
         try:
-            _wid = validate_work_id(work_id or None, reference)
+            raw_wid = work_id or None
+            _wid = validate_work_id(raw_wid, reference)
+            # validate_work_id returns None for both empty (intentional null) and
+            # invalid values. For comparison decisions, a non-empty value that fails
+            # validation means the model produced an invalid work_id — reject it.
+            if raw_wid is not None and _wid is None:
+                raise ComparisonError("INVALID_WORK_ID")
             # match_pid_with_work and product_work_ids expect str; convert for consistency
             result[item_id] = str(_wid) if _wid is not None else None
+        except ComparisonError:
+            raise
         except (ValueError, TypeError, KeyError):
             raise ComparisonError("INVALID_WORK_ID") from None
     if set(result) != set(expected_ids):
@@ -116,14 +126,28 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
         items = _records(session, f"SELECT to_jsonb(i) FROM {TCG_SCHEMA}.extraction_items i {join}", params)
         analyses = _records(session, f"SELECT to_jsonb(a) FROM {TCG_SCHEMA}.analysis_results a JOIN {TCG_SCHEMA}.extraction_items i ON i.id=a.extraction_item_id {join}", params)
         corrections = _records(session, f"SELECT to_jsonb(c) FROM {TCG_SCHEMA}.item_corrections c JOIN {TCG_SCHEMA}.extraction_items i ON i.id=c.extraction_item_id {join}", params)
-        # Strict table reads precede loaders with legacy missing-table fallback.
-        masters = {name: _records(session, f"SELECT to_jsonb(t) FROM {TCG_SCHEMA}.{name} t", {}) for name in MASTER_TABLES}
-        masters["tcg_type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.tcg_type_master t", {})
+        # ADR-156 Phase 5: all MASTER_TABLES now read from public schema (SSOT).
+        # tenant_004 copies are dropped by migration 20260921_130000_drop_tenant004_master_copies.sql.
+        _PUBLIC_MASTER = frozenset({
+            "tcg_normalization_rules",
+            "tcg_product_categories",
+            "conditions",
+            "units",
+            "condition_aliases",
+            "unit_aliases",
+            "product_search_keywords",
+            "product_exclude_keywords",
+        })
+        masters = {
+            name: _records(session, f"SELECT to_jsonb(t) FROM {'public' if name in _PUBLIC_MASTER else TCG_SCHEMA}.{name} t", {})
+            for name in MASTER_TABLES
+        }
+        masters["type_master"] = _records(session, "SELECT to_jsonb(t) FROM public.type_master t", {})
         # public.products is outside TCG_SCHEMA; read separately with renamed columns for compatibility
         masters["products"] = _records(
             session,
             "SELECT to_jsonb(jsonb_build_object("
-            "'code', p.product_code, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
+            "'id', p.id::text, 'is_active', p.is_active, 'work_id', p.work_id, 'category_class', p.category_class"
             ")) FROM public.products p",
             {},
         )
@@ -134,12 +158,12 @@ def read_snapshot(session_factory: Callable, import_id: str) -> dict:
             "product_ids": product_ids, "units": units, "search": search, "exclude": exclude,
             "categories": categories, "normalization": analyzer.load_normalization_rules(session),
             "works": analyzer.load_work_master(session),
-            "work_ids": {p["code"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
-            "classes": {p["code"]: ("Box" if categories[p["code"]] in {"箱系", "箱系大"} else "")
-                        if p["code"] in categories else (p["category_class"] or "")
+            "work_ids": {p["id"]: str(p["work_id"]) if p["work_id"] else None for p in masters["products"] if p["is_active"]},
+            "classes": {p["id"]: ("Box" if categories[p["id"]] in {"箱系", "箱系大"} else "")
+                        if p["id"] in categories else (p["category_class"] or "")
                         for p in masters["products"] if p["is_active"]},
         }
-        reference = load_work_reference(session, TCG_SCHEMA)
+        reference = load_work_reference(session, "public")
         if session.execute(text("SHOW transaction_read_only")).scalar_one() != "on":
             raise ComparisonError("READ_ONLY_LOST")
         data = json.loads(canonical(dict(import_id=import_id, import_job=imports[0], links=links,

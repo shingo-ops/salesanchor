@@ -29,8 +29,8 @@ logger = logging.getLogger(__name__)
 
 MIRROR_SPREADSHEET_ID = "1IBIpge6Qz2arq93OHmRFnCGBMj2kVhrgEjtY8c5ecus"
 
-# TCG解析システムは tenant_004 専用スキーマ。全SQLはこの定数で修飾する
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 _SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
@@ -111,7 +111,7 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 
     result = await db.execute(text("""
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             p.category_class AS series_name,
             NULL AS category,
@@ -121,7 +121,7 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
             NULL AS standard_purchase_price,
             NULL AS note
         FROM public.products p
-        ORDER BY p.product_code
+        ORDER BY p.id
     """))
     rows = result.fetchall()
     headers = [
@@ -135,24 +135,24 @@ async def _fetch_products(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             'search' AS keyword_type,
             k.keyword
-        FROM {TCG_SCHEMA}.product_search_keywords k
+        FROM public.product_search_keywords k
         JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.product_code, k.keyword
+        ORDER BY p.id, k.keyword
         UNION ALL
         SELECT
-            p.product_code AS product_id,
+            p.id::text AS product_id,
             p.name AS product_name,
             'exclude',
             k.keyword
-        FROM {TCG_SCHEMA}.product_exclude_keywords k
+        FROM public.product_exclude_keywords k
         JOIN public.products p ON p.id = k.product_id
-        ORDER BY p.product_code, k.keyword
+        ORDER BY p.id, k.keyword
     """))
     rows = result.fetchall()
     headers = ["product_id", "product_name", "keyword_type", "keyword"]
@@ -163,7 +163,7 @@ async def _fetch_keywords(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             ps.supplier_code AS code,
             ps.name,
@@ -171,7 +171,7 @@ async def _fetch_suppliers(db: Any) -> tuple[list[str], list[list]]:
             sc.channel_type,
             sc.channel_identifier
         FROM public.suppliers ps
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
+        LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
         ORDER BY ps.supplier_code, sc.channel_type
     """))
     rows = result.fetchall()
@@ -191,7 +191,7 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
             COUNT(DISTINCT ar.id) AS analysis_results,
             SUM(CASE WHEN ar.needs_review THEN 1 ELSE 0 END) AS needs_review
         FROM public.suppliers ps
-        LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.supplier_id = ps.id
+        LEFT JOIN public.supplier_channels sc ON sc.supplier_id = ps.id
         LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.supplier_channel_id = sc.id
         LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = sm.id
         LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id
@@ -208,7 +208,7 @@ async def _fetch_supplier_summary(db: Any) -> tuple[list[str], list[list]]:
 async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
     from sqlalchemy import text
 
-    result = await db.execute(text(f"""
+    result = await db.execute(text("""
         SELECT
             t.table_name,
             c.column_name,
@@ -218,14 +218,20 @@ async def _fetch_db_structure(db: Any) -> tuple[list[str], list[list]]:
         FROM information_schema.tables t
         JOIN information_schema.columns c
             ON c.table_name = t.table_name AND c.table_schema = t.table_schema
-        WHERE t.table_schema = '{TCG_SCHEMA}'
-          AND t.table_name IN (
-            'supplier_channels',
-            'product_search_keywords', 'product_exclude_keywords',
-            'units', 'unit_aliases', 'conditions', 'condition_aliases',
-            'source_messages', 'extraction_jobs', 'extraction_items',
-            'analysis_results', 'import_jobs', 'audit_log'
-          )
+        WHERE (
+            t.table_schema = 'public'
+            AND t.table_name IN (
+                'supplier_channels', 'source_messages', 'extraction_jobs',
+                'extraction_items', 'analysis_results', 'import_jobs', 'audit_log'
+            )
+        -- ADR-156 Phase 5: keyword/alias master tables moved to public schema (SSOT)
+        ) OR (
+            t.table_schema = 'public'
+            AND t.table_name IN (
+                'product_search_keywords', 'product_exclude_keywords',
+                'units', 'unit_aliases', 'conditions', 'condition_aliases'
+            )
+        )
         ORDER BY t.table_name, c.ordinal_position
     """))
     rows = result.fetchall()

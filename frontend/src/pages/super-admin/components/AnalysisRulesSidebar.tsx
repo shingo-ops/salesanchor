@@ -8,10 +8,24 @@
 import { useTranslation } from "react-i18next";
 
 export type AnalysisRulesSidebarKey =
+  | "dashboard"
+  | "import"
   | "accuracy-management"
   | "needs-review"
-  | "sold-out"
-  | "date-rule";
+  | "rule-management"
+  | "product-master"
+  | "product-categories-master"
+  | "product-kinds-master"
+  | "status-master"
+  | "supplier-master"
+  | "conditions-master"
+  | "unit-master"
+  | "note-master"
+  | "product-lines-master"
+  | "product-formats-master"
+  | "quantity-units-master"
+  | "condition-defs-master"
+  | "weight-classes-master";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -59,6 +73,8 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         <span className="hub-subnav-title">
           {t("analysisRules.sidebar.groupAnalysisStatus")}
         </span>
+        {navItem("dashboard", t("analysisRules.sidebar.dashboard"))}
+        {navItem("import", t("analysisRules.sidebar.import"))}
         {navItem("accuracy-management", t("analysisRules.sidebar.accuracyManagement"))}
         {navItem("needs-review", t("analysisRules.sidebar.needsReview"), needsReviewCount)}
       </div>
@@ -68,8 +84,27 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         <span className="hub-subnav-title">
           {t("analysisRules.sidebar.groupRuleManagement")}
         </span>
-        {navItem("sold-out", t("analysisRules.sidebar.soldOut"))}
-        {navItem("date-rule", t("analysisRules.sidebar.dateRule"))}
+        {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
+      </div>
+
+      {/* マスタ管理グループ */}
+      <div className="hub-subnav-section">
+        <span className="hub-subnav-title">
+          {t("analysisRules.sidebar.groupMasterManagement")}
+        </span>
+        {navItem("product-master", t("analysisRules.sidebar.productMaster"))}
+        {navItem("product-categories-master", t("analysisRules.sidebar.productCategoriesMaster"))}
+        {navItem("product-kinds-master", t("analysisRules.sidebar.productKindsMaster"))}
+        {navItem("status-master", t("analysisRules.sidebar.statusMaster"))}
+        {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
+        {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
+        {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
+        {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
+        {navItem("product-lines-master", t("analysisRules.sidebar.productLinesMaster"))}
+        {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
+        {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
+        {navItem("condition-defs-master", t("analysisRules.sidebar.conditionDefsMaster"))}
+        {navItem("weight-classes-master", t("analysisRules.sidebar.weightClassesMaster"))}
       </div>
     </nav>
   );

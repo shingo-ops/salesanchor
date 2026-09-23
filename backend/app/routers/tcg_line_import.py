@@ -42,7 +42,6 @@ from app.database import get_db
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
-    TCG_SCHEMA,
     _enqueue_extraction,
     _write_source_messages,
     build_provider_entries,
@@ -51,6 +50,10 @@ from app.services.tcg_line_import_svc import (
 )
 
 router = APIRouter()
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 
 # ---------------------------------------------------------------------------
@@ -485,6 +488,9 @@ async def resolve_supplier(
             text("""
                 INSERT INTO public.suppliers (name, line_name, supplier_type, is_active)
                 VALUES (:name, :line_name, 'corporate', TRUE)
+                ON CONFLICT (line_name)
+                    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL
+                DO UPDATE SET line_name = EXCLUDED.line_name
                 RETURNING id
             """),
             {"name": body.display_name, "line_name": body.display_name},

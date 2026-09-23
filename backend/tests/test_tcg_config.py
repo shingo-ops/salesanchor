@@ -2,7 +2,7 @@
 TCG スキーマ設定モジュール（tcg_config.py）のユニットテスト。
 
 テスト観点:
-  1. TCG_SCHEMA 未設定時は tenant_004 がデフォルト
+  1. TCG_SCHEMA 未設定時は public がデフォルト（public スキーマ移行済み）
   2. TCG_SCHEMA=tenant_006 のとき tenant_006 が返る
   3. 不正な値（tenant_abc, 任意文字列, 空文字）で RuntimeError
   4. サービスモジュールが TCG_SCHEMA を使って正しい SQL を組み立てる（monkeypatch）
@@ -40,10 +40,10 @@ def _reload_tcg_config(env_value: str | None) -> str:
         return mod.TCG_SCHEMA
 
 
-def test_tcg_config_default_is_tenant_004():
-    """TCG_SCHEMA 未設定時はデフォルト tenant_004 が返る。"""
+def test_tcg_config_default_is_public():
+    """TCG_SCHEMA 未設定時はデフォルト public が返る（public スキーマ移行済み）。"""
     schema = _reload_tcg_config(None)
-    assert schema == "tenant_004"
+    assert schema == "public"
 
 
 def test_tcg_config_custom_schema():
@@ -59,7 +59,6 @@ def test_tcg_config_custom_schema():
         "tenant_04",        # 桁数不足
         "tenant_0004",      # 桁数超過
         "TENANT_004",       # 大文字
-        "public",           # 任意文字列
         "",                 # 空文字
         "tenant_004 ",      # 末尾スペース
         "tenant-004",       # ハイフン

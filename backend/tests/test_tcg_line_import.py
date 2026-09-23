@@ -512,8 +512,9 @@ async def test_source_message_insert_before_update_supersede():
     先に実行されること。
 
     根拠:
-      backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231
-        superseded_by UUID REFERENCES tenant_004.source_messages(id)
+      migrations/20260921_110000_pipeline_tables_public.sql（public へ移行後の正本。
+      移行前は backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231）
+        superseded_by UUID REFERENCES public.source_messages(id)
       DEFERRABLE 未指定 = NOT DEFERRABLE INITIALLY IMMEDIATE。
       UPDATE で new_sm_id を参照する前に INSERT が済んでいない場合、
       ForeignKeyViolation が発生する。
@@ -562,7 +563,7 @@ async def test_source_message_insert_before_update_supersede():
         window_hours=0,  # フィルタなし: 全メッセージを取り込む
     )
 
-    from app.tcg_config import TCG_SCHEMA as _SCHEMA
+    from app.services.tcg_line_import_svc import TCG_SCHEMA as _SCHEMA
 
     insert_pos = next(
         (i for i, sql in enumerate(call_sqls) if f"INSERT INTO {_SCHEMA}.source_messages" in sql),
@@ -886,6 +887,92 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
     return db
 
 
+async def test_missing_supplier_channel_is_created_and_import_continues():
+    """仕入元はあるのに LINE チャネルが無い場合、その場で作って取り込みを続けること。
+
+    2026-09-21 の public 移行で supplier_channels の行が引き継がれず、既存仕入元からの
+    メッセージが全て HTTP 500（ValueError: Resolved supplier has no active LINE channel）
+    になった。その再発防止。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    sqls: list[str] = []
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        sqls.append(sql)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = (4321,)      # チャネル作成のための仕入元ID
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None          # ← チャネルが無い状態を再現
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        result = await import_line_export(
+            db=db, filename="test.txt", export_text=export_text,
+            uploaded_by=None, window_hours=0,
+        )
+
+    assert result["review_status"] == "ok"
+    assert any("INSERT INTO public.supplier_channels" in s for s in sqls), \
+        "チャネルが無いときに supplier_channels が作られていない"
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
+        "チャネル作成後に source_messages が書かれていない"
+
+
+async def test_supplier_missing_from_public_still_raises():
+    """仕入元そのものが public.suppliers に無い場合は、従来どおり失敗させること
+    （黙って作ると、正体不明の仕入元がマスタに増えるため）。"""
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = None          # 仕入元も無い
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        with pytest.raises(ValueError, match="missing from public.suppliers"):
+            await import_line_export(
+                db=db, filename="test.txt", export_text=export_text,
+                uploaded_by=None, window_hours=0,
+            )
+
+
 async def test_import_zero_unresolved_writes_source_messages():
     """
     未解決0件のとき source_messages が書かれ、エンキューされ、
@@ -917,7 +1004,7 @@ async def test_import_zero_unresolved_writes_source_messages():
 
     assert result["review_status"] == "ok"
     assert result["unresolved_count"] == 0
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called_once()
     db.commit.assert_called_once()
@@ -956,7 +1043,7 @@ async def test_import_unresolved_auto_creates_supplier_and_writes_source_message
     assert result["unresolved_count"] == 0, "自動登録後は unresolved_count=0 になること"
     assert any("INSERT INTO public.suppliers" in s for s in sqls), \
         "未登録仕入元の自動 INSERT が実行されていない"
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "自動登録後に source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called_once()
     db.commit.assert_called_once()
@@ -996,7 +1083,7 @@ async def test_import_partial_unresolved_auto_creates_and_writes_all():
     assert result["unresolved_count"] == 0
     assert any("INSERT INTO public.suppliers" in s for s in sqls), \
         "未登録仕入元の自動 INSERT が実行されていない"
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called()
 

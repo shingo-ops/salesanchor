@@ -42,3 +42,6 @@ gspread>=6.0,<7.0
 # Sprint 3 (monitoring): FastAPI メトリクスを /metrics エンドポイントで Prometheus に公開
 # rate_limit.py / audit.py の _SKIP_PATHS で除外済み
 prometheus-client==0.25.0
+# ADR-157: 買取相場ログ（買取ホムラ HTML スクレイピング用）
+beautifulsoup4>=4.12.0
+lxml>=5.0.0

@@ -37,9 +37,15 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.models import User
 from app.services import tcg_product_roundtrip_svc as roundtrip
-from app.services.tcg_product_detail_svc import ProductDetailError, get_product_detail, update_product_detail
+from app.services.tcg_product_detail_svc import (
+    ProductDetailError,
+    get_product_detail,
+    update_product_detail,
+)
 from app.services.tcg_product_import_svc import commit_import, preview
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 router = APIRouter()
 
@@ -52,7 +58,7 @@ MAX_UPLOAD_BYTES = 2 * 1024 * 1024
 
 
 class ProductListItem(BaseModel):
-    code: str
+    id: int
     japanese_title: str
     english_title: str = ""
     mark: str = ""
@@ -93,7 +99,7 @@ async def list_products(
     _user: User = Depends(require_super_admin),
 ) -> ProductListResponse:
     like = "%" + query.strip() + "%" if query.strip() else "%"
-    condition = "(p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like)"
+    condition = "(p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.id::text ILIKE :like)"
     params = {"like": like}
     if work_id is not None:
         condition += " AND p.work_id = :work_id"
@@ -108,20 +114,20 @@ async def list_products(
 
     rows = await db.execute(
         text(
-            f"SELECT p.product_code, p.name, p.name_en, p.mark, p.release_date, "
-            f"(SELECT count(*) FROM {TCG_SCHEMA}.product_search_keywords k "
+            f"SELECT p.id, p.name, p.name_en, p.mark, p.release_date, "
+            f"(SELECT count(*) FROM public.product_search_keywords k "
             f"WHERE k.product_id = p.id) AS keyword_count, "
-            f"(SELECT count(*) FROM {TCG_SCHEMA}.product_exclude_keywords k "
+            f"(SELECT count(*) FROM public.product_exclude_keywords k "
             f"WHERE k.product_id = p.id) AS exclude_keyword_count "
             f"FROM public.products p "
             f"WHERE {condition} "
-            f"ORDER BY p.release_date DESC NULLS LAST, p.product_code DESC LIMIT :limit OFFSET :offset"
+            f"ORDER BY p.release_date DESC NULLS LAST, p.id DESC LIMIT :limit OFFSET :offset"
         ),
         {**params, "limit": limit, "offset": offset},
     )
     items = [
         ProductListItem(
-            code=str(r[0]),
+            id=int(r[0]),
             japanese_title=str(r[1] or ""),
             english_title=str(r[2] or ""),
             mark=str(r[3] or ""),
@@ -132,7 +138,7 @@ async def list_products(
         for r in rows.fetchall()
     ]
     work_rows = await db.execute(text(
-        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.tcg_type_master s "
+        "SELECT s.id, s.code, s.name_ja AS display_name, s.name_en AS alt_name FROM public.type_master s "
         "WHERE s.is_active = TRUE OR EXISTS (SELECT 1 FROM public.products p "
         "WHERE p.work_id = s.id) ORDER BY s.code ASC"
     ))
@@ -247,14 +253,14 @@ async def commit_import_endpoint(
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
-@router.get("/tcg/products/detail/{product_code}", summary="商品マスタ詳細（DETAIL-01）")
+@router.get("/tcg/products/detail/{product_id}", summary="商品マスタ詳細（DETAIL-01）")
 async def product_detail(
-    product_code: str,
+    product_id: int,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_super_admin),
 ) -> dict:
     try:
-        return await get_product_detail(db, product_code)
+        return await get_product_detail(db, product_id)
     except ProductDetailError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
 
@@ -270,10 +276,10 @@ class ProductDetailUpdate(BaseModel):
     english_title: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
     mark: Annotated[str, StringConstraints(strip_whitespace=True, max_length=5000)]
     release_date: str | None
-    division_id: UUID | None
+    product_kind_id: int | None = None
     work_id: int | None = None
     manufacturer_id: UUID | None
-    product_category_id: UUID | None
+    product_category_id: int | None
     search_keywords: list[DetailWord] = Field(max_length=1000)
     exclude_keywords: list[DetailWord] = Field(max_length=1000)
 
@@ -285,9 +291,9 @@ class ProductDetailUpdate(BaseModel):
         return value
 
 
-@router.put("/tcg/products/detail/{product_code}", summary="商品マスタ詳細保存（DETAIL-01）")
+@router.put("/tcg/products/detail/{product_id}", summary="商品マスタ詳細保存（DETAIL-01）")
 async def save_product_detail(
-    product_code: str,
+    product_id: int,
     payload: ProductDetailUpdate,
     db: AsyncSession = Depends(get_db),
     user: User = Depends(require_super_admin),
@@ -295,7 +301,7 @@ async def save_product_detail(
     values = payload.model_dump(mode="json", exclude={"revision"})
     try:
         return await update_product_detail(
-            db, product_code, values, payload.revision, str(user.email or user.id or ""),
+            db, product_id, values, payload.revision, str(user.email or user.id or ""),
         )
     except ProductDetailError as exc:
         raise HTTPException(status_code=exc.status, detail=str(exc)) from exc
@@ -313,22 +319,31 @@ async def get_product_lookups(
 ) -> dict:
     """作成フォーム用の分類マスタ選択肢を返す。"""
     lookups: dict[str, list[dict]] = {}
-    # work_id → public.tcg_type_master (SSOT)
+    # work_id → public.type_master (SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE ORDER BY name_ja"
     ))
     lookups["work_id"] = [{"id": r.id, "name": r.name} for r in work_rows.fetchall()]
+    # product_kind_id → public.product_kinds (SSOT, INTEGER PK)
+    pk_rows = await db.execute(text(
+        "SELECT id::text AS id, name AS name "
+        "FROM public.product_kinds "
+        "WHERE is_active = TRUE ORDER BY name"
+    ))
+    lookups["product_kind_id"] = [{"id": r.id, "name": r.name} for r in pk_rows.fetchall()]
+    # Step 4/5: All referenced tables are now in public schema (tcg_manufacturers promoted
+    # alongside tcg_product_categories). TCG_SCHEMA resolves to "public".
     for key, table, name_col in [
-        ("division_id", "tcg_major_categories", "display_name"),
         ("manufacturer_id", "tcg_manufacturers", "display_name"),
         ("product_category_id", "tcg_product_categories", "display_name"),
     ]:
+        schema = TCG_SCHEMA
         rows = await db.execute(
             text(
                 f"SELECT id::text AS id, {name_col} AS name "
-                f"FROM {TCG_SCHEMA}.{table} "
+                f"FROM {schema}.{table} "
                 f"WHERE is_active = TRUE "
                 f"ORDER BY {name_col}"
             )
@@ -347,7 +362,7 @@ class CreateProductBody(BaseModel):
     mark: str = ""
     english_title: str = ""
     release_date: str | None = None
-    division_id: str
+    product_kind_id: str
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -366,7 +381,7 @@ async def create_product_standalone(
         db,
         extraction_item_id="",
         source_message_id="",
-        division_id=body.division_id,
+        product_kind_id=body.product_kind_id,
         work_id=body.work_id,
         manufacturer_id=body.manufacturer_id,
         product_category_id=body.product_category_id,
@@ -383,9 +398,9 @@ async def create_product_standalone(
     return result
 
 
-@router.delete("/tcg/products/detail/{product_code}", summary="商品マスタ削除（DETAIL-02）")
+@router.delete("/tcg/products/detail/{product_id}", summary="商品マスタ削除（DETAIL-02）")
 async def delete_product_detail(
-    product_code: str,
+    product_id: int,
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(require_super_admin),
 ) -> dict:
@@ -396,16 +411,14 @@ async def delete_product_detail(
     - analysis_results: product_id を NULL に設定してから削除
     - inventory, parse_logs, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
     """
-    # 商品を検索
+    # 商品の存在確認
     row = await db.execute(
-        text("SELECT id FROM public.products WHERE product_code = :code"),
-        {"code": product_code},
+        text("SELECT id FROM public.products WHERE id = :pid"),
+        {"pid": product_id},
     )
     product = row.fetchone()
     if product is None:
         raise HTTPException(status_code=404, detail="PRODUCT_NOT_FOUND")
-
-    product_id = product.id
 
     # analysis_results の product_id を NULL に設定（NO ACTION制約の事前対処）
     await db.execute(
@@ -431,4 +444,4 @@ async def delete_product_detail(
     from app.services.tenant_context import reset_tenant_context
     await reset_tenant_context(db)
 
-    return {"ok": True, "deleted": product_code}
+    return {"ok": True, "deleted": product_id}

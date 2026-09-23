@@ -109,8 +109,8 @@ class SupplierAliasResponse(SupplierAliasBase):
 # tcg_series_master
 # ============================================================================
 
-# ADR-083: TCG 種別は public.tcg_type_master で管理（固定リスト廃止）。
-# tcg_type の値検証は DB 側（tcg_type_master）に委ねる。code は安定キーのため不変。
+# ADR-083: TCG 種別は public.type_master で管理（固定リスト廃止）。
+# tcg_type の値検証は DB 側（type_master）に委ねる。code は安定キーのため不変。
 
 
 class TcgTypeBase(BaseModel):
@@ -128,15 +128,17 @@ class TcgTypeCreate(TcgTypeBase):
 
 
 class TcgTypeUpdate(BaseModel):
-    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグのみ更新可。
+    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグ・大分類のみ更新可。
     name_ja: Optional[str] = Field(default=None, min_length=1, max_length=100)
     name_en: Optional[str] = Field(default=None, max_length=100)
     sort_order: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    kind_id: Optional[int] = None
 
 
 class TcgTypeResponse(TcgTypeBase):
     id: int
+    kind_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -397,3 +399,203 @@ class SupplierPromptResponse(BaseModel):
 class SupplierPromptUpdate(BaseModel):
     prompt: str = Field(default="", max_length=50000)
     is_active: bool = True
+
+
+# ============================================================================
+# conditions_master: 状態マスタ (public.conditions)
+# ============================================================================
+
+
+class CentralConditionBase(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=100)
+    app_kubun: Optional[str] = None
+    is_active: bool = True
+    priority: Optional[int] = None
+    search_kw: str = ""
+    exclude_kw: str = ""
+
+
+class CentralConditionCreate(CentralConditionBase):
+    pass
+
+
+class CentralConditionUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    app_kubun: Optional[str] = None
+    is_active: Optional[bool] = None
+    priority: Optional[int] = None
+    search_kw: Optional[str] = None
+    exclude_kw: Optional[str] = None
+
+
+class CentralConditionResponse(CentralConditionBase):
+    id: int
+    tenant_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# public.units / public.unit_aliases
+# ============================================================================
+
+
+class UnitBase(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: bool = True
+
+
+class UnitCreate(UnitBase):
+    pass
+
+
+class UnitUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class UnitResponse(UnitBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UnitAliasBase(BaseModel):
+    unit_id: int
+    alias_text: str = Field(min_length=1, max_length=500)
+    lang: str = Field(default="ja", min_length=2, max_length=5)
+
+
+class UnitAliasCreate(UnitAliasBase):
+    pass
+
+
+class UnitAliasResponse(UnitAliasBase):
+    id: int
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_status_master
+# ============================================================================
+
+_VALID_MATCH_TYPES = {"REGEX", "LITERAL", "DEFAULT"}
+_VALID_EFFECTS = {"OUTPUT", "EXCLUDE"}
+
+
+class TcgStatusMasterBase(BaseModel):
+    status_id: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=255)
+    search_pattern: str = Field(default="", max_length=1000)
+    exclude_pattern: str = Field(default="", max_length=1000)
+    priority: int = Field(ge=0, le=10000)
+    enabled: bool = True
+    note: str = Field(default="", max_length=1000)
+    match_type: str = Field(min_length=1, max_length=20)
+    effect: str = Field(min_length=1, max_length=20)
+
+    @field_validator("match_type")
+    @classmethod
+    def _validate_match_type(cls, v: str) -> str:
+        if v not in _VALID_MATCH_TYPES:
+            raise ValueError(f"match_type must be one of {sorted(_VALID_MATCH_TYPES)}")
+        return v
+
+    @field_validator("effect")
+    @classmethod
+    def _validate_effect(cls, v: str) -> str:
+        if v not in _VALID_EFFECTS:
+            raise ValueError(f"effect must be one of {sorted(_VALID_EFFECTS)}")
+        return v
+
+
+class TcgStatusMasterCreate(TcgStatusMasterBase):
+    pass
+
+
+class TcgStatusMasterUpdate(BaseModel):
+    status_id: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    search_pattern: Optional[str] = Field(default=None, max_length=1000)
+    exclude_pattern: Optional[str] = Field(default=None, max_length=1000)
+    priority: Optional[int] = Field(default=None, ge=0, le=10000)
+    enabled: Optional[bool] = None
+    note: Optional[str] = Field(default=None, max_length=1000)
+    match_type: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    effect: Optional[str] = Field(default=None, min_length=1, max_length=20)
+
+
+class TcgStatusMasterResponse(TcgStatusMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_note_master
+# ============================================================================
+
+
+class TcgNoteMasterBase(BaseModel):
+    label_ja: str
+    label_en: str
+    enabled: bool = True
+    search_keywords: str = ""
+    exclude_keywords: str = ""
+    category: str = ""
+    priority: int
+    match_type: str = "LITERAL"
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: str) -> str:
+        if v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterCreate(TcgNoteMasterBase):
+    pass
+
+
+class TcgNoteMasterUpdate(BaseModel):
+    label_ja: Optional[str] = None
+    label_en: Optional[str] = None
+    enabled: Optional[bool] = None
+    search_keywords: Optional[str] = None
+    exclude_keywords: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[int] = None
+    match_type: Optional[str] = None
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterResponse(TcgNoteMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)

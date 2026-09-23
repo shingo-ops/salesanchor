@@ -11,6 +11,7 @@
  *   - is_super_admin=false なら 403 メッセージを表示
  */
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import { PageLayout } from "../../components/PageLayout";
@@ -20,6 +21,10 @@ import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { ImportWorkflowPanel } from "../../features/tcg-import-workflow/ImportWorkflowPanel";
 import { DistributionWorkspace } from "../../features/tcg-distribution/DistributionWorkspace";
+import {
+  AnalysisRulesSidebar,
+  type AnalysisRulesSidebarKey,
+} from "./components/AnalysisRulesSidebar";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -66,7 +71,14 @@ interface PendingJobDetail {
 
 export default function TcgLineImportPage() {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
+
+  const handleSidebarChange = (key: AnalysisRulesSidebarKey) => {
+    if (key !== "import") {
+      navigate("/super-admin/analysis-rules");
+    }
+  };
 
   // アップロードフォーム状態
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -237,7 +249,7 @@ export default function TcgLineImportPage() {
 
   if (superAdminLoading) {
     return (
-      <PageLayout titleText={t("tcgLineImport.pageTitle")}>
+      <PageLayout navKey="nav.superAdminAnalysisRules">
         <p style={{ color: "var(--text-secondary)" }}>{t("tcgLineImport.loading")}</p>
       </PageLayout>
     );
@@ -245,7 +257,7 @@ export default function TcgLineImportPage() {
 
   if (!isSuperAdmin) {
     return (
-      <PageLayout titleText={t("tcgLineImport.pageTitle")}>
+      <PageLayout navKey="nav.superAdminAnalysisRules">
         <p style={{ color: "var(--color-error)" }}>
           {t("tcgLineImport.notSuperAdmin")}
         </p>
@@ -258,7 +270,17 @@ export default function TcgLineImportPage() {
   // ---------------------------------------------------------------------------
 
   return (
-    <PageLayout titleText={t("tcgLineImport.pageTitle")} headerAction={selectedImportId ? <Button variant="secondary" onClick={openUpload}>{t("tcgLineImport.newFileDetails")}</Button> : undefined}>
+    <PageLayout
+      navKey="nav.superAdminAnalysisRules"
+      noScroll
+    >
+      <div className="hub-shell">
+        <AnalysisRulesSidebar
+          activeKey="import"
+          onChange={handleSidebarChange}
+        />
+        <div className="hub-content" style={{ overflowY: "auto", padding: "var(--space-6)" }}>
+          {selectedImportId && <div style={{ display: "flex", justifyContent: "flex-end", padding: "var(--space-3) var(--space-4)" }}><Button variant="secondary" onClick={openUpload}>{t("tcgLineImport.newFileDetails")}</Button></div>}
       {selectedImportId && <section style={{ marginBottom: "2rem" }}>
         <h3>{t("pmgWorkflow.title")}</h3>
         <Select
@@ -653,6 +675,8 @@ export default function TcgLineImportPage() {
           </div>
         )}
       </section>
+        </div>
+      </div>
     </PageLayout>
   );
 }

@@ -18,11 +18,26 @@
 -- ============================================================================
 
 DO $$
+DECLARE
+    _relkind CHAR(1);
+    _target  TEXT;
 BEGIN
-    -- ガード: tcg_type_master が存在しない CI ベースラインはスキップ
-    IF to_regclass('public.tcg_type_master') IS NULL THEN
-        RAISE NOTICE 'tcg_type_master not present -- skipping';
+    -- ガード: tcg_type_master も type_master も存在しない CI ベースラインはスキップ
+    IF to_regclass('public.tcg_type_master') IS NULL
+       AND to_regclass('public.type_master') IS NULL THEN
+        RAISE NOTICE 'neither tcg_type_master nor type_master present -- skipping';
         RETURN;
+    END IF;
+
+    -- ADR-156 Phase 2 互換ガード: tcg_type_master が VIEW の場合は type_master を操作
+    SELECT relkind INTO _relkind
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master';
+
+    IF _relkind = 'v' THEN
+        _target := 'type_master';
+    ELSE
+        _target := 'tcg_type_master';
     END IF;
 
     -- =========================================================================
@@ -45,8 +60,8 @@ BEGIN
     END IF;
 
     -- =========================================================================
-    -- Step 2: 重複 tcg_type_master 行を削除
+    -- Step 2: 重複行を削除（ビュー時は type_master から）
     -- =========================================================================
-    DELETE FROM public.tcg_type_master WHERE code IN ('pokemon', 'weiss');
+    EXECUTE format('DELETE FROM public.%I WHERE code IN (''pokemon'', ''weiss'')', _target);
 
 END $$;

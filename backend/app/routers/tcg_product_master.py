@@ -72,7 +72,7 @@ class SearchResponse(BaseModel):
 class DuplicateCheckRequest(BaseModel):
     extraction_item_id: str
     source_message_id: str
-    division_id: str
+    product_kind_id: str = ""
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -90,7 +90,7 @@ class DuplicateCheckResponse(BaseModel):
 class CreateProductRequest(BaseModel):
     extraction_item_id: str
     source_message_id: str
-    division_id: str
+    product_kind_id: str = ""
     work_id: str
     manufacturer_id: str
     product_category_id: str
@@ -221,7 +221,7 @@ async def create_product_master(
             db,
             extraction_item_id=body.extraction_item_id,
             source_message_id=body.source_message_id,
-            division_id=body.division_id,
+            product_kind_id=body.product_kind_id,
             work_id=body.work_id,
             manufacturer_id=body.manufacturer_id,
             product_category_id=body.product_category_id,
@@ -244,11 +244,11 @@ async def create_product_master(
 
 
 @router.post(
-    "/tcg/products/{product_code}/search-keywords",
+    "/tcg/products/{product_id}/search-keywords",
     summary="商品マスタ検索キーワード追加（PARITY-03 Phase 3 B-5）",
 )
 async def add_product_search_keyword(
-    product_code: str,
+    product_id: int,
     body: AddKeywordRequest,
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
@@ -256,7 +256,7 @@ async def add_product_search_keyword(
     try:
         result = await add_search_keyword(
             db,
-            product_code=product_code,
+            product_id=product_id,
             new_keyword=body.new_keyword,
         )
     except ValueError as e:

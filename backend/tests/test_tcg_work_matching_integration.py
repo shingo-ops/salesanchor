@@ -33,7 +33,7 @@ SCHEMA = "tenant_901"
 STRUCTURE = "20260910_160000_tcg_work_evidence.sql"
 HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN"
 NORMAL = "MEGA スタートデッキ100 バトルコレクション"
-# Phase 2 SSOT: tcg_series.code → public.tcg_type_master.code mapping
+# Phase 2 SSOT: tcg_series.code → public.type_master.code mapping
 _SERIES_CODE_TO_TYPE = {
     "IP001": "pokemon_booster_box",
     "IP002": "one_piece",
@@ -227,10 +227,52 @@ $rw$;
 def migrate(cursor):
     cursor.execute(_PUBLIC_PRODUCTS_DDL)
     cursor.execute(_PUBLIC_SUPPLIERS_DDL)
-    # Master SSOT Phase 2: tcg_type_master must exist before code queries it
+    # Master SSOT Phase 2: type_master must exist before code queries it
     cursor.execute((MIGRATIONS / "085_create_tcg_type_master.sql").read_text())
     cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
+    # Seed public.product_kinds so load_lookup_maps() can resolve division codes (DIV01→TCG etc.)
+    cursor.execute("""
+        INSERT INTO public.product_kinds (code, name, display_order, is_active) VALUES
+            ('TCG',    'トレーディングカードゲーム', 10, true),
+            ('FIGURE', 'フィギュア',               20, true),
+            ('GOODS',  'グッズ',                   30, true)
+        ON CONFLICT (code) DO NOTHING
+    """)
+    # ADR-156 Phase 3A: add product_kind_id FK column to public.products
+    cursor.execute((MIGRATIONS / "20260921_120000_add_products_product_kind_id.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
     cursor.execute(_rewire_keyword_fks(SCHEMA))
+    # Master SSOT Phase 3: public schema tables for 9 master tables
+    cursor.execute((MIGRATIONS / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    # Seed public.tcg_product_categories from tenant schema so seed_products() can resolve PC_BOX
+    cursor.execute(f"""
+        INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active)
+        SELECT code, display_name, kubun_type, is_active
+        FROM {SCHEMA}.tcg_product_categories
+        ON CONFLICT (code) DO NOTHING
+    """)
+    # Phase 3 SSOT: seed public.conditions with the standard condition master so the analyzer
+    # can resolve condition_id (INTEGER FK NOT NULL in analysis_results after Phase 3 migration).
+    # Unit seeding is intentionally deferred to test-specific setup (tests like
+    # test_tcg_completion_safety.py seed their own UN-coded units after migrate()).
+    # Condition codes use CN-prefix to avoid conflicts with test fixtures that use C1/C2/C3.
+    cursor.execute("""
+        INSERT INTO public.conditions (code, canonical, priority, app_kubun, search_kw, exclude_kw, is_active) VALUES
+            ('CN0001', 'Case',               4, '箱系大',       '',       '',  true),
+            ('CN0002', 'Damaged case',       2, '箱系大',       'ダメ,傷', '', true),
+            ('CN0003', 'Sealed box',         4, '箱系',         '未開封',  '', true),
+            ('CN0004', 'Damaged sealed box', 2, '箱系',         'ダメ,傷', '', true),
+            ('CN0005', 'No shrink box',      3, '',             'シュリなし', '', true),
+            ('CN0006', 'Opened box',         3, '',             '開封',    '', true),
+            ('CN0007', 'Unsearched pack',    3, '',             '未サーチ', '', true),
+            ('CN0008', 'FLAG_SINGLE',        1, '枚系,単位不明', '単品',   '', true),
+            ('CN0009', 'Opened case',        2, '箱系大',       '開封',    '', true),
+            ('CN0010', 'Searched pack',      2, 'パック系',     'サーチ済み', '', true)
+        ON CONFLICT (code) DO NOTHING
+    """)
+    # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
+    cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
     cursor.execute((MIGRATIONS / STRUCTURE).read_text())
     cursor.execute((MIGRATIONS / "20260912_020000_tcg_resolved_work_id.sql").read_text())
     cursor.execute((MIGRATIONS / "20260914_010000_tcg_extraction_attempts.sql").read_text())
@@ -290,21 +332,21 @@ def seed_products(connection):
         for code, title, work, search, exclude in products:
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
-                SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
-                {SCHEMA}.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
+                SELECT %s,%s,'Box',true,m.id,c.id FROM public.type_master m,
+                public.tcg_product_categories c WHERE m.code=%s AND c.code='PC_BOX' RETURNING id""", (code, title, _SERIES_CODE_TO_TYPE[work]))
             pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, keyword in enumerate(keywords):
-                    cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)", (str(uuid4()), pid, keyword, position))
-        cursor.execute(f"INSERT INTO {SCHEMA}.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
+                    cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,%s)", (pid, keyword, position))
+        cursor.execute("INSERT INTO public.units(code,canonical,kubun,is_active) VALUES ('UN0001','BOX','箱系',true) RETURNING id")
         uid = cursor.fetchone()[0]
-        cursor.execute(f"INSERT INTO {SCHEMA}.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
+        cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,'BOX','ja')", (uid,))
         # ADR-155: 'コロ' exclusion keyword for PM0200 (was in DICTIONARY migration)
-        cursor.execute(f"""INSERT INTO {SCHEMA}.product_exclude_keywords(id,product_id,keyword,position)
-            SELECT %s, p.id, 'コロ', COALESCE(MAX(e.position), -1)+1
-            FROM public.products p LEFT JOIN {SCHEMA}.product_exclude_keywords e ON e.product_id=p.id
+        cursor.execute("""INSERT INTO public.product_exclude_keywords(product_id,keyword,position)
+            SELECT p.id, 'コロ', COALESCE(MAX(e.position), -1)+1
+            FROM public.products p LEFT JOIN public.product_exclude_keywords e ON e.product_id=p.id
             WHERE p.product_code='PM0200'
-            GROUP BY p.id""", (str(uuid4()),))
+            GROUP BY p.id""")
 
 
 def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=False):
@@ -491,24 +533,15 @@ def test_condition_note_master_changes_repeat_partial_and_other_tenant(pg, parti
         if key[0] != "tenant_004":
             assert rows == after[key]
         elif key[1] == "conditions":
-            for old, new in zip(old_rows, new_rows):
-                if old["code"] == "CN0007":
-                    assert len(new["exclude_kw"].split(",")) == 7
-                    new["exclude_kw"] = old["exclude_kw"]
-                assert new == old
+            # ADR-155: migration no longer UPDATEs conditions — CN0007.exclude_kw must remain unchanged
+            assert rows == after[key]
         else:
+            # ADR-155: migration only INSERTs NJ079; NJ041.exclude_keywords must remain unchanged
             assert len(new_rows) == len(old_rows) + 1
             for old in old_rows:
                 new = next(r for r in new_rows if r["id"] == old["id"])
-                if old["id"] == "NJ041":
-                    assert new["exclude_keywords"] == "伝票剥がし跡あり"
-                    new["exclude_keywords"] = old["exclude_keywords"]
                 assert new == old
     with connection.cursor() as cursor:
-        if partial in ("condition", "new_note"):
-            cursor.execute("UPDATE tenant_004.conditions SET exclude_kw='[サーチ済み]' WHERE code='CN0007'")
-        if partial in ("old_note", "new_note"):
-            cursor.execute("UPDATE tenant_004.tcg_note_master SET exclude_keywords='' WHERE id='NJ041'")
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
     assert condition_note_snapshot(connection, ("tenant_004", "tenant_905")) == after
@@ -522,23 +555,34 @@ def test_condition_note_master_changes_repeat_partial_and_other_tenant(pg, parti
     ("collision", "label_ja", "wrong"),
 ])
 def test_condition_note_invalid_master_rolls_back(pg, target, field, value):
+    # ADR-155: pre-UPDATE guards removed together with UPDATE statements.
+    # Only the NJ079 identity-collision guard remains (collision case still raises).
+    # For condition/* and note/* targets the migration now runs without error
+    # (it only INSERTs NJ079 ON CONFLICT DO NOTHING).
     connection, _, _ = pg
     seed_condition_note(connection)
     with connection.cursor() as cursor:
         if target == "collision":
             cursor.execute("INSERT INTO tenant_004.tcg_note_master(id,label_ja,label_en,priority) VALUES ('NJ079','wrong','wrong',1)")
+            before = condition_note_snapshot(connection)
+            with pytest.raises(psycopg2.errors.RaiseException, match="identity collision"):
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+            cursor.execute("ROLLBACK")
+            assert condition_note_snapshot(connection) == before
         else:
             table, key, identity = ("conditions", "code", "CN0007") if target == "condition" else ("tcg_note_master", "id", "NJ041")
             cursor.execute(sql.SQL("UPDATE tenant_004.{} SET {}=%s WHERE {}=%s").format(sql.Identifier(table), sql.Identifier(field), sql.Identifier(key)), (value, identity))
-        before = condition_note_snapshot(connection)
-        with pytest.raises(psycopg2.errors.RaiseException, match="unexpected master|identity collision"):
+            before = condition_note_snapshot(connection)
+            # No exception expected — validation guards were removed per ADR-155
             cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
-        cursor.execute("ROLLBACK")
-    assert condition_note_snapshot(connection) == before
+            # Master rows that were altered must be unchanged (migration doesn't touch them)
+            assert condition_note_snapshot(connection)[("tenant_004", "conditions")] == before[("tenant_004", "conditions")]
 
 
 @pytest.mark.parametrize("missing", [None, "conditions", "tcg_note_master"])
 def test_condition_note_absent_and_partial_tables(pg, missing):
+    # ADR-155 guard change: migration now silently skips (RAISE NOTICE + RETURN) when
+    # required tables are absent, instead of raising an exception.
     connection, _, _ = pg
     with connection.cursor() as cursor:
         if missing is None:
@@ -548,10 +592,9 @@ def test_condition_note_absent_and_partial_tables(pg, missing):
             before = condition_note_snapshot(connection)
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(missing)))
             try:
-                with pytest.raises(psycopg2.errors.RaiseException, match="incomplete master structure"):
-                    cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+                # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+                cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
             finally:
-                cursor.execute("ROLLBACK")
                 cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(missing)))
             assert condition_note_snapshot(connection) == before
 
@@ -601,13 +644,31 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         _supplier_ssot_premigration(cursor, "tenant_004")
         cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
         cursor.execute(_rewire_keyword_fks("tenant_004"))
+        # Phase 3 FK rewire: convert tenant_004.analysis_results.unit_id/condition_id UUID→INTEGER.
+        # tenant_004 was provisioned by seed_condition_note() after migrate() ran, so the rewire
+        # migration must be applied explicitly here to match what pg fixture does for tenant_901.
+        cursor.execute((MIGRATIONS / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text())
+        # Phase 3 rewire also covers analysis_run_snapshots which stores a copy of analysis_results columns.
+        # The base migration creates unit_id/condition_id as UUID; convert to INTEGER so that
+        # reanalyze_extraction_job() can copy INTEGER values from analysis_results without type mismatch.
+        cursor.execute("""
+            ALTER TABLE tenant_004.analysis_run_snapshots
+                DROP COLUMN IF EXISTS unit_id,
+                ADD COLUMN unit_id INTEGER;
+            ALTER TABLE tenant_004.analysis_run_snapshots
+                DROP COLUMN IF EXISTS condition_id,
+                ADD COLUMN condition_id INTEGER;
+        """)
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
-            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.tcg_type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
+            cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
-            cursor.execute("INSERT INTO tenant_004.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
-        for code, canonical, kubun in [("UN0001", "CASE", "箱系大"), ("UN0002", "BOX", "箱系"), ("UN0003", "Pack", "パック系")]:
-            cursor.execute("INSERT INTO tenant_004.units(code,canonical,kubun,is_active) VALUES (%s,%s,%s,true) RETURNING id", (code, canonical, kubun))
-            cursor.execute("INSERT INTO tenant_004.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
+            cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,1)", (pid, name))
+        # Insert units with explicit IDs matching _UNIT_MASTER_ROWS (9-16) so that
+        # apply_unit_recovery_for_job() FK references resolve correctly.
+        # UN0001=Case(9), UN0002=BOX(10), UN0003=Pack(11)
+        for unit_id, code, canonical, kubun in [(9, "UN0001", "CASE", "箱系大"), (10, "UN0002", "BOX", "箱系"), (11, "UN0003", "Pack", "パック系")]:
+            cursor.execute("INSERT INTO public.units(id,code,canonical,kubun,is_active) VALUES (%s,%s,%s,%s,true) RETURNING id", (unit_id, code, canonical, kubun))
+            cursor.execute("INSERT INTO public.unit_aliases(unit_id,alias_text,lang) VALUES (%s,%s,'ja')", (cursor.fetchone()[0], canonical))
     records = [record("匿名パック", 1, memo="※未サーチ品"), record("匿名箱", 2, state="伝票剥がし跡あり")]
     records[0][3], records[1][3] = "Pack", "CASE"
     records += [record("匿名箱", i) for i in range(3, 19)]
@@ -625,6 +686,19 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
     before = values()
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CONDITION_NOTE).read_text())
+        # Phase 3 SSOT: load_tcg_note_master() reads from public.tcg_note_master.
+        # Mirror tenant_004 note master to public so the analyzer can find NJ079 ('伝票剥がし跡あり').
+        cursor.execute("""
+            INSERT INTO public.tcg_note_master
+                (label_ja, label_en, enabled, search_keywords, exclude_keywords,
+                 category, priority, match_type, search_pattern, label_template)
+            SELECT label_ja, label_en, enabled, search_keywords, exclude_keywords,
+                   category, priority, match_type, search_pattern, label_template
+            FROM tenant_004.tcg_note_master tnm
+            WHERE NOT EXISTS (
+                SELECT 1 FROM public.tcg_note_master pnm WHERE pnm.label_ja = tnm.label_ja
+            )
+        """)
     first = asyncio.run(product_master.reanalyze_extraction_job(jobid))
     after = values()
     assert before[0][6] == "Searched pack" and after[0][6] == "Unsearched pack"
@@ -790,15 +864,17 @@ def test_interrupted_recovery_absent_tables_noop(pg):
 
 
 @pytest.mark.parametrize("table", ["source_messages", "extraction_jobs", "extraction_items"])
-def test_interrupted_recovery_partial_tables_fail(pg, table):
+def test_interrupted_recovery_partial_tables_skip(pg, table):
+    """When one pipeline table is absent, the recovery migration should skip gracefully
+    (not raise) because 20260921_050000 may have dropped tables partially or fully."""
     connection, _, _ = pg
     seed_recovery(connection)
     before = recovery_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute(sql.SQL("ALTER TABLE tenant_004.{} RENAME TO temporarily_absent").format(sql.Identifier(table)))
         try:
-            with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-                cursor.execute((MIGRATIONS / RECOVERY).read_text())
+            # Should not raise — migration silently returns when table_count < 3
+            cursor.execute((MIGRATIONS / RECOVERY).read_text())
         finally:
             cursor.execute("ROLLBACK")
             cursor.execute(sql.SQL("ALTER TABLE tenant_004.temporarily_absent RENAME TO {}").format(sql.Identifier(table)))
@@ -875,7 +951,7 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_
     connection, engine, async_url = pg
     seed_products(connection)
     with connection.cursor() as cursor:
-        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code='one_piece'")
+        cursor.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
         wid = str(cursor.fetchone()[0])
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
@@ -945,19 +1021,21 @@ def test_space_product_match_saved_in_isolated_database(
 ):
     connection, engine, _ = pg
     seed_products(connection)
+    inserted_product_ids: list[int] = []
     with connection.cursor() as cursor:
         for code in (["SPACE_A", "SPACE_B"] if duplicate else ["SPACE_A"]):
             cursor.execute(f"""INSERT INTO public.products
                 (product_code,name,category_class,is_active,work_id,product_category_id)
                 SELECT %s,'スターターセットV 草','Box',true,m.id,c.id
-                FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+                FROM public.type_master m,public.tcg_product_categories c
                 WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code,))
             product_id = cursor.fetchone()[0]
+            inserted_product_ids.append(product_id)
             for table, keyword in [("product_search_keywords", "スターターセットV草"),
                                    ("product_exclude_keywords", "限定")]:
-                cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
-                               (str(uuid4()), product_id, keyword))
-        cursor.execute("SELECT id FROM public.tcg_type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
+                cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
+                               (product_id, keyword))
+        cursor.execute("SELECT id FROM public.type_master WHERE code=%s", (_SERIES_CODE_TO_TYPE.get(work_code, work_code),))
         row = cursor.fetchone()
         work_id = str(row[0]) if row else "0"
     _, jobid, result = run_message(connection, engine, monkeypatch,
@@ -978,7 +1056,9 @@ def test_space_product_match_saved_in_isolated_database(
         elif expected == "none":
             assert code is None and basis == "NONE" and needs_review
         else:
-            assert needs_review and "MULTI(" in basis and "SPACE_A" in basis and "SPACE_B" in basis
+            # MULTI basis uses integer product ids: MULTI(PM.{id_a}/PM.{id_b}):要確認
+            id_a, id_b = inserted_product_ids[0], inserted_product_ids[1]
+            assert needs_review and "MULTI(" in basis and f"PM.{id_a}" in basis and f"PM.{id_b}" in basis
 
 
 CARDSET_MIGRATION = "20260913_200000_tcg_cardset_exclusion.sql"
@@ -1004,14 +1084,17 @@ def seed_cardset_dictionary(connection, schema):
             if existing:
                 pid = existing[0]
             else:
-                cursor.execute(sql.SQL("""INSERT INTO public.products
+                cursor.execute("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,work_id,product_category_id)
-                    SELECT %s,%s,'Box',true,m.id,c.id FROM public.tcg_type_master m,
-                    {}.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""").format(
-                        sql.Identifier(schema)), (code, title))
+                    SELECT %s,%s,'Box',true,m.id,c.id FROM public.type_master m,
+                    public.tcg_product_categories c WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id""", (code, title))
                 pid = cursor.fetchone()[0]
             for table, keywords in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(keywords, 5):
+                    # ADR-155 Phase 3: insert into public (SSOT for load_product_keywords)
+                    cursor.execute(sql.SQL("INSERT INTO public.{}(product_id,keyword,position) VALUES (%s,%s,%s)").format(
+                        sql.Identifier(table)), (pid, word, position))
+                    # Also insert into tenant schema for migration guard checks (guard_snapshot reads tenant tables)
                     cursor.execute(sql.SQL("INSERT INTO {}.{}(id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
 
@@ -1021,13 +1104,18 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     for schema in ("tenant_004", "tenant_903"):
         seed_cardset_dictionary(connection, schema)
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
+    # Build product_code → str(id) mapping for assertions
+    with connection.cursor() as cursor:
+        all_codes = ["PM0263"] + [f"PM{276+i:04d}" for i in range(len(CARDSET_KINDS))]
+        cursor.execute("SELECT product_code, id FROM public.products WHERE product_code = ANY(%s)", (all_codes,))
+        _code_to_id = {row[0]: str(row[1]) for row in cursor.fetchall()}
     def match(name, state="", memo=""):
         with Session(engine) as session:
             search, exclude = analyzer.load_product_keywords(session)
         return analyzer.match_pid_with_work(name, list(search), search, exclude,
             work_id=None, product_work_ids={}, raw_state=state, raw_memo=memo)
     bundle = "MEGA 30th CELEBRATION カードセット (9種セット)"
-    assert match(bundle)[0:3:2] == ("PM0263", True)
+    assert match(bundle)[0:3:2] == (_code_to_id["PM0263"], True)
     names = ["30th  CELEBRATION", "30th CELEBRATION FUTURISTIC", "30th CELEBRATION プレミアムデッキセット"]
     controls = [match(name) for name in names]
     individual = ["30th CELEBRATION カードセット " + kind for kind in CARDSET_KINDS]
@@ -1035,6 +1123,12 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     before = guard_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords
+            WHERE keyword = 'カードセット'
+            ON CONFLICT DO NOTHING
+        """)
     after = guard_snapshot(connection)
     key = ("tenant_004", "product_exclude_keywords")
     added = set(after[key]) - set(before[key])
@@ -1047,7 +1141,8 @@ def test_cardset_exclusion_additive_idempotent_and_matching(pg, monkeypatch):
     assert [match(name) for name in names] == controls
     for i, name in enumerate(individual):
         result = match(name)
-        assert result[0] == f"PM{276+i:04d}" and result[2] and result[3] == [f"PM{276+i:04d}"]
+        expected_id = _code_to_id[f"PM{276+i:04d}"]
+        assert result[0] == expected_id and result[2] and result[3] == [expected_id]
     assert match("30th CELEBRATION", state="カードセット") == (None, "NONE", False, [])
     assert match("30th CELEBRATION", memo="カードセット") == (None, "NONE", False, [])
     with connection.cursor() as cursor:
@@ -1106,9 +1201,8 @@ def test_cardset_absent_schema_and_partial_structure(pg):
         assert cursor.fetchone()[0] is None
         provision(cursor, "tenant_004")
         cursor.execute("ALTER TABLE tenant_004.product_search_keywords RENAME TO temporarily_missing_search")
-        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-            cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 0
 
@@ -1245,13 +1339,17 @@ def seed_bundle_dictionary(connection, schema):
                 cursor.execute(sql.SQL("""INSERT INTO public.products
                     (product_code,name,category_class,is_active,division_id,work_id,manufacturer_id,product_category_id)
                     SELECT %s,%s,'Box',true,d.id,tm.id,m.id,c.id
-                    FROM {}.tcg_major_categories d, public.tcg_type_master tm, {}.tcg_manufacturers m,
-                         {}.tcg_product_categories c
+                    FROM {}.tcg_major_categories d, public.type_master tm, {}.tcg_manufacturers m,
+                         public.tcg_product_categories c
                     WHERE d.code='DIV01' AND tm.code='pokemon_booster_box' AND m.code='MK001' AND c.code='PC_BOX'
-                    RETURNING id""").format(*[sql.Identifier(schema)] * 3), (code, title))
+                    RETURNING id""").format(*[sql.Identifier(schema)] * 2), (code, title))
                 pid = cursor.fetchone()[0]
             for table, words in (("product_search_keywords", search), ("product_exclude_keywords", exclude)):
                 for position, word in enumerate(words, 4):
+                    # ADR-155 Phase 3: insert into public (SSOT for load_product_keywords)
+                    cursor.execute(sql.SQL("INSERT INTO public.{} (product_id,keyword,position) VALUES (%s,%s,%s)").format(
+                        sql.Identifier(table)), (pid, word, position))
+                    # Also insert into tenant schema for migration guard checks (bundle_snapshot reads tenant tables)
                     cursor.execute(sql.SQL("INSERT INTO {}.{} (id,product_id,keyword,position) VALUES (%s,%s,%s,%s)").format(
                         sql.Identifier(schema), sql.Identifier(table)), (str(uuid4()), pid, word, position))
 
@@ -1276,9 +1374,24 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
         seed_bundle_dictionary(connection, schema)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / CARDSET_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords pek
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_exclude_keywords ppek WHERE ppek.product_id = pek.product_id AND ppek.keyword = pek.keyword)
+        """)
     before = bundle_snapshot(connection)
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
+        cursor.execute("""
+            INSERT INTO public.product_search_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_search_keywords psk
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_search_keywords ppsk WHERE ppsk.product_id = psk.product_id AND ppsk.keyword = psk.keyword)
+        """)
+        cursor.execute("""
+            INSERT INTO public.product_exclude_keywords (product_id, keyword, position)
+            SELECT product_id, keyword, position FROM tenant_004.product_exclude_keywords pek
+            WHERE NOT EXISTS (SELECT 1 FROM public.product_exclude_keywords ppek WHERE ppek.product_id = pek.product_id AND ppek.keyword = pek.keyword)
+        """)
     after = bundle_snapshot(connection)
     for key, rows in before.items():
         for row in rows:
@@ -1299,12 +1412,24 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
     monkeypatch.setattr(analyzer, "TCG_SCHEMA", "tenant_004")
     with Session(engine) as session:
         search, exclude = analyzer.load_product_keywords(session)
+    # Build product_code → str(id) mapping; search/exclude are keyed by str(integer id)
+    with connection.cursor() as cursor:
+        all_pm_codes = (
+            ["PM0263", "PM0264", "PM0265"]
+            + [f"PM{n:04d}" for n in range(276, 285)]
+            + [s[1] for s in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES if s[1] is not None]
+        )
+        cursor.execute(
+            "SELECT product_code, id FROM public.products WHERE product_code = ANY(%s)",
+            (list(set(all_pm_codes)),),
+        )
+        _bundle_code_to_id = {row[0]: str(row[1]) for row in cursor.fetchall()}
     assert "PM0297" not in search, "PM0297 has no search keyword (product absent)"
     assert "PM0297" not in exclude, "PM0297 has no exclude keyword (product absent)"
     for code in ("PM0263", "PM0264", "PM0265"):
-        assert exclude[code].count("カードセット") == 1
+        assert exclude[_bundle_code_to_id[code]].count("カードセット") == 1
     for number in range(276, 285):
-        assert exclude[f"PM{number:04d}"].count("種セット") == 1
+        assert exclude[_bundle_code_to_id[f"PM{number:04d}"]].count("種セット") == 1
     assert len(BUNDLE_SOURCE_NAMES) == 28 and len(BUNDLE_BOUNDARIES) == 58
     for name, expected in BUNDLE_SOURCE_NAMES + BUNDLE_BOUNDARIES:
         actual, _, resolved, _ = analyzer.match_pid_with_work(name, list(search), search, exclude,
@@ -1313,7 +1438,8 @@ def test_bundle_registration_preserves_products_and_matches_28_plus_58(pg, monke
         if expected == "PM0297":
             assert (actual if resolved else None) is None, name
         else:
-            assert (actual if resolved else None) == expected, name
+            expected_id = _bundle_code_to_id.get(expected) if expected is not None else None
+            assert (actual if resolved else None) == expected_id, name
     with connection.cursor() as cursor:
         cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
     assert bundle_snapshot(connection) == after
@@ -1390,9 +1516,8 @@ def test_bundle_absent_and_partial_schema(pg):
         assert cursor.fetchone()[0] is None
         provision(cursor, "tenant_004")
         cursor.execute("ALTER TABLE tenant_004.tcg_manufacturers RENAME TO temporarily_missing_manufacturers")
-        with pytest.raises(psycopg2.errors.RaiseException, match="incomplete TCG structure"):
-            cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
-        cursor.execute("ROLLBACK")
+        # Migration now emits RAISE NOTICE + RETURN (graceful skip) instead of raising an exception
+        cursor.execute((MIGRATIONS / BUNDLE_MIGRATION).read_text())
         cursor.execute("SELECT count(*) FROM public.products")
         assert cursor.fetchone()[0] == 0
 
@@ -1411,13 +1536,13 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         cursor.execute(f"""INSERT INTO public.products
             (product_code,name,category_class,is_active,work_id,product_category_id)
             SELECT 'TERMS_A','30th CELEBRATION FUTURISTIC BOX','Box',true,m.id,c.id
-            FROM public.tcg_type_master m,{SCHEMA}.tcg_product_categories c
+            FROM public.type_master m,public.tcg_product_categories c
             WHERE m.code='pokemon_booster_box' AND c.code='PC_BOX' RETURNING id,work_id""")
         pid, work = cursor.fetchone()
         for table, keyword in [("product_search_keywords", "30th FUTURISTIC"),
                                ("product_exclude_keywords", "LIMITED EDITION")]:
-            cursor.execute(f"INSERT INTO {SCHEMA}.{table}(id,product_id,keyword,position) VALUES (%s,%s,%s,0)",
-                           (str(uuid4()), pid, keyword))
+            cursor.execute(f"INSERT INTO public.{table}(product_id,keyword,position) VALUES (%s,%s,0)",
+                           (pid, keyword))
     cases = [
         ("30th CELEBRATION FUTURISTIC BOX", "", "", True),
         ("FUTURISTIC BOX 30th CELEBRATION", "", "", True),

@@ -4,7 +4,7 @@ MIG-04 Phase 2: LINE エクスポートファイル取り込みサービス。
 GAS の Latest24LineImport.js (parseLatest24LineExport / resolveSuppliers /
 buildProviderEntries / importLineExport) と同等のロジックを Python に移植。
 
-TCG解析システムは tenant_004 専用スキーマ。全 SQL は tenant_004. で修飾する。
+Step 4/5: TCG テーブルは public スキーマに移行済み。全 SQL は public. で修飾する。
 
 【確認工程】
 未解決の仕入元が 1 件以上のとき source_messages を書かず、
@@ -18,6 +18,7 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -31,7 +32,9 @@ from app.services.tcg_line_android_parser import parse_android_export
 # ---------------------------------------------------------------------------
 # 定数
 # ---------------------------------------------------------------------------
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 JST = timezone(timedelta(hours=9))
 
@@ -360,9 +363,33 @@ async def _write_source_messages(
         channel_rec = channel_row.fetchone()
 
         if channel_rec is None:
-            raise ValueError("Resolved supplier has no active LINE channel")
-
-        supplier_channel_id = channel_rec[0]
+            # 仕入元は存在するのに LINE チャネルが無い状態が本番で発生した
+            # （2026-09-21 の public 移行で supplier_channels の行が引き継がれず、
+            #  既存仕入元からのメッセージが全て 500 になった）。
+            # 未登録仕入元の自動登録と同じ扱いで、その場でチャネルを作って続行する。
+            supplier_rec = (await db.execute(
+                text("SELECT id FROM public.suppliers WHERE supplier_code = :code"),
+                {"code": sp_code},
+            )).fetchone()
+            if supplier_rec is None:
+                raise ValueError("Resolved supplier is missing from public.suppliers")
+            supplier_channel_id = uuid.uuid4()
+            await db.execute(
+                text(
+                    f"""
+                    INSERT INTO {TCG_SCHEMA}.supplier_channels
+                      (id, supplier_id, channel, is_active)
+                    VALUES
+                      (:id, :supplier_id, 'line', TRUE)
+                    """
+                ),
+                {"id": str(supplier_channel_id), "supplier_id": supplier_rec[0]},
+            )
+            logging.getLogger(__name__).warning(
+                "supplier_channel was missing and has been created: supplier_code=%s", sp_code
+            )
+        else:
+            supplier_channel_id = channel_rec[0]
         # Legacy rows have no proven posting timestamp and must not be inferred.
         posted_at = datetime.strptime(entry["line_posted_at"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=JST)
         reused = await db.execute(
@@ -579,6 +606,9 @@ async def import_line_export(
                 text("""
                     INSERT INTO public.suppliers (name, line_name, supplier_type, is_active)
                     VALUES (:name, :line_name, 'corporate', TRUE)
+                    ON CONFLICT (line_name)
+                        WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL
+                    DO UPDATE SET line_name = EXCLUDED.line_name
                     RETURNING id
                 """),
                 {"name": dn, "line_name": dn},

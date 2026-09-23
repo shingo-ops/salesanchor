@@ -35,7 +35,10 @@ logger = logging.getLogger(__name__)
 
 from app.services.tcg_condition_review_svc import review_joins, source_cte
 from app.services.tcg_result_order import result_order_sql
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
@@ -235,7 +238,7 @@ async def fetch_output_rows(
             ON ps.id = sc.supplier_id
         LEFT JOIN public.products p
             ON p.id = ar.product_id
-        LEFT JOIN public.tcg_type_master ser
+        LEFT JOIN public.type_master ser
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
@@ -706,36 +709,6 @@ async def run_distribution(
         msg = (
             f"安全装置 #8b: 未完了の extraction_jobs が {total_unfinished} 件あります。"
             f" 完了を待ってから配信を実行してください。内訳: {breakdown}"
-        )
-        logger.warning("[dist] %s", msg)
-        return {
-            "run_id": None,
-            "started_at": started_at.isoformat(),
-            "output_count": 0,
-            "results": [],
-            "errors": [{"target_id": None, "error": msg}],
-        }
-
-    # 0-c. 完売判断ルール実行中チェック（安全装置 #8c）
-    # analysis_rule_runs に pending/running の行があれば配信を中止する。
-    # 判断結果が確定する前に配信すると、最新の判断が反映されない行が含まれる可能性がある。
-    pending_rule_runs = (
-        await db.execute(
-            text(
-                f"SELECT id, started_at FROM {TCG_SCHEMA}.analysis_rule_runs"
-                " WHERE state IN ('pending', 'running')"
-                " ORDER BY started_at LIMIT 10"
-            )
-        )
-    ).mappings().all()
-    if pending_rule_runs:
-        details = [
-            {"run_id": str(r["id"]), "started_at": r["started_at"].isoformat()}
-            for r in pending_rule_runs
-        ]
-        msg = (
-            f"安全装置 #8c: 完売判断ルール実行中の runs が {len(pending_rule_runs)} 件あります。"
-            f" 完了を待ってから配信を実行してください。実行中: {details}"
         )
         logger.warning("[dist] %s", msg)
         return {

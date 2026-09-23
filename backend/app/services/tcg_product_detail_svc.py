@@ -10,12 +10,21 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.tcg_config import TCG_SCHEMA
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
 
 LOOKUPS = {
-    "division_id": "tcg_major_categories",
     "manufacturer_id": "tcg_manufacturers",
+}
+# ADR-155 Phase 3B: product_category_id is now INTEGER FK to public.tcg_product_categories
+# ADR-156 Phase 3A: product_kind_id is INTEGER FK to public.product_kinds
+PUBLIC_INTEGER_LOOKUPS = {
     "product_category_id": "tcg_product_categories",
+    "product_kind_id": "product_kinds",
+}
+# Name column override: tables that use "name" instead of "display_name"
+PUBLIC_INTEGER_NAME_COL: dict[str, str] = {
+    "product_kind_id": "name",
 }
 WORD_TABLES = {
     "search_keywords": "product_search_keywords",
@@ -33,15 +42,15 @@ def _json(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
 
 
-async def _snapshot(db: AsyncSession, code: str) -> dict[str, Any]:
+async def _snapshot(db: AsyncSession, product_id: int) -> dict[str, Any]:
     result = await db.execute(text(
-        f"SELECT row_to_json(p) AS product, "
-        f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
-        f"COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
-        f"FROM {TCG_SCHEMA}.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
-        f"FROM public.products p WHERE p.product_code=:code"
-    ), {"code": code})
+        "SELECT row_to_json(p) AS product, "
+        "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
+        "FROM public.product_search_keywords k WHERE k.product_id=p.id), '[]'::json) AS search_keywords, "
+        "COALESCE((SELECT json_agg(k ORDER BY k.position,k.id) "
+        "FROM public.product_exclude_keywords k WHERE k.product_id=p.id), '[]'::json) AS exclude_keywords "
+        "FROM public.products p WHERE p.id=:pid"
+    ), {"pid": product_id})
     row = result.mappings().one_or_none()
     if row is None:
         raise ProductDetailError(404, "PRODUCT_DETAIL_NOT_FOUND")
@@ -67,10 +76,10 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
     for field in WORD_TABLES:
         product[field] = [row["keyword"] for row in snapshot[field]]
     lookups = {}
-    # work_id → public.tcg_type_master (INTEGER, SSOT)
+    # work_id → public.type_master (INTEGER, SSOT)
     work_rows = await db.execute(text(
         "SELECT id::text AS id, name_ja AS name, is_active "
-        "FROM public.tcg_type_master "
+        "FROM public.type_master "
         "WHERE is_active = TRUE OR id = :selected "
         "ORDER BY name_ja, id"
     ), {"selected": product["work_id"]})
@@ -83,22 +92,31 @@ async def _response(db: AsyncSession, snapshot: dict[str, Any]) -> dict[str, Any
             "WHERE is_active=TRUE OR id=CAST(:selected AS uuid) ORDER BY display_name,id"
         ), {"selected": product[field]})
         lookups[field] = [dict(row) for row in rows.mappings()]
+    # ADR-155 Phase 3B / ADR-156 Phase 3A: public INTEGER lookups
+    for field, table in PUBLIC_INTEGER_LOOKUPS.items():
+        name_col = PUBLIC_INTEGER_NAME_COL.get(field, "display_name")
+        rows = await db.execute(text(
+            f"SELECT id::text AS id,{name_col} AS name,is_active "
+            f"FROM public.{table} "
+            f"WHERE is_active=TRUE OR id=:selected ORDER BY {name_col},id"
+        ), {"selected": product[field]})
+        lookups[field] = [dict(row) for row in rows.mappings()]
     return {"product": product, "revision": _revision(snapshot), "lookups": lookups}
 
 
-async def get_product_detail(db: AsyncSession, code: str) -> dict[str, Any]:
-    return await _response(db, await _snapshot(db, code))
+async def get_product_detail(db: AsyncSession, product_id: int) -> dict[str, Any]:
+    return await _response(db, await _snapshot(db, product_id))
 
 
 async def update_product_detail(
-    db: AsyncSession, code: str, values: dict[str, Any], revision: str, actor: str,
+    db: AsyncSession, product_id: int, values: dict[str, Any], revision: str, actor: str,
 ) -> dict[str, Any]:
     """Serialize writes per product; reject stale drafts and roll back all failures."""
     try:
         await db.execute(text(
-            "SELECT id FROM public.products WHERE product_code=:code FOR UPDATE"
-        ), {"code": code})
-        before = await _snapshot(db, code)
+            "SELECT id FROM public.products WHERE id=:pid FOR UPDATE"
+        ), {"pid": product_id})
+        before = await _snapshot(db, product_id)
         if _revision(before) != revision:
             raise ProductDetailError(409, "PRODUCT_DETAIL_CONFLICT")
         product = before["product"]
@@ -106,7 +124,7 @@ async def update_product_detail(
         params["release_date"] = date.fromisoformat(values["release_date"]) if values["release_date"] else None
         params["pid"] = product["id"]
         params["category_class"] = product["category_class"]
-        # work_id → public.tcg_type_master (INTEGER, SSOT); validated separately from LOOKUPS
+        # work_id → public.type_master (INTEGER, SSOT); validated separately from LOOKUPS
         new_work_id = values.get("work_id")
         if new_work_id is not None and str(new_work_id) != str(product.get("work_id") or ""):
             try:
@@ -114,7 +132,7 @@ async def update_product_detail(
             except (TypeError, ValueError):
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
             work_row = (await db.execute(text(
-                "SELECT name_ja FROM public.tcg_type_master "
+                "SELECT name_ja FROM public.type_master "
                 "WHERE id=:id AND is_active=TRUE FOR SHARE"
             ), {"id": new_work_id_int})).one_or_none()
             if work_row is None:
@@ -135,13 +153,28 @@ async def update_product_detail(
             ), {"id": selected})).one_or_none()
             if row is None:
                 raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+        # ADR-155 Phase 3B / ADR-156 Phase 3A: validate public INTEGER lookups
+        for field, table in PUBLIC_INTEGER_LOOKUPS.items():
+            selected = values.get(field)
+            if selected == product.get(field):
+                continue
+            if selected is None:
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
+            name_col = PUBLIC_INTEGER_NAME_COL.get(field, "display_name")
+            row = (await db.execute(text(
+                f"SELECT {name_col} FROM public.{table} "
+                "WHERE id=:id AND is_active=TRUE FOR SHARE"
+            ), {"id": selected})).one_or_none()
+            if row is None:
+                raise ProductDetailError(422, "PRODUCT_DETAIL_INVALID_CLASSIFICATION")
         await db.execute(text("SET LOCAL app.is_operator = 'true'"))
         await db.execute(text(
             "UPDATE public.products SET "
             "name=:japanese_title,name_en=:english_title,mark=:mark,"
-            "release_date=CAST(:release_date AS date),division_id=CAST(:division_id AS uuid),"
+            "release_date=CAST(:release_date AS date),"
+            "product_kind_id=:product_kind_id,"
             "work_id=:work_id,manufacturer_id=CAST(:manufacturer_id AS uuid),"
-            "product_category_id=CAST(:product_category_id AS uuid),category_class=:category_class "
+            "product_category_id=:product_category_id,category_class=:category_class "
             "WHERE id=:pid"
         ), params)
         for field, table in WORD_TABLES.items():
@@ -149,15 +182,15 @@ async def update_product_detail(
             if words == [row["keyword"] for row in before[field]]:
                 continue
             await db.execute(text(
-                f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:pid"
+                f"DELETE FROM public.{table} WHERE product_id=:pid"
             ), {"pid": product["id"]})
             if words:
                 await db.execute(text(
-                    f"INSERT INTO {TCG_SCHEMA}.{table} (product_id,keyword,position) "
+                    f"INSERT INTO public.{table} (product_id,keyword,position) "
                     "VALUES (:pid,:word,:position)"
                 ), [{"pid": product["id"], "word": word, "position": position}
                     for position, word in enumerate(words, 1)])
-        after = await _snapshot(db, code)
+        after = await _snapshot(db, product_id)
         _audit_pid = str(uuid4())
         await db.execute(text(
             f"INSERT INTO {TCG_SCHEMA}.audit_log "
