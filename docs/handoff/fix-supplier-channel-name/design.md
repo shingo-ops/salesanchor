@@ -24,8 +24,8 @@
 
 ## 技術 How・KPI
 
-- KPI: `sc.name` エラー発生率 = 0%（修正前 100%）
-- 技術選択: SQL の `sc.name` を `sc.channel` に修正（3箇所: SELECT, GROUP BY, ORDER BY）
+- KPI: sc.name エラー発生率 = 0%（修正前 100%）
+- 技術選択: SQL の sc.name を sc.channel に修正（3箇所: SELECT, GROUP BY, ORDER BY）
 
 ---
 
@@ -39,7 +39,7 @@
 
 | ステップ | 内容 | 担当 |
 |---------|------|------|
-| 1 | `tcg_analysis_dashboard_svc.py` の `sc.name` を `sc.channel` に修正 | Generator |
+| 1 | tcg_analysis_dashboard_svc.py の sc.name を sc.channel に修正 | Generator |
 | 2 | CI 通過確認 | Generator |
 | 3 | 本番デプロイ後の API 動作確認 | Generator |
 
@@ -54,5 +54,5 @@
 
 ## 維持の仕組み
 
-- supplier_channels テーブルの正しいカラム名は `channel`（`name` ではない）
-- 人手で守る：今後 supplier_channels への SQL 追加時はカラム名を確認すること
+- supplier_channels テーブルの正しいカラム名は channel（name ではない）
+- 守り手: 人手で守る（今後 supplier_channels への SQL 追加時はカラム名を確認すること）
