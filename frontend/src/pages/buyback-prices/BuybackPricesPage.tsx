@@ -48,6 +48,7 @@ interface BuybackProduct {
 interface BuybackListResponse {
   items: BuybackProduct[];
   total: number;
+  counts_by_game: Record<string, number>;
 }
 
 interface PriceHistoryEntry {
@@ -105,8 +106,10 @@ export default function BuybackPricesPage() {
   const [page, setPage] = useState(1);
   const [shop, setShop] = useState<ShopFilter>("all");
   const [cardGame, setCardGame] = useState<CardGame>("all");
+  const [productType, setProductType] = useState<string>("");
   const [sortKey, setSortKey] = useState("price_s");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [countsByGame, setCountsByGame] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [fetching, setFetching] = useState(false);
@@ -133,6 +136,7 @@ export default function BuybackPricesPage() {
     });
     if (shop !== "all") params.set("shop", shop);
     if (cardGame !== "all") params.set("card_game", cardGame);
+    if (productType) params.append("product_type", productType);
 
     api
       .get<BuybackListResponse>(`/buyback-prices?${params.toString()}`)
@@ -140,6 +144,7 @@ export default function BuybackPricesPage() {
         if (!cancelled) {
           setItems(res.items);
           setTotal(res.total);
+          setCountsByGame(res.counts_by_game ?? {});
         }
       })
       .catch(() => {
@@ -152,7 +157,7 @@ export default function BuybackPricesPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, shop, cardGame, sortKey, sortDir, t]);
+  }, [page, shop, cardGame, productType, sortKey, sortDir, t]);
 
   // フィルタ変更時はページをリセット
   const handleShopChange = (value: ShopFilter) => {
@@ -274,15 +279,31 @@ export default function BuybackPricesPage() {
     { value: "homura", label: t("buybackPrices.homura") },
   ];
 
+  const productTypeOptions = [
+    { value: "", label: t("buybackPrices.allTypes") },
+    { value: "BOX", label: "BOX" },
+    { value: "PACK", label: t("buybackPrices.typePack") },
+    { value: "CARTON", label: t("buybackPrices.typeCarton") },
+    { value: "BOX_SHRINK", label: t("buybackPrices.typeShrink") },
+    { value: "BOX_NO_SHRINK", label: t("buybackPrices.typeNoShrink") },
+    { value: "SPECIAL_SET", label: t("buybackPrices.typeSpecialSet") },
+  ];
+
   // ── Tabs 選択肢 ────────────────────────────────────────────────────
-  const gameTabItems = [
-    { key: "all" as CardGame, label: t("buybackPrices.allGames") },
+  const CARD_GAMES = [
     { key: "pokemon" as CardGame, label: t("buybackPrices.pokemon") },
     { key: "onepiece" as CardGame, label: t("buybackPrices.onepiece") },
     { key: "yugioh" as CardGame, label: t("buybackPrices.yugioh") },
     { key: "dragonball" as CardGame, label: t("buybackPrices.dragonball") },
     { key: "weiss" as CardGame, label: t("buybackPrices.weiss") },
     { key: "lorcana" as CardGame, label: t("buybackPrices.lorcana") },
+  ];
+  const allCount = (Object.values(countsByGame) as number[]).reduce((a, b) => a + b, 0);
+  const gameTabItems = [
+    { key: "all" as CardGame, label: t("buybackPrices.allGames"), count: allCount },
+    ...CARD_GAMES
+      .filter((g) => (countsByGame[g.key] ?? 0) > 0)
+      .map((g) => ({ ...g, count: countsByGame[g.key] ?? 0 })),
   ];
 
   // ── ページネーション ───────────────────────────────────────────────
@@ -310,6 +331,12 @@ export default function BuybackPricesPage() {
               value={shop}
               placeholder={t("buybackPrices.shopFilter")}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleShopChange(e.target.value as ShopFilter)}
+            />
+            <SelectControl
+              options={productTypeOptions}
+              value={productType}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
+              size="sm"
             />
             <Tabs
               items={gameTabItems}
