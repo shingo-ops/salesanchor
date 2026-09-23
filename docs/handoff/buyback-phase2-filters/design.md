@@ -1,7 +1,7 @@
 # design: buyback-phase2-filters
 
-## recon 参照
-docs/handoff/buyback-phase2-filters/recon.md
+**対象ADR**: ADR-157
+**recon**: docs/handoff/buyback-phase2-filters/recon.md
 
 ## 変更概要（4変更）
 
@@ -64,9 +64,9 @@ docs/handoff/buyback-phase2-filters/recon.md
 | 画面で product_type フィルタが機能する | "BOX" 選択後に非BOX行が消える |
 | 件数0のゲームタブが非表示になる | データが0件のゲームのタブが DOM に存在しない |
 
-## 外部事例
-- FastAPI Query params ホワイトリストパターン: SQLAlchemy + text() + f-string ホワイトリスト（本番コードベース既存パターン踏襲）
-- React state + useEffect deps パターン: 既存 shop/cardGame フィルタと同一パターン
+## 外部・過去事例の参照と我々への応用
+- FastAPI Query params ホワイトリストパターン: SQLAlchemy + text() + f-string ホワイトリスト（本番コードベース既存パターン踏襲） → 我々への応用: `_SORT_WHITELIST` 辞書でフォールバック付き安全 sort 実装
+- React state + useEffect deps パターン: 既存 shop/cardGame フィルタと同一パターン → 我々への応用: productType を同じ deps 配列に追加し一貫性を保つ
 
 ## 戻し方
 - git revert このブランチのコミット、または PR をクローズ

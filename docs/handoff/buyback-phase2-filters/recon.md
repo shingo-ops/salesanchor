@@ -2,7 +2,7 @@
 
 ## 対象ADR検索結果
 - `git grep -i docs/adr/` で buyback 関連 ADR を検索
-- ADR-157: 買取相場ログ（`docs/adr/ADR-157-*.md` 参照）
+- ADR-157: 買取相場ログ（`docs/adr/ADR-157-buyback-price-logger.md` 参照）
 - FEATURE-INDEX.md に buyback エントリあり
 
 ## 現在地（file:line）
