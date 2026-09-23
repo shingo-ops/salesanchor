@@ -5,6 +5,7 @@
  * - 買取店フィルタ（SelectControl）・カードゲームタブ（Tabs）
  * - DataTable: shop_code / product_name / card_game / product_type / price_s/a/b / last_seen_at
  * - 行クリック → Drawer で価格推移グラフ（recharts LineChart）
+ * - スーパー管理者のみ: アラート設定 Modal（CRUD）
  */
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -26,6 +27,10 @@ import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { Drawer } from "../../components/Drawer";
 import { Button } from "../../components/Button";
+import { Modal } from "../../components/Modal";
+import { Card } from "../../components/Card";
+import { Badge } from "../../components/Badge";
+import { TextField } from "../../components/TextField";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import styles from "./BuybackPricesPage.module.css";
 
@@ -69,10 +74,51 @@ interface PriceHistoryResponse {
   history: PriceHistoryEntry[];
 }
 
+interface AlertRule {
+  id: string;
+  name: string;
+  card_game: string | null;
+  shop_code: string | null;
+  product_type: string | null;
+  shop_product_id: string | null;
+  direction: string;
+  threshold_pct: number;
+  price_grade: string;
+  is_active: boolean;
+  last_notified_at: string | null;
+  cooldown_minutes: number;
+  created_at: string;
+  updated_at: string;
+}
+
+interface AlertFormState {
+  name: string;
+  card_game: string;
+  shop_code: string;
+  product_type: string;
+  direction: string;
+  threshold_pct: string;
+  price_grade: string;
+  is_active: boolean;
+  cooldown_minutes: string;
+}
+
 type CardGame = "all" | "pokemon" | "onepiece" | "yugioh" | "dragonball" | "weiss" | "lorcana";
 type ShopFilter = "all" | "shinsoku" | "homura";
 
 const PER_PAGE = 50;
+
+const INITIAL_ALERT_FORM: AlertFormState = {
+  name: "",
+  card_game: "",
+  shop_code: "",
+  product_type: "",
+  direction: "down",
+  threshold_pct: "5",
+  price_grade: "price_s",
+  is_active: true,
+  cooldown_minutes: "360",
+};
 
 /* ─── ヘルパー ────────────────────────────────────────────────────────── */
 
@@ -93,6 +139,169 @@ function formatDate(iso: string | null): string {
 function formatChartDate(iso: string): string {
   const d = new Date(iso);
   return `${d.getMonth() + 1}/${d.getDate()}`;
+}
+
+/* ─── AlertRuleForm サブコンポーネント ────────────────────────────────── */
+
+interface AlertRuleFormProps {
+  onSave: (form: AlertFormState) => Promise<void>;
+  onCancel: () => void;
+  t: (key: string) => string;
+}
+
+function AlertRuleForm({ onSave, onCancel, t }: AlertRuleFormProps) {
+  const [form, setForm] = useState<AlertFormState>(INITIAL_ALERT_FORM);
+  const [saving, setSaving] = useState(false);
+
+  const set = (field: keyof AlertFormState, value: string | boolean) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await onSave(form);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const directionOptions = [
+    { value: "down", label: t("buybackPrices.alertDirectionDown") },
+    { value: "up", label: t("buybackPrices.alertDirectionUp") },
+    { value: "both", label: t("buybackPrices.alertDirectionBoth") },
+  ];
+
+  const gradeOptions = [
+    { value: "price_s", label: "S" },
+    { value: "price_a", label: "A" },
+    { value: "price_am", label: "A-" },
+    { value: "price_b", label: "B" },
+    { value: "price_c", label: "C" },
+  ];
+
+  const gameOptions = [
+    { value: "", label: t("buybackPrices.allGames") },
+    { value: "pokemon", label: t("buybackPrices.pokemon") },
+    { value: "onepiece", label: t("buybackPrices.onepiece") },
+    { value: "yugioh", label: t("buybackPrices.yugioh") },
+    { value: "dragonball", label: t("buybackPrices.dragonball") },
+    { value: "weiss", label: t("buybackPrices.weiss") },
+    { value: "lorcana", label: t("buybackPrices.lorcana") },
+  ];
+
+  const shopOptions = [
+    { value: "", label: t("buybackPrices.allShops") },
+    { value: "shinsoku", label: t("buybackPrices.shinsoku") },
+    { value: "homura", label: t("buybackPrices.homura") },
+  ];
+
+  return (
+    <Card variant="container">
+      <form onSubmit={handleSubmit}>
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
+          <TextField
+            label={t("buybackPrices.alertName")}
+            value={form.name}
+            onChange={(e) => set("name", e.target.value)}
+            required
+            size="sm"
+            fullWidth
+          />
+
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 160px" }}>
+              <label style={{ display: "block", fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                {t("buybackPrices.alertDirection")}
+              </label>
+              <SelectControl
+                options={directionOptions}
+                value={form.direction}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set("direction", e.target.value)}
+                size="sm"
+              />
+            </div>
+
+            <div style={{ flex: "1 1 120px" }}>
+              <TextField
+                label={t("buybackPrices.alertThreshold")}
+                type="number"
+                value={form.threshold_pct}
+                onChange={(e) => set("threshold_pct", e.target.value)}
+                min="0"
+                max="100"
+                step="0.1"
+                required
+                size="sm"
+                fullWidth
+              />
+            </div>
+
+            <div style={{ flex: "1 1 120px" }}>
+              <label style={{ display: "block", fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                {t("buybackPrices.alertGrade")}
+              </label>
+              <SelectControl
+                options={gradeOptions}
+                value={form.price_grade}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set("price_grade", e.target.value)}
+                size="sm"
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap" }}>
+            <div style={{ flex: "1 1 160px" }}>
+              <label style={{ display: "block", fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                {t("buybackPrices.alertCardGame")}
+              </label>
+              <SelectControl
+                options={gameOptions}
+                value={form.card_game}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set("card_game", e.target.value)}
+                size="sm"
+              />
+            </div>
+
+            <div style={{ flex: "1 1 160px" }}>
+              <label style={{ display: "block", fontSize: "var(--font-size-sm)", color: "var(--text-secondary)", marginBottom: "var(--space-1)" }}>
+                {t("buybackPrices.alertShop")}
+              </label>
+              <SelectControl
+                options={shopOptions}
+                value={form.shop_code}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => set("shop_code", e.target.value)}
+                size="sm"
+              />
+            </div>
+
+            <div style={{ flex: "1 1 120px" }}>
+              <TextField
+                label={t("buybackPrices.alertCooldown")}
+                type="number"
+                value={form.cooldown_minutes}
+                onChange={(e) => set("cooldown_minutes", e.target.value)}
+                min="1"
+                required
+                size="sm"
+                fullWidth
+              />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: "var(--space-2)", justifyContent: "flex-end" }}>
+            <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+              {t("buybackPrices.alertCancel")}
+            </Button>
+            <Button type="submit" variant="primary" size="sm" disabled={saving}>
+              {t("buybackPrices.alertSave")}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Card>
+  );
 }
 
 /* ─── コンポーネント ──────────────────────────────────────────────────── */
@@ -121,6 +330,12 @@ export default function BuybackPricesPage() {
   const [history, setHistory] = useState<PriceHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [historyDays, setHistoryDays] = useState<number>(30);
+
+  // Alert rules state
+  const [alertsOpen, setAlertsOpen] = useState(false);
+  const [alertRules, setAlertRules] = useState<AlertRule[]>([]);
+  const [alertLoading, setAlertLoading] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   // ── データ取得 ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -226,6 +441,45 @@ export default function BuybackPricesPage() {
     setSortKey(key);
     setSortDir(dir);
     setPage(1);
+  };
+
+  // ── アラートルール CRUD ──────────────────────────────────────────
+  const fetchAlertRules = async () => {
+    setAlertLoading(true);
+    try {
+      const res = await api.get("/buyback-alerts");
+      setAlertRules(res.items);
+    } catch { /* ignore */ }
+    setAlertLoading(false);
+  };
+
+  const createAlertRule = async (form: AlertFormState) => {
+    await api.post("/buyback-alerts", {
+      name: form.name,
+      card_game: form.card_game || null,
+      shop_code: form.shop_code || null,
+      product_type: form.product_type || null,
+      direction: form.direction,
+      threshold_pct: parseFloat(form.threshold_pct),
+      price_grade: form.price_grade,
+      is_active: form.is_active,
+      cooldown_minutes: parseInt(form.cooldown_minutes, 10),
+    });
+    await fetchAlertRules();
+    setShowCreateForm(false);
+  };
+
+  const toggleAlertRule = async (rule: AlertRule) => {
+    await api.put(`/buyback-alerts/${rule.id}`, {
+      ...rule,
+      is_active: !rule.is_active,
+    });
+    await fetchAlertRules();
+  };
+
+  const deleteAlertRule = async (id: string) => {
+    await api.delete(`/buyback-alerts/${id}`);
+    await fetchAlertRules();
   };
 
   // ── テーブル列定義 ─────────────────────────────────────────────────
@@ -378,6 +632,13 @@ export default function BuybackPricesPage() {
           isSuperAdmin ? (
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {fetchMsg && <span className={styles.statusMsg}>{fetchMsg}</span>}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setAlertsOpen(true); fetchAlertRules(); }}
+              >
+                {t("buybackPrices.alertSettings")}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
@@ -533,6 +794,67 @@ export default function BuybackPricesPage() {
           )}
         </div>
       </Drawer>
+
+      {/* ── アラート設定 Modal ────────────────────────────────────── */}
+      <Modal
+        open={alertsOpen}
+        onClose={() => { setAlertsOpen(false); setShowCreateForm(false); }}
+        title={t("buybackPrices.alertSettings")}
+        size="lg"
+      >
+        <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
+          {!showCreateForm && (
+            <Button variant="secondary" size="sm" onClick={() => setShowCreateForm(true)}>
+              {t("buybackPrices.alertCreate")}
+            </Button>
+          )}
+
+          {showCreateForm && (
+            <AlertRuleForm
+              onSave={createAlertRule}
+              onCancel={() => setShowCreateForm(false)}
+              t={t}
+            />
+          )}
+
+          {alertLoading ? (
+            <p style={{ color: "var(--text-secondary)" }}>{t("buybackPrices.loading")}</p>
+          ) : alertRules.length === 0 ? (
+            <p style={{ color: "var(--text-muted)" }}>{t("buybackPrices.alertNoRules")}</p>
+          ) : (
+            alertRules.map((rule) => (
+              <Card key={rule.id} variant="container">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "var(--space-2)" }}>
+                  <div>
+                    <strong>{rule.name}</strong>
+                    <p style={{ color: "var(--text-secondary)", fontSize: "var(--font-size-sm)", margin: 0 }}>
+                      {rule.direction === "down"
+                        ? t("buybackPrices.alertDirectionDown")
+                        : rule.direction === "up"
+                          ? t("buybackPrices.alertDirectionUp")
+                          : t("buybackPrices.alertDirectionBoth")}
+                      {" "}{rule.threshold_pct}% | {rule.price_grade}
+                      {rule.card_game && ` | ${rule.card_game}`}
+                      {rule.shop_code && ` | ${rule.shop_code}`}
+                    </p>
+                  </div>
+                  <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center", flexShrink: 0 }}>
+                    <Badge variant={rule.is_active ? "success" : "neutral"} size="sm">
+                      {rule.is_active ? t("buybackPrices.alertActive") : t("buybackPrices.alertInactive")}
+                    </Badge>
+                    <Button variant="ghost" size="sm" onClick={() => toggleAlertRule(rule)}>
+                      {rule.is_active ? t("buybackPrices.alertDisable") : t("buybackPrices.alertEnable")}
+                    </Button>
+                    <Button variant="danger" size="sm" onClick={() => deleteAlertRule(rule.id)}>
+                      {t("buybackPrices.alertDelete")}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))
+          )}
+        </div>
+      </Modal>
     </PageLayout>
   );
 }
