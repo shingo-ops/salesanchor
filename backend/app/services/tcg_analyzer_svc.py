@@ -1304,6 +1304,13 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
         # 単位解決 v2（商品フィルタより先に実行）— 正規化済み norm_unit を使用
         unit_canonical, kubun, unit_resolved = resolve_unit_v2(norm_unit, unit_alias_to_info)
+
+        # 「円」は通貨であり単位ではないためフィルタして未解決扱いに戻す
+        if unit_canonical == "円":
+            unit_canonical = None
+            kubun = ""
+            unit_resolved = False
+
         unit_uuid = unit_canonical_to_uuid.get(unit_canonical) if unit_canonical else None
 
         if unit_resolved:

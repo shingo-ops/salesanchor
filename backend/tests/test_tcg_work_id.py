@@ -79,12 +79,13 @@ def test_digest_tracks_content_and_integer_membership():
 
 @pytest.mark.parametrize("suffix", ["｜extra", ""])
 def test_eleven_columns_enforced(suffix):
-    # Ten or twelve columns, never eleven.
+    # Ten or twelve columns produce parse_errors (row is skipped, not whole-batch failure).
     row = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE)
     if suffix:
         row += "｜P1" + suffix
-    with pytest.raises(ValueError):
-        gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    items, parse_errors = gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    assert items == []
+    assert len(parse_errors) == 1
 
 
 def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):
@@ -178,7 +179,9 @@ def test_v5_span_diagnostic_has_shape_without_response_content(monkeypatch, capl
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: HEADER + "\n" + row)
     result = gemini.extract_message("X", work_reference=REF)
     assert result["status"] == "error"
-    assert "brackets=True" in result["error_message"]
-    assert "allowed_chars=False" in result["error_message"]
-    assert secret not in result["error_message"] and secret not in caplog.text
-    assert result["raw_response"] == ""
+    # span parse error is now stored in parse_errors (row-level skip), not error_message
+    assert len(result["parse_errors"]) == 1
+    parse_error_msg = result["parse_errors"][0]["error"]
+    assert "brackets=True" in parse_error_msg
+    assert "allowed_chars=False" in parse_error_msg
+    assert secret not in parse_error_msg and secret not in caplog.text
