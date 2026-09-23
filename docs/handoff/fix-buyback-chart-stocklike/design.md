@@ -1,5 +1,7 @@
 # design: fix-buyback-chart-stocklike
 
+recon: docs/handoff/fix-buyback-chart-stocklike/recon.md
+
 ## KGI
 買取価格チャートが株チャートと同様に動作する。
 
@@ -41,4 +43,4 @@ git revert でコミットを差し戻す（migrations なし）
 ## 維持の仕組み
 今後のスクレイパー追加時も `save_product_and_price` を使えば自動的に毎回記録される。
 
-守り手: shingo-ops（ADR-157 オーナー）
+守り手: docs/adr/ADR-157-buyback-price-logger.md（ADR-157 オーナー: shingo-ops）
