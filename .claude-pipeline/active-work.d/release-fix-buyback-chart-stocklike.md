@@ -1,13 +1,5 @@
-# release/fix-buyback-chart-stocklike
+branch: release/fix-buyback-chart-stocklike
 
-**Status**: IN_PROGRESS
-**Branch**: release/fix-buyback-chart-stocklike
-**Created**: 2026-09-22
-
-## KGI
-買取価格チャートが株チャートと同様に動作する（時系列データ蓄積・昇順表示・全グレード表示）
-
-## 変更内容
-1. 常にprice_logをINSERT（diff-onlyガード削除）
-2. historyエンドポイントのORDER BY を ASC に変更
-3. フロントエンドにAM・Cグレードを追加
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
+| release/fix-buyback-chart-stocklike | 買取価格チャート株チャート化 | 2026-09-22 09:00 | IN_PROGRESS | | | |
