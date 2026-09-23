@@ -1,5 +1,9 @@
 # design: fix-csv-export-null-guard
 
+## 関連ドキュメント
+- recon: docs/handoff/fix-csv-export-null-guard/recon.md
+- 対象ADR: ADR-155（商品マスタCSVエクスポート定義）
+
 ## KGI
 `/api/v1/tcg/products/export` が `product_code` NULL商品を含む場合でも200を返す。
 
@@ -37,6 +41,7 @@ pandas の `to_csv()` も NaN/None を空文字として出力する（デフォ
 → 我々への応用: None は空文字（出力しない）として扱うのが CSV ユーティリティの慣例に合致。
 
 ## 維持の仕組み
+- 守り手: `test_escape_cell_handles_none` テスト（CI必須）、mypy 型チェック（`str | None` アノテーション）
 - `escape_cell()` は型アノテーションを `str | None` に変更し、mypy でNone渡しの誤用を静的検出可能
 - `test_escape_cell_handles_none` テストが None ガードの存在を毎回 CI で担保
 
