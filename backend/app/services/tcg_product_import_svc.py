@@ -61,15 +61,25 @@ REQUIRED_COLUMNS: list[str] = [
 ]
 
 # コード列 → 参照マスタのテーブル名
-# NOTE: division_code と product_category_code は load_lookup_maps 内で公開スキーマ（public）の
-# SSOT（product_kinds / tcg_product_categories）で上書きされる（ADR-156 Phase 3A/3B）。
-# 初回クエリ（TCG_SCHEMA）は無駄になるが、静的解析ガード（test_tcg_schema_qualification.py）が
-# このマッピングの構造を直接検証するため、後方互換性のため変更しない。
+# NOTE: division_code と product_category_code は public の SSOT（product_kinds /
+# tcg_product_categories、ADR-156 Phase 3A/3B）へ移行済み。public.tcg_major_categories は
+# どの migration でも作成されておらず、tenant_004.tcg_major_categories も
+# migrations/20260921_130000_drop_tenant004_master_copies.sql:36 で削除済みのため
+# （確認日 2026-09-23）、TCG_SCHEMA（= public）で tcg_major_categories を素直に引くと
+# 「初回クエリが無駄になる」のではなく relation "public.tcg_major_categories" does not
+# exist の例外になる。そのため load_lookup_maps は _OVERRIDDEN_BY_PUBLIC_SSOT に載る列を
+# ループ内で引かず、直後の public SSOT 問い合わせだけで値を組み立てる。
+# LOOKUP_TABLES 自体の中身・構造は静的解析ガード（test_tcg_schema_qualification.py の
+# _assert_dynamic_lookup_contract）が直接検証するため変更しない。
 LOOKUP_TABLES: dict[str, str] = {
-    "division_code": "tcg_major_categories",       # overridden in load_lookup_maps → public.product_kinds
+    "division_code": "tcg_major_categories",       # ループでは引かず public.product_kinds を使う
     "manufacturer_code": "tcg_manufacturers",
-    "product_category_code": "tcg_product_categories",  # overridden in load_lookup_maps → public.tcg_product_categories
+    "product_category_code": "tcg_product_categories",  # ループでは引かず public.tcg_product_categories を使う
 }
+
+# load_lookup_maps のループでは引かず、直後の public SSOT 問い合わせの結果で
+# 値を組み立てる列（上の NOTE 参照）。
+_OVERRIDDEN_BY_PUBLIC_SSOT: frozenset[str] = frozenset({"division_code", "product_category_code"})
 
 # コード列 → create_product に渡す引数名
 LOOKUP_ARGS: dict[str, str] = {
@@ -176,18 +186,22 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     )
     maps["work_code"] = {str(r[0]): str(r[1]) for r in work_result.fetchall()}
     for column, table in LOOKUP_TABLES.items():
+        if column in _OVERRIDDEN_BY_PUBLIC_SSOT:
+            continue
         result = await db.execute(
             text(f"SELECT code, id FROM {TCG_SCHEMA}.{table} WHERE is_active = TRUE")
         )
         maps[column] = {str(r[0]): str(r[1]) for r in result.fetchall()}
     # Phase 3 SSOT: tcg_product_categories moved to public (INTEGER PK).
-    # Override the tenant-schema result with the canonical public-schema integer IDs.
+    # product_category_code is skipped in the loop above (_OVERRIDDEN_BY_PUBLIC_SSOT);
+    # this is the only query that fills it, from the canonical public-schema integer IDs.
     pc_result = await db.execute(
         text("SELECT code, id FROM public.tcg_product_categories WHERE is_active = TRUE")
     )
     maps["product_category_code"] = {str(r[0]): int(r[1]) for r in pc_result.fetchall()}
     # Phase 3A SSOT: tcg_major_categories moved to public.product_kinds (INTEGER PK).
-    # Override tenant-schema result with canonical public-schema integer IDs.
+    # division_code is skipped in the loop above (_OVERRIDDEN_BY_PUBLIC_SSOT);
+    # this is the only query that fills it, from the canonical public-schema integer IDs.
     pk_result = await db.execute(
         text("SELECT code, id FROM public.product_kinds WHERE is_active = TRUE")
     )
