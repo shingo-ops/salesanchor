@@ -10,7 +10,7 @@ Androidのジョブスケジューラ（約15分ごと）
   └─ Termux: ~/bin/line-auto-export            … termux/line-auto-export
        └─ proot（Ubuntu）: auto-export.sh       … 解除・共有・送信結果の待ち受け
             ├─ flow.sh                          … LINEのUI操作（端末の /data/local/tmp へ転送して実行）
-            └─ reanchor.sh                      … 4時間ごとに周期の位相を :00/:15/:30/:45 に揃え直す
+            └─ adb-discover.sh                  … ADBの接続先が変わったときに探し直す
 ```
 
 このセッションやPCは不要で、端末だけで完結する。結果は既存の outbox（`~/line-import/state/outbox.sqlite3`）
@@ -20,7 +20,7 @@ Androidのジョブスケジューラ（約15分ごと）
 
 | リポジトリ | 端末での配置先 |
 | --- | --- |
-| `auto-export.sh` / `flow.sh` / `reanchor.sh` | proot内 `/root/line-auto-export/` |
+| `auto-export.sh` / `flow.sh` / `adb-discover.sh` | proot内 `/root/line-auto-export/` |
 | `termux/line-auto-export` | Termux `~/bin/line-auto-export`（実行権限を付ける） |
 
 暗証番号は `~/line-import/state/unlock-pin`（権限600）に置く。スクリプトには埋め込まない。
@@ -40,17 +40,23 @@ termux-job-scheduler --job-id 4203 --period-ms 900000 \
   圏外や電池残量が少ないときに止まってしまう。
 - 登録した瞬間に1回実行され、そこが周期の起点になる。
 
-## 位相リセット（reanchor.sh）
+## ADB接続先の自動復旧（adb-discover.sh）
 
-ジョブスケジューラは時刻を指定できず、実測で1回あたり約0.6分ずつ後ろにずれる（平均間隔15.6分）。
-放置すると1日で約55分ずれるため、4時間ごとに登録し直して位相を揃える。
+Wi-Fi が切れて復帰すると、Android はワイヤレスデバッグを**新しいポート**で起動し直す。
+保存済みの接続先では復帰できず、2026-09-23 は 40359 → 44861 に変わって約6時間止まった。
 
-- `auto-export.sh` が「前回リセットから4時間経過」を検出し、`reanchor.sh` を**切り離して**起動する
-  （ジョブの実行時間制限を受けないため）。前回時刻は `/root/line-auto-export/last-reanchor`。
-- `reanchor.sh` は次の15分境界（:00/:15/:30/:45）まで待ってから登録し直す。
-- ウェイクロックは使わない。端末が深く眠ると待ちが数十秒〜数分伸びる（2026-09-19 実測: 狙い20:15:00に対し実際20:15:44）。
-  電池を優先した判断。精度が必要になったらウェイクロックの取得を検討する。
-- リセット間の最大ずれは約9〜10分、追加実行は1日6回。
+- `auto-export.sh` は保存済みの接続先で繋がらないとき `adb-discover.sh` を呼ぶ。
+- ローカルの 30000-55000 を走査し、`adb connect` して `adb devices` が `device` になった先を採用する。
+  成功したら `endpoint` ファイルを更新する。実測 約97秒（走査64秒＋検証）。
+- 候補の検証に `adb shell` を使うと `offline` 相手で数分待たされる（実測24分）。`devices` の状態で判定すること。
+- `adb mdns services` はこの端末で何も返さず、`getprop` は proot から権限が無く使えない（どちらも実測）。
+
+## 実行時刻について
+
+termux-job-scheduler は時刻を指定できず、1回あたり約0.6分ずつ後ろにずれる（実測 平均間隔15.6分）。
+**時刻を揃える仕組みは持たない。** 2026-09-19 に「次の15分境界まで待ってから登録し直す」方式を入れたが、
+待機プロセスがジョブ終了後に Android に停止され、22回中21回が完走しなかったため 2026-09-23 に廃止した。
+15分ごとに動いていれば1回の失敗は次の回で埋まるため、時刻の揃えに実用上の意味は無いと判断した。
 
 ## 実測（2026-09-19、15分周期へ変更後 約11時間・48回）
 
@@ -76,6 +82,10 @@ termux-job-scheduler --job-id 4203 --period-ms 900000 \
 - スマホ使用中（画面オン＋ロック解除）は見送る。前面の操作を奪わないための判断。
 - LINEやOSの更新でUIの配置が変わると `flow.sh` の調整が要る。
 - Termuxの「EDIT」ボタンだけは座標直打ち（`EDIT_X/EDIT_Y`）。この画面は uiautomator に出ないため。
+- Termux に「他のアプリの上に重ねて表示」権限が無いと、共有後のセッション起動が遅れる
+  （2026-09-23 実測: 90秒を超えて失敗扱いになり、端末を触った時点で溜まっていた8件が一斉に処理された。
+  ログ: `Termux:PermissionUtils: com.termux does not have Display over other apps (SYSTEM_ALERT_WINDOW) permission`）。
+  送信結果の待ちを4分に延ばして誤判定を減らしているが、根本対策は端末設定での権限付与。
 
 ADBに依存しない代替（自作アプリ方式）は `tools/line-auto-export-app/` で検証中。2026-09-19 時点では
 ロック画面へのタップが届かず未達（`docs/handoff/line-auto-export-app/evidence-20260919-unlock.md`）。

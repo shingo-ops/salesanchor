@@ -48,19 +48,6 @@ locked() { q dumpsys window policy | grep -q 'showing=true'; }
 awake() { q dumpsys power | grep -q 'mWakefulness=Awake'; }
 focus() { q dumpsys window | grep -m1 mCurrentFocus | sed -E 's/.* ([^ ]+)\}.*/\1/'; }
 
-# 4時間ごとに周期の位相を :00/:15/:30/:45 に揃え直す。termux-job-scheduler は時刻を
-# 指定できず、実測で1回あたり約0.6分ずつ後ろにずれるため（2026-09-19 実測: 平均間隔15.6分）。
-# 実処理は reanchor.sh に切り離す（ジョブの実行時間制限を受けないため）。
-REANCHOR_STATE=$DIR/last-reanchor
-REANCHOR_INTERVAL=14400   # 4時間
-last_reanchor=$(cat "$REANCHOR_STATE" 2>/dev/null || echo 0)
-case "$last_reanchor" in ''|*[!0-9]*) last_reanchor=0;; esac
-if [ $(( $(date +%s) - last_reanchor )) -ge "$REANCHOR_INTERVAL" ]; then
-  date +%s > "$REANCHOR_STATE"
-  setsid nohup bash "$DIR/reanchor.sh" >/dev/null 2>&1 &
-  say "位相リセットを起動"
-fi
-
 say "start"
 [ "$(stat -c %a "$PIN_FILE" 2>/dev/null)" = 600 ] || fail setup "暗証番号ファイルがない、または権限が600ではない"
 
@@ -69,7 +56,15 @@ timeout 10 adb start-server >/dev/null 2>&1
 if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
   last=$(cat "$DIR/endpoint" 2>/dev/null)
   [ -n "$last" ] && timeout 10 adb connect "$last" >/dev/null 2>&1
-  timeout 10 adb get-state 2>/dev/null | grep -q device || fail adb "ADBに接続できない（ワイヤレスデバッグ/Wi-Fiを確認）"
+  if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
+    # Wi-Fi が切れて復帰すると、ワイヤレスデバッグは新しいポートで起動し直す
+    # （2026-09-23: 40359 -> 44861 に変わり約6時間停止した）。保存済みの接続先で
+    # 駄目なときはポートを探し直す（実測 約97秒）。
+    say "接続先を探索"
+    found=$(bash "$DIR/adb-discover.sh")
+    [ -n "$found" ] && say "接続先を更新: $found"
+    timeout 10 adb get-state 2>/dev/null | grep -q device || fail adb "ADBに接続できない（ワイヤレスデバッグ/Wi-Fiを確認）"
+  fi
 fi
 timeout 10 adb devices | awk '/\tdevice$/{print $1; exit}' > "$DIR/endpoint"
 
@@ -111,7 +106,7 @@ q input tap $EDIT_X $EDIT_Y >/dev/null
 say "EDIT tapped"
 
 res=""
-for i in $(seq 1 90); do
+for i in $(seq 1 240); do
   res=$(python3 -c "
 import sqlite3
 r=sqlite3.connect('$DB').execute(\"select result from events where id>? and stage='send' and result<>'started' order by id desc limit 1\",($before,)).fetchone()
@@ -121,6 +116,6 @@ print('' if r is None else r[0])")
 done
 q input keyevent KEYCODE_HOME >/dev/null
 q input keyevent KEYCODE_SLEEP >/dev/null
-[ -z "$res" ] && fail import "書き出し後90秒たっても送信結果が記録されない"
+[ -z "$res" ] && fail import "書き出し後4分たっても送信結果が記録されない"
 say "done: $res"
 record ok "送信結果: $res"
