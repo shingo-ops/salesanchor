@@ -30,9 +30,15 @@ def escape_cell(value: str | None) -> str:
 | 既存テストが壊れない | pytest PASSED（CI確認） |
 | None 入力でも空文字を返す | `test_escape_cell_handles_none` テストで担保 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 Python CSV エスケープユーティリティにおける None ガードは標準的パターン。
 `csv.writer` の `writerow()` も None を空文字として扱う挙動と一致。
+pandas の `to_csv()` も NaN/None を空文字として出力する（デフォルト）。
+→ 我々への応用: None は空文字（出力しない）として扱うのが CSV ユーティリティの慣例に合致。
+
+## 維持の仕組み
+- `escape_cell()` は型アノテーションを `str | None` に変更し、mypy でNone渡しの誤用を静的検出可能
+- `test_escape_cell_handles_none` テストが None ガードの存在を毎回 CI で担保
 
 ## 戻し方
 `git revert <commit>` で即復旧可能（migration/DB変更なし）。
