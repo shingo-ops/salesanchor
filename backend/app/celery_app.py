@@ -159,10 +159,10 @@ celery_app.conf.beat_schedule = {
         "task": "app.tasks.tcg_import_discard.discard_stale_pending_jobs",
         "schedule": crontab(minute=0),  # 毎時0分
     },
-    # ADR-157: 外部買取店（シンソク + 買取ホムラ）の買取価格を 4時間ごとに取得
+    # ADR-157: 外部買取店（シンソク + 買取ホムラ）の買取価格を 1日3回取得（JST 10:00/13:00/22:00）
     # public.buyback_shop_products / public.buyback_price_logs に蓄積
     "fetch-buyback-prices": {
         "task": "buyback.fetch_all_prices",
-        "schedule": crontab(minute=0, hour="*/4"),
+        "schedule": crontab(minute=0, hour="1,4,13"),
     },
 }

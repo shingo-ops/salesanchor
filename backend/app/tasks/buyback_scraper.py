@@ -3,7 +3,7 @@
 
 ADR-157: 買取相場ログ
 
-スケジュール: 4時間ごと（beat_schedule "fetch-buyback-prices"）
+スケジュール: 1日3回（JST 10:00/13:00/22:00、beat_schedule "fetch-buyback-prices"）
 対象: シンソク（REST API） + 買取ホムラ（HTML スクレイピング）
 """
 
