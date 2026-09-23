@@ -83,8 +83,9 @@ def test_eleven_columns_enforced(suffix):
     row = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE)
     if suffix:
         row += "｜P1" + suffix
-    with pytest.raises(ValueError):
-        gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    items, parse_errors = gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    assert items == []
+    assert len(parse_errors) == 1
 
 
 def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):

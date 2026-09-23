@@ -153,14 +153,15 @@ def test_real_task_parsed_limit_preserves_measured_size(pg, monkeypatch, delta):
     seed_products(pg[0])
     sid, jid = source(pg)
     fake_model(monkeypatch)
-    item = gemini.parse_extraction_response(VALID, RAW, version=5)[0]
+    items, _ = gemini.parse_extraction_response(VALID, RAW, version=5)
+    item = items[0]
     fixed_id = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     monkeypatch.setattr(records, "uuid4", lambda: fixed_id)
     item["raw_memo"] = ""
     prepared = {**item, "extraction_item_id": str(fixed_id), "response_item_number": 1}
     size = records.MAX_BYTES + delta
     item["raw_memo"] = "x" * (size - len(records.encoded([prepared]).encode()))
-    monkeypatch.setattr(gemini, "parse_extraction_response", lambda *a, **kw: [item])
+    monkeypatch.setattr(gemini, "parse_extraction_response", lambda *a, **kw: ([item], []))
     analyzer = Mock(return_value={"status": "done"})
     monkeypatch.setattr(extraction, "analyze_extraction_job", analyzer)
     monkeypatch.setenv("TCG_AUTO_ANALYZE", "1")

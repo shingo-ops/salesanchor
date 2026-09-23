@@ -114,8 +114,9 @@ _VALID_RESPONSE = (
 def test_parse_extraction_response_basic():
     """正常な 2 行を正しく解析する。"""
     raw_text = "行A\n行B\n行C"
-    items = parse_extraction_response(_VALID_RESPONSE, raw_text)
+    items, parse_errors = parse_extraction_response(_VALID_RESPONSE, raw_text)
     assert len(items) == 2
+    assert parse_errors == []
 
     assert items[0]["raw_product_name"] == "ポケモンカード"
     assert items[0]["raw_quantity"] == "3"
@@ -137,7 +138,7 @@ def test_parse_extraction_response_single_line_span():
         "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
         "商品A｜1｜100円｜個｜｜｜L0001\n"
     )
-    items = parse_extraction_response(response, "行A")
+    items, _ = parse_extraction_response(response, "行A")
     assert items[0]["line_start"] == 1
     assert items[0]["line_end"] == 1
 
@@ -149,7 +150,7 @@ def test_parse_extraction_response_clamp_max():
         "商品A｜1｜100円｜個｜｜｜L0001-L0099\n"
     )
     raw_text = "行A\n行B"  # 2行
-    items = parse_extraction_response(response, raw_text)
+    items, _ = parse_extraction_response(response, raw_text)
     assert items[0]["line_end"] == 2  # クランプ
 
 
@@ -160,22 +161,24 @@ def test_parse_extraction_response_wrong_cols_skipped():
         "A｜B｜C\n"  # 3列のみ
         "ポケモン｜3｜1500円｜枚｜｜｜L0001\n"
     )
-    items = parse_extraction_response(response, "行A")
+    items, _ = parse_extraction_response(response, "行A")
     assert len(items) == 1
     assert items[0]["raw_product_name"] == "ポケモン"
 
 
 def test_parse_extraction_response_empty_response():
     """空レスポンスは空リスト。"""
-    items = parse_extraction_response("", "行A")
+    items, parse_errors = parse_extraction_response("", "行A")
     assert items == []
+    assert parse_errors == []
 
 
 def test_parse_extraction_response_header_only():
     """ヘッダー行のみは空リスト。"""
     response = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN\n"
-    items = parse_extraction_response(response, "行A")
+    items, parse_errors = parse_extraction_response(response, "行A")
     assert items == []
+    assert parse_errors == []
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -442,9 +445,9 @@ def _v3_response(old_response):
 @pytest.mark.parametrize("response", [
     "", "   ", "商品A｜1｜100｜BOX｜｜｜L0001｜｜", _VALID_RESPONSE,
     _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001",
-    _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001｜｜\n壊れた｜行",
 ])
 def test_v3_format_failure_saves_no_partial_items(monkeypatch, response):
+    """ヘッダー欠落 / 列数不一致行のみの場合は status='error' かつ items=[]。"""
     monkeypatch.setattr("app.services.gemini_extraction_svc.call_gemini_extraction",
                         lambda *args, **kwargs: response)
     result = extract_message("商品A")
@@ -452,19 +455,37 @@ def test_v3_format_failure_saves_no_partial_items(monkeypatch, response):
     assert result["items"] == []
 
 
+def test_v3_partial_save_when_valid_and_invalid_lines_mixed(monkeypatch):
+    """正常行と壊れた行が混在した場合は正常行を部分保存して status='done'。"""
+    mixed = _V3_HEADER + "\n商品A｜1｜100｜BOX｜｜｜L0001｜｜\n壊れた｜行"
+    monkeypatch.setattr("app.services.gemini_extraction_svc.call_gemini_extraction",
+                        lambda *args, **kwargs: mixed)
+    result = extract_message("商品A")
+    assert result["status"] == "done"
+    assert len(result["items"]) == 1
+    assert result["items"][0]["raw_product_name"] == "商品A"
+    assert result["parse_errors"] != []
+
+
 @pytest.mark.parametrize("span", ["L0000", "L0099", "L0002-L0001", "bad"])
-def test_v3_product_span_never_clamped(span):
-    with pytest.raises(ValueError):
-        parse_extraction_response(_V3_HEADER + f"\nガンダム EB01｜1｜100｜BOX｜｜｜{span}｜ガンダム｜L0001",
-                                  "ガンダム EB01", version=3)
+def test_v3_product_span_collected_in_parse_errors(span):
+    """v3 で不正なスパンを持つ行は parse_errors に収集され、items は空になる。"""
+    items, parse_errors = parse_extraction_response(
+        _V3_HEADER + f"\nガンダム EB01｜1｜100｜BOX｜｜｜{span}｜ガンダム｜L0001",
+        "ガンダム EB01", version=3,
+    )
+    assert items == []
+    assert len(parse_errors) == 1
 
 
 def test_v3_work_evidence_roundtrip_without_repair():
     row = "ガンダム EB01｜1｜100｜BOX｜｜｜L0001｜ガンダム｜L0099"
-    item = parse_extraction_response(_V3_HEADER + "\n" + row, "ガンダム EB01", version=3)[0]
+    items, _ = parse_extraction_response(_V3_HEADER + "\n" + row, "ガンダム EB01", version=3)
+    item = items[0]
     assert item["raw_work_name"] == "ガンダム"
     assert item["raw_work_source_line_span"] == "L0099"  # analyzer rejects, never clamps
-    assert parse_extraction_response(_VALID_RESPONSE, "a\nb\nc")[0]["raw_work_name"] is None
+    v2_items, _ = parse_extraction_response(_VALID_RESPONSE, "a\nb\nc")
+    assert v2_items[0]["raw_work_name"] is None
 
 
 def test_work_master_reaches_prompt_without_database_ids(monkeypatch):

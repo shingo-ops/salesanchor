@@ -402,6 +402,41 @@ class SupplierPromptUpdate(BaseModel):
 
 
 # ============================================================================
+# supplier extraction rules: 仕入元ごとの抽出ルール (public.suppliers 列)
+# ============================================================================
+
+
+class SupplierExtractionRulesResponse(BaseModel):
+    supplier_id: int
+    extraction_price_format: Optional[str] = None
+    extraction_qty_format: Optional[str] = None
+    extraction_order_pattern: Optional[str] = None
+    extraction_default_unit: Optional[str] = None
+    extraction_notes: Optional[str] = None
+    latest_raw_text: Optional[str] = None  # source_messages.raw_text の最新1件
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupplierExtractionRulesUpdate(BaseModel):
+    extraction_price_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_qty_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_order_pattern: Optional[str] = Field(default=None, max_length=5000)
+    extraction_default_unit: Optional[str] = Field(default=None, max_length=100)
+    extraction_notes: Optional[str] = Field(default=None, max_length=50000)
+
+
+class SupplierExtractionOverviewItem(BaseModel):
+    supplier_id: int
+    supplier_code: Optional[str] = None
+    name: str
+    has_extraction_rules: bool
+    unit_ng_count: int  # unit_resolved=false の analysis_results 件数
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
 # conditions_master: 状態マスタ (public.conditions)
 # ============================================================================
 

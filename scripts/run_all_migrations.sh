@@ -784,3 +784,9 @@ run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
 
 # public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
 run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql
+
+# public.suppliers に仕入元ごとの抽出ルール列を追加
+run_sql migrations/20260924_010000_add_supplier_extraction_rules.sql
+
+# public.line_unit_aliases に不足エイリアス（冊・OX・ﾏｽﾀｰｶｰﾄﾝ）を追加
+run_sql migrations/20260924_020000_add_missing_unit_aliases.sql
