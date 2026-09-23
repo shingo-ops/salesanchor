@@ -120,6 +120,7 @@ export default function BuybackPricesPage() {
   const [selectedProduct, setSelectedProduct] = useState<BuybackProduct | null>(null);
   const [history, setHistory] = useState<PriceHistoryResponse | null>(null);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyDays, setHistoryDays] = useState<number>(30);
 
   // ── データ取得 ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -174,6 +175,7 @@ export default function BuybackPricesPage() {
     setSelectedProduct(row);
     setDrawerOpen(true);
     setHistory(null);
+    setHistoryDays(30);
     setHistoryLoading(true);
 
     api
@@ -186,6 +188,24 @@ export default function BuybackPricesPage() {
       })
       .finally(() => setHistoryLoading(false));
   };
+
+  // ── 期間切り替え: 選択中の商品で再取得 ───────────────────────────
+  useEffect(() => {
+    if (!selectedProduct || !drawerOpen) return;
+    setHistory(null);
+    setHistoryLoading(true);
+
+    api
+      .get<PriceHistoryResponse>(
+        `/buyback-prices/${selectedProduct.shop_product_id}/history?days=${historyDays}`,
+      )
+      .then(setHistory)
+      .catch(() => {
+        /* 履歴取得失敗はサイレント。グラフ空表示 */
+      })
+      .finally(() => setHistoryLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyDays]);
 
   // ── 手動取得 ───────────────────────────────────────────────────────
   const handleManualFetch = async () => {
@@ -306,6 +326,13 @@ export default function BuybackPricesPage() {
       .map((g) => ({ ...g, count: countsByGame[g.key] ?? 0 })),
   ];
 
+  // ── 期間タブ ────────────────────────────────────────────────────
+  const periodItems = [
+    { key: "7", label: t("buybackPrices.history7d") },
+    { key: "30", label: t("buybackPrices.history30d") },
+    { key: "90", label: t("buybackPrices.history90d") },
+  ];
+
   // ── ページネーション ───────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const hasNextPage = page < totalPages;
@@ -409,8 +436,18 @@ export default function BuybackPricesPage() {
           {!historyLoading && history && (
             <>
               <p className={styles.historyMeta}>
-                {t("buybackPrices.historyDays")} — {selectedProduct?.shop_code}
+                {t("buybackPrices.historyDays", { days: historyDays })} — {selectedProduct?.shop_code}
               </p>
+
+              <div style={{ marginBottom: "var(--space-3)" }}>
+                <Tabs
+                  items={periodItems}
+                  activeKey={String(historyDays)}
+                  onChange={(k) => setHistoryDays(Number(k))}
+                  variant="pill"
+                  size="sm"
+                />
+              </div>
 
               {chartData.length === 0 ? (
                 <p className={styles.noHistory}>{t("buybackPrices.noData")}</p>
