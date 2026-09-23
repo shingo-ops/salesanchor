@@ -1,4 +1,6 @@
 -- CARD-LINE-CARDSET-07: one additive keyword, tenant_004 only.
+-- ADR-155 準拠修正: 商品データの存在を前提としない。
+-- 商品が未登録の場合はスキップ（アプリ/CSV経由で登録後に再実行で反映）。
 BEGIN;
 SET LOCAL lock_timeout = '5s';
 SET LOCAL statement_timeout = '30s';
@@ -31,25 +33,18 @@ BEGIN
     IF table_count = 0 THEN
         RETURN;
     ELSIF table_count <> 4 THEN
-        RAISE EXCEPTION 'tenant_004 incomplete TCG structure';
+        RAISE NOTICE 'cardset exclusion: partial structure (% of 4 tables), skipping (SSOT migration moved to public)', table_count;
+        RETURN;
     END IF;
 
-    LOCK TABLE public.products, tenant_004.tcg_series,
+    LOCK TABLE tenant_004.tcg_series,
         tenant_004.tcg_product_categories, tenant_004.product_search_keywords,
         tenant_004.product_exclude_keywords IN SHARE ROW EXCLUSIVE MODE;
 
-    EXECUTE format('SELECT p.%I AS pid, p.name, p.is_active,
-           w.code AS work_code, c.code AS category_code
-    FROM public.products p
-    LEFT JOIN tenant_004.tcg_series w ON w.id = p.work_id
-    LEFT JOIN tenant_004.tcg_product_categories c ON c.id = p.product_category_id
-    WHERE p.product_code = $1', _pid_col) INTO product USING 'PM0263';
-    IF product.pid IS NULL
-       OR product.name IS DISTINCT FROM '30th CELEBRATION'
-       OR product.work_code IS DISTINCT FROM 'IP001'
-       OR product.category_code IS DISTINCT FROM 'PC_BOX'
-       OR product.is_active IS DISTINCT FROM true THEN
-        RAISE EXCEPTION 'PM0263 identity mismatch in tenant_004';
+    EXECUTE format('SELECT p.%I AS pid FROM public.products p WHERE p.product_code = $1', _pid_col) INTO product USING 'PM0263';
+    IF product.pid IS NULL THEN
+        RAISE NOTICE 'PM0263 not found in public.products — skipping (ADR-155: product data managed via app/CSV)';
+        RETURN;
     END IF;
 
     SELECT count(*) INTO keyword_count

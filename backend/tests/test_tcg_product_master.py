@@ -31,7 +31,7 @@ _FORM_DATA = {
         "english_title": "",
     },
     "lookups": {
-        "division_id": [{"id": "cccc-0001", "name": "TCG"}],
+        "product_kind_id": [{"id": "1", "name": "TCG"}],
         "work_id": [{"id": "dddd-0001", "name": "Pokemon"}],
         "manufacturer_id": [{"id": "eeee-0001", "name": "The Pokemon Company"}],
         "product_category_id": [{"id": "ffff-0001", "name": "Box"}],
@@ -115,7 +115,7 @@ async def test_check_duplicates_requires_auth():
             "/api/v1/tcg/products/check-duplicates",
             json={
                 "extraction_item_id": "x", "source_message_id": "y",
-                "division_id": "d", "work_id": "w",
+                "product_kind_id": "d", "work_id": "w",
                 "manufacturer_id": "m", "product_category_id": "p",
                 "japanese_title": "SV1a",
             },
@@ -130,7 +130,7 @@ async def test_create_product_requires_auth():
             "/api/v1/tcg/products",
             json={
                 "extraction_item_id": "x", "source_message_id": "y",
-                "division_id": "d", "work_id": "w",
+                "product_kind_id": "d", "work_id": "w",
                 "manufacturer_id": "m", "product_category_id": "p",
                 "japanese_title": "SV1a",
             },
@@ -142,7 +142,7 @@ async def test_add_keyword_requires_auth():
     from app.main import app
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
         r = await client.post(
-            "/api/v1/tcg/products/PM0001/search-keywords",
+            "/api/v1/tcg/products/1/search-keywords",
             json={"new_keyword": "sv1a"},
         )
     assert r.status_code in (401, 403)
@@ -174,8 +174,8 @@ async def test_registration_form_ok(super_admin_override):
     assert body["item"]["raw_name"] == "ポケモン SV1a 1BOX"
     assert "mark" in body["item"]
     assert "english_title" in body["item"]
-    assert "division_id" in body["lookups"]
-    assert body["lookups"]["division_id"][0]["name"] == "TCG"
+    assert "product_kind_id" in body["lookups"]
+    assert body["lookups"]["product_kind_id"][0]["name"] == "TCG"
 
 
 async def test_registration_form_not_found(super_admin_override):
@@ -237,7 +237,7 @@ async def test_check_duplicates_ok(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "dddd-0001",
+                    "product_kind_id": "1",
                     "work_id": "eeee-0001",
                     "manufacturer_id": "ffff-0001",
                     "product_category_id": "gggg-0001",
@@ -267,7 +267,7 @@ async def test_create_product_ok(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "cccc",
+                    "product_kind_id": "1",
                     "work_id": "dddd",
                     "manufacturer_id": "eeee",
                     "product_category_id": "ffff",
@@ -294,7 +294,7 @@ async def test_create_product_with_mark_english_title(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "cccc",
+                    "product_kind_id": "1",
                     "work_id": "dddd",
                     "manufacturer_id": "eeee",
                     "product_category_id": "ffff",
@@ -322,7 +322,7 @@ async def test_create_product_duplicate(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "cccc",
+                    "product_kind_id": "1",
                     "work_id": "dddd",
                     "manufacturer_id": "eeee",
                     "product_category_id": "ffff",
@@ -346,7 +346,7 @@ async def test_create_product_empty_title(super_admin_override):
             json={
                 "extraction_item_id": "aaaa",
                 "source_message_id": "bbbb",
-                "division_id": "cccc",
+                "product_kind_id": "1",
                 "work_id": "dddd",
                 "manufacturer_id": "eeee",
                 "product_category_id": "ffff",
@@ -371,7 +371,7 @@ async def test_add_keyword_ok(super_admin_override):
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             r = await client.post(
-                "/api/v1/tcg/products/PM0001/search-keywords",
+                "/api/v1/tcg/products/1/search-keywords",
                 json={"new_keyword": "sv1a"},
             )
     assert r.status_code == 200
@@ -416,7 +416,7 @@ async def test_add_keyword_duplicate(super_admin_override):
             transport=ASGITransport(app=app), base_url="http://test"
         ) as client:
             r = await client.post(
-                "/api/v1/tcg/products/PM0001/search-keywords",
+                "/api/v1/tcg/products/1/search-keywords",
                 json={"new_keyword": "sv1a"},
             )
     assert r.status_code == 200
@@ -445,7 +445,7 @@ async def test_create_product_force_bypasses_duplicate(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "cccc",
+                    "product_kind_id": "1",
                     "work_id": "dddd",
                     "manufacturer_id": "eeee",
                     "product_category_id": "ffff",
@@ -474,7 +474,7 @@ async def test_create_product_no_force_default(super_admin_override):
                 json={
                     "extraction_item_id": "aaaa",
                     "source_message_id": "bbbb",
-                    "division_id": "cccc",
+                    "product_kind_id": "1",
                     "work_id": "dddd",
                     "manufacturer_id": "eeee",
                     "product_category_id": "ffff",

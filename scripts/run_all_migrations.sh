@@ -520,10 +520,11 @@ run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
 # 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
 run_sql migrations/20260729_043520_drop_deals.sql
 
-# ADR-1002: stale tcg_products 再作成防止 — Phase 2c DROP を早期実行
-# 前回失敗デプロイで再作成された空の tcg_products を除去する。
-# 元の位置（末尾）にも残置（冪等なため二重実行は無害）。
-run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+
+# Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
+run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
 
 # TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
 run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
@@ -656,6 +657,10 @@ run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
 # UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
 run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
 
+# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
+# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
+run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
+
 # UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
 run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
 
@@ -670,3 +675,109 @@ run_sql migrations/20260916_130000_work_id_not_null.sql
 
 # Gemini v5: extraction_items に resolved_product_code 列追加
 run_sql migrations/20260917_010000_add_product_code_to_extraction.sql
+
+# C92: 完売ルール・日付ルール共通テーブル 13表（tenant_001 専用・冪等）
+run_sql migrations/20260917_000000_create_analysis_rule_tables.sql
+
+# 仕入元マスタ SSOT Sprint 1: tcg_suppliers → public.suppliers コピー + supplier_channels FK UUID→INTEGER + line_supplier_source_names DROP
+run_sql migrations/20260917_020000_supplier_ssot_migration.sql
+
+# 仕入元マスタ SSOT Phase 2 Sprint 1: public.suppliers に tenant_id 追加 + purchase_orders/products FK 張り替え
+run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
+
+# Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
+run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
+
+# VIEW → TABLE 修正: 手動作成VIEWをDROPし実体テーブルをRENAME（本番デプロイ252番失敗の修正）
+run_sql migrations/20260919_015000_fix_view_to_table_rename.sql
+
+# Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
+run_sql migrations/20260919_020000_master_ssot_public_tables.sql
+
+# Master SSOT Phase 2: FK work_id → tcg_type_master（冪等）
+run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
+
+# Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
+run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
+
+# Master SSOT Phase 3: unit_id/condition_id FK UUID→INTEGER + product_category_id UUID→INTEGER（冪等）
+run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
+
+# Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
+run_sql migrations/20260920_020000_supplier_line_name_unique.sql
+
+# Conditions master SSOT Phase 1: public.conditions に tenant_id 追加 + deal_statuses/work_items FK 張り替え
+run_sql migrations/20260920_040000_conditions_ssot_phase1.sql
+
+# 単位マスタ public.units に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_030000_units_add_tenant_id.sql
+
+# ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
+
+# 備考マスタ public.tcg_note_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_060000_note_master_tenant_id.sql
+
+# product_categories tenant_id
+run_sql migrations/20260920_070000_product_categories_tenant_id.sql
+
+# analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
+run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
+
+# 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
+run_sql migrations/20260920_130000_create_product_classification.sql
+
+# analysis_rule 13テーブルを全スキーマから削除（SSOT を tcg_status_master に統合・PR #3621）
+run_sql migrations/20260921_010000_drop_analysis_rule_tables.sql
+
+# ADR-156: 商品分類ツリー Phase 1 — 大分類・type_master rename・小分類FK・コンディション定義・解析マスタFK
+run_sql migrations/20260921_060000_create_product_kinds.sql
+run_sql migrations/20260921_070000_rename_tcg_type_master_to_type_master.sql
+run_sql migrations/20260921_080000_product_lines_add_type_id.sql
+run_sql migrations/20260921_090000_create_condition_definitions.sql
+run_sql migrations/20260921_100000_add_analysis_master_fk.sql
+
+# Step 1/5: パイプライン 17テーブル を public スキーマに作成（DDL-only・冪等）
+run_sql migrations/20260921_110000_pipeline_tables_public.sql
+
+# Step 5/5: tenant_004 スキーマのパイプライン 17テーブル + バックアップ 2テーブルを DROP（ADR-1002）
+run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
+
+# ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
+run_sql migrations/20260921_120000_add_products_product_kind_id.sql
+
+# ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
+run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
+
+# ADR-156 Phase 6: 小分類→大分類FK / 入数マスタ / 重量マスタ / products FK追加
+run_sql migrations/20260921_140000_product_classification_masters.sql
+
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260922_000000_create_buyback_tables.sql
+
+# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+
+# ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
+run_sql migrations/20260922_030000_product_format_game_links.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql
+
+# 販売単位・状態マスタ連鎖プルダウン基盤
+run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql
+
+# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+
+# 残存 TCG マスタ 3 テーブルを public schema にプロモート
+run_sql migrations/20260923_030000_promote_remaining_tcg_tables.sql
+
+# line_import_devices.tcg_schema を tenant_004 → public に更新
+run_sql migrations/20260923_040000_update_device_tcg_schema.sql
+
+# public.analysis_results に欠落インデックスを追加（ON CONFLICT 修正）
+run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql

@@ -13,11 +13,25 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_product_import_svc import CSV_COLUMNS, LOOKUP_ARGS, LOOKUP_TABLES
-from app.tcg_config import TCG_SCHEMA
 
-COLUMNS = ["product_code", "revision", *CSV_COLUMNS]
+# Step 4/5: TCG テーブルは public スキーマに移行済み
+TCG_SCHEMA = "public"
+
+COLUMNS = ["product_id", "revision", *CSV_COLUMNS]
 MAX_BYTES = 2 * 1024 * 1024
 WORDS = {"search_keywords": "product_search_keywords", "exclude_keywords": "product_exclude_keywords"}
+# Phase 3 SSOT: these lookup tables moved to public schema (INTEGER PK).
+# Keys match the LOOKUP_TABLES keys whose backing table is now in public.
+# ADR-156 Phase 3A: division_code → public.product_kinds (INTEGER PK)
+_PUBLIC_LOOKUP_TABLES: set[str] = {"product_category_code", "division_code"}
+# ADR-156 Phase 3A: roundtrip snapshot JOINs use public.product_kinds (INTEGER PK)
+# instead of tenant.tcg_major_categories (UUID PK) for division_code.
+# LOOKUP_TABLES from import_svc still maps division_code→tcg_major_categories for the
+# tenant-schema CSV lookup path; here we override for the snapshot SELECT JOINs only.
+_ROUNDTRIP_LOOKUP_TABLES: dict[str, str] = {
+    **LOOKUP_TABLES,
+    "division_code": "product_kinds",
+}
 
 
 class RoundtripError(ValueError):
@@ -33,6 +47,8 @@ def needs_escape(value: str) -> bool:
 
 
 def escape_cell(value: str) -> str:
+    if not value:
+        return ""
     return "'" + value if needs_escape(value) else value
 
 
@@ -78,7 +94,7 @@ def read_records(raw: bytes) -> list[list[str]]:
 
 def is_update(raw: bytes) -> bool:
     records = read_records(raw)
-    return bool(records and any(c in records[0] for c in ("product_code", "revision")))
+    return bool(records and any(c in records[0] for c in ("product_id", "product_code", "revision")))
 
 
 def revision(snapshot: dict) -> str:
@@ -95,25 +111,31 @@ async def snapshots(db: AsyncSession, query: str = "", work_id: str | None = Non
     # One statement produces the complete product/words/reference snapshot.
     joins = []
     references = []
-    for field, table in LOOKUP_TABLES.items():
+    # work_code → public.type_master (SSOT, INTEGER PK)
+    joins.append("LEFT JOIN public.type_master work ON work.id=p.work_id")
+    references.append("'work_code', work.code")
+    for field, table in _ROUNDTRIP_LOOKUP_TABLES.items():
         alias = field.removesuffix("_code")
-        joins.append(f"LEFT JOIN {TCG_SCHEMA}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
+        # Phase 3 SSOT: tcg_product_categories + division_code moved to public (INTEGER PK).
+        schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
+        joins.append(f"LEFT JOIN {schema_prefix}.{table} {alias} ON {alias}.id=p.{LOOKUP_ARGS[field]}")
         references.append(f"'{field}', {alias}.code")
     keyword_sql = []
     for field, table in WORDS.items():
         keyword_sql.append(
             f"COALESCE((SELECT jsonb_agg(to_jsonb(k) ORDER BY k.position,k.id) "
-            f"FROM {TCG_SCHEMA}.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
+            f"FROM public.{table} k WHERE k.product_id=p.id),'[]'::jsonb) AS {field}"
         )
+    work_id_int = int(work_id) if work_id else None
     result = await db.execute(
         text(
             f"SELECT to_jsonb(p) AS product, jsonb_build_object({','.join(references)}) AS refs, "
             f"{','.join(keyword_sql)} FROM public.products p {' '.join(joins)} "
-            "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.product_code ILIKE :like) "
-            "AND (CAST(:work_id AS uuid) IS NULL OR p.work_id=CAST(:work_id AS uuid)) "
-            "ORDER BY p.release_date DESC NULLS LAST,p.product_code DESC"
+            "WHERE (p.name ILIKE :like OR p.name_en ILIKE :like OR p.mark ILIKE :like OR p.id::text ILIKE :like) "
+            "AND (CAST(:work_id AS INTEGER) IS NULL OR p.work_id = CAST(:work_id AS INTEGER)) "
+            "ORDER BY p.release_date DESC NULLS LAST,p.id DESC"
         ),
-        {"like": "%" + query.strip() + "%", "work_id": work_id},
+        {"like": "%" + query.strip() + "%", "work_id": work_id_int},
     )
     return [dict(row) for row in result.mappings().all()]
 
@@ -126,18 +148,21 @@ _PRODUCT_FIELD_MAP = {
 }
 
 
+_ALL_REF_COLUMNS = {"work_code", *LOOKUP_TABLES}
+
+
 def values(snapshot: dict) -> dict[str, str]:
     product = snapshot["product"]
     result = {}
     for field in CSV_COLUMNS:
-        if field in WORDS or field in LOOKUP_TABLES:
+        if field in WORDS or field in _ALL_REF_COLUMNS:
             continue
         # CSV フィールド名と public.products カラム名が異なる場合はマップする
         product_field = _PRODUCT_FIELD_MAP.get(field, field)
         result[field] = str(product.get(product_field) or "")
-    result.update({key: str(snapshot["refs"].get(key) or "") for key in LOOKUP_TABLES})
+    result.update({key: str(snapshot["refs"].get(key) or "") for key in _ALL_REF_COLUMNS})
     result.update({key: encode_words([word["keyword"] for word in snapshot[key]]) for key in WORDS})
-    return {"product_code": product["product_code"], "revision": revision(snapshot), **result}
+    return {"product_id": str(product["id"]), "revision": revision(snapshot), **result}
 
 
 async def export_csv(db: AsyncSession, query: str = "", work_id: str | None = None) -> bytes:
@@ -173,10 +198,15 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
     if len(records) == 1:
         response["file_errors"] = ["CSV_EMPTY"]
         return response, []
-    current = {s["product"]["product_code"]: s for s in await snapshots(db)}
+    current = {str(s["product"]["id"]): s for s in await snapshots(db)}
     references = {}
-    for field, table in LOOKUP_TABLES.items():
-        result = await db.execute(text(f"SELECT to_jsonb(r) FROM {TCG_SCHEMA}.{table} r WHERE r.is_active=TRUE"))
+    # work_code → public.type_master (SSOT, INTEGER PK)
+    work_result = await db.execute(text("SELECT to_jsonb(r) FROM public.type_master r WHERE r.is_active=TRUE"))
+    references["work_code"] = {row[0]["code"]: row[0] for row in work_result.fetchall()}
+    for field, table in _ROUNDTRIP_LOOKUP_TABLES.items():
+        # Phase 3 SSOT: tcg_product_categories + division_code moved to public (INTEGER PK).
+        schema_prefix = "public" if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA
+        result = await db.execute(text(f"SELECT to_jsonb(r) FROM {schema_prefix}.{table} r WHERE r.is_active=TRUE"))
         references[field] = {row[0]["code"]: row[0] for row in result.fetchall()}
     plans = []
     seen = set()
@@ -190,14 +220,14 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
             "row_no": str(number),
             "japanese_title": row["japanese_title"],
             "mark": row["mark"],
-            "product_code": row["product_code"],
+            "product_id": row["product_id"],
             "action": "unchanged",
             "changes": [],
             "blocking": [],
             "warnings": [],
         }
         errors = item["blocking"]
-        code = row["product_code"]
+        code = row["product_id"]
         if code in seen:
             errors.append("ROUNDTRIP_DUPLICATE_CODE")
         seen.add(code)
@@ -227,14 +257,14 @@ async def inspect_update(db: AsyncSession, raw: bytes, filename: str) -> tuple[d
                     if any(not word.strip() for word in after):
                         errors.append("ROUNDTRIP_KEYWORDS_INVALID")
                     plan["words"][field] = after
-                elif field in LOOKUP_TABLES:
+                elif field in references:  # work_code + LOOKUP_TABLES
                     ref = references[field].get(row[field])
                     if ref is None:
                         errors.append(f"UNKNOWN_{field.upper()}_{row[field]}")
                     else:
                         plan["sets"][LOOKUP_ARGS[field]] = ref["id"]
                         if field == "work_code":
-                            plan["sets"]["category_class"] = ref["display_name"]
+                            plan["sets"]["category_class"] = ref.get("name_ja") or ref.get("display_name", "")
                 else:
                     if field == "japanese_title" and not row[field].strip():
                         errors.append("JAPANESE_TITLE_REQUIRED")
@@ -273,13 +303,15 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
         await db.execute(text("SET LOCAL statement_timeout = '30s'"))
         await db.execute(
             text(
-                f"LOCK TABLE public.products, "
-                f"{TCG_SCHEMA}.product_search_keywords, {TCG_SCHEMA}.product_exclude_keywords "
+                "LOCK TABLE public.products, "
+                "public.product_search_keywords, public.product_exclude_keywords "
                 "IN SHARE ROW EXCLUSIVE MODE"
             )
         )
         await db.execute(
-            text(f"LOCK TABLE {', '.join(f'{TCG_SCHEMA}.{table}' for table in LOOKUP_TABLES.values())} IN SHARE MODE")
+            text(
+                f"LOCK TABLE {', '.join(('public' if field in _PUBLIC_LOOKUP_TABLES else TCG_SCHEMA) + '.' + table for field, table in _ROUNDTRIP_LOOKUP_TABLES.items())} IN SHARE MODE"
+            )
         )
         prior = await db.execute(
             text(f"SELECT id FROM {TCG_SCHEMA}.tcg_product_import_jobs WHERE raw_sha256=:digest"),
@@ -311,7 +343,9 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                 assignments = []
                 for field in plan["sets"]:
                     cast = (
-                        f"CAST(:{field} AS uuid)"
+                        f"CAST(:{field} AS INTEGER)"
+                        if field in ("work_id", "product_category_id", "product_kind_id")
+                        else f"CAST(:{field} AS uuid)"
                         if field in LOOKUP_ARGS.values()
                         else f"CAST(:{field} AS date)"
                         if field == "release_date"
@@ -340,7 +374,7 @@ async def commit_update(db: AsyncSession, raw: bytes, filename: str, executed_by
                     "title": row["japanese_title"],
                     "mark": row["mark"],
                     "result": row["action"],
-                    "code": row["product_code"],
+                    "code": row["product_id"],
                     "messages": json.dumps(row["changes"], ensure_ascii=False),
                 },
             )
@@ -359,13 +393,13 @@ async def replace_words(db: AsyncSession, product_id: int, table: str, words: li
     if table not in ("product_search_keywords", "product_exclude_keywords"):
         raise ValueError("Invalid keyword table")
     await db.execute(
-        text(f"DELETE FROM {TCG_SCHEMA}.{table} WHERE product_id=:product_id"),
+        text(f"DELETE FROM public.{table} WHERE product_id=:product_id"),
         {"product_id": product_id},
     )
     for position, word in enumerate(words, 1):
         await db.execute(
             text(
-                f"INSERT INTO {TCG_SCHEMA}.{table}(product_id,keyword,position) "
+                f"INSERT INTO public.{table}(product_id,keyword,position) "
                 "VALUES (:product_id,:keyword,:position)"
             ),
             {"product_id": product_id, "keyword": word, "position": position},

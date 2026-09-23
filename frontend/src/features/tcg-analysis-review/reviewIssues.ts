@@ -4,16 +4,16 @@ export type ReviewIssuePresentation = { id: AtomicReviewIssueId | 'NEEDS_REVIEW'
 
 export const REVIEW_ISSUES: Record<AtomicReviewIssueId, ReviewIssuePresentation> = {
   CONDITION_REVIEW_REQUIRED: { id: 'CONDITION_REVIEW_REQUIRED', get label() { return i18n.t("conditionReview.needsReview"); }, tone: 'warning', visible: true },
-  PRODUCT_ID_UNRESOLVED: { id: 'PRODUCT_ID_UNRESOLVED', label: '商品ID未解決', tone: 'danger', visible: false },
-  UNIT_UNRESOLVED: { id: 'UNIT_UNRESOLVED', label: '単位未解決', tone: 'warning', visible: true },
-  EXCLUDED: { id: 'EXCLUDED', label: '除外対象', tone: 'danger', visible: true },
-  PRODUCT_MASTER_UNREGISTERED: { id: 'PRODUCT_MASTER_UNREGISTERED', label: '商品マスタ未登録', tone: 'danger', visible: true },
-  SUPPLIER_UNREGISTERED: { id: 'SUPPLIER_UNREGISTERED', label: '仕入元未登録', tone: 'warning', visible: true },
-  PRODUCT_CONFIRMED: { id: 'PRODUCT_CONFIRMED', label: '確認済み', tone: 'success', visible: true },
+  PRODUCT_ID_UNRESOLVED: { id: 'PRODUCT_ID_UNRESOLVED', get label() { return i18n.t("reviewIssues.productIdUnresolved"); }, tone: 'danger', visible: false },
+  UNIT_UNRESOLVED: { id: 'UNIT_UNRESOLVED', get label() { return i18n.t("reviewIssues.unitUnresolved"); }, tone: 'warning', visible: true },
+  EXCLUDED: { id: 'EXCLUDED', get label() { return i18n.t("reviewIssues.excluded"); }, tone: 'danger', visible: true },
+  PRODUCT_MASTER_UNREGISTERED: { id: 'PRODUCT_MASTER_UNREGISTERED', get label() { return i18n.t("reviewIssues.productMasterUnregistered"); }, tone: 'danger', visible: true },
+  SUPPLIER_UNREGISTERED: { id: 'SUPPLIER_UNREGISTERED', get label() { return i18n.t("reviewIssues.supplierUnregistered"); }, tone: 'warning', visible: true },
+  PRODUCT_CONFIRMED: { id: 'PRODUCT_CONFIRMED', get label() { return i18n.t("reviewIssues.confirmed"); }, tone: 'success', visible: true },
 };
 
 const needsReviewIssueIds: AtomicReviewIssueId[] = ['PRODUCT_ID_UNRESOLVED', 'UNIT_UNRESOLVED', 'EXCLUDED', 'CONDITION_REVIEW_REQUIRED'];
-const needsReviewBadge: ReviewIssuePresentation = { id: 'NEEDS_REVIEW', label: '要確認', tone: 'warning', visible: true };
+const needsReviewBadge: ReviewIssuePresentation = { id: 'NEEDS_REVIEW', get label() { return i18n.t("conditionReview.needsReview"); }, tone: 'warning', visible: true };
 
 export const hasNeedsReview = (issues: string[]) => needsReviewIssueIds.some((issue) => issues.includes(issue));
 

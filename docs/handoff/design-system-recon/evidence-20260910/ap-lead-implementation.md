@@ -68,3 +68,37 @@ GO受領済みと配備可能性を区別し、APマージ/配備を停止。今
 ### 2026-09-15 復旧確認・配備再開
 
 PO原文「解消したので進めてくれ」を受領。PR3512/main26032c74のdeploy34914789016/job104209960597成功、移行完走とSA-19成功を原ログで確認。バックアップ09:50/9.9M。main通常統合は競合0、基準23と製品3hash一致。GO #3497は保持。最終CI確認後に通常マージ・本番配備を監視し結果をPR/台帳へ残す。過去の停止記録は履歴。
+
+
+### 2026-09-15 本番反映完了
+
+CI39成功/8対象外、GO #3497受領済みで通常マージ26d56889。deploy34916422461/job104214916879が10:17 JSTにsuccess。frontend healthy・Finalize/Verify成功、rootのTLS検証有効curlでApp/API200、DB/Redis/Celery connected。バックアップ9.9M。DB移行/SA-19は差分検出で対象外、実行成功とはしない。PR3497本文へ結果保存。PO目視・本番実認証操作は未実施。過去の停止記述は履歴。
+
+
+### 2026-09-22 再開時の事実確認と分担
+
+POはOpus設計/Sonnet調査・実装、Haiku禁止、SSOT/デザイントークン/金型遵守、根拠確立後のマージ・配備を指示。対象を既存完了記録/本番確認までか残り全体までか質問中（未回答）。本店には他者の未保存変更があり触れていない。PR3514は文書3ファイルのみ、draft/open。製品実装・本番操作・GO原文作成は本再開で0。
+
+親がGitHub実物で確認: main be414803be2373755ece8b73179f338773972f6b のdeploy35691903538/job106630485914がfailure。242/279、20260922_040000_fix_phase2c_fk_blocker.sql、public.analysis_results(product_id)→public.products(tcg_uuid)の参照制約追加でinteger/uuid型不一致。Finalize health成功、TLS検証有効curlでApp/API200、DB/Redis/Celery connected。本番DB直接検査は未実施。9/15のAP配備成功履歴とは区別する。障害修正は別件の設計・担当確認が必要。
+
+分担の実測: Claude Codeを--model sonnet/opus、Read/Grep/Glob限定で起動し、製品書込と追加サブエージェント起動を禁止。Sonnet初回報告は第三変更ファイルをmigration.mdと誤記し存在しない本文を引用したため親が差分/行実物で不採用。再調査でtasks/todo.mdへ訂正。Opusは条件付きAPPROVEを報告したが、READMEの古いREVISEを現在の全体状態とする記述等があり、そのまま実装可能とは判定しない。親の統合判定REVISE（対象範囲未確定・審査根拠補正が必要）。文書のみPRへ番号GOを一律必須とする提案も採用せず、今回POの明示承認と実際の対象ゲートで判断する。
+
+実行結果のモデル名とJSONのSHA256（原ログは当該セッション/tmpに保存）:
+- ap-sonnet-recon-result.json: claude-sonnet-4-6 / 90b72a397c0cd7f91df8191a919125e96ea788171f8b01dc994ce0f5cc601268
+- ap-sonnet-correct-result.json: claude-sonnet-4-6 / 7705cb14a0fbedea486b72c184350041ccd670401551a1448f877bd329665da4
+- ap-opus-review-result.json: claude-opus-4-6 / d9d245a5c8808caa45ea4a5b32ff79627a8447abf118b5e240e7f06d643b6375
+
+次の一手: 対象範囲の回答を得る。回答に依存しない既存記録の照合は実施済み。本番配備は失敗原因の復旧確認後。新しい製品実装や別件DB修復を推測で開始しない。
+
+
+### 2026-09-22 最新main成功確認・PR3514統合
+
+親がGitHub実物で直接確認した事実:
+
+- main `563e46e4aa76b47ab99534a4bbff4c059732db6e` のdeploy `35693536765`/job `106635373292` がsuccess。原ログでRun database migrationsおよびVerify deploymentもsuccess。9/22の先行deploy failure（be414803のfailure）は履歴であり、現在の配備失敗とはしない。
+- PR3514へ最新mainを通常統合、競合0。
+- PR3514の差分はap-lead-implementation.md・ap-release-prerequisite.json・tasks/todo.mdの文書3ファイルのみ（製品/DB/CI変更なし）。
+- POはPRマージ/デプロイまで完走を明示指示、Opus設計・Sonnet調査実装を指定。
+- PR3514の対象は既存の本番完了記録の保存に確定。全画面共通化は本PRとは別件であり、設計・対象・受入条件の確定が別途必要。
+
+未確認: PR3514の最終CI結果・Opus審査結果。これらを確認してから次の判断へ進む。製品変更・GO原文作成・マージ・本番操作は本追記では0。

@@ -49,13 +49,14 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+
 ENGINE_VERSION = "name-first-v9-product-all-terms"
 
 # NOTE: E3a/E5/E3b/E4 後処理は循環インポート回避のため analyze_extraction_job 内で lazy import する
 # (tcg_unit_recovery_svc → tcg_analyzer_svc の依存があるため)
-
-# TCG解析システムは tenant_004 専用スキーマ
-from app.tcg_config import TCG_SCHEMA
 
 # ---------------------------------------------------------------------------
 # マスタロード
@@ -69,25 +70,25 @@ def load_lookup_maps(
     照合に必要なルックアップマップを一括ロードする。
 
     Returns:
-      product_code_to_uuid   : {code: uuid_str}
+      product_id_to_uuid     : {id_str: int_id} (keyed by products.id as string)
       unit_alias_to_canonical: {alias_text: canonical}
       unit_canonical_to_uuid : {canonical: uuid_str}
       cond_alias_to_canonical: {alias_text: canonical}
       cond_canonical_to_uuid : {canonical: uuid_str}
     """
-    # --- 商品コード → UUID ---
+    # --- 商品ID → DB id（整数） ---
     rows = session.execute(
-        text("SELECT product_code AS code, id FROM public.products WHERE is_active = TRUE")
+        text("SELECT id FROM public.products WHERE is_active = TRUE")
     ).fetchall()
-    product_code_to_uuid: dict[str, int] = {r[0]: r[1] for r in rows}
+    product_code_to_uuid: dict[str, int] = {str(r[0]): r[0] for r in rows}
 
     # --- 単位エイリアス → canonical + UUID ---
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ua.alias_text, u.canonical, u.id
-            FROM {TCG_SCHEMA}.unit_aliases ua
-            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            FROM public.unit_aliases ua
+            JOIN public.units u ON u.id = ua.unit_id
             WHERE u.is_active = TRUE
             """
         )
@@ -105,10 +106,10 @@ def load_lookup_maps(
     # --- 単位エイリアス → (canonical, kubun) --- ※ resolve_unit_v2 用
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ua.alias_text, u.canonical, u.kubun, u.id
-            FROM {TCG_SCHEMA}.unit_aliases ua
-            JOIN {TCG_SCHEMA}.units u ON u.id = ua.unit_id
+            FROM public.unit_aliases ua
+            JOIN public.units u ON u.id = ua.unit_id
             WHERE u.is_active = TRUE
             """
         )
@@ -122,10 +123,10 @@ def load_lookup_maps(
     # --- 状態エイリアス → canonical + UUID ---
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT ca.alias_text, c.canonical, c.id
-            FROM {TCG_SCHEMA}.condition_aliases ca
-            JOIN {TCG_SCHEMA}.conditions c ON c.id = ca.condition_id
+            FROM public.condition_aliases ca
+            JOIN public.conditions c ON c.id = ca.condition_id
             WHERE c.is_active = TRUE
             """
         )
@@ -152,23 +153,23 @@ def load_lookup_maps(
 
 def load_product_kubun_type_map(session: Session) -> dict[str, str]:
     """
-    商品コード → 商品区分 kubun_type マップをロードする。
+    商品ID文字列 → 商品区分 kubun_type マップをロードする。
     product_category_id が NULL の商品は含まない。
 
     GAS 対照: filterProductMasterByUnitCategoryV2_ 用の商品区分情報
     """
     rows = session.execute(
         text(
-            f"""
-            SELECT p.product_code AS code, pc.kubun_type
+            """
+            SELECT p.id, pc.kubun_type
             FROM public.products p
-            JOIN {TCG_SCHEMA}.tcg_product_categories pc ON pc.id = p.product_category_id
+            JOIN public.tcg_product_categories pc ON pc.id = p.product_category_id
             WHERE p.is_active = TRUE
               AND p.product_category_id IS NOT NULL
             """
         )
     ).fetchall()
-    return {r[0]: r[1] for r in rows}
+    return {str(r[0]): r[1] for r in rows}
 
 
 def load_product_keywords(
@@ -178,44 +179,46 @@ def load_product_keywords(
     商品ごとの検索キーワード・除外キーワードをロードする。
 
     Returns:
-      search_kw : {product_code: [kw1, kw2, ...]}
-      exclude_kw: {product_code: [kw1, kw2, ...]}
+      search_kw : {product_id_str: [kw1, kw2, ...]}
+      exclude_kw: {product_id_str: [kw1, kw2, ...]}
     """
     # 検索キーワード
     rows = session.execute(
         text(
-            f"""
-            SELECT p.product_code AS code, psk.keyword
-            FROM {TCG_SCHEMA}.product_search_keywords psk
+            """
+            SELECT p.id, psk.keyword
+            FROM public.product_search_keywords psk
             JOIN public.products p ON p.id = psk.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.product_code, psk.position
+            ORDER BY p.id, psk.position
             """
         )
     ).fetchall()
     search_kw: dict[str, list[str]] = {}
-    for code, kw in rows:
-        if code not in search_kw:
-            search_kw[code] = []
-        search_kw[code].append(kw)
+    for pid, kw in rows:
+        key = str(pid)
+        if key not in search_kw:
+            search_kw[key] = []
+        search_kw[key].append(kw)
 
     # 除外キーワード
     rows = session.execute(
         text(
-            f"""
-            SELECT p.product_code AS code, pek.keyword
-            FROM {TCG_SCHEMA}.product_exclude_keywords pek
+            """
+            SELECT p.id, pek.keyword
+            FROM public.product_exclude_keywords pek
             JOIN public.products p ON p.id = pek.product_id
             WHERE p.is_active = TRUE
-            ORDER BY p.product_code, pek.position
+            ORDER BY p.id, pek.position
             """
         )
     ).fetchall()
     exclude_kw: dict[str, list[str]] = {}
-    for code, kw in rows:
-        if code not in exclude_kw:
-            exclude_kw[code] = []
-        exclude_kw[code].append(kw)
+    for pid, kw in rows:
+        key = str(pid)
+        if key not in exclude_kw:
+            exclude_kw[key] = []
+        exclude_kw[key].append(kw)
 
     return search_kw, exclude_kw
 
@@ -422,7 +425,7 @@ def select_product_candidates(
 def load_work_master(session: Session) -> list[dict]:
     """Active game/work names only; alt_name is a single value, never a list."""
     rows = session.execute(text(
-        f"SELECT id, display_name, alt_name FROM {TCG_SCHEMA}.tcg_series WHERE is_active = TRUE"
+        "SELECT id, name_ja AS display_name, name_en AS alt_name FROM public.type_master WHERE is_active = TRUE"
     )).fetchall()
     return [dict(id=str(r[0]), display_name=r[1], alt_name=r[2]) for r in rows]
 
@@ -661,10 +664,10 @@ def load_condition_entries(session: Session) -> list[dict]:
     """
     rows = session.execute(
         text(
-            f"""
+            """
             SELECT c.id, c.code, c.canonical, c.priority,
                    c.app_kubun, c.search_kw, c.exclude_kw
-            FROM {TCG_SCHEMA}.conditions c
+            FROM public.conditions c
             WHERE c.is_active = TRUE
               AND c.priority IS NOT NULL
               AND c.priority > 0
@@ -944,10 +947,10 @@ def load_note_master(session: Session) -> list[dict]:
     try:
         rows = session.execute(
             text(
-                f"""
+                """
                 SELECT id, label_ja, search_keywords, exclude_keywords, priority,
                        match_type, search_pattern, label_template
-                FROM {TCG_SCHEMA}.tcg_note_master
+                FROM public.tcg_note_master
                 WHERE enabled = TRUE ORDER BY priority ASC, id ASC
                 """
             )
@@ -1049,9 +1052,9 @@ def load_status_master(session: Session) -> list[dict]:
     try:
         rows = session.execute(
             text(
-                f"""
+                """
                 SELECT status_id, canonical, search_pattern, exclude_pattern, priority, match_type, effect
-                FROM {TCG_SCHEMA}.tcg_status_master
+                FROM public.tcg_status_master
                 WHERE enabled = TRUE ORDER BY effect ASC, priority ASC
                 """
             )
@@ -1064,6 +1067,7 @@ def load_status_master(session: Session) -> list[dict]:
         {
             "canonical": r[1],
             "search_pattern": r[2] or "",
+            "exclude_pattern": r[3] or "",
             "priority": r[4],
             "match_type": r[5],
             "effect": r[6],
@@ -1109,6 +1113,10 @@ def resolve_status_v2(
             and (raw_memo or "").strip().casefold() == entry["search_pattern"].strip().casefold()
         )
         if memo_exact or _match_status_pattern(text_val, entry["search_pattern"], entry["match_type"]):
+            if entry.get("exclude_pattern") and _match_status_pattern(
+                text_val, entry["exclude_pattern"], entry["match_type"]
+            ):
+                continue
             return (entry["canonical"], "excluded")
     for entry in sorted(
         (e for e in status_entries if e["effect"] == "OUTPUT" and e["match_type"] != "DEFAULT"),
@@ -1156,15 +1164,15 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
     works = load_work_master(session)
     work_rows = session.execute(text(
-        "SELECT product_code AS code, work_id, category_class FROM public.products WHERE is_active = TRUE"
+        "SELECT id, work_id, category_class FROM public.products WHERE is_active = TRUE"
     )).fetchall()
-    product_work_ids = {r[0]: str(r[1]) if r[1] is not None else None for r in work_rows}
+    product_work_ids = {str(r[0]): str(r[1]) if r[1] is not None else None for r in work_rows}
     # Registration stores the work label in category_class. The referenced product
     # category is authoritative for Box guards; legacy rows without it keep fallback.
     product_category_classes = {
-        row[0]: (
-            "Box" if product_code_to_kubun_type[row[0]] in {"箱系", "箱系大"} else ""
-        ) if row[0] in product_code_to_kubun_type else (row[2] or "")
+        str(row[0]): (
+            "Box" if product_code_to_kubun_type[str(row[0])] in {"箱系", "箱系大"} else ""
+        ) if str(row[0]) in product_code_to_kubun_type else (row[2] or "")
         for row in work_rows
     }
 
@@ -1182,13 +1190,15 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         digest = metadata.get("work_reference_sha256")
         if not reference or reference_digest(reference) != digest:
             raise ValueError("Work reference is missing or corrupted")
-        if reference_digest(load_work_reference(session, TCG_SCHEMA)) != digest:
+        if reference_digest(load_work_reference(session, "public")) != digest:
             raise ValueError("Work reference changed; re-extraction required")
         decisions = session.execute(text(f"""
             SELECT ei.id, to_jsonb(ei)->>'resolved_work_id'
             FROM {TCG_SCHEMA}.extraction_items ei WHERE extraction_job_id=:id
         """), {"id": extraction_job_id}).fetchall()
-        work_decisions = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        _raw = {str(i): validate_work_id(value, reference) for i, value in decisions}
+        # match_pid_with_work expects str work_id (same type as product_work_ids values)
+        work_decisions = {k: str(v) if v is not None else None for k, v in _raw.items()}
 
     # extraction_items を取得（raw_memo を含む）
     rows = session.execute(
@@ -1249,7 +1259,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             effective = reanalysis_condition(session, str(item_id), schema=TCG_SCHEMA, source_hash=source_hash)
             if effective:
                 session.execute(text(f"""UPDATE {TCG_SCHEMA}.analysis_results SET
-                    condition_id=CAST(:condition_id AS uuid), condition_canonical=:canonical,
+                    condition_id=:condition_id, condition_canonical=:canonical,
                     condition_basis=:basis, needs_review=:needs_review, review_reasons=:review_reasons,
                     updated_at=:updated_at WHERE extraction_item_id=CAST(:eid AS uuid)"""),
                     dict(effective, eid=str(item_id), updated_at=now))

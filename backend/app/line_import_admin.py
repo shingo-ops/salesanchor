@@ -20,7 +20,10 @@ from app.services import line_import_devices as devices
 from app.services import line_source_names
 from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_import_progress import read_progress
-from app.tcg_config import TCG_SCHEMA
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 SOURCE_REPORT_LIMIT = 10000
 
@@ -40,7 +43,7 @@ def validate(data):
         if len(value) != 64 or any(c not in '0123456789abcdef' for c in value):
             raise ValueError('invalid name hash')
     if data['action'] == 'link':
-        if not re.fullmatch(r'SP[0-9]{4,8}', data.get('supplier_code', '')) or not re.fullmatch(r'[0-9a-f]{64}', data.get('android_sha256', '')):
+        if not re.fullmatch(r'SP-[0-9]{5}', data.get('supplier_code', '')) or not re.fullmatch(r'[0-9a-f]{64}', data.get('android_sha256', '')):
             raise ValueError('supplier code and Android file digest required')
     if data['action'] == 'distribute':
         data['target_id'] = str(UUID(data['target_id']))
@@ -114,11 +117,11 @@ async def operate(db, data):
         rows = await distribution.fetch_output_rows(db, include_flag_single=settings.get('include_flag_single', 'false').lower() == 'true')
         private = None
         if data.get('report_public_key'):
-            suppliers = (await db.execute(text(f'SELECT code,name,is_active FROM {TCG_SCHEMA}.tcg_suppliers ORDER BY code'))).mappings().all()
-            sources = (await db.execute(text(f'''SELECT ts.code,sm.raw_text,sm.line_posted_at,sm.is_active
+            suppliers = (await db.execute(text('SELECT supplier_code AS code,name,is_active FROM public.suppliers ORDER BY supplier_code'))).mappings().all()
+            sources = (await db.execute(text(f'''SELECT ps.supplier_code AS code,sm.raw_text,sm.line_posted_at,sm.is_active
                 FROM {TCG_SCHEMA}.source_messages sm
                 JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
-                JOIN {TCG_SCHEMA}.tcg_suppliers ts ON ts.id=sc.supplier_id
+                JOIN public.suppliers ps ON ps.id=sc.supplier_id
                 WHERE sc.channel='line' ORDER BY sm.created_at DESC,sm.id DESC LIMIT {SOURCE_REPORT_LIMIT + 1}'''))).mappings().all()
             fingerprints = [{'code': r['code'], 'posted_at': str(r['line_posted_at']),
                              'active': r['is_active'], 'length': len(r['raw_text']),
@@ -144,8 +147,8 @@ async def operate(db, data):
         if len(matching) != 1 or job['review_status'] != 'pending_review':
             raise ValueError('pending name not uniquely identified')
         # Serialize code allocation against other maintenance operations and API INSERT/UPDATE.
-        await db.execute(text(f'LOCK TABLE {TCG_SCHEMA}.tcg_suppliers IN SHARE ROW EXCLUSIVE MODE'))
-        existing = (await db.execute(text(f'SELECT count(*) FROM {TCG_SCHEMA}.tcg_suppliers WHERE name=:name'),
+        await db.execute(text('LOCK TABLE public.suppliers IN SHARE ROW EXCLUSIVE MODE'))
+        existing = (await db.execute(text('SELECT count(*) FROM public.suppliers WHERE line_name=:name AND is_active=TRUE'),
                                     {'name': matching[0]})).scalar_one()
         if existing:
             raise ValueError('supplier already exists; inspect and commit instead')

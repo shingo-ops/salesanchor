@@ -29,7 +29,7 @@ def csv_input():
     for n in range(1, 45):
         writer.writerow([f"ATOMIC{n:02}", f"原子商品{n:02}", "", "",
                          f"検索語{n:02},別名{n:02}", f"除外語{n:02}",
-                         "DIV01", "IP002", "MK002", "PC_BOX"])
+                         "DIV01", "one_piece", "MK002", "PC_BOX"])
     return out.getvalue().encode("utf-8")
 
 
@@ -79,11 +79,11 @@ def sentinel_snapshot(connection):
 def observe(connection):
     """Independent committed view of every product/word/receipt/job, C1/C9."""
     with connection.cursor() as cur:
-        cur.execute(f"SELECT p.name AS japanese_title,p.product_code AS code FROM public.products p WHERE p.name LIKE '原子商品%%' ORDER BY p.name")
+        cur.execute(f"SELECT p.name AS japanese_title,p.id::text AS code FROM public.products p WHERE p.name LIKE '原子商品%%' ORDER BY p.name")
         products = dict(cur.fetchall())
         words = {}
         for table in ("product_search_keywords", "product_exclude_keywords"):
-            cur.execute(f"SELECT p.name,k.keyword,k.position FROM {SCHEMA}.{table} k JOIN public.products p ON p.id=k.product_id ORDER BY p.name,k.position")
+            cur.execute(f"SELECT p.name,k.keyword,k.position FROM public.{table} k JOIN public.products p ON p.id=k.product_id ORDER BY p.name,k.position")
             words[table] = cur.fetchall()
         cur.execute(f"SELECT row_no,japanese_title,result,product_code FROM {SCHEMA}.tcg_product_import_rows ORDER BY row_no")
         rows = cur.fetchall()
@@ -124,10 +124,13 @@ def failing_session(connection, mode, target):
         async def execute(self, statement, params=None, **kwargs):
             query = str(statement)
             # These services may only touch the intended tenant's tables.
-            for table in ("product_search_keywords", "product_exclude_keywords",
-                          "tcg_product_import_jobs", "tcg_product_import_rows"):
+            for table in ("tcg_product_import_jobs", "tcg_product_import_rows"):
                 if table in query:
                     assert f"{SCHEMA}.{table}" in query
+            # product_search_keywords and product_exclude_keywords are now in public schema (SSOT Phase 3)
+            for table in ("product_search_keywords", "product_exclude_keywords"):
+                if table in query:
+                    assert f"public.{table}" in query
             if "INSERT INTO public.products" in query:
                 self.current = int(params["japanese_title"].removeprefix("原子商品"))
                 if self.current == target:
@@ -137,7 +140,7 @@ def failing_session(connection, mode, target):
                         raise asyncio.CancelledError("cancelled creation")
                     if mode == "collision":
                         params = dict(params, code="PM0001")
-            if self.current == target and "SELECT product_code FROM public.products WHERE id" in query:
+            if self.current == target and "SELECT id FROM public.products WHERE id" in query:
                 if mode in ("verify_value", "rollback_failure"):
                     raise ValueError("post-write verification")
             if f"INSERT INTO {SCHEMA}.tcg_product_import_rows" in query:

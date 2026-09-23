@@ -15,7 +15,7 @@ MIG-04 Stage 1 & REVIEW-STAGE: tcg_line_import_svc の単体テスト（DB 不�
   - import_line_export: _enqueue_extraction は db.commit() の後に呼ばれること
   [REVIEW-STAGE]
   - 未解決0件 → 従来どおり source_messages が書かれ、エンキューされる（review_status='ok'）
-  - 未解決1件以上 → source_messages が1件も書かれない、review_status='pending_review'、エンキューされない
+  - 未解決1件以上 → 自動登録（public.suppliers INSERT）して全件 source_messages に書く（review_status='ok'）
   - 窓が JST 基準であること（_compute_window 境界テスト）
   - 破棄タスク → 24h 超の pending_review が discarded になる
 """
@@ -201,7 +201,7 @@ def test_resolve_exact_match():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 1
     assert resolved[0]["sp_code"] == "SP0001"
@@ -218,7 +218,7 @@ def test_resolve_prefix_match():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 0
     assert len(unresolved) == 1
@@ -236,11 +236,11 @@ def test_resolve_longest_prefix_wins():
         }
     ]
     db_suppliers = [
-        {"code": "SP0001", "name": "仕入元A"},
-        {"code": "SP0002", "name": "仕入元AB"},
+        {"code": "SP0001", "line_name": "仕入元A"},
+        {"code": "SP0002", "line_name": "仕入元AB"},
     ]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
-    assert resolved[0]["sp_code"] == "SP0002"  # 最長一致
+    assert resolved[0]["sp_code"] == "SP0002"  # 完全一致
 
 
 def test_resolve_unknown_sender():
@@ -253,7 +253,7 @@ def test_resolve_unknown_sender():
             "is_system_event": False,
         }
     ]
-    db_suppliers = [{"code": "SP0001", "name": "仕入元A"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "仕入元A"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 0
     assert len(unresolved) == 1
@@ -278,7 +278,7 @@ def test_resolve_mixed_resolved_unresolved():
         {"timestamp": "2026-08-01 10:00:00", "display_name": "既知の仕入元", "body": "商品A", "is_system_event": False},
         {"timestamp": "2026-08-01 10:01:00", "display_name": "未知のユーザー", "body": "何か", "is_system_event": False},
     ]
-    db_suppliers = [{"code": "SP0001", "name": "既知の仕入元"}]
+    db_suppliers = [{"code": "SP0001", "line_name": "既知の仕入元"}]
     resolved, unresolved = resolve_suppliers(messages, db_suppliers)
     assert len(resolved) == 1
     assert len(unresolved) == 1
@@ -512,8 +512,9 @@ async def test_source_message_insert_before_update_supersede():
     先に実行されること。
 
     根拠:
-      backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231
-        superseded_by UUID REFERENCES tenant_004.source_messages(id)
+      migrations/20260921_110000_pipeline_tables_public.sql（public へ移行後の正本。
+      移行前は backend/migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:230-231）
+        superseded_by UUID REFERENCES public.source_messages(id)
       DEFERRABLE 未指定 = NOT DEFERRABLE INITIALLY IMMEDIATE。
       UPDATE で new_sm_id を参照する前に INSERT が済んでいない場合、
       ForeignKeyViolation が発生する。
@@ -535,7 +536,7 @@ async def test_source_message_insert_before_update_supersede():
         if "import_jobs" in sql and "raw_sha256" in sql:
             # 冪等化チェック: 未取り込み
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             # サプライヤー一覧（プレフィックス一致で "仕入元A" を解決）
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
@@ -562,7 +563,7 @@ async def test_source_message_insert_before_update_supersede():
         window_hours=0,  # フィルタなし: 全メッセージを取り込む
     )
 
-    from app.tcg_config import TCG_SCHEMA as _SCHEMA
+    from app.services.tcg_line_import_svc import TCG_SCHEMA as _SCHEMA
 
     insert_pos = next(
         (i for i, sql in enumerate(call_sqls) if f"INSERT INTO {_SCHEMA}.source_messages" in sql),
@@ -603,7 +604,7 @@ async def test_enqueue_called_after_commit():
         sql = str(stmt)
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -741,7 +742,7 @@ async def test_received_at_stored_as_jst_in_insert():
             received_at_params.append(params["received_at"])
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = [("SP0001", "仕入元A")]
         elif "supplier_channels" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -854,13 +855,21 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
     """
     import_line_export 用の DB モックを生成する。
     supplier_rows: [(code, name), ...]
+
+    自動登録（INSERT INTO public.suppliers RETURNING id）に対応するため、
+    scalar_one() が 99999 を返す result を用意する。
     """
+    _auto_supplier_id = 99999
+
     async def tracked_execute(stmt, params=None):
         sql = str(stmt)
         result = MagicMock()
         if "import_jobs" in sql and "raw_sha256" in sql:
             result.fetchone.return_value = None          # 未取り込み
-        elif "tcg_suppliers" in sql and "supplier_channels" not in sql:
+        elif "INSERT INTO public.suppliers" in sql and "RETURNING id" in sql:
+            # 自動登録: INSERT RETURNING id → scalar_one() = 99999
+            result.scalar_one.return_value = _auto_supplier_id
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
             result.fetchall.return_value = supplier_rows
         elif "supplier_channels" in sql and "SELECT" in sql:
             result.fetchone.return_value = ("test-channel-id",)
@@ -876,6 +885,92 @@ def _make_db_mock(supplier_rows: list[tuple]) -> MagicMock:
     db.execute = tracked_execute
     db.commit = AsyncMock()
     return db
+
+
+async def test_missing_supplier_channel_is_created_and_import_continues():
+    """仕入元はあるのに LINE チャネルが無い場合、その場で作って取り込みを続けること。
+
+    2026-09-21 の public 移行で supplier_channels の行が引き継がれず、既存仕入元からの
+    メッセージが全て HTTP 500（ValueError: Resolved supplier has no active LINE channel）
+    になった。その再発防止。
+    """
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+    sqls: list[str] = []
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        sqls.append(sql)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = (4321,)      # チャネル作成のための仕入元ID
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None          # ← チャネルが無い状態を再現
+        elif "source_messages" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        result = await import_line_export(
+            db=db, filename="test.txt", export_text=export_text,
+            uploaded_by=None, window_hours=0,
+        )
+
+    assert result["review_status"] == "ok"
+    assert any("INSERT INTO public.supplier_channels" in s for s in sqls), \
+        "チャネルが無いときに supplier_channels が作られていない"
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
+        "チャネル作成後に source_messages が書かれていない"
+
+
+async def test_supplier_missing_from_public_still_raises():
+    """仕入元そのものが public.suppliers に無い場合は、従来どおり失敗させること
+    （黙って作ると、正体不明の仕入元がマスタに増えるため）。"""
+    export_text = (
+        "2026.08.01 金曜日\n"
+        "10:00 仕入元A 商品X 100円\n"
+    )
+
+    async def execute(stmt, params=None):
+        sql = str(stmt)
+        result = MagicMock()
+        if "import_jobs" in sql and "raw_sha256" in sql:
+            result.fetchone.return_value = None
+        elif "public.suppliers" in sql and "supplier_channels" not in sql and "SELECT id" in sql:
+            result.fetchone.return_value = None          # 仕入元も無い
+        elif "public.suppliers" in sql and "supplier_channels" not in sql:
+            result.fetchall.return_value = [("SP0001", "仕入元A")]
+        elif "supplier_channels" in sql and "SELECT" in sql:
+            result.fetchone.return_value = None
+        else:
+            result.fetchone.return_value = None
+            result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
+        with pytest.raises(ValueError, match="missing from public.suppliers"):
+            await import_line_export(
+                db=db, filename="test.txt", export_text=export_text,
+                uploaded_by=None, window_hours=0,
+            )
 
 
 async def test_import_zero_unresolved_writes_source_messages():
@@ -909,22 +1004,22 @@ async def test_import_zero_unresolved_writes_source_messages():
 
     assert result["review_status"] == "ok"
     assert result["unresolved_count"] == 0
-    assert any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
         "source_messages への INSERT が実行されていない"
     mock_enqueue.assert_called_once()
     db.commit.assert_called_once()
 
 
-async def test_import_unresolved_does_not_write_source_messages():
+async def test_import_unresolved_auto_creates_supplier_and_writes_source_messages():
     """
-    未解決1件以上のとき source_messages が1件も書かれず、
-    エンキューされず、review_status='pending_review' が返ること。
+    未解決仕入元があるとき自動登録され、source_messages が書かれ、
+    エンキューされ、review_status='ok' が返ること（自動登録フロー）。
     """
     export_text = (
         "2026.08.01 金曜日\n"
         "10:00 未登録ユーザー 商品X 100円\n"
     )
-    db = _make_db_mock([])   # 仕入元マスタ空 → 全員未解決
+    db = _make_db_mock([])   # 仕入元マスタ空 → 自動登録対象
     sqls: list[str] = []
 
     orig_execute = db.execute
@@ -944,24 +1039,25 @@ async def test_import_unresolved_does_not_write_source_messages():
             window_hours=0,
         )
 
-    assert result["review_status"] == "pending_review"
-    assert result["unresolved_count"] == 1
-    assert result["provider_count"] == 0
-    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls), \
-        "pending_review なのに source_messages への INSERT が実行された"
-    mock_enqueue.assert_not_called()
-    db.commit.assert_called_once()   # import_jobs 保存の commit は1回
+    assert result["review_status"] == "ok", "自動登録後は review_status='ok' になること"
+    assert result["unresolved_count"] == 0, "自動登録後は unresolved_count=0 になること"
+    assert any("INSERT INTO public.suppliers" in s for s in sqls), \
+        "未登録仕入元の自動 INSERT が実行されていない"
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
+        "自動登録後に source_messages への INSERT が実行されていない"
+    mock_enqueue.assert_called_once()
+    db.commit.assert_called_once()
 
 
-async def test_import_partial_unresolved_also_blocks():
+async def test_import_partial_unresolved_auto_creates_and_writes_all():
     """
-    解決済み仕入元が混在していても、未解決が1件でもあれば保留になること。
-    （解決済みの分も含めて全件保留）
+    解決済み仕入元と未解決仕入元が混在するとき、
+    未解決仕入元が自動登録されて全件 source_messages に書き込まれること。
     """
     export_text = (
         "2026.08.01 金曜日\n"
-        "10:00 仕入元A 商品X 100円\n"   # 解決済み
-        "10:05 未登録ユーザー 商品Y\n"  # 未解決
+        "10:00 仕入元A 商品X 100円\n"   # 既存解決済み
+        "10:05 未登録ユーザー 商品Y\n"  # 自動登録対象
     )
     db = _make_db_mock([("SP0001", "仕入元A")])
     sqls: list[str] = []
@@ -983,34 +1079,39 @@ async def test_import_partial_unresolved_also_blocks():
             window_hours=0,
         )
 
-    assert result["review_status"] == "pending_review"
-    assert not any("INSERT INTO tenant_004.source_messages" in s for s in sqls)
-    mock_enqueue.assert_not_called()
+    assert result["review_status"] == "ok", "自動登録後は review_status='ok' になること"
+    assert result["unresolved_count"] == 0
+    assert any("INSERT INTO public.suppliers" in s for s in sqls), \
+        "未登録仕入元の自動 INSERT が実行されていない"
+    assert any("INSERT INTO public.source_messages" in s for s in sqls), \
+        "source_messages への INSERT が実行されていない"
+    mock_enqueue.assert_called()
 
 
-async def test_import_unresolved_stores_pending_messages():
+async def test_import_unresolved_auto_registers_with_correct_name():
     """
-    保留時に pending_messages（JSON）と unresolved_names が import_jobs に渡されること。
+    自動登録時に public.suppliers の INSERT パラメータが
+    display_name と一致する name / line_name になること。
     """
     export_text = (
         "2026.08.01 金曜日\n"
         "10:00 未登録ユーザー 商品X 100円\n"
     )
     db = _make_db_mock([])
-    captured_params: list[dict] = []
+    captured_insert_params: list[dict] = []
 
     orig_execute = db.execute
 
     async def capturing_execute(stmt, params=None):
         sql = str(stmt)
-        if params and "pending_messages" in sql:
-            captured_params.append(dict(params))
+        if params and "INSERT INTO public.suppliers" in sql:
+            captured_insert_params.append(dict(params) if params else {})
         return await orig_execute(stmt, params)
 
     db.execute = capturing_execute
 
     with patch("app.services.tcg_line_import_svc._enqueue_extraction"):
-        await import_line_export(
+        result = await import_line_export(
             db=db,
             filename="test.txt",
             export_text=export_text,
@@ -1018,14 +1119,11 @@ async def test_import_unresolved_stores_pending_messages():
             window_hours=0,
         )
 
-    assert len(captured_params) == 1, "pending_messages を含む INSERT が1件実行されていない"
-    p = captured_params[0]
-    assert p["pending_messages"] is not None
-    msgs = json.loads(p["pending_messages"])
-    assert len(msgs) == 1
-    assert msgs[0]["display_name"] == "未登録ユーザー"
-    names = json.loads(p["unresolved_names"])
-    assert names == ["未登録ユーザー"]
+    assert result["review_status"] == "ok"
+    assert len(captured_insert_params) == 1, "suppliers への INSERT が1件実行されていない"
+    p = captured_insert_params[0]
+    assert p["name"] == "未登録ユーザー"
+    assert p["line_name"] == "未登録ユーザー"
 
 
 # ─────────────────────────────────────────────────────────────────────────────

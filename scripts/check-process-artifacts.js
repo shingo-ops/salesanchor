@@ -213,7 +213,7 @@ function parseSOPDeclaration(prBody) {
     ? touchFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.replace(/^[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
+        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
         .filter(f => f.length > 0)
     : [];
   const deleteFilesMatch = section.match(/削除するファイル:\s*((?:[\s\S]*?)(?=\n[^\s-*]|\n*$))/);
@@ -221,7 +221,7 @@ function parseSOPDeclaration(prBody) {
     ? deleteFilesMatch[1]
         .replace(/<!--[\s\S]*?-->/g, '')
         .split(/[\n,]/)
-        .map(f => f.replace(/^[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
+        .map(f => f.replace(/^\s*[-*]\s*/, '').replace(/（[^）]*）/g, '').trim())
         .filter(f => f.length > 0 && f !== 'なし')
     : [];
   const hasDeleteFilesDeclared = !!deleteFilesMatch;

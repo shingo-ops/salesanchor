@@ -39,11 +39,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
-from app.services import line_source_names
 from app.services.tcg_import_progress import read_extraction_jobs, read_items, read_messages, read_progress
 from app.services.tcg_line_android_parser import AndroidExportError
 from app.services.tcg_line_import_svc import (
-    TCG_SCHEMA,
     _enqueue_extraction,
     _write_source_messages,
     build_provider_entries,
@@ -52,6 +50,10 @@ from app.services.tcg_line_import_svc import (
 )
 
 router = APIRouter()
+
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
 
 
 # ---------------------------------------------------------------------------
@@ -403,8 +405,8 @@ async def resolve_supplier(
 
     action='assign': 指定した仕入元の name を display_name に差し替える。
                      別の既存仕入元と name が重複する場合は 409。
-    action='create': tcg_suppliers に新規登録 + supplier_channels を1件作成。
-                     code は既存の最大値+1 を採番。
+    action='create': public.suppliers に新規登録 + supplier_channels を1件作成。
+                     supplier_code は INSERT RETURNING id から SP-{id:05d} で採番。
 
     どちらも import_jobs.unresolved_names から該当名を除く。
     """
@@ -442,10 +444,10 @@ async def resolve_supplier(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="action='assign' のとき supplier_code は必須です",
             )
-        # 対象仕入元の name を display_name に差し替え
+        # 対象仕入元の line_name を display_name に差し替え
         sup_row = await db.execute(
             text(
-                f"SELECT id, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE code = :code AND is_active = TRUE"
+                "SELECT id, name, line_name FROM public.suppliers WHERE supplier_code = :code AND is_active = TRUE"
             ),
             {"code": body.supplier_code},
         )
@@ -456,12 +458,12 @@ async def resolve_supplier(
                 detail=f"supplier_code={body.supplier_code} が見つかりません",
             )
 
-        # 重複チェック: 差し替え後の name が他の仕入元と衝突しないか
+        # 重複チェック: 差し替え後の line_name が他の仕入元と衝突しないか
         dup_row = await db.execute(
             text(
-                f"""
-                SELECT id FROM {TCG_SCHEMA}.tcg_suppliers
-                WHERE name = :name AND id != :self_id AND is_active = TRUE
+                """
+                SELECT id FROM public.suppliers
+                WHERE line_name = :name AND id != :self_id AND is_active = TRUE
                 """
             ),
             {"name": body.display_name, "self_id": str(sup[0])},
@@ -472,39 +474,34 @@ async def resolve_supplier(
                 detail=f"'{body.display_name}' は別の仕入元に既に使われています（重複名は照合が壊れます）",
             )
 
-        # name を差し替え
+        # line_name を差し替え
         await db.execute(
             text(
-                f"UPDATE {TCG_SCHEMA}.tcg_suppliers SET name = :name WHERE id = :id"
+                "UPDATE public.suppliers SET line_name = :name WHERE id = :id"
             ),
             {"name": body.display_name, "id": str(sup[0])},
         )
 
     elif body.action == "create":
-        # 新規仕入元: code は最大値+1 を採番（SP プレフィックスは既存に合わせる）
-        max_code_row = await db.execute(
-            text(f"SELECT MAX(code) FROM {TCG_SCHEMA}.tcg_suppliers")
+        # 新規仕入元: INSERT RETURNING id で採番（super_admin_suppliers.py パターン踏襲）
+        result = await db.execute(
+            text("""
+                INSERT INTO public.suppliers (name, line_name, supplier_type, is_active)
+                VALUES (:name, :line_name, 'corporate', TRUE)
+                ON CONFLICT (line_name)
+                    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL
+                DO UPDATE SET line_name = EXCLUDED.line_name
+                RETURNING id
+            """),
+            {"name": body.display_name, "line_name": body.display_name},
         )
-        max_code = max_code_row.scalar()
-        # code は "SP0001" 形式を想定。数値部分を+1
-        if max_code:
-            prefix = "".join(c for c in max_code if c.isalpha())
-            num = int("".join(c for c in max_code if c.isdigit()) or "0") + 1
-            new_code = f"{prefix}{num:04d}"
-        else:
-            new_code = "SP0001"
-
-        new_supplier_id = uuid.uuid4()
+        new_id = result.scalar_one()
+        new_code = f"SP-{new_id:05d}"
         await db.execute(
-            text(
-                f"""
-                INSERT INTO {TCG_SCHEMA}.tcg_suppliers
-                  (id, code, name, is_active, created_at)
-                VALUES
-                  (:id, :code, :name, TRUE, now())
-                """
-            ),
-            {"id": str(new_supplier_id), "code": new_code, "name": body.display_name},
+            text("""
+                UPDATE public.suppliers SET supplier_code = :code WHERE id = :id AND supplier_code IS NULL
+            """),
+            {"code": new_code, "id": new_id},
         )
 
         # supplier_channels を1件作成（channel='line'）
@@ -518,7 +515,7 @@ async def resolve_supplier(
                   (:id, :supplier_id, 'line', TRUE)
                 """
             ),
-            {"id": str(new_sc_id), "supplier_id": str(new_supplier_id)},
+            {"id": str(new_sc_id), "supplier_id": new_id},
         )
 
     else:
@@ -603,14 +600,11 @@ async def commit_pending_job(
 
     # 最新の仕入元マスタで再解決
     suppliers_rows = await db.execute(
-        text(f"SELECT code, name FROM {TCG_SCHEMA}.tcg_suppliers WHERE is_active = TRUE")
+        text("SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL")
     )
-    db_suppliers = [{"code": r[0], "name": r[1]} for r in suppliers_rows.fetchall()]
+    db_suppliers = [{"code": r[0], "line_name": r[1]} for r in suppliers_rows.fetchall()]
 
-    if line_source_names.is_android(messages):
-        resolved_msgs, still_unresolved = line_source_names.resolve_android(messages, db_suppliers, await line_source_names.load_aliases(db))
-    else:
-        resolved_msgs, still_unresolved = resolve_suppliers(messages, db_suppliers)
+    resolved_msgs, still_unresolved = resolve_suppliers(messages, db_suppliers)
     if still_unresolved:
         remaining_names = [u["display_name"] for u in still_unresolved]
         raise HTTPException(
