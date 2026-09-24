@@ -20,7 +20,7 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-該当なし。既存の `BuybackPriceHistoryDrawer.tsx` の recharts LineChart + Tabs パターンを踏襲。
+該当なし。既存の BuybackPriceHistoryDrawer.tsx の recharts LineChart + Tabs パターンを踏襲。
 
 ## 維持の仕組み
 
