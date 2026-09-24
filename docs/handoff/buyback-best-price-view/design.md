@@ -25,10 +25,19 @@
 | yesterday_diffが前日比を正しく表示 | 前日データあり → 差分が+/-色付きで表示。なし → 「—」 |
 | カテゴリタブが正規化される | 大文字/小文字混在カテゴリが同一タブに集約される |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-GREATEST() / LATERAL JOIN は PostgreSQL 標準。yesterday_diff の NULL判定は両prev NULLの場合のみNULLとする。
+- PostgreSQL GREATEST() 関数: NULL値はスキップ（COALESCEで0補完して扱う）
+- LATERAL JOIN パターン: 既に同エンドポイントで homura/shinsoku の最新価格取得に使用済み（buyback_prices.py:496-523）
+- yesterday_diff の NULL判定: 両店舗前日データなしのみNULL（片方あれば差分計算）
 
-## 守り手
+## 維持の仕組み
 
-既存フィールド（homura_*/shinsoku_*）はAPIレスポンスに残し、BuybackProductHistoryDrawerが引き続き利用できる。
+- 既存フィールド（homura_*/shinsoku_*）はAPIレスポンスに残し、BuybackProductHistoryDrawerが引き続き利用できる
+- カテゴリ正規化はUPPER()のみ。DBのデータは変更しない
+- 行インデックスマッピング（r[0]..r[20]）はコメントなしで追跡が難しいため、将来的にmappings()切り替えを検討
+
+## 弊害・リスク
+
+- 前日比計算: `l.fetched_at < CURRENT_DATE` は日本時間ではなくサーバーUTC基準。UTC 0時前後で「前日」の定義がずれる可能性あり（許容範囲）
+- yesterday_diffのゼロ表示: 両日同額の場合も0（—ではなく+¥0）が表示される（仕様）
