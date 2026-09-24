@@ -44,12 +44,10 @@ interface ImportJobResponse {
   id: string;
   filename: string;
   raw_sha256: string;
-  message_count: number;
-  provider_count: number;
+  new_message_count: number;
+  resolved_count: number;
   unresolved_count: number;
   uploaded_by: string | null;
-  status: string;
-  review_status: string;
   created_at: string;
 }
 
@@ -618,13 +616,12 @@ export default function TcgLineImportPage() {
               <thead>
                 <tr style={{ borderBottom: "2px solid var(--border-color)" }}>
                   <th style={thStyle}>{t("tcgLineImport.colFilename")}</th>
-                  <th style={thStyle}>{t("tcgLineImport.colMessageCount")}</th>
-                  <th style={thStyle}>{t("tcgLineImport.colProviderCount")}</th>
+                  <th style={thStyle}>{t("tcgLineImport.colNewMessageCount")}</th>
+                  <th style={thStyle}>{t("tcgLineImport.colResolved")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colUnresolved")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colUploadedBy")}</th>
-                  <th style={thStyle}>{t("tcgLineImport.colStatus")}</th>
-                  <th style={thStyle}>{t("tcgLineImport.colReviewStatus")}</th>
                   <th style={thStyle}>{t("tcgLineImport.colDateJst")}</th>
+                  <th style={thStyle}></th>
                 </tr>
               </thead>
               <tbody>
@@ -636,8 +633,16 @@ export default function TcgLineImportPage() {
                     <td style={tdStyle} title={job.raw_sha256}>
                       {job.filename}
                     </td>
-                    <td style={{ ...tdStyle, textAlign: "right" }}>{job.message_count}</td>
-                    <td style={{ ...tdStyle, textAlign: "right" }}>{job.provider_count}</td>
+                    <td style={{ ...tdStyle, textAlign: "right" }}>{job.new_message_count}</td>
+                    <td
+                      style={{
+                        ...tdStyle,
+                        textAlign: "right",
+                        color: job.resolved_count > 0 ? "var(--color-success)" : undefined,
+                      }}
+                    >
+                      {job.resolved_count}
+                    </td>
                     <td
                       style={{
                         ...tdStyle,
@@ -649,24 +654,12 @@ export default function TcgLineImportPage() {
                     </td>
                     <td style={tdStyle}>{job.uploaded_by ?? "-"}</td>
                     <td style={tdStyle}>
-                      <span
-                        style={{
-                          padding: "0.15rem 0.5rem",
-                          borderRadius: "999px",
-                          fontSize: "0.75rem",
-                          background: job.status === "ok" ? "var(--color-success-bg)" : "var(--color-error-bg)",
-                          color: job.status === "ok" ? "var(--color-success)" : "var(--color-error)",
-                          border: `1px solid ${job.status === "ok" ? "var(--color-success-border)" : "var(--color-error-border)"}`,
-                        }}
-                      >
-                        {job.status}
-                      </span>
-                    </td>
-                    <td style={tdStyle}>
-                      <ReviewStatusBadge status={job.review_status} t={t} />
-                    </td>
-                    <td style={tdStyle}>
                       {formatJst(job.created_at)}
+                    </td>
+                    <td style={tdStyle}>
+                      <Button variant="secondary" onClick={() => selectImport(job.id)}>
+                        {t("tcgLineImport.detailButton")}
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -698,46 +691,3 @@ const tdStyle: React.CSSProperties = {
   verticalAlign: "top",
 };
 
-// ---------------------------------------------------------------------------
-// ReviewStatusBadge
-// ---------------------------------------------------------------------------
-
-function ReviewStatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
-  const colorMap: Record<string, { bg: string; color: string; border: string }> = {
-    ok: {
-      bg: "var(--color-success-bg)",
-      color: "var(--color-success)",
-      border: "var(--color-success-border)",
-    },
-    pending_review: {
-      bg: "var(--color-warning-bg)",
-      color: "var(--color-warning)",
-      border: "var(--color-warning-border)",
-    },
-    discarded: {
-      bg: "var(--color-error-bg)",
-      color: "var(--color-error)",
-      border: "var(--color-error-border)",
-    },
-  };
-  const c = colorMap[status] ?? colorMap["ok"];
-  const labelMap: Record<string, string> = {
-    ok: t("tcgLineImport.reviewStatusOk"),
-    pending_review: t("tcgLineImport.reviewStatusPending"),
-    discarded: t("tcgLineImport.reviewStatusDiscarded"),
-  };
-  return (
-    <span
-      style={{
-        padding: "0.15rem 0.5rem",
-        borderRadius: "999px",
-        fontSize: "0.75rem",
-        background: c.bg,
-        color: c.color,
-        border: `1px solid ${c.border}`,
-      }}
-    >
-      {labelMap[status] ?? status}
-    </span>
-  );
-}
