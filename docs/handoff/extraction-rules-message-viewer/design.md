@@ -46,8 +46,13 @@
 - embedded prop の動作は変更なし
 - 既存の extraction-rules GET/PATCH エンドポイントは無変更
 
-## 外部事例
-- ページ送りナビゲーション: 既存の `AnalysisDashboardPanel.tsx` での `DashboardIcons.arrowRight` 使用パターンを踏襲
+## 外部・過去事例の参照と我々への応用
+- ページ送りナビゲーション: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:375` での `DashboardIcons.arrowRight` 使用パターンを踏襲
+- `SCHEDULE_SETTINGS_ICONS.back` (ArrowLeftIcon) は同ファイルの DashboardIcons パターンを対称的に使用
+
+## 維持の仕組み
+- バックエンドの `SupplierExtractionRulesResponse` スキーマ変更時は `SupplierExtractionDetail` インターフェースも同時に更新する（フラット構造の一致を維持）
+- 新しい i18n キー追加時は ja.json / en.json 両方に同一キーを追加する（CI チェックあり）
 
 ## 戻し方
 - フロントエンド: 型定義・JSX を元の `source_text`/`rules` ネスト構造に戻す
