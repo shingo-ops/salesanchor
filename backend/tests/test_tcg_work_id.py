@@ -7,7 +7,7 @@ import pytest
 
 from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
-from app.services.tcg_work_reference import reference_digest, validate_work_id
+from app.services.tcg_work_reference import reference_digest, validate_product_id, validate_work_id
 from app.tasks import tcg_extraction as extraction
 
 ONE = 1
@@ -183,3 +183,14 @@ def test_v5_span_diagnostic_has_shape_without_response_content(monkeypatch, capl
     assert "allowed_chars=False" in result["error_message"]
     assert secret not in result["error_message"] and secret not in caplog.text
     assert result["raw_response"] == ""
+
+
+def test_validate_product_id_accepts_id_string():
+    """validate_product_id は REF スナップショット内の products.id 文字列を返すこと。"""
+    assert validate_product_id("1", REF) == "1"
+    assert validate_product_id(1, REF) == "1"          # int 入力も str 化して照合
+    assert validate_product_id(None, REF) is None
+    assert validate_product_id("", REF) is None
+    assert validate_product_id("9999", REF) is None    # 存在しない id
+    # 旧形式 product_code（"OP-01" 等）は REF の products.id に存在しないので None
+    assert validate_product_id("OP-01", REF) is None

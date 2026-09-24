@@ -1658,3 +1658,56 @@ def test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes(pg,
     assert pid_basis.startswith("FALLBACK|") or pid_basis == "NONE", (
         f"Expected FALLBACK| or NONE when Gemini code is invalid, got {pid_basis!r}"
     )
+
+
+def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
+    """resolved_product_code が旧形式（product_code 文字列: "PM0123"）の場合に products.id へ変換されること。
+
+    2026-09-23 以前に抽出されたジョブは resolved_product_code に product_code 文字列が
+    保存されている。analyze_extraction_job() でこれを products.id に変換し、
+    pid_resolved=True かつ pid_basis='GEMINI' になること。
+    """
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
+        wid = str(cursor.fetchone()[0])
+        # PM0123 の product_code 文字列を旧形式として使用する
+        cursor.execute("SELECT product_code FROM public.products WHERE product_code='PM0123'")
+        pm0123_code = cursor.fetchone()[0]  # "PM0123"
+
+    raw = "◆EB01 1BOX 1000円"
+    # 旧形式: resolved_product_code に product_code 文字列を渡す
+    _, jid, result = run_message(
+        connection, engine, monkeypatch, raw,
+        [record("◆EB01", 1) + [wid, pm0123_code]],
+        work_id_mode=True,
+    )
+    assert result["status"] == "done" and result["items_count"] == 1
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s",
+            ("raw-extraction-v5-product-p1", jid),
+        )
+        # resolved_product_code は validate_product_id で None になる（旧形式はスナップショットに存在しない）
+        # → _resolve_pid が product_code_to_id でフォールバック変換する
+        # 事前に extraction_items.resolved_product_code を旧形式に上書き
+        cursor.execute(
+            f"UPDATE {SCHEMA}.extraction_items SET resolved_product_code=%s WHERE extraction_job_id=%s",
+            (pm0123_code, jid),
+        )
+    with Session(engine) as session:
+        analyzer.analyze_extraction_job(session, jid)
+        row = session.execute(text(
+            f"SELECT ar.pid_resolved, ar.pid_basis FROM {SCHEMA}.analysis_results ar "
+            f"JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id "
+            f"WHERE ei.extraction_job_id=:jid"
+        ), {"jid": jid}).fetchone()
+    assert row is not None
+    pid_resolved, pid_basis = row
+    assert pid_resolved is True, (
+        f"pid_resolved should be True with legacy product_code fallback, got {pid_resolved}"
+    )
+    assert pid_basis == "GEMINI", (
+        f"pid_basis should be 'GEMINI' with legacy product_code fallback, got {pid_basis!r}"
+    )
