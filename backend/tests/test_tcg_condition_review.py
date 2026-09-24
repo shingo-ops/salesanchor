@@ -74,6 +74,8 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             # Step 4/5: create pipeline tables in public schema
             cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
+            # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+            cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
             # Seed a public.supplier_channels row for test data insertion
             cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) "
                            "SELECT 'line',true,id FROM public.suppliers LIMIT 1")

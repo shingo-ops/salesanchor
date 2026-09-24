@@ -38,11 +38,15 @@ def digest_sql(expression: str) -> str:
     return f"encode(sha256(convert_to(({expression})::text, 'UTF8')), 'hex')"
 
 
-def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None) -> str:
+def source_cte(*, schema: str | None = None, item_only: bool = False, source_hash: str | None = None, include_inactive: bool = False) -> str:
     schema = schema or "public"
-    scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
-             f"JOIN {schema}.extraction_jobs ej ON ej.id=ei.extraction_job_id WHERE ei.id=CAST(:eid AS uuid))"
-             if item_only else "WHERE is_active IS TRUE")
+    if item_only:
+        scope = (f"WHERE id=(SELECT ej.source_message_id FROM {schema}.extraction_items ei "
+                 f"JOIN {schema}.extraction_jobs ej ON ej.id=ei.extraction_job_id WHERE ei.id=CAST(:eid AS uuid))")
+    elif include_inactive:
+        scope = ""
+    else:
+        scope = "WHERE is_active IS TRUE"
     hash_expression = source_hash or digest_sql("raw_text")
     # Materialization makes the full original-message hash reusable by its items.
     return f"""WITH {_SOURCE_CTE_NAME} AS MATERIALIZED (
