@@ -2,12 +2,10 @@
  * SupplierExtractionRulesPage — 仕入元別 抽出ルール設定（/super-admin/supplier-extraction-rules）
  *
  * 一覧: 全仕入元をunit_ng降順で表示（DataTable）
- * 詳細: ルール設定フォーム
+ * 詳細: 左=原文テキスト / 右=ルール設定フォーム
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型コンポーネントのみ使用。
- *
- * Note: source-messages エンドポイントは ADR-157 Phase 3 (buyback-product-matching PR #3718) で削除済み。
  */
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -20,6 +18,8 @@ import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
 import { Textarea } from "../../components/Textarea";
 import { Button } from "../../components/Button";
+import { DashboardIcons, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
 import "./SupplierExtractionRulesPage.css";
 
 // ---------------------------------------------------------------------------
@@ -34,20 +34,21 @@ interface SupplierOverviewItem {
   has_extraction_rules: boolean;
 }
 
-interface ExtractionRules {
+interface SupplierExtractionDetail {
+  supplier_id: number;
   extraction_price_format: string | null;
   extraction_qty_format: string | null;
   extraction_order_pattern: string | null;
   extraction_default_unit: string | null;
   extraction_state_format: string | null;
   extraction_notes: string | null;
+  latest_raw_text: string | null;
 }
 
-interface SupplierExtractionDetail {
+interface SupplierSourceMessage {
   id: number;
-  name: string;
-  source_text: string | null;
-  rules: ExtractionRules;
+  raw_text: string;
+  created_at: string;
 }
 
 type RulesFormState = {
@@ -68,14 +69,14 @@ const emptyForm: RulesFormState = {
   extraction_notes: "",
 };
 
-function detailToForm(rules: ExtractionRules): RulesFormState {
+function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
   return {
-    extraction_price_format: rules.extraction_price_format ?? "",
-    extraction_qty_format: rules.extraction_qty_format ?? "",
-    extraction_order_pattern: rules.extraction_order_pattern ?? "",
-    extraction_default_unit: rules.extraction_default_unit ?? "",
-    extraction_state_format: rules.extraction_state_format ?? "",
-    extraction_notes: rules.extraction_notes ?? "",
+    extraction_price_format: detail.extraction_price_format ?? "",
+    extraction_qty_format: detail.extraction_qty_format ?? "",
+    extraction_order_pattern: detail.extraction_order_pattern ?? "",
+    extraction_default_unit: detail.extraction_default_unit ?? "",
+    extraction_state_format: detail.extraction_state_format ?? "",
+    extraction_notes: detail.extraction_notes ?? "",
   };
 }
 
@@ -104,6 +105,9 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [form, setForm] = useState<RulesFormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
+
+  const [messages, setMessages] = useState<SupplierSourceMessage[]>([]);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   // ---------------------------------------------------------------------------
   // 一覧取得
@@ -144,7 +148,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         `/super-admin/suppliers/${id}/extraction-rules`
       );
       setDetail(data);
-      setForm(detailToForm(data.rules));
+      setForm(detailToForm(data));
     } catch {
       setDetailError(t("common.errorLoading"));
     } finally {
@@ -152,15 +156,31 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     }
   }, [t]);
 
+  const fetchMessages = useCallback(async (id: number) => {
+    try {
+      const data = await api.get<{ messages: SupplierSourceMessage[]; total: number }>(
+        `/super-admin/suppliers/${id}/source-messages`
+      );
+      setMessages(data.messages);
+      setMessageIndex(0);
+    } catch {
+      setMessages([]);
+      setMessageIndex(0);
+    }
+  }, []);
+
   const handleSelectSupplier = useCallback(
     (row: SupplierOverviewItem) => {
       setSelectedSupplier({ supplier_id: row.supplier_id, name: row.name });
       setDetail(null);
       setForm(emptyForm);
       setSavedMessage(false);
+      setMessages([]);
+      setMessageIndex(0);
       void fetchDetail(row.supplier_id);
+      void fetchMessages(row.supplier_id);
     },
-    [fetchDetail]
+    [fetchDetail, fetchMessages]
   );
 
   const handleBack = useCallback(() => {
@@ -168,6 +188,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setDetail(null);
     setForm(emptyForm);
     setSavedMessage(false);
+    setMessages([]);
+    setMessageIndex(0);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -269,85 +291,129 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       {loadingDetail && <p>{t("common.loading")}</p>}
 
       {!loadingDetail && detail && (
-        <div className="supplier-rules-form">
-          <TextField
-            label={t("supplierExtractionRules.priceFormat")}
-            helperText={t("supplierExtractionRules.priceFormatHelper")}
-            value={form.extraction_price_format}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
-            }
-            fullWidth
-          />
-
-          <TextField
-            label={t("supplierExtractionRules.qtyFormat")}
-            helperText={t("supplierExtractionRules.qtyFormatHelper")}
-            value={form.extraction_qty_format}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
-            }
-            fullWidth
-          />
-
-          <Select
-            label={t("supplierExtractionRules.orderPattern")}
-            value={form.extraction_order_pattern}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
-            }
-            options={[
-              { value: "", label: t("supplierExtractionRules.orderUnset") },
-              { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
-              { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
-            ]}
-            fullWidth
-          />
-
-          <TextField
-            label={t("supplierExtractionRules.defaultUnit")}
-            helperText={t("supplierExtractionRules.defaultUnitHelper")}
-            value={form.extraction_default_unit}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
-            }
-            fullWidth
-          />
-
-          <TextField
-            label={t("supplierExtractionRules.stateFormat")}
-            helperText={t("supplierExtractionRules.stateFormatHelper")}
-            value={form.extraction_state_format}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
-            }
-            fullWidth
-          />
-
-          <Textarea
-            label={t("supplierExtractionRules.notes")}
-            helperText={t("supplierExtractionRules.notesHelper")}
-            value={form.extraction_notes}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
-            }
-            rows={4}
-            fullWidth
-          />
-
-          <div className="supplier-rules-form-actions">
-            {savedMessage && (
-              <span className="supplier-rules-saved-msg">
-                {t("supplierExtractionRules.saved")}
+        <div className="supplier-rules-split">
+          {/* 左: 原文テキスト */}
+          <div className="supplier-rules-source">
+            {messages.length > 0 ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    aria-label={t("common.previous")}
+                    onClick={() => setMessageIndex((i: number) => i - 1)}
+                    disabled={messageIndex <= 0}
+                  >
+                    {(() => { const BackIcon = SCHEDULE_SETTINGS_ICONS.back; return <BackIcon size={ICON.md} />; })()}
+                  </Button>
+                  <span style={{ fontSize: "var(--font-sm)" }}>
+                    {messageIndex + 1} / {messages.length}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    aria-label={t("common.next")}
+                    onClick={() => setMessageIndex((i: number) => i + 1)}
+                    disabled={messageIndex >= messages.length - 1}
+                  >
+                    {(() => { const NextIcon = DashboardIcons.arrowRight; return <NextIcon size={ICON.md} />; })()}
+                  </Button>
+                </div>
+                <div style={{ fontSize: "var(--font-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                  {messages[messageIndex].created_at}
+                </div>
+                <pre className="supplier-rules-source-pre">{messages[messageIndex].raw_text}</pre>
+              </>
+            ) : (
+              <span className="supplier-rules-source-empty">
+                {t("supplierExtractionRules.noMessages")}
               </span>
             )}
-            <Button
-              variant="primary"
-              onClick={() => void handleSave()}
-              disabled={saving}
-            >
-              {t("supplierExtractionRules.save")}
-            </Button>
+          </div>
+
+          {/* 右: ルール設定フォーム */}
+          <div className="supplier-rules-form">
+            <TextField
+              label={t("supplierExtractionRules.priceFormat")}
+              helperText={t("supplierExtractionRules.priceFormatHelper")}
+              value={form.extraction_price_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <TextField
+              label={t("supplierExtractionRules.qtyFormat")}
+              helperText={t("supplierExtractionRules.qtyFormatHelper")}
+              value={form.extraction_qty_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <Select
+              label={t("supplierExtractionRules.orderPattern")}
+              value={form.extraction_order_pattern}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
+              }
+              options={[
+                { value: "", label: t("supplierExtractionRules.orderUnset") },
+                { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
+                { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
+              ]}
+              fullWidth
+            />
+
+            <TextField
+              label={t("supplierExtractionRules.defaultUnit")}
+              helperText={t("supplierExtractionRules.defaultUnitHelper")}
+              value={form.extraction_default_unit}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <TextField
+              label={t("supplierExtractionRules.stateFormat")}
+              helperText={t("supplierExtractionRules.stateFormatHelper")}
+              value={form.extraction_state_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
+              }
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.notes")}
+              helperText={t("supplierExtractionRules.notesHelper")}
+              value={form.extraction_notes}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
+              }
+              rows={4}
+              fullWidth
+            />
+
+            <div className="supplier-rules-form-actions">
+              {savedMessage && (
+                <span className="supplier-rules-saved-msg">
+                  {t("supplierExtractionRules.saved")}
+                </span>
+              )}
+              <Button
+                variant="primary"
+                onClick={() => void handleSave()}
+                disabled={saving}
+              >
+                {t("supplierExtractionRules.save")}
+              </Button>
+            </div>
           </div>
         </div>
       )}
