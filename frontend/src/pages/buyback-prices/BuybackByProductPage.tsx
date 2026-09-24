@@ -8,6 +8,7 @@
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { Tabs } from "../../components/Tabs";
 import { TextField } from "../../components/TextField";
 import { SelectControl } from "../../components/Select";
@@ -207,39 +208,43 @@ export function BuybackByProductPage() {
 
   return (
     <>
-      <div style={{ padding: "var(--space-3) 0", display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
-        <TextField
-          type="search"
-          placeholder={t("buybackPrices.searchPlaceholder")}
-          value={search}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
-          size="sm"
-        />
-        <SelectControl
-          options={[
-            { value: "", label: t("buybackPrices.swingPeriodAll") },
-            { value: "7", label: t("buybackPrices.swingDays7") },
-            { value: "30", label: t("buybackPrices.swingDays30") },
-            { value: "90", label: t("buybackPrices.swingDays90") },
-          ]}
-          value={swingDays}
-          onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSwingDays(e.target.value); setMinSwing(""); setPage(1); }}
-          size="sm"
-        />
-        {swingDays && (
-          <SelectControl
-            options={[
-              { value: "", label: t("buybackPrices.swingMinAll") },
-              { value: "1000", label: "¥1,000+" },
-              { value: "5000", label: "¥5,000+" },
-              { value: "10000", label: "¥10,000+" },
-            ]}
-            value={minSwing}
-            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setMinSwing(e.target.value); setPage(1); }}
-            size="sm"
-          />
-        )}
-      </div>
+      <ContentToolbar
+        left={
+          <>
+            <TextField
+              type="search"
+              placeholder={t("buybackPrices.searchPlaceholder")}
+              value={search}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
+              size="sm"
+            />
+            <SelectControl
+              options={[
+                { value: "", label: t("buybackPrices.swingPeriodAll") },
+                { value: "7", label: t("buybackPrices.swingDays7") },
+                { value: "30", label: t("buybackPrices.swingDays30") },
+                { value: "90", label: t("buybackPrices.swingDays90") },
+              ]}
+              value={swingDays}
+              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSwingDays(e.target.value); setMinSwing(""); setPage(1); }}
+              size="sm"
+            />
+            {swingDays && (
+              <SelectControl
+                options={[
+                  { value: "", label: t("buybackPrices.swingMinAll") },
+                  { value: "1000", label: "¥1,000+" },
+                  { value: "5000", label: "¥5,000+" },
+                  { value: "10000", label: "¥10,000+" },
+                ]}
+                value={minSwing}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setMinSwing(e.target.value); setPage(1); }}
+                size="sm"
+              />
+            )}
+          </>
+        }
+      />
 
       {loading && (
         <p role="status" className={styles.statusMsg}>
