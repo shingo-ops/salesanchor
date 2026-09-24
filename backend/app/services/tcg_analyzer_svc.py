@@ -1631,7 +1631,7 @@ def _merge_supplier_products(
               AND ei_old.extraction_job_id != :job_id
               AND ar_old.is_current = TRUE
               AND EXISTS (
-                  SELECT 1 FROM unnest(:product_ids::integer[], :condition_ids::integer[]) AS t(pid, cid)
+                  SELECT 1 FROM unnest(CAST(:product_ids AS integer[]), CAST(:condition_ids AS integer[])) AS t(pid, cid)
                   WHERE ar_old.product_id = t.pid AND ar_old.condition_id = t.cid
               )
         """),
