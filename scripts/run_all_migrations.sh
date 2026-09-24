@@ -785,5 +785,8 @@ run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
 # public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
 run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql
 
+# ADR-157: 買取価格変動アラートルール
+run_sql migrations/20260924_000000_create_buyback_alert_rules.sql
+
 # public.suppliers に仕入元ごとの抽出ルール列を追加
 run_sql migrations/20260924_010000_add_supplier_extraction_rules.sql

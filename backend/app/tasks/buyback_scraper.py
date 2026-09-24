@@ -44,10 +44,24 @@ def fetch_all_buyback_prices() -> None:
 
     シンソク → 買取ホムラ の順に実行する。
     いずれかが失敗しても他方は続行する（各サービス内部でエラーハンドリング済み）。
+    価格取得完了後、アラートチェックを実行して閾値超過時に Discord 通知を送る。
     """
     logger.info("[buyback_scraper] 全店舗価格取得タスク開始")
     asyncio.run(_fetch_all())
     logger.info("[buyback_scraper] 全店舗価格取得タスク完了")
+
+    try:
+        fired = asyncio.run(_run_alert_check())
+        logger.info("[buyback_scraper] アラートチェック完了: %d 件発火", fired)
+    except Exception:  # noqa: BLE001
+        logger.exception("[buyback_scraper] アラートチェックでエラー")
+
+
+async def _run_alert_check() -> int:
+    """アラートチェックを非同期で実行する。"""
+    from app.services.buyback_scraper.alert_checker import check_alerts
+
+    return await check_alerts()
 
 
 async def _fetch_all() -> None:
