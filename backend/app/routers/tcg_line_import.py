@@ -684,7 +684,15 @@ async def get_import_extraction_jobs(import_job_id: uuid.UUID, limit: int = Quer
 )
 async def upload_android_line_export(
     file: UploadFile = File(...),
-    window_hours: int = Form(default=0, ge=0),
+    window_start: Optional[str] = Form(
+        default=None,
+        description="取り込み開始 timestamp (YYYY-MM-DD HH:MM:00 以上)。省略時は window_hours で自動計算",
+    ),
+    window_end: Optional[str] = Form(
+        default=None,
+        description="取り込み終了 timestamp (YYYY-MM-DD HH:MM:00 未満)",
+    ),
+    window_hours: int = Form(default=6, ge=0),
     db: AsyncSession = Depends(get_db),
     current_user=Depends(require_super_admin),
 ):
@@ -696,15 +704,20 @@ async def upload_android_line_export(
         raise HTTPException(status_code=413, detail="ファイルは10MiB以下にしてください")
     try:
         export_text = raw.decode("utf-8")
-    except UnicodeDecodeError as error:
-        raise HTTPException(status_code=400, detail="UTF-8のファイルが必要です") from error
+    except UnicodeDecodeError:
+        try:
+            export_text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError as error:
+            raise HTTPException(status_code=400, detail="UTF-8のファイルが必要です") from error
     uploaded_by = getattr(current_user, "email", None) or getattr(current_user, "id", None)
     try:
         return await import_line_export(
             db=db,
-            filename=file.filename,
+            filename=file.filename or "unknown.txt",
             export_text=export_text,
             uploaded_by=str(uploaded_by) if uploaded_by is not None else None,
+            window_start=window_start,
+            window_end=window_end,
             window_hours=window_hours,
             source_format="android",
         )
