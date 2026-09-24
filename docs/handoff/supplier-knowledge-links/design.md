@@ -39,3 +39,4 @@
 - knowledge_rules の新カテゴリ追加は seed migration で冪等管理
 - supplier_knowledge_links の参照整合性は ON DELETE CASCADE で保護
 - フロントエンド操作は即時APIコール（「保存」ボタン不要・独立）
+- 守り手: 人手で守る（新カテゴリ追加時は migration seed + `_EXTRACTION_KNOWLEDGE_CATEGORIES` タプルの両方に追加が必要。コメントで明記済み）
