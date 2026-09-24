@@ -21,7 +21,7 @@ interface SupplierOverviewItem {
 - `id` → `supplier_id`
 - `unit_ng` → `unit_ng_count`
 
-影響箇所（全て `SupplierExtractionRulesPage.tsx` 内）:
+影響箇所（全て `frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx` 内）:
 - `:27` — インターフェース定義
 - `:92` — `selectedSupplier` state 型
 - `:113` — sort 関数の `.unit_ng`
