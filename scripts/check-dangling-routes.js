@@ -298,10 +298,6 @@ function extractFrontendRefs() {
         normalized = normalized.replace('/api/v1/api/', '/api/');
       }
 
-      // デバッグ: source-messages 参照の検出時にファイル名を出力
-      if (normalized.includes('source-messages')) {
-        console.log(`[DEBUG] source-messages found in: ${relativePath} (raw: ${inner})`);
-      }
       refs.add(normalized);
     }
   }
