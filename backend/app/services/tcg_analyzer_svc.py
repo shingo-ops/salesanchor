@@ -1573,11 +1573,11 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 def _merge_supplier_products(
     session: Session, extraction_job_id: str, schema: str
 ) -> int:
-    """ADR-158: 同一仕入元の旧 analysis_results を商品単位で更新。
+    """ADR-158: 同一仕入元の旧 analysis_results を商品×コンディション単位で更新。
 
-    新メッセージの解析結果に含まれる product_id と同じ product_id を持つ
+    新メッセージの解析結果に含まれる (product_id, condition_id) と同じペアを持つ
     旧 analysis_results を is_current=FALSE に更新する。
-    新メッセージに含まれない product_id の旧行は is_current=TRUE のまま残る。
+    新メッセージに含まれないペアの旧行は is_current=TRUE のまま残る。
 
     Returns:
         更新した旧 analysis_results の件数
@@ -1598,10 +1598,10 @@ def _merge_supplier_products(
 
     supplier_channel_id = channel_row[0]
 
-    # 2. 新 analysis_results の product_id 一覧（pid_resolved=TRUE のもの）
-    new_pids = session.execute(
+    # 2. 新 analysis_results の (product_id, condition_id) ペア一覧
+    new_pairs = session.execute(
         text(f"""
-            SELECT DISTINCT ar.product_id
+            SELECT DISTINCT ar.product_id, ar.condition_id
             FROM {schema}.analysis_results ar
             JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
             WHERE ei.extraction_job_id = :job_id
@@ -1609,13 +1609,16 @@ def _merge_supplier_products(
               AND ar.product_id IS NOT NULL
         """),
         {"job_id": extraction_job_id},
-    ).scalars().all()
+    ).all()
 
-    if not new_pids:
+    if not new_pairs:
         return 0
 
+    new_product_ids = [p[0] for p in new_pairs]
+    new_condition_ids = [p[1] for p in new_pairs]
+
     # 3. 同一仕入元の旧 analysis_results で、新メッセージにも存在する
-    #    product_id の行を is_current=FALSE に更新
+    #    (product_id, condition_id) ペアの行を is_current=FALSE に更新
     result = session.execute(
         text(f"""
             UPDATE {schema}.analysis_results ar_old
@@ -1626,13 +1629,17 @@ def _merge_supplier_products(
             WHERE ar_old.extraction_item_id = ei_old.id
               AND sm_old.supplier_channel_id = :channel_id
               AND ei_old.extraction_job_id != :job_id
-              AND ar_old.product_id = ANY(:product_ids)
               AND ar_old.is_current = TRUE
+              AND EXISTS (
+                  SELECT 1 FROM unnest(:product_ids::integer[], :condition_ids::integer[]) AS t(pid, cid)
+                  WHERE ar_old.product_id = t.pid AND ar_old.condition_id = t.cid
+              )
         """),
         {
             "channel_id": supplier_channel_id,
             "job_id": extraction_job_id,
-            "product_ids": list(new_pids),
+            "product_ids": new_product_ids,
+            "condition_ids": new_condition_ids,
         },
     )
 
@@ -1640,7 +1647,7 @@ def _merge_supplier_products(
     if updated:
         session.commit()
         logger.info(
-            "[tcg_analyzer] ADR-158 merge: job=%s channel=%s superseded=%d products",
+            "[tcg_analyzer] ADR-158 merge: job=%s channel=%s superseded=%d product-condition pairs",
             extraction_job_id,
             supplier_channel_id,
             updated,
