@@ -32,11 +32,11 @@ SET LOCAL statement_timeout = '60s';
 - 呼び出し元: `scripts/run_all_migrations.sh:527`（`run_sql` 経由）
 - 他の migration には影響しない（LOCAL スコープ）
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-PostgreSQL 公式: `lock_timeout` は `SET LOCAL` でトランザクション内のみ有効。
-ゼロダウンタイム migration のベストプラクティス: 長時間テーブルを保持する
-トランザクションがある本番環境では lock_timeout を設定して fail-fast にする。
+- PostgreSQL 公式ドキュメント: `SET LOCAL lock_timeout` はトランザクション終了時にリセットされる。SESSION スコープと異なりコネクション再利用時に残留しない
+- ゼロダウンタイム migration のベストプラクティス（Braintree, GitLab engineering blog）: `ALTER TABLE` に `lock_timeout` を設定することで、デプロイパイプラインのタイムアウト前に fail-fast させる
+- 本プロジェクトへの応用: `command_timeout: 10m`（deploy.yml）より短い `30s` を設定し、ブロック時は明示的なエラーログを残す
 
 ## ADR参照
 
@@ -46,6 +46,12 @@ PostgreSQL 公式: `lock_timeout` は `SET LOCAL` でトランザクション内
 
 この migration はいずれ Phase 2c 完了後に不要になる。
 `lock_timeout` 追加は後の migration にも展開すべきパターン。
+
+## 維持の仕組み
+
+この変更はデプロイのたびに自動実行される（run_all_migrations.sh）。
+`IF NOT EXISTS` により、制約が存在しない場合はロック取得後に即完了する。
+将来 Phase 2c が完了したら本 migration ファイルを削除対象にできる。
 
 ## 戻し方
 
