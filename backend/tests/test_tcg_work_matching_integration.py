@@ -280,6 +280,7 @@ def migrate(cursor):
     # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
     _supplier_ssot_premigration(cursor, SCHEMA)
     cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260910_010000_tcg_import_message_links.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
     cursor.execute((MIGRATIONS / "20260924_010000_add_supplier_extraction_rules.sql").read_text())
     # product_code_seq: created by phase_b migration in prod, add idempotently for test DB
