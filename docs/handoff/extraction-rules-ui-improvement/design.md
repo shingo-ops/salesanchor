@@ -1,5 +1,7 @@
 # design: extraction-rules-ui-improvement
 
+- recon: docs/handoff/extraction-rules-ui-improvement/recon.md
+
 ## 参照ADR
 
 - ADR-027: i18n強制（全UI文字列は t("key") 経由）
@@ -36,7 +38,7 @@ HTML native `<details>/<summary>` は同リポジトリ内で使用済み:
 
 ## 維持の仕組み
 
-- 守り手: Hikky-dev（CC）
+- 守り手: .github/workflows/ui-governance-gate.yml（UIガバナンスgate）、frontend/scripts/check-i18n-missing-keys.js（i18nキー整合）
 - i18n: ja.json / en.json 同一キー必須（CI「i18n key parity」チェックで自動検出）
 - スタイル: デザイントークン変数のみ（ESLint no-restricted-syntax ルールで生値禁止）
 - UIガバナンス: ADR-144準拠（金型コンポーネント使用・details はHTML標準タグ）
