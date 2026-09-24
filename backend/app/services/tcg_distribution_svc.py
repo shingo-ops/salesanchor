@@ -210,7 +210,7 @@ async def fetch_output_rows(
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
 
-    sql = text(f"""{source_cte(schema=TCG_SCHEMA)}
+    sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
             COALESCE(TO_CHAR(sm.line_posted_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
@@ -231,7 +231,7 @@ async def fetch_output_rows(
         JOIN {TCG_SCHEMA}.extraction_jobs ej
             ON ej.id = ei.extraction_job_id
         JOIN {TCG_SCHEMA}.source_messages sm
-            ON sm.id = ej.source_message_id AND sm.is_active = TRUE
+            ON sm.id = ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc
             ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps
@@ -242,6 +242,7 @@ async def fetch_output_rows(
             ON ser.id = p.work_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
+          AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
@@ -291,15 +292,16 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
-    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
+    count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
-        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
         {review_joins(schema=TCG_SCHEMA)}
         WHERE ar.pid_resolved = TRUE
+          AND ar.is_current = TRUE
           AND cr.needs_review IS FALSE
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
@@ -309,7 +311,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     output_count = count_result.scalar()
 
     # 除外内訳
-    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA)}
+    excl_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
             COUNT(*) FILTER (WHERE cr.canonical LIKE 'FLAG_%')
                 AS exc_flag,
@@ -337,9 +339,10 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id
         JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id=ei.extraction_job_id
-        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id AND sm.is_active = TRUE
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id=ej.source_message_id
         JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id=sm.supplier_channel_id
         {review_joins(schema=TCG_SCHEMA)}
+        WHERE ar.is_current = TRUE
     """))
     excl = excl_result.mappings().one()
 
