@@ -17,6 +17,7 @@ import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
 import { Button } from "../../components/Button";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import { Badge } from "../../components/Badge";
 import {
   type BuybackProduct,
   type BuybackListResponse,
@@ -28,6 +29,7 @@ import {
 } from "./buybackTypes";
 import { BuybackPriceHistoryDrawer } from "./BuybackPriceHistoryDrawer";
 import { BuybackAlertModal } from "./BuybackAlertModal";
+import { BuybackPendingReviewModal } from "./BuybackPendingReviewModal";
 import styles from "./BuybackPricesPage.module.css";
 
 export default function BuybackPricesPage() {
@@ -55,6 +57,10 @@ export default function BuybackPricesPage() {
   // Alert Modal
   const [alertsOpen, setAlertsOpen] = useState(false);
 
+  // Pending Review Modal
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+
   // ── データ取得 ──────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
@@ -79,6 +85,8 @@ export default function BuybackPricesPage() {
           setItems(res.items);
           setTotal(res.total);
           setCountsByGame(res.counts_by_game ?? {});
+          const count = res.items.filter((item) => item.match_status === "pending_review").length;
+          setPendingCount(count);
         }
       })
       .catch(() => {
@@ -141,6 +149,25 @@ export default function BuybackPricesPage() {
     {
       key: "product_name",
       header: t("buybackPrices.columnName"),
+    },
+    {
+      key: "product_name_ja",
+      header: t("buybackPrices.columnLinkedProduct"),
+      width: "180px",
+      renderCell: (row: BuybackProduct) => {
+        if (row.match_status === "pending_review") {
+          return <Badge variant="warning" size="sm">{t("buybackPrices.pendingReview")}</Badge>;
+        }
+        if (row.product_code && row.product_name_ja) {
+          return (
+            <span style={{ fontSize: "var(--font-sm)" }}>
+              <Badge variant="success" size="sm" dot>{row.product_code}</Badge>
+              {" "}{row.product_name_ja}
+            </span>
+          );
+        }
+        return <span style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>—</span>;
+      },
     },
     {
       key: "card_game",
@@ -258,6 +285,15 @@ export default function BuybackPricesPage() {
           isSuperAdmin ? (
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {fetchMsg && <span className={styles.statusMsg}>{fetchMsg}</span>}
+              {pendingCount > 0 && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setReviewOpen(true)}
+                >
+                  {t("buybackPrices.pendingReviewBtn", { count: pendingCount })}
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -318,6 +354,14 @@ export default function BuybackPricesPage() {
       <BuybackAlertModal
         open={alertsOpen}
         onClose={() => setAlertsOpen(false)}
+      />
+
+      <BuybackPendingReviewModal
+        open={reviewOpen}
+        onClose={() => {
+          setReviewOpen(false);
+          setPage(1);
+        }}
       />
     </PageLayout>
   );

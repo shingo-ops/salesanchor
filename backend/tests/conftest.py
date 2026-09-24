@@ -47,15 +47,22 @@ from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 # check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
 _PUBLIC_SUPPLIERS_DDL = """
 CREATE TABLE IF NOT EXISTS public.suppliers (
-    id            SERIAL PRIMARY KEY,
-    supplier_code VARCHAR(20) UNIQUE,
-    name          VARCHAR(255) NOT NULL,
-    line_name     VARCHAR(255),
-    supplier_type VARCHAR(20) NOT NULL DEFAULT 'corporate',
-    is_active     BOOLEAN NOT NULL DEFAULT TRUE,
-    tenant_id     INTEGER,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-    updated_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    id                       SERIAL PRIMARY KEY,
+    supplier_code            VARCHAR(20) UNIQUE,
+    name                     VARCHAR(255) NOT NULL,
+    line_name                VARCHAR(255),
+    supplier_type            VARCHAR(20) NOT NULL DEFAULT 'corporate',
+    is_active                BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id                INTEGER,
+    extraction_price_format  TEXT,
+    extraction_qty_format    TEXT,
+    extraction_order_pattern TEXT,
+    extraction_default_unit  TEXT,
+    extraction_notes         TEXT,
+    extraction_state_format  TEXT,
+    extraction_example_text  TEXT,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
     ON public.suppliers (line_name)

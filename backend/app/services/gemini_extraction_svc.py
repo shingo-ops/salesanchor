@@ -230,9 +230,16 @@ def _build_supplier_context_note(supplier_context: dict) -> str:
         val = supplier_context.get(key)
         if val:
             parts.append(f"- {label}: {val}")
-    if not parts:
+    lines = []
+    if parts:
+        lines.append("【仕入元固有の抽出ルール】")
+        lines.extend(parts)
+    if supplier_context.get("extraction_example_text"):
+        lines.append("以下はこの仕入元の典型的なメッセージ例です。この書き方パターンを参考にして解析してください：")
+        lines.append(supplier_context["extraction_example_text"])
+    if not lines:
         return ""
-    return "【仕入元固有の抽出ルール】\n" + "\n".join(parts)
+    return "\n".join(lines)
 
 
 def call_gemini_extraction(

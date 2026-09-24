@@ -7,13 +7,22 @@ ADR-157: 買取相場ログ
   GET /api/v1/buyback-prices
     最新の買取価格一覧（shop_products JOIN 最新 price_log）
     クエリパラメータ: card_game / shop / product_type
+    レスポンスに product_code, product_name_ja, match_status を含む
 
   GET /api/v1/buyback-prices/{shop_product_id}/history
     商品別の価格推移（最大 days 日分）
 
+  GET /api/v1/buyback-prices/pending-reviews（管理者のみ）
+    match_status='pending_review' の商品一覧（match_candidates 含む）
+
+  POST /api/v1/buyback-prices/{shop_product_id}/link（管理者のみ）
+    product_id を手動設定し match_status='manual' に更新
+
+  POST /api/v1/buyback-prices/rematch（管理者のみ）
+    全未紐付け商品の再マッチング実行
+
 認証: get_current_tenant 必須（main.py で設定）
 テナント分離: public スキーマ参照のみのため search_path 不要
-              読み取り専用のため RLS の operator 設定も不要
 """
 
 from __future__ import annotations
@@ -61,6 +70,9 @@ class BuybackPriceItem(BaseModel):
     price_c: int | None
     fetched_at: datetime | None
     last_seen_at: datetime
+    product_code: str | None
+    product_name_ja: str | None
+    match_status: str
 
 
 class BuybackPriceListResponse(BaseModel):
@@ -85,6 +97,36 @@ class BuybackPriceHistoryResponse(BaseModel):
     card_game: str
     product_type: str | None
     history: list[BuybackPriceHistoryEntry]
+
+
+class PendingReviewItem(BaseModel):
+    shop_product_id: uuid.UUID
+    shop_code: str
+    product_name: str
+    card_game: str
+    match_candidates: list[dict]
+
+
+class PendingReviewListResponse(BaseModel):
+    items: list[PendingReviewItem]
+    total: int
+
+
+class LinkProductRequest(BaseModel):
+    product_id: int | None
+
+
+class LinkProductResponse(BaseModel):
+    shop_product_id: uuid.UUID
+    product_id: int | None
+    match_status: str
+
+
+class RematchResponse(BaseModel):
+    auto: int
+    pending_review: int
+    unmatched: int
+    skipped: int
 
 
 # ---------------------------------------------------------------------------
@@ -186,9 +228,13 @@ async def list_buyback_prices(
             l.price_b,
             l.price_c,
             l.fetched_at,
-            p.last_seen_at
+            p.last_seen_at,
+            pr.product_code,
+            pr.name_ja      AS product_name_ja,
+            p.match_status
         FROM public.buyback_shop_products p
         LEFT JOIN latest_logs l ON l.shop_product_id = p.id
+        LEFT JOIN public.products pr ON pr.id = p.product_id
         {where_clause}
         ORDER BY {sort_col} {sort_dir} NULLS LAST
         LIMIT :limit OFFSET :offset
@@ -241,11 +287,94 @@ async def list_buyback_prices(
             price_c=row["price_c"],
             fetched_at=row["fetched_at"],
             last_seen_at=row["last_seen_at"],
+            product_code=row["product_code"],
+            product_name_ja=row["product_name_ja"],
+            match_status=row["match_status"],
         )
         for row in rows
     ]
 
     return BuybackPriceListResponse(items=items, total=total, counts_by_game=counts_by_game)
+
+
+@router.get(
+    "/buyback-prices/pending-reviews",
+    response_model=PendingReviewListResponse,
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_pending_reviews(
+    limit: int = Query(default=50, ge=1, le=200, description="取得件数上限"),
+    offset: int = Query(default=0, ge=0, description="オフセット"),
+    db: AsyncSession = Depends(get_db),
+):
+    """match_status='pending_review' の商品一覧を返す（スーパー管理者のみ）。
+
+    match_candidates の内容（候補リスト）も含む。
+    """
+    rows = (
+        await db.execute(
+            text("""
+                SELECT id, shop_code, product_name, card_game, match_candidates
+                FROM public.buyback_shop_products
+                WHERE match_status = 'pending_review'
+                ORDER BY id
+                LIMIT :limit OFFSET :offset
+            """),
+            {"limit": limit, "offset": offset},
+        )
+    ).mappings().all()
+
+    total = (
+        await db.execute(
+            text("""
+                SELECT COUNT(*)
+                FROM public.buyback_shop_products
+                WHERE match_status = 'pending_review'
+            """)
+        )
+    ).scalar_one()
+
+    items = [
+        PendingReviewItem(
+            shop_product_id=row["id"],
+            shop_code=row["shop_code"],
+            product_name=row["product_name"],
+            card_game=row["card_game"],
+            match_candidates=row["match_candidates"] or [],
+        )
+        for row in rows
+    ]
+
+    return PendingReviewListResponse(items=items, total=total)
+
+
+@router.post(
+    "/buyback-prices/rematch",
+    response_model=RematchResponse,
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def rematch_products(
+    db: AsyncSession = Depends(get_db),
+):
+    """全未紐付け商品を再マッチングする（スーパー管理者のみ）。
+
+    キーワード更新後に手動で再マッチングを走らせる用途。
+    match_status が 'unmatched' または 'pending_review' の商品が対象。
+    """
+    from app.services.buyback_scraper.product_matcher import match_buyback_products
+
+    try:
+        stats = await match_buyback_products(db)
+    except Exception as exc:
+        logger.exception("buyback_prices.rematch: エラー")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"再マッチング中にエラーが発生しました: {exc}",
+        ) from exc
+
+    return RematchResponse(**stats)
 
 
 @router.get(
@@ -317,4 +446,82 @@ async def get_price_history(
         card_game=product_row["card_game"],
         product_type=product_row["product_type"],
         history=history,
+    )
+
+
+@router.post(
+    "/buyback-prices/{shop_product_id}/link",
+    response_model=LinkProductResponse,
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def link_product(
+    shop_product_id: uuid.UUID,
+    body: LinkProductRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """buy取商品に自社マスタ商品を手動紐付けする（スーパー管理者のみ）。
+
+    product_id を指定すると match_status='manual' に更新する。
+    product_id=null を指定すると match_status='unmatched' に戻す。
+    存在しない shop_product_id は 404。
+    """
+    # 対象レコードの存在確認
+    exists = (
+        await db.execute(
+            text("SELECT 1 FROM public.buyback_shop_products WHERE id = :id"),
+            {"id": str(shop_product_id)},
+        )
+    ).scalar()
+
+    if not exists:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="指定の商品が見つかりません",
+        )
+
+    # product_id が指定された場合、products テーブルに存在するか確認
+    if body.product_id is not None:
+        product_exists = (
+            await db.execute(
+                text("SELECT 1 FROM public.products WHERE id = :pid"),
+                {"pid": body.product_id},
+            )
+        ).scalar()
+        if not product_exists:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"product_id={body.product_id} が public.products に存在しません",
+            )
+
+    new_status = "manual" if body.product_id is not None else "unmatched"
+
+    # public スキーマへの write には operator フラグが必要
+    await db.execute(text("SET LOCAL app.is_operator = 'true'"))
+    await db.execute(
+        text("""
+            UPDATE public.buyback_shop_products
+            SET product_id = :pid,
+                match_status = :match_status
+            WHERE id = :id
+        """),
+        {
+            "id": str(shop_product_id),
+            "pid": body.product_id,
+            "match_status": new_status,
+        },
+    )
+    await db.commit()
+
+    logger.info(
+        "buyback_prices.link: shop_product_id=%s product_id=%s match_status=%s",
+        shop_product_id,
+        body.product_id,
+        new_status,
+    )
+
+    return LinkProductResponse(
+        shop_product_id=shop_product_id,
+        product_id=body.product_id,
+        match_status=new_status,
     )

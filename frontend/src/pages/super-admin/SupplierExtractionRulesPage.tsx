@@ -42,6 +42,7 @@ interface SupplierExtractionDetail {
   extraction_default_unit: string | null;
   extraction_state_format: string | null;
   extraction_notes: string | null;
+  extraction_example_text: string | null;
   latest_raw_text: string | null;
 }
 
@@ -58,6 +59,7 @@ type RulesFormState = {
   extraction_default_unit: string;
   extraction_state_format: string;
   extraction_notes: string;
+  extraction_example_text: string;
 };
 
 const emptyForm: RulesFormState = {
@@ -67,6 +69,7 @@ const emptyForm: RulesFormState = {
   extraction_default_unit: "",
   extraction_state_format: "",
   extraction_notes: "",
+  extraction_example_text: "",
 };
 
 function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
@@ -77,6 +80,7 @@ function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
     extraction_default_unit: detail.extraction_default_unit ?? "",
     extraction_state_format: detail.extraction_state_format ?? "",
     extraction_notes: detail.extraction_notes ?? "",
+    extraction_example_text: detail.extraction_example_text ?? "",
   };
 }
 
@@ -208,6 +212,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         extraction_default_unit: form.extraction_default_unit || null,
         extraction_state_format: form.extraction_state_format || null,
         extraction_notes: form.extraction_notes || null,
+        extraction_example_text: form.extraction_example_text || null,
       };
       await api.patch(
         `/super-admin/suppliers/${selectedSupplier.supplier_id}/extraction-rules`,
@@ -397,6 +402,17 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                 setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
               }
               rows={4}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.exampleText")}
+              value={form.extraction_example_text}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_example_text: e.target.value }))
+              }
+              rows={8}
+              placeholder={t("supplierExtractionRules.exampleTextPlaceholder")}
               fullWidth
             />
 
