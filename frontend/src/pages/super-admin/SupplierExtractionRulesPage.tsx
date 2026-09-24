@@ -107,7 +107,7 @@ export default function SupplierExtractionRulesPage() {
     setListError("");
     try {
       const data = await api.get<SupplierOverviewItem[]>(
-        "/api/v1/super-admin/suppliers/extraction-overview"
+        "/super-admin/suppliers/extraction-overview"
       );
       // unit_ng 降順ソート（問題先出し）
       const sorted = [...data].sort((a, b) => b.unit_ng - a.unit_ng);
@@ -134,7 +134,7 @@ export default function SupplierExtractionRulesPage() {
     setDetailError("");
     try {
       const data = await api.get<SupplierExtractionDetail>(
-        `/api/v1/super-admin/suppliers/${id}/extraction-rules`
+        `/super-admin/suppliers/${id}/extraction-rules`
       );
       setDetail(data);
       setForm(detailToForm(data.rules));
@@ -181,7 +181,7 @@ export default function SupplierExtractionRulesPage() {
         extraction_notes: form.extraction_notes || null,
       };
       await api.patch(
-        `/api/v1/super-admin/suppliers/${selectedSupplier.id}/extraction-rules`,
+        `/super-admin/suppliers/${selectedSupplier.id}/extraction-rules`,
         payload
       );
       setSavedMessage(true);
