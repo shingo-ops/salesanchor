@@ -68,6 +68,18 @@
 | i18n キー不一致 | Python 検証スクリプト実行済み：ja=85 / en=85、差分ゼロ |
 | 旧 RuleCreateDrawer.tsx が残ると二重管理 | ファイルは残置するが RuleManagementPanel からの import は削除済み。将来的に削除可 |
 
+## 外部・過去事例の参照と我々への応用
+
+- **BotsPage.tsx** (`frontend/src/pages/bots/BotsPage.tsx:1`): `useRecordDrawer` + Drawer の create/edit 分岐パターン。今回は RuleEntry 型が固定のため useRecordDrawer を使わず直接 state 管理にした
+- **ADR-122 バッチA**: 編集を Drawer 化する設計方針（BotsPage 改修時に策定）
+
+## 維持の仕組み
+
+- TypeScript で `RuleEntry` 型を `RuleDrawer.tsx` で export し、`RuleManagementPanel.tsx` で import → 型ミスマッチをコンパイル時に検出
+- `tsc --noEmit` は CI で常時チェック
+- i18n: 同一キーの存在を `scripts/check-i18n-keys.js`（CI）が強制（ja/en 差分ゼロ）
+- `validate-pr-body.sh` が次回 PR 作成時にも `触るファイル:` 宣言を強制
+
 ## recon 相互参照
 
 - 既存 ADR 検索: `docs/handoff/rule-edit-drawer/recon.md §既存 ADR 検索結果`
