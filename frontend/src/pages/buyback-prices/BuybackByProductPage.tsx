@@ -114,12 +114,12 @@ export function BuybackByProductPage() {
 
   const columns: DataTableColumn<ByProductItem>[] = [
     {
-      key: "product_code",
-      header: t("buybackPrices.byProduct.columnProductCode"),
-      width: "120px",
+      key: "mark",
+      header: t("buybackPrices.byProduct.columnMark"),
+      width: "100px",
       renderCell: (row) => (
         <span style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
-          {row.product_code}
+          {row.mark ?? "—"}
         </span>
       ),
     },
@@ -139,51 +139,41 @@ export function BuybackByProductPage() {
       ),
     },
     {
-      key: "homura_price_s",
-      header: t("buybackPrices.byProduct.columnHomuraS"),
-      width: "100px",
-      renderCell: (row) =>
-        row.homura_shop_product_id ? (
-          <span className={styles.priceCell}>
-            {formatPrice(row.homura_price_s)}
-          </span>
-        ) : (
-          <span style={{ color: "var(--text-muted)" }}>—</span>
-        ),
+      key: "best_price",
+      header: t("buybackPrices.byProduct.columnBestPrice"),
+      width: "130px",
+      renderCell: (row) => (
+        <>
+          {row.best_price ? (
+            <span className={styles.priceCell}>{`¥${row.best_price.toLocaleString()}`}</span>
+          ) : (
+            <span style={{ color: "var(--text-muted)" }}>—</span>
+          )}
+          {row.best_shop && (
+            <span style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)", marginLeft: "var(--space-1)" }}>
+              {row.best_shop === "homura" ? t("buybackPrices.shopHomura") : t("buybackPrices.shopShinsoku")}
+            </span>
+          )}
+        </>
+      ),
     },
     {
-      key: "shinsoku_price_s",
-      header: t("buybackPrices.byProduct.columnShinsokuS"),
+      key: "yesterday_diff",
+      header: t("buybackPrices.byProduct.columnYesterdayDiff"),
       width: "100px",
-      renderCell: (row) =>
-        row.shinsoku_shop_product_id ? (
-          <span className={styles.priceCell}>
-            {formatPrice(row.shinsoku_price_s)}
-          </span>
-        ) : (
-          <span style={{ color: "var(--text-muted)" }}>—</span>
-        ),
-    },
-    {
-      key: "diff",
-      header: t("buybackPrices.byProduct.columnDiff"),
-      width: "90px",
       renderCell: (row) => {
-        const h = row.homura_price_s;
-        const s = row.shinsoku_price_s;
-        if (h === null || s === null) {
+        if (row.yesterday_diff == null) {
           return <span style={{ color: "var(--text-muted)" }}>—</span>;
         }
-        const diff = h - s;
-        const color = diff > 0
-          ? "var(--success)"
-          : diff < 0
-          ? "var(--danger)"
-          : "var(--text-muted)";
+        const color =
+          row.yesterday_diff > 0
+            ? "var(--success)"
+            : row.yesterday_diff < 0
+            ? "var(--danger)"
+            : "var(--text-muted)";
+        const prefix = row.yesterday_diff > 0 ? "+" : "";
         return (
-          <span className={styles.priceCell} style={{ color }}>
-            {diff > 0 ? "+" : ""}{formatPrice(diff)}
-          </span>
+          <span style={{ color }}>{`${prefix}¥${row.yesterday_diff.toLocaleString()}`}</span>
         );
       },
     },

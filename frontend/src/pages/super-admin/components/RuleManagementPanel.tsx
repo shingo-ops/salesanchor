@@ -18,23 +18,7 @@ import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { RuleTestPanel } from "./RuleTestPanel";
-import { RuleCreateDrawer } from "./RuleCreateDrawer";
-import ConfirmModal from "../../../components/ConfirmModal";
-
-interface RuleEntry {
-  id: number;
-  status_id: string;
-  canonical: string;
-  search_pattern: string;
-  exclude_pattern: string;
-  priority: number;
-  enabled: boolean;
-  note: string;
-  match_type: string;
-  effect: string;
-  created_at: string;
-  updated_at: string;
-}
+import { RuleDrawer, type RuleEntry } from "./RuleDrawer";
 
 const PER_PAGE = 50;
 
@@ -49,10 +33,9 @@ export function RuleManagementPanel() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [toggling, setToggling] = useState<number | null>(null);
   const [activeTab, setActiveTab] = useState<RuleTab>("sold-out");
-  const [toggleTarget, setToggleTarget] = useState<RuleEntry | null>(null);
-  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [editRule, setEditRule] = useState<RuleEntry | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -84,25 +67,6 @@ export function RuleManagementPanel() {
     { key: "default", label: t(`${f}.tabs.default`), count: items.filter((i) => i.match_type === "DEFAULT").length },
     { key: "test", label: t(`${f}.tabs.test`) },
   ];
-
-  const handleRowClick = (row: RuleEntry) => {
-    setToggleTarget(row);
-  };
-
-  const handleToggleConfirm = async () => {
-    if (!toggleTarget) return;
-    setToggling(toggleTarget.id);
-    setError("");
-    try {
-      await api.patch(`/super-admin/status-master/${toggleTarget.id}`, { enabled: !toggleTarget.enabled });
-      await load();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t(`${f}.toggleFail`));
-    } finally {
-      setToggling(null);
-      setToggleTarget(null);
-    }
-  };
 
   const columns: DataTableColumn<RuleEntry>[] = [
     { key: "canonical", header: t(`${f}.columns.canonical`) },
@@ -178,7 +142,7 @@ export function RuleManagementPanel() {
                 <HeaderButton
                   variant="secondary"
                   data-testid="rule-management-create-btn"
-                  onClick={() => setCreateDrawerOpen(true)}
+                  onClick={() => { setEditRule(null); setDrawerOpen(true); }}
                 >
                   {t(`${f}.createRule`)}
                 </HeaderButton>
@@ -195,7 +159,7 @@ export function RuleManagementPanel() {
             columns={columns}
             data={filteredItems}
             rowKey={(row) => String(row.id)}
-            onRowClick={(row) => { if (toggling === null) handleRowClick(row); }}
+            onRowClick={(row) => { setEditRule(row); setDrawerOpen(true); }}
             emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
             page={page}
             hasNextPage={filteredItems.length >= PER_PAGE}
@@ -205,18 +169,11 @@ export function RuleManagementPanel() {
           />
         </>
       )}
-      <ConfirmModal
-        open={toggleTarget !== null}
-        title={toggleTarget?.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`)}
-        message={toggleTarget ? t(`${f}.toggleConfirm`, { name: toggleTarget.canonical, action: toggleTarget.enabled ? t(`${f}.toggleDisable`) : t(`${f}.toggleEnable`) }) : ""}
-        danger={toggleTarget?.enabled === true}
-        onConfirm={() => { void handleToggleConfirm(); }}
-        onCancel={() => setToggleTarget(null)}
-      />
-      <RuleCreateDrawer
-        open={createDrawerOpen}
-        onClose={() => setCreateDrawerOpen(false)}
-        onCreated={() => { setCreateDrawerOpen(false); void load(); }}
+      <RuleDrawer
+        open={drawerOpen}
+        onClose={() => { setDrawerOpen(false); setEditRule(null); }}
+        onSaved={() => { setDrawerOpen(false); setEditRule(null); void load(); }}
+        editRule={editRule}
       />
     </>
   );

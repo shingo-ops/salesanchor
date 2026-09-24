@@ -100,6 +100,7 @@ export interface ByProductItem {
   category: string;
   release_date: string | null;
   image_url: string | null;
+  mark?: string | null;
   homura_price_s: number | null;
   homura_price_a: number | null;
   homura_price_b: number | null;
@@ -110,6 +111,9 @@ export interface ByProductItem {
   shinsoku_price_b: number | null;
   shinsoku_shop_product_id: string | null;
   shinsoku_product_name: string | null;
+  best_price?: number | null;
+  best_shop?: string | null;
+  yesterday_diff?: number | null;
   swing_s?: number | null;
 }
 

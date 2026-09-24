@@ -391,8 +391,13 @@
       "priceHistory": "価格推移（店舗比較）",
       "homura": "ホムラ",
       "shinsoku": "シンソク",
-      "noHistory": "価格推移データがありません"
-    }
+      "noHistory": "価格推移データがありません",
+      "columnMark": "Mark",
+      "columnBestPrice": "最高買取価格",
+      "columnYesterdayDiff": "前日比"
+    },
+    "shopHomura": "ホムラ",
+    "shopShinsoku": "シンソク"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
@@ -4509,6 +4514,15 @@
       "effectExclude": "検索して除外",
       "testRequired": "テスト合格後に作成できます",
       "testPassed": "テスト合格"
+    },
+    "edit": {
+      "title": "ルール編集",
+      "update": "更新",
+      "updating": "更新中...",
+      "updated": "ルールを更新しました",
+      "disable": "このルールを無効にする",
+      "disabled": "ルールを無効にしました",
+      "disabling": "無効化中..."
     }
   },
   "reviewIssues": {

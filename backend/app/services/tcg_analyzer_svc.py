@@ -348,22 +348,10 @@ def filter_product_codes_by_unit_kubun(
     product_code_to_kubun_type: dict[str, str],
 ) -> list[str]:
     """
-    unit kubun に基づいて商品コードリストを絞り込む。
-
-    GAS 対照: filterProductMasterByUnitCategoryV2_ (SystemResolverV2.gs)
-      '箱系' / '箱系大' (UC_BOX / UC_CARTON) → kubun_type='箱系' の商品に限定
-      その他 → 絞り込みなし（全商品を返す）
-
-    フィルタ後に候補がゼロになった場合はフォールバックとして全商品を返す。
+    unit kubun に基づく商品コード絞り込みは廃止。
+    全商品を常に候補として返す。
     """
-    if "箱系" not in kubun:
-        return product_codes
-
-    filtered = [
-        c for c in product_codes
-        if product_code_to_kubun_type.get(c) == "箱系"
-    ]
-    return filtered if filtered else product_codes
+    return product_codes
 
 
 def match_pid_name_first(
@@ -1570,10 +1558,94 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     stats["e3b_flagged"] = e3b["flagged"]
     stats["e4_resolved"] = e4["resolved"]
 
+    # --- ADR-158: 商品単位の差分更新 ---
+    # 同一仕入元の旧 analysis_results で、新メッセージにも存在する
+    # product_id の行を is_current=FALSE に更新する。
+    # 新メッセージに存在しない product_id の旧行は TRUE のまま残り配信に継続表示。
+    _merge_supplier_products(session, extraction_job_id, TCG_SCHEMA)
+
     logger.info(
         "[tcg_analyzer] extraction_job=%s stats=%s", extraction_job_id, stats
     )
     return stats
+
+
+def _merge_supplier_products(
+    session: Session, extraction_job_id: str, schema: str
+) -> int:
+    """ADR-158: 同一仕入元の旧 analysis_results を商品単位で更新。
+
+    新メッセージの解析結果に含まれる product_id と同じ product_id を持つ
+    旧 analysis_results を is_current=FALSE に更新する。
+    新メッセージに含まれない product_id の旧行は is_current=TRUE のまま残る。
+
+    Returns:
+        更新した旧 analysis_results の件数
+    """
+    # 1. この extraction_job の supplier_channel_id を取得
+    channel_row = session.execute(
+        text(f"""
+            SELECT sm.supplier_channel_id
+            FROM {schema}.extraction_jobs ej
+            JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+            WHERE ej.id = :job_id
+        """),
+        {"job_id": extraction_job_id},
+    ).one_or_none()
+
+    if not channel_row:
+        return 0
+
+    supplier_channel_id = channel_row[0]
+
+    # 2. 新 analysis_results の product_id 一覧（pid_resolved=TRUE のもの）
+    new_pids = session.execute(
+        text(f"""
+            SELECT DISTINCT ar.product_id
+            FROM {schema}.analysis_results ar
+            JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :job_id
+              AND ar.pid_resolved = TRUE
+              AND ar.product_id IS NOT NULL
+        """),
+        {"job_id": extraction_job_id},
+    ).scalars().all()
+
+    if not new_pids:
+        return 0
+
+    # 3. 同一仕入元の旧 analysis_results で、新メッセージにも存在する
+    #    product_id の行を is_current=FALSE に更新
+    result = session.execute(
+        text(f"""
+            UPDATE {schema}.analysis_results ar_old
+            SET is_current = FALSE, updated_at = NOW()
+            FROM {schema}.extraction_items ei_old
+            JOIN {schema}.extraction_jobs ej_old ON ej_old.id = ei_old.extraction_job_id
+            JOIN {schema}.source_messages sm_old ON sm_old.id = ej_old.source_message_id
+            WHERE ar_old.extraction_item_id = ei_old.id
+              AND sm_old.supplier_channel_id = :channel_id
+              AND ei_old.extraction_job_id != :job_id
+              AND ar_old.product_id = ANY(:product_ids)
+              AND ar_old.is_current = TRUE
+        """),
+        {
+            "channel_id": supplier_channel_id,
+            "job_id": extraction_job_id,
+            "product_ids": list(new_pids),
+        },
+    )
+
+    updated = result.rowcount
+    if updated:
+        session.commit()
+        logger.info(
+            "[tcg_analyzer] ADR-158 merge: job=%s channel=%s superseded=%d products",
+            extraction_job_id,
+            supplier_channel_id,
+            updated,
+        )
+    return updated
 
 
 __all__ = [

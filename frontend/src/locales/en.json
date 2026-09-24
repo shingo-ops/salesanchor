@@ -391,8 +391,13 @@
       "priceHistory": "Price History (Shop Comparison)",
       "homura": "Homura",
       "shinsoku": "Shinsoku",
-      "noHistory": "No price history data"
-    }
+      "noHistory": "No price history data",
+      "columnMark": "Mark",
+      "columnBestPrice": "Best Price",
+      "columnYesterdayDiff": "vs Yesterday"
+    },
+    "shopHomura": "Homura",
+    "shopShinsoku": "Shinsoku"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
@@ -4509,6 +4514,15 @@
       "effectExclude": "Detect and exclude",
       "testRequired": "Create available after test passes",
       "testPassed": "Test passed"
+    },
+    "edit": {
+      "title": "Edit Rule",
+      "update": "Update",
+      "updating": "Updating...",
+      "updated": "Rule updated",
+      "disable": "Disable this rule",
+      "disabled": "Rule disabled",
+      "disabling": "Disabling..."
     }
   },
   "reviewIssues": {

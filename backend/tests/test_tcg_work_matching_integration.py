@@ -290,6 +290,8 @@ def migrate(cursor):
     # ADR-156 / PR #3705: work_id column added to analysis_results.
     # The new migration targets public.analysis_results (prod path); test schema needs it too.
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
+    # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+    cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
 
 
 @pytest.fixture
@@ -672,6 +674,8 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # ADR-156 / PR #3705: work_id column added to analysis_results (new migration targets public.*;
         # tenant_004 test schema needs the column too).
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
+        # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+        cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
