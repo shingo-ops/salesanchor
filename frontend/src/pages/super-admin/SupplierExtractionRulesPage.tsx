@@ -340,68 +340,14 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
 
           {/* 右: ルール設定フォーム */}
           <div className="supplier-rules-form">
-            <TextField
-              label={t("supplierExtractionRules.priceFormat")}
-              helperText={t("supplierExtractionRules.priceFormatHelper")}
-              value={form.extraction_price_format}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
-              }
-              fullWidth
-            />
-
-            <TextField
-              label={t("supplierExtractionRules.qtyFormat")}
-              helperText={t("supplierExtractionRules.qtyFormatHelper")}
-              value={form.extraction_qty_format}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
-              }
-              fullWidth
-            />
-
-            <Select
-              label={t("supplierExtractionRules.orderPattern")}
-              value={form.extraction_order_pattern}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
-              }
-              options={[
-                { value: "", label: t("supplierExtractionRules.orderUnset") },
-                { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
-                { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
-              ]}
-              fullWidth
-            />
-
-            <TextField
-              label={t("supplierExtractionRules.defaultUnit")}
-              helperText={t("supplierExtractionRules.defaultUnitHelper")}
-              value={form.extraction_default_unit}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
-              }
-              fullWidth
-            />
-
-            <TextField
-              label={t("supplierExtractionRules.stateFormat")}
-              helperText={t("supplierExtractionRules.stateFormatHelper")}
-              value={form.extraction_state_format}
-              onChange={(e) =>
-                setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
-              }
-              fullWidth
-            />
-
             <Textarea
-              label={t("supplierExtractionRules.notes")}
-              helperText={t("supplierExtractionRules.notesHelper")}
+              label={t("supplierExtractionRules.extractionInstruction")}
               value={form.extraction_notes}
               onChange={(e) =>
                 setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
               }
-              rows={4}
+              rows={10}
+              placeholder={t("supplierExtractionRules.extractionInstructionPlaceholder")}
               fullWidth
             />
 
@@ -415,6 +361,73 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
               placeholder={t("supplierExtractionRules.exampleTextPlaceholder")}
               fullWidth
             />
+
+            <details style={{ marginTop: "var(--space-4)" }}>
+              <summary style={{
+                cursor: "pointer",
+                fontSize: "var(--font-sm)",
+                color: "var(--color-text-muted)",
+                marginBottom: "var(--space-3)",
+                userSelect: "none",
+              }}>
+                {t("supplierExtractionRules.advancedSettings")}
+              </summary>
+              <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)", paddingTop: "var(--space-3)" }}>
+                <TextField
+                  label={t("supplierExtractionRules.priceFormat")}
+                  helperText={t("supplierExtractionRules.priceFormatHelper")}
+                  value={form.extraction_price_format}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
+                  }
+                  fullWidth
+                />
+
+                <TextField
+                  label={t("supplierExtractionRules.qtyFormat")}
+                  helperText={t("supplierExtractionRules.qtyFormatHelper")}
+                  value={form.extraction_qty_format}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
+                  }
+                  fullWidth
+                />
+
+                <Select
+                  label={t("supplierExtractionRules.orderPattern")}
+                  value={form.extraction_order_pattern}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
+                  }
+                  options={[
+                    { value: "", label: t("supplierExtractionRules.orderUnset") },
+                    { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
+                    { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
+                  ]}
+                  fullWidth
+                />
+
+                <TextField
+                  label={t("supplierExtractionRules.defaultUnit")}
+                  helperText={t("supplierExtractionRules.defaultUnitHelper")}
+                  value={form.extraction_default_unit}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
+                  }
+                  fullWidth
+                />
+
+                <TextField
+                  label={t("supplierExtractionRules.stateFormat")}
+                  helperText={t("supplierExtractionRules.stateFormatHelper")}
+                  value={form.extraction_state_format}
+                  onChange={(e) =>
+                    setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
+                  }
+                  fullWidth
+                />
+              </div>
+            </details>
 
             <div className="supplier-rules-form-actions">
               {savedMessage && (
