@@ -217,6 +217,7 @@ export function BuybackByProductPage() {
               value={search}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
               size="sm"
+              className={styles.searchField}
             />
             <SelectControl
               options={[

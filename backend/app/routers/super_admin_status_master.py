@@ -162,6 +162,17 @@ async def create_status_master(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
+    # Auto-generate status_id if not provided: ST + 4-digit zero-padded sequential number.
+    if not data.status_id:
+        seq_result = await db.execute(
+            text(
+                "SELECT MAX(CAST(SUBSTRING(status_id FROM 3) AS INTEGER)) "
+                "FROM public.tcg_status_master WHERE status_id ~ '^ST\\d+$'"
+            )
+        )
+        max_num = seq_result.scalar() or 0
+        data.status_id = f"ST{max_num + 1:04d}"
+
     try:
         result = await db.execute(
             text(

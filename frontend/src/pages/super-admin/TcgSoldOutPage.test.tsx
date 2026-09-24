@@ -115,10 +115,8 @@ it("shows analysis management menu item only for SaaS administrators", async () 
   const { default: DesktopShell } = await import("../../components/DesktopShell");
   const shell = () => render(<MemoryRouter><DesktopShell /></MemoryRouter>);
   shell();
-  fireEvent.click(screen.getByRole("button", { name: i18n.t("nav.saasAdmin") }));
-  const analysisLink = screen.getByRole("link", { name: "Analysis Management" });
+  const analysisLink = screen.getByRole("link", { name: i18n.t("nav.superAdminAnalysisRules") });
   expect(analysisLink.getAttribute("href")).toBe("/super-admin/analysis-rules");
   cleanup(); vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false }); shell();
-  expect(screen.queryByRole("button", { name: i18n.t("nav.saasAdmin") })).toBeNull();
-  expect(screen.queryByRole("link", { name: "Analysis Management" })).toBeNull();
+  expect(screen.queryByRole("link", { name: i18n.t("nav.superAdminAnalysisRules") })).toBeNull();
 });
