@@ -348,22 +348,10 @@ def filter_product_codes_by_unit_kubun(
     product_code_to_kubun_type: dict[str, str],
 ) -> list[str]:
     """
-    unit kubun に基づいて商品コードリストを絞り込む。
-
-    GAS 対照: filterProductMasterByUnitCategoryV2_ (SystemResolverV2.gs)
-      '箱系' / '箱系大' (UC_BOX / UC_CARTON) → kubun_type='箱系' の商品に限定
-      その他 → 絞り込みなし（全商品を返す）
-
-    フィルタ後に候補がゼロになった場合はフォールバックとして全商品を返す。
+    unit kubun に基づく商品コード絞り込みは廃止。
+    全商品を常に候補として返す。
     """
-    if "箱系" not in kubun:
-        return product_codes
-
-    filtered = [
-        c for c in product_codes
-        if product_code_to_kubun_type.get(c) == "箱系"
-    ]
-    return filtered if filtered else product_codes
+    return product_codes
 
 
 def match_pid_name_first(
