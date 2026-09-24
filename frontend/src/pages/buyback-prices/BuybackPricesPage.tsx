@@ -348,13 +348,6 @@ export default function BuybackPricesPage() {
                     size="sm"
                   />
                 )}
-                <Tabs
-                  items={gameTabItems}
-                  activeKey={cardGame}
-                  onChange={handleCardGameChange}
-                  variant="pill"
-                  size="sm"
-                />
               </>
             )}
           </>
@@ -408,23 +401,33 @@ export default function BuybackPricesPage() {
           )}
 
           {!error && (
-            <DataTable
-              columns={columns}
-              data={items}
-              rowKey={(row) => row.shop_product_id}
-              sortKey={sortKey}
-              sortDir={sortDir}
-              onSort={handleSort}
-              onRowClick={handleRowClick}
-              emptyState={<span>{t("buybackPrices.noData")}</span>}
-              page={page}
-              hasNextPage={hasNextPage}
-              onPageChange={setPage}
-              prevPageLabel={t("common.prevPage")}
-              nextPageLabel={t("common.nextPage")}
-              pageInfo={<span>{page} / {totalPages}</span>}
-              density="compact"
-            />
+            <div className={styles.buybackFilterGroup}>
+              <Tabs
+                items={gameTabItems}
+                activeKey={cardGame}
+                onChange={handleCardGameChange}
+                variant="underline"
+                size="sm"
+              />
+              <DataTable
+                columns={columns}
+                data={items}
+                rowKey={(row) => row.shop_product_id}
+                sortKey={sortKey}
+                sortDir={sortDir}
+                onSort={handleSort}
+                onRowClick={handleRowClick}
+                emptyState={<span>{t("buybackPrices.noData")}</span>}
+                page={page}
+                hasNextPage={hasNextPage}
+                onPageChange={setPage}
+                prevPageLabel={t("common.prevPage")}
+                nextPageLabel={t("common.nextPage")}
+                pageInfo={<span>{page} / {totalPages}</span>}
+                density="compact"
+                className={styles.buybackFilterGroupTable}
+              />
+            </div>
           )}
 
           <BuybackPriceHistoryDrawer

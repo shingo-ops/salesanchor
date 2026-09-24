@@ -37,6 +37,18 @@
   font-size: var(--font-sm);
 }
 
+/* ── カードゲームフィルターグループ（Tabs + DataTable 接続） ───────────── */
+.buybackFilterGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs の下ボーダーと DataTable の上ボーダーを繋げるため上角丸を除去 */
+.buybackFilterGroupTable {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
 /* ── Drawer 内コンテンツ ──────────────────────────────────────────────── */
 .drawerBody {
   padding: var(--space-4);
