@@ -1,0 +1,14 @@
+-- ============================================================================
+-- 仕入元マスタ name 重複解消（21組）
+--
+-- 本番実行済み: 2026-09-24 22:30 JST
+-- 実行方法: SSH手動（DRY-RUN → COMMIT）
+-- 影響: supplier_prompts 15件移行、knowledge_links 47件削除、
+--       inventory 31件移行、discord_inbound_messages 10件移行、
+--       旧SUP-xxx 21件 is_active=FALSE
+-- 検証: name重複0件・旧21件inactive・prompts移行済み・FK参照ゼロ
+--
+-- デプロイ時は何もしない（冪等: 実行するSQL文なし）
+-- 詳細: docs/handoff/supplier-name-dedup/design.md
+-- ============================================================================
+SELECT 1; -- no-op: 本番実行済みのため空マイグレーション
