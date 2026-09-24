@@ -5,97 +5,30 @@
  * - 買取店フィルタ（SelectControl）・カードゲームタブ（Tabs）
  * - DataTable: shop_code / product_name / card_game / product_type / price_s/a/b / last_seen_at
  * - 行クリック → Drawer で価格推移グラフ（recharts LineChart）
+ * - スーパー管理者のみ: アラート設定 Modal（CRUD）
  */
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-} from "recharts";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { SelectControl } from "../../components/Select";
 import { Tabs } from "../../components/Tabs";
-import { Drawer } from "../../components/Drawer";
 import { Button } from "../../components/Button";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
+import {
+  type BuybackProduct,
+  type BuybackListResponse,
+  type CardGame,
+  type ShopFilter,
+  PER_PAGE,
+  formatPrice,
+  formatDate,
+} from "./buybackTypes";
+import { BuybackPriceHistoryDrawer } from "./BuybackPriceHistoryDrawer";
+import { BuybackAlertModal } from "./BuybackAlertModal";
 import styles from "./BuybackPricesPage.module.css";
-
-/* ─── 型定義 ─────────────────────────────────────────────────────────── */
-
-interface BuybackProduct {
-  shop_product_id: string;
-  shop_code: string;
-  product_name: string;
-  card_game: string;
-  product_type: string;
-  price_s: number | null;
-  price_a: number | null;
-  price_am: number | null;
-  price_b: number | null;
-  price_c: number | null;
-  last_seen_at: string | null;
-}
-
-interface BuybackListResponse {
-  items: BuybackProduct[];
-  total: number;
-  counts_by_game: Record<string, number>;
-}
-
-interface PriceHistoryEntry {
-  price_s: number | null;
-  price_a: number | null;
-  price_am: number | null;
-  price_b: number | null;
-  price_c: number | null;
-  fetched_at: string;
-}
-
-interface PriceHistoryResponse {
-  shop_product_id: string;
-  product_name: string;
-  shop_code: string;
-  card_game: string;
-  product_type: string;
-  history: PriceHistoryEntry[];
-}
-
-type CardGame = "all" | "pokemon" | "onepiece" | "yugioh" | "dragonball" | "weiss" | "lorcana";
-type ShopFilter = "all" | "shinsoku" | "homura";
-
-const PER_PAGE = 50;
-
-/* ─── ヘルパー ────────────────────────────────────────────────────────── */
-
-function formatPrice(price: number | null): string {
-  if (price === null || price === undefined) return "—";
-  return `¥${price.toLocaleString()}`;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "—";
-  return new Date(iso).toLocaleDateString("ja-JP", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-}
-
-function formatChartDate(iso: string): string {
-  const d = new Date(iso);
-  return `${d.getMonth() + 1}/${d.getDate()}`;
-}
-
-/* ─── コンポーネント ──────────────────────────────────────────────────── */
 
 export default function BuybackPricesPage() {
   const { t } = useTranslation();
@@ -115,12 +48,12 @@ export default function BuybackPricesPage() {
   const [fetching, setFetching] = useState(false);
   const [fetchMsg, setFetchMsg] = useState("");
 
-  // Drawer / 価格推移
+  // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<BuybackProduct | null>(null);
-  const [history, setHistory] = useState<PriceHistoryResponse | null>(null);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyDays, setHistoryDays] = useState<number>(30);
+
+  // Alert Modal
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   // ── データ取得 ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -160,7 +93,6 @@ export default function BuybackPricesPage() {
     };
   }, [page, shop, cardGame, productType, sortKey, sortDir, t]);
 
-  // フィルタ変更時はページをリセット
   const handleShopChange = (value: ShopFilter) => {
     setShop(value);
     setPage(1);
@@ -170,44 +102,11 @@ export default function BuybackPricesPage() {
     setPage(1);
   };
 
-  // ── 行クリック: Drawer + 価格推移取得 ────────────────────────────
   const handleRowClick = (row: BuybackProduct) => {
     setSelectedProduct(row);
     setDrawerOpen(true);
-    setHistory(null);
-    setHistoryDays(30);
-    setHistoryLoading(true);
-
-    api
-      .get<PriceHistoryResponse>(
-        `/buyback-prices/${row.shop_product_id}/history?days=30`,
-      )
-      .then(setHistory)
-      .catch(() => {
-        /* 履歴取得失敗はサイレント。グラフ空表示 */
-      })
-      .finally(() => setHistoryLoading(false));
   };
 
-  // ── 期間切り替え: 選択中の商品で再取得 ───────────────────────────
-  useEffect(() => {
-    if (!selectedProduct || !drawerOpen) return;
-    setHistory(null);
-    setHistoryLoading(true);
-
-    api
-      .get<PriceHistoryResponse>(
-        `/buyback-prices/${selectedProduct.shop_product_id}/history?days=${historyDays}`,
-      )
-      .then(setHistory)
-      .catch(() => {
-        /* 履歴取得失敗はサイレント。グラフ空表示 */
-      })
-      .finally(() => setHistoryLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [historyDays]);
-
-  // ── 手動取得 ───────────────────────────────────────────────────────
   const handleManualFetch = async () => {
     setFetching(true);
     setFetchMsg("");
@@ -221,7 +120,6 @@ export default function BuybackPricesPage() {
     }
   };
 
-  // ── ソート ────────────────────────────────────────────────────────
   const handleSort = (key: string, dir: "asc" | "desc") => {
     setSortKey(key);
     setSortDir(dir);
@@ -326,27 +224,9 @@ export default function BuybackPricesPage() {
       .map((g) => ({ ...g, count: countsByGame[g.key] ?? 0 })),
   ];
 
-  // ── 期間タブ ────────────────────────────────────────────────────
-  const periodItems = [
-    { key: "7", label: t("buybackPrices.history7d") },
-    { key: "30", label: t("buybackPrices.history30d") },
-    { key: "90", label: t("buybackPrices.history90d") },
-  ];
-
   // ── ページネーション ───────────────────────────────────────────────
   const totalPages = Math.max(1, Math.ceil(total / PER_PAGE));
   const hasNextPage = page < totalPages;
-
-  // ── 価格推移グラフ用データ ─────────────────────────────────────────
-  const chartData =
-    history?.history.map((h: PriceHistoryEntry) => ({
-      date: formatChartDate(h.fetched_at),
-      S: h.price_s,
-      A: h.price_a,
-      AM: h.price_am,
-      B: h.price_b,
-      C: h.price_c,
-    })) ?? [];
 
   return (
     <PageLayout navKey="nav.buybackPrices" subtitleKey="buybackPrices.subtitle">
@@ -378,6 +258,13 @@ export default function BuybackPricesPage() {
           isSuperAdmin ? (
             <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               {fetchMsg && <span className={styles.statusMsg}>{fetchMsg}</span>}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAlertsOpen(true)}
+              >
+                {t("buybackPrices.alertSettings")}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
@@ -422,117 +309,16 @@ export default function BuybackPricesPage() {
         />
       )}
 
-      {/* ── 価格推移 Drawer ──────────────────────────────────────── */}
-      <Drawer
+      <BuybackPriceHistoryDrawer
         open={drawerOpen}
+        product={selectedProduct}
         onClose={() => setDrawerOpen(false)}
-        title={selectedProduct?.product_name ?? t("buybackPrices.priceHistory")}
-      >
-        <div className={styles.drawerBody}>
-          {historyLoading && (
-            <p role="status">{t("common.loading")}</p>
-          )}
+      />
 
-          {!historyLoading && history && (
-            <>
-              <p className={styles.historyMeta}>
-                {t("buybackPrices.historyDays", { days: historyDays })} — {selectedProduct?.shop_code}
-              </p>
-
-              <div style={{ marginBottom: "var(--space-3)" }}>
-                <Tabs
-                  items={periodItems}
-                  activeKey={String(historyDays)}
-                  onChange={(k) => setHistoryDays(Number(k))}
-                  variant="pill"
-                  size="sm"
-                />
-              </div>
-
-              {chartData.length === 0 ? (
-                <p className={styles.noHistory}>{t("buybackPrices.noData")}</p>
-              ) : (
-                <ResponsiveContainer width="100%" height={280}>
-                  <LineChart
-                    data={chartData}
-                    margin={{ top: 8, right: 16, bottom: 0, left: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                    <XAxis
-                      dataKey="date"
-                      tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
-                    />
-                    <YAxis
-                      tickFormatter={(v: number) => `¥${v.toLocaleString()}`}
-                      tick={{ fontSize: 11, fill: "var(--text-secondary)" }}
-                      width={70}
-                    />
-                    <Tooltip
-                      formatter={(value) => [`¥${Number(value ?? 0).toLocaleString()}`, undefined]}
-                      contentStyle={{
-                        background: "var(--bg-card)",
-                        border: "1px solid var(--border)",
-                        borderRadius: "var(--radius-sm)",
-                        fontSize: "12px",
-                      }}
-                    />
-                    <Legend wrapperStyle={{ fontSize: "12px" }} />
-                    <Line
-                      type="monotone"
-                      dataKey="S"
-                      name={t("buybackPrices.columnPriceS")}
-                      stroke="var(--accent)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="A"
-                      name={t("buybackPrices.columnPriceA")}
-                      stroke="var(--color-success)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="B"
-                      name={t("buybackPrices.columnPriceB")}
-                      stroke="var(--color-warning)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="AM"
-                      name={t("buybackPrices.columnPriceAM")}
-                      stroke="var(--info)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="C"
-                      name={t("buybackPrices.columnPriceC")}
-                      stroke="var(--color-error)"
-                      strokeWidth={2}
-                      dot={false}
-                      connectNulls
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
-              )}
-            </>
-          )}
-
-          {!historyLoading && !history && (
-            <p className={styles.noHistory}>{t("buybackPrices.noData")}</p>
-          )}
-        </div>
-      </Drawer>
+      <BuybackAlertModal
+        open={alertsOpen}
+        onClose={() => setAlertsOpen(false)}
+      />
     </PageLayout>
   );
 }
