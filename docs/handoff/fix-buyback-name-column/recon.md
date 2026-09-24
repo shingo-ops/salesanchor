@@ -9,16 +9,15 @@
 ## 原因特定
 
 ### エラー箇所
-- `backend/app/routers/buyback_prices.py`
+- `backend/app/routers/buyback_prices.py`（buyback_prices.py 内の SQL 2箇所）
 
 ### SQL 内の誤ったカラム名
 - 誤: `pr.name_ja`（2箇所）
 - 正: `pr.name`
 
 ### 根拠
-- `backend/app/models/products.py` に `name_ja` カラムの定義なし
-- `backend/app/services/tcg_product_master_svc.py` にも `name_ja` 参照なし
-- products テーブルの実カラム: `name`（文字列型）
+- products テーブルの実カラム名は `name`（文字列型）
+- `name_ja` というカラムは products テーブルに存在しない
 
 ## 影響範囲
 - `backend/app/routers/buyback_prices.py` の SQL クエリ 2箇所のみ
