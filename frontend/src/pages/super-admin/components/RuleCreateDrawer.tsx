@@ -1,13 +1,17 @@
 /**
- * RuleCreateDrawer — ルール新規作成ドロワー
+ * RuleCreateDrawer — ルール新規作成ドロワー（簡略版）
  *
- * tcg_status_master の新規ルールを作成する。
- * パターンマッチテスト機能を統合（SSOT: バックエンドの _match_status_pattern と同一ロジック）。
+ * 変更点:
+ *  - status_id は backend で自動採番（フォームから除去）
+ *  - match_type は LITERAL に固定（フォームから除去）
+ *  - exclude_pattern は空文字に固定（フォームから除去）
+ *  - canonical はDBから取得した Select に変更（effect を自動セット）
+ *  - テストゲート: 判定合格後のみ作成ボタンが有効になる
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { Drawer } from "../../../components/Drawer";
 import { TextField } from "../../../components/TextField";
@@ -28,24 +32,23 @@ interface PreviewResponse {
   detail: string;
 }
 
-interface FormDraft {
-  status_id: string;
+interface CanonicalOption {
   canonical: string;
-  match_type: string;
   effect: string;
-  search_pattern: string;
-  exclude_pattern: string;
+}
+
+interface FormDraft {
+  canonical: string;
+  effect: string;
+  searchPattern: string;
   priority: string;
   note: string;
 }
 
 const emptyDraft: FormDraft = {
-  status_id: "",
   canonical: "",
-  match_type: "LITERAL",
   effect: "OUTPUT",
-  search_pattern: "",
-  exclude_pattern: "",
+  searchPattern: "",
   priority: "0",
   note: "",
 };
@@ -61,25 +64,55 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
   const [testInput, setTestInput] = useState("");
   const [testResult, setTestResult] = useState<PreviewResponse | null>(null);
   const [testing, setTesting] = useState(false);
+  const [testPassed, setTestPassed] = useState(false);
+  const [canonicals, setCanonicals] = useState<CanonicalOption[]>([]);
+
+  // Load canonical options from backend when drawer opens
+  useEffect(() => {
+    if (!open) return;
+    api
+      .get<CanonicalOption[]>("/super-admin/rule-tests/canonicals")
+      .then((data) => setCanonicals(data))
+      .catch(() => {
+        /* best-effort — user can still select from empty list */
+      });
+  }, [open]);
+
+  const resetTestState = () => {
+    setTestResult(null);
+    setTestPassed(false);
+  };
 
   const set = (key: keyof FormDraft, value: string) => {
     setDraft((prev: FormDraft) => ({ ...prev, [key]: value }));
-    if (key === "match_type" || key === "search_pattern") {
-      setTestResult(null);
-    }
+    resetTestState();
+  };
+
+  const handleCanonicalChange = (value: string) => {
+    const found = canonicals.find((c) => c.canonical === value);
+    setDraft((prev) => ({
+      ...prev,
+      canonical: value,
+      effect: found ? found.effect : prev.effect,
+    }));
+    resetTestState();
   };
 
   const handleTest = async () => {
     if (!testInput.trim()) return;
     setTesting(true);
     setTestResult(null);
+    setTestPassed(false);
     try {
       const result = await api.post<PreviewResponse>("/super-admin/status-master/preview", {
-        match_type: draft.match_type,
-        search_pattern: draft.search_pattern,
+        match_type: "LITERAL",
+        search_pattern: draft.searchPattern,
         input_text: testInput,
       });
       setTestResult(result);
+      if (result.matched) {
+        setTestPassed(true);
+      }
     } catch (e) {
       setTestResult({
         matched: false,
@@ -95,19 +128,19 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
     setCreateError("");
     try {
       await api.post("/super-admin/status-master", {
-        status_id: draft.status_id,
         canonical: draft.canonical,
-        match_type: draft.match_type,
+        search_pattern: draft.searchPattern,
+        exclude_pattern: "",
+        match_type: "LITERAL",
         effect: draft.effect,
-        search_pattern: draft.search_pattern,
-        exclude_pattern: draft.exclude_pattern,
         priority: Number(draft.priority) || 0,
-        note: draft.note,
         enabled: false,
+        note: draft.note,
       });
       setDraft(emptyDraft);
       setTestInput("");
       setTestResult(null);
+      setTestPassed(false);
       onCreated();
     } catch (e) {
       setCreateError(e instanceof Error ? e.message : t("common.fetchError"));
@@ -120,23 +153,20 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
     setDraft(emptyDraft);
     setTestInput("");
     setTestResult(null);
+    setTestPassed(false);
     setCreateError("");
     onClose();
   };
-
-  const isDefaultMatch = draft.match_type === "DEFAULT";
-  const canCreate = draft.status_id.trim() !== "" && draft.canonical.trim() !== "";
-
-  const matchTypeOptions = [
-    { value: "LITERAL", label: t(`${fc}.matchTypeLiteral`) },
-    { value: "REGEX", label: t(`${fc}.matchTypeRegex`) },
-    { value: "DEFAULT", label: t(`${fc}.matchTypeDefault`) },
-  ];
 
   const effectOptions = [
     { value: "OUTPUT", label: t(`${fc}.effectOutput`) },
     { value: "EXCLUDE", label: t(`${fc}.effectExclude`) },
   ];
+
+  const canonicalOptions = canonicals.map((c) => ({
+    value: c.canonical,
+    label: c.canonical,
+  }));
 
   const footer = (
     <>
@@ -146,7 +176,7 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
       <Button
         variant="primary"
         onClick={() => { void handleCreate(); }}
-        disabled={!canCreate || creating}
+        disabled={!testPassed || creating}
         loading={creating}
         loadingText={t(`${fc}.creating`)}
       >
@@ -163,31 +193,19 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
       footer={footer}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-4)" }}>
-        {/* Form fields */}
-        <TextField
-          label={t(`${fc}.statusId`)}
-          value={draft.status_id}
-          onChange={(e) => set("status_id", e.target.value)}
-          required
-          fullWidth
-          data-testid="rule-create-status-id"
-        />
-        <TextField
+        {/* 1. ステータス (canonical) */}
+        <Select
           label={t(`${fc}.canonical`)}
+          options={canonicalOptions}
           value={draft.canonical}
-          onChange={(e) => set("canonical", e.target.value)}
-          required
+          onChange={(e) => handleCanonicalChange(e.target.value)}
+          placeholder={t(`${f}.test.expectedCanonicalPlaceholder`)}
           fullWidth
+          required
           data-testid="rule-create-canonical"
         />
-        <Select
-          label={t(`${fc}.matchType`)}
-          options={matchTypeOptions}
-          value={draft.match_type}
-          onChange={(e) => set("match_type", e.target.value)}
-          fullWidth
-          data-testid="rule-create-match-type"
-        />
+
+        {/* 2. 除外 / 検索 (effect) */}
         <Select
           label={t(`${fc}.effect`)}
           options={effectOptions}
@@ -196,21 +214,17 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
           fullWidth
           data-testid="rule-create-effect"
         />
+
+        {/* 3. ワード (search_pattern) */}
         <TextField
           label={t(`${fc}.searchPattern`)}
-          value={draft.search_pattern}
-          onChange={(e) => set("search_pattern", e.target.value)}
-          disabled={isDefaultMatch}
+          value={draft.searchPattern}
+          onChange={(e) => set("searchPattern", e.target.value)}
           fullWidth
           data-testid="rule-create-search-pattern"
         />
-        <TextField
-          label={t(`${fc}.excludePattern`)}
-          value={draft.exclude_pattern}
-          onChange={(e) => set("exclude_pattern", e.target.value)}
-          fullWidth
-          data-testid="rule-create-exclude-pattern"
-        />
+
+        {/* 4. 優先度 (priority) */}
         <TextField
           label={t(`${fc}.priority`)}
           type="number"
@@ -219,6 +233,8 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
           fullWidth
           data-testid="rule-create-priority"
         />
+
+        {/* 5. メモ (note) */}
         <TextField
           label={t(`${fc}.note`)}
           value={draft.note}
@@ -227,7 +243,7 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
           data-testid="rule-create-note"
         />
 
-        {/* Pattern test section */}
+        {/* 6. パターンテスト section */}
         <Card variant="container" density="compact">
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-3)" }}>
             <p style={{ margin: 0, fontSize: "var(--font-sm)", fontWeight: "var(--font-weight-medium)", color: "var(--text-primary)" }}>
@@ -236,7 +252,10 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
             <TextField
               label={t(`${fc}.testInput`)}
               value={testInput}
-              onChange={(e) => setTestInput(e.target.value)}
+              onChange={(e) => {
+                setTestInput(e.target.value);
+                resetTestState();
+              }}
               onKeyDown={(e) => { if (e.key === "Enter") { void handleTest(); } }}
               fullWidth
               data-testid="rule-create-test-input"
@@ -262,6 +281,18 @@ export function RuleCreateDrawer({ open, onClose, onCreated }: RuleCreateDrawerP
             )}
           </div>
         </Card>
+
+        {/* テストゲートメッセージ */}
+        {!testPassed && (
+          <p style={{ margin: 0, fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
+            {t(`${fc}.testRequired`)}
+          </p>
+        )}
+        {testPassed && (
+          <p style={{ margin: 0, fontSize: "var(--font-sm)", color: "var(--color-success)" }}>
+            {t(`${fc}.testPassed`)}
+          </p>
+        )}
 
         {createError && (
           <p role="alert" style={{ color: "var(--color-error)", fontSize: "var(--font-sm)", margin: 0 }}>
