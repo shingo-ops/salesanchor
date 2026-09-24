@@ -353,6 +353,7 @@
     "loading": "Loading...",
     "columnLinkedProduct": "Linked product",
     "pendingReview": "Review",
+    "unmatched": "Needs Review",
     "pendingReviewBtn": "Review ({{count}})",
     "pendingReviewTitle": "Product Matching Review",
     "pendingReviewDesc": "Products with multiple match candidates. Select the correct product.",
