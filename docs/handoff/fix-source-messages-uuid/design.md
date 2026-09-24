@@ -1,5 +1,8 @@
 # design: fix-source-messages-uuid
 
+- recon: docs/handoff/fix-source-messages-uuid/recon.md
+- 対象ADR: ADR-085
+
 ## KGI
 
 `GET /super-admin/suppliers/{id}/source-messages` が 500 を返さず 200 でデータを返す。
