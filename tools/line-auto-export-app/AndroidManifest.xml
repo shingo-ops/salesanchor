@@ -44,12 +44,14 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
-        <!-- 起動口: Termuxから `am broadcast -a jp.salesanchor.lineexport.RUN` で実行合図。PINはextraに載せない。 -->
+        <!-- 起動口: Termuxから `am broadcast -a jp.salesanchor.lineexport.RUN` で実行合図。PINはextraに載せない。
+             DIAG_WINDOWSは実験用の診断専用の起動口（読み取り専用、ロック解除やPIN入力は一切行わない）。 -->
         <receiver
             android:name=".RunReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="jp.salesanchor.lineexport.RUN" />
+                <action android:name="jp.salesanchor.lineexport.DIAG_WINDOWS" />
             </intent-filter>
         </receiver>
 

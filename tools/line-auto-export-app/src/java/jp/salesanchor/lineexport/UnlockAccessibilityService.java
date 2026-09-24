@@ -10,11 +10,14 @@ import android.graphics.Rect;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import java.lang.reflect.Method;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -35,7 +38,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private static final String TAG = "SALineExport";
     private static final String CHANNEL_ID = "sa_line_export_unlock";
     private static final int NOTIFICATION_ID = 1001;
+    private static final int NOTIFICATION_ID_DIAG = 1002;
     private static final String WAKE_LOCK_TAG = "SALineExport:unlock";
+    private static final int DIAG_MAX_PACKAGES_PER_DISPLAY = 3;
 
     // ロック画面は画面消灯までが約5秒（端末の「画面消灯時間」を60秒にしても
     // activityTimeoutWM=5000 が効く。2026-09-18 実機ログで確認）。PIN入力が
@@ -71,6 +76,20 @@ public class UnlockAccessibilityService extends AccessibilityService {
             return;
         }
         instance.startUnlockFlow();
+    }
+
+    /**
+     * 外部（RunReceiver）からの診断トリガー。ロック解除（RUN/startUnlockFlow）とは
+     * 独立の読み取り専用経路。副ディスプレイ上のウィンドウがアクセシビリティ経由で
+     * 読めるかを判定し、結果を通知で返す。ロック解除やPIN入力は一切行わない。
+     */
+    static void requestDiagWindows(Context context) {
+        UnlockAccessibilityService instance = sInstance;
+        if (instance == null) {
+            postDiagNotification(context, "エラー: ユーザー補助サービスが未接続（無効化されている可能性）");
+            return;
+        }
+        instance.runWindowDiagnostics();
     }
 
     @Override
@@ -256,6 +275,91 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
     }
 
+    // ---- Window diagnostics (experimental, read-only) -----------------------------------
+
+    /**
+     * 副ディスプレイ（仮想画面）上のアプリのUI要素をアクセシビリティ経由で読めるかを判定する。
+     * getWindowsOnAllDisplays()はAPI30で追加されたメソッドで、このビルドがリンクする
+     * android.jarはAPI23のためコンパイル時に直接参照できない。GestureCompat.javaと同じく
+     * リフレクションで呼ぶ（実機はAndroid16なので実行時にはメソッドが存在する）。
+     *
+     * ロック解除やPIN入力は一切行わない。読み取りのみ。
+     */
+    private void runWindowDiagnostics() {
+        SparseArray<List<AccessibilityWindowInfo>> allWindows;
+        try {
+            Method getWindowsOnAllDisplays = AccessibilityService.class.getMethod("getWindowsOnAllDisplays");
+            Object result = getWindowsOnAllDisplays.invoke(this);
+            @SuppressWarnings("unchecked")
+            SparseArray<List<AccessibilityWindowInfo>> casted =
+                    (SparseArray<List<AccessibilityWindowInfo>>) result;
+            allWindows = casted;
+        } catch (ReflectiveOperationException e) {
+            postDiagNotification(this,
+                    "getWindowsOnAllDisplays()呼び出し失敗: " + e.getClass().getName() + ": " + e.getMessage());
+            return;
+        } catch (RuntimeException e) {
+            postDiagNotification(this,
+                    "getWindowsOnAllDisplays()呼び出し失敗: " + e.getClass().getName() + ": " + e.getMessage());
+            return;
+        }
+
+        StringBuilder allPart = new StringBuilder();
+        StringBuilder pkgsPart = new StringBuilder();
+        int size = allWindows == null ? 0 : allWindows.size();
+        for (int i = 0; i < size; i++) {
+            int displayId = allWindows.keyAt(i);
+            List<AccessibilityWindowInfo> windows = allWindows.valueAt(i);
+            int count = windows == null ? 0 : windows.size();
+
+            if (allPart.length() > 0) {
+                allPart.append(", ");
+            }
+            allPart.append(displayId).append(':').append(count);
+
+            if (pkgsPart.length() > 0) {
+                pkgsPart.append(' ');
+            }
+            pkgsPart.append(displayId).append(':').append(joinDistinctPackageNames(windows));
+        }
+
+        int defCount;
+        try {
+            List<AccessibilityWindowInfo> defaultWindows = getWindows();
+            defCount = defaultWindows == null ? 0 : defaultWindows.size();
+        } catch (RuntimeException e) {
+            defCount = -1;
+        }
+
+        String body = "all=[" + allPart + "] / def=" + defCount + " / pkgs=" + pkgsPart;
+        postDiagNotification(this, body);
+    }
+
+    /** 重複除去した packageName を最大3件、カンマ区切りで返す。PIN等の秘密は含まれない。 */
+    private String joinDistinctPackageNames(List<AccessibilityWindowInfo> windows) {
+        LinkedHashSet<String> pkgs = new LinkedHashSet<String>();
+        if (windows != null) {
+            for (AccessibilityWindowInfo window : windows) {
+                if (window == null || pkgs.size() >= DIAG_MAX_PACKAGES_PER_DISPLAY) {
+                    continue;
+                }
+                AccessibilityNodeInfo root = window.getRoot();
+                CharSequence pkgName = root != null ? root.getPackageName() : null;
+                if (pkgName != null) {
+                    pkgs.add(pkgName.toString());
+                }
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String pkg : pkgs) {
+            if (sb.length() > 0) {
+                sb.append(',');
+            }
+            sb.append(pkg);
+        }
+        return sb.toString();
+    }
+
     // ---- Accessibility node search / click -------------------------------------------
 
     private AccessibilityNodeInfo findNodeByLabel(String label) {
@@ -423,6 +527,24 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
     private static void postFailureNotification(Context context, String reason) {
         postNotification(context, "ロック解除: 失敗", reason);
+    }
+
+    /**
+     * DIAG_WINDOWS専用の通知。本文はすでに整形済みの診断結果そのものを出す
+     * （postNotificationのように「理由: 」を前置しない）。PIN等の秘密は含まれない。
+     * 通常のロック解除結果通知（NOTIFICATION_ID）とは別IDにして、双方を取りこぼさない。
+     */
+    private static void postDiagNotification(Context context, String body) {
+        NotificationCompat.ensureChannel(context, CHANNEL_ID, "SA LINE Export");
+        Notification.Builder builder = NotificationCompat.newBuilder(context, CHANNEL_ID)
+                .setContentTitle("画面診断")
+                .setContentText(body)
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setAutoCancel(true);
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm != null) {
+            nm.notify(NOTIFICATION_ID_DIAG, builder.build());
+        }
     }
 
     private static void postNotification(Context context, String title, String reason) {
