@@ -45,6 +45,15 @@
   font-size: var(--font-size-sm);
 }
 
+.supplier-rules-source-pre {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-sm);
+  white-space: pre-wrap;
+  word-break: break-all;
+  color: var(--text-primary);
+}
+
 .supplier-rules-form {
   overflow-y: auto;
   display: flex;
