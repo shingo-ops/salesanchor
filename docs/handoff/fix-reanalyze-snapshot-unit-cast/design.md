@@ -18,8 +18,11 @@ docs/handoff/fix-reanalyze-snapshot-unit-cast/recon.md
 | 再解析スクリプトがエラーなく完走する | 32ジョブ全件 success=32 / errors=0 |
 | pid_resolved=false & resolved_product_code IS NOT NULL の件数が 168 → 0 付近に減少 | 本番DBでCOUNT確認 |
 
-## 外部事例
-なし（PostgreSQL型キャストの標準的修正）
+## 外部・過去事例の参照と我々への応用
+PostgreSQL では integer→uuid の暗黙キャストは不可。NULL::uuid は型を明示した NULL リテラルで uuid 列に安全に格納できる標準的な手法。我々への応用: スナップショット保存は補助情報のため NULL を許容しても機能に影響なし。
+
+## 維持の仕組み
+analysis_run_snapshots.unit_id / condition_id を将来 integer 型に変更する場合は、NULL::uuid キャストを ar.unit_id / ar.condition_id に戻す。inline コメントを残してあるため変更時に気づける。
 
 ## 守り手
 ruff PASS済み
