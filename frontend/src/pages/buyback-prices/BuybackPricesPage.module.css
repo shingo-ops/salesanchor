@@ -49,6 +49,11 @@
   border-top-right-radius: 0;
 }
 
+/* ── 検索フィールド幅制限 ─────────────────────────────────────────────── */
+.searchField {
+  max-width: var(--size-search-field-max);
+}
+
 /* ── Drawer 内コンテンツ ──────────────────────────────────────────────── */
 .drawerBody {
   padding: var(--space-4);

@@ -233,6 +233,7 @@
   --size-toggle-knob: 18px;  /* トグルつまみ直径 */
 
   /* ---- Form controls ---- */
+  --size-search-field-max:   200px;  /* ツールバー内検索フィールド最大幅（BuybackPricesPage 等） */
   --size-lang-select-min:    120px;  /* 言語選択プルダウン最小幅 */
   --size-carrier-label-col:  120px;  /* キャリア設定カード: ラベル列幅 */
   --size-substep-nav:        160px;  /* セットアップガイド サブ手順左ナビ幅（2ペイン） */

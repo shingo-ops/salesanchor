@@ -353,6 +353,7 @@
     "loading": "読み込み中...",
     "columnLinkedProduct": "自社商品",
     "pendingReview": "要確認",
+    "unmatched": "要確認",
     "pendingReviewBtn": "要確認 ({{count}}件)",
     "pendingReviewTitle": "商品紐付け確認",
     "pendingReviewDesc": "複数の候補が見つかった商品です。正しい商品を選んでください。",
