@@ -9,7 +9,7 @@
 - `frontend/src/components/Select.tsx:1-133` — セレクトの金型（size="sm" 対応確認済み）
 
 ## 既存バグ
-- `BuybackByProductPage.tsx:172` — `var(--color-danger)` は tokens.css に未定義。`var(--danger)` に修正必要
+- `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx:172` — `var(--color-danger)` は tokens.css に未定義。`var(--danger)` に修正必要
 
 ## ADR
 - ADR-027: i18n 強制（全UI文字列は t() 経由）
