@@ -259,7 +259,7 @@ def test_actual_8mib_pg_boundaries(pg, monkeypatch, stage, extra):
         measured[0]["raw_memo"] = item["raw_memo"]
         assert len(records.encoded(measured).encode()) == target
 
-    def synthetic_extract(raw_text, *, work_reference, recorder):
+    def synthetic_extract(raw_text, *, work_reference, recorder, supplier_context=None):
         payload = {"model": "synthetic", "contents": "あ", "config": {"temperature": 0}}
         if stage == "input":
             size = len(records.encoded({**payload, "reference": work_reference}).encode())
@@ -319,7 +319,7 @@ def test_migration_idempotent_and_parent_lifecycle(pg, monkeypatch):
         cur.execute(MIGRATION.read_text())
         cur.execute(MIGRATION.read_text())
         cur.execute("SELECT schemaname FROM pg_tables WHERE tablename='extraction_attempts' ORDER BY schemaname")
-        assert cur.fetchall() == [(SCHEMA,)]
+        assert cur.fetchall() == [('public',), (SCHEMA,)]
         cur.execute(f"SELECT tableowner FROM pg_tables WHERE schemaname='{SCHEMA}' AND tablename='extraction_attempts'")
         assert cur.fetchone()[0] == 'jarvis'
         cur.execute(f"SELECT has_table_privilege('salesanchor_app','{SCHEMA}.extraction_attempts','SELECT,INSERT,UPDATE')")
