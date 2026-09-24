@@ -41,15 +41,16 @@
 - 変更: `RuleCreateDrawer.tsx` のみ（AnalysisRulesPage.tsx は props 変更なし）
 - 変更: `TcgStatusMasterCreate` スキーマ（CSV インポートには影響しない — 別パス）
 
-## 守り手
+## 外部・過去事例の参照と我々への応用
 
+テストゲートパターン（フォーム送信前に動作確認を必須とする）は GitHub Actions の required status checks と同じ思想。未テストでの誤登録を防ぐ。フォーム内プレビュー→ゲート解放はフォームバリデーションの標準プラクティス（例: Stripe の支払い前確認フロー）に沿っている。
+
+## 維持の仕組み
+
+守り手:
 - TypeScript コンパイル: `frontend/src/pages/super-admin/components/RuleCreateDrawer.tsx`
-- i18n キー整合: `frontend/src/locales/ja.json` と `en.json` の ruleManagement.create 以下
+- i18n キー整合: `frontend/src/locales/ja.json` と `frontend/src/locales/en.json` の ruleManagement.create 以下
 - Backend syntax: `backend/app/routers/super_admin_status_master.py`、`backend/app/schemas/central_masters.py`
-
-## 外部事例
-
-- テストゲートパターン（フォーム送信前に動作確認を必須とする）は GitHub Actions の required status checks と同じ思想。未テストでの誤登録を防ぐ。
 
 ## 戻し方
 
