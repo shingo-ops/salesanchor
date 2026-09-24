@@ -92,6 +92,31 @@ export interface AlertFormState {
   cooldown_minutes: string;
 }
 
+export interface ByProductItem {
+  product_id: number;
+  product_code: string;
+  name_ja: string;
+  category: string;
+  release_date: string | null;
+  image_url: string | null;
+  homura_price_s: number | null;
+  homura_price_a: number | null;
+  homura_price_b: number | null;
+  homura_shop_product_id: string | null;
+  homura_product_name: string | null;
+  shinsoku_price_s: number | null;
+  shinsoku_price_a: number | null;
+  shinsoku_price_b: number | null;
+  shinsoku_shop_product_id: string | null;
+  shinsoku_product_name: string | null;
+}
+
+export interface ByProductResponse {
+  items: ByProductItem[];
+  total: number;
+  counts_by_category: Record<string, number>;
+}
+
 export type CardGame = "all" | "pokemon" | "onepiece" | "yugioh" | "dragonball" | "weiss" | "lorcana";
 export type ShopFilter = "all" | "shinsoku" | "homura";
 
