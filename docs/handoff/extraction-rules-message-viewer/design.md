@@ -53,6 +53,7 @@
 ## 維持の仕組み
 - バックエンドの `SupplierExtractionRulesResponse` スキーマ変更時は `SupplierExtractionDetail` インターフェースも同時に更新する（フラット構造の一致を維持）
 - 新しい i18n キー追加時は ja.json / en.json 両方に同一キーを追加する（CI チェックあり）
+- 守り手: Hikky-dev（バックエンドスキーマ変更時のフロントエンド型整合チェック）
 
 ## 戻し方
 - フロントエンド: 型定義・JSX を元の `source_text`/`rules` ネスト構造に戻す
