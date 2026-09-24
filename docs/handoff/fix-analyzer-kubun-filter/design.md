@@ -1,5 +1,9 @@
 # Design: fix-analyzer-kubun-filter
 
+## ADR参照
+
+- ADR-154 (docs/adr/ADR-154-tcg-parity02-gas-python-migration.md)
+
 ## recon参照
 
 - docs/handoff/fix-analyzer-kubun-filter/recon.md
