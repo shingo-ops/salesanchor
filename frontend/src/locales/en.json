@@ -4494,12 +4494,9 @@
     "createRule": "Create Rule",
     "create": {
       "title": "Create New Rule",
-      "statusId": "Status ID",
-      "canonical": "Display Name",
-      "matchType": "Match Type",
+      "canonical": "Status",
       "effect": "Effect",
-      "searchPattern": "Search Pattern",
-      "excludePattern": "Exclude Pattern",
+      "searchPattern": "Word",
       "priority": "Priority",
       "note": "Note",
       "testSection": "Pattern Test",
@@ -4509,11 +4506,10 @@
       "notMatched": "Not Matched",
       "creating": "Creating...",
       "created": "Rule created (disabled)",
-      "matchTypeLiteral": "Literal",
-      "matchTypeRegex": "Regex",
-      "matchTypeDefault": "Default",
-      "effectOutput": "Output",
-      "effectExclude": "Exclude"
+      "effectOutput": "Detect and show",
+      "effectExclude": "Detect and exclude",
+      "testRequired": "Create available after test passes",
+      "testPassed": "Test passed"
     }
   },
   "reviewIssues": {
