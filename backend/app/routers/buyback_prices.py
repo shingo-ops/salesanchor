@@ -410,22 +410,22 @@ async def list_by_product(
                   AND bsp2.product_id IS NOT NULL
                 GROUP BY bsp2.product_id
             )
-            SELECT UPPER(p.category), count(DISTINCT p.id)
+            SELECT bsp.card_game, count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
             LEFT JOIN product_swing psw ON psw.product_id = p.id
             WHERE {" AND ".join(cat_count_conditions)}
               AND COALESCE(psw.swing_s, 0) >= :cat_min_swing
-            GROUP BY UPPER(p.category)
+            GROUP BY bsp.card_game
             ORDER BY count(DISTINCT p.id) DESC
         """)
     else:
         cat_counts_query = text(f"""
-            SELECT UPPER(p.category), count(DISTINCT p.id)
+            SELECT bsp.card_game, count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
             WHERE {" AND ".join(cat_count_conditions)}
-            GROUP BY UPPER(p.category)
+            GROUP BY bsp.card_game
             ORDER BY count(DISTINCT p.id) DESC
         """)
     counts_result = await db.execute(cat_counts_query, cat_count_params)
@@ -436,7 +436,7 @@ async def list_by_product(
     params: dict = {"limit": limit, "offset": offset}
 
     if category:
-        extra_conditions.append("UPPER(p.category) = UPPER(:category)")
+        extra_conditions.append("EXISTS (SELECT 1 FROM public.buyback_shop_products bsp_f WHERE bsp_f.product_id = p.id AND bsp_f.card_game = :category)")
         params["category"] = category
 
     if q is not None:
@@ -476,7 +476,7 @@ async def list_by_product(
             p.id,
             p.product_code,
             p.name,
-            UPPER(p.category) AS category,
+            (SELECT bsp_cg.card_game FROM public.buyback_shop_products bsp_cg WHERE bsp_cg.product_id = p.id LIMIT 1) AS category,
             p.release_date,
             p.image_url,
             p.mark,
