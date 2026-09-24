@@ -117,6 +117,10 @@ export interface ByProductResponse {
   counts_by_category: Record<string, number>;
 }
 
+export interface ProductHistoryResponse {
+  history: Record<string, PriceHistoryEntry[]>;  // shop_code → entries
+}
+
 export type CardGame = "all" | "pokemon" | "onepiece" | "yugioh" | "dragonball" | "weiss" | "lorcana";
 export type ShopFilter = "all" | "shinsoku" | "homura";
 
