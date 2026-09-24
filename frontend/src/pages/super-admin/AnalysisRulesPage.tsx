@@ -23,6 +23,7 @@ import {
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { ProductKindsMasterPanel } from "./components/ProductKindsMasterPanel";
+import { TypeMasterPanel } from "./components/TypeMasterPanel";
 import { StatusMasterPanel } from "./components/StatusMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
@@ -163,6 +164,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "product-master" && <ProductMasterPanel />}
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
               {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
+              {activeSection === "type-master" && <TypeMasterPanel />}
               {activeSection === "status-master" && <StatusMasterPanel />}
               {activeSection === "supplier-master" && <SupplierMasterPanel />}
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
