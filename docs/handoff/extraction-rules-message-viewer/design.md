@@ -1,5 +1,8 @@
 # design: extraction-rules-message-viewer
 
+## 参照 recon
+- recon: docs/handoff/extraction-rules-message-viewer/recon.md
+
 ## 参照 ADR
 - ADR-027: UI i18n 強制 (`docs/adr/ADR-027-ui-internationalization.md`)
 - ADR-144: UIガバナンス (`docs/CC_UI_GOVERNANCE.md`)
