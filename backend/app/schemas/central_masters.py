@@ -578,7 +578,8 @@ class TcgStatusMasterBase(BaseModel):
 
 
 class TcgStatusMasterCreate(TcgStatusMasterBase):
-    pass
+    # status_id is optional — backend auto-generates "ST<NNNN>" if omitted.
+    status_id: Optional[str] = Field(default=None, max_length=50)
 
 
 class TcgStatusMasterUpdate(BaseModel):
