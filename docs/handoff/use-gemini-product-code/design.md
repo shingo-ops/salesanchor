@@ -18,7 +18,7 @@ v5 プロンプトジョブで Gemini が返した商品コードが、unit kubu
 
 ## 変更方針
 
-`tcg_analyzer_svc.py` の Gemini direct hit パス（1331行目）を以下に変更:
+`backend/app/services/tcg_analyzer_svc.py:1331` の Gemini direct hit パスを以下に変更:
 - チェック: `gemini_product_id in product_code_to_uuid` → `gemini_product_id in filtered_codes`
 - pid_basis: `f"GEMINI_DIRECT|WORK:{work_id}|ID:{matched_code}"[:100]` → `"GEMINI"`
 
