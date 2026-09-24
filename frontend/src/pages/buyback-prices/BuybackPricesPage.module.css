@@ -51,7 +51,11 @@
 
 /* ── 検索フィールド幅制限 ─────────────────────────────────────────────── */
 .searchField {
+  width: var(--size-search-field-max);
   max-width: var(--size-search-field-max);
+  /* ContentToolbar left スロット内で .comp-field の margin-bottom を打ち消す */
+  margin-bottom: 0;
+  flex-shrink: 0;
 }
 
 /* ── Drawer 内コンテンツ ──────────────────────────────────────────────── */
