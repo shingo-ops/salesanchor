@@ -152,9 +152,10 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
     # Note: public.products is schema-independent; this test no longer needs a separate schema insert
     await db.execute(text("SELECT 1"))  # placeholder: cross-schema isolation now handled via public.products
     await db.execute(text(f"SET LOCAL search_path TO {other}, public"))
-    # For unfiltered queries (work_id=None, query="" or "sHaReD") the total includes any
-    # pre-existing rows in public.products; use pre_count offset.  Filtered queries
-    # (work_id filter or name-specific query) are unaffected by pre-existing data.
+    # For unfiltered queries (work_id=None) the total includes any pre-existing rows in
+    # public.products; use pre_count offset.  Even with a query string, ILIKE '%X%' can
+    # match rows inserted by concurrent xdist workers, so any work_id=None case is treated
+    # as potentially contaminated.  Filtered queries (work_id set) are unaffected.
     # insertion order: A, C, B, Z, N2, N1, N0 → ids ascending in that order
     # ORDER BY release_date DESC NULLS LAST, id DESC:
     # A(2099)→ B(2026, higher id than C)→ C(2026)→ Z(2025)→ N0(NULL, highest id)→ N1→ N2(lowest id)
@@ -169,7 +170,7 @@ async def test_date_order_work_search_candidates_and_schema_boundary(product_db)
         ("", 888888, 0, [], 0),
     ]:
         result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
-        unfiltered = (work_id is None and not query)
+        unfiltered = work_id is None
         expected_total = pre_count + total_delta if unfiltered else total_delta
         assert result.total == expected_total
         if not unfiltered or pre_count == 0:
