@@ -57,10 +57,12 @@ ruleManagement.edit.* を ja.json と en.json に追加。
 
 - BotsPage (`frontend/src/pages/bots/BotsPage.tsx`) — useRecordDrawer + Drawer の create/edit 分岐パターン参照。今回は RuleEntry 型が固定のため useRecordDrawer を使わず直接 state 管理にした（抽象化が過剰）
 - ADR-122 バッチA — 編集を Drawer 化する設計方針（BotsPage 改修時に策定）
+- ADR-027（`docs/adr/ADR-027-ui-internationalization.md`）— UI 文字列は t("key") 経由。今回の ruleManagement.edit.* キー追加はこの制約に準拠
+- ADR-144（`docs/CC_UI_GOVERNANCE.md`）— 生 input / 自作タブ / 色直値禁止。RuleDrawer は既存 Drawer / Input / Button コンポーネントを使用
 
 ## 維持の仕組み
 
-守り手: TypeScript 型検査（tsc --noEmit CI）+ i18n CI チェック
+守り手: `.github/workflows/frontend-check.yml`（tsc --noEmit + i18n CI チェック）
 
 - TypeScript で RuleEntry 型を RuleDrawer から export し RuleManagementPanel で import → 型ミスマッチをコンパイル時に検出
 - tsc --noEmit は CI で常時チェック
