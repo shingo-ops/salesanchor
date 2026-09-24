@@ -52,13 +52,15 @@ PM0099: 「151」→3点のみ
 
 ## 外部・過去事例の参照と我々への応用
 - 情報検索分野のTF（Term Frequency）スコアリングと同様の考え方。長い・具体的なキーワードが高スコアになることで精度向上。
-- 自社内の既存実装: `tcg_analyzer_svc.py` の `match_one_kw()` は1キーワード単位のマッチを提供しており、それを組み合わせてスコア化する設計。
+- 自社内の既存実装: `backend/app/services/tcg_analyzer_svc.py` の `match_one_kw()` は1キーワード単位のマッチを提供しており、それを組み合わせてスコア化する設計。
 - 変更前のロジックは「最初のヒットで即確定」という貪欲法で、キーワード評価順序に依存する脆弱性があった。スコア式に変えることで順序非依存になる。
 
 ## 維持の仕組み
-- `score_product()` は純粋関数のため単体テスト可能
-- `match_one_kw()` の実装変更があれば本ロジックも追随（依存関係が明示的）
-- match_candidates JSONのschemaが変わった場合はフロント確認が必要（`score`/`keywords` キー）
+守り手: backend/app/services/buyback_scraper/product_matcher.py
+
+- score_product() は純粋関数のため単体テスト可能
+- match_one_kw() の実装変更があれば本ロジックも追随（依存関係が明示的）
+- match_candidates JSONのschemaが変わった場合はフロント確認が必要（score/keywords キー）
 
 ## 影響範囲
 - `backend/app/services/buyback_scraper/product_matcher.py` のみ
