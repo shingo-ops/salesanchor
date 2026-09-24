@@ -15,8 +15,12 @@
 | homura_price_s / shinsoku_price_s が横並びで返る | レスポンスのJSONフィールド確認 |
 | カテゴリタブの件数が正しい | counts_by_categoryの合計とitemsの件数が一致 |
 
-## 外部事例
-該当なし
+## 外部・過去事例の参照と我々への応用
+LATERAL JOIN による最新価格取得は PostgreSQL の標準的なパターン。既存の buyback_prices.py が DISTINCT ON で実装しているのと同等の意味を持つが、店舗別に独立してLATERAL JOINする構造の方が可読性が高い。
+
+## 維持の仕組み
+- 新しい買取店が増えた場合は、同パターンのLATERAL JOINをAPIに追加し、フロントの列定義も追加する
+- categoryは products.category の値をそのまま使うため、新カテゴリは自動反映される
 
 ## 弊害・ロールバック
 - APIエンドポイント追加のみ。既存エンドポイントに変更なし
