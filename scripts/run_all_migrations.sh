@@ -746,6 +746,12 @@ run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
 # ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
 run_sql migrations/20260921_120000_add_products_product_kind_id.sql
 
+# 共用Knowledge抽出語彙シード: block_delimiter / skip_condition / status_keyword
+run_sql migrations/20260924_040000_seed_knowledge_extraction_vocab.sql
+
+# 仕入元 Knowledge リンクテーブル新設（supplier_knowledge_links）
+run_sql migrations/20260924_050000_create_supplier_knowledge_links.sql
+
 # ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
 run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
 

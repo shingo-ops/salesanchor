@@ -37,11 +37,15 @@ from app.schemas.central_masters import (
     CentralSupplierCreate,
     CentralSupplierResponse,
     CentralSupplierUpdate,
+    KnowledgeRuleSimpleCreate,
+    KnowledgeRuleSimpleResponse,
     SupplierDiscordRoutingCreate,
     SupplierDiscordRoutingResponse,
     SupplierExtractionOverviewItem,
     SupplierExtractionRulesResponse,
     SupplierExtractionRulesUpdate,
+    SupplierKnowledgeLinkCreate,
+    SupplierKnowledgeLinkResponse,
     SupplierPromptResponse,
     SupplierPromptUpdate,
     SupplierSourceMessagesResponse,
@@ -953,3 +957,174 @@ async def list_supplier_source_messages(
         for row in rows
     ]
     return SupplierSourceMessagesResponse(messages=messages, total=len(messages))
+
+
+# ============================================================================
+# 共用 Knowledge ルール (public.knowledge_rules 抽出カテゴリ)
+#   GET  /super-admin/knowledge-rules?category=...
+#   POST /super-admin/knowledge-rules
+# ============================================================================
+
+_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "skip_condition", "status_keyword")
+
+
+@router.get(
+    "/super-admin/knowledge-rules",
+    response_model=list[KnowledgeRuleSimpleResponse],
+    dependencies=[Depends(require_super_admin)],
+    summary="共用Knowledgeルール一覧（カテゴリ別）",
+)
+async def list_knowledge_rules(
+    category: str = Query(..., description="block_delimiter / skip_condition / status_keyword"),
+    db: AsyncSession = Depends(get_db),
+) -> list[KnowledgeRuleSimpleResponse]:
+    if category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {category}")
+    result = await db.execute(
+        text(
+            "SELECT id, category, pattern_type, pattern, normalized_to, description, is_active"
+            " FROM public.knowledge_rules"
+            " WHERE category = :category AND is_active = TRUE"
+            " ORDER BY priority DESC, pattern"
+        ),
+        {"category": category},
+    )
+    return [KnowledgeRuleSimpleResponse(**row) for row in result.mappings().all()]
+
+
+@router.post(
+    "/super-admin/knowledge-rules",
+    response_model=KnowledgeRuleSimpleResponse,
+    dependencies=[Depends(require_super_admin)],
+    status_code=201,
+    summary="共用Knowledgeルール追加",
+)
+async def create_knowledge_rule(
+    data: KnowledgeRuleSimpleCreate,
+    db: AsyncSession = Depends(get_db),
+) -> KnowledgeRuleSimpleResponse:
+    if data.category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:
+        raise HTTPException(status_code=400, detail=f"Invalid category: {data.category}")
+    result = await db.execute(
+        text(
+            "INSERT INTO public.knowledge_rules"
+            " (category, pattern_type, pattern, normalized_to, description, priority, language, is_active)"
+            " VALUES (:category, :pattern_type, :pattern, :normalized_to, :description, 100, 'ja', TRUE)"
+            " RETURNING id, category, pattern_type, pattern, normalized_to, description, is_active"
+        ),
+        data.model_dump(),
+    )
+    await db.commit()
+    return KnowledgeRuleSimpleResponse(**result.mappings().first())
+
+
+# ============================================================================
+# 仕入元 Knowledge リンク (supplier_knowledge_links)
+#   GET    /super-admin/suppliers/{supplier_id}/knowledge-links
+#   POST   /super-admin/suppliers/{supplier_id}/knowledge-links
+#   DELETE /super-admin/suppliers/{supplier_id}/knowledge-links/{link_id}
+# ============================================================================
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links",
+    response_model=list[SupplierKnowledgeLinkResponse],
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元のKnowledgeリンク一覧",
+)
+async def list_supplier_knowledge_links(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> list[SupplierKnowledgeLinkResponse]:
+    result = await db.execute(
+        text(
+            """
+            SELECT skl.id, skl.supplier_id, skl.knowledge_rule_id,
+                   kr.category, kr.pattern, kr.normalized_to, kr.description, skl.is_active
+            FROM public.supplier_knowledge_links skl
+            JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+            WHERE skl.supplier_id = :supplier_id AND skl.is_active = TRUE
+            ORDER BY kr.category, kr.pattern
+            """
+        ),
+        {"supplier_id": supplier_id},
+    )
+    return [SupplierKnowledgeLinkResponse(**row) for row in result.mappings().all()]
+
+
+@router.post(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links",
+    response_model=SupplierKnowledgeLinkResponse,
+    dependencies=[Depends(require_super_admin)],
+    status_code=201,
+    summary="仕入元にKnowledgeルールをリンク",
+)
+async def create_supplier_knowledge_link(
+    supplier_id: int,
+    data: SupplierKnowledgeLinkCreate,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierKnowledgeLinkResponse:
+    # 仕入元存在確認（tenant_id IS NULL = 共用マスタ）
+    sup = (
+        await db.execute(
+            text("SELECT id FROM public.suppliers WHERE id = :id AND tenant_id IS NULL"),
+            {"id": supplier_id},
+        )
+    ).first()
+    if not sup:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+    try:
+        result = await db.execute(
+            text(
+                """
+                INSERT INTO public.supplier_knowledge_links (supplier_id, knowledge_rule_id, is_active)
+                VALUES (:supplier_id, :knowledge_rule_id, TRUE)
+                RETURNING id, supplier_id, knowledge_rule_id, is_active
+                """
+            ),
+            {"supplier_id": supplier_id, "knowledge_rule_id": data.knowledge_rule_id},
+        )
+        await db.commit()
+    except IntegrityError as exc:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="このルールは既にリンク済みです") from exc
+    link_row = result.mappings().first()
+    # JOINで完全な情報を取得
+    full = (
+        await db.execute(
+            text(
+                """
+                SELECT skl.id, skl.supplier_id, skl.knowledge_rule_id,
+                       kr.category, kr.pattern, kr.normalized_to, kr.description, skl.is_active
+                FROM public.supplier_knowledge_links skl
+                JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+                WHERE skl.id = :id
+                """
+            ),
+            {"id": link_row["id"]},
+        )
+    ).mappings().first()
+    return SupplierKnowledgeLinkResponse(**full)
+
+
+@router.delete(
+    "/super-admin/suppliers/{supplier_id}/knowledge-links/{link_id}",
+    dependencies=[Depends(require_super_admin)],
+    status_code=204,
+    summary="仕入元からKnowledgeルールを解除",
+)
+async def delete_supplier_knowledge_link(
+    supplier_id: int,
+    link_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    result = await db.execute(
+        text(
+            "DELETE FROM public.supplier_knowledge_links"
+            " WHERE id = :id AND supplier_id = :supplier_id"
+        ),
+        {"id": link_id, "supplier_id": supplier_id},
+    )
+    if result.rowcount == 0:
+        raise HTTPException(status_code=404, detail="リンクが見つかりません")
+    await db.commit()
