@@ -2,7 +2,7 @@
 
 recon: docs/handoff/use-gemini-product-code/recon.md
 
-対象ADR: 該当なし（TCG解析エンジン内部実装の改善）
+対象ADR: ADR-1001（public.products 統一後の analyzer 実装改善）
 
 ## KGI
 
@@ -35,12 +35,14 @@ v5 プロンプトジョブで Gemini が返した商品コードが、unit kubu
 
 `filtered_codes` を `product_code_to_uuid` に戻し、`pid_basis` を元の f-string に戻す。データ変更はなし（再解析しない限り既存レコードは変わらない）。
 
-## 外部・過去事例の参照
+## 外部・過去事例の参照と我々への応用
 
-- コミット 749006586 で実装された Gemini direct hit パスの改善
+- ADR-1001 で `public.products` 統一後の analyzer 実装を正式採用。本変更はその延長として Gemini v5 パスの精度改善。
+- コミット 749006586 で実装された Gemini direct hit パスの改善（`product_code_to_uuid` → `filtered_codes`）
 - unit kubun フィルタは既にキーワード照合パスで使用されており、同じフィルタを Gemini パスにも適用することで整合性を保つ
 
-## 守り手
+## 維持の仕組み
 
-- `backend/tests/test_tcg_work_matching_integration.py` に追加した2テスト
-- CI テスト: `test_gemini_resolved_product_code_v5_pid_basis`、`test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes`
+守り手: `backend/tests/test_tcg_work_matching_integration.py`（CI テスト2件）
+- `test_gemini_resolved_product_code_v5_pid_basis` — v5 有効コードで `pid_basis == 'GEMINI'` を保証
+- `test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes` — 無効コードでフォールバックを保証
