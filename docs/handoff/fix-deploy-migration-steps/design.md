@@ -25,8 +25,4 @@ git revert で元に戻せる（ただし戻すとデプロイが再度失敗す
 今回の失敗は deploy.yml に個別ステップを直書きした際の典型的なパスミスであり、run_all_migrations.sh 経由に一本化するルールを守ることで再発防止できる。
 
 ## 維持の仕組み
-- deploy.yml のコメント「新マイグレーション追加時は run_all_migrations.sh に追記する」が守り手
-- CI の deploy.yml lint（workflow-lint.yml）でステップ構造を確認
-
-## 守り手
-- `scripts/run_all_migrations.sh` を変更する場合は必ず `.github/workflows/deploy.yml` と整合性を確認すること
+守り手: deploy.yml を変更する際は必ず `scripts/run_all_migrations.sh` との整合性を確認する。deploy.yml のコメント「新マイグレーション追加時は run_all_migrations.sh に追記する」が手順書の役割を担う。
