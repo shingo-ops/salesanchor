@@ -515,7 +515,7 @@ def extract_message(
             "status": status,
             "prompt_version": prompt_version,
             "items": items,
-            "raw_response": response_text,
+            "raw_response": response_text if recorder is not None else "",
             "error_message": error_message,
             "parse_errors": parse_errors,
         }
