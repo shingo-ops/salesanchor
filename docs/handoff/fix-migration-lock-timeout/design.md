@@ -2,7 +2,7 @@
 
 ## KGI
 
-デプロイで `20260922_050000_fix_phase2c_fk_drop_only.sql` がタイムアウトしない。
+デプロイで `migrations/20260922_050000_fix_phase2c_fk_drop_only.sql` がタイムアウトしない。
 判定: 次回デプロイのGitHub Actions「Run database migrations」ステップが success。
 
 ## KPI / 検証方法
