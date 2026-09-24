@@ -40,7 +40,7 @@ export default function BuybackPricesPage() {
   const { t } = useTranslation();
   const { isSuperAdmin } = useSuperAdmin();
 
-  const [viewMode, setViewMode] = useState<ViewMode>("shop");
+  const [viewMode, setViewMode] = useState<ViewMode>("product");
 
   const [items, setItems] = useState<BuybackProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -159,27 +159,29 @@ export default function BuybackPricesPage() {
       ),
     },
     {
-      key: "product_name",
-      header: t("buybackPrices.columnName"),
+      key: "product_code",
+      header: t("buybackPrices.byProduct.columnProductCode"),
+      width: "110px",
+      renderCell: (row: BuybackProduct) =>
+        row.product_code ? (
+          <span style={{ fontSize: "var(--font-sm)", color: "var(--text-muted)" }}>
+            {row.product_code}
+          </span>
+        ) : (
+          <span style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>—</span>
+        ),
     },
     {
-      key: "product_name_ja",
-      header: t("buybackPrices.columnLinkedProduct"),
-      width: "180px",
-      renderCell: (row: BuybackProduct) => {
-        if (row.match_status === "pending_review") {
-          return <Badge variant="warning" size="sm">{t("buybackPrices.pendingReview")}</Badge>;
-        }
-        if (row.product_code && row.product_name_ja) {
-          return (
-            <span style={{ fontSize: "var(--font-sm)" }}>
-              <Badge variant="success" size="sm" dot>{row.product_code}</Badge>
-              {" "}{row.product_name_ja}
-            </span>
-          );
-        }
-        return <span style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>—</span>;
-      },
+      key: "product_name",
+      header: t("buybackPrices.columnName"),
+      renderCell: (row: BuybackProduct) => (
+        <span style={{ display: "inline-flex", alignItems: "center", gap: "var(--space-1)" }}>
+          <span>{row.product_name_ja ?? row.product_name}</span>
+          {(row.match_status === "unmatched" || row.match_status === "pending_review") && (
+            <Badge variant="warning" size="sm">{t("buybackPrices.unmatched")}</Badge>
+          )}
+        </span>
+      ),
     },
     {
       key: "card_game",
@@ -307,18 +309,18 @@ export default function BuybackPricesPage() {
         left={
           <>
             <Button
-              variant={viewMode === "shop" ? "primary" : "outline"}
-              size="sm"
-              onClick={() => setViewMode("shop")}
-            >
-              {t("buybackPrices.byShop")}
-            </Button>
-            <Button
               variant={viewMode === "product" ? "primary" : "outline"}
               size="sm"
               onClick={() => setViewMode("product")}
             >
               {t("buybackPrices.byProduct.label")}
+            </Button>
+            <Button
+              variant={viewMode === "shop" ? "primary" : "outline"}
+              size="sm"
+              onClick={() => setViewMode("shop")}
+            >
+              {t("buybackPrices.byShop")}
             </Button>
           </>
         }
@@ -342,6 +344,7 @@ export default function BuybackPricesPage() {
                 value={search}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
                 size="sm"
+                className={styles.searchField}
               />
               <SelectControl
                 options={shopOptions}
