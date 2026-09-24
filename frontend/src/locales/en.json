@@ -4510,6 +4510,15 @@
       "effectExclude": "Detect and exclude",
       "testRequired": "Create available after test passes",
       "testPassed": "Test passed"
+    },
+    "edit": {
+      "title": "Edit Rule",
+      "update": "Update",
+      "updating": "Updating...",
+      "updated": "Rule updated",
+      "disable": "Disable this rule",
+      "disabled": "Rule disabled",
+      "disabling": "Disabling..."
     }
   },
   "reviewIssues": {
