@@ -263,7 +263,7 @@
     "superAdminTcgSoldOut": "Sold-out rules",
     "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
-    "superAdminAnalysisRules": "Analysis Management",
+    "superAdminAnalysisRules": "LINE Analysis",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -3956,7 +3956,7 @@
   },
   "analysisRules": {
     "page": {
-      "title": "Analysis Management",
+      "title": "LINE Analysis",
       "subtitle": "Manage analysis rules and master data"
     },
     "sidebar": {

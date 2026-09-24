@@ -263,7 +263,7 @@
     "superAdminTcgSoldOut": "完売ルール",
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
-    "superAdminAnalysisRules": "解析管理",
+    "superAdminAnalysisRules": "LINE解析",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -3956,7 +3956,7 @@
   },
   "analysisRules": {
     "page": {
-      "title": "解析管理",
+      "title": "LINE解析",
       "subtitle": "解析ルール・マスタデータを管理します"
     },
     "sidebar": {
