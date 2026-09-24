@@ -438,33 +438,6 @@ jobs:
           SALESANCHOR_APP_PASSWORD: ${{ secrets.SALESANCHOR_APP_PASSWORD }}
           ADMIN_DATABASE_URL: ${{ secrets.ADMIN_DATABASE_URL }}
 
-      # ADR-082: backend/migration 系の変更がある場合のみ実行（フロントのみは skip）
-      # 旧: part 1 / part 2 の 2 ステップ（約 600 行）→ scripts/run_all_migrations.sh に統合
-      # 新マイグレーション追加時は deploy.yml ではなく scripts/run_all_migrations.sh に追記する
-      - name: Migration - seed knowledge extraction vocab
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd /home/ubuntu/salesanchor
-            docker compose exec -T postgres psql -U jarvis -d jarvis_db -f /tmp/migrations/20260924_040000_seed_knowledge_extraction_vocab.sql
-
-      - name: Migration - create supplier_knowledge_links
-        if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            set -e
-            cd /home/ubuntu/salesanchor
-            docker compose exec -T postgres psql -U jarvis -d jarvis_db -f /tmp/migrations/20260924_050000_create_supplier_knowledge_links.sql
-
       - name: Run database migrations
         if: ${{ success() && steps.changes.outputs.migrations == 'true' }}
         uses: appleboy/ssh-action@v1
