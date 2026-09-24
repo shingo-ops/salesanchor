@@ -41,8 +41,8 @@ ADR-027, ADR-144, ADR-157
 | デザイントークン準拠 | var(--color-danger) 消滅 |
 
 ## 維持の仕組み
-- 守り手: CI の i18n チェック（`frontend/scripts/check-i18n.js`）、eslint
+守り手: CI の i18n チェック（`frontend/scripts/check-i18n.js`）、eslint
 - 変動計算は既存 buyback_price_logs インデックス `(shop_product_id, fetched_at DESC)` を活用
 
-## 外部・過去事例
-該当なし（内部機能の拡張、外部事例の参照は不要）
+## 外部・過去事例の参照と我々への応用
+該当なし（内部機能の拡張。既存 buyback_price_logs インデックスを活用した価格変動計算は過去事例参照不要）
