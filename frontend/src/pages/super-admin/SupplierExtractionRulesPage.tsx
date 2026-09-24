@@ -19,6 +19,7 @@ import { Select } from "../../components/Select";
 import { Textarea } from "../../components/Textarea";
 import { Button } from "../../components/Button";
 import { DashboardIcons, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
+import { ICON } from "../../constants/iconSizes";
 import "./SupplierExtractionRulesPage.css";
 
 // ---------------------------------------------------------------------------
@@ -304,7 +305,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                     onClick={() => setMessageIndex((i: number) => i - 1)}
                     disabled={messageIndex <= 0}
                   >
-                    {(() => { const BackIcon = SCHEDULE_SETTINGS_ICONS.back; return <BackIcon style={{ width: "var(--icon-md)", height: "var(--icon-md)" }} />; })()}
+                    {(() => { const BackIcon = SCHEDULE_SETTINGS_ICONS.back; return <BackIcon size={ICON.md} />; })()}
                   </Button>
                   <span style={{ fontSize: "var(--font-sm)" }}>
                     {messageIndex + 1} / {messages.length}
@@ -317,7 +318,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                     onClick={() => setMessageIndex((i: number) => i + 1)}
                     disabled={messageIndex >= messages.length - 1}
                   >
-                    {(() => { const NextIcon = DashboardIcons.arrowRight; return <NextIcon style={{ width: "var(--icon-md)", height: "var(--icon-md)" }} />; })()}
+                    {(() => { const NextIcon = DashboardIcons.arrowRight; return <NextIcon size={ICON.md} />; })()}
                   </Button>
                 </div>
                 <div style={{ fontSize: "var(--font-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
