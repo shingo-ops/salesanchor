@@ -1,23 +1,33 @@
-# design: fix-product-code-id-format
+# 設計 — fix-product-code-id-format
 
-## ADR 参照
+**対象ADR**: ADR-1002  
+**recon**: docs/handoff/fix-product-code-id-format/recon.md  
+**日付**: 2026-09-24  
+**担当**: Hikky-dev
 
-- ADR-1002 (Phase C): TCG マスタ SSOT 統合 — products.id を商品識別子として統一
+---
 
-## KGI / KPI
+## 外部・過去事例の参照と我々への応用
+
+- Django migration の `allow_unicode_usernames` フォールバック / Rails の double-write パターン: 段階的識別子移行でアプリ層フォールバック変換を採用し DB スキーマを変えずに過渡期データを吸収する手法。我々への応用: `product_code_to_id` フォールバックマッピングをアプリ層に閉じることで、`extraction_items.resolved_product_code` の一括 DML 更新（不可逆操作）を回避する。
+
+---
+
+## 受け入れ基準
 
 | 基準 | 検証方法 |
 |------|---------|
 | `resolved_product_code IS NOT NULL AND pid_resolved=false` の件数が 0 になる | 再解析後に同クエリを実行して確認 |
-| 既存の pid_resolved=true の行が変化しない | 再解析後に pid_resolved=true の件数が減少していないこと |
+| 既存の `pid_resolved=true` の行が変化しない | 再解析後に `pid_resolved=true` の件数が減少していないこと |
 
-## 変更設計
+---
 
-### 問題
+## 技術 How・KPI
 
-`analyze_extraction_job()` で v5 ジョブの `resolved_product_code` を `validate_product_id()` で再検証する際、旧形式（product_code 文字列: "M1L"）が新形式スナップショット（id フィールド: "33"）に存在しないため `None` を返し `pid_resolved=false` になる。
+- KPI: 再解析後の `pid_resolved=false AND resolved_product_code IS NOT NULL` 件数 = 0
+- 技術選択: `product_code_to_id` フォールバックマッピングをアプリ層クロージャ `_resolve_pid()` に追加（理由: DB スキーマ変更なし・最小リスク）
 
-### 修正方針
+### 変更設計
 
 `backend/app/services/tcg_analyzer_svc.py:1167-1173` に `product_code_to_id` マッピングを追加:
 
@@ -45,42 +55,31 @@ def _resolve_pid(pid: str | None) -> str | None:
     return None
 ```
 
-### 影響範囲
+---
 
-- 呼び出し元: `analyze_extraction_job()` 内のみ（L1235-1238）
-- 外部インターフェース変更: なし
-- スナップショット形式変更: なし（既存データをそのまま読む）
+## 弊害・トレードオフ
 
-### 戻し方
+- `load_lookup_maps()` に 1 クエリ追加: 軽微なオーバーヘッド → 対策: `products` テーブルは小規模（数千行）なので許容範囲
 
-git revert で元の `validate_product_id` 直接呼び出しに戻す（1コミット）。
+---
 
-### 測り方
+## 計画票
 
-再解析後に以下のクエリで確認:
+| ステップ | 内容 | 担当 |
+|---------|------|------|
+| 1 | `product_code_to_id` マッピング追加 + `_resolve_pid()` クロージャ実装 | Generator |
+| 2 | `test_validate_product_id_accepts_id_string` ユニットテスト追加 | Generator |
+| 3 | `test_gemini_resolved_product_code_legacy_format_fallback` 統合テスト追加 | Generator |
+| 4 | デプロイ後に再解析実行・件数確認 | PO |
 
-```sql
-SELECT COUNT(*) FROM public.analysis_results ar
-JOIN public.extraction_items ei ON ei.id = ar.extraction_item_id
-JOIN public.extraction_jobs ej ON ej.id = ei.extraction_job_id
-JOIN public.source_messages sm ON sm.id = ej.source_message_id
-WHERE ei.resolved_product_code IS NOT NULL
-AND ar.pid_resolved = false
-AND sm.is_active = true;
-```
+---
 
-## 外部・過去事例の参照と我々への応用
+## 継続
 
-段階的識別子移行（product_code → products.id）で過渡期データが混在するケースは、Django migration の `allow_unicode_usernames` フォールバックや Rails の double-write パターンと同構造。アプリ層で変換を吸収し DB スキーマを変えない設計が最小リスク。
-
-本プロジェクトへの応用: `product_code_to_id` フォールバックマッピングをアプリ層に閉じることで、DB 上の `extraction_items.resolved_product_code` を一括更新する不可逆 DML を回避する。
+- 完了後の監視: 再解析後のクエリで `pid_resolved=false AND resolved_product_code IS NOT NULL` = 0 件を確認
+- 次フェーズへの引き継ぎ: `product_code_to_id` フォールバックは将来 `extraction_items` が全て id 形式になれば不要になる
 
 ## 維持の仕組み
 
-- 将来的に `extraction_items.resolved_product_code` が全て products.id 形式になれば `_resolve_pid()` はフォールバックなしの直接照合のみになる
-- `product_code_to_id` マッピングは `public.products` の `product_code` が不要になれば削除可能
-
-## 守り手
-
-- 守り手: `test_gemini_resolved_product_code_v5_pid_basis` — 新形式の正常動作（既存テスト）
-- 守り手: `test_gemini_resolved_product_code_legacy_format_fallback` — 旧形式フォールバック動作（今回追加）
+- 守り手: `backend/tests/test_tcg_work_matching_integration.py` — `test_gemini_resolved_product_code_v5_pid_basis`（新形式）・`test_gemini_resolved_product_code_legacy_format_fallback`（旧形式フォールバック）
+- 守り手: `backend/tests/test_tcg_work_id.py` — `test_validate_product_id_accepts_id_string`
