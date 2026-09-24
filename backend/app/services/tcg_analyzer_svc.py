@@ -1321,16 +1321,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         ))
 
         # Gemini direct hit: Gemini が返した resolved_product_code を第一 SoT として使用する。
-        # product_decisions に有効な ID がある かつ product_code_to_uuid に存在する場合、
-        # キーワード照合をスキップしてそのまま採用する。
+        # product_decisions に有効な ID がある かつ filtered_codes（unit kubun でフィルタ済み）に
+        # 存在する場合、キーワード照合をスキップしてそのまま採用する。
+        # unit kubun フィルタを通すことで、Gemini が誤った種別コードを返した場合でも拒否できる。
         gemini_product_id = (
             product_decisions.get(str(item_id))
             if product_decisions is not None
             else None
         )
-        if gemini_product_id and gemini_product_id in product_code_to_uuid:
+        if gemini_product_id and gemini_product_id in filtered_codes:
             matched_code = gemini_product_id
-            pid_basis = f"GEMINI_DIRECT|WORK:{work_id}|ID:{matched_code}"[:100]
+            pid_basis = "GEMINI"
             pid_resolved = True
             candidates: list = []
         else:
