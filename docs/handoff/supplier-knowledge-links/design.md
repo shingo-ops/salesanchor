@@ -28,3 +28,14 @@
 
 - tenant_* スキーマのテーブル（本実装は public スキーマのみ）
 - 既存の extraction_price_format 等のフィールド（別途PATCH で管理）
+
+## 外部・過去事例の参照と我々への応用
+
+- junction テーブルパターン（多対多・UNIQUE制約・ON DELETE CASCADE）: 既存の supplier_discord_routing / supplier_aliases と同様の構造を採用
+- プロンプト注入: 既存の `_build_supplier_context_note` への optional パラメータ追加で最小変更・後方互換を維持
+
+## 維持の仕組み
+
+- knowledge_rules の新カテゴリ追加は seed migration で冪等管理
+- supplier_knowledge_links の参照整合性は ON DELETE CASCADE で保護
+- フロントエンド操作は即時APIコール（「保存」ボタン不要・独立）
