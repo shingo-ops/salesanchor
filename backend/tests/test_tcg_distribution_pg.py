@@ -52,9 +52,16 @@ async def create_schema(conn, schema, corrections=True):
     except Exception:
         await conn.exec_driver_sql("ROLLBACK TO SAVEPOINT public_products_ddl")
     await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
-    # Guarantee work_id column exists even if SAVEPOINT rolled back (pre-existing table).
-    # IF EXISTS prevents failure when public.products was never created (SAVEPOINT rolled back due to
-    # something other than a duplicate-table conflict, e.g. early-stage provisioning on a fresh DB).
+    # Guarantee public.products exists even if SAVEPOINT rolled back mid-way
+    # (e.g. public.suppliers DDL failed after public.products was created inside the SAVEPOINT,
+    # causing the entire SAVEPOINT — including the products CREATE — to be rolled back).
+    # _PUBLIC_PRODUCTS_DDL uses CREATE TABLE IF NOT EXISTS / CREATE UNIQUE INDEX IF NOT EXISTS
+    # so re-running outside the SAVEPOINT is safe (idempotent).
+    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            await conn.exec_driver_sql(stmt)
+    # Guarantee work_id column exists (belt-and-suspenders; also covers pre-existing tables).
     await conn.exec_driver_sql("ALTER TABLE IF EXISTS public.products ADD COLUMN IF NOT EXISTS work_id INTEGER")
     migrations = Path(__file__).resolve().parents[2] / "migrations"
     # Phase 2 SSOT: public.type_master required by fetch_output_rows JOIN
