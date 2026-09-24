@@ -3,6 +3,9 @@
 ## 参照ADR
 - ADR-157: 買取相場ログ
 
+## 参照recon
+- docs/handoff/buyback-product-view/recon.md
+
 ## KGI
 同一商品のホムラ/シンソク買取価格（Sグレード）を横並びで比較できる。
 
@@ -21,6 +24,7 @@ LATERAL JOIN による最新価格取得は PostgreSQL の標準的なパター�
 ## 維持の仕組み
 - 新しい買取店が増えた場合は、同パターンのLATERAL JOINをAPIに追加し、フロントの列定義も追加する
 - categoryは products.category の値をそのまま使うため、新カテゴリは自動反映される
+- 守り手: process-artifacts gate（CI）がPR本文のGO記録を自動検証する
 
 ## 弊害・ロールバック
 - APIエンドポイント追加のみ。既存エンドポイントに変更なし
