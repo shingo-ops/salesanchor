@@ -377,7 +377,11 @@
       "columnHomuraS": "Homura S",
       "columnShinsokuS": "Shinsoku S",
       "columnDiff": "Diff",
-      "noLinkedData": "No linked product data"
+      "noLinkedData": "No linked product data",
+      "priceHistory": "Price History (Shop Comparison)",
+      "homura": "Homura",
+      "shinsoku": "Shinsoku",
+      "noHistory": "No price history data"
     }
   },
   "crm": {

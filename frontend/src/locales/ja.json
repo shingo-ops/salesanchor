@@ -377,7 +377,11 @@
       "columnHomuraS": "ホムラ S",
       "columnShinsokuS": "シンソク S",
       "columnDiff": "差額",
-      "noLinkedData": "紐付き商品データがありません"
+      "noLinkedData": "紐付き商品データがありません",
+      "priceHistory": "価格推移（店舗比較）",
+      "homura": "ホムラ",
+      "shinsoku": "シンソク",
+      "noHistory": "価格推移データがありません"
     }
   },
   "crm": {
