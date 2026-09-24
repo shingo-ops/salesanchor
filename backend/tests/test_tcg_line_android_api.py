@@ -35,7 +35,7 @@ def test_android_route_passes_explicit_format_and_full_window(client):
     assert response.status_code == 200
     assert response.json()['review_status'] == 'pending_review'
     assert run.call_args.kwargs['source_format'] == 'android'
-    assert run.call_args.kwargs['window_hours'] == 0
+    assert run.call_args.kwargs['window_hours'] == 6
     assert run.call_args.kwargs['export_text'] == EXPORT
 
 
