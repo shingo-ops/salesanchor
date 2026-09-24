@@ -1582,3 +1582,70 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
     for row, (name, _, _, expected) in zip(rows, cases):
         assert row == (name, expected, "TERMS_A" if expected else None, analyzer.ENGINE_VERSION)
     assert analyzer.ENGINE_VERSION == "name-first-v9-product-all-terms"
+
+
+def test_gemini_resolved_product_code_v5_pid_basis(pg, monkeypatch):
+    """resolved_product_code が filtered_codes に含まれる場合、pid_basis == 'GEMINI' になること。"""
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
+        wid = str(cursor.fetchone()[0])
+    # resolved_product_code として PM0123 (◆EB01 = one_piece 商品) を Gemini が返す想定
+    raw = "◆EB01 1BOX 1000円"
+    _, jid, result = run_message(
+        connection, engine, monkeypatch, raw,
+        [record("◆EB01", 1) + [wid, "PM0123"]],
+        work_id_mode=True,
+    )
+    assert result["status"] == "done" and result["items_count"] == 1
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s",
+            ("raw-extraction-v5-product-p1", jid),
+        )
+    with Session(engine) as session:
+        analyzer.analyze_extraction_job(session, jid)
+        row = session.execute(text(
+            f"SELECT ar.pid_resolved, ar.pid_basis FROM {SCHEMA}.analysis_results ar "
+            f"JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id "
+            f"WHERE ei.extraction_job_id=:jid"
+        ), {"jid": jid}).fetchone()
+    assert row is not None
+    pid_resolved, pid_basis = row
+    assert pid_resolved is True, f"pid_resolved should be True, got {pid_resolved}"
+    assert pid_basis == "GEMINI", f"pid_basis should be 'GEMINI', got {pid_basis!r}"
+
+
+def test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes(pg, monkeypatch):
+    """resolved_product_code が filtered_codes に含まれない場合、キーワード照合にフォールバックすること。"""
+    connection, engine, _ = pg
+    seed_products(connection)
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT id FROM public.type_master WHERE code='one_piece'")
+        wid = str(cursor.fetchone()[0])
+    # 存在しない商品コードを Gemini が返す想定 → フォールバック
+    raw = "◆EB01 1BOX 1000円"
+    _, jid, result = run_message(
+        connection, engine, monkeypatch, raw,
+        [record("◆EB01", 1) + [wid, "NONEXISTENT_CODE"]],
+        work_id_mode=True,
+    )
+    assert result["status"] == "done" and result["items_count"] == 1
+    with connection.cursor() as cursor:
+        cursor.execute(
+            f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s",
+            ("raw-extraction-v5-product-p1", jid),
+        )
+    with Session(engine) as session:
+        analyzer.analyze_extraction_job(session, jid)
+        pid_basis = session.execute(text(
+            f"SELECT ar.pid_basis FROM {SCHEMA}.analysis_results ar "
+            f"JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id "
+            f"WHERE ei.extraction_job_id=:jid"
+        ), {"jid": jid}).scalar_one()
+    # NONEXISTENT_CODE はマスタにないので FALLBACK| プレフィックスになる
+    assert pid_basis is not None
+    assert pid_basis.startswith("FALLBACK|") or pid_basis == "NONE", (
+        f"Expected FALLBACK| or NONE when Gemini code is invalid, got {pid_basis!r}"
+    )
