@@ -6,7 +6,7 @@
 
 ## 問題
 deploy.yml の2ステップが `/tmp/migrations/` パスを参照しているが、このパスは VPS 上に存在しない。
-`run_all_migrations.sh` が正しく `docker exec -i postgres psql ... < REPO_DIR/migrations/xxx.sql` パターンで実行するため、個別ステップは不要かつ誤り。
+`scripts/run_all_migrations.sh` が正しく `docker exec -i postgres psql` ... stdin経由でSQLを渡すパターンで実行するため、個別ステップは不要かつ誤り。
 
 ## 変更前後
 - 変更前: deploy.yml に `Migration - seed knowledge extraction vocab` と `Migration - create supplier_knowledge_links` の2ステップが存在（/tmp/migrations/ 参照・実行失敗）
