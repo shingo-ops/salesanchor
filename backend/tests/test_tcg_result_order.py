@@ -129,6 +129,10 @@ def test_unknown_state_missing_values_and_inactive_source_remain(pg):
     pending = {"smid": str(uuid4()), "job": str(uuid4()), "eid": str(uuid4())}
     with pg["connection"].cursor() as cursor:
         cursor.execute("UPDATE public.source_messages SET is_active=false WHERE id=%s", (inactive["smid"],))
+        # ADR-158: delivery visibility is now controlled by ar.is_current (not sm.is_active).
+        # Mark the inactive source's analysis_result as not current so fetch_output_rows excludes it.
+        cursor.execute("UPDATE public.analysis_results SET is_current=false WHERE extraction_item_id=%s",
+                       (inactive["eid"],))
         cursor.execute("INSERT INTO public.source_messages(id,raw_text,raw_sha256,is_active) "
                        "VALUES (%s,'pending',%s,true)", (pending["smid"], uuid4().hex * 2))
         cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')",

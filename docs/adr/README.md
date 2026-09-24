@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-09-21 / ADR 総数: 160 件
+最終更新: 2026-09-24 / ADR 総数: 161 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -175,6 +175,7 @@
 | [ADR-155](./ADR-155-product-master-ssot-csv-app.md) | ADR-155: 商品マスタデータの更新手段を CSV 取り込みとアプリ画面に一本化する | Accepted | — | — |
 | [ADR-156](./ADR-156-product-classification-tree-and-master-separation.md) | ADR-156: 商品分類ツリーと共用マスタ分離 | Accepted | — | — |
 | [ADR-157](./ADR-157-buyback-price-logger.md) | ADR-157: 買取相場ログ（外部買取店の価格定期取得） | Proposed | — | — |
+| [ADR-158](./ADR-158-product-level-supersession.md) | ADR-158: 商品単位の差分更新（Product-Level Supersession） | Proposed | — | — |
 | [ADR-999](./ADR-999-pipeline-test.md) | ADR-999: パイプライン動作テスト | テスト用（マージ後に削除予定） | — | — |
 | [ADR-1000](./ADR-1000-external-api-smoke-mandatory.md) | ADR-1000: 外部API連携の実Sandboxスモーク必須化と本番デプロイ安全化の区切り | Accepted | — | — |
 | [ADR-1001](./ADR-1001-deprecate-tcg-products-unify-to-public.md) | ADR-1001: tenant_004.tcg_products を廃止し public.products に統合する | Proposed | — | — |

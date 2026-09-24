@@ -238,6 +238,7 @@ BEGIN
                 unit_id             INTEGER      REFERENCES public.units(id),
                 condition_id        INTEGER      NOT NULL REFERENCES public.conditions(id),
                 work_id             INTEGER,
+                is_current          BOOLEAN      NOT NULL DEFAULT TRUE,
                 UNIQUE (extraction_item_id)
             )
         $sql$;
@@ -272,6 +273,7 @@ BEGIN
                 unit_id             INTEGER,
                 condition_id        INTEGER      NOT NULL,
                 work_id             INTEGER,
+                is_current          BOOLEAN      NOT NULL DEFAULT TRUE,
                 UNIQUE (extraction_item_id)
             )
         $sql$;
