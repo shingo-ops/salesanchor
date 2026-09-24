@@ -1,5 +1,9 @@
 # design: fix-extraction-rules-detail
 
+## 参照recon
+
+- recon: docs/handoff/fix-extraction-rules-detail/recon.md
+
 ## 参照ADR
 
 - ADR-027: i18n 強制 — 全 UI 文字列は t("key") 経由（新規キー追加なし）
@@ -36,11 +40,13 @@
 
 ## 維持の仕組み
 
+- 守り手: CI Frontend lint（i18nキー整合チェック）、ADR-144 UIガバナンスゲート（金型外コンポーネント検出）
 - フィールド名の一致はバックエンドのAPIスキーマを変更した際に、フロントエンドの型定義も同時に更新することで維持する
-- MobileShell と DesktopShell の項目の同期は、新規ページ追加時に両方に追加するコードレビューチェックで維持する
+- DesktopShell と MobileShell の項目の同期は、新規ページ追加時に両方に追加するコードレビューチェックで維持する
+- 解析管理サブナビへの統合は AnalysisRulesSidebarKey 型定義で管理（型エラーで未宣言キーを検出）
 
 ## 触らない範囲
 
 - バックエンドのAPIエンドポイント実装（`backend/`）: 変更なし
-- i18nファイル（`locales/`）: 変更なし（キーは既存）
+- i18nファイル（`locales/`）: `analysisRules.sidebar.extractionRules` キーを ja/en 両方に追加
 - CSSファイル: 変更なし
