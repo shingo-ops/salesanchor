@@ -56,12 +56,32 @@ def fetch_all_buyback_prices() -> None:
     except Exception:  # noqa: BLE001
         logger.exception("[buyback_scraper] アラートチェックでエラー")
 
+    try:
+        stats = asyncio.run(_run_product_matching())
+        logger.info(
+            "[buyback_scraper] 商品マッチング完了: auto=%d, pending_review=%d, unmatched=%d",
+            stats["auto"],
+            stats["pending_review"],
+            stats["unmatched"],
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("[buyback_scraper] 商品マッチングでエラー")
+
 
 async def _run_alert_check() -> int:
     """アラートチェックを非同期で実行する。"""
     from app.services.buyback_scraper.alert_checker import check_alerts
 
     return await check_alerts()
+
+
+async def _run_product_matching() -> dict:
+    """商品マッチングを非同期で実行する。"""
+    from app.services.buyback_scraper.product_matcher import match_buyback_products
+
+    session_factory = _build_async_session_factory()
+    async with session_factory() as db:
+        return await match_buyback_products(db)
 
 
 async def _fetch_all() -> None:
