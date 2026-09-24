@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -446,7 +447,7 @@ class SupplierExtractionOverviewItem(BaseModel):
 
 
 class SupplierSourceMessage(BaseModel):
-    id: int
+    id: UUID
     raw_text: str
     created_at: datetime
 

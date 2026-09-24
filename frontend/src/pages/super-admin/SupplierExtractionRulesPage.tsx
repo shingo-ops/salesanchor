@@ -47,7 +47,7 @@ interface SupplierExtractionDetail {
 }
 
 interface SupplierSourceMessage {
-  id: number;
+  id: string;
   raw_text: string;
   created_at: string;
 }
