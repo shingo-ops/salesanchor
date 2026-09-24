@@ -34,12 +34,12 @@
    - 追加: testPassed state（ゲート）
    - 変更: 作成ボタン disabled 条件 `!testPassed || creating`
 
-4. `frontend/src/locales/ja.json` / `en.json` — ruleManagement.create キー整理
+4. `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` — ruleManagement.create キー整理
 
 ## 影響範囲
 
-- 変更: `RuleCreateDrawer.tsx` のみ（AnalysisRulesPage.tsx は props 変更なし）
-- 変更: `TcgStatusMasterCreate` スキーマ（CSV インポートには影響しない — 別パス）
+- 変更: RuleCreateDrawer のみ（AnalysisRulesPage は props 変更なし）
+- 変更: TcgStatusMasterCreate スキーマ（CSV インポートには影響しない — 別パス）
 
 ## 外部・過去事例の参照と我々への応用
 
