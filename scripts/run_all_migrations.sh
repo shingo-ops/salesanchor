@@ -806,3 +806,6 @@ run_sql migrations/20260924_100000_buyback_product_matching.sql
 # analysis_run_snapshots.unit_id / condition_id: UUID → INTEGER 型修正
 # analysis_results が INTEGER 型のためスナップショット保存時の型不一致を解消
 run_sql migrations/20260924_110000_fix_analysis_run_snapshots_unit_condition_type.sql
+
+# ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
+run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
