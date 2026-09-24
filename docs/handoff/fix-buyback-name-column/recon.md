@@ -9,7 +9,7 @@
 ## 原因特定
 
 ### エラー箇所
-- `backend/app/routers/buyback_prices.py`（buyback_prices.py 内の SQL 2箇所）
+- buyback_prices router（`backend/app/routers/` 配下・buyback_prices.py）の SQL 2箇所
 
 ### SQL 内の誤ったカラム名
 - 誤: `pr.name_ja`（2箇所）
@@ -20,9 +20,9 @@
 - `name_ja` というカラムは products テーブルに存在しない
 
 ## 影響範囲
-- `backend/app/routers/buyback_prices.py` の SQL クエリ 2箇所のみ
+- buyback_prices.py の SQL クエリ 2箇所のみ
 - フロントエンド変更なし
 - マイグレーション変更なし
 
 ## 関連 PR
-- PR #3718: products テーブルとの LEFT JOIN を追加した際に `name_ja` と誤記
+- PR #3718: products テーブルとの LEFT JOIN 追加時に `name` を `name_ja` と誤記
