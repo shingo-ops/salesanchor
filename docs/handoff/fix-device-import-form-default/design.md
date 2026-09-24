@@ -1,6 +1,6 @@
 # 端末取り込みが Form 既定値を下流へ渡さないようにする
 
-対象ADR: 対象外（DBスキーマ・解析ロジックの変更を伴わない不具合修正）
+対象ADR: ADR-100（取り込み・解析パイプライン。端末からの取り込み経路の不具合修正）
 recon: `docs/handoff/fix-device-import-form-default/recon.md`（事象・原因・検出漏れの理由）
 
 ## 方針
