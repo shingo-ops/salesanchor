@@ -212,7 +212,7 @@ async def fetch_output_rows(
 
     sql = text(f"""{source_cte(schema=TCG_SCHEMA)}
         SELECT
-            COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo',
+            COALESCE(TO_CHAR(sm.line_posted_at AT TIME ZONE 'Asia/Tokyo',
                              'YYYY-MM-DD HH24:MI:SS'), '')          AS posted_at,
             COALESCE(p.mark, '')                                    AS mark,
             COALESCE(p.name, '')                                    AS japanese_title,
