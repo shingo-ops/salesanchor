@@ -69,9 +69,11 @@ AND ar.pid_resolved = false
 AND sm.is_active = true;
 ```
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-ADR-1002 Phase C のデータ移行パターンとして、段階的識別子移行でアプリ層フォールバック変換を採用する手法は一般的（Django の migration, Rails の double-write パターン等）。
+段階的識別子移行（product_code → products.id）で過渡期データが混在するケースは、Django migration の `allow_unicode_usernames` フォールバックや Rails の double-write パターンと同構造。アプリ層で変換を吸収し DB スキーマを変えない設計が最小リスク。
+
+本プロジェクトへの応用: `product_code_to_id` フォールバックマッピングをアプリ層に閉じることで、DB 上の `extraction_items.resolved_product_code` を一括更新する不可逆 DML を回避する。
 
 ## 維持の仕組み
 
@@ -80,5 +82,5 @@ ADR-1002 Phase C のデータ移行パターンとして、段階的識別子移
 
 ## 守り手
 
-- CI: `test_gemini_resolved_product_code_v5_pid_basis` — 新形式の正常動作
-- CI: `test_gemini_resolved_product_code_legacy_format_fallback` — 旧形式フォールバック動作（今回追加）
+- 守り手: `test_gemini_resolved_product_code_v5_pid_basis` — 新形式の正常動作（既存テスト）
+- 守り手: `test_gemini_resolved_product_code_legacy_format_fallback` — 旧形式フォールバック動作（今回追加）

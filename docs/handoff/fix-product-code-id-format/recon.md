@@ -54,7 +54,7 @@ GROUP BY ei.resolved_product_code, p.id
 
 ### ADR 検索結果
 
-- `docs/adr/ADR-1002-*.md` — ADR-1002: TCG マスタ SSOT 統合（Phase A/B/C）
+- `docs/adr/ADR-1002-unify-product-id-and-fix-migration-compat.md` — ADR-1002: TCG マスタ SSOT 統合（Phase A/B/C）
 - 今回は ADR-1002 Phase C のデータ移行漏れの修正
 
 ## スコープ
