@@ -179,6 +179,10 @@ function AlertRuleForm({ onSave, onCancel }: AlertRuleFormProps) {
   );
 }
 
+interface AlertRulesResponse {
+  items: AlertRule[];
+}
+
 /* ─── BuybackAlertModal ─────────────────────────────────────────────────── */
 
 interface BuybackAlertModalProps {
@@ -196,7 +200,7 @@ export function BuybackAlertModal({ open, onClose }: BuybackAlertModalProps) {
     if (!open) return;
     setAlertLoading(true);
     api
-      .get("/buyback-alerts")
+      .get<AlertRulesResponse>("/buyback-alerts")
       .then((res) => setAlertRules(res.items))
       .catch(() => { /* ignore */ })
       .finally(() => setAlertLoading(false));
@@ -205,7 +209,7 @@ export function BuybackAlertModal({ open, onClose }: BuybackAlertModalProps) {
   const fetchAlertRules = async () => {
     setAlertLoading(true);
     try {
-      const res = await api.get("/buyback-alerts");
+      const res = await api.get<AlertRulesResponse>("/buyback-alerts");
       setAlertRules(res.items);
     } catch { /* ignore */ }
     setAlertLoading(false);
