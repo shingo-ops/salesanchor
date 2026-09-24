@@ -22,8 +22,8 @@
 
 | 経路 | スクリプト | supplier_code 形式 | line_name | category |
 |------|-----------|-------------------|-----------|----------|
-| 手動インポート（旧） | `seed_suppliers_from_line_master.py` | `SUP-xxx`（3桁） | NULL | individual |
-| LINE自動登録（新） | `tcg_line_import_svc.py` | `SP-xxxxx`（5桁） | = name の値 | corporate |
+| 手動インポート（旧） | seed_suppliers_from_line_master.py（現存しない・削除済み） | SUP-xxx（3桁） | NULL | individual |
+| LINE自動登録（新） | tcg_line_import_svc.py（現存しない・リネーム済み） | SP-xxxxx（5桁） | = name の値 | corporate |
 
 同一人物の name が両方のレコードで一致しているため、UI・API でフィルタすると重複表示が発生する。
 

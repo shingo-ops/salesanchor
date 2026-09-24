@@ -59,11 +59,16 @@ name 重複の再発防止（DB UNIQUE 制約追加など）は本スコープ�
 理由:
 - `name` カラムは意図的に重複可能な場合がある（同名の別人物など）
 - 再発防止は ADR レベルの設計判断が必要（ADR-085 の改訂または新 ADR）
-- 根本解決は `seed_suppliers_from_line_master.py` と `tcg_line_import_svc.py` の登録経路統合（別スコープ）
+- 根本解決は手動インポートスクリプトと LINE 自動登録サービスの登録経路統合（別スコープ）
+
+守り手: Shingo（PO）— ADR-085 改訂時に UNIQUE 制約追加の是非を判断
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 PostgreSQL の FK 再割当て + ソフト削除パターンは一般的な重複解消手法。
 参照: ADR-085（Supplier Master Design）、ADR-090（LINE Import Service Architecture）
+
+過去事例: PR #3582 / #3585（supplier_ssot line_name dedup）で同様の FK 再割当てパターンを採用済み。
+今回はその応用として name 重複軸に適用する。
