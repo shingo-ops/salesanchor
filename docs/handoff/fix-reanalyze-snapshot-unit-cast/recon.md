@@ -24,7 +24,7 @@ analysis_run_snapshots.condition_id = uuid
 > Note: unit_id/condition_id are UUID here (legacy snapshot format, differs from analysis_results integer)
 
 ## コード箇所
-`backend/app/services/tcg_product_master_svc.py:614,617` — INSERT SELECT で ar.unit_id / ar.condition_id を直接参照
+`backend/app/services/tcg_product_master_svc.py:614` — INSERT SELECT で ar.unit_id を直接参照（:617 も同様）
 
 ## 修正方針
 スナップショットの unit_id/condition_id は比較用補助情報。

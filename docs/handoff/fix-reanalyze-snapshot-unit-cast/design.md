@@ -3,6 +3,9 @@
 ## recon参照
 docs/handoff/fix-reanalyze-snapshot-unit-cast/recon.md
 
+## ADR参照
+- ADR-072: write endpoint の db.commit() 直後に reset_tenant_context() 必須（本修正は同エリアの services ファイル変更）
+
 ## 変更前後
 - 変更前: `ar.unit_id` (integer) → `analysis_run_snapshots.unit_id` (uuid) — 型不一致エラー
 - 変更後: `NULL::uuid` → `analysis_run_snapshots.unit_id` (uuid) — 型一致
@@ -24,5 +27,4 @@ PostgreSQL では integer→uuid の暗黙キャストは不可。NULL::uuid は
 ## 維持の仕組み
 analysis_run_snapshots.unit_id / condition_id を将来 integer 型に変更する場合は、NULL::uuid キャストを ar.unit_id / ar.condition_id に戻す。inline コメントを残してあるため変更時に気づける。
 
-## 守り手
-ruff PASS済み
+守り手: ruff CI（backend/app/services/ 変更時に自動実行）
