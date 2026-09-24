@@ -10,16 +10,14 @@ UPPER(p.category) で GROUP BY しても別タブになってしまう。
 
 ## 証拠（file:line）
 
-対象ファイル: backend/app/routers/buyback_prices.py
+対象ファイル: `backend/app/routers/buyback_prices.py`
 
-| 行 | 変更前 |
-|----|--------|
-| 413 | SELECT UPPER(p.category), count(DISTINCT p.id) (swing CTE variant) |
-| 419 | GROUP BY UPPER(p.category) (swing CTE variant) |
-| 424 | SELECT UPPER(p.category), count(DISTINCT p.id) (non-swing variant) |
-| 428 | GROUP BY UPPER(p.category) (non-swing variant) |
-| 439 | UPPER(p.category) = UPPER(:category) (filter condition) |
-| 479 | UPPER(p.category) AS category (main SELECT) |
+- `backend/app/routers/buyback_prices.py:413` — SELECT UPPER(p.category), count(DISTINCT p.id) (swing CTE variant)
+- `backend/app/routers/buyback_prices.py:419` — GROUP BY UPPER(p.category) (swing CTE variant)
+- `backend/app/routers/buyback_prices.py:424` — SELECT UPPER(p.category), count(DISTINCT p.id) (non-swing variant)
+- `backend/app/routers/buyback_prices.py:428` — GROUP BY UPPER(p.category) (non-swing variant)
+- `backend/app/routers/buyback_prices.py:439` — UPPER(p.category) = UPPER(:category) (filter condition)
+- `backend/app/routers/buyback_prices.py:479` — UPPER(p.category) AS category (main SELECT)
 
 ## SSOTの問題
 

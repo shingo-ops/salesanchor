@@ -1,5 +1,9 @@
 # design: fix-buyback-category-key
 
+recon: docs/handoff/fix-buyback-category-key/recon.md
+
+ADR: ADR-155
+
 ## KGI
 
 買取 by-product ページのカテゴリタブが bsp.card_game の正規化キー（例: pokemon / onepiece）で表示され、
