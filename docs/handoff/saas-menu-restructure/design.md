@@ -41,9 +41,16 @@
 | メニューが常時表示（アコーディオン不要） | サイドバーにカーソルを当てて確認 |
 | 一般ユーザーにSAAS管理者メニューが非表示 | 一般アカウントでログインして確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - 既存の NavLink + sidebar-item パターン（DesktopShell.tsx:222-231 等）と同一構造を採用
+- MobileShell.tsx の他の resolveItem 順序並べ替えパターンと同様のアプローチ
+
+## 維持の仕組み
+
+- i18n キー名は変更していないため、ja.json/en.json の追加変更なし
+- DesktopShell の "more" SidebarAccordion は引き続き既存のまま動作
+- `saasAdminItems` 配列への項目追加/削除は既存パターンで継続可能
 
 ## 影響範囲
 
