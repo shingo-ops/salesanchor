@@ -83,8 +83,9 @@ def test_eleven_columns_enforced(suffix):
     row = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE)
     if suffix:
         row += "｜P1" + suffix
-    with pytest.raises(ValueError):
-        gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    items, parse_errors = gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    assert items == []
+    assert len(parse_errors) == 1
 
 
 def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):
@@ -103,7 +104,7 @@ def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):
 @pytest.mark.parametrize("invalid", [False, True])
 def test_reference_change_saves_no_items(monkeypatch, invalid):
     session = MagicMock()
-    session.execute.return_value.fetchone.return_value = ("job", "OP-01")
+    session.execute.return_value.fetchone.return_value = ("job", "OP-01", None, None, None, None, None, None)
     monkeypatch.setattr(extraction, "work_schema_ready", lambda _: True)
     versions = iter([REF, {**REF, "products": []}])
     def load(*_):
@@ -136,7 +137,7 @@ def test_valid_but_conflicting_id_resolved_to_none(monkeypatch):
         }
 
     session = MagicMock()
-    session.execute.return_value.fetchone.return_value = ("job", "Gundam EB01")
+    session.execute.return_value.fetchone.return_value = ("job", "Gundam EB01", None, None, None, None, None, None)
     monkeypatch.setattr(extraction, "work_schema_ready", lambda _: True)
     monkeypatch.setattr(extraction, "load_work_reference", lambda *_: REF)
     monkeypatch.setattr(extraction, "extract_message", fake_extract)

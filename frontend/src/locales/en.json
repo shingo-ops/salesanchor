@@ -194,7 +194,9 @@
     "page": "Page {{page}}",
     "unitDay": " days",
     "unresolved": "Unresolved",
-    "required": "This field is required"
+    "required": "This field is required",
+    "errorLoading": "Error loading",
+    "forbidden": "Access forbidden"
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -282,6 +284,7 @@
     "conditionsMaster": "Condition Master",
     "productCategories": "Product Categories",
     "superAdminSupplierMaster": "Supplier Master",
+    "superAdminSupplierExtractionRules": "Extraction Rules",
     "units": "Units",
     "noteMaster": "Note Master",
     "buybackPrices": "Buyback Prices"
@@ -4489,5 +4492,33 @@
     "compatV1Description": "Legacy GAS matching result (existing DB values, gemini_all.json basis)",
     "namefirstV1Description": "New server engine (in-memory calculation, keyword longest-match)",
     "pidResolutionRate": "PID Resolution Rate"
+  },
+  "supplierExtractionRules": {
+    "title": "Supplier Extraction Rules",
+    "supplierName": "Supplier",
+    "totalItems": "Total Items",
+    "unitNg": "Unit Unresolved",
+    "hasRules": "Rules",
+    "configured": "Configured",
+    "notConfigured": "Not Set",
+    "sourceText": "Source Text",
+    "noSourceText": "No active messages",
+    "priceFormat": "Price Format",
+    "priceFormatHelper": "e.g., @{price}円, ¥{price}, {price}×",
+    "qtyFormat": "Quantity Format",
+    "qtyFormatHelper": "e.g., 在庫数：{qty}, {qty}@, ×{qty}",
+    "orderPattern": "Price/Quantity Order",
+    "orderPriceAtQty": "Price@Quantity",
+    "orderQtyAtPrice": "Quantity@Price",
+    "orderUnset": "Not Set",
+    "defaultUnit": "Default Unit",
+    "defaultUnitHelper": "Default unit for suppliers who don't write units (e.g., BOX)",
+    "stateFormat": "State Format",
+    "stateFormatHelper": "e.g., [state], (state), ■state:",
+    "notes": "Additional Instructions for Gemini",
+    "notesHelper": "Free-text extraction rules specific to this supplier",
+    "save": "Save",
+    "saved": "Saved",
+    "back": "Back to List"
   }
 }

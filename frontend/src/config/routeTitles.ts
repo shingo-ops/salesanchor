@@ -12,7 +12,8 @@
  */
 export const ROUTE_TITLE_KEYS: Record<string, string> = {
   "/super-admin/tcg-sold-out":     "nav.superAdminTcgSoldOut",
-  "/super-admin/analysis-rules":   "nav.superAdminAnalysisRules",
+  "/super-admin/analysis-rules":              "nav.superAdminAnalysisRules",
+  "/super-admin/supplier-extraction-rules":   "nav.superAdminSupplierExtractionRules",
   "/":                           "nav.dashboard",
   "/lead-chat":                  "nav.leadChat",
   "/crm/leads":                  "nav.leads",

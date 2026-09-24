@@ -39,6 +39,9 @@ from app.schemas.central_masters import (
     CentralSupplierUpdate,
     SupplierDiscordRoutingCreate,
     SupplierDiscordRoutingResponse,
+    SupplierExtractionOverviewItem,
+    SupplierExtractionRulesResponse,
+    SupplierExtractionRulesUpdate,
     SupplierPromptResponse,
     SupplierPromptUpdate,
 )
@@ -731,3 +734,180 @@ async def get_supplier_parse_stats(
         )
         for row in rows
     ]
+
+
+# ============================================================================
+# 仕入元抽出ルール (public.suppliers.extraction_* 列)
+#   GET  /super-admin/suppliers/extraction-overview  — 全仕入元 + unit_ng数 + ルール有無
+#   GET  /super-admin/suppliers/{id}/extraction-rules — ルール取得 + 最新原文
+#   PATCH /super-admin/suppliers/{id}/extraction-rules — ルール更新
+# ============================================================================
+
+_EXTRACTION_RULE_COLS = (
+    "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
+    "extraction_default_unit, extraction_notes, extraction_state_format"
+)
+
+_EXTRACTION_RULE_UPDATABLE = {
+    "extraction_price_format",
+    "extraction_qty_format",
+    "extraction_order_pattern",
+    "extraction_default_unit",
+    "extraction_notes",
+    "extraction_state_format",
+}
+
+
+@router.get(
+    "/super-admin/suppliers/extraction-overview",
+    response_model=list[SupplierExtractionOverviewItem],
+    dependencies=[Depends(require_super_admin)],
+    summary="全仕入元の抽出ルール有無 + unit_ng件数一覧",
+)
+async def list_supplier_extraction_overview(
+    db: AsyncSession = Depends(get_db),
+) -> list[SupplierExtractionOverviewItem]:
+    """全仕入元（tenant_id IS NULL）の抽出ルール設定有無と unit_ng 件数を返す。"""
+    result = await db.execute(
+        text(
+            """
+            SELECT
+                s.id AS supplier_id,
+                s.supplier_code,
+                s.name,
+                (
+                    s.extraction_price_format IS NOT NULL
+                    OR s.extraction_qty_format IS NOT NULL
+                    OR s.extraction_order_pattern IS NOT NULL
+                    OR s.extraction_default_unit IS NOT NULL
+                    OR s.extraction_notes IS NOT NULL
+                    OR s.extraction_state_format IS NOT NULL
+                ) AS has_extraction_rules,
+                COALESCE(ng.unit_ng_count, 0) AS unit_ng_count
+            FROM public.suppliers s
+            LEFT JOIN LATERAL (
+                SELECT COUNT(ar.id) AS unit_ng_count
+                FROM public.supplier_channels sc
+                JOIN public.source_messages sm ON sm.supplier_channel_id = sc.id AND sm.is_active = TRUE
+                JOIN public.extraction_jobs ej ON ej.source_message_id = sm.id
+                JOIN public.extraction_items ei ON ei.extraction_job_id = ej.id
+                JOIN public.analysis_results ar ON ar.extraction_item_id = ei.id
+                WHERE sc.supplier_id = s.id
+                  AND ar.unit_resolved = FALSE
+            ) ng ON TRUE
+            WHERE s.tenant_id IS NULL AND s.is_active = TRUE
+            ORDER BY ng.unit_ng_count DESC, s.name ASC
+            """
+        )
+    )
+    return [
+        SupplierExtractionOverviewItem(
+            supplier_id=row["supplier_id"],
+            supplier_code=row["supplier_code"],
+            name=row["name"],
+            has_extraction_rules=bool(row["has_extraction_rules"]),
+            unit_ng_count=int(row["unit_ng_count"] or 0),
+        )
+        for row in result.mappings().all()
+    ]
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/extraction-rules",
+    response_model=SupplierExtractionRulesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の抽出ルール取得（最新原文付き）",
+)
+async def get_supplier_extraction_rules(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierExtractionRulesResponse:
+    """仕入元の抽出ルール列 + 最新 source_messages.raw_text を返す。"""
+    row = (
+        await db.execute(
+            text(
+                f"SELECT id, {_EXTRACTION_RULE_COLS} "
+                "FROM public.suppliers WHERE id = :id AND tenant_id IS NULL"
+            ),
+            {"id": supplier_id},
+        )
+    ).mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+
+    # 最新原文を取得
+    raw_row = (
+        await db.execute(
+            text(
+                """
+                SELECT sm.raw_text
+                FROM public.source_messages sm
+                JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+                WHERE sc.supplier_id = :sid AND sm.is_active = TRUE
+                ORDER BY sm.received_at DESC NULLS LAST
+                LIMIT 1
+                """
+            ),
+            {"sid": supplier_id},
+        )
+    ).mappings().first()
+
+    return SupplierExtractionRulesResponse(
+        supplier_id=supplier_id,
+        extraction_price_format=row["extraction_price_format"],
+        extraction_qty_format=row["extraction_qty_format"],
+        extraction_order_pattern=row["extraction_order_pattern"],
+        extraction_default_unit=row["extraction_default_unit"],
+        extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
+        latest_raw_text=raw_row["raw_text"] if raw_row else None,
+    )
+
+
+@router.patch(
+    "/super-admin/suppliers/{supplier_id}/extraction-rules",
+    response_model=SupplierExtractionRulesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の抽出ルール更新",
+)
+async def update_supplier_extraction_rules(
+    supplier_id: int,
+    data: SupplierExtractionRulesUpdate,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierExtractionRulesResponse:
+    """仕入元の extraction_* 列を更新する。未指定フィールドは変更しない。"""
+    update_data = data.model_dump(exclude_unset=True)
+    update_data = {k: v for k, v in update_data.items() if k in _EXTRACTION_RULE_UPDATABLE}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="更新するフィールドを指定してください")
+
+    set_clauses = ", ".join(f"{k} = :{k}" for k in update_data)
+    update_data["id"] = supplier_id
+    try:
+        result = await db.execute(
+            text(
+                f"UPDATE public.suppliers SET {set_clauses}, updated_at = NOW() "
+                f"WHERE id = :id AND tenant_id IS NULL "
+                f"RETURNING id, {_EXTRACTION_RULE_COLS}"
+            ),
+            update_data,
+        )
+    except Exception as exc:
+        await db.rollback()
+        raise HTTPException(status_code=500, detail=f"更新エラー: {exc}") from exc
+
+    row = result.mappings().first()
+    if not row:
+        raise HTTPException(status_code=404, detail="仕入元が見つかりません")
+    await db.commit()
+
+    return SupplierExtractionRulesResponse(
+        supplier_id=row["id"],
+        extraction_price_format=row["extraction_price_format"],
+        extraction_qty_format=row["extraction_qty_format"],
+        extraction_order_pattern=row["extraction_order_pattern"],
+        extraction_default_unit=row["extraction_default_unit"],
+        extraction_notes=row["extraction_notes"],
+        extraction_state_format=row["extraction_state_format"],
+        latest_raw_text=None,  # PATCH 応答では原文は含まない
+    )

@@ -118,13 +118,21 @@ def work_schema_ready(session: Session) -> bool:
 def _run_extraction(session: Session, source_message_id: str) -> dict:
     """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
 
-    # --- 1. pending job を取得 ---
+    # --- 1. pending job を取得（仕入元抽出ルールも同時取得）---
     row = session.execute(
         text(
             f"""
-            SELECT ej.id, sm.raw_text
+            SELECT ej.id, sm.raw_text,
+                   s.extraction_price_format,
+                   s.extraction_qty_format,
+                   s.extraction_order_pattern,
+                   s.extraction_default_unit,
+                   s.extraction_notes,
+                   s.extraction_state_format
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+            LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+            LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
             WHERE ej.source_message_id = :smid
               AND ej.status = 'pending'
             ORDER BY ej.created_at DESC
@@ -153,6 +161,19 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     extraction_job_id = str(row[0])
     raw_text = row[1] or ""
 
+    # 仕入元抽出ルールを取得して supplier_context を構築
+    supplier_context: dict | None = None
+    extraction_rules = {
+        "extraction_price_format": row[2],
+        "extraction_qty_format": row[3],
+        "extraction_order_pattern": row[4],
+        "extraction_default_unit": row[5],
+        "extraction_notes": row[6],
+        "extraction_state_format": row[7],
+    }
+    if any(v for v in extraction_rules.values()):
+        supplier_context = extraction_rules
+
     # C94: 空テキストチェック — strip後0文字なら Gemini スキップ
     # 設計根拠: sold-out-rules-design.md §14.1.2
     if len(raw_text.strip()) == 0:
@@ -175,7 +196,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
 
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
-        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder)
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
     except RecordError as exc:
@@ -189,8 +210,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
-def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder):
-    result = extract_message(raw_text, work_reference=reference, recorder=recorder)
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None):
+    result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
     digest = reference_digest(reference)

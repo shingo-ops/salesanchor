@@ -215,8 +215,31 @@ def _get_genai_client():
 _GEMINI_MODEL = "gemini-3.1-flash-lite"
 
 
+def _build_supplier_context_note(supplier_context: dict) -> str:
+    """仕入元抽出ルール辞書をプロンプト注入用テキストに変換する。"""
+    parts = []
+    label_map = {
+        "extraction_price_format": "価格フォーマット",
+        "extraction_qty_format": "数量フォーマット",
+        "extraction_order_pattern": "注文パターン",
+        "extraction_default_unit": "デフォルト単位",
+        "extraction_notes": "補足ルール",
+        "extraction_state_format": "状態フォーマット",
+    }
+    for key, label in label_map.items():
+        val = supplier_context.get(key)
+        if val:
+            parts.append(f"- {label}: {val}")
+    if not parts:
+        return ""
+    return "【仕入元固有の抽出ルール】\n" + "\n".join(parts)
+
+
 def call_gemini_extraction(
-    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None, recorder=None,
+    raw_text: str, works: list[dict] | None = None, *,
+    work_reference: dict | None = None,
+    recorder=None,
+    supplier_context: dict | None = None,
 ) -> str:
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
@@ -225,6 +248,9 @@ def call_gemini_extraction(
     temperature: 0
     プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + prompt_input（v3では作品マスタ参照を追加）
     同期 SDK (models.generate_content) を使用。
+
+    Args:
+        supplier_context: 仕入元抽出ルール辞書。指定された場合プロンプトに注入する。
 
     Raises:
         RuntimeError: GEMINI_API_KEY 未設定 / API 呼び出し失敗
@@ -240,10 +266,15 @@ def call_gemini_extraction(
     import json
 
     reference = json.dumps(work_names, ensure_ascii=False)
-    full_prompt = f"{PROMPT_TEXT}\n作品マスタ（参照値）:{reference}\n\n原文:\n{prompt_input}"
+
+    # 仕入元ルール注入（指定がある場合のみ）
+    supplier_note = _build_supplier_context_note(supplier_context) if supplier_context else ""
+    supplier_section = f"\n{supplier_note}\n" if supplier_note else ""
+
+    full_prompt = f"{PROMPT_TEXT}{supplier_section}\n作品マスタ（参照値）:{reference}\n\n原文:\n{prompt_input}"
 
     if work_reference is not None:
-        full_prompt = (f"{WORK_ID_PROMPT_TEXT}\n商品・作品マスタ（参照値）:"
+        full_prompt = (f"{WORK_ID_PROMPT_TEXT}{supplier_section}\n商品・作品マスタ（参照値）:"
                        f"{reference_json(work_reference)}\n\n原文:\n{prompt_input}")
 
     payload: dict[str, Any] = {"model": _GEMINI_MODEL, "contents": full_prompt, "config": {"temperature": 0}}
@@ -287,23 +318,31 @@ def call_gemini_extraction(
 
 def parse_extraction_response(
     response_text: str, raw_text: str, *, version: int = 2,
-) -> list[dict]:
+) -> tuple[list[dict], list[dict]]:
     """
-    Gemini の出力テキスト（パイプ区切りテーブル）をパースして items リストを返す。
+    Gemini の出力テキスト（パイプ区切りテーブル）をパースして items リストと parse_errors リストを返す。
 
-    戻り値: [
-      {
-        "raw_product_name": str,
-        "raw_quantity": str,
-        "raw_price": str,
-        "raw_unit": str,
-        "raw_state": str,
-        "raw_memo": str,
-        "line_start": int,  # 1-based
-        "line_end": int,    # 1-based
-      },
-      ...
-    ]
+    戻り値: (items, parse_errors)
+      items: [
+        {
+          "raw_product_name": str,
+          "raw_quantity": str,
+          "raw_price": str,
+          "raw_unit": str,
+          "raw_state": str,
+          "raw_memo": str,
+          "line_start": int,  # 1-based
+          "line_end": int,    # 1-based
+        },
+        ...
+      ]
+      parse_errors: [
+        {"line": str, "error": str},
+        ...
+      ]
+
+    ヘッダー欠落（v3+）は全体エラーとして ValueError を送出する（データ行の部分保存とは別）。
+    データ行のパースエラーは parse_errors に追加して続行する。
     """
     if version not in (2, 3, 4, 5):
         raise ValueError("Unsupported extraction format")
@@ -317,6 +356,7 @@ def parse_extraction_response(
         header += "｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE"
     max_line = len(raw_text.split("\n"))
     items: list[dict] = []
+    parse_errors: list[dict] = []
     header_seen = False
 
     for line_raw in response_text.split("\n"):
@@ -332,77 +372,81 @@ def parse_extraction_response(
                 header_seen = True
             continue
 
-        cols = line.split(_PIPE)
-        if len(cols) != expected_columns:
-            if version >= 3:
-                raise ValueError(f"v{version} extraction expected {expected_columns} columns, got {len(cols)}")
-            logger.warning(
-                "[gemini_extraction] schema error: expected 7 cols, got %d: %r",
-                len(cols),
-                line[:120],
+        try:
+            cols = line.split(_PIPE)
+            if len(cols) != expected_columns:
+                if version >= 3:
+                    raise ValueError(f"v{version} extraction expected {expected_columns} columns, got {len(cols)}")
+                logger.warning(
+                    "[gemini_extraction] schema error: expected 7 cols, got %d: %r",
+                    len(cols),
+                    line[:120],
+                )
+                continue
+
+            (
+                raw_product_name,
+                raw_quantity,
+                raw_price,
+                raw_unit,
+                raw_state,
+                raw_memo,
+                raw_span,
+            ) = [c.strip() for c in cols[:7]]
+            raw_work_name = cols[7].strip() if version >= 3 else None
+            raw_work_span = cols[8].strip() if version >= 3 else None
+
+            # RAW_SOURCE_LINE_SPAN パース
+            span_m = _SPAN_RE.match(raw_span.strip())
+            if span_m:
+                line_start = int(span_m.group(1))
+                line_end = int(span_m.group(2)) if span_m.group(2) else line_start
+            else:
+                if version >= 3:
+                    # Shape only: never include customer text or model output in errors/logs.
+                    detail = ""
+                    if version in (4, 5):
+                        brackets = "[" in raw_span or "]" in raw_span
+                        alphabet = all(c in "L0123456789-" for c in raw_span)
+                        detail = f" (length={len(raw_span)}, brackets={brackets}, allowed_chars={alphabet})"
+                    raise ValueError(f"v{version} extraction has an invalid product source span{detail}")
+                # パース不能の span は警告のみ、先頭行扱いで続行
+                logger.warning(
+                    "[gemini_extraction] unparseable span: %r", raw_span
+                )
+                line_start = 1
+                line_end = 1
+
+            if version >= 3 and not (1 <= line_start <= line_end <= max_line):
+                raise ValueError("v3 extraction product source span is outside the source")
+            # 旧7列の位置補正を維持。v3の作品根拠は補正せず保存し、解析時に検証する。
+            # クランプ
+            line_start = max(1, min(line_start, max_line))
+            line_end = max(line_start, min(line_end, max_line))
+
+            items.append(
+                {
+                    "raw_product_name": raw_product_name,
+                    "raw_quantity": raw_quantity,
+                    "raw_price": raw_price,
+                    "raw_unit": raw_unit,
+                    "raw_state": raw_state,
+                    "raw_memo": raw_memo,
+                    "line_start": line_start,
+                    "line_end": line_end,
+                    "raw_work_name": raw_work_name,
+                    "raw_work_source_line_span": raw_work_span,
+                    "resolved_work_id": (cols[9].strip() or None) if version in (4, 5) else None,
+                    "resolved_product_code": (cols[10].strip() or None) if version == 5 else None,
+                }
             )
+        except ValueError as exc:
+            parse_errors.append({"line": line, "error": str(exc)})
             continue
-
-        (
-            raw_product_name,
-            raw_quantity,
-            raw_price,
-            raw_unit,
-            raw_state,
-            raw_memo,
-            raw_span,
-        ) = [c.strip() for c in cols[:7]]
-        raw_work_name = cols[7].strip() if version >= 3 else None
-        raw_work_span = cols[8].strip() if version >= 3 else None
-
-        # RAW_SOURCE_LINE_SPAN パース
-        span_m = _SPAN_RE.match(raw_span.strip())
-        if span_m:
-            line_start = int(span_m.group(1))
-            line_end = int(span_m.group(2)) if span_m.group(2) else line_start
-        else:
-            if version >= 3:
-                # Shape only: never include customer text or model output in errors/logs.
-                detail = ""
-                if version in (4, 5):
-                    brackets = "[" in raw_span or "]" in raw_span
-                    alphabet = all(c in "L0123456789-" for c in raw_span)
-                    detail = f" (length={len(raw_span)}, brackets={brackets}, allowed_chars={alphabet})"
-                raise ValueError(f"v{version} extraction has an invalid product source span{detail}")
-            # パース不能の span は警告のみ、先頭行扱いで続行
-            logger.warning(
-                "[gemini_extraction] unparseable span: %r", raw_span
-            )
-            line_start = 1
-            line_end = 1
-
-        if version >= 3 and not (1 <= line_start <= line_end <= max_line):
-            raise ValueError("v3 extraction product source span is outside the source")
-        # 旧7列の位置補正を維持。v3の作品根拠は補正せず保存し、解析時に検証する。
-        # クランプ
-        line_start = max(1, min(line_start, max_line))
-        line_end = max(line_start, min(line_end, max_line))
-
-        items.append(
-            {
-                "raw_product_name": raw_product_name,
-                "raw_quantity": raw_quantity,
-                "raw_price": raw_price,
-                "raw_unit": raw_unit,
-                "raw_state": raw_state,
-                "raw_memo": raw_memo,
-                "line_start": line_start,
-                "line_end": line_end,
-                "raw_work_name": raw_work_name,
-                "raw_work_source_line_span": raw_work_span,
-                "resolved_work_id": (cols[9].strip() or None) if version in (4, 5) else None,
-                "resolved_product_code": (cols[10].strip() or None) if version == 5 else None,
-            }
-        )
 
     if version >= 3 and not header_seen:
         raise ValueError("v3 extraction response has no header")
-    return items
+    return items, parse_errors
 
 
 # ---------------------------------------------------------------------------
@@ -411,10 +455,23 @@ def parse_extraction_response(
 
 
 def extract_message(
-    raw_text: str, works: list[dict] | None = None, *, work_reference: dict | None = None, recorder=None,
+    raw_text: str, works: list[dict] | None = None, *,
+    work_reference: dict | None = None,
+    recorder=None,
+    supplier_context: dict | None = None,
 ) -> dict:
     """
     1 通の raw_text を Gemini で抽出する。
+
+    Args:
+        raw_text: 抽出対象の原文テキスト
+        works: 作品リスト（オプション）
+        work_reference: 作品参照（オプション、指定時 v5 形式を使用）
+        recorder: AttemptRecorder（オプション）
+        supplier_context: 仕入元ごとの抽出ルール辞書（オプション）
+            extraction_price_format, extraction_qty_format,
+            extraction_order_pattern, extraction_default_unit,
+            extraction_notes を含む dict
 
     戻り値:
       {
@@ -423,6 +480,7 @@ def extract_message(
         "items": [...],
         "raw_response": str,
         "error_message": str | None,
+        "parse_errors": [...],
       }
     """
     prompt_version = WORK_ID_PROMPT_VERSION if work_reference is not None else PROMPT_VERSION
@@ -430,23 +488,36 @@ def extract_message(
     error_code = "API_ERROR"
     try:
         kwargs = {"recorder": recorder} if recorder is not None else {}
+        if supplier_context:
+            kwargs["supplier_context"] = supplier_context
         if work_reference is None:
             response_text = call_gemini_extraction(raw_text, works=works, **kwargs)
         else:
             response_text = call_gemini_extraction(raw_text, works=works, work_reference=work_reference, **kwargs)
         error_code = "INVALID_RESPONSE"
-        items = parse_extraction_response(response_text, raw_text, version=5 if work_reference is not None else 3)
+        items, parse_errors = parse_extraction_response(response_text, raw_text, version=5 if work_reference is not None else 3)
         if work_reference is not None:
             for item in items:
                 item["resolved_work_id"] = validate_work_id(item["resolved_work_id"], work_reference)
                 item["resolved_product_code"] = validate_product_id(item.get("resolved_product_code"), work_reference)
-        status = "done" if items else "empty"
+        if items:
+            status = "done"
+        elif parse_errors:
+            status = "error"
+        else:
+            status = "empty"
+        error_message = None
+        if parse_errors:
+            error_message = f"PARTIAL_PARSE_ERRORS({len(parse_errors)}): " + "; ".join(
+                e["error"] for e in parse_errors[:3]
+            )
         return {
             "status": status,
             "prompt_version": prompt_version,
             "items": items,
-            "raw_response": response_text,
-            "error_message": None,
+            "raw_response": response_text if recorder is not None else "",
+            "error_message": error_message,
+            "parse_errors": parse_errors,
         }
     except SoftTimeLimitExceeded:
         raise

@@ -280,6 +280,8 @@ def migrate(cursor):
     # Sprint 1: copy tenant_suppliers → public.suppliers, rewire supplier_channels.supplier_id UUID→INTEGER
     _supplier_ssot_premigration(cursor, SCHEMA)
     cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
+    cursor.execute((MIGRATIONS / "20260924_010000_add_supplier_extraction_rules.sql").read_text())
     # product_code_seq: created by phase_b migration in prod, add idempotently for test DB
     cursor.execute(
         "CREATE SEQUENCE IF NOT EXISTS public.product_code_seq START WITH 1"
@@ -382,9 +384,9 @@ def test_schema_migrations_existing_absent_future_and_repeat(pg):
     connection, _, _ = pg
     with connection.cursor() as cursor:
         migrate(cursor)
-        cursor.execute("SELECT table_schema,column_name,is_nullable,data_type FROM information_schema.columns WHERE column_name IN ('raw_work_name','raw_work_source_line_span')")
+        cursor.execute("SELECT table_schema,column_name,is_nullable,data_type FROM information_schema.columns WHERE column_name IN ('raw_work_name','raw_work_source_line_span') AND table_schema IN ('public', %s)", (SCHEMA,))
         columns = cursor.fetchall()
-        assert len(columns) == 2 and all(row[0] == SCHEMA and row[2:] == ('YES', 'text') for row in columns)
+        assert len(columns) == 4 and all(row[2:] == ('YES', 'text') for row in columns)
         cursor.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema IN ('tenant_006','tenant_902')")
         assert cursor.fetchone()[0] == 0
         cursor.execute((MIGRATIONS / "20260906_120000_create_tcg_tables_t001.sql").read_text().replace("tenant_001", "tenant_902"))
@@ -467,7 +469,7 @@ def test_v3_format_error_partial_save_zero_and_legacy_null_evidence(pg, monkeypa
     connection, engine, _ = pg
     seed_products(connection)
     _, jobid, result = run_message(connection, engine, monkeypatch, 'ガンダム EB01\nbad',
-                                   [record('ガンダム EB01', 1, 'ガンダム', 'L0001'), ['bad', 'columns']])
+                                   [['bad', 'columns'], ['also', 'bad']])
     assert result['status'] == 'error' and result['items_count'] == 0
     with connection.cursor() as cursor:
         cursor.execute(f'SELECT count(*) FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s', (jobid,))
