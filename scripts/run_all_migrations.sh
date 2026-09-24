@@ -806,3 +806,6 @@ run_sql migrations/20260924_100000_buyback_product_matching.sql
 # analysis_run_snapshots.unit_id / condition_id: UUID → INTEGER 型修正
 # analysis_results が INTEGER 型のためスナップショット保存時の型不一致を解消
 run_sql migrations/20260924_110000_fix_analysis_run_snapshots_unit_condition_type.sql
+
+# Supplier name dedup: 同一name重複21組を統合（旧SUP-xxx → 新SP-xxxxx）
+run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
