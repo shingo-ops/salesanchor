@@ -612,10 +612,10 @@ def _run_reanalyze_sync(extraction_job_id: str) -> dict[str, Any]:
                     ar.product_id,
                     ar.pid_resolved,
                     ar.pid_basis,
-                    ar.unit_id,
+                    NULL::uuid,          -- unit_id: analysis_results=integer, snapshots=uuid (legacy). Cast to NULL.
                     ar.unit_canonical,
                     ar.unit_resolved,
-                    ar.condition_id,
+                    NULL::uuid,          -- condition_id: analysis_results=integer, snapshots=uuid (legacy). Cast to NULL.
                     ar.condition_canonical,
                     ar.condition_basis,
                     ar.quantity_normalized,
