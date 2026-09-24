@@ -4582,6 +4582,19 @@
     "patternUnit": "[Unit]",
     "patternPrice": "[Price]",
     "patternStatus": "[Status]",
-    "patternNewline": "(newline)"
+    "patternNewline": "(newline)",
+    "knowledgeSection": "Knowledge Rules",
+    "knowledgeBlockDelimiters": "Block Delimiters",
+    "knowledgeBlockDelimitersHelper": "Select symbols that mark product block start",
+    "knowledgeSkipConditions": "Skip Conditions",
+    "knowledgeSkipConditionsHelper": "Blocks containing these keywords are excluded",
+    "knowledgeStatusKeywords": "Status Keywords",
+    "knowledgeStatusKeywordsHelper": "Keywords for Pre-order / In Stock status",
+    "addRule": "Add",
+    "createNewRule": "Create New",
+    "newRulePattern": "Pattern",
+    "newRuleNormalizedTo": "Maps To",
+    "ruleLinked": "Linked",
+    "noRulesLinked": "Not configured"
   }
 }
