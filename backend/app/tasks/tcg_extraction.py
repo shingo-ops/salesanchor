@@ -129,7 +129,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                    s.extraction_default_unit,
                    s.extraction_notes,
                    s.extraction_state_format,
-                   s.extraction_example_text
+                   s.extraction_example_text,
+                   sc.supplier_id
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
@@ -176,6 +177,27 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     if any(v for v in extraction_rules.values()):
         supplier_context = extraction_rules
 
+    # Knowledge リンクを取得（supplier_id がある場合のみ）
+    knowledge_links: list[dict] | None = None
+    supplier_id = row[9]
+    if supplier_id is not None:
+        kl_rows = session.execute(
+            text(
+                """
+                SELECT kr.category, kr.pattern, kr.normalized_to
+                FROM public.supplier_knowledge_links skl
+                JOIN public.knowledge_rules kr ON kr.id = skl.knowledge_rule_id
+                WHERE skl.supplier_id = :sid AND skl.is_active = TRUE AND kr.is_active = TRUE
+                """
+            ),
+            {"sid": supplier_id},
+        ).fetchall()
+        if kl_rows:
+            knowledge_links = [
+                {"category": r[0], "pattern": r[1], "normalized_to": r[2]}
+                for r in kl_rows
+            ]
+
     # C94: 空テキストチェック — strip後0文字なら Gemini スキップ
     # 設計根拠: sold-out-rules-design.md §14.1.2
     if len(raw_text.strip()) == 0:
@@ -198,7 +220,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
 
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
-        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context)
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
     except RecordError as exc:
@@ -212,8 +234,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
-def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None):
-    result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context)
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None):
+    result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
     digest = reference_digest(reference)

@@ -259,7 +259,7 @@ def test_actual_8mib_pg_boundaries(pg, monkeypatch, stage, extra):
         measured[0]["raw_memo"] = item["raw_memo"]
         assert len(records.encoded(measured).encode()) == target
 
-    def synthetic_extract(raw_text, *, work_reference, recorder, supplier_context=None):
+    def synthetic_extract(raw_text, *, work_reference, recorder, supplier_context=None, knowledge_links=None):
         payload = {"model": "synthetic", "contents": "あ", "config": {"temperature": 0}}
         if stage == "input":
             size = len(records.encoded({**payload, "reference": work_reference}).encode())

@@ -215,8 +215,14 @@ def _get_genai_client():
 _GEMINI_MODEL = "gemini-3.1-flash-lite"
 
 
-def _build_supplier_context_note(supplier_context: dict) -> str:
-    """仕入元抽出ルール辞書をプロンプト注入用テキストに変換する。"""
+def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[dict] | None = None) -> str:
+    """仕入元抽出ルール辞書をプロンプト注入用テキストに変換する。
+
+    Args:
+        supplier_context: 仕入元抽出ルール辞書（extraction_price_format 等）
+        knowledge_links: supplier_knowledge_links + knowledge_rules の結合行リスト。
+                         各要素は {"category": str, "pattern": str, "normalized_to": str|None}
+    """
     import json as _json
 
     _PATTERN_MAP = {
@@ -267,6 +273,25 @@ def _build_supplier_context_note(supplier_context: dict) -> str:
     if supplier_context.get("extraction_example_text"):
         lines.append("以下はこの仕入元の典型的なメッセージ例です。この書き方パターンを参考にして解析してください：")
         lines.append(supplier_context["extraction_example_text"])
+
+    # Knowledge リンクからの注入
+    if knowledge_links:
+        delimiters = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "block_delimiter"]
+        skip_conds = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "skip_condition"]
+        status_kws = [
+            (lnk["pattern"], lnk.get("normalized_to") or "")
+            for lnk in knowledge_links if lnk["category"] == "status_keyword"
+        ]
+
+        if delimiters:
+            lines.append(f"商品ブロックの区切り記号: {', '.join(delimiters)}")
+            lines.append("上記の記号で始まる行が各商品ブロックの開始です。")
+        if skip_conds:
+            lines.append(f"以下のキーワードを含むブロックは出力対象外（スキップ）: {', '.join(skip_conds)}")
+        if status_kws:
+            status_parts = [f"「{kw}」→{norm}" for kw, norm in status_kws]
+            lines.append(f"ステータス判定: {', '.join(status_parts)}")
+
     if not lines:
         return ""
     return "\n".join(lines)
@@ -277,6 +302,7 @@ def call_gemini_extraction(
     work_reference: dict | None = None,
     recorder=None,
     supplier_context: dict | None = None,
+    knowledge_links: list[dict] | None = None,
 ) -> str:
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
@@ -288,6 +314,8 @@ def call_gemini_extraction(
 
     Args:
         supplier_context: 仕入元抽出ルール辞書。指定された場合プロンプトに注入する。
+        knowledge_links: supplier_knowledge_links + knowledge_rules 結合行リスト。
+                         各要素は {"category": str, "pattern": str, "normalized_to": str|None}
 
     Raises:
         RuntimeError: GEMINI_API_KEY 未設定 / API 呼び出し失敗
@@ -305,7 +333,11 @@ def call_gemini_extraction(
     reference = json.dumps(work_names, ensure_ascii=False)
 
     # 仕入元ルール注入（指定がある場合のみ）
-    supplier_note = _build_supplier_context_note(supplier_context) if supplier_context else ""
+    supplier_note = (
+        _build_supplier_context_note(supplier_context, knowledge_links=knowledge_links)
+        if supplier_context
+        else (_build_supplier_context_note({}, knowledge_links=knowledge_links) if knowledge_links else "")
+    )
     supplier_section = f"\n{supplier_note}\n" if supplier_note else ""
 
     full_prompt = f"{PROMPT_TEXT}{supplier_section}\n作品マスタ（参照値）:{reference}\n\n原文:\n{prompt_input}"
@@ -496,6 +528,7 @@ def extract_message(
     work_reference: dict | None = None,
     recorder=None,
     supplier_context: dict | None = None,
+    knowledge_links: list[dict] | None = None,
 ) -> dict:
     """
     1 通の raw_text を Gemini で抽出する。
@@ -509,6 +542,8 @@ def extract_message(
             extraction_price_format, extraction_qty_format,
             extraction_order_pattern, extraction_default_unit,
             extraction_notes を含む dict
+        knowledge_links: supplier_knowledge_links + knowledge_rules 結合行リスト（オプション）
+            各要素は {"category": str, "pattern": str, "normalized_to": str|None}
 
     戻り値:
       {
@@ -527,6 +562,8 @@ def extract_message(
         kwargs = {"recorder": recorder} if recorder is not None else {}
         if supplier_context:
             kwargs["supplier_context"] = supplier_context
+        if knowledge_links:
+            kwargs["knowledge_links"] = knowledge_links
         if work_reference is None:
             response_text = call_gemini_extraction(raw_text, works=works, **kwargs)
         else:

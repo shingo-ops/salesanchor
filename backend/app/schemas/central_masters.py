@@ -655,3 +655,49 @@ class TcgNoteMasterResponse(TcgNoteMasterBase):
     updated_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / skip_condition / status_keyword）
+# ============================================================================
+
+class KnowledgeRuleSimpleResponse(BaseModel):
+    """抽出カテゴリ専用の軽量レスポンス（既存 KnowledgeRuleResponse とは独立）"""
+    id: int
+    category: str
+    pattern_type: str
+    pattern: str
+    normalized_to: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KnowledgeRuleSimpleCreate(BaseModel):
+    category: str = Field(max_length=50)
+    pattern_type: str = Field(default="exact", max_length=20)
+    pattern: str = Field(max_length=500)
+    normalized_to: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
+# ============================================================================
+# 仕入元 Knowledge リンク（supplier_knowledge_links）
+# ============================================================================
+
+class SupplierKnowledgeLinkResponse(BaseModel):
+    id: int
+    supplier_id: int
+    knowledge_rule_id: int
+    category: str
+    pattern: str
+    normalized_to: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupplierKnowledgeLinkCreate(BaseModel):
+    knowledge_rule_id: int
