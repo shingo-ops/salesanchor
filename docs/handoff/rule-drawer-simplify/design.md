@@ -1,6 +1,8 @@
 # design.md — rule-drawer-simplify
 
-参照: [recon.md](./recon.md)
+参照: [recon.md](./recon.md) (`docs/handoff/rule-drawer-simplify/recon.md`)
+
+対象ADR: ADR-027（UI国際化）, ADR-144（UIガバナンス）
 
 ## KGI
 
