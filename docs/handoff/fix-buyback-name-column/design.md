@@ -1,13 +1,17 @@
 # design: fix-buyback-name-column
 
+## 参照
+- recon: docs/handoff/fix-buyback-name-column/recon.md
+- ADR-025: docs/adr/ADR-025_meta_integration_operational_hardening.md（本番運用フェーズのDB操作原則）
+
 ## 設計
 
 ### 変更内容
 buyback_prices router の SQL クエリ内で誤参照されている `pr.name_ja` を `pr.name` に修正。
 
 ### 変更箇所（修正前 → 修正後）
-- 店舗別ビュー SQL: `pr.name_ja` → `pr.name`
-- 商品別ビュー SQL: `pr.name_ja` → `pr.name`
+- `backend/app/routers/buyback_prices.py:233` 店舗別ビュー SQL: `pr.name_ja` → `pr.name`
+- `backend/app/routers/buyback_prices.py:399` 商品別ビュー SQL: `"name_ja"` → `"name"`
 
 ### 検証方法
 
@@ -25,7 +29,7 @@ PostgreSQL で `column does not exist` エラーが発生するのは SQL 内の
 
 ## 維持の仕組み
 
-守り手: コードレビュー時に SQL カラム名と実テーブル定義の一致を確認（SQL 文字列は静的解析対象外のため人的確認が必要）
+守り手: `backend/app/routers/buyback_prices.py` — コードレビュー時に SQL カラム名と実テーブル定義の一致を確認（SQL 文字列は静的解析対象外のため人的確認が必要）
 
 ## マイグレーション
 不要（スキーマ変更なし）
