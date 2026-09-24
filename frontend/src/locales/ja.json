@@ -350,7 +350,24 @@
     "alertCancel": "キャンセル",
     "alertCardGame": "カードゲーム",
     "alertShop": "買取店",
-    "loading": "読み込み中..."
+    "loading": "読み込み中...",
+    "columnLinkedProduct": "自社商品",
+    "pendingReview": "要確認",
+    "pendingReviewBtn": "要確認 ({{count}}件)",
+    "pendingReviewTitle": "商品紐付け確認",
+    "pendingReviewDesc": "複数の候補が見つかった商品です。正しい商品を選んでください。",
+    "pendingReviewBuyback": "買取商品",
+    "pendingReviewCandidates": "候補",
+    "pendingReviewMatchedBy": "マッチワード: {{keyword}}",
+    "pendingReviewNoMatch": "該当なし",
+    "pendingReviewLinked": "紐付け完了",
+    "pendingReviewEmpty": "確認が必要な商品はありません",
+    "rematch": "再マッチ",
+    "rematchStarted": "再マッチを開始しました",
+    "rematchFailed": "再マッチの開始に失敗しました",
+    "matchStatusAuto": "自動",
+    "matchStatusManual": "手動",
+    "matchStatusUnmatched": "未紐付け"
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
