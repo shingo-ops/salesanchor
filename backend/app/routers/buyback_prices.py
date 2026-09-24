@@ -230,7 +230,7 @@ async def list_buyback_prices(
             l.fetched_at,
             p.last_seen_at,
             pr.product_code,
-            pr.name_ja      AS product_name_ja,
+            pr.name         AS product_name_ja,
             p.match_status
         FROM public.buyback_shop_products p
         LEFT JOIN latest_logs l ON l.shop_product_id = p.id
@@ -336,7 +336,7 @@ async def list_by_product(
         SELECT
             p.id,
             p.product_code,
-            p.name_ja,
+            p.name,
             p.category,
             p.release_date,
             p.image_url,
