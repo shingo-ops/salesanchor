@@ -19,9 +19,10 @@ PO判断: 箱系/シングル系フィルタ工程自体を排除する。
 | 全商品が常に候補として返される | 関数が `product_codes` をそのまま返すことで確認 |
 | pid_resolved率が改善する | デプロイ後に197件再解析で数値確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-GAS対照: `filterProductMasterByUnitCategoryV2_` (SystemResolverV2.gs) — フィルタ廃止の判断根拠として参照
+- GAS対照: `filterProductMasterByUnitCategoryV2_` (SystemResolverV2.gs) — 元々フィルタなし（全商品返却）のロジックが正式仕様であることを確認
+- 応用: GASと同等の「フィルタなし」状態に戻すことで、category未設定商品の除外を防ぐ
 
 ## 影響範囲
 
@@ -30,6 +31,8 @@ GAS対照: `filterProductMasterByUnitCategoryV2_` (SystemResolverV2.gs) — フ�
 - DB・マイグレーション: 影響なし
 
 ## 維持の仕組み
+
+守り手: CI lint（tcg_analyzer_svc.py の型チェック）・既存テスト944件
 
 - `filter_product_codes_by_unit_kubun` は引数シグネチャを維持（呼び出し元変更なし）
 - 関数本体が `return product_codes` のみになるため、将来的に呼び出し元から削除可能
