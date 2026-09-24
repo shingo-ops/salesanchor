@@ -30,11 +30,16 @@ import {
 import { BuybackPriceHistoryDrawer } from "./BuybackPriceHistoryDrawer";
 import { BuybackAlertModal } from "./BuybackAlertModal";
 import { BuybackPendingReviewModal } from "./BuybackPendingReviewModal";
+import { BuybackByProductPage } from "./BuybackByProductPage";
 import styles from "./BuybackPricesPage.module.css";
+
+type ViewMode = "shop" | "product";
 
 export default function BuybackPricesPage() {
   const { t } = useTranslation();
   const { isSuperAdmin } = useSuperAdmin();
+
+  const [viewMode, setViewMode] = useState<ViewMode>("shop");
 
   const [items, setItems] = useState<BuybackProduct[]>([]);
   const [total, setTotal] = useState(0);
@@ -260,25 +265,43 @@ export default function BuybackPricesPage() {
       <ContentToolbar
         left={
           <>
-            <SelectControl
-              options={shopOptions}
-              value={shop}
-              placeholder={t("buybackPrices.shopFilter")}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleShopChange(e.target.value as ShopFilter)}
-            />
-            <SelectControl
-              options={productTypeOptions}
-              value={productType}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
+            <Button
+              variant={viewMode === "shop" ? "primary" : "outline"}
               size="sm"
-            />
-            <Tabs
-              items={gameTabItems}
-              activeKey={cardGame}
-              onChange={handleCardGameChange}
-              variant="pill"
+              onClick={() => setViewMode("shop")}
+            >
+              {t("buybackPrices.byShop")}
+            </Button>
+            <Button
+              variant={viewMode === "product" ? "primary" : "outline"}
               size="sm"
-            />
+              onClick={() => setViewMode("product")}
+            >
+              {t("buybackPrices.byProduct.label")}
+            </Button>
+            {viewMode === "shop" && (
+              <>
+                <SelectControl
+                  options={shopOptions}
+                  value={shop}
+                  placeholder={t("buybackPrices.shopFilter")}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleShopChange(e.target.value as ShopFilter)}
+                />
+                <SelectControl
+                  options={productTypeOptions}
+                  value={productType}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
+                  size="sm"
+                />
+                <Tabs
+                  items={gameTabItems}
+                  activeKey={cardGame}
+                  onChange={handleCardGameChange}
+                  variant="pill"
+                  size="sm"
+                />
+              </>
+            )}
           </>
         }
         right={
@@ -314,42 +337,48 @@ export default function BuybackPricesPage() {
         }
       />
 
-      {loading && (
-        <p role="status" className={styles.statusMsg}>
-          {t("common.loading")}
-        </p>
-      )}
-      {!loading && error && (
-        <p role="alert" className={styles.errorMsg}>
-          {error}
-        </p>
-      )}
+      {viewMode === "product" ? (
+        <BuybackByProductPage />
+      ) : (
+        <>
+          {loading && (
+            <p role="status" className={styles.statusMsg}>
+              {t("common.loading")}
+            </p>
+          )}
+          {!loading && error && (
+            <p role="alert" className={styles.errorMsg}>
+              {error}
+            </p>
+          )}
 
-      {!error && (
-        <DataTable
-          columns={columns}
-          data={items}
-          rowKey={(row) => row.shop_product_id}
-          sortKey={sortKey}
-          sortDir={sortDir}
-          onSort={handleSort}
-          onRowClick={handleRowClick}
-          emptyState={<span>{t("buybackPrices.noData")}</span>}
-          page={page}
-          hasNextPage={hasNextPage}
-          onPageChange={setPage}
-          prevPageLabel={t("common.prevPage")}
-          nextPageLabel={t("common.nextPage")}
-          pageInfo={<span>{page} / {totalPages}</span>}
-          density="compact"
-        />
-      )}
+          {!error && (
+            <DataTable
+              columns={columns}
+              data={items}
+              rowKey={(row) => row.shop_product_id}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              onSort={handleSort}
+              onRowClick={handleRowClick}
+              emptyState={<span>{t("buybackPrices.noData")}</span>}
+              page={page}
+              hasNextPage={hasNextPage}
+              onPageChange={setPage}
+              prevPageLabel={t("common.prevPage")}
+              nextPageLabel={t("common.nextPage")}
+              pageInfo={<span>{page} / {totalPages}</span>}
+              density="compact"
+            />
+          )}
 
-      <BuybackPriceHistoryDrawer
-        open={drawerOpen}
-        product={selectedProduct}
-        onClose={() => setDrawerOpen(false)}
-      />
+          <BuybackPriceHistoryDrawer
+            open={drawerOpen}
+            product={selectedProduct}
+            onClose={() => setDrawerOpen(false)}
+          />
+        </>
+      )}
 
       <BuybackAlertModal
         open={alertsOpen}

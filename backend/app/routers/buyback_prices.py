@@ -298,6 +298,128 @@ async def list_buyback_prices(
 
 
 @router.get(
+    "/buyback-prices/by-product",
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_by_product(
+    category: str | None = Query(None, description="商品カテゴリ (例: pokemon)"),
+    limit: int = Query(50, ge=1, le=200, description="取得件数上限"),
+    offset: int = Query(0, ge=0, description="オフセット"),
+    db: AsyncSession = Depends(get_db),
+):
+    """自社商品マスタ軸の買取価格一覧。category別フィルタ、release_date DESC。
+
+    商品マスタを軸に各店舗（homura/shinsoku）の最新買取価格を横並びで返す。
+    LATERAL JOIN で各店舗の最新 price_log を効率的に取得。
+    """
+    await db.execute(text("SET LOCAL app.is_operator = 'true'"))
+
+    # カテゴリ別件数（タブ用）
+    counts_result = await db.execute(text("""
+        SELECT p.category, count(DISTINCT p.id)
+        FROM public.products p
+        JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+        WHERE bsp.product_id IS NOT NULL
+        GROUP BY p.category
+        ORDER BY count(DISTINCT p.id) DESC
+    """))
+    counts_by_category = {row[0]: row[1] for row in counts_result}
+
+    params: dict = {"limit": limit, "offset": offset}
+    where_clause = ""
+    if category:
+        where_clause = "AND p.category = :category"
+        params["category"] = category
+
+    query = text(f"""
+        SELECT
+            p.id,
+            p.product_code,
+            p.name_ja,
+            p.category,
+            p.release_date,
+            p.image_url,
+            homura.price_s   AS homura_price_s,
+            homura.price_a   AS homura_price_a,
+            homura.price_b   AS homura_price_b,
+            homura.shop_product_id AS homura_shop_product_id,
+            homura.product_name    AS homura_product_name,
+            shinsoku.price_s AS shinsoku_price_s,
+            shinsoku.price_a AS shinsoku_price_a,
+            shinsoku.price_b AS shinsoku_price_b,
+            shinsoku.shop_product_id AS shinsoku_shop_product_id,
+            shinsoku.product_name    AS shinsoku_product_name
+        FROM public.products p
+        LEFT JOIN LATERAL (
+            SELECT bsp.id AS shop_product_id, bsp.product_name,
+                   l.price_s, l.price_a, l.price_b
+            FROM public.buyback_shop_products bsp
+            JOIN public.buyback_price_logs l ON l.shop_product_id = bsp.id
+            WHERE bsp.product_id = p.id AND bsp.shop_code = 'homura'
+            ORDER BY l.fetched_at DESC
+            LIMIT 1
+        ) homura ON true
+        LEFT JOIN LATERAL (
+            SELECT bsp.id AS shop_product_id, bsp.product_name,
+                   l.price_s, l.price_a, l.price_b
+            FROM public.buyback_shop_products bsp
+            JOIN public.buyback_price_logs l ON l.shop_product_id = bsp.id
+            WHERE bsp.product_id = p.id AND bsp.shop_code = 'shinsoku'
+            ORDER BY l.fetched_at DESC
+            LIMIT 1
+        ) shinsoku ON true
+        WHERE p.id IN (
+            SELECT DISTINCT product_id FROM public.buyback_shop_products
+            WHERE product_id IS NOT NULL
+        )
+        {where_clause}
+        ORDER BY p.release_date DESC NULLS LAST, p.product_code
+        LIMIT :limit OFFSET :offset
+    """)
+
+    result = await db.execute(query, params)
+    rows = result.fetchall()
+
+    count_query = text(f"""
+        SELECT count(DISTINCT p.id)
+        FROM public.products p
+        JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+        WHERE bsp.product_id IS NOT NULL
+        {where_clause}
+    """)
+    count_params = {"category": category} if category else {}
+    total = (await db.execute(count_query, count_params)).scalar() or 0
+
+    items = []
+    for r in rows:
+        items.append({
+            "product_id": r[0],
+            "product_code": r[1],
+            "name_ja": r[2],
+            "category": r[3],
+            "release_date": r[4].isoformat() if r[4] else None,
+            "image_url": r[5],
+            "homura_price_s": r[6],
+            "homura_price_a": r[7],
+            "homura_price_b": r[8],
+            "homura_shop_product_id": str(r[9]) if r[9] else None,
+            "homura_product_name": r[10],
+            "shinsoku_price_s": r[11],
+            "shinsoku_price_a": r[12],
+            "shinsoku_price_b": r[13],
+            "shinsoku_shop_product_id": str(r[14]) if r[14] else None,
+            "shinsoku_product_name": r[15],
+        })
+
+    return {
+        "items": items,
+        "total": total,
+        "counts_by_category": counts_by_category,
+    }
+
+
+@router.get(
     "/buyback-prices/pending-reviews",
     response_model=PendingReviewListResponse,
     tags=["buyback-prices"],

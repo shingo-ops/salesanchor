@@ -367,7 +367,18 @@
     "rematchFailed": "再マッチの開始に失敗しました",
     "matchStatusAuto": "自動",
     "matchStatusManual": "手動",
-    "matchStatusUnmatched": "未紐付け"
+    "matchStatusUnmatched": "未紐付け",
+    "byShop": "店舗別",
+    "byProduct": {
+      "label": "商品別",
+      "columnProductCode": "商品コード",
+      "columnProductName": "商品名",
+      "columnReleaseDate": "発売日",
+      "columnHomuraS": "ホムラ S",
+      "columnShinsokuS": "シンソク S",
+      "columnDiff": "差額",
+      "noLinkedData": "紐付き商品データがありません"
+    }
   },
   "crm": {
     "subtitle": "リード・顧客情報を一元管理できます。"
