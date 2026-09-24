@@ -28,6 +28,6 @@
 - 自社既存ロジック `tcg_analyzer_svc.match_keyword()` の横展開。同一アルゴリズムを LINE解析パイプラインで運用中（精度: parity02測定済み）。新規外部事例は不要。
 
 ## 維持の仕組み
-- `product_matcher.py` は `tcg_analyzer_svc` に依存するため、KW辞書追加・正規化ロジック変更時は自動的に買取マッチングにも反映される
-- `match_status` の値（auto/pending_review/unmatched）はDB制約で列挙管理
+- `backend/app/services/buyback_scraper/product_matcher.py` は `backend/app/services/tcg_analyzer_svc.py` に依存するため、KW辞書追加・正規化ロジック変更時は自動的に買取マッチングにも反映される
+- match_status の値（auto/pending_review/unmatched）はDB制約で列挙管理
 - 管理画面の pending_review モーダルにより人間によるフォールバックを確保
