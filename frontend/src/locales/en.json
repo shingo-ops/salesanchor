@@ -391,8 +391,13 @@
       "priceHistory": "Price History (Shop Comparison)",
       "homura": "Homura",
       "shinsoku": "Shinsoku",
-      "noHistory": "No price history data"
-    }
+      "noHistory": "No price history data",
+      "columnMark": "Mark",
+      "columnBestPrice": "Best Price",
+      "columnYesterdayDiff": "vs Yesterday"
+    },
+    "shopHomura": "Homura",
+    "shopShinsoku": "Shinsoku"
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
