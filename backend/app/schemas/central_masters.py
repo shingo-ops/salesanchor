@@ -439,6 +439,22 @@ class SupplierExtractionOverviewItem(BaseModel):
 
 
 # ============================================================================
+# supplier source messages: 仕入元チャンネルの原文メッセージ一覧
+# ============================================================================
+
+
+class SupplierSourceMessage(BaseModel):
+    id: int
+    raw_text: str
+    created_at: datetime
+
+
+class SupplierSourceMessagesResponse(BaseModel):
+    messages: list[SupplierSourceMessage]
+    total: int
+
+
+# ============================================================================
 # conditions_master: 状態マスタ (public.conditions)
 # ============================================================================
 

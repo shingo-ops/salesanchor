@@ -18,6 +18,7 @@ import { TextField } from "../../components/TextField";
 import { Select } from "../../components/Select";
 import { Textarea } from "../../components/Textarea";
 import { Button } from "../../components/Button";
+import { DashboardIcons, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
 import "./SupplierExtractionRulesPage.css";
 
 // ---------------------------------------------------------------------------
@@ -32,20 +33,21 @@ interface SupplierOverviewItem {
   has_extraction_rules: boolean;
 }
 
-interface ExtractionRules {
+interface SupplierExtractionDetail {
+  supplier_id: number;
   extraction_price_format: string | null;
   extraction_qty_format: string | null;
   extraction_order_pattern: string | null;
   extraction_default_unit: string | null;
   extraction_state_format: string | null;
   extraction_notes: string | null;
+  latest_raw_text: string | null;
 }
 
-interface SupplierExtractionDetail {
+interface SupplierSourceMessage {
   id: number;
-  name: string;
-  source_text: string | null;
-  rules: ExtractionRules;
+  raw_text: string;
+  created_at: string;
 }
 
 type RulesFormState = {
@@ -66,14 +68,14 @@ const emptyForm: RulesFormState = {
   extraction_notes: "",
 };
 
-function detailToForm(rules: ExtractionRules): RulesFormState {
+function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
   return {
-    extraction_price_format: rules.extraction_price_format ?? "",
-    extraction_qty_format: rules.extraction_qty_format ?? "",
-    extraction_order_pattern: rules.extraction_order_pattern ?? "",
-    extraction_default_unit: rules.extraction_default_unit ?? "",
-    extraction_state_format: rules.extraction_state_format ?? "",
-    extraction_notes: rules.extraction_notes ?? "",
+    extraction_price_format: detail.extraction_price_format ?? "",
+    extraction_qty_format: detail.extraction_qty_format ?? "",
+    extraction_order_pattern: detail.extraction_order_pattern ?? "",
+    extraction_default_unit: detail.extraction_default_unit ?? "",
+    extraction_state_format: detail.extraction_state_format ?? "",
+    extraction_notes: detail.extraction_notes ?? "",
   };
 }
 
@@ -102,6 +104,9 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [form, setForm] = useState<RulesFormState>(emptyForm);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
+
+  const [messages, setMessages] = useState<SupplierSourceMessage[]>([]);
+  const [messageIndex, setMessageIndex] = useState(0);
 
   // ---------------------------------------------------------------------------
   // 一覧取得
@@ -142,7 +147,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         `/super-admin/suppliers/${id}/extraction-rules`
       );
       setDetail(data);
-      setForm(detailToForm(data.rules));
+      setForm(detailToForm(data));
     } catch {
       setDetailError(t("common.errorLoading"));
     } finally {
@@ -150,15 +155,31 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     }
   }, [t]);
 
+  const fetchMessages = useCallback(async (id: number) => {
+    try {
+      const data = await api.get<{ messages: SupplierSourceMessage[]; total: number }>(
+        `/super-admin/suppliers/${id}/source-messages`
+      );
+      setMessages(data.messages);
+      setMessageIndex(0);
+    } catch {
+      setMessages([]);
+      setMessageIndex(0);
+    }
+  }, []);
+
   const handleSelectSupplier = useCallback(
     (row: SupplierOverviewItem) => {
       setSelectedSupplier({ supplier_id: row.supplier_id, name: row.name });
       setDetail(null);
       setForm(emptyForm);
       setSavedMessage(false);
+      setMessages([]);
+      setMessageIndex(0);
       void fetchDetail(row.supplier_id);
+      void fetchMessages(row.supplier_id);
     },
-    [fetchDetail]
+    [fetchDetail, fetchMessages]
   );
 
   const handleBack = useCallback(() => {
@@ -166,6 +187,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setDetail(null);
     setForm(emptyForm);
     setSavedMessage(false);
+    setMessages([]);
+    setMessageIndex(0);
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -270,13 +293,43 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         <div className="supplier-rules-split">
           {/* 左: 原文テキスト */}
           <div className="supplier-rules-source">
-            {detail.source_text
-              ? detail.source_text
-              : (
-                <span className="supplier-rules-source-empty">
-                  {t("supplierExtractionRules.noSourceText")}
-                </span>
-              )}
+            {messages.length > 0 ? (
+              <>
+                <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)", marginBottom: "var(--space-3)" }}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    aria-label={t("common.previous")}
+                    onClick={() => setMessageIndex((i: number) => i - 1)}
+                    disabled={messageIndex <= 0}
+                  >
+                    {(() => { const BackIcon = SCHEDULE_SETTINGS_ICONS.back; return <BackIcon style={{ width: 16, height: 16 }} />; })()}
+                  </Button>
+                  <span style={{ fontSize: "var(--font-sm)" }}>
+                    {messageIndex + 1} / {messages.length}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    iconOnly
+                    aria-label={t("common.next")}
+                    onClick={() => setMessageIndex((i: number) => i + 1)}
+                    disabled={messageIndex >= messages.length - 1}
+                  >
+                    {(() => { const NextIcon = DashboardIcons.arrowRight; return <NextIcon style={{ width: 16, height: 16 }} />; })()}
+                  </Button>
+                </div>
+                <div style={{ fontSize: "var(--font-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                  {messages[messageIndex].created_at}
+                </div>
+                <pre className="supplier-rules-source-pre">{messages[messageIndex].raw_text}</pre>
+              </>
+            ) : (
+              <span className="supplier-rules-source-empty">
+                {t("supplierExtractionRules.noMessages")}
+              </span>
+            )}
           </div>
 
           {/* 右: ルール設定フォーム */}

@@ -4520,6 +4520,7 @@
     "notesHelper": "Free-text extraction rules specific to this supplier",
     "save": "Save",
     "saved": "Saved",
-    "back": "Back to List"
+    "back": "Back to List",
+    "noMessages": "No messages"
   }
 }

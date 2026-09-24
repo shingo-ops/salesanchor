@@ -44,6 +44,7 @@ from app.schemas.central_masters import (
     SupplierExtractionRulesUpdate,
     SupplierPromptResponse,
     SupplierPromptUpdate,
+    SupplierSourceMessagesResponse,
 )
 
 router = APIRouter()
@@ -911,3 +912,40 @@ async def update_supplier_extraction_rules(
         extraction_state_format=row["extraction_state_format"],
         latest_raw_text=None,  # PATCH 応答では原文は含まない
     )
+
+
+# ============================================================================
+# 仕入元チャンネル原文メッセージ一覧
+#   GET /super-admin/suppliers/{id}/source-messages
+# ============================================================================
+
+
+@router.get(
+    "/super-admin/suppliers/{supplier_id}/source-messages",
+    response_model=SupplierSourceMessagesResponse,
+    dependencies=[Depends(require_super_admin)],
+    summary="仕入元の原文メッセージ一覧取得",
+)
+async def list_supplier_source_messages(
+    supplier_id: int,
+    db: AsyncSession = Depends(get_db),
+) -> SupplierSourceMessagesResponse:
+    """仕入元チャンネルに紐付く source_messages を新着順で返す。"""
+    result = await db.execute(
+        text(
+            """
+            SELECT sm.id, sm.raw_text, sm.created_at
+            FROM public.source_messages sm
+            JOIN public.supplier_channels sc ON sm.supplier_channel_id = sc.id
+            WHERE sc.supplier_id = :supplier_id AND sm.is_active = true
+            ORDER BY sm.created_at DESC
+            """
+        ),
+        {"supplier_id": supplier_id},
+    )
+    rows = result.mappings().all()
+    messages = [
+        {"id": row["id"], "raw_text": row["raw_text"], "created_at": str(row["created_at"])}
+        for row in rows
+    ]
+    return SupplierSourceMessagesResponse(messages=messages, total=len(messages))
