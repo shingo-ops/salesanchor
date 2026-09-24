@@ -12,6 +12,7 @@ export interface BuybackProduct {
   price_b: number | null;
   price_c: number | null;
   last_seen_at: string | null;
+  swing_s?: number | null;
   // マッチング結果
   product_code: string | null;
   product_name_ja: string | null;
@@ -109,6 +110,7 @@ export interface ByProductItem {
   shinsoku_price_b: number | null;
   shinsoku_shop_product_id: string | null;
   shinsoku_product_name: string | null;
+  swing_s?: number | null;
 }
 
 export interface ByProductResponse {

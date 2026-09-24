@@ -73,6 +73,7 @@ class BuybackPriceItem(BaseModel):
     product_code: str | None
     product_name_ja: str | None
     match_status: str
+    swing_s: int | None = None
 
 
 class BuybackPriceListResponse(BaseModel):
@@ -159,6 +160,9 @@ async def list_buyback_prices(
     card_game: str | None = Query(default=None, description="カードゲーム種別 (例: pokemon)"),
     shop: str | None = Query(default=None, description="買取店コード (例: shinsoku, homura)"),
     product_type: str | None = Query(default=None, description="商品種別 (例: BOX, CARTON)"),
+    q: str | None = Query(default=None, description="商品名検索"),
+    swing_days: int | None = Query(default=None, description="価格変動の計算期間（日数）", ge=1, le=365),
+    min_swing: int | None = Query(default=None, description="最小変動額（円）", ge=0),
     limit: int = Query(default=50, ge=1, le=200, description="取得件数上限"),
     offset: int = Query(default=0, ge=0, description="オフセット"),
     sort: str = Query(default="price_s", description="ソート列"),
@@ -178,6 +182,7 @@ async def list_buyback_prices(
         "price_b": "l.price_b",
         "product_name": "p.product_name",
         "last_seen_at": "p.last_seen_at",
+        "swing_s": "COALESCE(sw.swing_s, 0)",
     }
     sort_col = _SORT_WHITELIST.get(sort, "l.price_s")
     sort_dir = "ASC" if order == "asc" else "DESC"
@@ -198,7 +203,34 @@ async def list_buyback_prices(
         conditions.append("p.product_type = :product_type")
         params["product_type"] = product_type
 
+    if q is not None:
+        conditions.append("p.product_name ILIKE :q")
+        params["q"] = f"%{q}%"
+
+    if swing_days is not None:
+        params["swing_days"] = swing_days
+
+    if min_swing is not None:
+        conditions.append("COALESCE(sw.swing_s, 0) >= :min_swing")
+        params["min_swing"] = min_swing
+
     where_clause = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+
+    # price_swing CTE は swing_days が指定された場合のみ追加
+    if swing_days is not None:
+        swing_cte = """, price_swing AS (
+            SELECT shop_product_id,
+                   COALESCE(MAX(price_s), 0) - COALESCE(MIN(price_s), 0) AS swing_s
+            FROM public.buyback_price_logs
+            WHERE fetched_at >= now() - :swing_days * interval '1 day'
+            GROUP BY shop_product_id
+        )"""
+        swing_join = "LEFT JOIN price_swing sw ON sw.shop_product_id = p.id"
+        swing_select = "COALESCE(sw.swing_s, 0) AS swing_s,"
+    else:
+        swing_cte = ""
+        swing_join = ""
+        swing_select = "NULL AS swing_s,"
 
     query = text(
         f"""
@@ -213,7 +245,7 @@ async def list_buyback_prices(
                 fetched_at
             FROM public.buyback_price_logs
             ORDER BY shop_product_id, fetched_at DESC
-        )
+        ){swing_cte}
         SELECT
             p.id            AS shop_product_id,
             p.shop_code,
@@ -231,43 +263,83 @@ async def list_buyback_prices(
             p.last_seen_at,
             pr.product_code,
             pr.name         AS product_name_ja,
-            p.match_status
+            p.match_status,
+            {swing_select}
+            0 AS _dummy
         FROM public.buyback_shop_products p
         LEFT JOIN latest_logs l ON l.shop_product_id = p.id
         LEFT JOIN public.products pr ON pr.id = p.product_id
+        {swing_join}
         {where_clause}
         ORDER BY {sort_col} {sort_dir} NULLS LAST
         LIMIT :limit OFFSET :offset
         """
     )
 
-    count_query = text(
-        f"""
-        SELECT COUNT(*)
-        FROM public.buyback_shop_products p
-        {where_clause}
-        """
-    )
+    if swing_cte:
+        count_query = text(
+            f"""
+            WITH{swing_cte.lstrip(", ")}
+            SELECT COUNT(*)
+            FROM public.buyback_shop_products p
+            {swing_join}
+            {where_clause}
+            """
+        )
+    else:
+        count_query = text(
+            f"""
+            SELECT COUNT(*)
+            FROM public.buyback_shop_products p
+            {where_clause}
+            """
+        )
 
     rows = (await db.execute(query, params)).mappings().all()
     total = (await db.execute(count_query, params)).scalar_one()
 
-    # カードゲーム別件数（タブ用 — shop フィルタのみ反映、card_game フィルタは除外）
+    # カードゲーム別件数（タブ用 — shop / product_type / q / swing フィルタを反映、card_game フィルタは除外）
     count_conditions = []
     count_params: dict = {}
     if shop is not None:
-        count_conditions.append("shop_code = :count_shop")
+        count_conditions.append("p.shop_code = :count_shop")
         count_params["count_shop"] = shop
     if product_type is not None:
-        count_conditions.append("product_type = :count_product_type")
+        count_conditions.append("p.product_type = :count_product_type")
         count_params["count_product_type"] = product_type
+    if q is not None:
+        count_conditions.append("p.product_name ILIKE :count_q")
+        count_params["count_q"] = f"%{q}%"
+    if min_swing is not None:
+        count_conditions.append("COALESCE(sw.swing_s, 0) >= :count_min_swing")
+        count_params["count_min_swing"] = min_swing
+    if swing_days is not None:
+        count_params["count_swing_days"] = swing_days
     count_where = ("WHERE " + " AND ".join(count_conditions)) if count_conditions else ""
-    game_counts_query = text(f"""
-        SELECT card_game, COUNT(*) as cnt
-        FROM public.buyback_shop_products
-        {count_where}
-        GROUP BY card_game
-    """)
+    if swing_days is not None:
+        game_counts_swing_cte = """WITH game_price_swing AS (
+            SELECT shop_product_id,
+                   COALESCE(MAX(price_s), 0) - COALESCE(MIN(price_s), 0) AS swing_s
+            FROM public.buyback_price_logs
+            WHERE fetched_at >= now() - :count_swing_days * interval '1 day'
+            GROUP BY shop_product_id
+        )"""
+        game_counts_swing_join = "LEFT JOIN game_price_swing sw ON sw.shop_product_id = p.id"
+        game_counts_query = text(f"""
+            {game_counts_swing_cte}
+            SELECT p.card_game, COUNT(*) as cnt
+            FROM public.buyback_shop_products p
+            {game_counts_swing_join}
+            {count_where}
+            GROUP BY p.card_game
+        """)
+    else:
+        game_counts_query = text(f"""
+            SELECT p.card_game, COUNT(*) as cnt
+            FROM public.buyback_shop_products p
+            {count_where}
+            GROUP BY p.card_game
+        """)
     game_counts_rows = (await db.execute(game_counts_query, count_params)).mappings().all()
     counts_by_game = {row["card_game"]: row["cnt"] for row in game_counts_rows}
 
@@ -290,6 +362,7 @@ async def list_buyback_prices(
             product_code=row["product_code"],
             product_name_ja=row["product_name_ja"],
             match_status=row["match_status"],
+            swing_s=row["swing_s"] if swing_days is not None else None,
         )
         for row in rows
     ]
@@ -304,35 +377,101 @@ async def list_buyback_prices(
 )
 async def list_by_product(
     category: str | None = Query(None, description="商品カテゴリ (例: pokemon)"),
+    q: str | None = Query(None, description="商品名検索"),
+    swing_days: int | None = Query(None, description="価格変動の計算期間（日数）", ge=1, le=365),
+    min_swing: int | None = Query(None, description="最小変動額（円）", ge=0),
     limit: int = Query(50, ge=1, le=200, description="取得件数上限"),
     offset: int = Query(0, ge=0, description="オフセット"),
     db: AsyncSession = Depends(get_db),
 ):
-    """自社商品マスタ軸の買取価格一覧。category別フィルタ、release_date DESC。
+    """自社商品マスタ軸の買取価格一覧。category / q / swing フィルタ、release_date DESC。
 
     商品マスタを軸に各店舗（homura/shinsoku）の最新買取価格を横並びで返す。
     LATERAL JOIN で各店舗の最新 price_log を効率的に取得。
     """
     await db.execute(text("SET LOCAL app.is_operator = 'true'"))
 
-    # カテゴリ別件数（タブ用）
-    counts_result = await db.execute(text("""
-        SELECT p.category, count(DISTINCT p.id)
-        FROM public.products p
-        JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
-        WHERE bsp.product_id IS NOT NULL
-        GROUP BY p.category
-        ORDER BY count(DISTINCT p.id) DESC
-    """))
+    # カテゴリ別件数（タブ用 — category フィルタは除外、q/swing は反映）
+    cat_count_conditions: list[str] = ["bsp.product_id IS NOT NULL"]
+    cat_count_params: dict = {}
+    if q is not None:
+        cat_count_conditions.append("p.name ILIKE :cat_q")
+        cat_count_params["cat_q"] = f"%{q}%"
+    if swing_days is not None and min_swing is not None:
+        cat_count_params["cat_swing_days"] = swing_days
+        cat_count_params["cat_min_swing"] = min_swing
+        cat_counts_query = text(f"""
+            WITH product_swing AS (
+                SELECT bsp2.product_id,
+                       COALESCE(MAX(l2.price_s), 0) - COALESCE(MIN(l2.price_s), 0) AS swing_s
+                FROM public.buyback_price_logs l2
+                JOIN public.buyback_shop_products bsp2 ON bsp2.id = l2.shop_product_id
+                WHERE l2.fetched_at >= now() - :cat_swing_days * interval '1 day'
+                  AND bsp2.product_id IS NOT NULL
+                GROUP BY bsp2.product_id
+            )
+            SELECT p.category, count(DISTINCT p.id)
+            FROM public.products p
+            JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            LEFT JOIN product_swing psw ON psw.product_id = p.id
+            WHERE {" AND ".join(cat_count_conditions)}
+              AND COALESCE(psw.swing_s, 0) >= :cat_min_swing
+            GROUP BY p.category
+            ORDER BY count(DISTINCT p.id) DESC
+        """)
+    else:
+        cat_counts_query = text(f"""
+            SELECT p.category, count(DISTINCT p.id)
+            FROM public.products p
+            JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            WHERE {" AND ".join(cat_count_conditions)}
+            GROUP BY p.category
+            ORDER BY count(DISTINCT p.id) DESC
+        """)
+    counts_result = await db.execute(cat_counts_query, cat_count_params)
     counts_by_category = {row[0]: row[1] for row in counts_result}
 
+    # 動的条件
+    extra_conditions: list[str] = []
     params: dict = {"limit": limit, "offset": offset}
-    where_clause = ""
+
     if category:
-        where_clause = "AND p.category = :category"
+        extra_conditions.append("p.category = :category")
         params["category"] = category
 
+    if q is not None:
+        extra_conditions.append("p.name ILIKE :q")
+        params["q"] = f"%{q}%"
+
+    if swing_days is not None:
+        params["swing_days"] = swing_days
+
+    if min_swing is not None:
+        extra_conditions.append("COALESCE(psw.swing_s, 0) >= :min_swing")
+        params["min_swing"] = min_swing
+
+    extra_where = (" AND " + " AND ".join(extra_conditions)) if extra_conditions else ""
+
+    # product_swing CTE は swing_days が指定された場合のみ
+    if swing_days is not None:
+        bp_swing_cte = """WITH product_swing AS (
+            SELECT bsp.product_id,
+                   COALESCE(MAX(l.price_s), 0) - COALESCE(MIN(l.price_s), 0) AS swing_s
+            FROM public.buyback_price_logs l
+            JOIN public.buyback_shop_products bsp ON bsp.id = l.shop_product_id
+            WHERE l.fetched_at >= now() - :swing_days * interval '1 day'
+              AND bsp.product_id IS NOT NULL
+            GROUP BY bsp.product_id
+        )"""
+        bp_swing_join = "LEFT JOIN product_swing psw ON psw.product_id = p.id"
+        bp_swing_select = "COALESCE(psw.swing_s, 0) AS swing_s,"
+    else:
+        bp_swing_cte = ""
+        bp_swing_join = ""
+        bp_swing_select = "NULL AS swing_s,"
+
     query = text(f"""
+        {bp_swing_cte}
         SELECT
             p.id,
             p.product_code,
@@ -349,7 +488,9 @@ async def list_by_product(
             shinsoku.price_a AS shinsoku_price_a,
             shinsoku.price_b AS shinsoku_price_b,
             shinsoku.shop_product_id AS shinsoku_shop_product_id,
-            shinsoku.product_name    AS shinsoku_product_name
+            shinsoku.product_name    AS shinsoku_product_name,
+            {bp_swing_select}
+            0 AS _dummy
         FROM public.products p
         LEFT JOIN LATERAL (
             SELECT bsp.id AS shop_product_id, bsp.product_name,
@@ -369,11 +510,12 @@ async def list_by_product(
             ORDER BY l.fetched_at DESC
             LIMIT 1
         ) shinsoku ON true
+        {bp_swing_join}
         WHERE p.id IN (
             SELECT DISTINCT product_id FROM public.buyback_shop_products
             WHERE product_id IS NOT NULL
         )
-        {where_clause}
+        {extra_where}
         ORDER BY p.release_date DESC NULLS LAST, p.product_code
         LIMIT :limit OFFSET :offset
     """)
@@ -381,15 +523,33 @@ async def list_by_product(
     result = await db.execute(query, params)
     rows = result.fetchall()
 
-    count_query = text(f"""
-        SELECT count(DISTINCT p.id)
-        FROM public.products p
-        JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
-        WHERE bsp.product_id IS NOT NULL
-        {where_clause}
-    """)
-    count_params = {"category": category} if category else {}
-    total = (await db.execute(count_query, count_params)).scalar() or 0
+    if swing_days is not None:
+        count_query = text(f"""
+            WITH product_swing AS (
+                SELECT bsp.product_id,
+                       COALESCE(MAX(l.price_s), 0) - COALESCE(MIN(l.price_s), 0) AS swing_s
+                FROM public.buyback_price_logs l
+                JOIN public.buyback_shop_products bsp ON bsp.id = l.shop_product_id
+                WHERE l.fetched_at >= now() - :swing_days * interval '1 day'
+                  AND bsp.product_id IS NOT NULL
+                GROUP BY bsp.product_id
+            )
+            SELECT count(DISTINCT p.id)
+            FROM public.products p
+            JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            LEFT JOIN product_swing psw ON psw.product_id = p.id
+            WHERE bsp.product_id IS NOT NULL
+            {extra_where}
+        """)
+    else:
+        count_query = text(f"""
+            SELECT count(DISTINCT p.id)
+            FROM public.products p
+            JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            WHERE bsp.product_id IS NOT NULL
+            {extra_where}
+        """)
+    total = (await db.execute(count_query, params)).scalar() or 0
 
     items = []
     for r in rows:
@@ -410,6 +570,7 @@ async def list_by_product(
             "shinsoku_price_b": r[13],
             "shinsoku_shop_product_id": str(r[14]) if r[14] else None,
             "shinsoku_product_name": r[15],
+            "swing_s": r[16] if swing_days is not None else None,
         })
 
     return {
