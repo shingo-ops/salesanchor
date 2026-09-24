@@ -3935,7 +3935,8 @@
       "conditionDefsMaster": "Condition Definitions",
       "weightClassesMaster": "Weight Classes",
       "groupRuleManagement": "Rule Management",
-      "ruleManagement": "Status Rules"
+      "ruleManagement": "Status Rules",
+      "extractionRules": "Extraction Rules"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",

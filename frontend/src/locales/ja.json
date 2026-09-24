@@ -3935,7 +3935,8 @@
       "conditionDefsMaster": "状態定義マスタ",
       "weightClassesMaster": "重量クラスマスタ",
       "groupRuleManagement": "ルール管理",
-      "ruleManagement": "ステータスルール"
+      "ruleManagement": "ステータスルール",
+      "extractionRules": "抽出ルール設定"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
