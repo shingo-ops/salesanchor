@@ -367,7 +367,18 @@
     "rematchFailed": "Failed to start rematch",
     "matchStatusAuto": "Auto",
     "matchStatusManual": "Manual",
-    "matchStatusUnmatched": "Unlinked"
+    "matchStatusUnmatched": "Unlinked",
+    "byShop": "By Shop",
+    "byProduct": {
+      "label": "By Product",
+      "columnProductCode": "Code",
+      "columnProductName": "Product",
+      "columnReleaseDate": "Release",
+      "columnHomuraS": "Homura S",
+      "columnShinsokuS": "Shinsoku S",
+      "columnDiff": "Diff",
+      "noLinkedData": "No linked product data"
+    }
   },
   "crm": {
     "subtitle": "Manage leads and customer information in one place."
