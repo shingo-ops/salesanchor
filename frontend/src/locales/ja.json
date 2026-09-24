@@ -4510,6 +4510,15 @@
       "effectExclude": "検索して除外",
       "testRequired": "テスト合格後に作成できます",
       "testPassed": "テスト合格"
+    },
+    "edit": {
+      "title": "ルール編集",
+      "update": "更新",
+      "updating": "更新中...",
+      "updated": "ルールを更新しました",
+      "disable": "このルールを無効にする",
+      "disabled": "ルールを無効にしました",
+      "disabling": "無効化中..."
     }
   },
   "reviewIssues": {
