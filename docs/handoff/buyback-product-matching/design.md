@@ -24,5 +24,10 @@
 - `backend/app/routers/buyback_prices.py` — API エンドポイント
 - `frontend/src/pages/buyback-prices/BuybackPendingReviewModal.tsx` — 確認UI
 
-## 外部事例
-- 該当なし（自社既存ロジック tcg_analyzer_svc の横展開のため）
+## 外部・過去事例の参照と我々への応用
+- 自社既存ロジック `tcg_analyzer_svc.match_keyword()` の横展開。同一アルゴリズムを LINE解析パイプラインで運用中（精度: parity02測定済み）。新規外部事例は不要。
+
+## 維持の仕組み
+- `product_matcher.py` は `tcg_analyzer_svc` に依存するため、KW辞書追加・正規化ロジック変更時は自動的に買取マッチングにも反映される
+- `match_status` の値（auto/pending_review/unmatched）はDB制約で列挙管理
+- 管理画面の pending_review モーダルにより人間によるフォールバックを確保

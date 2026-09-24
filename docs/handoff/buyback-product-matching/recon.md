@@ -11,7 +11,7 @@
 - `backend/app/services/tcg_analyzer_svc.py:175` — `load_product_keywords()`: 商品マスタからKW辞書を構築
 
 ### 買取テーブル元定義
-- `migrations/20260921_140000_create_buyback_tables.sql` — `buyback_shop_products` 定義
+- `migrations/20260922_000000_create_buyback_tables.sql` — `buyback_shop_products` 定義
   - `product_id UUID NULL` — 今回 INTEGER に変更（全件NULL、データ影響なし）
 
 ### 買取ルーター既存実装
