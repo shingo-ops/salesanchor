@@ -3,7 +3,7 @@
  *
  * 商品マスタを軸に homura/shinsoku の最新買取価格を横並び比較。
  * categoryタブで切り替え、発売日の新しい順に表示。
- * 行クリック → BuybackPriceHistoryDrawer（shop_product_id で価格推移）
+ * 行クリック → BuybackProductHistoryDrawer（product_id で店舗比較価格推移）
  */
 import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -13,12 +13,11 @@ import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import {
   type ByProductItem,
   type ByProductResponse,
-  type BuybackProduct,
   PER_PAGE,
   formatPrice,
   formatDate,
 } from "./buybackTypes";
-import { BuybackPriceHistoryDrawer } from "./BuybackPriceHistoryDrawer";
+import { BuybackProductHistoryDrawer } from "./BuybackProductHistoryDrawer";
 import styles from "./BuybackPricesPage.module.css";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -29,31 +28,6 @@ const CATEGORY_LABELS: Record<string, string> = {
   weiss: "buybackPrices.weiss",
   lorcana: "buybackPrices.lorcana",
 };
-
-/** ByProductItem → BuybackProduct（shop側 Drawer 用）に変換 */
-function toDrawerProduct(row: ByProductItem, shopCode: "homura" | "shinsoku"): BuybackProduct | null {
-  const shopProductId =
-    shopCode === "homura" ? row.homura_shop_product_id : row.shinsoku_shop_product_id;
-  if (!shopProductId) return null;
-  return {
-    shop_product_id: shopProductId,
-    shop_code: shopCode,
-    product_name: shopCode === "homura"
-      ? (row.homura_product_name ?? row.name_ja)
-      : (row.shinsoku_product_name ?? row.name_ja),
-    card_game: row.category,
-    product_type: "",
-    price_s: shopCode === "homura" ? row.homura_price_s : row.shinsoku_price_s,
-    price_a: shopCode === "homura" ? row.homura_price_a : row.shinsoku_price_a,
-    price_am: null,
-    price_b: shopCode === "homura" ? row.homura_price_b : row.shinsoku_price_b,
-    price_c: null,
-    last_seen_at: null,
-    product_code: row.product_code,
-    product_name_ja: row.name_ja,
-    match_status: "manual",
-  };
-}
 
 export function BuybackByProductPage() {
   const { t } = useTranslation();
@@ -68,7 +42,7 @@ export function BuybackByProductPage() {
 
   // Drawer
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerProduct, setDrawerProduct] = useState<BuybackProduct | null>(null);
+  const [selectedItem, setSelectedItem] = useState<ByProductItem | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -109,31 +83,8 @@ export function BuybackByProductPage() {
   };
 
   const handleRowClick = (row: ByProductItem) => {
-    // homura 優先でDrawerを開く
-    const product =
-      toDrawerProduct(row, "homura") ?? toDrawerProduct(row, "shinsoku");
-    if (product) {
-      setDrawerProduct(product);
-      setDrawerOpen(true);
-    }
-  };
-
-  const handleHomuraCellClick = (e: React.MouseEvent, row: ByProductItem) => {
-    e.stopPropagation();
-    const product = toDrawerProduct(row, "homura");
-    if (product) {
-      setDrawerProduct(product);
-      setDrawerOpen(true);
-    }
-  };
-
-  const handleShinsokuCellClick = (e: React.MouseEvent, row: ByProductItem) => {
-    e.stopPropagation();
-    const product = toDrawerProduct(row, "shinsoku");
-    if (product) {
-      setDrawerProduct(product);
-      setDrawerOpen(true);
-    }
+    setSelectedItem(row);
+    setDrawerOpen(true);
   };
 
   // カテゴリタブ（0件は非表示）
@@ -184,14 +135,9 @@ export function BuybackByProductPage() {
       width: "100px",
       renderCell: (row) =>
         row.homura_shop_product_id ? (
-          <button
-            type="button"
-            className={styles.priceCell}
-            onClick={(e) => handleHomuraCellClick(e, row)}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
+          <span className={styles.priceCell}>
             {formatPrice(row.homura_price_s)}
-          </button>
+          </span>
         ) : (
           <span style={{ color: "var(--text-muted)" }}>—</span>
         ),
@@ -202,14 +148,9 @@ export function BuybackByProductPage() {
       width: "100px",
       renderCell: (row) =>
         row.shinsoku_shop_product_id ? (
-          <button
-            type="button"
-            className={styles.priceCell}
-            onClick={(e) => handleShinsokuCellClick(e, row)}
-            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
-          >
+          <span className={styles.priceCell}>
             {formatPrice(row.shinsoku_price_s)}
-          </button>
+          </span>
         ) : (
           <span style={{ color: "var(--text-muted)" }}>—</span>
         ),
@@ -282,9 +223,9 @@ export function BuybackByProductPage() {
         />
       )}
 
-      <BuybackPriceHistoryDrawer
+      <BuybackProductHistoryDrawer
         open={drawerOpen}
-        product={drawerProduct}
+        item={selectedItem}
         onClose={() => setDrawerOpen(false)}
       />
     </>
