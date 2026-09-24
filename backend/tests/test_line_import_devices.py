@@ -34,7 +34,8 @@ def test_key_and_code_validation():
     assert svc.code_digest('ABCD-EFGH') == svc.code_digest('abcd efgh')
     assert svc.key_digest(TOKEN) == svc.digest(TOKEN)
     for bad in ['firebase-token', 'sali1_short', TOKEN+'\n']:
-        with pytest.raises(HTTPException): svc.key_digest(bad)
+        with pytest.raises(HTTPException):
+            svc.key_digest(bad)
 
 
 @pytest.fixture
@@ -75,6 +76,33 @@ def test_upload_requires_valid_device_and_preserves_raw_text(client):
     assert upload.call_args.kwargs['window_hours'] == 0
     assert upload.call_args.kwargs['current_user'].id == 1
     used.assert_awaited_once()
+
+
+def test_upload_passes_plain_values_not_form_defaults(client):
+    """端末からの取り込みが、FastAPI の Form 既定値をそのまま下流へ渡さないこと。
+
+    このエンドポイントは upload_android_line_export を Python の関数として直接呼ぶため、
+    渡さなかった引数には Form(...) オブジェクトが入る（None にならない）。2026-09-24 に
+    PR #3719 が window_start / window_end を追加した際、ここで渡し忘れたため
+    取り込み処理の時刻比較が TypeError になり、本番が約2時間停止した。
+    引数が増えたときに気づけるよう、下流へ渡る値が全て素の値であることを検査する。
+    """
+    from fastapi import params as fastapi_params
+
+    cli, app = client
+    app.dependency_overrides[routes.device_user] = lambda: SimpleNamespace(
+        id=1, email='test@example.invalid', device_id='device')
+    answer = {'status': 'imported', 'review_status': 'ok', 'message_count': 1, 'provider_count': 1,
+              'unresolved_count': 0, 'unresolved_display_names': [], 'skipped_message_count': 0,
+              'import_job_id': 'job'}
+    with patch.object(routes, 'upload_android_line_export', new=AsyncMock(return_value=answer)) as upload, \
+            patch.object(svc, 'used', new=AsyncMock()):
+        result = cli.post('/api/v1/tcg/line-devices/import',
+                          files={'file': ('talk.txt', '2026/9/12(土)\n12:00\tA\tbody')})
+    assert result.status_code == 200
+    leaked = {name: value for name, value in upload.call_args.kwargs.items()
+              if isinstance(value, fastapi_params.Param) or isinstance(value, fastapi_params.Body)}
+    assert not leaked, f"FastAPI の既定値オブジェクトが下流へ渡っています: {sorted(leaked)}"
 
 
 async def test_pending_key_cannot_authenticate():

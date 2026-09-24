@@ -500,6 +500,49 @@ async def rematch_products(
 
 
 @router.get(
+    "/buyback-prices/by-product/{product_id}/history",
+    tags=["buyback-prices"],
+    dependencies=[Depends(require_super_admin)],
+)
+async def product_price_history(
+    product_id: int,
+    days: int = Query(30, ge=1, le=365),
+    db: AsyncSession = Depends(get_db),
+):
+    """自社商品IDに紐付く全店舗の価格推移を返す。"""
+
+    result = await db.execute(text("""
+        SELECT
+            bsp.shop_code,
+            l.price_s, l.price_a, l.price_am, l.price_b, l.price_c,
+            l.fetched_at
+        FROM public.buyback_price_logs l
+        JOIN public.buyback_shop_products bsp ON bsp.id = l.shop_product_id
+        WHERE bsp.product_id = :product_id
+          AND l.fetched_at >= now() - make_interval(days => :days)
+        ORDER BY l.fetched_at ASC
+    """), {"product_id": product_id, "days": days})
+
+    rows = result.fetchall()
+
+    # 店舗別にグループ化
+    history: dict[str, list] = {}
+    for r in rows:
+        shop = r[0]
+        entry = {
+            "price_s": r[1],
+            "price_a": r[2],
+            "price_am": r[3],
+            "price_b": r[4],
+            "price_c": r[5],
+            "fetched_at": r[6].isoformat() if r[6] else None,
+        }
+        history.setdefault(shop, []).append(entry)
+
+    return {"history": history}
+
+
+@router.get(
     "/buyback-prices/{shop_product_id}/history",
     response_model=BuybackPriceHistoryResponse,
     tags=["buyback-prices"],
