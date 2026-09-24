@@ -78,6 +78,10 @@ async def create_schema(conn, schema, corrections=True):
         names.insert(1, "20260903_170000_item_corrections_t004.sql")
     for name in names:
         await conn.exec_driver_sql((migrations / name).read_text().replace("tenant_004", schema))
+    # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
+    await conn.exec_driver_sql(
+        f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE"
+    )
 
 
 @pytest_asyncio.fixture
