@@ -19,8 +19,9 @@
 既存の `extraction_notes` / `extraction_price_format` 等と同一パターンで拡張。
 新たなアーキテクチャ変更なし。
 
-## 外部事例
-なし（内部拡張）
+## 外部・過去事例の参照と我々への応用
+
+該当なし。既存の `extraction_notes` / `extraction_price_format` 等と同一パターンの拡張であり、新たなアーキテクチャ判断を要しない内部拡張。
 
 ## 影響範囲（守り手）
 - `_EXTRACTION_RULE_COLS` を参照する全箇所: GET / PATCH エンドポイント（同ファイル内）
@@ -35,3 +36,9 @@
 ALTER TABLE public.suppliers DROP COLUMN IF EXISTS extraction_example_text;
 ```
 フロントエンドはフィールドを削除するだけで元に戻る。
+
+## 維持の仕組み
+
+- 守り手: 人手で守る（`_EXTRACTION_RULE_COLS` と `_EXTRACTION_RULE_UPDATABLE` を変更する際に同時更新するパターン）
+- 対象: `extraction_example_text` が SELECT / UPDATE / レスポンス構築 / テストの mock タプルで欠落すること
+- 関所なし: フィールド追加パターンは機械検査困難。コードレビューで確認する。
