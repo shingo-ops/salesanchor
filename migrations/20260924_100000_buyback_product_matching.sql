@@ -20,11 +20,11 @@ BEGIN
   -- Step 2: FK制約追加
   IF NOT EXISTS (
     SELECT 1 FROM information_schema.table_constraints
-    WHERE constraint_name = 'fk_buyback_shop_products_product_id'
+    WHERE constraint_name = 'fk_bsp_product_id'
       AND table_name = 'buyback_shop_products'
   ) THEN
     ALTER TABLE public.buyback_shop_products
-      ADD CONSTRAINT fk_buyback_shop_products_product_id
+      ADD CONSTRAINT fk_bsp_product_id
       FOREIGN KEY (product_id) REFERENCES public.products(id);
   END IF;
 
