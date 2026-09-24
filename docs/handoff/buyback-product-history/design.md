@@ -6,7 +6,7 @@
 
 ### recon 相互参照
 - `backend/app/routers/buyback_prices.py` — `GET /buyback-prices/by-product/{product_id}/history` エンドポイントを `/buyback-prices/{shop_product_id}/history` の前に追加
-- `frontend/src/pages/buyback-prices/BuybackPriceHistoryDrawer.tsx` — 既存実装参考（recharts/Tabs パターン）
+- `frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx` — 新規Drawer実装（recharts/Tabs パターン）
 - `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx` — `handleRowClick` を新 Drawer に切替
 
 ### 基準・検証方法
