@@ -9,17 +9,6 @@
 - `frontend/src/pages/buyback-prices/BuybackPriceHistoryDrawer.tsx` — 既存実装参考（recharts/Tabs パターン）
 - `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx` — `handleRowClick` を新 Drawer に切替
 
-### 守り手
-- `frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx`（新規）
-- `backend/app/routers/buyback_prices.py`（変更）
-- `frontend/src/pages/buyback-prices/buybackTypes.ts`（変更）
-- `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx`（変更）
-- `frontend/src/locales/ja.json`（変更）
-- `frontend/src/locales/en.json`（変更）
-
-### 外部事例
-該当なし
-
 ### 基準・検証方法
 
 | 基準 | 検証方法 |
@@ -29,5 +18,12 @@
 | 期間タブ（7/30/90日）が動作する | タブ切替でグラフデータが更新されることを確認 |
 | デザイントークンのみ使用（色直値禁止） | TypeScript コンパイルエラーなし・ruff エラーなし |
 
-### 維持の仕組み
-既存のスクレイパー（1日3回）がデータを蓄積し続けるため、グラフは自動更新される
+## 外部・過去事例の参照と我々への応用
+
+該当なし。既存の `BuybackPriceHistoryDrawer.tsx` の recharts LineChart + Tabs パターンを踏襲。
+
+## 維持の仕組み
+
+既存のスクレイパー（1日3回）がデータを蓄積し続けるため、グラフは自動更新される。
+
+守り手: `frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx`, `backend/app/routers/buyback_prices.py`
