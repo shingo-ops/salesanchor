@@ -9,7 +9,7 @@
 
 ## 既存ADR
 
-- ADR-158: `docs/adr/ADR-158-pipeline-supersession.md`（同一仕入元の旧 analysis_results 更新）
+- ADR-158: `docs/adr/ADR-158-product-level-supersession.md`（同一仕入元の旧 analysis_results 更新）
 
 ## 変更ファイル
 

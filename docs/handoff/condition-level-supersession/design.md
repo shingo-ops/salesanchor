@@ -3,7 +3,7 @@
 ## 参照
 
 - recon: `docs/handoff/condition-level-supersession/recon.md`
-- ADR: `docs/adr/ADR-158-pipeline-supersession.md`
+- ADR: `docs/adr/ADR-158-product-level-supersession.md`
 
 ## 問題
 
@@ -40,10 +40,18 @@ AND EXISTS (
 | 新メッセージに含まれないコンディションの旧行が is_current=TRUE のまま残る | 同一商品・複数コンディションのテストデータで _merge_supplier_products() 実行後に確認 |
 | 新メッセージに含まれるコンディションの旧行が is_current=FALSE になる | 同上 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 PostgreSQL unnest(array, array) による並列展開は公式サポート（9.4以降）。
-EXISTS + unnest パターンは IN 句の代替として標準的。
+EXISTS + unnest パターンは、複合キーによる IN 句の代替として標準的な手法。
+`unnest(a[], b[])` は対応する要素をペアとして返すため、(product_id, condition_id)
+の複合照合に適用できる。
+
+## 維持の仕組み
+
+守り手: _merge_supplier_products() の変更時は (product_id, condition_id) ペア照合が
+維持されているか確認すること。unnest 引数の順序（product_ids, condition_ids）と
+SQL の t(pid, cid) エイリアスの対応が崩れないよう注意。
 
 ## 影響範囲
 
