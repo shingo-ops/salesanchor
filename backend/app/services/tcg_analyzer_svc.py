@@ -355,6 +355,10 @@ def filter_product_codes_by_unit_kubun(
       その他 → 絞り込みなし（全商品を返す）
 
     フィルタ後に候補がゼロになった場合はフォールバックとして全商品を返す。
+
+    注意: product_category_id=NULL の商品（product_code_to_kubun_type に存在しない）は
+    箱系か否か不明なため、箱系フィルタ時も候補に残す。
+    明示的に「シングル系」等の非箱系 kubun_type が設定された商品のみ除外する。
     """
     if "箱系" not in kubun:
         return product_codes
@@ -362,6 +366,7 @@ def filter_product_codes_by_unit_kubun(
     filtered = [
         c for c in product_codes
         if product_code_to_kubun_type.get(c) == "箱系"
+        or c not in product_code_to_kubun_type  # category未設定は候補に残す
     ]
     return filtered if filtered else product_codes
 
