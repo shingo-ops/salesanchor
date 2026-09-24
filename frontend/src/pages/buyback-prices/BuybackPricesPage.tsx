@@ -14,6 +14,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { SelectControl } from "../../components/Select";
+import { TextField } from "../../components/TextField";
 import { Tabs } from "../../components/Tabs";
 import { Button } from "../../components/Button";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -47,6 +48,9 @@ export default function BuybackPricesPage() {
   const [shop, setShop] = useState<ShopFilter>("all");
   const [cardGame, setCardGame] = useState<CardGame>("all");
   const [productType, setProductType] = useState<string>("");
+  const [search, setSearch] = useState("");
+  const [swingDays, setSwingDays] = useState<string>("");
+  const [minSwing, setMinSwing] = useState<string>("");
   const [sortKey, setSortKey] = useState("price_s");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [countsByGame, setCountsByGame] = useState<Record<string, number>>({});
@@ -82,6 +86,9 @@ export default function BuybackPricesPage() {
     if (shop !== "all") params.set("shop", shop);
     if (cardGame !== "all") params.set("card_game", cardGame);
     if (productType) params.append("product_type", productType);
+    if (search) params.set("q", encodeURIComponent(search));
+    if (swingDays) params.set("swing_days", swingDays);
+    if (minSwing) params.set("min_swing", minSwing);
 
     api
       .get<BuybackListResponse>(`/buyback-prices?${params.toString()}`)
@@ -104,7 +111,7 @@ export default function BuybackPricesPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, shop, cardGame, productType, sortKey, sortDir, t]);
+  }, [page, shop, cardGame, productType, search, swingDays, minSwing, sortKey, sortDir, t]);
 
   const handleShopChange = (value: ShopFilter) => {
     setShop(value);
@@ -220,6 +227,23 @@ export default function BuybackPricesPage() {
         <span className={styles.dateCell}>{formatDate(row.last_seen_at)}</span>
       ),
     },
+    ...(swingDays ? [{
+      key: "swing_s",
+      header: t("buybackPrices.swingColumn"),
+      width: "90px",
+      renderCell: (row: BuybackProduct) => {
+        const v = row.swing_s;
+        if (v === null || v === undefined) {
+          return <span style={{ color: "var(--text-muted)" }}>{t("buybackPrices.noSwingData")}</span>;
+        }
+        const color = v > 0 ? "var(--danger)" : "var(--text-muted)";
+        return (
+          <span className={styles.priceCell} style={{ color }}>
+            {v > 0 ? "+" : ""}{formatPrice(v)}
+          </span>
+        );
+      },
+    } as DataTableColumn<BuybackProduct>] : []),
   ];
 
   // ── SelectControl 選択肢 ───────────────────────────────────────────
@@ -281,6 +305,13 @@ export default function BuybackPricesPage() {
             </Button>
             {viewMode === "shop" && (
               <>
+                <TextField
+                  type="search"
+                  placeholder={t("buybackPrices.searchPlaceholder")}
+                  value={search}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
+                  size="sm"
+                />
                 <SelectControl
                   options={shopOptions}
                   value={shop}
@@ -293,6 +324,30 @@ export default function BuybackPricesPage() {
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
                   size="sm"
                 />
+                <SelectControl
+                  options={[
+                    { value: "", label: t("buybackPrices.swingPeriodAll") },
+                    { value: "7", label: t("buybackPrices.swingDays7") },
+                    { value: "30", label: t("buybackPrices.swingDays30") },
+                    { value: "90", label: t("buybackPrices.swingDays90") },
+                  ]}
+                  value={swingDays}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSwingDays(e.target.value); setMinSwing(""); setPage(1); }}
+                  size="sm"
+                />
+                {swingDays && (
+                  <SelectControl
+                    options={[
+                      { value: "", label: t("buybackPrices.swingMinAll") },
+                      { value: "1000", label: "¥1,000+" },
+                      { value: "5000", label: "¥5,000+" },
+                      { value: "10000", label: "¥10,000+" },
+                    ]}
+                    value={minSwing}
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setMinSwing(e.target.value); setPage(1); }}
+                    size="sm"
+                  />
+                )}
                 <Tabs
                   items={gameTabItems}
                   activeKey={cardGame}
