@@ -4554,6 +4554,30 @@
     "save": "Save",
     "saved": "Saved",
     "back": "Back to List",
-    "noMessages": "No messages"
+    "noMessages": "No messages",
+    "formatBuilder": "Format Builder",
+    "formatPreview": "Preview",
+    "addElement": "Add Element",
+    "token": {
+      "quantity": "Quantity",
+      "unit": "Unit",
+      "price": "Price",
+      "status": "Status",
+      "space": "(space)",
+      "newline": "(newline)",
+      "stockLabel": "Stock",
+      "at": "@",
+      "yen": "yen",
+      "yenPrefix": "¥",
+      "dot": "·",
+      "slash": "/",
+      "none": "(none)"
+    },
+    "sampleStatus": "Normal",
+    "patternQuantity": "[Qty]",
+    "patternUnit": "[Unit]",
+    "patternPrice": "[Price]",
+    "patternStatus": "[Status]",
+    "patternNewline": "(newline)"
   }
 }
