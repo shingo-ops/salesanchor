@@ -3659,7 +3659,10 @@
     "reviewStatusPending": "確認待ち",
     "reviewStatusDiscarded": "破棄済み",
     "openReview": "確認する",
-    "newFileDetails": "新しいファイルを取り込む"
+    "newFileDetails": "新しいファイルを取り込む",
+    "colNewMessageCount": "新規メッセージ",
+    "colResolved": "解決",
+    "detailButton": "詳細"
   },
   "pmgWorkflow": {
     "selectImport": "取り込みを選択",

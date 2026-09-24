@@ -76,12 +76,10 @@ class ImportJobResponse(BaseModel):
     id: str
     filename: str
     raw_sha256: str
-    message_count: int
-    provider_count: int
+    new_message_count: int
+    resolved_count: int
     unresolved_count: int
     uploaded_by: Optional[str]
-    status: str
-    review_status: str
     created_at: str
 
 
@@ -264,11 +262,15 @@ async def list_import_history(
     rows = await db.execute(
         text(
             f"""
-            SELECT id, filename, raw_sha256, message_count, provider_count,
-                   unresolved_count, uploaded_by, status, review_status,
-                   created_at
-            FROM {TCG_SCHEMA}.import_jobs
-            ORDER BY created_at DESC
+            SELECT ij.id, ij.filename, ij.raw_sha256, ij.uploaded_by, ij.created_at,
+              COUNT(DISTINCT ijm.source_message_id) FILTER (WHERE ijm.relation_kind = 'created') AS new_message_count,
+              COUNT(DISTINCT ej.id) FILTER (WHERE ej.status IN ('done', 'empty')) AS resolved_count,
+              COUNT(DISTINCT ej.id) FILTER (WHERE ej.status IN ('pending', 'running', 'error')) AS unresolved_count
+            FROM {TCG_SCHEMA}.import_jobs ij
+            LEFT JOIN {TCG_SCHEMA}.import_job_messages ijm ON ijm.import_job_id = ij.id
+            LEFT JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.source_message_id = ijm.source_message_id
+            GROUP BY ij.id
+            ORDER BY ij.created_at DESC
             LIMIT 200
             """
         )
@@ -280,13 +282,11 @@ async def list_import_history(
                 id=str(r[0]),
                 filename=r[1],
                 raw_sha256=r[2],
-                message_count=r[3],
-                provider_count=r[4],
-                unresolved_count=r[5],
-                uploaded_by=r[6],
-                status=r[7],
-                review_status=r[8] if r[8] is not None else "ok",
-                created_at=r[9].isoformat() if hasattr(r[9], "isoformat") else str(r[9]),
+                uploaded_by=r[3],
+                created_at=r[4].isoformat() if hasattr(r[4], "isoformat") else str(r[4]),
+                new_message_count=int(r[5]) if r[5] is not None else 0,
+                resolved_count=int(r[6]) if r[6] is not None else 0,
+                unresolved_count=int(r[7]) if r[7] is not None else 0,
             )
         )
     return result

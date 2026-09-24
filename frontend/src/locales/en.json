@@ -3659,7 +3659,10 @@
     "reviewStatusPending": "Pending Review",
     "reviewStatusDiscarded": "Discarded",
     "openReview": "Review",
-    "newFileDetails": "Import a new file"
+    "newFileDetails": "Import a new file",
+    "colNewMessageCount": "New Messages",
+    "colResolved": "Resolved",
+    "detailButton": "Details"
   },
   "pmgWorkflow": {
     "selectImport": "Select import",
