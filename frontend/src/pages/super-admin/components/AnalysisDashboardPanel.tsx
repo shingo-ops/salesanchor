@@ -501,18 +501,8 @@ function ImportTabContent({ data, trend, loading, error, supplierData, supplierL
       })
     : [];
 
-  const getImportSeverity = (item: SupplierPipelineItem): SignalLevel => {
-    const receivedAt = item.import_info.latest_received_at;
-    if (!receivedAt) return "danger";
-    const ageMs = Date.now() - new Date(receivedAt).getTime();
-    const ageDays = ageMs / (1000 * 60 * 60 * 24);
-    if (ageDays >= 7) return "danger";
-    if (ageDays >= 3) return "warning";
-    return "success";
-  };
-
   const dangerImportCount = supplierData
-    ? supplierData.suppliers.filter((s) => getImportSeverity(s) === "danger").length
+    ? supplierData.suppliers.filter((s) => s.severity === "danger").length
     : 0;
 
   type ImportSupplierRow = SupplierPipelineItem;
@@ -543,11 +533,24 @@ function ImportTabContent({ data, trend, loading, error, supplierData, supplierL
       },
     },
     {
+      key: 'extraction' as keyof SupplierPipelineItem,
+      header: t('analysisRules.dashboard.supplierExtractionErrors'),
+      width: '120px',
+      renderCell: (row) => {
+        const errors = (row as SupplierPipelineItem).extraction?.error ?? 0;
+        return errors > 0 ? (
+          <Badge variant="danger">{errors}</Badge>
+        ) : (
+          <span>0</span>
+        );
+      },
+    },
+    {
       key: "severity",
       header: t("analysisRules.dashboard.supplierStatus"),
       width: "100px",
       renderCell: (row) => {
-        const level = getImportSeverity(row);
+        const level = row.severity as 'danger' | 'warning' | 'success';
         return (
           <Badge variant={level}>
             {t(`analysisRules.dashboard.supplierSeverity_${level}`)}
