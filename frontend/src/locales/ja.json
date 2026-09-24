@@ -4582,6 +4582,19 @@
     "patternUnit": "[単位]",
     "patternPrice": "[価格]",
     "patternStatus": "[状態]",
-    "patternNewline": "(改行)"
+    "patternNewline": "(改行)",
+    "knowledgeSection": "Knowledge ルール",
+    "knowledgeBlockDelimiters": "ブロック区切り記号",
+    "knowledgeBlockDelimitersHelper": "商品ブロックの開始を示す記号を選択",
+    "knowledgeSkipConditions": "スキップ条件",
+    "knowledgeSkipConditionsHelper": "このキーワードを含むブロックは抽出対象外",
+    "knowledgeStatusKeywords": "ステータス判定",
+    "knowledgeStatusKeywordsHelper": "予約/在庫の判定キーワード",
+    "addRule": "追加",
+    "createNewRule": "新規作成",
+    "newRulePattern": "パターン",
+    "newRuleNormalizedTo": "変換先",
+    "ruleLinked": "リンク済み",
+    "noRulesLinked": "未設定"
   }
 }

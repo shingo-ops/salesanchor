@@ -46,6 +46,27 @@ interface SupplierExtractionDetail {
   latest_raw_text: string | null;
 }
 
+interface KnowledgeRule {
+  id: number;
+  category: string;
+  pattern_type: string;
+  pattern: string;
+  normalized_to: string | null;
+  description: string | null;
+  is_active: boolean;
+}
+
+interface KnowledgeLink {
+  id: number;
+  supplier_id: number;
+  knowledge_rule_id: number;
+  category: string;
+  pattern: string;
+  normalized_to: string | null;
+  description: string | null;
+  is_active: boolean;
+}
+
 interface SupplierSourceMessage {
   id: string;
   raw_text: string;
@@ -115,6 +136,22 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [messages, setMessages] = useState<SupplierSourceMessage[]>([]);
   const [messageIndex, setMessageIndex] = useState(0);
 
+  // Knowledge links state
+  const [knowledgeLinks, setKnowledgeLinks] = useState<KnowledgeLink[]>([]);
+  const [allKnowledgeRules, setAllKnowledgeRules] = useState<Record<string, KnowledgeRule[]>>({});
+  const [knowledgeAddMode, setKnowledgeAddMode] = useState<Record<string, "none" | "select" | "create">>(
+    { block_delimiter: "none", skip_condition: "none", status_keyword: "none" }
+  );
+  const [knowledgeSelectValue, setKnowledgeSelectValue] = useState<Record<string, string>>(
+    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+  );
+  const [knowledgeNewPattern, setKnowledgeNewPattern] = useState<Record<string, string>>(
+    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+  );
+  const [knowledgeNewNormalizedTo, setKnowledgeNewNormalizedTo] = useState<Record<string, string>>(
+    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+  );
+
   // ---------------------------------------------------------------------------
   // 一覧取得
   // ---------------------------------------------------------------------------
@@ -175,6 +212,88 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     }
   }, []);
 
+  const fetchKnowledgeLinks = useCallback(async (supplierId: number) => {
+    try {
+      const data = await api.get<KnowledgeLink[]>(
+        `/super-admin/suppliers/${supplierId}/knowledge-links`
+      );
+      setKnowledgeLinks(data);
+    } catch {
+      setKnowledgeLinks([]);
+    }
+  }, []);
+
+  const fetchAllKnowledgeRules = useCallback(async () => {
+    const categories = ["block_delimiter", "skip_condition", "status_keyword"] as const;
+    const results: Record<string, KnowledgeRule[]> = {};
+    await Promise.all(
+      categories.map(async (cat) => {
+        try {
+          const data = await api.get<KnowledgeRule[]>(
+            `/super-admin/knowledge-rules?category=${cat}`
+          );
+          results[cat] = data;
+        } catch {
+          results[cat] = [];
+        }
+      })
+    );
+    setAllKnowledgeRules(results);
+  }, []);
+
+  const handleDeleteKnowledgeLink = useCallback(async (supplierId: number, linkId: number) => {
+    try {
+      await api.delete(`/super-admin/suppliers/${supplierId}/knowledge-links/${linkId}`);
+      setKnowledgeLinks((prev) => prev.filter((l) => l.id !== linkId));
+    } catch {
+      // silent: UI stays the same
+    }
+  }, []);
+
+  const handleAddKnowledgeLink = useCallback(async (supplierId: number, category: string) => {
+    const ruleId = parseInt(knowledgeSelectValue[category], 10);
+    if (!ruleId) return;
+    try {
+      const newLink = await api.post<KnowledgeLink>(
+        `/super-admin/suppliers/${supplierId}/knowledge-links`,
+        { knowledge_rule_id: ruleId }
+      );
+      setKnowledgeLinks((prev) => [...prev, newLink]);
+      setKnowledgeSelectValue((prev) => ({ ...prev, [category]: "" }));
+      setKnowledgeAddMode((prev) => ({ ...prev, [category]: "none" }));
+    } catch {
+      // silent
+    }
+  }, [knowledgeSelectValue]);
+
+  const handleCreateAndLinkKnowledgeRule = useCallback(async (supplierId: number, category: string) => {
+    const pattern = knowledgeNewPattern[category].trim();
+    if (!pattern) return;
+    try {
+      const newRule = await api.post<KnowledgeRule>("/super-admin/knowledge-rules", {
+        category,
+        pattern,
+        normalized_to: knowledgeNewNormalizedTo[category].trim() || null,
+      });
+      // allKnowledgeRules を更新
+      setAllKnowledgeRules((prev) => ({
+        ...prev,
+        [category]: [...(prev[category] ?? []), newRule],
+      }));
+      // リンクを作成
+      const newLink = await api.post<KnowledgeLink>(
+        `/super-admin/suppliers/${supplierId}/knowledge-links`,
+        { knowledge_rule_id: newRule.id }
+      );
+      setKnowledgeLinks((prev) => [...prev, newLink]);
+      setKnowledgeNewPattern((prev) => ({ ...prev, [category]: "" }));
+      setKnowledgeNewNormalizedTo((prev) => ({ ...prev, [category]: "" }));
+      setKnowledgeAddMode((prev) => ({ ...prev, [category]: "none" }));
+    } catch {
+      // silent
+    }
+  }, [knowledgeNewPattern, knowledgeNewNormalizedTo]);
+
   const handleSelectSupplier = useCallback(
     (row: SupplierOverviewItem) => {
       setSelectedSupplier({ supplier_id: row.supplier_id, name: row.name });
@@ -183,10 +302,14 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       setSavedMessage(false);
       setMessages([]);
       setMessageIndex(0);
+      setKnowledgeLinks([]);
+      setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
       void fetchDetail(row.supplier_id);
       void fetchMessages(row.supplier_id);
+      void fetchKnowledgeLinks(row.supplier_id);
+      void fetchAllKnowledgeRules();
     },
-    [fetchDetail, fetchMessages]
+    [fetchDetail, fetchMessages, fetchKnowledgeLinks, fetchAllKnowledgeRules]
   );
 
   const handleBack = useCallback(() => {
@@ -197,6 +320,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setMessages([]);
     setMessageIndex(0);
     setFormatTokens([]);
+    setKnowledgeLinks([]);
+    setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -497,6 +622,150 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                   </span>
                 )}
               </div>
+            </div>
+
+            {/* Knowledge ルール セクション */}
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <label style={{ display: "block", fontSize: "var(--font-sm)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
+                {t("supplierExtractionRules.knowledgeSection")}
+              </label>
+              {(["block_delimiter", "skip_condition", "status_keyword"] as const).map((category) => {
+                const labelKey = category === "block_delimiter"
+                  ? "knowledgeBlockDelimiters"
+                  : category === "skip_condition"
+                  ? "knowledgeSkipConditions"
+                  : "knowledgeStatusKeywords";
+                const helperKey = (labelKey + "Helper") as `${typeof labelKey}Helper`;
+                const linkedItems = knowledgeLinks.filter((l) => l.category === category);
+                const linkedIds = new Set(linkedItems.map((l) => l.knowledge_rule_id));
+                const availableRules = (allKnowledgeRules[category] ?? []).filter((r) => !linkedIds.has(r.id));
+                const addMode = knowledgeAddMode[category];
+
+                return (
+                  <div key={category} style={{ marginBottom: "var(--space-4)", paddingBottom: "var(--space-3)", borderBottom: "1px solid var(--color-border)" }}>
+                    <div style={{ fontSize: "var(--font-xs)", fontWeight: 600, color: "var(--color-text-muted)", marginBottom: "var(--space-1)" }}>
+                      {t(`supplierExtractionRules.${labelKey}`)}
+                    </div>
+                    <div style={{ fontSize: "var(--font-xs)", color: "var(--color-text-muted)", marginBottom: "var(--space-2)" }}>
+                      {t(`supplierExtractionRules.${helperKey}`)}
+                    </div>
+
+                    {/* リンク済みバッジ */}
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", marginBottom: "var(--space-2)" }}>
+                      {linkedItems.length === 0 ? (
+                        <span style={{ fontSize: "var(--font-xs)", color: "var(--color-text-muted)" }}>
+                          {t("supplierExtractionRules.noRulesLinked")}
+                        </span>
+                      ) : (
+                        linkedItems.map((link) => (
+                          <div key={link.id} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                            <Badge variant="info">{link.pattern}</Badge>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              iconOnly
+                              aria-label={t("common.delete")}
+                              onClick={() => void handleDeleteKnowledgeLink(selectedSupplier!.supplier_id, link.id)}
+                            >
+                              {(() => { const CloseIcon = SCHEDULE_SETTINGS_ICONS.close; return <CloseIcon size={ICON.sm} />; })()}
+                            </Button>
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    {/* 追加/新規ボタンと入力 */}
+                    {addMode === "none" && (
+                      <div style={{ display: "flex", gap: "var(--space-2)" }}>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setKnowledgeAddMode((prev) => ({ ...prev, [category]: "select" }))}
+                          disabled={availableRules.length === 0}
+                        >
+                          + {t("supplierExtractionRules.addRule")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setKnowledgeAddMode((prev) => ({ ...prev, [category]: "create" }))}
+                        >
+                          + {t("supplierExtractionRules.createNewRule")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {addMode === "select" && (
+                      <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+                        <SelectControl
+                          value={knowledgeSelectValue[category]}
+                          onChange={(e) =>
+                            setKnowledgeSelectValue((prev) => ({ ...prev, [category]: e.target.value }))
+                          }
+                          options={[
+                            { value: "", label: "---" },
+                            ...availableRules.map((r) => ({ value: String(r.id), label: r.pattern })),
+                          ]}
+                          size="sm"
+                        />
+                        <Button
+                          variant="primary"
+                          size="sm"
+                          onClick={() => void handleAddKnowledgeLink(selectedSupplier!.supplier_id, category)}
+                          disabled={!knowledgeSelectValue[category]}
+                        >
+                          {t("supplierExtractionRules.addRule")}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setKnowledgeAddMode((prev) => ({ ...prev, [category]: "none" }))}
+                        >
+                          {t("common.cancel")}
+                        </Button>
+                      </div>
+                    )}
+
+                    {addMode === "create" && (
+                      <div style={{ display: "flex", flexDirection: "column", gap: "var(--space-2)" }}>
+                        <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "flex-end" }}>
+                          <TextField
+                            label={t("supplierExtractionRules.newRulePattern")}
+                            value={knowledgeNewPattern[category]}
+                            onChange={(e) =>
+                              setKnowledgeNewPattern((prev) => ({ ...prev, [category]: e.target.value }))
+                            }
+                          />
+                          {category === "status_keyword" && (
+                            <TextField
+                              label={t("supplierExtractionRules.newRuleNormalizedTo")}
+                              value={knowledgeNewNormalizedTo[category]}
+                              onChange={(e) =>
+                                setKnowledgeNewNormalizedTo((prev) => ({ ...prev, [category]: e.target.value }))
+                              }
+                            />
+                          )}
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => void handleCreateAndLinkKnowledgeRule(selectedSupplier!.supplier_id, category)}
+                            disabled={!knowledgeNewPattern[category].trim()}
+                          >
+                            {t("supplierExtractionRules.createNewRule")}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setKnowledgeAddMode((prev) => ({ ...prev, [category]: "none" }))}
+                          >
+                            {t("common.cancel")}
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <Textarea
