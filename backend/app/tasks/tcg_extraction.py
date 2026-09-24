@@ -128,7 +128,8 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                    s.extraction_order_pattern,
                    s.extraction_default_unit,
                    s.extraction_notes,
-                   s.extraction_state_format
+                   s.extraction_state_format,
+                   s.extraction_example_text
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
@@ -170,6 +171,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         "extraction_default_unit": row[5],
         "extraction_notes": row[6],
         "extraction_state_format": row[7],
+        "extraction_example_text": row[8],
     }
     if any(v for v in extraction_rules.values()):
         supplier_context = extraction_rules

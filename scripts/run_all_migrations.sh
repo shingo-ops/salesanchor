@@ -791,5 +791,8 @@ run_sql migrations/20260924_000000_create_buyback_alert_rules.sql
 # public.suppliers に仕入元ごとの抽出ルール列を追加
 run_sql migrations/20260924_010000_add_supplier_extraction_rules.sql
 
+# public.suppliers に例文テキスト列を追加（Gemini プロンプト注入用）
+run_sql migrations/20260924_030000_add_extraction_example_text.sql
+
 # ADR-157 Phase 3: 買取商品と自社マスタの自動紐付け（product_id型変更・match列追加）
 run_sql migrations/20260924_100000_buyback_product_matching.sql

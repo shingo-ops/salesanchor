@@ -4535,6 +4535,8 @@
     "stateFormatHelper": "例: [状態]、（状態）、■状態：",
     "notes": "Geminiへの追加指示",
     "notesHelper": "この仕入元特有の抽出ルールを自由記述",
+    "exampleText": "メッセージ例文",
+    "exampleTextPlaceholder": "この仕入元の代表的なメッセージ原文を貼り付けてください",
     "save": "保存",
     "saved": "保存しました",
     "back": "一覧に戻る",
