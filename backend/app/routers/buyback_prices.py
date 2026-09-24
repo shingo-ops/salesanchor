@@ -410,22 +410,22 @@ async def list_by_product(
                   AND bsp2.product_id IS NOT NULL
                 GROUP BY bsp2.product_id
             )
-            SELECT p.category, count(DISTINCT p.id)
+            SELECT UPPER(p.category), count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
             LEFT JOIN product_swing psw ON psw.product_id = p.id
             WHERE {" AND ".join(cat_count_conditions)}
               AND COALESCE(psw.swing_s, 0) >= :cat_min_swing
-            GROUP BY p.category
+            GROUP BY UPPER(p.category)
             ORDER BY count(DISTINCT p.id) DESC
         """)
     else:
         cat_counts_query = text(f"""
-            SELECT p.category, count(DISTINCT p.id)
+            SELECT UPPER(p.category), count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
             WHERE {" AND ".join(cat_count_conditions)}
-            GROUP BY p.category
+            GROUP BY UPPER(p.category)
             ORDER BY count(DISTINCT p.id) DESC
         """)
     counts_result = await db.execute(cat_counts_query, cat_count_params)
@@ -436,7 +436,7 @@ async def list_by_product(
     params: dict = {"limit": limit, "offset": offset}
 
     if category:
-        extra_conditions.append("p.category = :category")
+        extra_conditions.append("UPPER(p.category) = UPPER(:category)")
         params["category"] = category
 
     if q is not None:
@@ -476,9 +476,10 @@ async def list_by_product(
             p.id,
             p.product_code,
             p.name,
-            p.category,
+            UPPER(p.category) AS category,
             p.release_date,
             p.image_url,
+            p.mark,
             homura.price_s   AS homura_price_s,
             homura.price_a   AS homura_price_a,
             homura.price_b   AS homura_price_b,
@@ -489,6 +490,18 @@ async def list_by_product(
             shinsoku.price_b AS shinsoku_price_b,
             shinsoku.shop_product_id AS shinsoku_shop_product_id,
             shinsoku.product_name    AS shinsoku_product_name,
+            GREATEST(COALESCE(homura.price_s, 0), COALESCE(shinsoku.price_s, 0)) AS best_price,
+            CASE
+                WHEN COALESCE(homura.price_s, 0) >= COALESCE(shinsoku.price_s, 0) AND homura.price_s IS NOT NULL THEN 'homura'
+                WHEN shinsoku.price_s IS NOT NULL THEN 'shinsoku'
+                WHEN homura.price_s IS NOT NULL THEN 'homura'
+                ELSE NULL
+            END AS best_shop,
+            CASE
+                WHEN homura_prev.price_s IS NULL AND shinsoku_prev.price_s IS NULL THEN NULL
+                ELSE GREATEST(COALESCE(homura.price_s, 0), COALESCE(shinsoku.price_s, 0))
+                   - GREATEST(COALESCE(homura_prev.price_s, 0), COALESCE(shinsoku_prev.price_s, 0))
+            END AS yesterday_diff,
             {bp_swing_select}
             0 AS _dummy
         FROM public.products p
@@ -510,6 +523,22 @@ async def list_by_product(
             ORDER BY l.fetched_at DESC
             LIMIT 1
         ) shinsoku ON true
+        LEFT JOIN LATERAL (
+            SELECT l.price_s
+            FROM public.buyback_shop_products bsp
+            JOIN public.buyback_price_logs l ON l.shop_product_id = bsp.id
+            WHERE bsp.product_id = p.id AND bsp.shop_code = 'homura'
+              AND l.fetched_at < CURRENT_DATE
+            ORDER BY l.fetched_at DESC LIMIT 1
+        ) homura_prev ON true
+        LEFT JOIN LATERAL (
+            SELECT l.price_s
+            FROM public.buyback_shop_products bsp
+            JOIN public.buyback_price_logs l ON l.shop_product_id = bsp.id
+            WHERE bsp.product_id = p.id AND bsp.shop_code = 'shinsoku'
+              AND l.fetched_at < CURRENT_DATE
+            ORDER BY l.fetched_at DESC LIMIT 1
+        ) shinsoku_prev ON true
         {bp_swing_join}
         WHERE p.id IN (
             SELECT DISTINCT product_id FROM public.buyback_shop_products
@@ -560,17 +589,21 @@ async def list_by_product(
             "category": r[3],
             "release_date": r[4].isoformat() if r[4] else None,
             "image_url": r[5],
-            "homura_price_s": r[6],
-            "homura_price_a": r[7],
-            "homura_price_b": r[8],
-            "homura_shop_product_id": str(r[9]) if r[9] else None,
-            "homura_product_name": r[10],
-            "shinsoku_price_s": r[11],
-            "shinsoku_price_a": r[12],
-            "shinsoku_price_b": r[13],
-            "shinsoku_shop_product_id": str(r[14]) if r[14] else None,
-            "shinsoku_product_name": r[15],
-            "swing_s": r[16] if swing_days is not None else None,
+            "mark": r[6],
+            "homura_price_s": r[7],
+            "homura_price_a": r[8],
+            "homura_price_b": r[9],
+            "homura_shop_product_id": str(r[10]) if r[10] else None,
+            "homura_product_name": r[11],
+            "shinsoku_price_s": r[12],
+            "shinsoku_price_a": r[13],
+            "shinsoku_price_b": r[14],
+            "shinsoku_shop_product_id": str(r[15]) if r[15] else None,
+            "shinsoku_product_name": r[16],
+            "best_price": r[17],
+            "best_shop": r[18],
+            "yesterday_diff": r[19],
+            "swing_s": r[20] if swing_days is not None else None,
         })
 
     return {
