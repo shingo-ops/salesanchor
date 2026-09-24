@@ -217,11 +217,28 @@ _GEMINI_MODEL = "gemini-3.1-flash-lite"
 
 def _build_supplier_context_note(supplier_context: dict) -> str:
     """仕入元抽出ルール辞書をプロンプト注入用テキストに変換する。"""
+    import json as _json
+
+    _PATTERN_MAP = {
+        "quantity": "[数量]",
+        "unit": "[単位]",
+        "price": "[価格]",
+        "status": "[状態]",
+        "@": "@",
+        "yen": "円",
+        "yen_prefix": "￥",
+        "space": " ",
+        "dot": "・",
+        "newline": "\n",
+        "slash": "/",
+        "stock_label": "在庫",
+        "none": "",
+    }
+
     parts = []
     label_map = {
         "extraction_price_format": "価格フォーマット",
         "extraction_qty_format": "数量フォーマット",
-        "extraction_order_pattern": "注文パターン",
         "extraction_default_unit": "デフォルト単位",
         "extraction_notes": "補足ルール",
         "extraction_state_format": "状態フォーマット",
@@ -230,6 +247,19 @@ def _build_supplier_context_note(supplier_context: dict) -> str:
         val = supplier_context.get(key)
         if val:
             parts.append(f"- {label}: {val}")
+
+    # extraction_order_pattern: JSON配列（新形式）または文字列（旧形式）
+    order_pattern = supplier_context.get("extraction_order_pattern", "")
+    if order_pattern:
+        try:
+            tokens = _json.loads(order_pattern)
+            if isinstance(tokens, list):
+                human_pattern = "".join(_PATTERN_MAP.get(tok, tok) for tok in tokens)
+                parts.append(f"- 明細行のフォーマット: {human_pattern}")
+            else:
+                parts.append(f"- 注文パターン: {order_pattern}")
+        except (_json.JSONDecodeError, TypeError):
+            parts.append(f"- 注文パターン: {order_pattern}")
     lines = []
     if parts:
         lines.append("【仕入元固有の抽出ルール】")

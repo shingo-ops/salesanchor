@@ -7,7 +7,7 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型コンポーネントのみ使用。
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { useSuperAdmin } from "../../hooks/useSuperAdmin";
@@ -15,7 +15,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { Badge } from "../../components/Badge";
 import { TextField } from "../../components/TextField";
-import { Select } from "../../components/Select";
+import { Select, SelectControl } from "../../components/Select";
 import { Textarea } from "../../components/Textarea";
 import { Button } from "../../components/Button";
 import { DashboardIcons, SCHEDULE_SETTINGS_ICONS } from "../../constants/icons";
@@ -110,6 +110,8 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
+  const [formatTokens, setFormatTokens] = useState<string[]>([]);
+
   const [messages, setMessages] = useState<SupplierSourceMessage[]>([]);
   const [messageIndex, setMessageIndex] = useState(0);
 
@@ -194,6 +196,88 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setSavedMessage(false);
     setMessages([]);
     setMessageIndex(0);
+    setFormatTokens([]);
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // フォーマットビルダー: detail ロード時にトークン配列を復元
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (detail?.extraction_order_pattern) {
+      try {
+        const parsed: unknown = JSON.parse(detail.extraction_order_pattern);
+        if (Array.isArray(parsed)) {
+          setFormatTokens(parsed as string[]);
+        } else {
+          setFormatTokens([]);
+        }
+      } catch {
+        setFormatTokens([]);
+      }
+    } else {
+      setFormatTokens([]);
+    }
+  }, [detail]);
+
+  // ---------------------------------------------------------------------------
+  // フォーマットビルダー: プレビューとパターン文字列
+  // ---------------------------------------------------------------------------
+
+  const sampleValues: Record<string, string> = useMemo(() => ({
+    quantity: "30",
+    unit: "BOX",
+    price: "13,500",
+    status: t("supplierExtractionRules.sampleStatus"),
+    "@": t("supplierExtractionRules.token.at"),
+    yen: t("supplierExtractionRules.token.yen"),
+    yen_prefix: t("supplierExtractionRules.token.yenPrefix"),
+    space: " ",
+    dot: t("supplierExtractionRules.token.dot"),
+    newline: "\\n",
+    slash: t("supplierExtractionRules.token.slash"),
+    stock_label: t("supplierExtractionRules.token.stockLabel"),
+    none: "",
+  }), [t]);
+
+  const formatPreview = useMemo(
+    () => formatTokens.map((tok) => sampleValues[tok] ?? tok).join(""),
+    [formatTokens, sampleValues]
+  );
+
+  const formatPattern = useMemo(() => {
+    const patternParts: Record<string, string> = {
+      quantity: t("supplierExtractionRules.patternQuantity"),
+      unit: t("supplierExtractionRules.patternUnit"),
+      price: t("supplierExtractionRules.patternPrice"),
+      status: t("supplierExtractionRules.patternStatus"),
+      "@": t("supplierExtractionRules.token.at"),
+      yen: t("supplierExtractionRules.token.yen"),
+      yen_prefix: t("supplierExtractionRules.token.yenPrefix"),
+      space: " ",
+      dot: t("supplierExtractionRules.token.dot"),
+      newline: t("supplierExtractionRules.patternNewline"),
+      slash: t("supplierExtractionRules.token.slash"),
+      stock_label: t("supplierExtractionRules.token.stockLabel"),
+      none: "",
+    };
+    return formatTokens.map((tok) => patternParts[tok] ?? tok).join("");
+  }, [formatTokens, t]);
+
+  // ---------------------------------------------------------------------------
+  // フォーマットビルダー: トークン操作
+  // ---------------------------------------------------------------------------
+
+  const addToken = useCallback(() => {
+    setFormatTokens((prev) => [...prev, "quantity"]);
+  }, []);
+
+  const updateToken = useCallback((index: number, value: string) => {
+    setFormatTokens((prev) => prev.map((tok, i) => (i === index ? value : tok)));
+  }, []);
+
+  const removeToken = useCallback((index: number) => {
+    setFormatTokens((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -208,7 +292,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       const payload: Record<string, string | null> = {
         extraction_price_format: form.extraction_price_format || null,
         extraction_qty_format: form.extraction_qty_format || null,
-        extraction_order_pattern: form.extraction_order_pattern || null,
+        extraction_order_pattern: formatTokens.length > 0 ? JSON.stringify(formatTokens) : null,
         extraction_default_unit: form.extraction_default_unit || null,
         extraction_state_format: form.extraction_state_format || null,
         extraction_notes: form.extraction_notes || null,
@@ -222,7 +306,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     } finally {
       setSaving(false);
     }
-  }, [selectedSupplier, form]);
+  }, [selectedSupplier, form, formatTokens]);
 
   // ---------------------------------------------------------------------------
   // 権限ガード
@@ -272,6 +356,26 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
           <Badge variant="neutral">{t("supplierExtractionRules.notConfigured")}</Badge>
         ),
     },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // フォーマットビルダー: トークン選択肢
+  // ---------------------------------------------------------------------------
+
+  const tokenOptions = [
+    { value: "quantity", label: t("supplierExtractionRules.token.quantity") },
+    { value: "unit", label: t("supplierExtractionRules.token.unit") },
+    { value: "price", label: t("supplierExtractionRules.token.price") },
+    { value: "status", label: t("supplierExtractionRules.token.status") },
+    { value: "@", label: t("supplierExtractionRules.token.at") },
+    { value: "yen", label: t("supplierExtractionRules.token.yen") },
+    { value: "yen_prefix", label: t("supplierExtractionRules.token.yenPrefix") },
+    { value: "space", label: t("supplierExtractionRules.token.space") },
+    { value: "dot", label: t("supplierExtractionRules.token.dot") },
+    { value: "newline", label: t("supplierExtractionRules.token.newline") },
+    { value: "slash", label: t("supplierExtractionRules.token.slash") },
+    { value: "stock_label", label: t("supplierExtractionRules.token.stockLabel") },
+    { value: "none", label: t("supplierExtractionRules.token.none") },
   ];
 
   // ---------------------------------------------------------------------------
@@ -340,6 +444,61 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
 
           {/* 右: ルール設定フォーム */}
           <div className="supplier-rules-form">
+            {/* フォーマットビルダー */}
+            <div style={{ marginBottom: "var(--space-4)" }}>
+              <label style={{ display: "block", fontSize: "var(--font-sm)", fontWeight: 600, marginBottom: "var(--space-2)" }}>
+                {t("supplierExtractionRules.formatBuilder")}
+              </label>
+
+              {/* トークン行 */}
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center", marginBottom: "var(--space-2)" }}>
+                {formatTokens.map((tok, index) => (
+                  <div key={index} style={{ display: "flex", alignItems: "center", gap: "var(--space-1)" }}>
+                    <SelectControl
+                      value={tok}
+                      onChange={(e) => updateToken(index, e.target.value)}
+                      options={tokenOptions}
+                      size="sm"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      iconOnly
+                      aria-label={t("common.delete")}
+                      onClick={() => removeToken(index)}
+                    >
+                      {(() => { const CloseIcon = SCHEDULE_SETTINGS_ICONS.close; return <CloseIcon size={ICON.md} />; })()}
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={addToken}
+                >
+                  + {t("supplierExtractionRules.addElement")}
+                </Button>
+              </div>
+
+              {/* プレビュー */}
+              <div style={{
+                padding: "var(--space-2) var(--space-3)",
+                backgroundColor: "var(--color-bg-subtle)",
+                borderRadius: "var(--radius-md)",
+                fontSize: "var(--font-sm)",
+              }}>
+                <span style={{ color: "var(--color-text-muted)", marginRight: "var(--space-2)" }}>
+                  {t("supplierExtractionRules.formatPreview")}:
+                </span>
+                <code>{formatPreview}</code>
+                {formatTokens.length > 0 && (
+                  <span style={{ color: "var(--color-text-muted)", marginLeft: "var(--space-3)", fontSize: "var(--font-xs)" }}>
+                    ({formatPattern})
+                  </span>
+                )}
+              </div>
+            </div>
+
             <Textarea
               label={t("supplierExtractionRules.extractionInstruction")}
               value={form.extraction_notes}

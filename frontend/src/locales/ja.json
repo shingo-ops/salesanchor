@@ -4543,6 +4543,30 @@
     "save": "保存",
     "saved": "保存しました",
     "back": "一覧に戻る",
-    "noMessages": "メッセージなし"
+    "noMessages": "メッセージなし",
+    "formatBuilder": "フォーマット設定",
+    "formatPreview": "プレビュー",
+    "addElement": "要素を追加",
+    "token": {
+      "quantity": "数量",
+      "unit": "単位",
+      "price": "価格",
+      "status": "状態",
+      "space": "(スペース)",
+      "newline": "(改行)",
+      "stockLabel": "在庫",
+      "at": "@",
+      "yen": "円",
+      "yenPrefix": "￥",
+      "dot": "・",
+      "slash": "/",
+      "none": "(なし)"
+    },
+    "sampleStatus": "通常品",
+    "patternQuantity": "[数量]",
+    "patternUnit": "[単位]",
+    "patternPrice": "[価格]",
+    "patternStatus": "[状態]",
+    "patternNewline": "(改行)"
   }
 }
