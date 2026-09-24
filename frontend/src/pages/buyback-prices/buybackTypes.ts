@@ -12,6 +12,31 @@ export interface BuybackProduct {
   price_b: number | null;
   price_c: number | null;
   last_seen_at: string | null;
+  // マッチング結果
+  product_code: string | null;
+  product_name_ja: string | null;
+  match_status: "auto" | "pending_review" | "manual" | "unmatched";
+}
+
+export interface MatchCandidate {
+  product_id: number;
+  product_code: string;
+  keyword: string;
+  kw_len: number;
+}
+
+export interface PendingReviewItem {
+  shop_product_id: string;
+  shop_code: string;
+  product_name: string;
+  card_game: string;
+  product_type: string;
+  match_candidates: MatchCandidate[];
+}
+
+export interface PendingReviewResponse {
+  items: PendingReviewItem[];
+  total: number;
 }
 
 export interface BuybackListResponse {
