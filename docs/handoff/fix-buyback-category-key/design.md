@@ -9,10 +9,10 @@
 
 | Change | 場所 | 変更前 | 変更後 |
 |--------|------|--------|--------|
-| A | `buyback_prices.py:413,419` (swing CTE) | `UPPER(p.category)` SELECT/GROUP BY | `bsp.card_game` SELECT/GROUP BY |
-| B | `buyback_prices.py:424,428` (non-swing) | `UPPER(p.category)` SELECT/GROUP BY | `bsp.card_game` SELECT/GROUP BY |
-| C | `buyback_prices.py:439` (filter) | `UPPER(p.category) = UPPER(:category)` | `EXISTS (SELECT 1 FROM bsp_f WHERE bsp_f.product_id = p.id AND bsp_f.card_game = :category)` |
-| D | `buyback_prices.py:479` (main SELECT) | `UPPER(p.category) AS category` | scalar subquery from `bsp_cg.card_game` |
+| A | `backend/app/routers/buyback_prices.py:413,419` (swing CTE) | `UPPER(p.category)` SELECT/GROUP BY | `bsp.card_game` SELECT/GROUP BY |
+| B | `backend/app/routers/buyback_prices.py:424,428` (non-swing) | `UPPER(p.category)` SELECT/GROUP BY | `bsp.card_game` SELECT/GROUP BY |
+| C | `backend/app/routers/buyback_prices.py:439` (filter) | `UPPER(p.category) = UPPER(:category)` | `EXISTS (SELECT 1 FROM bsp_f WHERE bsp_f.product_id = p.id AND bsp_f.card_game = :category)` |
+| D | `backend/app/routers/buyback_prices.py:479` (main SELECT) | `UPPER(p.category) AS category` | scalar subquery from `bsp_cg.card_game` |
 
 ## 検証方法
 
@@ -30,11 +30,12 @@
 - `list_by_shop` エンドポイント（すでに `bsp.card_game` 使用・変更不要）
 - マイグレーションファイル（スキーマ変更なし）
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-N/A — 自由記述カラムから正規化済みカラムへの参照切り替えは内部SQL修正。
+該当なし。自由記述カラムから正規化済みカラムへの参照切り替えは内部SQL修正のみ。
+`list_by_shop` エンドポイントが既に `bsp.card_game` を使用している実績を参考に、
+`list_by_product` も同じカラムに統一する。
 
-## 守り手
+## 維持の仕組み
 
-- 既存 CI テスト（`backend/tests/`）— buyback 専用テストは未作成だが回帰範囲外
-- 本番反映後: 買取 by-product ページのタブ目視確認
+守り手: 既存 CI テスト（`backend/tests/`）、本番反映後の買取 by-product ページ目視確認
