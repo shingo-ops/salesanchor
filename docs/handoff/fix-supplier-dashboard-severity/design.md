@@ -25,9 +25,12 @@ raw key ではなく日本語/英語ラベル（「要対応」「注意」「�
 
 ## 外部・過去事例の参照と我々への応用
 
-ADR-027準拠（全UIテキストは t() 経由）。同様パターンは既存バッジコンポーネント全般で採用済み。
+ADR-027（i18n強制）・ADR-067（UIガバナンス）準拠（全UIテキストは t() 経由・生select/生input禁止）。
+同様パターンは既存バッジコンポーネント全般で採用済み。
 本PJでは StatusBadge/severity バッジの i18n 化を複数箇所で実施済み（deals, inbox 等）。
 同じアプローチ（バックエンドから severity 文字列を受け取り、フロントで i18n キーに変換して表示）を踏襲する。
+
+recon: docs/handoff/fix-supplier-dashboard-severity/recon.md
 
 ## 維持の仕組み
 
