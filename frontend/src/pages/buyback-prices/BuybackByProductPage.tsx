@@ -239,13 +239,6 @@ export function BuybackByProductPage() {
             size="sm"
           />
         )}
-        <Tabs
-          items={categoryTabItems}
-          activeKey={category}
-          onChange={handleCategoryChange}
-          variant="pill"
-          size="sm"
-        />
       </div>
 
       {loading && (
@@ -263,20 +256,30 @@ export function BuybackByProductPage() {
       )}
 
       {!error && items.length > 0 && (
-        <DataTable
-          columns={columns}
-          data={items}
-          rowKey={(row) => String(row.product_id)}
-          onRowClick={handleRowClick}
-          emptyState={<span>{t("buybackPrices.byProduct.noLinkedData")}</span>}
-          page={page}
-          hasNextPage={hasNextPage}
-          onPageChange={setPage}
-          prevPageLabel={t("common.prevPage")}
-          nextPageLabel={t("common.nextPage")}
-          pageInfo={<span>{page} / {totalPages}</span>}
-          density="compact"
-        />
+        <div className={styles.buybackFilterGroup}>
+          <Tabs
+            items={categoryTabItems}
+            activeKey={category}
+            onChange={handleCategoryChange}
+            variant="underline"
+            size="sm"
+          />
+          <DataTable
+            columns={columns}
+            data={items}
+            rowKey={(row) => String(row.product_id)}
+            onRowClick={handleRowClick}
+            emptyState={<span>{t("buybackPrices.byProduct.noLinkedData")}</span>}
+            page={page}
+            hasNextPage={hasNextPage}
+            onPageChange={setPage}
+            prevPageLabel={t("common.prevPage")}
+            nextPageLabel={t("common.nextPage")}
+            pageInfo={<span>{page} / {totalPages}</span>}
+            density="compact"
+            className={styles.buybackFilterGroupTable}
+          />
+        </div>
       )}
 
       <BuybackProductHistoryDrawer
