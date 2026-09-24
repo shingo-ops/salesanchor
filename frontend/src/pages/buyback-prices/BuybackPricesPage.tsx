@@ -285,7 +285,24 @@ export default function BuybackPricesPage() {
   const hasNextPage = page < totalPages;
 
   return (
-    <PageLayout navKey="nav.buybackPrices" subtitleKey="buybackPrices.subtitle">
+    <PageLayout
+      navKey="nav.buybackPrices"
+      subtitleKey="buybackPrices.subtitle"
+      headerAction={
+        isSuperAdmin ? (
+          <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+            {fetchMsg && <span style={{ fontSize: "var(--font-xs)", color: "var(--text-muted)" }}>{fetchMsg}</span>}
+            <Button variant="ghost" size="sm" onClick={() => setAlertsOpen(true)}>
+              {t("buybackPrices.alertSettings")}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={handleManualFetch} disabled={fetching}>
+              {fetching ? "..." : t("buybackPrices.fetchNow")}
+            </Button>
+          </div>
+        ) : undefined
+      }
+    >
+      {/* Row 1: View toggle */}
       <ContentToolbar
         left={
           <>
@@ -303,87 +320,70 @@ export default function BuybackPricesPage() {
             >
               {t("buybackPrices.byProduct.label")}
             </Button>
-            {viewMode === "shop" && (
-              <>
-                <TextField
-                  type="search"
-                  placeholder={t("buybackPrices.searchPlaceholder")}
-                  value={search}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
-                  size="sm"
-                />
-                <SelectControl
-                  options={shopOptions}
-                  value={shop}
-                  placeholder={t("buybackPrices.shopFilter")}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleShopChange(e.target.value as ShopFilter)}
-                />
-                <SelectControl
-                  options={productTypeOptions}
-                  value={productType}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
-                  size="sm"
-                />
-                <SelectControl
-                  options={[
-                    { value: "", label: t("buybackPrices.swingPeriodAll") },
-                    { value: "7", label: t("buybackPrices.swingDays7") },
-                    { value: "30", label: t("buybackPrices.swingDays30") },
-                    { value: "90", label: t("buybackPrices.swingDays90") },
-                  ]}
-                  value={swingDays}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSwingDays(e.target.value); setMinSwing(""); setPage(1); }}
-                  size="sm"
-                />
-                {swingDays && (
-                  <SelectControl
-                    options={[
-                      { value: "", label: t("buybackPrices.swingMinAll") },
-                      { value: "1000", label: "¥1,000+" },
-                      { value: "5000", label: "¥5,000+" },
-                      { value: "10000", label: "¥10,000+" },
-                    ]}
-                    value={minSwing}
-                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setMinSwing(e.target.value); setPage(1); }}
-                    size="sm"
-                  />
-                )}
-              </>
-            )}
           </>
         }
         right={
-          isSuperAdmin ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
-              {fetchMsg && <span className={styles.statusMsg}>{fetchMsg}</span>}
-              {pendingCount > 0 && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setReviewOpen(true)}
-                >
-                  {t("buybackPrices.pendingReviewBtn", { count: pendingCount })}
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setAlertsOpen(true)}
-              >
-                {t("buybackPrices.alertSettings")}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handleManualFetch}
-                disabled={fetching}
-              >
-                {fetching ? "..." : t("buybackPrices.fetchNow")}
-              </Button>
-            </div>
+          pendingCount > 0 ? (
+            <Button variant="outline" size="sm" onClick={() => setReviewOpen(true)}>
+              {t("buybackPrices.pendingReviewBtn", { count: pendingCount })}
+            </Button>
           ) : undefined
         }
       />
+
+      {/* Row 2: Search + filters (shop view only) */}
+      {viewMode === "shop" && (
+        <ContentToolbar
+          left={
+            <>
+              <TextField
+                type="search"
+                placeholder={t("buybackPrices.searchPlaceholder")}
+                value={search}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setSearch(e.target.value); setPage(1); }}
+                size="sm"
+              />
+              <SelectControl
+                options={shopOptions}
+                value={shop}
+                placeholder={t("buybackPrices.shopFilter")}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleShopChange(e.target.value as ShopFilter)}
+                size="sm"
+              />
+              <SelectControl
+                options={productTypeOptions}
+                value={productType}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setProductType(e.target.value); setPage(1); }}
+                size="sm"
+              />
+              <SelectControl
+                options={[
+                  { value: "", label: t("buybackPrices.swingPeriodAll") },
+                  { value: "7", label: t("buybackPrices.swingDays7") },
+                  { value: "30", label: t("buybackPrices.swingDays30") },
+                  { value: "90", label: t("buybackPrices.swingDays90") },
+                ]}
+                value={swingDays}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setSwingDays(e.target.value); setMinSwing(""); setPage(1); }}
+                size="sm"
+              />
+              {swingDays && (
+                <SelectControl
+                  options={[
+                    { value: "", label: t("buybackPrices.swingMinAll") },
+                    { value: "1000", label: "¥1,000+" },
+                    { value: "5000", label: "¥5,000+" },
+                    { value: "10000", label: "¥10,000+" },
+                  ]}
+                  value={minSwing}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => { setMinSwing(e.target.value); setPage(1); }}
+                  size="sm"
+                />
+              )}
+            </>
+          }
+        />
+      )}
 
       {viewMode === "product" ? (
         <BuybackByProductPage />
