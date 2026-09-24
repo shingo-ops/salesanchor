@@ -21,5 +21,5 @@ ADR-144, ADR-067
 ## 維持の仕組み
 - 守り手: .searchField クラスが ContentToolbar 内の .comp-field margin を打ち消す
 
-## 外部・過去事例
-該当なし
+## 外部・過去事例の参照と我々への応用
+該当なし（flex コンテナ内での margin 打ち消しは CSS 標準パターン。プロジェクト固有の問題）
