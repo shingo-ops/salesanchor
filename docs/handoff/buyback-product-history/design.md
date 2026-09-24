@@ -5,6 +5,10 @@
 - 変更後: ホムラ・シンソクの価格推移を重ねたグラフが BuybackProductHistoryDrawer（product_id 軸）で表示される
 
 ### recon 相互参照
+
+調査記録: `docs/handoff/buyback-product-history/recon.md`
+関連ADR: ADR-157（買取相場ログ）
+
 - `backend/app/routers/buyback_prices.py` — `GET /buyback-prices/by-product/{product_id}/history` エンドポイントを `/buyback-prices/{shop_product_id}/history` の前に追加
 - `frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx` — 新規Drawer実装（recharts/Tabs パターン）
 - `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx` — `handleRowClick` を新 Drawer に切替
