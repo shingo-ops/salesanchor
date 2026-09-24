@@ -646,6 +646,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute((MIGRATIONS / "20260917_010000_add_product_code_to_extraction.sql").read_text())
         cursor.execute(_PUBLIC_PRODUCTS_DDL)
         cursor.execute(_PUBLIC_SUPPLIERS_DDL)
+        # PMG import: add line_posted_at to tenant_004.source_messages (needed by distribution query).
+        # tenant_004 is provisioned by seed_condition_note() which does not call migrate(), so this
+        # migration must be applied explicitly here.
+        cursor.execute((MIGRATIONS / "20260910_010000_tcg_import_message_links.sql").read_text())
         # Sprint 1: rewire supplier_channels.supplier_id UUID→INTEGER for distribution JOIN
         _supplier_ssot_premigration(cursor, "tenant_004")
         cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
