@@ -6,8 +6,9 @@
 
 ## recon/ADR相互参照
 
-- recon.md: import_job_messages中間テーブル経由の結合確認済み
-- 関連ADR: なし
+- recon.md: `docs/handoff/release-import-history-redesign/recon.md` — import_job_messages中間テーブル経由の結合確認済み
+- ADR-027 (i18n強制): `docs/adr/ADR-027-ui-internationalization.md` — ja.json/en.json両ファイルへのi18nキー追加が必須。ハードコード日本語禁止
+- ADR-144 (UIガバナンス): `docs/adr/ADR-144-ui-governance.md` — 既存コンポーネント金型を優先。生select/生input/色直値禁止
 
 ## 変更前後
 
@@ -42,4 +43,4 @@
 
 ## 維持の仕組み
 
-守り手: 既存のImportWorkflowPanelが詳細表示を担当。追加の維持管理は不要。
+守り手: `frontend/src/pages/super-admin/TcgLineImportPage.tsx` — テーブル列定義を保持。既存のImportWorkflowPanelが詳細表示を担当。i18nキーは `frontend/src/locales/ja.json` / `en.json` で管理。
