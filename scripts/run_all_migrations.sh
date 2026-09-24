@@ -796,3 +796,7 @@ run_sql migrations/20260924_030000_add_extraction_example_text.sql
 
 # ADR-157 Phase 3: 買取商品と自社マスタの自動紐付け（product_id型変更・match列追加）
 run_sql migrations/20260924_100000_buyback_product_matching.sql
+
+# analysis_run_snapshots.unit_id / condition_id: UUID → INTEGER 型修正
+# analysis_results が INTEGER 型のためスナップショット保存時の型不一致を解消
+run_sql migrations/20260924_110000_fix_analysis_run_snapshots_unit_condition_type.sql
