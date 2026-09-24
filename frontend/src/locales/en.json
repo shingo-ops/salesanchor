@@ -3979,6 +3979,7 @@
       "dashboard": "Dashboard",
       "noteMaster": "Note Master",
       "productKindsMaster": "Product Kinds",
+      "typeMaster": "Type Master",
       "productLinesMaster": "Product Lines",
       "productFormatsMaster": "Sub-categories",
       "quantityUnitsMaster": "Quantity Units",
@@ -4349,8 +4350,24 @@
     "name": "Name",
     "nameEn": "English Name",
     "kindId": "Product Kind",
-    "typeId": "Product Type (legacy)",
+    "typeId": "Type",
     "displayOrder": "Display Order",
+    "isActive": "Active"
+  },
+  "typeMaster": {
+    "title": "Type Master",
+    "subtitle": "Manage types (game/series categories)",
+    "addNew": "Add Type",
+    "createTitle": "Create Type",
+    "editTitle": "Edit Type",
+    "confirmDelete": "Are you sure you want to delete this type? Types with associated product lines cannot be deleted.",
+    "deleteBlocked": "This type is in use and cannot be deleted",
+    "noData": "No types registered",
+    "code": "Code",
+    "nameJa": "Name (JA)",
+    "nameEn": "Name (EN)",
+    "kindId": "Kind",
+    "sortOrder": "Sort Order",
     "isActive": "Active"
   },
   "productFormatsMaster": {
