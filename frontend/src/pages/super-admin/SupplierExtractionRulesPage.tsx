@@ -467,7 +467,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
                       aria-label={t("common.delete")}
                       onClick={() => removeToken(index)}
                     >
-                      ✕
+                      {(() => { const CloseIcon = SCHEDULE_SETTINGS_ICONS.close; return <CloseIcon size={ICON.md} />; })()}
                     </Button>
                   </div>
                 ))}
