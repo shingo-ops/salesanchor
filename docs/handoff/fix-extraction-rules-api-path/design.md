@@ -1,6 +1,6 @@
 # 設計 — fix-extraction-rules-api-path
 
-**対象ADR**: なし（バグフィックスのみ）
+**対象ADR**: ADR-027（UI文字列規約・i18n強制。今回はAPIパスのバグフィックスのみで文字列変更なし）
 **recon**: docs/handoff/fix-extraction-rules-api-path/recon.md
 **日付**: 2026-09-24
 **担当**: Planner
