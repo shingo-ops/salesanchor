@@ -35,6 +35,7 @@ import { ConditionDefsMasterPanel } from "./components/ConditionDefsMasterPanel"
 import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel";
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
+import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import "./AnalysisRulesPage.css";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
@@ -173,6 +174,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "condition-defs-master" && <ConditionDefsMasterPanel />}
               {activeSection === "weight-classes-master" && <WeightClassesMasterPanel />}
               {activeSection === "rule-management" && <RuleManagementPanel />}
+              {activeSection === "extraction-rules" && <SupplierExtractionRulesPage embedded />}
             </div>
           )}
         </div>

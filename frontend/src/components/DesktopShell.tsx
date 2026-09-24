@@ -187,9 +187,9 @@ export default function DesktopShell() {
   );
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
+  // 「抽出ルール設定」は解析管理ページ内サブナビに統合済み（ADR-144 hub-shell構造）
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
-    { to: "/super-admin/supplier-extraction-rules",   labelKey: "nav.superAdminSupplierExtractionRules" },
     { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
   ] : [];

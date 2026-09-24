@@ -13,6 +13,7 @@ export type AnalysisRulesSidebarKey =
   | "accuracy-management"
   | "needs-review"
   | "rule-management"
+  | "extraction-rules"
   | "product-master"
   | "product-categories-master"
   | "product-kinds-master"
@@ -85,6 +86,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
           {t("analysisRules.sidebar.groupRuleManagement")}
         </span>
         {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
+        {navItem("extraction-rules", t("analysisRules.sidebar.extractionRules"))}
       </div>
 
       {/* マスタ管理グループ */}

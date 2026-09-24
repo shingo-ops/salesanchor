@@ -81,7 +81,12 @@ function detailToForm(rules: ExtractionRules): RulesFormState {
 // メインコンポーネント
 // ---------------------------------------------------------------------------
 
-export default function SupplierExtractionRulesPage() {
+interface SupplierExtractionRulesPageProps {
+  /** 解析管理ページ内に埋め込む場合 true。PageLayout ラッパーをスキップする */
+  embedded?: boolean;
+}
+
+export default function SupplierExtractionRulesPage({ embedded = false }: SupplierExtractionRulesPageProps) {
   const { t } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
 
@@ -196,9 +201,10 @@ export default function SupplierExtractionRulesPage() {
 
   if (authLoading) return null;
   if (!isSuperAdmin) {
-    return (
+    const forbiddenContent = <p>{t("common.forbidden")}</p>;
+    return embedded ? forbiddenContent : (
       <PageLayout navKey="nav.superAdminSupplierExtractionRules">
-        <p>{t("common.forbidden")}</p>
+        {forbiddenContent}
       </PageLayout>
     );
   }
@@ -240,134 +246,132 @@ export default function SupplierExtractionRulesPage() {
   ];
 
   // ---------------------------------------------------------------------------
-  // レンダリング: 詳細ビュー
+  // 詳細ビューのコンテンツ
   // ---------------------------------------------------------------------------
 
-  if (selectedSupplier !== null) {
-    return (
-      <PageLayout navKey="nav.superAdminSupplierExtractionRules">
-        <div className="supplier-rules-header">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleBack}
-          >
-            ← {t("supplierExtractionRules.back")}
-          </Button>
-          {/* eslint-disable-next-line no-restricted-syntax */}
-          <h2 className="supplier-rules-header-title">{selectedSupplier.name}</h2>
-        </div>
+  const detailContent = selectedSupplier !== null ? (
+    <div>
+      <div className="supplier-rules-header">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleBack}
+        >
+          ← {t("supplierExtractionRules.back")}
+        </Button>
+        {/* eslint-disable-next-line no-restricted-syntax */}
+        <h2 className="supplier-rules-header-title">{selectedSupplier.name}</h2>
+      </div>
 
-        {detailError && <p>{detailError}</p>}
-        {loadingDetail && <p>{t("common.loading")}</p>}
+      {detailError && <p>{detailError}</p>}
+      {loadingDetail && <p>{t("common.loading")}</p>}
 
-        {!loadingDetail && detail && (
-          <div className="supplier-rules-split">
-            {/* 左: 原文テキスト */}
-            <div className="supplier-rules-source">
-              {detail.source_text
-                ? detail.source_text
-                : (
-                  <span className="supplier-rules-source-empty">
-                    {t("supplierExtractionRules.noSourceText")}
-                  </span>
-                )}
-            </div>
+      {!loadingDetail && detail && (
+        <div className="supplier-rules-split">
+          {/* 左: 原文テキスト */}
+          <div className="supplier-rules-source">
+            {detail.source_text
+              ? detail.source_text
+              : (
+                <span className="supplier-rules-source-empty">
+                  {t("supplierExtractionRules.noSourceText")}
+                </span>
+              )}
+          </div>
 
-            {/* 右: ルール設定フォーム */}
-            <div className="supplier-rules-form">
-              <TextField
-                label={t("supplierExtractionRules.priceFormat")}
-                helperText={t("supplierExtractionRules.priceFormatHelper")}
-                value={form.extraction_price_format}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
-                }
-                fullWidth
-              />
+          {/* 右: ルール設定フォーム */}
+          <div className="supplier-rules-form">
+            <TextField
+              label={t("supplierExtractionRules.priceFormat")}
+              helperText={t("supplierExtractionRules.priceFormatHelper")}
+              value={form.extraction_price_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_price_format: e.target.value }))
+              }
+              fullWidth
+            />
 
-              <TextField
-                label={t("supplierExtractionRules.qtyFormat")}
-                helperText={t("supplierExtractionRules.qtyFormatHelper")}
-                value={form.extraction_qty_format}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
-                }
-                fullWidth
-              />
+            <TextField
+              label={t("supplierExtractionRules.qtyFormat")}
+              helperText={t("supplierExtractionRules.qtyFormatHelper")}
+              value={form.extraction_qty_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_qty_format: e.target.value }))
+              }
+              fullWidth
+            />
 
-              <Select
-                label={t("supplierExtractionRules.orderPattern")}
-                value={form.extraction_order_pattern}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
-                }
-                options={[
-                  { value: "", label: t("supplierExtractionRules.orderUnset") },
-                  { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
-                  { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
-                ]}
-                fullWidth
-              />
+            <Select
+              label={t("supplierExtractionRules.orderPattern")}
+              value={form.extraction_order_pattern}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_order_pattern: e.target.value }))
+              }
+              options={[
+                { value: "", label: t("supplierExtractionRules.orderUnset") },
+                { value: "price_at_qty", label: t("supplierExtractionRules.orderPriceAtQty") },
+                { value: "qty_at_price", label: t("supplierExtractionRules.orderQtyAtPrice") },
+              ]}
+              fullWidth
+            />
 
-              <TextField
-                label={t("supplierExtractionRules.defaultUnit")}
-                helperText={t("supplierExtractionRules.defaultUnitHelper")}
-                value={form.extraction_default_unit}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
-                }
-                fullWidth
-              />
+            <TextField
+              label={t("supplierExtractionRules.defaultUnit")}
+              helperText={t("supplierExtractionRules.defaultUnitHelper")}
+              value={form.extraction_default_unit}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_default_unit: e.target.value }))
+              }
+              fullWidth
+            />
 
-              <TextField
-                label={t("supplierExtractionRules.stateFormat")}
-                helperText={t("supplierExtractionRules.stateFormatHelper")}
-                value={form.extraction_state_format}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
-                }
-                fullWidth
-              />
+            <TextField
+              label={t("supplierExtractionRules.stateFormat")}
+              helperText={t("supplierExtractionRules.stateFormatHelper")}
+              value={form.extraction_state_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_state_format: e.target.value }))
+              }
+              fullWidth
+            />
 
-              <Textarea
-                label={t("supplierExtractionRules.notes")}
-                helperText={t("supplierExtractionRules.notesHelper")}
-                value={form.extraction_notes}
-                onChange={(e) =>
-                  setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
-                }
-                rows={4}
-                fullWidth
-              />
+            <Textarea
+              label={t("supplierExtractionRules.notes")}
+              helperText={t("supplierExtractionRules.notesHelper")}
+              value={form.extraction_notes}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_notes: e.target.value }))
+              }
+              rows={4}
+              fullWidth
+            />
 
-              <div className="supplier-rules-form-actions">
-                {savedMessage && (
-                  <span className="supplier-rules-saved-msg">
-                    {t("supplierExtractionRules.saved")}
-                  </span>
-                )}
-                <Button
-                  variant="primary"
-                  onClick={() => void handleSave()}
-                  disabled={saving}
-                >
-                  {t("supplierExtractionRules.save")}
-                </Button>
-              </div>
+            <div className="supplier-rules-form-actions">
+              {savedMessage && (
+                <span className="supplier-rules-saved-msg">
+                  {t("supplierExtractionRules.saved")}
+                </span>
+              )}
+              <Button
+                variant="primary"
+                onClick={() => void handleSave()}
+                disabled={saving}
+              >
+                {t("supplierExtractionRules.save")}
+              </Button>
             </div>
           </div>
-        )}
-      </PageLayout>
-    );
-  }
+        </div>
+      )}
+    </div>
+  ) : null;
 
   // ---------------------------------------------------------------------------
-  // レンダリング: 一覧ビュー
+  // 一覧ビューのコンテンツ
   // ---------------------------------------------------------------------------
 
-  return (
-    <PageLayout navKey="nav.superAdminSupplierExtractionRules">
+  const listContent = (
+    <div>
       {listError && <p>{listError}</p>}
       {loadingList ? (
         <p>{t("common.loading")}</p>
@@ -379,6 +383,21 @@ export default function SupplierExtractionRulesPage() {
           onRowClick={handleSelectSupplier}
         />
       )}
+    </div>
+  );
+
+  const pageContent = detailContent ?? listContent;
+
+  // embedded モード: PageLayout を使わずにコンテンツのみ返す
+  if (embedded) return pageContent;
+
+  // ---------------------------------------------------------------------------
+  // スタンドアロンモード（直接 URL アクセス）
+  // ---------------------------------------------------------------------------
+
+  return (
+    <PageLayout navKey="nav.superAdminSupplierExtractionRules">
+      {pageContent}
     </PageLayout>
   );
 }
