@@ -4518,6 +4518,8 @@
     "stateFormatHelper": "e.g., [state], (state), ■state:",
     "notes": "Additional Instructions for Gemini",
     "notesHelper": "Free-text extraction rules specific to this supplier",
+    "exampleText": "Example Message",
+    "exampleTextPlaceholder": "Paste a representative raw message from this supplier",
     "save": "Save",
     "saved": "Saved",
     "back": "Back to List",
