@@ -4,6 +4,16 @@
 
 DO $$
 BEGIN
+  -- テーブルが存在しない場合はスキップ（CI環境対応）
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.tables
+    WHERE table_schema = 'public'
+      AND table_name = 'buyback_shop_products'
+  ) THEN
+    RAISE NOTICE 'buyback_shop_products does not exist, skipping migration';
+    RETURN;
+  END IF;
+
   -- Step 1: product_id の型変更 (UUID → INTEGER)
   -- 全件NULLなので安全に変更可能
   IF EXISTS (
