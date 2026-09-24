@@ -1,7 +1,8 @@
 # design: buyback by-product view improvements
 
-## 参照ADR
+## 参照
 
+- recon: docs/handoff/buyback-best-price-view/recon.md
 - ADR-157: 買取相場ログ
 
 ## 変更方針
@@ -36,6 +37,7 @@
 - 既存フィールド（homura_*/shinsoku_*）はAPIレスポンスに残し、BuybackProductHistoryDrawerが引き続き利用できる
 - カテゴリ正規化はUPPER()のみ。DBのデータは変更しない
 - 行インデックスマッピング（r[0]..r[20]）はコメントなしで追跡が難しいため、将来的にmappings()切り替えを検討
+- 守り手: 人手で守る（買取相場エンドポイントは単一ファイル buyback_prices.py に集約・変更時はレビューで確認）
 
 ## 弊害・リスク
 
