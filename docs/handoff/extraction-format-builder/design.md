@@ -27,9 +27,15 @@
 
 ## 維持の仕組み
 
+守り手: ESLint（ADR-027/ADR-144 自動検出）
+
 - ESLint `local/no-japanese-literal` が日本語リテラルの直書きを検出（ADR-027）
 - `check-jsx-emoji.js` が絵文字・記号リテラルを検出し `frontend/src/constants/icons.tsx` 使用を強制（ADR-144）
 - `extraction_order_pattern` は JSON 配列専用に切り替わったが旧値は空配列として透過的に処理
+
+## recon 参照
+
+調査記録: docs/handoff/extraction-format-builder/recon.md
 
 ## 守り手（触らない範囲）
 
