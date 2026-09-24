@@ -168,6 +168,12 @@ export default function MobileShell() {
                 "/super-admin/analysis-rules",
               ),
               resolveItem(
+                "supplierExtractionRules",
+                "nav.superAdminSupplierExtractionRules",
+                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
+                "/super-admin/supplier-extraction-rules",
+              ),
+              resolveItem(
                 "buybackPrices",
                 "nav.buybackPrices",
                 <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,

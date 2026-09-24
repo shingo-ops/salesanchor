@@ -25,10 +25,10 @@ import "./SupplierExtractionRulesPage.css";
 // ---------------------------------------------------------------------------
 
 interface SupplierOverviewItem {
-  id: number;
+  supplier_id: number;
   name: string;
   total_items: number;
-  unit_ng: number;
+  unit_ng_count: number;
   has_extraction_rules: boolean;
 }
 
@@ -89,7 +89,7 @@ export default function SupplierExtractionRulesPage() {
   const [loadingList, setLoadingList] = useState(true);
   const [listError, setListError] = useState("");
 
-  const [selectedSupplier, setSelectedSupplier] = useState<{ id: number; name: string } | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<{ supplier_id: number; name: string } | null>(null);
   const [detail, setDetail] = useState<SupplierExtractionDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [detailError, setDetailError] = useState("");
@@ -109,8 +109,8 @@ export default function SupplierExtractionRulesPage() {
       const data = await api.get<SupplierOverviewItem[]>(
         "/super-admin/suppliers/extraction-overview"
       );
-      // unit_ng 降順ソート（問題先出し）
-      const sorted = [...data].sort((a, b) => b.unit_ng - a.unit_ng);
+      // unit_ng_count 降順ソート（問題先出し）
+      const sorted = [...data].sort((a, b) => b.unit_ng_count - a.unit_ng_count);
       setSuppliers(sorted);
     } catch {
       setListError(t("common.errorLoading"));
@@ -147,11 +147,11 @@ export default function SupplierExtractionRulesPage() {
 
   const handleSelectSupplier = useCallback(
     (row: SupplierOverviewItem) => {
-      setSelectedSupplier({ id: row.id, name: row.name });
+      setSelectedSupplier({ supplier_id: row.supplier_id, name: row.name });
       setDetail(null);
       setForm(emptyForm);
       setSavedMessage(false);
-      void fetchDetail(row.id);
+      void fetchDetail(row.supplier_id);
     },
     [fetchDetail]
   );
@@ -181,7 +181,7 @@ export default function SupplierExtractionRulesPage() {
         extraction_notes: form.extraction_notes || null,
       };
       await api.patch(
-        `/super-admin/suppliers/${selectedSupplier.id}/extraction-rules`,
+        `/super-admin/suppliers/${selectedSupplier.supplier_id}/extraction-rules`,
         payload
       );
       setSavedMessage(true);
@@ -219,12 +219,12 @@ export default function SupplierExtractionRulesPage() {
       renderCell: (row) => String(row.total_items),
     },
     {
-      key: "unit_ng",
+      key: "unit_ng_count",
       header: t("supplierExtractionRules.unitNg"),
       renderCell: (row) => (
-        row.unit_ng > 0
-          ? <Badge variant="warning">{String(row.unit_ng)}</Badge>
-          : <Badge variant="success">{String(row.unit_ng)}</Badge>
+        row.unit_ng_count > 0
+          ? <Badge variant="warning">{String(row.unit_ng_count)}</Badge>
+          : <Badge variant="success">{String(row.unit_ng_count)}</Badge>
       ),
     },
     {
@@ -375,7 +375,7 @@ export default function SupplierExtractionRulesPage() {
         <DataTable
           columns={columns}
           data={suppliers}
-          rowKey={(row) => String(row.id)}
+          rowKey={(row) => String(row.supplier_id)}
           onRowClick={handleSelectSupplier}
         />
       )}
