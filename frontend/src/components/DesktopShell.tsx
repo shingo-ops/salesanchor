@@ -188,10 +188,11 @@ export default function DesktopShell() {
 
   // SaaS管理者専用メニュー項目（is_super_admin のみに表示）
   // 「抽出ルール設定」は解析管理ページ内サブナビに統合済み（ADR-144 hub-shell構造）
+  // 順序: LINE解析 → 買取相場 → 為替レート管理
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
-    { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
+    { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
   ] : [];
 
   const moreItems: NavItem[] = [];
@@ -372,16 +373,17 @@ export default function DesktopShell() {
               {isSuperAdmin && (
                 <>
                   <div className="sidebar-divider" aria-hidden="true" />
-                  <SidebarAccordion
-                    label={t("nav.saasAdmin")}
-                    icon={<NAV_ICONS.saasAdmin size={ICON.base} />}
-                    items={saasAdminItems}
-                    activePaths={["/super-admin"]}
-                    isExpanded={sidebarExpanded}
-                    isOpen={openAccordion === "saasAdmin"}
-                    onToggle={() => toggleAccordion("saasAdmin")}
-                    onNavClick={handleSidebarNavClick}
-                  />
+                  {saasAdminItems.map((item) => (
+                    <NavLink
+                      key={item.to}
+                      to={item.to}
+                      className={({ isActive }) => `sidebar-item${isActive ? " active" : ""}`}
+                      onClick={handleSidebarNavClick}
+                    >
+                      <span className="sidebar-icon"><NAV_ICONS.saasAdmin size={ICON.base} /></span>
+                      <span className="sidebar-label">{t(item.labelKey)}</span>
+                    </NavLink>
+                  ))}
                 </>
               )}
 
