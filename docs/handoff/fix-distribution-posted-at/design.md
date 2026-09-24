@@ -9,13 +9,13 @@ docs/handoff/fix-distribution-posted-at/recon.md
 ## 問題と方針
 
 ### 現状
-`tcg_distribution_svc.py:215` の SELECT文:
+`backend/app/services/tcg_distribution_svc.py:215` の SELECT文:
 ```sql
 COALESCE(TO_CHAR(sm.received_at AT TIME ZONE 'Asia/Tokyo', 'YYYY-MM-DD HH24:MI:SS'), '') AS posted_at
 ```
 
 ### 原因
-Android 版データのインポートでは `received_at` にプロバイダグループ内の最古メッセージ timestamp が設定される（`tcg_line_import_svc.py:306`）。これは SQR-05 で文書化された挙動。
+Android 版データのインポートでは `received_at` にプロバイダグループ内の最古メッセージ timestamp が設定される（`backend/app/services/tcg_line_import_svc.py:306`）。これは SQR-05 で文書化された挙動。
 
 ### 修正
 ```sql
