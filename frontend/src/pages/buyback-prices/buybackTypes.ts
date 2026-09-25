@@ -97,7 +97,7 @@ export interface ByProductItem {
   product_id: number;
   product_code: string;
   name_ja: string;
-  category: string;
+  work_id: number;
   release_date: string | null;
   image_url: string | null;
   mark?: string | null;
@@ -121,13 +121,14 @@ export interface ByProductResponse {
   items: ByProductItem[];
   total: number;
   counts_by_category: Record<string, number>;
+  category_names: Record<string, string>;
 }
 
 export interface ProductHistoryResponse {
   history: Record<string, PriceHistoryEntry[]>;  // shop_code → entries
 }
 
-export type CardGame = "all" | "pokemon" | "onepiece" | "yugioh" | "dragonball" | "weiss" | "lorcana";
+export type CardGame = "all" | string;
 export type ShopFilter = "all" | "shinsoku" | "homura";
 
 export const PER_PAGE = 50;
