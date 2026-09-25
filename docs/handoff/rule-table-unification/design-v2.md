@@ -152,12 +152,12 @@ code = f"CN{datetime.now().strftime('%Y%m%d%H%M%S')}"
 
 | ファイル | 変更内容 |
 |---------|---------|
-| `migrations/YYYYMMDD_HHMMSS_conditions_add_def_unit_note.sql` | ALTER TABLE + VIEW 再作成 |
+| `migrations/20260925_020000_conditions_add_def_unit_note.sql` | ALTER TABLE + VIEW 再作成 |
 | `backend/app/schemas/central_masters.py` | condition_def_id, unit_id, note 追加 |
 | `backend/app/schemas/condition.py` | 同上 |
 | `backend/app/routers/super_admin_conditions.py` | CRUD 対応 + code 自動生成 |
 | `backend/app/routers/conditions.py` | CRUD 対応 |
-| `frontend/.../ConditionsMasterPanel.tsx` | UI 全面改修 |
+| `frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx` | UI 全面改修 |
 | `frontend/src/locales/ja.json` | 質問形式ラベル |
 | `frontend/src/locales/en.json` | 同上 |
 | `scripts/run_all_migrations.sh` | migration 登録 |
@@ -194,3 +194,20 @@ code = f"CN{datetime.now().strftime('%Y%m%d%H%M%S')}"
 | V6 | 質問形式ラベルが適用されている | 画面確認 |
 | V7 | 既存テスト全PASS | CI |
 | V8 | resolve_condition_v2 の動作が変わらない | 既存テスト |
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+不要（既存UIパターンの改善であり、新技術導入を伴わない）。
+
+---
+
+## 維持の仕組み
+
+| 対象 | 守り手 |
+|------|-------|
+| `condition_definitions` / `units` マスタデータ | PO が ConditionDefsMasterPanel / UnitsMasterPanel 経由で UI 登録 |
+| `resolve_condition_v2` の動作保証 | 既存テスト（test_condition_vocab.py 等） + CI |
+| migration の安全性 | CI `migration-test` ジョブ + `migration-guard`（DROP COLUMN 検知） |
+| i18n キー整合性 | ADR-027 + CI lint（ja.json / en.json キー一致チェック） |
