@@ -54,7 +54,7 @@
 | 2 | extraction_items の raw_product_name フィールドが実在するか | `backend/app/tasks/tcg_extraction.py:285` で確認 | ✅ 解消済み: 実在する |
 | 3 | extraction_jobs と supplier_channels の結合パスが存在するか | `backend/app/services/tcg_analysis_dashboard_svc.py:435` で確認 | ✅ 解消済み: `supplier_channels → source_messages → extraction_jobs` パスが存在する |
 | 4 | 既存ランキング表示UIパターン（frr-rank）が流用可能か | `frontend/src/pages/dashboard/FunnelReasonsPage.tsx:72` と `FunnelReasonsPage.css:86` で確認 | ✅ 解消済み: 流用可能。`frr-rank` + `var(--dashboard-rank-badge)` のパターンが存在 |
-| 5 | ADR-144 が求める金型コンポーネントが抽出タブで既に使われているか | `AnalysisDashboardPanel.tsx:33-37` で確認 | ✅ 解消済み: Card / Badge / DataTable はすべて既存インポート済み |
+| 5 | ADR-144 が求める金型コンポーネントが抽出タブで既に使われているか | `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:33` で確認 | ✅ 解消済み: Card / Badge / DataTable はすべて既存インポート済み |
 
 **未解決ゼロ確認**: 全て解消済み
 
