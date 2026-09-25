@@ -1394,20 +1394,47 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             if product_decisions is not None
             else None
         )
+        # ADR-158: apply exclude_keywords check to GEMINI direct path before accepting.
+        # Previously, GEMINI bypass skipped exclude_keywords entirely, causing misassignments
+        # (e.g. single cards matched to BOX products, パラレル/SAR items matched to sealed boxes).
+        _gemini_excluded = False
         if gemini_product_id and gemini_product_id in filtered_codes:
+            _gemini_ex_fields = [
+                normalize_en(raw_product_name),
+                normalize_en(raw_state or ""),
+                normalize_en(raw_memo or ""),
+            ]
+            # Check 1: exclude_keywords match
+            if any(
+                kw and match_product_keyword(kw, field)
+                for kw in exclude_kw.get(gemini_product_id, [])
+                for field in _gemini_ex_fields
+            ):
+                _gemini_excluded = True
+            # Check 2: single card marker vs BOX/CASE category
+            if not _gemini_excluded:
+                _gemini_category = (product_category_classes or {}).get(gemini_product_id, "") or ""
+                if single_card_marker(raw_product_name, raw_state, raw_memo) and _gemini_category.casefold() in {"box", "case"}:
+                    _gemini_excluded = True
+
+        if gemini_product_id and gemini_product_id in filtered_codes and not _gemini_excluded:
             matched_code = gemini_product_id
             pid_basis = "GEMINI"
             pid_resolved = True
             candidates: list = []
         else:
-            # Gemini が NULL / 無効 → キーワード照合にフォールバック
+            # Gemini が NULL / 無効 / 除外 → キーワード照合にフォールバック
             matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
                 norm_product_name, filtered_codes, search_kw, exclude_kw,
                 work_id=work_id, product_work_ids=product_work_ids,
                 raw_state=norm_condition, raw_memo=norm_memo,
                 product_category_classes=product_category_classes,
             )
-            if product_decisions is not None and pid_basis != "NONE":
+            if _gemini_excluded and pid_basis != "NONE":
+                # ADR-158: GEMINI result was rejected by exclude_keywords or single_card_marker;
+                # prefix with GEMINI_EXCLUDED so we can track the bypass in analysis logs.
+                pid_basis = ("GEMINI_EXCLUDED|" + pid_basis)[:100]
+            elif product_decisions is not None and pid_basis != "NONE":
                 # v5 ジョブでフォールバックした場合は FALLBACK プレフィックスで区別する
                 pid_basis = ("FALLBACK|" + pid_basis)[:100]
             elif work_decisions is not None and pid_basis != "NONE":
