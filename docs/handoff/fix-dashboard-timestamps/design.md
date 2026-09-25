@@ -1,5 +1,9 @@
 # design: ダッシュボード時刻表示JST修正
 
+## 関連ドキュメント
+- recon: docs/handoff/fix-dashboard-timestamps/recon.md
+- 対象ADR: ADR-027-ui-internationalization（UI表示変更のため参照）
+
 ## 問題
 AnalysisDashboardPanelの3タブで時刻がUTCの生ISO文字列で表示されていた。
 
@@ -37,5 +41,4 @@ MDN Web Docs に仕様記載あり。他タブ（CompanyTabContent 等）でも�
 
 ## 維持の仕組み
 
-守り手: なし（表示のみの変更・自動テストなし）
-将来的に AnalysisDashboardPanel のテストを追加する際、時刻フォーマットのアサーションを含めることを推奨。
+守り手: 人手で守る（表示のみの変更・自動テストなし・コードレビューで確認）
