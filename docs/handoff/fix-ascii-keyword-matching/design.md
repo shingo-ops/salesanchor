@@ -29,5 +29,6 @@ ADR: ADR-157
 該当なし（同一リポジトリ内の正しい関数への差し替え）
 
 ## 維持の仕組み
+守り手: 既存テスト（test_tcg_keyword_matching.py）+ match_pid_with_work との同一パターン
 - match_pid_with_work と同じ関数使用パターンに統一
 - テストで search/exclude の分離をカバー

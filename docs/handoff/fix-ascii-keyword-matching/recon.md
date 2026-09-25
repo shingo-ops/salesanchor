@@ -1,7 +1,7 @@
 # Recon: 買取マッチャーが旧関数を使用している問題
 
 ## 問題
-`product_matcher.py` の `score_product` が検索キーワード照合に `match_one_kw`（連続文字列一致）を使用。
+`backend/app/services/buyback_scraper/product_matcher.py` の `score_product` が検索キーワード照合に `match_one_kw`（連続文字列一致）を使用。
 同リポジトリ内の `match_product_search_keyword`（トークンAND単語境界照合）が正しい関数だが未使用。
 
 ## エビデンス
