@@ -1,5 +1,7 @@
 # recon: 全マスタパネルDrawer化
 
+参照: [design.md](./design.md)
+
 ## 対象ADR
 - ADR-144: UIガバナンス（金型準拠・生select/生input/自作タブ/色直値禁止）
 

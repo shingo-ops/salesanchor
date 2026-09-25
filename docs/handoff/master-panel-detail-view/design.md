@@ -1,5 +1,7 @@
 # design: 全マスタパネルDrawer化
 
+参照: [recon.md](./recon.md)
+
 ## 対象ADR
 - ADR-144: UIガバナンス（金型準拠）
 
@@ -36,4 +38,4 @@
 
 ## 維持の仕組み
 - ADR-144 UIガバナンス: 生Modal使用時はESLintではなくコードレビューでブロック
-- 守り手: Hikky-dev (code-reviewer)
+- 守り手: `frontend/src/pages/super-admin/components/*MasterPanel.tsx` / Hikky-dev (code-reviewer)
