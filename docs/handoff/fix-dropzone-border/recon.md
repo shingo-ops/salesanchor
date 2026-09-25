@@ -4,8 +4,7 @@
 
 | 引用先 `path:line` | 確認内容 |
 |-------------------|---------|
-| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:42` | `.analysis-dashboard-dropzone` で `var(--color-border)` が使用されている |
-| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:78` | `.analysis-dashboard-window-input` でも `var(--color-border)` が使用されている |
+| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:46` | CSSをimportしているTSXファイル。ドロップゾーンUIがここで描画される |
 
 **未解決ゼロ確認**: 全て解消済み
 
