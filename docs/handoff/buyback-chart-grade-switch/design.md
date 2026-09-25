@@ -14,48 +14,23 @@
 ## 変更設計
 
 ### MergedDataPoint 型変更
-```typescript
-// Before
-interface MergedDataPoint {
-  date: string;
-  homura_s: number | null;
-  shinsoku_s: number | null;
-}
 
-// After
-interface MergedDataPoint {
-  date: string;
-  homura: number | null;
-  shinsoku: number | null;
-}
-```
+Before: `homura_s`/`shinsoku_s` 固定フィールド
+After: `homura`/`shinsoku`（グレードサフィックスなし・動的参照）
 
 ### mergeHistory 動的化
-```typescript
-// Before: price_s 固定
-dateMap[date].homura_s = entry.price_s;
 
-// After: 選択グレードに応じた price_s/a/b
-const priceKey = `price_${selectedGrade}` as keyof PriceHistoryEntry;
-dateMap[date].homura = (entry[priceKey] as number) ?? null;
-```
+`selectedGrade` パラメータを受け取り `price_s`/`price_a`/`price_b` を動的に参照。
 
 ### グレード切り替えUI
-- SelectControl（ADR-144準拠）を期間Tabsと横並び配置
-- gradeOptions: S/A/B（columnPriceS/A/B キー流用）
+
+- SelectControl（ADR-144準拠・生select禁止）を期間Tabsと横並び配置
+- gradeOptions: S/A/B（`buybackPrices.columnPriceS/A/B` キー流用）
 - デフォルト: "s"
 
 ### エラー表示修正
-```typescript
-// Before: サイレント
-.catch(() => { /* サイレント */ })
 
-// After: error state に格納
-.catch((err: unknown) => {
-  const msg = err instanceof Error ? err.message : null;
-  setError(msg ?? t("buybackPrices.loadError"));
-})
-```
+サイレントcatch → error state に格納してUIに表示（`buybackPrices.loadError` キー）
 
 ## 検証テーブル
 
@@ -68,7 +43,7 @@ dateMap[date].homura = (entry[priceKey] as number) ?? null;
 
 ## 影響範囲
 
-- `BuybackProductHistoryDrawer.tsx` のみ（他コンポーネントは参照なし）
+- `frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx` のみ（他コンポーネントは参照なし）
 - Line の dataKey が `homura_s` → `homura` に変わるが外部参照なし
 
 ## 戻し方
@@ -78,8 +53,10 @@ git revert <commit>
 ```
 フロントエンドUI変更のみ・DBなし・APIなし
 
-## 守り手
+## 外部・過去事例の参照と我々への応用
 
-- TypeScript型チェック（`price_${selectedGrade}` は `keyof PriceHistoryEntry` にキャスト済み）
-- 既存recharts基盤（新規依存なし）
-- ADR-144 SelectControl（生select禁止）準拠
+該当なし。SelectControl + recharts は既存基盤（ADR-144/ADR-157）を踏襲。グレード切り替えパターンは同ページの期間切り替え（Tabs + days state）と同一実装パターンを適用した。
+
+## 維持の仕組み
+
+- 守り手: TypeScript型チェック（`keyof PriceHistoryEntry` キャストで price_x フィールドのみ許可）+ 既存recharts基盤（新規依存なし）+ ADR-144 SelectControl（生select禁止・CIで強制）
