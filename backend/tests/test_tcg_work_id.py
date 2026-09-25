@@ -14,7 +14,10 @@ ONE = 1
 GUNDAM = 2
 REF = {"works": [{"id": ONE, "display_name": "One Piece"}, {"id": GUNDAM, "display_name": "Gundam"}],
        "products": [{"id": 1, "work_id": ONE, "mark": "OP-01"}]}
-HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE"
+# v5: 11 columns (used for backward-compat parse tests only)
+V5_HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE"
+# v6: 12 columns (current default)
+HEADER = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE｜RAW_PRODUCT_CODE"
 
 
 @pytest.fixture(autouse=True)
@@ -25,7 +28,7 @@ def no_live_gemini(monkeypatch):
 
 
 def test_work_id_separate_from_verbatim(monkeypatch):
-    response = HEADER + "\n◆OP-01｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜" + str(ONE) + "｜1"
+    response = HEADER + "\n◆OP-01｜2｜1,000円｜BOX｜未開封｜翌日発送｜L0001｜｜｜" + str(ONE) + "｜1｜OP-01"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: response)
     result = gemini.extract_message("◆OP-01 2BOX 1,000円 未開封 翌日発送", work_reference=REF)
     assert result["status"] == "done"
@@ -36,14 +39,15 @@ def test_work_id_separate_from_verbatim(monkeypatch):
     assert item["raw_work_name"] == "" and item["raw_work_source_line_span"] == ""
     assert item["resolved_work_id"] == ONE
     assert item["resolved_product_code"] == "1"
+    assert item["raw_product_code"] == "OP-01"
 
 
 @pytest.mark.parametrize("bad", ["not-a-number", "IP002", "99"])
 def test_unknown_or_invalid_id_returns_none_resolved_work_id(monkeypatch, bad):
     # validate_work_id now returns None instead of raising, so items with invalid
     # work_ids are preserved with resolved_work_id=None (partial success).
-    response = HEADER + "\nOP-01｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE) + "｜"
-    response += "\nEB01｜1｜100｜BOX｜｜｜L0001｜｜｜" + bad + "｜"
+    response = HEADER + "\nOP-01｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE) + "｜｜"
+    response += "\nEB01｜1｜100｜BOX｜｜｜L0001｜｜｜" + bad + "｜｜"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: response)
     result = gemini.extract_message("OP-01 EB01", work_reference=REF)
     assert result["status"] == "done"
@@ -55,7 +59,7 @@ def test_unknown_or_invalid_id_returns_none_resolved_work_id(monkeypatch, bad):
 
 
 def test_unknown_is_not_guessed(monkeypatch):
-    response = HEADER + "\nEB01｜1｜100｜BOX｜｜｜L0001｜｜｜｜"
+    response = HEADER + "\nEB01｜1｜100｜BOX｜｜｜L0001｜｜｜｜｜"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: response)
     item = gemini.extract_message("EB01", work_reference=REF)["items"][0]
     assert item["resolved_work_id"] is None
@@ -79,13 +83,24 @@ def test_digest_tracks_content_and_integer_membership():
 
 @pytest.mark.parametrize("suffix", ["｜extra", ""])
 def test_eleven_columns_enforced(suffix):
-    # Ten or twelve columns, never eleven.
+    # v5: 10 or 12 columns fail; 11 columns pass. (backward-compat test)
     row = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE)
     if suffix:
         row += "｜P1" + suffix
-    items, parse_errors = gemini.parse_extraction_response(HEADER + "\n" + row, "X", version=5)
+    items, parse_errors = gemini.parse_extraction_response(V5_HEADER + "\n" + row, "X", version=5)
     assert items == []
     assert len(parse_errors) == 1
+
+
+def test_twelve_columns_enforced_v6():
+    # v6: 11 or 13 columns fail; 12 columns pass.
+    row_11 = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE) + "｜P1"
+    row_13 = "X｜1｜100｜BOX｜｜｜L0001｜｜｜" + str(ONE) + "｜P1｜OP-01｜extra"
+    v6_header = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE｜RAW_PRODUCT_CODE"
+    for row in (row_11, row_13):
+        items, parse_errors = gemini.parse_extraction_response(v6_header + "\n" + row, "X", version=6)
+        assert items == [], f"Expected empty items for row with wrong column count: {row}"
+        assert len(parse_errors) == 1
 
 
 def test_missing_schema_does_not_call_model_or_modify_job(monkeypatch):
@@ -151,31 +166,46 @@ def test_valid_but_conflicting_id_resolved_to_none(monkeypatch):
 
 
 @pytest.mark.parametrize("span,start,end", [("L0001", 1, 1), ("L0001-L0005", 1, 5)])
-def test_v5_source_span_retains_raw_fields(monkeypatch, span, start, end):
+def test_v6_source_span_retains_raw_fields(monkeypatch, span, start, end):
     raw = "◆OP-17\n\nカートン/¥220,000\n\n残り22"
-    row = "◆OP-17｜22｜¥220,000｜カートン｜｜残り｜" + span + "｜｜｜" + str(ONE) + "｜1"
+    row = "◆OP-17｜22｜¥220,000｜カートン｜｜残り｜" + span + "｜｜｜" + str(ONE) + "｜1｜OP-17"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: HEADER + "\n" + row)
     result = gemini.extract_message(raw, work_reference=REF)
     assert result["status"] == "done"
-    assert result["prompt_version"] == "raw-extraction-v5-product-p1"
+    assert result["prompt_version"] == "raw-extraction-v6-rawcode-p1"
     item = result["items"][0]
     assert (item["line_start"], item["line_end"]) == (start, end)
     assert (item["raw_product_name"], item["raw_price"], item["raw_quantity"], item["raw_memo"]) == ("◆OP-17", "¥220,000", "22", "残り")
     assert item["resolved_work_id"] == ONE
     assert item["resolved_product_code"] == "1"
+    assert item["raw_product_code"] == "OP-17"
+
+
+@pytest.mark.parametrize("span,start,end", [("L0001", 1, 1), ("L0001-L0005", 1, 5)])
+def test_v5_source_span_retains_raw_fields(monkeypatch, span, start, end):
+    """v5 jobs (without raw_product_code) still parse correctly (backward compat)."""
+    raw = "◆OP-17\n\nカートン/¥220,000\n\n残り22"
+    row = "◆OP-17｜22｜¥220,000｜カートン｜｜残り｜" + span + "｜｜｜" + str(ONE) + "｜1"
+    items, parse_errors = gemini.parse_extraction_response(V5_HEADER + "\n" + row, raw, version=5)
+    assert not parse_errors
+    item = items[0]
+    assert (item["line_start"], item["line_end"]) == (start, end)
+    assert item["resolved_work_id"] == str(ONE)
+    assert item["resolved_product_code"] == "1"
+    assert item.get("raw_product_code") is None
 
 
 @pytest.mark.parametrize("span", ["[L0001]", "[L0001]-[L0005]", "L0001～L0005", "L0001,L0005", "", "L0000", "L0005-L0001", "L0001-L0006"])
-def test_v5_invalid_span_is_never_repaired(monkeypatch, span):
-    row = "X｜1｜100｜BOX｜｜｜" + span + "｜｜｜" + str(ONE) + "｜"
+def test_v6_invalid_span_is_never_repaired(monkeypatch, span):
+    row = "X｜1｜100｜BOX｜｜｜" + span + "｜｜｜" + str(ONE) + "｜｜"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: HEADER + "\n" + row)
     result = gemini.extract_message("X\n\n100\n\n1BOX", work_reference=REF)
     assert result["status"] == "error" and result["items"] == []
 
 
-def test_v5_span_diagnostic_has_shape_without_response_content(monkeypatch, caplog):
+def test_v6_span_diagnostic_has_shape_without_response_content(monkeypatch, caplog):
     secret = "PRIVATE_CUSTOMER_TEXT"
-    row = "X｜1｜100｜BOX｜｜｜[" + secret + "]｜｜｜" + str(ONE) + "｜"
+    row = "X｜1｜100｜BOX｜｜｜[" + secret + "]｜｜｜" + str(ONE) + "｜｜"
     monkeypatch.setattr(gemini, "call_gemini_extraction", lambda *a, **k: HEADER + "\n" + row)
     result = gemini.extract_message("X", work_reference=REF)
     assert result["status"] == "error"

@@ -76,6 +76,9 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
             # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+            # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+            cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
+            cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
             # Seed a public.supplier_channels row for test data insertion
             cursor.execute("INSERT INTO public.supplier_channels(channel,is_active,supplier_id) "
                            "SELECT 'line',true,id FROM public.suppliers LIMIT 1")

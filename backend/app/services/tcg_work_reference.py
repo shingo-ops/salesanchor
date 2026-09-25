@@ -10,10 +10,12 @@ from sqlalchemy.orm import Session
 
 logger = logging.getLogger(__name__)
 
-WORK_ID_PROMPT_VERSION = "raw-extraction-v5-product-p1"
-WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", WORK_ID_PROMPT_VERSION})
+WORK_ID_PROMPT_VERSION = "raw-extraction-v6-rawcode-p1"
+WORK_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2", "raw-extraction-v5-product-p1", WORK_ID_PROMPT_VERSION})
 # Prompt versions that include resolved_product_code (Gemini v5 and later).
-PRODUCT_ID_PROMPT_VERSIONS = frozenset({WORK_ID_PROMPT_VERSION})
+PRODUCT_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v5-product-p1", WORK_ID_PROMPT_VERSION})
+# Prompt versions that include raw_product_code (Gemini v6 and later).
+RAW_CODE_PROMPT_VERSIONS = frozenset({WORK_ID_PROMPT_VERSION})
 
 
 def reference_json(reference: dict) -> str:

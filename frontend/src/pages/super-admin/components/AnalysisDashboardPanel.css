@@ -431,3 +431,82 @@
   padding-top: var(--space-5);
   margin-top: var(--space-2);
 }
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   ランキングセクション
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-ranking-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.analysis-dashboard-ranking-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  margin: 0;
+}
+
+.analysis-dashboard-ranking-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-ranking-card-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dashboard-rank-badge);
+  height: var(--dashboard-rank-badge);
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.analysis-dashboard-ranking-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.analysis-dashboard-ranking-card-name {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-dashboard-ranking-card-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-ranking-card-stat {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.analysis-dashboard-ranking-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0;
+  padding: var(--space-3);
+}
