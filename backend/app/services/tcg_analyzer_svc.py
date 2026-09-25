@@ -42,7 +42,6 @@ from app.services.tcg_empty_box_rules import (
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
     PRODUCT_ID_PROMPT_VERSIONS,
-    RAW_CODE_PROMPT_VERSIONS,
     WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
