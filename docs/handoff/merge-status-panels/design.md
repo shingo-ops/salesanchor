@@ -30,11 +30,11 @@ StatusMasterPanel の3機能（CSVエクスポート・CSVインポートナビ�
 
 ### 2. AnalysisRulesSidebar.tsx
 - `AnalysisRulesSidebarKey` から `"status-master"` を除去（`frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:20`）
-- `{navItem("status-master", ...)}` を削除（`AnalysisRulesSidebar.tsx:91`）
+- `{navItem("status-master", ...)}` を削除（`frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:91`）
 
 ### 3. AnalysisRulesPage.tsx
-- `import { StatusMasterPanel }` を削除（`AnalysisRulesPage.tsx:27`）
-- `{activeSection === "status-master" && <StatusMasterPanel />}` を削除（`AnalysisRulesPage.tsx:173`）
+- `import { StatusMasterPanel }` を削除（`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:27`）
+- `{activeSection === "status-master" && <StatusMasterPanel />}` を削除（`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:173`）
 
 ### 4. i18n
 追加キー（ja.json / en.json）:
@@ -61,9 +61,12 @@ StatusMasterPanel の3機能（CSVエクスポート・CSVインポートナビ�
 | ja.json と en.json で同一キーが存在する | python3 diff確認 |
 | "抽出ルール設定" が "仕入元別ルール" に変わっている | サイドバー目視確認 |
 
-## 外部事例
-StatusMasterPanel (同リポジトリ) の既存実装パターンをそのまま移植。
+## 外部・過去事例の参照と我々への応用
 
-## 守り手
-- ADR-027: i18n強制 — 全文字列 t("key")経由で対応
+同リポジトリ内の `frontend/src/pages/super-admin/components/StatusMasterPanel.tsx` がCSVエクスポート・インポートナビ・一括削除の完成形実装として存在する。exportLock/exporting パターン、bulkDelete の `Promise.allSettled` パターン、DataTable の `selectable` props をそのまま移植した。
+
+## 維持の仕組み
+
+- ADR-027: i18n強制 — 全文字列 t("key")経由。`frontend/CLAUDE.md` の grep セルフチェックで強制
 - ADR-144: UIガバナンス — HeaderButton/ConfirmModal/DataTable の金型のみ使用
+- StatusMasterPanel.tsx は削除せず残置することで、将来の参照・差分確認が可能
