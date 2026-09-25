@@ -25,6 +25,7 @@ import {
   type ProductHistoryResponse,
   type PriceHistoryEntry,
   formatChartDate,
+  formatPrice,
 } from "./buybackTypes";
 
 interface MergedDataPoint {
@@ -37,6 +38,70 @@ interface BuybackProductHistoryDrawerProps {
   open: boolean;
   item: ByProductItem | null;
   onClose: () => void;
+}
+
+function getShopPrice(
+  item: ByProductItem,
+  shop: "homura" | "shinsoku",
+  grade: string,
+): number | null {
+  const key = `${shop}_price_${grade}` as keyof ByProductItem;
+  return (item[key] as number | null) ?? null;
+}
+
+function renderShopRow(
+  label: string,
+  price: number | null,
+) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "var(--space-2)",
+      }}
+    >
+      <span style={{ color: "var(--text-secondary)", minWidth: "80px" }}>
+        {label}
+      </span>
+      <span style={{ fontWeight: 600 }}>
+        {formatPrice(price)}
+      </span>
+    </div>
+  );
+}
+
+function renderDiffRow(label: string, diff: number | null | undefined) {
+  const color =
+    diff != null && diff > 0
+      ? "var(--success)"
+      : diff != null && diff < 0
+      ? "var(--danger)"
+      : "var(--text-muted)";
+  const text =
+    diff == null
+      ? "—"
+      : diff > 0
+      ? `+¥${diff.toLocaleString()}`
+      : diff < 0
+      ? `-¥${Math.abs(diff).toLocaleString()}`
+      : "±0";
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: "var(--space-2)",
+      }}
+    >
+      <span style={{ color: "var(--text-secondary)", minWidth: "80px" }}>
+        {label}
+      </span>
+      <span style={{ fontWeight: 600, color }}>{text}</span>
+    </div>
+  );
 }
 
 function mergeHistory(
@@ -239,6 +304,33 @@ export function BuybackProductHistoryDrawer({
                   />
                 </LineChart>
               </ResponsiveContainer>
+            )}
+            {item && hasData && (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--space-2)",
+                  marginTop: "var(--space-3)",
+                  padding: "var(--space-3)",
+                  backgroundColor: "var(--bg-surface)",
+                  borderRadius: "var(--radius-sm)",
+                  fontSize: "var(--font-sm)",
+                }}
+              >
+                {renderShopRow(
+                  t("buybackPrices.shopHomura"),
+                  getShopPrice(item, "homura", grade),
+                )}
+                {renderShopRow(
+                  t("buybackPrices.shopShinsoku"),
+                  getShopPrice(item, "shinsoku", grade),
+                )}
+                {renderDiffRow(
+                  t("buybackPrices.byProduct.columnYesterdayDiff"),
+                  item.yesterday_diff,
+                )}
+              </div>
             )}
           </>
         )}
