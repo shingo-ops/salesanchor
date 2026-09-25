@@ -292,6 +292,10 @@ def migrate(cursor):
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
     # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+    # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+    # The migration targets public.extraction_items; test tenant schema needs it too.
+    cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
 
 
 @pytest.fixture

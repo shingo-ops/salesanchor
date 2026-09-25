@@ -89,6 +89,11 @@ async def create_schema(conn, schema, corrections=True):
     await conn.exec_driver_sql(
         f"ALTER TABLE {schema}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE"
     )
+    # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+    await _exec_multi_stmt(conn, (migrations / "20260926_010000_add_raw_product_code.sql").read_text())
+    await conn.exec_driver_sql(
+        f"ALTER TABLE IF EXISTS {schema}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text"
+    )
 
 
 @pytest_asyncio.fixture
