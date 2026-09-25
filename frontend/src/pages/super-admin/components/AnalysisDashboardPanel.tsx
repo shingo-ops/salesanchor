@@ -297,7 +297,7 @@ interface AnalysisDashboardPanelProps {
 
 export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<DashboardTab>("extraction");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("import");
   const [trendDays, setTrendDays] = useState<number>(7);
 
   // Pipeline (Extraction + Analysis) data
