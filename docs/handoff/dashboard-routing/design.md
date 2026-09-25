@@ -42,10 +42,11 @@
 
 ---
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - React Router `useSearchParams` による URL 状態保持は公式推奨パターン（React Router v6 docs）
 - `replace: true` オプションで履歴を汚さずに URL を更新するのが標準的な実装
+- 既存コードベースで `useNavigate` は使用済みのため、同一 import から `useSearchParams` を追加する形は実績あり
 
 ---
 
