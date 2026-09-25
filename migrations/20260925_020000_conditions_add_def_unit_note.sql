@@ -33,11 +33,9 @@ ALTER TABLE public.line_conditions
     ADD COLUMN IF NOT EXISTS note TEXT NOT NULL DEFAULT '';
 
 -- ④ インデックス
-CREATE INDEX IF NOT EXISTS idx_line_conditions_condition_def_id
-    ON public.line_conditions (condition_def_id);
+CREATE INDEX IF NOT EXISTS idx_line_conditions_condition_def_id ON public.line_conditions (condition_def_id);
 
-CREATE INDEX IF NOT EXISTS idx_line_conditions_unit_id
-    ON public.line_conditions (unit_id);
+CREATE INDEX IF NOT EXISTS idx_line_conditions_unit_id ON public.line_conditions (unit_id);
 
 -- ⑤ conditions VIEW を再作成（新列を VIEW 経由でも見えるようにする）
 CREATE OR REPLACE VIEW public.conditions AS TABLE public.line_conditions;
@@ -54,9 +52,8 @@ BEGIN
     LOOP
         -- テナントスキーマ内の line_conditions が BASE TABLE の場合のみ追加
         IF EXISTS (
-            SELECT 1 FROM pg_class c
-            JOIN pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = _schema AND c.relname = 'line_conditions' AND c.relkind = 'r'
+            SELECT 1 FROM information_schema.tables
+            WHERE table_schema = _schema AND table_name = 'line_conditions' AND table_type = 'BASE TABLE'
         ) THEN
             EXECUTE format(
                 'ALTER TABLE %I.line_conditions ADD COLUMN IF NOT EXISTS condition_def_id INTEGER REFERENCES public.condition_definitions(id) ON DELETE SET NULL',

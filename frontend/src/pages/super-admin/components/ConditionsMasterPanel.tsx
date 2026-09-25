@@ -352,8 +352,8 @@ export function ConditionsMasterPanel() {
               <label className="field-label">{t(`${f}.outputPreview`)}</label>
               <div style={{
                 padding: "var(--space-2) var(--space-3)",
-                background: "var(--color-surface-2, #f5f5f5)",
-                borderRadius: "var(--radius-sm, 4px)",
+                background: "var(--bg-subtle)",
+                borderRadius: "var(--radius-sm)",
                 fontWeight: "bold",
               }}>
                 {outputPreview}
