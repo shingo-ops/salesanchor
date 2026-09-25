@@ -4025,7 +4025,7 @@
       "fetchError": "データの取得に失敗しました",
       "bottleneckLabel": "ボトルネック検出",
       "bottleneckDesc": "この指標が目標を下回っています。パイプラインの改善のためにアクションを取ってください。",
-      "trendTitle": "7日間のトレンド",
+      "trendTitle": "のトレンド",
       "ctaNeedsReview": "要確認アイテムを確認する",
       "ctaProductMaster": "商品マスタを更新する",
       "ctaUnitMaster": "数量マスタを更新する",
@@ -4070,7 +4070,7 @@
       "extractionTitle": "抽出工程",
       "analysisTitle": "解析工程",
       "extractionErrorRate": "抽出エラー率",
-      "importTrendTitle": "7日間のインポート推移",
+      "importTrendTitle": "のインポート推移",
       "importTrendJobCount": "インポート回数",
       "importTrendMessageCount": "メッセージ数",
       "importStatusOk": "取り込みは正常です",
@@ -4112,7 +4112,13 @@
       "analysisSupplierAnalysisCount": "解析件数",
       "analysisSupplierPidUnresolved": "商品ID未解決",
       "analysisSupplierUnitUnresolved": "単位未解決",
-      "analysisSupplierNeedsReview": "要確認"
+      "analysisSupplierNeedsReview": "要確認",
+      "period7d": "7日間",
+      "period30d": "30日間",
+      "period90d": "90日間",
+      "period180d": "180日間",
+      "period360d": "360日間",
+      "periodLabel": "表示期間"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",

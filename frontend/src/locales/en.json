@@ -4025,7 +4025,7 @@
       "fetchError": "Failed to fetch data",
       "bottleneckLabel": "Bottleneck Detected",
       "bottleneckDesc": "This metric is below the target. Take action to improve the pipeline.",
-      "trendTitle": "7-Day Trend",
+      "trendTitle": "-Day Trend",
       "ctaNeedsReview": "Review pending items",
       "ctaProductMaster": "Update product master",
       "ctaUnitMaster": "Update unit master",
@@ -4070,7 +4070,7 @@
       "extractionTitle": "Extraction Stage",
       "analysisTitle": "Analysis Stage",
       "extractionErrorRate": "Extraction Error Rate",
-      "importTrendTitle": "7-Day Import Trend",
+      "importTrendTitle": "-Day Import Trend",
       "importTrendJobCount": "Import Count",
       "importTrendMessageCount": "Message Count",
       "importStatusOk": "Import is healthy",
@@ -4112,7 +4112,13 @@
       "analysisSupplierAnalysisCount": "Analysis Count",
       "analysisSupplierPidUnresolved": "Product ID Unresolved",
       "analysisSupplierUnitUnresolved": "Unit Unresolved",
-      "analysisSupplierNeedsReview": "Needs Review"
+      "analysisSupplierNeedsReview": "Needs Review",
+      "period7d": "7 Days",
+      "period30d": "30 Days",
+      "period90d": "90 Days",
+      "period180d": "180 Days",
+      "period360d": "360 Days",
+      "periodLabel": "Period"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",

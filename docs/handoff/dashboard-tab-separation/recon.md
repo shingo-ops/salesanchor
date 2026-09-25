@@ -24,3 +24,13 @@ extraction_jobs.source_message_id → source_messages.supplier_channel_id → su
 ### 既存API
 - `backend/app/routers/tcg_supplier_quality.py:65` — GET /tcg/supplier-quality-summaries — 提供者別の解析品質データ（SSOT、再利用）
 - `backend/app/routers/tcg_analysis_dashboard.py:103` — GET /tcg/analysis-dashboard/pipeline-summary（拡張対象）
+
+### 期間セレクタ追加 (2026-09-25)
+
+- `backend/app/services/tcg_analysis_dashboard_svc.py:221` — `if not (1 <= days <= 90)` → days上限が90に制限されていた
+- `backend/app/services/tcg_analysis_dashboard_svc.py:366` — `min(int(days), 90)` → import_trendも90上限
+- `backend/app/routers/tcg_analysis_dashboard.py:200` — `Query(default=7, ge=1, le=90)` → import-trendエンドポイントのQuery制約
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:321` — `trend?days=7` ハードコード
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:345` — `import-trend?days=7` ハードコード
+- `frontend/src/components/Select.tsx:34` — `SelectControl` (bare select, size="sm") 利用可能 ✅
+- `frontend/src/locales/ja.json:4028` — `"trendTitle": "7日間のトレンド"` → suffix化対象

@@ -22,8 +22,16 @@
 ────────────────────────────────────────────────────────────────────────────── */
 
 .analysis-dashboard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   border-bottom: 1px solid var(--border-primary);
   margin-bottom: var(--space-1);
+}
+
+.analysis-dashboard-period-selector {
+  flex-shrink: 0;
+  padding-bottom: var(--space-1);
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
