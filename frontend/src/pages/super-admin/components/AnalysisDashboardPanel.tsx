@@ -17,7 +17,7 @@
  * ADR-067: 色・サイズはデザイントークンのみ
  * ADR-144: Card / Badge / DataTable / Tabs / recharts 金型のみ使用
  */
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -31,6 +31,7 @@ import {
 } from "recharts";
 import { api } from "../../../lib/api";
 import { Card } from "../../../components/Card";
+import { Button } from "../../../components/Button";
 import { Badge } from "../../../components/Badge";
 import { DataTable } from "../../../components/DataTable";
 import type { DataTableColumn } from "../../../components/DataTable";
@@ -49,6 +50,16 @@ import "./AnalysisDashboardPanel.css";
 // ──────────────────────────────────────────────────────────────────────────────
 
 type DashboardTab = "import" | "extraction" | "analysis" | "distribution";
+
+interface ImportResultResponse {
+  status: "imported" | "already_imported";
+  review_status: "ok" | "pending_review";
+  message_count: number;
+  provider_count: number;
+  unresolved_count: number;
+  unresolved_display_names: string[];
+  import_job_id: string;
+}
 
 // Supplier Pipeline 型定義
 
@@ -495,6 +506,10 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           t={t}
           onNavigate={handleCta}
           ArrowRightIcon={ArrowRightIcon}
+          onUploadSuccess={() => {
+            // Re-fetch import summary after successful upload
+            setImportData(null);
+          }}
         />
       )}
 
@@ -570,9 +585,71 @@ interface ImportTabContentProps {
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
+  onUploadSuccess: () => void;
 }
 
-function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
+function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigate, ArrowRightIcon, onUploadSuccess }: ImportTabContentProps) {
+  // Upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [windowHours, setWindowHours] = useState("24");
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadResult, setUploadResult] = useState<ImportResultResponse | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    if (!file.name.endsWith(".txt")) {
+      setUploadError(t("tcgLineImport.errorTxtOnly"));
+      return;
+    }
+    setUploadError("");
+    setUploadResult(null);
+    setSelectedFile(file);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0] ?? null;
+    handleFileChange(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setUploadError(t("tcgLineImport.errorSelectFile"));
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    setUploadResult(null);
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    const hours = parseInt(windowHours, 10);
+    formData.append("window_hours", isNaN(hours) ? "24" : String(hours));
+
+    try {
+      const data = await api.postForm<ImportResultResponse>("/tcg/line-import", formData);
+      setUploadResult(data);
+      onUploadSuccess();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : t("tcgLineImport.errorUploadFailed"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -658,6 +735,79 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
 
   return (
     <>
+      {/* ── アップロードセクション ── */}
+      <Card variant="container" density="compact">
+        <h3>{t("analysisRules.dashboard.importUploadTitle")}</h3>
+
+        {/* ドロップゾーン */}
+        <div
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className="analysis-dashboard-dropzone"
+          data-dragging={isDragging}
+        >
+          {/* ui-allow: 非表示ファイル入力はドロップゾーン専用ref用途、汎用コンポーネント非対象 (#3285) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt"
+            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+            style={{ display: "none" }}
+          />
+          <p>{selectedFile ? selectedFile.name : t("analysisRules.dashboard.importDropHint")}</p>
+        </div>
+
+        {/* ウィンドウ時間 */}
+        <div className="analysis-dashboard-upload-options">
+          <label>{t("analysisRules.dashboard.importWindowHours")}</label>
+          {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
+          <input
+            type="number"
+            min="0"
+            value={windowHours}
+            onChange={(e) => setWindowHours(e.target.value)}
+            className="analysis-dashboard-window-input"
+          />
+        </div>
+
+        {/* アップロードボタン */}
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleUpload}
+          disabled={uploading || !selectedFile}
+          loading={uploading}
+          loadingText={t("analysisRules.dashboard.importUploading")}
+        >
+          {t("analysisRules.dashboard.importUploadButton")}
+        </Button>
+
+        {/* エラー */}
+        {uploadError && <Badge variant="danger">{uploadError}</Badge>}
+
+        {/* 成功結果 */}
+        {uploadResult && uploadResult.status !== "already_imported" && (
+          <div className="analysis-dashboard-upload-result">
+            <Badge variant={uploadResult.review_status === "pending_review" ? "warning" : "success"}>
+              {uploadResult.review_status === "pending_review"
+                ? t("analysisRules.dashboard.importNeedsReview")
+                : t("analysisRules.dashboard.importSuccess")}
+            </Badge>
+            <span>{t("analysisRules.dashboard.importResultMessages").replace("{count}", String(uploadResult.message_count))}</span>
+            {uploadResult.review_status === "pending_review" && (
+              <Button variant="secondary" size="sm" onClick={() => onNavigate("import")}>
+                {t("analysisRules.dashboard.importGoReview")}
+              </Button>
+            )}
+          </div>
+        )}
+        {uploadResult && uploadResult.status === "already_imported" && (
+          <Badge variant="neutral">{t("analysisRules.dashboard.importAlreadyImported")}</Badge>
+        )}
+      </Card>
+
       {/* 孤立メッセージ警告 */}
       {orphanCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
