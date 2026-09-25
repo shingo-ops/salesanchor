@@ -23,15 +23,19 @@ AnalysisDashboardPanelの3タブで時刻がUTCの生ISO文字列で表示され
 | null値は "-" と表示 | APIがnullを返すケースでの表示を確認 |
 
 ## 影響範囲
-- `AnalysisDashboardPanel.tsx` 1ファイルのみ
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` 1ファイルのみ
 - 変更は6行（+6/-6）の純粋な表示フォーマット変更
 - データ取得ロジック・APIレスポンス・バックエンドへの影響なし
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
+
 `toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })` はブラウザ標準API（Intl.DateTimeFormat）。依存ライブラリ不要。
+MDN Web Docs に仕様記載あり。他タブ（CompanyTabContent 等）でも同パターンを使用済みであり、プロジェクト内に先行実装あり。
 
 ## 戻し方
 `git revert 10803b896` で即時ロールバック可能。
 
-## 守り手
-特になし（表示のみの変更）
+## 維持の仕組み
+
+守り手: なし（表示のみの変更・自動テストなし）
+将来的に AnalysisDashboardPanel のテストを追加する際、時刻フォーマットのアサーションを含めることを推奨。
