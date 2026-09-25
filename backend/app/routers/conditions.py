@@ -101,6 +101,8 @@ def _parse_conditions(raw: bytes) -> tuple[list[dict], list[str]]:
             "priority": priority,
             "search_kw": (raw_row.get("search_kw") or "").strip() or "",
             "exclude_kw": (raw_row.get("exclude_kw") or "").strip() or "",
+            "match_type": (raw_row.get("match_type") or "KEYWORD").strip() or "KEYWORD",
+            "effect": (raw_row.get("effect") or "OUTPUT").strip() or "OUTPUT",
             "_line": line_num,
         })
     return rows, errors
@@ -111,9 +113,10 @@ _ALIAS_COLS = "id, condition_id, alias_text, lang, updated_at"
 
 _COLS = (
     "id, code, canonical, app_kubun, is_active, priority, "
-    "search_kw, exclude_kw, tenant_id, created_at, updated_at"
+    "search_kw, exclude_kw, tenant_id, created_at, updated_at, "
+    "match_type, effect"
 )
-_UPDATABLE = {"code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw"}
+_UPDATABLE = {"code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw", "match_type", "effect"}
 
 
 @router.get(
@@ -222,8 +225,10 @@ async def create_condition(
     result = await db.execute(
         text(
             f"INSERT INTO public.conditions "
-            f"(tenant_id, code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, updated_at) "
-            f"VALUES (:tenant_id, :code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, now()) "
+            f"(tenant_id, code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+            f"match_type, effect, updated_at) "
+            f"VALUES (:tenant_id, :code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
+            f":match_type, :effect, now()) "
             f"RETURNING {_COLS}"
         ),
         {
@@ -235,6 +240,8 @@ async def create_condition(
             "priority": data.priority,
             "search_kw": data.search_kw,
             "exclude_kw": data.exclude_kw,
+            "match_type": data.match_type,
+            "effect": data.effect,
         },
     )
     row = result.mappings().first()
@@ -363,7 +370,8 @@ async def export_conditions_csv(
 ) -> Response:
     result = await db.execute(
         text(
-            "SELECT code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw "
+            "SELECT code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+            "match_type, effect "
             "FROM public.conditions "
             "WHERE (tenant_id = :tenant_id OR tenant_id IS NULL) "
             "ORDER BY id"
@@ -373,7 +381,7 @@ async def export_conditions_csv(
     rows = result.mappings().all()
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw"])
+    writer.writerow(["code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw", "match_type", "effect"])
     for r in rows:
         writer.writerow([
             r["code"] or "",
@@ -383,6 +391,8 @@ async def export_conditions_csv(
             r["priority"] if r["priority"] is not None else "",
             r["search_kw"] or "",
             r["exclude_kw"] or "",
+            r["match_type"] or "KEYWORD",
+            r["effect"] or "OUTPUT",
         ])
     return Response(
         content=buf.getvalue(),
@@ -464,7 +474,8 @@ async def import_conditions_commit(
                     text(
                         "UPDATE public.conditions SET canonical = :canonical, app_kubun = :app_kubun, "
                         "is_active = :is_active, priority = :priority, search_kw = :search_kw, "
-                        "exclude_kw = :exclude_kw, updated_at = now() "
+                        "exclude_kw = :exclude_kw, match_type = :match_type, effect = :effect, "
+                        "updated_at = now() "
                         "WHERE id = :id AND tenant_id = :tenant_id"
                     ),
                     {**data, "id": existing[0], "tenant_id": tenant_id},
@@ -474,8 +485,10 @@ async def import_conditions_commit(
                 await db.execute(
                     text(
                         "INSERT INTO public.conditions "
-                        "(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, tenant_id, updated_at) "
-                        "VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, :tenant_id, now())"
+                        "(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+                        "match_type, effect, tenant_id, updated_at) "
+                        "VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
+                        ":match_type, :effect, :tenant_id, now())"
                     ),
                     {**data, "tenant_id": tenant_id},
                 )

@@ -470,6 +470,8 @@ class CentralConditionBase(BaseModel):
     priority: Optional[int] = None
     search_kw: str = ""
     exclude_kw: str = ""
+    match_type: str = "KEYWORD"
+    effect: str = "OUTPUT"
 
 
 class CentralConditionCreate(CentralConditionBase):
@@ -484,6 +486,8 @@ class CentralConditionUpdate(BaseModel):
     priority: Optional[int] = None
     search_kw: Optional[str] = None
     exclude_kw: Optional[str] = None
+    match_type: Optional[str] = None
+    effect: Optional[str] = None
 
 
 class CentralConditionResponse(CentralConditionBase):

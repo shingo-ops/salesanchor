@@ -2667,7 +2667,15 @@
         "priority": "Priority",
         "searchKw": "Search Keywords",
         "excludeKw": "Exclude Keywords",
-        "isActive": "Active"
+        "isActive": "Active",
+        "matchType": "Match Type",
+        "matchTypeKeyword": "Keyword",
+        "matchTypeRegex": "Regex",
+        "matchTypeLiteral": "Literal",
+        "matchTypeDefault": "Default",
+        "effect": "Effect",
+        "effectOutput": "Detect and show",
+        "effectExclude": "Detect and exclude"
       }
     },
     "fxRate": {

@@ -35,6 +35,8 @@ interface CentralCondition {
   priority: number | null;
   search_kw: string;
   exclude_kw: string;
+  match_type: string;
+  effect: string;
 }
 
 type ConditionFormState = {
@@ -45,6 +47,8 @@ type ConditionFormState = {
   priority: string;
   search_kw: string;
   exclude_kw: string;
+  match_type: string;
+  effect: string;
 };
 
 const emptyForm: ConditionFormState = {
@@ -55,6 +59,8 @@ const emptyForm: ConditionFormState = {
   priority: "",
   search_kw: "",
   exclude_kw: "",
+  match_type: "KEYWORD",
+  effect: "OUTPUT",
 };
 
 const PER_PAGE = 50;
@@ -125,6 +131,8 @@ export function ConditionsMasterPanel() {
       priority: c.priority != null ? String(c.priority) : "",
       search_kw: c.search_kw,
       exclude_kw: c.exclude_kw,
+      match_type: c.match_type,
+      effect: c.effect,
     });
     setShowForm(true);
   };
@@ -140,6 +148,8 @@ export function ConditionsMasterPanel() {
       priority: form.priority !== "" ? parseInt(form.priority, 10) : null,
       search_kw: form.search_kw,
       exclude_kw: form.exclude_kw,
+      match_type: form.match_type,
+      effect: form.effect,
     };
     try {
       if (editId) {
@@ -213,8 +223,21 @@ export function ConditionsMasterPanel() {
   const f = "superAdmin.conditionsAdmin.fields";
   const fa = "superAdmin.conditionsAdmin";
 
+  const MATCH_TYPE_OPTIONS = [
+    { value: "KEYWORD", label: t(`${f}.matchTypeKeyword`) },
+    { value: "REGEX",   label: t(`${f}.matchTypeRegex`) },
+    { value: "LITERAL", label: t(`${f}.matchTypeLiteral`) },
+    { value: "DEFAULT", label: t(`${f}.matchTypeDefault`) },
+  ];
+
+  const EFFECT_OPTIONS = [
+    { value: "OUTPUT",  label: t(`${f}.effectOutput`) },
+    { value: "EXCLUDE", label: t(`${f}.effectExclude`) },
+  ];
+
   const columns: DataTableColumn<CentralCondition>[] = [
     { key: "canonical", header: t(`${f}.canonical`) },
+    { key: "match_type", header: t(`${f}.matchType`) },
     { key: "app_kubun", header: t(`${f}.appKubun`), renderCell: row => row.app_kubun ?? "—" },
     { key: "priority", header: t(`${f}.priority`), renderCell: row => row.priority ?? "—" },
     {
@@ -307,6 +330,34 @@ export function ConditionsMasterPanel() {
                 value={form.priority}
                 onChange={e => setForm({ ...form, priority: e.target.value })}
               />
+            </div>
+            <div className="form-group">
+              <label className="field-label">{t(`${f}.matchType`)} *</label>
+              {/* ui-allow: enum select for condition match_type; no SelectControl variant with option map (#3594) */}
+              <select
+                className="field field-h-md"
+                value={form.match_type}
+                onChange={e => setForm({ ...form, match_type: e.target.value })}
+                required
+              >
+                {MATCH_TYPE_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="field-label">{t(`${f}.effect`)} *</label>
+              {/* ui-allow: enum select for condition effect; no SelectControl variant with option map (#3594) */}
+              <select
+                className="field field-h-md"
+                value={form.effect}
+                onChange={e => setForm({ ...form, effect: e.target.value })}
+                required
+              >
+                {EFFECT_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
             </div>
             <div className="form-group" style={{ gridColumn: "1 / -1" }}>
               <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
