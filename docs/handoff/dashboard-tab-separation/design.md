@@ -21,6 +21,9 @@ recon: docs/handoff/dashboard-tab-separation/recon.md
 - 解析タブ: 既存 /tcg/supplier-quality-summaries API を再利用（新規エンドポイント不要）
 - 抽出タブ: 既存 pipeline-summary エンドポイントを拡張（extraction_by_supplier フィールド追加）
 
+### ADR遵守
+- ADR-027（UI国際化）: 全UI文字列を t("key") 経由で実装。ハードコード日本語なし。ja.json / en.json に同一キーを追加。詳細: docs/adr/ADR-027-ui-internationalization.md
+
 ### 受入基準
 
 | 基準 | 検証方法 |
@@ -38,4 +41,4 @@ recon: docs/handoff/dashboard-tab-separation/recon.md
 
 ## 維持の仕組み
 
-守り手: i18n check script（check-i18n-missing-keys.js）/ TypeScript型チェック（tsc）/ process-artifacts gate（check-process-artifacts.js）
+守り手: frontend/scripts/check-i18n-missing-keys.js
