@@ -24,9 +24,10 @@ ALTER TABLE public.line_conditions
         REFERENCES public.condition_definitions(id) ON DELETE SET NULL;
 
 -- ② unit_id 追加（既存の場合はスキップ）
+-- 注意: public.units は 20260922_080000 で VIEW になったため、FK は line_units（BASE TABLE）を参照する
 ALTER TABLE public.line_conditions
     ADD COLUMN IF NOT EXISTS unit_id INTEGER
-        REFERENCES public.units(id) ON DELETE SET NULL;
+        REFERENCES public.line_units(id) ON DELETE SET NULL;
 
 -- ③ note 追加
 ALTER TABLE public.line_conditions
@@ -60,7 +61,7 @@ BEGIN
                 _schema
             );
             EXECUTE format(
-                'ALTER TABLE %I.line_conditions ADD COLUMN IF NOT EXISTS unit_id INTEGER REFERENCES public.units(id) ON DELETE SET NULL',
+                'ALTER TABLE %I.line_conditions ADD COLUMN IF NOT EXISTS unit_id INTEGER REFERENCES public.line_units(id) ON DELETE SET NULL',
                 _schema
             );
             EXECUTE format(
