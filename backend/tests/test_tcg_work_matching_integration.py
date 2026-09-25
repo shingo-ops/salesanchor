@@ -292,6 +292,10 @@ def migrate(cursor):
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
     # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
     cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+    # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+    # The migration targets public.extraction_items; test tenant schema needs it too.
+    cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
 
 
 @pytest.fixture
@@ -365,7 +369,7 @@ def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=F
             SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
                        (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
         cursor.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
-    header = HEADER + ("｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE" if work_id_mode else "")
+    header = HEADER + ("｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE｜RAW_PRODUCT_CODE" if work_id_mode else "")
     response = header + "\n" + "\n".join("｜".join(row) for row in records)
     if not work_id_mode:
         # Keep legacy 9-column end-to-end regressions while new jobs use v4.
@@ -679,6 +683,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
         # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+        # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+        # migrate() applies this to tenant_901; tenant_004 is provisioned separately so it needs
+        # the same column added explicitly here.
+        cursor.execute("ALTER TABLE tenant_004.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
@@ -978,7 +986,7 @@ def test_work_id_v4_database_roundtrip_and_review_filter(pg, monkeypatch, saved_
         wid = str(cursor.fetchone()[0])
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(connection, engine, monkeypatch, raw,
-        [record("◆EB01", 1) + [wid, ""]], work_id_mode=True)
+        [record("◆EB01", 1) + [wid, "", ""]], work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == 1
     with connection.cursor() as cursor:
         cursor.execute(f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s", (saved_version, jid))
@@ -1063,7 +1071,7 @@ def test_space_product_match_saved_in_isolated_database(
         work_id = str(row[0]) if row else "0"
     _, jobid, result = run_message(connection, engine, monkeypatch,
         name + " 1BOX 1000円 " + state + " " + memo,
-        [record(name, 1, state=state, memo=memo) + [work_id, ""]], work_id_mode=True)
+        [record(name, 1, state=state, memo=memo) + [work_id, "", ""]], work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == 1
     assert result["analysis_stats"]["pid_resolved"] == int(expected == "resolved")
     with connection.cursor() as cursor:
@@ -1578,7 +1586,7 @@ def test_all_terms_product_results_persist_with_guards(pg, monkeypatch):
         ("30th FUTURISTIC", "", "LIMITED special EDITION", True),
     ]
     raw = "\n".join(name + " 1BOX 1000円 " + state + " " + memo for name, state, memo, _ in cases)
-    records = [record(name, line, state=state, memo=memo) + [str(work), ""]
+    records = [record(name, line, state=state, memo=memo) + [str(work), "", ""]
                for line, (name, state, memo, _) in enumerate(cases, 1)]
     _, jobid, result = run_message(connection, engine, monkeypatch, raw, records, work_id_mode=True)
     assert result["status"] == "done" and result["items_count"] == len(cases)
@@ -1610,7 +1618,7 @@ def test_gemini_resolved_product_code_v5_pid_basis(pg, monkeypatch):
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(
         connection, engine, monkeypatch, raw,
-        [record("◆EB01", 1) + [wid, pm0123_id]],
+        [record("◆EB01", 1) + [wid, pm0123_id, ""]],
         work_id_mode=True,
     )
     assert result["status"] == "done" and result["items_count"] == 1
@@ -1647,7 +1655,7 @@ def test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes(pg,
     raw = "◆EB01 1BOX 1000円"
     _, jid, result = run_message(
         connection, engine, monkeypatch, raw,
-        [record("◆EB01", 1) + [wid, "9999999"]],
+        [record("◆EB01", 1) + [wid, "9999999", ""]],
         work_id_mode=True,
     )
     assert result["status"] == "done" and result["items_count"] == 1
@@ -1690,7 +1698,7 @@ def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
     # 旧形式: resolved_product_code に product_code 文字列を渡す
     _, jid, result = run_message(
         connection, engine, monkeypatch, raw,
-        [record("◆EB01", 1) + [wid, pm0123_code]],
+        [record("◆EB01", 1) + [wid, pm0123_code, ""]],
         work_id_mode=True,
     )
     assert result["status"] == "done" and result["items_count"] == 1

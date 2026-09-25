@@ -821,3 +821,6 @@ run_sql migrations/20260925_010000_conditions_add_match_type.sql
 
 # line_conditions に condition_def_id / unit_id / note 追加（ConditionsMasterPanel v2）
 run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql
+
+# ADR-158 Phase 2: extraction_items に raw_product_code カラム追加（Gemini v6 型番抽出）
+run_sql migrations/20260926_010000_add_raw_product_code.sql
