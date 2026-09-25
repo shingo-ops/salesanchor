@@ -812,3 +812,6 @@ run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
 
 # ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
 run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
+
+# type_master.name_ja の英語値2件を日本語に修正（One Piece→ワンピース, Xross Stars→クロススタァ）
+run_sql migrations/20260925_010000_fix_type_master_name_ja.sql
