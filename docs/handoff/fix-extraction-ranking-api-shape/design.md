@@ -17,10 +17,14 @@
 | `/super-admin/analysis-rules` が白画面にならない | ブラウザで Extraction タブを開いてエラーなし |
 | `productRanking.slice()` が動作する | 商品ランキングセクションが表示される |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-FastAPI + Pydantic のレスポンスモデルがリスト型のラッパーになるパターンは公式ドキュメント記載のベストプラクティス。
+FastAPI + Pydantic のレスポンスモデルがリスト型のラッパーになるパターン（`{ items: list[...] }`）は公式ドキュメント記載のベストプラクティス。
+フロントエンドは常にレスポンス型をバックエンドのモデル定義と一致させる必要がある。
+今回の教訓: `api.get<T>` の型引数は必ず実際のAPIレスポンス形状に合わせること（配列を返すAPIは少なく、多くはラッパー型）。
 
 ## 維持の仕組み
 
 TypeScript の型注釈が `{ items: ExtractionProductRankingItem[] }` になることで、今後同APIを呼ぶ場合は型エラーで検出可能。
+
+守り手: TypeScriptコンパイラ（tsc --noEmit）
