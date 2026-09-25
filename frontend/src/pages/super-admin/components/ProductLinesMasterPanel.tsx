@@ -12,7 +12,7 @@ import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
-import { Modal } from "../../../components/Modal";
+import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { SelectControl } from "../../../components/Select";
 import { STATUS_ICONS } from "../../../constants/icons";
@@ -180,7 +180,6 @@ export function ProductLinesMasterPanel() {
   };
 
   const columns: DataTableColumn<ProductLine>[] = [
-    { key: "code", header: t(`${f}.code`) },
     { key: "name", header: t(`${f}.name`) },
     { key: "kind_id", header: t(`${f}.kindId`), renderCell: row => getKindName(row.kind_id) },
     { key: "type_id", header: t(`${f}.typeId`), renderCell: row => getTypeName(row.type_id) },
@@ -191,32 +190,6 @@ export function ProductLinesMasterPanel() {
       renderCell: row => row.is_active
         ? <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" />
         : "-",
-    },
-    {
-      key: "_edit",
-      header: "",
-      renderCell: row => (
-        <HeaderButton
-          variant="secondary"
-          data-testid={`product-line-edit-${row.id}`}
-          onClick={() => openEdit(row)}
-        >
-          {t("common.edit")}
-        </HeaderButton>
-      ),
-    },
-    {
-      key: "_delete",
-      header: "",
-      renderCell: row => (
-        <HeaderButton
-          variant="secondary"
-          data-testid={`product-line-delete-${row.id}`}
-          onClick={() => setConfirmDeleteId(row.id)}
-        >
-          {t("common.delete")}
-        </HeaderButton>
-      ),
     },
   ];
 
@@ -247,12 +220,31 @@ export function ProductLinesMasterPanel() {
         nextPageLabel={t("common.nextPage")}
       />
 
-      {/* 編集/新規 モーダル */}
-      <Modal
+      {/* 編集/新規 ドロワー */}
+      <Drawer
         open={showForm}
         onClose={() => setShowForm(false)}
         title={editId ? t(`${f}.editTitle`) : t(`${f}.createTitle`)}
-        size="md"
+        footer={
+          <>
+            {editId && (
+              <HeaderButton variant="secondary" onClick={() => { setShowForm(false); setConfirmDeleteId(editId); }}>
+                {t("common.delete")}
+              </HeaderButton>
+            )}
+            <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-2)" }}>
+              <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>
+                {t("common.back")}
+              </HeaderButton>
+              <HeaderButton
+                variant="primary"
+                onClick={() => formRef.current?.requestSubmit()}
+              >
+                {editId ? t("common.update") : t("common.create")}
+              </HeaderButton>
+            </div>
+          </>
+        }
       >
         <form ref={formRef} onSubmit={e => { void submit(e); }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
@@ -324,19 +316,8 @@ export function ProductLinesMasterPanel() {
               {t(`${f}.isActive`)}
             </label>
           </div>
-          <div className="form-actions">
-            <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>
-              {t("common.cancel")}
-            </HeaderButton>
-            <HeaderButton
-              variant="primary"
-              onClick={() => formRef.current?.requestSubmit()}
-            >
-              {editId ? t("common.update") : t("common.create")}
-            </HeaderButton>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       <ConfirmModal
         open={confirmDeleteId !== null}
