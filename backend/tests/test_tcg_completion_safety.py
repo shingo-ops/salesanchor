@@ -130,7 +130,9 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
         finally:
             await ae.dispose()
     output=asyncio.run(fetch())
-    assert len(output)==2
+    # ADR-158: items 1 and 3 both resolve to SYN001 with condition=Case (same product_id, condition_id);
+    # global-latest logic keeps only one is_current=TRUE per pair → 1 output row.
+    assert len(output)==1
     assert all(row[8]!='Sold out' for row in output)
 
 

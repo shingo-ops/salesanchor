@@ -464,7 +464,10 @@ def test_normal_limited_memo_scope_and_correction_preservation(pg, monkeypatch):
         finally:
             await async_engine.dispose()
     candidates = asyncio.run(output())  # read-only, never delivery
-    assert len(candidates) == 3  # PSA10 Box and the still-needs-review corrected row are excluded
+    # ADR-158: rows 3 and 4 both resolve to PM0285 with same (product_id, condition_id);
+    # new global-latest logic keeps only one is_current=TRUE per pair.
+    # PSA10 row (pid unresolved), needs-review corrected row, and duplicate PM0285 are excluded → 2.
+    assert len(candidates) == 2
     assert sum(r[2] == NORMAL for r in candidates) == 1
 
 
@@ -738,7 +741,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         finally:
             await async_engine.dispose()
     rows = asyncio.run(outputs())
-    assert len(rows) == 18
+    # ADR-158: 16 basic 匿名箱 records all share (PM0141, same condition_id);
+    # global-latest logic keeps only one is_current=TRUE per (product_id, condition_id) pair.
+    # Output: 1 × PM0268/Unsearched pack + 1 × PM0141/Case+note + 1 × PM0141/Case basic = 3.
+    assert len(rows) == 3
     assert sum(r[4] == "Unsearched pack" for r in rows) == 1
     assert sum(r[4] == "Case" and r[7] == "伝票剥がし跡あり" for r in rows) == 1
 RECOVERY_JOBS = ["6da3ca68-651e-4ff6-8316-1c9135508ad2", "bfa07018-9b34-42b6-990a-017e3c1cf140"]
