@@ -2663,19 +2663,25 @@
       "fields": {
         "code": "状態コード",
         "canonical": "表示名",
-        "appKubun": "アプリ区分",
-        "priority": "優先度",
-        "searchKw": "検索キーワード",
-        "excludeKw": "除外キーワード",
-        "isActive": "有効",
-        "matchType": "照合方法",
+        "appKubun": "どの商品タイプに適用しますか？",
+        "priority": "優先順位（小さいほど優先）",
+        "searchKw": "どの言葉が含まれていたらこの状態ですか？",
+        "excludeKw": "この言葉が含まれていたら除外しますか？",
+        "isActive": "有効にしますか？",
+        "matchType": "言葉の探し方は？",
         "matchTypeKeyword": "キーワード一致",
         "matchTypeRegex": "正規表現",
         "matchTypeLiteral": "文字列一致",
         "matchTypeDefault": "デフォルト",
-        "effect": "効果",
+        "effect": "見つけたらどうしますか？",
         "effectOutput": "検索して表示",
-        "effectExclude": "検索して除外"
+        "effectExclude": "検索して除外",
+        "conditionDefId": "どの状態ですか？",
+        "unitId": "どの単位が対象ですか？",
+        "outputPreview": "出力プレビュー",
+        "note": "メモ",
+        "unset": "（未設定）",
+        "noUnit": "（指定なし）"
       }
     },
     "fxRate": {

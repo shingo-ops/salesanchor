@@ -1,8 +1,15 @@
 /**
- * ConditionsMasterPanel — 状態マスタパネル（AnalysisRulesPage の hub-content 内で使用）
+ * ConditionsMasterPanel — 状態マスタパネル v2（AnalysisRulesPage の hub-content 内で使用）
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
+ *
+ * v2 変更点:
+ *   - code は自動生成（非表示）
+ *   - canonical は condition_def + unit の自動プレビューに置き換え
+ *   - aliases ボタンを削除
+ *   - フォームを質問形式ラベルに変更
+ *   - condition_def_id / unit_id プルダウンを追加
  */
 import { useCallback, useEffect, useRef, useState, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -13,17 +20,22 @@ import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
-import { Modal } from "../../../components/Modal";
 import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { Check } from "../../../constants/icons";
 
-interface ConditionAlias {
+interface ConditionDef {
   id: number;
-  condition_id: number;
-  alias_text: string;
-  lang: string;
-  updated_at: string;
+  name: string;
+  name_en: string | null;
+  is_active: boolean;
+}
+
+interface UnitItem {
+  id: number;
+  code: string;
+  canonical: string;
+  is_active: boolean;
 }
 
 interface CentralCondition {
@@ -37,11 +49,14 @@ interface CentralCondition {
   exclude_kw: string;
   match_type: string;
   effect: string;
+  condition_def_id: number | null;
+  unit_id: number | null;
+  note: string;
 }
 
 type ConditionFormState = {
-  code: string;
-  canonical: string;
+  condition_def_id: string;
+  unit_id: string;
   app_kubun: string;
   is_active: boolean;
   priority: string;
@@ -49,11 +64,12 @@ type ConditionFormState = {
   exclude_kw: string;
   match_type: string;
   effect: string;
+  note: string;
 };
 
 const emptyForm: ConditionFormState = {
-  code: "",
-  canonical: "",
+  condition_def_id: "",
+  unit_id: "",
   app_kubun: "",
   is_active: true,
   priority: "",
@@ -61,6 +77,7 @@ const emptyForm: ConditionFormState = {
   exclude_kw: "",
   match_type: "KEYWORD",
   effect: "OUTPUT",
+  note: "",
 };
 
 const PER_PAGE = 50;
@@ -74,6 +91,10 @@ export function ConditionsMasterPanel() {
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+
+  // 参照データ
+  const [conditionDefs, setConditionDefs] = useState<ConditionDef[]>([]);
+  const [units, setUnits] = useState<UnitItem[]>([]);
 
   async function downloadExport() {
     if (exportLock.current) return;
@@ -92,7 +113,7 @@ export function ConditionsMasterPanel() {
     }
   }
 
-  // 編集/新規ポップアップ
+  // 編集/新規ドロワー
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<ConditionFormState>(emptyForm);
   const [editId, setEditId] = useState<number | null>(null);
@@ -100,13 +121,20 @@ export function ConditionsMasterPanel() {
   // 一括削除確認
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // 別名管理（編集モーダル内）
-  const [aliasesFor, setAliasesFor] = useState<{ id: number; code: string } | null>(null);
-  const [aliases, setAliases] = useState<ConditionAlias[]>([]);
-  const [aliasForm, setAliasForm] = useState({ alias_text: "", lang: "ja" });
-
   const conditionsFormRef = useRef<HTMLFormElement>(null);
-  const aliasFormRef = useRef<HTMLFormElement>(null);
+
+  const loadReferenceData = useCallback(async () => {
+    try {
+      const [defs, unitList] = await Promise.all([
+        api.get<ConditionDef[]>("/super-admin/condition-definitions"),
+        api.get<UnitItem[]>("/super-admin/units"),
+      ]);
+      setConditionDefs(defs.filter((d: ConditionDef) => d.is_active));
+      setUnits(unitList.filter((u: UnitItem) => u.is_active));
+    } catch {
+      // 参照データ取得失敗は致命的ではないので無視
+    }
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -119,13 +147,14 @@ export function ConditionsMasterPanel() {
   }, [page, t]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void loadReferenceData(); }, [loadReferenceData]);
 
   const openCreate = () => { setEditId(null); setForm(emptyForm); setShowForm(true); };
   const openEdit = (c: CentralCondition) => {
     setEditId(c.id);
     setForm({
-      code: c.code,
-      canonical: c.canonical,
+      condition_def_id: c.condition_def_id != null ? String(c.condition_def_id) : "",
+      unit_id: c.unit_id != null ? String(c.unit_id) : "",
       app_kubun: c.app_kubun ?? "",
       is_active: c.is_active,
       priority: c.priority != null ? String(c.priority) : "",
@@ -133,16 +162,25 @@ export function ConditionsMasterPanel() {
       exclude_kw: c.exclude_kw,
       match_type: c.match_type,
       effect: c.effect,
+      note: c.note ?? "",
     });
     setShowForm(true);
   };
 
+  const f = "superAdmin.conditionsAdmin.fields";
+
+  // 出力プレビュー: 選択した condition_def 名 + unit 名の組み合わせ
+  const outputPreview = (() => {
+    const defName = conditionDefs.find((d: ConditionDef) => String(d.id) === form.condition_def_id)?.name ?? "";
+    const unitName = units.find((u: UnitItem) => String(u.id) === form.unit_id)?.canonical ?? "";
+    if (!defName) return t(`${f}.unset`);
+    return unitName ? `${defName} ${unitName}` : defName;
+  })();
+
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
-    const payload = {
-      code: form.code,
-      canonical: form.canonical,
+    const payload: Record<string, unknown> = {
       app_kubun: form.app_kubun || null,
       is_active: form.is_active,
       priority: form.priority !== "" ? parseInt(form.priority, 10) : null,
@@ -150,7 +188,15 @@ export function ConditionsMasterPanel() {
       exclude_kw: form.exclude_kw,
       match_type: form.match_type,
       effect: form.effect,
+      condition_def_id: form.condition_def_id !== "" ? parseInt(form.condition_def_id, 10) : null,
+      unit_id: form.unit_id !== "" ? parseInt(form.unit_id, 10) : null,
+      note: form.note,
     };
+    // 新規の場合は canonical をプレビュー値で送る（バックエンドが code を自動生成する）
+    if (!editId) {
+      payload.canonical = outputPreview;
+      payload.code = "";  // バックエンド側で CN<timestamp> に自動変換
+    }
     try {
       if (editId) {
         await api.patch(`/super-admin/conditions/${editId}`, payload);
@@ -163,43 +209,6 @@ export function ConditionsMasterPanel() {
       await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("common.saveError"));
-    }
-  };
-
-  // --- aliases ---
-  const openAliases = async () => {
-    if (editId === null) return;
-    setAliasesFor({ id: editId, code: form.code });
-    try {
-      const data = await api.get<ConditionAlias[]>(`/super-admin/conditions/${editId}/aliases`);
-      setAliases(data);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("common.fetchError"));
-    }
-  };
-
-  const addAlias = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!aliasesFor) return;
-    try {
-      await api.post(`/super-admin/conditions/${aliasesFor.id}/aliases`, {
-        condition_id: aliasesFor.id,
-        ...aliasForm,
-      });
-      setAliasForm({ alias_text: "", lang: "ja" });
-      setAliases(await api.get<ConditionAlias[]>(`/super-admin/conditions/${aliasesFor.id}/aliases`));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.saveError"));
-    }
-  };
-
-  const deleteAlias = async (id: number) => {
-    if (!aliasesFor) return;
-    try {
-      await api.delete(`/super-admin/conditions/aliases/${id}`);
-      setAliases(await api.get<ConditionAlias[]>(`/super-admin/conditions/${aliasesFor.id}/aliases`));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("common.deleteError"));
     }
   };
 
@@ -220,9 +229,6 @@ export function ConditionsMasterPanel() {
     }
   };
 
-  const f = "superAdmin.conditionsAdmin.fields";
-  const fa = "superAdmin.conditionsAdmin";
-
   const MATCH_TYPE_OPTIONS = [
     { value: "KEYWORD", label: t(`${f}.matchTypeKeyword`) },
     { value: "REGEX",   label: t(`${f}.matchTypeRegex`) },
@@ -236,7 +242,15 @@ export function ConditionsMasterPanel() {
   ];
 
   const columns: DataTableColumn<CentralCondition>[] = [
-    { key: "canonical", header: t(`${f}.canonical`) },
+    {
+      key: "canonical",
+      header: t(`${f}.outputPreview`),
+      renderCell: row => {
+        const defName = conditionDefs.find((d: ConditionDef) => d.id === row.condition_def_id)?.name ?? row.canonical;
+        const unitName = units.find((u: UnitItem) => u.id === row.unit_id)?.canonical ?? "";
+        return unitName ? `${defName} ${unitName}` : defName;
+      },
+    },
     { key: "match_type", header: t(`${f}.matchType`) },
     { key: "app_kubun", header: t(`${f}.appKubun`), renderCell: row => row.app_kubun ?? "—" },
     { key: "priority", header: t(`${f}.priority`), renderCell: row => row.priority ?? "—" },
@@ -300,37 +314,79 @@ export function ConditionsMasterPanel() {
       >
         <form ref={conditionsFormRef} onSubmit={e => { void submit(e); }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
+
+            {/* 1. どの状態ですか？ — condition_def_id */}
             <div className="form-group">
-              <TextField
-                label={`${t(`${f}.code`)} *`}
-                value={form.code}
-                onChange={e => setForm({ ...form, code: e.target.value })}
-                required
+              <label className="field-label">{t(`${f}.conditionDefId`)}</label>
+              {/* ui-allow: reference pulldown for condition_def_id; no SelectControl variant with dynamic option list (#3594) */}
+              <select
+                className="field field-h-md"
+                value={form.condition_def_id}
+                onChange={e => setForm({ ...form, condition_def_id: e.target.value })}
+              >
+                <option value="">{t(`${f}.unset`)}</option>
+                {conditionDefs.map(d => (
+                  <option key={d.id} value={String(d.id)}>{d.name}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 2. どの単位が対象ですか？ — unit_id */}
+            <div className="form-group">
+              <label className="field-label">{t(`${f}.unitId`)}</label>
+              {/* ui-allow: reference pulldown for unit_id; no SelectControl variant with dynamic option list (#3594) */}
+              <select
+                className="field field-h-md"
+                value={form.unit_id}
+                onChange={e => setForm({ ...form, unit_id: e.target.value })}
+              >
+                <option value="">{t(`${f}.noUnit`)}</option>
+                {units.map(u => (
+                  <option key={u.id} value={String(u.id)}>{u.canonical}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* 3. 出力プレビュー */}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label className="field-label">{t(`${f}.outputPreview`)}</label>
+              <div style={{
+                padding: "var(--space-2) var(--space-3)",
+                background: "var(--bg-subtle)",
+                borderRadius: "var(--radius-sm)",
+                fontWeight: "bold",
+              }}>
+                {outputPreview}
+              </div>
+            </div>
+
+            {/* 4. どの言葉が含まれていたらこの状態ですか？ */}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
+                {t(`${f}.searchKw`)}
+              </label>
+              <textarea
+                value={form.search_kw}
+                onChange={e => setForm({ ...form, search_kw: e.target.value })}
+                rows={3}
+                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
-            <div className="form-group">
-              <TextField
-                label={`${t(`${f}.canonical`)} *`}
-                value={form.canonical}
-                onChange={e => setForm({ ...form, canonical: e.target.value })}
-                required
+
+            {/* 5. この言葉が含まれていたら除外しますか？ */}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
+                {t(`${f}.excludeKw`)}
+              </label>
+              <textarea
+                value={form.exclude_kw}
+                onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
+                rows={3}
+                style={{ width: "100%", resize: "vertical" }}
               />
             </div>
-            <div className="form-group">
-              <TextField
-                label={t(`${f}.appKubun`)}
-                value={form.app_kubun}
-                onChange={e => setForm({ ...form, app_kubun: e.target.value })}
-              />
-            </div>
-            <div className="form-group">
-              <TextField
-                type="number"
-                label={t(`${f}.priority`)}
-                value={form.priority}
-                onChange={e => setForm({ ...form, priority: e.target.value })}
-              />
-            </div>
+
+            {/* 6. 言葉の探し方は？ — match_type */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.matchType`)} *</label>
               {/* ui-allow: enum select for condition match_type; no SelectControl variant with option map (#3594) */}
@@ -345,6 +401,8 @@ export function ConditionsMasterPanel() {
                 ))}
               </select>
             </div>
+
+            {/* 7. 見つけたらどうしますか？ — effect */}
             <div className="form-group">
               <label className="field-label">{t(`${f}.effect`)} *</label>
               {/* ui-allow: enum select for condition effect; no SelectControl variant with option map (#3594) */}
@@ -359,113 +417,44 @@ export function ConditionsMasterPanel() {
                 ))}
               </select>
             </div>
-            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
-                {t(`${f}.searchKw`)}
-              </label>
-              <textarea
-                value={form.search_kw}
-                onChange={e => setForm({ ...form, search_kw: e.target.value })}
-                rows={3}
-                style={{ width: "100%", resize: "vertical" }}
+
+            {/* 8. どの商品タイプに適用しますか？ */}
+            <div className="form-group">
+              <TextField
+                label={t(`${f}.appKubun`)}
+                value={form.app_kubun}
+                onChange={e => setForm({ ...form, app_kubun: e.target.value })}
               />
             </div>
-            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
-              <label style={{ display: "block", marginBottom: "var(--space-1)" }}>
-                {t(`${f}.excludeKw`)}
-              </label>
-              <textarea
-                value={form.exclude_kw}
-                onChange={e => setForm({ ...form, exclude_kw: e.target.value })}
-                rows={3}
-                style={{ width: "100%", resize: "vertical" }}
+
+            {/* 9. 優先順位 */}
+            <div className="form-group">
+              <TextField
+                type="number"
+                label={t(`${f}.priority`)}
+                value={form.priority}
+                onChange={e => setForm({ ...form, priority: e.target.value })}
               />
             </div>
+
+            {/* 10. メモ */}
+            <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+              <TextField
+                label={t(`${f}.note`)}
+                value={form.note}
+                onChange={e => setForm({ ...form, note: e.target.value })}
+              />
+            </div>
+
+            {/* 11. 有効にしますか？ */}
             <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
               <input type="checkbox" checked={form.is_active} onChange={e => setForm({ ...form, is_active: e.target.checked })} />
               {t(`${f}.isActive`)}
             </label>
-            {editId !== null && (
-              <div style={{ gridColumn: "1 / -1" }}>
-                <HeaderButton
-                  variant="secondary"
-                  data-testid="condition-open-aliases"
-                  onClick={() => { void openAliases(); }}
-                >
-                  {t(`${fa}.aliases`)}
-                </HeaderButton>
-              </div>
-            )}
+
           </div>
         </form>
       </Drawer>
-
-      {/* 別名管理モーダル */}
-      <Modal
-        open={!!aliasesFor}
-        onClose={() => setAliasesFor(null)}
-        title={aliasesFor ? `${t(`${fa}.aliases`)} \u2014 ${aliasesFor.code}` : ""}
-        size="md"
-      >
-        {/* ui-allow: alias table is a small inline form, not a data listing */}
-        <form
-          ref={aliasFormRef}
-          onSubmit={e => { void addAlias(e); }}
-          style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "var(--space-2)", margin: "var(--space-2) 0" }}
-        >
-          <TextField
-            label={t(`${fa}.aliasText`)}
-            value={aliasForm.alias_text}
-            onChange={e => setAliasForm({ ...aliasForm, alias_text: e.target.value })}
-            required
-          />
-          <TextField
-            label={t(`${fa}.aliasLang`)}
-            value={aliasForm.lang}
-            onChange={e => setAliasForm({ ...aliasForm, lang: e.target.value })}
-            required
-          />
-          <HeaderButton
-            variant="primary"
-            onClick={() => aliasFormRef.current?.requestSubmit()}
-          >
-            {t(`${fa}.addAlias`)}
-          </HeaderButton>
-        </form>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>{t(`${fa}.aliasText`)}</th>
-              <th>{t(`${fa}.aliasLang`)}</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {aliases.map(a => (
-              <tr key={a.id}>
-                <td>{a.alias_text}</td>
-                <td>{a.lang}</td>
-                <td style={{ textAlign: "right" }}>
-                  <HeaderButton
-                    variant="secondary"
-                    onClick={() => { void deleteAlias(a.id); }}
-                  >
-                    {t(`${fa}.deleteAlias`)}
-                  </HeaderButton>
-                </td>
-              </tr>
-            ))}
-            {aliases.length === 0 && (
-              <tr><td colSpan={3} className="empty">{t("common.noData")}</td></tr>
-            )}
-          </tbody>
-        </table>
-        <div style={{ marginTop: "var(--space-2)", textAlign: "right" }}>
-          <HeaderButton variant="secondary" onClick={() => setAliasesFor(null)}>
-            {t("common.close")}
-          </HeaderButton>
-        </div>
-      </Modal>
 
       <ConfirmModal
         open={confirmDelete}

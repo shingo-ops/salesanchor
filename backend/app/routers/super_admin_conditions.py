@@ -20,6 +20,7 @@ import csv
 import hashlib
 import io
 import re
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import text
@@ -114,11 +115,12 @@ _ALIAS_COLS = "id, condition_id, alias_text, lang, updated_at"
 _CONDITION_COLS = (
     "id, code, canonical, app_kubun, is_active, priority, "
     "search_kw, exclude_kw, tenant_id, created_at, updated_at, "
-    "match_type, effect"
+    "match_type, effect, condition_def_id, unit_id, note"
 )
 _CONDITION_UPDATABLE = {
     "code", "canonical", "app_kubun", "is_active", "priority",
     "search_kw", "exclude_kw", "match_type", "effect",
+    "condition_def_id", "unit_id", "note",
 }
 
 
@@ -166,6 +168,9 @@ async def create_condition(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
+    # code が未指定または空文字の場合は自動生成
+    effective_code = (data.code or "").strip() or f"CN{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
     try:
         # code 重複チェック（中央マスタ内）
         exists_result = await db.execute(
@@ -173,7 +178,7 @@ async def create_condition(
                 "SELECT 1 FROM public.conditions "
                 "WHERE code = :code AND tenant_id IS NULL"
             ),
-            {"code": data.code},
+            {"code": effective_code},
         )
         if exists_result.fetchone():
             raise HTTPException(
@@ -193,13 +198,13 @@ async def create_condition(
             text(
                 f"INSERT INTO public.conditions "
                 f"(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
-                f"match_type, effect, tenant_id, updated_at) "
+                f"match_type, effect, condition_def_id, unit_id, note, tenant_id, updated_at) "
                 f"VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
-                f":match_type, :effect, NULL, now()) "
+                f":match_type, :effect, :condition_def_id, :unit_id, :note, NULL, now()) "
                 f"RETURNING {_CONDITION_COLS}"
             ),
             {
-                "code": data.code,
+                "code": effective_code,
                 "canonical": data.canonical,
                 "app_kubun": data.app_kubun,
                 "is_active": data.is_active,
@@ -208,6 +213,9 @@ async def create_condition(
                 "exclude_kw": data.exclude_kw,
                 "match_type": data.match_type,
                 "effect": data.effect,
+                "condition_def_id": data.condition_def_id,
+                "unit_id": data.unit_id,
+                "note": data.note,
             },
         )
     except IntegrityError as exc:

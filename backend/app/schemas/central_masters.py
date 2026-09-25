@@ -472,10 +472,14 @@ class CentralConditionBase(BaseModel):
     exclude_kw: str = ""
     match_type: str = "KEYWORD"
     effect: str = "OUTPUT"
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: str = ""
 
 
 class CentralConditionCreate(CentralConditionBase):
-    pass
+    # code は省略可能 — 未指定時はバックエンドが CN<timestamp> を自動生成する
+    code: Optional[str] = Field(default=None, max_length=50)
 
 
 class CentralConditionUpdate(BaseModel):
@@ -488,6 +492,9 @@ class CentralConditionUpdate(BaseModel):
     exclude_kw: Optional[str] = None
     match_type: Optional[str] = None
     effect: Optional[str] = None
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: Optional[str] = None
 
 
 class CentralConditionResponse(CentralConditionBase):
