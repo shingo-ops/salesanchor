@@ -812,3 +812,6 @@ run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
 
 # ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
 run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
+
+# conditions テーブルに match_type / effect カラムを追加（tcg_status_master パターン統一）
+run_sql migrations/20260925_010000_conditions_add_match_type.sql

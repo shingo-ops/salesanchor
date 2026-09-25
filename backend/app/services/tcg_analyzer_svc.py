@@ -656,7 +656,8 @@ def load_condition_entries(session: Session) -> list[dict]:
         text(
             """
             SELECT c.id, c.code, c.canonical, c.priority,
-                   c.app_kubun, c.search_kw, c.exclude_kw
+                   c.app_kubun, c.search_kw, c.exclude_kw,
+                   c.match_type, c.effect
             FROM public.conditions c
             WHERE c.is_active = TRUE
               AND c.priority IS NOT NULL
@@ -676,6 +677,8 @@ def load_condition_entries(session: Session) -> list[dict]:
             "app_kubun": r[4] or "",
             "search_kw": r[5] or "",
             "exclude_kw": r[6] or "",
+            "match_type": r[7] if r[7] is not None else "KEYWORD",
+            "effect": r[8] if r[8] is not None else "OUTPUT",
         }
         for r in rows
     ]
@@ -785,9 +788,20 @@ def resolve_condition_v2(
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
-        s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
-        x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
-        hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        match_type = e.get("match_type", "KEYWORD")
+        if match_type in ("REGEX", "LITERAL", "DEFAULT"):
+            if match_type == "DEFAULT":
+                hit, matched_kw = True, "DEFAULT"
+            else:
+                hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
+                if hit and e["exclude_kw"]:
+                    hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
+                matched_kw = e["search_kw"] if hit else None
+        else:
+            # KEYWORD（デフォルト）: 既存動作を維持
+            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+            x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+            hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
         if not hit:
             continue
         prefix = f"{flag_note}," if flag_note else ""

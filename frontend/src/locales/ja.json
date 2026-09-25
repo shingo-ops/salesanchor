@@ -2667,7 +2667,15 @@
         "priority": "優先度",
         "searchKw": "検索キーワード",
         "excludeKw": "除外キーワード",
-        "isActive": "有効"
+        "isActive": "有効",
+        "matchType": "照合方法",
+        "matchTypeKeyword": "キーワード一致",
+        "matchTypeRegex": "正規表現",
+        "matchTypeLiteral": "文字列一致",
+        "matchTypeDefault": "デフォルト",
+        "effect": "効果",
+        "effectOutput": "検索して表示",
+        "effectExclude": "検索して除外"
       }
     },
     "fxRate": {
