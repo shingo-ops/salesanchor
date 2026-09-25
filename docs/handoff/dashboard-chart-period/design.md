@@ -1,12 +1,35 @@
 # Design: Dashboard Chart Period Selector
 
-recon: docs/handoff/dashboard-chart-period/recon.md
-作業日: 2026-09-25
+**対象ADR**: ADR-027（i18n強制）・ADR-144（UIガバナンス）  
+**recon**: docs/handoff/dashboard-chart-period/recon.md  
+**日付**: 2026-09-25  
+**担当**: Planner
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし：今回は既存デザインシステムコンポーネント（SelectControl）を使った内部機能追加のため外部事例の参照は不要と判断
+
+---
+
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|---|---|
+| ハードコード `days=7` なし | `grep "days=7" frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` でコメント行のみ |
+| 期間変更でAPIが再フェッチされる | ブラウザNetworkタブで days パラメータ確認 |
+| 360日まで選択可能 | セレクタで360日選択 → APIが200を返す |
+| i18n完全（ADR-027） | check-i18n-missing-keys.js PASS |
+| TypeScript型エラーなし | tsc --noEmit PASS |
+| デザインシステム遵守（ADR-144） | SelectControl使用・生select禁止確認 |
+
+---
 
 ## 設計方針
 
 LINE解析ダッシュボードのチャートに期間セレクタを追加する。
-SelectControlコンポーネントを使い、7/30/90/180/360日を選択可能にする。
+ADR-027に従い全UI文字列はt()経由で実装。ADR-144に従いSelectControlコンポーネントを使い、7/30/90/180/360日を選択可能にする。
 
 ## 変更範囲
 
@@ -28,23 +51,8 @@ SelectControlコンポーネントを使い、7/30/90/180/360日を選択可能�
 5. `frontend/src/locales/ja.json` — period系キー追加
 6. `frontend/src/locales/en.json` — period系キー追加（同一キー）
 
-## 受入基準
+---
 
-| 基準 | 検証方法 |
-|---|---|
-| ハードコード `days=7` なし | `grep "days=7" AnalysisDashboardPanel.tsx` でコメント行のみ |
-| 期間変更でAPIが再フェッチされる | ブラウザNetworkタブで days パラメータ確認 |
-| 360日まで選択可能 | セレクタで360日選択 → APIが200を返す |
-| i18n完全 | check-i18n-missing-keys.js PASS |
-| TypeScript型エラーなし | tsc --noEmit PASS |
-| デザインシステム遵守 | SelectControl使用（生select禁止） |
+## 維持の仕組み
 
-## 外部・過去事例の参照と我々への応用
-
-該当なし（内部機能追加。SelectControlは既存デザインシステムコンポーネントを使用）
-
-## 守り手
-
-- i18n check: check-i18n-missing-keys.js
-- TypeScript型チェック: tsc --noEmit
-- ADR-144 UIガバナンス: 生select禁止確認
+守り手: check-i18n-missing-keys.js（i18n完全性）・tsc --noEmit（TypeScript型安全）・UI governance gate（ADR-144 生select禁止）
