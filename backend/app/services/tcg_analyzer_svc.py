@@ -651,34 +651,77 @@ def load_condition_entries(session: Session) -> list[dict]:
     GAS 対照: readConditionMaster() condEntries 構築 (investigate2.gs:8118-8125)
     code ASC タイブレーカーは GAS の R3 条件処理順（SHURI→PERI: CN0005→CN0006）を保証する。
     GAS 根拠: investigate2.gs:9705-9710 で No shrink box (CN0005) を Opened box (CN0006) より先に判定。
+
+    注意: migration 適用前の環境（CI テスト DB 等）で match_type / effect カラムが
+    存在しない場合は fallback クエリに切り替えてデフォルト値を補完する。
     """
-    rows = session.execute(
-        text(
-            """
-            SELECT c.id, c.code, c.canonical, c.priority,
-                   c.app_kubun, c.search_kw, c.exclude_kw
-            FROM public.conditions c
-            WHERE c.is_active = TRUE
-              AND c.priority IS NOT NULL
-              AND c.priority > 0
-            ORDER BY c.priority ASC,
-                     length(COALESCE(c.app_kubun, '')) DESC,
-                     c.code ASC
-            """
-        )
-    ).fetchall()
-    return [
-        {
-            "cond_id": str(r[0]),
-            "code": r[1],
-            "canonical": r[2],
-            "priority": r[3],
-            "app_kubun": r[4] or "",
-            "search_kw": r[5] or "",
-            "exclude_kw": r[6] or "",
-        }
-        for r in rows
-    ]
+    try:
+        rows = session.execute(
+            text(
+                """
+                SELECT c.id, c.code, c.canonical, c.priority,
+                       c.app_kubun, c.search_kw, c.exclude_kw,
+                       c.match_type, c.effect
+                FROM public.conditions c
+                WHERE c.is_active = TRUE
+                  AND c.priority IS NOT NULL
+                  AND c.priority > 0
+                ORDER BY c.priority ASC,
+                         length(COALESCE(c.app_kubun, '')) DESC,
+                         c.code ASC
+                """
+            )
+        ).fetchall()
+        has_match_type = True
+    except Exception:
+        session.rollback()
+        rows = session.execute(
+            text(
+                """
+                SELECT c.id, c.code, c.canonical, c.priority,
+                       c.app_kubun, c.search_kw, c.exclude_kw
+                FROM public.conditions c
+                WHERE c.is_active = TRUE
+                  AND c.priority IS NOT NULL
+                  AND c.priority > 0
+                ORDER BY c.priority ASC,
+                         length(COALESCE(c.app_kubun, '')) DESC,
+                         c.code ASC
+                """
+            )
+        ).fetchall()
+        has_match_type = False
+
+    if has_match_type:
+        return [
+            {
+                "cond_id": str(r[0]),
+                "code": r[1],
+                "canonical": r[2],
+                "priority": r[3],
+                "app_kubun": r[4] or "",
+                "search_kw": r[5] or "",
+                "exclude_kw": r[6] or "",
+                "match_type": r[7] if r[7] is not None else "KEYWORD",
+                "effect": r[8] if r[8] is not None else "OUTPUT",
+            }
+            for r in rows
+        ]
+    else:
+        return [
+            {
+                "cond_id": str(r[0]),
+                "code": r[1],
+                "canonical": r[2],
+                "priority": r[3],
+                "app_kubun": r[4] or "",
+                "search_kw": r[5] or "",
+                "exclude_kw": r[6] or "",
+                "match_type": "KEYWORD",
+                "effect": "OUTPUT",
+            }
+            for r in rows
+        ]
 
 
 def app_kubun_matches(app_kubun_str: str, kubun: str) -> bool:
@@ -785,9 +828,20 @@ def resolve_condition_v2(
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
-        s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
-        x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
-        hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        match_type = e.get("match_type", "KEYWORD")
+        if match_type in ("REGEX", "LITERAL", "DEFAULT"):
+            if match_type == "DEFAULT":
+                hit, matched_kw = True, "DEFAULT"
+            else:
+                hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
+                if hit and e["exclude_kw"]:
+                    hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
+                matched_kw = e["search_kw"] if hit else None
+        else:
+            # KEYWORD（デフォルト）: 既存動作を維持
+            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+            x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+            hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
         if not hit:
             continue
         prefix = f"{flag_note}," if flag_note else ""
