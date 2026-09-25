@@ -1,11 +1,11 @@
 # design: supersession-global-latest
 
 **対象ADR**: [ADR-158](../../adr/ADR-158-product-level-supersession.md)
-**recon**: [recon.md](./recon.md)
+**recon**: [docs/handoff/supersession-global-latest/recon.md](./recon.md)
 
 ## 現状調査
 
-詳細は [recon.md](./recon.md) を参照。
+詳細は [docs/handoff/supersession-global-latest/recon.md](./recon.md) を参照。
 
 ## 変更内容
 
