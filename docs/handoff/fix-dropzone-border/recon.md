@@ -1,5 +1,16 @@
 # recon: fix-dropzone-border
 
+## file:line 引用表
+
+| 引用先 `path:line` | 確認内容 |
+|-------------------|---------|
+| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:42` | `.analysis-dashboard-dropzone` で `var(--color-border)` が使用されている |
+| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:78` | `.analysis-dashboard-window-input` でも `var(--color-border)` が使用されている |
+
+**未解決ゼロ確認**: 全て解消済み
+
+---
+
 ## 調査結果
 
 ### 問題の特定
@@ -20,7 +31,7 @@ grep -rn "^\s*--color-border\s*:" frontend/src --include="*.css"
 
 ### 影響確認
 
-- `AnalysisDashboardPanel.css:78` にも同様に `var(--color-border)` が使用されている（window-input ボーダー）
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:78` にも同様に `var(--color-border)` が使用されている（window-input ボーダー）
 - SVGアイコンは正常表示（HTML構造に問題なし）
 - CSS カスタムプロパティが未定義 → `border` が初期値 `none` にフォールバック → 破線が不可視
 

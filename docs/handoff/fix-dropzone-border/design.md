@@ -1,5 +1,7 @@
 # design: fix-dropzone-border
 
+recon: docs/handoff/fix-dropzone-border/recon.md
+
 ## 概要
 
 `AnalysisDashboardPanel.css` 内の未定義カスタムプロパティ `--color-border` を定義済みトークンに置き換える。
@@ -38,6 +40,8 @@ git revert でCSS2行を元に戻す。機能への影響なし（ボーダー�
 ## 維持の仕組み
 
 ADR-067 のデザイントークン強制ルールと `check-css-hardcoded-values.js` がトークン違反を lint で検出する。ただし「未定義トークン名を使う」パターンは現状の lint では検出されないため、今後のトークン追加・変更時にはトークン名の実在確認を行うこと。
+
+守り手: ADR-067 lint（`check-css-hardcoded-values.js`）および新規トークン使用時の手動確認
 
 ## 外部・過去事例の参照と我々への応用
 
