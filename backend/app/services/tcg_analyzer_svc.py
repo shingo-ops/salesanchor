@@ -1576,8 +1576,9 @@ def _merge_supplier_products(
     """ADR-158: 同一仕入元の旧 analysis_results を商品×コンディション単位で更新。
 
     新メッセージの解析結果に含まれる (product_id, condition_id) と同じペアを持つ
-    旧 analysis_results を is_current=FALSE に更新する。
+    自分より古いメッセージの analysis_results を is_current=FALSE に更新する。
     新メッセージに含まれないペアの旧行は is_current=TRUE のまま残る。
+    古いメッセージの再解析時は、自分より新しいメッセージの結果を上書きしない。
 
     Returns:
         更新した旧 analysis_results の件数
@@ -1618,7 +1619,8 @@ def _merge_supplier_products(
     new_condition_ids = [p[1] for p in new_pairs]
 
     # 3. 同一仕入元の旧 analysis_results で、新メッセージにも存在する
-    #    (product_id, condition_id) ペアの行を is_current=FALSE に更新
+    #    (product_id, condition_id) ペアを持つ「自分より古いメッセージの行」を is_current=FALSE に更新。
+    #    自分より新しいメッセージの行（古いメッセージの再解析時）は対象外とする。
     result = session.execute(
         text(f"""
             UPDATE {schema}.analysis_results ar_old
@@ -1629,6 +1631,12 @@ def _merge_supplier_products(
             WHERE ar_old.extraction_item_id = ei_old.id
               AND sm_old.supplier_channel_id = :channel_id
               AND ei_old.extraction_job_id != :job_id
+              AND sm_old.received_at < (
+                  SELECT sm2.received_at
+                  FROM {schema}.extraction_jobs ej2
+                  JOIN {schema}.source_messages sm2 ON sm2.id = ej2.source_message_id
+                  WHERE ej2.id = :job_id
+              )
               AND ar_old.is_current = TRUE
               AND EXISTS (
                   SELECT 1 FROM unnest(CAST(:product_ids AS integer[]), CAST(:condition_ids AS integer[])) AS t(pid, cid)
