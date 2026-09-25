@@ -31,3 +31,11 @@ recon: docs/handoff/dashboard-tab-separation/recon.md
 | 配信タブに解析データなし | コード確認: analysis フィールド参照なし |
 | i18n完全 | check-i18n-missing-keys.js PASS |
 | デザインシステム遵守 | Badge/Card/DataTable のみ使用 |
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし（内部リファクタリング。タブ別責任分離は既存4タブ構成の中で完結し、外部ライブラリ・外部事例への参照は不要）
+
+## 維持の仕組み
+
+守り手: i18n check script（check-i18n-missing-keys.js）/ TypeScript型チェック（tsc）/ process-artifacts gate（check-process-artifacts.js）
