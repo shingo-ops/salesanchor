@@ -1,5 +1,6 @@
 branch: release/dashboard-upload
 date: 2026-09-25
+recon: docs/handoff/dashboard-upload/recon.md
 
 ## 目標
 

@@ -7,13 +7,11 @@ date: 2026-09-25
 
 ## ファイル調査結果
 
-| ファイル | 役割 | 行 |
-|---------|------|----|
-| frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx | ダッシュボード本体・ImportTabContent を含む | 1-2000+ |
-| frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css | ダッシュボードスタイル | 1-200+ |
-| frontend/src/pages/tcg/TcgLineImportPage.tsx | 既存アップロードページ（独立） | - |
-| frontend/src/locales/ja.json | i18n日本語キー | - |
-| frontend/src/locales/en.json | i18n英語キー | - |
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1` — ダッシュボード本体・ImportTabContent を含む
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:1` — ダッシュボードスタイル
+- `frontend/src/pages/super-admin/TcgLineImportPage.tsx:1` — 既存アップロードページ（独立）・移植元
+- `frontend/src/locales/ja.json:1` — i18n日本語キー
+- `frontend/src/locales/en.json:1` — i18n英語キー
 
 ## API SSOT
 
