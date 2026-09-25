@@ -152,6 +152,38 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         for row in error_rows
     ]
 
+    # 8. 提供者別抽出サマリー
+    supplier_extraction_rows = (
+        await db.execute(
+            text(
+                "SELECT s.supplier_code, s.name AS supplier_name,"
+                "  COUNT(ej.id) AS total_jobs,"
+                "  SUM(CASE WHEN ej.status = 'done' THEN 1 ELSE 0 END) AS done_count,"
+                "  SUM(CASE WHEN ej.status = 'error' THEN 1 ELSE 0 END) AS error_count,"
+                "  SUM(CASE WHEN ej.status = 'empty' THEN 1 ELSE 0 END) AS empty_count"
+                f" FROM {TCG_SCHEMA}.extraction_jobs ej"
+                f" JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
+                f" JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
+                " JOIN public.suppliers s ON s.id = sc.supplier_id"
+                " WHERE s.is_active = TRUE"
+                " GROUP BY s.id, s.supplier_code, s.name"
+                " ORDER BY error_count DESC, s.name"
+            )
+        )
+    ).fetchall()
+
+    extraction_by_supplier = [
+        {
+            "supplier_code": row.supplier_code,
+            "supplier_name": row.supplier_name,
+            "total_jobs": int(row.total_jobs or 0),
+            "done_count": int(row.done_count or 0),
+            "error_count": int(row.error_count or 0),
+            "empty_count": int(row.empty_count or 0),
+        }
+        for row in supplier_extraction_rows
+    ]
+
     return {
         "extraction": {
             "total": total_extraction,
@@ -178,6 +210,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         "review_reasons": review_reasons,
         "engine": engine,
         "recent_errors": recent_errors,
+        "extraction_by_supplier": extraction_by_supplier,
     }
 
 

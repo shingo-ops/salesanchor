@@ -76,12 +76,22 @@ class RecentErrorItem(BaseModel):
     prompt_version: str | None
 
 
+class ExtractionBySupplierItem(BaseModel):
+    supplier_code: str | None
+    supplier_name: str | None
+    total_jobs: int
+    done_count: int
+    error_count: int
+    empty_count: int
+
+
 class PipelineSummaryResponse(BaseModel):
     extraction: ExtractionSummary
     analysis: AnalysisSummary
     review_reasons: list[ReviewReasonItem]
     engine: EngineInfo
     recent_errors: list[RecentErrorItem]
+    extraction_by_supplier: list[ExtractionBySupplierItem]
 
 
 # ---------------------------------------------------------------------------
