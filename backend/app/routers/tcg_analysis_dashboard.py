@@ -17,6 +17,7 @@ from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_analysis_dashboard_svc import (
     get_distribution_summary,
+    get_extraction_product_ranking,
     get_import_summary,
     get_import_trend,
     get_pipeline_summary,
@@ -305,3 +306,33 @@ async def supplier_pipeline(
 ) -> SupplierPipelineResponse:
     data = await get_supplier_pipeline(db)
     return SupplierPipelineResponse(**data)
+
+
+# ---------------------------------------------------------------------------
+# 抽出商品ランキング スキーマ
+# ---------------------------------------------------------------------------
+
+
+class ExtractionProductRankingItem(BaseModel):
+    raw_product_name: str
+    total_count: int
+    resolved_count: int
+    resolution_rate: float
+
+
+class ExtractionProductRankingResponse(BaseModel):
+    items: list[ExtractionProductRankingItem]
+
+
+@router.get(
+    "/tcg/analysis-dashboard/extraction-product-ranking",
+    response_model=ExtractionProductRankingResponse,
+    summary="TCG 抽出商品ランキング 解決率ワースト順（super_admin 限定）",
+)
+async def get_extraction_product_ranking_endpoint(
+    days: int = Query(default=30, ge=1, le=360),
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_super_admin),
+) -> ExtractionProductRankingResponse:
+    rows = await get_extraction_product_ranking(db, days)
+    return ExtractionProductRankingResponse(items=[ExtractionProductRankingItem(**row) for row in rows])
