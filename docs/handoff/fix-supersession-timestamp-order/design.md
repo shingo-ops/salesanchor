@@ -3,6 +3,9 @@
 ## 対象ADR
 ADR-158
 
+## recon 参照
+`docs/handoff/fix-supersession-timestamp-order/recon.md`
+
 ## 修正方針
 
 `_merge_supplier_products()` のステップ3 UPDATE クエリに、
@@ -46,5 +49,5 @@ PostgreSQL の UPDATE ... FROM ... WHERE サブクエリで「より新しい行
 
 ## 維持の仕組み
 
-- 守り手: ADR-158 の実装レビュー時に `_merge_supplier_products()` の UPDATE 条件に `received_at` 比較が含まれているか確認
+- 守り手: ADR-158 の実装レビュー時に `backend/app/services/tcg_analyzer_svc.py` の `_merge_supplier_products()` の UPDATE 条件に `received_at` 比較が含まれているか確認
 - 将来の変更時は「古いメッセージ再解析シナリオ」をテストケースに含めること
