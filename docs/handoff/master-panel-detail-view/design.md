@@ -1,6 +1,6 @@
 # design: 全マスタパネルDrawer化
 
-参照: [recon.md](./recon.md)
+参照: [recon.md](docs/handoff/master-panel-detail-view/recon.md)
 
 ## 対象ADR
 - ADR-144: UIガバナンス（金型準拠）
