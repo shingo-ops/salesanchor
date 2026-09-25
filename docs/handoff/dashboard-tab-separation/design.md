@@ -35,6 +35,28 @@ recon: docs/handoff/dashboard-tab-separation/recon.md
 | i18n完全 | check-i18n-missing-keys.js PASS |
 | デザインシステム遵守 | Badge/Card/DataTable のみ使用 |
 
+## 期間セレクタ追加 設計 (2026-09-25)
+
+### 変更範囲
+
+| 層 | 変更 |
+|---|---|
+| backend service | days clamp 90→360（pipeline_trend・import_trend両方） |
+| backend router | import-trend Query le=90→le=360 |
+| frontend state | `trendDays: number` (default 7) を AnalysisDashboardPanel に追加 |
+| frontend UI | `SelectControl` size="sm" をタブバー右端に配置（1つで全タブ共有） |
+| frontend fetch | pipeline-trend・import-trend を `days=${trendDays}` に変更 |
+| i18n | period7d/30d/90d/180d/360d/periodLabel キーを ja.json・en.json 両方に追加 |
+
+### 受入基準
+
+| 基準 | 検証方法 |
+|---|---|
+| ハードコード `days=7` なし | `grep "days=7" AnalysisDashboardPanel.tsx` でコメント行のみ |
+| 期間変更でAPIが再フェッチされる | ブラウザNetworkタブで days パラメータ確認 |
+| 360日まで選択可能 | セレクタで360日選択 → APIが200を返す |
+| i18n完全 | ja.json/en.json 同一キー確認済み |
+
 ## 外部・過去事例の参照と我々への応用
 
 該当なし（内部リファクタリング。タブ別責任分離は既存4タブ構成の中で完結し、外部ライブラリ・外部事例への参照は不要）

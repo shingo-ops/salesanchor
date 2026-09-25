@@ -197,7 +197,7 @@ class ImportTrendItem(BaseModel):
     summary="TCG インポート工程 日別トレンド（super_admin 限定）",
 )
 async def get_import_trend_endpoint(
-    days: int = Query(default=7, ge=1, le=90),
+    days: int = Query(default=7, ge=1, le=360),
     db: AsyncSession = Depends(get_db),
     _user: dict = Depends(require_super_admin),
 ) -> list[ImportTrendItem]:

@@ -218,7 +218,7 @@ async def get_pipeline_trend(db: AsyncSession, days: int = 7) -> list[dict]:
     """
     日別パイプライン集計を返す。SELECT のみ。
     """
-    if not (1 <= days <= 90):
+    if not (1 <= days <= 360):
         days = 7
 
     rows = (
@@ -363,7 +363,7 @@ async def get_import_summary(db: AsyncSession) -> dict:
 
 async def get_import_trend(db: AsyncSession, days: int = 7) -> list[dict]:
     """日別インポート集計（import_jobs テーブル）。SELECT のみ。"""
-    days = max(1, min(int(days), 90))
+    days = max(1, min(int(days), 360))
 
     rows = (
         await db.execute(
