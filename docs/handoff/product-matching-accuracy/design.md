@@ -5,9 +5,9 @@
 - ADR-155: product_exclude_keywords への migration INSERT 禁止
 
 ## 問題
-`analyze_extraction_job` の GEMINI direct path（`tcg_analyzer_svc.py:1397`）は
-`gemini_product_id` が `filtered_codes` に存在するだけで無条件採用していた。
-`match_pid_with_work` が持つ2つのガードが完全にスキップされていた：
+`analyze_extraction_job` の GEMINI direct path（`backend/app/services/tcg_analyzer_svc.py:1397`）は
+gemini_product_id が filtered_codes に存在するだけで無条件採用していた。
+match_pid_with_work が持つ2つのガードが完全にスキップされていた：
 1. `exclude_kw` チェック（パラレル/SAR/PSA 等のキーワードマッチ）
 2. `single_card_marker` × BOX/CASE カテゴリ判定
 
@@ -34,8 +34,14 @@ if gemini_product_id and gemini_product_id in filtered_codes:
 | 既存テスト全件 PASS | pytest 716件 |
 | 正常ケース（除外なし）は従来通り GEMINI | pid_basis=GEMINI のまま |
 
-## 外部事例
-- match_pid_with_work（L550）が同じ exclude_kw + single_card_marker ロジックを持つ → 同パターンを GEMINI path に移植
+## 外部・過去事例の参照と我々への応用
+- match_pid_with_work（L550）が同じ exclude_kw + single_card_marker ロジックを持つ → 同パターンを GEMINI path に移植（コピーではなく関数を再利用）
+- PR #3495（add-abbreviations）: 検索キーワード追加で召喚率を改善した先行事例
+- PR #3778（buyback-product-matching）: 同じ照合関数の差し替えパターン（match_product_keyword）
+
+## 維持の仕組み
+- 守り手: GEMINI path の exclude check を外すと回帰。`backend/tests/test_tcg_keyword_matching.py` に除外キーワードテストが存在
+- pid_basis の `GEMINI_EXCLUDED|` プレフィックスを本番ログでモニタリングすることで誤除外を検知可能
 
 ## 弊害・影響範囲
 - GEMINI が正しく BOX を返していたケースで、テキストに除外キーワードが含まれる場合は FALLBACK に切り替わる
