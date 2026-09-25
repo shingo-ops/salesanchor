@@ -31,10 +31,16 @@ VIEW と実テーブルを区別して処理を分岐させる。
 - 変更ファイル: `migrations/20260925_010000_conditions_add_match_type.sql`（1ファイルのみ）
 - 触らない範囲: backend Python コード、フロントエンド、その他 migration ファイル
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-ADR-1002 で確立済みのパターン（migration ガード修正）を踏襲。
-追加の外部事例調査は不要。
+ADR-1002 Phase A パターン（migration ガード修正）を踏襲。
+- 過去事例: `docs/handoff/fix-conditions-migration-guard/recon.md` — テーブル存在チェック追加で同種の migration 失敗を修正済み
+- 応用: 今回は「VIEWに対するALTER TABLE」問題。`table_type = 'BASE TABLE'` チェックで分岐させ、VIEW の場合は実テーブル `line_conditions` に ALTER するパターンを採用。
+
+## 維持の仕組み
+
+- migration はべき等（`IF NOT EXISTS` ガード）なので再実行しても副作用なし
+- VIEW の `CREATE OR REPLACE` はカラム定義変更に対して自動で追従する仕組みを採用
 
 ## 戻し方
 
