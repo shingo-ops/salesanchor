@@ -609,6 +609,9 @@ run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
 # IMPORT-01 QA: 同上（tenant_001 専用・冪等）
 run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
 
+# ADR-158: neutralized exclude-keyword inserts (data applied via app/CSV per ADR-155)
+run_sql migrations/20260925_120000_add_product_exclude_keywords.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
