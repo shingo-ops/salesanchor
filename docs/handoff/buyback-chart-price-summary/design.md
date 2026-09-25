@@ -15,7 +15,7 @@
 
 ### 追加ヘルパー関数（モジュールスコープ）
 
-`BuybackProductHistoryDrawer.tsx` に3関数を追加:
+`frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx` に3関数を追加:
 
 1. `getShopPrice(item, shop, grade): number | null`
    - `item[${shop}_price_${grade}]` を動的アクセスで取得
@@ -69,7 +69,7 @@
 
 ## 外部・過去事例の参照と我々への応用
 
-該当なし。本実装は `BuybackByProductPage.tsx` の既存 `yesterday_diff` レンダリングパターン（`var(--success)`/`var(--danger)` 色分け）を Drawer 内サマリーに応用したもの。外部ライブラリ・外部事例への依存なし。
+該当なし。本実装は `frontend/src/pages/buyback-prices/BuybackByProductPage.tsx` の既存 `yesterday_diff` レンダリングパターン（`var(--success)`/`var(--danger)` 色分け）を Drawer 内サマリーに応用したもの。外部ライブラリ・外部事例への依存なし。
 
 ## 影響範囲
 
