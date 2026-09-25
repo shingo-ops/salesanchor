@@ -52,10 +52,13 @@
 | REGEX 不正パターン拒否 | super_admin_conditions.py で re.compile テスト |
 | i18n キー同一 | ja.json 4179 = en.json 4179 |
 
-## 外部事例
-該当なし（内部テーブル統一。外部ライブラリ・サービス非依存）
+## 外部・過去事例の参照と我々への応用
+該当なし（内部テーブル構造の統一であり、外部ライブラリ・サービス非依存）。
+tcg_status_master の match_type/effect パターンを conditions に横展開した内部リファクタリング。
 
-## 守り手
+## 維持の仕組み
+守り手: REGEX 保存時に `re.compile(pattern)` でバリデーション（super_admin_conditions.py）、DEFAULT `'KEYWORD'` による既存データ保護、resolve_condition_v2 の KEYWORD パス分岐
+
 - REGEX 保存時: `re.compile(pattern)` でバリデーション（super_admin_conditions.py）
 - DEFAULT: `'KEYWORD'` で既存データ保護
 - resolve_condition_v2: KEYWORD パスは既存 `match_keyword` を完全維持
