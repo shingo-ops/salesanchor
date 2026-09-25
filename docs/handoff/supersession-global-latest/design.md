@@ -48,17 +48,19 @@ WHERE ar_target.is_current IS DISTINCT FROM ranked.should_be_current
 | テスト test_tcg_is_active_filter.py が PASS | pytest実行で確認 |
 | test_tcg_distribution_pg.py が PASS または SKIP（DB非接続） | pytest実行で確認 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（PostgreSQL ROW_NUMBER() CTE UPDATE は標準的なパターン）
+該当なし。PostgreSQL の ROW_NUMBER() CTE UPDATE は標準的なパターンであり、外部事例の参照なしに実装可能。
 
 ## 影響範囲
 
-- 呼び出し元: `backend/app/services/tcg_analyzer_svc.py:1565`（`_run_extraction_pipeline()` 内）のみ
+- 呼び出し元: `backend/app/services/tcg_analyzer_svc.py` の `analyze_extraction_job()` 内（行1565付近）のみ
 - 関数シグネチャ変更なし（引数・戻り値型は同一）
 - 戻り値の意味が「更新した旧行の件数」から「is_currentが変更された件数」に変わる（ログメッセージに反映済み）
 
 ## 維持の仕組み
 
-- 既存テスト `test_tcg_is_active_filter.py` が is_current フィルタのロジックをカバー
+守り手: Hikky-dev (Claude Code)
+
+- 既存テスト `backend/tests/test_tcg_is_active_filter.py` が is_current フィルタのロジックをカバー
 - ログ出力を `(global-latest)` 付きに変更し、新ロジックが動いていることを確認可能

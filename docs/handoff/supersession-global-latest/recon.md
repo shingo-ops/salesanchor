@@ -31,7 +31,7 @@ sm_old.received_at < (SELECT sm2.received_at FROM ... WHERE ej2.id = :job_id)
 
 ## 関連ADR
 
-- `docs/adr/ADR-158-*.md`（ADR-158 is_current 設計）
+- `docs/adr/ADR-158-product-level-supersession.md`（ADR-158 is_current 設計）
 
 ## 触らない範囲
 
