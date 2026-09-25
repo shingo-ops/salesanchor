@@ -569,6 +569,50 @@ ORDER BY COALESCE(s.name, sc.channel)
     }
 
 
+async def get_extraction_product_ranking(db: AsyncSession, days: int = 30) -> list[dict]:
+    """
+    商品名別 抽出解決率ランキングを返す（解決率ワースト順）。SELECT のみ。
+
+    - done ステータスのジョブのみ対象
+    - 直近 days 日以内に extracted_at があるジョブ
+    - raw_product_name が NULL のアイテムは除外
+    - total_count >= 2 の商品名のみ（サンプル数確保）
+    - 解決率昇順 (ワースト先頭)、同率はサンプル数降順
+    """
+    days = max(1, min(int(days), 360))
+
+    rows = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  ei.raw_product_name,"
+                f"  COUNT(*) AS total_count,"
+                f"  COUNT(ei.resolved_product_code) AS resolved_count"
+                f" FROM {TCG_SCHEMA}.extraction_items ei"
+                f" JOIN {TCG_SCHEMA}.extraction_jobs ej ON ei.extraction_job_id = ej.id"
+                f" WHERE ej.status = 'done'"
+                f"   AND ej.extracted_at >= NOW() - INTERVAL '{days} days'"
+                f"   AND ei.raw_product_name IS NOT NULL"
+                f" GROUP BY ei.raw_product_name"
+                f" HAVING COUNT(*) >= 2"
+                f" ORDER BY"
+                f"   (COUNT(ei.resolved_product_code)::float / COUNT(*)) ASC,"
+                f"   COUNT(*) DESC"
+            )
+        )
+    ).fetchall()
+
+    return [
+        {
+            "raw_product_name": row.raw_product_name,
+            "total_count": int(row.total_count),
+            "resolved_count": int(row.resolved_count),
+            "resolution_rate": int(row.resolved_count) / int(row.total_count),
+        }
+        for row in rows
+    ]
+
+
 async def get_distribution_summary(db: AsyncSession) -> dict:
     """配信工程のサマリーを返す。SELECT のみ。"""
     # 1. distribution_targets

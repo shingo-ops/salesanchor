@@ -17,7 +17,7 @@
  * ADR-067: 色・サイズはデザイントークンのみ
  * ADR-144: Card / Badge / DataTable / Tabs / recharts 金型のみ使用
  */
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -170,6 +170,13 @@ interface ExtractionBySupplierItem {
   done_count: number;
   error_count: number;
   empty_count: number;
+}
+
+interface ExtractionProductRankingItem {
+  raw_product_name: string;
+  total_count: number;
+  resolved_count: number;
+  resolution_rate: number;
 }
 
 interface PipelineSummary {
@@ -1005,6 +1012,107 @@ interface ExtractionTabContentProps {
 }
 
 function ExtractionTabContent({ data, trend, supplierData, supplierLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
+  const [productRanking, setProductRanking] = useState<ExtractionProductRankingItem[]>([]);
+  const [showSupplierDetail, setShowSupplierDetail] = useState(false);
+  const [showProductDetail, setShowProductDetail] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<ExtractionProductRankingItem[]>(
+        `/tcg/analysis-dashboard/extraction-product-ranking?days=${trendDays}`
+      )
+      .then((res) => {
+        setProductRanking(res);
+      })
+      .catch(() => {
+        setProductRanking([]);
+      });
+  }, [trendDays]);
+
+  const worstSuppliers = useMemo(() => {
+    return [...(data.extraction_by_supplier ?? [])]
+      .filter((s) => s.total_jobs > 0)
+      .map((s) => ({ ...s, successRate: s.done_count / s.total_jobs }))
+      .sort((a, b) => a.successRate - b.successRate);
+  }, [data.extraction_by_supplier]);
+
+  type SupplierWithRate = ExtractionBySupplierItem & { successRate: number };
+
+  const supplierRankingColumns: DataTableColumn<SupplierWithRate>[] = [
+    {
+      key: "rank",
+      header: t("analysisRules.dashboard.extractionRankRank"),
+      width: "60px",
+      renderCell: (_row, rowKey) => {
+        const idx = worstSuppliers.findIndex(
+          (s) => (s.supplier_code ?? s.supplier_name ?? "") === rowKey
+        );
+        return idx >= 0 ? idx + 1 : "-";
+      },
+    },
+    {
+      key: "supplier_name",
+      header: t("analysisRules.dashboard.extractionRankSupplierName"),
+    },
+    {
+      key: "successRate",
+      header: t("analysisRules.dashboard.extractionRankSuccessRate"),
+      width: "100px",
+      renderCell: (row) => `${(row.successRate * 100).toFixed(1)}%`,
+    },
+    {
+      key: "done_count",
+      header: t("analysisRules.dashboard.extractionRankDoneJobs"),
+      width: "80px",
+      renderCell: (row) => row.done_count.toLocaleString(),
+    },
+    {
+      key: "error_count",
+      header: t("analysisRules.dashboard.extractionRankErrorJobs"),
+      width: "80px",
+      renderCell: (row) => row.error_count.toLocaleString(),
+    },
+    {
+      key: "total_jobs",
+      header: t("analysisRules.dashboard.extractionRankTotalJobs"),
+      width: "100px",
+      renderCell: (row) => row.total_jobs.toLocaleString(),
+    },
+  ];
+
+  const productRankingColumns: DataTableColumn<ExtractionProductRankingItem>[] = [
+    {
+      key: "rank",
+      header: t("analysisRules.dashboard.extractionRankRank"),
+      width: "60px",
+      renderCell: (_row, rowKey) => {
+        const idx = productRanking.findIndex((p) => p.raw_product_name === rowKey);
+        return idx >= 0 ? idx + 1 : "-";
+      },
+    },
+    {
+      key: "raw_product_name",
+      header: t("analysisRules.dashboard.extractionRankProductName"),
+    },
+    {
+      key: "resolution_rate",
+      header: t("analysisRules.dashboard.extractionRankResolutionRate"),
+      width: "100px",
+      renderCell: (row) => `${(row.resolution_rate * 100).toFixed(1)}%`,
+    },
+    {
+      key: "resolved_count",
+      header: t("analysisRules.dashboard.extractionRankResolvedItems"),
+      width: "90px",
+      renderCell: (row) => row.resolved_count.toLocaleString(),
+    },
+    {
+      key: "total_count",
+      header: t("analysisRules.dashboard.extractionRankTotalItems"),
+      width: "90px",
+      renderCell: (row) => row.total_count.toLocaleString(),
+    },
+  ];
   const extractionSuccessRate =
     data.extraction.total > 0
       ? data.extraction.by_status.done / data.extraction.total
@@ -1090,6 +1198,110 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
 
   return (
     <>
+      {/* ランキングセクション: 抽出率ワースト提供者 */}
+      <section className="analysis-dashboard-ranking-section">
+        <h4 className="analysis-dashboard-ranking-title">
+          <Badge variant="danger" size="sm" dot>
+            {t("analysisRules.dashboard.extractionWorstSupplierTitle")}
+          </Badge>
+        </h4>
+        <div className="analysis-dashboard-ranking-cards">
+          {worstSuppliers.slice(0, 3).map((item, index) => (
+            <Card key={item.supplier_code ?? item.supplier_name ?? index} variant="container" density="compact">
+              <div className="analysis-dashboard-ranking-card-content">
+                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
+                <div className="analysis-dashboard-ranking-card-info">
+                  <span className="analysis-dashboard-ranking-card-name">
+                    {item.supplier_name ?? item.supplier_code ?? "-"}
+                  </span>
+                  <div className="analysis-dashboard-ranking-card-metrics">
+                    <Badge
+                      variant={item.successRate >= 0.8 ? "success" : item.successRate >= 0.6 ? "warning" : "danger"}
+                      size="sm"
+                    >
+                      {t("analysisRules.dashboard.extractionRankSuccessRate")}: {(item.successRate * 100).toFixed(0)}%
+                    </Badge>
+                    <span className="analysis-dashboard-ranking-card-stat">
+                      {t("analysisRules.dashboard.extractionRankDoneJobs")}: {item.done_count} / {item.total_jobs}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {worstSuppliers.length === 0 && (
+            <p className="analysis-dashboard-ranking-empty">
+              {t("analysisRules.dashboard.extractionRankNoData")}
+            </p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setShowSupplierDetail(!showSupplierDetail)}>
+          {showSupplierDetail
+            ? t("analysisRules.dashboard.extractionRankHideDetail")
+            : t("analysisRules.dashboard.extractionRankShowDetail")}
+        </Button>
+        {showSupplierDetail && (
+          <DataTable<SupplierWithRate>
+            columns={supplierRankingColumns}
+            data={worstSuppliers}
+            rowKey={(row) => row.supplier_code ?? row.supplier_name ?? ""}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
+          />
+        )}
+      </section>
+
+      {/* ランキングセクション: 照合率ワースト商品 */}
+      <section className="analysis-dashboard-ranking-section">
+        <h4 className="analysis-dashboard-ranking-title">
+          <Badge variant="danger" size="sm" dot>
+            {t("analysisRules.dashboard.extractionWorstProductTitle")}
+          </Badge>
+        </h4>
+        <div className="analysis-dashboard-ranking-cards">
+          {productRanking.slice(0, 3).map((item, index) => (
+            <Card key={item.raw_product_name} variant="container" density="compact">
+              <div className="analysis-dashboard-ranking-card-content">
+                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
+                <div className="analysis-dashboard-ranking-card-info">
+                  <span className="analysis-dashboard-ranking-card-name">{item.raw_product_name}</span>
+                  <div className="analysis-dashboard-ranking-card-metrics">
+                    <Badge
+                      variant={item.resolution_rate >= 0.8 ? "success" : item.resolution_rate >= 0.6 ? "warning" : "danger"}
+                      size="sm"
+                    >
+                      {t("analysisRules.dashboard.extractionRankResolutionRate")}: {(item.resolution_rate * 100).toFixed(0)}%
+                    </Badge>
+                    <span className="analysis-dashboard-ranking-card-stat">
+                      {t("analysisRules.dashboard.extractionRankResolvedItems")}: {item.resolved_count} / {item.total_count}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {productRanking.length === 0 && (
+            <p className="analysis-dashboard-ranking-empty">
+              {t("analysisRules.dashboard.extractionRankNoData")}
+            </p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setShowProductDetail(!showProductDetail)}>
+          {showProductDetail
+            ? t("analysisRules.dashboard.extractionRankHideDetail")
+            : t("analysisRules.dashboard.extractionRankShowDetail")}
+        </Button>
+        {showProductDetail && (
+          <DataTable<ExtractionProductRankingItem>
+            columns={productRankingColumns}
+            data={productRanking}
+            rowKey={(row) => row.raw_product_name}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
+          />
+        )}
+      </section>
+
       {/* 問題バー */}
       {!supplierLoading && dangerExtractionCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
