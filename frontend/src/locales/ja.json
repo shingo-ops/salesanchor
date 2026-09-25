@@ -1822,7 +1822,7 @@
     "openFullPage": "フルページで開く"
   },
   "unitMaster": {
-    "title": "単位マスタ",
+    "title": "単位ルール",
     "code": "コード",
     "canonical": "正規名",
     "kubun": "区分",
@@ -1841,7 +1841,7 @@
     "total": "単位数：{{count}}件"
   },
   "statusMaster": {
-    "title": "ステータスマスタ",
+    "title": "ステータスルール",
     "statusId": "ステータスID",
     "canonical": "正規名",
     "searchPattern": "検索パターン",
@@ -3970,11 +3970,11 @@
       "accuracyManagement": "解析精度管理",
       "needsReview": "要確認",
       "productMaster": "商品マスタ",
-      "statusMaster": "ステータスマスタ",
+      "statusMaster": "ステータスルール",
       "supplierMaster": "仕入元マスタ",
-      "conditionsMaster": "状態マスタ",
+      "conditionsMaster": "状態ルール",
       "productCategoriesMaster": "商品カテゴリ",
-      "unitMaster": "単位マスタ",
+      "unitMaster": "単位ルール",
       "import": "インポート",
       "dashboard": "ダッシュボード",
       "noteMaster": "備考マスタ",
@@ -4285,7 +4285,7 @@
     "backToList": "一覧に戻る"
   },
   "conditionsMaster": {
-    "title": "状態マスタ",
+    "title": "状態ルール",
     "subtitle": "テナント固有の状態を管理します。",
     "newCondition": "新規状態を追加",
     "bulkDeleteConfirm": "選択した状態を非アクティブにしますか？",
