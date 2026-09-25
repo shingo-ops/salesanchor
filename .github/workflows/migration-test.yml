@@ -605,6 +605,8 @@ jobs:
               priority    INTEGER,
               search_kw   TEXT NOT NULL DEFAULT '',
               exclude_kw  TEXT NOT NULL DEFAULT '',
+              match_type  TEXT NOT NULL DEFAULT 'KEYWORD',
+              effect      TEXT NOT NULL DEFAULT 'OUTPUT',
               created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
               updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
           );
