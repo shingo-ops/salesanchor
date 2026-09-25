@@ -24,7 +24,7 @@ date: 2026-09-25
 ## 関連 ADR
 
 - `docs/adr/ADR-027-ui-internationalization.md` — i18n強制
-- `docs/adr/ADR-144-ui-governance.md` — デザインシステム遵守
+- `docs/adr/ADR-144-ui-component-governance.md` — デザインシステム遵守
 
 ## 既存機能との重複確認
 
