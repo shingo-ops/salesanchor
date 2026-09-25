@@ -756,6 +756,25 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
             onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
             style={{ display: "none" }}
           />
+          {/* ui-allow: Lucide file-up スタイルインラインSVG — 登録アイコンコンポーネントに該当なし (#3285) */}
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="analysis-dashboard-dropzone-icon"
+            aria-hidden="true"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="12" y2="12" />
+            <line x1="15" y1="15" x2="12" y2="12" />
+          </svg>
           <p>{selectedFile ? selectedFile.name : t("analysisRules.dashboard.importDropHint")}</p>
         </div>
 
