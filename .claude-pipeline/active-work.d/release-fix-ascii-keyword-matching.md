@@ -1,12 +1,5 @@
-# release/fix-ascii-keyword-matching
+branch: release/fix-ascii-keyword-matching
 
-## 概要
-買取マッチャーの検索キーワード照合を `match_one_kw`（連続一致）から `match_product_search_keyword`（トークンAND照合）に差し替え。
-
-## ステータス
-PR作成済み・CI確認中
-
-## 変更ファイル
-- backend/app/services/buyback_scraper/product_matcher.py
-- docs/handoff/fix-ascii-keyword-matching/recon.md
-- docs/handoff/fix-ascii-keyword-matching/design.md
+| ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
+|-----------|--------------|---------|------|-----|------|------|
+| release/fix-ascii-keyword-matching | 買取マッチャー検索関数修正 | 2026-09-25 00:00 | WIP | | | |
