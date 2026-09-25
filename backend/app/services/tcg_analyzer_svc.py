@@ -42,6 +42,7 @@ from app.services.tcg_empty_box_rules import (
 from app.services.tcg_product_guards import single_card_marker, work_heading_evidence
 from app.services.tcg_work_reference import (
     PRODUCT_ID_PROMPT_VERSIONS,
+    RAW_CODE_PROMPT_VERSIONS,
     WORK_ID_PROMPT_VERSIONS,
     load_work_reference,
     reference_digest,
@@ -1214,6 +1215,15 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     ).fetchall()
     product_code_to_id: dict[str, str] = {str(r[0]): str(r[1]) for r in legacy_code_rows}
 
+    # Gate 1 (ADR-158 Phase 2): raw_product_code → products.id マッピング
+    # product_code と mark の両方を照合対象にする（どちらも型番として使われうる）
+    mark_rows = session.execute(
+        text("SELECT mark, id FROM public.products WHERE is_active = TRUE AND mark IS NOT NULL AND mark <> ''")
+    ).fetchall()
+    # product_code を基準にして mark で補完（product_code を優先）
+    rawcode_to_id: dict[str, str] = {str(r[0]): str(r[1]) for r in mark_rows}
+    rawcode_to_id.update(product_code_to_id)  # product_code が mark より優先
+
     works = load_work_master(session)
     work_rows = session.execute(text(
         "SELECT id, work_id, category_class FROM public.products WHERE is_active = TRUE"
@@ -1296,7 +1306,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                    ei.raw_work_name, ei.raw_work_source_line_span,
                    ei.line_start, ei.line_end, sm.raw_text,
                    EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections ic
-                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id')
+                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id'),
+                   ei.raw_product_code
             FROM {TCG_SCHEMA}.extraction_items ei
             JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
@@ -1332,6 +1343,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             line_end,
             source_text,
             has_product_correction,
+            ei_raw_product_code,
         ) = row
 
         stats["total"] += 1
@@ -1417,13 +1429,62 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                 if single_card_marker(raw_product_name, raw_state, raw_memo) and _gemini_category.casefold() in {"box", "case"}:
                     _gemini_excluded = True
 
+        # --- Gate 1: Raw product code match (ADR-158 Phase 2) ---
+        # raw_product_code は Gemini v6 が原文から抽出した型番（例: OP-14, SV8a）。
+        # マスタの product_code または mark に直接一致すれば商品IDを確定する。
+        # exclude_keywords チェックも適用して安全性を担保する。
+        _rawcode = (ei_raw_product_code or "").strip() or None
+        _rawcode_pid: str | None = rawcode_to_id.get(_rawcode) if _rawcode else None
+        # rawcode_pid が filtered_codes（unit kubun フィルタ済み）に含まれる場合のみ有効
+        _rawcode_valid = bool(_rawcode_pid and _rawcode_pid in filtered_codes)
+
         if gemini_product_id and gemini_product_id in filtered_codes and not _gemini_excluded:
-            matched_code = gemini_product_id
-            pid_basis = "GEMINI"
-            pid_resolved = True
-            candidates: list = []
+            if _rawcode_valid and _rawcode_pid != gemini_product_id:
+                # Gate 1: raw_product_code が Gemini と矛盾 → 原文型番を優先
+                matched_code = _rawcode_pid
+                pid_basis = "RAWCODE_OVERRIDE"
+                pid_resolved = True
+                candidates: list = []
+            else:
+                matched_code = gemini_product_id
+                pid_basis = "GEMINI"
+                pid_resolved = True
+                candidates = []
+        elif _rawcode_valid:
+            # Gate 1: Gemini 解決なし / 除外 → raw_product_code で直接照合
+            _rc_exclude_list = exclude_kw.get(_rawcode_pid, [])
+            _rc_ex_fields = [
+                normalize_en(raw_product_name),
+                normalize_en(raw_state or ""),
+                normalize_en(raw_memo or ""),
+            ]
+            _rc_excluded = any(
+                kw and match_product_keyword(kw, field)
+                for kw in _rc_exclude_list
+                for field in _rc_ex_fields
+            )
+            if not _rc_excluded:
+                matched_code = _rawcode_pid
+                pid_basis = "RAWCODE"
+                if _gemini_excluded:
+                    pid_basis = "GEMINI_EXCLUDED|RAWCODE"
+                pid_resolved = True
+                candidates = []
+            else:
+                # raw_product_code に除外語が一致 → キーワード照合にフォールバック
+                matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
+                    norm_product_name, filtered_codes, search_kw, exclude_kw,
+                    work_id=work_id, product_work_ids=product_work_ids,
+                    raw_state=norm_condition, raw_memo=norm_memo,
+                    product_category_classes=product_category_classes,
+                )
+                _kw_basis = pid_basis if pid_basis != "NONE" else "NONE"
+                if _gemini_excluded:
+                    pid_basis = (f"GEMINI_EXCLUDED|RAWCODE_EXCLUDED|{_kw_basis}")[:100]
+                else:
+                    pid_basis = (f"RAWCODE_EXCLUDED|{_kw_basis}")[:100]
         else:
-            # Gemini が NULL / 無効 / 除外 → キーワード照合にフォールバック
+            # Gemini が NULL / 無効 / 除外 かつ raw_product_code なし → キーワード照合にフォールバック
             matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
                 norm_product_name, filtered_codes, search_kw, exclude_kw,
                 work_id=work_id, product_work_ids=product_work_ids,

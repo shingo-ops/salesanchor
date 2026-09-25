@@ -285,7 +285,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         raw_product_name, raw_quantity, raw_price,
                         raw_unit, raw_state, raw_memo,
                         raw_work_name, raw_work_source_line_span, resolved_work_id,
-                        resolved_product_code,
+                        resolved_product_code, raw_product_code,
                         created_at
                     )
                     VALUES (
@@ -294,7 +294,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                         :raw_product_name, :raw_quantity, :raw_price,
                         :raw_unit, :raw_state, :raw_memo,
                         :raw_work_name, :raw_work_source_line_span, :resolved_work_id,
-                        :resolved_product_code,
+                        :resolved_product_code, :raw_product_code,
                         now()
                     )
                     """
@@ -314,6 +314,7 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
                     "raw_work_name": item.get("raw_work_name"),
                     "raw_work_source_line_span": item.get("raw_work_source_line_span"),
                     "resolved_product_code": item.get("resolved_product_code"),
+                    "raw_product_code": item.get("raw_product_code"),
                 },
             )
             items_inserted += 1
