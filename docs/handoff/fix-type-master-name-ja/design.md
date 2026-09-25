@@ -20,8 +20,8 @@ ADR: ADR-156
 | id=24 name_ja='クロススタァ' | 本番DB SELECT確認 |
 | 買取相場タブに英語タブなし | 画面目視 |
 
-## 外部事例
-該当なし（内部マスタデータ修正）
+## 外部・過去事例の参照と我々への応用
+該当なし（内部マスタデータ修正）。seed ON CONFLICT DO NOTHING による既存行未更新はPostgreSQLの標準動作であり、UPDATEマイグレーションで補正するのが一般的手法。
 
-## 守り手
-type_master.name_ja は NOT NULL 制約あり。WHERE条件で現在値を指定しているため冪等。
+## 維持の仕組み
+守り手: WHERE条件で現在値を指定しているため冪等。type_master.name_ja は NOT NULL 制約あり。今後の seed では ON CONFLICT DO UPDATE SET name_ja = EXCLUDED.name_ja を検討。
