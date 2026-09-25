@@ -39,6 +39,7 @@ import type { TabItem } from "../../../components/Tabs";
 import { DashboardIcons } from "../../../constants/icons";
 import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
+import type { SupplierQualitySummary } from "../../../features/tcg-analysis-review/supplierQuality";
 import "./AnalysisDashboardPanel.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -149,12 +150,22 @@ interface EngineSummary {
   current_engine_version: string | null;
 }
 
+interface ExtractionBySupplierItem {
+  supplier_code: string | null;
+  supplier_name: string | null;
+  total_jobs: number;
+  done_count: number;
+  error_count: number;
+  empty_count: number;
+}
+
 interface PipelineSummary {
   extraction: ExtractionSummary;
   analysis: AnalysisSummary;
   review_reasons: ReviewReason[];
   engine: EngineSummary;
   recent_errors: RecentError[];
+  extraction_by_supplier: ExtractionBySupplierItem[];
 }
 
 interface TrendDay {
@@ -292,6 +303,10 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   const [distLoading, setDistLoading] = useState(false);
   const [distError, setDistError] = useState<string | null>(null);
 
+  // Supplier quality summaries (lazy, analysis tab)
+  const [qualitySummaries, setQualitySummaries] = useState<SupplierQualitySummary[] | null>(null);
+  const [qualityLoading, setQualityLoading] = useState(false);
+
   // Supplier Pipeline data
   const [supplierData, setSupplierData] = useState<SupplierPipelineResponse | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
@@ -359,6 +374,48 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       });
   }, [activeTab, distData, distLoading, t]);
 
+  // Lazy load supplier quality summaries when analysis tab is first opened
+  useEffect(() => {
+    if (activeTab !== "analysis" || qualitySummaries !== null || qualityLoading) return;
+    setQualityLoading(true);
+
+    interface ApiSummaryRaw {
+      supplier_id: string;
+      supplier_name: string;
+      analysis_count: number;
+      needs_review_count: number;
+      product_id_unresolved_count: number;
+      unit_unresolved_count: number;
+      condition_fallback_count: number | null;
+    }
+    interface ApiQualityResponse {
+      summaries: ApiSummaryRaw[];
+    }
+
+    api
+      .get<ApiQualityResponse>("/tcg/supplier-quality-summaries")
+      .then((res) => {
+        setQualitySummaries(
+          res.summaries.map((raw) => ({
+            supplierId: raw.supplier_id,
+            supplierName: raw.supplier_name,
+            analysisCount: raw.analysis_count,
+            needsReviewCount: raw.needs_review_count,
+            productIdUnresolvedCount: raw.product_id_unresolved_count,
+            unitUnresolvedCount: raw.unit_unresolved_count,
+            conditionFallbackCount: raw.condition_fallback_count,
+          }))
+        );
+      })
+      .catch(() => {
+        // silently ignore — table will not render
+        setQualitySummaries([]);
+      })
+      .finally(() => {
+        setQualityLoading(false);
+      });
+  }, [activeTab, qualitySummaries, qualityLoading]);
+
   const tabItems: TabItem<DashboardTab>[] = [
     { key: "import", label: t("analysisRules.dashboard.tabImport") },
     { key: "extraction", label: t("analysisRules.dashboard.tabExtraction") },
@@ -398,8 +455,6 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           trend={importTrend}
           loading={importLoading}
           error={importError}
-          supplierData={supplierData}
-          supplierLoading={supplierLoading}
           t={t}
           onNavigate={handleCta}
           ArrowRightIcon={ArrowRightIcon}
@@ -441,6 +496,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             trend={trend}
             supplierData={supplierData}
             supplierLoading={supplierLoading}
+            qualitySummaries={qualitySummaries}
+            qualityLoading={qualityLoading}
             t={t}
             onNavigate={handleCta}
             ArrowRightIcon={ArrowRightIcon}
@@ -454,8 +511,6 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           data={distData}
           loading={distLoading}
           error={distError}
-          supplierData={supplierData}
-          supplierLoading={supplierLoading}
           t={t}
         />
       )}
@@ -472,14 +527,12 @@ interface ImportTabContentProps {
   trend: ImportTrendDay[];
   loading: boolean;
   error: string | null;
-  supplierData: SupplierPipelineResponse | null;
-  supplierLoading: boolean;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function ImportTabContent({ data, trend, loading, error, supplierData, supplierLoading, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
+function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -490,75 +543,6 @@ function ImportTabContent({ data, trend, loading, error, supplierData, supplierL
       </p>
     );
   }
-
-  // Supplier import table: severity by latest_received_at age
-  const importSupplierRows = supplierData
-    ? [...supplierData.suppliers].sort((a, b) => {
-        const order = { danger: 0, warning: 1, success: 2 };
-        const aOrder = order[a.severity as keyof typeof order] ?? 3;
-        const bOrder = order[b.severity as keyof typeof order] ?? 3;
-        return aOrder - bOrder;
-      })
-    : [];
-
-  const dangerImportCount = supplierData
-    ? supplierData.suppliers.filter((s) => s.severity === "danger").length
-    : 0;
-
-  type ImportSupplierRow = SupplierPipelineItem;
-
-  const importSupplierColumns: DataTableColumn<ImportSupplierRow>[] = [
-    {
-      key: "channel_name",
-      header: t("analysisRules.dashboard.supplierChannelName"),
-    },
-    {
-      key: "import_info",
-      header: t("analysisRules.dashboard.supplierActiveMessages"),
-      width: "120px",
-      renderCell: (row) => row.import_info.active_messages.toLocaleString(),
-    },
-    {
-      key: "import_info",
-      header: t("analysisRules.dashboard.supplierLatestReceivedAt"),
-      width: "160px",
-      renderCell: (row) => {
-        if (!row.import_info.latest_received_at) return "-";
-        return new Date(row.import_info.latest_received_at).toLocaleString("ja-JP", {
-          timeZone: "Asia/Tokyo",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-      },
-    },
-    {
-      key: 'extraction' as keyof SupplierPipelineItem,
-      header: t('analysisRules.dashboard.supplierExtractionErrors'),
-      width: '120px',
-      renderCell: (row) => {
-        const errors = (row as SupplierPipelineItem).extraction?.error ?? 0;
-        return errors > 0 ? (
-          <Badge variant="danger">{errors}</Badge>
-        ) : (
-          <span>0</span>
-        );
-      },
-    },
-    {
-      key: "severity",
-      header: t("analysisRules.dashboard.supplierStatus"),
-      width: "100px",
-      renderCell: (row) => {
-        const level = row.severity as 'danger' | 'warning' | 'success';
-        return (
-          <Badge variant={level}>
-            {t(`analysisRules.dashboard.supplierSeverity_${level}`)}
-          </Badge>
-        );
-      },
-    },
-  ];
 
   // Derived values: match rate (positive framing, flipped from unresolved_rate)
   const matchRate = (1 - (data.unresolved_rate ?? 0)) * 100;
@@ -630,28 +614,24 @@ function ImportTabContent({ data, trend, loading, error, supplierData, supplierL
     resolved_count: (item.created_count ?? 0) - (item.unresolved_count ?? 0),
   }));
 
+  const orphanCount = data.orphan_count ?? 0;
+
   return (
     <>
-      {/* 問題バー */}
-      {!supplierLoading && dangerImportCount > 0 && (
+      {/* 孤立メッセージ警告 */}
+      {orphanCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
-          <Badge variant="danger">
-            {`${dangerImportCount}${t("analysisRules.dashboard.supplierProblemCount")}`}
+          <Badge variant="warning">
+            {`${orphanCount.toLocaleString()}${t("analysisRules.dashboard.items")} ${t("analysisRules.dashboard.importOrphanMessages")}`}
           </Badge>
-        </div>
-      )}
-
-      {/* 提供者テーブル */}
-      {!supplierLoading && importSupplierRows.length > 0 && (
-        <div className="analysis-dashboard-supplier-section">
-          <h3>{t("analysisRules.dashboard.supplierTableTitle")}</h3>
-          <DataTable<ImportSupplierRow>
-            columns={importSupplierColumns}
-            data={importSupplierRows}
-            rowKey={(row) => row.channel_id}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.noData")}
-          />
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn"
+            onClick={() => onNavigate("supplier-master")}
+          >
+            {t("analysisRules.dashboard.importOrphanCta")}
+            <ArrowRightIcon size={14} />
+          </button>
         </div>
       )}
 
@@ -1099,6 +1079,57 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, t, o
           />
         </Card>
       )}
+
+      {/* 提供者別抽出エラー内訳 */}
+      {data.extraction_by_supplier.filter((s) => s.error_count > 0).length > 0 && (
+        <Card variant="container" density="compact">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.extractionSupplierTitle")}
+          </div>
+          <DataTable<ExtractionBySupplierItem>
+            columns={[
+              {
+                key: "supplier_name",
+                header: t("analysisRules.dashboard.extractionSupplierName"),
+              },
+              {
+                key: "total_jobs",
+                header: t("analysisRules.dashboard.extractionSupplierTotal"),
+                width: "100px",
+                renderCell: (row) => row.total_jobs.toLocaleString(),
+              },
+              {
+                key: "done_count",
+                header: t("analysisRules.dashboard.extractionSupplierDone"),
+                width: "80px",
+                renderCell: (row) => row.done_count.toLocaleString(),
+              },
+              {
+                key: "error_count",
+                header: t("analysisRules.dashboard.extractionSupplierError"),
+                width: "80px",
+                renderCell: (row) => (
+                  <Badge variant="danger">{row.error_count.toLocaleString()}</Badge>
+                ),
+              },
+            ]}
+            data={data.extraction_by_supplier.filter((s) => s.error_count > 0)}
+            rowKey={(row) => row.supplier_code ?? row.supplier_name ?? ""}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.noData")}
+          />
+          <div className="analysis-dashboard-ctas">
+            <button
+              type="button"
+              className="analysis-dashboard-cta-btn"
+              onClick={() => onNavigate("accuracy-management")}
+            >
+              {t("analysisRules.dashboard.ctaAccuracy")}
+              <ArrowRightIcon size={16} />
+            </button>
+          </div>
+        </Card>
+      )}
       </div>{/* end analysis-dashboard-existing-section */}
     </>
   );
@@ -1113,12 +1144,14 @@ interface AnalysisTabContentProps {
   trend: TrendDay[];
   supplierData: SupplierPipelineResponse | null;
   supplierLoading: boolean;
+  qualitySummaries: SupplierQualitySummary[] | null;
+  qualityLoading: boolean;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function AnalysisTabContent({ data, trend, supplierData, supplierLoading, t, onNavigate, ArrowRightIcon }: AnalysisTabContentProps) {
+function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualitySummaries, qualityLoading, t, onNavigate, ArrowRightIcon }: AnalysisTabContentProps) {
   const pidRate = data.analysis.pid_resolved_rate;
   const unitRate = data.analysis.unit_resolved_rate;
   const needsReviewRate = data.analysis.needs_review_rate;
@@ -1271,6 +1304,102 @@ function AnalysisTabContent({ data, trend, supplierData, supplierLoading, t, onN
           />
         </div>
       )}
+
+      {/* 提供者別解析問題テーブル (supplier-quality-summaries) */}
+      {!qualityLoading && qualitySummaries !== null && (() => {
+        const problemRows = qualitySummaries.filter(
+          (s) => s.needsReviewCount > 0 || s.productIdUnresolvedCount > 0 || s.unitUnresolvedCount > 0
+        );
+        if (problemRows.length === 0) return null;
+
+        type QualityRow = SupplierQualitySummary;
+        const qualityColumns: DataTableColumn<QualityRow>[] = [
+          {
+            key: "supplierName",
+            header: t("analysisRules.dashboard.analysisSupplierName"),
+          },
+          {
+            key: "analysisCount",
+            header: t("analysisRules.dashboard.analysisSupplierAnalysisCount"),
+            width: "100px",
+            renderCell: (row) => row.analysisCount.toLocaleString(),
+          },
+          {
+            key: "productIdUnresolvedCount",
+            header: t("analysisRules.dashboard.analysisSupplierPidUnresolved"),
+            width: "120px",
+            renderCell: (row) =>
+              row.productIdUnresolvedCount > 0 ? (
+                <Badge variant="danger">{row.productIdUnresolvedCount.toLocaleString()}</Badge>
+              ) : (
+                <span>{row.productIdUnresolvedCount.toLocaleString()}</span>
+              ),
+          },
+          {
+            key: "unitUnresolvedCount",
+            header: t("analysisRules.dashboard.analysisSupplierUnitUnresolved"),
+            width: "120px",
+            renderCell: (row) =>
+              row.unitUnresolvedCount > 0 ? (
+                <Badge variant="warning">{row.unitUnresolvedCount.toLocaleString()}</Badge>
+              ) : (
+                <span>{row.unitUnresolvedCount.toLocaleString()}</span>
+              ),
+          },
+          {
+            key: "needsReviewCount",
+            header: t("analysisRules.dashboard.analysisSupplierNeedsReview"),
+            width: "100px",
+            renderCell: (row) =>
+              row.needsReviewCount > 0 ? (
+                <Badge variant="warning">{row.needsReviewCount.toLocaleString()}</Badge>
+              ) : (
+                <span>{row.needsReviewCount.toLocaleString()}</span>
+              ),
+          },
+        ];
+
+        return (
+          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+            <div className="analysis-dashboard-section-title">
+              {t("analysisRules.dashboard.analysisSupplierTitle")}
+            </div>
+            <DataTable<QualityRow>
+              columns={qualityColumns}
+              data={problemRows}
+              rowKey={(row) => row.supplierId}
+              density="compact"
+              emptyState={t("analysisRules.dashboard.noData")}
+            />
+            <div className="analysis-dashboard-ctas">
+              <button
+                type="button"
+                className="analysis-dashboard-cta-btn"
+                onClick={() => onNavigate("needs-review")}
+              >
+                {t("analysisRules.dashboard.ctaNeedsReview")}
+                <ArrowRightIcon size={16} />
+              </button>
+              <button
+                type="button"
+                className="analysis-dashboard-cta-btn"
+                onClick={() => onNavigate("product-master")}
+              >
+                {t("analysisRules.dashboard.ctaProductMaster")}
+                <ArrowRightIcon size={16} />
+              </button>
+              <button
+                type="button"
+                className="analysis-dashboard-cta-btn"
+                onClick={() => onNavigate("unit-master")}
+              >
+                {t("analysisRules.dashboard.ctaUnitMaster")}
+                <ArrowRightIcon size={16} />
+              </button>
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* 既存コンテンツ */}
       <div className="analysis-dashboard-existing-section">
@@ -1493,12 +1622,10 @@ interface DistributionTabContentProps {
   data: DistributionSummary | null;
   loading: boolean;
   error: string | null;
-  supplierData: SupplierPipelineResponse | null;
-  supplierLoading: boolean;
   t: (key: string) => string;
 }
 
-function DistributionTabContent({ data, loading, error, supplierData, supplierLoading, t }: DistributionTabContentProps) {
+function DistributionTabContent({ data, loading, error, t }: DistributionTabContentProps) {
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -1509,6 +1636,36 @@ function DistributionTabContent({ data, loading, error, supplierData, supplierLo
       </p>
     );
   }
+
+  const STALE_DAYS = 7;
+
+  const isLastResultFailed = (lastResult: string | null): boolean => {
+    if (!lastResult) return false;
+    const lower = lastResult.toLowerCase();
+    return lower.includes("error") || lower.includes("fail");
+  };
+
+  const isLastResultOk = (lastResult: string | null): boolean => {
+    if (!lastResult) return false;
+    const lower = lastResult.toLowerCase();
+    return lower === "ok" || lower === "success";
+  };
+
+  const isStale = (lastDistributedAt: string | null): boolean => {
+    if (!lastDistributedAt) return false;
+    const diffMs = Date.now() - new Date(lastDistributedAt).getTime();
+    return diffMs > STALE_DAYS * 24 * 60 * 60 * 1000;
+  };
+
+  const hasDistributionProblem = (row: DistributionTarget): boolean => {
+    if (!row.is_active) return false;
+    if (isLastResultFailed(row.last_result)) return true;
+    if (!row.last_distributed_at) return true;
+    if (isStale(row.last_distributed_at)) return true;
+    return false;
+  };
+
+  const distributionProblemCount = data.targets.filter(hasDistributionProblem).length;
 
   const targetColumns: DataTableColumn<DistributionTarget>[] = [
     {
@@ -1531,6 +1688,19 @@ function DistributionTabContent({ data, loading, error, supplierData, supplierLo
       key: "last_distributed_at",
       header: t("analysisRules.dashboard.distributionLastAt"),
       width: "160px",
+      renderCell: (row) => {
+        if (!row.last_distributed_at) {
+          if (row.is_active) {
+            return <Badge variant="danger">{t("analysisRules.dashboard.distributionNeverRun")}</Badge>;
+          }
+          return "-";
+        }
+        const dateStr = row.last_distributed_at;
+        if (row.is_active && isStale(dateStr)) {
+          return <Badge variant="warning">{dateStr}</Badge>;
+        }
+        return <>{dateStr}</>;
+      },
     },
     {
       key: "last_distributed_count",
@@ -1541,6 +1711,17 @@ function DistributionTabContent({ data, loading, error, supplierData, supplierLo
       key: "last_result",
       header: t("analysisRules.dashboard.distributionLastResult"),
       width: "100px",
+      renderCell: (row) => {
+        const val = row.last_result;
+        if (!val) return "-";
+        if (isLastResultFailed(val)) {
+          return <Badge variant="danger">{t("analysisRules.dashboard.distributionResultFailed")}</Badge>;
+        }
+        if (isLastResultOk(val)) {
+          return <Badge variant="success">{t("analysisRules.dashboard.distributionResultSuccess")}</Badge>;
+        }
+        return <>{val}</>;
+      },
     },
   ];
 
@@ -1559,91 +1740,14 @@ function DistributionTabContent({ data, loading, error, supplierData, supplierLo
     },
   ];
 
-  // Supplier distribution table: sort distributable=0 first
-  const DROP_REASON_PRIORITY: Array<keyof FunnelDropReasons> = [
-    "unit_unresolved",
-    "pid_unresolved",
-    "needs_review",
-    "excluded",
-    "price_missing",
-  ];
-
-  const getTopDropReason = (item: SupplierPipelineItem): keyof FunnelDropReasons | null => {
-    let topKey: keyof FunnelDropReasons | null = null;
-    let topVal = 0;
-    for (const key of DROP_REASON_PRIORITY) {
-      const val = item.analysis[key as keyof SupplierAnalysisInfo] as number;
-      if (val > topVal) {
-        topVal = val;
-        topKey = key;
-      }
-    }
-    return topKey;
-  };
-
-  const distributionSupplierRows = supplierData
-    ? [...supplierData.suppliers].sort((a, b) => {
-        const aZero = a.analysis.distributable === 0 ? 0 : 1;
-        const bZero = b.analysis.distributable === 0 ? 0 : 1;
-        return aZero - bZero;
-      })
-    : [];
-
-  const dangerDistributionCount = supplierData
-    ? supplierData.suppliers.filter((s) => s.analysis.distributable === 0).length
-    : 0;
-
-  type DistributionSupplierRow = SupplierPipelineItem;
-
-  const distributionSupplierColumns: DataTableColumn<DistributionSupplierRow>[] = [
-    {
-      key: "channel_name",
-      header: t("analysisRules.dashboard.supplierChannelName"),
-    },
-    {
-      key: "analysis",
-      header: t("analysisRules.dashboard.supplierDistributable"),
-      width: "100px",
-      renderCell: (row) => row.analysis.distributable.toLocaleString(),
-    },
-    {
-      key: "severity",
-      header: t("analysisRules.dashboard.supplierTopDropReason"),
-      width: "160px",
-      renderCell: (row) => {
-        const topKey = getTopDropReason(row);
-        if (!topKey) return "-";
-        return (
-          <Badge variant="warning">
-            {t(`analysisRules.dashboard.supplierDropReason_${topKey}`)}
-          </Badge>
-        );
-      },
-    },
-  ];
-
   return (
     <>
-      {/* 問題バー */}
-      {!supplierLoading && dangerDistributionCount > 0 && (
+      {/* 配信先問題バー */}
+      {distributionProblemCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
           <Badge variant="danger">
-            {`${dangerDistributionCount}${t("analysisRules.dashboard.supplierProblemCount")}`}
+            {`${distributionProblemCount}${t("analysisRules.dashboard.distributionProblemsCount")}`}
           </Badge>
-        </div>
-      )}
-
-      {/* 提供者テーブル */}
-      {!supplierLoading && distributionSupplierRows.length > 0 && (
-        <div className="analysis-dashboard-supplier-section">
-          <h3>{t("analysisRules.dashboard.supplierTableTitle")}</h3>
-          <DataTable<DistributionSupplierRow>
-            columns={distributionSupplierColumns}
-            data={distributionSupplierRows}
-            rowKey={(row) => row.channel_id}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.noData")}
-          />
         </div>
       )}
 
