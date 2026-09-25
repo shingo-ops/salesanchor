@@ -15,6 +15,7 @@ import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
 import { Modal } from "../../../components/Modal";
+import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 
 interface CentralSupplier {
@@ -236,15 +237,6 @@ export function SupplierMasterPanel() {
     { key: "discord_channel_id", header: t(`${f}.discordId`), renderCell: row => row.discord_channel_id ? <code>{row.discord_channel_id}</code> : "-" },
     { key: "phone", header: t(`${f}.phone`), renderCell: row => row.phone || "-" },
     { key: "email", header: t(`${f}.email`), renderCell: row => row.email || "-" },
-    {
-      key: "_edit",
-      header: "",
-      renderCell: row => (
-        <HeaderButton variant="secondary" data-testid={`supplier-edit-${row.id}`} onClick={() => openEdit(row)}>
-          {t("common.edit")}
-        </HeaderButton>
-      ),
-    },
   ];
 
   return (
@@ -301,12 +293,19 @@ export function SupplierMasterPanel() {
         nextPageLabel={t("common.nextPage")}
       />
 
-      {/* 編集/新規 ポップアップ */}
-      <Modal
+      {/* 編集/新規 ドロワー */}
+      <Drawer
         open={showForm}
         onClose={() => setShowForm(false)}
         title={editId ? t("common.edit") : t("common.create")}
-        size="lg"
+        footer={
+          <>
+            <div style={{ marginLeft: "auto", display: "flex", gap: "var(--space-2)" }}>
+              <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>{t("common.back")}</HeaderButton>
+              <HeaderButton variant="primary" onClick={() => supplierFormRef.current?.requestSubmit()}>{editId ? t("common.update") : t("common.create")}</HeaderButton>
+            </div>
+          </>
+        }
       >
         <form ref={supplierFormRef} onSubmit={e => { void submit(e); }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-3) var(--space-4)" }}>
@@ -387,12 +386,8 @@ export function SupplierMasterPanel() {
               </div>
             )}
           </div>
-          <div className="form-actions">
-            <HeaderButton variant="secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</HeaderButton>
-            <HeaderButton variant="primary" onClick={() => supplierFormRef.current?.requestSubmit()}>{editId ? t("common.update") : t("common.create")}</HeaderButton>
-          </div>
         </form>
-      </Modal>
+      </Drawer>
 
       {/* Discord routing モーダル */}
       <Modal
