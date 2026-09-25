@@ -758,7 +758,7 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
           <span className="analysis-dashboard-engine-label">
             {t("analysisRules.dashboard.importLatestAt")}
           </span>
-          <span className="analysis-dashboard-engine-value">{data.latest_import_at}</span>
+          <span className="analysis-dashboard-engine-value">{data.latest_import_at ? new Date(data.latest_import_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</span>
         </div>
       )}
 
@@ -1111,7 +1111,7 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
           <DataTable<RecentError>
             columns={[
               { key: "error_message", header: t("analysisRules.dashboard.errorMessage") },
-              { key: "created_at", header: t("analysisRules.dashboard.errorDate"), width: "180px" },
+              { key: "created_at", header: t("analysisRules.dashboard.errorDate"), width: "180px", renderCell: (row) => row.created_at ? new Date(row.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-" },
             ]}
             data={data.recent_errors}
             rowKey={(row) => row.id}
@@ -1737,11 +1737,11 @@ function DistributionTabContent({ data, loading, error, t }: DistributionTabCont
           }
           return "-";
         }
-        const dateStr = row.last_distributed_at;
-        if (row.is_active && isStale(dateStr)) {
-          return <Badge variant="warning">{dateStr}</Badge>;
+        const formatted = new Date(row.last_distributed_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        if (row.is_active && isStale(row.last_distributed_at)) {
+          return <Badge variant="warning">{formatted}</Badge>;
         }
-        return <>{dateStr}</>;
+        return <>{formatted}</>;
       },
     },
     {
