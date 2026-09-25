@@ -88,6 +88,9 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         </span>
         {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
         {navItem("extraction-rules", t("analysisRules.sidebar.extractionRules"))}
+        {navItem("status-master", t("analysisRules.sidebar.statusMaster"))}
+        {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
+        {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
       </div>
 
       {/* マスタ管理グループ */}
@@ -101,10 +104,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("type-master", t("analysisRules.sidebar.typeMaster"))}
         {navItem("product-lines-master", t("analysisRules.sidebar.productLinesMaster"))}
         {navItem("product-formats-master", t("analysisRules.sidebar.productFormatsMaster"))}
-        {navItem("status-master", t("analysisRules.sidebar.statusMaster"))}
         {navItem("supplier-master", t("analysisRules.sidebar.supplierMaster"))}
-        {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
-        {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
         {navItem("note-master", t("analysisRules.sidebar.noteMaster"))}
         {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
         {navItem("condition-defs-master", t("analysisRules.sidebar.conditionDefsMaster"))}

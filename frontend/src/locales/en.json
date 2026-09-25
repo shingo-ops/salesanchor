@@ -1822,7 +1822,7 @@
     "openFullPage": "Open full page"
   },
   "unitMaster": {
-    "title": "Unit Master",
+    "title": "Unit Rules",
     "code": "Code",
     "canonical": "Canonical Name",
     "kubun": "Category",
@@ -1841,7 +1841,7 @@
     "total": "Units: {{count}}"
   },
   "statusMaster": {
-    "title": "Status Master",
+    "title": "Status Rules",
     "statusId": "Status ID",
     "canonical": "Canonical Name",
     "searchPattern": "Search Pattern",
@@ -3970,11 +3970,11 @@
       "accuracyManagement": "Accuracy Management",
       "needsReview": "Needs Review",
       "productMaster": "Product Master",
-      "statusMaster": "Status Master",
+      "statusMaster": "Status Rules",
       "supplierMaster": "Supplier Master",
-      "conditionsMaster": "Condition Master",
+      "conditionsMaster": "Condition Rules",
       "productCategoriesMaster": "Product Categories",
-      "unitMaster": "Unit Master",
+      "unitMaster": "Unit Rules",
       "import": "Import",
       "dashboard": "Dashboard",
       "noteMaster": "Note Master",
@@ -4302,7 +4302,7 @@
     "backToList": "Back to list"
   },
   "conditionsMaster": {
-    "title": "Condition Master",
+    "title": "Condition Rules",
     "subtitle": "Manage tenant-specific conditions.",
     "newCondition": "Add New Condition",
     "bulkDeleteConfirm": "Deactivate selected conditions?",
