@@ -2663,19 +2663,25 @@
       "fields": {
         "code": "Condition Code",
         "canonical": "Display Name",
-        "appKubun": "App Classification",
-        "priority": "Priority",
-        "searchKw": "Search Keywords",
-        "excludeKw": "Exclude Keywords",
-        "isActive": "Active",
-        "matchType": "Match Type",
+        "appKubun": "Which product type does this apply to?",
+        "priority": "Priority (lower = higher priority)",
+        "searchKw": "Which words trigger this condition?",
+        "excludeKw": "Which words should cause exclusion?",
+        "isActive": "Active?",
+        "matchType": "How to search for the words?",
         "matchTypeKeyword": "Keyword",
         "matchTypeRegex": "Regex",
         "matchTypeLiteral": "Literal",
         "matchTypeDefault": "Default",
-        "effect": "Effect",
+        "effect": "What to do when found?",
         "effectOutput": "Detect and show",
-        "effectExclude": "Detect and exclude"
+        "effectExclude": "Detect and exclude",
+        "conditionDefId": "What condition is this?",
+        "unitId": "Which unit applies?",
+        "outputPreview": "Output preview",
+        "note": "Note",
+        "unset": "(not set)",
+        "noUnit": "(none)"
       }
     },
     "fxRate": {
