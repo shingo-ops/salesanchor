@@ -683,6 +683,10 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS work_id INTEGER")
         # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
         cursor.execute("ALTER TABLE tenant_004.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
+        # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
+        # migrate() applies this to tenant_901; tenant_004 is provisioned separately so it needs
+        # the same column added explicitly here.
+        cursor.execute("ALTER TABLE tenant_004.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]
