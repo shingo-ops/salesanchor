@@ -19,6 +19,7 @@ import {
 import { api } from "../../lib/api";
 import { Drawer } from "../../components/Drawer";
 import { Tabs } from "../../components/Tabs";
+import { SelectControl } from "../../components/Select";
 import {
   type ByProductItem,
   type ProductHistoryResponse,
@@ -28,8 +29,8 @@ import {
 
 interface MergedDataPoint {
   date: string;
-  homura_s: number | null;
-  shinsoku_s: number | null;
+  homura: number | null;
+  shinsoku: number | null;
 }
 
 interface BuybackProductHistoryDrawerProps {
@@ -40,8 +41,10 @@ interface BuybackProductHistoryDrawerProps {
 
 function mergeHistory(
   historyMap: Record<string, PriceHistoryEntry[]>,
+  selectedGrade: string,
 ): MergedDataPoint[] {
   const dateMap: Record<string, MergedDataPoint> = {};
+  const priceKey = `price_${selectedGrade}` as keyof PriceHistoryEntry;
 
   const homuraEntries = historyMap["homura"] ?? [];
   const shinsokuEntries = historyMap["shinsoku"] ?? [];
@@ -50,18 +53,18 @@ function mergeHistory(
     if (!entry.fetched_at) continue;
     const date = entry.fetched_at.slice(0, 10);
     if (!dateMap[date]) {
-      dateMap[date] = { date, homura_s: null, shinsoku_s: null };
+      dateMap[date] = { date, homura: null, shinsoku: null };
     }
-    dateMap[date].homura_s = entry.price_s;
+    dateMap[date].homura = (entry[priceKey] as number) ?? null;
   }
 
   for (const entry of shinsokuEntries) {
     if (!entry.fetched_at) continue;
     const date = entry.fetched_at.slice(0, 10);
     if (!dateMap[date]) {
-      dateMap[date] = { date, homura_s: null, shinsoku_s: null };
+      dateMap[date] = { date, homura: null, shinsoku: null };
     }
-    dateMap[date].shinsoku_s = entry.price_s;
+    dateMap[date].shinsoku = (entry[priceKey] as number) ?? null;
   }
 
   return Object.values(dateMap).sort((a, b) => a.date.localeCompare(b.date));
@@ -75,13 +78,22 @@ export function BuybackProductHistoryDrawer({
   const { t } = useTranslation();
   const [historyMap, setHistoryMap] = useState<Record<string, PriceHistoryEntry[]> | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState<number>(30);
+  const [grade, setGrade] = useState<string>("s");
+
+  const gradeOptions = [
+    { value: "s", label: t("buybackPrices.columnPriceS") },
+    { value: "a", label: t("buybackPrices.columnPriceA") },
+    { value: "b", label: t("buybackPrices.columnPriceB") },
+  ];
 
   // 商品が切り替わったとき
   useEffect(() => {
     if (!item || !open) return;
     setHistoryMap(null);
     setDays(30);
+    setError(null);
     setLoading(true);
 
     api
@@ -89,7 +101,10 @@ export function BuybackProductHistoryDrawer({
         `/buyback-prices/by-product/${item.product_id}/history?days=30`,
       )
       .then((res) => setHistoryMap(res.history))
-      .catch(() => { /* サイレント */ })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : null;
+        setError(msg ?? t("buybackPrices.loadError"));
+      })
       .finally(() => setLoading(false));
   }, [item, open]);
 
@@ -97,6 +112,7 @@ export function BuybackProductHistoryDrawer({
   useEffect(() => {
     if (!item || !open) return;
     setHistoryMap(null);
+    setError(null);
     setLoading(true);
 
     api
@@ -104,13 +120,16 @@ export function BuybackProductHistoryDrawer({
         `/buyback-prices/by-product/${item.product_id}/history?days=${days}`,
       )
       .then((res) => setHistoryMap(res.history))
-      .catch(() => { /* サイレント */ })
+      .catch((err: unknown) => {
+        const msg = err instanceof Error ? err.message : null;
+        setError(msg ?? t("buybackPrices.loadError"));
+      })
       .finally(() => setLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [days]);
 
   const chartData: MergedDataPoint[] =
-    historyMap ? mergeHistory(historyMap) : [];
+    historyMap ? mergeHistory(historyMap, grade) : [];
 
   const periodItems = [
     { key: "7", label: t("buybackPrices.history7d") },
@@ -131,9 +150,28 @@ export function BuybackProductHistoryDrawer({
           <p role="status">{t("common.loading")}</p>
         )}
 
-        {!loading && historyMap && (
+        {!loading && error && (
+          <p style={{ color: "var(--danger)", fontSize: "var(--font-sm)" }}>
+            {error}
+          </p>
+        )}
+
+        {!loading && !error && historyMap && (
           <>
-            <div style={{ marginBottom: "var(--space-3)" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "var(--space-3)",
+                marginBottom: "var(--space-3)",
+              }}
+            >
+              <SelectControl
+                options={gradeOptions}
+                value={grade}
+                onChange={(e) => setGrade(e.target.value)}
+                size="sm"
+              />
               <Tabs
                 items={periodItems}
                 activeKey={String(days)}
@@ -182,7 +220,7 @@ export function BuybackProductHistoryDrawer({
                   <Legend wrapperStyle={{ fontSize: "12px" }} />
                   <Line
                     type="monotone"
-                    dataKey="homura_s"
+                    dataKey="homura"
                     name={t("buybackPrices.byProduct.homura")}
                     stroke="var(--accent)"
                     strokeWidth={2}
@@ -191,7 +229,7 @@ export function BuybackProductHistoryDrawer({
                   />
                   <Line
                     type="monotone"
-                    dataKey="shinsoku_s"
+                    dataKey="shinsoku"
                     name={t("buybackPrices.byProduct.shinsoku")}
                     stroke="var(--info)"
                     strokeWidth={2}
@@ -205,7 +243,7 @@ export function BuybackProductHistoryDrawer({
           </>
         )}
 
-        {!loading && !historyMap && (
+        {!loading && !error && !historyMap && (
           <p style={{ color: "var(--text-muted)", fontSize: "var(--font-sm)" }}>
             {t("buybackPrices.byProduct.noHistory")}
           </p>
