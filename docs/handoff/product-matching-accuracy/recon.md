@@ -20,7 +20,11 @@
 
 ### `migrations/20260925_120000_add_product_exclude_keywords.sql`（新規）
 - ADR-155 neutralized 形式（RAISE NOTICE のみ）
-- 意図した INSERT SQL はコメントブロックに保存
+- 意図した INSERT SQL はコメントブロックに保存（Migration Guard 対応のためブロックコメントも削除済み）
+
+### `scripts/run_all_migrations.sh`（既存・実行のみ）
+- migration ファイル適用に使用するスクリプト
+- 本 migration 適用時に PO が手動で呼び出す
 
 ## 触らない範囲
 - `match_pid_with_work` 関数本体（変更なし）
