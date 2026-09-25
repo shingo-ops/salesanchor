@@ -376,7 +376,7 @@ async def list_buyback_prices(
     dependencies=[Depends(require_super_admin)],
 )
 async def list_by_product(
-    category: str | None = Query(None, description="商品カテゴリ (例: pokemon)"),
+    category: int | None = Query(None, description="中分類ID (type_master.id)"),
     q: str | None = Query(None, description="商品名検索"),
     swing_days: int | None = Query(None, description="価格変動の計算期間（日数）", ge=1, le=365),
     min_swing: int | None = Query(None, description="最小変動額（円）", ge=0),
@@ -410,33 +410,37 @@ async def list_by_product(
                   AND bsp2.product_id IS NOT NULL
                 GROUP BY bsp2.product_id
             )
-            SELECT bsp.card_game, count(DISTINCT p.id)
+            SELECT p.work_id, tm.name_ja, count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            JOIN public.type_master tm ON tm.id = p.work_id
             LEFT JOIN product_swing psw ON psw.product_id = p.id
             WHERE {" AND ".join(cat_count_conditions)}
               AND COALESCE(psw.swing_s, 0) >= :cat_min_swing
-            GROUP BY bsp.card_game
+            GROUP BY p.work_id, tm.name_ja
             ORDER BY count(DISTINCT p.id) DESC
         """)
     else:
         cat_counts_query = text(f"""
-            SELECT bsp.card_game, count(DISTINCT p.id)
+            SELECT p.work_id, tm.name_ja, count(DISTINCT p.id)
             FROM public.products p
             JOIN public.buyback_shop_products bsp ON bsp.product_id = p.id
+            JOIN public.type_master tm ON tm.id = p.work_id
             WHERE {" AND ".join(cat_count_conditions)}
-            GROUP BY bsp.card_game
+            GROUP BY p.work_id, tm.name_ja
             ORDER BY count(DISTINCT p.id) DESC
         """)
     counts_result = await db.execute(cat_counts_query, cat_count_params)
-    counts_by_category = {row[0]: row[1] for row in counts_result}
+    counts_rows = counts_result.fetchall()
+    counts_by_category = {str(row[0]): row[2] for row in counts_rows}
+    category_names = {str(row[0]): row[1] for row in counts_rows}
 
     # 動的条件
     extra_conditions: list[str] = []
     params: dict = {"limit": limit, "offset": offset}
 
-    if category:
-        extra_conditions.append("EXISTS (SELECT 1 FROM public.buyback_shop_products bsp_f WHERE bsp_f.product_id = p.id AND bsp_f.card_game = :category)")
+    if category is not None:
+        extra_conditions.append("p.work_id = :category")
         params["category"] = category
 
     if q is not None:
@@ -476,7 +480,7 @@ async def list_by_product(
             p.id,
             p.product_code,
             p.name,
-            (SELECT bsp_cg.card_game FROM public.buyback_shop_products bsp_cg WHERE bsp_cg.product_id = p.id LIMIT 1) AS category,
+            p.work_id,
             p.release_date,
             p.image_url,
             p.mark,
@@ -586,7 +590,7 @@ async def list_by_product(
             "product_id": r[0],
             "product_code": r[1],
             "name_ja": r[2],
-            "category": r[3],
+            "work_id": r[3],
             "release_date": r[4].isoformat() if r[4] else None,
             "image_url": r[5],
             "mark": r[6],
@@ -610,6 +614,7 @@ async def list_by_product(
         "items": items,
         "total": total,
         "counts_by_category": counts_by_category,
+        "category_names": category_names,
     }
 
 

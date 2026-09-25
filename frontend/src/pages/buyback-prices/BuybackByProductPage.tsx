@@ -23,15 +23,6 @@ import {
 import { BuybackProductHistoryDrawer } from "./BuybackProductHistoryDrawer";
 import styles from "./BuybackPricesPage.module.css";
 
-const CATEGORY_LABELS: Record<string, string> = {
-  pokemon: "buybackPrices.pokemon",
-  onepiece: "buybackPrices.onepiece",
-  yugioh: "buybackPrices.yugioh",
-  dragonball: "buybackPrices.dragonball",
-  weiss: "buybackPrices.weiss",
-  lorcana: "buybackPrices.lorcana",
-};
-
 export function BuybackByProductPage() {
   const { t } = useTranslation();
 
@@ -40,6 +31,7 @@ export function BuybackByProductPage() {
   const [page, setPage] = useState(1);
   const [category, setCategory] = useState<string>("all");
   const [countsByCategory, setCountsByCategory] = useState<Record<string, number>>({});
+  const [categoryNames, setCategoryNames] = useState<Record<string, string>>({});
   const [search, setSearch] = useState("");
   const [swingDays, setSwingDays] = useState<string>("");
   const [minSwing, setMinSwing] = useState<string>("");
@@ -72,6 +64,7 @@ export function BuybackByProductPage() {
           setItems(res.items);
           setTotal(res.total);
           setCountsByCategory(res.counts_by_category ?? {});
+          setCategoryNames(res.category_names ?? {});
         }
       })
       .catch(() => {
@@ -104,7 +97,7 @@ export function BuybackByProductPage() {
       .filter(([, cnt]) => cnt > 0)
       .map(([key, cnt]) => ({
         key,
-        label: CATEGORY_LABELS[key] ? t(CATEGORY_LABELS[key]) : key,
+        label: categoryNames[key] ?? key,
         count: cnt,
       })),
   ];
