@@ -815,3 +815,6 @@ run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
 
 # conditions テーブルに match_type / effect カラムを追加（tcg_status_master パターン統一）
 run_sql migrations/20260925_010000_conditions_add_match_type.sql
+
+# line_conditions に condition_def_id / unit_id / note 追加（ConditionsMasterPanel v2）
+run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql

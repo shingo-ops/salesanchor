@@ -114,9 +114,13 @@ _ALIAS_COLS = "id, condition_id, alias_text, lang, updated_at"
 _COLS = (
     "id, code, canonical, app_kubun, is_active, priority, "
     "search_kw, exclude_kw, tenant_id, created_at, updated_at, "
-    "match_type, effect"
+    "match_type, effect, condition_def_id, unit_id, note"
 )
-_UPDATABLE = {"code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw", "match_type", "effect"}
+_UPDATABLE = {
+    "code", "canonical", "app_kubun", "is_active", "priority",
+    "search_kw", "exclude_kw", "match_type", "effect",
+    "condition_def_id", "unit_id", "note",
+}
 
 
 @router.get(
@@ -226,9 +230,9 @@ async def create_condition(
         text(
             f"INSERT INTO public.conditions "
             f"(tenant_id, code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
-            f"match_type, effect, updated_at) "
+            f"match_type, effect, condition_def_id, unit_id, note, updated_at) "
             f"VALUES (:tenant_id, :code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
-            f":match_type, :effect, now()) "
+            f":match_type, :effect, :condition_def_id, :unit_id, :note, now()) "
             f"RETURNING {_COLS}"
         ),
         {
@@ -242,6 +246,9 @@ async def create_condition(
             "exclude_kw": data.exclude_kw,
             "match_type": data.match_type,
             "effect": data.effect,
+            "condition_def_id": data.condition_def_id,
+            "unit_id": data.unit_id,
+            "note": data.note,
         },
     )
     row = result.mappings().first()
