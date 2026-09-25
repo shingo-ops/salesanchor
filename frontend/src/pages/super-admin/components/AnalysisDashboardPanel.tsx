@@ -36,6 +36,8 @@ import { DataTable } from "../../../components/DataTable";
 import type { DataTableColumn } from "../../../components/DataTable";
 import { Tabs } from "../../../components/Tabs";
 import type { TabItem } from "../../../components/Tabs";
+import { SelectControl } from "../../../components/Select";
+import type { SelectOption } from "../../../components/Select";
 import { DashboardIcons } from "../../../constants/icons";
 import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
@@ -285,6 +287,7 @@ interface AnalysisDashboardPanelProps {
 export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelProps) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<DashboardTab>("extraction");
+  const [trendDays, setTrendDays] = useState<number>(7);
 
   // Pipeline (Extraction + Analysis) data
   const [data, setData] = useState<PipelineSummary | null>(null);
@@ -311,14 +314,14 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   const [supplierData, setSupplierData] = useState<SupplierPipelineResponse | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
 
-  // Load pipeline data on mount
+  // Load pipeline data on mount and when trendDays changes
   useEffect(() => {
     setLoading(true);
     setSupplierLoading(true);
     setError(null);
     Promise.all([
       api.get<PipelineSummary>("/tcg/analysis-dashboard/pipeline-summary"),
-      api.get<TrendDay[]>("/tcg/analysis-dashboard/trend?days=7"),
+      api.get<TrendDay[]>(`/tcg/analysis-dashboard/trend?days=${trendDays}`),
       api.get<SupplierPipelineResponse>("/tcg/analysis-dashboard/supplier-pipeline"),
     ])
       .then(([summaryRes, trendRes, supplierRes]) => {
@@ -333,16 +336,33 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         setLoading(false);
         setSupplierLoading(false);
       });
-  }, [t]);
+  }, [t, trendDays]);
 
-  // Lazy load import data when tab is first opened
+  // Lazy load import data when tab is first opened; re-fetch trend when trendDays changes
   useEffect(() => {
-    if (activeTab !== "import" || importData !== null || importLoading) return;
+    if (activeTab !== "import" || importLoading) return;
+    // fetch summary only when not yet loaded; always fetch trend on trendDays change
+    if (importData !== null) {
+      // only re-fetch trend
+      setImportLoading(true);
+      setImportError(null);
+      api.get<ImportTrendDay[]>(`/tcg/analysis-dashboard/import-trend?days=${trendDays}`)
+        .then((trendRes) => {
+          setImportTrend(trendRes);
+        })
+        .catch(() => {
+          setImportError(t("analysisRules.dashboard.fetchError"));
+        })
+        .finally(() => {
+          setImportLoading(false);
+        });
+      return;
+    }
     setImportLoading(true);
     setImportError(null);
     Promise.all([
       api.get<ImportSummary>("/tcg/analysis-dashboard/import-summary"),
-      api.get<ImportTrendDay[]>("/tcg/analysis-dashboard/import-trend?days=7"),
+      api.get<ImportTrendDay[]>(`/tcg/analysis-dashboard/import-trend?days=${trendDays}`),
     ])
       .then(([summaryRes, trendRes]) => {
         setImportData(summaryRes);
@@ -354,7 +374,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       .finally(() => {
         setImportLoading(false);
       });
-  }, [activeTab, importData, importLoading, t]);
+  }, [activeTab, trendDays, t]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Lazy load distribution data when tab is first opened
   useEffect(() => {
@@ -423,6 +443,14 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
     { key: "distribution", label: t("analysisRules.dashboard.tabDistribution") },
   ];
 
+  const periodOptions: SelectOption[] = [
+    { value: "7", label: t("analysisRules.dashboard.period7d") },
+    { value: "30", label: t("analysisRules.dashboard.period30d") },
+    { value: "90", label: t("analysisRules.dashboard.period90d") },
+    { value: "180", label: t("analysisRules.dashboard.period180d") },
+    { value: "360", label: t("analysisRules.dashboard.period360d") },
+  ];
+
   const handleCta = (key: AnalysisRulesSidebarKey) => {
     if (onNavigate) {
       onNavigate(key);
@@ -446,6 +474,14 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           variant="underline"
           size="md"
         />
+        <div className="analysis-dashboard-period-selector" aria-label={t("analysisRules.dashboard.periodLabel")}>
+          <SelectControl
+            options={periodOptions}
+            size="sm"
+            value={String(trendDays)}
+            onChange={(e) => setTrendDays(Number(e.target.value))}
+          />
+        </div>
       </div>
 
       {/* ── Import Tab ───────────────────────────────────────────────────── */}
@@ -455,6 +491,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           trend={importTrend}
           loading={importLoading}
           error={importError}
+          trendDays={trendDays}
           t={t}
           onNavigate={handleCta}
           ArrowRightIcon={ArrowRightIcon}
@@ -475,6 +512,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             trend={trend}
             supplierData={supplierData}
             supplierLoading={supplierLoading}
+            trendDays={trendDays}
             t={t}
             onNavigate={handleCta}
             ArrowRightIcon={ArrowRightIcon}
@@ -498,6 +536,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             supplierLoading={supplierLoading}
             qualitySummaries={qualitySummaries}
             qualityLoading={qualityLoading}
+            trendDays={trendDays}
             t={t}
             onNavigate={handleCta}
             ArrowRightIcon={ArrowRightIcon}
@@ -527,12 +566,13 @@ interface ImportTabContentProps {
   trend: ImportTrendDay[];
   loading: boolean;
   error: string | null;
+  trendDays: number;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
+function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -726,7 +766,7 @@ function ImportTabContent({ data, trend, loading, error, t, onNavigate, ArrowRig
       {trend.length > 0 && (
         <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
           <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.importTrendTitle")}
+            {`${trendDays}${t("analysisRules.dashboard.importTrendTitle")}`}
           </div>
           <div className="analysis-dashboard-chart">
             <ResponsiveContainer width="100%" height={240}>
@@ -789,12 +829,13 @@ interface ExtractionTabContentProps {
   trend: TrendDay[];
   supplierData: SupplierPipelineResponse | null;
   supplierLoading: boolean;
+  trendDays: number;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function ExtractionTabContent({ data, trend, supplierData, supplierLoading, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
+function ExtractionTabContent({ data, trend, supplierData, supplierLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
   const extractionSuccessRate =
     data.extraction.total > 0
       ? data.extraction.by_status.done / data.extraction.total
@@ -1029,7 +1070,7 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, t, o
           className="analysis-dashboard-chart-card"
         >
           <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.trendTitle")}
+            {`${trendDays}${t("analysisRules.dashboard.trendTitle")}`}
           </div>
           <div className="analysis-dashboard-chart">
             <ResponsiveContainer width="100%" height={240}>
@@ -1146,12 +1187,13 @@ interface AnalysisTabContentProps {
   supplierLoading: boolean;
   qualitySummaries: SupplierQualitySummary[] | null;
   qualityLoading: boolean;
+  trendDays: number;
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualitySummaries, qualityLoading, t, onNavigate, ArrowRightIcon }: AnalysisTabContentProps) {
+function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualitySummaries, qualityLoading, trendDays, t, onNavigate, ArrowRightIcon }: AnalysisTabContentProps) {
   const pidRate = data.analysis.pid_resolved_rate;
   const unitRate = data.analysis.unit_resolved_rate;
   const needsReviewRate = data.analysis.needs_review_rate;
@@ -1503,7 +1545,7 @@ function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualit
           className="analysis-dashboard-chart-card"
         >
           <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.trendTitle")}
+            {`${trendDays}${t("analysisRules.dashboard.trendTitle")}`}
           </div>
           <div className="analysis-dashboard-chart">
             <ResponsiveContainer width="100%" height={240}>
