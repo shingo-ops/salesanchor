@@ -7,7 +7,8 @@
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: 金型クラスのみ使用。
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../../lib/api";
 import { ContentToolbar } from "../../../components/ContentToolbar";
@@ -17,6 +18,7 @@ import { Badge } from "../../../components/Badge";
 import { TextField } from "../../../components/TextField";
 import { EmptyState } from "../../../components/EmptyState";
 import { Tabs, type TabItem } from "../../../components/Tabs";
+import ConfirmModal from "../../../components/ConfirmModal";
 import { RuleTestPanel } from "./RuleTestPanel";
 import { RuleDrawer, type RuleEntry } from "./RuleDrawer";
 
@@ -26,6 +28,7 @@ type RuleTab = "sold-out" | "date" | "default" | "test";
 
 export function RuleManagementPanel() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const f = "ruleManagement";
 
   const [items, setItems] = useState<RuleEntry[]>([]);
@@ -36,6 +39,14 @@ export function RuleManagementPanel() {
   const [activeTab, setActiveTab] = useState<RuleTab>("sold-out");
   const [editRule, setEditRule] = useState<RuleEntry | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // CSV export
+  const exportLock = useRef(false);
+  const [exporting, setExporting] = useState(false);
+
+  // Bulk delete
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -51,6 +62,36 @@ export function RuleManagementPanel() {
   useEffect(() => { void load(); }, [load]);
 
   const runSearch = () => { setSearch(searchInput); setPage(1); };
+
+  async function downloadExport() {
+    if (exportLock.current) return;
+    exportLock.current = true; setExporting(true); setError("");
+    let url: string | undefined;
+    const anchor = document.createElement("a");
+    try {
+      const blob = await api.getBlob("/super-admin/status-master/export");
+      url = URL.createObjectURL(blob); anchor.href = url;
+      anchor.download = "status-master-export.csv";
+      document.body.appendChild(anchor); anchor.click();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("common.fetchError"));
+    } finally {
+      anchor.remove(); if (url) URL.revokeObjectURL(url); exportLock.current = false; setExporting(false);
+    }
+  }
+
+  const bulkDelete = async () => {
+    setConfirmDelete(false);
+    const selectedIds = Array.from(selectedKeys).map(Number);
+    const results = await Promise.allSettled(
+      selectedIds.map((id) => api.delete(`/super-admin/status-master/${id}`)),
+    );
+    if (results.some((r) => r.status === "rejected")) {
+      setError(t("common.deleteError"));
+    }
+    setSelectedKeys(new Set());
+    await load();
+  };
 
   const filteredItems = items.filter((item) => {
     switch (activeTab) {
@@ -141,11 +182,35 @@ export function RuleManagementPanel() {
                 </HeaderButton>
                 <HeaderButton
                   variant="secondary"
+                  disabled={exporting}
+                  data-testid="rule-management-export-btn"
+                  onClick={() => void downloadExport()}
+                >
+                  {t(exporting ? `${f}.exporting` : `${f}.export`)}
+                </HeaderButton>
+                <HeaderButton
+                  variant="primary"
+                  data-testid="rule-management-import-btn"
+                  onClick={() => navigate("/super-admin/masters/status-master/import")}
+                >
+                  {t(`${f}.import`)}
+                </HeaderButton>
+                <HeaderButton
+                  variant="secondary"
                   data-testid="rule-management-create-btn"
                   onClick={() => { setEditRule(null); setDrawerOpen(true); }}
                 >
                   {t(`${f}.createRule`)}
                 </HeaderButton>
+                {selectedKeys.size > 0 && (
+                  <HeaderButton
+                    variant="secondary"
+                    data-testid="rule-management-bulk-delete-btn"
+                    onClick={() => setConfirmDelete(true)}
+                  >
+                    {t(`${f}.bulkDelete`)}
+                  </HeaderButton>
+                )}
               </>
             }
           />
@@ -159,6 +224,9 @@ export function RuleManagementPanel() {
             columns={columns}
             data={filteredItems}
             rowKey={(row) => String(row.id)}
+            selectable
+            selectedKeys={selectedKeys}
+            onSelectChange={setSelectedKeys}
             onRowClick={(row) => { setEditRule(row); setDrawerOpen(true); }}
             emptyState={<EmptyState title={t(`${f}.noData`)} size="compact" />}
             page={page}
@@ -174,6 +242,15 @@ export function RuleManagementPanel() {
         onClose={() => { setDrawerOpen(false); setEditRule(null); }}
         onSaved={() => { setDrawerOpen(false); setEditRule(null); void load(); }}
         editRule={editRule}
+      />
+      <ConfirmModal
+        open={confirmDelete}
+        title={t(`${f}.bulkDelete`)}
+        message={t(`${f}.bulkDeleteConfirm`, { count: selectedKeys.size })}
+        confirmLabel={t(`${f}.bulkDelete`)}
+        danger
+        onConfirm={() => { void bulkDelete(); }}
+        onCancel={() => setConfirmDelete(false)}
       />
     </>
   );
