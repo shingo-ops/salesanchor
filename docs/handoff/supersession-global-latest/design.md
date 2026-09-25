@@ -1,5 +1,12 @@
 # design: supersession-global-latest
 
+**対象ADR**: [ADR-158](../../adr/ADR-158-product-level-supersession.md)
+**recon**: [recon.md](./recon.md)
+
+## 現状調査
+
+詳細は [recon.md](./recon.md) を参照。
+
 ## 変更内容
 
 `backend/app/services/tcg_analyzer_svc.py` の `_merge_supplier_products()` 関数のみ変更。
@@ -60,7 +67,7 @@ WHERE ar_target.is_current IS DISTINCT FROM ranked.should_be_current
 
 ## 維持の仕組み
 
-守り手: Hikky-dev (Claude Code)
+守り手: Hikky-dev (Claude Code) — `backend/app/services/tcg_analyzer_svc.py`
 
 - 既存テスト `backend/tests/test_tcg_is_active_filter.py` が is_current フィルタのロジックをカバー
 - ログ出力を `(global-latest)` 付きに変更し、新ロジックが動いていることを確認可能

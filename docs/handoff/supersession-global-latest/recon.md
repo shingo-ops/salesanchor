@@ -1,5 +1,7 @@
 # recon: supersession-global-latest
 
+**設計**: [design.md](./design.md)
+
 ## 変更対象ファイルと行番号
 
 - `backend/app/services/tcg_analyzer_svc.py:1561-1565` — 呼び出し元コメント
