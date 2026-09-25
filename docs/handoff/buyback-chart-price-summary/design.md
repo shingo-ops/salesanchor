@@ -67,9 +67,9 @@
 | チャートデータ0件時にサマリーが表示されない | noHistory表示時にサマリーが非表示であることを確認 |
 | t()経由でテキスト表示（ハードコード日本語なし） | grep `\"ホムラ\"\|\"シンソク\"\|\"前日比\"` が追加コードに0件 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（内部実装・既存パターンの踏襲）
+該当なし。本実装は `BuybackByProductPage.tsx` の既存 `yesterday_diff` レンダリングパターン（`var(--success)`/`var(--danger)` 色分け）を Drawer 内サマリーに応用したもの。外部ライブラリ・外部事例への依存なし。
 
 ## 影響範囲
 
@@ -77,7 +77,6 @@
 - i18n追加: なし（既存キーを再利用）
 - 削除: なし
 
-## 守り手
+## 維持の仕組み
 
-- TypeScript型チェック: `ByProductItem` フィールドに対する動的キーアクセスを `as keyof ByProductItem` でキャスト（既存 `mergeHistory` と同パターン）
-- デザイントークン: CSS変数のみ使用（hardcoded色・px値なし）
+守り手: TypeScript型チェック（`ByProductItem` 動的キーアクセスは `as keyof ByProductItem` キャスト） + デザイントークン強制（CSS変数のみ使用・hardcoded色・px値なし）
