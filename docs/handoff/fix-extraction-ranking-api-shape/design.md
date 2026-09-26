@@ -1,6 +1,7 @@
 # design — fix-extraction-ranking-api-shape
 
-## 対象ADR: ADR-144（コンポーネント金型遵守）
+recon: docs/handoff/fix-extraction-ranking-api-shape/recon.md
+対象ADR: ADR-138
 
 ## 原因
 
@@ -27,4 +28,4 @@ FastAPI + Pydantic のレスポンスモデルがリスト型のラッパーに�
 
 TypeScript の型注釈が `{ items: ExtractionProductRankingItem[] }` になることで、今後同APIを呼ぶ場合は型エラーで検出可能。
 
-守り手: TypeScriptコンパイラ（tsc --noEmit）
+守り手: .github/workflows/frontend-check.yml（tsc --noEmit）
