@@ -25,15 +25,15 @@ POが画面で確認可能。
 
 変更箇所（フロントエンド計算ロジックのみ。バックエンド変更なし）:
 
-1. `AnalysisDashboardPanel.tsx:839-843`
+1. `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:839-843`
    - `extractionDenominator = done + error` を新設
    - `extractionSuccessRate = done / extractionDenominator`
 
-2. `AnalysisDashboardPanel.tsx:852-862`
+2. `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:852-862`
    - トレンドグラフの分母を `extraction_done + extraction_error` に変更
    - errorRate も同じ分母で統一
 
-3. `AnalysisDashboardPanel.tsx:864-875`
+3. `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:864-875`
    - `.filter((s) => s.extraction.done + s.extraction.error > 0)` を追加
    - empty のみの提供者をランキングから除外
 
@@ -46,10 +46,16 @@ POが画面で確認可能。
 
 git revert で該当コミットを打ち消す。フロントのみ・DBスキーマ変更なし。
 
-### 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし（計算ロジックのシンプルな定義修正）。
+同様の事例: 計算指標から「評価対象外」ステータスを除外する手法は標準的な実践。
+例) 調査統計で「N/A」回答を成功率分母から除く。
+我々への応用: empty = 商品データ不在の自然な結果。done/fail の二項評価に馴染まない。
+「挨拶しか来ない提供者を0%と評価するのは誤り」という事業要件を数式で表現する。
 
-### 守り手
+## 維持の仕組み
 
-TypeScript 型チェック（ `SupplierExtractionInfo.done / .error` は `number` 型で確定）
+守り手: TypeScript（`SupplierExtractionInfo.done` / `error` は `number` 型で保護）
+
+計算箇所は `ExtractionTabContent` コンポーネント内の `extractionDenominator` 変数1箇所に集約。
+将来の変更時は `extractionDenominator` を検索すれば全利用箇所が把握できる。
