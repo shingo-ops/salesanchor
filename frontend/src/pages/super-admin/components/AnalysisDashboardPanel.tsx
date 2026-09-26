@@ -1018,11 +1018,11 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
 
   useEffect(() => {
     api
-      .get<ExtractionProductRankingItem[]>(
+      .get<{ items: ExtractionProductRankingItem[] }>(
         `/tcg/analysis-dashboard/extraction-product-ranking?days=${trendDays}`
       )
       .then((res) => {
-        setProductRanking(res);
+        setProductRanking(res.items ?? []);
       })
       .catch(() => {
         setProductRanking([]);
