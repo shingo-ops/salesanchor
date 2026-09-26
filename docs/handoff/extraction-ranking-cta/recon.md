@@ -8,19 +8,18 @@
 ## 現状確認
 
 ### ランキングセクション（CTAなし）
-- `AnalysisDashboardPanel.tsx:1202` — 抽出率ワースト提供者セクション (`analysis-dashboard-ranking-section`)
-- `AnalysisDashboardPanel.tsx:1255` — 照合率ワースト商品セクション (`analysis-dashboard-ranking-section`)
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1202` — 抽出率ワースト提供者セクション (analysis-dashboard-ranking-section)
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1255` — 照合率ワースト商品セクション (analysis-dashboard-ranking-section)
 - 両セクションとも「詳しく見る」ボタン (Button variant="ghost") と詳細テーブルはあったが、CTAボタンは存在しなかった
 
 ### 既存CTAパターン
-- `AnalysisDashboardPanel.tsx:1435-1444` — `analysis-dashboard-ctas` div + `analysis-dashboard-cta-btn` ボタン + ArrowRightIcon(size=16)
-- `AnalysisDashboardPanel.tsx:1350-1358` — `analysis-dashboard-cta-btn--primary` バリアントの例
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1435` — analysis-dashboard-ctas div + analysis-dashboard-cta-btn ボタン + ArrowRightIcon(size=16)
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:1350` — analysis-dashboard-cta-btn--primary バリアントの例
 
 ### ナビゲーションキー（有効値）
-- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:16-21`
-  - `"extraction-rules"` (line 16)
-  - `"product-master"` (line 17)
-  - `"supplier-master"` (line 21)
+- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:16` — extraction-rules
+- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:17` — product-master
+- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:21` — supplier-master
 
 ### i18nキー（既存）
 - `frontend/src/locales/ja.json:4134-4146` — extractionRank* キー群
