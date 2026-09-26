@@ -264,6 +264,7 @@
     "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
     "superAdminAnalysisRules": "LINE Analysis",
+    "superAdminNeedsReview": "Needs Review",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -4725,5 +4726,16 @@
     "newRuleNormalizedTo": "Maps To",
     "ruleLinked": "Linked",
     "noRulesLinked": "Not configured"
+  },
+  "needsReview": {
+    "title": "Needs Review",
+    "productName": "Product Name",
+    "supplier": "Supplier",
+    "reviewReasons": "Review Reasons",
+    "createdAt": "Date",
+    "noItems": "No items need review",
+    "pidUnresolved": "Product unresolved",
+    "multiCandidate": "Multiple candidates",
+    "noteUnmatched": "Note unmatched"
   }
 }
