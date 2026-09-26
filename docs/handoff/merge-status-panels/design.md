@@ -1,5 +1,8 @@
 # Design: merge-status-panels
 
+- recon: docs/handoff/merge-status-panels/recon.md
+- 対象ADR: ADR-027, ADR-144
+
 ## 概要
 StatusMasterPanel の3機能（CSVエクスポート・CSVインポートナビ・一括削除）を RuleManagementPanel に移行し、サイドバーから "status-master" エントリを除去する。合わせて "抽出ルール設定" を "仕入元別ルール" に改名。
 
@@ -66,6 +69,8 @@ StatusMasterPanel の3機能（CSVエクスポート・CSVインポートナビ�
 同リポジトリ内の `frontend/src/pages/super-admin/components/StatusMasterPanel.tsx` がCSVエクスポート・インポートナビ・一括削除の完成形実装として存在する。exportLock/exporting パターン、bulkDelete の `Promise.allSettled` パターン、DataTable の `selectable` props をそのまま移植した。
 
 ## 維持の仕組み
+
+守り手: .github/workflows/ui-governance-gate.yml
 
 - ADR-027: i18n強制 — 全文字列 t("key")経由。`frontend/CLAUDE.md` の grep セルフチェックで強制
 - ADR-144: UIガバナンス — HeaderButton/ConfirmModal/DataTable の金型のみ使用
