@@ -4001,7 +4001,7 @@
       "weightClassesMaster": "重量クラスマスタ",
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール",
-      "extractionRules": "抽出ルール設定"
+      "extractionRules": "仕入元別ルール"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
@@ -4602,7 +4602,14 @@
       "disable": "このルールを無効にする",
       "disabled": "ルールを無効にしました",
       "disabling": "無効化中..."
-    }
+    },
+    "export": "エクスポート",
+    "exporting": "エクスポート中...",
+    "import": "インポート",
+    "bulkDelete": "一括削除",
+    "bulkDeleteConfirm": "選択した{{count}}件のルールを削除しますか？",
+    "bulkDeleting": "削除中...",
+    "bulkDeleted": "{{count}}件のルールを削除しました"
   },
   "reviewIssues": {
     "productIdUnresolved": "商品ID未解決",

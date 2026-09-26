@@ -4001,7 +4001,7 @@
       "weightClassesMaster": "Weight Classes",
       "groupRuleManagement": "Rule Management",
       "ruleManagement": "Status Rules",
-      "extractionRules": "Extraction Rules"
+      "extractionRules": "Supplier Rules"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",
@@ -4602,7 +4602,14 @@
       "disable": "Disable this rule",
       "disabled": "Rule disabled",
       "disabling": "Disabling..."
-    }
+    },
+    "export": "Export",
+    "exporting": "Exporting...",
+    "import": "Import",
+    "bulkDelete": "Bulk Delete",
+    "bulkDeleteConfirm": "Delete {{count}} selected rules?",
+    "bulkDeleting": "Deleting...",
+    "bulkDeleted": "{{count}} rules deleted"
   },
   "reviewIssues": {
     "productIdUnresolved": "Product ID Unresolved",
