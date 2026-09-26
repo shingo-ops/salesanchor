@@ -1,7 +1,11 @@
 # Design: extraction-review-improvements
 
+参照 recon: docs/handoff/extraction-review-improvements/recon.md
+
 ## 参照ADR
 - ADR-158: 商品マッチング精度改善
+- ADR-027: UI国際化（i18nキー追加）
+- ADR-144: UIガバナンス（既存コンポーネント活用）
 
 ## KGI
 - _resolve_pid が非整数入力を受け付けなくなり、誤マッチが構造的に排除される
@@ -55,11 +59,14 @@ def _resolve_pid(pid: str | None) -> str | None:
 - `frontend/src/locales/ja.json` (needsReview + nav.superAdminNeedsReview)
 - `frontend/src/locales/en.json` (同上)
 
-## KPI検証方法
-- `npm run build` が通ること
-- `ruff check` が通ること
-- `-` や `M1L` が _resolve_pid に渡ったとき None が返ること（isdigit() = False）
-- `/super-admin/needs-review` にアクセスしてテーブルが表示されること
+## 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| `npm run build` が通る | CI: frontend lint & build |
+| `ruff check` が通る | CI: lint-backend-internal |
+| `-` や `M1L` を _resolve_pid に渡したとき None が返る | isdigit() = False を確認 |
+| `/super-admin/needs-review` でテーブルが表示される | ブラウザで目視確認 |
 
 ## 弊害
 - _resolve_pid の変更: 2026-09-23以前の旧形式（product_code文字列）は None になるが、これは仕様通り（誤マッチ排除）
@@ -68,6 +75,6 @@ def _resolve_pid(pid: str | None) -> str | None:
 - 該当なし：_resolve_pid の整数制限は ADR-158 の方針に基づく内部リファクタリングであり、外部事例は存在しない。NeedsReviewListPage は既存の TcgSoldOutPage パターンをそのまま踏襲した。
 
 ## 維持の仕組み
-守り手: shingo-ops
+守り手: 人手で守る（isdigit()チェックは ruff lint・i18nは ESLint で静的検査済み）
 - _resolve_pid の isdigit() チェックは ruff lint で静的検査される
 - i18n キーは ESLint local/no-japanese-literal ルールで強制される
