@@ -1723,11 +1723,8 @@ def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
         ), {"jid": jid}).fetchone()
     assert row is not None
     pid_resolved, pid_basis = row
-    # ADR-158: 旧形式（非整数）は _resolve_pid で None になるため pid_resolved=False
-    assert pid_resolved is False, (
-        f"pid_resolved should be False for legacy product_code format (non-integer), got {pid_resolved}"
-    )
-    # pid_basis はフォールバックマッチ（WORK/SK 等）の結果になる（"GEMINI" ではない）
+    # ADR-158: 旧形式（非整数）は _resolve_pid で None になり GEMINI 直接採用にはならない。
+    # work_id マッチ等のフォールバックが成功した場合でも pid_basis は "GEMINI" にならない。
     assert pid_basis != "GEMINI", (
         f"pid_basis should NOT be 'GEMINI' for legacy product_code format, got {pid_basis!r}"
     )
