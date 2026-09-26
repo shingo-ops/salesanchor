@@ -1271,17 +1271,12 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             # Legacy migration: resolved_product_code may contain a product_code string (e.g. "M1L")
             # from jobs extracted before 2026-09-23 refactor (ADR-1002). Convert to products.id if needed.
             def _resolve_pid(pid: str | None) -> str | None:
-                if pid is None or pid == "" or pid == "-":
+                if pid is None or pid == "":
                     return None
-                # Try direct products.id match first (new format: numeric string like "33")
-                validated = validate_product_id(pid, reference)
-                if validated is not None:
-                    return validated
-                # Fall back to product_code → id mapping (old format: "M1L" etc.)
-                mapped_id = product_code_to_id.get(pid)
-                if mapped_id is not None:
-                    return validate_product_id(mapped_id, reference)
-                return None
+                # 整数以外は全て拒否（誤マッチ防止）
+                if not pid.isdigit():
+                    return None
+                return validate_product_id(pid, reference)
 
             product_decisions = {
                 str(i): _resolve_pid(pid)
