@@ -191,6 +191,7 @@ export default function DesktopShell() {
   // 順序: LINE解析 → 買取相場 → 為替レート管理
   const saasAdminItems: NavItem[] = isSuperAdmin ? [
     { to: "/super-admin/analysis-rules",              labelKey: "nav.superAdminAnalysisRules" },
+    { to: "/super-admin/needs-review",                labelKey: "nav.superAdminNeedsReview" },
     { to: "/buyback-prices",                          labelKey: "nav.buybackPrices" },
     { to: "/super-admin/fx-rate",                     labelKey: "nav.superAdminFxRate" },
   ] : [];

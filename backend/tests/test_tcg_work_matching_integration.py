@@ -1679,11 +1679,12 @@ def test_gemini_resolved_product_code_v5_fallback_when_not_in_filtered_codes(pg,
 
 
 def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
-    """resolved_product_code が旧形式（product_code 文字列: "PM0123"）の場合に products.id へ変換されること。
+    """resolved_product_code が旧形式（product_code 文字列: "PM0123"）の場合に None を返すこと。
 
+    ADR-158: _resolve_pid は整数 ID のみ受け付ける（2026-09-26以降）。
     2026-09-23 以前に抽出されたジョブは resolved_product_code に product_code 文字列が
-    保存されている。analyze_extraction_job() でこれを products.id に変換し、
-    pid_resolved=True かつ pid_basis='GEMINI' になること。
+    保存されているが、isdigit() = False のため _resolve_pid は None を返す。
+    結果として pid_resolved=False となり、フォールバックマッチ（WORK/SK 等）に委ねられる。
     """
     connection, engine, _ = pg
     seed_products(connection)
@@ -1707,9 +1708,8 @@ def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
             f"UPDATE {SCHEMA}.extraction_jobs SET prompt_version=%s WHERE id=%s",
             ("raw-extraction-v5-product-p1", jid),
         )
-        # resolved_product_code は validate_product_id で None になる（旧形式はスナップショットに存在しない）
-        # → _resolve_pid が product_code_to_id でフォールバック変換する
-        # 事前に extraction_items.resolved_product_code を旧形式に上書き
+        # ADR-158: _resolve_pid は整数のみ受け付けるため、product_code 文字列（"PM0123"）は None になる
+        # → pid_resolved=False となりフォールバックマッチ（WORK/SK 等）に委ねられる
         cursor.execute(
             f"UPDATE {SCHEMA}.extraction_items SET resolved_product_code=%s WHERE extraction_job_id=%s",
             (pm0123_code, jid),
@@ -1723,9 +1723,11 @@ def test_gemini_resolved_product_code_legacy_format_fallback(pg, monkeypatch):
         ), {"jid": jid}).fetchone()
     assert row is not None
     pid_resolved, pid_basis = row
-    assert pid_resolved is True, (
-        f"pid_resolved should be True with legacy product_code fallback, got {pid_resolved}"
+    # ADR-158: 旧形式（非整数）は _resolve_pid で None になるため pid_resolved=False
+    assert pid_resolved is False, (
+        f"pid_resolved should be False for legacy product_code format (non-integer), got {pid_resolved}"
     )
-    assert pid_basis == "GEMINI", (
-        f"pid_basis should be 'GEMINI' with legacy product_code fallback, got {pid_basis!r}"
+    # pid_basis はフォールバックマッチ（WORK/SK 等）の結果になる（"GEMINI" ではない）
+    assert pid_basis != "GEMINI", (
+        f"pid_basis should NOT be 'GEMINI' for legacy product_code format, got {pid_basis!r}"
     )

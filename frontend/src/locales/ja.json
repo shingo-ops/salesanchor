@@ -264,6 +264,7 @@
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "superAdminAnalysisRules": "LINE解析",
+    "superAdminNeedsReview": "要確認一覧",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -4725,5 +4726,16 @@
     "newRuleNormalizedTo": "変換先",
     "ruleLinked": "リンク済み",
     "noRulesLinked": "未設定"
+  },
+  "needsReview": {
+    "title": "要確認一覧",
+    "productName": "商品名",
+    "supplier": "仕入元",
+    "reviewReasons": "確認理由",
+    "createdAt": "日時",
+    "noItems": "要確認の商品はありません",
+    "pidUnresolved": "商品未特定",
+    "multiCandidate": "複数候補",
+    "noteUnmatched": "備考未一致"
   }
 }
