@@ -1249,6 +1249,24 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
             emptyState={t("analysisRules.dashboard.extractionRankNoData")}
           />
         )}
+        <div className="analysis-dashboard-ctas">
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn"
+            onClick={() => onNavigate("supplier-master")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaSupplierMaster")}
+            <ArrowRightIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn"
+            onClick={() => onNavigate("extraction-rules")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaExtractionRules")}
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </section>
 
       {/* ランキングセクション: 照合率ワースト商品 */}
@@ -1300,6 +1318,16 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
             emptyState={t("analysisRules.dashboard.extractionRankNoData")}
           />
         )}
+        <div className="analysis-dashboard-ctas">
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn analysis-dashboard-cta-btn--primary"
+            onClick={() => onNavigate("product-master")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaProductMaster")}
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
       </section>
 
       {/* 問題バー */}
