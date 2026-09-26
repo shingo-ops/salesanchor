@@ -64,5 +64,10 @@ def _resolve_pid(pid: str | None) -> str | None:
 ## 弊害
 - _resolve_pid の変更: 2026-09-23以前の旧形式（product_code文字列）は None になるが、これは仕様通り（誤マッチ排除）
 
-## 外部事例
-- N/A（内部リファクタリング）
+## 外部・過去事例の参照と我々への応用
+- 該当なし：_resolve_pid の整数制限は ADR-158 の方針に基づく内部リファクタリングであり、外部事例は存在しない。NeedsReviewListPage は既存の TcgSoldOutPage パターンをそのまま踏襲した。
+
+## 維持の仕組み
+守り手: shingo-ops
+- _resolve_pid の isdigit() チェックは ruff lint で静的検査される
+- i18n キーは ESLint local/no-japanese-literal ルールで強制される
