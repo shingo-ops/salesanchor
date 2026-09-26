@@ -4001,7 +4001,8 @@
       "weightClassesMaster": "重量クラスマスタ",
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール",
-      "extractionRules": "仕入元別ルール"
+      "extractionRules": "仕入元別ルール",
+      "promptConfig": "抽出プロンプト設定"
     },
     "accuracyManagement": {
       "title": "解析精度管理",
@@ -4186,6 +4187,18 @@
       "editNote": "備考ルール編集",
       "deleteConfirm": "この備考ルールを削除しますか？",
       "noNotes": "備考ルールがありません"
+    },
+    "extractionPromptConfig": {
+      "title": "抽出プロンプト設定",
+      "baseExtraction": "基本抽出プロンプト",
+      "workIdExtraction": "作品・商品ID抽出プロンプト",
+      "save": "保存",
+      "saved": "保存しました",
+      "error": "保存に失敗しました",
+      "active": "有効",
+      "inactive": "無効",
+      "version": "バージョン",
+      "placeholder": "プロンプトを入力してください。空の場合はシステムデフォルトが使用されます。"
     }
   },
   "tcgAnalysisReview": {

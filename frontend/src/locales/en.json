@@ -4001,7 +4001,8 @@
       "weightClassesMaster": "Weight Classes",
       "groupRuleManagement": "Rule Management",
       "ruleManagement": "Status Rules",
-      "extractionRules": "Supplier Rules"
+      "extractionRules": "Supplier Rules",
+      "promptConfig": "Extraction Prompt Config"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",
@@ -4186,6 +4187,18 @@
       "editNote": "Edit Note Rule",
       "deleteConfirm": "Are you sure you want to delete this note rule?",
       "noNotes": "No note rules found"
+    },
+    "extractionPromptConfig": {
+      "title": "Extraction Prompt Config",
+      "baseExtraction": "Base Extraction Prompt",
+      "workIdExtraction": "Work/Product ID Extraction Prompt",
+      "save": "Save",
+      "saved": "Saved successfully",
+      "error": "Failed to save",
+      "active": "Active",
+      "inactive": "Inactive",
+      "version": "Version",
+      "placeholder": "Enter prompt text. If empty, system default will be used."
     }
   },
   "tcgAnalysisReview": {

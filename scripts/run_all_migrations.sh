@@ -824,3 +824,9 @@ run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql
 
 # ADR-158 Phase 2: extraction_items に raw_product_code カラム追加（Gemini v6 型番抽出）
 run_sql migrations/20260926_010000_add_raw_product_code.sql
+
+# Gemini 抽出プロンプト設定テーブル新設（管理画面から編集可能）
+run_sql migrations/20260926_080000_create_extraction_prompt_config.sql
+
+# product_id=61 の product_code='-' を 'S-PS' に修正（30th BOX バグ根本原因）
+run_sql migrations/20260926_080100_fix_product_code_dash.sql

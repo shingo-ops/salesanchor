@@ -26,7 +26,8 @@ export type AnalysisRulesSidebarKey =
   | "product-formats-master"
   | "quantity-units-master"
   | "condition-defs-master"
-  | "weight-classes-master";
+  | "weight-classes-master"
+  | "prompt-config";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -87,6 +88,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         </span>
         {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
         {navItem("extraction-rules", t("analysisRules.sidebar.extractionRules"))}
+        {navItem("prompt-config", t("analysisRules.sidebar.promptConfig"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}
       </div>
