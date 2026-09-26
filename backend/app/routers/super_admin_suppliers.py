@@ -1128,3 +1128,93 @@ async def delete_supplier_knowledge_link(
     if result.rowcount == 0:
         raise HTTPException(status_code=404, detail="リンクが見つかりません")
     await db.commit()
+
+
+# ============================================================================
+# 抽出プロンプト設定 (public.extraction_prompt_config)
+#   GET  /super-admin/extraction-prompts             全件取得
+#   GET  /super-admin/extraction-prompts/{key}       単一取得（未登録なら空を返す）
+#   PUT  /super-admin/extraction-prompts/{key}       upsert（UNIQUE(prompt_key)）
+# ============================================================================
+
+class ExtractionPromptConfigResponse(BaseModel):
+    prompt_key: str
+    prompt_text: str
+    is_active: bool
+    version: int
+
+
+class ExtractionPromptConfigUpdate(BaseModel):
+    prompt_text: str
+    is_active: bool = True
+
+
+@router.get(
+    "/super-admin/extraction-prompts",
+    response_model=list[ExtractionPromptConfigResponse],
+    dependencies=[Depends(require_super_admin)],
+)
+async def list_extraction_prompts(db: AsyncSession = Depends(get_db)):
+    rows = (
+        await db.execute(
+            text(
+                "SELECT prompt_key, prompt_text, is_active, version "
+                "FROM public.extraction_prompt_config ORDER BY prompt_key"
+            )
+        )
+    ).mappings().all()
+    return [ExtractionPromptConfigResponse(**dict(r)) for r in rows]
+
+
+@router.get(
+    "/super-admin/extraction-prompts/{prompt_key}",
+    response_model=ExtractionPromptConfigResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def get_extraction_prompt(prompt_key: str, db: AsyncSession = Depends(get_db)):
+    row = (
+        await db.execute(
+            text(
+                "SELECT prompt_key, prompt_text, is_active, version "
+                "FROM public.extraction_prompt_config WHERE prompt_key = :key"
+            ),
+            {"key": prompt_key},
+        )
+    ).mappings().first()
+    if not row:
+        # 未登録の場合は空プロンプトを返す（編集開始用）
+        return ExtractionPromptConfigResponse(
+            prompt_key=prompt_key, prompt_text="", is_active=True, version=0
+        )
+    return ExtractionPromptConfigResponse(**dict(row))
+
+
+@router.put(
+    "/super-admin/extraction-prompts/{prompt_key}",
+    response_model=ExtractionPromptConfigResponse,
+    dependencies=[Depends(require_super_admin)],
+)
+async def upsert_extraction_prompt(
+    prompt_key: str,
+    data: ExtractionPromptConfigUpdate,
+    user: User = Depends(require_super_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    row = (
+        await db.execute(
+            text(
+                "INSERT INTO public.extraction_prompt_config "
+                "(prompt_key, prompt_text, is_active, updated_by) "
+                "VALUES (:key, :text, :active, :uid) "
+                "ON CONFLICT (prompt_key) DO UPDATE SET "
+                "prompt_text = EXCLUDED.prompt_text, is_active = EXCLUDED.is_active, "
+                "updated_by = EXCLUDED.updated_by, "
+                "version = public.extraction_prompt_config.version + 1, "
+                "updated_at = NOW() "
+                "RETURNING prompt_key, prompt_text, is_active, version"
+            ),
+            {"key": prompt_key, "text": data.prompt_text, "active": data.is_active, "uid": user.id},
+        )
+    ).mappings().first()
+    await db.commit()
+    return ExtractionPromptConfigResponse(**dict(row))

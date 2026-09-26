@@ -1271,7 +1271,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             # Legacy migration: resolved_product_code may contain a product_code string (e.g. "M1L")
             # from jobs extracted before 2026-09-23 refactor (ADR-1002). Convert to products.id if needed.
             def _resolve_pid(pid: str | None) -> str | None:
-                if pid is None or pid == "":
+                if pid is None or pid == "" or pid == "-":
                     return None
                 # Try direct products.id match first (new format: numeric string like "33")
                 validated = validate_product_id(pid, reference)
