@@ -12,6 +12,7 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import ConfirmModal from "../../components/ConfirmModal";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -19,6 +20,7 @@ import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
@@ -194,15 +196,15 @@ export default function BotsPage() {
     <PageLayout
       navKey="nav.bots"
       subtitleKey="bots.subtitle"
-      headerAction={hasPermission("bots.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
-            {t("bots.newBot")}
-          </button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      <ContentToolbar
+        right={hasPermission("bots.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+            {t("bots.newBot")}
+          </button>
+        ) : undefined}
+      />
 
       {newApiKey && (
         <div className="notice" style={{ padding: "var(--space-4)", background: "var(--warning-bg)", border: "1px solid var(--warning-text)", borderRadius: "var(--radius-sm)", margin: "16px 0" }}>
@@ -255,10 +257,10 @@ export default function BotsPage() {
             <input type="email" value={createForm.sender_email} onChange={(e) => setCreateForm({ ...createForm, sender_email: e.target.value })} />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={submitting}>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)} disabled={submitting}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md" disabled={submitting}>
               {submitting ? t("common.submitting") : t("bots.registerIssueKey")}
-            </button>
+            </Button>
           </div>
         </form>
       </Modal>
@@ -277,8 +279,8 @@ export default function BotsPage() {
             staff={staff}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       </Drawer>

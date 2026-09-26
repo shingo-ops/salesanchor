@@ -103,3 +103,26 @@ required check 登録済。本 ADR では追加実装しない。
 - `.github/workflows/ui-governance-gate.yml`: CI ワークフロー（非必須）
 - `docs/CC_UI_GOVERNANCE.md`: CC 遵守テンプレ
 - `docs/BRANCH_PROTECTION_SETUP.md §8`: required check 登録手順（安定後）
+
+
+## 2026-09-10 改訂案: 画面統一完了後の全件検査
+
+状態: Proposed（本節は設計案。既存Accepted本文の運用はCI切替まで維持）。POの画面統一後にCIを設置する順序と、原因別の順次PR統合の指示に基づく。設計合格をPO自筆のADR承認記録へ代用しない。
+
+### Why
+
+固定3bdf33d5のscripts/check-ui-governance.jsはpagesの同種件数増加のみを検出し、git読取失敗を空内容として扱う。再測定では製品input450/select74/textarea53、native table39を確認。共通部品内部も含むため件数全てを違反数と呼ばない。同数置換・features配下・読取不能の取りこぼしを、移行完了後の全件検査で解消する。根拠: docs/handoff/design-system-recon/recon.md、同evidence-20260910/final-ci-contract-audit.md。
+
+### 置換する規則
+
+- pages差分の増分判定をfrontend/srcの全対象検査へ置換。test/story/catalogは確定した用途のみに限定し、components/featuresを丸ごと除外しない。
+- ui-allowコメントと既存件数免除を廃止。完全module+export+必要なimplementationBinding+nativeTag/type+所有CSSで正当な内部実装だけを登録する。
+- 共通UIへの自由なstyle/classNameと、利用先CSSからの所有外観上書きを検出。一般の配置計算と利用者指定色は、既存用途・既存条件を維持する名前付き入口で扱う。
+- 数値アイコン生成の必須5キーと生成物一致を検査。定義元へのアクセス失敗・対象0で合格しない。終了値は正常0/規則違反1/列挙・読取・解析不能2。
+- 独立CLIをcheck:allと既存UI governance jobへ接続。job名と全PR起動を維持し必要なnpm ciを追加する。Ruleset/本人認証API/新たなPO操作を追加しない。
+
+### 受入と実施順
+
+旧AC-5（既存件数を赤化しない）は、全対象の未移行0で合格へ置換する。旧AC-6の22ケース中ui-allow免除/table非検出の期待を更新し、最終契約C01〜C27を実行する。既存入力失敗の再現はexit2で拒否される対照へ継承する。UI移行が先、CIは最後。未移行を登録して緑にする切替は禁止。
+
+維持するもの: 共通部品の利用、i18n、既存の業務動作、既存必須チェック、PRレビュー。CIで任意JSの意味や全ての独自divの見た目まで保証するとは主張しない。対応表とコードレビューで補う。

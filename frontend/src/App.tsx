@@ -19,8 +19,6 @@ import CompaniesPage from "./pages/companies/CompaniesPage";
 import CompanyDetailPage from "./pages/company-detail/CompanyDetailPage";
 import ContactsPage from "./pages/contacts/ContactsPage";
 import ContactEditPage from "./pages/contacts/ContactEditPage";
-import DealsPage from "./pages/deals/DealsPage";
-import DealEditPage from "./pages/deals/DealEditPage";
 import OrdersPage from "./pages/orders/OrdersPage";
 // 区切り4 (ADR-021 改修): 売上管理 / 報酬管理 メニュー分離
 import SalesPage from "./pages/sales/SalesPage";
@@ -41,7 +39,17 @@ import InvoicesPage from "./pages/invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/invoice-create/InvoiceCreatePage";
 import InvoiceDetailPage from "./pages/invoice-detail/InvoiceDetailPage";
 import SuppliersPage from "./pages/suppliers/SuppliersPage";
+import StatusMasterPage from "./pages/status-master/StatusMasterPage";
+import ConditionsPage from "./pages/conditions/ConditionsPage";
+import ProductCategoriesPage from "./pages/product-categories/ProductCategoriesPage";
+import UnitsPage from "./pages/units/UnitsPage";
+import NoteMasterPage from "./pages/note-master/NoteMasterPage";
 import SupplierEditPage from "./pages/suppliers/SupplierEditPage";
+import SupplierImportTenantPage from "./pages/suppliers/SupplierImportPage";
+import UnitImportTenantPage from "./pages/units/UnitImportPage";
+import ConditionImportTenantPage from "./pages/conditions/ConditionImportPage";
+import StatusMasterImportTenantPage from "./pages/status-master/StatusMasterImportPage";
+import NoteMasterImportTenantPage from "./pages/note-master/NoteMasterImportPage";
 import PurchaseOrdersPage from "./pages/purchase-orders/PurchaseOrdersPage";
 import NotificationsPage from "./pages/notifications/NotificationsPage";
 import StaffReportsPage from "./pages/staff-reports/StaffReportsPage";
@@ -58,15 +66,12 @@ import ChannelsPage from "./pages/channels/ChannelsPage";
 import OAuthCallbackPage from "./pages/oauth-callback/OAuthCallbackPage";
 import InboxPage from "./pages/inbox/InboxPage";
 import ComingSoonPage from "./pages/coming-soon/ComingSoonPage";
-import IntegrationPlaceholderPage from "./pages/integrations/IntegrationPlaceholderPage";
 import GoogleDriveIntegrationPage from "./pages/integrations/GoogleDriveIntegrationPage";
 import CarrierIntegrationPage from "./pages/integrations/CarrierIntegrationPage";
 import CarrierSetupGuidePage from "./pages/integrations/CarrierSetupGuidePage";
 import PaypalIntegrationPage from "./pages/integrations/PaypalIntegrationPage";
 // ADR-021 Phase 5 / Sprint 5: 担当者報酬計算 MVP
 import CommissionSettingsPage from "./pages/commission-settings/CommissionSettingsPage";
-// spec.md v1.1 F2 (Sprint 2): マスタ編集 UI（中央 admin + テナント admin の二層）
-import SuperAdminMastersPage from "./pages/super-admin/MastersPage";
 import InventoryVisibilityPage from "./pages/admin/InventoryVisibilityPage";
 // spec.md v1.1 F8 (Sprint 8): テナント発行者情報 (PO PDF / メール差出人) admin UI
 import TenantProfilePage from "./pages/admin/TenantProfilePage";
@@ -80,14 +85,28 @@ import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
 import AdminHubPage from "./pages/admin/AdminHubPage";
 // SA-02 Stage 3: チャネルマスタ管理
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
-// spec.md v1.1 F5 (Sprint 5): Discord Inbound 受信メッセージ一覧（中央 admin）
-import DiscordInboundPage from "./pages/super-admin/DiscordInboundPage";
 import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
-// spec.md v1.2 F9 (Sprint 9): スプレッドシート並走 Phase 切替 admin UI
-import PhaseSwitchPage from "./pages/super-admin/PhaseSwitchPage";
-import InventoryOffersPage from "./pages/super-admin/InventoryOffersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
+import FxRatePage from "./pages/super-admin/FxRatePage";
+import TcgProductMasterPage from "./pages/super-admin/TcgProductMasterPage";
+import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
+import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
+import TcgSupplierQualityPage from "./pages/super-admin/TcgSupplierQualityPage";  // PARITY-03 第2段階
+import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
+import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
+import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
+import AnalysisRulesPage from "./pages/super-admin/AnalysisRulesPage";  // CARD-ANALYSIS-RULE-P6-UI
+import SupplierMasterPage from "./pages/super-admin/SupplierMasterPage";
+import SupplierExtractionRulesPage from "./pages/super-admin/SupplierExtractionRulesPage";
+import SupplierImportPage from "./pages/super-admin/SupplierImportPage";
+import UnitImportPage from "./pages/super-admin/UnitImportPage";
+import ConditionImportPage from "./pages/super-admin/ConditionImportPage";
+import StatusMasterImportPage from "./pages/super-admin/StatusMasterImportPage";
+import NoteMasterImportPage from "./pages/super-admin/NoteMasterImportPage";
+import ProductCategoriesImportPage from "./pages/super-admin/ProductCategoriesImportPage";
+import ProductCategoriesImportTenantPage from "./pages/product-categories/ProductCategoriesImportPage";
 import AccountSettingsPage from "./pages/account-settings/AccountSettingsPage";
+import BuybackPricesPage from "./pages/buyback-prices/BuybackPricesPage";
 import CustomerHubPage from "./pages/crm/CustomerHubPage";
 // ADR-069: デザインシステム パーツ保管庫（開発環境専用）
 import DesignSystemPage from "./pages/design-system/DesignSystemPage";
@@ -186,6 +205,9 @@ function App() {
                     <Route path="archive"         element={<ArchivesPage />} />
                   </Route>
 
+                  {/* 外部買取店の買取価格 */}
+                  <Route path="/buyback-prices" element={<BuybackPricesPage />} />
+
                   {/* 在庫表（最終ユーザー向け offers ビュー / ADR-093 Phase 2） */}
                   <Route path="/inventory" element={<InventoryPage />} />
                   {/* 自社在庫（A在庫）管理（ADR SA-04/05） */}
@@ -218,8 +240,6 @@ function App() {
                   />
 
                   {/* 管理 */}
-                  <Route path="/deals" element={<DealsPage />} />
-                  <Route path="/deals/:id/edit" element={<DealEditPage />} />
                   <Route path="/orders" element={<OrdersPage />} />
                   {/* 区切り4 (ADR-021 改修): 売上管理 / 報酬管理（受注管理から分離） */}
                   <Route path="/sales" element={<SalesPage />} />
@@ -238,6 +258,12 @@ function App() {
                   <Route path="/roles" element={<RolesPage />} />
                   <Route path="/data" element={<ERPPage />} />
                   <Route path="/suppliers" element={<SuppliersPage />} />
+                  <Route path="/suppliers/import" element={<SupplierImportTenantPage />} />
+                  <Route path="/management-center/units/import" element={<UnitImportTenantPage />} />
+                  <Route path="/management-center/conditions/import" element={<ConditionImportTenantPage />} />
+                  <Route path="/management-center/status-master/import" element={<StatusMasterImportTenantPage />} />
+                  <Route path="/management-center/note-master/import" element={<NoteMasterImportTenantPage />} />
+                  <Route path="/management-center/product-categories/import" element={<ProductCategoriesImportTenantPage />} />
                   <Route path="/suppliers/:id/edit" element={<SupplierEditPage />} />
                   <Route
                     path="/purchase-orders"
@@ -271,31 +297,75 @@ function App() {
                     }
                   />
 
-                  {/* spec.md v1.1 F2 (Sprint 2): マスタ編集 UI */}
-                  {/* 中央 admin（is_super_admin=true のみ。SuperAdminMastersPage 内で 403 ガード） */}
-                  <Route
-                    path="/super-admin/masters"
-                    element={<SuperAdminMastersPage />}
-                  />
-                  {/* spec.md v1.1 F5 (Sprint 5): Discord Inbound 受信一覧（is_super_admin 限定、Page 内で 403 ガード） */}
-                  <Route
-                    path="/super-admin/inbound"
-                    element={<DiscordInboundPage />}
-                  />
                   {/* spec.md v1.1 F6 (Sprint 6): 解析結果レビュー画面（is_super_admin 限定、Page 内で 403 ガード） */}
                   <Route
                     path="/super-admin/inbound/:id/review"
                     element={<ParseReviewPage />}
                   />
-                  {/* spec.md v1.2 F9 (Sprint 9): スプレッドシート並走 Phase 切替 (is_super_admin 限定、Page 内で 403 ガード) */}
+                  <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
+                  <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
+                  <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
+                  {/* 為替レート SSOT (is_super_admin 限定、Page 内で 403 ガード) */}
                   <Route
-                    path="/super-admin/phase-switch"
-                    element={<PhaseSwitchPage />}
+                    path="/super-admin/fx-rate"
+                    element={<FxRatePage />}
                   />
-                  {/* spec.md v1.3 F11 (Sprint 11) AC11.5: 仕入元現在オファー admin 一覧 (is_super_admin 限定) */}
+                  {/* MIG-04 Phase 4: 並行運用比較レポート (is_super_admin 限定) */}
                   <Route
-                    path="/super-admin/inventory-offers"
-                    element={<InventoryOffersPage />}
+                    path="/super-admin/tcg-parallel-report"
+                    element={<TcgParallelReportPage />}
+                  />
+                  {/* PARITY-03 第2段階: 仕入元品質サマリー (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-supplier-quality"
+                    element={<TcgSupplierQualityPage />}
+                  />
+                  {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-distribution"
+                    element={<TcgDistributionPage />}
+                  />
+                  {/* MIG-04 Stage 1: LINE エクスポート取り込み (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/tcg-line-import"
+                    element={<TcgLineImportPage />}
+                  />
+                  {/* CARD-ANALYSIS-RULE-P6-UI: 解析管理（完売ルール・日付ルール） (is_super_admin 限定) */}
+                  <Route
+                    path="/super-admin/analysis-rules"
+                    element={<AnalysisRulesPage />}
+                  />
+                  <Route
+                    path="/super-admin/supplier-master"
+                    element={<SupplierMasterPage />}
+                  />
+                  <Route
+                    path="/super-admin/supplier-extraction-rules"
+                    element={<SupplierExtractionRulesPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/suppliers/import"
+                    element={<SupplierImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/units/import"
+                    element={<UnitImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/conditions/import"
+                    element={<ConditionImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/status-master/import"
+                    element={<StatusMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/note-master/import"
+                    element={<NoteMasterImportPage />}
+                  />
+                  <Route
+                    path="/super-admin/masters/product-categories/import"
+                    element={<ProductCategoriesImportPage />}
                   />
                   {/* SaaS 管理者ハブ（ボトムタブ統合） */}
                   <Route path="/admin" element={<AdminHubPage />}>
@@ -333,8 +403,12 @@ function App() {
                     <Route path="tenant-profile"      element={<TenantProfilePage />} />
                     <Route path="channels"            element={<ChannelsPage />} />
                     <Route path="bots"                element={<BotsPage />} />
-                    <Route path="deals"               element={<DealsPage />} />
                     <Route path="suppliers"           element={<SuppliersPage />} />
+                    <Route path="status-master"       element={<StatusMasterPage />} />
+                    <Route path="conditions"          element={<ConditionsPage />} />
+                    <Route path="product-categories" element={<ProductCategoriesPage />} />
+                    <Route path="units"              element={<UnitsPage />} />
+                    <Route path="note-master"        element={<NoteMasterPage />} />
                     <Route path="purchase-orders"     element={<PurchaseOrdersPage />} />
                     <Route path="data"                element={<ERPPage />} />
                     {/* API 連携（各サービスとも現状は「現在作成中」プレースホルダー） */}
@@ -342,15 +416,9 @@ function App() {
                     <Route path="integrations/fedex"        element={<CarrierIntegrationPage carrier="fedex" />} />
                     <Route path="integrations/dhl"          element={<CarrierIntegrationPage carrier="dhl" />} />
                     <Route path="integrations/ups"          element={<CarrierIntegrationPage carrier="ups" />} />
-                    <Route path="integrations/yamato"       element={<IntegrationPlaceholderPage />} />
-                    <Route path="integrations/sagawa"       element={<IntegrationPlaceholderPage />} />
                     <Route path="integrations/paypal"       element={<PaypalIntegrationPage />} />
                     <Route path="notifications"       element={<NotificationsPage />} />
                     <Route path="reports"             element={<StaffReportsPage />} />
-                    <Route path="super-admin/masters" element={<SuperAdminMastersPage />} />
-                    <Route path="super-admin/inbound" element={<DiscordInboundPage />} />
-                    <Route path="super-admin/phase"   element={<PhaseSwitchPage />} />
-                    <Route path="super-admin/inventory-offers" element={<InventoryOffersPage />} />
                   </Route>
                 </Route>
               </Routes>

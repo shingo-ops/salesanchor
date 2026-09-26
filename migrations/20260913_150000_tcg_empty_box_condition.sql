@@ -1,0 +1,47 @@
+-- CARD-LINE-EMPTY-BOX-REVIEW-01: tenant_004 only, no historical row rewrites.
+BEGIN;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '30s';
+DO $body$
+DECLARE
+    table_count integer;
+    existing record;
+BEGIN
+    SELECT count(*) INTO table_count
+    FROM unnest(ARRAY['conditions', 'analysis_results', 'extraction_items',
+                     'extraction_jobs', 'source_messages', 'item_corrections']) AS t(name)
+    WHERE to_regclass(format('tenant_004.%I', t.name)) IS NOT NULL;
+    IF table_count = 0 AND NOT EXISTS (
+        SELECT 1 FROM information_schema.tables WHERE table_schema='tenant_004'
+        AND (table_name LIKE 'tcg_%' OR table_name IN (
+            'analysis_run_snapshots','analysis_runs','audit_log','condition_aliases','import_jobs','item_notes',
+            'product_exclude_keywords','product_search_keywords','products_logistics','supplier_channels',
+            'unit_aliases','units','unparsed_lines'))
+    ) THEN RETURN; END IF;
+    -- パイプラインテーブルが部分的または全面的に削除済みの場合はスキップ
+    -- analysis_results が存在しない = pipeline teardown 中（20260921_050000）
+    -- conditions は残存するが analysis_results が削除されると table_count < 6 となる
+    IF to_regclass('tenant_004.analysis_results') IS NULL THEN
+        RAISE NOTICE 'empty box: analysis_results not found (pipeline teardown), skipping';
+        RETURN;
+    END IF;
+    IF table_count <> 6 THEN RAISE NOTICE 'empty box: partial structure (% of 6 tables), skipping (SSOT migration moved to public)', table_count; RETURN; END IF;
+    LOCK TABLE tenant_004.conditions IN SHARE ROW EXCLUSIVE MODE;
+    IF (SELECT count(*) FROM tenant_004.conditions WHERE code='CN0011' OR canonical='Empty box') > 1 THEN
+        RAISE EXCEPTION 'empty box: conflicting condition identities';
+    END IF;
+    SELECT * INTO existing FROM tenant_004.conditions WHERE code='CN0011' OR canonical='Empty box';
+    IF FOUND THEN
+        IF existing.code IS DISTINCT FROM 'CN0011' OR existing.canonical IS DISTINCT FROM 'Empty box'
+           OR existing.priority IS DISTINCT FROM 1 OR existing.is_active IS DISTINCT FROM true
+           OR existing.app_kubun IS DISTINCT FROM '' OR existing.search_kw IS DISTINCT FROM '空箱'
+           OR existing.exclude_kw IS DISTINCT FROM '空箱ではない,空箱ではありません,空箱なし,空箱無し' THEN
+            RAISE EXCEPTION 'empty box: unexpected existing definition';
+        END IF;
+        RETURN;
+    END IF;
+    INSERT INTO tenant_004.conditions (code, canonical, priority, app_kubun, search_kw, exclude_kw, is_active)
+    VALUES ('CN0011', 'Empty box', 1, '', '空箱', '空箱ではない,空箱ではありません,空箱なし,空箱無し', true);
+END;
+$body$;
+COMMIT;

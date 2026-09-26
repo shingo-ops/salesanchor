@@ -1,0 +1,137 @@
+{
+  "recordedAt": "2026-09-11T11:11:39.399312+00:00",
+  "worktree": "/Users/tanizawashingo/worktrees/salesanchor/release-frontend-shared-button-migration",
+  "HEAD": "adc8bc4d67a94e8ede45a1e9c0ee9f28d28bb70b",
+  "state": "WIP 16 source button migrations retained; AJ13 separation NOT applied; NOT verified/approved",
+  "files": [
+    {
+      "path": "frontend/src/components/ConfirmModal.tsx",
+      "sha256": "989f89f39006b20439b60b5fb8be97bc0344bd2ab86c6a440fdfc450c5720ad9",
+      "lines": 46
+    },
+    {
+      "path": "frontend/src/components/CommissionPanel.tsx",
+      "sha256": "00350277d0216278bd9fe01c813193f47e5c25323b7fec3afe986cc0c48d557e",
+      "lines": 276
+    },
+    {
+      "path": "frontend/src/components/PriorityScoreOverride.tsx",
+      "sha256": "78d14d8e073ed3aaf0ea52f7aaff8f063f62ffa1db6d48dfe8737c55dfe470cc",
+      "lines": 117
+    },
+    {
+      "path": "frontend/src/components/OrderFinancialPanel.tsx",
+      "sha256": "e3b6e7962b8df270796a6d2e8f4d944e9b370a66b64874393fb672186b9fe2e8",
+      "lines": 298
+    },
+    {
+      "path": "frontend/src/components/PurchaseDetailPanel.tsx",
+      "sha256": "a476b519a6b935b5d97b2bf2508d06b9739871243eeed6cb4c065c7c7d80e441",
+      "lines": 450
+    },
+    {
+      "path": "frontend/src/components/ShippingDetailPanel.tsx",
+      "sha256": "3176dd6ebdf3946834068e719d1bbf1abf5370a3f4fd3042bef957e8780bc639",
+      "lines": 559
+    },
+    {
+      "path": "frontend/src/components/SharedButtonMigration.test.tsx",
+      "sha256": "3f522e4f591fc36566e42eb617aa2b07bfe4820d4134bdf288c898733cc6e226",
+      "lines": 157
+    }
+  ],
+  "sessions": [
+    {
+      "id": 89179,
+      "operation": "restore7 and npm ci",
+      "status": "exit0",
+      "pid": 15198
+    },
+    {
+      "id": 21883,
+      "operation": "AST and counts audit",
+      "status": "exit0"
+    },
+    {
+      "id": 34976,
+      "operation": "initial additional20 unit",
+      "status": "exit0"
+    },
+    {
+      "id": 98690,
+      "operation": "initial browser matrix",
+      "status": "exit1; Commission390en outline failure"
+    },
+    {
+      "id": 74502,
+      "operation": "strict eslint then coverage",
+      "status": "eslint0;coverage1"
+    },
+    {
+      "id": 32541,
+      "operation": "Commission ancestor diagnostic",
+      "status": "exit0 DIAGNOSTIC_ONLY"
+    },
+    {
+      "id": 89969,
+      "operation": "six-component inventory",
+      "status": "exit0 DIAGNOSTIC_ONLY; centered-scroll states not initial/nearest"
+    },
+    {
+      "id": 48415,
+      "operation": "type-fix eslint then20unit",
+      "status": "exit0;20passed2.72s"
+    },
+    {
+      "id": 55283,
+      "operation": "isolated retry queue",
+      "status": "interrupted by parent checkpoint request exit130;Button0;FedEx interrupted;rest unexecuted"
+    }
+  ],
+  "activeOwnedSessions": [],
+  "activeFixtureServerPids": [],
+  "processEvidence": "/tmp/frontend-shared-button-resume/checkpoint-process-read.json",
+  "passed": {
+    "heldHash": 7,
+    "unchangedBaseTSX": 6,
+    "ASTNonAppearanceEqual": 16,
+    "rawBeforeAfter": [
+      332,
+      316
+    ],
+    "dedicatedUnchanged": 20,
+    "linksUnchanged": 8,
+    "ButtonBeforeAfter": [
+      70,
+      86
+    ],
+    "initialSingleUnit": 20,
+    "typeFixSingleUnit": 20,
+    "strictESLintExit": 0,
+    "typeFixESLintExit": 0
+  },
+  "failures": {
+    "coverage": {
+      "passed": 188,
+      "failed": 21,
+      "filesFailed": 11,
+      "filesPassed": 10,
+      "workerErrors": 2,
+      "exit": 1,
+      "log": "/tmp/frontend-shared-button-resume/coverage.log"
+    },
+    "browser": "390/light/en Commission nearest scrolling fails outer4px; old overflow528px vs new537px with clientWidth390; actual outline old1px new2+2px; not resolved",
+    "initialBuildReportedByRoot": "test type errors4 fixed, build has not rerun by this agent"
+  },
+  "limitations": [
+    "initial browser measured only horizontal bounds and accidentally included header close: not final evidence",
+    "inventory12 measures centered scroll/focus/Tab states, excludes header, DOM counts2/7/2/2/3/3; does NOT negate initial/nearest-scroll failure",
+    "Priority trigger outside modal not included in inventory",
+    "long actual Confirm labels, full width/theme matrix, full keyboard/focus/disabled browser acceptance still incomplete",
+    "coverage repeated full run not performed; only existingButton single passed before checkpoint interruption",
+    "root checkall0/build2/Storybook unexecuted are parent results, not independently executed here"
+  ],
+  "next": "root saves checkpoint; wait for formal AJ13 card before product separation; no automatic resume",
+  "gitStatus": " M docs/ai-agents/evidence-registry.md\n M docs/handoff/design-system-recon/recon.md\n M docs/specs/design-system/design.md\n M docs/specs/design-system/migration.md\n M frontend/src/components/CommissionPanel.tsx\n M frontend/src/components/ConfirmModal.tsx\n M frontend/src/components/OrderFinancialPanel.tsx\n M frontend/src/components/PriorityScoreOverride.tsx\n M frontend/src/components/PurchaseDetailPanel.tsx\n M frontend/src/components/ShippingDetailPanel.tsx\n M tasks/todo.md\n?? docs/handoff/design-system-recon/evidence-20260910/ah-resume-base-diff.json\n?? docs/handoff/design-system-recon/evidence-20260910/ah-resume-card.txt\n?? docs/handoff/design-system-recon/evidence-20260910/ah-resume-summary.json\n?? docs/handoff/design-system-recon/evidence-20260910/ah-working-check-reexecution-verification.json\n?? docs/handoff/design-system-recon/evidence-20260910/ah-working-check.cjs\n?? docs/handoff/design-system-recon/evidence-20260910/ah-working-verification.json\n?? docs/handoff/design-system-recon/evidence-20260910/ah-working-verification.md\n?? docs/handoff/design-system-recon/evidence-20260910/shared-button-implementation.md\n?? frontend/src/components/SharedButtonMigration.test.tsx\n",
+  "commitPushPRPerformed": false
+}

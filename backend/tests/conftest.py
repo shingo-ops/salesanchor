@@ -42,6 +42,79 @@ import app.auth.dependencies  # noqa: F401
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
 
+# PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
+# SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
+# check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
+_PUBLIC_SUPPLIERS_DDL = """
+CREATE TABLE IF NOT EXISTS public.suppliers (
+    id                       SERIAL PRIMARY KEY,
+    supplier_code            VARCHAR(20) UNIQUE,
+    name                     VARCHAR(255) NOT NULL,
+    line_name                VARCHAR(255),
+    supplier_type            VARCHAR(20) NOT NULL DEFAULT 'corporate',
+    is_active                BOOLEAN NOT NULL DEFAULT TRUE,
+    tenant_id                INTEGER,
+    extraction_price_format  TEXT,
+    extraction_qty_format    TEXT,
+    extraction_order_pattern TEXT,
+    extraction_default_unit  TEXT,
+    extraction_notes         TEXT,
+    extraction_state_format  TEXT,
+    extraction_example_text  TEXT,
+    created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_suppliers_line_name_active_unique
+    ON public.suppliers (line_name)
+    WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL;
+"""
+
+
+def _supplier_ssot_premigration(cursor, schema: str):
+    """Pre-migration value operations for supplier SSOT.
+    Copies tenant_suppliers → public.suppliers and maps supplier_channels UUID → INTEGER.
+    Must be called BEFORE running 20260917_020000_supplier_ssot_migration.sql.
+    Idempotent: skips if supplier_id is already INTEGER."""
+    # Check if supplier_id is already INTEGER (conversion already done)
+    cursor.execute("""
+        SELECT a.atttypid = 'integer'::regtype::oid
+        FROM pg_attribute a
+        JOIN pg_class c ON c.oid = a.attrelid
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = %s
+          AND c.relname = 'supplier_channels'
+          AND a.attname = 'supplier_id'
+          AND a.attnum > 0
+    """, (schema,))
+    row = cursor.fetchone()
+    if row and row[0]:
+        return  # Already INTEGER, skip
+    # Also skip if supplier_channels table doesn't exist in this schema
+    if not row:
+        return
+    # Step 1: Copy tenant_suppliers → public.suppliers
+    cursor.execute(f"""
+        INSERT INTO public.suppliers (supplier_code, name, line_name, supplier_type, is_active, created_at, updated_at)
+        SELECT
+            'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0'),
+            ts.name, ts.name, 'corporate', ts.is_active, ts.created_at, NOW()
+        FROM {schema}.tenant_suppliers ts
+        ON CONFLICT (supplier_code) DO UPDATE SET
+            line_name = EXCLUDED.line_name
+        WHERE public.suppliers.line_name IS NULL
+    """)
+    # Step 2: Add tmp column and map UUID → INTEGER
+    cursor.execute(f"ALTER TABLE {schema}.supplier_channels ADD COLUMN IF NOT EXISTS supplier_int_id INTEGER")
+    cursor.execute(f"""
+        UPDATE {schema}.supplier_channels sc
+        SET supplier_int_id = ps.id
+        FROM {schema}.tenant_suppliers ts
+        JOIN public.suppliers ps
+          ON ps.supplier_code = 'SP-' || LPAD(SUBSTRING(ts.code FROM 3), 5, '0')
+        WHERE ts.id = sc.supplier_id
+    """)
+
+
 def _load_country_seed_rows() -> list[tuple[str, str, str]]:
     """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
     import re
@@ -53,7 +126,7 @@ def _load_country_seed_rows() -> list[tuple[str, str, str]]:
 
 
 def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """tcg_type_master の seed rows を canonical code に合わせる。"""
+    """type_master の seed rows を canonical code に合わせる。"""
     return [
         ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
         ("one_piece", "ワンピース", "One Piece TCG"),
@@ -107,8 +180,8 @@ async def test_engine():
             statement = statement.replace("public.permissions", "permissions")
         if "public.countries" in statement:
             statement = statement.replace("public.countries", "countries")
-        if "public.tcg_type_master" in statement:
-            statement = statement.replace("public.tcg_type_master", "tcg_type_master")
+        if "public.type_master" in statement:
+            statement = statement.replace("public.type_master", "type_master")
         if "public.data_access_events" in statement:
             statement = statement.replace("public.data_access_events", "data_access_events")
         if "public.tenant_discord_config" in statement:
@@ -121,6 +194,8 @@ async def test_engine():
             statement = statement.replace("public.tenant_deletion_audit", "tenant_deletion_audit")
         if "public.tenant_features" in statement:
             statement = statement.replace("public.tenant_features", "tenant_features")
+        if "public.suppliers" in statement:
+            statement = statement.replace("public.suppliers", "suppliers")
         # SQLite は FOR UPDATE をサポートしない（ファイルレベルロックで代替）。
         if " FOR UPDATE" in statement:
             statement = statement.replace(" FOR UPDATE", "")
@@ -362,6 +437,9 @@ async def setup_test_db(test_engine):
                 customer_type VARCHAR(50),
                 response_speed VARCHAR(20),
                 monthly_forecast NUMERIC(15, 2),
+                amount NUMERIC(15, 2),
+                currency VARCHAR(10) DEFAULT 'JPY',
+                expected_close_date DATE,
                 prospect_rank VARCHAR(10),
                 assigned_to INTEGER,
                 converted_deal_id INTEGER,
@@ -403,31 +481,7 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
-        # 案件テーブル（Step 5d: 旧 customer_id 列削除済）
-        await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS deals (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                tenant_id INTEGER NOT NULL DEFAULT 999,
-                deal_code VARCHAR(20),
-                company_id INTEGER REFERENCES companies(id),
-                contact_id INTEGER REFERENCES contacts(id),
-                lead_id INTEGER REFERENCES leads(id),
-                title VARCHAR(255) NOT NULL,
-                amount NUMERIC(15, 2),
-                currency VARCHAR(10) DEFAULT 'JPY',
-                status VARCHAR(50) DEFAULT 'open',
-                stage VARCHAR(50) DEFAULT 'open',
-                probability INTEGER DEFAULT 10,
-                assigned_to INTEGER,
-                expected_close_date DATE,
-                notes TEXT,
-                lead_source VARCHAR(50),
-                closed_at TIMESTAMP,
-                close_reason_memo TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """))
+        # 便D-1: deals テーブルDDL 除去済み（2026-07-28）。DROP は便E。
         # 注文テーブル（Step 5d: 旧 customer_id 列削除済）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS orders (
@@ -435,7 +489,6 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 company_id INTEGER REFERENCES companies(id),
                 contact_id INTEGER REFERENCES contacts(id),
-                deal_id INTEGER REFERENCES deals(id),
                 invoice_id INTEGER,
                 order_number VARCHAR(100) NOT NULL,
                 total_amount NUMERIC(15, 2),
@@ -596,6 +649,26 @@ async def setup_test_db(test_engine):
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # データアクセス監査ログ（migrations/071 をSQLite互換で写経。audit.py が書き込む先）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS data_access_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_type VARCHAR(50) NOT NULL,
+                method VARCHAR(10) NOT NULL,
+                path VARCHAR(500) NOT NULL,
+                status_code INTEGER NOT NULL,
+                user_email VARCHAR(255),
+                client_ip VARCHAR(45),
+                user_agent VARCHAR(500),
+                duration_ms INTEGER,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
+        # public. 付き参照の互換ビュー
+        await conn.execute(text(
+            'CREATE VIEW IF NOT EXISTS "public.data_access_events" '
+            'AS SELECT * FROM data_access_events'
+        ))
         # パーミッションマスタ（通常は public.permissions だがSQLite互換で無スキーマ）
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS permissions (
@@ -618,7 +691,7 @@ async def setup_test_db(test_engine):
             )
         """))
         await conn.execute(text("""
-            CREATE TABLE IF NOT EXISTS tcg_type_master (
+            CREATE TABLE IF NOT EXISTS type_master (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 code VARCHAR(50) NOT NULL UNIQUE,
                 name_ja VARCHAR(100) NOT NULL,
@@ -657,7 +730,7 @@ async def setup_test_db(test_engine):
             })
         for code, name_ja, name_en in _load_tcg_type_seed_rows():
             await conn.execute(text("""
-                INSERT OR IGNORE INTO tcg_type_master (code, name_ja, name_en, sort_order, is_active)
+                INSERT OR IGNORE INTO type_master (code, name_ja, name_en, sort_order, is_active)
                 VALUES (:code, :name_ja, :name_en, 100, 1)
             """), {"code": code, "name_ja": name_ja, "name_en": name_en})
         # ロール
@@ -724,6 +797,7 @@ async def setup_test_db(test_engine):
                 product_code VARCHAR(20),
                 category VARCHAR(100),
                 mark VARCHAR(100),
+                name VARCHAR(255),
                 name_en VARCHAR(255),
                 name_ja VARCHAR(255) NOT NULL,
                 status VARCHAR(20) DEFAULT 'active',
@@ -746,7 +820,7 @@ async def setup_test_db(test_engine):
                 is_archived BOOLEAN DEFAULT FALSE,
                 archived_at TIMESTAMP,
                 supplier_default_id INTEGER,
-                tcg_type VARCHAR(50) REFERENCES tcg_type_master(code),
+                tcg_type VARCHAR(50) REFERENCES type_master(code),
                 product_kind VARCHAR(50) DEFAULT 'TCG',
                 set_type VARCHAR(50),
                 unit VARCHAR(20),
@@ -763,7 +837,15 @@ async def setup_test_db(test_engine):
                 search_keywords TEXT,
                 exclude_keywords TEXT,
                 related_series VARCHAR(255),
-                display_order INTEGER
+                display_order INTEGER,
+                tcg_uuid UUID,
+                division_id UUID,
+                product_kind_id INTEGER,
+                work_id INTEGER,
+                manufacturer_id UUID,
+                product_category_id UUID,
+                category_class TEXT,
+                is_active BOOLEAN DEFAULT true
             )
         """))
         await conn.execute(text("""
@@ -797,7 +879,7 @@ async def setup_test_db(test_engine):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 quote_code VARCHAR(20),
-                deal_id INTEGER REFERENCES deals(id),
+                lead_id INTEGER REFERENCES leads(id),
                 company_id INTEGER NOT NULL REFERENCES companies(id),
                 contact_id INTEGER REFERENCES contacts(id),
                 currency VARCHAR(10) DEFAULT 'JPY',
@@ -832,6 +914,29 @@ async def setup_test_db(test_engine):
                 subtotal NUMERIC(15, 2) NOT NULL,
                 sort_order INTEGER DEFAULT 0,
                 hs_code VARCHAR(20)
+            )
+        """))
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS order_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL DEFAULT 999,
+                order_id INTEGER NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+                product_id INTEGER REFERENCES products(id),
+                product_name VARCHAR(255) NOT NULL,
+                name_en VARCHAR(255),
+                condition VARCHAR(50),
+                unit VARCHAR(20),
+                sku VARCHAR(100),
+                quantity INTEGER NOT NULL DEFAULT 1,
+                unit_price NUMERIC(15, 2) NOT NULL,
+                subtotal NUMERIC(15, 2) NOT NULL,
+                weight NUMERIC(10, 3),
+                hs_code VARCHAR(20),
+                usd_unit_value NUMERIC(15, 2),
+                exchange_rate_usd NUMERIC(12, 4),
+                sort_order INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
         await conn.execute(text("""
@@ -928,10 +1033,17 @@ async def setup_test_db(test_engine):
                 tenant_id INTEGER NOT NULL DEFAULT 999,
                 supplier_code VARCHAR(20),
                 name VARCHAR(255) NOT NULL,
+                line_name VARCHAR(255),
+                supplier_type VARCHAR(20) DEFAULT 'corporate',
                 contact_name VARCHAR(255),
                 email VARCHAR(255),
                 phone VARCHAR(50),
                 address TEXT,
+                postal_code VARCHAR(20),
+                prefecture VARCHAR(100),
+                city VARCHAR(100),
+                address1 TEXT,
+                address2 TEXT,
                 notes TEXT,
                 is_active BOOLEAN DEFAULT TRUE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -948,6 +1060,8 @@ async def setup_test_db(test_engine):
                 total_amount NUMERIC(15, 2) DEFAULT 0,
                 ordered_at TIMESTAMP,
                 received_at TIMESTAMP,
+                paid_at TIMESTAMP,
+                shipping_fee NUMERIC(15, 2) DEFAULT 0,
                 notes TEXT,
                 created_by INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -962,6 +1076,7 @@ async def setup_test_db(test_engine):
                 quantity INTEGER NOT NULL DEFAULT 1,
                 unit_cost NUMERIC(15, 2) NOT NULL,
                 subtotal NUMERIC(15, 2) NOT NULL,
+                order_item_id INTEGER REFERENCES order_items(id),
                 sort_order INTEGER DEFAULT 0
             )
         """))
@@ -1136,10 +1251,10 @@ async def setup_test_db(test_engine):
         await conn.execute(text("""
             CREATE TABLE IF NOT EXISTS deal_close_reasons (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                deal_id INTEGER NOT NULL REFERENCES deals(id),
+                lead_id INTEGER REFERENCES leads(id),
                 reason_id INTEGER NOT NULL REFERENCES close_reasons(id),
                 is_primary INTEGER NOT NULL DEFAULT 0,
-                UNIQUE (deal_id, reason_id)
+                UNIQUE (lead_id, reason_id)
             )
         """))
         # Google Drive 連携設定テーブル（中重要度 audit テスト用）
@@ -1267,6 +1382,22 @@ async def setup_test_db(test_engine):
                 PRIMARY KEY (tenant_id, feature_key)
             )
         """))
+        # attachment-storage 便4: 添付ファイル保管台帳（SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS lead_attachments (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                lead_id INTEGER NOT NULL,
+                message_id TEXT NOT NULL UNIQUE,
+                platform TEXT NOT NULL DEFAULT 'discord',
+                file_path TEXT NOT NULL,
+                file_size INTEGER NOT NULL DEFAULT 0,
+                content_type TEXT,
+                original_filename TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield
 
 
@@ -1298,6 +1429,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM notification_channels"))
         await conn.execute(text("DELETE FROM purchase_order_items"))
         await conn.execute(text("DELETE FROM purchase_orders"))
+        await conn.execute(text("DELETE FROM order_items"))
         await conn.execute(text("DELETE FROM suppliers"))
         # Sprint 8: tenant_profile
         await conn.execute(text("DELETE FROM tenant_profile"))
@@ -1311,7 +1443,7 @@ async def db_session(test_engine, setup_test_db):
         await conn.execute(text("DELETE FROM orders"))
         await conn.execute(text("DELETE FROM products"))
         await conn.execute(text("DELETE FROM deal_close_reasons"))
-        await conn.execute(text("DELETE FROM deals"))
+        # 便D-1: DELETE FROM deals 除去済み（deals テーブルはテスト環境に存在しない）
         await conn.execute(text("DELETE FROM close_reasons"))
         # ADR-138: デフォルト理由を再投入（テスト間の独立性確保）
         await conn.execute(text("""
@@ -1491,7 +1623,8 @@ async def client(db_session):
     from contextlib import ExitStack
     _audit_targets = [
         # ADR-089 Sprint 3: app.routers.customers 廃止済み
-        "app.routers.deals", "app.routers.orders",
+        # deal-removal 便C: app.routers.deals 廃止済み
+        "app.routers.orders",
         "app.routers.order_financials",
         "app.routers.order_shipping_details",
         "app.routers.order_purchase_details",

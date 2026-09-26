@@ -2,10 +2,10 @@ name: active-work integrity
 
 on:
   push:
-    branches: [develop]
+    branches: [main, develop]
     paths: ['.claude-pipeline/active-work.md']
   pull_request:
-    branches: [develop]
+    branches: [main, develop]
     paths: ['.claude-pipeline/active-work.md']
 
 jobs:

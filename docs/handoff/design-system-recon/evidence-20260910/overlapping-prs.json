@@ -1,0 +1,354 @@
+[
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "CLAUDE.md",
+        "additions": 0,
+        "deletions": 1
+      },
+      {
+        "path": "docs/handoff/color-tokens-ssot/recon.md",
+        "additions": 7,
+        "deletions": 7
+      },
+      {
+        "path": "docs/handoff/color-tokens-ssot/verify-navy-css-only.md",
+        "additions": 83,
+        "deletions": 0
+      },
+      {
+        "path": "docs/handoff/color-tokens-ssot/verify-navy-final.md",
+        "additions": 57,
+        "deletions": 0
+      },
+      {
+        "path": "docs/specs/design-system/design.md",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/components.css",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/components/Badge.css",
+        "additions": 6,
+        "deletions": 6
+      },
+      {
+        "path": "frontend/src/components/EmptyState.css",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/constants/icons.tsx",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/constants/platform-icon.css",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "path": "frontend/src/index.css",
+        "additions": 60,
+        "deletions": 26
+      },
+      {
+        "path": "frontend/src/mobile-shell.css",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/pages/dashboard/DashboardPage.css",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/pages/inbox/InboxPage.css",
+        "additions": 2,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/sidebar.css",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/tokens.css",
+        "additions": 0,
+        "deletions": 18
+      }
+    ],
+    "headRefName": "release/color-tokens-ssot-merge",
+    "headRefOid": "af85323e45f504fabe02abebe924f71f03b2b8bf",
+    "isDraft": false,
+    "number": 2911,
+    "state": "OPEN",
+    "title": "style(color): 色トークンSSOT統合（icon/navy/tokens-cal/design 4本を1本に）",
+    "updatedAt": "2026-07-14T15:25:26Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " frontend/src/index.css                       | 89 +++++++++++++++++++---------\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 +++++------\n frontend/src/tokens.css                      | 44 --------------\n 3 files changed, 78 insertions(+), 90 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "frontend/src/index.css",
+        "additions": 6,
+        "deletions": 6
+      }
+    ],
+    "headRefName": "release/color-token-dedup",
+    "headRefOid": "86417cd4a469f983d14a6cfc365c2ca2033d9b1e",
+    "isDraft": false,
+    "number": 2914,
+    "state": "OPEN",
+    "title": "style(color): 色トークン辞書の整理（別名化＋リンク青化＋孤児削除）",
+    "updatedAt": "2026-07-15T00:51:27Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " frontend/src/index.css                       | 15 +++++-------\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 ++++++++++++++--------------\n frontend/src/tokens.css                      | 26 ---------------------\n 3 files changed, 24 insertions(+), 52 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "frontend/src/index.css",
+        "additions": 4,
+        "deletions": 4
+      }
+    ],
+    "headRefName": "release/color-dup2-alias",
+    "headRefOid": "2e7c09e80ce6deb70e11746d7007ce1cb31089fb",
+    "isDraft": false,
+    "number": 2919,
+    "state": "OPEN",
+    "title": "style(color): 役割同一の同色重複を別名化（重複解消・見た目不変）",
+    "updatedAt": "2026-07-15T06:40:38Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " frontend/src/index.css                       | 11 ++++-----\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 ++++++++++++++--------------\n frontend/src/tokens.css                      | 26 ---------------------\n 3 files changed, 22 insertions(+), 50 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "frontend/src/features/schedule/calendars.config.ts",
+        "additions": 21,
+        "deletions": 25
+      },
+      {
+        "path": "frontend/src/index.css",
+        "additions": 42,
+        "deletions": 0
+      },
+      {
+        "path": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+        "additions": 5,
+        "deletions": 5
+      }
+    ],
+    "headRefName": "release/calendar-color-impl",
+    "headRefOid": "6dd8b1a156dc5d0119b4a2d8cf59d950efba1478",
+    "isDraft": false,
+    "number": 2889,
+    "state": "OPEN",
+    "title": "style(color): カレンダー色をCSS変数化",
+    "updatedAt": "2026-07-12T07:02:56Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " frontend/src/index.css                       | 45 ++++++++++++++++++++++++++--\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 +++++++++++-----------\n frontend/src/tokens.css                      | 26 ----------------\n 3 files changed, 60 insertions(+), 46 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "CLAUDE.md",
+        "additions": 0,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/components.css",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/components/Badge.css",
+        "additions": 6,
+        "deletions": 6
+      },
+      {
+        "path": "frontend/src/components/EmptyState.css",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/constants/icons.tsx",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/constants/platform-icon.css",
+        "additions": 1,
+        "deletions": 0
+      },
+      {
+        "path": "frontend/src/index.css",
+        "additions": 34,
+        "deletions": 0
+      },
+      {
+        "path": "frontend/src/mobile-shell.css",
+        "additions": 3,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/pages/dashboard/DashboardPage.css",
+        "additions": 1,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/pages/inbox/InboxPage.css",
+        "additions": 2,
+        "deletions": 3
+      },
+      {
+        "path": "frontend/src/sidebar.css",
+        "additions": 3,
+        "deletions": 3
+      }
+    ],
+    "headRefName": "release/icon-color-impl",
+    "headRefOid": "8cca08eaf8d2d401e760ab7a0f0ce1f4d99f6632",
+    "isDraft": false,
+    "number": 2895,
+    "state": "OPEN",
+    "title": "style(color): アイコン色を用途別--icon-*トークンに集約",
+    "updatedAt": "2026-07-14T08:11:41Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " frontend/src/index.css                       | 37 +++++++++++++++++++++++++---\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 +++++++++++++-------------\n frontend/src/tokens.css                      | 26 -------------------\n 3 files changed, 52 insertions(+), 46 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": "frontend/src/components/FormField.css",
+        "additions": 27,
+        "deletions": 5
+      },
+      {
+        "path": "frontend/src/components/Select.stories.tsx",
+        "additions": 17,
+        "deletions": 1
+      },
+      {
+        "path": "frontend/src/components/Select.tsx",
+        "additions": 54,
+        "deletions": 16
+      },
+      {
+        "path": "frontend/src/pages/invoices/InvoicesPage.tsx",
+        "additions": 9,
+        "deletions": 4
+      },
+      {
+        "path": "tasks/todo.md",
+        "additions": 1,
+        "deletions": 0
+      }
+    ],
+    "headRefName": "release/morimoto/select-control-bare-select",
+    "headRefOid": "03de7daac04b535af5ba729111a695e59c1acc87",
+    "isDraft": true,
+    "number": 2668,
+    "state": "OPEN",
+    "title": "release: select-control bare Select pilot",
+    "updatedAt": "2026-06-28T12:58:27Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " .github/workflows/design-token-guard.yml     | 20 ----------------\n frontend/src/index.css                       |  3 ---\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 ++++++++++++++--------------\n frontend/src/tokens.css                      | 26 ---------------------\n 4 files changed, 18 insertions(+), 66 deletions(-)\n",
+    "diff_exit": 0
+  },
+  {
+    "author": {
+      "id": "U_kgDODkCfvQ",
+      "is_bot": false,
+      "login": "shingo-cc",
+      "name": "shingo-cc"
+    },
+    "files": [
+      {
+        "path": ".github/workflows/design-token-guard.yml",
+        "additions": 3,
+        "deletions": 0
+      },
+      {
+        "path": "frontend/scripts/check-tsx-style-colors.js",
+        "additions": 54,
+        "deletions": 0
+      }
+    ],
+    "headRefName": "release/guard-tsx-style-color",
+    "headRefOid": "3eafc15c74c4b1dc62b0a30a8a91825158aacf3c",
+    "isDraft": false,
+    "number": 2926,
+    "state": "OPEN",
+    "title": "feat(guard): .tsx UIスタイル色ガード（warn版・段階導入）",
+    "updatedAt": "2026-07-15T14:32:38Z",
+    "base_compared": "23413b10f29228ffce7c7bf0813649b1910cf6bb",
+    "ancestor_exit": 1,
+    "target_diff_stat": " .github/workflows/design-token-guard.yml     |  3 +++\n frontend/src/index.css                       |  3 ---\n frontend/src/pages/invoices/InvoicesPage.tsx | 35 ++++++++++++++--------------\n frontend/src/tokens.css                      | 26 ---------------------\n 4 files changed, 21 insertions(+), 46 deletions(-)\n",
+    "diff_exit": 0
+  }
+]

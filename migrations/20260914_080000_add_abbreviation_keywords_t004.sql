@@ -1,0 +1,28 @@
+-- ============================================================================
+-- Migration 20260914_080000: tenant_004 略語キーワード追加（検索語・除外語）
+--
+-- 目的:
+--   TCG解析エンジンが読む tenant_004.product_search_keywords /
+--   product_exclude_keywords に略語キーワードを追加する。
+--
+-- 根拠:
+--   PR #3495 の背景調査により、解析エンジンは public.products.search_keywords
+--   ではなく tenant_004 スキーマのテーブルを参照することが確認された。
+--   略語（「頂上」「決戦」等）がないとメッセージ内の短縮表記にマッチしない。
+--
+-- 対象テーブル:
+--   tenant_004.product_search_keywords  — 検索語（網）
+--   tenant_004.product_exclude_keywords — 除外語（壁）
+--
+-- UNIQUE制約: (product_id, keyword) → ON CONFLICT DO NOTHING で冪等
+-- position: 既存最大値が 13〜14 程度のため、20 から開始（衝突なし）
+--
+-- 承認: PR #3495
+-- ============================================================================
+--
+-- NEUTRALIZED (ADR-155, 2026-09-18):
+-- 商品マスタデータはアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'ADR-155 neutralized: abbreviation keywords removed — manage via app/CSV'; END $$;

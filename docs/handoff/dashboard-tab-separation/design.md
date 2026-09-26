@@ -1,0 +1,66 @@
+---
+title: "LINE解析ダッシュボード タブ分離 設計"
+recon: docs/handoff/dashboard-tab-separation/recon.md
+---
+
+## 設計
+
+### 原則
+各タブは自分の担当工程の問題だけを表示する。
+
+### タブ別変更
+
+| タブ | 変更内容 |
+|------|---------|
+| Import | 抽出関連の提供者テーブル削除、orphan_count警告追加 |
+| Extraction | 提供者別抽出エラー内訳テーブル追加（新規SQL） |
+| Analysis | 提供者別解析問題テーブル追加（既存API再利用） |
+| Distribution | 配信失敗/停止警告バッジ追加、解析ドメインデータ削除 |
+
+### SSOT遵守
+- 解析タブ: 既存 /tcg/supplier-quality-summaries API を再利用（新規エンドポイント不要）
+- 抽出タブ: 既存 pipeline-summary エンドポイントを拡張（extraction_by_supplier フィールド追加）
+
+### ADR遵守
+- ADR-027（UI国際化）: 全UI文字列を t("key") 経由で実装。ハードコード日本語なし。ja.json / en.json に同一キーを追加。詳細: docs/adr/ADR-027-ui-internationalization.md
+
+### 受入基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| インポートタブに抽出・解析データなし | コード確認: extraction/analysis フィールド参照なし |
+| 抽出タブに提供者別エラー表示 | 画面確認: エラーありの提供者がテーブルに表示 |
+| 解析タブに提供者別問題表示 | 画面確認: 問題ありの提供者がテーブルに表示 |
+| 配信タブに解析データなし | コード確認: analysis フィールド参照なし |
+| i18n完全 | check-i18n-missing-keys.js PASS |
+| デザインシステム遵守 | Badge/Card/DataTable のみ使用 |
+
+## 期間セレクタ追加 設計 (2026-09-25)
+
+### 変更範囲
+
+| 層 | 変更 |
+|---|---|
+| backend service | days clamp 90→360（pipeline_trend・import_trend両方） |
+| backend router | import-trend Query le=90→le=360 |
+| frontend state | `trendDays: number` (default 7) を AnalysisDashboardPanel に追加 |
+| frontend UI | `SelectControl` size="sm" をタブバー右端に配置（1つで全タブ共有） |
+| frontend fetch | pipeline-trend・import-trend を `days=${trendDays}` に変更 |
+| i18n | period7d/30d/90d/180d/360d/periodLabel キーを ja.json・en.json 両方に追加 |
+
+### 受入基準
+
+| 基準 | 検証方法 |
+|---|---|
+| ハードコード `days=7` なし | `grep "days=7" AnalysisDashboardPanel.tsx` でコメント行のみ |
+| 期間変更でAPIが再フェッチされる | ブラウザNetworkタブで days パラメータ確認 |
+| 360日まで選択可能 | セレクタで360日選択 → APIが200を返す |
+| i18n完全 | ja.json/en.json 同一キー確認済み |
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし（内部リファクタリング。タブ別責任分離は既存4タブ構成の中で完結し、外部ライブラリ・外部事例への参照は不要）
+
+## 維持の仕組み
+
+守り手: frontend/scripts/check-i18n-missing-keys.js

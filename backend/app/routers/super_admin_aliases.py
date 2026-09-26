@@ -58,7 +58,7 @@ async def list_product_options(
     conditions: list[str] = []
     params: dict = {"limit": limit}
     if q:
-        conditions.append("(name ILIKE :q OR name_en ILIKE :q OR product_code ILIKE :q)")
+        conditions.append("(name ILIKE :q OR name_en ILIKE :q OR id::text ILIKE :q)")
         params["q"] = f"%{q}%"
     where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
     result = await db.execute(

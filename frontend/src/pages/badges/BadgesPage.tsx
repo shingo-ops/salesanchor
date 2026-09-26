@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 
 interface Badge { id: number; name: string; description: string | null; icon: string | null; criteria: string | null; points: number; is_active: boolean; created_at: string; }
@@ -40,13 +41,13 @@ export default function BadgesPage() {
     <PageLayout
       navKey="nav.badges"
       subtitleKey="badges.subtitle"
-      headerAction={hasPermission("badges.manage") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => setShowForm(true)}>{t("badges.newBadge")}</button>
-        </div>
-      ) : undefined}
     >
       {error && <div className="error-message">{error}</div>}
+      {hasPermission("badges.manage") ? (
+        <ContentToolbar
+          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("badges.newBadge")}</button>}
+        />
+      ) : undefined}
       <Modal
         open={showForm}
         onClose={() => setShowForm(false)}

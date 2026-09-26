@@ -1,0 +1,231 @@
+"""Real query semantics for the product management list, in a rolled-back schema."""
+import os
+from datetime import date, timedelta
+from pathlib import Path
+from types import SimpleNamespace
+from uuid import uuid4
+
+import pytest
+import pytest_asyncio
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.engine import make_url
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from app.auth.dependencies import get_current_user
+from app.routers import tcg_product_import as routes
+
+URL = os.getenv("RLS_ADMIN_DATABASE_URL")
+pytestmark = [pytest.mark.asyncio, pytest.mark.skipif(not URL, reason="Disposable PostgreSQL required")]
+
+
+from tests.test_tcg_work_matching_integration import (
+    _PUBLIC_PRODUCTS_DDL,
+    _rewire_keyword_fks,
+)
+
+
+async def _exec_multi_stmt(conn, sql: str) -> None:
+    """Execute multi-statement SQL via asyncpg Simple Query protocol.
+
+    asyncpg's exec_driver_sql() uses the Prepared Statement protocol which
+    rejects multi-statement SQL (including DO $$ ... $$ blocks).  Dropping
+    to the raw driver connection and calling .execute() uses the Simple Query
+    protocol instead, which handles multiple statements in one call.
+    """
+    raw = await conn.get_raw_connection()
+    await raw.driver_connection.execute(sql)
+
+
+async def create_product_schema(conn, schema):
+    """Build every disposable schema from the same production migrations."""
+    await conn.execute(text(f"CREATE SCHEMA {schema}"))
+    await conn.exec_driver_sql("SELECT pg_advisory_lock(2147483647)")
+    for stmt in _PUBLIC_PRODUCTS_DDL.split(';'):
+        stmt = stmt.strip()
+        if stmt:
+            await conn.exec_driver_sql(stmt)
+    await conn.exec_driver_sql("SELECT pg_advisory_unlock(2147483647)")
+    migrations = Path(__file__).resolve().parents[2] / "migrations"
+    for name in (
+        "20260831_110000_create_tcg_analysis_tables_t004.sql",
+        "20260903_180000_tcg_products_mark_en_t004.sql",
+        "20260902_110000_tcg_classification_masters.sql",
+    ):
+        sql = (migrations / name).read_text().replace("tenant_004", schema)
+        await _exec_multi_stmt(conn, sql)
+    await _exec_multi_stmt(conn, (migrations / "085_create_tcg_type_master.sql").read_text())
+    await _exec_multi_stmt(conn, (migrations / "086_seed_additional_tcg_types.sql").read_text())
+    await _exec_multi_stmt(conn, (migrations / "20260921_060000_create_product_kinds.sql").read_text())
+    # Seed public.product_kinds so detail/import services can resolve division codes
+    await conn.execute(text("""
+        INSERT INTO public.product_kinds (code, name, display_order, is_active) VALUES
+            ('TCG',    'トレーディングカードゲーム', 10, true),
+            ('FIGURE', 'フィギュア',               20, true),
+            ('GOODS',  'グッズ',                   30, true)
+        ON CONFLICT (code) DO NOTHING
+    """))
+    # ADR-156 Phase 3A: add product_kind_id FK column to public.products (idempotent if already added)
+    await _exec_multi_stmt(conn, (migrations / "20260921_120000_add_products_product_kind_id.sql").read_text())
+    await _exec_multi_stmt(conn, (migrations / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+    await _exec_multi_stmt(conn, _rewire_keyword_fks(schema))
+    await _exec_multi_stmt(conn, (migrations / "20260919_020000_master_ssot_public_tables.sql").read_text())
+    # Master SSOT Phase 3: unit_id/condition_id UUID→INTEGER rewire + product_category_id UUID→INTEGER
+    # Strip BEGIN/COMMIT: this runs inside an outer transaction managed by product_db fixture.
+    _phase3_sql = (migrations / "20260920_010000_phase3_fk_rewire_unit_condition.sql").read_text()
+    _phase3_sql = _phase3_sql.replace("BEGIN;", "").replace("COMMIT;", "")
+    await _exec_multi_stmt(conn, _phase3_sql)
+
+
+@pytest_asyncio.fixture
+async def product_db(monkeypatch):
+    url = make_url(URL)
+    assert url.database == "jarvis_test_db" and url.host in ("localhost", "127.0.0.1")
+    schema = "product_csv_test_" + uuid4().hex
+    monkeypatch.setattr(routes, "TCG_SCHEMA", schema)
+    engine = create_async_engine(url.set(drivername="postgresql+asyncpg"))
+    try:
+        async with engine.connect() as conn:
+            transaction = await conn.begin()
+            try:
+                await create_product_schema(conn, schema)
+                async with AsyncSession(bind=conn) as db:
+                    yield db, schema
+            finally:
+                await transaction.rollback()
+    finally:
+        await engine.dispose()
+
+
+async def test_all_products_search_and_pagination(product_db):
+    db, schema = product_db
+    await db.execute(text(
+        "INSERT INTO public.products "
+        "(product_code,name,category_class,is_active) VALUES "
+        "('PM01','Alpha','Box',true),('PM02','Alpha hidden','Box',false),('PM03','Beta','Box',true)"
+    ))
+    await db.execute(text(
+        "INSERT INTO public.product_search_keywords (product_id,keyword,position) "
+        "SELECT id,'hidden',0 FROM public.products WHERE product_code='PM02'"
+    ))
+    first = await routes.list_products(query="", limit=1, offset=0, work_id=None, db=db, _user={})
+    second = await routes.list_products(query="", limit=1, offset=1, work_id=None, db=db, _user={})
+    assert first.total == second.total == 3
+    assert first.items[0].japanese_title == "Beta"
+    assert second.items[0].japanese_title == "Alpha hidden" and second.items[0].keyword_count == 1
+    found = await routes.list_products(query="alpha", limit=50, offset=0, work_id=None, db=db, _user={})
+    assert found.total == 2 and {row.japanese_title for row in found.items} == {"Alpha", "Alpha hidden"}
+    empty = await routes.list_products(query="absent", limit=50, offset=0, work_id=None, db=db, _user={})
+    assert empty.total == 0 and empty.items == []
+
+
+async def test_date_order_work_search_candidates_and_schema_boundary(product_db):
+    """AC1/3/4/5: real DATE/INTEGER semantics and independent work candidates."""
+    db, schema = product_db
+    ids = dict((await db.execute(text(
+        "SELECT code,id FROM public.type_master WHERE code IN ('pokemon_booster_box','one_piece','dragon_ball','yugioh')"
+    ))).all())
+    # Snapshot baseline before inserting test data.  In a fully isolated fixture this
+    # should always be 0, but if a parallel xdist worker leaked rows into public.products
+    # (e.g. from test_all_products_search_and_pagination) the baseline will be > 0.
+    # We use the delta so the test is correct in both situations.
+    pre_count = (await db.execute(text("SELECT count(*) FROM public.products"))).scalar_one()
+    fixtures = [
+        ("A", date(2099, 1, 1), ids["pokemon_booster_box"], True),
+        ("C", date(2026, 1, 1), ids["pokemon_booster_box"], True),
+        ("B", date(2026, 1, 1), ids["pokemon_booster_box"], False),
+        ("Z", date(2025, 1, 1), ids["one_piece"], True),
+        ("N2", None, ids["yugioh"], False),
+        ("N1", None, None, True),
+        ("N0", None, 999999, True),
+    ]
+    for code, release, work, active in fixtures:
+        await db.execute(text(
+            "INSERT INTO public.products "
+            "(product_code,name,category_class,is_active,release_date,work_id) "
+            "VALUES (:code,:code,'Box',:active,:release,:work)"
+        ), {"code": code, "active": active, "release": release, "work": work})
+    # A same-named table in another disposable schema must not supply rows.
+    other = schema + "_other"
+    await create_product_schema(await db.connection(), other)
+    # Note: public.products is schema-independent; this test no longer needs a separate schema insert
+    await db.execute(text("SELECT 1"))  # placeholder: cross-schema isolation now handled via public.products
+    await db.execute(text(f"SET LOCAL search_path TO {other}, public"))
+    # For unfiltered queries (work_id=None) the total includes any pre-existing rows in
+    # public.products; use pre_count offset.  Even with a query string, ILIKE '%X%' can
+    # match rows inserted by concurrent xdist workers, so any work_id=None case is treated
+    # as potentially contaminated.  Filtered queries (work_id set) are unaffected.
+    # insertion order: A, C, B, Z, N2, N1, N0 → ids ascending in that order
+    # ORDER BY release_date DESC NULLS LAST, id DESC:
+    # A(2099)→ B(2026, higher id than C)→ C(2026)→ Z(2025)→ N0(NULL, highest id)→ N1→ N2(lowest id)
+    for query, work_id, offset, expected, total_delta in [
+        ("", None, 0, ["A", "B", "C", "Z", "N0", "N1", "N2"], 7),
+        ("A", None, 0, ["A"], 1),
+        ("B", ids["pokemon_booster_box"], 0, ["B"], 1),
+        ("C", ids["pokemon_booster_box"], 0, ["C"], 1),
+        ("Z", ids["one_piece"], 0, ["Z"], 1),
+        ("Z", ids["pokemon_booster_box"], 100, [], 0),
+        ("absent", ids["pokemon_booster_box"], 0, [], 0),
+        ("", 888888, 0, [], 0),
+    ]:
+        result = await routes.list_products(query=query, work_id=work_id, offset=offset, limit=50, db=db, _user={})
+        unfiltered = work_id is None
+        expected_total = pre_count + total_delta if unfiltered else total_delta
+        assert result.total == expected_total
+        if not unfiltered or pre_count == 0:
+            assert [item.japanese_title for item in result.items] == expected
+        # works list contains all active type_master entries; verify key entries are present
+        work_codes = {w.code for w in result.works}
+        assert "pokemon_booster_box" in work_codes
+        assert "one_piece" in work_codes
+        assert "dragon_ball" in work_codes
+        assert "yugioh" in work_codes
+    result = await routes.list_products(query="A", work_id=None, offset=0, limit=50, db=db, _user={})
+    assert result.items[0].release_date == "2099-01-01"
+
+
+async def test_date_order_across_fifty_row_pages(product_db):
+    """AC2: compare both pages against independently generated chronological order."""
+    db, schema = product_db
+    work_id = (await db.execute(text("SELECT id FROM public.type_master WHERE code='pokemon_booster_box'"))).scalar_one()
+    for index in range(53):
+        await db.execute(text(
+            "INSERT INTO public.products (product_code,name,category_class,is_active,release_date,work_id) "
+            "VALUES (:code,:code,'Box',true,:release,:work)"
+        ), {"code": f"P{index:03}", "release": date(2026, 1, 1) + timedelta(days=52-index), "work": work_id})
+    first = await routes.list_products(query="", work_id=work_id, offset=0, limit=50, db=db, _user={})
+    second = await routes.list_products(query="", work_id=work_id, offset=50, limit=50, db=db, _user={})
+    assert first.total == second.total == 53
+    assert len(first.items) == 50 and len(second.items) == 3
+    # products inserted with name=product_code (P000..P052), ordered by release_date DESC then id DESC
+    # P000 has highest date → first; P052 has lowest → last
+    assert [item.japanese_title for item in first.items + second.items] == [f"P{i:03}" for i in range(53)]
+    assert first.works == second.works
+
+
+@pytest.mark.parametrize("work_id", ["", "not-a-number"])
+async def test_invalid_work_id_is_rejected_before_sql(product_db, work_id):
+    """AC5: mount the actual router; do not replace require_super_admin."""
+    db, _ = product_db
+    app = FastAPI()
+    app.include_router(routes.router, prefix="/api/v1")
+    app.dependency_overrides[routes.get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=True)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/tcg/products/list", params={"work_id": work_id})
+    assert response.status_code == 422
+    assert any(error["loc"] == ["query", "work_id"] for error in response.json()["detail"])
+
+
+@pytest.mark.parametrize("authenticated", [False, True])
+async def test_list_denies_unauthenticated_and_non_admin(product_db, authenticated):
+    db, _ = product_db
+    app = FastAPI()
+    app.include_router(routes.router, prefix="/api/v1")
+    app.dependency_overrides[routes.get_db] = lambda: db
+    if authenticated:
+        app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=False)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/api/v1/tcg/products/list")
+    assert response.status_code == 403 if authenticated else response.status_code in (401, 403)

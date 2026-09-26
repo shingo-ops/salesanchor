@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" font-family="sans-serif">
+  <style>
+    .t{font-size:13px;fill:#1a1a1a}.s{font-size:11px;fill:#555}.h{font-size:14px;font-weight:600;fill:#1a1a1a}
+    .card{fill:#f6f4ef;stroke:#9a968e;stroke-width:0.8}
+    .teal{fill:#e0efee;stroke:#3E7C7B;stroke-width:0.5}.amber{fill:#fdf0d9;stroke:#D9932B;stroke-width:0.5}
+  </style>
+  <text class="h" x="185" y="26" text-anchor="middle">未来志向カードの型（全指標共通）</text>
+  <rect class="card" x="30" y="44" width="310" height="230" rx="10"/>
+  <text class="s" x="50" y="72">(1) 現在地　¥3.2M（達成率64%）</text>
+  <text class="s" x="50" y="102">(2) 着地予測　このままなら ¥4.6M</text>
+  <text class="s" x="50" y="132">(3) 目標　¥5.0M（点線=ゴール）</text>
+  <text class="s" x="50" y="162">(4) 差分の行動翻訳　あと¥0.4M=見積4件</text>
+  <rect class="teal" x="46" y="182" width="160" height="30" rx="15"/><text class="s" x="126" y="201" text-anchor="middle">(5) 水曜に4件送る -&gt;</text>
+  <text class="s" x="50" y="244">「今どこ・どこに着く・</text>
+  <text class="s" x="50" y="262">　何をすれば変わる」に必ず答える</text>
+  <text class="h" x="530" y="26" text-anchor="middle">目標が未設定のとき</text>
+  <rect class="card" x="410" y="44" width="240" height="230" rx="10"/>
+  <text class="s" x="530" y="88" text-anchor="middle">数値もバッジも出さない</text>
+  <text class="s" x="530" y="112" text-anchor="middle">（行き先のない地図は描かない）</text>
+  <rect class="amber" x="450" y="140" width="160" height="34" rx="17"/><text class="s" x="530" y="161" text-anchor="middle">目標を設定する -&gt;</text>
+  <text class="s" x="530" y="212" text-anchor="middle">最初のCTA=目的地を決めること</text>
+  <text class="s" x="530" y="234" text-anchor="middle">（D9 目標設定ページへ1クリック）</text>
+  <line x1="345" y1="159" x2="405" y2="159" stroke="#9a968e" stroke-width="1"/>
+  <polygon points="405,159 397,155 397,163" fill="#9a968e"/>
+</svg>

@@ -24,6 +24,7 @@ from typing import Any, Sequence
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.gemini_extraction_svc import _safe_error_message
 from app.services.inventory_parser_llm import (
     LLMConfigError,
     LLMParseError,
@@ -37,8 +38,8 @@ logger = logging.getLogger(__name__)
 # Config (env override 可能。方針は固定: 送信=最上位必須)
 # ---------------------------------------------------------------------------
 
-MODEL_RECEIVE: str = os.getenv("TRANSLATION_MODEL_RECEIVE", "gemini-2.5-flash")
-MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-2.5-pro")
+MODEL_RECEIVE: str = os.getenv("TRANSLATION_MODEL_RECEIVE", "gemini-3.5-flash-lite")
+MODEL_SEND: str = os.getenv("TRANSLATION_MODEL_SEND", "gemini-3.5-flash-lite")
 CONF_THRESHOLD_RECEIVE: float = float(
     os.getenv("TRANSLATION_CONFIDENCE_THRESHOLD_RECEIVE", "0.70")
 )
@@ -413,7 +414,7 @@ async def _call_gemini(
             loop = asyncio.get_running_loop()
             response = await loop.run_in_executor(None, model.generate_content, prompt)
     except Exception as exc:
-        logger.exception("[message_translator] Gemini call failed (model=%s): %s", model_name, exc)
+        logger.exception("[message_translator] Gemini call failed (model=%s): %s", model_name, _safe_error_message(exc))
         raise LLMParseError(f"Gemini API 呼び出し失敗: {exc}") from exc
 
     text_payload = getattr(response, "text", "") or ""

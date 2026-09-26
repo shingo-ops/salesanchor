@@ -1,0 +1,25 @@
+-- 商品マスタ キーワード整備 11項目（tenant_004 専用・冪等）
+--
+-- 目的: 除外キーワードが自分自身の商品を弾く「自己矛盾」を解消し、
+--       類似商品を弾く壁が無い商品に壁を足す。あわせて死に商品1件を無効化する。
+--
+-- 承認: Shingo 2026-09-07
+-- 根拠: CARD-PMG-SELFCONFLICT-01 / CARD-PMG-SIBLING-01 / CARD-PMG-FIX10-01 の実測
+--       docs/handoff/tcg-product-master-growth/design.md 1章（検索語=網 / 除外語=壁）
+--
+-- 実測済みの問題（2026-09-07）:
+--   PM0172「THE BEST vol.2」が除外語「THE BEST」で自滅し、
+--   原文「PRB-02 THE BEST vol.2」等が NONE になっていた。
+--   さらに原文「ONE PIECE CARD THE BEST PRB-02」が PM0137（vol.1）に誤解決していた。
+--
+-- 設計判断:
+--   - 削除は5本のみ。いずれも自分自身の商品名の一部を壁にしていたもの
+--   - 検証は担当範囲（対象11商品）だけを数える。テーブル全体を数えない
+--   - 冪等: 削除は存在しなくてもエラーにしない。追加は重複チェック付き
+--
+-- NEUTRALIZED (ADR-155, 2026-09-18):
+-- 商品マスタデータはアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'ADR-155 neutralized: keyword hygiene operations removed — manage via app/CSV'; END $$;

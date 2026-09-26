@@ -1,0 +1,86 @@
+[
+  {
+    "check": "check-css-hardcoded-colors",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ CSS色チェック PASSED（hex・rgba 違反なし）"
+    ]
+  },
+  {
+    "check": "check-css-hardcoded-values",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ CSS数値ハードコードチェック PASSED"
+    ]
+  },
+  {
+    "check": "check-dark-parity",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ ダークモード変数パリティチェック PASSED (120 変数すべて対応済み)"
+    ]
+  },
+  {
+    "check": "check-css-var-fallbacks",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ CSS var フォールバックチェック PASSED"
+    ]
+  },
+  {
+    "check": "check-page-layout",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ PageLayout チェック PASSED（raw <h2> なし・subtitleKey 付与済み）"
+    ]
+  },
+  {
+    "check": "check-content-toolbar",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ 操作台チェック PASSED（page-content-actions の使用なし）"
+    ]
+  },
+  {
+    "check": "check-icon-sync",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "[icon-sync] ✅ All 5 icon sizes in sync (tokens.css ↔ iconSizes.ts)"
+    ]
+  },
+  {
+    "check": "check-stories-count",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "✅ check:stories — 全 38 コンポーネントに stories が存在します"
+    ]
+  },
+  {
+    "check": "check-color-token-sync",
+    "exit": 0,
+    "lines": 1,
+    "tail": [
+      "[color-token-sync] ✅ 全 37 カラートークンが同期済み（index.css ↔ DesignSystemPage COLOR_TOKENS）"
+    ]
+  },
+  {
+    "check": "check-unused-tokens",
+    "exit": 0,
+    "lines": 35,
+    "tail": [
+      "   --calendar-today-text                         (src/index.css)",
+      "   --calendar-today-cell-bg                      (src/index.css)",
+      "",
+      "対処: 不要なトークンは削除、または使用箇所がある場合は検索パターンを確認してください。",
+      "     意図的に未使用の場合は EXEMPT_PREFIXES に prefix を追加してください。"
+    ]
+  }
+]

@@ -1,0 +1,67 @@
+# design: fix-supplier-migration-wiring
+
+## recon 参照
+
+docs/handoff/fix-supplier-migration-wiring/recon.md
+
+## 関連 ADR
+
+- docs/adr/ADR-1001-deprecate-tcg-products-unify-to-public.md
+
+## 変更内容
+
+### 修正1: backend/app/line_import_admin.py
+
+backend/app/line_import_admin.py の from app.tcg_config import TCG_SCHEMA を削除し、ローカル定義に変更。
+
+変更前:
+```
+from app.tcg_config import TCG_SCHEMA  # noqa: E402
+```
+
+変更後:
+```
+# Step 4/5: TCG テーブルは public スキーマに移行済み。
+# テスト互換性のため TCG_SCHEMA 属性を維持する（monkeypatch.setattr 対象）。
+TCG_SCHEMA = "public"
+```
+
+### 修正2: backend/app/tcg_config.py
+
+デフォルト値とバリデーション正規表現を更新。
+
+変更前:
+```
+_RAW: str = os.getenv("TCG_SCHEMA", "tenant_004")
+_VALID = re.compile(r"^tenant_\d{3}$")
+```
+
+変更後:
+```
+_RAW: str = os.getenv("TCG_SCHEMA", "public")
+_VALID = re.compile(r"^(tenant_\d{3}|public)$")
+```
+
+## KGI/KPI
+
+| 基準 | 検証方法 |
+|------|---------|
+| backend/app/line_import_admin.py に from app.tcg_config import TCG_SCHEMA が存在しない | grep が 0 件 |
+| 環境変数未設定時のデフォルト値が public | python -c "from app.tcg_config import TCG_SCHEMA; print(TCG_SCHEMA)" が public を出力 |
+| TCG_SCHEMA=public 設定時にエラーが出ない | exit 0 |
+
+## 弊害・リスク
+
+- backend/app/tcg_config.py を import している他ファイル（9ファイル）は、デフォルト値が安全側（public）に変わるのみ。既存動作を壊さない。
+- 旧 tenant_004 スキーマへの接続が必要な場合は環境変数 TCG_SCHEMA=tenant_004 で上書き可能（正規表現も許容）。
+
+## 外部・過去事例の参照と我々への応用
+
+前回の移行済みファイルのパターン（PR #3663 release/line-import-schema-rewire で確立済み）を踏襲。
+同 PR で移行済みの他ファイルと同じローカル定義パターンを適用する。
+
+## 維持の仕組み
+
+守り手: backend CI + ruff（import チェック）
+- backend/app/tcg_config.py のデフォルト値・バリデーション正規表現は環境変数 TCG_SCHEMA で制御される
+- 新規ファイルで TCG_SCHEMA を参照する場合は、ローカル定義 TCG_SCHEMA = "public" パターンを使用すること

@@ -21,8 +21,10 @@ import MergeLeadModal from "../../components/MergeLeadModal";
 import PriorityScoreBadge, { type CustomerScoreData } from "../../components/PriorityScoreBadge";
 import { ChannelTypeCombobox } from "../../components/ChannelTypeCombobox";
 import { Select } from "../../components/Select";
+import { ContentToolbar } from "../../components/ContentToolbar";
 import { usePermissions } from "../../hooks/usePermissions";
 import { useSSE } from "../../hooks/useSSE";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { getStatusPresentation } from "../../utils/statusPresentation";
@@ -30,8 +32,8 @@ import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStat
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { useRecordDrawer } from "../../hooks/useRecordDrawer";
-import { LeadFormFields } from "./LeadFormFields";
-import type { LeadFormState } from "./LeadFormFields";
+import { LeadFormFields, buildLostReasonUpdatePayload, type LeadFormState } from "./LeadFormFields";
+import { getCloseReasons, type CloseReasonResponse } from "../../api/closeReasons";
 
 /* ------------------------------------------------------------------ */
 /* Lead types                                                           */
@@ -55,7 +57,6 @@ interface Lead {
   monthly_forecast: number | null;
   prospect_rank: string | null;
   assigned_to: number | null;
-  converted_deal_id: number | null;
   notes: string | null;
   country: string | null;
   created_at: string;
@@ -94,6 +95,7 @@ const emptyCreateForm: CreateFormState = {
 const emptyEditForm: LeadFormState = {
   customer_name: "", email: "", phone: "",
   status: "lead", type: "", notes: "", country: "",
+  close_reason_id: "", close_reason_memo: "",
 };
 
 const toForm = (l: Lead): LeadFormState => ({
@@ -104,6 +106,8 @@ const toForm = (l: Lead): LeadFormState => ({
   type: l.type || "",
   notes: l.notes || "",
   country: l.country || "",
+  close_reason_id: "",
+  close_reason_memo: "",
 });
 
 /* ------------------------------------------------------------------ */
@@ -132,6 +136,7 @@ export default function LeadsPage() {
   const [convertCompanyId, setConvertCompanyId] = useState<number | null>(null);
   const [convertContactId, setConvertContactId] = useState<number | null>(null);
   const [convertSelectorError, setConvertSelectorError] = useState("");
+  const [closeReasonOptions, setCloseReasonOptions] = useState<CloseReasonResponse[]>([]);
 
   // ADR-109: status codes with i18n labels
   const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
@@ -154,6 +159,24 @@ export default function LeadsPage() {
   useEffect(() => {
     loadLeads();
   }, [loadLeads]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadCloseReasons = async () => {
+      try {
+        const reasons = await getCloseReasons("lost");
+        if (!cancelled) setCloseReasonOptions(reasons);
+      } catch (e) {
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : t("common.fetchError"));
+        }
+      }
+    };
+    void loadCloseReasons();
+    return () => {
+      cancelled = true;
+    };
+  }, [t]);
 
   // Phase 3 SSE: 他スタッフのリード作成・更新・削除を即時反映
   useSSE({
@@ -199,6 +222,11 @@ export default function LeadsPage() {
     setError("");
     const toNull = (v: string) => (v ? v : null);
     try {
+      const lostReasonPayload = buildLostReasonUpdatePayload(
+        editForm.status,
+        editForm.close_reason_id,
+        editForm.close_reason_memo,
+      );
       await api.patch(`/leads/${editId}`, {
         customer_name: editForm.customer_name,
         email: toNull(editForm.email),
@@ -207,6 +235,7 @@ export default function LeadsPage() {
         type: toNull(editForm.type),
         notes: toNull(editForm.notes),
         country: toNull(editForm.country),
+        ...lostReasonPayload,
       });
       closeDrawer();
       loadLeads();
@@ -267,23 +296,24 @@ export default function LeadsPage() {
     <PageLayout
       navKey="nav.leadsSection"
       subtitleKey="leads.subtitle"
-      headerAction={hasPermission("leads.create") ? (
-        <div className="page-header-actions">
-          <button className="btn-primary" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
-        </div>
-      ) : undefined}
     >
-      <div className="filter-bar">
-        <Select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          placeholder={t("leads.allStatuses")}
-          options={LEAD_STATUSES.map((s) => ({
-            value: s,
-            label: translateLeadStatus(s),
-          }))}
-        />
-      </div>
+      <ContentToolbar
+        left={
+          <Select
+            className="field-h-md field-w-sm"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            placeholder={t("leads.allStatuses")}
+            options={LEAD_STATUSES.map((s) => ({
+              value: s,
+              label: translateLeadStatus(s),
+            }))}
+          />
+        }
+        right={hasPermission("leads.create") ? (
+          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
+        ) : undefined}
+      />
 
       {error && <div className="error-message">{error}</div>}
 
@@ -407,8 +437,8 @@ export default function LeadsPage() {
             />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowCreate(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>
@@ -467,10 +497,10 @@ export default function LeadsPage() {
           )},
           { key: "actions", header: t("leads.actions"), renderCell: (l) => (
             <span className="actions" onClick={(e) => e.stopPropagation()}>
-              {hasPermission("leads.convert") && !l.converted_deal_id && (
+              {hasPermission("leads.convert") && l.status === "lead" && (
                 <button className="btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</button>
               )}
-              {hasPermission("leads.delete") && !l.converted_deal_id && (
+              {hasPermission("leads.delete") && l.status === "lead" && (
                 <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</button>
               )}
               {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</button>}
@@ -502,13 +532,14 @@ export default function LeadsPage() {
       >
         {editForm && (
           <form onSubmit={handleEditSubmit}>
-            <LeadFormFields
-              form={editForm}
-              onChange={(field, value) => setEditForm({ ...editForm, [field]: value })}
-            />
+          <LeadFormFields
+            form={editForm}
+            onChange={(field, value) => setEditForm({ ...editForm, [field]: value })}
+            closeReasonOptions={closeReasonOptions}
+          />
             <div className="form-actions">
-              <button type="button" className="btn-secondary" onClick={closeDrawer}>{t("common.cancel")}</button>
-              <button type="submit" className="btn-primary">{t("common.update")}</button>
+              <Button type="button" variant="secondary" size="md" onClick={closeDrawer}>{t("common.cancel")}</Button>
+              <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
             </div>
           </form>
         )}

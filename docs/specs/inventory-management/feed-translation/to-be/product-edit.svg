@@ -1,0 +1,70 @@
+<svg width="720" height="720" viewBox="0 0 720 720" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="720" height="720" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">&#8592; 商品を編集</text>
+  <text x="600" y="34" font-size="12" fill="#c4432f" text-anchor="end">&#128465; 削除</text>
+  <text x="24" y="54" font-size="12" fill="#5f5e5a">スカーレット&amp;バイオレット BOX</text>
+
+  <rect x="24" y="70" width="672" height="220" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="92" font-size="12" fill="#5f5e5a">基本情報</text>
+  <text x="38" y="114" font-size="10" fill="#888780">カテゴリ</text>
+  <rect x="38" y="120" width="200" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="136" font-size="11" fill="#2c2c2a">ポケモン</text>
+  <text x="258" y="114" font-size="10" fill="#888780">マーク</text>
+  <rect x="258" y="120" width="200" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="268" y="136" font-size="11" fill="#2c2c2a">SV</text>
+
+  <text x="38" y="162" font-size="10" fill="#888780">商品名（日本語）</text>
+  <rect x="38" y="168" width="300" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="184" font-size="11" fill="#2c2c2a">スカーレット&amp;バイオレット BOX</text>
+  <text x="358" y="162" font-size="10" fill="#888780">商品名（英語）</text>
+  <rect x="358" y="168" width="300" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="368" y="184" font-size="11" fill="#2c2c2a">Scarlet &amp; Violet Booster Box</text>
+
+  <text x="38" y="210" font-size="10" fill="#888780">ケース入数</text>
+  <rect x="38" y="216" width="130" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="232" font-size="11" fill="#2c2c2a">12</text>
+  <text x="182" y="210" font-size="10" fill="#888780">BOX入数</text>
+  <rect x="182" y="216" width="130" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="192" y="232" font-size="11" fill="#2c2c2a">30</text>
+  <text x="326" y="210" font-size="10" fill="#888780">発売日</text>
+  <rect x="326" y="216" width="150" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="336" y="232" font-size="11" fill="#2c2c2a">2023-01-20</text>
+  <text x="490" y="210" font-size="10" fill="#888780">タイプ</text>
+  <rect x="490" y="216" width="130" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="500" y="232" font-size="11" fill="#2c2c2a">BOX系</text>
+
+  <rect x="24" y="306" width="672" height="130" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="328" font-size="12" fill="#5f5e5a">通関・輸出情報</text>
+  <text x="38" y="350" font-size="10" fill="#888780">Box重量</text>
+  <rect x="38" y="356" width="140" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="48" y="372" font-size="11" fill="#2c2c2a">450g</text>
+  <text x="188" y="350" font-size="10" fill="#888780">Case重量</text>
+  <rect x="188" y="356" width="140" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="198" y="372" font-size="11" fill="#2c2c2a">5.4kg</text>
+  <text x="338" y="350" font-size="10" fill="#888780">HSコード</text>
+  <rect x="338" y="356" width="140" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="348" y="372" font-size="11" fill="#2c2c2a">9504.40</text>
+  <text x="488" y="350" font-size="10" fill="#888780">品目</text>
+  <rect x="488" y="356" width="90" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="588" y="350" font-size="10" fill="#888780">素材</text>
+  <rect x="588" y="356" width="90" height="24" rx="6" fill="#ffffff" stroke="#378add" stroke-width="1"/>
+  <text x="596" y="372" font-size="11" fill="#2c2c2a">紙</text>
+  <text x="38" y="404" font-size="10" fill="#888780">品目: ブースターBOX</text>
+
+  <rect x="24" y="452" width="672" height="200" rx="8" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="38" y="474" font-size="12" fill="#5f5e5a">解析用</text>
+  <text x="38" y="496" font-size="10" fill="#888780">検索キーワード</text>
+  <rect x="38" y="502" width="300" height="26" rx="6" fill="#e6f1fb"/>
+  <text x="48" y="519" font-size="10" fill="#0c447c">SV BOX ×　スカバイ ×</text>
+  <text x="38" y="546" font-size="10" fill="#888780">除外キーワード</text>
+  <rect x="38" y="552" width="300" height="26" rx="6" fill="#f1efe8"/>
+  <text x="48" y="569" font-size="10" fill="#5f5e5a">プロモ ×</text>
+  <text x="38" y="596" font-size="10" fill="#888780">整形ワード（表記ゆれの正規化。例: 「SVBOX」「ＳＶＢＯＸ」→統一表記）</text>
+  <rect x="38" y="602" width="640" height="26" rx="6" fill="#ffffff" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="24" y="670" width="140" height="30" rx="6" fill="#ffffff" stroke="#378add" stroke-width="2"/>
+  <text x="94" y="689" font-size="11" fill="#0c447c" text-anchor="middle">保存する</text>
+  <rect x="174" y="670" width="100" height="30" rx="6" fill="#ffffff" stroke="#b4b2a9" stroke-width="1"/>
+  <text x="224" y="689" font-size="11" fill="#2c2c2a" text-anchor="middle">キャンセル</text>
+</svg>

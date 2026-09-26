@@ -55,5 +55,9 @@ cd frontend && npm run check:all   # 全デザインシステムチェック一�
 全 UI アイコンは `frontend/src/constants/icons.tsx` から import。
 `lucide-react` からの直接 import は ESLint が禁止。
 
+アイコンの大きさの正本は `frontend/src/tokens.css` の `--icon-sm/md/base/lg/xl`。
+`frontend/src/constants/iconSizes.ts` は生成物のため直接編集しない。変更後は `cd frontend && npm run generate:icon-sizes` を実行する。`dev` と `build` の開始前にも自動生成される。
+生成物との一致確認は `node scripts/generate-icon-sizes.js --check`（frontend内）で行う。
+
 追加手順: lucide-react で確認 → `constants/icons.tsx` に追加 → import → `aria-hidden="true"` 付与。
 スコープ外: `BadgesPage.tsx` のユーザー定義絵文字、`lp/src/` 以下

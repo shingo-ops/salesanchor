@@ -22,9 +22,17 @@ FedEx Rates API クライアントのユニットテスト（ADR-125）。
 from __future__ import annotations
 
 import time
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
+from zoneinfo import ZoneInfo
+
+_JST = ZoneInfo("Asia/Tokyo")
+
+
+def _today_jst() -> date:
+    """_fetch_transit_days の today と同じ基準（JST）。テスト内の delivery 計算に使う。"""
+    return datetime.now(_JST).date()
 
 import pytest
 
@@ -322,9 +330,13 @@ class TestFetchTransitDays:
         return resp
 
     def test_returns_transit_days_from_sa_api(self):
-        """SA API 正常系: serviceType → transit_days を返す。"""
-        today = date.today()
-        delivery = today + timedelta(days=2)
+        """SA API 正常系: serviceType → transit_days を返す。
+
+        delivery を _today_jst() + 2 で生成する理由:
+        _fetch_transit_days 内の transit_days = (delivery_date - today_jst).days が
+        JST 基準のため、テスト側も同じ基準で揃える。
+        """
+        delivery = _today_jst() + timedelta(days=2)
         day_str = delivery.strftime("%b-%d-%Y")  # e.g. "Jun-12-2026"
 
         sa_resp = self._make_sa_resp([{
@@ -382,9 +394,13 @@ class TestFetchTransitDays:
         assert result == {}
 
     def test_transit_map_used_in_get_rates(self):
-        """get_rates が SA API の transit_days を FedExRateQuote に反映する。"""
-        today = date.today()
-        delivery = today + timedelta(days=3)
+        """get_rates が SA API の transit_days を FedExRateQuote に反映する。
+
+        delivery を _today_jst() + 3 で生成する理由:
+        _fetch_transit_days が transit_days = (delivery_date - today_jst).days で計算するため、
+        テスト側も JST 基準の delivery を渡し「3日後配達 → transit_days == 3」を検証する。
+        """
+        delivery = _today_jst() + timedelta(days=3)
         day_str = delivery.strftime("%b-%d-%Y")
 
         sa_resp = self._make_sa_resp([{

@@ -1,0 +1,19 @@
+
+> salesanchor-frontend@1.0.0 prepare
+> cd .. && husky frontend/.husky
+
+
+added 783 packages, and audited 784 packages in 12s
+
+239 packages are looking for funding
+  run `npm fund` for details
+
+25 vulnerabilities (1 low, 8 moderate, 9 high, 7 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.

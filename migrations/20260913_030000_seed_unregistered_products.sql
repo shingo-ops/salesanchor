@@ -1,0 +1,26 @@
+-- ============================================================================
+-- Migration 20260913_030000: マスタ未登録商品 17件の追加
+--
+-- 目的:
+--   Gemini抽出で取引実績がありながら商品マスタに未登録だった商品を追加。
+--   検索ワード(search_keywords)は型番+タイトル+固有識別子のみ（Phase 1方針準拠）。
+--   除外ワード(exclude_keywords)で類似商品との誤マッチを防止。
+--
+-- 対象:
+--   Dragon Ball フュージョンワールド 新弾 7件 (FB-09〜12, FS-11〜12, STORY BOOSTER 01)
+--   ONE PIECE プロモ・付録系 9件 (DAY'24, Nike, ROUND1, P-159, CHOPPER's, ナツコミ, EMOTION, Guide, VJ10月号)
+--   ドラゴンボールスーパーダイバーズ 1件 (PO判断で登録)
+--
+-- 出典: 公式サイト + 通販サイト + ニュース記事
+--   詳細: /tmp/CC報告ファイル/unregistered_products_master_v2.txt
+--
+-- ADR-090: public 中央カタログ（tenant_id=NULL）。在庫数は 0。
+-- 冪等: ON CONFLICT(product_code) WHERE product_code IS NOT NULL DO UPDATE。
+-- ============================================================================
+--
+-- NEUTRALIZED (ADR-155, 2026-09-18):
+-- 商品マスタデータはアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'ADR-155 neutralized: unregistered product seed removed — manage via app/CSV'; END $$;

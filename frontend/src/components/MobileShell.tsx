@@ -34,6 +34,7 @@ import { useTheme } from "../contexts/ThemeContext";
 import { useUiPrefs } from "../contexts/UiPrefsContext";
 import { usePermissions } from "../hooks/usePermissions";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useSuperAdmin } from "../hooks/useSuperAdmin";
 import { useSSE } from "../hooks/useSSE";
 import { listConversations } from "../lib/messages";
 import {
@@ -70,6 +71,7 @@ export default function MobileShell() {
   const { signOut } = useAuth();
   const { hasPermission, loading: permsLoading } = usePermissions();
   const { prefs, loading: uiPrefsLoading } = useUiPrefs();
+  const { isSuperAdmin } = useSuperAdmin();
   const pageTitle = usePageTitle();
 
   const navLoading = permsLoading || uiPrefsLoading;
@@ -157,6 +159,28 @@ export default function MobileShell() {
           <ACCOUNT_ICONS.profile size={ICON.base} aria-hidden="true" />,
           "/account/settings",
         ),
+        ...(isSuperAdmin
+          ? [
+              resolveItem(
+                "analysisRules",
+                "nav.superAdminAnalysisRules",
+                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
+                "/super-admin/analysis-rules",
+              ),
+              resolveItem(
+                "buybackPrices",
+                "nav.buybackPrices",
+                <NAV_ICONS.sales size={ICON.base} aria-hidden="true" />,
+                "/buyback-prices",
+              ),
+              resolveItem(
+                "supplierExtractionRules",
+                "nav.superAdminSupplierExtractionRules",
+                <NAV_ICONS.saasAdmin size={ICON.base} aria-hidden="true" />,
+                "/super-admin/supplier-extraction-rules",
+              ),
+            ]
+          : []),
       ];
 
   // ── レンダリング ──

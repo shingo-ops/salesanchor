@@ -12,6 +12,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 export interface OrderFinancialDto {
   id: number;
@@ -273,22 +274,22 @@ export default function OrderFinancialPanel({
               </span>
             </div>
             <div className="form-actions" style={{ marginTop: "var(--space-4)" }}>
-              <button
+              <Button
                 type="button"
-                className="btn-secondary"
+                variant="secondary"
                 onClick={onClose}
                 disabled={saving}
               >
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="btn-primary"
+                variant="primary"
                 disabled={saving}
                 data-testid="fin-save"
               >
                 {saving ? t("common.saving") : existing ? t("common.update") : t("common.register")}
-              </button>
+              </Button>
             </div>
           </form>
         )}

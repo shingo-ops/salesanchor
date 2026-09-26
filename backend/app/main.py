@@ -28,8 +28,11 @@ from app.routers import (
     archives,
     auth,
     bots,
+    buyback_alerts,  # ADR-157: 買取価格変動アラートルール CRUD
+    buyback_prices,  # ADR-157: 買取相場ログ API
     close_reasons,  # ADR-138 PR3: 成約・失注理由マスタ CRUD
     companies,  # Phase 1-B-2 Step 5b-1
+    conditions,  # 状態マスタ CRUD（テナント版）
     contact,  # LP問い合わせフォーム受付
     contact_channel_links,  # SA-05: 担当者チャンネルリンク生成 API
     contacts,  # Phase 1-B-2 Step 5b-1
@@ -37,7 +40,6 @@ from app.routers import (
     countries,  # Foundation F1: 国台帳 (public.countries)
     customer_priority,  # ADR-107 (SA-14): 分析エージェント(A) 顧客優先度付け
     dashboard,
-    deals,
     discord_announcement,  # ADR-091 KPI4: アナウンス投稿 API
     discord_auto_setup,  # ADR-091 拡張: Bot招待後サーバー初期構築ウィザード
     discord_channel_invite,  # ADR-091 KPI5: チャンネル招待メッセージ送信 API
@@ -48,7 +50,8 @@ from app.routers import (
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
-goals,  # ダッシュボード強化: 目標管理
+    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
+    goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
     integrations,  # API連携 (Googleドライブ 保存テスト 等)
@@ -56,10 +59,13 @@ goals,  # ダッシュボード強化: 目標管理
     inventory_offers,  # Sprint 11 / F11 AC11.5: 仕入元現在オファー admin CRUD
     inventory_search,
     invoices,
+    item_corrections,  # PARITY-03 Phase 3 Stage 3: 修正履歴保存
     leads,
+    line_import_devices,
     me_inventory_filters,  # ADR-093 Phase 4: 在庫表ユーザー別フィルタ設定
     meta,
     meta_inbox,  # Phase 1-D Sprint 2: OAuth 接続バックエンド
+    note_master,  # 備考マスタ テナント用
     notifications,
     order_commissions,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     order_financials,  # ADR-021 Phase 2 / Sprint 2: 売上計算 MVP
@@ -68,6 +74,7 @@ goals,  # ダッシュボード強化: 目標管理
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     parse_review,
+    product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
     purchase_orders,
@@ -75,27 +82,50 @@ goals,  # ダッシュボード強化: 目標管理
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
     reports,
     roles,
+    rule_test,  # Rule Test System: ルールテスト実行 API
     shifts,
     shipping,
     staff,
     staff_reports,
+    status_master,  # ステータスマスタ テナント用
     super_admin_aliases,
+    super_admin_condition_defs,  # コンディション定義マスタ中央 admin
+    super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
+    super_admin_note_master,  # 備考マスタ中央 admin
     super_admin_phase_switch,
+    super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
+    super_admin_product_formats,  # フォーマットマスタ中央 admin
+    super_admin_product_kinds,  # 大分類マスタ中央 admin
+    super_admin_product_lines,  # 小分類マスタ中央 admin
+    super_admin_quantity_units,  # 数量単位マスタ中央 admin
+    super_admin_status_master,  # ステータスマスタ中央 admin
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
+    super_admin_units,  # 単位マスタ中央 admin
+    super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
+    tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
+    tcg_analysis_review,  # PARITY-03 第1段階: 解析レビュー API
+    tcg_diagnostics,  # DB-A2: TCG 診断 API（固定 SQL 方式）
+    tcg_distribution,  # DIST-01: TCG 在庫配信
+    tcg_line_import,  # MIG-04 Stage 1: LINE エクスポート取り込み
+    tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
+    tcg_product_import,  # IMPORT-01: 商品マスタ CSV 取り込み API
+    tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
+    tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
     tenant_commission_settings,  # ADR-021 Phase 5 / Sprint 5: 報酬計算 MVP
     tenant_policy,  # ADR-106: テナントポリシー設定
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
+    units,  # 単位マスタ テナント用
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
@@ -274,10 +304,6 @@ app.include_router(
     contact_channel_links.router, prefix="/api/v1", tags=["contacts"],
     dependencies=[Depends(get_current_tenant)],
 )
-app.include_router(
-    deals.router, prefix="/api/v1", tags=["deals"],
-    dependencies=[Depends(get_current_tenant)],
-)
 # ADR-138 PR3: 成約・失注理由マスタ CRUD
 app.include_router(
     close_reasons.router, prefix="/api/v1", tags=["close-reasons"],
@@ -357,6 +383,30 @@ app.include_router(
 # Phase 3: 仕入れ・調達 + 重複検知
 app.include_router(
     suppliers.router, prefix="/api/v1", tags=["suppliers"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# 単位マスタ テナント用
+app.include_router(
+    units.router, prefix="/api/v1", tags=["units"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# ステータスマスタ テナント用
+app.include_router(
+    status_master.router, prefix="/api/v1", tags=["status-master"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# 備考マスタ テナント用
+app.include_router(
+    note_master.router, prefix="/api/v1", tags=["note-master"],
+    dependencies=[Depends(get_current_tenant)],
+)
+app.include_router(
+    conditions.router, prefix="/api/v1", tags=["conditions"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# 商品カテゴリマスタ テナント用
+app.include_router(
+    product_categories.router, prefix="/api/v1", tags=["product-categories"],
     dependencies=[Depends(get_current_tenant)],
 )
 app.include_router(
@@ -447,6 +497,10 @@ app.include_router(
 app.include_router(
     super_admin_aliases.router, prefix="/api/v1", tags=["super-admin"],
 )
+# 状態マスタ SSOT admin CRUD
+app.include_router(
+    super_admin_conditions.router, prefix="/api/v1", tags=["super-admin"],
+)
 app.include_router(
     super_admin_tcg.router, prefix="/api/v1", tags=["super-admin"],
 )
@@ -459,6 +513,49 @@ app.include_router(
 )
 app.include_router(
     super_admin_suppliers.router, prefix="/api/v1", tags=["super-admin"],
+)
+app.include_router(
+    super_admin_units.router, prefix="/api/v1", tags=["super-admin-units"],
+)
+# ステータスマスタ中央 admin
+app.include_router(
+    super_admin_status_master.router, prefix="/api/v1", tags=["super-admin-status-master"],
+)
+# Rule Test System: ルールテスト実行 API
+app.include_router(
+    rule_test.router, prefix="/api/v1", tags=["rule-test"],
+)
+# 備考マスタ中央 admin
+app.include_router(
+    super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 商品カテゴリマスタ中央 admin
+app.include_router(
+    super_admin_product_categories.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 大分類マスタ中央 admin
+app.include_router(
+    super_admin_product_kinds.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 小分類マスタ中央 admin
+app.include_router(
+    super_admin_product_lines.router, prefix="/api/v1", tags=["super-admin"],
+)
+# フォーマットマスタ中央 admin
+app.include_router(
+    super_admin_product_formats.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 数量単位マスタ中央 admin
+app.include_router(
+    super_admin_quantity_units.router, prefix="/api/v1", tags=["super-admin"],
+)
+# コンディション定義マスタ中央 admin
+app.include_router(
+    super_admin_condition_defs.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 重量クラスマスタ中央 admin
+app.include_router(
+    super_admin_weight_classes.router, prefix="/api/v1", tags=["super-admin"],
 )
 # SA-05: リンクテンプレート SSOT admin CRUD
 app.include_router(
@@ -522,6 +619,11 @@ app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
 )
 
+# 為替レート SSOT: GET /api/v1/fx-rate/{currency} + POST /api/v1/super-admin/fx-rate/refresh
+app.include_router(
+    fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
+)
+
 # Google Calendar 連携
 # public_router: callback + webhook は Bearer トークンなし（認証不要）
 app.include_router(google_calendar.public_router, prefix="/api/v1", tags=["google-calendar"])
@@ -549,6 +651,69 @@ app.include_router(
     dependencies=[Depends(get_current_tenant)],
 )
 
+# PARITY-03 Phase 3 Stage 3: 修正履歴保存（require_super_admin 限定）
+app.include_router(
+    item_corrections.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 第1段階: 解析レビュー API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_review.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 Phase 3: 商品マスタ登録 API（require_super_admin 限定）
+app.include_router(
+    tcg_product_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# IMPORT-01: 商品マスタ CSV 取り込み API（require_super_admin 限定）
+app.include_router(
+    tcg_product_import.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
+app.include_router(
+    tcg_supplier_quality.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# ANALYSIS-DASHBOARD: 解析パイプライン サマリー API（require_super_admin 限定）
+app.include_router(
+    tcg_analysis_dashboard.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# DB-A2: TCG 診断 API（固定 SQL 方式・require_super_admin 限定）
+app.include_router(
+    tcg_diagnostics.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Phase 4: 並行運用比較レポート（is_super_admin 限定）
+app.include_router(
+    tcg_parallel_report.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# DIST-01: TCG 在庫配信
+app.include_router(
+    tcg_distribution.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# MIG-04 Stage 1: LINE エクスポート取り込み（is_super_admin 限定）
+app.include_router(
+    tcg_line_import.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+
+app.include_router(line_import_devices.router, prefix="/api/v1")
+
+# ADR-157: 買取相場ログ API（認証必須・テナント横断の public スキーマ参照）
+app.include_router(
+    buyback_prices.router, prefix="/api/v1", tags=["buyback-prices"],
+    dependencies=[Depends(get_current_tenant)],
+)
+
+# ADR-157: 買取価格変動アラートルール CRUD（super_admin 専用）
+app.include_router(
+    buyback_alerts.router, prefix="/api/v1", tags=["buyback-alerts"],
+)
 
 @app.exception_handler(OperationalError)
 async def db_operational_error_handler(request: Request, exc: OperationalError) -> JSONResponse:

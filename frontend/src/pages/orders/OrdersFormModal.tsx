@@ -14,7 +14,6 @@ interface Props {
   setShowForm: (v: boolean) => void;
   editId: number | null;
   form: {
-    deal_id: string;
     order_number: string;
     total_amount: string;
     status: string;

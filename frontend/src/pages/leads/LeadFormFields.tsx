@@ -5,10 +5,12 @@
  * 全項目は LeadEditPage を参照。
  */
 
+import { useId } from "react";
 import { useTranslation } from "react-i18next";
 import { CountryCombobox } from "../../components/CountryCombobox";
 import { Select } from "../../components/Select";
 import { LEAD_STATUS_CODES, type LeadStatusCode } from "../../constants/leadStatus";
+import type { CloseReasonResponse } from "../../api/closeReasons";
 
 export interface LeadFormState {
   customer_name: string;
@@ -18,16 +20,79 @@ export interface LeadFormState {
   type: string;
   notes: string;
   country: string;
+  close_reason_id: string;
+  close_reason_memo: string;
+}
+
+export interface LostReasonFieldsProps {
+  status: string;
+  closeReasonId: string;
+  closeReasonMemo: string;
+  closeReasonOptions: Pick<CloseReasonResponse, "id" | "label">[];
+  onCloseReasonIdChange: (value: string) => void;
+  onCloseReasonMemoChange: (value: string) => void;
 }
 
 interface Props {
   form: LeadFormState;
   onChange: (field: keyof LeadFormState, value: string) => void;
+  closeReasonOptions: Pick<CloseReasonResponse, "id" | "label">[];
 }
 
 const LEAD_STATUSES: LeadStatusCode[] = [...LEAD_STATUS_CODES];
 
-export function LeadFormFields({ form, onChange }: Props) {
+export function buildLostReasonUpdatePayload(
+  status: string,
+  closeReasonId: string,
+  closeReasonMemo: string,
+) {
+  if (status !== "lost") return {};
+  return {
+    close_reason_memo: closeReasonMemo ? closeReasonMemo : null,
+    close_reasons: closeReasonId
+      ? [{ reason_id: Number(closeReasonId), is_primary: true }]
+      : [],
+  };
+}
+
+export function LostReasonFields({
+  status,
+  closeReasonId,
+  closeReasonMemo,
+  closeReasonOptions,
+  onCloseReasonIdChange,
+  onCloseReasonMemoChange,
+}: LostReasonFieldsProps) {
+  const { t } = useTranslation();
+  const memoId = useId();
+  if (status !== "lost") return null;
+
+  return (
+    <>
+      <Select
+        label={t("leads.lostReasonCode")}
+        value={closeReasonId}
+        onChange={(e) => onCloseReasonIdChange(e.target.value)}
+        options={closeReasonOptions.map((option) => ({
+          value: String(option.id),
+          label: option.label,
+        }))}
+        placeholder={t("leads.lostReasonCodePlaceholder")}
+      />
+      <div className="form-group">
+        <label htmlFor={memoId}>{t("leads.lostReason")}</label>
+        <textarea
+          id={memoId}
+          value={closeReasonMemo}
+          onChange={(e) => onCloseReasonMemoChange(e.target.value)}
+          placeholder={t("leads.lostReasonPlaceholder")}
+        />
+      </div>
+    </>
+  );
+}
+
+export function LeadFormFields({ form, onChange, closeReasonOptions }: Props) {
   const { t } = useTranslation();
   const statusOptions = LEAD_STATUSES.map((s) => ({
     value: s,
@@ -67,6 +132,14 @@ export function LeadFormFields({ form, onChange }: Props) {
         value={form.status}
         onChange={(e) => onChange("status", e.target.value)}
         options={statusOptions}
+      />
+      <LostReasonFields
+        status={form.status}
+        closeReasonId={form.close_reason_id}
+        closeReasonMemo={form.close_reason_memo}
+        closeReasonOptions={closeReasonOptions}
+        onCloseReasonIdChange={(value) => onChange("close_reason_id", value)}
+        onCloseReasonMemoChange={(value) => onChange("close_reason_memo", value)}
       />
       <Select
         label={t("leads.type")}

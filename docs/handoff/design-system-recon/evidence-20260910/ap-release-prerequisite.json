@@ -1,0 +1,150 @@
+{
+  "checked_at": "2026-09-14T02:05:41.014092+00:00",
+  "implementationHead": "f3598fb240107396e265f3edc93d9367f33154f1",
+  "implementationCi": {
+    "success": 38,
+    "skipped": 8,
+    "failure": {
+      "name": "process-artifacts gate",
+      "reason": "GO section missing; no PO GO received",
+      "run": 34797819740,
+      "job": 103834237322
+    }
+  },
+  "priorDeployment": {
+    "head": "e69da6ed7945a5fa8c16b32b89b02d8cfb7967ea",
+    "run": 34797490804,
+    "job": 103833308323,
+    "conclusion": "failure",
+    "failedStep": "Run database migrations",
+    "migration": "migrations/20260913_210000_tcg_cardset_bundle_registration.sql",
+    "error": "cardset bundle: identity mismatch PM0264",
+    "backup": {
+      "file": "salesanchor_db_20260914_105621.sql.gz",
+      "size": "7.2M"
+    },
+    "finalHealthStep": "passed",
+    "rawLogSha256": "70f974ba1be30b0bac2d2009ea7500c29f412f890ed399ccb24aa8ce11aa1e09"
+  },
+  "publicHealth": {
+    "transport": "curl with TLS verification enabled",
+    "appHttp": 200,
+    "apiHttp": 200,
+    "apiBody": {
+      "status": "ok",
+      "database": "connected",
+      "redis": "connected",
+      "celery": "connected"
+    },
+    "initialPythonAttempt": "local CA trust lookup failed; not counted as service failure"
+  },
+  "relatedRecordPr": "https://github.com/shingo-ops/salesanchor/pull/3496",
+  "action": "AP3497 merged and deployed successfully. PO visual/authenticated form verification remains unperformed.",
+  "recoveryVerification": {
+    "checkedAt": "2026-09-14T04:01:57.960797+00:00",
+    "pr": 3500,
+    "head": "70d145f090e122dd36e4a39b4928e13cc0dae613",
+    "run": 34804164057,
+    "job": 103852603870,
+    "conclusion": "success",
+    "migrations": {
+      "completed": 233,
+      "previousFailureStep231": "DO and COMMIT succeeded"
+    },
+    "backup": {
+      "file": "salesanchor_db_20260914_125456.sql.gz",
+      "size": "6.7M"
+    },
+    "smoke": "All SA-19 smoke tests passed",
+    "verifyDeployment": "success",
+    "publicHealth": {
+      "appHttp": 200,
+      "apiHttp": 200,
+      "status": "ok",
+      "database": "connected",
+      "redis": "connected",
+      "celery": "connected",
+      "transport": "curl; TLS verification enabled"
+    },
+    "rawLogSha256": "8cd87f7450ae452d8cbb457c96eeedbbe0fdefa1a44635cc3d3ca35f35988a5b",
+    "limits": [
+      "No direct production product-name SELECT or CSV round-trip test performed",
+      "No AP merge or deployment; no GO #3497 received"
+    ]
+  },
+  "integrationVerification": {
+    "head": "3719308070cae60dca77fdfe02a2278ff252ac09",
+    "main": "95daf966103d8023d9388ebe75764476645fc1ba",
+    "mainDeployRun": 34808959394,
+    "mainDeployConclusion": "success",
+    "baselineFilesUnchanged": 23,
+    "productHashesUnchanged": 3,
+    "conflicts": "Only evidence-registry append conflicts; both fixed parents retained",
+    "initialVerificationFailure": "First check referenced mutable origin/main which advanced concurrently; fixed HEAD/MERGE_HEAD checks passed. No product edits.",
+    "poRequest": "推測は禁止して事実確認を怠らずに確実性を重視して最も効果があり、現状把握の粒度が細く、精度が高いエビデンスを確立して安全に進めてくれ、確立したなら\n本番反映",
+    "gateRemaining": "Numbered GO #3497 original required by scripts/check-process-artifacts.js:291-322; not fabricated",
+    "ci": "Latest candidate checks pending; no production operation performed"
+  },
+  "poGo": {
+    "issuer": "Shingo (shingo-ops)",
+    "original": "GO #3497",
+    "recordedAt": "2026-09-14T06:52:48Z",
+    "targetHead": "af3734c94a49ca7633a05c78edd95a5ab9d01b4c"
+  },
+  "newDeploymentBlocker": {
+    "main": "180c0f38aefc2c727a3133a4e84fa8f4aec3b893",
+    "pr": 3503,
+    "run": 34810423329,
+    "job": 103870490025,
+    "conclusion": "failure",
+    "step": "Run database migrations",
+    "migration": "20260914_140000_unify_tcg_products_to_public.sql",
+    "position": "234/234",
+    "error": "there is no unique constraint matching given keys for referenced table \"products\"",
+    "statement": "ALTER TABLE tenant_001.product_search_keywords ADD CONSTRAINT fk_product_search_keywords_product_public FOREIGN KEY (product_id) REFERENCES public.products (tcg_uuid) ON DELETE CASCADE",
+    "backup": "salesanchor_db_20260914_144003.sql.gz (7.9M)",
+    "finalHealth": "passed",
+    "publicApp": 200,
+    "publicApi": 200,
+    "connections": [
+      "database connected",
+      "redis connected",
+      "celery connected"
+    ],
+    "rawLogSha256": "fd5a655a7302a0c6c89eae196219b7a9194bff0b14e22782434d2def538a1fce",
+    "limits": "No direct database inspection; do not treat 297 upserts printed before transaction failure as committed data"
+  },
+  "recovery20260915": {
+    "main": "26032c7440395f0cecd064af2d382d26a1ac824b",
+    "pr": 3512,
+    "run": 34914789016,
+    "job": 104209960597,
+    "conclusion": "success",
+    "migrations": "Migrations done",
+    "smoke": "All SA-19 smoke tests passed",
+    "backup": "salesanchor_db_20260915_095032.sql.gz (9.9M)",
+    "baselineFilesUnchanged": 23,
+    "productFilesUnchanged": 3,
+    "rawLogSha256": "478d3b778fe183c0fc6fe04c0197b54497bf8ece82bf44fb7dd71b05738147d5"
+  },
+  "deploymentResult": {
+    "merge": "26d5688946dc6f6144f3cea6bc9b2cb85db5bace",
+    "head": "ee14624102b6add06c52e93b30e953143666a3b3",
+    "ciSuccess": 39,
+    "ciSkipped": 8,
+    "run": 34916422461,
+    "job": 104214916879,
+    "conclusion": "success",
+    "finishedAt": "2026-09-15T01:17:11Z",
+    "backup": "salesanchor_db_20260915_101420.sql.gz (9.9M)",
+    "migrations": "skipped",
+    "sa19": "skipped",
+    "finalize": "success",
+    "verify": "success",
+    "frontend": "healthy",
+    "appHttp": 200,
+    "apiHttp": 200,
+    "dbRedisCelery": "connected",
+    "logSha256": "4a20273a98a7b4ee67630ce9e9fa9b5865de9d4b991ba05e7455f3221bd8e248"
+  }
+}

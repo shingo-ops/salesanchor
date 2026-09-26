@@ -1,0 +1,73 @@
+<svg width="800" height="380" viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg" font-family="sans-serif">
+  <rect x="0" y="0" width="800" height="380" rx="12" fill="#f7f6f2" stroke="#d3d1c7" stroke-width="1"/>
+
+  <text x="24" y="34" font-size="18" font-weight="600" fill="#2c2c2a">顧客管理</text>
+  <text x="776" y="34" font-size="11" fill="#888780" text-anchor="end">37社</text>
+
+  <text x="24" y="58" font-size="11" fill="#5f5e5a">&#128269;</text>
+  <rect x="40" y="46" width="110" height="24" rx="6" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="95" y="62" font-size="10" fill="#5f5e5a" text-anchor="middle">国: すべて &#9660;</text>
+  <rect x="158" y="46" width="130" height="24" rx="6" fill="#f1efe8" stroke="#d3d1c7" stroke-width="1"/>
+  <text x="223" y="62" font-size="10" fill="#5f5e5a" text-anchor="middle">取扱商材: すべて &#9660;</text>
+  <rect x="296" y="46" width="150" height="24" rx="6" fill="#e6f1fb" stroke="#378add" stroke-width="1.5"/>
+  <text x="371" y="62" font-size="10" fill="#0c447c" text-anchor="middle">販売方法: ライブ配信 &#10005;</text>
+  <text x="700" y="62" font-size="10" fill="#888780" text-anchor="end">→ 8社に絞り込み中</text>
+
+  <g font-size="10" fill="#888780">
+    <text x="30" y="90">優先度 &#8595;</text>
+    <text x="90" y="90">顧客名</text>
+    <text x="240" y="90">国</text>
+    <text x="300" y="90">取扱商材</text>
+    <text x="410" y="90">販売方法</text>
+    <text x="520" y="90" text-anchor="end">総受注額</text>
+    <text x="580" y="90" text-anchor="end">単価</text>
+    <text x="630" y="90" text-anchor="end">取引回数</text>
+    <text x="690" y="90" text-anchor="end">取引期間</text>
+    <text x="770" y="90" text-anchor="end">直近受注日</text>
+  </g>
+  <line x1="24" y1="98" x2="776" y2="98" stroke="#d3d1c7" stroke-width="1"/>
+
+  <rect x="24" y="108" width="34" height="18" rx="5" fill="#faece7"/>
+  <text x="41" y="121" font-size="10" fill="#993c1d" text-anchor="middle">高</text>
+  <text x="90" y="118" font-size="12" fill="#2c2c2a">Card Kingdom AU</text>
+  <text x="90" y="132" font-size="9" fill="#993c1d">冷めつつある</text>
+  <text x="240" y="121" font-size="11" fill="#5f5e5a">オーストラリア</text>
+  <text x="300" y="121" font-size="11" fill="#5f5e5a">ポケモン +1</text>
+  <text x="410" y="121" font-size="11" fill="#5f5e5a">ライブ配信</text>
+  <text x="520" y="121" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥1.2M</text>
+  <text x="580" y="121" font-size="11" fill="#5f5e5a" text-anchor="end">¥300k</text>
+  <text x="630" y="121" font-size="11" fill="#5f5e5a" text-anchor="end">4回</text>
+  <text x="690" y="121" font-size="11" fill="#5f5e5a" text-anchor="end">3か月</text>
+  <text x="770" y="121" font-size="11" fill="#5f5e5a" text-anchor="end">05-19</text>
+  <line x1="24" y1="146" x2="776" y2="146" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="24" y="156" width="34" height="18" rx="5" fill="#faeeda"/>
+  <text x="41" y="169" font-size="10" fill="#854f0b" text-anchor="middle">中</text>
+  <text x="90" y="166" font-size="12" fill="#2c2c2a">Pokemon Cards USA LLC</text>
+  <text x="90" y="180" font-size="9" fill="#0f6e56">安定</text>
+  <text x="240" y="169" font-size="11" fill="#5f5e5a">アメリカ</text>
+  <text x="300" y="169" font-size="11" fill="#5f5e5a">ポケモン</text>
+  <text x="410" y="169" font-size="11" fill="#5f5e5a">ECサイト +2</text>
+  <text x="520" y="169" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥2.1M</text>
+  <text x="580" y="169" font-size="11" fill="#5f5e5a" text-anchor="end">¥95k</text>
+  <text x="630" y="169" font-size="11" fill="#5f5e5a" text-anchor="end">22回</text>
+  <text x="690" y="169" font-size="11" fill="#5f5e5a" text-anchor="end">14か月</text>
+  <text x="770" y="169" font-size="11" fill="#5f5e5a" text-anchor="end">06-14</text>
+  <line x1="24" y1="194" x2="776" y2="194" stroke="#e3e1d9" stroke-width="1"/>
+
+  <rect x="24" y="204" width="34" height="18" rx="5" fill="#f1efe8"/>
+  <text x="41" y="217" font-size="10" fill="#5f5e5a" text-anchor="middle">低</text>
+  <text x="90" y="214" font-size="12" fill="#2c2c2a">TCG Traders EU</text>
+  <text x="90" y="228" font-size="9" fill="#0f6e56">安定</text>
+  <text x="240" y="217" font-size="11" fill="#5f5e5a">ドイツ</text>
+  <text x="300" y="217" font-size="11" fill="#5f5e5a">ワンピース</text>
+  <text x="410" y="217" font-size="11" fill="#5f5e5a">実店舗</text>
+  <text x="520" y="217" font-size="12" fill="#2c2c2a" text-anchor="end" font-weight="600">¥1.8M</text>
+  <text x="580" y="217" font-size="11" fill="#5f5e5a" text-anchor="end">¥164k</text>
+  <text x="630" y="217" font-size="11" fill="#5f5e5a" text-anchor="end">11回</text>
+  <text x="690" y="217" font-size="11" fill="#5f5e5a" text-anchor="end">8か月</text>
+  <text x="770" y="217" font-size="11" fill="#5f5e5a" text-anchor="end">06-02</text>
+
+  <text x="400" y="270" font-size="10" fill="#888780" text-anchor="middle">複数の取扱商材/販売方法は代表1つ＋残り件数（+N）で表示。詳細ページで全件確認可能</text>
+  <text x="400" y="288" font-size="10" fill="#888780" text-anchor="middle">優先度・販売方法・取扱商材のヘッダーはクリックで並び替え／行クリックで顧客詳細ページへ</text>
+</svg>

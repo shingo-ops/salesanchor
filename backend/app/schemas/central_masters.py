@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -109,8 +110,8 @@ class SupplierAliasResponse(SupplierAliasBase):
 # tcg_series_master
 # ============================================================================
 
-# ADR-083: TCG 種別は public.tcg_type_master で管理（固定リスト廃止）。
-# tcg_type の値検証は DB 側（tcg_type_master）に委ねる。code は安定キーのため不変。
+# ADR-083: TCG 種別は public.type_master で管理（固定リスト廃止）。
+# tcg_type の値検証は DB 側（type_master）に委ねる。code は安定キーのため不変。
 
 
 class TcgTypeBase(BaseModel):
@@ -128,15 +129,17 @@ class TcgTypeCreate(TcgTypeBase):
 
 
 class TcgTypeUpdate(BaseModel):
-    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグのみ更新可。
+    # code は不変（既存シリーズが参照するため）。名称・並び順・有効フラグ・大分類のみ更新可。
     name_ja: Optional[str] = Field(default=None, min_length=1, max_length=100)
     name_en: Optional[str] = Field(default=None, max_length=100)
     sort_order: Optional[int] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
+    kind_id: Optional[int] = None
 
 
 class TcgTypeResponse(TcgTypeBase):
     id: int
+    kind_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -397,3 +400,316 @@ class SupplierPromptResponse(BaseModel):
 class SupplierPromptUpdate(BaseModel):
     prompt: str = Field(default="", max_length=50000)
     is_active: bool = True
+
+
+# ============================================================================
+# supplier extraction rules: 仕入元ごとの抽出ルール (public.suppliers 列)
+# ============================================================================
+
+
+class SupplierExtractionRulesResponse(BaseModel):
+    supplier_id: int
+    extraction_price_format: Optional[str] = None
+    extraction_qty_format: Optional[str] = None
+    extraction_order_pattern: Optional[str] = None
+    extraction_default_unit: Optional[str] = None
+    extraction_notes: Optional[str] = None
+    extraction_state_format: Optional[str] = None
+    extraction_example_text: Optional[str] = None
+    latest_raw_text: Optional[str] = None  # source_messages.raw_text の最新1件
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupplierExtractionRulesUpdate(BaseModel):
+    extraction_price_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_qty_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_order_pattern: Optional[str] = Field(default=None, max_length=5000)
+    extraction_default_unit: Optional[str] = Field(default=None, max_length=100)
+    extraction_notes: Optional[str] = Field(default=None, max_length=50000)
+    extraction_state_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_example_text: Optional[str] = Field(default=None, max_length=50000)
+
+
+class SupplierExtractionOverviewItem(BaseModel):
+    supplier_id: int
+    supplier_code: Optional[str] = None
+    name: str
+    has_extraction_rules: bool
+    unit_ng_count: int  # unit_resolved=false の analysis_results 件数
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# supplier source messages: 仕入元チャンネルの原文メッセージ一覧
+# ============================================================================
+
+
+class SupplierSourceMessage(BaseModel):
+    id: UUID
+    raw_text: str
+    created_at: datetime
+
+
+class SupplierSourceMessagesResponse(BaseModel):
+    messages: list[SupplierSourceMessage]
+    total: int
+
+
+# ============================================================================
+# conditions_master: 状態マスタ (public.conditions)
+# ============================================================================
+
+
+class CentralConditionBase(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=100)
+    app_kubun: Optional[str] = None
+    is_active: bool = True
+    priority: Optional[int] = None
+    search_kw: str = ""
+    exclude_kw: str = ""
+    match_type: str = "KEYWORD"
+    effect: str = "OUTPUT"
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: str = ""
+
+
+class CentralConditionCreate(CentralConditionBase):
+    # code は省略可能 — 未指定時はバックエンドが CN<timestamp> を自動生成する
+    code: Optional[str] = Field(default=None, max_length=50)
+
+
+class CentralConditionUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    app_kubun: Optional[str] = None
+    is_active: Optional[bool] = None
+    priority: Optional[int] = None
+    search_kw: Optional[str] = None
+    exclude_kw: Optional[str] = None
+    match_type: Optional[str] = None
+    effect: Optional[str] = None
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: Optional[str] = None
+
+
+class CentralConditionResponse(CentralConditionBase):
+    id: int
+    tenant_id: Optional[int] = None
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# public.units / public.unit_aliases
+# ============================================================================
+
+
+class UnitBase(BaseModel):
+    code: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: bool = True
+
+
+class UnitCreate(UnitBase):
+    pass
+
+
+class UnitUpdate(BaseModel):
+    code: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=100)
+    kubun: Optional[str] = Field(default=None, max_length=50)
+    is_active: Optional[bool] = None
+
+
+class UnitResponse(UnitBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class UnitAliasBase(BaseModel):
+    unit_id: int
+    alias_text: str = Field(min_length=1, max_length=500)
+    lang: str = Field(default="ja", min_length=2, max_length=5)
+
+
+class UnitAliasCreate(UnitAliasBase):
+    pass
+
+
+class UnitAliasResponse(UnitAliasBase):
+    id: int
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_status_master
+# ============================================================================
+
+_VALID_MATCH_TYPES = {"REGEX", "LITERAL", "DEFAULT"}
+_VALID_EFFECTS = {"OUTPUT", "EXCLUDE"}
+
+
+class TcgStatusMasterBase(BaseModel):
+    status_id: str = Field(min_length=1, max_length=50)
+    canonical: str = Field(min_length=1, max_length=255)
+    search_pattern: str = Field(default="", max_length=1000)
+    exclude_pattern: str = Field(default="", max_length=1000)
+    priority: int = Field(ge=0, le=10000)
+    enabled: bool = True
+    note: str = Field(default="", max_length=1000)
+    match_type: str = Field(min_length=1, max_length=20)
+    effect: str = Field(min_length=1, max_length=20)
+
+    @field_validator("match_type")
+    @classmethod
+    def _validate_match_type(cls, v: str) -> str:
+        if v not in _VALID_MATCH_TYPES:
+            raise ValueError(f"match_type must be one of {sorted(_VALID_MATCH_TYPES)}")
+        return v
+
+    @field_validator("effect")
+    @classmethod
+    def _validate_effect(cls, v: str) -> str:
+        if v not in _VALID_EFFECTS:
+            raise ValueError(f"effect must be one of {sorted(_VALID_EFFECTS)}")
+        return v
+
+
+class TcgStatusMasterCreate(TcgStatusMasterBase):
+    # status_id is optional — backend auto-generates "ST<NNNN>" if omitted.
+    status_id: Optional[str] = Field(default=None, max_length=50)
+
+
+class TcgStatusMasterUpdate(BaseModel):
+    status_id: Optional[str] = Field(default=None, min_length=1, max_length=50)
+    canonical: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    search_pattern: Optional[str] = Field(default=None, max_length=1000)
+    exclude_pattern: Optional[str] = Field(default=None, max_length=1000)
+    priority: Optional[int] = Field(default=None, ge=0, le=10000)
+    enabled: Optional[bool] = None
+    note: Optional[str] = Field(default=None, max_length=1000)
+    match_type: Optional[str] = Field(default=None, min_length=1, max_length=20)
+    effect: Optional[str] = Field(default=None, min_length=1, max_length=20)
+
+
+class TcgStatusMasterResponse(TcgStatusMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# tcg_note_master
+# ============================================================================
+
+
+class TcgNoteMasterBase(BaseModel):
+    label_ja: str
+    label_en: str
+    enabled: bool = True
+    search_keywords: str = ""
+    exclude_keywords: str = ""
+    category: str = ""
+    priority: int
+    match_type: str = "LITERAL"
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: str) -> str:
+        if v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterCreate(TcgNoteMasterBase):
+    pass
+
+
+class TcgNoteMasterUpdate(BaseModel):
+    label_ja: Optional[str] = None
+    label_en: Optional[str] = None
+    enabled: Optional[bool] = None
+    search_keywords: Optional[str] = None
+    exclude_keywords: Optional[str] = None
+    category: Optional[str] = None
+    priority: Optional[int] = None
+    match_type: Optional[str] = None
+    search_pattern: Optional[str] = None
+    label_template: Optional[str] = None
+
+    @field_validator("match_type")
+    @classmethod
+    def validate_match_type(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v not in ("LITERAL", "REGEX", "DEFAULT"):
+            raise ValueError("match_type must be LITERAL, REGEX, or DEFAULT")
+        return v
+
+
+class TcgNoteMasterResponse(TcgNoteMasterBase):
+    id: int
+    created_at: datetime
+    updated_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+# ============================================================================
+# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / skip_condition / status_keyword）
+# ============================================================================
+
+class KnowledgeRuleSimpleResponse(BaseModel):
+    """抽出カテゴリ専用の軽量レスポンス（既存 KnowledgeRuleResponse とは独立）"""
+    id: int
+    category: str
+    pattern_type: str
+    pattern: str
+    normalized_to: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class KnowledgeRuleSimpleCreate(BaseModel):
+    category: str = Field(max_length=50)
+    pattern_type: str = Field(default="exact", max_length=20)
+    pattern: str = Field(max_length=500)
+    normalized_to: Optional[str] = Field(default=None, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=500)
+
+
+# ============================================================================
+# 仕入元 Knowledge リンク（supplier_knowledge_links）
+# ============================================================================
+
+class SupplierKnowledgeLinkResponse(BaseModel):
+    id: int
+    supplier_id: int
+    knowledge_rule_id: int
+    category: str
+    pattern: str
+    normalized_to: Optional[str] = None
+    description: Optional[str] = None
+    is_active: bool
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SupplierKnowledgeLinkCreate(BaseModel):
+    knowledge_rule_id: int

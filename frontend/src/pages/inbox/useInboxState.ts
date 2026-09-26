@@ -107,9 +107,11 @@ export interface UseInboxStateReturn {
   setDraft: (v: string) => void;
   sending: boolean;
   sendError: string;
+  sendErrorReason: string;
+  sendErrorCode: number | null;
   sendDisabled: boolean;
   canSend: boolean;
-  discordDmChannelMissing: boolean;
+  discordChannelMissing: boolean;
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
   submitSend: (opts?: { draftId?: number }) => Promise<void>;
@@ -208,6 +210,8 @@ export function useInboxState(): UseInboxStateReturn {
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [sendError, setSendError] = useState("");
+  const [sendErrorReason, setSendErrorReason] = useState("");
+  const [sendErrorCode, setSendErrorCode] = useState<number | null>(null);
   const [attachedFile, setAttachedFile] = useState<File | null>(null);
   const clearAttachment = useCallback(() => { setAttachedFile(null); }, []);
 
@@ -488,6 +492,8 @@ export function useInboxState(): UseInboxStateReturn {
     closeKartePanel();
     setDraft("");
     setSendError("");
+    setSendErrorReason("");
+    setSendErrorCode(null);
     clearAttachment();
 
     // ADR-108: set default karte tab based on lead_status
@@ -599,22 +605,31 @@ export function useInboxState(): UseInboxStateReturn {
   // ---------------------------------------------------------------------------
 
   const messagingWindow: MessagingWindow | undefined = messagesData?.messaging_window;
-  // AC1.5: Discord DM channel が未設定の場合は送信不可
+  // Discord はチケット専用チャンネル（discord_guild_channel_id）のみを送信先とする。
+  // DM 経路は廃止方針のため discord_dm_channel_id は参照しない。
   const currentPlatform = messagesData?.lead?.platform ?? null;
-  const discordDmChannelMissing = currentPlatform === "discord" && !leadDetail?.discord_dm_channel_id;
-  const canSend = !!messagingWindow?.can_send_at_all && !discordDmChannelMissing;
+  const discordChannelMissing = currentPlatform === "discord" && !leadDetail?.discord_guild_channel_id;
+  const canSend = !!messagingWindow?.can_send_at_all && !discordChannelMissing;
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
 
   const submitSend = useCallback(async (opts?: { draftId?: number }) => {
     if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
     setSendError("");
+    setSendErrorReason("");
+    setSendErrorCode(null);
     setSending(true);
     try {
       if (attachedFile) {
-        await sendImageMessage(selectedLeadId, attachedFile);
+        const imgRes = await sendImageMessage(selectedLeadId, attachedFile);
         clearAttachment();
         setDraft("");
+        // 送信は成功したが自社保管に失敗した場合を可視化する（PO決定 2026-09-03）。
+        // 静かに失われることを防ぐため、送信成功のまま警告だけを出す。
+        if ((imgRes as { attachment_saved?: boolean }).attachment_saved === false) {
+          setSendErrorReason("attachment_not_saved");
+          setSendError("attachment_not_saved");
+        }
       } else {
         await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");
@@ -624,10 +639,17 @@ export function useInboxState(): UseInboxStateReturn {
       loadConversations();
     } catch (e) {
       if (e instanceof ApiError) {
+        const detail = e.responseDetail as { reason?: string; error_code?: number } | null;
+        setSendErrorReason(detail?.reason ?? "generic");
+        setSendErrorCode(detail?.error_code ?? null);
         setSendError(e.message || "Send failed");
       } else if (e instanceof Error) {
+        setSendErrorReason("generic");
+        setSendErrorCode(null);
         setSendError(e.message);
       } else {
+        setSendErrorReason("generic");
+        setSendErrorCode(null);
         setSendError("Send failed");
       }
     } finally {
@@ -861,9 +883,11 @@ export function useInboxState(): UseInboxStateReturn {
     setDraft,
     sending,
     sendError,
+    sendErrorReason,
+    sendErrorCode,
     sendDisabled,
     canSend,
-    discordDmChannelMissing,
+    discordChannelMissing,
     trimmedDraft,
     messagingWindow,
     submitSend,

@@ -12,6 +12,8 @@ useDefault = true
 description = "プロジェクト固有の誤検知除外ルール"
 paths = [
   ".env.example",
+  # SEC-01: APIキーを含む例外文字列をテストするファイル（偽キーのみ使用）
+  "backend/tests/test_gemini_error_redact.py",
 ]
 regexes = [
   # ドキュメント内の公開済み Meta App ID（秘密情報でない）

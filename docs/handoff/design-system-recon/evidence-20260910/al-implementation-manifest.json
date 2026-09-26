@@ -1,0 +1,97 @@
+{
+  "base": "9e0406eeb5fa804dd678874c395fe66d906faafa",
+  "products": [
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "sha256": "9ab2b459d1690a6c7a7f12f7286a0df197485d641cb46071020e175f60b0287b"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SupplierEditPage.tsx",
+      "sha256": "fe82d7dc30bd08086de08767cd697523ca5df0122d8aa13a35421ba8e616dd3a"
+    },
+    {
+      "file": "frontend/src/components/FullPageFormButtonMigration.test.tsx",
+      "sha256": "d92bf51e0326165dcc5d3803e316ecbf9c0657d6731bed15a63d82da3d42af20"
+    }
+  ],
+  "archive": "al-implementation-checkpoint.tar.gz",
+  "archiveSha256": "b0a33603fc013093d1f991f0314e3c125c87d42a816f2e18c72bddd1a35b59bf",
+  "files": [
+    {
+      "file": "prepare.cjs",
+      "sha256": "dbffc12c021b7797e6e9b9739b3c86fd48198d46c6db0703900575d8a98d9e2f"
+    },
+    {
+      "file": "server.cjs",
+      "sha256": "5731cf160b9ba5b5f10d0953c8dd7bac4b6fdfe86b6a03f410f779058f55120f"
+    },
+    {
+      "file": "browser.cjs",
+      "sha256": "e740620b5a8bed838361aff65c60aca0587b594de9958254b9a265dfd7e73df5"
+    },
+    {
+      "file": "operations.cjs",
+      "sha256": "304560017c12f1f1c0eee1cdb2cff58e387b1a70ea16e74e4048b5b40f5c60d8"
+    },
+    {
+      "file": "verify-source.py",
+      "sha256": "50345ba268036df5bc7cc1cb9ac839ce6ffb42cdb9f7d78d0f78054dc4d15121"
+    },
+    {
+      "file": "source-verification.json",
+      "sha256": "feffb5c8b65e4fe276e5b11ce07c70462700fdfe7ea5b51a3658db39941aa57f"
+    },
+    {
+      "file": "counts.cjs",
+      "sha256": "9496a0d46bbae17621d3ca3c8edef3bfd305bd2d2c7edd9dc8d7372ceff844ae"
+    },
+    {
+      "file": "counts.json",
+      "sha256": "7296740f77d7bb4d558136161e11115e37c72221bc23be58dbde2189b309fd27"
+    },
+    {
+      "file": "browser-smoke.json",
+      "sha256": "0a011f5aa476ba02b176a556409386257d1c72665cefe75603a5d39fd6f1c637"
+    },
+    {
+      "file": "browser-result.json",
+      "sha256": "a9f95789aa916a8120a61a9e4d092a5661a819727669da472e4ed42cb125115c"
+    },
+    {
+      "file": "operations-result.json",
+      "sha256": "160dd05a60050849028736565e59f5d085201574eeb9c782d39a77f2d31233ef"
+    },
+    {
+      "file": "contacts-active.png",
+      "sha256": "2698f926e18a6a81456e20e8c2c00a14015fd9b9fe4a71a38a614a0a6c15960e"
+    },
+    {
+      "file": "contacts-pending.png",
+      "sha256": "a907d8e7b9a033aaec20a736b499a10497c23bb948dd33c6bd72a3000c66e639"
+    },
+    {
+      "file": "suppliers.png",
+      "sha256": "fd87d122049f8aa3889576c97820820d0eaa41489fb0d19beebff6b597752bb3"
+    },
+    {
+      "file": "al-generator-npmci.log",
+      "sha256": "3ce274db6fcbe744db20c3b5e10f0c629a5e9925d4e4e3852e0c4adf02aafb0e"
+    },
+    {
+      "file": "al-generator-coverage.log",
+      "sha256": "15402df8a523ede8ed35da175de7eb9e2227663e893ac179052d319263650c11"
+    },
+    {
+      "file": "al-generator-checkall.log",
+      "sha256": "2b10ed3db35ff2e0b5fe4335a1f4ddcf8bb0dc2747be169476dd3a083207d488"
+    },
+    {
+      "file": "al-generator-build.log",
+      "sha256": "ec7e394b8685a97c190a8473b88693df28b82d1287dc3921ba523599a5ac9f96"
+    },
+    {
+      "file": "al-generator-storybook.log",
+      "sha256": "05e77d1a88d44d91d6ad303c5258ed1ce7c34bfdc0b0c68dc5f3b060c12f956b"
+    }
+  ]
+}

@@ -120,7 +120,7 @@ run_py  scripts/migrate_meta_messages_page_id.py
 run_py  scripts/migrate_adr015_lead_foundation.py  -e TENANT_CODE=highlife-jpn
 
 # ロール移行
-# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働
+# [2026-06-28 停止] migrate_roles_gas_compat.py — 役目終了のため非稼働（GO #2658 Shingo承認済み）
 #   停止理由:
 #     1. メンバー→CS 移行・メンバー削除は全テナント完了済み（5テナントで「メンバー」0件 / 2026-06-28確認）
 #     2. 既存テナントへの seed が DEFAULT_ROLES 変更のたびに新名ロールを全テナントに INSERT し
@@ -453,11 +453,12 @@ run_sql migrations/20260622_020000_migrate_conv_only_into_meta_messages.sql
 # Foundation F2: lead.country を ISO alpha-2 に backfill（危険変更）
 run_py  scripts/migrate_20260621_020000_backfill_lead_country.py
 
-# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
-run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # SSOT cleanup 2: products.tcg_type を tcg_type_master.code に固定
 run_sql migrations/20260623_060000_add_products_tcg_type_fk.sql
+
+# SA-18 Phase2 ③-b(5): message_translations に RLS 有効化（tenant スキーマ全件）
+run_sql migrations/20260623_100000_rls_message_translations.sql
 
 # 送信ガード土台: meta_messages.original_language を message_translations から backfill
 run_sql migrations/20260624_120000_backfill_meta_messages_original_language.sql
@@ -468,6 +469,9 @@ run_sql migrations/20260624_140000_converge_inventory_v2.sql
 # 段階A: outbound_translation_drafts に送信メッセージ紐付け＋is_edited 列を追加
 run_sql migrations/20260626_100000_add_outbound_draft_message_link.sql
 
+# ADR-146 B方式: tenant_discord_config.guild_id に UNIQUE 制約追加（1Guild=1Tenant保証）
+run_sql migrations/20260626_120000_add_unique_guild_id_to_tenant_discord_config.sql
+
 # ADR-145 段階2: public.products に FORCE-RLS + 4ポリシー（共通=運営のみ/固有=自テナント）
 run_sql migrations/20260626_130000_force_rls_public_products.sql
 
@@ -477,9 +481,352 @@ run_sql migrations/20260627_120000_add_tenant_features_table.sql
 # スコープ②Phase2 backfill: products.unit DROP 前に inventory.unit へ退避（空欄のみ・冪等）
 run_sql migrations/20260629_010000_backfill_inventory_unit_from_products.sql
 
+# 為替レート SSOT (public.app_fx_rates) テーブル新設 + RLS（読み取り全許可・書き込みoperatorのみ）
+run_sql migrations/20260628_170000_add_app_fx_rates.sql
+
+# 便1a: 取引フロー背骨の必須化（遡及lead逆造成 backfill + 条件付き NOT NULL）
+run_sql migrations/20260703_010000_txn_backbone_ben1a.sql
+
 # スコープ②Phase2 DROP: products から redundant な condition/unit 列を物理削除（IF EXISTS・冪等）
 run_sql migrations/20260629_020000_drop_products_condition_unit.sql
+
+# 便1b: conversation_logs の背骨必須化（echo穴埋め + 遡及backfill + NOT NULL）
+run_sql migrations/20260703_020000_conv_backbone_ben1b.sql
+run_sql migrations/20260715_100000_add_conversation_logs_lead_fk.sql
+# deals廃止 段階①: leads へ商談列追加
+run_sql migrations/20260718_100000_leads_add_deal_columns.sql
+
+# deals廃止 段階②(D3): orders.deal_id の NOT NULL 解除
+run_sql migrations/20260720_100000_orders_deal_id_drop_not_null.sql
+run_sql migrations/20260721_100000_close_reasons_quotes_add_lead_id.sql
+run_sql migrations/20260721_120000_close_reasons_quotes_leadid_notnull.sql
+run_sql migrations/20260723_120000_dcr_dealid_nullable.sql
+
+# 便2: order_items 新設＋仕入接続
+run_sql migrations/20260703_030000_order_items_ben2.sql
+
+# orders.deal_id と対応するFKを全tenantから削除（冪等）
+run_sql migrations/20260724_074500_drop_orders_deal_id.sql
+
+# quotes.deal_id と対応するFKを全tenantから削除（冪等）
+run_sql migrations/20260724_131500_quotes_drop_deal_id.sql
+
+# deal-removal: deal_close_reasons の deal_id 依存を撤去し、lead_id/reason_id を一意化
+run_sql migrations/20260724_170000_dcr_drop_deal_id.sql
+
+# leads.converted_deal_id と対応するFKを全tenantから削除（冪等）
+run_sql migrations/20260726_180000_leads_drop_converted_deal_id.sql
+
+# 便E: deals テーブル本体を全tenantから削除（本番適用済み 2026-07-29・冪等）
+run_sql migrations/20260729_043520_drop_deals.sql
+
+# Phase 2c 前処理: tcg_products 参照 FK をクリーンアップ（冪等）
+run_sql migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql
+
+# Fix: Phase 2a missed public/tenant_004.analysis_results FK (blocks Phase 2c)
+run_sql migrations/20260922_050000_fix_phase2c_fk_drop_only.sql
+
+# TCG MIG-04: tenant_004 TCG解析テーブル 18本 作成（冪等）
+run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
+
+# TCG MIG-04: conditions に R1〜R4 解決列追加 + seed（additive-only・冪等）
+run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
+
+# MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
+run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
+
+# TCG MIG-04 E3a/E5: analysis_results に unit_inferred/unit_basis/unit_confidence/unit_infer_reason 追加（additive-only・冪等）
+run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
+
+# attachment-storage 便2: 添付ファイル保管台帳 (tenant_NNN.lead_attachments) + RLS
+run_sql migrations/20260902_100000_create_lead_attachments.sql
+
+# TCG MIG-04: 分類マスタ 4テーブル作成＋GAS実データ seed（tenant_004 専用・冪等）
+run_sql migrations/20260902_110000_tcg_classification_masters.sql
+
+# TCG MIG-04: tcg_products に分類 ID FK を設定し 268件全行を GAS 実データで更新（冪等）
+run_sql migrations/20260902_110100_tcg_products_classification_ids.sql
+
+
+# PARITY-02 A-2: 単位証拠ルール 4件 seed（tcg_unit_evidence_rules 新規テーブル・冪等）
+run_sql migrations/20260903_120000_tcg_unit_evidence_rules_t004.sql
+
+# PARITY-02 A-3: 注記マスタ 22件 seed（tcg_note_master 新規テーブル・冪等）
+run_sql migrations/20260903_130000_tcg_note_master_t004.sql
+# TCG PARITY-02 A-4: ステータスマスタ 9件（tenant_004 専用・冪等）
+run_sql migrations/20260903_150000_tcg_status_master_t004.sql
+
+# TCG PARITY-02 A-1: 正規化ルール 135件（tenant_004 専用・冪等）
+run_sql migrations/20260903_160000_tcg_normalization_rules_t004.sql
+
+# PARITY-03: tcg_products に mark / english_title 列を追加し 268件を充填（冪等）
+run_sql migrations/20260903_180000_tcg_products_mark_en_t004.sql
+
+# PARITY-03 Phase 3 Stage 3: 修正履歴テーブル（tenant_004 専用・冪等）
+run_sql migrations/20260903_170000_item_corrections_t004.sql
+
+# DIST-01 A': NR0008 全角＠除去ルール追加（price_normalized NULL 91→3件）
+run_sql migrations/20260903_190000_tcg_normalization_rules_nr0136.sql
+
+# DIST-01 B: 配信先マスタ（tenant_004 専用・冪等）
+run_sql migrations/20260903_200000_tcg_distribution_targets_t004.sql
+
+# DIST-01 C: 配信全体設定（tenant_004 専用・冪等）
+run_sql migrations/20260903_210000_tcg_distribution_settings_t004.sql
+
+# HIST-01: 再解析履歴テーブル（analysis_runs / analysis_run_snapshots・tenant_004 専用・冪等）
+run_sql migrations/20260903_220000_create_tcg_analysis_history_t004.sql
+run_sql migrations/20260904_160000_tcg_magazine_promo_products_t004.sql
+run_sql migrations/20260905_010000_tcg_pokemon_master_batch1_t004.sql
+run_sql migrations/20260905_020000_tcg_fix_product_names_t004.sql
+
+# REVIEW-STAGE: import_jobs に確認工程カラムを追加（pending_messages/window/unresolved_names/review_status）
+run_sql migrations/20260905_140000_import_jobs_review_stage_t004.sql
+
+# SUP-R2: 仕入元 15件 新規登録（SP0188〜SP0202）+ LINE チャンネル行（tenant_004 専用・冪等）
+run_sql migrations/20260905_120000_register_15_suppliers_t004.sql
+
+# RECORD-01: 直接SQL復旧の記録（SP0007/SP0184 name修正・SP0203/SP0204 新規登録）（tenant_004 専用・冪等）
+run_sql migrations/20260905_150000_record_manual_supplier_fixes_t004.sql
+
+# QA-03: tenant_001 に TCG 全テーブル 27 本を作成 + 分類マスタ seed + テスト仕入元 3 件（QA 専用・冪等）
+# tenant_006 は Meta App Review 専用（QA 禁止）→ QA は tenant_001 を使用
+run_sql migrations/20260906_120000_create_tcg_tables_t001.sql
+
+# SEC-01: extraction_jobs.error_message に残る Gemini APIキー付きURL 24行を定型文に置換（tenant_004 専用・冪等）
+run_sql migrations/20260906_230000_redact_extraction_error_keys_t004.sql
+
+# NOTE-EXPAND-A: tcg_note_master 固定札26件追加＋既存2行の検索語更新（tenant_004 専用・冪等）
+run_sql migrations/20260907_100000_tcg_note_master_expand_t004.sql
+run_sql migrations/20260907_120000_tcg_dist_stale_jobs_terminate_t004.sql
+
+# KW-HYGIENE: 商品マスタ キーワード整備 11項目（除外語の自己矛盾解消・壁追加・PM0146無効化）（tenant_004 専用・冪等）
+run_sql migrations/20260907_140000_tcg_keyword_hygiene_t004.sql
+
+# IMPORT-01: 商品マスタCSV取り込み履歴（tenant_004 専用・冪等）
+run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
+
+# IMPORT-01 QA: 同上（tenant_001 専用・冪等）
+run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
+
+# ADR-158: neutralized exclude-keyword inserts (data applied via app/CSV per ADR-155)
+run_sql migrations/20260925_120000_add_product_exclude_keywords.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
 echo "============================================"
+
+# LMI-SP0136-REQUEUE: SP0136 の残す1件の抽出ジョブを error→pending に戻す（tenant_004 専用・冪等）
+run_sql migrations/20260908_130000_tcg_sp0136_requeue_extraction_t004.sql
+run_sql migrations/20260908_170000_tcg_keyword_v4_t004.sql
+
+# LMI-SP0136-CLEANUP: SP0136 の古い在庫メッセージ c5ad04aa を無効化（tenant_004 専用・冪等）
+run_sql migrations/20260908_210000_tcg_sp0136_supersede_old_message_t004.sql
+
+# PHASE-2B: public.products Phase 2b columns prerequisite (work_id, unit, condition, etc.)
+run_sql migrations/20260909_000000_public_products_phase2b_columns.sql
+
+# NOTE-B2: 値を運ぶ備考札＋正規化拡張（tenant_004 専用・冪等）
+run_sql migrations/20260909_130000_tcg_note_b2_t004.sql
+
+# PMG import progress: TCG schemas only, additive, no backfill
+run_sql migrations/20260910_010000_tcg_import_message_links.sql
+
+# LINE work evidence before v3 code; dictionary filter is independently idempotent.
+run_sql migrations/20260910_160000_tcg_work_evidence.sql
+run_sql migrations/20260910_160100_tcg_normal_deck_coro_exclusion.sql
+run_sql migrations/20260910_170000_tcg_keyword_false_positive_guards.sql
+run_sql migrations/20260910_180000_tcg_interrupted_jobs_recovery_t004.sql
+run_sql migrations/20260910_200000_tcg_condition_note_delivery_t004.sql
+run_sql migrations/20260912_020000_tcg_resolved_work_id.sql
+run_sql migrations/20260912_160000_line_import_devices.sql
+run_sql migrations/20260912_170000_line_supplier_source_names.sql
+
+# ドラゴンボール フュージョンワールド 商品マスタ v2（55件：英語名補完+未登録29件追加+検索/除外キーワード付与）
+run_sql migrations/20260913_010000_seed_dragonball_products_v2.sql
+run_sql migrations/20260913_020000_seed_onepiece_products.sql
+run_sql migrations/20260913_030000_seed_unregistered_products.sql
+run_sql migrations/20260913_150000_tcg_empty_box_condition.sql
+run_sql migrations/20260913_200000_tcg_cardset_exclusion.sql
+run_sql migrations/20260913_210000_tcg_cardset_bundle_registration.sql
+
+# ABBREV-01: tenant_004 略語キーワード追加（検索語・除外語）— PR #3495
+run_sql migrations/20260914_080000_add_abbreviation_keywords_t004.sql
+
+# CARD09: persist extraction attempts before adopting new results.
+run_sql migrations/20260914_010000_tcg_extraction_attempts.sql
+
+# UNIFY-2A: tcg_products → public.products 統合（ADR-1001 Phase 2a）— スキーマ拡張 + データ移行 + FK 張替え
+run_sql migrations/20260914_140000_unify_tcg_products_to_public.sql
+
+# Fix: Phase 2c blocker — initial FK fix draft (public.analysis_results stale FK DROP + re-add)
+# NOTE: superseded by 050000 for the DROP step, but registered here to satisfy migration guard
+run_sql migrations/20260922_040000_fix_phase2c_fk_blocker.sql
+
+# UNIFY-2C: tcg_products テーブル DROP（ADR-1001 Phase 2c）— SSOT 完了後のクリーンアップ
+run_sql migrations/20260915_010000_drop_tcg_products_phase2c.sql
+
+# ADR-1002 Phase B: FK付替え UUID→INTEGER + SEQUENCE（冪等）
+run_sql migrations/20260915_120000_phase_b_fk_rewire_uuid_to_int.sql
+
+# ADR-1002 Phase C: public.products.tcg_uuid カラム・制約・インデックス削除
+run_sql migrations/20260916_120000_phase_c_drop_tcg_uuid.sql
+
+# work_id NOT NULL 制約追加
+run_sql migrations/20260916_130000_work_id_not_null.sql
+
+# Gemini v5: extraction_items に resolved_product_code 列追加
+run_sql migrations/20260917_010000_add_product_code_to_extraction.sql
+
+# C92: 完売ルール・日付ルール共通テーブル 13表（tenant_001 専用・冪等）
+run_sql migrations/20260917_000000_create_analysis_rule_tables.sql
+
+# 仕入元マスタ SSOT Sprint 1: tcg_suppliers → public.suppliers コピー + supplier_channels FK UUID→INTEGER + line_supplier_source_names DROP
+run_sql migrations/20260917_020000_supplier_ssot_migration.sql
+
+# 仕入元マスタ SSOT Phase 2 Sprint 1: public.suppliers に tenant_id 追加 + purchase_orders/products FK 張り替え
+run_sql migrations/20260918_030000_supplier_ssot_phase2.sql
+
+# Master SSOT Phase 1a: public.products.work_id を UUID→INTEGER へ再キャスト（冪等）
+run_sql migrations/20260919_010000_master_ssot_work_id_recast.sql
+
+# VIEW → TABLE 修正: 手動作成VIEWをDROPし実体テーブルをRENAME（本番デプロイ252番失敗の修正）
+run_sql migrations/20260919_015000_fix_view_to_table_rename.sql
+
+# Master SSOT Phase 1b: 共用マスタ public テーブル群を作成（冪等）
+run_sql migrations/20260919_020000_master_ssot_public_tables.sql
+
+# Master SSOT Phase 2: FK work_id → tcg_type_master（冪等）
+run_sql migrations/20260919_030000_master_ssot_fk_work_id.sql
+
+# Fix extraction_items.resolved_work_id UUID→INTEGER 型修正（冪等）
+run_sql migrations/20260919_190000_fix_extraction_work_id_type.sql
+
+# Master SSOT Phase 3: unit_id/condition_id FK UUID→INTEGER + product_category_id UUID→INTEGER（冪等）
+run_sql migrations/20260920_010000_phase3_fk_rewire_unit_condition.sql
+
+# Supplier dedup: LINE インポートで同じ仕入先が重複登録される問題を修正（UPSERT + UNIQUE インデックス）
+run_sql migrations/20260920_020000_supplier_line_name_unique.sql
+
+# Conditions master SSOT Phase 1: public.conditions に tenant_id 追加 + deal_statuses/work_items FK 張り替え
+run_sql migrations/20260920_040000_conditions_ssot_phase1.sql
+
+# 単位マスタ public.units に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_030000_units_add_tenant_id.sql
+
+# ステータスマスタ public.tcg_status_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_050000_status_master_add_tenant_id.sql
+
+# 備考マスタ public.tcg_note_master に tenant_id 追加（NULL=共用/LINE解析用、数値=テナント個別）
+run_sql migrations/20260920_060000_note_master_tenant_id.sql
+
+# product_categories tenant_id
+run_sql migrations/20260920_070000_product_categories_tenant_id.sql
+
+# analysis_rule 13テーブルをpublicスキーマに新設（CREATE TABLE IF NOT EXISTS・冪等）
+run_sql migrations/20260920_120000_analysis_rule_public_tables.sql
+
+# 商品分類マスタ新設: product_lines（小分類）+ product_formats（細分類）+ products FK カラム追加
+run_sql migrations/20260920_130000_create_product_classification.sql
+
+# analysis_rule 13テーブルを全スキーマから削除（SSOT を tcg_status_master に統合・PR #3621）
+run_sql migrations/20260921_010000_drop_analysis_rule_tables.sql
+
+# ADR-156: 商品分類ツリー Phase 1 — 大分類・type_master rename・小分類FK・コンディション定義・解析マスタFK
+run_sql migrations/20260921_060000_create_product_kinds.sql
+run_sql migrations/20260921_070000_rename_tcg_type_master_to_type_master.sql
+run_sql migrations/20260921_080000_product_lines_add_type_id.sql
+run_sql migrations/20260921_090000_create_condition_definitions.sql
+run_sql migrations/20260921_100000_add_analysis_master_fk.sql
+
+# Step 1/5: パイプライン 17テーブル を public スキーマに作成（DDL-only・冪等）
+run_sql migrations/20260921_110000_pipeline_tables_public.sql
+
+# Step 5/5: tenant_004 スキーマのパイプライン 17テーブル + バックアップ 2テーブルを DROP（ADR-1002）
+run_sql migrations/20260921_050000_drop_tenant004_pipeline_tables.sql
+
+# ADR-156 Phase 3A: products に product_kind_id（INTEGER FK → public.product_kinds）追加
+run_sql migrations/20260921_120000_add_products_product_kind_id.sql
+
+# 共用Knowledge抽出語彙シード: block_delimiter / skip_condition / status_keyword
+run_sql migrations/20260924_040000_seed_knowledge_extraction_vocab.sql
+
+# 仕入元 Knowledge リンクテーブル新設（supplier_knowledge_links）
+run_sql migrations/20260924_050000_create_supplier_knowledge_links.sql
+
+# ADR-156 Phase 5: tenant_004 マスタテーブルのコピーを DROP（全コードが public SSOT を参照済み）
+run_sql migrations/20260921_130000_drop_tenant004_master_copies.sql
+
+# ADR-156 Phase 6: 小分類→大分類FK / 入数マスタ / 重量マスタ / products FK追加
+run_sql migrations/20260921_140000_product_classification_masters.sql
+
+# ADR-157: 買取相場ログ（外部買取店の価格定期取得テーブル）
+run_sql migrations/20260922_000000_create_buyback_tables.sql
+
+# ADR-156 Phase 7: 細分類→大分類FK / 商品→中分類FK追加
+run_sql migrations/20260922_010000_product_format_kind_id_and_products_type_master_id.sql
+
+# ADR-156 Phase 8: 細分類→中分類 多対多中間テーブル
+run_sql migrations/20260922_030000_product_format_game_links.sql
+
+# Rule Test System: テストケース管理 + テスト実行
+run_sql migrations/20260922_020000_create_rule_test_tables.sql
+
+# 販売単位・状態マスタ連鎖プルダウン基盤
+run_sql migrations/20260922_060000_product_unit_condition_infra.sql
+
+# LINE解析テーブルリネーム Phase 1（RENAME + 後方互換VIEW）
+run_sql migrations/20260922_080000_rename_line_analysis_tables.sql
+
+# ADR-156 Phase 9: 細分類(product_formats)に type_master_id 直接リンク追加（カードゲーム別フィルタリング）
+run_sql migrations/20260923_010000_product_formats_add_type_master_id.sql
+
+# 残存 TCG マスタ 3 テーブルを public schema にプロモート
+run_sql migrations/20260923_030000_promote_remaining_tcg_tables.sql
+
+# line_import_devices.tcg_schema を tenant_004 → public に更新
+run_sql migrations/20260923_040000_update_device_tcg_schema.sql
+
+# public.analysis_results に欠落インデックスを追加（ON CONFLICT 修正）
+run_sql migrations/20260923_050000_add_indexes_public_analysis_results.sql
+
+# public.analysis_results に work_id カラムを追加（Gemini 精度計測用）
+run_sql migrations/20260923_120000_add_work_id_to_analysis_results.sql
+
+# ADR-157: 買取価格変動アラートルール
+run_sql migrations/20260924_000000_create_buyback_alert_rules.sql
+
+# public.suppliers に仕入元ごとの抽出ルール列を追加
+run_sql migrations/20260924_010000_add_supplier_extraction_rules.sql
+
+# public.suppliers に例文テキスト列を追加（Gemini プロンプト注入用）
+run_sql migrations/20260924_030000_add_extraction_example_text.sql
+
+# ADR-157 Phase 3: 買取商品と自社マスタの自動紐付け（product_id型変更・match列追加）
+run_sql migrations/20260924_100000_buyback_product_matching.sql
+
+# analysis_run_snapshots.unit_id / condition_id: UUID → INTEGER 型修正
+# analysis_results が INTEGER 型のためスナップショット保存時の型不一致を解消
+run_sql migrations/20260924_110000_fix_analysis_run_snapshots_unit_condition_type.sql
+
+# Supplier name dedup: 同一name重複21組を統合（旧SUP-xxx → 新SP-xxxxx）
+run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
+
+# ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
+run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
+
+# conditions テーブルに match_type / effect カラムを追加（tcg_status_master パターン統一）
+run_sql migrations/20260925_010000_conditions_add_match_type.sql
+
+# line_conditions に condition_def_id / unit_id / note 追加（ConditionsMasterPanel v2）
+run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql
+
+# ADR-158 Phase 2: extraction_items に raw_product_code カラム追加（Gemini v6 型番抽出）
+run_sql migrations/20260926_010000_add_raw_product_code.sql
+
+# Gemini 抽出プロンプト設定テーブル新設（管理画面から編集可能）
+run_sql migrations/20260926_080000_create_extraction_prompt_config.sql
+
+# product_id=61 の product_code='-' を 'S-PS' に修正（30th BOX バグ根本原因）
+run_sql migrations/20260926_080100_fix_product_code_dash.sql

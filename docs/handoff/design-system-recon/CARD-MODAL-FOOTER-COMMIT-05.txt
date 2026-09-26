@@ -1,0 +1,22 @@
+CARD-MODAL-FOOTER-COMMIT-05
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする。
+受領確認: 受領。CARD-MODAL-FOOTER-COMMIT-05
+読んだ節: guards/00-common.md、03-file.md、05-pr.md、11-lint.md。
+照合§5.5: 1○実tree、2○本便PRなし、3○親へ全文、4○検収済み差分commit、5○基準main登録、6○manifest列挙、7○hash/製品2限定。
+Generator担当。他者と並行、root文書/製品を改変しない。新AI起動禁止。
+作業tree `/Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared`、HEAD `7606ca9a041e315b81040373e8f4ddebbc562133`。
+許可は `/tmp/frontend-raw-buttons-20260911/commit-manifest.json` の列挙ファイルをhash照合しstage/commitすることだけ。rootがこのカード保存後に作成する実在manifestを使用する。製品はModal.css/Modal.stories.tsxの2ファイル、残り正式docsとtasksのみ。AH7草案は/tmp退避済み、今回stage対象外。
+禁止: ファイル内容編集/対象外stage/GO/push/PR/merge/deploy。後続PRはreadyでdraft禁止。本便はcommitまで。
+手順0: 必須preflightとHEAD照合。root品質5項目exit0、browser560/輪郭448/Story4、限定review APPROVE、製品2hash一致の証跡はmodal-footer-implementation.md。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && ./scripts/dev/executor-preflight.sh
+手順1: manifest全ファイルのSHA256と実物、gitの変更ファイル集合を一致検算。untrackedも含め列挙外があれば停止。禁止領域やAH6TSX差分は0であることを名前付きで確認。Python/subprocessでmanifest配列を引数配列としてgit addへ渡し、文字列shell展開しない。
+手順2: git diff --cached --check、check-task-stateを実行。stage集合/各hashがmanifest一致、製品2/22追加0削除を確認。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git diff --cached --check
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && bash scripts/check-task-state.sh
+手順3: 成功した場合だけcommit。フック拒否時は原出力を親へ報告し停止。迂回/設定変更なし。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git commit -m 'fix(frontend): wrap shared modal footer actions'
+手順4: 実在commitを確認して親へ。pushはまだしない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git log -1 --format='%H %s'
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-raw-buttons-shared && git status --short
+完了報告冒頭「本報告はカード CARD-MODAL-FOOTER-COMMIT-05 の実行結果である」。親へ生出力全文と実在ログリンク。停止時は手順番号/最後のコマンド/理由/対象名。commitなしを成功扱いしない。
+END OF CARD

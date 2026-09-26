@@ -1,0 +1,140 @@
+# dealsテーブル廃止・リード統合（deal-removal）— 設計図
+
+> この文書は何か（専門用語なしの1行）:
+> 商談（deals）を別テーブルで持つのをやめ、リードの状態の1つとして扱う設計。商談は「新規顧客と関係を築く1回きりの局面」なので、紙を分ける必要がないと判断した。親テーマ「DB設計のSSOT化」の子。
+
+親: ../README.md ／ あるべき姿・KGI: ../ideal-state.md, ../kgi.md
+
+## 1. あるべき姿（PO自筆・2026-07-18・原文のまま）
+
+私の考えている商談とは新規顧客との商談で、最終的な結果は成約するか失注するか、対象外の結果しか想定していない
+成約の方向であれば顧客登録フォームに記入をしてもらい顧客テーブルが作成され、そこから発注をいただければ請求書を発行することでorderテーブルが作成される
+
+つまりdealとはリードで登録された新規の顧客と信頼関係を構築して新しいパートナーシップを築くための商談のことを指している
+
+## 2. KGI（○×で測る）
+
+| # | 合格条件 | 測り方 | 合格ライン |
+|---|---|---|---|
+| D1 | 新規の商談化でdealsテーブルに行が作られない | 商談化ボタン押下後のdeals行数増分 | 0 |
+| D2 | 商談の金額・通貨・完了予定日がleadsで管理される | leadsに対応列が実在 | 1 |
+| D3 | orders.deal_id 必須が解消され company_id 参照に置換 | スキーマ実測 | 1 |
+| D4 | 失注理由（deal_close_reasons）がlead_id参照で維持され、既存データが失われない | 移設後の行数=移設前の行数 | 1 |
+| D5 | dealsテーブルが全テナントから削除されている | \dt 実測でdeals不在 | 1 |
+| D6 | 分析・ダッシュボードのdeals参照コードが0件 | git grep "FROM deals" = 0 | 0件 |
+| D7 | quotes.deal_idがlead_id参照に置換され既存見積が失われない | 移設後の行数=移設前の行数 | 1 |
+| D8 | conversation_logs.deal_idを読むコードが0件 | git grep実測 | 0件 |
+| D9 | leads.converted_deal_idを読むコードが0件 | git grep実測 | 0件 |
+
+KPI: 達成KGI数 ◯/9
+
+## 3. recon（実測・2026-07-18・origin/main ff093ab）
+
+- 影響規模: py 272箇所・tsx/ts 302箇所・deal_id 391箇所・md 185ファイル
+- DB依存: orders.deal_id NOT NULL（tenant.py:492）／leads.converted_deal_id FK（tenant.py:448-460）／deal_close_reasons（migrations/20260613_020000）
+- conversation_logs.deal_id: 列あり・FKなし
+- 過去便: docs/handoff/deal-removal-track-a/（ADR-121）は dashboard 可視参照外しのみ。テーブル温存。本設計と矛盾なし・前哨戦として接続
+
+## 4. design（3段階）
+
+- 段階①（書き込み停止）: 商談化はleads.statusの遷移のみに変更。leadsへ amount/currency/expected_close_date 相当を追加。deals新規作成コードを停止
+- 段階②（読み替え）: 分析・ダッシュボード・受注のdeals参照をleads/companies参照へ書き換え。orders.deal_id→company_id移行。deal_close_reasons→lead_id参照へ移設
+- 段階③（削除）: 全参照0を実測確認後、migrationでdeals削除（バックアップ→dry-run→PO自筆GO→実行→検算）
+- 各段階は独立の便で recon→design→実装→GO を踏む。段階③は危険操作（migrations）
+
+## 4.5 段階①の差分設計（PO確定・2026-07-18）
+
+### 移す列・捨てる列（PO確定）
+- leadsへ追加する3列: amount NUMERIC(15,2)・currency VARCHAR(10) DEFAULT 'JPY'・expected_close_date DATE
+- 移さない（段階③で消滅）: title・probability・deal_code。理由: 1リード=商談1回のため案件名はリード名で代替、probabilityは温度感で代替済み、deal_codeはlead_codeが既存
+
+### 書き込み経路の停止（recon 2026-07-18・origin/main 81165c7）
+- 経路1: leads.py:719-833 convert_lead — deals INSERT（765行）を廃し、leads.status='negotiating'遷移＋amount/currency/expected_close_date の直接保存に書き換え。アトミッククレームは converted_deal_id から status 遷移条件へ変更
+- 経路2: deals.py:168 INSERT・351 UPDATE — 新規作成APIを405封鎖（段階②で読み替え完了までUPDATE系は温存）
+- 経路3: companies.py:454/760 会社マージ時のdeals更新 — 段階②で除去（段階①では温存）
+- フロント: LeadsPage.tsx の商談化モーダルから会社・担当者・案件名入力を除去し、金額・通貨・完了予定日入力へ簡素化
+
+### 段階①の受入基準
+- 商談化操作後、dealsの行数増分=0（KGI D1）
+- leadsに3列が実在（KGI D2）
+- 既存テスト緑＋商談化の新テスト（3列保存の実測）追加
+
+## 4.6 段階②の差分設計（PO確定・2026-07-20）
+
+### 読み替えの原則（PO決定の記録）
+- leadは全ての親。商談局面の出来事（見積・失注理由・会話ログ）はリードにぶら下げる
+- 注文（請求書発行時点）は成約後の出来事なので会社にぶら下げる（KGI D3どおり）
+- 「全部リードにぶら下げる」案は検討のうえ不採用（注文の既存company_id活用・意味の整合・移行量の理由。2026-07-20 PO確認）
+
+### 付け替え正解表
+| 対象 | 現状 | 付け替え先 | データ移行 | KGI |
+|---|---|---|---|---|
+| orders.deal_id（NOT NULL FK） | dealsの子 | company_id参照（既存列活用・deal_id依存を除去） | 有 | D3 |
+| deal_close_reasons.deal_id | dealsの子 | lead_id参照へ移設（移設後行数=移設前行数・ロス厳禁） | 有 | D4 |
+| quotes.deal_id | dealsの子 | lead_id参照へ | 有 | D7 |
+| conversation_logs.deal_id | 列のみ・FKなし | lead_id（PR #2917でFK敷設済み）。deal_id列は読み取り0化のみ、列削除は段階③ | 無 | D8 |
+| leads.converted_deal_id | dealsへのFK（循環） | 読み取り0化のみ。列・FKの物理削除は段階③migrationに同乗 | 無 | D9 |
+
+### 共用経路7本の扱い（recon 2026-07-20実測 MAIN e0c34762）
+- leads.py:745-779: 段階①改修済み。converted_deal_id参照が残れば0化（D9）
+- deals.py:137-145,356-381: 失注理由更新をlead_id参照へ（D4）。UPDATE系は読み替え完了後に405封鎖
+- orders.py:443-510: deal_id経由の会社導出を廃止しcompany_id直参照へ（D3）
+- quotes.py:175-215: deal_id存在確認をlead_id存在確認へ（D7）
+- companies.py:454,760: 会社マージ時のdeals更新を除去（§4.5経路3の予約どおり）
+- contacts.py:791-810: deals付け替え部分のみ除去。担当者概念廃止テーマとは範囲分離・リンクのみ
+- conv_log_writer.py:117-131: deals由来のcompany_id補完をleads由来へ（D8）
+
+### 着手順と手続き
+P（表示・分析の読み替え）→ Q（orders D3）→ R（データ移設 D4/D7）。Rは危険migration＝バックアップ→dry-run（ROLLBACK検算）→PO自筆GO→実行→検算。R着手直前に詳細recon（行数・NULL・dealsのlead_id欠損＝孤児の件数）を実測してから移行SQLを確定する。
+
+### 弊害・トレードオフ
+- スコープが§4記載の2件から5件に増え工期が伸びる。ただし段階③の削除ブロッカーを先に解消できる
+- dealsにlead_id=NULL行が存在した場合、D4/D7の移設先が決まらない。Rの詳細reconで件数実測後に扱いを決める
+- /dealsページの画面導線の畳み方は未確定。Pブロック設計時に別途1決定
+
+## 4.7 段階②Rブロックの差分設計（PO確定・2026-07-21）
+
+### 紐づけの原則
+- deal_close_reasons.lead_id / quotes.lead_id を最終的な正とする。段階③で deals を削るときも、Rブロックの読み取りは lead へ寄せる
+- 現行 migration は nullable で `lead_id` を追加し、既存の壊れた行を抱えたままでも適用できるようにする。tenant_006 の 8 行を本番適用前に整理した後、別 migration で NOT NULL 化して最終形へ進める
+- deal_id 列は段階③まで温存し、移行期は lead_id と併存させる
+
+### 実測根拠（recon 2026-07-21）
+- deal_close_reasons: tenant_004 = 0 行、tenant_006 = 8 行
+- deal_close_reasons の 8 行は、紐づく deals.lead_id が全て NULL のため移設先の lead が決まらない
+- quotes: 全テナント 0 行
+- したがって、deal_close_reasons は既存 8 行を整理してから NOT NULL 化、quotes は空なので追加直後から lead_id を書ける
+
+### KGI の検算
+- D4: deal_close_reasons の行数が移設前後で不変。lead_id を FK で保持し、NULL の行を本番適用前に整理した後で NOT NULL 化する
+- D7: quotes の行数が移設前後で不変。lead_id を company/deal の正しい親から導出して保存する
+- D8: conversation_logs.deal_id 読み取り 0 件は維持。R ブロックとは独立
+
+### 弊害・トレードオフ
+- lead_id を nullable で入れるため、最終形にするには tenant_006 の 8 行整理と別 migration が必要
+- ただし、FK を先に入れておけば壊れた行と正しい行を DB 制約で切り分けやすくなる。最終的な NOT NULL は本番適用便の cleanup 後に機械的に課す
+- /deals 廃止と同時に分析・見積の読み替えを進めるため、R ブロックのコードと migration は P/Q ブロックと独立に検証する
+
+## 5. 弊害・トレードオフ（空欄不可）
+
+- 工期が長い（複数便）。ただし段階①完了時点で新規データの二重化は止まる
+- 「1リード=商談1回」が前提。同一リードと2回目の商談が将来必要になった場合、本設計は再検討が必要（現業務では再アプローチ状態で表現する）
+- 既存deals実データ（金額・履歴）の移行手順は段階②のreconで確定する（本書では未確定と明記）
+
+## 6. 外部・過去事例
+
+- ADR-121 / deal-removal-track-a: dashboard可視参照の先行撤去（2026-06-23）。本設計はその延長
+- ADR-089: customers→companies統一。テーブル統廃合の先例として手順を参照
+
+## 7. 受入基準
+
+各KGI（D1〜D6）の測り方をそのまま受入検証とする。段階ごとのPRで該当KGIのみ検証
+
+## 8. 維持の仕組み
+
+- 守り手: .github/workflows/（process-artifacts gate）。migrations変更はGO記録必須
+- 対象: dealsが「復活」する実装（新規deals参照コード）の混入防止。段階③完了後、CI grepガード（FROM deals検出）の追加を検討
+
+## 9. 接触面分析（6面走査）
+
+- ①人: PO（GO発行）・実装役。②エージェント: 本design.mdが正本、着手時に必読。③機械: process-artifacts gate・migration-test.yml（deal_id記載2箇所は段階②で更新）。④データ: 全テナントdeals行（tenant_004本番は特別注意・移行はバックアップ必須）。⑤本番: 段階③はmigration=デプロイ順序リスク対象。⑥外部: 利用者画面から/dealsページが消える（段階②で導線変更）

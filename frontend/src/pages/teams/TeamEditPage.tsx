@@ -9,6 +9,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { api } from "../../lib/api";
 import { TeamFormFields, type TeamFormState } from "./TeamFormFields";
@@ -64,16 +65,16 @@ export default function TeamEditPage() {
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <TeamFormFields form={form} onChange={(f, v) => setForm((p) => ({ ...p, [f]: v }))} />
           <div className="form-actions">
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="secondary" size="md"
               onClick={() => navigate("/teams")}
             >
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">
+            </Button>
+            <Button type="submit" variant="primary" size="md">
               {t("common.update")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

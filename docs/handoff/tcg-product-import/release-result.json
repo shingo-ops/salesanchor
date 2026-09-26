@@ -1,0 +1,69 @@
+{
+  "date_jst": "2026-09-13",
+  "pr": 3438,
+  "pr_url": "https://github.com/shingo-ops/salesanchor/pull/3438",
+  "po_go_original": "GO #3438",
+  "go_kind": "PO本人の原文転記（AI代理GOではない）",
+  "reviewed_head": "c454957227e6edd6bf039ea78e0633fc2194e233",
+  "merge_sha": "739f772d4cf55c1b3972c02c086a7c77b807d293",
+  "merged_at_jst": "2026-09-13T05:46:15+09:00",
+  "deployment": {
+    "run": 34718060417,
+    "url": "https://github.com/shingo-ops/salesanchor/actions/runs/34718060417",
+    "conclusion": "success",
+    "observed_head": "739f772d4cf55c1b3972c02c086a7c77b807d293",
+    "log_head_line": 1031,
+    "health_success_line": 4677
+  },
+  "backup": {
+    "basename": "salesanchor_db_20260913_054655.sql.gz",
+    "reported_size": "6.7M",
+    "success_log_at_jst": "2026-09-13T05:46:58+09:00",
+    "log_line": 584,
+    "restoration_test_performed": false
+  },
+  "ci": {
+    "passed": 2684,
+    "skipped": 95,
+    "warnings": 309,
+    "duration_seconds": 98.96,
+    "checks_success": 40,
+    "checks_skipped": 6
+  },
+  "http": {
+    "api_health": 200,
+    "app": 200,
+    "csv": 200,
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "csv": {
+    "url": "https://app.salesanchor.jp/templates/tcg-product-import-template.csv",
+    "bytes": 148,
+    "sha256": "08ce5fc2137a86a0f594d0d4272fccbfa8d7b9a26ebdf245020fb742dc936929",
+    "bom": true,
+    "crlf": true,
+    "columns": 10,
+    "product_rows": 0,
+    "matches_reviewed_asset": true
+  },
+  "evidence_roles": {
+    "worker": "main統合・CI・正式merge・配備監視・HTTP/CSV照合を実行",
+    "parent": "GO/PR/配備API・実ログを直接確認、本番HTTP/CSV一致を独立に実行（独立第三者レビューではない）"
+  },
+  "not_performed": [
+    "本番の認証付き保存ボタン操作",
+    "本番商品登録",
+    "再解析",
+    "シート配信",
+    "バックアップ復元試験",
+    "文書PR3436のマージ"
+  ],
+  "logs": [
+    "/tmp/reports/SA-CSV-RELEASE-20260913.txt",
+    "/tmp/reports/SA-CSV-RELEASE-20260913-deploy.txt",
+    "/tmp/reports/SA-CSV-RELEASE-PARENT-PR-20260913.json",
+    "/tmp/reports/SA-CSV-RELEASE-PARENT-DEPLOY-20260913.json"
+  ]
+}

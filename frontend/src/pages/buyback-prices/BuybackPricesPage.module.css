@@ -1,0 +1,80 @@
+/* BuybackPricesPage — 外部買取店の買取価格ページ */
+
+/* ── 買取店バッジ ─────────────────────────────────────────────────────── */
+.shopBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
+/* ── 価格セル ─────────────────────────────────────────────────────────── */
+.priceCell {
+  font-variant-numeric: tabular-nums;
+  font-size: var(--font-sm);
+}
+
+/* ── 日付セル ─────────────────────────────────────────────────────────── */
+.dateCell {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+/* ── ステータスメッセージ ──────────────────────────────────────────────── */
+.statusMsg {
+  padding: var(--space-3) 0;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.errorMsg {
+  padding: var(--space-3) 0;
+  color: var(--color-danger);
+  font-size: var(--font-sm);
+}
+
+/* ── カードゲームフィルターグループ（Tabs + DataTable 接続） ───────────── */
+.buybackFilterGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Tabs の下ボーダーと DataTable の上ボーダーを繋げるため上角丸を除去 */
+.buybackFilterGroupTable {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+/* ── 検索フィールド幅制限 ─────────────────────────────────────────────── */
+.searchField {
+  width: var(--size-search-field-max);
+  max-width: var(--size-search-field-max);
+  /* ContentToolbar left スロット内で .comp-field の margin-bottom を打ち消す */
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+/* ── Drawer 内コンテンツ ──────────────────────────────────────────────── */
+.drawerBody {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.historyMeta {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.noHistory {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  text-align: center;
+  padding: var(--space-5) 0;
+}

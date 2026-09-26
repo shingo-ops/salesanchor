@@ -1,0 +1,34 @@
+
+> salesanchor-frontend@1.0.0 test:unit
+> vitest run --config vitest.unit.config.ts --project unit src/components/GoogleCalendarStatusBar.test.tsx
+
+
+ RUN  v4.1.7 /Users/tanizawashingo/worktrees/salesanchor/release-calendar-status-callback/frontend
+
+ ❯ |unit| src/components/GoogleCalendarStatusBar.test.tsx (7 tests | 1 failed) 218ms
+     × sends new fetch results only to the replacement callback and keeps one interval 5ms
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 6 passed (7)
+   Start at  09:56:09
+   Duration  2.13s (transform 135ms, setup 53ms, import 682ms, tests 218ms, environment 985ms)
+
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  |unit| src/components/GoogleCalendarStatusBar.test.tsx > Google Calendar status notification dependencies > sends new fetch results only to the replacement callback and keeps one interval
+AssertionError: expected "vi.fn()" to be called once with arguments: [ 'disconnected' ]
+
+Number of calls: 0
+
+ ❯ src/components/GoogleCalendarStatusBar.test.tsx:57:23
+     55|     rerender(<GoogleCalendarStatusBar {...props} onSyncStatusChange={n…
+     56|     await settle();
+     57|     expect(newNotify).toHaveBeenCalledExactlyOnceWith('disconnected');
+       |                       ^
+     58|     expect(oldNotify).toHaveBeenCalledTimes(1);
+     59|     expect(get).toHaveBeenCalledTimes(2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+EXIT 1

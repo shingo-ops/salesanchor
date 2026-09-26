@@ -1,0 +1,13 @@
+CARD-SAMPLE-BAD-L01
+読んだ節: guards/00-common.md
+
+受領確認
+  最初の応答で「受領。」と1行返してから開始する。
+
+停止時の報告
+  実行画面に出たエラー出力を全文チャットへ貼る。
+
+手順0
+  git status --porcelain > "/tmp/CC報告ファイル/sample.txt"
+
+END OF CARD

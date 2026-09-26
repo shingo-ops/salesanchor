@@ -231,6 +231,39 @@ git -C "${DONE_UNPUSHED_DIR}" commit -m "local only" -q 2>/dev/null
 OUTPUT7=$(run_reaper_dry)
 assert_not_in_delete "DONE+upstream未設定+origin有+未push→保護" "${BRANCH_DONE_UNPUSHED}" "${OUTPUT7}"
 
+# ── テスト 15: DONE + upstream=共用側(origin/main) + 専用棚一致 + きれい → 削除候補（本バグ再現） ──
+# @{u} が origin/main を指し @{u}..HEAD に差分が出るが、HEAD==origin/<branch>（push済み）。
+# 旧コード=未push誤検出で保護／修正後=専用棚一致でpush済みとみなし②完了(DONE)へ進み削除候補。
+BRANCH_DONE_SHARED="feature/test/done-shared-upstream"
+DONE_SHARED_DIR=$(make_worktree_dir "wt-done-shared" "${BRANCH_DONE_SHARED}")
+echo "| ${BRANCH_DONE_SHARED} | テスト | 2026-06-06 | DONE | #997 | | |" >> "${FAKE_ACTIVE_WORK}"
+
+FAKE_REMOTE_15="${TMPDIR_TEST}/fake-remote-15.git"
+git init --bare "${FAKE_REMOTE_15}" -q 2>/dev/null
+git init "${DONE_SHARED_DIR}" -q 2>/dev/null
+git -C "${DONE_SHARED_DIR}" config user.email "test@test.com"
+git -C "${DONE_SHARED_DIR}" config user.name "test"
+git -C "${DONE_SHARED_DIR}" remote add origin "${FAKE_REMOTE_15}"
+
+# base → origin/main（共用側の物差しを作る）
+touch "${DONE_SHARED_DIR}/base.txt"
+git -C "${DONE_SHARED_DIR}" add .
+git -C "${DONE_SHARED_DIR}" commit -m "base" -q 2>/dev/null
+git -C "${DONE_SHARED_DIR}" push origin HEAD:"refs/heads/main" -q 2>/dev/null
+
+# feature → origin/<branch>（専用棚＝HEADと一致）
+touch "${DONE_SHARED_DIR}/feature.txt"
+git -C "${DONE_SHARED_DIR}" add .
+git -C "${DONE_SHARED_DIR}" commit -m "feature work" -q 2>/dev/null
+git -C "${DONE_SHARED_DIR}" push origin HEAD:"refs/heads/${BRANCH_DONE_SHARED}" -q 2>/dev/null
+
+git -C "${DONE_SHARED_DIR}" fetch origin -q 2>/dev/null
+# @{u} を共用側 origin/main に向ける（設定漏れの再現）
+git -C "${DONE_SHARED_DIR}" branch --set-upstream-to=origin/main -q 2>/dev/null
+
+OUTPUT15=$(run_reaper_dry)
+assert_in_delete "DONE+共用upstream+専用棚一致+きれい→削除候補(本バグ)" "${BRANCH_DONE_SHARED}" "${OUTPUT15}"
+
 # ── テスト 8: active-work.md に行なし → 新規行が --- より上に挿入される ────
 # auto-review / auto-done ワークフローの not-found 挿入ロジックをテストする
 BRANCH_NEW="feature/test/brand-new-branch"

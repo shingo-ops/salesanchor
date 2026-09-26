@@ -10,6 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import { SupplierFormFields, type SupplierFormState } from "./SupplierFormFields";
 
@@ -76,16 +77,16 @@ export default function SupplierEditPage() {
         <form onSubmit={handleSubmit} style={{ maxWidth: "var(--modal-max-w-md)" }}>
           <SupplierFormFields form={form} onChange={handleChange} />
           <div className="form-actions">
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="secondary" size="md"
               onClick={() => navigate("/suppliers")}
             >
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary">
+            </Button>
+            <Button type="submit" variant="primary" size="md">
               {t("common.update")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

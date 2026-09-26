@@ -4,11 +4,11 @@
 
 ## なぜコンフリクトが起きるのか
 
-`develop ↔ main` のコンフリクトは主に4つのパターンで発生します。
+`feature ↔ main` のコンフリクトは主に次のパターンで発生します（P1 は main 一本化 #2715 で解消済み）。
 
 | パターン | 何が起きるか |
 |---------|------------|
-| P1: 長期分岐 | develop が main より大幅に先行した状態でリリース PR を開く |
+| P1: 長期分岐 | main 一本化（#2715）により解消済み（記録として残置） |
 | P2: 同一ファイル並行編集 | 複数 feature branch が `InboxPage.css` / `schedule.css` などを同時編集 |
 | P3: 非同期 pull | Terminal A で PR merge → Terminal B が pull 前に commit/push |
 | P4: incomplete rebase | `git pull --rebase` 実行中に別ターミナルから push → abort |
@@ -41,9 +41,9 @@ bash scripts/new-worktree.sh feature/morimoto/<トピック名> --claude
 ### 3. 他ターミナルの PR がマージされたとき
 
 ```bash
-# 現在の feature ブランチで最新 develop を取り込む
+# 現在の feature ブランチで最新 main を取り込む
 git fetch origin
-git rebase origin/develop
+git rebase origin/main
 # ※ rebase 中は他のターミナルで push しないこと（P4 防止）
 ```
 
@@ -98,7 +98,7 @@ bash scripts/new-worktree.sh feature/morimoto/<トピック名> --claude
 **作業完了後のクリーンアップ（ADR-114）**
 
 - **行は DONE で残す・フォルダは消す**（active-work.md の行は削除しない）
-- PR が develop にマージされると、active-work.md の行は **自動で DONE に更新**される
+- PR が main にマージされると、active-work.md の行は **自動で DONE に更新**される
 - フォルダ（worktree）の削除は `reaper-worktree.sh` が自動実行（`new-worktree.sh` 呼び出し時と毎日夜間）
 
 手動でフォルダを削除したい場合（緊急時のみ）:
@@ -138,7 +138,6 @@ lockfile が衝突して 5,000行 差分が発生する（レビュー不可能�
 
 | ワークフロー | 何をするか |
 |------------|-----------|
-| `auto-release-pr.yml` | develop push 時に develop→main PR を自動起票（P1防止） |
 | `frontend-check.yml` | PR ごとに `npm run check:all` を実行 |
 | `active-work-lint.yml` | `active-work.md` 変更時に列数フォーマット（6列）を検証（PR#916） |
 
@@ -162,10 +161,10 @@ git config pull.ff only        # fast-forward のみ
 
 ---
 
-## develop → main のリリース手順
+## release/* → main のリリース手順
 
 ```bash
-# ① develop → main の PR は自動起票される（auto-release-pr.yml）
+# ① release/* から `gh pr create`（--base 省略で main が自動設定）で PR を作成
 # ② しんごさん（PO）が GitHub 上でマージ
 # ③ deploy.yml が自動起動（本番デプロイ）
 ```

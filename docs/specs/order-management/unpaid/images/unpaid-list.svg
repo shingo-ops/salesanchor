@@ -1,0 +1,72 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 300" role="img" aria-label="未入金一覧・2段組みの行">
+<style>
+/* PLACEHOLDER TOKENS: 実装者は下記の値のみ親 docs/specs/order-management/images/ の実値へ置換。構造は不変。--warn-*/--dang- は子定義(接近/超過)で親パレット系に合わせる。 */
+svg{--font:'Hiragino Sans','Noto Sans JP',sans-serif;--text:#2C2C2A;--sub:#5F5E5A;--acc-s:#534AB7;--acc-f:#EEEDFE;--acc-t:#3C3489;--bd:#D3D1C7;--bd2:#888780;--surf:#FFFFFF;--warn-f:#FBF3E2;--warn-t:#8A6114;--dang-f:#FBECEA;--dang-t:#8F3320;}
+text{font-family:var(--font);fill:var(--text);}
+.sub{fill:var(--sub);}
+.bd{fill:none;stroke:var(--bd);stroke-width:0.5;}
+.dash{fill:none;stroke:var(--bd2);stroke-width:0.5;stroke-dasharray:4 4;}
+</style>
+<text x="20" y="26" font-size="15">受注管理 ＞ 未入金</text>
+
+<!-- サイドメニュー(親の器) -->
+<rect class="bd" x="20" y="40" width="120" height="240" rx="8"/>
+<text x="32" y="62" font-size="10" class="sub">サイドメニュー(親)</text>
+<text x="32" y="86" font-size="12" class="sub">すべて</text>
+<rect x="26" y="96" width="108" height="24" rx="5" fill="var(--acc-f)"/>
+<text x="34" y="112" font-size="12" fill="var(--acc-t)">未入金　12</text>
+<text x="34" y="140" font-size="12" class="sub">仕入れ対応中</text>
+<text x="34" y="162" font-size="12" class="sub">発送手配中</text>
+<text x="34" y="184" font-size="11" class="sub">…ほか4件</text>
+
+<!-- ガイド領域(子・点線) -->
+<rect class="dash" x="155" y="40" width="505" height="38" rx="8"/>
+<text x="170" y="63" font-size="12"><tspan fill="var(--warn-t)">接近3件</tspan> ・ <tspan fill="var(--dang-t)">超過1件</tspan>　／　一括リマインド送信</text>
+
+<!-- 検索・並び替え(親) -->
+<rect class="bd" x="155" y="88" width="380" height="30" rx="6"/>
+<text x="167" y="107" font-size="11" class="sub">注文番号・顧客名で検索</text>
+<rect class="bd" x="543" y="88" width="117" height="30" rx="6"/>
+<text x="555" y="107" font-size="11" class="sub">並び替え：期日</text>
+
+<!-- 行1(接近) 2段組み -->
+<line x1="155" y1="130" x2="660" y2="130" stroke="var(--bd)" stroke-width="0.5"/>
+<text x="163" y="150" font-size="13">山田商店</text>
+<text x="250" y="150" font-size="13" class="sub">151 BOX ×3 ほか</text>
+<text x="450" y="150" font-size="13" text-anchor="end">¥120,000</text>
+<rect x="458" y="139" width="66" height="18" rx="4" fill="var(--warn-f)"/>
+<text x="491" y="152" font-size="10" fill="var(--warn-t)" text-anchor="middle">7/10 接近</text>
+<rect class="bd" x="532" y="138" width="26" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="545" y="152" font-size="10" text-anchor="middle" class="sub">編集</text>
+<rect class="bd" x="562" y="138" width="92" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="608" y="152" font-size="10" text-anchor="middle">入金確認</text>
+<text x="163" y="168" font-size="10" class="sub">発行日 6/28　・　PayPal　・　USD</text>
+
+<!-- 行2(通常) -->
+<line x1="155" y1="180" x2="660" y2="180" stroke="var(--bd)" stroke-width="0.5"/>
+<text x="163" y="200" font-size="13">Kim Trading</text>
+<text x="250" y="200" font-size="13" class="sub">SV 強化BOX ×10</text>
+<text x="450" y="200" font-size="13" text-anchor="end">¥86,500</text>
+<text x="491" y="202" font-size="11" class="sub" text-anchor="middle">7/22</text>
+<rect class="bd" x="532" y="188" width="26" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="545" y="202" font-size="10" text-anchor="middle" class="sub">編集</text>
+<rect class="bd" x="562" y="188" width="92" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="608" y="202" font-size="10" text-anchor="middle">入金確認</text>
+<text x="163" y="218" font-size="10" class="sub">発行日 7/02　・　銀行振込　・　JPY</text>
+
+<!-- 行3(超過) -->
+<line x1="155" y1="230" x2="660" y2="230" stroke="var(--bd)" stroke-width="0.5"/>
+<text x="163" y="250" font-size="13">Chen Ltd</text>
+<text x="250" y="250" font-size="13" class="sub">VSTAR ユニバース ×5</text>
+<text x="450" y="250" font-size="13" text-anchor="end">¥240,000</text>
+<rect x="458" y="239" width="66" height="18" rx="4" fill="var(--dang-f)"/>
+<text x="491" y="252" font-size="10" fill="var(--dang-t)" text-anchor="middle">7/01 超過</text>
+<rect class="bd" x="532" y="238" width="26" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="545" y="252" font-size="10" text-anchor="middle" class="sub">編集</text>
+<rect class="bd" x="562" y="238" width="92" height="20" rx="4" stroke="var(--bd2)"/>
+<text x="608" y="252" font-size="10" text-anchor="middle">入金確認</text>
+<text x="163" y="268" font-size="10" class="sub">発行日 6/20　・　PayPal　・　USD</text>
+
+<line x1="155" y1="280" x2="660" y2="280" stroke="var(--bd)" stroke-width="0.5"/>
+<text x="163" y="294" font-size="10" class="sub">上段＝宛先・品目・金額・期日＋操作／下段＝発行日・決済方法・通貨</text>
+</svg>

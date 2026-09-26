@@ -1,14 +1,14 @@
 # design: mc-hub-submenu
 
 **対象:** PR — ManagementCenterPage のサブナビを SubMenu 共通部品に置換
-**対象ADR:** ADR-148-submenu-ssot-link-mode
+**対象ADR:** ADR-149-submenu-ssot-link-mode
 **recon:** docs/handoff/mc-hub-submenu/recon.md
 
 ---
 
 ## 外部・過去事例の参照と我々への応用
 
-- ADR-148 段階移行 Step 3。Step 2（CustomerHubPage / PR #2662）で確立した `groups + activeKey + useLocation` パターンを、グループ付き（4グループ）に拡張する。
+- ADR-149 段階移行 Step 3。Step 2（CustomerHubPage / PR #2662）で確立した `groups + activeKey + useLocation` パターンを、グループ付き（4グループ）に拡張する。
 - `sections.flatMap` で全項目を平坦化して activeKey を算出する点が顧客ハブとの唯一の差異。同リポジトリ内の確立済みパターンの範囲内。
 
 ---

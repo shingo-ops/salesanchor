@@ -1,0 +1,450 @@
+"""DETAIL-01 read/write contracts in disposable PostgreSQL only."""
+import asyncio
+import csv
+import hashlib
+import io
+import json
+from types import SimpleNamespace
+
+import pytest
+import pytest_asyncio
+from fastapi import FastAPI
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+
+from app.auth.dependencies import get_current_user
+from app.routers import tcg_product_import as routes
+from app.services import tcg_product_detail_svc as details
+from app.services import tcg_product_master_svc as master
+from app.services import tcg_product_roundtrip_svc as roundtrip
+from tests import test_tcg_product_list_pg as fixtures
+from tests import test_tcg_work_matching_integration as durable
+
+product_db = fixtures.product_db
+pytestmark = fixtures.pytestmark
+
+
+async def _pid(db, code: str) -> int:
+    """Resolve product_code to integer id for tests."""
+    row = (await db.execute(text("SELECT id FROM public.products WHERE product_code=:c"), {"c": code})).fetchone()
+    assert row is not None, f"product_code {code!r} not found"
+    return int(row[0])
+
+
+@pytest_asyncio.fixture
+async def detail_db(product_db, monkeypatch):
+    db, schema = product_db
+    monkeypatch.setattr(details, "TCG_SCHEMA", schema)
+    await db.execute(text(
+        "INSERT INTO public.products "
+        "(product_code,name,name_en,mark,category_class,is_active,required_output_value) "
+        "VALUES ('DETAIL','Japanese','English detail','MODEL-DETAIL','Original',false,'Keep this')"
+    ))
+    await db.execute(text(
+        "INSERT INTO public.product_search_keywords(product_id,keyword,position) "
+        "SELECT id,'Alpha, Beta',1 FROM public.products WHERE product_code='DETAIL'"
+    ))
+    await db.execute(text(
+        "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
+        "SELECT id,'Exclude one',1 FROM public.products WHERE product_code='DETAIL'"
+    ))
+    return db, schema
+
+
+async def test_detail_contains_stored_values_words_and_revision(detail_db):
+    db, schema = detail_db
+    pid = await _pid(db, "DETAIL")
+    before = await details.get_product_detail(db, pid)
+    product = before["product"]
+    assert product["japanese_title"] == "Japanese"
+    assert product["english_title"] == "English detail"
+    assert product["is_active"] is False
+    assert product["required_output_value"] == "Keep this"
+    assert product["search_keywords"] == ["Alpha, Beta"]
+    assert product["exclude_keywords"] == ["Exclude one"]
+    assert len(before["revision"]) == 64
+    assert before["revision"] == (await details.get_product_detail(db, pid))["revision"]
+    assert set(before["lookups"]) == {"product_kind_id", "work_id", "manufacturer_id", "product_category_id"}
+    await db.execute(text(
+        "INSERT INTO public.product_exclude_keywords(product_id,keyword,position) "
+        "SELECT id,'Exclude two',2 FROM public.products WHERE product_code='DETAIL'"
+    ))
+    assert before["revision"] != (await details.get_product_detail(db, pid))["revision"]
+
+
+@pytest.mark.parametrize("query", ["english DETAIL", "MODEL-DETAIL"])
+async def test_list_finds_english_and_mark_with_both_counts(detail_db, query):
+    db, _ = detail_db
+    result = await routes.list_products(query=query, limit=50, offset=0, work_id=None, db=db, _user={})
+    assert result.total == 1
+    assert result.items[0].keyword_count == 1
+    assert result.items[0].exclude_keyword_count == 1
+    assert result.items[0].english_title == "English detail"
+
+
+@pytest.mark.parametrize("is_admin,use_missing,status", [(True, False, 200), (True, True, 404), (False, False, 403)])
+async def test_detail_route_uses_actual_admin_dependency(detail_db, is_admin, use_missing, status):
+    db, _ = detail_db
+    pid = await _pid(db, "DETAIL")
+    route_id = 999999 if use_missing else pid
+    app = FastAPI()
+    app.include_router(routes.router, prefix="/api/v1")
+    app.dependency_overrides[routes.get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=is_admin)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(f"/api/v1/tcg/products/detail/{route_id}")
+    assert response.status_code == status
+
+
+pg = durable.pg
+
+
+@pytest.fixture
+def edit_pg(pg, monkeypatch):
+    connection, _, url = pg
+    for module in (details, master, routes):
+        monkeypatch.setattr(module, "TCG_SCHEMA", durable.SCHEMA)
+    with connection.cursor() as cur:
+        for code in ("DETAIL", "SENTINEL"):
+            cur.execute(
+                "INSERT INTO public.products "
+                "(product_code,name,category_class,is_active,required_output_value) "
+                "VALUES (%s,'Original','Keep category',true,'Keep output') RETURNING id", (code,))
+            pid = cur.fetchone()[0]
+            for table in details.WORD_TABLES.values():
+                cur.execute(f"INSERT INTO {durable.SCHEMA}.{table}(product_id,keyword,position) "
+                            "VALUES (%s,'Alpha, Beta',1)", (pid,))
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.source_messages(raw_text,raw_sha256,is_active) "
+                    "VALUES ('fixture',%s,true) RETURNING id", ("0" * 64,))
+        smid = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.extraction_jobs(source_message_id,status) "
+                    "VALUES (%s,'done') RETURNING id", (smid,))
+        job = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.extraction_items(extraction_job_id) VALUES (%s) RETURNING id", (job,))
+        item = cur.fetchone()[0]
+        cur.execute("SELECT id FROM public.conditions LIMIT 1")
+        cond_id = cur.fetchone()[0]
+        cur.execute(f"INSERT INTO {durable.SCHEMA}.analysis_results "
+                    "(extraction_item_id,product_id,pid_resolved,unit_resolved,needs_review,engine_version,condition_id) "
+                    "SELECT %s,id,true,false,true,'fixture',%s FROM public.products WHERE product_code='DETAIL'", (item, cond_id))
+        durable.provision(cur, "tenant_990")
+        cur.execute("INSERT INTO tenant_990.tcg_products(code,japanese_title,category_class,is_active) "
+                    "VALUES ('DETAIL','Other tenant','Other',true) RETURNING id")
+        other_pid = cur.fetchone()[0]
+        for table in details.WORD_TABLES.values():
+            cur.execute(f"INSERT INTO tenant_990.{table}(product_id,keyword,position) VALUES (%s,'Other',1)", (other_pid,))
+    def other_rows():
+        with connection.cursor() as cur:
+            rows = {}
+            for table in ("tcg_products", *details.WORD_TABLES.values(), "audit_log"):
+                cur.execute(f"SELECT row_to_json(t) FROM tenant_990.{table} t ORDER BY id")
+                rows[table] = cur.fetchall()
+            return rows
+    before = other_rows()
+    yield connection, url
+    assert other_rows() == before
+
+
+def observed(connection):
+    with connection.cursor() as cur:
+        result = {}
+        cur.execute("SELECT row_to_json(t) FROM public.products t ORDER BY t.id")
+        result["products"] = [r[0] for r in cur.fetchall()]
+        for table in (*details.WORD_TABLES.values(), "audit_log", "analysis_results"):
+            cur.execute(f"SELECT row_to_json(t) FROM {durable.SCHEMA}.{table} t ORDER BY id")
+            result[table] = [r[0] for r in cur.fetchall()]
+        return result
+
+
+def edit_values(snapshot):
+    p = snapshot["product"]
+    return {field: (p.get(field) or "") if field in ("english_title", "mark") else p.get(field)
+            for field in ("japanese_title", "english_title", "mark", "release_date", *details.LOOKUPS,
+                          *details.PUBLIC_INTEGER_LOOKUPS, *details.WORD_TABLES)}
+
+
+async def test_edit_commits_details_words_audit_and_preserves_identity(edit_pg):
+    connection, url = edit_pg
+    before = observed(connection)
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values.update(japanese_title="Edited", english_title="English edited", mark="MODEL",
+                          release_date="2026-09-14", search_keywords=["A, B", "C"], exclude_keywords=[])
+            result = await details.update_product_detail(db, pid, values, snapshot["revision"], "ci-reviewer")
+        after = observed(connection)
+        product = result["product"]
+        assert product["id"] == snapshot["product"]["id"]
+        assert product["code"] == "DETAIL" and product["required_output_value"] == "Keep output"
+        assert product["category_class"] == "Keep category" and product["is_active"] is True
+        assert product["release_date"] == "2026-09-14" and product["mark"] == "MODEL"
+        assert product["english_title"] == "English edited"
+        assert product["search_keywords"] == ["A, B", "C"] and product["exclude_keywords"] == []
+        assert result["revision"] != snapshot["revision"]
+        sentinel = next(p for p in before["products"] if p["product_code"] == "SENTINEL")
+        assert sentinel in after["products"]
+        for table in details.WORD_TABLES.values():
+            assert [r for r in before[table] if r["product_id"] == sentinel["id"]] == [
+                r for r in after[table] if r["product_id"] == sentinel["id"]]
+        assert after["analysis_results"] == before["analysis_results"]
+        assert len(after["audit_log"]) == 1
+        audit = after["audit_log"][0]
+        assert audit["changed_by"] == "ci-reviewer"
+        import uuid as _uuid_mod; _uuid_mod.UUID(audit["record_id"])  # valid UUID
+        assert json.loads(audit["old_values"])["product"]["name"] == "Original"
+        assert json.loads(audit["new_values"])["product"]["name"] == "Edited"
+    finally:
+        await engine.dispose()
+
+
+async def test_unchanged_words_keep_row_ids_and_stale_edit_is_rejected(edit_pg):
+    connection, url = edit_pg
+    before = observed(connection)
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            values["english_title"] = "Change only title"
+            await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            after = observed(connection)
+            for table in details.WORD_TABLES.values():
+                assert after[table] == before[table]
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            assert caught.value.status == 409
+            assert observed(connection) == after
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("stage", ["words", "audit", "commit", "cancel"])
+async def test_failed_edit_rolls_back_product_words_and_audit(edit_pg, stage):
+    connection, url = edit_pg
+    before = observed(connection)
+    with connection.cursor() as _cur:
+        _cur.execute("SELECT id FROM public.products WHERE product_code='DETAIL'")
+        _pid_int = int(_cur.fetchone()[0])
+    class FailingSession(AsyncSession):
+        async def execute(self, statement, params=None, **kwargs):
+            query = str(statement)
+            if stage in ("words", "cancel") and "INSERT INTO" in query and "product_search_keywords" in query:
+                if stage == "cancel":
+                    raise asyncio.CancelledError()
+                raise RuntimeError("injected keyword failure")
+            if stage == "audit" and "INSERT INTO" in query and "audit_log" in query:
+                raise RuntimeError("injected audit failure")
+            return await super().execute(statement, params, **kwargs)
+
+        async def commit(self):
+            if stage == "commit":
+                raise RuntimeError("injected commit failure")
+            return await super().commit()
+    engine = create_async_engine(url)
+    try:
+        async with FailingSession(engine) as db:
+            snapshot = await details.get_product_detail(db, _pid_int)
+            values = edit_values(snapshot)
+            values.update(japanese_title="Must roll back", search_keywords=["Replacement"], exclude_keywords=[])
+            with pytest.raises(asyncio.CancelledError if stage == "cancel" else RuntimeError):
+                await details.update_product_detail(db, _pid_int, values, snapshot["revision"], "test")
+        assert observed(connection) == before
+    finally:
+        await engine.dispose()
+
+
+async def test_simultaneous_edits_have_one_winner(edit_pg):
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as reader:
+            pid = await _pid(reader, "DETAIL")
+            snapshot = await details.get_product_detail(reader, pid)
+        async def write(title):
+            async with AsyncSession(engine) as db:
+                values = edit_values(snapshot)
+                values["japanese_title"] = title
+                try:
+                    return await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+                except details.ProductDetailError as exc:
+                    return exc.status
+        results = await asyncio.gather(write("First"), write("Second"))
+        assert sum(isinstance(result, dict) for result in results) == 1
+        assert results.count(409) == 1
+        assert len(observed(connection)["audit_log"]) == 1
+    finally:
+        await engine.dispose()
+
+
+async def test_keyword_addition_invalidates_open_draft(edit_pg):
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as reader:
+            pid = await _pid(reader, "DETAIL")
+            snapshot = await details.get_product_detail(reader, pid)
+        async with AsyncSession(engine) as writer:
+            assert await master.add_search_keyword(writer, product_id=pid, new_keyword="Added") == {"ok": True}
+        before = observed(connection)
+        async with AsyncSession(engine) as writer:
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(writer, pid, edit_values(snapshot), snapshot["revision"], "test")
+            assert caught.value.status == 409
+        assert observed(connection) == before
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("field,value", [
+    ("japanese_title", " "), ("release_date", "2026-02-30"), ("release_date", "20260914"),
+    ("work_id", "invalid"), ("search_keywords", [""]), ("exclude_keywords", ["x"] * 1001),
+    ("code", "forbidden"), ("is_active", False),
+])
+async def test_update_rejects_invalid_payload_before_writing(detail_db, field, value):
+    db, _ = detail_db
+    pid = await _pid(db, "DETAIL")
+    snapshot = await details.get_product_detail(db, pid)
+    payload = dict(edit_values(snapshot), revision=snapshot["revision"])
+    payload[field] = value
+    app = FastAPI()
+    app.include_router(routes.router)
+    app.dependency_overrides[routes.get_db] = lambda: db
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(is_super_admin=True, email="test", id="test")
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.put(f"/tcg/products/detail/{pid}", json=payload)
+    assert response.status_code == 422
+    assert (await details.get_product_detail(db, pid))["revision"] == snapshot["revision"]
+
+
+@pytest.mark.parametrize("admin,use_missing,status", [(True, False, 200), (False, False, 403), (True, True, 404)])
+async def test_update_route_and_real_permission_dependency(edit_pg, admin, use_missing, status):
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            route_id = 999999 if use_missing else pid
+            snapshot = await details.get_product_detail(db, pid)
+            payload = dict(edit_values(snapshot), revision=snapshot["revision"], english_title="Via HTTP")
+            app = FastAPI()
+            app.include_router(routes.router)
+            app.dependency_overrides[routes.get_db] = lambda: db
+            app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(
+                is_super_admin=admin, email="http-test", id="test")
+            async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+                response = await client.put(f"/tcg/products/detail/{route_id}", json=payload)
+            assert response.status_code == status
+            assert len(observed(connection)["audit_log"]) == (1 if status == 200 else 0)
+    finally:
+        await engine.dispose()
+
+
+async def test_classification_change_derives_work_name_and_rejects_unknown(edit_pg):
+    connection, url = edit_pg
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            values = edit_values(snapshot)
+            selected = snapshot["lookups"]["work_id"][0]
+            values["work_id"] = selected["id"]
+            updated = await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+            assert updated["product"]["category_class"] == selected["name"]
+            before = observed(connection)
+            values["work_id"] = "00000000-0000-0000-0000-000000000000"
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(db, pid, values, updated["revision"], "test")
+            assert caught.value.status == 422
+            assert observed(connection) == before
+    finally:
+        await engine.dispose()
+
+
+async def test_lost_commit_response_keeps_one_atomic_change_and_stale_retry_fails(edit_pg):
+    connection, url = edit_pg
+    with connection.cursor() as _cur:
+        _cur.execute("SELECT id FROM public.products WHERE product_code='DETAIL'")
+        _pid_int = int(_cur.fetchone()[0])
+    class LostResponse(AsyncSession):
+        async def commit(self):
+            await super().commit()
+            raise RuntimeError("commit response lost")
+    engine = create_async_engine(url)
+    try:
+        async with LostResponse(engine) as db:
+            snapshot = await details.get_product_detail(db, _pid_int)
+            values = edit_values(snapshot)
+            values.update(japanese_title="Committed", search_keywords=[], exclude_keywords=["New exclusion"])
+            with pytest.raises(RuntimeError, match="response lost"):
+                await details.update_product_detail(db, _pid_int, values, snapshot["revision"], "test")
+        after = observed(connection)
+        assert len(after["audit_log"]) == 1
+        async with AsyncSession(engine) as reader:
+            current = await details.get_product_detail(reader, _pid_int)
+            assert current["product"]["japanese_title"] == "Committed"
+            assert current["product"]["search_keywords"] == []
+            assert current["product"]["exclude_keywords"] == ["New exclusion"]
+            with pytest.raises(details.ProductDetailError) as caught:
+                await details.update_product_detail(reader, _pid_int, values, snapshot["revision"], "test")
+            assert caught.value.status == 409
+        assert observed(connection) == after
+    finally:
+        await engine.dispose()
+
+
+@pytest.mark.parametrize("query", ["english DETAIL", "MODEL-DETAIL"])
+async def test_export_matches_english_and_model_list_filter(detail_db, monkeypatch, query):
+    db, schema = detail_db
+    monkeypatch.setattr(roundtrip, "TCG_SCHEMA", schema)
+    result = await routes.list_products(query=query, limit=50, offset=0, work_id=None, db=db, _user={})
+    raw = await roundtrip.export_csv(db, query)
+    records = list(csv.DictReader(io.StringIO(raw.decode("utf-8-sig"))))
+    pid = await _pid(db, "DETAIL")
+    assert [row["product_id"] for row in records] == [str(item.id) for item in result.items] == [str(pid)]
+
+
+@pytest.mark.parametrize("csv_first", [True, False])
+async def test_detail_and_csv_reject_each_others_stale_drafts(edit_pg, monkeypatch, csv_first):
+    connection, url = edit_pg
+    monkeypatch.setattr(roundtrip, "TCG_SCHEMA", durable.SCHEMA)
+    with connection.cursor() as cur:
+        cur.execute((durable.MIGRATIONS / "20260906_130000_create_tcg_product_import_history_t004.sql").read_text().replace("tenant_004", durable.SCHEMA))
+    engine = create_async_engine(url)
+    try:
+        async with AsyncSession(engine) as db:
+            pid = await _pid(db, "DETAIL")
+            snapshot = await details.get_product_detail(db, pid)
+            raw = await roundtrip.export_csv(db)
+        records = list(csv.reader(io.StringIO(raw.decode("utf-8-sig"))))
+        title_index = records[0].index("english_title")
+        for row in records[1:]:
+            if row[0] == str(pid):
+                row[title_index] = "CSV change"
+        out = io.StringIO(newline="")
+        csv.writer(out).writerows(records)
+        edited = out.getvalue().encode("utf-8-sig")
+        digest = hashlib.sha256(edited).hexdigest()
+        values = edit_values(snapshot)
+        values["english_title"] = "Drawer change"
+        async with AsyncSession(engine) as db:
+            if csv_first:
+                await roundtrip.commit_update(db, edited, "edit.csv", "test", digest)
+            else:
+                await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+        before = observed(connection)
+        async with AsyncSession(engine) as db:
+            with pytest.raises(details.ProductDetailError if csv_first else roundtrip.RoundtripError) as caught:
+                if csv_first:
+                    await details.update_product_detail(db, pid, values, snapshot["revision"], "test")
+                else:
+                    await roundtrip.commit_update(db, edited, "edit.csv", "test", digest)
+            assert caught.value.status == 409
+        assert observed(connection) == before
+    finally:
+        await engine.dispose()

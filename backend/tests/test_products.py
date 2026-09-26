@@ -393,7 +393,9 @@ class TestProductsDeleteWithFK:
         product_id = p_res.json()["id"]
 
         # 会社・担当者・見積もりを作成し、商品IDを明細に使用
-        co = await client.post("/api/v1/companies", json={"name": "FK参照テスト会社"})
+        from tests.helpers_txn import create_lead
+        lead_id = await create_lead(client, "FK参照テスト会社")
+        co = await client.post("/api/v1/companies", json={"name": "FK参照テスト会社", "lead_id": lead_id})
         company_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
             "company_id": company_id,
@@ -428,7 +430,9 @@ class TestProductsDeleteWithFK:
         })
         product_id = p_res.json()["id"]
 
-        co = await client.post("/api/v1/companies", json={"name": "請求FK会社"})
+        from tests.helpers_txn import create_lead
+        lead_id = await create_lead(client, "請求FK会社")
+        co = await client.post("/api/v1/companies", json={"name": "請求FK会社", "lead_id": lead_id})
         company_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
             "company_id": company_id, "display_name": "請求FK担当",

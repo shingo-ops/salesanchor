@@ -96,6 +96,12 @@
   padding: 0 var(--page-padding-x) var(--space-8);
 }
 
+.page-content-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
 .page-layout-content--no-scroll {
   overflow-y: hidden;
   /* noScrollページ（受信箱）は自分でpaddingを管理するため上書き */

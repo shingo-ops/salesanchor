@@ -1,0 +1,77 @@
+{
+  "files": 117,
+  "tags": {
+    "button": {
+      "occurrences": 395,
+      "files": 90
+    },
+    "Button": {
+      "occurrences": 40,
+      "files": 9
+    },
+    "HeaderButton": {
+      "occurrences": 0,
+      "files": 0
+    },
+    "input": {
+      "occurrences": 405,
+      "files": 79
+    },
+    "TextField": {
+      "occurrences": 19,
+      "files": 2
+    },
+    "textarea": {
+      "occurrences": 43,
+      "files": 30
+    },
+    "Textarea": {
+      "occurrences": 0,
+      "files": 0
+    },
+    "select": {
+      "occurrences": 67,
+      "files": 35
+    },
+    "Select": {
+      "occurrences": 38,
+      "files": 15
+    },
+    "SelectControl": {
+      "occurrences": 1,
+      "files": 1
+    },
+    "table": {
+      "occurrences": 31,
+      "files": 25
+    },
+    "DataTable": {
+      "occurrences": 23,
+      "files": 20
+    },
+    "Card": {
+      "occurrences": 3,
+      "files": 2
+    },
+    "Modal": {
+      "occurrences": 25,
+      "files": 20
+    },
+    "ConfirmModal": {
+      "occurrences": 23,
+      "files": 17
+    },
+    "Tabs": {
+      "occurrences": 0,
+      "files": 0
+    },
+    "PageLayout": {
+      "occurrences": 85,
+      "files": 65
+    },
+    "ContentToolbar": {
+      "occurrences": 25,
+      "files": 25
+    }
+  }
+}

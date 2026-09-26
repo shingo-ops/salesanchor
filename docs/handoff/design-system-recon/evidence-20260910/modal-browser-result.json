@@ -1,0 +1,2531 @@
+{
+  "base": "7606ca9a041e315b81040373e8f4ddebbc562133",
+  "cases": [
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 93.6875,
+            "top": 278,
+            "bottom": 340,
+            "width": 69.6875,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 105.6875,
+            "right": 216.3125,
+            "top": 278,
+            "bottom": 340,
+            "width": 110.625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 109,
+            "clientWidth": 109,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 228.3125,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 67.6875,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 99.75,
+            "right": 170.5625,
+            "top": 240,
+            "bottom": 284,
+            "width": 70.8125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 831,
+          "scrollTop": 723,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "new",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 93.6875,
+            "top": 278,
+            "bottom": 340,
+            "width": 69.6875,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 105.6875,
+            "right": 216.3125,
+            "top": 278,
+            "bottom": 340,
+            "width": 110.625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 109,
+            "clientWidth": 109,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "登録",
+            "left": 228.3125,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 67.6875,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 68,
+            "clientWidth": 68,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 99.75,
+            "right": 170.5625,
+            "top": 240,
+            "bottom": 284,
+            "width": 70.8125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "登録",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 831,
+          "scrollTop": 723,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "purchase",
+      "mode": "saving",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 24,
+            "right": 88.984375,
+            "top": 278,
+            "bottom": 340,
+            "width": 64.984375,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 63,
+            "clientWidth": 63,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 100.984375,
+            "right": 199.96875,
+            "top": 278,
+            "bottom": 340,
+            "width": 98.984375,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 97,
+            "clientWidth": 97,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 211.96875,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 84.03125,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 84,
+            "clientWidth": 84,
+            "disabled": true,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 831,
+          "scrollTop": 685,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ],
+          [
+            "patch",
+            "/orders/7/purchase",
+            {
+              "purchase_staff": null,
+              "transaction_no": null,
+              "supplier_name": null,
+              "supplier_url": null,
+              "carrier_name": null,
+              "waybill_no": null,
+              "purchase_date": null,
+              "purchase_note": null,
+              "purchase_status": null,
+              "purchase_amount": null,
+              "purchase_quantity": null,
+              "purchase_total": null,
+              "purchase_shipping": null
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "確定",
+            "left": 99.75,
+            "right": 170.5625,
+            "top": 240,
+            "bottom": 284,
+            "width": 70.8125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 200.796875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 95.203125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 95,
+            "clientWidth": 95,
+            "disabled": true,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 831,
+          "scrollTop": 723,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ],
+          [
+            "patch",
+            "/orders/7/purchase",
+            {
+              "purchase_staff": null,
+              "transaction_no": null,
+              "supplier_name": null,
+              "supplier_url": null,
+              "carrier_name": null,
+              "waybill_no": null,
+              "purchase_date": null,
+              "purchase_note": null,
+              "purchase_status": null,
+              "purchase_amount": null,
+              "purchase_quantity": null,
+              "purchase_total": null,
+              "purchase_shipping": null
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "shipping",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 240,
+          "bottom": 360,
+          "width": 320,
+          "height": 120
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 24,
+            "right": 141.65625,
+            "top": 259,
+            "bottom": 337,
+            "width": 117.65625,
+            "height": 78,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 116,
+            "clientWidth": 116,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 153.65625,
+            "right": 229.59375,
+            "top": 256,
+            "bottom": 340,
+            "width": 75.9375,
+            "height": 84,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 74,
+            "clientWidth": 74,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 241.59375,
+            "right": 296,
+            "top": 268,
+            "bottom": 328,
+            "width": 54.40625,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 54,
+            "clientWidth": 54,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 124,
+          "scrollHeight": 1529,
+          "scrollTop": 1405,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 94.75,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 201.25,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 101.75,
+            "right": 215.1875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "更新",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 1529,
+          "scrollTop": 1421,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "shipping",
+      "mode": "new",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 240,
+          "bottom": 360,
+          "width": 320,
+          "height": 120
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 24,
+            "right": 141.65625,
+            "top": 259,
+            "bottom": 337,
+            "width": 117.65625,
+            "height": 78,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 116,
+            "clientWidth": 116,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 153.65625,
+            "right": 229.59375,
+            "top": 256,
+            "bottom": 340,
+            "width": 75.9375,
+            "height": 84,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 74,
+            "clientWidth": 74,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "登録",
+            "left": 241.59375,
+            "right": 296,
+            "top": 268,
+            "bottom": 328,
+            "width": 54.40625,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 54,
+            "clientWidth": 54,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 124,
+          "scrollHeight": 1529,
+          "scrollTop": 1405,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 94.75,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 201.25,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 101.75,
+            "right": 215.1875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "登録",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 1529,
+          "scrollTop": 1421,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "shipping",
+      "mode": "saving",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 240,
+          "bottom": 360,
+          "width": 320,
+          "height": 120
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 24,
+            "right": 133.375,
+            "top": 259,
+            "bottom": 337,
+            "width": 109.375,
+            "height": 78,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 107,
+            "clientWidth": 107,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 145.375,
+            "right": 217.609375,
+            "top": 256,
+            "bottom": 340,
+            "width": 72.234375,
+            "height": 84,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 70,
+            "clientWidth": 70,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 229.609375,
+            "right": 296,
+            "top": 257,
+            "bottom": 339,
+            "width": 66.390625,
+            "height": 82,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 66,
+            "clientWidth": 66,
+            "disabled": true,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 124,
+          "scrollHeight": 1529,
+          "scrollTop": 1405,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ],
+          [
+            "patch",
+            "/orders/7/shipping",
+            {
+              "recipient_name": null,
+              "phone": null,
+              "email": null,
+              "tax_number": null,
+              "address1": null,
+              "address2": null,
+              "address3": null,
+              "city": null,
+              "state_code": null,
+              "zip_code": null,
+              "country_code": null,
+              "packing_memo": null,
+              "packing_type": null,
+              "inspection_status": null,
+              "item_description": null,
+              "hs_code": null,
+              "tax_id": null,
+              "fedex_id": null,
+              "ship_method": null,
+              "tracking_number": null,
+              "carrier": null,
+              "ship_date": null,
+              "ship_memo": null,
+              "length_cm": null,
+              "width_cm": null,
+              "height_cm": null,
+              "weight_kg": null,
+              "volume_g": null,
+              "box_count": null,
+              "item_price_usd": null,
+              "exchange_rate": null,
+              "est_shipping_fee": null
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "eLogi CSV ダウンロード",
+            "left": 94.75,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 201.25,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 199,
+            "clientWidth": 199,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 75.359375,
+            "right": 188.796875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 200.796875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 95.203125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 95,
+            "clientWidth": 95,
+            "disabled": true,
+            "form": "shipping-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 1529,
+          "scrollTop": 1421,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/shipping"
+          ],
+          [
+            "patch",
+            "/orders/7/shipping",
+            {
+              "recipient_name": null,
+              "phone": null,
+              "email": null,
+              "tax_number": null,
+              "address1": null,
+              "address2": null,
+              "address3": null,
+              "city": null,
+              "state_code": null,
+              "zip_code": null,
+              "country_code": null,
+              "packing_memo": null,
+              "packing_type": null,
+              "inspection_status": null,
+              "item_description": null,
+              "hs_code": null,
+              "tax_id": null,
+              "fedex_id": null,
+              "ship_method": null,
+              "tracking_number": null,
+              "carrier": null,
+              "ship_date": null,
+              "ship_memo": null,
+              "length_cm": null,
+              "width_cm": null,
+              "height_cm": null,
+              "weight_kg": null,
+              "volume_g": null,
+              "box_count": null,
+              "item_price_usd": null,
+              "exchange_rate": null,
+              "est_shipping_fee": null
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "orders",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 280,
+          "bottom": 360,
+          "width": 320,
+          "height": 80
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥0",
+            "left": 24,
+            "right": 83.265625,
+            "top": 305.203125,
+            "bottom": 330.796875,
+            "width": 59.265625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 59,
+            "clientWidth": 59,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 101.75,
+            "right": 215.1875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 164,
+          "scrollHeight": 412,
+          "scrollTop": 248,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 280,
+          "bottom": 360,
+          "width": 320,
+          "height": 80
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥0",
+            "left": 24,
+            "right": 83.265625,
+            "top": 305.203125,
+            "bottom": 330.796875,
+            "width": 59.265625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 59,
+            "clientWidth": 59,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 101.75,
+            "right": 215.1875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 164,
+          "scrollHeight": 412,
+          "scrollTop": 248,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "orders",
+      "mode": "existing",
+      "amount": 123450,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 24,
+            "right": 111.921875,
+            "top": 283.40625,
+            "bottom": 334.59375,
+            "width": 87.921875,
+            "height": 51.1875,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 88,
+            "clientWidth": 88,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 123.921875,
+            "right": 221.5625,
+            "top": 278,
+            "bottom": 340,
+            "width": 97.640625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 96,
+            "clientWidth": 96,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 233.5625,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 62.4375,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 62,
+            "clientWidth": 62,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 393,
+          "scrollTop": 247,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 24,
+            "right": 136.890625,
+            "top": 249.203125,
+            "bottom": 274.796875,
+            "width": 112.890625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 113,
+            "clientWidth": 113,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 393,
+          "scrollTop": 285,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "orders",
+      "mode": "existing",
+      "amount": 999999999999,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 196,
+          "bottom": 360,
+          "width": 320,
+          "height": 164
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥999,999,999,999",
+            "left": 11.953125,
+            "right": 161.1875,
+            "top": 250.40625,
+            "bottom": 301.59375,
+            "width": 149.234375,
+            "height": 51.1875,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 149,
+            "clientWidth": 149,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 173.1875,
+            "right": 229.59375,
+            "top": 212,
+            "bottom": 340,
+            "width": 56.40625,
+            "height": 128,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 54,
+            "clientWidth": 54,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 241.59375,
+            "right": 296,
+            "top": 246,
+            "bottom": 306,
+            "width": 54.40625,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 54,
+            "clientWidth": 54,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 80,
+          "scrollHeight": 393,
+          "scrollTop": 313,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 242.40625,
+          "bottom": 360,
+          "width": 320,
+          "height": 117.59375
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥999,999,999,999",
+            "left": 24,
+            "right": 211.421875,
+            "top": 258.40625,
+            "bottom": 284,
+            "width": 187.421875,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 187,
+            "clientWidth": 187,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 101.75,
+            "right": 215.1875,
+            "top": 296,
+            "bottom": 340,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存",
+            "left": 227.1875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 68.8125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 69,
+            "clientWidth": 69,
+            "disabled": false,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 126,
+          "scrollHeight": 393,
+          "scrollTop": 267,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "ja",
+      "kind": "orders",
+      "mode": "saving",
+      "amount": 123450,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 262,
+          "bottom": 360,
+          "width": 320,
+          "height": 98
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 24,
+            "right": 102.234375,
+            "top": 283.40625,
+            "bottom": 334.59375,
+            "width": 78.234375,
+            "height": 51.1875,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 78,
+            "clientWidth": 78,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 114.234375,
+            "right": 205.75,
+            "top": 278,
+            "bottom": 340,
+            "width": 91.515625,
+            "height": 62,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 217.75,
+            "right": 296,
+            "top": 279,
+            "bottom": 339,
+            "width": 78.25,
+            "height": 60,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 82, 142)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 78,
+            "clientWidth": 78,
+            "disabled": true,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 146,
+          "scrollHeight": 393,
+          "scrollTop": 247,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ],
+          [
+            "post",
+            "/purchase-orders",
+            {
+              "supplier_id": 2,
+              "notes": null,
+              "items": [
+                {
+                  "product_id": 3,
+                  "quantity": 1,
+                  "unit_cost": 123450
+                }
+              ]
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "SPAN",
+            "text": "金額: ¥123,450",
+            "left": 24,
+            "right": 136.890625,
+            "top": 249.203125,
+            "bottom": 274.796875,
+            "width": 112.890625,
+            "height": 25.59375,
+            "color": "rgb(26, 32, 44)",
+            "background": "rgba(0, 0, 0, 0)",
+            "font": "16px",
+            "radius": "0px",
+            "padding": "0px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 113,
+            "clientWidth": 113,
+            "disabled": null,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "キャンセル",
+            "left": 182.5625,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 113.4375,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 111,
+            "clientWidth": 111,
+            "disabled": true,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "保存中...",
+            "left": 200.796875,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 95.203125,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(59, 82, 142)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 95,
+            "clientWidth": 95,
+            "disabled": true,
+            "form": "po-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 393,
+          "scrollTop": 285,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/suppliers/catalog"
+          ],
+          [
+            "post",
+            "/purchase-orders",
+            {
+              "supplier_id": 2,
+              "notes": null,
+              "items": [
+                {
+                  "product_id": 3,
+                  "quantity": 1,
+                  "unit_cost": 123450
+                }
+              ]
+            }
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    },
+    {
+      "width": 320,
+      "height": 360,
+      "dark": false,
+      "lang": "en",
+      "kind": "purchase",
+      "mode": "existing",
+      "amount": 0,
+      "equivalent200Percent": false,
+      "before": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 280,
+          "bottom": 360,
+          "width": 320,
+          "height": 80
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "Confirm",
+            "left": 6.3125,
+            "right": 98.734375,
+            "top": 296,
+            "bottom": 340,
+            "width": 92.421875,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Cancel",
+            "left": 110.734375,
+            "right": 197.5625,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.828125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 85,
+            "clientWidth": 85,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Update",
+            "left": 209.5625,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.4375,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 86,
+            "clientWidth": 86,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 164,
+          "scrollHeight": 874,
+          "scrollTop": 710,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      },
+      "after": {
+        "footer": {
+          "left": 0,
+          "right": 320,
+          "top": 224,
+          "bottom": 360,
+          "width": 320,
+          "height": 136
+        },
+        "dialog": {
+          "left": 0,
+          "right": 320,
+          "top": 36,
+          "bottom": 360,
+          "width": 320,
+          "height": 324
+        },
+        "children": [
+          {
+            "tag": "BUTTON",
+            "text": "Confirm",
+            "left": 104.75,
+            "right": 197.171875,
+            "top": 240,
+            "bottom": 284,
+            "width": 92.421875,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 90,
+            "clientWidth": 90,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Cancel",
+            "left": 209.171875,
+            "right": 296,
+            "top": 240,
+            "bottom": 284,
+            "width": 86.828125,
+            "height": 44,
+            "color": "rgb(74, 85, 104)",
+            "background": "rgb(255, 255, 255)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 85,
+            "clientWidth": 85,
+            "disabled": false,
+            "form": null,
+            "withinForm": null
+          },
+          {
+            "tag": "BUTTON",
+            "text": "Update",
+            "left": 209.5625,
+            "right": 296,
+            "top": 296,
+            "bottom": 340,
+            "width": 86.4375,
+            "height": 44,
+            "color": "rgb(255, 255, 255)",
+            "background": "rgb(30, 58, 138)",
+            "font": "14.4px",
+            "radius": "4px",
+            "padding": "8px 20px",
+            "inside": true,
+            "internalText": true,
+            "scrollWidth": 86,
+            "clientWidth": 86,
+            "disabled": false,
+            "form": "purchase-detail-form",
+            "withinForm": null
+          }
+        ],
+        "overlaps": [],
+        "body": {
+          "height": 108,
+          "scrollHeight": 874,
+          "scrollTop": 766,
+          "overflow": "auto"
+        },
+        "calls": [
+          [
+            "get",
+            "/orders/7/purchase"
+          ]
+        ],
+        "counts": {
+          "closes": 0,
+          "saves": 0
+        }
+      }
+    }
+  ],
+  "future": [],
+  "keyboard": [],
+  "errors": [],
+  "externalRequests": [],
+  "status": "FAIL",
+  "failure": "AssertionError [ERR_ASSERTION]: one-row children changed\n+ actual - expected\n... Skipped lines\n\n  [\n    {\n      background: 'rgb(255, 255, 255)',\n+     bottom: 284,\n-     bottom: 340,\n      clientWidth: 90,\n      color: 'rgb(74, 85, 104)',\n      disabled: false,\n      font: '14.4px',\n      form: null,\n...\n      internalText: true,\n+     left: 104.75,\n-     left: 6.3125,\n      padding: '8px 20px',\n      radius: '4px',\n+     right: 197.171875,\n-     right: 98.734375,\n      scrollWidth: 90,\n      tag: 'BUTTON',\n      text: 'Confirm',\n+     top: 240,\n-     top: 296,\n      width: 92.421875,\n      withinForm: null\n    },\n    {\n      background: 'rgb(255, 255, 255)',\n+     bottom: 284,\n-     bottom: 340,\n      clientWidth: 85,\n      color: 'rgb(74, 85, 104)',\n      disabled: false,\n      font: '14.4px',\n      form: null,\n...\n      internalText: true,\n+     left: 209.171875,\n-     left: 110.734375,\n      padding: '8px 20px',\n      radius: '4px',\n+     right: 296,\n-     right: 197.5625,\n      scrollWidth: 85,\n      tag: 'BUTTON',\n      text: 'Cancel',\n+     top: 240,\n-     top: 296,\n      width: 86.828125,\n      withinForm: null\n    },\n    {\n      background: 'rgb(30, 58, 138)',\n"
+}

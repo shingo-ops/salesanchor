@@ -10,6 +10,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
 
@@ -206,8 +207,8 @@ export default function ContactEditPage() {
           )}
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate("/contacts")}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.update")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => navigate("/contacts")}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.update")}</Button>
           </div>
         </form>
       )}

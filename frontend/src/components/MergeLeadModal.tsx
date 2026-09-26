@@ -9,7 +9,7 @@
  *   loser のリードレコードは削除される。
  *
  * 安全策:
- *   1. loser が成約済み（converted_deal_id != null）の場合は backend が 400 を返す。
+ *   1. loser が lead 状態以外の場合は backend が 400 を返す。
  *      フロントでも convertedError メッセージを分かりやすく表示する。
  *   2. 確定前に「取り消せません」の警告ダイアログ
  *   3. 任意の reason 入力欄（audit_logs に記録）
@@ -118,7 +118,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
     } catch (e: unknown) {
       // backend 400 で loser が成約済みの場合は分かりやすいメッセージに差し替える
       const msg = e instanceof Error ? e.message : "";
-      if (msg.includes("converted")) {
+      if (msg.includes("status=")) {
         setError(t("mergeLead.convertedError"));
       } else {
         setError(msg || t("common.operationError"));

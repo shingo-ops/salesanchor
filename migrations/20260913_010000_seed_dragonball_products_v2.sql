@@ -1,0 +1,27 @@
+-- ============================================================================
+-- Migration 20260913_010000: ドラゴンボール フュージョンワールド 商品マスタ v2
+--
+-- 目的:
+--   1. 既存26件の英語名補完 + FB11 release_date 修正 + set_type/BOX仕様追加
+--   2. 未登録29件の追加（スペシャルセット/チャンピオンシップ/スリーブ/プレイマット/大会景品等）
+--   3. 全商品に search_keywords / exclude_keywords を付与
+--
+-- 出典: 公式サイト dbs-cardgame.com/fw/jp/products/ (全6ページ)
+--       公式英語サイト dbs-cardgame.com/fw/en/products/ (全5ページ)
+--       プレミアムバンダイ p-bandai.jp
+--       meli-melo.blog.jp (イベント発売日リスト)
+--
+-- キーワード設計方針:
+--   search_keywords: 取りこぼし防止。型番(ハイフン有無両方)+商品名+略称+表記揺れ+カテゴリ用語+固有語
+--   exclude_keywords: 誤採用防止。競合TCG名+別カテゴリ商品名+別ゲームライン+類似商品名の固有識別子
+--
+-- 冪等: product_code の partial UNIQUE で ON CONFLICT DO UPDATE。
+-- additive-only（INSERT のみ）。
+-- ============================================================================
+--
+-- NEUTRALIZED (ADR-155, 2026-09-18):
+-- 商品マスタデータはアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'ADR-155 neutralized: Dragon Ball v2 product seed removed — manage via app/CSV'; END $$;

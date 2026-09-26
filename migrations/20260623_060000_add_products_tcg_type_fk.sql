@@ -11,9 +11,22 @@
 DO $$
 DECLARE
     invalid_codes TEXT;
+    _relkind      CHAR(1);
+    _fk_target    TEXT;
 BEGIN
+    -- ADR-156 Phase 2 互換ガード: tcg_type_master が VIEW の場合は type_master を FK ターゲットにする
+    SELECT relkind INTO _relkind
+      FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public' AND c.relname = 'tcg_type_master';
+
+    IF _relkind = 'v' THEN
+        _fk_target := 'type_master';
+    ELSE
+        _fk_target := 'tcg_type_master';
+    END IF;
+
     IF to_regclass('public.products') IS NULL
-       OR to_regclass('public.tcg_type_master') IS NULL
+       OR (to_regclass('public.tcg_type_master') IS NULL AND to_regclass('public.type_master') IS NULL)
        OR NOT EXISTS (
             SELECT 1
               FROM pg_attribute a
@@ -26,16 +39,17 @@ BEGIN
                AND NOT a.attisdropped
        ) THEN
         RAISE NOTICE
-            'fk_products_tcg_type preflight skipped: public.products / public.products.tcg_type / public.tcg_type_master is missing';
+            'fk_products_tcg_type preflight skipped: public.products / public.products.tcg_type / public.type_master is missing';
     ELSE
-        SELECT string_agg(quote_literal(tc), ', ' ORDER BY tc)
-          INTO invalid_codes
-          FROM (
-            SELECT DISTINCT tcg_type AS tc
-              FROM public.products
-             WHERE tcg_type IS NOT NULL
-               AND tcg_type NOT IN (SELECT code FROM public.tcg_type_master)
-          ) invalids;
+        EXECUTE format('
+            SELECT string_agg(quote_literal(tc), '', '' ORDER BY tc)
+              FROM (
+                SELECT DISTINCT tcg_type AS tc
+                  FROM public.products
+                 WHERE tcg_type IS NOT NULL
+                   AND tcg_type NOT IN (SELECT code FROM public.%I)
+              ) invalids', _fk_target)
+        INTO invalid_codes;
 
         IF invalid_codes IS NOT NULL THEN
             RAISE EXCEPTION
@@ -51,9 +65,11 @@ BEGIN
                AND rel.relname = 'products'
                AND rel.relnamespace = 'public'::regnamespace
         ) THEN
-            ALTER TABLE public.products
-                ADD CONSTRAINT fk_products_tcg_type
-                FOREIGN KEY (tcg_type) REFERENCES public.tcg_type_master(code);
+            EXECUTE format('
+                ALTER TABLE public.products
+                    ADD CONSTRAINT fk_products_tcg_type
+                    FOREIGN KEY (tcg_type) REFERENCES public.%I(code)',
+                _fk_target);
         END IF;
     END IF;
 END $$;

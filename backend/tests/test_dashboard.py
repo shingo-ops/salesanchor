@@ -8,30 +8,18 @@ import pytest
 
 async def _seed_data(client):
     """テスト用データを投入するヘルパー"""
+    from tests.helpers_txn import create_lead
     # 会社 + 担当者ペア 3 組
     pairs = []
     for name in ["顧客A", "顧客B", "顧客C"]:
-        co = await client.post("/api/v1/companies", json={"name": name})
+        lead_id = await create_lead(client, name)
+        co = await client.post("/api/v1/companies", json={"name": name, "lead_id": lead_id})
         company_id = co.json()["id"]
         ct = await client.post("/api/v1/contacts", json={
             "company_id": company_id,
             "display_name": f"{name}の担当",
         })
         pairs.append((company_id, ct.json()["id"]))
-
-    # 案件: open 2件, won 1件
-    await client.post("/api/v1/deals", json={
-        "company_id": pairs[0][0], "contact_id": pairs[0][1],
-        "title": "案件1", "amount": 100000, "status": "open",
-    })
-    await client.post("/api/v1/deals", json={
-        "company_id": pairs[1][0], "contact_id": pairs[1][1],
-        "title": "案件2", "amount": 200000, "status": "open",
-    })
-    await client.post("/api/v1/deals", json={
-        "company_id": pairs[2][0], "contact_id": pairs[2][1],
-        "title": "案件3", "amount": 500000, "status": "won",
-    })
 
     # 注文: pending 2件, confirmed 1件
     await client.post("/api/v1/orders", json={

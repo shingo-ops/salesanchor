@@ -1,0 +1,2519 @@
+[
+  {
+    "id": "TB-01",
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 186,
+    "properties": []
+  },
+  {
+    "id": "TB-01",
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"20%\" }}",
+    "line": 189,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-01",
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"45%\" }}",
+    "line": 190,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-01",
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"20%\" }}",
+    "line": 191,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-01",
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"15%\" }}",
+    "line": 192,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"comp-table__table\"",
+    "line": 168,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "tr",
+    "name": "className",
+    "value": "\"comp-table__head-row\"",
+    "line": 170,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "th",
+    "name": "className",
+    "value": "\"comp-table__th comp-table__th--check\"",
+    "line": 172,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "th",
+    "name": "className",
+    "value": "\"comp-table__th\"",
+    "line": 186,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{col.width ? { width: col.width } : undefined}",
+    "line": 186,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"comp-table__empty\"",
+    "line": 226,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "tr",
+    "name": "className",
+    "value": "{[\n                    'comp-table__row',\n                    isSelected ? 'comp-table__row--selected' : '',\n                    clickable ? 'comp-table__row--clickable' : '',\n                    rowClassName ? rowClassName(row) : '',\n                  ].filter(Boolean).join(' ')}",
+    "line": 239,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"comp-table__td comp-table__td--check\"",
+    "line": 260,
+    "properties": []
+  },
+  {
+    "id": "TB-02",
+    "file": "frontend/src/components/DataTable.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"comp-table__td\"",
+    "line": 271,
+    "properties": []
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\", borderCollapse: \"collapse\", fontSize: \"14px\" }}",
+    "line": 329,
+    "properties": [
+      "width",
+      "borderCollapse",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ borderBottom: \"2px solid var(--border)\" }}",
+    "line": 331,
+    "properties": [
+      "borderBottom"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"left\", padding: \"8px 4px\" }}",
+    "line": 332,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"left\", padding: \"8px 4px\" }}",
+    "line": 333,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+    "line": 334,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+    "line": 335,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+    "line": 336,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+    "line": 337,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ borderBottom: \"1px solid var(--border)\" }}",
+    "line": 342,
+    "properties": [
+      "borderBottom"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"8px 4px\" }}",
+    "line": 346,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"8px 4px\" }}",
+    "line": 349,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", padding: \"8px 4px\" }}",
+    "line": 352,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", padding: \"8px 4px\", fontWeight: 600 }}",
+    "line": 357,
+    "properties": [
+      "textAlign",
+      "padding",
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+    "line": 360,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-03",
+    "file": "frontend/src/components/FedExRateModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", padding: \"8px 4px\" }}",
+    "line": 363,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-04",
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 197,
+    "properties": []
+  },
+  {
+    "id": "TB-04",
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: 0 }}",
+    "line": 197,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-04",
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: 'var(--col-width-checkbox)' }}",
+    "line": 200,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-04",
+    "file": "frontend/src/components/MergeCompanyModal.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+    "line": 208,
+    "properties": [
+      "cursor",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-05",
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 195,
+    "properties": []
+  },
+  {
+    "id": "TB-05",
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: 0 }}",
+    "line": 195,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-05",
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\" }}",
+    "line": 198,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-05",
+    "file": "frontend/src/components/MergeContactModal.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+    "line": 206,
+    "properties": [
+      "cursor",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-06",
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 184,
+    "properties": []
+  },
+  {
+    "id": "TB-06",
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: 0 }}",
+    "line": 184,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-06",
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: 'var(--col-width-checkbox)' }}",
+    "line": 187,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-06",
+    "file": "frontend/src/components/MergeLeadModal.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{\n                          cursor: \"pointer\",\n                          background: c.id === selectedId ? \"var(--warning-bg)\" : undefined,\n                        }}",
+    "line": 195,
+    "properties": [
+      "cursor",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-07",
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{\n              width: \"100%\",\n              borderCollapse: \"collapse\",\n              fontSize: \"0.8125rem\",\n            }}",
+    "line": 115,
+    "properties": [
+      "width",
+      "borderCollapse",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-07",
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{\n                      textAlign: \"left\",\n                      padding: \"0.25rem 0.5rem\",\n                      borderBottom: \"1px solid var(--color-border)\",\n                      color: \"var(--color-text-sub)\",\n                      fontWeight: 600,\n                      whiteSpace: \"nowrap\",\n                    }}",
+    "line": 125,
+    "properties": [
+      "textAlign",
+      "padding",
+      "borderBottom",
+      "color",
+      "fontWeight",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-07",
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{\n                      isHighlighted\n                        ? { color: \"var(--color-error)\", fontWeight: 500 }\n                        : undefined\n                    }",
+    "line": 145,
+    "properties": [
+      "color",
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-07",
+    "file": "frontend/src/features/tcg-analysis-review/DiagnosticsDrawer.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{\n                          padding: \"0.25rem 0.5rem\",\n                          borderBottom: \"1px solid var(--color-border)\",\n                        }}",
+    "line": 154,
+    "properties": [
+      "padding",
+      "borderBottom"
+    ]
+  },
+  {
+    "id": "TB-08",
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"dist-table\"",
+    "line": 81,
+    "properties": []
+  },
+  {
+    "id": "TB-08",
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "tag": "tr",
+    "name": "className",
+    "value": "{target.is_active ? \"\" : \"dist-row--inactive\"}",
+    "line": 98,
+    "properties": []
+  },
+  {
+    "id": "TB-08",
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontSize: \"var(--font-xs)\", color: \"var(--text-secondary)\", whiteSpace: \"nowrap\" }}",
+    "line": 113,
+    "properties": [
+      "fontSize",
+      "color",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-08",
+    "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontSize: \"var(--font-sm)\", textAlign: \"right\" }}",
+    "line": 123,
+    "properties": [
+      "fontSize",
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-09",
+    "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"channel-masters-table\"",
+    "line": 80,
+    "properties": []
+  },
+  {
+    "id": "TB-10",
+    "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 132,
+    "properties": []
+  },
+  {
+    "id": "TB-11",
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 76,
+    "properties": []
+  },
+  {
+    "id": "TB-11",
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: \"var(--space-6)\" }}",
+    "line": 76,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-11",
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: i < 3 ? \"var(--font-weight-bold)\" : \"var(--font-weight-normal)\" }}",
+    "line": 81,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-11",
+    "file": "frontend/src/pages/badges/BadgesPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 84,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-12",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 75,
+    "properties": []
+  },
+  {
+    "id": "TB-12",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: \"var(--space-6)\" }}",
+    "line": 75,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-12",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"actions\"",
+    "line": 84,
+    "properties": []
+  },
+  {
+    "id": "TB-12",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 87,
+    "properties": []
+  },
+  {
+    "id": "TB-13",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 91,
+    "properties": []
+  },
+  {
+    "id": "TB-13",
+    "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 102,
+    "properties": []
+  },
+  {
+    "id": "TB-14",
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 189,
+    "properties": []
+  },
+  {
+    "id": "TB-14",
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"20%\" }}",
+    "line": 192,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-14",
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"30%\" }}",
+    "line": 193,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-14",
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"30%\" }}",
+    "line": 194,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-15",
+    "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 30,
+    "properties": []
+  },
+  {
+    "id": "TB-16",
+    "file": "frontend/src/pages/company-detail/CompanyContactsTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 102,
+    "properties": []
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 501,
+    "properties": []
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\", fontSize: \"var(--font-md)\" }}",
+    "line": 501,
+    "properties": [
+      "width",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+    "line": 509,
+    "properties": [
+      "width",
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\" }}",
+    "line": 532,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 571,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-17",
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 573,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-18",
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 257,
+    "properties": []
+  },
+  {
+    "id": "TB-19",
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 322,
+    "properties": []
+  },
+  {
+    "id": "TB-19",
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ minWidth: \"var(--table-min-width-base)\" }}",
+    "line": 322,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-19",
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ minWidth: \"var(--table-col-product-name-min-w)\" }}",
+    "line": 338,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-19",
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+    "line": 390,
+    "properties": [
+      "fontWeight",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\", fontSize: \"var(--font-sm)\", borderCollapse: \"collapse\" }}",
+    "line": 243,
+    "properties": [
+      "width",
+      "fontSize",
+      "borderCollapse"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ textAlign: \"left\", color: \"var(--text-secondary)\" }}",
+    "line": 245,
+    "properties": [
+      "textAlign",
+      "color"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 246,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 247,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 248,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 249,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 255,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 256,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 257,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-20",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ padding: \"var(--space-1)\" }}",
+    "line": 258,
+    "properties": [
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 305,
+    "properties": []
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: \"var(--space-6)\" }}",
+    "line": 305,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 328,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 333,
+    "properties": [
+      "textAlign",
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 333,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 334,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 335,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 336,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+    "line": 337,
+    "properties": [
+      "textAlign",
+      "fontWeight",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+    "line": 337,
+    "properties": [
+      "fontWeight",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", color: \"var(--text-muted)\" }}",
+    "line": 338,
+    "properties": [
+      "textAlign",
+      "color"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ color: \"var(--text-muted)\" }}",
+    "line": 338,
+    "properties": [
+      "color"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", color: \"var(--text-muted)\" }}",
+    "line": 339,
+    "properties": [
+      "textAlign",
+      "color"
+    ]
+  },
+  {
+    "id": "TB-21",
+    "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ color: \"var(--text-muted)\" }}",
+    "line": 339,
+    "properties": [
+      "color"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 286,
+    "properties": []
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\" }}",
+    "line": 286,
+    "properties": [
+      "width"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\", cursor: \"help\" }}",
+    "line": 292,
+    "properties": [
+      "width",
+      "textAlign",
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ minWidth: \"10rem\" }}",
+    "line": 302,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ cursor: \"pointer\", userSelect: \"none\", minWidth: \"22rem\" }}",
+    "line": 304,
+    "properties": [
+      "cursor",
+      "userSelect",
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "tr",
+    "name": "className",
+    "value": "\"product-row-top\"",
+    "line": 340,
+    "properties": []
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ ...rowStyle, cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined) }}",
+    "line": 340,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", verticalAlign: \"middle\" }}",
+    "line": 351,
+    "properties": [
+      "textAlign",
+      "verticalAlign"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ verticalAlign: \"middle\" }}",
+    "line": 361,
+    "properties": [
+      "verticalAlign"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "tr",
+    "name": "className",
+    "value": "\"product-row-bottom\"",
+    "line": 375,
+    "properties": []
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ ...rowStyle, cursor: reorderMode ? \"grab\" : (hasPermission(\"products.update\") ? \"pointer\" : undefined) }}",
+    "line": 375,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ whiteSpace: \"nowrap\" }}",
+    "line": 386,
+    "properties": [
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-22",
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 396,
+    "properties": []
+  },
+  {
+    "id": "TB-23",
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 165,
+    "properties": []
+  },
+  {
+    "id": "TB-23",
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ minWidth: \"var(--table-col-min-width)\" }}",
+    "line": 168,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-23",
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ minWidth: \"var(--table-col-min-width)\" }}",
+    "line": 180,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-23",
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+    "line": 196,
+    "properties": [
+      "fontWeight",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-24",
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 170,
+    "properties": []
+  },
+  {
+    "id": "TB-24",
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ minWidth: 'var(--table-min-width-base)' }}",
+    "line": 170,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-24",
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ minWidth: 'var(--table-col-product-name-min-w)' }}",
+    "line": 186,
+    "properties": [
+      "minWidth"
+    ]
+  },
+  {
+    "id": "TB-24",
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\", whiteSpace: \"nowrap\" }}",
+    "line": 239,
+    "properties": [
+      "fontWeight",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 175,
+    "properties": []
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ marginBottom: \"var(--space-6)\" }}",
+    "line": 175,
+    "properties": [
+      "marginBottom"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 206,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 211,
+    "properties": [
+      "textAlign",
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-semi)\" }}",
+    "line": 211,
+    "properties": [
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 212,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 213,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 214,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\", fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+    "line": 215,
+    "properties": [
+      "textAlign",
+      "fontWeight",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-25",
+    "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontWeight: \"var(--font-weight-bold)\", fontSize: \"var(--font-lg)\" }}",
+    "line": 215,
+    "properties": [
+      "fontWeight",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-26",
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 99,
+    "properties": []
+  },
+  {
+    "id": "TB-26",
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"mono\"",
+    "line": 104,
+    "properties": []
+  },
+  {
+    "id": "TB-26",
+    "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 111,
+    "properties": []
+  },
+  {
+    "id": "TB-27",
+    "file": "frontend/src/pages/super-admin/DexTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 343,
+    "properties": []
+  },
+  {
+    "id": "TB-28",
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 123,
+    "properties": []
+  },
+  {
+    "id": "TB-28",
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\", marginTop: \"var(--space-4)\" }}",
+    "line": 123,
+    "properties": [
+      "width",
+      "marginTop"
+    ]
+  },
+  {
+    "id": "TB-28",
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontSize: \"var(--font-sm)\" }}",
+    "line": 151,
+    "properties": [
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-28",
+    "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontSize: \"var(--font-sm)\" }}",
+    "line": 154,
+    "properties": [
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-29",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 352,
+    "properties": []
+  },
+  {
+    "id": "TB-29",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+    "line": 355,
+    "properties": [
+      "width",
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-29",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 367,
+    "properties": []
+  },
+  {
+    "id": "TB-29",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\" }}",
+    "line": 371,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-29",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 386,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-30",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 430,
+    "properties": []
+  },
+  {
+    "id": "TB-30",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+    "line": 433,
+    "properties": [
+      "width",
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-30",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 442,
+    "properties": []
+  },
+  {
+    "id": "TB-30",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\" }}",
+    "line": 446,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-30",
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 458,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-31",
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 120,
+    "properties": []
+  },
+  {
+    "id": "TB-31",
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ width: \"100%\", marginTop: \"var(--space-4)\" }}",
+    "line": 120,
+    "properties": [
+      "width",
+      "marginTop"
+    ]
+  },
+  {
+    "id": "TB-31",
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ fontSize: \"var(--font-sm)\" }}",
+    "line": 146,
+    "properties": [
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-31",
+    "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\", padding: \"var(--space-4)\" }}",
+    "line": 161,
+    "properties": [
+      "textAlign",
+      "padding"
+    ]
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 494,
+    "properties": []
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "th",
+    "name": "className",
+    "value": "\"review-col-skip\"",
+    "line": 499,
+    "properties": []
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{\n                            row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined\n                          }",
+    "line": 523,
+    "properties": [
+      "opacity",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"review-col-skip\"",
+    "line": 534,
+    "properties": []
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"review-col-product\"",
+    "line": 548,
+    "properties": []
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ minWidth: \"10rem\", maxWidth: \"16rem\" }}",
+    "line": 548,
+    "properties": [
+      "minWidth",
+      "maxWidth"
+    ]
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{\n                              row.skipped\n                                ? { opacity: \"var(--opacity-skipped)\", background: \"var(--bg-disabled)\" }\n                                : undefined\n                            }",
+    "line": 696,
+    "properties": [
+      "opacity",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"review-col-skip\"",
+    "line": 704,
+    "properties": []
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{\n                            row.skipped\n                              ? {\n                                  opacity: \"var(--opacity-skipped)\",\n                                  background: \"var(--bg-disabled)\",\n                                }\n                              : undefined\n                          }",
+    "line": 740,
+    "properties": [
+      "opacity",
+      "background"
+    ]
+  },
+  {
+    "id": "TB-32",
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"review-col-skip\"",
+    "line": 751,
+    "properties": []
+  },
+  {
+    "id": "TB-33",
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 267,
+    "properties": []
+  },
+  {
+    "id": "TB-33",
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+    "line": 272,
+    "properties": [
+      "width",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-33",
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+    "line": 273,
+    "properties": [
+      "width",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-33",
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 279,
+    "properties": []
+  },
+  {
+    "id": "TB-33",
+    "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{canDrag ? { cursor: \"grab\" } : undefined}",
+    "line": 283,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-34",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 241,
+    "properties": []
+  },
+  {
+    "id": "TB-34",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"var(--col-width-checkbox)\", textAlign: \"center\" }}",
+    "line": 244,
+    "properties": [
+      "width",
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-34",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"center\" }}",
+    "line": 256,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-34",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 264,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-34",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 269,
+    "properties": []
+  },
+  {
+    "id": "TB-35",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 348,
+    "properties": []
+  },
+  {
+    "id": "TB-35",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ textAlign: \"right\" }}",
+    "line": 361,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-35",
+    "file": "frontend/src/pages/super-admin/SuppliersAdminTab.tsx",
+    "tag": "td",
+    "name": "className",
+    "value": "\"empty\"",
+    "line": 366,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{\n                width: \"100%\",\n                borderCollapse: \"collapse\",\n                fontSize: \"0.85rem\",\n              }}",
+    "line": 515,
+    "properties": [
+      "width",
+      "borderCollapse",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ borderBottom: \"2px solid var(--border-color)\" }}",
+    "line": 523,
+    "properties": [
+      "borderBottom"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 524,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 525,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 526,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 527,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 528,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 529,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 530,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 531,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ borderBottom: \"1px solid var(--border-color)\" }}",
+    "line": 536,
+    "properties": [
+      "borderBottom"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 540,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 543,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 544,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{\n                        ...tdStyle,\n                        textAlign: \"right\",\n                        color: job.unresolved_count > 0 ? \"var(--color-warning)\" : undefined,\n                      }}",
+    "line": 545,
+    "properties": [
+      "textAlign",
+      "color"
+    ]
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 554,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 555,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 569,
+    "properties": []
+  },
+  {
+    "id": "TB-36",
+    "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 572,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ borderCollapse: \"collapse\", fontSize: 13 }}",
+    "line": 156,
+    "properties": [
+      "borderCollapse",
+      "fontSize"
+    ]
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ background: \"var(--table-header-bg)\" }}",
+    "line": 158,
+    "properties": [
+      "background"
+    ]
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 159,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 160,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 161,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 162,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 167,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 168,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 169,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 172,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 173,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 174,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}",
+    "line": 175,
+    "properties": [
+      "color"
+    ]
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 180,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 181,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 182,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, color: diffColor(report.summary.name_first_v1_pid_pct - report.summary.compat_v1_pid_pct) }}",
+    "line": 183,
+    "properties": [
+      "color"
+    ]
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 188,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 189,
+    "properties": []
+  },
+  {
+    "id": "TB-37",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 190,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "table",
+    "name": "style",
+    "value": "{{ borderCollapse: \"collapse\", fontSize: 12, width: \"100%\" }}",
+    "line": 201,
+    "properties": [
+      "borderCollapse",
+      "fontSize",
+      "width"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ background: \"var(--table-header-bg)\" }}",
+    "line": 203,
+    "properties": [
+      "background"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+    "line": 204,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 210,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+    "line": 211,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 217,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 218,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ ...thStyle, cursor: \"pointer\" }}",
+    "line": 219,
+    "properties": [
+      "cursor"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 225,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{thStyle}",
+    "line": 226,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "tr",
+    "name": "style",
+    "value": "{{ background: i % 2 === 0 ? \"var(--bg-surface)\" : \"var(--bg-subtle)\" }}",
+    "line": 231,
+    "properties": [
+      "background"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{tdStyle}",
+    "line": 235,
+    "properties": []
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, maxWidth: \"var(--max-width-truncate)\", overflow: \"hidden\", textOverflow: \"ellipsis\", whiteSpace: \"nowrap\" }}",
+    "line": 236,
+    "properties": [
+      "maxWidth",
+      "overflow",
+      "textOverflow",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 239,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 240,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 241,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\", color: diffColor(row.pid_pct_diff), fontWeight: \"bold\" }}",
+    "line": 242,
+    "properties": [
+      "textAlign",
+      "color",
+      "fontWeight"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 245,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-38",
+    "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+    "tag": "td",
+    "name": "style",
+    "value": "{{ ...tdStyle, textAlign: \"right\" }}",
+    "line": 248,
+    "properties": [
+      "textAlign"
+    ]
+  },
+  {
+    "id": "TB-39",
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "tag": "table",
+    "name": "className",
+    "value": "\"data-table\"",
+    "line": 331,
+    "properties": []
+  },
+  {
+    "id": "TB-39",
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+    "line": 341,
+    "properties": [
+      "width",
+      "whiteSpace"
+    ]
+  },
+  {
+    "id": "TB-39",
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "tag": "th",
+    "name": "style",
+    "value": "{{ width: \"1%\", whiteSpace: \"nowrap\" }}",
+    "line": 344,
+    "properties": [
+      "width",
+      "whiteSpace"
+    ]
+  }
+]

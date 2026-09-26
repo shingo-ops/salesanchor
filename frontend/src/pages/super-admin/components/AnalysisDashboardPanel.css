@@ -1,0 +1,512 @@
+/**
+ * AnalysisDashboardPanel スタイル（UX改善版）
+ * ADR-067: 全スタイルはデザイントークンのみ使用。色・サイズ直値禁止。
+ * ADR-144: 金型クラスのみ。analysis-dashboard- プレフィックス必須。
+ */
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   ベースレイアウト
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard {
+  padding: var(--space-6);
+  overflow-y: auto;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   タブナビゲーション
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border-primary);
+  margin-bottom: var(--space-1);
+}
+
+.analysis-dashboard-period-selector {
+  flex-shrink: 0;
+  padding-bottom: var(--space-1);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   Import タブ
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-dropzone {
+  border: 2px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-6);
+  text-align: center;
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  transition: border-color 0.2s, background-color 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+}
+.analysis-dashboard-dropzone:hover {
+  border-color: var(--color-primary);
+  background-color: var(--color-surface-hover);
+}
+.analysis-dashboard-dropzone[data-dragging="true"] {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-subtle);
+}
+.analysis-dashboard-dropzone-icon {
+  color: var(--text-muted);
+}
+.analysis-dashboard-dropzone p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+.analysis-dashboard-upload-options {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+.analysis-dashboard-window-input {
+  width: calc(var(--space-10) * 2);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.analysis-dashboard-upload-result {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.analysis-dashboard-import-latest {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-sm);
+}
+
+/* サマリーカード */
+
+.analysis-dashboard-import-header {
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-import-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.analysis-dashboard-import-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.analysis-dashboard-import-label {
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+}
+
+.analysis-dashboard-import-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   1. ボトルネックヒーロー
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-hero {
+  border-radius: var(--radius-md, 8px);
+  border-left: var(--space-1) solid;
+  padding: var(--space-4) var(--space-5);
+}
+
+.analysis-dashboard-hero.analysis-dashboard-signal--warning {
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning-border);
+}
+
+.analysis-dashboard-hero.analysis-dashboard-signal--danger {
+  background: var(--color-error-bg);
+  border-color: var(--color-error-border);
+}
+
+.analysis-dashboard-hero-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-hero-metric {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-top: var(--space-1);
+}
+
+.analysis-dashboard-hero-name {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-hero-value {
+  font-size: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-hero-desc {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   2. 信号灯 KPI カード（Card に追加するボーダーカラークラス）
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-signal--success {
+  border-top: 3px solid var(--color-success-border) !important;
+}
+
+.analysis-dashboard-signal--warning {
+  border-top: 3px solid var(--color-warning-border) !important;
+}
+
+.analysis-dashboard-signal--danger {
+  border-top: 3px solid var(--color-error-border) !important;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   KPI メトリクスグリッド
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-metrics {
+  display: flex;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-metric-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: var(--space-1);
+}
+
+.analysis-dashboard-metric-value {
+  font-size: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-metric-unit {
+  font-size: var(--font-sm);
+  margin-left: var(--space-1);
+  color: var(--text-secondary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   アラートバッジ行
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-alerts {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-alert-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   3. CTAボタン群
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-ctas {
+  display: flex;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md, 6px);
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.analysis-dashboard-cta-btn:hover {
+  background: var(--surface-secondary, var(--surface-primary));
+  border-color: var(--border-focus, var(--border-primary));
+}
+
+.analysis-dashboard-cta-btn--primary {
+  align-self: flex-start;
+  margin-top: var(--space-1);
+}
+
+.analysis-dashboard-cta-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-error-bg);
+  color: var(--color-error);
+  border-radius: var(--radius-full, 999px);
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-bold);
+  padding: 0 var(--space-2);
+  min-width: 1.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   4. トレンドグラフ
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-chart-card {
+  width: 100%;
+}
+
+.analysis-dashboard-chart {
+  margin-top: var(--space-3);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   共通セクションタイトル
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-section-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  margin-bottom: var(--space-3);
+  color: var(--text-primary);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   5. 詳細グリッド（理由内訳・エンジン・エラー）
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.analysis-dashboard-reason-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-reason-item {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.analysis-dashboard-reason-count {
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.analysis-dashboard-engine-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-engine-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.analysis-dashboard-engine-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.analysis-dashboard-engine-value {
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  font-weight: var(--font-weight-medium);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   状態
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  padding: var(--space-4) 0;
+}
+
+.analysis-dashboard-error {
+  color: var(--color-error);
+  font-size: var(--font-sm);
+  padding: var(--space-4);
+}
+
+/* --- Supplier Pipeline --- */
+.analysis-dashboard-problem-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-error-bg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-error-text);
+}
+
+.analysis-dashboard-supplier-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-supplier-section h3 {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.analysis-dashboard-rate-cell {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-rate-cell--danger {
+  color: var(--color-error-text);
+  font-weight: var(--font-weight-semibold);
+}
+
+.analysis-dashboard-rate-cell--warning {
+  color: var(--color-warning-text);
+}
+
+.analysis-dashboard-rate-cell--success {
+  color: var(--color-success-text);
+}
+
+.analysis-dashboard-existing-section {
+  border-top: 1px solid var(--border-default);
+  padding-top: var(--space-5);
+  margin-top: var(--space-2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   ランキングセクション
+────────────────────────────────────────────────────────────────────────────── */
+
+.analysis-dashboard-ranking-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.analysis-dashboard-ranking-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  margin: 0;
+}
+
+.analysis-dashboard-ranking-cards {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.analysis-dashboard-ranking-card-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.analysis-dashboard-rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--dashboard-rank-badge);
+  height: var(--dashboard-rank-badge);
+  border-radius: var(--radius-full);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+  flex-shrink: 0;
+}
+
+.analysis-dashboard-ranking-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.analysis-dashboard-ranking-card-name {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysis-dashboard-ranking-card-metrics {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.analysis-dashboard-ranking-card-stat {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.analysis-dashboard-ranking-empty {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0;
+  padding: var(--space-3);
+}
