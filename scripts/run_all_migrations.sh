@@ -609,6 +609,9 @@ run_sql migrations/20260906_130000_create_tcg_product_import_history_t004.sql
 # IMPORT-01 QA: 同上（tenant_001 専用・冪等）
 run_sql migrations/20260906_130100_create_tcg_product_import_history_t001.sql
 
+# ADR-158: neutralized exclude-keyword inserts (data applied via app/CSV per ADR-155)
+run_sql migrations/20260925_120000_add_product_exclude_keywords.sql
+
 echo ""
 echo "============================================"
 echo "✅ 全マイグレーション完了 (${TOTAL}ステップ)"
@@ -812,3 +815,12 @@ run_sql migrations/20260924_060000_cleanup_supplier_name_duplicates.sql
 
 # ADR-158: analysis_results に is_current カラムを追加（商品単位の差分更新）
 run_sql migrations/20260924_120000_add_analysis_results_is_current.sql
+
+# conditions テーブルに match_type / effect カラムを追加（tcg_status_master パターン統一）
+run_sql migrations/20260925_010000_conditions_add_match_type.sql
+
+# line_conditions に condition_def_id / unit_id / note 追加（ConditionsMasterPanel v2）
+run_sql migrations/20260925_020000_conditions_add_def_unit_note.sql
+
+# ADR-158 Phase 2: extraction_items に raw_product_code カラム追加（Gemini v6 型番抽出）
+run_sql migrations/20260926_010000_add_raw_product_code.sql

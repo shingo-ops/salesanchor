@@ -17,7 +17,7 @@
  * ADR-067: 色・サイズはデザイントークンのみ
  * ADR-144: Card / Badge / DataTable / Tabs / recharts 金型のみ使用
  */
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -31,6 +31,7 @@ import {
 } from "recharts";
 import { api } from "../../../lib/api";
 import { Card } from "../../../components/Card";
+import { Button } from "../../../components/Button";
 import { Badge } from "../../../components/Badge";
 import { DataTable } from "../../../components/DataTable";
 import type { DataTableColumn } from "../../../components/DataTable";
@@ -49,6 +50,16 @@ import "./AnalysisDashboardPanel.css";
 // ──────────────────────────────────────────────────────────────────────────────
 
 type DashboardTab = "import" | "extraction" | "analysis" | "distribution";
+
+interface ImportResultResponse {
+  status: "imported" | "already_imported";
+  review_status: "ok" | "pending_review";
+  message_count: number;
+  provider_count: number;
+  unresolved_count: number;
+  unresolved_display_names: string[];
+  import_job_id: string;
+}
 
 // Supplier Pipeline 型定義
 
@@ -159,6 +170,13 @@ interface ExtractionBySupplierItem {
   done_count: number;
   error_count: number;
   empty_count: number;
+}
+
+interface ExtractionProductRankingItem {
+  raw_product_name: string;
+  total_count: number;
+  resolved_count: number;
+  resolution_rate: number;
 }
 
 interface PipelineSummary {
@@ -286,7 +304,7 @@ interface AnalysisDashboardPanelProps {
 
 export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelProps) {
   const { t } = useTranslation();
-  const [activeTab, setActiveTab] = useState<DashboardTab>("extraction");
+  const [activeTab, setActiveTab] = useState<DashboardTab>("import");
   const [trendDays, setTrendDays] = useState<number>(7);
 
   // Pipeline (Extraction + Analysis) data
@@ -495,6 +513,10 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           t={t}
           onNavigate={handleCta}
           ArrowRightIcon={ArrowRightIcon}
+          onUploadSuccess={() => {
+            // Re-fetch import summary after successful upload
+            setImportData(null);
+          }}
         />
       )}
 
@@ -570,9 +592,71 @@ interface ImportTabContentProps {
   t: (key: string) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
+  onUploadSuccess: () => void;
 }
 
-function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigate, ArrowRightIcon }: ImportTabContentProps) {
+function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigate, ArrowRightIcon, onUploadSuccess }: ImportTabContentProps) {
+  // Upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [windowHours, setWindowHours] = useState("24");
+  const [isDragging, setIsDragging] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadResult, setUploadResult] = useState<ImportResultResponse | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (file: File | null) => {
+    if (!file) return;
+    if (!file.name.endsWith(".txt")) {
+      setUploadError(t("tcgLineImport.errorTxtOnly"));
+      return;
+    }
+    setUploadError("");
+    setUploadResult(null);
+    setSelectedFile(file);
+  };
+
+  const onDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const onDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0] ?? null;
+    handleFileChange(file);
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) {
+      setUploadError(t("tcgLineImport.errorSelectFile"));
+      return;
+    }
+    setUploading(true);
+    setUploadError("");
+    setUploadResult(null);
+
+    const formData = new FormData();
+    formData.append("file", selectedFile);
+    const hours = parseInt(windowHours, 10);
+    formData.append("window_hours", isNaN(hours) ? "24" : String(hours));
+
+    try {
+      const data = await api.postForm<ImportResultResponse>("/tcg/line-import", formData);
+      setUploadResult(data);
+      onUploadSuccess();
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : t("tcgLineImport.errorUploadFailed"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (loading) {
     return <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>;
   }
@@ -658,6 +742,98 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
 
   return (
     <>
+      {/* ── アップロードセクション ── */}
+      <Card variant="container" density="compact">
+        <h3>{t("analysisRules.dashboard.importUploadTitle")}</h3>
+
+        {/* ドロップゾーン */}
+        <div
+          onDragOver={onDragOver}
+          onDragLeave={onDragLeave}
+          onDrop={onDrop}
+          onClick={() => fileInputRef.current?.click()}
+          className="analysis-dashboard-dropzone"
+          data-dragging={isDragging}
+        >
+          {/* ui-allow: 非表示ファイル入力はドロップゾーン専用ref用途、汎用コンポーネント非対象 (#3285) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".txt"
+            onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+            style={{ display: "none" }}
+          />
+          {/* ui-allow: Lucide file-up スタイルインラインSVG — 登録アイコンコンポーネントに該当なし (#3285) */}
+          <svg
+            width="40"
+            height="40"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="analysis-dashboard-dropzone-icon"
+            aria-hidden="true"
+          >
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="9" y1="15" x2="12" y2="12" />
+            <line x1="15" y1="15" x2="12" y2="12" />
+          </svg>
+          <p>{selectedFile ? selectedFile.name : t("analysisRules.dashboard.importDropHint")}</p>
+        </div>
+
+        {/* ウィンドウ時間 */}
+        <div className="analysis-dashboard-upload-options">
+          <label>{t("analysisRules.dashboard.importWindowHours")}</label>
+          {/* ui-allow: MIG-04 super-admin専用フォーム、汎用コンポーネント不要 (#3285) */}
+          <input
+            type="number"
+            min="0"
+            value={windowHours}
+            onChange={(e) => setWindowHours(e.target.value)}
+            className="analysis-dashboard-window-input"
+          />
+        </div>
+
+        {/* アップロードボタン */}
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleUpload}
+          disabled={uploading || !selectedFile}
+          loading={uploading}
+          loadingText={t("analysisRules.dashboard.importUploading")}
+        >
+          {t("analysisRules.dashboard.importUploadButton")}
+        </Button>
+
+        {/* エラー */}
+        {uploadError && <Badge variant="danger">{uploadError}</Badge>}
+
+        {/* 成功結果 */}
+        {uploadResult && uploadResult.status !== "already_imported" && (
+          <div className="analysis-dashboard-upload-result">
+            <Badge variant={uploadResult.review_status === "pending_review" ? "warning" : "success"}>
+              {uploadResult.review_status === "pending_review"
+                ? t("analysisRules.dashboard.importNeedsReview")
+                : t("analysisRules.dashboard.importSuccess")}
+            </Badge>
+            <span>{t("analysisRules.dashboard.importResultMessages").replace("{count}", String(uploadResult.message_count))}</span>
+            {uploadResult.review_status === "pending_review" && (
+              <Button variant="secondary" size="sm" onClick={() => onNavigate("import")}>
+                {t("analysisRules.dashboard.importGoReview")}
+              </Button>
+            )}
+          </div>
+        )}
+        {uploadResult && uploadResult.status === "already_imported" && (
+          <Badge variant="neutral">{t("analysisRules.dashboard.importAlreadyImported")}</Badge>
+        )}
+      </Card>
+
       {/* 孤立メッセージ警告 */}
       {orphanCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
@@ -758,7 +934,7 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
           <span className="analysis-dashboard-engine-label">
             {t("analysisRules.dashboard.importLatestAt")}
           </span>
-          <span className="analysis-dashboard-engine-value">{data.latest_import_at}</span>
+          <span className="analysis-dashboard-engine-value">{data.latest_import_at ? new Date(data.latest_import_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-"}</span>
         </div>
       )}
 
@@ -836,6 +1012,109 @@ interface ExtractionTabContentProps {
 }
 
 function ExtractionTabContent({ data, trend, supplierData, supplierLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
+  const [productRanking, setProductRanking] = useState<ExtractionProductRankingItem[]>([]);
+  const [showSupplierDetail, setShowSupplierDetail] = useState(false);
+  const [showProductDetail, setShowProductDetail] = useState(false);
+
+  useEffect(() => {
+    api
+      .get<{ items: ExtractionProductRankingItem[] }>(
+        `/tcg/analysis-dashboard/extraction-product-ranking?days=${trendDays}`
+      )
+      .then((res) => {
+        setProductRanking(res.items ?? []);
+      })
+      .catch(() => {
+        setProductRanking([]);
+      });
+  }, [trendDays]);
+
+  const worstSuppliers = useMemo(() => {
+    return [...(data.extraction_by_supplier ?? [])]
+      .filter((s) => s.total_jobs > 0)
+      .map((s) => ({ ...s, successRate: s.done_count / s.total_jobs }))
+      .sort((a, b) => a.successRate - b.successRate);
+  }, [data.extraction_by_supplier]);
+
+  type SupplierWithRate = ExtractionBySupplierItem & { successRate: number };
+
+  const supplierRankingColumns: DataTableColumn<SupplierWithRate>[] = [
+    {
+      key: "rank",
+      header: t("analysisRules.dashboard.extractionRankRank"),
+      width: "60px",
+      renderCell: (_row, rowKey) => {
+        const idx = worstSuppliers.findIndex(
+          (s) => (s.supplier_code ?? s.supplier_name ?? "") === rowKey
+        );
+        return idx >= 0 ? idx + 1 : "-";
+      },
+    },
+    {
+      key: "supplier_name",
+      header: t("analysisRules.dashboard.extractionRankSupplierName"),
+    },
+    {
+      key: "successRate",
+      header: t("analysisRules.dashboard.extractionRankSuccessRate"),
+      width: "100px",
+      renderCell: (row) => `${(row.successRate * 100).toFixed(1)}%`,
+    },
+    {
+      key: "done_count",
+      header: t("analysisRules.dashboard.extractionRankDoneJobs"),
+      width: "80px",
+      renderCell: (row) => row.done_count.toLocaleString(),
+    },
+    {
+      key: "error_count",
+      header: t("analysisRules.dashboard.extractionRankErrorJobs"),
+      width: "80px",
+      renderCell: (row) => row.error_count.toLocaleString(),
+    },
+    {
+      key: "total_jobs",
+      header: t("analysisRules.dashboard.extractionRankTotalJobs"),
+      width: "100px",
+      renderCell: (row) => row.total_jobs.toLocaleString(),
+    },
+  ];
+
+  const productRankingColumns: DataTableColumn<ExtractionProductRankingItem>[] = [
+    {
+      key: "rank",
+      header: t("analysisRules.dashboard.extractionRankRank"),
+      width: "60px",
+      renderCell: (_row, rowKey) => {
+        const idx = productRanking.findIndex((p) => p.raw_product_name === rowKey);
+        return idx >= 0 ? idx + 1 : "-";
+      },
+    },
+    {
+      key: "raw_product_name",
+      header: t("analysisRules.dashboard.extractionRankProductName"),
+    },
+    {
+      key: "resolution_rate",
+      header: t("analysisRules.dashboard.extractionRankResolutionRate"),
+      width: "100px",
+      renderCell: (row) => `${(row.resolution_rate * 100).toFixed(1)}%`,
+    },
+    {
+      key: "resolved_count",
+      header: t("analysisRules.dashboard.extractionRankResolvedItems"),
+      width: "90px",
+      renderCell: (row) => row.resolved_count.toLocaleString(),
+    },
+    {
+      key: "total_count",
+      header: t("analysisRules.dashboard.extractionRankTotalItems"),
+      width: "90px",
+      renderCell: (row) => row.total_count.toLocaleString(),
+    },
+  ];
+
+  // fix: emptyを除外して done/(done+error) で計算（挨拶等のemptyメッセージを分母から除外）
   const extractionDenominator =
     data.extraction.by_status.done + data.extraction.by_status.error;
   const extractionSuccessRate =
@@ -928,6 +1207,138 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
 
   return (
     <>
+      {/* ランキングセクション: 抽出率ワースト提供者 */}
+      <section className="analysis-dashboard-ranking-section">
+        <h4 className="analysis-dashboard-ranking-title">
+          <Badge variant="danger" size="sm" dot>
+            {t("analysisRules.dashboard.extractionWorstSupplierTitle")}
+          </Badge>
+        </h4>
+        <div className="analysis-dashboard-ranking-cards">
+          {worstSuppliers.slice(0, 3).map((item, index) => (
+            <Card key={item.supplier_code ?? item.supplier_name ?? index} variant="container" density="compact">
+              <div className="analysis-dashboard-ranking-card-content">
+                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
+                <div className="analysis-dashboard-ranking-card-info">
+                  <span className="analysis-dashboard-ranking-card-name">
+                    {item.supplier_name ?? item.supplier_code ?? "-"}
+                  </span>
+                  <div className="analysis-dashboard-ranking-card-metrics">
+                    <Badge
+                      variant={item.successRate >= 0.8 ? "success" : item.successRate >= 0.6 ? "warning" : "danger"}
+                      size="sm"
+                    >
+                      {t("analysisRules.dashboard.extractionRankSuccessRate")}: {(item.successRate * 100).toFixed(0)}%
+                    </Badge>
+                    <span className="analysis-dashboard-ranking-card-stat">
+                      {t("analysisRules.dashboard.extractionRankDoneJobs")}: {item.done_count} / {item.total_jobs}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {worstSuppliers.length === 0 && (
+            <p className="analysis-dashboard-ranking-empty">
+              {t("analysisRules.dashboard.extractionRankNoData")}
+            </p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setShowSupplierDetail(!showSupplierDetail)}>
+          {showSupplierDetail
+            ? t("analysisRules.dashboard.extractionRankHideDetail")
+            : t("analysisRules.dashboard.extractionRankShowDetail")}
+        </Button>
+        {showSupplierDetail && (
+          <DataTable<SupplierWithRate>
+            columns={supplierRankingColumns}
+            data={worstSuppliers}
+            rowKey={(row) => row.supplier_code ?? row.supplier_name ?? ""}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
+          />
+        )}
+        <div className="analysis-dashboard-ctas">
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn"
+            onClick={() => onNavigate("supplier-master")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaSupplierMaster")}
+            <ArrowRightIcon size={16} />
+          </button>
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn"
+            onClick={() => onNavigate("extraction-rules")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaExtractionRules")}
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
+      </section>
+
+      {/* ランキングセクション: 照合率ワースト商品 */}
+      <section className="analysis-dashboard-ranking-section">
+        <h4 className="analysis-dashboard-ranking-title">
+          <Badge variant="danger" size="sm" dot>
+            {t("analysisRules.dashboard.extractionWorstProductTitle")}
+          </Badge>
+        </h4>
+        <div className="analysis-dashboard-ranking-cards">
+          {productRanking.slice(0, 3).map((item, index) => (
+            <Card key={item.raw_product_name} variant="container" density="compact">
+              <div className="analysis-dashboard-ranking-card-content">
+                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
+                <div className="analysis-dashboard-ranking-card-info">
+                  <span className="analysis-dashboard-ranking-card-name">{item.raw_product_name}</span>
+                  <div className="analysis-dashboard-ranking-card-metrics">
+                    <Badge
+                      variant={item.resolution_rate >= 0.8 ? "success" : item.resolution_rate >= 0.6 ? "warning" : "danger"}
+                      size="sm"
+                    >
+                      {t("analysisRules.dashboard.extractionRankResolutionRate")}: {(item.resolution_rate * 100).toFixed(0)}%
+                    </Badge>
+                    <span className="analysis-dashboard-ranking-card-stat">
+                      {t("analysisRules.dashboard.extractionRankResolvedItems")}: {item.resolved_count} / {item.total_count}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          ))}
+          {productRanking.length === 0 && (
+            <p className="analysis-dashboard-ranking-empty">
+              {t("analysisRules.dashboard.extractionRankNoData")}
+            </p>
+          )}
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => setShowProductDetail(!showProductDetail)}>
+          {showProductDetail
+            ? t("analysisRules.dashboard.extractionRankHideDetail")
+            : t("analysisRules.dashboard.extractionRankShowDetail")}
+        </Button>
+        {showProductDetail && (
+          <DataTable<ExtractionProductRankingItem>
+            columns={productRankingColumns}
+            data={productRanking}
+            rowKey={(row) => row.raw_product_name}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
+          />
+        )}
+        <div className="analysis-dashboard-ctas">
+          <button
+            type="button"
+            className="analysis-dashboard-cta-btn analysis-dashboard-cta-btn--primary"
+            onClick={() => onNavigate("product-master")}
+          >
+            {t("analysisRules.dashboard.extractionRankCtaProductMaster")}
+            <ArrowRightIcon size={16} />
+          </button>
+        </div>
+      </section>
+
       {/* 問題バー */}
       {!supplierLoading && dangerExtractionCount > 0 && (
         <div className="analysis-dashboard-problem-banner">
@@ -1118,7 +1529,7 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
           <DataTable<RecentError>
             columns={[
               { key: "error_message", header: t("analysisRules.dashboard.errorMessage") },
-              { key: "created_at", header: t("analysisRules.dashboard.errorDate"), width: "180px" },
+              { key: "created_at", header: t("analysisRules.dashboard.errorDate"), width: "180px", renderCell: (row) => row.created_at ? new Date(row.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-" },
             ]}
             data={data.recent_errors}
             rowKey={(row) => row.id}
@@ -1744,11 +2155,11 @@ function DistributionTabContent({ data, loading, error, t }: DistributionTabCont
           }
           return "-";
         }
-        const dateStr = row.last_distributed_at;
-        if (row.is_active && isStale(dateStr)) {
-          return <Badge variant="warning">{dateStr}</Badge>;
+        const formatted = new Date(row.last_distributed_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
+        if (row.is_active && isStale(row.last_distributed_at)) {
+          return <Badge variant="warning">{formatted}</Badge>;
         }
-        return <>{dateStr}</>;
+        return <>{formatted}</>;
       },
     },
     {

@@ -17,6 +17,11 @@ class ConditionBase(BaseModel):
     priority: Optional[int] = None
     search_kw: str = ""
     exclude_kw: str = ""
+    match_type: str = "KEYWORD"
+    effect: str = "OUTPUT"
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: str = ""
 
 
 class ConditionCreate(ConditionBase):
@@ -31,6 +36,11 @@ class ConditionUpdate(BaseModel):
     priority: Optional[int] = None
     search_kw: Optional[str] = None
     exclude_kw: Optional[str] = None
+    match_type: Optional[str] = None
+    effect: Optional[str] = None
+    condition_def_id: Optional[int] = None
+    unit_id: Optional[int] = None
+    note: Optional[str] = None
 
 
 class ConditionResponse(ConditionBase):

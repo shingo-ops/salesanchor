@@ -651,34 +651,77 @@ def load_condition_entries(session: Session) -> list[dict]:
     GAS 対照: readConditionMaster() condEntries 構築 (investigate2.gs:8118-8125)
     code ASC タイブレーカーは GAS の R3 条件処理順（SHURI→PERI: CN0005→CN0006）を保証する。
     GAS 根拠: investigate2.gs:9705-9710 で No shrink box (CN0005) を Opened box (CN0006) より先に判定。
+
+    注意: migration 適用前の環境（CI テスト DB 等）で match_type / effect カラムが
+    存在しない場合は fallback クエリに切り替えてデフォルト値を補完する。
     """
-    rows = session.execute(
-        text(
-            """
-            SELECT c.id, c.code, c.canonical, c.priority,
-                   c.app_kubun, c.search_kw, c.exclude_kw
-            FROM public.conditions c
-            WHERE c.is_active = TRUE
-              AND c.priority IS NOT NULL
-              AND c.priority > 0
-            ORDER BY c.priority ASC,
-                     length(COALESCE(c.app_kubun, '')) DESC,
-                     c.code ASC
-            """
-        )
-    ).fetchall()
-    return [
-        {
-            "cond_id": str(r[0]),
-            "code": r[1],
-            "canonical": r[2],
-            "priority": r[3],
-            "app_kubun": r[4] or "",
-            "search_kw": r[5] or "",
-            "exclude_kw": r[6] or "",
-        }
-        for r in rows
-    ]
+    try:
+        rows = session.execute(
+            text(
+                """
+                SELECT c.id, c.code, c.canonical, c.priority,
+                       c.app_kubun, c.search_kw, c.exclude_kw,
+                       c.match_type, c.effect
+                FROM public.conditions c
+                WHERE c.is_active = TRUE
+                  AND c.priority IS NOT NULL
+                  AND c.priority > 0
+                ORDER BY c.priority ASC,
+                         length(COALESCE(c.app_kubun, '')) DESC,
+                         c.code ASC
+                """
+            )
+        ).fetchall()
+        has_match_type = True
+    except Exception:
+        session.rollback()
+        rows = session.execute(
+            text(
+                """
+                SELECT c.id, c.code, c.canonical, c.priority,
+                       c.app_kubun, c.search_kw, c.exclude_kw
+                FROM public.conditions c
+                WHERE c.is_active = TRUE
+                  AND c.priority IS NOT NULL
+                  AND c.priority > 0
+                ORDER BY c.priority ASC,
+                         length(COALESCE(c.app_kubun, '')) DESC,
+                         c.code ASC
+                """
+            )
+        ).fetchall()
+        has_match_type = False
+
+    if has_match_type:
+        return [
+            {
+                "cond_id": str(r[0]),
+                "code": r[1],
+                "canonical": r[2],
+                "priority": r[3],
+                "app_kubun": r[4] or "",
+                "search_kw": r[5] or "",
+                "exclude_kw": r[6] or "",
+                "match_type": r[7] if r[7] is not None else "KEYWORD",
+                "effect": r[8] if r[8] is not None else "OUTPUT",
+            }
+            for r in rows
+        ]
+    else:
+        return [
+            {
+                "cond_id": str(r[0]),
+                "code": r[1],
+                "canonical": r[2],
+                "priority": r[3],
+                "app_kubun": r[4] or "",
+                "search_kw": r[5] or "",
+                "exclude_kw": r[6] or "",
+                "match_type": "KEYWORD",
+                "effect": "OUTPUT",
+            }
+            for r in rows
+        ]
 
 
 def app_kubun_matches(app_kubun_str: str, kubun: str) -> bool:
@@ -785,9 +828,20 @@ def resolve_condition_v2(
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
-        s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
-        x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
-        hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        match_type = e.get("match_type", "KEYWORD")
+        if match_type in ("REGEX", "LITERAL", "DEFAULT"):
+            if match_type == "DEFAULT":
+                hit, matched_kw = True, "DEFAULT"
+            else:
+                hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
+                if hit and e["exclude_kw"]:
+                    hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
+                matched_kw = e["search_kw"] if hit else None
+        else:
+            # KEYWORD（デフォルト）: 既存動作を維持
+            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+            x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+            hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
         if not hit:
             continue
         prefix = f"{flag_note}," if flag_note else ""
@@ -1160,6 +1214,15 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     ).fetchall()
     product_code_to_id: dict[str, str] = {str(r[0]): str(r[1]) for r in legacy_code_rows}
 
+    # Gate 1 (ADR-158 Phase 2): raw_product_code → products.id マッピング
+    # product_code と mark の両方を照合対象にする（どちらも型番として使われうる）
+    mark_rows = session.execute(
+        text("SELECT mark, id FROM public.products WHERE is_active = TRUE AND mark IS NOT NULL AND mark <> ''")
+    ).fetchall()
+    # product_code を基準にして mark で補完（product_code を優先）
+    rawcode_to_id: dict[str, str] = {str(r[0]): str(r[1]) for r in mark_rows}
+    rawcode_to_id.update(product_code_to_id)  # product_code が mark より優先
+
     works = load_work_master(session)
     work_rows = session.execute(text(
         "SELECT id, work_id, category_class FROM public.products WHERE is_active = TRUE"
@@ -1242,7 +1305,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
                    ei.raw_work_name, ei.raw_work_source_line_span,
                    ei.line_start, ei.line_end, sm.raw_text,
                    EXISTS (SELECT 1 FROM {TCG_SCHEMA}.item_corrections ic
-                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id')
+                           WHERE ic.extraction_item_id = ei.id AND ic.field_name = 'product_id'),
+                   ei.raw_product_code
             FROM {TCG_SCHEMA}.extraction_items ei
             JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
@@ -1278,6 +1342,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             line_end,
             source_text,
             has_product_correction,
+            ei_raw_product_code,
         ) = row
 
         stats["total"] += 1
@@ -1340,20 +1405,96 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
             if product_decisions is not None
             else None
         )
+        # ADR-158: apply exclude_keywords check to GEMINI direct path before accepting.
+        # Previously, GEMINI bypass skipped exclude_keywords entirely, causing misassignments
+        # (e.g. single cards matched to BOX products, パラレル/SAR items matched to sealed boxes).
+        _gemini_excluded = False
         if gemini_product_id and gemini_product_id in filtered_codes:
-            matched_code = gemini_product_id
-            pid_basis = "GEMINI"
-            pid_resolved = True
-            candidates: list = []
+            _gemini_ex_fields = [
+                normalize_en(raw_product_name),
+                normalize_en(raw_state or ""),
+                normalize_en(raw_memo or ""),
+            ]
+            # Check 1: exclude_keywords match
+            if any(
+                kw and match_product_keyword(kw, field)
+                for kw in exclude_kw.get(gemini_product_id, [])
+                for field in _gemini_ex_fields
+            ):
+                _gemini_excluded = True
+            # Check 2: single card marker vs BOX/CASE category
+            if not _gemini_excluded:
+                _gemini_category = (product_category_classes or {}).get(gemini_product_id, "") or ""
+                if single_card_marker(raw_product_name, raw_state, raw_memo) and _gemini_category.casefold() in {"box", "case"}:
+                    _gemini_excluded = True
+
+        # --- Gate 1: Raw product code match (ADR-158 Phase 2) ---
+        # raw_product_code は Gemini v6 が原文から抽出した型番（例: OP-14, SV8a）。
+        # マスタの product_code または mark に直接一致すれば商品IDを確定する。
+        # exclude_keywords チェックも適用して安全性を担保する。
+        _rawcode = (ei_raw_product_code or "").strip() or None
+        _rawcode_pid: str | None = rawcode_to_id.get(_rawcode) if _rawcode else None
+        # rawcode_pid が filtered_codes（unit kubun フィルタ済み）に含まれる場合のみ有効
+        _rawcode_valid = bool(_rawcode_pid and _rawcode_pid in filtered_codes)
+
+        if gemini_product_id and gemini_product_id in filtered_codes and not _gemini_excluded:
+            if _rawcode_valid and _rawcode_pid != gemini_product_id:
+                # Gate 1: raw_product_code が Gemini と矛盾 → 原文型番を優先
+                matched_code = _rawcode_pid
+                pid_basis = "RAWCODE_OVERRIDE"
+                pid_resolved = True
+                candidates: list = []
+            else:
+                matched_code = gemini_product_id
+                pid_basis = "GEMINI"
+                pid_resolved = True
+                candidates = []
+        elif _rawcode_valid:
+            # Gate 1: Gemini 解決なし / 除外 → raw_product_code で直接照合
+            _rc_exclude_list = exclude_kw.get(_rawcode_pid, [])
+            _rc_ex_fields = [
+                normalize_en(raw_product_name),
+                normalize_en(raw_state or ""),
+                normalize_en(raw_memo or ""),
+            ]
+            _rc_excluded = any(
+                kw and match_product_keyword(kw, field)
+                for kw in _rc_exclude_list
+                for field in _rc_ex_fields
+            )
+            if not _rc_excluded:
+                matched_code = _rawcode_pid
+                pid_basis = "RAWCODE"
+                if _gemini_excluded:
+                    pid_basis = "GEMINI_EXCLUDED|RAWCODE"
+                pid_resolved = True
+                candidates = []
+            else:
+                # raw_product_code に除外語が一致 → キーワード照合にフォールバック
+                matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
+                    norm_product_name, filtered_codes, search_kw, exclude_kw,
+                    work_id=work_id, product_work_ids=product_work_ids,
+                    raw_state=norm_condition, raw_memo=norm_memo,
+                    product_category_classes=product_category_classes,
+                )
+                _kw_basis = pid_basis if pid_basis != "NONE" else "NONE"
+                if _gemini_excluded:
+                    pid_basis = (f"GEMINI_EXCLUDED|RAWCODE_EXCLUDED|{_kw_basis}")[:100]
+                else:
+                    pid_basis = (f"RAWCODE_EXCLUDED|{_kw_basis}")[:100]
         else:
-            # Gemini が NULL / 無効 → キーワード照合にフォールバック
+            # Gemini が NULL / 無効 / 除外 かつ raw_product_code なし → キーワード照合にフォールバック
             matched_code, pid_basis, pid_resolved, candidates = match_pid_with_work(
                 norm_product_name, filtered_codes, search_kw, exclude_kw,
                 work_id=work_id, product_work_ids=product_work_ids,
                 raw_state=norm_condition, raw_memo=norm_memo,
                 product_category_classes=product_category_classes,
             )
-            if product_decisions is not None and pid_basis != "NONE":
+            if _gemini_excluded and pid_basis != "NONE":
+                # ADR-158: GEMINI result was rejected by exclude_keywords or single_card_marker;
+                # prefix with GEMINI_EXCLUDED so we can track the bypass in analysis logs.
+                pid_basis = ("GEMINI_EXCLUDED|" + pid_basis)[:100]
+            elif product_decisions is not None and pid_basis != "NONE":
                 # v5 ジョブでフォールバックした場合は FALLBACK プレフィックスで区別する
                 pid_basis = ("FALLBACK|" + pid_basis)[:100]
             elif work_decisions is not None and pid_basis != "NONE":
@@ -1558,10 +1699,9 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     stats["e3b_flagged"] = e3b["flagged"]
     stats["e4_resolved"] = e4["resolved"]
 
-    # --- ADR-158: 商品単位の差分更新 ---
-    # 同一仕入元の旧 analysis_results で、新メッセージにも存在する
-    # product_id の行を is_current=FALSE に更新する。
-    # 新メッセージに存在しない product_id の旧行は TRUE のまま残り配信に継続表示。
+    # --- ADR-158: 商品×コンディション単位の配信可視性制御 ---
+    # 同一仕入元の全メッセージから、各 (product_id, condition_id) ペアごとに
+    # 最新の投稿日時 (received_at) を持つ解析結果のみ is_current=TRUE にする。
     _merge_supplier_products(session, extraction_job_id, TCG_SCHEMA)
 
     logger.info(
@@ -1573,15 +1713,16 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 def _merge_supplier_products(
     session: Session, extraction_job_id: str, schema: str
 ) -> int:
-    """ADR-158: 同一仕入元の旧 analysis_results を商品×コンディション単位で更新。
+    """ADR-158: 同一仕入元の analysis_results を商品×コンディション単位で整理。
 
-    新メッセージの解析結果に含まれる (product_id, condition_id) と同じペアを持つ
-    自分より古いメッセージの analysis_results を is_current=FALSE に更新する。
-    新メッセージに含まれないペアの旧行は is_current=TRUE のまま残る。
-    古いメッセージの再解析時は、自分より新しいメッセージの結果を上書きしない。
+    この解析ジョブで生成された (product_id, condition_id) ペアについて、
+    同一仕入元チャネルの全メッセージを投稿日時 (received_at) で比較し、
+    各ペアごとに最新メッセージの結果だけを is_current=TRUE に設定する。
+    古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
+    データ自体は履歴として保持される。
 
     Returns:
-        更新した旧 analysis_results の件数
+        is_current の値が変更された analysis_results の件数
     """
     # 1. この extraction_job の supplier_channel_id を取得
     channel_row = session.execute(
@@ -1599,7 +1740,7 @@ def _merge_supplier_products(
 
     supplier_channel_id = channel_row[0]
 
-    # 2. 新 analysis_results の (product_id, condition_id) ペア一覧
+    # 2. この job の analysis_results から (product_id, condition_id) ペア一覧
     new_pairs = session.execute(
         text(f"""
             SELECT DISTINCT ar.product_id, ar.condition_id
@@ -1615,39 +1756,48 @@ def _merge_supplier_products(
     if not new_pairs:
         return 0
 
-    new_product_ids = [p[0] for p in new_pairs]
-    new_condition_ids = [p[1] for p in new_pairs]
-
-    # 3. 同一仕入元の旧 analysis_results で、新メッセージにも存在する
-    #    (product_id, condition_id) ペアを持つ「自分より古いメッセージの行」を is_current=FALSE に更新。
-    #    自分より新しいメッセージの行（古いメッセージの再解析時）は対象外とする。
+    # 3. 同一 supplier_channel_id の全メッセージを対象に、各 (product_id, condition_id) ペアごとに
+    #    received_at 最新1件のみ is_current=TRUE、残りを FALSE にする（全体最新ロジック）。
+    #    IS DISTINCT FROM で既に正しい値の行は更新しない（無駄な書き込み防止）。
     result = session.execute(
         text(f"""
-            UPDATE {schema}.analysis_results ar_old
-            SET is_current = FALSE, updated_at = NOW()
-            FROM {schema}.extraction_items ei_old
-            JOIN {schema}.extraction_jobs ej_old ON ej_old.id = ei_old.extraction_job_id
-            JOIN {schema}.source_messages sm_old ON sm_old.id = ej_old.source_message_id
-            WHERE ar_old.extraction_item_id = ei_old.id
-              AND sm_old.supplier_channel_id = :channel_id
-              AND ei_old.extraction_job_id != :job_id
-              AND sm_old.received_at < (
-                  SELECT sm2.received_at
-                  FROM {schema}.extraction_jobs ej2
-                  JOIN {schema}.source_messages sm2 ON sm2.id = ej2.source_message_id
-                  WHERE ej2.id = :job_id
-              )
-              AND ar_old.is_current = TRUE
-              AND EXISTS (
-                  SELECT 1 FROM unnest(CAST(:product_ids AS integer[]), CAST(:condition_ids AS integer[])) AS t(pid, cid)
-                  WHERE ar_old.product_id = t.pid AND ar_old.condition_id = t.cid
-              )
+            WITH touched_triples AS (
+                SELECT DISTINCT ar.product_id, ar.condition_id
+                FROM {schema}.analysis_results ar
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                WHERE ei.extraction_job_id = :job_id
+                  AND ar.pid_resolved = TRUE
+                  AND ar.product_id IS NOT NULL
+            ),
+            ranked AS (
+                SELECT ar.id,
+                       (ROW_NUMBER() OVER (
+                           PARTITION BY ar.product_id, ar.condition_id
+                           ORDER BY sm.received_at DESC, ar.computed_at DESC
+                       ) = 1) AS should_be_current
+                FROM {schema}.analysis_results ar
+                JOIN {schema}.extraction_items ei ON ei.id = ar.extraction_item_id
+                JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+                JOIN {schema}.source_messages sm ON sm.id = ej.source_message_id
+                WHERE sm.supplier_channel_id = :channel_id
+                  AND ar.pid_resolved = TRUE
+                  AND ar.product_id IS NOT NULL
+                  AND EXISTS (
+                      SELECT 1 FROM touched_triples tt
+                      WHERE tt.product_id = ar.product_id
+                        AND tt.condition_id = ar.condition_id
+                  )
+            )
+            UPDATE {schema}.analysis_results ar_target
+            SET is_current = ranked.should_be_current,
+                updated_at = NOW()
+            FROM ranked
+            WHERE ar_target.id = ranked.id
+              AND ar_target.is_current IS DISTINCT FROM ranked.should_be_current
         """),
         {
             "channel_id": supplier_channel_id,
             "job_id": extraction_job_id,
-            "product_ids": new_product_ids,
-            "condition_ids": new_condition_ids,
         },
     )
 
@@ -1655,7 +1805,7 @@ def _merge_supplier_products(
     if updated:
         session.commit()
         logger.info(
-            "[tcg_analyzer] ADR-158 merge: job=%s channel=%s superseded=%d product-condition pairs",
+            "[tcg_analyzer] ADR-158 merge: job=%s channel=%s updated=%d rows (global-latest)",
             extraction_job_id,
             supplier_channel_id,
             updated,

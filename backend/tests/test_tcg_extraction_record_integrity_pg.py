@@ -153,7 +153,7 @@ def test_real_task_parsed_limit_preserves_measured_size(pg, monkeypatch, delta):
     seed_products(pg[0])
     sid, jid = source(pg)
     fake_model(monkeypatch)
-    items, _ = gemini.parse_extraction_response(VALID, RAW, version=5)
+    items, _ = gemini.parse_extraction_response(VALID, RAW, version=6)
     item = items[0]
     fixed_id = UUID("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")
     monkeypatch.setattr(records, "uuid4", lambda: fixed_id)

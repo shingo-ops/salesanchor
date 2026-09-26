@@ -16,7 +16,7 @@ import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.tcg_analyzer_svc import match_one_kw, normalize_en
+from app.services.tcg_analyzer_svc import match_one_kw, match_product_search_keyword, normalize_en
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ def score_product(
     score = 0
     matched: list[str] = []
     for kw in search_kws:
-        if kw and match_one_kw(kw, product_name_norm):
+        if kw and match_product_search_keyword(kw, product_name_norm):
             score += len(kw)
             matched.append(kw)
 

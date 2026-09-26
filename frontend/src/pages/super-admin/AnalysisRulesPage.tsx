@@ -11,7 +11,7 @@
  * 2026-09-19: マスタ管理パネル（商品マスタ・仕入元マスタ）を追加。
  */
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
@@ -24,7 +24,6 @@ import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { ProductKindsMasterPanel } from "./components/ProductKindsMasterPanel";
 import { TypeMasterPanel } from "./components/TypeMasterPanel";
-import { StatusMasterPanel } from "./components/StatusMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
@@ -112,8 +111,12 @@ function NeedsReviewPanel() {
 export default function AnalysisRulesPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isSuperAdmin, loading: superAdminLoading } = useSuperAdmin();
-  const [activeSection, setActiveSection] = useState<AnalysisRulesSidebarKey>("dashboard");
+  const initialSection =
+    (searchParams.get("section") as AnalysisRulesSidebarKey) || "dashboard";
+  const [activeSection, setActiveSection] =
+    useState<AnalysisRulesSidebarKey>(initialSection);
 
   const handleSectionChange = (key: AnalysisRulesSidebarKey) => {
     if (key === "import") {
@@ -121,6 +124,7 @@ export default function AnalysisRulesPage() {
       return;
     }
     setActiveSection(key);
+    setSearchParams({ section: key }, { replace: true });
   };
 
   if (superAdminLoading) {
@@ -165,7 +169,6 @@ export default function AnalysisRulesPage() {
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
               {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
               {activeSection === "type-master" && <TypeMasterPanel />}
-              {activeSection === "status-master" && <StatusMasterPanel />}
               {activeSection === "supplier-master" && <SupplierMasterPanel />}
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
               {activeSection === "unit-master" && <UnitMasterPanel />}

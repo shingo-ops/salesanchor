@@ -19,6 +19,8 @@ from __future__ import annotations
 import csv
 import hashlib
 import io
+import re
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Response, UploadFile, status
 from sqlalchemy import text
@@ -100,6 +102,8 @@ def _parse_conditions(raw: bytes) -> tuple[list[dict], list[str]]:
             "priority": priority,
             "search_kw": (raw_row.get("search_kw") or "").strip() or "",
             "exclude_kw": (raw_row.get("exclude_kw") or "").strip() or "",
+            "match_type": (raw_row.get("match_type") or "KEYWORD").strip() or "KEYWORD",
+            "effect": (raw_row.get("effect") or "OUTPUT").strip() or "OUTPUT",
             "_line": line_num,
         })
     return rows, errors
@@ -110,11 +114,13 @@ _ALIAS_COLS = "id, condition_id, alias_text, lang, updated_at"
 
 _CONDITION_COLS = (
     "id, code, canonical, app_kubun, is_active, priority, "
-    "search_kw, exclude_kw, tenant_id, created_at, updated_at"
+    "search_kw, exclude_kw, tenant_id, created_at, updated_at, "
+    "match_type, effect, condition_def_id, unit_id, note"
 )
 _CONDITION_UPDATABLE = {
     "code", "canonical", "app_kubun", "is_active", "priority",
-    "search_kw", "exclude_kw",
+    "search_kw", "exclude_kw", "match_type", "effect",
+    "condition_def_id", "unit_id", "note",
 }
 
 
@@ -162,6 +168,9 @@ async def create_condition(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(require_super_admin),
 ):
+    # code が未指定または空文字の場合は自動生成
+    effective_code = (data.code or "").strip() or f"CN{datetime.now().strftime('%Y%m%d%H%M%S')}"
+
     try:
         # code 重複チェック（中央マスタ内）
         exists_result = await db.execute(
@@ -169,7 +178,7 @@ async def create_condition(
                 "SELECT 1 FROM public.conditions "
                 "WHERE code = :code AND tenant_id IS NULL"
             ),
-            {"code": data.code},
+            {"code": effective_code},
         )
         if exists_result.fetchone():
             raise HTTPException(
@@ -177,21 +186,36 @@ async def create_condition(
                 detail="状態コードは既に存在します",
             )
 
+        if data.match_type == "REGEX" and data.search_kw:
+            try:
+                re.compile(data.search_kw)
+            except re.error as exc:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail=f"search_kw が無効な正規表現です: {exc}",
+                )
         result = await db.execute(
             text(
                 f"INSERT INTO public.conditions "
-                f"(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, tenant_id, updated_at) "
-                f"VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, NULL, now()) "
+                f"(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+                f"match_type, effect, condition_def_id, unit_id, note, tenant_id, updated_at) "
+                f"VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
+                f":match_type, :effect, :condition_def_id, :unit_id, :note, NULL, now()) "
                 f"RETURNING {_CONDITION_COLS}"
             ),
             {
-                "code": data.code,
+                "code": effective_code,
                 "canonical": data.canonical,
                 "app_kubun": data.app_kubun,
                 "is_active": data.is_active,
                 "priority": data.priority,
                 "search_kw": data.search_kw,
                 "exclude_kw": data.exclude_kw,
+                "match_type": data.match_type,
+                "effect": data.effect,
+                "condition_def_id": data.condition_def_id,
+                "unit_id": data.unit_id,
+                "note": data.note,
             },
         )
     except IntegrityError as exc:
@@ -276,7 +300,8 @@ async def delete_condition(
 async def export_conditions_csv(db: AsyncSession = Depends(get_db)) -> Response:
     result = await db.execute(
         text(
-            "SELECT code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw "
+            "SELECT code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+            "match_type, effect "
             "FROM public.conditions "
             "WHERE tenant_id IS NULL "
             "ORDER BY id"
@@ -285,7 +310,7 @@ async def export_conditions_csv(db: AsyncSession = Depends(get_db)) -> Response:
     rows = result.mappings().all()
     buf = io.StringIO()
     writer = csv.writer(buf)
-    writer.writerow(["code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw"])
+    writer.writerow(["code", "canonical", "app_kubun", "is_active", "priority", "search_kw", "exclude_kw", "match_type", "effect"])
     for r in rows:
         writer.writerow([
             r["code"] or "",
@@ -295,6 +320,8 @@ async def export_conditions_csv(db: AsyncSession = Depends(get_db)) -> Response:
             r["priority"] if r["priority"] is not None else "",
             r["search_kw"] or "",
             r["exclude_kw"] or "",
+            r["match_type"] or "KEYWORD",
+            r["effect"] or "OUTPUT",
         ])
     return Response(
         content=buf.getvalue(),
@@ -372,7 +399,8 @@ async def import_conditions_commit(
                     text(
                         "UPDATE public.conditions SET canonical = :canonical, app_kubun = :app_kubun, "
                         "is_active = :is_active, priority = :priority, search_kw = :search_kw, "
-                        "exclude_kw = :exclude_kw, updated_at = now() "
+                        "exclude_kw = :exclude_kw, match_type = :match_type, effect = :effect, "
+                        "updated_at = now() "
                         "WHERE id = :id AND tenant_id IS NULL"
                     ),
                     {**data, "id": existing[0]},
@@ -382,8 +410,10 @@ async def import_conditions_commit(
                 await db.execute(
                     text(
                         "INSERT INTO public.conditions "
-                        "(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, tenant_id, updated_at) "
-                        "VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, NULL, now())"
+                        "(code, canonical, app_kubun, is_active, priority, search_kw, exclude_kw, "
+                        "match_type, effect, tenant_id, updated_at) "
+                        "VALUES (:code, :canonical, :app_kubun, :is_active, :priority, :search_kw, :exclude_kw, "
+                        ":match_type, :effect, NULL, now())"
                     ),
                     data,
                 )
