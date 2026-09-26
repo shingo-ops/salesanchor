@@ -30,9 +30,9 @@
 - ADR-138: extraction analysis design
 - ADR-144: UI governance（既存CSSクラス使用）
 
-## 外部事例
-既存のImportTabContent・AnalysisTabContentにある同パターン（analysis-dashboard-ctas + analysis-dashboard-cta-btn）を踏襲。
+## 外部・過去事例の参照と我々への応用
+既存のImportTabContent・AnalysisTabContentにある同パターン（analysis-dashboard-ctas + analysis-dashboard-cta-btn）を踏襲。新規パターンの導入なし。
 
-## 守り手
-- CI: TypeScript型チェック（node_modules利用時）
-- ADR-027 grep チェック
+## 維持の仕組み
+
+守り手: i18n lint / UI governance gate / process-artifacts gate
