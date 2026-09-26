@@ -1113,9 +1113,13 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
       renderCell: (row) => row.total_count.toLocaleString(),
     },
   ];
+
+  // fix: emptyを除外して done/(done+error) で計算（挨拶等のemptyメッセージを分母から除外）
+  const extractionDenominator =
+    data.extraction.by_status.done + data.extraction.by_status.error;
   const extractionSuccessRate =
-    data.extraction.total > 0
-      ? data.extraction.by_status.done / data.extraction.total
+    extractionDenominator > 0
+      ? data.extraction.by_status.done / extractionDenominator
       : 0;
 
   const successLevel = getSignalLevel(extractionSuccessRate);
@@ -1126,26 +1130,31 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
   const isBottleneck = successLevel !== "success";
 
   // Extraction trend lines only
-  const chartData = trend.map((d) => ({
-    day: d.day.slice(5),
-    extractionRate:
-      d.extraction_total > 0
-        ? Math.round((d.extraction_done / d.extraction_total) * 100)
-        : 0,
-    errorRate:
-      d.extraction_total > 0
-        ? Math.round((d.extraction_error / d.extraction_total) * 100)
-        : 0,
-  }));
+  const chartData = trend.map((d) => {
+    const trendDenominator = d.extraction_done + d.extraction_error;
+    return {
+      day: d.day.slice(5),
+      extractionRate:
+        trendDenominator > 0
+          ? Math.round((d.extraction_done / trendDenominator) * 100)
+          : 0,
+      errorRate:
+        trendDenominator > 0
+          ? Math.round((d.extraction_error / trendDenominator) * 100)
+          : 0,
+    };
+  });
 
-  // Supplier extraction table
+  // Supplier extraction table: exclude empty-only suppliers (done+error === 0)
   const extractionSupplierRows = supplierData
-    ? [...supplierData.suppliers].sort((a, b) => {
-        const order = { error: 0, empty: 1, done: 2, pending: 3 };
-        const aOrder = order[a.extraction.status as keyof typeof order] ?? 4;
-        const bOrder = order[b.extraction.status as keyof typeof order] ?? 4;
-        return aOrder - bOrder;
-      })
+    ? [...supplierData.suppliers]
+        .filter((s) => s.extraction.done + s.extraction.error > 0)
+        .sort((a, b) => {
+          const order = { error: 0, empty: 1, done: 2, pending: 3 };
+          const aOrder = order[a.extraction.status as keyof typeof order] ?? 4;
+          const bOrder = order[b.extraction.status as keyof typeof order] ?? 4;
+          return aOrder - bOrder;
+        })
     : [];
 
   const dangerExtractionCount = supplierData
