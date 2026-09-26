@@ -1,5 +1,8 @@
 # design: fix-extraction-rate-calc
 
+recon: docs/handoff/fix-extraction-rate-calc/recon.md
+対象ADR: ADR-138
+
 ## KGI
 
 「抽出成功率が正しく計算される」 = 挨拶のみ提供者（Akiho等）が成功率0%と表示されない。
@@ -55,7 +58,7 @@ git revert で該当コミットを打ち消す。フロントのみ・DBスキ�
 
 ## 維持の仕組み
 
-守り手: TypeScript（`SupplierExtractionInfo.done` / `error` は `number` 型で保護）
+守り手: frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx（`extractionDenominator` 変数に集約・TypeScript 型で保護）
 
 計算箇所は `ExtractionTabContent` コンポーネント内の `extractionDenominator` 変数1箇所に集約。
 将来の変更時は `extractionDenominator` を検索すれば全利用箇所が把握できる。
