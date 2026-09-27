@@ -6,6 +6,7 @@
  */
 
 import { useTranslation } from "react-i18next";
+import { REACTION_EMOJI_PRESETS } from "./reactionEmojiPresets";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -31,16 +32,6 @@ export interface EmojiPickerWrapperProps {
 }
 
 // ---------------------------------------------------------------------------
-// プリセット絵文字リスト（Unicode 直書き・CDN 不要）
-// ---------------------------------------------------------------------------
-
-const PRESET_EMOJIS = [
-  "❤️", "👍", "👎", "😊", "😂", "🎉",
-  "✅", "🙏", "👀", "🔥", "💯", "⭐",
-  "😍", "🤔", "👏", "💪",
-];
-
-// ---------------------------------------------------------------------------
 // コンポーネント
 // ---------------------------------------------------------------------------
 
@@ -53,7 +44,7 @@ export function EmojiPickerWrapper({ onSelect, customEmojis }: EmojiPickerWrappe
       role="group"
       aria-label={t("inbox.emojiPicker")}
     >
-      {PRESET_EMOJIS.map((emoji) => (
+      {REACTION_EMOJI_PRESETS.map((emoji) => (
         <button
           key={emoji}
           type="button"
