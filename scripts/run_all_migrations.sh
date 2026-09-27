@@ -833,3 +833,6 @@ run_sql migrations/20260926_080100_fix_product_code_dash.sql
 
 # tcg_distribution_settings に max_age_hours=48 設定を追加（配信時の最大経過時間フィルタ）
 run_sql migrations/20260927_120000_add_max_age_hours_setting.sql
+
+# extraction_attempts に Gemini APIトークン数・コストカラムを追加（透明化）
+run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql

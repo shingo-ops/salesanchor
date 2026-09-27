@@ -164,6 +164,7 @@ jobs:
       #   ※ public.line_units は 20260922_080000 で units からリネーム済み（本番状態を反映）
       #   ※ public.tcg_status_master は 20260919_020000_master_ssot_public_tables.sql で本番作成済み（最小定義を登録）
       #   ※ public.tcg_note_master は既存テーブル（PARITY-02 で作成済み）（最小定義を登録）
+      #   ※ public.extraction_attempts は 20260921_110000_pipeline_tables_public.sql で本番作成済み（最小定義を登録）
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
@@ -725,6 +726,29 @@ jobs:
               value      TEXT        NOT NULL,
               note       TEXT,
               updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
+
+          -- public.extraction_attempts: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20260927_130000_add_extraction_token_cost_columns.sql が ALTER TABLE public.extraction_attempts
+          --   を実行するため、前提として最小定義を登録する（FK なしでよい）。
+          CREATE TABLE IF NOT EXISTS public.extraction_attempts (
+              id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+              extraction_job_id    UUID        NOT NULL,
+              source_message_id    UUID        NOT NULL,
+              started_at           TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+              finished_at          TIMESTAMPTZ,
+              phase                TEXT        NOT NULL DEFAULT 'started',
+              input_payload        JSONB,
+              input_sha256         TEXT        NOT NULL DEFAULT '',
+              input_bytes          BIGINT      NOT NULL DEFAULT 0,
+              requested_model      TEXT        NOT NULL DEFAULT '',
+              prompt_version       TEXT        NOT NULL DEFAULT '',
+              response_text        TEXT,
+              parsed_items         JSONB,
+              parsed_bytes         BIGINT,
+              item_count           INTEGER,
+              validation_result    JSONB       NOT NULL DEFAULT '{}',
+              error_code           TEXT
           );
           PUBLIC_SQL
 

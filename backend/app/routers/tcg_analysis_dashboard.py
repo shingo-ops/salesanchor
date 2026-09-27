@@ -347,6 +347,147 @@ async def get_extraction_product_ranking_endpoint(
 _TCG_SCHEMA = "public"
 
 
+# ---------------------------------------------------------------------------
+# コストサマリー スキーマ
+# ---------------------------------------------------------------------------
+
+
+class CostDailyItem(BaseModel):
+    date: str
+    total_calls: int
+    success_calls: int
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+
+
+class CostBySupplierItem(BaseModel):
+    supplier_name: str | None
+    total_calls: int
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+    avg_items: float
+
+
+class CostTotal(BaseModel):
+    calls: int
+    input_tokens: int
+    output_tokens: int
+    cost_usd: float
+
+
+class CostBudget(BaseModel):
+    monthly_budget_usd: float
+    current_month_usd: float
+
+
+class CostSummaryResponse(BaseModel):
+    daily: list[CostDailyItem]
+    by_supplier: list[CostBySupplierItem]
+    total: CostTotal
+    budget: CostBudget
+
+
+@router.get(
+    "/tcg/analysis-dashboard/cost-summary",
+    response_model=CostSummaryResponse,
+    summary="TCG Gemini APIコストサマリー（super_admin 限定）",
+)
+async def get_cost_summary(
+    days: int = Query(default=7, ge=1, le=360),
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_super_admin),
+) -> CostSummaryResponse:
+    # --- daily ---
+    daily_rows = (await db.execute(text(f"""
+        SELECT
+            DATE(ea.started_at) AS date,
+            COUNT(*) AS total_calls,
+            COUNT(*) FILTER (WHERE ea.phase = 'completed') AS success_calls,
+            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+        FROM {_TCG_SCHEMA}.extraction_attempts ea
+        WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
+        GROUP BY DATE(ea.started_at)
+        ORDER BY date DESC
+    """), {"days": days})).mappings().all()
+
+    # --- by_supplier ---
+    supplier_rows = (await db.execute(text(f"""
+        SELECT
+            s.name AS supplier_name,
+            COUNT(*) AS total_calls,
+            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd,
+            COALESCE(AVG(NULLIF(ea.item_count, 0)), 0.0)::double precision AS avg_items
+        FROM {_TCG_SCHEMA}.extraction_attempts ea
+        JOIN {_TCG_SCHEMA}.extraction_jobs ej ON ej.id = ea.extraction_job_id
+        JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ea.source_message_id
+        LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
+        LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
+        WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
+        GROUP BY s.name
+        ORDER BY cost_usd DESC
+    """), {"days": days})).mappings().all()
+
+    # --- total ---
+    total_row = (await db.execute(text(f"""
+        SELECT
+            COUNT(*) AS calls,
+            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+        FROM {_TCG_SCHEMA}.extraction_attempts ea
+        WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
+    """), {"days": days})).mappings().first()
+
+    # --- budget (全テナント合算) ---
+    budget_row = (await db.execute(text("""
+        SELECT
+            COALESCE(SUM(monthly_budget_usd), 0.0)::double precision AS monthly_budget_usd,
+            COALESCE(SUM(current_month_usd), 0.0)::double precision AS current_month_usd
+        FROM public.tenant_llm_budgets
+    """))).mappings().first()
+
+    return CostSummaryResponse(
+        daily=[
+            CostDailyItem(
+                date=str(r["date"]),
+                total_calls=int(r["total_calls"]),
+                success_calls=int(r["success_calls"]),
+                input_tokens=int(r["input_tokens"]),
+                output_tokens=int(r["output_tokens"]),
+                cost_usd=float(r["cost_usd"]),
+            )
+            for r in daily_rows
+        ],
+        by_supplier=[
+            CostBySupplierItem(
+                supplier_name=r["supplier_name"],
+                total_calls=int(r["total_calls"]),
+                input_tokens=int(r["input_tokens"]),
+                output_tokens=int(r["output_tokens"]),
+                cost_usd=float(r["cost_usd"]),
+                avg_items=float(r["avg_items"]),
+            )
+            for r in supplier_rows
+        ],
+        total=CostTotal(
+            calls=int(total_row["calls"]) if total_row else 0,
+            input_tokens=int(total_row["input_tokens"]) if total_row else 0,
+            output_tokens=int(total_row["output_tokens"]) if total_row else 0,
+            cost_usd=float(total_row["cost_usd"]) if total_row else 0.0,
+        ),
+        budget=CostBudget(
+            monthly_budget_usd=float(budget_row["monthly_budget_usd"]) if budget_row else 0.0,
+            current_month_usd=float(budget_row["current_month_usd"]) if budget_row else 0.0,
+        ),
+    )
+
+
 class ExtractionErrorItem(BaseModel):
     id: str
     error_message: str | None

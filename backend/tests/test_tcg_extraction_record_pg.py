@@ -467,8 +467,8 @@ def test_simulated_process_exit_keeps_last_committed_stage(pg, monkeypatch, rece
     if received:
         original = records.AttemptRecorder.on_response
 
-        def stop(self, response):
-            original(self, response)
+        def stop(self, response, *, input_tokens=0, output_tokens=0):
+            original(self, response, input_tokens=input_tokens, output_tokens=output_tokens)
             raise SystemExit("simulated process exit")
 
         monkeypatch.setattr(records.AttemptRecorder, "on_response", stop)
