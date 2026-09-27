@@ -46,3 +46,8 @@
 | 2 | en.json 同様修正 | Hikky-dev |
 | 3 | KnowledgeAliasesTab.tsx RULE_CATEGORIES に3値追加 | Hikky-dev |
 | 4 | PR作成・CI確認 | Hikky-dev |
+
+## 維持の仕組み
+
+- 新たなDBカテゴリ値が増えた場合は同ファイルに追記が必要（3箇所: ja.json/en.json/RULE_CATEGORIES）
+- 既存の `defaultValue: r.category` フォールバックにより未対応カテゴリも内部名で表示され続ける
