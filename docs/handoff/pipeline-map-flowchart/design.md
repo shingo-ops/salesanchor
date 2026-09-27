@@ -57,10 +57,11 @@ docs/handoff/pipeline-map-flowchart/recon.md
 
 なし
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-- React Flow (xyflow) の公式ドキュメント: `nodeTypes` 登録によるカスタムノード定義
-- xyflow の `selectable: false` でクリック不可ノードを実装するパターン
+- React Flow (xyflow) 公式ドキュメント — `nodeTypes` にカスタムノードを登録する標準パターンを参照し、PhaseNode / TableNode の2種類をそれぞれ登録した
+- xyflow の Node プロパティ `selectable: false` / `draggable: false` — フェーズヘッダーをクリック不可・移動不可にするために適用
+- 本プロジェクト既存の PipelineMapPanel.tsx (#3806 マージ済み) — フォントサイズ・カラートークン・Drawer連携の実装パターンを踏襲
 
 ## 維持の仕組み（守り手）
 
