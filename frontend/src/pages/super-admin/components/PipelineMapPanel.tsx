@@ -91,7 +91,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 0, y: 300 },
     data: {
       label: "suppliers",
-      columns: ["🔑 id", "name", "code", "is_active"],
+      columns: ["id", "name", "code", "is_active"],
     },
   },
   {
@@ -100,7 +100,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 250, y: 300 },
     data: {
       label: "supplier_channels",
-      columns: ["🔑 id", "→ supplier_id", "channel_type", "channel_key"],
+      columns: ["id", "→ supplier_id", "channel_type", "channel_key"],
     },
   },
   {
@@ -109,7 +109,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 500, y: 300 },
     data: {
       label: "source_messages",
-      columns: ["🔑 id", "→ supplier_channel_id", "raw_text", "received_at"],
+      columns: ["id", "→ supplier_channel_id", "raw_text", "received_at"],
     },
   },
   {
@@ -118,7 +118,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 750, y: 300 },
     data: {
       label: "extraction_jobs",
-      columns: ["🔑 id", "→ source_message_id", "status", "created_at"],
+      columns: ["id", "→ source_message_id", "status", "created_at"],
     },
   },
   {
@@ -127,7 +127,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1000, y: 300 },
     data: {
       label: "extraction_items",
-      columns: ["🔑 id", "→ extraction_job_id", "raw_text", "position"],
+      columns: ["id", "→ extraction_job_id", "raw_text", "position"],
     },
   },
   {
@@ -136,7 +136,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1300, y: 300 },
     data: {
       label: "analysis_results",
-      columns: ["🔑 id", "→ extraction_item_id", "→ condition_id", "→ unit_id"],
+      columns: ["id", "→ extraction_item_id", "→ condition_id", "→ unit_id"],
     },
   },
 
@@ -147,7 +147,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 0, y: 100 },
     data: {
       label: "supplier_aliases",
-      columns: ["🔑 id", "→ supplier_id", "alias"],
+      columns: ["id", "→ supplier_id", "alias"],
     },
   },
   {
@@ -156,7 +156,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 0, y: 180 },
     data: {
       label: "supplier_prompts",
-      columns: ["🔑 id", "→ supplier_id", "prompt_text"],
+      columns: ["id", "→ supplier_id", "prompt_text"],
     },
   },
   {
@@ -165,7 +165,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 200, y: 100 },
     data: {
       label: "supplier_knowledge_links",
-      columns: ["🔑 id", "→ supplier_id", "→ knowledge_rule_id"],
+      columns: ["id", "→ supplier_id", "→ knowledge_rule_id"],
     },
   },
   {
@@ -174,7 +174,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 400, y: 100 },
     data: {
       label: "knowledge_rules",
-      columns: ["🔑 id", "rule_text", "is_active"],
+      columns: ["id", "rule_text", "is_active"],
     },
   },
   {
@@ -183,7 +183,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 200, y: 180 },
     data: {
       label: "supplier_discord_routing",
-      columns: ["🔑 id", "→ supplier_id", "channel_id"],
+      columns: ["id", "→ supplier_id", "channel_id"],
     },
   },
 
@@ -194,7 +194,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 350, y: 500 },
     data: {
       label: "import_jobs",
-      columns: ["🔑 id", "status", "created_at"],
+      columns: ["id", "status", "created_at"],
     },
   },
   {
@@ -203,7 +203,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 500, y: 500 },
     data: {
       label: "import_job_messages",
-      columns: ["🔑 id", "→ import_job_id", "→ source_message_id"],
+      columns: ["id", "→ import_job_id", "→ source_message_id"],
     },
   },
 
@@ -214,7 +214,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 750, y: 500 },
     data: {
       label: "extraction_attempts",
-      columns: ["🔑 id", "→ extraction_job_id", "attempt_no", "status"],
+      columns: ["id", "→ extraction_job_id", "attempt_no", "status"],
     },
   },
   {
@@ -223,7 +223,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 750, y: 180 },
     data: {
       label: "extraction_prompt_config",
-      columns: ["🔑 id", "version", "prompt_body"],
+      columns: ["id", "version", "prompt_body"],
     },
   },
   {
@@ -232,7 +232,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1000, y: 500 },
     data: {
       label: "item_corrections",
-      columns: ["🔑 id", "→ extraction_item_id", "corrected_text"],
+      columns: ["id", "→ extraction_item_id", "corrected_text"],
     },
   },
 
@@ -243,7 +243,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1100, y: 100 },
     data: {
       label: "products",
-      columns: ["🔑 id", "name", "→ product_kind_id", "→ type_master_id"],
+      columns: ["id", "name", "→ product_kind_id", "→ type_master_id"],
     },
   },
   {
@@ -252,7 +252,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1300, y: 50 },
     data: {
       label: "product_search_keywords",
-      columns: ["🔑 id", "→ product_id", "keyword"],
+      columns: ["id", "→ product_id", "keyword"],
     },
   },
   {
@@ -261,7 +261,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1300, y: 130 },
     data: {
       label: "product_exclude_keywords",
-      columns: ["🔑 id", "→ product_id", "keyword"],
+      columns: ["id", "→ product_id", "keyword"],
     },
   },
   {
@@ -270,7 +270,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 900, y: 50 },
     data: {
       label: "type_master",
-      columns: ["🔑 id", "name", "code"],
+      columns: ["id", "name", "code"],
     },
   },
   {
@@ -279,7 +279,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 900, y: 130 },
     data: {
       label: "product_kinds",
-      columns: ["🔑 id", "name", "display_order"],
+      columns: ["id", "name", "display_order"],
     },
   },
   {
@@ -288,7 +288,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1100, y: 20 },
     data: {
       label: "product_lines",
-      columns: ["🔑 id", "name", "→ product_kind_id"],
+      columns: ["id", "name", "→ product_kind_id"],
     },
   },
   {
@@ -297,7 +297,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1100, y: 180 },
     data: {
       label: "product_formats",
-      columns: ["🔑 id", "name", "display_order"],
+      columns: ["id", "name", "display_order"],
     },
   },
 
@@ -308,7 +308,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1500, y: 200 },
     data: {
       label: "line_conditions",
-      columns: ["🔑 id", "name", "code"],
+      columns: ["id", "name", "code"],
     },
   },
   {
@@ -317,7 +317,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1500, y: 400 },
     data: {
       label: "line_units",
-      columns: ["🔑 id", "name", "code"],
+      columns: ["id", "name", "code"],
     },
   },
 
@@ -328,7 +328,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1500, y: 300 },
     data: {
       label: "analysis_runs",
-      columns: ["🔑 id", "→ extraction_job_id", "run_at"],
+      columns: ["id", "→ extraction_job_id", "run_at"],
     },
   },
   {
@@ -337,7 +337,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1700, y: 300 },
     data: {
       label: "analysis_run_snapshots",
-      columns: ["🔑 id", "→ run_id", "snapshot_data"],
+      columns: ["id", "→ run_id", "snapshot_data"],
     },
   },
 
@@ -348,7 +348,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1700, y: 200 },
     data: {
       label: "tcg_distribution_targets",
-      columns: ["🔑 id", "name", "is_active"],
+      columns: ["id", "name", "is_active"],
     },
   },
   {
@@ -357,7 +357,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1700, y: 400 },
     data: {
       label: "tcg_distribution_settings",
-      columns: ["🔑 id", "setting_key", "setting_value"],
+      columns: ["id", "setting_key", "setting_value"],
     },
   },
 
@@ -368,7 +368,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 0, y: 500 },
     data: {
       label: "discord_inbound_messages",
-      columns: ["🔑 id", "→ supplier_id", "message_id", "content"],
+      columns: ["id", "→ supplier_id", "message_id", "content"],
     },
   },
   {
@@ -377,7 +377,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 250, y: 500 },
     data: {
       label: "ingestion_jobs",
-      columns: ["🔑 id", "→ supplier_id", "status"],
+      columns: ["id", "→ supplier_id", "status"],
     },
   },
   {
@@ -386,7 +386,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 250, y: 600 },
     data: {
       label: "parse_logs",
-      columns: ["🔑 id", "→ ingestion_job_id", "→ supplier_id", "→ matched_product_id"],
+      columns: ["id", "→ ingestion_job_id", "→ supplier_id", "→ matched_product_id"],
     },
   },
 
@@ -397,7 +397,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1300, y: 550 },
     data: {
       label: "inventory",
-      columns: ["🔑 id", "→ supplier_id", "→ product_id", "quantity"],
+      columns: ["id", "→ supplier_id", "→ product_id", "quantity"],
     },
   },
   {
@@ -406,7 +406,7 @@ const initialNodes: Node<TableNodeData>[] = [
     position: { x: 1500, y: 550 },
     data: {
       label: "inventory_movements",
-      columns: ["🔑 id", "→ product_id", "→ supplier_id", "delta"],
+      columns: ["id", "→ product_id", "→ supplier_id", "delta"],
     },
   },
 ];
