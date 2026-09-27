@@ -4194,7 +4194,24 @@
       "periodLabel": "Period",
       "distribution": {
         "nullPostedAtWarning": "No posted_at {{count}} items (anomaly)"
-      }
+      },
+      "costSectionTitle": "API Cost",
+      "costTotalUsd": "Period Cost",
+      "costTotalCalls": "API Calls",
+      "costBudgetUsage": "Monthly Budget Usage",
+      "costAvgPerCall": "Avg Cost / Call",
+      "costSupplierName": "Supplier",
+      "costSupplierCalls": "Calls",
+      "costInputTokens": "Input Tokens",
+      "costOutputTokens": "Output Tokens",
+      "costUsd": "Cost (USD)",
+      "costAvgItems": "Avg Items",
+      "costDailyDate": "Date",
+      "costDailyCalls": "Calls",
+      "costDailyCost": "Cost",
+      "costNoData": "No cost data available",
+      "costBudgetOf": "/ {{budget}} USD",
+      "costTokenUnit": "K"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
