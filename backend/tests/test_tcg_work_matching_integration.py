@@ -692,6 +692,11 @@ def test_condition_note_18_items_history_twice_and_distribution(pg, monkeypatch)
         # migrate() applies this to tenant_901; tenant_004 is provisioned separately so it needs
         # the same column added explicitly here.
         cursor.execute("ALTER TABLE tenant_004.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
+        # Extraction cost transparency: input_tokens/output_tokens/cost_usd on extraction_attempts.
+        # migrate() applies these via 20260927_130000 to public.*; tenant_004 needs them explicitly.
+        cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS input_tokens integer")
+        cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS output_tokens integer")
+        cursor.execute("ALTER TABLE tenant_004.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
         for code, name in [("PM0268", "匿名パック"), ("PM0141", "匿名箱")]:
             cursor.execute("INSERT INTO public.products(product_code,name,category_class,is_active,work_id) SELECT %s,%s,'Box',true,id FROM public.type_master WHERE code='pokemon_booster_box' RETURNING id", (code, name))
             pid = cursor.fetchone()[0]

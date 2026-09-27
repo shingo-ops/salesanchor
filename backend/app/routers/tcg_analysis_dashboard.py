@@ -402,7 +402,7 @@ async def get_cost_summary(
     # --- daily ---
     daily_rows = (await db.execute(text(f"""
         SELECT
-            DATE(ea.started_at AT TIME ZONE 'UTC') AS date,
+            DATE(ea.started_at) AS date,
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE ea.phase = 'completed') AS success_calls,
             COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
@@ -410,7 +410,7 @@ async def get_cost_summary(
             COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
-        GROUP BY DATE(ea.started_at AT TIME ZONE 'UTC')
+        GROUP BY DATE(ea.started_at)
         ORDER BY date DESC
     """), {"days": days})).mappings().all()
 
