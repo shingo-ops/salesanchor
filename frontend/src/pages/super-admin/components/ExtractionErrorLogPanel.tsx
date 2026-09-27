@@ -3,6 +3,7 @@
  *
  * API:
  *   GET /api/v1/tcg/extraction-errors?offset=0&limit=50
+ *   （api クライアントが /api/v1 を付与するため、呼び出し時は /tcg/extraction-errors を渡す）
  *
  * ADR-027: 全UI文字列は t("key") 経由
  * ADR-067: 色・サイズはデザイントークンのみ
@@ -47,7 +48,7 @@ export function ExtractionErrorLogPanel() {
     setError(null);
     api
       .get<ExtractionErrorItem[]>(
-        `/api/v1/tcg/extraction-errors?offset=${nextOffset}&limit=${PAGE_SIZE}`
+        `/tcg/extraction-errors?offset=${nextOffset}&limit=${PAGE_SIZE}`
       )
       .then((rows) => {
         if (nextOffset === 0) {
