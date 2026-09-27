@@ -2451,7 +2451,7 @@
       "newAlias": "New Per-Supplier Rule",
       "selectSupplier": "Please select a supplier",
       "bulkDeleteConfirm": "Delete the {{count}} selected items. Are you sure?",
-      "categoryHelp": "Choose which processing stage this rule is used in. Usually \"Normalize\".",
+      "categoryHelp": "Choose the rule type. \"Message Exclude\" filters before Gemini is called; \"Product Block Delimiter\" determines how product blocks are split.",
       "patternTypeHelp": "How the inbound word is matched. Regex is an advanced pattern (e.g. From \"^SV1a-(\\d+)\" -> To \"SV1a-$1\" with backreference).",
       "categories": {
         "normalize": "Normalize",
@@ -2459,7 +2459,10 @@
         "alias_normalize": "Alias normalize",
         "exclude": "Exclude (ignore line)",
         "message_exclude": "Message Exclude (Immediate)",
-        "message_exclude_no_digit": "Message Exclude (No Digit)"
+        "message_exclude_no_digit": "Message Exclude (No Digit)",
+        "block_delimiter": "Product Block Delimiter",
+        "skip_condition": "Gemini Skip Condition",
+        "status_keyword": "Status Keyword"
       },
       "langs": {
         "ja": "Japanese",
@@ -2476,8 +2479,8 @@
       "fields": {
         "category": "Category",
         "patternType": "Match method",
-        "pattern": "From word",
-        "normalizedTo": "To word",
+        "pattern": "Search Keyword",
+        "normalizedTo": "Convert To",
         "priority": "Priority",
         "language": "Language",
         "isActive": "Active",
