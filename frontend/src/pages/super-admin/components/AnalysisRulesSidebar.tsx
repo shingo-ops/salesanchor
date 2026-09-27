@@ -29,6 +29,7 @@ export type AnalysisRulesSidebarKey =
   | "condition-defs-master"
   | "weight-classes-master"
   | "prompt-config"
+  | "pipeline-map"
   | "db-viewer";
 
 interface Props {
@@ -119,6 +120,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         <span className="hub-subnav-title">
           {t("analysisRules.sidebar.groupSystem")}
         </span>
+        {navItem("pipeline-map", t("analysisRules.sidebar.pipelineMap"))}
         {navItem("db-viewer", t("analysisRules.sidebar.dbViewer"))}
       </div>
     </nav>

@@ -74,6 +74,7 @@
     "@fullcalendar/timegrid": "^6.1.20",
     "@heroicons/react": "^2.2.0",
     "@types/react-big-calendar": "^1.16.3",
+    "@xyflow/react": "^12.12.0",
     "date-fns": "^4.3.0",
     "firebase": "^11.0.0",
     "i18next": "^26.1.0",
@@ -110,13 +111,13 @@
     "jsdom": "^29.1.1",
     "lint-staged": "^17.0.5",
     "playwright": "^1.60.0",
+    "postcss": "8.5.15",
     "storybook": "^10.4.1",
     "stylelint": "^16.26.1",
     "stylelint-config-standard": "^36.0.1",
     "typescript": "^5.7.3",
     "vite": "^8.0.14",
-    "vitest": "^4.1.7",
-    "postcss": "8.5.15"
+    "vitest": "^4.1.7"
   },
   "overrides": {
     "protobufjs": "7.6.4",

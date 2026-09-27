@@ -4006,6 +4006,7 @@
       "promptConfig": "抽出プロンプト設定",
       "errorLog": "エラーログ",
       "groupSystem": "システム",
+      "pipelineMap": "パイプラインマップ",
       "dbViewer": "データ構造"
     },
     "dbViewer": {
@@ -4041,6 +4042,18 @@
       "no": "-",
       "noComment": "（説明なし）",
       "fkTo": "→ {table}"
+    },
+    "pipelineMap": {
+      "title": "LINE解析パイプラインマップ",
+      "tableDetail": "テーブル詳細",
+      "mainFlow": "メインフロー",
+      "supplierGroup": "仕入先",
+      "productGroup": "商品",
+      "inventoryGroup": "在庫",
+      "distributionGroup": "配信",
+      "analysisGroup": "解析ルール",
+      "discordGroup": "Discord入力",
+      "importGroup": "LINEインポート"
     },
     "errorLog": {
       "title": "抽出エラーログ",
