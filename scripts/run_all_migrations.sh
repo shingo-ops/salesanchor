@@ -830,3 +830,6 @@ run_sql migrations/20260926_080000_create_extraction_prompt_config.sql
 
 # product_id=61 の product_code='-' を 'S-PS' に修正（30th BOX バグ根本原因）
 run_sql migrations/20260926_080100_fix_product_code_dash.sql
+
+# tcg_distribution_settings に max_age_hours=48 設定を追加（配信時の最大経過時間フィルタ）
+run_sql migrations/20260927_120000_add_max_age_hours_setting.sql

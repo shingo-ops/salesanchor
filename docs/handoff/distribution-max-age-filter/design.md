@@ -68,6 +68,18 @@
 
 ## 触るファイル:
 
+- `migrations/20260927_120000_add_max_age_hours_setting.sql`
+- `backend/app/routers/tcg_analysis_dashboard.py`
+- `backend/app/services/tcg_distribution_svc.py`
+- `backend/app/services/tcg_analysis_dashboard_svc.py`
+- `frontend/src/locales/en.json`
+- `frontend/src/locales/ja.json`
+- `frontend/src/pages/super-admin/AnalysisRulesPage.tsx`
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx`
+- `frontend/src/pages/super-admin/components/DistributionSettingsDrawer.tsx`
+
+## 削除するファイル:
+
 - `backend/app/routers/tcg_analysis_dashboard.py`
 - `backend/app/services/tcg_distribution_svc.py`
 - `frontend/src/locales/en.json`
