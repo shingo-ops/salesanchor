@@ -28,7 +28,8 @@ export type AnalysisRulesSidebarKey =
   | "quantity-units-master"
   | "condition-defs-master"
   | "weight-classes-master"
-  | "prompt-config";
+  | "prompt-config"
+  | "db-viewer";
 
 interface Props {
   activeKey: AnalysisRulesSidebarKey;
@@ -111,6 +112,14 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("quantity-units-master", t("analysisRules.sidebar.quantityUnitsMaster"))}
         {navItem("condition-defs-master", t("analysisRules.sidebar.conditionDefsMaster"))}
         {navItem("weight-classes-master", t("analysisRules.sidebar.weightClassesMaster"))}
+      </div>
+
+      {/* システムグループ */}
+      <div className="hub-subnav-section">
+        <span className="hub-subnav-title">
+          {t("analysisRules.sidebar.groupSystem")}
+        </span>
+        {navItem("db-viewer", t("analysisRules.sidebar.dbViewer"))}
       </div>
     </nav>
   );
