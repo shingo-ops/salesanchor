@@ -355,7 +355,7 @@ class ExtractionErrorItem(BaseModel):
 
 
 @router.get(
-    "/api/v1/tcg/extraction-errors",
+    "/tcg/extraction-errors",
     response_model=list[ExtractionErrorItem],
     dependencies=[Depends(require_super_admin)],
     summary="TCG 抽出エラーログ一覧（super_admin 限定）",
