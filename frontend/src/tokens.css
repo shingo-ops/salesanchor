@@ -241,6 +241,17 @@
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
   --size-pipeline-map-min-h: 600px;  /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
   --size-pipeline-node-max-w: 220px; /* パイプラインマップ TableNode 最大幅（PipelineMapPanel） */
+  --size-pipeline-node-w:    240px;  /* パイプラインマップ新ノード幅（PipelineMapPanel リデザイン） */
+
+  /* ---- Pipeline map カテゴリ色（PipelineMapPanel ノードヘッダー背景） ---- */
+  --cat-supplier:     #1e40af;  /* 仕入先 — 青系 */
+  --cat-pipeline:     #7c3aed;  /* パイプライン — 紫系 */
+  --cat-product:      #059669;  /* 商品 — 緑系 */
+  --cat-master:       #d97706;  /* マスタ — 橙系 */
+  --cat-import:       #0891b2;  /* インポート — シアン系 */
+  --cat-discord:      #6366f1;  /* Discord — インディゴ系 */
+  --cat-distribution: #dc2626;  /* 配信 — 赤系 */
+  --cat-inventory:    #ca8a04;  /* 在庫 — 黄系 */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
