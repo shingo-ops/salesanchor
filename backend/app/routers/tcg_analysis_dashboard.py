@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
@@ -336,3 +337,57 @@ async def get_extraction_product_ranking_endpoint(
 ) -> ExtractionProductRankingResponse:
     rows = await get_extraction_product_ranking(db, days)
     return ExtractionProductRankingResponse(items=[ExtractionProductRankingItem(**row) for row in rows])
+
+
+# ---------------------------------------------------------------------------
+# 抽出エラーログ
+# ---------------------------------------------------------------------------
+
+_TCG_SCHEMA = "public"
+
+
+class ExtractionErrorItem(BaseModel):
+    id: str
+    error_message: str | None
+    created_at: str | None
+    prompt_version: str | None
+    supplier_name: str | None
+
+
+@router.get(
+    "/api/v1/tcg/extraction-errors",
+    response_model=list[ExtractionErrorItem],
+    dependencies=[Depends(require_super_admin)],
+    summary="TCG 抽出エラーログ一覧（super_admin 限定）",
+)
+async def list_extraction_errors(
+    offset: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=500),
+    db: AsyncSession = Depends(get_db),
+) -> list[ExtractionErrorItem]:
+    rows = (
+        await db.execute(
+            text(
+                "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version,"
+                "  s.name AS supplier_name"
+                f" FROM {_TCG_SCHEMA}.extraction_jobs ej"
+                f" JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
+                f" JOIN {_TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
+                " JOIN public.suppliers s ON s.id = sc.supplier_id"
+                " WHERE ej.status = 'error'"
+                " ORDER BY ej.created_at DESC"
+                " OFFSET :offset LIMIT :limit"
+            ),
+            {"offset": offset, "limit": limit},
+        )
+    ).fetchall()
+    return [
+        ExtractionErrorItem(
+            id=str(row.id),
+            error_message=row.error_message,
+            created_at=row.created_at.isoformat() if row.created_at else None,
+            prompt_version=row.prompt_version,
+            supplier_name=row.supplier_name,
+        )
+        for row in rows
+    ]

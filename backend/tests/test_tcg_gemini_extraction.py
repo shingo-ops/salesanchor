@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.gemini_extraction_svc import (
-    PROMPT_TEXT,
     annotate_lines,
     extract_message,
     format_prompt_input,
@@ -96,7 +95,9 @@ def test_prompt_input_embedded_in_genshi_separator():
     """format_prompt_input の出力が '原文:\\n' の直後に続く形で組み合わせられる。"""
     raw_text = "テスト行"
     prompt_input = format_prompt_input(raw_text)
-    full = f"{PROMPT_TEXT}\n\n原文:\n{prompt_input}"
+    # プロンプトはDBから取得するため、ここでは連結パターンの検証のみ行う
+    dummy_prompt = "テスト用プロンプト"
+    full = f"{dummy_prompt}\n\n原文:\n{prompt_input}"
     assert "原文:\n[L0001] テスト行" in full
 
 
