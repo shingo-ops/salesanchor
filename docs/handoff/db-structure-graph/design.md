@@ -7,10 +7,10 @@ LINE解析パイプラインのテーブル関連を視覚的なマップで表�
 
 ## 変更内容
 1. @xyflow/react（React Flow）ライブラリを導入
-2. PipelineMapPanel コンポーネントを新規作成
+2. PipelineMapPanel コンポーネントを新規作成（ADR-144: components/金型先確認済み・既存Drawer流用）
 3. サイドメニューに「パイプラインマップ」を追加
 4. ノードクリックでDrawer経由のテーブル詳細表示
-5. tokens.css にパイプラインマップ専用サイズトークンを追加（ADR-067準拠）
+5. tokens.css にパイプラインマップ専用サイズトークンを追加（ADR-067・ADR-144準拠）
 
 ## 受け入れ基準
 
@@ -33,12 +33,10 @@ LINE解析パイプラインのテーブル関連を視覚的なマップで表�
 - 本プロジェクトの既存実装: DbViewerPanel.tsx（スプレッドシート形式）は行列表示に特化しており関係性の可視化が困難。マップ形式を別パネルとして追加することでUIを壊さずに機能拡張できる。
 
 ## 維持の仕組み
-- tokens.css の `--size-pipeline-map-min-h` / `--size-pipeline-node-max-w` をCSS変数化済み → デザインシステム変更時に一元更新可能
+
+守り手: frontend/src/pages/super-admin/components/PipelineMapPanel.tsx
+
+- tokens.css の `--size-pipeline-map-min-h` / `--size-pipeline-node-max-w` をCSS変数化済み → デザインシステム変更時に一元更新可能（ADR-067準拠）
 - FK関係はバックエンドAPI（super_admin_db_schema.py）から取得 → DBスキーマ変更が自動反映される（ハードコードなし）
 - i18n: ja.json/en.json 両キー同一必須（ADR-027）→ CI チェックで強制
-
-## 守り手
-- frontend/src/pages/super-admin/components/PipelineMapPanel.tsx — UI側
-- frontend/src/tokens.css — デザイントークン定義
-- backend/app/routers/super_admin_db_schema.py — API側（テーブル詳細取得）
-- CI: ADR-067 dark mode check, UI governance gate
+- UIコンポーネント新設時はcomponents/金型先確認（ADR-144）→ CI UI governance gate で強制。既存Drawer・Button等を流用し、生select/生input/自作タブ禁止
