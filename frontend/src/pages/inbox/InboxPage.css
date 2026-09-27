@@ -1836,6 +1836,42 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--bg-surface);
   border: 1px solid var(--border);
   overflow: hidden;
+  padding: var(--space-2);
+}
+
+/* プリセット絵文字グリッド（CDN 不要・Unicode 直書き） */
+.emoji-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-1);
+}
+
+.emoji-preset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--size-8);
+  height: var(--size-8);
+  padding: 0;
+  font-size: var(--font-lg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+  line-height: 1;
+}
+
+.emoji-preset-btn:hover {
+  background: var(--color-hover-overlay);
+  border-color: var(--border);
+}
+
+.emoji-preset-divider {
+  grid-column: 1 / -1;
+  height: 1px;
+  background: var(--border);
+  margin: var(--space-1) 0;
 }
 
 :root.force-dark .msg-reaction-pill {

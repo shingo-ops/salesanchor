@@ -38,6 +38,7 @@ import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
 import { ExtractionErrorLogPanel } from "./components/ExtractionErrorLogPanel";
 import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import ExtractionPromptConfigTab from "./ExtractionPromptConfigTab";
+import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
 import "./AnalysisRulesPage.css";
 import { SupplierQualityList } from "../../features/tcg-analysis-review/SupplierQualityList";
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
@@ -198,6 +199,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "weight-classes-master" && <WeightClassesMasterPanel />}
               {activeSection === "rule-management" && <RuleManagementPanel />}
               {activeSection === "extraction-rules" && <SupplierExtractionRulesPage embedded />}
+              {activeSection === "knowledge-aliases" && <KnowledgeAliasesTab />}
               {activeSection === "prompt-config" && <ExtractionPromptConfigTab />}
               {activeSection === "pipeline-map" && <PipelineMapPanel />}
               {activeSection === "db-viewer" && <DbViewerPanel />}

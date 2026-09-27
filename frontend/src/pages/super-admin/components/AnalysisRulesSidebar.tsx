@@ -15,6 +15,7 @@ export type AnalysisRulesSidebarKey =
   | "error-log"
   | "rule-management"
   | "extraction-rules"
+  | "knowledge-aliases"
   | "product-master"
   | "product-categories-master"
   | "product-kinds-master"
@@ -92,6 +93,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         </span>
         {navItem("rule-management", t("analysisRules.sidebar.ruleManagement"))}
         {navItem("extraction-rules", t("analysisRules.sidebar.extractionRules"))}
+        {navItem("knowledge-aliases", t("analysisRules.sidebar.knowledgeAliases"))}
         {navItem("prompt-config", t("analysisRules.sidebar.promptConfig"))}
         {navItem("conditions-master", t("analysisRules.sidebar.conditionsMaster"))}
         {navItem("unit-master", t("analysisRules.sidebar.unitMaster"))}

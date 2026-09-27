@@ -2,7 +2,7 @@
 
 > この文書は、受信箱で Discord リアクションを送受信する機能の設計です。
 > 親仕様書: [docs/specs/discord-reaction/README.md](../../specs/discord-reaction/README.md)
-> Recon: [recon.md](recon.md)
+> Recon: [docs/handoff/discord-reaction/recon.md](recon.md)
 > ADR: [ADR-009](../../adr/ADR-009-discord-gateway.md) M7, [ADR-091](../../adr/ADR-091-discord-bot-scope-definition.md)
 
 ## 目的

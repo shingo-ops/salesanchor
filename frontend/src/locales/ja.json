@@ -4013,6 +4013,7 @@
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール",
       "extractionRules": "仕入元別ルール",
+      "knowledgeAliases": "抽出フィルタ / ルール",
       "promptConfig": "抽出プロンプト設定",
       "errorLog": "エラーログ",
       "groupSystem": "システム",

@@ -4013,6 +4013,7 @@
       "groupRuleManagement": "Rule Management",
       "ruleManagement": "Status Rules",
       "extractionRules": "Supplier Rules",
+      "knowledgeAliases": "Extraction Filter / Rules",
       "promptConfig": "Extraction Prompt Config",
       "errorLog": "Error Log",
       "groupSystem": "System",
