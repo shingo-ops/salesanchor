@@ -63,10 +63,18 @@ interface SkillNodeData extends Record<string, unknown> {
 function SkillNode({ data }: NodeProps<Node<SkillNodeData>>) {
   const categoryColor = `var(--cat-${data.category})`;
   return (
-    <div
-      className={`skill-node ${data.isTrunk ? "skill-node--trunk" : "skill-node--branch"}`}
-    >
-      <Handle type="target" position={Position.Left} className="skill-handle" />
+    <div className={`skill-node ${data.isTrunk ? "skill-node--trunk" : "skill-node--branch"}`}>
+      {/* Target handles (incoming edges) */}
+      <Handle type="target" position={Position.Left} id="target-left" className="skill-handle" />
+      <Handle type="target" position={Position.Top} id="target-top" className="skill-handle" />
+      <Handle type="target" position={Position.Right} id="target-right" className="skill-handle" />
+      <Handle type="target" position={Position.Bottom} id="target-bottom" className="skill-handle" />
+      {/* Source handles (outgoing edges) */}
+      <Handle type="source" position={Position.Left} id="source-left" className="skill-handle" />
+      <Handle type="source" position={Position.Top} id="source-top" className="skill-handle" />
+      <Handle type="source" position={Position.Right} id="source-right" className="skill-handle" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="skill-handle" />
+
       <div
         className="skill-node__orb"
         style={{
@@ -75,11 +83,6 @@ function SkillNode({ data }: NodeProps<Node<SkillNodeData>>) {
         }}
       />
       <span className="skill-node__label">{data.label}</span>
-      <Handle
-        type="source"
-        position={Position.Right}
-        className="skill-handle"
-      />
     </div>
   );
 }
@@ -100,38 +103,52 @@ interface SkillNodeDef {
   isTrunk: boolean;
 }
 
-const SKILL_NODE_DEFS: SkillNodeDef[] = [
-  // ── 起点ノード（仮想：パイプラインの入口）──
-  { id: "origin",                    x: 80,   y: 400, category: "import",       isTrunk: true },
+const TABLE_NODE_DEFS: SkillNodeDef[] = [
+  // ── 起点 ──
+  { id: "origin",                    x: 100,  y: 400, category: "import",       isTrunk: true },
 
-  // ── トランクノード（メインフロー、y=400）──
-  { id: "source_messages",           x: 380,  y: 400, category: "import",       isTrunk: true },
-  { id: "extraction_jobs",           x: 680,  y: 400, category: "pipeline",     isTrunk: true },
-  { id: "extraction_items",          x: 980,  y: 400, category: "pipeline",     isTrunk: true },
-  { id: "analysis_results",          x: 1280, y: 400, category: "pipeline",     isTrunk: true },
-  { id: "tcg_distribution_targets",  x: 1580, y: 400, category: "distribution", isTrunk: true },
+  // ── 幹ノード（メインフロー） ──
+  { id: "source_messages",           x: 400,  y: 400, category: "import",       isTrunk: true },
+  { id: "extraction_jobs",           x: 700,  y: 400, category: "pipeline",     isTrunk: true },
+  { id: "extraction_items",          x: 1000, y: 400, category: "pipeline",     isTrunk: true },
+  { id: "analysis_results",          x: 1300, y: 400, category: "pipeline",     isTrunk: true },
+  { id: "tcg_distribution_targets",  x: 1600, y: 400, category: "distribution", isTrunk: true },
 
-  // ── 上部ブランチノード（y < 400）──
+  // ── 上枝（入力系） ──
   { id: "suppliers",                 x: 200,  y: 200, category: "supplier",     isTrunk: false },
-  { id: "supplier_aliases",          x: 400,  y: 120, category: "supplier",     isTrunk: false },
-  { id: "supplier_channels",         x: 400,  y: 260, category: "supplier",     isTrunk: false },
-  { id: "extraction_prompt_config",  x: 680,  y: 200, category: "pipeline",     isTrunk: false },
-  { id: "supplier_prompts",          x: 880,  y: 200, category: "supplier",     isTrunk: false },
-  { id: "products",                  x: 1120, y: 200, category: "product",      isTrunk: false },
-  { id: "product_search_keywords",   x: 1320, y: 120, category: "product",      isTrunk: false },
-  { id: "product_exclude_keywords",  x: 1320, y: 230, category: "product",      isTrunk: false },
-  { id: "type_master",               x: 1120, y: 300, category: "product",      isTrunk: false },
-  { id: "analysis_runs",             x: 1420, y: 200, category: "pipeline",     isTrunk: false },
-  { id: "analysis_run_snapshots",    x: 1580, y: 120, category: "pipeline",     isTrunk: false },
+  { id: "supplier_aliases",          x: 350,  y: 120, category: "supplier",     isTrunk: false },
+  { id: "supplier_channels",         x: 350,  y: 270, category: "supplier",     isTrunk: false },
 
-  // ── 下部ブランチノード（y > 400）──
-  { id: "import_jobs",               x: 250,  y: 560, category: "import",       isTrunk: false },
-  { id: "discord_inbound_messages",  x: 250,  y: 660, category: "discord",      isTrunk: false },
-  { id: "extraction_attempts",       x: 880,  y: 560, category: "pipeline",     isTrunk: false },
-  { id: "item_corrections",          x: 980,  y: 580, category: "pipeline",     isTrunk: false },
-  { id: "line_conditions",           x: 1280, y: 580, category: "master",       isTrunk: false },
-  { id: "line_units",                x: 1420, y: 580, category: "master",       isTrunk: false },
-  { id: "tcg_distribution_settings", x: 1580, y: 560, category: "distribution", isTrunk: false },
+  // ── 下枝（入力系） ──
+  { id: "import_jobs",               x: 500,  y: 560, category: "import",       isTrunk: false },
+  { id: "discord_inbound_messages",  x: 500,  y: 660, category: "discord",      isTrunk: false },
+
+  // ── 上枝（AI抽出系） ──
+  { id: "extraction_prompt_config",  x: 700,  y: 200, category: "pipeline",     isTrunk: false },
+  { id: "supplier_prompts",          x: 900,  y: 200, category: "supplier",     isTrunk: false },
+
+  // ── 下枝（AI抽出系） ──
+  { id: "extraction_attempts",       x: 900,  y: 560, category: "pipeline",     isTrunk: false },
+
+  // ── 下枝（抽出結果系） ──
+  { id: "item_corrections",          x: 1100, y: 560, category: "pipeline",     isTrunk: false },
+
+  // ── 上枝（商品照合系） ──
+  { id: "products",                  x: 1300, y: 200, category: "product",      isTrunk: false },
+  { id: "product_search_keywords",   x: 1500, y: 120, category: "product",      isTrunk: false },
+  { id: "product_exclude_keywords",  x: 1500, y: 250, category: "product",      isTrunk: false },
+  { id: "type_master",               x: 1150, y: 200, category: "product",      isTrunk: false },
+
+  // ── 下枝（商品照合系） ──
+  { id: "line_conditions",           x: 1300, y: 580, category: "master",       isTrunk: false },
+  { id: "line_units",                x: 1500, y: 580, category: "master",       isTrunk: false },
+
+  // ── 上枝（確認・配信系） ──
+  { id: "analysis_runs",             x: 1500, y: 300, category: "pipeline",     isTrunk: false },
+  { id: "analysis_run_snapshots",    x: 1650, y: 200, category: "pipeline",     isTrunk: false },
+
+  // ── 下枝（確認・配信系） ──
+  { id: "tcg_distribution_settings", x: 1700, y: 560, category: "distribution", isTrunk: false },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -139,18 +156,22 @@ const SKILL_NODE_DEFS: SkillNodeDef[] = [
 // ──────────────────────────────────────────────────────────────────────────────
 
 const MAIN_STROKE = "var(--accent)";
-const SUB_STROKE = "var(--border)";
+const SUB_STROKE = "var(--text-muted)";
 
 function makeMainEdge(
   id: string,
   source: string,
   target: string,
   label: string,
+  sourceHandle = "source-right",
+  targetHandle = "target-left",
 ): Edge {
   return {
     id,
     source,
     target,
+    sourceHandle,
+    targetHandle,
     type: "smoothstep",
     animated: true,
     label,
@@ -164,17 +185,25 @@ function makeMainEdge(
   };
 }
 
-function makeSubEdge(id: string, source: string, target: string): Edge {
+function makeSubEdge(
+  id: string,
+  source: string,
+  target: string,
+  sourceHandle = "source-right",
+  targetHandle = "target-left",
+): Edge {
   return {
     id,
     source,
     target,
+    sourceHandle,
+    targetHandle,
     type: "smoothstep",
     animated: false,
     markerEnd: { type: MarkerType.ArrowClosed },
     style: {
       stroke: SUB_STROKE,
-      strokeWidth: 1.5,
+      strokeWidth: 2,
     },
   };
 }
@@ -187,7 +216,7 @@ export function PipelineMapPanel() {
   const { t } = useTranslation();
 
   // スキルノード（ラベル・説明はi18nキーで取得）
-  const skillNodes: Node<SkillNodeData>[] = SKILL_NODE_DEFS.map((def) => ({
+  const skillNodes: Node<SkillNodeData>[] = TABLE_NODE_DEFS.map((def) => ({
     id: def.id,
     type: "skill",
     position: { x: def.x, y: def.y },
@@ -202,33 +231,48 @@ export function PipelineMapPanel() {
 
   // メインフローエッジ（トランク間：太い・アニメーション・ラベル付き）
   const mainEdges: Edge[] = [
-    makeMainEdge("e-main-origin-sm",  "origin",           "source_messages",          t("analysisRules.pipelineMap.edgeMessageRecv")),
-    makeMainEdge("e-main-sm-ej",      "source_messages",  "extraction_jobs",           t("analysisRules.pipelineMap.edgeSendText")),
-    makeMainEdge("e-main-ej-ei",      "extraction_jobs",  "extraction_items",          t("analysisRules.pipelineMap.edgeExtractCandidates")),
-    makeMainEdge("e-main-ei-ar",      "extraction_items", "analysis_results",          t("analysisRules.pipelineMap.edgeMatchMaster")),
-    makeMainEdge("e-main-ar-dist",    "analysis_results", "tcg_distribution_targets",  t("analysisRules.pipelineMap.edgeDistribute")),
+    makeMainEdge("e-main-1", "origin",             "source_messages",          t("analysisRules.pipelineMap.edgeMessageRecv"),        "source-right", "target-left"),
+    makeMainEdge("e-main-2", "source_messages",     "extraction_jobs",          t("analysisRules.pipelineMap.edgeSendText"),            "source-right", "target-left"),
+    makeMainEdge("e-main-3", "extraction_jobs",     "extraction_items",         t("analysisRules.pipelineMap.edgeExtractCandidates"),   "source-right", "target-left"),
+    makeMainEdge("e-main-4", "extraction_items",    "analysis_results",         t("analysisRules.pipelineMap.edgeMatchMaster"),         "source-right", "target-left"),
+    makeMainEdge("e-main-5", "analysis_results",    "tcg_distribution_targets", t("analysisRules.pipelineMap.edgeDistribute"),          "source-right", "target-left"),
   ];
 
-  // 補助フローエッジ（ブランチ→トランク：細い・静止）
+  // 補助フローエッジ（ブランチ↔トランク：細い・静止）
   const subEdges: Edge[] = [
-    makeSubEdge("e-sup-origin",       "suppliers",                 "origin"),
-    makeSubEdge("e-sa-sup",           "supplier_aliases",          "suppliers"),
-    makeSubEdge("e-sc-sup",           "supplier_channels",         "suppliers"),
-    makeSubEdge("e-ij-sm",            "import_jobs",               "source_messages"),
-    makeSubEdge("e-dim-sm",           "discord_inbound_messages",  "source_messages"),
-    makeSubEdge("e-epc-ej",           "extraction_prompt_config",  "extraction_jobs"),
-    makeSubEdge("e-sp-ej",            "supplier_prompts",          "extraction_jobs"),
-    makeSubEdge("e-ea-ej",            "extraction_attempts",       "extraction_jobs"),
-    makeSubEdge("e-ic-ei",            "item_corrections",          "extraction_items"),
-    makeSubEdge("e-prod-ar",          "products",                  "analysis_results"),
-    makeSubEdge("e-psk-prod",         "product_search_keywords",   "products"),
-    makeSubEdge("e-pek-prod",         "product_exclude_keywords",  "products"),
-    makeSubEdge("e-tm-prod",          "type_master",               "products"),
-    makeSubEdge("e-lc-ar",            "line_conditions",           "analysis_results"),
-    makeSubEdge("e-lu-ar",            "line_units",                "analysis_results"),
-    makeSubEdge("e-arun-ar",          "analysis_runs",             "analysis_results"),
-    makeSubEdge("e-snap-arun",        "analysis_run_snapshots",    "analysis_runs"),
-    makeSubEdge("e-dist-set",         "tcg_distribution_settings", "tcg_distribution_targets"),
+    // origin branches (up to suppliers area)
+    makeSubEdge("e-b-origin-sup",     "origin",              "suppliers",                "source-top",    "target-bottom"),
+    makeSubEdge("e-b-sup-alias",      "suppliers",           "supplier_aliases",         "source-right",  "target-left"),
+    makeSubEdge("e-b-sup-chan",        "suppliers",           "supplier_channels",        "source-bottom", "target-left"),
+
+    // source_messages branches (down)
+    makeSubEdge("e-b-sm-ij",          "source_messages",     "import_jobs",              "source-bottom", "target-top"),
+    makeSubEdge("e-b-sm-dim",         "source_messages",     "discord_inbound_messages", "source-bottom", "target-top"),
+
+    // extraction_jobs branches
+    makeSubEdge("e-b-ej-epc",         "extraction_jobs",     "extraction_prompt_config", "source-top",    "target-bottom"),
+    makeSubEdge("e-b-ej-sp",          "extraction_jobs",     "supplier_prompts",         "source-top",    "target-bottom"),
+    makeSubEdge("e-b-ej-ea",          "extraction_jobs",     "extraction_attempts",      "source-bottom", "target-top"),
+
+    // extraction_items branches (down)
+    makeSubEdge("e-b-ei-ic",          "extraction_items",    "item_corrections",         "source-bottom", "target-top"),
+
+    // analysis_results branches (up to products)
+    makeSubEdge("e-b-ar-prod",        "analysis_results",    "products",                 "source-top",    "target-bottom"),
+    makeSubEdge("e-b-prod-psk",       "products",            "product_search_keywords",  "source-right",  "target-left"),
+    makeSubEdge("e-b-prod-pek",       "products",            "product_exclude_keywords", "source-right",  "target-left"),
+    makeSubEdge("e-b-prod-tm",        "type_master",         "products",                 "source-right",  "target-left"),
+
+    // analysis_results branches (down)
+    makeSubEdge("e-b-ar-lc",          "analysis_results",    "line_conditions",          "source-bottom", "target-top"),
+    makeSubEdge("e-b-ar-lu",          "analysis_results",    "line_units",               "source-bottom", "target-top"),
+
+    // analysis_results branches (up-right to runs)
+    makeSubEdge("e-b-ar-runs",        "analysis_results",    "analysis_runs",            "source-right",  "target-left"),
+    makeSubEdge("e-b-runs-snap",      "analysis_runs",       "analysis_run_snapshots",   "source-right",  "target-left"),
+
+    // distribution branches (down)
+    makeSubEdge("e-b-dist-set",       "tcg_distribution_targets", "tcg_distribution_settings", "source-bottom", "target-top"),
   ];
 
   const allNodes = [...skillNodes];

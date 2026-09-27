@@ -10,10 +10,10 @@
 - ADR-144: docs/adr/ADR-144-ui-governance.md
 
 ## 対象
-- `PipelineMapPanel.tsx` — 全面書き換え
-- `PipelineMapPanel.css` — 全面書き換え
-- `tokens.css` — トークン入れ替え
-- `ja.json` / `en.json` — キー追加・削除
+- `frontend/src/pages/super-admin/components/PipelineMapPanel.tsx` — 全面書き換え
+- PipelineMapPanel.css — 全面書き換え
+- tokens.css — トークン入れ替え
+- ja.json / en.json — キー追加・削除
 
 ## 対象外
 - バックエンドAPI変更
