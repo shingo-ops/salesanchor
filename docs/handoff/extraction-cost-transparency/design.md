@@ -17,18 +17,18 @@
 ## 設計方針
 
 ### DB変更
-- `migration/20260927_130000_add_extraction_token_cost_columns.sql`: ADD COLUMN IF NOT EXISTS（NULL許可・既存行に影響なし）
+- `migrations/20260927_130000_add_extraction_token_cost_columns.sql`: ADD COLUMN IF NOT EXISTS（NULL許可・既存行に影響なし）
 - 追加カラム: `input_tokens INTEGER`, `output_tokens INTEGER`, `cost_usd NUMERIC(10,6)`
 
 ### バックエンド
-1. `gemini_extraction_svc.py`: Gemini SDK `response.usage_metadata` から `prompt_token_count` / `response_token_count` を取得し `recorder.on_response()` に渡す
-2. `tcg_extraction_record_svc.py`: `on_response()` でトークン数を保持し、`finalize()` 時に `llm_budget.calculate_cost()` でUSD算出→DB保存
-3. `inventory_parser_llm.py`: SDKフィールド名修正（`candidates_token_count` → `response_token_count`）
-4. `tcg_analysis_dashboard.py`: `GET /tcg/analysis-dashboard/cost-summary` を追加（期間指定・仕入元別集計・日別推移）
+1. `backend/app/services/gemini_extraction_svc.py`: Gemini SDK `response.usage_metadata` から `prompt_token_count` / `response_token_count` を取得し `recorder.on_response()` に渡す
+2. `backend/app/services/tcg_extraction_record_svc.py`: `on_response()` でトークン数を保持し、`finalize()` 時に `llm_budget.calculate_cost()` でUSD算出→DB保存
+3. `backend/app/services/inventory_parser_llm.py`: SDKフィールド名修正（`candidates_token_count` → `response_token_count`）
+4. `backend/app/routers/tcg_analysis_dashboard.py`: `GET /tcg/analysis-dashboard/cost-summary` を追加（期間指定・仕入元別集計・日別推移）
 
 ### フロントエンド
-- `AnalysisDashboardPanel.tsx`: 抽出タブにコストセクション追加（KPIカード・仕入元別テーブル・日別推移チャート）
-- i18n: `ja.json` / `en.json` にキー追加
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx`: 抽出タブにコストセクション追加（KPIカード・仕入元別テーブル・日別推移チャート）
+- i18n: `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` にキー追加
 
 ## 影響範囲
 - extraction_attempts テーブルのみ（ADD COLUMN、既存行はNULL）
@@ -36,7 +36,7 @@
 - 既存のfinalize()/record_failure()はコストカラムが埋まった場合のみ更新
 
 ## 弊害
-- None（NULL許可ADD COLUMNのみ・既存ロジックに非破壊的変更のみ）
+- なし（NULL許可ADD COLUMNのみ・既存ロジックに非破壊的変更のみ）
 
 ## 計画
 1. migration適用（ADD COLUMN）
@@ -44,8 +44,10 @@
 3. 次回extraction実行時にトークン数・コストが記録される
 4. ダッシュボードでコストセクションが表示される
 
-## 外部事例
-- llm_budget.py（ADR-110翻訳システム）が同一パターンで実装済み。横展開のみ。
+## 外部・過去事例の参照と我々への応用
+- ADR-110（翻訳サブシステム）で `backend/app/services/llm_budget.py` を用いたLLMコスト計算が実証済み
+- 同一の `calculate_cost(input_tokens, output_tokens, model=...)` APIを使い、モデル変更時の一元修正を保証
+- Google Cloud Cost Management の usage_metadata 取得パターンをそのまま踏襲
 
-## 守り手
-- `llm_budget.calculate_cost()` が料金体系を一元管理（モデル変更時もここだけ修正）
+## 維持の仕組み
+守り手: `backend/app/services/llm_budget.py` が料金体系を一元管理（モデル変更時もここだけ修正）
