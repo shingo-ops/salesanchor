@@ -214,7 +214,10 @@ async def fetch_output_rows(
     age_condition = ""
     bind_params: dict = {}
     if max_age_hours:
-        age_condition = "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        age_condition = (
+            "\n          AND sm.line_posted_at IS NOT NULL"
+            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        )
         bind_params["max_age_hours"] = max_age_hours
 
     sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
@@ -254,7 +257,6 @@ async def fetch_output_rows(
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
-          AND sm.line_posted_at IS NOT NULL
           AND {cond_filter}{age_condition}
         ORDER BY {result_order_sql()}
     """)
@@ -305,7 +307,10 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     count_age_condition = ""
     count_bind_params: dict = {}
     if max_age_hours:
-        count_age_condition = "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        count_age_condition = (
+            "\n          AND sm.line_posted_at IS NOT NULL"
+            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        )
         count_bind_params["max_age_hours"] = max_age_hours
 
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
@@ -322,7 +327,6 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
-          AND sm.line_posted_at IS NOT NULL
           AND {cond_filter}{count_age_condition}
     """), count_bind_params)
     output_count = count_result.scalar()

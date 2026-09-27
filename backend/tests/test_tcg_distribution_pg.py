@@ -94,6 +94,10 @@ async def create_schema(conn, schema, corrections=True):
     await conn.exec_driver_sql(
         f"ALTER TABLE IF EXISTS {schema}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text"
     )
+    # distribution-max-age-filter: line_posted_at column on source_messages (needed by fetch_output_rows SELECT).
+    await conn.exec_driver_sql(
+        f"ALTER TABLE {schema}.source_messages ADD COLUMN IF NOT EXISTS line_posted_at TIMESTAMPTZ"
+    )
 
 
 @pytest_asyncio.fixture
