@@ -240,9 +240,9 @@
   --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
   --size-pipeline-map-min-h: 600px;  /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
-  --size-pipeline-node-max-w: 220px; /* パイプラインマップ TableNode 最大幅（PipelineMapPanel） */
-  --size-pipeline-node-w:    240px;  /* パイプラインマップ新ノード幅（PipelineMapPanel リデザイン） */
-  --size-pipeline-phase-w:   380px;  /* パイプラインマップ フェーズヘッダー幅（PipelineMapPanel） */
+  --size-skill-orb-lg:       52px;   /* スキルツリー トランクノード オーブ直径（PipelineMapPanel） */
+  --size-skill-orb-sm:       38px;   /* スキルツリー ブランチノード オーブ直径（PipelineMapPanel） */
+  --size-skill-label-w:      120px;  /* スキルツリー ノードラベル最大幅（PipelineMapPanel） */
 
   /* ---- Pipeline map カテゴリ色（PipelineMapPanel ノードヘッダー背景） ---- */
   --cat-supplier:     #1e40af;  /* 仕入先 — 青系 */

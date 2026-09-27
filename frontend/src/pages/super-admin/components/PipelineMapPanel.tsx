@@ -1,8 +1,8 @@
 /**
- * PipelineMapPanel — LINE解析パイプライン フローチャート
+ * PipelineMapPanel — RPGスキルツリー型パイプラインマップ
  *
- * 左→右の4段階フロー（入力→AI抽出→商品特定→確認配信）で
- * 非エンジニアが業務の流れを理解できるようにリデザイン。
+ * 横一列のトランクフロー（左→右）にブランチノードが接続する
+ * RPGスキルツリーデザインで、LINE解析パイプラインを可視化する。
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: CSS変数のみ使用。ハードコード色禁止。
@@ -48,141 +48,90 @@ interface DbColumn {
   } | null;
 }
 
-interface TableNodeData extends Record<string, unknown> {
+interface SkillNodeData extends Record<string, unknown> {
   label: string;
   description: string;
   tableName: string;
   category: string;
-}
-
-interface PhaseNodeData extends Record<string, unknown> {
-  label: string;
-  description: string;
-  color: string;
+  isTrunk: boolean;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// カスタムノード: PhaseNode（フェーズヘッダー）
+// カスタムノード: SkillNode（RPGスキルツリー風）
 // ──────────────────────────────────────────────────────────────────────────────
 
-function PhaseNode({ data }: NodeProps<Node<PhaseNodeData>>) {
-  return (
-    <div className="pipeline-phase" style={{ backgroundColor: data.color }}>
-      <span className="pipeline-phase__label">{data.label}</span>
-      <span className="pipeline-phase__desc">{data.description}</span>
-    </div>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────────
-// カスタムノード: TableNode（業務ノード）
-// ──────────────────────────────────────────────────────────────────────────────
-
-function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
+function SkillNode({ data }: NodeProps<Node<SkillNodeData>>) {
   const categoryColor = `var(--cat-${data.category})`;
   return (
-    <div className="pipeline-node">
-      <Handle type="target" position={Position.Left} className="pipeline-handle" />
-      <div className="pipeline-node__header" style={{ backgroundColor: categoryColor }}>
-        {data.label}
-      </div>
-      <div className="pipeline-node__body">
-        <p className="pipeline-node__desc">{data.description}</p>
-        <span className="pipeline-node__table-name">{data.tableName}</span>
-      </div>
-      <Handle type="source" position={Position.Right} className="pipeline-handle" />
+    <div
+      className={`skill-node ${data.isTrunk ? "skill-node--trunk" : "skill-node--branch"}`}
+    >
+      <Handle type="target" position={Position.Left} className="skill-handle" />
+      <div
+        className="skill-node__orb"
+        style={{
+          backgroundColor: categoryColor,
+          boxShadow: `0 0 ${data.isTrunk ? "var(--space-4)" : "var(--space-2)"} ${categoryColor}`,
+        }}
+      />
+      <span className="skill-node__label">{data.label}</span>
+      <Handle
+        type="source"
+        position={Position.Right}
+        className="skill-handle"
+      />
     </div>
   );
 }
 
 const nodeTypes = {
-  phase: PhaseNode,
-  table: TableNode,
+  skill: SkillNode,
 };
 
 // ──────────────────────────────────────────────────────────────────────────────
-// フェーズノード定義
+// ノード定義（座標・カテゴリ・トランク判定。ラベル/説明はi18nキーで取得）
 // ──────────────────────────────────────────────────────────────────────────────
 
-// フェーズノードはi18nキーとして参照するため、t()はコンポーネント内で使う。
-// ここではキーのみ定義し、useTranslation後にノードを生成する。
-const PHASE_DEFS = [
-  {
-    id: "phase-input",
-    labelKey: "analysisRules.pipelineMap.phaseInput",
-    descKey: "analysisRules.pipelineMap.phaseInputDesc",
-    x: 50,
-    y: 20,
-    color: "var(--cat-import)",
-  },
-  {
-    id: "phase-extract",
-    labelKey: "analysisRules.pipelineMap.phaseExtract",
-    descKey: "analysisRules.pipelineMap.phaseExtractDesc",
-    x: 500,
-    y: 20,
-    color: "var(--cat-pipeline)",
-  },
-  {
-    id: "phase-match",
-    labelKey: "analysisRules.pipelineMap.phaseMatch",
-    descKey: "analysisRules.pipelineMap.phaseMatchDesc",
-    x: 950,
-    y: 20,
-    color: "var(--cat-product)",
-  },
-  {
-    id: "phase-output",
-    labelKey: "analysisRules.pipelineMap.phaseOutput",
-    descKey: "analysisRules.pipelineMap.phaseOutputDesc",
-    x: 1400,
-    y: 20,
-    color: "var(--cat-distribution)",
-  },
-];
-
-// ──────────────────────────────────────────────────────────────────────────────
-// 業務ノード定義（座標・カテゴリのみ。ラベル/説明はi18nキーで取得）
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface TableNodeDef {
+interface SkillNodeDef {
   id: string;
   x: number;
   y: number;
   category: string;
+  isTrunk: boolean;
 }
 
-const TABLE_NODE_DEFS: TableNodeDef[] = [
-  // ── ① 入力フェーズ ──
-  { id: "suppliers",                x: 100,  y: 150, category: "supplier" },
-  { id: "supplier_aliases",         x: 300,  y: 150, category: "supplier" },
-  { id: "supplier_channels",        x: 100,  y: 300, category: "supplier" },
-  { id: "source_messages",          x: 100,  y: 450, category: "import" },
-  { id: "import_jobs",              x: 300,  y: 300, category: "import" },
-  { id: "discord_inbound_messages", x: 300,  y: 550, category: "discord" },
+const SKILL_NODE_DEFS: SkillNodeDef[] = [
+  // ── 起点ノード（仮想：パイプラインの入口）──
+  { id: "origin",                    x: 80,   y: 400, category: "import",       isTrunk: true },
 
-  // ── ② AI抽出フェーズ ──
-  { id: "extraction_jobs",          x: 550,  y: 300, category: "pipeline" },
-  { id: "extraction_items",         x: 550,  y: 450, category: "pipeline" },
-  { id: "extraction_prompt_config", x: 750,  y: 150, category: "pipeline" },
-  { id: "supplier_prompts",         x: 750,  y: 300, category: "supplier" },
-  { id: "extraction_attempts",      x: 750,  y: 450, category: "pipeline" },
+  // ── トランクノード（メインフロー、y=400）──
+  { id: "source_messages",           x: 380,  y: 400, category: "import",       isTrunk: true },
+  { id: "extraction_jobs",           x: 680,  y: 400, category: "pipeline",     isTrunk: true },
+  { id: "extraction_items",          x: 980,  y: 400, category: "pipeline",     isTrunk: true },
+  { id: "analysis_results",          x: 1280, y: 400, category: "pipeline",     isTrunk: true },
+  { id: "tcg_distribution_targets",  x: 1580, y: 400, category: "distribution", isTrunk: true },
 
-  // ── ③ 商品特定フェーズ ──
-  { id: "analysis_results",         x: 1000, y: 450, category: "pipeline" },
-  { id: "products",                 x: 1000, y: 150, category: "product" },
-  { id: "product_search_keywords",  x: 1200, y: 150, category: "product" },
-  { id: "product_exclude_keywords", x: 1200, y: 250, category: "product" },
-  { id: "line_conditions",          x: 1200, y: 400, category: "master" },
-  { id: "line_units",               x: 1200, y: 500, category: "master" },
-  { id: "type_master",              x: 1000, y: 250, category: "product" },
+  // ── 上部ブランチノード（y < 400）──
+  { id: "suppliers",                 x: 200,  y: 200, category: "supplier",     isTrunk: false },
+  { id: "supplier_aliases",          x: 400,  y: 120, category: "supplier",     isTrunk: false },
+  { id: "supplier_channels",         x: 400,  y: 260, category: "supplier",     isTrunk: false },
+  { id: "extraction_prompt_config",  x: 680,  y: 200, category: "pipeline",     isTrunk: false },
+  { id: "supplier_prompts",          x: 880,  y: 200, category: "supplier",     isTrunk: false },
+  { id: "products",                  x: 1120, y: 200, category: "product",      isTrunk: false },
+  { id: "product_search_keywords",   x: 1320, y: 120, category: "product",      isTrunk: false },
+  { id: "product_exclude_keywords",  x: 1320, y: 230, category: "product",      isTrunk: false },
+  { id: "type_master",               x: 1120, y: 300, category: "product",      isTrunk: false },
+  { id: "analysis_runs",             x: 1420, y: 200, category: "pipeline",     isTrunk: false },
+  { id: "analysis_run_snapshots",    x: 1580, y: 120, category: "pipeline",     isTrunk: false },
 
-  // ── ④ 確認・配信フェーズ ──
-  { id: "item_corrections",         x: 1450, y: 350, category: "pipeline" },
-  { id: "tcg_distribution_targets", x: 1450, y: 500, category: "distribution" },
-  { id: "tcg_distribution_settings",x: 1650, y: 500, category: "distribution" },
-  { id: "analysis_runs",            x: 1450, y: 200, category: "pipeline" },
-  { id: "analysis_run_snapshots",   x: 1650, y: 200, category: "pipeline" },
+  // ── 下部ブランチノード（y > 400）──
+  { id: "import_jobs",               x: 250,  y: 560, category: "import",       isTrunk: false },
+  { id: "discord_inbound_messages",  x: 250,  y: 660, category: "discord",      isTrunk: false },
+  { id: "extraction_attempts",       x: 880,  y: 560, category: "pipeline",     isTrunk: false },
+  { id: "item_corrections",          x: 980,  y: 580, category: "pipeline",     isTrunk: false },
+  { id: "line_conditions",           x: 1280, y: 580, category: "master",       isTrunk: false },
+  { id: "line_units",                x: 1420, y: 580, category: "master",       isTrunk: false },
+  { id: "tcg_distribution_settings", x: 1580, y: 560, category: "distribution", isTrunk: false },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -202,6 +151,7 @@ function makeMainEdge(
     id,
     source,
     target,
+    type: "smoothstep",
     animated: true,
     label,
     labelStyle: { fontSize: "var(--font-xs)", fill: "var(--text-secondary)" },
@@ -219,6 +169,7 @@ function makeSubEdge(id: string, source: string, target: string): Edge {
     id,
     source,
     target,
+    type: "smoothstep",
     animated: false,
     markerEnd: { type: MarkerType.ArrowClosed },
     style: {
@@ -235,64 +186,52 @@ function makeSubEdge(id: string, source: string, target: string): Edge {
 export function PipelineMapPanel() {
   const { t } = useTranslation();
 
-  // フェーズノード（t()で翻訳）
-  const phaseNodes: Node<PhaseNodeData>[] = PHASE_DEFS.map((def) => ({
+  // スキルノード（ラベル・説明はi18nキーで取得）
+  const skillNodes: Node<SkillNodeData>[] = SKILL_NODE_DEFS.map((def) => ({
     id: def.id,
-    type: "phase",
-    position: { x: def.x, y: def.y },
-    draggable: false,
-    selectable: false,
-    data: {
-      label: t(def.labelKey),
-      description: t(def.descKey),
-      color: def.color,
-    },
-  }));
-
-  // 業務ノード（ラベル・説明はi18nキーで取得）
-  const tableNodes: Node<TableNodeData>[] = TABLE_NODE_DEFS.map((def) => ({
-    id: def.id,
-    type: "table",
+    type: "skill",
     position: { x: def.x, y: def.y },
     data: {
       label: t(`analysisRules.pipelineMap.nodeLabel_${def.id}`),
       description: t(`analysisRules.pipelineMap.nodeDesc_${def.id}`),
       tableName: def.id,
       category: def.category,
+      isTrunk: def.isTrunk,
     },
   }));
 
-  // メインフローエッジ（ラベル付き・太い矢印）
+  // メインフローエッジ（トランク間：太い・アニメーション・ラベル付き）
   const mainEdges: Edge[] = [
-    makeMainEdge("e-main-sup-sc",  "suppliers",        "supplier_channels",        t("analysisRules.pipelineMap.edgeChannelReg")),
-    makeMainEdge("e-main-sc-sm",   "supplier_channels","source_messages",           t("analysisRules.pipelineMap.edgeMessageRecv")),
-    makeMainEdge("e-main-sm-ej",   "source_messages",  "extraction_jobs",           t("analysisRules.pipelineMap.edgeSendText")),
-    makeMainEdge("e-main-ej-ei",   "extraction_jobs",  "extraction_items",          t("analysisRules.pipelineMap.edgeExtractCandidates")),
-    makeMainEdge("e-main-ei-ar",   "extraction_items", "analysis_results",          t("analysisRules.pipelineMap.edgeMatchMaster")),
-    makeMainEdge("e-main-ar-dist", "analysis_results", "tcg_distribution_targets",  t("analysisRules.pipelineMap.edgeDistribute")),
+    makeMainEdge("e-main-origin-sm",  "origin",           "source_messages",          t("analysisRules.pipelineMap.edgeMessageRecv")),
+    makeMainEdge("e-main-sm-ej",      "source_messages",  "extraction_jobs",           t("analysisRules.pipelineMap.edgeSendText")),
+    makeMainEdge("e-main-ej-ei",      "extraction_jobs",  "extraction_items",          t("analysisRules.pipelineMap.edgeExtractCandidates")),
+    makeMainEdge("e-main-ei-ar",      "extraction_items", "analysis_results",          t("analysisRules.pipelineMap.edgeMatchMaster")),
+    makeMainEdge("e-main-ar-dist",    "analysis_results", "tcg_distribution_targets",  t("analysisRules.pipelineMap.edgeDistribute")),
   ];
 
-  // 補助フローエッジ（細い矢印・ラベルなし）
+  // 補助フローエッジ（ブランチ→トランク：細い・静止）
   const subEdges: Edge[] = [
-    makeSubEdge("e-ij-sm",       "import_jobs",              "source_messages"),
-    makeSubEdge("e-dim-sm",      "discord_inbound_messages",  "source_messages"),
-    makeSubEdge("e-epc-ej",      "extraction_prompt_config",  "extraction_jobs"),
-    makeSubEdge("e-sp-ej",       "supplier_prompts",           "extraction_jobs"),
-    makeSubEdge("e-ea-ej",       "extraction_attempts",        "extraction_jobs"),
-    makeSubEdge("e-prod-ar",     "products",                   "analysis_results"),
-    makeSubEdge("e-psk-prod",    "product_search_keywords",    "products"),
-    makeSubEdge("e-pek-prod",    "product_exclude_keywords",   "products"),
-    makeSubEdge("e-lc-ar",       "line_conditions",            "analysis_results"),
-    makeSubEdge("e-lu-ar",       "line_units",                 "analysis_results"),
-    makeSubEdge("e-tm-prod",     "type_master",                "products"),
-    makeSubEdge("e-ic-ei",       "item_corrections",           "extraction_items"),
-    makeSubEdge("e-arun-ar",     "analysis_runs",              "analysis_results"),
-    makeSubEdge("e-snap-arun",   "analysis_run_snapshots",     "analysis_runs"),
-    makeSubEdge("e-sa-sup",      "supplier_aliases",           "suppliers"),
-    makeSubEdge("e-dist-set",    "tcg_distribution_settings",  "tcg_distribution_targets"),
+    makeSubEdge("e-sup-origin",       "suppliers",                 "origin"),
+    makeSubEdge("e-sa-sup",           "supplier_aliases",          "suppliers"),
+    makeSubEdge("e-sc-sup",           "supplier_channels",         "suppliers"),
+    makeSubEdge("e-ij-sm",            "import_jobs",               "source_messages"),
+    makeSubEdge("e-dim-sm",           "discord_inbound_messages",  "source_messages"),
+    makeSubEdge("e-epc-ej",           "extraction_prompt_config",  "extraction_jobs"),
+    makeSubEdge("e-sp-ej",            "supplier_prompts",          "extraction_jobs"),
+    makeSubEdge("e-ea-ej",            "extraction_attempts",       "extraction_jobs"),
+    makeSubEdge("e-ic-ei",            "item_corrections",          "extraction_items"),
+    makeSubEdge("e-prod-ar",          "products",                  "analysis_results"),
+    makeSubEdge("e-psk-prod",         "product_search_keywords",   "products"),
+    makeSubEdge("e-pek-prod",         "product_exclude_keywords",  "products"),
+    makeSubEdge("e-tm-prod",          "type_master",               "products"),
+    makeSubEdge("e-lc-ar",            "line_conditions",           "analysis_results"),
+    makeSubEdge("e-lu-ar",            "line_units",                "analysis_results"),
+    makeSubEdge("e-arun-ar",          "analysis_runs",             "analysis_results"),
+    makeSubEdge("e-snap-arun",        "analysis_run_snapshots",    "analysis_runs"),
+    makeSubEdge("e-dist-set",         "tcg_distribution_settings", "tcg_distribution_targets"),
   ];
 
-  const allNodes = [...phaseNodes, ...tableNodes];
+  const allNodes = [...skillNodes];
   const allEdges = [...mainEdges, ...subEdges];
 
   const [nodes, , onNodesChange] = useNodesState(allNodes);
@@ -308,8 +247,8 @@ export function PipelineMapPanel() {
   // ノードクリック → テーブル詳細をドロワーで表示
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
-      // フェーズノードはクリック不可（selectable=false だが念のため）
-      if (node.type === "phase") return;
+      // 起点ノードはクリック不可（実テーブルではないため）
+      if (node.type === "skill" && node.id === "origin") return;
 
       const tableName = node.id;
       setDrawerTable(tableName);
@@ -395,7 +334,7 @@ export function PipelineMapPanel() {
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
           nodeTypes={nodeTypes}
-          defaultViewport={{ x: 20, y: 10, zoom: 0.7 }}
+          defaultViewport={{ x: 20, y: 0, zoom: 0.65 }}
           minZoom={0.2}
           maxZoom={3}
           nodesDraggable
