@@ -13,7 +13,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: 600px;
+  min-height: var(--size-pipeline-map-min-h);
   background: var(--bg-canvas);
 }
 
@@ -21,7 +21,7 @@
 .pipeline-map-panel__canvas {
   flex: 1;
   width: 100%;
-  min-height: 600px;
+  min-height: var(--size-pipeline-map-min-h);
 }
 
 /* ─── カスタムノード: TableNode ─── */
@@ -30,8 +30,8 @@
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
-  min-width: 160px;
-  max-width: 220px;
+  min-width: var(--size-substep-nav);
+  max-width: var(--size-pipeline-node-max-w);
   font-family: inherit;
   cursor: pointer;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
@@ -73,6 +73,6 @@
 .pipeline-handle {
   background: var(--accent);
   border: 2px solid var(--bg-surface);
-  width: 8px;
-  height: 8px;
+  width: var(--space-2);
+  height: var(--space-2);
 }
