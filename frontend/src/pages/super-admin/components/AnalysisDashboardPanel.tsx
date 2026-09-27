@@ -246,6 +246,40 @@ interface DistributionSetting {
   note: string | null;
 }
 
+// Cost Summary 型定義
+interface CostSummaryDailyItem {
+  date: string;
+  total_calls: number;
+  success_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+}
+
+interface CostSummaryBySupplierItem {
+  supplier_name: string;
+  total_calls: number;
+  input_tokens: number;
+  output_tokens: number;
+  cost_usd: number;
+  avg_items: number;
+}
+
+interface CostSummary {
+  daily: CostSummaryDailyItem[];
+  by_supplier: CostSummaryBySupplierItem[];
+  total: {
+    calls: number;
+    input_tokens: number;
+    output_tokens: number;
+    cost_usd: number;
+  };
+  budget: {
+    monthly_budget_usd: number;
+    current_month_usd: number;
+  };
+}
+
 interface DistributionSummary {
   active_target_count: number;
   total_target_count: number;
@@ -333,6 +367,10 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   const [supplierData, setSupplierData] = useState<SupplierPipelineResponse | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
 
+  // Cost summary data (lazy, extraction tab)
+  const [costData, setCostData] = useState<CostSummary | null>(null);
+  const [costLoading, setCostLoading] = useState(false);
+
   // Load pipeline data on mount and when trendDays changes
   useEffect(() => {
     setLoading(true);
@@ -394,6 +432,23 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         setImportLoading(false);
       });
   }, [activeTab, trendDays, t]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Lazy load cost data when extraction tab is opened; re-fetch on trendDays change
+  useEffect(() => {
+    if (activeTab !== "extraction") return;
+    setCostLoading(true);
+    api
+      .get<CostSummary>(`/tcg/analysis-dashboard/cost-summary?days=${trendDays}`)
+      .then((res) => {
+        setCostData(res);
+      })
+      .catch(() => {
+        setCostData(null);
+      })
+      .finally(() => {
+        setCostLoading(false);
+      });
+  }, [activeTab, trendDays]);
 
   // Lazy load distribution data when tab is first opened
   useEffect(() => {
@@ -535,6 +590,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             trend={trend}
             supplierData={supplierData}
             supplierLoading={supplierLoading}
+            costData={costData}
+            costLoading={costLoading}
             trendDays={trendDays}
             t={t}
             onNavigate={handleCta}
@@ -1006,13 +1063,15 @@ interface ExtractionTabContentProps {
   trend: TrendDay[];
   supplierData: SupplierPipelineResponse | null;
   supplierLoading: boolean;
+  costData: CostSummary | null;
+  costLoading: boolean;
   trendDays: number;
   t: (key: string, options?: Record<string, unknown>) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
 
-function ExtractionTabContent({ data, trend, supplierData, supplierLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
+function ExtractionTabContent({ data, trend, supplierData, supplierLoading, costData, costLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
   const [productRanking, setProductRanking] = useState<ExtractionProductRankingItem[]>([]);
   const [showSupplierDetail, setShowSupplierDetail] = useState(false);
   const [showProductDetail, setShowProductDetail] = useState(false);
@@ -1591,7 +1650,221 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, tren
         </Card>
       )}
       </div>{/* end analysis-dashboard-existing-section */}
+
+      {/* ── API コストセクション ── */}
+      <ExtractionCostSection costData={costData} costLoading={costLoading} t={t} />
     </>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────────
+// Extraction Cost Section
+// ──────────────────────────────────────────────────────────────────────────────
+
+interface ExtractionCostSectionProps {
+  costData: CostSummary | null;
+  costLoading: boolean;
+  t: (key: string, options?: Record<string, unknown>) => string;
+}
+
+function ExtractionCostSection({ costData, costLoading, t }: ExtractionCostSectionProps) {
+  const supplierCostColumns: DataTableColumn<CostSummaryBySupplierItem>[] = [
+    {
+      key: "supplier_name",
+      header: t("analysisRules.dashboard.costSupplierName"),
+    },
+    {
+      key: "total_calls",
+      header: t("analysisRules.dashboard.costSupplierCalls"),
+      width: "100px",
+      renderCell: (row) => row.total_calls.toLocaleString(),
+    },
+    {
+      key: "input_tokens",
+      header: t("analysisRules.dashboard.costInputTokens"),
+      width: "110px",
+      renderCell: (row) =>
+        `${(row.input_tokens / 1000).toFixed(1)}${t("analysisRules.dashboard.costTokenUnit")}`,
+    },
+    {
+      key: "output_tokens",
+      header: t("analysisRules.dashboard.costOutputTokens"),
+      width: "110px",
+      renderCell: (row) =>
+        `${(row.output_tokens / 1000).toFixed(1)}${t("analysisRules.dashboard.costTokenUnit")}`,
+    },
+    {
+      key: "cost_usd",
+      header: t("analysisRules.dashboard.costUsd"),
+      width: "110px",
+      renderCell: (row) => `$${row.cost_usd.toFixed(4)}`,
+    },
+    {
+      key: "avg_items",
+      header: t("analysisRules.dashboard.costAvgItems"),
+      width: "100px",
+      renderCell: (row) => row.avg_items.toFixed(1),
+    },
+  ];
+
+  const dailyCostColumns: DataTableColumn<CostSummaryDailyItem>[] = [
+    {
+      key: "date",
+      header: t("analysisRules.dashboard.costDailyDate"),
+      width: "120px",
+    },
+    {
+      key: "total_calls",
+      header: t("analysisRules.dashboard.costDailyCalls"),
+      width: "100px",
+      renderCell: (row) => row.total_calls.toLocaleString(),
+    },
+    {
+      key: "cost_usd",
+      header: t("analysisRules.dashboard.costDailyCost"),
+      width: "110px",
+      renderCell: (row) => `$${row.cost_usd.toFixed(4)}`,
+    },
+  ];
+
+  if (costLoading) {
+    return (
+      <section className="analysis-dashboard-cost-section">
+        <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
+        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>
+      </section>
+    );
+  }
+
+  if (!costData) {
+    return (
+      <section className="analysis-dashboard-cost-section">
+        <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
+        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.costNoData")}</p>
+      </section>
+    );
+  }
+
+  const avgCostPerCall =
+    costData.total.calls > 0 ? costData.total.cost_usd / costData.total.calls : 0;
+
+  const budgetUsageRate =
+    costData.budget.monthly_budget_usd > 0
+      ? costData.budget.current_month_usd / costData.budget.monthly_budget_usd
+      : 0;
+
+  const budgetLevel: SignalLevel =
+    budgetUsageRate >= 0.9 ? "danger" : budgetUsageRate >= 0.7 ? "warning" : "success";
+
+  const sortedBySupplier = [...costData.by_supplier].sort((a, b) => b.cost_usd - a.cost_usd);
+
+  return (
+    <section className="analysis-dashboard-cost-section">
+      <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
+
+      {/* KPIカード */}
+      <div className="analysis-dashboard-metrics">
+        <Card variant="metric" density="compact">
+          <div className="analysis-dashboard-metric-label">
+            {t("analysisRules.dashboard.costTotalUsd")}
+          </div>
+          <div className="analysis-dashboard-metric-value">
+            ${costData.total.cost_usd.toFixed(4)}
+          </div>
+        </Card>
+
+        <Card variant="metric" density="compact">
+          <div className="analysis-dashboard-metric-label">
+            {t("analysisRules.dashboard.costTotalCalls")}
+          </div>
+          <div className="analysis-dashboard-metric-value">
+            {costData.total.calls.toLocaleString()}
+          </div>
+        </Card>
+
+        <Card variant="metric" density="compact" className={getSignalClass(budgetLevel)}>
+          <div className="analysis-dashboard-metric-label">
+            {t("analysisRules.dashboard.costBudgetUsage")}
+          </div>
+          <div className="analysis-dashboard-metric-value">
+            {(budgetUsageRate * 100).toFixed(1)}%
+            <span className="analysis-dashboard-metric-unit">
+              {t("analysisRules.dashboard.costBudgetOf", {
+                budget: costData.budget.monthly_budget_usd.toFixed(2),
+              })}
+            </span>
+          </div>
+        </Card>
+
+        <Card variant="metric" density="compact">
+          <div className="analysis-dashboard-metric-label">
+            {t("analysisRules.dashboard.costAvgPerCall")}
+          </div>
+          <div className="analysis-dashboard-metric-value">
+            ${avgCostPerCall.toFixed(5)}
+          </div>
+        </Card>
+      </div>
+
+      {/* 仕入元別コストテーブル */}
+      {sortedBySupplier.length > 0 && (
+        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.costSupplierName")}
+          </div>
+          <DataTable<CostSummaryBySupplierItem>
+            columns={supplierCostColumns}
+            data={sortedBySupplier}
+            rowKey={(row) => row.supplier_name}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.costNoData")}
+          />
+        </Card>
+      )}
+
+      {/* 日別コスト推移チャート */}
+      {costData.daily.length > 0 && (
+        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.costDailyCost")}
+          </div>
+          <div className="analysis-dashboard-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <LineChart data={costData.daily}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip formatter={(value) => `$${Number(value).toFixed(4)}`} />
+                <Legend />
+                <Line
+                  type="monotone"
+                  dataKey="cost_usd"
+                  name={t("analysisRules.dashboard.costDailyCost")}
+                  stroke="var(--color-warning)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <Line
+                  type="monotone"
+                  dataKey="total_calls"
+                  name={t("analysisRules.dashboard.costDailyCalls")}
+                  stroke="var(--color-success)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <DataTable<CostSummaryDailyItem>
+            columns={dailyCostColumns}
+            data={costData.daily}
+            rowKey={(row) => row.date}
+            density="compact"
+            emptyState={t("analysisRules.dashboard.costNoData")}
+          />
+        </Card>
+      )}
+    </section>
   );
 }
 

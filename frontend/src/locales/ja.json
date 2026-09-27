@@ -4243,7 +4243,24 @@
       "periodLabel": "表示期間",
       "distribution": {
         "nullPostedAtWarning": "投稿日時なし {{count}}件（異常）"
-      }
+      },
+      "costSectionTitle": "API コスト",
+      "costTotalUsd": "期間内コスト",
+      "costTotalCalls": "API呼び出し回数",
+      "costBudgetUsage": "月次予算消化",
+      "costAvgPerCall": "平均コスト/回",
+      "costSupplierName": "仕入元",
+      "costSupplierCalls": "呼び出し回数",
+      "costInputTokens": "入力トークン",
+      "costOutputTokens": "出力トークン",
+      "costUsd": "コスト (USD)",
+      "costAvgItems": "平均アイテム",
+      "costDailyDate": "日付",
+      "costDailyCalls": "呼び出し",
+      "costDailyCost": "コスト",
+      "costNoData": "コストデータがありません",
+      "costBudgetOf": "/ {{budget}} USD",
+      "costTokenUnit": "K"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",

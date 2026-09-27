@@ -395,8 +395,12 @@ def call_gemini_extraction(
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
+    # トークン数取得
+    usage = getattr(response, "usage_metadata", None)
+    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "response_token_count", 0) or 0)
     if recorder is not None:
-        recorder.on_response(result_text)
+        recorder.on_response(result_text, input_tokens=input_tokens, output_tokens=output_tokens)
     logger.info(
         "[gemini_extraction] API response received, response_len=%d", len(result_text)
     )
