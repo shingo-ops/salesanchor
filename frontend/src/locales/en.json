@@ -2457,7 +2457,9 @@
         "normalize": "Normalize",
         "split": "Split lines",
         "alias_normalize": "Alias normalize",
-        "exclude": "Exclude (ignore line)"
+        "exclude": "Exclude (ignore line)",
+        "message_exclude": "Message Exclude (Immediate)",
+        "message_exclude_no_digit": "Message Exclude (No Digit)"
       },
       "langs": {
         "ja": "Japanese",
@@ -3804,6 +3806,7 @@
       "error": "Error",
       "pending": "Pending",
       "running": "Running",
+      "filtered": "Filtered",
       "unknown": "Not recorded"
     },
     "reviewReason": {
