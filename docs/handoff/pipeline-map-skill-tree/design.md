@@ -3,6 +3,12 @@
 ## 目的
 パイプラインマップをRPGスキルツリー形式に変換し、非エンジニアが直感的にデータフローを理解できるようにする。
 
+## 参照
+- recon: docs/handoff/pipeline-map-skill-tree/recon.md
+- ADR-027: docs/adr/ADR-027-ui-internationalization.md
+- ADR-067: docs/adr/ADR-067-design-tokens.md
+- ADR-144: docs/adr/ADR-144-ui-governance.md
+
 ## 対象
 - `PipelineMapPanel.tsx` — 全面書き換え
 - `PipelineMapPanel.css` — 全面書き換え
@@ -44,9 +50,18 @@
 - 対処: 座標はコード内定数で管理、調整容易
 
 ## 維持の仕組み
-- 守り手: ADR-027（i18n）、ADR-067（デザイントークン）、CI lint
+- 守り手: `frontend/scripts/check-design-tokens.js`（ADR-067）、`.github/workflows/frontend-lint.yml`（ADR-027 i18n）、`.github/workflows/ui-governance-gate.yml`（ADR-144）
 - テーブル追加時: TABLE_NODE_DEFSに行追加 + i18nキー追加
 
-## 外部事例
-- RPGスキルツリーUIは非エンジニアへの視覚的説明手法として広く実績あり（Path of Exile, Civilization等）
-- React Flowによるスキルツリー実装は公式examplesにも類似パターンあり
+## 外部・過去事例の参照と我々への応用
+
+### 事例1: RPGスキルツリーUI（Path of Exile / Civilization）
+- 概要: ゲーム業界で広く使われるスキルツリー型のビジュアルは、非専門家がシステムの依存関係・分岐構造を直感的に理解するための確立されたUIパターン
+- 応用: パイプラインの幹（メインデータフロー）と枝（参照データ）の関係を、ゲームのスキルツリーと同じ視覚メタファーで表現
+
+### 事例2: React Flow公式Examples（Interactive skill tree）
+- 概要: @xyflow/react公式ドキュメントにスキルツリー/テクノロジーツリー型のインタラクティブグラフ実装例あり
+- 応用: smoothstepエッジ、カスタムノード、ズーム/パン操作の実装パターンを踏襲
+
+### 該当なし事例
+- 数値エビデンス: 本変更はUI表示形式の変更であり、パフォーマンス改善やコンバージョン率等の数値指標は対象外
