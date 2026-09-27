@@ -4,6 +4,7 @@ A方式（テナント別bot）から B方式（共通bot + guild_id → tenant_
 
 受信フロー:
   on_message(guild) → _resolve_tenant_id(guild_id) → ticket_channel_writer(tenant_id)
+  on_raw_reaction_add/remove → _resolve_tenant_id(guild_id) → reaction_writer(tenant_id)
 
 DM は B方式の対象外（guild_id を持たないため逆引き不能 — ADR-146 F7/PO決定）。
 
@@ -14,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 from typing import Any, Callable
 
 import discord
@@ -24,6 +26,7 @@ from app.discord_gateway import (
     ticket_channel_writer,
 )
 from app.discord_gateway.config import SingleBotConfig
+from app.discord_gateway.reaction_writer import ReactionWriter
 
 logger = logging.getLogger(__name__)
 
@@ -36,30 +39,45 @@ logger = logging.getLogger(__name__)
 class JarvisDiscordClient(discord.Client):
     """ADR-146 B方式: 共通bot1台で全テナントのguildを受信し guild_id でテナントを振り分ける。
 
-    - on_message(guild):  _resolve_tenant_id(guild_id) → ticket_channel_writer
-    - on_message(DM):     スキップ（B方式対象外 — F7/PO決定）
-    - on_resumed:         no-op（在庫補完は案ア休眠中 — ADR-146）
-    - on_interaction:     guild_id → tenant_id 逆引き → ticket_channel_creator
+    - on_message(guild):           _resolve_tenant_id(guild_id) → ticket_channel_writer
+    - on_message(DM):              スキップ（B方式対象外 — F7/PO決定）
+    - on_resumed:                  no-op（在庫補完は案ア休眠中 — ADR-146）
+    - on_interaction:              guild_id → tenant_id 逆引き → ticket_channel_creator
+    - on_raw_reaction_add/remove:  guild_id → tenant_id 逆引き → reaction_writer
     """
 
     def __init__(
         self,
         *,
         db_factory: Callable[[], Any] | None = None,
+        database_url: str | None = None,
     ) -> None:
         """Args:
             db_factory: AsyncSession factory（テスト時に差し込み可能）。
                 None なら `app.database.AsyncSessionLocal` を遅延 import。
+            database_url: asyncpg 用 DB 接続 URL。
+                None なら DATABASE_URL 環境変数を使用。
+                postgresql+asyncpg:// スキームは asyncpg 形式に正規化する。
         """
         intents = discord.Intents.none()
         intents.guilds = True
         intents.guild_messages = True
         intents.message_content = True
         intents.members = True
+        intents.reactions = True
         # DM は B方式対象外のため dm_messages intent は不要
         super().__init__(intents=intents)
         self._db_factory_override = db_factory
         self._resumed_completed: set[str] = set()
+
+        # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
+        raw_url = database_url or os.environ.get(
+            "DATABASE_URL", "postgresql://myapp_user:password@postgres:5432/myapp_db"
+        )
+        self._asyncpg_database_url = raw_url.replace(
+            "postgresql+asyncpg://", "postgresql://", 1
+        )
+        self.reaction_writer: ReactionWriter = ReactionWriter(self._asyncpg_database_url)
 
     # --- helpers ---------------------------------------------------------
 
@@ -97,6 +115,17 @@ class JarvisDiscordClient(discord.Client):
                 exc,
             )
             return None
+
+    # --- lifecycle hooks -------------------------------------------------
+
+    async def setup_hook(self) -> None:
+        """discord.py が接続前に呼ぶライフサイクルフック。asyncpg pool を初期化する。"""
+        await self.reaction_writer.initialize()
+
+    async def close(self) -> None:
+        """クライアント終了時に asyncpg pool をクローズする。"""
+        await self.reaction_writer.close()
+        await super().close()
 
     # --- event handlers --------------------------------------------------
 
@@ -200,6 +229,53 @@ class JarvisDiscordClient(discord.Client):
             member.id,
             channel.id,
         )
+
+    async def on_raw_reaction_add(self, payload: discord.RawReactionActionEvent) -> None:
+        """Process reaction add events from guild channels."""
+        if not payload.guild_id:
+            return  # DM は対象外
+        if self.user and payload.user_id == self.user.id:
+            return  # Bot 自身のリアクションは無視（ループ防止）
+        await self._process_reaction(payload, action="add")
+
+    async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
+        """Process reaction remove events from guild channels."""
+        if not payload.guild_id:
+            return
+        await self._process_reaction(payload, action="remove")
+
+    async def _process_reaction(self, payload: discord.RawReactionActionEvent, action: str) -> None:
+        """guild_id → tenant_id 逆引き → reaction_writer に委譲する。"""
+        guild_id = str(payload.guild_id)
+        tenant_id = await self._resolve_tenant_id(guild_id)
+        if tenant_id is None:
+            logger.debug(
+                "[discord-gateway] reaction: unknown guild_id=%s — 未登録 guild のため無視",
+                guild_id,
+            )
+            return
+
+        try:
+            await self.reaction_writer.process_reaction(
+                tenant_id=tenant_id,
+                channel_id=str(payload.channel_id),
+                message_id=str(payload.message_id),
+                user_id=str(payload.user_id),
+                emoji=payload.emoji,
+                member=payload.member,
+                action=action,
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] reaction routing failed tenant_id=%d msg=%s action=%s: %s",
+                tenant_id,
+                payload.message_id,
+                action,
+                exc,
+                exc_info=True,
+            )
 
     async def on_message(self, message: discord.Message) -> None:  # type: ignore[override]
         """MESSAGE_CREATE: guild メッセージのみ処理する (ADR-146 B方式).

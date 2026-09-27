@@ -169,6 +169,8 @@ export default function InboxPage() {
                 clearAttachment={state.clearAttachment}
                 recipientLanguageSetting={state.recipientLanguageSetting}
                 setRecipientLanguage={state.setRecipientLanguage}
+                sendReaction={state.sendReaction}
+                deleteReaction={state.deleteReaction}
               />
             </div>
           </div>

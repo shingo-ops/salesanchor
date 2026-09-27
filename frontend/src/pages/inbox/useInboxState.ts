@@ -126,6 +126,10 @@ export interface UseInboxStateReturn {
   setAttachedFile: (f: File | null) => void;
   clearAttachment: () => void;
 
+  // Discord リアクション
+  sendReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  deleteReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+
   // 管理ドロップダウン
   manageOpen: boolean;
   setManageOpen: (fn: boolean | ((prev: boolean) => boolean)) => void;
@@ -379,6 +383,29 @@ export function useInboxState(): UseInboxStateReturn {
       // 既読化失敗は致命的ではないので無視
     }
   }, []);
+
+  // ---------------------------------------------------------------------------
+  // Discord リアクション送信 / 取り消し
+  // ---------------------------------------------------------------------------
+
+  const sendReaction = useCallback(async (messageId: string, emojiName: string, emojiId?: string) => {
+    if (!selectedLeadId) return;
+    await api.post<void>(
+      `/leads/${selectedLeadId}/messages/${encodeURIComponent(messageId)}/reactions`,
+      { emoji_name: emojiName, emoji_id: emojiId ?? null },
+    );
+    // 楽観的更新は行わず、メッセージを再取得して同期する
+    await loadMessages(selectedLeadId);
+  }, [selectedLeadId, loadMessages]);
+
+  const deleteReaction = useCallback(async (messageId: string, emojiName: string, emojiId?: string) => {
+    if (!selectedLeadId) return;
+    const emojiParam = emojiId ? `${emojiName}:${emojiId}` : emojiName;
+    await api.delete(
+      `/leads/${selectedLeadId}/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(emojiParam)}`,
+    );
+    await loadMessages(selectedLeadId);
+  }, [selectedLeadId, loadMessages]);
 
   // ---------------------------------------------------------------------------
   // カルテ編集ハンドラー（常時編集 + blur保存 + Notionキャッシュ）
@@ -901,6 +928,10 @@ export function useInboxState(): UseInboxStateReturn {
     attachedFile,
     setAttachedFile,
     clearAttachment,
+
+    // Discord リアクション
+    sendReaction,
+    deleteReaction,
 
     // 管理ドロップダウン
     manageOpen,

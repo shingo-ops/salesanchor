@@ -1745,3 +1745,105 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   color: var(--text);
 }
 
+/* ======= Discord リアクション ======= */
+
+/* リアクション表示バー */
+.msg-reaction-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+  margin-top: var(--space-1);
+}
+
+/* 空（リアクションなし）バーはホバー時のみ表示 */
+.msg-reaction-bar--empty {
+  opacity: 0;
+  transition: opacity var(--transition-micro);
+}
+.msg-bubble:hover .msg-reaction-bar--empty {
+  opacity: 1;
+}
+
+/* リアクションピル */
+.msg-reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-pill);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  transition: background var(--transition-micro), border-color var(--transition-micro);
+  font-family: inherit;
+  line-height: 1;
+}
+.msg-reaction-pill:hover {
+  background: var(--color-hover-overlay);
+  border-color: var(--accent);
+  color: var(--text-primary);
+}
+/* 自分が押したピル */
+.msg-reaction-pill[data-mine="true"] {
+  background: var(--link-active-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.msg-reaction-pill[data-mine="true"]:hover {
+  opacity: var(--opacity-dim);
+}
+
+/* カウント数字 */
+.msg-reaction-count {
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi);
+}
+
+/* リアクション追加ボタン */
+.msg-reaction-add-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-1);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-micro), border-color var(--transition-micro), color var(--transition-micro);
+  font-family: inherit;
+  line-height: 1;
+  width: var(--size-6);
+  height: var(--size-6);
+}
+.msg-reaction-add-btn:hover {
+  background: var(--color-hover-overlay);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* リアクションピッカー Popover（金型 Popover が届くまでの仮配置） */
+.msg-reaction-picker-popover {
+  position: absolute;
+  z-index: var(--z-popover, 9000);
+  bottom: calc(100% + var(--space-2));
+  left: 0;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+:root.force-dark .msg-reaction-pill {
+  background: var(--bg-subtle);
+  border-color: var(--border);
+}
+:root.force-dark .msg-reaction-pill[data-mine="true"] {
+  background: var(--link-active-bg);
+  border-color: var(--accent);
+}
+

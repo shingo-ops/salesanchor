@@ -1324,6 +1324,13 @@
       "soundEnabled": "通知音",
       "tooltip": "設定"
     },
+    "addReaction": "リアクションを追加",
+    "removeReaction": "リアクションを取り消す",
+    "reactedBy": "リアクションした人",
+    "emojiPicker": "絵文字を選択",
+    "customEmojis": "サーバー絵文字",
+    "reactionSendFailed": "リアクションの送信に失敗しました",
+    "reactionDeleteFailed": "リアクションの取り消しに失敗しました",
     "sendError": {
       "windowClosed": "送信できる時間枠を過ぎています（相手からの受信が必要です）",
       "permissionDenied": "24時間を過ぎたため送信できません。Instagram/Messengerから直接返信してください",
