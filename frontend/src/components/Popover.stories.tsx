@@ -69,7 +69,7 @@ export const Controlled: Story = {
             style={{
               display: "inline-block",
               padding: "8px 16px",
-              background: "#e2e8f0",
+              background: "var(--bg-hover)",
               borderRadius: "4px",
               cursor: "pointer",
             }}

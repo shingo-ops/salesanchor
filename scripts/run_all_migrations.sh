@@ -836,3 +836,6 @@ run_sql migrations/20260927_120000_add_max_age_hours_setting.sql
 
 # extraction_attempts に Gemini APIトークン数・コストカラムを追加（透明化）
 run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql
+
+# ADR-009 M7: Discord リアクション保存テーブル新設（RLS有効・冪等）
+run_sql migrations/20260927_100000_create_meta_message_reactions.sql
