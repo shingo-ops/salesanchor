@@ -970,11 +970,17 @@ def test_raw_heading_and_box_guard_through_analysis(pg, monkeypatch, heading, st
             assert basis.startswith("WORK_HEADER:L1|")
 
 
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
+
+
 @pytest.fixture(autouse=True)
 def prohibit_live_gemini(monkeypatch):
     def forbidden():
         pytest.fail("Gemini live calls are forbidden in tests")
     monkeypatch.setattr(gemini, "_get_genai_client", forbidden)
+    # DB プロンプト読み取りをスタブ化（テスト用DBにextraction_prompt_configが存在しない）
+    monkeypatch.setattr(gemini, "_load_db_prompts", lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT))
 
 
 @pytest.mark.parametrize("saved_version", ["raw-extraction-v4-work-id-p1", "raw-extraction-v4-work-id-p2"])
