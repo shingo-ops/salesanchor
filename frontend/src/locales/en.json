@@ -4005,6 +4005,7 @@
       "extractionRules": "Supplier Rules",
       "promptConfig": "Extraction Prompt Config",
       "errorLog": "Error Log",
+      "groupSystem": "System",
       "dbViewer": "Data Structure"
     },
     "dbViewer": {
