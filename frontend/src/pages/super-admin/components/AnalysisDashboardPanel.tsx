@@ -252,6 +252,7 @@ interface DistributionSummary {
   total_last_distributed: number;
   targets: DistributionTarget[];
   settings: DistributionSetting[];
+  null_posted_at_count: number;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -589,7 +590,7 @@ interface ImportTabContentProps {
   loading: boolean;
   error: string | null;
   trendDays: number;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
   onUploadSuccess: () => void;
@@ -1006,7 +1007,7 @@ interface ExtractionTabContentProps {
   supplierData: SupplierPipelineResponse | null;
   supplierLoading: boolean;
   trendDays: number;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
@@ -1606,7 +1607,7 @@ interface AnalysisTabContentProps {
   qualitySummaries: SupplierQualitySummary[] | null;
   qualityLoading: boolean;
   trendDays: number;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
   onNavigate: (key: AnalysisRulesSidebarKey) => void;
   ArrowRightIcon: Icon;
 }
@@ -2082,7 +2083,7 @@ interface DistributionTabContentProps {
   data: DistributionSummary | null;
   loading: boolean;
   error: string | null;
-  t: (key: string) => string;
+  t: (key: string, options?: Record<string, unknown>) => string;
 }
 
 function DistributionTabContent({ data, loading, error, t }: DistributionTabContentProps) {
@@ -2207,6 +2208,13 @@ function DistributionTabContent({ data, loading, error, t }: DistributionTabCont
         <div className="analysis-dashboard-problem-banner">
           <Badge variant="danger">
             {`${distributionProblemCount}${t("analysisRules.dashboard.distributionProblemsCount")}`}
+          </Badge>
+        </div>
+      )}
+      {data.null_posted_at_count > 0 && (
+        <div className="analysis-dashboard-problem-banner">
+          <Badge variant="danger" dot>
+            {t("analysisRules.dashboard.distribution.nullPostedAtWarning", { count: data.null_posted_at_count })}
           </Badge>
         </div>
       )}

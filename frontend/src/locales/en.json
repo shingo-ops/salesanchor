@@ -4191,7 +4191,10 @@
       "period90d": "90 Days",
       "period180d": "180 Days",
       "period360d": "360 Days",
-      "periodLabel": "Period"
+      "periodLabel": "Period",
+      "distribution": {
+        "nullPostedAtWarning": "No posted_at {{count}} items (anomaly)"
+      }
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
@@ -4766,5 +4769,15 @@
     "pidUnresolved": "Product unresolved",
     "multiCandidate": "Multiple candidates",
     "noteUnmatched": "Note unmatched"
+  },
+  "distributionSettings": {
+    "buttonLabel": "Distribution Settings",
+    "drawerTitle": "Distribution Settings",
+    "maxAgeHours": {
+      "label": "Max Age (hours)",
+      "description": "Products from LINE posts older than this threshold are excluded from distribution. Set to 0 for no limit."
+    },
+    "save": "Save",
+    "saved": "Saved"
   }
 }
