@@ -4006,6 +4006,7 @@
       "promptConfig": "Extraction Prompt Config",
       "errorLog": "Error Log",
       "groupSystem": "System",
+      "pipelineMap": "Pipeline Map",
       "dbViewer": "Data Structure"
     },
     "dbViewer": {
@@ -4041,6 +4042,18 @@
       "no": "-",
       "noComment": "(No description)",
       "fkTo": "→ {table}"
+    },
+    "pipelineMap": {
+      "title": "LINE Analysis Pipeline Map",
+      "tableDetail": "Table Detail",
+      "mainFlow": "Main Flow",
+      "supplierGroup": "Suppliers",
+      "productGroup": "Products",
+      "inventoryGroup": "Inventory",
+      "distributionGroup": "Distribution",
+      "analysisGroup": "Analysis Rules",
+      "discordGroup": "Discord Input",
+      "importGroup": "LINE Import"
     },
     "errorLog": {
       "title": "Extraction Error Log",

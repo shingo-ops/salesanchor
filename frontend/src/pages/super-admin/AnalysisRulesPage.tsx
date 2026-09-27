@@ -45,6 +45,7 @@ import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/Diagnostic
 import type { SupplierQualitySummary } from "../../features/tcg-analysis-review/supplierQuality";
 import { DistributionSettingsDrawer } from "./components/DistributionSettingsDrawer";
 import { DbViewerPanel } from "./components/DbViewerPanel";
+import { PipelineMapPanel } from "./components/PipelineMapPanel";
 
 // ---------------------------------------------------------------------------
 // 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
@@ -198,6 +199,7 @@ export default function AnalysisRulesPage() {
               {activeSection === "rule-management" && <RuleManagementPanel />}
               {activeSection === "extraction-rules" && <SupplierExtractionRulesPage embedded />}
               {activeSection === "prompt-config" && <ExtractionPromptConfigTab />}
+              {activeSection === "pipeline-map" && <PipelineMapPanel />}
               {activeSection === "db-viewer" && <DbViewerPanel />}
             </div>
           )}

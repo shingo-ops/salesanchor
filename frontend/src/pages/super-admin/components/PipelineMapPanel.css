@@ -1,0 +1,78 @@
+/**
+ * PipelineMapPanel — LINE解析パイプラインマップのスタイル
+ *
+ * CSS変数のみ使用（ハードコードの色・サイズ禁止）。
+ * ADR-027: i18n準拠。ADR-144: 金型クラスのみ使用。
+ */
+
+/* React Flow デフォルトスタイル */
+@import "@xyflow/react/dist/style.css";
+
+/* ─── パネル全体 ─── */
+.pipeline-map-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: var(--size-pipeline-map-min-h);
+  background: var(--bg-canvas);
+}
+
+/* ─── React Flow キャンバス領域 ─── */
+.pipeline-map-panel__canvas {
+  flex: 1;
+  width: 100%;
+  min-height: var(--size-pipeline-map-min-h);
+}
+
+/* ─── カスタムノード: TableNode ─── */
+.pipeline-table-node {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  min-width: var(--size-substep-nav);
+  max-width: var(--size-pipeline-node-max-w);
+  font-family: inherit;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.pipeline-table-node:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--accent);
+}
+
+/* ─── ノードヘッダー ─── */
+.pipeline-table-node__header {
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  padding: var(--space-1) var(--space-2);
+  border-radius: calc(var(--radius-lg) - 1px) calc(var(--radius-lg) - 1px) 0 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── ノードボディ（カラム一覧）─── */
+.pipeline-table-node__body {
+  padding: var(--space-1) var(--space-2);
+}
+
+.pipeline-table-node__col {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  padding: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ─── React Flow ハンドル ─── */
+.pipeline-handle {
+  background: var(--accent);
+  border: 2px solid var(--bg-surface);
+  width: var(--space-2);
+  height: var(--space-2);
+}

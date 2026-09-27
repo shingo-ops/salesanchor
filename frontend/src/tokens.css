@@ -239,6 +239,8 @@
   --size-substep-nav:        160px;  /* セットアップガイド サブ手順左ナビ幅（2ペイン） */
   --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
+  --size-pipeline-map-min-h: 600px;  /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
+  --size-pipeline-node-max-w: 220px; /* パイプラインマップ TableNode 最大幅（PipelineMapPanel） */
 
   /* ---- Opacity ---- */
   --opacity-full:      1;     /* 不透明（三項演算子の else 側で使用）*/
