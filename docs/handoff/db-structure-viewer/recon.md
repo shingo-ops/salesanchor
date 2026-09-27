@@ -7,11 +7,11 @@
 ## 既存パターン調査
 
 ### 参照したコンポーネント
-- `frontend/src/pages/super-admin/components/SupplierMasterPanel.tsx` — サイドツリー+テーブル構成の参照実装
-- `frontend/src/components/DataTable.tsx` — スプレッドシート形式テーブル（既存金型）
-- `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:1` — サイドメニュー追加先
-- `frontend/src/pages/super-admin/AnalysisRulesPage.tsx:1` — パネル配線先
-- `backend/app/routers/super_admin_tcg.py:1` — super_adminルーターの参照実装
+- frontend/src/pages/super-admin/components/SupplierMasterPanel.tsx — サイドツリー+テーブル構成の参照実装
+- frontend/src/components/DataTable.tsx — スプレッドシート形式テーブル（既存金型）
+- frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx — サイドメニュー追加先
+- frontend/src/pages/super-admin/AnalysisRulesPage.tsx — パネル配線先
+- backend/app/routers/super_admin_tcg.py — super_adminルーターの参照実装
 
 ### APIエンドポイント設計根拠
 - `information_schema.tables` / `information_schema.columns` / `information_schema.table_constraints` / `information_schema.key_column_usage` — PostgreSQL標準スキーマ（SSOT、migration不要）

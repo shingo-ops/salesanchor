@@ -32,10 +32,11 @@
 - [ ] CI全緑（lint/test/type-check）
 
 ## 外部・過去事例の参照と我々への応用
-- PostgreSQL公式: `information_schema`はSQL標準準拠のスキーマメタ情報ビュー。`pg_catalog`より移植性が高く、カラム・FK・制約を動的取得に最適。
-- 既存実装参照: `super_admin_tcg.py`のルーター構造・`SupplierMasterPanel.tsx`のサイドツリー+テーブルパターンを踏襲し、コードベース内で一貫性を保つ。
+- PostgreSQL公式: information_schemaはSQL標準準拠のスキーマメタ情報ビュー。pg_catalogより移植性が高く、カラム・FK・制約を動的取得に最適。
+- 既存実装参照: super_admin_tcg.pyのルーター構造・SupplierMasterPanel.tsxのサイドツリー+テーブルパターンを踏襲し、コードベース内で一貫性を保つ。
 
 ## 維持の仕組み
+守り手: super-admin担当開発者（Hikky-dev）
 - テーブル追加・カラム変更はDBに反映された瞬間にビューアにも自動反映（migration不要・SSOT）
-- FK設計変更は`information_schema.key_column_usage`が追跡するため手動更新不要
-- i18nキー追加時は`ja.json`/`en.json`両方に同一キーが必須（CIでチェック）
+- FK設計変更はinformation_schema.key_column_usageが追跡するため手動更新不要
+- i18nキー追加時はja.json/en.json両方に同一キーが必須（CIでチェック）
