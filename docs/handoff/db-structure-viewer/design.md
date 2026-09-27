@@ -1,6 +1,6 @@
 # design: DB構造ビューア追加
 
-参照: [recon.md](./recon.md)
+参照: [recon.md](./recon.md) (`docs/handoff/db-structure-viewer/recon.md`)
 
 ## KGI
 管理者が画面上でDB全テーブル構造・FK関係を把握できる（ツール切り替え不要）
