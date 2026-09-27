@@ -28,8 +28,14 @@ LINE解析パイプラインのテーブル関連を視覚的なマップで表�
 - テナントスキーマのテーブル表示（CRMテーブル等はこのマップの対象外）
 - テーブル構造の編集機能
 
-## 外部事例
-React Flow は GitHub Stars 27k+、npm 週間DL 400k+ の実績あるグラフ描画ライブラリ。
+## 外部・過去事例の参照と我々への応用
+- React Flow（@xyflow/react）: GitHub Stars 27k+、npm 週間DL 400k+ の実績あるグラフ描画ライブラリ。DAGや有向グラフのインタラクティブ表示において業界標準的な選択。カスタムノード・エッジ・ミニマップ・ズーム制御など本用途に必要な機能がすべて揃っている。
+- 本プロジェクトの既存実装: DbViewerPanel.tsx（スプレッドシート形式）は行列表示に特化しており関係性の可視化が困難。マップ形式を別パネルとして追加することでUIを壊さずに機能拡張できる。
+
+## 維持の仕組み
+- tokens.css の `--size-pipeline-map-min-h` / `--size-pipeline-node-max-w` をCSS変数化済み → デザインシステム変更時に一元更新可能
+- FK関係はバックエンドAPI（super_admin_db_schema.py）から取得 → DBスキーマ変更が自動反映される（ハードコードなし）
+- i18n: ja.json/en.json 両キー同一必須（ADR-027）→ CI チェックで強制
 
 ## 守り手
 - frontend/src/pages/super-admin/components/PipelineMapPanel.tsx — UI側
