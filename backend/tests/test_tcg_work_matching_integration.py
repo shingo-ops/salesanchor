@@ -296,6 +296,11 @@ def migrate(cursor):
     # The migration targets public.extraction_items; test tenant schema needs it too.
     cursor.execute((MIGRATIONS / "20260926_010000_add_raw_product_code.sql").read_text())
     cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_items ADD COLUMN IF NOT EXISTS raw_product_code text")
+    # Extraction cost transparency: input_tokens/output_tokens/cost_usd on extraction_attempts.
+    # The migration targets public.extraction_attempts; test tenant schema needs it too.
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS input_tokens integer")
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS output_tokens integer")
+    cursor.execute(f"ALTER TABLE IF EXISTS {SCHEMA}.extraction_attempts ADD COLUMN IF NOT EXISTS cost_usd numeric(10,6)")
 
 
 @pytest.fixture
