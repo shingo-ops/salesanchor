@@ -66,6 +66,16 @@
 
 ---
 
+## 触るファイル:
+
+- `backend/app/routers/tcg_analysis_dashboard.py`
+- `backend/app/services/tcg_distribution_svc.py`
+- `frontend/src/locales/en.json`
+- `frontend/src/locales/ja.json`
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx`
+
+---
+
 ## 維持の仕組み
 
 守り手: 人手で守る  
