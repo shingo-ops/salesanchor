@@ -1,5 +1,10 @@
 # design: extraction-error-detail
 
+## 参照
+
+- recon: docs/handoff/extraction-error-detail/recon.md
+- 対象ADR: ADR-152
+
 ## 目的
 
 抽出エラー発生時にエラーの種類（カテゴリ）と詳細（raw message）を `extraction_attempts.validation_result` に記録し、ダッシュボードで診断できるようにする。
