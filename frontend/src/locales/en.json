@@ -4014,7 +4014,25 @@
       "promptVersion": "Prompt Version",
       "noErrors": "No errors found",
       "fetchError": "Failed to fetch error log",
-      "loadMore": "Load more"
+      "loadMore": "Load more",
+      "retrySelected": "Retry selected jobs",
+      "retryConfirm": "Retry {{count}} job(s)?",
+      "retrySuccess": "{{count}} job(s) queued for retry",
+      "retryError": "Failed to retry",
+      "errorCategory": "Error type",
+      "errorDetail": "Error detail",
+      "category": {
+        "gemini_rate_limit": "Gemini rate limit",
+        "gemini_http_error": "Gemini HTTP error",
+        "gemini_timeout": "Gemini timeout",
+        "gemini_unknown": "Gemini unknown",
+        "system_timeout": "System timeout",
+        "system_db_error": "System DB error",
+        "system_input_error": "System input error",
+        "logic_parse_error": "Response parse error",
+        "logic_conflict": "Consistency error",
+        "unknown": "Unknown"
+      }
     },
     "accuracyManagement": {
       "title": "Accuracy Management",
