@@ -91,6 +91,7 @@ from app.routers import (
     super_admin_aliases,
     super_admin_condition_defs,  # コンディション定義マスタ中央 admin
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
+    super_admin_db_schema,  # DB構造ビューア API
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
@@ -713,6 +714,11 @@ app.include_router(
 # ADR-157: 買取価格変動アラートルール CRUD（super_admin 専用）
 app.include_router(
     buyback_alerts.router, prefix="/api/v1", tags=["buyback-alerts"],
+)
+
+# DB構造ビューア API（require_super_admin 限定）
+app.include_router(
+    super_admin_db_schema.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 @app.exception_handler(OperationalError)
