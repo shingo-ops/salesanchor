@@ -1,13 +1,11 @@
 /**
- * EmojiPickerWrapper — emoji-picker-react を遅延ロードするラッパー
+ * EmojiPickerWrapper — プリセット絵文字グリッド
  *
- * React.lazy で遅延ロードすることでバンドルサイズを抑制する。
- * 金型 Popover が完成するまでは EmojiPickerWrapper 単体で動作する。
+ * CDN 依存の emoji-picker-react を廃止し、Unicode 絵文字を直接ボタンとして並べる。
+ * 画像・CDN 不要のため本番環境での読み込み失敗が発生しない。
  */
 
-import { Suspense, lazy } from "react";
 import { useTranslation } from "react-i18next";
-import type { EmojiClickData } from "emoji-picker-react";
 
 // ---------------------------------------------------------------------------
 // 型定義
@@ -33,10 +31,14 @@ export interface EmojiPickerWrapperProps {
 }
 
 // ---------------------------------------------------------------------------
-// 遅延ロード
+// プリセット絵文字リスト（Unicode 直書き・CDN 不要）
 // ---------------------------------------------------------------------------
 
-const EmojiPicker = lazy(() => import("emoji-picker-react"));
+const PRESET_EMOJIS = [
+  "❤️", "👍", "👎", "😊", "😂", "🎉",
+  "✅", "🙏", "👀", "🔥", "💯", "⭐",
+  "😍", "🤔", "👏", "💪",
+];
 
 // ---------------------------------------------------------------------------
 // コンポーネント
@@ -45,51 +47,46 @@ const EmojiPicker = lazy(() => import("emoji-picker-react"));
 export function EmojiPickerWrapper({ onSelect, customEmojis }: EmojiPickerWrapperProps) {
   const { t } = useTranslation();
 
-  const handleEmojiClick = (emojiData: EmojiClickData) => {
-    onSelect({
-      name: emojiData.emoji,
-      unified: emojiData.unified,
-    });
-  };
-
   return (
-    <Suspense
-      fallback={
-        <div
-          className="emoji-picker-loading"
-          role="status"
-          aria-label={t("common.loading")}
-          style={{
-            /* ui-allow: emoji-picker-react の標準表示サイズに合わせた固定幅・高さ。デザイントークンに相当値なし (#discord-reaction) */
-            width: "var(--emoji-picker-width, 320px)",
-            height: "var(--emoji-picker-height, 400px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "var(--text-secondary)",
-            fontSize: "var(--font-sm)",
-            background: "var(--bg-surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-          }}
-        >
-          {t("common.loading")}
-        </div>
-      }
+    <div
+      className="emoji-preset-grid"
+      role="group"
+      aria-label={t("inbox.emojiPicker")}
     >
-      <EmojiPicker
-        onEmojiClick={handleEmojiClick}
-        customEmojis={(customEmojis as unknown as never[]) ?? []}
-        searchPlaceholder={t("inbox.emojiPicker")}
-        categories={
-          customEmojis && customEmojis.length > 0
-            ? [
-                { category: "custom" as never, name: t("inbox.customEmojis") },
-                { category: "smileys_people" as never, name: t("inbox.emojiPicker") },
-              ]
-            : undefined
-        }
-      />
-    </Suspense>
+      {PRESET_EMOJIS.map((emoji) => (
+        <button
+          key={emoji}
+          type="button"
+          className="emoji-preset-btn"
+          aria-label={emoji}
+          onClick={() => onSelect({ name: emoji })}
+        >
+          {emoji}
+        </button>
+      ))}
+      {customEmojis && customEmojis.length > 0 && (
+        <>
+          <div className="emoji-preset-divider" role="separator" />
+          {customEmojis.map((ce) => (
+            <button
+              key={ce.id}
+              type="button"
+              className="emoji-preset-btn"
+              aria-label={ce.names[0] ?? ce.id}
+              title={ce.names[0] ?? ce.id}
+              onClick={() => onSelect({ name: ce.names[0] ?? ce.id, id: ce.id })}
+            >
+              <img
+                src={ce.imgUrl}
+                alt={ce.names[0] ?? ce.id}
+                width={20}
+                height={20}
+                style={{ verticalAlign: "middle" }}
+              />
+            </button>
+          ))}
+        </>
+      )}
+    </div>
   );
 }
