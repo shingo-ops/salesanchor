@@ -45,6 +45,7 @@ from app.routers import (
     discord_channel_invite,  # ADR-091 KPI5: チャンネル招待メッセージ送信 API
     discord_guild_config,  # Sprint D2: Discord Guild 設定 admin API
     discord_oauth,  # ADR-091 拡張: Discord Bot OAuth Invite フロー
+    discord_reactions,  # discord-reaction: リアクション送受信 API
     discord_remove,  # ADR-091 KPI6: チャンネル削除・Kick・BAN API
     discord_role_resync,  # ADR-091 KPI7: ロール手動再同期 API
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
@@ -245,6 +246,11 @@ app.include_router(
 # ADR-091 KPI4: Discord アナウンス投稿 API
 app.include_router(
     discord_announcement.router, prefix="/api/v1", tags=["discord"],
+    dependencies=[Depends(get_current_tenant)],
+)
+# discord-reaction: リアクション送受信 API
+app.include_router(
+    discord_reactions.router, prefix="/api/v1", tags=["discord"],
     dependencies=[Depends(get_current_tenant)],
 )
 # ADR-091 KPI5: Discord チャンネル招待メッセージ送信 API

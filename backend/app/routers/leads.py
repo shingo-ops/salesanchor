@@ -1005,9 +1005,59 @@ async def list_lead_messages(
             "created_at": _meta_msg_format_dt(r["created_at"]),
             "attachment_url": r["attachment_url"] if _has_attachment_cols else None,
             "attachment_type": r["attachment_type"] if _has_attachment_cols else None,
+            "reactions": [],  # 後続クエリで上書き
         }
         for r in msg_rows
     ]
+
+    # リアクション取得（meta_message_reactions テーブルが存在する環境のみ）
+    if messages:
+        msg_id_list = [m["id"] for m in messages]
+        reactions_schema = f"tenant_{tenant_id:03d}"
+        try:
+            reaction_result = await db.execute(
+                text(f"""
+                    SELECT meta_message_id, emoji_name, emoji_id, emoji_animated,
+                           reactor_discord_user_id, reactor_display_name, is_bot_reaction
+                    FROM {reactions_schema}.meta_message_reactions
+                    WHERE meta_message_id = ANY(:ids)
+                      AND tenant_id = :tenant_id
+                """),
+                {"ids": msg_id_list, "tenant_id": tenant_id},
+            )
+            reaction_rows = reaction_result.mappings().all()
+
+            # グループ化: meta_message_id → { "emoji_key": { count, reactors, is_bot } }
+            from collections import defaultdict
+            reaction_map: dict[int, dict[str, dict]] = defaultdict(dict)
+            for rr in reaction_rows:
+                mid = rr["meta_message_id"]
+                key = f"{rr['emoji_name']}:{rr['emoji_id'] or ''}"
+                if key not in reaction_map[mid]:
+                    reaction_map[mid][key] = {
+                        "emoji_name": rr["emoji_name"],
+                        "emoji_id": rr["emoji_id"],
+                        "emoji_animated": rr["emoji_animated"],
+                        "count": 0,
+                        "reactors": [],
+                        "is_bot_reaction": False,
+                    }
+                reaction_map[mid][key]["count"] += 1
+                if rr["reactor_display_name"]:
+                    reaction_map[mid][key]["reactors"].append(rr["reactor_display_name"])
+                if rr["is_bot_reaction"]:
+                    reaction_map[mid][key]["is_bot_reaction"] = True
+
+            # messages に reactions をマージ
+            for msg in messages:
+                grouped = list(reaction_map.get(msg["id"], {}).values())
+                msg["reactions"] = grouped
+        except Exception:
+            # meta_message_reactions テーブル未適用環境・テスト環境は graceful fallback
+            logger.debug(
+                "[leads] meta_message_reactions query failed tenant=%s — reactions=[]",
+                tenant_id,
+            )
 
     # platform は messages 末尾の最新値を採用（pagination 対象外）
     latest_platform: Optional[str] = None
