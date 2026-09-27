@@ -63,11 +63,16 @@ import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
 | 4 | `npm run lint` でエラー（error）がゼロ | lintログ確認（warnings は既存・許容） |
 | 5 | ja/en 両方に `knowledgeAliases` キーが存在する | `ja.json` / `en.json` のキー一致確認 |
 
+## 外部・過去事例の参照と我々への応用
+
+既存サイドバーの他メニュー接続パターン（例: `extraction-rules` → `SupplierExtractionRulesPage`、`prompt-config` → `ExtractionPromptConfigTab`）をそのまま踏襲。新規実装なし。同一ファイル内の既存コードが事例。
+
 ## 維持の仕組み
 
 - `AnalysisRulesSidebarKey` 型による静的チェック：存在しないキーを `navItem()` に渡すとTypeScriptコンパイルエラー
 - ADR-027 ESLintルールによりハードコード日本語文字列は自動検出
 - ADR-144: `hub-subnav-item` 金型クラスを使用しており、デザイントークン整合性が維持される
+- 守り手: TypeScript型チェック（CI `tsc`）+ ADR-027 ESLint
 
 ## ADR 参照
 
