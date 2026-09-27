@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from datetime import datetime, timezone
 
 from celery.exceptions import SoftTimeLimitExceeded
@@ -136,6 +137,89 @@ def work_schema_ready(session: Session) -> bool:
     return count == 4
 
 
+def _match_rule(pattern: str, pattern_type: str, text: str) -> bool:
+    """
+    knowledge_rules の pattern_type に従って text にパターンがマッチするか判定する。
+
+    - exact: 完全一致（strip比較）
+    - substring: 部分一致
+    - prefix: 前方一致
+    - regex: 正規表現
+    """
+    if pattern_type == "exact":
+        return text.strip() == pattern.strip()
+    if pattern_type == "substring":
+        return pattern in text
+    if pattern_type == "prefix":
+        return text.startswith(pattern)
+    if pattern_type == "regex":
+        try:
+            return re.search(pattern, text) is not None
+        except re.error:
+            logger.warning("[pre_filter] invalid regex pattern: %r", pattern)
+            return False
+    return False
+
+
+def _apply_pre_extraction_filter(session: Session, raw_text: str) -> str | None:
+    """
+    Gemini 呼び出し前事前フィルタ。
+
+    knowledge_rules テーブルから message_exclude / message_exclude_no_digit カテゴリの
+    アクティブなルールを取得し、2層でフィルタリングする。
+
+    層1 (message_exclude):
+      パターンにマッチ → 無条件で 'filtered'。
+
+    層2 (message_exclude_no_digit):
+      パターンにマッチ かつ raw_text に数字が含まれない → 'filtered'。
+      数字が含まれる場合はフィルタしない（在庫情報の可能性）。
+
+    Returns:
+      フィルタ判定理由文字列（マッチしたカテゴリ+パターン）、または None（フィルタしない）。
+    """
+    try:
+        filter_rows = session.execute(
+            text(
+                """
+                SELECT category, pattern_type, pattern
+                FROM public.knowledge_rules
+                WHERE category IN ('message_exclude', 'message_exclude_no_digit')
+                  AND is_active = TRUE
+                ORDER BY category, pattern
+                """
+            )
+        ).fetchall()
+    except Exception as exc:
+        # knowledge_rules テーブルが存在しない環境（テスト等）ではスキップ
+        logger.debug("[pre_filter] knowledge_rules table not available — skipping filter: %s", exc)
+        session.rollback()
+        return None
+
+    if not filter_rows:
+        return None
+
+    has_digit = re.search(r"\d", raw_text) is not None
+
+    for row in filter_rows:
+        category = row[0]
+        pattern_type = row[1]
+        pattern = row[2]
+
+        if not _match_rule(pattern, pattern_type, raw_text):
+            continue
+
+        if category == "message_exclude":
+            return f"message_exclude:{pattern!r}"
+
+        if category == "message_exclude_no_digit":
+            if not has_digit:
+                return f"message_exclude_no_digit:{pattern!r}"
+            # 数字ありなら在庫情報の可能性があるのでフィルタしない
+
+    return None
+
+
 def _run_extraction(session: Session, source_message_id: str) -> dict:
     """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
 
@@ -234,6 +318,32 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         return {
             "extraction_job_id": extraction_job_id,
             "status": "empty",
+            "items_count": 0,
+            "analysis_stats": None,
+            "error_message": None,
+        }
+
+    # C95: 事前フィルタ — knowledge_rules の message_exclude / message_exclude_no_digit カテゴリで判定
+    # 設計根拠: pre-extraction-filter design
+    filtered_reason = _apply_pre_extraction_filter(session, raw_text)
+    if filtered_reason is not None:
+        session.execute(
+            text(
+                f"UPDATE {TCG_SCHEMA}.extraction_jobs "
+                "SET status = 'filtered', extracted_at = NOW(), error_message = NULL "
+                "WHERE id = :ej_id"
+            ),
+            {"ej_id": extraction_job_id},
+        )
+        session.commit()
+        logger.info(
+            "[tcg_extraction] pre-filter matched: ej=%s reason=%s",
+            extraction_job_id,
+            filtered_reason,
+        )
+        return {
+            "extraction_job_id": extraction_job_id,
+            "status": "filtered",
             "items_count": 0,
             "analysis_stats": None,
             "error_message": None,

@@ -40,6 +40,7 @@ class ExtractionByStatus(BaseModel):
     pending: int
     running: int
     empty: int
+    filtered: int = 0
 
 
 class ExtractionSummary(BaseModel):

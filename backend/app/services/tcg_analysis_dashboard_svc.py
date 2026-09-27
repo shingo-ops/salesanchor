@@ -30,7 +30,10 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
 
     total_extraction = sum(by_status.values())
     error_count = by_status.get("error", 0)
-    error_rate = error_count / total_extraction if total_extraction > 0 else 0.0
+    # filtered は Gemini を呼ばないため error_rate の母数から除外（empty と同じ扱い）
+    filtered_count = by_status.get("filtered", 0)
+    error_rate_denominator = total_extraction - filtered_count
+    error_rate = error_count / error_rate_denominator if error_rate_denominator > 0 else 0.0
 
     # 2. stale running 件数（10分超）
     stale_running_count = int(
@@ -193,6 +196,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
                 "pending": by_status.get("pending", 0),
                 "running": by_status.get("running", 0),
                 "empty": by_status.get("empty", 0),
+                "filtered": by_status.get("filtered", 0),
             },
             "stale_running_count": stale_running_count,
             "error_rate": error_rate,
@@ -409,11 +413,11 @@ SELECT
     -- インポート段階
     COUNT(DISTINCT sm.id) AS active_messages,
     MAX(sm.received_at) AS latest_received_at,
-    -- 抽出段階
+    -- 抽出段階 (filtered は empty と同じく Gemini 未呼び出しのため empty に合算)
     COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'done') AS extraction_done,
-    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'empty') AS extraction_empty,
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status IN ('empty', 'filtered')) AS extraction_empty,
     COUNT(DISTINCT ej.id) FILTER (WHERE ej.status = 'error') AS extraction_error,
-    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status NOT IN ('done','empty','error')) AS extraction_other,
+    COUNT(DISTINCT ej.id) FILTER (WHERE ej.status NOT IN ('done','empty','filtered','error')) AS extraction_other,
     -- 解析段階
     COUNT(ar.id) AS analysis_total,
     COUNT(ar.id) FILTER (WHERE ar.pid_resolved = true) AS pid_resolved,

@@ -242,6 +242,7 @@
   --size-pipeline-map-min-h: 600px;  /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
   --size-pipeline-node-max-w: 220px; /* パイプラインマップ TableNode 最大幅（PipelineMapPanel） */
   --size-pipeline-node-w:    240px;  /* パイプラインマップ新ノード幅（PipelineMapPanel リデザイン） */
+  --size-pipeline-phase-w:   380px;  /* パイプラインマップ フェーズヘッダー幅（PipelineMapPanel） */
 
   /* ---- Pipeline map カテゴリ色（PipelineMapPanel ノードヘッダー背景） ---- */
   --cat-supplier:     #1e40af;  /* 仕入先 — 青系 */

@@ -1,9 +1,10 @@
 /**
- * PipelineMapPanel — LINE解析パイプラインマップのスタイル（リデザイン版）
+ * PipelineMapPanel — フローチャート型パイプラインマップのスタイル
  *
  * CSS変数のみ使用（ハードコードの色・サイズ禁止）。
  * ADR-027: i18n準拠。ADR-144: 金型クラスのみ使用。
  * カテゴリ色は tokens.css の --cat-* 変数を使用。
+ * フェーズヘッダー幅は --size-pipeline-phase-w を使用。
  */
 
 /* React Flow デフォルトスタイル */
@@ -25,7 +26,29 @@
   min-height: var(--size-pipeline-map-min-h);
 }
 
-/* ─── カスタムノード: TableNode ─── */
+/* ─── フェーズヘッダーノード ─── */
+.pipeline-phase {
+  width: var(--size-pipeline-phase-w);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  color: var(--on-accent);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  pointer-events: none; /* クリック不可 */
+}
+
+.pipeline-phase__label {
+  font-size: var(--font-lg);
+  font-weight: var(--font-weight-bold);
+}
+
+.pipeline-phase__desc {
+  font-size: var(--font-sm);
+  opacity: var(--opacity-soft);
+}
+
+/* ─── 業務ノード: TableNode ─── */
 .pipeline-node {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
