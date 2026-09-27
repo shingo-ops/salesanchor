@@ -2457,7 +2457,9 @@
         "normalize": "正規化（表記統一）",
         "split": "行の分割",
         "alias_normalize": "別名の正規化",
-        "exclude": "除外（無視する行）"
+        "exclude": "除外（無視する行）",
+        "message_exclude": "メッセージ除外（即除外）",
+        "message_exclude_no_digit": "メッセージ除外（数字なし条件）"
       },
       "langs": {
         "ja": "日本語",
@@ -3804,6 +3806,7 @@
       "error": "エラー",
       "pending": "待機中",
       "running": "実行中",
+      "filtered": "フィルタ除外",
       "unknown": "未記録"
     },
     "reviewReason": {
