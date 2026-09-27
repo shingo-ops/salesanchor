@@ -10,6 +10,8 @@ from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
 from sqlalchemy import text
 
+from app.services.llm_budget import calculate_cost
+
 logger = logging.getLogger(__name__)
 
 # Step 4/5: TCG テーブルは public スキーマに移行済み。
@@ -59,9 +61,13 @@ class AttemptRecorder:
         self.response_saved = False
         self._oversized_parsed_bytes: int | None = None
         self._error_detail: dict = {}
+        self._input_tokens: int = 0
+        self._output_tokens: int = 0
+        self._requested_model: str = ""
 
     def before_send(self, payload: dict) -> None:
         """The payload is exactly the model/contents/config passed to the SDK."""
+        self._requested_model = payload.get("model", "")
         body = encoded({**payload, "reference": self.reference})
         byte_count = len(body.encode("utf-8"))
         oversized = byte_count > MAX_BYTES
@@ -122,7 +128,9 @@ class AttemptRecorder:
             raise RecordError("ATTEMPT_CONFLICT")
         return owned
 
-    def on_response(self, response: str) -> None:
+    def on_response(self, response: str, *, input_tokens: int = 0, output_tokens: int = 0) -> None:
+        self._input_tokens = input_tokens
+        self._output_tokens = output_tokens
         s = self.session
         size = len(response.encode("utf-8"))
         oversized = size > MAX_BYTES
@@ -165,16 +173,33 @@ class AttemptRecorder:
         """Do not commit here: caller commits items, job and this row together."""
         body = encoded(items)
         size = self._parsed_size(body)
+        cost: float | None = None
+        if self._requested_model and (self._input_tokens > 0 or self._output_tokens > 0):
+            try:
+                cost = float(calculate_cost(self._input_tokens, self._output_tokens, model=self._requested_model))
+            except ValueError:
+                cost = None
         self.session.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts
             SET phase='completed',finished_at=clock_timestamp(),parsed_items=CAST(:items AS JSONB),
-                parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb
+                parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb,
+                input_tokens=:input_tokens,output_tokens=:output_tokens,cost_usd=:cost_usd
             WHERE id=:id AND phase='received' AND response_text IS NOT NULL
             RETURNING id
-        """), {"id": self.id, "items": body, "size": size, "count": len(items)}).scalar_one()
+        """), {"id": self.id, "items": body, "size": size, "count": len(items),
+               "input_tokens": self._input_tokens or None,
+               "output_tokens": self._output_tokens or None,
+               "cost_usd": cost}).scalar_one()
 
     def fail(self, code: str) -> None:
         """One bounded, best-effort failure write. Terminal/foreign attempts stay unchanged."""
         s = self.session
+        # エラー時も入力トークン分のコストは発生する（出力は0扱い）
+        fail_cost: float | None = None
+        if self._requested_model and self._input_tokens > 0:
+            try:
+                fail_cost = float(calculate_cost(self._input_tokens, 0, model=self._requested_model))
+            except ValueError:
+                fail_cost = None
         try:
             s.rollback()
             if self._owned(required=False):
@@ -186,19 +211,27 @@ class AttemptRecorder:
                     s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
                         finished_at=clock_timestamp(),error_code=:code,
                         parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                        validation_result=CAST(:vr AS JSONB)
+                        validation_result=CAST(:vr AS JSONB),
+                        input_tokens=COALESCE(:input_tokens,input_tokens),
+                        cost_usd=COALESCE(:cost_usd,cost_usd)
                         WHERE id=:id
                     """), {"id": self.id, "code": code,
                              "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
-                             "vr": validation_result})
+                             "vr": validation_result,
+                             "input_tokens": self._input_tokens or None,
+                             "cost_usd": fail_cost})
                 else:
                     s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
                         finished_at=clock_timestamp(),error_code=:code,
                         parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
+                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text)),
+                        input_tokens=COALESCE(:input_tokens,input_tokens),
+                        cost_usd=COALESCE(:cost_usd,cost_usd)
                         WHERE id=:id
                     """), {"id": self.id, "code": code,
-                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
+                             "input_tokens": self._input_tokens or None,
+                             "cost_usd": fail_cost})
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})

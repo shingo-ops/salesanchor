@@ -315,7 +315,7 @@ async def parse_with_gemini(
 
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "response_token_count", 0) or 0)
 
     logger.info(
         "[llm_parser] Gemini call OK: items=%s in_tokens=%s out_tokens=%s",
