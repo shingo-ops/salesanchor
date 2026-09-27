@@ -78,3 +78,7 @@ import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
 
 - ADR-027: UI文字列 i18n 強制
 - ADR-144: UIガバナンス
+
+## 相互参照
+
+- recon: docs/handoff/knowledge-menu-connect/recon.md
