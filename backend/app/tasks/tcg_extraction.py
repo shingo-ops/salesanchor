@@ -38,6 +38,27 @@ from app.services.tcg_work_reference import (
 
 logger = logging.getLogger(__name__)
 
+
+# ---------------------------------------------------------------------------
+# エラー分類
+# ---------------------------------------------------------------------------
+
+_SYSTEM_ERROR_CATEGORIES = {
+    "RECORD_WRITE_FAILED": "system_db_error",
+    "INPUT_TOO_LARGE": "system_input_error",
+    "RESPONSE_TOO_LARGE": "system_input_error",
+    "PARSED_TOO_LARGE": "system_input_error",
+    "CLAIM_CONFLICT": "system_db_error",
+    "ATTEMPT_CONFLICT": "system_db_error",
+    "INVALID_RESPONSE": "logic_parse_error",
+    "WORK_ID_CONFLICT": "logic_conflict",
+    "REFERENCE_CHANGED": "logic_conflict",
+}
+
+
+def _classify_system_error(code: str) -> str:
+    return _SYSTEM_ERROR_CATEGORIES.get(code, "system_unknown")
+
 # ---------------------------------------------------------------------------
 # スキーマ定数
 # Step 4/5: TCG テーブルは public スキーマに移行済み。
@@ -223,11 +244,17 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
+        if recorder is not None:
+            recorder.record_error_detail({"category": "system_timeout", "raw": "Celery soft time limit exceeded"})
     except RecordError as exc:
         code = str(exc)
+        if recorder is not None:
+            recorder.record_error_detail({"category": _classify_system_error(code), "raw": code})
     except Exception:
         logger.exception("[tcg_extraction] record write failed for ej=%s", extraction_job_id)
         code = "RECORD_WRITE_FAILED"
+        if recorder is not None:
+            recorder.record_error_detail({"category": "system_db_error", "raw": code})
     recorder.fail(code)
     message = "Work ID contradicts explicit source evidence" if code == "WORK_ID_CONFLICT" else code
     return {"extraction_job_id": extraction_job_id, "status": "error", "items_count": 0,

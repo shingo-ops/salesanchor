@@ -352,6 +352,8 @@ class ExtractionErrorItem(BaseModel):
     created_at: str | None
     prompt_version: str | None
     supplier_name: str | None
+    error_category: str | None
+    error_detail: str | None
 
 
 @router.get(
@@ -369,11 +371,18 @@ async def list_extraction_errors(
         await db.execute(
             text(
                 "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version,"
-                "  s.name AS supplier_name"
+                "  s.name AS supplier_name,"
+                "  ea.validation_result"
                 f" FROM {_TCG_SCHEMA}.extraction_jobs ej"
                 f" JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
                 f" JOIN {_TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
                 " JOIN public.suppliers s ON s.id = sc.supplier_id"
+                f" LEFT JOIN LATERAL ("
+                f"   SELECT ea2.validation_result"
+                f"   FROM {_TCG_SCHEMA}.extraction_attempts ea2"
+                f"   WHERE ea2.extraction_job_id = ej.id"
+                f"   ORDER BY ea2.started_at DESC LIMIT 1"
+                f" ) ea ON true"
                 " WHERE ej.status = 'error'"
                 " ORDER BY ej.created_at DESC"
                 " OFFSET :offset LIMIT :limit"
@@ -388,6 +397,8 @@ async def list_extraction_errors(
             created_at=row.created_at.isoformat() if row.created_at else None,
             prompt_version=row.prompt_version,
             supplier_name=row.supplier_name,
+            error_category=row.validation_result.get("category") if row.validation_result else None,
+            error_detail=row.validation_result.get("raw") if row.validation_result else None,
         )
         for row in rows
     ]

@@ -58,6 +58,7 @@ class AttemptRecorder:
         self.prompt_version = prompt_version
         self.response_saved = False
         self._oversized_parsed_bytes: int | None = None
+        self._error_detail: dict = {}
 
     def before_send(self, payload: dict) -> None:
         """The payload is exactly the model/contents/config passed to the SDK."""
@@ -95,6 +96,10 @@ class AttemptRecorder:
             raise RecordError("RECORD_WRITE_FAILED") from None
         if oversized:
             raise RecordError("INPUT_TOO_LARGE")
+
+    def record_error_detail(self, detail: dict) -> None:
+        """Store error detail to be written to validation_result on fail()."""
+        self._error_detail = detail
 
     def _owned(self, *, required: bool = True) -> bool:
         """Lock the job first, matching claim ordering. A newer child fences this attempt."""
@@ -169,13 +174,27 @@ class AttemptRecorder:
         try:
             s.rollback()
             if self._owned(required=False):
-                s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
-                    finished_at=clock_timestamp(),error_code=:code,
-                    parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                    validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
-                    WHERE id=:id
-                """), {"id": self.id, "code": code,
-                         "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
+                if self._error_detail:
+                    validation_result = json.dumps(
+                        {"status": "failed", "code": code, **self._error_detail},
+                        ensure_ascii=False,
+                    )
+                    s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
+                        finished_at=clock_timestamp(),error_code=:code,
+                        parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
+                        validation_result=CAST(:vr AS JSONB)
+                        WHERE id=:id
+                    """), {"id": self.id, "code": code,
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
+                             "vr": validation_result})
+                else:
+                    s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
+                        finished_at=clock_timestamp(),error_code=:code,
+                        parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
+                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
+                        WHERE id=:id
+                    """), {"id": self.id, "code": code,
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})

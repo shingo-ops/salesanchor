@@ -174,6 +174,18 @@ def _safe_error_message(exc: Exception) -> str:
     return re.sub(r"key=[^\s&'\"<>]+", "(APIキー省略)", msg)
 
 
+def _classify_error(exc: Exception) -> str:
+    """Classify a Gemini API exception into a category for diagnostics."""
+    msg = str(exc)
+    if re.search(r"\b429\b", msg) or "RESOURCE_EXHAUSTED" in msg:
+        return "gemini_rate_limit"
+    if re.search(r"\b[45]\d{2}\b", msg):
+        return "gemini_http_error"
+    if "timeout" in msg.lower() or "deadline" in msg.lower():
+        return "gemini_timeout"
+    return "gemini_unknown"
+
+
 # ---------------------------------------------------------------------------
 # ユーティリティ: 行アノテーション
 # ---------------------------------------------------------------------------
@@ -376,6 +388,8 @@ def call_gemini_extraction(
         raise
     except Exception as exc:
         if recorder is not None:
+            detail = _safe_error_message(exc)
+            recorder.record_error_detail({"raw": detail, "category": _classify_error(exc)})
             raise RecordError("API_ERROR") from None
         logger.exception("[gemini_extraction] API call failed: %s", _safe_error_message(exc))
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
@@ -634,4 +648,5 @@ __all__ = [
     "format_prompt_input",
     "strip_emoji",
     "_safe_error_message",
+    "_classify_error",
 ]
