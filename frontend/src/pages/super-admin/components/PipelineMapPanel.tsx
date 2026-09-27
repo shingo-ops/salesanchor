@@ -1,11 +1,11 @@
 /**
- * PipelineMapPanel — LINE解析パイプライン ビジュアルマップ（リデザイン版）
+ * PipelineMapPanel — LINE解析パイプライン フローチャート
  *
- * React Flow (@xyflow/react) を使用してテーブル間のFK関係を視覚化する。
- * ノードクリックで既存 DbViewerPanel のカラム詳細をドロワーに表示。
+ * 左→右の4段階フロー（入力→AI抽出→商品特定→確認配信）で
+ * 非エンジニアが業務の流れを理解できるようにリデザイン。
  *
  * ADR-027: 全UI文字列は t("key") 経由。
- * ADR-144: CSS変数のみ使用。ハードコード色禁止（カテゴリ色は tokens.css で定義）。
+ * ADR-144: CSS変数のみ使用。ハードコード色禁止。
  */
 import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -48,86 +48,34 @@ interface DbColumn {
   } | null;
 }
 
-type NodeCategory =
-  | "supplier"
-  | "pipeline"
-  | "product"
-  | "master"
-  | "import"
-  | "discord"
-  | "distribution"
-  | "inventory";
-
 interface TableNodeData extends Record<string, unknown> {
   label: string;
   description: string;
   tableName: string;
-  category: NodeCategory;
+  category: string;
+}
+
+interface PhaseNodeData extends Record<string, unknown> {
+  label: string;
+  description: string;
+  color: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// ノードメタデータ（日本語ラベル・説明・カテゴリ）
+// カスタムノード: PhaseNode（フェーズヘッダー）
 // ──────────────────────────────────────────────────────────────────────────────
 
-const NODE_METADATA: Record<
-  string,
-  { label: string; description: string; category: NodeCategory }
-> = {
-  // メインフロー
-  suppliers: { label: "仕入先マスタ", description: "仕入先の基本情報を管理", category: "supplier" },
-  supplier_channels: { label: "連絡チャネル", description: "仕入先のLINE/Discord接続先", category: "supplier" },
-  source_messages: { label: "受信メッセージ", description: "LINEから取り込んだ生テキスト", category: "pipeline" },
-  extraction_jobs: { label: "AI抽出ジョブ", description: "Geminiによる商品抽出の実行単位", category: "pipeline" },
-  extraction_items: { label: "抽出結果（行）", description: "AIが抽出した1行ごとの商品候補", category: "pipeline" },
-  analysis_results: { label: "解析結果", description: "商品・数量・価格の最終確定値", category: "pipeline" },
-
-  // 仕入先サブ
-  supplier_aliases: { label: "仕入先別名", description: "仕入先名の表記ゆれ辞書", category: "supplier" },
-  supplier_prompts: { label: "仕入先別プロンプト", description: "仕入先ごとのAI指示文", category: "supplier" },
-  supplier_knowledge_links: { label: "ナレッジ紐付け", description: "仕入先と解析ルールの接続", category: "supplier" },
-  knowledge_rules: { label: "解析ルール", description: "テキストのパターンマッチ定義", category: "supplier" },
-  supplier_discord_routing: { label: "Discordルーティング", description: "仕入先とDiscordチャネルの対応", category: "supplier" },
-
-  // 商品
-  products: { label: "商品マスタ", description: "全商品の基本情報（SSOT）", category: "product" },
-  product_search_keywords: { label: "検索キーワード", description: "商品名マッチング用の語句", category: "product" },
-  product_exclude_keywords: { label: "除外キーワード", description: "誤マッチ防止用の語句", category: "product" },
-  type_master: { label: "ゲーム種別", description: "ポケモン/ワンピース等の分類", category: "product" },
-  product_kinds: { label: "大分類", description: "TCG/書籍/ゲーム機の大区分", category: "product" },
-  product_lines: { label: "小分類", description: "ボックス/パック/シングルの区分", category: "product" },
-  product_formats: { label: "フォーマット", description: "1BOX=30パック等の構成定義", category: "product" },
-
-  // パイプライン補助
-  extraction_attempts: { label: "抽出試行ログ", description: "AIへの問い合わせ記録と応答", category: "pipeline" },
-  extraction_prompt_config: { label: "抽出プロンプト設定", description: "Geminiに送る共通プロンプト", category: "pipeline" },
-  item_corrections: { label: "人間補正", description: "AIの結果を人間が修正した記録", category: "pipeline" },
-  analysis_runs: { label: "解析バッチ", description: "解析の一括実行単位", category: "pipeline" },
-  analysis_run_snapshots: { label: "解析スナップショット", description: "実行時点の結果コピー", category: "pipeline" },
-
-  // 条件・単位
-  line_conditions: { label: "状態マスタ", description: "新品/美品/中古等の状態定義", category: "master" },
-  line_units: { label: "単位マスタ", description: "枚/箱/パック等の単位定義", category: "master" },
-
-  // インポート
-  import_jobs: { label: "インポートジョブ", description: "LINEファイル取込の実行単位", category: "import" },
-  import_job_messages: { label: "取込メッセージ紐付", description: "ジョブとメッセージの対応", category: "import" },
-
-  // Discord
-  discord_inbound_messages: { label: "Discord受信", description: "Discordからの仕入報告メッセージ", category: "discord" },
-  ingestion_jobs: { label: "取込ジョブ", description: "Discord/手動の解析ジョブ", category: "discord" },
-  parse_logs: { label: "解析ログ", description: "1行ごとのマッチ結果記録", category: "discord" },
-
-  // 配信
-  tcg_distribution_targets: { label: "配信先", description: "スプレッドシートの配信設定", category: "distribution" },
-  tcg_distribution_settings: { label: "配信設定", description: "配信のグローバル設定値", category: "distribution" },
-
-  // 在庫
-  inventory: { label: "B在庫（仕入先別）", description: "仕入先ごとの在庫オファー", category: "inventory" },
-  inventory_movements: { label: "在庫変動履歴", description: "入出庫の増減記録", category: "inventory" },
-};
+function PhaseNode({ data }: NodeProps<Node<PhaseNodeData>>) {
+  return (
+    <div className="pipeline-phase" style={{ backgroundColor: data.color }}>
+      <span className="pipeline-phase__label">{data.label}</span>
+      <span className="pipeline-phase__desc">{data.description}</span>
+    </div>
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
-// カスタムノード: TableNode
+// カスタムノード: TableNode（業務ノード）
 // ──────────────────────────────────────────────────────────────────────────────
 
 function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
@@ -147,174 +95,208 @@ function TableNode({ data }: NodeProps<Node<TableNodeData>>) {
   );
 }
 
-const nodeTypes = { tableNode: TableNode };
+const nodeTypes = {
+  phase: PhaseNode,
+  table: TableNode,
+};
 
 // ──────────────────────────────────────────────────────────────────────────────
-// ノード定義（手動配置）
+// フェーズノード定義
 // ──────────────────────────────────────────────────────────────────────────────
 
-const MAIN_STROKE = "var(--accent)";
-const DEFAULT_STROKE = "var(--border-strong)";
-
-function makeNode(id: string, x: number, y: number): Node<TableNodeData> {
-  const meta = NODE_METADATA[id] ?? {
-    label: id,
-    description: "",
-    category: "pipeline" as NodeCategory,
-  };
-  return {
-    id,
-    type: "tableNode",
-    position: { x, y },
-    data: {
-      label: meta.label,
-      description: meta.description,
-      tableName: id,
-      category: meta.category,
-    },
-  };
-}
-
-const initialNodes: Node<TableNodeData>[] = [
-  // ── メインフロー（y=400、横間隔350px）
-  makeNode("suppliers", 50, 400),
-  makeNode("supplier_channels", 400, 400),
-  makeNode("source_messages", 750, 400),
-  makeNode("extraction_jobs", 1100, 400),
-  makeNode("extraction_items", 1450, 400),
-  makeNode("analysis_results", 1850, 400),
-
-  // ── 上段（仕入先関連）
-  makeNode("supplier_aliases", 50, 120),
-  makeNode("supplier_prompts", 50, 250),
-  makeNode("supplier_knowledge_links", 350, 120),
-  makeNode("knowledge_rules", 650, 120),
-  makeNode("supplier_discord_routing", 350, 250),
-  makeNode("extraction_prompt_config", 1100, 200),
-
-  // ── 商品関連（右上）
-  makeNode("products", 1550, 150),
-  makeNode("product_search_keywords", 1850, 50),
-  makeNode("product_exclude_keywords", 1850, 180),
-  makeNode("type_master", 1300, 50),
-  makeNode("product_kinds", 1300, 180),
-  makeNode("product_lines", 1550, 50),
-  makeNode("product_formats", 1550, 250),
-
-  // ── 解析結果周辺（右端）
-  makeNode("line_conditions", 2150, 280),
-  makeNode("line_units", 2150, 500),
-  makeNode("analysis_runs", 2150, 400),
-  makeNode("analysis_run_snapshots", 2450, 400),
-  makeNode("tcg_distribution_targets", 2450, 280),
-  makeNode("tcg_distribution_settings", 2450, 500),
-
-  // ── 下段
-  makeNode("import_jobs", 550, 620),
-  makeNode("import_job_messages", 750, 620),
-  makeNode("extraction_attempts", 1100, 620),
-  makeNode("item_corrections", 1450, 620),
-  makeNode("discord_inbound_messages", 50, 620),
-  makeNode("ingestion_jobs", 350, 620),
-  makeNode("parse_logs", 350, 750),
-  makeNode("inventory", 1850, 620),
-  makeNode("inventory_movements", 2150, 620),
+// フェーズノードはi18nキーとして参照するため、t()はコンポーネント内で使う。
+// ここではキーのみ定義し、useTranslation後にノードを生成する。
+const PHASE_DEFS = [
+  {
+    id: "phase-input",
+    labelKey: "analysisRules.pipelineMap.phaseInput",
+    descKey: "analysisRules.pipelineMap.phaseInputDesc",
+    x: 50,
+    y: 20,
+    color: "var(--cat-import)",
+  },
+  {
+    id: "phase-extract",
+    labelKey: "analysisRules.pipelineMap.phaseExtract",
+    descKey: "analysisRules.pipelineMap.phaseExtractDesc",
+    x: 500,
+    y: 20,
+    color: "var(--cat-pipeline)",
+  },
+  {
+    id: "phase-match",
+    labelKey: "analysisRules.pipelineMap.phaseMatch",
+    descKey: "analysisRules.pipelineMap.phaseMatchDesc",
+    x: 950,
+    y: 20,
+    color: "var(--cat-product)",
+  },
+  {
+    id: "phase-output",
+    labelKey: "analysisRules.pipelineMap.phaseOutput",
+    descKey: "analysisRules.pipelineMap.phaseOutputDesc",
+    x: 1400,
+    y: 20,
+    color: "var(--cat-distribution)",
+  },
 ];
 
 // ──────────────────────────────────────────────────────────────────────────────
-// エッジ定義（FK関係）
+// 業務ノード定義（座標・カテゴリのみ。ラベル/説明はi18nキーで取得）
 // ──────────────────────────────────────────────────────────────────────────────
 
-function makeEdge(
+interface TableNodeDef {
+  id: string;
+  x: number;
+  y: number;
+  category: string;
+}
+
+const TABLE_NODE_DEFS: TableNodeDef[] = [
+  // ── ① 入力フェーズ ──
+  { id: "suppliers",                x: 100,  y: 150, category: "supplier" },
+  { id: "supplier_aliases",         x: 300,  y: 150, category: "supplier" },
+  { id: "supplier_channels",        x: 100,  y: 300, category: "supplier" },
+  { id: "source_messages",          x: 100,  y: 450, category: "import" },
+  { id: "import_jobs",              x: 300,  y: 300, category: "import" },
+  { id: "discord_inbound_messages", x: 300,  y: 550, category: "discord" },
+
+  // ── ② AI抽出フェーズ ──
+  { id: "extraction_jobs",          x: 550,  y: 300, category: "pipeline" },
+  { id: "extraction_items",         x: 550,  y: 450, category: "pipeline" },
+  { id: "extraction_prompt_config", x: 750,  y: 150, category: "pipeline" },
+  { id: "supplier_prompts",         x: 750,  y: 300, category: "supplier" },
+  { id: "extraction_attempts",      x: 750,  y: 450, category: "pipeline" },
+
+  // ── ③ 商品特定フェーズ ──
+  { id: "analysis_results",         x: 1000, y: 450, category: "pipeline" },
+  { id: "products",                 x: 1000, y: 150, category: "product" },
+  { id: "product_search_keywords",  x: 1200, y: 150, category: "product" },
+  { id: "product_exclude_keywords", x: 1200, y: 250, category: "product" },
+  { id: "line_conditions",          x: 1200, y: 400, category: "master" },
+  { id: "line_units",               x: 1200, y: 500, category: "master" },
+  { id: "type_master",              x: 1000, y: 250, category: "product" },
+
+  // ── ④ 確認・配信フェーズ ──
+  { id: "item_corrections",         x: 1450, y: 350, category: "pipeline" },
+  { id: "tcg_distribution_targets", x: 1450, y: 500, category: "distribution" },
+  { id: "tcg_distribution_settings",x: 1650, y: 500, category: "distribution" },
+  { id: "analysis_runs",            x: 1450, y: 200, category: "pipeline" },
+  { id: "analysis_run_snapshots",   x: 1650, y: 200, category: "pipeline" },
+];
+
+// ──────────────────────────────────────────────────────────────────────────────
+// エッジ定義
+// ──────────────────────────────────────────────────────────────────────────────
+
+const MAIN_STROKE = "var(--accent)";
+const SUB_STROKE = "var(--border)";
+
+function makeMainEdge(
   id: string,
   source: string,
   target: string,
-  isMain = false,
+  label: string,
 ): Edge {
   return {
     id,
     source,
     target,
     animated: true,
+    label,
+    labelStyle: { fontSize: "var(--font-xs)", fill: "var(--text-secondary)" },
+    labelBgStyle: { fill: "var(--bg-surface)", strokeWidth: 0 },
     markerEnd: { type: MarkerType.ArrowClosed },
     style: {
-      stroke: isMain ? MAIN_STROKE : DEFAULT_STROKE,
-      strokeWidth: isMain ? 3 : 2,
+      stroke: MAIN_STROKE,
+      strokeWidth: 3,
     },
   };
 }
 
-const initialEdges: Edge[] = [
-  // メインフロー
-  makeEdge("e-sc-sm", "supplier_channels", "source_messages", true),
-  makeEdge("e-sm-ej", "source_messages", "extraction_jobs", true),
-  makeEdge("e-ej-ei", "extraction_jobs", "extraction_items", true),
-  makeEdge("e-ei-ar", "extraction_items", "analysis_results", true),
-
-  // supplier_channels ← suppliers
-  makeEdge("e-sup-sc", "suppliers", "supplier_channels"),
-
-  // source_messages 自己参照（superseded_by）
-  makeEdge("e-sm-sm", "source_messages", "source_messages"),
-
-  // extraction_attempts ← extraction_jobs
-  makeEdge("e-ej-ea", "extraction_jobs", "extraction_attempts"),
-
-  // analysis_results ← line_conditions, line_units
-  makeEdge("e-lc-ar", "line_conditions", "analysis_results"),
-  makeEdge("e-lu-ar", "line_units", "analysis_results"),
-
-  // analysis_runs ← extraction_jobs
-  makeEdge("e-ej-arun", "extraction_jobs", "analysis_runs"),
-
-  // analysis_run_snapshots ← analysis_runs
-  makeEdge("e-arun-snap", "analysis_runs", "analysis_run_snapshots"),
-
-  // import_job_messages ← import_jobs, source_messages
-  makeEdge("e-ij-ijm", "import_jobs", "import_job_messages"),
-  makeEdge("e-sm-ijm", "source_messages", "import_job_messages"),
-
-  // 仕入先サブグラフ
-  makeEdge("e-sup-sa", "suppliers", "supplier_aliases"),
-  makeEdge("e-sup-sp", "suppliers", "supplier_prompts"),
-  makeEdge("e-sup-sdr", "suppliers", "supplier_discord_routing"),
-  makeEdge("e-sup-skl", "suppliers", "supplier_knowledge_links"),
-  makeEdge("e-skl-kr", "supplier_knowledge_links", "knowledge_rules"),
-
-  // Discord入力サブグラフ
-  makeEdge("e-sup-dim", "suppliers", "discord_inbound_messages"),
-  makeEdge("e-sup-ingest", "suppliers", "ingestion_jobs"),
-  makeEdge("e-ingest-pl", "ingestion_jobs", "parse_logs"),
-  makeEdge("e-sup-pl", "suppliers", "parse_logs"),
-  makeEdge("e-prod-pl", "products", "parse_logs"),
-
-  // 商品サブグラフ
-  makeEdge("e-sup-prod", "suppliers", "products"),
-  makeEdge("e-pk-prod", "product_kinds", "products"),
-  makeEdge("e-pl-prod", "product_lines", "products"),
-  makeEdge("e-pf-prod", "product_formats", "products"),
-  makeEdge("e-tm-prod", "type_master", "products"),
-  makeEdge("e-prod-psk", "products", "product_search_keywords"),
-  makeEdge("e-prod-pek", "products", "product_exclude_keywords"),
-
-  // item_corrections ← extraction_items
-  makeEdge("e-ei-ic", "extraction_items", "item_corrections"),
-
-  // 在庫サブグラフ
-  makeEdge("e-sup-inv", "suppliers", "inventory"),
-  makeEdge("e-prod-inv", "products", "inventory"),
-  makeEdge("e-prod-ivm", "products", "inventory_movements"),
-  makeEdge("e-sup-ivm", "suppliers", "inventory_movements"),
-];
+function makeSubEdge(id: string, source: string, target: string): Edge {
+  return {
+    id,
+    source,
+    target,
+    animated: false,
+    markerEnd: { type: MarkerType.ArrowClosed },
+    style: {
+      stroke: SUB_STROKE,
+      strokeWidth: 1.5,
+    },
+  };
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
-// メインコンポーネント
+// コンポーネント
 // ──────────────────────────────────────────────────────────────────────────────
 
 export function PipelineMapPanel() {
   const { t } = useTranslation();
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+
+  // フェーズノード（t()で翻訳）
+  const phaseNodes: Node<PhaseNodeData>[] = PHASE_DEFS.map((def) => ({
+    id: def.id,
+    type: "phase",
+    position: { x: def.x, y: def.y },
+    draggable: false,
+    selectable: false,
+    data: {
+      label: t(def.labelKey),
+      description: t(def.descKey),
+      color: def.color,
+    },
+  }));
+
+  // 業務ノード（ラベル・説明はi18nキーで取得）
+  const tableNodes: Node<TableNodeData>[] = TABLE_NODE_DEFS.map((def) => ({
+    id: def.id,
+    type: "table",
+    position: { x: def.x, y: def.y },
+    data: {
+      label: t(`analysisRules.pipelineMap.nodeLabel_${def.id}`),
+      description: t(`analysisRules.pipelineMap.nodeDesc_${def.id}`),
+      tableName: def.id,
+      category: def.category,
+    },
+  }));
+
+  // メインフローエッジ（ラベル付き・太い矢印）
+  const mainEdges: Edge[] = [
+    makeMainEdge("e-main-sup-sc",  "suppliers",        "supplier_channels",        t("analysisRules.pipelineMap.edgeChannelReg")),
+    makeMainEdge("e-main-sc-sm",   "supplier_channels","source_messages",           t("analysisRules.pipelineMap.edgeMessageRecv")),
+    makeMainEdge("e-main-sm-ej",   "source_messages",  "extraction_jobs",           t("analysisRules.pipelineMap.edgeSendText")),
+    makeMainEdge("e-main-ej-ei",   "extraction_jobs",  "extraction_items",          t("analysisRules.pipelineMap.edgeExtractCandidates")),
+    makeMainEdge("e-main-ei-ar",   "extraction_items", "analysis_results",          t("analysisRules.pipelineMap.edgeMatchMaster")),
+    makeMainEdge("e-main-ar-dist", "analysis_results", "tcg_distribution_targets",  t("analysisRules.pipelineMap.edgeDistribute")),
+  ];
+
+  // 補助フローエッジ（細い矢印・ラベルなし）
+  const subEdges: Edge[] = [
+    makeSubEdge("e-ij-sm",       "import_jobs",              "source_messages"),
+    makeSubEdge("e-dim-sm",      "discord_inbound_messages",  "source_messages"),
+    makeSubEdge("e-epc-ej",      "extraction_prompt_config",  "extraction_jobs"),
+    makeSubEdge("e-sp-ej",       "supplier_prompts",           "extraction_jobs"),
+    makeSubEdge("e-ea-ej",       "extraction_attempts",        "extraction_jobs"),
+    makeSubEdge("e-prod-ar",     "products",                   "analysis_results"),
+    makeSubEdge("e-psk-prod",    "product_search_keywords",    "products"),
+    makeSubEdge("e-pek-prod",    "product_exclude_keywords",   "products"),
+    makeSubEdge("e-lc-ar",       "line_conditions",            "analysis_results"),
+    makeSubEdge("e-lu-ar",       "line_units",                 "analysis_results"),
+    makeSubEdge("e-tm-prod",     "type_master",                "products"),
+    makeSubEdge("e-ic-ei",       "item_corrections",           "extraction_items"),
+    makeSubEdge("e-arun-ar",     "analysis_runs",              "analysis_results"),
+    makeSubEdge("e-snap-arun",   "analysis_run_snapshots",     "analysis_runs"),
+    makeSubEdge("e-sa-sup",      "supplier_aliases",           "suppliers"),
+    makeSubEdge("e-dist-set",    "tcg_distribution_settings",  "tcg_distribution_targets"),
+  ];
+
+  const allNodes = [...phaseNodes, ...tableNodes];
+  const allEdges = [...mainEdges, ...subEdges];
+
+  const [nodes, , onNodesChange] = useNodesState(allNodes);
+  const [edges, , onEdgesChange] = useEdgesState(allEdges);
 
   // ドロワー用状態
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -326,6 +308,9 @@ export function PipelineMapPanel() {
   // ノードクリック → テーブル詳細をドロワーで表示
   const handleNodeClick = useCallback(
     (_: React.MouseEvent, node: Node) => {
+      // フェーズノードはクリック不可（selectable=false だが念のため）
+      if (node.type === "phase") return;
+
       const tableName = node.id;
       setDrawerTable(tableName);
       setDrawerOpen(true);
@@ -410,7 +395,7 @@ export function PipelineMapPanel() {
           onEdgesChange={onEdgesChange}
           onNodeClick={handleNodeClick}
           nodeTypes={nodeTypes}
-          defaultViewport={{ x: 50, y: 50, zoom: 0.65 }}
+          defaultViewport={{ x: 20, y: 10, zoom: 0.7 }}
           minZoom={0.2}
           maxZoom={3}
           nodesDraggable
