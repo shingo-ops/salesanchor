@@ -4,8 +4,8 @@
 
 | 対象 | 修正前 | 修正後 |
 |------|--------|--------|
-| `tcg_analysis_dashboard.py:358` | `"/api/v1/tcg/extraction-errors"` | `"/tcg/extraction-errors"` |
-| `ExtractionErrorLogPanel.tsx:50` | `api.get("/api/v1/tcg/extraction-errors?...")` | `api.get("/tcg/extraction-errors?...")` |
+| `backend/app/routers/tcg_analysis_dashboard.py:358` | `"/api/v1/tcg/extraction-errors"` | `"/tcg/extraction-errors"` |
+| `frontend/src/pages/super-admin/components/ExtractionErrorLogPanel.tsx:50` | `api.get("/api/v1/tcg/extraction-errors?...")` | `api.get("/tcg/extraction-errors?...")` |
 
 ## 検証方法
 
@@ -18,15 +18,18 @@
 
 呼び出し元: `ExtractionErrorLogPanel.tsx` のみ（grep確認済み）
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-ルーターprefixとエンドポイントパスの二重定義はFastAPIの一般的なバグパターン。
-修正パターン: エンドポイント側からプレフィックスを除去。
+ADR-152（`docs/adr/ADR-152-frontend-api-path-no-prefix.md`）と同一パターンのバグ。
+PR #3181 で `TcgParallelReportPage.tsx` が `/api/v1/tcg/parallel-report` を呼んで
+本番 404 が発生した教訓を受け、ADR-152 が策定された。
+本修正は ADR-152 の決定に準拠し、フロントとバックエンドの両方でプレフィックス重複を解消する。
 
-## 守り手
+## 維持の仕組み
 
-本修正後、同パターンの再発を防ぐには `include_router` 時の prefix と
-エンドポイント定義を合わせてレビューすること。
+ADR-152 の守り手として、以下が存在する:
+- `frontend/src/lib/api.ts` のコメント: `API_BASE = "/api/v1"` を明示
+- コードレビュー時に `api.get("/api/v1/...)` パターンを指摘する規約（ADR-152）
 
 ## 戻し方
 
