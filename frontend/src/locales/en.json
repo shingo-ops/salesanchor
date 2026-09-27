@@ -4003,7 +4003,18 @@
       "groupRuleManagement": "Rule Management",
       "ruleManagement": "Status Rules",
       "extractionRules": "Supplier Rules",
-      "promptConfig": "Extraction Prompt Config"
+      "promptConfig": "Extraction Prompt Config",
+      "errorLog": "Error Log"
+    },
+    "errorLog": {
+      "title": "Extraction Error Log",
+      "errorMessage": "Error Message",
+      "supplier": "Supplier",
+      "createdAt": "Date",
+      "promptVersion": "Prompt Version",
+      "noErrors": "No errors found",
+      "fetchError": "Failed to fetch error log",
+      "loadMore": "Load more"
     },
     "accuracyManagement": {
       "title": "Accuracy Management",

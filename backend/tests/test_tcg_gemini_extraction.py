@@ -18,7 +18,6 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from app.services.gemini_extraction_svc import (
-    PROMPT_TEXT,
     annotate_lines,
     extract_message,
     format_prompt_input,
@@ -28,12 +27,21 @@ from app.services.gemini_extraction_svc import (
 from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
 
 
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
+
+
 @pytest.fixture(autouse=True)
 def isolated_reference(monkeypatch):
     # This legacy task unit suite isolates the reference DB queries.
     monkeypatch.setattr("app.tasks.tcg_extraction.work_schema_ready", lambda _: True)
     monkeypatch.setattr("app.tasks.tcg_extraction.schema_ready", lambda _: True)
     monkeypatch.setattr("app.tasks.tcg_extraction.load_work_reference", lambda *_: {"works": [], "products": []})
+    # DB プロンプト読み取りをスタブ化（テスト環境にはextraction_prompt_configが存在しない）
+    monkeypatch.setattr(
+        "app.services.gemini_extraction_svc._load_db_prompts",
+        lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT),
+    )
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -96,7 +104,9 @@ def test_prompt_input_embedded_in_genshi_separator():
     """format_prompt_input の出力が '原文:\\n' の直後に続く形で組み合わせられる。"""
     raw_text = "テスト行"
     prompt_input = format_prompt_input(raw_text)
-    full = f"{PROMPT_TEXT}\n\n原文:\n{prompt_input}"
+    # プロンプトはDBから取得するため、ここでは連結パターンの検証のみ行う
+    dummy_prompt = "テスト用プロンプト"
+    full = f"{dummy_prompt}\n\n原文:\n{prompt_input}"
     assert "原文:\n[L0001] テスト行" in full
 
 

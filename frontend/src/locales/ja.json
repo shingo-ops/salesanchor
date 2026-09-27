@@ -4003,7 +4003,18 @@
       "groupRuleManagement": "ルール管理",
       "ruleManagement": "ステータスルール",
       "extractionRules": "仕入元別ルール",
-      "promptConfig": "抽出プロンプト設定"
+      "promptConfig": "抽出プロンプト設定",
+      "errorLog": "エラーログ"
+    },
+    "errorLog": {
+      "title": "抽出エラーログ",
+      "errorMessage": "エラー内容",
+      "supplier": "仕入元",
+      "createdAt": "日時",
+      "promptVersion": "プロンプトバージョン",
+      "noErrors": "エラーはありません",
+      "fetchError": "エラーログの取得に失敗しました",
+      "loadMore": "さらに読み込む"
     },
     "accuracyManagement": {
       "title": "解析精度管理",

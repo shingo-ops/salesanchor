@@ -12,6 +12,7 @@ export type AnalysisRulesSidebarKey =
   | "import"
   | "accuracy-management"
   | "needs-review"
+  | "error-log"
   | "rule-management"
   | "extraction-rules"
   | "product-master"
@@ -79,6 +80,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
         {navItem("import", t("analysisRules.sidebar.import"))}
         {navItem("accuracy-management", t("analysisRules.sidebar.accuracyManagement"))}
         {navItem("needs-review", t("analysisRules.sidebar.needsReview"), needsReviewCount)}
+        {navItem("error-log", t("analysisRules.sidebar.errorLog"))}
       </div>
 
       {/* ルール管理グループ */}

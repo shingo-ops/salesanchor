@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
+from app.services import gemini_extraction_svc as gemini
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_distribution_svc as distribution
 from app.services import tcg_unit_recovery_svc as recovery
@@ -14,6 +15,15 @@ from tests import test_tcg_work_matching_integration as work_fixture
 
 SCHEMA = work_fixture.SCHEMA
 pg = work_fixture.pg
+
+_STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
+_STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
+
+
+@pytest.fixture(autouse=True)
+def stub_db_prompts(monkeypatch):
+    # DB プロンプト読み取りをスタブ化（テスト用DBにextraction_prompt_configが存在しない）
+    monkeypatch.setattr(gemini, "_load_db_prompts", lambda: (_STUB_BASE_PROMPT, _STUB_WORK_ID_PROMPT))
 
 
 @pytest.mark.parametrize('keyword,name,expected', [

@@ -35,6 +35,7 @@ import { ConditionDefsMasterPanel } from "./components/ConditionDefsMasterPanel"
 import { WeightClassesMasterPanel } from "./components/WeightClassesMasterPanel";
 import { RuleManagementPanel } from "./components/RuleManagementPanel";
 import { AnalysisDashboardPanel } from "./components/AnalysisDashboardPanel";
+import { ExtractionErrorLogPanel } from "./components/ExtractionErrorLogPanel";
 import SupplierExtractionRulesPage from "./SupplierExtractionRulesPage";
 import ExtractionPromptConfigTab from "./ExtractionPromptConfigTab";
 import "./AnalysisRulesPage.css";
@@ -166,6 +167,7 @@ export default function AnalysisRulesPage() {
             <div className="analysis-panel-content">
               {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
               {activeSection === "needs-review" && <NeedsReviewPanel />}
+              {activeSection === "error-log" && <ExtractionErrorLogPanel />}
               {activeSection === "product-master" && <ProductMasterPanel />}
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}
               {activeSection === "product-kinds-master" && <ProductKindsMasterPanel />}
