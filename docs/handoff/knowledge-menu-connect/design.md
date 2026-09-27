@@ -61,7 +61,7 @@ import KnowledgeAliasesTab from "./KnowledgeAliasesTab";
 | 2 | メニュー項目クリックで `KnowledgeAliasesTab` が表示される | クリック後に右パネルの内容が変わることを目視確認 |
 | 3 | `npm run build` がエラーなしで通る | CIログ確認（TypeScriptエラーゼロ） |
 | 4 | `npm run lint` でエラー（error）がゼロ | lintログ確認（warnings は既存・許容） |
-| 5 | ja/en 両方に `knowledgeAliases` キーが存在する | `ja.json` / `en.json` のキー一致確認 |
+| 5 | ja/en 両方に `knowledgeAliases` キーが存在する | ja.json / en.json のキー一致確認 |
 
 ## 外部・過去事例の参照と我々への応用
 
