@@ -4014,7 +4014,25 @@
       "promptVersion": "プロンプトバージョン",
       "noErrors": "エラーはありません",
       "fetchError": "エラーログの取得に失敗しました",
-      "loadMore": "さらに読み込む"
+      "loadMore": "さらに読み込む",
+      "retrySelected": "選択したジョブを再実行",
+      "retryConfirm": "{{count}}件のジョブを再実行しますか？",
+      "retrySuccess": "{{count}}件のジョブを再実行キューに投入しました",
+      "retryError": "再実行に失敗しました",
+      "errorCategory": "エラー種別",
+      "errorDetail": "エラー詳細",
+      "category": {
+        "gemini_rate_limit": "Gemini レート制限",
+        "gemini_http_error": "Gemini HTTPエラー",
+        "gemini_timeout": "Gemini タイムアウト",
+        "gemini_unknown": "Gemini 不明",
+        "system_timeout": "システム タイムアウト",
+        "system_db_error": "システム DB障害",
+        "system_input_error": "システム 入力超過",
+        "logic_parse_error": "応答解析エラー",
+        "logic_conflict": "整合性エラー",
+        "unknown": "不明"
+      }
     },
     "accuracyManagement": {
       "title": "解析精度管理",
