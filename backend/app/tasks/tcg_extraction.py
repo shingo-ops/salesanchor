@@ -147,7 +147,7 @@ def _match_rule(pattern: str, pattern_type: str, text: str) -> bool:
     - regex: 正規表現
     """
     if pattern_type == "exact":
-        return text.strip() == pattern
+        return text.strip() == pattern.strip()
     if pattern_type == "substring":
         return pattern in text
     if pattern_type == "prefix":
