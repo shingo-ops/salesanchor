@@ -18,5 +18,4 @@
 
 ### 触らないファイル
 - `migrations/` — information_schema動的取得のため不要
-- `deploy.yml` — ルーター追加のみ（再起動不要）
 - `backend/app/models/` — 新規モデル定義不要
