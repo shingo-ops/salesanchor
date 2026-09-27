@@ -1,103 +1,85 @@
 /**
- * PipelineMapPanel — フローチャート型パイプラインマップのスタイル
+ * PipelineMapPanel — RPGスキルツリー型パイプラインマップのスタイル
  *
  * CSS変数のみ使用（ハードコードの色・サイズ禁止）。
  * ADR-027: i18n準拠。ADR-144: 金型クラスのみ使用。
  * カテゴリ色は tokens.css の --cat-* 変数を使用。
- * フェーズヘッダー幅は --size-pipeline-phase-w を使用。
  */
 
 /* React Flow デフォルトスタイル */
 @import "@xyflow/react/dist/style.css";
 
-/* ─── パネル全体 ─── */
+/* ── パネル全体 ─────────────────────────────────────────────────────────────── */
+
 .pipeline-map-panel {
   display: flex;
   flex-direction: column;
   height: 100%;
-  min-height: var(--size-pipeline-map-min-h);
-  background: var(--bg-canvas);
 }
 
-/* ─── React Flow キャンバス領域 ─── */
+/* ── React Flow キャンバス領域 ────────────────────────────────────────────── */
+
 .pipeline-map-panel__canvas {
   flex: 1;
-  width: 100%;
   min-height: var(--size-pipeline-map-min-h);
 }
 
-/* ─── フェーズヘッダーノード ─── */
-.pipeline-phase {
-  width: var(--size-pipeline-phase-w);
-  padding: var(--space-3) var(--space-4);
-  border-radius: var(--radius-lg);
-  color: var(--on-accent);
+/* ── Skill Node ──────────────────────────────────────────────────────────── */
+
+.skill-node {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: var(--space-1);
-  pointer-events: none; /* クリック不可 */
-}
-
-.pipeline-phase__label {
-  font-size: var(--font-lg);
-  font-weight: var(--font-weight-bold);
-}
-
-.pipeline-phase__desc {
-  font-size: var(--font-sm);
-  opacity: var(--opacity-soft);
-}
-
-/* ─── 業務ノード: TableNode ─── */
-.pipeline-node {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-  width: var(--size-pipeline-node-w);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
   cursor: pointer;
-  transition: box-shadow var(--transition-fast), border-color var(--transition-fast);
+  transition: var(--transition-fast);
 }
 
-.pipeline-node:hover {
-  box-shadow: var(--shadow-md);
-  border-color: var(--accent);
-}
-
-/* ─── ノードヘッダー（カテゴリ色 — backgroundColor はインラインで指定）─── */
-.pipeline-node__header {
-  padding: var(--space-2) var(--space-3);
-  color: var(--on-accent);
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-bold);
-  line-height: var(--line-height-tight);
-}
-
-/* ─── ノードボディ ─── */
-.pipeline-node__body {
-  padding: var(--space-2) var(--space-3) var(--space-3);
-}
-
-/* ─── 業務説明テキスト ─── */
-.pipeline-node__desc {
-  font-size: var(--font-sm);
-  color: var(--text-secondary);
-  margin: 0 0 var(--space-1) 0;
-  line-height: 1.4;
-}
-
-/* ─── 英語テーブル名（モノスペース・ミュート色）─── */
-.pipeline-node__table-name {
-  font-size: var(--font-xs);
-  color: var(--text-muted);
-  font-family: monospace;
-}
-
-/* ─── React Flow ハンドル ─── */
-.pipeline-handle {
-  background: var(--accent);
+.skill-node__orb {
+  border-radius: 50%;
+  transition: var(--transition-fast);
   border: 2px solid var(--bg-surface);
-  width: var(--space-2);
-  height: var(--space-2);
+}
+
+.skill-node--trunk .skill-node__orb {
+  width: var(--size-skill-orb-lg);
+  height: var(--size-skill-orb-lg);
+}
+
+.skill-node--branch .skill-node__orb {
+  width: var(--size-skill-orb-sm);
+  height: var(--size-skill-orb-sm);
+}
+
+.skill-node:hover {
+  transform: scale(1.1);
+}
+
+.skill-node:hover .skill-node__orb {
+  filter: brightness(1.3);
+}
+
+.skill-node__label {
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+  text-align: center;
+  max-width: var(--size-skill-label-w);
+  line-height: var(--line-height-tight);
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+/* ── Handle ──────────────────────────────────────────────────────────────── */
+
+.skill-handle {
+  width: var(--space-2) !important;
+  height: var(--space-2) !important;
+  background: var(--border) !important;
+  border: none !important;
+  opacity: 0;
+}
+
+.skill-node:hover .skill-handle {
+  opacity: var(--opacity-soft);
 }
