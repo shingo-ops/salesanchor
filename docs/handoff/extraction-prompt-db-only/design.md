@@ -49,9 +49,14 @@
 | テーブルにエラーが表示される | 画面確認 |
 | ハードコード日本語なし | ESLint |
 
-## 外部事例
-- 既存: AnalysisDashboardPanel の recent_errors テーブル（同パターン）
-- 既存: supplier_pipeline API の supplier JOIN パターン
+## 外部・過去事例の参照と我々への応用
+- 既存: AnalysisDashboardPanel の recent_errors テーブル（同パターンで DataTable + Card 使用）
+- 既存: supplier_pipeline API の extraction_jobs → source_messages → supplier_channels → suppliers JOIN パターン
+- 我々への応用: 同じ JOIN パターンをエラーログ専用エンドポイントに流用。既存パターンと一致させることで実装差分を最小化。
+
+## 維持の仕組み
+- PROMPT_TEXT/WORK_ID_PROMPT_TEXT が残っていないことは `grep -rn "PROMPT_TEXT" backend/` で CI 時に確認可能
+- DB必須化により、プロンプト未登録時は起動時ではなく抽出実行時に RuntimeError が発生する（運用で管理画面から登録済みであることが前提）
 
 ## 守り手（戻し方）
 コード変更のみ（migration/DB変更なし）。PRを revert すれば元の状態に戻る。
