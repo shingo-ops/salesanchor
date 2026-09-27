@@ -90,8 +90,8 @@ from app.routers import (
     status_master,  # ステータスマスタ テナント用
     super_admin_aliases,
     super_admin_condition_defs,  # コンディション定義マスタ中央 admin
-    super_admin_db_schema,  # DB構造ビューア API
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
+    super_admin_db_schema,  # DB構造ビューア API
     super_admin_dex,
     super_admin_inbound,
     super_admin_knowledge,
