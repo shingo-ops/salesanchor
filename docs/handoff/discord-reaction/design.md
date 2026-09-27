@@ -168,7 +168,7 @@ Response: { "success": true }
 
 処理: `discord_rest.discord_api_request("GET", f"/guilds/{guild_id}/emojis", bot_token)`
 
-### `/leads/{lead_id}/messages` レスポンス拡張（`leads.py:952-965`）
+### `/leads/{lead_id}/messages` レスポンス拡張（`backend/app/routers/leads.py:952-965`）
 
 既存の messages 取得後に reactions を別クエリで取得してマージ:
 
@@ -188,7 +188,7 @@ reaction_rows = await conn.fetch(
 
 ### 金型新設
 
-#### Popover（`frontend/src/components/Popover.tsx` + `.css` + `.stories.tsx`）
+#### Popover（`frontend/src/components/Popover.tsx` + `frontend/src/components/Popover.css` + `frontend/src/components/Popover.stories.tsx`）
 
 - トリガー要素の位置に対してフローティング表示
 - `placement: 'top' | 'bottom' | 'left' | 'right'`
@@ -196,7 +196,7 @@ reaction_rows = await conn.fetch(
 - z-index: `var(--z-dropdown)`
 - トークン: `--space-2` padding, `--radius-2` border-radius, `--shadow-lg` box-shadow
 
-#### Tooltip（`frontend/src/components/Tooltip.tsx` + `.css` + `.stories.tsx`）
+#### Tooltip（`frontend/src/components/Tooltip.tsx` + `frontend/src/components/Tooltip.css` + `frontend/src/components/Tooltip.stories.tsx`）
 
 - ホバーで表示、150ms delay
 - テキストのみ（HTML なし）
@@ -301,7 +301,7 @@ reaction_rows = await conn.fetch(
 - `customEmojis` prop に `GET /discord/guilds/{guild_id}/emojis` の結果をマッピング
 - ラッパーコンポーネント: `frontend/src/pages/inbox/EmojiPickerWrapper.tsx`
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 Discord リアクション同期は Slack/Discord ブリッジツール（例: Zapier, IFTTT）で一般的に実現される機能であり、技術的に枯れたパターン。Sales Anchor の要件は CRM 受信箱への統合であり、ブリッジツールでは不十分（CRM データとの紐付けが必要）。discord.py の公式ドキュメントとサンプルコードに `on_raw_reaction_add` の使用例が掲載されており、実装パターンは確立済み。独自の外部事例調査は不要と判断（理由: 枯れた API の標準的な使用であり、アーキテクチャ上の新規判断を伴わないため）。
 
@@ -324,6 +324,6 @@ Discord リアクション同期は Slack/Discord ブリッジツール（例: Z
 
 - 守り手: `backend/app/discord_gateway/client.py` の `intents.reactions = True`（無効化されるとリアクション受信が停止）
 - 守り手: `frontend/scripts/check-i18n-keys.js`（i18n キーの ja/en 同一性）
-- 守り手: `.github/workflows/ci.yml`（migration 適用チェック・ESLint・型チェック）
+- 守り手: `.github/workflows/test.yml`（migration 適用チェック・ESLint・型チェック）
 - 対象: リアクション送受信の双方向同期が壊れると、受信箱で Discord リアクションが見えなくなる
 - 関所なしの項目: Discord Developer Portal の `Add Reactions` チェック状態は CI で検査不可（人手で守る。理由: リポジトリ外の設定）

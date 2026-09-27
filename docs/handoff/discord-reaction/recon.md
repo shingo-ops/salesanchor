@@ -14,7 +14,7 @@
 
 ## 1. Gateway 実装の現在地
 
-### Intents（`backend/app/discord_gateway/client.py:54-60`）
+### Intents（`backend/app/discord_gateway/client.py:54`）
 
 ```python
 intents = discord.Intents.none()
@@ -27,7 +27,7 @@ intents.members = True
 
 【事実】`reactions` intent は未設定。コメントで M7 有効化予定が記載済み。
 
-### イベントハンドラ一覧（`client.py`）
+### イベントハンドラ一覧（`backend/app/discord_gateway/client.py`）
 
 | ハンドラ | 行 | 処理 |
 |---------|-----|------|
@@ -39,7 +39,7 @@ intents.members = True
 
 【事実】`on_raw_reaction_add` / `on_raw_reaction_remove` は存在しない。
 
-### メッセージ処理フロー（`client.py:85-98`）
+### メッセージ処理フロー（`backend/app/discord_gateway/client.py:85`）
 
 ```
 on_message → bot自身を除外 → DM除外（ADR-146）
@@ -90,8 +90,8 @@ Gateway イベント → DB 保存 → sse_pubsub.publish_inbox_update(tenant_id
 → useInboxSSE → loadMessages() 即時実行
 ```
 
-- ハートビート: 30秒（`meta_inbox.py:1061`）
-- 再接続: 指数バックオフ 2秒〜5分（`useInboxSSE.ts`）
+- ハートビート: 30秒（`backend/app/routers/meta_inbox.py:1061`）
+- 再接続: 指数バックオフ 2秒〜5分（`frontend/src/hooks/useInboxSSE.ts`）
 - 通知ペイロード: `event: update, data: {}`（変更合図のみ、デルタなし）
 
 【事実】リアクション保存後に `publish_inbox_update()` を呼べば、既存経路でフロント自動更新。インフラ追加不要。
@@ -150,9 +150,9 @@ L63 `attachment_type` フィールド直後に `reactions` フィールド追加
 
 | 金型 | ファイル | 用途 |
 |------|---------|------|
-| `Button` | `components/Button.tsx` | iconOnly prop でリアクション追加ボタン |
-| `Badge` | `components/Badge.tsx` | リアクションカウント表示 |
-| `HeaderButton` | `components/HeaderButton.tsx` | variant="icon" |
+| `Button` | `frontend/src/components/Button.tsx` | iconOnly prop でリアクション追加ボタン |
+| `Badge` | `frontend/src/components/Badge.tsx` | リアクションカウント表示 |
+| `HeaderButton` | `frontend/src/components/HeaderButton.tsx` | variant="icon" |
 
 ### 新設必要（PO許可済み 2026-09-27）
 
