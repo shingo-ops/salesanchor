@@ -2451,7 +2451,7 @@
       "newAlias": "個別ルール新規作成",
       "selectSupplier": "仕入元を選択してください",
       "bulkDeleteConfirm": "選択した {{count}} 件を削除します。よろしいですか？",
-      "categoryHelp": "このルールがどの処理段階で使われるかを選びます。通常は「正規化（表記統一）」。",
+      "categoryHelp": "このルールの種類を選びます。「メッセージ除外」はGemini呼び出し前のフィルタ、「商品の区切り記号」は商品ブロックの区切り判定に使います。",
       "patternTypeHelp": "受信ワードの照合方法。正規表現は高度な指定（例: 変換前『^SV1a-(\\d+)』→ 変換後『SV1a-$1』で後方参照）。",
       "categories": {
         "normalize": "正規化（表記統一）",
@@ -2459,7 +2459,10 @@
         "alias_normalize": "別名の正規化",
         "exclude": "除外（無視する行）",
         "message_exclude": "メッセージ除外（即除外）",
-        "message_exclude_no_digit": "メッセージ除外（数字なし条件）"
+        "message_exclude_no_digit": "メッセージ除外（数字なし条件）",
+        "block_delimiter": "商品の区切り記号",
+        "skip_condition": "Geminiスキップ条件",
+        "status_keyword": "ステータス判定"
       },
       "langs": {
         "ja": "日本語",
@@ -2476,8 +2479,8 @@
       "fields": {
         "category": "カテゴリ",
         "patternType": "一致方法",
-        "pattern": "変換前ワード",
-        "normalizedTo": "変換後ワード",
+        "pattern": "検索キーワード",
+        "normalizedTo": "変換先",
         "priority": "優先度",
         "language": "言語",
         "isActive": "有効",

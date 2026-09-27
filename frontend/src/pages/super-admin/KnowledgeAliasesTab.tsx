@@ -41,7 +41,8 @@ const PATTERN_TYPES = ["exact", "prefix", "substring", "regex"];
 
 // カテゴリはパーサが解釈する処理段階の固定値（inventory_parser）。
 // message_exclude / message_exclude_no_digit は Gemini 呼び出し前の事前フィルタ用カテゴリ。
-const RULE_CATEGORIES = ["normalize", "split", "alias_normalize", "exclude", "message_exclude", "message_exclude_no_digit"];
+// block_delimiter / skip_condition / status_keyword は DB に存在する追加カテゴリ。
+const RULE_CATEGORIES = ["normalize", "split", "alias_normalize", "exclude", "message_exclude", "message_exclude_no_digit", "block_delimiter", "skip_condition", "status_keyword"];
 
 // 言語コード（日本語/英語ラベルは i18n の langs.* で表示）。
 const LANGS = ["ja", "en", "ko", "zh"];
