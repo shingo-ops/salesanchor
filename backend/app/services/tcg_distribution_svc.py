@@ -189,6 +189,7 @@ async def fetch_output_rows(
     db: AsyncSession,
     *,
     include_flag_single: bool = False,
+    max_age_hours: int | None = None,
 ) -> list[list[str]]:
     """
     配信対象行を12列で取得する。
@@ -209,6 +210,15 @@ async def fetch_output_rows(
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+
+    # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
+    age_condition = ""
+    bind_params: dict = {}
+    if max_age_hours:
+        age_condition = (
+            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        )
+        bind_params["max_age_hours"] = max_age_hours
 
     sql = text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT
@@ -247,11 +257,12 @@ async def fetch_output_rows(
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
-          AND {cond_filter}
+          AND sm.line_posted_at IS NOT NULL
+          AND {cond_filter}{age_condition}
         ORDER BY {result_order_sql()}
     """)
 
-    result = await db.execute(sql)
+    result = await db.execute(sql, bind_params)
     rows = result.mappings().all()
     return [
         [
@@ -283,6 +294,7 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
     """
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
+    max_age_hours = int(settings.get("max_age_hours", "0"))
 
     # 配信候補件数
     if include_flag_single:
@@ -292,6 +304,16 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
         )
     else:
         cond_filter = "cr.canonical NOT LIKE 'FLAG_%'"
+
+    # line_posted_at IS NOT NULL は常時適用（PO決定: NULL行は配信対象外）
+    count_age_condition = ""
+    count_bind_params: dict = {}
+    if max_age_hours:
+        count_age_condition = (
+            "\n          AND sm.line_posted_at >= NOW() - make_interval(hours => :max_age_hours)"
+        )
+        count_bind_params["max_age_hours"] = max_age_hours
+
     count_result = await db.execute(text(f"""{source_cte(schema=TCG_SCHEMA, include_inactive=True)}
         SELECT COUNT(*) AS cnt
         FROM {TCG_SCHEMA}.analysis_results ar
@@ -306,8 +328,9 @@ async def fetch_preview_data(db: AsyncSession) -> dict:
           AND ar.exclusion IS DISTINCT FROM 'excluded'
           AND ar.unit_resolved = TRUE
           AND ar.price_normalized IS NOT NULL
-          AND {cond_filter}
-    """))
+          AND sm.line_posted_at IS NOT NULL
+          AND {cond_filter}{count_age_condition}
+    """), count_bind_params)
     output_count = count_result.scalar()
 
     # 除外内訳
@@ -725,10 +748,11 @@ async def run_distribution(
     # 1. 設定ロード
     settings = await load_distribution_settings(db)
     include_flag_single = settings.get("include_flag_single", "false").lower() == "true"
+    max_age_hours = int(settings.get("max_age_hours", "0"))
 
     # 2. 出力データ取得
     try:
-        rows = await fetch_output_rows(db, include_flag_single=include_flag_single)
+        rows = await fetch_output_rows(db, include_flag_single=include_flag_single, max_age_hours=max_age_hours)
     except Exception as exc:
         logger.error("[dist] 出力データ取得エラー: %s", exc)
         return {

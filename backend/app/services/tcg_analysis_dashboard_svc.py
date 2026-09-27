@@ -657,10 +657,24 @@ async def get_distribution_summary(db: AsyncSession) -> dict:
         for row in setting_rows
     ]
 
+    # 3. line_posted_at が NULL の配信候補件数
+    null_count_result = await db.execute(text(f"""
+        SELECT COUNT(*) AS cnt
+        FROM {TCG_SCHEMA}.analysis_results ar
+        JOIN {TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+        JOIN {TCG_SCHEMA}.extraction_jobs ej ON ej.id = ei.extraction_job_id
+        JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
+        WHERE ar.is_current = TRUE
+          AND ar.pid_resolved = TRUE
+          AND sm.line_posted_at IS NULL
+    """))
+    null_posted_at_count = null_count_result.scalar() or 0
+
     return {
         "targets": targets,
         "active_target_count": active_count,
         "total_target_count": len(targets),
         "total_last_distributed": total_distributed,
         "settings": settings,
+        "null_posted_at_count": null_posted_at_count,
     }

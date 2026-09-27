@@ -184,6 +184,7 @@ class DistributionSummaryResponse(BaseModel):
     total_target_count: int
     total_last_distributed: int
     settings: list[DistributionSettingItem]
+    null_posted_at_count: int = 0
 
 
 class ImportTrendItem(BaseModel):

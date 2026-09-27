@@ -716,6 +716,16 @@ jobs:
               unit_id             INTEGER,
               condition_id        INTEGER
           );
+
+          -- public.tcg_distribution_settings: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20260927_120000_add_max_age_hours_setting.sql が INSERT INTO public.tcg_distribution_settings
+          --   を実行するため、前提として最小定義を登録する。
+          CREATE TABLE IF NOT EXISTS public.tcg_distribution_settings (
+              key        TEXT        PRIMARY KEY,
+              value      TEXT        NOT NULL,
+              note       TEXT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
@@ -1369,6 +1379,15 @@ jobs:
               used_at      TIMESTAMPTZ,
               created_by   INTEGER     NOT NULL,
               created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          -- public.tcg_distribution_settings: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20260927_120000_add_max_age_hours_setting.sql が INSERT INTO public.tcg_distribution_settings
+          --   を実行するため、前提として最小定義を登録する。
+          CREATE TABLE IF NOT EXISTS public.tcg_distribution_settings (
+              key        TEXT        PRIMARY KEY,
+              value      TEXT        NOT NULL,
+              note       TEXT,
+              updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
           );
           PUBLIC_SQL
 

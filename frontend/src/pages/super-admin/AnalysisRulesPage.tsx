@@ -43,6 +43,7 @@ import { SupplierQualityList } from "../../features/tcg-analysis-review/Supplier
 import { SupplierDetailView } from "../../features/tcg-analysis-review/SupplierDetailView";
 import { DiagnosticsDrawer } from "../../features/tcg-analysis-review/DiagnosticsDrawer";
 import type { SupplierQualitySummary } from "../../features/tcg-analysis-review/supplierQuality";
+import { DistributionSettingsDrawer } from "./components/DistributionSettingsDrawer";
 
 // ---------------------------------------------------------------------------
 // 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
@@ -119,6 +120,7 @@ export default function AnalysisRulesPage() {
     (searchParams.get("section") as AnalysisRulesSidebarKey) || "dashboard";
   const [activeSection, setActiveSection] =
     useState<AnalysisRulesSidebarKey>(initialSection);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleSectionChange = (key: AnalysisRulesSidebarKey) => {
     if (key === "import") {
@@ -147,12 +149,23 @@ export default function AnalysisRulesPage() {
     );
   }
 
+  const headerAction = activeSection === "dashboard" ? (
+    <Button variant="ghost" size="md" onClick={() => setSettingsOpen(true)}>
+      {t("distributionSettings.buttonLabel")}
+    </Button>
+  ) : undefined;
+
   return (
     <PageLayout
       navKey="nav.superAdminAnalysisRules"
       subtitleKey="analysisRules.page.subtitle"
       noScroll
+      headerAction={headerAction}
     >
+      <DistributionSettingsDrawer
+        open={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+      />
       <div className="hub-shell">
         {/* 左サブナビ */}
         <AnalysisRulesSidebar

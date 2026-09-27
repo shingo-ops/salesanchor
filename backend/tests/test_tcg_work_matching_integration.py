@@ -365,8 +365,8 @@ def run_message(connection, engine, monkeypatch, raw, records, *, work_id_mode=F
     smid, jobid = str(uuid4()), str(uuid4())
     with connection.cursor() as cursor:
         cursor.execute(f"""INSERT INTO {SCHEMA}.source_messages
-            (id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
+            (id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+            SELECT %s,id,%s,%s,true,now(),now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
                        (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
         cursor.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (jobid, smid))
     header = HEADER + ("｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE｜RAW_PRODUCT_CODE" if work_id_mode else "")

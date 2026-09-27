@@ -4,7 +4,9 @@ The imported fixture permits only disposable CI PostgreSQL databases. No live
 Sheets, source-message rewrite, or production credentials are used.
 """
 import asyncio
+import hashlib
 from collections import Counter
+from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 
@@ -195,9 +197,12 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
         cursor.execute("SELECT supplier_channel_id,raw_text,raw_sha256,received_at "
                        "FROM public.source_messages WHERE id=%s", (baseline["smid"],))
         source = cursor.fetchone()
+        _now = datetime.now(timezone.utc)
         execute_values(cursor, "INSERT INTO public.source_messages "
-                       "(id,supplier_channel_id,raw_text,raw_sha256,received_at,is_active) VALUES %s",
-                       [(e["smid"], *source, True) for e in entries])
+                       "(id,supplier_channel_id,raw_text,raw_sha256,received_at,is_active,line_posted_at) VALUES %s",
+                       [(e["smid"], source[0], source[1],
+                         hashlib.sha256(e["smid"].encode()).hexdigest(),
+                         source[3], True, _now) for e in entries])
         execute_values(cursor, "INSERT INTO public.extraction_jobs "
                        "(id,source_message_id,status) VALUES %s",
                        [(e["job"], e["smid"], "done") for e in entries])
