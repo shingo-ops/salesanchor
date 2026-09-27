@@ -112,8 +112,8 @@ def seed(pg, *, name="Test Booster 空箱", state="", memo="", reasons="empty_bo
     smid, job, eid = str(uuid4()), str(uuid4()), str(uuid4())
     raw = name + state + memo
     with pg["connection"].cursor() as cursor:
-        cursor.execute("""INSERT INTO public.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM public.supplier_channels LIMIT 1""",
+        cursor.execute("""INSERT INTO public.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+            SELECT %s,id,%s,%s,true,now(),now() FROM public.supplier_channels LIMIT 1""",
             (smid, raw, hashlib.sha256(raw.encode()).hexdigest()))
         cursor.execute("INSERT INTO public.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')", (job,smid))
         cursor.execute("""INSERT INTO public.extraction_items(id,extraction_job_id,line_start,line_end,raw_product_name,

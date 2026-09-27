@@ -103,8 +103,8 @@ def test_postgres_analysis_replay_and_distribution(pg, monkeypatch):
         cur.execute('INSERT INTO public.product_search_keywords(product_id,keyword,position) VALUES (%s,%s,0)',(pid,'架空検証商品'))
         smid, jobid = str(uuid4()), str(uuid4())
         original='ワンピース\n架空検証商品 カートン\n架空検証商品 BOX\n架空検証商品 カートン(10BOX入り)\n架空検証商品'
-        cur.execute(f'''INSERT INTO {SCHEMA}.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at)
-            SELECT %s,id,%s,%s,true,now() FROM {SCHEMA}.supplier_channels LIMIT 1''',(smid,original,hashlib.sha256(original.encode()).hexdigest()))
+        cur.execute(f'''INSERT INTO {SCHEMA}.source_messages(id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+            SELECT %s,id,%s,%s,true,now(),now() FROM {SCHEMA}.supplier_channels LIMIT 1''',(smid,original,hashlib.sha256(original.encode()).hexdigest()))
         cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'done')",(jobid,smid))
         items=[]
         for line,name,memo in [(2,'ONE PIECE 架空検証商品 カートン',''),(3,'架空検証商品 BOX','完売'),(4,'架空検証商品 カートン(10BOX入り)',''),(5,'架空検証商品','')]:
