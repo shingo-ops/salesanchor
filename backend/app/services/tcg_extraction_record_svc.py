@@ -98,8 +98,12 @@ class AttemptRecorder:
             raise RecordError("INPUT_TOO_LARGE")
 
     def record_error_detail(self, detail: dict) -> None:
-        """Store error detail to be written to validation_result on fail()."""
-        self._error_detail = detail
+        """Store error detail to be written to validation_result on fail().
+
+        Does not overwrite if already set (first writer wins).
+        """
+        if not self._error_detail:
+            self._error_detail = detail
 
     def _owned(self, *, required: bool = True) -> bool:
         """Lock the job first, matching claim ordering. A newer child fences this attempt."""
