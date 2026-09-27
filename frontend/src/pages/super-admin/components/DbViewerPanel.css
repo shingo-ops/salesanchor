@@ -1,0 +1,145 @@
+/**
+ * DbViewerPanel — DB構造ビューアパネルのスタイル
+ *
+ * CSS変数のみ使用（ハードコードの色・サイズ禁止）。
+ * ADR-027: i18n準拠。ADR-144: 金型クラスのみ使用。
+ */
+
+.db-viewer {
+  display: flex;
+  gap: var(--space-4);
+  align-items: flex-start;
+}
+
+/* ─── 左ナビ ─── */
+.db-viewer__nav {
+  width: var(--drawer-width);
+  flex-shrink: 0;
+  overflow-y: auto;
+  max-height: calc(100vh - 200px);
+  border-right: 1px solid var(--border);
+  padding-bottom: var(--space-4);
+}
+
+.db-viewer__search {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-3) 0;
+}
+
+/* ─── カテゴリグループ ─── */
+.db-viewer__category {
+  margin-bottom: var(--space-2);
+}
+
+.db-viewer__category summary {
+  cursor: pointer;
+  font-weight: var(--font-weight-semi);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  padding: var(--space-2) var(--space-3);
+  list-style: none;
+  user-select: none;
+}
+
+.db-viewer__category summary::-webkit-details-marker {
+  display: none;
+}
+
+.db-viewer__category summary::before {
+  content: "▶";
+  display: inline-block;
+  font-size: var(--font-xs);
+  margin-right: var(--space-2);
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+
+.db-viewer__category[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* ─── テーブルアイテム ─── */
+.db-viewer__table-item {
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-6);
+  cursor: pointer;
+  font-size: var(--font-xs);
+  color: var(--text-primary);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 1px var(--space-2);
+  transition: background 0.1s ease;
+}
+
+.db-viewer__table-item:hover {
+  background: var(--bg-hover);
+}
+
+.db-viewer__table-item--active {
+  background: var(--sidebar-item-active-bg);
+  color: var(--sidebar-item-active-color);
+}
+
+.db-viewer__table-item--active:hover {
+  background: var(--sidebar-item-active-bg);
+}
+
+/* ─── スキーマバッジ ─── */
+.db-viewer__schema-badge {
+  font-size: var(--font-xs);
+  margin-left: var(--space-2);
+  flex-shrink: 0;
+}
+
+/* ─── 右メインエリア ─── */
+.db-viewer__main {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}
+
+.db-viewer__main-placeholder {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  padding: var(--space-8) var(--space-4);
+  text-align: center;
+}
+
+.db-viewer__section {
+  margin-bottom: var(--space-4);
+}
+
+.db-viewer__section-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin-bottom: var(--space-3);
+}
+
+/* ─── FKリンク ─── */
+.db-viewer__fk-link {
+  color: var(--accent);
+  cursor: pointer;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  font-family: inherit;
+}
+
+.db-viewer__fk-link:hover {
+  color: var(--accent-hover);
+}
+
+/* ─── エラー表示 ─── */
+.db-viewer__error {
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-sm);
+}
