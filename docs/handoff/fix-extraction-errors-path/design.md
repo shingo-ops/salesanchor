@@ -1,5 +1,7 @@
 # design: エラーログAPIパス二重prefix修正
 
+recon: docs/handoff/fix-extraction-errors-path/recon.md
+
 ## 修正内容
 
 | 対象 | 修正前 | 修正後 |
