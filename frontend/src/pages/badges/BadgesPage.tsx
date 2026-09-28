@@ -5,6 +5,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 
 interface Badge { id: number; name: string; description: string | null; icon: string | null; criteria: string | null; points: number; is_active: boolean; created_at: string; }
 interface LeaderEntry { user_id: number; username: string | null; badge_count: number; total_points: number; }
@@ -63,8 +64,8 @@ export default function BadgesPage() {
           {/* eslint-enable local/no-japanese-literal */}
           <div className="form-group"><label>{t("badges.points")}</label><input type="number" min="0" value={form.points} onChange={e => setForm({ ...form, points: e.target.value })} /></div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.create")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.create")}</Button>
           </div>
         </form>
       </Modal>

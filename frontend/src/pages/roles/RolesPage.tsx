@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
+import { Button } from "../../components/Button";
 import { usePermissions } from "../../hooks/usePermissions";
 import { CATEGORY_ICONS, STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
@@ -537,8 +538,8 @@ export default function RolesPage() {
                 <textarea value={roleForm.description} onChange={(e) => setRoleForm({ ...roleForm, description: e.target.value })} />
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary">{editingRoleId ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowRoleForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md">{editingRoleId ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>
@@ -563,8 +564,8 @@ export default function RolesPage() {
           ))}
         </div>
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={closeUserAssign}>{t("common.cancel")}</button>
-          <button type="button" className="btn-primary" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={closeUserAssign}>{t("common.cancel")}</Button>
+          <Button type="button" variant="primary" size="md" onClick={saveUserRoles} disabled={!targetUserId}>{t("common.save")}</Button>
         </div>
       </Modal>
 

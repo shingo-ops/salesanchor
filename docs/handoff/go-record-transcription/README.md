@@ -204,3 +204,17 @@ Deploy to VPS run34478228420/job102874182347はsuccess。事前DBバックアッ
 証拠: /tmp/reports/TH-L1-3404-MERGED.json、TH-L1-3404-MERGE-PROOF.json、TH-L1-3404-GO3-CHECK.json、TH-L1-3404-GO3-MERGE.txt、TH-L1-3404-DEPLOY-FINAL-RUN.json、TH-L1-3404-DEPLOY-JOBS.json、TH-L1-3404-PROD-VERIFY.txt、TH-L1-3404-PROD-STATE.txt、TH-L1-3404-API-HEALTH.json、TH-L1-3404-RESULT.json。
 
 L1状態はPO承認済み・マージ済み・本番反映照合済み。wrapperでL1worktree/ローカルbranchを整理、公式ledger-lookupでDONEを確認。GOフロー設計PR #3418は別テーマとして未マージ、全体設計REVISE、ガード/委任経路は未実装のまま。
+
+## 2026-09-28 PR作成とマージ審査の限定修正
+
+PO提示「PR作成時は設計・検証を確認し、番号付きGOはマージ直前に必須確認する」への応答原文「よい」を受領。
+限定設計はAstra自己審査APPROVE。既存代理GO制度全体はREVISE/未有効化のまま。特定PRのGOは創作しない。
+- [調査](pr-lifecycle-recon.md)
+- [設計・受入条件](pr-lifecycle-design.md)
+- [実装カード](CARD-PR-LIFECYCLE-01.md)
+
+この修正はLINEガイドのfrontend変更と別PRで管理する。CARD-03まで実装・試験済み、Sol read-onlyレビューとAstra限定実装審査APPROVE。Node107/wrapper5/lifecycle11成功。PR #3824提出済み、未マージ。
+- [追加修正カード](CARD-PR-LIFECYCLE-03.md)
+- [保存カード](CARD-PR-LIFECYCLE-04.md)
+
+PR: https://github.com/shingo-ops/salesanchor/pull/3824 。実装コミット90c6dbecc4314b4c40f591e365478a9540cc5356をpush済み。提出wrapperの実行成功と.pr-number/実PRの一致を確認。CI run36387714825の失敗理由は番号付きGO節未受領による欠落。その他CI確認中。

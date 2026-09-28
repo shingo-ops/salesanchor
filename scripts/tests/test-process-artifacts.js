@@ -52,12 +52,19 @@ function test(name, fn) {
   }
 }
 
-function runScript(env = {}) {
-  const result = spawnSync('node', [SCRIPT], {
+function runScript(env = {}, args = []) {
+  const result = spawnSync('node', [SCRIPT, ...args], {
     env: { ...process.env, ...env },
     encoding: 'utf8',
   });
   return { code: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function runScriptWithPath(env, args, pathValue) {
+  return spawnSync('node', [SCRIPT, ...args], {
+    env: { ...process.env, ...env, PATH: pathValue },
+    encoding: 'utf8',
+  });
 }
 
 // ─── 一時ファイル管理 ─────────────────────────────────────────────────────────
@@ -1370,6 +1377,60 @@ test('維持欄統合: failモード＋欄なし＋PR2599 → pass（猶予・�
 });
 
 }
+
+console.log('\n【validation-only副作用テスト】');
+
+test('validation-only: 緊急判定は維持しissue createは0回', () => {
+  setupTmp();
+  const fakeBin = join(TMP, 'fake-bin');
+  const ghLog = join(TMP, 'gh.log');
+  mkdirSync(fakeBin, { recursive: true });
+  writeFileSync(join(fakeBin, 'gh'), `#!/bin/sh\necho "$*" >> "${ghLog}"\nif [ "$1 $2" = "issue list" ]; then echo '[]'; fi\nexit 0\n`);
+  require('fs').chmodSync(join(fakeBin, 'gh'), 0o755);
+  try {
+    const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-113\n- recon: docs/handoff/go-record-transcription/pr-lifecycle-recon.md\n- 設計: docs/handoff/go-record-transcription/pr-lifecycle-design.md\n- （危ない変更の特例時）モード: 緊急 ＋ 承認者: shingo-ops\n触るファイル: scripts/check-process-artifacts.js\n削除するファイル: scripts/check-process-artifacts.js\n\n${validGORecordSection(2700)}`;
+    const env = {
+      CHANGED_FILES: 'scripts/check-process-artifacts.js',
+      MOCK_ADDED_FILES: '',
+      MOCK_PR_BODY: body,
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      REPO: 'shingo-ops/salesanchor',
+    };
+    const validation = runScriptWithPath(env, ['--validation-only'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(validation.status, 0, `${validation.stdout}\n${validation.stderr}`);
+    const validationLog = existsSync(ghLog) ? require('fs').readFileSync(ghLog, 'utf8') : '';
+    assert.ok(!validationLog.includes('issue create'), `issue副作用あり: ${validationLog}`);
+
+    const duplicate = runScriptWithPath(env, ['--validation-only', '--validation-only'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(duplicate.status, 1, `重複引数はfailすべき: ${duplicate.stdout}\n${duplicate.stderr}`);
+    const unknown = runScriptWithPath(env, ['--validation-ony'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(unknown.status, 1, `未知引数はfailすべき: ${unknown.stdout}\n${unknown.stderr}`);
+    const rejectedLog = existsSync(ghLog) ? require('fs').readFileSync(ghLog, 'utf8') : '';
+    assert.ok(!rejectedLog.includes('issue create'), `引数拒否時のissue副作用あり: ${rejectedLog}`);
+
+    const normal = runScriptWithPath(env, [], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(normal.status, 0, `${normal.stdout}\n${normal.stderr}`);
+    const normalLog = require('fs').readFileSync(ghLog, 'utf8');
+    assert.ok(normalLog.includes('issue create'), `通常modeのissue createが無い: ${normalLog}`);
+    assert.ok(normalLog.includes('--repo github.com/shingo-ops/salesanchor'), `Issue送信先が固定されていない: ${normalLog}`);
+  } finally { cleanupTmp(); }
+});
+
+test('対象外REPOはfull checker開始前にfail', () => {
+  const r = runScript({
+    CHANGED_FILES: 'scripts/check-process-artifacts.js',
+    MOCK_ADDED_FILES: '',
+    MOCK_PR_BODY: validGORecordSection(2700),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    MOCK_EXTERNAL_API_CHANGE: 'false',
+    PR_NUMBER: '2700',
+    REPO: 'evil/example',
+  }, ['--validation-only']);
+  assert.strictEqual(r.code, 1, `対象外REPOはfailすべき: ${r.stdout}\n${r.stderr}`);
+  assert.ok(r.stderr.includes('対象外repo'), `拒否理由が無い: ${r.stderr}`);
+});
 
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`

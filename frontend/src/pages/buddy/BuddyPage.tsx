@@ -5,6 +5,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 
 interface Pair { id: number; coach_user_id: number; mentee_user_id: number; is_active: boolean; started_at: string; ended_at: string | null; notes: string | null; }
 interface Feedback { id: number; pair_id: number; feedback_type: string; reason: string | null; created_by: number; created_at: string; }
@@ -64,8 +65,8 @@ export default function BuddyPage() {
           <div className="form-group"><label>{t("buddy.menteeUserId")} *</label><input type="number" min="1" required value={form.mentee_user_id} onChange={e => setForm({ ...form, mentee_user_id: e.target.value })} /></div>
           <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.create")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.create")}</Button>
           </div>
         </form>
       </Modal>
