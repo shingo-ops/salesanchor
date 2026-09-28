@@ -46,3 +46,6 @@ PO指示により画面/実ログイン/本番フォーム操作/PO目視を省�
 残旧232件は本便未移管。bare/dynamic、表、報酬3、カレンダー色は次の設計対象、新CI追加は全画面移管後。今回残りは正式保存/PR/最新CI確認、番号付きGOを正規経路で確認してmerge/deploy。代理GO有効化未確認、PO原文を創作しない。
 
 前回文書PR3829はmerge1675bfa02、Deploy36401805835成功。root09:20:01Zのread-only検査で本番HEAD一致、App/API200、接続3項目正常、公開index/JSとcontainerhash一致。as-previous-docs-production.jsonはこの前回文書配備の証跡でありASの本番反映証明ではない。
+
+
+2026-09-28 正式提出: 255be0f550e7a67b1f2ebd9673ac437ad7f41edeをcommit/push、公式create-safeでPR #3834（https://github.com/shingo-ops/salesanchor/pull/3834）を提出し.pr-number/ブランチ照合済み。最新main1675bfa02と整合、未保存0を直接確認。PRのprocess-artifacts gateは今回番号付きGOの未受領で停止（run36404560681/job108870059341原ログ確認）、技術検査は確認継続。CLAUDE.md/ADR-136と公式マージ経路が番号付きPO原文を要求するため、包括的な続行許可から「GO #3834」を創作しない。新規GO受領後は対象HEAD・最新CI・本番バックアップを再確認して公式merge/deploy経路へ進む。現時点で本便のマージ/本番反映は未実施。

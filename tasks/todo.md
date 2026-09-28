@@ -173,4 +173,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| AS共通Button移管 | Astra設計/Sol2担当実装 | 34/25移管・自己設計審査/相互レビューAPPROVE、全606試験成功 | 正式保存/PR/最新CI・今回番号付きGO確認 | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |
+| AS共通Button移管 | Astra設計/Sol2担当実装 | PR3834提出、34/25移管・相互レビューAPPROVE、全606試験成功。GO記録検査は未受領で停止 | 最新技術CI確認、GO #3834受領後にHEAD/backup再照合・公式merge/deploy | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |
