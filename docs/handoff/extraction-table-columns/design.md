@@ -1,5 +1,11 @@
 # design: 抽出テーブル列改善
 
+## 対象 ADR
+
+- ADR-027: `docs/adr/ADR-027-ui-internationalization.md`（UI 文字列は全て `t("key")` 経由・`ja.json`/`en.json` 同一キー必須）
+- ADR-067: `docs/adr/ADR-067-design-tokens.md`（CSS 変数・デザイントークン使用必須）
+- ADR-144: `docs/CC_UI_GOVERNANCE.md`（UI 部品新設時は `components/` 金型確認・生 select/input/色直値禁止）
+
 ## recon 参照
 
 - `docs/handoff/extraction-table-columns/recon.md`
