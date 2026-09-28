@@ -22,10 +22,10 @@ from app.services.gemini_extraction_svc import (
     extract_message,
     format_prompt_input,
     parse_extraction_response,
+    parse_raw_copy_response,
     strip_emoji,
 )
 from app.tcg_config import TCG_SCHEMA as _TCG_SCHEMA
-
 
 _STUB_BASE_PROMPT = "RAW_PRODUCT_NAME｜RAW_QUANTITY｜RAW_PRICE｜RAW_UNIT｜RAW_STATE｜RAW_MEMO｜RAW_SOURCE_LINE_SPAN｜RAW_WORK_NAME｜RAW_WORK_SOURCE_LINE_SPAN (stub)"
 _STUB_WORK_ID_PROMPT = "RAW_PRODUCT_NAME｜RESOLVED_WORK_ID｜RESOLVED_PRODUCT_CODE (stub)"
@@ -341,6 +341,103 @@ def test_auto_analyze_on_calls_analyze(monkeypatch):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# EXTRACTION_SHADOW_ENABLED フラグ制御（試運転, PR-C）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def _mock_extract_done():
+    def mock_extract(raw_text, **kwargs):
+        return {
+            "status": "done",
+            "prompt_version": "v1",
+            "items": [
+                {
+                    "raw_product_name": "商品A",
+                    "raw_quantity": "1",
+                    "raw_price": "100円",
+                    "raw_unit": "個",
+                    "raw_state": "",
+                    "raw_memo": "",
+                    "line_start": 1,
+                    "line_end": 1,
+                }
+            ],
+            "raw_response": "",
+            "error_message": None,
+        }
+    return mock_extract
+
+
+def test_shadow_disabled_by_default_skips_run_shadow(monkeypatch):
+    """EXTRACTION_SHADOW_ENABLED 未設定のとき run_shadow_for_job を呼ばない。"""
+    monkeypatch.delenv("EXTRACTION_SHADOW_ENABLED", raising=False)
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+    shadow_calls = []
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", lambda *a, **kw: shadow_calls.append((a, kw))):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")
+
+    assert result["status"] == "done"
+    assert shadow_calls == [], "EXTRACTION_SHADOW_ENABLED 未設定のとき run_shadow_for_job を呼ぶべきでない"
+
+
+def test_shadow_enabled_calls_run_shadow_with_production_values(monkeypatch):
+    """EXTRACTION_SHADOW_ENABLED=1 のとき、本番で読み込んだ raw_text 等をそのまま渡して呼ぶ。"""
+    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session(raw_text="商品A\n商品B")
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+    shadow_calls = []
+
+    def fake_run_shadow(session, extraction_job_id, *, raw_text, supplier_context, knowledge_links):
+        shadow_calls.append(
+            {"extraction_job_id": extraction_job_id, "raw_text": raw_text}
+        )
+        return {"status": "completed"}
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", fake_run_shadow):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")
+
+    assert result["status"] == "done"
+    assert len(shadow_calls) == 1
+    assert shadow_calls[0]["raw_text"] == "商品A\n商品B"
+
+
+def test_shadow_exception_does_not_propagate_to_production(monkeypatch):
+    """run_shadow_for_job が例外を送出しても _run_extraction の結果には影響しない。"""
+    monkeypatch.setenv("EXTRACTION_SHADOW_ENABLED", "1")
+    monkeypatch.delenv("TCG_AUTO_ANALYZE", raising=False)
+
+    mock_session = _make_mock_session()
+    recorder = MagicMock()
+    recorder.prepare_items.side_effect = lambda items: [{**item, "extraction_item_id": "synthetic-item"} for item in items]
+    monkeypatch.setattr("app.tasks.tcg_extraction.AttemptRecorder", lambda *a: recorder)
+
+    def raise_shadow(*a, **kw):
+        raise RuntimeError("shadow run が失敗しても本番には伝わらないことを確認する")
+
+    with patch("app.tasks.tcg_extraction.extract_message", _mock_extract_done()), \
+         patch("app.tasks.tcg_extraction.run_shadow_for_job", raise_shadow):
+        from app.tasks.tcg_extraction import _run_extraction
+        result = _run_extraction(mock_session, "test-sm-id")  # raises せず完走すること自体が検証
+
+    assert result["status"] == "done"
+    assert result["items_count"] == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # SQL スキーマ守護テスト（IMP-05 の穴を塞ぐ）
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -510,6 +607,135 @@ def test_work_master_reaches_prompt_without_database_ids(monkeypatch):
     prompt = client.models.generate_content.call_args.kwargs["contents"]
     assert '"display_name": "GUNDAM"' in prompt and '[L0001] ガンダム EB01' in prompt
     assert "secret-database-id" not in prompt and "inactive-work" not in prompt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 試運転（Shadow run, PR-C）: parse_raw_copy_response / call_gemini_raw_copy
+# ─────────────────────────────────────────────────────────────────────────────
+
+_RAW_COPY_HEADER_LINE = (
+    "RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜RAW_MULTI｜"
+    "RAW_SOURCE_LINE_SPAN｜RAW_HEADING_LINE_SPAN"
+)
+
+_VALID_RAW_COPY_RESPONSE = (
+    _RAW_COPY_HEADER_LINE + "\n"
+    "ポケモンカード｜1500円｜枚｜3｜none｜none｜none｜L0001｜none\n"
+    "遊戯王カード｜5000円｜枚｜10｜PSA10｜発売日発送｜none｜L0002-L0003｜L0001\n"
+)
+
+
+class TestParseRawCopyResponse:
+    def test_parses_valid_two_line_response(self):
+        # Arrange
+        raw_text = "見出し\nポケモンカード\n遊戯王カード\n続き"
+        # Act
+        items, parse_errors = parse_raw_copy_response(_VALID_RAW_COPY_RESPONSE, raw_text)
+        # Assert
+        assert parse_errors == []
+        assert len(items) == 2
+        assert items[0]["raw_product_name"] == "ポケモンカード"
+        assert items[0]["raw_state"] == "none"
+        assert items[0]["raw_ship"] == "none"
+        assert items[0]["line_start"] == 1 and items[0]["line_end"] == 1
+        assert items[0]["heading_line_start"] is None
+        assert items[0]["heading_line_end"] is None
+        assert items[1]["line_start"] == 2 and items[1]["line_end"] == 3
+        assert items[1]["heading_line_start"] == 1 and items[1]["heading_line_end"] == 1
+
+    def test_header_mismatch_raises_value_error(self):
+        # Arrange
+        bad_response = "RAW_PRODUCT_NAME｜RAW_PRICE｜間違ったヘッダー\n商品｜100｜個\n"
+        # Act / Assert
+        with pytest.raises(ValueError):
+            parse_raw_copy_response(bad_response, "行A")
+
+    def test_empty_response_raises_no_header_error(self):
+        # Act / Assert
+        with pytest.raises(ValueError):
+            parse_raw_copy_response("", "行A")
+
+    def test_empty_raw_state_goes_to_parse_errors_not_items(self):
+        # Arrange: RAW_STATE が空欄（Gemini指示違反）
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜｜none｜none｜L0001｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+        assert "RAW_STATE" in parse_errors[0]["error"] or "RAW_SHIP" in parse_errors[0]["error"]
+
+    def test_empty_raw_ship_goes_to_parse_errors_not_items(self):
+        # Arrange
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜none｜｜none｜L0001｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+    def test_invalid_source_span_goes_to_parse_errors(self):
+        # Arrange
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜100円｜個｜1｜none｜none｜none｜不正な範囲｜none\n"
+        )
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+    def test_wrong_column_count_goes_to_parse_errors(self):
+        # Arrange
+        response = _RAW_COPY_HEADER_LINE + "\n商品A｜100円｜個\n"
+        # Act
+        items, parse_errors = parse_raw_copy_response(response, "行A")
+        # Assert
+        assert items == []
+        assert len(parse_errors) == 1
+
+
+class TestCallGeminiRawCopy:
+    def test_uses_db_raw_copy_prompt_and_filters_knowledge_links(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        knowledge_links = [
+            {"category": "block_delimiter", "pattern": "◆", "normalized_to": None},
+            {"category": "skip_condition", "pattern": "完売", "normalized_to": "skip"},
+            {"category": "status_keyword", "pattern": "サーチ済", "normalized_to": "searched"},
+        ]
+        # Act
+        result = svc.call_gemini_raw_copy("行A", knowledge_links=knowledge_links)
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "raw copy prompt (stub)" in prompt
+        assert "◆" in prompt  # block_delimiter は渡す
+        assert "完売" not in prompt  # skip_condition は渡さない
+        assert "サーチ済" not in prompt  # status_keyword は渡さない
+        assert result["response_text"] == _RAW_COPY_HEADER_LINE
+
+    def test_missing_prompt_raises_runtime_error(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+
+        def _raise():
+            raise RuntimeError("raw_copy_extraction プロンプトがDBに登録されていない")
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", _raise)
+        # Act / Assert
+        with pytest.raises(RuntimeError):
+            svc.call_gemini_raw_copy("行A")
 
 
 # Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
