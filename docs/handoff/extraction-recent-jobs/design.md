@@ -39,6 +39,8 @@
 
 ## 維持の仕組み
 
+守り手: ADR-027(i18n), ADR-067(デザイントークン), ADR-144(UI金型)
+
 - `recent_extraction_jobs` は API の additive 追加のため、フィールドを削除・リネームする際は PipelineSummaryResponse + フロント型定義の両方を同時変更すること
 - ステータスバッジの色マッピングは `recentJobColumns` の renderCell 内に集約。新ステータス追加時は renderCell と i18n キー（`extractionJobStatus_<status>`）を同時追加すること
 - `extractionTrendDay`/`extractionTrendTotal`/`extractionTrendDone`/`extractionTrendError` キーは削除済み。再追加不可
