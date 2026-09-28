@@ -74,3 +74,15 @@ APPROVE（画面省略の限界付き）。製品14静的レビュー、4試験�
 - 初回失敗/途中出力/最終原ログをar-validation-logs.tar.gzへ格納、ar-validation-manifest.jsonに各SHA256を保存して再照合一致。生成coverageは削除せず/tmp/ar-final-coverage-20260928へ退避、commitには含めない。
 
 次: 実装と文書保存、正式main統合、公式wrapperでAQ+AR計30件のPR、最新HEADのCI、番号付きGO、merge/deploy確認。画面/実ログイン/本番フォーム/PO目視は省略・未検証。旧266件・表・報酬3・カレンダー色は残タスク、新CI追加は最後。
+
+### 保存・main統合後の検証状況
+
+AR実装を1557eb821へ保存、origin/main fdf3b45a4をddd470746fe6001b3b83525b4ef057012a7ca537へ通常統合（競合0）。統合前後frontend全体diff0をAstraが直接確認。正式のPR起票経路を取り込み済み。
+
+同値fixture修正後の全件30ログは580成功/1失敗（OrderLead edit成功試験の5000ms timeout、233.04秒）。これを記録し、23の全件成功だけで最終安定性を断定しない。製品/試験/configを変えず並行数1で全件を再検証中。原因の資源競合は未確定で、マージ/配備の完了宣言はしない。
+
+## 最終HEAD相当の全件検証確定
+
+31-coverage-maxworkers1-final.log（Sol実行exit0、Astra原ログ直接確認）は40ファイル581試験成功/失敗0、171.87秒。statements20.23% (3618/17876)、branches16.53% (2122/12831)、functions17.88% (991/5542)、lines20.86% (3202/15346)。試験・製品・config変更なし、並行数1の実行。新たな除外/skip/期待緩和0。途中23のcoverage値と区別し、最終値はこちらを採用する。
+
+32最終機械監査pass=true、33diff-check成功、34試験hash保存。コミットhookも最終18製品/試験をstrict ESLint・絵文字・CSS var検査して成功。ローカル検収APPROVE確定。archiveを全実行終了後に再生成してmanifest全件SHA256一致。最終coverage生成物も/tmpへ保管し、製品commitへ混入しない。PR/正式CI/番号付きGO/merge/deployは次段階。
