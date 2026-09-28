@@ -23,6 +23,46 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260928-PR-LIFECYCLE-GATES
+date: 2026-09-28
+agent: Sol implementation/validation
+task: PR作成前検査とマージ前GO検査の分離
+scope: CARD-01〜04の設計・限定実装・ローカル試験・審査と正式PR提出。merge/deployは未実施。
+evidence:
+  - type: command
+    reference: node scripts/tests/test-process-artifacts.js
+    summary: 107 PASS / 0 FAIL。validation-onlyの判定維持、Issue write 0、未知・重複引数と対象外REPO拒否を確認。
+  - type: command
+    reference: bash scripts/tests/test-merge-safe-guard.sh
+    summary: 5 PASS / 0 FAIL。.pr-number欠落・空、GITHUB_ACTIONS環境名だけの成功skipを拒否し、helper非0時cleanup 0を確認。
+  - type: command
+    reference: python3 scripts/tests/test-pr-lifecycle.py
+    summary: 11 test methods成功。一時gitと偽ghだけでcreate本文4構文、host/repo固定、入力再構成、SHA検査、checks再確認、正常merge 1回、送信後異常exit2と再送0を確認。
+  - type: file
+    reference: docs/handoff/go-record-transcription/pr-lifecycle-design.md
+    summary: Astraの呼出契約の確定追補を実装基準とした。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-01実装時のPreToolUse拒否
+    summary: 同一pathをDelete/Addするapply_patchが「structural file header重複」で拒否された。設定変更や別書込手段で迂回せず、以後は正式指示どおりUpdate File形式を使用した。CARD-PR-LIFECYCLE-02受領後の新規ガード拒否は0件。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-03初回のPreToolUse拒否とAstra再開追補
+    summary: PR操作文字列を含む複合read-onlyコマンドが拒否され、Solは追加変更0で停止。Astra確認後、検索・読取を単独コマンドへ分離して再開した。再開後の新規ガード拒否は0件。
+  - type: external
+    reference: https://github.com/shingo-ops/salesanchor/pull/3824
+    summary: Astraがcreate-safe exit0、.pr-number=3824とgh pr listの番号/HEAD一致を直接確認。実装commit90c6dbecc4314b4c40f591e365478a9540cc5356はlocal/origin一致。正式PR作成1回。
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/36387714825
+    summary: 初回CI失敗はGO節欠落。Astraがlog-failedを直接確認。番号付きGO未受領なので合格扱いしない。
+  - type: command
+    reference: Astraの設計・引用検査、CARD-04 lint
+    summary: errors=[]、lint exit0。Solの最終試験ログとコードをAstraと別Solレビューが照合しAPPROVE。
+confidence: high
+tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
+decision: ローカル実装・試験・Astra/Sol審査を完了しPR #3824提出済み。番号付きGO未受領、未merge・未deploy。
+follow_up: CI結果を確認後GO #3824を受領・記録し、マージ前の全検査へ進む。Ruleset13必須checks/strictを実確認済み。process-artifactsはrequired一覧外。本番挙動は未確認。
+```
+
+```text
 id: EV-20260914-TCG-RESULT-ORDER
 date: 2026-09-14
 agent: Codex (design partner; same-AI self-review)

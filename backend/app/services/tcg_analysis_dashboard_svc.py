@@ -206,6 +206,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
                 f" LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
                 f" LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
                 f" LEFT JOIN {TCG_SCHEMA}.suppliers s ON s.id = sc.supplier_id"
+                f" WHERE ej.status NOT IN ('empty', 'filtered')"
                 f" GROUP BY ej.id, ej.status, ej.created_at, s.name"
                 f" ORDER BY ej.created_at DESC"
                 f" LIMIT 10"
