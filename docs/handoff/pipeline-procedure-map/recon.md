@@ -169,3 +169,8 @@ main再前進追補: 88b495603保存直後にmainがb3cf1fdfへ前進し、必�
 CARD17再検証実測（Sol実行）: unmerged0、ガイド8pathは承認25e9比差分0。check:all exit0（既存警告140/error0）、build exit0（1740 modules、660ms）、単体2files17/17成功（1.56s）。直前5173 listener空/exit1を確認し、既定Chromium E2E6/6成功（12.5s、1 worker）。Astra直接task-state/diff-check成功。製品独自修正なし。統合後HEADのCIとPO再GO、マージ・本番反映・PO読解確認は別途。
 
 PR3835結果記録追補: CARD17保存後、mainが0c060d3へ前進。追加はASの本番反映証跡・台帳9件のみでfrontend/backend/scripts/guards/CI差分0。guard評価run36417342020はstale-base-checkoutでskipし、必須status未報告を確認した。Astra実通常mergeは競合0で双方の記録を自動統合。評価base更新と同一blob照合を行い、製品treeがCARD17検証時と同一のため試験実測を保持する。新HEADのCIとPO再GOは別途確認する。
+
+## 2026-09-28 PR3823統合の実処理照合
+
+12:19:24 UTCにPO原文「GO #3831」をHEAD1b39bb461への承認として受領したが、実mainはaa74c018へ前進しPRはBEHIND。マージ送信0。追加4pathはskip_condition削除migration、seed撤去、既存実行登録、台帳。Sol初期REVISEは実処理を追加照合して訂正した。gemini_extraction_svc.py:295-311のskip_conditionと、tcg_extraction.py:164-220のmessage_exclude/message_exclude_no_digitは別category。後者の抽出前フィルタと同ファイル:306-371のempty/filtered/error記録が残るため、ガイドstep4のja/enは正しい。遷移先名称もsidebarと一致。推測で文言を変えずAPPROVE。
+CARD18でSolが固定mainを競合0通常統合、frontend diff0/unmerged0を実確認。独自製品変更・DB実行なし。CARD17試験を同一frontendの証拠として保持。評価baseと必読blobを最新mainに照合。統合後HEADへの旧GO流用はせず、全CIと再GO確認後にのみマージする。
