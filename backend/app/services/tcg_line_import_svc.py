@@ -284,7 +284,7 @@ def build_provider_entries(
             "sp_code": str,
             "canonical_name": str,
             "raw_text": str,               # 最新メッセージ本文のみ（SQR-05）
-            "received_at": str,            # 最初の timestamp "YYYY-MM-DD HH:MM:00"
+            "received_at": str,            # 採用した最新メッセージの timestamp（line_posted_at と同値）
             "sha256": str,
             "skipped_message_count": int,  # 棄却したメッセージ数（最新以外）
         }]
@@ -303,7 +303,7 @@ def build_provider_entries(
         sorted_msgs = sorted(msgs, key=lambda m: m["timestamp"])
         latest_msg = sorted_msgs[-1]
         raw_text = latest_msg["body"]
-        received_at = sorted_msgs[0]["timestamp"]
+        received_at = latest_msg["timestamp"]
         canonical_name = sorted_msgs[0]["canonical_name"]
         skipped_message_count = len(sorted_msgs) - 1
 
