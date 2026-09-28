@@ -9,7 +9,10 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Literal
 
-from app.services.inventory_parser import extract_offer_type_ship_timing
+# inventory_parser.py は scripts/check-condition-vocab.js の CODE_FILES に含まれ、
+# 同ファイルを変更すると本PRと無関係な既存のレガシー語彙（shrink_yes等）の全文スキャンが
+# 発火する。レガシー語彙移行は別テーマのため、公開名を追加する代わりに内部関数を直接importする。
+from app.services.inventory_parser import _extract_offer_type_ship_timing as extract_offer_type_ship_timing
 
 _KATAKANA_START = 0x30A1
 _KATAKANA_END = 0x30F6

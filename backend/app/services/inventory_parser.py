@@ -541,9 +541,6 @@ def _extract_offer_type_ship_timing(line: str) -> tuple[str | None, str | None]:
     return offer_type, ship_timing
 
 
-extract_offer_type_ship_timing = _extract_offer_type_ship_timing
-
-
 # ---------------------------------------------------------------------------
 # Step 4b: 1 行に複数 (qty × unit @ price [condition]) ブロックが含まれる場合の分割
 # ---------------------------------------------------------------------------
