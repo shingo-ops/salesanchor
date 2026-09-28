@@ -5062,7 +5062,9 @@
     "newRulePattern": "Pattern",
     "newRuleNormalizedTo": "Maps To",
     "ruleLinked": "Linked",
-    "noRulesLinked": "Not configured"
+    "noRulesLinked": "Not configured",
+    "shipFormat": "Ship timing format",
+    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)"
   },
   "needsReview": {
     "title": "Needs Review",
@@ -5073,7 +5075,12 @@
     "noItems": "No items need review",
     "pidUnresolved": "Product unresolved",
     "multiCandidate": "Multiple candidates",
-    "noteUnmatched": "Note unmatched"
+    "noteUnmatched": "Note unmatched",
+    "tabs": {
+      "production": "Production review",
+      "shadow": "Shadow run review",
+      "bottlenecks": "Bottlenecks"
+    }
   },
   "distributionSettings": {
     "buttonLabel": "Distribution Settings",
@@ -5084,5 +5091,38 @@
     },
     "save": "Save",
     "saved": "Saved"
+  },
+  "shadowReview": {
+    "supplier": "Supplier",
+    "excerpt": "Raw text excerpt",
+    "stoppedItem": "Stopped item",
+    "candidates": "Candidates",
+    "reason": "Reason",
+    "createdAt": "Created at",
+    "noItems": "No pending reviews",
+    "modalTitle": "Shadow run review details",
+    "blockText": "Full block text",
+    "candidateList": "Candidate list",
+    "keywordKind": "Keyword type",
+    "keywordKindSearch": "Search keyword",
+    "keywordKindExclude": "Exclude keyword",
+    "keywordInput": "Keyword",
+    "checkImpact": "Check impact",
+    "register": "Register",
+    "previewChecked": "Checked {{count}} block(s)",
+    "registerSuccess": "Registered",
+    "registerFailed": "Registration failed",
+    "keywordAlreadyExists": "This keyword is already registered",
+    "matchStatusMatched": "Matched",
+    "matchStatusAmbiguous": "Multiple candidates",
+    "matchStatusUnmatched": "Unmatched",
+    "bottleneckDaysLabel": "Period",
+    "bottleneckDays7": "Last 7 days",
+    "bottleneckDays30": "Last 30 days",
+    "bySupplier": "By supplier",
+    "byItem": "By item",
+    "matchedRatio": "Auto-match ratio",
+    "needsReviewCount": "Needs review count",
+    "totalCount": "Total"
   }
 }

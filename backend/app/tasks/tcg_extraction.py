@@ -236,6 +236,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                    s.extraction_notes,
                    s.extraction_state_format,
                    s.extraction_example_text,
+                   s.extraction_ship_format,
                    sc.supplier_id
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
@@ -279,13 +280,14 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         "extraction_notes": row[6],
         "extraction_state_format": row[7],
         "extraction_example_text": row[8],
+        "extraction_ship_format": row[9],
     }
     if any(v for v in extraction_rules.values()):
         supplier_context = extraction_rules
 
     # Knowledge リンクを取得（supplier_id がある場合のみ）
     knowledge_links: list[dict] | None = None
-    supplier_id = row[9]
+    supplier_id = row[10]
     if supplier_id is not None:
         kl_rows = session.execute(
             text(
