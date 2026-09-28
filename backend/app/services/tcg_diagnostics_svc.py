@@ -209,6 +209,15 @@ async def retry_extraction(
     # 3. error → pending にリセット（pending はそのまま）
     error_ids = [str(row.id) for row in rows if row.status == "error"]
     if error_ids:
+        # リトライ前に古い extraction_items を削除（安全策）
+        # FK CASCADE (analysis_results → extraction_items) により紐づく analysis_results も自動削除される
+        await db.execute(
+            text(
+                f"DELETE FROM {TCG_SCHEMA}.extraction_items"
+                " WHERE extraction_job_id = ANY(:ids)"
+            ),
+            {"ids": error_ids},
+        )
         await db.execute(
             text(
                 f"UPDATE {TCG_SCHEMA}.extraction_jobs"
