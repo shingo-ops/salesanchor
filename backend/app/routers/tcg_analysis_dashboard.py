@@ -90,8 +90,11 @@ class ExtractionBySupplierItem(BaseModel):
 
 class RecentExtractionJobItem(BaseModel):
     id: str
-    channel_name: str | None
+    supplier_name: str | None
     item_count: int
+    resolved_count: int
+    unresolved_count: int
+    needs_review_count: int
     status: str
     created_at: str | None
 
