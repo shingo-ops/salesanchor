@@ -31,6 +31,8 @@ let cachedOriginMainPaths = null;
 
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
+const TARGET_REPO = 'shingo-ops/salesanchor';
+const TARGET_GH_REPO = 'github.com/shingo-ops/salesanchor';
 
 // ─── GO権限（PO単独）────────────────────────────────────────────────────────
 const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
@@ -532,7 +534,7 @@ function createFollowupIssue(prNumber, repo) {
     // 重複起票防止（同PR番号のopenイシューがあればスキップ）
     const existingIssues = JSON.parse(
       execSync(
-        `gh issue list --label "sop-followup" --state open --json number,title --repo "${repo}"`,
+        `gh issue list --label "sop-followup" --state open --json number,title --repo "${TARGET_GH_REPO}"`,
         { encoding: 'utf8' }
       ).trim()
     );
@@ -542,7 +544,7 @@ function createFollowupIssue(prNumber, repo) {
     }
 
     execSync(
-      `gh issue create --title "${title}" --body '${body.replace(/'/g, "'\\''")}' --label "sop-followup" --repo "${repo}"`,
+      `gh issue create --title "${title}" --body '${body.replace(/'/g, "'\\''")}' --label "sop-followup" --repo "${TARGET_GH_REPO}"`,
       { encoding: 'utf8' }
     );
     console.log(`  📌 宿題待ち issue を起票しました（期限: ${deadline}）`);
@@ -651,6 +653,13 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
 
 // ─── メイン ──────────────────────────────────────────────────────────────────
 function main() {
+  const cliArgs = process.argv.slice(2);
+  const validationOnly = cliArgs.includes('--validation-only');
+  const unknownArgs = cliArgs.filter(arg => arg !== '--validation-only');
+  if (unknownArgs.length > 0 || cliArgs.filter(arg => arg === '--validation-only').length > 1) {
+    console.error(`❌ 不正な引数です: ${cliArgs.join(' ')}`);
+    process.exit(1);
+  }
   // develop→main リリースPR は develop 段階で通過済み → スキップ
   // その他の →main PR（hotfix 等）は通常どおり検査
   const headRef = process.env.MOCK_HEAD_REF !== undefined ? process.env.MOCK_HEAD_REF : (process.env.HEAD_REF || '');
@@ -705,13 +714,16 @@ function main() {
   // PR 作者チェック（コード変更を含む PR のみ）
   const prNumber = process.env.PR_NUMBER;
   const repo = process.env.REPO;
+  if (repo && repo !== TARGET_REPO) {
+    printFailure([`❌ 対象外repoは検査できません: ${repo}`]);
+  }
   let prAuthor = '';
   if (process.env.MOCK_PR_AUTHOR !== undefined) {
     prAuthor = process.env.MOCK_PR_AUTHOR;
   } else if (prNumber && repo) {
     try {
       prAuthor = execSync(
-        `gh api "repos/${repo}/pulls/${prNumber}" --jq '.user.login'`,
+        `gh api --hostname github.com "repos/${TARGET_REPO}/pulls/${prNumber}" --jq '.user.login'`,
         { encoding: 'utf8' }
       ).trim();
     } catch {
@@ -733,7 +745,7 @@ function main() {
   } else if (prNumber && repo) {
     try {
       prBody = execSync(
-        `gh api "repos/${repo}/pulls/${prNumber}" --jq '.body // ""'`,
+        `gh api --hostname github.com "repos/${TARGET_REPO}/pulls/${prNumber}" --jq '.body // ""'`,
         { encoding: 'utf8' }
       ).trim();
     } catch {
@@ -838,8 +850,12 @@ function main() {
 
     const mode = declaration ? declaration.mode : null;
     if (mode === '緊急') {
-      console.log(`✅ 危ない変更：GO記録確認済み（緊急）— pass＋宿題待ち起票`);
-      createFollowupIssue(prNumber, repo);
+      if (validationOnly) {
+        console.log(`✅ 危ない変更：GO記録確認済み（緊急）— validation-onlyのため宿題待ち起票なし`);
+      } else {
+        console.log(`✅ 危ない変更：GO記録確認済み（緊急）— pass＋宿題待ち起票`);
+        createFollowupIssue(prNumber, repo);
+      }
     } else {
       console.log(`✅ 危ない変更：GO記録確認済み — pass`);
     }
