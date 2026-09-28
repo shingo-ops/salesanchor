@@ -1,0 +1,1538 @@
+{
+  "base": "99899eb824234c7158c14855301c9412f440db2d",
+  "generatedAt": "2026-09-28T06:40:16.193Z",
+  "candidateFileCount": 14,
+  "candidateTargetExpected": 28,
+  "candidateTargetActual": 28,
+  "files": [
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "sha256": "9b9cdbddb6869914ac68d87cc2d7c2108dda1cfab2409f6367bf7c7c25c3d1e6",
+      "baseSha256": "9b9cdbddb6869914ac68d87cc2d7c2108dda1cfab2409f6367bf7c7c25c3d1e6",
+      "expectedLines": [
+        141,
+        169,
+        173
+      ],
+      "targetCount": 3,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 141,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\">{t(\"common.search\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.search\")}"
+        },
+        {
+          "tag": "button",
+          "line": 169,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">\n          {editId ? t(\"common.update\") : t(\"superAdmin.attrMasters.addBtn\")}\n        </button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{editId ? t(\"common.update\") : t(\"superAdmin.attrMasters.addBtn\")}"
+        },
+        {
+          "tag": "button",
+          "line": 173,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={cancelEdit}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={cancelEdit}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={cancelEdit}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        }
+      ],
+      "outsideLegacyCount": 3,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 143,
+          "raw": "<button type=\"button\" className=\"btn-sm\" onClick={() => { setSearch(\"\"); setSearchInput(\"\"); }}>\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button type=\"button\" className=\"btn-sm\" onClick={() => { setSearch(\"\"); setSearchInput(\"\"); }}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 208,
+          "raw": "<button className=\"btn-secondary btn-sm\" onClick={() => startEdit(r)}>{t(\"common.edit\")}</button>",
+          "opening": "<button className=\"btn-secondary btn-sm\" onClick={() => startEdit(r)}>",
+          "type": null,
+          "className": "className=\"btn-secondary btn-sm\"",
+          "onClick": "onClick={() => startEdit(r)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 211,
+          "raw": "<button className=\"btn-danger btn-sm\" onClick={() => remove(r.id)}>{t(\"common.delete\")}</button>",
+          "opening": "<button className=\"btn-danger btn-sm\" onClick={() => remove(r.id)}>",
+          "type": null,
+          "className": "className=\"btn-danger btn-sm\"",
+          "onClick": "onClick={() => remove(r.id)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "sha256": "7ffe902966a373c7898097be97652ffdb6aca5a9ba52952a01410f82df6a61bb",
+      "baseSha256": "7ffe902966a373c7898097be97652ffdb6aca5a9ba52952a01410f82df6a61bb",
+      "expectedLines": [
+        65,
+        66
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 65,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 66,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.add\")}"
+        }
+      ],
+      "outsideLegacyCount": 2,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 51,
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"settings.addChannel\")}</button>",
+          "opening": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>",
+          "type": null,
+          "className": "className=\"btn-primary field-h-md\"",
+          "onClick": "onClick={() => setShowForm(true)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"settings.addChannel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 98,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(ch.id)}>{t(\"common.delete\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(ch.id)}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={() => handleDelete(ch.id)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "sha256": "55f5c02938bc537fb04a37ce668123e4d575adb155a95fd42df033515b0995c0",
+      "baseSha256": "55f5c02938bc537fb04a37ce668123e4d575adb155a95fd42df033515b0995c0",
+      "expectedLines": [
+        66,
+        67
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 66,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 67,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.create\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.create\")}"
+        }
+      ],
+      "outsideLegacyCount": 1,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 48,
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"badges.newBadge\")}</button>",
+          "opening": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>",
+          "type": null,
+          "className": "className=\"btn-primary field-h-md\"",
+          "onClick": "onClick={() => setShowForm(true)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"badges.newBadge\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "sha256": "c2db0d23978f84591ba686aa924ea7c4c0301e8c6e39a3ab6b03dfa6dd659eb9",
+      "baseSha256": "c2db0d23978f84591ba686aa924ea7c4c0301e8c6e39a3ab6b03dfa6dd659eb9",
+      "expectedLines": [
+        79,
+        80
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 79,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 80,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.register\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.register\")}"
+        }
+      ],
+      "outsideLegacyCount": 2,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 52,
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"shifts.newShift\")}</button>",
+          "opening": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>",
+          "type": null,
+          "className": "className=\"btn-primary field-h-md\"",
+          "onClick": "onClick={() => setShowForm(true)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"shifts.newShift\")}"
+        },
+        {
+          "tag": "button",
+          "line": 113,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(s.id)}>{t(\"common.delete\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(s.id)}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={() => handleDelete(s.id)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "sha256": "549d355e62606df42c40c7bede53e8f0438a8c1a266567ea1f3e13010da4639f",
+      "baseSha256": "549d355e62606df42c40c7bede53e8f0438a8c1a266567ea1f3e13010da4639f",
+      "expectedLines": [
+        67,
+        68
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 67,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 68,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.create\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.create\")}"
+        }
+      ],
+      "outsideLegacyCount": 2,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 53,
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"buddy.newPair\")}</button>",
+          "opening": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>",
+          "type": null,
+          "className": "className=\"btn-primary field-h-md\"",
+          "onClick": "onClick={() => setShowForm(true)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"buddy.newPair\")}"
+        },
+        {
+          "tag": "button",
+          "line": 84,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={() => endPair(p.id)}>{t(\"buddy.end\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={() => endPair(p.id)}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={() => endPair(p.id)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"buddy.end\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+      "sha256": "1cad316d9b82be2187d30ad7d57775ff5cea52f8cc33ff002619af2a2a0d9872",
+      "baseSha256": "1cad316d9b82be2187d30ad7d57775ff5cea52f8cc33ff002619af2a2a0d9872",
+      "expectedLines": [
+        96,
+        99
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 96,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>\n            {t(\"common.cancel\")}\n          </button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 99,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">\n            {editId ? t(\"common.update\") : t(\"common.register\")}\n          </button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{editId ? t(\"common.update\") : t(\"common.register\")}"
+        }
+      ],
+      "outsideLegacyCount": 0,
+      "outsideLegacy": []
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "sha256": "92bf192004f12f4f4c66e624808667e077634c633099419a11d80bbc36535ace",
+      "baseSha256": "92bf192004f12f4f4c66e624808667e077634c633099419a11d80bbc36535ace",
+      "expectedLines": [
+        470,
+        471
+      ],
+      "targetCount": 2,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 470,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={closeConvert}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={closeConvert}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={closeConvert}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 471,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"leads.convert\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"leads.convert\")}"
+        }
+      ],
+      "outsideLegacyCount": 4,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 314,
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t(\"leads.newLead\")}</button>",
+          "opening": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>",
+          "type": null,
+          "className": "className=\"btn-primary field-h-md\"",
+          "onClick": "onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"leads.newLead\")}"
+        },
+        {
+          "tag": "button",
+          "line": 501,
+          "raw": "<button className=\"btn-sm btn-primary\" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t(\"leads.convert\")}</button>",
+          "opening": "<button className=\"btn-sm btn-primary\" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-primary\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"leads.convert\")}"
+        },
+        {
+          "tag": "button",
+          "line": 504,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t(\"leads.merge\")}</button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"leads.merge\")}"
+        },
+        {
+          "tag": "button",
+          "line": 506,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t(\"common.delete\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "sha256": "e14c10a52ca997e0cc9399fda93248efbd6c9402708a3ec01e1c16ff7c7cbdf5",
+      "baseSha256": "e14c10a52ca997e0cc9399fda93248efbd6c9402708a3ec01e1c16ff7c7cbdf5",
+      "expectedLines": [
+        540,
+        541,
+        566,
+        567
+      ],
+      "targetCount": 4,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 540,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowRoleForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowRoleForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowRoleForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 541,
+          "raw": "<button type=\"submit\" className=\"btn-primary\">{editingRoleId ? t(\"common.update\") : t(\"common.create\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{editingRoleId ? t(\"common.update\") : t(\"common.create\")}"
+        },
+        {
+          "tag": "button",
+          "line": 566,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={closeUserAssign}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={closeUserAssign}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={closeUserAssign}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 567,
+          "raw": "<button type=\"button\" className=\"btn-primary\" onClick={saveUserRoles} disabled={!targetUserId}>{t(\"common.save\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-primary\" onClick={saveUserRoles} disabled={!targetUserId}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": "onClick={saveUserRoles}",
+          "disabled": "disabled={!targetUserId}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.save\")}"
+        }
+      ],
+      "outsideLegacyCount": 6,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 339,
+          "raw": "<button className=\"btn-primary btn-sm\" onClick={openCreateRole}>+ {t(\"common.new\")}</button>",
+          "opening": "<button className=\"btn-primary btn-sm\" onClick={openCreateRole}>",
+          "type": null,
+          "className": "className=\"btn-primary btn-sm\"",
+          "onClick": "onClick={openCreateRole}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "+ {t(\"common.new\")}"
+        },
+        {
+          "tag": "button",
+          "line": 365,
+          "raw": "<button className=\"btn-secondary btn-block\" onClick={() => setUserAssignOpen(true)}>\n              {t(\"roles.assignUsers\")}\n            </button>",
+          "opening": "<button className=\"btn-secondary btn-block\" onClick={() => setUserAssignOpen(true)}>",
+          "type": null,
+          "className": "className=\"btn-secondary btn-block\"",
+          "onClick": "onClick={() => setUserAssignOpen(true)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"roles.assignUsers\")}"
+        },
+        {
+          "tag": "button",
+          "line": 397,
+          "raw": "<button className=\"btn-sm\" onClick={() => openEditRole(selectedRole)}>{t(\"common.edit\")}</button>",
+          "opening": "<button className=\"btn-sm\" onClick={() => openEditRole(selectedRole)}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => openEditRole(selectedRole)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 399,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={() => setDeleteTarget(selectedRole)}>{t(\"common.delete\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={() => setDeleteTarget(selectedRole)}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={() => setDeleteTarget(selectedRole)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 403,
+          "raw": "<button className=\"btn-secondary\" disabled={!dirty || savingPerms} onClick={cancelEdits}>\n                    {t(\"roles.cancelChanges\")}\n                  </button>",
+          "opening": "<button className=\"btn-secondary\" disabled={!dirty || savingPerms} onClick={cancelEdits}>",
+          "type": null,
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={cancelEdits}",
+          "disabled": "disabled={!dirty || savingPerms}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"roles.cancelChanges\")}"
+        },
+        {
+          "tag": "button",
+          "line": 406,
+          "raw": "<button className=\"btn-primary\" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>\n                    {savingPerms ? t(\"common.saving\") : t(\"roles.saveChanges\")}\n                  </button>",
+          "opening": "<button className=\"btn-primary\" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>",
+          "type": null,
+          "className": "className=\"btn-primary\"",
+          "onClick": "onClick={savePermissions}",
+          "disabled": "disabled={!dirty || savingPerms || !canEditPerms}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{savingPerms ? t(\"common.saving\") : t(\"roles.saveChanges\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "sha256": "e3b0ea4e7e95f8b77867797b9bbc7d2a0c9b2c79d1090ed1befebeedbd62c3dd",
+      "baseSha256": "e3b0ea4e7e95f8b77867797b9bbc7d2a0c9b2c79d1090ed1befebeedbd62c3dd",
+      "expectedLines": [
+        580,
+        581,
+        633,
+        634
+      ],
+      "targetCount": 4,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 580,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowRuleForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowRuleForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowRuleForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 581,
+          "raw": "<button type=\"submit\" className=\"btn-primary\" data-testid=\"rule-save\">{ruleEditId !== null ? t(\"common.update\") : t(\"common.create\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\" data-testid=\"rule-save\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"rule-save\"",
+          "children": "{ruleEditId !== null ? t(\"common.update\") : t(\"common.create\")}"
+        },
+        {
+          "tag": "button",
+          "line": 633,
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowAliasForm(false)}>{t(\"common.cancel\")}</button>",
+          "opening": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowAliasForm(false)}>",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-secondary\"",
+          "onClick": "onClick={() => setShowAliasForm(false)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.cancel\")}"
+        },
+        {
+          "tag": "button",
+          "line": 634,
+          "raw": "<button type=\"submit\" className=\"btn-primary\" data-testid=\"alias-save\">{aliasEditId !== null ? t(\"common.update\") : t(\"common.create\")}</button>",
+          "opening": "<button type=\"submit\" className=\"btn-primary\" data-testid=\"alias-save\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"alias-save\"",
+          "children": "{aliasEditId !== null ? t(\"common.update\") : t(\"common.create\")}"
+        }
+      ],
+      "outsideLegacyCount": 9,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 338,
+          "raw": "<button onClick={() => loadRules(ruleSearch)} className=\"btn-secondary btn-sm\" data-testid=\"rules-search-btn\">\n            {t(\"common.search\")}\n          </button>",
+          "opening": "<button onClick={() => loadRules(ruleSearch)} className=\"btn-secondary btn-sm\" data-testid=\"rules-search-btn\">",
+          "type": null,
+          "className": "className=\"btn-secondary btn-sm\"",
+          "onClick": "onClick={() => loadRules(ruleSearch)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"rules-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        },
+        {
+          "tag": "button",
+          "line": 341,
+          "raw": "<button onClick={openCreateRule} className=\"btn-primary btn-sm\" data-testid=\"rules-new\" style={{ marginLeft: \"auto\" }}>\n            {t(\"superAdmin.knowledge.newRule\")}\n          </button>",
+          "opening": "<button onClick={openCreateRule} className=\"btn-primary btn-sm\" data-testid=\"rules-new\" style={{ marginLeft: \"auto\" }}>",
+          "type": null,
+          "className": "className=\"btn-primary btn-sm\"",
+          "onClick": "onClick={openCreateRule}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"rules-new\"",
+          "children": "{t(\"superAdmin.knowledge.newRule\")}"
+        },
+        {
+          "tag": "button",
+          "line": 344,
+          "raw": "<button\n            onClick={() => setRuleConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={ruleSelected.size === 0}\n            data-testid=\"rules-bulk-delete\"\n          >\n            {t(\"common.delete\")}\n          </button>",
+          "opening": "<button\n            onClick={() => setRuleConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={ruleSelected.size === 0}\n            data-testid=\"rules-bulk-delete\"\n          >",
+          "type": null,
+          "className": "className=\"btn-danger btn-sm\"",
+          "onClick": "onClick={() => setRuleConfirmDelete(true)}",
+          "disabled": "disabled={ruleSelected.size === 0}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"rules-bulk-delete\"",
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 389,
+          "raw": "<button className=\"btn-sm\" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>\n                      {t(\"common.edit\")}\n                    </button>",
+          "opening": "<button className=\"btn-sm\" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => openEditRule(r)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid={`rule-edit-${r.id}`}",
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 416,
+          "raw": "<button onClick={() => loadAliases(aliasSearch)} className=\"btn-secondary btn-sm\" data-testid=\"aliases-search-btn\">\n            {t(\"common.search\")}\n          </button>",
+          "opening": "<button onClick={() => loadAliases(aliasSearch)} className=\"btn-secondary btn-sm\" data-testid=\"aliases-search-btn\">",
+          "type": null,
+          "className": "className=\"btn-secondary btn-sm\"",
+          "onClick": "onClick={() => loadAliases(aliasSearch)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"aliases-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        },
+        {
+          "tag": "button",
+          "line": 419,
+          "raw": "<button onClick={openCreateAlias} className=\"btn-primary btn-sm\" data-testid=\"aliases-new\" style={{ marginLeft: \"auto\" }}>\n            {t(\"superAdmin.knowledge.newAlias\")}\n          </button>",
+          "opening": "<button onClick={openCreateAlias} className=\"btn-primary btn-sm\" data-testid=\"aliases-new\" style={{ marginLeft: \"auto\" }}>",
+          "type": null,
+          "className": "className=\"btn-primary btn-sm\"",
+          "onClick": "onClick={openCreateAlias}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"aliases-new\"",
+          "children": "{t(\"superAdmin.knowledge.newAlias\")}"
+        },
+        {
+          "tag": "button",
+          "line": 422,
+          "raw": "<button\n            onClick={() => setAliasConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={aliasSelected.size === 0}\n            data-testid=\"aliases-bulk-delete\"\n          >\n            {t(\"common.delete\")}\n          </button>",
+          "opening": "<button\n            onClick={() => setAliasConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={aliasSelected.size === 0}\n            data-testid=\"aliases-bulk-delete\"\n          >",
+          "type": null,
+          "className": "className=\"btn-danger btn-sm\"",
+          "onClick": "onClick={() => setAliasConfirmDelete(true)}",
+          "disabled": "disabled={aliasSelected.size === 0}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"aliases-bulk-delete\"",
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 461,
+          "raw": "<button className=\"btn-sm\" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>\n                      {t(\"common.edit\")}\n                    </button>",
+          "opening": "<button className=\"btn-sm\" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => openEditAlias(a)}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid={`alias-edit-${a.id}`}",
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 510,
+          "raw": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              disabled={promptSupplierId === null || promptSaving}\n              onClick={savePrompt}\n              data-testid=\"supplier-prompt-save\"\n            >\n              {promptSaving ? t(\"common.saving\") : t(\"common.save\")}\n            </button>",
+          "opening": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              disabled={promptSupplierId === null || promptSaving}\n              onClick={savePrompt}\n              data-testid=\"supplier-prompt-save\"\n            >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-primary\"",
+          "onClick": "onClick={savePrompt}",
+          "disabled": "disabled={promptSupplierId === null || promptSaving}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"supplier-prompt-save\"",
+          "children": "{promptSaving ? t(\"common.saving\") : t(\"common.save\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "sha256": "55e1a113ad882fd8f6ebffaff10367360715b03a693c69b8021734ee8053560b",
+      "baseSha256": "55e1a113ad882fd8f6ebffaff10367360715b03a693c69b8021734ee8053560b",
+      "expectedLines": [
+        248
+      ],
+      "targetCount": 1,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 248,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"units-search-btn\">\n              {t(\"common.search\")}\n            </button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"units-search-btn\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"units-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        }
+      ],
+      "outsideLegacyCount": 5,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 188,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>\n              {t(\"common.edit\")}\n            </button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); openEdit(u); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 193,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(u); }}>\n              {t(\"common.delete\")}\n            </button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(u); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setDeleteTarget(u); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 252,
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 399,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"units-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"units-page-prev\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => Math.max(1, p - 1))}",
+          "disabled": "disabled={page <= 1}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"units-page-prev\"",
+          "children": "{t(\"common.prevPage\")}"
+        },
+        {
+          "tag": "button",
+          "line": 412,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"units-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"units-page-next\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => p + 1)}",
+          "disabled": "disabled={!hasNext}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"units-page-next\"",
+          "children": "{t(\"common.nextPage\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "sha256": "3fde4943357608c4b86df013d9d08f51539fb7e1bda2c5d83b34b61087792b7c",
+      "baseSha256": "3fde4943357608c4b86df013d9d08f51539fb7e1bda2c5d83b34b61087792b7c",
+      "expectedLines": [
+        289
+      ],
+      "targetCount": 1,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 289,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"product-categories-search-btn\">\n              {t(\"common.search\")}\n            </button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"product-categories-search-btn\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"product-categories-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        }
+      ],
+      "outsideLegacyCount": 5,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 180,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>\n              {t(\"common.edit\")}\n            </button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); openEdit(c); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 185,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>\n              {t(\"common.delete\")}\n            </button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 293,
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 376,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"product-categories-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"product-categories-page-prev\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => Math.max(1, p - 1))}",
+          "disabled": "disabled={page <= 1}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"product-categories-page-prev\"",
+          "children": "{t(\"common.prevPage\")}"
+        },
+        {
+          "tag": "button",
+          "line": 389,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"product-categories-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"product-categories-page-next\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => p + 1)}",
+          "disabled": "disabled={!hasNext}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"product-categories-page-next\"",
+          "children": "{t(\"common.nextPage\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "sha256": "9f31e5f31546a46b9ab1528f7aa216d2f06d51f68209b2be7f9c263bf7135254",
+      "baseSha256": "9f31e5f31546a46b9ab1528f7aa216d2f06d51f68209b2be7f9c263bf7135254",
+      "expectedLines": [
+        175
+      ],
+      "targetCount": 1,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 175,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"suppliers-search-btn\">\n              {t(\"common.search\")}\n            </button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"suppliers-search-btn\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"suppliers-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        }
+      ],
+      "outsideLegacyCount": 5,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 179,
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 239,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t(\"common.edit\")}</button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 240,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t(\"suppliers.deleteSupplier\")}</button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"suppliers.deleteSupplier\")}"
+        },
+        {
+          "tag": "button",
+          "line": 275,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"suppliers-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"suppliers-page-prev\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage((p) => Math.max(1, p - 1))}",
+          "disabled": "disabled={page <= 1}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"suppliers-page-prev\"",
+          "children": "{t(\"common.prevPage\")}"
+        },
+        {
+          "tag": "button",
+          "line": 288,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"suppliers-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"suppliers-page-next\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage((p) => p + 1)}",
+          "disabled": "disabled={!hasNext}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"suppliers-page-next\"",
+          "children": "{t(\"common.nextPage\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "sha256": "d3c658207018ae1590b2762b726bedd563ee58ec518234803464b66f3d2b28c3",
+      "baseSha256": "d3c658207018ae1590b2762b726bedd563ee58ec518234803464b66f3d2b28c3",
+      "expectedLines": [
+        415
+      ],
+      "targetCount": 1,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 415,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"conditions-search-btn\">\n              {t(\"common.search\")}\n            </button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"conditions-search-btn\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"conditions-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        }
+      ],
+      "outsideLegacyCount": 4,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 278,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>\n              {t(\"common.edit\")}\n            </button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); openEdit(c); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 419,
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 594,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"conditions-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"conditions-page-prev\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => Math.max(1, p - 1))}",
+          "disabled": "disabled={page <= 1}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"conditions-page-prev\"",
+          "children": "{t(\"common.prevPage\")}"
+        },
+        {
+          "tag": "button",
+          "line": 607,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"conditions-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"conditions-page-next\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => p + 1)}",
+          "disabled": "disabled={!hasNext}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"conditions-page-next\"",
+          "children": "{t(\"common.nextPage\")}"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "sha256": "750929ca11b3067721d77bc76cf8295c78ede57df69aee58f02f078fa82cc2d6",
+      "baseSha256": "750929ca11b3067721d77bc76cf8295c78ede57df69aee58f02f078fa82cc2d6",
+      "expectedLines": [
+        357
+      ],
+      "targetCount": 1,
+      "targets": [
+        {
+          "tag": "button",
+          "line": 357,
+          "raw": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"status-master-search-btn\">\n              {t(\"common.search\")}\n            </button>",
+          "opening": "<button type=\"submit\" className=\"btn-secondary field-h-md\" data-testid=\"status-master-search-btn\">",
+          "type": "type=\"submit\"",
+          "className": "className=\"btn-secondary field-h-md\"",
+          "onClick": null,
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"status-master-search-btn\"",
+          "children": "{t(\"common.search\")}"
+        }
+      ],
+      "outsideLegacyCount": 5,
+      "outsideLegacy": [
+        {
+          "tag": "button",
+          "line": 207,
+          "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>\n              {t(\"common.edit\")}\n            </button>",
+          "opening": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); openEdit(s); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.edit\")}"
+        },
+        {
+          "tag": "button",
+          "line": 212,
+          "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>\n              {t(\"common.delete\")}\n            </button>",
+          "opening": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>",
+          "type": null,
+          "className": "className=\"btn-sm btn-danger\"",
+          "onClick": "onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.delete\")}"
+        },
+        {
+          "tag": "button",
+          "line": 361,
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>",
+          "opening": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >",
+          "type": "type=\"button\"",
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}",
+          "disabled": null,
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": null,
+          "children": "{t(\"common.clear\")}"
+        },
+        {
+          "tag": "button",
+          "line": 444,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"status-master-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"status-master-page-prev\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => Math.max(1, p - 1))}",
+          "disabled": "disabled={page <= 1}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"status-master-page-prev\"",
+          "children": "{t(\"common.prevPage\")}"
+        },
+        {
+          "tag": "button",
+          "line": 457,
+          "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"status-master-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>",
+          "opening": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"status-master-page-next\"\n            >",
+          "type": null,
+          "className": "className=\"btn-sm\"",
+          "onClick": "onClick={() => setPage(p => p + 1)}",
+          "disabled": "disabled={!hasNext}",
+          "form": null,
+          "href": null,
+          "to": null,
+          "dataTestId": "data-testid=\"status-master-page-next\"",
+          "children": "{t(\"common.nextPage\")}"
+        }
+      ]
+    }
+  ],
+  "fieldHMd": {
+    "targetCount": 6,
+    "targetRefs": [
+      "MasterListEditor.tsx:141",
+      "UnitsPage.tsx:248",
+      "ProductCategoriesPage.tsx:289",
+      "SuppliersPage.tsx:175",
+      "ConditionsPage.tsx:415",
+      "StatusMasterPage.tsx:357"
+    ],
+    "reason": "All six targets are native form submits with legacy btn-secondary field-h-md. field-size.css:8 and Button.css base both use min-height var(--field-h-md) with border-box. Migration adopts the existing Button secondary/md appearance and preserves behavior; it does not claim pixel-identical rendering.",
+    "legacyTokenEvidence": [
+      {
+        "line": 8,
+        "raw": ".field-h-md { min-height: var(--field-h-md, 36px); box-sizing: border-box; }"
+      }
+    ],
+    "buttonEvidence": [
+      {
+        "line": 7,
+        "raw": "  box-sizing: border-box;"
+      },
+      {
+        "line": 9,
+        "raw": "  min-height: var(--field-h-md);"
+      }
+    ]
+  },
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "sha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263"
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "sha256": "34334cb8fe05afa50ddc89f8bc06cf98286b8408eef34dc276232a772f4c6762"
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "sha256": "fd7e6dbf80831ed034234e625008e8eda4bb454f2fb16cdc132ddf6e950b3115"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "sha256": "c0e82655697f716ee8ca1f8307ee9cbb746932b2ec3c863c8426caacd8014ee8"
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "sha256": "fdc09f98cae7cdfbc1ba791e075f70f8fa71454090dfa09fbb4b2398adf6d8b0"
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "sha256": "0a40f8dca2e612c0a61463c2db87737169f48533f290447873501b5ed0050720"
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "sha256": "6a2981925541cdeeeda4693b62f977255c3369281437156a1d17b39e0a61a1a8"
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "sha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597"
+    },
+    {
+      "file": "frontend/src/components/field-size.css",
+      "sha256": "6acbe76e817dc0428f1eb930ca104fd00a7f25d16a80c04e0be9db0e23c8e4b6"
+    }
+  ],
+  "formInventory": {
+    "fileCount": 9,
+    "nativeFormCount": 10,
+    "nativeFormButtonCount": 20,
+    "nonFormActionGroupCount": 1,
+    "nonFormActionButtonCount": 2,
+    "buttonCount": 22,
+    "modalNativeFormCount": 9,
+    "inlineNativeFormCount": 1,
+    "detail": {
+      "nonForm": "RolesPage user assignment: type=button/onClick, no form submit",
+      "inline": "MasterListEditor add/edit",
+      "twoNativeForms": "KnowledgeAliasesTab rule/alias"
+    }
+  }
+}
