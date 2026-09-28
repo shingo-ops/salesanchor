@@ -426,6 +426,89 @@ async def test_add_keyword_duplicate(super_admin_override):
 
 
 # ---------------------------------------------------------------------------
+# PR-D: 除外ワード追加（add_search_keyword を写した作り）
+# ---------------------------------------------------------------------------
+
+
+async def test_add_exclude_keyword_requires_auth():
+    from app.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        r = await client.post(
+            "/api/v1/tcg/products/1/exclude-keywords",
+            json={"new_keyword": "シュリ無"},
+        )
+    assert r.status_code in (401, 403)
+
+
+async def test_add_exclude_keyword_ok(super_admin_override):
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.add_exclude_keyword",
+        new=AsyncMock(return_value=_KEYWORD_OK),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products/1/exclude-keywords",
+                json={"new_keyword": "シュリ無"},
+            )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+
+
+async def test_add_exclude_keyword_duplicate(super_admin_override):
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.add_exclude_keyword",
+        new=AsyncMock(return_value=_KEYWORD_DUP),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products/1/exclude-keywords",
+                json={"new_keyword": "シュリ無"},
+            )
+    assert r.status_code == 200
+    body = r.json()
+    assert body["ok"] is False
+    assert body["code"] == "KEYWORD_ALREADY_EXISTS"
+
+
+async def test_add_exclude_keyword_not_found(super_admin_override):
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.add_exclude_keyword",
+        new=AsyncMock(side_effect=ValueError("EXCLUDE_KEYWORD_PRODUCT_NOT_FOUND")),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products/999999/exclude-keywords",
+                json={"new_keyword": "シュリ無"},
+            )
+    assert r.status_code == 404
+
+
+async def test_add_exclude_keyword_empty(super_admin_override):
+    from app.main import app
+    with patch(
+        "app.routers.tcg_product_master.add_exclude_keyword",
+        new=AsyncMock(side_effect=ValueError("EXCLUDE_KEYWORD_EMPTY")),
+    ):
+        async with AsyncClient(
+            transport=ASGITransport(app=app), base_url="http://test"
+        ) as client:
+            r = await client.post(
+                "/api/v1/tcg/products/1/exclude-keywords",
+                json={"new_keyword": "   "},
+            )
+    assert r.status_code == 422
+
+
+# ---------------------------------------------------------------------------
 # B-3: force=True — 重複候補があっても登録できる（GAS ソフトブロック準拠）
 # ---------------------------------------------------------------------------
 
