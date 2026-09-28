@@ -467,8 +467,8 @@ export default function LeadsPage() {
             <input type="number" min="0" step="1" value={convertForm.amount} onChange={(e) => setConvertForm({ ...convertForm, amount: e.target.value })} />
           </div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={closeConvert}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("leads.convert")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={closeConvert}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("leads.convert")}</Button>
           </div>
         </form>
       </Modal>

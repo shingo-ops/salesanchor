@@ -7,6 +7,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { Modal } from "../../components/Modal";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface Channel { id: number; channel_name: string; webhook_url: string; event_types: string; is_active: boolean; created_at: string; }
 
@@ -48,7 +49,7 @@ export default function NotificationsPage() {
       {error && <div className="error-message">{error}</div>}
       {hasPermission("notifications.manage") ? (
         <ContentToolbar
-          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>}
+          right={<Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</Button>}
         />
       ) : undefined}
       <Modal
@@ -62,8 +63,8 @@ export default function NotificationsPage() {
           <div className="form-group"><label>{t("settings.channelName")} *</label><input required value={form.channel_name} onChange={e => setForm({ ...form, channel_name: e.target.value })} placeholder="例: #crm-activity" /></div>
           <div className="form-group"><label>Webhook URL *</label><input required value={form.webhook_url} onChange={e => setForm({ ...form, webhook_url: e.target.value })} placeholder="https://discord.com/api/webhooks/..." /></div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.add")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.add")}</Button>
           </div>
         </form>
       </Modal>

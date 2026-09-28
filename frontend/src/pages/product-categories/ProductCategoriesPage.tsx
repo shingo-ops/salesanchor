@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
+import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -286,9 +287,9 @@ export default function ProductCategoriesPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="product-categories-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="product-categories-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="product-categories-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
               <button
                 type="button"

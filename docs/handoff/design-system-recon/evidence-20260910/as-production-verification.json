@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-28T11:36:40.862290+00:00",
+  "expectedCommit": "b3cf1fdf32bb57394239f973364273ed6f560fad",
+  "deployedCommit": "b3cf1fdf32bb57394239f973364273ed6f560fad",
+  "appHTTP": "200",
+  "asset": "/assets/index-BIU3BYCw.js",
+  "assetHTTP": "200",
+  "apiHTTP": "200",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "publicIndexSHA256": "ad215075ff636ecaf54e4787d8b9a3378ecd9ffd6b9c0d83559b204353f94054",
+  "containerIndexSHA256": "ad215075ff636ecaf54e4787d8b9a3378ecd9ffd6b9c0d83559b204353f94054",
+  "publicAssetSHA256": "04358ba6e509a0a6cba9be8fdb40b0c2a7bc3e02f9802086852bf158800cee65",
+  "containerAssetSHA256": "04358ba6e509a0a6cba9be8fdb40b0c2a7bc3e02f9802086852bf158800cee65",
+  "authenticatedUI": "skipped at PO request; unverified",
+  "pass": true
+}

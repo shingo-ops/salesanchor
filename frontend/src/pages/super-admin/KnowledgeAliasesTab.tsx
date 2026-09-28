@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 
 interface KnowledgeRule {
@@ -335,9 +336,9 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadRules(ruleSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadRules(ruleSearch)} className="btn-secondary btn-sm" data-testid="rules-search-btn">
+          <Button onClick={() => loadRules(ruleSearch)} variant="secondary" size="sm" data-testid="rules-search-btn">
             {t("common.search")}
-          </button>
+          </Button>
           <button onClick={openCreateRule} className="btn-primary btn-sm" data-testid="rules-new" style={{ marginLeft: "auto" }}>
             {t("superAdmin.knowledge.newRule")}
           </button>
@@ -413,9 +414,9 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadAliases(aliasSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadAliases(aliasSearch)} className="btn-secondary btn-sm" data-testid="aliases-search-btn">
+          <Button onClick={() => loadAliases(aliasSearch)} variant="secondary" size="sm" data-testid="aliases-search-btn">
             {t("common.search")}
-          </button>
+          </Button>
           <button onClick={openCreateAlias} className="btn-primary btn-sm" data-testid="aliases-new" style={{ marginLeft: "auto" }}>
             {t("superAdmin.knowledge.newAlias")}
           </button>
@@ -577,8 +578,8 @@ export default function KnowledgeAliasesTab() {
                 </label>
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" data-testid="rule-save">{ruleEditId !== null ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md" data-testid="rule-save">{ruleEditId !== null ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>
@@ -630,8 +631,8 @@ export default function KnowledgeAliasesTab() {
                 </div>
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowAliasForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" data-testid="alias-save">{aliasEditId !== null ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowAliasForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md" data-testid="alias-save">{aliasEditId !== null ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>
