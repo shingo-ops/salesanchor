@@ -16,4 +16,3 @@ Deleted branch release/frontend-form-button-batch (was e129dac1b).
 ✅ ブランチ削除完了: release/frontend-form-button-batch
 
 ✅ クリーンアップ完了
-
