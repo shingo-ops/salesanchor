@@ -6,6 +6,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 import { Select } from "../../components/Select";
+import { Button } from "../../components/Button";
 
 interface StaffReport {
   id: number; report_code: string | null; report_type: string; user_id: number; period: string;
@@ -90,8 +91,8 @@ export default function StaffReportsPage() {
           <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.goals} onChange={e => setForm({ ...form, goals: e.target.value })} /></div>
           <div className="form-group"><label>{t("common.notes")}</label><textarea value={form.challenges} onChange={e => setForm({ ...form, challenges: e.target.value })} /></div>
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.add")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.add")}</Button>
           </div>
         </form>
       </Modal>

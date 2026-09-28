@@ -770,3 +770,8 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
 
 同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。
+
+
+## AQ再測定（2026-09-28）
+
+基準4bad43a4、Sol実物調査で旧候補5hash/原文10一致、ページ回帰0。Astra構文監査で共通201/旧296、スタッフ日報末尾2/対象外起動1/共有14を保存。対象はStaffReportsPage93/94、5キーPOST・取消保持・成功reset・pending2回を維持。設計はdesign.md§AQ、証拠evidence-20260910/aq-staff-report-audit.json/cjs。PO画面省略は合格とはしない。既存共有金型だけ使用、DB/API/配線/データ複製変更0。最大事業効果は未測定、接触面が最小の候補を選定。
