@@ -1828,3 +1828,49 @@ AS設計訂正（実装中の既存回帰照合）: rootが関連7suite/130試�
 
 
 2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。
+
+### AT. 既存フォーム11ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。ADR-113/067/027/073/122を継承。recon: docs/handoff/design-system-recon/recon.md。POの根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの指示に基づく。番号付き本人GOの代筆、代理GO有効化はしない。本番画面・ログイン操作・PO目視は既存の省略指示を維持し未検証として扱う。
+
+#### Planner: 目的・事実・選定
+
+目的は既存合意「1か所直せば全ページが変わる」の継続。利用者の保存・行追加操作を維持し、既存Buttonの外観へ統一する。固定基準a1cd9ea379cc7d85b797cca6b1cc092192296bc3のAST実測は共通265、旧232（native224/link8）。明示色158、bare btn-sm60、動的6。11件/9製品を対象に共通276/旧221へ移管する。使用頻度・売上効果・工数短縮は未測定で最大効果とは断定しない。
+
+根拠はat-button-inventory.md/json、at-button-audit.json、at-form-contract-research.md、at-commerce-test-plan.md、at-admin-test-plan.md（docs/handoff/design-system-recon/evidence-20260910/）。対象全11原文、9file hash、対象外221原文、共有18hashを固定。候補数36/13などは調査途中の案で最終scopeはauditのみ。bare btn-smの色を推測する案は却下、Invoice submitは非JPY時の外部FX参照、Roles saveは認可変更として除外。InvoicesPage/SuppliersPageは他便所有のため除外。QuoteCreateはPR #3084の実変更/正式設計対象外、同ブランチworktreeなしを確認し競合なし。古いIN_PROGRESSを現在の作業事実と扱わない。
+
+対象: Profile submit1、Company Basic/Channels submit2、Invoice add1、Quote add/submit2、Product submit1、PO submit1、Dex edit submit1、TCG type/series submit2。全11が明示primary/secondary、md対応、inline style/追加独自classなし。全232件一括は未確定variant・リンク・外部副作用・権限操作が混在するため採らない。小分けより同型契約を一つの検証便にまとめられる11件を選ぶ。
+
+#### 変更仕様・所有・データの正本
+
+auditに示す原文のbutton開始/終了タグをButton、classNameをvariant/sizeへ置換。named importがない場合だけ独立1行追加。type/form/disabled/onClick/children/全その他属性、handler本文を逐語保持。loading/aria-busy/追加disabled/レイアウト/CSS/トークン/i18n/依存/CI/route変更0。既存Buttonのtype既定値は未設定であり、勝手にtypeを補わない。field-h-mdはmdへ吸収。既存金型採用なのでpixel完全同一とは呼ばない。
+
+Sol1所有: InvoiceCreatePage、QuoteCreatePage、ProductEditPageの3製品4件とCommerceSubmitButtonMigration.test.tsx。
+Sol2所有: ProfileSection、CompanyBasicTab、CompanyChannelsTab、PurchaseOrdersFormModal、DexTab、TcgSeriesTabの6製品7件とAccountCompanySaveButtonMigration.test.tsx/AdminMasterSaveButtonMigration.test.tsx。
+Astra所有: 正式設計/監査/台帳/審査/検収。既存試験はread-only、他者変更を戻さない。製品9+新規試験3以外の製品変更は禁止。API/DB/配線の変更・新保存先・データ複製追加0。
+
+サーバー追跡でProfileは認証本人の7項目、Companyはcustomers.updateとtenant会社/販路、POはpurchase_orders.createと既存public supplier参照・必要時tenant supplier複製を伴う既存処理を確認。後者は既存動作で、本便で複製を追加/変更しない。Dex/TCGはrequire_super_admin下のpublic共通マスタ更新で全tenantに関係する。Quote/Productは既存tenant商品/見積のDB・監査・cache処理。これらの実保存を本番試験で発火させない。変更境界はフロント原文逆変換とbackend差分0、動作は合成APIで全payload/URLを確認する。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象11と範囲保持 | 9fileをimport/タグ/variant/size逆変換し固定基準と全byte一致。対象外221原文・共有18hash不変、共通276/旧221。並行main追加は別計数して記録 |
+| APIと保存状態 | 3新規suiteの実ページ/handlerで全キー完全一致、method/URL、成功後遷移またはGET増分、失敗時入力保持/再試行/成功処理0を確認。試験APIはmockで実通信0 |
+| Profile/Company | 本物UiPrefsProvider/patchMyProfile/useCompanyDetail使用。Profile7項目と成功refresh GET+1、Company基本14項目と販路区切り正規化、成功company/contacts各GET+1。権限待機・dirty/native required・pendingクリック重複0 |
+| Commerce | Invoice/Quote行追加で行数増分+1かつwrite0。Quote contact/item guard、全payload/null/数値変換、/quotesへ遷移。Product POST/PATCH全34キー、外置form参照、required/loading/pending/失敗保持とnavigate(-1) |
+| PO/Dex/TCG | PO全payload/2items/required/pending/成功onCreated→onClose。Dex pokemon/trainer両schemaの全payloadと正確な再GET。TCG type/series作成更新の全payload・trim/null/required/再GET/reset。Dex/TCGに現存しないpendingロックを要求せず繰返し送信可を保持 |
+| 品質 | strict ESLint、関連既存unit、全体coverage/check:all/build/Storybook、diff/task-state/card checks、Sol相互read-onlyレビュー、最新PR CI。失敗ログも保存、skip/ガード迂回禁止 |
+| 検証限界 | DOM成功は本番DB保存や画面品質の検収ではない。認証付き本番フォーム/ブラウザー/目視は省略・未検証。サーバー権限をfrontend mockだけで合格としない |
+
+#### Why・リスク・維持の仕組み
+
+11の静的対応と実callback/API追跡、固定原文の全byte逆変換、従来試験の保存処理未被覆を補う契約試験が採用根拠。ADRのWhyにはこの実測を使用し、架空の外部効果数値を使わない。外部・過去事例は不要（既存社内部品への限定移管で新ライブラリ仕様採用なし）。
+
+リスクは保存先/値の取り違え、実UiPrefsをmockしてrefreshを見逃すこと、合成fixture誤り、他便競合。実handler・全キー・GET初期回数分離・deferred全settle・最新main差分で検査する。fixture補正は実物根拠と初回失敗を残す。既存の多重送信可能なDex/TCGに機能追加せず維持する。未知の業務判断はPOへ戻し、独断仕様変更は禁止。
+
+守り手は既存Buttonとトークン、既存品質CI、追加3suite。rootはaudit/根拠/進捗、Solは限定実装と相互レビュー。回帰時は本便製品差分revertで戻しDB復元不要。新CI、残旧221、表/報酬3/カレンダー色は別便。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身の自己審査であり独立した第二者レビューではない。直接ASTで共通265/旧232/対象11/構文エラー0、商品payload34キーを再確認。対象9と全原文/18共有hash、実サーバー副作用、所有分離、受入/既存CI/ADR整合を確認。Solのrawとcallback追跡の誤記（Buttonのtype既定値、商品33キー報告）を実物に基づき訂正。API/DB変更なしで検証可能、対象仕様の未解決なし。正式card-lint成功後に委任する。設計合格は実装/検証/番号付きGO/マージ/本番反映完了を意味しない。

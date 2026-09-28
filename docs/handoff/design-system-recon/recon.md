@@ -797,3 +797,8 @@ AR実装後の再測定: 14製品逆変換byte一致、28対象/対象外53/共�
 
 
 2026-09-28 AS本番反映完了: 本人GO #3834、公式merge b3cf1fdf3（11:32:45Z）、Deploy36416280694成功。root 2026-09-28T11:36:40.862290+00:00に本番HEAD/公開index・JSとcontainer hash/HTTP200/接続3項目一致を直接確認。34件移管、共通265/旧232。根拠as-implementation.md/as-production-verification.json。画面・実ログイン・本番フォーム・PO目視は省略・未検証。
+
+
+## 2026-09-28 AT フォーム残数と保存契約
+
+固定a1cd9eaで再測定: 共通265、旧232=native224+link8。11件/9製品を選定、対象外221、共有18hashを保存。詳細は[evidence-20260910/at-button-inventory.md](evidence-20260910/at-button-inventory.md)、[全原文監査](evidence-20260910/at-button-audit.json)、[Commerce操作](evidence-20260910/at-commerce-test-plan.md)、[管理・会社・本人操作](evidence-20260910/at-admin-test-plan.md)。Invoice submit外部FXとRoles認可変更は除外、既存PO supplier tenant複製/public master更新は既存効果として区別し本便DB変更なし。全体KGI達成や事業効果は未測定。

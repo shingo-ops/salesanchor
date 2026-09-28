@@ -174,3 +174,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | AS共通Button移管 | Astra設計/Sol2担当実装 | GO #3834でmerge b3cf1fdf3・Deploy36416280694成功、本番hash/HTTP/接続確認済み。34件反映 | 本便製品完了。結果文書保存、残旧232/表/報酬3/カレンダー色は別設計 | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |
+| AT共通フォームButton移管 | Astra設計/Sol2担当実装 | 固定a1cd9eaで11件/9製品・全旧232を監査、設計自己審査APPROVE・カードlint成功、限定実装中 | 全payload/操作回帰・逆変換・全体品質・第二レビュー後にPR化 | EV-20260928-AT-DESIGN / docs/specs/design-system/design.md §AT | 2026-09-28 |
