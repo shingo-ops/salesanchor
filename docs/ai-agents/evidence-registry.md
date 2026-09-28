@@ -27,7 +27,7 @@ id: EV-20260928-PR-LIFECYCLE-GATES
 date: 2026-09-28
 agent: Sol implementation/validation
 task: PR作成前検査とマージ前GO検査の分離
-scope: CARD-PR-LIFECYCLE-02の許可コード9件・テストとローカル台帳。外部書込、commit、push、PR、merge、deployは対象外。
+scope: CARD-01〜04の設計・限定実装・ローカル試験・審査と正式PR提出。merge/deployは未実施。
 evidence:
   - type: command
     reference: node scripts/tests/test-process-artifacts.js
@@ -47,10 +47,19 @@ evidence:
   - type: log
     reference: CARD-PR-LIFECYCLE-03初回のPreToolUse拒否とAstra再開追補
     summary: PR操作文字列を含む複合read-onlyコマンドが拒否され、Solは追加変更0で停止。Astra確認後、検索・読取を単独コマンドへ分離して再開した。再開後の新規ガード拒否は0件。
+  - type: external
+    reference: https://github.com/shingo-ops/salesanchor/pull/3824
+    summary: Astraがcreate-safe exit0、.pr-number=3824とgh pr listの番号/HEAD一致を直接確認。実装commit90c6dbecc4314b4c40f591e365478a9540cc5356はlocal/origin一致。正式PR作成1回。
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/36387714825
+    summary: 初回CI失敗はGO節欠落。Astraがlog-failedを直接確認。番号付きGO未受領なので合格扱いしない。
+  - type: command
+    reference: Astraの設計・引用検査、CARD-04 lint
+    summary: errors=[]、lint exit0。Solの最終試験ログとコードをAstraと別Solレビューが照合しAPPROVE。
 confidence: high
 tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
-decision: CARD-PR-LIFECYCLE-03の対象・入力固定までローカル実装と偽gh検証を完了。Astraレビュー待ち。未commit・未push・未PR・未merge・未deploy。
-follow_up: Astraレビュー後、別の正式許可で保存・PR・番号付きGO・mergeを扱う。実GitHub/Ruleset/本番挙動は未確認。
+decision: ローカル実装・試験・Astra/Sol審査を完了しPR #3824提出済み。番号付きGO未受領、未merge・未deploy。
+follow_up: CI結果を確認後GO #3824を受領・記録し、マージ前の全検査へ進む。Ruleset13必須checks/strictを実確認済み。process-artifactsはrequired一覧外。本番挙動は未確認。
 ```
 
 ```text

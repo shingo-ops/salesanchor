@@ -166,3 +166,5 @@ shell/Python構文、task-state、diff-checkはSol実行exit0。Astra直接実�
 コード根拠SHA256: create=83c14d22ccff1f41e143b4f07894396976abd9418fec0f6ed3951adb98116a08、helper=67b045a0595023650dde0dd0eecefa22cb2f9d4a91f67dd4d6186b899c61066e。
 試験証跡: /private/tmp/pr-lifecycle-card03-sol-resume.log の最終出力Node107、wrapper5、lifecycle11。実GitHubへのcreate/merge/issue書込0。
 状態: 設計方針PO承認済み、設計審査済み、限定実装/ローカル検証済み。PR番号付きGO・マージ・本番反映は未了。
+
+提出実測: PR #3824 OPEN、HEAD90c6dbecc4314b4c40f591e365478a9540cc5356。create-safe実行exit0、登録番号3824一致。初回CI process-artifactsはGO節欠落で失敗（run36387714825）。承認なしで提出でき、承認検査は残っている事実を確認。マージ送信は未実施。

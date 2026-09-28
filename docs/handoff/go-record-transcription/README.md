@@ -213,6 +213,8 @@ PO提示「PR作成時は設計・検証を確認し、番号付きGOはマー�
 - [設計・受入条件](pr-lifecycle-design.md)
 - [実装カード](CARD-PR-LIFECYCLE-01.md)
 
-この修正はLINEガイドのfrontend変更と別PRで管理する。CARD-03まで実装・試験済み、Sol read-onlyレビューとAstra限定実装審査APPROVE。Node107/wrapper5/lifecycle11成功。PR未作成、未マージ。
+この修正はLINEガイドのfrontend変更と別PRで管理する。CARD-03まで実装・試験済み、Sol read-onlyレビューとAstra限定実装審査APPROVE。Node107/wrapper5/lifecycle11成功。PR #3824提出済み、未マージ。
 - [追加修正カード](CARD-PR-LIFECYCLE-03.md)
 - [保存カード](CARD-PR-LIFECYCLE-04.md)
+
+PR: https://github.com/shingo-ops/salesanchor/pull/3824 。実装コミット90c6dbecc4314b4c40f591e365478a9540cc5356をpush済み。提出wrapperの実行成功と.pr-number/実PRの一致を確認。CI run36387714825の失敗理由は番号付きGO節未受領による欠落。その他CI確認中。
