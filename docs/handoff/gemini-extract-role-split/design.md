@@ -89,7 +89,7 @@
 - 判定の関数は backend/tests/test_extraction_judgement_svc.py の単体テストで守る（CI の必須チェック `pytest (SQLite + PostgreSQL RLS)`）。
 - 試運転の結果と確認待ちの件数は、PR-D の集計画面で週ごとに PO が見る。
 - 仕入元ルール・検索ワード・除外ワードは SSOT の表だけに置き、ほかに置き場所を作らない（§3）。
-- 守り手: CI 必須チェック pytest (SQLite + PostgreSQL RLS) と PO の週次確認（design.md §9-2）
+- 守り手: `backend/tests/test_extraction_judgement_svc.py` と `backend/tests/test_extraction_shadow_svc.py`（CI 必須チェック pytest (SQLite + PostgreSQL RLS) で実行）、および PO の週次確認（design.md §9-2）
 
 ## 10. 本番DBの実測（2026-09-28、PO が読み取り専用で実行。生データは recon の db-survey.txt）
 
@@ -212,6 +212,7 @@ RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜
 
 ## PR-D：試運転の確認画面・ワード登録・影響プレビュー・詰まり集計・発送日の欄（frontend＋routers）
 
+- 関連ADR: ADR-027, ADR-067, ADR-144（画面は i18n・デザイントークン・金型の決まりを守る）
 - API（新しいルーター backend/app/routers/tcg_shadow_review.py、`require_super_admin`）
   - `GET /tcg/shadow-results?needs_review=&supplier_id=&offset=&limit=`：原文ブロック・止まった項目・候補（商品名付き）・理由を返す。
   - `GET /tcg/shadow-results/bottlenecks?days=7|30`：仕入元別・項目別の確認待ち件数と、自動で確定した割合。
