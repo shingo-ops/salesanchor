@@ -1,5 +1,6 @@
--- Migration: Seed knowledge extraction vocab (block_delimiter / skip_condition / status_keyword)
+-- Migration: Seed knowledge extraction vocab (block_delimiter / status_keyword)
 -- 冪等: WHERE NOT EXISTS で既存レコードと衝突しない
+-- 注: skip_condition の INSERT は PR #3823（2026-09-28 PO決定。設計根拠は PR #3825）で削除済み。詳細は本ファイル下部のコメント参照。
 
 -- ブロック区切り記号（仕入元メッセージで商品ブロックの開始を示す記号）
 INSERT INTO public.knowledge_rules (category, pattern_type, pattern, normalized_to, priority, language, is_active, description)
@@ -28,28 +29,15 @@ WHERE NOT EXISTS (
     WHERE kr.category = 'block_delimiter' AND kr.pattern = v.pattern
 );
 
--- スキップ条件（このキーワードを含むブロックは抽出対象外）
-INSERT INTO public.knowledge_rules (category, pattern_type, pattern, normalized_to, priority, language, is_active, description)
-SELECT 'skip_condition', v.pattern_type, v.pattern, 'skip', 100, 'ja', TRUE, v.description
-FROM (VALUES
-    ('exact', '[サーチ済み]', '出力抑止: サーチ痕あり'),
-    ('exact', '[サーチ済]', '出力抑止: サーチ痕あり(短縮)'),
-    ('substring', 'サーチ済', '出力抑止: サーチ済(部分一致)'),
-    ('substring', '完売しました', '出力抑止: 完売'),
-    ('substring', '売り切れ', '出力抑止: 売り切れ'),
-    ('substring', '売切', '出力抑止: 売切(短縮)'),
-    ('exact', '〆', '出力抑止: 締め切り'),
-    ('substring', 'ペリ無', '出力抑止: ペリ無(付属品なし)'),
-    ('substring', 'ペリ無し', '出力抑止: ペリ無し'),
-    ('substring', 'セット', '出力抑止: セット商品'),
-    ('substring', 'バラパック', '出力抑止: バラパック'),
-    ('substring', '適格請求事業者', '出力抑止: 事業者情報'),
-    ('substring', '発送元', '出力抑止: 発送元情報')
-) AS v(pattern_type, pattern, description)
-WHERE NOT EXISTS (
-    SELECT 1 FROM public.knowledge_rules kr
-    WHERE kr.category = 'skip_condition' AND kr.pattern = v.pattern
-);
+-- スキップ条件（skip_condition）の INSERT は削除済み。
+-- 理由（PO決定 2026-09-28）: skip_condition は Gemini への指示文に入り、Gemini に商品ブロックを
+-- 捨てる判断をさせていた。PO 方針（2026-09-28）: Gemini は原文の書き写しのみ・判断はシステム。
+-- 完売・サーチ済み等はシステム側の解析ルール（conditions CN0007/CN0010、tcg_status_master
+-- ST0011〜ST0013）で扱うため、skip_condition は全件廃止。
+-- 削除は migrations/20260928_100000_delete_skip_condition_rules.sql（PR #3823）で実施。
+-- この INSERT ブロックを残したままだと、run_all_migrations.sh の全件再実行のたびに
+-- WHERE NOT EXISTS で再挿入 → 上記 delete migration が再度削除、を繰り返すため、
+-- 再挿入源を止める目的でここを削除した（block_delimiter / status_keyword は変更なし）。
 
 -- ステータス判定キーワード
 INSERT INTO public.knowledge_rules (category, pattern_type, pattern, normalized_to, priority, language, is_active, description)
