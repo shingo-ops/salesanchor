@@ -4368,11 +4368,17 @@
       "extractionHealthTotalJobs": "抽出ジョブ総数",
       "extractionHealthSuccessRate": "抽出成功率",
       "extractionHealthErrorCount": "エラー件数",
-      "extractionTrendDay": "日付",
-      "extractionTrendTotal": "総数",
-      "extractionTrendDone": "成功",
-      "extractionTrendError": "エラー",
-      "extractionTotalTitle": "抽出総数"
+      "extractionJobChannel": "提供者",
+      "extractionJobItemCount": "抽出数",
+      "extractionJobStatus": "ステータス",
+      "extractionJobDate": "日時",
+      "extractionJobStatus_done": "完了",
+      "extractionJobStatus_error": "エラー",
+      "extractionJobStatus_empty": "空",
+      "extractionJobStatus_pending": "待機中",
+      "extractionJobStatus_running": "実行中",
+      "extractionJobStatus_filtered": "除外",
+      "extractionTotalTitle": "直近ジョブ"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
