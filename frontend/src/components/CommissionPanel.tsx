@@ -17,6 +17,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 const ROLES: { key: RoleKey; labelKey: string }[] = [
   { key: "sales", labelKey: "commissions.role_sales" },
@@ -260,13 +261,13 @@ export default function CommissionPanel({
               >
                 {recalcing ? t("commission.recalculating") : t("commission.recalc")}
               </button>
-              <button
+              <Button
                 type="button"
-                className="btn-secondary"
+                variant="secondary" size="md"
                 onClick={onClose}
               >
                 {t("common.close")}
-              </button>
+              </Button>
             </div>
           </>
         )}

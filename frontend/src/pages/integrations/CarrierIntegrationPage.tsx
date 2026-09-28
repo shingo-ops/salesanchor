@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { Badge } from "../../components/Badge";
 import ConfirmModal from "../../components/ConfirmModal";
@@ -202,11 +203,11 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
             </p>
           )}
           <div className="form-actions">
-            <button className="btn-secondary" disabled={busy} onClick={() => openEdit(env)}>
+            <Button variant="secondary" size="md" disabled={busy} onClick={() => openEdit(env)}>
               {env === "sandbox"
                 ? t("carrierIntegration.registerSandboxKey")
                 : t("carrierIntegration.registerProdKey")}
-            </button>
+            </Button>
           </div>
         </section>
       );
@@ -273,9 +274,9 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
           >
             {busy ? t("carrierIntegration.testing") : t("carrierIntegration.testButton")}
           </button>
-          <button className="btn-secondary" disabled={busy} onClick={() => openEdit(env)}>
+          <Button variant="secondary" size="md" disabled={busy} onClick={() => openEdit(env)}>
             {t("common.edit")}
-          </button>
+          </Button>
           <button
             className="btn-ghost carrier-env-card__delete-btn"
             disabled={busy}

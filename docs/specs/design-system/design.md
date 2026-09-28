@@ -1780,3 +1780,51 @@ Planner案作成済み。詳細28件監査・契約表の照合とSol read-only�
 AR設計レビュー修正: Solの実物照合で11フォーム分類を10フォーム＋1非form操作群へ訂正。検索もlocal1/GET5に分離、inlineに存在しないX/Escapeの試験期待を削除した（製品挙動変更ではなく実装前の契約訂正）。初期調査報告を正とせず実ソースを正とする。
 
 AR Architect確定: APPROVE（限定設計合格、2026-09-28）。Astraが正式監査の14hash/28原文/対象外53/共有15を直接照合して一致。Planner作成後に実物・既存金型・受入/所有18ファイルを整合審査した同一AI自己審査である。別Solのread-only照合も修正後APPROVE。初回の分類違いとカード検索文の曖昧さを正式資料で訂正し、正式card-lint最終exit0（長行警告2）。POの広域移管/担当委任/続行指示に基づきCARD-AR-NATIVE-BUTTONS-01を発行する。実装/試験/PR/配備の完了ではない。
+
+
+### AS. 静的primary/secondary 34ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。目的は既存合意「1か所直せば全ページが変わる」の継続。POは根拠確立後の続行・Astra設計/Sol調査実装・サブエージェント分担を明示。本設計はその範囲内の限定移管であり、PO本人の設計文言や番号付きGOを代筆しない。画面確認の省略指示を維持し、画面品質を検収済みとはしない。
+
+#### Planner: 事実・選定・対象外
+
+基準1675bfa0275a1ac76210ae489abbcb818287da02、公式worktree release/frontend-action-button-batch。preflight成功、作成時未保存0。本店の他者未保存18件は変更しない。調査固定49970e337から基準までfrontend差分0。AS AST直接再測定: 共通231/旧266、対象34/25ファイル、対象外232、共有15hash。原文と逆変換仕様は[as-button-audit.json](../../handoff/design-system-recon/evidence-20260910/as-button-audit.json)。callback/親/Modal追跡はas-static-contracts.md/json、既存実操作テスト照合はas-test-plan.md。外部事例は不要（新技術導入ではなく既存社内部品への限定移管）。利用頻度・事業価値順位・売上効果は未測定であり、最大効果とは断定しない。
+
+Sol暫定候補85を審査し、bare btn-sm42は色の対応未確定、動的4は個別仕様が必要と判明。静的39からghost3/danger1/btn-smとfield-h-md併用1を除き、色・寸法の対応が定義できる34件を採用する。85調査と非reload34案は履歴資料で、最終対象はas-button-audit.jsonのみ。競合中InvoicesPageは対象外。旧全266を一括変更すると未確定の色/動的条件/書込系が混ざるため採らない。34件はクリック起因GET7・状態/親callback/内部遷移27、直接write/外部送信0。GETは在庫ページ送り2、見積読込1、発注Modal catalog取得1、Dex検索1、Knowledge検索2。
+
+#### 変更仕様と所有
+
+各監査原文の開始/終了buttonだけをButtonへ、classNameだけをvariant primary/secondaryとsize mdへ置換。btn-smを含むものはsize sm、単独field-h-mdはmdへ吸収。Button未importのファイルだけ既存部品へのnamed import1行追加。type（省略を含む）/disabled/onClick/children/その他属性・業務本文は逐語維持。loading/追加disabled/aria-busy/style/layoutClassNameを導入しない。
+
+製品所有と全34原文はas-button-audit.json。Sol1: 16製品/21件＋CommerceNavigationButtonMigration.test.tsx。Sol2: 9製品/13件＋IntegrationLaunchButtonMigration.test.tsx/PurchaseAdminEditorButtonMigration.test.tsx。rootは正式文書/監査/台帳/検収。既存試験はread-only、対象外担当ファイルを相互編集しない。製品/新規試験計28ファイル以外の製品変更は禁止。DB/API/配線/権限/翻訳/ルート/依存/共有部品/トークン/CSS/CI変更0。データ正本は既存API/DBのまま、新保存先/複製0。
+
+既存金型採用のため外観完全同一は約束しない。smは旧padding4/10・radius3・最低高なしに対し既存Buttonがpadding4/12・radius6・最低高28、モバイル最低高44。mdのfield-h-mdは既存最低高に吸収。新金型/ハードコード追加は不要。配置wrapperと文言は維持する。根拠as-button-contract-research.mdの実物行番号。
+
+#### 受入条件・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象と本文保持 | 対象34/34、25ファイルをimport/タグ/属性だけ逆変換し基準全byte一致。対象外232rawの出現数・原文一致、共有15hash不変。共通265/旧232。他便差分が入った場合は別計数し根拠を更新 |
+| 既存10件 | 既存6suite（as-test-plan.md）を再実行。表示/クラスだけを被覆と数えず操作と状態/API/遷移結果を確認 |
+| 未被覆24件 | 3新規suite、実ページ/Router/Modal/Button/usePermissions使用。認証/API境界のみ合成。対応するcallbackの状態変化、正確な遷移先、GETクエリ/回数、disabled、取消時書込0。具体的24件契約はas-test-plan.md |
+| GET/失敗/pending | 在庫page境界とGET、Invoice見積読込のID/状態/失敗再試行/disabled、DexとKnowledge検索条件、発注catalog取得。deferredは全settleし既存のロックだけを維持。外部実通信0 |
+| 品質 | 全変更TSX strict ESLint、新規3＋関連既存6＋Button、全体coverage/check:all/build/Storybook、doc/task-state/card-lint/diff、最新PR必須CI成功。初回失敗も保存し、合格のためskip/ガード解除/仕様変更は禁止 |
+| 画面確認の境界 | PO指示で本番認証操作/目視/ブラウザー画面検査は省略・未検証。DOM合格を画面の欠け/寸法/本番送信の合格へ読み替えない |
+
+#### Why・影響と維持
+
+選択根拠は対象34の静的variant/size対応、実callback34とGET7の追跡、既存10被覆と不足24の特定、対象原文34と全byte逆変換で変更境界を証明できること。将来ADRのWhyにはこの実測と候補比較を使用する。ADR-113 handoff、ADR-067/027/073/122と既存金型を継承、新ADR/ライブラリ仕様調査不要。
+
+接触面: 利用者は34ボタン外観、実装者は分離所有、CIは既存経路、API/DBは追加変更0、運用は番号付きGO/公式merge/deploy経路、外部送信は試験で0。リスクは既存sm寸法差、非同期fixtureの誤判定、同時作業の衝突。画面保証の制約を記録し、合成APIの開始回数/全settle/権限待機、逆変換と最新main差分で監査する。未知の仕様・範囲外・競合・検証失敗は該当操作停止、必要調査を補い設計へ戻す。画面や製品仕様の独断補正禁止。
+
+維持担当は共通Buttonが外観、各既存ページが業務配線、既存CI＋3新規/6既存suiteが操作回帰、rootが原文/hash/状態台帳を管理。戻す場合は本便製品差分revert、DB復元不要。表/報酬3/カレンダー色、未確定bare/dynamic、残旧232は次便へ、新CIは全画面移管後。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身による審査であり独立した第二者設計レビューではない。別Sol2名のread-only調査で対象原文/処理契約/既存被覆を照合し、AstraがAST34/25・全legacy266・対象外232・共有15hashと固定frontend差分0を直接確認した。85暫定案の不足を34静的対応へ修正。受入方法・所有分離・既存ADR/金型/CI整合を確認し、未解決の対象仕様なし。正式カードlint成功後に発行する。製品実装・試験・番号付きGO・マージ・配備完了とは区別する。
+
+
+AS設計訂正（実装中の既存回帰照合）: rootが関連7suite/130試験を直接実行し129成功/1失敗。StaffReportFormButtonMigration.test.tsx:269-270にAQ便の対象外起動ボタンを旧classのまま維持する期待が残っていた。今回その起動はAS対象なので古いスコープ期待と矛盾する。契約を緩和せず、この既存試験1件の題名と旧class断定2行のみ共通金型のprimary断定へ変更を許可する。filter GET/回数/権限などその他期待は逐語維持。所有はSol1、これ以外の既存試験はread-only。製品25＋新規3＋限定既存1の計29ファイルに修正する。新規重複試験は追加しない。Astra自己再審査APPROVE、初回失敗原ログ03-existing-regressions.logを保存。これは動作の不良を隠す期待値変更ではなく、旧便の対象外判定を今回明示対象に合わせる設計訂正。
+
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。

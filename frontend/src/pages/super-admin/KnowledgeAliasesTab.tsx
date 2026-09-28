@@ -336,9 +336,9 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadRules(ruleSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadRules(ruleSearch)} className="btn-secondary btn-sm" data-testid="rules-search-btn">
+          <Button onClick={() => loadRules(ruleSearch)} variant="secondary" size="sm" data-testid="rules-search-btn">
             {t("common.search")}
-          </button>
+          </Button>
           <button onClick={openCreateRule} className="btn-primary btn-sm" data-testid="rules-new" style={{ marginLeft: "auto" }}>
             {t("superAdmin.knowledge.newRule")}
           </button>
@@ -414,9 +414,9 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadAliases(aliasSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadAliases(aliasSearch)} className="btn-secondary btn-sm" data-testid="aliases-search-btn">
+          <Button onClick={() => loadAliases(aliasSearch)} variant="secondary" size="sm" data-testid="aliases-search-btn">
             {t("common.search")}
-          </button>
+          </Button>
           <button onClick={openCreateAlias} className="btn-primary btn-sm" data-testid="aliases-new" style={{ marginLeft: "auto" }}>
             {t("superAdmin.knowledge.newAlias")}
           </button>
