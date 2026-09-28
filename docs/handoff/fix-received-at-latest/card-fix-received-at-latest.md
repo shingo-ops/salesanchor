@@ -9,6 +9,7 @@
 1. `backend/app/services/tcg_line_import_svc.py`（:289 と :309 の2か所だけ）
 2. `backend/tests/test_tcg_line_import.py`（`test_build_timestamp_ascending_order` だけ）
 3. migrations/20260929_120000_fix_source_messages_received_at.sql（新規作成）
+3-2. `scripts/run_all_migrations.sh`（上の migration の登録を1行だけ追加する。既存の登録行と同じ書式で、日付順の正しい位置に入れる。migration-guard のチェック2が登録を求めているため。2026-09-29 追記: 初版のカードに漏れていた）
 4. `.claude-pipeline/active-work.d/` の、このブランチの台帳
 - 削除するファイル: なし
 - 触らないもの: `backend/app/services/tcg_analyzer_svc.py`、配信・ダッシュボードのコード、frontend、ADR ファイル

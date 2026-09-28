@@ -5,7 +5,7 @@
   - 実装の承認:「時刻修正→〆判定＋Y (Recommended)」＝この便では時刻の修正だけを実装して Draft PR にする。〆の判定と Y は次の便で扱う
   - 値段のない新しい投稿の扱い:「B. 前の値段を引き継ぐ」、見せ方は「Y. 値段のある直前の投稿」。**この便には入れない**（§11）
 - 調査: `docs/handoff/fix-received-at-latest/recon.md`
-- 起点: `docs/handoff/line-import-missed-0928/recon.md`（PR #3840）
+- 起点: PR #3840 の調査記録（docs/handoff/line-import-missed-0928/recon.md。未マージ）
 - 対象ADR: `docs/adr/ADR-158-product-level-supersession.md`
 - PO の決定（2026-09-29、チャットの原文）:「受信時刻を正しくする：すでに間違って入っている時刻も直します。」
 

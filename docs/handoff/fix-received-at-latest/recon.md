@@ -2,7 +2,7 @@
 
 - 調査日: 2026-09-29（JST）／基準: origin/main `638cc6f91`
 - 本番は読み取り専用で照会した（`SET default_transaction_read_only=on` → `on` を確認、SELECT のみ）
-- 起点の調査: `docs/handoff/line-import-missed-0928/recon.md`（PR #3840）§6-2
+- 起点の調査: PR #3840 の docs/handoff/line-import-missed-0928/recon.md §6-2（2026-09-29 時点で未マージ。そのため、ファイルとしての引用はしない）
 - 既存ADR・設計の検索: `docs/adr/FEATURE-INDEX.md` →「取り込み / 解析 / パイプライン」→ ADR-100、ADR-154。商品単位の置き換えは `docs/adr/ADR-158-product-level-supersession.md`（Status は Proposed のままだが、実装済み・本番反映済み: PR #3747／#3755／#3763／#3769）。received_at の意味を決めた ADR はない
 
 ## 1. 現在のコード（事実）
@@ -66,7 +66,7 @@ is_current の再計算を試算した結果（並べ替えを line_posted_at DE
 ```
 - analysis_results は全体で 22,894 行
 
-実例（`docs/handoff/line-import-missed-0928/recon.md` §6-2）: 平田光希の 2026-09-28 21:36 の投稿（received_at 2026-08-30 12:50）の product 621／125079／125081／440406 が、同じチャネルの 2026-09-24 23:01 の投稿（received_at 2026-09-24 16:58）に負けて is_current=FALSE になっている
+実例（PR #3840 の調査記録 §6-2）: 平田光希の 2026-09-28 21:36 の投稿（received_at 2026-08-30 12:50）の product 621／125079／125081／440406 が、同じチャネルの 2026-09-24 23:01 の投稿（received_at 2026-09-24 16:58）に負けて is_current=FALSE になっている
 
 ## 5. デプロイの順番（事実）
 `.github/workflows/deploy.yml:160`「Deploy to VPS」で backend と celery-worker を再起動したあとに、`.github/workflows/deploy.yml:441`「Run database migrations」（`scripts/run_all_migrations.sh`）が実行される。**新しいコードが先に起動し、マイグレーションはそのあと**
