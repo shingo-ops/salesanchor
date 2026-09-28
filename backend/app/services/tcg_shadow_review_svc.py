@@ -13,11 +13,15 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.extraction_judgement_svc import ProductEntry, block_text, match_product
-from app.tcg_config import TCG_SCHEMA
 
-# extraction_shadow_runs/results は public 固定（migrations/20260928_110000_*）。
-# extraction_jobs/source_messages は既存コード（tcg_extraction.py:240-243）と同じく
-# TCG_SCHEMA 経由で引く（同じJOIN形を踏襲。新規クエリの複製ではなく同じ参照形の再利用）。
+# extraction_jobs/source_messages は ADR-156 Step4/5 で public へ移行済み・tenant_004側は
+# 削除済み（migrations/20260921_050000_drop_tenant004_pipeline_tables.sql）。
+# app.tcg_config.TCG_SCHEMA（環境依存）ではなく固定で "public" を使う
+# （tests/test_tcg_schema_qualification.py が要求するパターン。
+#  参考: backend/app/services/tcg_import_progress.py:15）。
+TCG_SCHEMA = "public"
+
+# extraction_shadow_runs/results も public 固定（migrations/20260928_110000_*）。
 _SHADOW_RESULTS_BASE_FROM = f"""
     FROM public.extraction_shadow_results esr
     JOIN public.extraction_shadow_runs esh ON esh.id = esr.run_id
