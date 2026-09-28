@@ -8,7 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
-| PR作成前検査とマージ前GO検査の分離 | Agent | PR #3824提出済み。Astra/Sol審査合格、Node107/wrapper5/lifecycle11成功。番号付きGO未受領、未マージ | CI結果確認後、GO #3824受領と正式記録を経てマージ前検査 | EV-20260928-PR-LIFECYCLE-GATES / docs/handoff/go-record-transcription/pr-lifecycle-design.md | 2026-09-28 |
+| PR作成前検査とマージ前GO検査の分離 | Agent | PR #3824はPO GOを記録してマージ済み。Deploy36390769039成功、API正常。自動worktree回収・台帳DONEを確認 | 限定修正は完了。代理GO制度とreaper残存lock対策は別範囲 | EV-20260928-PR-LIFECYCLE-GATES / docs/handoff/go-record-transcription/pr-lifecycle-design.md / PR #3824 | 2026-09-28 |
 | 解析結果・配信の共通並び順 | Agent | GO #3501受領済み。Deploy34914789016復旧成功確認。現行商品構造への統合補正中 | 最新main統合後に順序・値保持・負荷試験と必須CIを再検証し反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-15 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
@@ -167,6 +167,12 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 商品検索語の全語一致 | 設計/実装担当 | PR3499実装済み。固定正解0→4/4、正式3718成功/95skip/失敗0 | 番号付きGOと既存PM0264配備障害解消待ち。本番未反映 | docs/handoff/tcg-product-import/design.md§24 | 2026-09-14 |
+
+## LINE解析の業務手順（2026-09-28）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| システム欄の7段階LINE業務ガイド | Agent | PR #3831提出済み。maina1cd9eaまで統合、frontend変化0、check/build/unit17成功・最新E2E6成功（12.5秒、CARD17）。実装レビュー合格 | 既受領GOとPO追加完走指示をPRへ原文保存。最新HEADの全CI確認後にマージ/配備。最新公開状態はPR記録を参照。PO読解確認は別途 | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-16.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / https://github.com/shingo-ops/salesanchor/pull/3831 | 2026-09-28 |
 
 
 ## 静的34ボタンの共通金型移管（AS・2026-09-28）
