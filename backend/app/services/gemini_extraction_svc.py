@@ -301,9 +301,6 @@ def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[d
         "extraction_default_unit": "デフォルト単位",
         "extraction_notes": "補足ルール",
         "extraction_state_format": "状態フォーマット",
-        # PR-B1 で suppliers.extraction_ship_format が追加されるまでは
-        # supplier_context に鍵が存在しないため無視される（後方互換）。
-        "extraction_ship_format": "発送日フォーマット",
     }
     for key, label in label_map.items():
         val = supplier_context.get(key)
@@ -478,6 +475,15 @@ def call_gemini_raw_copy(
         lnk for lnk in (knowledge_links or []) if lnk.get("category") == "block_delimiter"
     ]
     supplier_note = _build_supplier_context_note(supplier_context or {}, knowledge_links=filtered_links)
+
+    # extraction_ship_format は PR #3826（suppliers 列追加）デプロイ後に supplier_context へ
+    # 入ってくる想定。列がまだ無い本番には影響させないため、共有の _build_supplier_context_note
+    # の label_map には入れず、v7専用でここだけに注入する。
+    ship_format = (supplier_context or {}).get("extraction_ship_format")
+    if ship_format:
+        ship_line = f"- 発送日フォーマット: {ship_format}"
+        supplier_note = f"{supplier_note}\n{ship_line}" if supplier_note else f"【仕入元固有の抽出ルール】\n{ship_line}"
+
     supplier_section = f"\n{supplier_note}\n" if supplier_note else ""
 
     full_prompt = f"{db_prompt}{supplier_section}\n原文:\n{prompt_input}"

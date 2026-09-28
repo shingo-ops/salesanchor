@@ -737,6 +737,55 @@ class TestCallGeminiRawCopy:
         with pytest.raises(RuntimeError):
             svc.call_gemini_raw_copy("行A")
 
+    def test_ship_format_included_in_v7_prompt_when_provided(self, monkeypatch):
+        """extraction_ship_format は v7 専用注入。supplier_context にあればプロンプトに入る。"""
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        svc.call_gemini_raw_copy(
+            "行A", supplier_context={"extraction_ship_format": "発売N日前発送 の形式"},
+        )
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "発送日フォーマット: 発売N日前発送 の形式" in prompt
+
+    def test_ship_format_absent_when_not_provided(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = None
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        svc.call_gemini_raw_copy("行A", supplier_context={"extraction_price_format": "100円"})
+        # Assert
+        prompt = client.models.generate_content.call_args.kwargs["contents"]
+        assert "発送日フォーマット" not in prompt
+
+
+class TestBuildSupplierContextNoteV6Unaffected:
+    """label_map から extraction_ship_format を外した変更が v6（本番）出力を変えないことを守る。"""
+
+    def test_extraction_ship_format_is_ignored_by_shared_note_builder(self):
+        # Arrange
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+        supplier_context = {
+            "extraction_price_format": "100円",
+            "extraction_ship_format": "発売N日前発送 の形式",
+        }
+        # Act
+        note = _build_supplier_context_note(supplier_context)
+        # Assert: v6 が読む共有ビルダーは ship_format を出力に含めない（PR-D で列追加後に注入）
+        assert "価格フォーマット: 100円" in note
+        assert "発送日フォーマット" not in note
+        assert "extraction_ship_format" not in note
+
 
 # Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
 # A live run must report format errors / correct / unknown / wrong independently.
