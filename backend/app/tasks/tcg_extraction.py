@@ -410,6 +410,15 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     error_message = result["error_message"]
 
     # --- 4. items を extraction_items に INSERT ---
+    # リトライ時に前回の stale items を削除（冪等化）
+    # FK CASCADE (analysis_results → extraction_items) により紐づく analysis_results も自動削除される
+    session.execute(
+        text(
+            f"DELETE FROM {TCG_SCHEMA}.extraction_items"
+            " WHERE extraction_job_id = :ej_id"
+        ),
+        {"ej_id": extraction_job_id},
+    )
     items_inserted = 0
     if items:
         for item in items:

@@ -23,6 +23,46 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260928-PR-LIFECYCLE-GATES
+date: 2026-09-28
+agent: Sol implementation/validation
+task: PR作成前検査とマージ前GO検査の分離
+scope: CARD-01〜04の設計・限定実装・ローカル試験・審査と正式PR提出。merge/deployは未実施。
+evidence:
+  - type: command
+    reference: node scripts/tests/test-process-artifacts.js
+    summary: 107 PASS / 0 FAIL。validation-onlyの判定維持、Issue write 0、未知・重複引数と対象外REPO拒否を確認。
+  - type: command
+    reference: bash scripts/tests/test-merge-safe-guard.sh
+    summary: 5 PASS / 0 FAIL。.pr-number欠落・空、GITHUB_ACTIONS環境名だけの成功skipを拒否し、helper非0時cleanup 0を確認。
+  - type: command
+    reference: python3 scripts/tests/test-pr-lifecycle.py
+    summary: 11 test methods成功。一時gitと偽ghだけでcreate本文4構文、host/repo固定、入力再構成、SHA検査、checks再確認、正常merge 1回、送信後異常exit2と再送0を確認。
+  - type: file
+    reference: docs/handoff/go-record-transcription/pr-lifecycle-design.md
+    summary: Astraの呼出契約の確定追補を実装基準とした。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-01実装時のPreToolUse拒否
+    summary: 同一pathをDelete/Addするapply_patchが「structural file header重複」で拒否された。設定変更や別書込手段で迂回せず、以後は正式指示どおりUpdate File形式を使用した。CARD-PR-LIFECYCLE-02受領後の新規ガード拒否は0件。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-03初回のPreToolUse拒否とAstra再開追補
+    summary: PR操作文字列を含む複合read-onlyコマンドが拒否され、Solは追加変更0で停止。Astra確認後、検索・読取を単独コマンドへ分離して再開した。再開後の新規ガード拒否は0件。
+  - type: external
+    reference: https://github.com/shingo-ops/salesanchor/pull/3824
+    summary: Astraがcreate-safe exit0、.pr-number=3824とgh pr listの番号/HEAD一致を直接確認。実装commit90c6dbecc4314b4c40f591e365478a9540cc5356はlocal/origin一致。正式PR作成1回。
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/36387714825
+    summary: 初回CI失敗はGO節欠落。Astraがlog-failedを直接確認。番号付きGO未受領なので合格扱いしない。
+  - type: command
+    reference: Astraの設計・引用検査、CARD-04 lint
+    summary: errors=[]、lint exit0。Solの最終試験ログとコードをAstraと別Solレビューが照合しAPPROVE。
+confidence: high
+tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
+decision: ローカル実装・試験・Astra/Sol審査を完了しPR #3824提出済み。番号付きGO未受領、未merge・未deploy。
+follow_up: CI結果を確認後GO #3824を受領・記録し、マージ前の全検査へ進む。Ruleset13必須checks/strictを実確認済み。process-artifactsはrequired一覧外。本番挙動は未確認。
+```
+
+```text
 id: EV-20260914-TCG-RESULT-ORDER
 date: 2026-09-14
 agent: Codex (design partner; same-AI self-review)
@@ -3194,3 +3234,27 @@ EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を�
 EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
 
 EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、backend/API/DB変更0）。端末実機で人の動作確認を実施。①共有3回（17:58:54/17:59:27/18:00:18）で受信→完了4.4/1.8/0.8秒、結果通知3回表示をPO確認。②送信後の端末原本はoriginals1件・inbox0件。③PO決定で詰まり判定60秒・点検15分周期。termux-job-schedulerの既定条件（ネット接続時のみ・電池低下時停止）を実機で発見し、--network none --battery-not-lowfalseで再登録。点検はevents上18:19:10/18:39:19/…で自動実行を確認（間隔15〜25分）。④機内モードで19:24:51共有→即時失敗通知、19:45:09（20分）/19:48:43（23分）に詰まり検知・通知をPO確認。⑤機内モード解除後、20:03:41の点検で自動再送→pending_review（投稿1,702件・確認待ち33件）。unittest41件OK。未マージ。
+
+
+### EV-20260928-AQ-DESIGN
+
+基準4bad43a4。Sol候補5hash/10原文一致、親AST実測201/296。StaffReportsPage.tsx93/94の2ボタン・対象外1・共有14hash保存、ページ専用試験未整備を受入条件に補完。Astra設計自己審査APPROVE、独立審査ではない。根拠docs/specs/design-system/design.md§AQ、docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-audit.json。画面確認はPO指示で省略、合格とはしない。製品/検証未実施。
+
+### EV-20260928-AQ-IMPLEMENTATION
+
+AQ日報2ボタン実装・Sol第二レビューAPPROVE。製品逆変換一致/共有14hash維持、最終29対象/501全体試験成功。根拠: docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-implementation.md、aq-validation-logs.tar.gz/manifest.json。画面省略、PR/新番号GO/配備未実施。
+
+2026-09-28 AQ保存f1935c24f remote一致、PR前validate-pr-body.shがGO節欠落でexit1。PR未発行[]と番号必須検査の循環を記録。スキップ/代筆/ガード変更なし。詳細 aq-staff-report-implementation.md §保存とPR前検査の停止。
+
+### EV-20260928-AR-DESIGN
+
+固定99899eb82でSol棚卸し/別Sol照合。対象14ファイル28、対象外53、共有15、native form10＋非form1＋検索local1/GET5。ar-button-audit.json/ar-contracts.mdとdesign.md §ARに根拠保存。実装前カードlintは受領欄不足を修正してexit0（長行2警告）。初期のフォーム分類誤りは明記訂正。承認手順は別担当の同領域編集を検出してSTOP、製品移管のみ継続。
+
+
+### EV-20260928-AR-IMPLEMENTATION
+
+14ファイル28ボタン移管、逆変換14/対象外53/共有15一致、共通231/旧266。Sol製品レビュー/4試験交差レビューAPPROVE、root直接監査pass=true。対象92・全体581成功（初回23timeout後、並行数2で同一全件再検証）。fixture同値修正後対象92成功、check:all/build/Storybook成功。初回失敗・報告件数訂正もar-implementation.md/ar-validation-logs.tar.gz/manifestへ保存。画面省略・未検証、PR/CI/番号付きGO/配備は次。
+
+EV-20260928-AR-IMPLEMENTATION提出追補: 保存33dbf6d7a、正式main統合済み、公式create-safe exit0でPR3828提出・登録。最終全体581成功は並行数1の31ログ、coverage20.23/16.53/17.88/20.86%。全52原ログのarchive/manifest照合済み。番号付きGO/merge/deploy未実施、CIは最新HEADで確認する。
+
+EV-20260928-AR-IMPLEMENTATION反映確定: GO原文「GO #3828」受領、対象f7987554d、正式CI582試験成功。38checks成功/8対象外後、公式merge-safeで8862732e4へ08:02:45Zマージ。Deploy36395037199成功、backup217M。root本番read-only検証08:06:54Zは公開App/API200、接続3項目正常、公開index/JSとcontainerのSHA256一致、本番HEAD一致。根拠docs/handoff/design-system-recon/evidence-20260910/ar-production-verification.json/ar-merge.txt。画面省略・未検証。

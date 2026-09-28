@@ -8,6 +8,7 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |------|------|------|---------|-----|------|
+| PR作成前検査とマージ前GO検査の分離 | Agent | PR #3824提出済み。Astra/Sol審査合格、Node107/wrapper5/lifecycle11成功。番号付きGO未受領、未マージ | CI結果確認後、GO #3824受領と正式記録を経てマージ前検査 | EV-20260928-PR-LIFECYCLE-GATES / docs/handoff/go-record-transcription/pr-lifecycle-design.md | 2026-09-28 |
 | 解析結果・配信の共通並び順 | Agent | GO #3501受領済み。Deploy34914789016復旧成功確認。現行商品構造への統合補正中 | 最新main統合後に順序・値保持・負荷試験と必須CIを再検証し反映 | EV-20260914-TCG-RESULT-ORDER / docs/handoff/pmg-import-delivery-ssot/design.md RESULT-ORDER | 2026-09-15 |
 | シンソク抽出100秒超過の限定是正設計 | 設計パートナー | PR #3476本番反映後、対象1件が146.425秒で抽出・解析done。147明細・要確認0、原文数値等735照合一致、欠落重複0 | 当該1件の解消確認済み。今後の長文所要時間を観測。型番3商品不整合は別課題、配信未実行 | PR #3476 https://github.com/shingo-ops/salesanchor/pull/3476・記録PR #3477・recon本番1件再抽出節 | 2026-09-13 |
 | PMG3段階カード下部CTA | root / pmg_cta_completion | 実装・差分/画像審査APPROVE。unit273/実PG18/E2E12成功、build/check/lint終了0 | GO #3467受領済み。承認記録保存後の最新CI確認→マージ/通常配備/稼働確認。本番未反映 | EV-20260913-PMG-STAGE-CTA / docs/handoff/pmg-import-delivery-ssot/design.md | 2026-09-13 |
@@ -15,7 +16,7 @@
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
-| フロントエンド金型化・再測定 | 設計/実装担当 | APリード6件実装検収合格。240表示/47操作前後組・70/451試験成功、共通137/旧281 | PR3500配備34804164057成功・233移行完走・App/API200でPM0264復旧確認済。PR3497 GO受領・CI39成功/8対象外後に26d56889へマージ、deploy34916422461成功・App/API200。本番反映済、次はPO目視。表/報酬3/カレンダー色保留、新CI最後 | docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md / PR3497 | 2026-09-15 |
+| フロントエンド金型化・再測定 | Astra設計/Sol実装 | AQ+AR計30件PR3828マージ・本番反映・公開配信確認済。共通231/旧266 | 残旧266件の次便調査。表/報酬3/カレンダー色保留、新CI最後。画面確認はPO指示で省略・未検証 | PR3828 / Deploy36395037199 / docs/handoff/design-system-recon/evidence-20260910/ar-production-verification.json | 2026-09-28 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |

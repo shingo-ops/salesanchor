@@ -8,6 +8,7 @@ import { Modal } from "../../components/Modal";
 import { Select } from "../../components/Select";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface Shift { id: number; user_id: number; shift_date: string; start_time: string; end_time: string; shift_type: string; notes: string | null; created_at: string; }
 
@@ -76,8 +77,8 @@ export default function ShiftsPage() {
             ]}
           />
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary">{t("common.register")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>
+            <Button type="submit" variant="primary" size="md">{t("common.register")}</Button>
           </div>
         </form>
       </Modal>

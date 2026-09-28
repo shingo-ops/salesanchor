@@ -172,9 +172,9 @@ export default function SuppliersPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="suppliers-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="suppliers-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="suppliers-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
               <button
                 type="button"

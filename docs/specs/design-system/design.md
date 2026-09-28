@@ -1691,3 +1691,92 @@ AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非los
 
 
 AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### AQ. スタッフ日報フォーム2ボタン移管（2026-09-28）
+
+mode: handoff。既存の「1か所直せば全ページが変わる」目的の延長。POは根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの進行を明示し、画面確認は省略と指示。目視合格とみなさない。代理GO有効化や番号原文の創作ではない。
+
+#### Planner: 目的・実物根拠・範囲
+
+基準4bad43a4dca6368ffa7370792a3c912e90bba521、公式専用worktree release/frontend-next-button-batch、preflight成功。Solが旧候補5ページのhash5/5・ボタン原文10/10を再照合、ページ直接回帰試験は検索0。親AstraがStaffReportsPageとButton実物を読み、構文監査を実行。根拠aq-staff-report-audit.json/cjs。StaffReportsPage.tsx:93/94の取消/追加だけを対象とする。起動:68と日報一覧/絞込/入力を対象外とする。
+
+全体は同一構文定義で共通Button201・旧btn296（TSX、stories/test/spec/design-preview除外）。本便期待203/294。AP時点137/281との差は他便の変化であり、本便の改善へ加算しない。KGI: 対象2/2、逆変換でページ全byte一致、対象外1原文一致、共有14hash不変、送信契約の回帰違反0。最大の利用頻度/売上効果は未測定。
+
+候補比較: Badges2は2取得と数値変換、Buddy2は終了操作、Shifts2は日時/非reset/削除、Notifications2はWebhook情報を扱う。StaffReportsは単一GET・5項目POST・削除なしなので、事業価値の順位ではなく検証接触面が最小という理由で先行する。全10件の一括は失敗原因の切分け範囲を広げるため採らない。表/報酬3/カレンダー色は別設計、新CIは全画面移管後。
+
+変更: named import Buttonを追加し、2つの開始/終了タグだけをButtonへ。取消variant secondary、追加primary、いずれもsize md。旧classNameを外し、type/onClick/childrenを逐語保持。Button.tsx:38/49-87のnative属性転送を利用。新しいCSS/トークン/文言/金型登録は0。loading/disabled/aria-busy/fullWidth/style/layoutClassName/stateを追加しない。
+
+変更禁止: API/DB/認証/権限/入力/翻訳/依存/共有部品/CI、TYPE_LABELSの既存Daily/Weekly/Monthly、エラー表示、対象外の起動ボタン、テーブル。外観の正本はButton.tsx/Button.css、配置は既存form-actions。データは既存/staff-reportsへだけ送り、新たな保存先/複製は作らない。実DB/本番への書込は検証で0。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械的移管だけ | named importと2タグ/propsを逆変換して基準ページ全byte一致。対象外1/共有14hash維持、製品差分はページ1件と新規試験1件の合計2ファイルだけ |
+| 送信全5キー保持 | 実ページ/実Modal/実Select/実Button/実usePermissionsと合成認証/APIを使用。POST /staff-reportsでreport_type/period/review原値、goals/challenges空null、非空/空白保持。daily/weekly/monthlyを操作 |
+| 取消・終了 | 取消で書込0・close。取消後再開では既存入力保持。X/Escは既存Modalの閉鎖・focus復帰を検証。新規初期化を加えない |
+| 成功と失敗 | 成功close、5項目既定へreset、GET追加1。失敗は入力保持・既存エラー、再送成功。filter GETクエリ維持 |
+| 入力 | period/review必須不成立は送信0、textarea Enterは改行。新しい必須/数値/形式制約を追加しない |
+| pending | 取消/追加は有効・文言不変・aria-busyなし。独立2回送信は2回を維持。pending取消可、連投防止を無断追加しない |
+| 権限 | staff_reports.create許可で起動、拒否で起動なし。許可契約はusePermissions実物と合成/me/permissionsで検証 |
+| 品質 | 対象strict ESLint、新規ページ回帰/既存Button試験、全体coverage/check:all/build/build-storybook、PR必須CI。ネットワークは合成API以外拒否 |
+
+PO指示により本番実認証操作/目視・ブラウザー画面検査は省略し、寸法/切れ/画面品質を検証済みとは主張しない。自動DOM/操作回帰・構文/共有hash・既存品質チェックは省略しない。画面検査省略で幾何的な保証が弱まる制約を明記し、共有CSSは不変で影響を2ボタンに限定する。
+
+#### Why・影響・維持
+
+既存Buttonのnative属性契約をそのまま使い、業務本文の逆変換差分0と実ページの5キーpayloadを独立検証するため、見た目の正本集約と業務維持を切り分けられる。新ライブラリ/外部導入事例は不要（既存金型への限定移管で、外部事例で成功を保証しない）。関連ADR-113/067/027/073/122、親README/recon/migrationを継承。新ADR不要。
+
+Astraが設計・自己審査・差分検収、Solが製品2ファイルと自動試験を担当。他者変更は戻さない。守り手は追加StaffReportFormButtonMigration.test.tsxと既存Button.test.tsx/vitest.unit.config.ts、frontend品質CI。新CI追加0。リスクは既存pending連投・取消入力保持を意図せず変えることと画面検査省略。前者は回帰で固定し後者は未検証を明記。違反時はREVISEへ戻し、CSSや文言変更で通さない。製品差分のrevertで戻せ、DB復元は不要。
+
+#### Architect自己審査
+
+APPROVE（設計合格）。Planner作成後に基準実物・既存Button契約・共有14/対象2/対象外1・CIと照合。上記受入は自動回帰と逆変換で判定可能。同じAstraによる自己審査であり独立審査とは称さない。実装/試験は未実施、画面品質は省略・未検証。POの条件付き続行/担当委任指示に基づき、正式カード検査成功後にSolへ実装を委任する。設計合格を新PRの番号付きGO原文に転用しない。
+
+
+AQ設計根拠のSol追加照合: 主要業務契約の矛盾0。ファイル数の表現を明確化。pending取消後のPOST成功はreset/GET、失敗は入力保持/エラーという実物契約も自動回帰で確認する（機能追加ではない）。Astraは設計合格を維持。
+
+
+### AR — nativeフォーム・検索28ボタン一括移管（2026-09-28）
+
+mode: handoff。対象ADR: ADR-113/067/027/073/122。recon: docs/handoff/design-system-recon/recon.md。
+
+PO原文「次を進める、もっと幅広く一気に実装は出来る？」とAstra設計/Sol調査実装・根拠確立後の続行を受領。成功条件は14製品ファイルの指定28件を既存Buttonへ寄せ、旧294→266・共通203→231にすること（AQ2件と同じPRならmain基準で計30件）。営業成果や体感速度の改善量は測定しておらず主張しない。
+
+#### 範囲・採用理由
+
+固定基点99899eb824234c7158c14855301c9412f440db2d。詳細監査はar-button-audit.json、操作契約はar-contracts.md。Notifications/Badges/Shifts/Buddy/OrdersFormModal/LeadsPage/RolesPage/KnowledgeAliasesTab/MasterListEditorの10 nativeフォーム20件＋権限割当の非form Modal操作2件と、MasterListEditor/Units/ProductCategories/Suppliers/Conditions/StatusMasterの検索submit6件。計14ファイル28件。取消/保存/検索のnative buttonで、既存type/handler/childrenを保持できる同型群をまとめる。少数ずつのPRより確認・配備回数を減らせるが、実際の工数削減率は未測定。
+
+代替は全旧294件の一括変換と2件ずつの継続。前者はLink/a、bare btn-smのvariant未確定、独自CSS、loading/外部効果、削除actionが混在するため不採用。後者は同一契約の検査を共通化できる28件の実物が揃ったため採らない。対象外の旧266件、表、報酬3件、カレンダー色、CI追加は別便。
+
+#### 実装契約
+
+raw btn-secondary→Button variant=secondary size=md、raw btn-primary→Button variant=primary size=md。検索のfield-h-mdもsize=mdへ吸収する。field-size.css:8とButton.cssのmin-height/box-sizingが同じトークンを参照することを確認。既存金型の外観を採用するのでpixel完全同一とは呼ばない。
+
+各ファイルのnamed import追加と指定JSXタグ/className→variant/size置換だけ。type/form/disabled/data-testid/onClick/childrenは原文保持、元の暗黙typeは明示値を勝手に追加しない。loading/aria-busyを新設しない。API URL/method/payload、権限、business handler、state/reset、通信回数、配線/DBのSSOTは変更しない。共有15hash（AQ共有14＋field-size.css）不変、対象外button原文維持。逆変換で各ページ/部品全文が基点とbyte一致することを必須とする。新CSS・トークン・ハードコード・金型・依存は追加しない。
+
+#### 受入と検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械変換28件・対象外保持 | 固定監査JSONのraw JSX/各hashと前後照合、14ファイル逆変換byte一致、AST共通231/旧266、共有15hash一致 |
+| 10フォームと1操作群の動作維持 | 実ページ/共通部品をrenderし成功・取消・失敗/再試行・pendingを各契約別に検証。X/Escape/焦点は9つのModal formのみ。inline MasterListはadd/edit/cancel/required/grid、Roles割当はtype=button/onClick/disabled/PUTと閉鎖reset。APIはmock、実通信拒否 |
+| 送信・権限分岐 | 契約表のcreate/edit method/URL/全payload/required/数値変換/null/空白保持/権限/disabled/reset/再GETを期待値として照合。対象外の削除/終了を起こさない |
+| 検索6系統 | MasterListのlocalfilter1件はclick/Enter/trim/clear・追加通信0。GET検索5件はclick/Enterのquery/encoding/page1/clearを照合しwrite0。type=submit/data-testid維持 |
+| 全体品質 | 変更ファイルstrict ESLint、対象unit/既存Button、全体coverage/check:all/build/Storybook、diff/task-stateチェック |
+| 描画確認の限界 | PO指示で画面/実ログイン/本番フォーム/PO目視は省略・未検証と明記。DOM動作成功を表示合格や実DB成功に読み替えない |
+
+#### リスクと維持
+
+広域変更のリスクは画面ごとの副作用・検証fixtureの取り違え。固定原文の逆変換とhandler契約別試験、独立Sol差分レビューで検査する。fixture補正は実物根拠を残し初回ログを保存、試験skip/既存期待値変更で合格にしない。共有部品変更は行わず、製品差分のrevertで戻せる（DB復元不要）。守り手は追加/既存unitと既存品質CI、API/DB SSOTに別データを作らない。新CI追加は最後の方針を保持。
+
+外部・過去事例は該当なし。自社既存部品への限定移管であり、原文と自動回帰が直接の根拠となる。ライブラリ/API新仕様の採用はない。
+
+#### 設計審査の状態
+
+Planner案作成済み。詳細28件監査・契約表の照合とSol read-only第二照合後にArchitect判定を確定する。現時点は実装カード未発行。Astra自身の設計審査と独立Sol照合を区別する。PR起票手順は別担当release/pr-lifecycle-gatesが同領域変更中で、担当確認待ち。本ARからガードや外部設定を変更しない。番号付きGO原文の創作、代理制度の有効化はしない。
+
+AR設計レビュー修正: Solの実物照合で11フォーム分類を10フォーム＋1非form操作群へ訂正。検索もlocal1/GET5に分離、inlineに存在しないX/Escapeの試験期待を削除した（製品挙動変更ではなく実装前の契約訂正）。初期調査報告を正とせず実ソースを正とする。
+
+AR Architect確定: APPROVE（限定設計合格、2026-09-28）。Astraが正式監査の14hash/28原文/対象外53/共有15を直接照合して一致。Planner作成後に実物・既存金型・受入/所有18ファイルを整合審査した同一AI自己審査である。別Solのread-only照合も修正後APPROVE。初回の分類違いとカード検索文の曖昧さを正式資料で訂正し、正式card-lint最終exit0（長行警告2）。POの広域移管/担当委任/続行指示に基づきCARD-AR-NATIVE-BUTTONS-01を発行する。実装/試験/PR/配備の完了ではない。
