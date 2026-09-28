@@ -172,4 +172,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| システム欄の7段階LINE業務ガイド | Agent | main8862732を統合。独立追記を両方保持して競合解消。check/build成功、unit17/E2E6成功。Astra/Solの実装・限定試験修正レビュー合格 | 検証済み成果を保存して正式PR提出・CI確認。番号付きGO・マージ・本番表示・PO読解確認は未了 | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-13.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL | 2026-09-28 |
+| システム欄の7段階LINE業務ガイド | Agent | PR #3831提出済み。main157cd679まで統合、frontend変化0、check/build/unit17成功・最新E2E6成功（13.7秒）。実装レビュー合格 | PR最新HEADのCI・番号付きGOを確認してマージ/配備。最新公開状態はPR記録を参照。PO読解確認は別途 | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-16.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / https://github.com/shingo-ops/salesanchor/pull/3831 | 2026-09-28 |

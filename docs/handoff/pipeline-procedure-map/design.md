@@ -258,3 +258,9 @@ Astraはコード/CSS/接続差分を直接確認し、現在mainのlocaleキー
 状態: 設計/実装レビュー済み、最新main統合後のローカル受入検証済み。正式PR提出・CI・本ガイドへの番号付きGO・マージ・本番反映・PO読解確認は未了。正式保存後CARD14/15でPRまで進める。
 
 最終審査追補: 最新main統合後の別Sol read-onlyレビューAPPROVE、blocking 0。unmerged/marker 0、AQ/AR追記の削除改変0、frontend8path/744行追加（ガイド741＋試験mode3行）を直接照合。Astraもこの範囲と実検証を確認し実装レビューAPPROVE。未実施のPR/CI/番号付きGO/本番/PO読解確認を合格に含めない。
+
+## 2026-09-28 PR #3831の提出後検証記録
+
+PR https://github.com/shingo-ops/salesanchor/pull/3831 は正式提出済み。CARD16でmain157cd6799480e34481bdcc4a04804dc1e4732be7を競合0で統合。frontend treeは統合前と完全一致、origin/main比の製品差分はガイド8pathだけ。main由来backend2/文書2を保持し、本ガイドでDB/API/抽出処理を追加変更していない。
+Solの最新実測: 直前lsof出力空/exit1、既定E2E6/6成功（13.7秒）。同一frontendに対するcheck:all/build成功・unit17成功はCARD13の実測を保持し、不要な重複実行をしていない。Astraはこの境界と限定意味監査を照合して実装レビューAPPROVEを維持する。
+保存時点: 設計/実装/ローカル検証済み、PR提出済み。更新後のCI・承認・マージ・配備状態はPRの最新HEADと記録を正本として確認する。本文中の提出時CI失敗は過去HEADの観測であり、最新結果へ流用しない。POによる読みやすさの確認は未実施。本ガイドの番号付きGOは未受領、#3824のGOを流用しない。

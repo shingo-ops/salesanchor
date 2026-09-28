@@ -52,4 +52,4 @@ PO合意: 指定商品の〆は数量0・在庫表示から除外、他商品と
 既存の横長マップに加え、担当・確認資料・入力・結果・例外を縦に読める説明ページを追加する。
 - [現状の実装と原稿の証跡](../../../handoff/pipeline-procedure-map/recon.md)
 - [画面設計と受入条件](../../../handoff/pipeline-procedure-map/design.md)
-状態: 設計/既存実装レビューAPPROVE。実装済み、最新main8862732統合後check/build/unit17/E2E6成功。PR・PO画面確認・マージ・本番反映は未完了。処理仕様やDBの正本は変更しない。
+状態: 設計/実装レビューAPPROVE、check/build/unit17/最新E2E6成功。PR #3831提出済み、main157cd679まで統合。CI・承認・公開状態は[PRの最新記録](https://github.com/shingo-ops/salesanchor/pull/3831)を参照。PO読解確認は別途。処理仕様やDBの正本は変更しない。

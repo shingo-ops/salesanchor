@@ -142,3 +142,16 @@ Astraはコード/CSS/接続差分を直接確認し、現在mainのlocaleキー
 状態: 設計/実装レビュー済み、最新main統合後のローカル受入検証済み。正式PR提出・CI・本ガイドへの番号付きGO・マージ・本番反映・PO読解確認は未了。正式保存後CARD14/15でPRまで進める。
 
 提出カード保存時の停止記録: CARD15のshell文書作成中、hookが本文中のPR操作例を検出しone literal PR command制約で2回拒否、PR送信0・ファイル作成0。カードを入口参照と固定入力欄を示す設計文書へ改めて保存し、card-lint exit0。実際の提出は独立tool callで正式wrapperと全hook/validatorを通す契約のまま。設定変更・直接CLI/API代替・GO代筆0。
+
+## 2026-09-28 PR #3831提出と最新base追従
+
+CARD13保存fb39d740bd6afd6faf104f88dd8f0acb85cf780a、parents3c198d435+8862732。CARD14通常push成功、local/tracking/remoteの3SHA一致。CARD15は正式wrapperで1回作成、exit0、.pr-numberと実PR番号3831一致。PRはOPEN/ready、base main、head release/line-workflow-guide-resume、作者shingo-cc。AstraもGitHub GETで番号/HEAD/状態を直接確認。URL https://github.com/shingo-ops/salesanchor/pull/3831 。
+初回CI: process-artifacts gate run36398169706/job108849430510はGO節欠落だけで失敗（Solが実ログ確認）。guard evaluation run36398169228/job108849430274はbase157cd679非包含によるancestor検査error。評価文書の不一致を示すfailureではなかった。Astraの実required checks取得は13件中12pass/guard evaluation1fail。これは提出時HEADfb39d740への結果であり、更新後HEADへ流用しない。
+追加main157cd6799480e34481bdcc4a04804dc1e4732be7はbackend抽出リトライの旧明細整理2ファイルと設計文書2ファイルだけ。別Solの意味監査でガイド原稿修正0、frontend/部品/token/locale変更0、競合候補0。ガイドは再試行を実行せず既存エラーログへ案内するため、通常手順の意味は維持される。
+CARD16で実fetch後固定SHA一致、通常mergeは競合0。backend2/文書2をmainどおり保持し、追加変更しない。ローカル最終検証と更新後HEADのCIは後続結果を参照する。
+
+## 2026-09-28 PR #3831の提出後検証記録
+
+PR https://github.com/shingo-ops/salesanchor/pull/3831 は正式提出済み。CARD16でmain157cd6799480e34481bdcc4a04804dc1e4732be7を競合0で統合。frontend treeは統合前と完全一致、origin/main比の製品差分はガイド8pathだけ。main由来backend2/文書2を保持し、本ガイドでDB/API/抽出処理を追加変更していない。
+Solの最新実測: 直前lsof出力空/exit1、既定E2E6/6成功（13.7秒）。同一frontendに対するcheck:all/build成功・unit17成功はCARD13の実測を保持し、不要な重複実行をしていない。Astraはこの境界と限定意味監査を照合して実装レビューAPPROVEを維持する。
+保存時点: 設計/実装/ローカル検証済み、PR提出済み。更新後のCI・承認・マージ・配備状態はPRの最新HEADと記録を正本として確認する。本文中の提出時CI失敗は過去HEADの観測であり、最新結果へ流用しない。POによる読みやすさの確認は未実施。本ガイドの番号付きGOは未受領、#3824のGOを流用しない。
