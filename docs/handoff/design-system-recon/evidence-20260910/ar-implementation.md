@@ -108,3 +108,23 @@ PR3828初回最終HEAD1efa06c63のCIは36成功/8対象外/2失敗（実行中0�
 色試験是正の実装: RoleKnowledge1ファイルだけ変更、SHA256 a3bbcb8d8bb1bdf3c4cd98d4f15ec607a9e9f430137d43a6a14bddc1d1eddb38。create先頭単一checked/null fallback readonly/非null保持/別palette選択のfull POST/PATCH一致を検証。色文字列の隠蔽・移設なし、新規hex0。Sol実行で19試験成功・strict ESLint/diff-check成功、Astraは実差分と原ログを読取。初回sandbox EPERMと再実行成功を区別してarchiveへ追加。製品/ガード/他試験変更0。これにより試験1件追加となったため、全件581という旧実行と、修正後の正式CIを区別する。カード初回lintは参照節不足1件を修正してexit0後に発行。
 
 色試験是正の別Sol read-only交差レビューAPPROVE、所見0。Astraは限定是正を検収。更新後archive57件をmanifestで再検算一致。正式CIの最新HEAD結果を確認してからGOへ進む。
+
+## GO受領と正式マージ（2026-09-28）
+
+- GO発行者: Shingo（shingo-ops、PO本人）
+- 日時: 2026-09-28 17:00 JST（受領後記録）
+- GO原文: GO #3828
+- 対象HEAD: f7987554d6c917e48668bbee9670a8c3ad1554b4
+- バックアップ確認: GO受領後にsalesanchor_db_20260928_161705.sql.gzのstat/gzip -tを再実行し終了0。226266450 bytes。復元試験は未実施。
+
+本人GOをPR本文へ転記後、checks38成功/8対象外/CLEANを直接確認。公式gh-pr-merge-safe.shが必須13成功を2回再確認し、2026-09-28T08:02:45Zにmerge commit 8862732e494ac5d92287d57aeea808cee05d3151でMERGEDを確認。原ログar-merge.txt。公式手順が当該クリーンなworktreeとローカル専用ブランチを回収済み。GO委任の自己有効化・proxy発行ではない。
+
+正式Frontend CI run36394071288/job108836226026: 40ファイル582試験成功/51.66秒、coverage statements20.25%/branches16.57%/functions17.91%/lines20.87%。AstraがGitHub原ログを直接読取。ローカル最終581の後に色操作試験を1件追加した正式結果である。
+
+## 本番反映の確認結果
+
+Deploy run36395037199/job108839306368はsuccess。対象merge8862732e4一致、新規バックアップsalesanchor_db_20260928_170324.sql.gz（217M）を08:04:09Zの原ログで確認。Pre-deploy backup/FedEx smoke/Finalize/Verifyはsuccess、変更範囲判定によりDB migrationsとSA-19 smokeはskipped（成功試験に数えない）。
+
+2026-09-28T08:06:54Z、Astraが本番read-only確認を直接実行しpass=true。VPS git HEADは8862732e494ac5d92287d57aeea808cee05d3151、公開App/asset/APIはHTTP200、healthはok、database/redis/celeryすべてconnected。公開indexと/assets/index-i7xY32AW.jsの各SHA256がfrontendコンテナの配信ファイルとそれぞれ一致。証跡ar-production-verification.json、再確認器ar-verify-production.py。
+
+状態: 設計/実装/検証/PO本人GO/PR3828マージ/本番反映/公開配信確認を完了。今回30ボタン、共通231/旧266。認証付き本番フォーム送信・PO目視・復元試験は未実施（画面確認はPO指示で省略）。DOM/mock試験を実DB書込の確認に読み替えない。結果文書は別の文書専用ブランチから保存する。
