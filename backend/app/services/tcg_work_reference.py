@@ -17,6 +17,11 @@ PRODUCT_ID_PROMPT_VERSIONS = frozenset({"raw-extraction-v5-product-p1", WORK_ID_
 # Prompt versions that include raw_product_code (Gemini v6 and later).
 RAW_CODE_PROMPT_VERSIONS = frozenset({WORK_ID_PROMPT_VERSION})
 
+# 試運転（Shadow run）専用: Gemini＝書き写し専任のv7プロンプト版。
+# v6分岐（WORK_ID_PROMPT_VERSIONS 等）には意図的に入れない
+# （design.md PR-C: 「既存の frozenset には入れない（v6 の分岐に影響させないため）」）。
+RAW_COPY_PROMPT_VERSION = "raw-copy-v7-p1"
+
 
 def reference_json(reference: dict) -> str:
     return json.dumps(reference, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
