@@ -23,6 +23,37 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260928-PR-LIFECYCLE-GATES
+date: 2026-09-28
+agent: Sol implementation/validation
+task: PR作成前検査とマージ前GO検査の分離
+scope: CARD-PR-LIFECYCLE-02の許可コード9件・テストとローカル台帳。外部書込、commit、push、PR、merge、deployは対象外。
+evidence:
+  - type: command
+    reference: node scripts/tests/test-process-artifacts.js
+    summary: 107 PASS / 0 FAIL。validation-onlyの判定維持、Issue write 0、未知・重複引数と対象外REPO拒否を確認。
+  - type: command
+    reference: bash scripts/tests/test-merge-safe-guard.sh
+    summary: 5 PASS / 0 FAIL。.pr-number欠落・空、GITHUB_ACTIONS環境名だけの成功skipを拒否し、helper非0時cleanup 0を確認。
+  - type: command
+    reference: python3 scripts/tests/test-pr-lifecycle.py
+    summary: 11 test methods成功。一時gitと偽ghだけでcreate本文4構文、host/repo固定、入力再構成、SHA検査、checks再確認、正常merge 1回、送信後異常exit2と再送0を確認。
+  - type: file
+    reference: docs/handoff/go-record-transcription/pr-lifecycle-design.md
+    summary: Astraの呼出契約の確定追補を実装基準とした。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-01実装時のPreToolUse拒否
+    summary: 同一pathをDelete/Addするapply_patchが「structural file header重複」で拒否された。設定変更や別書込手段で迂回せず、以後は正式指示どおりUpdate File形式を使用した。CARD-PR-LIFECYCLE-02受領後の新規ガード拒否は0件。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-03初回のPreToolUse拒否とAstra再開追補
+    summary: PR操作文字列を含む複合read-onlyコマンドが拒否され、Solは追加変更0で停止。Astra確認後、検索・読取を単独コマンドへ分離して再開した。再開後の新規ガード拒否は0件。
+confidence: high
+tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
+decision: CARD-PR-LIFECYCLE-03の対象・入力固定までローカル実装と偽gh検証を完了。Astraレビュー待ち。未commit・未push・未PR・未merge・未deploy。
+follow_up: Astraレビュー後、別の正式許可で保存・PR・番号付きGO・mergeを扱う。実GitHub/Ruleset/本番挙動は未確認。
+```
+
+```text
 id: EV-20260914-TCG-RESULT-ORDER
 date: 2026-09-14
 agent: Codex (design partner; same-AI self-review)
