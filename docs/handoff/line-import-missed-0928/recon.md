@@ -4,7 +4,7 @@
 - 起点: PO報告「9/28 20:11〜22:03 はかなり投稿があるのに拾えていない（クレームあり）」
 - 調査日: 2026-09-29（JST）
 - 調査方法: 本番DBは読み取り専用で照会した（PO許可の鍵を使用、`SET default_transaction_read_only=on` → `SHOW transaction_read_only` = `on` を毎回確認、SELECTのみ）。コードは origin/main（HEAD `638cc6f91`）基準
-- 既存ADR・設計の検索: `docs/handoff/tcg-import-latest-only/`（SQR-05／〆の商品単位反映、Draft）、`docs/handoff/line-import-missing-channel/design.md`、`docs/handoff/line-import-schema-rewire/recon.md`
+- 既存ADR・設計の検索: `docs/adr/FEATURE-INDEX.md` の「取り込み / 解析 / パイプライン」→ `docs/adr/ADR-100-sa-ingestion-analysis-pipeline.md`（Accepted、GAS時代の概念設計。source_messages／SQR-05／Android の記載なし）、`docs/adr/ADR-154-tcg-parity02-gas-python-migration.md`（Accepted、Python側の解析移植。SQR-05の記載なし）、`docs/adr/ADR-158-product-level-supersession.md`（**Proposed**、〆は対象商品だけ消すという決定。`source_messages.is_active` の二重責務を問題として記載）。SQR-05（同じ人は最新1通）と Android 取り込み経路を定めたADRはない（`docs/handoff/tcg-import-latest-only/recon.md:563`、`docs/handoff/line-android-import/recon.md:59`）。関連する設計: `docs/handoff/tcg-import-latest-only/design.md`（Draft）、`docs/handoff/line-import-missing-channel/design.md`、`docs/handoff/line-import-schema-rewire/recon.md`
 
 ## 1. 取り込み経路（事実）
 
@@ -116,7 +116,7 @@
 **A'. 〆の投稿が、その人の有効な投稿を商品に関係なくすべて無効化する（画面から消える原因）**
 - 平田光希 21:36（9品目。product_code 621／18／440406／125079／125081 ほか）は、23:15「EB03〆」（product_code 18 だけ）によって、投稿全体が `is_active=FALSE` になった
 - コード: `backend/app/services/tcg_line_import_svc.py:452-463`（同じ `supplier_channel_id` の有効な行をすべて置き換える）。`backend/app/services/` の中に、商品単位で判定するロジックはない
-- 既存設計との関係: `docs/handoff/tcg-import-latest-only/design.md` では、PO合意として「商品を指定した〆は、その商品だけを在庫から外し、他の商品は維持する」と記録されている。ただし同文書は Draft で、実装・本番反映は未実施と明記している → **設計済み・未実装のずれ**
+- 既存設計との関係: `docs/handoff/tcg-import-latest-only/design.md` では、PO合意として「商品を指定した〆は、その商品だけを在庫から外し、他の商品は維持する」と記録されている。ただし同文書は Draft で、実装・本番反映は未実施と明記している。ADR-158（Proposed）も同じ問題（「〆」だけのメッセージで、その仕入元の全商品が配信から消える）を扱っている（`docs/adr/ADR-158-product-level-supersession.md:11`、`docs/adr/ADR-158-product-level-supersession.md:15`） → **設計済み・未実装のずれ**
 
 **B. 倉田 和博 20:46 が empty になった理由**
 - 本文（50文字）は「4周年 四皇トレジャーゲット キャンペーンパック 10パックセット/¥5,000 **完売**」
@@ -146,7 +146,7 @@
 ## 6. 付随事項
 
 - 調査中に、本番の環境変数を読んだ際、DB接続文字列（パスワードを含む）が作業記録に1回表示された。外部への送信はなし。パスワードを変更するかはPOが判断する
-- `docs/handoff/go-record-transcription/opus-delegation.md` は origin/main に存在しない（`git ls-tree -r --name-only origin/main | grep -i opus-delegation` → 0件）
+- GO委任の正式記録（docs/handoff/go-record-transcription/ 配下の opus-delegation 文書）は origin/main に存在しない（`git ls-tree -r --name-only origin/main | grep -i opus-delegation` → 0件）
 
 ## 7. 次の判断（PO）
 
