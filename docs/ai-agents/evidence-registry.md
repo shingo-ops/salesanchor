@@ -3194,3 +3194,13 @@ EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を�
 EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
 
 EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、backend/API/DB変更0）。端末実機で人の動作確認を実施。①共有3回（17:58:54/17:59:27/18:00:18）で受信→完了4.4/1.8/0.8秒、結果通知3回表示をPO確認。②送信後の端末原本はoriginals1件・inbox0件。③PO決定で詰まり判定60秒・点検15分周期。termux-job-schedulerの既定条件（ネット接続時のみ・電池低下時停止）を実機で発見し、--network none --battery-not-lowfalseで再登録。点検はevents上18:19:10/18:39:19/…で自動実行を確認（間隔15〜25分）。④機内モードで19:24:51共有→即時失敗通知、19:45:09（20分）/19:48:43（23分）に詰まり検知・通知をPO確認。⑤機内モード解除後、20:03:41の点検で自動再送→pending_review（投稿1,702件・確認待ち33件）。unittest41件OK。未マージ。
+
+### EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL
+
+CARD-LINE-GUIDE-01/02に基づき、システム欄へLINE解析の7段階業務ガイドを実装。AstraのREVISE事項として、利用者向け原稿への修正、自動解析と照合の関係修正、h3アンカーとtabIndex=-1、E2E locator限定、遷移先実体確認を反映した。既存Card/Badge/Buttonと既存tokenのみを使用し、新規API/DB/route/token/業務書込は0。
+
+ローカル最終実測: `npm run check:all` exit0（既存140警告、新規警告0）、`npm run build` exit0（1740 modules、built in 815ms）、指定unit 2ファイル17件成功、指定Chromium E2E 6件成功。E2Eは1440/390、ja/en、light/dark、System→ガイド、同hub query、取込/配信pathnameと遷移先内容、h3アンカーのキーボードフォーカス、ガイド表示中のPOST/PUT/PATCH/DELETE 0件を検証。画面証跡は `/tmp/reports/card-line-guide-01/guide-*.png` の4件を目視し、目次を縦配置へ是正後にE2Eを再実行した。
+
+初回buildは新規unitの未登録jest-dom matcher型でexit2となり、期待対象を同じDOM属性・pathnameのVitest直接比較へ修正して解消。E2E初回はsandboxのlocalhost:5173 bindがEPERMとなり、カードとPOが許可した同一コマンドのrequire_escalated審査で成功。npm ciは正規審査でexit0、lockfile変更は意図していない。CI・本番確認・PO画面確認・commit/push/PR/merge/deployは未実施。Astraレビュー待ちでDONEではない。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 追補: CARD-LINE-GUIDE-03の390x900可視範囲2/2成功（7.3秒）、画像6枚・操作ボタンtrial成功。Astraが日本語手順1/英語手順7画像とコード/CSS/hub差分を直接確認。Sol別セッションのread-onlyレビューもAPPROVE（指摘0、ja/en89/89）。本番/PO読解確認/CIは未実施。
