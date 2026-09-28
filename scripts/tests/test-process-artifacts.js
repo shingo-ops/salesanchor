@@ -395,6 +395,32 @@ test('ADR-1003: requiresPoOnlyGo はmigrationファイルが無ければfalse（
   assert.strictEqual(requiresPoOnlyGo(['backend/app/schemas/lead.py']), false);
 });
 
+test('ADR-1003: migration有り＋BASE_SHA/HEAD_SHA無し → fail-closed（true）', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/001_test.sql']), true);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
+test('ADR-1003: migrationファイルが無ければBASE_SHA/HEAD_SHA無しでもfalse', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['backend/app/schemas/lead.py']), false);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
 // ── ユニットテスト: file:line 引用検証 ───────────────────────────────────────
 console.log('\n【file:line引用テスト】');
 

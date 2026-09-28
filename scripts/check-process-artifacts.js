@@ -60,7 +60,8 @@ function migrationsContainDropStatement(files) {
 
   const base = process.env.BASE_SHA;
   const head = process.env.HEAD_SHA;
-  if (!base || !head) return false;
+  // migration ファイルがあるのに diff を取れない場合は fail-closed（PO本人のGO必須側）に倒す
+  if (!base || !head) return true;
 
   try {
     const diff = execSync(
@@ -70,7 +71,8 @@ function migrationsContainDropStatement(files) {
     const addedLines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
     return addedLines.some(l => /DROP\s+(TABLE|COLUMN)/i.test(l));
   } catch {
-    return false;
+    // git diff 自体が失敗した場合も fail-closed
+    return true;
   }
 }
 
