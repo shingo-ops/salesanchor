@@ -137,6 +137,41 @@ def _load_db_prompts() -> tuple[str, str]:
     return base_text, work_id_text
 
 
+def _load_db_raw_copy_prompt() -> str:
+    """
+    public.extraction_prompt_config から raw_copy_extraction（is_active）を取得する。
+    試運転（Shadow run, PR-C）専用。DB接続失敗または未登録の場合は RuntimeError。
+    """
+    if not _SYNC_DB_URL:
+        raise RuntimeError(
+            "抽出プロンプト設定エラー: DATABASE_URL が未設定です。"
+            "raw_copy_extraction プロンプトを読み取れません。"
+        )
+    try:
+        from sqlalchemy import create_engine
+        from sqlalchemy import text as sa_text
+        engine = create_engine(_SYNC_DB_URL, echo=False, pool_pre_ping=True)
+        with engine.connect() as conn:
+            row = conn.execute(
+                sa_text(
+                    "SELECT prompt_text FROM public.extraction_prompt_config "
+                    "WHERE prompt_key = 'raw_copy_extraction' AND is_active = TRUE"
+                )
+            ).mappings().first()
+    except Exception as exc:
+        raise RuntimeError(
+            f"抽出プロンプト設定エラー: DBからraw_copy_extractionを読み取れません: {exc}"
+        ) from exc
+
+    prompt_text = row["prompt_text"] if row else None
+    if not prompt_text:
+        raise RuntimeError(
+            "抽出プロンプト設定エラー: raw_copy_extraction プロンプトがDBに登録されていないか無効です。"
+            "（PR-B1 migration で INSERT ... ON CONFLICT DO NOTHING により投入される想定）"
+        )
+    return prompt_text
+
+
 # 全角パイプ区切り
 _PIPE = "｜"
 
@@ -408,6 +443,83 @@ def call_gemini_extraction(
 
 
 # ---------------------------------------------------------------------------
+# 試運転（Shadow run, PR-C）: v7（raw_copy_extraction）呼び出し
+# ---------------------------------------------------------------------------
+
+
+def call_gemini_raw_copy(
+    raw_text: str, *,
+    supplier_context: dict | None = None,
+    knowledge_links: list[dict] | None = None,
+) -> dict:
+    """
+    v7（raw_copy_extraction）を呼び出す。Gemini は書き写し専任（判定はしない）。
+
+    design.md PR-C:
+      - DB の raw_copy_extraction のみを使う（is_active）。未登録は RuntimeError。
+      - 仕入元の書き方として渡すのは extraction_*（ship_format含む）と
+        block_delimiter のみ。skip_condition / status_keyword は渡さない
+        （判定はシステム側、tcg_status_master に任せる）。
+      - 行番号の付け方・モデル設定は既存の call_gemini_extraction と同じ。
+
+    Returns:
+      {"response_text": str, "input_tokens": int, "output_tokens": int}
+    """
+    from google.genai import types as genai_types  # type: ignore[import-untyped]
+
+    db_prompt = _load_db_raw_copy_prompt()
+    prompt_input = format_prompt_input(raw_text)
+
+    # 判定にあたる block_delimiter 以外（skip_condition/status_keyword）は渡さない。
+    filtered_links = [
+        lnk for lnk in (knowledge_links or []) if lnk.get("category") == "block_delimiter"
+    ]
+    supplier_note = _build_supplier_context_note(supplier_context or {}, knowledge_links=filtered_links)
+
+    # extraction_ship_format は PR #3826（suppliers 列追加）デプロイ後に supplier_context へ
+    # 入ってくる想定。列がまだ無い本番には影響させないため、共有の _build_supplier_context_note
+    # の label_map には入れず、v7専用でここだけに注入する。
+    ship_format = (supplier_context or {}).get("extraction_ship_format")
+    if ship_format:
+        ship_line = f"- 発送日フォーマット: {ship_format}"
+        supplier_note = f"{supplier_note}\n{ship_line}" if supplier_note else f"【仕入元固有の抽出ルール】\n{ship_line}"
+
+    supplier_section = f"\n{supplier_note}\n" if supplier_note else ""
+
+    full_prompt = f"{db_prompt}{supplier_section}\n原文:\n{prompt_input}"
+
+    payload: dict[str, Any] = {"model": _GEMINI_MODEL, "contents": full_prompt, "config": {"temperature": 0}}
+    client = _get_genai_client()
+
+    logger.info(
+        "[gemini_extraction] calling Gemini raw_copy API, model=%s text_len=%d",
+        _GEMINI_MODEL,
+        len(raw_text),
+    )
+
+    try:
+        response = client.models.generate_content(
+            model=payload["model"],
+            contents=payload["contents"],
+            config=genai_types.GenerateContentConfig(**payload["config"]),
+        )
+    except SoftTimeLimitExceeded:
+        raise
+    except Exception as exc:
+        logger.exception("[gemini_extraction] raw_copy API call failed: %s", _safe_error_message(exc))
+        raise RuntimeError(f"Gemini raw_copy API 呼び出し失敗: {_safe_error_message(exc)}") from exc
+
+    result_text = getattr(response, "text", "") or ""
+    usage = getattr(response, "usage_metadata", None)
+    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
+    output_tokens = int(getattr(usage, "response_token_count", 0) or 0)
+    logger.info(
+        "[gemini_extraction] raw_copy API response received, response_len=%d", len(result_text)
+    )
+    return {"response_text": result_text, "input_tokens": input_tokens, "output_tokens": output_tokens}
+
+
+# ---------------------------------------------------------------------------
 # パース: パイプ区切りテーブル → items リスト
 # ---------------------------------------------------------------------------
 
@@ -549,6 +661,122 @@ def parse_extraction_response(
 
 
 # ---------------------------------------------------------------------------
+# 試運転（Shadow run, PR-C）: v7（raw_copy_extraction）パーサ
+# ---------------------------------------------------------------------------
+
+_RAW_COPY_HEADER = (
+    "RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜RAW_MULTI｜"
+    "RAW_SOURCE_LINE_SPAN｜RAW_HEADING_LINE_SPAN"
+)
+_RAW_COPY_COLUMNS = 9
+
+
+def parse_raw_copy_response(response_text: str, raw_text: str) -> tuple[list[dict], list[dict]]:
+    """
+    v7（raw_copy_extraction、書き写し専任）の出力をパースする。
+
+    design.md PR-C:
+      - 9列固定。ヘッダーが完全一致しなければ ValueError。
+      - RAW_STATE か RAW_SHIP が空の行は parse_errors に入れる（item化しない。
+        「空欄にしないこと」という指示への違反を可視化する）。
+      - 行範囲は既存の v6 と同じ規則で検証する（1始まり・raw_text の行数以内）。
+      - RAW_HEADING_LINE_SPAN は "none"/不正形式なら (None, None)（エラーにしない）。
+
+    戻り値: (items, parse_errors)
+      items: [
+        {
+          "raw_product_name": str, "raw_price": str, "raw_unit": str,
+          "raw_quantity": str, "raw_state": str, "raw_ship": str, "raw_multi": str,
+          "line_start": int, "line_end": int,
+          "heading_line_start": int | None, "heading_line_end": int | None,
+        },
+        ...
+      ]
+      parse_errors: [{"line": str, "error": str}, ...]
+    """
+    max_line = len(raw_text.split("\n"))
+    items: list[dict] = []
+    parse_errors: list[dict] = []
+    header_seen = False
+
+    for line_raw in response_text.split("\n"):
+        line = line_raw.strip()
+        if not line:
+            continue
+
+        if not header_seen:
+            if line != _RAW_COPY_HEADER:
+                raise ValueError(
+                    f"raw_copy extraction header must exactly match the {_RAW_COPY_COLUMNS} defined columns"
+                )
+            header_seen = True
+            continue
+
+        try:
+            cols = line.split(_PIPE)
+            if len(cols) != _RAW_COPY_COLUMNS:
+                raise ValueError(
+                    f"raw_copy extraction expected {_RAW_COPY_COLUMNS} columns, got {len(cols)}"
+                )
+            (
+                raw_product_name,
+                raw_price,
+                raw_unit,
+                raw_quantity,
+                raw_state,
+                raw_ship,
+                raw_multi,
+                raw_span,
+                raw_heading_span,
+            ) = [c.strip() for c in cols]
+
+            if not raw_state or not raw_ship:
+                raise ValueError(
+                    "raw_copy extraction RAW_STATE/RAW_SHIP must not be empty (Gemini must write 'none')"
+                )
+
+            span_m = _SPAN_RE.match(raw_span)
+            if not span_m:
+                raise ValueError("raw_copy extraction has an invalid RAW_SOURCE_LINE_SPAN")
+            line_start = int(span_m.group(1))
+            line_end = int(span_m.group(2)) if span_m.group(2) else line_start
+            if not (1 <= line_start <= line_end <= max_line):
+                raise ValueError("raw_copy extraction RAW_SOURCE_LINE_SPAN is outside the source")
+
+            heading_line_start: int | None = None
+            heading_line_end: int | None = None
+            heading_m = _SPAN_RE.match(raw_heading_span)
+            if heading_m:
+                h_start = int(heading_m.group(1))
+                h_end = int(heading_m.group(2)) if heading_m.group(2) else h_start
+                if 1 <= h_start <= h_end <= max_line:
+                    heading_line_start, heading_line_end = h_start, h_end
+
+            items.append(
+                {
+                    "raw_product_name": raw_product_name,
+                    "raw_price": raw_price,
+                    "raw_unit": raw_unit,
+                    "raw_quantity": raw_quantity,
+                    "raw_state": raw_state,
+                    "raw_ship": raw_ship,
+                    "raw_multi": raw_multi,
+                    "line_start": line_start,
+                    "line_end": line_end,
+                    "heading_line_start": heading_line_start,
+                    "heading_line_end": heading_line_end,
+                }
+            )
+        except ValueError as exc:
+            parse_errors.append({"line": line, "error": str(exc)})
+            continue
+
+    if not header_seen:
+        raise ValueError("raw_copy extraction response has no header")
+    return items, parse_errors
+
+
+# ---------------------------------------------------------------------------
 # エントリポイント: 1 通のメッセージを抽出
 # ---------------------------------------------------------------------------
 
@@ -653,4 +881,6 @@ __all__ = [
     "strip_emoji",
     "_safe_error_message",
     "_classify_error",
+    "call_gemini_raw_copy",
+    "parse_raw_copy_response",
 ]
