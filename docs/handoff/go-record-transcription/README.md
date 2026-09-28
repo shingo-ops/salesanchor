@@ -218,3 +218,7 @@ PO提示「PR作成時は設計・検証を確認し、番号付きGOはマー�
 - [保存カード](CARD-PR-LIFECYCLE-04.md)
 
 PR: https://github.com/shingo-ops/salesanchor/pull/3824 。実装コミット90c6dbecc4314b4c40f591e365478a9540cc5356をpush済み。提出wrapperの実行成功と.pr-number/実PRの一致を確認。CI run36387714825の失敗理由は番号付きGO節未受領による欠落。その他CI確認中。
+
+## 2026-09-28 審査分離PRの完了状態
+
+PR #3824はPO原文「GO #3824」を記録してマージ済み。Deploy36390769039成功、API health正常、自動worktree回収と台帳DONEをAstraが確認。直前の「未マージ」は提出時点の履歴。[完了証跡](pr-lifecycle-design.md#2026-09-28-pr-3824-マージデプロイ完了)を参照。代理GO制度全体の有効化ではない。
