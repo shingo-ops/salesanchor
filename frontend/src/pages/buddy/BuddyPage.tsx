@@ -51,7 +51,7 @@ export default function BuddyPage() {
       {error && <div className="error-message">{error}</div>}
       {hasPermission("buddy.manage") ? (
         <ContentToolbar
-          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("buddy.newPair")}</button>}
+          right={<Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("buddy.newPair")}</Button>}
         />
       ) : undefined}
       <Modal

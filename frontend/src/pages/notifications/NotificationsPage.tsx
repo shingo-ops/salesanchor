@@ -49,7 +49,7 @@ export default function NotificationsPage() {
       {error && <div className="error-message">{error}</div>}
       {hasPermission("notifications.manage") ? (
         <ContentToolbar
-          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</button>}
+          right={<Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("settings.addChannel")}</Button>}
         />
       ) : undefined}
       <Modal

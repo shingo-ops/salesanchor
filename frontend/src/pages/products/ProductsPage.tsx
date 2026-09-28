@@ -18,6 +18,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product } from "./products.types";
+import { Button } from "../../components/Button";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -187,13 +188,13 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   const pageContentButtons = hasPermission("products.create") || hasPermission("products.delete") ? (
     <>
       {hasPermission("products.create") && (
-        <button
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary" size="md"
           onClick={() => navigate("/admin/products/new")}
         >
           {t("products.newProduct")}
-        </button>
+        </Button>
       )}
       {hasPermission("products.delete") && (
         <button

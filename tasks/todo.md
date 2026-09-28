@@ -172,4 +172,11 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| システム欄の7段階LINE業務ガイド | Agent | PR #3831提出済み。main1675bfaまで統合、frontend変化0、check/build/unit17成功・最新E2E6成功（13.7秒）。実装レビュー合格 | PR最新HEADのCI・番号付きGOを確認してマージ/配備。最新公開状態はPR記録を参照。PO読解確認は別途 | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-16.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / https://github.com/shingo-ops/salesanchor/pull/3831 | 2026-09-28 |
+| システム欄の7段階LINE業務ガイド | Agent | PR #3831提出済み。mainb3cf1fdfまで統合、frontend変化0、check/build/unit17成功・最新E2E6成功（12.5秒、CARD17）。実装レビュー合格 | PR最新HEADのCI・番号付きGOを確認してマージ/配備。最新公開状態はPR記録を参照。PO読解確認は別途 | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-16.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / https://github.com/shingo-ops/salesanchor/pull/3831 | 2026-09-28 |
+
+
+## 静的34ボタンの共通金型移管（AS・2026-09-28）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| AS共通Button移管 | Astra設計/Sol2担当実装 | PR3834提出、34/25移管・相互レビューAPPROVE、全606試験成功。GO記録検査は未受領で停止 | 最新技術CI確認、GO #3834受領後にHEAD/backup再照合・公式merge/deploy | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |

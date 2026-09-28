@@ -163,3 +163,7 @@ PO原文「GO #3831」を08:59:38 UTCに確認しHEAD c0cf2d446へ転記した�
 ## 2026-09-28 再GO受領後のmain前進
 
 11:30:08 UTCにPO原文「GO #3831」をHEAD25e9ffca6への再承認として確認。実mainは1675bfaへ前進しPRはCONFLICTINGだったためマージ送信をしなかった。Sol調査では前進は別テーマの台帳・文書7件だけで製品変更0。実通常mergeではevidence-registryだけが競合し、双方の追記を逐語保持してmarkerを除去。todoの別テーマ完了行は自動統合でmain版になり、LINE行を保持した。評価のbaseを最新mainへ更新し、旧GOを統合後HEADへ流用せず再検証する。
+
+main再前進追補: 88b495603保存直後にmainがb3cf1fdfへ前進し、必須CIは未報告、PRは再びCONFLICTINGとなった。fail/pending一覧が空でも全検査成功とは扱わない。Sol調査で追加はPR3834の共通Button移管と証跡、ガイド8pathは不変でリンク先の操作意味も不変。CARD17でSolが通常mergeを実行し、実競合2台帳はAstraがLINEとASの両方を保持して解消。評価base更新と必読blob一致を確認。旧HEADへのGOは履歴として維持し、統合後は再検証と再GOが必要。
+
+CARD17再検証実測（Sol実行）: unmerged0、ガイド8pathは承認25e9比差分0。check:all exit0（既存警告140/error0）、build exit0（1740 modules、660ms）、単体2files17/17成功（1.56s）。直前5173 listener空/exit1を確認し、既定Chromium E2E6/6成功（12.5s、1 worker）。Astra直接task-state/diff-check成功。製品独自修正なし。統合後HEADのCIとPO再GO、マージ・本番反映・PO読解確認は別途。

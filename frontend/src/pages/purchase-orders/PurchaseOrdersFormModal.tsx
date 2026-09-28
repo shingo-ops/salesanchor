@@ -11,6 +11,7 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
 import { Modal } from "../../components/Modal";
 
@@ -131,9 +132,9 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
       <span style={{ marginRight: "auto" }}>
         {t("common.amount")}: <strong>¥{total.toLocaleString()}</strong>
       </span>
-      <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
+      <Button type="button" variant="secondary" size="md" onClick={onClose} disabled={saving}>
         {t("common.cancel")}
-      </button>
+      </Button>
       <button form="po-form" type="submit" className="btn-primary" disabled={saving}>
         {saving ? t("common.saving") : t("common.save")}
       </button>

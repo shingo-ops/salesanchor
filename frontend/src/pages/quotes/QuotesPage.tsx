@@ -17,6 +17,7 @@ import { sortQuotes } from "./quotesSort";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn, SortDir } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface Quote {
   id: number;
@@ -134,7 +135,7 @@ export default function QuotesPage() {
           </div>
         }
         right={hasPermission("quotes.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</button>
+          <Button variant="primary" size="md" onClick={() => navigate("/quotes/new")}>{t("quotes.newQuote")}</Button>
         ) : undefined}
       />
 

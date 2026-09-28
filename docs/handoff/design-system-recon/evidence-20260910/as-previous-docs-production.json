@@ -1,0 +1,21 @@
+{
+  "checkedAt": "2026-09-28T09:20:01.737323+00:00",
+  "expectedCommit": "1675bfa0275a1ac76210ae489abbcb818287da02",
+  "deployedCommit": "1675bfa0275a1ac76210ae489abbcb818287da02",
+  "appHTTP": "200",
+  "asset": "/assets/index-i7xY32AW.js",
+  "assetHTTP": "200",
+  "apiHTTP": "200",
+  "health": {
+    "status": "ok",
+    "database": "connected",
+    "redis": "connected",
+    "celery": "connected"
+  },
+  "publicIndexSHA256": "5256e59960893824a2d52b93b773b84afe6283a7812a9e904d355ced4139ca90",
+  "containerIndexSHA256": "5256e59960893824a2d52b93b773b84afe6283a7812a9e904d355ced4139ca90",
+  "publicAssetSHA256": "6fbae09431317ec2cb4b1006b6249145d392db9447096812beb3266484465321",
+  "containerAssetSHA256": "6fbae09431317ec2cb4b1006b6249145d392db9447096812beb3266484465321",
+  "authenticatedUI": "skipped at PO request; unverified",
+  "pass": true
+}

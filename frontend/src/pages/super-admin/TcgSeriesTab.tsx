@@ -15,6 +15,7 @@
 import { useEffect, useState, FormEvent, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 
 interface TcgSeries {
   id: number;
@@ -194,13 +195,13 @@ export default function TcgSeriesTab() {
             ))}
           </select>
         </label>
-        <button
+        <Button
           type="button"
-          className="btn-secondary"
+          variant="secondary" size="md"
           onClick={() => setShowTypeManager((v) => !v)}
         >
           {t("superAdmin.tcg.typeManager.title")}
-        </button>
+        </Button>
       </div>
 
       {/* ADR-083: 種別の管理 (増減) */}
@@ -356,9 +357,9 @@ export default function TcgSeriesTab() {
               <td>{it.name_en}</td>
               <td>{it.release_date}</td>
               <td>
-                <button onClick={() => startEdit(it)} className="btn-secondary">
+                <Button onClick={() => startEdit(it)} variant="secondary" size="md">
                   {t("common.edit")}
-                </button>
+                </Button>
               </td>
               <td>
                 <button onClick={() => remove(it.id)} className="btn-danger-link">
