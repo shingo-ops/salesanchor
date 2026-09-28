@@ -1,0 +1,34 @@
+[
+  {
+    "path": "at-merge.txt",
+    "sha256": "04dc1422a7a716ff72e0ee826d4c155d53a715b179bb50040da4d836e98521b2"
+  },
+  {
+    "path": "at-go-main-merge.log",
+    "sha256": "3217ed4672ce19e649bdb4ca1cb706867915ecf4028e767cac0a7e3ea30d6134"
+  },
+  {
+    "path": "at-go-backup.json",
+    "sha256": "68d6994366e112bc50de00dcc189c2e9213a9e435c7285a779d0e0b8789a6220"
+  },
+  {
+    "path": "at-go-audit-result.json",
+    "sha256": "fa0dea0815bf1bb398833f09ec17bc999f885648e5db69454185bb490c5e00e2"
+  },
+  {
+    "path": "at-go-build.log",
+    "sha256": "0bf6a043dd68e77b41288414281b53af301a801eb77404dd81f1ed9f3c73c5c9"
+  },
+  {
+    "path": "at-go-check-all.log",
+    "sha256": "7cdd0e88e9221571f1e414e5304f796ee00aeb5d39ce8467f95db14dfa2d0962"
+  },
+  {
+    "path": "at-go-storybook.log",
+    "sha256": "2824ad57e8cb653a855d7c8602a463a7215d00c9f21bfed2c636d836db515824"
+  },
+  {
+    "path": "at-go-coverage.log",
+    "sha256": "cd6c1339d96dc107bbea37b9e2d3dcf3b688e6a96c4a40619beab45bc8e2ea06"
+  }
+]

@@ -46,3 +46,12 @@ PR #3839（https://github.com/shingo-ops/salesanchor/pull/3839）を公式create
 直前バックアップの読取確認: 2026-09-28T13:16:17.766798Z、/home/ubuntu/backups/postgres/salesanchor_db_20260928_214745.sql.gz、229641593bytes、gzip -t exit0。マージ直前には改めてHEAD/CI/バックアップを確認する。画面確認は省略・未検証。
 
 再開手順: 本worktree release/frontend-form-button-batchでpreflight→.pr-number/GitHub PR head・state/未保存差分照合→最新CI確認。本人からGO #3839受領後のみ原文転記し、正式merge-safe --merge→Deployログ→本番HEAD/公開asset hash/HTTP/接続状態を確認、結果は別文書便で保存。権限・鍵の変更、代理GO発行はしない。
+
+
+## 2026-09-29 本人GO受領後のmain追従
+
+本人原文「GO #3839」を受領、06:40 JSTにPRへ逐語転記。最初の公式merge-safeはmain先行でBEHIND停止、マージ送信0。main86eac16c3730947d25904c54de3b4a7d1089db0bを正規統合し、承認対象9製品/3試験は旧HEAD3690e0bと全byte一致を直接確認。main側の既存変更が追加されたのみで本PRの製品範囲拡大0。
+
+当初再GOを求める旨を説明したが、同一PRの承認済み範囲が完全不変と確定したため訂正。今回の本人GOと既存のmain追従・検証・マージ依頼の範囲で進める。本人GOの再発行、原文の創作、Opus委任のAstraへの拡張は行わない。新HEAD/最新CI/バックアップを改めて正式gateで検査する。
+
+統合後監査: 共通280/旧221（main単体269/232、本便+11/-11）、対象9逆変換/対象外221/共有18一致。製品・試験12ファイル以外の製品差分0。build/check:all/Storybook成功、最新全体48files638試験成功（64.53秒、maxWorkers=1、時間制限変更なし）。原ログはat-go-validation.tar.gz、再現監査はat-go-audit.cjs。旧統合監査は当時の固定mainを対象とした履歴として保持する。
