@@ -5062,7 +5062,9 @@
     "newRulePattern": "パターン",
     "newRuleNormalizedTo": "変換先",
     "ruleLinked": "リンク済み",
-    "noRulesLinked": "未設定"
+    "noRulesLinked": "未設定",
+    "shipFormat": "発送日の書き方",
+    "shipFormatHelper": "予約商品の発送日の記載パターン（例：発売◯日前発送）"
   },
   "needsReview": {
     "title": "要確認一覧",
@@ -5073,7 +5075,12 @@
     "noItems": "要確認の商品はありません",
     "pidUnresolved": "商品未特定",
     "multiCandidate": "複数候補",
-    "noteUnmatched": "備考未一致"
+    "noteUnmatched": "備考未一致",
+    "tabs": {
+      "production": "本番の確認待ち",
+      "shadow": "試運転の確認待ち",
+      "bottlenecks": "詰まり"
+    }
   },
   "distributionSettings": {
     "buttonLabel": "配信設定",
@@ -5084,5 +5091,38 @@
     },
     "save": "保存",
     "saved": "保存しました"
+  },
+  "shadowReview": {
+    "supplier": "仕入元",
+    "excerpt": "原文の抜粋",
+    "stoppedItem": "止まった項目",
+    "candidates": "候補",
+    "reason": "理由",
+    "createdAt": "作成日時",
+    "noItems": "確認待ちはありません",
+    "modalTitle": "試運転の確認待ち詳細",
+    "blockText": "原文ブロック全文",
+    "candidateList": "候補一覧",
+    "keywordKind": "ワードの種類",
+    "keywordKindSearch": "検索ワード",
+    "keywordKindExclude": "除外ワード",
+    "keywordInput": "ワード",
+    "checkImpact": "影響を確認",
+    "register": "登録",
+    "previewChecked": "{{count}}件を確認しました",
+    "registerSuccess": "登録しました",
+    "registerFailed": "登録に失敗しました",
+    "keywordAlreadyExists": "このワードは既に登録されています",
+    "matchStatusMatched": "確定",
+    "matchStatusAmbiguous": "候補複数",
+    "matchStatusUnmatched": "未確定",
+    "bottleneckDaysLabel": "期間",
+    "bottleneckDays7": "直近7日",
+    "bottleneckDays30": "直近30日",
+    "bySupplier": "仕入元別",
+    "byItem": "項目別",
+    "matchedRatio": "自動確定率",
+    "needsReviewCount": "確認待ち件数",
+    "totalCount": "件数"
   }
 }
