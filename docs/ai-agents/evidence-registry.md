@@ -3250,3 +3250,27 @@ EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 停止追補: 実装3d8c8b239をorigin/rel
 EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 再開追補: 正式作成の障害はPR3824で解消。CARD04の直接復元はL12拒否/未実行。05/06で公式入口からrelease/line-workflow-guide-resumeをmain fdf3b45aへ作成し、旧87c4ad83を通常merge、競合0/commit前停止。事前remote/実作成HEAD/06 origin/mainの3SHA一致、本店非台帳18件は不変。別Solの意味監査は修正0、手順整合再審査APPROVE。--claude省略とreaper回収は本セッションPO指示の限定範囲。根拠はpipeline-procedure-map/recon.md末尾、統合後の試験はCARD07で実施中。
 
 EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL CARD07〜10追補: fdf3b45a統合後check/build/unit17成功。既定並列E2Eは2/6成功・4件30秒timeout、trace上goto24〜25秒。workers1比較6/6成功後、当該specだけmode defaultへ限定変更し、workers overrideなし既定E2E6/6成功（23.9秒）。timeout/assert/global変更0。eslint対象外warningはlint済みと扱わない。実装時のmain cwdガード拒否は正しい登録worktreeを起動rootにする正式経路で解消、子sandbox通信失敗は同一preflightの正規escalationで解消。実ログ/private/tmp/line-guide-card10-sol-resume.log。main新規8862732の意味影響0、統合/最終検証は次カード。
+
+
+### EV-20260928-AQ-DESIGN
+
+基準4bad43a4。Sol候補5hash/10原文一致、親AST実測201/296。StaffReportsPage.tsx93/94の2ボタン・対象外1・共有14hash保存、ページ専用試験未整備を受入条件に補完。Astra設計自己審査APPROVE、独立審査ではない。根拠docs/specs/design-system/design.md§AQ、docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-audit.json。画面確認はPO指示で省略、合格とはしない。製品/検証未実施。
+
+### EV-20260928-AQ-IMPLEMENTATION
+
+AQ日報2ボタン実装・Sol第二レビューAPPROVE。製品逆変換一致/共有14hash維持、最終29対象/501全体試験成功。根拠: docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-implementation.md、aq-validation-logs.tar.gz/manifest.json。画面省略、PR/新番号GO/配備未実施。
+
+2026-09-28 AQ保存f1935c24f remote一致、PR前validate-pr-body.shがGO節欠落でexit1。PR未発行[]と番号必須検査の循環を記録。スキップ/代筆/ガード変更なし。詳細 aq-staff-report-implementation.md §保存とPR前検査の停止。
+
+### EV-20260928-AR-DESIGN
+
+固定99899eb82でSol棚卸し/別Sol照合。対象14ファイル28、対象外53、共有15、native form10＋非form1＋検索local1/GET5。ar-button-audit.json/ar-contracts.mdとdesign.md §ARに根拠保存。実装前カードlintは受領欄不足を修正してexit0（長行2警告）。初期のフォーム分類誤りは明記訂正。承認手順は別担当の同領域編集を検出してSTOP、製品移管のみ継続。
+
+
+### EV-20260928-AR-IMPLEMENTATION
+
+14ファイル28ボタン移管、逆変換14/対象外53/共有15一致、共通231/旧266。Sol製品レビュー/4試験交差レビューAPPROVE、root直接監査pass=true。対象92・全体581成功（初回23timeout後、並行数2で同一全件再検証）。fixture同値修正後対象92成功、check:all/build/Storybook成功。初回失敗・報告件数訂正もar-implementation.md/ar-validation-logs.tar.gz/manifestへ保存。画面省略・未検証、PR/CI/番号付きGO/配備は次。
+
+EV-20260928-AR-IMPLEMENTATION提出追補: 保存33dbf6d7a、正式main統合済み、公式create-safe exit0でPR3828提出・登録。最終全体581成功は並行数1の31ログ、coverage20.23/16.53/17.88/20.86%。全52原ログのarchive/manifest照合済み。番号付きGO/merge/deploy未実施、CIは最新HEADで確認する。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL CARD13最終追補: main8862732統合後unmerged0。evidence-registryの競合はLINEとAQ/AR追記を双方保持。check:all/build exit0、unit17/17、既定E2E6/6（14.5秒）をSolが実行。frontend差分はガイド8pathだけ、登録UI/token/SSOTの範囲維持。PR/CI/番号付きGO/本番/PO読解確認は未了。

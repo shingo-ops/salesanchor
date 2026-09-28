@@ -1,0 +1,87 @@
+{
+  "base": "4bad43a4dca6368ffa7370792a3c912e90bba521",
+  "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+  "sha256": "c14a8ee81aa8fd2602d5f9a85583ca9f2df80dc816bf2e9b9228b8b5887ea8a5",
+  "targets": [
+    {
+      "line": 93,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => setShowForm(false)}>{t(\"common.cancel\")}</button>"
+    },
+    {
+      "line": 94,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>"
+    }
+  ],
+  "others": [
+    {
+      "line": 68,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"common.add\")}</button>"
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "sha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263"
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "sha256": "34334cb8fe05afa50ddc89f8bc06cf98286b8408eef34dc276232a772f4c6762"
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "sha256": "fd7e6dbf80831ed034234e625008e8eda4bb454f2fb16cdc132ddf6e950b3115"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "sha256": "c0e82655697f716ee8ca1f8307ee9cbb746932b2ec3c863c8426caacd8014ee8"
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "sha256": "fdc09f98cae7cdfbc1ba791e075f70f8fa71454090dfa09fbb4b2398adf6d8b0"
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "sha256": "0a40f8dca2e612c0a61463c2db87737169f48533f290447873501b5ed0050720"
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "sha256": "6a2981925541cdeeeda4693b62f977255c3369281437156a1d17b39e0a61a1a8"
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "sha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597"
+    }
+  ],
+  "counts": {
+    "common": 201,
+    "legacy": 296
+  },
+  "expected": {
+    "common": 203,
+    "legacy": 294
+  }
+}

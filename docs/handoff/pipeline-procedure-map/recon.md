@@ -133,3 +133,12 @@ CARD11草案をtmpへ書く初回コマンドは本店cwdでprotected mainガー
 ### PR3828によるmain更新の限定影響監査
 
 origin/main 8862732e494ac5d92287d57aeea808cee05d3151。Sol読取監査ではfdf..mainのガイド接触はKnowledgeAliasesTab.tsxのcancel/save4ボタンを既存Buttonへ移管した部分のみ。section key/API/業務意味は不変。ガイド8frontend path、共通Button/Badge/Card、token、localeのmain側変更0。ガイド本文/実装修正必要0。evidence-registryの同じ末尾への追記が競合候補、todoは同一pathだが別hunk。実統合前の観測であり、他テーマの途中状態文面を完了と読み替えない。
+
+## 2026-09-28 最新main統合後の最終検証
+
+main 8862732e494ac5d92287d57aeea808cee05d3151を通常merge。競合はevidence-registry末尾1件で、AstraがLINEガイドとAQ/ARの独立した追記を逐語で両方保持し、markerだけ除去した。todoは自動統合し、mainの他テーマ内容を保持。unmerged path 0、origin/main比のfrontend変更はガイド8pathだけ。
+Sol CARD13実測: check:all exit0（既存warning140/error0）、build exit0（1740 modules/729ms、既存Vite警告あり）、関連unit2files/17件成功（1.71秒）、workers指定なしの既定E2E6/6成功（14.5秒、各2.4/1.7/1.7/1.5/2.7/1.3秒）。run前lsofはexit1/空で他server再利用なし。製品/試験の追加変更0。
+Astraはコード/CSS/接続差分を直接確認し、現在mainのlocaleキー保持・登録部品/token・業務書込0の設計と整合を確認。Solの実行結果を根拠とし、Astra自身の試験再実行とは称さない。画面画像の直接確認とモックE2E、本番/PO読解確認を区別する。
+状態: 設計/実装レビュー済み、最新main統合後のローカル受入検証済み。正式PR提出・CI・本ガイドへの番号付きGO・マージ・本番反映・PO読解確認は未了。正式保存後CARD14/15でPRまで進める。
+
+提出カード保存時の停止記録: CARD15のshell文書作成中、hookが本文中のPR操作例を検出しone literal PR command制約で2回拒否、PR送信0・ファイル作成0。カードを入口参照と固定入力欄を示す設計文書へ改めて保存し、card-lint exit0。実際の提出は独立tool callで正式wrapperと全hook/validatorを通す契約のまま。設定変更・直接CLI/API代替・GO代筆0。

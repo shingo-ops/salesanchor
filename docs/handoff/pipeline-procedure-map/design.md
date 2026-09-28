@@ -249,3 +249,12 @@ CARD09/10の設計変更はE2E specだけmode defaultを指定し、同spec内�
 Sol実測: workers指定なしの既定E2E6/6成功、23.9秒（各2.9/2.3/3.1/2.8/5.7/2.8）。run前後のport5173 listenerなし。個別eslintはexit0だが設定対象外warning1のため、当該specのlint検証済みとはしない。Playwrightでの実行成功と区別する。
 Astraが3行差分と.worktree-idを直接確認。CLI報告のCODEX_THREAD_IDとworktree UUIDの不一致は異なる識別子の比較であり、実.worktree-idのbce43041-c2fe-4179-a45b-16ddfd59ec66はカードと一致。
 ここまでの受入検証はfdf3b45a起点。後からorigin/mainへ入ったPR3828（8862732e494ac5d92287d57aeea808cee05d3151）は別Solが影響調査し、ガイド意味/製品修正0、共通部品/token/locale変更0を確認。証跡末尾の競合候補を双方保持して統合し、最終検証・PRへ進む。PO読解確認とガイドの番号付きGO/マージ/本番反映は未了。
+
+## 2026-09-28 最新main統合後の最終検証
+
+main 8862732e494ac5d92287d57aeea808cee05d3151を通常merge。競合はevidence-registry末尾1件で、AstraがLINEガイドとAQ/ARの独立した追記を逐語で両方保持し、markerだけ除去した。todoは自動統合し、mainの他テーマ内容を保持。unmerged path 0、origin/main比のfrontend変更はガイド8pathだけ。
+Sol CARD13実測: check:all exit0（既存warning140/error0）、build exit0（1740 modules/729ms、既存Vite警告あり）、関連unit2files/17件成功（1.71秒）、workers指定なしの既定E2E6/6成功（14.5秒、各2.4/1.7/1.7/1.5/2.7/1.3秒）。run前lsofはexit1/空で他server再利用なし。製品/試験の追加変更0。
+Astraはコード/CSS/接続差分を直接確認し、現在mainのlocaleキー保持・登録部品/token・業務書込0の設計と整合を確認。Solの実行結果を根拠とし、Astra自身の試験再実行とは称さない。画面画像の直接確認とモックE2E、本番/PO読解確認を区別する。
+状態: 設計/実装レビュー済み、最新main統合後のローカル受入検証済み。正式PR提出・CI・本ガイドへの番号付きGO・マージ・本番反映・PO読解確認は未了。正式保存後CARD14/15でPRまで進める。
+
+最終審査追補: 最新main統合後の別Sol read-onlyレビューAPPROVE、blocking 0。unmerged/marker 0、AQ/AR追記の削除改変0、frontend8path/744行追加（ガイド741＋試験mode3行）を直接照合。Astraもこの範囲と実検証を確認し実装レビューAPPROVE。未実施のPR/CI/番号付きGO/本番/PO読解確認を合格に含めない。

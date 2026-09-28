@@ -52,4 +52,4 @@ PO合意: 指定商品の〆は数量0・在庫表示から除外、他商品と
 既存の横長マップに加え、担当・確認資料・入力・結果・例外を縦に読める説明ページを追加する。
 - [現状の実装と原稿の証跡](../../../handoff/pipeline-procedure-map/recon.md)
 - [画面設計と受入条件](../../../handoff/pipeline-procedure-map/design.md)
-状態: 設計/既存実装レビューAPPROVE。実装済み、fdf3b45a統合後check/build/unit17/E2E6成功。後続main更新を取り込んで最終検証予定。PR・PO画面確認・マージ・本番反映は未完了。処理仕様やDBの正本は変更しない。
+状態: 設計/既存実装レビューAPPROVE。実装済み、最新main8862732統合後check/build/unit17/E2E6成功。PR・PO画面確認・マージ・本番反映は未完了。処理仕様やDBの正本は変更しない。
