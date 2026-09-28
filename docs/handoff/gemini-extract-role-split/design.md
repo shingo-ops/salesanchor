@@ -212,6 +212,7 @@ RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜
 
 ## PR-D：試運転の確認画面・ワード登録・影響プレビュー・詰まり集計・発送日の欄（frontend＋routers）
 
+- 関連ADR: ADR-027, ADR-067, ADR-144（画面は i18n・デザイントークン・金型の決まりを守る）
 - API（新しいルーター backend/app/routers/tcg_shadow_review.py、`require_super_admin`）
   - `GET /tcg/shadow-results?needs_review=&supplier_id=&offset=&limit=`：原文ブロック・止まった項目・候補（商品名付き）・理由を返す。
   - `GET /tcg/shadow-results/bottlenecks?days=7|30`：仕入元別・項目別の確認待ち件数と、自動で確定した割合。
