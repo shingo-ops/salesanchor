@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "base_commit": "aa74c0185f198041e3315519796a18845a06c0c8",
+  "base_commit": "a1cd9ea379cc7d85b797cca6b1cc092192296bc3",
   "changes": [
     {
       "path": "docs/handoff/design-partner-card-ops/guards/04-worktree.md",

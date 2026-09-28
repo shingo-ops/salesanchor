@@ -174,3 +174,8 @@ PR3835結果記録追補: CARD17保存後、mainが0c060d3へ前進。追加はA
 
 12:19:24 UTCにPO原文「GO #3831」をHEAD1b39bb461への承認として受領したが、実mainはaa74c018へ前進しPRはBEHIND。マージ送信0。追加4pathはskip_condition削除migration、seed撤去、既存実行登録、台帳。Sol初期REVISEは実処理を追加照合して訂正した。gemini_extraction_svc.py:295-311のskip_conditionと、tcg_extraction.py:164-220のmessage_exclude/message_exclude_no_digitは別category。後者の抽出前フィルタと同ファイル:306-371のempty/filtered/error記録が残るため、ガイドstep4のja/enは正しい。遷移先名称もsidebarと一致。推測で文言を変えずAPPROVE。
 CARD18でSolが固定mainを競合0通常統合、frontend diff0/unmerged0を実確認。独自製品変更・DB実行なし。CARD17試験を同一frontendの証拠として保持。評価baseと必読blobを最新mainに照合。統合後HEADへの旧GO流用はせず、全CIと再GO確認後にのみマージする。
+
+## 2026-09-28 PO追加実行指示とCARD19
+
+12:39:26 UTCにPOから同一セッション完了・Astra/Sol分担・マージ/デプロイまでの明示指示を受領。原文末尾は「PRマージ、デプロイまで完走させてくれ。」。全文をPR3831へ保存する。従前の番号付きGOは各受領版の履歴として保持し、新しい番号付き発話を創作しない。今回のPO本人の追加指示に基づき、同じPRの目的・仕様を維持するmain追従と再検証を実施し、確定HEADの全検査と既存safe wrapperを通して実行する。代理GO権限の自己有効化やガード変更ではない。仕様変更・事業判断が必要なら停止する。
+main a1cd9eaの追加5pathは試運転専用shadowテーブルと発送形式列/未配線prompt、migration登録、検査設定、台帳。Sol実物監査で現在の解析/配信queryとガイド8path変更0を確認しAPPROVE。CARD19で通常統合は競合0、frontend差分0、未解消0。DB実行なし。CARD17の同一frontend試験を維持し、新base評価と最新CIを確認する。

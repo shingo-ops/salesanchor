@@ -842,3 +842,6 @@ run_sql migrations/20260927_100000_create_meta_message_reactions.sql
 
 # skip_condition カテゴリ全件（13件）を削除（Gemini が既に判断するため重複ルール撤去、PO決定 2026-09-28）
 run_sql migrations/20260928_100000_delete_skip_condition_rules.sql
+
+# PR-B1: 試運転用の表（extraction_shadow_runs/results）と仕入元の発送日の書き方欄を追加（A/B専用・既存クエリ非改変）
+run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
