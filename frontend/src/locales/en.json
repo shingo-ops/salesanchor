@@ -4021,6 +4021,7 @@
       "errorLog": "Error Log",
       "groupSystem": "System",
       "pipelineMap": "Pipeline Map",
+      "lineWorkflowGuide": "LINE Analysis Workflow",
       "dbViewer": "Data Structure"
     },
     "dbViewer": {
@@ -4155,6 +4156,123 @@
           "complete": "Output complete",
           "feedback": "Adjust master & rules, re-analyze"
         }
+      }
+    },
+    "lineWorkflowGuide": {
+      "title": "LINE analysis workflow guide",
+      "intro": "Follow the roles and reference screens from importing LINE records through checking supplier and product information to distribution.",
+      "readOnlyNotice": "Use this page to review the workflow. Perform each action on the screen opened by its button.",
+      "stepLabel": "Step {{step}}",
+      "stepsTitle": "Seven steps",
+      "prerequisites": {
+        "title": "Prepare before you start",
+        "item1": "A .txt file exported from LINE and the period to import",
+        "item2": "A reference that identifies each supplier's LINE display name",
+        "item3": "Permission to review registered product, unit, and condition information, along with the rules and instructions that control how records are read"
+      },
+      "toc": {
+        "title": "Contents",
+        "ariaLabel": "Contents of the LINE analysis workflow guide"
+      },
+      "fields": {
+        "purpose": "Purpose",
+        "reference": "References and screens",
+        "input": "Input and action",
+        "result": "Result",
+        "next": "Condition for the next step",
+        "trouble": "If something goes wrong"
+      },
+      "actions": {
+        "ariaLabel": "Destinations for step {{step}}",
+        "openImport": "Open import",
+        "openSupplierMaster": "Open supplier master",
+        "openExtractionRules": "Open supplier rules",
+        "openKnowledgeAliases": "Open extraction filters / rules",
+        "openPromptConfig": "Open extraction prompt config",
+        "openErrorLog": "Open error log",
+        "openProductMaster": "Open product master",
+        "openUnitMaster": "Open unit rules",
+        "openConditionsMaster": "Open condition rules",
+        "openDistribution": "Open distribution"
+      },
+      "steps": {
+        "step1": {
+          "title": "Import LINE records",
+          "owner": "Handled by a person",
+          "purpose": "Send the LINE records and target period to the system for analysis.",
+          "reference": "Check the .txt file exported from LINE and the import screen.",
+          "input": "Select the file and target period. The default is 24 hours; enter 0 to include the full period.",
+          "result": "The records are saved and move to supplier confirmation or the extraction queue.",
+          "next": "Extraction can start after every unknown supplier is resolved.",
+          "trouble": "If the file cannot be imported, check that the exported file uses the .txt format and that the selected period contains records."
+        },
+        "step2": {
+          "title": "Confirm who sent each record",
+          "owner": "Handled by the system and a person",
+          "purpose": "Connect each LINE display name to a registered supplier.",
+          "reference": "Check unknown suppliers on the import screen and the supplier master.",
+          "input": "The system matches display names. For an unknown name, select an existing supplier or register a new one.",
+          "result": "Selecting an existing supplier also updates that supplier's LINE name to the current display name.",
+          "next": "After no unknown suppliers remain, confirm the import to continue to extraction.",
+          "trouble": "If the supplier cannot be identified, leave it unresolved and do not start extraction with an incorrect supplier."
+        },
+        "step3": {
+          "title": "Select the records for this run",
+          "owner": "Handled by the system",
+          "purpose": "Choose the records in the specified period that will be analyzed.",
+          "reference": "Check the original text and target period on the import screen.",
+          "input": "The system selects each supplier's latest record in the period.",
+          "result": "The selected original text is saved and waits for extraction.",
+          "next": "After the target records are saved, the workflow continues to reading product information.",
+          "trouble": "If the record you need is missing, check the timestamp of the original record and the selected period."
+        },
+        "step4": {
+          "title": "Read product information",
+          "owner": "Handled by the system",
+          "purpose": "Read products, quantities, prices, and related details from each record.",
+          "reference": "Use supplier rules to check writing patterns, extraction filters / rules to check skip conditions, and extraction prompt config to check the reading instructions given to AI.",
+          "input": "The system checks exclusion conditions and extracts product information from eligible original text.",
+          "result": "The result distinguishes empty records, exclusions, and extraction failures.",
+          "next": "Extracted information continues to matching against registered information.",
+          "trouble": "If reading fails, open the error log and check the cause."
+        },
+        "step5": {
+          "title": "Match registered information",
+          "owner": "Handled by the system",
+          "purpose": "Align the extracted details with registered products, units, and conditions.",
+          "reference": "Check the product master, unit rules, and condition rules.",
+          "input": "When automatic analysis is enabled, the system uses registered information to match the applicable product, unit, and condition.",
+          "result": "Product and unit matching results, along with items that require attention, are recorded.",
+          "next": "After analysis finishes, review the results on the import screen.",
+          "trouble": "If analysis does not start after extraction finishes, ask an administrator to check the automatic analysis setting."
+        },
+        "step6": {
+          "title": "Review results and items requiring attention",
+          "owner": "Handled by a person",
+          "purpose": "Review import results and items requiring attention to find missing reference settings.",
+          "reference": "Check results on the import screen, relevant product and supplier masters, and the error log.",
+          "input": "Read the results and flagged items, then review missing master or rule entries as needed.",
+          "result": "You can identify missing references or failures that need attention before distribution.",
+          "next": "After reviewing the result and required registrations, continue to distribution review.",
+          "trouble": "For an item you cannot resolve, check the original record and registered information. If a processing failure is shown, check its cause in the error log."
+        },
+        "step7": {
+          "title": "Review and run distribution",
+          "owner": "Handled by a person",
+          "purpose": "Review candidate and excluded counts, then distribute the confirmed content.",
+          "reference": "Check candidate and excluded counts on the distribution screen.",
+          "input": "Review the counts and run distribution. Existing content in the target sheet is fully replaced.",
+          "result": "The reviewed distribution content is written to the target sheet.",
+          "next": "Finish after confirming completion and checking the target sheet.",
+          "trouble": "If distribution stops, check that extraction and analysis have finished and that a distribution target is registered."
+        }
+      },
+      "exceptions": {
+        "title": "Where to return when an exception occurs",
+        "item1": "For an unknown supplier, return to matching in step 2.",
+        "item2": "For an extraction failure, open the error log from step 4.",
+        "item3": "When an item still requires attention, review the result and referenced masters in step 6.",
+        "item4": "Automatic import from a configured device also joins this workflow. Automatic analysis and automatic distribution run only when their respective settings are enabled."
       }
     },
     "errorLog": {

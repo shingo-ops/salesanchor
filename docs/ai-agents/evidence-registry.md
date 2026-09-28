@@ -27,7 +27,7 @@ id: EV-20260928-PR-LIFECYCLE-GATES
 date: 2026-09-28
 agent: Sol implementation/validation
 task: PR作成前検査とマージ前GO検査の分離
-scope: CARD-01〜04の設計・限定実装・ローカル試験・審査と正式PR提出。merge/deployは未実施。
+scope: CARD-01〜05の限定実装・試験・審査・PR提出とPO GOによるmerge/deploy。
 evidence:
   - type: command
     reference: node scripts/tests/test-process-artifacts.js
@@ -58,8 +58,8 @@ evidence:
     summary: errors=[]、lint exit0。Solの最終試験ログとコードをAstraと別Solレビューが照合しAPPROVE。
 confidence: high
 tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
-decision: ローカル実装・試験・Astra/Sol審査を完了しPR #3824提出済み。番号付きGO未受領、未merge・未deploy。
-follow_up: CI結果を確認後GO #3824を受領・記録し、マージ前の全検査へ進む。Ruleset13必須checks/strictを実確認済み。process-artifactsはrequired一覧外。本番挙動は未確認。
+decision: PO原文GO #3824を承認HEAD8814e4ef39335c0ade70db6a2e20ba6383847a21へ記録しマージ済み。merge fdf3b45a4c0423413e704694fb99700d94e1d5a7、Deploy36390769039成功、API正常、自動回収DONE。
+follow_up: 限定修正は完了。完了根拠はpr-lifecycle-design.md末尾と/private/tmp/pr-3824-result.json。Ruleset13必須checks/strictを実確認済み、process-artifactsはrequired一覧外という制約は維持。代理GO制度や全経路の物理強制を実装済みとはしない。
 ```
 
 ```text
@@ -3234,3 +3234,19 @@ EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を�
 EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
 
 EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、backend/API/DB変更0）。端末実機で人の動作確認を実施。①共有3回（17:58:54/17:59:27/18:00:18）で受信→完了4.4/1.8/0.8秒、結果通知3回表示をPO確認。②送信後の端末原本はoriginals1件・inbox0件。③PO決定で詰まり判定60秒・点検15分周期。termux-job-schedulerの既定条件（ネット接続時のみ・電池低下時停止）を実機で発見し、--network none --battery-not-lowfalseで再登録。点検はevents上18:19:10/18:39:19/…で自動実行を確認（間隔15〜25分）。④機内モードで19:24:51共有→即時失敗通知、19:45:09（20分）/19:48:43（23分）に詰まり検知・通知をPO確認。⑤機内モード解除後、20:03:41の点検で自動再送→pending_review（投稿1,702件・確認待ち33件）。unittest41件OK。未マージ。
+
+### EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL
+
+CARD-LINE-GUIDE-01/02に基づき、システム欄へLINE解析の7段階業務ガイドを実装。AstraのREVISE事項として、利用者向け原稿への修正、自動解析と照合の関係修正、h3アンカーとtabIndex=-1、E2E locator限定、遷移先実体確認を反映した。既存Card/Badge/Buttonと既存tokenのみを使用し、新規API/DB/route/token/業務書込は0。
+
+ローカル最終実測: `npm run check:all` exit0（既存140警告、新規警告0）、`npm run build` exit0（1740 modules、built in 815ms）、指定unit 2ファイル17件成功、指定Chromium E2E 6件成功。E2Eは1440/390、ja/en、light/dark、System→ガイド、同hub query、取込/配信pathnameと遷移先内容、h3アンカーのキーボードフォーカス、ガイド表示中のPOST/PUT/PATCH/DELETE 0件を検証。画面証跡は `/tmp/reports/card-line-guide-01/guide-*.png` の4件を目視し、目次を縦配置へ是正後にE2Eを再実行した。
+
+初回buildは新規unitの未登録jest-dom matcher型でexit2となり、期待対象を同じDOM属性・pathnameのVitest直接比較へ修正して解消。E2E初回はsandboxのlocalhost:5173 bindがEPERMとなり、カードとPOが許可した同一コマンドのrequire_escalated審査で成功。npm ciは正規審査でexit0、lockfile変更は意図していない。CI・本番確認・PO画面確認・commit/push/PR/merge/deployは未実施。Astraレビュー待ちでDONEではない。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 追補: CARD-LINE-GUIDE-03の390x900可視範囲2/2成功（7.3秒）、画像6枚・操作ボタンtrial成功。Astraが日本語手順1/英語手順7画像とコード/CSS/hub差分を直接確認。Sol別セッションのread-onlyレビューもAPPROVE（指摘0、ja/en89/89）。本番/PO読解確認/CIは未実施。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 停止追補: 実装3d8c8b239をorigin/release/line-workflow-guideへpush、SHA一致を直接確認。正式gh-pr-create-safeの実行はPreToolUseのCanonical PR body validationでGO記録欠落により拒否。PR未発行・CI/merge/deploy未実施。本文は/tmp/line-workflow-guide-pr-body.md、停止根拠と修正方針案はdesign.md末尾。GO転記・guard変更・迂回0。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 再開追補: 正式作成の障害はPR3824で解消。CARD04の直接復元はL12拒否/未実行。05/06で公式入口からrelease/line-workflow-guide-resumeをmain fdf3b45aへ作成し、旧87c4ad83を通常merge、競合0/commit前停止。事前remote/実作成HEAD/06 origin/mainの3SHA一致、本店非台帳18件は不変。別Solの意味監査は修正0、手順整合再審査APPROVE。--claude省略とreaper回収は本セッションPO指示の限定範囲。根拠はpipeline-procedure-map/recon.md末尾、統合後の試験はCARD07で実施中。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL CARD07〜10追補: fdf3b45a統合後check/build/unit17成功。既定並列E2Eは2/6成功・4件30秒timeout、trace上goto24〜25秒。workers1比較6/6成功後、当該specだけmode defaultへ限定変更し、workers overrideなし既定E2E6/6成功（23.9秒）。timeout/assert/global変更0。eslint対象外warningはlint済みと扱わない。実装時のmain cwdガード拒否は正しい登録worktreeを起動rootにする正式経路で解消、子sandbox通信失敗は同一preflightの正規escalationで解消。実ログ/private/tmp/line-guide-card10-sol-resume.log。main新規8862732の意味影響0、統合/最終検証は次カード。
