@@ -69,7 +69,7 @@
 | PR | 内容 | 触るファイル（予定） | 危険 |
 |---|---|---|---|
 | A | 判定の関数（照合・候補・推測チェック・発送日の呼び出し）＋単体テスト。DB・配線なし | 新規 `backend/app/services/extraction_judgement_svc.py`、新規 `backend/tests/test_extraction_judgement_svc.py` | 低 |
-| B | migration：`extraction_shadow_results` の新設、`suppliers.extraction_ship_format` の追加、supplier_prompts→extraction_notes のデータ移行 | `migrations/2026xxxx_*.sql`、`.github/workflows/deploy.yml`（CI の必須チェックに従う） | **高：GO #PR番号が必要** |
+| B | migration：`extraction_shadow_results` の新設、`suppliers.extraction_ship_format` の追加、supplier_prompts→extraction_notes のデータ移行 | migrations/2026xxxx_*.sql、`.github/workflows/deploy.yml`（CI の必須チェックに従う） | **高：GO #PR番号が必要** |
 | C | v7 の指示とパーサ、試運転の実行部分（初期値は無効） | `backend/app/services/gemini_extraction_svc.py:443-453`、`backend/app/services/tcg_work_reference.py:13-14`、`backend/app/tasks/tcg_extraction.py`、`extraction_prompt_config`（v7 の行は PR 内の migration で入れる→危険扱い） | **高** |
 | D | 画面：試運転の確認待ち一覧（既存 NeedsReviewListPage に金型 `DataTable` でタブを追加）、ワード登録（除外ワード1件追加 API を新設）、影響プレビュー、詰まりの集計、仕入元ルール画面に発送日欄、supplier_prompts 画面の撤去 | `frontend/src/pages/super-admin/NeedsReviewListPage.tsx`、`backend/app/routers/tcg_product_master.py`、ja/en.json 他 | 中 |
 | E | 切り替え（264件そろってから） | 配信と解析の入口 | **高：PO GO** |
@@ -89,6 +89,7 @@
 - 判定の関数は `backend/tests/test_extraction_judgement_svc.py` の単体テストで守る（CI の必須チェック `pytest (SQLite + PostgreSQL RLS)`）。
 - 試運転の結果と確認待ちの件数は、PR-D の集計画面で週ごとに PO が見る。
 - 仕入元ルール・検索ワード・除外ワードは SSOT の表だけに置き、ほかに置き場所を作らない（§3）。
+- 守り手: CI 必須チェック pytest (SQLite + PostgreSQL RLS) と PO の週次確認（design.md §9-2）
 
 ## 10. 本番DBの実測（2026-09-28、PO が読み取り専用で実行。生データは recon の db-survey.txt）
 
