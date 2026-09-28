@@ -4060,67 +4060,102 @@
     "pipelineMap": {
       "title": "LINE解析パイプラインマップ",
       "tableDetail": "テーブル詳細",
-      "mainFlow": "メインフロー",
-      "supplierGroup": "仕入先",
-      "productGroup": "商品",
-      "inventoryGroup": "在庫",
-      "distributionGroup": "配信",
-      "analysisGroup": "解析ルール",
-      "discordGroup": "Discord入力",
-      "importGroup": "LINEインポート",
-      "nodeLabel_origin": "LINE解析",
-      "nodeDesc_origin": "パイプラインの起点",
-      "edgeMessageRecv": "メッセージ受信",
-      "edgeSendText": "テキストを送信",
-      "edgeExtractCandidates": "商品候補を抽出",
-      "edgeMatchMaster": "マスタと照合",
-      "edgeDistribute": "確定値を配信",
-      "nodeLabel_suppliers": "仕入先マスタ",
-      "nodeDesc_suppliers": "仕入先の基本情報",
-      "nodeLabel_supplier_aliases": "仕入先別名",
-      "nodeDesc_supplier_aliases": "表記ゆれ辞書",
-      "nodeLabel_supplier_channels": "仕入先チャネル",
-      "nodeDesc_supplier_channels": "LINEのアカウント情報",
-      "nodeLabel_source_messages": "受信メッセージ",
-      "nodeDesc_source_messages": "LINEから取り込んだテキスト",
-      "nodeLabel_import_jobs": "LINEインポート",
-      "nodeDesc_import_jobs": "LINEファイルの取込ジョブ",
-      "nodeLabel_discord_inbound_messages": "Discord受信",
-      "nodeDesc_discord_inbound_messages": "Discordからの仕入報告",
-      "nodeLabel_extraction_jobs": "AI抽出ジョブ",
-      "nodeDesc_extraction_jobs": "1メッセージ=1ジョブでGeminiに送る",
-      "nodeLabel_extraction_items": "抽出結果（行）",
-      "nodeDesc_extraction_items": "AIが見つけた商品候補（1行ごと）",
-      "nodeLabel_extraction_prompt_config": "抽出プロンプト設定",
-      "nodeDesc_extraction_prompt_config": "Geminiへの指示文",
-      "nodeLabel_supplier_prompts": "仕入先別プロンプト",
-      "nodeDesc_supplier_prompts": "仕入先ごとのAI指示",
-      "nodeLabel_extraction_attempts": "抽出試行ログ",
-      "nodeDesc_extraction_attempts": "AIへの問い合わせ記録",
-      "nodeLabel_analysis_results": "解析結果",
-      "nodeDesc_analysis_results": "商品・数量・価格の最終確定値",
-      "nodeLabel_products": "商品マスタ",
-      "nodeDesc_products": "全商品の基本情報",
-      "nodeLabel_product_search_keywords": "検索キーワード",
-      "nodeDesc_product_search_keywords": "商品名マッチング用の語句",
-      "nodeLabel_product_exclude_keywords": "除外キーワード",
-      "nodeDesc_product_exclude_keywords": "誤マッチ防止用の語句",
-      "nodeLabel_line_conditions": "状態マスタ",
-      "nodeDesc_line_conditions": "新品/美品/中古の定義",
-      "nodeLabel_line_units": "単位マスタ",
-      "nodeDesc_line_units": "枚/箱/パックの定義",
-      "nodeLabel_type_master": "ゲーム種別",
-      "nodeDesc_type_master": "ポケモン/ワンピース等",
-      "nodeLabel_item_corrections": "人間補正",
-      "nodeDesc_item_corrections": "AIの結果を人間が修正",
-      "nodeLabel_tcg_distribution_targets": "配信先",
-      "nodeDesc_tcg_distribution_targets": "スプレッドシートへの配信設定",
-      "nodeLabel_tcg_distribution_settings": "配信設定",
-      "nodeDesc_tcg_distribution_settings": "配信のグローバル設定",
-      "nodeLabel_analysis_runs": "解析バッチ",
-      "nodeDesc_analysis_runs": "解析の一括実行",
-      "nodeLabel_analysis_run_snapshots": "解析スナップショット",
-      "nodeDesc_analysis_run_snapshots": "実行時点の結果コピー"
+      "proc": {
+        "masterPhase": {
+          "title": "マスタ整備（前提）",
+          "desc": "常時メンテナンス"
+        },
+        "master": {
+          "product": {
+            "title": "商品マスタ",
+            "detail": "商品名・検索KW・除外KWを登録",
+            "screen": "マスタ管理 > 商品マスタ"
+          },
+          "supplier": {
+            "title": "仕入先マスタ",
+            "detail": "仕入先のLINE表示名を登録",
+            "screen": "マスタ管理 > 仕入先マスタ"
+          },
+          "rules": {
+            "title": "ルール設定",
+            "detail": "ステータス・単位・状態の判定ルールを設定",
+            "screen": "ルール管理"
+          },
+          "prompt": {
+            "title": "プロンプト設定",
+            "detail": "仕入先ごとのAI抽出ヒントを記述",
+            "screen": "抽出プロンプト設定"
+          }
+        },
+        "step1": {
+          "stepNum": "STEP 1",
+          "badge": "手動",
+          "title": "LINEファイル取込",
+          "why": "仕入先からのメッセージをシステムに取り込む",
+          "procedures": "LINEグループのtxtファイルをエクスポートし、管理画面にドラッグ＆ドロップ。対象時間（例: 24h）を指定してアップロード",
+          "screen": "インポート画面",
+          "check": "取込件数と仕入先の解決状況を確認"
+        },
+        "step2": {
+          "stepNum": "STEP 2",
+          "badge": "自動",
+          "title": "AI自動抽出",
+          "why": "テキストから商品・数量・価格・状態を自動で読み取る",
+          "procedures": "Gemini AIがメッセージを解析し、商品名・数量・単価・状態・メモを抽出する（バックグラウンド自動処理）",
+          "screen": "自動処理（操作不要）",
+          "check": "抽出ジョブの完了ステータスを確認"
+        },
+        "step3": {
+          "stepNum": "STEP 3",
+          "badge": "自動",
+          "title": "商品自動照合",
+          "why": "抽出結果を商品マスタと突き合わせて商品IDを確定する",
+          "procedures": "検索キーワードで商品マスタを照合し、単位・コンディションを解決する。未解決の行は「要確認」フラグが付く（自動処理）",
+          "screen": "自動処理（操作不要）",
+          "check": "照合率と要確認件数を確認"
+        },
+        "step4": {
+          "stepNum": "STEP 4",
+          "badge": "手動",
+          "title": "精度確認・調整",
+          "why": "AIの抽出精度を確認し、マスタやルールを改善する",
+          "procedures": "仕入先別の解決率・エラー率を確認。要確認行を対処し、必要に応じて商品マスタの検索KWやルールを調整して再解析を実行",
+          "screen": "解析精度管理",
+          "check": "全仕入先の解決率が基準を満たすか確認"
+        },
+        "step5": {
+          "stepNum": "STEP 5",
+          "badge": "手動",
+          "title": "配信プレビュー",
+          "why": "配信前にデータの件数と除外理由を最終確認する",
+          "procedures": "配信候補の合計件数と除外内訳（未解決・価格なし等）を確認する。問題があればSTEP 4に戻って調整",
+          "screen": "配信管理画面",
+          "check": "配信候補件数と除外内訳が妥当か確認"
+        },
+        "step6": {
+          "stepNum": "STEP 6",
+          "badge": "手動",
+          "title": "配信実行",
+          "why": "確定したデータをGoogle Sheetsに出力する",
+          "procedures": "配信ボタンを押して確認ダイアログでOKする。安全チェック7項目が自動実行された後、Google Sheetsに12列のデータが書き込まれる",
+          "screen": "配信管理画面",
+          "check": "配信完了通知とSheets上のデータを確認"
+        },
+        "end": {
+          "title": "完了",
+          "detail": "Google Sheetsに商品データが出力されました"
+        },
+        "edge": {
+          "prerequisite": "前提として事前に整備",
+          "autoExtract": "自動でAI抽出開始",
+          "autoMatch": "自動で照合開始",
+          "reviewResult": "結果を確認",
+          "previewDist": "配信内容をプレビュー",
+          "execute": "配信を実行",
+          "complete": "出力完了",
+          "feedback": "マスタ・ルールを調整して再解析"
+        }
+      }
     },
     "errorLog": {
       "title": "抽出エラーログ",

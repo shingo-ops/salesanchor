@@ -1,13 +1,12 @@
 /**
- * PipelineMapPanel — RPGスキルツリー型パイプラインマップ
+ * PipelineMapPanel — 業務手順書フローチャート
  *
- * 横一列のトランクフロー（左→右）にブランチノードが接続する
- * RPGスキルツリーデザインで、LINE解析パイプラインを可視化する。
+ * LINE解析パイプラインの6ステップを業務手順書フローチャートとして可視化する。
+ * 左側の「マスタ整備（前提）」カラムから始まり、右方向に各ステップが流れる。
  *
  * ADR-027: 全UI文字列は t("key") 経由。
  * ADR-144: CSS変数のみ使用。ハードコード色禁止。
  */
-import { useCallback, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ReactFlow,
@@ -24,135 +23,107 @@ import {
   Position,
   MarkerType,
 } from "@xyflow/react";
-import { api } from "../../../lib/api";
-import { Drawer } from "../../../components/Drawer";
-import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import "./PipelineMapPanel.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface DbColumn {
-  name: string;
-  type: string;
-  max_length: number | null;
-  nullable: boolean;
-  is_pk: boolean;
-  default: string | null;
-  comment: string | null;
-  fk: {
-    foreign_schema: string;
-    foreign_table: string;
-    foreign_column: string;
-  } | null;
+interface ProcedureNodeData extends Record<string, unknown> {
+  stepNum: string;
+  badge: string;
+  badgeType: string;
+  title: string;
+  why: string;
+  procedures: string;
+  screen: string;
+  checkpoint: string;
 }
 
-interface SkillNodeData extends Record<string, unknown> {
-  label: string;
-  description: string;
-  tableName: string;
-  category: string;
-  isTrunk: boolean;
+interface MasterNodeData extends Record<string, unknown> {
+  title: string;
+  detail: string;
+  screen: string;
+}
+
+interface EndNodeData extends Record<string, unknown> {
+  title: string;
+  detail: string;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
-// カスタムノード: SkillNode（RPGスキルツリー風）
+// カスタムノード: ProcedureNode（手順カード）
 // ──────────────────────────────────────────────────────────────────────────────
 
-function SkillNode({ data }: NodeProps<Node<SkillNodeData>>) {
-  const categoryColor = `var(--cat-${data.category})`;
+function ProcedureNode({ data }: NodeProps<Node<ProcedureNodeData>>) {
+  const badgeClass = `procedure-node__badge--${data.badgeType}`;
   return (
-    <div className={`skill-node ${data.isTrunk ? "skill-node--trunk" : "skill-node--branch"}`}>
-      {/* Target handles (incoming edges) */}
-      <Handle type="target" position={Position.Left} id="target-left" className="skill-handle" />
-      <Handle type="target" position={Position.Top} id="target-top" className="skill-handle" />
-      <Handle type="target" position={Position.Right} id="target-right" className="skill-handle" />
-      <Handle type="target" position={Position.Bottom} id="target-bottom" className="skill-handle" />
-      {/* Source handles (outgoing edges) */}
-      <Handle type="source" position={Position.Left} id="source-left" className="skill-handle" />
-      <Handle type="source" position={Position.Top} id="source-top" className="skill-handle" />
-      <Handle type="source" position={Position.Right} id="source-right" className="skill-handle" />
-      <Handle type="source" position={Position.Bottom} id="source-bottom" className="skill-handle" />
+    <div className="procedure-node">
+      <Handle type="target" position={Position.Left}   id="target-left"   className="procedure-handle" />
+      <Handle type="target" position={Position.Top}    id="target-top"    className="procedure-handle" />
+      <Handle type="target" position={Position.Right}  id="target-right"  className="procedure-handle" />
+      <Handle type="source" position={Position.Right}  id="source-right"  className="procedure-handle" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="procedure-handle" />
+      <Handle type="source" position={Position.Left}   id="source-left"   className="procedure-handle" />
 
-      <div
-        className="skill-node__orb"
-        style={{
-          backgroundColor: categoryColor,
-          boxShadow: `0 0 ${data.isTrunk ? "var(--space-4)" : "var(--space-2)"} ${categoryColor}`,
-        }}
-      />
-      <span className="skill-node__label">{data.label}</span>
+      <div className={`procedure-node__header procedure-node__header--${data.badgeType}`}>
+        <span className="procedure-node__step">{data.stepNum}</span>
+        <span className={`procedure-node__badge ${badgeClass}`}>{data.badge}</span>
+      </div>
+      <div className="procedure-node__body">
+        <p className="procedure-node__title">{data.title}</p>
+        <p className="procedure-node__why">{data.why}</p>
+        <div className="procedure-node__section">
+          <span className="procedure-node__section-label">{data.procedures}</span>
+        </div>
+        <div className="procedure-node__footer">
+          <span className="procedure-node__screen">{data.screen}</span>
+          <span className="procedure-node__check">{data.checkpoint}</span>
+        </div>
+      </div>
     </div>
   );
 }
 
-const nodeTypes = {
-  skill: SkillNode,
-};
-
 // ──────────────────────────────────────────────────────────────────────────────
-// ノード定義（座標・カテゴリ・トランク判定。ラベル/説明はi18nキーで取得）
+// カスタムノード: MasterNode（マスタデータカード）
 // ──────────────────────────────────────────────────────────────────────────────
 
-interface SkillNodeDef {
-  id: string;
-  x: number;
-  y: number;
-  category: string;
-  isTrunk: boolean;
+function MasterNode({ data }: NodeProps<Node<MasterNodeData>>) {
+  return (
+    <div className="master-node">
+      <Handle type="target" position={Position.Top}    id="target-top"    className="procedure-handle" />
+      <Handle type="source" position={Position.Right}  id="source-right"  className="procedure-handle" />
+      <Handle type="source" position={Position.Bottom} id="source-bottom" className="procedure-handle" />
+      <span className="master-node__title">{data.title}</span>
+      <span className="master-node__detail">{data.detail}</span>
+      <span className="master-node__screen">{data.screen}</span>
+    </div>
+  );
 }
 
-const TABLE_NODE_DEFS: SkillNodeDef[] = [
-  // ── 起点 ──
-  { id: "origin",                    x: 100,  y: 400, category: "import",       isTrunk: true },
+// ──────────────────────────────────────────────────────────────────────────────
+// カスタムノード: EndNode（完了マーカー）
+// ──────────────────────────────────────────────────────────────────────────────
 
-  // ── 幹ノード（メインフロー） ──
-  { id: "source_messages",           x: 400,  y: 400, category: "import",       isTrunk: true },
-  { id: "extraction_jobs",           x: 700,  y: 400, category: "pipeline",     isTrunk: true },
-  { id: "extraction_items",          x: 1000, y: 400, category: "pipeline",     isTrunk: true },
-  { id: "analysis_results",          x: 1300, y: 400, category: "pipeline",     isTrunk: true },
-  { id: "tcg_distribution_targets",  x: 1600, y: 400, category: "distribution", isTrunk: true },
-
-  // ── 上枝（入力系） ──
-  { id: "suppliers",                 x: 200,  y: 200, category: "supplier",     isTrunk: false },
-  { id: "supplier_aliases",          x: 350,  y: 120, category: "supplier",     isTrunk: false },
-  { id: "supplier_channels",         x: 350,  y: 270, category: "supplier",     isTrunk: false },
-
-  // ── 下枝（入力系） ──
-  { id: "import_jobs",               x: 500,  y: 560, category: "import",       isTrunk: false },
-  { id: "discord_inbound_messages",  x: 500,  y: 660, category: "discord",      isTrunk: false },
-
-  // ── 上枝（AI抽出系） ──
-  { id: "extraction_prompt_config",  x: 700,  y: 200, category: "pipeline",     isTrunk: false },
-  { id: "supplier_prompts",          x: 900,  y: 200, category: "supplier",     isTrunk: false },
-
-  // ── 下枝（AI抽出系） ──
-  { id: "extraction_attempts",       x: 900,  y: 560, category: "pipeline",     isTrunk: false },
-
-  // ── 下枝（抽出結果系） ──
-  { id: "item_corrections",          x: 1100, y: 560, category: "pipeline",     isTrunk: false },
-
-  // ── 上枝（商品照合系） ──
-  { id: "products",                  x: 1300, y: 200, category: "product",      isTrunk: false },
-  { id: "product_search_keywords",   x: 1500, y: 120, category: "product",      isTrunk: false },
-  { id: "product_exclude_keywords",  x: 1500, y: 250, category: "product",      isTrunk: false },
-  { id: "type_master",               x: 1150, y: 200, category: "product",      isTrunk: false },
-
-  // ── 下枝（商品照合系） ──
-  { id: "line_conditions",           x: 1300, y: 580, category: "master",       isTrunk: false },
-  { id: "line_units",                x: 1500, y: 580, category: "master",       isTrunk: false },
-
-  // ── 上枝（確認・配信系） ──
-  { id: "analysis_runs",             x: 1500, y: 300, category: "pipeline",     isTrunk: false },
-  { id: "analysis_run_snapshots",    x: 1650, y: 200, category: "pipeline",     isTrunk: false },
-
-  // ── 下枝（確認・配信系） ──
-  { id: "tcg_distribution_settings", x: 1700, y: 560, category: "distribution", isTrunk: false },
-];
+function EndNode({ data }: NodeProps<Node<EndNodeData>>) {
+  return (
+    <div className="end-node">
+      <Handle type="target" position={Position.Left} id="target-left" className="procedure-handle" />
+      <span className="end-node__title">{data.title}</span>
+      <span className="end-node__detail">{data.detail}</span>
+    </div>
+  );
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
-// エッジ定義
+// ノードタイプ登録
+// ──────────────────────────────────────────────────────────────────────────────
+
+const nodeTypes = { procedure: ProcedureNode, master: MasterNode, end: EndNode };
+
+// ──────────────────────────────────────────────────────────────────────────────
+// エッジファクトリ
 // ──────────────────────────────────────────────────────────────────────────────
 
 const MAIN_STROKE = "var(--accent)";
@@ -215,158 +186,212 @@ function makeSubEdge(
 export function PipelineMapPanel() {
   const { t } = useTranslation();
 
-  // スキルノード（ラベル・説明はi18nキーで取得）
-  const skillNodes: Node<SkillNodeData>[] = TABLE_NODE_DEFS.map((def) => ({
-    id: def.id,
-    type: "skill",
-    position: { x: def.x, y: def.y },
-    data: {
-      label: t(`analysisRules.pipelineMap.nodeLabel_${def.id}`),
-      description: t(`analysisRules.pipelineMap.nodeDesc_${def.id}`),
-      tableName: def.id,
-      category: def.category,
-      isTrunk: def.isTrunk,
+  // ── マスタカラムノード（x=50, 縦配列） ──────────────────────────────────
+  const masterNodes: Node<MasterNodeData>[] = [
+    {
+      id: "master-product",
+      type: "master",
+      position: { x: 50, y: 120 },
+      data: {
+        title: t("analysisRules.pipelineMap.proc.master.product.title"),
+        detail: t("analysisRules.pipelineMap.proc.master.product.detail"),
+        screen: t("analysisRules.pipelineMap.proc.master.product.screen"),
+      },
     },
-  }));
+    {
+      id: "master-supplier",
+      type: "master",
+      position: { x: 50, y: 260 },
+      data: {
+        title: t("analysisRules.pipelineMap.proc.master.supplier.title"),
+        detail: t("analysisRules.pipelineMap.proc.master.supplier.detail"),
+        screen: t("analysisRules.pipelineMap.proc.master.supplier.screen"),
+      },
+    },
+    {
+      id: "master-rules",
+      type: "master",
+      position: { x: 50, y: 400 },
+      data: {
+        title: t("analysisRules.pipelineMap.proc.master.rules.title"),
+        detail: t("analysisRules.pipelineMap.proc.master.rules.detail"),
+        screen: t("analysisRules.pipelineMap.proc.master.rules.screen"),
+      },
+    },
+    {
+      id: "master-prompt",
+      type: "master",
+      position: { x: 50, y: 540 },
+      data: {
+        title: t("analysisRules.pipelineMap.proc.master.prompt.title"),
+        detail: t("analysisRules.pipelineMap.proc.master.prompt.detail"),
+        screen: t("analysisRules.pipelineMap.proc.master.prompt.screen"),
+      },
+    },
+  ];
 
-  // メインフローエッジ（トランク間：太い・アニメーション・ラベル付き）
+  // ── 手順ステップノード（y=180, 横配列） ────────────────────────────────
+  const stepNodes: Node<ProcedureNodeData>[] = [
+    {
+      id: "step1",
+      type: "procedure",
+      position: { x: 420, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step1.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step1.badge"),
+        badgeType:  "manual",
+        title:      t("analysisRules.pipelineMap.proc.step1.title"),
+        why:        t("analysisRules.pipelineMap.proc.step1.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step1.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step1.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step1.check"),
+      },
+    },
+    {
+      id: "step2",
+      type: "procedure",
+      position: { x: 740, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step2.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step2.badge"),
+        badgeType:  "auto",
+        title:      t("analysisRules.pipelineMap.proc.step2.title"),
+        why:        t("analysisRules.pipelineMap.proc.step2.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step2.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step2.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step2.check"),
+      },
+    },
+    {
+      id: "step3",
+      type: "procedure",
+      position: { x: 1060, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step3.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step3.badge"),
+        badgeType:  "auto",
+        title:      t("analysisRules.pipelineMap.proc.step3.title"),
+        why:        t("analysisRules.pipelineMap.proc.step3.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step3.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step3.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step3.check"),
+      },
+    },
+    {
+      id: "step4",
+      type: "procedure",
+      position: { x: 1380, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step4.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step4.badge"),
+        badgeType:  "manual",
+        title:      t("analysisRules.pipelineMap.proc.step4.title"),
+        why:        t("analysisRules.pipelineMap.proc.step4.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step4.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step4.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step4.check"),
+      },
+    },
+    {
+      id: "step5",
+      type: "procedure",
+      position: { x: 1700, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step5.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step5.badge"),
+        badgeType:  "manual",
+        title:      t("analysisRules.pipelineMap.proc.step5.title"),
+        why:        t("analysisRules.pipelineMap.proc.step5.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step5.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step5.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step5.check"),
+      },
+    },
+    {
+      id: "step6",
+      type: "procedure",
+      position: { x: 2020, y: 180 },
+      data: {
+        stepNum:    t("analysisRules.pipelineMap.proc.step6.stepNum"),
+        badge:      t("analysisRules.pipelineMap.proc.step6.badge"),
+        badgeType:  "manual",
+        title:      t("analysisRules.pipelineMap.proc.step6.title"),
+        why:        t("analysisRules.pipelineMap.proc.step6.why"),
+        procedures: t("analysisRules.pipelineMap.proc.step6.procedures"),
+        screen:     t("analysisRules.pipelineMap.proc.step6.screen"),
+        checkpoint: t("analysisRules.pipelineMap.proc.step6.check"),
+      },
+    },
+  ];
+
+  // ── 完了ノード ──────────────────────────────────────────────────────────
+  const endNode: Node<EndNodeData> = {
+    id: "end",
+    type: "end",
+    position: { x: 2300, y: 300 },
+    data: {
+      title:  t("analysisRules.pipelineMap.proc.end.title"),
+      detail: t("analysisRules.pipelineMap.proc.end.detail"),
+    },
+  };
+
+  const allNodes: Node[] = [...masterNodes, ...stepNodes, endNode];
+
+  // ── メインフローエッジ（左→右, 太矢印, ラベル付き） ────────────────────
   const mainEdges: Edge[] = [
-    makeMainEdge("e-main-1", "origin",             "source_messages",          t("analysisRules.pipelineMap.edgeMessageRecv"),        "source-right", "target-left"),
-    makeMainEdge("e-main-2", "source_messages",     "extraction_jobs",          t("analysisRules.pipelineMap.edgeSendText"),            "source-right", "target-left"),
-    makeMainEdge("e-main-3", "extraction_jobs",     "extraction_items",         t("analysisRules.pipelineMap.edgeExtractCandidates"),   "source-right", "target-left"),
-    makeMainEdge("e-main-4", "extraction_items",    "analysis_results",         t("analysisRules.pipelineMap.edgeMatchMaster"),         "source-right", "target-left"),
-    makeMainEdge("e-main-5", "analysis_results",    "tcg_distribution_targets", t("analysisRules.pipelineMap.edgeDistribute"),          "source-right", "target-left"),
+    makeMainEdge("e-s1-s2",  "step1", "step2", t("analysisRules.pipelineMap.proc.edge.autoExtract"),  "source-right", "target-left"),
+    makeMainEdge("e-s2-s3",  "step2", "step3", t("analysisRules.pipelineMap.proc.edge.autoMatch"),    "source-right", "target-left"),
+    makeMainEdge("e-s3-s4",  "step3", "step4", t("analysisRules.pipelineMap.proc.edge.reviewResult"), "source-right", "target-left"),
+    makeMainEdge("e-s4-s5",  "step4", "step5", t("analysisRules.pipelineMap.proc.edge.previewDist"),  "source-right", "target-left"),
+    makeMainEdge("e-s5-s6",  "step5", "step6", t("analysisRules.pipelineMap.proc.edge.execute"),      "source-right", "target-left"),
+    makeMainEdge("e-s6-end", "step6", "end",   t("analysisRules.pipelineMap.proc.edge.complete"),     "source-right", "target-left"),
   ];
 
-  // 補助フローエッジ（ブランチ↔トランク：細い・静止）
-  const subEdges: Edge[] = [
-    // origin branches (up to suppliers area)
-    makeSubEdge("e-b-origin-sup",     "origin",              "suppliers",                "source-top",    "target-bottom"),
-    makeSubEdge("e-b-sup-alias",      "suppliers",           "supplier_aliases",         "source-right",  "target-left"),
-    makeSubEdge("e-b-sup-chan",        "suppliers",           "supplier_channels",        "source-bottom", "target-left"),
+  // ── マスタ→STEP1（前提エッジ） ─────────────────────────────────────────
+  const masterToStep1Edge: Edge = makeSubEdge(
+    "e-master-s1",
+    "master-prompt",
+    "step1",
+    "source-right",
+    "target-left",
+  );
 
-    // source_messages branches (down)
-    makeSubEdge("e-b-sm-ij",          "source_messages",     "import_jobs",              "source-bottom", "target-top"),
-    makeSubEdge("e-b-sm-dim",         "source_messages",     "discord_inbound_messages", "source-bottom", "target-top"),
-
-    // extraction_jobs branches
-    makeSubEdge("e-b-ej-epc",         "extraction_jobs",     "extraction_prompt_config", "source-top",    "target-bottom"),
-    makeSubEdge("e-b-ej-sp",          "extraction_jobs",     "supplier_prompts",         "source-top",    "target-bottom"),
-    makeSubEdge("e-b-ej-ea",          "extraction_jobs",     "extraction_attempts",      "source-bottom", "target-top"),
-
-    // extraction_items branches (down)
-    makeSubEdge("e-b-ei-ic",          "extraction_items",    "item_corrections",         "source-bottom", "target-top"),
-
-    // analysis_results branches (up to products)
-    makeSubEdge("e-b-ar-prod",        "analysis_results",    "products",                 "source-top",    "target-bottom"),
-    makeSubEdge("e-b-prod-psk",       "products",            "product_search_keywords",  "source-right",  "target-left"),
-    makeSubEdge("e-b-prod-pek",       "products",            "product_exclude_keywords", "source-right",  "target-left"),
-    makeSubEdge("e-b-prod-tm",        "type_master",         "products",                 "source-right",  "target-left"),
-
-    // analysis_results branches (down)
-    makeSubEdge("e-b-ar-lc",          "analysis_results",    "line_conditions",          "source-bottom", "target-top"),
-    makeSubEdge("e-b-ar-lu",          "analysis_results",    "line_units",               "source-bottom", "target-top"),
-
-    // analysis_results branches (up-right to runs)
-    makeSubEdge("e-b-ar-runs",        "analysis_results",    "analysis_runs",            "source-right",  "target-left"),
-    makeSubEdge("e-b-runs-snap",      "analysis_runs",       "analysis_run_snapshots",   "source-right",  "target-left"),
-
-    // distribution branches (down)
-    makeSubEdge("e-b-dist-set",       "tcg_distribution_targets", "tcg_distribution_settings", "source-bottom", "target-top"),
+  // ── マスタ内縦連結 ──────────────────────────────────────────────────────
+  const masterInternalEdges: Edge[] = [
+    makeSubEdge("e-m1-m2", "master-product",  "master-supplier", "source-bottom", "target-top"),
+    makeSubEdge("e-m2-m3", "master-supplier", "master-rules",    "source-bottom", "target-top"),
+    makeSubEdge("e-m3-m4", "master-rules",    "master-prompt",   "source-bottom", "target-top"),
   ];
 
-  const allNodes = [...skillNodes];
-  const allEdges = [...mainEdges, ...subEdges];
+  // ── フィードバックループ（STEP4 → マスタカラム, 点線） ───────────────────
+  const feedbackEdge: Edge = {
+    id: "e-feedback",
+    source: "step4",
+    target: "master-product",
+    sourceHandle: "source-bottom",
+    targetHandle: "target-right",
+    type: "smoothstep",
+    animated: true,
+    label: t("analysisRules.pipelineMap.proc.edge.feedback"),
+    labelStyle: { fontSize: "var(--font-xs)", fill: "var(--text-secondary)" },
+    labelBgStyle: { fill: "var(--bg-surface)", strokeWidth: 0 },
+    style: {
+      stroke: "var(--color-warning)",
+      strokeWidth: 2,
+      strokeDasharray: "8 4",
+    },
+    markerEnd: { type: MarkerType.ArrowClosed },
+  };
+
+  const allEdges: Edge[] = [
+    ...mainEdges,
+    masterToStep1Edge,
+    ...masterInternalEdges,
+    feedbackEdge,
+  ];
 
   const [nodes, , onNodesChange] = useNodesState(allNodes);
   const [edges, , onEdgesChange] = useEdgesState(allEdges);
-
-  // ドロワー用状態
-  const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerTable, setDrawerTable] = useState<string | null>(null);
-  const [drawerColumns, setDrawerColumns] = useState<DbColumn[]>([]);
-  const [drawerLoading, setDrawerLoading] = useState(false);
-  const [drawerError, setDrawerError] = useState("");
-
-  // ノードクリック → テーブル詳細をドロワーで表示
-  const handleNodeClick = useCallback(
-    (_: React.MouseEvent, node: Node) => {
-      // 起点ノードはクリック不可（実テーブルではないため）
-      if (node.type === "skill" && node.id === "origin") return;
-
-      const tableName = node.id;
-      setDrawerTable(tableName);
-      setDrawerOpen(true);
-      setDrawerColumns([]);
-      setDrawerError("");
-      setDrawerLoading(true);
-
-      api
-        .get<DbColumn[]>(
-          `/super-admin/db-schema/tables/public/${tableName}/columns`,
-        )
-        .then((data) => {
-          setDrawerColumns(data);
-        })
-        .catch((e: unknown) => {
-          setDrawerError(e instanceof Error ? e.message : t("common.fetchError"));
-        })
-        .finally(() => {
-          setDrawerLoading(false);
-        });
-    },
-    [t],
-  );
-
-  // ドロワー内カラムテーブル列定義
-  const columnDefs: DataTableColumn<DbColumn>[] = [
-    {
-      key: "name",
-      header: t("analysisRules.dbViewer.columnName"),
-      width: "160px",
-    },
-    {
-      key: "type",
-      header: t("analysisRules.dbViewer.columnType"),
-      width: "120px",
-      renderCell: (row) => {
-        const typeStr =
-          row.max_length != null ? `${row.type}(${row.max_length})` : row.type;
-        return <code style={{ fontSize: "var(--font-xs)" }}>{typeStr}</code>;
-      },
-    },
-    {
-      key: "is_pk",
-      header: t("analysisRules.dbViewer.primaryKey"),
-      width: "60px",
-      renderCell: (row) =>
-        row.is_pk
-          ? t("analysisRules.dbViewer.yes")
-          : t("analysisRules.dbViewer.no"),
-    },
-    {
-      key: "nullable",
-      header: t("analysisRules.dbViewer.nullable"),
-      width: "80px",
-      renderCell: (row) =>
-        row.nullable
-          ? t("analysisRules.dbViewer.yes")
-          : t("analysisRules.dbViewer.no"),
-    },
-    {
-      key: "fk",
-      header: t("analysisRules.dbViewer.foreignKey"),
-      renderCell: (row) => {
-        if (!row.fk) return t("analysisRules.dbViewer.no");
-        const { foreign_table, foreign_column } = row.fk;
-        return (
-          <code style={{ fontSize: "var(--font-xs)" }}>
-            → {foreign_table}.{foreign_column}
-          </code>
-        );
-      },
-    },
-  ];
 
   return (
     <div className="pipeline-map-panel">
@@ -376,9 +401,8 @@ export function PipelineMapPanel() {
           edges={edges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
-          onNodeClick={handleNodeClick}
           nodeTypes={nodeTypes}
-          defaultViewport={{ x: 20, y: 0, zoom: 0.65 }}
+          defaultViewport={{ x: 10, y: 10, zoom: 0.55 }}
           minZoom={0.2}
           maxZoom={3}
           nodesDraggable
@@ -388,48 +412,6 @@ export function PipelineMapPanel() {
           <MiniMap />
         </ReactFlow>
       </div>
-
-      {/* テーブル詳細ドロワー */}
-      <Drawer
-        open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        title={
-          drawerTable
-            ? `${t("analysisRules.pipelineMap.tableDetail")}: ${drawerTable}`
-            : t("analysisRules.pipelineMap.tableDetail")
-        }
-      >
-        {drawerLoading && (
-          <p
-            style={{
-              padding: "var(--space-4)",
-              color: "var(--text-muted)",
-              fontSize: "var(--font-sm)",
-            }}
-          >
-            {t("common.loading")}
-          </p>
-        )}
-        {drawerError && (
-          <p
-            style={{
-              padding: "var(--space-4)",
-              color: "var(--color-error)",
-              fontSize: "var(--font-sm)",
-            }}
-          >
-            {drawerError}
-          </p>
-        )}
-        {!drawerLoading && !drawerError && drawerColumns.length > 0 && (
-          <DataTable<DbColumn>
-            columns={columnDefs}
-            data={drawerColumns}
-            rowKey={(row) => row.name}
-            density="compact"
-          />
-        )}
-      </Drawer>
     </div>
   );
 }
