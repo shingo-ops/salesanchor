@@ -168,3 +168,13 @@ shell/Python構文、task-state、diff-checkはSol実行exit0。Astra直接実�
 状態: 設計方針PO承認済み、設計審査済み、限定実装/ローカル検証済み。PR番号付きGO・マージ・本番反映は未了。
 
 提出実測: PR #3824 OPEN、HEAD90c6dbecc4314b4c40f591e365478a9540cc5356。create-safe実行exit0、登録番号3824一致。初回CI process-artifactsはGO節欠落で失敗（run36387714825）。承認なしで提出でき、承認検査は残っている事実を確認。マージ送信は未実施。
+
+## 2026-09-28 PR #3824 マージ・デプロイ完了
+
+PO原文「GO #3824」を2026-09-28T07:12:08Z（16:12:08 JST）に観測し、承認HEAD8814e4ef39335c0ade70db6a2e20ba6383847a21とともに正式PR本文へ転記。番号/発話を創作しない。
+必須CI13件とGO検査成功後、safe wrapperから検査HEAD指定で1回マージ送信。GitHub実取得でMERGED、mergedAt2026-09-28T07:16:22Z、mergeCommit fdf3b45a4c0423413e704694fb99700d94e1d5a7を確認した。
+[PR #3824](https://github.com/shingo-ops/salesanchor/pull/3824)、[Deploy run36390769039](https://github.com/shingo-ops/salesanchor/actions/runs/36390769039)はsuccess。事前DBbackup・既存migrations・Finalize・Verify deployment成功をAstraが確認。新たなDB変更を本PRへ追加したわけではない。
+Astra直接HTTP確認: /api/healthはstatus ok、database/redis/celery connected。SSHで稼働containerのSHAを照合したとはしない。
+マージ後の公式自動cleanupはworktree/ローカルbranchを削除し、ledger DONE。Astraが実体なし・git登録なし・公式台帳DONEを直接確認。remote branchは保持。
+証跡まとめ: /private/tmp/pr-3824-result.json。状態はPO承認済み・マージ済み・デプロイ成功・API正常確認済み。
+本記録は3824だけに適用する。LINEガイドの新PRへのGO流用、代理GO権限の自己有効化はしない。別件のreaper残存lock問題を修正済みとはしない。

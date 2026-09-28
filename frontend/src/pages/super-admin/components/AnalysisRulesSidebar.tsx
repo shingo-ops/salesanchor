@@ -31,6 +31,7 @@ export type AnalysisRulesSidebarKey =
   | "weight-classes-master"
   | "prompt-config"
   | "pipeline-map"
+  | "line-workflow-guide"
   | "db-viewer";
 
 interface Props {
@@ -123,6 +124,7 @@ export function AnalysisRulesSidebar({ activeKey, onChange, needsReviewCount }: 
           {t("analysisRules.sidebar.groupSystem")}
         </span>
         {navItem("pipeline-map", t("analysisRules.sidebar.pipelineMap"))}
+        {navItem("line-workflow-guide", t("analysisRules.sidebar.lineWorkflowGuide"))}
         {navItem("db-viewer", t("analysisRules.sidebar.dbViewer"))}
       </div>
     </nav>
