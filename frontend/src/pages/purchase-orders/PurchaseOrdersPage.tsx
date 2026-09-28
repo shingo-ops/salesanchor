@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 import { auth } from "../../lib/firebase";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
@@ -195,9 +196,9 @@ export default function PurchaseOrdersPage() {
           </select>
         }
         right={hasPermission("purchase_orders.create") ? (
-          <button className="btn-primary field-h-md" data-testid="po-new-btn" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>
+          <Button variant="primary" size="md" data-testid="po-new-btn" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>
             {t("purchaseOrders.newPO")}
-          </button>
+          </Button>
         ) : undefined}
       />
       {error && <div className="error-message">{error}</div>}

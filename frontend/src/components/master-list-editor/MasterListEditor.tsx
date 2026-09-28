@@ -206,7 +206,7 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
                 <td>{r.name_ja}</td>
                 <td>{r.name_en}</td>
                 <td>
-                  <button className="btn-secondary btn-sm" onClick={() => startEdit(r)}>{t("common.edit")}</button>
+                  <Button variant="secondary" size="sm" onClick={() => startEdit(r)}>{t("common.edit")}</Button>
                 </td>
                 <td>
                   <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>{t("common.delete")}</button>

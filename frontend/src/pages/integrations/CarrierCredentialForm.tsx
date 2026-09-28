@@ -11,6 +11,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 import "./CarrierIntegrationPage.css";
 
 export type Carrier = "fedex" | "dhl" | "ups";
@@ -133,13 +134,13 @@ export default function CarrierCredentialForm({
       </div>
       {error && <p className="error-message">{error}</p>}
       <div className="form-actions">
-        <button
-          className="btn-secondary"
+        <Button
+          variant="secondary" size="md"
           disabled={busy}
           onClick={onCancel}
         >
           {t("common.cancel")}
-        </button>
+        </Button>
         <button
           className="btn-primary"
           disabled={busy || !clientId || !clientSecret}
