@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
+import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -354,9 +355,9 @@ export default function StatusMasterPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="status-master-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="status-master-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="status-master-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
               <button
                 type="button"
