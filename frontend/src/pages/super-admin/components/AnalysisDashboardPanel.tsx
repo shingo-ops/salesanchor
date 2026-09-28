@@ -17,7 +17,7 @@
  * ADR-067: 色・サイズはデザイントークンのみ
  * ADR-144: Card / Badge / DataTable / Tabs / recharts 金型のみ使用
  */
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ResponsiveContainer,
@@ -172,13 +172,6 @@ interface ExtractionBySupplierItem {
   empty_count: number;
 }
 
-interface ExtractionProductRankingItem {
-  raw_product_name: string;
-  total_count: number;
-  resolved_count: number;
-  resolution_rate: number;
-}
-
 interface PipelineSummary {
   extraction: ExtractionSummary;
   analysis: AnalysisSummary;
@@ -244,40 +237,6 @@ interface DistributionSetting {
   key: string;
   value: string;
   note: string | null;
-}
-
-// Cost Summary 型定義
-interface CostSummaryDailyItem {
-  date: string;
-  total_calls: number;
-  success_calls: number;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-}
-
-interface CostSummaryBySupplierItem {
-  supplier_name: string;
-  total_calls: number;
-  input_tokens: number;
-  output_tokens: number;
-  cost_usd: number;
-  avg_items: number;
-}
-
-interface CostSummary {
-  daily: CostSummaryDailyItem[];
-  by_supplier: CostSummaryBySupplierItem[];
-  total: {
-    calls: number;
-    input_tokens: number;
-    output_tokens: number;
-    cost_usd: number;
-  };
-  budget: {
-    monthly_budget_usd: number;
-    current_month_usd: number;
-  };
 }
 
 interface DistributionSummary {
@@ -367,10 +326,6 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
   const [supplierData, setSupplierData] = useState<SupplierPipelineResponse | null>(null);
   const [supplierLoading, setSupplierLoading] = useState(false);
 
-  // Cost summary data (lazy, extraction tab)
-  const [costData, setCostData] = useState<CostSummary | null>(null);
-  const [costLoading, setCostLoading] = useState(false);
-
   // Load pipeline data on mount and when trendDays changes
   useEffect(() => {
     setLoading(true);
@@ -432,23 +387,6 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
         setImportLoading(false);
       });
   }, [activeTab, trendDays, t]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Lazy load cost data when extraction tab is opened; re-fetch on trendDays change
-  useEffect(() => {
-    if (activeTab !== "extraction") return;
-    setCostLoading(true);
-    api
-      .get<CostSummary>(`/tcg/analysis-dashboard/cost-summary?days=${trendDays}`)
-      .then((res) => {
-        setCostData(res);
-      })
-      .catch(() => {
-        setCostData(null);
-      })
-      .finally(() => {
-        setCostLoading(false);
-      });
-  }, [activeTab, trendDays]);
 
   // Lazy load distribution data when tab is first opened
   useEffect(() => {
@@ -588,14 +526,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           <ExtractionTabContent
             data={data}
             trend={trend}
-            supplierData={supplierData}
-            supplierLoading={supplierLoading}
-            costData={costData}
-            costLoading={costLoading}
             trendDays={trendDays}
             t={t}
-            onNavigate={handleCta}
-            ArrowRightIcon={ArrowRightIcon}
           />
         )
       )}
@@ -1061,133 +993,28 @@ function ImportTabContent({ data, trend, loading, error, trendDays, t, onNavigat
 interface ExtractionTabContentProps {
   data: PipelineSummary;
   trend: TrendDay[];
-  supplierData: SupplierPipelineResponse | null;
-  supplierLoading: boolean;
-  costData: CostSummary | null;
-  costLoading: boolean;
   trendDays: number;
   t: (key: string, options?: Record<string, unknown>) => string;
-  onNavigate: (key: AnalysisRulesSidebarKey) => void;
-  ArrowRightIcon: Icon;
 }
 
-function ExtractionTabContent({ data, trend, supplierData, supplierLoading, costData, costLoading, trendDays, t, onNavigate, ArrowRightIcon }: ExtractionTabContentProps) {
-  const [productRanking, setProductRanking] = useState<ExtractionProductRankingItem[]>([]);
-  const [showSupplierDetail, setShowSupplierDetail] = useState(false);
-  const [showProductDetail, setShowProductDetail] = useState(false);
-
-  useEffect(() => {
-    api
-      .get<{ items: ExtractionProductRankingItem[] }>(
-        `/tcg/analysis-dashboard/extraction-product-ranking?days=${trendDays}`
-      )
-      .then((res) => {
-        setProductRanking(res.items ?? []);
-      })
-      .catch(() => {
-        setProductRanking([]);
-      });
-  }, [trendDays]);
-
-  const worstSuppliers = useMemo(() => {
-    return [...(data.extraction_by_supplier ?? [])]
-      .filter((s) => s.total_jobs > 0)
-      .map((s) => ({ ...s, successRate: s.done_count / s.total_jobs }))
-      .sort((a, b) => a.successRate - b.successRate);
-  }, [data.extraction_by_supplier]);
-
-  type SupplierWithRate = ExtractionBySupplierItem & { successRate: number };
-
-  const supplierRankingColumns: DataTableColumn<SupplierWithRate>[] = [
-    {
-      key: "rank",
-      header: t("analysisRules.dashboard.extractionRankRank"),
-      width: "60px",
-      renderCell: (_row, rowKey) => {
-        const idx = worstSuppliers.findIndex(
-          (s) => (s.supplier_code ?? s.supplier_name ?? "") === rowKey
-        );
-        return idx >= 0 ? idx + 1 : "-";
-      },
-    },
-    {
-      key: "supplier_name",
-      header: t("analysisRules.dashboard.extractionRankSupplierName"),
-    },
-    {
-      key: "successRate",
-      header: t("analysisRules.dashboard.extractionRankSuccessRate"),
-      width: "100px",
-      renderCell: (row) => `${(row.successRate * 100).toFixed(1)}%`,
-    },
-    {
-      key: "done_count",
-      header: t("analysisRules.dashboard.extractionRankDoneJobs"),
-      width: "80px",
-      renderCell: (row) => row.done_count.toLocaleString(),
-    },
-    {
-      key: "error_count",
-      header: t("analysisRules.dashboard.extractionRankErrorJobs"),
-      width: "80px",
-      renderCell: (row) => row.error_count.toLocaleString(),
-    },
-    {
-      key: "total_jobs",
-      header: t("analysisRules.dashboard.extractionRankTotalJobs"),
-      width: "100px",
-      renderCell: (row) => row.total_jobs.toLocaleString(),
-    },
-  ];
-
-  const productRankingColumns: DataTableColumn<ExtractionProductRankingItem>[] = [
-    {
-      key: "rank",
-      header: t("analysisRules.dashboard.extractionRankRank"),
-      width: "60px",
-      renderCell: (_row, rowKey) => {
-        const idx = productRanking.findIndex((p) => p.raw_product_name === rowKey);
-        return idx >= 0 ? idx + 1 : "-";
-      },
-    },
-    {
-      key: "raw_product_name",
-      header: t("analysisRules.dashboard.extractionRankProductName"),
-    },
-    {
-      key: "resolution_rate",
-      header: t("analysisRules.dashboard.extractionRankResolutionRate"),
-      width: "100px",
-      renderCell: (row) => `${(row.resolution_rate * 100).toFixed(1)}%`,
-    },
-    {
-      key: "resolved_count",
-      header: t("analysisRules.dashboard.extractionRankResolvedItems"),
-      width: "90px",
-      renderCell: (row) => row.resolved_count.toLocaleString(),
-    },
-    {
-      key: "total_count",
-      header: t("analysisRules.dashboard.extractionRankTotalItems"),
-      width: "90px",
-      renderCell: (row) => row.total_count.toLocaleString(),
-    },
-  ];
-
+function ExtractionTabContent({ data, trend, trendDays, t }: ExtractionTabContentProps) {
   // fix: emptyを除外して done/(done+error) で計算（挨拶等のemptyメッセージを分母から除外）
   const extractionDenominator =
     data.extraction.by_status.done + data.extraction.by_status.error;
   const extractionSuccessRate =
     extractionDenominator > 0
-      ? data.extraction.by_status.done / extractionDenominator
+      ? (data.extraction.by_status.done / extractionDenominator) * 100
       : 0;
+  const errorCount = data.extraction.by_status.error;
 
-  const successLevel = getSignalLevel(extractionSuccessRate);
-  const errorLevel: SignalLevel = data.extraction.error_rate > 0.2 ? "danger"
-    : data.extraction.error_rate > 0.1 ? "warning" : "success";
-
-  // Extraction-only bottleneck
-  const isBottleneck = successLevel !== "success";
+  const successRateSignal: SignalLevel =
+    extractionSuccessRate >= 90 ? "success"
+      : extractionSuccessRate >= 70 ? "warning" : "danger";
+  const errorSignal: SignalLevel = errorCount === 0 ? "success" : "danger";
+  const headerSignal: SignalLevel =
+    data.extraction.error_rate > 0.1 ? "danger"
+      : (data.extraction.error_rate > 0.05 || data.extraction.stale_running_count > 0)
+        ? "warning" : "success";
 
   // Extraction trend lines only
   const chartData = trend.map((d) => {
@@ -1205,342 +1032,67 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, cost
     };
   });
 
-  // Supplier extraction table: exclude empty-only suppliers (done+error === 0)
-  const extractionSupplierRows = supplierData
-    ? [...supplierData.suppliers]
-        .filter((s) => s.extraction.done + s.extraction.error > 0)
-        .sort((a, b) => {
-          const order = { error: 0, empty: 1, done: 2, pending: 3 };
-          const aOrder = order[a.extraction.status as keyof typeof order] ?? 4;
-          const bOrder = order[b.extraction.status as keyof typeof order] ?? 4;
-          return aOrder - bOrder;
-        })
-    : [];
-
-  const dangerExtractionCount = supplierData
-    ? supplierData.suppliers.filter((s) => s.extraction.status === "error").length
-    : 0;
-
-  type ExtractionSupplierRow = SupplierPipelineItem;
-
-  const extractionSupplierColumns: DataTableColumn<ExtractionSupplierRow>[] = [
+  const trendColumns: DataTableColumn<TrendDay>[] = [
     {
-      key: "channel_name",
-      header: t("analysisRules.dashboard.supplierChannelName"),
+      key: "day",
+      header: t("analysisRules.dashboard.extractionTrendDay"),
+      width: "120px",
     },
     {
-      key: "extraction",
-      header: t("analysisRules.dashboard.supplierExtractionStatus"),
-      width: "100px",
-      renderCell: (row) => {
-        const statusVariant =
-          row.extraction.status === "error" ? "danger"
-            : row.extraction.status === "empty" ? "warning"
-              : row.extraction.status === "done" ? "success"
-                : "neutral";
-        return (
-          <Badge variant={statusVariant}>
-            {t(`analysisRules.dashboard.supplierExtractionStatus_${row.extraction.status}`)}
-          </Badge>
-        );
-      },
-    },
-    {
-      key: "extraction",
-      header: t("analysisRules.dashboard.supplierExtractionDone"),
+      key: "extraction_total",
+      header: t("analysisRules.dashboard.extractionTrendTotal"),
       width: "80px",
-      renderCell: (row) => row.extraction.done.toLocaleString(),
+      renderCell: (row) => row.extraction_total.toLocaleString(),
     },
     {
-      key: "extraction",
-      header: t("analysisRules.dashboard.supplierExtractionError"),
+      key: "extraction_done",
+      header: t("analysisRules.dashboard.extractionTrendDone"),
       width: "80px",
-      renderCell: (row) => row.extraction.error.toLocaleString(),
+      renderCell: (row) => row.extraction_done.toLocaleString(),
     },
     {
-      key: "extraction",
-      header: t("analysisRules.dashboard.supplierExtractionEmpty"),
+      key: "extraction_error",
+      header: t("analysisRules.dashboard.extractionTrendError"),
       width: "80px",
-      renderCell: (row) => row.extraction.empty.toLocaleString(),
+      renderCell: (row) => row.extraction_error.toLocaleString(),
     },
   ];
 
   return (
     <>
-      {/* ランキングセクション: 抽出率ワースト提供者 */}
-      <section className="analysis-dashboard-ranking-section">
-        <h4 className="analysis-dashboard-ranking-title">
-          <Badge variant="danger" size="sm" dot>
-            {t("analysisRules.dashboard.extractionWorstSupplierTitle")}
-          </Badge>
-        </h4>
-        <div className="analysis-dashboard-ranking-cards">
-          {worstSuppliers.slice(0, 3).map((item, index) => (
-            <Card key={item.supplier_code ?? item.supplier_name ?? index} variant="container" density="compact">
-              <div className="analysis-dashboard-ranking-card-content">
-                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
-                <div className="analysis-dashboard-ranking-card-info">
-                  <span className="analysis-dashboard-ranking-card-name">
-                    {item.supplier_name ?? item.supplier_code ?? "-"}
-                  </span>
-                  <div className="analysis-dashboard-ranking-card-metrics">
-                    <Badge
-                      variant={item.successRate >= 0.8 ? "success" : item.successRate >= 0.6 ? "warning" : "danger"}
-                      size="sm"
-                    >
-                      {t("analysisRules.dashboard.extractionRankSuccessRate")}: {(item.successRate * 100).toFixed(0)}%
-                    </Badge>
-                    <span className="analysis-dashboard-ranking-card-stat">
-                      {t("analysisRules.dashboard.extractionRankDoneJobs")}: {item.done_count} / {item.total_jobs}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-          {worstSuppliers.length === 0 && (
-            <p className="analysis-dashboard-ranking-empty">
-              {t("analysisRules.dashboard.extractionRankNoData")}
-            </p>
-          )}
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => setShowSupplierDetail(!showSupplierDetail)}>
-          {showSupplierDetail
-            ? t("analysisRules.dashboard.extractionRankHideDetail")
-            : t("analysisRules.dashboard.extractionRankShowDetail")}
-        </Button>
-        {showSupplierDetail && (
-          <DataTable<SupplierWithRate>
-            columns={supplierRankingColumns}
-            data={worstSuppliers}
-            rowKey={(row) => row.supplier_code ?? row.supplier_name ?? ""}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
-          />
-        )}
-        <div className="analysis-dashboard-ctas">
-          <button
-            type="button"
-            className="analysis-dashboard-cta-btn"
-            onClick={() => onNavigate("supplier-master")}
-          >
-            {t("analysisRules.dashboard.extractionRankCtaSupplierMaster")}
-            <ArrowRightIcon size={16} />
-          </button>
-          <button
-            type="button"
-            className="analysis-dashboard-cta-btn"
-            onClick={() => onNavigate("extraction-rules")}
-          >
-            {t("analysisRules.dashboard.extractionRankCtaExtractionRules")}
-            <ArrowRightIcon size={16} />
-          </button>
-        </div>
-      </section>
-
-      {/* ランキングセクション: 照合率ワースト商品 */}
-      <section className="analysis-dashboard-ranking-section">
-        <h4 className="analysis-dashboard-ranking-title">
-          <Badge variant="danger" size="sm" dot>
-            {t("analysisRules.dashboard.extractionWorstProductTitle")}
-          </Badge>
-        </h4>
-        <div className="analysis-dashboard-ranking-cards">
-          {productRanking.slice(0, 3).map((item, index) => (
-            <Card key={item.raw_product_name} variant="container" density="compact">
-              <div className="analysis-dashboard-ranking-card-content">
-                <span className="analysis-dashboard-rank-badge">{index + 1}</span>
-                <div className="analysis-dashboard-ranking-card-info">
-                  <span className="analysis-dashboard-ranking-card-name">{item.raw_product_name}</span>
-                  <div className="analysis-dashboard-ranking-card-metrics">
-                    <Badge
-                      variant={item.resolution_rate >= 0.8 ? "success" : item.resolution_rate >= 0.6 ? "warning" : "danger"}
-                      size="sm"
-                    >
-                      {t("analysisRules.dashboard.extractionRankResolutionRate")}: {(item.resolution_rate * 100).toFixed(0)}%
-                    </Badge>
-                    <span className="analysis-dashboard-ranking-card-stat">
-                      {t("analysisRules.dashboard.extractionRankResolvedItems")}: {item.resolved_count} / {item.total_count}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </Card>
-          ))}
-          {productRanking.length === 0 && (
-            <p className="analysis-dashboard-ranking-empty">
-              {t("analysisRules.dashboard.extractionRankNoData")}
-            </p>
-          )}
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => setShowProductDetail(!showProductDetail)}>
-          {showProductDetail
-            ? t("analysisRules.dashboard.extractionRankHideDetail")
-            : t("analysisRules.dashboard.extractionRankShowDetail")}
-        </Button>
-        {showProductDetail && (
-          <DataTable<ExtractionProductRankingItem>
-            columns={productRankingColumns}
-            data={productRanking}
-            rowKey={(row) => row.raw_product_name}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.extractionRankNoData")}
-          />
-        )}
-        <div className="analysis-dashboard-ctas">
-          <button
-            type="button"
-            className="analysis-dashboard-cta-btn analysis-dashboard-cta-btn--primary"
-            onClick={() => onNavigate("product-master")}
-          >
-            {t("analysisRules.dashboard.extractionRankCtaProductMaster")}
-            <ArrowRightIcon size={16} />
-          </button>
-        </div>
-      </section>
-
-      {/* 問題バー */}
-      {!supplierLoading && dangerExtractionCount > 0 && (
-        <div className="analysis-dashboard-problem-banner">
-          <Badge variant="danger">
-            {`${dangerExtractionCount}${t("analysisRules.dashboard.supplierProblemCount")}`}
-          </Badge>
-        </div>
-      )}
-
-      {/* 提供者テーブル */}
-      {!supplierLoading && extractionSupplierRows.length > 0 && (
-        <div className="analysis-dashboard-supplier-section">
-          <h3>{t("analysisRules.dashboard.supplierTableTitle")}</h3>
-          <DataTable<ExtractionSupplierRow>
-            columns={extractionSupplierColumns}
-            data={extractionSupplierRows}
-            rowKey={(row) => row.channel_id}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.noData")}
-          />
-        </div>
-      )}
-
-      {/* 既存コンテンツ */}
       <div className="analysis-dashboard-existing-section">
-
-      {/* ボトルネックヒーロー */}
-      {isBottleneck && (
-        <div className={`analysis-dashboard-hero ${getSignalClass(successLevel)}`}>
-          <div className="analysis-dashboard-hero-content">
-            <Badge variant={successLevel === "danger" ? "danger" : "warning"} dot>
-              {t("analysisRules.dashboard.bottleneckLabel")}
-            </Badge>
-            <div className="analysis-dashboard-hero-metric">
-              <span className="analysis-dashboard-hero-name">
-                {t("analysisRules.dashboard.extractionSuccessRate")}
-              </span>
-              <span className="analysis-dashboard-hero-value">
-                {(extractionSuccessRate * 100).toFixed(1)}%
-              </span>
-            </div>
-            <p className="analysis-dashboard-hero-desc">
-              {t("analysisRules.dashboard.bottleneckDesc")}
-            </p>
-            <button
-              type="button"
-              className="analysis-dashboard-cta-btn analysis-dashboard-cta-btn--primary"
-              onClick={() => onNavigate("accuracy-management")}
-            >
-              {t("analysisRules.dashboard.ctaAccuracy")}
-              <ArrowRightIcon size={16} />
-            </button>
+      {/* 段1: 正常性カード */}
+      <Card
+        variant="metric"
+        density="compact"
+        className={getSignalClass(headerSignal)}
+      >
+        <h4 className="analysis-dashboard-import-header">
+          {headerSignal === "success"
+            ? t("analysisRules.dashboard.extractionHealthOk")
+            : t("analysisRules.dashboard.extractionHealthIssue")}
+        </h4>
+        <div className="analysis-dashboard-import-summary">
+          <div className="analysis-dashboard-import-summary-row">
+            <span>{t("analysisRules.dashboard.extractionHealthTotalJobs")}</span>
+            <span>{data.extraction.total.toLocaleString()}</span>
           </div>
-        </div>
-      )}
-
-      {/* KPIカード */}
-      <div className="analysis-dashboard-metrics">
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.totalJobs")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {data.extraction.total.toLocaleString()}
-            <span className="analysis-dashboard-metric-unit">
-              {t("analysisRules.dashboard.jobs")}
-            </span>
-          </div>
-        </Card>
-
-        <Card
-          variant="metric"
-          density="compact"
-          className={getSignalClass(successLevel)}
-        >
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.extractionSuccessRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(extractionSuccessRate * 100).toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card
-          variant="metric"
-          density="compact"
-          className={getSignalClass(errorLevel)}
-        >
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.extractionErrorRate")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(data.extraction.error_rate * 100).toFixed(1)}%
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.staleRunning")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {data.extraction.stale_running_count.toLocaleString()}
-            <span className="analysis-dashboard-metric-unit">
-              {t("analysisRules.dashboard.items")}
-            </span>
-          </div>
-        </Card>
-      </div>
-
-      {/* アラートバッジ */}
-      <div className="analysis-dashboard-alerts">
-        {data.extraction.stale_running_count > 0 && (
-          <div className="analysis-dashboard-alert-item">
-            <Badge variant="danger" dot>
-              {t("analysisRules.dashboard.staleRunning")}{" "}
-              {data.extraction.stale_running_count}
-              {t("analysisRules.dashboard.items")}
+          <div className="analysis-dashboard-import-summary-row">
+            <span>{t("analysisRules.dashboard.extractionHealthSuccessRate")}</span>
+            <Badge variant={successRateSignal} size="sm">
+              {extractionSuccessRate.toFixed(1)}%
             </Badge>
           </div>
-        )}
-        <div className="analysis-dashboard-alert-item">
-          <Badge variant="info" dot>
-            {t("analysisRules.dashboard.pending")}{" "}
-            {data.extraction.by_status.pending}
-            {t("analysisRules.dashboard.items")}
-          </Badge>
+          <div className="analysis-dashboard-import-summary-row">
+            <span>{t("analysisRules.dashboard.extractionHealthErrorCount")}</span>
+            <Badge variant={errorSignal} size="sm">
+              {errorCount.toLocaleString()}
+            </Badge>
+          </div>
         </div>
-      </div>
+      </Card>
 
-      {/* CTAボタン */}
-      <div className="analysis-dashboard-ctas">
-        <button
-          type="button"
-          className="analysis-dashboard-cta-btn"
-          onClick={() => onNavigate("accuracy-management")}
-        >
-          {t("analysisRules.dashboard.ctaAccuracy")}
-          <ArrowRightIcon size={16} />
-        </button>
-      </div>
-
-      {/* 抽出トレンドグラフ */}
+      {/* 段2: 推移グラフ */}
       {chartData.length > 0 && (
         <Card
           variant="container"
@@ -1580,293 +1132,34 @@ function ExtractionTabContent({ data, trend, supplierData, supplierLoading, cost
         </Card>
       )}
 
-      {/* 直近のエラー */}
-      {data.recent_errors.length > 0 && (
-        <Card variant="container" density="compact">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.recentErrors")}
-          </div>
-          <DataTable<RecentError>
-            columns={[
-              { key: "error_message", header: t("analysisRules.dashboard.errorMessage") },
-              { key: "created_at", header: t("analysisRules.dashboard.errorDate"), width: "180px", renderCell: (row) => row.created_at ? new Date(row.created_at).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "-" },
-            ]}
-            data={data.recent_errors}
-            rowKey={(row) => row.id}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.noErrors")}
-          />
-        </Card>
-      )}
-
-      {/* 提供者別抽出エラー内訳 */}
-      {data.extraction_by_supplier.filter((s) => s.error_count > 0).length > 0 && (
-        <Card variant="container" density="compact">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.extractionSupplierTitle")}
-          </div>
-          <DataTable<ExtractionBySupplierItem>
-            columns={[
-              {
-                key: "supplier_name",
-                header: t("analysisRules.dashboard.extractionSupplierName"),
-              },
-              {
-                key: "total_jobs",
-                header: t("analysisRules.dashboard.extractionSupplierTotal"),
-                width: "100px",
-                renderCell: (row) => row.total_jobs.toLocaleString(),
-              },
-              {
-                key: "done_count",
-                header: t("analysisRules.dashboard.extractionSupplierDone"),
-                width: "80px",
-                renderCell: (row) => row.done_count.toLocaleString(),
-              },
-              {
-                key: "error_count",
-                header: t("analysisRules.dashboard.extractionSupplierError"),
-                width: "80px",
-                renderCell: (row) => (
-                  <Badge variant="danger">{row.error_count.toLocaleString()}</Badge>
-                ),
-              },
-            ]}
-            data={data.extraction_by_supplier.filter((s) => s.error_count > 0)}
-            rowKey={(row) => row.supplier_code ?? row.supplier_name ?? ""}
+      {/* 段3: 抽出総数テーブル */}
+      <Card
+        variant="container"
+        density="compact"
+        className="analysis-dashboard-chart-card"
+      >
+        <div className="analysis-dashboard-section-title">
+          {t("analysisRules.dashboard.extractionTotalTitle")}
+        </div>
+        {trend.length === 0 ? (
+          <p className="analysis-dashboard-empty">
+            {t("analysisRules.dashboard.noData")}
+          </p>
+        ) : (
+          <DataTable<TrendDay>
+            columns={trendColumns}
+            data={trend}
+            rowKey={(row) => row.day}
             density="compact"
             emptyState={t("analysisRules.dashboard.noData")}
           />
-          <div className="analysis-dashboard-ctas">
-            <button
-              type="button"
-              className="analysis-dashboard-cta-btn"
-              onClick={() => onNavigate("accuracy-management")}
-            >
-              {t("analysisRules.dashboard.ctaAccuracy")}
-              <ArrowRightIcon size={16} />
-            </button>
-          </div>
-        </Card>
-      )}
+        )}
+      </Card>
       </div>{/* end analysis-dashboard-existing-section */}
-
-      {/* ── API コストセクション ── */}
-      <ExtractionCostSection costData={costData} costLoading={costLoading} t={t} />
     </>
   );
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// Extraction Cost Section
-// ──────────────────────────────────────────────────────────────────────────────
-
-interface ExtractionCostSectionProps {
-  costData: CostSummary | null;
-  costLoading: boolean;
-  t: (key: string, options?: Record<string, unknown>) => string;
-}
-
-function ExtractionCostSection({ costData, costLoading, t }: ExtractionCostSectionProps) {
-  const supplierCostColumns: DataTableColumn<CostSummaryBySupplierItem>[] = [
-    {
-      key: "supplier_name",
-      header: t("analysisRules.dashboard.costSupplierName"),
-    },
-    {
-      key: "total_calls",
-      header: t("analysisRules.dashboard.costSupplierCalls"),
-      width: "100px",
-      renderCell: (row) => row.total_calls.toLocaleString(),
-    },
-    {
-      key: "input_tokens",
-      header: t("analysisRules.dashboard.costInputTokens"),
-      width: "110px",
-      renderCell: (row) =>
-        `${(row.input_tokens / 1000).toFixed(1)}${t("analysisRules.dashboard.costTokenUnit")}`,
-    },
-    {
-      key: "output_tokens",
-      header: t("analysisRules.dashboard.costOutputTokens"),
-      width: "110px",
-      renderCell: (row) =>
-        `${(row.output_tokens / 1000).toFixed(1)}${t("analysisRules.dashboard.costTokenUnit")}`,
-    },
-    {
-      key: "cost_usd",
-      header: t("analysisRules.dashboard.costUsd"),
-      width: "110px",
-      renderCell: (row) => `$${row.cost_usd.toFixed(4)}`,
-    },
-    {
-      key: "avg_items",
-      header: t("analysisRules.dashboard.costAvgItems"),
-      width: "100px",
-      renderCell: (row) => row.avg_items.toFixed(1),
-    },
-  ];
-
-  const dailyCostColumns: DataTableColumn<CostSummaryDailyItem>[] = [
-    {
-      key: "date",
-      header: t("analysisRules.dashboard.costDailyDate"),
-      width: "120px",
-    },
-    {
-      key: "total_calls",
-      header: t("analysisRules.dashboard.costDailyCalls"),
-      width: "100px",
-      renderCell: (row) => row.total_calls.toLocaleString(),
-    },
-    {
-      key: "cost_usd",
-      header: t("analysisRules.dashboard.costDailyCost"),
-      width: "110px",
-      renderCell: (row) => `$${row.cost_usd.toFixed(4)}`,
-    },
-  ];
-
-  if (costLoading) {
-    return (
-      <section className="analysis-dashboard-cost-section">
-        <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
-        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.loading")}</p>
-      </section>
-    );
-  }
-
-  if (!costData) {
-    return (
-      <section className="analysis-dashboard-cost-section">
-        <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
-        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.costNoData")}</p>
-      </section>
-    );
-  }
-
-  const avgCostPerCall =
-    costData.total.calls > 0 ? costData.total.cost_usd / costData.total.calls : 0;
-
-  const budgetUsageRate =
-    costData.budget.monthly_budget_usd > 0
-      ? costData.budget.current_month_usd / costData.budget.monthly_budget_usd
-      : 0;
-
-  const budgetLevel: SignalLevel =
-    budgetUsageRate >= 0.9 ? "danger" : budgetUsageRate >= 0.7 ? "warning" : "success";
-
-  const sortedBySupplier = [...costData.by_supplier].sort((a, b) => b.cost_usd - a.cost_usd);
-
-  return (
-    <section className="analysis-dashboard-cost-section">
-      <h3 className="analysis-dashboard-section-title">{t("analysisRules.dashboard.costSectionTitle")}</h3>
-
-      {/* KPIカード */}
-      <div className="analysis-dashboard-metrics">
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.costTotalUsd")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            ${costData.total.cost_usd.toFixed(4)}
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.costTotalCalls")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {costData.total.calls.toLocaleString()}
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact" className={getSignalClass(budgetLevel)}>
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.costBudgetUsage")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            {(budgetUsageRate * 100).toFixed(1)}%
-            <span className="analysis-dashboard-metric-unit">
-              {t("analysisRules.dashboard.costBudgetOf", {
-                budget: costData.budget.monthly_budget_usd.toFixed(2),
-              })}
-            </span>
-          </div>
-        </Card>
-
-        <Card variant="metric" density="compact">
-          <div className="analysis-dashboard-metric-label">
-            {t("analysisRules.dashboard.costAvgPerCall")}
-          </div>
-          <div className="analysis-dashboard-metric-value">
-            ${avgCostPerCall.toFixed(5)}
-          </div>
-        </Card>
-      </div>
-
-      {/* 仕入元別コストテーブル */}
-      {sortedBySupplier.length > 0 && (
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.costSupplierName")}
-          </div>
-          <DataTable<CostSummaryBySupplierItem>
-            columns={supplierCostColumns}
-            data={sortedBySupplier}
-            rowKey={(row) => row.supplier_name}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.costNoData")}
-          />
-        </Card>
-      )}
-
-      {/* 日別コスト推移チャート */}
-      {costData.daily.length > 0 && (
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.costDailyCost")}
-          </div>
-          <div className="analysis-dashboard-chart">
-            <ResponsiveContainer width="100%" height={240}>
-              <LineChart data={costData.daily}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" fontSize={12} />
-                <YAxis fontSize={12} />
-                <Tooltip formatter={(value) => `$${Number(value).toFixed(4)}`} />
-                <Legend />
-                <Line
-                  type="monotone"
-                  dataKey="cost_usd"
-                  name={t("analysisRules.dashboard.costDailyCost")}
-                  stroke="var(--color-warning)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="total_calls"
-                  name={t("analysisRules.dashboard.costDailyCalls")}
-                  stroke="var(--color-success)"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-          <DataTable<CostSummaryDailyItem>
-            columns={dailyCostColumns}
-            data={costData.daily}
-            rowKey={(row) => row.date}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.costNoData")}
-          />
-        </Card>
-      )}
-    </section>
-  );
-}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Analysis Tab

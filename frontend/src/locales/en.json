@@ -4327,7 +4327,17 @@
       "costDailyCost": "Cost",
       "costNoData": "No cost data available",
       "costBudgetOf": "/ {{budget}} USD",
-      "costTokenUnit": "K"
+      "costTokenUnit": "K",
+      "extractionHealthOk": "Extraction is operating normally",
+      "extractionHealthIssue": "Extraction needs attention",
+      "extractionHealthTotalJobs": "Total extraction jobs",
+      "extractionHealthSuccessRate": "Extraction success rate",
+      "extractionHealthErrorCount": "Error count",
+      "extractionTrendDay": "Date",
+      "extractionTrendTotal": "Total",
+      "extractionTrendDone": "Success",
+      "extractionTrendError": "Errors",
+      "extractionTotalTitle": "Extraction totals"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",
