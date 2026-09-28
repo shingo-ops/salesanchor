@@ -187,6 +187,38 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         for row in supplier_extraction_rows
     ]
 
+    # 9. 直近抽出ジョブ 10 件（新しい順）
+    recent_jobs_rows = (
+        await db.execute(
+            text(
+                f"SELECT"
+                f"  ej.id::text AS id,"
+                f"  ej.status,"
+                f"  ej.created_at,"
+                f"  COUNT(ei.id)::int AS item_count,"
+                f"  sc.channel_name"
+                f" FROM {TCG_SCHEMA}.extraction_jobs ej"
+                f" LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id"
+                f" LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
+                f" LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
+                f" GROUP BY ej.id, ej.status, ej.created_at, sc.channel_name"
+                f" ORDER BY ej.created_at DESC"
+                f" LIMIT 10"
+            )
+        )
+    ).fetchall()
+
+    recent_extraction_jobs = [
+        {
+            "id": str(row.id),
+            "channel_name": row.channel_name,
+            "item_count": int(row.item_count),
+            "status": row.status,
+            "created_at": row.created_at.isoformat() if row.created_at else None,
+        }
+        for row in recent_jobs_rows
+    ]
+
     return {
         "extraction": {
             "total": total_extraction,
@@ -215,6 +247,7 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         "engine": engine,
         "recent_errors": recent_errors,
         "extraction_by_supplier": extraction_by_supplier,
+        "recent_extraction_jobs": recent_extraction_jobs,
     }
 
 

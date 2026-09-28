@@ -88,6 +88,14 @@ class ExtractionBySupplierItem(BaseModel):
     empty_count: int
 
 
+class RecentExtractionJobItem(BaseModel):
+    id: str
+    channel_name: str | None
+    item_count: int
+    status: str
+    created_at: str | None
+
+
 class PipelineSummaryResponse(BaseModel):
     extraction: ExtractionSummary
     analysis: AnalysisSummary
@@ -95,6 +103,7 @@ class PipelineSummaryResponse(BaseModel):
     engine: EngineInfo
     recent_errors: list[RecentErrorItem]
     extraction_by_supplier: list[ExtractionBySupplierItem]
+    recent_extraction_jobs: list[RecentExtractionJobItem]
 
 
 # ---------------------------------------------------------------------------

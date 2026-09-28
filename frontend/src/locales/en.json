@@ -4368,11 +4368,17 @@
       "extractionHealthTotalJobs": "Total extraction jobs",
       "extractionHealthSuccessRate": "Extraction success rate",
       "extractionHealthErrorCount": "Error count",
-      "extractionTrendDay": "Date",
-      "extractionTrendTotal": "Total",
-      "extractionTrendDone": "Success",
-      "extractionTrendError": "Errors",
-      "extractionTotalTitle": "Extraction totals"
+      "extractionJobChannel": "Provider",
+      "extractionJobItemCount": "Items",
+      "extractionJobStatus": "Status",
+      "extractionJobDate": "Date",
+      "extractionJobStatus_done": "Done",
+      "extractionJobStatus_error": "Error",
+      "extractionJobStatus_empty": "Empty",
+      "extractionJobStatus_pending": "Pending",
+      "extractionJobStatus_running": "Running",
+      "extractionJobStatus_filtered": "Filtered",
+      "extractionTotalTitle": "Recent Jobs"
     },
     "errors": {
       "conflict": "Another user has made changes. Please reload the page.",

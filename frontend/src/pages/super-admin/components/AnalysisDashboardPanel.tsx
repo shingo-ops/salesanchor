@@ -172,6 +172,14 @@ interface ExtractionBySupplierItem {
   empty_count: number;
 }
 
+interface RecentExtractionJob {
+  id: string;
+  channel_name: string | null;
+  item_count: number;
+  status: string;
+  created_at: string | null;
+}
+
 interface PipelineSummary {
   extraction: ExtractionSummary;
   analysis: AnalysisSummary;
@@ -179,6 +187,7 @@ interface PipelineSummary {
   engine: EngineSummary;
   recent_errors: RecentError[];
   extraction_by_supplier: ExtractionBySupplierItem[];
+  recent_extraction_jobs: RecentExtractionJob[];
 }
 
 interface TrendDay {
@@ -1032,29 +1041,50 @@ function ExtractionTabContent({ data, trend, trendDays, t }: ExtractionTabConten
     };
   });
 
-  const trendColumns: DataTableColumn<TrendDay>[] = [
+  const recentJobColumns: DataTableColumn<RecentExtractionJob>[] = [
     {
-      key: "day",
-      header: t("analysisRules.dashboard.extractionTrendDay"),
-      width: "120px",
+      key: "channel_name",
+      header: t("analysisRules.dashboard.extractionJobChannel"),
+      renderCell: (row) => row.channel_name ?? "-",
     },
     {
-      key: "extraction_total",
-      header: t("analysisRules.dashboard.extractionTrendTotal"),
+      key: "item_count",
+      header: t("analysisRules.dashboard.extractionJobItemCount"),
       width: "80px",
-      renderCell: (row) => row.extraction_total.toLocaleString(),
+      renderCell: (row) => row.item_count.toLocaleString(),
     },
     {
-      key: "extraction_done",
-      header: t("analysisRules.dashboard.extractionTrendDone"),
-      width: "80px",
-      renderCell: (row) => row.extraction_done.toLocaleString(),
+      key: "status",
+      header: t("analysisRules.dashboard.extractionJobStatus"),
+      width: "100px",
+      renderCell: (row) => {
+        const variant =
+          row.status === "done" ? "success"
+            : row.status === "error" ? "danger"
+              : row.status === "empty" ? "warning"
+                : "neutral";
+        return (
+          <Badge variant={variant} size="sm">
+            {t(`analysisRules.dashboard.extractionJobStatus_${row.status}`)}
+          </Badge>
+        );
+      },
     },
     {
-      key: "extraction_error",
-      header: t("analysisRules.dashboard.extractionTrendError"),
-      width: "80px",
-      renderCell: (row) => row.extraction_error.toLocaleString(),
+      key: "created_at",
+      header: t("analysisRules.dashboard.extractionJobDate"),
+      width: "180px",
+      renderCell: (row) => {
+        if (!row.created_at) return "-";
+        return new Date(row.created_at).toLocaleString("ja-JP", {
+          timeZone: "Asia/Tokyo",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+      },
     },
   ];
 
@@ -1132,7 +1162,7 @@ function ExtractionTabContent({ data, trend, trendDays, t }: ExtractionTabConten
         </Card>
       )}
 
-      {/* 段3: 抽出総数テーブル */}
+      {/* 段3: 直近ジョブテーブル */}
       <Card
         variant="container"
         density="compact"
@@ -1141,19 +1171,13 @@ function ExtractionTabContent({ data, trend, trendDays, t }: ExtractionTabConten
         <div className="analysis-dashboard-section-title">
           {t("analysisRules.dashboard.extractionTotalTitle")}
         </div>
-        {trend.length === 0 ? (
-          <p className="analysis-dashboard-empty">
-            {t("analysisRules.dashboard.noData")}
-          </p>
-        ) : (
-          <DataTable<TrendDay>
-            columns={trendColumns}
-            data={trend}
-            rowKey={(row) => row.day}
-            density="compact"
-            emptyState={t("analysisRules.dashboard.noData")}
-          />
-        )}
+        <DataTable<RecentExtractionJob>
+          columns={recentJobColumns}
+          data={data.recent_extraction_jobs}
+          rowKey={(row) => row.id}
+          density="compact"
+          emptyState={t("analysisRules.dashboard.noData")}
+        />
       </Card>
       </div>{/* end analysis-dashboard-existing-section */}
     </>
