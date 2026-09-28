@@ -33,9 +33,15 @@
 
 `docs/handoff/extraction-recent-jobs/recon.md`
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-なし（既存 recent_imports パターン踏襲）
+既存の `get_import_summary` 関数内 `recent_imports` 実装（tcg_analysis_dashboard_svc.py:319-346）が同等パターン。LEFT JOIN で関連テーブルの情報を付加し、ORDER BY created_at DESC LIMIT 10 で直近件数に絞る手法を踏襲。フロントエンドは ImportTabContent のテーブル実装（AnalysisDashboardPanel.tsx:681-727）を踏襲し、日時フォーマットも同一の toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", ... }) を使用。
+
+## 維持の仕組み
+
+- `recent_extraction_jobs` は API の additive 追加のため、フィールドを削除・リネームする際は PipelineSummaryResponse + フロント型定義の両方を同時変更すること
+- ステータスバッジの色マッピングは `recentJobColumns` の renderCell 内に集約。新ステータス追加時は renderCell と i18n キー（`extractionJobStatus_<status>`）を同時追加すること
+- `extractionTrendDay`/`extractionTrendTotal`/`extractionTrendDone`/`extractionTrendError` キーは削除済み。再追加不可
 
 ## 守り手
 
