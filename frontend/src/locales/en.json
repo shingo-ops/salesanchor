@@ -4060,67 +4060,102 @@
     "pipelineMap": {
       "title": "LINE Analysis Pipeline Map",
       "tableDetail": "Table Detail",
-      "mainFlow": "Main Flow",
-      "supplierGroup": "Suppliers",
-      "productGroup": "Products",
-      "inventoryGroup": "Inventory",
-      "distributionGroup": "Distribution",
-      "analysisGroup": "Analysis Rules",
-      "discordGroup": "Discord Input",
-      "importGroup": "LINE Import",
-      "nodeLabel_origin": "LINE Analysis",
-      "nodeDesc_origin": "Pipeline origin",
-      "edgeMessageRecv": "Message received",
-      "edgeSendText": "Send text",
-      "edgeExtractCandidates": "Extract candidates",
-      "edgeMatchMaster": "Match with master",
-      "edgeDistribute": "Distribute results",
-      "nodeLabel_suppliers": "Supplier Master",
-      "nodeDesc_suppliers": "Basic supplier information",
-      "nodeLabel_supplier_aliases": "Supplier Aliases",
-      "nodeDesc_supplier_aliases": "Name variation dictionary",
-      "nodeLabel_supplier_channels": "Supplier Channels",
-      "nodeDesc_supplier_channels": "LINE account information",
-      "nodeLabel_source_messages": "Received Messages",
-      "nodeDesc_source_messages": "Raw text imported from LINE",
-      "nodeLabel_import_jobs": "LINE Import",
-      "nodeDesc_import_jobs": "LINE file import jobs",
-      "nodeLabel_discord_inbound_messages": "Discord Inbound",
-      "nodeDesc_discord_inbound_messages": "Supplier reports from Discord",
-      "nodeLabel_extraction_jobs": "AI Extraction Job",
-      "nodeDesc_extraction_jobs": "One job per message sent to Gemini",
-      "nodeLabel_extraction_items": "Extracted Lines",
-      "nodeDesc_extraction_items": "Product candidates found by AI (per line)",
-      "nodeLabel_extraction_prompt_config": "Prompt Config",
-      "nodeDesc_extraction_prompt_config": "Gemini instruction text",
-      "nodeLabel_supplier_prompts": "Supplier Prompts",
-      "nodeDesc_supplier_prompts": "Per-supplier AI instructions",
-      "nodeLabel_extraction_attempts": "Extraction Attempts",
-      "nodeDesc_extraction_attempts": "AI query log",
-      "nodeLabel_analysis_results": "Analysis Results",
-      "nodeDesc_analysis_results": "Final product, quantity and price values",
-      "nodeLabel_products": "Product Master",
-      "nodeDesc_products": "All product basic information",
-      "nodeLabel_product_search_keywords": "Search Keywords",
-      "nodeDesc_product_search_keywords": "Terms for product name matching",
-      "nodeLabel_product_exclude_keywords": "Exclude Keywords",
-      "nodeDesc_product_exclude_keywords": "Terms to prevent false matches",
-      "nodeLabel_line_conditions": "Condition Master",
-      "nodeDesc_line_conditions": "New / Near-mint / Used definitions",
-      "nodeLabel_line_units": "Unit Master",
-      "nodeDesc_line_units": "Card / Box / Pack definitions",
-      "nodeLabel_type_master": "Game Type",
-      "nodeDesc_type_master": "Pokemon / One Piece etc.",
-      "nodeLabel_item_corrections": "Human Corrections",
-      "nodeDesc_item_corrections": "Human overrides of AI results",
-      "nodeLabel_tcg_distribution_targets": "Distribution Targets",
-      "nodeDesc_tcg_distribution_targets": "Spreadsheet distribution settings",
-      "nodeLabel_tcg_distribution_settings": "Distribution Settings",
-      "nodeDesc_tcg_distribution_settings": "Global distribution settings",
-      "nodeLabel_analysis_runs": "Analysis Batch",
-      "nodeDesc_analysis_runs": "Batch analysis execution",
-      "nodeLabel_analysis_run_snapshots": "Run Snapshots",
-      "nodeDesc_analysis_run_snapshots": "Result copy at execution time"
+      "proc": {
+        "masterPhase": {
+          "title": "Master Setup (Prerequisite)",
+          "desc": "Ongoing maintenance"
+        },
+        "master": {
+          "product": {
+            "title": "Product Master",
+            "detail": "Register product names, search & exclude keywords",
+            "screen": "Master Mgmt > Products"
+          },
+          "supplier": {
+            "title": "Supplier Master",
+            "detail": "Register supplier LINE display names",
+            "screen": "Master Mgmt > Suppliers"
+          },
+          "rules": {
+            "title": "Rule Settings",
+            "detail": "Configure status, unit & condition rules",
+            "screen": "Rule Management"
+          },
+          "prompt": {
+            "title": "Prompt Settings",
+            "detail": "Write AI extraction hints per supplier",
+            "screen": "Extraction Prompt Config"
+          }
+        },
+        "step1": {
+          "stepNum": "STEP 1",
+          "badge": "Manual",
+          "title": "LINE File Import",
+          "why": "Import supplier messages into the system",
+          "procedures": "Export txt file from LINE group chat, drag & drop to admin panel. Set time range (e.g. 24h) and upload",
+          "screen": "Import Page",
+          "check": "Verify import count and supplier resolution"
+        },
+        "step2": {
+          "stepNum": "STEP 2",
+          "badge": "Auto",
+          "title": "AI Auto-Extraction",
+          "why": "Automatically read product, quantity, price and status from text",
+          "procedures": "Gemini AI analyzes messages and extracts product name, quantity, price, condition, and notes (background process)",
+          "screen": "Automatic (no action needed)",
+          "check": "Verify extraction job completion status"
+        },
+        "step3": {
+          "stepNum": "STEP 3",
+          "badge": "Auto",
+          "title": "Product Auto-Matching",
+          "why": "Match extraction results against product master to resolve product IDs",
+          "procedures": "Match search keywords against product master, resolve units and conditions. Unresolved rows get a needs review flag (automatic)",
+          "screen": "Automatic (no action needed)",
+          "check": "Verify match rate and review-needed count"
+        },
+        "step4": {
+          "stepNum": "STEP 4",
+          "badge": "Manual",
+          "title": "Accuracy Review & Adjust",
+          "why": "Review AI extraction accuracy and improve master data and rules",
+          "procedures": "Check per-supplier resolution and error rates. Handle review-needed rows, adjust product keywords or rules as needed, then re-analyze",
+          "screen": "Analysis Accuracy Mgmt",
+          "check": "Verify all suppliers meet resolution targets"
+        },
+        "step5": {
+          "stepNum": "STEP 5",
+          "badge": "Manual",
+          "title": "Distribution Preview",
+          "why": "Final check of data count and exclusion reasons before distribution",
+          "procedures": "Review total candidate count and exclusion breakdown (unresolved, no price, etc.). Go back to STEP 4 if issues found",
+          "screen": "Distribution Page",
+          "check": "Verify candidate count and exclusions are acceptable"
+        },
+        "step6": {
+          "stepNum": "STEP 6",
+          "badge": "Manual",
+          "title": "Execute Distribution",
+          "why": "Output confirmed data to Google Sheets",
+          "procedures": "Press distribute button and confirm dialog. 7 safety checks run automatically, then 12 columns of data are written to Google Sheets",
+          "screen": "Distribution Page",
+          "check": "Verify completion notification and data in Sheets"
+        },
+        "end": {
+          "title": "Complete",
+          "detail": "Product data has been output to Google Sheets"
+        },
+        "edge": {
+          "prerequisite": "Set up in advance",
+          "autoExtract": "Auto AI extraction starts",
+          "autoMatch": "Auto matching starts",
+          "reviewResult": "Review results",
+          "previewDist": "Preview distribution",
+          "execute": "Execute distribution",
+          "complete": "Output complete",
+          "feedback": "Adjust master & rules, re-analyze"
+        }
+      }
     },
     "errorLog": {
       "title": "Extraction Error Log",

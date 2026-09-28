@@ -239,10 +239,10 @@
   --size-substep-nav:        160px;  /* セットアップガイド サブ手順左ナビ幅（2ペイン） */
   --size-drawer-label-min:   100px;  /* ドロワーラベル列最小幅（FollowUpsPage） */
   --size-split-label-min:     60px;  /* 新規/リピート分割ラベル最小幅（売上・ファネル） */
-  --size-pipeline-map-min-h: 600px;  /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
-  --size-skill-orb-lg:       52px;   /* スキルツリー トランクノード オーブ直径（PipelineMapPanel） */
-  --size-skill-orb-sm:       38px;   /* スキルツリー ブランチノード オーブ直径（PipelineMapPanel） */
-  --size-skill-label-w:      120px;  /* スキルツリー ノードラベル最大幅（PipelineMapPanel） */
+  --size-pipeline-map-min-h: 600px;           /* パイプラインマップキャンバス最小高（PipelineMapPanel） */
+  --size-proc-card-w:        260px;           /* 業務手順カード幅（ProcedureNode） */
+  --size-proc-master-w:      200px;           /* マスタ/完了カード幅（MasterNode / EndNode） */
+  --color-badge-overlay:     rgba(255, 255, 255, 0.2); /* バッジ背景オーバーレイ（ProcedureNode ヘッダー） */
 
   /* ---- Pipeline map カテゴリ色（PipelineMapPanel ノードヘッダー背景） ---- */
   --cat-supplier:     #1e40af;  /* 仕入先 — 青系 */
