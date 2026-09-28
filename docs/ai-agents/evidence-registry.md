@@ -3203,3 +3203,5 @@ EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、bac
 ### EV-20260928-AQ-IMPLEMENTATION
 
 AQ日報2ボタン実装・Sol第二レビューAPPROVE。製品逆変換一致/共有14hash維持、最終29対象/501全体試験成功。根拠: docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-implementation.md、aq-validation-logs.tar.gz/manifest.json。画面省略、PR/新番号GO/配備未実施。
+
+2026-09-28 AQ保存f1935c24f remote一致、PR前validate-pr-body.shがGO節欠落でexit1。PR未発行[]と番号必須検査の循環を記録。スキップ/代筆/ガード変更なし。詳細 aq-staff-report-implementation.md §保存とPR前検査の停止。

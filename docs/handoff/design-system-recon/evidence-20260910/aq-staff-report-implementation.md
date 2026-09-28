@@ -28,3 +28,16 @@ Sol第二レビューAPPROVEと全品質結果確定後、文書と実装を保�
 Sol read-only第二レビューは初回REVISE。空白原値、pending両ボタンの有効/aria-busyなし、filter下POST後GETの3点を新規試験へ補強し再レビューAPPROVE。レビュー担当自身のunit実行はsandbox EPERMで未実行、コード静的審査と担当ログ読取を行った。Astraは逆変換byte一致・共有14hash・対象外原文を直接再検証し、改訂後29/501成功の原ログを読取確認した。自己審査とSol第二レビューを区別する。
 
 実装担当の初回報告にはcoverage件数488/1892という誤記があり、rootの原ログ照合で訂正・撤回した。正確な初回は36ファイル500件、改訂後は36ファイル501件。ログの数値を正とし、誤報を根拠には採用していない。画面省略という検証限界を残して実装検収APPROVE。
+
+## 2026-09-28 保存とPR前検査の停止
+
+実装/設計/検証13ファイルをf1935c24f1c6f4d0e40a5267cb75853ceac498a2でcommit/push済み。git ls-remoteでremote一致。gh pr list --head release/frontend-next-button-batch --state all --json number,url,state は []、PR未発行。未追跡frontend/coverageはローカル検証生成物でcommit対象外。製品2hashは保存前後一致。
+
+公式 scripts/dev/validate-pr-body.sh に実差分13ファイルを列挙した本文をstdin入力したところexit1:
+
+> ❌ ユーザー影響変更があります。PR本文に「### GO記録」セクションがありません
+> → frontend/src / backend/app/routers / backend/app/services の変更は Shingo の GO 記録が必要です
+
+実物の検査10（283行以降、309–321行）はGO節/発行者/原文/番号形式を要求する。新PR番号が未発行の段階で番号が必要な循環がある。またgh-pr-create-safe.shはPR生成前にcheck-process-artifacts.jsを実行するが、同checkerはBASE_SHA/HEAD_SHAとPR_NUMBER/REPOから既存PR本文を取得する構成（665–746行）。包括許可を番号付き原文へ代筆できず、別コマンド/skip環境変数でチェックを回避していない。PR/CI/マージ/本番配備は未実施。
+
+次の一手（草案・未承認）: PR起票時の書式/範囲検査と、マージ直前の番号付きGO検査を分ける。GOなしでもPR番号を取得できるが、GOなしのmainマージは従来どおり拒否する設計を正式審査する。承認/CIを弱める変更はしない。対象は承認経路でありAQカード外のため、scripts/CI/ガード本体は変更していない。仕様・テスト・運用の正式な設計とPO判断後に別便で扱う。本番への投入再開は承認経路の解決、今回番号付きGO、最終HEADのCI成功が条件。
