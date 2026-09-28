@@ -90,3 +90,21 @@ AR実装を1557eb821へ保存、origin/main fdf3b45a4をddd470746fe6001b3b83525b
 ## PR提出
 
 2026-09-28、33dbf6d7a9d36285a006539299e4fe7c8671ed90をpush後、正式gh-pr-create-safe.shの検査exit0でPR #3828を提出・登録。URL: https://github.com/shingo-ops/salesanchor/pull/3828 。AQ+AR計30ボタン、製品15ファイル/追加試験5ファイル。ローカル未保存変更0を確認。正式CIは提出後確認する。番号付きGO #3828は未受領であり、包括依頼を原文に代筆しない。マージ/本番反映未実施。再開は同PRの最新HEAD/CI/番号付きGOと正式merge-safeの検査から。
+
+## 正式CIによる試験色データの是正設計
+
+PR3828/1efa06c63のguard-hex-increase（run36393071425）はRoleKnowledge試験0→3のhex直書きを検出し失敗。製品Rolesは13→13。文字列分割/符号化/ファイル移設/例外追加で隠さず、色値の試験への複製をやめる。
+
+Astra設計自己審査APPROVE: createでは実radio群の初期checkedが先頭で単一であることを検証し、その選択値をexact POSTへ照合する。null API色は既存fallbackのlegacy/readOnly radioへ入り、その値をexact PATCHへ照合する。さらに非null色は実パレットから得た値をAPI mock入力として供給し、編集での保持/変更送信を検証する。fixtureは試験内だけで、製品/DB/SSOTへ新たなデータを保存しない。
+
+色値そのものの固定は、Rolesを含む14製品の逆変換byte一致が独立に担保する。DOMとpayloadの整合試験だけで色定義不変を保証したとは称さない。これにより固定値を試験へ重複定義せず、初期選択/既存非null保持/null fallback/操作転送の複合根拠を残す。CSS named colorはbackend/app/schemas/role.py:21-29のhex限定validatorに適合しないことをSol実物調査で確認し不採用。製品変更0、ガード変更0、試験期待の削除による合格化は禁止。
+
+### 本番配備前提の読み取り確認
+
+既存main fdf3b45a4のDeploy run36390769039はsuccess。原ログ07:17:49Zにsalesanchor_db_20260928_161705.sql.gz（216M）の作成成功を確認。POの本タスクでの鍵使用明示許可に基づき、アプリVPS（runbook記載49.212.137.46）へSSHで当該ファイルのstatとgzip -tだけを実行。226266450 bytes、更新2026-09-28 16:17:49 +0900、gzip検査exit0。DB内容/設定/サービスは変更せず、復元試験は未実施。今回のAR未配備を既存mainの配備成功と混同しない。
+
+PR3828初回最終HEAD1efa06c63のCIは36成功/8対象外/2失敗（実行中0）。失敗は試験hex増加とGO節欠落。process-artifacts原ログrun36393071564で、番号付きGO受領後の転記が必要と確認。ガード解除・架空原文・直接mergeは行わない。
+
+色試験是正の実装: RoleKnowledge1ファイルだけ変更、SHA256 a3bbcb8d8bb1bdf3c4cd98d4f15ec607a9e9f430137d43a6a14bddc1d1eddb38。create先頭単一checked/null fallback readonly/非null保持/別palette選択のfull POST/PATCH一致を検証。色文字列の隠蔽・移設なし、新規hex0。Sol実行で19試験成功・strict ESLint/diff-check成功、Astraは実差分と原ログを読取。初回sandbox EPERMと再実行成功を区別してarchiveへ追加。製品/ガード/他試験変更0。これにより試験1件追加となったため、全件581という旧実行と、修正後の正式CIを区別する。カード初回lintは参照節不足1件を修正してexit0後に発行。
+
+色試験是正の別Sol read-only交差レビューAPPROVE、所見0。Astraは限定是正を検収。更新後archive57件をmanifestで再検算一致。正式CIの最新HEAD結果を確認してからGOへ進む。

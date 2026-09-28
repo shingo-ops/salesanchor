@@ -49,6 +49,11 @@
   "role/12-unit-cross-fix.log": "cd9b14b936db2de2c9b7d082f49689c325e25f2b0a8836fee3912fe619f90cd1",
   "role/13-eslint-cross-final.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "role/14-unit-cross-final.log": "229351ba5b11d38d116ffc136845761b570db696739e5615339fd4d400bd1ae4",
+  "role-color/01-unit.log": "0bed4bd8086231e1a6dc411e1fb7bf4b350ae21bb812c21b1c41ab78e04b45d3",
+  "role-color/02-unit-rerun.log": "8a8737057d1faccc5c78706767a2501601cf2fef5d38d4ffc7b4bfcc2ba2849d",
+  "role-color/03-eslint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "role-color/04-diff-check.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "role-color/05-hex-scan.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "root/ar-root-audit-final.json": "cabf65af34c071bb463d809f716740821b61ae153040b1865fdf95ca27c1acc9",
   "root/ar-product-eslint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 }

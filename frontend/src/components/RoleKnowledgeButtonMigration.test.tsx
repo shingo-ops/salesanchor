@@ -8,21 +8,21 @@ import en from '../locales/en.json';
 
 const mock = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn(), delete: vi.fn() }));
 vi.mock('../lib/api', () => ({ api: mock }));
-const role = { id: 1, name: 'Fixture role', color: '#6c757d', priority: 500, description: null, is_system: false, user_count: 0 };
+const role = { id: 1, name: 'Fixture role', color: null, priority: 500, description: null, is_system: false, user_count: 0 };
 const rule = { id: 11, category: 'split', pattern_type: 'prefix', pattern: 'old pattern', normalized_to: 'old normalized', priority: 300, language: 'en', is_active: false, created_at: '' };
 const alias = { id: 12, supplier_id: 7, alias_text: 'old alias', language: 'en', product_id: 8, source: 'import' };
-let instance = createInstance(); let permissions: string[] = [];
+let instance = createInstance(); let permissions: string[] = []; let roleColor: string | null = null;
 const tr = (key: string) => String(instance.t(key));
 function deferred() { let resolve!: (v: unknown) => void; let reject!: (e: Error) => void; const promise = new Promise((res, rej) => { resolve = res; reject = rej; }); return { promise, resolve, reject }; }
 function provider(node: React.ReactNode) { return <I18nextProvider i18n={instance}>{node}</I18nextProvider>; }
 
 beforeEach(async () => {
-  vi.resetAllMocks(); permissions = ['roles.create', 'roles.update', 'roles.assign', 'roles.delete']; instance = createInstance();
+  vi.resetAllMocks(); permissions = ['roles.create', 'roles.update', 'roles.assign', 'roles.delete']; roleColor = null; instance = createInstance();
   await instance.init({ lng: 'en', resources: { en: { translation: en } }, interpolation: { escapeValue: false } });
   vi.stubGlobal('fetch', vi.fn(() => { throw new Error('Unexpected network'); }));
   mock.get.mockImplementation(async (url: string) => {
     if (url === '/me/permissions') return { permissions };
-    if (url === '/roles') return [role];
+    if (url === '/roles') return [{ ...role, color: roleColor }];
     if (url === '/permissions' || url === '/roles/1/permissions') return [];
     if (url === '/super-admin/knowledge' || url.startsWith('/super-admin/knowledge?q=')) return [rule];
     if (url === '/super-admin/aliases' || url.startsWith('/super-admin/aliases?q=')) return [alias];
@@ -64,18 +64,47 @@ describe('role Button migration contracts', () => {
   it('covers create/edit exact payloads, required, refresh and cancel retention', async () => {
     mock.post.mockResolvedValue({}); mock.patch.mockResolvedValue({}); await renderRoles();
     let { dialog } = openRole(); expect(dialog.querySelectorAll('[required]')).toHaveLength(1);
+    const createColors = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')];
+    const createChecked = createColors.filter(input => input.checked);
+    expect(createChecked).toHaveLength(1); expect(createChecked[0]).toBe(createColors[0]);
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.create') })); expect(mock.post).not.toHaveBeenCalled();
     fillRole(dialog); const reads = mock.get.mock.calls.filter(c => c[0] === '/roles').length;
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.create') }));
-    await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/roles', { name: ' New role ', color: '#ef4444', priority: 900, description: ' desc ' }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/roles', { name: ' New role ', color: createChecked[0].value, priority: 900, description: ' desc ' }));
     await waitFor(() => expect(mock.get.mock.calls.filter(c => c[0] === '/roles')).toHaveLength(reads + 1));
     ({ dialog } = openRole()); fireEvent.change(dialog.querySelector('input[required]')!, { target: { value: 'Retained' } });
     const writesBeforeCancel = mock.post.mock.calls.length + mock.patch.mock.calls.length;
     fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') }));
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(mock.post.mock.calls.length + mock.patch.mock.calls.length).toBe(writesBeforeCancel);
-    ({ dialog } = openRole(true)); fillRole(dialog, ' Edited role '); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.update') }));
-    await waitFor(() => expect(mock.patch).toHaveBeenCalledExactlyOnceWith('/roles/1', { name: ' Edited role ', color: '#6c757d', priority: 900, description: ' desc ' }));
+    ({ dialog } = openRole(true));
+    const editChecked = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')].filter(input => input.checked);
+    expect(editChecked).toHaveLength(1); expect(editChecked[0].readOnly).toBe(true);
+    fillRole(dialog, ' Edited role '); fireEvent.click(within(dialog).getByRole('button', { name: tr('common.update') }));
+    await waitFor(() => expect(mock.patch).toHaveBeenCalledExactlyOnceWith('/roles/1', { name: ' Edited role ', color: editChecked[0].value, priority: 900, description: ' desc ' }));
+  });
+
+  it('keeps an existing palette color and forwards a changed palette selection exactly', async () => {
+    mock.patch.mockResolvedValue({}); await renderRoles();
+    let { dialog } = openRole();
+    const palette = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')];
+    expect(palette.length).toBeGreaterThan(1);
+    const existingColor = palette[0].value; const changedColor = palette[1].value;
+    fireEvent.click(within(dialog).getByRole('button', { name: tr('common.cancel') }));
+    cleanup(); roleColor = existingColor; await renderRoles();
+
+    ({ dialog } = openRole(true));
+    let checked = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')].filter(input => input.checked);
+    expect(checked).toHaveLength(1); expect(checked[0].value).toBe(existingColor); expect(checked[0].readOnly).toBe(false);
+    fireEvent.click(within(dialog).getByRole('button', { name: tr('common.update') }));
+    await waitFor(() => expect(mock.patch).toHaveBeenNthCalledWith(1, '/roles/1', { name: role.name, color: existingColor, priority: role.priority, description: null }));
+
+    ({ dialog } = openRole(true));
+    const changed = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')].find(input => input.value === changedColor)!;
+    fireEvent.click(changed); checked = [...dialog.querySelectorAll<HTMLInputElement>('input[name="role-color"]')].filter(input => input.checked);
+    expect(checked).toHaveLength(1); expect(checked[0]).toBe(changed);
+    fireEvent.click(within(dialog).getByRole('button', { name: tr('common.update') }));
+    await waitFor(() => expect(mock.patch).toHaveBeenNthCalledWith(2, '/roles/1', { name: role.name, color: changedColor, priority: role.priority, description: null }));
   });
 
   it.each(['create', 'edit'] as const)('covers role %s failure/retry and pending duplicate cancel then resolve/reject', async mode => {

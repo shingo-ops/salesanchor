@@ -1,0 +1,16 @@
+本カードの許可・禁止は、過去便の禁止条項をすべて上書きする
+CARD-AR-ROLE-COLOR-CONTRACT-03
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。
+場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch
+目的: CIで検出された試験内の色定義複製を除き、実UIと送信の契約を維持する。
+根拠: ar-implementation.md「正式CIによる試験色データの是正設計」。
+担当: sol_button_inventory (Sol)。他担当が同居しているため他者変更の取消禁止。
+所有: frontend/src/components/RoleKnowledgeButtonMigration.test.tsx のみ。
+許可: 上記1ファイルの試験補強、/tmp/ar-role-color-validation/への検証ログ出力。
+禁止: 製品/CI/ガード/許可リスト/色定義の別ファイル作成・移設、文字分割や符号化での隠蔽、skip/期待削除、commit/push/PR/GO/本番、他試験編集。
+受入: 新規hex0。create先頭単一checkedとexactPOST、null色legacy/readOnlyとexactPATCH、非null既存色保持と色変更のexact転送を維持・補強。
+色値不変はrootの14製品逆変換監査と組合せて検証。初期色固定をDOM単体で保証したと称さない。
+検証: 当該試験、strictESLint、diff-check。rootがコミット後に正式ラチェットとCIを確認。
+停止: 製品/色定義変更が必要、実物契約不明、検証失敗を隠さない。新たなサブエージェント禁止。
+受領確認: 担当・所有・禁止を確認し着手前に報告。
+END OF CARD
