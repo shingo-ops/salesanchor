@@ -34,8 +34,49 @@ const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
 const TARGET_REPO = 'shingo-ops/salesanchor';
 const TARGET_GH_REPO = 'github.com/shingo-ops/salesanchor';
 
-// ─── GO権限（PO単独）────────────────────────────────────────────────────────
-const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
+// ─── GO権限（PO単独。ADR-1003 により例外を除き Claude Opus 設計担当へ常時委譲）──
+const PO_GO_ISSUERS = ['shingo-ops', 'Shingo'];
+const DELEGATED_GO_ISSUER = 'POの委任に基づくClaude Opus発行';
+const AUTHORIZED_GO_ISSUERS = [...PO_GO_ISSUERS, DELEGATED_GO_ISSUER];
+
+// ─── 委譲の例外パス（ADR-1003・PO本人のGOが必須） ────────────────────────────
+// DANGEROUS_PATTERNS と同じ regex 方式で判定する。
+const PO_ONLY_EXCEPTION_PATTERNS = [
+  /^\.github\/workflows\/workflow-lint\.yml$/,
+];
+
+function hasPoOnlyExceptionPath(files) {
+  return files.some(f => PO_ONLY_EXCEPTION_PATTERNS.some(r => r.test(f)));
+}
+
+// ─── migration の DROP TABLE / DROP COLUMN 検出（ADR-1003 例外判定） ─────────
+function migrationsContainDropStatement(files) {
+  if (process.env.MOCK_MIGRATION_DROP_DETECTED !== undefined) {
+    return process.env.MOCK_MIGRATION_DROP_DETECTED === 'true';
+  }
+
+  const migrationFiles = files.filter(f => /^migrations\//.test(f));
+  if (migrationFiles.length === 0) return false;
+
+  const base = process.env.BASE_SHA;
+  const head = process.env.HEAD_SHA;
+  if (!base || !head) return false;
+
+  try {
+    const diff = execSync(
+      `git diff "${base}...${head}" -- ${migrationFiles.map(f => `"${f}"`).join(' ')}`,
+      { encoding: 'utf8' }
+    );
+    const addedLines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+    return addedLines.some(l => /DROP\s+(TABLE|COLUMN)/i.test(l));
+  } catch {
+    return false;
+  }
+}
+
+function requiresPoOnlyGo(files) {
+  return hasPoOnlyExceptionPath(files) || migrationsContainDropStatement(files);
+}
 
 // ─── 維持の仕組み欄の猶予閾値（GRACE_THRESHOLD_PR と同値） ───────────────────
 const MAINTENANCE_GRACE_PR = 2600;
@@ -294,7 +335,7 @@ function parseGORecord(prBody) {
  * バックアップ確認: 「あり」「なし」「該当なし」いずれも可（DB非接触の危険変更は「該当なし」でよい）
  * GOの正式書式: 「GO #<PR番号>」（番号必須。番号のない曖昧な肯定はGOとみなさない）
  */
-function validateGORecord(goRecord, prNumber) {
+function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
   if (!goRecord) {
     return [
       '❌ PR本文に「### GO記録」セクションがありません',
@@ -308,7 +349,10 @@ function validateGORecord(goRecord, prNumber) {
 
   if (!goRecord.issuer || !AUTHORIZED_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
     errors.push(`❌ GO発行者が未記入または権限外です（「${goRecord.issuer || '未記入'}」）`);
-    errors.push('   → GO権限はPO（Shingo / shingo-ops）のみです（Hikky-devによるバイパスは廃止）');
+    errors.push('   → GO権限はPO（Shingo / shingo-ops）またはADR-1003の委譲名義のみです');
+  } else if (requiresPoOnly && !PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
+    errors.push(`❌ この変更はADR-1003の例外対象のためPO本人のGOが必要です（委譲名義「${goRecord.issuer}」は使用不可）`);
+    errors.push('   → DROP TABLE/COLUMN を含む migration、または .github/workflows/workflow-lint.yml の変更は常にPO本人（Shingo / shingo-ops）のGOが必要です');
   }
 
   if (!goRecord.date || goRecord.date.trim().length < 5) {
@@ -839,10 +883,12 @@ function main() {
   }
   // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
 
+  const requiresPoOnly = requiresPoOnlyGo(changedFiles);
+
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
     const goRecord = parseGORecord(prBody);
-    const goErrors = validateGORecord(goRecord, prNumber);
+    const goErrors = validateGORecord(goRecord, prNumber, { requiresPoOnly });
 
     if (goErrors.length > 0) {
       printFailure(goErrors);
@@ -865,7 +911,7 @@ function main() {
   // ユーザー影響のある変更・外部API変更は、develop へ入る前に Shingo GO が必須
   if (hasUserImpacting || hasExternalApiImpact) {
     const goRecord = parseGORecord(prBody);
-    const goErrors = validateGORecord(goRecord, prNumber);
+    const goErrors = validateGORecord(goRecord, prNumber, { requiresPoOnly });
 
     if (goErrors.length > 0) {
       printFailure([
@@ -879,6 +925,18 @@ function main() {
       ? '✅ 外部API変更：GO記録確認済み — pass'
       : '✅ ユーザー影響変更：GO記録確認済み — pass';
     console.log(label);
+  } else if (requiresPoOnly) {
+    // hasDangerous / hasUserImpacting のどちらにも該当しないが、
+    // ADR-1003 の例外対象パス（workflow-lint.yml 等）に該当する場合はここで GO を要求する
+    const goRecord = parseGORecord(prBody);
+    const goErrors = validateGORecord(goRecord, prNumber, { requiresPoOnly });
+
+    if (goErrors.length > 0) {
+      printFailure(goErrors);
+    }
+
+    console.log('✅ ADR-1003例外対象（PO本人のGO必須）：GO記録確認済み — pass');
+    process.exit(0);
   }
 
   // 実コード変更の処理
@@ -907,6 +965,9 @@ module.exports = {
   validateFileCitations,
   validateDesignDoc,
   validateMaintenanceSection,
+  hasPoOnlyExceptionPath,
+  migrationsContainDropStatement,
+  requiresPoOnlyGo,
 };
 
 // CLI として直接実行された場合のみ main() を呼ぶ
