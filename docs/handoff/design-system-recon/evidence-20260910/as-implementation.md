@@ -49,3 +49,15 @@ PO指示により画面/実ログイン/本番フォーム操作/PO目視を省�
 
 
 2026-09-28 正式提出: 255be0f550e7a67b1f2ebd9673ac437ad7f41edeをcommit/push、公式create-safeでPR #3834（https://github.com/shingo-ops/salesanchor/pull/3834）を提出し.pr-number/ブランチ照合済み。最新main1675bfa02と整合、未保存0を直接確認。PRのprocess-artifacts gateは今回番号付きGOの未受領で停止（run36404560681/job108870059341原ログ確認）、技術検査は確認継続。CLAUDE.md/ADR-136と公式マージ経路が番号付きPO原文を要求するため、包括的な続行許可から「GO #3834」を創作しない。新規GO受領後は対象HEAD・最新CI・本番バックアップを再確認して公式merge/deploy経路へ進む。現時点で本便のマージ/本番反映は未実施。
+
+
+## GO受領・マージ・本番反映完了（2026-09-28）
+
+- GO発行者: Shingo（shingo-ops、PO本人）。原文: **GO #3834**。記録日時2026-09-28 20:30 JST（受領後の記録時刻）。代理発行ではない。
+- 承認対象HEAD17fa78527ba0ab81eb69cadef9d6dc2d4e9a6a03不変、最新main1675bfa02との差分・未保存0確認。GO記録後の全checks39成功/8対象外、必須13成功を公式ゲートが2回確認。
+- 事前backup salesanchor_db_20260928_181059.sql.gz、227316980 bytes。GO受領後SSH stat/gzip -t終了0。復元試験は未実施。
+- 公式merge-safeで11:32:45Zにmerge b3cf1fdf32bb57394239f973364273ed6f560fad。原ログas-merge.txt。公式cleanupで元作業台は削除済み。
+- Deploy36416280694/job108908090014 **success**。各step成功/skipの区別はas-deploy-result.json。配備前backup salesanchor_db_20260928_203319.sql.gz（219M）の成功を11:34:05Z原ログで確認。
+- root直接検証 2026-09-28T11:36:40.862290+00:00: 本番HEAD一致、App/asset/API HTTP200、DB/Redis/Celery connected、公開index/JSとfrontendコンテナのSHA256一致、pass=true。公開assetは/assets/index-BIU3BYCw.js。根拠as-production-verification.json、再検証器as-verify-production.py。
+
+本便の34件/25製品は本番反映完了。共通265/旧232。DB/API/配線/金型正本の変更0。画面/実ログイン/本番フォーム送信/PO目視は指示により省略・未検証。この稼働確認を本番フォーム操作の成功へ読み替えない。次は残旧232、表/報酬3/カレンダー色等の別設計。結果文書の保存便はrelease/frontend-action-button-result。

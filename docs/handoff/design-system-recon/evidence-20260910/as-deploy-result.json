@@ -1,0 +1,116 @@
+{
+  "run": 36416280694,
+  "job": 108908090014,
+  "head": "b3cf1fdf32bb57394239f973364273ed6f560fad",
+  "conclusion": "success",
+  "steps": [
+    {
+      "name": "Set up job",
+      "conclusion": "success"
+    },
+    {
+      "name": "Checkout",
+      "conclusion": "success"
+    },
+    {
+      "name": "Detect backend / migration changes",
+      "conclusion": "success"
+    },
+    {
+      "name": "Setup Node.js",
+      "conclusion": "success"
+    },
+    {
+      "name": "Build LP",
+      "conclusion": "success"
+    },
+    {
+      "name": "Setup SSH agent",
+      "conclusion": "success"
+    },
+    {
+      "name": "Add VPS to known_hosts",
+      "conclusion": "success"
+    },
+    {
+      "name": "Rsync LP build to VPS",
+      "conclusion": "success"
+    },
+    {
+      "name": "Generate progress.json from SA-OVERVIEW",
+      "conclusion": "success"
+    },
+    {
+      "name": "Setup design-site htpasswd (idempotent)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Rsync design-site to VPS",
+      "conclusion": "success"
+    },
+    {
+      "name": "Pre-deploy DB backup",
+      "conclusion": "success"
+    },
+    {
+      "name": "Deploy to VPS (code + env + docker compose)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Recreate nginx (apply config/volume changes)",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Bootstrap salesanchor_app role (idempotent)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Run database migrations",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Post-deploy smoke tests (SA-19)",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "FedEx Rates *** smoke (ADR-124 D2)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Finalize (health check + cleanup)",
+      "conclusion": "success"
+    },
+    {
+      "name": "Verify deployment",
+      "conclusion": "success"
+    },
+    {
+      "name": "Stamp main deploy date in active-work.md",
+      "conclusion": "success"
+    },
+    {
+      "name": "Emergency block /design/ on smoke FAIL (ADR-134 D)",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Deployment Failure Notification",
+      "conclusion": "skipped"
+    },
+    {
+      "name": "Post Setup SSH agent",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Setup Node.js",
+      "conclusion": "success"
+    },
+    {
+      "name": "Post Checkout",
+      "conclusion": "success"
+    },
+    {
+      "name": "Complete job",
+      "conclusion": "success"
+    }
+  ]
+}
