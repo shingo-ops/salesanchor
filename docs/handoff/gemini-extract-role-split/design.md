@@ -68,7 +68,7 @@
 
 | PR | 内容 | 触るファイル（予定） | 危険 |
 |---|---|---|---|
-| A | 判定の関数（照合・候補・推測チェック・発送日の呼び出し）＋単体テスト。DB・配線なし | 新規 `backend/app/services/extraction_judgement_svc.py`、新規 `backend/tests/test_extraction_judgement_svc.py` | 低 |
+| A | 判定の関数（照合・候補・推測チェック・発送日の呼び出し）＋単体テスト。DB・配線なし | 新規 backend/app/services/extraction_judgement_svc.py、新規 backend/tests/test_extraction_judgement_svc.py | 低 |
 | B | migration：`extraction_shadow_results` の新設、`suppliers.extraction_ship_format` の追加、supplier_prompts→extraction_notes のデータ移行 | migrations/2026xxxx_*.sql、`.github/workflows/deploy.yml`（CI の必須チェックに従う） | **高：GO #PR番号が必要** |
 | C | v7 の指示とパーサ、試運転の実行部分（初期値は無効） | `backend/app/services/gemini_extraction_svc.py:443-453`、`backend/app/services/tcg_work_reference.py:13-14`、`backend/app/tasks/tcg_extraction.py`、`extraction_prompt_config`（v7 の行は PR 内の migration で入れる→危険扱い） | **高** |
 | D | 画面：試運転の確認待ち一覧（既存 NeedsReviewListPage に金型 `DataTable` でタブを追加）、ワード登録（除外ワード1件追加 API を新設）、影響プレビュー、詰まりの集計、仕入元ルール画面に発送日欄、supplier_prompts 画面の撤去 | `frontend/src/pages/super-admin/NeedsReviewListPage.tsx`、`backend/app/routers/tcg_product_master.py`、ja/en.json 他 | 中 |
@@ -86,7 +86,7 @@
 
 ## 9-2. 維持の仕組み
 
-- 判定の関数は `backend/tests/test_extraction_judgement_svc.py` の単体テストで守る（CI の必須チェック `pytest (SQLite + PostgreSQL RLS)`）。
+- 判定の関数は backend/tests/test_extraction_judgement_svc.py の単体テストで守る（CI の必須チェック `pytest (SQLite + PostgreSQL RLS)`）。
 - 試運転の結果と確認待ちの件数は、PR-D の集計画面で週ごとに PO が見る。
 - 仕入元ルール・検索ワード・除外ワードは SSOT の表だけに置き、ほかに置き場所を作らない（§3）。
 - 守り手: CI 必須チェック pytest (SQLite + PostgreSQL RLS) と PO の週次確認（design.md §9-2）
@@ -139,7 +139,7 @@
 
 ## PR-B1：試運転用の表と発送日の欄（migration のみ・危険 PR・GO #番号が必要）
 
-- 新規 migration を1本作る：`migrations/20260928_1xxxxx_create_extraction_shadow_tables.sql`。登録先は `scripts/run_all_migrations.sh` の末尾。
+- 新規 migration を1本作る：migrations/20260928_1xxxxx_create_extraction_shadow_tables.sql。登録先は `scripts/run_all_migrations.sh` の末尾。
   1. `ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_ship_format TEXT;`
   2. `public.extraction_shadow_runs`（Gemini の呼び出し1回につき1行。A/B 専用）
      - `id uuid PK`（既定値の書き方は既存 migration に合わせる）
@@ -193,7 +193,7 @@ RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜
   - RAW_STATE か RAW_SHIP が空の行は parse_errors に入れる。
   - 行範囲は既存の v6 と同じ規則で検証する。
 - 版の定数：`backend/app/services/tcg_work_reference.py` に `RAW_COPY_PROMPT_VERSION = "raw-copy-v7-p1"` を足す。既存の frozenset には入れない（v6 の分岐に影響させないため）。
-- 新しいサービス `backend/app/services/extraction_shadow_svc.py` に `run_shadow_for_job(session, extraction_job_id)` を作る。
+- 新しいサービス backend/app/services/extraction_shadow_svc.py に `run_shadow_for_job(session, extraction_job_id)` を作る。
   1. ジョブの原文・仕入元の情報・knowledge_links を、本番と同じクエリで読む（`backend/app/tasks/tcg_extraction.py:229-304` を関数として切り出すか、同じ SQL を使う。**複製が必要になる場合は止めて報告する**）。
   2. v7 を呼んで、`extraction_shadow_runs` に記録する。
   3. ブロックごとに、次の順で判定する。
@@ -212,7 +212,7 @@ RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜
 
 ## PR-D：試運転の確認画面・ワード登録・影響プレビュー・詰まり集計・発送日の欄（frontend＋routers）
 
-- API（新しいルーター `backend/app/routers/tcg_shadow_review.py`、`require_super_admin`）
+- API（新しいルーター backend/app/routers/tcg_shadow_review.py、`require_super_admin`）
   - `GET /tcg/shadow-results?needs_review=&supplier_id=&offset=&limit=`：原文ブロック・止まった項目・候補（商品名付き）・理由を返す。
   - `GET /tcg/shadow-results/bottlenecks?days=7|30`：仕入元別・項目別の確認待ち件数と、自動で確定した割合。
   - `POST /tcg/shadow-results/keyword-preview`（入力：`{product_id, kind: search|exclude, keyword}`）

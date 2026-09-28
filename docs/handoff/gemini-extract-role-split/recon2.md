@@ -6,7 +6,7 @@
 ## 1. Migration 規約
 
 - 最新5件: `migrations/20260926_080000_create_extraction_prompt_config.sql`〜`migrations/20260927_130000_add_extraction_token_cost_columns.sql`（`ls migrations/ | sort | tail`で確認）
-- ファイル名は `YYYYMMDD_HHMMSS_description.sql` 固定（`.github/workflows/migration-guard.yml:94-113` が正規表現 `^[0-9]{8}_[0-9]{6}_.*\.sql$` で強制。旧 `NNN_` 連番は失敗させる）
+- ファイル名は YYYYMMDD_HHMMSS_description.sql 固定（`.github/workflows/migration-guard.yml:94-113` が正規表現 `^[0-9]{8}_[0-9]{6}_.*\.sql$` で強制。旧 `NNN_` 連番は失敗させる）
 - 冪等パターン: `CREATE TABLE IF NOT EXISTS` / `ADD COLUMN IF NOT EXISTS`。テーブル存在チェック付きの `DO $$ ... IF EXISTS (SELECT 1 FROM pg_tables ...) ... $$` パターンも使われる（`migrations/20260926_010000_add_raw_product_code.sql` 全文）
 - 新設テーブルは `public` スキーマ（`extraction_prompt_config` も `public`、tenant_idなし）。RLS は今回の対象テーブル（新設テーブル・suppliers列追加）双方とも tenant_id を持たない設計のため付与例なし（`suppliers` は既存 `tenant_id IS NULL` フィルタで運用者管理を表現）
 - `scripts/run_all_migrations.sh` 末尾に `run_sql migrations/<file>` を追記するのが「新スタイル」。`.github/workflows/deploy.yml` への `< migrations/<file>` 追記でも可（旧スタイル）。**どちらか一方で migration-guard チェック2 を通過**（`.github/workflows/migration-guard.yml:113-125`）
@@ -100,7 +100,7 @@ DBテーブル本体（削除対象・PR-B）: `public.supplier_prompts`（DROP 
 
 ## 10. PG テスト fixture パターン
 
-- 命名規約: 実PostgreSQL必須のテストは `test_*_pg.py`（例: `backend/tests/test_tcg_extraction_record_integrity_pg.py`, `backend/tests/test_tcg_product_import_atomicity_pg.py` 他、grep該当10件以上）
+- 命名規約: 実PostgreSQL必須のテストは test_*_pg.py（例: `backend/tests/test_tcg_extraction_record_integrity_pg.py`, `backend/tests/test_tcg_product_import_atomicity_pg.py` 他、grep該当10件以上）
 - 共有conftestの`engine`fixtureは無し。**各テストファイルが自前で定義**（`backend/tests/test_super_admin_suppliers.py:19-33`の例）:
   ```python
   TEST_PG_URL = os.getenv("TEST_PG_URL")
@@ -113,7 +113,7 @@ DBテーブル本体（削除対象・PR-B）: `public.supplier_prompts`（DROP 
       yield eng
       await eng.dispose()
   ```
-- `_pg.py` サフィックスのファイル名自体が命名規約（grep該当が全て`_pg.py`）。非PGテストと同居する `backend/tests/test_super_admin_suppliers.py` のように `_pg.py` サフィックスなしでも `TEST_PG_URL` skipif パターンを使う例もある（両方存在、統一名称ではなく「実DB必須テストは`TEST_PG_URL`スキップガード必須」が本質規約）
+- _pg.py サフィックスのファイル名自体が命名規約（grep該当が全て_pg.py）。非PGテストと同居する `backend/tests/test_super_admin_suppliers.py` のように _pg.py サフィックスなしでも `TEST_PG_URL` skipif パターンを使う例もある（両方存在、統一名称ではなく「実DB必須テストは`TEST_PG_URL`スキップガード必須」が本質規約）
 
 ## 未確認・要追加調査
 
