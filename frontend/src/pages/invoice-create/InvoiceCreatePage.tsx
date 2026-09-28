@@ -401,7 +401,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</Button>
           </div>
 
           <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
