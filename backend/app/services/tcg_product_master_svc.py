@@ -537,6 +537,76 @@ async def add_search_keyword(
 
 
 # ---------------------------------------------------------------------------
+# PR-D: 除外ワード追加（WRITE）
+# ---------------------------------------------------------------------------
+
+
+async def add_exclude_keyword(
+    db: AsyncSession,
+    *,
+    product_id: int,
+    new_keyword: str,
+) -> dict[str, Any]:
+    """
+    add_search_keyword を写した作り（design.md PR-D）。
+
+    既存キーワードは削除しない。重複は KEYWORD_ALREADY_EXISTS で返す。
+    """
+    kw = new_keyword.strip()
+    if not kw:
+        raise ValueError("EXCLUDE_KEYWORD_EMPTY")
+
+    # product の存在確認
+    pid_row = await db.execute(
+        text(
+            """
+            SELECT id
+            FROM public.products
+            WHERE id = :pid AND is_active = TRUE
+            FOR UPDATE
+            """
+        ),
+        {"pid": product_id},
+    )
+    pr = pid_row.fetchone()
+    if pr is None:
+        raise ValueError("EXCLUDE_KEYWORD_PRODUCT_NOT_FOUND")
+    product_uuid = pr.id
+
+    # 既存キーワード確認
+    existing = await db.execute(
+        text(
+            """
+            SELECT keyword
+            FROM public.product_exclude_keywords
+            WHERE product_id = :pid
+            ORDER BY position
+            """
+        ),
+        {"pid": product_uuid},
+    )
+    existing_kws = [r.keyword for r in existing.fetchall()]
+    if kw in existing_kws:
+        return {"ok": False, "code": "KEYWORD_ALREADY_EXISTS"}
+
+    # 追記（position = MAX + 1）
+    next_pos = len(existing_kws) + 1
+    await db.execute(
+        text(
+            """
+            INSERT INTO public.product_exclude_keywords
+                (product_id, keyword, position)
+            VALUES (:pid, :kw, :pos)
+            """
+        ),
+        {"pid": product_uuid, "kw": kw, "pos": next_pos},
+    )
+    await db.commit()
+
+    return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
 # R-1: 単一ジョブ再解析（WRITE — analysis_results を UPSERT）
 # ---------------------------------------------------------------------------
 

@@ -751,7 +751,7 @@ async def get_supplier_parse_stats(
 _EXTRACTION_RULE_COLS = (
     "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
     "extraction_default_unit, extraction_notes, extraction_state_format, "
-    "extraction_example_text"
+    "extraction_example_text, extraction_ship_format"
 )
 
 _EXTRACTION_RULE_UPDATABLE = {
@@ -762,6 +762,7 @@ _EXTRACTION_RULE_UPDATABLE = {
     "extraction_notes",
     "extraction_state_format",
     "extraction_example_text",
+    "extraction_ship_format",
 }
 
 
@@ -868,6 +869,7 @@ async def get_supplier_extraction_rules(
         extraction_notes=row["extraction_notes"],
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
+        extraction_ship_format=row["extraction_ship_format"],
         latest_raw_text=raw_row["raw_text"] if raw_row else None,
     )
 
@@ -918,6 +920,7 @@ async def update_supplier_extraction_rules(
         extraction_notes=row["extraction_notes"],
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
+        extraction_ship_format=row["extraction_ship_format"],
         latest_raw_text=None,  # PATCH 応答では原文は含まない
     )
 

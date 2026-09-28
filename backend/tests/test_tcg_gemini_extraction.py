@@ -786,6 +786,56 @@ class TestBuildSupplierContextNoteV6Unaffected:
         assert "発送日フォーマット" not in note
         assert "extraction_ship_format" not in note
 
+    def test_ship_format_only_produces_same_empty_note_as_no_context(self):
+        """仕入元が extraction_ship_format だけを設定している場合（他の6列は空）の
+        本番PR懸念（tcg_extraction.py の supplier_context が None から非None辞書へ変わる）を
+        固定する。_build_supplier_context_note 単体では None/{}/ship_format-only の
+        いずれも同じ空文字列を返す（PR-D #3844）。"""
+        from app.services.gemini_extraction_svc import _build_supplier_context_note
+
+        ship_only = {
+            "extraction_price_format": None,
+            "extraction_qty_format": None,
+            "extraction_order_pattern": None,
+            "extraction_default_unit": None,
+            "extraction_notes": None,
+            "extraction_state_format": None,
+            "extraction_example_text": None,
+            "extraction_ship_format": "発売N日前発送",
+        }
+        assert _build_supplier_context_note(ship_only) == ""
+        assert _build_supplier_context_note({}) == ""
+        assert _build_supplier_context_note(ship_only) == _build_supplier_context_note({})
+
+    def test_ship_format_only_supplier_context_produces_identical_v6_prompt(self, monkeypatch):
+        """call_gemini_extraction レベルでも、supplier_context が
+        {ship_format のみ設定} のときと None のときでプロンプト全文が一致することを確認する
+        （tcg_extraction.py の `if any(v for v in extraction_rules.values())` により
+        ship_format単独設定でも supplier_context が非None辞書になるが、v6出力は変わらない）。"""
+        from app.services import gemini_extraction_svc as svc
+
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _V3_HEADER
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+
+        svc.call_gemini_extraction("行A", supplier_context=None)
+        prompt_without_context = client.models.generate_content.call_args.kwargs["contents"]
+
+        ship_only = {
+            "extraction_price_format": None,
+            "extraction_qty_format": None,
+            "extraction_order_pattern": None,
+            "extraction_default_unit": None,
+            "extraction_notes": None,
+            "extraction_state_format": None,
+            "extraction_example_text": None,
+            "extraction_ship_format": "発売N日前発送",
+        }
+        svc.call_gemini_extraction("行A", supplier_context=ship_only)
+        prompt_with_ship_only = client.models.generate_content.call_args.kwargs["contents"]
+
+        assert prompt_without_context == prompt_with_ship_only
+
 
 # Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
 # A live run must report format errors / correct / unknown / wrong independently.
