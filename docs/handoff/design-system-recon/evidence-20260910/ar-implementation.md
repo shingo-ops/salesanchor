@@ -86,3 +86,7 @@ AR実装を1557eb821へ保存、origin/main fdf3b45a4をddd470746fe6001b3b83525b
 31-coverage-maxworkers1-final.log（Sol実行exit0、Astra原ログ直接確認）は40ファイル581試験成功/失敗0、171.87秒。statements20.23% (3618/17876)、branches16.53% (2122/12831)、functions17.88% (991/5542)、lines20.86% (3202/15346)。試験・製品・config変更なし、並行数1の実行。新たな除外/skip/期待緩和0。途中23のcoverage値と区別し、最終値はこちらを採用する。
 
 32最終機械監査pass=true、33diff-check成功、34試験hash保存。コミットhookも最終18製品/試験をstrict ESLint・絵文字・CSS var検査して成功。ローカル検収APPROVE確定。archiveを全実行終了後に再生成してmanifest全件SHA256一致。最終coverage生成物も/tmpへ保管し、製品commitへ混入しない。PR/正式CI/番号付きGO/merge/deployは次段階。
+
+## PR提出
+
+2026-09-28、33dbf6d7a9d36285a006539299e4fe7c8671ed90をpush後、正式gh-pr-create-safe.shの検査exit0でPR #3828を提出・登録。URL: https://github.com/shingo-ops/salesanchor/pull/3828 。AQ+AR計30ボタン、製品15ファイル/追加試験5ファイル。ローカル未保存変更0を確認。正式CIは提出後確認する。番号付きGO #3828は未受領であり、包括依頼を原文に代筆しない。マージ/本番反映未実施。再開は同PRの最新HEAD/CI/番号付きGOと正式merge-safeの検査から。
