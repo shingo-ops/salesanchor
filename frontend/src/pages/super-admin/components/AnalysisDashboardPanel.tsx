@@ -174,8 +174,11 @@ interface ExtractionBySupplierItem {
 
 interface RecentExtractionJob {
   id: string;
-  channel_name: string | null;
+  supplier_name: string | null;
   item_count: number;
+  resolved_count: number;
+  unresolved_count: number;
+  needs_review_count: number;
   status: string;
   created_at: string | null;
 }
@@ -1043,15 +1046,33 @@ function ExtractionTabContent({ data, trend, trendDays, t }: ExtractionTabConten
 
   const recentJobColumns: DataTableColumn<RecentExtractionJob>[] = [
     {
-      key: "channel_name",
-      header: t("analysisRules.dashboard.extractionJobChannel"),
-      renderCell: (row) => row.channel_name ?? "-",
+      key: "supplier_name",
+      header: t("analysisRules.dashboard.extractionJobSupplier"),
+      renderCell: (row) => row.supplier_name ?? "-",
     },
     {
       key: "item_count",
       header: t("analysisRules.dashboard.extractionJobItemCount"),
       width: "80px",
       renderCell: (row) => row.item_count.toLocaleString(),
+    },
+    {
+      key: "resolved_count",
+      header: t("analysisRules.dashboard.extractionJobResolved"),
+      width: "80px",
+      renderCell: (row) => row.resolved_count.toLocaleString(),
+    },
+    {
+      key: "unresolved_count",
+      header: t("analysisRules.dashboard.extractionJobUnresolved"),
+      width: "80px",
+      renderCell: (row) => row.unresolved_count.toLocaleString(),
+    },
+    {
+      key: "needs_review_count",
+      header: t("analysisRules.dashboard.extractionJobNeedsReview"),
+      width: "80px",
+      renderCell: (row) => row.needs_review_count.toLocaleString(),
     },
     {
       key: "status",

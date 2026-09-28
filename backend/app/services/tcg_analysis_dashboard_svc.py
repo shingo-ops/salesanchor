@@ -192,16 +192,21 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
         await db.execute(
             text(
                 f"SELECT"
-                f"  ej.id::text AS id,"
+                f"  ej.id::text,"
                 f"  ej.status,"
                 f"  ej.created_at,"
+                f"  s.name AS supplier_name,"
                 f"  COUNT(ei.id)::int AS item_count,"
-                f"  sc.channel AS channel_name"
+                f"  COUNT(ar.id) FILTER (WHERE ar.pid_resolved = true)::int AS resolved_count,"
+                f"  COUNT(ar.id) FILTER (WHERE ar.pid_resolved = false)::int AS unresolved_count,"
+                f"  COUNT(ar.id) FILTER (WHERE ar.needs_review = true)::int AS needs_review_count"
                 f" FROM {TCG_SCHEMA}.extraction_jobs ej"
                 f" LEFT JOIN {TCG_SCHEMA}.extraction_items ei ON ei.extraction_job_id = ej.id"
+                f" LEFT JOIN {TCG_SCHEMA}.analysis_results ar ON ar.extraction_item_id = ei.id"
                 f" LEFT JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
                 f" LEFT JOIN {TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
-                f" GROUP BY ej.id, ej.status, ej.created_at, sc.channel"
+                f" LEFT JOIN {TCG_SCHEMA}.suppliers s ON s.id = sc.supplier_id"
+                f" GROUP BY ej.id, ej.status, ej.created_at, s.name"
                 f" ORDER BY ej.created_at DESC"
                 f" LIMIT 10"
             )
@@ -211,8 +216,11 @@ async def get_pipeline_summary(db: AsyncSession) -> dict:
     recent_extraction_jobs = [
         {
             "id": str(row.id),
-            "channel_name": row.channel_name,
-            "item_count": int(row.item_count),
+            "supplier_name": row.supplier_name,
+            "item_count": row.item_count,
+            "resolved_count": row.resolved_count,
+            "unresolved_count": row.unresolved_count,
+            "needs_review_count": row.needs_review_count,
             "status": row.status,
             "created_at": row.created_at.isoformat() if row.created_at else None,
         }
