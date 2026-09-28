@@ -4362,7 +4362,17 @@
       "costDailyCost": "コスト",
       "costNoData": "コストデータがありません",
       "costBudgetOf": "/ {{budget}} USD",
-      "costTokenUnit": "K"
+      "costTokenUnit": "K",
+      "extractionHealthOk": "抽出は正常に動作しています",
+      "extractionHealthIssue": "抽出に注意が必要です",
+      "extractionHealthTotalJobs": "抽出ジョブ総数",
+      "extractionHealthSuccessRate": "抽出成功率",
+      "extractionHealthErrorCount": "エラー件数",
+      "extractionTrendDay": "日付",
+      "extractionTrendTotal": "総数",
+      "extractionTrendDone": "成功",
+      "extractionTrendError": "エラー",
+      "extractionTotalTitle": "抽出総数"
     },
     "errors": {
       "conflict": "他のユーザーが変更を行いました。ページを再読み込みしてください。",
