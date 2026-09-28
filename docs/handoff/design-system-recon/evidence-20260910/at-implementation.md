@@ -28,3 +28,12 @@ Sol担当実行原ログ: Commerce11試験、Account/Company/Admin14試験、str
 初回buildの5型エラーは実input配列の型指定2箇所で解消し、root再build成功。Sol2→Sol1交差レビューAPPROVE。Sol1→Sol2の予備指摘（再試行payload/成功callback/再GETの不足）を試験だけ補完、14試験とstrict再成功。rootの追加25件再実行と逆変換、最新main統合後の最終品質を確認する。
 
 root追加25件再実行成功、最終逆変換監査pass。Sol両方向交差レビューは最終hashでAPPROVE。最新main統合と全体最終品質のため保存へ進む。
+
+
+## 最新main統合後の最終検収
+
+origin/main 638cc6f91025c623a9ab47032b9466cdb03e3cffを正規merge。AT対象製品差分0、他便PR3831がLINE案内へButton1件/翻訳キーを追加している。今回の移管11件と別計数し、統合後は共通277/旧221。対象9逆変換・対象外221・共有18（翻訳2は統合mainのhash）一致、構文0。原監査はat-final-audit-result.json、統合監査はat-main-integration.json/at-integrated-audit.cjs/at-integrated-audit-result.jsonに区別。現在の再現コマンドはnode docs/handoff/design-system-recon/evidence-20260910/at-integrated-audit.cjs。
+
+root最終: 47files634試験成功（coverage、maxWorkers=1、時間上限変更なし）。統合初回は631成功/3タイムアウト(5000ms)、失敗の既存RoleKnowledge試験と関連製品の差分0を直接確認。同時実行数だけ1へ変更した全体再実行で合格。初回失敗原ログを保持し性能問題の恒久解消とは主張しない。check:all error0/warning140、build/Storybook成功、許可12製品・試験ファイル以外の製品差分0、backend/API/DB/scripts/CI変更0。レビュー後追加25試験もroot直接成功。
+
+Astra実装検収APPROVE。Sol両方向交差レビューAPPROVE（記録はat-sol1-review.md/at-sol2-review.md）。初回build型エラー、fixture4失敗、レビューで追加した期待、統合タイムアウトを隠さず保存。PO指示で本番画面/フォーム/目視は省略・未検証。設計・実装・ローカル検収・文書保存済み、PR最新CIと本人番号付きGO/マージ/配備は次段階。

@@ -53,4 +53,4 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 
 ## 2026-09-28 最新の実施状況
 
-上記9月10日の「製品未着手」は当時の履歴。現在はAS製品PR #3834と結果文書PR #3835まで本番反映済み。AS時点の共通Button265/旧232、606自動試験成功。証跡は[migration.md](migration.md)と[AS検収](../../handoff/design-system-recon/evidence-20260910/as-implementation.md)。ATは[design.md §AT](design.md#at-既存フォーム11ボタンの共通金型移管2026-09-28)に基づく11件の限定実装中。画面・本番フォーム操作・PO目視はPO指示で省略・未検証。全体の残件と最後のCI補強は未完了。
+上記9月10日の「製品未着手」は当時の履歴。現在はAS製品PR #3834と結果文書PR #3835まで本番反映済み。AS時点の共通Button265/旧232、606自動試験成功。証跡は[migration.md](migration.md)と[AS検収](../../handoff/design-system-recon/evidence-20260910/as-implementation.md)。ATは[design.md §AT](design.md#at-既存フォーム11ボタンの共通金型移管2026-09-28)に基づく11件を実装・ローカル検収済み（最新main統合後634試験成功）。画面・本番フォーム操作・PO目視はPO指示で省略・未検証。全体の残件と最後のCI補強は未完了。

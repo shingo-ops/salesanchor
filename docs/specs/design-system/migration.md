@@ -316,3 +316,6 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 ### 2026-09-28 AT 実装開始
 
 固定a1cd9eaで共通265/旧232を再計測。11件/9製品のフォームボタンを既存md金型へ移管する設計を自己審査APPROVE、正式カード検査後Sol2担当へ分離委任。期待共通276/旧221。詳細design.md §AT、証跡at-button-audit.json/at-commerce-test-plan.md/at-admin-test-plan.md。API/DB/配線/共有部品変更0、実装・検証・PR完了はまだ宣言しない。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。

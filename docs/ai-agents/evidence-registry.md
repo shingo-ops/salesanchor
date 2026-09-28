@@ -3299,3 +3299,6 @@ EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 提出追補: 正規wrapperでPR3831作成
 ### EV-20260928-AT-DESIGN
 
 固定a1cd9ea、直接AST共通265/旧232/対象11/構文0。9file原文hash・対象外221・共有18、API/サーバー副作用を追跡。色未確定60、Invoice外部FX/権限変更を除外。QuoteCreate先約はPR3084 MERGED/実ファイル非対象で競合なし。docs/specs/design-system/design.md §ATの自己審査APPROVE、正式card-lint2件exit0、Sol分離実装へ。根拠docs/handoff/design-system-recon/evidence-20260910/at-button-audit.json、at-admin-test-plan.md、at-commerce-test-plan.md。製品検証/PR/番号付きGO/本番反映は未実施。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。

@@ -146,6 +146,21 @@
       "sha256": "bfe249b7a40d1bafd7107d11d29f060324a6661f96b8423170692425862209c2"
     },
     {
+      "path": "root/at-premerge-backup.json",
+      "size": 168,
+      "sha256": "dc16908c3dc2c9803b0e4fc8b9f414491461d7162924bcdd416e61b97a34add4"
+    },
+    {
+      "path": "root/at-integrated-coverage-serial.log",
+      "size": 30912,
+      "sha256": "52e37c3dd0bb41988daf3c0fa84e87c78ddeb8da864fe3dc5f39da774ad98823"
+    },
+    {
+      "path": "root/at-commit.log",
+      "size": 2866,
+      "sha256": "6e85cad946387ed6cb4215717ae2532f130bf75873fd62497c304e588d801403"
+    },
+    {
       "path": "root/at-final-targeted.log",
       "size": 543,
       "sha256": "1a24d9480de59d8e2719799f535ff29ef487ecfb67d125257db69b0cc6e54d87"
@@ -189,7 +204,37 @@
       "path": "root/at-final-audit-result.json",
       "size": 4834,
       "sha256": "75ec921ed1fbd82898106c805ba0036d2a6ee0624d674d7024b76b81a05588b7"
+    },
+    {
+      "path": "root/at-integrated-audit-result.json",
+      "size": 5392,
+      "sha256": "ad1c99d48fc467ecc03ef52cbb468d3e63100ca755375927887d0c657f511b6b"
+    },
+    {
+      "path": "root/at-integrated-coverage.log",
+      "size": 2358,
+      "sha256": "c54b8a3d88e83339eeb508d635567ce33042781cf080fcb0ed9be9632c226485"
+    },
+    {
+      "path": "root/at-integrated-build.log",
+      "size": 1223,
+      "sha256": "c3381bb22be345f79eaeb14d6eeb042accdabcd89958bd92b9e126ac524e359e"
+    },
+    {
+      "path": "root/at-integrated-check-all.log",
+      "size": 31352,
+      "sha256": "0ae43565189c211f1d88153702befabf1036da0bed0d9a4ef3ef9cf813dd55a8"
+    },
+    {
+      "path": "root/at-integrated-storybook.log",
+      "size": 10465,
+      "sha256": "14b53679b2bd5a1b1ffe6d025846b4471ffbc3a9158e898e88951f8ce0932b38"
+    },
+    {
+      "path": "root/at-main-merge.log",
+      "size": 4678,
+      "sha256": "c64df936b397506109c7cb75cdcfd6552a0d99d4a90f21bf263e8593738af697"
     }
   ],
-  "archiveSha256": "02ece68b7ec09df2cbea1323bdb9aa6f51edff471d6fc8fc6991f7287eb6191c"
+  "archiveSha256": "7462d34efbaa2bebc7080bbbc7d7e38a09be6a08af4b84664e49ce9cffed7282"
 }

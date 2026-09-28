@@ -1874,3 +1874,6 @@ Astra所有: 正式設計/監査/台帳/審査/検収。既存試験はread-only
 #### Architect自己審査（Planner作成後）
 
 APPROVE（限定設計合格）。Astra自身の自己審査であり独立した第二者レビューではない。直接ASTで共通265/旧232/対象11/構文エラー0、商品payload34キーを再確認。対象9と全原文/18共有hash、実サーバー副作用、所有分離、受入/既存CI/ADR整合を確認。Solのrawとcallback追跡の誤記（Buttonのtype既定値、商品33キー報告）を実物に基づき訂正。API/DB変更なしで検証可能、対象仕様の未解決なし。正式card-lint成功後に委任する。設計合格は実装/検証/番号付きGO/マージ/本番反映完了を意味しない。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
