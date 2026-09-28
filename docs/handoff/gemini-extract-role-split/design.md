@@ -116,3 +116,149 @@
 - **PR-A（判定の関数とテスト）：APPROVE。** 入力として使う関数が、原文を渡せる純粋な関数であることを確認した（`backend/app/services/tcg_product_guards.py`、`backend/app/services/inventory_parser.py:518`）。work_id が NULL の商品は0件（§10）。DB にも配線にも触れない。
 - **削除 PR（skip_condition id 21〜26）：APPROVE。** 対象の6件と、代わりに処理する解析ルール（conditions CN0007/CN0010、tcg_status_master ST0011〜13）が本番に実在することを確認した（§10）。migration による DELETE なので危険 PR 扱いとし、GO #PR番号 が必要。
 - **PR-B〜E：REVISE。** §11 の1と2が決まってから、実装カードを作る。
+
+# design 追補：PR-B1 / PR-C / PR-D / PR-CLEAN（2026-09-28、Opus）
+
+- 根拠となる調査：recon2.md（origin/main `4bad43a4dca6368ffa7370792a3c912e90bba52`）。以下 `backend/app/routers/super_admin_suppliers.py` などはすべてリポジトリ相対パスで引く。
+- Architect 審査：本文末尾（§Z）。
+
+## A/B 期間中の SSOT の扱い（重要な決定）
+
+- **block_delimiter（区切り記号）**
+  - 切り替え（PR-E）までは、v6 と v7 の両方が同じ `knowledge_rules` と `supplier_knowledge_links` を読む。
+  - A/B 期間中は区切り記号を仕入元の欄へ**移さない**。移すと置き場所が一時的に2つになり、SSOT に反するため。移すのは PR-E で行う。
+- **status_keyword（ステータス判定語）**
+  - v7 の Gemini には渡さない。判定にあたるので、システム側の `public.tcg_status_master` に任せる。
+- **発送日の書き方**
+  - `public.suppliers.extraction_ship_format` を新しく設ける（PR-B1）。
+  - 画面での編集は PR-D、v7 への注入は PR-C で行う。
+- **v7 の指示文**
+  - `public.extraction_prompt_config` に、新しいキー `raw_copy_extraction` として置く（SSOT は DB）。
+  - 最初の文面は PR-B1 の migration で `INSERT ... ON CONFLICT (prompt_key) DO NOTHING` として入れる。こうすれば再現でき、かつ管理画面での編集を上書きしない。
+  - その後の編集は、既存の管理 API（`backend/app/routers/super_admin_suppliers.py:1196-1224` の PUT /super-admin/extraction-prompts/{key}）で行う。
+
+## PR-B1：試運転用の表と発送日の欄（migration のみ・危険 PR・GO #番号が必要）
+
+- 新規 migration を1本作る：`migrations/20260928_1xxxxx_create_extraction_shadow_tables.sql`。登録先は `scripts/run_all_migrations.sh` の末尾。
+  1. `ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_ship_format TEXT;`
+  2. `public.extraction_shadow_runs`（Gemini の呼び出し1回につき1行。A/B 専用）
+     - `id uuid PK`（既定値の書き方は既存 migration に合わせる）
+     - `extraction_job_id uuid NOT NULL REFERENCES public.extraction_jobs(id) ON DELETE CASCADE`
+     - `prompt_key text NOT NULL`、`prompt_config_version int`、`engine_version text NOT NULL`、`requested_model text NOT NULL`
+     - `input_bytes bigint`、`response_text text`
+     - トークンと費用の列：`migrations/20260927_130000_add_extraction_token_cost_columns.sql` と同じ名前・同じ型にする
+     - `status text NOT NULL CHECK (status IN ('completed','failed'))`、`error_code text`、`error_detail text`
+     - `started_at timestamptz NOT NULL DEFAULT now()`、`finished_at timestamptz`
+     - `UNIQUE (extraction_job_id, engine_version)`
+  3. `public.extraction_shadow_results`（ブロック1つにつき1行）
+     - `id uuid PK`、`run_id uuid NOT NULL REFERENCES public.extraction_shadow_runs(id) ON DELETE CASCADE`、`block_index int NOT NULL`
+     - `line_start int`、`line_end int`、`heading_line_start int`、`heading_line_end int`
+     - Gemini が書き写した値（すべて text）：`raw_product_name`、`raw_price`、`raw_unit`、`raw_quantity`、`raw_state`、`raw_ship`、`raw_multi`
+     - システムの判定結果：`product_id int REFERENCES public.products(id)`、`work_id int`、`condition_id int`、`quantity_normalized numeric(14,2)`、`price_normalized numeric(14,2)`、`ship_offer_type text`、`ship_timing text`、`note_ja text`、`status varchar(50)`、`exclusion text`
+     - `match_status text NOT NULL CHECK (match_status IN ('matched','ambiguous','unmatched'))`、`needs_review boolean NOT NULL`
+     - `review_items jsonb NOT NULL DEFAULT '[]'`（`[{item, reason, candidates}]`）
+     - `evidence jsonb NOT NULL DEFAULT '{}'`、`verify_failures jsonb NOT NULL DEFAULT '[]'`
+     - `created_at timestamptz NOT NULL DEFAULT now()`
+     - `UNIQUE (run_id, block_index)`
+     - 索引：`(needs_review, created_at)`、`(run_id)`
+  4. `INSERT INTO public.extraction_prompt_config (prompt_key, prompt_text, is_active) VALUES ('raw_copy_extraction', <下の文面>, TRUE) ON CONFLICT (prompt_key) DO NOTHING;`
+     - 列名と必須の列は `migrations/20260926_080000_create_extraction_prompt_config.sql` を読んで合わせる。
+- `analysis_results` と配信のクエリには一切触れない。
+- テスト：使い捨ての postgres:16 で、関係する migration → 新しい migration を2回実行し、冪等であることを確かめる。
+
+### v7 指示文（raw_copy_extraction の最初の文面）
+
+```
+あなたは書き写し担当です。判断・推測・補完・言い換え・翻訳はしません。
+入力は LINE の投稿本文で、各行の先頭に行番号（例 L0001）が付いています。
+商品のまとまり（ブロック）ごとに1行ずつ、次の9列を「｜」で区切って出力してください。1行目は次のヘッダーをそのまま出力します。
+RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜RAW_MULTI｜RAW_SOURCE_LINE_SPAN｜RAW_HEADING_LINE_SPAN
+- 値は原文の文字をそのまま書き写す。
+- 原文に書かれていない値は none と書く。空欄にしない（特に RAW_STATE と RAW_SHIP）。
+- 1つのブロックに同じ種類の値が2つ以上あるときは、すべてを「／」でつないで書き、RAW_MULTI にその列名を書く（複数あれば「／」でつなぐ）。なければ none。
+- RAW_SOURCE_LINE_SPAN はブロックの行範囲（例 L0003-L0005）。RAW_HEADING_LINE_SPAN はそのブロックに掛かる見出し行の範囲。なければ none。
+- 作品・商品・状態・在庫・完売などの判定はしない。書かれている文字を書き写すだけ。
+- 後に続く「仕入元の書き方」は、この仕入元がどこに何を書くかの説明です。書き写す場所を見つける参考にだけ使ってください。
+```
+
+## PR-C：v7 の呼び出し・読み取りと試運転の実行（backend、初期値は無効）
+
+- `backend/app/services/gemini_extraction_svc.py`
+  - 新しい関数 `call_gemini_raw_copy(raw_text, supplier_context, knowledge_links)` を作る。
+  - DB の `raw_copy_extraction` だけを使う（is_active）。無いときは例外にして、試運転側が failed として記録する。本番の経路は巻き込まない。
+  - 仕入元の書き方として渡すもの：既存の `_build_supplier_context_note` と同じ書き方で、`extraction_*`（ship_format を含む）と block_delimiter だけ。skip_condition と status_keyword は渡さない。
+  - 行番号の付け方とモデルの設定は、既存の `call_gemini_extraction` と同じにする。
+- 新しいパーサ `parse_raw_copy_response(response_text, raw_text)`
+  - 9列固定。ヘッダーが完全に一致しなければ ValueError。
+  - RAW_STATE か RAW_SHIP が空の行は parse_errors に入れる。
+  - 行範囲は既存の v6 と同じ規則で検証する。
+- 版の定数：`backend/app/services/tcg_work_reference.py` に `RAW_COPY_PROMPT_VERSION = "raw-copy-v7-p1"` を足す。既存の frozenset には入れない（v6 の分岐に影響させないため）。
+- 新しいサービス `backend/app/services/extraction_shadow_svc.py` に `run_shadow_for_job(session, extraction_job_id)` を作る。
+  1. ジョブの原文・仕入元の情報・knowledge_links を、本番と同じクエリで読む（`backend/app/tasks/tcg_extraction.py:229-304` を関数として切り出すか、同じ SQL を使う。**複製が必要になる場合は止めて報告する**）。
+  2. v7 を呼んで、`extraction_shadow_runs` に記録する。
+  3. ブロックごとに、次の順で判定する。
+     - `extraction_judgement_svc.block_text` / `match_product` / `verify_copied` / `ship_timing`（PR-A）
+     - 状態・数量・価格・ステータス・備考は、既存の `resolve_condition_v2` / `_parse_numeric` / `resolve_status_v2` / `build_note_ja`（`backend/app/services/tcg_analyzer_svc.py`）を呼ぶ。備考の入力はブロックの原文。
+     - **既存の関数の引数が Gemini 固有の構造を必要とする場合は、止めて報告する**。
+  4. `review_items` を作る：1つに決まらなかった項目ごとに `{item, reason, candidates}` を入れる。
+  5. `extraction_shadow_results` に保存する。同じ run の中では、DELETE してから INSERT し直す。
+  6. 例外が起きても本番には伝えない。failed として記録して、ログに残す。
+- 呼び出し元：`backend/app/tasks/tcg_extraction.py:484-500` の `if final_status == "done":` の中で、本番の解析が終わった後に `if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":` で `run_shadow_for_job` を呼ぶ。try/except で本番から切り離す。
+- テスト
+  - パーサ（正常／ヘッダー不一致／none／空欄での失敗）
+  - run_shadow_for_job（Gemini をモックする。matched／ambiguous／unmatched／verify の失敗）
+  - 無効のときは呼ばれないこと
+  - 例外が本番に伝わらないこと
+
+## PR-D：試運転の確認画面・ワード登録・影響プレビュー・詰まり集計・発送日の欄（frontend＋routers）
+
+- API（新しいルーター `backend/app/routers/tcg_shadow_review.py`、`require_super_admin`）
+  - `GET /tcg/shadow-results?needs_review=&supplier_id=&offset=&limit=`：原文ブロック・止まった項目・候補（商品名付き）・理由を返す。
+  - `GET /tcg/shadow-results/bottlenecks?days=7|30`：仕入元別・項目別の確認待ち件数と、自動で確定した割合。
+  - `POST /tcg/shadow-results/keyword-preview`（入力：`{product_id, kind: search|exclude, keyword}`）
+    - 直近30日の `extraction_shadow_results` のブロックを、ワードを追加した状態で `match_product` で判定し直す。
+    - 結果が変わる件数（`unmatched→matched`、`ambiguous→matched`、`matched→ambiguous` など）を返す。
+    - DB には書き込まない。
+  - 除外ワードを1件追加する API：`POST /tcg/products/{product_id}/exclude-keywords`（`backend/app/routers/tcg_product_master.py`）
+    - サービスは `add_exclude_keyword` とし、`backend/app/services/tcg_product_master_svc.py:474-530` の `add_search_keyword` を写した作りにする。
+  - 仕入元の抽出ルール：`backend/app/routers/super_admin_suppliers.py:751-765` の `_EXTRACTION_RULE_COLS` と `_EXTRACTION_RULE_UPDATABLE`、`backend/app/schemas/central_masters.py:410-432` に `extraction_ship_format` を追加する。
+- 画面
+  - `frontend/src/pages/super-admin/NeedsReviewListPage.tsx` に既存の金型 `Tabs` を入れる。
+    - 「本番の確認待ち」は今の表示のまま。
+    - 「試運転の確認待ち」は `DataTable` に、仕入元・原文の抜粋・止まった項目・候補・理由・日時を出す。
+    - 行を選ぶと `Modal` を開き、次を出す。
+      - 原文ブロックの全文
+      - 候補の一覧
+      - ワードの種類を選ぶ `Select`（検索／除外）
+      - 入力欄 `TextField`（最初から原文のブロックが入っている）
+      - 「影響を確認」ボタン → プレビューの件数を表示 →「登録」ボタン
+  - 詰まりの集計：同じページの3つ目のタブ「詰まり」に、`Card` と `DataTable` で表示する。
+  - `frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx`：発送日の書き方の欄を、既存の `Textarea` 金型で足す。
+  - i18n：ja/en に同じキーを足す。キーは既存の名前空間の決まりに合わせる。ハードコードの日本語、生の要素、色やピクセルの直接指定は禁止（ADR-027/067/144）。
+- テスト：API の単体テストと PG テスト。画面は既存のテストの作法に合わせる。
+
+## PR-CLEAN：古い仕入元ルールの経路を撤去（危険 PR・GO #番号が必要）
+
+- supplier_prompts
+  - 取り除くもの：API（`backend/app/routers/super_admin_suppliers.py:49-50, 600-667`）、スキーマ（`backend/app/schemas/central_masters.py:388-408`）、画面（`frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx` のプロンプト部分）、i18n（ja/en の `knowledge.prompt*`）
+  - migration で `DROP TABLE IF EXISTS public.supplier_prompts;`（不可逆）
+- skip_condition の登録経路
+  - `backend/app/routers/super_admin_suppliers.py:968` の許可カテゴリから外す。
+  - 画面の `frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx`（143-152, 227, 306, 324, 632-636）と `frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx:44-45` から外す。
+  - `backend/app/services/gemini_extraction_svc.py:298, 307-308` の描画処理を取り除く。
+
+## §Z Architect 審査（Opus が自分で審査。独立した第二者によるレビューではない）
+
+- **PR-B1：APPROVE**
+  - 追加だけの変更で、既存の表・配信クエリには触れない。
+  - 置き場所は PO の決定どおり（試運転の結果は分ける、ルールとマスタは SSOT）。
+- **PR-C：APPROVE（条件付き）**
+  - 切り替えスイッチの初期値は無効。例外は本番から切り離す。
+  - 既存の関数の引数が合わない場合、またはクエリを複製することになる場合は、止めて報告することを条件にする。
+- **PR-D：APPROVE**
+  - 使うのはすべて既存の金型（Tabs、DataTable、Modal、Select、TextField、Card、Textarea）。recon2 §7 で存在を確認済み。
+  - プレビューは DB に書き込まない。
+- **PR-CLEAN：APPROVE**
+  - PO の決定（supplier_prompts は削除、skip_condition は廃止）どおり。DROP は不可逆なので GO #番号 が必要。
+- **残るリスク**
+  - PR-C/D/CLEAN は backend/frontend を変えるため、PR を作る時点で GO記録が必要（`scripts/dev/validate-pr-body.sh:308-322`）。ブランチを push するところまでで止まる。
