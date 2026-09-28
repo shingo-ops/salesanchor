@@ -250,7 +250,7 @@ export default function QuoteCreatePage() {
         </div>
 
         <div style={{ marginBottom: "var(--space-3)" }}>
-          <button type="button" className="btn-secondary" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="quote-add-blank">{t("quotes.addItem")}</Button>
         </div>
 
         <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
@@ -281,7 +281,7 @@ export default function QuoteCreatePage() {
 
         <div className="form-actions">
           <Button type="button" variant="secondary" size="md" onClick={() => navigate("/quotes")}>{t("common.cancel")}</Button>
-          <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</button>
+          <Button type="submit" variant="primary" size="md" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</Button>
         </div>
       </form>
       <FedExRateModal

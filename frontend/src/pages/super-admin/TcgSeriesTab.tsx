@@ -241,9 +241,9 @@ export default function TcgSeriesTab() {
                 setTypeForm({ ...typeForm, name_en: e.target.value })
               }
             />
-            <button type="submit" className="btn-primary">
+            <Button type="submit" variant="primary" size="md">
               {t("superAdmin.tcg.typeManager.addBtn")}
-            </button>
+            </Button>
           </form>
 
           <ul
@@ -324,9 +324,9 @@ export default function TcgSeriesTab() {
           value={form.name_en}
           onChange={(e) => setForm({ ...form, name_en: e.target.value })}
         />
-        <button type="submit" className="btn-primary">
+        <Button type="submit" variant="primary" size="md">
           {editId ? t("common.update") : t("superAdmin.tcg.newSeries")}
-        </button>
+        </Button>
       </form>
 
       <table className="data-table">

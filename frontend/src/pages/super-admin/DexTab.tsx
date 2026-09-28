@@ -319,9 +319,9 @@ export default function DexTab() {
             )}
           </div>
           <div style={{ marginTop: "var(--space-2)" }}>
-            <button type="submit" className="btn-primary">
+            <Button type="submit" variant="primary" size="md">
               {t("common.save")}
-            </button>{" "}
+            </Button>{" "}
             <Button type="button" onClick={() => setEditing(null)} variant="secondary" size="md">
               {t("common.cancel")}
             </Button>

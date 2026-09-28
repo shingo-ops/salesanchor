@@ -5,6 +5,7 @@
 
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import type { BasicFormState, Company } from "./company-detail.types";
 
 interface Props {
@@ -94,9 +95,9 @@ export function CompanyBasicTab({
       </div>
       {canEdit && (
         <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={!basicDirty || basicSubmitting}>
+          <Button type="submit" variant="primary" size="md" disabled={!basicDirty || basicSubmitting}>
             {basicSubmitting ? t("common.saving") : t("companies.saveBasicInfo")}
-          </button>
+          </Button>
         </div>
       )}
 
