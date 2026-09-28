@@ -148,6 +148,35 @@
 - 調査中に、本番の環境変数を読んだ際、DB接続文字列（パスワードを含む）が作業記録に1回表示された。外部への送信はなし。パスワードを変更するかはPOが判断する
 - GO委任の正式記録（docs/handoff/go-record-transcription/ 配下の opus-delegation 文書）は origin/main に存在しない（`git ls-tree -r --name-only origin/main | grep -i opus-delegation` → 0件）
 
+## 6-2. 追加調査: 〆・完売の扱い（2026-09-29 追記）
+
+### 完売ルールのページの経緯（事実）
+| 日付 | 内容 | 根拠 |
+|---|---|---|
+| 2026-09-17 | 解析管理に「完売ルール」ページを追加（検索・除外ワード、テスト、テスト全件合格までの有効化ゲート、変更履歴） | コミット a64aba110 |
+| 2026-09-21 | analysis_rule 系の仕組みごとページを削除（完売ワードは tcg_status_master に統合） | コミット d909017a8、PR #3623（GO #3623） |
+| 2026-09-21〜26 | 解析管理 → ルール管理 →「ステータスルール」（`frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:84-94`）の中に、「完売ルール」タブと「テスト」タブとして作り直した | `frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:25`、コミット 50aca4c16／155a01e45 |
+- 本番の frontend には、削除と作り直しの両方が反映済み（最新の成功したデプロイの headSha 638cc6f91 が、どちらのコミットも含む）
+- 未確認: 旧ページの「変更履歴」機能に当たるものが、今の画面にあるか
+
+### 完売ワードが照合される範囲（事実）
+- tcg_status_master は解析時に読み込まれる（`backend/app/services/tcg_analyzer_svc.py:1094-1116`）。照合の対象は、抽出された各商品の「状態」欄（raw_state）だけ（`backend/app/services/tcg_analyzer_svc.py:1371`）
+- 9/28 の実例: 「EB03〆」「30th 〆」「30th 両方〆」は、どれも raw_state が空で、〆は商品名の側に入っていた → status=In Stock、exclusion=NULL。「完売」だけの投稿（倉田 20:46）と「〆」だけの投稿（やまざき 22:24）は、抽出が0件で、analysis_results がない
+
+### 商品単位の置き換え（ADR-158）の実装と、受信時刻の誤り（事実）
+- ADR-158 は実装済みで、本番に反映されている（PR #3747／#3755／#3763／#3769。本番の analysis_results に is_current 列がある）。ADR本文の Status は Proposed のままで、本文は condition 単位・全体最新方式への変更を反映していない
+- is_current は、同じ supplier_channel_id の中で (product_id, condition_id) ごとに `sm.received_at DESC, ar.computed_at DESC` の1位を TRUE にする（`backend/app/services/tcg_analyzer_svc.py:1757-1792`）。is_active は見ていない
+- received_at には、その仕入元の取り込み対象メッセージのうち**最も古いもの**の時刻が入る（`backend/app/services/tcg_line_import_svc.py:309`）。Android 経路は全履歴を送る（window_hours=0: `backend/app/routers/line_import_devices.py:69`、`tools/termux-line-import/client.py:432`）ので、数週間前の時刻になる。導入はコミット ca0c4f983（2026-09-05）と 87e0c78d6／6af781351（2026-09-12）
+- 本番の実測: line_posted_at が 2026-09-28 のメッセージ80件のうち、77件で received_at の日付が一致しない
+- 影響の実例: 平田 21:36（received_at 2026-08-30 12:50）の product 621／125079／125081／440406 は、同じチャネルの 2026-09-24 23:01 投稿（received_at 2026-09-24 16:58）に負けて is_current=FALSE。9/24 の内容のほうが現在の扱いになっている
+- 大知「30th 両方〆」は product 125079 に解決された。18:10 の 125081／440406 は is_current=TRUE のまま、価格も入っている。未確認: 配信に出ているか（cr.needs_review の値を照会できなかった）
+- 画面による判定の違い: 仕入元の詳細画面（`frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx`）は is_active で絞る（`backend/app/services/tcg_analysis_review_svc.py:38`）。配信（`backend/app/services/tcg_distribution_svc.py:254`）とダッシュボード（`backend/app/services/tcg_analysis_dashboard_svc.py:713`）は is_current で絞る
+- received_at を使う他の箇所: `backend/app/services/tcg_analysis_dashboard_svc.py:457`（最終受信日時の表示）、`backend/app/routers/super_admin_suppliers.py:854` と `backend/app/services/tcg_supplier_quality_svc.py:84`（「最新原文」を選ぶ）
+- 未確認: 平田 23:15「EB03〆」が、raw_sha256 の違う2行（1e49f148／f8206338）として保存されている理由
+
+### 調査の付随事項
+- 調査担当が指示に反して、本番サーバーの /tmp に照会用のファイル（dist_check.sql／dist_check.b64。SELECT 文のみで、秘密情報はない）を作り、そのまま残っている。削除するかは PO が判断する
+
 ## 7. 次の判断（PO）
 
 A／A'／B／C を直すかどうかと、その順番。A'は既存の Draft 設計（`docs/handoff/tcg-import-latest-only/`）の実装に当たる。
