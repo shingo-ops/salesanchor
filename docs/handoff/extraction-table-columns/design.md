@@ -8,7 +8,7 @@
 
 | 基準 | 検証方法 |
 |------|----------|
-| 抽出タブの直近ジョブテーブルで提供者名（suppliers.name）が表示される | ブラウザで抽出タブを開き、提供者列に "line" ではなく実際の提供者名が表示されること |
+| 抽出タブの直近ジョブテーブルで提供者名（suppliers.name）が表示される | ブラウザで抽出タブを開き、提供者列に channel 名ではなく実際の提供者名が表示されること |
 | 解決・未解決・要確認カウントが表示される | 各ジョブ行に数値が表示されること（analysis_results 集計） |
 | 既存インポートタブに影響なし | インポートタブの表示が変わらないこと |
 
@@ -18,7 +18,7 @@
 
 `recent_extraction_jobs` SQL クエリを拡張する。
 
-既存パターン踏襲: `tcg_analysis_dashboard_svc.py:402-444` の `get_supplier_pipeline()` 内の JOIN 構造を参考にする。
+既存パターン踏襲: `backend/app/services/tcg_analysis_dashboard_svc.py` の get_supplier_pipeline() 内の JOIN 構造を参考にする。
 
 ```
 extraction_jobs ej
@@ -38,17 +38,28 @@ GROUP BY ej.id, ej.status, ej.created_at, s.name
 
 ### フロントエンド変更
 
-- `RecentExtractionJob` 型: `channel_name` を `supplier_name` に変更、4フィールド追加
-- `recentJobColumns`: 4列 → 7列（supplier/items/resolved/unresolved/needs_review/status/date）
-- i18n: `extractionJobChannel` → `extractionJobSupplier` + 3新規キー
+変更対象:
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx`
+- `frontend/src/locales/ja.json`
+- `frontend/src/locales/en.json`
 
-## 外部事例
+`RecentExtractionJob` 型: `channel_name` を `supplier_name` に変更、4フィールド追加
+`recentJobColumns`: 4列 → 7列（supplier/items/resolved/unresolved/needs_review/status/date）
+i18n: `extractionJobChannel` → `extractionJobSupplier` + 3新規キー
 
-既存 get_supplier_pipeline の JOIN パターン（svc.py:402-444）を踏襲。
+## 外部・過去事例の参照と我々への応用
+
+既存 `backend/app/services/tcg_analysis_dashboard_svc.py` の `get_supplier_pipeline()` 関数（行402-444）で同一の JOIN パターン（`LEFT JOIN suppliers s ON s.id = sc.supplier_id`）が稼働中。同ファイルの `analysis_results` JOIN パターン（行477）も稼働中。今回は同パターンを `get_pipeline_summary()` の recent_extraction_jobs セクションに適用する。
+
+## 維持の仕組み
+
+守り手: backend/app/services/tcg_analysis_dashboard_svc.py
+
+バックエンドとフロントエンドの型定義が一致している限り動作する。`RecentExtractionJobItem`（Pydantic）と `RecentExtractionJob`（TypeScript）が同じフィールドを持つことが維持条件。
 
 ## 影響範囲
 
-- 呼び出し元: `AnalysisDashboardPanel.tsx` のみ
+- 呼び出し元: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` のみ
 - API変更: フィールド追加（既存フィールド削除なし→後方互換）
 - DBへの書き込み: なし（SELECT 変更のみ）
 
