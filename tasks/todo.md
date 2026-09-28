@@ -171,4 +171,4 @@
 
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
-| システム欄の7段階LINE業務ガイド | Agent | Astra実装レビューAPPROVE、Sol読取レビューAPPROVE。check/build、unit17件、E2E6件と可視範囲追加2件成功。未マージ・未デプロイ | コミット・push・正式PR作成を実行し、手続き上の不整合があれば停止して根拠を記録する | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-02.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / /tmp/reports/card-line-guide-01 | 2026-09-28 |
+| システム欄の7段階LINE業務ガイド | Agent | Astra実装レビューAPPROVE、Sol読取レビューAPPROVE。check/build、unit17件、E2E6件と可視範囲追加2件成功。未マージ・未デプロイ | 3d8c8b239をpush済み。PR作成前hookがGO記録欠落で拒否。作成とマージ審査の分離案をPOに提示し、正式手順を整えてからPR提出する | docs/handoff/pipeline-procedure-map/CARD-LINE-GUIDE-02.md / EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL / /tmp/reports/card-line-guide-01 | 2026-09-28 |

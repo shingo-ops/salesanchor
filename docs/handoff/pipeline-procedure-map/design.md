@@ -203,3 +203,24 @@ scripts/gh-pr-create-safe.sh:26-43はPR作成前にprocess-artifactsを実行す
 scripts/check-process-artifacts.js:668-674はSHA必須、:706-744は既存PR番号から本文取得、:300-329は番号付きGO原文を要求する。
 既存のGO転記設計はPR作成後に番号付き承認を受ける順序。この不整合を、偽のPR番号・GO原文・MOCK/skip設定で通過させない。
 正式PR操作の実結果は後続カードで取得する。本節の読み取り結果だけでPR作成失敗済みとは断定しない。
+
+### 2026-09-28正式PR提出の停止記録
+
+実装commit: 3d8c8b23935bd24f2655764a39d8f4e25045d446。専用origin/release/line-workflow-guideへpush成功、リモートSHA一致。
+本店mainの未保存18件は変更していない。コミット時のlint-staged/ADR-067検査成功。
+Astra直接実行: check-task-state、design/recon見出し重複、card03 lint、git diff --checkはexit0。
+実行した正式操作: bash scripts/gh-pr-create-safe.sh --base main --head release/line-workflow-guide --title（LINE業務ガイド）--body-file /tmp/line-workflow-guide-pr-body.md。
+PreToolUseの実拒否: Canonical PR body validation failed: ❌ ユーザー影響変更があります。PR本文に「### GO記録」セクションがありません。
+ラッパー起動前の拒否であり、process-artifacts本体のSHA不足は今回未実行。コード読取で判明した別の問題と区別する。
+PR番号未発行・CI未実施・マージ未実施・本番未反映。汎用の遂行許可を番号付きPO発話へ書き換えず、skip/mock/直gh/API等で迂回しなかった。
+作業中origin/mainに5コミット追加（4bad43a4d、PR3821）。localeの変更箇所は抽出結果表ラベルであり、ガイド追加箇所とは別。
+最新main統合後の試験は未実施。現在の実測はae783c7f起点の実装commitに対するもの。
+
+### 手続き修正案（未承認・未実装）
+
+推奨方針: PR作成時の審査と、マージ直前のGO審査を分け、既存GO転記設計の順序を実装へ合わせる。
+PR作成時: 実在するbase/HEAD・本文ファイルから変更範囲、設計/recon/ADR、作者、検証結果を検査する。存在しないPR番号を要求しない。
+マージ時: 実際のPR番号・HEAD・CI・レビューと、番号が一致するPO GO原文（または正式に有効化された委任）を必須とする。
+安全条件: マージの承認要件は維持。作成段階の合格をマージ権限に流用しない。任意の環境変数でマージ審査を省略できる仕組みにしない。
+検証案: GOなし作成可能、GOなしマージ拒否、別PR番号/古いHEAD/期限切れ委任/CI失敗はマージ拒否、正しい承認だけ通過。
+この修正は今回のfrontend変更に混載しない。実装には別の設計審査と正式カードが必要。現時点はPOへの方針相談案で、設計合格やGOを宣言しない。

@@ -3204,3 +3204,5 @@ CARD-LINE-GUIDE-01/02に基づき、システム欄へLINE解析の7段階業務
 初回buildは新規unitの未登録jest-dom matcher型でexit2となり、期待対象を同じDOM属性・pathnameのVitest直接比較へ修正して解消。E2E初回はsandboxのlocalhost:5173 bindがEPERMとなり、カードとPOが許可した同一コマンドのrequire_escalated審査で成功。npm ciは正規審査でexit0、lockfile変更は意図していない。CI・本番確認・PO画面確認・commit/push/PR/merge/deployは未実施。Astraレビュー待ちでDONEではない。
 
 EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 追補: CARD-LINE-GUIDE-03の390x900可視範囲2/2成功（7.3秒）、画像6枚・操作ボタンtrial成功。Astraが日本語手順1/英語手順7画像とコード/CSS/hub差分を直接確認。Sol別セッションのread-onlyレビューもAPPROVE（指摘0、ja/en89/89）。本番/PO読解確認/CIは未実施。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 停止追補: 実装3d8c8b239をorigin/release/line-workflow-guideへpush、SHA一致を直接確認。正式gh-pr-create-safeの実行はPreToolUseのCanonical PR body validationでGO記録欠落により拒否。PR未発行・CI/merge/deploy未実施。本文は/tmp/line-workflow-guide-pr-body.md、停止根拠と修正方針案はdesign.md末尾。GO転記・guard変更・迂回0。
