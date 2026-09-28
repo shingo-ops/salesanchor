@@ -3205,3 +3205,12 @@ EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、bac
 AQ日報2ボタン実装・Sol第二レビューAPPROVE。製品逆変換一致/共有14hash維持、最終29対象/501全体試験成功。根拠: docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-implementation.md、aq-validation-logs.tar.gz/manifest.json。画面省略、PR/新番号GO/配備未実施。
 
 2026-09-28 AQ保存f1935c24f remote一致、PR前validate-pr-body.shがGO節欠落でexit1。PR未発行[]と番号必須検査の循環を記録。スキップ/代筆/ガード変更なし。詳細 aq-staff-report-implementation.md §保存とPR前検査の停止。
+
+### EV-20260928-AR-DESIGN
+
+固定99899eb82でSol棚卸し/別Sol照合。対象14ファイル28、対象外53、共有15、native form10＋非form1＋検索local1/GET5。ar-button-audit.json/ar-contracts.mdとdesign.md §ARに根拠保存。実装前カードlintは受領欄不足を修正してexit0（長行2警告）。初期のフォーム分類誤りは明記訂正。承認手順は別担当の同領域編集を検出してSTOP、製品移管のみ継続。
+
+
+### EV-20260928-AR-IMPLEMENTATION
+
+14ファイル28ボタン移管、逆変換14/対象外53/共有15一致、共通231/旧266。Sol製品レビュー/4試験交差レビューAPPROVE、root直接監査pass=true。対象92・全体581成功（初回23timeout後、並行数2で同一全件再検証）。fixture同値修正後対象92成功、check:all/build/Storybook成功。初回失敗・報告件数訂正もar-implementation.md/ar-validation-logs.tar.gz/manifestへ保存。画面省略・未検証、PR/CI/番号付きGO/配備は次。

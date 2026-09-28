@@ -775,3 +775,13 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 ## AQ再測定（2026-09-28）
 
 基準4bad43a4、Sol実物調査で旧候補5hash/原文10一致、ページ回帰0。Astra構文監査で共通201/旧296、スタッフ日報末尾2/対象外起動1/共有14を保存。対象はStaffReportsPage93/94、5キーPOST・取消保持・成功reset・pending2回を維持。設計はdesign.md§AQ、証拠evidence-20260910/aq-staff-report-audit.json/cjs。PO画面省略は合格とはしない。既存共有金型だけ使用、DB/API/配線/データ複製変更0。最大事業効果は未測定、接触面が最小の候補を選定。
+
+
+## 2026-09-28 AR広域nativeボタン調査
+
+基点99899eb824234c7158c14855301c9412f440db2d。Sol棚卸し＋別Sol照合により14ファイル28対象、対象外53原文、共有15hashを固定。根拠: evidence-20260910/ar-button-audit.json、ar-contracts.md。フォーム分類の初期誤りを実物で訂正し、10 native forms（9 Modal/1 inline）20件＋Roles非form操作2件＋検索6件（local1/GET5）とする。Link/a、bare btn-sm、独自style/class、削除action、外部効果/loadingは一括対象外。共通203/旧294から231/266を目標とする。外観は既存Buttonを採用しpixel同値は主張しない。設計はdocs/specs/design-system/design.md §AR。
+
+承認手順調査ではmain Rulesetのrequired一覧にprocess-artifacts gateが無いことが判明（全経路の機械強制は未達）。起票前GO循環の修正は別担当release/pr-lifecycle-gatesが同ファイル変更中と判明し、重複時STOP規則に従いこちらの編集を停止、POへ担当確認中。ARからガード/外部設定を変更しない。
+
+
+AR実装後の再測定: 14製品逆変換byte一致、28対象/対象外53/共有15維持、共通231/旧266、root直接監査pass=true。操作試験はSol2担当で所有を分け交差レビューAPPROVE、対象92成功の原ログをroot確認。全体検証は ar-implementation.md に初回失敗と最終結果を分けて保存する。承認手順の別担当PR3824は07:16:22ZにMERGED（GitHub直接確認）となり、起票依存は解消。正式main統合後に公式wrapperを使用し、ガード/制度の独自変更は0。
