@@ -1,6 +1,6 @@
 -- Migration: 試運転用の表（extraction_shadow_runs / extraction_shadow_results）と
 --            仕入元の発送日の書き方欄（suppliers.extraction_ship_format）を追加する
--- 根拠: docs/handoff/gemini-extract-role-split/design.md 追補（PR-B1、2026-09-28、Architect APPROVE）
+-- 根拠: docs/handoff/gemini-extract-role-split/design.md（PR #3825 で追加）追補 §PR-B1（2026-09-28、Architect APPROVE）
 -- 既存の analysis_results・配信クエリには一切触れない（追加のみ）。
 -- 冪等: CREATE TABLE / ADD COLUMN / INSERT はすべて IF NOT EXISTS・ON CONFLICT DO NOTHING。
 
