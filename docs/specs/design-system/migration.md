@@ -296,3 +296,6 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 
 
 2026-09-28 AR広域移管: 14製品ファイル28ボタン実装、逆変換14/対象外53/共有15一致、共通231/旧266。Astra設計自己審査APPROVE、Sol製品第二レビューと4試験交差レビューAPPROVE。対象92/全体581成功、check:all/build/Storybook成功。AQ2と併せ計30件の同一PR提出予定。詳細 ar-implementation.md。画面/実ログイン/本番フォーム/PO目視は指示により省略・未検証。PR/CI/今回番号付きGO/配備未完。表/報酬3/カレンダー色保留、新CI最後。
+
+
+2026-09-28 AQ+AR本番反映完了: PO本人「GO #3828」を受領、checks38成功/8対象外・必須13成功・CLEANを確認し08:02:45Zにmerge8862732e4。Deploy36395037199成功、新規backup217M。08:06:54Zにrootが本番HEAD/公開index・JSとcontainerのhash一致/HTTP200/DB・Redis・Celery接続を直接確認。計30ボタン、共通231/旧266。証跡ar-implementation.md/ar-production-verification.json。画面・実ログイン・本番フォーム・PO目視・復元試験は未実施。次は残旧266件・表/報酬3/カレンダー色の実物再調査、新CI最後。
