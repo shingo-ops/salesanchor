@@ -1,6 +1,6 @@
 -- Migration: Seed knowledge extraction vocab (block_delimiter / status_keyword)
 -- 冪等: WHERE NOT EXISTS で既存レコードと衝突しない
--- 注: skip_condition の INSERT は PR #3823（2026-09-28 PO決定）で削除済み。詳細は本ファイル下部のコメント参照。
+-- 注: skip_condition の INSERT は PR #3823（2026-09-28 PO決定。設計根拠は PR #3825）で削除済み。詳細は本ファイル下部のコメント参照。
 
 -- ブロック区切り記号（仕入元メッセージで商品ブロックの開始を示す記号）
 INSERT INTO public.knowledge_rules (category, pattern_type, pattern, normalized_to, priority, language, is_active, description)
@@ -30,8 +30,10 @@ WHERE NOT EXISTS (
 );
 
 -- スキップ条件（skip_condition）の INSERT は削除済み。
--- 理由: Gemini が抽出時点で完売・サーチ済み等を既に判断するため重複ルールとなり、
--- PO決定（2026-09-28 チャット）により skip_condition カテゴリ全体を廃止。
+-- 理由（PO決定 2026-09-28）: skip_condition は Gemini への指示文に入り、Gemini に商品ブロックを
+-- 捨てる判断をさせていた。PO 方針（2026-09-28）: Gemini は原文の書き写しのみ・判断はシステム。
+-- 完売・サーチ済み等はシステム側の解析ルール（conditions CN0007/CN0010、tcg_status_master
+-- ST0011〜ST0013）で扱うため、skip_condition は全件廃止。
 -- 削除は migrations/20260928_100000_delete_skip_condition_rules.sql（PR #3823）で実施。
 -- この INSERT ブロックを残したままだと、run_all_migrations.sh の全件再実行のたびに
 -- WHERE NOT EXISTS で再挿入 → 上記 delete migration が再度削除、を繰り返すため、
