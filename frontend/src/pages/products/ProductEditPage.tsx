@@ -181,15 +181,15 @@ export default function ProductEditPage() {
       >
         {t("common.cancel")}
       </Button>
-      <button
+      <Button
         form="product-edit-page-form"
         type="submit"
-        className="btn-primary field-h-md"
+        variant="primary" size="md"
         disabled={saving || loading}
         data-testid="product-edit-save"
       >
         {saving ? t("common.saving") : isNew ? t("common.register") : t("common.update")}
-      </button>
+      </Button>
     </>
   );
 

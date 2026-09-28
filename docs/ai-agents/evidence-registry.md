@@ -3294,3 +3294,23 @@ EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 提出追補: 正規wrapperでPR3831作成
 
 
 2026-09-28 AS本番反映完了: 本人GO #3834、公式merge b3cf1fdf3（11:32:45Z）、Deploy36416280694成功。root 2026-09-28T11:36:40.862290+00:00に本番HEAD/公開index・JSとcontainer hash/HTTP200/接続3項目一致を直接確認。34件移管、共通265/旧232。根拠as-implementation.md/as-production-verification.json。画面・実ログイン・本番フォーム・PO目視は省略・未検証。
+
+
+### EV-20260928-AT-DESIGN
+
+固定a1cd9ea、直接AST共通265/旧232/対象11/構文0。9file原文hash・対象外221・共有18、API/サーバー副作用を追跡。色未確定60、Invoice外部FX/権限変更を除外。QuoteCreate先約はPR3084 MERGED/実ファイル非対象で競合なし。docs/specs/design-system/design.md §ATの自己審査APPROVE、正式card-lint2件exit0、Sol分離実装へ。根拠docs/handoff/design-system-recon/evidence-20260910/at-button-audit.json、at-admin-test-plan.md、at-commerce-test-plan.md。製品検証/PR/番号付きGO/本番反映は未実施。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+### EV-20260929-AT-DEPLOY
+
+
+## 2026-09-29 AT 本番反映完了
+
+本人原文「GO #3839」受領・転記済み。main追従後も対象9製品/3試験は承認時と全byte一致。最新HEAD e129dac1bf1c42060d7801b4607e3cd2e701d9a1の技術CI38成功/8対象外、CI48files638試験成功（65.41秒）。公式merge-safeが必須13checksを2回確認後、merge a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-28T21:51:11ZをGitHubで確認。初回BEHIND停止からの経緯は前節とat-go-validation.tar.gzに保存。
+
+Deploy 36488806931 success。rootは2026-09-28T21:55:11.392639+00:00にread-onlyで本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナ各SHA256一致を直接検証した。証跡at-production-verification.json/at-merge-final.txt/at-deploy-result.json。実データを書き込むフォーム操作・ブラウザー画面・PO目視は指示どおり省略・未検証。復元試験も未実施。
+
+11件移管、本番対象の共通Button280/旧221。API/DB/配線/共有金型変更0。設計・実装・レビュー・本人承認・マージ・本番反映・配信確認済み。残旧221、表/報酬3/カレンダー色、最後のCI補強は別便。結果文書の保存PRを本便完了記録として扱う。

@@ -5,6 +5,7 @@
 
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import type { Company } from "./company-detail.types";
 
 interface Props {
@@ -34,9 +35,9 @@ export function CompanyChannelsTab({
       </div>
       {canEdit && (
         <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={!channelsDirty || channelsSubmitting}>
+          <Button type="submit" variant="primary" size="md" disabled={!channelsDirty || channelsSubmitting}>
             {channelsSubmitting ? t("common.saving") : t("companies.saveChannels")}
-          </button>
+          </Button>
         </div>
       )}
     </form>

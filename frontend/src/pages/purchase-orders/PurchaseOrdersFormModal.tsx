@@ -135,9 +135,9 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
       <Button type="button" variant="secondary" size="md" onClick={onClose} disabled={saving}>
         {t("common.cancel")}
       </Button>
-      <button form="po-form" type="submit" className="btn-primary" disabled={saving}>
+      <Button form="po-form" type="submit" variant="primary" size="md" disabled={saving}>
         {saving ? t("common.saving") : t("common.save")}
-      </button>
+      </Button>
     </>
   );
 
