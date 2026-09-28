@@ -3302,3 +3302,15 @@ EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 提出追補: 正規wrapperでPR3831作成
 
 
 2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+### EV-20260929-AT-DEPLOY
+
+
+## 2026-09-29 AT 本番反映完了
+
+本人原文「GO #3839」受領・転記済み。main追従後も対象9製品/3試験は承認時と全byte一致。最新HEAD e129dac1bf1c42060d7801b4607e3cd2e701d9a1の技術CI38成功/8対象外、CI48files638試験成功（65.41秒）。公式merge-safeが必須13checksを2回確認後、merge a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-28T21:51:11ZをGitHubで確認。初回BEHIND停止からの経緯は前節とat-go-validation.tar.gzに保存。
+
+Deploy 36488806931 success。rootは2026-09-28T21:55:11.392639+00:00にread-onlyで本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナ各SHA256一致を直接検証した。証跡at-production-verification.json/at-merge-final.txt/at-deploy-result.json。実データを書き込むフォーム操作・ブラウザー画面・PO目視は指示どおり省略・未検証。復元試験も未実施。
+
+11件移管、本番対象の共通Button280/旧221。API/DB/配線/共有金型変更0。設計・実装・レビュー・本人承認・マージ・本番反映・配信確認済み。残旧221、表/報酬3/カレンダー色、最後のCI補強は別便。結果文書の保存PRを本便完了記録として扱う。

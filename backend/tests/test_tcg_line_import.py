@@ -345,7 +345,7 @@ def test_build_latest_only_with_two_messages():
 
 
 def test_build_timestamp_ascending_order():
-    """received_at は最初のタイムスタンプ、raw_text は最新（最後）のメッセージ本文（SQR-05）。"""
+    """received_at と line_posted_at は最新（最後）のタイムスタンプ、raw_text は最新のメッセージ本文（SQR-05）。"""
     resolved_messages = [
         {
             "sp_code": "SP0001", "canonical_name": "仕入元A",
@@ -360,7 +360,8 @@ def test_build_timestamp_ascending_order():
     ]
     entries = build_provider_entries(resolved_messages)
     assert len(entries) == 1
-    assert entries[0]["received_at"] == "2026-08-01 10:00:00"
+    assert entries[0]["received_at"] == "2026-08-01 10:05:00"
+    assert entries[0]["received_at"] == entries[0]["line_posted_at"]
     assert entries[0]["raw_text"] == "後のメッセージ"
 
 
