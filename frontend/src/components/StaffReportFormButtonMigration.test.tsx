@@ -262,12 +262,12 @@ describe('staff report form Button migration on the real page', () => {
     else await waitFor(() => expect(screen.queryByRole('button', { name: tr('common.add') })).toBeNull());
   });
 
-  it('keeps report filtering in the GET query and leaves the unrelated trigger legacy', async () => {
+  it('keeps report filtering in the GET query and uses the common primary trigger', async () => {
     mock.post.mockResolvedValue({});
     renderPage();
     const trigger = await screen.findByRole('button', { name: tr('common.add') });
-    expect(trigger.className).toBe('btn-primary field-h-md');
-    expect(trigger.classList.contains('comp-btn')).toBe(false);
+    expect(trigger.classList.contains('comp-btn')).toBe(true);
+    expect(trigger.classList.contains('comp-btn--primary')).toBe(true);
     fireEvent.change(screen.getByRole('combobox', { name: '' }), { target: { value: 'weekly' } });
     await waitFor(() => expect(mock.get).toHaveBeenCalledWith('/staff-reports?report_type=weekly'));
     const filteredReads = mock.get.mock.calls.filter(call => call[0] === '/staff-reports?report_type=weekly').length;

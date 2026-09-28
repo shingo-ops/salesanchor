@@ -1,0 +1,1680 @@
+{
+  "base": "1675bfa0275a1ac76210ae489abbcb818287da02",
+  "counts": {
+    "common": 231,
+    "legacy": 266
+  },
+  "files": [
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "sha256": "a225570d80f5e8eb9cba69e8c8d0ad62423b26492d14fb2c141de64344deac37",
+      "targets": [
+        {
+          "line": 263,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button\n                type=\"button\"\n                className=\"btn-secondary\"\n                onClick={onClose}\n              >\n                {t(\"common.close\")}\n              </button>",
+          "migrated": "<Button\n                type=\"button\"\n                variant=\"secondary\" size=\"md\"\n                onClick={onClose}\n              >\n                {t(\"common.close\")}\n              </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "sha256": "7b3f111341ac68e445e534a4d999e691eed027f65881fa700eb74e985c4c9293",
+      "targets": [
+        {
+          "line": 209,
+          "className": "btn-secondary btn-sm",
+          "variant": "secondary",
+          "size": "sm",
+          "raw": "<button className=\"btn-secondary btn-sm\" onClick={() => startEdit(r)}>{t(\"common.edit\")}</button>",
+          "migrated": "<Button variant=\"secondary\" size=\"sm\" onClick={() => startEdit(r)}>{t(\"common.edit\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/badges/BadgesPage.tsx",
+      "sha256": "bb08f3ff91f36097ac7e574b827dfc7710f857ca37d685138e2568ea11ed3e8f",
+      "targets": [
+        {
+          "line": 49,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"badges.newBadge\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => setShowForm(true)}>{t(\"badges.newBadge\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "sha256": "7982207598efba033ebb31cbe293fadad36c38cf87d1b5519a9cf169e6233505",
+      "targets": [
+        {
+          "line": 54,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"buddy.newPair\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => setShowForm(true)}>{t(\"buddy.newPair\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "sha256": "50ff2a0db2459f990b9c48bbd816913da6e477a00a2e9c1d4f806a893c116ec8",
+      "targets": [
+        {
+          "line": 136,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button\n          className=\"btn-secondary\"\n          disabled={busy}\n          onClick={onCancel}\n        >\n          {t(\"common.cancel\")}\n        </button>",
+          "migrated": "<Button\n          variant=\"secondary\" size=\"md\"\n          disabled={busy}\n          onClick={onCancel}\n        >\n          {t(\"common.cancel\")}\n        </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "sha256": "e174e54687dc2202f018dc7354ffca77ffc580f6a05d898874713945f4d23bab",
+      "targets": [
+        {
+          "line": 205,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button className=\"btn-secondary\" disabled={busy} onClick={() => openEdit(env)}>\n              {env === \"sandbox\"\n                ? t(\"carrierIntegration.registerSandboxKey\")\n                : t(\"carrierIntegration.registerProdKey\")}\n            </button>",
+          "migrated": "<Button variant=\"secondary\" size=\"md\" disabled={busy} onClick={() => openEdit(env)}>\n              {env === \"sandbox\"\n                ? t(\"carrierIntegration.registerSandboxKey\")\n                : t(\"carrierIntegration.registerProdKey\")}\n            </Button>"
+        },
+        {
+          "line": 276,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button className=\"btn-secondary\" disabled={busy} onClick={() => openEdit(env)}>\n            {t(\"common.edit\")}\n          </button>",
+          "migrated": "<Button variant=\"secondary\" size=\"md\" disabled={busy} onClick={() => openEdit(env)}>\n            {t(\"common.edit\")}\n          </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "sha256": "8b342bf3bf133409403222ded31cb2211ccfa98a0791438b13facda10e4d82d4",
+      "targets": [
+        {
+          "line": 474,
+          "className": "btn-primary",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary\" type=\"button\" onClick={onOpenCredentialsTab}>\n                {t(\"carrierIntegration.fedexEtdGuideOpenCredentials\")}\n              </button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" type=\"button\" onClick={onOpenCredentialsTab}>\n                {t(\"carrierIntegration.fedexEtdGuideOpenCredentials\")}\n              </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "sha256": "b3fdeea6e653d1a5e1f3b676e241a73b355930a5dd7275112c27dd279a0e9d09",
+      "targets": [
+        {
+          "line": 602,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading} data-testid=\"inventory-prev\" className=\"btn-secondary\">\n          {t(\"common.previous\")}\n        </button>",
+          "migrated": "<Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading} data-testid=\"inventory-prev\" variant=\"secondary\" size=\"md\">\n          {t(\"common.previous\")}\n        </Button>"
+        },
+        {
+          "line": 608,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading} data-testid=\"inventory-next\" className=\"btn-secondary\">\n          {t(\"common.next\")}\n        </button>",
+          "migrated": "<Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading} data-testid=\"inventory-next\" variant=\"secondary\" size=\"md\">\n          {t(\"common.next\")}\n        </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "sha256": "1eeaa518348aef6c96267e2360ecb97929a1dbd37d4f864ccb3d36bc731d8229",
+      "targets": [
+        {
+          "line": 223,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button className=\"btn-secondary\" onClick={() => navigate(\"/management-center/tenant-profile\")}>\n            {t(\"nav.tenantProfile\")}\n          </button>",
+          "migrated": "<Button variant=\"secondary\" size=\"md\" onClick={() => navigate(\"/management-center/tenant-profile\")}>\n            {t(\"nav.tenantProfile\")}\n          </Button>"
+        },
+        {
+          "line": 271,
+          "className": "btn-sm btn-primary",
+          "variant": "primary",
+          "size": "sm",
+          "raw": "<button\n                        className=\"btn-sm btn-primary\"\n                        disabled={saving}\n                        onClick={() => loadQuoteForEdit(q.id)}\n                        data-testid={`invoice-edit-from-quote-${q.id}`}\n                      >\n                        {t(\"invoices.editFromThisQuote\")}\n                      </button>",
+          "migrated": "<Button\n                        variant=\"primary\" size=\"sm\"\n                        disabled={saving}\n                        onClick={() => loadQuoteForEdit(q.id)}\n                        data-testid={`invoice-edit-from-quote-${q.id}`}\n                      >\n                        {t(\"invoices.editFromThisQuote\")}\n                      </Button>"
+        },
+        {
+          "line": 434,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => navigate(\"/invoices\")}>{t(\"common.cancel\")}</button>",
+          "migrated": "<Button type=\"button\" variant=\"secondary\" size=\"md\" onClick={() => navigate(\"/invoices\")}>{t(\"common.cancel\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "sha256": "c410f2b36e2aa1c20a48ea4f51f3e551124abba60bef71edaec55cb04036a90f",
+      "targets": [
+        {
+          "line": 272,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button className=\"btn-secondary\" onClick={() => setShowVoidForm(false)}>{t(\"common.cancel\")}</button>",
+          "migrated": "<Button variant=\"secondary\" size=\"md\" onClick={() => setShowVoidForm(false)}>{t(\"common.cancel\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "sha256": "9c8dfa7fa1dba33c1835e64af45898ba7d8851393c2bb3227b6ca04471289897",
+      "targets": [
+        {
+          "line": 52,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"settings.addChannel\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => setShowForm(true)}>{t(\"settings.addChannel\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "sha256": "3ade03e176ed81e02033f193e477d64a99d8a2c022152aba0f9bd782eaa690b2",
+      "targets": [
+        {
+          "line": 48,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button\n      className=\"btn-primary field-h-md\"\n      onClick={() => {\n        setShowForm(true);\n        setEditId(null);\n        setForm(emptyForm);\n        resetSelector();\n      }}\n    >\n      {t(\"orders.newOrder\")}\n    </button>",
+          "migrated": "<Button\n      variant=\"primary\" size=\"md\"\n      onClick={() => {\n        setShowForm(true);\n        setEditId(null);\n        setForm(emptyForm);\n        resetSelector();\n      }}\n    >\n      {t(\"orders.newOrder\")}\n    </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "sha256": "41e0e77f5b48b59a1178ca32b125a3cd63df644b9f7304f0c474bf3126c0714d",
+      "targets": [
+        {
+          "line": 175,
+          "className": "btn-secondary field-h-md",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button\n        type=\"button\"\n        className=\"btn-secondary field-h-md\"\n        onClick={() => navigate(-1)}\n        disabled={saving}\n      >\n        {t(\"common.cancel\")}\n      </button>",
+          "migrated": "<Button\n        type=\"button\"\n        variant=\"secondary\" size=\"md\"\n        onClick={() => navigate(-1)}\n        disabled={saving}\n      >\n        {t(\"common.cancel\")}\n      </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "sha256": "556157df2f5686af40173ab4d2d503478543e5cf00092882b989e11c8ea83305",
+      "targets": [
+        {
+          "line": 190,
+          "className": "btn-primary",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button\n          type=\"button\"\n          className=\"btn-primary\"\n          onClick={() => navigate(\"/admin/products/new\")}\n        >\n          {t(\"products.newProduct\")}\n        </button>",
+          "migrated": "<Button\n          type=\"button\"\n          variant=\"primary\" size=\"md\"\n          onClick={() => navigate(\"/admin/products/new\")}\n        >\n          {t(\"products.newProduct\")}\n        </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "sha256": "680d951af798be84d6457fbce5fbb3c6d5d331a5e452f56aa6d7b791570ebe55",
+      "targets": [
+        {
+          "line": 134,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={onClose} disabled={saving}>\n        {t(\"common.cancel\")}\n      </button>",
+          "migrated": "<Button type=\"button\" variant=\"secondary\" size=\"md\" onClick={onClose} disabled={saving}>\n        {t(\"common.cancel\")}\n      </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "sha256": "6a43185caca83c2e78137b9442d9575124af9e3bc2461e12d308e78e4f2ec0b5",
+      "targets": [
+        {
+          "line": 198,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" data-testid=\"po-new-btn\" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>\n            {t(\"purchaseOrders.newPO\")}\n          </button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" data-testid=\"po-new-btn\" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>\n            {t(\"purchaseOrders.newPO\")}\n          </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "sha256": "01a9046f739a43d564fb7b1c0a6deefcaa0433da7a302c43caccded7f749a672",
+      "targets": [
+        {
+          "line": 267,
+          "className": "btn-sm btn-secondary",
+          "variant": "secondary",
+          "size": "sm",
+          "raw": "<button type=\"button\" className=\"btn-sm btn-secondary\" onClick={() => setShowFedExModal(true)} data-testid=\"fedex-estimate-btn\">{t(\"quotes.fedexEstimate\")}</button>",
+          "migrated": "<Button type=\"button\" variant=\"secondary\" size=\"sm\" onClick={() => setShowFedExModal(true)} data-testid=\"fedex-estimate-btn\">{t(\"quotes.fedexEstimate\")}</Button>"
+        },
+        {
+          "line": 282,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={() => navigate(\"/quotes\")}>{t(\"common.cancel\")}</button>",
+          "migrated": "<Button type=\"button\" variant=\"secondary\" size=\"md\" onClick={() => navigate(\"/quotes\")}>{t(\"common.cancel\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "sha256": "f9d6733f1b1627a7b5c2547434a2810f066db1b3dd56ef3fd18baaa01c012f2f",
+      "targets": [
+        {
+          "line": 137,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => navigate(\"/quotes/new\")}>{t(\"quotes.newQuote\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => navigate(\"/quotes/new\")}>{t(\"quotes.newQuote\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "sha256": "809da1034f480b5d8321c5e25a25b5044a837a56b93f01a83f62f4dc108e4fd8",
+      "targets": [
+        {
+          "line": 404,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button className=\"btn-secondary\" disabled={!dirty || savingPerms} onClick={cancelEdits}>\n                    {t(\"roles.cancelChanges\")}\n                  </button>",
+          "migrated": "<Button variant=\"secondary\" size=\"md\" disabled={!dirty || savingPerms} onClick={cancelEdits}>\n                    {t(\"roles.cancelChanges\")}\n                  </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "sha256": "bef46eedc7f9c8c0a97639e7f1234c7dd7de77102cfd64e163f60cb76070899a",
+      "targets": [
+        {
+          "line": 53,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"shifts.newShift\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => setShowForm(true)}>{t(\"shifts.newShift\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/staff-reports/StaffReportsPage.tsx",
+      "sha256": "c5fa6f5af93ef99fca806c1af66602a25f420ba6c06febf1673766ee5f7dda42",
+      "targets": [
+        {
+          "line": 69,
+          "className": "btn-primary field-h-md",
+          "variant": "primary",
+          "size": "md",
+          "raw": "<button className=\"btn-primary field-h-md\" onClick={() => setShowForm(true)}>{t(\"common.add\")}</button>",
+          "migrated": "<Button variant=\"primary\" size=\"md\" onClick={() => setShowForm(true)}>{t(\"common.add\")}</Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "sha256": "895655551e1bc1cf7b2c7ec933b7839ab6ec14e09fc222ff496b451cab19a7e9",
+      "targets": [
+        {
+          "line": 173,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button onClick={() => startEdit(it)} className=\"btn-secondary\">\n          {t(\"common.edit\")}\n        </button>",
+          "migrated": "<Button onClick={() => startEdit(it)} variant=\"secondary\" size=\"md\">\n          {t(\"common.edit\")}\n        </Button>"
+        },
+        {
+          "line": 206,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button onClick={load} className=\"btn-secondary\">\n          {t(\"common.search\")}\n        </button>",
+          "migrated": "<Button onClick={load} variant=\"secondary\" size=\"md\">\n          {t(\"common.search\")}\n        </Button>"
+        },
+        {
+          "line": 324,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button type=\"button\" onClick={() => setEditing(null)} className=\"btn-secondary\">\n              {t(\"common.cancel\")}\n            </button>",
+          "migrated": "<Button type=\"button\" onClick={() => setEditing(null)} variant=\"secondary\" size=\"md\">\n              {t(\"common.cancel\")}\n            </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "sha256": "e65a9e21955dbaf53a441c6294a06a97fe6647c95934cd866cbbe76371c00b98",
+      "targets": [
+        {
+          "line": 339,
+          "className": "btn-secondary btn-sm",
+          "variant": "secondary",
+          "size": "sm",
+          "raw": "<button onClick={() => loadRules(ruleSearch)} className=\"btn-secondary btn-sm\" data-testid=\"rules-search-btn\">\n            {t(\"common.search\")}\n          </button>",
+          "migrated": "<Button onClick={() => loadRules(ruleSearch)} variant=\"secondary\" size=\"sm\" data-testid=\"rules-search-btn\">\n            {t(\"common.search\")}\n          </Button>"
+        },
+        {
+          "line": 417,
+          "className": "btn-secondary btn-sm",
+          "variant": "secondary",
+          "size": "sm",
+          "raw": "<button onClick={() => loadAliases(aliasSearch)} className=\"btn-secondary btn-sm\" data-testid=\"aliases-search-btn\">\n            {t(\"common.search\")}\n          </button>",
+          "migrated": "<Button onClick={() => loadAliases(aliasSearch)} variant=\"secondary\" size=\"sm\" data-testid=\"aliases-search-btn\">\n            {t(\"common.search\")}\n          </Button>"
+        }
+      ],
+      "owner": "sol1"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "sha256": "8a51b9c2344a9285d3d0b7274637548de6cb4f480f825b40fc9954e60618c7cc",
+      "targets": [
+        {
+          "line": 148,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button\n                  type=\"button\"\n                  className=\"btn-secondary\"\n                  onClick={() => startEdit(b)}\n                  data-testid={`llm-budget-edit-${b.tenant_id}`}\n                >\n                  {t(\"common.edit\")}\n                </button>",
+          "migrated": "<Button\n                  type=\"button\"\n                  variant=\"secondary\" size=\"md\"\n                  onClick={() => startEdit(b)}\n                  data-testid={`llm-budget-edit-${b.tenant_id}`}\n                >\n                  {t(\"common.edit\")}\n                </Button>"
+        }
+      ],
+      "owner": "sol2"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "sha256": "a7a69efd7b8b01ee6c77bdb14523ff43931bbd6bfb9180da02149b606fcd6470",
+      "targets": [
+        {
+          "line": 197,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button\n          type=\"button\"\n          className=\"btn-secondary\"\n          onClick={() => setShowTypeManager((v) => !v)}\n        >\n          {t(\"superAdmin.tcg.typeManager.title\")}\n        </button>",
+          "migrated": "<Button\n          type=\"button\"\n          variant=\"secondary\" size=\"md\"\n          onClick={() => setShowTypeManager((v) => !v)}\n        >\n          {t(\"superAdmin.tcg.typeManager.title\")}\n        </Button>"
+        },
+        {
+          "line": 359,
+          "className": "btn-secondary",
+          "variant": "secondary",
+          "size": "md",
+          "raw": "<button onClick={() => startEdit(it)} className=\"btn-secondary\">\n                  {t(\"common.edit\")}\n                </button>",
+          "migrated": "<Button onClick={() => startEdit(it)} variant=\"secondary\" size=\"md\">\n                  {t(\"common.edit\")}\n                </Button>"
+        }
+      ],
+      "owner": "sol2"
+    }
+  ],
+  "outsideLegacy": [
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "line": 227,
+      "raw": "<button\n                            className=\"btn-sm\"\n                            type=\"button\"\n                            data-testid={`commission-unassign-${key}`}\n                            disabled={savingRole === key}\n                            onClick={() => handleUnassign(key)}\n                          >\n                            {t(\"commission.unassignBtn\")}\n                          </button>"
+    },
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "line": 254,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-primary\"\n                onClick={handleRecalc}\n                disabled={recalcing}\n                data-testid=\"commission-recalc\"\n              >\n                {recalcing ? t(\"commission.recalculating\") : t(\"commission.recalc\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 286,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-sm\"\n            onClick={() => onPageChange(Math.max(1, page - 1))}\n            disabled={page <= 1}\n            aria-label=\"previous page\"\n          >\n            {prevPageLabel}\n          </button>"
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 298,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-sm\"\n            onClick={() => onPageChange(page + 1)}\n            disabled={!hasNextPage}\n            aria-label=\"next page\"\n          >\n            {nextPageLabel}\n          </button>"
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 246,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-primary\"\n                disabled={!selected}\n                onClick={() => setStage(\"confirm\")}\n              >\n                {t(\"mergeLead.nextStep\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 309,
+      "raw": "<button\n                type=\"submit\"\n                className=\"btn-danger\"\n                disabled={submitting}\n              >\n                {submitting\n                  ? t(\"mergeLead.merging\")\n                  : t(\"mergeLead.executeLabel\", { masterName: selected.customer_name })}\n              </button>"
+    },
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "line": 144,
+      "raw": "<button type=\"button\" className=\"btn-sm\" onClick={() => { setSearch(\"\"); setSearchInput(\"\"); }}>\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "line": 212,
+      "raw": "<button className=\"btn-danger btn-sm\" onClick={() => remove(r.id)}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+      "line": 124,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={saving}>\n            {saving ? t(\"accountSettings.saving\") : t(\"common.save\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+      "line": 104,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={changing}>\n            {changing ? t(\"accountSettings.changing\") : t(\"accountSettings.changePassword\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+      "line": 115,
+      "raw": "<button\n            onClick={handleSend}\n            disabled={sending || !channelId.trim() || !message.trim()}\n            className=\"btn btn-primary\"\n          >\n            {sending ? t(\"discordAnnounce.sending\") : t(\"discordAnnounce.send\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 278,
+      "raw": "<button onClick={handleSave} disabled={saving} className=\"btn btn-primary\">\n              {saving ? t(\"common.saving\") : t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 300,
+      "raw": "<button\n              onClick={handleAutoSetup}\n              disabled={!guildId || autoSetupRunning}\n              className=\"btn btn-secondary\"\n            >\n              {autoSetupRunning ? t(\"discordAutoSetup.running\") : t(\"discordAutoSetup.runButton\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 541,
+      "raw": "<button onClick={handleTicketSave} disabled={ticketSaving} className=\"btn btn-primary\">\n              {ticketSaving ? t(\"common.saving\") : t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "line": 557,
+      "raw": "<button\n                onClick={handleDeployButton}\n                disabled={deploying}\n                className=\"btn btn-secondary\"\n              >\n                {deploying ? t(\"discordTicketConfig.deploying\") : t(\"discordTicketConfig.deployButton\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+      "line": 161,
+      "raw": "<button\n                    onClick={() => saveRole(row)}\n                    className=\"btn-primary\"\n                    disabled={savingFor === row.role_id}\n                  >\n                    {savingFor === row.role_id\n                      ? t(\"common.saving\")\n                      : t(\"inventoryVisibility.save\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "line": 304,
+      "raw": "<button\n                type=\"submit\"\n                className=\"btn-primary\"\n                disabled={saving}\n                data-testid=\"tenant-policy-save\"\n              >\n                {saving ? t(\"common.saving\") : t(\"common.save\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "line": 249,
+      "raw": "<button\n                type=\"submit\"\n                className=\"btn-primary\"\n                disabled={saving}\n                data-testid=\"tenant-profile-save\"\n              >\n                {saving ? t(\"common.saving\") : t(\"common.save\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/archives/ArchivesPage.tsx",
+      "line": 60,
+      "raw": "<button className=\"btn-sm btn-primary\" onClick={() => restore(a.id)}>{t(\"archives.restore\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 203,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>\n            {t(\"bots.newBot\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 213,
+      "raw": "<button className=\"btn-sm\" onClick={() => setNewApiKey(null)} style={{ marginTop: \"var(--space-2)\" }}>{t(\"bots.apiKeyConfirm\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 311,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(b); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 312,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setRotateTarget(b); }}>{t(\"bots.rotateKey\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "line": 313,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(b); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "line": 85,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => endPair(p.id)}>{t(\"buddy.end\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 386,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={handleConnect}\n              disabled={connecting}\n            >\n              {connecting ? t(\"channels.connecting\") : t(\"channels.reauthAction\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 404,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-sm\"\n            style={{ marginLeft: \"var(--space-2)\" }}\n            onClick={loadChannels}\n          >\n            {t(\"channels.reload\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 435,
+      "raw": "<button\n              className=\"btn-primary\"\n              onClick={handleConnect}\n              disabled={connecting}\n              style={{ fontSize: \"var(--font-md)\", padding: \"var(--space-3) var(--space-6)\" }}\n            >\n              {connecting ? t(\"channels.connecting\") : t(\"channels.connect\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 521,
+      "raw": "<button\n                      className=\"btn-sm btn-danger\"\n                      onClick={() => setDisconnectTarget(ch)}\n                      disabled={disconnecting}\n                    >\n                      {t(\"channels.disconnect\")}\n                    </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 557,
+      "raw": "<button\n                  className=\"btn-primary\"\n                  onClick={handleDiscordConnect}\n                  disabled={discordConnecting}\n                  style={{ fontSize: \"var(--font-md)\", padding: \"var(--space-3) var(--space-6)\" }}\n                >\n                  {discordConnecting ? t(\"channels.discordConnecting\") : t(\"channels.discordAddBot\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 600,
+      "raw": "<button\n                  className=\"btn-sm btn-ghost\"\n                  onClick={() => navigate(\"/admin/discord-config\")}\n                >\n                  {t(\"channels.discordOpenSettings\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 607,
+      "raw": "<button\n                    className=\"btn-sm btn-danger\"\n                    onClick={() => setDiscordDisconnectOpen(true)}\n                    disabled={discordDisconnecting}\n                  >\n                    {t(\"channels.discordDisconnect\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "line": 251,
+      "raw": "<button\n                type=\"submit\"\n                className=\"btn-primary\"\n                disabled={saving}\n                data-testid=\"settings-save\"\n              >\n                {saving ? t(\"common.saving\") : t(\"common.save\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+      "line": 226,
+      "raw": "<button\n                  type=\"button\"\n                  className=\"btn-sm\"\n                  data-testid={`commissions-assign-${o.order_id}`}\n                  onClick={() => setAssigning(o)}\n                >\n                  {t(\"commissions.assignStaff\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 359,
+      "raw": "<button\n      className=\"btn-primary field-h-md\"\n      onClick={() => {\n        setCreateForm(emptyForm);\n        setActiveTab(\"basic\");\n        setPhoneError(null);\n        setAddressesDirty(false);\n        setShowCreate(true);\n      }}\n    >\n      + {t(\"companies.newCompany\")}\n    </button>"
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 408,
+      "raw": "<Link to={`/companies/${c.id}`} className=\"btn-sm\" onClick={(e) => e.stopPropagation()}>{t(\"companies.viewDetail\")}</Link>"
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 410,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 413,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 52,
+      "raw": "<button className=\"btn-sm\" onClick={() => openAddressEdit(a)}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 53,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => setAddrDeleteTarget(a)}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 73,
+      "raw": "<button className=\"btn-sm\" style={{ marginLeft: \"var(--space-3)\" }} onClick={() => openAddressNew(\"billing\")}>\n            + {t(\"common.add\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "line": 87,
+      "raw": "<button className=\"btn-sm\" style={{ marginLeft: \"var(--space-3)\" }} onClick={() => openAddressNew(\"delivery\")}>\n            + {t(\"common.add\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 97,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={!basicDirty || basicSubmitting}>\n            {basicSubmitting ? t(\"common.saving\") : t(\"companies.saveBasicInfo\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 126,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              onClick={() => setDedupConfirmOpen(true)}\n              disabled={dedupSubmitting || basicDirty}\n              title={basicDirty ? t(\"companies.dedupUnsavedHint\") : \"\"}\n            >\n              {t(\"companies.dedupConfirmAsDistinct\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "line": 135,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-danger\"\n              onClick={() => setMergeModalOpen(true)}\n              disabled={!canMerge || dedupSubmitting || basicDirty}\n              title={\n                !canMerge\n                  ? t(\"companies.dedupMergeNoPermission\")\n                  : basicDirty\n                    ? t(\"companies.dedupUnsavedHint\")\n                    : t(\"companies.dedupMergeHint\")\n              }\n            >\n              {t(\"companies.dedupMergeLabel\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyChannelsTab.tsx",
+      "line": 37,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={!channelsDirty || channelsSubmitting}>\n            {channelsSubmitting ? t(\"common.saving\") : t(\"companies.saveChannels\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "line": 90,
+      "raw": "<button\n              type=\"submit\"\n              className=\"btn-sm btn-primary\"\n              disabled={!discordDirty || discordSubmitting}\n            >\n              {discordSubmitting ? t(\"common.saving\") : t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "line": 97,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-sm btn-danger\"\n              onClick={handleDiscordDelete}\n              style={{ marginLeft: \"var(--space-2)\" }}\n            >\n              {t(\"discord.deleteSettings\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "line": 279,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>\n              {t(\"common.edit\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "line": 420,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "line": 595,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"conditions-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "line": 608,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"conditions-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "line": 199,
+      "raw": "<button type=\"button\" className=\"btn-primary\" onClick={handleResolveAsDistinct} disabled={dedupSubmitting}>\n                  {t(\"contacts.confirmAsDistinctFull\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 253,
+      "raw": "<button\n      className=\"btn-primary field-h-md\"\n      onClick={() => {\n        setCreateForm({ ...emptyCreateForm, company_id: companyFilter });\n        setShowCreate(true);\n      }}\n    >\n      + {t(\"contacts.newContact\")}\n    </button>"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 397,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 400,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}>\n                  {t(\"contacts.confirmAsDistinct\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "line": 405,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 166,
+      "raw": "<button className=\"btn-primary\">btn-primary</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 167,
+      "raw": "<button className=\"btn-secondary\">btn-secondary</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 168,
+      "raw": "<button className=\"btn-sm\">btn-sm</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 169,
+      "raw": "<button className=\"btn-sm btn-danger\">btn-sm danger</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 412,
+      "raw": "<button type=\"button\" className=\"btn-ghost\">FAQ</button>"
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 429,
+      "raw": "<button type=\"button\" className=\"btn-ghost\">FAQ</button>"
+    },
+    {
+      "file": "frontend/src/pages/erp/ERPPage.tsx",
+      "line": 58,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={exportInvoices} disabled={exporting}>\n              {exporting ? t(\"erp.exporting\") : t(\"erp.exportInvoices\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 201,
+      "raw": "<button className=\"btn-primary gs-save-btn\" onClick={onSave} disabled={saving}>\n        {saving ? t(\"common.saving\") : t(\"goals.save\")}\n      </button>"
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 360,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-primary gs-advisor__run-btn\"\n                data-testid=\"goal-advisor-generate\"\n                onClick={fetchAdvice}\n                disabled={loadingAdvice}\n              >\n                {loadingAdvice ? t(\"common.loading\") : t(\"goals.advisorGenerate\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 318,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                style={{ marginLeft: \"var(--spacing-1)\" }}\n                onClick={() => { navigator.clipboard.writeText(regLink); }}\n              >\n                {t(\"registration.copyLink\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 733,
+      "raw": "<button\n          onClick={handleSend}\n          disabled={sending}\n          className=\"btn btn-secondary text-xs\"\n        >\n          {sending ? t(\"leads.channelInviteSending\") : t(\"leads.channelInviteSend\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 791,
+      "raw": "<button\n          onClick={handleResync}\n          disabled={syncing}\n          className=\"btn btn-secondary text-xs\"\n        >\n          {syncing ? t(\"leads.discordRoleSyncing\") : t(\"leads.discordRoleResync\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 834,
+      "raw": "<button\n              onClick={() => handleAction(\"remove-from-channel\")}\n              disabled={loading !== null}\n              className=\"btn btn-secondary text-xs\"\n            >\n              {loading === \"remove-from-channel\" ? t(\"common.processing\") : t(\"leads.discordRemoveFromChannel\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 842,
+      "raw": "<button\n            onClick={() => handleAction(\"kick\")}\n            disabled={loading !== null}\n            className=\"btn btn-secondary text-xs\"\n          >\n            {loading === \"kick\" ? t(\"common.processing\") : t(\"leads.discordKick\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 849,
+      "raw": "<button\n            onClick={() => handleAction(\"ban\")}\n            disabled={loading !== null}\n            className=\"btn btn-danger text-xs\"\n          >\n            {loading === \"ban\" ? t(\"common.processing\") : t(\"leads.discordBan\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 46,
+      "raw": "<button\n        type=\"button\"\n        className=\"btn-ghost\"\n        onClick={() => navigate(\"/templates\")}\n        aria-label={t(\"nav.templates\")}\n        data-tooltip={t(\"nav.templates\")}\n      >\n        {t(\"nav.templates\")}\n      </button>"
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 55,
+      "raw": "<button\n        type=\"button\"\n        className=\"btn-ghost\"\n        onClick={() => navigate(\"/faq\")}\n        aria-label={t(\"faq.title\")}\n        data-tooltip={t(\"faq.title\")}\n      >\n        FAQ\n      </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "line": 143,
+      "raw": "<button\n          className=\"btn-primary\"\n          disabled={busy || !clientId || !clientSecret}\n          onClick={handleSaveAndTest}\n        >\n          {busy ? t(\"carrierIntegration.saving\") : t(\"carrierIntegration.saveAndTest\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 269,
+      "raw": "<button\n            className=\"btn-secondary\"\n            disabled={busy}\n            onClick={() => handleTest(env)}\n          >\n            {busy ? t(\"carrierIntegration.testing\") : t(\"carrierIntegration.testButton\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 279,
+      "raw": "<button\n            className=\"btn-ghost carrier-env-card__delete-btn\"\n            disabled={busy}\n            onClick={() => setDeleteConfirmEnv(env)}\n          >\n            {t(\"carrierIntegration.disconnect\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "line": 297,
+      "raw": "<a\n            href={`/management-center/integrations/${carrier}/setup-guide`}\n            target=\"_blank\"\n            rel=\"noopener noreferrer\"\n            className=\"btn-secondary\"\n          >\n            {t(\"carrierIntegration.openSetupGuide\")}\n          </a>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 146,
+      "raw": "<button type=\"button\" className=\"btn-primary\" onClick={onAdvance}>\n              {advanceLabel}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 513,
+      "raw": "<button\n                    type=\"button\"\n                    className=\"btn-secondary\"\n                    disabled={uploadBusy.letterhead}\n                    onClick={() => void handleUpload(\"LETTERHEAD\")}\n                  >\n                    {uploadBusy.letterhead\n                      ? t(\"carrierIntegration.fedexEtdGuideUploading\")\n                      : t(\"carrierIntegration.fedexEtdGuideUploadButton\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 542,
+      "raw": "<button\n                    type=\"button\"\n                    className=\"btn-secondary\"\n                    disabled={uploadBusy.signature}\n                    onClick={() => void handleUpload(\"SIGNATURE\")}\n                  >\n                    {uploadBusy.signature\n                      ? t(\"carrierIntegration.fedexEtdGuideUploading\")\n                      : t(\"carrierIntegration.fedexEtdGuideUploadButton\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 590,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              onClick={advance}\n            >\n              {activeStepIndex === stepDefinitions.length - 1\n                ? t(\"carrierIntegration.fedexEtdGuideFinishedButton\")\n                : t(\"common.next\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 184,
+      "raw": "<a\n              href=\"https://developer.fedex.com/api/ja-jp/home.html\"\n              target=\"_blank\"\n              rel=\"noopener noreferrer\"\n              className=\"btn-primary\"\n            >\n              {t(\"carrierIntegration.fedexGuideDeveloperPortalButton\")}\n            </a>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 252,
+      "raw": "<button\n            className=\"btn-primary\"\n            disabled={labelBusy}\n            onClick={handleIssueLabels}\n          >\n            {labelBusy ? t(\"carrierIntegration.lvStep2Issuing\") : t(\"carrierIntegration.lvStep2Button\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 269,
+      "raw": "<button\n                  className=\"btn-secondary btn-sm\"\n                  onClick={() => handleDownloadPdf(label)}\n                >\n                  {t(\"carrierIntegration.lvStep2DownloadPdf\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 366,
+      "raw": "<button\n            className=\"btn-secondary\"\n            disabled={coverBusy || !contactName || !printerModel || !printerCount}\n            onClick={handleDownloadCoverSheet}\n          >\n            {coverBusy ? t(\"carrierIntegration.lvStep6Downloading\") : t(\"carrierIntegration.lvStep6Button\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 382,
+      "raw": "<button\n            className=\"btn-secondary\"\n            disabled={emailBusy}\n            onClick={handleGetEmailTemplate}\n          >\n            {emailBusy ? t(\"carrierIntegration.lvStep7Loading\") : t(\"carrierIntegration.lvStep7Button\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 402,
+      "raw": "<button className=\"btn-secondary\" onClick={handleCopyEmailBody}>\n                {emailCopied\n                  ? t(\"carrierIntegration.lvStep7Copied\")\n                  : t(\"carrierIntegration.lvStep7CopyButton\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "line": 417,
+      "raw": "<a\n            href={mailtoHref}\n            className=\"btn-primary\"\n          >\n            {t(\"carrierIntegration.lvStep8MailtoButton\")}\n          </a>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 130,
+      "raw": "<button className=\"btn-primary\" disabled={busy} onClick={handleConnect}>\n              {busy\n                ? t(\"googleDriveIntegration.connecting\")\n                : t(\"googleDriveIntegration.connectButton\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 149,
+      "raw": "<button className=\"btn-secondary\" disabled={busy} onClick={handleDisconnect}>\n                {t(\"googleDriveIntegration.disconnect\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "line": 173,
+      "raw": "<button className=\"btn-primary\" disabled={busy} onClick={handleTest}>\n                {busy\n                  ? t(\"googleDriveIntegration.testing\")\n                  : t(\"googleDriveIntegration.testButton\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 173,
+      "raw": "<button className=\"btn-secondary\" disabled={busy} onClick={handleDisconnect}>\n              {t(\"paypalIntegration.disconnect\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 177,
+      "raw": "<button\n            className=\"btn-primary\"\n            disabled={busy || !clientId || !clientSecret}\n            onClick={handleSave}\n          >\n            {busy ? t(\"paypalIntegration.saving\") : t(\"paypalIntegration.save\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 192,
+      "raw": "<button\n            className=\"btn-primary\"\n            disabled={busy || !status?.configured}\n            onClick={handleTest}\n          >\n            {busy ? t(\"paypalIntegration.testing\") : t(\"paypalIntegration.testButton\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 220,
+      "raw": "<button className=\"btn-primary\" disabled={busy} onClick={handlePaymentTest}>\n              {busy ? t(\"paypalIntegration.payTestRunning\") : t(\"paypalIntegration.payTestButton\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 231,
+      "raw": "<a className=\"btn-primary\" href={payTest.approval_url} target=\"_blank\" rel=\"noopener noreferrer\">\n                  {t(\"paypalIntegration.payTestPay\")}\n                </a>"
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "line": 234,
+      "raw": "<a className=\"btn-secondary\" href={`/invoices/${payTest.invoice_id}`} target=\"_blank\" rel=\"noopener noreferrer\">\n                  {t(\"paypalIntegration.payTestOpenInvoice\")}\n                </a>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+      "line": 304,
+      "raw": "<button type=\"button\" className=\"btn-sm\" onClick={onClose}>\n          {t(\"common.close\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 394,
+      "raw": "<button type=\"button\" className=\"btn-primary btn-sm field-h-md\" data-testid=\"inventory-search-btn\" onClick={runSearch}>\n                {t(\"common.search\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 397,
+      "raw": "<button type=\"button\" className=\"btn-secondary btn-sm field-h-md\" data-testid=\"inventory-reset-sort\" onClick={resetAll}>\n                {t(\"inventory.resetSort\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 400,
+      "raw": "<button\n                type=\"button\"\n                className={filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}\n                data-testid=\"inventory-filter-toggle\"\n                aria-expanded={showFilterPanel}\n                aria-pressed={filterEnabled}\n                onClick={() => setShowFilterPanel((v) => !v)}\n              >\n                {t(\"inventory.filterPanel.button\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 168,
+      "raw": "<button\n                        type=\"button\"\n                        className=\"btn btn-sm btn-primary\"\n                        onClick={() => openAction(row, \"reserve\")}\n                        aria-label={t(\"ownInventory.reserve\")}\n                      >\n                        {t(\"ownInventory.reserve\")}\n                      </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 176,
+      "raw": "<button\n                        type=\"button\"\n                        className=\"btn btn-sm btn-secondary\"\n                        onClick={() => openAction(row, \"release\")}\n                        aria-label={t(\"ownInventory.release\")}\n                      >\n                        {t(\"ownInventory.release\")}\n                      </button>"
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 184,
+      "raw": "<button\n                        type=\"button\"\n                        className=\"btn btn-sm btn-danger\"\n                        onClick={() => openAction(row, \"ship\")}\n                        aria-label={t(\"ownInventory.ship\")}\n                      >\n                        {t(\"ownInventory.ship\")}\n                      </button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 233,
+      "raw": "<button\n          className={mode === \"inventory\" ? \"btn-primary\" : \"btn-secondary\"}\n          onClick={() => setMode(\"inventory\")}\n          data-testid=\"invoice-mode-inventory\"\n        >\n          {t(\"invoices.fromInventory\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 240,
+      "raw": "<button\n          className={mode === \"quote\" ? \"btn-primary\" : \"btn-secondary\"}\n          onClick={() => { setSourceQuoteCode(null); setMode(\"quote\"); }}\n          data-testid=\"invoice-mode-quote\"\n        >\n          {t(\"invoices.fromQuote\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 393,
+      "raw": "<button type=\"button\" className=\"btn-sm btn-danger\" onClick={() => removeItem(i)}>{t(\"quotes.removeItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 403,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={addItem} data-testid=\"invoice-add-blank\">{t(\"quotes.addItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "line": 435,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={saving}>{saving ? t(\"common.saving\") : t(\"invoices.createBtn\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 194,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"issue\")}>{t(\"invoices.issueAction\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 197,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"pay\")}>{t(\"invoices.payAction\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 200,
+      "raw": "<button className=\"btn-secondary field-h-md\" onClick={() => doAction(\"paypal-link\")}>{t(\"invoices.paypal.issueLink\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 203,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"paypal-confirm\")}>{t(\"invoices.paypal.confirm\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 206,
+      "raw": "<button className=\"btn-danger field-h-md\" onClick={() => setShowVoidForm(true)}>{t(\"invoices.voidAction\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 208,
+      "raw": "<button className=\"btn-secondary field-h-md\" onClick={handleDownloadPdf}>{t(\"invoices.snapshot.downloadPdf\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 221,
+      "raw": "<a className=\"btn-secondary\" href={invoice.paypal_approval_url} target=\"_blank\" rel=\"noopener noreferrer\">{t(\"invoices.paypal.openLink\")}</a>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 231,
+      "raw": "<a className=\"btn-secondary\" href={invoice.paypal_invoicer_view_url} target=\"_blank\" rel=\"noopener noreferrer\">{t(\"invoices.paypal.openOriginal\")}</a>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 234,
+      "raw": "<button className=\"btn-secondary\" onClick={handleDownloadCopyPdf}>{t(\"invoices.paypal.downloadCopyPdf\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "line": 273,
+      "raw": "<button className=\"btn-danger\" onClick={handleVoid}>{t(\"invoices.voidExecute\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 113,
+      "raw": "<button className=\"btn-sm\" onClick={() => navigate(`/invoices/${inv.id}`)}>\n          {t(\"common.detail\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 140,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => navigate(\"/invoices/new\")}>\n            {t(\"invoices.createTitle\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 314,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t(\"leads.newLead\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 501,
+      "raw": "<button className=\"btn-sm btn-primary\" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t(\"leads.convert\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 504,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t(\"leads.merge\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "line": 506,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 119,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={loading}>\n                {loading ? t(\"login.signingIn\") : t(\"login.signIn\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 144,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={loading}>\n                  {loading ? t(\"login.sendingEmail\") : t(\"login.sendResetEmail\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/note-master/NoteMasterPage.tsx",
+      "line": 236,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={(e) => { e.stopPropagation(); openEdit(n); }}\n            >\n              {t(\"common.edit\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/note-master/NoteMasterPage.tsx",
+      "line": 244,
+      "raw": "<button\n              className=\"btn-sm btn-danger\"\n              onClick={(e) => { e.stopPropagation(); setDeleteTarget(n); }}\n            >\n              {t(\"common.delete\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "line": 99,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(ch.id)}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 139,
+      "raw": "<button className=\"btn-sm\" onClick={() => handleEdit(o)}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 143,
+      "raw": "<button\n                className=\"btn-sm\"\n                onClick={() => setPaidOrder(o, true)}\n                data-testid={`mark-paid-${o.id}`}\n              >\n                {t(\"orders.markPaid\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 152,
+      "raw": "<button\n                className=\"btn-sm\"\n                onClick={() => setPurchaseTarget(o)}\n                data-testid={`mark-purchased-${o.id}`}\n              >\n                {t(\"orders.markPurchased\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 161,
+      "raw": "<button\n                className=\"btn-sm\"\n                onClick={() => setShippingTarget(o)}\n                data-testid={`issue-label-${o.id}`}\n              >\n                {t(\"orders.issueLabel\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 171,
+      "raw": "<button\n                className=\"btn-sm\"\n                onClick={() => setPaidOrder(o, false)}\n                data-testid={`mark-unpaid-${o.id}`}\n              >\n                {t(\"orders.markUnpaid\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 181,
+      "raw": "<button className=\"btn-sm\" onClick={() => setShippingTarget(o)} data-testid={`open-shipping-${o.id}`}>\n              {t(\"orders.shipping\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 184,
+      "raw": "<button className=\"btn-sm\" onClick={() => setPurchaseTarget(o)} data-testid={`open-purchase-${o.id}`}>\n              {t(\"orders.purchase\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "line": 187,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => setDeleteTarget(o)}>\n              {t(\"common.delete\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "line": 181,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>\n              {t(\"common.edit\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "line": 186,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>\n              {t(\"common.delete\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "line": 294,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "line": 377,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"product-categories-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "line": 390,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"product-categories-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "line": 183,
+      "raw": "<button\n        form=\"product-edit-page-form\"\n        type=\"submit\"\n        className=\"btn-primary field-h-md\"\n        disabled={saving || loading}\n        data-testid=\"product-edit-save\"\n      >\n        {saving ? t(\"common.saving\") : isNew ? t(\"common.register\") : t(\"common.update\")}\n      </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 199,
+      "raw": "<button\n          type=\"button\"\n          className=\"btn-danger\"\n          disabled={selectedIds.size === 0}\n          onClick={() => setConfirmBulkDelete(true)}\n          data-testid=\"products-bulk-delete\"\n        >\n          {t(\"common.delete\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 234,
+      "raw": "<button\n                type=\"button\"\n                className={reorderMode ? \"btn-primary btn-sm\" : \"btn-sm\"}\n                onClick={toggleReorderMode}\n                aria-pressed={reorderMode}\n                data-testid=\"products-reorder-toggle\"\n                title={t(\"products.reorderHint\")}\n              >\n                {reorderMode ? t(\"products.reorderModeOn\") : t(\"products.reorderMode\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 268,
+      "raw": "<button className=\"btn-primary btn-sm\" onClick={() => goCreate(\"/quotes/new\")} data-testid=\"create-quote-from-products\">\n            {t(\"products.createQuote\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 271,
+      "raw": "<button className=\"btn-primary btn-sm\" onClick={() => goCreate(\"/invoices/new\")} data-testid=\"create-invoice-from-products\">\n            {t(\"products.createInvoice\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 274,
+      "raw": "<button className=\"btn-sm\" onClick={() => setSelectedIds(new Set())}>\n            {t(\"common.clear\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 422,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"products-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "line": 435,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"products-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 137,
+      "raw": "<button form=\"po-form\" type=\"submit\" className=\"btn-primary\" disabled={saving}>\n        {saving ? t(\"common.saving\") : t(\"common.save\")}\n      </button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 201,
+      "raw": "<button type=\"button\" className=\"btn-sm btn-danger\" onClick={() => removeItem(i)}>{t(\"quotes.removeItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "line": 209,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={addItem} style={{ marginTop: \"var(--space-2)\" }}>{t(\"quotes.addItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 242,
+      "raw": "<button className=\"btn-sm btn-primary\" onClick={() => doAction(p.id, \"receive\")}>{t(\"purchaseOrders.actionReceive\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 246,
+      "raw": "<button\n                    className=\"btn-sm btn-secondary\"\n                    data-testid={`po-unreceive-${p.id}`}\n                    onClick={() => doAction(p.id, \"unreceive\")}\n                  >\n                    {t(\"purchaseOrders.actionUnreceive\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 255,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => doAction(p.id, \"cancel\")}>{t(\"purchaseOrders.actionCancel\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 259,
+      "raw": "<button\n                    className=\"btn-sm btn-secondary\"\n                    data-testid={`po-pdf-${p.id}`}\n                    onClick={() => downloadPdf(p.id, p.po_number, p.status)}\n                  >\n                    {t(\"purchaseOrders.actionDownloadPdf\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 268,
+      "raw": "<button\n                    className=\"btn-sm btn-secondary\"\n                    data-testid={`po-send-email-${p.id}`}\n                    onClick={() => sendEmail(p.id)}\n                  >\n                    {t(\"purchaseOrders.actionSendEmail\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "line": 277,
+      "raw": "<button\n                    className=\"btn-sm btn-primary\"\n                    data-testid={`po-resend-email-${p.id}`}\n                    onClick={() => resendEmail(p.id)}\n                  >\n                    {t(\"purchaseOrders.actionResendEmail\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 242,
+      "raw": "<button type=\"button\" className=\"btn-sm btn-danger\" onClick={() => removeItem(i)}>{t(\"quotes.removeItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 252,
+      "raw": "<button type=\"button\" className=\"btn-secondary\" onClick={addItem} data-testid=\"quote-add-blank\">{t(\"quotes.addItem\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "line": 283,
+      "raw": "<button type=\"submit\" className=\"btn-primary\" disabled={saving}>{saving ? t(\"common.saving\") : t(\"quotes.saveDraft\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 133,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"send\")}>{t(\"quotes.send\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 137,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"approve\")}>{t(\"quotes.approve\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 138,
+      "raw": "<button className=\"btn-danger field-h-md\" onClick={() => doAction(\"reject\")}>{t(\"quotes.reject\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 142,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={convertToInvoice}>{t(\"quotes.convertToInvoice\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 145,
+      "raw": "<button className=\"btn-secondary field-h-md\" onClick={handleFetchFxRate} disabled={fxLoading}>\n                {fxLoading ? t(\"common.loading\") : t(\"quotes.fx.fetchRate\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "line": 149,
+      "raw": "<button className=\"btn-secondary field-h-md\" onClick={handleDownloadPdf}>{t(\"invoices.snapshot.downloadPdf\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 100,
+      "raw": "<button\n              type=\"button\"\n              className={statusFilter === \"\" ? \"btn-primary btn-sm\" : \"btn-secondary btn-sm\"}\n              data-testid=\"quotes-filter-all\"\n              aria-pressed={statusFilter === \"\"}\n              onClick={() => setStatusFilter(\"\")}\n            >\n              {t(\"quotes.allStatuses\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 167,
+      "raw": "<button className=\"btn-sm\" onClick={() => navigate(`/quotes/${q.id}`)}>{t(\"common.detail\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "line": 294,
+      "raw": "<button type=\"button\" className=\"btn btn-ghost\" onClick={toggleLang} style={{ fontSize: \"var(--font-size-sm)\" }}>\n          {currentLang === \"en\" ? t(\"registration.switchToJapanese\") : t(\"registration.switchToEnglish\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "line": 461,
+      "raw": "<button\n          type=\"submit\"\n          className=\"btn btn-primary\"\n          disabled={submitting}\n          style={{ width: \"100%\" }}\n        >\n          {submitting ? t(\"common.saving\") : t(\"registration.addAddress\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "line": 227,
+      "raw": "<button type=\"button\" className=\"btn btn-ghost\" onClick={toggleLang} style={{ fontSize: \"var(--font-size-sm)\" }}>\n          {currentLang === \"en\" ? t(\"registration.switchToJapanese\") : t(\"registration.switchToEnglish\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "line": 407,
+      "raw": "<button\n          type=\"submit\"\n          className=\"btn btn-primary\"\n          disabled={submitting}\n          style={{ width: \"100%\" }}\n        >\n          {submitting ? t(\"common.saving\") : t(\"registration.changeBillingSubmit\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "line": 279,
+      "raw": "<button type=\"button\" className=\"btn btn-ghost\" onClick={toggleLang} style={{ fontSize: \"var(--font-size-sm)\" }}>\n          {currentLang === \"en\" ? t(\"registration.switchToJapanese\") : t(\"registration.switchToEnglish\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "line": 538,
+      "raw": "<button\n          type=\"submit\"\n          className=\"btn btn-primary\"\n          disabled={submitting}\n          style={{ width: \"100%\" }}\n        >\n          {submitting ? t(\"common.saving\") : t(\"registration.submit\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 340,
+      "raw": "<button className=\"btn-primary btn-sm\" onClick={openCreateRole}>+ {t(\"common.new\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 366,
+      "raw": "<button className=\"btn-secondary btn-block\" onClick={() => setUserAssignOpen(true)}>\n              {t(\"roles.assignUsers\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 398,
+      "raw": "<button className=\"btn-sm\" onClick={() => openEditRole(selectedRole)}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 400,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => setDeleteTarget(selectedRole)}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 407,
+      "raw": "<button className=\"btn-primary\" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>\n                    {savingPerms ? t(\"common.saving\") : t(\"roles.saveChanges\")}\n                  </button>"
+    },
+    {
+      "file": "frontend/src/pages/sales/SalesPage.tsx",
+      "line": 167,
+      "raw": "<button\n                  type=\"button\"\n                  className=\"btn-sm\"\n                  data-testid={`sales-edit-${o.order_id}`}\n                  onClick={() => setEditing(o)}\n                >\n                  {t(\"sales.editFinancial\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "line": 114,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => handleDelete(s.id)}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 220,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>\n            {t(\"staff.newStaff\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 366,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "line": 367,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 208,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>\n              {t(\"common.edit\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 213,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>\n              {t(\"common.delete\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 362,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 445,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"status-master-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "line": 458,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"status-master-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 222,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-secondary\"\n            disabled={importing}\n            onClick={runImportPreview}\n            data-testid=\"dex-import-preview-btn\"\n          >\n            {t(\"superAdmin.dex.import.previewBtn\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 276,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-primary\"\n            disabled={importing}\n            onClick={runImportApply}\n            data-testid=\"dex-import-apply-btn\"\n          >\n            {t(\"superAdmin.dex.import.applyBtn\", {\n              count: importPreview.added_count,\n            })}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "line": 321,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">\n              {t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+      "line": 241,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              disabled={saving[key]}\n              data-testid={`prompt-save-${key}`}\n              onClick={() => void handleSave(key)}\n            >\n              {saving[key] ? t(\"common.saving\") : t(`${p}.save`)}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+      "line": 93,
+      "raw": "<button\n            type=\"button\"\n            className=\"btn-primary field-h-md\"\n            onClick={handleRefresh}\n            disabled={refreshing}\n            data-testid=\"fx-rate-refresh-btn\"\n          >\n            <RefreshIcon size={16} aria-hidden=\"true\" />\n            {refreshing ? t(\"common.loading\") : t(\"superAdmin.fxRate.refreshBtn\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 342,
+      "raw": "<button onClick={openCreateRule} className=\"btn-primary btn-sm\" data-testid=\"rules-new\" style={{ marginLeft: \"auto\" }}>\n            {t(\"superAdmin.knowledge.newRule\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 345,
+      "raw": "<button\n            onClick={() => setRuleConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={ruleSelected.size === 0}\n            data-testid=\"rules-bulk-delete\"\n          >\n            {t(\"common.delete\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 390,
+      "raw": "<button className=\"btn-sm\" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>\n                      {t(\"common.edit\")}\n                    </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 420,
+      "raw": "<button onClick={openCreateAlias} className=\"btn-primary btn-sm\" data-testid=\"aliases-new\" style={{ marginLeft: \"auto\" }}>\n            {t(\"superAdmin.knowledge.newAlias\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 423,
+      "raw": "<button\n            onClick={() => setAliasConfirmDelete(true)}\n            className=\"btn-danger btn-sm\"\n            disabled={aliasSelected.size === 0}\n            data-testid=\"aliases-bulk-delete\"\n          >\n            {t(\"common.delete\")}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 462,
+      "raw": "<button className=\"btn-sm\" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>\n                      {t(\"common.edit\")}\n                    </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "line": 511,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-primary\"\n              disabled={promptSupplierId === null || promptSaving}\n              onClick={savePrompt}\n              data-testid=\"supplier-prompt-save\"\n            >\n              {promptSaving ? t(\"common.saving\") : t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "line": 226,
+      "raw": "<button\n              type=\"submit\"\n              className=\"btn-primary\"\n              data-testid=\"llm-budget-save\"\n            >\n              {t(\"common.save\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "line": 233,
+      "raw": "<button\n              type=\"button\"\n              className=\"btn-secondary\"\n              onClick={cancelEdit}\n              style={{ marginLeft: \"var(--space-2)\" }}\n              data-testid=\"llm-budget-cancel\"\n            >\n              {t(\"common.cancel\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 844,
+      "raw": "<button\n                  onClick={() => void handleApprove()}\n                  disabled={isFinal || submitting}\n                  data-testid=\"review-approve-btn\"\n                  className=\"btn-primary\"\n                >\n                  {t(\"superAdmin.inbound.review.approveBtn\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 852,
+      "raw": "<button\n                  onClick={() => setShowRejectDialog(true)}\n                  disabled={isFinal || submitting}\n                  data-testid=\"review-reject-btn\"\n                  className=\"btn-danger\"\n                  style={{ marginLeft: \"var(--space-2)\" }}\n                >\n                  {t(\"superAdmin.inbound.review.rejectBtn\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 890,
+      "raw": "<button\n                  onClick={() => void handleReject()}\n                  disabled={submitting}\n                  data-testid=\"review-reject-confirm-btn\"\n                  className=\"btn-danger\"\n                >\n                  {t(\"superAdmin.inbound.review.rejectConfirmBtn\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "line": 898,
+      "raw": "<button\n                  onClick={() => {\n                    setShowRejectDialog(false);\n                    setRejectReason(\"\");\n                  }}\n                  className=\"btn-secondary\"\n                  style={{ marginLeft: \"var(--space-2)\" }}\n                >\n                  {t(\"common.cancel\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "line": 116,
+      "raw": "<button\n            key={a.key}\n            role=\"tab\"\n            aria-selected={attr === a.key}\n            className={attr === a.key ? \"btn-primary\" : \"btn-secondary\"}\n            onClick={() => setAttr(a.key)}\n            style={{ padding: \"var(--space-1) var(--space-3)\" }}\n            data-testid={`attr-master-tab-${a.key}`}\n          >\n            {t(a.labelKey)}\n          </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 243,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">\n              {t(\"superAdmin.tcg.typeManager.addBtn\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 276,
+      "raw": "<button\n                  type=\"button\"\n                  className=\"btn-danger-link\"\n                  aria-label={`${t(\"common.delete\")} ${tp.name_ja}`}\n                  onClick={() => removeType(tp.id)}\n                >\n                  {t(\"common.delete\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 326,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">\n          {editId ? t(\"common.update\") : t(\"superAdmin.tcg.newSeries\")}\n        </button>"
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "line": 364,
+      "raw": "<button onClick={() => remove(it.id)} className=\"btn-danger-link\">\n                  {t(\"common.delete\")}\n                </button>"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 179,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 239,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 240,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t(\"suppliers.deleteSupplier\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 275,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"suppliers-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "line": 288,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage((p) => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"suppliers-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 181,
+      "raw": "<button className=\"btn-primary field-h-md\" onClick={() => { setShowCreate(true); setCreateForm(emptyForm); }}>\n              {t(\"teams.newTeam\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 244,
+      "raw": "<button type=\"submit\" className=\"btn-primary\">{t(\"common.add\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 254,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={() => removeMember(m.user_id)}>{t(\"common.remove\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 281,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openMembers(team); }}>{t(\"teams.membersBtn\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 283,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); handleRowClick(team); }}>{t(\"common.edit\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "line": 286,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(team); }}>{t(\"common.delete\")}</button>"
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "line": 189,
+      "raw": "<button className=\"btn-sm\" onClick={(e) => { e.stopPropagation(); openEdit(u); }}>\n              {t(\"common.edit\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "line": 194,
+      "raw": "<button className=\"btn-sm btn-danger\" onClick={(e) => { e.stopPropagation(); setDeleteTarget(u); }}>\n              {t(\"common.delete\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "line": 253,
+      "raw": "<button\n                type=\"button\"\n                className=\"btn-sm\"\n                onClick={() => { setSearch(\"\"); setSearchInput(\"\"); setPage(1); }}\n              >\n                {t(\"common.clear\")}\n              </button>"
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "line": 400,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => Math.max(1, p - 1))}\n              disabled={page <= 1}\n              data-testid=\"units-page-prev\"\n            >\n              {t(\"common.prevPage\")}\n            </button>"
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "line": 413,
+      "raw": "<button\n              className=\"btn-sm\"\n              onClick={() => setPage(p => p + 1)}\n              disabled={!hasNext}\n              data-testid=\"units-page-next\"\n            >\n              {t(\"common.nextPage\")}\n            </button>"
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "sha256": "600ffba93af587b49e550854cc3079cdde157e63244e4f2e7fd9ed66cb6578a4"
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "sha256": "fbc00867e719614a806b649cce7df1268c3eb395cc94517feae510c7e38978b9"
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "sha256": "e95ceb5d29c95c372d0f19de503df964220edcc049fd76e3ff258bfdeab29c63"
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "sha256": "0715a72e3898b3f78993415159dd4d6d9076527a04787786986751312f599a52"
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "sha256": "944eccd5e087ab494fbc1c777ec17c40f4a1d664f7d60fdd7c15f2d593b2e263"
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "sha256": "34334cb8fe05afa50ddc89f8bc06cf98286b8408eef34dc276232a772f4c6762"
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "sha256": "fd7e6dbf80831ed034234e625008e8eda4bb454f2fb16cdc132ddf6e950b3115"
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "sha256": "04b710ddcf56f8c13d13c094eaf75105d3354bd78133fa643bb70208719e5080"
+    },
+    {
+      "file": "frontend/src/components.css",
+      "sha256": "a729d85432ba4552602bacb11a441dbe383426f7fdac5675d6c6400b1a8ef3be"
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "sha256": "c0e82655697f716ee8ca1f8307ee9cbb746932b2ec3c863c8426caacd8014ee8"
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "sha256": "fdc09f98cae7cdfbc1ba791e075f70f8fa71454090dfa09fbb4b2398adf6d8b0"
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "sha256": "0a40f8dca2e612c0a61463c2db87737169f48533f290447873501b5ed0050720"
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "sha256": "6a2981925541cdeeeda4693b62f977255c3369281437156a1d17b39e0a61a1a8"
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "sha256": "d00f413597152bf28546777e51de3e1e95094ab96839213e8231021a318d2597"
+    },
+    {
+      "file": "frontend/src/components/field-size.css",
+      "sha256": "6acbe76e817dc0428f1eb930ca104fd00a7f25d16a80c04e0be9db0e23c8e4b6"
+    }
+  ]
+}

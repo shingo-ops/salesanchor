@@ -16,7 +16,7 @@
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
-| フロントエンド金型化・再測定 | Astra設計/Sol実装 | AP本番/記録反映済。AQ2件保存済。AR追加28件実装/交差レビュー/ローカル検収合格、AQ+AR PR3828提出済 | PR3828最新HEADのCI/番号付きGO/配備。PR3824マージで起票依存解消。画面確認はPO指示で省略。表/報酬3/カレンダー色保留、新CI最後 | docs/specs/design-system/design.md §AR / ar-button-audit.json / aq-staff-report-implementation.md / PR3497・3514 | 2026-09-28 |
+| フロントエンド金型化・再測定 | Astra設計/Sol実装 | AQ+AR計30件PR3828マージ・本番反映・公開配信確認済。共通231/旧266 | 残旧266件の次便調査。表/報酬3/カレンダー色保留、新CI最後。画面確認はPO指示で省略・未検証 | PR3828 / Deploy36395037199 / docs/handoff/design-system-recon/evidence-20260910/ar-production-verification.json | 2026-09-28 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
@@ -167,3 +167,10 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | 商品検索語の全語一致 | 設計/実装担当 | PR3499実装済み。固定正解0→4/4、正式3718成功/95skip/失敗0 | 番号付きGOと既存PM0264配備障害解消待ち。本番未反映 | docs/handoff/tcg-product-import/design.md§24 | 2026-09-14 |
+
+
+## 静的34ボタンの共通金型移管（AS・2026-09-28）
+
+| タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
+|---|---|---|---|---|---|
+| AS共通Button移管 | Astra設計/Sol2担当実装 | PR3834提出、34/25移管・相互レビューAPPROVE、全606試験成功。GO記録検査は未受領で停止 | 最新技術CI確認、GO #3834受領後にHEAD/backup再照合・公式merge/deploy | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |

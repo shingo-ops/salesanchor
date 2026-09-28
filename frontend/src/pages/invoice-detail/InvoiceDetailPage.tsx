@@ -14,6 +14,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
+import { Button } from "../../components/Button";
 
 interface InvoiceItem {
   id: number;
@@ -269,7 +270,7 @@ export default function InvoiceDetailPage() {
           <input style={{ width: "100%", padding: "var(--space-2)", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }}
                  value={voidReason} onChange={(e) => setVoidReason(e.target.value)} placeholder={t("invoices.voidReasonPlaceholder")} />
           <div style={{ marginTop: "var(--space-2)", display: "flex", gap: "var(--space-2)" }}>
-            <button className="btn-secondary" onClick={() => setShowVoidForm(false)}>{t("common.cancel")}</button>
+            <Button variant="secondary" size="md" onClick={() => setShowVoidForm(false)}>{t("common.cancel")}</Button>
             <button className="btn-danger" onClick={handleVoid}>{t("invoices.voidExecute")}</button>
           </div>
         </div>

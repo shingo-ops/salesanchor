@@ -12,6 +12,7 @@
 import { useCallback, useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 
 interface LLMBudget {
   tenant_id: number;
@@ -145,14 +146,14 @@ export default function LLMBudgetTab() {
               <td>{b.notify_admin ? "ON" : "OFF"}</td>
               <td style={{ fontSize: "var(--font-sm)" }}>{b.last_reset_at.split("T")[0]}</td>
               <td>
-                <button
+                <Button
                   type="button"
-                  className="btn-secondary"
+                  variant="secondary" size="md"
                   onClick={() => startEdit(b)}
                   data-testid={`llm-budget-edit-${b.tenant_id}`}
                 >
                   {t("common.edit")}
-                </button>
+                </Button>
               </td>
             </tr>
           ))}

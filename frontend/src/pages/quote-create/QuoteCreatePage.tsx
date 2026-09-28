@@ -20,6 +20,7 @@ import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { FedExRateModal } from "../../components/FedExRateModal";
+import { Button } from "../../components/Button";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -264,7 +265,7 @@ export default function QuoteCreatePage() {
           <div className="form-group"><label>{t("quotes.shippingFee")}</label>
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
               <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
-              <button type="button" className="btn-sm btn-secondary" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</button>
+              <Button type="button" variant="secondary" size="sm" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</Button>
             </div>
           </div>
           <div className="form-group"><label>{t("quotes.tax")}</label>
@@ -279,7 +280,7 @@ export default function QuoteCreatePage() {
         </div>
 
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => navigate("/quotes")}>{t("common.cancel")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={() => navigate("/quotes")}>{t("common.cancel")}</Button>
           <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("quotes.saveDraft")}</button>
         </div>
       </form>
