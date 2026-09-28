@@ -1,0 +1,18 @@
+✅ PR所有権確認: PR #3828 (ブランチ: release/frontend-next-button-batch)
+   マージ前GO・HEAD・必須checksを検査します（自動追従・再送なし）
+
+required checks: total=13 pass=13 skipping=0
+required checks: total=13 pass=13 skipping=0
+{"status": "MERGED", "number": 3828, "headRefOid": "f7987554d6c917e48668bbee9670a8c3ad1554b4", "mergeCommit": "8862732e494ac5d92287d57aeea808cee05d3151", "mergedAt": "2026-09-28T08:02:45Z"}
+
+🗑️  worktreeをクリーンアップしています...
+   ブランチ: release/frontend-next-button-batch
+   パス    : /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch
+
+🔓 UUID解放: 27ca755a-4559-499e-b46e-7e9e58a81e98
+✅ active-work.md → DONE に更新しました: release/frontend-next-button-batch
+✅ worktree削除完了: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-next-button-batch
+Deleted branch release/frontend-next-button-batch (was f7987554d).
+✅ ブランチ削除完了: release/frontend-next-button-batch
+
+✅ クリーンアップ完了
