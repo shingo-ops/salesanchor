@@ -16,7 +16,7 @@
 | Android LINE専用API・Termux送信 | Codex | 全124名照合、対応判明5名のAndroid別名保存を実装中 | CI後に反映・証拠付きlink・暗号化inspectで保存を確認。今回は確定/解析/配信なし | docs/handoff/line-supplier-aliases/design.md / recon.md / Issue #3437 | 2026-09-12 |
 | 商品マスタの発売日順・作品タブ（実装） | Agent | ローカル実装12e6b13c、画面単体14件/E2E5件成功。PO原文GO#3433受領、最新main追従済み | PR #3433へ公開、実PG skip0・CI確認後にマージ/配備。tenant_001実接続と人の確認は未実施 | docs/handoff/tcg-product-import/recon.md 同日GO追補 / EV-20260911-PRODUCT-DATE-TABS / PR #3433 | 2026-09-11 |
 | 商品マスタ詳細編集・二言語一覧 | 実装/公開担当 | PR #3492 GO受領・起動ガード復旧確認。mainのCSV往復を保持して統合、相互上書き防止と出力検索一致の検証追加 | 最新HEADの全CI成功→正規マージ/デプロイ→公開資産/health確認 | PR #3492 / docs/handoff/tcg-product-import/recon.md GO受領後の環境復旧・CSV統合 | 2026-09-14 |
-| フロントエンド金型化・再測定 | Astra設計/Sol実装 | AQ+AR計30件PR3828マージ・本番反映・公開配信確認済。共通231/旧266 | 残旧266件の次便調査。表/報酬3/カレンダー色保留、新CI最後。画面確認はPO指示で省略・未検証 | PR3828 / Deploy36395037199 / docs/handoff/design-system-recon/evidence-20260910/ar-production-verification.json | 2026-09-28 |
+| フロントエンド金型化・再測定 | Astra設計/Sol実装 | AT11件PR3839までマージ・本番反映・公開配信確認済。対象版共通280/旧221 | 残旧221件の次便調査。表/報酬3/カレンダー色保留、新CI最後。画面確認はPO指示で省略・未検証 | PR3839 / Deploy36488806931 / docs/handoff/design-system-recon/evidence-20260910/at-production-verification.json | 2026-09-29 |
 | PMG解析実行記録（後続設計） | 設計担当 | PR #3396文書マージ確認済み。製品設計REVISE。隔離試験PR #3408のDocker99件成功、ページ接続PR #3416は本番反映済み | PR #3408マージ/自動deploy成功確認済み。入口配布・旧処理照合の具体手段を確定して設計再審査 | docs/handoff/pmg-import-delivery-ssot/design.md 最終確認節 / EV-20260910-PMG-ANALYSIS-RUN / PR #3396 | 2026-09-10 |
 | 商品取り込みのスキーマ修飾検査（依頼6） | 実装担当 | PR #3397マージ済み（a0c0eb7f）。実PGを含む2436成功・93スキップ、必須12件成功 | 依頼4の評価ゲートを別PRで設置・検証する | backend/tests/test_tcg_schema_qualification.py / EV-20260910-TCG-SCHEMA-IMPL | 2026-09-10 |
 | worktree作成時の既存保持指定（設計） | Agent | PR #3390にPO GO受領。文書4件のみ、mainの別テーマ追記を保持して競合解消。実装未着手 | 最新HEADのCI確認後に文書PRをマージ。最終状態はPR #3390参照。実装担当の作業場所と正式カードは別途 | docs/handoff/branch-operations/design.md 同日節 / EV-20260910-WORKTREE-PRESERVE | 2026-09-10 |
@@ -180,4 +180,4 @@
 | タスク | 担当 | 現在地 | 次の一手 | 根拠 | 更新日 |
 |---|---|---|---|---|---|
 | AS共通Button移管 | Astra設計/Sol2担当実装 | GO #3834でmerge b3cf1fdf3・Deploy36416280694成功、本番hash/HTTP/接続確認済み。34件反映 | 本便製品完了。結果文書保存、残旧232/表/報酬3/カレンダー色は別設計 | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |
-| AT共通フォームButton移管 | Astra設計/Sol2担当実装 | 11件移管・逆変換/共有維持・634試験と全体品質成功・相互レビューAPPROVE | PR #3839提出済み。最新CI・番号付き本人GO確認後に正規マージ/配備 | EV-20260928-AT-DESIGN / docs/specs/design-system/design.md §AT | 2026-09-28 |
+| AT共通フォームButton移管 | Astra設計/Sol2担当実装 | GO #3839でmerge a5547fb7・Deploy36488806931成功。本番HEAD/公開hash/HTTP/接続を直接確認済み。11件反映 | 本便製品完了。結果文書保存、残旧221/表/報酬3/カレンダー色は別設計 | EV-20260929-AT-DEPLOY / docs/handoff/design-system-recon/evidence-20260910/at-production-verification.json | 2026-09-29 |

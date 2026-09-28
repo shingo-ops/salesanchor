@@ -55,3 +55,12 @@ PR #3839（https://github.com/shingo-ops/salesanchor/pull/3839）を公式create
 当初再GOを求める旨を説明したが、同一PRの承認済み範囲が完全不変と確定したため訂正。今回の本人GOと既存のmain追従・検証・マージ依頼の範囲で進める。本人GOの再発行、原文の創作、Opus委任のAstraへの拡張は行わない。新HEAD/最新CI/バックアップを改めて正式gateで検査する。
 
 統合後監査: 共通280/旧221（main単体269/232、本便+11/-11）、対象9逆変換/対象外221/共有18一致。製品・試験12ファイル以外の製品差分0。build/check:all/Storybook成功、最新全体48files638試験成功（64.53秒、maxWorkers=1、時間制限変更なし）。原ログはat-go-validation.tar.gz、再現監査はat-go-audit.cjs。旧統合監査は当時の固定mainを対象とした履歴として保持する。
+
+
+## 2026-09-29 AT 本番反映完了
+
+本人原文「GO #3839」受領・転記済み。main追従後も対象9製品/3試験は承認時と全byte一致。最新HEAD e129dac1bf1c42060d7801b4607e3cd2e701d9a1の技術CI38成功/8対象外、CI48files638試験成功（65.41秒）。公式merge-safeが必須13checksを2回確認後、merge a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-28T21:51:11ZをGitHubで確認。初回BEHIND停止からの経緯は前節とat-go-validation.tar.gzに保存。
+
+Deploy 36488806931 success。rootは2026-09-28T21:55:11.392639+00:00にread-onlyで本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナ各SHA256一致を直接検証した。証跡at-production-verification.json/at-merge-final.txt/at-deploy-result.json。実データを書き込むフォーム操作・ブラウザー画面・PO目視は指示どおり省略・未検証。復元試験も未実施。
+
+11件移管、本番対象の共通Button280/旧221。API/DB/配線/共有金型変更0。設計・実装・レビュー・本人承認・マージ・本番反映・配信確認済み。残旧221、表/報酬3/カレンダー色、最後のCI補強は別便。結果文書の保存PRを本便完了記録として扱う。

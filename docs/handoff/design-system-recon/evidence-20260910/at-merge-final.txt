@@ -1,0 +1,19 @@
+✅ PR所有権確認: PR #3839 (ブランチ: release/frontend-form-button-batch)
+   マージ前GO・HEAD・必須checksを検査します（自動追従・再送なし）
+
+required checks: total=13 pass=13 skipping=0
+required checks: total=13 pass=13 skipping=0
+{"status": "MERGED", "number": 3839, "headRefOid": "e129dac1bf1c42060d7801b4607e3cd2e701d9a1", "mergeCommit": "a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401", "mergedAt": "2026-09-28T21:51:11Z"}
+
+🗑️  worktreeをクリーンアップしています...
+   ブランチ: release/frontend-form-button-batch
+   パス    : /Users/tanizawashingo/worktrees/salesanchor/release-frontend-form-button-batch
+
+🔓 UUID解放: 7a7411e1-c60b-454a-ac8a-b24f0075aff1
+✅ active-work.md → DONE に更新しました: release/frontend-form-button-batch
+✅ worktree削除完了: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-form-button-batch
+Deleted branch release/frontend-form-button-batch (was e129dac1b).
+✅ ブランチ削除完了: release/frontend-form-button-batch
+
+✅ クリーンアップ完了
+
