@@ -34,6 +34,9 @@ const {
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
+  hasPoOnlyExceptionPath,
+  migrationsContainDropStatement,
+  requiresPoOnlyGo,
 } = require(SCRIPT);
 
 // ─── テストユーティリティ ─────────────────────────────────────────────────────
@@ -347,6 +350,77 @@ test('PR番号未指定時は番号一致チェックをスキップ', () => {
   assert.deepStrictEqual(errors, []);
 });
 
+// ── ユニットテスト: ADR-1003 GO委任 ───────────────────────────────────────
+console.log('\n【ADR-1003 GO委任テスト】');
+
+/** 委譲名義のGO記録セクション */
+function delegatedGORecordSection(prNumber) {
+  return `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #${prNumber}\n- バックアップ確認: あり\n`;
+}
+
+test('ADR-1003: 委譲の名義（例外対象でない）はエラーなしで通る', () => {
+  const r = parseGORecord(delegatedGORecordSection(2099));
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: false });
+  assert.deepStrictEqual(errors, []);
+});
+
+test('ADR-1003: 例外対象で委譲の名義を使うとfailする', () => {
+  const r = parseGORecord(delegatedGORecordSection(2099));
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: true });
+  assert.ok(errors.length > 0);
+  assert.ok(errors.some(e => e.includes('例外対象') && e.includes('PO本人')));
+});
+
+test('ADR-1003: PO名義は例外対象でも従来どおり通る', () => {
+  const r = parseGORecord(validGORecordSection(2099)); // Shingo（shingo-ops）名義
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: true });
+  assert.deepStrictEqual(errors, []);
+});
+
+test('ADR-1003: hasPoOnlyExceptionPath は workflow-lint.yml を例外対象と判定する', () => {
+  assert.ok(hasPoOnlyExceptionPath(['.github/workflows/workflow-lint.yml']));
+  assert.ok(!hasPoOnlyExceptionPath(['.github/workflows/deploy.yml']));
+});
+
+test('ADR-1003: migrationsContainDropStatement はMOCK変数で判定できる', () => {
+  process.env.MOCK_MIGRATION_DROP_DETECTED = 'true';
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/001_test.sql']), true);
+  } finally {
+    delete process.env.MOCK_MIGRATION_DROP_DETECTED;
+  }
+});
+
+test('ADR-1003: requiresPoOnlyGo はmigrationファイルが無ければfalse（DROP検出をスキップ）', () => {
+  assert.strictEqual(requiresPoOnlyGo(['backend/app/schemas/lead.py']), false);
+});
+
+test('ADR-1003: migration有り＋BASE_SHA/HEAD_SHA無し → fail-closed（true）', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/001_test.sql']), true);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
+test('ADR-1003: migrationファイルが無ければBASE_SHA/HEAD_SHA無しでもfalse', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['backend/app/schemas/lead.py']), false);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
 // ── ユニットテスト: file:line 引用検証 ───────────────────────────────────────
 console.log('\n【file:line引用テスト】');
 
@@ -577,6 +651,42 @@ test('AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須�
     MOCK_PR_BODY: body,
   });
   assert.notStrictEqual(result.code, 0);
+});
+
+// ── ADR-1003: GO委任の統合テスト ────────────────────────────────────────────
+console.log('\n【ADR-1003 GO委任 統合テスト】');
+
+test('ADR-1003統合: 危ない変更（例外対象でない）＋委譲名義のGO → pass', () => {
+  const body = `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: 'scripts/some-script.sh', // dangerous（scripts/）だがADR-1003例外対象ではない
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+});
+
+test('ADR-1003統合: workflow-lint.yml変更＋委譲名義のGO → fail（PO本人のGOが必要）', () => {
+  const body = `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: '.github/workflows/workflow-lint.yml',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '委譲名義では例外対象のfailになるべき');
+  assert.ok(
+    result.stderr.includes('例外対象') && result.stderr.includes('PO本人'),
+    `例外対象メッセージが出るべき: stderr=${result.stderr}`
+  );
+});
+
+test('ADR-1003統合: workflow-lint.yml変更＋PO名義のGO → pass', () => {
+  const result = runScript({
+    CHANGED_FILES: '.github/workflows/workflow-lint.yml',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `PO名義ならexitコードは0であるべき: stderr=${result.stderr}`);
 });
 
 // ── §7 AC5: GO記録あり（全フィールド正常）→ pass ────────────────────────────
