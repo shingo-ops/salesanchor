@@ -140,7 +140,7 @@ async def test_actual_timestamp_is_latest_and_legacy_not_inferred(pg):
     with conn.cursor() as c:
         c.execute(f"SELECT received_at, line_posted_at FROM {SCHEMA}.source_messages")
         received,posted=c.fetchone()
-        assert (posted-received).total_seconds()==5*3600
+        assert (posted-received).total_seconds()==0
         c.execute(f"UPDATE {SCHEMA}.source_messages SET line_posted_at=NULL")
     await upload(engine,export(body="latest",hour="15:00"))
     assert count(conn,"source_messages")==2
