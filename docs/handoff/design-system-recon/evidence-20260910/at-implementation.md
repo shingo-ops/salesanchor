@@ -37,3 +37,12 @@ origin/main 638cc6f91025c623a9ab47032b9466cdb03e3cffを正規merge。AT対象製
 root最終: 47files634試験成功（coverage、maxWorkers=1、時間上限変更なし）。統合初回は631成功/3タイムアウト(5000ms)、失敗の既存RoleKnowledge試験と関連製品の差分0を直接確認。同時実行数だけ1へ変更した全体再実行で合格。初回失敗原ログを保持し性能問題の恒久解消とは主張しない。check:all error0/warning140、build/Storybook成功、許可12製品・試験ファイル以外の製品差分0、backend/API/DB/scripts/CI変更0。レビュー後追加25試験もroot直接成功。
 
 Astra実装検収APPROVE。Sol両方向交差レビューAPPROVE（記録はat-sol1-review.md/at-sol2-review.md）。初回build型エラー、fixture4失敗、レビューで追加した期待、統合タイムアウトを隠さず保存。PO指示で本番画面/フォーム/目視は省略・未検証。設計・実装・ローカル検収・文書保存済み、PR最新CIと本人番号付きGO/マージ/配備は次段階。
+
+
+## PR保存と再開点
+
+PR #3839（https://github.com/shingo-ops/salesanchor/pull/3839）を公式create-safe経由で提出、.pr-numberとGitHub head branchの一致を直接確認。初回提出HEAD37f37475a47c1822ccf8a7905a5206ef6166766a。CIのprocess-artifacts gateは本人番号付きGO欄が無いことだけで停止（job108946092604、2026-09-28T13:19:54Z）。他の技術検査は提出後に順次実行。今回の番号付きGO原文は未受領、過去GO #3834を流用しない。広域の続行許可は受領済みだが、現行の番号照合を迂回/改変しない。
+
+直前バックアップの読取確認: 2026-09-28T13:16:17.766798Z、/home/ubuntu/backups/postgres/salesanchor_db_20260928_214745.sql.gz、229641593bytes、gzip -t exit0。マージ直前には改めてHEAD/CI/バックアップを確認する。画面確認は省略・未検証。
+
+再開手順: 本worktree release/frontend-form-button-batchでpreflight→.pr-number/GitHub PR head・state/未保存差分照合→最新CI確認。本人からGO #3839受領後のみ原文転記し、正式merge-safe --merge→Deployログ→本番HEAD/公開asset hash/HTTP/接続状態を確認、結果は別文書便で保存。権限・鍵の変更、代理GO発行はしない。
