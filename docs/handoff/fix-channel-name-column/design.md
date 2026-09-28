@@ -20,10 +20,12 @@
 ## 外部・過去事例の参照と我々への応用
 
 PostgreSQL では存在しないカラムを参照すると `ERROR: column "xxx" does not exist` で 500 になる（公式ドキュメント確認済み）。
-migration ファイル（`20260921_110000_pipeline_tables_public.sql:11`）でカラム名 `channel` と定義済みだが、実装コードで `channel_name` と誤記したことで本障害が発生した。
+migration ファイル（`migrations/20260921_110000_pipeline_tables_public.sql:11`）でカラム名 `channel` と定義済みだが、実装コードで `channel_name` と誤記したことで本障害が発生した。
 今後: SQL クエリをコード内に直書きする場合は migration 定義との照合を PRレビュー時に行うことで再発防止できる。
 
 ## 維持の仕組み
 
-守り手: PR レビュー時に migration ファイルとコードのカラム名を照合する（人的確認）。
+守り手: `backend/app/services/tcg_analysis_dashboard_svc.py`
 将来的には SQLAlchemy ORM モデルを使えば型チェック時に検知可能。
+
+参照: docs/handoff/fix-channel-name-column/recon.md
