@@ -50,7 +50,7 @@ export default function ShiftsPage() {
       {error && <div className="error-message">{error}</div>}
       <ContentToolbar
         right={hasPermission("shifts.manage") ? (
-          <button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</button>
+          <Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("shifts.newShift")}</Button>
         ) : undefined}
       />
       <Modal

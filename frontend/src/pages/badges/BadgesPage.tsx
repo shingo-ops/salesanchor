@@ -46,7 +46,7 @@ export default function BadgesPage() {
       {error && <div className="error-message">{error}</div>}
       {hasPermission("badges.manage") ? (
         <ContentToolbar
-          right={<button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("badges.newBadge")}</button>}
+          right={<Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("badges.newBadge")}</Button>}
         />
       ) : undefined}
       <Modal

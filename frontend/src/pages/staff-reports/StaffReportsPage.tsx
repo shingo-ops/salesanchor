@@ -66,7 +66,7 @@ export default function StaffReportsPage() {
           />
         }
         right={hasPermission("staff_reports.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => setShowForm(true)}>{t("common.add")}</button>
+          <Button variant="primary" size="md" onClick={() => setShowForm(true)}>{t("common.add")}</Button>
         ) : undefined}
       />
       {error && <div className="error-message">{error}</div>}

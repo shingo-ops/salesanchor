@@ -299,3 +299,9 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 
 
 2026-09-28 AQ+AR本番反映完了: PO本人「GO #3828」を受領、checks38成功/8対象外・必須13成功・CLEANを確認し08:02:45Zにmerge8862732e4。Deploy36395037199成功、新規backup217M。08:06:54Zにrootが本番HEAD/公開index・JSとcontainerのhash一致/HTTP200/DB・Redis・Celery接続を直接確認。計30ボタン、共通231/旧266。証跡ar-implementation.md/ar-production-verification.json。画面・実ログイン・本番フォーム・PO目視・復元試験は未実施。次は残旧266件・表/報酬3/カレンダー色の実物再調査、新CI最後。
+
+
+2026-09-28 AS設計: 基準1675bfa02で共通231/旧266。静的34件/25製品を選定、対象外232/共有15保持。既存実操作被覆10・追加24を3suiteで検証する。設計§AS自己審査APPROVE、正式カード検査後Sol2担当へ分離委任。製品/検証/PR/番号GO未完、画面省略・未検証。根拠as-button-audit.json/as-static-contracts.md/as-test-plan.md。
+
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。

@@ -11,6 +11,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 
 type DexKind = "pokemon" | "trainer";
 
@@ -170,9 +171,9 @@ export default function DexTab() {
         <td>{it.era}</td>
       )}
       <td>
-        <button onClick={() => startEdit(it)} className="btn-secondary">
+        <Button onClick={() => startEdit(it)} variant="secondary" size="md">
           {t("common.edit")}
-        </button>
+        </Button>
       </td>
     </tr>
   );
@@ -203,9 +204,9 @@ export default function DexTab() {
             if (e.key === "Enter") load();
           }}
         />
-        <button onClick={load} className="btn-secondary">
+        <Button onClick={load} variant="secondary" size="md">
           {t("common.search")}
-        </button>
+        </Button>
       </div>
 
       {/* ADR-084: PokeAPI 取込 (ポケモン図鑑のみ) */}
@@ -321,9 +322,9 @@ export default function DexTab() {
             <button type="submit" className="btn-primary">
               {t("common.save")}
             </button>{" "}
-            <button type="button" onClick={() => setEditing(null)} className="btn-secondary">
+            <Button type="button" onClick={() => setEditing(null)} variant="secondary" size="md">
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

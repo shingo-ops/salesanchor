@@ -15,6 +15,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
+import { Button } from "../../components/Button";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -220,9 +221,9 @@ export default function InvoiceCreatePage() {
       subtitleKey="invoices.createSubtitle"
       headerAction={
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>
+          <Button variant="secondary" size="md" onClick={() => navigate("/management-center/tenant-profile")}>
             {t("nav.tenantProfile")}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -268,14 +269,14 @@ export default function InvoiceCreatePage() {
                     <td>{q.quote_code}</td>
                     <td>{fmtAmount(q.total_amount, q.currency)}</td>
                     <td>
-                      <button
-                        className="btn-sm btn-primary"
+                      <Button
+                        variant="primary" size="sm"
                         disabled={saving}
                         onClick={() => loadQuoteForEdit(q.id)}
                         data-testid={`invoice-edit-from-quote-${q.id}`}
                       >
                         {t("invoices.editFromThisQuote")}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -431,7 +432,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate("/invoices")}>{t("common.cancel")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
             <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</button>
           </div>
         </form>
