@@ -14,6 +14,7 @@ mode: handoff
 - ADR-027: `docs/adr/ADR-027-ui-internationalization.md` — 全 UI 文字列 t("key") 経由
 - ADR-067: デザイントークン強制ルール — CSS 変数のみ、ハードコード色禁止
 - ADR-144: `docs/CC_UI_GOVERNANCE.md` — 金型部品使用ルール
+- ADR-113: `docs/adr/ADR-113-two-mode-dev-flow.md` — handoff様式・設計/調査の相互参照と実装カードの正式チェック
 
 ## 変更の目的
 
