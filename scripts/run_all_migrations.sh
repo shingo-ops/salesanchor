@@ -839,3 +839,6 @@ run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql
 
 # ADR-009 M7: Discord リアクション保存テーブル新設（RLS有効・冪等）
 run_sql migrations/20260927_100000_create_meta_message_reactions.sql
+
+# PR-B1: 試運転用の表（extraction_shadow_runs/results）と仕入元の発送日の書き方欄を追加（A/B専用・既存クエリ非改変）
+run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
