@@ -839,3 +839,6 @@ run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql
 
 # ADR-009 M7: Discord リアクション保存テーブル新設（RLS有効・冪等）
 run_sql migrations/20260927_100000_create_meta_message_reactions.sql
+
+# 完売・サーチ済み系 skip_condition ルール6件を削除（Gemini が既に判断するため重複ルール撤去）
+run_sql migrations/20260928_100000_delete_skip_condition_soldout_searched.sql
