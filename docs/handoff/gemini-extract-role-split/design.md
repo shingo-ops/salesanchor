@@ -11,7 +11,7 @@
 
 | 基準 | 検証方法 |
 |---|---|
-| Gemini は判定しない（v7出力に RESOLVED_* 列が無い） | `test_tcg_gemini_extraction.py` の v7 パーサテストで、列一覧に RESOLVED_WORK_ID と RESOLVED_PRODUCT_CODE が無いことを assert |
+| Gemini は判定しない（v7出力に RESOLVED_* 列が無い） | `backend/tests/test_tcg_gemini_extraction.py` の v7 パーサテストで、列一覧に RESOLVED_WORK_ID と RESOLVED_PRODUCT_CODE が無いことを assert |
 | 状態・発送日に空欄が0件（無ければ `none`） | v7 パーサテスト：空欄の行は parse_errors に入る。本番では試運転表の state_raw / ship_raw の空欄件数が0 |
 | システムの自動確定に誤りが0件 | 試運転期間に自動で確定した行から抽出して人が確認し、誤りが0件（件数は試運転で1日の件数が分かってから PO が決める） |
 | 確認待ちの全件に「項目・候補・理由」が付く | 試運転表の `needs_review=TRUE` の行で、`review_items` が空のものが0件（SQL） |
@@ -30,11 +30,11 @@
 
 | 区分 | 置き場所 | 根拠 |
 |---|---|---|
-| 仕入元ルール（SSOT） | `public.suppliers.extraction_*`（7列）＋新しい列 `extraction_ship_format` | 実際に Gemini へ届いている唯一の経路：`tcg_extraction.py:229-249`、`gemini_extraction_svc.py:236-317` |
-| supplier_prompts | **削除**（PO決定 2026-09-28：不要）。表・CRUD API（`super_admin_suppliers.py:600-644`）・画面をまとめて消す。中身は移さない。DROP TABLE は不可逆なので、PO の「GO #PR番号」が必要 | 抽出経路からは読まれていない：recon §C |
+| 仕入元ルール（SSOT） | `public.suppliers.extraction_*`（7列）＋新しい列 `extraction_ship_format` | 実際に Gemini へ届いている唯一の経路：`backend/app/tasks/tcg_extraction.py:229-249`、`backend/app/services/gemini_extraction_svc.py:236-317` |
+| supplier_prompts | **削除**（PO決定 2026-09-28：不要）。表・CRUD API（`backend/app/routers/super_admin_suppliers.py:600-644`）・画面をまとめて消す。中身は移さない。DROP TABLE は不可逆なので、PO の「GO #PR番号」が必要 | 抽出経路からは読まれていない：recon §C |
 | 知識ルール（仕入元ごとに紐付いている区切り方・読み飛ばす行・状態の言葉＝`block_delimiter`/`skip_condition`/`status_keyword`） | **仕入元マスタの抽出ルール欄に寄せる**（PO決定 2026-09-28）。列を足してデータを移し、`supplier_knowledge_links` 経由でプロンプトに入れるのはやめる。全仕入元に共通の除外（`message_exclude*`、`tcg_extraction.py:164-`）は、そのまま残す | recon §V4 |
 | 商品の検索ワード・除外ワード（SSOT） | 既存の `public.product_search_keywords` / `product_exclude_keywords` | recon §G |
-| 作品 | `public.products.work_id`（商品に作品が登録済み。作品用のワード表は作らない） | `tcg_analyzer_svc.py:1227-1230` |
+| 作品 | `public.products.work_id`（商品に作品が登録済み。作品用のワード表は作らない） | `backend/app/services/tcg_analyzer_svc.py:1227-1230` |
 | 状態・ステータス・備考の各マスタ | 既存の `public.conditions` / `public.tcg_status_master` / `public.tcg_note_master` | `tcg_analyzer_svc.py:646-725, 989-997, 1093` |
 | **試運転（A/B）の結果** | **新しい表 `public.extraction_shadow_results`**（本番の `analysis_results` とは分ける） | PO決定。`analysis_results` は `UNIQUE(extraction_item_id)`：recon §E |
 
@@ -42,19 +42,19 @@
 
 1. 対象は `public.products` の有効な全件（解析用の別マスタは作らない）。
 2. 照合するのは、Gemini が示したブロックの行範囲にある**原文そのもの**。Gemini が書き写した値ではなく、元の文を見る。
-3. 原文に品番が書いてあり、`products.product_code` か `mark` と一致すれば、その商品を候補にする（いまの Gate1 と同じ考え方：`tcg_analyzer_svc.py:1217-1224`）。
+3. 原文に品番が書いてあり、`products.product_code` か `mark` と一致すれば、その商品を候補にする（いまの Gate1 と同じ考え方：`backend/app/services/tcg_analyzer_svc.py:1217-1224`）。
 4. 検索ワードをスペースで区切り、各語が**すべて**原文に含まれる商品を候補にする。比べる前に、両方を NFKC・小文字・カタカナ→ひらがな・空白削除・記号削除でそろえる。
 5. 除外ワードを含む商品は候補から外す。
-6. 単品か箱かの見分け（`tcg_product_guards.py`）は、原文を入力にして使う。
+6. 単品か箱かの見分け（`backend/app/services/tcg_product_guards.py`）は、原文を入力にして使う。
 7. 候補が1件なら確定。0件または2件以上なら確認待ち（候補・当たった語・外した語を記録）。
 8. 作品は、確定した商品の `work_id` から決める。
 
 ## 5. その他の項目
 
-- 状態：いまの `resolve_condition_v2()`（`tcg_analyzer_svc.py:787-882`）に、Gemini が書き写した状態を渡す。`none` は「記載なし」として扱う。
+- 状態：いまの `resolve_condition_v2()`（`backend/app/services/tcg_analyzer_svc.py:787-882`）に、Gemini が書き写した状態を渡す。`none` は「記載なし」として扱う。
 - 数量・価格：いまの `_parse_numeric()`（`:896-923`）を使う。
 - 備考：いまの `build_note_ja()`（`:1033-1071`）に、Gemini の備考列の代わりに**ブロックの原文**を渡す。
-- 発送日：`inventory_parser.py` にある発送日のルール判定（`:240-252, 518-541`）を関数として呼んで使う（コピーしない）。
+- 発送日：`backend/app/services/inventory_parser.py` にある発送日のルール判定（`:240-252, 518-541`）を関数として呼んで使う（コピーしない）。
 - 推測チェック：Gemini が書き写した各値が、示した行範囲の原文に（そろえた上で）含まれるかを確かめる。最初は**記録だけ**して止めない。止める設定にするのは PO が数字を見て決めてから。
 
 ## 6. 試運転（A/B）
@@ -69,20 +69,26 @@
 | PR | 内容 | 触るファイル（予定） | 危険 |
 |---|---|---|---|
 | A | 判定の関数（照合・候補・推測チェック・発送日の呼び出し）＋単体テスト。DB・配線なし | 新規 `backend/app/services/extraction_judgement_svc.py`、新規 `backend/tests/test_extraction_judgement_svc.py` | 低 |
-| B | migration：`extraction_shadow_results` の新設、`suppliers.extraction_ship_format` の追加、supplier_prompts→extraction_notes のデータ移行 | `migrations/2026xxxx_*.sql`、`deploy.yml`（CI の必須チェックに従う） | **高：GO #PR番号が必要** |
-| C | v7 の指示とパーサ、試運転の実行部分（初期値は無効） | `gemini_extraction_svc.py:443-453`、`tcg_work_reference.py:13-14`、`tcg_extraction.py`、`extraction_prompt_config`（v7 の行は PR 内の migration で入れる→危険扱い） | **高** |
-| D | 画面：試運転の確認待ち一覧（既存 NeedsReviewListPage に金型 `DataTable` でタブを追加）、ワード登録（除外ワード1件追加 API を新設）、影響プレビュー、詰まりの集計、仕入元ルール画面に発送日欄、supplier_prompts 画面の撤去 | `frontend/src/pages/super-admin/NeedsReviewListPage.tsx`、`tcg_product_master.py`、ja/en.json 他 | 中 |
+| B | migration：`extraction_shadow_results` の新設、`suppliers.extraction_ship_format` の追加、supplier_prompts→extraction_notes のデータ移行 | `migrations/2026xxxx_*.sql`、`.github/workflows/deploy.yml`（CI の必須チェックに従う） | **高：GO #PR番号が必要** |
+| C | v7 の指示とパーサ、試運転の実行部分（初期値は無効） | `backend/app/services/gemini_extraction_svc.py:443-453`、`backend/app/services/tcg_work_reference.py:13-14`、`backend/app/tasks/tcg_extraction.py`、`extraction_prompt_config`（v7 の行は PR 内の migration で入れる→危険扱い） | **高** |
+| D | 画面：試運転の確認待ち一覧（既存 NeedsReviewListPage に金型 `DataTable` でタブを追加）、ワード登録（除外ワード1件追加 API を新設）、影響プレビュー、詰まりの集計、仕入元ルール画面に発送日欄、supplier_prompts 画面の撤去 | `frontend/src/pages/super-admin/NeedsReviewListPage.tsx`、`backend/app/routers/tcg_product_master.py`、ja/en.json 他 | 中 |
 | E | 切り替え（264件そろってから） | 配信と解析の入口 | **高：PO GO** |
 
 ## 8. 戻し方
 
 - 試運転：`EXTRACTION_SHADOW_ENABLED` を無効にする（本番には影響しない）。
-- 切り替え後：指示文を v6 に戻す（`extraction_prompt_config` の is_active）。あわせて、コード側の版の分岐（`tcg_work_reference.py:14`）も戻す。
+- 切り替え後：指示文を v6 に戻す（`extraction_prompt_config` の is_active）。あわせて、コード側の版の分岐（`backend/app/services/tcg_work_reference.py:14`）も戻す。
 - supplier_prompts：表を消さずに残すので、データは元に戻せる。
 
-## 9. 外部事例
+## 9. 外部・過去事例の参照と我々への応用
 
 - 該当なし。この設計の正しさは、外部事例ではなく試運転（A/B）の自社実測で確かめる（§1）。
+
+## 9-2. 維持の仕組み
+
+- 判定の関数は `backend/tests/test_extraction_judgement_svc.py` の単体テストで守る（CI の必須チェック `pytest (SQLite + PostgreSQL RLS)`）。
+- 試運転の結果と確認待ちの件数は、PR-D の集計画面で週ごとに PO が見る。
+- 仕入元ルール・検索ワード・除外ワードは SSOT の表だけに置き、ほかに置き場所を作らない（§3）。
 
 ## 10. 本番DBの実測（2026-09-28、PO が読み取り専用で実行。生データは recon の db-survey.txt）
 
@@ -106,6 +112,6 @@
 
 ## 12. Architect 審査（Opus が自分で審査。独立した第二者によるレビューではない、2026-09-28）
 
-- **PR-A（判定の関数とテスト）：APPROVE。** 入力として使う関数が、原文を渡せる純粋な関数であることを確認した（`tcg_product_guards.py`、`inventory_parser.py:518`）。work_id が NULL の商品は0件（§10）。DB にも配線にも触れない。
+- **PR-A（判定の関数とテスト）：APPROVE。** 入力として使う関数が、原文を渡せる純粋な関数であることを確認した（`backend/app/services/tcg_product_guards.py`、`backend/app/services/inventory_parser.py:518`）。work_id が NULL の商品は0件（§10）。DB にも配線にも触れない。
 - **削除 PR（skip_condition id 21〜26）：APPROVE。** 対象の6件と、代わりに処理する解析ルール（conditions CN0007/CN0010、tcg_status_master ST0011〜13）が本番に実在することを確認した（§10）。migration による DELETE なので危険 PR 扱いとし、GO #PR番号 が必要。
 - **PR-B〜E：REVISE。** §11 の1と2が決まってから、実装カードを作る。
