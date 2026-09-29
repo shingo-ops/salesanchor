@@ -93,11 +93,12 @@ services:
       # この行が無いと .env に値があっても os.getenv が空になり、LLM が
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
-      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-2）
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
       # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
+      # backnet の gemini-egress コンテナが SSH -L で中継する（2026-09-30 改訂2）。
       # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
-      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://host-gateway:18888}
-      - grpc_proxy=${GEMINI_GRPC_PROXY-http://host-gateway:18888}
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://gemini-egress:18888}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-http://gemini-egress:18888}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
@@ -124,8 +125,6 @@ services:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
       - attachments_data:/data/attachments
-    extra_hosts:
-      - "host-gateway:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -229,16 +228,15 @@ services:
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
       # Google Sheets SA キーファイル（backend サービスと同パターン）
       - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
-      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-2）
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
       # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
+      # backnet の gemini-egress コンテナが SSH -L で中継する（2026-09-30 改訂2）。
       # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
-      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://host-gateway:18888}
-      - grpc_proxy=${GEMINI_GRPC_PROXY-http://host-gateway:18888}
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://gemini-egress:18888}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-http://gemini-egress:18888}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
-    extra_hosts:
-      - "host-gateway:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -334,6 +332,40 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:size=16M
+    networks:
+      - backnet
+
+  # ============================================================
+  # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 2026-09-30 改訂2）
+  # ============================================================
+  # backnet のコンテナから host-gateway（172.17.0.1）は ufw の既定 INPUT DROP により
+  # 到達できない（V4不合格・2026-09-30実測）。代わりにこのコンテナが中継専用鍵
+  # （restrict + permitopen="127.0.0.1:8888"）で prod2 へ SSH し、-L で
+  # 127.0.0.1:18888 を prod2 の tinyproxy（127.0.0.1:8888）へフォワードする。
+  # ホストには公開しない（ports なし、backnet 内のみ到達可能）。
+  gemini-egress:
+    image: alpine:3.24
+    restart: unless-stopped
+    volumes:
+      - /home/ubuntu/.ssh/gemini_egress_ed25519:/run/secrets/gemini_egress_key:ro
+    command: >
+      sh -c "apk add --no-cache openssh-client >/dev/null &&
+      exec ssh -i /run/secrets/gemini_egress_key
+      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+      -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes
+      -N -L 0.0.0.0:18888:127.0.0.1:8888 ubuntu@49.212.160.98"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: "0.25"
+    logging:
+      driver: json-file
+      options:
+        max-size: "5m"
+        max-file: "2"
+    security_opt:
+      - no-new-privileges:true
     networks:
       - backnet
 

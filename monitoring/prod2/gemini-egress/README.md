@@ -45,9 +45,12 @@ docker compose -p gemini-egress down
 プロジェクト名を `gemini-egress` にすることで、監視スタックの compose とは
 完全に分離している。
 
-## 構成
+## 構成（2026-09-30 改訂2）
 
-- `tinyproxy`：`generativelanguage.googleapis.com:443` 宛だけを中継する HTTP CONNECT プロキシ（127.0.0.1:8888 で待受）
-- `tunnel`：`autossh` で prod1 の `172.17.0.1:18888` へ逆転送（`-R`）し、prod1 側から prod2 の tinyproxy（127.0.0.1:8888）を使えるようにする
+prod2 側に残るのは `tinyproxy` だけになった。転送は prod1 側が能動的に取りに来る方式に変わった。
 
-両サービスとも `network_mode: host` で動作する。
+- `tinyproxy`：`generativelanguage.googleapis.com:443` 宛だけを中継する HTTP CONNECT プロキシ（127.0.0.1:8888 で待受）。`network_mode: host` で動作する。
+- prod1 の `gemini-egress` コンテナ（backnet 上）が、中継専用鍵（`ubuntu@`、`restrict` + `permitopen="127.0.0.1:8888"` 制限付き）で prod2 に SSH し、`-L 0.0.0.0:18888:127.0.0.1:8888` で prod2 の tinyproxy をローカルの 18888 番に転送する。中継の起動・停止は prod1 側（`docker-compose.yml` の `gemini-egress` サービス）で行う。
+- prod2 の `~/.ssh/authorized_keys` に、中継専用鍵の公開鍵を `restrict,permitopen="127.0.0.1:8888"` 付きの1行として登録している（鍵の中身はこの README には書かない）。
+
+`tunnel/`（Dockerfile）は 2026-09-30 の方式変更で使わなくなった。compose からは外してある。削除は、あとの片付けの便で行う。

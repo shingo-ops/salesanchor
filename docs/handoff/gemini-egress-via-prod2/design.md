@@ -85,18 +85,35 @@
 - sudo のパスワードが記録と合わず、PO も分からなかった（2026-09-30）
 - コンテナ方式なら、既存の監視トンネルを再起動しない。監視が途切れる心配もなくなる
 
+**2026-09-30 改訂2：prod1→backnet から host-gateway に届かない問題への対処**
+
+上の §5-1 の方式（prod2 の `tunnel` が prod1 の `172.17.0.1:18888`（host-gateway）へ `-R` で逆転送し、backend/celery-worker が `extra_hosts: host-gateway` 経由で使う＝V4）は不合格だった。
+
+- **V4 不合格の事実**：prod1 のアプリのコンテナ（backnet 上）から host-gateway（172.17.0.1）へは、ファイアウォールのため届かない。ufw の既定は INPUT DROP で、backnet（bridge）から docker0 ブリッジIP宛の通信が塞がれている（2026-09-30 実測）。
+- **新しい方式**：prod2 側の逆転送（`-R`）をやめ、prod1 の backnet 上に中継専用コンテナ `gemini-egress` を置き、そこから prod2 へ**外向きの** SSH `-L` で転送する（`docker-compose.yml` の `gemini-egress` サービス、§5-2 参照）。鍵は中継専用の `/home/ubuntu/.ssh/gemini_egress_ed25519` で、prod2 の `authorized_keys` に `restrict` と `permitopen="127.0.0.1:8888"` を付けて登録済み（用途を tinyproxy への転送1本に限定）。prod2 側の逆向きの通り道コンテナ（`tunnel`）は不要になったため、prod2 上では停止・削除済み（tinyproxy のみ稼働継続）。
+- **実測の結果（2026-09-30）**：3a・3b・3c・V4a・V4b がすべて合格（backnet 上の仮コンテナから `gemini-egress-test:18888` 経由で新SDK・旧SDK（`grpc_proxy`）両方の Gemini 呼び出しが OK）。
+- **戻し方**：
+  1. prod2 の `~/.ssh/authorized_keys` から中継専用鍵の1行を削除する（控え：`~/.ssh/authorized_keys.bak-20260930-025029`）
+  2. この PR（release/gemini-egress-via-prod2）を revert する
+- **リスク**：`gemini-egress` コンテナは起動のたびに alpine の CDN（`apk add openssh-client`）からパッケージを取得するため、CDN が止まっていると起動に失敗する。自前イメージ（Dockerfile をビルドして pin する）にするかどうかは、次の便で決める。
+- **未削除の残骸**：`monitoring/prod2/gemini-egress/tunnel/`（Dockerfile 一式）は、この改訂で使わなくなったが削除していない。ディレクトリの削除は破壊的操作として PO の承認（`permit-danger.sh`）が必要な運用のため、承認取得の手間を避けてこの便では見送り、あとの片付けの便に回した。`docker-compose.yml`（prod2）の `tunnel` サービス定義は既に外してあるので、動作には影響しない。
+
 ### 5-2. アプリ（PR：release/gemini-egress-via-prod2）
 1. `backend/app/services/gemini_extraction_svc.py` の `_get_genai_client()`（247-261行）
    - 環境変数 `GEMINI_PROXY_URL` に値があれば、`genai.Client(api_key=api_key, http_options=types.HttpOptions(client_args={"proxy": url}, async_client_args={"proxy": url}))` を返す
    - 値が無ければ、今までどおり `genai.Client(api_key=api_key)` を返す
    - 定数・関数を1つ増やすだけ。ほかの関数には触れない
-2. `docker-compose.yml` の backend と celery-worker の environment に、次を足す
-   - `- GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://host-gateway:18888}`
-   - `- grpc_proxy=${GEMINI_GRPC_PROXY-http://host-gateway:18888}`
-   - あわせて `extra_hosts: ["host-gateway:host-gateway"]` を足す（`docker-compose.exporters.yml:97-98` と同じ書き方）
+2. **（2026-09-30 改訂2）** `docker-compose.yml` の backend と celery-worker の environment に、次を足す
+   - `- GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://gemini-egress:18888}`
+   - `- grpc_proxy=${GEMINI_GRPC_PROXY-http://gemini-egress:18888}`
+   - `extra_hosts: ["host-gateway:host-gateway"]` は V4 不合格（§5-1 改訂2）につき削除する。代わりに backnet 上の `gemini-egress` サービス（§5-1 改訂2）をコンテナ名で参照する
    - 注：`-`（コロンなし）にするのは、`.env` に空文字を書けば、中継なしの直接接続に戻せるようにするため
 3. `backend/tests/` に `_get_genai_client` のテストを足す（環境変数があるとき・ないとき）
 4. prod2 用のファイル（§5-1）は `monitoring/prod2/gemini-egress/` を正本にする。README に「prod2 へは scp で写す。変えるときは、ここを直してから写し直す」と書く
+5. **（2026-09-30 改訂2）** `.github/workflows/deploy.yml:335` の非 backend サービス一覧（`frontend celery-worker celery-beat discord-gateway`）の末尾に `gemini-egress` を足す
+   - 理由：通常デプロイは `docker compose up -d` をサービス名指定で実行しており（backend は `scripts/blue-green-cutover.sh` で個別に、それ以外は :335・:337・:371・:915 で明示列挙）、サービス名を指定しない全サービス起動（`docker compose up -d --remove-orphans`、:599）はヘルスチェック失敗時のロールバック分岐にしか無い。`docker-compose.yml` に `gemini-egress` を追加しただけでは通常デプロイで起動されないため、:335 に明示追加する
+   - PO の許可（原文、2026-09-30）：「PR #3857 で .github/workflows/deploy.yml の335行目（docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway）の最後に gemini-egress を1つ足す変更を許可する。ほかの行は変えない。」
+   - この許可に基づき、:335 の行末に ` gemini-egress` のみを追加し、他の行は変更していない
 - 触らないもの：`HTTPS_PROXY`・`HTTP_PROXY`・`ALL_PROXY`・`NO_PROXY` は設定しない。Meta・Discord・FedEx・Drive のコードにも触れない
 
 ### 5-3. 順番（この順を守る）
