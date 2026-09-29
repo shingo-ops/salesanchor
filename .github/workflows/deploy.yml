@@ -332,7 +332,7 @@ jobs:
             for _svc in frontend celery-worker celery-beat discord-gateway; do
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
-            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway
+            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
             echo "Step 3d: Ensuring monitoring collectors are up..."
             docker compose up -d --no-deps node-exporter promtail
 
