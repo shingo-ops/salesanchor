@@ -93,6 +93,11 @@ services:
       # この行が無いと .env に値があっても os.getenv が空になり、LLM が
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-2）
+      # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
+      # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://host-gateway:18888}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-http://host-gateway:18888}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
@@ -119,6 +124,8 @@ services:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
       - attachments_data:/data/attachments
+    extra_hosts:
+      - "host-gateway:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -222,9 +229,16 @@ services:
       - TCG_SCHEMA=${TCG_SCHEMA:-tenant_004}
       # Google Sheets SA キーファイル（backend サービスと同パターン）
       - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
+      # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-2）
+      # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
+      # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://host-gateway:18888}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-http://host-gateway:18888}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro
+    extra_hosts:
+      - "host-gateway:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
