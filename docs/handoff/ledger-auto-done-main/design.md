@@ -29,8 +29,8 @@ docs/handoff/ledger-auto-done-main/recon.md を参照。要点は次の4つ。
 
 1. main への PR がマージされたら発火する。
 2. `release/ledger-done-*` と `release/ledger-auto-*` は対象外にする。
-3. `.claude-pipeline/active-work.d/<セーフ形>.md` の存在を確認する。
-4. 在れば `ledger-update.sh` で DONE と PR番号を書き込む。
+3. active-work.d 配下の単票（ブランチ名をファイル名にしたもの） の存在を確認する。
+4. 在れば `scripts/ledger-update.sh` で DONE と PR番号を書き込む。
 5. 台帳ブランチを作り、PR を作成する。
 6. `gh pr merge --auto --merge` で自動マージを予約する。
 
@@ -122,9 +122,9 @@ GO 記録を検査する gate は必須チェックに入っていない。
   2. タイトルが `^chore\(ledger\): .*DONE 化（自動）$` に一致する
   3. 変更ファイルが1件以上で、すべて `.claude-pipeline/active-work.d/` の下（`..` を含むパスは不可）
   4. 作成者が `shingo-ops`（スクリプト内の定数 `LEDGER_PR_AUTHOR` 1か所）
-- B. `ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog` を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
-- C. `ledger-done-update-branch.yml`（新規）: main への push で、予約済みかつ BEHIND の台帳DONE化PRに update-branch を実行する。concurrency で1本ずつ。失敗したらジョブを赤にする。
-- D. `auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` で起動。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
+- B. `.github/workflows/ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog` を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
+- C. `.github/workflows/ledger-done-update-branch.yml`（新規）: main への push で、予約済みかつ BEHIND の台帳DONE化PRに update-branch を実行する。concurrency で1本ずつ。失敗したらジョブを赤にする。
+- D. `.github/workflows/auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` で起動。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
 
 `git grep "ledger-done-"` に残る箇所の意味づけ（判定ではない）:
 - ledger-auto-done-main.yml の `startsWith(... 'release/ledger-done-')`: 無限ループ防止の除外（既存）。
@@ -163,4 +163,4 @@ GO 記録を検査する gate は必須チェックに入っていない。
 
 - 守り手: scripts/tests/test-is-ledger-done-pr.sh（判定の4条件）と .github/workflows/auto-merge-guard.yml（台帳以外の予約の取り消し）
 - 対象: 台帳以外の PR に自動マージが予約されたまま main に入ること／判定条件が複数箇所に増えて食い違うこと。
-- 検知方法: auto-merge-guard.yml が取り消しに失敗するとジョブが赤になる。判定の変更はテストが赤になる。`test-is-ledger-done-pr.sh` は現状 CI に組み込まれていないため、判定を変える便で手で実行する（CI 組み込みは別便）。
+- 検知方法: auto-merge-guard.yml が取り消しに失敗するとジョブが赤になる。判定の変更はテストが赤になる。`scripts/tests/test-is-ledger-done-pr.sh` は現状 CI に組み込まれていないため、判定を変える便で手で実行する（CI 組み込みは別便）。

@@ -99,11 +99,11 @@ ruleset 15777895（main branch protection）の実測値:
 - `scripts/ci/` は origin/main に存在しない（`git ls-tree -r origin/main --name-only | grep -E '(^|/)ci/'` → 0 件）。本便で新設する（設計者判断 2026-09-29）。
 - 既存のシェルテストは scripts/tests/ にある: scripts/tests/test-ledger-helpers.sh, scripts/tests/test-manifest-generation.sh, scripts/tests/test-merge-safe-guard.sh, scripts/tests/test-reaper-safety.sh。
 - 書き方: scripts/tests/test-merge-safe-guard.sh:1-20（素の bash、`set -u`、`mktemp -d` と `trap`、`ok`/`ng` 関数、`bash scripts/tests/<name>.sh` で実行、終了コード 0=全PASS）。
-- CI での実行: `git grep -n 'scripts/tests' -- .github/workflows` の結果は node/python のテストのみ（dangling-route-gate.yml:35, guard-authoring-gate.yml:11,14,41, migration-test.yml:83, test-schema-dup-gate.yml:35, ui-governance-gate.yml:33）。`test-*.sh` を呼ぶワークフローは 0 件。CI への組み込みは本便の範囲外。
+- CI での実行: `git grep -n 'scripts/tests' -- .github/workflows` の結果は node/python のテストのみ（dangling-route-gate.yml:35, guard-authoring-gate.yml:11,14,41, migration-test.yml:83, test-schema-dup-gate.yml:35, ui-governance-gate.yml:33）。test-で始まる .sh のテストを呼ぶワークフローは 0 件。CI への組み込みは本便の範囲外。
 
 ### 公式仕様の確認（Context7、2026-09-29）
 
-- (a) `pull_request_target` の activity type: `auto_merge_enabled` / `auto_merge_disabled` を含む。出典: github/docs `data/reusables/actions/workflow-triggers-pull-request-activity-types.md`（raw を取得して一覧を確認）、同 `content/actions/reference/workflows-and-actions/events-that-trigger-workflows.md`。同文書の記述: このイベントは base 側（デフォルトブランチ）の文脈で動き、PR の head のコードを実行しない。SHA に似たブランチ名では起動しないことがある。
+- (a) `pull_request_target` の activity type: `auto_merge_enabled` / `auto_merge_disabled` を含む。出典: https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows（activity type 一覧は github/docs リポジトリの reusable「workflow-triggers-pull-request-activity-types」を raw で取得して確認）。同文書の記述: このイベントは base 側（デフォルトブランチ）の文脈で動き、PR の head のコードを実行しない。SHA に似たブランチ名では起動しないことがある。
 - (b) `PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch`: base の最新を PR ブランチへ merge する。body は任意の `expected_head_sha` のみ（不一致は 422）。成功は 202。出典: https://docs.github.com/en/rest/pulls/pulls（Context7 /websites/github_en）。update_method に相当する REST パラメータは確認できなかったため使わない。
 - (c) `gh pr merge --disable-auto`: PR の auto-merge を無効にする。出典: https://cli.github.com/manual/gh_pr_merge（Context7 /websites/cli_github_manual）。手元の `gh pr merge --help` にも `--disable-auto  Disable auto-merge for this pull request` がある。
 
