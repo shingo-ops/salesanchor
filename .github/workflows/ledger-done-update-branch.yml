@@ -1,0 +1,61 @@
+name: 台帳DONE化PRの自動追従（main）
+
+# main が進むたびに、自動マージ予約済みで BEHIND の台帳DONE化PRを最新の main に追従させる。
+# DONE化PRが複数 open のとき、1本マージされるたびに次の1本が追従して詰まらないようにする。
+#
+# 設計: docs/handoff/ledger-auto-done-main/design.md
+# トークンは PIPELINE_PAT（GITHUB_TOKEN の push では必須チェックが再実行されない）。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ledger-done-update-branch
+  cancel-in-progress: false
+
+jobs:
+  update-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Update behind ledger PRs
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+
+          # mergeStateStatus は GitHub が後から計算するため一覧では UNKNOWN になりやすい。
+          # そのため main との差（behind_by）を compare API で直接測る。
+          CANDIDATES="$(gh pr list --state open --limit 500 \
+            --json number,headRefName,autoMergeRequest \
+            --jq '.[] | select((.headRefName | startswith("release/ledger-done-")) and .autoMergeRequest != null) | "\(.number) \(.headRefName)"')"
+
+          if [ -z "${CANDIDATES}" ]; then
+            echo "予約済みの台帳DONE化PRなし"
+            exit 0
+          fi
+
+          FAILED=0
+          while read -r N HEAD_REF; do
+            if ! BEHIND_BY="$(gh api "repos/${GH_REPO}/compare/main...${HEAD_REF}" --jq .behind_by)"; then
+              echo "::error::compare failed: #${N} (${HEAD_REF})"
+              FAILED=1
+              continue
+            fi
+            if [ "${BEHIND_BY}" -lt 1 ]; then
+              echo "up to date: #${N}"
+              continue
+            fi
+            if gh api --method PUT "repos/${GH_REPO}/pulls/${N}/update-branch"; then
+              echo "updated: #${N} (behind_by=${BEHIND_BY})"
+            else
+              echo "::error::update-branch failed: #${N}"
+              FAILED=1
+            fi
+          done <<< "${CANDIDATES}"
+          exit "${FAILED}"
