@@ -36,3 +36,4 @@ design: docs/handoff/ledger-auto-done-main/design.md
 
 - 作成者の定数 `LEDGER_PR_AUTHOR`（`shingo-ops`）は scripts/ci/is-ledger-done-pr.sh の1か所だけ。PIPELINE_PAT の持ち主を変えるときは、ここを同時に直す。
 - scripts/tests/test-is-ledger-done-pr.sh は CI から実行されない。判定を変える便で `bash scripts/tests/test-is-ledger-done-pr.sh` を手で実行する。
+<!-- auto-merge-guard 実測用。このPRはマージしない -->
