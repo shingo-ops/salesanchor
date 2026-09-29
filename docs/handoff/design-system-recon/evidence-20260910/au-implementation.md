@@ -41,4 +41,14 @@ HeaderButtonの間接旧CSS依存を削除前に発見し停止、追補設計�
 設計/審査/実装/相互レビュー/ローカル全検証/文書保存済み。PR提出・最新CI・マージ・本番反映は未実施。POは全数移管とPR/配備までを依頼済み、特定PR番号のGOは未受領。AstraはOpus向け常時委譲を自分へ読み替えない。正式承認経路を改変/迂回しない。
 画面・本番ログインフォーム・PO目視は既存PO指示で省略・未検証。旧smの色/枠/寸法を含め共通外観へ変わるがpixel同一とはしない。表の狭幅表示/報酬欄の見た目も未検証。本便は指定された旧221の移管であり、別のnative179（タブ等）や表/カレンダー/最後のCI強化の全完了を意味しない。
 
-2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.log）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
+2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
+
+## 2026-09-29 AU 本番反映完了
+
+PO本人の「GO #3855」を本チャットで受領し、そのままPR本文へ転記。最新HEAD523ca39d9、CI40成功/8skip、必須13/13成功と直前バックアップgzip -t成功を確認後、公式merge-safeでPR3855をmerge。merge SHA85af04d5e51ab0cfc75ce11bb8792bb8542abae5、2026-09-29T04:44:47Z。
+
+Deploy36522989354 success。rootは2026-09-29T04:48:08.291083+00:00に本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナの各SHA256一致をread-onlyで直接確認。証跡au-go-merge-record.json、au-approved-checks.json、au-merge-final.txt、au-deploy-result.json、au-production-verification.json。au-verify-production.pyは読取検証の再現資料。
+
+設計・審査・実装・相互レビュー・本人GO・マージ・本番反映・公開配信照合済み。旧方式221→0、共有Button494/ButtonLink8。DB/API/配線/データ保存先変更0。画面・本番ログインフォーム・PO目視は指示どおり省略・未検証、復元試験も未実施。別native179、表/報酬3/カレンダー色、最後のCI補強は別便。本記録PRは実施済み結果の文書保存のみ。
+
+証跡txtは保存時に行末空白と末尾空行のみ正規化。コマンド結果の内容は保持。
