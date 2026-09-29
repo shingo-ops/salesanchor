@@ -1,0 +1,18 @@
+✅ PR所有権確認: PR #3855 (ブランチ: release/frontend-all-buttons)
+   マージ前GO・HEAD・必須checksを検査します（自動追従・再送なし）
+
+required checks: total=13 pass=13 skipping=0
+required checks: total=13 pass=13 skipping=0
+{"status": "MERGED", "number": 3855, "headRefOid": "523ca39d9bdea43c666007c7724e9902c9d31ebd", "mergeCommit": "85af04d5e51ab0cfc75ce11bb8792bb8542abae5", "mergedAt": "2026-09-29T04:44:47Z"}
+
+🗑️  worktreeをクリーンアップしています...
+   ブランチ: release/frontend-all-buttons
+   パス    : /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+
+🔓 UUID解放: 7184a5d7-e2c6-4484-ad29-d48f0a1e000e
+✅ active-work.md → DONE に更新しました: release/frontend-all-buttons
+✅ worktree削除完了: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+Deleted branch release/frontend-all-buttons (was 523ca39d9).
+✅ ブランチ削除完了: release/frontend-all-buttons
+
+✅ クリーンアップ完了
