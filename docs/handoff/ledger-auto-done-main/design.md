@@ -97,3 +97,70 @@ GitHub は無限ループ防止のため GITHUB_TOKEN によるプッシュで
 - 対象: main マージ後に台帳PRが作られなくなること。
 - 検知方法: `scripts/ghost-count.sh` が台帳の IN_PROGRESS のうち
   実在しないブランチを数える。閾値超過で警告が出る。
+
+---
+
+## 追補：auto-merge の限定（2026-09-29）
+
+> この節は何か（専門用語なしの1行）:
+> 台帳の自動マージを「台帳の記録PRだけ」に限り、それ以外の自動マージは機械が取り消すようにする作り方。
+
+対象ADR: ADR-050（追補先）、ADR-114
+recon: docs/handoff/ledger-auto-done-main/recon.md（追補節）
+
+### 追補 1. なぜ必要か
+
+GitHub の「Allow auto-merge」はリポジトリ全体の設定で、PR の種類ごとには分けられない。
+GO 記録を検査する gate は必須チェックに入っていない。
+そのため設定を ON にすると、GO を受けていない PR にも自動マージを予約できてしまう。
+台帳ワークフローは既に予約を試みているが、設定が OFF で毎回失敗し、`exit 0` で隠れていた（recon 追補）。
+
+### 追補 2. 設計
+
+- A. 判定は `scripts/ci/is-ledger-done-pr.sh <PR番号>` の1か所。次の4条件をすべて満たすと exit 0、満たさなければ理由を stderr に出して exit 1。
+  1. head ブランチ名が `release/ledger-done-` で始まる
+  2. タイトルが `^chore\(ledger\): .*DONE 化（自動）$` に一致する
+  3. 変更ファイルが1件以上で、すべて `.claude-pipeline/active-work.d/` の下（`..` を含むパスは不可）
+  4. 作成者が `shingo-ops`（スクリプト内の定数 `LEDGER_PR_AUTHOR` 1か所）
+- B. `ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog` を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
+- C. `ledger-done-update-branch.yml`（新規）: main への push で、予約済みかつ BEHIND の台帳DONE化PRに update-branch を実行する。concurrency で1本ずつ。失敗したらジョブを赤にする。
+- D. `auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` で起動。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
+
+`git grep "ledger-done-"` に残る箇所の意味づけ（判定ではない）:
+- ledger-auto-done-main.yml の `startsWith(... 'release/ledger-done-')`: 無限ループ防止の除外（既存）。
+- backlog モードの候補列挙: 「候補を集める」ための前段。採否は必ず A が決める。
+
+既知の穴: GITHUB_TOKEN で `--auto` を予約した場合は D が起動しない。今後 GITHUB_TOKEN で `--auto` を使うワークフローの追加を禁止する（ADR-050 追補）。
+
+### 追補 3. 受入基準
+
+| 基準 | 検証方法 |
+|---|---|
+| 判定の条件が1か所にある | `git grep -n "ledger-done-" .github/workflows scripts/ci` で、4条件の判定を持つのが `scripts/ci/is-ledger-done-pr.sh` だけ（他は除外・候補列挙・呼び出し） |
+| 判定が4条件で正しく分かれる | `bash scripts/tests/test-is-ledger-done-pr.sh` が全PASS（合格1・各条件欠4・files0件・パス脱出・引数なし） |
+| ワークフローが構文として妥当 | `actionlint` が3本すべてエラーなし |
+| 予約失敗・条件外が失敗として見える | `gh pr merge --auto` の失敗分岐が `exit 1` になっている | `grep -n -A3 'gh pr merge --auto' .github/workflows/ledger-auto-done-main.yml` の else 側が `::error::` と `exit 1` |
+| マージのたびに DONE化PR が自動で入る | 本PRのマージと Allow auto-merge ON の後、次に通常PRがマージされたとき `release/ledger-done-<番号>` が人手なしで merged になる |
+| 台帳以外の予約は取り消される | マージ後のテスト用PRに `--auto` を付ける → 数十秒後に `autoMergeRequest` が null になりコメントが付く |
+| 溜まりがゼロ | backlog モード実行後、open の `release/ledger-done-` PR が 0 件 |
+
+### 追補 4. 外部・過去事例の参照と我々への応用
+
+該当なし。理由: 本追補はこのリポジトリの ruleset・ワークフロー・GitHub 公式仕様（recon 追補）の事実だけを根拠にする、リポジトリ固有の許可範囲の限定であり、外部事例に倣う設計判断を含まないため。
+
+### 追補 5. 弊害・トレードオフ
+
+- main が進む回数が、通常のマージ1件につき +1 になる。他のPRが BEHIND になる機会が増える（作業が消えることはない: merge commit のみ・strict）。
+- 判定の作成者条件は `shingo-ops` が PO 本人のアカウントでもあるため、単独では決め手にならない。4条件の AND で担保する。
+- 予約の失敗を赤にするため、設定 OFF の間は台帳ワークフローが毎回失敗する。これは失敗を可視化するための意図的な変更で、Allow auto-merge の ON 後に解消する。
+
+### 追補 6. 戻し方
+
+- PO が Allow auto-merge を OFF にする（すぐ効く）。
+- 3本のワークフローと `scripts/ci/` を元に戻す PR を出す。
+
+## 維持の仕組み（追補）
+
+- 守り手: scripts/tests/test-is-ledger-done-pr.sh（判定の4条件）と .github/workflows/auto-merge-guard.yml（台帳以外の予約の取り消し）
+- 対象: 台帳以外の PR に自動マージが予約されたまま main に入ること／判定条件が複数箇所に増えて食い違うこと。
+- 検知方法: auto-merge-guard.yml が取り消しに失敗するとジョブが赤になる。判定の変更はテストが赤になる。`test-is-ledger-done-pr.sh` は現状 CI に組み込まれていないため、判定を変える便で手で実行する（CI 組み込みは別便）。

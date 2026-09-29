@@ -1,0 +1,50 @@
+name: 台帳DONE化PRの自動追従（main）
+
+# main が進むたびに、自動マージ予約済みで BEHIND の台帳DONE化PRを最新の main に追従させる。
+# DONE化PRが複数 open のとき、1本マージされるたびに次の1本が追従して詰まらないようにする。
+#
+# 設計: docs/handoff/ledger-auto-done-main/design.md
+# トークンは PIPELINE_PAT（GITHUB_TOKEN の push では必須チェックが再実行されない）。
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ledger-done-update-branch
+  cancel-in-progress: false
+
+jobs:
+  update-branch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Update BEHIND ledger PRs
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -uo pipefail
+
+          TARGETS="$(gh pr list --state open --limit 500 \
+            --json number,headRefName,autoMergeRequest,mergeStateStatus \
+            --jq '.[] | select((.headRefName | startswith("release/ledger-done-")) and .autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number')"
+
+          if [ -z "${TARGETS}" ]; then
+            echo "追従対象なし"
+            exit 0
+          fi
+
+          FAILED=0
+          for N in ${TARGETS}; do
+            if gh api --method PUT "repos/${GH_REPO}/pulls/${N}/update-branch"; then
+              echo "updated: #${N}"
+            else
+              echo "::error::update-branch failed: #${N}"
+              FAILED=1
+            fi
+          done
+          exit "${FAILED}"

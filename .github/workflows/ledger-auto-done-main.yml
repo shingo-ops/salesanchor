@@ -16,6 +16,13 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'backlog = open の台帳DONE化PRを1本にまとめて自動マージ予約する（溜まり解消用）'
+        type: choice
+        options: [backlog]
+        required: true
 
 concurrency:
   group: ledger-auto-done-main
@@ -24,6 +31,7 @@ concurrency:
 jobs:
   ledger-done:
     if: >
+      github.event_name == 'pull_request' &&
       github.event.pull_request.merged == true &&
       !startsWith(github.event.pull_request.head.ref, 'release/ledger-done-') &&
       !startsWith(github.event.pull_request.head.ref, 'release/ledger-auto-')
@@ -134,9 +142,143 @@ jobs:
 
           echo "created: ${PR_URL}"
 
+          # 自動マージは台帳 DONE化 PR だけに限る（判定の正: scripts/ci/is-ledger-done-pr.sh）
+          if ! REASON="$(bash scripts/ci/is-ledger-done-pr.sh "${PR_URL##*/}" 2>&1)"; then
+            echo "::error::台帳 DONE化 PR の条件を満たさないため自動マージを予約しない: ${REASON}"
+            exit 1
+          fi
+
           if gh pr merge --auto --merge "${PR_URL}"; then
             echo "auto-merge enabled"
           else
-            echo "::warning::auto-merge failed - manual merge required"
+            echo "::error::auto-merge failed - manual merge required"
+            exit 1
+          fi
+
+  # 溜まった台帳DONE化PRを1本にまとめる（workflow_dispatch mode=backlog 専用）。
+  # 1件ずつ自動マージすると CI が件数分だけ順番に走るため、1本に集約する。
+  ledger-backlog:
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'backlog'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          token: ${{ secrets.PIPELINE_PAT }}
+          fetch-depth: 0
+
+      - name: Consolidate open ledger PRs into one PR
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+        run: |
+          set -uo pipefail
+
+          CANDIDATES="$(gh pr list --state open --limit 500 --json number,headRefName \
+            --jq '.[] | select(.headRefName | startswith("release/ledger-done-")) | .number' | sort -n)"
+          if [ -z "${CANDIDATES}" ]; then
+            echo "open の台帳DONE化PRなし - 何もしない"
             exit 0
           fi
+
+          BACKLOG_BRANCH="release/ledger-done-backlog-$(date -u +%Y%m%d%H%M)"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "${BACKLOG_BRANCH}"
+
+          MERGED_LIST=()
+          SKIPPED_LIST=()
+          DIFF_FILE="$(mktemp)"
+          for N in ${CANDIDATES}; do
+            if ! REASON="$(bash scripts/ci/is-ledger-done-pr.sh "${N}" 2>&1)"; then
+              echo "skip #${N}: 台帳DONE化PRの条件を満たさない (${REASON})"
+              SKIPPED_LIST+=("#${N}")
+              continue
+            fi
+            if ! gh pr diff "${N}" > "${DIFF_FILE}"; then
+              echo "skip #${N}: diff を取得できない"
+              SKIPPED_LIST+=("#${N}")
+              continue
+            fi
+            if git apply "${DIFF_FILE}"; then
+              MERGED_LIST+=("#${N}")
+            else
+              echo "skip #${N}: 差分が当たらない"
+              SKIPPED_LIST+=("#${N}")
+            fi
+          done
+          rm -f "${DIFF_FILE}"
+
+          if [ "${#MERGED_LIST[@]}" -eq 0 ]; then
+            echo "取り込めたPRなし - 何もしない (skip: ${SKIPPED_LIST[*]:-なし})"
+            exit 0
+          fi
+
+          COUNT="${#MERGED_LIST[@]}"
+          git add .claude-pipeline/active-work.d
+          git commit -m "chore(ledger): 溜まり ${COUNT}件を DONE 化（自動）"
+          git push origin "${BACKLOG_BRANCH}"
+
+          TITLE="chore(ledger): 溜まり ${COUNT}件を DONE 化（自動）"
+          BODY_FILE="$(mktemp)"
+          {
+            echo "## 変更概要"
+            echo ""
+            echo "open のまま溜まった台帳DONE化PRの差分を1本にまとめて DONE 化する。"
+            echo "本PRは .github/workflows/ledger-auto-done-main.yml（mode=backlog）が自動生成した。"
+            echo ""
+            echo "## 取り込んだPR（${COUNT}件）"
+            echo ""
+            echo "${MERGED_LIST[*]}"
+            echo ""
+            echo "## スキップしたPR"
+            echo ""
+            echo "${SKIPPED_LIST[*]:-なし}"
+            echo ""
+            echo "### 標準ワークフロー確認"
+            echo ""
+            echo "対象ADR: ADR-114"
+            echo "recon: docs/handoff/ledger-auto-done-main/recon.md"
+            echo "設計: docs/handoff/ledger-auto-done-main/design.md"
+            echo "触るファイル:"
+            echo ".claude-pipeline/active-work.d/"
+            echo "削除するファイル:"
+            echo "なし"
+            echo ""
+            echo "### GO記録"
+            echo ""
+            echo "GO発行者: 自動（台帳のみの変更のため GO 不要）"
+            echo "日時: 自動"
+            echo "GO原文: 自動"
+            echo "バックアップ確認: 該当なし（台帳のみ・DB変更なし）"
+          } > "${BODY_FILE}"
+
+          if ! PR_URL="$(gh pr create --base main --head "${BACKLOG_BRANCH}" --title "${TITLE}" --body-file "${BODY_FILE}")"; then
+            echo "::error::gh pr create failed"
+            exit 1
+          fi
+          rm -f "${BODY_FILE}"
+          NEW_PR="${PR_URL##*/}"
+          echo "created: ${PR_URL}"
+
+          if ! REASON="$(bash scripts/ci/is-ledger-done-pr.sh "${NEW_PR}" 2>&1)"; then
+            echo "::error::台帳 DONE化 PR の条件を満たさないため自動マージを予約しない: ${REASON}"
+            exit 1
+          fi
+          if ! gh pr merge --auto --merge "${PR_URL}"; then
+            echo "::error::auto-merge failed - manual merge required (旧PRはクローズしない)"
+            exit 1
+          fi
+          echo "auto-merge enabled"
+
+          # 取り込めた旧PRだけをクローズする
+          CLOSE_FAILED=0
+          for REF in "${MERGED_LIST[@]}"; do
+            if ! gh pr close "${REF#\#}" --comment "#${NEW_PR} に統合"; then
+              echo "::error::close failed: ${REF}"
+              CLOSE_FAILED=1
+            fi
+          done
+          exit "${CLOSE_FAILED}"
