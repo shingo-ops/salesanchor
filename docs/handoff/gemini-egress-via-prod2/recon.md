@@ -26,8 +26,8 @@
 | 作品比較：同じ `_get_genai_client()` を使う | 同上 | `backend/app/services/tcg_work_comparison_svc.py:98` |
 | 翻訳：`import google.generativeai as genai`、`genai.configure(api_key=...)`（transport の指定なし） | 旧 SDK google-generativeai | `backend/app/services/message_translator.py:99`、`:403` |
 | 在庫解析：同上 | 旧 SDK | `backend/app/services/inventory_parser_llm.py:197`、`:253` |
-| 使用中の版（prod1 celery-worker）：google-generativeai 0.8.6、google-genai 2.8.0、grpcio 1.84.0、httpx 0.28.1、requests 2.34.2 | — | PO 手元実行 `prod1_read_check.sh`（2026-09-29） |
-| 旧 SDK は transport=None のとき gRPC になる（`_transport_registry` の先頭が grpc） | google-ai-generativelanguage 0.6.15 | PyPI の sdist：`google/ai/generativelanguage_v1beta/services/generative_service/transports/__init__.py`、`client.py` の `get_transport_class` |
+| 使用中の版（prod1 celery-worker）：google-generativeai 0.8.6、google-genai 2.8.0、grpcio 1.84.0、httpx 0.28.1、requests 2.34.2 | — | PO 手元実行 prod1_read_check.sh（Opus の scratchpad にあるリポジトリ外のスクリプト、2026-09-29） |
+| 旧 SDK は transport=None のとき gRPC になる（`_transport_registry` の先頭が grpc） | google-ai-generativelanguage 0.6.15 | PyPI の sdist（リポジトリ外）：google/ai/generativelanguage_v1beta/services/generative_service/transports/__init__.py と、同じパッケージの client.py にある get_transport_class |
 | backend で gRPC や google.cloud を使うのは Gemini の SDK だけ | — | `git grep -n -E "grpc\|google\.cloud" origin/main -- backend` の結果が0件。requirements は `backend/requirements.txt:27`、`:29` |
 | Gemini 以外の外向き HTTP：Meta・Discord・FedEx は httpx。Google Drive は requests。IMAP は imaplib | — | `backend/app/services/meta_graph.py:38`、`backend/app/services/discord_rest.py:15`、`backend/app/services/fedex_etd.py:18`、`backend/app/services/google_drive_oauth.py:291`、`backend/app/services/review_mail_notifier.py:23` |
 | docker-compose.yml には HTTPS_PROXY / HTTP_PROXY / NO_PROXY が無い | — | `git grep -n PROXY origin/main -- docker-compose.yml` の結果が0件 |
@@ -47,12 +47,12 @@
 | prod2 の `monitoring-tunnel.service`（`/etc/systemd/system/`）が、autossh で prod2 から prod1 へ常時つないでいる。`-L 0.0.0.0:19100/19187/19113/19121` と `-R 0.0.0.0:13100:127.0.0.1:3100`。`Restart=always`、`RestartSec=10` | prod2 で `systemctl cat monitoring-tunnel.service` |
 | この unit はリポジトリに無い（`autossh`・`tunnel-key`・`ExitOnForwardFailure` で grep すると0件） | `git grep` origin/main |
 | prod1 の promtail は `http://host-gateway:13100` で Loki に送っている | `docker-compose.exporters.yml:85-98` |
-| prod1 の `host-gateway` は `172.17.0.1`（docker0）に解決される | PO 手元実行 `prod1_read_check2.sh`：promtail の中で `getent hosts host-gateway` |
+| prod1 の `host-gateway` は `172.17.0.1`（docker0）に解決される | PO 手元実行 prod1_read_check2.sh（リポジトリ外）：promtail の中で `getent hosts host-gateway` |
 | prod1 の sshd は `GatewayPorts clientspecified` なので、`-R` の待ち受けアドレスを指定できる | 同上：sshd の設定ファイル |
 | prod1 の 13100 は `0.0.0.0` で待ち受けているが、Mac からも prod2 からも接続がタイムアウトする。つまり外から届かない | 同上：`ss -ltn`、`nc -zv -w 5`（2026-09-29） |
 | prod1・prod2 とも `sudo` にはパスワードが要るため、ufw の状態は読めない。さくらのパケットフィルタも画面側の設定なので未確認 | 同上 |
 | prod2：Ubuntu 24.04.4、OpenSSH 9.6p1、使えるメモリ 2,581MB。tinyproxy 1.11.1 と squid 6.14 は apt で入れられるが、まだ入っていない。8888 番・3128 番の待ち受けはない | prod2 で `cat /etc/os-release`、`ssh -V`、`free -m`、`apt-cache policy`、`ss -ltnp` |
-| prod1 から prod2 の 22 番に届く | PO 手元実行 `prod1_read_check.sh` |
+| prod1 から prod2 の 22 番に届く | PO 手元実行 prod1_read_check.sh（リポジトリ外） |
 
 ## 4. 既存の ADR（検索した結果）
 
@@ -69,13 +69,7 @@
 
 ```
 $ git grep -n -i -E "proxy|egress|tinyproxy|grpc_proxy|monitoring-tunnel|autossh" -- docs/adr/
-docs/adr/ADR-018_instagram_send_endpoint_fix.md:66:2. Messenger 返信は引き続き動作している（regression なし）
-docs/adr/ADR-018_instagram_send_endpoint_fix.md:67:3. Instagram 受信は引き続き動作している（regression なし）
-docs/adr/ADR-026_meta_messages_message_id_text.md:54:4. **regression test**: 157 文字超の `message_id` を含む Instagram webhook payload で `_persist_meta_message` が成功することを確認する pytest を追加
-docs/adr/ADR-026_meta_messages_message_id_text.md:63:- **ADR-025 の検証スクリプト 3 点セット原則の遵守**: 機能修正本体 + 検証 (regression test) + 監視 (今回は per-tenant 適用スクリプトの dry-run + 実機確認) を併設
-docs/adr/ADR-026_meta_messages_message_id_text.md:81:- **既存 regression test の継続成功**: `tests/test_webhook_instagram.py` の既存 test が引き続き pass すること
-docs/adr/ADR-026_meta_messages_message_id_text.md:91:### Regression Test
-docs/adr/ADR-026_meta_messages_message_id_text.md:117:- **Q-026.4**: regression test の payload で IG の本物 mid を使うか架空文字列で 157 文字を作るか → **架空文字列で 200 文字（境界より十分長く）を作る**（本物 PII を test fixture に置かない）
+（Opus 注：ここにあった ADR-018 の2行と ADR-026 の5行は、「regression」の文字列が「egress」に一致しただけで、今回とは関係がないため省略した。行番号は ADR-018:66-67、ADR-026:54,63,81,91,117）
 docs/adr/ADR-081-monitoring-vps-final-operational-design.md:1:# ADR-081: 監視VPS分離の最終運用設計 — パケットフィルタ、UFW、proxy 経路、backend worker 数の固定
 docs/adr/ADR-081-monitoring-vps-final-operational-design.md:13:監視スタックの管理室VPS分離を継続し、**外部公開の入口制御・VPS内 firewall・nginx proxy・backend worker 数**をひとつの最終運用設計として固定する。
 docs/adr/ADR-081-monitoring-vps-final-operational-design.md:25:| nginx | `/grafana` / `/monitor` 系の proxy を維持 |

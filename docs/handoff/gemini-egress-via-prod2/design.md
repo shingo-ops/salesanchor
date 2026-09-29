@@ -26,7 +26,7 @@
 **対象外**
 - 旧 SDK から新 SDK への移行（旧 SDK はサポート終了済みだが、別テーマとして扱う）
 - ADR-080 と実物（トンネル方式）の食い違いの是正（PO に報告する）
-- `translation.py:235-238` の生ログの安全確認（新しいセッションで security-reviewer が行う）
+- `backend/app/tasks/translation.py:235-238` の生ログの安全確認（新しいセッションで security-reviewer が行う）
 - Vertex AI への切り替え
 
 ## 3. 変更前と変更後
