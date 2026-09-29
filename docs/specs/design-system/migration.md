@@ -327,3 +327,5 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 2026-09-29 AU実装検収: 旧221件/71file→0、共通Button494/ButtonLink8、HeaderButton共有1とstory6は別計数。root全71逆変換（承認i18n例外2差分）・対象外179・locale2一致、52files661試験/check:all/build/Storybook成功。Sol相互レビューAPPROVE。根拠evidence-20260910/au-implementation.md。画面省略・未検証。PR/CI/マージ/配備は次段階。
 
 2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.log）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
+
+2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。

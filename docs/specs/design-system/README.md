@@ -62,4 +62,4 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 2026-09-29 AU着手: POは残旧221件の全数移管を依頼。最新基準303c3cfe7で221件/71fileを再測定。設計はdesign.md §AU、証拠は[全数棚卸し](../../handoff/design-system-recon/evidence-20260910/au-inventory.md)。実装前審査中。
 
 
-AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855提出済み。番号付きGO待ち、本番反映は未実施。
+AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855本人GO後マージ・本番反映・公開配信照合済み（Deploy36522989354）。画面省略・未検証。
