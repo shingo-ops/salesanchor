@@ -2,7 +2,7 @@
 
 - 作成：2026-09-30（Opus 設計担当）
 - 状態：PO が許可済み（2026-09-30「CLAUDE.md のこのルール変更を許可する」）
-- 根拠：[recon.md](./recon.md)
+- 根拠：[docs/handoff/claude-md-vps-key-rule/recon.md](./recon.md)
 
 ## 目的
 PO の恒常の許可を、サブエージェントが必ず読む CLAUDE.md に書く。これで、読み取りの調査で止まらないようにする。変更を伴う作業は、これまでどおり作業ごとに PO の GO が要る。
