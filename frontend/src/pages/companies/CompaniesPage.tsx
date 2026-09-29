@@ -24,6 +24,7 @@ import { useRecordDrawer } from "../../hooks/useRecordDrawer";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
+import { ButtonLink } from "../../components/ButtonLink";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -356,8 +357,8 @@ export default function CompaniesPage() {
     </div>
   );
   const pageContentActions = hasPermission("customers.create") ? (
-    <button
-      className="btn-primary field-h-md"
+    <Button variant="primary" size="sm" layoutClassName="field-h-md"
+
       onClick={() => {
         setCreateForm(emptyForm);
         setActiveTab("basic");
@@ -367,7 +368,7 @@ export default function CompaniesPage() {
       }}
     >
       + {t("companies.newCompany")}
-    </button>
+    </Button>
   ) : undefined;
 
   return (
@@ -405,12 +406,12 @@ export default function CompaniesPage() {
           { key: "delivery", header: t("companies.delivery"), renderCell: (c) => addressDisplay(defaultAddress(c, "delivery")) },
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
             <>
-              <Link to={`/companies/${c.id}`} className="btn-sm" onClick={(e) => e.stopPropagation()}>{t("companies.viewDetail")}</Link>
+              <ButtonLink variant="secondary" size="sm" to={`/companies/${c.id}`} onClick={(e) => e.stopPropagation()}>{t("companies.viewDetail")}</ButtonLink>
               {hasPermission("customers.update") && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</Button>
               )}
               {hasPermission("customers.delete") && (
-                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</button>
+                <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</Button>
               )}
             </>
           )},

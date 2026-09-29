@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { PageLayout } from "../../components/PageLayout";
 import "./DesignSystemPage.css";
+import { Button } from "../../components/Button";
 
 /* ---- Color Section ---- */
 const COLOR_TOKENS = [
@@ -163,10 +164,10 @@ function ComponentsSection() {
         <div className="ds-component-block">
           <p className="ds-component-label">Buttons</p>
           <div style={{ display: "flex", gap: "var(--space-3)", flexWrap: "wrap", alignItems: "center" }}>
-            <button className="btn-primary">btn-primary</button>
-            <button className="btn-secondary">btn-secondary</button>
-            <button className="btn-sm">btn-sm</button>
-            <button className="btn-sm btn-danger">btn-sm danger</button>
+            <Button variant="primary" size="md">btn-primary</Button>
+            <Button variant="secondary" size="md">btn-secondary</Button>
+            <Button variant="secondary" size="sm">btn-sm</Button>
+            <Button variant="danger" size="sm">btn-sm danger</Button>
             <button className="icon-btn" aria-label="icon button">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <circle cx="8" cy="8" r="6" stroke="currentColor" strokeWidth="1.5" />
@@ -409,7 +410,7 @@ function HeaderActionButtonsSection() {
         <div className="ds-component-block">
           <p className="ds-component-label">.btn-ghost — text button (height: --size-icon-btn)</p>
           <div className="page-header-actions">
-            <button type="button" className="btn-ghost">FAQ</button>
+            <Button variant="ghost" size="md" type="button">FAQ</Button>
           </div>
         </div>
         <div className="ds-component-block">
@@ -426,7 +427,7 @@ function HeaderActionButtonsSection() {
         <div className="ds-component-block">
           <p className="ds-component-label">Combined — .page-header-actions (aligned at 36px)</p>
           <div className="page-header-actions">
-            <button type="button" className="btn-ghost">FAQ</button>
+            <Button variant="ghost" size="md" type="button">FAQ</Button>
             <button type="button" className="icon-btn" aria-label="settings">
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
                 <circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5" />

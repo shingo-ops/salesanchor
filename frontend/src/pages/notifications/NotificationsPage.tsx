@@ -96,7 +96,7 @@ export default function NotificationsPage() {
             renderCell: (ch) => (
               <span className="actions">
                 {hasPermission("notifications.manage") && (
-                  <button className="btn-sm btn-danger" onClick={() => handleDelete(ch.id)}>{t("common.delete")}</button>
+                  <Button variant="danger" size="sm" onClick={() => handleDelete(ch.id)}>{t("common.delete")}</Button>
                 )}
               </span>
             ),

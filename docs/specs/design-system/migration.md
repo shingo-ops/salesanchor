@@ -322,3 +322,6 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 
 
 2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+
+2026-09-29 AU実装検収: 旧221件/71file→0、共通Button494/ButtonLink8、HeaderButton共有1とstory6は別計数。root全71逆変換（承認i18n例外2差分）・対象外179・locale2一致、52files661試験/check:all/build/Storybook成功。Sol相互レビューAPPROVE。根拠evidence-20260910/au-implementation.md。画面省略・未検証。PR/CI/マージ/配備は次段階。

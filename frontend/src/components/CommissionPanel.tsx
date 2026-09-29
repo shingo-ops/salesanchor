@@ -225,15 +225,15 @@ export default function CommissionPanel({
                       </td>
                       <td>
                         {row && row.staff_id !== null ? (
-                          <button
-                            className="btn-sm"
+                          <Button variant="secondary" size="sm"
+
                             type="button"
                             data-testid={`commission-unassign-${key}`}
                             disabled={savingRole === key}
                             onClick={() => handleUnassign(key)}
                           >
                             {t("commission.unassignBtn")}
-                          </button>
+                          </Button>
                         ) : (
                           <span className="text-muted">—</span>
                         )}
@@ -252,15 +252,15 @@ export default function CommissionPanel({
                 gap: "var(--space-2)",
               }}
             >
-              <button
+              <Button variant="primary" size="md"
                 type="button"
-                className="btn-primary"
+
                 onClick={handleRecalc}
                 disabled={recalcing}
                 data-testid="commission-recalc"
               >
                 {recalcing ? t("commission.recalculating") : t("commission.recalc")}
-              </button>
+              </Button>
               <Button
                 type="button"
                 variant="secondary" size="md"

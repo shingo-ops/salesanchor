@@ -173,8 +173,8 @@ describe('full-page form Button migration', () => {
     await mountPage('contact');
     const distinct = screen.getByRole('button', { name: 'contacts.confirmAsDistinctFull' }) as HTMLButtonElement;
     const merge = screen.getByRole('button', { name: 'contacts.mergeAsDuplicate' }) as HTMLButtonElement;
-    expect(distinct.classList.contains('btn-primary')).toBe(true);
-    expect(distinct.classList.contains('comp-btn')).toBe(false);
+    expect(distinct.classList.contains('comp-btn--primary')).toBe(true);
+    expect(distinct.classList.contains('comp-btn')).toBe(true);
     expect(distinct.type).toBe('button');
     expect(merge.disabled).toBe(true);
     fireEvent.click(merge);

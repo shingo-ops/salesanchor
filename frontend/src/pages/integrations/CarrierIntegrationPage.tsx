@@ -33,6 +33,7 @@ import CarrierCredentialForm, {
   SUPPORTS_ENV_SELECT,
 } from "./CarrierCredentialForm";
 import "./CarrierIntegrationPage.css";
+import { ButtonLink } from "../../components/ButtonLink";
 
 const NAV_KEY: Record<Carrier, `nav.${string}`> = {
   fedex: "nav.integrationFedex",
@@ -267,23 +268,23 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
           </div>
         </div>
         <div className="form-actions">
-          <button
-            className="btn-secondary"
+          <Button variant="secondary" size="md"
+
             disabled={busy}
             onClick={() => handleTest(env)}
           >
             {busy ? t("carrierIntegration.testing") : t("carrierIntegration.testButton")}
-          </button>
+          </Button>
           <Button variant="secondary" size="md" disabled={busy} onClick={() => openEdit(env)}>
             {t("common.edit")}
           </Button>
-          <button
-            className="btn-ghost carrier-env-card__delete-btn"
+          <Button variant="danger" size="md" layoutClassName="comp-btn-layout--ml-auto"
+
             disabled={busy}
             onClick={() => setDeleteConfirmEnv(env)}
           >
             {t("carrierIntegration.disconnect")}
-          </button>
+          </Button>
         </div>
       </section>
     );
@@ -295,14 +296,14 @@ export default function CarrierIntegrationPage({ carrier }: { carrier: Carrier }
       subtitleKey="carrierIntegration.subtitle"
       headerAction={
         isFedex ? (
-          <a
+          <ButtonLink variant="secondary" size="md"
             href={`/management-center/integrations/${carrier}/setup-guide`}
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-secondary"
+
           >
             {t("carrierIntegration.openSetupGuide")}
-          </a>
+          </ButtonLink>
         ) : undefined
       }
     >

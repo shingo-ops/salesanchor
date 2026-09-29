@@ -224,22 +224,22 @@ export default function LLMBudgetTab() {
             </label>
           </div>
           <div>
-            <button
+            <Button variant="primary" size="md"
               type="submit"
-              className="btn-primary"
+
               data-testid="llm-budget-save"
             >
               {t("common.save")}
-            </button>
-            <button
+            </Button>
+            <Button variant="secondary" size="md" layoutClassName="comp-btn-layout--ml-2"
               type="button"
-              className="btn-secondary"
+
               onClick={cancelEdit}
-              style={{ marginLeft: "var(--space-2)" }}
+
               data-testid="llm-budget-cancel"
             >
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

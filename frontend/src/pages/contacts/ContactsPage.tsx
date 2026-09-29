@@ -250,15 +250,15 @@ export default function ContactsPage() {
     </div>
   );
   const pageContentActions = hasPermission("customers.create") ? (
-    <button
-      className="btn-primary field-h-md"
+    <Button variant="primary" size="sm" layoutClassName="field-h-md"
+
       onClick={() => {
         setCreateForm({ ...emptyCreateForm, company_id: companyFilter });
         setShowCreate(true);
       }}
     >
       + {t("contacts.newContact")}
-    </button>
+    </Button>
   ) : undefined;
 
   return (
@@ -394,15 +394,15 @@ export default function ContactsPage() {
           { key: "actions", header: t("common.actions"), renderCell: (c) => (
             <>
               {hasPermission("customers.update") && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(c); }}>{t("common.edit")}</Button>
               )}
               {hasPermission("customers.update") && c.status === "pending_dedup_review" && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setDedupConfirmTarget(c); }}>
                   {t("contacts.confirmAsDistinct")}
-                </button>
+                </Button>
               )}
               {hasPermission("customers.delete") && (
-                <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</button>
+                <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>{t("common.delete")}</Button>
               )}
             </>
           )},

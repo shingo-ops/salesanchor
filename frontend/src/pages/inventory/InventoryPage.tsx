@@ -392,22 +392,22 @@ export default function InventoryPage() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
               />
-              <button type="button" className="btn-primary btn-sm field-h-md" data-testid="inventory-search-btn" onClick={runSearch}>
+              <Button variant="primary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-search-btn" onClick={runSearch}>
                 {t("common.search")}
-              </button>
-              <button type="button" className="btn-secondary btn-sm field-h-md" data-testid="inventory-reset-sort" onClick={resetAll}>
+              </Button>
+              <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
                 {t("inventory.resetSort")}
-              </button>
-              <button
+              </Button>
+              <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
                 type="button"
-                className={filterEnabled ? "btn-primary btn-sm field-h-md" : "btn-secondary btn-sm field-h-md"}
+
                 data-testid="inventory-filter-toggle"
                 aria-expanded={showFilterPanel}
                 aria-pressed={filterEnabled}
                 onClick={() => setShowFilterPanel((v) => !v)}
               >
                 {t("inventory.filterPanel.button")}
-              </button>
+              </Button>
             </>
           }
         />

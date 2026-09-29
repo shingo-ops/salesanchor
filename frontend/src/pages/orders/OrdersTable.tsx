@@ -25,6 +25,7 @@ import { fmtCurrency, orderPhase } from "./useOrdersState";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface PanelOpeners {
   setShippingTarget: (o: OrderListItem) => void;
@@ -136,57 +137,57 @@ export function OrdersTable({
         const phase = orderPhase(o, pur, ship);
         return (
           <span className="actions">
-            <button className="btn-sm" onClick={() => handleEdit(o)}>{t("common.edit")}</button>
+            <Button variant="secondary" size="sm" onClick={() => handleEdit(o)}>{t("common.edit")}</Button>
 
             {/* フェーズ別の主要操作 */}
             {phase === "awaiting_payment" && (
-              <button
-                className="btn-sm"
+              <Button variant="secondary" size="sm"
+
                 onClick={() => setPaidOrder(o, true)}
                 data-testid={`mark-paid-${o.id}`}
               >
                 {t("orders.markPaid")}
-              </button>
+              </Button>
             )}
             {phase === "sourcing" && (
-              <button
-                className="btn-sm"
+              <Button variant="secondary" size="sm"
+
                 onClick={() => setPurchaseTarget(o)}
                 data-testid={`mark-purchased-${o.id}`}
               >
                 {t("orders.markPurchased")}
-              </button>
+              </Button>
             )}
             {phase === "awaiting_shipping" && (
-              <button
-                className="btn-sm"
+              <Button variant="secondary" size="sm"
+
                 onClick={() => setShippingTarget(o)}
                 data-testid={`issue-label-${o.id}`}
               >
                 {t("orders.issueLabel")}
-              </button>
+              </Button>
             )}
             {/* 支払済を取り消したい場合（支払い待ち以外で paid_at 有） */}
             {o.paid_at && phase !== "completed" && phase !== "cancelled" && phase !== "trouble" && (
-              <button
-                className="btn-sm"
+              <Button variant="secondary" size="sm"
+
                 onClick={() => setPaidOrder(o, false)}
                 data-testid={`mark-unpaid-${o.id}`}
               >
                 {t("orders.markUnpaid")}
-              </button>
+              </Button>
             )}
 
             {/* 補助操作（発送 / 仕入 詳細パネル）は常時参照可 */}
-            <button className="btn-sm" onClick={() => setShippingTarget(o)} data-testid={`open-shipping-${o.id}`}>
+            <Button variant="secondary" size="sm" onClick={() => setShippingTarget(o)} data-testid={`open-shipping-${o.id}`}>
               {t("orders.shipping")}
-            </button>
-            <button className="btn-sm" onClick={() => setPurchaseTarget(o)} data-testid={`open-purchase-${o.id}`}>
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setPurchaseTarget(o)} data-testid={`open-purchase-${o.id}`}>
               {t("orders.purchase")}
-            </button>
-            <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(o)}>
+            </Button>
+            <Button variant="danger" size="sm" onClick={() => setDeleteTarget(o)}>
               {t("common.delete")}
-            </button>
+            </Button>
           </span>
         );
       },

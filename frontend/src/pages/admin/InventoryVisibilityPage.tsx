@@ -15,6 +15,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 interface MatrixRow {
   role_id: number;
@@ -158,15 +159,15 @@ export default function InventoryVisibilityPage() {
                   </td>
                 ))}
                 <td>
-                  <button
+                  <Button variant="primary" size="md"
                     onClick={() => saveRole(row)}
-                    className="btn-primary"
+
                     disabled={savingFor === row.role_id}
                   >
                     {savingFor === row.role_id
                       ? t("common.saving")
                       : t("inventoryVisibility.save")}
-                  </button>
+                  </Button>
                   {savedFor === row.role_id && (
                     <span style={{ marginLeft: "var(--space-2)", color: "var(--success)" }}>
                       <STATUS_ICONS.check size={ICON.sm} aria-hidden="true" />{" "}{t("inventoryVisibility.saved")}

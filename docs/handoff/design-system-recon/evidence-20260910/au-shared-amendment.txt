@@ -1,0 +1,17 @@
+CARD-AU-SHARED-02
+受領確認: 本報告はカードCARD-AU-SHARED-02の実行結果であると記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。間接CSS依存を実物照合済み。
+CARD-AU-SHARED-01の全許可/禁止/作業場所/所有を継承し、以下のみ追加する。他担当の変更を戻さない。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+設計: docs/specs/design-system/design.md §AUのHeaderButton追補。
+追加所有: frontend/src/components/HeaderButton.tsx、HeaderButton.test.tsx。
+追加所有: frontend/src/pages/account-settings/AccountSettings.stories.tsx、frontend/src/components/ContentToolbar.stories.tsx、frontend/src/components/PageLayout.stories.tsx。
+手順1: HeaderButtonのtext3variantを既存Buttonへ委譲、type=button、size=md、元のvariant/全props/childrenを保持。
+iconだけは元のnative button/icon-btnのまま保持し、見た目/処理/型/公開propsを変更しない。VARIANT_CLASS旧btn依存を除去しコメントを更新する。
+手順2: HeaderButtonの4variantでnative element/type、onClick/disabled、aria/data props、icon class/text shared classを試験する。
+手順3: 3storyのraw legacy6件をButtonへ、variant同名/md、importを追加する。既存文言/他storyは変更しない。
+手順4: 旧btn利用がHeaderButton/storiesからも消えたことを確認して、既定の旧CSS撤去とテストを続ける。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && git diff --check
+曖昧/失敗は該当操作停止しrootへ報告。根拠は/tmp/au-shared-validationへ。新型や不必要なvariant追加は禁止。
+END OF CARD

@@ -860,7 +860,8 @@
     "advisorStep3": "Step 3: Back-calculated from win rate {{winRate}} and deal rate {{dealRate}}",
     "advisorMonthlyRequired": "Required per month",
     "advisorWeeklyRequired": "Required per week",
-    "advisorGeneratedAt": "Generated at"
+    "advisorGeneratedAt": "Generated at",
+    "advisorRecommended": "Recommended {{value}}"
   },
   "leads": {
     "title": "Lead Management",

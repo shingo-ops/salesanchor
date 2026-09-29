@@ -274,14 +274,14 @@ export default function TcgSeriesTab() {
                   {tp.name_ja}{" "}
                   <code style={{ color: "var(--text-muted)" }}>{tp.code}</code>
                 </span>
-                <button
+                <Button variant="danger" size="sm"
                   type="button"
-                  className="btn-danger-link"
+
                   aria-label={`${t("common.delete")} ${tp.name_ja}`}
                   onClick={() => removeType(tp.id)}
                 >
                   {t("common.delete")}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -362,9 +362,9 @@ export default function TcgSeriesTab() {
                 </Button>
               </td>
               <td>
-                <button onClick={() => remove(it.id)} className="btn-danger-link">
+                <Button variant="danger" size="sm" onClick={() => remove(it.id)}>
                   {t("common.delete")}
-                </button>
+                </Button>
               </td>
             </tr>
           ))}
