@@ -22,29 +22,40 @@ jobs:
     permissions:
       contents: read
     steps:
-      - name: Update BEHIND ledger PRs
+      - name: Update behind ledger PRs
         env:
           GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
           GH_REPO: ${{ github.repository }}
         run: |
           set -uo pipefail
 
-          TARGETS="$(gh pr list --state open --limit 500 \
-            --json number,headRefName,autoMergeRequest,mergeStateStatus \
-            --jq '.[] | select((.headRefName | startswith("release/ledger-done-")) and .autoMergeRequest != null and .mergeStateStatus == "BEHIND") | .number')"
+          # mergeStateStatus は GitHub が後から計算するため一覧では UNKNOWN になりやすい。
+          # そのため main との差（behind_by）を compare API で直接測る。
+          CANDIDATES="$(gh pr list --state open --limit 500 \
+            --json number,headRefName,autoMergeRequest \
+            --jq '.[] | select((.headRefName | startswith("release/ledger-done-")) and .autoMergeRequest != null) | "\(.number) \(.headRefName)"')"
 
-          if [ -z "${TARGETS}" ]; then
-            echo "追従対象なし"
+          if [ -z "${CANDIDATES}" ]; then
+            echo "予約済みの台帳DONE化PRなし"
             exit 0
           fi
 
           FAILED=0
-          for N in ${TARGETS}; do
+          while read -r N HEAD_REF; do
+            if ! BEHIND_BY="$(gh api "repos/${GH_REPO}/compare/main...${HEAD_REF}" --jq .behind_by)"; then
+              echo "::error::compare failed: #${N} (${HEAD_REF})"
+              FAILED=1
+              continue
+            fi
+            if [ "${BEHIND_BY}" -lt 1 ]; then
+              echo "up to date: #${N}"
+              continue
+            fi
             if gh api --method PUT "repos/${GH_REPO}/pulls/${N}/update-branch"; then
-              echo "updated: #${N}"
+              echo "updated: #${N} (behind_by=${BEHIND_BY})"
             else
               echo "::error::update-branch failed: #${N}"
               FAILED=1
             fi
-          done
+          done <<< "${CANDIDATES}"
           exit "${FAILED}"

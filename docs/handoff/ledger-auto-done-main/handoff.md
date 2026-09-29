@@ -14,7 +14,7 @@ design: docs/handoff/ledger-auto-done-main/design.md
 | scripts/ci/is-ledger-done-pr.sh | 台帳 DONE化 PR かどうかの判定（唯一の置き場所） |
 | scripts/tests/test-is-ledger-done-pr.sh | 上の判定テスト（gh をスタブ化） |
 | .github/workflows/ledger-auto-done-main.yml | 予約前に判定・予約失敗を赤に・mode=backlog を追加 |
-| .github/workflows/ledger-done-update-branch.yml | 予約済みで BEHIND の台帳PRを main に追従 |
+| .github/workflows/ledger-done-update-branch.yml | 予約済みで main より遅れている（behind_by が1以上）台帳PRを main に追従 |
 | .github/workflows/auto-merge-guard.yml | 台帳以外に予約された auto-merge を取り消す |
 | docs/adr/ADR-050-release-pr-workflow-standardization.md | 追補：auto-merge の限定 |
 

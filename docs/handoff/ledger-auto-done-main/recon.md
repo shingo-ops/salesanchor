@@ -107,6 +107,11 @@ ruleset 15777895（main branch protection）の実測値:
 - (b) `PUT /repos/{owner}/{repo}/pulls/{pull_number}/update-branch`: base の最新を PR ブランチへ merge する。body は任意の `expected_head_sha` のみ（不一致は 422）。成功は 202。出典: https://docs.github.com/en/rest/pulls/pulls（Context7 /websites/github_en）。update_method に相当する REST パラメータは確認できなかったため使わない。
 - (c) `gh pr merge --disable-auto`: PR の auto-merge を無効にする。出典: https://cli.github.com/manual/gh_pr_merge（Context7 /websites/cli_github_manual）。手元の `gh pr merge --help` にも `--disable-auto  Disable auto-merge for this pull request` がある。
 
+### 追従対象の判定に mergeStateStatus を使わない理由
+
+- 設計者の初回調査（2026-09-29）で、open の台帳DONE化PRは #3851 以外すべて mergeStateStatus が UNKNOWN だった（GitHub が後から計算するため、一覧では UNKNOWN になりやすい）。
+- そのため .github/workflows/ledger-done-update-branch.yml は、予約済みPRごとに compare API（repos/{owner}/{repo}/compare/main...{head}）の behind_by を測る。
+
 ### 既存 ADR の検索
 
 - `git grep -il "auto-merge\|ledger\|台帳" docs/adr` → ADR-023（別文脈：ユーザー台帳）, ADR-056（develop への auto-merge。別件）, ADR-099（古物台帳。別件）, ADR-1002（migration の実行済み台帳。別件）, README.md。

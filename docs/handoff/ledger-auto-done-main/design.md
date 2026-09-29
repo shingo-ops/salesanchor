@@ -123,7 +123,7 @@ GO 記録を検査する gate は必須チェックに入っていない。
   3. 変更ファイルが1件以上で、すべて `.claude-pipeline/active-work.d/` の下（`..` を含むパスは不可）
   4. 作成者が `shingo-ops`（スクリプト内の定数 `LEDGER_PR_AUTHOR` 1か所）
 - B. `.github/workflows/ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog` を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
-- C. `.github/workflows/ledger-done-update-branch.yml`（新規）: main への push で、予約済みかつ BEHIND の台帳DONE化PRに update-branch を実行する。concurrency で1本ずつ。失敗したらジョブを赤にする。
+- C. `.github/workflows/ledger-done-update-branch.yml`（新規）: main への push で、予約済みの台帳DONE化PRそれぞれについて compare API（main...head）の behind_by を測り、1以上のものだけに update-branch を実行する（mergeStateStatus は一覧で UNKNOWN になりやすいため使わない）。compare が失敗したPRは失敗扱いでジョブを赤にする。concurrency で1本ずつ。失敗したらジョブを赤にする。
 - D. `.github/workflows/auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` で起動。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
 
 `git grep "ledger-done-"` に残る箇所の意味づけ（判定ではない）:
@@ -139,7 +139,8 @@ GO 記録を検査する gate は必須チェックに入っていない。
 | 判定の条件が1か所にある | `git grep -n "ledger-done-" .github/workflows scripts/ci` で、4条件の判定を持つのが `scripts/ci/is-ledger-done-pr.sh` だけ（他は除外・候補列挙・呼び出し） |
 | 判定が4条件で正しく分かれる | `bash scripts/tests/test-is-ledger-done-pr.sh` が全PASS（合格1・各条件欠4・files0件・パス脱出・引数なし） |
 | ワークフローが構文として妥当 | `actionlint` が3本すべてエラーなし |
-| 予約失敗・条件外が失敗として見える | `gh pr merge --auto` の失敗分岐が `exit 1` になっている | `grep -n -A3 'gh pr merge --auto' .github/workflows/ledger-auto-done-main.yml` の else 側が `::error::` と `exit 1` |
+| 予約失敗・条件外が失敗として見える | `grep -n -A3 'gh pr merge --auto' .github/workflows/ledger-auto-done-main.yml` の else 側が `::error::` と `exit 1`（`gh pr merge --auto` の失敗分岐が exit 1 になっている） |
+| 遅れた予約済みPRだけが追従される | `grep -n 'behind_by' .github/workflows/ledger-done-update-branch.yml` で compare の値を使い、mergeStateStatus で絞っていない |
 | マージのたびに DONE化PR が自動で入る | 本PRのマージと Allow auto-merge ON の後、次に通常PRがマージされたとき `release/ledger-done-<番号>` が人手なしで merged になる |
 | 台帳以外の予約は取り消される | マージ後のテスト用PRに `--auto` を付ける → 数十秒後に `autoMergeRequest` が null になりコメントが付く |
 | 溜まりがゼロ | backlog モード実行後、open の `release/ledger-done-` PR が 0 件 |
