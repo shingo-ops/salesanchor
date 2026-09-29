@@ -18,7 +18,8 @@
 
 **対象**
 - prod2 に tinyproxy を置く。受け口は 127.0.0.1 だけ。中継する相手は `generativelanguage.googleapis.com:443` だけ
-- prod2 の `monitoring-tunnel.service` に `-R 172.17.0.1:18888:127.0.0.1:8888` を1本足す
+- prod2 から prod1 へ、`-R 172.17.0.1:18888:127.0.0.1:8888` の逆転送を張る
+- 2026-09-30 の改訂：prod2 の sudo パスワードが記録（`~/.claude-access.env`）と合わず、使えなかった。そこで、上の2つは sudo を使わず、`ubuntu` ユーザーの docker コンテナとして動かす（§5-1）。既存の `monitoring-tunnel.service` は変えない
 - アプリ：新 SDK は `_get_genai_client()` で中継先を渡す。旧 SDK は `grpc_proxy` 環境変数で渡す
 - docker-compose.yml：backend と celery-worker に、中継先の環境変数と `extra_hosts: host-gateway` を足す
 - prod2 の設定（unit と tinyproxy）の写しを、リポジトリの記録として残す
@@ -52,19 +53,37 @@
 
 ## 5. 実装（実装カードの中身）
 
-### 5-1. prod2（リポジトリの外。実行の直前に PO へ3行で報告する）
-1. 退避：`sudo cp /etc/systemd/system/monitoring-tunnel.service /etc/systemd/system/monitoring-tunnel.service.bak-YYYYMMDD`
-2. `sudo apt-get install -y tinyproxy`（1.11.1-3ubuntu0.1）
-3. `/etc/tinyproxy/tinyproxy.conf` の要点：
-   - `Port 8888`、`Listen 127.0.0.1`、`Allow 127.0.0.1`
-   - `ConnectPort 443`
-   - 宛先を `generativelanguage.googleapis.com` だけに限る（Filter と既定で拒否）
-   - Filter の書式は、tinyproxy 1.11 の公式 man（tinyproxy.conf(5)）で確かめてから書く。未確認のまま書かない
-4. unit の ExecStart に `-R 172.17.0.1:18888:127.0.0.1:8888 \` を1行足す（`-R 0.0.0.0:13100…` の次の行）
-5. `sudo systemctl daemon-reload && sudo systemctl restart monitoring-tunnel.service`
-   - 監視の転送が数秒途切れる。Restart=always の範囲
-6. 確かめる（§6 の V1〜V3）
-- 注：prod2 の sudo にはパスワードが要る（recon §3）。AI が実行できない場合は、PO が手元で1行実行するスクリプトにする
+### 5-1. prod2（2026-09-30 改訂：sudo を使わないコンテナ方式。実行の直前に PO へ3行で報告し、GO を受ける）
+
+**前提となる事実（prod2 で読み取って確認、2026-09-30）**
+- `ubuntu` は docker グループに入っている（`id` の出力に `988(docker)`）。docker のバージョンは 29.5.2
+- `/opt/salesanchor-monitoring/` の持ち主は ubuntu で、書き込める
+- `secrets/tunnel-key` は ubuntu が読める。この鍵は、既存の `monitoring-tunnel.service` が prod1 に入るときに使っているもの（recon §3 の `systemctl cat`）
+- 8888 番と 18888 番は、まだ使われていない
+- prod1 の sshd は `GatewayPorts clientspecified`（recon §3）
+
+**置くもの（正本はリポジトリの `monitoring/prod2/gemini-egress/`。prod2 には scp で `/opt/salesanchor-gemini-egress/` に写す）**
+- `docker-compose.yml`
+  - プロジェクト名は `gemini-egress`。監視スタックの compose とは別にし、監視スタックには触れない
+  - 2つのサービスとも `network_mode: host`、`restart: unless-stopped`
+  - `tinyproxy`：alpine に `apk add tinyproxy` を入れる自前の Dockerfile。他人が作ったイメージは使わない
+  - `tunnel`：alpine に `apk add autossh openssh-client` を入れる自前の Dockerfile
+    - `autossh -M 0 -N -o StrictHostKeyChecking=no -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes -i /run/secrets/tunnel-key -R 172.17.0.1:18888:127.0.0.1:8888 ubuntu@49.212.137.46`
+    - 鍵は `/opt/salesanchor-monitoring/secrets/tunnel-key` を読み取り専用でマウントする
+- `tinyproxy.conf`：`Port 8888`、`Listen 127.0.0.1`、`Allow 127.0.0.1`、`ConnectPort 443`、`FilterDefaultDeny Yes`、`Filter "/etc/tinyproxy/filter"`。FilterURLs は付けない（公式 docs：HTTPS では URL の絞り込みが効かない）
+- `filter`：`^generativelanguage\.googleapis\.com$`
+- alpine のバージョンは、実装するときに公式のリリースページで今の安定版を確かめて固定する
+
+**手順（すべて ubuntu で行う。sudo は使わない）**
+1. `scp -r monitoring/prod2/gemini-egress ubuntu@49.212.160.98:/opt/salesanchor-gemini-egress`
+   - `/opt` 直下に ubuntu が書けない場合は、`/opt/salesanchor-monitoring/gemini-egress` に置く
+2. `cd <置き場> && docker compose -p gemini-egress up -d --build`
+3. 確かめる（§6 の V1〜V3）
+- 元に戻す：`docker compose -p gemini-egress down`。既存の監視には触れていないので、戻す操作はこれだけ
+
+**旧案（systemd の unit に -R を足し、apt で tinyproxy を入れる）をやめた理由**
+- sudo のパスワードが記録と合わず、PO も分からなかった（2026-09-30）
+- コンテナ方式なら、既存の監視トンネルを再起動しない。監視が途切れる心配もなくなる
 
 ### 5-2. アプリ（PR：release/gemini-egress-via-prod2）
 1. `backend/app/services/gemini_extraction_svc.py` の `_get_genai_client()`（247-261行）
@@ -77,7 +96,7 @@
    - あわせて `extra_hosts: ["host-gateway:host-gateway"]` を足す（`docker-compose.exporters.yml:97-98` と同じ書き方）
    - 注：`-`（コロンなし）にするのは、`.env` に空文字を書けば、中継なしの直接接続に戻せるようにするため
 3. `backend/tests/` に `_get_genai_client` のテストを足す（環境変数があるとき・ないとき）
-4. 記録：`monitoring/prod2/monitoring-tunnel.service` と `monitoring/prod2/tinyproxy.conf` に、prod2 の実物の写しを置く。README に「実物は prod2 の /etc。変えたらここも直す」と書く
+4. prod2 用のファイル（§5-1）は `monitoring/prod2/gemini-egress/` を正本にする。README に「prod2 へは scp で写す。変えるときは、ここを直してから写し直す」と書く
 - 触らないもの：`HTTPS_PROXY`・`HTTP_PROXY`・`ALL_PROXY`・`NO_PROXY` は設定しない。Meta・Discord・FedEx・Drive のコードにも触れない
 
 ### 5-3. 順番（この順を守る）
@@ -105,16 +124,16 @@
 
 | リスク | 対処 |
 |---|---|
-| prod2 かトンネルが止まると Gemini も止まる | Restart=always（10秒）。抽出の API_ERROR が続けば、今と同じ症状で気づける。専用の見張りは、次の便で抽出状態の表示を直すときに入れる |
+| prod2 かトンネルが止まると Gemini も止まる | コンテナは `restart: unless-stopped`、autossh は切れたらつなぎ直す。抽出の API_ERROR が続けば、今と同じ症状で気づける。専用の見張りは、次の便で抽出状態の表示を直すときに入れる |
 | prod2 も US 判定に変わる | 案 D（Vertex）を検討する。V6 の見方で気づける |
-| 監視のトンネルの再起動で、監視が数秒途切れる | 業務時間外に行う必要はない（数秒・自動復旧） |
+| 監視トンネルと同じ鍵で、prod1 への SSH 接続が2本になる | 既存の監視トンネルには触れない。別の接続として張る。prod1 側の authorized_keys の制限（permitlisten など）で 18888 番が拒まれた場合は、V3 で分かる。そのときは止まって、設計を見直す |
 | grpc_proxy が Gemini 以外の gRPC にも効く | backend で gRPC を使うのは Gemini だけ（recon §2）。gRPC を使うライブラリを増やすときは、この設計を見直す |
 | prod2 の設定がリポジトリの外にあり、ずれる | §5-2 の 4 で写しを置く。見直すきっかけは、監視 VPS を変えるときの runbook |
 
 ## 8. 元に戻す方法
 
 - アプリ：prod1 の `.env` に `GEMINI_PROXY_URL=` と `GEMINI_GRPC_PROXY=` を空で書くか、PR を revert する
-- prod2：退避した unit を戻して `daemon-reload` と `restart` を行う。`apt-get remove tinyproxy`
+- prod2：置き場で `docker compose -p gemini-egress down` を実行する（既存の監視には触れていない）
 - どちらに戻しても、直接接続（今の止まった状態）に戻るだけ
 
 ## 9. 設計審査（Architect、同じ AI による自己審査）
@@ -133,6 +152,7 @@
 
 ## 10. 維持の仕組み
 
+- 守り手：Opus 設計担当（監視 VPS を変えるときに見直す）／PO（Google の訂正が反映されたら、中継を外すかを判断する）
 - 担当：監視 VPS（prod2）を変えるときは、`monitoring/prod2/` の写しと、この design の §3 を見直す
 - 気づく仕組み：抽出ジョブの API_ERROR（V6 と同じ見方）
 - 解除するきっかけ：Google の訂正が反映され、prod1 の `"GL"` が JP に戻った場合。中継を外すかは、そのとき PO が判断する
