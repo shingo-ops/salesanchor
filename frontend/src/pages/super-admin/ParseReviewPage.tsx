@@ -21,6 +21,7 @@ import { useSuperAdmin } from "../../hooks/useSuperAdmin";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
 import { PageLayout } from "../../components/PageLayout";
 import "./ParseReviewPage.css";
+import { Button } from "../../components/Button";
 
 interface ReviewItem {
   product_id: number | null;
@@ -841,23 +842,23 @@ export default function ParseReviewPage() {
               </section>
 
               <div className="action-bar" style={{ marginTop: "var(--space-4)" }}>
-                <button
+                <Button variant="primary" size="md"
                   onClick={() => void handleApprove()}
                   disabled={isFinal || submitting}
                   data-testid="review-approve-btn"
-                  className="btn-primary"
+
                 >
                   {t("superAdmin.inbound.review.approveBtn")}
-                </button>
-                <button
+                </Button>
+                <Button variant="danger" size="md" layoutClassName="comp-btn-layout--ml-2"
                   onClick={() => setShowRejectDialog(true)}
                   disabled={isFinal || submitting}
                   data-testid="review-reject-btn"
-                  className="btn-danger"
-                  style={{ marginLeft: "var(--space-2)" }}
+
+
                 >
                   {t("superAdmin.inbound.review.rejectBtn")}
-                </button>
+                </Button>
               </div>
             </div>{/* /.review-main */}
           </div>{/* /.review-split */}
@@ -887,24 +888,24 @@ export default function ParseReviewPage() {
                 style={{ width: "100%" }}
               />
               <div style={{ marginTop: "var(--space-2)" }}>
-                <button
+                <Button variant="danger" size="md"
                   onClick={() => void handleReject()}
                   disabled={submitting}
                   data-testid="review-reject-confirm-btn"
-                  className="btn-danger"
+
                 >
                   {t("superAdmin.inbound.review.rejectConfirmBtn")}
-                </button>
-                <button
+                </Button>
+                <Button variant="secondary" size="md" layoutClassName="comp-btn-layout--ml-2"
                   onClick={() => {
                     setShowRejectDialog(false);
                     setRejectReason("");
                   }}
-                  className="btn-secondary"
-                  style={{ marginLeft: "var(--space-2)" }}
+
+
                 >
                   {t("common.cancel")}
-                </button>
+                </Button>
               </div>
             </div>
           )}

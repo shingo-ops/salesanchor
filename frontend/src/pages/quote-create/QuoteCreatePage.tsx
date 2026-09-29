@@ -240,7 +240,7 @@ export default function QuoteCreatePage() {
                   <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                   <td>
                     {items.length > 1 && (
-                      <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                      <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                     )}
                   </td>
                 </tr>

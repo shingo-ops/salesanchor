@@ -50,118 +50,6 @@
   margin-top: var(--space-5);
 }
 
-/* --- Buttons --- */
-.btn-primary {
-  padding: var(--space-2) var(--space-5);
-  background: var(--accent);
-  color: var(--on-accent);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-base);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.btn-primary:hover { background: var(--accent-hover); }
-.btn-primary:disabled { background: var(--text-muted); cursor: not-allowed; opacity: var(--opacity-muted); }
-
-.btn-secondary {
-  padding: var(--space-2) var(--space-5);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-size: var(--font-base);
-  cursor: pointer;
-}
-
-.btn-secondary:hover { background: var(--bg-subtle); }
-
-/* --- Ghost Button (text-only, transparent bg) --- */
-.btn-ghost {
-  padding: var(--space-2) var(--space-3);
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-md);
-  cursor: pointer;
-  color: var(--text-primary);
-  font-size: var(--font-sm);
-  font-weight: var(--font-weight-semibold);
-  white-space: nowrap;
-  transition: background var(--transition-fast);
-}
-.btn-ghost:hover { background: var(--bg-subtle); }
-
-.btn-sm {
-  padding: var(--space-1) var(--space-10px);
-  font-size: var(--font-xs);
-  background: var(--bg-hover);
-  border: none;
-  border-radius: var(--radius-2xs);
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.btn-sm:hover { background: var(--bg-hover); }
-
-.btn-danger {
-  padding: var(--space-2) var(--space-3);
-  background: transparent;
-  color: var(--danger);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: var(--font-base);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.btn-danger:hover { background: var(--danger-bg); }
-
-/* --- Outline Button (透過背景 + 枠線 / Task 6E) ---
-   背景は透過、枠線のみ。色・画像の背景の上で使う。
-   白背景では secondary と見た目がほぼ同じになる（意図的）。 */
-.btn-outline {
-  padding: var(--space-2) var(--space-5);
-  background: transparent;
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--comp-btn-radius);
-  font-size: var(--font-base);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-}
-
-.btn-outline:hover { background: var(--bg-subtle); border-color: var(--text-secondary); }
-.btn-outline:active { background: var(--bg-hover); }
-.btn-outline:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-.btn-outline:disabled { opacity: var(--opacity-disabled); cursor: not-allowed; }
-
-/* 行内アクション列でのボタン高さ不揃い対策:
-   btn-danger は btn-sm より後に定義されサイズ(padding/font-size)を上書きするため、
-   btn-sm を色バリアントと併用したとき高さがバラつく。複合セレクタ(0,2,0)で
-   サイズ系を btn-sm に明示的に揃える。 */
-.btn-sm.btn-secondary,
-.btn-sm.btn-danger {
-  padding: var(--space-1) var(--space-10px);
-  font-size: var(--font-xs);
-}
-
-/* btn-sm.btn-primary: btn-sm の background(bg-hover) が btn-primary の accent を
-   上書きするため、複合セレクタ(0,2,0)で色を明示的に復元する。 */
-.btn-sm.btn-primary {
-  padding: var(--space-1) var(--space-10px);
-  font-size: var(--font-xs);
-  background: var(--accent);
-  color: var(--on-accent);
-}
-.btn-sm.btn-primary:hover { background: var(--accent-hover); }
-
 /* --- Search / Filter --- */
 .search-bar,
 .filter-bar {
@@ -685,26 +573,12 @@
   gap: var(--space-3);
   flex-shrink: 0;
 }
-.page-header-actions .btn-ghost,
 .page-header-actions .icon-btn {
   border: 1px solid var(--border-icon);
 }
-.page-header-actions .btn-ghost:hover,
 .page-header-actions .icon-btn:hover {
   border-color: var(--border-icon);
 }
-/* stylelint-disable no-descending-specificity -- intentional: header context overrides base button variants */
-.page-header-actions .btn-ghost,
-.page-header-actions .btn-primary,
-.page-header-actions .btn-secondary {
-  font-size: var(--font-sm);
-  height: var(--size-icon-btn);
-  padding-top: 0;
-  padding-bottom: 0;
-  display: flex;
-  align-items: center;
-}
-/* stylelint-enable no-descending-specificity */
 
 /* --- Page Header Select --- */
 /* ヘッダーアクションエリア内のドロップダウン共通スタイル (SSoT: ここのみ定義) */
@@ -918,14 +792,3 @@
 }
 .toggle-switch input:checked + .toggle-switch-slider { background: var(--accent); }
 .toggle-switch input:checked + .toggle-switch-slider::before { transform: translateX(18px); }
-
-/* Legacy raw buttons: retain the previous Button.css mobile contract until migration. */
-@media (max-width: 767px) {
-  .btn-primary,
-  .btn-secondary,
-  .btn-ghost,
-  .btn-danger,
-  .btn-outline {
-    min-height: var(--btn-min-height-mobile, 44px);
-  }
-}

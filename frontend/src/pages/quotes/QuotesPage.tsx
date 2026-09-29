@@ -98,15 +98,15 @@ export default function QuotesPage() {
       <ContentToolbar
         left={
           <div style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", alignItems: "center" }}>
-            <button
+            <Button variant={statusFilter === "" ? "primary" : "secondary"} size="sm"
               type="button"
-              className={statusFilter === "" ? "btn-primary btn-sm" : "btn-secondary btn-sm"}
+
               data-testid="quotes-filter-all"
               aria-pressed={statusFilter === ""}
               onClick={() => setStatusFilter("")}
             >
               {t("quotes.allStatuses")}
-            </button>
+            </Button>
             {FILTER_STATUSES.map((s) => {
               const active = statusFilter === s;
               return (
@@ -165,7 +165,7 @@ export default function QuotesPage() {
           { key: "validity_date", header: t("quotes.validityDate"), sortable: true, renderCell: (q) => q.validity_date || "-" },
           { key: "created_at", header: t("common.createdAt"), sortable: true, renderCell: (q) => new Date(q.created_at).toLocaleDateString() },
           { key: "actions", header: t("common.actions"), renderCell: (q) => (
-            <button className="btn-sm" onClick={() => navigate(`/quotes/${q.id}`)}>{t("common.detail")}</button>
+            <Button variant="secondary" size="sm" onClick={() => navigate(`/quotes/${q.id}`)}>{t("common.detail")}</Button>
           )},
         ];
         return (

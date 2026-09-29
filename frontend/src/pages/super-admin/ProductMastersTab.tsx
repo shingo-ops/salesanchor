@@ -16,6 +16,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { MasterListEditor, type MasterDataSource } from "../../components/master-list-editor";
+import { Button } from "../../components/Button";
 
 const ATTRIBUTES = [
   { key: "product_kind", labelKey: "superAdmin.attrMasters.attr.productKind" },
@@ -113,17 +114,17 @@ export default function ProductMastersTab() {
         style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)", margin: "0.5rem 0 1rem" }}
       >
         {ATTRIBUTES.map((a) => (
-          <button
+          <Button variant={attr === a.key ? "primary" : "secondary"} size="sm"
             key={a.key}
             role="tab"
             aria-selected={attr === a.key}
-            className={attr === a.key ? "btn-primary" : "btn-secondary"}
+
             onClick={() => setAttr(a.key)}
-            style={{ padding: "var(--space-1) var(--space-3)" }}
+
             data-testid={`attr-master-tab-${a.key}`}
           >
             {t(a.labelKey)}
-          </button>
+          </Button>
         ))}
       </div>
 

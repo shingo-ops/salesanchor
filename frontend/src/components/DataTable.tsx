@@ -20,6 +20,7 @@
 import type { ReactNode, KeyboardEvent, MouseEvent } from 'react';
 import { TABLE_ICONS } from '../constants/icons';
 import './DataTable.css';
+import { Button } from "./Button";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
@@ -283,27 +284,27 @@ export function DataTable<T = Record<string, unknown>>({
 
       {showPagination && (
         <div className="comp-table__pagination">
-          <button
+          <Button variant="secondary" size="sm"
             type="button"
-            className="btn-sm"
+
             onClick={() => onPageChange(Math.max(1, page - 1))}
             disabled={page <= 1}
             aria-label="previous page"
           >
             {prevPageLabel}
-          </button>
+          </Button>
           <span className="comp-table__page-info">
             {pageInfo ?? page}
           </span>
-          <button
+          <Button variant="secondary" size="sm"
             type="button"
-            className="btn-sm"
+
             onClick={() => onPageChange(page + 1)}
             disabled={!hasNextPage}
             aria-label="next page"
           >
             {nextPageLabel}
-          </button>
+          </Button>
         </div>
       )}
     </div>

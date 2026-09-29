@@ -181,3 +181,5 @@
 |---|---|---|---|---|---|
 | AS共通Button移管 | Astra設計/Sol2担当実装 | GO #3834でmerge b3cf1fdf3・Deploy36416280694成功、本番hash/HTTP/接続確認済み。34件反映 | 本便製品完了。結果文書保存、残旧232/表/報酬3/カレンダー色は別設計 | EV-20260928-AS-IMPLEMENTATION / docs/specs/design-system/design.md §AS | 2026-09-28 |
 | AT共通フォームButton移管 | Astra設計/Sol2担当実装 | GO #3839でmerge a5547fb7・Deploy36488806931成功。本番HEAD/公開hash/HTTP/接続を直接確認済み。11件反映 | 本便製品完了。結果文書保存、残旧221/表/報酬3/カレンダー色は別設計 | EV-20260929-AT-DEPLOY / docs/handoff/design-system-recon/evidence-20260910/at-production-verification.json | 2026-09-29 |
+
+| AU旧ボタン全数移管 | Astra設計/Sol調査実装 | PR3855提出済、旧221→0、661試験/品質成功、Sol相互APPROVE | 最新CI確認、番号付きGO3855受領後にマージ/配備/本番照合 | docs/specs/design-system/design.md §AU / EV-20260929-AU-ALL-BUTTONS | 2026-09-29 |

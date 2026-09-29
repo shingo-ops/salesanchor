@@ -1,0 +1,2958 @@
+{
+  "base": "303c3cfe756b1d82c042cba342c3a3150fc5ab8c",
+  "counts": {
+    "before": 221,
+    "afterLegacy": 0,
+    "common": 494,
+    "links": 8
+  },
+  "files": [
+    {
+      "file": "frontend/src/components/CommissionPanel.tsx",
+      "beforeSha256": "8292cd30c57b2b4a10714fc123f5b16e78b7cf8773d540ac1ff7075981f4f79f",
+      "afterSha256": "e66fecee1935348ebf00239e28aec8ecb86fb10b40f28ea933fb794afc5cc4c2",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 228,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7e2250f038cfd45f9793bb19dab1ba8e66c572634e5616b12753760715cbcffd"
+        },
+        {
+          "line": 255,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b07f9ca6b22115ff81c5cecbbaa429360c872f8338a100b4f923d40e5375a1ca"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "beforeSha256": "46af44593ee1e4e31e8dcf2e81fb575f9bd55a716e456c2db0025087c7cf384b",
+      "afterSha256": "6ce6b057099bf6bf875260bdb5facec9483c497a9ca86168b1bba15ab5ca16d4",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 286,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "82d399224a44472f61758b16cc079552031930146a7ba34aa2fbb4d7aa285b7b"
+        },
+        {
+          "line": 298,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7b1efd3380a9e12bfea5a11d41ff1a2ca14d0d583f2ee8ec9a6639fbbd57ab16"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "beforeSha256": "7f477ded99f13818f063edbc3568cb7e155d07fc0ee328cb466c376b6e249f38",
+      "afterSha256": "fca9586c9fa7ee41bf38d8efb43840fc91b0930803e17f4b5a6bdf7a569e4305",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 246,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2e3847d47fe3d7fc93b423e023eab93471d1814709d253fc55e5aab09007ea37"
+        },
+        {
+          "line": 309,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "43b977bd692f6fe1f1e283b27003e36fbce63753127026d8b67307f00fbbf42c"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/components/master-list-editor/MasterListEditor.tsx",
+      "beforeSha256": "7cc9d8489476696941d82353225098c79203051ec069724d49c4e9e727776721",
+      "afterSha256": "bcb37905bbbc762603e6d21819c68c5c82bbf91916fb7fe6d1dc9152a00f9be4",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 144,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f30b28a1264efda2ba4deaf8414d82015f8eac8d806030c37c2dbe9b1963a4aa"
+        },
+        {
+          "line": 212,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "19ad9a047e5267047bb54500ce2439e1dd5a84038e365a899079d43eb08ed030"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/account-settings/SecuritySection.tsx",
+      "beforeSha256": "e4f0fd6d2fa0385d9e931e2ea0a3b2c15c21c207741cc83b9d4f0009946dfd7d",
+      "afterSha256": "7bbae3d4a504d77b7ac1253a682dcef7e516e1e8e24d0c32e06944d7df44fe56",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 104,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ad5cd6aeed2382b9d9408d02e27af6cfb1d7c3ba6b0a09434daddaa11a7ecd18"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordAnnouncePage.tsx",
+      "beforeSha256": "8ba74cc5efb486536b796d21a1789eaf4986a8e5ede0bc5f428faf88583f6203",
+      "afterSha256": "9a02b8084656f32311491fddb6763fc3bff625bc9c3307078f93976a2889c28a",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 115,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "111fc1d59775ad552d0b4144a15f1dcbc8e86035e862c39b14478a449987b054"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+      "beforeSha256": "7772f51661f4089c0d6cb65f35fdd7f8aeb4275911cfaf4bc28587aa311a3995",
+      "afterSha256": "0588cf7d2fd77daaac71dcd2337a27d05db23617081568e99daa1e3e3e11285e",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 278,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "d97331d8c574347f47dff38af33fab3277f04d3ae4fde77786941326c81af79f"
+        },
+        {
+          "line": 300,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ecdcba88d1b39f3493fc3fed811fe77f3583fa10d367a413b0d2f0d4a0d17221"
+        },
+        {
+          "line": 541,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "906d3fc5f0ad7624bfd8e979669e1b1521b11f17f2b7a067bfa86f2911e0482e"
+        },
+        {
+          "line": 557,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e1759fc90aac5d282e01c2f75c330a2c1a876e91a2f031c5184c70c0bd72af35"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/admin/InventoryVisibilityPage.tsx",
+      "beforeSha256": "15dc40dea1f27e817b114bdb655ab62ceef263b2a129dcbc8a57c50605146871",
+      "afterSha256": "07ad73dc3df108565ab5f1e1b1e584c598e858410e238be0b6a0a74d37bfb973",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 161,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "dbace50b4aa25bae2c81e554e6d7960c2aa8bb73c4a2b0259eef71dc0f750076"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+      "beforeSha256": "9ae6f88f7a5369c1ef99ff8eaca47ac79e146cd1f7a956d9987b64141c75801a",
+      "afterSha256": "cb5d5bec05c4ed48771a4c2725c770cc7358958652c9342a602745a8e3fb3d21",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 304,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a5ff00b85b43aebd63f184dc5a45436c25793100419737924e3ed034765c611c"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+      "beforeSha256": "de242e8504149f450a7d81687881886b29563a42ac94a7f94f3abf8df534b64c",
+      "afterSha256": "7c3742f909e9c3571730ff33d899134b6aac78f3b4db2eb913282dc400808648",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 249,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "3c45d8716712d069b3efd743ca0623072c6d65673597b13c9fb1b8272ca0ccc4"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/archives/ArchivesPage.tsx",
+      "beforeSha256": "285796a5780d538b74f2818839a2ae5c6a02788aebc9b78d6d9ff025fc727411",
+      "afterSha256": "9d57d4233e0a33e4c149ddaea67ac6c42449b28a020a8a5e1099d7c0f8bde089",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 60,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "346ae68e3abb922c115f81930ef57e4e21fe5c9365a38986f517344a1e47f318"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/bots/BotsPage.tsx",
+      "beforeSha256": "8377a0a7c85edf1ddf1af232e81e7fc3d61c891d29bd7f091ee7ebb2941dcb55",
+      "afterSha256": "b21a4f693d802ecf116801d517bf0232c8cf7d20183f698b0cfd0fd58c65788a",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 203,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4d11052dcfd6efc16d9b395cf6b6e94021229153f7ae1b27328386fcfb1d1f3d"
+        },
+        {
+          "line": 213,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "38faaddb8f1242094b47c1e9f346116e4effad34f359109ba8d345027336f8e0"
+        },
+        {
+          "line": 311,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bac8d271bfd245e6ffc42908ae870ce1513138748c02fd15ac7cac8d9589f939"
+        },
+        {
+          "line": 312,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c5d324fa7cb84a70a609b87be6c7ab751128ecc7fc1f48fa31e723d43b454b8b"
+        },
+        {
+          "line": 313,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2a7defef6edb8767e6d89b189b1f59ebb4912f12037163f19300ed91b5d1b353"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/buddy/BuddyPage.tsx",
+      "beforeSha256": "ce5766290a165795e9a1c5af2eeba0ddb1a9d56f85f669d2ae222f05a8a9687c",
+      "afterSha256": "47d6be825745dcd6bf1cb89988557b1971ad14e90db0ce4f8a693bddedc856c6",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 85,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "25fd9056c5514162ae3c24641e2601e6cafc251aaafa2d31f7c38a0dbda58fcf"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "beforeSha256": "6e52f1c2a76c4e45c68a7bfa39aa07be83f7c1842a295159e350f34548db1c3e",
+      "afterSha256": "cbd42d0d3a0e3a49657a8316efb10d04cf4ba70c04a2e0da7ad2682cbb669f35",
+      "targets": 7,
+      "expected": 7,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 386,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "244b763655a887d9f0ead59c5d05e2afdf34e7d776b2592f4a71b6aedb1f0b75"
+        },
+        {
+          "line": 404,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0c4739073c83d68a65760a46f1586af3b218a773c209f85a94a50ed3b063aabf"
+        },
+        {
+          "line": 435,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f11314f794ab386e3a8a5ff6d12440997e32ab7bbde84a5b578a9fcf647dbb49"
+        },
+        {
+          "line": 521,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "54b141e16e47cf902f52515b5fb44ae92e66366cc13cfac9b396ff3448d29e8f"
+        },
+        {
+          "line": 557,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "9b8bada030da9d482046937fab4a59bb2c313f58a70a7d48aadefab11a4c82f2"
+        },
+        {
+          "line": 600,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "99f953245401235cafb6eaab5f5d6f2f39a2f4b735bcc4bba0879c73d5bd61c0"
+        },
+        {
+          "line": 607,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "3666b15ee8ffefa1d4a97d142f47af6a4109180aea95900d27a4d4e25af73987"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+      "beforeSha256": "a78faaf191fb5dc14b65998186a65058a34e2fd1232fc7636d616b793f5ca736",
+      "afterSha256": "2dc663f6da272da9fb8888d8788894f42f280baf59d222bf1406cd146033ab34",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 251,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "d948540b848275732141a14f8c13d30352bf28b2b91a73a108b1643505bf595e"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/commissions/CommissionsPage.tsx",
+      "beforeSha256": "ef407f38ff92332757e2683d1a06a6c1f7de3765f68d7071d787370689ca6938",
+      "afterSha256": "ee4662b0bcefc8ae70c90b87caa32717d4725e4d8d7f22ddfb32626efe06c5d5",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 226,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6cf45d9ec9e67b563c934691859e1dfe6751686afde619bf0a370ddbff795cab"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "beforeSha256": "69dc7f5ce9cc118f1e55e3f5a13bee79148bafe96edd2d4b8044c26cd328c5b7",
+      "afterSha256": "0050dd339a6b5774fef9ec8f4f8f4d5ac0b181707094c3749498e1ce43703801",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 359,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "aac96f4c4d8bf5c6af893e0a6f52148157341eb367f3be752d84214254b76d28"
+        },
+        {
+          "line": 408,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ad3331ee30d4df314fdd4a391262a1231fdc1f5a563877ab668878e6841cb0c8"
+        },
+        {
+          "line": 410,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bf8192b51244ecfb0f95c861f589734e2a6d6e4945fe8d9f6b8a3fac9c6e9817"
+        },
+        {
+          "line": 413,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4b4ef15835bca5c065db3549e31fa1001b2cce52cad4af3f0c0c7851f85509f4"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyAddressesTab.tsx",
+      "beforeSha256": "319e3c80147f6f94a8b4d4d3df5924e2d99ed9aedac8bd95b1cd5b2bcbf880ce",
+      "afterSha256": "39923a3cb73697c372a25c2760d08463588755532cf612abe3257a067f435120",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 52,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "70603de28bfa924ea33040451115e8213fafc38b76d690c5739985a71241ee48"
+        },
+        {
+          "line": 53,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7ba8b1345f33561aeb2c67e9174fe78f22b3467cb068c32a88bb1ca367c1781c"
+        },
+        {
+          "line": 73,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b02553bb5915a84939e059a8cfe04727f83e4993da60883a9774bb85f80b5e6f"
+        },
+        {
+          "line": 87,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "681f592204b1c9e686b4fd57d43328be2100aa9eccab7db2e94633c82f6f821d"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "beforeSha256": "6c9a4bb3e42d5d64de47bc8f096ce0f6ab53a5baf89719e37d50f8d67ad7e944",
+      "afterSha256": "70fb6a8a9fcd203eeb3bc43abb0c3b5d1c428bc75ecb473ee6aad611bde1b5b6",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 127,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f18b54954b22121180422f0fa4e5686b0e50d7630f3b0c63d12bc39b9379bffd"
+        },
+        {
+          "line": 136,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "aa61db16808bb0f3d36b5f2c210a7134d0370d675cbdd7c46e601bafe4afcc18"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyDiscordTab.tsx",
+      "beforeSha256": "6d3f6ea6108460bdc34f86d9ffd7f334b15b7c9eb3860386dadcc0692706fc95",
+      "afterSha256": "2e451fe941e532e731e3528afb5dcda1456d937952311af7a0fd491bf4eb5932",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 90,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "58e2b85d143a6cedf7ca61dd54c62cdd2fb0e2903ce398f3b06afd8c42bdb8b3"
+        },
+        {
+          "line": 97,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "fde109b3c71d2f7aa787ed881290d4c7cfdd87fc1a5e527299a4f880e4b8862d"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/conditions/ConditionsPage.tsx",
+      "beforeSha256": "22437343c589b4af4505553e4e80d3355cc64abb49e1db8aeea3bca3c8c20e87",
+      "afterSha256": "f6c8572c345fc9ba030d44b42f9ab5da8ca2cb4d5b64f9d7168e4dc213a4dc72",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 279,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "52ee452682bdaa79c0ca05ba112bf7e8f1f5f0a60f975c7b33c6293fc8ca6733"
+        },
+        {
+          "line": 420,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "67f13222bcb9e2667fb7134d8d5ebd718db82220b94bde2cd590b165a112ab42"
+        },
+        {
+          "line": 595,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "206915e00c89288db7634e5b1bb2ed12495685416b6580176857844ddebc0974"
+        },
+        {
+          "line": 608,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2595c60d0b61748d132a00668e7dc241b43bb42130c7db6d910a998f4d3ed6bf"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "beforeSha256": "9ab2b459d1690a6c7a7f12f7286a0df197485d641cb46071020e175f60b0287b",
+      "afterSha256": "0fc674a092fb292df1133637944aebc7e266b5699c76bd66f8f9bcf608d901ae",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 199,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "24f5d8d9bf380a045a179f6bb1c0919517a24dd6fa9422e1f56cc3e5020d9fdd"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+      "beforeSha256": "8a677097e941dc3d6f49b42b6889a3d6baf5860c8199eea9aaec9df062f987c5",
+      "afterSha256": "18823b5488f8fac58e1e5f1ee4a8301b7c08dc6c9b393242af3940ba411361a0",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 253,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5d92602846ea2ffcd3d4c15d0137ccfa526eca10ea2005003dd7280daefdb9ca"
+        },
+        {
+          "line": 397,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bf8192b51244ecfb0f95c861f589734e2a6d6e4945fe8d9f6b8a3fac9c6e9817"
+        },
+        {
+          "line": 400,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8f8ac634575a84f6dba79acdaa9e5293663f7136f0782390b95926ff24e2f72a"
+        },
+        {
+          "line": 405,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4b4ef15835bca5c065db3549e31fa1001b2cce52cad4af3f0c0c7851f85509f4"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "beforeSha256": "d6f3ceec0508498dfabbdf34cfbdac33d04653aba8ffc385e8a4f6df44e76dac",
+      "afterSha256": "9ea415637b3d76ed954c767c3a5da80995cddb5c612effafde6507b931fa23f7",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 166,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "70296629d7ba1cf3ac17c99fe6f75fad9170761b26d3f721706ca80fd20dfbf4"
+        },
+        {
+          "line": 167,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0f3b7d39740ab35af586fdb0e9a02c8781fdf3fd9035c10702398124860f6eb7"
+        },
+        {
+          "line": 168,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "14505c68d420613b45190a2aa7996ebd3b25110c87bd6c3f4e7c50f4f07dc119"
+        },
+        {
+          "line": 169,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "be6bca33c63fa8aa39b6b542bad2e80aaf0a104d061f412de3c2cd2cdd1de1c2"
+        },
+        {
+          "line": 412,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1020c02b3f3367a1fe46f01a75a86435a10628cc71e58f04e3f255a22fbdef4d"
+        },
+        {
+          "line": 429,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1020c02b3f3367a1fe46f01a75a86435a10628cc71e58f04e3f255a22fbdef4d"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/erp/ERPPage.tsx",
+      "beforeSha256": "db61bdb847eb6615343c3ce7b2c652c52cf40c8fc6a13d9783f0562a4c1665b1",
+      "afterSha256": "6b48ea357d6d145345236858bd6f7e0f9d8ec71772462019bb176af31480b315",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 58,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0bcc53e5897d7e15200d7b2d44cb56acb932a0c5189bb1db6d7c47a30ec01339"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "beforeSha256": "4498c692a0ea3e7b4bb5f47e7c7f303c216c77d1c18920cb2e0b05eae9624f13",
+      "afterSha256": "b59f1b1128a5b60683f15f2068f8af351ffea1aba88c1d1b240c0bd9c56a203c",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 201,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8abff45e605ad71aa0ab1079a61651a3a8f6472a6c8f628104f74d660ad8838d"
+        },
+        {
+          "line": 360,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "33396c50cc8fce0ea7a913dd649e7475401579fbe02140937df381c62536d793"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "beforeSha256": "70e332b9dd0cdfe481fab6ac3e2c9f63da2cc4598d90eac7fe086f30fac25b9c",
+      "afterSha256": "7e5a25d7227ea4848293888990b83650ac6029a4516910912980d8e59fbbddb7",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 318,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "829151292db2c524fcf9076fc5702bfe64477b548e52ccdd9f84f04307d5956d"
+        },
+        {
+          "line": 733,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ae4d850eac009901172840b2b65bb7cefcc5da6e7e562f8058b359443d77e227"
+        },
+        {
+          "line": 791,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4f76e58fb7597be9689dac09bf3a529fcadefec22102d616a5fe28b040276535"
+        },
+        {
+          "line": 834,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "25a78cf8c6866b00b530cf57d7a2279c7d8e2e1475a3995f9ae8b8d8a714bae1"
+        },
+        {
+          "line": 842,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bce5eb37f2435ca278ac7b82bee77daef4d6dd7c6448afd6fc96bba7a1606be4"
+        },
+        {
+          "line": 849,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2859bbad210288d647bbbc2abacd091e4b94a59611ccee258c2d9880a17a33a6"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "beforeSha256": "b6d147cd0de04702576f579ff3412963c828090cadd67d58213d3d5a7855f2d5",
+      "afterSha256": "8db2d07dc5971a1b84b96b370348862236d1a6f04d1db3e329d0ba2b4f7e4100",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 46,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6683ecdaa78cbbbe15c518793e5cfc8c2388436825039e00f43fa1ad76f61de1"
+        },
+        {
+          "line": 55,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "23c008d487b3ad9fe36e0210f05579f091dab75e50ad1ce4ae05e61822644ce4"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierCredentialForm.tsx",
+      "beforeSha256": "4162677a457ce51767cf7340ae9d55448cbb33a6ae1a1387d0d4a824b671b59b",
+      "afterSha256": "c2a4e0f1c123d078745af91cdbe8f8f0ee8f7e202b6d3618bf9c6d9cc4b8a86d",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 144,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b77f2173cce68bbec8995d7b20f13b3ae5438cd0c7d1c5ede3b8bd91bd738eb8"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/CarrierIntegrationPage.tsx",
+      "beforeSha256": "f89755a39a8467fc2771daddda536e08a33f90796e7719d3fc494b55fe0c47a1",
+      "afterSha256": "ebe011a39fcf64812d2bdbcfcad67e0a7434eed4a1a47c628ab95c3869858393",
+      "targets": 3,
+      "expected": 3,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 270,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "94cb9c10896d9638305fa234cc71c2961bbc178115ba7a5584d3384b20b850fa"
+        },
+        {
+          "line": 280,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7219ae2b942cea1fdba2d17eec14f2a744fbfa6a57031234683e2e6390f43816"
+        },
+        {
+          "line": 298,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "13961c72768f7fc56bd2c256f1c69522da0ba9864a3c142deb3c79225f0ee669"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "beforeSha256": "efbd738985459756e1158e25b76a49760b2bcd2fdb62f3e22b54b80066c66e06",
+      "afterSha256": "2a83809391cd937c74f1c9f7d48af33b53239d3c6a3b10148970a84fa6f69aef",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 147,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "619fda9f030b24db8bd9bc3697f8546f32c61d4a8c6fdb0e84f9a4f1bd3ce82c"
+        },
+        {
+          "line": 514,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "fd84730627eb1873080da2a696bfcbaee4ea6cf6e11ff36f784038e1d832a50b"
+        },
+        {
+          "line": 543,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "42612903303896a3cb6b5784f80c810fc62435a34e8955fe4eb665f1f95f5e3d"
+        },
+        {
+          "line": 591,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5995597a8f0a72c16d95da2cc350d6a094b48b5cf16efc95798fed9f6ec89a5d"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexLabelValidationTab.tsx",
+      "beforeSha256": "e50161644312094ca62214a8773b652e2463b2b863701da72a817165b84c242f",
+      "afterSha256": "6a779f308bd88b4a800a644efeb217c34545347d433065265bd7c3c50f921362",
+      "targets": 7,
+      "expected": 7,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 184,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "459017983805fc250d05b68792239f797d6a57721a125695f6e4ab797f060d5c"
+        },
+        {
+          "line": 252,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "610d102d6d9f64fda3edd4e6d03c5b8debaaa7491aaf1823d9bbfcdf712bedb7"
+        },
+        {
+          "line": 269,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e485d84cc242bc691f7804618d73ffe6796434c5af2bada41a2a0d652260e76b"
+        },
+        {
+          "line": 366,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1a66eec1245d965e2fc3bcc56949b20fada2e9a1bf3bf7fe8afe12d0b4d5d83e"
+        },
+        {
+          "line": 382,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8677d12da516082cdb97a26de89779f5f4ef6f30d21c066f44ca6acb3b343a69"
+        },
+        {
+          "line": 402,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5355d5ab2286df4ead6af50f97a391bb2aebf90ddbe5ca125b6e2b3fccb995ce"
+        },
+        {
+          "line": 417,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b7ca53b8b2ed075e9b58b51fc872d9caecab76608af105422bb0867d208f63ae"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/GoogleDriveIntegrationPage.tsx",
+      "beforeSha256": "8cd7bafee01b1a048744f8e91872273e79ad49c8198517172244b4823feec1e6",
+      "afterSha256": "8fccac418e895cf4efbe817d545f88ad2243169afe10f6ab8b0d0e5b473c6275",
+      "targets": 3,
+      "expected": 3,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 130,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2a9f0a37a9c8cf670d372932e2e66a230fe3284e4914c636c91adaebd44bda3b"
+        },
+        {
+          "line": 149,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "69c27c0139093b90151bad563567e78363426624ee3718edc91cd8f73bb97f57"
+        },
+        {
+          "line": 173,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "766bdf0924adf0e655ee6894c6935efeae79667a6ec81bb302806e088a35bbfc"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+      "beforeSha256": "c03b3d2a1707b3b0947dc305e58700e7aad62ca1829dac71b5c3c4ba59dab1df",
+      "afterSha256": "2e9d8324b89b9a01230cb1a2df419cb1c3f64fcdb09267ee766f0d261ca9ea39",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 173,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "503f04872157c8c54645595e1e57dc22dee9a1a0235379970f250ce2b3bbb4bb"
+        },
+        {
+          "line": 177,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c8ff5db38b292766fdd687be958b545160019cda5c5e5361efa69c7eda7fb5c0"
+        },
+        {
+          "line": 192,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "23a980a852e5195750e6d5efd4a45eca14192f87867e06496c95624abf480088"
+        },
+        {
+          "line": 220,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "49b387acb36c3234b92fc8ead45a44e03d0c6992df805caac33b1668c12ba4d1"
+        },
+        {
+          "line": 231,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "005f76788da04877a4de1d4dcdceecd27c0489d217696b0a48e256c53fd4ed30"
+        },
+        {
+          "line": 234,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "275cb7250ebc75ff6db90e9e98d520b9b685b4906134fa26f3ed17981525b9bc"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryFilterPanel.tsx",
+      "beforeSha256": "7aa23212103d1cfc3c2a46f839e2a5a4a60192c419f916c0c417c93dde25e6ba",
+      "afterSha256": "1cd742423226cedce73d8220d8a0e49a258f5383a8e7a45881ef267e4253c731",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 304,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6906097215328f0867cc71a2bb374430aa0c81981703644a2491ab944f2d5c33"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "beforeSha256": "980152abcf7fcb9753a549ebab9643e1fe3834a4e294234f1d1d18454662b1a2",
+      "afterSha256": "2289dbf1587645354df6f2886693181a29348ec3515f0f436d6f9d6d176ff018",
+      "targets": 3,
+      "expected": 3,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 395,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "00360f385e30eca399fa8e54283ee5592dfcc4bd69465dfc3ecb5c8b05672a33"
+        },
+        {
+          "line": 398,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "9d8475787288d65cf8e7282e3c18ab3de7f2c7c90523532d622bc70a3f1ba130"
+        },
+        {
+          "line": 401,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bd782e5b79b68304e8161e4cf368f395eaa1382ee350b9e2817c734f5c33e332"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "beforeSha256": "659e0ff9da45f74251f52f4f1e60ce0d8b7a28cde24521d1b90d8ea3dfc5034c",
+      "afterSha256": "1efb45624158e449ff693dde0ed2e04afa1f5170d77bb631de735ba6a032bbcc",
+      "targets": 3,
+      "expected": 3,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 168,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "eacd0f389ab8532908ce3a7a9bdd99725332e687c4cab86de90a60372af8d8e5"
+        },
+        {
+          "line": 176,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f894285c2ece0c903a6a0a5f99b136b0509bee3b2b252056cb8c25c81e8f69a1"
+        },
+        {
+          "line": 184,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "82831cdc6394172d35eb623704059c669eb2f1b28f0cc7218681d094546ebdf9"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "beforeSha256": "5dbd7fc940589e076f770bd8cfbbc653a4495ad931410d02de219db7c0f5ce33",
+      "afterSha256": "6233c5fdb1c174767ac20acdd811756a5d1a76bf518c8a0e52e1e82e290a246f",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 234,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bfc1aa35d56271690608cb860be93e4eed39b65862739198745b6ca73529d379"
+        },
+        {
+          "line": 241,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5784f44fbf919c57a526d991b4e038065b7fe7b19e57aeb49e5c8800bbf53b86"
+        },
+        {
+          "line": 394,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "50bdbb3850f1b193c899f0eef4832981482b8a2792f46d59aa2ae876ecad6719"
+        },
+        {
+          "line": 436,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "754cb931db8497e5bb07ec43a9cb099a1edaa70b58dd1a5b3395131aab2d933e"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx",
+      "beforeSha256": "46ab51550e62227515f41d5f752d96fee9f59b42818c2225db428316bdaf0542",
+      "afterSha256": "dfb014da2ace3c3bf49d7b22de2dad1735d262833f3843af0d6285c78bb3e0da",
+      "targets": 10,
+      "expected": 10,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 195,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c2be19da0a7b9058a08f9c7b6865b047997f640c1a30bcba2721fc5e9b4e8e53"
+        },
+        {
+          "line": 198,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "cdcde4b08fd2fffdc2a47d480dbaaff45aaf1c9f95c989d3516fcf19476f6b09"
+        },
+        {
+          "line": 201,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a636f221aee9d1580a09a6945ad2c6681183e5a1fbf06bfd19db5098788b8f26"
+        },
+        {
+          "line": 204,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5f736c6752380a456cab789720b3843e42149d8bb723bac9013e405a27346c1d"
+        },
+        {
+          "line": 207,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "bc268f6bf4a10f24f65f0072add381c4fa5d11ae642cf9ae9f0e4dfc399fc0e9"
+        },
+        {
+          "line": 209,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e743f1b018a89c967fc320af4ea66ac0b74d48647b86e322018d790cd7b09ef6"
+        },
+        {
+          "line": 222,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "16e12366bf33e28604d87bf11f4cd19cb92d7844483596c665a66f45b59de8cc"
+        },
+        {
+          "line": 232,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c4ee475fdc6d4481078051a6f35c0381bfafe79d2c1b3bb04c3d02c0326df00f"
+        },
+        {
+          "line": 235,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f1c948b717acb050acdf92493b888ba6e4105dec6efb6ae5cbb47d8cefcbf2ee"
+        },
+        {
+          "line": 274,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f8ea7b22722bf2b207e12ba1796241d6b7d12f51cbdde0de107daf7289c06f5a"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "beforeSha256": "e8d3efbc56ae7b48baf653579cc725c36ee1e936bc763a895871e1a28639cf74",
+      "afterSha256": "77be0f6dd4bc98dde5cac7721ca133f7e0d76684cc8ed8a7d8729d993cb29aa2",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 113,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1c71c777fb2657994b81feafc2ed4959db267a6edea4ef471f4cb64f19e2eea6"
+        },
+        {
+          "line": 140,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "48040c94ccc9655c2f88eb2b96515f44bd2649702d9f160963d64c56627b0835"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/leads/LeadsPage.tsx",
+      "beforeSha256": "020cc18287a94f8ad6243fa2d30daa11e6471e96fe7abc76c2c3d8edf9f63f6d",
+      "afterSha256": "64f170801c749bfdfeab3b606aa114c9d709fb197929053a0eac88f98d77cb67",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 314,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "72c18499f03bc525cc7b1b25e83b67a3a591210f1fc8da51ad36ae298b949b59"
+        },
+        {
+          "line": 501,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "d96e035cedd959f71667ed14cfa4c46ea8db45c61bb455506de51f28ee426a3b"
+        },
+        {
+          "line": 504,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "84e025f5de371d0e28289e28dadb3f25ab2ea11bc94f353e395ad8d091b98a33"
+        },
+        {
+          "line": 506,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "d1cba27da2e36441f70bf4313dc17eb5c550f081729de0a267bdeb542e30798c"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "beforeSha256": "cd5f79eae77f43831aa72fa83f03d35464a18f1a07586ef7eb9a3f20a4003216",
+      "afterSha256": "95786346af2a050d964f4f8dcee024af33408643f36439b7638961ce5b06a861",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 119,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8e98616f2c0420b3880e2cbb82f9b4ef8847acaf1900c702c4dc56c80b1fe90c"
+        },
+        {
+          "line": 144,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "17b8329a397302d10f0af1b3a5fdb325bdb9699ae6f2ed822c566e9656410e75"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/note-master/NoteMasterPage.tsx",
+      "beforeSha256": "84b2e2065c15261b4ec8e1d3b02c75677b7f4c748da8ede79a09de2a41eb3f87",
+      "afterSha256": "749dd2b21bc5d0de9672f0eeef62d68b1f0c3a5508f93a89707cac14742b0c75",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 236,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "74e29c67619b8cdad73fcd16e7e60d56553c56368a9c8694aeae755814fc017b"
+        },
+        {
+          "line": 244,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "dadc316a81fa883573b7c993e04f6dde7c60d5b7f11d5ba0617927271d50a0f7"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/notifications/NotificationsPage.tsx",
+      "beforeSha256": "7e3f4df27002d9068de868dd0c0723fd2dcfe2a9a8715a39ae2ef5d3522d673c",
+      "afterSha256": "caa64042bc471bd1aa463e8cc1b7eea5bf83dd5c5b0d6342532027b6f3ed847e",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 99,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "55d24b8a5c843c990ff0bde507c5e7c39874a22a9aa69e413fd59bdca196e7c8"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersTable.tsx",
+      "beforeSha256": "f10e9c81124437e03757b76351d74c9e9307f9d60dcdf1025142d7b892ed24be",
+      "afterSha256": "a45771cc2b3fb4101b79c89e04a3bac0da68450d656b8ac0abf00e5a4f05a95c",
+      "targets": 8,
+      "expected": 8,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 139,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0c495b89dfce8ddb9b42e985e0088e86ff4eb7c437539235143fbff9f4f2e3aa"
+        },
+        {
+          "line": 143,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b776afcb7cfa19b595f40ec07b68724009940c17d92a7aeb49341f49f380701c"
+        },
+        {
+          "line": 152,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1bf04390e26c46aa179473770ea9fb09f9ca85732d2a7688d0193864614346b7"
+        },
+        {
+          "line": 161,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1f663d1c5180f63dd4271744300061e53bab307b49f0926670f9b1e345d1c3e1"
+        },
+        {
+          "line": 171,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "3a1661a5a4649e53b88907877dfdc77a23ce1444f0d6922d286af52f22a49b69"
+        },
+        {
+          "line": 181,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "de95eed6ba34d2bd0fea3b386f8269bea56d519fd80e1c202796b1e51fbf2880"
+        },
+        {
+          "line": 184,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b285595fc7fd38051ce2b89ba0dda6072dfd70fa03517c1ec39de30f7fc1f538"
+        },
+        {
+          "line": 187,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "673380aa97107701f798f08b765b8afb48330badb53fbec2e6af02c59ea6e2fe"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/product-categories/ProductCategoriesPage.tsx",
+      "beforeSha256": "9a59103e91b375a5e778ce3528324acca86b007274078a9dc7e72c42967a4ba1",
+      "afterSha256": "8f9df05de8479bac2d4b6f5ae555c88e8cc8ac6b343c9b8e8010caf792b4f2ae",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 181,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "52ee452682bdaa79c0ca05ba112bf7e8f1f5f0a60f975c7b33c6293fc8ca6733"
+        },
+        {
+          "line": 186,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e507649a4d1755ade3d9d8ee7e68e1550f59d846241b664e51efe9f231452efe"
+        },
+        {
+          "line": 294,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "67f13222bcb9e2667fb7134d8d5ebd718db82220b94bde2cd590b165a112ab42"
+        },
+        {
+          "line": 377,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7356a6a017c7fdd71ee906961318cc06808c5b6a18edad85db5d151576eb341b"
+        },
+        {
+          "line": 390,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5dd8524980a0c09372e6652cdaa4ec72b60cf90f0d2ea866cd6e7fc80e7268e8"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/products/ProductsPage.tsx",
+      "beforeSha256": "167f2f133b99c3a240b13fa009d79d372445d98d6c06dd5796941fa6545f33c0",
+      "afterSha256": "54d8281485fe9ae138e3b7de9d99afccd12d43ddc58cbd581b86faff26f6d0c2",
+      "targets": 7,
+      "expected": 7,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 200,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c666f6c3f164b9be07f7800b554eaa186d36480e02b44cea1cf44a1171c362ae"
+        },
+        {
+          "line": 235,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "d2f516655c39c91072c72096fd5701b68ff662772b86d8189cd257e4a60e02dc"
+        },
+        {
+          "line": 269,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "b52fd69b8469b7b69751e07762049e02912b57d158fa0866a2c98067ad8205bf"
+        },
+        {
+          "line": 272,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "27b2cf86bc3507568bdfd06589e4c413c0fdf48ef96b71f0279db3f867e65cc4"
+        },
+        {
+          "line": 275,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "132875cc6465d9061d087ad91fe669bdf654b7c5dff63cbb9ee85b17c401291a"
+        },
+        {
+          "line": 423,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c845050d8a2087f863e2ee2d5a8a7d515fcdd964e19adff6c47c546c2fe691a2"
+        },
+        {
+          "line": 436,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8cd1351e9356944a0daba48678355e6d7386e822d686535546c20098a7aca167"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "beforeSha256": "91f061755968d762f2a6ede9ee752ffc563bd5bbfc6e8cd2c1eb9a97dd10a60a",
+      "afterSha256": "c8696e2da5ca433b65f4d820326445dfeda965ee32b60a1eec43112e17769413",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 202,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "50bdbb3850f1b193c899f0eef4832981482b8a2792f46d59aa2ae876ecad6719"
+        },
+        {
+          "line": 210,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4a2f358d6cf21f1bb71f1d1ccdab7e6b49ee1f6b76f32bd3eb9eb39db3db16f0"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+      "beforeSha256": "d59513f54cd656dd9cf0d0c045f337bdefae09c3f501541216724712c72d1794",
+      "afterSha256": "5190b80a192fc892fcf2927960fd573bb5815395635cc96badf738c878ea3a92",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 243,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4eb94ec25120d931dc92b60b0885d769443abfb1554ac85de84ffbac6b2e9511"
+        },
+        {
+          "line": 247,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a52e8db7207ed396c8ecfceee82c1273c6a6278bf7f598445f11f562b5e0c56a"
+        },
+        {
+          "line": 256,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8beaa368030bda6f83f8d2f599279b0faf35d7e38d51d3e6586014f2ac318bf7"
+        },
+        {
+          "line": 260,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0de48591c08f00c74bf25e082a4d3fa4cd07ffcf9f9d9c75acde2fb4da6b2aef"
+        },
+        {
+          "line": 269,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "03d76b387004ffa601c440f7ba7d91b3b14629410f50fc8be96f71d8de84bfae"
+        },
+        {
+          "line": 278,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "651d053b4ed54e3f593b297189ea5d109d8e9a60f3f7ef8b81ff439d8da6f128"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "beforeSha256": "8de0050b451baf60b18fea2a60a7689814a175871b9348e516091e860f97808f",
+      "afterSha256": "e207ee137ea644ad229ed641bc5f6de77fce0cfd9c428ad42cb913eb0d3cd8cc",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 243,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "50bdbb3850f1b193c899f0eef4832981482b8a2792f46d59aa2ae876ecad6719"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+      "beforeSha256": "d6f1a41125ebbf9da9efd3b787f6b583ef79ed364004c038e7a416d06ead013d",
+      "afterSha256": "418f72624f21ad2d1a379da8dee1dceb11650837c3e9588e5697685cbec2a948",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 133,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c9db2c02d11e5d14dc78ec7acd56d2a3972fb47da0db3987a990dff37d82c6d6"
+        },
+        {
+          "line": 137,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6e963c67da1dde03f541d44e5dc8682c6737f6fcf66b80eda9eede38a5f28ad3"
+        },
+        {
+          "line": 138,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a9f65d522c81717184b747a4509736f1a803c10e02750de9107c09382aa3149d"
+        },
+        {
+          "line": 142,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a892a9dd193470fa8c0a7d42ec4af0b60acd2d18e3ebc883082c4f0e62213165"
+        },
+        {
+          "line": 145,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "fb01c727a432613ddcb59f1ccffedaaddfa6f9fc635c358a87a407f20577015e"
+        },
+        {
+          "line": 149,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e743f1b018a89c967fc320af4ea66ac0b74d48647b86e322018d790cd7b09ef6"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "beforeSha256": "205d898a96e8852be654d2c0a8b4f5d5982c6b39316f36fc4814f62639dee361",
+      "afterSha256": "0cc72ad1eac084aec00c3ff3a03f9facdae467233e365924a7544b7ee02e6c02",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 101,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "75ed58b7fd419fc7811099774ec9ab3c0cd58529a82e572a92bba3e3f7c20188"
+        },
+        {
+          "line": 168,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5f23e144340ee7a678e490e2710d6c9d13bcd12e4ca748eed2e211a19c19695e"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterAddressPage.tsx",
+      "beforeSha256": "1dec0f8fe083e321d7f182c9d01ef2663582429b597e2b59f7021a29324a897a",
+      "afterSha256": "35727a52d45cf210defc253b32c77b3c68ae107ee9fb98bcba2c172cf540d5fd",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 294,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0fb12edfb4a08d894339566aa03a7e3909da3d94fe125b4ada6a27997085d430"
+        },
+        {
+          "line": 461,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "551fb70606cbf632b77fa35b10c6923e70de4755e220af518851915bfca59077"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterChangeBillingPage.tsx",
+      "beforeSha256": "529fe251839892f014ab8f7ffd3c5c8a7becb6c3f4d4cbbd014a44e3f2fdac0f",
+      "afterSha256": "3c2864994e2454b4cd37b1efae56986f68b4a127adca7613e7bc81397db32826",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 227,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0fb12edfb4a08d894339566aa03a7e3909da3d94fe125b4ada6a27997085d430"
+        },
+        {
+          "line": 407,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "1108c4e6c430b58c1a86c14742978240d5e195cce5a8710253b1013aae584a0f"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/register/RegisterPage.tsx",
+      "beforeSha256": "75ed296c30eb71c15f05d43f0d005269f4cfd7eeb278b95eb3b85597a9190aa7",
+      "afterSha256": "5b138fb98c1f6a21f775192bd16918ce0d4bc49cac5f6b7b063fb2043fa53d24",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 279,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "0fb12edfb4a08d894339566aa03a7e3909da3d94fe125b4ada6a27997085d430"
+        },
+        {
+          "line": 538,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "41b15ca2cf9c24627c83267e7c2bcee592596172c1b64c8fb37b7c7f36fa2312"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "beforeSha256": "f949c42743ad339971fed7f19203aeeb6d0ad1008082cdaedcd5351ee6e73a6e",
+      "afterSha256": "63a5d75d633fcba9590884cac7277ed9abd05ea456474d2ebce92fc0cd4d29b5",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 340,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a1061f7c47118cd2bb368f5be8a171d369cf6c1e642bc537cd51725b920d45f3"
+        },
+        {
+          "line": 366,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8a7cec3fbda03177654b74072d08de2698b1bd82795466c47fee0cd3caa95fa2"
+        },
+        {
+          "line": 398,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "76d87441b82d5e733df3ea37249f963404efc26c0109dc2402eb759ebf26aed5"
+        },
+        {
+          "line": 400,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c6018a1124fb2cca699876f40edf8bba18135f69172f4faebd6ed0d1d93498d4"
+        },
+        {
+          "line": 407,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ee0ef6181660df261fc274fcedfaa927a4ef7245d812162e5562f5e0709d4e10"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/sales/SalesPage.tsx",
+      "beforeSha256": "4286c2b02e173cada84a94e63f6d1a83afce46b8828ec9066b90c6b7b5509afe",
+      "afterSha256": "7e80df0176379f598a57fd89aa31307d56041cd44e25068eac85fb2db25dc6db",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 167,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ece82a0af71a639bcb55d798f126ba98f30d0211528650501c152c9550bc8696"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/shifts/ShiftsPage.tsx",
+      "beforeSha256": "3c066a086fcd5bc7eb649c6f464ae2863a6c5855f1ecb1695c2276d8f06d1c1a",
+      "afterSha256": "3964e87b85a8cae7a9069a2de316c43447b41736fffa6faa74d0d6441cc14fe2",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 114,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "26cffe3da99ff4484a7fd4160adb5cfc1b003713c355ed613052f3b10b9e99ad"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/staff/StaffPage.tsx",
+      "beforeSha256": "35a2f1a770f29f61f0fbc6c6898479fbb5acdd327b614a94f05f9f69330d7724",
+      "afterSha256": "b2a3a361d4e891fd66865d713eb2df5aa2139276e11b7a9893db46c9c58c0406",
+      "targets": 3,
+      "expected": 3,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 220,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "213f3ebf2e985645ffcc6fe5382e4b711e68ffb74e4777c460523d9f55360579"
+        },
+        {
+          "line": 366,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "fa312bb132617608d68517f421c62f7bb74223aebace570d178a1da7712e73e0"
+        },
+        {
+          "line": 367,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "e465a560565842950c0ca6b16e6fd8ee95da6fc2f0595479446f5b70513cdd9b"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+      "beforeSha256": "bfc3f99d47f73574df4f6b8e729276aaf867b41d45797b6d76728881ae273c94",
+      "afterSha256": "df5f84e490b82550b7996ee037317c8256592e818a6e302bbf21e96a9d6e4f0d",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 208,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a9dacfaa6ab8ce6ec6ef4443b11252d2f85caf82403c0d6ff8601bc08f8b107e"
+        },
+        {
+          "line": 213,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "85ae42e1c9751382a7e871988fb430f7ca76d7a48d81cf9812963046c35e120f"
+        },
+        {
+          "line": 362,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "67f13222bcb9e2667fb7134d8d5ebd718db82220b94bde2cd590b165a112ab42"
+        },
+        {
+          "line": 445,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "7640da0ecd457510337ac9f5775570586b31cb24ed4b8ca118b248bc31c42cc0"
+        },
+        {
+          "line": 458,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5f91e6b5cbd8e9dac81509faf2ac56bdbc1c608590283d580c062c45a94657c9"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "beforeSha256": "0f118b10296dcb47560a278a1c0932c081b99ca98b5c3009916f2a3deff3255b",
+      "afterSha256": "9af15b00fa1e917a85b7b5c94f684ed0a566fe8418eb12e9878eb6b9a3ca2c80",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 223,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "34782b446051a0964d7aef88b90299e5e3b6fbf028546db9659006a88e71b82a"
+        },
+        {
+          "line": 277,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "83501e4f05e03e796c87261745a47f0f120e1a4802bf3002768817b59e9d81f0"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ExtractionPromptConfigTab.tsx",
+      "beforeSha256": "b0ef175d4d2292751206036edd243fb98c95503db4f60f5a3171c7e3245d0bfb",
+      "afterSha256": "53e536a451abeecf8c148273ec6b7b1ecfb04804db8e3ee0fb2e117b16de3fcd",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 241,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "a54180f722d68f106df33c6c5a2c5d2e6c40fe25b54386f4dd23732f02f86b18"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+      "beforeSha256": "289074f6bada53dca9911605e8dbe4e8ed4708a79ca254dc98d39ee840dab5ce",
+      "afterSha256": "df1a56faf76caf57afedc6569645550a53c31ab7cdcaa1a3ff8309a3075f595a",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 93,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "68c24366e2efb20650e3a9b3f93d789a38b877679dafa6c82fa8217c0295c478"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+      "beforeSha256": "490f7de53c795f6231001e667970de9c099f838e5097bfa62166bf12b72d19f3",
+      "afterSha256": "46e16a17a7659f1edb1b7a5cd8d3c91d127ebffb5cf5b798b3de6a32178d4d84",
+      "targets": 7,
+      "expected": 7,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 342,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "21966937a85a59dbe9d8ddfe40a46af748fe9444a38d1bf32f4fb93af37a51b3"
+        },
+        {
+          "line": 345,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f241b94792f61285b526427e4608983c59a00e42c436d2484bbbebc5c1ce95c4"
+        },
+        {
+          "line": 390,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "05295ce18969198cd77aadf7cfcf1adf84e8a3d1fc5cc626bc16e879e11399a4"
+        },
+        {
+          "line": 420,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6c12ca9a277c8f7717ed5bc820f89d337afb3304d46c3fbd401a288b865d5d64"
+        },
+        {
+          "line": 423,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "c582055d79e795477d5e3c6d0981f11e4ea6235db307fab5cce7173fe8680a47"
+        },
+        {
+          "line": 462,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "860736b673bf42d5b79f1f0945983b667dbf1eb47745558bab5c65b8b8478931"
+        },
+        {
+          "line": 511,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "faa1d6b7d9dcc2a3548117b29ce14237ae343abf59bfe6209b8b196d7cf2635b"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/LLMBudgetTab.tsx",
+      "beforeSha256": "93e94706b0b3e6c7f759bbfc1ef794f967904a101681fc871540d0ebe0cf9e0d",
+      "afterSha256": "3efd33401734b5db2f67b355fe4565f0fb69bd1bc67f8f59f4c1b9fb0aa15a92",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 227,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5352595370fc5cbf4a55569ff692a2c9f6106a7975cab536d1dc57fd6ba85dea"
+        },
+        {
+          "line": 234,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "57def2263cdff6b7edd5b7db3058dc2989b5cddbd075e0cd04da9a1e661b508b"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+      "beforeSha256": "843e06dbb90420cf6ffc94c655c8f55fd28cf246306709fd3989903b954b8439",
+      "afterSha256": "7abba97846b58d8e0565206412dd595248773dfee7e7adecb14af12d3763aa9c",
+      "targets": 4,
+      "expected": 4,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 844,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "708f02adbe662a5fa75758f3d0515e7608f89cadb3f03f54257faaea2ad1b5ed"
+        },
+        {
+          "line": 852,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "92568974be293777d4ff0cb87164ce2aadc13bed11fef3ef41ee4f413a14955d"
+        },
+        {
+          "line": 890,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "3bdecce0f5a6675af2f6e125a00e3968ddd27ee7c388065f2737fd419a59e592"
+        },
+        {
+          "line": 898,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f380e1ec3d6b16cb74a1f58a091e999e3b848396bf8d8b12ce889793aeeba68d"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/ProductMastersTab.tsx",
+      "beforeSha256": "3121a735bc3e938b909dbef8b99e34aa42484cf69c902e48691a61334e446278",
+      "afterSha256": "a637beab8c602634fcb78d811c5d08576d9a203a76b079fa04de3368393eaf3f",
+      "targets": 1,
+      "expected": 1,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 116,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "951035e34adaa7c4cf3a8ecd2319aeb1419de7425c48211e2504223da57c5970"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "beforeSha256": "54545756902a5f4471bac8e1f20f8d065c9946605e2d36b1ba6255944596750e",
+      "afterSha256": "fb633f6f392fcc6b7d0753446d7a4f253fe79635e2c3f52313244cd864fd011e",
+      "targets": 2,
+      "expected": 2,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 277,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ca99ce857faa357251190531c8c2f8753988b0ca9ce480eabb107acf2b114f4f"
+        },
+        {
+          "line": 365,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "4d05a5cd3a8964b1f1bf674c722c0d441e7a76c77f4857096bedd65d78212de9"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/suppliers/SuppliersPage.tsx",
+      "beforeSha256": "8a19db3d0aad6f57c0a5468ce9881cb5eaa4eb7f4cd0b642f4b7ee41c177ab4d",
+      "afterSha256": "bbf766fe76b2f42b700f0dd0d7ef7aaa6967eab2b411c4d3b593bdb2a149aee8",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 179,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "67f13222bcb9e2667fb7134d8d5ebd718db82220b94bde2cd590b165a112ab42"
+        },
+        {
+          "line": 239,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "fa312bb132617608d68517f421c62f7bb74223aebace570d178a1da7712e73e0"
+        },
+        {
+          "line": 240,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "3122436c5d0a92a7af6f122496427c2eb43fd61731d691ba9d7fffeea10a8e30"
+        },
+        {
+          "line": 275,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f807147b032ba8aec3418623cb00ef9f50c09db502d0bccd6d852193b2390538"
+        },
+        {
+          "line": 288,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "6810b771549c4973d4b24ff1b56d91f40a1378f3da99cb3899d660d29b431dfc"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/teams/TeamsPage.tsx",
+      "beforeSha256": "04ddab18596381a724ab640b5360cac0bc14dc1d1072b52f66f647d75f89c2da",
+      "afterSha256": "bca0bc71c019ab0d4b94c65274bbe95bdbb5b473293ed73b8e1c9669789166a1",
+      "targets": 6,
+      "expected": 6,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 181,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2473e7d6bab22aa75fc8f81d0f67145bb9b915d6d7ca5a46f3bc4c7584f7151f"
+        },
+        {
+          "line": 244,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ecae8fd1de87e1f2b9127fbbdc87aa2c9c3ccb4fe914c5b8c925ff5d0a3b3daa"
+        },
+        {
+          "line": 254,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ec8f0b21046686cc26251d1de82d02b340008479233984756f168724575a734f"
+        },
+        {
+          "line": 281,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "f14d062068ae96e8d5c152777a214e0b99a2502b8134e904e711b4dc4c5e5022"
+        },
+        {
+          "line": 283,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "929399e987cfb0c24a653ebe415d4756390b80abda8ca9f5650984da052577a3"
+        },
+        {
+          "line": 286,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "8b1439b34c25f4ff70569b5ab0fd1976923faf3e28dc0a35622d60a2c4790861"
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/units/UnitsPage.tsx",
+      "beforeSha256": "2ba1a24ea77c3c2a66a57f0bffac4556b2a0b10062a75ab3da333685ebcac493",
+      "afterSha256": "b9e1b81e9c5e31297777ecfcd26d36712d47fa649d57b2a6955a1c95a530bd75",
+      "targets": 5,
+      "expected": 5,
+      "inverseEqual": true,
+      "results": [
+        {
+          "line": 189,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "112ec7e501907d0aec9009fb338f89a4b0fedc58150740f6dfdfb8fe547b6a86"
+        },
+        {
+          "line": 194,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "ec5e21ce2c3f0ce9623dd3b7854f9f593c685273c184a703d1feabc598d0e7c0"
+        },
+        {
+          "line": 253,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "67f13222bcb9e2667fb7134d8d5ebd718db82220b94bde2cd590b165a112ab42"
+        },
+        {
+          "line": 400,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "2123722084a67f5d3fd08cd8c9f3760fd49ebd46300dc7040fefa555d02a27d3"
+        },
+        {
+          "line": 413,
+          "semanticAttributesEqual": true,
+          "childrenEqual": true,
+          "migratedSha256": "5e1a65a0793399934a5021a60dacf20ea1a1acc7e6c0ad1da57e0d2c8b17965e"
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "outsideNative": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "line": 76,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+      "line": 120,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/ChannelTypeCombobox.tsx",
+      "line": 173,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/CountryCombobox.tsx",
+      "line": 119,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/CountryCombobox.tsx",
+      "line": 172,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DataTable.tsx",
+      "line": 197,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 68,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 415,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 442,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 455,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 465,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 475,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/DesktopShell.tsx",
+      "line": 483,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/GoogleCalendarStatusBar.tsx",
+      "line": 129,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 301,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/InventorySearchBar.tsx",
+      "line": 317,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 243,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MergeLeadModal.tsx",
+      "line": 302,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 230,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 246,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 254,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/MobileShell.tsx",
+      "line": 317,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/NavDropdown.tsx",
+      "line": 47,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/SubMenu.tsx",
+      "line": 96,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Tabs.tsx",
+      "line": 74,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/loading/Drawer.tsx",
+      "line": 32,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+      "line": 33,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+      "line": 33,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+      "line": 33,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 254,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 261,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 346,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 358,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 372,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 479,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 491,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 499,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 502,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx",
+      "line": 529,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SourceRawPane.tsx",
+      "line": 30,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SourceRawPane.tsx",
+      "line": 30,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SourceRawPane.tsx",
+      "line": 30,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx",
+      "line": 92,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx",
+      "line": 119,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/SupplierDetailView.tsx",
+      "line": 125,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-analysis-review/components/DataList.tsx",
+      "line": 8,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 121,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 174,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionPreview.tsx",
+      "line": 181,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 135,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 156,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 248,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetForm.tsx",
+      "line": 251,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 157,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 170,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 184,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 222,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 229,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 249,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionTargetList.tsx",
+      "line": 256,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/features/tcg-distribution/DistributionWorkspace.tsx",
+      "line": 53,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+      "line": 97,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/admin/ChannelMastersPage.tsx",
+      "line": 131,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/channels/ChannelsPage.tsx",
+      "line": 347,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 439,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 440,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+      "line": 441,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/contacts/ContactEditPage.tsx",
+      "line": 202,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 423,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 430,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+      "line": 543,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FollowUpsPage.tsx",
+      "line": 148,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelReasonsPage.tsx",
+      "line": 41,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelReasonsPage.tsx",
+      "line": 48,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 107,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 256,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 341,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 370,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/dashboard/FunnelSection.tsx",
+      "line": 413,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 135,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 151,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 170,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 418,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/design-system/DesignSystemPage.tsx",
+      "line": 430,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 343,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+      "line": 351,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/EmojiPickerWrapper.tsx",
+      "line": 48,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/EmojiPickerWrapper.tsx",
+      "line": 62,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 70,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 81,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 107,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 111,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 115,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 119,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 128,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 135,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 166,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+      "line": 194,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 125,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 166,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 182,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 270,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 273,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 286,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 295,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+      "line": 305,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 432,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 439,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 447,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 459,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 464,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 469,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 475,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 595,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 633,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 670,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 706,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 748,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 758,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 768,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 801,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 845,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 858,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+      "line": 870,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 64,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxPage.tsx",
+      "line": 85,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 88,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+      "line": 101,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+      "line": 179,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+      "line": 190,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+      "line": 86,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+      "line": 164,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/OutboundTranslationPreview.tsx",
+      "line": 172,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inbox/SalesFormMultiSelect.tsx",
+      "line": 102,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+      "line": 103,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 338,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+      "line": 468,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 209,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+      "line": 218,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 126,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+      "line": 127,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 111,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/login/LoginPage.tsx",
+      "line": 149,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+      "line": 51,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "line": 67,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/orders/OrdersPage.tsx",
+      "line": 77,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 92,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 93,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/quotes/QuotesPage.tsx",
+      "line": 113,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/roles/RolesPage.tsx",
+      "line": 354,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 220,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 230,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 239,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 486,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 609,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 633,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 679,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 694,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 783,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1142,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+      "line": 1173,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 127,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+      "line": 135,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgDistributionPage.tsx",
+      "line": 41,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgLineImportPage.tsx",
+      "line": 547,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgParallelReportPage.tsx",
+      "line": 142,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 845,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 893,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 919,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1447,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1455,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1463,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1497,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1540,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1552,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx",
+      "line": 1560,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx",
+      "line": 49,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/DbViewerPanel.tsx",
+      "line": 216,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/super-admin/components/DbViewerPanel.tsx",
+      "line": 282,
+      "unchanged": true
+    }
+  ],
+  "locales": [
+    {
+      "file": "frontend/src/locales/ja.json",
+      "valueMatches": true,
+      "otherKeysUnchanged": true
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "valueMatches": true,
+      "otherKeysUnchanged": true
+    }
+  ],
+  "pass": true
+}

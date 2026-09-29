@@ -802,3 +802,8 @@ AR実装後の再測定: 14製品逆変換byte一致、28対象/対象外53/共�
 ## 2026-09-28 AT フォーム残数と保存契約
 
 固定a1cd9eaで再測定: 共通265、旧232=native224+link8。11件/9製品を選定、対象外221、共有18hashを保存。詳細は[evidence-20260910/at-button-inventory.md](evidence-20260910/at-button-inventory.md)、[全原文監査](evidence-20260910/at-button-audit.json)、[Commerce操作](evidence-20260910/at-commerce-test-plan.md)、[管理・会社・本人操作](evidence-20260910/at-admin-test-plan.md)。Invoice submit外部FXとRoles認可変更は除外、既存PO supplier tenant複製/public master更新は既存効果として区別し本便DB変更なし。全体KGI達成や事業効果は未測定。
+
+
+## 2026-09-29 AU全旧ボタン再測定
+
+親: docs/specs/design-system/README.md、設計: docs/specs/design-system/design.md §AU。基準303c3cfe7で旧221/71file、Button.tsx:38/75のnative契約とHeaderButton.tsx:17-19の間接CSS依存を実物確認。全原文・変換・検算・限界は[evidence-20260910/au-implementation.md](evidence-20260910/au-implementation.md)を参照。外部仕様はContext7利用不可につき公式Router文書/実導入7.18.0を対照。

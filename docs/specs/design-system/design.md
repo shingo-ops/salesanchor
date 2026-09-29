@@ -1880,3 +1880,65 @@ APPROVE（限定設計合格）。Astra自身の自己審査であり独立し�
 
 
 2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+### AU. 残る旧ボタン221件の全数移管（2026-09-29）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-113/067/073/122/144を継承。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文「個別に作られたボタンを全て共通部品に置き換える」、続いて旧方式221個を対象として明示。最新のAstra設計/Sol調査実装・PRマージ/デプロイまでの依頼を受領。これは実施範囲の承認であり、PO本人の番号付きGOやOpus委任を創作しない。画面/本番フォーム/PO目視は既存省略指示を維持する。
+
+公式作業台release/frontend-all-buttons、基準303c3cfe756b1d82c042cba342c3a3150fc5ab8c。preflight成功、本店の他者未保存変更は不変。AST実測221件/71ファイル＝native213、Router Link1、anchor7、動的class6、構文エラー0。別のnative180は今回の221母数に含まれず、タブ等を一律Buttonへ変えない。初回226はbtnをsuffixとして含む5件の誤検出、境界修正で221を確定。全原文・属性・行はau-inventory.json、部品/CSS契約はau-button-contracts.md。使用頻度・売上改善は未測定。
+
+根拠: Button.tsx:38/49/75（native属性/type/ref透過）、Button.test.tsx:23/52（form/submitter/propagation）、components.css:54/68/81/95/107/127（既存各色）、pages-layout.css:262/546（login幅/btn-block）、本設計§Z（ButtonLinkの既存承認設計）。Context7は提供ツール0件、PO許可代替のReact Router公式 https://reactrouter.com/7.18.4/api/components/Link を2026-09-29直接確認。導入版7.18.0の実コード/型も実装時照合し、version差の新機能を持ち込まない。外部事例は新技術採用ではなく既存金型への移管のため不要。
+
+#### 変更契約・設計判断（PO発言の代筆ではない）
+
+- native213はButton、Link/a8は新登録ButtonLink。既存Button.cssのみを外観正本とする。native/Router/anchorの意味を変えない。全type（省略含む）/form/disabled/name/value/ARIA/data/ref/handler/子内容/親DOMを逐語保持。API・payload・認可・DB・翻訳・依存・CI変更0、新保存先0。loadingや新たな送信抑止を追加しない。
+- 明示primary/secondary/ghost/danger/outlineは同名variant、btn-smはsize sm、他はmd。bare btn-smは既存の補助操作金型secondary smを採用する設計判断。旧中性色のpixel再現ではなく共通部品へ統一する目的を優先。primaryへ推測変換しない。定義のないbtn-danger-link2件は既存削除操作にdanger smを採用、新しいlink色金型は作らない。
+- 動的6件は元の条件式を保持してvariant primary/secondaryへ写像し、tab/aria-pressedを新設しない。共通サイズは元のbtn-smの有無、field-h-md併用はsize sm + layoutClassName field-h-mdとし、既存の最小高さを維持する。
+- btn-block/width100%はfullWidth。login2件はprimary lg fullWidth、Channelsの明示font-md+space3/6はlg。ProductMastersTabのspace1/3はsm。text-xsのCSS定義は実物確認し、存在しないなら独立の意味を付加せず除去し元variantの既定サイズへ。
+- 登録3ページの言語切替はghost md（font-size-sm定義なしのinline上書きは除去）、登録submitはprimary md fullWidth。これらは新しい動作や色の選択を追加しない。
+- inline外側余白は共通Button.css内の登録配置classへ移す: comp-btn-layout--mt-2=margin-top var(--space-2)、--ml-2=margin-left var(--space-2)、--ml-3=margin-left var(--space-3)、--ml-auto=margin-left auto。色/枠/字体/paddingは配置classで上書き禁止。Inboxのvar(--spacing-1)は定義がないため効果を創作せず当該無効margin宣言だけ除去する。gs-save-btnはalign-selfのみ、gs-advisor__run-btnはmin-height/nowrapのみなので同じDOMのlayoutClassNameで維持可。carrier-env-card__delete-btnはdanger md + --ml-autoへ（元の削除色と配置）、独自外観classは渡さない。
+- ButtonLinkをcomponents/ButtonLink.tsxへ登録。to必須のRouter branch/href必須のanchor branchの排他的型、forwardRef<HTMLAnchorElement>、元のLink/aそのまま。variantはtab以外、size/fullWidth/layoutClassNameを共有。disabled/loading/className/styleを受け付けない。Buttonのクラス組立をbuttonAppearance.tsへ抽出しButtonとButtonLinkで1定義のみ利用、既存Button出力/属性順/disabled式は完全維持。link専用CSSはButton.cssの下線除去のみ、色や寸法の重複定義0。
+- 全利用移管後にcomponents.cssの旧btn-primary/secondary/ghost/sm/danger/outline定義、旧header修飾、旧mobile定義とpages-layout.cssのlogin旧ボタン/btn-block定義を除去する。icon-btn等の対象外は保持。旧classに依存する試験の外観assertのみ新classへ更新し、操作期待を弱めない。
+
+登録: componentId=button-link、module=frontend/src/components/ButtonLink.tsx、exportName=ButtonLink、native=a/Router Link、story=ButtonLink.stories.tsx、test=ButtonLink.test.tsx、外観owner=Button.css + buttonAppearance.ts、承認設計=本節。配置class4件も同ownerへ登録。新規の機械台帳体系は作らずcomponent-standard.mdと既存移行台帳へ追記する。
+
+#### 受入・検証と限界
+
+| 条件 | 検証 |
+|---|---|
+| 全数 | 基準221原文全てを変換、残旧0。Button213追加・ButtonLink8追加、native対象外180と業務本文不変。固定全71fileを変換記録から逆変換し全byte一致（import変更含む）。CSS/共有部品は別監査 |
+| 配線/データ | handler・条件・非外観属性・子内容のAST/原文一致、backend/API/DB差分0。共有Buttonのイベント/form/ref/disabled試験、全体既存操作回帰。実サービスへ送信せずAPI/Auth境界を合成 |
+| リンク | href/to/target/rel/download、mailto、Router通常/修飾クリック、preventDefault/stopPropagation、ref、型禁止を試験。Button+navigate代用0 |
+| 実操作 | 実LoginでsignIn/reset引数・pending・成功/失敗、動的variantの条件切替、削除確認の取消/実行で呼出回数と対象ID、invoice外部操作の境界を合成して検証。不足は報告し補完 |
+| 品質 | Button既存試験、ButtonLink新規試験、移管の実操作試験、全体coverage maxWorkers1、check:all/build/Storybook、strict変更箇所、doc/task-state/card/diff、Sol相互レビュー、最新CI |
+| 本番 | 正式PR/merge経路、バックアップ確認、通常Deploy、配備HEAD/公開asset hash/HTTP200/DBRedisCelery接続を確認。画面・本番実書込・人の目視は省略・未検証 |
+
+代替: 小口移管は残件を残すため今回不採用。一律タグ置換はリンクや外側配置を壊すため不採用。外観の完全互換は金型が二重化するため採用せず、既存共通外観を採用。サイズ/背景/枠/角丸は変化する（bare smは背景と枠も変わる）。利用者の意味・操作維持と外観同一を混同しない。表の狭幅表示や報酬欄は過去に幅課題があり、画面未検証という限界を隠さない。
+
+担当: root Astraは設計/審査/公式文書/検収/保存。Sol sharedは共有部品/CSS/専用試験/Storybook、Sol pagesは71利用ファイル/操作試験。所有はカードで列挙。他者未保存や先行PRとの衝突は差分確認後に調整し、無断上書き禁止。新仕様不明・検証失敗は該当操作停止。失敗ログ保持、skip/ガード解除なし。
+
+#### Architect自己審査
+
+REVISE（実装前）。全221原文と既存部品/CSSを照合済み。上記mappingは統一の具体策であって旧外観と同一とはしない。残る調査: OPEN PR/実作業との衝突、全221変換予定と不明0の確認。これを補った後にAPPROVE/カード発行する。同一Astraによる自己審査であり独立第二者レビューとは称しない。
+
+#### 維持の仕組み
+
+守り手: frontend/src/components/Button.test.tsx、ButtonLink.test.tsx（本便作成）、既存frontend品質CI、保存するau監査。外観はButton.css、業務処理は元ページ/API。再発防止は既存移行計画どおり最後のCI補強へ、今回はCI設定を変更しない。切戻しは本PRの製品差分revertでDB復元不要。
+
+
+AU共有部品先行審査: APPROVE（共有部分のみ、Astra自己審査）。既存Button契約試験のform/ref/event/disabled/ARIA、§ZのButtonLink、導入Router7.18.0実在、外側余白4個のtoken定義を照合。共有部品と専用試験は利用ページの並行PRから独立するため先行可。全数移管の審査は利用側の競合確認までREVISEのまま。CARD-AU-SHARED-01正式card-lint exit0。
+
+
+AU全数設計最終審査: APPROVE（Astra自身の自己審査）。全221変換計画resolved221/blocked0、非外観属性と子内容を保持、71fileの逆変換計画を照合。Carrier削除variantの計画ghost誤記をdangerへ訂正して再生成した。OPEN PR6件を実diff照合: #2685 FX/null guard、#2668 Select、#2667 callback prop、#2401/#2362 header/Tabsは対象ボタン変更0。#2656は4openingの整形とCard wrapperがあるがhandler/disabled/class/children不変。将来text競合はあり得るため当該PRを無断統合/変更/終了しない。対象ファイルは本店/公式作業台/実在する4関連作業台で未保存0、2PRには該当作業台なし。古い日時のみを非活動の根拠にしない。今回独立作業台の最新main本文だけを外観変換し、他作業を上書きしない。証跡au-overlap-evidence.json。CARD-AU-PAGES-01は初回停止経路不足L15を補い再lint成功（長行警告のみ）。
+
+
+AU間接依存の追加発見と設計追補（実装中・削除前停止）: HeaderButton.tsx:17-19はclassName={VARIANT_CLASS[variant]}経由で旧btn3variantを参照し、221のliteral監査では捕捉しない。SolがCSS撤去前に発見、当該削除を停止した。これを「全旧CSS利用0」と誤認しない。HeaderButtonは公開API/固定type=buttonを維持しtext3variantだけButton(size md)へ委譲、icon branchは従来native icon-btnのまま残す。ここで追加される共有Button利用1件は213利用側移管と別計数。対象外native180のうちHeaderButton1定義のみ、この共有実装の意図した変更として別監査する。HeaderButton試験を新設して4variantのtype/event/disabled/aria/dataとicon外観classを確認。原文監査はこの共有定義を対象外nativeの不変検査から明示的に区別し、他179定義は不変とする。
+
+旧CSS削除の前提として3カタログstory（AccountSettings2/ContentToolbar2/PageLayout2）の旧raw6件もButtonへ移す。既存文言/他のstory機能は維持。原則の221実運用対象の完了数には算入しない。共通外観/依存の整理に必要な限定追加として同じユーザー依頼内で実施。API/DB/配線変更0。Astraの追補自己審査APPROVE、HeaderButton全文とCSS参照と3storyを直接確認、CARD-AU-SHARED-02正式lint成功。
+
+
+AU品質ゲート補正: 変更対象GoalSettingPage.tsx:225の既存「おすすめ」直書き1件でstrict ESLintが失敗。放置/ルール緩和をせず、同ファイルAdvisorMetricRowで既存useTranslationを利用、goals.advisorRecommendedをja/enへ各1key追加する（ja=おすすめ {{value}}、en=Recommended {{value}}）。既存数値整形/null分岐/処理は不変、日本文言を保持し英語を翻訳する。これは全byte逆変換の例外2コード差分として機械的に許可しlocale差分を各1keyで監査する。Astra設計追補自己審査APPROVE。CARD-AU-PAGES-02正式lint成功。DB/API/配線変更0、i18n以外の警告を独断で直さない。

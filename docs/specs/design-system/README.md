@@ -57,3 +57,9 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 
 
 2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+
+2026-09-29 AU着手: POは残旧221件の全数移管を依頼。最新基準303c3cfe7で221件/71fileを再測定。設計はdesign.md §AU、証拠は[全数棚卸し](../../handoff/design-system-recon/evidence-20260910/au-inventory.md)。実装前審査中。
+
+
+AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855提出済み。番号付きGO待ち、本番反映は未実施。

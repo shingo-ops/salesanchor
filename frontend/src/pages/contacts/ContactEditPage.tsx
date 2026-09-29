@@ -196,9 +196,9 @@ export default function ContactEditPage() {
               <h3>{t("contacts.dedupResolveTitle")}</h3>
               <p>{t("contacts.dedupResolveDesc")}</p>
               <div className="dedup-resolve-actions">
-                <button type="button" className="btn-primary" onClick={handleResolveAsDistinct} disabled={dedupSubmitting}>
+                <Button variant="primary" size="md" type="button" onClick={handleResolveAsDistinct} disabled={dedupSubmitting}>
                   {t("contacts.confirmAsDistinctFull")}
-                </button>
+                </Button>
                 <button type="button" disabled style={{ opacity: "var(--opacity-disabled)", cursor: "not-allowed" }}>
                   {t("contacts.mergeAsDuplicate")}
                 </button>

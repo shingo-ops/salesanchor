@@ -5,6 +5,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
+import { Button } from "../../components/Button";
 
 interface Archive { id: number; source_table: string; source_id: number; archived_by: number | null; archived_at: string; restored_at: string | null; }
 
@@ -57,7 +58,7 @@ export default function ArchivesPage() {
             header: t("common.actions"),
             renderCell: (a) => (
               <span className="actions">
-                {!a.restored_at && hasPermission("archive.manage") && <button className="btn-sm btn-primary" onClick={() => restore(a.id)}>{t("archives.restore")}</button>}
+                {!a.restored_at && hasPermission("archive.manage") && <Button variant="primary" size="sm" onClick={() => restore(a.id)}>{t("archives.restore")}</Button>}
                 {a.restored_at && <span className="badge badge-won">{t("archives.restored")}</span>}
               </span>
             ),

@@ -337,7 +337,7 @@ export default function RolesPage() {
           <div className="roles-sidebar-header">
             <h3>{t("roles.title")}</h3>
             {hasPermission("roles.create") && (
-              <button className="btn-primary btn-sm" onClick={openCreateRole}>+ {t("common.new")}</button>
+              <Button variant="primary" size="sm" onClick={openCreateRole}>+ {t("common.new")}</Button>
             )}
           </div>
           <ul className="roles-list">
@@ -363,9 +363,9 @@ export default function RolesPage() {
             })}
           </ul>
           {hasPermission("roles.assign") && (
-            <button className="btn-secondary btn-block" onClick={() => setUserAssignOpen(true)}>
+            <Button variant="secondary" size="md" fullWidth onClick={() => setUserAssignOpen(true)}>
               {t("roles.assignUsers")}
-            </button>
+            </Button>
           )}
         </aside>
 
@@ -395,18 +395,18 @@ export default function RolesPage() {
                 <div className="roles-main-actions">
                   {canEditPerms && !selectedRole.is_system && (
                     <>
-                      <button className="btn-sm" onClick={() => openEditRole(selectedRole)}>{t("common.edit")}</button>
+                      <Button variant="secondary" size="sm" onClick={() => openEditRole(selectedRole)}>{t("common.edit")}</Button>
                       {hasPermission("roles.delete") && (
-                        <button className="btn-sm btn-danger" onClick={() => setDeleteTarget(selectedRole)}>{t("common.delete")}</button>
+                        <Button variant="danger" size="sm" onClick={() => setDeleteTarget(selectedRole)}>{t("common.delete")}</Button>
                       )}
                     </>
                   )}
                   <Button variant="secondary" size="md" disabled={!dirty || savingPerms} onClick={cancelEdits}>
                     {t("roles.cancelChanges")}
                   </Button>
-                  <button className="btn-primary" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
+                  <Button variant="primary" size="md" disabled={!dirty || savingPerms || !canEditPerms} onClick={savePermissions}>
                     {savingPerms ? t("common.saving") : t("roles.saveChanges")}
-                  </button>
+                  </Button>
                 </div>
               </div>
 

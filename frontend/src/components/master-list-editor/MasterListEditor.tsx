@@ -141,9 +141,9 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
             />
             <Button type="submit" variant="secondary" size="md">{t("common.search")}</Button>
             {search && (
-              <button type="button" className="btn-sm" onClick={() => { setSearch(""); setSearchInput(""); }}>
+              <Button variant="secondary" size="sm" type="button" onClick={() => { setSearch(""); setSearchInput(""); }}>
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -209,7 +209,7 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
                   <Button variant="secondary" size="sm" onClick={() => startEdit(r)}>{t("common.edit")}</Button>
                 </td>
                 <td>
-                  <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>{t("common.delete")}</button>
+                  <Button variant="danger" size="sm" onClick={() => remove(r.id)}>{t("common.delete")}</Button>
                 </td>
               </tr>
             ))

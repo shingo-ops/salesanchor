@@ -3314,3 +3314,25 @@ EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 提出追補: 正規wrapperでPR3831作成
 Deploy 36488806931 success。rootは2026-09-28T21:55:11.392639+00:00にread-onlyで本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナ各SHA256一致を直接検証した。証跡at-production-verification.json/at-merge-final.txt/at-deploy-result.json。実データを書き込むフォーム操作・ブラウザー画面・PO目視は指示どおり省略・未検証。復元試験も未実施。
 
 11件移管、本番対象の共通Button280/旧221。API/DB/配線/共有金型変更0。設計・実装・レビュー・本人承認・マージ・本番反映・配信確認済み。残旧221、表/報酬3/カレンダー色、最後のCI補強は別便。結果文書の保存PRを本便完了記録として扱う。
+
+
+```text
+id: EV-20260929-AU-ALL-BUTTONS
+date: 2026-09-29
+agent: Astra design / Sol research and implementation
+task: 旧方式221ボタンの共通部品移管
+scope: frontend button/link appearance; API/DB/wiring unchanged
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/au-inventory.json
+    summary: 固定303c3cfe7、221件71ファイル、native213/link8、対象外native180、構文エラー0。
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/au-button-contracts.md
+    summary: 実部品/CSS/仕様の行番号を対照。ButtonLinkは設計済み・未実装。
+confidence: high
+tradeoff: 操作保持と共通外観採用。旧外観とpixel同一ではない。画面検査は省略・未検証。
+decision: 全221移管、root監査/661試験/品質成功、Sol相互APPROVE。実装保存済み・本番未反映。
+follow_up: PR/最新CI、正式承認経路後にマージ/配備。au-implementation.mdに全根拠と限界。
+```
+
+2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.log）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。

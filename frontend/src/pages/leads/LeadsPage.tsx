@@ -311,7 +311,7 @@ export default function LeadsPage() {
           />
         }
         right={hasPermission("leads.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</button>
+          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>{t("leads.newLead")}</Button>
         ) : undefined}
       />
 
@@ -498,12 +498,12 @@ export default function LeadsPage() {
           { key: "actions", header: t("leads.actions"), renderCell: (l) => (
             <span className="actions" onClick={(e) => e.stopPropagation()}>
               {hasPermission("leads.convert") && l.status === "lead" && (
-                <button className="btn-sm btn-primary" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</button>
+                <Button variant="primary" size="sm" onClick={(e) => { e.stopPropagation(); setConvertTarget(l); }}>{t("leads.convert")}</Button>
               )}
               {hasPermission("leads.delete") && l.status === "lead" && (
-                <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</button>
+                <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setMergeSource(l); }}>{t("leads.merge")}</Button>
               )}
-              {hasPermission("leads.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</button>}
+              {hasPermission("leads.delete") && <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(l); }}>{t("common.delete")}</Button>}
             </span>
           )},
         ];

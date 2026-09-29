@@ -860,7 +860,8 @@
     "advisorStep3": "③成約率{{winRate}}・商談化率{{dealRate}}から逆算",
     "advisorMonthlyRequired": "月間で必要な数",
     "advisorWeeklyRequired": "週間で必要な数",
-    "advisorGeneratedAt": "作成日時"
+    "advisorGeneratedAt": "作成日時",
+    "advisorRecommended": "おすすめ {{value}}"
   },
   "leads": {
     "title": "リード管理",
