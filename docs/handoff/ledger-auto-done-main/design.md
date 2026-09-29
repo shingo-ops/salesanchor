@@ -120,11 +120,11 @@ GO 記録を検査する gate は必須チェックに入っていない。
 - A. 判定は `scripts/ci/is-ledger-done-pr.sh <PR番号>` の1か所。次の4条件をすべて満たすと exit 0、満たさなければ理由を stderr に出して exit 1。
   1. head ブランチ名が `release/ledger-done-` で始まる
   2. タイトルが `^chore\(ledger\): .*DONE 化（自動）$` に一致する
-  3. 変更ファイルが1件以上で、すべて `.claude-pipeline/active-work.d/` の下（`..` を含むパスは不可）
+  3. 変更ファイルが1件以上で、すべて `.claude-pipeline/active-work.d/` の下（`..` を含むパスは不可）。変更ファイルは pulls/{n}/files を paginate で全件取り、changedFiles と件数が合わなければ exit 2（100件打ち切りの防止）
   4. 作成者が `shingo-ops`（スクリプト内の定数 `LEDGER_PR_AUTHOR` 1か所）
-- B. `.github/workflows/ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog` を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
+- B. `.github/workflows/ledger-auto-done-main.yml`: 予約の直前に A を実行し、不合格なら `::error::` で失敗。予約失敗の `exit 0` は `exit 1` に変更。`workflow_dispatch` の `mode: backlog`（main ブランチ上の実行だけ）を追加し、open の台帳DONE化PRを1本（`release/ledger-done-backlog-<YYYYMMDDHHMM>`、UTC）にまとめて自動マージを予約し、取り込めた旧PRだけを「#新PR に統合」でクローズする。通常時の起動条件・ブランチ名・タイトルは変えない。
 - C. `.github/workflows/ledger-done-update-branch.yml`（新規）: main への push で、予約済みの台帳DONE化PRそれぞれについて compare API（main...head）の behind_by を測り、1以上のものだけに update-branch を実行する（mergeStateStatus は一覧で UNKNOWN になりやすいため使わない）。compare が失敗したPRは失敗扱いでジョブを赤にする。concurrency で1本ずつ。失敗したらジョブを赤にする。
-- D. `.github/workflows/auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` で起動。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
+- D. `.github/workflows/auto-merge-guard.yml`（新規）: `pull_request_target: auto_merge_enabled` と `synchronize` で起動（synchronize は予約が付いているときだけ判定する。予約後に台帳以外の変更が push されても止めるため）。PR のコードは checkout せず、main 側の A だけを使う。不合格なら `--disable-auto` で取り消し、コメントを残す。失敗したらジョブを赤にする。permissions は `contents: read` のみで、取り消しとコメントは PIPELINE_PAT で行う。
 
 `git grep "ledger-done-"` に残る箇所の意味づけ（判定ではない）:
 - ledger-auto-done-main.yml の `startsWith(... 'release/ledger-done-')`: 無限ループ防止の除外（既存）。
@@ -154,6 +154,7 @@ GO 記録を検査する gate は必須チェックに入っていない。
 - main が進む回数が、通常のマージ1件につき +1 になる。他のPRが BEHIND になる機会が増える（作業が消えることはない: merge commit のみ・strict）。
 - 判定の作成者条件は `shingo-ops` が PO 本人のアカウントでもあるため、単独では決め手にならない。4条件の AND で担保する。
 - 予約の失敗を赤にするため、設定 OFF の間は台帳ワークフローが毎回失敗する。これは失敗を可視化するための意図的な変更で、Allow auto-merge の ON 後に解消する。
+- backlog は旧PRを予約直後にクローズする。新PRが詰まった場合でも、内容は新PRに残る。新PRが赤になったときは手で直してマージする。
 
 ### 追補 6. 戻し方
 

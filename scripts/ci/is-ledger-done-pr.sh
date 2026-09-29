@@ -10,6 +10,9 @@
 #   3. 変更ファイルが1件以上あり、すべて .claude-pipeline/active-work.d/ の下（.. を含まない）
 #   4. 作成者が LEDGER_PR_AUTHOR である
 #
+# 変更ファイルは pulls/{n}/files を --paginate で全件取る（gh pr view --json files は
+# 100件で打ち切られるため）。取れた件数が changedFiles と合わなければ exit 2。
+#
 # 呼び出し元: ledger-auto-done-main.yml（予約前）/ auto-merge-guard.yml（見張り）
 # 設計: docs/handoff/ledger-auto-done-main/design.md
 set -u
@@ -26,23 +29,47 @@ if [ -z "${PR}" ]; then
   exit 2
 fi
 
-if ! JSON="$(gh pr view "${PR}" --json headRefName,title,files,author)"; then
+if ! JSON="$(gh pr view "${PR}" --json headRefName,title,author,changedFiles)"; then
   echo "PR #${PR} の情報を取得できない" >&2
+  exit 2
+fi
+
+REPO="${GH_REPO:-}"
+if [ -z "${REPO}" ] && ! REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"; then
+  echo "リポジトリ名を取得できない" >&2
+  exit 2
+fi
+
+if ! FILES_LIST="$(gh api --paginate "repos/${REPO}/pulls/${PR}/files" --jq '.[].filename')"; then
+  echo "PR #${PR} の変更ファイル一覧を取得できない" >&2
   exit 2
 fi
 
 BRANCH="$(jq -r '.headRefName // ""' <<<"${JSON}")"
 TITLE="$(jq -r '.title // ""' <<<"${JSON}")"
 AUTHOR="$(jq -r '.author.login // ""' <<<"${JSON}")"
-FILE_COUNT="$(jq -r '(.files // []) | length' <<<"${JSON}")"
-BAD_FILES="$(jq -r --arg p "${FILES_PREFIX}" \
-  '(.files // [])[] | .path | select((startswith($p) and (contains("..") | not)) | not)' <<<"${JSON}")"
+EXPECTED_COUNT="$(jq -r '.changedFiles // -1' <<<"${JSON}")"
+
+FILE_COUNT=0
+BAD_FILES=()
+while IFS= read -r F; do
+  [ -n "${F}" ] || continue
+  FILE_COUNT=$((FILE_COUNT + 1))
+  if [[ "${F}" != "${FILES_PREFIX}"* || "${F}" == *..* ]]; then
+    BAD_FILES+=("${F}")
+  fi
+done <<<"${FILES_LIST}"
+
+if [ "${FILE_COUNT}" -ne "${EXPECTED_COUNT}" ]; then
+  echo "変更ファイル数が合わない: 取得=${FILE_COUNT} changedFiles=${EXPECTED_COUNT}" >&2
+  exit 2
+fi
 
 REASONS=()
 [[ "${BRANCH}" == "${BRANCH_PREFIX}"* ]] || REASONS+=("head ブランチ名が ${BRANCH_PREFIX} で始まらない (${BRANCH})")
 [[ "${TITLE}" =~ ${TITLE_REGEX} ]] || REASONS+=("タイトルが台帳DONE化の形でない (${TITLE})")
 [ "${FILE_COUNT}" -ge 1 ] || REASONS+=("変更ファイルが0件")
-[ -z "${BAD_FILES}" ] || REASONS+=("台帳ディレクトリ外のファイルを含む ($(tr '\n' ' ' <<<"${BAD_FILES}"))")
+[ "${#BAD_FILES[@]}" -eq 0 ] || REASONS+=("台帳ディレクトリ外のファイルを含む (${BAD_FILES[0]} ほか計${#BAD_FILES[@]}件)")
 [ "${AUTHOR}" = "${LEDGER_PR_AUTHOR}" ] || REASONS+=("作成者が ${LEDGER_PR_AUTHOR} でない (${AUTHOR})")
 
 if [ "${#REASONS[@]}" -gt 0 ]; then

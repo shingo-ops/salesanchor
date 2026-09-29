@@ -158,7 +158,7 @@ jobs:
   # 溜まった台帳DONE化PRを1本にまとめる（workflow_dispatch mode=backlog 専用）。
   # 1件ずつ自動マージすると CI が件数分だけ順番に走るため、1本に集約する。
   ledger-backlog:
-    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'backlog'
+    if: github.event_name == 'workflow_dispatch' && inputs.mode == 'backlog' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
