@@ -481,7 +481,8 @@ export function InboxMessageThread({
           const outbound = msg.direction === "outbound";
           const failed = !!msg.error_code;
           const translationState = msg.message_id ? translations[msg.message_id] : undefined;
-          const canReact = !!msg.message_id && !failed;
+          // リアクション API は Discord メッセージのみ対応（Meta/IG は 404）。platform は meta_messages 行ごとに保存された値
+          const canReact = msg.platform === "discord" && !!msg.message_id && !failed;
           const heartHover = canReact && !splitReactions(msg.reactions).heart?.is_mine;
           const heartButton = (
             <span className="msg-heart-hover">

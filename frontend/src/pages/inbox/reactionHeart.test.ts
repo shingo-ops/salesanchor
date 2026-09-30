@@ -23,6 +23,11 @@ describe("splitReactions", () => {
     expect(splitReactions([thumbs, heart])).toEqual({ heart, others: [thumbs] });
   });
 
+  it("recognizes the heart without the variation selector (bare U+2764)", () => {
+    const bare = make({ emoji_name: "\u2764" });
+    expect(splitReactions([bare])).toEqual({ heart: bare, others: [] });
+  });
+
   it("treats a custom emoji named like the heart as a non-heart reaction", () => {
     const custom = make({ emoji_id: "123456789012345678" });
     expect(splitReactions([custom])).toEqual({ heart: null, others: [custom] });

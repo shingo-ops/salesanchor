@@ -9,8 +9,16 @@ export interface SplitReactions {
   others: MessageReaction[];
 }
 
+const VARIATION_SELECTOR_16 = /\uFE0F/g;
+
+/** 異体字セレクタ（U+FE0F）の有無に依存せず比較するため除去する */
+const stripVariationSelector = (emoji: string): string => emoji.replace(VARIATION_SELECTOR_16, "");
+
 export function isHeartReaction(reaction: MessageReaction): boolean {
-  return reaction.emoji_name === HEART_REACTION_EMOJI && !reaction.emoji_id;
+  return (
+    !reaction.emoji_id &&
+    stripVariationSelector(reaction.emoji_name) === stripVariationSelector(HEART_REACTION_EMOJI)
+  );
 }
 
 export function splitReactions(reactions: MessageReaction[] | undefined): SplitReactions {
