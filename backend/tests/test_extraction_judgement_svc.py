@@ -374,7 +374,12 @@ _PRICE_QTY_CASES = [
     ("400＠518", "400", "518", "price_first", 400, 518, "rule", (), None),
     ("24万　在庫20", "24万", "20", None, 240000, 20, "marker", (), None),
     ("30円×3,000枚", "30円", "3,000枚", None, 30, 3000, "marker", (), None),
-    ("¥4,0000/冊\n15冊", "¥4,0000", None, None, 40000, None, "marker", ("irregular_comma",), None),
+    ("¥4,0000/冊\n15冊", "¥4,0000", "15冊", None, 40000, 15, "marker", ("irregular_comma",), None),
+    ("12,000円 10月入荷", "12,000円", None, None, 12000, None, "marker", (), None),
+    ("12,000円 3営業日", "12,000円", "none", None, 12000, None, "marker", (), None),
+    ("12,000円 在庫50", "12,000円", "none", None, 12000, 50, "marker", ("gemini_disagrees",), None),
+    ("27,500x18BOX", "27,500", "18BOX", None, 27500, 18, "marker", (), None),
+    ("27,500x18", "27,500", "18", "price_first", 27500, 18, "rule", (), None),
     (
         "@150,000円/在庫2\n@12,100円/在庫48",
         "150,000円／12,100円", "2／48", None, None, None, "none", ("multiple_values",), None,
@@ -436,7 +441,7 @@ def test_resolve_price_quantity_none_when_gemini_has_no_values():
 
 def test_resolve_price_quantity_reports_gemini_disagreement():
     result = resolve_price_quantity(
-        "27,500×18BOX", gemini_price="27,000", gemini_quantity="18BOX",
+        "27,500円 18BOX", gemini_price="27,000", gemini_quantity="18BOX",
         unit_aliases=_UNIT_ALIASES, order=None,
     )
     assert "gemini_disagrees" in result.reasons

@@ -310,7 +310,8 @@ def _extract_line_numbers(line: str, line_no: int, aliases: Sequence[str]) -> li
         before, after = line[: m.start()], line[m.end():]
         raw = m.group(0).replace("，", ",")
         head_y = bool(re.search(r"(?<![A-Za-z])Y\s*$", before))
-        if not head_y and (re.search(r"[A-Za-z]$", before) or before.endswith("-")):
+        digit_x_before = bool(re.search(r"\d[xX]$", before))  # 数字に挟まれた x/X は区切り
+        if not head_y and not digit_x_before and (re.search(r"[A-Za-z]$", before) or before.endswith("-")):
             continue
         is_unit = _unit_after(after, aliases)
         if (
@@ -385,7 +386,14 @@ def _unique(nums: list[_Num]) -> list[_Num]:
     return list(seen.values())
 
 
-def _marker_candidates(per_line: list[list[_Num]]) -> tuple[list[_Num], list[_Num]]:
+def _copied_by_gemini(num: _Num, gemini_groups: tuple[str, ...]) -> bool:
+    """Gemini がその側の値を書き写していて、数字列が一致するか（補完の条件）。"""
+    return bool(gemini_groups) and _digits_agree(gemini_groups, num)
+
+
+def _marker_candidates(
+    per_line: list[list[_Num]], g_price: tuple[str, ...], g_qty: tuple[str, ...]
+) -> tuple[list[_Num], list[_Num]]:
     prices = [n for nums in per_line for n in nums if n.price_marked]
     qtys = [n for nums in per_line for n in nums if n.qty_marked]
     for nums in per_line:
@@ -393,7 +401,9 @@ def _marker_candidates(per_line: list[list[_Num]]) -> tuple[list[_Num], list[_Nu
         has_p = any(n.price_marked for n in nums)
         has_q = any(n.qty_marked for n in nums)
         if len(unmarked) == 1 and has_p != has_q:
-            (qtys if has_p else prices).append(unmarked[0])
+            filled_side, groups = (qtys, g_qty) if has_p else (prices, g_price)
+            if _copied_by_gemini(unmarked[0], groups):
+                filled_side.append(unmarked[0])
     return prices, qtys
 
 
@@ -451,7 +461,7 @@ def resolve_price_quantity(
     per_line = [_apply_at_marker(t, _extract_line_numbers(t, no, aliases)) for no, t in target]
 
     reasons: list[str] = []
-    prices, qtys = _marker_candidates(per_line)
+    prices, qtys = _marker_candidates(per_line, g_price, g_qty)
     prices, qtys = _unique(prices), _unique(qtys)
     price: _Num | None = None
     qty: _Num | None = None
@@ -495,9 +505,9 @@ def _verify_reasons(
     out: list[str] = []
     if any(n and n.irregular for n in (price, qty)):
         out.append("irregular_comma")
-    if (price and g_price and not _digits_agree(g_price, price)) or (
-        qty and g_qty and not _digits_agree(g_qty, qty)
-    ):
+    price_differs = price is not None and (not g_price or not _digits_agree(g_price, price))
+    qty_differs = qty is not None and (not g_qty or not _digits_agree(g_qty, qty))
+    if price_differs or qty_differs:
         out.append("gemini_disagrees")
     explained = "multiple_values" in existing or "no_order_rule" in existing
     if not explained and ((g_price and price is None) or (g_qty and qty is None)):
