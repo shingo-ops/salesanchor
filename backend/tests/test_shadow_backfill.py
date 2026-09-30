@@ -210,12 +210,17 @@ def test_load_extraction_context_none_when_job_missing():
 # --- §6 対象の選び方（実 PostgreSQL）-------------------------------------------
 # スキーマは本物の migration で作る（柱3-c: テストでの本番テーブル定義コピー禁止）。
 # 共有 `pg` フィクスチャは CI 専用（GITHUB_ACTIONS=true + RLS_ADMIN_DATABASE_URL 必須）。
-_SHADOW_MIGRATION = "20260928_110000_create_extraction_shadow_tables.sql"
+# shadow の migration は extraction_prompt_config に初期値を INSERT するため、先にその表の migration を流す。
+_SHADOW_MIGRATIONS = (
+    "20260926_080000_create_extraction_prompt_config.sql",
+    "20260928_110000_create_extraction_shadow_tables.sql",
+)
 
 
 def _apply_shadow_migration(connection) -> None:
     with connection.cursor() as cur:
-        cur.execute((MIGRATIONS / _SHADOW_MIGRATION).read_text())
+        for name in _SHADOW_MIGRATIONS:
+            cur.execute((MIGRATIONS / name).read_text())
 
 
 def test_select_target_jobs_rules_on_real_postgres(pg):
