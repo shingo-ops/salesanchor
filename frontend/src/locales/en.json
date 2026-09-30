@@ -5132,6 +5132,20 @@
     "byItem": "By item",
     "matchedRatio": "Auto-match ratio",
     "needsReviewCount": "Needs review count",
-    "totalCount": "Total"
+    "totalCount": "Total",
+    "itemLabel": {
+      "product": "Product identification",
+      "verify_copied": "Copy verification",
+      "price_qty": "Price and quantity"
+    },
+    "priceQtyReason": {
+      "multiple_values": "Multiple values, so it cannot be fixed",
+      "gemini_disagrees": "Does not match Gemini's copy",
+      "rule_vs_shape": "The rule's order does not fit the number shapes",
+      "irregular_comma": "Invalid digit separators",
+      "unresolved": "Cannot determine price and quantity",
+      "no_order_rule": "The supplier rule has no order",
+      "quantity_unmarked": "The quantity has no marker"
+    }
   }
 }

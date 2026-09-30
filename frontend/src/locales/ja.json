@@ -5132,6 +5132,20 @@
     "byItem": "項目別",
     "matchedRatio": "自動確定率",
     "needsReviewCount": "確認待ち件数",
-    "totalCount": "件数"
+    "totalCount": "件数",
+    "itemLabel": {
+      "product": "商品の特定",
+      "verify_copied": "書き写しの照合",
+      "price_qty": "価格と数量"
+    },
+    "priceQtyReason": {
+      "multiple_values": "値が複数あるため確定しない",
+      "gemini_disagrees": "Geminiの書き写しと一致しない",
+      "rule_vs_shape": "ルールの向きと数値の形が合わない",
+      "irregular_comma": "桁区切りが不正",
+      "unresolved": "価格と数量を決められない",
+      "no_order_rule": "仕入元ルールに向きがない",
+      "quantity_unmarked": "数量に目印がない"
+    }
   }
 }
