@@ -144,16 +144,16 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   const [knowledgeLinks, setKnowledgeLinks] = useState<KnowledgeLink[]>([]);
   const [allKnowledgeRules, setAllKnowledgeRules] = useState<Record<string, KnowledgeRule[]>>({});
   const [knowledgeAddMode, setKnowledgeAddMode] = useState<Record<string, "none" | "select" | "create">>(
-    { block_delimiter: "none", skip_condition: "none", status_keyword: "none" }
+    { block_delimiter: "none", status_keyword: "none" }
   );
   const [knowledgeSelectValue, setKnowledgeSelectValue] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
   const [knowledgeNewPattern, setKnowledgeNewPattern] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
   const [knowledgeNewNormalizedTo, setKnowledgeNewNormalizedTo] = useState<Record<string, string>>(
-    { block_delimiter: "", skip_condition: "", status_keyword: "" }
+    { block_delimiter: "", status_keyword: "" }
   );
 
   // ---------------------------------------------------------------------------
@@ -228,7 +228,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
   }, []);
 
   const fetchAllKnowledgeRules = useCallback(async () => {
-    const categories = ["block_delimiter", "skip_condition", "status_keyword"] as const;
+    const categories = ["block_delimiter", "status_keyword"] as const;
     const results: Record<string, KnowledgeRule[]> = {};
     await Promise.all(
       categories.map(async (cat) => {
@@ -307,7 +307,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
       setMessages([]);
       setMessageIndex(0);
       setKnowledgeLinks([]);
-      setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
+      setKnowledgeAddMode({ block_delimiter: "none", status_keyword: "none" });
       void fetchDetail(row.supplier_id);
       void fetchMessages(row.supplier_id);
       void fetchKnowledgeLinks(row.supplier_id);
@@ -325,7 +325,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
     setMessageIndex(0);
     setFormatTokens([]);
     setKnowledgeLinks([]);
-    setKnowledgeAddMode({ block_delimiter: "none", skip_condition: "none", status_keyword: "none" });
+    setKnowledgeAddMode({ block_delimiter: "none", status_keyword: "none" });
   }, []);
 
   // ---------------------------------------------------------------------------
@@ -634,11 +634,9 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
               <label style={{ display: "block", fontSize: "var(--font-sm)", fontWeight: 600, marginBottom: "var(--space-3)" }}>
                 {t("supplierExtractionRules.knowledgeSection")}
               </label>
-              {(["block_delimiter", "skip_condition", "status_keyword"] as const).map((category) => {
+              {(["block_delimiter", "status_keyword"] as const).map((category) => {
                 const labelKey = category === "block_delimiter"
                   ? "knowledgeBlockDelimiters"
-                  : category === "skip_condition"
-                  ? "knowledgeSkipConditions"
                   : "knowledgeStatusKeywords";
                 const helperKey = (labelKey + "Helper") as `${typeof labelKey}Helper`;
                 const linkedItems = knowledgeLinks.filter((l) => l.category === category);

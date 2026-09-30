@@ -46,8 +46,6 @@ from app.schemas.central_masters import (
     SupplierExtractionRulesUpdate,
     SupplierKnowledgeLinkCreate,
     SupplierKnowledgeLinkResponse,
-    SupplierPromptResponse,
-    SupplierPromptUpdate,
     SupplierSourceMessagesResponse,
 )
 
@@ -597,77 +595,6 @@ async def delete_routing(routing_id: int, db: AsyncSession = Depends(get_db)):
 
 
 # ============================================================================
-# ADR-085: 仕入先別 Gemini プロンプト (public.supplier_prompts)
-#   GET  /super-admin/suppliers/{id}/prompt  未登録なら空プロンプトを返す
-#   PUT  /super-admin/suppliers/{id}/prompt  upsert (UNIQUE(supplier_id))
-# ============================================================================
-@router.get(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
-)
-async def get_supplier_prompt(
-    supplier_id: int, db: AsyncSession = Depends(get_db)
-):
-    row = (
-        await db.execute(
-            text(
-                "SELECT supplier_id, prompt, is_active "
-                "FROM public.supplier_prompts WHERE supplier_id = :sid"
-            ),
-            {"sid": supplier_id},
-        )
-    ).mappings().first()
-    if not row:
-        # 未登録の仕入先は空プロンプトを返す（編集開始用）
-        return SupplierPromptResponse(
-            supplier_id=supplier_id, prompt="", is_active=True
-        )
-    return SupplierPromptResponse(**dict(row))
-
-
-@router.put(
-    "/super-admin/suppliers/{supplier_id}/prompt",
-    response_model=SupplierPromptResponse,
-    dependencies=[Depends(require_super_admin)],
-)
-async def upsert_supplier_prompt(
-    supplier_id: int,
-    data: SupplierPromptUpdate,
-    user: User = Depends(require_super_admin),
-    db: AsyncSession = Depends(get_db),
-):
-    try:
-        row = (
-            await db.execute(
-                text(
-                    "INSERT INTO public.supplier_prompts "
-                    "(supplier_id, prompt, is_active, updated_by) "
-                    "VALUES (:sid, :prompt, :active, :uid) "
-                    "ON CONFLICT (supplier_id) DO UPDATE SET "
-                    "prompt = EXCLUDED.prompt, is_active = EXCLUDED.is_active, "
-                    "updated_by = EXCLUDED.updated_by, updated_at = NOW() "
-                    "RETURNING supplier_id, prompt, is_active"
-                ),
-                {
-                    "sid": supplier_id,
-                    "prompt": data.prompt,
-                    "active": data.is_active,
-                    "uid": user.id,
-                },
-            )
-        ).mappings().first()
-    except IntegrityError as exc:
-        await db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail=f"仕入先が存在しません: {exc.orig}",
-        )
-    await db.commit()
-    return SupplierPromptResponse(**dict(row))
-
-
-# ============================================================================
 # ADR SA-06: 解析精度サマリー (v_supplier_parse_stats)
 #   GET /super-admin/suppliers/{id}/parse-stats
 # ============================================================================
@@ -968,7 +895,7 @@ async def list_supplier_source_messages(
 #   POST /super-admin/knowledge-rules
 # ============================================================================
 
-_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "skip_condition", "status_keyword")
+_EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "status_keyword")
 
 
 @router.get(
@@ -978,7 +905,7 @@ _EXTRACTION_KNOWLEDGE_CATEGORIES = ("block_delimiter", "skip_condition", "status
     summary="共用Knowledgeルール一覧（カテゴリ別）",
 )
 async def list_knowledge_rules(
-    category: str = Query(..., description="block_delimiter / skip_condition / status_keyword"),
+    category: str = Query(..., description="block_delimiter / status_keyword"),
     db: AsyncSession = Depends(get_db),
 ) -> list[KnowledgeRuleSimpleResponse]:
     if category not in _EXTRACTION_KNOWLEDGE_CATEGORIES:

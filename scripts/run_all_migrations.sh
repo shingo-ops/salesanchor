@@ -848,3 +848,6 @@ run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
 
 # ADR-158: source_messages.received_at を採用本文の投稿時刻にそろえる（冪等）
 run_sql migrations/20260929_120000_fix_source_messages_received_at.sql
+
+# PR-CLEAN: 旧仕入元別Geminiプロンプトテーブルを廃止（ADR-085機能撤去、PO決定 2026-09-28）
+run_sql migrations/20260930_120000_drop_supplier_prompts.sql

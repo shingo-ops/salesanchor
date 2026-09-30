@@ -2439,9 +2439,6 @@
     },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
-      "promptSection": "仕入先別 解析プロンプト（使用保留中）",
-      "promptHelp": "仕入先ごとに Gemini 解析用プロンプトを管理します（スプレッドシートから取込済み）。",
-      "promptPlaceholder": "この仕入先の Gemini 解析プロンプトを入力",
       "rulesSection": "正規化ルール",
       "rulesHelp": "受信通知に含まれるワードを、別のワードに自動変換するルールです。",
       "aliasesSection": "仕入元個別ルール",
@@ -2460,7 +2457,6 @@
         "message_exclude": "メッセージ除外（即除外）",
         "message_exclude_no_digit": "メッセージ除外（数字なし条件）",
         "block_delimiter": "商品の区切り記号",
-        "skip_condition": "Geminiスキップ条件",
         "status_keyword": "ステータス判定"
       },
       "langs": {
@@ -5066,8 +5062,6 @@
     "knowledgeSection": "Knowledge ルール",
     "knowledgeBlockDelimiters": "ブロック区切り記号",
     "knowledgeBlockDelimitersHelper": "商品ブロックの開始を示す記号を選択",
-    "knowledgeSkipConditions": "スキップ条件",
-    "knowledgeSkipConditionsHelper": "このキーワードを含むブロックは抽出対象外",
     "knowledgeStatusKeywords": "ステータス判定",
     "knowledgeStatusKeywordsHelper": "予約/在庫の判定キーワード",
     "addRule": "追加",

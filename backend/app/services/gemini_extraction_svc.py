@@ -344,7 +344,6 @@ def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[d
     # Knowledge リンクからの注入
     if knowledge_links:
         delimiters = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "block_delimiter"]
-        skip_conds = [lnk["pattern"] for lnk in knowledge_links if lnk["category"] == "skip_condition"]
         status_kws = [
             (lnk["pattern"], lnk.get("normalized_to") or "")
             for lnk in knowledge_links if lnk["category"] == "status_keyword"
@@ -353,8 +352,6 @@ def _build_supplier_context_note(supplier_context: dict, knowledge_links: list[d
         if delimiters:
             lines.append(f"商品ブロックの区切り記号: {', '.join(delimiters)}")
             lines.append("上記の記号で始まる行が各商品ブロックの開始です。")
-        if skip_conds:
-            lines.append(f"以下のキーワードを含むブロックは出力対象外（スキップ）: {', '.join(skip_conds)}")
         if status_kws:
             status_parts = [f"「{kw}」→{norm}" for kw, norm in status_kws]
             lines.append(f"ステータス判定: {', '.join(status_parts)}")

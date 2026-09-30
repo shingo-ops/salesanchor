@@ -122,3 +122,32 @@ DBテーブル本体（削除対象・PR-B）: `public.supplier_prompts`（DROP 
 3. `frontend/src/locales/en.json` 側の対応キー（ja.jsonとの1:1確認は未実施）
 4. `supplier_knowledge_links` CRUDルーターの正確な行番号（`backend/app/routers/super_admin_suppliers.py`内、本調査では knowledge-links の具体的GET/POST/DELETE実装箇所まで行番号を特定できていない）
 5. v7プロンプトの`prompt_key`命名・DB投入方式（新規キー名、`is_active`運用、シャドー専用に分離するか既存2キーと並存させるか）はPR-C設計時にArchitect判断が必要
+
+## PR-CLEAN 実装時の再確認（2026-09-30）
+
+worktree `/Users/tanizawashingo/worktrees/salesanchor/release-delete-skip-soldout-searched`（ブランチ `release/remove-legacy-supplier-rule-paths`）で実装。origin/main と merge（コミット `275beffa8`、親: `aebaf2dd5`（PR-CLEAN実装コミット）+ `c3fce9326`（origin/main））。マージ時に2件コンフリクト（`KnowledgeAliasesTab.tsx`／`scripts/run_all_migrations.sh`、原因: main側の全ボタン`<Button>`移行・別便の3migration追加との行重複）→ 双方の意図を保持する形で手動解消（詳細は本セクション末尾）。
+
+### 再検証した file:line（マージ後ツリー基準）
+
+- `backend/app/routers/super_admin_suppliers.py`
+  - GET/PUT `.../prompt` エンドポイント・`SupplierPromptResponse`/`SupplierPromptUpdate` import: 削除済み（コミット `aebaf2dd5`）
+  - `_EXTRACTION_KNOWLEDGE_CATEGORIES`: `super_admin_suppliers.py:898` = `("block_delimiter", "status_keyword")`（`skip_condition` 除去済み）
+- `backend/app/schemas/central_masters.py`: `SupplierPromptResponse`/`SupplierPromptUpdate` クラス削除済み（grep 0件）
+- `frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx`: プロンプト編集セクション（旧435-500行付近: h3/textarea/select/save Button/state/loadPrompt/savePrompt）全削除、`RULE_CATEGORIES` から `skip_condition` 除去。main側の `<button>`→`<Button>` 移行（PR #3822等）はそのまま維持（マージで両立）
+- `frontend/src/pages/super-admin/SupplierExtractionRulesPage.tsx`: `skip_condition` grep 0件（登録UI・カテゴリ配列から除去済み）
+- `frontend/src/locales/ja.json` / `en.json`: `knowledge.prompt*` キー0件（両ファイルとも削除済み、`grep -n "knowledge\.prompt"` on frontend/src コードも0件＝未参照キーなし）
+- `backend/app/services/gemini_extraction_svc.py`: `_build_supplier_context_note` 内の `skip_conds` 抽出・レンダリング行（旧298・307-308）削除済み。残存する `skip_condition` 言及（現行472・484行）はコメントのみ（「skip_condition は渡さない」という설명文）、渡さない設計は変更前と同じなので削除対象外
+- `scripts/seed_supplier_prompts_from_sheet.py`: ファイル削除済み（`git status` で `D`、worktree に実体なし）
+- `migrations/20260930_120000_drop_supplier_prompts.sql`（当初 `20260928_120000` から改名、既存最新migration `20260929_120000_fix_source_messages_received_at.sql` より後の日付にするため）: `DROP TABLE IF EXISTS public.supplier_prompts;` + ADR-135/136 に基づき GO待ちである旨のコメント
+- `scripts/run_all_migrations.sh`: 843行以降に4件連続で run_sql（`20260928_100000_delete_skip_condition_rules.sql` → `20260928_110000_create_extraction_shadow_tables.sql` → `20260929_120000_fix_source_messages_received_at.sql` → 新規 `20260930_120000_drop_supplier_prompts.sql`、我々のPRの行を最後尾に配置）。194行目 `run_sql migrations/087_create_supplier_prompts.sql`（CREATE の履歴）は不変のまま維持
+
+### ゲート対象（変更せず、報告のみ）
+
+- `.github/workflows/migration-guard.yml:224` — `PUBLIC_TABLES` リストに `supplier_prompts` が残存（ワークフロー変更はPO判断領域のため未編集）
+- `scripts/run_all_migrations.sh:194` — `run_sql migrations/087_create_supplier_prompts.sql`（CREATEの履歴、DROPとは別に維持する設計のため不変）
+- `scripts/seed_supplier_prompts_from_sheet.py` — 本PRで削除実施済み（カードのnote通り「既にstaged worksに含まれる」ため、GO待ちPRの一部として削除を維持）
+
+### マージコンフリクト解消の詳細
+
+1. `scripts/run_all_migrations.sh`: origin/main側の3件（skip_condition削除・shadow tables・received_at修正）をそのまま残し、我々の1行（drop_supplier_prompts、リネーム後のファイル名）を最後尾に追加。087行目のCREATE参照は無変更。
+2. `frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx`: コンフリクト領域はプロンプトセクションのJSXのみ（state/関数は非コンフリクト領域で既にクリーンマージ済み）。origin/main側（プロンプトセクションのJSX、ボタン移行済み版）を破棄し、HEAD側（削除済み＝空）を採用。マージ後、`grep -in "prompt"` は0件、raw `<button` タグも0件（main の Button移行はプロンプトセクション以外の箇所で維持）。
