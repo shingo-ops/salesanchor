@@ -12,7 +12,6 @@ import argparse
 import logging
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
 from decimal import Decimal
 
 from sqlalchemy import text
@@ -28,10 +27,11 @@ _SHADOW_PURPOSE = "line_extraction_shadow"
 
 # 対象: done・ルールあり（has_required_supplier_rule と同じ3列が空白除き非空）・
 #       shadow の run 無し（UNIQUE 衝突の回避）。同じ投稿（空白の違いだけ）は created_at 最新の1件。
-#       同じ組に試運転済みが1件でもあれば組ごと外す（同じ投稿を2回測らない）。並びは古い投稿から。
+#       同じ組に試運転済みが1件でもあれば組ごと外す（status に関係なくすべてのジョブで見る）。
+#       並びは古い投稿から。
 _SELECT_TARGETS_SQL = f"""
     WITH cand AS (
-        SELECT ej.id, ej.created_at, sm.supplier_channel_id AS ch, sm.line_posted_at AS pa,
+        SELECT ej.id, ej.created_at, ej.status, sm.supplier_channel_id AS ch, sm.line_posted_at AS pa,
                regexp_replace(sm.raw_text, '\\s', '', 'g') AS k,
                EXISTS (
                    SELECT 1 FROM {TCG_SCHEMA}.extraction_shadow_runs r WHERE r.extraction_job_id = ej.id
@@ -40,8 +40,7 @@ _SELECT_TARGETS_SQL = f"""
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         JOIN public.suppliers s ON s.id = sc.supplier_id
-        WHERE ej.status = 'done'
-          AND btrim(COALESCE(s.extraction_price_format, '')) <> ''
+        WHERE btrim(COALESCE(s.extraction_price_format, '')) <> ''
           AND btrim(COALESCE(s.extraction_qty_format, '')) <> ''
           AND btrim(COALESCE(s.extraction_order_pattern, '')) <> ''
     ), grouped AS (
@@ -50,23 +49,29 @@ _SELECT_TARGETS_SQL = f"""
     SELECT id FROM (
         SELECT DISTINCT ON (ch, pa, k) id, pa
         FROM grouped
-        WHERE NOT group_ran
+        WHERE NOT group_ran AND status = 'done'
         ORDER BY ch, pa, k, created_at DESC
     ) t
     ORDER BY pa ASC NULLS LAST, id
     LIMIT :limit
 """
 
+# 費用は、この道具が作った run の run_id で絞る（時刻や purpose では絞らない）
 _LEDGER_TOTALS_SQL = """
-    SELECT COUNT(*), COUNT(*) FILTER (WHERE cost_usd IS NULL), COALESCE(SUM(cost_usd), 0)
+    SELECT COUNT(DISTINCT extraction_shadow_run_id), COUNT(*) FILTER (WHERE cost_usd IS NULL),
+           COALESCE(SUM(cost_usd), 0)
     FROM public.llm_usage_events
-    WHERE purpose = :purpose AND occurred_at >= :since
+    WHERE extraction_shadow_run_id = ANY(CAST(:run_ids AS uuid[]))
+"""
+
+_RUN_EXISTS_SQL = f"""
+    SELECT EXISTS (SELECT 1 FROM {TCG_SCHEMA}.extraction_shadow_runs WHERE extraction_job_id = :ej_id)
 """
 
 
 @dataclass(frozen=True)
 class LedgerTotals:
-    rows: int
+    rows: int  # 台帳に行がある run の数
     null_cost_rows: int
     cost_usd: Decimal
 
@@ -76,10 +81,11 @@ class BackfillSummary:
     target_count: int = 0
     preview_job_ids: list[str] = field(default_factory=list)
     processed: int = 0
+    skipped: int = 0
     succeeded: int = 0
     failed: int = 0
     total_cost_usd: Decimal = Decimal("0")
-    stop_reason: str | None = None  # cost_limit / ledger_missing / cost_null
+    stop_reason: str | None = None  # job_failed / ledger_missing / cost_null / cost_limit
     dry_run: bool = False
 
 
@@ -88,26 +94,25 @@ def select_target_jobs(session: Session, limit: int) -> list[str]:
     return [str(r[0]) for r in rows]
 
 
-def fetch_db_now(session: Session) -> datetime:
-    """DB の時計で「実行を始めた時刻」を取る（台帳の occurred_at も DB の時計で付くため）。"""
-    return session.execute(text("SELECT clock_timestamp()")).scalar_one()
+def shadow_run_exists(session: Session, job_id: str) -> bool:
+    return bool(session.execute(text(_RUN_EXISTS_SQL), {"ej_id": job_id}).scalar_one())
 
 
-def fetch_ledger_totals(session: Session, since: datetime) -> LedgerTotals:
-    """実行を始めてからの台帳（purpose=line_extraction_shadow）の行数・費用NULLの行数・費用の合計。"""
-    row = session.execute(
-        text(_LEDGER_TOTALS_SQL), {"purpose": _SHADOW_PURPOSE, "since": since}
-    ).one()
+def fetch_ledger_totals(session: Session, run_ids: list[str]) -> LedgerTotals:
+    """run_ids の run に紐づく台帳の行：行のある run の数・費用NULLの行数・費用の合計。"""
+    if not run_ids:
+        return LedgerTotals(rows=0, null_cost_rows=0, cost_usd=Decimal("0"))
+    row = session.execute(text(_LEDGER_TOTALS_SQL), {"run_ids": run_ids}).one()
     return LedgerTotals(rows=int(row[0]), null_cost_rows=int(row[1]), cost_usd=Decimal(str(row[2])))
 
 
-def _process_job(session: Session, job_id: str) -> bool:
-    """1ジョブを新方式で流す。成功なら True。例外・失敗は False（中断しない）。"""
+def _process_job(session: Session, job_id: str) -> str | None:
+    """1ジョブを新方式で流す。completed なら run_id を返す。失敗・例外は None（呼び出し側が止める）。"""
     try:
         ctx = load_extraction_context(session, job_id)
         if ctx is None:
             logger.error("[shadow_backfill] job not found ej=%s", job_id)
-            return False
+            return None
         result = run_shadow_for_job(
             session,
             job_id,
@@ -118,15 +123,16 @@ def _process_job(session: Session, job_id: str) -> bool:
     except Exception:  # noqa: BLE001
         session.rollback()
         logger.exception("[shadow_backfill] unexpected error ej=%s", job_id)
-        return False
-    ok = result.get("status") == "completed"
+        return None
     logger.info("[shadow_backfill] ej=%s status=%s", job_id, result.get("status"))
-    return ok
+    if result.get("status") != "completed" or not result.get("run_id"):
+        return None
+    return str(result["run_id"])
 
 
-def _stop_reason(summary: BackfillSummary, totals: LedgerTotals, max_cost_usd: Decimal) -> str | None:
+def _stop_reason(run_count: int, totals: LedgerTotals, max_cost_usd: Decimal) -> str | None:
     """止める理由。費用を見張れない状態（台帳の行が足りない・費用NULL）は安全側に止める。"""
-    if totals.rows < summary.succeeded:
+    if totals.rows < run_count:
         return "ledger_missing"
     if totals.null_cost_rows > 0:
         return "cost_null"
@@ -145,17 +151,23 @@ def run_backfill(
     if dry_run:
         return summary
 
-    since = fetch_db_now(session)
+    run_ids: list[str] = []
     for job_id in job_ids:
-        ok = _process_job(session, job_id)
+        if shadow_run_exists(session, job_id):
+            summary.skipped += 1
+            logger.warning("[shadow_backfill] run already exists, skipped ej=%s", job_id)
+            continue
+        run_id = _process_job(session, job_id)
         summary.processed += 1
-        if ok:
-            summary.succeeded += 1
-        else:
+        if run_id is None:
             summary.failed += 1
-        totals = fetch_ledger_totals(session, since)
+            summary.stop_reason = "job_failed"
+            break
+        summary.succeeded += 1
+        run_ids.append(run_id)
+        totals = fetch_ledger_totals(session, run_ids)
         summary.total_cost_usd = totals.cost_usd
-        reason = _stop_reason(summary, totals, max_cost_usd)
+        reason = _stop_reason(len(run_ids), totals, max_cost_usd)
         if reason is not None:
             summary.stop_reason = reason
             logger.warning("[shadow_backfill] stopping: %s (cost=%s)", reason, totals.cost_usd)
@@ -180,7 +192,7 @@ def _print_summary(summary: BackfillSummary) -> None:
             print(f"  {job_id}")
         return
     print(
-        f"processed={summary.processed} succeeded={summary.succeeded} failed={summary.failed} "
+        f"processed={summary.processed} skipped={summary.skipped} succeeded={summary.succeeded} failed={summary.failed} "
         f"total_cost_usd={summary.total_cost_usd} stop_reason={summary.stop_reason}"
     )
 

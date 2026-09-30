@@ -22,22 +22,27 @@ _CTX = task.ExtractionContext(
 
 @pytest.fixture
 def fakes(monkeypatch):
-    """Gemini を呼ぶ関数・読み込み・費用の読み取りを差し替える。"""
-    run = MagicMock(return_value={"status": "completed"})
+    """Gemini を呼ぶ関数・読み込み・直前の再確認を差し替える。run は呼ぶたびに run_id r1, r2... を返す。"""
+    counter = {"n": 0}
+
+    def run_fn(*a, **kw):
+        counter["n"] += 1
+        return {"status": "completed", "run_id": f"r{counter['n']}"}
+
+    run = MagicMock(side_effect=run_fn)
     monkeypatch.setattr(sb, "run_shadow_for_job", run)
     monkeypatch.setattr(sb, "load_extraction_context", MagicMock(return_value=_CTX))
-    monkeypatch.setattr(sb, "fetch_db_now", MagicMock(return_value="T0"))
+    monkeypatch.setattr(sb, "shadow_run_exists", MagicMock(return_value=False))
     return run
 
 
-def _totals(costs, *, null_rows=0, rows_per_job=1):
-    """呼ぶたびに費用が costs の順に進み、台帳の行は1件処理ごとに rows_per_job 増える台帳の読み取り。"""
+def _totals(costs, *, null_rows=0, missing=False):
+    """台帳の読み取り。run_id の数だけ行があり（missing なら0行）、費用は costs の順に進む。"""
     it = iter(costs)
-    state = {"rows": 0}
 
-    def fake(session, since):
-        state["rows"] += rows_per_job
-        return sb.LedgerTotals(rows=state["rows"], null_cost_rows=null_rows, cost_usd=next(it))
+    def fake(session, run_ids):
+        rows = 0 if missing else len(run_ids)
+        return sb.LedgerTotals(rows=rows, null_cost_rows=null_rows, cost_usd=next(it))
 
     return fake
 
@@ -46,25 +51,52 @@ def _session():
     return MagicMock()
 
 
-# --- §6 基準2: 費用の上限で止まる ---------------------------------------------
+def _targets(monkeypatch, ids):
+    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ids)
+
+
+# --- §6 費用の上限で止まる ----------------------------------------------------
 def test_stops_when_cumulative_cost_exceeds_limit_and_skips_gemini(monkeypatch, fakes):
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3", "j4"])
+    _targets(monkeypatch, ["j1", "j2", "j3", "j4"])
     monkeypatch.setattr(
         sb, "fetch_ledger_totals", _totals([Decimal("0.4"), Decimal("1.1"), Decimal("9")])
     )
 
     summary = sb.run_backfill(_session(), limit=4, max_cost_usd=Decimal("1.0"), dry_run=False)
 
-    assert fakes.call_count == 2
     assert [c.args[1] for c in fakes.call_args_list] == ["j1", "j2"]
     assert summary.processed == 2
     assert summary.stop_reason == "cost_limit"
     assert summary.total_cost_usd == Decimal("1.1")
 
 
+def test_ledger_is_read_by_run_ids_created_by_this_tool(monkeypatch, fakes):
+    _targets(monkeypatch, ["j1", "j2"])
+    seen = []
+
+    def fake(session, run_ids):
+        seen.append(list(run_ids))
+        return sb.LedgerTotals(rows=len(run_ids), null_cost_rows=0, cost_usd=Decimal("0.1"))
+
+    monkeypatch.setattr(sb, "fetch_ledger_totals", fake)
+    sb.run_backfill(_session(), limit=2, max_cost_usd=Decimal("5"), dry_run=False)
+    assert seen == [["r1"], ["r1", "r2"]]
+
+
+def test_runs_all_targets_when_under_limit(monkeypatch, fakes):
+    _targets(monkeypatch, ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0.1")] * 3))
+
+    summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
+
+    assert (summary.processed, summary.succeeded, summary.failed) == (3, 3, 0)
+    assert summary.stop_reason is None
+
+
+# --- §6 費用を見張れないときに止まる ------------------------------------------
 def test_stops_when_completed_run_has_no_ledger_row(monkeypatch, fakes):
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
-    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3, rows_per_job=0))
+    _targets(monkeypatch, ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3, missing=True))
 
     summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
 
@@ -73,7 +105,7 @@ def test_stops_when_completed_run_has_no_ledger_row(monkeypatch, fakes):
 
 
 def test_stops_when_ledger_cost_is_null(monkeypatch, fakes):
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
+    _targets(monkeypatch, ["j1", "j2", "j3"])
     monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3, null_rows=1))
 
     summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
@@ -82,32 +114,49 @@ def test_stops_when_ledger_cost_is_null(monkeypatch, fakes):
     assert summary.stop_reason == "cost_null"
 
 
-def test_runs_all_targets_when_under_limit_and_counts_failures(monkeypatch, fakes):
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
-    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0.1")] * 3))
-    fakes.side_effect = [{"status": "completed"}, {"status": "failed", "error_code": "X"}, RuntimeError("boom")]
+# --- §6 失敗1件で止まる -------------------------------------------------------
+@pytest.mark.parametrize(
+    "outcome",
+    [{"status": "failed", "error_code": "JUDGEMENT_FAILED"}, {"status": "failed"}, RuntimeError("boom")],
+)
+def test_stops_at_first_failure_and_skips_next_gemini(monkeypatch, fakes, outcome):
+    _targets(monkeypatch, ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3))
+    fakes.side_effect = [outcome]
 
     summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
 
-    assert (summary.processed, summary.succeeded, summary.failed) == (3, 1, 2)
-    assert summary.stop_reason is None
+    assert fakes.call_count == 1
+    assert (summary.processed, summary.succeeded, summary.failed) == (1, 0, 1)
+    assert summary.stop_reason == "job_failed"
 
 
-def test_missing_job_context_counts_as_failed_without_gemini(monkeypatch, fakes):
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1"])
-    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")]))
+def test_missing_job_context_stops_without_gemini(monkeypatch, fakes):
+    _targets(monkeypatch, ["j1", "j2"])
     monkeypatch.setattr(sb, "load_extraction_context", MagicMock(return_value=None))
 
-    summary = sb.run_backfill(_session(), limit=1, max_cost_usd=Decimal("1"), dry_run=False)
+    summary = sb.run_backfill(_session(), limit=2, max_cost_usd=Decimal("1"), dry_run=False)
 
     fakes.assert_not_called()
-    assert (summary.processed, summary.failed) == (1, 1)
+    assert (summary.processed, summary.failed, summary.stop_reason) == (1, 1, "job_failed")
 
 
-# --- §6 基準3: dry-run は書き込まない -----------------------------------------
+# --- §6 直前の再確認 ----------------------------------------------------------
+def test_skips_job_whose_run_appeared_after_selection(monkeypatch, fakes):
+    _targets(monkeypatch, ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "shadow_run_exists", lambda s, job_id: job_id == "j2")
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0.1")] * 3))
+
+    summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
+
+    assert [c.args[1] for c in fakes.call_args_list] == ["j1", "j3"]
+    assert (summary.processed, summary.skipped) == (2, 1)
+
+
+# --- §6 dry-run は書き込まない ------------------------------------------------
 def test_dry_run_calls_neither_gemini_nor_writes(monkeypatch, fakes):
     ids = [f"j{i}" for i in range(15)]
-    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ids)
+    _targets(monkeypatch, ids)
     cost = MagicMock()
     monkeypatch.setattr(sb, "fetch_ledger_totals", cost)
     session = _session()
@@ -116,6 +165,7 @@ def test_dry_run_calls_neither_gemini_nor_writes(monkeypatch, fakes):
 
     fakes.assert_not_called()
     sb.load_extraction_context.assert_not_called()
+    sb.shadow_run_exists.assert_not_called()
     cost.assert_not_called()
     session.commit.assert_not_called()
     assert all("INSERT" not in str(c.args[0]).upper() for c in session.execute.call_args_list)
@@ -197,6 +247,9 @@ def test_select_target_jobs_rules_on_real_postgres():
         grp_a = add(ch_ok, "G H", "2026-01-09", "done", "2026-01-09")
         grp_b = add(ch_ok, "G\nH", "2026-01-09", "done", "2026-01-10")
         s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": grp_a})
+        nd_ran = add(ch_ok, "N O", "2026-01-11", "error", "2026-01-11")
+        nd_done = add(ch_ok, "N\nO", "2026-01-11", "done", "2026-01-12")
+        s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": nd_ran})
         add(ch_ok, "pending", "2026-01-07", "pending", "2026-01-07")
         add(ch_norule, "norule", "2026-01-08", "done", "2026-01-08")
         s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": ran})
@@ -207,3 +260,48 @@ def test_select_target_jobs_rules_on_real_postgres():
     assert ids == [early, dup_new]
     assert dup_old not in ids
     assert grp_a not in ids and grp_b not in ids
+    assert nd_ran not in ids and nd_done not in ids
+
+
+@pytest.mark.skipif(not _PG, reason="実 PostgreSQL が必要 (TEST_PG_URL 未設定)")
+def test_ledger_totals_by_run_id_with_real_record_usage_event_sync():
+    """本物の record_usage_event_sync が（未commitで）書いた行を、run_id だけで集計できる。"""
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.orm import Session
+
+    from app.services.llm_budget import UsageCounts, record_usage_event_sync
+
+    assert _PG
+    mine, other = str(uuid.uuid4()), str(uuid.uuid4())
+    with Session(create_engine(_PG)) as s:
+        if s.execute(text("SELECT to_regclass('public.llm_usage_events')")).scalar() is not None:
+            pytest.skip("public.llm_usage_events が実在する DB では、試験用の表を作らない")
+        s.execute(text("""
+            CREATE TABLE public.llm_usage_events (
+              id uuid PRIMARY KEY, occurred_at timestamptz NOT NULL DEFAULT now(),
+              purpose text NOT NULL, tenant_id int, model text NOT NULL, sdk text NOT NULL,
+              prompt_tokens int, cached_content_tokens int, candidates_tokens int,
+              thoughts_tokens int, tool_use_prompt_tokens int, total_tokens int,
+              cost_usd numeric(12,6), extraction_attempt_id uuid, extraction_shadow_run_id uuid,
+              discord_inbound_message_id int, source_ref text)
+        """))
+        priced = UsageCounts(prompt_tokens=1000, candidates_tokens=100)
+        for run_id, model in ((mine, "gemini-3.1-flash-lite"), (other, "gemini-3.1-flash-lite")):
+            record_usage_event_sync(
+                s, purpose="line_extraction_shadow", model=model, sdk="google-genai",
+                counts=priced, extraction_shadow_run_id=run_id,
+            )
+        # 同じ run でも費用が不明（単価表に無いモデル）の行 → null_cost_rows に数える
+        record_usage_event_sync(
+            s, purpose="line_extraction_shadow", model="unknown-model", sdk="google-genai",
+            counts=priced, extraction_shadow_run_id=mine,
+        )
+        only_mine = sb.fetch_ledger_totals(s, [mine])
+        both = sb.fetch_ledger_totals(s, [mine, other])
+        none = sb.fetch_ledger_totals(s, [])
+        s.rollback()
+
+    assert only_mine.rows == 1 and only_mine.null_cost_rows == 1
+    assert both.rows == 2 and both.cost_usd == 2 * only_mine.cost_usd
+    assert only_mine.cost_usd > 0
+    assert (none.rows, none.null_cost_rows, none.cost_usd) == (0, 0, Decimal("0"))
