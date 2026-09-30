@@ -28,7 +28,7 @@ Gemini 呼び出しのどこで・どれだけコスト/トークンを使って
 
 ### 3.2 日付バケットの選択（design 上の判断・recon §3 参照）
 
-同ファイル内の `cost-summary`（`daily`）は `DATE(ea.started_at)`（TZ変換なし）を使うが、同ダッシュボードの「トレンド」系エンドポイント（`import-trend`/`trend`。実体は `tcg_analysis_dashboard_svc.py` の `get_import_trend`/`get_pipeline_trend`）は `DATE_TRUNC('day', ... AT TIME ZONE 'Asia/Tokyo')`（JST固定）を使う。
+同ファイル内の `cost-summary`（`daily`）は `DATE(ea.started_at)`（TZ変換なし）を使うが、同ダッシュボードの「トレンド」系エンドポイント（`import-trend`/`trend`。実体は `backend/app/services/tcg_analysis_dashboard_svc.py` の `get_import_trend`/`get_pipeline_trend`）は `DATE_TRUNC('day', ... AT TIME ZONE 'Asia/Tokyo')`（JST固定）を使う。
 
 **本PRは JST DATE_TRUNC 側を採用した。** 理由: 本タブの `daily` は「日別トレンド」という性格が cost-summary の付随集計より trend 系エンドポイントに近く、TZ を明示しない `DATE()` はセッションTZ依存で本番/テスト間の挙動差リスクがあるため。cost-summary 自体は変更しない（設計スコープ外）。
 
@@ -40,14 +40,14 @@ Gemini 呼び出しのどこで・どれだけコスト/トークンを使って
 
 ### 4.1 タブ追加（最小差分）
 
-`AnalysisDashboardPanel.tsx` への変更は3点のみ:
+`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` への変更は3点のみ:
 1. `DashboardTab` 型に `"usage"` を追加
 2. `tabItems` に `{ key: "usage", label: t("analysisRules.dashboard.tabUsage") }` を追加
 3. `{activeTab === "usage" && <LlmUsageSection days={trendDays} t={t} />}` を追加
 
 期間セレクタ（`trendDays`）は既存実装で全タブ共通表示（recon §5）のため追加変更不要。
 
-### 4.2 新規コンポーネント `LlmUsageSection.tsx`
+### 4.2 新規コンポーネント `frontend/src/pages/super-admin/components/LlmUsageSection.tsx`
 
 - 単独で `api.get()` を呼び、loading/error/empty を既存タブ（`ImportTabContent` 等）と同じパターンで扱う。
 - レイアウト: `Card variant="metric"` ×4（費用合計／呼び出し回数／入力トークン／出力トークン）→ `DataTable`（by_purpose）→ `DataTable`（daily）→ `DataTable`（by_model）。すべて既存金型（`Card`/`DataTable`）のみ。
@@ -61,11 +61,11 @@ Gemini 呼び出しのどこで・どれだけコスト/トークンを使って
 
 | 基準 | 検証方法 |
 |---|---|
-| ① タブが表示され、4枚のメトリクスカード＋3つの表が出る | `LlmUsageSection.test.tsx` のレンダーテスト＋目視（Storybook対象外のため） |
-| ② 値が同じ days で `public.llm_usage_events` を集計した SQL と一致する | `test_tcg_analysis_dashboard_llm_usage.py` で SQL に `llm_usage_events` のみ含まれ `extraction_attempts`/`extraction_shadow_runs` を含まないことを assert |
-| ③ NULL は「記録なし」と表示される | `test_tcg_analysis_dashboard_llm_usage.py`（バックエンドの NULL 伝播）＋ `LlmUsageSection.test.tsx`（フロントの「Not reported」描画） |
+| ① タブが表示され、4枚のメトリクスカード＋3つの表が出る | `frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx` のレンダーテスト＋目視（Storybook対象外のため） |
+| ② 値が同じ days で `public.llm_usage_events` を集計した SQL と一致する | `backend/tests/test_tcg_analysis_dashboard_llm_usage.py` で SQL に `llm_usage_events` のみ含まれ `extraction_attempts`/`extraction_shadow_runs` を含まないことを assert |
+| ③ NULL は「記録なし」と表示される | `backend/tests/test_tcg_analysis_dashboard_llm_usage.py`（バックエンドの NULL 伝播）＋ `frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx`（フロントの「Not reported」描画） |
 | ④ ja/en のキーセットが同一 | `npm run check:i18n-missing-keys` PASS（実行済み・後述） |
-| ⑤ 生 select/input・インラインカラーが無い | 目視 diff（`LlmUsageSection.tsx` は `Card`/`DataTable` のみ使用）＋ `npm run check:css-colors`/`check:css-values` PASS |
+| ⑤ 生 select/input・インラインカラーが無い | 目視 diff（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` は `Card`/`DataTable` のみ使用）＋ `npm run check:css-colors`/`check:css-values` PASS |
 | ⑥ backend の days 範囲外（0, 361）が 422 | `test_llm_usage_days_out_of_bounds_returns_422`（parametrize 0/361）PASS |
 
 ## 6. 外部・過去事例

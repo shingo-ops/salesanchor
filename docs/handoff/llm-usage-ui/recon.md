@@ -28,11 +28,11 @@
 
 ## 3. 既存 router: backend/app/routers/tcg_analysis_dashboard.py（変更前 674 行）
 
-- `GET /tcg/analysis-dashboard/cost-summary`（`tcg_analysis_dashboard.py:450-554`）: `require_super_admin` 認可・`llm_usage_events` を `extraction_attempts` に LEFT JOIN して読む唯一の既存エンドポイント。`daily` の日付バケットは `DATE(ea.started_at)`（`tcg_analysis_dashboard.py:467`）— タイムゾーン変換なし（セッションTZ依存）。
-- 「トレンド」系エンドポイント本体（`get_import_trend`, `get_pipeline_trend`）は `backend/app/services/tcg_analysis_dashboard_svc.py` にあり、日付バケットは `TO_CHAR(DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo'), 'MM-DD')`（`tcg_analysis_dashboard_svc.py:417-425`）— JST 固定。
+- `GET /tcg/analysis-dashboard/cost-summary`（`backend/app/routers/tcg_analysis_dashboard.py:450-554`）: `require_super_admin` 認可・`llm_usage_events` を `extraction_attempts` に LEFT JOIN して読む唯一の既存エンドポイント。`daily` の日付バケットは `DATE(ea.started_at)`（`backend/app/routers/tcg_analysis_dashboard.py:467`）— タイムゾーン変換なし（セッションTZ依存）。
+- 「トレンド」系エンドポイント本体（`get_import_trend`, `get_pipeline_trend`）は `backend/app/services/tcg_analysis_dashboard_svc.py` にあり、日付バケットは `TO_CHAR(DATE_TRUNC('day', created_at AT TIME ZONE 'Asia/Tokyo'), 'MM-DD')`（`backend/app/services/tcg_analysis_dashboard_svc.py:417-425`）— JST 固定。
 - **本PRの `daily` バケットは trend 系（JST DATE_TRUNC）に合わせた**（cost-summary の daily ではなく）。理由: cost-summary の `daily` は「コスト集計」の一部であり、`import-trend`/`trend` エンドポイントの方が本タブの「日別トレンド」という性格に近いため。cost-summary の `DATE()` はセッションTZ依存で挙動が不透明という懸念もある。
-- `days: int = Query(default=30, ge=1, le=360)` の形は `extraction-product-ranking`（`tcg_analysis_dashboard.py:353`）・`import-trend`（`tcg_analysis_dashboard.py:221`）と同一パターン。本PRの `llm-usage` エンドポイントも同じ形を踏襲。
-- 認可は全エンドポイント共通で `_admin=Depends(require_super_admin)`（例: `tcg_analysis_dashboard.py:325`, `:355`, `:458`）。
+- `days: int = Query(default=30, ge=1, le=360)` の形は `extraction-product-ranking`（`backend/app/routers/tcg_analysis_dashboard.py:353`）・`import-trend`（`backend/app/routers/tcg_analysis_dashboard.py:221`）と同一パターン。本PRの `llm-usage` エンドポイントも同じ形を踏襲。
+- 認可は全エンドポイント共通で `_admin=Depends(require_super_admin)`（例: `backend/app/routers/tcg_analysis_dashboard.py:325`, `:355`, `:458`）。
 
 ## 4. 本番データ形状（2026-10-01 時点、PO 提供の事実）
 
@@ -43,10 +43,10 @@
 ## 5. フロントエンド既存構造
 
 - `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx`（変更前 1904 行）
-  - `DashboardTab` 型定義: `AnalysisDashboardPanel.tsx:52`
-  - `tabItems` 配列: `AnalysisDashboardPanel.tsx:467-472`
-  - `trendDays` state: `AnalysisDashboardPanel.tsx:314`。`SelectControl` による期間セレクタは `activeTab` の条件分岐の**外側**（`AnalysisDashboardPanel.tsx:497-513`）にあり、全タブ共通で常に表示される。→ 新規セレクタ追加不要、既存 `trendDays` を `LlmUsageSection` に prop で渡すだけで良い。
-  - タブごとのレンダリング分岐は `{activeTab === "xxx" && (...)}` パターン（`AnalysisDashboardPanel.tsx:516-583`）。
+  - `DashboardTab` 型定義: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:52`
+  - `tabItems` 配列: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:467-472`
+  - `trendDays` state: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:314`。`SelectControl` による期間セレクタは `activeTab` の条件分岐の**外側**（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:497-513`）にあり、全タブ共通で常に表示される。→ 新規セレクタ追加不要、既存 `trendDays` を `LlmUsageSection` に prop で渡すだけで良い。
+  - タブごとのレンダリング分岐は `{activeTab === "xxx" && (...)}` パターン（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:516-583`）。
   - `api` クライアント: `frontend/src/lib/api.ts`（`api.get<T>(path)` 形。Firebase ID トークン自動付与・502/503/504 リトライあり）。
   - `Card`（`frontend/src/components/Card.tsx`）: `variant: "container" | "interactive" | "metric"`, `density: "default" | "compact"`。
   - `DataTable`（`frontend/src/components/DataTable.tsx`）: `columns`（`key`/`header`/`width`/`renderCell`）+ `data` + `rowKey` + `density` + `emptyState`。
