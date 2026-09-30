@@ -531,6 +531,8 @@
 .inbox-msg-row { display: flex; }
 .inbox-msg-row.outbound { justify-content: flex-end; }
 .inbox-msg-row.inbound { justify-content: flex-start; }
+/* 吹き出し + リアクション表示の縦積み。幅上限（旧 .msg-bubble の 70%）はこの単位で持つ */
+.msg-stack { display: flex; flex-direction: column; min-width: 0; max-width: 70%; }
 /* Meta実測: バブル 16px / padding=8px 12px */
 .msg-bubble {
   max-width: 70%;
@@ -1158,7 +1160,7 @@
   }
   /* overflow:hidden を明示してデスクトップと sticky スコープを統一 */
   .inbox-center  { width: 100%; flex: 1; min-height: var(--inbox-center-min-h); overflow: hidden; }
-  .msg-bubble    { max-width: 85%; }
+  .msg-stack     { max-width: 85%; }
   .inbox-send-btn { width: var(--size-avatar-sm); height: var(--size-avatar-sm); }
   .inbox-search-row { padding: var(--space-2) var(--space-2) var(--space-1); }
 
@@ -1745,28 +1747,54 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   color: var(--text);
 }
 
-/* ======= Discord リアクション ======= */
+/* ======= Discord リアクション（ハート方式） ======= */
 
-/* リアクション表示バー */
-.msg-reaction-bar {
+/* 吹き出し + 下端のリアクション表示を縦に積む（幅上限は .inbox-msg-row 直後で定義） */
+.inbox-msg-row.inbound .msg-stack { align-items: flex-start; }
+.inbox-msg-row.outbound .msg-stack { align-items: flex-end; }
+.msg-stack .msg-bubble { max-width: 100%; min-width: 0; }
+
+/* 吹き出し + 外側のハート（受信=右隣 / 送信=左隣） */
+.msg-bubble-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* 白抜きハートは通常非表示。hover / フォーカス / 長押しで表示 */
+.msg-heart-hover {
+  display: inline-flex;
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--transition-micro);
+}
+.msg-bubble-line:focus-within .msg-heart-hover,
+.msg-bubble-line[data-heart-revealed="true"] .msg-heart-hover {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: hover) {
+  .msg-bubble-line:hover .msg-heart-hover {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+/* 吹き出し下端のリアクション（受信=左寄せ / 送信=右寄せ） */
+.msg-reactions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
   margin-top: var(--space-1);
 }
+.inbox-msg-row.outbound .msg-reactions { justify-content: flex-end; }
 
-/* 空（リアクションなし）バーはホバー時のみ表示 */
-.msg-reaction-bar--empty {
-  opacity: 0;
-  transition: opacity var(--transition-micro);
-}
-.msg-bubble:hover .msg-reaction-bar--empty {
-  opacity: 1;
-}
-
-/* リアクションピル */
-.msg-reaction-pill {
+/* ハート以外の顧客リアクション（表示専用） */
+.msg-reaction-badge {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -1776,110 +1804,13 @@ input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit { color:
   background: var(--bg-subtle);
   color: var(--text-secondary);
   font-size: var(--font-xs);
-  cursor: pointer;
-  transition: background var(--transition-micro), border-color var(--transition-micro);
-  font-family: inherit;
   line-height: 1;
 }
-.msg-reaction-pill:hover {
-  background: var(--color-hover-overlay);
-  border-color: var(--accent);
-  color: var(--text-primary);
-}
-/* 自分が押したピル */
-.msg-reaction-pill[data-mine="true"] {
-  background: var(--link-active-bg);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-.msg-reaction-pill[data-mine="true"]:hover {
-  opacity: var(--opacity-dim);
-}
+.msg-reaction-emoji-img { display: block; }
 
 /* カウント数字 */
 .msg-reaction-count {
   font-size: var(--font-2xs);
   font-weight: var(--font-weight-semi);
-}
-
-/* リアクション追加ボタン */
-.msg-reaction-add-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-1);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-pill);
-  background: transparent;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: background var(--transition-micro), border-color var(--transition-micro), color var(--transition-micro);
-  font-family: inherit;
-  line-height: 1;
-  width: var(--size-6);
-  height: var(--size-6);
-}
-.msg-reaction-add-btn:hover {
-  background: var(--color-hover-overlay);
-  border-color: var(--accent);
-  color: var(--accent);
-}
-
-/* リアクションピッカー Popover（金型 Popover が届くまでの仮配置） */
-.msg-reaction-picker-popover {
-  position: absolute;
-  z-index: var(--z-popover, 9000);
-  bottom: calc(100% + var(--space-2));
-  left: 0;
-  box-shadow: var(--shadow-md);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  overflow: hidden;
-  padding: var(--space-2);
-}
-
-/* プリセット絵文字グリッド（CDN 不要・Unicode 直書き） */
-.emoji-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: var(--space-1);
-}
-
-.emoji-preset-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--size-8);
-  height: var(--size-8);
-  padding: 0;
-  font-size: var(--font-lg);
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition: background var(--transition-fast), border-color var(--transition-fast);
-  line-height: 1;
-}
-
-.emoji-preset-btn:hover {
-  background: var(--color-hover-overlay);
-  border-color: var(--border);
-}
-
-.emoji-preset-divider {
-  grid-column: 1 / -1;
-  height: 1px;
-  background: var(--border);
-  margin: var(--space-1) 0;
-}
-
-:root.force-dark .msg-reaction-pill {
-  background: var(--bg-subtle);
-  border-color: var(--border);
-}
-:root.force-dark .msg-reaction-pill[data-mine="true"] {
-  background: var(--link-active-bg);
-  border-color: var(--accent);
 }
 
