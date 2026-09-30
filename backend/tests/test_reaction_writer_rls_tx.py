@@ -11,7 +11,6 @@ ReactionWriter の RLS トランザクション修正テスト（ADR-072 / ADR-0
 - is_bot_reaction が INSERT に引き渡される
 - SSE publish はトランザクション commit 後に呼ばれる
 - DB 失敗時は exc_info 付き warning を出し SSE を publish しない
-- 実 PostgreSQL（RLS_TEST_DATABASE_URL 設定時のみ）: トランザクション無しは失敗・有りは成功
 
 実行:
     pytest backend/tests/test_reaction_writer_rls_tx.py -v
@@ -25,13 +24,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
-import asyncpg
 import pytest
-from sqlalchemy import text
-from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.discord_gateway.reaction_writer import ReactionWriter
-from tests.rls_bootstrap import _apply_migration, bootstrap_tenant_schema, tenant_schema_lock
 
 SNOWFLAKE = "222222222222222222"
 CHANNEL_ID = "111111111111111111"
@@ -130,80 +125,3 @@ async def test_db_failure_logs_warning_with_exc_info_and_skips_sse(caplog):
     record = next(r for r in caplog.records if "DB 書き込み失敗" in r.getMessage())
     assert record.exc_info is not None
     sse.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# 実 PostgreSQL（RLS の実挙動）。RLS_TEST_DATABASE_URL 未設定なら skip。
-# ---------------------------------------------------------------------------
-
-ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
-APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
-_TENANT_ID = 98
-_SCHEMA = f"tenant_{_TENANT_ID:03d}"
-_REACTIONS_MIGRATION = "20260927_100000_create_meta_message_reactions.sql"
-
-
-def _dsn(url: str) -> str:
-    return url.replace("postgresql+asyncpg://", "postgresql://")
-
-
-async def _build_schema_from_source_of_truth(admin_engine) -> None:
-    """本番と同じ経路でテナントスキーマを作る（DDL のコピーは持たない）。
-
-    create_tenant_schema（meta_messages）→ 本番 migration（meta_message_reactions）の順。
-    """
-    await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
-    await _apply_migration(admin_engine, _REACTIONS_MIGRATION)
-    async with admin_engine.begin() as conn:
-        await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
-        await conn.execute(
-            text(f"INSERT INTO {_SCHEMA}.meta_messages (tenant_id, sender_id, message_id)"
-                 " VALUES (:t, 'seed', :m)"),
-            {"t": _TENANT_ID, "m": SNOWFLAKE},
-        )
-
-
-@pytest.mark.skipif(
-    not ADMIN_PG_URL or not APP_PG_URL,
-    reason="実 PostgreSQL 環境が必要 (RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL 未設定)。",
-)
-@pytest.mark.asyncio
-async def test_real_pg_bare_set_config_fails_and_transaction_succeeds():
-    admin_engine = create_async_engine(ADMIN_PG_URL)
-    writer = ReactionWriter(_dsn(APP_PG_URL))
-    emoji = SimpleNamespace(id=None, name="❤️", animated=False)
-    member = SimpleNamespace(display_name="Bot", name="bot")
-    verify_sql = f"SELECT emoji_name, is_bot_reaction FROM {_SCHEMA}.meta_message_reactions"
-    try:
-        async with tenant_schema_lock(admin_engine, _TENANT_ID):
-            await _build_schema_from_source_of_truth(admin_engine)
-            await writer.initialize()
-
-            # 修正前の挙動: トランザクション無しの set_config は次の文で消える
-            async with writer._pool.acquire() as conn:
-                await conn.execute("SELECT set_config('app.tenant_id', $1, true)", str(_TENANT_ID))
-                with pytest.raises(asyncpg.exceptions.InvalidTextRepresentationError):
-                    await conn.fetchrow(f"SELECT id FROM {_SCHEMA}.meta_messages LIMIT 1")
-
-            # 修正後: process_reaction が行を書き込み、remove で消える
-            with patch(SSE_PATH, new=AsyncMock()):
-                await writer.process_reaction(
-                    tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
-                    user_id="u1", emoji=emoji, member=member, action="add", is_bot_reaction=True,
-                )
-            async with admin_engine.begin() as conn:
-                await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
-                rows = (await conn.execute(text(verify_sql))).all()
-            assert [(r[0], r[1]) for r in rows] == [("❤️", True)]
-
-            with patch(SSE_PATH, new=AsyncMock()):
-                await writer.process_reaction(
-                    tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
-                    user_id="u1", emoji=emoji, member=member, action="remove", is_bot_reaction=True,
-                )
-            async with admin_engine.begin() as conn:
-                await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
-                assert (await conn.execute(text(verify_sql))).all() == []
-    finally:
-        await writer.close()
-        await admin_engine.dispose()

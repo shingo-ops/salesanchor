@@ -50,7 +50,7 @@ async with self._pool.acquire() as conn:
 |is_bot_reaction が INSERT に渡る（True/False）|同 add テスト（parametrize）と backend/tests/test_discord_reaction_wiring.py|
 |SSE は commit 後|add テスト（SSE 呼び出し時点のイベント列）|
 |失敗時に exc_info 付き警告|同 test_db_failure_logs_warning_with_exc_info_and_skips_sse|
-|実 PostgreSQL の RLS で、トランザクション無しは InvalidTextRepresentationError・process_reaction は成功|同 test_real_pg_bare_set_config_fails_and_transaction_succeeds（CI の RLS_TEST_DATABASE_URL / RLS_ADMIN_DATABASE_URL で実行）|
+|実 PostgreSQL の RLS でトランザクション無しは失敗・有りは成功|本番 PO スモーク（下記2行）。実PGテストは CI で DeadlockDetectedError（tests/test_rls_bootstrap_ordering.py・bootstrap の public DDL 競合・CI run 36716926440）が出たため、CI 全体の不安定化を避けて削除|
 |本番: PO が受信箱で ❤️ を押すと tenant_001.meta_message_reactions に is_bot_reaction=true の行ができ、受信箱で塗りつぶしハートになる|マージ・デプロイ後に PO が確認（読み取りのみ）|
 |本番: 顧客が Discord でリアクションすると受信箱にバッジが出る|同上|
 
@@ -61,7 +61,7 @@ async with self._pool.acquire() as conn:
 
 ## 維持の仕組み
 
-- 実 PG の RLS テストが CI（test.yml の RLS 環境変数）で回り、トランザクションを外すと FAIL する。
+- 実 PG の RLS テストは追加しない（上記の理由）。本番 PO スモークで確認する。
 - ユニットテストが transaction 内実行と順序を固定する。
 - 失敗は warning + exc_info で Gateway ログに残る（今回の原因特定に使えた経路を維持）。
 - 守り手: `backend/tests/test_reaction_writer_rls_tx.py`
