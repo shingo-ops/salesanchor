@@ -311,47 +311,102 @@ from app.services.extraction_judgement_svc import (  # noqa: E402
     resolve_price_quantity,
 )
 
-# backend/app/services/tcg_unit_recovery_svc.py:70-119 の別名一覧（canonical 名を含む）。
-_UNIT_ALIASES = tuple(
-    ["Case", "Box", "Pack", "Piece", "Set", "本", "点", "個"]
-    + "case,CASE,Case,carton,CARTON,Carton,ct,CT,Ct,カートン,ケース,ｶｰﾄﾝ,ｹｰｽ".split(",")
-    + "box,BOX,Box,ボックス,箱,ﾎﾞｯｸｽ".split(",")
-    + "pack,PACK,Pack,パック,ﾊﾟｯｸ".split(",")
-    + "piece,PIECE,Piece,pcs,PCS,Pcs,枚".split(",")
-    + "set,SET,Set,セット,ｾｯﾄ".split(",")
+# 本番 public.units / public.unit_aliases の読み取り結果（2026-09-30, canonical と alias_text の和集合・45語）。
+_UNIT_ALIASES = (
+    "BOX",
+    "Booklet",
+    "Box",
+    "CARTON",
+    "CASE",
+    "CT",
+    "Carton",
+    "Case",
+    "Ct",
+    "MasterCarton",
+    "OX",
+    "PACK",
+    "PCS",
+    "PIECE",
+    "Pack",
+    "Pcs",
+    "Piece",
+    "SET",
+    "Set",
+    "box",
+    "carton",
+    "case",
+    "ct",
+    "pack",
+    "pcs",
+    "piece",
+    "set",
+    "カートン",
+    "ケース",
+    "セット",
+    "パック",
+    "ボックス",
+    "マスターカートン",
+    "個",
+    "冊",
+    "本",
+    "枚",
+    "点",
+    "箱",
+    "ｶートン",
+    "ｹース",
+    "ｾｯﾄ",
+    "ﾊﾟｯｸ",
+    "ﾎﾞｯｸｽ",
+    "ﾏｽﾀｰｶｰﾄﾝ",
 )
 
-# (block, gemini_price, gemini_quantity, order, price, quantity, basis, reasons)
+# (block, gemini_price, gemini_quantity, order, price, quantity, basis, reasons, product_name)
 _PRICE_QTY_CASES = [
-    ("27,500×18BOX", "27,500", "18BOX", None, 27500, 18, "marker", ()),
-    ("40個＠27500円", "27500円", "40個", None, 27500, 40, "marker", ()),
-    ("在庫50/13500円", "13500円", "50", None, 13500, 50, "marker", ()),
-    ("@19,000円/在庫15※潰れ破れなどあり", "19,000円", "15", None, 19000, 15, "marker", ()),
-    ("15BOX：19,500", "19,500", "15BOX", None, 19500, 15, "marker", ()),
-    ("■単価（税込）：￥27,500\n■在庫数：17", "￥27,500", "17", None, 27500, 17, "marker", ()),
-    ("ボックス/¥25,000\n残り200", "¥25,000", "200", None, 25000, 200, "marker", ()),
-    ("10900@152", "10900", "152", "price_first", 10900, 152, "rule", ()),
-    ("ストームエメラルダ 100@11300", "11300", "100", "quantity_first", 11300, 100, "rule", ()),
-    ("400＠518", "400", "518", "price_first", 400, 518, "rule", ()),
-    ("24万　在庫20", "24万", "20", None, 240000, 20, "marker", ()),
-    ("30円×3,000枚", "30円", "3,000枚", None, 30, 3000, "marker", ()),
-    ("¥4,0000/冊\n15冊", "¥4,0000", None, None, 40000, None, "marker", ("irregular_comma",)),
+    ("27,500×18BOX", "27,500", "18BOX", None, 27500, 18, "marker", (), None),
+    ("40個＠27500円", "27500円", "40個", None, 27500, 40, "marker", (), None),
+    ("在庫50/13500円", "13500円", "50", None, 13500, 50, "marker", (), None),
+    ("@19,000円/在庫15※潰れ破れなどあり", "19,000円", "15", None, 19000, 15, "marker", (), None),
+    ("15BOX：19,500", "19,500", "15BOX", None, 19500, 15, "marker", (), None),
+    ("■単価（税込）：￥27,500\n■在庫数：17", "￥27,500", "17", None, 27500, 17, "marker", (), None),
+    ("ボックス/¥25,000\n残り200", "¥25,000", "200", None, 25000, 200, "marker", (), None),
+    ("10900@152", "10900", "152", "price_first", 10900, 152, "rule", (), None),
+    ("ストームエメラルダ 100@11300", "11300", "100", "quantity_first", 11300, 100, "rule", (), None),
+    ("400＠518", "400", "518", "price_first", 400, 518, "rule", (), None),
+    ("24万　在庫20", "24万", "20", None, 240000, 20, "marker", (), None),
+    ("30円×3,000枚", "30円", "3,000枚", None, 30, 3000, "marker", (), None),
+    ("¥4,0000/冊\n15冊", "¥4,0000", None, None, 40000, None, "marker", ("irregular_comma",), None),
     (
         "@150,000円/在庫2\n@12,100円/在庫48",
-        "150,000円／12,100円", "2／48", None, None, None, "none", ("multiple_values",),
+        "150,000円／12,100円", "2／48", None, None, None, "none", ("multiple_values",), None,
     ),
-    ("10900@152", "10900", "152", None, None, None, "none", ("no_order_rule",)),
-    ("OP-17\n12,000×11BOX", "12,000", "11BOX", None, 12000, 11, "marker", ()),
+    ("10900@152", "10900", "152", None, None, None, "none", ("no_order_rule",), None),
+    ("OP-17\n12,000×11BOX", "12,000", "11BOX", None, 12000, 11, "marker", (), None),
+    ("23500円/ 1BOX\n60点", "23500円", "60点", None, 23500, 60, "marker", (), None),
+    ("¥280,000/1ケース\n5カートン", "¥280,000", "5カートン", None, 280000, 5, "marker", (), None),
+    (
+        "ARバルク、100枚セット\n@13000円 在庫1", "13000円", "1", None, 13000, 1, "marker", (),
+        "ARバルク、100枚セット",
+    ),
+    ("●アビスアイ　¥8,500　在庫38個", "¥8,500", "38個", None, 8500, 38, "marker", (), "アビスアイ"),
+    (
+        "ストームエメラルダ 100@11300", "11300", "100", "quantity_first", 11300, 100, "rule", (),
+        "ストームエメラルダ",
+    ),
+    ("500packs/330円（未サーチ）", "330円", "500packs", None, 330, None, "marker", ("unresolved",), None),
+
 ]
 
 
 @pytest.mark.parametrize(
-    "block,g_price,g_qty,order,price,quantity,basis,reasons", _PRICE_QTY_CASES
+    "block,g_price,g_qty,order,price,quantity,basis,reasons,product_name", _PRICE_QTY_CASES
 )
-def test_resolve_price_quantity_design_table(block, g_price, g_qty, order, price, quantity, basis, reasons):
+def test_resolve_price_quantity_design_table(
+    block, g_price, g_qty, order, price, quantity, basis, reasons, product_name
+):
     # Act
     result = resolve_price_quantity(
-        block, gemini_price=g_price, gemini_quantity=g_qty, unit_aliases=_UNIT_ALIASES, order=order
+        block, gemini_price=g_price, gemini_quantity=g_qty, unit_aliases=_UNIT_ALIASES, order=order,
+        gemini_product_name=product_name,
     )
 
     # Assert

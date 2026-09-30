@@ -321,6 +321,8 @@ def _extract_line_numbers(line: str, line_no: int, aliases: Sequence[str]) -> li
             continue
         has_man = after.startswith(_MAN_MARKER)
         value = float(raw.replace(",", ""))
+        if is_unit and value == 1 and re.search(r"/\s*$", before):
+            continue  # 「/1BOX」は単位あたりの価格の表記で、数量ではない
         if has_man:
             value *= _MAN_MULTIPLIER
         price_marked = (
@@ -359,6 +361,21 @@ def _apply_at_marker(line: str, nums: list[_Num]) -> list[_Num]:
         else n
         for n in nums
     ]
+
+
+def _mask_product_name(lines: list[tuple[int, str]], product_name: str | None) -> list[tuple[int, str]]:
+    """商品名の文字列を空白に置き換え、商品名だけの行は対象から外す（商品名中の数を値にしない）。"""
+    name = _nfkc(product_name).strip()
+    if not name or name.lower() in _NO_VALUE_TEXTS:
+        return lines
+    name_compact = "".join(name.split())
+    masked: list[tuple[int, str]] = []
+    for no, text in lines:
+        compact = "".join(text.split())
+        if compact and compact in name_compact:
+            continue
+        masked.append((no, text.replace(name, " " * len(name))))
+    return masked
 
 
 def _unique(nums: list[_Num]) -> list[_Num]:
@@ -413,6 +430,7 @@ def resolve_price_quantity(
     gemini_quantity: str | None,
     unit_aliases: Iterable[str],
     order: Literal["price_first", "quantity_first"] | None,
+    gemini_product_name: str | None = None,
 ) -> PriceQtyResult:
     """価格と数量をシステムが決め、Gemini の書き写しと検算する（純粋関数）。
 
@@ -423,7 +441,9 @@ def resolve_price_quantity(
         return PriceQtyResult(None, None, "none", (), None, None)
 
     aliases = sorted({_nfkc(a).lower() for a in unit_aliases if a and _nfkc(a).strip()}, key=len, reverse=True)
-    lines = [(i + 1, _nfkc(t)) for i, t in enumerate(block.split("\n"))]
+    lines = _mask_product_name(
+        [(i + 1, _nfkc(t)) for i, t in enumerate(block.split("\n"))], gemini_product_name
+    )
     target = [
         (no, t) for no, t in lines
         if any(g in _only_digits(t) for g in (*g_price, *g_qty))

@@ -290,6 +290,7 @@ def _judge_block(
         gemini_quantity=block_item["raw_quantity"],
         unit_aliases=unit_aliases,
         order=order,
+        gemini_product_name=block_item["raw_product_name"],
     )
     if price_qty.reasons:
         review_items.append(
