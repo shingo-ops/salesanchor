@@ -16,6 +16,17 @@
     <!-- 画面ウェイク（PowerManager.WakeLock）に必要。dangerous permission ではないためインストール時に自動付与される。 -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
 
+    <!-- LINE通知の記録を外部ストレージ(Download/sa-line-notify)に書き出すために必要。 -->
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <!--
+      android.permission.INTERNET は意図的に付与しない。
+      この段階では「LINE通知から本文を取り出して端末内に記録する」だけを行い、
+      送信機能は実装しない（本番配線は別作業）。INTERNET権限を持たせないことで、
+      実装ミスや将来の変更があっても本アプリから外部への送信が構造的に起こり
+      得ないようにする。
+    -->
+
     <application
         android:label="@string/app_name"
         android:allowBackup="false">
@@ -54,6 +65,16 @@
                 <action android:name="jp.salesanchor.lineexport.DIAG_WINDOWS" />
             </intent-filter>
         </receiver>
+
+        <!-- NotificationListenerService: LINEの通知から本文を取り出して端末内に記録するだけ（送信はしない）。 -->
+        <service
+            android:name=".LineNotifyListenerService"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
 
     </application>
 </manifest>

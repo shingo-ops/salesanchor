@@ -87,3 +87,66 @@ javac `--release 8` → dalvik-exchange で classes.dex → aapt でリソース
 4. 測定中は `flock /root/line-auto-export/lock` を握って毎時の自動書き出しを止める（割り込みでタップが混ざるため）。
 
 生の記録には利用者の実際の暗証番号入力が混ざるため、解析後に削除した。生記録はリポジトリに入れない。
+
+## 2026-09-30 追補: 通知リスナー方式（記録のみ・送信なし）
+
+### 目的
+
+段階2（LINE操作の自動化）とは別経路として、`NotificationListenerService` でLINEの通知を横取りし、本文を端末内に記録するだけの機能を追加した。**送信機能は実装していない**（本番配線・Termuxへの受け渡しは別作業）。誤送信を構造的に防ぐため、このアプリには `android.permission.INTERNET` を一切付与していない（`AndroidManifest.xml` に理由をコメントで明記）。
+
+### 実測で判明した通知の形
+
+対象端末で `jp.naver.line.android` の会話通知を実際に受信して確認した extras の形（前提として記載済みの実測に基づく。詳細は本アプリの実装依頼メモを参照）:
+
+- `android.conversationTitle`: グループ名（例「WeGo買います専用」）。1対1トークでは無いことがある。
+- `android.title`: `"グループ名: 送信者名"` の形。`conversationTitle` が無い場合のフォールバック元。
+- `android.text`: 本文。改行を含む長文がそのまま入る（実測: 484字・改行11個・絵文字入りが欠けずに入っていた）。
+- `android.bigText`: 展開時の本文（`android.text` より優先度は下だが `android.messages` が無い場合の次点）。
+- `android.messages`: `Parcelable[]`（要素は `Bundle`）。各要素は `text`(CharSequence) / `time`(long) / `sender`(CharSequence) を持つ。**`sender_person` は `android.app.Person`（API28追加）のため一切参照しない。**
+- `sbn.getNotification().when`: 通知の到着時刻(epoch ms)。0のことがある。
+- グループのサマリ通知（`FLAG_GROUP_SUMMARY`）も別に飛んでくるため除外が必要。
+
+値の決定順（`LineNotifyListenerService#handle`）:
+1. グループ名: `android.conversationTitle` → 無ければ `android.title` の `": "` より前（無ければ title 全体）
+2. 送信者: `android.messages` 最後の要素の `sender` → 無ければ `android.title` の `": "` より後 → 無ければ空文字
+3. 本文: `android.messages` 最後の要素の `text` → 無ければ `android.bigText` → 無ければ `android.text`
+4. 時刻: `android.messages` の `time` → 0/未設定なら `notification.when` → それも0なら `sbn.getPostTime()`
+
+### API23ビルド制約への対処
+
+このビルド環境の `javac` は API23 の `android.jar` にリンクしているため、API24以降に追加されたシンボルは**コンパイル時に参照できない**（実行時の端末はAndroid 16でも無関係）。`javap -p -constants` で確認した結果、`Notification.EXTRA_CONVERSATION_TITLE` と `Notification.EXTRA_MESSAGES` はAPI23の `android.jar` に存在しない（`EXTRA_TITLE`/`EXTRA_TEXT`/`EXTRA_BIG_TEXT` は存在する）。そのため `LineNotifyListenerService` では `"android.conversationTitle"` / `"android.messages"` をリテラル文字列で直読みしている。`android.app.Person`（API28）・`NotificationChannel`（API26、既存の `NotificationCompat` のリフレクション方式を流用）にも一切触れていない。`NotificationListenerService` / `StatusBarNotification` はAPI18で存在するため、リフレクション不要で直接使用できた。
+
+### 記録先とファイル形式
+
+記録先ディレクトリは `Environment.getExternalStorageDirectory() + "/Download/sa-line-notify"` を優先し、作成/書き込みができなければ `getFilesDir() + "/sa-line-notify"` にフォールバックする（`LineNotifyListenerService#resolveStorageDir`）。実際に使ったパスは `NotifyStore` に保存し、設定画面に表示する。
+
+- `raw-YYYYMMDD.jsonl`（検証用）: 1行1レコードのJSON。フィールドは `postTime`（記録処理を行った時刻, ISO8601+タイムゾーンオフセット）、`when`（本文決定に使った到着時刻, 同形式）、`key`（`sbn.getKey()`）、`group`、`sender`、`text`、`textLen`、`messagesCount`、`titleRaw`、`source`（`messages`/`bigText`/`text` のどれから本文を取ったか）。ISO8601はオフセットを `+0900` のようなbasic形式で出す（`+09:00` のextended形式にはしていない。どちらもISO8601として有効）。
+- `talk-YYYYMMDD.txt`（既存の Android LINE 書き出し取り込み形式。`tools/termux-line-import/android_parser.py` がそのまま読める）: 日付が変わる最初の1件の前に `YYYY/M/D(曜)` 行（曜は日本語1文字）、各メッセージは `H:MM<TAB>送信者<TAB>本文`。本文中の改行はエスケープせず、CharSequenceの `\n` をそのまま書き込むだけで既存パーサの継続行（タブなしの生の行）と同じ形になる。日付行の重複を防ぐため、最後に書いた日付ヘッダを `NotifyStore` に保持し、変わったときだけ出力する。
+- ファイル名の `YYYYMMDD` は記録処理を行った時刻（`postTime`）のローカル日付。`talk-*.txt` 内の `YYYY/M/D(曜)` ヘッダは本文決定に使った到着時刻（`when`）のローカル日付（通常は同じ日になるはずだが、日付境界をまたいだ遅延通知では一致しないことがあり得る＝未検証）。
+- 両ファイルとも UTF-8、1件ごとに追記直後に flush、書き込みは `LineNotifyListenerService` 内の `synchronized (WRITE_LOCK)` ブロックで直列化している。
+
+絞り込み: `NotifyStore` に保存された対象グループ名（カンマ区切り、各要素をtrimしたうえで完全一致）のいずれかと一致する通知だけを記録する。保存値が空文字列のときは全グループを記録する。既定値は `WeGo売ります掲示板グループ`。設定画面（`SettingsActivity`）の入力欄で変更できる。
+
+件数・最終記録時刻・最終記録グループ・記録先パスは `NotifyStore`（`PinStore` と同じ private SharedPreferences方式、別ファイル）に保存し、通知ID `4204` を「記録: N件 / 最後: HH:MM グループ名」の形で更新表示する。**本文は通知にもログにも出さない**（例外ログは種別と `textLen` のみ）。
+
+### INTERNET権限を持たせない理由
+
+この段階の目的は「本文を取り出して端末内に記録できるか」の検証であり、送信は別作業（PO確認・本番配線）で行う。実装ミスや将来の変更が万一あっても、このアプリ自体に `INTERNET` 権限が無ければ外部への送信が起こり得ない。`aapt dump badging out/app-debug.apk` で `INTERNET` のuses-permissionが出力に含まれないことを確認済み（`WRITE_EXTERNAL_STORAGE` に伴う `READ_EXTERNAL_STORAGE` のuses-implied-permissionのみ）。
+
+### 動作確認の手順（未実施・実機で要確認）
+
+1. APKをインストール（本アプリでは実施しない。POが実施）。
+2. 設定 → アプリ → SA LINE Export → 通知の使用を許可（`SettingsActivity` の「通知アクセスの設定を開く」ボタンから `ACTION_NOTIFICATION_LISTENER_SETTINGS` を開ける）。
+3. 「記録用ストレージ権限を許可」ボタンで `WRITE_EXTERNAL_STORAGE` を許可（Android 10+ではスコープドストレージの影響で `Download/` 配下への書き込みが制限される可能性があり未検証＝下記「未対応事項」）。
+4. 設定画面の対象グループ欄を確認・保存（既定は `WeGo売ります掲示板グループ`）。
+5. 対象グループ宛にLINEメッセージを送ってもらい、通知が届いた後に設定画面へ戻って「記録件数」「最終記録」「記録先」が更新されるか確認。
+6. `adb shell run-as jp.salesanchor.lineexport ...` またはファイルマネージャで `Download/sa-line-notify/raw-YYYYMMDD.jsonl` と `talk-YYYYMMDD.txt` の中身を確認し、本文・改行・絵文字が欠落なく入っているか、`talk-*.txt` が `android_parser.py` でパースできる形式になっているかを確認する。
+
+### 未対応・不明点
+
+- 実機での動作確認は未実施（このアプリ側の実装はビルド確認のみ、実機検証はPOが担当）。
+- Android 10+ のスコープドストレージが `Environment.getExternalStorageDirectory() + "/Download/sa-line-notify"` への書き込みにどう影響するか未検証。書き込めない場合は `getFilesDir()` フォールバックに自動的に切り替わるはずだが未確認。
+- `android.messages` の実際のキー名（`text`/`time`/`sender`）は `Notification.MessagingStyle.Message#toBundle()` の実装に基づく想定であり、対象端末のLINEアプリが実際に `MessagingStyle` でこれらのキーを使っているかは実機ログでの再確認が望ましい（メモに記載の実測結果に基づき実装したが、本追補時点では実装者はその実測ログ自体を直接見ていない）。
+- 対象グループ名のカンマ区切りは各要素をtrimして比較している（仕様上は「完全一致」とだけ指定されていたが、人力入力時のスペース混入を許容するためtrimを追加した。トリム無しの厳密一致に戻す場合は `LineNotifyListenerService#matchesTarget` を変更する）。
+- 日付境界をまたぐ遅延通知（`talk-*.txt` のファイル名日付とヘッダ日付が食い違うケース）は未検証。
+- LINEのアップデートで `android.messages`/`android.conversationTitle` の有無やキー名が変わる可能性があり、その場合は本追補の「値の決定順」を実機ログで再確認して調整が必要。

@@ -9,4 +9,19 @@
     <string name="pin_invalid">PINは4桁以上の数字で入力してください</string>
     <string name="pin_saved">PINを保存しました</string>
     <string name="accessibility_service_description">SA LINE Export のロック解除自動化サービス（当該アプリの操作のみに使用）</string>
+
+    <!-- 通知記録（LineNotifyListenerService）関連 -->
+    <string name="notify_section_title">通知記録（送信はしません）</string>
+    <string name="notify_access_enabled">通知アクセス: 有効</string>
+    <string name="notify_access_disabled">通知アクセス: 無効</string>
+    <string name="notify_open_settings_button">通知アクセスの設定を開く</string>
+    <string name="notify_record_count_format">記録件数: %1$d件</string>
+    <string name="notify_last_time_format">最終記録: %1$s</string>
+    <string name="notify_last_time_none">最終記録: なし</string>
+    <string name="notify_storage_path_format">記録先: %1$s</string>
+    <string name="notify_storage_path_none">記録先: 未確定（まだ記録がありません）</string>
+    <string name="notify_target_groups_hint">対象グループ名（カンマ区切り、空欄で全グループ）</string>
+    <string name="notify_target_groups_save_button">対象グループを保存</string>
+    <string name="notify_target_groups_saved">対象グループを保存しました</string>
+    <string name="notify_request_storage_permission_button">記録用ストレージ権限を許可</string>
 </resources>
