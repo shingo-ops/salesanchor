@@ -2212,7 +2212,7 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 #### 特定されたギャップ
 
 1. **paid_at = NOW()問題**: 3箇所全てでサーバー時刻を使用。PayPalのWebhookペイロードに含まれる`payment_date`を無視している。入金日と処理日が異なる場合（休日・時差）に記録が不正確になる
-2. **PayPal実受取額の未取得**: `paypal_payments.py`はfee情報を取得できる構造だが、`order_financials`への自動転記はない
+2. **PayPal実受取額の未取得**: `backend/app/services/paypal_payments.py`はfee情報を取得できる構造だが、`order_financials`への自動転記はない
 3. **Wise API完全未実装**: `backend/`にWise API連携コードなし。ADR-095に「Wise API本格調査を後日」と記載
 
 ---
@@ -2240,7 +2240,7 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 `app_fx_rates`テーブル（全テナント共通、`migrations/20260628_170000_add_app_fx_rates.sql`）:
 - `currency` VARCHAR(3), `rate_jpy` NUMERIC(12,4), `fetched_at` TIMESTAMPTZ
 - 現在USDのみ。Celery Beatが1日2回外部API（open.er-api.com）からUPSERT
-- `invoices`テーブルに`exchange_rate_jpy`/`exchange_rate_usd`を個別保持（`tenant.py:860-861`）
+- `invoices`テーブルに`exchange_rate_jpy`/`exchange_rate_usd`を個別保持（`backend/app/services/tenant.py:860-861`）
 - `order_financials`には為替レートカラムなし（JPY換算済み前提）
 
 #### 権限キー（約80キー）
@@ -2250,7 +2250,7 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 
 #### ADR-144（UIガバナンス）違反
 
-**【事実】** `OrderFinancialPanel.tsx`が生`<input type="number">`と生`<textarea>`を使用（`Modal`/`Button`のみ金型使用）。`ui-allow`コメントなし。ADR-144違反。
+**【事実】** `frontend/src/components/OrderFinancialPanel.tsx`が生`<input type="number">`と生`<textarea>`を使用（`Modal`/`Button`のみ金型使用）。`ui-allow`コメントなし。ADR-144違反。
 
 ---
 
@@ -2258,8 +2258,8 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 
 #### 概要
 
-- シートタブ総数: **134タブ**（`inventory.md`記載）
-- DBテーブル数（テナントスキーマ）: **42テーブル**（`tenant.py`定義）
+- シートタブ総数: **134タブ**（`docs/handoff/db-ssot-sheet-recon/inventory.md`記載）
+- DBテーブル数（テナントスキーマ）: **42テーブル**（`backend/app/services/tenant.py`定義）
 - backup/copy/旧タブ: 約53タブ（業務データではない）
 - 業務稼働タブ: 約81タブ
 
@@ -2283,7 +2283,7 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 
 1. **顧客税務番号（#2番号種別マスタ、#3顧客税務番号）**: シートは「顧客ID×番号種別ID×番号値」の3列構造。DBは`company_addresses.tax_id` VARCHAR(100)の単一フィールドのみ。複数種別（VAT/インボイス登録番号/BN等）の管理テーブル未作成
 2. **送料系マスタ（#12配送会社マスタ、#15-18サイズ・重量・荷姿マスタ）**: シートに専用タブあり。`shipping_zones`/`shipping_rates`への統合状況は未確認
-3. **集計・帳票タブ（#82 SCM出力同期・#83集計同期）**: GAS数式集計シート。DB側は`order_financials.py`のPython計算で対応
+3. **集計・帳票タブ（#82 SCM出力同期・#83集計同期）**: GAS数式集計シート。DB側は`backend/app/routers/order_financials.py`のPython計算で対応
 4. **適格請求書登録番号（インボイス制度）**: `invoices`テーブルに登録番号フィールドなし
 
 #### 税関連フィールド一覧（10箇所）
@@ -2324,7 +2324,7 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 本設計はPO固有の業務条件と既存コード・ADR・合意記録を直接根拠とする。外部事例（他社SaaS・OSSパターン等）は今回の照合作業の根拠として使用していない。
 
 - Wise公式料金ページ（wise.com/gb/pricing/）: F01調査にて公式料金体系を確認。219 JPY固定という前提が公式スケジュールにないことを確認済み
-- PayPal Invoice API: `paypal_payments.py`の既存実装が`payment_date`を取得できる構造であることをコード照合で確認
+- PayPal Invoice API: `backend/app/services/paypal_payments.py`の既存実装が`payment_date`を取得できる構造であることをコード照合で確認
 - paid_at = NOW() パターン: 自システム内の実装パターンとして照合。実入金日時との乖離はPO判断が必要
 
 我々への応用: 外部事例は補足確認のみで、設計判断はPO合意・ADR・コード実物に基づく。
