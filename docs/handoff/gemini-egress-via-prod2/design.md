@@ -96,7 +96,7 @@
   1. prod2 の `~/.ssh/authorized_keys` から中継専用鍵の1行を削除する（控え：`~/.ssh/authorized_keys.bak-20260930-025029`）
   2. この PR（release/gemini-egress-via-prod2）を revert する
 - **リスク**：`gemini-egress` コンテナは起動のたびに alpine の CDN（`apk add openssh-client`）からパッケージを取得するため、CDN が止まっていると起動に失敗する。自前イメージ（Dockerfile をビルドして pin する）にするかどうかは、次の便で決める。→ §5-4 で対処
-- **未削除の残骸**：`monitoring/prod2/gemini-egress/tunnel/`（Dockerfile 一式）は、この改訂で使わなくなったが削除していない。ディレクトリの削除は破壊的操作として PO の承認（`scripts/permit-danger.sh`）が必要な運用のため、承認取得の手間を避けてこの便では見送り、あとの片付けの便に回した。`docker-compose.yml`（prod2）の `tunnel` サービス定義は既に外してあるので、動作には影響しない。
+- **未削除の残骸**：`monitoring/prod2/gemini-egress/tunnel/`（Dockerfile 一式）は、この改訂で使わなくなったが削除していない。ディレクトリの削除は破壊的操作として PO の承認（`scripts/permit-danger.sh`）が必要な運用のため、承認取得の手間を避けてこの便では見送り、あとの片付けの便に回した。`docker-compose.yml`（prod2）の `tunnel` サービス定義は既に外してあるので、動作には影響しない。→ 2026-09-30 の片付け PR（release/gemini-egress-cleanup）で削除済み。
 
 ### 5-2. アプリ（PR：release/gemini-egress-via-prod2）
 1. `backend/app/services/gemini_extraction_svc.py` の `_get_genai_client()`（247-261行）

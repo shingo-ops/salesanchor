@@ -2,7 +2,7 @@
 MIG-04 Stage 2: Gemini 抽出サービス。
 
 RawExtractionV2.js (GAS) の RAW_EXTRACTION_V2_PROMPT_TEXT を Python に移植し、
-Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
+Gemini（モデルは _GEMINI_MODEL を参照）で LINE メッセージから商品明細を抽出する。
 
 設計:
   - google-genai SDK (新) を使用
@@ -12,7 +12,7 @@ Gemini 3.6 Flash で LINE メッセージから商品明細を抽出する。
 
 既存APIとの互換:
   - プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + input（v3では作品マスタ参照を追加）
-  - モデル: gemini-3.6-flash / temperature=0
+  - モデル: _GEMINI_MODEL / temperature=0
 """
 from __future__ import annotations
 
@@ -374,7 +374,7 @@ def call_gemini_extraction(
     """
     Gemini API を呼び出し、抽出結果テキスト（パイプ区切り表）を返す。
 
-    モデル: gemini-3.6-flash（GAS 側デフォルトと同一）
+    モデル: _GEMINI_MODEL
     temperature: 0
     プロンプト連結: PROMPT_TEXT + '\\n\\n原文:\\n' + prompt_input（v3では作品マスタ参照を追加）
     同期 SDK (models.generate_content) を使用。
