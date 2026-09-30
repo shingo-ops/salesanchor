@@ -4291,6 +4291,20 @@
       "retryError": "Failed to retry",
       "errorCategory": "Error type",
       "errorDetail": "Error detail",
+      "handlingStatus": "Status",
+      "retryCount": "Retry count",
+      "firstFailedAt": "First failed",
+      "lastFailedAt": "Last failed",
+      "tab": {
+        "unhandled": "Unhandled",
+        "inProgress": "In progress",
+        "resolved": "Resolved"
+      },
+      "status": {
+        "unhandled": "Unhandled",
+        "inProgress": "In progress",
+        "resolved": "Resolved"
+      },
       "category": {
         "gemini_rate_limit": "Gemini rate limit",
         "gemini_http_error": "Gemini HTTP error",
