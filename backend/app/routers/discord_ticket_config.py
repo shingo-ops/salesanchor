@@ -36,6 +36,7 @@ from app.auth.dependencies import (
     reset_tenant_context,
 )
 from app.database import get_db
+from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
 
@@ -54,7 +55,7 @@ class DiscordTicketConfigResponse(BaseModel):
     ticket_category_id: str | None = None
     ticket_button_channel_id: str | None = None
     staff_role_id: str | None = None
-    welcome_template: str = "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
+    welcome_template: str = bot_texts.DEFAULT_WELCOME_TEMPLATE
     small_channel_id: str | None = None
     large_channel_id: str | None = None
     # KPI7 拡張: ロール名設定（Small→Member, Large→Partner がデフォルト）
@@ -67,7 +68,7 @@ class DiscordTicketConfigUpdate(BaseModel):
     ticket_button_channel_id: str = Field(..., min_length=17, max_length=20)
     staff_role_id: str | None = Field(default=None, min_length=17, max_length=20)
     welcome_template: str = Field(
-        default="Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
+        default=bot_texts.DEFAULT_WELCOME_TEMPLATE,
         max_length=_WELCOME_TEMPLATE_MAX,
     )
     small_channel_id: str | None = Field(default=None, min_length=17, max_length=20)
@@ -253,23 +254,7 @@ async def deploy_ticket_button(
         raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。")
 
     # Discord REST API でボタンメッセージを投稿
-    payload = {
-        "content": "サポートが必要な場合は下のボタンを押してください。",
-        "components": [
-            {
-                "type": 1,  # ActionRow
-                "components": [
-                    {
-                        "type": 2,  # Button
-                        "style": 1,  # Primary (青)
-                        "label": "チケットを開く",
-                        "custom_id": "ticket_open",
-                        "emoji": {"name": "🎫"},
-                    }
-                ],
-            }
-        ],
-    }
+    payload = bot_texts.ticket_button_payload()
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.post(

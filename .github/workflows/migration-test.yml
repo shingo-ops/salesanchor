@@ -173,6 +173,8 @@ jobs:
       #      20260929_120000_fix_source_messages_received_at.sql が JOIN するため最小定義を登録
       #   ※ public.extraction_prompt_config は 20260926_080000_create_extraction_prompt_config.sql で本番作成済み。
       #      20260928_110000_create_extraction_shadow_tables.sql の INSERT ON CONFLICT のため最小定義を登録
+      #   ※ public.tenant_discord_ticket_config は 20260602_120000_add_discord_ticket_config.sql で本番作成済み。
+      #      20260930_130000_set_discord_welcome_template_english.sql の ALTER/UPDATE のため最小定義を登録
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
@@ -479,6 +481,15 @@ jobs:
               updated_at TIMESTAMPTZ DEFAULT NOW()
           );
 
+          -- public.tenant_discord_ticket_config: 20260602_120000_add_discord_ticket_config.sql で本番作成済み。
+          --   20260930_130000_set_discord_welcome_template_english.sql が ALTER COLUMN SET DEFAULT / UPDATE するため
+          --   最小定義（welcome_template は旧日本語既定つき）を登録する
+          CREATE TABLE IF NOT EXISTS public.tenant_discord_ticket_config (
+              tenant_id        INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+              welcome_template TEXT NOT NULL DEFAULT 'ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。',
+              updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+
           -- public.tenant_settings: ADR-106 テナントポリシー列が ALTER ADD COLUMN で操作する
           CREATE TABLE IF NOT EXISTS public.tenant_settings (
               tenant_id         INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
@@ -779,7 +790,7 @@ jobs:
           --   を実行するため、前提として最小定義を登録する（FK なしでよい）。
           --   input_tokens/output_tokens/cost_usd は 20260927_130000 が本番で既に ADD 済みの列。
           --   response_received_at は 20260921_110000 で本番作成済みの列（型は同ファイルと同一）。
-          --   このジョブは「変更 SQL のみ」を旧SQLの再適用なしに検証するため、20260930_140000
+          --   このジョブは「変更 SQL のみ」を旧SQLの再適用なしに検証するため、20260930_160000
           --   （PR #3884, ADR-1004 A2: llm_usage_events バックフィル）のように既存列を SELECT する
           --   migration を追加する場合、ここで列を先に用意しておく必要がある。
           CREATE TABLE IF NOT EXISTS public.extraction_attempts (
@@ -806,11 +817,11 @@ jobs:
               cost_usd             NUMERIC(10,6)
           );
 
-          -- public.llm_usage_events: ADR-1004 A1（PR #3889, migrations/20260930_130000_create_llm_usage_events.sql）
+          -- public.llm_usage_events: ADR-1004 A1（PR #3889, migrations/20260930_150000_create_llm_usage_events.sql）
           --   で本番作成予定。A1マージ後、このジョブの「変更 SQL のみ」実行方式では
-          --   20260930_130000 が再実行されないため、A2（20260930_140000_backfill_llm_usage_events.sql）の
+          --   20260930_150000 が再実行されないため、A2（20260930_160000_backfill_llm_usage_events.sql）の
           --   INSERT 先として、A1 と同一定義をここに事前登録する（A1マージ前の現状でも
-          --   changed_sql に 130000 が含まれる限り CREATE TABLE IF NOT EXISTS は無害に冪等スキップされる）。
+          --   changed_sql に 150000 が含まれる限り CREATE TABLE IF NOT EXISTS は無害に冪等スキップされる）。
           CREATE TABLE IF NOT EXISTS public.llm_usage_events (
               id                          UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
               occurred_at                 TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -1,5 +1,5 @@
 -- Migration: LLM 使用量台帳（public.llm_usage_events）過去分バックフィル（A2）
--- 前提: migrations/20260930_130000_create_llm_usage_events.sql（A1）が本番に適用済みであること。
+-- 前提: migrations/20260930_150000_create_llm_usage_events.sql（A1）が本番に適用済みであること。
 --       A1・A2 の分離理由は design.md §9「出し方（2段階）」を参照。
 --       （.github/workflows/deploy.yml がバックエンドのコード切替・celery再起動を
 --        「Run database migrations」より先に実行するため、表の作成とアプリの書き込み

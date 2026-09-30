@@ -7,8 +7,8 @@ design.md §3-4 (バックフィル) / §9 (2段階の出し方) の受入条件
     backfilled=true で台帳に写る
   - 重複防止（WHERE NOT EXISTS）: 2回目のバックフィルで行が増えない
 
-A1（migrations/20260930_130000_create_llm_usage_events.sql、表のみ）を先に適用してから
-A2（migrations/20260930_140000_backfill_llm_usage_events.sql、バックフィルのみ）を適用する。
+A1（migrations/20260930_150000_create_llm_usage_events.sql、表のみ）を先に適用してから
+A2（migrations/20260930_160000_backfill_llm_usage_events.sql、バックフィルのみ）を適用する。
 スキーマは本物の migration ファイル（.sql）を実行して作る（柱3-c: テストでの本番テーブル
 定義コピー禁止 — scripts/check_test_schema_dup.py）。test_tcg_extraction_record_pg.py と
 同じ `pg` フィクスチャ（実 PostgreSQL、CI-only: GITHUB_ACTIONS=true + RLS_ADMIN_DATABASE_URL
@@ -26,8 +26,8 @@ from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg
 
 _TOKEN_COST_COLUMNS_MIGRATION = "20260927_130000_add_extraction_token_cost_columns.sql"
-_TABLE_MIGRATION = "20260930_130000_create_llm_usage_events.sql"
-_BACKFILL_MIGRATION = "20260930_140000_backfill_llm_usage_events.sql"
+_TABLE_MIGRATION = "20260930_150000_create_llm_usage_events.sql"
+_BACKFILL_MIGRATION = "20260930_160000_backfill_llm_usage_events.sql"
 
 
 def _apply(connection, filename: str) -> None:

@@ -21,7 +21,7 @@ from __future__ import annotations
 from tests.test_tcg_work_matching_integration import MIGRATIONS
 from tests.test_tcg_work_matching_integration import pg as pg
 
-_LEDGER_MIGRATION = "20260930_130000_create_llm_usage_events.sql"
+_LEDGER_MIGRATION = "20260930_150000_create_llm_usage_events.sql"
 
 
 def _apply_ledger_migration(connection) -> None:
