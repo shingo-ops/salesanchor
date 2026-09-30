@@ -2440,9 +2440,6 @@
     },
     "knowledge": {
       "title": "Normalization Rules + Per-Supplier Rules",
-      "promptSection": "Per-Supplier Parsing Prompt (on hold)",
-      "promptHelp": "Manage the Gemini parsing prompt per supplier (imported from the spreadsheet).",
-      "promptPlaceholder": "Enter the Gemini parsing prompt for this supplier",
       "rulesSection": "Normalization Rules",
       "rulesHelp": "Rules that automatically convert a word found in an inbound message into another word.",
       "aliasesSection": "Per-Supplier Rules",
@@ -2461,7 +2458,6 @@
         "message_exclude": "Message Exclude (Immediate)",
         "message_exclude_no_digit": "Message Exclude (No Digit)",
         "block_delimiter": "Product Block Delimiter",
-        "skip_condition": "Gemini Skip Condition",
         "status_keyword": "Status Keyword"
       },
       "langs": {
@@ -4935,8 +4931,6 @@
     "knowledgeSection": "Knowledge Rules",
     "knowledgeBlockDelimiters": "Block Delimiters",
     "knowledgeBlockDelimitersHelper": "Select symbols that mark product block start",
-    "knowledgeSkipConditions": "Skip Conditions",
-    "knowledgeSkipConditionsHelper": "Blocks containing these keywords are excluded",
     "knowledgeStatusKeywords": "Status Keywords",
     "knowledgeStatusKeywordsHelper": "Keywords for Pre-order / In Stock status",
     "addRule": "Add",

@@ -839,3 +839,6 @@ run_sql migrations/20260927_130000_add_extraction_token_cost_columns.sql
 
 # ADR-009 M7: Discord リアクション保存テーブル新設（RLS有効・冪等）
 run_sql migrations/20260927_100000_create_meta_message_reactions.sql
+
+# PR-CLEAN: 旧仕入元別Geminiプロンプトテーブルを廃止（ADR-085機能撤去、PO決定 2026-09-28）
+run_sql migrations/20260928_120000_drop_supplier_prompts.sql

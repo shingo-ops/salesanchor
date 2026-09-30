@@ -1,0 +1,11 @@
+-- Migration: Drop the legacy per-supplier Gemini prompt table (public.supplier_prompts)
+-- 根拠: docs/handoff/gemini-extract-role-split/design.md（PR #3825 で追加） PR-CLEAN 節
+-- PO決定（2026-09-28）: 旧仕入元別プロンプト機能（ADR-085）は使用保留中のまま廃止。
+--   API（backend/app/routers/super_admin_suppliers.py の GET/PUT .../prompt）、
+--   スキーマ（backend/app/schemas/central_masters.py の SupplierPromptResponse/Update）、
+--   画面（frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx のプロンプト部分）、
+--   i18n（ja/en の knowledge.prompt*）、
+--   運用スクリプト（scripts/seed_supplier_prompts_from_sheet.py）を同じPRで撤去済み。
+-- 不可逆操作: DROP TABLE。PO の「GO #PR番号」を受け取るまでマージ・適用しない（ADR-135/136）。
+-- 元の CREATE は migrations/087_create_supplier_prompts.sql（変更しない・履歴として残す）。
+DROP TABLE IF EXISTS public.supplier_prompts;

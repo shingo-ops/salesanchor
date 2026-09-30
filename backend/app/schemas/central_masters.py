@@ -384,23 +384,6 @@ class RoleVisibilityAssign(BaseModel):
     visibility_keys: list[str]
 
 
-# ============================================================================
-# ADR-085: 仕入先別 Gemini プロンプト (public.supplier_prompts)
-# ============================================================================
-
-
-class SupplierPromptResponse(BaseModel):
-    supplier_id: int
-    prompt: str
-    is_active: bool
-
-    model_config = ConfigDict(from_attributes=True)
-
-
-class SupplierPromptUpdate(BaseModel):
-    prompt: str = Field(default="", max_length=50000)
-    is_active: bool = True
-
 
 # ============================================================================
 # supplier extraction rules: 仕入元ごとの抽出ルール (public.suppliers 列)
@@ -670,7 +653,7 @@ class TcgNoteMasterResponse(TcgNoteMasterBase):
 
 
 # ============================================================================
-# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / skip_condition / status_keyword）
+# 共用 Knowledge ルール（抽出カテゴリ: block_delimiter / status_keyword）
 # ============================================================================
 
 class KnowledgeRuleSimpleResponse(BaseModel):
