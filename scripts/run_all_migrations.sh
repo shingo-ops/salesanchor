@@ -851,3 +851,6 @@ run_sql migrations/20260929_120000_fix_source_messages_received_at.sql
 
 # PR-CLEAN: 旧仕入元別Geminiプロンプトテーブルを廃止（ADR-085機能撤去、PO決定 2026-09-28）
 run_sql migrations/20260930_120000_drop_supplier_prompts.sql
+
+# ADR-1004 A1: LLM 使用量台帳（llm_usage_events）新設（表のみ。バックフィルは A2 で別PR）
+run_sql migrations/20260930_130000_create_llm_usage_events.sql
