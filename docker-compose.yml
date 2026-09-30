@@ -243,6 +243,12 @@ services:
       redis:
         condition: service_healthy
     restart: unless-stopped
+    # デプロイ時の warm shutdown 用（docs/handoff/extraction-job-recovery/design.md §B-3）
+    # task_acks_late=True のため、SIGTERM 後に実行中タスクを終えるだけの猶予を与える。
+    # time_limit=330秒（tcg.extract_source_message）より短いが、
+    # deploy.yml 側で `docker compose stop -t 60` を使うため実質 60 秒が上限になる。
+    stop_signal: SIGTERM
+    stop_grace_period: 60s
     deploy:
       resources:
         limits:
