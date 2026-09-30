@@ -9,6 +9,9 @@ TCG 解析ダッシュボード API。
 
 from __future__ import annotations
 
+import logging
+from typing import Literal
+
 from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy import text
@@ -25,6 +28,8 @@ from app.services.tcg_analysis_dashboard_svc import (
     get_pipeline_trend,
     get_supplier_pipeline,
 )
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -359,6 +364,46 @@ async def get_extraction_product_ranking_endpoint(
 
 _TCG_SCHEMA = "public"
 
+# ---------------------------------------------------------------------------
+# 対応状況の割り当て（SSOT）
+#
+# design §3: extraction_jobs.status → handling_status の対応表。
+# ジョブの今の状態からその場で決める（保存はしない）。
+# 表にない状態が来たときは unhandled とし、logger.warning を出す。
+# ---------------------------------------------------------------------------
+
+HandlingStatus = Literal["unhandled", "in_progress", "resolved"]
+
+_STATUS_TO_HANDLING: dict[str, HandlingStatus] = {
+    "error": "unhandled",
+    "pending": "in_progress",
+    "running": "in_progress",
+    "done": "resolved",
+    "empty": "resolved",
+    "filtered": "resolved",
+}
+
+
+def _handling_status(job_status: str) -> HandlingStatus:
+    """extraction_jobs.status から handling_status を決める。表にない状態は unhandled。"""
+    handling = _STATUS_TO_HANDLING.get(job_status)
+    if handling is None:
+        logger.warning(
+            "Unknown extraction_jobs.status %r; defaulting handling_status to 'unhandled'",
+            job_status,
+        )
+        return "unhandled"
+    return handling
+
+
+def _job_statuses_for_handling(handling_status: HandlingStatus) -> list[str]:
+    """handling_status に対応する extraction_jobs.status の一覧を返す。"""
+    return [
+        job_status
+        for job_status, handling in _STATUS_TO_HANDLING.items()
+        if handling == handling_status
+    ]
+
 
 # ---------------------------------------------------------------------------
 # コストサマリー スキーマ
@@ -503,57 +548,119 @@ async def get_cost_summary(
 
 class ExtractionErrorItem(BaseModel):
     id: str
-    error_message: str | None
-    created_at: str | None
-    prompt_version: str | None
     supplier_name: str | None
+    prompt_version: str | None
+    error_message: str | None
     error_category: str | None
     error_detail: str | None
+    last_failed_at: str | None
+    first_failed_at: str | None
+    retry_count: int
+    job_status: str
+    handling_status: HandlingStatus
+
+
+class ExtractionErrorCounts(BaseModel):
+    unhandled: int
+    in_progress: int
+    resolved: int
+
+
+class ExtractionErrorListResponse(BaseModel):
+    items: list[ExtractionErrorItem]
+    total: int
+    counts: ExtractionErrorCounts
 
 
 @router.get(
     "/tcg/extraction-errors",
-    response_model=list[ExtractionErrorItem],
+    response_model=ExtractionErrorListResponse,
     dependencies=[Depends(require_super_admin)],
     summary="TCG 抽出エラーログ一覧（super_admin 限定）",
 )
 async def list_extraction_errors(
+    status: HandlingStatus = Query(default="unhandled"),
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=500),
     db: AsyncSession = Depends(get_db),
-) -> list[ExtractionErrorItem]:
+) -> ExtractionErrorListResponse:
+    job_statuses = _job_statuses_for_handling(status)
+
     rows = (
         await db.execute(
             text(
-                "SELECT ej.id, ej.error_message, ej.created_at, ej.prompt_version,"
-                "  s.name AS supplier_name,"
-                "  ea.validation_result"
+                "WITH job_attempts AS ("
+                "  SELECT"
+                "    extraction_job_id,"
+                "    COUNT(*) AS attempt_count,"
+                "    MIN(started_at) FILTER (WHERE phase = 'failed') AS first_failed_at,"
+                "    MAX(started_at) FILTER (WHERE phase = 'failed') AS last_failed_at,"
+                "    COUNT(*) FILTER (WHERE phase = 'failed') AS failed_count"
+                f"  FROM {_TCG_SCHEMA}.extraction_attempts"
+                "  GROUP BY extraction_job_id"
+                ")"
+                " SELECT ej.id, ej.error_message, ej.prompt_version, ej.status AS job_status,"
+                "   s.name AS supplier_name,"
+                "   ja.first_failed_at, ja.last_failed_at, ja.attempt_count,"
+                "   latest_failed.error_code, latest_failed.validation_result"
                 f" FROM {_TCG_SCHEMA}.extraction_jobs ej"
+                " JOIN job_attempts ja ON ja.extraction_job_id = ej.id AND ja.failed_count > 0"
                 f" JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id"
                 f" JOIN {_TCG_SCHEMA}.supplier_channels sc ON sc.id = sm.supplier_channel_id"
                 " JOIN public.suppliers s ON s.id = sc.supplier_id"
-                f" LEFT JOIN LATERAL ("
-                f"   SELECT ea2.validation_result"
+                " LEFT JOIN LATERAL ("
+                "   SELECT ea2.error_code, ea2.validation_result"
                 f"   FROM {_TCG_SCHEMA}.extraction_attempts ea2"
-                f"   WHERE ea2.extraction_job_id = ej.id"
-                f"   ORDER BY ea2.started_at DESC LIMIT 1"
-                f" ) ea ON true"
-                " WHERE ej.status = 'error'"
-                " ORDER BY ej.created_at DESC"
+                "   WHERE ea2.extraction_job_id = ej.id AND ea2.phase = 'failed'"
+                "   ORDER BY ea2.started_at DESC LIMIT 1"
+                " ) latest_failed ON true"
+                " WHERE ej.status = ANY(:job_statuses)"
+                " ORDER BY ja.last_failed_at DESC"
                 " OFFSET :offset LIMIT :limit"
             ),
-            {"offset": offset, "limit": limit},
+            {"job_statuses": job_statuses, "offset": offset, "limit": limit},
         )
     ).fetchall()
-    return [
+
+    counts_rows = (
+        await db.execute(
+            text(
+                "WITH job_attempts AS ("
+                "  SELECT extraction_job_id, COUNT(*) FILTER (WHERE phase = 'failed') AS failed_count"
+                f"  FROM {_TCG_SCHEMA}.extraction_attempts"
+                "  GROUP BY extraction_job_id"
+                ")"
+                " SELECT ej.status AS job_status, COUNT(*) AS cnt"
+                f" FROM {_TCG_SCHEMA}.extraction_jobs ej"
+                " JOIN job_attempts ja ON ja.extraction_job_id = ej.id AND ja.failed_count > 0"
+                " GROUP BY ej.status"
+            )
+        )
+    ).fetchall()
+
+    counts: dict[HandlingStatus, int] = {"unhandled": 0, "in_progress": 0, "resolved": 0}
+    for row in counts_rows:
+        counts[_handling_status(row.job_status)] += int(row.cnt)
+
+    items = [
         ExtractionErrorItem(
             id=str(row.id),
-            error_message=row.error_message,
-            created_at=row.created_at.isoformat() if row.created_at else None,
-            prompt_version=row.prompt_version,
             supplier_name=row.supplier_name,
+            prompt_version=row.prompt_version,
+            error_message=row.error_code or row.error_message,
             error_category=row.validation_result.get("category") if row.validation_result else None,
             error_detail=row.validation_result.get("raw") if row.validation_result else None,
+            last_failed_at=row.last_failed_at.isoformat() if row.last_failed_at else None,
+            first_failed_at=row.first_failed_at.isoformat() if row.first_failed_at else None,
+            retry_count=int(row.attempt_count) - 1,
+            job_status=row.job_status,
+            handling_status=_handling_status(row.job_status),
         )
         for row in rows
     ]
+
+    return ExtractionErrorListResponse(
+        items=items,
+        total=counts[status],
+        counts=ExtractionErrorCounts(**counts),
+    )

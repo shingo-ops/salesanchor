@@ -4291,6 +4291,20 @@
       "retryError": "再実行に失敗しました",
       "errorCategory": "エラー種別",
       "errorDetail": "エラー詳細",
+      "handlingStatus": "対応状況",
+      "retryCount": "再実行回数",
+      "firstFailedAt": "最初の失敗",
+      "lastFailedAt": "最新の失敗",
+      "tab": {
+        "unhandled": "未対応",
+        "inProgress": "対応中",
+        "resolved": "対応完了"
+      },
+      "status": {
+        "unhandled": "未対応",
+        "inProgress": "対応中",
+        "resolved": "対応完了"
+      },
       "category": {
         "gemini_rate_limit": "Gemini レート制限",
         "gemini_http_error": "Gemini HTTPエラー",
