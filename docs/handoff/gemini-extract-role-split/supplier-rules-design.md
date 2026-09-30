@@ -1,6 +1,11 @@
 # 追補：仕入元ルールの整備と、ルールのない仕入元の抽出禁止（2026-09-30）
 
-状態：**設計案（草案）／Opus 自己審査済み／PO 承認前／実装は未着手**
+状態：**設計確定（PO 合意 2026-09-30）／Opus 自己審査済み／実装は未着手**
+- PO との合意の経緯
+  - 対象を「在庫の投稿がある115社」とすることに合意した。全1,688投稿で確定した数である。
+  - 役割分担の追補2（`docs/handoff/gemini-extract-role-split/price-qty-resolver-design.md`）に「完全に合意」を得た。
+  - 進め方の順番に合意した：設計 → 記録 → 実装 → 照合試験 → ルールの不足分を補う → A/B
+- 本書 §5-3 の「照合試験」は、追補2 §11 の方法で、実装の後に行う。
 - 親：`docs/handoff/gemini-extract-role-split/design.md`（§7 PR-E「264件そろってから」を、この追補で置き換える）
 - 原文の読み取り記録（根拠）：`docs/handoff/gemini-extract-role-split/supplier-block-evidence.md`
 - 関連 ADR
