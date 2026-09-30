@@ -851,3 +851,6 @@ run_sql migrations/20260929_120000_fix_source_messages_received_at.sql
 
 # PR-CLEAN: 旧仕入元別Geminiプロンプトテーブルを廃止（ADR-085機能撤去、PO決定 2026-09-28）
 run_sql migrations/20260930_120000_drop_supplier_prompts.sql
+
+# Discord チケットのウェルカム文の DB 既定値を英語へ（顧客向け文言の英語化・PO決定 2026-09-30・冪等）
+run_sql migrations/20260930_130000_set_discord_welcome_template_english.sql
