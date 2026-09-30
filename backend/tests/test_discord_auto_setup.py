@@ -1002,3 +1002,43 @@ async def test_button_read_403_returns_descriptive_error() -> None:
     assert steps["button"]["status"] == "failed"
     assert steps["button"]["error"] is not None
     assert "チャンネル権限" in steps["button"]["error"] or "VIEW_CHANNEL" in steps["button"]["error"]
+
+
+# ---------------------------------------------------------------------------
+# テスト: 顧客向け文言は bot_texts（英語）から供給される
+# ---------------------------------------------------------------------------
+
+async def test_auto_setup_posts_english_button_and_default_welcome() -> None:
+    """ボタン投稿ペイロードと初回 INSERT の welcome_template が bot_texts の英語既定であること。"""
+    from app.discord_gateway import bot_texts
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
+    app = _build_app(mock_db)
+    discord_responses = [
+        [], [], {"id": "BOT-1"},
+        {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},
+        {"id": "ROLE-PARTNER", "name": "Partner"},
+        {"id": "ROLE-MEMBER", "name": "Member"},
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
+        {"id": "MSG-1"},
+    ]
+
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = discord_responses
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    assert resp.status_code == 200, resp.text
+    button_payload = mock_api.call_args_list[10].kwargs["json"]
+    assert button_payload == bot_texts.ticket_button_payload()
+    assert button_payload["content"] == "Need help? Click the button below to open a private support ticket."
+    assert button_payload["components"][0]["components"][0]["label"] == "Open a ticket"
+    assert button_payload["components"][0]["components"][0]["custom_id"] == "ticket_open"
+
+    upsert_params = mock_db.execute.await_args_list[2].args[1]
+    assert upsert_params["welcome_template"] == bot_texts.DEFAULT_WELCOME_TEMPLATE

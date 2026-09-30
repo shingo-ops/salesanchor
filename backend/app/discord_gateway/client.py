@@ -22,6 +22,7 @@ import discord
 from sqlalchemy import text
 
 from app.discord_gateway import (
+    bot_texts,
     ticket_channel_creator,
     ticket_channel_writer,
 )
@@ -157,7 +158,7 @@ class JarvisDiscordClient(discord.Client):
         if interaction.type != discord.InteractionType.component:
             return
         custom_id: str = (interaction.data or {}).get("custom_id", "")  # type: ignore[arg-type]
-        if not custom_id.startswith("ticket_open"):
+        if not custom_id.startswith(bot_texts.TICKET_BUTTON_CUSTOM_ID):
             return
 
         # 3 秒以内に応答しないと Discord がタイムアウトするため先に defer
@@ -170,7 +171,7 @@ class JarvisDiscordClient(discord.Client):
         member = interaction.user
         if guild is None or not isinstance(member, discord.Member):
             await interaction.followup.send(
-                "サーバー内でのみ利用できます。", ephemeral=True
+                bot_texts.GUILD_ONLY, ephemeral=True
             )
             return
 
@@ -182,7 +183,7 @@ class JarvisDiscordClient(discord.Client):
                 guild.id,
             )
             await interaction.followup.send(
-                "このサーバーは未登録です。管理者にお問い合わせください。",
+                bot_texts.GUILD_NOT_REGISTERED,
                 ephemeral=True,
             )
             return
@@ -198,7 +199,7 @@ class JarvisDiscordClient(discord.Client):
                 "[ticket] config not set tenant_id=%d guild_id=%s", tenant_id, guild.id
             )
             await interaction.followup.send(
-                "チケット機能が設定されていません。管理者にお問い合わせください。",
+                bot_texts.TICKET_NOT_CONFIGURED,
                 ephemeral=True,
             )
             return
@@ -213,13 +214,13 @@ class JarvisDiscordClient(discord.Client):
 
         if channel is None:
             await interaction.followup.send(
-                "チャンネルの作成に失敗しました。管理者にお問い合わせください。",
+                bot_texts.TICKET_CREATE_FAILED,
                 ephemeral=True,
             )
             return
 
         await interaction.followup.send(
-            f"専用チャンネルを用意しました → {channel.mention}",
+            bot_texts.TICKET_READY_TEMPLATE.format(mention=channel.mention),
             ephemeral=True,
         )
         logger.info(

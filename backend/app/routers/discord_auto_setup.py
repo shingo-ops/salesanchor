@@ -38,6 +38,7 @@ from app.auth.dependencies import (
     reset_tenant_context,
 )
 from app.database import get_db
+from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
 from app.services.discord_rest import DiscordAPIError, discord_api_request
@@ -326,10 +327,10 @@ async def run_auto_setup(
             text("""
                 INSERT INTO public.tenant_discord_ticket_config
                     (tenant_id, staff_role_id, ticket_category_id, ticket_button_channel_id,
-                     small_channel_id, large_channel_id, updated_at)
+                     small_channel_id, large_channel_id, welcome_template, updated_at)
                 VALUES
                     (:tid, :staff_role_id, :category_id, :ticket_ch_id,
-                     :small_ch_id, :large_ch_id, NOW())
+                     :small_ch_id, :large_ch_id, :welcome_template, NOW())
                 ON CONFLICT (tenant_id) DO UPDATE SET
                     staff_role_id            = COALESCE(EXCLUDED.staff_role_id,
                                                         tenant_discord_ticket_config.staff_role_id),
@@ -350,6 +351,8 @@ async def run_auto_setup(
                 "ticket_ch_id": ticket_ch_id,
                 "small_ch_id": small_ch_id,
                 "large_ch_id": large_ch_id,
+                # 初回 INSERT の既定値のみ。ON CONFLICT 側は更新しない（独自文言を保持）
+                "welcome_template": bot_texts.DEFAULT_WELCOME_TEMPLATE,
             },
         )
         await record_audit_log(
@@ -563,7 +566,7 @@ async def _ensure_ticket_button_step(
     for msg in messages:
         for row in msg.get("components", []):
             for component in row.get("components", []):
-                if component.get("custom_id") == "ticket_open":
+                if component.get("custom_id") == bot_texts.TICKET_BUTTON_CUSTOM_ID:
                     return AutoSetupStep(
                         step=step_name, status="skipped", discord_id=str(msg["id"])
                     )
@@ -587,23 +590,7 @@ async def _post_ticket_button_step(
             error="ticket-start チャンネルが未作成のためボタン投稿をスキップしました。",
         )
 
-    payload = {
-        "content": "サポートが必要な場合は下のボタンを押してください。",
-        "components": [
-            {
-                "type": 1,  # ActionRow
-                "components": [
-                    {
-                        "type": 2,  # Button
-                        "style": 1,  # Primary（青）
-                        "label": "チケットを開く",
-                        "custom_id": "ticket_open",
-                        "emoji": {"name": "🎫"},
-                    }
-                ],
-            }
-        ],
-    }
+    payload = bot_texts.ticket_button_payload()
     try:
         created = await discord_api_request(
             method="POST",
