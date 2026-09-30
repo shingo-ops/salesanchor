@@ -12,7 +12,7 @@ recon.md 参照。要点のみ再掲する。
 - `backend/app/tasks/tcg_extraction.py` の `tcg.extract_source_message`：`max_retries=2`、`time_limit=330`、`soft_time_limit=300`。`_run_extraction` は `status='pending'` のジョブだけを拾う（224-249行目）。
 - `docker-compose.yml:197-262` の celery-worker には、`stop_grace_period` と `stop_signal` がない。`--concurrency=2`。
 - `.github/workflows/deploy.yml:332-335`：`docker ps -a --filter name=astro-webapp-${_svc} | xargs -r docker rm -f` で強制削除してから `docker compose up -d`。キューが空になるのを待つ処理はない。
-- 停滞ジョブを自動で直す beat タスクはない。`tcg_diagnostics_svc.py:91-100` の `extraction-running-stale` は、読み取りの診断だけ。
+- 停滞ジョブを自動で直す beat タスクはない。`backend/app/services/tcg_diagnostics_svc.py:91-100` の `extraction-running-stale` は、読み取りの診断だけ。
 - 本番（2026-09-30）：直近7日の attempt 所要時間は p50 2.4 秒、p90 5.3 秒、最大 31.9 秒（1,142 件）。deploy.yml は 09-24 09:02 から 09-30 03:24 までに 51 回。9/30 03:29 のデプロイで、pending 5 件と running 1 件が取り残された。
 
 ## §B 変更
@@ -51,14 +51,18 @@ recon.md 参照。要点のみ再掲する。
 | V1 | 本番に反映したあと、beat が登録されている | celery inspect／beat のログ |
 | V2 | 反映したあと30分以内に、pending・running が15分以上残っていない | 本番 DB の読み取り |
 
-## §D リスク・戻し方・守り手
+## §D リスク・戻し方
 
 - 実行中のジョブを誤って二重に動かすリスクについて：time_limit が 330 秒なので、15分以上実行中のものは実在しない。回収は pending に戻すだけで、処理の冪等性は既存の retry と同じ（`extraction_items` を消して入れ直す、`retry_extraction` 内部の処理）。
 - 戻し方：この PR を revert する。
-- 守り手: Opus 設計担当（しきい値の見直し）／PO（運用の判断）
 
 ## 維持の仕組み
 
+- 守り手: Opus 設計担当（しきい値の見直し）／PO（運用の判断）
 - しきい値（`STALE_RUNNING_MINUTES`・`STALE_PENDING_MINUTES`・`MAX_RECOVER_PER_RUN`）は定数としてモジュール冒頭にまとめ、根拠のコメントを§Aへのリンクとして残す。将来 `time_limit` を変更する場合は、このファイルのコメントが変更点を示す。
 - beat 登録のテスト（T4）があるため、`beat_schedule` からの削除・書式崩れは CI で検知される。
 - 回収件数と ID を `logger.warning` で出すため、本番ログ（Loki/Promtail 経由）で回収の発生を事後に確認できる（V1/V2 の裏付け）。
+
+## 外部・過去事例
+
+- 該当なし。社内の既存パターン（`backend/app/tasks/tcg_import_discard.py` の期限切れ回収タスク、`backend/app/tasks/tcg_extraction.py:610-642` の Celery→非同期サービス呼び出しパターン）を根拠にした。Celery の stale task 回収は Celery 公式ドキュメントの `task_acks_late`/`worker_prefetch_multiplier` の推奨設定（本リポジトリは既に採用済み、recon.md 参照）に沿う一般的な対処であり、外部の失敗事例調査は本件の変更規模（既存パターンの組み合わせ）に対して不要と判断した。
