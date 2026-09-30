@@ -324,9 +324,11 @@ def build_report(
         "new_gate2_raw_message_blocks": new_raw["changed_count"],
         "new_gate3": new_gate3["count"],
         "population_gate": len(pop_gate["below_minimum"]),
+        "no_candidates": 0 if candidates else 1,
     }
     return {
         "meta": {"days": days, "candidate_count": len(candidates), "pm_code_like_raw_texts": pm_code_like_texts},
+        "candidates": {"count": len(candidates), "error": None if candidates else "NO_CANDIDATES"},
         "population_gate": pop_gate,
         "gate1": gate1,
         "legacy": {"gate2": legacy, "gate3": legacy_gate3},
@@ -472,7 +474,10 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--min-population", type=int, default=DEFAULT_MIN_POPULATION,
                         help=f"各再生対象の最小件数。下回る（0 を含む）と不合格（既定 {DEFAULT_MIN_POPULATION}）")
     parser.add_argument("--out", help="JSON の出力先（省略時は標準出力）")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.min_population < 0:
+        parser.error("--min-population は 0 以上を指定してください")
+    return args
 
 
 def write_report(report: dict, out: str | None) -> None:

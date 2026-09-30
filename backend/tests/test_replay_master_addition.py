@@ -6,6 +6,8 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import pytest
+
 from app.services.extraction_judgement_svc import ProductEntry
 from scripts import replay_master_addition as replay
 
@@ -65,7 +67,7 @@ class TestCaseAUnrelatedCandidate:
         assert report["gate_counts"] == {
             "gate1": 0, "legacy_gate2": 0, "legacy_gate3": 0,
             "new_gate2_shadow_results_pre_maintenance": 0, "new_gate2_raw_message_blocks": 0, "new_gate3": 0,
-            "population_gate": 0,
+            "population_gate": 0, "no_candidates": 0,
         }
         assert report["exit_code"] == 0
 
@@ -210,6 +212,22 @@ class TestPopulationGate:
         report = _run(_candidate(keywords=("ゲンガー",)), inputs)
         # Assert
         assert report["meta"]["pm_code_like_raw_texts"] == 1
+
+
+class TestNoCandidates:
+    def test_zero_candidates_fails_with_no_candidates_error(self):
+        # Arrange / Act
+        report = _run([], _inputs())
+        # Assert
+        assert report["candidates"] == {"count": 0, "error": "NO_CANDIDATES"}
+        assert report["gate_counts"]["no_candidates"] == 1
+        assert report["exit_code"] == 1
+
+    def test_negative_min_population_is_an_argument_error(self):
+        # Arrange / Act / Assert
+        with pytest.raises(SystemExit) as exc:
+            replay.parse_args(["c.csv", "--min-population", "-1"])
+        assert exc.value.code == 2
 
 
 class TestReadOnlySession:
