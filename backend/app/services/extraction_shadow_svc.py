@@ -15,8 +15,9 @@ from __future__ import annotations
 
 import logging
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -26,6 +27,8 @@ from app.services.extraction_judgement_svc import (
     ProductEntry,
     block_text,
     match_product,
+    order_from_pattern,
+    resolve_price_quantity,
     verify_copied,
 )
 from app.services.extraction_judgement_svc import (
@@ -34,7 +37,6 @@ from app.services.extraction_judgement_svc import (
 from app.services.gemini_extraction_svc import call_gemini_raw_copy, parse_raw_copy_response
 from app.services.llm_budget import UsageCounts, record_usage_event_sync
 from app.services.tcg_analyzer_svc import (
-    _parse_numeric,
     build_note_ja,
     load_condition_entries,
     load_lookup_maps,
@@ -52,7 +54,27 @@ _REQUESTED_MODEL = "gemini-3.1-flash-lite"
 _PROMPT_KEY = "raw_copy_extraction"
 
 # verify_copied で照合する Gemini 書き写し値のうち、原文検証の対象にするフィールド。
-_VERIFY_FIELDS = ("raw_price", "raw_state", "raw_ship")
+_VERIFY_FIELDS = ("raw_price", "raw_state", "raw_ship", "raw_quantity")
+
+# 試運転に必要な仕入元ルール（design 追補2 §6）。3つとも空でなければ試運転する。
+_REQUIRED_SUPPLIER_RULE_KEYS = (
+    "extraction_price_format",
+    "extraction_qty_format",
+    "extraction_order_pattern",
+)
+
+
+def _is_filled(value: Any) -> bool:
+    if isinstance(value, (list, tuple, dict)):
+        return bool(value)
+    return value is not None and str(value).strip() != ""
+
+
+def has_required_supplier_rule(supplier_context: dict | None) -> bool:
+    """price_format・qty_format・order_pattern の3つが、どれも空白を除いて空でなければ True。"""
+    if not supplier_context:
+        return False
+    return all(_is_filled(supplier_context.get(key)) for key in _REQUIRED_SUPPLIER_RULE_KEYS)
 
 
 # ---------------------------------------------------------------------------
@@ -225,6 +247,8 @@ def _judge_block(
     unit_alias_to_info: dict,
     status_entries: list[dict],
     note_entries: list[dict],
+    unit_aliases: Iterable[str] = (),
+    order: Literal["price_first", "quantity_first"] | None = None,
 ) -> dict:
     """1ブロック（v7の書き写し1行）をシステム判定し、shadow_results 用の1行を返す。"""
     block = block_text(raw_text, block_item["line_start"], block_item["line_end"])
@@ -260,7 +284,20 @@ def _judge_block(
             {"item": "verify_copied", "reason": ",".join(verify_failures), "candidates": []}
         )
 
-    needs_review = match.status != "matched" or bool(verify_failures)
+    price_qty = resolve_price_quantity(
+        block,
+        gemini_price=block_item["raw_price"],
+        gemini_quantity=block_item["raw_quantity"],
+        unit_aliases=unit_aliases,
+        order=order,
+        gemini_product_name=block_item["raw_product_name"],
+    )
+    if price_qty.reasons:
+        review_items.append(
+            {"item": "price_qty", "reason": ",".join(price_qty.reasons), "candidates": []}
+        )
+
+    needs_review = match.status != "matched" or bool(verify_failures) or price_qty.needs_review
 
     return {
         "line_start": block_item["line_start"],
@@ -277,8 +314,8 @@ def _judge_block(
         "product_id": match.product_id,
         "work_id": match.work_id,
         "condition_id": condition_id,
-        "quantity_normalized": _parse_numeric(block_item["raw_quantity"]),
-        "price_normalized": _parse_numeric(block_item["raw_price"]),
+        "quantity_normalized": price_qty.quantity,
+        "price_normalized": price_qty.price,
         "ship_offer_type": ship_offer_type,
         "ship_timing": ship_timing_value,
         "note_ja": note_ja,
@@ -287,7 +324,15 @@ def _judge_block(
         "match_status": match.status,
         "needs_review": needs_review,
         "review_items": review_items,
-        "evidence": {"basis": match.basis},
+        "evidence": {
+            "basis": match.basis,
+            "price_qty": {
+                "basis": price_qty.basis,
+                "reasons": list(price_qty.reasons),
+                "price_line": price_qty.price_line,
+                "quantity_line": price_qty.quantity_line,
+            },
+        },
         "verify_failures": verify_failures,
     }
 
@@ -343,6 +388,7 @@ def run_shadow_for_job(
         status_entries = load_status_master(session)
         note_entries = load_note_master(session)
         (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
+        order = order_from_pattern((supplier_context or {}).get("extraction_order_pattern"))
 
         results = [
             _judge_block(
@@ -354,6 +400,8 @@ def run_shadow_for_job(
                 unit_alias_to_info=unit_alias_to_info,
                 status_entries=status_entries,
                 note_entries=note_entries,
+                unit_aliases=set(unit_alias_to_info),
+                order=order,
             )
             for block_item in blocks
         ]
@@ -446,4 +494,5 @@ __all__ = [
     "insert_shadow_run",
     "insert_shadow_results",
     "run_shadow_for_job",
+    "has_required_supplier_rule",
 ]

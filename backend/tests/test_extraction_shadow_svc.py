@@ -81,7 +81,11 @@ class TestRunShadowForJobMatched:
         assert row["match_status"] == "matched"
         assert row["product_id"] == 1
         assert row["work_id"] == 7
-        assert row["needs_review"] is False
+        # 単位の別名が空の環境なので「3枚」の 3 は目印なしで補われ、数量は確認に回る（quantity_unmarked）。
+        assert row["needs_review"] is True
+        assert row["review_items"] == [
+            {"item": "price_qty", "reason": "quantity_unmarked", "candidates": []}
+        ]
         assert row["verify_failures"] == []
         session.commit.assert_called_once()
 
@@ -373,3 +377,75 @@ class TestInsertShadowResultsShape:
         first_call_sql = str(session.execute.call_args_list[0].args[0])
         assert "DELETE FROM public.extraction_shadow_results" in first_call_sql
         assert session.execute.call_count == 2  # DELETE + 1件分のINSERT
+
+
+# ---------------------------------------------------------------------------
+# 価格・数量の決定と、ルールのない仕入元の試運転スキップ（設計 追補2）
+# ---------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+from app.services.extraction_shadow_svc import (  # noqa: E402
+    _VERIFY_FIELDS,
+    _judge_block,
+    has_required_supplier_rule,
+)
+
+_FULL_RULE = {
+    "extraction_price_format": "円",
+    "extraction_qty_format": "在庫",
+    "extraction_order_pattern": '["price","@","quantity"]',
+}
+
+
+class TestHasRequiredSupplierRule:
+    def test_true_when_all_three_filled(self):
+        assert has_required_supplier_rule(_FULL_RULE) is True
+
+    @pytest.mark.parametrize("missing", list(_FULL_RULE))
+    @pytest.mark.parametrize("empty_value", [None, "", "  \n"])
+    def test_false_when_any_of_three_is_blank(self, missing, empty_value):
+        context = {**_FULL_RULE, missing: empty_value}
+        assert has_required_supplier_rule(context) is False
+
+    def test_false_when_context_is_none_or_empty(self):
+        assert has_required_supplier_rule(None) is False
+        assert has_required_supplier_rule({}) is False
+
+
+def test_verify_fields_include_raw_quantity():
+    assert "raw_quantity" in _VERIFY_FIELDS
+
+
+def _judge(block_text_value, item, *, unit_aliases=("BOX",), order=None):
+    return _judge_block(
+        {
+            "line_start": 1, "line_end": 1, "raw_product_name": "商品A", "raw_unit": "",
+            "raw_state": "", "raw_ship": "", "raw_multi": "", "raw_price": "", "raw_quantity": "",
+            **item,
+        },
+        block_text_value,
+        products=[], cond_entries=[], cond_canonical_to_uuid={}, unit_alias_to_info={},
+        status_entries=[], note_entries=[], unit_aliases=unit_aliases, order=order,
+    )
+
+
+class TestJudgeBlockPriceQty:
+    def test_confirmed_values_are_normalized_without_price_qty_review_item(self):
+        row = _judge("商品A 27,500×18BOX", {"raw_price": "27,500", "raw_quantity": "18BOX"})
+        assert (row["price_normalized"], row["quantity_normalized"]) == (27500, 18)
+        assert all(item["item"] != "price_qty" for item in row["review_items"])
+        assert row["evidence"]["price_qty"]["basis"] == "marker"
+
+    def test_adds_price_qty_review_item_when_values_are_ambiguous(self):
+        row = _judge("10900@152", {"raw_price": "10900", "raw_quantity": "152"}, order=None)
+        items = [i for i in row["review_items"] if i["item"] == "price_qty"]
+        assert items == [{"item": "price_qty", "reason": "no_order_rule", "candidates": []}]
+        assert row["needs_review"] is True
+        assert row["price_normalized"] is None and row["quantity_normalized"] is None
+        assert row["evidence"]["price_qty"]["reasons"] == ["no_order_rule"]
+
+    def test_order_from_rule_decides_price_and_quantity(self):
+        row = _judge("10900@152", {"raw_price": "10900", "raw_quantity": "152"}, order="price_first")
+        assert (row["price_normalized"], row["quantity_normalized"]) == (10900, 152)
+        assert row["evidence"]["price_qty"]["basis"] == "rule"
