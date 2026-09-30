@@ -28,7 +28,7 @@
 - L620-625 のコメント: SDK が値を返さない列は SUM() が NULL を返す仕様（COALESCE で 0 に丸めない＝推測しない）という既存方針が明記されている。今回追加する `computed_total_tokens` もこの方針を踏襲する。
 
 `backend/tests/test_tcg_analysis_dashboard_llm_usage.py`:
-- L1-11: DB を AsyncMock で模擬し `get_llm_usage()` を直接呼ぶ方式（`test_tcg_analysis_dashboard_cost_summary.py` と同じ）。
+- L1-11: DB を AsyncMock で模擬し `get_llm_usage()` を直接呼ぶ方式（`backend/tests/test_tcg_analysis_dashboard_cost_summary.py` と同じ）。
 - L26-45: `_mock_db_with_sequenced_results()` ヘルパーは `db.execute()` 呼び出し順に mappings 結果を返す。クエリ数が変わると `mapping_results` の要素数・`db._executed_sql` の件数アサーションを合わせる必要がある（旧: 4クエリ固定、L105 で `assert len(db._executed_sql) == 4`）。
 
 ### フロントエンド
@@ -54,7 +54,7 @@
 
 ## 4. i18n 既存キー（origin/main 時点）
 
-`frontend/src/locales/ja.json` L4479-4508 / `en.json` L4479-4508:
+`frontend/src/locales/ja.json` L4479-4508 / `frontend/src/locales/en.json` L4479-4508:
 - `analysisRules.dashboard.usage.*` に note / notReported / metricCost / metricCalls / metricInput / metricOutput / byPurposeTitle / dailyTitle / byModelTitle / colPurpose / colCalls / colInput / colCached / colOutput / colThoughts / colTool / colTotal / colCost / colDate / colModel / purpose.* が定義済み。ja/en でキー完全一致（`npm run check:i18n-missing-keys` は既存時点で PASS）。
 - `metricCalls`（ja: "呼び出し回数" / en: "Call Count"）と `colCalls`（ja: "回数" / en: "Calls"）が「応答が返った回数」であることを明示していなかった。
 
@@ -64,4 +64,4 @@
 - `backend/tests/test_tcg_analysis_dashboard_llm_usage.py`: 新フィールド・新クエリ数（6）・mismatch カウント・全NULL時のcomputed_total_tokens=NULLを検証するテストを追加。
 - `frontend/src/pages/super-admin/components/LlmUsageSection.tsx`: recharts BarChart による日次・月次（使いみち別）積み上げ棒グラフを追加、「合計」列を computed_total_tokens に変更、mismatch 件数の注記、呼び出し回数ラベルの変更。
 - `frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx`: 上記の振る舞いを検証するテストを追加。
-- `frontend/src/locales/ja.json` / `en.json`: `analysisRules.dashboard.usage.*` に `dailyByPurposeChartTitle` / `monthlyByPurposeChartTitle` / `totalMismatchNote` を追加、`note` / `metricCalls` / `colCalls` の文言を変更。ja/en 同一キー（`npm run check:i18n-missing-keys` で確認）。
+- `frontend/src/locales/ja.json` / `frontend/src/locales/en.json`: `analysisRules.dashboard.usage.*` に `dailyByPurposeChartTitle` / `monthlyByPurposeChartTitle` / `totalMismatchNote` を追加、`note` / `metricCalls` / `colCalls` の文言を変更。ja/en 同一キー（`npm run check:i18n-missing-keys` で確認）。

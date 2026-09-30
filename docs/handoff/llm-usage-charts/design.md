@@ -16,8 +16,8 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 ## チャート実装方針（pre-check 結果）
 
 - (a) `frontend/src/components` 配下に Chart 名を含む専用金型コンポーネントは存在しない（recon.md「フロントエンド」節、`grep -rl "Chart" frontend/src/components --include="*.tsx"` が 0 件）。
-- (b) そのため `AnalysisDashboardPanel.tsx` が既に使っている recharts 直書きパターン（`ResponsiveContainer` + `CartesianGrid` + `XAxis`/`YAxis` + `Tooltip` + `Legend`、L959-983 等）を踏襲し、積み上げ棒グラフ用に `BarChart`/`Bar`（`stackId` 指定）を同じ import スタイルで追加した。recharts は `frontend/package.json:87` で `^3.8.1` として既存依存済み（新規パッケージ追加なし）。
-- 色: 新規 hex は追加せず、`frontend/src/tokens.css` L396-402（ライト）/ L566-572（ダーク）に light/dark 両方定義済みの `--cal-personal`〜`--cal-holiday`（7色、カレンダーカテゴリ用の既存トークン）を使いみち別カラーとして転用した（6 purpose に対し7色で充足）。`AnalysisDashboardPanel.tsx` の既存3チャートが使う `--color-success`/`--color-error`/`--color-warning-*` は状態色2〜3色のみで、カテゴリカルな塗り分けには不足するため対象外とした。
+- (b) そのため `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` が既に使っている recharts 直書きパターン（`ResponsiveContainer` + `CartesianGrid` + `XAxis`/`YAxis` + `Tooltip` + `Legend`、L959-983 等）を踏襲し、積み上げ棒グラフ用に `BarChart`/`Bar`（`stackId` 指定）を同じ import スタイルで追加した。recharts は `frontend/package.json:87` で `^3.8.1` として既存依存済み（新規パッケージ追加なし）。
+- 色: 新規 hex は追加せず、`frontend/src/tokens.css` L396-402（ライト）/ L566-572（ダーク）に light/dark 両方定義済みの `--cal-personal`〜`--cal-holiday`（7色、カレンダーカテゴリ用の既存トークン）を使いみち別カラーとして転用した（6 purpose に対し7色で充足）。`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` の既存3チャートが使う `--color-success`/`--color-error`/`--color-warning-*` は状態色2〜3色のみで、カテゴリカルな塗り分けには不足するため対象外とした。
 - 金型もトークンベースの色源も両方存在したため、「STOP して報告」の条件（金型なし かつ 色源なし）には該当しない。
 
 ## 変更点サマリ
@@ -35,9 +35,9 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 - `total.total_mismatch_calls > 0` のとき、既存の note 直下に `totalMismatchNote` を1行追加表示。
 - 「呼び出し回数」系ラベル（メトリクスカード `metricCalls` ＋ 3テーブル共通の `colCalls`）を ja「応答が返った回数」/ en "Calls with response" に変更し、note 末尾に「応答が返らず失敗した呼び出しは含みません。」を追記。
 - 日次・月次の使いみち別積み上げ棒グラフ（Card 2枚）をテーブル群の上に追加。データが空のときはテーブルと同じ `noData` 文言を表示。
-- `AnalysisDashboardPanel.tsx` は変更していない（import元の `LlmUsageSection` のシグネチャ・呼び出し方に変更がないため）。
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は変更していない（import元の `LlmUsageSection` のシグネチャ・呼び出し方に変更がないため）。
 
-### i18n（`frontend/src/locales/ja.json` / `en.json`）
+### i18n（`frontend/src/locales/ja.json` / `frontend/src/locales/en.json`）
 
 - `analysisRules.dashboard.usage.dailyByPurposeChartTitle` / `monthlyByPurposeChartTitle` / `totalMismatchNote` を新設。
 - `note` / `metricCalls` / `colCalls` の文言を変更。ja/en 同一キー（`npm run check:i18n-missing-keys` で確認済み）。
@@ -53,13 +53,13 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 | ⑤ ja/en で i18n キーが同一（ADR-027） | `npm run check:i18n-missing-keys` PASS（実行済み、後述の生出力参照）。 |
 | ⑥ 新規 hex 直値なし（ADR-067） | `npm run check:css-colors` PASS（実行済み）。色は `--cal-*` 既存トークンのみを `var(--cal-*)` 形式で参照。 |
 
-## 外部事例・過去事例
+## 外部・過去事例の参照と我々への応用
 
-該当なし。Sales Anchor 社内ダッシュボードの既存パターン（`AnalysisDashboardPanel.tsx` の recharts 直書き・DataTable 金型）の拡張であり、社外事例やOSS実装を参照する必要がある新規技術要素（新ライブラリ・新アーキテクチャパターン）を含まないため、GitHub/npm調査は実施しなかった。recharts 自体は既存依存（`^3.8.1`）であり API 仕様（`BarChart`/`Bar`/`stackId`）はプロジェクト内の既存3チャート実装から確認した。
+該当なし。Sales Anchor 社内ダッシュボードの既存パターン（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` の recharts 直書き・DataTable 金型）の拡張であり、社外事例やOSS実装を参照する必要がある新規技術要素（新ライブラリ・新アーキテクチャパターン）を含まないため、GitHub/npm調査は実施しなかった。recharts 自体は既存依存（`^3.8.1`）であり API 仕様（`BarChart`/`Bar`/`stackId`）はプロジェクト内の既存3チャート実装から確認した。
 
 ## 維持の仕組み
 
 - `computed_total_tokens` のロジックは SQL の CASE 式コメントで「なぜ NULL のままにするか」を明記（`_COMPUTED_TOTAL_TOKENS_EXPR` 直上）。将来 SDK が新しいトークン種別を返すようになった場合、この4項目リストの更新漏れに気づけるよう、同コメント内に4項目を明記している。
-- 使いみち別カラーは `PURPOSE_CHART_COLOR_VARS`（`LlmUsageSection.tsx`）の配列1箇所に集約。新しい purpose が `KNOWN_PURPOSES` に追加されても、`purposeColor()` が `--cal-*` 7色を巡回するため個別対応は不要（8種目以降は既存6種と色が重複するが、7色中6色使用時点では重複しない）。
+- 使いみち別カラーは `PURPOSE_CHART_COLOR_VARS`（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx`）の配列1箇所に集約。新しい purpose が `KNOWN_PURPOSES` に追加されても、`purposeColor()` が `--cal-*` 7色を巡回するため個別対応は不要（8種目以降は既存6種と色が重複するが、7色中6色使用時点では重複しない）。
 - i18n キー・CSS色・CSS値・クラス命名の各チェックスクリプトが CI（`npm run check:all` 相当）に組み込まれており、今後の変更でも自動検出される（`check:i18n-missing-keys` / `check:css-colors` / `check:css-values` / `check:css-class-naming`）。
-- 守り手: Hikky-dev（実装・CI通過確認）／ PO しんごさん（GO判断・本番反映確認）。
+- 守り手: Hikky-dev（`backend/tests/test_tcg_analysis_dashboard_llm_usage.py` / `frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx` のCI通過確認）／ PO しんごさん（GO判断・本番反映確認）。
