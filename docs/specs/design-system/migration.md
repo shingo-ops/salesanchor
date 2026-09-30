@@ -311,3 +311,21 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 
 
 2026-09-28 AS本番反映完了: 本人GO #3834、公式merge b3cf1fdf3（11:32:45Z）、Deploy36416280694成功。root 2026-09-28T11:36:40.862290+00:00に本番HEAD/公開index・JSとcontainer hash/HTTP200/接続3項目一致を直接確認。34件移管、共通265/旧232。根拠as-implementation.md/as-production-verification.json。画面・実ログイン・本番フォーム・PO目視は省略・未検証。
+
+
+### 2026-09-28 AT 実装開始
+
+固定a1cd9eaで共通265/旧232を再計測。11件/9製品のフォームボタンを既存md金型へ移管する設計を自己審査APPROVE、正式カード検査後Sol2担当へ分離委任。期待共通276/旧221。詳細design.md §AT、証跡at-button-audit.json/at-commerce-test-plan.md/at-admin-test-plan.md。API/DB/配線/共有部品変更0、実装・検証・PR完了はまだ宣言しない。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+
+2026-09-29 AU実装検収: 旧221件/71file→0、共通Button494/ButtonLink8、HeaderButton共有1とstory6は別計数。root全71逆変換（承認i18n例外2差分）・対象外179・locale2一致、52files661試験/check:all/build/Storybook成功。Sol相互レビューAPPROVE。根拠evidence-20260910/au-implementation.md。画面省略・未検証。PR/CI/マージ/配備は次段階。
+
+2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
+
+2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。

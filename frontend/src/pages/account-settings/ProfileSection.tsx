@@ -1,5 +1,6 @@
 import { useState, FormEvent, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import { api } from "../../lib/api";
 import { patchMyProfile } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
@@ -121,9 +122,9 @@ export default function ProfileSection() {
         {success && <div className="account-settings-success">{t("accountSettings.profileSaved")}</div>}
 
         <div className="account-settings-actions">
-          <button type="submit" className="btn-primary" disabled={saving}>
+          <Button type="submit" variant="primary" size="md" disabled={saving}>
             {saving ? t("accountSettings.saving") : t("common.save")}
-          </button>
+          </Button>
         </div>
       </form>
     </section>

@@ -240,48 +240,48 @@ export default function PurchaseOrdersPage() {
             renderCell: (p) => (
               <span className="actions">
                 {p.status === "ordered" && hasPermission("purchase_orders.receive") && (
-                  <button className="btn-sm btn-primary" onClick={() => doAction(p.id, "receive")}>{t("purchaseOrders.actionReceive")}</button>
+                  <Button variant="primary" size="sm" onClick={() => doAction(p.id, "receive")}>{t("purchaseOrders.actionReceive")}</Button>
                 )}
                 {/* P5: 入荷取消（received → ordered、在庫加算を巻き戻す） */}
                 {p.status === "received" && hasPermission("purchase_orders.receive") && (
-                  <button
-                    className="btn-sm btn-secondary"
+                  <Button variant="secondary" size="sm"
+
                     data-testid={`po-unreceive-${p.id}`}
                     onClick={() => doAction(p.id, "unreceive")}
                   >
                     {t("purchaseOrders.actionUnreceive")}
-                  </button>
+                  </Button>
                 )}
                 {(p.status === "draft" || p.status === "ordered") && (
-                  <button className="btn-sm btn-danger" onClick={() => doAction(p.id, "cancel")}>{t("purchaseOrders.actionCancel")}</button>
+                  <Button variant="danger" size="sm" onClick={() => doAction(p.id, "cancel")}>{t("purchaseOrders.actionCancel")}</Button>
                 )}
                 {/* P3 / Sprint 8: PDF（draft でも作成可。draft は作成後に発注済み確認） */}
                 {(p.status === "draft" || p.status === "ordered" || p.status === "received" || p.status === "error") && hasPermission("purchase_orders.view") && (
-                  <button
-                    className="btn-sm btn-secondary"
+                  <Button variant="secondary" size="sm"
+
                     data-testid={`po-pdf-${p.id}`}
                     onClick={() => downloadPdf(p.id, p.po_number, p.status)}
                   >
                     {t("purchaseOrders.actionDownloadPdf")}
-                  </button>
+                  </Button>
                 )}
                 {(p.status === "ordered" || p.status === "received") && hasPermission("purchase_orders.update") && (
-                  <button
-                    className="btn-sm btn-secondary"
+                  <Button variant="secondary" size="sm"
+
                     data-testid={`po-send-email-${p.id}`}
                     onClick={() => sendEmail(p.id)}
                   >
                     {t("purchaseOrders.actionSendEmail")}
-                  </button>
+                  </Button>
                 )}
                 {p.status === "error" && hasPermission("purchase_orders.update") && (
-                  <button
-                    className="btn-sm btn-primary"
+                  <Button variant="primary" size="sm"
+
                     data-testid={`po-resend-email-${p.id}`}
                     onClick={() => resendEmail(p.id)}
                   >
                     {t("purchaseOrders.actionResendEmail")}
-                  </button>
+                  </Button>
                 )}
               </span>
             ),

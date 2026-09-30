@@ -200,9 +200,9 @@ export default function BotsPage() {
       {error && <div className="error-message">{error}</div>}
       <ContentToolbar
         right={hasPermission("bots.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
             {t("bots.newBot")}
-          </button>
+          </Button>
         ) : undefined}
       />
 
@@ -210,7 +210,7 @@ export default function BotsPage() {
         <div className="notice" style={{ padding: "var(--space-4)", background: "var(--warning-bg)", border: "1px solid var(--warning-text)", borderRadius: "var(--radius-sm)", margin: "16px 0" }}>
           <strong><STATUS_ICONS.warning size={ICON.sm} aria-hidden="true" /> {t("bots.apiKeyIssued")}</strong>
           <div className="mono" style={{ padding: "var(--space-2)", background: "var(--bg-surface)", marginTop: "var(--space-2)", wordBreak: "break-all" }}>{newApiKey}</div>
-          <button className="btn-sm" onClick={() => setNewApiKey(null)} style={{ marginTop: "var(--space-2)" }}>{t("bots.apiKeyConfirm")}</button>
+          <Button variant="secondary" size="sm" layoutClassName="comp-btn-layout--mt-2" onClick={() => setNewApiKey(null)}>{t("bots.apiKeyConfirm")}</Button>
         </div>
       )}
 
@@ -308,9 +308,9 @@ export default function BotsPage() {
             header: t("common.actions"),
             renderCell: (b) => (
               <span className="actions">
-                {hasPermission("bots.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(b); }}>{t("common.edit")}</button>}
-                {hasPermission("bots.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); setRotateTarget(b); }}>{t("bots.rotateKey")}</button>}
-                {hasPermission("bots.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(b); }}>{t("common.delete")}</button>}
+                {hasPermission("bots.update") && <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(b); }}>{t("common.edit")}</Button>}
+                {hasPermission("bots.update") && <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); setRotateTarget(b); }}>{t("bots.rotateKey")}</Button>}
+                {hasPermission("bots.delete") && <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(b); }}>{t("common.delete")}</Button>}
               </span>
             ),
           },

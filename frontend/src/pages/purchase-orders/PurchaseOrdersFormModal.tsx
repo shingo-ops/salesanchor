@@ -135,9 +135,9 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
       <Button type="button" variant="secondary" size="md" onClick={onClose} disabled={saving}>
         {t("common.cancel")}
       </Button>
-      <button form="po-form" type="submit" className="btn-primary" disabled={saving}>
+      <Button form="po-form" type="submit" variant="primary" size="md" disabled={saving}>
         {saving ? t("common.saving") : t("common.save")}
-      </button>
+      </Button>
     </>
   );
 
@@ -199,7 +199,7 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
                   </td>
                   <td>
                     {items.length > 1 && (
-                      <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                      <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                     )}
                   </td>
                 </tr>
@@ -207,7 +207,7 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
             </tbody>
           </table>
           {!pickerless && (
-            <button type="button" className="btn-secondary" onClick={addItem} style={{ marginTop: "var(--space-2)" }}>{t("quotes.addItem")}</button>
+            <Button variant="secondary" size="md" layoutClassName="comp-btn-layout--mt-2" type="button" onClick={addItem}>{t("quotes.addItem")}</Button>
           )}
         </div>
 

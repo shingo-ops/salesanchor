@@ -167,6 +167,10 @@ jobs:
       #   ※ public.extraction_attempts は 20260921_110000_pipeline_tables_public.sql で本番作成済み（最小定義を登録）
       #   ※ public.extraction_jobs は 20260921_110000_pipeline_tables_public.sql で本番作成済み。
       #      20260928_110000_create_extraction_shadow_tables.sql の FK 参照のため最小定義（id のみ）を登録
+      #   ※ public.source_messages は 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+      #      20260929_120000_fix_source_messages_received_at.sql が UPDATE するため最小定義を登録
+      #   ※ public.extraction_items は 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+      #      20260929_120000_fix_source_messages_received_at.sql が JOIN するため最小定義を登録
       #   ※ public.extraction_prompt_config は 20260926_080000_create_extraction_prompt_config.sql で本番作成済み。
       #      20260928_110000_create_extraction_shadow_tables.sql の INSERT ON CONFLICT のため最小定義を登録
       # ──────────────────────────────────────────────────────────────────────
@@ -719,7 +723,8 @@ jobs:
               unit_infer_reason   TEXT         NOT NULL DEFAULT '',
               product_id          INTEGER,
               unit_id             INTEGER,
-              condition_id        INTEGER
+              condition_id        INTEGER,
+              is_current          BOOLEAN      NOT NULL DEFAULT TRUE
           );
 
           -- public.tcg_distribution_settings: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
@@ -736,7 +741,23 @@ jobs:
           --   20260928_110000_create_extraction_shadow_tables.sql が
           --   REFERENCES public.extraction_jobs(id) を使用するため、前提として最小定義を登録する（id のみでよい）。
           CREATE TABLE IF NOT EXISTS public.extraction_jobs (
-              id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+              id                 UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              source_message_id  UUID
+          );
+
+          -- public.source_messages: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20260929_120000_fix_source_messages_received_at.sql が UPDATE するため最小定義を登録する（FK なし）。
+          CREATE TABLE IF NOT EXISTS public.source_messages (
+              id                  UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
+              supplier_channel_id UUID,
+              received_at         TIMESTAMPTZ,
+              line_posted_at      TIMESTAMPTZ
+          );
+          -- public.extraction_items: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
+          --   20260929_120000_fix_source_messages_received_at.sql が JOIN するため最小定義を登録する（FK なし）。
+          CREATE TABLE IF NOT EXISTS public.extraction_items (
+              id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+              extraction_job_id UUID NOT NULL
           );
 
           -- public.extraction_prompt_config: 20260926_080000_create_extraction_prompt_config.sql で本番作成済み。

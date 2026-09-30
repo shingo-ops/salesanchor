@@ -837,6 +837,56 @@ class TestBuildSupplierContextNoteV6Unaffected:
         assert prompt_without_context == prompt_with_ship_only
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# _get_genai_client: GEMINI_PROXY_URL (gemini-egress-via-prod2)
+# design: docs/handoff/gemini-egress-via-prod2/design.md §5-2
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class TestGetGenaiClientProxy:
+    def test_no_proxy_url_uses_direct_client(self, monkeypatch):
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.delenv("GEMINI_PROXY_URL", raising=False)
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        mock_client_cls.assert_called_once_with(api_key="dummy-key")
+
+    def test_proxy_url_set_passes_http_options(self, monkeypatch):
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.setenv("GEMINI_PROXY_URL", "http://host-gateway:18888")
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        assert mock_client_cls.call_count == 1
+        _, kwargs = mock_client_cls.call_args
+        assert kwargs["api_key"] == "dummy-key"
+        http_options = kwargs["http_options"]
+        assert http_options.client_args == {"proxy": "http://host-gateway:18888"}
+        assert http_options.async_client_args == {"proxy": "http://host-gateway:18888"}
+
+    def test_empty_proxy_url_uses_direct_client(self, monkeypatch):
+        """GEMINI_PROXY_URL が空文字（.env で無効化）なら直接接続に戻る。"""
+        from app.services import gemini_extraction_svc as svc
+
+        monkeypatch.setenv("GEMINI_API_KEY", "dummy-key")
+        monkeypatch.setenv("GEMINI_PROXY_URL", "")
+
+        with patch("google.genai.Client") as mock_client_cls:
+            mock_client_cls.return_value = MagicMock()
+            svc._get_genai_client()
+
+        mock_client_cls.assert_called_once_with(api_key="dummy-key")
+
+
 # Anonymous live-Gemini acceptance corpus (not an execution or accuracy result).
 # A live run must report format errors / correct / unknown / wrong independently.
 LIVE_WORK_SAMPLES = [

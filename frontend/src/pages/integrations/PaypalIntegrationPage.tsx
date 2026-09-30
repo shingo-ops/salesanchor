@@ -14,6 +14,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
+import { ButtonLink } from "../../components/ButtonLink";
 
 interface PaypalStatus {
   configured: boolean;
@@ -170,17 +172,17 @@ export default function PaypalIntegrationPage() {
         </div>
         <div className="form-actions">
           {status?.configured && (
-            <button className="btn-secondary" disabled={busy} onClick={handleDisconnect}>
+            <Button variant="secondary" size="md" disabled={busy} onClick={handleDisconnect}>
               {t("paypalIntegration.disconnect")}
-            </button>
+            </Button>
           )}
-          <button
-            className="btn-primary"
+          <Button variant="primary" size="md"
+
             disabled={busy || !clientId || !clientSecret}
             onClick={handleSave}
           >
             {busy ? t("paypalIntegration.saving") : t("paypalIntegration.save")}
-          </button>
+          </Button>
         </div>
         {saved && <p className="success-message">{t("paypalIntegration.saved")}</p>}
       </section>
@@ -189,13 +191,13 @@ export default function PaypalIntegrationPage() {
       <section className="card">
         <h3>{t("paypalIntegration.testTitle")}</h3>
         <div className="form-actions">
-          <button
-            className="btn-primary"
+          <Button variant="primary" size="md"
+
             disabled={busy || !status?.configured}
             onClick={handleTest}
           >
             {busy ? t("paypalIntegration.testing") : t("paypalIntegration.testButton")}
-          </button>
+          </Button>
         </div>
         {!status?.configured && (
           <p className="form-hint">{t("paypalIntegration.testNeedsSave")}</p>
@@ -217,9 +219,9 @@ export default function PaypalIntegrationPage() {
           <h3>{t("paypalIntegration.payTestTitle")}</h3>
           <p className="form-hint">{t("paypalIntegration.payTestHint")}</p>
           <div className="form-actions">
-            <button className="btn-primary" disabled={busy} onClick={handlePaymentTest}>
+            <Button variant="primary" size="md" disabled={busy} onClick={handlePaymentTest}>
               {busy ? t("paypalIntegration.payTestRunning") : t("paypalIntegration.payTestButton")}
-            </button>
+            </Button>
           </div>
           {payTest && (
             <div style={{ marginTop: "var(--space-3)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "var(--space-3)" }}>
@@ -228,12 +230,12 @@ export default function PaypalIntegrationPage() {
               </p>
               <p className="form-hint">{t("paypalIntegration.payTestSteps")}</p>
               <div style={{ display: "flex", gap: "var(--space-2)", flexWrap: "wrap", marginTop: "var(--space-2)" }}>
-                <a className="btn-primary" href={payTest.approval_url} target="_blank" rel="noopener noreferrer">
+                <ButtonLink variant="primary" size="md" href={payTest.approval_url} target="_blank" rel="noopener noreferrer">
                   {t("paypalIntegration.payTestPay")}
-                </a>
-                <a className="btn-secondary" href={`/invoices/${payTest.invoice_id}`} target="_blank" rel="noopener noreferrer">
+                </ButtonLink>
+                <ButtonLink variant="secondary" size="md" href={`/invoices/${payTest.invoice_id}`} target="_blank" rel="noopener noreferrer">
                   {t("paypalIntegration.payTestOpenInvoice")}
-                </a>
+                </ButtonLink>
               </div>
             </div>
           )}

@@ -231,20 +231,20 @@ export default function InvoiceCreatePage() {
       {error && <div className="error-message">{error}</div>}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
-        <button
-          className={mode === "inventory" ? "btn-primary" : "btn-secondary"}
+        <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"
+
           onClick={() => setMode("inventory")}
           data-testid="invoice-mode-inventory"
         >
           {t("invoices.fromInventory")}
-        </button>
-        <button
-          className={mode === "quote" ? "btn-primary" : "btn-secondary"}
+        </Button>
+        <Button variant={mode === "quote" ? "primary" : "secondary"} size="md"
+
           onClick={() => { setSourceQuoteCode(null); setMode("quote"); }}
           data-testid="invoice-mode-quote"
         >
           {t("invoices.fromQuote")}
-        </button>
+        </Button>
       </div>
 
       {mode === "quote" ? (
@@ -391,7 +391,7 @@ export default function InvoiceCreatePage() {
                     <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                     <td>
                       {items.length > 1 && (
-                        <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                        <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                       )}
                     </td>
                   </tr>
@@ -401,7 +401,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</Button>
           </div>
 
           <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
@@ -433,7 +433,7 @@ export default function InvoiceCreatePage() {
 
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</button>
+            <Button variant="primary" size="md" type="submit" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</Button>
           </div>
         </form>
       )}

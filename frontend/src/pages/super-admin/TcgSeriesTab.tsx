@@ -241,9 +241,9 @@ export default function TcgSeriesTab() {
                 setTypeForm({ ...typeForm, name_en: e.target.value })
               }
             />
-            <button type="submit" className="btn-primary">
+            <Button type="submit" variant="primary" size="md">
               {t("superAdmin.tcg.typeManager.addBtn")}
-            </button>
+            </Button>
           </form>
 
           <ul
@@ -274,14 +274,14 @@ export default function TcgSeriesTab() {
                   {tp.name_ja}{" "}
                   <code style={{ color: "var(--text-muted)" }}>{tp.code}</code>
                 </span>
-                <button
+                <Button variant="danger" size="sm"
                   type="button"
-                  className="btn-danger-link"
+
                   aria-label={`${t("common.delete")} ${tp.name_ja}`}
                   onClick={() => removeType(tp.id)}
                 >
                   {t("common.delete")}
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
@@ -324,9 +324,9 @@ export default function TcgSeriesTab() {
           value={form.name_en}
           onChange={(e) => setForm({ ...form, name_en: e.target.value })}
         />
-        <button type="submit" className="btn-primary">
+        <Button type="submit" variant="primary" size="md">
           {editId ? t("common.update") : t("superAdmin.tcg.newSeries")}
-        </button>
+        </Button>
       </form>
 
       <table className="data-table">
@@ -362,9 +362,9 @@ export default function TcgSeriesTab() {
                 </Button>
               </td>
               <td>
-                <button onClick={() => remove(it.id)} className="btn-danger-link">
+                <Button variant="danger" size="sm" onClick={() => remove(it.id)}>
                   {t("common.delete")}
-                </button>
+                </Button>
               </td>
             </tr>
           ))}

@@ -13,6 +13,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 type RoleKey = "sales" | "order" | "ship" | "purchase" | "trouble";
 type RateType = "rate" | "fixed";
@@ -248,14 +249,14 @@ export default function CommissionSettingsPage() {
                 gap: "var(--space-2)",
               }}
             >
-              <button
+              <Button variant="primary" size="md"
                 type="submit"
-                className="btn-primary"
+
                 disabled={saving}
                 data-testid="settings-save"
               >
                 {saving ? t("common.saving") : t("common.save")}
-              </button>
+              </Button>
             </div>
             {settings && (
               <p className="text-muted" style={{ fontSize: "var(--font-sm)" }}>

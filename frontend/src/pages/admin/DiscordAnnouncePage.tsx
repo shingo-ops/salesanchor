@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 export default function DiscordAnnouncePage() {
   const { t } = useTranslation();
@@ -112,13 +113,13 @@ export default function DiscordAnnouncePage() {
         {sent && <p className="text-sm text-green-600">{t("discordAnnounce.sent")}</p>}
 
         {canEdit && (
-          <button
+          <Button variant="primary" size="md"
             onClick={handleSend}
             disabled={sending || !channelId.trim() || !message.trim()}
-            className="btn btn-primary"
+
           >
             {sending ? t("discordAnnounce.sending") : t("discordAnnounce.send")}
-          </button>
+          </Button>
         )}
       </div>
     </PageLayout>

@@ -1,0 +1,29 @@
+CARD-AU-PAGES-01
+受領確認: 冒頭に本報告はカードCARD-AU-PAGES-01の実行結果であると記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。公式worktree/221原文/競合diffを照合済み。
+担当: sol_all_inventory。同じworktreeに共有担当がいる。他者の変更を戻さず調整する。rootは設計/文書/台帳。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+基準: 303c3cfe756b1d82c042cba342c3a3150fc5ab8c
+設計: docs/specs/design-system/design.md §AUと最新自己審査追補。
+所有製品: docs/handoff/design-system-recon/evidence-20260910/au-transform-plan.jsonの全71file/221nodeのみ。
+所有新規試験: frontend/src/components/AllLegacyButtonOperationMigration.test.tsx、frontend/src/components/AllLegacyButtonDynamicMigration.test.tsx。
+変更内容: 保存済みau-page-changes.jsonのsourceRaw→migratedRawとButton/ButtonLink import追加/未使用Link import除去。
+CarrierIntegrationPage280はvariant danger、Inbox無効margin除去、登録言語ghost md、login lg fullWidthを設計/計画双方で照合する。
+禁止: 共有部品/CSS/トークン/依存/CI/既存試験/DB/API/配線/処理/認可/翻訳変更、skip/ガード解除、新agent/commit/push/PR/GO/本番操作。
+許可: 新規2suiteと/tmp/au-pages-validationの一時検証スクリプト/原ログ、計画の実装結果記録。
+手順0: preflightと対象原文を再照合する。他者変更は触らない。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && ./scripts/dev/executor-preflight.sh
+手順1: 全221を確定計画へ変換する。type省略含む全非外観属性/children/handler/親DOM/条件を逐語保持。
+全71fileを置換とimportだけ逆変換して基準と全byte一致、旧btn残0。再フォーマットは禁止。
+手順2: 新規2suiteで実ページのLogin認証/パスワード再設定（正確な引数/pending/成功遷移/失敗）、Tcg等の削除取消/確認（IDと呼出回数）、invoice操作の外部境界を合成して確認する。
+動的variant6は実ページ/既存testを利用し条件前後、既存aria、disabled/イベント保持を検証する。全6の被覆先を一覧化し不足は報告する。
+API/Auth境界のみmock、実Button/Router/ページhandler使用。実通信0、合成のpromiseは全settle、既存多重送信可能な仕様に架空ロックを要求しない。
+原文一致+共有部品試験で全対象の配線不変を証明し、代表操作試験を全221業務の実行済みと呼ばない。
+手順3: 所有変更TSXのstrict ESLint、新規2suite、diffを確認し原ログ/exitを保存する。失敗は隠さず実物根拠でfixtureだけ修正。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && git diff --check
+新規ButtonLink型を待つ間はページ移管/既存Button依存試験を進める。全体検査はroot。
+手順4: 変更数、全数逆変換、試験内容/原ログ、残不明を報告する。root連絡後に共有担当変更をread-onlyレビュー可。
+画面・本番フォーム・PO目視は省略・未検証。OPEN PRの変更を取り込まず/閉じず、別worktree/ブランチを書き換えない。
+不明/設計矛盾/失敗は該当操作を停止しrootへ根拠とともに報告する。
+END OF CARD

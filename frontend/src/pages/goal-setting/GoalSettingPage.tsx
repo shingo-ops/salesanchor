@@ -17,6 +17,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { STATUS_ICONS } from "../../constants/icons";
 import "./GoalSettingPage.css";
+import { Button } from "../../components/Button";
 
 const CheckIcon = STATUS_ICONS.check;
 
@@ -198,9 +199,9 @@ function GoalBlock({
           />
         ))}
       </div>
-      <button className="btn-primary gs-save-btn" onClick={onSave} disabled={saving}>
+      <Button variant="primary" size="md" layoutClassName="gs-save-btn" onClick={onSave} disabled={saving}>
         {saving ? t("common.saving") : t("goals.save")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -214,6 +215,7 @@ interface AdvisorMetricRowProps {
 }
 
 function AdvisorMetricRow({ label, value, onChange, recommended, testId }: AdvisorMetricRowProps) {
+  const { t } = useTranslation();
   return (
     <div className="gs-advisor__metric" data-testid={testId}>
       <div className="gs-advisor__metric-head">
@@ -221,7 +223,7 @@ function AdvisorMetricRow({ label, value, onChange, recommended, testId }: Advis
         <span className="gs-advisor__metric-rec">
           {recommended === null || recommended === undefined
             ? "—"
-            : `おすすめ ${formatAdviceNumber(recommended)}`}
+            : t("goals.advisorRecommended", { value: formatAdviceNumber(recommended) })}
         </span>
       </div>
       <input
@@ -357,15 +359,15 @@ function GoalAdvisorPanel({ defaultMonthlyKgi, t }: GoalAdvisorPanelProps) {
                   {t("goals.advisorTypeWins")}
                 </button>
               </div>
-              <button
+              <Button variant="primary" size="md" layoutClassName="gs-advisor__run-btn"
                 type="button"
-                className="btn-primary gs-advisor__run-btn"
+
                 data-testid="goal-advisor-generate"
                 onClick={fetchAdvice}
                 disabled={loadingAdvice}
               >
                 {loadingAdvice ? t("common.loading") : t("goals.advisorGenerate")}
-              </button>
+              </Button>
             </div>
             <p className="gs-advisor__scope-note">{t("goals.advisorScopeMine")}</p>
           </div>

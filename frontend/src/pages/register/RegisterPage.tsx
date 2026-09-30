@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import i18n from "../../i18n";
 import { COUNTRIES } from "../../constants/countries";
 import { CountryCombobox } from "./CountryCombobox";
+import { Button } from "../../components/Button";
 
 interface TokenInfo {
   valid: boolean;
@@ -276,9 +277,9 @@ export default function RegisterPage() {
     <div className="page-container" style={{ maxWidth: "600px", margin: "0 auto", padding: "var(--spacing-6)" }}>
       {/* Language toggle */}
       <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "var(--spacing-3)" }}>
-        <button type="button" className="btn btn-ghost" onClick={toggleLang} style={{ fontSize: "var(--font-size-sm)" }}>
+        <Button variant="ghost" size="md" type="button" onClick={toggleLang}>
           {currentLang === "en" ? t("registration.switchToJapanese") : t("registration.switchToEnglish")}
-        </button>
+        </Button>
       </div>
 
       <h1>{t("registration.title")}</h1>
@@ -535,14 +536,14 @@ export default function RegisterPage() {
           </div>
         </fieldset>
 
-        <button
+        <Button variant="primary" size="md" fullWidth
           type="submit"
-          className="btn btn-primary"
+
           disabled={submitting}
-          style={{ width: "100%" }}
+
         >
           {submitting ? t("common.saving") : t("registration.submit")}
-        </button>
+        </Button>
       </form>
     </div>
   );

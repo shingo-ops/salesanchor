@@ -111,7 +111,7 @@ export default function ShiftsPage() {
             header: t("common.actions"),
             renderCell: (s) => (
               <span className="actions">
-                {hasPermission("shifts.manage") && <button className="btn-sm btn-danger" onClick={() => handleDelete(s.id)}>{t("common.delete")}</button>}
+                {hasPermission("shifts.manage") && <Button variant="danger" size="sm" onClick={() => handleDelete(s.id)}>{t("common.delete")}</Button>}
               </span>
             ),
           },

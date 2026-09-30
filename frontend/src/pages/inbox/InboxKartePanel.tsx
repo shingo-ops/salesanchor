@@ -7,6 +7,7 @@ import { getInitials, parseDate } from "./inbox.types";
 import { getStatusPresentation } from "../../utils/statusPresentation";
 import type { LeadDetail, KarteTabKey, SalesFormSelectionState } from "./inbox.types";
 import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
+import { Button } from "../../components/Button";
 
 interface CardForm {
   nickname?: string | null;
@@ -315,14 +316,14 @@ function ActionBar({
           {regLink && (
             <div className="karte-overflow-link" style={{ padding: "var(--spacing-2)", wordBreak: "break-all", fontSize: "var(--font-size-xs)" }}>
               <a href={regLink} target="_blank" rel="noopener noreferrer">{regLink}</a>
-              <button
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="btn-sm"
-                style={{ marginLeft: "var(--spacing-1)" }}
+
+
                 onClick={() => { navigator.clipboard.writeText(regLink); }}
               >
                 {t("registration.copyLink")}
-              </button>
+              </Button>
             </div>
           )}
         </div>
@@ -730,13 +731,13 @@ function ChannelInviteButton({ leadId }: { leadId: number }) {
     <div className="right-panel-row">
       <span className="right-panel-label">{t("leads.channelInvite")}</span>
       <div className="flex flex-col gap-1">
-        <button
+        <Button variant="secondary" size="md"
           onClick={handleSend}
           disabled={sending}
-          className="btn btn-secondary text-xs"
+
         >
           {sending ? t("leads.channelInviteSending") : t("leads.channelInviteSend")}
-        </button>
+        </Button>
         {sent && <span className="text-xs text-green-600">{t("leads.channelInviteSent")}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
@@ -788,13 +789,13 @@ function RoleSyncStatusRow({
             </span>
           )}
         </span>
-        <button
+        <Button variant="secondary" size="md"
           onClick={handleResync}
           disabled={syncing}
-          className="btn btn-secondary text-xs"
+
         >
           {syncing ? t("leads.discordRoleSyncing") : t("leads.discordRoleResync")}
-        </button>
+        </Button>
         {triggered && <span className="text-xs text-green-600">{t("leads.discordRoleSyncTriggered")}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
@@ -831,28 +832,28 @@ function DiscordRemoveButtons({ leadId, hasChannel }: { leadId: number; hasChann
       <div className="flex flex-col gap-1">
         <div className="flex gap-1 flex-wrap">
           {hasChannel && (
-            <button
+            <Button variant="secondary" size="md"
               onClick={() => handleAction("remove-from-channel")}
               disabled={loading !== null}
-              className="btn btn-secondary text-xs"
+
             >
               {loading === "remove-from-channel" ? t("common.processing") : t("leads.discordRemoveFromChannel")}
-            </button>
+            </Button>
           )}
-          <button
+          <Button variant="secondary" size="md"
             onClick={() => handleAction("kick")}
             disabled={loading !== null}
-            className="btn btn-secondary text-xs"
+
           >
             {loading === "kick" ? t("common.processing") : t("leads.discordKick")}
-          </button>
-          <button
+          </Button>
+          <Button variant="danger" size="md"
             onClick={() => handleAction("ban")}
             disabled={loading !== null}
-            className="btn btn-danger text-xs"
+
           >
             {loading === "ban" ? t("common.processing") : t("leads.discordBan")}
-          </button>
+          </Button>
         </div>
         {done && <span className="text-xs text-green-600">{done}</span>}
         {error && <span className="text-xs text-red-500">{error}</span>}

@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 interface DiscordConfig {
   guild_id: string | null;
@@ -275,9 +276,9 @@ export default function DiscordConfigPage() {
           {saved && <p className="text-sm text-green-600">{t("discordConfig.saved")}</p>}
 
           {canEdit && (
-            <button onClick={handleSave} disabled={saving} className="btn btn-primary">
+            <Button variant="primary" size="md" onClick={handleSave} disabled={saving}>
               {saving ? t("common.saving") : t("common.save")}
-            </button>
+            </Button>
           )}
         </section>
 
@@ -297,13 +298,13 @@ export default function DiscordConfigPage() {
               <p className="text-xs text-token-text-secondary">{t("discordAutoSetup.disabledHint")}</p>
             )}
 
-            <button
+            <Button variant="secondary" size="md"
               onClick={handleAutoSetup}
               disabled={!guildId || autoSetupRunning}
-              className="btn btn-secondary"
+
             >
               {autoSetupRunning ? t("discordAutoSetup.running") : t("discordAutoSetup.runButton")}
-            </button>
+            </Button>
 
             {autoSetupError && <p className="text-sm text-red-500">{autoSetupError}</p>}
 
@@ -538,9 +539,9 @@ export default function DiscordConfigPage() {
           {ticketSaved && <p className="text-sm text-green-600">{t("discordTicketConfig.saved")}</p>}
 
           {canEdit && (
-            <button onClick={handleTicketSave} disabled={ticketSaving} className="btn btn-primary">
+            <Button variant="primary" size="md" onClick={handleTicketSave} disabled={ticketSaving}>
               {ticketSaving ? t("common.saving") : t("common.save")}
-            </button>
+            </Button>
           )}
 
           {/* ── ボタン設置 (Phase 3) ── */}
@@ -554,13 +555,13 @@ export default function DiscordConfigPage() {
               </p>
               {deployError && <p className="text-sm text-red-500">{deployError}</p>}
               {deployDone && <p className="text-sm text-green-600">{t("discordTicketConfig.deployDone")}</p>}
-              <button
+              <Button variant="secondary" size="md"
                 onClick={handleDeployButton}
                 disabled={deploying}
-                className="btn btn-secondary"
+
               >
                 {deploying ? t("discordTicketConfig.deploying") : t("discordTicketConfig.deployButton")}
-              </button>
+              </Button>
             </div>
           )}
         </section>

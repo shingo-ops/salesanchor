@@ -6,8 +6,9 @@ TCG 診断 API サービス層。
 SELECT のみ（retry_extraction を除く）。
 
 retry_extraction:
-  status='pending' または 'error' のジョブを再エンキューする。
-  'done' / 'running' は skipped。
+  job_ids 指定時：status='error' のジョブのみを再エンキューする。
+    'pending' / 'running' / それ以外は skipped（二重投入防止。design §5）。
+  scope="pending" 指定時：status='pending' の全件（最大 50 件）を対象とする（変更なし）。
   Celery 未接続時は RuntimeError を送出（呼び出し元で 503 に変換）。
 """
 from __future__ import annotations
@@ -137,7 +138,7 @@ async def run_diagnostic(db: AsyncSession, *, key: str) -> list[dict]:
 # 再エンキュー（retry-extraction エンドポイント用）
 # ---------------------------------------------------------------------------
 
-_ELIGIBLE_STATUSES = frozenset({"pending", "error"})
+_ELIGIBLE_STATUSES = frozenset({"error"})
 _MAX_JOBS = 50
 _COUNTDOWN_STEP = 3  # seconds per job
 
@@ -153,7 +154,8 @@ async def retry_extraction(
 
     Args:
         db:       非同期 DB セッション
-        job_ids:  再実行対象の extraction_job ID リスト（最大 50 件）
+        job_ids:  再実行対象の extraction_job ID リスト（最大 50 件）。
+                  status='error' 以外（pending/running 含む）は skipped
         scope:    "pending" のとき status='pending' の全件（最大 50 件）を対象とする
 
     Returns:

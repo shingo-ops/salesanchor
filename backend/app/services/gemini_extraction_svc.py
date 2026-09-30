@@ -245,10 +245,15 @@ def format_prompt_input(raw_text: str) -> str:
 
 
 def _get_genai_client():
-    """google.genai.Client を生成して返す。"""
+    """google.genai.Client を生成して返す。
+
+    GEMINI_PROXY_URL が設定されていれば、その URL を HTTP CONNECT プロキシとして
+    同期/非同期クライアントの両方に渡す（prod2 経由の egress 対応。design:
+    docs/handoff/gemini-egress-via-prod2/design.md §5-2）。未設定なら従来どおり直接接続する。
+    """
     try:
         from google import genai  # type: ignore[import-untyped]
-        from google.genai import types as _types  # noqa: F401
+        from google.genai import types as _types
     except ImportError as exc:
         raise RuntimeError(
             "google-genai がインストールされていません: pip install google-genai"
@@ -257,6 +262,15 @@ def _get_genai_client():
     if not api_key:
         raise RuntimeError(
             "GEMINI_API_KEY が未設定です。Gemini 抽出は実行できません。"
+        )
+    proxy_url = os.getenv("GEMINI_PROXY_URL", "").strip()
+    if proxy_url:
+        return genai.Client(
+            api_key=api_key,
+            http_options=_types.HttpOptions(
+                client_args={"proxy": proxy_url},
+                async_client_args={"proxy": proxy_url},
+            ),
         )
     return genai.Client(api_key=api_key)
 

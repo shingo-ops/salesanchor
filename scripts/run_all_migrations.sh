@@ -845,3 +845,6 @@ run_sql migrations/20260928_100000_delete_skip_condition_rules.sql
 
 # PR-B1: 試運転用の表（extraction_shadow_runs/results）と仕入元の発送日の書き方欄を追加（A/B専用・既存クエリ非改変）
 run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
+
+# ADR-158: source_messages.received_at を採用本文の投稿時刻にそろえる（冪等）
+run_sql migrations/20260929_120000_fix_source_messages_received_at.sql

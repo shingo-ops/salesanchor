@@ -82,7 +82,7 @@ export default function BuddyPage() {
                   {/* status-ssot-exempt: is_active boolean (status ドメインではなく boolean flag) */}
                   <td><span className={`badge badge-${p.is_active ? "won" : "lost"}`}>{p.is_active ? t("common.active") : t("buddy.ended")}</span></td>
                   <td>{new Date(p.started_at).toLocaleDateString()}</td>
-                  <td className="actions">{p.is_active && hasPermission("buddy.manage") && <button className="btn-sm btn-danger" onClick={() => endPair(p.id)}>{t("buddy.end")}</button>}</td>
+                  <td className="actions">{p.is_active && hasPermission("buddy.manage") && <Button variant="danger" size="sm" onClick={() => endPair(p.id)}>{t("buddy.end")}</Button>}</td>
                 </tr>
               ))}
               {pairs.length === 0 && <tr><td colSpan={5} className="empty">{t("buddy.noPairs")}</td></tr>}

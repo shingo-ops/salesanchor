@@ -205,14 +205,14 @@ export default function StatusMasterPage() {
       renderCell: s => (
         <span className="actions">
           {hasPermission("suppliers.view") && (
-            <button className="btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(s); }}>
               {t("common.edit")}
-            </button>
+            </Button>
           )}
           {hasPermission("suppliers.view") && (
-            <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
+            <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>
               {t("common.delete")}
-            </button>
+            </Button>
           )}
         </span>
       ),
@@ -359,13 +359,13 @@ export default function StatusMasterPage() {
               {t("common.search")}
             </Button>
             {search && (
-              <button
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="btn-sm"
+
                 onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
               >
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -442,27 +442,27 @@ export default function StatusMasterPage() {
           data-testid="status-master-pagination"
         >
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
               data-testid="status-master-page-prev"
             >
               {t("common.prevPage")}
-            </button>
+            </Button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="status-master-page-info">
             {t(`${f}.total`, { count: items.length })}
           </span>
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => p + 1)}
               disabled={!hasNext}
               data-testid="status-master-page-next"
             >
               {t("common.nextPage")}
-            </button>
+            </Button>
           )}
         </div>
       )}

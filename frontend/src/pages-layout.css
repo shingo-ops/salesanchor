@@ -258,24 +258,6 @@
   box-shadow: var(--focus-ring-shadow);
 }
 
-/* Meta 風ログインボタン（.login-card スコープ限定） */
-.login-card .btn-primary {
-  width: 100%;
-  background: var(--accent);
-  color: var(--on-accent);
-  border: none;
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--font-md);
-  font-weight: var(--font-weight-semi);
-  cursor: pointer;
-  transition: background var(--transition-fast);
-}
-
-.login-card .btn-primary:hover:not(:disabled) {
-  background: var(--accent-hover);
-}
-
 /* パスワード再設定リンク（パスワード入力欄の下） */
 .login-forgot-link {
   display: block;
@@ -542,10 +524,6 @@
   font-size: var(--font-xs);
   opacity: var(--opacity-dim);
   margin-top: var(--space-2px);
-}
-.btn-block {
-  width: 100%;
-  padding: var(--space-2);
 }
 .roles-main {
   background: var(--bg-surface);

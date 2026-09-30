@@ -339,17 +339,17 @@ export default function KnowledgeAliasesTab() {
           <Button onClick={() => loadRules(ruleSearch)} variant="secondary" size="sm" data-testid="rules-search-btn">
             {t("common.search")}
           </Button>
-          <button onClick={openCreateRule} className="btn-primary btn-sm" data-testid="rules-new" style={{ marginLeft: "auto" }}>
+          <Button variant="primary" size="sm" layoutClassName="comp-btn-layout--ml-auto" onClick={openCreateRule} data-testid="rules-new">
             {t("superAdmin.knowledge.newRule")}
-          </button>
-          <button
+          </Button>
+          <Button variant="danger" size="sm"
             onClick={() => setRuleConfirmDelete(true)}
-            className="btn-danger btn-sm"
+
             disabled={ruleSelected.size === 0}
             data-testid="rules-bulk-delete"
           >
             {t("common.delete")}
-          </button>
+          </Button>
         </div>
 
         <table className="data-table">
@@ -387,9 +387,9 @@ export default function KnowledgeAliasesTab() {
                   <td>{r.priority}</td>
                   <td>{t(`superAdmin.knowledge.langs.${r.language}`, { defaultValue: r.language })}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="btn-sm" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>
+                    <Button variant="secondary" size="sm" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>
                       {t("common.edit")}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -417,17 +417,17 @@ export default function KnowledgeAliasesTab() {
           <Button onClick={() => loadAliases(aliasSearch)} variant="secondary" size="sm" data-testid="aliases-search-btn">
             {t("common.search")}
           </Button>
-          <button onClick={openCreateAlias} className="btn-primary btn-sm" data-testid="aliases-new" style={{ marginLeft: "auto" }}>
+          <Button variant="primary" size="sm" layoutClassName="comp-btn-layout--ml-auto" onClick={openCreateAlias} data-testid="aliases-new">
             {t("superAdmin.knowledge.newAlias")}
-          </button>
-          <button
+          </Button>
+          <Button variant="danger" size="sm"
             onClick={() => setAliasConfirmDelete(true)}
-            className="btn-danger btn-sm"
+
             disabled={aliasSelected.size === 0}
             data-testid="aliases-bulk-delete"
           >
             {t("common.delete")}
-          </button>
+          </Button>
         </div>
 
         <table className="data-table">
@@ -459,9 +459,9 @@ export default function KnowledgeAliasesTab() {
                   <td><code>{a.alias_text}</code></td>
                   <td>{a.product_id ? (productName.get(a.product_id) ?? `#${a.product_id}`) : "-"}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="btn-sm" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>
+                    <Button variant="secondary" size="sm" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>
                       {t("common.edit")}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -508,15 +508,15 @@ export default function KnowledgeAliasesTab() {
               />{" "}
               {t("superAdmin.suppliersAdmin.fields.isActive")}
             </label>
-            <button
+            <Button variant="primary" size="md"
               type="button"
-              className="btn-primary"
+
               disabled={promptSupplierId === null || promptSaving}
               onClick={savePrompt}
               data-testid="supplier-prompt-save"
             >
               {promptSaving ? t("common.saving") : t("common.save")}
-            </button>
+            </Button>
             {promptMsg && <span style={{ color: "var(--text-secondary)" }}>{promptMsg}</span>}
           </div>
           <textarea

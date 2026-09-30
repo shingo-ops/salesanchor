@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "../../contexts/AuthContext";
 import { firebaseErrorMessage } from "../../lib/firebaseErrorMessage";
+import { Button } from "../../components/Button";
 
 type Mode = "signIn" | "reset";
 
@@ -116,9 +117,9 @@ export default function LoginPage() {
                   {t("login.forgotPassword")}
                 </button>
               </div>
-              <button type="submit" className="btn-primary" disabled={loading}>
+              <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
                 {loading ? t("login.signingIn") : t("login.signIn")}
-              </button>
+              </Button>
             </form>
           </>
         ) : (
@@ -141,9 +142,9 @@ export default function LoginPage() {
                     autoComplete="email"
                   />
                 </div>
-                <button type="submit" className="btn-primary" disabled={loading}>
+                <Button variant="primary" size="lg" fullWidth type="submit" disabled={loading}>
                   {loading ? t("login.sendingEmail") : t("login.sendResetEmail")}
-                </button>
+                </Button>
               </form>
             )}
             <button type="button" className="login-back-link" onClick={switchToSignIn}>
