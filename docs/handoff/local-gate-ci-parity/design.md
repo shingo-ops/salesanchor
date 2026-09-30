@@ -2,7 +2,7 @@
 
 - 状態: 設計案作成済み／自己審査 APPROVE（§8）／PO 実装承認済み（2026-09-30「確立したならy」）
 - 調査: `docs/handoff/local-gate-ci-parity/recon.md`
-- 対象ADR: （実装担当が `git grep -il "process-artifacts" origin/main -- docs/adr/` で候補を出し、設計担当が確定する）
+- 対象ADR: `docs/adr/ADR-121-sop-process-artifacts-gate.md`（process-artifacts gate の定義元。関連: `docs/adr/ADR-1003-go-delegation-to-opus.md` の GO 記録、`docs/adr/ADR-135-release-stowaway-prevention.md` の危険変更パターン。本便はどちらの判定も CI では変えない）
 
 ## 1. 目的（PO から見える変化）
 - 設計書の不備（ADR 参照がない、recon の参照がない、受入条件表がない等）が、CI を数分待ってからではなく、**PR を作る時点で**止まる。PR #3861 と同じ不備は、PR 作成の時点で止まる
@@ -14,6 +14,8 @@
   - PR 番号に依存する検査（維持の仕組み、触る／削除するファイルの照合）は「新しい PR（2600 以上）」として実行する
   - **CI では使えない**: `GITHUB_ACTIONS=true` のときに `LOCAL_PRECHECK=1` があれば exit 1（CI で GO 記録の検査を抜ける経路を作らない）
 - 既存の Python の検査は、この便では**消さない**（変更は一度に1つ。JS 呼び出しが実運用で働くことを確かめてから、重複を別便で整理する）
+- 手元の関所から JS を呼ぶときは `env -u GITHUB_ACTIONS` を付ける。理由（2026-09-30 実装時の事実）: `scripts/tests/test-pr-lifecycle.py:437-453` は、PR 作成が外から注入された環境変数（GH_HOST、GH_REPO、GITHUB_ACTIONS=true）に左右されないことを確かめており、既存の `scripts/gh-pr-create-safe.sh:138` も同じ理由で `env -u GITHUB_ACTIONS` を使っている。CI の gate（`.github/workflows/process-artifacts-gate.yml:44`）は `validate-pr-body.sh` を通らず JS を直接呼ぶので、CI での拒否はそのまま効く
+- 事実（CI と同じ挙動のまま）: 危険変更だけの PR（例: `scripts/` のみ）は、CI でも GO 記録の検査のあと設計書の検査に進まずに終わる（`scripts/check-process-artifacts.js` の hasDangerous 分岐）。手元の関所も同じになる。これを変えるかは別便
 
 ## 3. 変更するファイル
 - `scripts/check-process-artifacts.js`: `LOCAL_PRECHECK` の追加（GO 記録の検査の直前で分岐、PR 番号の猶予判定2か所、CI での使用拒否）
