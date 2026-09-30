@@ -65,6 +65,7 @@ class TestCaseAUnrelatedCandidate:
         assert report["gate_counts"] == {
             "gate1": 0, "legacy_gate2": 0, "legacy_gate3": 0,
             "new_gate2_shadow_results_pre_maintenance": 0, "new_gate2_raw_message_blocks": 0, "new_gate3": 0,
+            "population_gate": 0,
         }
         assert report["exit_code"] == 0
 
@@ -161,6 +162,54 @@ class TestNewSystemOnlyChange:
         assert result["changed_count"] == 1
         assert result["changes"][0]["before"]["status"] == "unmatched"
         assert result["changes"][0]["after"]["status"] == "matched"
+
+
+class TestPopulationGate:
+    def test_empty_items_list_fails_with_exit_1(self):
+        # Arrange
+        inputs = {**_inputs(), "items": []}
+        # Act
+        report = _run(_candidate(keywords=("ゲンガー",)), inputs)
+        # Assert
+        assert report["population_gate"]["below_minimum"] == ["legacy_items"]
+        assert report["gate_counts"]["population_gate"] == 1
+        assert report["exit_code"] == 1
+
+    def test_empty_shadow_population_is_reported_and_fails(self):
+        # Arrange
+        inputs = {**_inputs(), "shadow_blocks": []}
+        # Act
+        report = _run(_candidate(keywords=("ゲンガー",)), inputs)
+        # Assert
+        assert report["population_gate"]["populations"]["new_shadow_blocks"] == 0
+        assert report["exit_code"] == 1
+
+    def test_min_population_option_is_applied_and_reported(self):
+        # Arrange
+        inputs = _inputs()
+        # Act
+        report = replay.evaluate(candidates=_candidate(keywords=("ゲンガー",)), file_errors=[], days=90,
+                                 inputs=inputs, min_population=2)
+        # Assert
+        assert report["population_gate"]["min_population"] == 2
+        assert len(report["population_gate"]["below_minimum"]) == 4
+        assert report["exit_code"] == 1
+
+    def test_dropped_items_count_is_reported(self):
+        # Arrange
+        inputs = {**_inputs(), "dropped_items_missing_source": 3}
+        # Act
+        report = _run(_candidate(keywords=("ゲンガー",)), inputs)
+        # Assert
+        assert report["population_gate"]["dropped_items_missing_source"] == 3
+
+    def test_pm_code_like_raw_texts_are_counted(self):
+        # Arrange
+        inputs = {**_inputs(), "raw_texts": {"src-1": "ピカチュウ ex 1BOX 5000円", "a": "PM0001 入荷", "b": "関係なし"}}
+        # Act
+        report = _run(_candidate(keywords=("ゲンガー",)), inputs)
+        # Assert
+        assert report["meta"]["pm_code_like_raw_texts"] == 1
 
 
 class TestReadOnlySession:

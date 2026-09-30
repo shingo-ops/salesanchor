@@ -31,6 +31,14 @@
 
 Gemini の選び方のリスク: 新解析には存在しない。根拠 = docs/handoff/gemini-extract-role-split/design.md:25「渡すのは、共通の指示・その仕入元のルール・原文だけで、マスタは渡さない」。したがって新解析の影響は `match_product` の再計算で決定的に測れる。旧解析の Gemini 選択（v6 系）は本試運転で再現できないため、関門3 で出現を数えて確認する。
 
+## 母集団ゲート（空の再生を合格にしない）
+- 旧解析の items・新解析の shadow ブロック・新解析の原文ブロック・原文の 4 母集団のいずれかが `--min-population`（既定 1）未満（0 を含む）なら不合格（終了コード 1）。shadow 停止中（#3864）で母集団 (a) が小さくても、0 なら不合格として報告する。
+- JSON の `population_gate` に最小件数・各母集団の件数・下回った母集団名・`dropped_items_missing_source`（原文が取れず落とした items 件数）を出す。
+
+## 既知の限界（候補の登録後の値を読み取り専用では再現できない項目）
+- product_code: 登録時に `nextval('public.product_code_seq')` で採番される（backend/app/services/tcg_product_master_svc.py:297）ため、登録前には決まらない。試運転では None（RAWCODE 判定に参加しない）。自動採番コード（PMxxxx 形式）が過去の原文に出るかは `meta.pm_code_like_raw_texts` で実行時に実測して報告する。リスクが小さいという主張は、この実測値が 0 のときのみ成立する。【未確認】実 DB 未実行のため現時点の値は不明。
+- category_class: 登録は type_master.name_ja（作品名）を保存する（tcg_product_master_svc.py:374-380）が、旧解析が単品／Box 判定に使う値は「商品区分（product_category_id）の kubun_type が 箱系・箱系大 なら Box、なければ category_class」（tcg_work_comparison_svc の classes と同じ規則）。CSV の product_category_code は必須列なので、登録後の候補は kubun_type 側で判定される。試運転は同じ規則で kubun_type から導出する。create_product の導出そのものは async の書き込み関数内で再利用できないため複製していない。
+
 ## 実装方針
 - 現在の有効マスタは既存ローダで読む（`load_lookup_maps`／`load_product_keywords`／`load_product_kubun_type_map`／`load_work_master`／`load_normalization_rules`／`load_work_reference`／`load_product_entries`）。SQL の複製は、既存に無い最小の 4 本のみ（work_code→id、category→kubun、products.category_class、過去データの抽出）。
 - 「追加後」はメモリ上で作る（元の辞書・リストは変更せず新しいものを返す）。候補には負の仮 ID を振り、実商品 ID と衝突させない。
@@ -55,6 +63,13 @@ Gemini の選び方のリスク: 新解析には存在しない。根拠 = docs/
 ## 外部・過去事例の参照と我々への応用
 - 外部事例: 該当なし。理由: 社内の LINE 解析マスタ（旧解析 match_pid_with_work と新解析 match_product の 2 系統）に固有の前後比較ツールであり、外部の汎用ツールで代替できない。既存の社内前例（`tcg_keyword_lint` の「登録内容を機械が読む」型、`tcg_work_comparison_svc.match_item` の解き直し）を再利用する。
 - 社内の過去事例: docs/handoff/tcg-keyword-quality/design.md（登録内容を機械が読んで止める型）→ 応用: 同じ型で「追加前に過去データで解き直して止める」関所にする。
+
+## 本番での実行手順（【未確認】初回実行まで未検証）
+1. 候補 CSV をコンテナの /tmp に置く（コンテナ再起動で消える。/app は書込不可）。
+2. `docker compose exec -T backend python scripts/replay_master_addition.py /tmp/candidates.csv --out /tmp/result.json`
+3. `docker compose exec -T backend cat /tmp/result.json > result.json`（`docker compose cp` は tmpfs のため使えない）
+4. `gate_counts` が全て 0 であることと、`population_gate.below_minimum` が空であることを確認する。終了コード 1 なら登録しない。
+- 実行には無制限鍵・VPS 直作業が絡む場合があり、CLAUDE.md の VPS 規則に従う（許可は PO の都度承認）。
 
 ## 維持の仕組み
 - 守り手: backend/scripts/replay_master_addition.py（終了コード 1 が関所）と docs/handoff/buyback-master-addition/design.md（手順の正本）。Hikky-dev（実装役）が登録便ごとに実行し、PO が gate_counts を確認する。

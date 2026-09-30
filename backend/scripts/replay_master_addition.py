@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from collections.abc import Iterable, Sequence
 from contextlib import contextmanager
@@ -43,6 +44,8 @@ from app.services.tcg_work_comparison_svc import match_item
 from app.services.tcg_work_reference import load_work_reference
 
 DEFAULT_DAYS = 90
+DEFAULT_MIN_POPULATION = 1
+PM_CODE_LIKE = re.compile(r"pm\d{4}")  # create_product の自動採番形式（PMxxxx）を正規化後の原文から探す
 SAMPLE_LIMIT = 20
 BOX_KUBUN_TYPES = frozenset({"箱系", "箱系大"})  # tcg_work_comparison_svc.compare の classes と同じ定義
 FIRST_SYNTHETIC_ID = -1  # 候補には負の仮 ID を振る（実商品 ID と衝突しない）
@@ -72,6 +75,8 @@ class Candidate:
     exclude_keywords: tuple[str, ...]
 
     def entry(self) -> ProductEntry:
+        # product_code は登録時に nextval('public.product_code_seq') で採番される（登録前は決まらない）ため None。
+        # 自動採番コード（PMxxxx）の RAWCODE 当たりは meta.pm_code_like_raw_texts で実測する。
         return ProductEntry(
             id=self.synthetic_id,
             product_code=None,
@@ -286,9 +291,30 @@ def count_raw_text_hits(raw_texts: dict[str, str], candidates: Sequence[Candidat
 # ---------------------------------------------------------------------------
 
 
+def population_gate(inputs: dict, min_population: int) -> dict:
+    """再生対象が min_population 未満（0 を含む）なら不合格。空の母集団を「変化 0 件」と誤認しないための関門。"""
+    populations = {
+        "legacy_items": len(inputs["items"]),
+        "new_shadow_blocks": len(inputs["shadow_blocks"]),
+        "new_raw_message_blocks": len(inputs["message_blocks"]),
+        "raw_texts": len(inputs["raw_texts"]),
+    }
+    return {
+        "min_population": min_population,
+        "populations": populations,
+        "below_minimum": sorted(name for name, n in populations.items() if n < min_population),
+        "dropped_items_missing_source": inputs.get("dropped_items_missing_source", 0),
+    }
+
+
+def count_pm_code_like(raw_texts: dict[str, str]) -> int:
+    """PMxxxx 形式の文字列を含む原文の件数（自動採番コードの RAWCODE 誤当たりリスクの実測。報告のみ）。"""
+    return sum(1 for raw in raw_texts.values() if PM_CODE_LIKE.search(normalize_for_match(raw)))
+
+
 def build_report(
     *, candidates: Sequence[Candidate], gate1: dict, legacy: dict, new_shadow: dict, new_raw: dict,
-    legacy_gate3: dict, new_gate3: dict, days: int,
+    legacy_gate3: dict, new_gate3: dict, days: int, pop_gate: dict, pm_code_like_texts: int,
 ) -> dict:
     counts = {
         "gate1": gate1["count"],
@@ -297,9 +323,11 @@ def build_report(
         "new_gate2_shadow_results_pre_maintenance": new_shadow["changed_count"],
         "new_gate2_raw_message_blocks": new_raw["changed_count"],
         "new_gate3": new_gate3["count"],
+        "population_gate": len(pop_gate["below_minimum"]),
     }
     return {
-        "meta": {"days": days, "candidate_count": len(candidates)},
+        "meta": {"days": days, "candidate_count": len(candidates), "pm_code_like_raw_texts": pm_code_like_texts},
+        "population_gate": pop_gate,
         "gate1": gate1,
         "legacy": {"gate2": legacy, "gate3": legacy_gate3},
         "new": {
@@ -314,6 +342,7 @@ def build_report(
 
 def evaluate(
     *, candidates: Sequence[Candidate], file_errors: Sequence[str], days: int, inputs: dict,
+    min_population: int = DEFAULT_MIN_POPULATION,
 ) -> dict:
     """DB を読まない中核。inputs は load_inputs が返す辞書（テストでは手で組む）。"""
     after_ctx = with_candidates_legacy_context(inputs["legacy_context"], candidates)
@@ -327,6 +356,8 @@ def evaluate(
         new_raw=replay_new(inputs["message_blocks"], inputs["entries"], after_entries),
         legacy_gate3=count_raw_text_hits(inputs["raw_texts"], candidates, legacy_system_hit),
         new_gate3=count_raw_text_hits(inputs["raw_texts"], candidates, new_system_hit),
+        pop_gate=population_gate(inputs, min_population),
+        pm_code_like_texts=count_pm_code_like(inputs["raw_texts"]),
     )
 
 
@@ -415,7 +446,8 @@ def load_inputs(session: Session, days: int) -> dict:
     legacy_context, valid_work_ids = load_legacy_context(session)
     items = [dict(r._mapping) for r in session.execute(text(_ITEMS_SQL), params).fetchall()]
     raw_texts = {str(r[0]): r[1] for r in session.execute(text(_SOURCES_SQL), params).fetchall()}
-    items = [{**i, "source_id": str(i["source_id"])} for i in items if str(i["source_id"]) in raw_texts]
+    all_items = [{**i, "source_id": str(i["source_id"])} for i in items]
+    items = [i for i in all_items if i["source_id"] in raw_texts]
     shadow_blocks = [
         {"id": str(r[0]), "text": block_text(r[3], r[1], r[2])}
         for r in session.execute(text(_SHADOW_SQL)).fetchall()
@@ -424,7 +456,7 @@ def load_inputs(session: Session, days: int) -> dict:
         "legacy_context": legacy_context, "valid_work_ids": valid_work_ids,
         "entries": load_product_entries(session), "works": analyzer.load_work_master(session),
         "items": items, "raw_texts": raw_texts, "message_blocks": _message_blocks(items, raw_texts),
-        "shadow_blocks": shadow_blocks,
+        "shadow_blocks": shadow_blocks, "dropped_items_missing_source": len(all_items) - len(items),
     }
 
 
@@ -437,6 +469,8 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="マスタ追加の影響を読み取り専用で試運転する")
     parser.add_argument("csv", help="追加候補の CSV（商品マスタ CSV 取り込みと同じ形式）")
     parser.add_argument("--days", type=int, default=DEFAULT_DAYS, help=f"過去何日を対象にするか（既定 {DEFAULT_DAYS}）")
+    parser.add_argument("--min-population", type=int, default=DEFAULT_MIN_POPULATION,
+                        help=f"各再生対象の最小件数。下回る（0 を含む）と不合格（既定 {DEFAULT_MIN_POPULATION}）")
     parser.add_argument("--out", help="JSON の出力先（省略時は標準出力）")
     return parser.parse_args(argv)
 
@@ -465,7 +499,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             inputs = load_inputs(session, args.days)
     finally:
         engine.dispose()
-    report = evaluate(candidates=candidates, file_errors=file_errors, days=args.days, inputs=inputs)
+    report = evaluate(candidates=candidates, file_errors=file_errors, days=args.days, inputs=inputs,
+                      min_population=args.min_population)
     write_report(report, args.out)
     return report["exit_code"]
 
