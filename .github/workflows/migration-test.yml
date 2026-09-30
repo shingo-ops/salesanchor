@@ -777,6 +777,10 @@ jobs:
           -- public.extraction_attempts: 20260921_110000_pipeline_tables_public.sql で本番作成済み。
           --   20260927_130000_add_extraction_token_cost_columns.sql が ALTER TABLE public.extraction_attempts
           --   を実行するため、前提として最小定義を登録する（FK なしでよい）。
+          --   input_tokens/output_tokens/cost_usd は 20260927_130000 が本番で既に ADD 済みの列。
+          --   このジョブは「変更 SQL のみ」を旧SQLの再適用なしに検証するため、20260930_130000
+          --   （PR #3884, ADR-1004 llm_usage_events バックフィル）のように既存列を SELECT する
+          --   migration を追加する場合、ここで列を先に用意しておく必要がある。
           CREATE TABLE IF NOT EXISTS public.extraction_attempts (
               id                   UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
               extraction_job_id    UUID        NOT NULL,
@@ -794,7 +798,10 @@ jobs:
               parsed_bytes         BIGINT,
               item_count           INTEGER,
               validation_result    JSONB       NOT NULL DEFAULT '{}',
-              error_code           TEXT
+              error_code           TEXT,
+              input_tokens         INTEGER,
+              output_tokens        INTEGER,
+              cost_usd             NUMERIC(10,6)
           );
           PUBLIC_SQL
 
