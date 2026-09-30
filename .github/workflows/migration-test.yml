@@ -173,6 +173,8 @@ jobs:
       #      20260929_120000_fix_source_messages_received_at.sql が JOIN するため最小定義を登録
       #   ※ public.extraction_prompt_config は 20260926_080000_create_extraction_prompt_config.sql で本番作成済み。
       #      20260928_110000_create_extraction_shadow_tables.sql の INSERT ON CONFLICT のため最小定義を登録
+      #   ※ public.tenant_discord_ticket_config は 20260602_120000_add_discord_ticket_config.sql で本番作成済み。
+      #      20260930_130000_set_discord_welcome_template_english.sql の ALTER/UPDATE のため最小定義を登録
       # ──────────────────────────────────────────────────────────────────────
       - name: 既存データ付きの公開スキーマを作成
         run: |
@@ -477,6 +479,15 @@ jobs:
               guild_id   VARCHAR(32),
               created_at TIMESTAMPTZ DEFAULT NOW(),
               updated_at TIMESTAMPTZ DEFAULT NOW()
+          );
+
+          -- public.tenant_discord_ticket_config: 20260602_120000_add_discord_ticket_config.sql で本番作成済み。
+          --   20260930_130000_set_discord_welcome_template_english.sql が ALTER COLUMN SET DEFAULT / UPDATE するため
+          --   最小定義（welcome_template は旧日本語既定つき）を登録する
+          CREATE TABLE IF NOT EXISTS public.tenant_discord_ticket_config (
+              tenant_id        INTEGER PRIMARY KEY REFERENCES public.tenants(id) ON DELETE CASCADE,
+              welcome_template TEXT NOT NULL DEFAULT 'ご連絡ありがとうございます。こちらのチャンネルでサポートいたします。',
+              updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
           );
 
           -- public.tenant_settings: ADR-106 テナントポリシー列が ALTER ADD COLUMN で操作する
