@@ -9,7 +9,7 @@
   - → Gemini の出力単価は thinking tokens（内部思考トークン）を含む。
 
 ### google-genai SDK の usage_metadata 定義
-- `types.py`: `total_token_count = prompt_token_count + candidates_token_count + tool_use_prompt_token_count + thoughts_token_count`
+- google-genai SDK の types.py: `total_token_count = prompt_token_count + candidates_token_count + tool_use_prompt_token_count + thoughts_token_count`
 - → `candidates_token_count` は thoughts を**含まない**別カウンタ。
 
 ### 現状の実装（origin/main、本 recon 時点で再確認）
