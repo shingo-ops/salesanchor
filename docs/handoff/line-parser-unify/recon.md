@@ -3,8 +3,8 @@
 - デプロイ済みSHA: `a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401`（`gh run list --workflow deploy.yml --status success --limit 1 --json headSha`）
 - 調査日時: 2026-09-30（JST）
 - 既存ADR検索結果: `git grep -il "line" docs/adr/` はほぼ誤検出（pipeline/online等の部分一致）。`docs/adr/FEATURE-INDEX.md` にも該当なし。LINE取り込みパーサへの直接言及は以下2件のみ:
-  - `docs/adr/ADR-1001-deprecate-tcg-products-unify-to-public.md:105` — `routers/tcg_line_import.py` のスキーマ参照変更（表内の一行）
-  - `docs/adr/ADR-158-product-level-supersession.md:62,69` — `tcg_line_import_svc.py` の is_active/旧メッセージ無効化ロジックへの言及
+  - `docs/adr/ADR-1001-deprecate-tcg-products-unify-to-public.md:105` — `backend/app/routers/tcg_line_import.py` のスキーマ参照変更（表内の一行）
+  - `docs/adr/ADR-158-product-level-supersession.md:62,69` — `backend/app/services/tcg_line_import_svc.py` の is_active/旧メッセージ無効化ロジックへの言及
   - パーサ統合そのものを扱うADRは**未確認**（存在しない）
 - worktreeは作成していません（上限到達のため）。読み取りのみ、コードはすべて `git show <SHA>:<path>` で取得。Q4のパース実験は scratchpad 内に一時的にソースを書き出して実行（作業後もscratchpad配下に残置＝リポジトリ外）。
 
@@ -80,16 +80,16 @@
 3. **`POST /tcg/line-devices/import`**（`backend/app/routers/line_import_devices.py:69-82`）
    - デバイストークン認証（`device_user`）。**Python関数として `upload_android_line_export()` を直接呼ぶ**（HTTPを経由しない、78-81行目）。この関数内のコメント（72-77行目）に「新しい引数が増えたときは、ここにも必ず明示的に渡すこと」という警告があり、2026-09-24に `window_start`/`window_end` 追加漏れで本番障害が起きた実績がある
    - 実際の呼び出し元（Termuxクライアント）: `tools/termux-line-import/client.py:22` の `ENDPOINT = 'https://api.salesanchor.jp/api/v1/tcg/line-devices/import'`、435行目 `post()` 関数でこのURLにmultipartでPOST
-   - `client.py` は先にローカルで `parse_android_export`（19行目でimport、158行目で呼び出し）を使って解析＆検証してからサーバーに送信（サーバー側の`parse_android_export`と**重複したロジック**が `tools/termux-line-import/android_parser.py` に存在）
+   - `tools/termux-line-import/client.py` は先にローカルで `parse_android_export`（19行目でimport、158行目で呼び出し）を使って解析＆検証してからサーバーに送信（サーバー側の`parse_android_export`と**重複したロジック**が `tools/termux-line-import/android_parser.py` に存在）
 
 ### `source_format` の決定箇所
 
-- デフォルトは `"pc"`（`tcg_line_import_svc.py:509`）
+- デフォルトは `"pc"`（`backend/app/services/tcg_line_import_svc.py:509`）
 - `"android"` になるのは `upload_android_line_export()` から呼ばれた場合のみ（722行目でハードコード）。ユーザー入力やリクエストパラメータでは変わらない＝エンドポイントのルーティングで固定的に決まる
 
 ### 関連する追加の呼び出し経路（Q7で言及）
 
-- `backend/app/line_import_admin.py`（メンテナンス専用モジュール、FastAPIルーターではなくCLI的呼び出し）は `commit_pending_job` / `resolve_supplier`（`tcg_line_import.py` からimport）と `line_source_names.resolve_android` / `is_android` を使う。**`resolve_android`/`is_android` は `import_line_export` の本流フローでは呼ばれておらず**、`line_source_names.py` 内の `link_pending` 相当の別経路でのみ使用（`git grep` で `resolve_android(` の呼び出し元は`line_source_names.py:119`のみ）。この関数群がAndroid専用の別解決ロジックとして存在すること自体、現状「2系統に分かれている」実例
+- `backend/app/line_import_admin.py`（メンテナンス専用モジュール、FastAPIルーターではなくCLI的呼び出し）は `commit_pending_job` / `resolve_supplier`（`backend/app/routers/tcg_line_import.py` からimport）と `line_source_names.resolve_android` / `is_android` を使う。**`resolve_android`/`is_android` は `import_line_export` の本流フローでは呼ばれておらず**、`backend/app/services/line_source_names.py` 内の `link_pending` 相当の別経路でのみ使用（`git grep` で `resolve_android(` の呼び出し元は`backend/app/services/line_source_names.py:119`のみ）。この関数群がAndroid専用の別解決ロジックとして存在すること自体、現状「2系統に分かれている」実例
 
 ---
 
@@ -100,12 +100,12 @@
 | `backend/tests/test_tcg_line_import.py` | 44 | `parse_line_export` / `import_line_export`（PC側中心） |
 | `backend/tests/test_tcg_line_android_parser.py` | 6 | `parse_android_export`（サーバー側） |
 | `backend/tests/test_tcg_line_android_api.py` | 5 | `upload_android_line_export` エンドポイント |
-| `backend/tests/test_line_source_names.py` | 7 | `line_source_names.py`（`is_android`/`resolve_android`含む）+ `import_line_export(source_format='android')` |
+| `backend/tests/test_line_source_names.py` | 7 | `backend/app/services/line_source_names.py`（`is_android`/`resolve_android`含む）+ `import_line_export(source_format='android')` |
 | `backend/tests/test_line_import_devices.py` | 6 | `/tcg/line-devices/*` エンドポイント |
 | `backend/tests/test_line_import_devices_pg.py` | 5 | DB統合（`source_format`カラム含む） |
 | `backend/tests/test_tcg_import_progress_pg.py` | 18 | 進捗API（`import_line_export`呼び出しあり、106行目） |
-| `backend/tests/test_line_import_admin.py` | 20 | `line_import_admin.py`（メンテナンスCLI） |
-| `tools/termux-line-import/test_android_import.py` | 38 | `android_parser.py`（tools側の重複実装）+ `client.py`全体 |
+| `backend/tests/test_line_import_admin.py` | 20 | `backend/app/line_import_admin.py`（メンテナンスCLI） |
+| `tools/termux-line-import/test_android_import.py` | 38 | `tools/termux-line-import/android_parser.py`（tools側の重複実装）+ `tools/termux-line-import/client.py`全体 |
 | `tools/termux-line-import/test_device_session.py` | 7 | デバイス認証（パーサ非対象） |
 
 - カウント方法: `git show $SHA:<file> | grep -c "def test_"`
@@ -117,7 +117,7 @@
 
 対象ファイル: `/Users/tanizawashingo/Downloads/[LINE]WeGo売ります掲示板グループ.txt`（2026-09-29更新、193,975行、UTF-8）
 
-実行方法: デプロイ済みSHAの `tcg_line_import_svc.py` と `tcg_line_android_parser.py` を scratchpad にコピー（`app/services/` 相当のダミーパッケージを作成してimport解決）、`parse_line_export()` をそのまま呼び出し。`supplier_names` は渡さず（＝本番のマスタ一致は再現していない点に注意、名前の切り出しは「最初のスペースで分割」フォールバックのみで検証）。
+実行方法: デプロイ済みSHAの `backend/app/services/tcg_line_import_svc.py` と `backend/app/services/tcg_line_android_parser.py` を scratchpad にコピー（`app/services/` 相当のダミーパッケージを作成してimport解決）、`parse_line_export()` をそのまま呼び出し。`supplier_names` は渡さず（＝本番のマスタ一致は再現していない点に注意、名前の切り出しは「最初のスペースで分割」フォールバックのみで検証）。
 
 ```
 total messages: 3997
@@ -166,7 +166,7 @@ display_name: 'GL'
 body: 'スタッフ ビジネス版LINE 「LINE WORKS」からトークに参加しました。\n\n(グループ機能のノート/アルバム/イベント/投票には対応していません。)'
 ```
 
-これらの `display_name`（例: `N.Fukuda`, `伊藤晴彦`, `一真`, `RAITO`, `ぱ`, `GL`）は、supplier マスタに一致しなければ `import_line_export` の「4b. 未解決仕入元の自動登録」ロジック（`tcg_line_import_svc.py:598-647`）により**そのまま新規サプライヤーとして自動登録される**。Q5でこれが実際に本番DBで発生していることを確認。
+これらの `display_name`（例: `N.Fukuda`, `伊藤晴彦`, `一真`, `RAITO`, `ぱ`, `GL`）は、supplier マスタに一致しなければ `import_line_export` の「4b. 未解決仕入元の自動登録」ロジック（`backend/app/services/tcg_line_import_svc.py:598-647`）により**そのまま新規サプライヤーとして自動登録される**。Q5でこれが実際に本番DBで発生していることを確認。
 
 「招待」「退出」に該当する明確な実例は今回のサンプル抽出キーワードでは0件だった（**未確認**: このファイル内に存在するか自体は全数走査していない。抽出は代表的キーワードのみ）。
 
@@ -249,7 +249,7 @@ body: 'スタッフ ビジネス版LINE 「LINE WORKS」からトークに参加
 **呼び出し経路の非対称性**（Q2参照）:
 - PCは1系統（`POST /tcg/line-import` → `import_line_export(source_format="pc")` がデフォルト）
 - Androidは2系統が同じ `import_line_export(source_format="android")` に収束するが、手前に「サーバー側 `upload_android_line_export`」と「クライアント側 `tools/termux-line-import/client.py` が独自に `parse_android_export` を呼んでローカル検証」という**パーサ実装の二重化**がある（`backend/app/services/tcg_line_android_parser.py` と `tools/termux-line-import/android_parser.py` は別ファイルで内容比較は**未確認**、Q2参照）
-- Android専用の別解決ロジック（`line_source_names.resolve_android`/`is_android`）が`import_line_export`の本流とは別に存在し、`line_import_admin.py`経由でのみ使われる（Q2参照）。これが現状「1本化されていない」実例のひとつ
+- Android専用の別解決ロジック（`line_source_names.resolve_android`/`is_android`）が`import_line_export`の本流とは別に存在し、`backend/app/line_import_admin.py`経由でのみ使われる（Q2参照）。これが現状「1本化されていない」実例のひとつ
 
 **実害の非対称性**（Q4/Q5参照）:
 - PC側の `_SYSTEM_EVENT_RE` は4パターンの固定サフィックスのみをカバーし、「通話」「ノート」「LINE WORKS参加」等はすり抜けて通常メッセージ扱いになり、送信者名がそのまま新規サプライヤーとして自動登録される（本番で3件確認済み）
@@ -262,7 +262,7 @@ body: 'スタッフ ビジネス版LINE 「LINE WORKS」からトークに参加
 ## 追補（Q8〜Q12）
 
 - 生出力全文: `q8_output_final.txt`（scratchpad同ディレクトリ、218行）
-- 実行スクリプト: `q8_analysis.py`（PC実ファイルを対象に `parse_line_export` の全出力を再集計）
+- 実行スクリプト: q8_analysis.py（scratchpad調査用スクリプト。リポジトリ外）（PC実ファイルを対象に `parse_line_export` の全出力を再集計）
 
 ### Q8. 網羅性チェック（PC実ファイル、`is_system_event=False` 3089件 / `=True` 908件の全数走査）
 
@@ -295,18 +295,18 @@ body: 'スタッフ ビジネス版LINE 「LINE WORKS」からトークに参加
 
 **取れない**。根拠:
 1. `public.import_jobs`（`migrations/20260921_110000_pipeline_tables_public.sql:40-56`）のカラムは `id/filename/raw_sha256/message_count/provider_count/unresolved_count/uploaded_by/status/created_at/pending_messages/window_start/window_end/unresolved_names/review_status/messages_linked_at` のみで、**アップロード原文（export_text全体）を保存する列が存在しない**
-2. `public.source_messages.raw_text`（同migrations:20-30行目）も、`build_provider_entries`（`tcg_line_import_svc.py:275-321`）により「サプライヤーごとの最新メッセージ1件のみ」に絞り込まれた後の断片であり、アップロードファイル全体の原文ではない
+2. `public.source_messages.raw_text`（同migrations:20-30行目）も、`build_provider_entries`（`backend/app/services/tcg_line_import_svc.py:275-321`）により「サプライヤーごとの最新メッセージ1件のみ」に絞り込まれた後の断片であり、アップロードファイル全体の原文ではない
 3. Termux端末側 (`tools/termux-line-import/client.py:63,167`) は `self.base/originals/<sha256>.txt` にファイルを保存するが、`supersede_and_cleanup`→`remove_old_files`（201-221行目）により**最新1件（keep_digest）を除いて古いoriginalsを削除する設計**。かつ端末自体への接続手段は今回のrecon環境に与えられていない（本指示で許可されているのは本番DBへのSELECT専用SSHアクセスのみ）
 
 よってQ9のパース実験・システム判定パターン集計は実施不可。
 
-### Q10. `android_parser.py` diff
+### Q10. `tools/termux-line-import/android_parser.py` diff
 
 ```
 diff <(git show a5547fb7...:backend/app/services/tcg_line_android_parser.py) \
      <(git show a5547fb7...:tools/termux-line-import/android_parser.py)
 ```
-**出力なし（完全に同一内容、diff 0件）**。デプロイ済みSHA時点でサーバー側とTermuxクライアント側の`android_parser.py`はバイト単位で一致している。ただし同期の仕組み（CI等での自動同期か手動コピーか）は今回未確認。
+**出力なし（完全に同一内容、diff 0件）**。デプロイ済みSHA時点でサーバー側とTermuxクライアント側の`tools/termux-line-import/android_parser.py`はバイト単位で一致している。ただし同期の仕組み（CI等での自動同期か手動コピーか）は今回未確認。
 
 ### Q11. 本番・SELECT のみ（Q5の3件の追跡）
 

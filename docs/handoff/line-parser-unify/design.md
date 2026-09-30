@@ -1,7 +1,7 @@
 # design（草案）: LINE 取り込み 段階1「集める」— お知らせの判定を1つにまとめる
 
 - 状態: 設計案作成済み／自己審査 REVISE→条件付き（§8）／PO の実装承認待ち／作業フォルダ未作成（上限100のため、正式保存時に worktree へ移す）
-- 調査: 同ディレクトリ `recon.md`（Q1〜Q13、デプロイ済み SHA a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-30 本番読み取り）
+- 調査: 同ディレクトリ `docs/handoff/line-parser-unify/recon.md`（Q1〜Q13、デプロイ済み SHA a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-30 本番読み取り）
 - PO の依頼（2026-09-30）: 業務フロー表の段階1「集める」から整備を進める。上位の方針: 原文を1つの表に集め、DBにない投稿だけ Gemini へ（段階2）、再解析はルール整備の後
 
 ## 1. 目的（PO から見える変化）
@@ -13,7 +13,7 @@
 - 2つのパーサは戻り値の形が同じ（timestamp / display_name / body / is_system_event）。違いは日付・区切り・続き行と、お知らせの判定方法（recon Q1）
 - PC の判定は固定4文言・行末一致のみ（`backend/app/services/tcg_line_import_svc.py:46-49`）。PC 実ファイルで約80件がすり抜け（招待38は 0/38 一致、ほか削除12・アナウンス10・通話6・退会5・ノート5・LINE WORKS 3・名称変更1）（recon Q8）
 - 本番: お知らせ 34 行が source_messages に存在（うち有効 12）、21 仕入元が関与、8 仕入元はお知らせのみ（SP-00245/247/254/260/276/285/302/310）。7件は参照なし、SP-00276 は supplier_knowledge_links（knowledge_rule_id=39）から1件参照（recon 追補2）
-- 未解決の送信者は自動で仕入元登録される（`tcg_line_import_svc.py:598-647`）＝幽霊仕入元の発生源
+- 未解決の送信者は自動で仕入元登録される（`backend/app/services/tcg_line_import_svc.py:598-647`）＝幽霊仕入元の発生源
 - スマホ用パーサはサーバーと Termux 側で完全同一（recon Q10）だが、同期の仕組みはない（未確認）
 - スマホの原文はどこにも残らない（recon Q9）＝スマホ側の実データ検証は不可
 
@@ -21,7 +21,7 @@
 - C1 お知らせの文言表を1か所に置く（新ファイル `backend/app/services/tcg_line_system_events.py`）。PC 実ファイルで判定済み 70 種＋すり抜け 8 種を、行全体一致の正規表現で持つ（部分一致にしない＝「ウェビナーに参加」等の業務文を誤判定しない）
   - PC: `_SYSTEM_EVENT_RE` をこの表に置き換える（判定対象は今と同じ display_name＋本文の1行目）
   - スマホ: 今の構造判定（タブ1個＝お知らせ）を残し、加えて同じ表も当てる（二重の網）
-- C2 （**段階1から外す**。2026-09-30 証拠 E2）続き行のつなぎを保存値で `\n` にそろえると、`tcg_line_import_svc.py:395-403` の再利用判定（raw_text 完全一致）が既存 PC 行 1,332 件（有効 52）と一致しなくなり重複登録の恐れ、さらに `raw_text.split("\n")` で行番号を振る5箇所（gemini_extraction_svc.py:230/581/711、extraction_judgement_svc.py:56、tcg_product_guards.py:37、tcg_analyzer_svc.py:458）で既存の抽出結果と行番号がずれる → 保存値は変えず、段階2の「同じ投稿か」の比較でだけ改行をそろえる（比較用の正規化）
+- C2 （**段階1から外す**。2026-09-30 証拠 E2）続き行のつなぎを保存値で `\n` にそろえると、`backend/app/services/tcg_line_import_svc.py:395-403` の再利用判定（raw_text 完全一致）が既存 PC 行 1,332 件（有効 52）と一致しなくなり重複登録の恐れ、さらに `raw_text.split("\n")` で行番号を振る5箇所（gemini_extraction_svc.py:230/581/711、extraction_judgement_svc.py:56、tcg_product_guards.py:37、tcg_analyzer_svc.py:458）で既存の抽出結果と行番号がずれる → 保存値は変えず、段階2の「同じ投稿か」の比較でだけ改行をそろえる（比較用の正規化）
 - C3（本便から除外、2026-09-30: `.github/workflows/test.yml` の detect-changes が `tools/**` を含まず、tools 側だけの変更では CI が走らないため。CI 設定の変更は PO 判断が要るので別便） Termux 側の android_parser.py がサーバー側と同じであることを確かめるテストを追加（ずれたら CI が赤）
 - C4 既存データの整理（C1〜C3 と別便・PO 判断）: お知らせ 34 行を無効化、幽霊仕入元 8 件は PO 決定済みの方式（記録は残す・（旧）印・無効）に合わせる。suppliers は保護表のため、手動 SSH（DRY-RUN→COMMIT）＋記録用の no-op マイグレーション。SP-00276 のルール参照は中身を確認してから決める
 
