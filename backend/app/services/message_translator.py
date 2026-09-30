@@ -29,7 +29,14 @@ from app.services.inventory_parser_llm import (
     LLMConfigError,
     LLMParseError,
 )
-from app.services.llm_budget import BudgetStatus, check_budget, record_cost
+from app.services.llm_budget import (
+    BudgetStatus,
+    UsageCounts,
+    check_budget,
+    record_cost,
+    record_usage_event,
+    usage_counts_from,
+)
 from app.services.translation_glossary import GlossaryEntry, format_glossary_for_prompt, load_glossary
 
 logger = logging.getLogger(__name__)
@@ -392,11 +399,11 @@ def _build_outbound_prompt(
 async def _call_gemini(
     prompt: str,
     model_name: str,
-) -> tuple[str, int, int]:
+) -> tuple[str, int, int, UsageCounts]:
     """Gemini API を呼び出してテキストと token 使用量を返す。
 
     Returns:
-        (response_text, input_tokens, output_tokens)
+        (response_text, input_tokens, output_tokens, usage_counts)
     """
     api_key = _ensure_api_key()
     genai = _get_genai_module()
@@ -422,9 +429,10 @@ async def _call_gemini(
         raise LLMParseError("Gemini 応答が空でした")
 
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
-    return text_payload.strip(), input_tokens, output_tokens
+    counts = usage_counts_from(usage)
+    input_tokens = counts.prompt_tokens or 0
+    output_tokens = (counts.candidates_tokens or 0) + (counts.thoughts_tokens or 0)
+    return text_payload.strip(), input_tokens, output_tokens, counts
 
 
 def _parse_translation_response(
@@ -521,8 +529,12 @@ async def translate_inbound(
         raise BudgetExceededError(budget_status)
 
     prompt = _build_inbound_prompt(message_text, target_language, glossary)
-    response_text, in_tokens, out_tokens = await _call_gemini(prompt, model)
+    response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
+    await record_usage_event(
+        db, purpose="translation_inbound", model=model, sdk="google-generativeai",
+        counts=counts, tenant_id=tenant_id, source_ref=message_id,
+    )
 
     translated_text, confidence, original_language, flagged_terms = _parse_translation_response(
         response_text
@@ -538,8 +550,13 @@ async def translate_inbound(
         budget_status2 = await check_budget(db, tenant_id)
         if budget_status2 not in (BudgetStatus.HARD_STOP, BudgetStatus.NO_BUDGET_ROW):
             prompt2 = _build_inbound_prompt(message_text, target_language, glossary)
-            resp2, in2, out2 = await _call_gemini(prompt2, MODEL_SEND)
+            resp2, in2, out2, counts2 = await _call_gemini(prompt2, MODEL_SEND)
             await record_cost(db, tenant_id, in2, out2, model=MODEL_SEND)
+            await record_usage_event(
+                db, purpose="translation_inbound_escalation", model=MODEL_SEND,
+                sdk="google-generativeai", counts=counts2, tenant_id=tenant_id,
+                source_ref=message_id,
+            )
             t2, c2, ol2, ft2 = _parse_translation_response(resp2)
             if c2 > confidence:
                 translated_text, confidence, original_language, flagged_terms = t2, c2, ol2, ft2
@@ -665,8 +682,13 @@ async def generate_outbound_draft(
     # 送信英訳は常に最上位モデル（固定方針）
     model = MODEL_SEND
     prompt = _build_outbound_prompt(draft_text, target_language, glossary)
-    response_text, in_tokens, out_tokens = await _call_gemini(prompt, model)
+    response_text, in_tokens, out_tokens, counts = await _call_gemini(prompt, model)
     await record_cost(db, tenant_id, in_tokens, out_tokens, model=model)
+    await record_usage_event(
+        db, purpose="translation_outbound", model=model, sdk="google-generativeai",
+        counts=counts, tenant_id=tenant_id,
+        source_ref=str(lead_id) if lead_id is not None else None,
+    )
 
     translated_text, confidence, _, flagged_terms = _parse_translation_response(
         response_text

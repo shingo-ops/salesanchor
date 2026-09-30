@@ -99,5 +99,5 @@ cost = prompt_tokens × 入力単価 + (candidates_tokens + thoughts_tokens) × 
 
 ### 決定（expand/contract）
 - **A1（本 PR、先行）**: `public.llm_usage_events` の CREATE TABLE のみ。アプリコード（backend/app/services/ 配下）の変更は一切含まない。表が存在してもアプリはまだ書き込まないので、コードが古いまま先にデプロイされても安全（expand）。
-- **A2（PR #3884、A1マージ後に本番反映）**: 過去分バックフィル（migrations/20260930_140000_backfill_llm_usage_events.sql、A2で新規作成）＋ llm_budget.py の書き込み関数＋4経路（抽出・試運転・翻訳3経路）への結線。A1がマージ・本番反映済みであることが前提（表が無い状態で書き込みコードが動くことはない）。
+- **A2（PR #3884、A1マージ後に本番反映）**: 過去分バックフィル（migrations/20260930_160000_backfill_llm_usage_events.sql、A2で新規作成）＋ llm_budget.py の書き込み関数＋4経路（抽出・試運転・翻訳3経路）への結線。A1がマージ・本番反映済みであることが前提（表が無い状態で書き込みコードが動くことはない）。
 - A1・A2は別PRなので、A2は「A1 #<PR番号> を先にマージ・反映すること」をPR本文冒頭に明記し、GOはA1・A2それぞれ別に受ける。

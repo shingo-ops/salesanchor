@@ -457,16 +457,22 @@ async def get_cost_summary(
     db: AsyncSession = Depends(get_db),
     _admin=Depends(require_super_admin),
 ) -> CostSummaryResponse:
+    # ADR-1004: llm_usage_events 台帳が SSOT。extraction_attempts.input_tokens/output_tokens/
+    # cost_usd は本 PR 以降書き込まれないため参照しない（input_bytes/3 推定も廃止）。
+    # LEFT JOIN で extraction_attempt_id 経由の line_extraction 行のみ拾う
+    # （FK の性質上 purpose='line_extraction' の行しか extraction_attempt_id を持たない）。
+
     # --- daily ---
     daily_rows = (await db.execute(text(f"""
         SELECT
             DATE(ea.started_at) AS date,
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE ea.phase = 'completed') AS success_calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY DATE(ea.started_at)
         ORDER BY date DESC
@@ -477,15 +483,16 @@ async def get_cost_summary(
         SELECT
             s.name AS supplier_name,
             COUNT(*) AS total_calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd,
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd,
             COALESCE(AVG(NULLIF(ea.item_count, 0)), 0.0)::double precision AS avg_items
         FROM {_TCG_SCHEMA}.extraction_attempts ea
         JOIN {_TCG_SCHEMA}.extraction_jobs ej ON ej.id = ea.extraction_job_id
         JOIN {_TCG_SCHEMA}.source_messages sm ON sm.id = ea.source_message_id
         LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY s.name
         ORDER BY cost_usd DESC
@@ -495,10 +502,11 @@ async def get_cost_summary(
     total_row = (await db.execute(text(f"""
         SELECT
             COUNT(*) AS calls,
-            COALESCE(SUM(COALESCE(ea.input_tokens, ea.input_bytes / 3)), 0)::bigint AS input_tokens,
-            COALESCE(SUM(COALESCE(ea.output_tokens, 0)), 0)::bigint AS output_tokens,
-            COALESCE(SUM(ea.cost_usd), 0.0)::double precision AS cost_usd
+            COALESCE(SUM(ue.prompt_tokens), 0)::bigint AS input_tokens,
+            COALESCE(SUM(COALESCE(ue.candidates_tokens, 0) + COALESCE(ue.thoughts_tokens, 0)), 0)::bigint AS output_tokens,
+            COALESCE(SUM(ue.cost_usd), 0.0)::double precision AS cost_usd
         FROM {_TCG_SCHEMA}.extraction_attempts ea
+        LEFT JOIN public.llm_usage_events ue ON ue.extraction_attempt_id = ea.id
         WHERE ea.started_at >= NOW() - INTERVAL '1 day' * :days
     """), {"days": days})).mappings().first()
 

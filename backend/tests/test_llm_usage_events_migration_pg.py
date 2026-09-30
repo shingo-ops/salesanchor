@@ -60,30 +60,47 @@ def test_check_constraints_exist(pg):
 
 def test_extraction_shadow_run_id_has_no_fk(pg):
     """CI 対応: CI の差分実行ベースラインに extraction_shadow_runs が
-    無いため FK を外した（design.md §3-1 実装時変更 / ADR-1004 決定6）。"""
+    無いため FK を外した（design.md §3-1 実装時変更 / ADR-1004 決定6）。
+
+    共有 pg fixture は tenant_901 用に FK を外すため（test_tcg_work_matching_integration.py
+    migrate()）、ここでは本物の migration から作り直して本番と同じ制約を検証する
+    （CI の使い捨て DB 内のみ）。
+    """
     connection, _, _ = pg
+    with connection.cursor() as cur:
+        cur.execute("DROP TABLE IF EXISTS public.llm_usage_events")
     _apply_ledger_migration(connection)
 
-    with connection.cursor() as cur:
-        cur.execute("""
-            SELECT COUNT(*) FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu
-                ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-            WHERE tc.table_schema = 'public' AND tc.table_name = 'llm_usage_events'
-              AND tc.constraint_type = 'FOREIGN KEY'
-              AND kcu.column_name = 'extraction_shadow_run_id'
-        """)
-        assert cur.fetchone()[0] == 0
+    try:
+        with connection.cursor() as cur:
+            cur.execute("""
+                SELECT COUNT(*) FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                    ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+                WHERE tc.table_schema = 'public' AND tc.table_name = 'llm_usage_events'
+                  AND tc.constraint_type = 'FOREIGN KEY'
+                  AND kcu.column_name = 'extraction_shadow_run_id'
+            """)
+            assert cur.fetchone()[0] == 0
 
-        cur.execute("""
-            SELECT COUNT(*) FROM information_schema.table_constraints tc
-            JOIN information_schema.key_column_usage kcu
-                ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
-            WHERE tc.table_schema = 'public' AND tc.table_name = 'llm_usage_events'
-              AND tc.constraint_type = 'FOREIGN KEY'
-              AND kcu.column_name = 'extraction_attempt_id'
-        """)
-        assert cur.fetchone()[0] == 1
+            cur.execute("""
+                SELECT COUNT(*) FROM information_schema.table_constraints tc
+                JOIN information_schema.key_column_usage kcu
+                    ON tc.constraint_name = kcu.constraint_name AND tc.table_schema = kcu.table_schema
+                WHERE tc.table_schema = 'public' AND tc.table_name = 'llm_usage_events'
+                  AND tc.constraint_type = 'FOREIGN KEY'
+                  AND kcu.column_name = 'extraction_attempt_id'
+            """)
+            assert cur.fetchone()[0] == 1
+    finally:
+        # テスト専用：共有 pg fixture は tenant_901 用に FK を外すため（test_tcg_work_matching_integration.py
+        # migrate()）、ここで本物の migration から作り直した表を、同じ fixture を使う後続テスト向けに
+        # 元の（FK なしの）状態へ戻す。
+        with connection.cursor() as cur:
+            cur.execute(
+                "ALTER TABLE public.llm_usage_events "
+                "DROP CONSTRAINT IF EXISTS llm_usage_events_extraction_attempt_id_fkey"
+            )
 
 
 def test_indexes_exist(pg):

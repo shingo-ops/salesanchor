@@ -71,7 +71,9 @@ def _make_gemini_json_response(
     })
     response = MagicMock()
     response.text = payload
-    usage = MagicMock()
+    # spec を絞ることで未設定フィールドは getattr(..., None) で None になる
+    # （MagicMock() の自動属性生成で int(MagicMock()) == 1 になる事故を防ぐ。ADR-1003）。
+    usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
     usage.prompt_token_count = prompt_tokens
     usage.candidates_token_count = candidates_tokens
     response.usage_metadata = usage

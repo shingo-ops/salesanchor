@@ -13,7 +13,7 @@
 --
 -- 2段階の出し方（design.md §9）: 本ファイルは A1（表のみ、先行デプロイ）。
 --   過去分バックフィル（INSERT ... SELECT FROM public.extraction_attempts）は
---   migrations/20260930_140000_backfill_llm_usage_events.sql（A2）に分離した。
+--   migrations/20260930_160000_backfill_llm_usage_events.sql（A2）に分離した。
 --   理由: .github/workflows/deploy.yml はバックエンドのコード切替・celery再起動
 --   （~:323, ~:337-342）を「Run database migrations」（~:448-462）より先に実行する。
 --   CREATE と アプリコードの usage 書き込みロジックと バックフィル SELECT を

@@ -857,3 +857,6 @@ run_sql migrations/20260930_130000_set_discord_welcome_template_english.sql
 
 # ADR-1004 A1: LLM 使用量台帳（llm_usage_events）新設（表のみ。バックフィルは A2 で別PR）
 run_sql migrations/20260930_150000_create_llm_usage_events.sql
+
+# ADR-1004 A2: LLM 使用量台帳（llm_usage_events）過去分バックフィル（SSOT化、A1マージ後に適用）
+run_sql migrations/20260930_160000_backfill_llm_usage_events.sql
