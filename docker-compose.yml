@@ -349,17 +349,29 @@ services:
   # （restrict + permitopen="127.0.0.1:8888"）で prod2 へ SSH し、-L で
   # 127.0.0.1:18888 を prod2 の tinyproxy（127.0.0.1:8888）へフォワードする。
   # ホストには公開しない（ports なし、backnet 内のみ到達可能）。
+  # イメージは monitoring/prod1/gemini-egress/Dockerfile でビルド（起動時の apk 取得なし、design §5-4）
   gemini-egress:
-    image: alpine:3.24
+    build: ./monitoring/prod1/gemini-egress
     restart: unless-stopped
     volumes:
       - /home/ubuntu/.ssh/gemini_egress_ed25519:/run/secrets/gemini_egress_key:ro
-    command: >
-      sh -c "apk add --no-cache openssh-client >/dev/null &&
-      exec ssh -i /run/secrets/gemini_egress_key
-      -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
-      -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -o ExitOnForwardFailure=yes
-      -N -L 0.0.0.0:18888:127.0.0.1:8888 ubuntu@49.212.160.98"
+    command:
+      - -i
+      - /run/secrets/gemini_egress_key
+      - -o
+      - StrictHostKeyChecking=no
+      - -o
+      - UserKnownHostsFile=/dev/null
+      - -o
+      - ServerAliveInterval=30
+      - -o
+      - ServerAliveCountMax=3
+      - -o
+      - ExitOnForwardFailure=yes
+      - -N
+      - -L
+      - 0.0.0.0:18888:127.0.0.1:8888
+      - ubuntu@49.212.160.98
     deploy:
       resources:
         limits:
