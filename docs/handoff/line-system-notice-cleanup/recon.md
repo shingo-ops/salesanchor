@@ -2,7 +2,7 @@
 
 - 調査日: 2026-09-30（JST）、読み取りのみ（本番は `SET default_transaction_read_only=on;` で SELECT のみ）
 - worktree: `/Users/tanizawashingo/worktrees/salesanchor/release-line-system-notice-cleanup`（ブランチ `release/line-system-notice-cleanup`）
-- 前提資料: scratchpad `line-parser-unify/recon.md`（Q1〜Q13）、`unconfirmed-resolution-20260930.md`（U1〜U8）。本ファイルはその追補（R1〜R6）。
+- 前提資料: scratchpad line-parser-unify/recon.md（Q1〜Q13）、unconfirmed-resolution-20260930.md（U1〜U8）。本ファイルはその追補（R1〜R6）。
 - 対象34件の抽出条件（1クエリにまとめた正規表現、以後同じ条件を使い回す）:
   ```
   (招待中の友だちが参加するまでしばらくお待ちください。|をグループから削除しました。|がグループを退会しました。|アナウンスしました|グループ通話が開始されました|グループ通話が終了しました|新しいノートを作成しました。|からトークに参加しました。)
@@ -13,7 +13,7 @@
 ## R1. 過去の整理（手本）の手順
 
 - `docs/handoff/supplier-name-dedup/design.md`: name重複21件のFK再割当て設計。技術選択は「1トランザクションでFK再割当て→旧レコードを`is_active=FALSE`＋`supplier_code=NULL`にして無効化（物理削除しない）」。冪等性は`is_active=TRUE`条件のUPDATEで担保。本番実行は`docs/handoff/supplier-name-dedup/design.md`内の記述どおりSSH手動DRY-RUN（`BEGIN`→確認→`ROLLBACK`）→本番`COMMIT`。
-- `docs/handoff/supplier-dedup/cleanup-dedup.sql`: line_name重複解消（旧世代、`tenant_004`/`tenant_006`スキーマを直接触る設計＝現在の`public`統一後とはスキーマ構成が異なる。`project_pipeline_public_migration.md`によりtenant_004→public移行済みのため、このSQLをそのまま今回に流用不可、パターンのみ参考にする）。旧レコードは`is_active=FALSE`＋`line_name = line_name || '_dedup_' || id::text`で一意化して印を付ける。
+- `docs/handoff/supplier-dedup/cleanup-dedup.sql`: line_name重複解消（旧世代、`tenant_004`/`tenant_006`スキーマを直接触る設計＝現在の`public`統一後とはスキーマ構成が異なる。project_pipeline_public_migration.mdによりtenant_004→public移行済みのため、このSQLをそのまま今回に流用不可、パターンのみ参考にする）。旧レコードは`is_active=FALSE`＋`line_name = line_name || '_dedup_' || id::text`で一意化して印を付ける。
 - `docs/handoff/supplier-dedup/migration-unique-index.sql`: 部分UNIQUEインデックス（`WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL`）をクリーンアップ後に追加。`IF NOT EXISTS`で冪等。
 - 記録用no-opマイグレーション実物: `migrations/20260924_060000_cleanup_supplier_name_duplicates.sql`（全文）:
   ```sql
@@ -397,10 +397,10 @@ PreToolUse:Bash hook error: [/Users/tanizawashingo/.claude/scripts/agent-danger-
 | 取り込み時の照合（`resolve_suppliers`が使う`db_suppliers`、`_split_sender`が使う`sorted_names`） | `backend/app/services/tcg_line_import_svc.py:569-573` | **見る**。両方とも同一クエリ `SELECT supplier_code, line_name FROM public.suppliers WHERE is_active = TRUE AND line_name IS NOT NULL`（569-570行目）から作られる（571行目で`db_suppliers`、572行目で`supplier_names`＝`sorted_names`を同時に生成）。 |
 
 **「鈴木」「Mie」を`is_active=FALSE`にした場合の今後の取り込み挙動**:
-- `_split_sender`（`tcg_line_import_svc.py:62-90`）は`sorted_names`（=is_active=TRUEのみ）を長さ降順で走査し、`tail.startswith(name + " ")`で前方一致を試みる（86行目）。マッチしなければ`tail.split(" ", 1)`のフォールバックへ落ちる（88-90行目）。**このフォールバックは`sorted_names`の中身を一切参照しない無条件の「最初のスペースで機械的に2分割」処理**。
+- `_split_sender`（`backend/app/services/tcg_line_import_svc.py:62-90`）は`sorted_names`（=is_active=TRUEのみ）を長さ降順で走査し、`tail.startswith(name + " ")`で前方一致を試みる（86行目）。マッチしなければ`tail.split(" ", 1)`のフォールバックへ落ちる（88-90行目）。**このフォールバックは`sorted_names`の中身を一切参照しない無条件の「最初のスペースで機械的に2分割」処理**。
 - 本文側にスペースを挟んで続く発言（例: `"鈴木 章裕 お世話になります。"`）: `"鈴木 章裕"`（SP-00316、is_active=TRUE）との前方一致が先に成立するため、**「鈴木」を無効化してもしなくても、この形の発言は元々正しく解決されている**（R5で確認済み）。
 - 本文側にスペースが続かない発言（例: システムイベント文言`"鈴木 章裕がメッセージの送信を取り消しました"`）: `"鈴木 章裕 "`前方一致が失敗し、次点で以前は`"鈴木 "`前方一致（SP-00273）が成立して誤って解決されていた。**「鈴木」をis_active=FALSEにすると`sorted_names`からSP-00273の"鈴木"が消えるため、この前方一致自体が起きなくなり、最終フォールバック（`tail.split(" ",1)`）に落ちて`display_name="鈴木"`のまま`unresolved`になる**。
-- `unresolved`になった`display_name`は「4b. 未解決仕入元の自動登録」（`tcg_line_import_svc.py:598-647`）により**新規`suppliers`行として再登録される**。INSERT文の`ON CONFLICT (line_name) WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL`（615-618行目）は**`is_active=TRUE`の行としか衝突しない部分インデックス**（`migrations`のUNIQUE制約、R1参照）のため、is_active=FALSEにした旧SP-00273とは衝突せず、**新しい`supplier_code`を持つ全く別の「鈴木」ゴースト仕入元が作られてしまう**。
+- `unresolved`になった`display_name`は「4b. 未解決仕入元の自動登録」（`backend/app/services/tcg_line_import_svc.py:598-647`）により**新規`suppliers`行として再登録される**。INSERT文の`ON CONFLICT (line_name) WHERE line_name IS NOT NULL AND is_active = TRUE AND tenant_id IS NULL`（615-618行目）は**`is_active=TRUE`の行としか衝突しない部分インデックス**（`migrations`のUNIQUE制約、R1参照）のため、is_active=FALSEにした旧SP-00273とは衝突せず、**新しい`supplier_code`を持つ全く別の「鈴木」ゴースト仕入元が作られてしまう**。
 - **結論**: 「鈴木」「Mie」の無効化だけでは送信者名の切れの再発は防げない。再発条件は「システムイベント文言や本文末尾がスペースなしで名前に直結する形で、そのフルネームが未登録または前方一致条件を満たさない場合」に常に成立する（`_split_sender`のフォールバックがマスタの状態に依存しない無条件分割であるため）。恒久対策には`_split_sender`のロジック改修（フォールバック時にも既存の長い名前の接頭辞と一致するかを緩く検査する等）が必要で、これはR5末尾で述べた設計判断がR9でも同じ結論に帰着する。
 
 ## 追補の未確認事項
@@ -415,14 +415,14 @@ PreToolUse:Bash hook error: [/Users/tanizawashingo/.claude/scripts/agent-danger-
 ### 方法（推測で組み立てず、コードから機械的に取得）
 
 1. `backend/app/services/tcg_distribution_svc.py` の`fetch_output_rows`（origin/main、SHA `34abf56e883a5fd84daaec51d90f1fa36851f20e`、worktree作成時のHEAD）を、実際にimportして呼び出した。DB接続部分だけを「SQL文字列とバインドパラメータを記録して空結果を返す」フェイクの`AsyncSession`に差し替え（本番には一切接続しない）。
-   - スクリプト: `/private/tmp/.../scratchpad/capture_fetch_output_rows_sql.py`
+   - スクリプト: /private/tmp/.../scratchpad/capture_fetch_output_rows_sql.py
    - 本番の`tcg_distribution_settings`実測値（先に本番へSELECTで確認）: `include_flag_single=false`, `max_age_hours=48`
    - 呼び出し: `fetch_output_rows(fake_db, include_flag_single=False, max_age_hours=48)`
-   - 出力: `/private/tmp/.../scratchpad/fetch_output_rows_captured.sql`（captured SQL全文、210行、`:max_age_hours`はバインドパラメータのまま・未置換）
-2. `run_distribution`（`tcg_distribution_svc.py:673-763`）の実装を確認: `fetch_output_rows`は**1回だけ**呼ばれ、同じ`rows`が全アクティブ配信先（`list_targets`で`is_active=TRUE`のもの）へ書き込まれる（755行目→775-857行目のforループ）。**配信先ごとにSQLが変わることはない**（設定は`tcg_distribution_settings`のグローバル値のみ）。→「3配信先それぞれで」の実行は不要（同一SQL・同一結果セットが3先へ複製される構造のため）。本番の`tcg_distribution_targets`（`is_active=TRUE`）の件数は別途確認可能だが、SQL自体は変わらないため今回は割愛。
+   - 出力: /private/tmp/.../scratchpad/fetch_output_rows_captured.sql（captured SQL全文、210行、`:max_age_hours`はバインドパラメータのまま・未置換）
+2. `run_distribution`（`backend/app/services/tcg_distribution_svc.py:673-763`）の実装を確認: `fetch_output_rows`は**1回だけ**呼ばれ、同じ`rows`が全アクティブ配信先（`list_targets`で`is_active=TRUE`のもの）へ書き込まれる（755行目→775-857行目のforループ）。**配信先ごとにSQLが変わることはない**（設定は`tcg_distribution_settings`のグローバル値のみ）。→「3配信先それぞれで」の実行は不要（同一SQL・同一結果セットが3先へ複製される構造のため）。本番の`tcg_distribution_targets`（`is_active=TRUE`）の件数は別途確認可能だが、SQL自体は変わらないため今回は割愛。
 3. captured SQLの`:max_age_hours`を本番実測値48にリテラル置換し、`shlex.quote`で安全にクォートした上でssh経由でdocker execしたpsqlに読み取り専用（`SET default_transaction_read_only=on;`）で渡して本番実行した（`SELECT 1;`のno-op置換ではなく、captured SQLをそのまま使用。captured SQL中に不等号記号は0件のため誤検知は発生せず、書き込みキーワードも無いためブロックされなかった）。
-   - 実行スクリプト: `/private/tmp/.../scratchpad/run_captured_sql.py`
-   - 結果保存: `/private/tmp/.../scratchpad/fetch_output_rows_result_48h.txt`（883行）
+   - 実行スクリプト: /private/tmp/.../scratchpad/run_captured_sql.py
+   - 結果保存: /private/tmp/.../scratchpad/fetch_output_rows_result_48h.txt（883行）
 
 ### 結果1（本番の現実の設定値どおり、max_age_hours=48）
 
@@ -432,8 +432,8 @@ PreToolUse:Bash hook error: [/Users/tanizawashingo/.claude/scripts/agent-danger-
 ### 結果2（R7で確認した二重is_current行が「時間窓の中にあったら」どうなるかの検証、max_age_hours=1000で同じSQL構造を再実行）
 
 R7・R8で確認した`is_current=TRUE`の重複（product_id=440406/condition_id=17、product_id=125079/condition_id=14、SP-00277「Mie」とSP-00317「Mie (＊´ω｀＊)」の分裂）が、配信SQLの最終フィルター（`cr.needs_review IS FALSE`・FLAG判定含む全条件）を実際に通過するかどうかを確認するため、時間窓だけを広げて（`max_age_hours=1000`）同一の`fetch_output_rows`ロジックを再実行した（設定変更やDB書き込みは一切なし、captured SQLの数値を置換しただけの読み取り専用SELECT）。
-- スクリプト: `/private/tmp/.../scratchpad/run_captured_sql_1000h.py`
-- 結果保存: `/private/tmp/.../scratchpad/fetch_output_rows_result_1000h.txt`（2158行）
+- スクリプト: /private/tmp/.../scratchpad/run_captured_sql_1000h.py
+- 結果保存: /private/tmp/.../scratchpad/fetch_output_rows_result_1000h.txt（2158行）
 
 「鈴木」「Mie」で検索した生出力（全4行の該当箇所）:
 ```
@@ -452,12 +452,12 @@ R7・R8で確認した`is_current=TRUE`の重複（product_id=440406/condition_i
 - **結論**: R7・R8で確認した`is_current`の二重TRUEは、**配信SQLの全フィルター（cr.needs_review・FLAG判定を含む）を実際に通過して、同一商品が2つの異なる仕入元名で二重に配信される実害である**ことを、推測ではなくSQL実行結果で確認した。ただし**現時点（2026-09-30）ではこれらの投稿が48時間の時間窓の外にあるため、今この瞬間の配信には出ていない**（結果1）。今後、分裂した仕入元の片方に新しい投稿があり直近48時間以内に収まった場合、または`max_age_hours`設定が緩められた場合に、同じ二重配信が再現する構造上のリスクとして残っている。
 
 ### 生成SQL・結果ファイルの保存パス（全てscratchpad内、本番には一切ファイルを作成していない）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/capture_fetch_output_rows_sql.py`（capture用スクリプト）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_captured.sql`（captured SQL、max_age_hours=48版の元）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_captured_1000h.sql`（captured SQL、max_age_hours=1000版の元）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/run_captured_sql.py` / `run_captured_sql_1000h.py`（本番read-only実行スクリプト）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_result_48h.txt`（883行、本番実測値どおりの実行結果）
-- `/private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_result_1000h.txt`（2158行、時間窓を広げた検証用実行結果）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/capture_fetch_output_rows_sql.py（capture用スクリプト）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_captured.sql（captured SQL、max_age_hours=48版の元）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_captured_1000h.sql（captured SQL、max_age_hours=1000版の元）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/run_captured_sql.py / run_captured_sql_1000h.py（本番read-only実行スクリプト）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_result_48h.txt（883行、本番実測値どおりの実行結果）
+- /private/tmp/claude-501/-Users-tanizawashingo-salesanchor/4afea278-bb82-4546-901a-ff0c9af6ee6e/scratchpad/fetch_output_rows_result_1000h.txt（2158行、時間窓を広げた検証用実行結果）
 
 ### 追補2の未確認事項
 - 「鈴木」「Mie」以外にも時間窓の外で同様の二重配信が起きている（起きうる）組み合わせが他にあるかどうかは、今回は名前切れ2件に絞った確認であり、全件走査はしていない
@@ -672,7 +672,7 @@ R11(a)の18組（フルネーム側の主IDのみ、既に無効化済みの5行
 
 ### ① 本物3チャネルの「お知らせ34件を除いた最新の投稿」
 
-まず recon 冒頭の34件条件（8パターンの正規表現）だけで除外したところ、**いとう あチャネルで想定外の行が2件混入した**（`いとう　あがノートに投稿しました。`、2026-09-15 06:05:00 と 2026-09-24 03:36:00 の2件、id=`96925248-41da-43b0-9941-b973e34ceb86`・`eef0d3dc-f8c9-44b9-bad0-701db87fa090`）。この文言は`tcg_line_system_events.py`の13パターン（`join`/`invite`/`invite_cancel`/`recall`/`invite_wait`/`removed`/`left`/`announce`/`call_start`/`call_end`/`note_created`/`line_works_join`/`name_changed`）のいずれにも一致しない（`note_created`は「新しいノートを作成しました」限定で「〜がノートに投稿しました。」は別表現）。本文はこの1行のみで業務内容を含まない＝**34件にもtcg_line_system_events.pyの13種にも数えられていない、未収録の第14の「お知らせ」文言が存在する**（今回の片付け対象34件には含まれていないため、design §3のA〜Eには影響しないが、design §12「今後は発生しない」の前提であるPR #3861の13パターン表がこの文言をカバーしていないことを示す新事実）。
+まず recon 冒頭の34件条件（8パターンの正規表現）だけで除外したところ、**いとう あチャネルで想定外の行が2件混入した**（`いとう　あがノートに投稿しました。`、2026-09-15 06:05:00 と 2026-09-24 03:36:00 の2件、id=`96925248-41da-43b0-9941-b973e34ceb86`・`eef0d3dc-f8c9-44b9-bad0-701db87fa090`）。この文言は`backend/app/services/tcg_line_system_events.py`の13パターン（`join`/`invite`/`invite_cancel`/`recall`/`invite_wait`/`removed`/`left`/`announce`/`call_start`/`call_end`/`note_created`/`line_works_join`/`name_changed`）のいずれにも一致しない（`note_created`は「新しいノートを作成しました」限定で「〜がノートに投稿しました。」は別表現）。本文はこの1行のみで業務内容を含まない＝**34件にもtcg_line_system_events.pyの13種にも数えられていない、未収録の第14の「お知らせ」文言が存在する**（今回の片付け対象34件には含まれていないため、design §3のA〜Eには影響しないが、design §12「今後は発生しない」の前提であるPR #3861の13パターン表がこの文言をカバーしていないことを示す新事実）。
 
 この2件を追加で除外した上での、3チャネルそれぞれの最新投稿（id・line_posted_at・is_active・superseded_by・本文先頭30字、生出力）:
 ```
@@ -771,11 +771,11 @@ SELECT count(*) FROM public.source_messages WHERE raw_text ~ '(招待中の友�
 
 design §12で言及の`グループ名を「...」に変更しました`パターン（tcg_line_system_events.pyの`name_changed`）も再確認: `SELECT count(*) FROM public.source_messages WHERE raw_text ~ 'グループ名を';` → 結果 `0`（変化なし）。
 
-**結論**: PR #3861反映後、34件からの増加は無い（U1の確認と整合）。ただし①で見つかった「〜がノートに投稿しました。」（未収録の第14パターン）は、この34件のカウント方法にも`tcg_line_system_events.py`の13パターンにも含まれておらず、**今回数えていない「お知らせ」文言が少なくとも1種類、本番に存在する**（いとう あチャネルに2件、2026-09-15と2026-09-24）。件数への影響は無い（34件のカウントは変わらない）が、design §12「今後は同じ片付けは発生しない」の前提（13パターン表が全種を捕捉している）には**穴がある**。
+**結論**: PR #3861反映後、34件からの増加は無い（U1の確認と整合）。ただし①で見つかった「〜がノートに投稿しました。」（未収録の第14パターン）は、この34件のカウント方法にも`backend/app/services/tcg_line_system_events.py`の13パターンにも含まれておらず、**今回数えていない「お知らせ」文言が少なくとも1種類、本番に存在する**（いとう あチャネルに2件、2026-09-15と2026-09-24）。件数への影響は無い（34件のカウントは変わらない）が、design §12「今後は同じ片付けは発生しない」の前提（13パターン表が全種を捕捉している）には**穴がある**。
 
 ### 追補4の未確認事項
 - 「〜がノートに投稿しました。」パターンが、いとう あチャネル以外（他の33件やまだ見つかっていない箇所）にも存在するかは全件走査していない
-- この新パターンが本番の`tcg_line_system_events.py`にとって`is_system_event`判定にどう影響するか（現状は判定されずtcg_analysis_dashboard_svc等に「最新の投稿」として出うる）は、コード上の判定ロジック（`match_system_event`）を読めば確定できるが、今回は本番データの事実確認のみで、コード側の影響評価は未実施
+- この新パターンが本番の`backend/app/services/tcg_line_system_events.py`にとって`is_system_event`判定にどう影響するか（現状は判定されずtcg_analysis_dashboard_svc等に「最新の投稿」として出うる）は、コード上の判定ロジック（`match_system_event`）を読めば確定できるが、今回は本番データの事実確認のみで、コード側の影響評価は未実施
 
 
 ---
@@ -825,7 +825,7 @@ WHERE raw_text !~ chr(10) AND NOT (length(raw_text) > 60) AND raw_text ~ 'まし
 (27 rows)
 ```
 
-判定方法: origin/main（worktree HEAD `34abf56e883a5fd84daaec51d90f1fa36851f20e`）の`backend/app/services/tcg_line_system_events.py`の`match_system_event(display_name, body)`を実際にimportして、27件それぞれに`display_name=suppliers.name`、`body=raw_text`を渡して実行した（推測ではなくコード実行）。スクリプト: `/private/tmp/.../scratchpad/s1_rows.txt`＋実行コード（本メッセージ末尾参照）。
+判定方法: origin/main（worktree HEAD `34abf56e883a5fd84daaec51d90f1fa36851f20e`）の`backend/app/services/tcg_line_system_events.py`の`match_system_event(display_name, body)`を実際にimportして、27件それぞれに`display_name=suppliers.name`、`body=raw_text`を渡して実行した（推測ではなくコード実行）。スクリプト: /private/tmp/.../scratchpad/s1_rows.txt＋実行コード（本メッセージ末尾参照）。
 
 **文型ごとの件数・is_active件数（13パターンに一致=covered）**:
 | 文型 | 件数 | is_active=TRUE | ラベル |
@@ -949,7 +949,7 @@ label=removed          total=5  active=0
 
 ## S1〜S4を通した最終一覧（お知らせ文型・本番の行ID）
 
-### 表にある13種（`tcg_line_system_events.py`）
+### 表にある13種（`backend/app/services/tcg_line_system_events.py`）
 
 | ラベル | 総数 | 有効(is_active=TRUE)件数 | 有効な行ID（全部） |
 |---|---|---|---|
@@ -968,7 +968,7 @@ label=removed          total=5  active=0
 | name_changed | 0 | 0 | (該当なし) |
 | **13種合計** | **35**（うちテストデータ1件） | **10** | design.md §6「A」の10件と完全一致 |
 
-### 表に無い2種（S1〜S4で新規発見、`tcg_line_system_events.py`未収録）
+### 表に無い2種（S1〜S4で新規発見、`backend/app/services/tcg_line_system_events.py`未収録）
 
 | 文型 | 総数 | 有効件数 | 有効な行ID（全部） | 由来 |
 |---|---|---|---|---|
