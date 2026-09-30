@@ -2524,7 +2524,9 @@
         "needsReviewCount": "Needs Review",
         "productIdUnresolvedCount": "Product ID Unresolved",
         "unitUnresolvedCount": "Unit Unresolved",
-        "conditionFallbackCount": "Condition Unresolved (pending)"
+        "conditionFallbackCount": "Condition Unresolved",
+        "conditionGiveUpCount": "of which No Clue",
+        "conditionManualReviewedCount": "Manually Reviewed"
       },
       "conditionPending": "Pending",
       "backToList": "← Back to list",
