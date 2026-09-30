@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import text
@@ -31,6 +32,7 @@ from app.services.extraction_judgement_svc import (
     ship_timing as judge_ship_timing,
 )
 from app.services.gemini_extraction_svc import call_gemini_raw_copy, parse_raw_copy_response
+from app.services.llm_budget import calculate_cost
 from app.services.tcg_analyzer_svc import (
     _parse_numeric,
     build_note_ja,
@@ -106,6 +108,10 @@ def insert_shadow_run(
     status: str,
     error_code: str | None = None,
     error_detail: str | None = None,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    cost_usd: float | None = None,
+    started_at: datetime | None = None,
 ) -> str:
     """extraction_shadow_runs に1行 INSERT して run_id を返す（PR-B1 migration 前提）。"""
     run_id = str(uuid.uuid4())
@@ -114,10 +120,12 @@ def insert_shadow_run(
             """
             INSERT INTO public.extraction_shadow_runs
                 (id, extraction_job_id, prompt_key, engine_version, requested_model,
-                 input_bytes, response_text, status, error_code, error_detail, finished_at)
+                 input_bytes, response_text, status, error_code, error_detail,
+                 input_tokens, output_tokens, cost_usd, started_at, finished_at)
             VALUES
                 (:id, :extraction_job_id, :prompt_key, :engine_version, :requested_model,
-                 :input_bytes, :response_text, :status, :error_code, :error_detail, now())
+                 :input_bytes, :response_text, :status, :error_code, :error_detail,
+                 :input_tokens, :output_tokens, :cost_usd, COALESCE(:started_at, now()), now())
             """
         ),
         {
@@ -131,6 +139,10 @@ def insert_shadow_run(
             "status": status,
             "error_code": error_code,
             "error_detail": error_detail,
+            "input_tokens": input_tokens,
+            "output_tokens": output_tokens,
+            "cost_usd": cost_usd,
+            "started_at": started_at,
         },
     )
     return run_id
@@ -285,6 +297,16 @@ def _judge_block(
 # ---------------------------------------------------------------------------
 
 
+def _calc_shadow_cost(input_tokens: int | None, output_tokens: int | None) -> float | None:
+    """tcg_extraction_record_svc.complete() と同じ扱い：未知モデルは None（design.md PR-C）。"""
+    if not input_tokens and not output_tokens:
+        return None
+    try:
+        return float(calculate_cost(input_tokens or 0, output_tokens or 0, model=_REQUESTED_MODEL))
+    except ValueError:
+        return None
+
+
 def run_shadow_for_job(
     session: Session,
     extraction_job_id: str,
@@ -300,6 +322,7 @@ def run_shadow_for_job(
     伝播しない（design.md PR-C: 「例外が起きても本番には伝えない」）。
     """
     input_bytes = len(raw_text.encode("utf-8"))
+    started_at = datetime.now(timezone.utc)
 
     try:
         raw_copy = call_gemini_raw_copy(
@@ -308,17 +331,23 @@ def run_shadow_for_job(
     except Exception as exc:  # noqa: BLE001
         logger.error("[extraction_shadow] gemini call failed ej=%s: %s", extraction_job_id, exc)
         return _record_failed_run(
-            session, extraction_job_id, input_bytes, None, "GEMINI_CALL_FAILED", str(exc)
+            session, extraction_job_id, input_bytes, None, "GEMINI_CALL_FAILED", str(exc),
+            started_at=started_at,
         )
 
     response_text = raw_copy["response_text"]
+    input_tokens = raw_copy.get("input_tokens")
+    output_tokens = raw_copy.get("output_tokens")
+    cost_usd = _calc_shadow_cost(input_tokens, output_tokens)
 
     try:
         blocks, parse_errors = parse_raw_copy_response(response_text, raw_text)
     except Exception as exc:  # noqa: BLE001
         logger.error("[extraction_shadow] parse failed ej=%s: %s", extraction_job_id, exc)
         return _record_failed_run(
-            session, extraction_job_id, input_bytes, response_text, "PARSE_FAILED", str(exc)
+            session, extraction_job_id, input_bytes, response_text, "PARSE_FAILED", str(exc),
+            input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,
+            started_at=started_at,
         )
 
     try:
@@ -351,6 +380,10 @@ def run_shadow_for_job(
             input_bytes=input_bytes,
             response_text=response_text,
             status="completed",
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+            started_at=started_at,
         )
         insert_shadow_results(session, run_id, results)
         session.commit()
@@ -373,6 +406,11 @@ def _record_failed_run(
     response_text: str | None,
     error_code: str,
     error_detail: str,
+    *,
+    input_tokens: int | None = None,
+    output_tokens: int | None = None,
+    cost_usd: float | None = None,
+    started_at: datetime | None = None,
 ) -> dict:
     """Gemini 呼び出し／パース失敗を failed run として記録する（記録自体の失敗も吸収）。"""
     try:
@@ -387,6 +425,10 @@ def _record_failed_run(
             status="failed",
             error_code=error_code,
             error_detail=error_detail[:2000],
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            cost_usd=cost_usd,
+            started_at=started_at,
         )
         session.commit()
     except Exception:  # noqa: BLE001

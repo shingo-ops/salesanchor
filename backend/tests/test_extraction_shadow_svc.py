@@ -85,6 +85,107 @@ class TestRunShadowForJobMatched:
         session.commit.assert_called_once()
 
 
+class TestRunShadowForJobTokensAndCost:
+    """design.md PR-C 追加分: insert_shadow_run に tokens・cost・started_at が渡ること。"""
+
+    def test_insert_shadow_run_receives_tokens_cost_and_started_at(self, monkeypatch):
+        # Arrange
+        raw_text = "商品A 1500円 3枚 未使用"
+        response = (
+            _RAW_COPY_HEADER_LINE + "\n"
+            "商品A｜1500円｜枚｜3｜未使用｜none｜none｜L0001｜none\n"
+        )
+        product = _product(id_=1, work_id=7, search_keywords=("商品A",))
+        svc = _patch_common(
+            monkeypatch, products=[product], raw_copy_response=response,
+            raw_copy_side_effect=lambda raw_text, **kw: {
+                "response_text": response, "input_tokens": 100, "output_tokens": 40,
+            },
+        )
+        session = _mock_session()
+        recorded_kwargs = {}
+
+        def fake_insert_run(session, **kwargs):
+            recorded_kwargs.update(kwargs)
+            return "run-tokens"
+
+        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+        monkeypatch.setattr(svc, "insert_shadow_results", lambda session, run_id, results: None)
+
+        # Act
+        result = run_shadow_for_job(
+            session, "ej-tokens", raw_text=raw_text, supplier_context=None, knowledge_links=None,
+        )
+
+        # Assert
+        assert result["status"] == "completed"
+        assert recorded_kwargs["input_tokens"] == 100
+        assert recorded_kwargs["output_tokens"] == 40
+        assert recorded_kwargs["cost_usd"] is not None
+        assert recorded_kwargs["cost_usd"] > 0
+        assert recorded_kwargs["started_at"] is not None
+
+    def test_failed_run_still_receives_tokens_when_gemini_call_succeeded(self, monkeypatch):
+        # Arrange: Gemini 呼び出しは成功したがパースに失敗するケース
+        svc = _patch_common(
+            monkeypatch, products=[], raw_copy_response="not a valid header at all",
+            raw_copy_side_effect=lambda raw_text, **kw: {
+                "response_text": "not a valid header at all", "input_tokens": 30, "output_tokens": 5,
+            },
+        )
+        session = _mock_session()
+        recorded_kwargs = {}
+
+        def fake_insert_run(session, **kwargs):
+            recorded_kwargs.update(kwargs)
+            return "run-fail-tokens"
+
+        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+
+        # Act
+        result = run_shadow_for_job(
+            session, "ej-fail-tokens", raw_text="行A", supplier_context=None, knowledge_links=None,
+        )
+
+        # Assert
+        assert result["status"] == "failed"
+        assert result["error_code"] == "PARSE_FAILED"
+        assert recorded_kwargs["input_tokens"] == 30
+        assert recorded_kwargs["output_tokens"] == 5
+        assert recorded_kwargs["cost_usd"] is not None
+        assert recorded_kwargs["started_at"] is not None
+
+    def test_failed_run_has_none_tokens_when_gemini_call_itself_failed(self, monkeypatch):
+        # Arrange: Gemini 呼び出し自体が失敗 -> tokens 不明
+        import app.services.extraction_shadow_svc as svc
+
+        def raise_gemini(raw_text, **kw):
+            raise RuntimeError("Gemini API 呼び出し失敗")
+
+        monkeypatch.setattr(svc, "call_gemini_raw_copy", raise_gemini)
+        session = _mock_session()
+        recorded_kwargs = {}
+
+        def fake_insert_run(session, **kwargs):
+            recorded_kwargs.update(kwargs)
+            return "run-fail-no-tokens"
+
+        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+
+        # Act
+        result = run_shadow_for_job(
+            session, "ej-fail-no-tokens", raw_text="行A", supplier_context=None, knowledge_links=None,
+        )
+
+        # Assert
+        assert result["status"] == "failed"
+        assert result["error_code"] == "GEMINI_CALL_FAILED"
+        assert recorded_kwargs["input_tokens"] is None
+        assert recorded_kwargs["output_tokens"] is None
+        assert recorded_kwargs["cost_usd"] is None
+        assert recorded_kwargs["started_at"] is not None
+
+
 class TestRunShadowForJobAmbiguousUnmatched:
     def test_ambiguous_when_two_products_match(self, monkeypatch):
         # Arrange
