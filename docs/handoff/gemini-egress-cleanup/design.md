@@ -4,6 +4,9 @@
 
 PR-4「片付け」カードに沿って、残骸削除・ドキュメントと実物の差分記録・誤ったモデル名の docstring 修正を行う。挙動は一切変更しない。
 
+recon: docs/handoff/gemini-egress-cleanup/recon.md
+対象ADR: ADR-080（追記対象・決定は変更しない）, ADR-113（標準開発フロー・2モード運用に従い本 recon/design を作成）
+
 ## 対象と対象外
 
 **対象:**
@@ -60,16 +63,17 @@ PR-4「片付け」カードに沿って、残骸削除・ドキュメントと�
 |------|---------|
 | `tunnel/` が git 管理から消えている | `git ls-tree -r --name-only HEAD -- monitoring/prod2/gemini-egress/` に `tunnel/Dockerfile` が出ない |
 | ADR-080 に追記節がある | `grep -n "追記（2026-09-30）" docs/adr/ADR-080-monitoring-vps-separation.md` がヒット |
-| `gemini_extraction_svc.py` に `3.6-flash` が残っていない | `grep -n "3.6-flash" backend/app/services/gemini_extraction_svc.py` が0件 |
+| `backend/app/services/gemini_extraction_svc.py` に `3.6-flash` が残っていない | `grep -n "3.6-flash" backend/app/services/gemini_extraction_svc.py` が0件 |
 | 既存テストが緑 | `python3 -m pytest tests/test_tcg_gemini_extraction.py -q`（backend/ 配下） が pass |
 | ADR index が最新 | `node scripts/generate-adr-index.js --check` が成功 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-該当事例なし（理由：記録と残骸削除のみで挙動を変えないため、外部事例の調査対象ではない）。
+該当なし（理由：記録と残骸削除のみで挙動を変えない片付け作業のため、外部事例の調査対象ではない）。
 
-## 維持する仕組み
+## 維持の仕組み
 
+- 守り手: .github/workflows/adr-index-check.yml（ADR ファイル変更時に `node scripts/generate-adr-index.js --check` を CI で強制。インデックス整合性のみ機械検査。ADR-080 本文の追記が今後消えないかどうかは人のレビューで守る）
 - ADR-080 の追記節により、次に監視VPS周りを触る人が「実物は ADR と違う」ことを ADR 本体から知れる（別ドキュメントに埋もれない）。
 - `_GEMINI_MODEL` を参照する記述に変えたことで、今後モデルを変更しても docstring が自動的に古くならない（定数名を指すだけで値を書き写さない）。
 - `monitoring-tunnel.service` をリポジトリで管理するかどうかは未決のまま。次にこの領域を触る便で改めて判断が必要（本 PR のスコープ外）。
