@@ -10,6 +10,7 @@ import { ManualRecordSection } from "./ManualRecordSection";
 import { formatAbsolute, getInitials, relativeTime } from "./inbox.types";
 import type { LeadDetail } from "./inbox.types";
 import { EmojiPickerWrapper } from "./EmojiPickerWrapper";
+import { toast } from "../../components/loading/Toast";
 
 interface Props {
   selectedLeadId: number | null;
@@ -47,9 +48,9 @@ interface Props {
   recipientLanguageSetting: "auto" | "ja" | "en";
   setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
   /** Discord リアクション送信 */
-  sendReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   /** Discord リアクション取り消し */
-  deleteReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
 }
 
 /** Per-message translation state. */
@@ -197,7 +198,7 @@ export function InboxMessageThread({
   }, [openPickerForMsgId]);
 
   const handleReactionPillClick = useCallback(async (
-    messageId: string,
+    messageId: number,
     emojiName: string,
     emojiId: string | null,
     isMine: boolean,
@@ -209,21 +210,23 @@ export function InboxMessageThread({
         await sendReaction(messageId, emojiName, emojiId ?? undefined);
       }
     } catch {
-      // エラーは無視（ポーリングで状態は同期される）
+      toast.error(
+        isMine ? t("inbox.reactionDeleteFailed") : t("inbox.reactionSendFailed"),
+      );
     }
-  }, [sendReaction, deleteReaction]);
+  }, [sendReaction, deleteReaction, t]);
 
   const handlePickerSelect = useCallback(async (
-    messageId: string,
+    messageId: number,
     emoji: { name: string; id?: string; unified?: string },
   ) => {
     setOpenPickerForMsgId(null);
     try {
       await sendReaction(messageId, emoji.name, emoji.id);
     } catch {
-      // エラーは無視
+      toast.error(t("inbox.reactionSendFailed"));
     }
-  }, [sendReaction]);
+  }, [sendReaction, t]);
   const draftHasKana = /[\u3040-\u30FF]/.test(trimmedDraft);
   const shouldFireGuard = draftHasKana && recipientLanguageSetting !== "ja";
 
@@ -605,7 +608,7 @@ export function InboxMessageThread({
                           }
                           onClick={() =>
                             handleReactionPillClick(
-                              msg.message_id!,
+                              msg.id,
                               reaction.emoji_name,
                               reaction.emoji_id,
                               reaction.is_mine,
@@ -655,7 +658,7 @@ export function InboxMessageThread({
                         {openPickerForMsgId === msg.message_id && (
                           <div ref={pickerRef} className="msg-reaction-picker-popover">
                             <EmojiPickerWrapper
-                              onSelect={(emoji) => handlePickerSelect(msg.message_id!, emoji)}
+                              onSelect={(emoji) => handlePickerSelect(msg.id, emoji)}
                             />
                           </div>
                         )}
@@ -691,7 +694,7 @@ export function InboxMessageThread({
                       {openPickerForMsgId === msg.message_id && (
                         <div ref={pickerRef} className="msg-reaction-picker-popover">
                           <EmojiPickerWrapper
-                            onSelect={(emoji) => handlePickerSelect(msg.message_id!, emoji)}
+                            onSelect={(emoji) => handlePickerSelect(msg.id, emoji)}
                           />
                         </div>
                       )}

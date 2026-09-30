@@ -35,6 +35,7 @@ import {
   readInboxSettings,
 } from "./inbox.types";
 import type { InboxSettings, LeadDetail, StatusTabKey } from "./inbox.types";
+import { buildReactionCreatePath, buildReactionDeletePath } from "./reactionPaths";
 
 // ---------------------------------------------------------------------------
 // 返却型
@@ -127,8 +128,8 @@ export interface UseInboxStateReturn {
   clearAttachment: () => void;
 
   // Discord リアクション
-  sendReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
-  deleteReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
+  deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
 
   // 管理ドロップダウン
   manageOpen: boolean;
@@ -388,22 +389,20 @@ export function useInboxState(): UseInboxStateReturn {
   // Discord リアクション送信 / 取り消し
   // ---------------------------------------------------------------------------
 
-  const sendReaction = useCallback(async (messageId: string, emojiName: string, emojiId?: string) => {
+  // messageId は meta_messages.id（内部ID）。Discord snowflake ではない。
+  const sendReaction = useCallback(async (messageId: number, emojiName: string, emojiId?: string) => {
     if (!selectedLeadId) return;
     await api.post<void>(
-      `/leads/${selectedLeadId}/messages/${encodeURIComponent(messageId)}/reactions`,
+      buildReactionCreatePath(selectedLeadId, messageId),
       { emoji_name: emojiName, emoji_id: emojiId ?? null },
     );
-    // 楽観的更新は行わず、メッセージを再取得して同期する
+    // 楽観的更新は行わず再取得で同期する（DB 記録は Gateway、反映は SSE 経由でも届く）
     await loadMessages(selectedLeadId);
   }, [selectedLeadId, loadMessages]);
 
-  const deleteReaction = useCallback(async (messageId: string, emojiName: string, emojiId?: string) => {
+  const deleteReaction = useCallback(async (messageId: number, emojiName: string, emojiId?: string) => {
     if (!selectedLeadId) return;
-    const emojiParam = emojiId ? `${emojiName}:${emojiId}` : emojiName;
-    await api.delete(
-      `/leads/${selectedLeadId}/messages/${encodeURIComponent(messageId)}/reactions/${encodeURIComponent(emojiParam)}`,
-    );
+    await api.delete(buildReactionDeletePath(selectedLeadId, messageId, emojiName, emojiId));
     await loadMessages(selectedLeadId);
   }, [selectedLeadId, loadMessages]);
 
