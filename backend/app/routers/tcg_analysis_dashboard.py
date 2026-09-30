@@ -568,6 +568,8 @@ class LlmUsageTotal(BaseModel):
     tool_use_prompt_tokens: int | None
     total_tokens: int | None
     cost_usd: float | None
+    computed_total_tokens: int | None
+    total_mismatch_calls: int
 
 
 class LlmUsageByPurposeItem(BaseModel):
@@ -580,6 +582,8 @@ class LlmUsageByPurposeItem(BaseModel):
     tool_use_prompt_tokens: int | None
     total_tokens: int | None
     cost_usd: float | None
+    computed_total_tokens: int | None
+    total_mismatch_calls: int
 
 
 class LlmUsageByModelItem(BaseModel):
@@ -597,14 +601,56 @@ class LlmUsageDailyItem(BaseModel):
     thoughts_tokens: int | None
 
 
+class LlmUsageDailyByPurposeItem(BaseModel):
+    date: str
+    purpose: str
+    cost_usd: float | None
+    calls: int
+
+
+class LlmUsageMonthlyByPurposeItem(BaseModel):
+    month: str
+    purpose: str
+    calls: int
+    cost_usd: float | None
+
+
 class LlmUsageResponse(BaseModel):
     total: LlmUsageTotal
     by_purpose: list[LlmUsageByPurposeItem]
     by_model: list[LlmUsageByModelItem]
     daily: list[LlmUsageDailyItem]
+    daily_by_purpose: list[LlmUsageDailyByPurposeItem]
+    monthly_by_purpose: list[LlmUsageMonthlyByPurposeItem]
 
 
 _LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()"
+
+# computed_total_tokens: SDK が返した4項目（prompt/candidates/thoughts/tool_use_prompt）の
+# 単純合算。1件でも報告があれば COALESCE(...,0) で合算し、全項目が NULL の行は SUM の対象外
+# （SUM は NULL を無視するため、グループ内の全行がこの4項目すべて NULL のときだけ結果が NULL
+# になる＝推測で 0 に丸めない）。
+_COMPUTED_TOTAL_TOKENS_EXPR = """
+    SUM(
+        CASE
+            WHEN prompt_tokens IS NULL AND candidates_tokens IS NULL
+                 AND thoughts_tokens IS NULL AND tool_use_prompt_tokens IS NULL
+            THEN NULL
+            ELSE COALESCE(prompt_tokens, 0) + COALESCE(candidates_tokens, 0)
+                 + COALESCE(thoughts_tokens, 0) + COALESCE(tool_use_prompt_tokens, 0)
+        END
+    ) AS computed_total_tokens
+"""
+
+# total_mismatch_calls: Google が返した total_tokens と、こちらで計算した4項目合算が
+# 食い違う行数。total_tokens が NULL の行（未報告）はカウントしない。
+_TOTAL_MISMATCH_CALLS_EXPR = """
+    COUNT(*) FILTER (
+        WHERE total_tokens IS NOT NULL
+          AND total_tokens != COALESCE(prompt_tokens, 0) + COALESCE(candidates_tokens, 0)
+               + COALESCE(thoughts_tokens, 0) + COALESCE(tool_use_prompt_tokens, 0)
+    ) AS total_mismatch_calls
+"""
 
 
 @router.get(
@@ -632,7 +678,9 @@ async def get_llm_usage(
             SUM(thoughts_tokens) AS thoughts_tokens,
             SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
             SUM(total_tokens) AS total_tokens,
-            SUM(cost_usd) AS cost_usd
+            SUM(cost_usd) AS cost_usd,
+            {_COMPUTED_TOTAL_TOKENS_EXPR},
+            {_TOTAL_MISMATCH_CALLS_EXPR}
         FROM public.llm_usage_events
         WHERE {_LLM_USAGE_WHERE}
     """), {"days": days})).mappings().first()
@@ -647,7 +695,9 @@ async def get_llm_usage(
             SUM(thoughts_tokens) AS thoughts_tokens,
             SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
             SUM(total_tokens) AS total_tokens,
-            SUM(cost_usd) AS cost_usd
+            SUM(cost_usd) AS cost_usd,
+            {_COMPUTED_TOTAL_TOKENS_EXPR},
+            {_TOTAL_MISMATCH_CALLS_EXPR}
         FROM public.llm_usage_events
         WHERE {_LLM_USAGE_WHERE}
         GROUP BY purpose
@@ -679,6 +729,30 @@ async def get_llm_usage(
         ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') DESC
     """), {"days": days})).mappings().all()
 
+    daily_by_purpose_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            purpose,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), purpose
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    monthly_by_purpose_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM') AS month,
+            purpose,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo'), purpose
+        ORDER BY DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
     return LlmUsageResponse(
         total=LlmUsageTotal(
             calls=int(total_row["calls"]) if total_row else 0,
@@ -689,6 +763,8 @@ async def get_llm_usage(
             tool_use_prompt_tokens=total_row["tool_use_prompt_tokens"] if total_row else None,
             total_tokens=total_row["total_tokens"] if total_row else None,
             cost_usd=float(total_row["cost_usd"]) if total_row and total_row["cost_usd"] is not None else None,
+            computed_total_tokens=total_row["computed_total_tokens"] if total_row else None,
+            total_mismatch_calls=int(total_row["total_mismatch_calls"]) if total_row else 0,
         ),
         by_purpose=[
             LlmUsageByPurposeItem(
@@ -701,6 +777,8 @@ async def get_llm_usage(
                 tool_use_prompt_tokens=r["tool_use_prompt_tokens"],
                 total_tokens=r["total_tokens"],
                 cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                computed_total_tokens=r["computed_total_tokens"],
+                total_mismatch_calls=int(r["total_mismatch_calls"]),
             )
             for r in by_purpose_rows
         ],
@@ -722,6 +800,24 @@ async def get_llm_usage(
                 thoughts_tokens=r["thoughts_tokens"],
             )
             for r in daily_rows
+        ],
+        daily_by_purpose=[
+            LlmUsageDailyByPurposeItem(
+                date=str(r["date"]),
+                purpose=r["purpose"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                calls=int(r["calls"]),
+            )
+            for r in daily_by_purpose_rows
+        ],
+        monthly_by_purpose=[
+            LlmUsageMonthlyByPurposeItem(
+                month=str(r["month"]),
+                purpose=r["purpose"],
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+            )
+            for r in monthly_by_purpose_rows
         ],
     )
 

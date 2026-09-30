@@ -8,6 +8,16 @@
  * ADR-144: Card / DataTable 金型のみ使用
  */
 import { useEffect, useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+} from "recharts";
 import i18n from "../../../i18n";
 import { api } from "../../../lib/api";
 import { Card } from "../../../components/Card";
@@ -27,6 +37,8 @@ interface LlmUsageTotal {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  computed_total_tokens: number | null;
+  total_mismatch_calls: number;
 }
 
 interface LlmUsageByPurposeItem {
@@ -39,6 +51,8 @@ interface LlmUsageByPurposeItem {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  computed_total_tokens: number | null;
+  total_mismatch_calls: number;
 }
 
 interface LlmUsageByModelItem {
@@ -56,11 +70,27 @@ interface LlmUsageDailyItem {
   thoughts_tokens: number | null;
 }
 
+interface LlmUsageDailyByPurposeItem {
+  date: string;
+  purpose: string;
+  cost_usd: number | null;
+  calls: number;
+}
+
+interface LlmUsageMonthlyByPurposeItem {
+  month: string;
+  purpose: string;
+  calls: number;
+  cost_usd: number | null;
+}
+
 interface LlmUsageResponse {
   total: LlmUsageTotal;
   by_purpose: LlmUsageByPurposeItem[];
   by_model: LlmUsageByModelItem[];
   daily: LlmUsageDailyItem[];
+  daily_by_purpose: LlmUsageDailyByPurposeItem[];
+  monthly_by_purpose: LlmUsageMonthlyByPurposeItem[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -75,6 +105,43 @@ const KNOWN_PURPOSES = [
   "translation_inbound_escalation",
   "translation_outbound",
 ];
+
+// 積み上げ棒グラフの使いみち別カラー。
+// ADR-067: 新規 hex は追加しない。既存の分類用カラートークン（--cal-*、スケジュール
+// カテゴリ用に light/dark 両方が定義済み）を流用する。
+const PURPOSE_CHART_COLOR_VARS = [
+  "var(--cal-personal)",
+  "var(--cal-meeting)",
+  "var(--cal-purchase)",
+  "var(--cal-shipping)",
+  "var(--cal-billing)",
+  "var(--cal-release)",
+  "var(--cal-holiday)",
+];
+
+function purposeColor(purpose: string, allPurposes: string[]): string {
+  const index = allPurposes.indexOf(purpose);
+  const safeIndex = index === -1 ? 0 : index % PURPOSE_CHART_COLOR_VARS.length;
+  return PURPOSE_CHART_COLOR_VARS[safeIndex];
+}
+
+type PivotRow = { key: string } & Record<string, number | string>;
+
+function pivotByPurpose<T extends { purpose: string; cost_usd: number | null }>(
+  rows: T[],
+  keyOf: (row: T) => string
+): PivotRow[] {
+  const map = new Map<string, PivotRow>();
+  for (const row of rows) {
+    const key = keyOf(row);
+    if (!map.has(key)) {
+      map.set(key, { key });
+    }
+    const entry = map.get(key) as PivotRow;
+    entry[row.purpose] = row.cost_usd ?? 0;
+  }
+  return Array.from(map.values());
+}
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Props
@@ -201,10 +268,10 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       renderCell: (row) => formatNumber(row.tool_use_prompt_tokens, t),
     },
     {
-      key: "total_tokens",
+      key: "computed_total_tokens",
       header: t("analysisRules.dashboard.usage.colTotal"),
       width: "100px",
-      renderCell: (row) => formatNumber(row.total_tokens, t),
+      renderCell: (row) => formatNumber(row.computed_total_tokens, t),
     },
     {
       key: "cost_usd",
@@ -271,11 +338,21 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
     },
   ];
 
+  const purposeOrder = data.by_purpose.map((row) => row.purpose);
+  const dailyByPurposeData = pivotByPurpose(data.daily_by_purpose, (row) => row.date);
+  const monthlyByPurposeData = pivotByPurpose(data.monthly_by_purpose, (row) => row.month);
+  const formatChartCurrency = (value: number) => formatCurrency(value, t);
+
   return (
     <div className="analysis-dashboard-existing-section">
       <p className="analysis-dashboard-section-note">
         {t("analysisRules.dashboard.usage.note")}
       </p>
+      {data.total.total_mismatch_calls > 0 && (
+        <p className="analysis-dashboard-section-note">
+          {t("analysisRules.dashboard.usage.totalMismatchNote", { count: data.total.total_mismatch_calls })}
+        </p>
+      )}
 
       {/* 段1: 4枚のメトリクスカード */}
       <div className="analysis-dashboard-metrics">
@@ -312,6 +389,68 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
           </div>
         </Card>
       </div>
+
+      {/* 日次の費用（使いみち別・積み上げ棒） */}
+      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+        <div className="analysis-dashboard-section-title">
+          {t("analysisRules.dashboard.usage.dailyByPurposeChartTitle")}
+        </div>
+        {dailyByPurposeData.length === 0 ? (
+          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+        ) : (
+          <div className="analysis-dashboard-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={dailyByPurposeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="key" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                <Legend formatter={(purpose) => purposeLabel(String(purpose), t)} />
+                {purposeOrder.map((purpose) => (
+                  <Bar
+                    key={purpose}
+                    dataKey={purpose}
+                    name={purpose}
+                    stackId="cost"
+                    fill={purposeColor(purpose, purposeOrder)}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
+
+      {/* 月次の費用（使いみち別・積み上げ棒） */}
+      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+        <div className="analysis-dashboard-section-title">
+          {t("analysisRules.dashboard.usage.monthlyByPurposeChartTitle")}
+        </div>
+        {monthlyByPurposeData.length === 0 ? (
+          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+        ) : (
+          <div className="analysis-dashboard-chart">
+            <ResponsiveContainer width="100%" height={240}>
+              <BarChart data={monthlyByPurposeData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="key" fontSize={12} />
+                <YAxis fontSize={12} />
+                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                <Legend formatter={(purpose) => purposeLabel(String(purpose), t)} />
+                {purposeOrder.map((purpose) => (
+                  <Bar
+                    key={purpose}
+                    dataKey={purpose}
+                    name={purpose}
+                    stackId="cost"
+                    fill={purposeColor(purpose, purposeOrder)}
+                  />
+                ))}
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
+      </Card>
 
       {/* 段2: 使いみち別 */}
       <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
