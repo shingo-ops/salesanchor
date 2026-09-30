@@ -56,6 +56,8 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
         "tool_use_prompt_tokens": None,
         "total_tokens": None,
         "cost_usd": 0.002,
+        "computed_total_tokens": 1200,
+        "total_mismatch_calls": 0,
     }
     by_purpose_row = {
         "purpose": "line_extraction",
@@ -67,6 +69,8 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
         "tool_use_prompt_tokens": None,
         "total_tokens": None,
         "cost_usd": 0.002,
+        "computed_total_tokens": 1200,
+        "total_mismatch_calls": 0,
     }
     by_model_row = {"model": "gemini-3.1-flash-lite", "calls": 3, "cost_usd": 0.002}
     daily_row = {
@@ -77,9 +81,28 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
         "candidates_tokens": 300,
         "thoughts_tokens": None,
     }
+    daily_by_purpose_row = {
+        "date": "2026-10-01",
+        "purpose": "line_extraction",
+        "cost_usd": 0.002,
+        "calls": 3,
+    }
+    monthly_by_purpose_row = {
+        "month": "2026-10",
+        "purpose": "line_extraction",
+        "calls": 3,
+        "cost_usd": 0.002,
+    }
 
     db = _mock_db_with_sequenced_results(
-        [total_row, [by_purpose_row], [by_model_row], [daily_row]]
+        [
+            total_row,
+            [by_purpose_row],
+            [by_model_row],
+            [daily_row],
+            [daily_by_purpose_row],
+            [monthly_by_purpose_row],
+        ]
     )
 
     result = await get_llm_usage(days=30, db=db, _admin=None)
@@ -91,9 +114,13 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
     assert result.total.cached_content_tokens is None
     assert result.total.tool_use_prompt_tokens is None
     assert result.total.total_tokens is None
+    assert result.total.computed_total_tokens == 1200
+    assert result.total.total_mismatch_calls == 0
 
     assert result.by_purpose[0].purpose == "line_extraction"
     assert result.by_purpose[0].thoughts_tokens is None
+    assert result.by_purpose[0].computed_total_tokens == 1200
+    assert result.by_purpose[0].total_mismatch_calls == 0
 
     assert result.by_model[0].model == "gemini-3.1-flash-lite"
     assert result.by_model[0].cost_usd == pytest.approx(0.002)
@@ -101,8 +128,18 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
     assert result.daily[0].date == "2026-10-01"
     assert result.daily[0].thoughts_tokens is None
 
-    # 4クエリすべてが llm_usage_events のみを参照し、extraction_attempts 等の旧列を読まない
-    assert len(db._executed_sql) == 4
+    assert result.daily_by_purpose[0].date == "2026-10-01"
+    assert result.daily_by_purpose[0].purpose == "line_extraction"
+    assert result.daily_by_purpose[0].calls == 3
+    assert result.daily_by_purpose[0].cost_usd == pytest.approx(0.002)
+
+    # month は 'YYYY-MM' 形式
+    assert result.monthly_by_purpose[0].month == "2026-10"
+    assert result.monthly_by_purpose[0].purpose == "line_extraction"
+    assert result.monthly_by_purpose[0].calls == 3
+
+    # 6クエリすべてが llm_usage_events のみを参照し、extraction_attempts 等の旧列を読まない
+    assert len(db._executed_sql) == 6
     for sql in db._executed_sql:
         assert "llm_usage_events" in sql
         assert "extraction_attempts" not in sql
@@ -120,16 +157,46 @@ async def test_llm_usage_all_null_when_no_rows():
         "tool_use_prompt_tokens": None,
         "total_tokens": None,
         "cost_usd": None,
+        "computed_total_tokens": None,
+        "total_mismatch_calls": 0,
     }
-    db = _mock_db_with_sequenced_results([empty_total, [], [], []])
+    db = _mock_db_with_sequenced_results([empty_total, [], [], [], [], []])
 
     result = await get_llm_usage(days=7, db=db, _admin=None)
 
     assert result.total.calls == 0
     assert result.total.cost_usd is None
+    # 4項目すべて未報告のグループは computed_total_tokens も NULL のまま（0 と推測しない）
+    assert result.total.computed_total_tokens is None
+    assert result.total.total_mismatch_calls == 0
     assert result.by_purpose == []
     assert result.by_model == []
     assert result.daily == []
+    assert result.daily_by_purpose == []
+    assert result.monthly_by_purpose == []
+
+
+@pytest.mark.asyncio
+async def test_llm_usage_mismatch_calls_counted_when_total_tokens_disagrees():
+    total_row = {
+        "calls": 2,
+        "prompt_tokens": 500,
+        "cached_content_tokens": None,
+        "candidates_tokens": 100,
+        "thoughts_tokens": None,
+        "tool_use_prompt_tokens": None,
+        "total_tokens": 999,
+        "cost_usd": 0.001,
+        "computed_total_tokens": 600,
+        "total_mismatch_calls": 1,
+    }
+    db = _mock_db_with_sequenced_results([total_row, [], [], [], [], []])
+
+    result = await get_llm_usage(days=30, db=db, _admin=None)
+
+    assert result.total.total_mismatch_calls == 1
+    assert result.total.computed_total_tokens == 600
+    assert result.total.total_tokens == 999
 
 
 @pytest.mark.asyncio

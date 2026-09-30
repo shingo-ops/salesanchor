@@ -401,6 +401,18 @@
   --cal-release:         #0d9488;  --cal-release-tint:  #e0f1ef;  --cal-release-text:  #0b6e66;
   --cal-holiday:         #64748b;  --cal-holiday-tint:  #eef1f4;  --cal-holiday-text:  #475569;
 
+  /* ---- Chart categorical series palette (ADR-067 新規トークン追加手順) ----
+     使いみち別グラフ等、カレンダー以外のドメインでカテゴリカルな塗り分けが
+     必要な箇所はこちらを参照する（--cal-* を他ドメインから直接参照しない）。
+     値は既存の --cal-* をそのままエイリアスしており、新規 hex は追加しない。 */
+  --chart-series-1: var(--cal-personal);
+  --chart-series-2: var(--cal-meeting);
+  --chart-series-3: var(--cal-purchase);
+  --chart-series-4: var(--cal-shipping);
+  --chart-series-5: var(--cal-billing);
+  --chart-series-6: var(--cal-release);
+  --chart-series-7: var(--cal-holiday);
+
   /* ---- Field sizes ---- */
   --min-width-input-sm:   120px;  /* 小型入力フィールド最小幅 */
 
@@ -570,6 +582,15 @@
   --cal-billing:   #e0a35a; --cal-billing-tint:  #3a2a10; --cal-billing-text:  #f1c48e;
   --cal-release:   #2dd4bf; --cal-release-tint:  #0c322d; --cal-release-text:  #8de6da;
   --cal-holiday:   #94a3b8; --cal-holiday-tint:  #1f2a3a; --cal-holiday-text:  #c2cdda;
+
+  /* ---- Chart categorical series palette（ダーク・--cal-* のエイリアス） ---- */
+  --chart-series-1: var(--cal-personal);
+  --chart-series-2: var(--cal-meeting);
+  --chart-series-3: var(--cal-purchase);
+  --chart-series-4: var(--cal-shipping);
+  --chart-series-5: var(--cal-billing);
+  --chart-series-6: var(--cal-release);
+  --chart-series-7: var(--cal-holiday);
 
   --schedule-gridline:  #2d3b52;
   --schedule-slot-hover: rgba(91, 141, 217, .10);
