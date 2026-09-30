@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.services.gemini_extraction_svc import _safe_error_message
+from app.services.llm_budget import UsageCounts, usage_counts_from
 
 logger = logging.getLogger(__name__)
 
@@ -90,6 +91,8 @@ class LLMParseResult:
     output_tokens: int = 0
     model: str = "gemini-3.1-flash-lite"
     raw_response_text: str = ""  # debug 用
+    # ADR-1004: llm_usage_events 台帳への記録用（in/output_tokens は後方互換で残す）
+    usage_counts: UsageCounts = field(default_factory=UsageCounts)
 
 
 # ---------------------------------------------------------------------------
@@ -314,8 +317,9 @@ async def parse_with_gemini(
         )
 
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    counts = usage_counts_from(usage)
+    input_tokens = counts.prompt_tokens or 0
+    output_tokens = (counts.candidates_tokens or 0) + (counts.thoughts_tokens or 0)
 
     logger.info(
         "[llm_parser] Gemini call OK: items=%s in_tokens=%s out_tokens=%s",
@@ -327,6 +331,7 @@ async def parse_with_gemini(
         items=items,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
+        usage_counts=counts,
         model=model_name,
         raw_response_text=text_payload,
     )

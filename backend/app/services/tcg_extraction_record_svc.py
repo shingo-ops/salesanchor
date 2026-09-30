@@ -10,7 +10,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from fastapi import HTTPException
 from sqlalchemy import text
 
-from app.services.llm_budget import calculate_cost
+from app.services.llm_budget import UsageCounts, record_usage_event_sync
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +64,7 @@ class AttemptRecorder:
         self._input_tokens: int = 0
         self._output_tokens: int = 0
         self._requested_model: str = ""
+        self._usage_counts: UsageCounts | None = None
 
     def before_send(self, payload: dict) -> None:
         """The payload is exactly the model/contents/config passed to the SDK."""
@@ -128,9 +129,13 @@ class AttemptRecorder:
             raise RecordError("ATTEMPT_CONFLICT")
         return owned
 
-    def on_response(self, response: str, *, input_tokens: int = 0, output_tokens: int = 0) -> None:
+    def on_response(
+        self, response: str, *, input_tokens: int = 0, output_tokens: int = 0,
+        usage_counts: UsageCounts | None = None,
+    ) -> None:
         self._input_tokens = input_tokens
         self._output_tokens = output_tokens
+        self._usage_counts = usage_counts
         s = self.session
         size = len(response.encode("utf-8"))
         oversized = size > MAX_BYTES
@@ -173,33 +178,26 @@ class AttemptRecorder:
         """Do not commit here: caller commits items, job and this row together."""
         body = encoded(items)
         size = self._parsed_size(body)
-        cost: float | None = None
-        if self._requested_model and (self._input_tokens > 0 or self._output_tokens > 0):
-            try:
-                cost = float(calculate_cost(self._input_tokens, self._output_tokens, model=self._requested_model))
-            except ValueError:
-                cost = None
         self.session.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts
             SET phase='completed',finished_at=clock_timestamp(),parsed_items=CAST(:items AS JSONB),
-                parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb,
-                input_tokens=:input_tokens,output_tokens=:output_tokens,cost_usd=:cost_usd
+                parsed_bytes=:size,item_count=:count,validation_result='{{"status":"passed"}}'::jsonb
             WHERE id=:id AND phase='received' AND response_text IS NOT NULL
             RETURNING id
-        """), {"id": self.id, "items": body, "size": size, "count": len(items),
-               "input_tokens": self._input_tokens or None,
-               "output_tokens": self._output_tokens or None,
-               "cost_usd": cost}).scalar_one()
+        """), {"id": self.id, "items": body, "size": size, "count": len(items)}).scalar_one()
+        # ADR-1004: llm_usage_events 台帳が SSOT。応答を受け取れた（usage_counts あり）ときのみ1行書く。
+        if self._usage_counts is not None and self._requested_model:
+            record_usage_event_sync(
+                self.session,
+                purpose="line_extraction",
+                model=self._requested_model,
+                sdk="google-genai",
+                counts=self._usage_counts,
+                extraction_attempt_id=self.id,
+            )
 
     def fail(self, code: str) -> None:
         """One bounded, best-effort failure write. Terminal/foreign attempts stay unchanged."""
         s = self.session
-        # エラー時も入力トークン分のコストは発生する（出力は0扱い）
-        fail_cost: float | None = None
-        if self._requested_model and self._input_tokens > 0:
-            try:
-                fail_cost = float(calculate_cost(self._input_tokens, 0, model=self._requested_model))
-            except ValueError:
-                fail_cost = None
         try:
             s.rollback()
             if self._owned(required=False):
@@ -211,27 +209,30 @@ class AttemptRecorder:
                     s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
                         finished_at=clock_timestamp(),error_code=:code,
                         parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                        validation_result=CAST(:vr AS JSONB),
-                        input_tokens=COALESCE(:input_tokens,input_tokens),
-                        cost_usd=COALESCE(:cost_usd,cost_usd)
+                        validation_result=CAST(:vr AS JSONB)
                         WHERE id=:id
                     """), {"id": self.id, "code": code,
                              "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
-                             "vr": validation_result,
-                             "input_tokens": self._input_tokens or None,
-                             "cost_usd": fail_cost})
+                             "vr": validation_result})
                 else:
                     s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_attempts SET phase='failed',
                         finished_at=clock_timestamp(),error_code=:code,
                         parsed_bytes=COALESCE(:parsed_bytes,parsed_bytes),
-                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text)),
-                        input_tokens=COALESCE(:input_tokens,input_tokens),
-                        cost_usd=COALESCE(:cost_usd,cost_usd)
+                        validation_result=jsonb_build_object('status','failed','code',CAST(:code AS text))
                         WHERE id=:id
                     """), {"id": self.id, "code": code,
-                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None,
-                             "input_tokens": self._input_tokens or None,
-                             "cost_usd": fail_cost})
+                             "parsed_bytes": self._oversized_parsed_bytes if code == "PARSED_TOO_LARGE" else None})
+                # ADR-1004: 応答を受け取れていた（usage_counts あり）失敗のみ台帳に1行書く。
+                # 応答が無い失敗（呼び出し自体の例外）は usage 不明のため書かない。
+                if self._usage_counts is not None and self._requested_model:
+                    record_usage_event_sync(
+                        self.session,
+                        purpose="line_extraction",
+                        model=self._requested_model,
+                        sdk="google-genai",
+                        counts=self._usage_counts,
+                        extraction_attempt_id=self.id,
+                    )
                 s.execute(text(f"""UPDATE {TCG_SCHEMA}.extraction_jobs SET status='error',
                     error_message=:code,extracted_at=NULL,prompt_version=:version WHERE id=:job
                 """), {"job": self.job_id, "code": code, "version": self.prompt_version})

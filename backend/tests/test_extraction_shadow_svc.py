@@ -8,6 +8,7 @@ from unittest.mock import MagicMock
 
 from app.services.extraction_judgement_svc import ProductEntry
 from app.services.extraction_shadow_svc import run_shadow_for_job
+from app.services.llm_budget import UsageCounts
 
 _RAW_COPY_HEADER_LINE = (
     "RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜RAW_MULTI｜"
@@ -85,10 +86,12 @@ class TestRunShadowForJobMatched:
         session.commit.assert_called_once()
 
 
-class TestRunShadowForJobTokensAndCost:
-    """design.md PR-C 追加分: insert_shadow_run に tokens・cost・started_at が渡ること。"""
+class TestRunShadowForJobUsageLedger:
+    """ADR-1004: insert_shadow_run は tokens/cost を書かず、代わりに
+    record_usage_event_sync(purpose='line_extraction_shadow') に1行書く。
+    design.md §3-2: 応答が無い失敗は行を作らない。"""
 
-    def test_insert_shadow_run_receives_tokens_cost_and_started_at(self, monkeypatch):
+    def test_completed_run_writes_one_ledger_row_with_run_id(self, monkeypatch):
         # Arrange
         raw_text = "商品A 1500円 3枚 未使用"
         response = (
@@ -99,18 +102,21 @@ class TestRunShadowForJobTokensAndCost:
         svc = _patch_common(
             monkeypatch, products=[product], raw_copy_response=response,
             raw_copy_side_effect=lambda raw_text, **kw: {
-                "response_text": response, "input_tokens": 100, "output_tokens": 40,
+                "response_text": response,
+                "input_tokens": 100, "output_tokens": 40,
+                "usage_counts": UsageCounts(prompt_tokens=100, candidates_tokens=40),
             },
         )
         session = _mock_session()
-        recorded_kwargs = {}
-
-        def fake_insert_run(session, **kwargs):
-            recorded_kwargs.update(kwargs)
-            return "run-tokens"
-
-        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+        monkeypatch.setattr(svc, "insert_shadow_run", lambda session, **kwargs: "run-tokens")
         monkeypatch.setattr(svc, "insert_shadow_results", lambda session, run_id, results: None)
+        recorded = {}
+
+        def fake_record(session, **kwargs):
+            recorded.update(kwargs)
+            return "usage-event-1"
+
+        monkeypatch.setattr(svc, "record_usage_event_sync", fake_record)
 
         # Act
         result = run_shadow_for_job(
@@ -119,28 +125,30 @@ class TestRunShadowForJobTokensAndCost:
 
         # Assert
         assert result["status"] == "completed"
-        assert recorded_kwargs["input_tokens"] == 100
-        assert recorded_kwargs["output_tokens"] == 40
-        assert recorded_kwargs["cost_usd"] is not None
-        assert recorded_kwargs["cost_usd"] > 0
-        assert recorded_kwargs["started_at"] is not None
+        assert recorded["purpose"] == "line_extraction_shadow"
+        assert recorded["extraction_shadow_run_id"] == "run-tokens"
+        assert recorded["counts"].prompt_tokens == 100
+        assert recorded["counts"].candidates_tokens == 40
 
-    def test_failed_run_still_receives_tokens_when_gemini_call_succeeded(self, monkeypatch):
-        # Arrange: Gemini 呼び出しは成功したがパースに失敗するケース
+    def test_failed_run_still_writes_ledger_row_when_gemini_call_succeeded(self, monkeypatch):
+        # Arrange: Gemini 呼び出しは成功したがパースに失敗するケース（usage は分かっている）
         svc = _patch_common(
             monkeypatch, products=[], raw_copy_response="not a valid header at all",
             raw_copy_side_effect=lambda raw_text, **kw: {
-                "response_text": "not a valid header at all", "input_tokens": 30, "output_tokens": 5,
+                "response_text": "not a valid header at all",
+                "input_tokens": 30, "output_tokens": 5,
+                "usage_counts": UsageCounts(prompt_tokens=30, candidates_tokens=5),
             },
         )
         session = _mock_session()
-        recorded_kwargs = {}
+        monkeypatch.setattr(svc, "insert_shadow_run", lambda session, **kwargs: "run-fail-tokens")
+        recorded = {}
 
-        def fake_insert_run(session, **kwargs):
-            recorded_kwargs.update(kwargs)
-            return "run-fail-tokens"
+        def fake_record(session, **kwargs):
+            recorded.update(kwargs)
+            return "usage-event-2"
 
-        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+        monkeypatch.setattr(svc, "record_usage_event_sync", fake_record)
 
         # Act
         result = run_shadow_for_job(
@@ -150,13 +158,11 @@ class TestRunShadowForJobTokensAndCost:
         # Assert
         assert result["status"] == "failed"
         assert result["error_code"] == "PARSE_FAILED"
-        assert recorded_kwargs["input_tokens"] == 30
-        assert recorded_kwargs["output_tokens"] == 5
-        assert recorded_kwargs["cost_usd"] is not None
-        assert recorded_kwargs["started_at"] is not None
+        assert recorded["extraction_shadow_run_id"] == "run-fail-tokens"
+        assert recorded["counts"].prompt_tokens == 30
 
-    def test_failed_run_has_none_tokens_when_gemini_call_itself_failed(self, monkeypatch):
-        # Arrange: Gemini 呼び出し自体が失敗 -> tokens 不明
+    def test_failed_run_writes_no_ledger_row_when_gemini_call_itself_failed(self, monkeypatch):
+        # Arrange: Gemini 呼び出し自体が失敗 -> usage 不明。行を作らない（design.md: 推測で作らない）。
         import app.services.extraction_shadow_svc as svc
 
         def raise_gemini(raw_text, **kw):
@@ -164,13 +170,12 @@ class TestRunShadowForJobTokensAndCost:
 
         monkeypatch.setattr(svc, "call_gemini_raw_copy", raise_gemini)
         session = _mock_session()
-        recorded_kwargs = {}
-
-        def fake_insert_run(session, **kwargs):
-            recorded_kwargs.update(kwargs)
-            return "run-fail-no-tokens"
-
-        monkeypatch.setattr(svc, "insert_shadow_run", fake_insert_run)
+        monkeypatch.setattr(svc, "insert_shadow_run", lambda session, **kwargs: "run-fail-no-tokens")
+        record_calls = []
+        monkeypatch.setattr(
+            svc, "record_usage_event_sync",
+            lambda session, **kwargs: record_calls.append(kwargs) or "usage-event-3",
+        )
 
         # Act
         result = run_shadow_for_job(
@@ -180,10 +185,7 @@ class TestRunShadowForJobTokensAndCost:
         # Assert
         assert result["status"] == "failed"
         assert result["error_code"] == "GEMINI_CALL_FAILED"
-        assert recorded_kwargs["input_tokens"] is None
-        assert recorded_kwargs["output_tokens"] is None
-        assert recorded_kwargs["cost_usd"] is None
-        assert recorded_kwargs["started_at"] is not None
+        assert record_calls == []
 
 
 class TestRunShadowForJobAmbiguousUnmatched:

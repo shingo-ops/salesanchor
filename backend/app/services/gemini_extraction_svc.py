@@ -23,6 +23,7 @@ from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 
+from app.services import llm_budget
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
@@ -441,12 +442,16 @@ def call_gemini_extraction(
         raise RuntimeError(f"Gemini API 呼び出し失敗: {_safe_error_message(exc)}") from exc
 
     result_text = getattr(response, "text", "") or ""
-    # トークン数取得
+    # トークン数取得（ADR-1004: llm_usage_events 台帳が SSOT）
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    usage_counts = llm_budget.usage_counts_from(usage)
+    input_tokens = usage_counts.prompt_tokens or 0
+    output_tokens = (usage_counts.candidates_tokens or 0) + (usage_counts.thoughts_tokens or 0)
     if recorder is not None:
-        recorder.on_response(result_text, input_tokens=input_tokens, output_tokens=output_tokens)
+        recorder.on_response(
+            result_text, input_tokens=input_tokens, output_tokens=output_tokens,
+            usage_counts=usage_counts,
+        )
     logger.info(
         "[gemini_extraction] API response received, response_len=%d", len(result_text)
     )
@@ -522,12 +527,18 @@ def call_gemini_raw_copy(
 
     result_text = getattr(response, "text", "") or ""
     usage = getattr(response, "usage_metadata", None)
-    input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    usage_counts = llm_budget.usage_counts_from(usage)
+    input_tokens = usage_counts.prompt_tokens or 0
+    output_tokens = (usage_counts.candidates_tokens or 0) + (usage_counts.thoughts_tokens or 0)
     logger.info(
         "[gemini_extraction] raw_copy API response received, response_len=%d", len(result_text)
     )
-    return {"response_text": result_text, "input_tokens": input_tokens, "output_tokens": output_tokens}
+    return {
+        "response_text": result_text,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "usage_counts": usage_counts,
+    }
 
 
 # ---------------------------------------------------------------------------

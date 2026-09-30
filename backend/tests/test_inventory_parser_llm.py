@@ -54,7 +54,10 @@ def _make_fake_response(
         response.text = text_payload
     else:
         response.text = json.dumps(json_payload or {"items": []})
-    usage = MagicMock()
+    # spec を絞ることで未設定フィールド（thoughts_token_count 等）は
+    # getattr(..., None) で None になる（MagicMock() の自動属性生成で
+    # int(MagicMock()) == 1 になってしまう事故を防ぐ。ADR-1004）。
+    usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
     usage.prompt_token_count = prompt_tokens
     usage.candidates_token_count = candidates_tokens
     response.usage_metadata = usage

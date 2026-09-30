@@ -32,7 +32,7 @@ from app.services.extraction_judgement_svc import (
     ship_timing as judge_ship_timing,
 )
 from app.services.gemini_extraction_svc import call_gemini_raw_copy, parse_raw_copy_response
-from app.services.llm_budget import calculate_cost
+from app.services.llm_budget import UsageCounts, record_usage_event_sync
 from app.services.tcg_analyzer_svc import (
     _parse_numeric,
     build_note_ja,
@@ -108,12 +108,15 @@ def insert_shadow_run(
     status: str,
     error_code: str | None = None,
     error_detail: str | None = None,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    cost_usd: float | None = None,
     started_at: datetime | None = None,
 ) -> str:
-    """extraction_shadow_runs に1行 INSERT して run_id を返す（PR-B1 migration 前提）。"""
+    """extraction_shadow_runs に1行 INSERT して run_id を返す（PR-B1 migration 前提）。
+
+    ADR-1004: input_tokens/output_tokens/cost_usd は本 PR 以降 llm_usage_events 台帳が
+    SSOT。ここでは書き込まない（列は残置、NULL のまま）。呼び出し元が run_id を受けて
+    record_usage_event_sync(purpose='line_extraction_shadow', extraction_shadow_run_id=run_id)
+    を呼ぶこと。
+    """
     run_id = str(uuid.uuid4())
     session.execute(
         text(
@@ -121,11 +124,11 @@ def insert_shadow_run(
             INSERT INTO public.extraction_shadow_runs
                 (id, extraction_job_id, prompt_key, engine_version, requested_model,
                  input_bytes, response_text, status, error_code, error_detail,
-                 input_tokens, output_tokens, cost_usd, started_at, finished_at)
+                 started_at, finished_at)
             VALUES
                 (:id, :extraction_job_id, :prompt_key, :engine_version, :requested_model,
                  :input_bytes, :response_text, :status, :error_code, :error_detail,
-                 :input_tokens, :output_tokens, :cost_usd, COALESCE(:started_at, now()), now())
+                 COALESCE(:started_at, now()), now())
             """
         ),
         {
@@ -139,9 +142,6 @@ def insert_shadow_run(
             "status": status,
             "error_code": error_code,
             "error_detail": error_detail,
-            "input_tokens": input_tokens,
-            "output_tokens": output_tokens,
-            "cost_usd": cost_usd,
             "started_at": started_at,
         },
     )
@@ -297,16 +297,6 @@ def _judge_block(
 # ---------------------------------------------------------------------------
 
 
-def _calc_shadow_cost(input_tokens: int | None, output_tokens: int | None) -> float | None:
-    """tcg_extraction_record_svc.complete() と同じ扱い：未知モデルは None（design.md PR-C）。"""
-    if not input_tokens and not output_tokens:
-        return None
-    try:
-        return float(calculate_cost(input_tokens or 0, output_tokens or 0, model=_REQUESTED_MODEL))
-    except ValueError:
-        return None
-
-
 def run_shadow_for_job(
     session: Session,
     extraction_job_id: str,
@@ -336,9 +326,7 @@ def run_shadow_for_job(
         )
 
     response_text = raw_copy["response_text"]
-    input_tokens = raw_copy.get("input_tokens")
-    output_tokens = raw_copy.get("output_tokens")
-    cost_usd = _calc_shadow_cost(input_tokens, output_tokens)
+    usage_counts: UsageCounts = raw_copy.get("usage_counts") or UsageCounts()
 
     try:
         blocks, parse_errors = parse_raw_copy_response(response_text, raw_text)
@@ -346,8 +334,7 @@ def run_shadow_for_job(
         logger.error("[extraction_shadow] parse failed ej=%s: %s", extraction_job_id, exc)
         return _record_failed_run(
             session, extraction_job_id, input_bytes, response_text, "PARSE_FAILED", str(exc),
-            input_tokens=input_tokens, output_tokens=output_tokens, cost_usd=cost_usd,
-            started_at=started_at,
+            usage_counts=usage_counts, started_at=started_at,
         )
 
     try:
@@ -380,10 +367,15 @@ def run_shadow_for_job(
             input_bytes=input_bytes,
             response_text=response_text,
             status="completed",
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_usd=cost_usd,
             started_at=started_at,
+        )
+        record_usage_event_sync(
+            session,
+            purpose="line_extraction_shadow",
+            model=_REQUESTED_MODEL,
+            sdk="google-genai",
+            counts=usage_counts,
+            extraction_shadow_run_id=run_id,
         )
         insert_shadow_results(session, run_id, results)
         session.commit()
@@ -407,14 +399,16 @@ def _record_failed_run(
     error_code: str,
     error_detail: str,
     *,
-    input_tokens: int | None = None,
-    output_tokens: int | None = None,
-    cost_usd: float | None = None,
+    usage_counts: UsageCounts | None = None,
     started_at: datetime | None = None,
 ) -> dict:
-    """Gemini 呼び出し／パース失敗を failed run として記録する（記録自体の失敗も吸収）。"""
+    """Gemini 呼び出し／パース失敗を failed run として記録する（記録自体の失敗も吸収）。
+
+    usage_counts が None なのは呼び出し自体が失敗した場合（応答が無く usage 不明）。
+    その場合は llm_usage_events に行を作らない（design.md: 推測で作らない）。
+    """
     try:
-        insert_shadow_run(
+        run_id = insert_shadow_run(
             session,
             extraction_job_id=extraction_job_id,
             prompt_key=_PROMPT_KEY,
@@ -425,11 +419,17 @@ def _record_failed_run(
             status="failed",
             error_code=error_code,
             error_detail=error_detail[:2000],
-            input_tokens=input_tokens,
-            output_tokens=output_tokens,
-            cost_usd=cost_usd,
             started_at=started_at,
         )
+        if usage_counts is not None:
+            record_usage_event_sync(
+                session,
+                purpose="line_extraction_shadow",
+                model=_REQUESTED_MODEL,
+                sdk="google-genai",
+                counts=usage_counts,
+                extraction_shadow_run_id=run_id,
+            )
         session.commit()
     except Exception:  # noqa: BLE001
         session.rollback()
