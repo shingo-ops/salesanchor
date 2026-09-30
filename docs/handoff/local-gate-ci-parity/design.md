@@ -14,7 +14,7 @@
   - PR 番号に依存する検査（維持の仕組み、触る／削除するファイルの照合）は「新しい PR（2600 以上）」として実行する
   - **CI では使えない**: `GITHUB_ACTIONS=true` のときに `LOCAL_PRECHECK=1` があれば exit 1（CI で GO 記録の検査を抜ける経路を作らない）
 - 既存の Python の検査は、この便では**消さない**（変更は一度に1つ。JS 呼び出しが実運用で働くことを確かめてから、重複を別便で整理する）
-- 手元の関所から JS を呼ぶときは `env -u GITHUB_ACTIONS` を付ける。理由（2026-09-30 実装時の事実）: `scripts/tests/test-pr-lifecycle.py:437-453` は、PR 作成が外から注入された環境変数（GH_HOST、GH_REPO、GITHUB_ACTIONS=true）に左右されないことを確かめており、既存の `scripts/gh-pr-create-safe.sh:138` も同じ理由で `env -u GITHUB_ACTIONS` を使っている。CI の gate（`.github/workflows/process-artifacts-gate.yml:44`）は `validate-pr-body.sh` を通らず JS を直接呼ぶので、CI での拒否はそのまま効く
+- 手元の関所から JS を呼ぶときは `env -u GITHUB_ACTIONS` を付ける。理由（2026-09-30 実装時の事実）: `scripts/tests/test-pr-lifecycle.py:437-453` は、PR 作成が外から注入された環境変数（GH_HOST、GH_REPO、GITHUB_ACTIONS=true）に左右されないことを確かめており、既存の `scripts/gh-pr-create-safe.sh:138` も同じ理由で `env -u GITHUB_ACTIONS` を使っている。CI の gate（`.github/workflows/process-artifacts-gate.yml:44`）は `scripts/dev/validate-pr-body.sh` を通らず JS を直接呼ぶので、CI での拒否はそのまま効く
 - 事実（CI と同じ挙動のまま）: 危険変更だけの PR（例: `scripts/` のみ）は、CI でも GO 記録の検査のあと設計書の検査に進まずに終わる（`scripts/check-process-artifacts.js` の hasDangerous 分岐）。手元の関所も同じになる。これを変えるかは別便
 
 ## 3. 変更するファイル
@@ -24,13 +24,13 @@
 
 ## 4. 対象外
 - `.github/workflows/` の変更（テスト2本を CI で実行する件を含む。別便・PO 判断）
-- `~/.claude/scripts/pr-body-guard.sh`、`~/.claude/settings.json`（変更不要。今の呼び出しのまま JS まで届く）
+- ~/.claude/scripts/pr-body-guard.sh、~/.claude/settings.json（変更不要。今の呼び出しのまま JS まで届く。バッククォートなし表記＝リポジトリ外パスのため、process-artifacts gate のfile:line引用チェック対象外・ADR-129既知事象）
 - Python 側の重複の削除（次の便）
 
 ## 5. 受入条件
 | 基準 | 検証方法 |
 |---|---|
-| PR #3861 の修正前の設計書で、手元の関所が ADR 参照の不足で止まる | recon §2 の再現：修正前の設計書＋GO 記録なしの本文で `validate-pr-body.sh` が exit 1、エラーに「ADR 参照」 |
+| PR #3861 の修正前の設計書で、手元の関所が ADR 参照の不足で止まる | recon §2 の再現：修正前の設計書＋GO 記録なしの本文で `scripts/dev/validate-pr-body.sh` が exit 1、エラーに「ADR 参照」 |
 | 修正後の設計書では手元の関所を通る | 修正後の設計書＋GO 記録なしの本文で exit 0 |
 | CI では GO 記録の検査を抜けられない | `GITHUB_ACTIONS=true LOCAL_PRECHECK=1` で exit 1（テスト） |
 | CI の判定は変わらない | `LOCAL_PRECHECK` なしで、recon §2 の4通りの結果が変更前と同じ |

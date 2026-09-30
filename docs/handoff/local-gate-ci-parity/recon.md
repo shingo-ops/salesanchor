@@ -23,7 +23,7 @@
 - 入力: 標準入力の PR 本文（:16）。検査は Python で CI のロジックを**手で写したもの**（:39、:51、:68、:106、:203、:226 に「CIスクリプトと同じロジック」とある）。`check-process-artifacts.js` は呼んでいない
 - CI にあって手元にない検査: 設計書の ADR 参照・recon 相互参照・受入条件表、GO 記録（:278「GO記録はPR番号確定後のマージ前full gateで検査する」）
 - 維持の仕組み欄は警告のみ（:224-239）
-- 呼び出し元: `~/.claude/scripts/pr-body-guard.sh:111`（`gh pr create/edit --body(-file)` のときに発火、:19-30）、フック登録は `~/.claude/settings.json:57`。もう1つの呼び出し元は `scripts/gh-pr-create-safe.sh:132`
+- 呼び出し元: ~/.claude/scripts/pr-body-guard.sh:111（`gh pr create/edit --body(-file)` のときに発火、:19-30）、フック登録は ~/.claude/settings.json:57（バッククォートなし表記＝リポジトリ外パスのため、file:line引用チェック対象外）。もう1つの呼び出し元は `scripts/gh-pr-create-safe.sh:132`
 - node: v24.12.0（手元で実行可）
 
 ## 4. 影響範囲
