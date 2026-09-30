@@ -27,7 +27,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app.services.extraction_shadow_svc import run_shadow_for_job
+from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
@@ -354,7 +354,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
 
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
-        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links, supplier_id=supplier_id)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
         if recorder is not None:
@@ -374,7 +374,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
-def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None):
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None, supplier_id=None):
     result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
@@ -522,19 +522,26 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
         # knowledge_links（本番用に上で既に読み込んだ値）で v7 を呼び、結果は
         # extraction_shadow_results にのみ書く。例外は本番へ一切伝播させない。
         if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":
-            try:
-                run_shadow_for_job(
-                    session,
-                    extraction_job_id,
-                    raw_text=raw_text,
-                    supplier_context=supplier_context,
-                    knowledge_links=knowledge_links,
-                )
-            except Exception:
-                logger.exception(
-                    "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+            if not has_required_supplier_rule(supplier_context):
+                logger.info(
+                    "[tcg_extraction] shadow skipped: no supplier rule supplier_id=%s ej=%s",
+                    supplier_id,
                     extraction_job_id,
                 )
+            else:
+                try:
+                    run_shadow_for_job(
+                        session,
+                        extraction_job_id,
+                        raw_text=raw_text,
+                        supplier_context=supplier_context,
+                        knowledge_links=knowledge_links,
+                    )
+                except Exception:
+                    logger.exception(
+                        "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+                        extraction_job_id,
+                    )
 
     return {
         "extraction_job_id": extraction_job_id,

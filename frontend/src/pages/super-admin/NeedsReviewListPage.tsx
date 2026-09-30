@@ -8,6 +8,7 @@
  * 認証: is_super_admin 必須
  */
 import { useEffect, useState } from "react";
+import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { PageLayout } from "../../components/PageLayout";
@@ -127,6 +128,14 @@ function formatDate(isoString: string, locale: string): string {
     minute: "2-digit",
     hourCycle: "h23",
   }).format(new Date(isoString));
+}
+
+function formatPriceQtyReason(reason: string, t: TFunction): string {
+  return reason
+    .split(",")
+    .filter(Boolean)
+    .map((code) => t(`shadowReview.priceQtyReason.${code}`, { defaultValue: code }))
+    .join(", ");
 }
 
 export default function NeedsReviewListPage() {
@@ -394,7 +403,10 @@ export default function NeedsReviewListPage() {
     {
       key: "stopped_item",
       header: t("shadowReview.stoppedItem"),
-      renderCell: (item) => item.review_items.map((r) => r.item).join(", ") || "—",
+      renderCell: (item) =>
+        item.review_items
+          .map((r) => t(`shadowReview.itemLabel.${r.item}`, { defaultValue: r.item }))
+          .join(", ") || "—",
     },
     {
       key: "candidates",
@@ -407,7 +419,11 @@ export default function NeedsReviewListPage() {
     {
       key: "reason",
       header: t("shadowReview.reason"),
-      renderCell: (item) => item.review_items.map((r) => r.reason).filter(Boolean).join(" / ") || "—",
+      renderCell: (item) =>
+        item.review_items
+          .map((r) => (r.item === "price_qty" ? formatPriceQtyReason(r.reason ?? "", t) : r.reason))
+          .filter(Boolean)
+          .join(" / ") || "—",
     },
     {
       key: "created_at",

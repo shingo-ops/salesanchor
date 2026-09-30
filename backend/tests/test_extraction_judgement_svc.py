@@ -297,3 +297,135 @@ def test_product_entry_is_frozen():
         assert False, "frozen dataclass のはずが変更できた"
     except AttributeError:
         pass
+
+
+# ---------------------------------------------------------------------------
+# 価格・数量の決定（design price-qty-resolver-design.md §4・§5・§10）
+# ---------------------------------------------------------------------------
+
+import pytest  # noqa: E402
+
+from app.services.extraction_judgement_svc import (  # noqa: E402
+    PriceQtyResult,
+    order_from_pattern,
+    resolve_price_quantity,
+)
+
+# backend/app/services/tcg_unit_recovery_svc.py:70-119 の別名一覧（canonical 名を含む）。
+_UNIT_ALIASES = tuple(
+    ["Case", "Box", "Pack", "Piece", "Set", "本", "点", "個"]
+    + "case,CASE,Case,carton,CARTON,Carton,ct,CT,Ct,カートン,ケース,ｶｰﾄﾝ,ｹｰｽ".split(",")
+    + "box,BOX,Box,ボックス,箱,ﾎﾞｯｸｽ".split(",")
+    + "pack,PACK,Pack,パック,ﾊﾟｯｸ".split(",")
+    + "piece,PIECE,Piece,pcs,PCS,Pcs,枚".split(",")
+    + "set,SET,Set,セット,ｾｯﾄ".split(",")
+)
+
+# (block, gemini_price, gemini_quantity, order, price, quantity, basis, reasons)
+_PRICE_QTY_CASES = [
+    ("27,500×18BOX", "27,500", "18BOX", None, 27500, 18, "marker", ()),
+    ("40個＠27500円", "27500円", "40個", None, 27500, 40, "marker", ()),
+    ("在庫50/13500円", "13500円", "50", None, 13500, 50, "marker", ()),
+    ("@19,000円/在庫15※潰れ破れなどあり", "19,000円", "15", None, 19000, 15, "marker", ()),
+    ("15BOX：19,500", "19,500", "15BOX", None, 19500, 15, "marker", ()),
+    ("■単価（税込）：￥27,500\n■在庫数：17", "￥27,500", "17", None, 27500, 17, "marker", ()),
+    ("ボックス/¥25,000\n残り200", "¥25,000", "200", None, 25000, 200, "marker", ()),
+    ("10900@152", "10900", "152", "price_first", 10900, 152, "rule", ()),
+    ("ストームエメラルダ 100@11300", "11300", "100", "quantity_first", 11300, 100, "rule", ()),
+    ("400＠518", "400", "518", "price_first", 400, 518, "rule", ()),
+    ("24万　在庫20", "24万", "20", None, 240000, 20, "marker", ()),
+    ("30円×3,000枚", "30円", "3,000枚", None, 30, 3000, "marker", ()),
+    ("¥4,0000/冊\n15冊", "¥4,0000", None, None, 40000, None, "marker", ("irregular_comma",)),
+    (
+        "@150,000円/在庫2\n@12,100円/在庫48",
+        "150,000円／12,100円", "2／48", None, None, None, "none", ("multiple_values",),
+    ),
+    ("10900@152", "10900", "152", None, None, None, "none", ("no_order_rule",)),
+    ("OP-17\n12,000×11BOX", "12,000", "11BOX", None, 12000, 11, "marker", ()),
+]
+
+
+@pytest.mark.parametrize(
+    "block,g_price,g_qty,order,price,quantity,basis,reasons", _PRICE_QTY_CASES
+)
+def test_resolve_price_quantity_design_table(block, g_price, g_qty, order, price, quantity, basis, reasons):
+    # Act
+    result = resolve_price_quantity(
+        block, gemini_price=g_price, gemini_quantity=g_qty, unit_aliases=_UNIT_ALIASES, order=order
+    )
+
+    # Assert
+    assert result.price == price
+    assert result.quantity == quantity
+    assert result.basis == basis
+    assert result.reasons == reasons
+    assert result.needs_review is bool(reasons)
+
+
+def test_resolve_price_quantity_does_not_join_digits_of_multiple_values():
+    result = resolve_price_quantity(
+        "10,000／12,100", gemini_price="10,000／12,100", gemini_quantity=None,
+        unit_aliases=_UNIT_ALIASES, order=None,
+    )
+    assert result.price != 1000012100
+    assert isinstance(result, PriceQtyResult)
+
+
+def test_resolve_price_quantity_none_when_gemini_has_no_values():
+    result = resolve_price_quantity(
+        "完売", gemini_price="none", gemini_quantity=None, unit_aliases=_UNIT_ALIASES, order=None
+    )
+    assert (result.price, result.quantity, result.basis, result.reasons) == (None, None, "none", ())
+    assert result.needs_review is False
+
+
+def test_resolve_price_quantity_reports_gemini_disagreement():
+    result = resolve_price_quantity(
+        "27,500×18BOX", gemini_price="27,000", gemini_quantity="18BOX",
+        unit_aliases=_UNIT_ALIASES, order=None,
+    )
+    assert "gemini_disagrees" in result.reasons
+
+
+def test_resolve_price_quantity_flags_rule_vs_shape():
+    result = resolve_price_quantity(
+        "152@10,900", gemini_price="152", gemini_quantity="10,900",
+        unit_aliases=_UNIT_ALIASES, order="price_first",
+    )
+    assert result.basis == "rule"
+    assert "rule_vs_shape" in result.reasons
+
+
+def test_resolve_price_quantity_unresolved_when_no_candidate():
+    result = resolve_price_quantity(
+        "商品 1500", gemini_price="1500", gemini_quantity=None, unit_aliases=_UNIT_ALIASES, order=None
+    )
+    assert result.reasons == ("unresolved",)
+
+
+def test_resolve_price_quantity_unit_words_come_only_from_argument():
+    block = "18BOX 27,500円"
+    with_alias = resolve_price_quantity(
+        block, gemini_price="27,500円", gemini_quantity="18", unit_aliases=("BOX",), order=None
+    )
+    without_alias = resolve_price_quantity(
+        block, gemini_price="27,500円", gemini_quantity="18", unit_aliases=(), order=None
+    )
+    assert with_alias.quantity == 18
+    assert without_alias.quantity != 18
+
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+        ('["price","@","quantity"]', "price_first"),
+        ('["quantity","@","price"]', "quantity_first"),
+        ('["price","yen"]', None),
+        ("price_at_qty", None),
+        ("", None),
+        (None, None),
+        ('{"a":1}', None),
+    ],
+)
+def test_order_from_pattern(pattern, expected):
+    assert order_from_pattern(pattern) == expected
