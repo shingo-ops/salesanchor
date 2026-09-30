@@ -12,6 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 TCG_SCHEMA = "public"
 
+# condition_basis の書式（生成元: tcg_analyzer_svc.py:853,877,880 / tcg_condition_review_svc.py:286）。
+# 接頭辞「単品語あり・要確認(<kw>),」が付く場合があるため末尾一致で判定する。
+CONDITION_FALLBACK_PATTERN = r"(^|,)(R4:単位既定(:単位不明)?|R5:パック既定)$"
+CONDITION_GIVE_UP_PATTERN = r"(^|,)R4:単位既定:単位不明$"
+CONDITION_MANUAL_BASIS = "MANUAL_CONDITION_REVIEW"
+
 
 async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
     """
@@ -25,6 +31,9 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
       unitUnresolved      = NOT ar.unit_resolved
       excluded            = ar.exclusion IS NOT NULL AND ar.exclusion != ''
       needsReview         = いずれか1つ以上
+      conditionFallback   = condition_basis が CONDITION_FALLBACK_PATTERN に末尾一致
+      conditionGiveUp     = condition_basis が CONDITION_GIVE_UP_PATTERN に末尾一致（fallback の内数）
+      conditionManual     = condition_basis = 'MANUAL_CONDITION_REVIEW'（人が確認済み）
     """
     sql = f"""
         SELECT
@@ -37,7 +46,10 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
                   OR (ar.exclusion IS NOT NULL AND ar.exclusion != '')
                 THEN 1 END)                  AS needs_review_count,
             COUNT(CASE WHEN NOT ar.pid_resolved THEN 1 END)  AS product_id_unresolved_count,
-            COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count
+            COUNT(CASE WHEN NOT ar.unit_resolved THEN 1 END) AS unit_unresolved_count,
+            COUNT(CASE WHEN ar.condition_basis ~ :fallback_pattern THEN 1 END) AS condition_fallback_count,
+            COUNT(CASE WHEN ar.condition_basis ~ :give_up_pattern THEN 1 END)  AS condition_give_up_count,
+            COUNT(CASE WHEN ar.condition_basis = :manual_basis THEN 1 END)     AS condition_manual_reviewed_count
         FROM {TCG_SCHEMA}.source_messages sm
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
         LEFT JOIN public.suppliers ps ON ps.id = sc.supplier_id
@@ -48,7 +60,12 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
         GROUP BY sc.id, ps.supplier_code, ps.name
         ORDER BY COALESCE(ps.name, '') ASC
     """
-    rows = (await db.execute(text(sql))).fetchall()
+    params = {
+        "fallback_pattern": CONDITION_FALLBACK_PATTERN,
+        "give_up_pattern": CONDITION_GIVE_UP_PATTERN,
+        "manual_basis": CONDITION_MANUAL_BASIS,
+    }
+    rows = (await db.execute(text(sql), params)).fetchall()
     return [
         {
             "supplier_id": row.supplier_id,
@@ -57,7 +74,9 @@ async def fetch_supplier_quality_summaries(db: AsyncSession) -> list[dict]:
             "needs_review_count": row.needs_review_count,
             "product_id_unresolved_count": row.product_id_unresolved_count,
             "unit_unresolved_count": row.unit_unresolved_count,
-            "condition_fallback_count": None,  # Q8実測不能 — GAS と同じく null 固定
+            "condition_fallback_count": row.condition_fallback_count,
+            "condition_give_up_count": row.condition_give_up_count,
+            "condition_manual_reviewed_count": row.condition_manual_reviewed_count,
         }
         for row in rows
     ]

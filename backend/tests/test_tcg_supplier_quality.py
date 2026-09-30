@@ -10,6 +10,7 @@ PARITY-03 第2段階: 仕入元品質サマリー API テスト。
 from __future__ import annotations
 
 import os
+import re
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -27,7 +28,9 @@ _DUMMY_SUMMARIES = [
         "needs_review_count": 3,
         "product_id_unresolved_count": 2,
         "unit_unresolved_count": 1,
-        "condition_fallback_count": None,
+        "condition_fallback_count": 4,
+        "condition_give_up_count": 1,
+        "condition_manual_reviewed_count": 2,
     },
     # items=0 の仕入元（SP0057/Hiroshi 相当）
     {
@@ -37,7 +40,9 @@ _DUMMY_SUMMARIES = [
         "needs_review_count": 0,
         "product_id_unresolved_count": 0,
         "unit_unresolved_count": 0,
-        "condition_fallback_count": None,
+        "condition_fallback_count": 0,
+        "condition_give_up_count": 0,
+        "condition_manual_reviewed_count": 0,
     },
 ]
 
@@ -124,6 +129,8 @@ async def test_supplier_quality_summaries_response_shape(fake_super_admin_overri
         "product_id_unresolved_count",
         "unit_unresolved_count",
         "condition_fallback_count",
+        "condition_give_up_count",
+        "condition_manual_reviewed_count",
     ):
         assert key in s, f"{key} missing"
 
@@ -170,3 +177,71 @@ async def test_supplier_source_response_shape(fake_super_admin_override):
     ):
         assert key in body, f"{key} missing"
     assert body["found"] is True
+
+
+# ---------------------------------------------------------------------------
+# condition_basis 判定パターン（tcg_supplier_quality_svc の定数）
+# ---------------------------------------------------------------------------
+
+_PREFIX = "単品語あり・要確認(バラ),"
+
+
+@pytest.mark.parametrize(
+    "basis",
+    [
+        "R4:単位既定",
+        "R4:単位既定:単位不明",
+        "R5:パック既定",
+        _PREFIX + "R4:単位既定",
+        _PREFIX + "R4:単位既定:単位不明",
+    ],
+)
+def test_fallback_pattern_matches(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_FALLBACK_PATTERN
+
+    assert re.search(CONDITION_FALLBACK_PATTERN, basis)
+
+
+@pytest.mark.parametrize(
+    "basis",
+    ["R4:未開封", "R3:MEMO:サーチ済", "R2:開封", "MANUAL_CONDITION_REVIEW",
+     "EMPTY_BOX:explicit", "None", ""],
+)
+def test_fallback_pattern_rejects(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_FALLBACK_PATTERN
+
+    assert not re.search(CONDITION_FALLBACK_PATTERN, basis)
+
+
+@pytest.mark.parametrize(
+    "basis", ["R4:単位既定:単位不明", _PREFIX + "R4:単位既定:単位不明"]
+)
+def test_give_up_pattern_matches(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_GIVE_UP_PATTERN
+
+    assert re.search(CONDITION_GIVE_UP_PATTERN, basis)
+
+
+@pytest.mark.parametrize("basis", ["R4:単位既定", "R5:パック既定", ""])
+def test_give_up_pattern_rejects(basis):
+    from app.services.tcg_supplier_quality_svc import CONDITION_GIVE_UP_PATTERN
+
+    assert not re.search(CONDITION_GIVE_UP_PATTERN, basis)
+
+
+async def test_service_passes_three_bind_params():
+    from app.services import tcg_supplier_quality_svc as svc
+
+    result = AsyncMock()
+    result.fetchall = lambda: []
+    db = AsyncMock()
+    db.execute = AsyncMock(return_value=result)
+
+    await svc.fetch_supplier_quality_summaries(db)
+
+    params = db.execute.call_args.args[1]
+    assert params == {
+        "fallback_pattern": svc.CONDITION_FALLBACK_PATTERN,
+        "give_up_pattern": svc.CONDITION_GIVE_UP_PATTERN,
+        "manual_basis": svc.CONDITION_MANUAL_BASIS,
+    }

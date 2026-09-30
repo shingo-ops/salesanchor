@@ -431,6 +431,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
       product_id_unresolved_count: number;
       unit_unresolved_count: number;
       condition_fallback_count: number | null;
+      condition_give_up_count?: number | null;
+      condition_manual_reviewed_count?: number | null;
     }
     interface ApiQualityResponse {
       summaries: ApiSummaryRaw[];
@@ -448,6 +450,8 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
             productIdUnresolvedCount: raw.product_id_unresolved_count,
             unitUnresolvedCount: raw.unit_unresolved_count,
             conditionFallbackCount: raw.condition_fallback_count,
+            conditionGiveUpCount: raw.condition_give_up_count ?? null,
+            conditionManualReviewedCount: raw.condition_manual_reviewed_count ?? null,
           }))
         );
       })
