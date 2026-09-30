@@ -30,31 +30,31 @@ basis には `単品語あり・要確認(<kw>),` の接頭辞が付く場合が
 不変条件: `condition_give_up_count ≤ condition_fallback_count`。`condition_fallback_count` と `condition_manual_reviewed_count` は排他（同じ行は両方に入らない）。
 
 ## 対象外（触らない）
-- 判定ロジック（`tcg_analyzer_svc.py`）・手動レビュー（`tcg_condition_review_svc.py`）・単位復旧（`tcg_unit_recovery_svc.py`）
+- 判定ロジック（`backend/app/services/tcg_analyzer_svc.py`）・手動レビュー（`backend/app/services/tcg_condition_review_svc.py`）・単位復旧（`backend/app/services/tcg_unit_recovery_svc.py`）
 - DB スキーマ（migration なし）・deploy.yml・本番スクリプト
 - 他の既存列（解析／要確認／商品ID未解決／単位未解決）の数え方
-- `fetch_supplier_source`（`tcg_supplier_quality_svc.py:66-104`）
+- `fetch_supplier_source`（`backend/app/services/tcg_supplier_quality_svc.py:66-104`）
 
 ## 影響範囲（呼び出し元走査済み・recon 追記参照）
 - BE: `backend/app/services/tcg_supplier_quality_svc.py:29-63`、`backend/app/routers/tcg_supplier_quality.py:35-42`
-- FE: `frontend/src/features/tcg-analysis-review/supplierQuality.ts`、`SupplierQualityList.tsx`、
+- FE: `frontend/src/features/tcg-analysis-review/supplierQuality.ts`、`frontend/src/features/tcg-analysis-review/SupplierQualityList.tsx`、
   `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:45, 428-451`（同じ型を使うため追随が必要）
-- i18n: `frontend/src/locales/ja.json` / `en.json` の `superAdmin.supplierQuality`（:2520〜）
+- i18n: `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` の `superAdmin.supplierQuality`（:2520〜）
 - テスト: `backend/tests/test_tcg_supplier_quality.py`
 
 ## 代替案と選択理由
 | 案 | 不採用理由 |
 |---|---|
-| 前方一致 `LIKE 'R4:単位既定%'` | 接頭辞付き basis を取りこぼす（`tcg_analyzer_svc.py:852`） |
-| 旧案C（A − 手動済み） | 手動レビューで basis が上書きされるため A と常に同値（`tcg_condition_review_svc.py:286`） |
+| 前方一致 `LIKE 'R4:単位既定%'` | 接頭辞付き basis を取りこぼす（`backend/app/services/tcg_analyzer_svc.py:852`） |
+| 旧案C（A − 手動済み） | 手動レビューで basis が上書きされるため A と常に同値（`backend/app/services/tcg_condition_review_svc.py:286`） |
 | 手動前の元 basis を `item_corrections` から復元 | JSON 解析が必要で重く、PO の目的（今の残件と内訳）に不要 |
 
 ## リスクと対処
 | リスク | 対処 |
 |---|---|
-| basis の書式が将来変わり件数が0に落ちる | 正規表現を定数化し、書式の生成元（`tcg_analyzer_svc.py:853,877,880`）を定数コメントで指す。pytest で代表 basis の一致/不一致を固定 |
+| basis の書式が将来変わり件数が0に落ちる | 正規表現を定数化し、書式の生成元（`backend/app/services/tcg_analyzer_svc.py:853,877,880`）を定数コメントで指す。pytest で代表 basis の一致/不一致を固定 |
 | SQLite テストでは正規表現 SQL が動かない | SQL 実行はモック。正規表現の意味は Python `re` で同一パターンを検証＋本番値との手動照合（受入条件4） |
-| `AnalysisDashboardPanel.tsx` は本店（~/salesanchor）で別作業の未保存変更あり | worktree は origin/main 起点で独立。変更は :428-451 のマッピング2行追加のみに限定し、衝突時は停止報告 |
+| `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は本店（~/salesanchor）で別作業の未保存変更あり | worktree は origin/main 起点で独立。変更は :428-451 のマッピング2行追加のみに限定し、衝突時は停止報告 |
 
 ## 受入条件
 | 基準 | 検証方法 |
@@ -84,10 +84,12 @@ GROUP BY ps.supplier_code ORDER BY ps.supplier_code;
 
 ## 維持の仕組み
 - 書式の変更検知: pytest の basis 分類テスト（代表値: 接頭辞あり/なし、R3:MEMO、R4:<kw>、MANUAL）
-- 所有: 解析精度管理の BE サービス（`tcg_supplier_quality_svc.py`）に正規表現定数を集約
+- 所有: 解析精度管理の BE サービス（`backend/app/services/tcg_supplier_quality_svc.py`）に正規表現定数を集約
+- 守り手: `backend/tests/test_tcg_supplier_quality.py` の basis 分類テスト（CI の backend pytest で毎PR実行）
 
-## 外部事例
-不要: 社内DBの既存カラムを数えるだけの集計置換で、外部の方式選定を伴わないため。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 不要。社内DBの既存カラムを数えるだけの集計置換で、外部の方式選定を伴わないため。
+- 過去事例: 当初「GASで実測不能」としてnull固定した経緯（`docs/handoff/parity03-supplier-quality-be/design.md`）。前提（GAS）が消えた後も固定値が残った → 応用: 集計不能の理由をコードコメントでなく定数＋テストで持ち、前提変化時にテストが落ちる形にする。
 
 ## 設計審査（Architect・同一AIの自己審査）
 判定: **APPROVE**（2026-09-30）
