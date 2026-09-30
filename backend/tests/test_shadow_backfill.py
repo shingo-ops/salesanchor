@@ -30,6 +30,18 @@ def fakes(monkeypatch):
     return run
 
 
+def _totals(costs, *, null_rows=0, rows_per_job=1):
+    """呼ぶたびに費用が costs の順に進み、台帳の行は1件処理ごとに rows_per_job 増える台帳の読み取り。"""
+    it = iter(costs)
+    state = {"rows": 0}
+
+    def fake(session, since):
+        state["rows"] += rows_per_job
+        return sb.LedgerTotals(rows=state["rows"], null_cost_rows=null_rows, cost_usd=next(it))
+
+    return fake
+
+
 def _session():
     return MagicMock()
 
@@ -37,32 +49,53 @@ def _session():
 # --- §6 基準2: 費用の上限で止まる ---------------------------------------------
 def test_stops_when_cumulative_cost_exceeds_limit_and_skips_gemini(monkeypatch, fakes):
     monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3", "j4"])
-    costs = iter([Decimal("0.4"), Decimal("1.1"), Decimal("9")])
-    monkeypatch.setattr(sb, "fetch_cumulative_cost", lambda s, since: next(costs))
+    monkeypatch.setattr(
+        sb, "fetch_ledger_totals", _totals([Decimal("0.4"), Decimal("1.1"), Decimal("9")])
+    )
 
     summary = sb.run_backfill(_session(), limit=4, max_cost_usd=Decimal("1.0"), dry_run=False)
 
     assert fakes.call_count == 2
     assert [c.args[1] for c in fakes.call_args_list] == ["j1", "j2"]
     assert summary.processed == 2
-    assert summary.stopped_by_cost is True
+    assert summary.stop_reason == "cost_limit"
     assert summary.total_cost_usd == Decimal("1.1")
+
+
+def test_stops_when_completed_run_has_no_ledger_row(monkeypatch, fakes):
+    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3, rows_per_job=0))
+
+    summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
+
+    assert fakes.call_count == 1
+    assert summary.stop_reason == "ledger_missing"
+
+
+def test_stops_when_ledger_cost_is_null(monkeypatch, fakes):
+    monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")] * 3, null_rows=1))
+
+    summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
+
+    assert fakes.call_count == 1
+    assert summary.stop_reason == "cost_null"
 
 
 def test_runs_all_targets_when_under_limit_and_counts_failures(monkeypatch, fakes):
     monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1", "j2", "j3"])
-    monkeypatch.setattr(sb, "fetch_cumulative_cost", lambda s, since: Decimal("0.1"))
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0.1")] * 3))
     fakes.side_effect = [{"status": "completed"}, {"status": "failed", "error_code": "X"}, RuntimeError("boom")]
 
     summary = sb.run_backfill(_session(), limit=3, max_cost_usd=Decimal("5"), dry_run=False)
 
     assert (summary.processed, summary.succeeded, summary.failed) == (3, 1, 2)
-    assert summary.stopped_by_cost is False
+    assert summary.stop_reason is None
 
 
 def test_missing_job_context_counts_as_failed_without_gemini(monkeypatch, fakes):
     monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ["j1"])
-    monkeypatch.setattr(sb, "fetch_cumulative_cost", lambda s, since: Decimal("0"))
+    monkeypatch.setattr(sb, "fetch_ledger_totals", _totals([Decimal("0")]))
     monkeypatch.setattr(sb, "load_extraction_context", MagicMock(return_value=None))
 
     summary = sb.run_backfill(_session(), limit=1, max_cost_usd=Decimal("1"), dry_run=False)
@@ -76,7 +109,7 @@ def test_dry_run_calls_neither_gemini_nor_writes(monkeypatch, fakes):
     ids = [f"j{i}" for i in range(15)]
     monkeypatch.setattr(sb, "select_target_jobs", lambda s, limit: ids)
     cost = MagicMock()
-    monkeypatch.setattr(sb, "fetch_cumulative_cost", cost)
+    monkeypatch.setattr(sb, "fetch_ledger_totals", cost)
     session = _session()
 
     summary = sb.run_backfill(session, limit=15, max_cost_usd=Decimal("1"), dry_run=True)
@@ -161,6 +194,9 @@ def test_select_target_jobs_rules_on_real_postgres():
         dup_new = add(ch_ok, "A B C", "2026-01-02", "done", "2026-01-04")
         early = add(ch_ok, "early", "2026-01-01", "done", "2026-01-05")
         ran = add(ch_ok, "ran", "2026-01-06", "done", "2026-01-06")
+        grp_a = add(ch_ok, "G H", "2026-01-09", "done", "2026-01-09")
+        grp_b = add(ch_ok, "G\nH", "2026-01-09", "done", "2026-01-10")
+        s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": grp_a})
         add(ch_ok, "pending", "2026-01-07", "pending", "2026-01-07")
         add(ch_norule, "norule", "2026-01-08", "done", "2026-01-08")
         s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": ran})
@@ -170,3 +206,4 @@ def test_select_target_jobs_rules_on_real_postgres():
 
     assert ids == [early, dup_new]
     assert dup_old not in ids
+    assert grp_a not in ids and grp_b not in ids

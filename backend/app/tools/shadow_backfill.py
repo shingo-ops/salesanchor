@@ -28,12 +28,14 @@ _SHADOW_PURPOSE = "line_extraction_shadow"
 
 # 対象: done・ルールあり（has_required_supplier_rule と同じ3列が空白除き非空）・
 #       shadow の run 無し（UNIQUE 衝突の回避）。同じ投稿（空白の違いだけ）は created_at 最新の1件。
-#       並びは古い投稿から。
+#       同じ組に試運転済みが1件でもあれば組ごと外す（同じ投稿を2回測らない）。並びは古い投稿から。
 _SELECT_TARGETS_SQL = f"""
-    SELECT id FROM (
-        SELECT DISTINCT ON (sm.supplier_channel_id, sm.line_posted_at,
-                            regexp_replace(sm.raw_text, '\\s', '', 'g'))
-               ej.id, sm.line_posted_at
+    WITH cand AS (
+        SELECT ej.id, ej.created_at, sm.supplier_channel_id AS ch, sm.line_posted_at AS pa,
+               regexp_replace(sm.raw_text, '\\s', '', 'g') AS k,
+               EXISTS (
+                   SELECT 1 FROM {TCG_SCHEMA}.extraction_shadow_runs r WHERE r.extraction_job_id = ej.id
+               ) AS ran
         FROM {TCG_SCHEMA}.extraction_jobs ej
         JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
         JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
@@ -42,21 +44,31 @@ _SELECT_TARGETS_SQL = f"""
           AND btrim(COALESCE(s.extraction_price_format, '')) <> ''
           AND btrim(COALESCE(s.extraction_qty_format, '')) <> ''
           AND btrim(COALESCE(s.extraction_order_pattern, '')) <> ''
-          AND NOT EXISTS (
-              SELECT 1 FROM {TCG_SCHEMA}.extraction_shadow_runs r WHERE r.extraction_job_id = ej.id
-          )
-        ORDER BY sm.supplier_channel_id, sm.line_posted_at,
-                 regexp_replace(sm.raw_text, '\\s', '', 'g'), ej.created_at DESC
+    ), grouped AS (
+        SELECT cand.*, bool_or(ran) OVER (PARTITION BY ch, pa, k) AS group_ran FROM cand
+    )
+    SELECT id FROM (
+        SELECT DISTINCT ON (ch, pa, k) id, pa
+        FROM grouped
+        WHERE NOT group_ran
+        ORDER BY ch, pa, k, created_at DESC
     ) t
-    ORDER BY line_posted_at ASC NULLS LAST, id
+    ORDER BY pa ASC NULLS LAST, id
     LIMIT :limit
 """
 
-_CUMULATIVE_COST_SQL = """
-    SELECT COALESCE(SUM(cost_usd), 0)
+_LEDGER_TOTALS_SQL = """
+    SELECT COUNT(*), COUNT(*) FILTER (WHERE cost_usd IS NULL), COALESCE(SUM(cost_usd), 0)
     FROM public.llm_usage_events
     WHERE purpose = :purpose AND occurred_at >= :since
 """
+
+
+@dataclass(frozen=True)
+class LedgerTotals:
+    rows: int
+    null_cost_rows: int
+    cost_usd: Decimal
 
 
 @dataclass
@@ -67,7 +79,7 @@ class BackfillSummary:
     succeeded: int = 0
     failed: int = 0
     total_cost_usd: Decimal = Decimal("0")
-    stopped_by_cost: bool = False
+    stop_reason: str | None = None  # cost_limit / ledger_missing / cost_null
     dry_run: bool = False
 
 
@@ -81,11 +93,12 @@ def fetch_db_now(session: Session) -> datetime:
     return session.execute(text("SELECT clock_timestamp()")).scalar_one()
 
 
-def fetch_cumulative_cost(session: Session, since: datetime) -> Decimal:
-    value = session.execute(
-        text(_CUMULATIVE_COST_SQL), {"purpose": _SHADOW_PURPOSE, "since": since}
-    ).scalar_one()
-    return Decimal(str(value))
+def fetch_ledger_totals(session: Session, since: datetime) -> LedgerTotals:
+    """実行を始めてからの台帳（purpose=line_extraction_shadow）の行数・費用NULLの行数・費用の合計。"""
+    row = session.execute(
+        text(_LEDGER_TOTALS_SQL), {"purpose": _SHADOW_PURPOSE, "since": since}
+    ).one()
+    return LedgerTotals(rows=int(row[0]), null_cost_rows=int(row[1]), cost_usd=Decimal(str(row[2])))
 
 
 def _process_job(session: Session, job_id: str) -> bool:
@@ -111,6 +124,17 @@ def _process_job(session: Session, job_id: str) -> bool:
     return ok
 
 
+def _stop_reason(summary: BackfillSummary, totals: LedgerTotals, max_cost_usd: Decimal) -> str | None:
+    """止める理由。費用を見張れない状態（台帳の行が足りない・費用NULL）は安全側に止める。"""
+    if totals.rows < summary.succeeded:
+        return "ledger_missing"
+    if totals.null_cost_rows > 0:
+        return "cost_null"
+    if totals.cost_usd > max_cost_usd:
+        return "cost_limit"
+    return None
+
+
 def run_backfill(
     session: Session, *, limit: int, max_cost_usd: Decimal, dry_run: bool
 ) -> BackfillSummary:
@@ -129,13 +153,12 @@ def run_backfill(
             summary.succeeded += 1
         else:
             summary.failed += 1
-        summary.total_cost_usd = fetch_cumulative_cost(session, since)
-        if summary.total_cost_usd > max_cost_usd:
-            summary.stopped_by_cost = True
-            logger.warning(
-                "[shadow_backfill] cost limit exceeded: %s > %s, stopping",
-                summary.total_cost_usd, max_cost_usd,
-            )
+        totals = fetch_ledger_totals(session, since)
+        summary.total_cost_usd = totals.cost_usd
+        reason = _stop_reason(summary, totals, max_cost_usd)
+        if reason is not None:
+            summary.stop_reason = reason
+            logger.warning("[shadow_backfill] stopping: %s (cost=%s)", reason, totals.cost_usd)
             break
     return summary
 
@@ -158,7 +181,7 @@ def _print_summary(summary: BackfillSummary) -> None:
         return
     print(
         f"processed={summary.processed} succeeded={summary.succeeded} failed={summary.failed} "
-        f"total_cost_usd={summary.total_cost_usd} stopped_by_cost={summary.stopped_by_cost}"
+        f"total_cost_usd={summary.total_cost_usd} stop_reason={summary.stop_reason}"
     )
 
 
