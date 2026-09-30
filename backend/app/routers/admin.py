@@ -65,7 +65,12 @@ async def register_tenant(
         await db.flush()  # IDを確定させる（commit前にIDが必要）
 
         # 専用スキーマを自動生成（テーブル + RLSポリシー込み）
-        schema_name = await create_tenant_schema(db, tenant.id, admin_db=admin_db)
+        # caller_tenant_id を渡すことで、シード完了後に app.tenant_id を
+        # current_user のテナントへ戻す（壁2後始末: audit_log RLS 対応）。
+        schema_name = await create_tenant_schema(
+            db, tenant.id, admin_db=admin_db,
+            caller_tenant_id=current_user.tenant_id,
+        )
 
         # 監査ログ記録
         await record_audit_log(
