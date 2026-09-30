@@ -1328,8 +1328,6 @@
     "addReaction": "リアクションを追加",
     "removeReaction": "リアクションを取り消す",
     "reactedBy": "リアクションした人",
-    "emojiPicker": "絵文字を選択",
-    "customEmojis": "サーバー絵文字",
     "reactionSendFailed": "リアクションの送信に失敗しました",
     "reactionDeleteFailed": "リアクションの取り消しに失敗しました",
     "sendError": {

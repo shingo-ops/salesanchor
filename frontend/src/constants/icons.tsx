@@ -55,6 +55,7 @@ import {
   PaperClipIcon,
   ArrowTopRightOnSquareIcon,
   PlusIcon,
+  HeartIcon,
 } from "@heroicons/react/24/solid";
 
 // ── outline: サイドバーナビゲーション専用 ────────────────────────────────
@@ -86,6 +87,7 @@ import {
   BanknotesIcon as BanknotesOutlineIcon,
   Bars3Icon as Bars3OutlineIcon,
   PlusIcon as PlusOutlineIcon,
+  HeartIcon as HeartOutlineIcon,
 } from "@heroicons/react/24/outline";
 
 /**
@@ -158,6 +160,8 @@ const ArrowTopRight = hi(ArrowTopRightOnSquareIcon);
 
 // ── outline wrapped（サイドバーナビゲーション専用）────────────────────────
 const SquaresFour       = hi(Squares2X2Icon);
+const Heart             = hi(HeartIcon);
+const HeartOutline      = hi(HeartOutlineIcon);
 const UsersOutline      = hi(UsersOutlineIcon);
 const PackageOutline    = hi(CubeOutlineIcon);
 const FileTextOutline   = hi(DocumentTextOutlineIcon);
@@ -374,6 +378,8 @@ export const INBOX_ACTION_ICONS = {
   translate:  Languages,       // LanguageIcon      — AI翻訳（ADR-088）
   send:       PaperAirplane,   // PaperAirplaneIcon — 送信ボタン（solid）
   attach:     Paperclip,       // PaperClipIcon     — 画像添付ボタン
+  heart:       HeartOutline,   // HeartIcon outline — リアクション（未押下・ホバー時の型枠）
+  heartFilled: Heart,          // HeartIcon solid   — リアクション（押下済み）
 } satisfies Record<string, Icon>;
 
 // スケジュールポップオーバー用（outline バリアント — Google Calendar 準拠）
