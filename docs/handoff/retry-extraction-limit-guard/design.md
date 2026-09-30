@@ -27,3 +27,20 @@ recon: `docs/handoff/retry-extraction-limit-guard/recon.md`
 
 revert（本 PR の commit を `git revert` する）。
 守り手: Opus 設計担当
+
+## 外部・過去事例の参照と我々への応用
+
+該当なし。本件はサービス層直接呼び出し時のみ再現する社内特有の呼び出し順序バグであり、
+外部ライブラリ・OSSの既知issueとして参照できる同型事例は無い。応用できる外部事例が無いため、
+根拠は 2026-09-30 の社内実測イベント（1件消失）とコード上の LIMIT/eligible 計算の突き合わせ
+（recon.md §A）のみとする。
+
+## 維持の仕組み
+
+- `_MAX_JOBS` は `backend/app/services/tcg_diagnostics_svc.py` 内の単一定数であり、
+  サービス層ガードと SELECT の `LIMIT` は同じ定数を参照するため、値を変更しても
+  二箇所が乖離しない。
+- API 側（`RetryExtractionRequest.check_exactly_one`）とサービス層ガードの二重防御構造は
+  そのまま維持し、どちらか一方が将来削除されても他方が黙落ちを防ぐ。
+- 回帰防止は `backend/tests/test_tcg_diagnostics_svc.py` の T1/T2 単体テストが担う
+  （51件超で ValueError、50件はちょうど従来どおり処理されることを CI で継続確認する）。
