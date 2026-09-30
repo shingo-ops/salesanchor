@@ -103,3 +103,5 @@ GROUP BY ps.supplier_code ORDER BY ps.supplier_code;
 - 元の設計: `docs/handoff/parity03-supplier-quality-be/design.md`
 - 台帳: `.claude-pipeline/active-work.d/release-condition-fallback-count.md`
 - ADR-154（条件判定ロジック）、ADR-100（パイプライン全体）、ADR-027（i18n）
+- ADR-067（デザイントークン強制: 列幅 `minWidth` は文字列 rem のため許可 — `docs/adr/ADR-067-design-token-enforcement.md:90`、`frontend/eslint.config.js:91-95`）
+- ADR-144（UIガバナンス: 新規UI部品は作らず既存 DataList に列を追加するのみ — `docs/CC_UI_GOVERNANCE.md:27`）
