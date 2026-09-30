@@ -5,6 +5,7 @@
   - `docs/handoff/gemini-extract-role-split/design.md`
   - `docs/handoff/gemini-extract-role-split/supplier-rules-design.md`
 - 根拠
+  - `docs/handoff/gemini-extract-role-split/recon.md`（現在地の調査。v7 の書き写し・判定の配線）
   - `docs/handoff/gemini-extract-role-split/supplier-block-evidence.md`
   - 本番の全1,688投稿の機械集計（§2）
 
@@ -113,7 +114,7 @@
 
 ## 6. ルールのない仕入元は試運転しない
 - 判定の関数：`has_required_supplier_rule(supplier_context)`。price_format、qty_format、order_pattern の3つが、どれも空白を除いて空でなければ True。
-- 置き場所：`extraction_shadow_svc.py`
+- 置き場所：`backend/app/services/extraction_shadow_svc.py`
 - 呼び出し元：`backend/app/tasks/tcg_extraction.py:522-537`。False のときは run_shadow_for_job を呼ばず、`logger.info("[tcg_extraction] shadow skipped: no supplier rule supplier_id=%s ej=%s")` を出す。
 - 旧方式（本番）は変えない。
 
@@ -194,6 +195,19 @@
      - 単位の別名の追加（冊・P など。照合試験の結果で決める）
    - 手順：対象の行と SQL を PO に見せて合意を得る → DRY-RUN → 実行
 2. 試運転の再開（#3864 を戻す PR）→ A/B 比較（合格ラインは PO が決める）
+
+## 12-2. 外部・過去事例の参照と我々への応用
+- 過去事例（社内）
+  - v6 は、Gemini に価格と数量の意味づけまで任せている。その結果を `_parse_numeric` で数値にしているため、「24万」を 24、「10,000／12,100」を連結した数値にしてしまう（F2）。この失敗が、意味づけをシステムに移す直接の根拠になっている。
+  - 目印による判定の当たり具合は、全1,688投稿で実測した（F8・F10）。
+- 外部事例
+  - 今回の対象は、自社の仕入元の原文だけで成否を測れる「決定的な規則による解析」である。そのため、外部事例は使わない。
+  - LLM で書き写し、規則で意味づけする構成（ハイブリッド）の外部事例の調査は、PO の構想（`project_line_message_type_routing_idea`）に着手するときに行う。
+
+## 維持の仕組み
+- 守り手: 設計担当（Opus）が判定の規則と試験の実例を管理する。Sonnet が試験を維持する。単位の別名は、単位マスタ画面（既存）で管理する。
+- 目印の語は `backend/app/services/extraction_judgement_svc.py` の定数1か所だけに置く。単位の語は DB（`public.unit_aliases`）だけに置く。
+- 試運転の確認待ちで `price_qty` の理由を集計し、多い理由から規則、または単位の辞書を直していく。
 
 ## 13. 自己審査（同じ AI による自己審査）
 - 判定：**APPROVE（実装に進んでよい）**
