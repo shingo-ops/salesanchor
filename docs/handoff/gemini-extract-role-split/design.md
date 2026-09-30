@@ -263,3 +263,9 @@ RAW_PRODUCT_NAME｜RAW_PRICE｜RAW_UNIT｜RAW_QUANTITY｜RAW_STATE｜RAW_SHIP｜
   - PO の決定（supplier_prompts は削除、skip_condition は廃止）どおり。DROP は不可逆なので GO #番号 が必要。
 - **残るリスク**
   - PR-C/D/CLEAN は backend/frontend を変えるため、PR を作る時点で GO記録が必要（`scripts/dev/validate-pr-body.sh:308-322`）。ブランチを push するところまでで止まる。
+
+## 追記（2026-09-30）：試運転の一時停止
+- PO 決定（2026-09-30）：「新しいシステムは停止しておいて、整備してから精度チェックしたいので未整備のまま動作させたくない」「試運転を止めることを許可する（前にご相談した「整備が終わるまで止める」）」
+- docker-compose.yml の celery-worker の EXTRACTION_SHADOW_ENABLED の初期値を 1→0 に変更。再開は同じ値を 1 に戻す
+- 停止前に記録された extraction_shadow_runs（2026-09-29〜30、整備前）は精度評価に使わない
+- 関連 ADR：ADR-1003（GO の委任。この変更の GO は ADR-1003 に基づく Opus 発行）
