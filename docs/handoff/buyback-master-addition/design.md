@@ -52,10 +52,12 @@ Gemini の選び方のリスク: 新解析には存在しない。根拠 = docs/
 | 既存テストを壊さない（本番コード無変更） | `git diff --name-only origin/main...HEAD` が scripts/・tests/・docs/handoff/ 配下のみ |
 | 実 DB での実行 | 本 PR の範囲外（登録便の手順 1 で PO 操作または人間仲介。未確認として記録） |
 
-## 外部事例
-該当なし。理由: 社内の LINE 解析マスタ（旧解析 match_pid_with_work と新解析 match_product の 2 系統）に固有の前後比較ツールであり、外部の汎用ツールで代替できない。既存の社内前例（`tcg_keyword_lint` の「登録内容を機械が読む」型、`tcg_work_comparison_svc.match_item` の解き直し）を再利用する。
+## 外部・過去事例の参照と我々への応用
+- 外部事例: 該当なし。理由: 社内の LINE 解析マスタ（旧解析 match_pid_with_work と新解析 match_product の 2 系統）に固有の前後比較ツールであり、外部の汎用ツールで代替できない。既存の社内前例（`tcg_keyword_lint` の「登録内容を機械が読む」型、`tcg_work_comparison_svc.match_item` の解き直し）を再利用する。
+- 社内の過去事例: docs/handoff/tcg-keyword-quality/design.md（登録内容を機械が読んで止める型）→ 応用: 同じ型で「追加前に過去データで解き直して止める」関所にする。
 
 ## 維持の仕組み
+- 守り手: Hikky-dev（実装役）が登録便ごとに実行し、PO が結果の gate_counts を確認する。
 - 登録便ごとに、束の CSV を本スクリプトに通し、`gate_counts` が全て 0 であることを PR 本文・報告に貼ることを手順化する（docs/handoff/buyback-master-addition/design.md をこの手順の正本とする）。
 - 終了コード 1 を返すため、シェル手順・将来の CI 化でそのまま関所にできる。
 - 新しい判定系統（match_pid_with_work・match_product 以外）を増やす便は、`evaluate()` に系統を足し、対応テストを追加する。
