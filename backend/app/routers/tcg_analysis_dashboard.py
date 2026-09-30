@@ -554,6 +554,178 @@ async def get_cost_summary(
     )
 
 
+# ---------------------------------------------------------------------------
+# LLM 使用量台帳サマリー スキーマ（ADR-1004）
+# ---------------------------------------------------------------------------
+
+
+class LlmUsageTotal(BaseModel):
+    calls: int
+    prompt_tokens: int | None
+    cached_content_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+    tool_use_prompt_tokens: int | None
+    total_tokens: int | None
+    cost_usd: float | None
+
+
+class LlmUsageByPurposeItem(BaseModel):
+    purpose: str
+    calls: int
+    prompt_tokens: int | None
+    cached_content_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+    tool_use_prompt_tokens: int | None
+    total_tokens: int | None
+    cost_usd: float | None
+
+
+class LlmUsageByModelItem(BaseModel):
+    model: str
+    calls: int
+    cost_usd: float | None
+
+
+class LlmUsageDailyItem(BaseModel):
+    date: str
+    calls: int
+    cost_usd: float | None
+    prompt_tokens: int | None
+    candidates_tokens: int | None
+    thoughts_tokens: int | None
+
+
+class LlmUsageResponse(BaseModel):
+    total: LlmUsageTotal
+    by_purpose: list[LlmUsageByPurposeItem]
+    by_model: list[LlmUsageByModelItem]
+    daily: list[LlmUsageDailyItem]
+
+
+_LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()"
+
+
+@router.get(
+    "/tcg/analysis-dashboard/llm-usage",
+    response_model=LlmUsageResponse,
+    summary="LLM 使用量台帳サマリー（super_admin 限定）",
+)
+async def get_llm_usage(
+    days: int = Query(default=30, ge=1, le=360),
+    db: AsyncSession = Depends(get_db),
+    _admin=Depends(require_super_admin),
+) -> LlmUsageResponse:
+    # ADR-1004: public.llm_usage_events が SSOT。extraction_attempts 等の旧列は読まない。
+    # 日別バケットは import-trend / pipeline-trend（tcg_analysis_dashboard_svc.py の
+    # get_import_trend/get_pipeline_trend）と同じ JST DATE_TRUNC 表現に合わせる。
+    # cost-summary の daily は DATE()（セッションTZ依存）だが、こちらは「トレンド」相当の
+    # 集計のため trend 系の表現を優先した。
+    # SDK が値を返さなかった列は SUM() が NULL を返す（COALESCE で 0 に丸めない＝推測しない）。
+    total_row = (await db.execute(text(f"""
+        SELECT
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(cached_content_tokens) AS cached_content_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens,
+            SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
+            SUM(total_tokens) AS total_tokens,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+    """), {"days": days})).mappings().first()
+
+    by_purpose_rows = (await db.execute(text(f"""
+        SELECT
+            purpose,
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(cached_content_tokens) AS cached_content_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens,
+            SUM(tool_use_prompt_tokens) AS tool_use_prompt_tokens,
+            SUM(total_tokens) AS total_tokens,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY purpose
+        ORDER BY cost_usd DESC NULLS LAST
+    """), {"days": days})).mappings().all()
+
+    by_model_rows = (await db.execute(text(f"""
+        SELECT
+            model,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY model
+        ORDER BY cost_usd DESC NULLS LAST
+    """), {"days": days})).mappings().all()
+
+    daily_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COUNT(*) AS calls,
+            SUM(cost_usd) AS cost_usd,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(candidates_tokens) AS candidates_tokens,
+            SUM(thoughts_tokens) AS thoughts_tokens
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo')
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') DESC
+    """), {"days": days})).mappings().all()
+
+    return LlmUsageResponse(
+        total=LlmUsageTotal(
+            calls=int(total_row["calls"]) if total_row else 0,
+            prompt_tokens=total_row["prompt_tokens"] if total_row else None,
+            cached_content_tokens=total_row["cached_content_tokens"] if total_row else None,
+            candidates_tokens=total_row["candidates_tokens"] if total_row else None,
+            thoughts_tokens=total_row["thoughts_tokens"] if total_row else None,
+            tool_use_prompt_tokens=total_row["tool_use_prompt_tokens"] if total_row else None,
+            total_tokens=total_row["total_tokens"] if total_row else None,
+            cost_usd=float(total_row["cost_usd"]) if total_row and total_row["cost_usd"] is not None else None,
+        ),
+        by_purpose=[
+            LlmUsageByPurposeItem(
+                purpose=r["purpose"],
+                calls=int(r["calls"]),
+                prompt_tokens=r["prompt_tokens"],
+                cached_content_tokens=r["cached_content_tokens"],
+                candidates_tokens=r["candidates_tokens"],
+                thoughts_tokens=r["thoughts_tokens"],
+                tool_use_prompt_tokens=r["tool_use_prompt_tokens"],
+                total_tokens=r["total_tokens"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+            )
+            for r in by_purpose_rows
+        ],
+        by_model=[
+            LlmUsageByModelItem(
+                model=r["model"],
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+            )
+            for r in by_model_rows
+        ],
+        daily=[
+            LlmUsageDailyItem(
+                date=str(r["date"]),
+                calls=int(r["calls"]),
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+                prompt_tokens=r["prompt_tokens"],
+                candidates_tokens=r["candidates_tokens"],
+                thoughts_tokens=r["thoughts_tokens"],
+            )
+            for r in daily_rows
+        ],
+    )
+
+
 class ExtractionErrorItem(BaseModel):
     id: str
     supplier_name: str | None
