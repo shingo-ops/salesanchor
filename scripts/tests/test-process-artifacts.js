@@ -1542,6 +1542,55 @@ test('対象外REPOはfull checker開始前にfail', () => {
   assert.ok(r.stderr.includes('対象外repo'), `拒否理由が無い: ${r.stderr}`);
 });
 
+// ─── LOCAL_PRECHECK テスト（docs/handoff/local-gate-ci-parity/design.md §2）────
+console.log('\n【LOCAL_PRECHECK テスト】');
+
+test('LOCAL_PRECHECK: 危険変更＋GO記録なしでもGO記録で落ちず先の検査に進む', () => {
+  const r = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    // LOCAL_PRECHECKは触る/削除ファイル照合も猶予なし扱いになるため、
+    // GO記録の検査だけを分離して見るために宣言を満たしておく
+    MOCK_PR_BODY: '### 標準ワークフロー確認\n触るファイル: migrations/001_test.sql\n削除するファイル: なし\n',
+    LOCAL_PRECHECK: '1',
+  });
+  assert.strictEqual(r.code, 0, `GO記録なしでも落ちないべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stdout.includes('GO記録は') && r.stdout.includes('PR 番号確定後'),
+    `GO記録省略メッセージが出るべき: ${r.stdout}`
+  );
+  assert.ok(
+    !r.stderr.includes('PROCESS ARTIFACTS GATE FAILED'),
+    `GO記録要求でfailしてはいけない: ${r.stderr}`
+  );
+});
+
+test('LOCAL_PRECHECK: GITHUB_ACTIONS=true と併用するとfail（CIでは使用不可）', () => {
+  const r = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: '',
+    LOCAL_PRECHECK: '1',
+    GITHUB_ACTIONS: 'true',
+  });
+  assert.strictEqual(r.code, 1, `CIでのLOCAL_PRECHECKはfailすべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stderr.includes('LOCAL_PRECHECK は CI では使えません'),
+    `CI不可メッセージが出るべき: ${r.stderr}`
+  );
+});
+
+test('LOCAL_PRECHECK: PR_NUMBERなしでも触る/削除するファイルの宣言照合が行われる', () => {
+  const r = runScript({
+    CHANGED_FILES: 'backend/tests/util_precheck_test.py',
+    MOCK_PR_BODY: '',
+    LOCAL_PRECHECK: '1',
+  });
+  assert.strictEqual(r.code, 1, `PR番号なしでも宣言照合が働くべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stderr.includes('触るファイル'),
+    `触るファイル宣言不足のメッセージが出るべき: ${r.stderr}`
+  );
+});
+
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`
 ${'='.repeat(50)}`);
