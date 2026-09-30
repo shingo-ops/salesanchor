@@ -149,6 +149,36 @@ def test_parse_system_event_recall():
     assert messages[0]["is_system_event"] is True
 
 
+def test_parse_system_event_invite_wait():
+    """招待＋しばらくお待ちください（旧実装の $ アンカーがすり抜けていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 山田太郎 田中花子をグループに招待しました。招待中の友だちが参加するまでしばらくお待ちください。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
+def test_parse_system_event_removed():
+    """「グループから削除しました」もシステムイベント（旧実装で判定漏れしていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 山田太郎 田中花子をグループから削除しました。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
+def test_parse_system_event_call_ended():
+    """「グループ通話が終了しました」もシステムイベント（旧実装で判定漏れしていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 グループ通話 グループ通話が終了しました。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
 def test_parse_multiple_date_blocks():
     """複数の日付ブロックにまたがるメッセージが正しく日付を引き継ぐ。"""
     export_text = """\
