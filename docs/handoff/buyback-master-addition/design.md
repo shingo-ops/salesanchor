@@ -57,7 +57,7 @@ Gemini の選び方のリスク: 新解析には存在しない。根拠 = docs/
 - 社内の過去事例: docs/handoff/tcg-keyword-quality/design.md（登録内容を機械が読んで止める型）→ 応用: 同じ型で「追加前に過去データで解き直して止める」関所にする。
 
 ## 維持の仕組み
-- 守り手: Hikky-dev（実装役）が登録便ごとに実行し、PO が結果の gate_counts を確認する。
+- 守り手: backend/scripts/replay_master_addition.py（終了コード 1 が関所）と docs/handoff/buyback-master-addition/design.md（手順の正本）。Hikky-dev（実装役）が登録便ごとに実行し、PO が gate_counts を確認する。
 - 登録便ごとに、束の CSV を本スクリプトに通し、`gate_counts` が全て 0 であることを PR 本文・報告に貼ることを手順化する（docs/handoff/buyback-master-addition/design.md をこの手順の正本とする）。
 - 終了コード 1 を返すため、シェル手順・将来の CI 化でそのまま関所にできる。
 - 新しい判定系統（match_pid_with_work・match_product 以外）を増やす便は、`evaluate()` に系統を足し、対応テストを追加する。
