@@ -8,7 +8,7 @@ recon: `docs/handoff/fix-gemini-token-cost-recording/recon.md`
 ## §B 変更
 
 1. 出力トークンの読み方を、3か所とも `candidates_token_count` に直す
-   （`message_translator.py:426` と同じ読み方にそろえる）。
+   （`backend/app/services/message_translator.py:426` と同じ読み方にそろえる）。
    - 対象: `backend/app/services/gemini_extraction_svc.py:450`（`call_gemini_extraction`）、
      同ファイル `:529`（`call_gemini_raw_copy`）、
      `backend/app/services/inventory_parser_llm.py:318`。
@@ -25,8 +25,8 @@ recon: `docs/handoff/fix-gemini-token-cost-recording/recon.md`
      時刻（`datetime.now(timezone.utc)` 相当）を `started_at` として変数に控える。
    - `raw_copy["input_tokens"]` / `raw_copy["output_tokens"]` を受け取り、
      `calculate_cost(input_tokens, output_tokens, model=_REQUESTED_MODEL)`
-     （`llm_budget.py:130`）で費用を計算して `insert_shadow_run` に渡す。
-     `ValueError`（未知モデル）の場合は `tcg_extraction_record_svc.py:172-179` と
+     （`backend/app/services/llm_budget.py:130`）で費用を計算して `insert_shadow_run` に渡す。
+     `ValueError`（未知モデル）の場合は `backend/app/services/tcg_extraction_record_svc.py:172-179` と
      同じ扱いで `cost = None` にする。
    - `finished_at` は現状通り INSERT 文中の `now()` のままとし、変更しない。
    - `_record_failed_run`（`extraction_shadow_svc.py:339-`）でも、
@@ -59,26 +59,29 @@ recon: `docs/handoff/fix-gemini-token-cost-recording/recon.md`
   `model_fields` 実測、recon §A）であり、社外のブログ・Issue 等は参照していない。
   Google 公式の genai SDK リファレンス（`GenerateContentResponseUsageMetadata`）の
   一次情報が最終的な裏取り先になるが、今回のカードでは本番実測を優先した。
-- 社内の類似実装（`message_translator.py:426`）が既に `candidates_token_count` を
+- 社内の類似実装（`backend/app/services/message_translator.py:426`）が既に `candidates_token_count` を
   正しく使っており、本 PR はそれに他 3 箇所を合わせる形。新規パターンの導入ではない。
 
 ## §C 検証
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| T1 | 3か所（`gemini_extraction_svc.py` 2箇所・`inventory_parser_llm.py` 1箇所）が `candidates_token_count` を読む | 単体テスト |
+| T1 | 3か所（`backend/app/services/gemini_extraction_svc.py` 2箇所・`backend/app/services/inventory_parser_llm.py` 1箇所）が `candidates_token_count` を読む | 単体テスト |
 | T2 | 試運転の記録（`insert_shadow_run` 呼び出し）に tokens・cost・started_at が渡る | 単体テスト |
 | V1 | 本番に反映したあと、新しい extraction_attempts で output_tokens が NULL ではない | 本番DB の読み取り（設計担当が行う。実装便の範囲外） |
 
 ## 維持の仕組み
 
-- `message_translator.py` と `gemini_extraction_svc.py` / `inventory_parser_llm.py` は
-  いずれも `usage.usage_metadata` から `getattr` で読む同一パターンであり、
+- `backend/app/services/message_translator.py` と
+  `backend/app/services/gemini_extraction_svc.py` /
+  `backend/app/services/inventory_parser_llm.py` はいずれも
+  `usage.usage_metadata` から `getattr` で読む同一パターンであり、
   本 PR 後は 4 箇所すべてが `candidates_token_count` に統一される。今後 Gemini SDK
   呼び出しを追加する際は grep `getattr(usage,` で既存箇所を確認すれば揃える先が
   見つかる状態にする。
 - 試運転側のテスト（T2）が `insert_shadow_run` の呼び出し引数を固定化するため、
   将来 tokens/cost の受け渡しを誤って削る変更が入れば単体テストで検知できる。
+- 守り手: Opus 設計担当
 
 ## §D 戻し方・守り手
 
