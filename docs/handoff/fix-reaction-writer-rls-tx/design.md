@@ -54,13 +54,14 @@ async with self._pool.acquire() as conn:
 |本番: PO が受信箱で ❤️ を押すと tenant_001.meta_message_reactions に is_bot_reaction=true の行ができ、受信箱で塗りつぶしハートになる|マージ・デプロイ後に PO が確認（読み取りのみ）|
 |本番: 顧客が Discord でリアクションすると受信箱にバッジが出る|同上|
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
-- PostgreSQL 16 docs: set_config(setting_name, new_value, is_local) — is_local が true なら値は現在のトランザクション限りで、トランザクション終了で元に戻る。https://www.postgresql.org/docs/16/functions-admin.html
-- asyncpg docs: 明示トランザクションは `async with connection.transaction():` で開始する。トランザクション外のステートメントは自動コミット。https://magicstack.github.io/asyncpg/current/api/index.html#asyncpg.connection.Connection.transaction
+- PostgreSQL 16 docs: set_config(setting_name, new_value, is_local) — is_local が true なら値は現在のトランザクション限りで、トランザクション終了で元に戻る。→ 応用: 明示トランザクション内で set_config と後続文を実行する。https://www.postgresql.org/docs/16/functions-admin.html
+- asyncpg docs: 明示トランザクションは `async with connection.transaction():` で開始する。トランザクション外のステートメントは自動コミット。→ 応用: conn.transaction() で set_config から書き込みまでを1トランザクションにする。https://magicstack.github.io/asyncpg/current/api/index.html#asyncpg.connection.Connection.transaction
 
 ## 維持の仕組み
 
 - 実 PG の RLS テストが CI（test.yml の RLS 環境変数）で回り、トランザクションを外すと FAIL する。
 - ユニットテストが transaction 内実行と順序を固定する。
 - 失敗は warning + exc_info で Gateway ログに残る（今回の原因特定に使えた経路を維持）。
+- 守り手: `backend/tests/test_reaction_writer_rls_tx.py`
