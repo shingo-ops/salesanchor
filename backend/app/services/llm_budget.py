@@ -127,6 +127,20 @@ def _month_start_utc(now: datetime | None = None) -> datetime:
     return datetime(n.year, n.month, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 
+def billable_output_tokens(usage: object) -> int:
+    """課金対象の出力トークン数 = candidates_token_count + thoughts_token_count.
+
+    Gemini の出力単価は thinking tokens を含む（https://ai.google.dev/gemini-api/docs/pricing）。
+    candidates_token_count は thoughts を含まない（google-genai: total = prompt + candidates + tool_use_prompt + thoughts）。
+    usage が None / 欠損フィールドは 0 として扱う。
+    """
+    if usage is None:
+        return 0
+    candidates = int(getattr(usage, "candidates_token_count", 0) or 0)
+    thoughts = int(getattr(usage, "thoughts_token_count", 0) or 0)
+    return candidates + thoughts
+
+
 def calculate_cost(
     input_tokens: int, output_tokens: int, model: str = DEFAULT_MODEL
 ) -> Decimal:
@@ -313,6 +327,7 @@ __all__ = [
     "BudgetSnapshot",
     "DEFAULT_MODEL",
     "LLM_PRICING",
+    "billable_output_tokens",
     "calculate_cost",
     "check_budget",
     "ensure_budget_row",

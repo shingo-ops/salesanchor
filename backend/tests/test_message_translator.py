@@ -74,6 +74,9 @@ def _make_gemini_json_response(
     usage = MagicMock()
     usage.prompt_token_count = prompt_tokens
     usage.candidates_token_count = candidates_tokens
+    # thoughts_token_count は明示的に 0（未指定だと MagicMock.__int__ が 1 を返し
+    # billable_output_tokens() の期待値が +1 ズレるため）
+    usage.thoughts_token_count = 0
     response.usage_metadata = usage
     return response
 

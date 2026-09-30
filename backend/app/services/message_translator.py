@@ -29,7 +29,12 @@ from app.services.inventory_parser_llm import (
     LLMConfigError,
     LLMParseError,
 )
-from app.services.llm_budget import BudgetStatus, check_budget, record_cost
+from app.services.llm_budget import (
+    BudgetStatus,
+    billable_output_tokens,
+    check_budget,
+    record_cost,
+)
 from app.services.translation_glossary import GlossaryEntry, format_glossary_for_prompt, load_glossary
 
 logger = logging.getLogger(__name__)
@@ -423,7 +428,7 @@ async def _call_gemini(
 
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    output_tokens = billable_output_tokens(usage)
     return text_payload.strip(), input_tokens, output_tokens
 
 

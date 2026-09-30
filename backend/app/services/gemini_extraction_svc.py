@@ -23,6 +23,7 @@ from typing import Any
 
 from celery.exceptions import SoftTimeLimitExceeded
 
+from app.services.llm_budget import billable_output_tokens
 from app.services.tcg_extraction_record_svc import RecordError
 from app.services.tcg_work_reference import (
     WORK_ID_PROMPT_VERSION,
@@ -444,7 +445,7 @@ def call_gemini_extraction(
     # トークン数取得
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    output_tokens = billable_output_tokens(usage)
     if recorder is not None:
         recorder.on_response(result_text, input_tokens=input_tokens, output_tokens=output_tokens)
     logger.info(
@@ -523,7 +524,7 @@ def call_gemini_raw_copy(
     result_text = getattr(response, "text", "") or ""
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    output_tokens = billable_output_tokens(usage)
     logger.info(
         "[gemini_extraction] raw_copy API response received, response_len=%d", len(result_text)
     )

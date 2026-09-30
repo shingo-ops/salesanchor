@@ -24,6 +24,7 @@ import pytest
 from app.services.llm_budget import (
     BudgetStatus,
     LLM_PRICING,
+    billable_output_tokens,
     calculate_cost,
     check_budget,
     record_cost,
@@ -68,6 +69,40 @@ class TestCalculateCost:
         assert pricing["output_per_token"] > 0
         # 出力 > 入力 (Gemini の料金構造、回帰防止)
         assert pricing["output_per_token"] > pricing["input_per_token"]
+
+
+# ---------------------------------------------------------------------------
+# billable_output_tokens (pure, no DB)
+# ---------------------------------------------------------------------------
+
+
+class TestBillableOutputTokens:
+    def test_none_usage_returns_zero(self) -> None:
+        assert billable_output_tokens(None) == 0
+
+    def test_candidates_plus_thoughts(self) -> None:
+        usage = MagicMock(spec=["candidates_token_count", "thoughts_token_count"])
+        usage.candidates_token_count = 100
+        usage.thoughts_token_count = 40
+        assert billable_output_tokens(usage) == 140
+
+    def test_thoughts_none_falls_back_to_candidates(self) -> None:
+        usage = MagicMock(spec=["candidates_token_count", "thoughts_token_count"])
+        usage.candidates_token_count = 100
+        usage.thoughts_token_count = None
+        assert billable_output_tokens(usage) == 100
+
+    def test_missing_thoughts_attr_falls_back_to_candidates(self) -> None:
+        # usage_metadata の実装によっては thoughts_token_count 属性自体が無い場合がある
+        usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
+        usage.candidates_token_count = 250
+        assert billable_output_tokens(usage) == 250
+
+    def test_zero_candidates_and_thoughts(self) -> None:
+        usage = MagicMock(spec=["candidates_token_count", "thoughts_token_count"])
+        usage.candidates_token_count = 0
+        usage.thoughts_token_count = 0
+        assert billable_output_tokens(usage) == 0
 
 
 # ---------------------------------------------------------------------------

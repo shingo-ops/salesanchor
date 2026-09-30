@@ -35,6 +35,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.services.gemini_extraction_svc import _safe_error_message
+from app.services.llm_budget import billable_output_tokens
 
 logger = logging.getLogger(__name__)
 
@@ -315,7 +316,7 @@ async def parse_with_gemini(
 
     usage = getattr(response, "usage_metadata", None)
     input_tokens = int(getattr(usage, "prompt_token_count", 0) or 0)
-    output_tokens = int(getattr(usage, "candidates_token_count", 0) or 0)
+    output_tokens = billable_output_tokens(usage)
 
     logger.info(
         "[llm_parser] Gemini call OK: items=%s in_tokens=%s out_tokens=%s",

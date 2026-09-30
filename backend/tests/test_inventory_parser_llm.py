@@ -47,8 +47,13 @@ def _make_fake_response(
     text_payload: str | None = None,
     prompt_tokens: int = 1200,
     candidates_tokens: int = 350,
+    thoughts_tokens: int = 0,
 ) -> MagicMock:
-    """Gemini SDK の GenerateContentResponse 風の MagicMock を生成。"""
+    """Gemini SDK の GenerateContentResponse 風の MagicMock を生成。
+
+    thoughts_tokens はデフォルト 0（未指定 MagicMock 属性は __int__ で 1 を返すため
+    明示的に 0 をセットしないと billable_output_tokens() のテストが +1 ズレる）。
+    """
     response = MagicMock()
     if text_payload is not None:
         response.text = text_payload
@@ -57,6 +62,7 @@ def _make_fake_response(
     usage = MagicMock()
     usage.prompt_token_count = prompt_tokens
     usage.candidates_token_count = candidates_tokens
+    usage.thoughts_token_count = thoughts_tokens
     response.usage_metadata = usage
     return response
 

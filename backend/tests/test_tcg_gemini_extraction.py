@@ -815,6 +815,29 @@ class TestUsageMetadataTokenReading:
         assert result["input_tokens"] == 50
         assert result["output_tokens"] == 77
 
+    def test_call_gemini_extraction_includes_thoughts_in_output_tokens(self, monkeypatch):
+        """thoughts_token_count が存在する場合、output_tokens = candidates + thoughts。
+        Gemini の出力単価は thinking tokens を含むため（billable_output_tokens 参照）。
+        """
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _STUB_BASE_PROMPT
+        usage = MagicMock(
+            spec=["prompt_token_count", "candidates_token_count", "thoughts_token_count"]
+        )
+        usage.prompt_token_count = 111
+        usage.candidates_token_count = 222
+        usage.thoughts_token_count = 33
+        client.models.generate_content.return_value.usage_metadata = usage
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        recorder = MagicMock()
+        # Act
+        svc.call_gemini_extraction("行A", recorder=recorder)
+        # Assert
+        _args, kwargs = recorder.on_response.call_args
+        assert kwargs["output_tokens"] == 255  # 222 + 33
+
 
 class TestBuildSupplierContextNoteV6Unaffected:
     """label_map から extraction_ship_format を外した変更が v6（本番）出力を変えないことを守る。"""
