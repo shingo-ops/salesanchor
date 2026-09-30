@@ -1,16 +1,26 @@
--- Migration: LLM 使用量台帳（public.llm_usage_events）新設 + 過去分バックフィル
+-- Migration: LLM 使用量台帳（public.llm_usage_events）新設（A1: 表のみ）
 -- 目的: Gemini を呼ぶたびに1行、量の種類ごと・使いみちごとに記録し、どこで何に
 --       使ったかを1か所（SSOT）で集計できるようにする（PO「使用量は最大限細分化」指示）。
--- design: docs/handoff/llm-usage-ledger/design.md §3
+-- design: docs/handoff/llm-usage-ledger/design.md §3・§9（2段階の出し方）
 -- ADR:    docs/adr/ADR-1004-llm-usage-ledger.md
 -- 冪等: CREATE TABLE IF NOT EXISTS / CREATE INDEX IF NOT EXISTS。
---       バックフィルは INSERT ... SELECT ... WHERE NOT EXISTS で重複防止。
 -- DROP なし: extraction_attempts.input_tokens/output_tokens/cost_usd,
 --            extraction_shadow_runs の同3列は本PRでは残置する（列の削除は別途PO本人のGOが必要）。
 -- extraction_shadow_run_id に FK を張らない理由: CI の migration-test-run 差分実行ベースライン
 --   （.github/workflows/migration-test.yml）に public.extraction_shadow_runs が登録されておらず、
 --   REFERENCES で参照すると CI のみで失敗する。試運転（extraction_shadow_runs 書き込み）自体が
 --   現在停止中（#3864）のため実害はない。列とインデックスは維持する。
+--
+-- 2段階の出し方（design.md §9）: 本ファイルは A1（表のみ、先行デプロイ）。
+--   過去分バックフィル（INSERT ... SELECT FROM public.extraction_attempts）は
+--   migrations/20260930_140000_backfill_llm_usage_events.sql（A2）に分離した。
+--   理由: .github/workflows/deploy.yml はバックエンドのコード切替・celery再起動
+--   （~:323, ~:337-342）を「Run database migrations」（~:448-462）より先に実行する。
+--   CREATE と アプリコードの usage 書き込みロジックと バックフィル SELECT を
+--   同一 migration・同一デプロイで出すと、コード切替後～migration 実行までの間、
+--   本番の抽出処理が「テーブルが無い」または「列が無い」エラーで失敗する窓ができる。
+--   A1（表のみ、コード変更なし）を先にマージ・本番反映してから、A2（バックフィル＋
+--   アプリの書き込みコード）を出すことでこの窓を無くす。
 
 -- 1. public.llm_usage_events: 1行 = Gemini の応答1回
 CREATE TABLE IF NOT EXISTS public.llm_usage_events (
@@ -50,26 +60,3 @@ CREATE INDEX IF NOT EXISTS ix_llm_usage_events_extraction_attempt_id
     ON public.llm_usage_events (extraction_attempt_id);
 CREATE INDEX IF NOT EXISTS ix_llm_usage_events_extraction_shadow_run_id
     ON public.llm_usage_events (extraction_shadow_run_id);
-
--- 2. 過去分バックフィル（extraction_attempts → llm_usage_events, purpose='line_extraction'）
---    条件: input_tokens IS NOT NULL OR output_tokens IS NOT NULL OR cost_usd IS NOT NULL
---    冪等: extraction_attempt_id で重複防止（WHERE NOT EXISTS）。
-INSERT INTO public.llm_usage_events
-    (purpose, tenant_id, model, sdk, prompt_tokens, candidates_tokens, cost_usd,
-     extraction_attempt_id, occurred_at, backfilled)
-SELECT
-    'line_extraction',
-    NULL,
-    ea.requested_model,
-    'google-genai',
-    ea.input_tokens,
-    ea.output_tokens,
-    ea.cost_usd,
-    ea.id,
-    COALESCE(ea.response_received_at, ea.finished_at, ea.started_at),
-    true
-FROM public.extraction_attempts ea
-WHERE (ea.input_tokens IS NOT NULL OR ea.output_tokens IS NOT NULL OR ea.cost_usd IS NOT NULL)
-  AND NOT EXISTS (
-      SELECT 1 FROM public.llm_usage_events e WHERE e.extraction_attempt_id = ea.id
-  );

@@ -85,3 +85,19 @@ cost = prompt_tokens × 入力単価 + (candidates_tokens + thoughts_tokens) × 
 ## 8. 維持の仕組み
 - 書き込みは llm_budget の関数1か所（record_usage_event の sync/async 版）に集約し、各経路はそれを呼ぶだけ。
 - 守り手: backend/tests の台帳テスト、migration-guard とマイグレーション登録チェック（CI）
+
+## 9. 出し方（2段階、expand/contract）
+本設計は当初 PR #3884（release/llm-usage-ledger）1本で出す予定だったが、CI（.github/workflows/deploy.yml）を精査した結果、以下のデプロイ順序上の危険が判明したため、A1（表のみ）→ A2（バックフィル＋アプリ書き込みコード）の2段階に分割する。
+
+### デプロイ順序の事実（.github/workflows/deploy.yml、行番号は起案時点）
+- Step 3b「Blue-green backend cutover」（`bash scripts/blue-green-cutover.sh`、:323）でバックエンドの新コンテナに無停止切替。
+- Step 3c「Updating non-backend services」（:337-342）で celery-worker を含む非backendサービスを新コードで再起動。
+- 「Run database migrations」ステップ（:448-462、`bash scripts/run_all_migrations.sh` を実行）は上記2つより**後**に実行される。
+
+### 危険
+`public.llm_usage_events` の CREATE TABLE と、それを書き込むアプリコード（`llm_budget.record_usage_event`/`record_usage_event_sync` とその4経路への結線）を同一 migration・同一デプロイで出すと、Step 3b/3c でコードが切り替わってから migration ステップが表を作るまでの間、本番の抽出・翻訳処理が「テーブルが無い」エラー（`RECORD_WRITE_FAILED` 等）に遭遇する窓が生じる。
+
+### 決定（expand/contract）
+- **A1（本 PR、先行）**: `public.llm_usage_events` の CREATE TABLE のみ。アプリコード（backend/app/services/ 配下）の変更は一切含まない。表が存在してもアプリはまだ書き込まないので、コードが古いまま先にデプロイされても安全（expand）。
+- **A2（PR #3884、A1マージ後に本番反映）**: 過去分バックフィル（migrations/20260930_140000_backfill_llm_usage_events.sql、A2で新規作成）＋ llm_budget.py の書き込み関数＋4経路（抽出・試運転・翻訳3経路）への結線。A1がマージ・本番反映済みであることが前提（表が無い状態で書き込みコードが動くことはない）。
+- A1・A2は別PRなので、A2は「A1 #<PR番号> を先にマージ・反映すること」をPR本文冒頭に明記し、GOはA1・A2それぞれ別に受ける。
