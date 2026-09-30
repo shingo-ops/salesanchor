@@ -27,8 +27,11 @@ os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
 import asyncpg
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 
 from app.discord_gateway.reaction_writer import ReactionWriter
+from tests.rls_bootstrap import _apply_migration, bootstrap_tenant_schema, tenant_schema_lock
 
 SNOWFLAKE = "222222222222222222"
 CHANNEL_ID = "111111111111111111"
@@ -137,49 +140,27 @@ ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
 _TENANT_ID = 98
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
+_REACTIONS_MIGRATION = "20260927_100000_create_meta_message_reactions.sql"
 
 
 def _dsn(url: str) -> str:
     return url.replace("postgresql+asyncpg://", "postgresql://")
 
 
-async def _bootstrap(admin_dsn: str) -> None:
-    conn = await asyncpg.connect(admin_dsn)
-    try:
-        await conn.execute(f"CREATE SCHEMA IF NOT EXISTS {_SCHEMA}")
-        await conn.execute(f"""
-            CREATE TABLE IF NOT EXISTS {_SCHEMA}.meta_messages (
-                id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL, message_id TEXT)
-        """)
-        await conn.execute(f"""
-            CREATE TABLE IF NOT EXISTS {_SCHEMA}.meta_message_reactions (
-                id SERIAL PRIMARY KEY, tenant_id INTEGER NOT NULL,
-                meta_message_id INTEGER NOT NULL, emoji_name TEXT NOT NULL,
-                emoji_id TEXT, emoji_animated BOOLEAN NOT NULL DEFAULT FALSE,
-                reactor_discord_user_id TEXT NOT NULL, reactor_display_name TEXT,
-                is_bot_reaction BOOLEAN NOT NULL DEFAULT FALSE,
-                CONSTRAINT uq_reaction_per_user_emoji
-                    UNIQUE (meta_message_id, emoji_name, emoji_id, reactor_discord_user_id))
-        """)
-        for table in ("meta_messages", "meta_message_reactions"):
-            await conn.execute(f"ALTER TABLE {_SCHEMA}.{table} ENABLE ROW LEVEL SECURITY")
-            await conn.execute(f"ALTER TABLE {_SCHEMA}.{table} FORCE ROW LEVEL SECURITY")
-            await conn.execute(f"DROP POLICY IF EXISTS tenant_isolation ON {_SCHEMA}.{table}")
-            await conn.execute(f"""
-                CREATE POLICY tenant_isolation ON {_SCHEMA}.{table}
-                USING (tenant_id = (current_setting('app.tenant_id', true))::integer)
-                WITH CHECK (tenant_id = (current_setting('app.tenant_id', true))::integer)
-            """)
-        await conn.execute(f"GRANT USAGE ON SCHEMA {_SCHEMA} TO PUBLIC")
-        await conn.execute(f"GRANT ALL ON ALL TABLES IN SCHEMA {_SCHEMA} TO PUBLIC")
-        await conn.execute(f"GRANT ALL ON ALL SEQUENCES IN SCHEMA {_SCHEMA} TO PUBLIC")
-        await conn.execute(f"TRUNCATE {_SCHEMA}.meta_messages, {_SCHEMA}.meta_message_reactions")
+async def _build_schema_from_source_of_truth(admin_engine) -> None:
+    """本番と同じ経路でテナントスキーマを作る（DDL のコピーは持たない）。
+
+    create_tenant_schema（meta_messages）→ 本番 migration（meta_message_reactions）の順。
+    """
+    await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+    await _apply_migration(admin_engine, _REACTIONS_MIGRATION)
+    async with admin_engine.begin() as conn:
+        await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
         await conn.execute(
-            f"INSERT INTO {_SCHEMA}.meta_messages (tenant_id, message_id) VALUES ($1, $2)",
-            _TENANT_ID, SNOWFLAKE,
+            text(f"INSERT INTO {_SCHEMA}.meta_messages (tenant_id, sender_id, message_id)"
+                 " VALUES (:t, 'seed', :m)"),
+            {"t": _TENANT_ID, "m": SNOWFLAKE},
         )
-    finally:
-        await conn.close()
 
 
 @pytest.mark.skipif(
@@ -188,36 +169,41 @@ async def _bootstrap(admin_dsn: str) -> None:
 )
 @pytest.mark.asyncio
 async def test_real_pg_bare_set_config_fails_and_transaction_succeeds():
-    await _bootstrap(_dsn(ADMIN_PG_URL))
+    admin_engine = create_async_engine(ADMIN_PG_URL)
     writer = ReactionWriter(_dsn(APP_PG_URL))
-    await writer.initialize()
     emoji = SimpleNamespace(id=None, name="❤️", animated=False)
     member = SimpleNamespace(display_name="Bot", name="bot")
-    verify = await asyncpg.connect(_dsn(ADMIN_PG_URL))
+    verify_sql = f"SELECT emoji_name, is_bot_reaction FROM {_SCHEMA}.meta_message_reactions"
     try:
-        # 修正前の挙動: トランザクション無しの set_config は次の文で消える
-        async with writer._pool.acquire() as conn:
-            await conn.execute("SELECT set_config('app.tenant_id', $1, true)", str(_TENANT_ID))
-            with pytest.raises(asyncpg.exceptions.InvalidTextRepresentationError):
-                await conn.fetchrow(f"SELECT id FROM {_SCHEMA}.meta_messages LIMIT 1")
+        async with tenant_schema_lock(admin_engine, _TENANT_ID):
+            await _build_schema_from_source_of_truth(admin_engine)
+            await writer.initialize()
 
-        # 修正後: process_reaction が行を書き込む
-        with patch(SSE_PATH, new=AsyncMock()):
-            await writer.process_reaction(
-                tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
-                user_id="u1", emoji=emoji, member=member, action="add", is_bot_reaction=True,
-            )
-        rows = await verify.fetch(
-            f"SELECT emoji_name, is_bot_reaction FROM {_SCHEMA}.meta_message_reactions"
-        )
-        assert [(r["emoji_name"], r["is_bot_reaction"]) for r in rows] == [("❤️", True)]
+            # 修正前の挙動: トランザクション無しの set_config は次の文で消える
+            async with writer._pool.acquire() as conn:
+                await conn.execute("SELECT set_config('app.tenant_id', $1, true)", str(_TENANT_ID))
+                with pytest.raises(asyncpg.exceptions.InvalidTextRepresentationError):
+                    await conn.fetchrow(f"SELECT id FROM {_SCHEMA}.meta_messages LIMIT 1")
 
-        with patch(SSE_PATH, new=AsyncMock()):
-            await writer.process_reaction(
-                tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
-                user_id="u1", emoji=emoji, member=member, action="remove", is_bot_reaction=True,
-            )
-        assert await verify.fetchval(f"SELECT count(*) FROM {_SCHEMA}.meta_message_reactions") == 0
+            # 修正後: process_reaction が行を書き込み、remove で消える
+            with patch(SSE_PATH, new=AsyncMock()):
+                await writer.process_reaction(
+                    tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
+                    user_id="u1", emoji=emoji, member=member, action="add", is_bot_reaction=True,
+                )
+            async with admin_engine.begin() as conn:
+                await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
+                rows = (await conn.execute(text(verify_sql))).all()
+            assert [(r[0], r[1]) for r in rows] == [("❤️", True)]
+
+            with patch(SSE_PATH, new=AsyncMock()):
+                await writer.process_reaction(
+                    tenant_id=_TENANT_ID, channel_id=CHANNEL_ID, message_id=SNOWFLAKE,
+                    user_id="u1", emoji=emoji, member=member, action="remove", is_bot_reaction=True,
+                )
+            async with admin_engine.begin() as conn:
+                await conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(_TENANT_ID)})
+                assert (await conn.execute(text(verify_sql))).all() == []
     finally:
-        await verify.close()
         await writer.close()
+        await admin_engine.dispose()
