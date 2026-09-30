@@ -92,7 +92,7 @@ def recover_stale_running_jobs(session) -> list[str]:
             f"""
             UPDATE {TCG_SCHEMA}.extraction_jobs
             SET status = 'pending'
-            WHERE id = ANY(:ids)
+            WHERE id = ANY(CAST(:ids AS uuid[]))
               AND status = 'running'
             """
         ),
@@ -187,7 +187,7 @@ async def _reenqueue_stale_pending_jobs(job_ids: list[str]) -> dict[str, int]:
                         f"""
                         SELECT id, source_message_id
                         FROM {TCG_SCHEMA}.extraction_jobs
-                        WHERE id = ANY(:ids)
+                        WHERE id = ANY(CAST(:ids AS uuid[]))
                           AND status = 'pending'
                         ORDER BY created_at ASC
                         """
