@@ -42,7 +42,7 @@ migrations/、deploy.yml、scripts/、Discord 権限設定、カスタム絵文�
 | API が `is_mine`・`reactors[{user_id,display_name}]` を返す | backend 単体テスト（`_group_reactions`） |
 | Bot の add を Gateway が `is_bot_reaction=true` で記録 | writer / client 単体テスト |
 | REST が DB を書かず `…/messages/{snowflake}/reactions/{enc}/@me` を叩く | httpx モックテスト（POST・DELETE） |
-| フロントが `msg.id` で呼ぶ・DELETE の URL 形・失敗時 Toast | 型チェック（tsc）＋ vitest（`reactionPaths.test.ts`）＋コード差分 |
+| フロントが `msg.id` で呼ぶ・DELETE の URL 形・失敗時 Toast | 型チェック（tsc）＋ vitest（frontend/src/pages/inbox/reactionPaths.test.ts）＋コード差分 |
 | CI 必須チェック全緑 | `gh pr checks` |
 | 本番: 手順書 0〜6 がすべて○（6 は取消成功） | PO が tenant_001 で実施（本 PR の外・完了定義 docs/STANDARD-WORKFLOW.md） |
 
