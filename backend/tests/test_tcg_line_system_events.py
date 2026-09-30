@@ -1,7 +1,8 @@
 """
 tcg_line_system_events.match_system_event の単体テスト（DB 不要）。
 
-- 13 パターンそれぞれの一致例（実ファイルの文言の形。個人名は仮名に置換。recon.md Q8/Q13）
+- 15 パターンそれぞれの一致例（実ファイルの文言の形。個人名は仮名に置換。recon.md Q8/Q13、
+  スマホ由来2文型は recon 追補5）
 - 一致しない例（業務文の誤判定防止）
 - LINE WORKS 参加は本文1行目のみで一致すること（2行目の括弧書きは対象外）
 """
@@ -76,6 +77,45 @@ def test_match_line_works_join():
 
 def test_match_name_changed():
     assert match_system_event("山田太郎", "グループ名を「新グループ名」に変更しました。") == "name_changed"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# スマホ由来の2文型（recon 追補5。表の出典が PC 実ファイルのみだったため漏れていた）
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_match_note_posted():
+    assert match_system_event("一真", "一真がノートに投稿しました。") == "note_posted"
+
+
+def test_match_note_posted_android_format():
+    """スマホ形式（表示名＋本文）の組み合わせでも一致すること。"""
+    assert match_system_event("一真", "がノートに投稿しました。") == "note_posted"
+
+
+def test_match_voice_call_start():
+    assert match_system_event("伊藤晴彦", "グループ音声通話が開始されました。") == "voice_call_start"
+
+
+def test_match_voice_call_start_android_format():
+    """スマホ形式（表示名＋本文）の組み合わせでも一致すること。"""
+    assert match_system_event("グループ", "グループ音声通話が開始されました") == "voice_call_start"
+
+
+def test_no_match_note_summary_business_text():
+    """「ノートに在庫をまとめました」は業務投稿でお知らせと誤判定しない。"""
+    assert match_system_event("山田太郎", "ノートに在庫をまとめました") is None
+
+
+def test_no_match_voice_explanation_business_text():
+    """「音声で説明しました」は業務投稿でお知らせと誤判定しない。"""
+    assert match_system_event("山田太郎", "音声で説明しました") is None
+
+
+def test_pattern_count_is_fifteen():
+    from app.services.tcg_line_system_events import SYSTEM_EVENT_PATTERNS
+
+    assert len(SYSTEM_EVENT_PATTERNS) == 15
 
 
 # ─────────────────────────────────────────────────────────────────────────────

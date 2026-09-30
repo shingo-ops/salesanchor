@@ -848,3 +848,6 @@ run_sql migrations/20260928_110000_create_extraction_shadow_tables.sql
 
 # ADR-158: source_messages.received_at を採用本文の投稿時刻にそろえる（冪等）
 run_sql migrations/20260929_120000_fix_source_messages_received_at.sql
+
+# LINE のお知らせ34件と幽霊仕入元9件の片付け（本番実行済み、記録用no-op）
+run_sql migrations/20260930_120000_cleanup_line_system_notice_ghosts.sql
