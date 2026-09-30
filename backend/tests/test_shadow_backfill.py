@@ -4,7 +4,6 @@
 """
 from __future__ import annotations
 
-import os
 import uuid
 from decimal import Decimal
 from unittest.mock import MagicMock
@@ -13,6 +12,10 @@ import pytest
 
 import app.tools.shadow_backfill as sb
 from app.tasks import tcg_extraction as task
+from tests.test_tcg_work_matching_integration import MIGRATIONS
+from tests.test_tcg_work_matching_integration import pg as pg_fixture
+
+pg = pg_fixture  # 共有 fixture（本物の migration 済み DB。CI 専用）
 
 _CTX = task.ExtractionContext(
     raw_text="raw", supplier_context={"extraction_price_format": "円"},
@@ -204,58 +207,70 @@ def test_load_extraction_context_none_when_job_missing():
     assert task.load_extraction_context(session, "nope") is None
 
 
-# --- §6 基準1: 対象の選び方（実 PostgreSQL。TEST_PG_URL 未設定なら skip）------
-_PG = os.getenv("TEST_PG_URL")
+# --- §6 対象の選び方（実 PostgreSQL）-------------------------------------------
+# スキーマは本物の migration で作る（柱3-c: テストでの本番テーブル定義コピー禁止）。
+# 共有 `pg` フィクスチャは CI 専用（GITHUB_ACTIONS=true + RLS_ADMIN_DATABASE_URL 必須）。
+_SHADOW_MIGRATION = "20260928_110000_create_extraction_shadow_tables.sql"
 
 
-@pytest.mark.skipif(not _PG, reason="実 PostgreSQL が必要 (TEST_PG_URL 未設定)")
-def test_select_target_jobs_rules_on_real_postgres():
-    from sqlalchemy import create_engine, text
+def _apply_shadow_migration(connection) -> None:
+    with connection.cursor() as cur:
+        cur.execute((MIGRATIONS / _SHADOW_MIGRATION).read_text())
+
+
+def test_select_target_jobs_rules_on_real_postgres(pg):
+    from sqlalchemy import text
     from sqlalchemy.orm import Session
 
-    assert _PG
-    engine = create_engine(_PG)
-    ch_ok, ch_norule = str(uuid.uuid4()), str(uuid.uuid4())
+    connection, engine, _ = pg
+    _apply_shadow_migration(connection)
     with Session(engine) as s:
-        if s.execute(text("SELECT to_regclass('public.extraction_jobs')")).scalar() is not None:
-            pytest.skip("public.extraction_jobs が実在する DB では、試験用の表を作らない")
-        s.execute(text("""
-            CREATE TABLE public.suppliers (id int, extraction_price_format text,
-              extraction_qty_format text, extraction_order_pattern text);
-            CREATE TABLE public.supplier_channels (id uuid, supplier_id int);
-            CREATE TABLE public.source_messages (id uuid, supplier_channel_id uuid, raw_text text,
-              line_posted_at timestamptz);
-            CREATE TABLE public.extraction_jobs (id uuid, source_message_id uuid, status text,
-              created_at timestamptz);
-            CREATE TABLE public.extraction_shadow_runs (id uuid, extraction_job_id uuid);
-        """))
-        s.execute(text("INSERT INTO suppliers VALUES (1,'円','在庫','[\"price\"]'),(2,'円','','[\"price\"]')"))
-        s.execute(text("INSERT INTO supplier_channels VALUES (:a,1),(:b,2)"), {"a": ch_ok, "b": ch_norule})
+        sup_ok = s.execute(text(
+            "INSERT INTO public.suppliers (name, extraction_price_format, extraction_qty_format,"
+            " extraction_order_pattern) VALUES ('ok','円','在庫','[\"price\"]') RETURNING id"
+        )).scalar_one()
+        sup_norule = s.execute(text(
+            "INSERT INTO public.suppliers (name, extraction_price_format, extraction_qty_format,"
+            " extraction_order_pattern) VALUES ('norule','円','','[\"price\"]') RETURNING id"
+        )).scalar_one()
+        channels = {}
+        for key, sup in (("ok", sup_ok), ("norule", sup_norule)):
+            channels[key] = s.execute(text(
+                "INSERT INTO public.supplier_channels (channel, external_id, is_active, supplier_id)"
+                " VALUES ('line', :e, TRUE, :s) RETURNING id"
+            ), {"e": key, "s": sup}).scalar_one()
 
         def add(ch, raw, posted, status, created):
-            sm, ej = str(uuid.uuid4()), str(uuid.uuid4())
-            s.execute(text("INSERT INTO source_messages VALUES (:i,:c,:r,:p)"),
-                      {"i": sm, "c": ch, "r": raw, "p": posted})
-            s.execute(text("INSERT INTO extraction_jobs VALUES (:i,:m,:s,:c)"),
-                      {"i": ej, "m": sm, "s": status, "c": created})
-            return ej
+            sm = s.execute(text(
+                "INSERT INTO public.source_messages (supplier_channel_id, raw_text, raw_sha256,"
+                " is_active, line_posted_at) VALUES (:c, :r, md5(:r), TRUE, :p) RETURNING id"
+            ), {"c": channels[ch], "r": raw, "p": posted}).scalar_one()
+            return str(s.execute(text(
+                "INSERT INTO public.extraction_jobs (source_message_id, status, created_at)"
+                " VALUES (:m, :s, :c) RETURNING id"
+            ), {"m": sm, "s": status, "c": created}).scalar_one())
 
-        dup_old = add(ch_ok, "A B\n\nC", "2026-01-02", "done", "2026-01-03")
-        dup_new = add(ch_ok, "A B C", "2026-01-02", "done", "2026-01-04")
-        early = add(ch_ok, "early", "2026-01-01", "done", "2026-01-05")
-        ran = add(ch_ok, "ran", "2026-01-06", "done", "2026-01-06")
-        grp_a = add(ch_ok, "G H", "2026-01-09", "done", "2026-01-09")
-        grp_b = add(ch_ok, "G\nH", "2026-01-09", "done", "2026-01-10")
-        s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": grp_a})
-        nd_ran = add(ch_ok, "N O", "2026-01-11", "error", "2026-01-11")
-        nd_done = add(ch_ok, "N\nO", "2026-01-11", "done", "2026-01-12")
-        s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": nd_ran})
-        add(ch_ok, "pending", "2026-01-07", "pending", "2026-01-07")
-        add(ch_norule, "norule", "2026-01-08", "done", "2026-01-08")
-        s.execute(text("INSERT INTO extraction_shadow_runs VALUES (gen_random_uuid(), :j)"), {"j": ran})
+        def mark_ran(job_id):
+            s.execute(text(
+                "INSERT INTO public.extraction_shadow_runs (extraction_job_id, prompt_key,"
+                " engine_version, requested_model, status) VALUES (:j, 'k', 'v', 'm', 'completed')"
+            ), {"j": job_id})
+
+        dup_old = add("ok", "A B\n\nC", "2026-01-02", "done", "2026-01-03")
+        dup_new = add("ok", "A B C", "2026-01-02", "done", "2026-01-04")
+        early = add("ok", "early", "2026-01-01", "done", "2026-01-05")
+        ran = add("ok", "ran", "2026-01-06", "done", "2026-01-06")
+        grp_a = add("ok", "G H", "2026-01-09", "done", "2026-01-09")
+        grp_b = add("ok", "G\nH", "2026-01-09", "done", "2026-01-10")
+        nd_ran = add("ok", "N O", "2026-01-11", "error", "2026-01-11")
+        nd_done = add("ok", "N\nO", "2026-01-11", "done", "2026-01-12")
+        add("ok", "pending", "2026-01-07", "pending", "2026-01-07")
+        add("norule", "norule", "2026-01-08", "done", "2026-01-08")
+        for job_id in (ran, grp_a, nd_ran):
+            mark_ran(job_id)
+        s.commit()
 
         ids = sb.select_target_jobs(s, 100)
-        s.rollback()
 
     assert ids == [early, dup_new]
     assert dup_old not in ids
@@ -263,33 +278,20 @@ def test_select_target_jobs_rules_on_real_postgres():
     assert nd_ran not in ids and nd_done not in ids
 
 
-@pytest.mark.skipif(not _PG, reason="実 PostgreSQL が必要 (TEST_PG_URL 未設定)")
-def test_ledger_totals_by_run_id_with_real_record_usage_event_sync():
+def test_ledger_totals_by_run_id_with_real_record_usage_event_sync(pg):
     """本物の record_usage_event_sync が（未commitで）書いた行を、run_id だけで集計できる。"""
-    from sqlalchemy import create_engine, text
     from sqlalchemy.orm import Session
 
     from app.services.llm_budget import UsageCounts, record_usage_event_sync
 
-    assert _PG
+    _, engine, _ = pg
     mine, other = str(uuid.uuid4()), str(uuid.uuid4())
-    with Session(create_engine(_PG)) as s:
-        if s.execute(text("SELECT to_regclass('public.llm_usage_events')")).scalar() is not None:
-            pytest.skip("public.llm_usage_events が実在する DB では、試験用の表を作らない")
-        s.execute(text("""
-            CREATE TABLE public.llm_usage_events (
-              id uuid PRIMARY KEY, occurred_at timestamptz NOT NULL DEFAULT now(),
-              purpose text NOT NULL, tenant_id int, model text NOT NULL, sdk text NOT NULL,
-              prompt_tokens int, cached_content_tokens int, candidates_tokens int,
-              thoughts_tokens int, tool_use_prompt_tokens int, total_tokens int,
-              cost_usd numeric(12,6), extraction_attempt_id uuid, extraction_shadow_run_id uuid,
-              discord_inbound_message_id int, source_ref text)
-        """))
-        priced = UsageCounts(prompt_tokens=1000, candidates_tokens=100)
-        for run_id, model in ((mine, "gemini-3.1-flash-lite"), (other, "gemini-3.1-flash-lite")):
+    priced = UsageCounts(prompt_tokens=1000, candidates_tokens=100)
+    with Session(engine) as s:
+        for run_id in (mine, other):
             record_usage_event_sync(
-                s, purpose="line_extraction_shadow", model=model, sdk="google-genai",
-                counts=priced, extraction_shadow_run_id=run_id,
+                s, purpose="line_extraction_shadow", model="gemini-3.1-flash-lite",
+                sdk="google-genai", counts=priced, extraction_shadow_run_id=run_id,
             )
         # 同じ run でも費用が不明（単価表に無いモデル）の行 → null_cost_rows に数える
         record_usage_event_sync(

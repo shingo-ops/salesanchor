@@ -222,7 +222,12 @@ def _apply_pre_extraction_filter(session: Session, raw_text: str) -> str | None:
     return None
 
 
-_CONTEXT_SELECT_SQL = f"""
+def _context_select_sql() -> str:
+    """原文・仕入元ルールを読む SELECT（WHERE 句は呼び出し側が足す）。
+
+    TCG_SCHEMA は呼び出し時に埋め込む（試験が実行時に差し替えるため、import 時に固定しない）。
+    """
+    return f"""
             SELECT ej.id, sm.raw_text,
                    s.extraction_price_format,
                    s.extraction_qty_format,
@@ -250,7 +255,7 @@ class ExtractionContext(NamedTuple):
 
 
 def _build_extraction_context(session: Session, row) -> ExtractionContext:
-    """_CONTEXT_SELECT_SQL の1行から、原文・仕入元ルール・knowledge リンクを組み立てる。"""
+    """_context_select_sql() の1行から、原文・仕入元ルール・knowledge リンクを組み立てる。"""
     raw_text = row[1] or ""
 
     # 仕入元抽出ルールを取得して supplier_context を構築
@@ -298,7 +303,7 @@ def load_extraction_context(session: Session, extraction_job_id: str) -> Extract
     ジョブが無ければ None。
     """
     row = session.execute(
-        text(_CONTEXT_SELECT_SQL + "            WHERE ej.id = :ejid\n"),
+        text(_context_select_sql() + "            WHERE ej.id = :ejid\n"),
         {"ejid": extraction_job_id},
     ).fetchone()
     if row is None:
@@ -312,7 +317,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
     # --- 1. pending job を取得（仕入元抽出ルールも同時取得）---
     row = session.execute(
         text(
-            _CONTEXT_SELECT_SQL
+            _context_select_sql()
             + """            WHERE ej.source_message_id = :smid
               AND ej.status = 'pending'
             ORDER BY ej.created_at DESC
