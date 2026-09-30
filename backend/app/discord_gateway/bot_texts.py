@@ -8,6 +8,7 @@
   - discord_gateway/client.py（ボタン押下への ephemeral 応答）
   - discord_gateway/ticket_channel_creator.py（ウェルカム既定文）
   - routers/discord_auto_setup.py・routers/discord_ticket_config.py（ボタン投稿・設定既定値）
+  - routers/discord_channel_invite.py（規模別チャンネル案内）
 
 DB 側の既定値（tenant_discord_ticket_config.welcome_template）は
 migrations/20260930_130000_set_discord_welcome_template_english.sql が
@@ -33,6 +34,25 @@ GUILD_ONLY = "This can only be used inside a server."
 GUILD_NOT_REGISTERED = "This server is not registered. Please contact the administrator."
 TICKET_NOT_CONFIGURED = "The ticket feature is not set up. Please contact the administrator."
 TICKET_CREATE_FAILED = "Failed to create the channel. Please contact the administrator."
+
+# 規模別の専用チャンネル案内（discord_channel_invite）。顧客向けのため英語（規模ラベルも英語）
+CHANNEL_INVITE_TEMPLATE = (
+    "[Notice] Here is the dedicated channel for our {scale_label} customers.\n"
+    "Check the channel below for the latest news and special offers \U0001F447\n"
+    "<#{channel_id}>"
+)
+# estimated_scale → 顧客に見せる英語ラベル（小口 / 一般 / 大口）
+CHANNEL_INVITE_SCALE_LABELS = {
+    "Small": "small-volume",
+    "Medium": "regular",
+    "Large": "large-volume",
+}
+
+
+def channel_invite_message(estimated_scale: str, channel_id: str) -> str:
+    """規模別チャンネル案内の本文を返す。未知の規模は値をそのままラベルにする。"""
+    scale_label = CHANNEL_INVITE_SCALE_LABELS.get(estimated_scale, estimated_scale)
+    return CHANNEL_INVITE_TEMPLATE.format(scale_label=scale_label, channel_id=channel_id)
 
 
 def ticket_button_payload() -> dict:

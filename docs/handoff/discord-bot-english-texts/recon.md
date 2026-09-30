@@ -11,6 +11,7 @@
 - 手動設定 API の既定は英語（リテラル重複）: backend/app/routers/discord_ticket_config.py:57 と backend/app/routers/discord_ticket_config.py:70。
 - ボタン押下への ephemeral 応答は日本語（backend/app/discord_gateway/client.py:173 / :185 / :201 / :216 / :222）。
 - チケット開始ボタンの投稿文・ラベルが日本語で2箇所に重複: backend/app/routers/discord_auto_setup.py:591・:599 と backend/app/routers/discord_ticket_config.py:257・:265。custom_id は backend/app/routers/discord_auto_setup.py:566 と backend/app/discord_gateway/client.py:160 でも文字列リテラル `ticket_open`。
+- 規模別チャンネル案内（チケットチャンネルへ投稿する顧客向け文）も日本語: backend/app/routers/discord_channel_invite.py:141 から続く3行。規模ラベルは backend/app/routers/discord_channel_invite.py:40 の `_SCALE_LABEL`（小口 / 一般 / 大口）で、エンドポイントは Small と Large のみ受け付ける（それ以外は 422）。ラベルは顧客の規模（取引量）を指し、Discord のロール名（Member / Partner）ではない。
 - 既に投稿済みのボタンメッセージ（各 Discord サーバー上）は日本語のまま残る。コードからは編集していない。
 
 ## PO 決定（2026-09-30・原文）

@@ -21,6 +21,7 @@ Discord サーバーの顧客（メンバー）に見える Bot の文言をす�
 | ウェルカム既定（DB） | migration が日本語を既定にしていた | 新 migration で既定を英語に変更し、旧日本語既定のままの行だけ英語へ更新 |
 | 自動セットアップの INSERT | welcome_template を指定せず DB 既定に依存 | bot_texts の英語既定を明示（ON CONFLICT 側は更新しない＝独自文言は保持） |
 | ボタン投稿文 / ラベル | サポートが必要な場合は下のボタンを押してください。 / チケットを開く | Need help? Click the button below to open a private support ticket. / Open a ticket（custom_id と絵文字は不変） |
+| 規模別チャンネル案内（チケットチャンネルへ投稿） | 【お知らせ】{小口/一般/大口}のお客様向けの専用チャンネルをご案内します。 … 👇 | [Notice] Here is the dedicated channel for our {small-volume/regular/large-volume} customers. … 👇（bot_texts.channel_invite_message。管理画面向けのエラー文は日本語のまま） |
 | ボタン押下の応答（ephemeral） | 日本語 5 種 | 英語 5 種（PO 指定文言そのまま） |
 
 ## 設計判断と代替案
@@ -53,7 +54,7 @@ Discord サーバーの顧客（メンバー）に見える Bot の文言をす�
 
 ## 影響範囲
 
-- 文言の利用箇所: backend/app/discord_gateway/client.py・backend/app/discord_gateway/ticket_channel_creator.py・backend/app/routers/discord_auto_setup.py・backend/app/routers/discord_ticket_config.py（`git grep -n bot_texts` で全件確認）。
+- 文言の利用箇所: backend/app/discord_gateway/client.py・backend/app/discord_gateway/ticket_channel_creator.py・backend/app/routers/discord_auto_setup.py・backend/app/routers/discord_ticket_config.py・backend/app/routers/discord_channel_invite.py（`git grep -n bot_texts` で全件確認）。
 - 既存テナントの welcome_template: 旧日本語既定のままの行のみ英語へ。独自文言は不変。
 - migration は scripts/run_all_migrations.sh に登録（deploy.yml は同スクリプトを呼ぶため変更不要）。
 

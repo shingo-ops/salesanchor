@@ -144,3 +144,56 @@ async def test_create_failed_and_ready_replies_are_english(channel):
         else bot_texts.TICKET_READY_TEMPLATE.format(mention="<#42>")
     )
     interaction.followup.send.assert_awaited_once_with(expected, ephemeral=True)
+
+
+def test_channel_invite_message_is_english_and_keeps_channel_mention():
+    message = bot_texts.channel_invite_message("Small", "123456789012345678")
+    assert message == (
+        "[Notice] Here is the dedicated channel for our small-volume customers.\n"
+        "Check the channel below for the latest news and special offers \U0001F447\n"
+        "<#123456789012345678>"
+    )
+    assert "large-volume" in bot_texts.channel_invite_message("Large", "1")
+    assert bot_texts.channel_invite_message("Custom", "1").count("Custom") == 1
+
+
+@pytest.mark.asyncio
+async def test_channel_invite_endpoint_posts_bot_texts_message(monkeypatch):
+    from app.routers import discord_channel_invite as invite
+
+    posted: dict = {}
+    response = MagicMock(status_code=200, text="")
+    response.json.return_value = {"id": "m1"}
+    http_client = AsyncMock()
+
+    async def _post(url, headers=None, json=None):
+        posted["url"], posted["json"] = url, json
+        return response
+
+    http_client.post = _post
+    monkeypatch.setenv("DISCORD_BOT_TOKEN", "Bot-token-test")
+
+    def _mapping_result(mapping):
+        result = MagicMock()
+        result.mappings.return_value.first.return_value = mapping
+        return result
+
+    db = AsyncMock()
+    db.execute = AsyncMock(side_effect=[
+        _mapping_result({"estimated_scale": "Small", "discord_guild_channel_id": "222222222222222222"}),
+        _mapping_result({"small_channel_id": "333333333333333333", "large_channel_id": None}),
+    ])
+    with patch.object(invite, "tenant_table_ref", return_value="tenant_001.leads"), \
+         patch.object(invite, "record_audit_log", new=AsyncMock()), \
+         patch.object(invite, "reset_tenant_context", new=AsyncMock()), \
+         patch("app.routers.discord_channel_invite.httpx.AsyncClient") as mock_cls:
+        mock_cls.return_value.__aenter__ = AsyncMock(return_value=http_client)
+        mock_cls.return_value.__aexit__ = AsyncMock(return_value=False)
+        await invite.send_channel_invite(
+            lead_id=1, db=db, tenant_id=1, current_user=SimpleNamespace(id=9),
+        )
+
+    assert posted["json"] == {
+        "content": bot_texts.channel_invite_message("Small", "333333333333333333")
+    }
+    assert posted["url"].endswith("/channels/222222222222222222/messages")
