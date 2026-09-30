@@ -854,3 +854,6 @@ run_sql migrations/20260930_120000_drop_supplier_prompts.sql
 
 # Discord チケットのウェルカム文の DB 既定値を英語へ（顧客向け文言の英語化・PO決定 2026-09-30・冪等）
 run_sql migrations/20260930_130000_set_discord_welcome_template_english.sql
+
+# ADR-1004 A1: LLM 使用量台帳（llm_usage_events）新設（表のみ。バックフィルは A2 で別PR）
+run_sql migrations/20260930_150000_create_llm_usage_events.sql
