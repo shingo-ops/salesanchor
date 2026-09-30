@@ -1,6 +1,6 @@
 # design: LINE のお知らせ34件と、お知らせだけから生まれた仕入元8件の片付け（段階1の後始末・その1）
 
-- 状態: 設計案作成済み／自己審査 APPROVE（§8、実行前の確認2点つき）／PO の実装承認待ち
+- 状態: 本番実行済み（2026-09-30、PO が手動実行）。実行記録: `docs/handoff/line-system-notice-cleanup/execution-log.md`
 - 調査: `docs/handoff/line-system-notice-cleanup/recon.md`（R1〜R11、2026-09-30 本番読み取り）
 - 対象ADR: `docs/adr/ADR-158-product-level-supersession.md`（source_messages.is_active／置き換えの前提。本便は置き換えの規則を変えず、お知らせで押し出された投稿を元に戻すだけ）
 - 前の便: PR #3861（お知らせを取り込まない。2026-09-30 本番反映、反映後のお知らせ0件を確認済み）

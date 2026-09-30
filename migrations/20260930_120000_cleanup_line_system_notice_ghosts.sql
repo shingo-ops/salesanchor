@@ -1,0 +1,19 @@
+-- ============================================================================
+-- LINE のお知らせ34件と、お知らせだけから生まれた仕入元8件（+一真1件＝9件）の片付け
+--
+-- 本番実行済み: 2026-09-30 (JST、時刻は execution-log.md 参照。PO が SSH で手動実行、DRY-RUN→COMMIT)
+-- 実行方法: SSH手動（DRY-RUN → COMMIT）。実行SQLは docs/handoff/line-system-notice-cleanup/cleanup.sql
+-- 影響: source_messages お知らせ12行 is_active=FALSE（A）、本物3チャネルの
+--       お知らせ以外の最新投稿3行を is_active=TRUE に復元（B）、
+--       幽霊仕入元9件 is_active=FALSE・name 先頭に「（旧）」（C）、
+--       その supplier_channels 9件 is_active=FALSE（D）、
+--       supplier_knowledge_links id=290 is_active=FALSE（E）
+-- 検証: 事後確認は docs/handoff/line-system-notice-cleanup/execution-log.md 参照
+--       （お知らせ15文型でis_active=TRUE 0件、本物3チャネルの有効行1件ずつ、
+--         幽霊仕入元9件が無効・（旧）付き、チャネル9件無効、リンク290無効、
+--         配信結果は実行前後で完全一致）
+--
+-- デプロイ時は何もしない（冪等: 実行するSQL文なし）
+-- 詳細: docs/handoff/line-system-notice-cleanup/design.md
+-- ============================================================================
+SELECT 1; -- no-op: 本番実行済みのため空マイグレーション
