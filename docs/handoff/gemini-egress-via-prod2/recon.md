@@ -109,3 +109,11 @@ ADR-081 は「監視VPS `49.212.160.98`」についての ADR で、recon §3 �
 2. gRPC の `grpc_proxy` が本番で効くか → V5
 3. tinyproxy 1.11 の設定で、CONNECT の宛先を1つのホストに限れるか（Filter の書き方）→ 公式 man で確かめてから設定する（design §5-1）
 4. 翻訳（旧 SDK）が今止まっているか → `docker compose logs` の `[translation_task] batch done: ... failed=N` で確かめる
+
+## 追補（2026-09-30）：gemini-egress イメージ
+
+- `docker-compose.yml:352-362`（origin/main c3fce93）：`gemini-egress` サービスは `image: alpine:3.24` を直接使い、`command:` の `sh -c "apk add --no-cache openssh-client >/dev/null && exec ssh -i ... ubuntu@49.212.160.98"` で、コンテナ起動のたびに alpine CDN から openssh-client を取得してから ssh を実行している。
+- `.github/workflows/deploy.yml:308`：`docker compose build` を最大3回リトライで実行してからサービスを起動する（`BUILD_OK=false` ループ、3回失敗で `exit 1`）。`build:` を持つサービスはこのタイミングでイメージがビルドされる。
+- `.github/workflows/deploy.yml:342`：`docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress` で `gemini-egress` を明示的に起動している（§5-2 改訂2 で追加済み）。
+- `docker-compose.yml:448`（`gha-exporter`）：`build: / context: ./monitoring/gha-exporter` という同型の自前イメージビルド例が既存。`context` はディレクトリ内の `Dockerfile` を使う。
+- `monitoring/prod2/gemini-egress/tunnel/Dockerfile`（既存・未使用）：`FROM alpine:3.24` に `RUN apk add --no-cache autossh openssh-client`。同README に「`tunnel/` は2026-09-30の方式変更で使わなくなった。compose からは外してある。削除はあとの片付けの便で行う」と明記されている。今回作成した `monitoring/prod1/gemini-egress/Dockerfile` とは別の（prod2 側・未使用の）ファイルで、競合しない。

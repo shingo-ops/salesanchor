@@ -163,3 +163,11 @@
 - スプリント計画: `.claude-pipeline/spec.md`（監視VPS分離セクション）
 - 既存監視 runbook: `docs/runbooks/monitoring-step7-vps.md`
 - VPS runner runbook: `docs/runbooks/vps-runner-setup.md`
+
+## 追記（2026-09-30）：実物との差分（観測事実の記録。決定の変更ではない）
+
+- 本 ADR は、管理室VPS の prometheus がアプリVPS の exporter を HTTP で直接スクレイプし、ポートはファイアウォールで管理室VPS の IP からのみ許可する前提で書かれている（本文「VPS間通信」「ファイアウォール」の項）。
+- 実物の prod2 では、systemd の `monitoring-tunnel.service` が autossh で prod2→prod1 に常時接続し、`-L 0.0.0.0:19100/19187/19113/19121`（exporter）と `-R 0.0.0.0:13100:127.0.0.1:3100`（Loki）で転送している（`Restart=always`、`RestartSec=10`）。
+- この unit ファイルはリポジトリに無い。
+- 根拠：`docs/handoff/gemini-egress-via-prod2/recon.md` §3（prod2 で `systemctl cat monitoring-tunnel.service`、2026-09-30）
+- どちらの方式を正とするか、unit をリポジトリで管理するかは未決。

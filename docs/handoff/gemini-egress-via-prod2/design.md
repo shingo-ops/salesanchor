@@ -95,8 +95,8 @@
 - **戻し方**：
   1. prod2 の `~/.ssh/authorized_keys` から中継専用鍵の1行を削除する（控え：`~/.ssh/authorized_keys.bak-20260930-025029`）
   2. この PR（release/gemini-egress-via-prod2）を revert する
-- **リスク**：`gemini-egress` コンテナは起動のたびに alpine の CDN（`apk add openssh-client`）からパッケージを取得するため、CDN が止まっていると起動に失敗する。自前イメージ（Dockerfile をビルドして pin する）にするかどうかは、次の便で決める。
-- **未削除の残骸**：`monitoring/prod2/gemini-egress/tunnel/`（Dockerfile 一式）は、この改訂で使わなくなったが削除していない。ディレクトリの削除は破壊的操作として PO の承認（`permit-danger.sh`）が必要な運用のため、承認取得の手間を避けてこの便では見送り、あとの片付けの便に回した。`docker-compose.yml`（prod2）の `tunnel` サービス定義は既に外してあるので、動作には影響しない。
+- **リスク**：`gemini-egress` コンテナは起動のたびに alpine の CDN（`apk add openssh-client`）からパッケージを取得するため、CDN が止まっていると起動に失敗する。自前イメージ（Dockerfile をビルドして pin する）にするかどうかは、次の便で決める。→ §5-4 で対処
+- **未削除の残骸**：`monitoring/prod2/gemini-egress/tunnel/`（Dockerfile 一式）は、この改訂で使わなくなったが削除していない。ディレクトリの削除は破壊的操作として PO の承認（`scripts/permit-danger.sh`）が必要な運用のため、承認取得の手間を避けてこの便では見送り、あとの片付けの便に回した。`docker-compose.yml`（prod2）の `tunnel` サービス定義は既に外してあるので、動作には影響しない。→ 2026-09-30 の片付け PR（release/gemini-egress-cleanup）で削除済み。
 
 ### 5-2. アプリ（PR：release/gemini-egress-via-prod2）
 1. `backend/app/services/gemini_extraction_svc.py` の `_get_genai_client()`（247-261行）
@@ -123,6 +123,26 @@
    - GO は ADR-1003 の委任による
    - 先にデプロイすると、今動いているかもしれない翻訳まで止まるおそれがある（recon §5-4）ので、順番を逆にしない
 4. V5〜V8 を確かめる
+
+### 5-4. gemini-egress を自前イメージにする（2026-09-30 追補）
+
+- **目的**：`gemini-egress` コンテナが起動のたびに alpine の CDN（`apk add openssh-client`）へパッケージを取得しに行くのをやめ、CDN 停止時でも既存コンテナの再起動が失敗しないようにする（§5-1 のリスク項目への対処）。
+- **変更前**：`docker-compose.yml:352-362`（origin/main c3fce93）の `gemini-egress` サービスは `image: alpine:3.24` を直接使い、`command:` の `sh -c` の中で毎回 `apk add --no-cache openssh-client` してから `exec ssh ...` していた。
+- **変更後**：`docker-compose.yml` の `gemini-egress` サービスを `build: ./monitoring/prod1/gemini-egress` に変更し、新規 `monitoring/prod1/gemini-egress/Dockerfile`（`FROM alpine:3.24` → `RUN apk add --no-cache openssh-client` → `ENTRYPOINT ["ssh"]`）でビルドする。`command:` は `ssh` への引数の exec form リストに変更（`sh -c` ラッパーを廃止）。`.github/workflows/deploy.yml:308` の `docker compose build` がデプロイのたびにこのイメージをビルドするため、パッケージ取得はビルド時のみになる。
+- **影響範囲**：`gemini-egress` サービスの定義のみ。`backend`・`celery-worker` の `GEMINI_PROXY_URL`／`grpc_proxy` 環境変数、`.github/workflows/deploy.yml:342` の `docker compose up -d --no-deps --remove-orphans ... gemini-egress` 呼び出し、prod2 側（`monitoring/prod2/gemini-egress/`）は変更していない。
+- **リスク**：ビルド時に alpine CDN が止まっていると、`.github/workflows/deploy.yml:308` の `docker compose build` が3回リトライしても失敗し、デプロイ全体が止まる（`exit 1`）。ただしその場合でも、既存の `gemini-egress` コンテナ（前回ビルド済みイメージ）は動き続けたまま残る点が、変更前（起動のたびに apk 取得＝再起動のたびに失敗しうる）との違い。
+- **戻し方**：この PR（`release/gemini-egress-pinned-image`）を revert する。
+- **受入条件**：
+
+| 基準 | 検証方法 |
+|---|---|
+| ① デプロイ後、`gemini-egress` コンテナのイメージが `alpine:3.24` そのものではなく、ビルド済みイメージ（`astro-webapp-gemini-egress` 系タグ）になっている | `docker inspect astro-webapp-gemini-egress-1 --format '{{.Config.Image}}'`（または `docker compose images gemini-egress`） |
+| ② コンテナ起動ログに `apk` の出力が無い | `docker logs astro-webapp-gemini-egress-1` |
+| ③ 反映後、Gemini 抽出の新規 attempt が成功する（`status=done`） | 抽出ジョブのDB確認（recon の手順に準拠） |
+| ④ `docker restart` 後も 18888 番ポートで待受している | `docker restart astro-webapp-gemini-egress-1 && docker exec astro-webapp-gemini-egress-1 sh -c "true"`（ssh は shell を持たないため、`docker compose -p ... ps` のステータスと `nc -z` 相当で18888到達を確認） |
+
+- **外部事例**：該当事例なし（理由：ビルド時にパッケージを入れる Dockerfile の標準的な作法で、事例による裏付けを要しない）。
+- **維持する仕組み**：`.github/workflows/deploy.yml:308` の `docker compose build` が毎デプロイでこのイメージを再ビルドする。Dockerfile を変更しても、次回デプロイ時に自動的に反映される。
 
 ## 6. 基準と検証方法
 
@@ -169,7 +189,7 @@
 
 ## 10. 維持の仕組み
 
-- 守り手：Opus 設計担当（監視 VPS を変えるときに見直す）／PO（Google の訂正が反映されたら、中継を外すかを判断する）
+- 守り手: Opus 設計担当（監視 VPS を変えるときに見直す）／PO（Google の訂正が反映されたら、中継を外すかを判断する）
 - 担当：監視 VPS（prod2）を変えるときは、`monitoring/prod2/` の写しと、この design の §3 を見直す
 - 気づく仕組み：抽出ジョブの API_ERROR（V6 と同じ見方）
 - 解除するきっかけ：Google の訂正が反映され、prod1 の `"GL"` が JP に戻った場合。中継を外すかは、そのとき PO が判断する
