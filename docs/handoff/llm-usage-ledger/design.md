@@ -33,7 +33,7 @@
 | total_tokens | integer null | usage.total_token_count |
 | cost_usd | numeric(12,6) null | 3-3 の式。単価表に無いモデルは NULL |
 | extraction_attempt_id | uuid null FK public.extraction_attempts(id) ON DELETE SET NULL | |
-| extraction_shadow_run_id | uuid null FK public.extraction_shadow_runs(id) ON DELETE SET NULL | |
+| extraction_shadow_run_id | uuid null（FK なし） | 実装時変更（PR #3884 CI対応）: CI の migration-test-run 差分実行ベースラインに public.extraction_shadow_runs が無いため FK を外した（試運転は #3864 で停止中、実害なし）。列・インデックスは維持 |
 | discord_inbound_message_id | 型は discord_inbound_messages.id に合わせる, null（FK は張らない：テーブルは運用停止中で型差異の危険を避ける） | |
 | source_ref | text null | 翻訳の message_id など、上の FK で表せない参照 |
 | backfilled | boolean not null default false | 過去データを写した行 |

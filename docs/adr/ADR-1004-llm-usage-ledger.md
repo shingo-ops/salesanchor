@@ -27,6 +27,7 @@
 3. **費用の式**: `cost = prompt_tokens × 入力単価 + (candidates_tokens + thoughts_tokens) × 出力単価`（NULL は 0 として計算、両方 NULL なら cost も NULL、単価表に無いモデルは NULL）。単一の関数 `llm_budget.calculate_usage_cost()` に集約。
 4. **SSOT への切り替え**: `extraction_attempts`/`extraction_shadow_runs` の token/cost 列には本PR以降書き込まない（列は残置、DROP は別途 PO 本人の GO が必要）。過去分は migration で台帳へ写す（`backfilled=true`、`extraction_attempt_id` で重複防止の冪等 `INSERT ... SELECT ... WHERE NOT EXISTS`）。集計 API `GET /tcg/analysis-dashboard/cost-summary` は台帳から読むよう切り替え、`input_bytes/3` の推定を廃止する。
 5. **対象外**: 画面での内訳表示（PR-B で別途）、`tenant_llm_budgets` の月次リセットが翻訳経路で呼ばれない件（別課題）、旧列の DROP。
+6. **実装時変更（PR #3884 CI対応）**: `extraction_shadow_run_id` は FK を張らない（列・インデックスは維持）。CI の `migration-test-run` 差分実行ベースラインに `public.extraction_shadow_runs` が登録されておらず、REFERENCES すると CI のみで失敗するため。試運転（`extraction_shadow_runs` への書き込み）自体が `EXTRACTION_SHADOW_ENABLED`（既定無効、#3864）で現在停止中のため実害はない。
 
 ## Consequences
 
