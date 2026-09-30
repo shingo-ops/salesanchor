@@ -9,7 +9,12 @@ import { OutboundTranslationPreview } from "./OutboundTranslationPreview";
 import { ManualRecordSection } from "./ManualRecordSection";
 import { formatAbsolute, getInitials, relativeTime } from "./inbox.types";
 import type { LeadDetail } from "./inbox.types";
-import { EmojiPickerWrapper } from "./EmojiPickerWrapper";
+import { MessageReactionBadges } from "./MessageReactionBadges";
+import { useLongPressReveal } from "./useLongPressReveal";
+import { splitReactions } from "./reactionHeart";
+import { HEART_REACTION_EMOJI } from "./reactionEmojiPresets";
+import { IconToggleButton } from "../../components/IconToggleButton";
+import { toast } from "../../components/loading/Toast";
 
 interface Props {
   selectedLeadId: number | null;
@@ -47,9 +52,9 @@ interface Props {
   recipientLanguageSetting: "auto" | "ja" | "en";
   setRecipientLanguage: (v: "auto" | "ja" | "en") => void;
   /** Discord リアクション送信 */
-  sendReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  sendReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
   /** Discord リアクション取り消し */
-  deleteReaction: (messageId: string, emojiName: string, emojiId?: string) => Promise<void>;
+  deleteReaction: (messageId: number, emojiName: string, emojiId?: string) => Promise<void>;
 }
 
 /** Per-message translation state. */
@@ -180,50 +185,24 @@ export function InboxMessageThread({
   // ADR-142: 送信ガード Phase A
   const [showSendGuardDialog, setShowSendGuardDialog] = useState(false);
 
-  // Discord リアクション — どのメッセージのピッカーが開いているか（message_id）
-  const [openPickerForMsgId, setOpenPickerForMsgId] = useState<string | null>(null);
-  const pickerRef = useRef<HTMLDivElement>(null);
+  // Discord リアクション（ハートのみ）。タッチ端末は吹き出し長押しでハートを表示する
+  const { revealedId, hide: hideRevealedHeart, bind: bindLongPress } = useLongPressReveal();
 
-  // ピッカー外クリックで閉じる
-  useEffect(() => {
-    if (!openPickerForMsgId) return;
-    const handler = (e: MouseEvent) => {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setOpenPickerForMsgId(null);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, [openPickerForMsgId]);
-
-  const handleReactionPillClick = useCallback(async (
-    messageId: string,
-    emojiName: string,
-    emojiId: string | null,
-    isMine: boolean,
-  ) => {
+  const handleHeartToggle = useCallback(async (messageId: number, isMine: boolean) => {
+    hideRevealedHeart();
     try {
       if (isMine) {
-        await deleteReaction(messageId, emojiName, emojiId ?? undefined);
+        await deleteReaction(messageId, HEART_REACTION_EMOJI);
       } else {
-        await sendReaction(messageId, emojiName, emojiId ?? undefined);
+        await sendReaction(messageId, HEART_REACTION_EMOJI);
       }
     } catch {
-      // エラーは無視（ポーリングで状態は同期される）
+      toast.error(
+        isMine ? t("inbox.reactionDeleteFailed") : t("inbox.reactionSendFailed"),
+      );
     }
-  }, [sendReaction, deleteReaction]);
+  }, [sendReaction, deleteReaction, hideRevealedHeart, t]);
 
-  const handlePickerSelect = useCallback(async (
-    messageId: string,
-    emoji: { name: string; id?: string; unified?: string },
-  ) => {
-    setOpenPickerForMsgId(null);
-    try {
-      await sendReaction(messageId, emoji.name, emoji.id);
-    } catch {
-      // エラーは無視
-    }
-  }, [sendReaction]);
   const draftHasKana = /[\u3040-\u30FF]/.test(trimmedDraft);
   const shouldFireGuard = draftHasKana && recipientLanguageSetting !== "ja";
 
@@ -502,11 +481,29 @@ export function InboxMessageThread({
           const outbound = msg.direction === "outbound";
           const failed = !!msg.error_code;
           const translationState = msg.message_id ? translations[msg.message_id] : undefined;
+          // リアクション API は Discord メッセージのみ対応（Meta/IG は 404）。platform は meta_messages 行ごとに保存された値
+          const canReact = msg.platform === "discord" && !!msg.message_id && !failed;
+          const heartHover = canReact && !splitReactions(msg.reactions).heart?.is_mine;
+          const heartButton = (
+            <span className="msg-heart-hover">
+              <IconToggleButton
+                pressed={false}
+                iconOff={INBOX_ACTION_ICONS.heart}
+                iconOn={INBOX_ACTION_ICONS.heartFilled}
+                aria-label={t("inbox.addReaction")}
+                onClick={() => handleHeartToggle(msg.id, false)}
+              />
+            </span>
+          );
           return (
             <div key={msg.id} className={`inbox-msg-row${outbound ? " outbound" : " inbound"}`}>
+              <div className="msg-stack">
+              <div className="msg-bubble-line" data-heart-revealed={revealedId === msg.id ? "true" : undefined}>
+              {heartHover && outbound && heartButton}
               <div
                 role={failed ? "alert" : undefined}
                 className={`msg-bubble${failed ? " failed" : outbound ? " outbound" : " inbound"}`}
+                {...(canReact ? bindLongPress(msg.id) : {})}
                 title={
                   failed
                     ? `Send failed: ${msg.error_code}${msg.error_message ? ` — ${msg.error_message}` : ""}`
@@ -581,124 +578,6 @@ export function InboxMessageThread({
                   </div>
                 )}
 
-                {/* Discord リアクション表示バー */}
-                {msg.reactions && msg.reactions.length > 0 && msg.message_id && (
-                  <div className="msg-reaction-bar" role="group" aria-label={t("inbox.reactedBy")}>
-                    {msg.reactions.map((reaction) => {
-                      const reactorNames = reaction.reactors
-                        .map((r) => r.display_name ?? r.user_id)
-                        .join(", ");
-                      const tooltipText = reactorNames
-                        ? `${t("inbox.reactedBy")}: ${reactorNames}`
-                        : t("inbox.reactedBy");
-                      return (
-                        <button
-                          key={`${reaction.emoji_name}:${reaction.emoji_id ?? ""}`}
-                          type="button"
-                          className="msg-reaction-pill"
-                          data-mine={reaction.is_mine ? "true" : undefined}
-                          title={tooltipText}
-                          aria-label={
-                            reaction.is_mine
-                              ? t("inbox.removeReaction")
-                              : t("inbox.addReaction")
-                          }
-                          onClick={() =>
-                            handleReactionPillClick(
-                              msg.message_id!,
-                              reaction.emoji_name,
-                              reaction.emoji_id,
-                              reaction.is_mine,
-                            )
-                          }
-                        >
-                          {reaction.emoji_id ? (
-                            <img
-                              src={`https://cdn.discordapp.com/emojis/${reaction.emoji_id}.${reaction.emoji_animated ? "gif" : "png"}?size=16`}
-                              alt={reaction.emoji_name}
-                              width={16}
-                              height={16}
-                              style={{ verticalAlign: "middle" }}
-                            />
-                          ) : (
-                            <span aria-hidden="true">{reaction.emoji_name}</span>
-                          )}
-                          <span className="msg-reaction-count">{reaction.count}</span>
-                        </button>
-                      );
-                    })}
-                    {/* リアクション追加ボタン */}
-                    {msg.message_id && (
-                      <div style={{ position: "relative", display: "inline-block" }}>
-                        <button
-                          type="button"
-                          className="msg-reaction-add-btn"
-                          aria-label={t("inbox.addReaction")}
-                          title={t("inbox.addReaction")}
-                          onClick={() =>
-                            setOpenPickerForMsgId((prev) =>
-                              prev === msg.message_id ? null : (msg.message_id ?? null)
-                            )
-                          }
-                        >
-                          {/* emoji スマイルアイコン（INBOX_ACTION_ICONS にないため SVG 直書き） */}
-                          {/* ui-allow: SmilePlus は icons.tsx 未登録・emoji-picker と同梱のため直書き */}
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                            <circle cx="12" cy="12" r="10" />
-                            <path d="M8 13s1.5 2 4 2 4-2 4-2" />
-                            <line x1="9" y1="9" x2="9.01" y2="9" />
-                            <line x1="15" y1="9" x2="15.01" y2="9" />
-                            <line x1="19" y1="5" x2="23" y2="5" />
-                            <line x1="21" y1="3" x2="21" y2="7" />
-                          </svg>
-                        </button>
-                        {openPickerForMsgId === msg.message_id && (
-                          <div ref={pickerRef} className="msg-reaction-picker-popover">
-                            <EmojiPickerWrapper
-                              onSelect={(emoji) => handlePickerSelect(msg.message_id!, emoji)}
-                            />
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
-                {/* リアクション追加ボタン（リアクションがまだない場合） */}
-                {(!msg.reactions || msg.reactions.length === 0) && msg.message_id && !failed && (
-                  <div className="msg-reaction-bar msg-reaction-bar--empty">
-                    <div style={{ position: "relative", display: "inline-block" }}>
-                      <button
-                        type="button"
-                        className="msg-reaction-add-btn"
-                        aria-label={t("inbox.addReaction")}
-                        title={t("inbox.addReaction")}
-                        onClick={() =>
-                          setOpenPickerForMsgId((prev) =>
-                            prev === msg.message_id ? null : (msg.message_id ?? null)
-                          )
-                        }
-                      >
-                        {/* ui-allow: SmilePlus は icons.tsx 未登録・emoji-picker と同梱のため直書き */}
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <circle cx="12" cy="12" r="10" />
-                          <path d="M8 13s1.5 2 4 2 4-2 4-2" />
-                          <line x1="9" y1="9" x2="9.01" y2="9" />
-                          <line x1="15" y1="9" x2="15.01" y2="9" />
-                          <line x1="19" y1="5" x2="23" y2="5" />
-                          <line x1="21" y1="3" x2="21" y2="7" />
-                        </svg>
-                      </button>
-                      {openPickerForMsgId === msg.message_id && (
-                        <div ref={pickerRef} className="msg-reaction-picker-popover">
-                          <EmojiPickerWrapper
-                            onSelect={(emoji) => handlePickerSelect(msg.message_id!, emoji)}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
                 <div className={`msg-time${outbound ? "" : " inbound"}`}>
                   {relativeTime(msg.created_at)}
                   {/* Translate button */}
@@ -715,6 +594,16 @@ export function InboxMessageThread({
                     </button>
                   )}
                 </div>
+              </div>
+              {heartHover && !outbound && heartButton}
+              </div>
+              {canReact && (
+                <MessageReactionBadges
+                  messageId={msg.id}
+                  reactions={msg.reactions}
+                  onToggleHeart={handleHeartToggle}
+                />
+              )}
               </div>
             </div>
           );

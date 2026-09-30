@@ -1,0 +1,55 @@
+/**
+ * IconToggleButton — アイコン切替ボタン
+ * ADR-067: 全カラー・寸法は CSS 変数参照のみ
+ */
+
+.comp-icon-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  box-sizing: border-box;
+  min-width: var(--size-icon-btn-sm);
+  height: var(--size-icon-btn-sm);
+  padding: 0 var(--space-1);
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--icon-action);
+  font-family: inherit;
+  font-size: var(--font-xs);
+  line-height: 1;
+  cursor: pointer;
+  transition: color var(--transition-micro), background var(--transition-micro);
+}
+
+.comp-icon-toggle--md {
+  min-width: var(--size-icon-btn);
+  height: var(--size-icon-btn);
+  padding: 0 var(--space-2);
+}
+
+.comp-icon-toggle:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
+.comp-icon-toggle:disabled {
+  opacity: var(--opacity-dim);
+  cursor: not-allowed;
+}
+
+.comp-icon-toggle:hover:not(:disabled) {
+  color: var(--icon-action-hover);
+  background: var(--color-hover-overlay);
+}
+
+.comp-icon-toggle--pressed,
+.comp-icon-toggle--pressed:hover:not(:disabled) {
+  color: var(--icon-action-danger);
+}
+
+.comp-icon-toggle__count {
+  font-size: var(--font-2xs);
+  font-weight: var(--font-weight-semi);
+}

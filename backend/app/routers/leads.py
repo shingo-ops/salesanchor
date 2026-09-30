@@ -858,6 +858,39 @@ async def convert_lead(
 # `mw.compute_window(...)` を呼ぶラッパだけ残す（Sprint 4 Reviewer F5 対応）。
 
 
+def _group_reactions(rows) -> dict[int, list[dict]]:
+    """meta_message_reactions の行を meta_message_id → リアクション一覧へ集約する。
+
+    返却形はフロント型 MessageReaction（frontend/src/lib/messages.ts）に合わせる。
+    is_mine は「そのグループに Bot 自身の行がある」（Bot 名義送信・ADR-091）。
+    """
+    grouped: dict[int, dict[str, dict]] = {}
+    for row in rows:
+        by_emoji = grouped.setdefault(row["meta_message_id"], {})
+        key = f"{row['emoji_name']}:{row['emoji_id'] or ''}"
+        reaction = by_emoji.setdefault(
+            key,
+            {
+                "emoji_name": row["emoji_name"],
+                "emoji_id": row["emoji_id"],
+                "emoji_animated": row["emoji_animated"],
+                "count": 0,
+                "is_mine": False,
+                "reactors": [],
+            },
+        )
+        reaction["count"] += 1
+        reaction["reactors"].append(
+            {
+                "user_id": row["reactor_discord_user_id"],
+                "display_name": row["reactor_display_name"],
+            }
+        )
+        if row["is_bot_reaction"]:
+            reaction["is_mine"] = True
+    return {mid: list(by_emoji.values()) for mid, by_emoji in grouped.items()}
+
+
 def _meta_msg_format_dt(value) -> Optional[str]:
     """meta_messages の datetime / 文字列 / None を ISO 文字列に正規化。
 
@@ -1027,36 +1060,17 @@ async def list_lead_messages(
             )
             reaction_rows = reaction_result.mappings().all()
 
-            # グループ化: meta_message_id → { "emoji_key": { count, reactors, is_bot } }
-            from collections import defaultdict
-            reaction_map: dict[int, dict[str, dict]] = defaultdict(dict)
-            for rr in reaction_rows:
-                mid = rr["meta_message_id"]
-                key = f"{rr['emoji_name']}:{rr['emoji_id'] or ''}"
-                if key not in reaction_map[mid]:
-                    reaction_map[mid][key] = {
-                        "emoji_name": rr["emoji_name"],
-                        "emoji_id": rr["emoji_id"],
-                        "emoji_animated": rr["emoji_animated"],
-                        "count": 0,
-                        "reactors": [],
-                        "is_bot_reaction": False,
-                    }
-                reaction_map[mid][key]["count"] += 1
-                if rr["reactor_display_name"]:
-                    reaction_map[mid][key]["reactors"].append(rr["reactor_display_name"])
-                if rr["is_bot_reaction"]:
-                    reaction_map[mid][key]["is_bot_reaction"] = True
+            reaction_map = _group_reactions(reaction_rows)
 
             # messages に reactions をマージ
             for msg in messages:
-                grouped = list(reaction_map.get(msg["id"], {}).values())
-                msg["reactions"] = grouped
+                msg["reactions"] = reaction_map.get(msg["id"], [])
         except Exception:
             # meta_message_reactions テーブル未適用環境・テスト環境は graceful fallback
-            logger.debug(
+            logger.warning(
                 "[leads] meta_message_reactions query failed tenant=%s — reactions=[]",
                 tenant_id,
+                exc_info=True,
             )
 
     # platform は messages 末尾の最新値を採用（pagination 対象外）

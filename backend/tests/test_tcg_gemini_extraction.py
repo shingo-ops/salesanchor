@@ -769,6 +769,53 @@ class TestCallGeminiRawCopy:
         assert "発送日フォーマット" not in prompt
 
 
+class TestUsageMetadataTokenReading:
+    """出力トークンは usage_metadata.candidates_token_count から読む
+    （response_token_count という属性は google-genai SDK に存在しない）。
+    recon.md §A 参照。
+    """
+
+    def _fake_usage(self, *, prompt_token_count, candidates_token_count):
+        usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
+        usage.prompt_token_count = prompt_token_count
+        usage.candidates_token_count = candidates_token_count
+        return usage
+
+    def test_call_gemini_extraction_reads_candidates_token_count(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _STUB_BASE_PROMPT
+        client.models.generate_content.return_value.usage_metadata = self._fake_usage(
+            prompt_token_count=111, candidates_token_count=222,
+        )
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        recorder = MagicMock()
+        # Act
+        svc.call_gemini_extraction("行A", recorder=recorder)
+        # Assert: recorder.on_response に正しい input/output tokens が渡る
+        recorder.on_response.assert_called_once()
+        _args, kwargs = recorder.on_response.call_args
+        assert kwargs["input_tokens"] == 111
+        assert kwargs["output_tokens"] == 222
+
+    def test_call_gemini_raw_copy_reads_candidates_token_count(self, monkeypatch):
+        # Arrange
+        from app.services import gemini_extraction_svc as svc
+        monkeypatch.setattr(svc, "_load_db_raw_copy_prompt", lambda: "raw copy prompt (stub)")
+        client = MagicMock()
+        client.models.generate_content.return_value.text = _RAW_COPY_HEADER_LINE
+        client.models.generate_content.return_value.usage_metadata = self._fake_usage(
+            prompt_token_count=50, candidates_token_count=77,
+        )
+        monkeypatch.setattr(svc, "_get_genai_client", lambda: client)
+        # Act
+        result = svc.call_gemini_raw_copy("行A")
+        # Assert
+        assert result["input_tokens"] == 50
+        assert result["output_tokens"] == 77
+
+
 class TestBuildSupplierContextNoteV6Unaffected:
     """label_map から extraction_ship_format を外した変更が v6（本番）出力を変えないことを守る。"""
 
