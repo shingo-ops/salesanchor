@@ -107,16 +107,18 @@ const KNOWN_PURPOSES = [
 ];
 
 // 積み上げ棒グラフの使いみち別カラー。
-// ADR-067: 新規 hex は追加しない。既存の分類用カラートークン（--cal-*、スケジュール
-// カテゴリ用に light/dark 両方が定義済み）を流用する。
+// ADR-067: 新規 hex は追加しない。カレンダードメインの --cal-* を他ドメインから直接
+// 参照すると、カレンダー側の配色変更がこのチャートを無言で巻き込んでしまうため、
+// frontend/src/tokens.css に --chart-series-1〜7（--cal-* のエイリアス）を新設し、
+// そちらを参照する（light/dark 両方定義済み）。
 const PURPOSE_CHART_COLOR_VARS = [
-  "var(--cal-personal)",
-  "var(--cal-meeting)",
-  "var(--cal-purchase)",
-  "var(--cal-shipping)",
-  "var(--cal-billing)",
-  "var(--cal-release)",
-  "var(--cal-holiday)",
+  "var(--chart-series-1)",
+  "var(--chart-series-2)",
+  "var(--chart-series-3)",
+  "var(--chart-series-4)",
+  "var(--chart-series-5)",
+  "var(--chart-series-6)",
+  "var(--chart-series-7)",
 ];
 
 function purposeColor(purpose: string, allPurposes: string[]): string {
