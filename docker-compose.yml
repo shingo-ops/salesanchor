@@ -211,7 +211,7 @@ services:
       # GEMINI_API_KEY: Gemini 翻訳 API キー（未設定だと LLMConfigError で全翻訳スキップ）
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
-      - EXTRACTION_SHADOW_ENABLED=${EXTRACTION_SHADOW_ENABLED:-1}
+      - EXTRACTION_SHADOW_ENABLED=${EXTRACTION_SHADOW_ENABLED:-0}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       # ADMIN_NOTIFICATION_DISCORD_WEBHOOK: 翻訳監視アラート送信先
       # check_translation_health_task が異常時に通知する（未設定だと通知が沈黙する）
