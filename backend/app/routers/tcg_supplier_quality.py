@@ -39,7 +39,9 @@ class SupplierQualitySummary(BaseModel):
     needs_review_count: int
     product_id_unresolved_count: int
     unit_unresolved_count: int
-    condition_fallback_count: int | None  # GAS と同じく null 固定
+    condition_fallback_count: int | None  # condition_basis 末尾一致で集計（tcg_supplier_quality_svc 定数参照）
+    condition_give_up_count: int | None = None
+    condition_manual_reviewed_count: int | None = None
 
 
 class SupplierQualitySummariesResponse(BaseModel):

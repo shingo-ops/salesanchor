@@ -2524,7 +2524,9 @@
         "needsReviewCount": "要確認",
         "productIdUnresolvedCount": "商品ID未解決",
         "unitUnresolvedCount": "単位未解決",
-        "conditionFallbackCount": "状態未解決（集計準備中）"
+        "conditionFallbackCount": "状態未解決",
+        "conditionGiveUpCount": "うち完全お手上げ",
+        "conditionManualReviewedCount": "人が確認済み"
       },
       "conditionPending": "集計準備中",
       "backToList": "← 一覧に戻る",

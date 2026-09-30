@@ -5,9 +5,9 @@
 //   needsReviewCount:           analysisReviewHasCurrentNeedsReview_ (ShadowReviewV2.js:98)
 //   productIdUnresolvedCount:   pid_resolved delegate (ShadowReviewV2.js:92)
 //   unitUnresolvedCount:        unit_resolved delegate (ShadowReviewV2.js:93)
-//   conditionFallbackCount:     Q8=実測不能 — null（集計準備中）
-//                               condition_basis の完全一致文字列が既存 clasp 関数で
-//                               実測不能のため未実装。別タスクで確定後に number に変更する。
+//   conditionFallbackCount:     condition_basis 末尾一致で集計（BE: tcg_supplier_quality_svc.py）
+//   conditionGiveUpCount:       うち完全お手上げ（R4:単位既定:単位不明）
+//   conditionManualReviewedCount: 人が確認済み（MANUAL_CONDITION_REVIEW）
 //
 // Field NOT included (Phase 1.6 Gate G1 decisions):
 //   extractionCount — omitted: Q6=抽出ロスは実在するが落ちた件数を取り出す既存手段がない
@@ -22,7 +22,9 @@ export type SupplierQualitySummary = {
   needsReviewCount: number;
   productIdUnresolvedCount: number;
   unitUnresolvedCount: number;
-  conditionFallbackCount: number | null; // null = 集計準備中（Q8 実測不能）
+  conditionFallbackCount: number | null; // null = 集計準備中（旧 API 互換）
+  conditionGiveUpCount: number | null;
+  conditionManualReviewedCount: number | null;
 };
 
 export type SupplierQualityColumnId =
@@ -31,7 +33,9 @@ export type SupplierQualityColumnId =
   | 'NEEDS_REVIEW_COUNT'
   | 'PRODUCT_ID_UNRESOLVED_COUNT'
   | 'UNIT_UNRESOLVED_COUNT'
-  | 'CONDITION_FALLBACK_COUNT';
+  | 'CONDITION_FALLBACK_COUNT'
+  | 'CONDITION_GIVE_UP_COUNT'
+  | 'CONDITION_MANUAL_REVIEWED_COUNT';
 
 export function supplierQualityColumns(t: TFunction): Array<DataListColumn & { id: SupplierQualityColumnId }> {
   return [
@@ -41,5 +45,7 @@ export function supplierQualityColumns(t: TFunction): Array<DataListColumn & { i
     { id: 'PRODUCT_ID_UNRESOLVED_COUNT', label: t("superAdmin.supplierQuality.columns.productIdUnresolvedCount"),   minWidth: '8rem',  visible: true },
     { id: 'UNIT_UNRESOLVED_COUNT',       label: t("superAdmin.supplierQuality.columns.unitUnresolvedCount"),        minWidth: '7rem',  visible: true },
     { id: 'CONDITION_FALLBACK_COUNT',    label: t("superAdmin.supplierQuality.columns.conditionFallbackCount"),     minWidth: '9rem',  visible: true },
+    { id: 'CONDITION_GIVE_UP_COUNT',          label: t("superAdmin.supplierQuality.columns.conditionGiveUpCount"),          minWidth: '9rem',  visible: true },
+    { id: 'CONDITION_MANUAL_REVIEWED_COUNT',  label: t("superAdmin.supplierQuality.columns.conditionManualReviewedCount"),  minWidth: '9rem',  visible: true },
   ];
 }

@@ -12,6 +12,8 @@ interface ApiSummary {
   product_id_unresolved_count: number;
   unit_unresolved_count: number;
   condition_fallback_count: number | null;
+  condition_give_up_count?: number | null;
+  condition_manual_reviewed_count?: number | null;
 }
 
 interface ApiResponse {
@@ -27,6 +29,8 @@ function mapSummary(raw: ApiSummary): SupplierQualitySummary {
     productIdUnresolvedCount: raw.product_id_unresolved_count,
     unitUnresolvedCount: raw.unit_unresolved_count,
     conditionFallbackCount: raw.condition_fallback_count,
+    conditionGiveUpCount: raw.condition_give_up_count ?? null,
+    conditionManualReviewedCount: raw.condition_manual_reviewed_count ?? null,
   };
 }
 
@@ -61,6 +65,10 @@ export function SupplierQualityList({ onSelectSupplier }: { onSelectSupplier: (s
           case 'UNIT_UNRESOLVED_COUNT':       return row.unitUnresolvedCount;
           case 'CONDITION_FALLBACK_COUNT':
             return row.conditionFallbackCount !== null ? row.conditionFallbackCount : t("superAdmin.supplierQuality.conditionPending");
+          case 'CONDITION_GIVE_UP_COUNT':
+            return row.conditionGiveUpCount !== null ? row.conditionGiveUpCount : t("superAdmin.supplierQuality.conditionPending");
+          case 'CONDITION_MANUAL_REVIEWED_COUNT':
+            return row.conditionManualReviewedCount !== null ? row.conditionManualReviewedCount : t("superAdmin.supplierQuality.conditionPending");
           default: return null;
         }
       }}
