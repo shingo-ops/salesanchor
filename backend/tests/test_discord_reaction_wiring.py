@@ -114,6 +114,10 @@ def test_group_reactions_separates_custom_emoji_and_messages():
 def _writer_with_conn() -> tuple[ReactionWriter, AsyncMock]:
     conn = AsyncMock()
     conn.fetchrow.return_value = {"id": 77}
+    tx_cm = MagicMock()
+    tx_cm.__aenter__ = AsyncMock(return_value=None)
+    tx_cm.__aexit__ = AsyncMock(return_value=False)
+    conn.transaction = MagicMock(return_value=tx_cm)
     acquire_cm = MagicMock()
     acquire_cm.__aenter__ = AsyncMock(return_value=conn)
     acquire_cm.__aexit__ = AsyncMock(return_value=False)
