@@ -163,7 +163,14 @@ async def retry_extraction(
 
     Raises:
         RuntimeError: Celery タスクが未初期化、または Redis 接続失敗
+        ValueError: job_ids が _MAX_JOBS 件を超える場合
     """
+    # 0. job_ids の件数上限チェック（API 側で先に弾かれるが、サービス層直接呼び出しも保護する）
+    if job_ids is not None and len(job_ids) > _MAX_JOBS:
+        raise ValueError(
+            f"job_ids must contain at most {_MAX_JOBS} entries (got {len(job_ids)})"
+        )
+
     # 1. Celery タスクが利用可能か事前確認
     try:
         from app.tasks.tcg_extraction import extract_source_message_task  # noqa: PLC0415

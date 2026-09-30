@@ -1328,8 +1328,6 @@
     "addReaction": "Add Reaction",
     "removeReaction": "Remove Reaction",
     "reactedBy": "Reacted by",
-    "emojiPicker": "Select Emoji",
-    "customEmojis": "Server Emojis",
     "reactionSendFailed": "Failed to send reaction",
     "reactionDeleteFailed": "Failed to remove reaction",
     "sendError": {

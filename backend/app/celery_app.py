@@ -34,6 +34,7 @@ celery_app = Celery(
         "app.tasks.fx_rate_updater",     # 為替レート SSOT: USD/JPY を1日2回更新
         "app.tasks.tcg_mirror",          # MIG-05 Task 3: TCG マスタミラーシート 日次書き出し
         "app.tasks.tcg_extraction",      # MIG-04 Stage 2: Gemini 抽出タスク
+        "app.tasks.tcg_extraction_recovery",  # 抽出ジョブの停滞回収（design: docs/handoff/extraction-job-recovery/design.md）
         "app.tasks.tcg_import_discard",  # REVIEW-STAGE: 期限切れ保留ジョブの破棄
         "app.tasks.rule_test",           # Rule Test System: ルールテスト実行
         "app.tasks.buyback_scraper",     # ADR-157: 買取相場ログ（シンソク + 買取ホムラ）
@@ -164,5 +165,13 @@ celery_app.conf.beat_schedule = {
     "fetch-buyback-prices": {
         "task": "buyback.fetch_all_prices",
         "schedule": crontab(minute=0, hour="1,4,13"),
+    },
+    # 抽出ジョブの停滞回収（10分ごと）
+    # design: docs/handoff/extraction-job-recovery/design.md §B
+    # デプロイ時の強制コンテナ削除等で running/pending のまま取り残された
+    # extraction_jobs を回収する。
+    "recover-stale-extraction-jobs": {
+        "task": "tcg.recover_stale_extraction_jobs",
+        "schedule": 600.0,  # 10分
     },
 }
