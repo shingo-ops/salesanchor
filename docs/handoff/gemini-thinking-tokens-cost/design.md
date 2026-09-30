@@ -1,5 +1,7 @@
 # design: Gemini thoughts_token_count を出力トークン・費用に含める
 
+recon: docs/handoff/gemini-thinking-tokens-cost/recon.md
+
 ## 目的
 Gemini API の実際の課金は `candidates_token_count + thoughts_token_count`（公式料金表の
 "including thinking tokens" 表記どおり）だが、現行実装は `candidates_token_count` のみを
