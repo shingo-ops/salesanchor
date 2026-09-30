@@ -81,7 +81,11 @@ class TestRunShadowForJobMatched:
         assert row["match_status"] == "matched"
         assert row["product_id"] == 1
         assert row["work_id"] == 7
-        assert row["needs_review"] is False
+        # 単位の別名が空の環境なので「3枚」の 3 は目印なしで補われ、数量は確認に回る（quantity_unmarked）。
+        assert row["needs_review"] is True
+        assert row["review_items"] == [
+            {"item": "price_qty", "reason": "quantity_unmarked", "candidates": []}
+        ]
         assert row["verify_failures"] == []
         session.commit.assert_called_once()
 

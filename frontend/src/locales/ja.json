@@ -5144,7 +5144,8 @@
       "rule_vs_shape": "ルールの向きと数値の形が合わない",
       "irregular_comma": "桁区切りが不正",
       "unresolved": "価格と数量を決められない",
-      "no_order_rule": "仕入元ルールに向きがない"
+      "no_order_rule": "仕入元ルールに向きがない",
+      "quantity_unmarked": "数量に目印がない"
     }
   }
 }

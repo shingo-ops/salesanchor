@@ -5144,7 +5144,8 @@
       "rule_vs_shape": "The rule's order does not fit the number shapes",
       "irregular_comma": "Invalid digit separators",
       "unresolved": "Cannot determine price and quantity",
-      "no_order_rule": "The supplier rule has no order"
+      "no_order_rule": "The supplier rule has no order",
+      "quantity_unmarked": "The quantity has no marker"
     }
   }
 }

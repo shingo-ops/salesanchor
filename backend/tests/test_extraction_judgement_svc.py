@@ -379,6 +379,8 @@ _PRICE_QTY_CASES = [
     ("12,000円 3営業日", "12,000円", "none", None, 12000, None, "marker", (), None),
     ("12,000円 在庫50", "12,000円", "none", None, 12000, 50, "marker", ("gemini_disagrees",), None),
     ("27,500x18BOX", "27,500", "18BOX", None, 27500, 18, "marker", (), None),
+    ("12,000円 2025年", "12,000円", "2025", None, 12000, 2025, "marker", ("quantity_unmarked",), None),
+    ("@11,500円 36", "11,500円", "36", None, 11500, 36, "marker", ("quantity_unmarked",), None),
     ("27,500x18", "27,500", "18", "price_first", 27500, 18, "rule", (), None),
     (
         "@150,000円/在庫2\n@12,100円/在庫48",

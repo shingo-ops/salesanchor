@@ -105,6 +105,7 @@
 | `gemini_disagrees` | システムが決めた価格・数量の数字列と、Gemini が書き写した数字列が一致しない。または、Gemini が none と書き写した側に、システムが値を決めた（例：`12,000円 在庫50` で Gemini の数量が none） |
 | `rule_vs_shape` | basis が rule のときだけ使う。「4桁以上が価格」と「カンマ付きが価格」のどちらかが、ルールの向きと逆になる。basis が marker のときは使わない（F8：外れは、目印のある安い単価の行に限られるため） |
 | `irregular_comma` | 4-3 のとおり |
+| `quantity_unmarked` | 数量を、目印の無い数値で補った（4-4 の 2）。Gemini が日付や回次（例：`2025年`、`第3弾`、`10月`）を数量として書き写すと、両者が一致して見逃す恐れがあるため、数量の補完は必ず確認に回す（再審査の残余リスク指摘への対処）。価格の補完（例：`27,500×18BOX` の 27,500）は対象にしない |
 | `unresolved` | Gemini は値を書き写しているのに、システムが決められない |
 
 ### 4-7. 出力
@@ -171,6 +172,8 @@
 | `12,000円 3営業日`（Gemini の数量は none） | None | 12000 / なし / 理由なし |
 | `12,000円 在庫50`（Gemini の数量は none） | None | 12000 / 50 / marker、理由 gemini_disagrees |
 | `27,500x18BOX` | None | 27500 / 18 / marker |
+| `12,000円 2025年`（Gemini の数量は `2025`） | None | 12000 / 2025 / marker、理由 quantity_unmarked（確認に回る） |
+| `@11,500円 36`（Gemini の数量は `36`） | None | 11500 / 36 / marker、理由 quantity_unmarked |
 | `27,500x18`（Gemini の価格は 27,500、数量は 18） | price_first | 27500 / 18 / rule |
 | `@150,000円/在庫2` ＋ `@12,100円/在庫48` | None | None / None / multiple_values |
 | `10900@152` | None | None / None / no_order_rule |

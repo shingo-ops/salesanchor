@@ -393,9 +393,11 @@ def _copied_by_gemini(num: _Num, gemini_groups: tuple[str, ...]) -> bool:
 
 def _marker_candidates(
     per_line: list[list[_Num]], g_price: tuple[str, ...], g_qty: tuple[str, ...]
-) -> tuple[list[_Num], list[_Num]]:
+) -> tuple[list[_Num], list[_Num], list[_Num]]:
+    """(価格の候補, 数量の候補, 数量を目印なしの数値で補ったもの) を返す。"""
     prices = [n for nums in per_line for n in nums if n.price_marked]
     qtys = [n for nums in per_line for n in nums if n.qty_marked]
+    qty_filled: list[_Num] = []
     for nums in per_line:
         unmarked = [n for n in nums if not n.price_marked and not n.qty_marked]
         has_p = any(n.price_marked for n in nums)
@@ -404,7 +406,9 @@ def _marker_candidates(
             filled_side, groups = (qtys, g_qty) if has_p else (prices, g_price)
             if _copied_by_gemini(unmarked[0], groups):
                 filled_side.append(unmarked[0])
-    return prices, qtys
+                if has_p:
+                    qty_filled.append(unmarked[0])
+    return prices, qtys, qty_filled
 
 
 def _rule_pairs(lines: list[tuple[int, str]], per_line: list[list[_Num]]) -> list[tuple[_Num, _Num]]:
@@ -461,7 +465,7 @@ def resolve_price_quantity(
     per_line = [_apply_at_marker(t, _extract_line_numbers(t, no, aliases)) for no, t in target]
 
     reasons: list[str] = []
-    prices, qtys = _marker_candidates(per_line, g_price, g_qty)
+    prices, qtys, qty_filled = _marker_candidates(per_line, g_price, g_qty)
     prices, qtys = _unique(prices), _unique(qtys)
     price: _Num | None = None
     qty: _Num | None = None
@@ -473,6 +477,8 @@ def resolve_price_quantity(
             reasons.append("multiple_values")
         price = prices[0] if len(prices) == 1 else None
         qty = qtys[0] if len(qtys) == 1 else None
+        if qty is not None and any(qty is f for f in qty_filled):
+            reasons.append("quantity_unmarked")
     else:
         pairs = _rule_pairs(target, per_line)
         unique_pairs = {(a.value, b.value): (a, b) for a, b in pairs}
