@@ -284,5 +284,39 @@ if [[ -n "$PARSE_RESULT" ]]; then
   exit 1
 fi
 
+# ──────────────────────────────────────────────────────────────────────────────
+# CI と同じ process-artifacts 検査を、PR 作成前の事前検査として先に呼ぶ
+# （docs/handoff/local-gate-ci-parity/design.md §2、写さずに呼ぶ）
+# ──────────────────────────────────────────────────────────────────────────────
+if ! command -v node >/dev/null 2>&1; then
+  echo "❌ node が見つかりません。手元の事前検査（process-artifacts）を実行できません" >&2
+  exit 1
+fi
+
+PRECHECK_AUTHOR="$(gh api user --jq .login 2>/dev/null)" || {
+  echo "❌ gh api user の取得に失敗しました（GitHub認証を確認してください）。手元の事前検査を実行できません" >&2
+  exit 1
+}
+
+PRECHECK_CHANGED_FILES="$(cd "$REPO_ROOT" && git diff --name-only origin/main...HEAD)"
+PRECHECK_HEAD_REF="$(cd "$REPO_ROOT" && git branch --show-current)"
+PRECHECK_BASE_SHA="$(cd "$REPO_ROOT" && git rev-parse origin/main)"
+PRECHECK_HEAD_SHA="$(cd "$REPO_ROOT" && git rev-parse HEAD)"
+
+# 外から注入された GITHUB_ACTIONS に左右されない（gh-pr-create-safe.sh:138 と同じ理由）。
+# CI の gate は本スクリプトを通らず JS を直接呼ぶため、CI での LOCAL_PRECHECK 拒否は有効なまま
+if ! env -u GITHUB_ACTIONS \
+     LOCAL_PRECHECK=1 \
+     CHANGED_FILES="$PRECHECK_CHANGED_FILES" \
+     MOCK_PR_BODY="$PR_BODY" \
+     MOCK_PR_AUTHOR="$PRECHECK_AUTHOR" \
+     MOCK_HEAD_REF="$PRECHECK_HEAD_REF" \
+     MOCK_BASE_REF="main" \
+     BASE_SHA="$PRECHECK_BASE_SHA" \
+     HEAD_SHA="$PRECHECK_HEAD_SHA" \
+     node "$REPO_ROOT/scripts/check-process-artifacts.js"; then
+  exit 1
+fi
+
 echo "✅ PR本文検証OK"
 exit 0
