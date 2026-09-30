@@ -67,7 +67,7 @@
 - 呼び出し元は ExtractionErrorLogPanel だけなので、応答の形を変えても、ほかに影響は出ない（recon §2）
 
 ## 5. 再実行の受付
-- `tcg_diagnostics_svc.py`：job_ids で指定したときに受け付ける状態を、`{"error"}` だけにする。`scope="pending"` のほうは今のまま
+- `backend/app/services/tcg_diagnostics_svc.py`：job_ids で指定したときに受け付ける状態を、`{"error"}` だけにする。`scope="pending"` のほうは今のまま
 - pending または running のジョブは skipped に数える。Celery には投入しない
 
 ## 6. 画面（ExtractionErrorLogPanel）
