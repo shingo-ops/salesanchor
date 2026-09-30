@@ -20,6 +20,22 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 - 色: 新規 hex は追加せず、`frontend/src/tokens.css` L396-402（ライト）/ L566-572（ダーク）に light/dark 両方定義済みの `--cal-personal`〜`--cal-holiday`（7色、カレンダーカテゴリ用の既存トークン）を使いみち別カラーとして転用した（6 purpose に対し7色で充足）。`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` の既存3チャートが使う `--color-success`/`--color-error`/`--color-warning-*` は状態色2〜3色のみで、カテゴリカルな塗り分けには不足するため対象外とした。
 - 金型もトークンベースの色源も両方存在したため、「STOP して報告」の条件（金型なし かつ 色源なし）には該当しない。
 
+### レビュー指摘への対応: ドメイン跨ぎのトークン直接参照をやめる
+
+Designer レビュー（Opus）で、上記の `--cal-*`（カレンダードメイン用トークン）を LLM 使用量
+チャートから直接参照すると、将来カレンダー側の配色を変更したときにこのグラフが無言で
+巻き込まれて再着色される問題を指摘された。`docs/adr/ADR-067-design-token-enforcement.md`
+「新規トークン追加手順」（1. `src/tokens.css` の `:root {}` に追加 → 2. 色トークンは
+`:root` と `:root.force-dark` 両方に追加 → 3. `npm run check:dark-parity` で確認 →
+4. ADR のコンポーネントトークン表を更新）に従い、`frontend/src/tokens.css` に
+`--chart-series-1`〜`--chart-series-7` を新設した。各トークンは既存の `--cal-*` の値を
+`var(--cal-*)` でエイリアスするのみで、新規 hex/rgb は追加していない（light/dark 両方に
+同じ形で追加、`npm run check:dark-parity` PASS 済み）。`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` は
+`var(--chart-series-N)` を参照するよう変更した。`docs/CC_UI_GOVERNANCE.md` は UI
+「部品」（Select/TextField 等の金型）の新設・流用ルールであり、トークンの新設手順は
+規定していない（両ドキュメントを確認済み）。PO 事前承認を必須とする記述はどちらにも
+なかったため、STOP せずに実装した。
+
 ## 変更点サマリ
 
 ### バックエンド（`backend/app/routers/tcg_analysis_dashboard.py`）
@@ -35,6 +51,7 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 - `total.total_mismatch_calls > 0` のとき、既存の note 直下に `totalMismatchNote` を1行追加表示。
 - 「呼び出し回数」系ラベル（メトリクスカード `metricCalls` ＋ 3テーブル共通の `colCalls`）を ja「応答が返った回数」/ en "Calls with response" に変更し、note 末尾に「応答が返らず失敗した呼び出しは含みません。」を追記。
 - 日次・月次の使いみち別積み上げ棒グラフ（Card 2枚）をテーブル群の上に追加。データが空のときはテーブルと同じ `noData` 文言を表示。
+- 積み上げ棒グラフの色は `frontend/src/tokens.css` に新設した `--chart-series-1`〜`--chart-series-7`（`--cal-*` のエイリアス）を参照（ドメイン跨ぎの直接参照を回避）。
 - `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は変更していない（import元の `LlmUsageSection` のシグネチャ・呼び出し方に変更がないため）。
 
 ### i18n（`frontend/src/locales/ja.json` / `frontend/src/locales/en.json`）
@@ -51,7 +68,7 @@ ADR-1004 は `public.llm_usage_events` を LLM使用量の SSOT と定めてい�
 | ③ total_mismatch_calls > 0 のとき不一致注記が出る（0のときは出ない） | `test_llm_usage_mismatch_calls_counted_when_total_tokens_disagrees`（backend）、`"shows a mismatch note..."` / `"does not show a mismatch note..."`（frontend）。 |
 | ④「呼び出し回数」系ラベルが「応答が返った回数」/ "Calls with response" に変わっている | frontend テスト `"uses the 'Calls with response' label instead of the old 'Call Count' label"` / `"mentions that failed calls without a response are excluded"`。 |
 | ⑤ ja/en で i18n キーが同一（ADR-027） | `npm run check:i18n-missing-keys` PASS（実行済み、後述の生出力参照）。 |
-| ⑥ 新規 hex 直値なし（ADR-067） | `npm run check:css-colors` PASS（実行済み）。色は `--cal-*` 既存トークンのみを `var(--cal-*)` 形式で参照。 |
+| ⑥ 新規 hex 直値なし・ドメイン跨ぎのトークン直接参照なし（ADR-067） | `npm run check:css-colors` / `npm run check:dark-parity` PASS（実行済み）。色は `frontend/src/tokens.css` に新設した `--chart-series-1`〜`--chart-series-7`（`--cal-*` のエイリアス、light/dark 両方）を `var(--chart-series-N)` 形式で参照。`--cal-*` を他ドメインから直接参照しない。 |
 
 ## 外部・過去事例の参照と我々への応用
 
