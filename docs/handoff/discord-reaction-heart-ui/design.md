@@ -70,6 +70,6 @@ backend/、migrations/、deploy.yml、scripts/、Discord 権限設定、カス�
 
 ## 維持の仕組み
 
-- 守り手: IconToggleButton.test.tsx・reactionHeart.test.ts が CI の vitest で常時実行される。金型の stories 欠落は check:stories が、色直値・生 px は ADR-067/144 の CI ゲートが止める。
+- 守り手: frontend/src/components/IconToggleButton.test.tsx と frontend/src/pages/inbox/reactionHeart.test.ts が CI の vitest で常時実行される。金型の stories 欠落は check:stories が、色直値・生 px は ADR-067 / ADR-144 の CI ゲートが止める。
 - 対象: 本 UI の金型・ハート抽出・長押し定数。
 - 関所なしの場合: 該当なし。

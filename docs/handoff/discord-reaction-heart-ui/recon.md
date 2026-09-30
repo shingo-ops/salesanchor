@@ -26,3 +26,12 @@
 
 - `git grep -il reaction origin/main -- docs/adr/` は ADR-024 と ADR-091 のみ（前便 recon と同じ）。UI 金型・デザイントークンの拘束は ADR-144（docs/adr/ADR-144-ui-component-governance.md）と ADR-067（docs/adr/ADR-067-design-token-enforcement.md）。
 - 対象 ADR: ADR-144, ADR-067, ADR-091。
+
+## 引用（file:line・origin/main 4c056c5f9）
+
+- frontend/src/pages/inbox/InboxMessageThread.tsx:12 — EmojiPickerWrapper の import
+- frontend/src/pages/inbox/InboxMessageThread.tsx:185 — picker 状態（openPickerForMsgId）
+- frontend/src/pages/inbox/InboxMessageThread.tsx:190-198 — 外側クリックで閉じる effect
+- frontend/src/constants/icons.tsx:369 — INBOX_ACTION_ICONS の定義開始
+- frontend/src/index.css:196 — `--icon-action-danger`（ダーク側は :400）
+- frontend/src/index.css:194-195 — `--icon-action` / `--icon-action-hover`
