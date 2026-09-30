@@ -24,13 +24,13 @@
 
 ## 3. AttemptRecorder の INSERT/UPDATE 順序（FK 有効性の根拠）
 
-`before_send()`（`tcg_extraction_record_svc.py:68-104`）が `extraction_attempts` に self.id で INSERT + commit する。`gemini_extraction_svc.call_gemini_extraction()` は `recorder.before_send(payload)`（:420 付近）を呼んでから `client.models.generate_content(...)` を呼ぶ（:427-432）ので、Gemini 応答を受け取る時点（`on_response`/`complete`/`fail`）では `extraction_attempts` 行が必ず存在する。→ `llm_usage_events.extraction_attempt_id` の FK は `complete()`/`fail()` 時点で有効。
+`backend/app/services/tcg_extraction_record_svc.py:68-104` の `before_send()` が `extraction_attempts` に self.id で INSERT + commit する。`backend/app/services/gemini_extraction_svc.py` の `call_gemini_extraction()` は `recorder.before_send(payload)`（:420 付近）を呼んでから `client.models.generate_content(...)` を呼ぶ（:427-432）ので、Gemini 応答を受け取る時点（`on_response`/`complete`/`fail`）では `extraction_attempts` 行が必ず存在する。→ `llm_usage_events.extraction_attempt_id` の FK は `complete()`/`fail()` 時点で有効。
 
-`extraction_shadow_svc.insert_shadow_run()`（`extraction_shadow_svc.py:99-148`、改修後は tokens/cost 列を書かない）は1回の INSERT で `run_id`（`gen_random_uuid()` 相当、Python 側で `uuid.uuid4()`）を確定して返す。呼び出し元 `run_shadow_for_job()`（:310-393）は `run_id = insert_shadow_run(...)` の直後に `record_usage_event_sync(..., extraction_shadow_run_id=run_id)` を呼べる。
+`backend/app/services/extraction_shadow_svc.py:99-148` の `insert_shadow_run()`（改修後は tokens/cost 列を書かない）は1回の INSERT で `run_id`（Python 側で `uuid.uuid4()`）を確定して返す。呼び出し元 `run_shadow_for_job()`（:310-393）は `run_id = insert_shadow_run(...)` の直後に `record_usage_event_sync(..., extraction_shadow_run_id=run_id)` を呼べる。
 
 ## 4. 単価・SDK usage フィールド（design.md §3-3 の根拠）
 
-- Google 公式料金表（`llm_budget.py` `LLM_PRICING` 定数、2026-09-11 追記コメント）: `gemini-3.1-flash-lite` の出力単価コメントに "Output price (including thinking tokens)" と明記。thoughts が課金対象に含まれる。
+- Google 公式料金表（`backend/app/services/llm_budget.py` の `LLM_PRICING` 定数、2026-09-11 追記コメント）: `gemini-3.1-flash-lite` の出力単価コメントに "Output price (including thinking tokens)" と明記。thoughts が課金対象に含まれる。
 - SDK の usage_metadata フィールド: `prompt_token_count` / `cached_content_token_count` / `candidates_token_count` / `thoughts_token_count` / `tool_use_prompt_token_count` / `total_token_count`。`total = prompt + candidates + tool_use_prompt + thoughts`（`candidates_token_count` 自体は thoughts を含まない）。閉じた PR #3883 (`origin/release/gemini-thinking-tokens-cost`) の `billable_output_tokens()` 実装・テストがこの前提を裏付ける（`candidates + thoughts` を課金対象出力とする）。
 
 ## 5. migration-guard / PUBLIC_TABLES
@@ -43,7 +43,7 @@
 
 ## 7. ADR 番号
 
-`docs/adr/` の最新10xx系は `ADR-1002-unify-product-id-and-fix-migration-compat.md`。`ADR-1004` / `ADR-1004` はどちらも未使用（`ls docs/adr | grep -E "1003|1004"` 0件）。設計案は当初 `ADR-1004` を仮番号としていたが、次の空き番号は `ADR-1004` のため本 PR では `ADR-1004` を採番した（design.md 内の `ADR-1004` 表記は `ADR-1004` に修正済み）。
+設計案は当初 `ADR-1004` を仮番号としていた。着手時点で `~/salesanchor`（main の物理チェックアウト）が origin/main より486コミット遅れており、`ls docs/adr | grep -E "1003|1004"` が0件だったため一度 `ADR-1003` を採番したが、worktree 作成後に origin/main 最新（`docs/adr/ADR-1003-go-delegation-to-opus.md`、2026-09-29 マージ済み）で衝突が判明し、`ADR-1004`（次の空き番号）に採番し直した。設計案の元の仮番号どおりの着地であり、design.md / recon.md / ADR ファイル名 / 全ソースコメントの `ADR-1003` 表記はすべて `ADR-1004` に統一済み（`git grep -n "ADR-1003"` で本 PR 差分に残っていないことを確認）。
 
 ## 8. deprecated 列チェック（CI）
 
