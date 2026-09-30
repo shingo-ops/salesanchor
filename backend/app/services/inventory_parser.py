@@ -868,7 +868,6 @@ async def parse_inventory_message(
     language: str = "ja",
     *,
     tenant_id: int | None = None,
-    discord_inbound_message_id: int | None = None,
 ) -> ParseResult:
     """DB から aliases / rules を読み込み、pure 関数を呼ぶ薄ラッパ。
 
@@ -899,8 +898,6 @@ async def parse_inventory_message(
         language: 'ja' / 'en' (default 'ja')
         tenant_id: budget 集計対象テナント。None なら LLM フォールバックを呼ばない
             (rule_v1 のみ。Sprint 3 までの動作と完全互換)。
-        discord_inbound_message_id: ADR-1004 llm_usage_events.discord_inbound_message_id に
-            紐付ける参照（呼出元が分かる場合のみ）。
 
     Returns:
         ParseResult: parse_engine は上記いずれか。items[] に LLM 由来も含まれる。
@@ -926,7 +923,6 @@ async def parse_inventory_message(
         tenant_id=tenant_id,
         rules=rules,
         language=language,
-        discord_inbound_message_id=discord_inbound_message_id,
     )
 
 
@@ -936,8 +932,6 @@ async def _maybe_apply_llm_fallback(
     tenant_id: int,
     rules: list[RuleRow],
     language: str,
-    *,
-    discord_inbound_message_id: int | None = None,
 ) -> ParseResult:
     """rule_v1 結果に LLM 由来 items をマージする。
 
@@ -1041,20 +1035,6 @@ async def _maybe_apply_llm_fallback(
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("[inventory_parser] record_cost failed: %s", exc)
-
-    # ADR-1004: llm_usage_events 台帳への記録（record_cost の隣、同トランザクション）
-    try:
-        await llm_budget.record_usage_event(
-            db,
-            purpose="inventory_parse_fallback",
-            model=llm_result.model,
-            sdk="google-generativeai",
-            counts=llm_result.usage_counts,
-            tenant_id=tenant_id,
-            discord_inbound_message_id=discord_inbound_message_id,
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("[inventory_parser] record_usage_event failed: %s", exc)
 
     # Step 5: LLM 由来 items を rule_v1 items にマージ
     merged_items = list(base_result.items)

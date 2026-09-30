@@ -434,7 +434,6 @@ async def schedule_parse(
                     supplier_id=supplier_id,
                     language=language,
                     tenant_id=tenant_id,
-                    discord_inbound_message_id=inbound_id,
                 )
                 # parse_engine → parse_status マッピング
                 # 参照: inventory_parser.parse_inventory_message docstring

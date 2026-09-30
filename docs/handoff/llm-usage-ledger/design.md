@@ -44,7 +44,7 @@
 |---|---|---|
 | line_extraction | tcg_extraction_record_svc.AttemptRecorder（complete / fail で今 input_tokens 等を UPDATE している箇所を置き換え） | sync |
 | line_extraction_shadow | extraction_shadow_svc（insert_shadow_run で tokens/cost を入れている箇所を置き換え、run_id を紐付け） | sync |
-| inventory_parse_fallback | inventory_parser._maybe_apply_llm_fallback の record_cost 呼び出しの隣 | async |
+| inventory_parse_fallback | 本PRでは結線しない（対象外、§4参照） | — |
 | translation_inbound / _escalation / translation_outbound | message_translator の record_cost 呼び出し3か所の隣 | async |
 - 呼び出しが例外で応答が無いときは usage が無いので行を作らない（課金の有無は不明、推測で作らない）。応答後にパースで失敗した場合は行を作る。
 - call_work_model（テスト専用）は対象外。本番経路に結線するときに purpose を追加する。
@@ -61,6 +61,7 @@ cost = prompt_tokens × 入力単価 + (candidates_tokens + thoughts_tokens) × 
 - 画面での内訳表示（PR-B で別に行う）。
 - tenant_llm_budgets の月次リセットが翻訳経路で呼ばれない件（別課題として記録）。
 - 旧列の DROP。
+- 在庫解析の補完（inventory_parse_fallback）の台帳書き込み：backend/app/services/inventory_parser.py は condition vocab gate（scripts/check-condition-vocab.js、変更ファイルの全文を旧語彙で検査・例外なし）により、既存の旧語彙を含むため編集できない。本番の在庫解析の実績は discord_inbound_messages の最終行が 2026-06-25（直近7日0件、2026-09-30 読み取り）。旧語彙の整理後に別PRで結線する。purpose の値と CHECK 制約は先に用意しておく。
 
 ## 5. 受入条件
 | 基準 | 検証方法 |
