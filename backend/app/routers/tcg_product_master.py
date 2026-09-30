@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
 from app.services.tcg_product_master_svc import (
+    add_exclude_keyword,
     add_search_keyword,
     check_duplicates,
     create_product,
@@ -255,6 +256,35 @@ async def add_product_search_keyword(
 ) -> dict:
     try:
         result = await add_search_keyword(
+            db,
+            product_id=product_id,
+            new_keyword=body.new_keyword,
+        )
+    except ValueError as e:
+        code = str(e)
+        if "NOT_FOUND" in code:
+            raise HTTPException(status_code=404, detail=code) from e
+        raise HTTPException(status_code=422, detail=code) from e
+    return result
+
+
+# ---------------------------------------------------------------------------
+# PR-D: 除外ワード追加
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/tcg/products/{product_id}/exclude-keywords",
+    summary="商品マスタ除外キーワード追加（design.md PR-D）",
+)
+async def add_product_exclude_keyword(
+    product_id: int,
+    body: AddKeywordRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: dict = Depends(require_super_admin),
+) -> dict:
+    try:
+        result = await add_exclude_keyword(
             db,
             product_id=product_id,
             new_keyword=body.new_keyword,

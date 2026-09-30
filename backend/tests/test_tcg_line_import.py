@@ -149,6 +149,36 @@ def test_parse_system_event_recall():
     assert messages[0]["is_system_event"] is True
 
 
+def test_parse_system_event_invite_wait():
+    """招待＋しばらくお待ちください（旧実装の $ アンカーがすり抜けていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 山田太郎 田中花子をグループに招待しました。招待中の友だちが参加するまでしばらくお待ちください。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
+def test_parse_system_event_removed():
+    """「グループから削除しました」もシステムイベント（旧実装で判定漏れしていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 山田太郎 田中花子をグループから削除しました。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
+def test_parse_system_event_call_ended():
+    """「グループ通話が終了しました」もシステムイベント（旧実装で判定漏れしていたパターン）。"""
+    export_text = """\
+2026.08.01 金曜日
+10:00 グループ通話 グループ通話が終了しました。
+"""
+    messages = parse_line_export(export_text)
+    assert messages[0]["is_system_event"] is True
+
+
 def test_parse_multiple_date_blocks():
     """複数の日付ブロックにまたがるメッセージが正しく日付を引き継ぐ。"""
     export_text = """\
@@ -345,7 +375,7 @@ def test_build_latest_only_with_two_messages():
 
 
 def test_build_timestamp_ascending_order():
-    """received_at は最初のタイムスタンプ、raw_text は最新（最後）のメッセージ本文（SQR-05）。"""
+    """received_at と line_posted_at は最新（最後）のタイムスタンプ、raw_text は最新のメッセージ本文（SQR-05）。"""
     resolved_messages = [
         {
             "sp_code": "SP0001", "canonical_name": "仕入元A",
@@ -360,7 +390,8 @@ def test_build_timestamp_ascending_order():
     ]
     entries = build_provider_entries(resolved_messages)
     assert len(entries) == 1
-    assert entries[0]["received_at"] == "2026-08-01 10:00:00"
+    assert entries[0]["received_at"] == "2026-08-01 10:05:00"
+    assert entries[0]["received_at"] == entries[0]["line_posted_at"]
     assert entries[0]["raw_text"] == "後のメッセージ"
 
 

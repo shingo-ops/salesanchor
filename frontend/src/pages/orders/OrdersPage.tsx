@@ -17,6 +17,7 @@ import { OrdersFilterBar } from "./OrdersFilterBar";
 import { OrdersFormModal } from "./OrdersFormModal";
 import { OrdersTable } from "./OrdersTable";
 import { emptyForm, STATUSES } from "./orders.types";
+import { Button } from "../../components/Button";
 
 export default function OrdersPage() {
   const { t } = useTranslation();
@@ -45,8 +46,8 @@ export default function OrdersPage() {
   } = state;
 
   const newOrderButton = hasPermission("orders.create") ? (
-    <button
-      className="btn-primary field-h-md"
+    <Button
+      variant="primary" size="md"
       onClick={() => {
         setShowForm(true);
         setEditId(null);
@@ -55,7 +56,7 @@ export default function OrdersPage() {
       }}
     >
       {t("orders.newOrder")}
-    </button>
+    </Button>
   ) : null;
 
   return (

@@ -28,6 +28,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.tcg_line_android_parser import parse_android_export
+from app.services.tcg_line_system_events import match_system_event
 
 # ---------------------------------------------------------------------------
 # 定数
@@ -42,11 +43,8 @@ JST = timezone(timedelta(hours=9))
 _DATE_RE = re.compile(r"^(\d{4})\.(\d{2})\.(\d{2})\s+.+$")
 # 時刻行: "14:30 山田太郎 こんにちは" など（時が 1 桁でも対応）
 _TIME_RE = re.compile(r"^(\d{1,2}):(\d{2})\s+(.+)$")
-# システムイベント（除外対象）
-_SYSTEM_EVENT_RE = re.compile(
-    r"(?:がグループに参加しました。?|をグループに招待しました。?"
-    r"|招待をキャンセルしました。?|がメッセージの送信を取り消しました。?)$"
-)
+# システムイベント判定は app.services.tcg_line_system_events.match_system_event に集約
+# （旧 _SYSTEM_EVENT_RE は削除。docs/handoff/line-parser-unify/design.md §3 C1）
 # メッセージ結合セパレーター（SQR-05）
 _MSG_SEPARATOR = "\n\n"
 
@@ -182,8 +180,7 @@ def parse_line_export(
             timestamp = f"{current_date} {hour:02d}:{minute:02d}:00"
             # GAS と同等: displayName + firstBody の連結に対してシステムイベント判定
             # (Latest24LineImport.js:73)
-            check_str = display_name + (" " + body if body else "")
-            is_system = bool(_SYSTEM_EVENT_RE.search(check_str))
+            is_system = match_system_event(display_name, body) is not None
 
             current_msg = {
                 "timestamp": timestamp,
@@ -197,9 +194,8 @@ def parse_line_export(
         if current_msg is not None:
             current_msg["body"] = current_msg["body"] + _MSG_SEPARATOR + line
             # システムイベント再判定（継続行込みで再チェック）
-            check_str = current_msg["display_name"] + " " + current_msg["body"]
-            current_msg["is_system_event"] = bool(
-                _SYSTEM_EVENT_RE.search(check_str)
+            current_msg["is_system_event"] = (
+                match_system_event(current_msg["display_name"], current_msg["body"]) is not None
             )
 
     # 最後のメッセージを確定
@@ -284,7 +280,7 @@ def build_provider_entries(
             "sp_code": str,
             "canonical_name": str,
             "raw_text": str,               # 最新メッセージ本文のみ（SQR-05）
-            "received_at": str,            # 最初の timestamp "YYYY-MM-DD HH:MM:00"
+            "received_at": str,            # 採用した最新メッセージの timestamp（line_posted_at と同値）
             "sha256": str,
             "skipped_message_count": int,  # 棄却したメッセージ数（最新以外）
         }]
@@ -303,7 +299,7 @@ def build_provider_entries(
         sorted_msgs = sorted(msgs, key=lambda m: m["timestamp"])
         latest_msg = sorted_msgs[-1]
         raw_text = latest_msg["body"]
-        received_at = sorted_msgs[0]["timestamp"]
+        received_at = latest_msg["timestamp"]
         canonical_name = sorted_msgs[0]["canonical_name"]
         skipped_message_count = len(sorted_msgs) - 1
 
@@ -578,6 +574,18 @@ async def import_line_export(
 
     # --- 3. パース & フィルタ ---
     all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
+    # PC・スマホ双方の全メッセージへ同じ文言表を当てる（二重の網）。
+    # 元の dict は書き換えず、新しい list/dict を作る。
+    all_messages = [
+        {
+            **m,
+            "is_system_event": (
+                m["is_system_event"]
+                or match_system_event(m["display_name"], m["body"]) is not None
+            ),
+        }
+        for m in all_messages
+    ]
     messages = [m for m in all_messages if not m["is_system_event"]]
 
     # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）

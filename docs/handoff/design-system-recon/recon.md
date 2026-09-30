@@ -770,3 +770,40 @@ AP実装は1c0791c1で保存し、最新main e69da6edをf3598fb2へ通常統合�
 別件の最新main deploy34797490804/job103833308323が既存migration 20260913_210000_tcg_cardset_bundle_registration.sqlの「identity mismatch PM0264」で失敗したことをrootが原ログで直接確認。バックアップsalesanchor_db_20260914_105621.sql.gz/7.2M、後続Finalize health成功。公開App/APIはTLS検証有効のcurlでHTTP200、DB/Redis/Celery connected。Pythonの初回確認はローカルCA証明書取得失敗であり稼働不良には数えない。
 
 同件はPR3496にも既に記録され、修正範囲判断待ち。APのButton変更と別の問題だが、配備前提が未解決のため今回GO依頼/マージ/本番反映を保留する。既存migrationの変更・商品名巻戻し・ガード迂回・同じ配備の無条件再実行は行っていない。根拠ap-release-prerequisite.json。AP実装・検収・保存済みと本番反映未実施を区別する。次は既存移行処理の復旧担当/範囲を確認し、復旧事実の確認後にAP番号付きGOへ進む。
+
+
+## AQ再測定（2026-09-28）
+
+基準4bad43a4、Sol実物調査で旧候補5hash/原文10一致、ページ回帰0。Astra構文監査で共通201/旧296、スタッフ日報末尾2/対象外起動1/共有14を保存。対象はStaffReportsPage93/94、5キーPOST・取消保持・成功reset・pending2回を維持。設計はdesign.md§AQ、証拠evidence-20260910/aq-staff-report-audit.json/cjs。PO画面省略は合格とはしない。既存共有金型だけ使用、DB/API/配線/データ複製変更0。最大事業効果は未測定、接触面が最小の候補を選定。
+
+
+## 2026-09-28 AR広域nativeボタン調査
+
+基点99899eb824234c7158c14855301c9412f440db2d。Sol棚卸し＋別Sol照合により14ファイル28対象、対象外53原文、共有15hashを固定。根拠: evidence-20260910/ar-button-audit.json、ar-contracts.md。フォーム分類の初期誤りを実物で訂正し、10 native forms（9 Modal/1 inline）20件＋Roles非form操作2件＋検索6件（local1/GET5）とする。Link/a、bare btn-sm、独自style/class、削除action、外部効果/loadingは一括対象外。共通203/旧294から231/266を目標とする。外観は既存Buttonを採用しpixel同値は主張しない。設計はdocs/specs/design-system/design.md §AR。
+
+承認手順調査ではmain Rulesetのrequired一覧にprocess-artifacts gateが無いことが判明（全経路の機械強制は未達）。起票前GO循環の修正は別担当release/pr-lifecycle-gatesが同ファイル変更中と判明し、重複時STOP規則に従いこちらの編集を停止、POへ担当確認中。ARからガード/外部設定を変更しない。
+
+
+AR実装後の再測定: 14製品逆変換byte一致、28対象/対象外53/共有15維持、共通231/旧266、root直接監査pass=true。操作試験はSol2担当で所有を分け交差レビューAPPROVE、対象92成功の原ログをroot確認。全体検証は ar-implementation.md に初回失敗と最終結果を分けて保存する。承認手順の別担当PR3824は07:16:22ZにMERGED（GitHub直接確認）となり、起票依存は解消。正式main統合後に公式wrapperを使用し、ガード/制度の独自変更は0。
+
+
+2026-09-28 AS設計: 基準1675bfa02で共通231/旧266。静的34件/25製品を選定、対象外232/共有15保持。既存実操作被覆10・追加24を3suiteで検証する。設計§AS自己審査APPROVE、正式カード検査後Sol2担当へ分離委任。製品/検証/PR/番号GO未完、画面省略・未検証。根拠as-button-audit.json/as-static-contracts.md/as-test-plan.md。
+
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。
+
+
+2026-09-28 正式提出: 255be0f550e7a67b1f2ebd9673ac437ad7f41edeをcommit/push、公式create-safeでPR #3834（https://github.com/shingo-ops/salesanchor/pull/3834）を提出し.pr-number/ブランチ照合済み。最新main1675bfa02と整合、未保存0を直接確認。PRのprocess-artifacts gateは今回番号付きGOの未受領で停止（run36404560681/job108870059341原ログ確認）、技術検査は確認継続。CLAUDE.md/ADR-136と公式マージ経路が番号付きPO原文を要求するため、包括的な続行許可から「GO #3834」を創作しない。新規GO受領後は対象HEAD・最新CI・本番バックアップを再確認して公式merge/deploy経路へ進む。現時点で本便のマージ/本番反映は未実施。
+
+
+2026-09-28 AS本番反映完了: 本人GO #3834、公式merge b3cf1fdf3（11:32:45Z）、Deploy36416280694成功。root 2026-09-28T11:36:40.862290+00:00に本番HEAD/公開index・JSとcontainer hash/HTTP200/接続3項目一致を直接確認。34件移管、共通265/旧232。根拠as-implementation.md/as-production-verification.json。画面・実ログイン・本番フォーム・PO目視は省略・未検証。
+
+
+## 2026-09-28 AT フォーム残数と保存契約
+
+固定a1cd9eaで再測定: 共通265、旧232=native224+link8。11件/9製品を選定、対象外221、共有18hashを保存。詳細は[evidence-20260910/at-button-inventory.md](evidence-20260910/at-button-inventory.md)、[全原文監査](evidence-20260910/at-button-audit.json)、[Commerce操作](evidence-20260910/at-commerce-test-plan.md)、[管理・会社・本人操作](evidence-20260910/at-admin-test-plan.md)。Invoice submit外部FXとRoles認可変更は除外、既存PO supplier tenant複製/public master更新は既存効果として区別し本便DB変更なし。全体KGI達成や事業効果は未測定。
+
+
+## 2026-09-29 AU全旧ボタン再測定
+
+親: docs/specs/design-system/README.md、設計: docs/specs/design-system/design.md §AU。基準303c3cfe7で旧221/71file、Button.tsx:38/75のnative契約とHeaderButton.tsx:17-19の間接CSS依存を実物確認。全原文・変換・検算・限界は[evidence-20260910/au-implementation.md](evidence-20260910/au-implementation.md)を参照。外部仕様はContext7利用不可につき公式Router文書/実導入7.18.0を対照。

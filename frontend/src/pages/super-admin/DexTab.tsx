@@ -11,6 +11,7 @@
 import { useEffect, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 
 type DexKind = "pokemon" | "trainer";
 
@@ -170,9 +171,9 @@ export default function DexTab() {
         <td>{it.era}</td>
       )}
       <td>
-        <button onClick={() => startEdit(it)} className="btn-secondary">
+        <Button onClick={() => startEdit(it)} variant="secondary" size="md">
           {t("common.edit")}
-        </button>
+        </Button>
       </td>
     </tr>
   );
@@ -203,9 +204,9 @@ export default function DexTab() {
             if (e.key === "Enter") load();
           }}
         />
-        <button onClick={load} className="btn-secondary">
+        <Button onClick={load} variant="secondary" size="md">
           {t("common.search")}
-        </button>
+        </Button>
       </div>
 
       {/* ADR-084: PokeAPI 取込 (ポケモン図鑑のみ) */}
@@ -219,15 +220,15 @@ export default function DexTab() {
             margin: "0.5rem 0",
           }}
         >
-          <button
+          <Button variant="secondary" size="md"
             type="button"
-            className="btn-secondary"
+
             disabled={importing}
             onClick={runImportPreview}
             data-testid="dex-import-preview-btn"
           >
             {t("superAdmin.dex.import.previewBtn")}
-          </button>
+          </Button>
           {importMsg && (
             <span style={{ color: "var(--text-secondary)" }}>{importMsg}</span>
           )}
@@ -273,9 +274,9 @@ export default function DexTab() {
               </li>
             ))}
           </ul>
-          <button
+          <Button variant="primary" size="md"
             type="button"
-            className="btn-primary"
+
             disabled={importing}
             onClick={runImportApply}
             data-testid="dex-import-apply-btn"
@@ -283,7 +284,7 @@ export default function DexTab() {
             {t("superAdmin.dex.import.applyBtn", {
               count: importPreview.added_count,
             })}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -318,12 +319,12 @@ export default function DexTab() {
             )}
           </div>
           <div style={{ marginTop: "var(--space-2)" }}>
-            <button type="submit" className="btn-primary">
+            <Button type="submit" variant="primary" size="md">
               {t("common.save")}
-            </button>{" "}
-            <button type="button" onClick={() => setEditing(null)} className="btn-secondary">
+            </Button>{" "}
+            <Button type="button" onClick={() => setEditing(null)} variant="secondary" size="md">
               {t("common.cancel")}
-            </button>
+            </Button>
           </div>
         </form>
       )}

@@ -18,6 +18,8 @@
  *   MOCK_ORIGIN_MAIN_FILES latest origin/main の改行区切りファイルリスト
  *   MOCK_PR_BODY  PR 本文テキスト（GitHub API の代替）
  *   MOCK_PR_AUTHOR PR 作者ログイン（GitHub API の代替）
+ *   LOCAL_PRECHECK PR作成前の事前検査モード（'1'で有効。GO記録検査を省略し、PR番号猶予は
+ *                   「猶予なし」として扱う。CI（GITHUB_ACTIONS=true）では使用不可）
  */
 'use strict';
 
@@ -29,11 +31,59 @@ const { join } = require('path');
 const repoRoot = execSync('git rev-parse --show-toplevel', { encoding: 'utf8' }).trim();
 let cachedOriginMainPaths = null;
 
+// ─── PR作成前の事前検査モード（scripts/dev/validate-pr-body.sh から呼ばれる） ──
+const LOCAL_PRECHECK = process.env.LOCAL_PRECHECK === '1';
+
 // ─── 認可された PR 作者（コード変更PR作成可） ────────────────────────────────
 const AUTHORIZED_AUTHORS = ['shingo-cc', 'Hikky-dev'];
+const TARGET_REPO = 'shingo-ops/salesanchor';
+const TARGET_GH_REPO = 'github.com/shingo-ops/salesanchor';
 
-// ─── GO権限（PO単独）────────────────────────────────────────────────────────
-const AUTHORIZED_GO_ISSUERS = ['shingo-ops', 'Shingo'];
+// ─── GO権限（PO単独。ADR-1003 により例外を除き Claude Opus 設計担当へ常時委譲）──
+const PO_GO_ISSUERS = ['shingo-ops', 'Shingo'];
+const DELEGATED_GO_ISSUER = 'POの委任に基づくClaude Opus発行';
+const AUTHORIZED_GO_ISSUERS = [...PO_GO_ISSUERS, DELEGATED_GO_ISSUER];
+
+// ─── 委譲の例外パス（ADR-1003・PO本人のGOが必須） ────────────────────────────
+// DANGEROUS_PATTERNS と同じ regex 方式で判定する。
+const PO_ONLY_EXCEPTION_PATTERNS = [
+  /^\.github\/workflows\/workflow-lint\.yml$/,
+];
+
+function hasPoOnlyExceptionPath(files) {
+  return files.some(f => PO_ONLY_EXCEPTION_PATTERNS.some(r => r.test(f)));
+}
+
+// ─── migration の DROP TABLE / DROP COLUMN 検出（ADR-1003 例外判定） ─────────
+function migrationsContainDropStatement(files) {
+  if (process.env.MOCK_MIGRATION_DROP_DETECTED !== undefined) {
+    return process.env.MOCK_MIGRATION_DROP_DETECTED === 'true';
+  }
+
+  const migrationFiles = files.filter(f => /^migrations\//.test(f));
+  if (migrationFiles.length === 0) return false;
+
+  const base = process.env.BASE_SHA;
+  const head = process.env.HEAD_SHA;
+  // migration ファイルがあるのに diff を取れない場合は fail-closed（PO本人のGO必須側）に倒す
+  if (!base || !head) return true;
+
+  try {
+    const diff = execSync(
+      `git diff "${base}...${head}" -- ${migrationFiles.map(f => `"${f}"`).join(' ')}`,
+      { encoding: 'utf8' }
+    );
+    const addedLines = diff.split('\n').filter(l => l.startsWith('+') && !l.startsWith('+++'));
+    return addedLines.some(l => /DROP\s+(TABLE|COLUMN)/i.test(l));
+  } catch {
+    // git diff 自体が失敗した場合も fail-closed
+    return true;
+  }
+}
+
+function requiresPoOnlyGo(files) {
+  return hasPoOnlyExceptionPath(files) || migrationsContainDropStatement(files);
+}
 
 // ─── 維持の仕組み欄の猶予閾値（GRACE_THRESHOLD_PR と同値） ───────────────────
 const MAINTENANCE_GRACE_PR = 2600;
@@ -292,7 +342,7 @@ function parseGORecord(prBody) {
  * バックアップ確認: 「あり」「なし」「該当なし」いずれも可（DB非接触の危険変更は「該当なし」でよい）
  * GOの正式書式: 「GO #<PR番号>」（番号必須。番号のない曖昧な肯定はGOとみなさない）
  */
-function validateGORecord(goRecord, prNumber) {
+function validateGORecord(goRecord, prNumber, { requiresPoOnly = false } = {}) {
   if (!goRecord) {
     return [
       '❌ PR本文に「### GO記録」セクションがありません',
@@ -306,7 +356,10 @@ function validateGORecord(goRecord, prNumber) {
 
   if (!goRecord.issuer || !AUTHORIZED_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
     errors.push(`❌ GO発行者が未記入または権限外です（「${goRecord.issuer || '未記入'}」）`);
-    errors.push('   → GO権限はPO（Shingo / shingo-ops）のみです（Hikky-devによるバイパスは廃止）');
+    errors.push('   → GO権限はPO（Shingo / shingo-ops）またはADR-1003の委譲名義のみです');
+  } else if (requiresPoOnly && !PO_GO_ISSUERS.some(a => goRecord.issuer.includes(a))) {
+    errors.push(`❌ この変更はADR-1003の例外対象のためPO本人のGOが必要です（委譲名義「${goRecord.issuer}」は使用不可）`);
+    errors.push('   → DROP TABLE/COLUMN を含む migration、または .github/workflows/workflow-lint.yml の変更は常にPO本人（Shingo / shingo-ops）のGOが必要です');
   }
 
   if (!goRecord.date || goRecord.date.trim().length < 5) {
@@ -330,6 +383,20 @@ function validateGORecord(goRecord, prNumber) {
   }
 
   return errors;
+}
+
+/**
+ * GO記録検査の呼び出しラッパー。LOCAL_PRECHECK では GO記録検査を省略する
+ * （PR番号確定前の事前検査では GO記録がまだ書けないため。カード §2）。
+ * LOCAL_PRECHECK でないときは validateGORecord をそのまま呼ぶ（挙動は変えない）。
+ */
+function checkGoRecord(prBody, prNumber, requiresPoOnly) {
+  if (LOCAL_PRECHECK) {
+    console.log('⏭ GO記録は PR 番号確定後に CI で検査します（PR 作成前の事前検査では省略）');
+    return [];
+  }
+  const goRecord = parseGORecord(prBody);
+  return validateGORecord(goRecord, prNumber, { requiresPoOnly });
 }
 
 // ─── recon.md 検証 ────────────────────────────────────────────────────────────
@@ -532,7 +599,7 @@ function createFollowupIssue(prNumber, repo) {
     // 重複起票防止（同PR番号のopenイシューがあればスキップ）
     const existingIssues = JSON.parse(
       execSync(
-        `gh issue list --label "sop-followup" --state open --json number,title --repo "${repo}"`,
+        `gh issue list --label "sop-followup" --state open --json number,title --repo "${TARGET_GH_REPO}"`,
         { encoding: 'utf8' }
       ).trim()
     );
@@ -542,7 +609,7 @@ function createFollowupIssue(prNumber, repo) {
     }
 
     execSync(
-      `gh issue create --title "${title}" --body '${body.replace(/'/g, "'\\''")}' --label "sop-followup" --repo "${repo}"`,
+      `gh issue create --title "${title}" --body '${body.replace(/'/g, "'\\''")}' --label "sop-followup" --repo "${TARGET_GH_REPO}"`,
       { encoding: 'utf8' }
     );
     console.log(`  📌 宿題待ち issue を起票しました（期限: ${deadline}）`);
@@ -626,9 +693,9 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
       const designErrors = validateDesignDoc(designContent, reconPath, adrs);
       errors.push(...designErrors);
 
-      // 維持の仕組み欄 検査（PR番号2600以上のみ・初期は警告モード）
+      // 維持の仕組み欄 検査（PR番号2600以上のみ・初期は警告モード。LOCAL_PRECHECKは猶予なし扱い）
       const maintenancePrNumber = parseInt(process.env.PR_NUMBER, 10);
-      if (maintenancePrNumber >= MAINTENANCE_GRACE_PR) {
+      if (LOCAL_PRECHECK || maintenancePrNumber >= MAINTENANCE_GRACE_PR) {
         const maintenanceErrors = validateMaintenanceSection(designContent);
         if (maintenanceErrors.length > 0) {
           if (process.env.MAINTENANCE_ENFORCE === 'fail') {
@@ -651,6 +718,18 @@ function runFullCheck(declaration, { allowExempt = true } = {}) {
 
 // ─── メイン ──────────────────────────────────────────────────────────────────
 function main() {
+  if (LOCAL_PRECHECK && process.env.GITHUB_ACTIONS === 'true') {
+    console.error('❌ LOCAL_PRECHECK は CI では使えません');
+    process.exit(1);
+  }
+
+  const cliArgs = process.argv.slice(2);
+  const validationOnly = cliArgs.includes('--validation-only');
+  const unknownArgs = cliArgs.filter(arg => arg !== '--validation-only');
+  if (unknownArgs.length > 0 || cliArgs.filter(arg => arg === '--validation-only').length > 1) {
+    console.error(`❌ 不正な引数です: ${cliArgs.join(' ')}`);
+    process.exit(1);
+  }
   // develop→main リリースPR は develop 段階で通過済み → スキップ
   // その他の →main PR（hotfix 等）は通常どおり検査
   const headRef = process.env.MOCK_HEAD_REF !== undefined ? process.env.MOCK_HEAD_REF : (process.env.HEAD_REF || '');
@@ -705,13 +784,16 @@ function main() {
   // PR 作者チェック（コード変更を含む PR のみ）
   const prNumber = process.env.PR_NUMBER;
   const repo = process.env.REPO;
+  if (repo && repo !== TARGET_REPO) {
+    printFailure([`❌ 対象外repoは検査できません: ${repo}`]);
+  }
   let prAuthor = '';
   if (process.env.MOCK_PR_AUTHOR !== undefined) {
     prAuthor = process.env.MOCK_PR_AUTHOR;
   } else if (prNumber && repo) {
     try {
       prAuthor = execSync(
-        `gh api "repos/${repo}/pulls/${prNumber}" --jq '.user.login'`,
+        `gh api --hostname github.com "repos/${TARGET_REPO}/pulls/${prNumber}" --jq '.user.login'`,
         { encoding: 'utf8' }
       ).trim();
     } catch {
@@ -733,7 +815,7 @@ function main() {
   } else if (prNumber && repo) {
     try {
       prBody = execSync(
-        `gh api "repos/${repo}/pulls/${prNumber}" --jq '.body // ""'`,
+        `gh api --hostname github.com "repos/${TARGET_REPO}/pulls/${prNumber}" --jq '.body // ""'`,
         { encoding: 'utf8' }
       ).trim();
     } catch {
@@ -760,7 +842,7 @@ function main() {
     /^\.claude-pipeline\/active-work\.md$/,
   ];
 
-  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+  if (LOCAL_PRECHECK || parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
     const targets = changedFiles.filter(
       f => !TOUCH_FILE_EXCLUDE_PATTERNS.some(p => p.test(f))
     );
@@ -785,7 +867,7 @@ function main() {
   // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
 
   // ─── 削除ファイル宣言 vs 実diff 照合（PR番号2600以上で義務化） ─────────────
-  if (parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
+  if (LOCAL_PRECHECK || parseInt(prNumber, 10) >= GRACE_THRESHOLD_PR) {
     const base = process.env.BASE_SHA;
     const head = process.env.HEAD_SHA;
     if (base && head) {
@@ -827,10 +909,11 @@ function main() {
   }
   // PR番号 < 2600 はこのブロックを通らない＝スキップ（猶予）
 
+  const requiresPoOnly = requiresPoOnlyGo(changedFiles);
+
   // 危ない変更の処理（GO記録チェック）
   if (hasDangerous) {
-    const goRecord = parseGORecord(prBody);
-    const goErrors = validateGORecord(goRecord, prNumber);
+    const goErrors = checkGoRecord(prBody, prNumber, requiresPoOnly);
 
     if (goErrors.length > 0) {
       printFailure(goErrors);
@@ -838,8 +921,12 @@ function main() {
 
     const mode = declaration ? declaration.mode : null;
     if (mode === '緊急') {
-      console.log(`✅ 危ない変更：GO記録確認済み（緊急）— pass＋宿題待ち起票`);
-      createFollowupIssue(prNumber, repo);
+      if (validationOnly) {
+        console.log(`✅ 危ない変更：GO記録確認済み（緊急）— validation-onlyのため宿題待ち起票なし`);
+      } else {
+        console.log(`✅ 危ない変更：GO記録確認済み（緊急）— pass＋宿題待ち起票`);
+        createFollowupIssue(prNumber, repo);
+      }
     } else {
       console.log(`✅ 危ない変更：GO記録確認済み — pass`);
     }
@@ -848,8 +935,7 @@ function main() {
 
   // ユーザー影響のある変更・外部API変更は、develop へ入る前に Shingo GO が必須
   if (hasUserImpacting || hasExternalApiImpact) {
-    const goRecord = parseGORecord(prBody);
-    const goErrors = validateGORecord(goRecord, prNumber);
+    const goErrors = checkGoRecord(prBody, prNumber, requiresPoOnly);
 
     if (goErrors.length > 0) {
       printFailure([
@@ -863,6 +949,17 @@ function main() {
       ? '✅ 外部API変更：GO記録確認済み — pass'
       : '✅ ユーザー影響変更：GO記録確認済み — pass';
     console.log(label);
+  } else if (requiresPoOnly) {
+    // hasDangerous / hasUserImpacting のどちらにも該当しないが、
+    // ADR-1003 の例外対象パス（workflow-lint.yml 等）に該当する場合はここで GO を要求する
+    const goErrors = checkGoRecord(prBody, prNumber, requiresPoOnly);
+
+    if (goErrors.length > 0) {
+      printFailure(goErrors);
+    }
+
+    console.log('✅ ADR-1003例外対象（PO本人のGO必須）：GO記録確認済み — pass');
+    process.exit(0);
   }
 
   // 実コード変更の処理
@@ -891,6 +988,9 @@ module.exports = {
   validateFileCitations,
   validateDesignDoc,
   validateMaintenanceSection,
+  hasPoOnlyExceptionPath,
+  migrationsContainDropStatement,
+  requiresPoOnlyGo,
 };
 
 // CLI として直接実行された場合のみ main() を呼ぶ

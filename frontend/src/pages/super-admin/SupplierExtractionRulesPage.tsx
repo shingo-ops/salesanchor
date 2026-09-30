@@ -43,6 +43,7 @@ interface SupplierExtractionDetail {
   extraction_state_format: string | null;
   extraction_notes: string | null;
   extraction_example_text: string | null;
+  extraction_ship_format: string | null;
   latest_raw_text: string | null;
 }
 
@@ -81,6 +82,7 @@ type RulesFormState = {
   extraction_state_format: string;
   extraction_notes: string;
   extraction_example_text: string;
+  extraction_ship_format: string;
 };
 
 const emptyForm: RulesFormState = {
@@ -91,6 +93,7 @@ const emptyForm: RulesFormState = {
   extraction_state_format: "",
   extraction_notes: "",
   extraction_example_text: "",
+  extraction_ship_format: "",
 };
 
 function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
@@ -102,6 +105,7 @@ function detailToForm(detail: SupplierExtractionDetail): RulesFormState {
     extraction_state_format: detail.extraction_state_format ?? "",
     extraction_notes: detail.extraction_notes ?? "",
     extraction_example_text: detail.extraction_example_text ?? "",
+    extraction_ship_format: detail.extraction_ship_format ?? "",
   };
 }
 
@@ -422,6 +426,7 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
         extraction_state_format: form.extraction_state_format || null,
         extraction_notes: form.extraction_notes || null,
         extraction_example_text: form.extraction_example_text || null,
+        extraction_ship_format: form.extraction_ship_format || null,
       };
       await api.patch(
         `/super-admin/suppliers/${selectedSupplier.supplier_id}/extraction-rules`,
@@ -785,6 +790,17 @@ export default function SupplierExtractionRulesPage({ embedded = false }: Suppli
               }
               rows={8}
               placeholder={t("supplierExtractionRules.exampleTextPlaceholder")}
+              fullWidth
+            />
+
+            <Textarea
+              label={t("supplierExtractionRules.shipFormat")}
+              helperText={t("supplierExtractionRules.shipFormatHelper")}
+              value={form.extraction_ship_format}
+              onChange={(e) =>
+                setForm((prev) => ({ ...prev, extraction_ship_format: e.target.value }))
+              }
+              rows={4}
               fullWidth
             />
 

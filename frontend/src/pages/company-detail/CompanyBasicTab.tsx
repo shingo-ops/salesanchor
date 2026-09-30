@@ -5,6 +5,7 @@
 
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import { Button } from "../../components/Button";
 import type { BasicFormState, Company } from "./company-detail.types";
 
 interface Props {
@@ -94,9 +95,9 @@ export function CompanyBasicTab({
       </div>
       {canEdit && (
         <div className="form-actions">
-          <button type="submit" className="btn-primary" disabled={!basicDirty || basicSubmitting}>
+          <Button type="submit" variant="primary" size="md" disabled={!basicDirty || basicSubmitting}>
             {basicSubmitting ? t("common.saving") : t("companies.saveBasicInfo")}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -123,18 +124,18 @@ export function CompanyBasicTab({
           <h3>{t("companies.dedupResolveTitle")}</h3>
           <p>{t("companies.dedupResolveDesc")}</p>
           <div className="dedup-resolve-actions">
-            <button
+            <Button variant="primary" size="md"
               type="button"
-              className="btn-primary"
+
               onClick={() => setDedupConfirmOpen(true)}
               disabled={dedupSubmitting || basicDirty}
               title={basicDirty ? t("companies.dedupUnsavedHint") : ""}
             >
               {t("companies.dedupConfirmAsDistinct")}
-            </button>
-            <button
+            </Button>
+            <Button variant="danger" size="md"
               type="button"
-              className="btn-danger"
+
               onClick={() => setMergeModalOpen(true)}
               disabled={!canMerge || dedupSubmitting || basicDirty}
               title={
@@ -146,7 +147,7 @@ export function CompanyBasicTab({
               }
             >
               {t("companies.dedupMergeLabel")}
-            </button>
+            </Button>
           </div>
         </div>
       )}

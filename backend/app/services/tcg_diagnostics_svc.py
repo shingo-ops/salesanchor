@@ -6,8 +6,9 @@ TCG 診断 API サービス層。
 SELECT のみ（retry_extraction を除く）。
 
 retry_extraction:
-  status='pending' または 'error' のジョブを再エンキューする。
-  'done' / 'running' は skipped。
+  job_ids 指定時：status='error' のジョブのみを再エンキューする。
+    'pending' / 'running' / それ以外は skipped（二重投入防止。design §5）。
+  scope="pending" 指定時：status='pending' の全件（最大 50 件）を対象とする（変更なし）。
   Celery 未接続時は RuntimeError を送出（呼び出し元で 503 に変換）。
 """
 from __future__ import annotations
@@ -137,7 +138,7 @@ async def run_diagnostic(db: AsyncSession, *, key: str) -> list[dict]:
 # 再エンキュー（retry-extraction エンドポイント用）
 # ---------------------------------------------------------------------------
 
-_ELIGIBLE_STATUSES = frozenset({"pending", "error"})
+_ELIGIBLE_STATUSES = frozenset({"error"})
 _MAX_JOBS = 50
 _COUNTDOWN_STEP = 3  # seconds per job
 
@@ -153,7 +154,8 @@ async def retry_extraction(
 
     Args:
         db:       非同期 DB セッション
-        job_ids:  再実行対象の extraction_job ID リスト（最大 50 件）
+        job_ids:  再実行対象の extraction_job ID リスト（最大 50 件）。
+                  status='error' 以外（pending/running 含む）は skipped
         scope:    "pending" のとき status='pending' の全件（最大 50 件）を対象とする
 
     Returns:
@@ -161,7 +163,14 @@ async def retry_extraction(
 
     Raises:
         RuntimeError: Celery タスクが未初期化、または Redis 接続失敗
+        ValueError: job_ids が _MAX_JOBS 件を超える場合
     """
+    # 0. job_ids の件数上限チェック（API 側で先に弾かれるが、サービス層直接呼び出しも保護する）
+    if job_ids is not None and len(job_ids) > _MAX_JOBS:
+        raise ValueError(
+            f"job_ids must contain at most {_MAX_JOBS} entries (got {len(job_ids)})"
+        )
+
     # 1. Celery タスクが利用可能か事前確認
     try:
         from app.tasks.tcg_extraction import extract_source_message_task  # noqa: PLC0415
@@ -209,6 +218,15 @@ async def retry_extraction(
     # 3. error → pending にリセット（pending はそのまま）
     error_ids = [str(row.id) for row in rows if row.status == "error"]
     if error_ids:
+        # リトライ前に古い extraction_items を削除（安全策）
+        # FK CASCADE (analysis_results → extraction_items) により紐づく analysis_results も自動削除される
+        await db.execute(
+            text(
+                f"DELETE FROM {TCG_SCHEMA}.extraction_items"
+                " WHERE extraction_job_id = ANY(:ids)"
+            ),
+            {"ids": error_ids},
+        )
         await db.execute(
             text(
                 f"UPDATE {TCG_SCHEMA}.extraction_jobs"

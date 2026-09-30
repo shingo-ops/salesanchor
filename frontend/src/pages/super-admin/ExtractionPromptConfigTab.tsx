@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import { Button } from "../../components/Button";
 
 const PROMPT_KEYS = ["base_extraction", "work_id_extraction"] as const;
 type PromptKey = (typeof PROMPT_KEYS)[number];
@@ -238,15 +239,15 @@ export default function ExtractionPromptConfigTab() {
           />
 
           <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "var(--space-3)" }}>
-            <button
+            <Button variant="primary" size="md"
               type="button"
-              className="btn-primary"
+
               disabled={saving[key]}
               data-testid={`prompt-save-${key}`}
               onClick={() => void handleSave(key)}
             >
               {saving[key] ? t("common.saving") : t(`${p}.save`)}
-            </button>
+            </Button>
           </div>
         </section>
       ))}

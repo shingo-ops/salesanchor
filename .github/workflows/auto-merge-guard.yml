@@ -1,0 +1,73 @@
+name: 自動マージの見張り
+
+# 自動マージが予約された PR が「台帳 DONE化 PR」でなければ、予約を取り消してコメントを残す。
+# 判定の正: scripts/ci/is-ledger-done-pr.sh（main 側のものだけを使う）
+#
+# 重要:
+# - pull_request_target は base（main）側の定義で動く。PR のコードは checkout しない。
+# - GITHUB_TOKEN で `--auto` を予約するとこのワークフローは起動しない。
+#   GITHUB_TOKEN で `--auto` を使うワークフローの追加は禁止（ADR-050 追補）。
+# - 予約の取り消しには PIPELINE_PAT を使う。
+#
+# 設計: docs/handoff/ledger-auto-done-main/design.md
+
+on:
+  pull_request_target:
+    types: [auto_merge_enabled, synchronize]
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout main (script only)
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          persist-credentials: false
+
+      - name: Cancel auto-merge unless ledger DONE PR
+        env:
+          GH_TOKEN: ${{ secrets.PIPELINE_PAT }}
+          GH_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          EVENT_ACTION: ${{ github.event.action }}
+        run: |
+          set -uo pipefail
+
+          # synchronize（予約後の push）は、予約が付いているときだけ判定する
+          if [ "${EVENT_ACTION}" = "synchronize" ]; then
+            if ! HAS_AUTO="$(gh pr view "${PR_NUMBER}" --json autoMergeRequest --jq '.autoMergeRequest != null')"; then
+              echo "::error::autoMergeRequest を取得できない: #${PR_NUMBER}"
+              exit 1
+            fi
+            if [ "${HAS_AUTO}" != "true" ]; then
+              echo "自動マージの予約なし - 何もしない"
+              exit 0
+            fi
+          fi
+
+          if REASON="$(bash scripts/ci/is-ledger-done-pr.sh "${PR_NUMBER}" 2>&1)"; then
+            echo "台帳 DONE化 PR - 自動マージを許可"
+            exit 0
+          fi
+
+          echo "台帳 DONE化 PR ではない: ${REASON}"
+          FAILED=0
+
+          if ! gh pr merge "${PR_NUMBER}" --disable-auto; then
+            echo "::error::予約の取り消しに失敗: #${PR_NUMBER}"
+            FAILED=1
+          fi
+
+          BODY_FILE="$(mktemp)"
+          printf '%s\n' "自動マージは台帳 DONE化 PR だけに限られています（理由: ${REASON}）。GO を受けてから手でマージしてください" > "${BODY_FILE}"
+          if ! gh pr comment "${PR_NUMBER}" --body-file "${BODY_FILE}"; then
+            echo "::error::コメントの投稿に失敗: #${PR_NUMBER}"
+            FAILED=1
+          fi
+          rm -f "${BODY_FILE}"
+
+          exit "${FAILED}"

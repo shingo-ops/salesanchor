@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
+import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -275,9 +276,9 @@ export default function ConditionsPage() {
       renderCell: c => (
         <span className="actions">
           {hasPermission("conditions.update") && (
-            <button className="btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
               {t("common.edit")}
-            </button>
+            </Button>
           )}
         </span>
       ),
@@ -412,17 +413,17 @@ export default function ConditionsPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="conditions-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="conditions-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="conditions-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
-              <button
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="btn-sm"
+
                 onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
               >
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -591,27 +592,27 @@ export default function ConditionsPage() {
           data-testid="conditions-pagination"
         >
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
               data-testid="conditions-page-prev"
             >
               {t("common.prevPage")}
-            </button>
+            </Button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="conditions-page-info">
             {t(`${f}.total`, { count: items.length })}
           </span>
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => p + 1)}
               disabled={!hasNext}
               data-testid="conditions-page-next"
             >
               {t("common.nextPage")}
-            </button>
+            </Button>
           )}
         </div>
       )}

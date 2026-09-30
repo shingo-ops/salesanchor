@@ -217,9 +217,9 @@ export default function StaffPage() {
       {error && <div className="error-message">{error}</div>}
       <ContentToolbar
         right={hasPermission("staff.create") ? (
-          <button className="btn-primary field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
+          <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => { setShowCreate(true); setCreateForm(emptyCreateForm); }}>
             {t("staff.newStaff")}
-          </button>
+          </Button>
         ) : undefined}
       />
 
@@ -363,8 +363,8 @@ export default function StaffPage() {
             header: t("common.actions"),
             renderCell: (s) => (
               <span className="actions">
-                {hasPermission("staff.update") && <button className="btn-sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</button>}
-                {hasPermission("staff.delete") && <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("common.delete")}</button>}
+                {hasPermission("staff.update") && <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); handleRowClick(s); }}>{t("common.edit")}</Button>}
+                {hasPermission("staff.delete") && <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(s); }}>{t("common.delete")}</Button>}
               </span>
             ),
           },

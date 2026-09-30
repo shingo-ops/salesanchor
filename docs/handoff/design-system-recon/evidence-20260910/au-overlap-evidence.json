@@ -1,0 +1,232 @@
+{
+  "base": "303c3cfe756b1d82c042cba342c3a3150fc5ab8c",
+  "officialWorktreeStatus": "",
+  "rootWorktreeStatus": "",
+  "prs": [
+    {
+      "pr": 2685,
+      "head": "9c36bd69ad8323544e25c9ff1bd42b10346d2323",
+      "files": [
+        "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+        "frontend/src/pages/super-admin/FxRatePage.tsx"
+      ],
+      "worktree": "/Users/tanizawashingo/worktrees/salesanchor/hotfix-morimoto-fx-rate-null-guard",
+      "nodes": [
+        {
+          "file": "frontend/src/pages/quote-detail/QuoteDetailPage.tsx",
+          "count": 6,
+          "exactRawUnchangedInPrHead": 0,
+          "changedNodes": [
+            {
+              "line": 133,
+              "classNameRaw": "\"btn-primary field-h-md\"",
+              "openingRaw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"send\")}>"
+            },
+            {
+              "line": 137,
+              "classNameRaw": "\"btn-primary field-h-md\"",
+              "openingRaw": "<button className=\"btn-primary field-h-md\" onClick={() => doAction(\"approve\")}>"
+            },
+            {
+              "line": 138,
+              "classNameRaw": "\"btn-danger field-h-md\"",
+              "openingRaw": "<button className=\"btn-danger field-h-md\" onClick={() => doAction(\"reject\")}>"
+            },
+            {
+              "line": 142,
+              "classNameRaw": "\"btn-primary field-h-md\"",
+              "openingRaw": "<button className=\"btn-primary field-h-md\" onClick={convertToInvoice}>"
+            },
+            {
+              "line": 145,
+              "classNameRaw": "\"btn-secondary field-h-md\"",
+              "openingRaw": "<button className=\"btn-secondary field-h-md\" onClick={handleFetchFxRate} disabled={fxLoading}>"
+            },
+            {
+              "line": 149,
+              "classNameRaw": "\"btn-secondary field-h-md\"",
+              "openingRaw": "<button className=\"btn-secondary field-h-md\" onClick={handleDownloadPdf}>"
+            }
+          ]
+        },
+        {
+          "file": "frontend/src/pages/super-admin/FxRatePage.tsx",
+          "count": 1,
+          "exactRawUnchangedInPrHead": 0,
+          "changedNodes": [
+            {
+              "line": 93,
+              "classNameRaw": "\"btn-primary field-h-md\"",
+              "openingRaw": "<button\n            type=\"button\"\n            className=\"btn-primary field-h-md\"\n            onClick={handleRefresh}\n            disabled={refreshing}\n            data-testid=\"fx-rate-refresh-btn\"\n          >"
+            }
+          ]
+        }
+      ],
+      "worktreeStatus": "",
+      "worktreePresence": "present"
+    },
+    {
+      "pr": 2668,
+      "head": "03de7daac04b535af5ba729111a695e59c1acc87",
+      "files": [
+        "frontend/src/pages/invoices/InvoicesPage.tsx"
+      ],
+      "worktree": "/Users/tanizawashingo/worktrees/salesanchor/release-morimoto-select-control-bare-select",
+      "nodes": [
+        {
+          "file": "frontend/src/pages/invoices/InvoicesPage.tsx",
+          "count": 2,
+          "exactRawUnchangedInPrHead": 1,
+          "changedNodes": [
+            {
+              "line": 140,
+              "classNameRaw": "\"btn-primary field-h-md\"",
+              "openingRaw": "<button className=\"btn-primary field-h-md\" onClick={() => navigate(\"/invoices/new\")}>"
+            }
+          ]
+        }
+      ],
+      "worktreeStatus": "",
+      "worktreePresence": "present"
+    },
+    {
+      "pr": 2667,
+      "head": "eef905e231b926caaa947837356f625a1a15edc2",
+      "files": [
+        "frontend/src/pages/inbox/InboxPage.tsx"
+      ],
+      "worktree": "/Users/tanizawashingo/worktrees/salesanchor/feature-morimoto-manual-record-to-meta-messages",
+      "nodes": [
+        {
+          "file": "frontend/src/pages/inbox/InboxPage.tsx",
+          "count": 2,
+          "exactRawUnchangedInPrHead": 2,
+          "changedNodes": []
+        }
+      ],
+      "worktreeStatus": "",
+      "worktreePresence": "present"
+    },
+    {
+      "pr": 2656,
+      "head": "f1a53769576ada3de3f174a3f82cc5d5318f9648",
+      "files": [
+        "frontend/src/pages/admin/DiscordConfigPage.tsx"
+      ],
+      "worktree": "/Users/tanizawashingo/worktrees/salesanchor/feature-morimoto-discord-config-card-tidy",
+      "nodes": [
+        {
+          "file": "frontend/src/pages/admin/DiscordConfigPage.tsx",
+          "count": 4,
+          "exactRawUnchangedInPrHead": 0,
+          "changedNodes": [
+            {
+              "line": 278,
+              "classNameRaw": "\"btn btn-primary\"",
+              "openingRaw": "<button onClick={handleSave} disabled={saving} className=\"btn btn-primary\">"
+            },
+            {
+              "line": 300,
+              "classNameRaw": "\"btn btn-secondary\"",
+              "openingRaw": "<button\n              onClick={handleAutoSetup}\n              disabled={!guildId || autoSetupRunning}\n              className=\"btn btn-secondary\"\n            >"
+            },
+            {
+              "line": 541,
+              "classNameRaw": "\"btn btn-primary\"",
+              "openingRaw": "<button onClick={handleTicketSave} disabled={ticketSaving} className=\"btn btn-primary\">"
+            },
+            {
+              "line": 557,
+              "classNameRaw": "\"btn btn-secondary\"",
+              "openingRaw": "<button\n                onClick={handleDeployButton}\n                disabled={deploying}\n                className=\"btn btn-secondary\"\n              >"
+            }
+          ]
+        }
+      ],
+      "worktreeStatus": "",
+      "worktreePresence": "present"
+    },
+    {
+      "pr": 2401,
+      "head": "15bc2868fa0986b656deec86cdd326e26d7fe973",
+      "files": [
+        "frontend/src/pages/inventory/InventoryPage.tsx",
+        "frontend/src/pages/inventory/OwnInventoryPage.tsx"
+      ],
+      "worktree": null,
+      "nodes": [
+        {
+          "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+          "count": 3,
+          "exactRawUnchangedInPrHead": 0,
+          "changedNodes": [
+            {
+              "line": 395,
+              "classNameRaw": "\"btn-primary btn-sm field-h-md\"",
+              "openingRaw": "<button type=\"button\" className=\"btn-primary btn-sm field-h-md\" data-testid=\"inventory-search-btn\" onClick={runSearch}>"
+            },
+            {
+              "line": 398,
+              "classNameRaw": "\"btn-secondary btn-sm field-h-md\"",
+              "openingRaw": "<button type=\"button\" className=\"btn-secondary btn-sm field-h-md\" data-testid=\"inventory-reset-sort\" onClick={resetAll}>"
+            },
+            {
+              "line": 401,
+              "classNameRaw": "{filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}",
+              "openingRaw": "<button\n                type=\"button\"\n                className={filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}\n                data-testid=\"inventory-filter-toggle\"\n                aria-expanded={showFilterPanel}\n                aria-pressed={filterEnabled}\n                onClick={() => setShowFilterPanel((v) => !v)}\n              >"
+            }
+          ]
+        },
+        {
+          "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+          "count": 3,
+          "exactRawUnchangedInPrHead": 3,
+          "changedNodes": []
+        }
+      ],
+      "worktreeStatus": null,
+      "worktreePresence": "absent"
+    },
+    {
+      "pr": 2362,
+      "head": "3c8d0f1037ffe684dc2f4e1b832464ed98ff2aca",
+      "files": [
+        "frontend/src/pages/inventory/InventoryPage.tsx",
+        "frontend/src/pages/inventory/OwnInventoryPage.tsx"
+      ],
+      "worktree": null,
+      "nodes": [
+        {
+          "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+          "count": 3,
+          "exactRawUnchangedInPrHead": 0,
+          "changedNodes": [
+            {
+              "line": 395,
+              "classNameRaw": "\"btn-primary btn-sm field-h-md\"",
+              "openingRaw": "<button type=\"button\" className=\"btn-primary btn-sm field-h-md\" data-testid=\"inventory-search-btn\" onClick={runSearch}>"
+            },
+            {
+              "line": 398,
+              "classNameRaw": "\"btn-secondary btn-sm field-h-md\"",
+              "openingRaw": "<button type=\"button\" className=\"btn-secondary btn-sm field-h-md\" data-testid=\"inventory-reset-sort\" onClick={resetAll}>"
+            },
+            {
+              "line": 401,
+              "classNameRaw": "{filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}",
+              "openingRaw": "<button\n                type=\"button\"\n                className={filterEnabled ? \"btn-primary btn-sm field-h-md\" : \"btn-secondary btn-sm field-h-md\"}\n                data-testid=\"inventory-filter-toggle\"\n                aria-expanded={showFilterPanel}\n                aria-pressed={filterEnabled}\n                onClick={() => setShowFilterPanel((v) => !v)}\n              >"
+            }
+          ]
+        },
+        {
+          "file": "frontend/src/pages/inventory/OwnInventoryPage.tsx",
+          "count": 3,
+          "exactRawUnchangedInPrHead": 3,
+          "changedNodes": []
+        }
+      ],
+      "worktreeStatus": null,
+      "worktreePresence": "absent"
+    }
+  ]
+}

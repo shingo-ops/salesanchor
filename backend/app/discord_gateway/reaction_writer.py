@@ -56,6 +56,7 @@ class ReactionWriter:
         emoji: Any,
         member: Any,
         action: str,
+        is_bot_reaction: bool,
     ) -> None:
         """リアクションイベントを処理して DB に書き込む。
 
@@ -67,6 +68,7 @@ class ReactionWriter:
             emoji: discord.PartialEmoji オブジェクト
             member: discord.Member オブジェクト（on_raw_reaction_remove では None になりうる）
             action: "add" または "remove"
+            is_bot_reaction: リアクションした主体が Bot 自身か（add 時に記録。remove では未使用）
         """
         if self._pool is None:
             logger.warning(
@@ -127,7 +129,7 @@ class ReactionWriter:
                             (tenant_id, meta_message_id, emoji_name, emoji_id,
                              emoji_animated, reactor_discord_user_id,
                              reactor_display_name, is_bot_reaction)
-                        VALUES ($1, $2, $3, $4, $5, $6, $7, false)
+                        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
                         ON CONFLICT ON CONSTRAINT uq_reaction_per_user_emoji DO NOTHING
                         """,
                         tenant_id,
@@ -137,6 +139,7 @@ class ReactionWriter:
                         emoji_animated,
                         user_id,
                         reactor_display_name,
+                        is_bot_reaction,
                     )
                     logger.info(
                         "[reaction-writer] add tenant=%s meta_msg=%d emoji=%s user=%s",

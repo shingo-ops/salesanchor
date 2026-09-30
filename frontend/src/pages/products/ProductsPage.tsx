@@ -18,6 +18,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import type { Product } from "./products.types";
+import { Button } from "../../components/Button";
 
 // embedded: マスタ管理タブ内に埋め込む場合 true（PageLayout を被せず中身のみ描画）。
 export default function ProductsPage({ embedded = false }: { embedded?: boolean } = {}) {
@@ -187,24 +188,24 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
   const pageContentButtons = hasPermission("products.create") || hasPermission("products.delete") ? (
     <>
       {hasPermission("products.create") && (
-        <button
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary" size="md"
           onClick={() => navigate("/admin/products/new")}
         >
           {t("products.newProduct")}
-        </button>
+        </Button>
       )}
       {hasPermission("products.delete") && (
-        <button
+        <Button variant="danger" size="md"
           type="button"
-          className="btn-danger"
+
           disabled={selectedIds.size === 0}
           onClick={() => setConfirmBulkDelete(true)}
           data-testid="products-bulk-delete"
         >
           {t("common.delete")}
-        </button>
+        </Button>
       )}
     </>
   ) : undefined;
@@ -231,16 +232,16 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
             )}
             {/* 行ドラッグ並び替えモード切替（ON で手動順表示＋ドラッグ可） */}
             {hasPermission("products.update") && (
-              <button
+              <Button variant={reorderMode ? "primary" : "secondary"} size="sm"
                 type="button"
-                className={reorderMode ? "btn-primary btn-sm" : "btn-sm"}
+
                 onClick={toggleReorderMode}
                 aria-pressed={reorderMode}
                 data-testid="products-reorder-toggle"
                 title={t("products.reorderHint")}
               >
                 {reorderMode ? t("products.reorderModeOn") : t("products.reorderMode")}
-              </button>
+              </Button>
             )}
           </div>
         }
@@ -265,15 +266,15 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
           <span style={{ fontWeight: "var(--font-weight-semi)" }}>
             {t("products.selectedCount", { count: selectedIds.size })}
           </span>
-          <button className="btn-primary btn-sm" onClick={() => goCreate("/quotes/new")} data-testid="create-quote-from-products">
+          <Button variant="primary" size="sm" onClick={() => goCreate("/quotes/new")} data-testid="create-quote-from-products">
             {t("products.createQuote")}
-          </button>
-          <button className="btn-primary btn-sm" onClick={() => goCreate("/invoices/new")} data-testid="create-invoice-from-products">
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => goCreate("/invoices/new")} data-testid="create-invoice-from-products">
             {t("products.createInvoice")}
-          </button>
-          <button className="btn-sm" onClick={() => setSelectedIds(new Set())}>
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setSelectedIds(new Set())}>
             {t("common.clear")}
-          </button>
+          </Button>
         </div>
       )}
 
@@ -419,27 +420,27 @@ export default function ProductsPage({ embedded = false }: { embedded?: boolean 
           data-testid="products-pagination"
         >
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page <= 1}
               data-testid="products-page-prev"
             >
               {t("common.prevPage")}
-            </button>
+            </Button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="products-page-info">
             {t("products.pageLabel", { page, count: products.length })}
           </span>
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage((p) => p + 1)}
               disabled={!hasNext}
               data-testid="products-page-next"
             >
               {t("common.nextPage")}
-            </button>
+            </Button>
           )}
         </div>
       )}

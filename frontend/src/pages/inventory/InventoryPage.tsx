@@ -14,6 +14,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import InventoryFilterPanel from "./InventoryFilterPanel";
+import { Button } from "../../components/Button";
 
 interface InventoryRow {
   id: number;
@@ -391,22 +392,22 @@ export default function InventoryPage() {
                 }}
                 onKeyDown={(e) => { if (e.key === "Enter") runSearch(); }}
               />
-              <button type="button" className="btn-primary btn-sm field-h-md" data-testid="inventory-search-btn" onClick={runSearch}>
+              <Button variant="primary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-search-btn" onClick={runSearch}>
                 {t("common.search")}
-              </button>
-              <button type="button" className="btn-secondary btn-sm field-h-md" data-testid="inventory-reset-sort" onClick={resetAll}>
+              </Button>
+              <Button variant="secondary" size="sm" layoutClassName="field-h-md" type="button" data-testid="inventory-reset-sort" onClick={resetAll}>
                 {t("inventory.resetSort")}
-              </button>
-              <button
+              </Button>
+              <Button variant={filterEnabled ? "primary" : "secondary"} size="sm" layoutClassName="field-h-md"
                 type="button"
-                className={filterEnabled ? "btn-primary btn-sm field-h-md" : "btn-secondary btn-sm field-h-md"}
+
                 data-testid="inventory-filter-toggle"
                 aria-expanded={showFilterPanel}
                 aria-pressed={filterEnabled}
                 onClick={() => setShowFilterPanel((v) => !v)}
               >
                 {t("inventory.filterPanel.button")}
-              </button>
+              </Button>
             </>
           }
         />
@@ -599,15 +600,15 @@ export default function InventoryPage() {
           justifyContent: "center",
         }}
       >
-        <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading} data-testid="inventory-prev" className="btn-secondary">
+        <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page <= 1 || loading} data-testid="inventory-prev" variant="secondary" size="md">
           {t("common.previous")}
-        </button>
+        </Button>
         <span data-testid="inventory-pagination-label">
           {t("inventory.pageOf", { page, total: totalPages, count: total })}
         </span>
-        <button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading} data-testid="inventory-next" className="btn-secondary">
+        <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page >= totalPages || loading} data-testid="inventory-next" variant="secondary" size="md">
           {t("common.next")}
-        </button>
+        </Button>
       </section>
     </PageLayout>
   );

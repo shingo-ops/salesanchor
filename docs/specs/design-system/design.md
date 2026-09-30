@@ -1691,3 +1691,254 @@ AP検証前提の実測補足: 初回390px/en/lightの20観測中、専用非los
 
 
 AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root逆変換2/共有21/対象外6一致、最終240表示・47操作前後組成功。担当70/451試験と品質原ログを確認。初回表示2・unit45・追加操作4失敗の前提補正を履歴保存し、自然Tabの既存欠けは残存として区別。共通137/旧281。根拠docs/handoff/design-system-recon/evidence-20260910/ap-lead-implementation.md。PR3497へ保存・更新し最新CI確認、今回番号GO/マージ/本番未実施。
+
+
+### AQ. スタッフ日報フォーム2ボタン移管（2026-09-28）
+
+mode: handoff。既存の「1か所直せば全ページが変わる」目的の延長。POは根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの進行を明示し、画面確認は省略と指示。目視合格とみなさない。代理GO有効化や番号原文の創作ではない。
+
+#### Planner: 目的・実物根拠・範囲
+
+基準4bad43a4dca6368ffa7370792a3c912e90bba521、公式専用worktree release/frontend-next-button-batch、preflight成功。Solが旧候補5ページのhash5/5・ボタン原文10/10を再照合、ページ直接回帰試験は検索0。親AstraがStaffReportsPageとButton実物を読み、構文監査を実行。根拠aq-staff-report-audit.json/cjs。StaffReportsPage.tsx:93/94の取消/追加だけを対象とする。起動:68と日報一覧/絞込/入力を対象外とする。
+
+全体は同一構文定義で共通Button201・旧btn296（TSX、stories/test/spec/design-preview除外）。本便期待203/294。AP時点137/281との差は他便の変化であり、本便の改善へ加算しない。KGI: 対象2/2、逆変換でページ全byte一致、対象外1原文一致、共有14hash不変、送信契約の回帰違反0。最大の利用頻度/売上効果は未測定。
+
+候補比較: Badges2は2取得と数値変換、Buddy2は終了操作、Shifts2は日時/非reset/削除、Notifications2はWebhook情報を扱う。StaffReportsは単一GET・5項目POST・削除なしなので、事業価値の順位ではなく検証接触面が最小という理由で先行する。全10件の一括は失敗原因の切分け範囲を広げるため採らない。表/報酬3/カレンダー色は別設計、新CIは全画面移管後。
+
+変更: named import Buttonを追加し、2つの開始/終了タグだけをButtonへ。取消variant secondary、追加primary、いずれもsize md。旧classNameを外し、type/onClick/childrenを逐語保持。Button.tsx:38/49-87のnative属性転送を利用。新しいCSS/トークン/文言/金型登録は0。loading/disabled/aria-busy/fullWidth/style/layoutClassName/stateを追加しない。
+
+変更禁止: API/DB/認証/権限/入力/翻訳/依存/共有部品/CI、TYPE_LABELSの既存Daily/Weekly/Monthly、エラー表示、対象外の起動ボタン、テーブル。外観の正本はButton.tsx/Button.css、配置は既存form-actions。データは既存/staff-reportsへだけ送り、新たな保存先/複製は作らない。実DB/本番への書込は検証で0。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械的移管だけ | named importと2タグ/propsを逆変換して基準ページ全byte一致。対象外1/共有14hash維持、製品差分はページ1件と新規試験1件の合計2ファイルだけ |
+| 送信全5キー保持 | 実ページ/実Modal/実Select/実Button/実usePermissionsと合成認証/APIを使用。POST /staff-reportsでreport_type/period/review原値、goals/challenges空null、非空/空白保持。daily/weekly/monthlyを操作 |
+| 取消・終了 | 取消で書込0・close。取消後再開では既存入力保持。X/Escは既存Modalの閉鎖・focus復帰を検証。新規初期化を加えない |
+| 成功と失敗 | 成功close、5項目既定へreset、GET追加1。失敗は入力保持・既存エラー、再送成功。filter GETクエリ維持 |
+| 入力 | period/review必須不成立は送信0、textarea Enterは改行。新しい必須/数値/形式制約を追加しない |
+| pending | 取消/追加は有効・文言不変・aria-busyなし。独立2回送信は2回を維持。pending取消可、連投防止を無断追加しない |
+| 権限 | staff_reports.create許可で起動、拒否で起動なし。許可契約はusePermissions実物と合成/me/permissionsで検証 |
+| 品質 | 対象strict ESLint、新規ページ回帰/既存Button試験、全体coverage/check:all/build/build-storybook、PR必須CI。ネットワークは合成API以外拒否 |
+
+PO指示により本番実認証操作/目視・ブラウザー画面検査は省略し、寸法/切れ/画面品質を検証済みとは主張しない。自動DOM/操作回帰・構文/共有hash・既存品質チェックは省略しない。画面検査省略で幾何的な保証が弱まる制約を明記し、共有CSSは不変で影響を2ボタンに限定する。
+
+#### Why・影響・維持
+
+既存Buttonのnative属性契約をそのまま使い、業務本文の逆変換差分0と実ページの5キーpayloadを独立検証するため、見た目の正本集約と業務維持を切り分けられる。新ライブラリ/外部導入事例は不要（既存金型への限定移管で、外部事例で成功を保証しない）。関連ADR-113/067/027/073/122、親README/recon/migrationを継承。新ADR不要。
+
+Astraが設計・自己審査・差分検収、Solが製品2ファイルと自動試験を担当。他者変更は戻さない。守り手は追加StaffReportFormButtonMigration.test.tsxと既存Button.test.tsx/vitest.unit.config.ts、frontend品質CI。新CI追加0。リスクは既存pending連投・取消入力保持を意図せず変えることと画面検査省略。前者は回帰で固定し後者は未検証を明記。違反時はREVISEへ戻し、CSSや文言変更で通さない。製品差分のrevertで戻せ、DB復元は不要。
+
+#### Architect自己審査
+
+APPROVE（設計合格）。Planner作成後に基準実物・既存Button契約・共有14/対象2/対象外1・CIと照合。上記受入は自動回帰と逆変換で判定可能。同じAstraによる自己審査であり独立審査とは称さない。実装/試験は未実施、画面品質は省略・未検証。POの条件付き続行/担当委任指示に基づき、正式カード検査成功後にSolへ実装を委任する。設計合格を新PRの番号付きGO原文に転用しない。
+
+
+AQ設計根拠のSol追加照合: 主要業務契約の矛盾0。ファイル数の表現を明確化。pending取消後のPOST成功はreset/GET、失敗は入力保持/エラーという実物契約も自動回帰で確認する（機能追加ではない）。Astraは設計合格を維持。
+
+
+### AR — nativeフォーム・検索28ボタン一括移管（2026-09-28）
+
+mode: handoff。対象ADR: ADR-113/067/027/073/122。recon: docs/handoff/design-system-recon/recon.md。
+
+PO原文「次を進める、もっと幅広く一気に実装は出来る？」とAstra設計/Sol調査実装・根拠確立後の続行を受領。成功条件は14製品ファイルの指定28件を既存Buttonへ寄せ、旧294→266・共通203→231にすること（AQ2件と同じPRならmain基準で計30件）。営業成果や体感速度の改善量は測定しておらず主張しない。
+
+#### 範囲・採用理由
+
+固定基点99899eb824234c7158c14855301c9412f440db2d。詳細監査はar-button-audit.json、操作契約はar-contracts.md。Notifications/Badges/Shifts/Buddy/OrdersFormModal/LeadsPage/RolesPage/KnowledgeAliasesTab/MasterListEditorの10 nativeフォーム20件＋権限割当の非form Modal操作2件と、MasterListEditor/Units/ProductCategories/Suppliers/Conditions/StatusMasterの検索submit6件。計14ファイル28件。取消/保存/検索のnative buttonで、既存type/handler/childrenを保持できる同型群をまとめる。少数ずつのPRより確認・配備回数を減らせるが、実際の工数削減率は未測定。
+
+代替は全旧294件の一括変換と2件ずつの継続。前者はLink/a、bare btn-smのvariant未確定、独自CSS、loading/外部効果、削除actionが混在するため不採用。後者は同一契約の検査を共通化できる28件の実物が揃ったため採らない。対象外の旧266件、表、報酬3件、カレンダー色、CI追加は別便。
+
+#### 実装契約
+
+raw btn-secondary→Button variant=secondary size=md、raw btn-primary→Button variant=primary size=md。検索のfield-h-mdもsize=mdへ吸収する。field-size.css:8とButton.cssのmin-height/box-sizingが同じトークンを参照することを確認。既存金型の外観を採用するのでpixel完全同一とは呼ばない。
+
+各ファイルのnamed import追加と指定JSXタグ/className→variant/size置換だけ。type/form/disabled/data-testid/onClick/childrenは原文保持、元の暗黙typeは明示値を勝手に追加しない。loading/aria-busyを新設しない。API URL/method/payload、権限、business handler、state/reset、通信回数、配線/DBのSSOTは変更しない。共有15hash（AQ共有14＋field-size.css）不変、対象外button原文維持。逆変換で各ページ/部品全文が基点とbyte一致することを必須とする。新CSS・トークン・ハードコード・金型・依存は追加しない。
+
+#### 受入と検証方法
+
+| 基準 | 検証方法 |
+|---|---|
+| 機械変換28件・対象外保持 | 固定監査JSONのraw JSX/各hashと前後照合、14ファイル逆変換byte一致、AST共通231/旧266、共有15hash一致 |
+| 10フォームと1操作群の動作維持 | 実ページ/共通部品をrenderし成功・取消・失敗/再試行・pendingを各契約別に検証。X/Escape/焦点は9つのModal formのみ。inline MasterListはadd/edit/cancel/required/grid、Roles割当はtype=button/onClick/disabled/PUTと閉鎖reset。APIはmock、実通信拒否 |
+| 送信・権限分岐 | 契約表のcreate/edit method/URL/全payload/required/数値変換/null/空白保持/権限/disabled/reset/再GETを期待値として照合。対象外の削除/終了を起こさない |
+| 検索6系統 | MasterListのlocalfilter1件はclick/Enter/trim/clear・追加通信0。GET検索5件はclick/Enterのquery/encoding/page1/clearを照合しwrite0。type=submit/data-testid維持 |
+| 全体品質 | 変更ファイルstrict ESLint、対象unit/既存Button、全体coverage/check:all/build/Storybook、diff/task-stateチェック |
+| 描画確認の限界 | PO指示で画面/実ログイン/本番フォーム/PO目視は省略・未検証と明記。DOM動作成功を表示合格や実DB成功に読み替えない |
+
+#### リスクと維持
+
+広域変更のリスクは画面ごとの副作用・検証fixtureの取り違え。固定原文の逆変換とhandler契約別試験、独立Sol差分レビューで検査する。fixture補正は実物根拠を残し初回ログを保存、試験skip/既存期待値変更で合格にしない。共有部品変更は行わず、製品差分のrevertで戻せる（DB復元不要）。守り手は追加/既存unitと既存品質CI、API/DB SSOTに別データを作らない。新CI追加は最後の方針を保持。
+
+外部・過去事例は該当なし。自社既存部品への限定移管であり、原文と自動回帰が直接の根拠となる。ライブラリ/API新仕様の採用はない。
+
+#### 設計審査の状態
+
+Planner案作成済み。詳細28件監査・契約表の照合とSol read-only第二照合後にArchitect判定を確定する。現時点は実装カード未発行。Astra自身の設計審査と独立Sol照合を区別する。PR起票手順は別担当release/pr-lifecycle-gatesが同領域変更中で、担当確認待ち。本ARからガードや外部設定を変更しない。番号付きGO原文の創作、代理制度の有効化はしない。
+
+AR設計レビュー修正: Solの実物照合で11フォーム分類を10フォーム＋1非form操作群へ訂正。検索もlocal1/GET5に分離、inlineに存在しないX/Escapeの試験期待を削除した（製品挙動変更ではなく実装前の契約訂正）。初期調査報告を正とせず実ソースを正とする。
+
+AR Architect確定: APPROVE（限定設計合格、2026-09-28）。Astraが正式監査の14hash/28原文/対象外53/共有15を直接照合して一致。Planner作成後に実物・既存金型・受入/所有18ファイルを整合審査した同一AI自己審査である。別Solのread-only照合も修正後APPROVE。初回の分類違いとカード検索文の曖昧さを正式資料で訂正し、正式card-lint最終exit0（長行警告2）。POの広域移管/担当委任/続行指示に基づきCARD-AR-NATIVE-BUTTONS-01を発行する。実装/試験/PR/配備の完了ではない。
+
+
+### AS. 静的primary/secondary 34ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。目的は既存合意「1か所直せば全ページが変わる」の継続。POは根拠確立後の続行・Astra設計/Sol調査実装・サブエージェント分担を明示。本設計はその範囲内の限定移管であり、PO本人の設計文言や番号付きGOを代筆しない。画面確認の省略指示を維持し、画面品質を検収済みとはしない。
+
+#### Planner: 事実・選定・対象外
+
+基準1675bfa0275a1ac76210ae489abbcb818287da02、公式worktree release/frontend-action-button-batch。preflight成功、作成時未保存0。本店の他者未保存18件は変更しない。調査固定49970e337から基準までfrontend差分0。AS AST直接再測定: 共通231/旧266、対象34/25ファイル、対象外232、共有15hash。原文と逆変換仕様は[as-button-audit.json](../../handoff/design-system-recon/evidence-20260910/as-button-audit.json)。callback/親/Modal追跡はas-static-contracts.md/json、既存実操作テスト照合はas-test-plan.md。外部事例は不要（新技術導入ではなく既存社内部品への限定移管）。利用頻度・事業価値順位・売上効果は未測定であり、最大効果とは断定しない。
+
+Sol暫定候補85を審査し、bare btn-sm42は色の対応未確定、動的4は個別仕様が必要と判明。静的39からghost3/danger1/btn-smとfield-h-md併用1を除き、色・寸法の対応が定義できる34件を採用する。85調査と非reload34案は履歴資料で、最終対象はas-button-audit.jsonのみ。競合中InvoicesPageは対象外。旧全266を一括変更すると未確定の色/動的条件/書込系が混ざるため採らない。34件はクリック起因GET7・状態/親callback/内部遷移27、直接write/外部送信0。GETは在庫ページ送り2、見積読込1、発注Modal catalog取得1、Dex検索1、Knowledge検索2。
+
+#### 変更仕様と所有
+
+各監査原文の開始/終了buttonだけをButtonへ、classNameだけをvariant primary/secondaryとsize mdへ置換。btn-smを含むものはsize sm、単独field-h-mdはmdへ吸収。Button未importのファイルだけ既存部品へのnamed import1行追加。type（省略を含む）/disabled/onClick/children/その他属性・業務本文は逐語維持。loading/追加disabled/aria-busy/style/layoutClassNameを導入しない。
+
+製品所有と全34原文はas-button-audit.json。Sol1: 16製品/21件＋CommerceNavigationButtonMigration.test.tsx。Sol2: 9製品/13件＋IntegrationLaunchButtonMigration.test.tsx/PurchaseAdminEditorButtonMigration.test.tsx。rootは正式文書/監査/台帳/検収。既存試験はread-only、対象外担当ファイルを相互編集しない。製品/新規試験計28ファイル以外の製品変更は禁止。DB/API/配線/権限/翻訳/ルート/依存/共有部品/トークン/CSS/CI変更0。データ正本は既存API/DBのまま、新保存先/複製0。
+
+既存金型採用のため外観完全同一は約束しない。smは旧padding4/10・radius3・最低高なしに対し既存Buttonがpadding4/12・radius6・最低高28、モバイル最低高44。mdのfield-h-mdは既存最低高に吸収。新金型/ハードコード追加は不要。配置wrapperと文言は維持する。根拠as-button-contract-research.mdの実物行番号。
+
+#### 受入条件・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象と本文保持 | 対象34/34、25ファイルをimport/タグ/属性だけ逆変換し基準全byte一致。対象外232rawの出現数・原文一致、共有15hash不変。共通265/旧232。他便差分が入った場合は別計数し根拠を更新 |
+| 既存10件 | 既存6suite（as-test-plan.md）を再実行。表示/クラスだけを被覆と数えず操作と状態/API/遷移結果を確認 |
+| 未被覆24件 | 3新規suite、実ページ/Router/Modal/Button/usePermissions使用。認証/API境界のみ合成。対応するcallbackの状態変化、正確な遷移先、GETクエリ/回数、disabled、取消時書込0。具体的24件契約はas-test-plan.md |
+| GET/失敗/pending | 在庫page境界とGET、Invoice見積読込のID/状態/失敗再試行/disabled、DexとKnowledge検索条件、発注catalog取得。deferredは全settleし既存のロックだけを維持。外部実通信0 |
+| 品質 | 全変更TSX strict ESLint、新規3＋関連既存6＋Button、全体coverage/check:all/build/Storybook、doc/task-state/card-lint/diff、最新PR必須CI成功。初回失敗も保存し、合格のためskip/ガード解除/仕様変更は禁止 |
+| 画面確認の境界 | PO指示で本番認証操作/目視/ブラウザー画面検査は省略・未検証。DOM合格を画面の欠け/寸法/本番送信の合格へ読み替えない |
+
+#### Why・影響と維持
+
+選択根拠は対象34の静的variant/size対応、実callback34とGET7の追跡、既存10被覆と不足24の特定、対象原文34と全byte逆変換で変更境界を証明できること。将来ADRのWhyにはこの実測と候補比較を使用する。ADR-113 handoff、ADR-067/027/073/122と既存金型を継承、新ADR/ライブラリ仕様調査不要。
+
+接触面: 利用者は34ボタン外観、実装者は分離所有、CIは既存経路、API/DBは追加変更0、運用は番号付きGO/公式merge/deploy経路、外部送信は試験で0。リスクは既存sm寸法差、非同期fixtureの誤判定、同時作業の衝突。画面保証の制約を記録し、合成APIの開始回数/全settle/権限待機、逆変換と最新main差分で監査する。未知の仕様・範囲外・競合・検証失敗は該当操作停止、必要調査を補い設計へ戻す。画面や製品仕様の独断補正禁止。
+
+維持担当は共通Buttonが外観、各既存ページが業務配線、既存CI＋3新規/6既存suiteが操作回帰、rootが原文/hash/状態台帳を管理。戻す場合は本便製品差分revert、DB復元不要。表/報酬3/カレンダー色、未確定bare/dynamic、残旧232は次便へ、新CIは全画面移管後。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身による審査であり独立した第二者設計レビューではない。別Sol2名のread-only調査で対象原文/処理契約/既存被覆を照合し、AstraがAST34/25・全legacy266・対象外232・共有15hashと固定frontend差分0を直接確認した。85暫定案の不足を34静的対応へ修正。受入方法・所有分離・既存ADR/金型/CI整合を確認し、未解決の対象仕様なし。正式カードlint成功後に発行する。製品実装・試験・番号付きGO・マージ・配備完了とは区別する。
+
+
+AS設計訂正（実装中の既存回帰照合）: rootが関連7suite/130試験を直接実行し129成功/1失敗。StaffReportFormButtonMigration.test.tsx:269-270にAQ便の対象外起動ボタンを旧classのまま維持する期待が残っていた。今回その起動はAS対象なので古いスコープ期待と矛盾する。契約を緩和せず、この既存試験1件の題名と旧class断定2行のみ共通金型のprimary断定へ変更を許可する。filter GET/回数/権限などその他期待は逐語維持。所有はSol1、これ以外の既存試験はread-only。製品25＋新規3＋限定既存1の計29ファイルに修正する。新規重複試験は追加しない。Astra自己再審査APPROVE、初回失敗原ログ03-existing-regressions.logを保存。これは動作の不良を隠す期待値変更ではなく、旧便の対象外判定を今回明示対象に合わせる設計訂正。
+
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。
+
+### AT. 既存フォーム11ボタンの共通金型移管（2026-09-28）
+
+mode: handoff。ADR-113/067/027/073/122を継承。recon: docs/handoff/design-system-recon/recon.md。POの根拠確立後の続行・Astra設計/Sol調査実装・PR/配備までの指示に基づく。番号付き本人GOの代筆、代理GO有効化はしない。本番画面・ログイン操作・PO目視は既存の省略指示を維持し未検証として扱う。
+
+#### Planner: 目的・事実・選定
+
+目的は既存合意「1か所直せば全ページが変わる」の継続。利用者の保存・行追加操作を維持し、既存Buttonの外観へ統一する。固定基準a1cd9ea379cc7d85b797cca6b1cc092192296bc3のAST実測は共通265、旧232（native224/link8）。明示色158、bare btn-sm60、動的6。11件/9製品を対象に共通276/旧221へ移管する。使用頻度・売上効果・工数短縮は未測定で最大効果とは断定しない。
+
+根拠はat-button-inventory.md/json、at-button-audit.json、at-form-contract-research.md、at-commerce-test-plan.md、at-admin-test-plan.md（docs/handoff/design-system-recon/evidence-20260910/）。対象全11原文、9file hash、対象外221原文、共有18hashを固定。候補数36/13などは調査途中の案で最終scopeはauditのみ。bare btn-smの色を推測する案は却下、Invoice submitは非JPY時の外部FX参照、Roles saveは認可変更として除外。InvoicesPage/SuppliersPageは他便所有のため除外。QuoteCreateはPR #3084の実変更/正式設計対象外、同ブランチworktreeなしを確認し競合なし。古いIN_PROGRESSを現在の作業事実と扱わない。
+
+対象: Profile submit1、Company Basic/Channels submit2、Invoice add1、Quote add/submit2、Product submit1、PO submit1、Dex edit submit1、TCG type/series submit2。全11が明示primary/secondary、md対応、inline style/追加独自classなし。全232件一括は未確定variant・リンク・外部副作用・権限操作が混在するため採らない。小分けより同型契約を一つの検証便にまとめられる11件を選ぶ。
+
+#### 変更仕様・所有・データの正本
+
+auditに示す原文のbutton開始/終了タグをButton、classNameをvariant/sizeへ置換。named importがない場合だけ独立1行追加。type/form/disabled/onClick/children/全その他属性、handler本文を逐語保持。loading/aria-busy/追加disabled/レイアウト/CSS/トークン/i18n/依存/CI/route変更0。既存Buttonのtype既定値は未設定であり、勝手にtypeを補わない。field-h-mdはmdへ吸収。既存金型採用なのでpixel完全同一とは呼ばない。
+
+Sol1所有: InvoiceCreatePage、QuoteCreatePage、ProductEditPageの3製品4件とCommerceSubmitButtonMigration.test.tsx。
+Sol2所有: ProfileSection、CompanyBasicTab、CompanyChannelsTab、PurchaseOrdersFormModal、DexTab、TcgSeriesTabの6製品7件とAccountCompanySaveButtonMigration.test.tsx/AdminMasterSaveButtonMigration.test.tsx。
+Astra所有: 正式設計/監査/台帳/審査/検収。既存試験はread-only、他者変更を戻さない。製品9+新規試験3以外の製品変更は禁止。API/DB/配線の変更・新保存先・データ複製追加0。
+
+サーバー追跡でProfileは認証本人の7項目、Companyはcustomers.updateとtenant会社/販路、POはpurchase_orders.createと既存public supplier参照・必要時tenant supplier複製を伴う既存処理を確認。後者は既存動作で、本便で複製を追加/変更しない。Dex/TCGはrequire_super_admin下のpublic共通マスタ更新で全tenantに関係する。Quote/Productは既存tenant商品/見積のDB・監査・cache処理。これらの実保存を本番試験で発火させない。変更境界はフロント原文逆変換とbackend差分0、動作は合成APIで全payload/URLを確認する。
+
+#### 受入条件と検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 対象11と範囲保持 | 9fileをimport/タグ/variant/size逆変換し固定基準と全byte一致。対象外221原文・共有18hash不変、共通276/旧221。並行main追加は別計数して記録 |
+| APIと保存状態 | 3新規suiteの実ページ/handlerで全キー完全一致、method/URL、成功後遷移またはGET増分、失敗時入力保持/再試行/成功処理0を確認。試験APIはmockで実通信0 |
+| Profile/Company | 本物UiPrefsProvider/patchMyProfile/useCompanyDetail使用。Profile7項目と成功refresh GET+1、Company基本14項目と販路区切り正規化、成功company/contacts各GET+1。権限待機・dirty/native required・pendingクリック重複0 |
+| Commerce | Invoice/Quote行追加で行数増分+1かつwrite0。Quote contact/item guard、全payload/null/数値変換、/quotesへ遷移。Product POST/PATCH全34キー、外置form参照、required/loading/pending/失敗保持とnavigate(-1) |
+| PO/Dex/TCG | PO全payload/2items/required/pending/成功onCreated→onClose。Dex pokemon/trainer両schemaの全payloadと正確な再GET。TCG type/series作成更新の全payload・trim/null/required/再GET/reset。Dex/TCGに現存しないpendingロックを要求せず繰返し送信可を保持 |
+| 品質 | strict ESLint、関連既存unit、全体coverage/check:all/build/Storybook、diff/task-state/card checks、Sol相互read-onlyレビュー、最新PR CI。失敗ログも保存、skip/ガード迂回禁止 |
+| 検証限界 | DOM成功は本番DB保存や画面品質の検収ではない。認証付き本番フォーム/ブラウザー/目視は省略・未検証。サーバー権限をfrontend mockだけで合格としない |
+
+#### Why・リスク・維持の仕組み
+
+11の静的対応と実callback/API追跡、固定原文の全byte逆変換、従来試験の保存処理未被覆を補う契約試験が採用根拠。ADRのWhyにはこの実測を使用し、架空の外部効果数値を使わない。外部・過去事例は不要（既存社内部品への限定移管で新ライブラリ仕様採用なし）。
+
+リスクは保存先/値の取り違え、実UiPrefsをmockしてrefreshを見逃すこと、合成fixture誤り、他便競合。実handler・全キー・GET初期回数分離・deferred全settle・最新main差分で検査する。fixture補正は実物根拠と初回失敗を残す。既存の多重送信可能なDex/TCGに機能追加せず維持する。未知の業務判断はPOへ戻し、独断仕様変更は禁止。
+
+守り手は既存Buttonとトークン、既存品質CI、追加3suite。rootはaudit/根拠/進捗、Solは限定実装と相互レビュー。回帰時は本便製品差分revertで戻しDB復元不要。新CI、残旧221、表/報酬3/カレンダー色は別便。
+
+#### Architect自己審査（Planner作成後）
+
+APPROVE（限定設計合格）。Astra自身の自己審査であり独立した第二者レビューではない。直接ASTで共通265/旧232/対象11/構文エラー0、商品payload34キーを再確認。対象9と全原文/18共有hash、実サーバー副作用、所有分離、受入/既存CI/ADR整合を確認。Solのrawとcallback追跡の誤記（Buttonのtype既定値、商品33キー報告）を実物に基づき訂正。API/DB変更なしで検証可能、対象仕様の未解決なし。正式card-lint成功後に委任する。設計合格は実装/検証/番号付きGO/マージ/本番反映完了を意味しない。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+### AU. 残る旧ボタン221件の全数移管（2026-09-29）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-113/067/073/122/144を継承。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文「個別に作られたボタンを全て共通部品に置き換える」、続いて旧方式221個を対象として明示。最新のAstra設計/Sol調査実装・PRマージ/デプロイまでの依頼を受領。これは実施範囲の承認であり、PO本人の番号付きGOやOpus委任を創作しない。画面/本番フォーム/PO目視は既存省略指示を維持する。
+
+公式作業台release/frontend-all-buttons、基準303c3cfe756b1d82c042cba342c3a3150fc5ab8c。preflight成功、本店の他者未保存変更は不変。AST実測221件/71ファイル＝native213、Router Link1、anchor7、動的class6、構文エラー0。別のnative180は今回の221母数に含まれず、タブ等を一律Buttonへ変えない。初回226はbtnをsuffixとして含む5件の誤検出、境界修正で221を確定。全原文・属性・行はau-inventory.json、部品/CSS契約はau-button-contracts.md。使用頻度・売上改善は未測定。
+
+根拠: Button.tsx:38/49/75（native属性/type/ref透過）、Button.test.tsx:23/52（form/submitter/propagation）、components.css:54/68/81/95/107/127（既存各色）、pages-layout.css:262/546（login幅/btn-block）、本設計§Z（ButtonLinkの既存承認設計）。Context7は提供ツール0件、PO許可代替のReact Router公式 https://reactrouter.com/7.18.4/api/components/Link を2026-09-29直接確認。導入版7.18.0の実コード/型も実装時照合し、version差の新機能を持ち込まない。外部事例は新技術採用ではなく既存金型への移管のため不要。
+
+#### 変更契約・設計判断（PO発言の代筆ではない）
+
+- native213はButton、Link/a8は新登録ButtonLink。既存Button.cssのみを外観正本とする。native/Router/anchorの意味を変えない。全type（省略含む）/form/disabled/name/value/ARIA/data/ref/handler/子内容/親DOMを逐語保持。API・payload・認可・DB・翻訳・依存・CI変更0、新保存先0。loadingや新たな送信抑止を追加しない。
+- 明示primary/secondary/ghost/danger/outlineは同名variant、btn-smはsize sm、他はmd。bare btn-smは既存の補助操作金型secondary smを採用する設計判断。旧中性色のpixel再現ではなく共通部品へ統一する目的を優先。primaryへ推測変換しない。定義のないbtn-danger-link2件は既存削除操作にdanger smを採用、新しいlink色金型は作らない。
+- 動的6件は元の条件式を保持してvariant primary/secondaryへ写像し、tab/aria-pressedを新設しない。共通サイズは元のbtn-smの有無、field-h-md併用はsize sm + layoutClassName field-h-mdとし、既存の最小高さを維持する。
+- btn-block/width100%はfullWidth。login2件はprimary lg fullWidth、Channelsの明示font-md+space3/6はlg。ProductMastersTabのspace1/3はsm。text-xsのCSS定義は実物確認し、存在しないなら独立の意味を付加せず除去し元variantの既定サイズへ。
+- 登録3ページの言語切替はghost md（font-size-sm定義なしのinline上書きは除去）、登録submitはprimary md fullWidth。これらは新しい動作や色の選択を追加しない。
+- inline外側余白は共通Button.css内の登録配置classへ移す: comp-btn-layout--mt-2=margin-top var(--space-2)、--ml-2=margin-left var(--space-2)、--ml-3=margin-left var(--space-3)、--ml-auto=margin-left auto。色/枠/字体/paddingは配置classで上書き禁止。Inboxのvar(--spacing-1)は定義がないため効果を創作せず当該無効margin宣言だけ除去する。gs-save-btnはalign-selfのみ、gs-advisor__run-btnはmin-height/nowrapのみなので同じDOMのlayoutClassNameで維持可。carrier-env-card__delete-btnはdanger md + --ml-autoへ（元の削除色と配置）、独自外観classは渡さない。
+- ButtonLinkをcomponents/ButtonLink.tsxへ登録。to必須のRouter branch/href必須のanchor branchの排他的型、forwardRef<HTMLAnchorElement>、元のLink/aそのまま。variantはtab以外、size/fullWidth/layoutClassNameを共有。disabled/loading/className/styleを受け付けない。Buttonのクラス組立をbuttonAppearance.tsへ抽出しButtonとButtonLinkで1定義のみ利用、既存Button出力/属性順/disabled式は完全維持。link専用CSSはButton.cssの下線除去のみ、色や寸法の重複定義0。
+- 全利用移管後にcomponents.cssの旧btn-primary/secondary/ghost/sm/danger/outline定義、旧header修飾、旧mobile定義とpages-layout.cssのlogin旧ボタン/btn-block定義を除去する。icon-btn等の対象外は保持。旧classに依存する試験の外観assertのみ新classへ更新し、操作期待を弱めない。
+
+登録: componentId=button-link、module=frontend/src/components/ButtonLink.tsx、exportName=ButtonLink、native=a/Router Link、story=ButtonLink.stories.tsx、test=ButtonLink.test.tsx、外観owner=Button.css + buttonAppearance.ts、承認設計=本節。配置class4件も同ownerへ登録。新規の機械台帳体系は作らずcomponent-standard.mdと既存移行台帳へ追記する。
+
+#### 受入・検証と限界
+
+| 条件 | 検証 |
+|---|---|
+| 全数 | 基準221原文全てを変換、残旧0。Button213追加・ButtonLink8追加、native対象外180と業務本文不変。固定全71fileを変換記録から逆変換し全byte一致（import変更含む）。CSS/共有部品は別監査 |
+| 配線/データ | handler・条件・非外観属性・子内容のAST/原文一致、backend/API/DB差分0。共有Buttonのイベント/form/ref/disabled試験、全体既存操作回帰。実サービスへ送信せずAPI/Auth境界を合成 |
+| リンク | href/to/target/rel/download、mailto、Router通常/修飾クリック、preventDefault/stopPropagation、ref、型禁止を試験。Button+navigate代用0 |
+| 実操作 | 実LoginでsignIn/reset引数・pending・成功/失敗、動的variantの条件切替、削除確認の取消/実行で呼出回数と対象ID、invoice外部操作の境界を合成して検証。不足は報告し補完 |
+| 品質 | Button既存試験、ButtonLink新規試験、移管の実操作試験、全体coverage maxWorkers1、check:all/build/Storybook、strict変更箇所、doc/task-state/card/diff、Sol相互レビュー、最新CI |
+| 本番 | 正式PR/merge経路、バックアップ確認、通常Deploy、配備HEAD/公開asset hash/HTTP200/DBRedisCelery接続を確認。画面・本番実書込・人の目視は省略・未検証 |
+
+代替: 小口移管は残件を残すため今回不採用。一律タグ置換はリンクや外側配置を壊すため不採用。外観の完全互換は金型が二重化するため採用せず、既存共通外観を採用。サイズ/背景/枠/角丸は変化する（bare smは背景と枠も変わる）。利用者の意味・操作維持と外観同一を混同しない。表の狭幅表示や報酬欄は過去に幅課題があり、画面未検証という限界を隠さない。
+
+担当: root Astraは設計/審査/公式文書/検収/保存。Sol sharedは共有部品/CSS/専用試験/Storybook、Sol pagesは71利用ファイル/操作試験。所有はカードで列挙。他者未保存や先行PRとの衝突は差分確認後に調整し、無断上書き禁止。新仕様不明・検証失敗は該当操作停止。失敗ログ保持、skip/ガード解除なし。
+
+#### Architect自己審査
+
+REVISE（実装前）。全221原文と既存部品/CSSを照合済み。上記mappingは統一の具体策であって旧外観と同一とはしない。残る調査: OPEN PR/実作業との衝突、全221変換予定と不明0の確認。これを補った後にAPPROVE/カード発行する。同一Astraによる自己審査であり独立第二者レビューとは称しない。
+
+#### 維持の仕組み
+
+守り手: frontend/src/components/Button.test.tsx、ButtonLink.test.tsx（本便作成）、既存frontend品質CI、保存するau監査。外観はButton.css、業務処理は元ページ/API。再発防止は既存移行計画どおり最後のCI補強へ、今回はCI設定を変更しない。切戻しは本PRの製品差分revertでDB復元不要。
+
+
+AU共有部品先行審査: APPROVE（共有部分のみ、Astra自己審査）。既存Button契約試験のform/ref/event/disabled/ARIA、§ZのButtonLink、導入Router7.18.0実在、外側余白4個のtoken定義を照合。共有部品と専用試験は利用ページの並行PRから独立するため先行可。全数移管の審査は利用側の競合確認までREVISEのまま。CARD-AU-SHARED-01正式card-lint exit0。
+
+
+AU全数設計最終審査: APPROVE（Astra自身の自己審査）。全221変換計画resolved221/blocked0、非外観属性と子内容を保持、71fileの逆変換計画を照合。Carrier削除variantの計画ghost誤記をdangerへ訂正して再生成した。OPEN PR6件を実diff照合: #2685 FX/null guard、#2668 Select、#2667 callback prop、#2401/#2362 header/Tabsは対象ボタン変更0。#2656は4openingの整形とCard wrapperがあるがhandler/disabled/class/children不変。将来text競合はあり得るため当該PRを無断統合/変更/終了しない。対象ファイルは本店/公式作業台/実在する4関連作業台で未保存0、2PRには該当作業台なし。古い日時のみを非活動の根拠にしない。今回独立作業台の最新main本文だけを外観変換し、他作業を上書きしない。証跡au-overlap-evidence.json。CARD-AU-PAGES-01は初回停止経路不足L15を補い再lint成功（長行警告のみ）。
+
+
+AU間接依存の追加発見と設計追補（実装中・削除前停止）: HeaderButton.tsx:17-19はclassName={VARIANT_CLASS[variant]}経由で旧btn3variantを参照し、221のliteral監査では捕捉しない。SolがCSS撤去前に発見、当該削除を停止した。これを「全旧CSS利用0」と誤認しない。HeaderButtonは公開API/固定type=buttonを維持しtext3variantだけButton(size md)へ委譲、icon branchは従来native icon-btnのまま残す。ここで追加される共有Button利用1件は213利用側移管と別計数。対象外native180のうちHeaderButton1定義のみ、この共有実装の意図した変更として別監査する。HeaderButton試験を新設して4variantのtype/event/disabled/aria/dataとicon外観classを確認。原文監査はこの共有定義を対象外nativeの不変検査から明示的に区別し、他179定義は不変とする。
+
+旧CSS削除の前提として3カタログstory（AccountSettings2/ContentToolbar2/PageLayout2）の旧raw6件もButtonへ移す。既存文言/他のstory機能は維持。原則の221実運用対象の完了数には算入しない。共通外観/依存の整理に必要な限定追加として同じユーザー依頼内で実施。API/DB/配線変更0。Astraの追補自己審査APPROVE、HeaderButton全文とCSS参照と3storyを直接確認、CARD-AU-SHARED-02正式lint成功。
+
+
+AU品質ゲート補正: 変更対象GoalSettingPage.tsx:225の既存「おすすめ」直書き1件でstrict ESLintが失敗。放置/ルール緩和をせず、同ファイルAdvisorMetricRowで既存useTranslationを利用、goals.advisorRecommendedをja/enへ各1key追加する（ja=おすすめ {{value}}、en=Recommended {{value}}）。既存数値整形/null分岐/処理は不変、日本文言を保持し英語を翻訳する。これは全byte逆変換の例外2コード差分として機械的に許可しlocale差分を各1keyで監査する。Astra設計追補自己審査APPROVE。CARD-AU-PAGES-02正式lint成功。DB/API/配線変更0、i18n以外の警告を独断で直さない。

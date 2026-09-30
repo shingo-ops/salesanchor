@@ -49,3 +49,17 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 ## 最新の設計審査
 
 全体設計は[§AA](design.md#aa-全体設計の自己審査2026-09-10)で同一AI自己審査APPROVE。これは設計合格でありPOの具体的ADR承認・製品実装/テスト・製品PRマージではない。文書PR #3407は保存済み。追加契約を次の文書PRへ保存し、数値ICON生成の限定実装カードへ進む。CIは最後、画面目視は完成後PO。
+
+
+## 2026-09-28 最新の実施状況
+
+上記9月10日の「製品未着手」は当時の履歴。現在はAS製品PR #3834と結果文書PR #3835まで本番反映済み。AS時点の共通Button265/旧232、606自動試験成功。証跡は[migration.md](migration.md)と[AS検収](../../handoff/design-system-recon/evidence-20260910/as-implementation.md)。ATは[design.md §AT](design.md#at-既存フォーム11ボタンの共通金型移管2026-09-28)に基づく11件を実装・ローカル検収済み（最新main統合後634試験成功）。画面・本番フォーム操作・PO目視はPO指示で省略・未検証。全体の残件と最後のCI補強は未完了。
+
+
+2026-09-29 AT本番反映完了: 本人GO #3839、merge a5547fb7、Deploy36488806931 success。11件を共通金型へ移管、統合版共通280/旧221。root本番HEAD/公開asset hash/HTTP200/接続3項目一致を直接確認。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md、at-production-verification.json。画面/本番フォーム/PO目視は省略・未検証。
+
+
+2026-09-29 AU着手: POは残旧221件の全数移管を依頼。最新基準303c3cfe7で221件/71fileを再測定。設計はdesign.md §AU、証拠は[全数棚卸し](../../handoff/design-system-recon/evidence-20260910/au-inventory.md)。実装前審査中。
+
+
+AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855本人GO後マージ・本番反映・公開配信照合済み（Deploy36522989354）。画面省略・未検証。

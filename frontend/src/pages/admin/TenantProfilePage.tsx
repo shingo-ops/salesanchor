@@ -18,6 +18,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
+import { Button } from "../../components/Button";
 
 interface TenantProfile {
   id: number;
@@ -246,14 +247,14 @@ export default function TenantProfilePage() {
 
           {canEdit && (
             <div className="form-actions">
-              <button
+              <Button variant="primary" size="md"
                 type="submit"
-                className="btn-primary"
+
                 disabled={saving}
                 data-testid="tenant-profile-save"
               >
                 {saving ? t("common.saving") : t("common.save")}
-              </button>
+              </Button>
             </div>
           )}
         </form>

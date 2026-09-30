@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { ContentToolbar } from "../ContentToolbar";
+import { Button } from "../Button";
 
 export interface MasterRow {
   id: number;
@@ -138,11 +139,11 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
-            <button type="submit" className="btn-secondary field-h-md">{t("common.search")}</button>
+            <Button type="submit" variant="secondary" size="md">{t("common.search")}</Button>
             {search && (
-              <button type="button" className="btn-sm" onClick={() => { setSearch(""); setSearchInput(""); }}>
+              <Button variant="secondary" size="sm" type="button" onClick={() => { setSearch(""); setSearchInput(""); }}>
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -166,11 +167,11 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
           value={form.name_en}
           onChange={(e) => setForm({ ...form, name_en: e.target.value })}
         />
-        <button type="submit" className="btn-primary">
+        <Button type="submit" variant="primary" size="md">
           {editId ? t("common.update") : t("superAdmin.attrMasters.addBtn")}
-        </button>
+        </Button>
         {editId ? (
-          <button type="button" className="btn-secondary" onClick={cancelEdit}>{t("common.cancel")}</button>
+          <Button type="button" variant="secondary" size="md" onClick={cancelEdit}>{t("common.cancel")}</Button>
         ) : (
           <span />
         )}
@@ -205,10 +206,10 @@ export function MasterListEditor({ source }: { source: MasterDataSource }) {
                 <td>{r.name_ja}</td>
                 <td>{r.name_en}</td>
                 <td>
-                  <button className="btn-secondary btn-sm" onClick={() => startEdit(r)}>{t("common.edit")}</button>
+                  <Button variant="secondary" size="sm" onClick={() => startEdit(r)}>{t("common.edit")}</Button>
                 </td>
                 <td>
-                  <button className="btn-danger btn-sm" onClick={() => remove(r.id)}>{t("common.delete")}</button>
+                  <Button variant="danger" size="sm" onClick={() => remove(r.id)}>{t("common.delete")}</Button>
                 </td>
               </tr>
             ))

@@ -34,6 +34,9 @@ const {
   hasFileCitations,
   validateFileCitations,
   validateDesignDoc,
+  hasPoOnlyExceptionPath,
+  migrationsContainDropStatement,
+  requiresPoOnlyGo,
 } = require(SCRIPT);
 
 // ─── テストユーティリティ ─────────────────────────────────────────────────────
@@ -52,12 +55,19 @@ function test(name, fn) {
   }
 }
 
-function runScript(env = {}) {
-  const result = spawnSync('node', [SCRIPT], {
+function runScript(env = {}, args = []) {
+  const result = spawnSync('node', [SCRIPT, ...args], {
     env: { ...process.env, ...env },
     encoding: 'utf8',
   });
   return { code: result.status, stdout: result.stdout, stderr: result.stderr };
+}
+
+function runScriptWithPath(env, args, pathValue) {
+  return spawnSync('node', [SCRIPT, ...args], {
+    env: { ...process.env, ...env, PATH: pathValue },
+    encoding: 'utf8',
+  });
 }
 
 // ─── 一時ファイル管理 ─────────────────────────────────────────────────────────
@@ -340,6 +350,77 @@ test('PR番号未指定時は番号一致チェックをスキップ', () => {
   assert.deepStrictEqual(errors, []);
 });
 
+// ── ユニットテスト: ADR-1003 GO委任 ───────────────────────────────────────
+console.log('\n【ADR-1003 GO委任テスト】');
+
+/** 委譲名義のGO記録セクション */
+function delegatedGORecordSection(prNumber) {
+  return `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #${prNumber}\n- バックアップ確認: あり\n`;
+}
+
+test('ADR-1003: 委譲の名義（例外対象でない）はエラーなしで通る', () => {
+  const r = parseGORecord(delegatedGORecordSection(2099));
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: false });
+  assert.deepStrictEqual(errors, []);
+});
+
+test('ADR-1003: 例外対象で委譲の名義を使うとfailする', () => {
+  const r = parseGORecord(delegatedGORecordSection(2099));
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: true });
+  assert.ok(errors.length > 0);
+  assert.ok(errors.some(e => e.includes('例外対象') && e.includes('PO本人')));
+});
+
+test('ADR-1003: PO名義は例外対象でも従来どおり通る', () => {
+  const r = parseGORecord(validGORecordSection(2099)); // Shingo（shingo-ops）名義
+  const errors = validateGORecord(r, '2099', { requiresPoOnly: true });
+  assert.deepStrictEqual(errors, []);
+});
+
+test('ADR-1003: hasPoOnlyExceptionPath は workflow-lint.yml を例外対象と判定する', () => {
+  assert.ok(hasPoOnlyExceptionPath(['.github/workflows/workflow-lint.yml']));
+  assert.ok(!hasPoOnlyExceptionPath(['.github/workflows/deploy.yml']));
+});
+
+test('ADR-1003: migrationsContainDropStatement はMOCK変数で判定できる', () => {
+  process.env.MOCK_MIGRATION_DROP_DETECTED = 'true';
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/001_test.sql']), true);
+  } finally {
+    delete process.env.MOCK_MIGRATION_DROP_DETECTED;
+  }
+});
+
+test('ADR-1003: requiresPoOnlyGo はmigrationファイルが無ければfalse（DROP検出をスキップ）', () => {
+  assert.strictEqual(requiresPoOnlyGo(['backend/app/schemas/lead.py']), false);
+});
+
+test('ADR-1003: migration有り＋BASE_SHA/HEAD_SHA無し → fail-closed（true）', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['migrations/001_test.sql']), true);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
+test('ADR-1003: migrationファイルが無ければBASE_SHA/HEAD_SHA無しでもfalse', () => {
+  const savedBase = process.env.BASE_SHA;
+  const savedHead = process.env.HEAD_SHA;
+  delete process.env.BASE_SHA;
+  delete process.env.HEAD_SHA;
+  try {
+    assert.strictEqual(migrationsContainDropStatement(['backend/app/schemas/lead.py']), false);
+  } finally {
+    if (savedBase !== undefined) process.env.BASE_SHA = savedBase; else delete process.env.BASE_SHA;
+    if (savedHead !== undefined) process.env.HEAD_SHA = savedHead; else delete process.env.HEAD_SHA;
+  }
+});
+
 // ── ユニットテスト: file:line 引用検証 ───────────────────────────────────────
 console.log('\n【file:line引用テスト】');
 
@@ -570,6 +651,42 @@ test('AC4: 危ない変更で自己申告免除"だけ"はfail（GO記録必須�
     MOCK_PR_BODY: body,
   });
   assert.notStrictEqual(result.code, 0);
+});
+
+// ── ADR-1003: GO委任の統合テスト ────────────────────────────────────────────
+console.log('\n【ADR-1003 GO委任 統合テスト】');
+
+test('ADR-1003統合: 危ない変更（例外対象でない）＋委譲名義のGO → pass', () => {
+  const body = `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: 'scripts/some-script.sh', // dangerous（scripts/）だがADR-1003例外対象ではない
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `exitコードは0であるべき: stderr=${result.stderr}`);
+});
+
+test('ADR-1003統合: workflow-lint.yml変更＋委譲名義のGO → fail（PO本人のGOが必要）', () => {
+  const body = `### GO記録\n- GO発行者: POの委任に基づくClaude Opus発行\n- 日時: 2026-09-29 10:00 JST\n- GO原文: GO #2099\n- バックアップ確認: あり\n`;
+  const result = runScript({
+    CHANGED_FILES: '.github/workflows/workflow-lint.yml',
+    MOCK_PR_BODY: body,
+    PR_NUMBER: '2099',
+  });
+  assert.notStrictEqual(result.code, 0, '委譲名義では例外対象のfailになるべき');
+  assert.ok(
+    result.stderr.includes('例外対象') && result.stderr.includes('PO本人'),
+    `例外対象メッセージが出るべき: stderr=${result.stderr}`
+  );
+});
+
+test('ADR-1003統合: workflow-lint.yml変更＋PO名義のGO → pass', () => {
+  const result = runScript({
+    CHANGED_FILES: '.github/workflows/workflow-lint.yml',
+    MOCK_PR_BODY: validGORecordSection(2099),
+    PR_NUMBER: '2099',
+  });
+  assert.strictEqual(result.code, 0, `PO名義ならexitコードは0であるべき: stderr=${result.stderr}`);
 });
 
 // ── §7 AC5: GO記録あり（全フィールド正常）→ pass ────────────────────────────
@@ -1370,6 +1487,109 @@ test('維持欄統合: failモード＋欄なし＋PR2599 → pass（猶予・�
 });
 
 }
+
+console.log('\n【validation-only副作用テスト】');
+
+test('validation-only: 緊急判定は維持しissue createは0回', () => {
+  setupTmp();
+  const fakeBin = join(TMP, 'fake-bin');
+  const ghLog = join(TMP, 'gh.log');
+  mkdirSync(fakeBin, { recursive: true });
+  writeFileSync(join(fakeBin, 'gh'), `#!/bin/sh\necho "$*" >> "${ghLog}"\nif [ "$1 $2" = "issue list" ]; then echo '[]'; fi\nexit 0\n`);
+  require('fs').chmodSync(join(fakeBin, 'gh'), 0o755);
+  try {
+    const body = `### 標準ワークフロー確認\n- 対象ADR: ADR-113\n- recon: docs/handoff/go-record-transcription/pr-lifecycle-recon.md\n- 設計: docs/handoff/go-record-transcription/pr-lifecycle-design.md\n- （危ない変更の特例時）モード: 緊急 ＋ 承認者: shingo-ops\n触るファイル: scripts/check-process-artifacts.js\n削除するファイル: scripts/check-process-artifacts.js\n\n${validGORecordSection(2700)}`;
+    const env = {
+      CHANGED_FILES: 'scripts/check-process-artifacts.js',
+      MOCK_ADDED_FILES: '',
+      MOCK_PR_BODY: body,
+      MOCK_PR_AUTHOR: 'shingo-cc',
+      MOCK_EXTERNAL_API_CHANGE: 'false',
+      PR_NUMBER: '2700',
+      REPO: 'shingo-ops/salesanchor',
+    };
+    const validation = runScriptWithPath(env, ['--validation-only'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(validation.status, 0, `${validation.stdout}\n${validation.stderr}`);
+    const validationLog = existsSync(ghLog) ? require('fs').readFileSync(ghLog, 'utf8') : '';
+    assert.ok(!validationLog.includes('issue create'), `issue副作用あり: ${validationLog}`);
+
+    const duplicate = runScriptWithPath(env, ['--validation-only', '--validation-only'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(duplicate.status, 1, `重複引数はfailすべき: ${duplicate.stdout}\n${duplicate.stderr}`);
+    const unknown = runScriptWithPath(env, ['--validation-ony'], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(unknown.status, 1, `未知引数はfailすべき: ${unknown.stdout}\n${unknown.stderr}`);
+    const rejectedLog = existsSync(ghLog) ? require('fs').readFileSync(ghLog, 'utf8') : '';
+    assert.ok(!rejectedLog.includes('issue create'), `引数拒否時のissue副作用あり: ${rejectedLog}`);
+
+    const normal = runScriptWithPath(env, [], `${fakeBin}:${process.env.PATH}`);
+    assert.strictEqual(normal.status, 0, `${normal.stdout}\n${normal.stderr}`);
+    const normalLog = require('fs').readFileSync(ghLog, 'utf8');
+    assert.ok(normalLog.includes('issue create'), `通常modeのissue createが無い: ${normalLog}`);
+    assert.ok(normalLog.includes('--repo github.com/shingo-ops/salesanchor'), `Issue送信先が固定されていない: ${normalLog}`);
+  } finally { cleanupTmp(); }
+});
+
+test('対象外REPOはfull checker開始前にfail', () => {
+  const r = runScript({
+    CHANGED_FILES: 'scripts/check-process-artifacts.js',
+    MOCK_ADDED_FILES: '',
+    MOCK_PR_BODY: validGORecordSection(2700),
+    MOCK_PR_AUTHOR: 'shingo-cc',
+    MOCK_EXTERNAL_API_CHANGE: 'false',
+    PR_NUMBER: '2700',
+    REPO: 'evil/example',
+  }, ['--validation-only']);
+  assert.strictEqual(r.code, 1, `対象外REPOはfailすべき: ${r.stdout}\n${r.stderr}`);
+  assert.ok(r.stderr.includes('対象外repo'), `拒否理由が無い: ${r.stderr}`);
+});
+
+// ─── LOCAL_PRECHECK テスト（docs/handoff/local-gate-ci-parity/design.md §2）────
+console.log('\n【LOCAL_PRECHECK テスト】');
+
+test('LOCAL_PRECHECK: 危険変更＋GO記録なしでもGO記録で落ちず先の検査に進む', () => {
+  const r = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    // LOCAL_PRECHECKは触る/削除ファイル照合も猶予なし扱いになるため、
+    // GO記録の検査だけを分離して見るために宣言を満たしておく
+    MOCK_PR_BODY: '### 標準ワークフロー確認\n触るファイル: migrations/001_test.sql\n削除するファイル: なし\n',
+    LOCAL_PRECHECK: '1',
+  });
+  assert.strictEqual(r.code, 0, `GO記録なしでも落ちないべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stdout.includes('GO記録は') && r.stdout.includes('PR 番号確定後'),
+    `GO記録省略メッセージが出るべき: ${r.stdout}`
+  );
+  assert.ok(
+    !r.stderr.includes('PROCESS ARTIFACTS GATE FAILED'),
+    `GO記録要求でfailしてはいけない: ${r.stderr}`
+  );
+});
+
+test('LOCAL_PRECHECK: GITHUB_ACTIONS=true と併用するとfail（CIでは使用不可）', () => {
+  const r = runScript({
+    CHANGED_FILES: 'migrations/001_test.sql',
+    MOCK_PR_BODY: '',
+    LOCAL_PRECHECK: '1',
+    GITHUB_ACTIONS: 'true',
+  });
+  assert.strictEqual(r.code, 1, `CIでのLOCAL_PRECHECKはfailすべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stderr.includes('LOCAL_PRECHECK は CI では使えません'),
+    `CI不可メッセージが出るべき: ${r.stderr}`
+  );
+});
+
+test('LOCAL_PRECHECK: PR_NUMBERなしでも触る/削除するファイルの宣言照合が行われる', () => {
+  const r = runScript({
+    CHANGED_FILES: 'backend/tests/util_precheck_test.py',
+    MOCK_PR_BODY: '',
+    LOCAL_PRECHECK: '1',
+  });
+  assert.strictEqual(r.code, 1, `PR番号なしでも宣言照合が働くべき: code=${r.code}\n${r.stdout}\n${r.stderr}`);
+  assert.ok(
+    r.stderr.includes('触るファイル'),
+    `触るファイル宣言不足のメッセージが出るべき: ${r.stderr}`
+  );
+});
 
 // ─── 結果集計 ─────────────────────────────────────────────────────────────────
 console.log(`

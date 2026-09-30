@@ -13,6 +13,7 @@ import { useEffect, useMemo, useState, FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import ConfirmModal from "../../components/ConfirmModal";
 
 interface KnowledgeRule {
@@ -298,20 +299,20 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadRules(ruleSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadRules(ruleSearch)} className="btn-secondary btn-sm" data-testid="rules-search-btn">
+          <Button onClick={() => loadRules(ruleSearch)} variant="secondary" size="sm" data-testid="rules-search-btn">
             {t("common.search")}
-          </button>
-          <button onClick={openCreateRule} className="btn-primary btn-sm" data-testid="rules-new" style={{ marginLeft: "auto" }}>
+          </Button>
+          <Button variant="primary" size="sm" layoutClassName="comp-btn-layout--ml-auto" onClick={openCreateRule} data-testid="rules-new">
             {t("superAdmin.knowledge.newRule")}
-          </button>
-          <button
+          </Button>
+          <Button variant="danger" size="sm"
             onClick={() => setRuleConfirmDelete(true)}
-            className="btn-danger btn-sm"
+
             disabled={ruleSelected.size === 0}
             data-testid="rules-bulk-delete"
           >
             {t("common.delete")}
-          </button>
+          </Button>
         </div>
 
         <table className="data-table">
@@ -349,9 +350,9 @@ export default function KnowledgeAliasesTab() {
                   <td>{r.priority}</td>
                   <td>{t(`superAdmin.knowledge.langs.${r.language}`, { defaultValue: r.language })}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="btn-sm" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>
+                    <Button variant="secondary" size="sm" onClick={() => openEditRule(r)} data-testid={`rule-edit-${r.id}`}>
                       {t("common.edit")}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -377,20 +378,20 @@ export default function KnowledgeAliasesTab() {
             onKeyDown={(e) => { if (e.key === "Enter") loadAliases(aliasSearch); }}
             style={{ width: SEARCH_WIDTH, maxWidth: "100%" }}
           />
-          <button onClick={() => loadAliases(aliasSearch)} className="btn-secondary btn-sm" data-testid="aliases-search-btn">
+          <Button onClick={() => loadAliases(aliasSearch)} variant="secondary" size="sm" data-testid="aliases-search-btn">
             {t("common.search")}
-          </button>
-          <button onClick={openCreateAlias} className="btn-primary btn-sm" data-testid="aliases-new" style={{ marginLeft: "auto" }}>
+          </Button>
+          <Button variant="primary" size="sm" layoutClassName="comp-btn-layout--ml-auto" onClick={openCreateAlias} data-testid="aliases-new">
             {t("superAdmin.knowledge.newAlias")}
-          </button>
-          <button
+          </Button>
+          <Button variant="danger" size="sm"
             onClick={() => setAliasConfirmDelete(true)}
-            className="btn-danger btn-sm"
+
             disabled={aliasSelected.size === 0}
             data-testid="aliases-bulk-delete"
           >
             {t("common.delete")}
-          </button>
+          </Button>
         </div>
 
         <table className="data-table">
@@ -422,9 +423,9 @@ export default function KnowledgeAliasesTab() {
                   <td><code>{a.alias_text}</code></td>
                   <td>{a.product_id ? (productName.get(a.product_id) ?? `#${a.product_id}`) : "-"}</td>
                   <td style={{ textAlign: "right" }}>
-                    <button className="btn-sm" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>
+                    <Button variant="secondary" size="sm" onClick={() => openEditAlias(a)} data-testid={`alias-edit-${a.id}`}>
                       {t("common.edit")}
-                    </button>
+                    </Button>
                   </td>
                 </tr>
               ))
@@ -480,8 +481,8 @@ export default function KnowledgeAliasesTab() {
                 </label>
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" data-testid="rule-save">{ruleEditId !== null ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowRuleForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md" data-testid="rule-save">{ruleEditId !== null ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>
@@ -533,8 +534,8 @@ export default function KnowledgeAliasesTab() {
                 </div>
               </div>
               <div className="form-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowAliasForm(false)}>{t("common.cancel")}</button>
-                <button type="submit" className="btn-primary" data-testid="alias-save">{aliasEditId !== null ? t("common.update") : t("common.create")}</button>
+                <Button type="button" variant="secondary" size="md" onClick={() => setShowAliasForm(false)}>{t("common.cancel")}</Button>
+                <Button type="submit" variant="primary" size="md" data-testid="alias-save">{aliasEditId !== null ? t("common.update") : t("common.create")}</Button>
               </div>
         </form>
       </Modal>

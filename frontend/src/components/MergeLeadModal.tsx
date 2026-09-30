@@ -20,6 +20,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
 import { getStatusPresentation } from "../utils/statusPresentation";
 import { Modal } from "./Modal";
+import { Button } from "./Button";
 
 interface LeadOption {
   id: number;
@@ -243,14 +244,14 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               <button type="button" onClick={onCancel}>
                 {t("common.cancel")}
               </button>
-              <button
+              <Button variant="primary" size="md"
                 type="button"
-                className="btn-primary"
+
                 disabled={!selected}
                 onClick={() => setStage("confirm")}
               >
                 {t("mergeLead.nextStep")}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -306,15 +307,15 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
               >
                 {t("common.back")}
               </button>
-              <button
+              <Button variant="danger" size="md"
                 type="submit"
-                className="btn-danger"
+
                 disabled={submitting}
               >
                 {submitting
                   ? t("mergeLead.merging")
                   : t("mergeLead.executeLabel", { masterName: selected.customer_name })}
-              </button>
+              </Button>
             </div>
           </form>
         )}

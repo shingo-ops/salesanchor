@@ -20,6 +20,7 @@ import { Select } from "../../components/Select";
 import { HeaderButton } from "../../components/HeaderButton";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { Button } from "../../components/Button";
 
 interface TcgNoteMaster {
   id: number;
@@ -233,20 +234,20 @@ export default function NoteMasterPage() {
       renderCell: n => (
         <span className="actions">
           {hasPermission("suppliers.view") && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={(e) => { e.stopPropagation(); openEdit(n); }}
             >
               {t("common.edit")}
-            </button>
+            </Button>
           )}
           {hasPermission("suppliers.view") && (
-            <button
-              className="btn-sm btn-danger"
+            <Button variant="danger" size="sm"
+
               onClick={(e) => { e.stopPropagation(); setDeleteTarget(n); }}
             >
               {t("common.delete")}
-            </button>
+            </Button>
           )}
         </span>
       ),

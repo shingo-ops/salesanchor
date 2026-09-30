@@ -1,0 +1,29 @@
+CARD-AU-SHARED-01
+受領確認: 冒頭に本報告はカードCARD-AU-SHARED-01の実行結果であると記載する。
+本カードの許可・禁止は過去便の禁止条項をすべて上書きする。
+読んだ節: guards/00-common.md、03-file.md、04-worktree.md、05-pr.md、11-lint.md。公式worktree/実在型/CSSを照合済み。
+担当: sol_button_contracts。単独ではない。他者の変更を戻さず調整する。rootは文書/台帳、sol_all_inventoryは71利用ファイル。
+作業場所: /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons
+基準: 303c3cfe756b1d82c042cba342c3a3150fc5ab8c
+設計: docs/specs/design-system/design.md §AU。先にこの全文と共有部分の審査追補を読む。
+所有: frontend/src/components/Button.tsx、Button.css、buttonAppearance.ts、ButtonLink.tsx、ButtonLink.test.tsx、ButtonLink.stories.tsx。
+追加所有: frontend/src/components.css、frontend/src/pages-layout.css（旧btn CSSだけ、全利用移管確認後に撤去）。
+追加所有: frontend/src/components/FullPageFormButtonMigration.test.tsx（旧btn-primary assert1箇所だけを新金型に更新、操作期待は保持）。
+許可: 共有外観組立の1定義への抽出、ButtonLink実装/型/試験/Storybook、登録済み外側配置class4件、未使用旧btn CSS除去。
+禁止: ページ/DB/API/配線/処理/認可/翻訳/依存/CI/トークン/GO/commit/push/PR/本番変更、skip/ガード解除、新agent起動。
+手順0: 状態/preflightと既存Button出力を確認する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && ./scripts/dev/executor-preflight.sh
+手順1: shared builderは既存Buttonのclass文字列順序と全条件をそのまま抽出する。属性/disabled/ARIA順序は変えない。
+ButtonLinkはtoまたはhrefを必須の排他的型にして元Link/aを直接renderする。forwardRef anchor、variantはtab以外。
+ButtonとButtonLinkで見た目定義を1つにする。Linkにloading/disabled/className/style禁止、role=buttonを追加しない。
+Link専用CSSはButton.cssで下線除去のみ。外側配置classは設計4件だけtoken参照で登録する。
+Context7利用不可はroot確認済み。公式資料 https://reactrouter.com/7.18.4/api/components/Link と実導入7.18.0コード/型を対照し新機能を持ち込まない。
+手順2: native契約既存試験と新Link試験を実行する。href/to/target/rel/download/mailto/ref、クリック修飾4種、preventDefault、stopPropagation、props/型禁止を検証。
+Storybookは既存パターン、同じCSS共有を説明。合成リンクを用い実外部アクセス0。
+手順3: 全旧btn利用が0になったroot連絡後に、旧定義だけ除去する。対象外icon-btn、page-header-actions自体、他CSSを保持する。
+FullPageFormButtonMigrationの過去範囲assert1件だけを変更し意味のある操作試験を弱めない。その他既存試験変更は報告する。
+手順4: 所有TSX strict ESLint/new suite、git diff検査、原ログと結果を/tmp/au-shared-validationへ保存する。
+  cd /Users/tanizawashingo/worktrees/salesanchor/release-frontend-all-buttons && git diff --check
+不明/設計矛盾/失敗は根拠と報告し該当操作停止、調査で補える分は補う。画面/本番フォーム/PO目視は省略・未検証。
+成果物: 所有変更/テストログ/初回失敗/残件。root連絡後にpages変更のread-only独立レビューを許可する。
+END OF CARD

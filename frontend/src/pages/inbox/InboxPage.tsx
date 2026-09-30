@@ -23,6 +23,7 @@ import { InboxMessageThread } from "./InboxMessageThread";
 import { InboxKartePanel } from "./InboxKartePanel";
 import { InboxSettingsModal } from "./InboxSettingsModal";
 import { InboxProfileModal } from "./InboxProfileModal";
+import { Button } from "../../components/Button";
 
 export default function InboxPage() {
   const state = useInboxState();
@@ -43,24 +44,24 @@ export default function InboxPage() {
 
   const headerActions = (
     <div className="page-header-actions">
-      <button
+      <Button variant="ghost" size="md"
         type="button"
-        className="btn-ghost"
+
         onClick={() => navigate("/templates")}
         aria-label={t("nav.templates")}
         data-tooltip={t("nav.templates")}
       >
         {t("nav.templates")}
-      </button>
-      <button
+      </Button>
+      <Button variant="ghost" size="md"
         type="button"
-        className="btn-ghost"
+
         onClick={() => navigate("/faq")}
         aria-label={t("faq.title")}
         data-tooltip={t("faq.title")}
       >
         FAQ
-      </button>
+      </Button>
       <button
         type="button"
         className="icon-btn"

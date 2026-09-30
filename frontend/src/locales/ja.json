@@ -860,7 +860,8 @@
     "advisorStep3": "③成約率{{winRate}}・商談化率{{dealRate}}から逆算",
     "advisorMonthlyRequired": "月間で必要な数",
     "advisorWeeklyRequired": "週間で必要な数",
-    "advisorGeneratedAt": "作成日時"
+    "advisorGeneratedAt": "作成日時",
+    "advisorRecommended": "おすすめ {{value}}"
   },
   "leads": {
     "title": "リード管理",
@@ -1327,8 +1328,6 @@
     "addReaction": "リアクションを追加",
     "removeReaction": "リアクションを取り消す",
     "reactedBy": "リアクションした人",
-    "emojiPicker": "絵文字を選択",
-    "customEmojis": "サーバー絵文字",
     "reactionSendFailed": "リアクションの送信に失敗しました",
     "reactionDeleteFailed": "リアクションの取り消しに失敗しました",
     "sendError": {
@@ -4017,6 +4016,7 @@
       "errorLog": "エラーログ",
       "groupSystem": "システム",
       "pipelineMap": "パイプラインマップ",
+      "lineWorkflowGuide": "LINE解析の業務手順",
       "dbViewer": "データ構造"
     },
     "dbViewer": {
@@ -4153,6 +4153,123 @@
         }
       }
     },
+    "lineWorkflowGuide": {
+      "title": "LINE解析の業務手順",
+      "intro": "LINEの記録を取り込み、仕入元と商品情報を確認してから配信するまでの流れを、担当と確認先に沿って説明します。",
+      "readOnlyNotice": "手順を確認するページです。各操作は、ボタンで開く画面で行います。",
+      "stepLabel": "手順 {{step}}",
+      "stepsTitle": "7つの手順",
+      "prerequisites": {
+        "title": "始める前に用意するもの",
+        "item1": "LINEから書き出した.txtファイルと、取り込む対象期間",
+        "item2": "仕入元のLINE表示名を確認できる資料",
+        "item3": "商品・単位・状態の登録情報と、読み取り方を決めるルール・指示文を確認できる権限"
+      },
+      "toc": {
+        "title": "目次",
+        "ariaLabel": "LINE解析の業務手順の目次"
+      },
+      "fields": {
+        "purpose": "目的",
+        "reference": "確認する資料・画面",
+        "input": "入力・操作",
+        "result": "結果",
+        "next": "次へ進む条件",
+        "trouble": "困った時"
+      },
+      "actions": {
+        "ariaLabel": "手順 {{step}} の操作先",
+        "openImport": "取込画面を開く",
+        "openSupplierMaster": "仕入元マスタを開く",
+        "openExtractionRules": "仕入元別ルールを開く",
+        "openKnowledgeAliases": "抽出フィルタ / ルールを開く",
+        "openPromptConfig": "抽出プロンプト設定を開く",
+        "openErrorLog": "エラーログを開く",
+        "openProductMaster": "商品マスタを開く",
+        "openUnitMaster": "単位ルールを開く",
+        "openConditionsMaster": "状態ルールを開く",
+        "openDistribution": "配信画面を開く"
+      },
+      "steps": {
+        "step1": {
+          "title": "LINEの記録を取り込む",
+          "owner": "人が担当",
+          "purpose": "解析するLINEの記録と対象期間をシステムへ渡します。",
+          "reference": "LINEから書き出した.txtファイルと取込画面を確認します。",
+          "input": "ファイルと対象期間を指定します。既定は24時間で、0を指定すると全期間が対象です。",
+          "result": "記録が保存され、仕入元の確認または抽出待ちへ進みます。",
+          "next": "不明な仕入元をすべて解決すると、抽出を開始できます。",
+          "trouble": "取り込めない場合は、書き出したファイルが.txt形式か、指定した期間に投稿があるかを確認します。"
+        },
+        "step2": {
+          "title": "誰から届いたか確認する",
+          "owner": "システムと人が担当",
+          "purpose": "LINE表示名を、登録済みの仕入元と結び付けます。",
+          "reference": "取込画面の不明な仕入元と、仕入元マスタを確認します。",
+          "input": "システムが表示名で照合します。不明な場合は、既存の仕入元を選ぶか新しく登録します。",
+          "result": "既存の仕入元を選ぶと、その仕入元のLINE名も今回の表示名に更新されます。",
+          "next": "不明な仕入元が0件になった後、取込内容を確定して抽出へ進みます。",
+          "trouble": "仕入元が判断できない場合は照合を保留し、誤った仕入元のまま抽出を始めません。"
+        },
+        "step3": {
+          "title": "今回扱う投稿を選ぶ",
+          "owner": "システムが担当",
+          "purpose": "指定期間から、今回の解析に使う投稿を決めます。",
+          "reference": "取込画面で原文と対象期間を確認します。",
+          "input": "システムが期間内の仕入元ごとの最新投稿を選びます。",
+          "result": "選ばれた原文が保存され、抽出待ちになります。",
+          "next": "対象の投稿が保存されると、商品情報の読み取りへ進みます。",
+          "trouble": "使いたい投稿が見当たらない場合は、原文の投稿日時と指定した期間を確認します。"
+        },
+        "step4": {
+          "title": "商品情報を読み取る",
+          "owner": "システムが担当",
+          "purpose": "投稿から商品・数量・価格などを読み取ります。",
+          "reference": "仕入元別ルールで書き方の特徴、抽出フィルタ / ルールで読み飛ばす条件、抽出プロンプト設定でAIへの読み取り指示を確認します。",
+          "input": "システムが除外条件を確認し、対象の原文から商品情報を抽出します。",
+          "result": "抽出結果は、空の投稿・除外・抽出失敗を区別して記録されます。",
+          "next": "抽出できた情報は、登録情報との照合へ進みます。",
+          "trouble": "読み取りに失敗した場合は、エラーログを開いて原因を確認します。"
+        },
+        "step5": {
+          "title": "登録情報と照合する",
+          "owner": "システムが担当",
+          "purpose": "読み取った内容を、登録済みの商品・単位・状態にそろえます。",
+          "reference": "商品マスタ、単位ルール、状態ルールを確認します。",
+          "input": "自動解析が有効な場合、システムが登録情報を使って、どの商品・単位・状態に当たるかを照合します。",
+          "result": "商品や単位などの照合結果と、確認が必要な項目が記録されます。",
+          "next": "解析が終わったら、取込画面で結果を確認します。",
+          "trouble": "抽出が終わっても解析が始まらない場合は、管理担当者に自動解析の設定を確認してもらいます。"
+        },
+        "step6": {
+          "title": "結果と要確認を確認する",
+          "owner": "人が担当",
+          "purpose": "取込結果と要確認の内容を見て、参照設定の不足を調べます。",
+          "reference": "取込画面の結果と、商品・仕入元などの各マスタ、エラーログを確認します。",
+          "input": "結果と要確認を読み、必要に応じて不足しているマスタやルールの登録内容を確認します。",
+          "result": "配信前に確認すべき不足や失敗の場所が分かります。",
+          "next": "結果と必要な登録内容を確認したら、配信内容の確認へ進みます。",
+          "trouble": "判断できない項目は、元の投稿と登録情報を確認します。処理の失敗が表示されている場合は、エラーログで原因を確認します。"
+        },
+        "step7": {
+          "title": "配信内容を確認して実行する",
+          "owner": "人が担当",
+          "purpose": "配信候補と除外件数を確認し、確定した内容を配信します。",
+          "reference": "配信画面の候補件数と除外件数を確認します。",
+          "input": "件数を確認して配信を実行します。対象シートの既存内容は全置換されます。",
+          "result": "確認済みの配信内容が対象シートへ出力されます。",
+          "next": "配信完了と対象シートの内容を確認して終了します。",
+          "trouble": "配信が止まる場合は、抽出・解析が終わっているか、配信先が登録されているかを確認します。"
+        }
+      },
+      "exceptions": {
+        "title": "例外が起きた時の戻り先",
+        "item1": "不明な仕入元がある時は、手順2の照合へ戻ります。",
+        "item2": "抽出に失敗した時は、手順4からエラーログを確認します。",
+        "item3": "要確認が残る時は、手順6で結果と参照したマスタを確認します。",
+        "item4": "設定済みの端末からの自動取込も、この流れにつながります。自動解析・自動配信は、それぞれの設定が有効な場合に動きます。"
+      }
+    },
     "errorLog": {
       "title": "抽出エラーログ",
       "errorMessage": "エラー内容",
@@ -4168,6 +4285,20 @@
       "retryError": "再実行に失敗しました",
       "errorCategory": "エラー種別",
       "errorDetail": "エラー詳細",
+      "handlingStatus": "対応状況",
+      "retryCount": "再実行回数",
+      "firstFailedAt": "最初の失敗",
+      "lastFailedAt": "最新の失敗",
+      "tab": {
+        "unhandled": "未対応",
+        "inProgress": "対応中",
+        "resolved": "対応完了"
+      },
+      "status": {
+        "unhandled": "未対応",
+        "inProgress": "対応中",
+        "resolved": "対応完了"
+      },
       "category": {
         "gemini_rate_limit": "Gemini レート制限",
         "gemini_http_error": "Gemini HTTPエラー",
@@ -4938,7 +5069,9 @@
     "newRulePattern": "パターン",
     "newRuleNormalizedTo": "変換先",
     "ruleLinked": "リンク済み",
-    "noRulesLinked": "未設定"
+    "noRulesLinked": "未設定",
+    "shipFormat": "発送日の書き方",
+    "shipFormatHelper": "予約商品の発送日の記載パターン（例：発売◯日前発送）"
   },
   "needsReview": {
     "title": "要確認一覧",
@@ -4949,7 +5082,12 @@
     "noItems": "要確認の商品はありません",
     "pidUnresolved": "商品未特定",
     "multiCandidate": "複数候補",
-    "noteUnmatched": "備考未一致"
+    "noteUnmatched": "備考未一致",
+    "tabs": {
+      "production": "本番の確認待ち",
+      "shadow": "試運転の確認待ち",
+      "bottlenecks": "詰まり"
+    }
   },
   "distributionSettings": {
     "buttonLabel": "配信設定",
@@ -4960,5 +5098,38 @@
     },
     "save": "保存",
     "saved": "保存しました"
+  },
+  "shadowReview": {
+    "supplier": "仕入元",
+    "excerpt": "原文の抜粋",
+    "stoppedItem": "止まった項目",
+    "candidates": "候補",
+    "reason": "理由",
+    "createdAt": "作成日時",
+    "noItems": "確認待ちはありません",
+    "modalTitle": "試運転の確認待ち詳細",
+    "blockText": "原文ブロック全文",
+    "candidateList": "候補一覧",
+    "keywordKind": "ワードの種類",
+    "keywordKindSearch": "検索ワード",
+    "keywordKindExclude": "除外ワード",
+    "keywordInput": "ワード",
+    "checkImpact": "影響を確認",
+    "register": "登録",
+    "previewChecked": "{{count}}件を確認しました",
+    "registerSuccess": "登録しました",
+    "registerFailed": "登録に失敗しました",
+    "keywordAlreadyExists": "このワードは既に登録されています",
+    "matchStatusMatched": "確定",
+    "matchStatusAmbiguous": "候補複数",
+    "matchStatusUnmatched": "未確定",
+    "bottleneckDaysLabel": "期間",
+    "bottleneckDays7": "直近7日",
+    "bottleneckDays30": "直近30日",
+    "bySupplier": "仕入元別",
+    "byItem": "項目別",
+    "matchedRatio": "自動確定率",
+    "needsReviewCount": "確認待ち件数",
+    "totalCount": "件数"
   }
 }

@@ -16,6 +16,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
+import { Button } from "../../components/Button";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -177,14 +178,14 @@ export default function ProductCategoriesPage() {
       renderCell: c => (
         <span className="actions">
           {hasPermission("product_categories.edit") && (
-            <button className="btn-sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
+            <Button variant="secondary" size="sm" onClick={(e) => { e.stopPropagation(); openEdit(c); }}>
               {t("common.edit")}
-            </button>
+            </Button>
           )}
           {hasPermission("product_categories.delete") && (
-            <button className="btn-sm btn-danger" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>
+            <Button variant="danger" size="sm" onClick={(e) => { e.stopPropagation(); setDeleteTarget(c); }}>
               {t("common.delete")}
-            </button>
+            </Button>
           )}
         </span>
       ),
@@ -286,17 +287,17 @@ export default function ProductCategoriesPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               data-testid="product-categories-search"
             />
-            <button type="submit" className="btn-secondary field-h-md" data-testid="product-categories-search-btn">
+            <Button type="submit" variant="secondary" size="md" data-testid="product-categories-search-btn">
               {t("common.search")}
-            </button>
+            </Button>
             {search && (
-              <button
+              <Button variant="secondary" size="sm"
                 type="button"
-                className="btn-sm"
+
                 onClick={() => { setSearch(""); setSearchInput(""); setPage(1); }}
               >
                 {t("common.clear")}
-              </button>
+              </Button>
             )}
           </form>
         }
@@ -373,27 +374,27 @@ export default function ProductCategoriesPage() {
           data-testid="product-categories-pagination"
         >
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => Math.max(1, p - 1))}
               disabled={page <= 1}
               data-testid="product-categories-page-prev"
             >
               {t("common.prevPage")}
-            </button>
+            </Button>
           )}
           <span style={{ color: "var(--text-secondary)" }} data-testid="product-categories-page-info">
             {t(`${f}.total`, { count: items.length })}
           </span>
           {(page > 1 || hasNext) && (
-            <button
-              className="btn-sm"
+            <Button variant="secondary" size="sm"
+
               onClick={() => setPage(p => p + 1)}
               disabled={!hasNext}
               data-testid="product-categories-page-next"
             >
               {t("common.nextPage")}
-            </button>
+            </Button>
           )}
         </div>
       )}

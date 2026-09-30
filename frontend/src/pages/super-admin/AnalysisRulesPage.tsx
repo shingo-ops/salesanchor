@@ -47,6 +47,7 @@ import type { SupplierQualitySummary } from "../../features/tcg-analysis-review/
 import { DistributionSettingsDrawer } from "./components/DistributionSettingsDrawer";
 import { DbViewerPanel } from "./components/DbViewerPanel";
 import { PipelineMapPanel } from "./components/PipelineMapPanel";
+import { LineWorkflowGuidePanel } from "./components/LineWorkflowGuidePanel";
 
 // ---------------------------------------------------------------------------
 // 解析精度管理パネル（TcgSupplierQualityPage の内容を移植）
@@ -202,6 +203,9 @@ export default function AnalysisRulesPage() {
               {activeSection === "knowledge-aliases" && <KnowledgeAliasesTab />}
               {activeSection === "prompt-config" && <ExtractionPromptConfigTab />}
               {activeSection === "pipeline-map" && <PipelineMapPanel />}
+              {activeSection === "line-workflow-guide" && (
+                <LineWorkflowGuidePanel onNavigate={handleSectionChange} />
+              )}
               {activeSection === "db-viewer" && <DbViewerPanel />}
             </div>
           )}

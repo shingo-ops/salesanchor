@@ -234,8 +234,6 @@ class JarvisDiscordClient(discord.Client):
         """Process reaction add events from guild channels."""
         if not payload.guild_id:
             return  # DM は対象外
-        if self.user and payload.user_id == self.user.id:
-            return  # Bot 自身のリアクションは無視（ループ防止）
         await self._process_reaction(payload, action="add")
 
     async def on_raw_reaction_remove(self, payload: discord.RawReactionActionEvent) -> None:
@@ -255,6 +253,9 @@ class JarvisDiscordClient(discord.Client):
             )
             return
 
+        # Bot 自身のリアクション（受信箱から REST 経由で付与）も Gateway が唯一の書き手として記録する
+        is_bot_reaction = bool(self.user and payload.user_id == self.user.id)
+
         try:
             await self.reaction_writer.process_reaction(
                 tenant_id=tenant_id,
@@ -264,6 +265,7 @@ class JarvisDiscordClient(discord.Client):
                 emoji=payload.emoji,
                 member=payload.member,
                 action=action,
+                is_bot_reaction=is_bot_reaction,
             )
         except asyncio.CancelledError:
             raise

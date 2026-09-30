@@ -27,6 +27,7 @@ from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
+from app.services.extraction_shadow_svc import run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
@@ -235,6 +236,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                    s.extraction_notes,
                    s.extraction_state_format,
                    s.extraction_example_text,
+                   s.extraction_ship_format,
                    sc.supplier_id
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
@@ -278,13 +280,14 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
         "extraction_notes": row[6],
         "extraction_state_format": row[7],
         "extraction_example_text": row[8],
+        "extraction_ship_format": row[9],
     }
     if any(v for v in extraction_rules.values()):
         supplier_context = extraction_rules
 
     # Knowledge リンクを取得（supplier_id がある場合のみ）
     knowledge_links: list[dict] | None = None
-    supplier_id = row[9]
+    supplier_id = row[10]
     if supplier_id is not None:
         kl_rows = session.execute(
             text(
@@ -409,6 +412,15 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
     error_message = result["error_message"]
 
     # --- 4. items を extraction_items に INSERT ---
+    # リトライ時に前回の stale items を削除（冪等化）
+    # FK CASCADE (analysis_results → extraction_items) により紐づく analysis_results も自動削除される
+    session.execute(
+        text(
+            f"DELETE FROM {TCG_SCHEMA}.extraction_items"
+            " WHERE extraction_job_id = :ej_id"
+        ),
+        {"ej_id": extraction_job_id},
+    )
     items_inserted = 0
     if items:
         for item in items:
@@ -504,6 +516,25 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
             logger.info(
                 "[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id
             )
+
+        # --- 6b. 試運転（Shadow run, PR-C）。EXTRACTION_SHADOW_ENABLED=1 のときのみ ---
+        # design.md PR-C: 本番の解析が終わった後、同じ raw_text/supplier_context/
+        # knowledge_links（本番用に上で既に読み込んだ値）で v7 を呼び、結果は
+        # extraction_shadow_results にのみ書く。例外は本番へ一切伝播させない。
+        if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":
+            try:
+                run_shadow_for_job(
+                    session,
+                    extraction_job_id,
+                    raw_text=raw_text,
+                    supplier_context=supplier_context,
+                    knowledge_links=knowledge_links,
+                )
+            except Exception:
+                logger.exception(
+                    "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+                    extraction_job_id,
+                )
 
     return {
         "extraction_job_id": extraction_job_id,

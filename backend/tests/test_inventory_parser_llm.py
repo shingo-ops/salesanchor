@@ -56,7 +56,7 @@ def _make_fake_response(
         response.text = json.dumps(json_payload or {"items": []})
     usage = MagicMock()
     usage.prompt_token_count = prompt_tokens
-    usage.response_token_count = candidates_tokens
+    usage.candidates_token_count = candidates_tokens
     response.usage_metadata = usage
     return response
 

@@ -6,6 +6,7 @@ import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { Modal } from "../../components/Modal";
+import { Button } from "../../components/Button";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
 
@@ -93,12 +94,12 @@ export function OrdersFormModal({
           <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
         </div>
         <div className="form-actions">
-          <button type="button" className="btn-secondary" onClick={() => setShowForm(false)}>
+          <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>
             {t("common.cancel")}
-          </button>
-          <button type="submit" className="btn-primary">
+          </Button>
+          <Button type="submit" variant="primary" size="md">
             {editId ? t("common.update") : t("common.register")}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

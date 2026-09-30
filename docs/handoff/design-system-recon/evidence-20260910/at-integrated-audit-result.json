@@ -1,0 +1,220 @@
+{
+  "base": "a1cd9ea379cc7d85b797cca6b1cc092192296bc3",
+  "files": [
+    {
+      "file": "frontend/src/pages/account-settings/ProfileSection.tsx",
+      "sha256": "261c7ae712c326d5ed0fc4078616e714980605ede01aff84f7d479f9288d3264",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 124,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+      "sha256": "6c9a4bb3e42d5d64de47bc8f096ce0f6ab53a5baf89719e37d50f8d67ad7e944",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 97,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/company-detail/CompanyChannelsTab.tsx",
+      "sha256": "615139ac6add85a2c05ba835a56f834e2661d35a08ad4e6b5733275059105c54",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 37,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+      "sha256": "5dbd7fc940589e076f770bd8cfbbc653a4495ad931410d02de219db7c0f5ce33",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 404,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/products/ProductEditPage.tsx",
+      "sha256": "6728cfb56ed472c10a949dc6531f032e534b7f3089a881362fc118977bc83b14",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 184,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+      "sha256": "91f061755968d762f2a6ede9ee752ffc563bd5bbfc6e8cd2c1eb9a97dd10a60a",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 138,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+      "sha256": "8de0050b451baf60b18fea2a60a7689814a175871b9348e516091e860f97808f",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 253,
+          "count": 1
+        },
+        {
+          "line": 284,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/DexTab.tsx",
+      "sha256": "0f118b10296dcb47560a278a1c0932c081b99ca98b5c3009916f2a3deff3255b",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 322,
+          "count": 1
+        }
+      ]
+    },
+    {
+      "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+      "sha256": "54545756902a5f4471bac8e1f20f8d065c9946605e2d36b1ba6255944596750e",
+      "baselineMatches": true,
+      "inverseByteEqual": true,
+      "targets": [
+        {
+          "line": 244,
+          "count": 1
+        },
+        {
+          "line": 327,
+          "count": 1
+        }
+      ]
+    }
+  ],
+  "shared": [
+    {
+      "file": "frontend/src/components/Button.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Button.css",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Modal.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Modal.css",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/Select.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/PageLayout.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/ContentToolbar.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/hooks/usePermissions.ts",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components.css",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/tokens.css",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/locales/ja.json",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/locales/en.json",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/package-lock.json",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/vitest.unit.config.ts",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/components/field-size.css",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/pages/company-detail/useCompanyDetail.ts",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/contexts/UiPrefsContext.tsx",
+      "baselineMatches": true,
+      "unchanged": true
+    },
+    {
+      "file": "frontend/src/lib/staffProfile.ts",
+      "baselineMatches": true,
+      "unchanged": true
+    }
+  ],
+  "counts": {
+    "common": 277,
+    "legacy": 221
+  },
+  "syntaxErrors": [],
+  "outsideLegacyByteEqual": true,
+  "pass": true
+}

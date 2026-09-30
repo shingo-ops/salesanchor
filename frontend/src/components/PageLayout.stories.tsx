@@ -4,6 +4,7 @@
  * 全ページ共通のタイトル・サブタイトルレイアウト標準パターン
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { Button } from './Button'
 import { PageLayout } from './PageLayout'
 
 const meta: Meta<typeof PageLayout> = {
@@ -38,7 +39,7 @@ export const WithHeaderAction: Story = {
   args: {
     navKey: 'nav.companies',
     headerAction: (
-      <button className="btn-primary">+ 新規追加</button>
+      <Button variant="primary" size="md">+ 新規追加</Button>
     ),
     children: <div style={{ padding: 'var(--space-4)' }}>コンテンツエリア</div>,
   },
@@ -50,7 +51,7 @@ export const WithAll: Story = {
     navKey: 'nav.orders',
     subtitleKey: 'orders.subtitle',
     headerAction: (
-      <button className="btn-primary">+ 受注追加</button>
+      <Button variant="primary" size="md">+ 受注追加</Button>
     ),
     children: <div style={{ padding: 'var(--space-4)' }}>コンテンツエリア</div>,
   },

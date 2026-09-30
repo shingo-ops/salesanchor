@@ -15,6 +15,7 @@ import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
+import { Button } from "../../components/Button";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -220,9 +221,9 @@ export default function InvoiceCreatePage() {
       subtitleKey="invoices.createSubtitle"
       headerAction={
         <div style={{ display: "flex", gap: "var(--space-2)" }}>
-          <button className="btn-secondary" onClick={() => navigate("/management-center/tenant-profile")}>
+          <Button variant="secondary" size="md" onClick={() => navigate("/management-center/tenant-profile")}>
             {t("nav.tenantProfile")}
-          </button>
+          </Button>
         </div>
       }
     >
@@ -230,20 +231,20 @@ export default function InvoiceCreatePage() {
       {error && <div className="error-message">{error}</div>}
 
       <div style={{ display: "flex", gap: "var(--space-2)", margin: "var(--space-3) 0" }}>
-        <button
-          className={mode === "inventory" ? "btn-primary" : "btn-secondary"}
+        <Button variant={mode === "inventory" ? "primary" : "secondary"} size="md"
+
           onClick={() => setMode("inventory")}
           data-testid="invoice-mode-inventory"
         >
           {t("invoices.fromInventory")}
-        </button>
-        <button
-          className={mode === "quote" ? "btn-primary" : "btn-secondary"}
+        </Button>
+        <Button variant={mode === "quote" ? "primary" : "secondary"} size="md"
+
           onClick={() => { setSourceQuoteCode(null); setMode("quote"); }}
           data-testid="invoice-mode-quote"
         >
           {t("invoices.fromQuote")}
-        </button>
+        </Button>
       </div>
 
       {mode === "quote" ? (
@@ -268,14 +269,14 @@ export default function InvoiceCreatePage() {
                     <td>{q.quote_code}</td>
                     <td>{fmtAmount(q.total_amount, q.currency)}</td>
                     <td>
-                      <button
-                        className="btn-sm btn-primary"
+                      <Button
+                        variant="primary" size="sm"
                         disabled={saving}
                         onClick={() => loadQuoteForEdit(q.id)}
                         data-testid={`invoice-edit-from-quote-${q.id}`}
                       >
                         {t("invoices.editFromThisQuote")}
-                      </button>
+                      </Button>
                     </td>
                   </tr>
                 ))}
@@ -390,7 +391,7 @@ export default function InvoiceCreatePage() {
                     <td style={{ fontWeight: "var(--font-weight-semi)", whiteSpace: "nowrap" }}>{(item.quantity * item.unit_price).toLocaleString()}</td>
                     <td>
                       {items.length > 1 && (
-                        <button type="button" className="btn-sm btn-danger" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</button>
+                        <Button variant="danger" size="sm" type="button" onClick={() => removeItem(i)}>{t("quotes.removeItem")}</Button>
                       )}
                     </td>
                   </tr>
@@ -400,7 +401,7 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div style={{ marginBottom: "var(--space-3)" }}>
-            <button type="button" className="btn-secondary" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={addItem} data-testid="invoice-add-blank">{t("quotes.addItem")}</Button>
           </div>
 
           <div style={{ width: "min(100%, 40rem)", marginBottom: "var(--space-6)" }}>
@@ -431,8 +432,8 @@ export default function InvoiceCreatePage() {
           </div>
 
           <div className="form-actions">
-            <button type="button" className="btn-secondary" onClick={() => navigate("/invoices")}>{t("common.cancel")}</button>
-            <button type="submit" className="btn-primary" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</button>
+            <Button type="button" variant="secondary" size="md" onClick={() => navigate("/invoices")}>{t("common.cancel")}</Button>
+            <Button variant="primary" size="md" type="submit" disabled={saving}>{saving ? t("common.saving") : t("invoices.createBtn")}</Button>
           </div>
         </form>
       )}

@@ -1,0 +1,64 @@
+{
+  "version": 1,
+  "base_commit": "a1cd9ea379cc7d85b797cca6b1cc092192296bc3",
+  "changes": [
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/04-worktree.md",
+      "old_blob": "8ab7ff1e81897689cd511ea77ade7b0787a362ec",
+      "new_blob": "161f4100b017aa4aab8fe70a123288d92b549053"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/05-pr.md",
+      "old_blob": "4831abc82e0208571d9be6de1825dbb9c72787af",
+      "new_blob": "38dc55f6214d427825dc3228272a03991cf796a9"
+    }
+  ],
+  "reads": [
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards.md",
+      "ref": "base",
+      "blob": "79af0129b88b34f237294b78c8572e79591491bc"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/00-common.md",
+      "ref": "base",
+      "blob": "1399886bbeb7e95c949065ddbb137eecc72dc589"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/04-worktree.md",
+      "ref": "base",
+      "blob": "8ab7ff1e81897689cd511ea77ade7b0787a362ec"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/05-pr.md",
+      "ref": "base",
+      "blob": "4831abc82e0208571d9be6de1825dbb9c72787af"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/11-lint.md",
+      "ref": "base",
+      "blob": "ad2281fc4fc1e833c87570600316ef1ea8251b01"
+    },
+    {
+      "path": "docs/handoff/design-partner-card-ops/guards/12-guard-authoring.md",
+      "ref": "base",
+      "blob": "948217078c31e9597dd1e9e4c2062b971a04bfe6"
+    }
+  ],
+  "assessment": {
+    "purpose": "既存ブランチの復帰案とカード検査L12の矛盾、およびPR作成時とマージ時の検査説明の不一致を、確認済みの公式手順へ揃える。",
+    "impact": "変更対象はguards/04-worktree.mdと05-pr.mdの2文書。ガード、hook、検査コード、CI設定、権限、DBには変更を加えない。",
+    "false_positives": "ローカルmainが古いだけで公式origin/main起点の作成を止める記述を修正する。ただし本店main確認、未保存変更の記録、計画SHA・作成HEAD・次便origin/mainの一致確認を残し、不一致では停止する。",
+    "future_costs": "公式スクリプトやmainが進んだ際は説明と評価対象blobを再照合する。reaper副作用を作成前に確認し、別作業台の未保存変更や未統合ブランチを保護する。--claude省略は今回のPO指定モデルによる条件であり恒久的例外にしない。",
+    "alternatives": "旧記述を維持すると直接worktree作成案がL12で再び拒否される。L12を弱める案は採らず、公式作成スクリプトで新しい継続ブランチを作り、別カードで実在と所有権を確認して保存ブランチを通常マージする。",
+    "decision": "採用。CARD04のL12拒否後、CARD05・06で正式作成と別便確認を実施した記録に合わせる。05-prはマージ済みPR #3824の作成前検査とマージ前GO検査の分離、および環境変数によるスキップ撤去を説明へ反映する。Astraによる設計自己審査でありPO承認を代筆しない。",
+    "rollback": "誤りが判明した場合は対象操作を停止し、この2文書の修正をPRで戻すか訂正する。実行中ガードの無効化や保護設定解除は行わない。",
+    "owner": "当該手順文書を変更する設計担当が根拠と評価を維持し、レビュー担当が実物との整合を確認する。PO権限や委任期限をこの評価で変更しない。",
+    "normal_example": "origin/main起点で公式作成を行い、次のカードで実在・所有権と作成時SHAの一致を確認した継続作業は進める。PR作成は本文・HEAD・作成者の検査を通し、番号付きGOはマージ前に確認する。",
+    "violation_example": "直接worktree作成を提案するカードは既存L12で拒否する。作成後にorigin/mainまたは対象HEADが計画値と異なる場合は停止する。GO #3824を別PR #3831の承認へ流用することは認めない。"
+  },
+  "verification": {
+    "kind": "documentation",
+    "reason": "変更は既存実装に合わせた手順文書2件のみで、判定ロジックを変更しないため新しいロジックの正常・拒否機械試験は不要。base版の評価検査器で対象blob・読了対象・評価構造を照合し、既存CARD04の拒否とCARD05・06の実施記録およびPR #3824の実装を根拠とする。"
+  }
+}

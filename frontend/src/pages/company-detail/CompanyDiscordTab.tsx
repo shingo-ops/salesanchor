@@ -6,6 +6,7 @@
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { DiscordFormState } from "./company-detail.types";
+import { Button } from "../../components/Button";
 
 interface Props {
   discordForm: DiscordFormState;
@@ -87,21 +88,21 @@ export function CompanyDiscordTab({
 
         {canEdit && (
           <div className="form-actions" style={{ marginTop: "var(--space-3)" }}>
-            <button
+            <Button variant="primary" size="sm"
               type="submit"
-              className="btn-sm btn-primary"
+
               disabled={!discordDirty || discordSubmitting}
             >
               {discordSubmitting ? t("common.saving") : t("common.save")}
-            </button>
-            <button
+            </Button>
+            <Button variant="danger" size="sm" layoutClassName="comp-btn-layout--ml-2"
               type="button"
-              className="btn-sm btn-danger"
+
               onClick={handleDiscordDelete}
-              style={{ marginLeft: "var(--space-2)" }}
+
             >
               {t("discord.deleteSettings")}
-            </button>
+            </Button>
           </div>
         )}
       </form>

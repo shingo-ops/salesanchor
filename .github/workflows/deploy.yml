@@ -323,16 +323,23 @@ jobs:
             echo "Step 3b: Blue-green backend cutover..."
             bash scripts/blue-green-cutover.sh
 
-            # backend 以外（frontend/celery/discord）は従来の force-rm + up で切替。
+            # backend 以外（frontend/celery-beat/discord）は従来の force-rm + up で切替。
             # これらは nginx 経由の同期 API のリクエストパスに関与しないため
-            # 数秒のダウンは発生しない（frontend は静的配信、celery/discord は非同期）。
+            # 数秒のダウンは発生しない（frontend は静的配信、celery-beat/discord は非同期）。
             # discord-gateway: 重複起動による Discord 再接続storm→token reset を防ぐため
             # 旧コンテナを先に削除してから起動する（従来動作を維持）。
+            #
+            # celery-worker だけは別扱い（docs/handoff/extraction-job-recovery/design.md §B-3）:
+            # task_acks_late=True で実行中タスクを抱えている場合があるため、
+            # 強制削除（docker rm -f）の前に `docker compose stop -t 60` で
+            # warm shutdown（SIGTERM→最大60秒待って実行中タスクを終える）してから止める。
             echo "Step 3c: Updating non-backend services (frontend/celery/discord)..."
-            for _svc in frontend celery-worker celery-beat discord-gateway; do
+            docker compose stop -t 60 celery-worker 2>/dev/null || true
+            for _svc in frontend celery-beat discord-gateway; do
               docker ps -a --filter "name=astro-webapp-${_svc}" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
             done
-            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway
+            docker ps -a --filter "name=astro-webapp-celery-worker" --format "{{.ID}}" | xargs -r docker rm -f 2>/dev/null || true
+            docker compose up -d --no-deps --remove-orphans frontend celery-worker celery-beat discord-gateway gemini-egress
             echo "Step 3d: Ensuring monitoring collectors are up..."
             docker compose up -d --no-deps node-exporter promtail
 

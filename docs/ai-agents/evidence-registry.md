@@ -23,6 +23,46 @@ follow_up:
 ## Current Entries
 
 ```text
+id: EV-20260928-PR-LIFECYCLE-GATES
+date: 2026-09-28
+agent: Sol implementation/validation
+task: PR作成前検査とマージ前GO検査の分離
+scope: CARD-01〜05の限定実装・試験・審査・PR提出とPO GOによるmerge/deploy。
+evidence:
+  - type: command
+    reference: node scripts/tests/test-process-artifacts.js
+    summary: 107 PASS / 0 FAIL。validation-onlyの判定維持、Issue write 0、未知・重複引数と対象外REPO拒否を確認。
+  - type: command
+    reference: bash scripts/tests/test-merge-safe-guard.sh
+    summary: 5 PASS / 0 FAIL。.pr-number欠落・空、GITHUB_ACTIONS環境名だけの成功skipを拒否し、helper非0時cleanup 0を確認。
+  - type: command
+    reference: python3 scripts/tests/test-pr-lifecycle.py
+    summary: 11 test methods成功。一時gitと偽ghだけでcreate本文4構文、host/repo固定、入力再構成、SHA検査、checks再確認、正常merge 1回、送信後異常exit2と再送0を確認。
+  - type: file
+    reference: docs/handoff/go-record-transcription/pr-lifecycle-design.md
+    summary: Astraの呼出契約の確定追補を実装基準とした。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-01実装時のPreToolUse拒否
+    summary: 同一pathをDelete/Addするapply_patchが「structural file header重複」で拒否された。設定変更や別書込手段で迂回せず、以後は正式指示どおりUpdate File形式を使用した。CARD-PR-LIFECYCLE-02受領後の新規ガード拒否は0件。
+  - type: log
+    reference: CARD-PR-LIFECYCLE-03初回のPreToolUse拒否とAstra再開追補
+    summary: PR操作文字列を含む複合read-onlyコマンドが拒否され、Solは追加変更0で停止。Astra確認後、検索・読取を単独コマンドへ分離して再開した。再開後の新規ガード拒否は0件。
+  - type: external
+    reference: https://github.com/shingo-ops/salesanchor/pull/3824
+    summary: Astraがcreate-safe exit0、.pr-number=3824とgh pr listの番号/HEAD一致を直接確認。実装commit90c6dbecc4314b4c40f591e365478a9540cc5356はlocal/origin一致。正式PR作成1回。
+  - type: log
+    reference: https://github.com/shingo-ops/salesanchor/actions/runs/36387714825
+    summary: 初回CI失敗はGO節欠落。Astraがlog-failedを直接確認。番号付きGO未受領なので合格扱いしない。
+  - type: command
+    reference: Astraの設計・引用検査、CARD-04 lint
+    summary: errors=[]、lint exit0。Solの最終試験ログとコードをAstraと別Solレビューが照合しAPPROVE。
+confidence: high
+tradeoff: BEHIND時の自動追従を廃止したため停止は増える。異なるHEADを同一GOで送らないことを優先。
+decision: PO原文GO #3824を承認HEAD8814e4ef39335c0ade70db6a2e20ba6383847a21へ記録しマージ済み。merge fdf3b45a4c0423413e704694fb99700d94e1d5a7、Deploy36390769039成功、API正常、自動回収DONE。
+follow_up: 限定修正は完了。完了根拠はpr-lifecycle-design.md末尾と/private/tmp/pr-3824-result.json。Ruleset13必須checks/strictを実確認済み、process-artifactsはrequired一覧外という制約は維持。代理GO制度や全経路の物理強制を実装済みとはしない。
+```
+
+```text
 id: EV-20260914-TCG-RESULT-ORDER
 date: 2026-09-14
 agent: Codex (design partner; same-AI self-review)
@@ -3194,3 +3234,107 @@ EV-20260914-GEMINI-VISIBILITY: PO「進める」で実装/レビュー委任を�
 EV-20260914-GEMINI-VISIBILITY 検証追補: 担当unit54/54・E2E2/2・build/check終了0。別担当コードレビューはcopy競合修正後APPROVE、root直接hash/diff/card/task検査成功。依存3494はREVISEのまま、本番未反映。
 
 EV-20260917-TERMUX-IMPORT-NOTIFY: PR3538（tools/termux-line-import のみ、backend/API/DB変更0）。端末実機で人の動作確認を実施。①共有3回（17:58:54/17:59:27/18:00:18）で受信→完了4.4/1.8/0.8秒、結果通知3回表示をPO確認。②送信後の端末原本はoriginals1件・inbox0件。③PO決定で詰まり判定60秒・点検15分周期。termux-job-schedulerの既定条件（ネット接続時のみ・電池低下時停止）を実機で発見し、--network none --battery-not-lowfalseで再登録。点検はevents上18:19:10/18:39:19/…で自動実行を確認（間隔15〜25分）。④機内モードで19:24:51共有→即時失敗通知、19:45:09（20分）/19:48:43（23分）に詰まり検知・通知をPO確認。⑤機内モード解除後、20:03:41の点検で自動再送→pending_review（投稿1,702件・確認待ち33件）。unittest41件OK。未マージ。
+
+### EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL
+
+CARD-LINE-GUIDE-01/02に基づき、システム欄へLINE解析の7段階業務ガイドを実装。AstraのREVISE事項として、利用者向け原稿への修正、自動解析と照合の関係修正、h3アンカーとtabIndex=-1、E2E locator限定、遷移先実体確認を反映した。既存Card/Badge/Buttonと既存tokenのみを使用し、新規API/DB/route/token/業務書込は0。
+
+ローカル最終実測: `npm run check:all` exit0（既存140警告、新規警告0）、`npm run build` exit0（1740 modules、built in 815ms）、指定unit 2ファイル17件成功、指定Chromium E2E 6件成功。E2Eは1440/390、ja/en、light/dark、System→ガイド、同hub query、取込/配信pathnameと遷移先内容、h3アンカーのキーボードフォーカス、ガイド表示中のPOST/PUT/PATCH/DELETE 0件を検証。画面証跡は `/tmp/reports/card-line-guide-01/guide-*.png` の4件を目視し、目次を縦配置へ是正後にE2Eを再実行した。
+
+初回buildは新規unitの未登録jest-dom matcher型でexit2となり、期待対象を同じDOM属性・pathnameのVitest直接比較へ修正して解消。E2E初回はsandboxのlocalhost:5173 bindがEPERMとなり、カードとPOが許可した同一コマンドのrequire_escalated審査で成功。npm ciは正規審査でexit0、lockfile変更は意図していない。CI・本番確認・PO画面確認・commit/push/PR/merge/deployは未実施。Astraレビュー待ちでDONEではない。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 追補: CARD-LINE-GUIDE-03の390x900可視範囲2/2成功（7.3秒）、画像6枚・操作ボタンtrial成功。Astraが日本語手順1/英語手順7画像とコード/CSS/hub差分を直接確認。Sol別セッションのread-onlyレビューもAPPROVE（指摘0、ja/en89/89）。本番/PO読解確認/CIは未実施。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 停止追補: 実装3d8c8b239をorigin/release/line-workflow-guideへpush、SHA一致を直接確認。正式gh-pr-create-safeの実行はPreToolUseのCanonical PR body validationでGO記録欠落により拒否。PR未発行・CI/merge/deploy未実施。本文は/tmp/line-workflow-guide-pr-body.md、停止根拠と修正方針案はdesign.md末尾。GO転記・guard変更・迂回0。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 再開追補: 正式作成の障害はPR3824で解消。CARD04の直接復元はL12拒否/未実行。05/06で公式入口からrelease/line-workflow-guide-resumeをmain fdf3b45aへ作成し、旧87c4ad83を通常merge、競合0/commit前停止。事前remote/実作成HEAD/06 origin/mainの3SHA一致、本店非台帳18件は不変。別Solの意味監査は修正0、手順整合再審査APPROVE。--claude省略とreaper回収は本セッションPO指示の限定範囲。根拠はpipeline-procedure-map/recon.md末尾、統合後の試験はCARD07で実施中。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL CARD07〜10追補: fdf3b45a統合後check/build/unit17成功。既定並列E2Eは2/6成功・4件30秒timeout、trace上goto24〜25秒。workers1比較6/6成功後、当該specだけmode defaultへ限定変更し、workers overrideなし既定E2E6/6成功（23.9秒）。timeout/assert/global変更0。eslint対象外warningはlint済みと扱わない。実装時のmain cwdガード拒否は正しい登録worktreeを起動rootにする正式経路で解消、子sandbox通信失敗は同一preflightの正規escalationで解消。実ログ/private/tmp/line-guide-card10-sol-resume.log。main新規8862732の意味影響0、統合/最終検証は次カード。
+
+
+### EV-20260928-AQ-DESIGN
+
+基準4bad43a4。Sol候補5hash/10原文一致、親AST実測201/296。StaffReportsPage.tsx93/94の2ボタン・対象外1・共有14hash保存、ページ専用試験未整備を受入条件に補完。Astra設計自己審査APPROVE、独立審査ではない。根拠docs/specs/design-system/design.md§AQ、docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-audit.json。画面確認はPO指示で省略、合格とはしない。製品/検証未実施。
+
+### EV-20260928-AQ-IMPLEMENTATION
+
+AQ日報2ボタン実装・Sol第二レビューAPPROVE。製品逆変換一致/共有14hash維持、最終29対象/501全体試験成功。根拠: docs/handoff/design-system-recon/evidence-20260910/aq-staff-report-implementation.md、aq-validation-logs.tar.gz/manifest.json。画面省略、PR/新番号GO/配備未実施。
+
+2026-09-28 AQ保存f1935c24f remote一致、PR前validate-pr-body.shがGO節欠落でexit1。PR未発行[]と番号必須検査の循環を記録。スキップ/代筆/ガード変更なし。詳細 aq-staff-report-implementation.md §保存とPR前検査の停止。
+
+### EV-20260928-AR-DESIGN
+
+固定99899eb82でSol棚卸し/別Sol照合。対象14ファイル28、対象外53、共有15、native form10＋非form1＋検索local1/GET5。ar-button-audit.json/ar-contracts.mdとdesign.md §ARに根拠保存。実装前カードlintは受領欄不足を修正してexit0（長行2警告）。初期のフォーム分類誤りは明記訂正。承認手順は別担当の同領域編集を検出してSTOP、製品移管のみ継続。
+
+
+### EV-20260928-AR-IMPLEMENTATION
+
+14ファイル28ボタン移管、逆変換14/対象外53/共有15一致、共通231/旧266。Sol製品レビュー/4試験交差レビューAPPROVE、root直接監査pass=true。対象92・全体581成功（初回23timeout後、並行数2で同一全件再検証）。fixture同値修正後対象92成功、check:all/build/Storybook成功。初回失敗・報告件数訂正もar-implementation.md/ar-validation-logs.tar.gz/manifestへ保存。画面省略・未検証、PR/CI/番号付きGO/配備は次。
+
+EV-20260928-AR-IMPLEMENTATION提出追補: 保存33dbf6d7a、正式main統合済み、公式create-safe exit0でPR3828提出・登録。最終全体581成功は並行数1の31ログ、coverage20.23/16.53/17.88/20.86%。全52原ログのarchive/manifest照合済み。番号付きGO/merge/deploy未実施、CIは最新HEADで確認する。
+
+EV-20260928-AR-IMPLEMENTATION反映確定: GO原文「GO #3828」受領、対象f7987554d、正式CI582試験成功。38checks成功/8対象外後、公式merge-safeで8862732e4へ08:02:45Zマージ。Deploy36395037199成功、backup217M。root本番read-only検証08:06:54Zは公開App/API200、接続3項目正常、公開index/JSとcontainerのSHA256一致、本番HEAD一致。根拠docs/handoff/design-system-recon/evidence-20260910/ar-production-verification.json/ar-merge.txt。画面省略・未検証。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL CARD13最終追補: main8862732統合後unmerged0。evidence-registryの競合はLINEとAQ/AR追記を双方保持。check:all/build exit0、unit17/17、既定E2E6/6（14.5秒）をSolが実行。frontend差分はガイド8pathだけ、登録UI/token/SSOTの範囲維持。PR/CI/番号付きGO/本番/PO読解確認は未了。
+
+EV-20260928-LINE-WORKFLOW-GUIDE-LOCAL 提出追補: 正規wrapperでPR3831作成exit0、.pr-number/実PR一致、ready/headfb39d740/作者shingo-cc。初回CIはGO欠落とBEHINDを実ログで確認。CARD16でmain157cd679を競合0統合、frontend tree不変、既定E2E6/6（13.7秒）。同一frontendのcheck/build/unit17成功はCARD13記録を保持。最新CI/承認/merge/deployは https://github.com/shingo-ops/salesanchor/pull/3831 の対象HEADと記録で確認する。GO代筆/guard変更0、PO読解確認未実施。
+
+
+### EV-20260928-AS-DESIGN
+
+基準1675bfa02、Astra直接AST231/266、対象34/25、対象外232/共有15、Sol実物callback追跡34/34で直接write0/GET7。既存操作被覆10と未被覆24を確定。docs/specs/design-system/design.md §ASとdocs/handoff/design-system-recon/evidence-20260910/as-button-audit.json/as-static-contracts.md/as-test-plan.md。85暫定案を静的34へ訂正、自己審査APPROVE、カード検査後委任、製品検証未実施。
+
+
+### EV-20260928-AS-IMPLEMENTATION
+
+2026-09-28 AS実装検収: 34件/25製品移管、共通265/旧232。逆変換25・対象外232・共有15一致。新規24/既存130/全体606試験成功、check:all/build/Storybook/strict成功。Sol相互レビュー指摘修正後APPROVE。日報旧スコープassert限定訂正と初回失敗を保存。根拠as-implementation.md/as-validation-logs.tar.gz。画面省略・未検証。PR/最新CI/番号付きGO/マージ/本番反映は次段階。
+
+
+2026-09-28 正式提出: 255be0f550e7a67b1f2ebd9673ac437ad7f41edeをcommit/push、公式create-safeでPR #3834（https://github.com/shingo-ops/salesanchor/pull/3834）を提出し.pr-number/ブランチ照合済み。最新main1675bfa02と整合、未保存0を直接確認。PRのprocess-artifacts gateは今回番号付きGOの未受領で停止（run36404560681/job108870059341原ログ確認）、技術検査は確認継続。CLAUDE.md/ADR-136と公式マージ経路が番号付きPO原文を要求するため、包括的な続行許可から「GO #3834」を創作しない。新規GO受領後は対象HEAD・最新CI・本番バックアップを再確認して公式merge/deploy経路へ進む。現時点で本便のマージ/本番反映は未実施。
+
+
+2026-09-28 AS本番反映完了: 本人GO #3834、公式merge b3cf1fdf3（11:32:45Z）、Deploy36416280694成功。root 2026-09-28T11:36:40.862290+00:00に本番HEAD/公開index・JSとcontainer hash/HTTP200/接続3項目一致を直接確認。34件移管、共通265/旧232。根拠as-implementation.md/as-production-verification.json。画面・実ログイン・本番フォーム・PO目視は省略・未検証。
+
+
+### EV-20260928-AT-DESIGN
+
+固定a1cd9ea、直接AST共通265/旧232/対象11/構文0。9file原文hash・対象外221・共有18、API/サーバー副作用を追跡。色未確定60、Invoice外部FX/権限変更を除外。QuoteCreate先約はPR3084 MERGED/実ファイル非対象で競合なし。docs/specs/design-system/design.md §ATの自己審査APPROVE、正式card-lint2件exit0、Sol分離実装へ。根拠docs/handoff/design-system-recon/evidence-20260910/at-button-audit.json、at-admin-test-plan.md、at-commerce-test-plan.md。製品検証/PR/番号付きGO/本番反映は未実施。
+
+
+2026-09-28 AT実装検収: 11件/9製品を共通Buttonへ移管。対象9逆変換/対象外221/共有18一致、API/DB/配線変更0。最新main638cc6f9由来Button1件を別計数し共通277/旧221。47files634試験（maxWorkers=1）、check:all/build/Storybook成功、Sol相互レビューAPPROVE。統合初回タイムアウト3件・初回型エラーなど原ログ保持。根拠docs/handoff/design-system-recon/evidence-20260910/at-implementation.md。画面省略・未検証。PR/本人番号GO/マージ/本番反映は次段階。
+
+
+### EV-20260929-AT-DEPLOY
+
+
+## 2026-09-29 AT 本番反映完了
+
+本人原文「GO #3839」受領・転記済み。main追従後も対象9製品/3試験は承認時と全byte一致。最新HEAD e129dac1bf1c42060d7801b4607e3cd2e701d9a1の技術CI38成功/8対象外、CI48files638試験成功（65.41秒）。公式merge-safeが必須13checksを2回確認後、merge a5547fb7b1a5af7c0bb10d0dcf5d37dc2238c401、2026-09-28T21:51:11ZをGitHubで確認。初回BEHIND停止からの経緯は前節とat-go-validation.tar.gzに保存。
+
+Deploy 36488806931 success。rootは2026-09-28T21:55:11.392639+00:00にread-onlyで本番HEAD一致、App/API/JS HTTP200、DB/Redis/Celery接続正常、公開index/JSと本番コンテナ各SHA256一致を直接検証した。証跡at-production-verification.json/at-merge-final.txt/at-deploy-result.json。実データを書き込むフォーム操作・ブラウザー画面・PO目視は指示どおり省略・未検証。復元試験も未実施。
+
+11件移管、本番対象の共通Button280/旧221。API/DB/配線/共有金型変更0。設計・実装・レビュー・本人承認・マージ・本番反映・配信確認済み。残旧221、表/報酬3/カレンダー色、最後のCI補強は別便。結果文書の保存PRを本便完了記録として扱う。
+
+
+```text
+id: EV-20260929-AU-ALL-BUTTONS
+date: 2026-09-29
+agent: Astra design / Sol research and implementation
+task: 旧方式221ボタンの共通部品移管
+scope: frontend button/link appearance; API/DB/wiring unchanged
+evidence:
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/au-inventory.json
+    summary: 固定303c3cfe7、221件71ファイル、native213/link8、対象外native180、構文エラー0。
+  - type: file
+    reference: docs/handoff/design-system-recon/evidence-20260910/au-button-contracts.md
+    summary: 実部品/CSS/仕様の行番号を対照。ButtonLinkは設計済み・未実装。
+confidence: high
+tradeoff: 操作保持と共通外観採用。旧外観とpixel同一ではない。画面検査は省略・未検証。
+decision: 全221移管、root監査/661試験/品質成功、Sol相互APPROVE。実装保存済み・本番未反映。
+follow_up: PR/最新CI、正式承認経路後にマージ/配備。au-implementation.mdに全根拠と限界。
+```
+
+2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
+
+2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。

@@ -120,6 +120,7 @@ from app.routers import (
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     tcg_product_import,  # IMPORT-01: 商品マスタ CSV 取り込み API
     tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
+    tcg_shadow_review,  # design.md PR-D: 試運転（Shadow run）の確認画面用 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
     tenant_admin_inventory_visibility,
@@ -676,6 +677,11 @@ app.include_router(
 # IMPORT-01: 商品マスタ CSV 取り込み API（require_super_admin 限定）
 app.include_router(
     tcg_product_import.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# design.md PR-D: 試運転（Shadow run）の確認画面用 API（require_super_admin 限定）
+app.include_router(
+    tcg_shadow_review.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）
