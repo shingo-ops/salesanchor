@@ -3,7 +3,7 @@
 受信箱から Discord リアクションを送信・取消する API と、
 カスタム絵文字一覧を取得する API を提供する。
 
-API:
+API（送信・取消は Discord API を呼ぶだけで DB は書かない。記録は Gateway が担う）:
   POST   /api/v1/leads/{lead_id}/messages/{message_id}/reactions — リアクション送信
   DELETE /api/v1/leads/{lead_id}/messages/{message_id}/reactions/{emoji} — リアクション取消
   GET    /api/v1/discord/guilds/{guild_id}/emojis — カスタム絵文字一覧
@@ -27,12 +27,10 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
-    reset_tenant_context,
     tenant_table_ref,
 )
 from app.database import get_db
 from app.models import User
-from app.services import sse_pubsub
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -176,31 +174,8 @@ async def send_reaction(
             detail=f"Discord API error ({resp.status_code}): failed to add reaction.",
         )
 
-    schema = _schema(tenant_id)
-    await db.execute(
-        text(f"""
-            INSERT INTO {schema}.meta_message_reactions
-                (tenant_id, meta_message_id, emoji_name, emoji_id,
-                 emoji_animated, reactor_discord_user_id,
-                 reactor_display_name, is_bot_reaction)
-            SELECT :tenant_id, :meta_message_id, :emoji_name, :emoji_id,
-                   false, bot.discord_bot_user_id, 'Bot', true
-            FROM public.tenant_discord_config bot
-            WHERE bot.tenant_id = :tenant_id
-            ON CONFLICT ON CONSTRAINT uq_reaction_per_user_emoji DO NOTHING
-        """),
-        {
-            "tenant_id": tenant_id,
-            "meta_message_id": message_id,
-            "emoji_name": data.emoji_name,
-            "emoji_id": data.emoji_id,
-        },
-    )
-    await db.commit()
-    await reset_tenant_context(db, tenant_id)
-
-    await sse_pubsub.publish_inbox_update(tenant_id)
-
+    # DB への記録は Gateway（reaction_writer）が唯一の書き手（SSOT）。
+    # Discord から届く REACTION_ADD イベントを Gateway が書き込み SSE を発火する。
     logger.info(
         "[discord-reaction] sent tenant=%d lead=%d msg=%d emoji=%s",
         tenant_id, lead_id, message_id, data.emoji_name,
@@ -268,45 +243,7 @@ async def delete_reaction(
             detail=f"Discord API error ({resp.status_code}): failed to remove reaction.",
         )
 
-    schema = _schema(tenant_id)
-    if emoji_id:
-        await db.execute(
-            text(f"""
-                DELETE FROM {schema}.meta_message_reactions
-                WHERE tenant_id = :tenant_id
-                  AND meta_message_id = :meta_message_id
-                  AND emoji_name = :emoji_name
-                  AND emoji_id = :emoji_id
-                  AND is_bot_reaction = true
-            """),
-            {
-                "tenant_id": tenant_id,
-                "meta_message_id": message_id,
-                "emoji_name": emoji,
-                "emoji_id": emoji_id,
-            },
-        )
-    else:
-        await db.execute(
-            text(f"""
-                DELETE FROM {schema}.meta_message_reactions
-                WHERE tenant_id = :tenant_id
-                  AND meta_message_id = :meta_message_id
-                  AND emoji_name = :emoji_name
-                  AND emoji_id IS NULL
-                  AND is_bot_reaction = true
-            """),
-            {
-                "tenant_id": tenant_id,
-                "meta_message_id": message_id,
-                "emoji_name": emoji,
-            },
-        )
-    await db.commit()
-    await reset_tenant_context(db, tenant_id)
-
-    await sse_pubsub.publish_inbox_update(tenant_id)
-
+    # DB からの削除は Gateway（reaction_writer）が REACTION_REMOVE イベントで行う（SSOT）。
     logger.info(
         "[discord-reaction] deleted tenant=%d lead=%d msg=%d emoji=%s",
         tenant_id, lead_id, message_id, emoji,
