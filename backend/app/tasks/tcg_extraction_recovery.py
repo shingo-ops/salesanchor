@@ -13,8 +13,9 @@ tcg.extract_source_message の time_limit=330 秒）:
   (a) running のジョブ: 最新 attempt の started_at（無ければ created_at）から
       STALE_RUNNING_MINUTES 分以上たったものを pending に戻す。
   (b) pending のジョブ: created_at から STALE_PENDING_MINUTES 分以上たち、
-      最新 attempt が無いか STALE_PENDING_MINUTES 分以上前に始まったものを、
-      既存の retry_extraction(scope="pending") と同じ方法で再投入する。
+      最新 attempt が無いか STALE_PENDING_MINUTES 分以上前に始まったものだけを、
+      retry_extraction の手順4（extract_source_message_task.apply_async）と
+      同じ方法で再投入する（対象外の pending ジョブを巻き込まない）。
 
 新しい表・列は増やさない。既存の extraction_jobs.status と
 extraction_attempts だけで判定する。
@@ -37,6 +38,9 @@ STALE_RUNNING_MINUTES = 15
 STALE_PENDING_MINUTES = 15
 # design.md §B: retry_extraction 内部の _MAX_JOBS=50 と一致させる。
 MAX_RECOVER_PER_RUN = 50
+# retry_extraction 内部の _COUNTDOWN_STEP と同じ値（backend/app/services/tcg_diagnostics_svc.py）。
+# 件数×3秒の countdown で Celery への一斉投入を分散させる。
+_COUNTDOWN_STEP = 3
 
 _DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
     "postgresql+asyncpg://", "postgresql://"
@@ -133,15 +137,22 @@ def find_stale_pending_job_ids(session) -> list[str]:
     return [str(row[0]) for row in rows]
 
 
-async def _reenqueue_pending(job_ids: list[str]) -> dict[str, int]:
+async def _reenqueue_stale_pending_jobs(job_ids: list[str]) -> dict[str, int]:
     """
-    既存の retry_extraction(scope="pending") と同じ方法で再投入する。
+    停滞している pending ジョブ（job_ids）だけを再投入する。
+
+    retry_extraction（backend/app/services/tcg_diagnostics_svc.py）の
+    scope="pending" 経路は status='pending' の全件を対象にしてしまい、
+    正常にキューで待っている新しいジョブまで巻き込んで二重投入する恐れがある
+    （設計担当レビュー指摘）。そのため retry_extraction 自体は呼ばず、
+    その手順4（extract_source_message_task.apply_async(
+    args=(source_message_id,), countdown=i*_COUNTDOWN_STEP)）と同じ方法だけを
+    踏襲し、対象は find_stale_pending_job_ids が返した job_ids に限定する。
+    ステータスは変えない（pending のまま。retry_extraction の error→pending
+    リセットはここでは行わない＝そもそも対象は既に pending）。
 
     tcg_extraction.py:610-642 (auto_distribute_after_analysis_task) と同じ
     パターンで、ワンショットの非同期エンジン/セッションを使う。
-    job_ids は回収対象の絞り込みに使うのみで、実際の再投入判定・エンキューは
-    retry_extraction 自身の scope="pending" ロジック（status='pending' 全件、
-    created_at ASC、最大50件）に委ねる。新しい再投入ロジックは作らない。
     """
     if not job_ids:
         return {"enqueued": 0, "skipped": 0}
@@ -149,7 +160,10 @@ async def _reenqueue_pending(job_ids: list[str]) -> dict[str, int]:
     from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
 
     from app.database import DATABASE_URL  # noqa: PLC0415
-    from app.services.tcg_diagnostics_svc import retry_extraction  # noqa: PLC0415
+    from app.tasks.tcg_extraction import extract_source_message_task  # noqa: PLC0415
+
+    if extract_source_message_task is None:
+        raise RuntimeError("Celery is not available (task not registered).")
 
     _connect_args: dict = {
         "prepared_statement_cache_size": 0,
@@ -165,22 +179,47 @@ async def _reenqueue_pending(job_ids: list[str]) -> dict[str, int]:
     _Session = async_sessionmaker(_engine, expire_on_commit=False)
     try:
         async with _Session() as db:
-            return await retry_extraction(db, job_ids=None, scope="pending")
+            # 対象を再取得: id = ANY(:ids) AND status = 'pending' で絞り込み、
+            # find_stale_pending_job_ids 実行後に状態が変わった行を除外する。
+            rows = (
+                await db.execute(
+                    text(
+                        f"""
+                        SELECT id, source_message_id
+                        FROM {TCG_SCHEMA}.extraction_jobs
+                        WHERE id = ANY(:ids)
+                          AND status = 'pending'
+                        ORDER BY created_at ASC
+                        """
+                    ),
+                    {"ids": job_ids},
+                )
+            ).fetchall()
+
+            source_message_ids = [str(row.source_message_id) for row in rows]
+            for i, sm_id in enumerate(source_message_ids):
+                extract_source_message_task.apply_async(
+                    args=(sm_id,),
+                    countdown=i * _COUNTDOWN_STEP,
+                )
+            return {"enqueued": len(rows), "skipped": len(job_ids) - len(rows)}
     finally:
         await _engine.dispose()
 
 
 def _run_recovery() -> dict:
     engine = _get_sync_engine()
-    Session = sessionmaker(engine)
-
-    with Session() as session:
-        recovered_running_ids = recover_stale_running_jobs(session)
-        stale_pending_ids = find_stale_pending_job_ids(session)
+    try:
+        Session = sessionmaker(engine)
+        with Session() as session:
+            recovered_running_ids = recover_stale_running_jobs(session)
+            stale_pending_ids = find_stale_pending_job_ids(session)
+    finally:
+        engine.dispose()
 
     reenqueue_result = {"enqueued": 0, "skipped": 0}
     if stale_pending_ids:
-        reenqueue_result = asyncio.run(_reenqueue_pending(stale_pending_ids))
+        reenqueue_result = asyncio.run(_reenqueue_stale_pending_jobs(stale_pending_ids))
 
     result = {
         "recovered_running_count": len(recovered_running_ids),

@@ -23,10 +23,12 @@ recon.md 参照。要点のみ再掲する。
      - 根拠は §A（最大 32 秒、time_limit 330 秒）。実行中の attempt が15分を超えることは、time_limit 上ありえない。
    - (a) running のジョブで、最新の attempt の `started_at` から15分以上たったもの（attempt がなければ `created_at` から15分以上）を pending に戻す。
      - `UPDATE public.extraction_jobs SET status='pending' WHERE id = ANY(:ids) AND status='running'`
-   - (b) pending のジョブで、`created_at` から15分以上たち、最新の attempt が無いか、あっても15分以上前に始まったものを、`retry_extraction(scope="pending")` と同じ方法（`extract_source_message_task.apply_async` を countdown 付きで呼ぶ）で再投入する。
-     - 既存の `retry_extraction`（`backend/app/services/tcg_diagnostics_svc.py`）をそのまま import して呼ぶ。新しい再投入ロジックは増やさない。
-     - `retry_extraction` は `AsyncSession` を要求する非同期関数なので、`backend/app/tasks/tcg_extraction.py:610-642`（`auto_distribute_after_analysis_task`）と同じパターン（ワンショット `create_async_engine`/`async_sessionmaker` ＋ `asyncio.run()`）で呼ぶ。
-     - 最大 `MAX_RECOVER_PER_RUN` 件。古いものから（`retry_extraction` 内部が `ORDER BY created_at ASC LIMIT 50` のため、この上限は `retry_extraction` 自身の `_MAX_JOBS=50` と一致させる）。
+   - (b) pending のジョブで、`created_at` から15分以上たち、最新の attempt が無いか、あっても15分以上前に始まったものを見つけたら、**停滞している pending の ID だけを**、`retry_extraction`（`backend/app/services/tcg_diagnostics_svc.py`）の手順4（`extract_source_message_task.apply_async(args=(source_message_id,), countdown=i*_COUNTDOWN_STEP)`）と同じ方法で投入する。
+     - `retry_extraction` 自体（`_ELIGIBLE_STATUSES={"error"}` と `scope="pending"` の経路）は変えない・呼ばない。`scope="pending"` は status='pending' の**全件**を対象にしてしまい、正常にキューで待っている新しいジョブまで巻き込んで二重投入する恐れがあるため（設計担当レビュー指摘）。
+     - 対象ジョブの `source_message_id` は `WHERE id = ANY(:ids) AND status = 'pending'` で再取得する（判定後に状態が変わった行を除外するため）。
+     - ステータスは変えない（対象は既に pending のまま）。
+     - `retry_extraction` と同様、`AsyncSession` を要求する処理なので、`backend/app/tasks/tcg_extraction.py:610-642`（`auto_distribute_after_analysis_task`）と同じパターン（ワンショット `create_async_engine`/`async_sessionmaker` ＋ `asyncio.run()`）で呼ぶ。
+     - 最大 `MAX_RECOVER_PER_RUN` 件。古いものから（`retry_extraction` 内部の `_MAX_JOBS=50` と一致させる）。
    - 回収した件数と ID を `logger.warning` で出す。
    - DB の表や列は増やさない。
    - 見分けに使うのは、既存の `extraction_jobs` の `status` と `extraction_attempts` だけ。
@@ -53,7 +55,8 @@ recon.md 参照。要点のみ再掲する。
 
 ## §D リスク・戻し方
 
-- 実行中のジョブを誤って二重に動かすリスクについて：time_limit が 330 秒なので、15分以上実行中のものは実在しない。回収は pending に戻すだけで、処理の冪等性は既存の retry と同じ（`extraction_items` を消して入れ直す、`retry_extraction` 内部の処理）。
+- 実行中のジョブを誤って二重に動かすリスクについて：time_limit が 330 秒なので、15分以上実行中のものは実在しない。
+- pending の二重投入リスクについて：`retry_extraction(scope="pending")` を呼ばず、停滞している job_ids だけに限定して `extract_source_message_task.apply_async` を呼ぶため、正常にキューで待っている新しい pending ジョブを巻き込まない（設計担当レビューで指摘・修正）。
 - 戻し方：この PR を revert する。
 
 ## 維持の仕組み
