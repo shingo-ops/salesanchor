@@ -43,13 +43,14 @@ import { DashboardIcons } from "../../../constants/icons";
 import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import type { SupplierQualitySummary } from "../../../features/tcg-analysis-review/supplierQuality";
+import { LlmUsageSection } from "./LlmUsageSection";
 import "./AnalysisDashboardPanel.css";
 
 // ──────────────────────────────────────────────────────────────────────────────
 // 型定義
 // ──────────────────────────────────────────────────────────────────────────────
 
-type DashboardTab = "import" | "extraction" | "analysis" | "distribution";
+type DashboardTab = "import" | "extraction" | "analysis" | "distribution" | "usage";
 
 interface ImportResultResponse {
   status: "imported" | "already_imported";
@@ -469,6 +470,7 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
     { key: "extraction", label: t("analysisRules.dashboard.tabExtraction") },
     { key: "analysis", label: t("analysisRules.dashboard.tabAnalysis") },
     { key: "distribution", label: t("analysisRules.dashboard.tabDistribution") },
+    { key: "usage", label: t("analysisRules.dashboard.tabUsage") },
   ];
 
   const periodOptions: SelectOption[] = [
@@ -581,6 +583,9 @@ export function AnalysisDashboardPanel({ onNavigate }: AnalysisDashboardPanelPro
           t={t}
         />
       )}
+
+      {/* ── Usage Tab ────────────────────────────────────────────────────── */}
+      {activeTab === "usage" && <LlmUsageSection days={trendDays} t={t} />}
     </div>
   );
 }

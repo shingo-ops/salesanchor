@@ -22,12 +22,13 @@ import logging
 import os
 import re
 from datetime import datetime, timezone
+from typing import NamedTuple
 
 from celery.exceptions import SoftTimeLimitExceeded
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
-from app.services.extraction_shadow_svc import run_shadow_for_job
+from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
@@ -221,13 +222,12 @@ def _apply_pre_extraction_filter(session: Session, raw_text: str) -> str | None:
     return None
 
 
-def _run_extraction(session: Session, source_message_id: str) -> dict:
-    """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
+def _context_select_sql() -> str:
+    """原文・仕入元ルールを読む SELECT（WHERE 句は呼び出し側が足す）。
 
-    # --- 1. pending job を取得（仕入元抽出ルールも同時取得）---
-    row = session.execute(
-        text(
-            f"""
+    TCG_SCHEMA は呼び出し時に埋め込む（試験が実行時に差し替えるため、import 時に固定しない）。
+    """
+    return f"""
             SELECT ej.id, sm.raw_text,
                    s.extraction_price_format,
                    s.extraction_qty_format,
@@ -242,32 +242,20 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
             LEFT JOIN public.suppliers s ON s.id = sc.supplier_id
-            WHERE ej.source_message_id = :smid
-              AND ej.status = 'pending'
-            ORDER BY ej.created_at DESC
-            LIMIT 1
-            """
-        ),
-        {"smid": source_message_id},
-    ).fetchone()
+"""
 
-    if row is None:
-        logger.warning(
-            "[tcg_extraction] no pending job for sm=%s", source_message_id
-        )
-        return {
-            "extraction_job_id": None,
-            "status": "no_pending_job",
-            "items_count": 0,
-            "analysis_stats": None,
-            "error_message": "pending extraction_job が見つかりません",
-        }
 
-    if not work_schema_ready(session) or not schema_ready(session):
-        return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
-                "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
-    reference = load_work_reference(session, "public")
-    extraction_job_id = str(row[0])
+class ExtractionContext(NamedTuple):
+    """ジョブの原文・仕入元ルール・knowledge リンク・仕入元 ID。"""
+
+    raw_text: str
+    supplier_context: dict | None
+    knowledge_links: list[dict] | None
+    supplier_id: int | None
+
+
+def _build_extraction_context(session: Session, row) -> ExtractionContext:
+    """_context_select_sql() の1行から、原文・仕入元ルール・knowledge リンクを組み立てる。"""
     raw_text = row[1] or ""
 
     # 仕入元抽出ルールを取得して supplier_context を構築
@@ -305,6 +293,60 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
                 {"category": r[0], "pattern": r[1], "normalized_to": r[2]}
                 for r in kl_rows
             ]
+    return ExtractionContext(raw_text, supplier_context, knowledge_links, supplier_id)
+
+
+def load_extraction_context(session: Session, extraction_job_id: str) -> ExtractionContext | None:
+    """extraction_job_id のジョブの原文・仕入元ルール・knowledge リンク・仕入元 ID を読む。
+
+    _run_extraction（本番）と shadow_backfill（過去ジョブへの一括実行）が共有する。
+    ジョブが無ければ None。
+    """
+    row = session.execute(
+        text(_context_select_sql() + "            WHERE ej.id = :ejid\n"),
+        {"ejid": extraction_job_id},
+    ).fetchone()
+    if row is None:
+        return None
+    return _build_extraction_context(session, row)
+
+
+def _run_extraction(session: Session, source_message_id: str) -> dict:
+    """実際の抽出ロジック。source_message_id に対応する pending job を処理する。"""
+
+    # --- 1. pending job を取得（仕入元抽出ルールも同時取得）---
+    row = session.execute(
+        text(
+            _context_select_sql()
+            + """            WHERE ej.source_message_id = :smid
+              AND ej.status = 'pending'
+            ORDER BY ej.created_at DESC
+            LIMIT 1
+            """
+        ),
+        {"smid": source_message_id},
+    ).fetchone()
+
+    if row is None:
+        logger.warning(
+            "[tcg_extraction] no pending job for sm=%s", source_message_id
+        )
+        return {
+            "extraction_job_id": None,
+            "status": "no_pending_job",
+            "items_count": 0,
+            "analysis_stats": None,
+            "error_message": "pending extraction_job が見つかりません",
+        }
+
+    if not work_schema_ready(session) or not schema_ready(session):
+        return {"extraction_job_id": str(row[0]), "status": "pending", "items_count": 0,
+                "analysis_stats": None, "error_message": "Extraction record / Work-ID schema migration is not ready"}
+    reference = load_work_reference(session, "public")
+    extraction_job_id = str(row[0])
+    ctx = _build_extraction_context(session, row)
+    raw_text, supplier_context = ctx.raw_text, ctx.supplier_context
+    knowledge_links, supplier_id = ctx.knowledge_links, ctx.supplier_id
 
     # C94: 空テキストチェック — strip後0文字なら Gemini スキップ
     # 設計根拠: sold-out-rules-design.md §14.1.2
@@ -354,7 +396,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
 
     recorder = AttemptRecorder(session, extraction_job_id, source_message_id, reference, WORK_ID_PROMPT_VERSION)
     try:
-        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
+        return _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, supplier_context=supplier_context, knowledge_links=knowledge_links, supplier_id=supplier_id)
     except SoftTimeLimitExceeded:
         code = "SOFT_TIME_LIMIT"
         if recorder is not None:
@@ -374,7 +416,7 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
-def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None):
+def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None, supplier_id=None):
     result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
@@ -522,19 +564,26 @@ def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, re
         # knowledge_links（本番用に上で既に読み込んだ値）で v7 を呼び、結果は
         # extraction_shadow_results にのみ書く。例外は本番へ一切伝播させない。
         if os.environ.get("EXTRACTION_SHADOW_ENABLED", "").strip() == "1":
-            try:
-                run_shadow_for_job(
-                    session,
-                    extraction_job_id,
-                    raw_text=raw_text,
-                    supplier_context=supplier_context,
-                    knowledge_links=knowledge_links,
-                )
-            except Exception:
-                logger.exception(
-                    "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+            if not has_required_supplier_rule(supplier_context):
+                logger.info(
+                    "[tcg_extraction] shadow skipped: no supplier rule supplier_id=%s ej=%s",
+                    supplier_id,
                     extraction_job_id,
                 )
+            else:
+                try:
+                    run_shadow_for_job(
+                        session,
+                        extraction_job_id,
+                        raw_text=raw_text,
+                        supplier_context=supplier_context,
+                        knowledge_links=knowledge_links,
+                    )
+                except Exception:
+                    logger.exception(
+                        "[tcg_extraction] shadow run failed (isolated from production) ej=%s",
+                        extraction_job_id,
+                    )
 
     return {
         "extraction_job_id": extraction_job_id,

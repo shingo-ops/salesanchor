@@ -30,13 +30,14 @@ from app.auth.dependencies import (
     tenant_table_ref,
 )
 from app.database import get_db
+from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
 
-# estimated_scale → メッセージ文言のマッピング
+# estimated_scale → 管理画面向けエラー文言のマッピング（顧客向け案内文は bot_texts）
 _SCALE_LABEL: dict[str, str] = {
     "Small": "小口",
     "Medium": "一般",
@@ -136,12 +137,7 @@ async def send_channel_invite(
         )
 
     # チケットチャンネルへ案内メッセージを送信
-    scale_label = _SCALE_LABEL.get(estimated_scale, estimated_scale)
-    message_content = (
-        f"【お知らせ】{scale_label}のお客様向けの専用チャンネルをご案内します。\n"
-        f"以下のチャンネルで最新情報・お得な情報をご確認ください👇\n"
-        f"<#{target_channel_id}>"
-    )
+    message_content = bot_texts.channel_invite_message(estimated_scale, str(target_channel_id))
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         resp = await client.post(

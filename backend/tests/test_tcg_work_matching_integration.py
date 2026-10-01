@@ -283,6 +283,15 @@ def migrate(cursor):
     cursor.execute((MIGRATIONS / "20260910_010000_tcg_import_message_links.sql").read_text())
     cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
     cursor.execute((MIGRATIONS / "20260924_010000_add_supplier_extraction_rules.sql").read_text())
+    # ADR-1004 A1: llm_usage_events 台帳（FK 先 public.extraction_attempts は直前で作成済み）。
+    # AttemptRecorder.complete()/fail() がこの表へ書き込むため、extraction 系テストに必須。
+    cursor.execute((MIGRATIONS / "20260930_150000_create_llm_usage_events.sql").read_text())
+    # テスト専用：この fixture は TCG_SCHEMA を tenant_901 に差し替え attempts を tenant_901 側に作るため、
+    # public.extraction_attempts への FK を外す。本番は TCG_SCHEMA='public'（tcg_extraction_record_svc.py:19）
+    # で FK は成立する。
+    cursor.execute(
+        "ALTER TABLE public.llm_usage_events DROP CONSTRAINT IF EXISTS llm_usage_events_extraction_attempt_id_fkey"
+    )
     # product_code_seq: created by phase_b migration in prod, add idempotently for test DB
     cursor.execute(
         "CREATE SEQUENCE IF NOT EXISTS public.product_code_seq START WITH 1"

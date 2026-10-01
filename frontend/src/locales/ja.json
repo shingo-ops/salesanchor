@@ -4359,6 +4359,7 @@
       "tabExtraction": "抽出",
       "tabAnalysis": "解析",
       "tabDistribution": "配信",
+      "tabUsage": "使用量",
       "importTotal": "インポート総数",
       "importMessages": "メッセージ総数",
       "importUnresolvedRate": "未解決名率",
@@ -4474,6 +4475,39 @@
       "periodLabel": "表示期間",
       "distribution": {
         "nullPostedAtWarning": "投稿日時なし {{count}}件（異常）"
+      },
+      "usage": {
+        "note": "Gemini を呼ぶたびの使用量（台帳 llm_usage_events）。考える量は Google が返したときだけ記録されます。応答が返らず失敗した呼び出しは含みません。",
+        "notReported": "記録なし",
+        "metricCost": "費用合計",
+        "metricCalls": "応答が返った回数",
+        "metricInput": "入力トークン",
+        "metricOutput": "出力トークン",
+        "byPurposeTitle": "使いみち別",
+        "dailyTitle": "日別",
+        "byModelTitle": "モデル別",
+        "dailyByPurposeChartTitle": "日次の費用（使いみち別）",
+        "monthlyByPurposeChartTitle": "月次の費用（使いみち別）",
+        "totalMismatchNote": "Google が返した合計と一致しない呼び出しが {{count}} 件あります",
+        "colPurpose": "使いみち",
+        "colCalls": "応答が返った回数",
+        "colInput": "入力",
+        "colCached": "キャッシュ",
+        "colOutput": "出力",
+        "colThoughts": "考える量",
+        "colTool": "ツール",
+        "colTotal": "合計",
+        "colCost": "費用",
+        "colDate": "日付",
+        "colModel": "モデル",
+        "purpose": {
+          "line_extraction": "LINE抽出",
+          "line_extraction_shadow": "LINE抽出（試運転）",
+          "inventory_parse_fallback": "在庫解析の補完",
+          "translation_inbound": "受信翻訳",
+          "translation_inbound_escalation": "受信翻訳（再判定）",
+          "translation_outbound": "送信翻訳"
+        }
       },
       "costSectionTitle": "API コスト",
       "costTotalUsd": "期間内コスト",
@@ -5132,6 +5166,20 @@
     "byItem": "項目別",
     "matchedRatio": "自動確定率",
     "needsReviewCount": "確認待ち件数",
-    "totalCount": "件数"
+    "totalCount": "件数",
+    "itemLabel": {
+      "product": "商品の特定",
+      "verify_copied": "書き写しの照合",
+      "price_qty": "価格と数量"
+    },
+    "priceQtyReason": {
+      "multiple_values": "値が複数あるため確定しない",
+      "gemini_disagrees": "Geminiの書き写しと一致しない",
+      "rule_vs_shape": "ルールの向きと数値の形が合わない",
+      "irregular_comma": "桁区切りが不正",
+      "unresolved": "価格と数量を決められない",
+      "no_order_rule": "仕入元ルールに向きがない",
+      "quantity_unmarked": "数量に目印がない"
+    }
   }
 }

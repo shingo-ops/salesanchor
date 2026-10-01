@@ -22,14 +22,18 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.services.llm_budget import (
-    BudgetStatus,
     LLM_PRICING,
+    BudgetStatus,
+    UsageCounts,
     calculate_cost,
+    calculate_usage_cost,
     check_budget,
     record_cost,
+    record_usage_event,
+    record_usage_event_sync,
     reset_monthly_if_needed,
+    usage_counts_from,
 )
-
 
 # ---------------------------------------------------------------------------
 # calculate_cost (pure, no DB)
@@ -240,3 +244,164 @@ class TestRecordCost:
         db.execute = AsyncMock()
         cost = await record_cost(db, tenant_id=6, input_tokens=5_000_000, output_tokens=5_000_000)
         assert cost == Decimal("14.0000")
+
+
+# ---------------------------------------------------------------------------
+# ADR-1004: llm_usage_events 台帳 — usage_counts_from (pure, no DB)
+# ---------------------------------------------------------------------------
+
+
+class TestUsageCountsFrom:
+    def test_none_usage_returns_all_none(self) -> None:
+        counts = usage_counts_from(None)
+        assert counts == UsageCounts()
+        assert counts.prompt_tokens is None
+        assert counts.total_tokens is None
+
+    def test_reads_all_six_fields(self) -> None:
+        usage = MagicMock(spec=[
+            "prompt_token_count", "cached_content_token_count", "candidates_token_count",
+            "thoughts_token_count", "tool_use_prompt_token_count", "total_token_count",
+        ])
+        usage.prompt_token_count = 1000
+        usage.cached_content_token_count = 50
+        usage.candidates_token_count = 100
+        usage.thoughts_token_count = 40
+        usage.tool_use_prompt_token_count = 5
+        usage.total_token_count = 1195
+        counts = usage_counts_from(usage)
+        assert counts == UsageCounts(
+            prompt_tokens=1000, cached_content_tokens=50, candidates_tokens=100,
+            thoughts_tokens=40, tool_use_prompt_tokens=5, total_tokens=1195,
+        )
+
+    def test_missing_attr_is_none_not_zero(self) -> None:
+        # 旧 SDK は thoughts_token_count 属性自体を持たない場合がある
+        usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
+        usage.prompt_token_count = 250
+        usage.candidates_token_count = 80
+        counts = usage_counts_from(usage)
+        assert counts.prompt_tokens == 250
+        assert counts.candidates_tokens == 80
+        assert counts.thoughts_tokens is None
+        assert counts.cached_content_tokens is None
+
+    def test_none_attr_value_stays_none(self) -> None:
+        usage = MagicMock(spec=["prompt_token_count", "thoughts_token_count"])
+        usage.prompt_token_count = 100
+        usage.thoughts_token_count = None
+        counts = usage_counts_from(usage)
+        assert counts.prompt_tokens == 100
+        assert counts.thoughts_tokens is None
+
+    def test_zero_is_preserved_not_treated_as_none(self) -> None:
+        usage = MagicMock(spec=["prompt_token_count", "candidates_token_count"])
+        usage.prompt_token_count = 0
+        usage.candidates_token_count = 0
+        counts = usage_counts_from(usage)
+        assert counts.prompt_tokens == 0
+        assert counts.candidates_tokens == 0
+
+
+# ---------------------------------------------------------------------------
+# calculate_usage_cost (pure, no DB)
+# ---------------------------------------------------------------------------
+
+
+class TestCalculateUsageCost:
+    def test_prompt_candidates_and_thoughts_included(self) -> None:
+        # design.md 受入条件: prompt=1000, candidates=100, thoughts=50, model=gemini-3.1-flash-lite
+        # 1000 * 0.25e-6 + 150 * 1.50e-6 = 0.00025 + 0.000225 = 0.000475
+        counts = UsageCounts(prompt_tokens=1000, candidates_tokens=100, thoughts_tokens=50)
+        cost = calculate_usage_cost(counts, model="gemini-3.1-flash-lite")
+        assert cost == Decimal("1000") * Decimal("0.25") / Decimal("1000000") + Decimal("150") * Decimal("1.50") / Decimal("1000000")
+
+    def test_unknown_model_returns_none(self) -> None:
+        counts = UsageCounts(prompt_tokens=100, candidates_tokens=50)
+        assert calculate_usage_cost(counts, model="claude-opus-99") is None
+
+    def test_all_none_counts_returns_none(self) -> None:
+        counts = UsageCounts()
+        assert calculate_usage_cost(counts, model="gemini-3.1-flash-lite") is None
+
+    def test_none_treated_as_zero_when_partial(self) -> None:
+        # prompt のみ分かっている場合、candidates/thoughts は 0 扱い
+        counts = UsageCounts(prompt_tokens=1_000_000)
+        cost = calculate_usage_cost(counts, model="gemini-3.1-flash-lite")
+        assert cost == Decimal("0.25")
+
+    def test_thoughts_only_still_computes(self) -> None:
+        counts = UsageCounts(candidates_tokens=None, thoughts_tokens=1_000_000)
+        cost = calculate_usage_cost(counts, model="gemini-3.1-flash-lite")
+        assert cost == Decimal("1.50")
+
+
+# ---------------------------------------------------------------------------
+# record_usage_event_sync / record_usage_event
+# ---------------------------------------------------------------------------
+
+
+class TestRecordUsageEvent:
+    def test_sync_unknown_purpose_raises(self) -> None:
+        session = MagicMock()
+        with pytest.raises(ValueError, match="unknown llm_usage_events purpose"):
+            record_usage_event_sync(
+                session, purpose="not_a_real_purpose", model="gemini-3.1-flash-lite",
+                sdk="google-genai", counts=UsageCounts(),
+            )
+        session.execute.assert_not_called()
+
+    def test_sync_unknown_sdk_raises(self) -> None:
+        session = MagicMock()
+        with pytest.raises(ValueError, match="unknown llm_usage_events sdk"):
+            record_usage_event_sync(
+                session, purpose="line_extraction", model="gemini-3.1-flash-lite",
+                sdk="not_a_real_sdk", counts=UsageCounts(),
+            )
+        session.execute.assert_not_called()
+
+    def test_sync_inserts_one_row_with_expected_columns(self) -> None:
+        session = MagicMock()
+        counts = UsageCounts(prompt_tokens=1000, candidates_tokens=100, thoughts_tokens=50)
+        row_id = record_usage_event_sync(
+            session, purpose="line_extraction", model="gemini-3.1-flash-lite",
+            sdk="google-genai", counts=counts, extraction_attempt_id="attempt-1",
+        )
+        session.execute.assert_called_once()
+        args, kwargs = session.execute.call_args
+        params = args[1]
+        assert params["id"] == row_id
+        assert params["purpose"] == "line_extraction"
+        assert params["extraction_attempt_id"] == "attempt-1"
+        assert params["prompt_tokens"] == 1000
+        assert params["candidates_tokens"] == 100
+        assert params["thoughts_tokens"] == 50
+        assert params["cost_usd"] is not None
+
+    def test_sync_no_usage_no_cost_still_inserts_null_cost(self) -> None:
+        session = MagicMock()
+        record_usage_event_sync(
+            session, purpose="line_extraction_shadow", model="gemini-3.1-flash-lite",
+            sdk="google-genai", counts=UsageCounts(), extraction_shadow_run_id="run-1",
+        )
+        _, kwargs_or_args = session.execute.call_args
+        params = session.execute.call_args[0][1]
+        assert params["cost_usd"] is None
+        assert params["prompt_tokens"] is None
+
+    @pytest.mark.asyncio
+    async def test_async_inserts_one_row(self) -> None:
+        db = AsyncMock()
+        db.execute = AsyncMock()
+        counts = UsageCounts(prompt_tokens=500, candidates_tokens=200)
+        row_id = await record_usage_event(
+            db, purpose="inventory_parse_fallback", model="gemini-3.1-flash-lite",
+            sdk="google-generativeai", counts=counts, tenant_id=6,
+            discord_inbound_message_id=42,
+        )
+        db.execute.assert_called_once()
+        params = db.execute.call_args[0][1]
+        assert params["id"] == row_id
+        assert params["tenant_id"] == 6
+        assert params["discord_inbound_message_id"] == 42
+        assert params["purpose"] == "inventory_parse_fallback"

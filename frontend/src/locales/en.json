@@ -4359,6 +4359,7 @@
       "tabExtraction": "Extraction",
       "tabAnalysis": "Analysis",
       "tabDistribution": "Distribution",
+      "tabUsage": "Usage",
       "importTotal": "Total Imports",
       "importMessages": "Total Messages",
       "importUnresolvedRate": "Unresolved Name Rate",
@@ -4474,6 +4475,39 @@
       "periodLabel": "Period",
       "distribution": {
         "nullPostedAtWarning": "No posted_at {{count}} items (anomaly)"
+      },
+      "usage": {
+        "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
+        "notReported": "Not reported",
+        "metricCost": "Total Cost",
+        "metricCalls": "Calls with response",
+        "metricInput": "Input Tokens",
+        "metricOutput": "Output Tokens",
+        "byPurposeTitle": "By Purpose",
+        "dailyTitle": "Daily",
+        "byModelTitle": "By Model",
+        "dailyByPurposeChartTitle": "Daily Cost by Purpose",
+        "monthlyByPurposeChartTitle": "Monthly Cost by Purpose",
+        "totalMismatchNote": "{{count}} call(s) do not match the total Google returned",
+        "colPurpose": "Purpose",
+        "colCalls": "Calls with response",
+        "colInput": "Input",
+        "colCached": "Cached",
+        "colOutput": "Output",
+        "colThoughts": "Thinking",
+        "colTool": "Tool",
+        "colTotal": "Total",
+        "colCost": "Cost",
+        "colDate": "Date",
+        "colModel": "Model",
+        "purpose": {
+          "line_extraction": "LINE Extraction",
+          "line_extraction_shadow": "LINE Extraction (Shadow)",
+          "inventory_parse_fallback": "Inventory Parse Fallback",
+          "translation_inbound": "Inbound Translation",
+          "translation_inbound_escalation": "Inbound Translation (Escalation)",
+          "translation_outbound": "Outbound Translation"
+        }
       },
       "costSectionTitle": "API Cost",
       "costTotalUsd": "Period Cost",
@@ -5132,6 +5166,20 @@
     "byItem": "By item",
     "matchedRatio": "Auto-match ratio",
     "needsReviewCount": "Needs review count",
-    "totalCount": "Total"
+    "totalCount": "Total",
+    "itemLabel": {
+      "product": "Product identification",
+      "verify_copied": "Copy verification",
+      "price_qty": "Price and quantity"
+    },
+    "priceQtyReason": {
+      "multiple_values": "Multiple values, so it cannot be fixed",
+      "gemini_disagrees": "Does not match Gemini's copy",
+      "rule_vs_shape": "The rule's order does not fit the number shapes",
+      "irregular_comma": "Invalid digit separators",
+      "unresolved": "Cannot determine price and quantity",
+      "no_order_rule": "The supplier rule has no order",
+      "quantity_unmarked": "The quantity has no marker"
+    }
   }
 }
