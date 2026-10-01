@@ -296,6 +296,12 @@ def _judge_block(
     if heading_name_used:
         # 導入から1週間は見出し由来の特定を要確認にする（外す作業は別PR）
         review_items.append({"item": "product_heading", "reason": "heading_name", "candidates": []})
+    # 境界の条件で他の候補が消え、1つに決まったものは自動確定にしない
+    eliminated_by_boundary = match.status == "matched" and bool(match.boundary_dropped)
+    if eliminated_by_boundary:
+        review_items.append(
+            {"item": "product_boundary", "reason": "boundary_dropped", "candidates": list(match.boundary_dropped)}
+        )
     if verify_failures:
         review_items.append(
             {"item": "verify_copied", "reason": ",".join(verify_failures), "candidates": []}
@@ -316,7 +322,21 @@ def _judge_block(
 
     needs_review = (
         match.status != "matched" or bool(verify_failures) or price_qty.needs_review or heading_name_used
+        or eliminated_by_boundary
     )
+
+    evidence: dict = {
+        "basis": match.basis,
+        "name_source": name_source,
+        "price_qty": {
+            "basis": price_qty.basis,
+            "reasons": list(price_qty.reasons),
+            "price_line": price_qty.price_line,
+            "quantity_line": price_qty.quantity_line,
+        },
+    }
+    if eliminated_by_boundary:
+        evidence["boundary_dropped"] = list(match.boundary_dropped)
 
     return {
         "line_start": block_item["line_start"],
@@ -343,16 +363,7 @@ def _judge_block(
         "match_status": match.status,
         "needs_review": needs_review,
         "review_items": review_items,
-        "evidence": {
-            "basis": match.basis,
-            "name_source": name_source,
-            "price_qty": {
-                "basis": price_qty.basis,
-                "reasons": list(price_qty.reasons),
-                "price_line": price_qty.price_line,
-                "quantity_line": price_qty.quantity_line,
-            },
-        },
+        "evidence": evidence,
         "verify_failures": verify_failures,
     }
 

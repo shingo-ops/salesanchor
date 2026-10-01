@@ -537,3 +537,92 @@ class TestProductMatchText:
         # Assert
         assert source == "BLOCK"
         assert text.endswith("\nsv2p スノーハザード")
+
+
+class TestMatchProductShortBoundary:
+    """短い値（2文字以下）・数字だけの値は、語の境界があるときだけ当たる（PR-3b）。"""
+
+    def test_short_mark_does_not_hit_inside_english_word(self):
+        # Arrange
+        product = _product(id_=1, mark="M")
+        # Act
+        result = match_product("MEGA スペシャルセット 3BOX", [product])
+        # Assert
+        assert result.status == "unmatched"
+        assert result.boundary_dropped == (1,)
+
+    def test_short_mark_does_not_hit_inside_katakana_word(self):
+        product = _product(id_=1, mark="M")
+        # カタカナ語に英字の M は無いので、別の語中の m で確かめる
+        result = match_product("アーセナルベース (mint)", [product])
+        assert result.status == "unmatched"
+        assert result.boundary_dropped == (1,)
+
+    def test_short_keyword_token_does_not_hit_inside_word(self):
+        product = _product(id_=2, search_keywords=("PP",))
+        result = match_product("CHOPPER's フィギュア", [product])
+        assert result.status == "unmatched"
+        assert result.boundary_dropped == (2,)
+
+    def test_digits_only_code_does_not_hit_inside_price(self):
+        product = _product(id_=3, product_code="151")
+        for block in ("151BOX 15,100円", "新品 15100"):
+            result = match_product(block, [product])
+            assert result.status == "unmatched"
+            assert result.boundary_dropped == (3,)
+
+    def test_short_mark_hits_when_delimited(self):
+        product = _product(id_=1, mark="M")
+        for block in ("[M] 新品", "M 新品", "新品 M"):
+            result = match_product(block, [product])
+            assert result.status == "matched"
+            assert result.basis == "RAWCODE"
+            assert result.boundary_dropped == ()
+
+    def test_digits_code_hits_with_boundary(self):
+        product = _product(id_=3, product_code="151")
+        for block in ("151 カートン", "◆151", "151カートン"):
+            result = match_product(block, [product])
+            assert result.status == "matched"
+            assert result.boundary_dropped == ()
+
+    def test_long_alnum_code_keeps_substring_match(self):
+        product = _product(id_=2, product_code="ONP01")
+        result = match_product("ONP01BOX 新品", [product])
+        assert result.status == "matched"
+        assert result.boundary_dropped == ()
+
+    def test_long_keyword_token_keeps_substring_match(self):
+        product = _product(id_=2, search_keywords=("スノーハザード",))
+        result = match_product("スノーハザードBOX", [product])
+        assert result.status == "matched"
+        assert result.boundary_dropped == ()
+
+    def test_boundary_uses_nfkc_lowercase_and_hiragana(self):
+        # 全角・大文字でも、値の前後が英数字でなければ境界あり
+        product = _product(id_=1, mark="ｍ")
+        assert match_product("（Ｍ）新品", [product]).status == "matched"
+        assert match_product("ＭＥＧＡ", [product]).status == "unmatched"
+
+    def test_whitespace_and_symbols_are_kept_for_boundary(self):
+        # 空白・記号は消さない: 「1 5 1」「15-1」を 151 とみなさない
+        product = _product(id_=3, product_code="151")
+        assert match_product("15 1", [product]).status == "unmatched"
+
+    def test_boundary_dropped_lists_only_products_dropped_by_boundary(self):
+        short = _product(id_=1, mark="M")
+        long_ = _product(id_=2, search_keywords=("スノーハザード",))
+        result = match_product("スノーハザード MEGA", [short, long_])
+        assert result.status == "matched"
+        assert result.product_id == 2
+        assert result.boundary_dropped == (1,)
+
+    def test_boundary_dropped_empty_by_default(self):
+        result = match_product("何もない", [_product(id_=1, mark="ZZ9")])
+        assert result.boundary_dropped == ()
+
+    def test_excluded_product_not_listed_in_boundary_dropped_when_it_would_be_excluded(self):
+        # 境界が無くても除外ワードで落ちる商品は、境界のせいで外れたとは言えない
+        short = _product(id_=1, mark="M", exclude_keywords=("MEGA",))
+        result = match_product("MEGA", [short])
+        assert result.boundary_dropped == ()

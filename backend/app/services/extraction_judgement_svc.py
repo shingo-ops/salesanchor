@@ -9,6 +9,7 @@ import re
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, replace
+from functools import lru_cache
 from typing import Literal
 
 # inventory_parser.py は scripts/check-condition-vocab.js の CODE_FILES に含まれ、
@@ -21,21 +22,22 @@ _KATAKANA_END = 0x30F6
 _KATAKANA_TO_HIRAGANA_OFFSET = 0x60
 
 
+def fold_for_match(text: str) -> str:
+    """NFKC → 小文字化 → カタカナをひらがな化。空白と記号は消さない。"""
+    normalized = unicodedata.normalize("NFKC", text or "").lower()
+    return "".join(
+        chr(ord(ch) - _KATAKANA_TO_HIRAGANA_OFFSET) if _KATAKANA_START <= ord(ch) <= _KATAKANA_END else ch
+        for ch in normalized
+    )
+
+
 def normalize_for_match(text: str) -> str:
     """NFKC → 小文字化 → カタカナをひらがな化 → 空白除去 → 記号/句読点(P*/S*)除去。
 
     数字・英字は残す。
     """
-    normalized = unicodedata.normalize("NFKC", text or "").lower()
-    converted = []
-    for ch in normalized:
-        cp = ord(ch)
-        if _KATAKANA_START <= cp <= _KATAKANA_END:
-            converted.append(chr(cp - _KATAKANA_TO_HIRAGANA_OFFSET))
-        else:
-            converted.append(ch)
     result = []
-    for ch in converted:
+    for ch in fold_for_match(text):
         if ch.isspace():
             continue
         category = unicodedata.category(ch)
@@ -43,6 +45,29 @@ def normalize_for_match(text: str) -> str:
             continue
         result.append(ch)
     return "".join(result)
+
+
+_SHORT_VALUE_MAX_LEN = 2
+_VALUE_CACHE_SIZE = 16384
+
+
+@lru_cache(maxsize=_VALUE_CACHE_SIZE)
+def _normalize_value(text: str) -> str:
+    """商品マスタの値（品番・記号・検索ワード・除外ワード）の正規化。同じ値を何度も正規化しないための記憶。"""
+    return normalize_for_match(text)
+
+
+def _needs_boundary(normalized: str) -> bool:
+    """2文字以下、または数字だけの値は、語の境界があるときだけ当たりとする。"""
+    return len(normalized) <= _SHORT_VALUE_MAX_LEN or normalized.isdigit()
+
+
+def has_word_boundary(folded_text: str, value: str) -> bool:
+    """fold_for_match 済みの文字列の中に、前後が英字・数字でない（または端の）value があるか。"""
+    needle = fold_for_match(value).strip()
+    if not needle:
+        return False
+    return re.search(r"(?<![a-z0-9])" + re.escape(needle) + r"(?![a-z0-9])", folded_text) is not None
 
 
 def block_text(raw_text: str, line_start: int, line_end: int) -> str:
@@ -103,25 +128,40 @@ class MatchResult:
     excluded_by: Mapping[int, tuple[str, ...]]
     basis: str
     reason: str
+    boundary_dropped: tuple[int, ...] = ()
 
 
-def _code_candidate_basis(product: ProductEntry, nb: str) -> str | None:
-    """product_code または mark を正規化したもの（空でないもの）が nb に含まれれば 'RAWCODE'。"""
+def _value_hits(raw: str, nb: str, folded: str | None) -> bool:
+    """raw を正規化したものが nb に含まれるか。folded を渡すと、短い値・数字だけの値は境界も条件にする。"""
+    normalized = _normalize_value(raw)
+    if not normalized or normalized not in nb:
+        return False
+    if folded is not None and _needs_boundary(normalized):
+        return has_word_boundary(folded, raw)
+    return True
+
+
+def _code_candidate_basis(product: ProductEntry, nb: str, folded: str | None = None) -> str | None:
+    """product_code または mark を正規化したもの（空でないもの）が nb に含まれれば 'RAWCODE'。
+
+    folded（fold_for_match 済みの照合文字列）を渡すと、短い値・数字だけの値は語の境界も条件にする。
+    """
     for raw in (product.product_code, product.mark):
-        if not raw:
-            continue
-        normalized = normalize_for_match(raw)
-        if normalized and normalized in nb:
+        if raw and _value_hits(raw, nb, folded):
             return "RAWCODE"
     return None
 
 
-def _keyword_matches(product: ProductEntry, nb: str) -> tuple[str, ...]:
-    """search_keywords のうち、全トークンが nb に含まれるものを返す（当たった keyword 全部）。"""
+def _keyword_matches(product: ProductEntry, nb: str, folded: str | None = None) -> tuple[str, ...]:
+    """search_keywords のうち、全トークンが nb に含まれるものを返す（当たった keyword 全部）。
+
+    folded を渡すと、短い・数字だけのトークンは語の境界も条件にする。
+    """
     matched: list[str] = []
     for keyword in product.search_keywords:
-        tokens = [normalize_for_match(word) for word in keyword.split(" ") if word]
-        if tokens and all(token in nb for token in tokens):
+        words = [word for word in keyword.split(" ") if word]
+        # 正規化すると空になるトークン（記号だけ等）は従来どおり「含まれる」扱い
+        if words and all(not _normalize_value(word) or _value_hits(word, nb, folded) for word in words):
             matched.append(keyword)
     return tuple(matched)
 
@@ -130,24 +170,36 @@ def _excluded_keywords(product: ProductEntry, nb: str) -> tuple[str, ...]:
     """exclude_keywords のうち、正規化したものが nb に含まれるものを返す。"""
     excluded: list[str] = []
     for keyword in product.exclude_keywords:
-        normalized = normalize_for_match(keyword)
+        normalized = _normalize_value(keyword)
         if normalized and normalized in nb:
             excluded.append(keyword)
     return tuple(excluded)
 
 
+def _is_candidate(product: ProductEntry, nb: str, folded: str | None) -> bool:
+    """コード・検索ワードのどちらかに当たり、除外ワードに当たらないか。"""
+    if _code_candidate_basis(product, nb, folded) is None and not _keyword_matches(product, nb, folded):
+        return False
+    return not _excluded_keywords(product, nb)
+
+
 def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
     nb = normalize_for_match(block)
+    folded = fold_for_match(block)
 
     code_basis: dict[int, str] = {}
     matched_keywords: dict[int, tuple[str, ...]] = {}
     excluded_by: dict[int, tuple[str, ...]] = {}
     candidates: list[int] = []
+    boundary_dropped: list[int] = []
 
     for product in products:
-        basis = _code_candidate_basis(product, nb)
-        keywords = _keyword_matches(product, nb)
+        basis = _code_candidate_basis(product, nb, folded)
+        keywords = _keyword_matches(product, nb, folded)
         if basis is None and not keywords:
+            # 境界の条件が無ければ候補になっていた商品を控える
+            if _is_candidate(product, nb, None):
+                boundary_dropped.append(product.id)
             continue
         if basis is not None:
             code_basis[product.id] = basis
@@ -161,6 +213,7 @@ def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
 
         candidates.append(product.id)
 
+    dropped = tuple(boundary_dropped)
     if len(candidates) == 0:
         return MatchResult(
             status="unmatched",
@@ -171,6 +224,7 @@ def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
             excluded_by=excluded_by,
             basis="",
             reason="一致する検索ワード・品番がない",
+            boundary_dropped=dropped,
         )
 
     if len(candidates) >= 2:
@@ -183,6 +237,7 @@ def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
             excluded_by=excluded_by,
             basis="",
             reason=f"候補{len(candidates)}件：{'/'.join(str(c) for c in candidates)}",
+            boundary_dropped=dropped,
         )
 
     product_id = candidates[0]
@@ -201,6 +256,7 @@ def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
         excluded_by=excluded_by,
         basis=basis,
         reason="",
+        boundary_dropped=dropped,
     )
 
 
