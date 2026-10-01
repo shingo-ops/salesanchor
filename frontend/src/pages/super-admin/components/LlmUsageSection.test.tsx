@@ -93,10 +93,10 @@ const fxRate150 = {
 
 const view = () => render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
 
-/** /fx-rate/USD だけ fxResponse を返し、それ以外（llm-usage）は response を返す api.get モック。 */
+/** /fx-rates/USD だけ fxResponse を返し、それ以外（llm-usage）は response を返す api.get モック。 */
 function mockApiWithFx(fxResponse: unknown) {
   vi.mocked(api.get).mockImplementation((url: string) => {
-    if (url.startsWith("/fx-rate/")) {
+    if (url.startsWith("/fx-rates/")) {
       if (fxResponse instanceof Error) return Promise.reject(fxResponse);
       return Promise.resolve(fxResponse);
     }

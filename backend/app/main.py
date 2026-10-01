@@ -51,7 +51,7 @@ from app.routers import (
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
-    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
+    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rates/{currency} / POST /super-admin/fx-rate/refresh)
     goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
@@ -631,7 +631,7 @@ app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
 )
 
-# 為替レート SSOT: GET /api/v1/fx-rate/{currency} + POST /api/v1/super-admin/fx-rate/refresh
+# 為替レート SSOT: GET /api/v1/fx-rates/{currency} + POST /api/v1/super-admin/fx-rate/refresh
 app.include_router(
     fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
 )

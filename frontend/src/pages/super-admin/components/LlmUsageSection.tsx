@@ -125,7 +125,7 @@ interface LlmUsageResponse {
 
 /**
  * 為替レート SSOT（ADR-148: public.app_fx_rates）の読み取りレスポンス。
- * GET /fx-rate/{currency}（backend/app/routers/fx_rate_admin.py）。
+ * GET /fx-rates/{currency}（backend/app/routers/fx_rate_admin.py）。
  * frontend/src/pages/super-admin/FxRatePage.tsx と同形。共有クライアントは存在しないため
  * 既存パターン（各ページで api.get を直接呼ぶ）を踏襲する。
  */
@@ -391,7 +391,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       api.get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`),
       // 為替レートは失敗しても本体データの表示は止めない（ADR-148: 読み取りは全ユーザー可）。
       // 失敗・未取得時は呼び出し側で USD 表示へフォールバックする。
-      api.get<FxRate>("/fx-rate/USD").catch(() => null),
+      api.get<FxRate>("/fx-rates/USD").catch(() => null),
     ])
       .then(([res, fx]) => {
         setData(res);
