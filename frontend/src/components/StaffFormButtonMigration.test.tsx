@@ -179,12 +179,12 @@ describe('staff form Button migration with real UI preferences provider', () => 
     expect(target.textContent).toBe(tr(mode === 'create' ? 'common.register' : 'common.update'));
     expect(meCalls()).toBe(1);
   });
-  it.each(['   ', '  ST-NEW  '])('create handles optional staff code %s', async code => {
+  it('create form has no staff code field and posts no staff_code', async () => {
     mock.post.mockResolvedValue({});
     const scope = await mountForm('create');
-    fireEvent.change(field(scope, 'staff.staffCodeLabel'), { target: { value: code } });
+    expect(within(scope).queryByText(tr('staff.staffCodeLabel'))).toBeNull();
     fireEvent.click(save(scope, 'create'));
-    await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/staff', { ...payload('create'), ...(code.trim() ? { staff_code: code.trim() } : {}) }));
+    await waitFor(() => expect(mock.post).toHaveBeenCalledExactlyOnceWith('/staff', payload('create')));
   });
   it.each(modes.flatMap(mode => ['staff.surnameJp', 'staff.givenNameJp', 'staff.primaryEmail', 'staff.role'].map(key => ({ mode, key }))))(
     '$mode preserves required $key',

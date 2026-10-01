@@ -49,6 +49,16 @@ from app.services.staff_avatar import (
 )
 
 logger = logging.getLogger(__name__)
+# staff.staff_code は VARCHAR(20) NOT NULL（services/tenant.py の staff テーブル定義と同値）
+STAFF_CODE_MAX_LENGTH = 20
+_PLACEHOLDER_PREFIX = "TMP-"
+
+
+def _new_placeholder_code() -> str:
+    """INSERT 時の一意な仮コード（EMP-%05d へ UPDATE されるまでの値）。VARCHAR(20) に収める。"""
+    return _PLACEHOLDER_PREFIX + uuid.uuid4().hex[: STAFF_CODE_MAX_LENGTH - len(_PLACEHOLDER_PREFIX)]
+
+
 router = APIRouter()
 
 _STAFF_COLS = """
@@ -540,8 +550,8 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
     if not check.first():
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="指定の role_id はこのテナントに存在しません")
 
-    explicit_code = data.staff_code and data.staff_code.strip()
-    staff_code = explicit_code if explicit_code else f"EMP-PENDING-{uuid.uuid4().hex}"
+    # staff_code は常にサーバー側で自動採番する（クライアント指定は受け付けない）
+    staff_code = _new_placeholder_code()
     try:
         result = await db.execute(
             text("""
@@ -570,11 +580,10 @@ async def create_staff(data: StaffCreate, db: AsyncSession = Depends(get_db),
             },
         )
         new_id = result.scalar_one()
-        if not explicit_code:
-            await db.execute(
-                text("UPDATE staff SET staff_code = :code WHERE id = :id"),
-                {"code": f"EMP-{new_id:05d}", "id": new_id},
-            )
+        await db.execute(
+            text("UPDATE staff SET staff_code = :code WHERE id = :id"),
+            {"code": f"EMP-{new_id:05d}", "id": new_id},
+        )
         await _upsert_ui_prefs(db, new_id, data.ui_preferences)
         await _replace_additional_emails(db, new_id, data.additional_emails)
         await record_audit_log(

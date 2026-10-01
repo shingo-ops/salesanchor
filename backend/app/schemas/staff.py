@@ -57,7 +57,6 @@ class StaffEmailInput(BaseModel):
 
 
 class StaffCreate(BaseModel):
-    staff_code: str | None = Field(default=None, max_length=20, description="EMP-00001 形式。空欄なら自動採番")
     surname_jp: str = Field(min_length=1, max_length=50)
     given_name_jp: str = Field(min_length=1, max_length=50)
     surname_kana: str | None = Field(default=None, max_length=100)
