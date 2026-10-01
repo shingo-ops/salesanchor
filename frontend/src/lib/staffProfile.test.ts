@@ -44,4 +44,24 @@ describe('toSameOriginAvatarUrl', () => {
     expect(toSameOriginAvatarUrl('/api/public/staff-avatars/abc.webp')).toBe('/api/public/staff-avatars/abc.webp');
     expect(toSameOriginAvatarUrl('https://example.com/a.png')).toBe('https://example.com/a.png');
   });
+
+  it('keeps an invalid url string unchanged', () => {
+    expect(toSameOriginAvatarUrl('not a url')).toBe('not a url');
+  });
+
+  it('keeps a protocol-relative url unchanged', () => {
+    expect(toSameOriginAvatarUrl('//evil.example/api/public/staff-avatars/abc.webp')).toBe(
+      '//evil.example/api/public/staff-avatars/abc.webp',
+    );
+  });
+
+  it('keeps a non-avatar /api/ path on another host unchanged', () => {
+    expect(toSameOriginAvatarUrl('https://evil.example/api/v1/secret')).toBe('https://evil.example/api/v1/secret');
+  });
+
+  it('converts the avatar path even on another host (same public route)', () => {
+    expect(toSameOriginAvatarUrl('https://other.example/api/public/staff-avatars/abc.webp')).toBe(
+      '/api/public/staff-avatars/abc.webp',
+    );
+  });
 });
