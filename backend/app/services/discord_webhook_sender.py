@@ -52,10 +52,14 @@ def _install_log_redaction() -> None:
     def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
         record = previous(*args, **kwargs)
         if record.name.startswith(_REDACTED_LOGGER_PREFIXES):
-            message = record.getMessage()
-            if "/webhooks/" in message:
-                record.msg = _redact_webhook_token(message)
-                record.args = ()
+            # 不正な log 呼び出し（引数の個数違い等）で呼び出し元に例外を投げない。失敗時は記録を変えない
+            try:
+                message = record.getMessage()
+                if "/webhooks/" in message:
+                    record.msg = _redact_webhook_token(message)
+                    record.args = ()
+            except Exception:
+                pass
         return record
 
     factory._redacts_webhook_token = True  # type: ignore[attr-defined]

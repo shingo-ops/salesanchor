@@ -425,3 +425,11 @@ def test_token_redacted_for_httpx_and_httpcore_child_loggers(caplog, name):
     logging.getLogger(name).info("HTTP Request: POST %s", url)
     assert _TOKEN not in caplog.text
     assert "/webhooks/123/***" in caplog.text
+
+
+def test_malformed_log_call_from_httpx_logger_does_not_raise():
+    # 引数の個数が合わない（getMessage が TypeError になる）記録でも、呼び出し元に例外を投げない
+    record = logging.getLogger("httpcore.http11").makeRecord(
+        "httpcore.http11", logging.INFO, __file__, 1, "bad %s %s", ("x",), None,
+    )
+    assert record.msg == "bad %s %s" and record.args == ("x",)  # 失敗時は記録を変えない
