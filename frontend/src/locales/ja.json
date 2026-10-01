@@ -4478,6 +4478,8 @@
       "usage": {
         "note": "Gemini を呼ぶたびの使用量（台帳 llm_usage_events）。考える量は Google が返したときだけ記録されます。応答が返らず失敗した呼び出しは含みません。",
         "notReported": "記録なし",
+        "chartsCardTitle": "グラフ",
+        "costRowTitle": "費用",
         "byPurposeTitle": "使いみち別",
         "dailyTitle": "日別",
         "byModelTitle": "モデル別",

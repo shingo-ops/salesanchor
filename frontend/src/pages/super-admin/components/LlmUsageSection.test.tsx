@@ -247,6 +247,32 @@ it("removes the old 4 separate metric cards (consolidated into the summary card)
   expect(container.querySelector(".analysis-dashboard-metrics")).toBeNull();
 });
 
+it("consolidates all 7 charts into a single charts card (no per-chart Card wrappers)", async () => {
+  const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+  await screen.findByText("LINE Extraction");
+
+  const chartsCard = container.querySelector(".llm-usage-charts");
+  expect(chartsCard).not.toBeNull();
+  const text = chartsCard?.textContent ?? "";
+  expect(text).toContain("Charts");
+  expect(text).toContain("Requests & Success Rate");
+  expect(text).toContain("Errors by Type");
+  expect(text).toContain("Input Tokens");
+  expect(text).toContain("Output Tokens");
+  expect(text).toContain("Requests");
+  expect(text).toContain("Daily Cost by Purpose");
+  expect(text).toContain("Monthly Cost by Purpose");
+
+  // 各グラフは __item 内にあり、ネストした Card（.analysis-dashboard-chart-card）を持たない
+  expect(chartsCard?.querySelectorAll(".llm-usage-charts__item").length).toBeGreaterThanOrEqual(7);
+  expect(chartsCard?.querySelector(".analysis-dashboard-chart-card")).toBeNull();
+
+  // サマリーカードと表（段2〜4）はそのまま存在する
+  expect(container.querySelector(".llm-usage-summary")).not.toBeNull();
+  const chartCards = container.querySelectorAll(".analysis-dashboard-chart-card");
+  expect(chartCards.length).toBe(3); // byPurposeTitle / dailyTitle / byModelTitle の表カードのみ
+});
+
 describe("formatCompactNumber", () => {
   it("abbreviates large numbers for chart y-axis ticks", () => {
     expect(formatCompactNumber(29766307, "en")).toBe("30M");

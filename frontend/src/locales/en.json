@@ -4478,6 +4478,8 @@
       "usage": {
         "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
         "notReported": "Not reported",
+        "chartsCardTitle": "Charts",
+        "costRowTitle": "Cost",
         "byPurposeTitle": "By Purpose",
         "dailyTitle": "Daily",
         "byModelTitle": "By Model",
