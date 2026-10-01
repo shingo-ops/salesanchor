@@ -164,6 +164,7 @@ export default function InboxPage() {
                 discordChannelMissing={state.discordChannelMissing}
                 trimmedDraft={state.trimmedDraft}
                 submitSend={state.submitSend}
+                retrySend={state.retrySend}
                 handleKeyDown={state.handleKeyDown}
                 attachedFile={state.attachedFile}
                 setAttachedFile={state.setAttachedFile}

@@ -1334,6 +1334,14 @@
       "permissionDenied": "24時間を過ぎたため送信できません。Instagram/Messengerから直接返信してください",
       "rateLimited": "送信が一時的に制限されています。時間をおいて再試行してください",
       "attachmentNotSaved": "画像は送信されましたが、自社への保管に失敗しました",
+      "discordEnNameRequired": "Discordで返信するには、英語の名前の登録が必要です。",
+      "discordEnNameInvalid": "英語の名前に使えない言葉（discord など）が含まれています。",
+      "discordSendFailed": "送信できませんでした。入力した文は残っています。",
+      "discordWebhookPermissionAdmin": "Discordの設定が足りないため送れません。",
+      "discordWebhookPermissionStaff": "Discordの設定が足りないため送れません。管理者に連絡してください。",
+      "ctaOpenAccountSettings": "アカウント設定を開く",
+      "ctaRetry": "もう一度送る",
+      "ctaOpenDiscordConfig": "Discord設定を開く",
       "generic": "送信できませんでした",
       "codeSuffix": "（コード: {{code}}）"
     }
@@ -1952,6 +1960,7 @@
     "givenNameJp": "名（日本語）",
     "surnameEn": "姓（英語）",
     "givenNameEn": "名（英語）",
+    "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。",
     "primaryEmail": "メインメール",
     "role": "ロール",
     "status": "ステータス",
@@ -3109,7 +3118,20 @@
     "changing": "変更中...",
     "sectionPreferences": "環境設定",
     "darkModeLabel": "ダークモード",
-    "languageLabel": "言語"
+    "languageLabel": "言語",
+    "avatarLabel": "アイコン",
+    "avatarChoose": "画像を選ぶ",
+    "avatarChange": "画像を変更",
+    "avatarRemove": "削除",
+    "avatarUploading": "保存中...",
+    "avatarHint": "2MB以下のJPG・PNG・WebP。Discordの返信に表示されます。",
+    "avatarAlt": "アイコン",
+    "avatarErrorInvalid": "2MB以下のJPG・PNG・WebP画像を選んでください。",
+    "avatarErrorInvalidAction": "画像を選び直す",
+    "avatarErrorSave": "画像を保存できませんでした。",
+    "avatarErrorSaveAction": "もう一度試す",
+    "englishNameHelp": "Discordで返信するときの表示名に使います。名（英語）は返信者として顧客に表示されます。",
+    "englishNameRequired": "英語の名前（姓・名）を入力してください。Discordで返信するときに必要です。"
   },
   "badges": {
     "subtitle": "バッジと達成条件を管理します。",
@@ -4478,7 +4500,6 @@
       "usage": {
         "note": "Gemini を呼ぶたびの使用量（台帳 llm_usage_events）。考える量は Google が返したときだけ記録されます。応答が返らず失敗した呼び出しは含みません。",
         "notReported": "記録なし",
-        "chartsCardTitle": "グラフ",
         "costRowTitle": "費用",
         "byPurposeTitle": "使いみち別",
         "dailyTitle": "日別",
@@ -4524,6 +4545,10 @@
           "outputLabel": "出力トークン",
           "successRateLabel": "成功率（LINE抽出）",
           "errorCountLabel": "エラー件数（LINE抽出）"
+        },
+        "fx": {
+          "note": "1ドル＝{{rate}}円（{{fetchedAt}} 時点のレートで換算。過去の日も同じレートで計算しています）",
+          "fallbackNote": "為替レートを取得できないため、ドルで表示しています"
         }
       },
       "costSectionTitle": "API コスト",

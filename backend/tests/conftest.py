@@ -41,7 +41,6 @@ from sqlalchemy.orm import sessionmaker
 import app.auth.dependencies  # noqa: F401
 from app.services.channel_masters import DEFAULT_CHANNEL_MASTERS
 
-
 # PostgreSQL専用テスト（*_pg.py ファイル）向け DDL 定数
 # SQLite用 conftest fixtures の suppliers テーブル（AUTOINCREMENT）とは別物。
 # check_test_schema_dup.py の EXCLUDE_FILES 対象のため、ここに集約する。
@@ -373,6 +372,7 @@ async def setup_test_db(test_engine):
                 firebase_uid VARCHAR(128) UNIQUE,
                 is_employee BOOLEAN NOT NULL DEFAULT 0,
                 phone VARCHAR(20),
+                avatar_token TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE (tenant_id, staff_code)
@@ -1399,6 +1399,17 @@ async def setup_test_db(test_engine):
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """))
+        # ADR-159 便B: Discord チャンネル別 webhook（token は暗号化済み・SQLite互換、スキーマなし）
+        await conn.execute(text("""
+            CREATE TABLE IF NOT EXISTS discord_channel_webhooks (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tenant_id INTEGER NOT NULL,
+                channel_id TEXT NOT NULL UNIQUE,
+                webhook_id TEXT NOT NULL,
+                webhook_token_encrypted TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """))
     yield
 
 
@@ -1412,6 +1423,7 @@ async def db_session(test_engine, setup_test_db):
 
     # テスト後にデータを全削除（FK制約順）
     async with test_engine.begin() as conn:
+        await conn.execute(text("DELETE FROM discord_channel_webhooks"))
         await conn.execute(text("DELETE FROM audit_logs"))
         await conn.execute(text("DELETE FROM goals"))
         await conn.execute(text("DELETE FROM tenant_google_drive_config"))

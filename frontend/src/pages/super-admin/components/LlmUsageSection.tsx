@@ -123,6 +123,19 @@ interface LlmUsageResponse {
   daily_by_model: LlmUsageDailyByModelItem[];
 }
 
+/**
+ * 為替レート SSOT（ADR-148: public.app_fx_rates）の読み取りレスポンス。
+ * GET /fx-rate/{currency}（backend/app/routers/fx_rate_admin.py）。
+ * frontend/src/pages/super-admin/FxRatePage.tsx と同形。共有クライアントは存在しないため
+ * 既存パターン（各ページで api.get を直接呼ぶ）を踏襲する。
+ */
+interface FxRate {
+  currency: string;
+  rate_jpy: number;
+  fetched_at: string;
+  updated_at: string;
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // 定数
 // ──────────────────────────────────────────────────────────────────────────────
@@ -272,6 +285,45 @@ function makeCurrencyFormatter(language: string): (value: number | null, t: (key
   return (value, t) => (value == null ? t("analysisRules.dashboard.usage.notReported") : formatter.format(value));
 }
 
+/** 円表示用フォーマッタ（ADR-148: USD→JPY 換算後の値を整形する）。 */
+function makeJpyFormatter(language: string): (value: number | null, t: (key: string) => string) => string {
+  const formatter = new Intl.NumberFormat(language, {
+    style: "currency",
+    currency: "JPY",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
+  return (value, t) => (value == null ? t("analysisRules.dashboard.usage.notReported") : formatter.format(value));
+}
+
+/** コストチャート Y 軸の桁短縮表示（単位付き。例: ¥500, ¥1.2K / $1.2K）。 */
+function makeCompactCurrencyFormatter(language: string, currency: "JPY" | "USD"): (value: number) => string {
+  const formatter = new Intl.NumberFormat(language, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  return (value) => formatter.format(value);
+}
+
+/** USD → JPY 換算（ADR-148 SSOT: public.app_fx_rates.rate_jpy を使用）。変換ロジックはここ一箇所に集約する。 */
+function toJpy(usd: number, rateJpy: number): number {
+  return usd * rateJpy;
+}
+
+/** fetched_at（UTC ISO文字列）を JST 表示に整形する（他ページと同じ Asia/Tokyo 固定の既存パターンを踏襲）。 */
+function formatFetchedAtJst(isoString: string, language: string): string {
+  return new Date(isoString).toLocaleString(language, {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function purposeLabel(purpose: string, t: (key: string) => string): string {
   if (!KNOWN_PURPOSES.includes(purpose)) return purpose;
   return t(`analysisRules.dashboard.usage.purpose.${purpose}`);
@@ -330,14 +382,20 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   const [data, setData] = useState<LlmUsageResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fxRate, setFxRate] = useState<FxRate | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    api
-      .get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`)
-      .then((res) => {
+    Promise.all([
+      api.get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`),
+      // 為替レートは失敗しても本体データの表示は止めない（ADR-148: 読み取りは全ユーザー可）。
+      // 失敗・未取得時は呼び出し側で USD 表示へフォールバックする。
+      api.get<FxRate>("/fx-rate/USD").catch(() => null),
+    ])
+      .then(([res, fx]) => {
         setData(res);
+        setFxRate(fx != null && typeof fx.rate_jpy === "number" ? fx : null);
       })
       .catch(() => {
         setError(t("analysisRules.dashboard.fetchError"));
@@ -360,6 +418,19 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
 
   const formatCurrency = makeCurrencyFormatter(i18n.language);
   const compactTick = (value: number) => formatCompactNumber(value, i18n.language);
+
+  // ADR-148: USD→JPY 換算（1箇所に集約）。レート未取得時は null のまま USD 表示にフォールバックする。
+  const costRate = fxRate != null ? fxRate.rate_jpy : null;
+  const formatJpy = makeJpyFormatter(i18n.language);
+  /** 生の USD 値（API レスポンス）を表示用文字列にする唯一のヘルパー。全コスト表示箇所から呼ぶ。 */
+  const formatCost = (usd: number | null): string =>
+    costRate == null ? formatCurrency(usd, t) : formatJpy(usd == null ? null : toJpy(usd, costRate), t);
+  /** 既に換算済みの値（チャート用に事前変換したデータ）を表示用文字列にする。 */
+  const formatConvertedCost = (value: number): string =>
+    costRate == null ? formatCurrency(value, t) : formatJpy(value, t);
+  const costTick = makeCompactCurrencyFormatter(i18n.language, costRate == null ? "USD" : "JPY");
+  const convertCost = (usd: number | null): number | null =>
+    costRate == null || usd == null ? usd : toJpy(usd, costRate);
 
   const byPurposeColumns: DataTableColumn<LlmUsageByPurposeItem>[] = [
     {
@@ -413,7 +484,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row.cost_usd),
     },
   ];
 
@@ -451,7 +522,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row.cost_usd),
     },
   ];
 
@@ -470,14 +541,17 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row.cost_usd),
     },
   ];
 
   const purposeOrder = data.by_purpose.map((row) => row.purpose);
-  const dailyByPurposeData = pivotByPurpose(data.daily_by_purpose, (row) => row.date);
-  const monthlyByPurposeData = pivotByPurpose(data.monthly_by_purpose, (row) => row.month);
-  const formatChartCurrency = (value: number) => formatCurrency(value, t);
+  // チャートに渡す前に USD→JPY 換算を済ませる（pivotByPurpose は通貨を意識しない汎用関数のまま維持）。
+  const dailyByPurposeConverted = data.daily_by_purpose.map((row) => ({ ...row, cost_usd: convertCost(row.cost_usd) }));
+  const monthlyByPurposeConverted = data.monthly_by_purpose.map((row) => ({ ...row, cost_usd: convertCost(row.cost_usd) }));
+  const dailyByPurposeData = pivotByPurpose(dailyByPurposeConverted, (row) => row.date);
+  const monthlyByPurposeData = pivotByPurpose(monthlyByPurposeConverted, (row) => row.month);
+  const formatChartCurrency = (value: number) => formatConvertedCost(value);
 
   const errorCodeOrder = uniqueInOrder(data.daily_errors.map((row) => row.error_code));
   const dailyErrorsData = pivotErrorsByDate(data.daily_errors);
@@ -508,7 +582,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
             {t("analysisRules.dashboard.usage.summary.costLabel")}
           </span>
           <span className="llm-usage-summary__hero-value">
-            {formatCurrency(data.total.cost_usd, t)}
+            {formatCost(data.total.cost_usd)}
           </span>
         </div>
         <div className="llm-usage-summary__stats">
@@ -555,17 +629,31 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         </div>
       </Card>
 
-      {/* グラフ: 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約 */}
+      {/* ADR-148: 円換算レートの出典を明示（過去日も現在レートで一律換算している旨の注記を含む） */}
+      {costRate != null && fxRate != null ? (
+        <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-note">
+          {t("analysisRules.dashboard.usage.fx.note", {
+            rate: fxRate.rate_jpy.toLocaleString(i18n.language, {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 4,
+            }),
+            fetchedAt: formatFetchedAtJst(fxRate.fetched_at, i18n.language),
+          })}
+        </p>
+      ) : (
+        <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-fallback-note">
+          {t("analysisRules.dashboard.usage.fx.fallbackNote")}
+        </p>
+      )}
+
+      {/* 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約。カード見出しは行1（概要）のタイトルを兼ねる */}
       <Card variant="container" density="compact" className="llm-usage-charts">
         <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.chartsCardTitle")}
+          {t("analysisRules.dashboard.usage.health.title")}
         </div>
 
         {/* 行1: 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
         <div className="llm-usage-charts__row">
-          <div className="llm-usage-charts__row-title">
-            {t("analysisRules.dashboard.usage.health.title")}
-          </div>
           <p className="analysis-dashboard-section-note">
             {t("analysisRules.dashboard.usage.health.note")}
           </p>
@@ -827,7 +915,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
                       />
                       <YAxis
                         tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                        tickFormatter={compactTick}
+                        tickFormatter={costTick}
                       />
                       <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
                       <Legend
@@ -870,7 +958,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
                       />
                       <YAxis
                         tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                        tickFormatter={compactTick}
+                        tickFormatter={costTick}
                       />
                       <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
                       <Legend

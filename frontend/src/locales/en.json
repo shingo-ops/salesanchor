@@ -1334,6 +1334,14 @@
       "permissionDenied": "More than 24 hours have passed, so this message cannot be sent. Please reply directly from Instagram / Messenger.",
       "rateLimited": "Sending is temporarily limited. Please try again later.",
       "attachmentNotSaved": "The image was sent, but saving a copy failed.",
+      "discordEnNameRequired": "To reply on Discord, you need to register your English name.",
+      "discordEnNameInvalid": "Your English name contains a word that can't be used (such as \"discord\").",
+      "discordSendFailed": "The message could not be sent. Your text is still here.",
+      "discordWebhookPermissionAdmin": "The message can't be sent because the Discord setup is incomplete.",
+      "discordWebhookPermissionStaff": "The message can't be sent because the Discord setup is incomplete. Please contact an administrator.",
+      "ctaOpenAccountSettings": "Open account settings",
+      "ctaRetry": "Send again",
+      "ctaOpenDiscordConfig": "Open Discord settings",
       "generic": "Failed to send the message.",
       "codeSuffix": " (code: {{code}})"
     }
@@ -1952,6 +1960,7 @@
     "givenNameJp": "First name (JA)",
     "surnameEn": "Last name (EN)",
     "givenNameEn": "First name (EN)",
+    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord.",
     "primaryEmail": "Primary email",
     "role": "Role",
     "status": "Status",
@@ -3109,7 +3118,20 @@
     "changing": "Changing...",
     "sectionPreferences": "Preferences",
     "darkModeLabel": "Dark mode",
-    "languageLabel": "Language"
+    "languageLabel": "Language",
+    "avatarLabel": "Icon",
+    "avatarChoose": "Choose image",
+    "avatarChange": "Change image",
+    "avatarRemove": "Remove",
+    "avatarUploading": "Saving...",
+    "avatarHint": "JPG, PNG or WebP, 2MB or smaller. Shown on your Discord replies.",
+    "avatarAlt": "Icon",
+    "avatarErrorInvalid": "Please choose a JPG, PNG or WebP image of 2MB or smaller.",
+    "avatarErrorInvalidAction": "Choose another image",
+    "avatarErrorSave": "We could not save the image.",
+    "avatarErrorSaveAction": "Try again",
+    "englishNameHelp": "Used as your display name when you reply on Discord. Your first name (English) is shown to customers.",
+    "englishNameRequired": "Please enter your English name (last and first). It is required to reply on Discord."
   },
   "badges": {
     "subtitle": "Manage badges and achievement conditions.",
@@ -4478,7 +4500,6 @@
       "usage": {
         "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
         "notReported": "Not reported",
-        "chartsCardTitle": "Charts",
         "costRowTitle": "Cost",
         "byPurposeTitle": "By Purpose",
         "dailyTitle": "Daily",
@@ -4524,6 +4545,10 @@
           "outputLabel": "Output Tokens",
           "successRateLabel": "Success Rate (LINE Extraction)",
           "errorCountLabel": "Error Count (LINE Extraction)"
+        },
+        "fx": {
+          "note": "Converted at 1 USD = ¥{{rate}} (as of {{fetchedAt}}. Past days are also calculated using this rate.)",
+          "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
         }
       },
       "costSectionTitle": "API Cost",

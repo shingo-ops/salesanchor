@@ -860,3 +860,9 @@ run_sql migrations/20260930_150000_create_llm_usage_events.sql
 
 # ADR-1004 A2: LLM 使用量台帳（llm_usage_events）過去分バックフィル（SSOT化、A1マージ後に適用）
 run_sql migrations/20260930_160000_backfill_llm_usage_events.sql
+
+# ADR-159 便A: staff.avatar_token 追加（担当者アイコンの公開 URL token・additive・冪等）
+run_sql migrations/20261001_120000_add_staff_avatar_token.sql
+
+# ADR-159 便B: discord_channel_webhooks 作成（担当者名義 webhook 送信・token 暗号化・冪等）
+run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
