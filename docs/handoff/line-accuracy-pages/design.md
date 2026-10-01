@@ -3,6 +3,7 @@
 状態：**設計審査済み（Opus 自己審査：APPROVE）／PO の方針は合意済み（2026-10-01）／実装は未着手**
 
 関連：現状把握は `docs/handoff/line-accuracy-pages/recon.md`、精度の根拠は `docs/handoff/line-accuracy-pages/accuracy-evidence.md`
+関連ADR：ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバナンス）・ADR-158（要確認一覧）・ADR-1003（v7 書き写しと判定の分離）
 
 審査の要点
 - 未解決だった3点（原文の表示部品、S3 の定義、部品の置き場所）は、3-5 で実物をもとに決めた。
@@ -157,6 +158,6 @@
 - 外部事例：社内のデータで直接測れる表示機能なので、使わない。
 
 ## 維持の仕組み
-- 守り手: 設計担当（Opus）が兆候の定義と設計書を管理し、実装担当（Sonnet）が試験を維持する
+- 守り手: 設計担当（Opus）が設計書と兆候の定義を管理し、実装担当（Sonnet）が frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.test.tsx などの試験を維持する
 - 守り手：設計担当（Opus）が兆候の定義を管理する。定義は backend の1モジュールに置き、試験で固定する。
 - 兆候を増やすときは、このモジュールと設計書を同時に更新する。
