@@ -44,7 +44,7 @@ recon.md「2. 本番事実」の通り、本番相当の `extraction_attempts` �
 - 新規テスト3本を追加: `test_daily_requests_success_rate_null_when_no_terminal_attempts`（completed=failed=0 のとき success_rate が None のまま＝0除算を推測しない）、`test_daily_errors_maps_null_error_code_to_unknown`、`test_daily_by_model_output_tokens_null_when_all_null_in_group`（candidates/thoughts が全行NULLのグループは output_tokens も None）。
 - 既存3テスト（`test_llm_usage_reads_only_ledger_and_propagates_null` 等）は `_mock_db_with_sequenced_results` の呼び出しに3件分のモック結果を追加し、新規フィールドのアサーションを追記。
 
-## フロントエンド変更点（`LlmUsageSection.tsx` のみ、`AnalysisDashboardPanel.tsx` は変更なし）
+## フロントエンド変更点（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` のみ、`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は変更なし）
 
 - recharts import に `ComposedChart` / `Line` / `LineChart` を追加。
 - 型定義に `LlmUsageDailyRequestsItem` / `LlmUsageDailyErrorItem` / `LlmUsageDailyByModelItem` を追加し `LlmUsageResponse` を拡張。
@@ -56,11 +56,11 @@ recon.md「2. 本番事実」の通り、本番相当の `extraction_attempts` �
   2. 「モデル別」タイトル＋ `.analysis-dashboard-grid` で3枚の `LineChart`（入力トークン／出力トークン／リクエスト数、モデルごとに1本の線、色は `PURPOSE_CHART_COLOR_VARS` をモデル順インデックスで巡回、`connectNulls={false}` でギャップ表現）。
 - 新規 hex/rgb・新規インラインpx・生 select/input は追加していない（`.analysis-dashboard-grid` / `.analysis-dashboard-chart-card` / `.analysis-dashboard-chart` / `.analysis-dashboard-section-title` / `.analysis-dashboard-empty` を再利用、CSSファイルは無変更）。
 
-### i18n（`frontend/src/locales/ja.json` / `en.json`、同一キー構造）
+### i18n（`frontend/src/locales/ja.json` / `frontend/src/locales/en.json`、同一キー構造）
 
 `analysisRules.dashboard.usage.health.*` を新設: `title`（概要（LINE抽出）/ Overview (LINE Extraction)）、`note`（成功率の定義・翻訳が含まれない理由）、`requestsChartTitle`、`errorsChartTitle`、`attemptsLabel`、`successRateLabel`、`modelTrendTitle`、`inputTokensChartTitle`、`outputTokensChartTitle`、`requestsByModelChartTitle`。既存 `byModelTitle`（モデル別テーブルの見出し）とは別キーとし、文言「モデル別」が2箇所（テーブル見出しと新チャート見出し）に出る設計はPO依頼どおり（Google AI Studio 参考画面も同様の重複見出し構成）。
 
-### フロントエンドテスト（`LlmUsageSection.test.tsx`）
+### フロントエンドテスト（`frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx`）
 
 - モックレスポンスに `daily_requests` / `daily_errors` / `daily_by_model` を追加。
 - 新規4テスト: 概要セクションの2チャートタイトル表示、エラー0件時の空状態表示、モデル別3チャートのタイトル・モデル名表示、成功率ノート文言の表示。
@@ -73,7 +73,7 @@ recon.md「2. 本番事実」の通り、本番相当の `extraction_attempts` �
 | ①リクエスト数＋成功率チャートが表示され、success_rate は completed/(completed+failed) で in-flight を含まない | `backend/tests/test_tcg_analysis_dashboard_llm_usage.py::test_llm_usage_reads_only_ledger_and_propagates_null`（数値アサーション）、`test_daily_requests_success_rate_null_when_no_terminal_attempts`（0除算せずNone）。frontend `"renders the requests & success rate chart and the errors-by-type chart"`。 |
 | ②エラー種類別の日次スタック棒グラフが表示され、error_code の NULL は UNKNOWN に丸まる | `test_daily_errors_maps_null_error_code_to_unknown`、frontend `"shows the empty state for the errors chart when there are no errors"`。 |
 | ③モデル別の入力/出力トークン・リクエスト数の日次推移が表示され、両方NULLのグループはoutput_tokensもNULLのまま | `test_daily_by_model_output_tokens_null_when_all_null_in_group`、frontend `"renders the per-model trend charts..."`。 |
-| ④既存6フィールド・既存3チャート・既存3テーブルは無変更（後方互換） | 既存バックエンドテスト3本（`test_llm_usage_reads_only_ledger_and_propagates_null` 等）が新規フィールド追加後も通過。`AnalysisDashboardPanel.tsx` は diff なし（`git diff --stat` で確認）。 |
+| ④既存6フィールド・既存3チャート・既存3テーブルは無変更（後方互換） | 既存バックエンドテスト3本（`test_llm_usage_reads_only_ledger_and_propagates_null` 等）が新規フィールド追加後も通過。`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は diff なし（`git diff --stat` で確認）。 |
 | ⑤新規 hex/rgb・新規インラインpx・生select/input なし（ADR-067/ADR-144） | `npm run check:css-colors` / `check:css-values` / `check:dark-parity` PASS（CSSファイル自体は無変更のため既存チェックと同じ結果）。 |
 | ⑥ja/enでi18nキー同一（ADR-027）、UI文字列はすべてt()経由 | `npm run check:i18n-missing-keys` PASS、`grep -n '[ぁ-んァ-ン一-龥]' frontend/src/pages/super-admin/components/LlmUsageSection.tsx` がコメント行以外で0件。 |
 

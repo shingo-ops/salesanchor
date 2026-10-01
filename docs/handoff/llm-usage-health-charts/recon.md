@@ -60,9 +60,9 @@ PO 指示の pre-check として、本番相当の `extraction_attempts` 直近�
 - L295-301: `.analysis-dashboard-chart-card` / `.analysis-dashboard-chart`。
 - L318-322: `.analysis-dashboard-grid`（`grid-template-columns: repeat(auto-fit, minmax(280px, 1fr))`）— 「横並び（広い画面）」のレイアウトに新規CSSを足さず、このグリッドクラスを再利用する。
 
-`frontend/src/locales/ja.json` / `en.json`: `analysisRules.dashboard.usage.*` 配下に `health.*` の新規キーは未定義。
+`frontend/src/locales/ja.json` / `frontend/src/locales/en.json`: `analysisRules.dashboard.usage.*` 配下に `health.*` の新規キーは未定義。
 
 ## 4. 影響範囲
 
-- `AnalysisDashboardPanel.tsx` は `LlmUsageSection` の props（`days`, `t`）をそのまま渡しているのみで、本便ではシグネチャを変更しないため触らない。
+- `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` は `LlmUsageSection` の props（`days`, `t`）をそのまま渡しているのみで、本便ではシグネチャを変更しないため触らない。
 - バックエンドの既存6クエリ・既存フィールドは変更なし（後方互換）。
