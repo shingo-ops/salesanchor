@@ -492,3 +492,37 @@ class TestJudgeBlockProductName:
         row = _judge_with_product(raw, {"raw_product_name": "スノーハザード"}, (2, 2), (1, 1))
         assert row["match_status"] == "unmatched"
         assert row["evidence"]["name_source"] == "NONE"
+
+
+def _judge_two_products(raw_text, item):
+    return _judge_block(
+        {
+            "line_start": 1, "line_end": 1,
+            "heading_line_start": None, "heading_line_end": None,
+            "raw_product_name": "", "raw_unit": "", "raw_state": "", "raw_ship": "",
+            "raw_multi": "", "raw_price": "", "raw_quantity": "",
+            **item,
+        },
+        raw_text,
+        products=[_product(id_=1, mark="M"), _product(id_=2, search_keywords=("スノーハザード",))],
+        cond_entries=[], cond_canonical_to_uuid={}, unit_alias_to_info={},
+        status_entries=[], note_entries=[], unit_aliases=("BOX",), order=None,
+    )
+
+
+class TestJudgeBlockBoundaryDropped:
+    def test_matched_by_elimination_requires_review(self):
+        row = _judge_two_products("スノーハザード MEGA", {})
+        assert row["match_status"] == "matched"
+        assert row["product_id"] == 2
+        assert row["needs_review"] is True
+        assert {"item": "product_boundary", "reason": "boundary_dropped", "candidates": [1]} in row["review_items"]
+        assert row["evidence"]["boundary_dropped"] == [1]
+
+    def test_nothing_dropped_keeps_current_result(self):
+        row = _judge_two_products("スノーハザード 3BOX", {})
+        assert row["match_status"] == "matched"
+        assert row["product_id"] == 2
+        assert row["needs_review"] is False
+        assert all(i["item"] != "product_boundary" for i in row["review_items"])
+        assert "boundary_dropped" not in row["evidence"]
