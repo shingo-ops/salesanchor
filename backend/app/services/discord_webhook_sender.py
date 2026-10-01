@@ -9,7 +9,7 @@ Bot の通常送信は表示名・アイコンを変えられないが、webhook
 - webhook token は services/encryption.py（Fernet）で暗号化して保存する。ログ・例外文に token / 実行 URL を出さない。
 - アイコン未登録の場合は avatar_url を省略する（Discord 標準アイコンと同じ表示）。
 - webhook が消えていた（404/401）場合は保管行を消して 1 回だけ作り直し、1 回だけ再送する。
-- 429 / 5xx / ネットワークエラーは 1 回だけ再試行する（retry_after が小さい場合のみ待つ）。
+- 自動再試行は「確実に未送信」の場合だけ 1 回（429 で retry_after が小さい／接続前の失敗）。読み取りタイムアウト・5xx は二重送信を避けるため再試行しない。
 """
 from __future__ import annotations
 
@@ -31,22 +31,38 @@ from app.services import encryption
 logger = logging.getLogger(__name__)
 
 
-class _RedactWebhookTokenFilter(logging.Filter):
-    """httpx 自身の INFO ログ（"HTTP Request: POST <url>"）は実行 URL＝token を含むため伏せる。"""
-
-    _PATTERN = re.compile(r"(/webhooks/[^/\s]+/)[^/?\s\"]+")
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        message = record.getMessage()
-        if "/webhooks/" in message:
-            record.msg = self._PATTERN.sub(r"\1***", message)
-            record.args = ()
-        return True
+_WEBHOOK_URL_TOKEN = re.compile(r"(/webhooks/[^/\s]+/)[^/?\s\"]+")
+_REDACTED_LOGGER_PREFIXES = ("httpx", "httpcore")
 
 
-# httpx / httpcore のログ全体に適用する（実行 URL に token が含まれるため）
-for _name in ("httpx", "httpcore"):
-    logging.getLogger(_name).addFilter(_RedactWebhookTokenFilter())
+def _redact_webhook_token(message: str) -> str:
+    return _WEBHOOK_URL_TOKEN.sub(r"\1***", message)
+
+
+def _install_log_redaction() -> None:
+    """httpx / httpcore（子 logger を含む）の記録に出る webhook 実行 URL の token を伏せる。
+
+    logger に付けた Filter は子 logger の記録に効かないため、記録の生成時（LogRecordFactory）に処理する。
+    二重に装着しないよう目印属性で判定する。
+    """
+    previous = logging.getLogRecordFactory()
+    if getattr(previous, "_redacts_webhook_token", False):
+        return
+
+    def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
+        record = previous(*args, **kwargs)
+        if record.name.startswith(_REDACTED_LOGGER_PREFIXES):
+            message = record.getMessage()
+            if "/webhooks/" in message:
+                record.msg = _redact_webhook_token(message)
+                record.args = ()
+        return record
+
+    factory._redacts_webhook_token = True  # type: ignore[attr-defined]
+    logging.setLogRecordFactory(factory)
+
+
+_install_log_redaction()
 
 _DISCORD_API_BASE = "https://discord.com/api/v10"
 _TIMEOUT_SEC = 10.0
@@ -180,28 +196,47 @@ async def _retry_pause(response: httpx.Response | None) -> bool:
 async def _request_with_retry(
     *, label: str, send: Any,
 ) -> httpx.Response:
-    """429 / 5xx / ネットワークエラーのとき 1 回だけ再試行する。2 回目の結果をそのまま返す。
+    """Discord がメッセージを作っていないと確実に言える場合だけ 1 回再試行する。
+
+    顧客への二重送信を避けるため、再試行は次の 2 つに限る:
+      - 429（レート制限。メッセージは作られていない。retry_after が小さいときだけ待つ）
+      - 接続前の失敗（ConnectError / ConnectTimeout。リクエストは相手に届いていない）
+    読み取りタイムアウトや 5xx は「送られたかもしれない」ため再試行せず失敗にする
+    （担当者が「もう一度送る」で再送する）。
 
     send は引数なしで httpx.Response を返す coroutine 関数。例外・URL は token を含み得るためログに出さない。
     """
     for attempt in (1, 2):
-        response: httpx.Response | None = None
         try:
             response = await send()
-        except httpx.RequestError as exc:
-            logger.warning("[discord_webhook] %s network error=%s attempt=%d", label, type(exc).__name__, attempt)
+        except (httpx.ConnectError, httpx.ConnectTimeout) as exc:
+            logger.warning("[discord_webhook] %s connect error=%s attempt=%d", label, type(exc).__name__, attempt)
             if attempt == 2:
                 raise WebhookSendError("network") from None
             await _retry_pause(None)
             continue
-        status = response.status_code
-        retryable = status == 429 or 500 <= status < 600
-        if not retryable or attempt == 2:
+        except httpx.RequestError as exc:
+            # リクエストが届いた可能性があるため再試行しない
+            logger.warning("[discord_webhook] %s request error=%s（再試行しない）", label, type(exc).__name__)
+            raise WebhookSendError("network") from None
+        if response.status_code != 429 or attempt == 2:
             return response
-        logger.warning("[discord_webhook] %s status=%d attempt=%d", label, status, attempt)
+        logger.warning("[discord_webhook] %s status=429 attempt=%d", label, attempt)
         if not await _retry_pause(response):
             return response
     raise WebhookSendError("unreachable")  # pragma: no cover
+
+
+def _json_object(response: httpx.Response, *keys: str) -> dict[str, Any]:
+    """成功応答の JSON から必要なキーを取り出す。形式が違えば WebhookSendError（500 にしない）。"""
+    try:
+        body = response.json()
+        if not isinstance(body, dict) or any(key not in body for key in keys):
+            raise KeyError("missing")
+    except (ValueError, KeyError):
+        logger.error("[discord_webhook] 想定外の応答形式 status=%d", response.status_code)
+        raise WebhookSendError("malformed_response") from None
+    return body
 
 
 async def _create_webhook(
@@ -225,7 +260,7 @@ async def _create_webhook(
             "[discord_webhook] webhook 作成失敗 channel=%s status=%d", channel_id, response.status_code,
         )
         raise WebhookSendError(f"create_status_{response.status_code}")
-    body = response.json()
+    body = _json_object(response, "id", "token")
     webhook = _Webhook(webhook_id=str(body["id"]), token=str(body["token"]))
     await _store_webhook(db, tenant_id, channel_id, webhook)
     return webhook
@@ -289,7 +324,7 @@ async def send_as_staff(
             webhook, content=content, file=file, username=name, avatar_url=avatar_url,
         )
         if response.status_code in (200, 201):
-            return str(response.json()["id"])
+            return str(_json_object(response, "id")["id"])
         if response.status_code in _GONE_STATUSES and not recreated:
             logger.warning("[discord_webhook] webhook 消失を検知 channel=%s → 作り直し", channel_id)
             await _delete_webhook(db, tenant_id, channel_id)

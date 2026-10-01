@@ -116,6 +116,8 @@ export interface UseInboxStateReturn {
   trimmedDraft: string;
   messagingWindow: MessagingWindow | undefined;
   submitSend: (opts?: { draftId?: number }) => Promise<void>;
+  /** 失敗した送信を同じ下書き（draft_id）のまま再送する（ADR-159 の「もう一度送る」） */
+  retrySend: () => Promise<void>;
   handleKeyDown: (e: KeyboardEvent<HTMLTextAreaElement>) => void;
 
   // ADR-142: 送信ガード Phase A — スレッド言語設定
@@ -639,6 +641,9 @@ export function useInboxState(): UseInboxStateReturn {
   const trimmedDraft = draft.trim();
   const sendDisabled = sending || !canSend || (trimmedDraft.length === 0 && !attachedFile) || selectedLeadId === null;
 
+  // 直近の送信が下書き経由だった場合の draft_id。失敗時だけ保持し、再送で同じ紐付けを使う
+  const failedDraftIdRef = useRef<number | undefined>(undefined);
+
   const submitSend = useCallback(async (opts?: { draftId?: number }) => {
     if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
     setSendError("");
@@ -660,10 +665,12 @@ export function useInboxState(): UseInboxStateReturn {
         await sendMessage(selectedLeadId, { text: trimmedDraft, draft_id: opts?.draftId });
         setDraft("");
       }
+      failedDraftIdRef.current = undefined;
       skipNextPollRef.current = true;
       await loadMessages(selectedLeadId);
       loadConversations();
     } catch (e) {
+      failedDraftIdRef.current = opts?.draftId;
       if (e instanceof ApiError) {
         const detail = e.responseDetail as { reason?: string; error_code?: number } | null;
         setSendErrorReason(detail?.reason ?? "generic");
@@ -682,6 +689,11 @@ export function useInboxState(): UseInboxStateReturn {
       setSending(false);
     }
   }, [sending, canSend, selectedLeadId, trimmedDraft, attachedFile, clearAttachment, loadMessages, loadConversations]);
+
+  const retrySend = useCallback(
+    () => submitSend({ draftId: failedDraftIdRef.current }),
+    [submitSend],
+  );
 
   const handleKeyDown = useCallback((e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
@@ -917,6 +929,7 @@ export function useInboxState(): UseInboxStateReturn {
     trimmedDraft,
     messagingWindow,
     submitSend,
+    retrySend,
     handleKeyDown,
 
     // ADR-142: 送信ガード Phase A

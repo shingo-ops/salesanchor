@@ -48,6 +48,7 @@ interface Props {
   discordChannelMissing: boolean;
   trimmedDraft: string;
   submitSend: (opts?: { draftId?: number }) => void;
+  retrySend: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   attachedFile: File | null;
   setAttachedFile: (f: File | null) => void;
@@ -75,7 +76,7 @@ export function InboxMessageThread({
   showKartePanel, openKartePanel, closeKartePanel, inboxSettings,
   messageListRef,
   draft, setDraft, sending, sendError, sendErrorReason, sendErrorCode, sendDisabled, canSend, discordChannelMissing,
-  trimmedDraft, submitSend, handleKeyDown,
+  trimmedDraft, submitSend, retrySend, handleKeyDown,
   attachedFile, setAttachedFile, clearAttachment,
   recipientLanguageSetting, setRecipientLanguage,
   sendReaction, deleteReaction,
@@ -702,7 +703,7 @@ export function InboxMessageThread({
                   const cta = discordGuide.cta;
                   if (!cta) return;
                   if (cta.kind === "navigate") navigate(cta.to);
-                  else submitSend();
+                  else retrySend();
                 }}
               >
                 {t(discordGuide.cta.labelKey)}

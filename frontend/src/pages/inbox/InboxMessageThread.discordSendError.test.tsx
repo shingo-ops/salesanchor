@@ -23,6 +23,7 @@ type Props = ComponentProps<typeof InboxMessageThread>;
 
 function renderThread(overrides: Partial<Props>) {
   const submitSend = vi.fn();
+  const retrySend = vi.fn();
   const props = {
     selectedLeadId: 1,
     selectedConversation: null,
@@ -51,6 +52,7 @@ function renderThread(overrides: Partial<Props>) {
     discordChannelMissing: false,
     trimmedDraft: "入力中の文",
     submitSend,
+    retrySend,
     handleKeyDown: vi.fn(),
     attachedFile: null,
     setAttachedFile: vi.fn(),
@@ -62,7 +64,7 @@ function renderThread(overrides: Partial<Props>) {
     ...overrides,
   } as unknown as Props;
   render(<InboxMessageThread {...props} />);
-  return { submitSend };
+  return { submitSend, retrySend };
 }
 
 beforeEach(() => {
@@ -87,10 +89,12 @@ describe("InboxMessageThread Discord 送信エラー表示（ADR-159）", () => 
   });
 
   it("DISCORD_SEND_FAILED: 「もう一度送る」で再送する（遷移しない）", () => {
-    const { submitSend } = renderThread({ sendErrorReason: "DISCORD_SEND_FAILED" });
+    const { submitSend, retrySend } = renderThread({ sendErrorReason: "DISCORD_SEND_FAILED" });
     expect(screen.getByRole("alert").textContent).toContain("inbox.sendError.discordSendFailed");
     fireEvent.click(screen.getByRole("button", { name: "inbox.sendError.ctaRetry" }));
-    expect(submitSend).toHaveBeenCalledTimes(1);
+    // 下書き（draft_id）経由の送信でも同じ紐付けで再送できるよう、専用の retrySend を呼ぶ
+    expect(retrySend).toHaveBeenCalledTimes(1);
+    expect(submitSend).not.toHaveBeenCalled();
     expect(navigateMock).not.toHaveBeenCalled();
   });
 

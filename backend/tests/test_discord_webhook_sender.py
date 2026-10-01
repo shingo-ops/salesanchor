@@ -252,37 +252,80 @@ async def test_401_also_triggers_recreate(db, monkeypatch):
 # ---------------------------------------------------------------------------
 
 
-@pytest.mark.asyncio
-async def test_retries_once_on_5xx_then_succeeds(db, monkeypatch, sleeps):
-    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.Response(502), _ok("ok")]})
-    _install(monkeypatch, rec)
-    assert await _send(db) == "ok"
-    assert rec.count("webhook_exec") == 2
+# 自動再送は「Discord がメッセージを作っていないと確実に言える場合」だけ（顧客への二重送信を防ぐ）
 
 
 @pytest.mark.asyncio
-async def test_5xx_twice_raises_send_error_and_never_uses_bot(db, monkeypatch, sleeps):
-    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.Response(500), httpx.Response(503)]})
+@pytest.mark.parametrize("status", [500, 502, 503])
+async def test_5xx_is_not_retried_and_never_uses_bot(db, monkeypatch, sleeps, status):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.Response(status), _ok("dup")]})
     _install(monkeypatch, rec)
     with pytest.raises(sender.WebhookSendError):
         await _send(db)
-    assert rec.count("webhook_exec") == 2
+    assert rec.count("webhook_exec") == 1  # 送られたかもしれないので再送しない
     assert rec.count("bot_send") == 0
+    assert sleeps == []
 
 
 @pytest.mark.asyncio
-async def test_retries_on_timeout_then_succeeds(db, monkeypatch, sleeps):
-    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.ConnectTimeout("t"), _ok("ok")]})
-    _install(monkeypatch, rec)
-    assert await _send(db) == "ok"
-
-
-@pytest.mark.asyncio
-async def test_timeout_twice_raises_send_error(db, monkeypatch, sleeps):
-    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.ReadTimeout("t"), httpx.ReadTimeout("t")]})
+@pytest.mark.parametrize("exc", [httpx.ReadTimeout("t"), httpx.WriteTimeout("t"), httpx.RemoteProtocolError("t")])
+async def test_error_after_request_sent_is_not_retried(db, monkeypatch, sleeps, exc):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [exc, _ok("dup")]})
     _install(monkeypatch, rec)
     with pytest.raises(sender.WebhookSendError):
         await _send(db)
+    assert rec.count("webhook_exec") == 1
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("exc", [httpx.ConnectTimeout("t"), httpx.ConnectError("t")])
+async def test_connect_failure_is_retried_once_then_succeeds(db, monkeypatch, sleeps, exc):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [exc, _ok("ok")]})
+    _install(monkeypatch, rec)
+    assert await _send(db) == "ok"
+    assert rec.count("webhook_exec") == 2
+
+
+@pytest.mark.asyncio
+async def test_connect_failure_twice_raises_send_error(db, monkeypatch, sleeps):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.ConnectError("t"), httpx.ConnectError("t")]})
+    _install(monkeypatch, rec)
+    with pytest.raises(sender.WebhookSendError):
+        await _send(db)
+    assert rec.count("webhook_exec") == 2
+
+
+# ---------------------------------------------------------------------------
+# 想定外の応答（500 にせず WebhookSendError）
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", [
+    httpx.Response(200, content=b"<html>not json</html>"),
+    httpx.Response(200, json={"no_id": 1}),
+    httpx.Response(200, json=["list"]),
+])
+async def test_malformed_execute_response_raises_send_error(db, monkeypatch, bad):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [bad]})
+    _install(monkeypatch, rec)
+    with pytest.raises(sender.WebhookSendError):
+        await _send(db)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("bad", [
+    httpx.Response(201, content=b"not json"),
+    httpx.Response(201, json={"id": "wh1"}),
+    httpx.Response(201, json={"token": "t"}),
+])
+async def test_malformed_create_response_raises_send_error_and_stores_nothing(db, monkeypatch, bad):
+    rec = Recorder({"webhook_create": [bad]})
+    _install(monkeypatch, rec)
+    with pytest.raises(sender.WebhookSendError):
+        await _send(db)
+    assert await _rows(db) == []
+    assert rec.count("webhook_exec") == 0
 
 
 @pytest.mark.asyncio
@@ -366,10 +409,19 @@ async def test_token_never_logged(db, monkeypatch, sleeps, caplog):
     caplog.set_level(logging.DEBUG)
     rec = Recorder({
         "webhook_create": [_created()],
-        "webhook_exec": [httpx.ConnectTimeout("t"), httpx.Response(500), ],
+        "webhook_exec": [httpx.ConnectTimeout("t"), httpx.Response(500)],
     })
     _install(monkeypatch, rec)
     with pytest.raises(sender.WebhookSendError):
         await _send(db)
     assert _TOKEN not in caplog.text
     assert "bot-token-test" not in caplog.text
+
+
+@pytest.mark.parametrize("name", ["httpx", "httpcore", "httpcore.http11", "httpcore.connection", "httpx._client"])
+def test_token_redacted_for_httpx_and_httpcore_child_loggers(caplog, name):
+    caplog.set_level(logging.DEBUG)
+    url = f"https://discord.com/api/v10/webhooks/123/{_TOKEN}?wait=true"
+    logging.getLogger(name).info("HTTP Request: POST %s", url)
+    assert _TOKEN not in caplog.text
+    assert "/webhooks/123/***" in caplog.text

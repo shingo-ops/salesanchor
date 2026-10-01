@@ -6,7 +6,7 @@
 
 - 表示名: 「名だけ (例: Shingo) (推奨)」。英語名は必須
 - アイコン未登録: 「discordのアイコンなしの状態と同じ表示」（avatar_url を省略・webhook は avatar なしで作成）
-- 失敗時: 「送らずに止める (推奨)」（Bot 名義では送らない・自動再試行 1 回・失敗表示・入力文保持）
+- 失敗時: 「送らずに止める (推奨)」（Bot 名義では送らない・自動再送は確実に未送信の場合のみ 1 回・失敗表示・入力文保持）
 - エラー表示: 「非エンジニアである担当者が理解できる内容でエラーメッセージを表示させて対応方法までCTA，簡潔に」
 - リアクションは Bot 名義のまま
 
@@ -21,9 +21,11 @@ Discord のテキスト・画像返信を、担当者の名前・アイコンで
   - `validate_username`: 前後空白除去・1〜80 文字・discord / clyde（大文字小文字不問）を含まない → `StaffNameInvalidError`
   - `send_as_staff`: 保管 webhook を取得、無ければ POST /channels/{id}/webhooks（name="Sales Anchor"・avatar なし・Bot 認証）で作成して暗号化保管。実行は POST /webhooks/{id}/{token}?wait=true（json、画像は multipart + payload_json）。avatar_url は未登録なら省略
   - 実行が 401/404 → 保管行を削除し 1 回だけ作り直して 1 回だけ再送（作成直後の 404 は作り直さない）
-  - 429 / 5xx / ネットワークエラー → 1 回だけ再試行（429 は retry_after が 5 秒以下のときだけ待つ）
+  - 自動再送は確実に未送信の場合のみ（顧客への二重送信を防ぐ）: 429（retry_after が 5 秒以下のときだけ待つ）と、接続前の失敗（ConnectError / ConnectTimeout）を 1 回だけ再試行。読み取りタイムアウト・5xx・その他は「送られたかもしれない」ため再試行せず `DISCORD_SEND_FAILED`（担当者が「もう一度送る」で再送）
+  - 想定外の応答（JSON でない・id / token が無い）は `WebhookSendError` → `DISCORD_SEND_FAILED`（500 にしない）
+  - 「もう一度送る」は下書き（draft_id）経由の送信なら同じ draft_id で再送する（useInboxState の retrySend）
   - 作成 403 → `WebhookPermissionError`。その他の失敗 → `WebhookSendError`。Bot 名義の送信（/channels/{id}/messages）は一切呼ばない
-  - token / 実行 URL をログに出さない（例外文は種別名のみ。httpx 自身の INFO ログは logging.Filter で token を `***` に置換）
+  - token / 実行 URL をログに出さない（例外文は種別名のみ。httpx / httpcore（子 logger 含む）のログは LogRecordFactory で token を `***` に置換）
 - ルーター: backend/app/routers/leads.py
   - `_resolve_staff_identity` を送信前に実行（チャンネル未設定の 409 / 404 の後・送信の前）。英語名なし or staff 不在 → 422 `STAFF_EN_NAME_REQUIRED`、不正 → 422 `STAFF_EN_NAME_INVALID`
   - `_send_discord_as_staff` が例外を HTTP に変換: 権限 → 409 `DISCORD_WEBHOOK_PERMISSION`、送信失敗 → 502 `DISCORD_SEND_FAILED`
@@ -40,7 +42,7 @@ Discord のテキスト・画像返信を、担当者の名前・アイコンで
 
 | 基準 | 検証方法 |
 |---|---|
-| webhook の作成・実行・404 作り直し 1 回・429/5xx/タイムアウト再試行 1 回・権限エラー | backend/tests/test_discord_webhook_sender.py（httpx.MockTransport） |
+| webhook の作成・実行・404 作り直し 1 回・429 と接続前失敗のみ再試行 1 回・5xx/読み取りタイムアウトは再試行しない・想定外応答は失敗扱い・権限エラー | backend/tests/test_discord_webhook_sender.py（httpx.MockTransport） |
 | avatar 未登録なら avatar_url を送らない・webhook 作成も avatar なし | 同上 |
 | token は暗号化保存（DB に平文なし）・ログに出ない | 同上（test_creates_webhook_stores_encrypted_and_sends / test_token_never_logged） |
 | 英語名なし 422・不正名 422・権限 409・失敗 502、いずれも送らず meta_messages 行を作らない | backend/tests/test_discord_staff_send.py、backend/tests/test_discord_inbox.py |
@@ -55,8 +57,8 @@ Discord のテキスト・画像返信を、担当者の名前・アイコンで
 ## 外部・過去事例の参照と我々への応用
 
 - Discord Webhook 公式仕様（https://discord.com/developers/docs/resources/webhook）: username / avatar_url のメッセージ単位上書き、`?wait=true` で message id 取得 → 本設計の中核
-- Discord 公式 Rate Limits（https://discord.com/developers/docs/topics/rate-limits）: 429 は retry_after に従う → 小さい場合のみ待って 1 回再試行、大きい場合は画面を止めないため失敗扱い
-- 過去事例: 便A（#3908）の公開 URL ヘルパ再利用、migrations/20260927_100000_create_meta_message_reactions.sql の migration 型、discord_rest.py の再試行方針（本便は PO 決定により 1 回に限定）
+- Discord 公式 Rate Limits（https://discord.com/developers/docs/topics/rate-limits）: 429 は retry_after に従う → 小さい場合のみ待って 1 回再試行（メッセージ未作成が確実なため）、大きい場合は画面を止めないため失敗扱い
+- 過去事例: 便A（#3908）の公開 URL ヘルパ再利用、migrations/20260927_100000_create_meta_message_reactions.sql の migration 型、discord_rest.py の再試行方針（本便は二重送信回避のため、確実に未送信の場合の 1 回に限定）
 - 実測で見つけた事象: httpx の INFO ログが webhook 実行 URL（token 入り）を出す → フィルタで伏せた
 
 ## リスクと戻し方
