@@ -20,6 +20,7 @@ import {
   AnalysisRulesSidebar,
   type AnalysisRulesSidebarKey,
 } from "./components/AnalysisRulesSidebar";
+import NeedsReviewTabsPanel from "./components/NeedsReviewTabsPanel";
 import { ProductMasterPanel } from "./components/ProductMasterPanel";
 import { ProductCategoriesMasterPanel } from "./components/ProductCategoriesMasterPanel";
 import { ProductKindsMasterPanel } from "./components/ProductKindsMasterPanel";
@@ -83,31 +84,6 @@ function AccuracyManagementPanel() {
       )}
       <DiagnosticsDrawer open={diagOpen} onClose={() => setDiagOpen(false)} />
     </>
-  );
-}
-
-function NeedsReviewPanel() {
-  const { t } = useTranslation();
-  return (
-    <div
-      style={{
-        padding: "var(--space-6)",
-        color: "var(--text-muted)",
-        fontSize: "var(--font-sm)",
-      }}
-    >
-      <h3
-        style={{
-          margin: "0 0 var(--space-2)",
-          fontSize: "var(--font-lg)",
-          fontWeight: "var(--font-weight-bold)",
-          color: "var(--text-primary)",
-        }}
-      >
-        {t("analysisRules.needsReview.title")}
-      </h3>
-      <p>{t("analysisRules.needsReview.comingSoon")}</p>
-    </div>
   );
 }
 
@@ -183,7 +159,7 @@ export default function AnalysisRulesPage() {
           {activeSection !== "dashboard" && (
             <div className="analysis-panel-content">
               {activeSection === "accuracy-management" && <AccuracyManagementPanel />}
-              {activeSection === "needs-review" && <NeedsReviewPanel />}
+              {activeSection === "needs-review" && <NeedsReviewTabsPanel />}
               {activeSection === "error-log" && <ExtractionErrorLogPanel />}
               {activeSection === "product-master" && <ProductMasterPanel />}
               {activeSection === "product-categories-master" && <ProductCategoriesMasterPanel />}

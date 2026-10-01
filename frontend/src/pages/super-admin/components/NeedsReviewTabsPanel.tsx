@@ -1,26 +1,25 @@
 /**
- * /super-admin/needs-review — 要確認一覧
+ * LINE解析ハブ「要確認」パネル（旧・要確認一覧ページから移設）
  *
  * タブ3種（design.md PR-D）:
  *   - 本番の確認待ち: GET /api/v1/tcg/analysis-results?status_tab=NEEDS_REVIEW
  *   - 試運転の確認待ち: GET /api/v1/tcg/shadow-results
  *   - 詰まり: GET /api/v1/tcg/shadow-results/bottlenecks
- * 認証: is_super_admin 必須
+ * 認証: ハブ（AnalysisRulesPage）が is_super_admin を制御
  */
 import { useEffect, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { PageLayout } from "../../components/PageLayout";
-import { DataTable, type DataTableColumn } from "../../components/DataTable";
-import { Tabs, type TabItem } from "../../components/Tabs";
-import { Modal } from "../../components/Modal";
-import { Select } from "../../components/Select";
-import { TextField } from "../../components/TextField";
-import { Button } from "../../components/Button";
-import { Card } from "../../components/Card";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import { api, ApiError } from "../../lib/api";
+import { DataTable, type DataTableColumn } from "../../../components/DataTable";
+import { Tabs, type TabItem } from "../../../components/Tabs";
+import { Modal } from "../../../components/Modal";
+import { Select } from "../../../components/Select";
+import { TextField } from "../../../components/TextField";
+import { Button } from "../../../components/Button";
+import { Card } from "../../../components/Card";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import { api, ApiError } from "../../../lib/api";
 
 const PAGE_SIZE = 20;
 
@@ -138,7 +137,7 @@ function formatPriceQtyReason(reason: string, t: TFunction): string {
     .join(", ");
 }
 
-export default function NeedsReviewListPage() {
+export default function NeedsReviewTabsPanel() {
   const { t, i18n } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
   const navigate = useNavigate();
@@ -326,23 +325,6 @@ export default function NeedsReviewListPage() {
     }
   };
 
-  if (authLoading) {
-    return (
-      <PageLayout navKey="nav.superAdminNeedsReview">
-        {t("common.loading")}
-      </PageLayout>
-    );
-  }
-  if (!isSuperAdmin) {
-    return (
-      <PageLayout navKey="nav.superAdminNeedsReview">
-        <p role="alert" style={{ color: "var(--color-error)" }}>
-          {t("superAdmin.supplierQuality.superAdminOnly")}
-        </p>
-      </PageLayout>
-    );
-  }
-
   const productionColumns: DataTableColumn<NeedsReviewItem>[] = [
     {
       key: "raw_product_name",
@@ -466,7 +448,7 @@ export default function NeedsReviewListPage() {
     selectedItem?.review_items.find((r) => r.item === "product")?.candidates ?? [];
 
   return (
-    <PageLayout navKey="nav.superAdminNeedsReview">
+    <>
       <Tabs items={tabItems} activeKey={activeTab} onChange={setActiveTab} />
 
       {activeTab === "production" && (
@@ -620,6 +602,6 @@ export default function NeedsReviewListPage() {
           </div>
         </Modal>
       )}
-    </PageLayout>
+    </>
   );
 }
