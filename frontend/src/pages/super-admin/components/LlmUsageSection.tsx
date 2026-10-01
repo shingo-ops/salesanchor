@@ -10,8 +10,11 @@
 import { useEffect, useState } from "react";
 import {
   ResponsiveContainer,
+  ComposedChart,
   BarChart,
+  LineChart,
   Bar,
+  Line,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -84,6 +87,29 @@ interface LlmUsageMonthlyByPurposeItem {
   cost_usd: number | null;
 }
 
+interface LlmUsageDailyRequestsItem {
+  date: string;
+  attempts: number;
+  completed: number;
+  failed: number;
+  success_rate: number | null;
+}
+
+interface LlmUsageDailyErrorItem {
+  date: string;
+  error_code: string;
+  count: number;
+}
+
+interface LlmUsageDailyByModelItem {
+  date: string;
+  model: string;
+  calls: number;
+  prompt_tokens: number | null;
+  output_tokens: number | null;
+  cost_usd: number | null;
+}
+
 interface LlmUsageResponse {
   total: LlmUsageTotal;
   by_purpose: LlmUsageByPurposeItem[];
@@ -91,6 +117,9 @@ interface LlmUsageResponse {
   daily: LlmUsageDailyItem[];
   daily_by_purpose: LlmUsageDailyByPurposeItem[];
   monthly_by_purpose: LlmUsageMonthlyByPurposeItem[];
+  daily_requests: LlmUsageDailyRequestsItem[];
+  daily_errors: LlmUsageDailyErrorItem[];
+  daily_by_model: LlmUsageDailyByModelItem[];
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -145,6 +174,48 @@ function pivotByPurpose<T extends { purpose: string; cost_usd: number | null }>(
   return Array.from(map.values());
 }
 
+function pivotErrorsByDate(rows: LlmUsageDailyErrorItem[]): PivotRow[] {
+  const map = new Map<string, PivotRow>();
+  for (const row of rows) {
+    if (!map.has(row.date)) {
+      map.set(row.date, { key: row.date });
+    }
+    const entry = map.get(row.date) as PivotRow;
+    entry[row.error_code] = row.count;
+  }
+  return Array.from(map.values());
+}
+
+function uniqueInOrder(values: string[]): string[] {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const value of values) {
+    if (!seen.has(value)) {
+      seen.add(value);
+      result.push(value);
+    }
+  }
+  return result;
+}
+
+function pivotByModel(
+  rows: LlmUsageDailyByModelItem[],
+  valueKey: "prompt_tokens" | "output_tokens" | "calls"
+): PivotRow[] {
+  const map = new Map<string, PivotRow>();
+  for (const row of rows) {
+    if (!map.has(row.date)) {
+      map.set(row.date, { key: row.date });
+    }
+    const entry = map.get(row.date) as PivotRow;
+    const value = row[valueKey];
+    if (value !== null) {
+      entry[row.model] = value;
+    }
+  }
+  return Array.from(map.values());
+}
+
 // ──────────────────────────────────────────────────────────────────────────────
 // Props
 // ──────────────────────────────────────────────────────────────────────────────
@@ -187,6 +258,11 @@ function makeCurrencyFormatter(language: string): (value: number | null, t: (key
 function purposeLabel(purpose: string, t: (key: string) => string): string {
   if (!KNOWN_PURPOSES.includes(purpose)) return purpose;
   return t(`analysisRules.dashboard.usage.purpose.${purpose}`);
+}
+
+function formatSuccessRatePercent(value: number | null): string {
+  if (value == null) return "";
+  return `${(value * 100).toFixed(1)}%`;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -345,6 +421,15 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   const monthlyByPurposeData = pivotByPurpose(data.monthly_by_purpose, (row) => row.month);
   const formatChartCurrency = (value: number) => formatCurrency(value, t);
 
+  const errorCodeOrder = uniqueInOrder(data.daily_errors.map((row) => row.error_code));
+  const dailyErrorsData = pivotErrorsByDate(data.daily_errors);
+  const dailyRequestsData = [...data.daily_requests].sort((a, b) => a.date.localeCompare(b.date));
+
+  const modelOrder = uniqueInOrder(data.daily_by_model.map((row) => row.model));
+  const inputTokensByModelData = pivotByModel(data.daily_by_model, "prompt_tokens");
+  const outputTokensByModelData = pivotByModel(data.daily_by_model, "output_tokens");
+  const requestsByModelData = pivotByModel(data.daily_by_model, "calls");
+
   return (
     <div className="analysis-dashboard-existing-section">
       <p className="analysis-dashboard-section-note">
@@ -354,6 +439,186 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         <p className="analysis-dashboard-section-note">
           {t("analysisRules.dashboard.usage.totalMismatchNote", { count: data.total.total_mismatch_calls })}
         </p>
+      )}
+
+      {/* 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
+      <div className="analysis-dashboard-section-title">
+        {t("analysisRules.dashboard.usage.health.title")}
+      </div>
+      <p className="analysis-dashboard-section-note">
+        {t("analysisRules.dashboard.usage.health.note")}
+      </p>
+      <div className="analysis-dashboard-grid">
+        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.usage.health.requestsChartTitle")}
+          </div>
+          {dailyRequestsData.length === 0 ? (
+            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+          ) : (
+            <div className="analysis-dashboard-chart">
+              <ResponsiveContainer width="100%" height={240}>
+                <ComposedChart data={dailyRequestsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="date" fontSize={12} />
+                  <YAxis yAxisId="attempts" fontSize={12} allowDecimals={false} />
+                  <YAxis
+                    yAxisId="successRate"
+                    orientation="right"
+                    domain={[0, 100]}
+                    tickFormatter={(value: number) => `${value}%`}
+                    fontSize={12}
+                  />
+                  <Tooltip
+                    formatter={(value, name) =>
+                      name === t("analysisRules.dashboard.usage.health.successRateLabel")
+                        ? [formatSuccessRatePercent(Number(value) / 100), name]
+                        : [Number(value).toLocaleString(), name]
+                    }
+                  />
+                  <Legend />
+                  <Bar
+                    yAxisId="attempts"
+                    dataKey="attempts"
+                    name={t("analysisRules.dashboard.usage.health.attemptsLabel")}
+                    fill="var(--chart-series-1)"
+                  />
+                  <Line
+                    yAxisId="successRate"
+                    type="monotone"
+                    dataKey={(row: LlmUsageDailyRequestsItem) =>
+                      row.success_rate == null ? null : row.success_rate * 100
+                    }
+                    name={t("analysisRules.dashboard.usage.health.successRateLabel")}
+                    stroke="var(--color-success)"
+                    connectNulls={false}
+                  />
+                </ComposedChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
+
+        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+          <div className="analysis-dashboard-section-title">
+            {t("analysisRules.dashboard.usage.health.errorsChartTitle")}
+          </div>
+          {dailyErrorsData.length === 0 ? (
+            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+          ) : (
+            <div className="analysis-dashboard-chart">
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={dailyErrorsData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" fontSize={12} />
+                  <YAxis fontSize={12} allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  {errorCodeOrder.map((errorCode, index) => (
+                    <Bar
+                      key={errorCode}
+                      dataKey={errorCode}
+                      name={errorCode}
+                      stackId="errors"
+                      fill={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                    />
+                  ))}
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* モデル別（トークン・リクエスト数の日次推移） */}
+      <div className="analysis-dashboard-section-title">
+        {t("analysisRules.dashboard.usage.health.modelTrendTitle")}
+      </div>
+      {modelOrder.length === 0 ? (
+        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+      ) : (
+        <div className="analysis-dashboard-grid">
+          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+            <div className="analysis-dashboard-section-title">
+              {t("analysisRules.dashboard.usage.health.inputTokensChartTitle")}
+            </div>
+            <div className="analysis-dashboard-chart">
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={inputTokensByModelData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  {modelOrder.map((model, index) => (
+                    <Line
+                      key={model}
+                      type="monotone"
+                      dataKey={model}
+                      name={model}
+                      stroke={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+            <div className="analysis-dashboard-section-title">
+              {t("analysisRules.dashboard.usage.health.outputTokensChartTitle")}
+            </div>
+            <div className="analysis-dashboard-chart">
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={outputTokensByModelData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" fontSize={12} />
+                  <YAxis fontSize={12} />
+                  <Tooltip />
+                  <Legend />
+                  {modelOrder.map((model, index) => (
+                    <Line
+                      key={model}
+                      type="monotone"
+                      dataKey={model}
+                      name={model}
+                      stroke={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+
+          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+            <div className="analysis-dashboard-section-title">
+              {t("analysisRules.dashboard.usage.health.requestsByModelChartTitle")}
+            </div>
+            <div className="analysis-dashboard-chart">
+              <ResponsiveContainer width="100%" height={200}>
+                <LineChart data={requestsByModelData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="key" fontSize={12} />
+                  <YAxis fontSize={12} allowDecimals={false} />
+                  <Tooltip />
+                  <Legend />
+                  {modelOrder.map((model, index) => (
+                    <Line
+                      key={model}
+                      type="monotone"
+                      dataKey={model}
+                      name={model}
+                      stroke={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                      connectNulls={false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </div>
       )}
 
       {/* 段1: 4枚のメトリクスカード */}
