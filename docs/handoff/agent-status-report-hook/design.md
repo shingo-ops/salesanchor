@@ -1,6 +1,6 @@
 # design: サブエージェント完了報告ラベル強制フック
 
-**対象ADR**: ADR-040（Claude Code 運用ガードレール。専用ADRは未起案＝関連ADRとして参照）  
+**対象ADR**: ADR-042（Accepted・Claude Code 運用ガードレール強化、settings.json hook 整備を含む）, ADR-040（調査記録・関連）  
 **recon**: docs/handoff/agent-status-report-hook/recon.md  
 **日付**: 2026-10-01
 
