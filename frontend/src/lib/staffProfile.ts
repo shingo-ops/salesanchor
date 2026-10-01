@@ -25,6 +25,21 @@ export async function uploadMyAvatar(file: File): Promise<StaffAvatarResponse> {
   return api.postForm<StaffAvatarResponse>("/staff/me/avatar", body);
 }
 
+/**
+ * アプリ内表示用に、絶対 URL を同一オリジンのパスへ変換する。
+ * アプリの CSP は img-src 'self' のため、api.salesanchor.jp への直リンクは拒否される。
+ * app.salesanchor.jp/api/ は nginx が同じバックエンドへ中継する。Discord 用の絶対 URL はそのまま残す。
+ */
+export function toSameOriginAvatarUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const { pathname } = new URL(url);
+    return pathname.startsWith("/api/") ? pathname : url;
+  } catch {
+    return url;
+  }
+}
+
 /** 本人の担当者アイコンを削除する */
 export async function deleteMyAvatar(): Promise<void> {
   await api.delete("/staff/me/avatar");
