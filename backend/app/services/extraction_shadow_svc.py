@@ -28,6 +28,7 @@ from app.services.extraction_judgement_svc import (
     block_text,
     match_product,
     order_from_pattern,
+    product_match_text,
     resolve_price_quantity,
     verify_copied,
 )
@@ -237,6 +238,16 @@ def insert_shadow_results(session: Session, run_id: str, results: list[dict[str,
 # ---------------------------------------------------------------------------
 
 
+def _heading_text(raw_text: str, heading_start: Any, heading_end: Any) -> str:
+    """見出し行の原文。行番号が無い・int にできない場合は空文字。"""
+    try:
+        start = int(heading_start)
+        end = int(heading_end) if heading_end is not None else start
+    except (TypeError, ValueError):
+        return ""
+    return block_text(raw_text, start, end)
+
+
 def _judge_block(
     block_item: dict,
     raw_text: str,
@@ -253,7 +264,9 @@ def _judge_block(
     """1ブロック（v7の書き写し1行）をシステム判定し、shadow_results 用の1行を返す。"""
     block = block_text(raw_text, block_item["line_start"], block_item["line_end"])
 
-    match: MatchResult = match_product(block, products)
+    heading = _heading_text(raw_text, block_item.get("heading_line_start"), block_item.get("heading_line_end"))
+    match_text, name_source = product_match_text(block, heading, block_item.get("raw_product_name"))
+    match: MatchResult = match_product(match_text, products)
 
     _unit_canonical, kubun, _unit_resolved = resolve_unit_v2(block_item["raw_unit"], unit_alias_to_info)
     _cond_canonical, condition_id, _basis = resolve_condition_v2(
@@ -279,6 +292,10 @@ def _judge_block(
         review_items.append(
             {"item": "product", "reason": match.reason, "candidates": list(match.candidates)}
         )
+    heading_name_used = name_source == "HEADING" and match.status == "matched"
+    if heading_name_used:
+        # 導入から1週間は見出し由来の特定を要確認にする（外す作業は別PR）
+        review_items.append({"item": "product_heading", "reason": "heading_name", "candidates": []})
     if verify_failures:
         review_items.append(
             {"item": "verify_copied", "reason": ",".join(verify_failures), "candidates": []}
@@ -297,7 +314,9 @@ def _judge_block(
             {"item": "price_qty", "reason": ",".join(price_qty.reasons), "candidates": []}
         )
 
-    needs_review = match.status != "matched" or bool(verify_failures) or price_qty.needs_review
+    needs_review = (
+        match.status != "matched" or bool(verify_failures) or price_qty.needs_review or heading_name_used
+    )
 
     return {
         "line_start": block_item["line_start"],
@@ -326,6 +345,7 @@ def _judge_block(
         "review_items": review_items,
         "evidence": {
             "basis": match.basis,
+            "name_source": name_source,
             "price_qty": {
                 "basis": price_qty.basis,
                 "reasons": list(price_qty.reasons),

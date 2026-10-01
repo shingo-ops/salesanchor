@@ -61,6 +61,28 @@ def block_text(raw_text: str, line_start: int, line_end: int) -> str:
     return "\n".join(lines[line_start - 1:line_end])
 
 
+_NO_NAME_VALUES = frozenset({"none"})
+
+
+def product_match_text(block: str, heading: str, raw_product_name: str | None) -> tuple[str, str]:
+    """照合に使う文字列と、商品名の出どころ（BLOCK / HEADING / NONE）を返す。
+
+    Gemini が写した商品名は、ブロックか見出しの原文に実際に書かれている場合だけ足す
+    （原文に無い名前は足さない）。
+    """
+    name = (raw_product_name or "").strip()
+    if not name or name.lower() in _NO_NAME_VALUES:
+        return block, "NONE"
+    normalized_name = normalize_for_match(name)
+    if not normalized_name:
+        return block, "NONE"
+    if normalized_name in normalize_for_match(block):
+        return f"{block}\n{name}", "BLOCK"
+    if normalized_name in normalize_for_match(heading):
+        return f"{block}\n{name}", "HEADING"
+    return block, "NONE"
+
+
 @dataclass(frozen=True)
 class ProductEntry:
     id: int

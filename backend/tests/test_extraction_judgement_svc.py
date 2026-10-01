@@ -8,6 +8,7 @@ from app.services.extraction_judgement_svc import (
     block_text,
     match_product,
     normalize_for_match,
+    product_match_text,
     ship_timing,
     verify_copied,
 )
@@ -491,3 +492,48 @@ def test_resolve_price_quantity_unit_words_come_only_from_argument():
 )
 def test_order_from_pattern(pattern, expected):
     assert order_from_pattern(pattern) == expected
+
+
+class TestProductMatchText:
+    def test_name_in_block_is_appended_with_block_source(self):
+        # Arrange
+        block = "スノーハザード 3BOX@13,300円"
+        # Act
+        text, source = product_match_text(block, "■見出し", "スノーハザード")
+        # Assert
+        assert (text, source) == (block + "\nスノーハザード", "BLOCK")
+
+    def test_name_only_in_heading_is_appended_with_heading_source(self):
+        # Arrange
+        block = "3BOX@13,300円[通常品]"
+        heading = "■拡張パック「スノーハザード」(SV2P)"
+        # Act
+        text, source = product_match_text(block, heading, "拡張パック「スノーハザード」(SV2P)")
+        # Assert
+        assert (text, source) == (block + "\n拡張パック「スノーハザード」(SV2P)", "HEADING")
+
+    def test_name_absent_from_both_is_not_added(self):
+        # Arrange
+        block = "3BOX@13,300円"
+        # Act
+        text, source = product_match_text(block, "■見出し", "作り話の商品名")
+        # Assert
+        assert (text, source) == (block, "NONE")
+
+    @pytest.mark.parametrize("name", [None, "", "none", "None", "NONE", "  ", "「」"])
+    def test_empty_or_none_name_returns_none_source(self, name):
+        # Arrange
+        block = "3BOX@13,300円"
+        # Act
+        text, source = product_match_text(block, "■見出し", name)
+        # Assert
+        assert (text, source) == (block, "NONE")
+
+    def test_fullwidth_and_space_differences_still_match(self):
+        # Arrange
+        block = "ＳＶ２Ｐ　スノー ハザード 3BOX"
+        # Act
+        text, source = product_match_text(block, "", "sv2p スノーハザード")
+        # Assert
+        assert source == "BLOCK"
+        assert text.endswith("\nsv2p スノーハザード")
