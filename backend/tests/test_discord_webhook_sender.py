@@ -24,8 +24,6 @@ import pytest
 import pytest_asyncio
 from cryptography.fernet import Fernet
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
 
 from app.services import discord_webhook_sender as sender
 from app.services import encryption
@@ -34,27 +32,10 @@ _REAL_ASYNC_CLIENT = httpx.AsyncClient
 _TOKEN = "WEBHOOK-SECRET-TOKEN-xyz"
 _CHANNEL = "555000111"
 
-_DDL = """
-    CREATE TABLE discord_channel_webhooks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER NOT NULL,
-        channel_id TEXT NOT NULL UNIQUE,
-        webhook_id TEXT NOT NULL,
-        webhook_token_encrypted TEXT NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    )
-"""
-
-
 @pytest_asyncio.fixture
-async def db():
-    eng = create_async_engine("sqlite+aiosqlite:///:memory:")
-    async with eng.begin() as conn:
-        await conn.execute(text(_DDL))
-    Session = sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
-    async with Session() as session:
-        yield session
-    await eng.dispose()
+async def db(db_session):
+    """conftest.py の setup_test_db が作る discord_channel_webhooks を使う。"""
+    yield db_session
 
 
 @pytest.fixture(autouse=True)

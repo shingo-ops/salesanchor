@@ -31,18 +31,14 @@ from app.auth.dependencies import get_current_tenant, get_current_user
 from app.database import get_db
 from app.routers import leads as leads_router
 from app.services import discord_webhook_sender as sender
-from tests.test_message_image_send import _LEAD_DDL, _META_MESSAGES_DDL
+from tests.test_message_image_send import _LEAD_DDL, _META_MESSAGES_DDL, _STAFF_DDL
 
 _ALL_PERMS = {"channels.view", "channels.manage", "messaging.view", "messaging.send"}
-_STAFF_DDL = """
-    CREATE TABLE staff (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        tenant_id INTEGER NOT NULL,
-        primary_email VARCHAR(255),
-        given_name_en VARCHAR(100),
-        avatar_token TEXT
-    )
-"""
+# 既存の staff 定義を再利用し、本便で必要な列だけ足す（表定義を新規コピーしない）
+_STAFF_EXTRA_COLUMNS = (
+    "ALTER TABLE staff ADD COLUMN given_name_en VARCHAR(100)",
+    "ALTER TABLE staff ADD COLUMN avatar_token TEXT",
+)
 _TOKEN43 = "A" * 43
 _CHANNEL = "900100200"
 
@@ -56,7 +52,7 @@ async def db_session():
         dbapi_conn.create_function("NOW", 0, lambda: "2026-06-01 00:00:00+00:00")
 
     async with eng.begin() as conn:
-        for ddl in (_LEAD_DDL, _META_MESSAGES_DDL, _STAFF_DDL):
+        for ddl in (_LEAD_DDL, _META_MESSAGES_DDL, _STAFF_DDL, *_STAFF_EXTRA_COLUMNS):
             await conn.execute(text(ddl))
     Session = sessionmaker(eng, class_=AsyncSession, expire_on_commit=False)
     async with Session() as session:
