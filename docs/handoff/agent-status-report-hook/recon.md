@@ -12,7 +12,7 @@
 - 該当 0 件（新規領域）。
 
 ## 既存フック（file:line）
-- `.claude/settings.json:30` SessionStart のみ（check-freshness.sh / stop-log-digest.sh）。規約: bash スクリプトを .claude/hooks/ に置き "${CLAUDE_PROJECT_DIR}" 経由で呼ぶ。
+- `.claude/settings.json:35` SessionStart のみ（check-freshness.sh / stop-log-digest.sh）。規約: bash スクリプトを .claude/hooks/ に置き "${CLAUDE_PROJECT_DIR}" 経由で呼ぶ。
 - `.claude/hooks/stop-log-digest.sh:2` bash＋python3、失敗しても exit 0。
 - ~/.claude/settings.json（読み取りのみ）: Stop / PreToolUse(Bash,Read,Edit,Write,Glob,Grep) / PostToolUse(Write) / UserPromptSubmit。SubagentStop・TeammateIdle・SubagentHandback は無し＝競合なし。
 
