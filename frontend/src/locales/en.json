@@ -3992,6 +3992,7 @@
       "groupAnalysisStatus": "Analysis Status",
       "groupMasterManagement": "Master Management",
       "accuracyManagement": "Accuracy Management",
+      "accuracyManagementV7": "Accuracy Management (New)",
       "needsReview": "Needs Review",
       "productMaster": "Product Master",
       "statusMaster": "Status Rules",
@@ -5194,6 +5195,101 @@
       "unresolved": "Cannot determine price and quantity",
       "no_order_rule": "The supplier rule has no order",
       "quantity_unmarked": "The quantity has no marker"
+    }
+  },
+  "shadowAccuracy": {
+    "tabs": {
+      "summary": "Accuracy summary",
+      "posts": "Post comparison"
+    },
+    "filter": {
+      "period": "Period",
+      "supplier": "Supplier",
+      "allSuppliers": "All suppliers"
+    },
+    "period": {
+      "7": "Last 7 days",
+      "30": "Last 30 days",
+      "0": "All time"
+    },
+    "supplier": "Supplier",
+    "empty": "No data",
+    "metric": {
+      "blocks": "Blocks",
+      "autoConfirmed": "Auto-confirmed",
+      "needsReviewRatio": "Needs-review ratio",
+      "matched": "Product matched",
+      "ambiguous": "Product ambiguous",
+      "unmatched": "Product unmatched",
+      "priceFixed": "Price fixed",
+      "quantityFixed": "Quantity fixed",
+      "soldOut": "Sold out",
+      "preOrder": "Pre-order"
+    },
+    "conditions": {
+      "title": "Condition breakdown",
+      "condition": "Condition"
+    },
+    "signal": {
+      "title": "Signals",
+      "note": "Signals are candidates for errors, not errors themselves. Press a count to see the posts with that signal in Post comparison.",
+      "count": "{{count}}",
+      "openPosts": "Show posts with {{signal}}",
+      "label": {
+        "S1": "Missed sold-out",
+        "S2": "Missed pre-order",
+        "S3": "Single-item by unit",
+        "S4": "Confirmed by short mark",
+        "S5": "Heading product not matched",
+        "S6": "Unit filled in"
+      },
+      "short": {
+        "S1": "Sold out",
+        "S2": "Pre-order",
+        "S3": "Single by unit",
+        "S4": "Short mark",
+        "S5": "Heading unmatched",
+        "S6": "Unit filled"
+      }
+    },
+    "bySupplier": {
+      "title": "By supplier"
+    },
+    "posts": {
+      "filterReview": "Review status",
+      "reviewAll": "All",
+      "reviewPending": "Has pending blocks",
+      "reviewConfirmed": "All confirmed",
+      "filterSignal": "Signal",
+      "signalAll": "All",
+      "postedAt": "Posted at",
+      "pending": "Pending",
+      "noItems": "No matching posts",
+      "total": "{{count}} in total",
+      "selectHint": "Select a post from the list on the left."
+    },
+    "detail": {
+      "run": "Engine {{engine}} / model {{model}}",
+      "block": "Block {{index}}",
+      "needsReview": "Needs review",
+      "showInSource": "Show in source"
+    },
+    "stage": {
+      "title": "Stage",
+      "copy": "Copied",
+      "judgement": "Judgement",
+      "reason": "Reason and evidence",
+      "product": "Product",
+      "price": "Price",
+      "unit": "Unit",
+      "quantity": "Quantity",
+      "state": "Condition",
+      "ship": "Shipping"
+    },
+    "source": {
+      "title": "Source text",
+      "legendBlock": "Block range",
+      "legendHeading": "Heading range"
     }
   }
 }
