@@ -21,11 +21,11 @@
 - 既存の「要確認」：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:89-112` の NeedsReviewPanel。「準備中」を表示するだけ。
   - ダッシュボードからの導線が3か所ある：`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:931`、`:1459`、`:1552`
 - 既存の「解析精度管理」：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:56-87`。中身は旧方式（v6）の仕入元品質。
-- 独立した要確認一覧のページ：`frontend/src/pages/super-admin/NeedsReviewListPage.tsx`
+- 独立した要確認一覧のページ：移設前（origin/main 01c275171 時点）：frontend/src/pages/super-admin/NeedsReviewListPage.tsx
   - 3タブ（`:459-470`）。PageLayout を内包している。
   - ルート：`frontend/src/App.tsx:97`（import）、`:308-309`（Route）
   - メニュー：`frontend/src/components/DesktopShell.tsx:194`、`frontend/src/components/MobileShell.tsx:170-175`
-  - 試験：`frontend/src/pages/super-admin/NeedsReviewListPage.test.tsx:7`、`:61`
+  - 試験：移設前（origin/main 01c275171 時点）：frontend/src/pages/super-admin/NeedsReviewListPage.test.tsx:7、`:61`
 - 新方式の API：`backend/app/routers/tcg_shadow_review.py`
   - shadow-results（needs_review・supplier_id・offset・limit）、bottlenecks、keyword-preview
   - 精度を集計する API はない。
@@ -41,7 +41,7 @@
 - NeedsReviewListPage の中身（3タブ、モーダル、API 呼び出し）を、PageLayout を外したパネル部品にして、`frontend/src/pages/super-admin/AnalysisRulesPage.tsx` の section `needs-review` に表示する。
   - 新しい部品の置き場所：新規作成予定：frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx
 - 削除するもの
-  - `frontend/src/pages/super-admin/NeedsReviewListPage.tsx` 本体
+  - 移設前（origin/main 01c275171 時点）：frontend/src/pages/super-admin/NeedsReviewListPage.tsx 本体
   - `frontend/src/App.tsx:97` と `:308-309`
   - `frontend/src/components/DesktopShell.tsx:194` と `frontend/src/components/MobileShell.tsx:170-175`
   - 使われなくなった i18n キー（`nav.superAdminNeedsReview`。ja と en の両方）

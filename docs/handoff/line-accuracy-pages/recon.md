@@ -19,12 +19,12 @@
 - ダッシュボードからの導線：`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:931`、`:1459`、`:1552`
 - 「解析精度管理」（旧方式）：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:56-87`
 - 独立した要確認一覧
-  - 本体：`frontend/src/pages/super-admin/NeedsReviewListPage.tsx`
+  - 本体：移設前（origin/main 01c275171 時点）：frontend/src/pages/super-admin/NeedsReviewListPage.tsx
   - 3タブ：`:459-470`
   - API の呼び出し：本番 `:166`、試運転 `:206`、詰まり `:239`、モーダル `:290`、`:309-310`
   - ルート：`frontend/src/App.tsx:97`、`:308-309`
   - メニュー：`frontend/src/components/DesktopShell.tsx:194`、`frontend/src/components/MobileShell.tsx:170-175`
-  - 試験：`frontend/src/pages/super-admin/NeedsReviewListPage.test.tsx:7`、`:61`
+  - 試験：移設前（origin/main 01c275171 時点）：frontend/src/pages/super-admin/NeedsReviewListPage.test.tsx:7、`:61`
   - i18n：`nav.superAdminNeedsReview`（ja.json:267、en.json:267）
   - コードからの参照は、上に挙げた箇所だけ。e2e からの参照はない。
 
