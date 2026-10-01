@@ -8,8 +8,8 @@
   `StringDataRightTruncationError: value too long for type character varying(20)` on `INSERT INTO staff (... staff_code ...)` -> 500「データベースエラーが発生しました。」
 
 ## 原因（file:line）
-- `/Users/tanizawashingo/salesanchor/backend/app/services/tenant.py:590` `staff_code VARCHAR(20) NOT NULL`
-- `/Users/tanizawashingo/salesanchor/backend/app/routers/staff.py:543-544`（修正前）仮コード `f"EMP-PENDING-{uuid.uuid4().hex}"` = 12 + 32 = 44 文字 > 20
+- `backend/app/services/tenant.py:590` `staff_code VARCHAR(20) NOT NULL`
+- `backend/app/routers/staff.py:543-544`（修正前）仮コード `f"EMP-PENDING-{uuid.uuid4().hex}"` = 12 + 32 = 44 文字 > 20
 - 同 `:574-577`（修正前）の `UPDATE ... 'EMP-%05d'` には到達しない（INSERT で失敗）
 - commit 2a23aeeba (#101) 以来の既存不具合。SQLite テストは長さを強制しないため CI で検出されなかった。
 
@@ -20,8 +20,8 @@
   - `scripts/data_migration/*`, `scripts/setup_*`, `scripts/qa/seed-tenant.sql`: DB 直 INSERT で API 非経由
   - `backend/tests/*`: DB 直 INSERT
 - `POST /staff` に staff_code を渡す他の呼び出し元（CSV インポート等）は無し。
-- `StaffEditPage.tsx` は staff_code を表示のみ（型 `staff_code: string`）。変更不要。
+- `frontend/src/pages/staff/StaffEditPage.tsx` は staff_code を表示のみ（型 `staff_code: string`）。変更不要。
 
 ## 関連 ADR
-- 対象 ADR なし（staff_code 採番を規定する ADR は `grep -rli "staff_code" docs/adr` で ADR-023 のみヒット、採番規則の記述なし）。
+- 対象ADR: ADR-023（staff_code 採番を規定する ADR は `grep -rli "staff_code" docs/adr` で ADR-023 のみヒット、採番規則の記述なし。ライフサイクルの参考として対象とする）。
 - 参考: `docs/adr/ADR-023_staff_lifecycle_three_layer_sync.md`（staff ライフサイクル）
