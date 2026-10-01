@@ -1009,6 +1009,12 @@
   font-size: var(--font-xs);
   margin-bottom: 6px;
 }
+.inbox-send-error--with-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
 
 /* ============================================================
    レスポンシブ対応

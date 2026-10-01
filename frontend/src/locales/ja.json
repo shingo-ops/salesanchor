@@ -1334,6 +1334,14 @@
       "permissionDenied": "24時間を過ぎたため送信できません。Instagram/Messengerから直接返信してください",
       "rateLimited": "送信が一時的に制限されています。時間をおいて再試行してください",
       "attachmentNotSaved": "画像は送信されましたが、自社への保管に失敗しました",
+      "discordEnNameRequired": "Discordで返信するには、英語の名前の登録が必要です。",
+      "discordEnNameInvalid": "英語の名前に使えない言葉（discord など）が含まれています。",
+      "discordSendFailed": "送信できませんでした。入力した文は残っています。",
+      "discordWebhookPermissionAdmin": "Discordの設定が足りないため送れません。",
+      "discordWebhookPermissionStaff": "Discordの設定が足りないため送れません。管理者に連絡してください。",
+      "ctaOpenAccountSettings": "アカウント設定を開く",
+      "ctaRetry": "もう一度送る",
+      "ctaOpenDiscordConfig": "Discord設定を開く",
       "generic": "送信できませんでした",
       "codeSuffix": "（コード: {{code}}）"
     }

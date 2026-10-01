@@ -1334,6 +1334,14 @@
       "permissionDenied": "More than 24 hours have passed, so this message cannot be sent. Please reply directly from Instagram / Messenger.",
       "rateLimited": "Sending is temporarily limited. Please try again later.",
       "attachmentNotSaved": "The image was sent, but saving a copy failed.",
+      "discordEnNameRequired": "To reply on Discord, you need to register your English name.",
+      "discordEnNameInvalid": "Your English name contains a word that can't be used (such as \"discord\").",
+      "discordSendFailed": "The message could not be sent. Your text is still here.",
+      "discordWebhookPermissionAdmin": "The message can't be sent because the Discord setup is incomplete.",
+      "discordWebhookPermissionStaff": "The message can't be sent because the Discord setup is incomplete. Please contact an administrator.",
+      "ctaOpenAccountSettings": "Open account settings",
+      "ctaRetry": "Send again",
+      "ctaOpenDiscordConfig": "Open Discord settings",
       "generic": "Failed to send the message.",
       "codeSuffix": " (code: {{code}})"
     }
