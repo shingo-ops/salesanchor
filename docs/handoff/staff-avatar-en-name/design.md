@@ -37,10 +37,11 @@
 | AvatarUpload が .tsx/.css/.stories を持ち var() のみ | check:stories / check:css-colors / check:css-values / build-storybook |
 | migration が冪等・既存行を壊さない | migration-test CI |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 - Discord webhook の username / avatar_url 上書き仕様: https://discord.com/developers/docs/resources/webhook
-- OWASP File Upload Cheat Sheet: 内容で形式判定・再エンコードでメタデータ除去・推測不能なファイル名
+- OWASP File Upload Cheat Sheet: 内容で形式判定・再エンコードでメタデータ除去・推測不能なファイル名 → 先頭バイト判定・Pillow 再エンコード・token_urlsafe(32) として適用
+- 過去事例: 認証不要ルーターの前例（backend/app/main.py の registration_tokens.public_router）に倣い公開配信ルーターを追加
 
 ## リスクと戻し方
 
