@@ -44,6 +44,8 @@ async def test_translate_inbound_records_usage_event_with_message_id():
     ), patch(
         "app.services.message_translator.load_glossary", new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed", new_callable=AsyncMock,
+    ), patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.UNDER,
     ), patch(
@@ -90,6 +92,8 @@ async def test_translate_inbound_escalation_records_second_usage_event(monkeypat
     ), patch(
         "app.services.message_translator.load_glossary", new_callable=AsyncMock, return_value=[],
     ), patch(
+        "app.services.message_translator.reset_monthly_if_needed", new_callable=AsyncMock,
+    ), patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.UNDER,
     ), patch(
@@ -120,6 +124,8 @@ async def test_generate_outbound_draft_records_usage_event_with_lead_id():
 
     with patch(
         "app.services.message_translator.load_glossary", new_callable=AsyncMock, return_value=[],
+    ), patch(
+        "app.services.message_translator.reset_monthly_if_needed", new_callable=AsyncMock,
     ), patch(
         "app.services.message_translator.check_budget",
         new_callable=AsyncMock, return_value=BudgetStatus.UNDER,
