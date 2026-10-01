@@ -26,7 +26,7 @@ PO要望（2026-10-01）: (1) 4枚に分かれている主要指標を画面最�
   - `summarizeDailyRequests(rows)` — `{ successRate: number | null; errorCount: number }` を返す純粋関数（空配列なら `successRate: null, errorCount: 0`）。
   - `formatSuccessRateOrNotReported(value, t)` — `null` のとき `notReported`、それ以外は `(value*100).toFixed(1)}%`。
 
-## 2. チャート装飾（全チャート共通、`LlmUsageSection.tsx` 内）
+## 2. チャート装飾（全チャート共通、`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` 内）
 
 既存6チャート（概要2枚 + モデル別3枚 + 使いみち別日次/月次2枚）すべてに以下を適用:
 
@@ -40,9 +40,9 @@ PO要望（2026-10-01）: (1) 4枚に分かれている主要指標を画面最�
 | `Legend` | デフォルト配置・アイコン未指定 | `verticalAlign="bottom" iconType="circle" iconSize={8}`（定数 `LEGEND_ICON_SIZE`） |
 | チャート高さ | 概要/使いみち別=240、モデル別=200（バラバラにハードコード） | 定数化（`CHART_HEIGHT=240` / `MODEL_CHART_HEIGHT=200`）。グループ内は既存グリッドクラス（`analysis-dashboard-grid`）でカード揺れを揃える既存仕様を維持。 |
 
-数値 props（radius/barSize/strokeWidth/fontSize）は recon §3 で確認した前例（`AnalysisDashboardPanel.tsx` の `strokeWidth={2}` 等）に従い、`LlmUsageSection.tsx` 冒頭で `UPPER_SNAKE_CASE` 定数として定義する（`CHART_HEIGHT` / `MODEL_CHART_HEIGHT` / `AXIS_TICK_FONT_SIZE` / `BAR_RADIUS` / `BAR_SIZE` / `LINE_STROKE_WIDTH` / `LAST_POINT_DOT_RADIUS` / `ACTIVE_DOT_RADIUS` / `LEGEND_ICON_SIZE`）。numeric recharts props を flag するチェックスクリプトは存在しないため（recon §3 確認済み）、STOP 条件には該当しない。
+数値 props（radius/barSize/strokeWidth/fontSize）は recon §3 で確認した前例（`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` の `strokeWidth={2}` 等）に従い、`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` 冒頭で `UPPER_SNAKE_CASE` 定数として定義する（`CHART_HEIGHT` / `MODEL_CHART_HEIGHT` / `AXIS_TICK_FONT_SIZE` / `BAR_RADIUS` / `BAR_SIZE` / `LINE_STROKE_WIDTH` / `LAST_POINT_DOT_RADIUS` / `ACTIVE_DOT_RADIUS` / `LEGEND_ICON_SIZE`）。numeric recharts props を flag するチェックスクリプトは存在しないため（recon §3 確認済み）、STOP 条件には該当しない。
 
-## 3. i18n（`frontend/src/locales/ja.json` / `en.json`、同一キー構造）
+## 3. i18n（`frontend/src/locales/ja.json`  / `frontend/src/locales/en.json`、同一キー構造）
 
 `analysisRules.dashboard.usage.health` の直後に `summary` ブロックを追加:
 

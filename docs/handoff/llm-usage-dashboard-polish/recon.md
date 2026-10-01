@@ -62,7 +62,7 @@
 
 いずれも既存トークンの再利用のみで、新規色トークンの追加は無し（ADR-067 準拠）。
 
-### i18n 現行キー（`frontend/src/locales/ja.json` / `en.json`、両言語とも L4479-4523 付近）
+### i18n 現行キー（`frontend/src/locales/ja.json`  / `frontend/src/locales/en.json`、両言語とも L4479-4523 付近）
 
 `analysisRules.dashboard.usage.*` 配下に `note` / `notReported` / `metricCost` / `metricCalls` / `metricInput` / `metricOutput` / `byPurposeTitle` 等、および `health.*`（L4511-4522）が既存。`metricCost`〜`metricOutput`（4キー）は本便で削除対象の4枚カード専用キーのため、使用箇所が無くなることを `git grep -rn "usage\.metricCost\|usage\.metricCalls\|usage\.metricInput\|usage\.metricOutput" frontend/src` で確認済み（他箇所からの参照なし）。新規 `summary.*`（6キー: costLabel/callsLabel/inputLabel/outputLabel/successRateLabel/errorCountLabel）を `health` の直後に追加する設計。
 
