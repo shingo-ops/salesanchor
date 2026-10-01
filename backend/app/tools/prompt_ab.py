@@ -85,21 +85,27 @@ class AbSummary:
 # ---------------------------------------------------------------------------
 
 
+def _sdk_field_names() -> tuple[set[str], set[str]]:
+    """(GenerateContentConfig の項目名, ThinkingConfig の項目名)。試験ではここを差し替える。"""
+    from google.genai import types as t  # type: ignore[import-untyped]
+
+    return set(t.GenerateContentConfig.model_fields), set(t.ThinkingConfig.model_fields)
+
+
 def check_sdk_capabilities() -> tuple[bool, str]:
     """GenerateContentConfig に response_json_schema / thinking_config、ThinkingConfig に thinking_level があるか。"""
     import importlib.metadata as md
 
     try:
-        from google.genai import types as t  # type: ignore[import-untyped]
+        config_fields, thinking_fields = _sdk_field_names()
     except ImportError:
         return False, "google-genai が入っていません"
     try:
         version = md.version("google-genai")
     except md.PackageNotFoundError:
         version = "unknown"
-    config_fields = t.GenerateContentConfig.model_fields
     missing = [f"GenerateContentConfig.{n}" for n in ("response_json_schema", "thinking_config") if n not in config_fields]
-    missing += [f"ThinkingConfig.{n}" for n in ("thinking_level", "include_thoughts") if n not in t.ThinkingConfig.model_fields]
+    missing += [f"ThinkingConfig.{n}" for n in ("thinking_level", "include_thoughts") if n not in thinking_fields]
     if missing:
         return False, f"google-genai {version}: 次が無いため実行できません: {', '.join(missing)}"
     return True, f"google-genai {version}: OK"

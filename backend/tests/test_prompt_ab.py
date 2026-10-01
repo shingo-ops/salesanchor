@@ -5,7 +5,7 @@
 from __future__ import annotations
 
 import json
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
@@ -256,9 +256,10 @@ def test_capability_check_passes_with_installed_sdk():
 
 
 def test_capability_check_reports_version_when_missing(monkeypatch):
-    from google.genai import types as t
-
-    monkeypatch.setattr(t.ThinkingConfig, "model_fields", {"include_thoughts": object()})
+    monkeypatch.setattr(
+        pab, "_sdk_field_names",
+        lambda: ({"response_json_schema", "thinking_config"}, {"include_thoughts"}),
+    )
     ok, msg = pab.check_sdk_capabilities()
     assert ok is False
     assert "thinking_level" in msg and "google-genai" in msg
@@ -301,6 +302,7 @@ def test_read_run_ids_ignores_blank_and_comment_lines(tmp_path):
 
 
 def test_ledger_totals_sum_by_source_ref_on_real_postgres(pg):
+    from sqlalchemy import text
     from sqlalchemy.orm import Session
 
     _conn, engine, _url = pg
@@ -313,8 +315,18 @@ def test_ledger_totals_sum_by_source_ref_on_real_postgres(pg):
                 )
         s.commit()
         totals = pab.fetch_ledger_totals(s, "prompt_ab:T1")
-        expected = llm_budget.calculate_usage_cost(_COUNTS, "gemini-3.1-flash-lite") * 2
+        # 台帳の cost_usd は NUMERIC(12,6)。1行ぶんの費用 0.0000115 は保存時に 0.000012 に丸められる。
+        # 合計は「保存された行の合計」なので、期待値は保存された各行から求める（手書きの定数にしない）。
+        stored = [
+            Decimal(str(r[0]))
+            for r in s.execute(
+                text("SELECT cost_usd FROM public.llm_usage_events WHERE source_ref = :r"), {"r": "prompt_ab:T1"}
+            ).fetchall()
+        ]
+        per_row = llm_budget.calculate_usage_cost(_COUNTS, "gemini-3.1-flash-lite")
+        assert len(stored) == 2
+        assert all(v == per_row.quantize(Decimal("0.000001"), rounding=ROUND_HALF_UP) for v in stored)
         assert totals.rows == 2
         assert totals.null_cost_rows == 0
-        assert totals.cost_usd == expected
+        assert totals.cost_usd == sum(stored)
         assert pab.fetch_ledger_totals(s, "prompt_ab:NONE").rows == 0
