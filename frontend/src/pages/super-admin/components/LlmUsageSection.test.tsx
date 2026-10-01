@@ -254,7 +254,9 @@ it("consolidates all 7 charts into a single charts card (no per-chart Card wrapp
   const chartsCard = container.querySelector(".llm-usage-charts");
   expect(chartsCard).not.toBeNull();
   const text = chartsCard?.textContent ?? "";
-  expect(text).toContain("Charts");
+  expect(screen.queryByText("Charts")).toBeNull();
+  // カード見出しは「グラフ」ではなく行1タイトル「概要（LINE抽出）」。重複表示はしない
+  expect(screen.getAllByText("Overview (LINE Extraction)").length).toBe(1);
   expect(text).toContain("Requests & Success Rate");
   expect(text).toContain("Errors by Type");
   expect(text).toContain("Input Tokens");
