@@ -1,7 +1,7 @@
 """
 為替レート SSOT API ルーター。
 
-GET    /api/v1/fx-rate/{currency}         — 現在レート取得（ログイン認証のみ）
+GET    /api/v1/fx-rates/{currency}        — 現在レート取得（ログイン認証のみ）
 POST   /api/v1/super-admin/fx-rate/refresh — 手動即時更新（require_super_admin）
 
 設計:
@@ -9,6 +9,9 @@ POST   /api/v1/super-admin/fx-rate/refresh — 手動即時更新（require_supe
   - 読み取りは全ログイン済みユーザーが可（為替は秘匿でない）。
   - 書き込み（手動更新）は require_super_admin のみ。
   - invoices.py の fetch_fx_rate（ライブ取得）は別系統のまま。このルーターは触らない。
+  - 2026-10-01: 読み取りパスを /fx-rate/{currency} から /fx-rates/{currency} に変更。
+    invoices.py の fetch_fx_rate が同一パス /fx-rate/{currency} を先に登録しており、
+    このルーターの読み取りエンドポイントが到達不能になっていたため（ADR-148 追記参照）。
 """
 from __future__ import annotations
 
@@ -36,7 +39,7 @@ class FxRateResponse(BaseModel):
 
 
 @router.get(
-    "/fx-rate/{currency}",
+    "/fx-rates/{currency}",
     response_model=FxRateResponse,
     tags=["fx-rate"],
 )
