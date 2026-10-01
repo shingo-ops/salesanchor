@@ -51,6 +51,44 @@
 }
 
 /* ──────────────────────────────────────────────────────────────────────────────
+   チャートカード: 概要（LINE抽出）/ モデル別 / 費用 を1枚に集約（PR-F）
+   行同士は薄い区切り線（--border）で分ける。各グラフはネストした Card を使わず、
+   小見出し（__item-title）のみを付ける。
+────────────────────────────────────────────────────────────────────────────── */
+
+.llm-usage-charts__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border);
+}
+
+.llm-usage-charts__row:first-of-type {
+  padding-top: 0;
+  border-top: none;
+}
+
+.llm-usage-charts__row-title {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.llm-usage-charts__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.llm-usage-charts__item-title {
+  font-size: var(--font-sm);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
    チャート: Legend を小さめに揃える（下部・円アイコン）
 ────────────────────────────────────────────────────────────────────────────── */
 

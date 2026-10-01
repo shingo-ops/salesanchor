@@ -555,331 +555,348 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         </div>
       </Card>
 
-      {/* 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
-      <div className="analysis-dashboard-section-title">
-        {t("analysisRules.dashboard.usage.health.title")}
-      </div>
-      <p className="analysis-dashboard-section-note">
-        {t("analysisRules.dashboard.usage.health.note")}
-      </p>
-      <div className="analysis-dashboard-grid">
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.usage.health.requestsChartTitle")}
+      {/* グラフ: 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約 */}
+      <Card variant="container" density="compact" className="llm-usage-charts">
+        <div className="analysis-dashboard-section-title">
+          {t("analysisRules.dashboard.usage.chartsCardTitle")}
+        </div>
+
+        {/* 行1: 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
+        <div className="llm-usage-charts__row">
+          <div className="llm-usage-charts__row-title">
+            {t("analysisRules.dashboard.usage.health.title")}
           </div>
-          {dailyRequestsData.length === 0 ? (
+          <p className="analysis-dashboard-section-note">
+            {t("analysisRules.dashboard.usage.health.note")}
+          </p>
+          <div className="llm-usage-charts__grid">
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.health.requestsChartTitle")}
+              </div>
+              {dailyRequestsData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <ComposedChart data={dailyRequestsData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        yAxisId="attempts"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        allowDecimals={false}
+                        tickFormatter={compactTick}
+                      />
+                      <YAxis
+                        yAxisId="successRate"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tickFormatter={(value: number) => `${value}%`}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <Tooltip
+                        formatter={(value, name) =>
+                          name === t("analysisRules.dashboard.usage.health.successRateLabel")
+                            ? [formatSuccessRatePercent(Number(value) / 100), name]
+                            : [Number(value).toLocaleString(), name]
+                        }
+                      />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      <Bar
+                        yAxisId="attempts"
+                        dataKey="attempts"
+                        name={t("analysisRules.dashboard.usage.health.attemptsLabel")}
+                        fill="var(--chart-series-1)"
+                        radius={BAR_RADIUS}
+                        barSize={BAR_SIZE}
+                      />
+                      <Line
+                        yAxisId="successRate"
+                        type="monotone"
+                        dataKey={(row: LlmUsageDailyRequestsItem) =>
+                          row.success_rate == null ? null : row.success_rate * 100
+                        }
+                        name={t("analysisRules.dashboard.usage.health.successRateLabel")}
+                        stroke="var(--color-success)"
+                        strokeWidth={LINE_STROKE_WIDTH}
+                        connectNulls={false}
+                        dot={renderLastPointDot(dailyRequestsData.length, "var(--color-success)")}
+                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.health.errorsChartTitle")}
+              </div>
+              {dailyErrorsData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={dailyErrorsData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {errorCodeOrder.map((errorCode, index) => (
+                        <Bar
+                          key={errorCode}
+                          dataKey={errorCode}
+                          name={errorCode}
+                          stackId="errors"
+                          fill={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 行2: モデル別（トークン・リクエスト数の日次推移） */}
+        <div className="llm-usage-charts__row">
+          <div className="llm-usage-charts__row-title">
+            {t("analysisRules.dashboard.usage.health.modelTrendTitle")}
+          </div>
+          {modelOrder.length === 0 ? (
             <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
           ) : (
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                <ComposedChart data={dailyRequestsData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    yAxisId="attempts"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    allowDecimals={false}
-                    tickFormatter={compactTick}
-                  />
-                  <YAxis
-                    yAxisId="successRate"
-                    orientation="right"
-                    domain={[0, 100]}
-                    tickFormatter={(value: number) => `${value}%`}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <Tooltip
-                    formatter={(value, name) =>
-                      name === t("analysisRules.dashboard.usage.health.successRateLabel")
-                        ? [formatSuccessRatePercent(Number(value) / 100), name]
-                        : [Number(value).toLocaleString(), name]
-                    }
-                  />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  <Bar
-                    yAxisId="attempts"
-                    dataKey="attempts"
-                    name={t("analysisRules.dashboard.usage.health.attemptsLabel")}
-                    fill="var(--chart-series-1)"
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                  <Line
-                    yAxisId="successRate"
-                    type="monotone"
-                    dataKey={(row: LlmUsageDailyRequestsItem) =>
-                      row.success_rate == null ? null : row.success_rate * 100
-                    }
-                    name={t("analysisRules.dashboard.usage.health.successRateLabel")}
-                    stroke="var(--color-success)"
-                    strokeWidth={LINE_STROKE_WIDTH}
-                    connectNulls={false}
-                    dot={renderLastPointDot(dailyRequestsData.length, "var(--color-success)")}
-                    activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
+            <div className="llm-usage-charts__grid">
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.inputTokensChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={inputTokensByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(inputTokensByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.outputTokensChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={outputTokensByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(outputTokensByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.requestsByModelChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={requestsByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(requestsByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
             </div>
           )}
-        </Card>
-
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.usage.health.errorsChartTitle")}
-          </div>
-          {dailyErrorsData.length === 0 ? (
-            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-          ) : (
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                <BarChart data={dailyErrorsData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {errorCodeOrder.map((errorCode, index) => (
-                    <Bar
-                      key={errorCode}
-                      dataKey={errorCode}
-                      name={errorCode}
-                      stackId="errors"
-                      fill={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
-                      radius={BAR_RADIUS}
-                      barSize={BAR_SIZE}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* モデル別（トークン・リクエスト数の日次推移） */}
-      <div className="analysis-dashboard-section-title">
-        {t("analysisRules.dashboard.usage.health.modelTrendTitle")}
-      </div>
-      {modelOrder.length === 0 ? (
-        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-      ) : (
-        <div className="analysis-dashboard-grid">
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.inputTokensChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={inputTokensByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(inputTokensByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.outputTokensChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={outputTokensByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(outputTokensByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.requestsByModelChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={requestsByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(requestsByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
         </div>
-      )}
 
-      {/* 日次の費用（使いみち別・積み上げ棒） */}
-      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-        <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.dailyByPurposeChartTitle")}
-        </div>
-        {dailyByPurposeData.length === 0 ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-        ) : (
-          <div className="analysis-dashboard-chart llm-usage-chart">
-            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-              <BarChart data={dailyByPurposeData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                <XAxis
-                  dataKey="key"
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                />
-                <YAxis
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  tickFormatter={compactTick}
-                />
-                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={LEGEND_ICON_SIZE}
-                  formatter={(purpose) => purposeLabel(String(purpose), t)}
-                />
-                {purposeOrder.map((purpose) => (
-                  <Bar
-                    key={purpose}
-                    dataKey={purpose}
-                    name={purpose}
-                    stackId="cost"
-                    fill={purposeColor(purpose, purposeOrder)}
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+        {/* 行3: 費用（使いみち別・積み上げ棒） */}
+        <div className="llm-usage-charts__row">
+          <div className="llm-usage-charts__row-title">
+            {t("analysisRules.dashboard.usage.costRowTitle")}
           </div>
-        )}
-      </Card>
+          <div className="llm-usage-charts__grid">
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.dailyByPurposeChartTitle")}
+              </div>
+              {dailyByPurposeData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={dailyByPurposeData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                      <Legend
+                        verticalAlign="bottom"
+                        iconType="circle"
+                        iconSize={LEGEND_ICON_SIZE}
+                        formatter={(purpose) => purposeLabel(String(purpose), t)}
+                      />
+                      {purposeOrder.map((purpose) => (
+                        <Bar
+                          key={purpose}
+                          dataKey={purpose}
+                          name={purpose}
+                          stackId="cost"
+                          fill={purposeColor(purpose, purposeOrder)}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
 
-      {/* 月次の費用（使いみち別・積み上げ棒） */}
-      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-        <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.monthlyByPurposeChartTitle")}
-        </div>
-        {monthlyByPurposeData.length === 0 ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-        ) : (
-          <div className="analysis-dashboard-chart llm-usage-chart">
-            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-              <BarChart data={monthlyByPurposeData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                <XAxis
-                  dataKey="key"
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                />
-                <YAxis
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  tickFormatter={compactTick}
-                />
-                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={LEGEND_ICON_SIZE}
-                  formatter={(purpose) => purposeLabel(String(purpose), t)}
-                />
-                {purposeOrder.map((purpose) => (
-                  <Bar
-                    key={purpose}
-                    dataKey={purpose}
-                    name={purpose}
-                    stackId="cost"
-                    fill={purposeColor(purpose, purposeOrder)}
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.monthlyByPurposeChartTitle")}
+              </div>
+              {monthlyByPurposeData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={monthlyByPurposeData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                      <Legend
+                        verticalAlign="bottom"
+                        iconType="circle"
+                        iconSize={LEGEND_ICON_SIZE}
+                        formatter={(purpose) => purposeLabel(String(purpose), t)}
+                      />
+                      {purposeOrder.map((purpose) => (
+                        <Bar
+                          key={purpose}
+                          dataKey={purpose}
+                          name={purpose}
+                          stackId="cost"
+                          fill={purposeColor(purpose, purposeOrder)}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </Card>
 
       {/* 段2: 使いみち別 */}
