@@ -6,6 +6,9 @@
 ## recon参照
 `docs/handoff/llm-usage-charts-header/recon.md`（本設計の事実根拠。origin/main `a0c3ae38872ba1e308ff758009f6b1c2bd550c34` 時点）
 
+## 対象ADR
+ADR-027, ADR-067, ADR-144, ADR-1004（このセクション自体の由来・`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` はADR-1004: public.llm_usage_events のダッシュボード表示。本変更はADR-1004の対象コンポーネントの見出し文言のみを変更し、データ・スキーマ・API契約には触れない）
+
 ## Before / After
 
 ### Before（origin/main）
