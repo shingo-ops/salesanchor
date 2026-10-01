@@ -1,5 +1,8 @@
 # 設計書：Gemini 書き写し v8 と比較試験（詳細版）
 
+- recon: docs/handoff/gemini-v8/recon.md
+- 関連ADR: ADR-1003、ADR-1004、ADR-085、ADR-100
+
 状態：**設計審査済み（Opus の自己審査で REVISE、修正を反映して APPROVE。§7-2 を参照）／方針は PO と合意済み（2026-10-01）／実装は未着手**
 
 根拠
@@ -207,6 +210,16 @@
 - nullable の書き方が受け付けられるか → T0
 - SIG で10列になった原因 → JSON にすると形式の問題としては消える。考えた過程の要約で、何が起きたかが見えるかを T0・T1 で確かめる。
 - 今のシステムに、raw_unit が none のときデフォルト単位を付ける処理があるか → PR-3 の前に、コードで確かめる。
+
+## PR-1 の受け入れ基準
+| 基準 | 検証方法 |
+|---|---|
+| v6 と本番 v7 の関数・ファイルが1文字も変わっていない | git diff origin/main -- backend/app/services/gemini_extraction_svc.py backend/app/services/extraction_shadow_svc.py の出力が空 |
+| 既存の試験が無変更で通る | backend/tests/test_tcg_gemini_extraction.py と backend/tests/test_extraction_shadow_svc.py を pytest で実行し全件 pass |
+| v8 の入力整形・仕入元ルール・受け取り後の検査・呼び出し設定が設計どおり | backend/tests/test_gemini_raw_copy_v8.py が全件 pass |
+| 費用の上限・失敗1回で停止・dry-run で Gemini を呼ばない・v7 は既存関数を呼ぶ | backend/tests/test_prompt_ab.py が pass。台帳の source_ref 合計だけは共有の pg fixture のため CI で確認 |
+| 台帳以外の DB に書かない・migration を足さない | PR の変更ファイル一覧に migrations/・deploy.yml が無いこと |
+| 起動時の確認が働く | python -m app.tools.prompt_ab --help が通り、SDK に項目が無ければ版を表示して終了コード 2 |
 
 ## 外部・過去事例の参照と我々への応用
 - 外部：Gemini 公式資料（本設計の根拠に挙げた thinking.txt・structured-output.txt・g3.txt の写し）。型指定 JSON（response_json_schema）、thinking の設定、温度の既定値 1.0 の推奨は、これらに基づく。応用：§2・§4。使える組み合わせかどうかは公式資料だけでは確定しないため、試験 T0 で実機確認する（§8）。
