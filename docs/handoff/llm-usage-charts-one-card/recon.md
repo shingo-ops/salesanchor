@@ -71,7 +71,7 @@ PO（2026-10-01）: PR-E でサマリーカードは1枚に集約済み。残る
 
 ### デザイントークン確認（`frontend/src/index.css` / `frontend/src/tokens.css`）
 
-- `--border`（区切り線、`frontend/src/index.css:29`。`LlmUsageSection.tsx` 内 `GRID_STROKE_VAR = "var(--border)"` で既に参照あり、L167）
+- `--border`（区切り線、`frontend/src/index.css:29`。`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:167` 内 `GRID_STROKE_VAR = "var(--border)"` で既に参照あり）
 - `--text-primary` / `--text-secondary`（`frontend/src/index.css:23-24`）
 - `--font-sm` / `--font-md`（`frontend/src/tokens.css:14-25` 付近）
 - `--font-weight-semi`（`frontend/src/tokens.css:29-31` 付近）

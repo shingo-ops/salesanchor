@@ -54,7 +54,7 @@ PO要望（2026-10-01、PR-F）: PR-E（#3902、マージ済み）でサマリ�
 
 ## 2. CSS（`frontend/src/pages/super-admin/components/LlmUsageSection.css`、新設クラス追加）
 
-recon §3「CSS グリッド precedent」の `minmax(<n>px, 1fr)` + `auto-fit` + `gap: var(--space-4)` パターンを踏襲。行間の区切りは `<hr>` ではなく `border-top: 1px solid var(--border)` を使う（`--border` は `frontend/src/index.css:29` で定義済み、`LlmUsageSection.tsx` の `GRID_STROKE_VAR` で既に参照されているトークンと同一）。
+recon §3「CSS グリッド precedent」の `minmax(<n>px, 1fr)` + `auto-fit` + `gap: var(--space-4)` パターンを踏襲。行間の区切りは `<hr>` ではなく `border-top: 1px solid var(--border)` を使う（`--border` は `frontend/src/index.css:29` で定義済み、`frontend/src/pages/super-admin/components/LlmUsageSection.tsx` の `GRID_STROKE_VAR` で既に参照されているトークンと同一）。
 
 ```css
 .llm-usage-charts__row {
