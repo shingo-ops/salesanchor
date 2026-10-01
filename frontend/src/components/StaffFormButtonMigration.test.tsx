@@ -19,7 +19,7 @@ const originalPrefs = { dark_mode: false, show_chat_menu: true, show_sales_menu:
 const editedPrefs = { dark_mode: true, show_chat_menu: false, show_sales_menu: false, show_settings_menu: false, show_admin_menu: true, show_sidebar: false };
 const staff = {
   id: 7, staff_code: 'ST7', surname_jp: 'Fixture', given_name_jp: 'Staff', primary_email: 'fixture@example.test',
-  surname_kana: null, given_name_kana: null, surname_en: null, given_name_en: null,
+  surname_kana: null, given_name_kana: null, surname_en: 'EnFixture', given_name_en: 'EnStaff',
   discord_user_id: null, role_id: 2, role_name: 'Fixture role', status: 'active',
   firebase_uid: null, ui_preferences: originalPrefs, emails: [],
 };
@@ -61,7 +61,7 @@ function closed(scope: HTMLElement, mode: Mode) {
 function payload(mode: Mode) {
   const common = { surname_jp: 'Edited', given_name_jp: 'Staff', primary_email: 'fixture@example.test', role_id: 3, status: 'active', discord_user_id: null };
   return mode === 'quick' ? common : {
-    ...common, surname_kana: null, given_name_kana: null, surname_en: null, given_name_en: null,
+    ...common, surname_kana: null, given_name_kana: null, surname_en: 'EnFixture', given_name_en: 'EnStaff',
     firebase_uid: null, ui_preferences: editedPrefs,
   };
 }
@@ -98,6 +98,8 @@ async function mountForm(mode: Mode) {
   fireEvent.change(field(scope, 'staff.primaryEmail'), { target: { value: 'fixture@example.test' } });
   fireEvent.change(field(scope, 'staff.role'), { target: { value: '3' } });
   if (mode !== 'quick') {
+    fireEvent.change(field(scope, 'staff.surnameEn'), { target: { value: 'EnFixture' } });
+    fireEvent.change(field(scope, 'staff.givenNameEn'), { target: { value: 'EnStaff' } });
     const labels = ['staff.darkMode', 'staff.showChatMenu', 'staff.showSalesMenu', 'staff.showSettingsMenu', 'staff.showAdminMenu', 'staff.showSidebar'];
     for (const key of labels) fireEvent.click(within(scope).getByRole('checkbox', { name: tr(key) }));
   }

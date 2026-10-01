@@ -13,7 +13,7 @@ CRUD を提供する。UI設定は ネストで含めて返す/更新する。
 import logging
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,6 +35,17 @@ from app.schemas.staff import (
     StaffUpdate,
 )
 from app.services.audit import record_audit_log
+from app.services.staff_avatar import (
+    AVATAR_MAX_BYTES,
+    ERR_SAVE_FAILED,
+    ERR_TOO_LARGE,
+    AvatarError,
+    build_avatar_url,
+    delete_avatar_file,
+    new_token,
+    process_avatar,
+    save_avatar,
+)
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -43,7 +54,7 @@ _STAFF_COLS = """
     s.id, s.tenant_id, s.user_id, s.staff_code, s.surname_jp, s.given_name_jp,
     s.surname_kana, s.given_name_kana, s.surname_en, s.given_name_en,
     s.primary_email, s.discord_user_id, s.role_id, s.status, s.firebase_uid,
-    s.is_employee, s.phone,
+    s.is_employee, s.phone, s.avatar_token,
     s.created_at, s.updated_at,
     r.name AS role_name
 """
@@ -98,8 +109,10 @@ async def _fetch_theme(db: AsyncSession, primary_email: str) -> str:
 
 async def _compose(db: AsyncSession, main_row: dict) -> StaffResponse:
     sid = main_row["id"]
+    row = {k: v for k, v in main_row.items() if k != "avatar_token"}
     return StaffResponse(
-        **main_row,
+        **row,
+        avatar_url=build_avatar_url(main_row.get("avatar_token")),
         emails=await _fetch_emails(db, sid),
         ui_preferences=await _fetch_ui_prefs(db, sid),
         locale=await _fetch_locale(db, main_row["primary_email"]),
@@ -338,6 +351,122 @@ async def update_my_profile(
         {"id": staff_id},
     )
     return await _compose(db, dict(fetched.mappings().first()))
+
+
+_AVATAR_MESSAGES = {
+    "AVATAR_INVALID_TYPE": "2MB以下のJPG・PNG・WebP画像を選んでください",
+    "AVATAR_TOO_LARGE": "画像のサイズが2MBを超えています",
+    "AVATAR_SAVE_FAILED": "画像を保存できませんでした",
+}
+
+
+def _avatar_http_error(code: str, http_status: int) -> HTTPException:
+    """フロントが code を文言に変換する。detail は dict（{code, detail}）で返す。"""
+    return HTTPException(
+        status_code=http_status,
+        detail={"code": code, "detail": _AVATAR_MESSAGES.get(code, code)},
+    )
+
+
+async def _my_staff_id_and_token(db: AsyncSession, user_email: str | None) -> tuple[int, str | None]:
+    """ログイン中ユーザ本人の staff.id と現在の avatar_token を返す（/staff/me と同じ特定方法）。"""
+    if not user_email:
+        raise HTTPException(status_code=401, detail="認証されていません")
+    result = await db.execute(
+        text("SELECT id, avatar_token FROM staff WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
+        {"email": user_email},
+    )
+    row = result.mappings().first()
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="現在のユーザに紐づく staff レコードが見つかりません",
+        )
+    return row["id"], row["avatar_token"]
+
+
+async def _fetch_staff_response(db: AsyncSession, staff_id: int) -> StaffResponse:
+    fetched = await db.execute(
+        text(f"SELECT {_STAFF_COLS} FROM staff s LEFT JOIN roles r ON r.id = s.role_id WHERE s.id = :id"),
+        {"id": staff_id},
+    )
+    return await _compose(db, dict(fetched.mappings().first()))
+
+
+@router.post("/staff/me/avatar", response_model=StaffResponse, status_code=200)
+async def upload_my_avatar(
+    image: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    本人の担当者アイコンを登録・変更する（ADR-159）。
+
+    jpg/png/webp・2MB 以下。Pillow で EXIF 除去・中央正方形切り抜き・256px WebP 化し、
+    新 token で保存して旧ファイルを削除する。本人以外は操作できない（権限は本人限定）。
+    """
+    staff_id, old_token = await _my_staff_id_and_token(db, getattr(current_user, "email", None))
+
+    # 上限+1 バイトだけ読む（巨大ファイルをメモリに載せない）
+    data = await image.read(AVATAR_MAX_BYTES + 1)
+    try:
+        webp = process_avatar(data)
+        token = new_token()
+        save_avatar(token, webp)
+    except AvatarError as e:
+        code = e.code
+        http_status = (
+            413 if code == ERR_TOO_LARGE
+            else status.HTTP_500_INTERNAL_SERVER_ERROR if code == ERR_SAVE_FAILED
+            else status.HTTP_400_BAD_REQUEST
+        )
+        raise _avatar_http_error(code, http_status) from None
+
+    try:
+        await db.execute(
+            text("UPDATE staff SET avatar_token = :token, updated_at = NOW() WHERE id = :id"),
+            {"token": token, "id": staff_id},
+        )
+        await record_audit_log(
+            db=db, tenant_id=tenant_id, user_id=current_user.id,
+            action="update", table_name="staff", record_id=staff_id,
+            new_data={"avatar": "set"},
+        )
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072
+    except Exception:
+        await db.rollback()
+        delete_avatar_file(token)  # DB に載らなかった新ファイルは残さない
+        logger.exception("upload_my_avatar: DB 更新に失敗 tenant=%d staff=%d", tenant_id, staff_id)
+        raise _avatar_http_error(ERR_SAVE_FAILED, status.HTTP_500_INTERNAL_SERVER_ERROR) from None
+
+    delete_avatar_file(old_token)
+    return await _fetch_staff_response(db, staff_id)
+
+
+@router.delete("/staff/me/avatar", response_model=StaffResponse, status_code=200)
+async def delete_my_avatar(
+    db: AsyncSession = Depends(get_db),
+    tenant_id: int = Depends(get_current_tenant),
+    current_user: User = Depends(get_current_user),
+):
+    """本人の担当者アイコンを削除する（未登録なら何もしない＝冪等）。"""
+    staff_id, old_token = await _my_staff_id_and_token(db, getattr(current_user, "email", None))
+    if old_token:
+        await db.execute(
+            text("UPDATE staff SET avatar_token = NULL, updated_at = NOW() WHERE id = :id"),
+            {"id": staff_id},
+        )
+        await record_audit_log(
+            db=db, tenant_id=tenant_id, user_id=current_user.id,
+            action="update", table_name="staff", record_id=staff_id,
+            new_data={"avatar": "removed"},
+        )
+        await db.commit()
+        await reset_tenant_context(db, tenant_id)  # ADR-072
+        delete_avatar_file(old_token)
+    return await _fetch_staff_response(db, staff_id)
 
 
 @router.get("/staff", response_model=list[StaffResponse],

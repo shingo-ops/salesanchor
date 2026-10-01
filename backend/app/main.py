@@ -78,6 +78,7 @@ from app.routers import (
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
+    public_staff_avatars,  # ADR-159: 担当者アイコン公開配信（認証不要）
     purchase_orders,
     quotes,
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
@@ -235,6 +236,8 @@ app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
 app.include_router(
     registration_tokens.public_router, prefix="/api/v1", tags=["registration"],
 )
+# ADR-159: 担当者アイコン画像の公開配信（認証不要 - Discord が avatar_url として取得。推測不能 token）
+app.include_router(public_staff_avatars.public_router, prefix="/api", tags=["public"])
 
 # --- 認証必須なルーター（デフォルトで認証が強制される） ---
 # dependencies=[Depends(get_current_tenant)] により、
