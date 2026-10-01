@@ -18,14 +18,14 @@
 - LINE解析ハブ：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:123-213`
   - サブメニューは `?section=` で切り替える。
   - サブメニューの定義は `frontend/src/pages/super-admin/components/AnalysisRulesSidebar.tsx:10-35`（キーの型）と `:78-129`（項目）。
-- 既存の「要確認」：`AnalysisRulesPage.tsx:89-112` の NeedsReviewPanel。「準備中」を表示するだけ。
+- 既存の「要確認」：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:89-112` の NeedsReviewPanel。「準備中」を表示するだけ。
   - ダッシュボードからの導線が3か所ある：`frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:931`、`:1459`、`:1552`
-- 既存の「解析精度管理」：`AnalysisRulesPage.tsx:56-87`。中身は旧方式（v6）の仕入元品質。
+- 既存の「解析精度管理」：`frontend/src/pages/super-admin/AnalysisRulesPage.tsx:56-87`。中身は旧方式（v6）の仕入元品質。
 - 独立した要確認一覧のページ：`frontend/src/pages/super-admin/NeedsReviewListPage.tsx`
   - 3タブ（`:459-470`）。PageLayout を内包している。
   - ルート：`frontend/src/App.tsx:97`（import）、`:308-309`（Route）
   - メニュー：`frontend/src/components/DesktopShell.tsx:194`、`frontend/src/components/MobileShell.tsx:170-175`
-  - 試験：`NeedsReviewListPage.test.tsx:7`、`:61`
+  - 試験：`frontend/src/pages/super-admin/NeedsReviewListPage.test.tsx:7`、`:61`
 - 新方式の API：`backend/app/routers/tcg_shadow_review.py`
   - shadow-results（needs_review・supplier_id・offset・limit）、bottlenecks、keyword-preview
   - 精度を集計する API はない。
@@ -38,12 +38,12 @@
 
 ## 3. 作るもの
 ### 3-1. 要確認の移設（画面のみ）
-- NeedsReviewListPage の中身（3タブ、モーダル、API 呼び出し）を、PageLayout を外したパネル部品にして、`AnalysisRulesPage.tsx` の section `needs-review` に表示する。
-  - 新しい部品の置き場所：`frontend/src/features/line-analysis/NeedsReviewTabsPanel.tsx`
+- NeedsReviewListPage の中身（3タブ、モーダル、API 呼び出し）を、PageLayout を外したパネル部品にして、`frontend/src/pages/super-admin/AnalysisRulesPage.tsx` の section `needs-review` に表示する。
+  - 新しい部品の置き場所：新規作成予定：frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx
 - 削除するもの
-  - `NeedsReviewListPage.tsx` 本体
-  - `App.tsx:97` と `:308-309`
-  - `DesktopShell.tsx:194` と `MobileShell.tsx:170-175`
+  - `frontend/src/pages/super-admin/NeedsReviewListPage.tsx` 本体
+  - `frontend/src/App.tsx:97` と `:308-309`
+  - `frontend/src/components/DesktopShell.tsx:194` と `frontend/src/components/MobileShell.tsx:170-175`
   - 使われなくなった i18n キー（`nav.superAdminNeedsReview`。ja と en の両方）
 - 試験は、新しい部品の試験に移し替える。
 - 中身（タブ、列、ワード登録）は変えない。純粋な移設とする。
@@ -92,15 +92,15 @@
 
 ### 3-5. 実物の確認で決めたこと（2026-10-01 追記）
 - **部品の置き場所**
-  - パネル：`frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx`、`ShadowAccuracyPanel.tsx`。既存の ExtractionErrorLogPanel などと同じく、css と test を同じ場所に置く。
+  - パネル：新規作成予定：frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx、新規作成予定：frontend/src/pages/super-admin/components/ShadowAccuracyPanel.tsx。既存の `frontend/src/pages/super-admin/components/ExtractionErrorLogPanel.tsx` などと同じく、css と test を同じ場所に置く。
   - 原文の表示と比較の部品：`frontend/src/features/tcg-analysis-review/`
 - **原文の表示**
   - 既存の SourceRawPane は変更しない。
     - 強調できるのは1行だけで、2.6秒で消える。範囲を指定して色分けする仕組みがない。
     - 日本語が直書きされている。i18n 違反の既存の負債として、別件で扱う。
     - SupplierDetailView から使われている。
-  - 新しく `ShadowSourcePane.tsx` を作る。
-    - 行の分割は `sourceRawLines`（`sourceRawNavigation.ts:3`）を再利用する。
+  - 新規作成予定：frontend/src/features/tcg-analysis-review/ShadowSourcePane.tsx を作る。
+    - 行の分割は `sourceRawLines`（`frontend/src/features/tcg-analysis-review/sourceRawNavigation.ts:3`）を再利用する。
     - 行番号を表示し、ブロックと見出しの範囲を色分けする。色はデザイントークンを使う。
 - **詳細の出し方**
   - ドロワーは幅が 480px 固定（`Drawer.css:30`）で狭いため、使わない。
@@ -117,11 +117,11 @@
   - そのため、単品系の単位に対して、優先度1のキーワード経路が当たらない。
 - **バックエンド**
   - 新しく作るファイル
-    - `backend/app/routers/tcg_shadow_accuracy.py`
-    - `backend/app/services/tcg_shadow_accuracy_svc.py`
-    - `backend/app/services/shadow_accuracy_signals.py`（兆候の SQL 式の SSOT）
+    - 新規作成予定：backend/app/routers/tcg_shadow_accuracy.py
+    - 新規作成予定：backend/app/services/tcg_shadow_accuracy_svc.py
+    - 新規作成予定：backend/app/services/shadow_accuracy_signals.py（兆候の SQL 式の SSOT）
   - 作りは tcg_shadow_review と同じにする。
-    - router に prefix を付けず、`main.py` で `/api/v1` を付ける。
+    - router に prefix を付けず、`backend/app/main.py` で `/api/v1` を付ける。
     - require_super_admin と get_db を使い、dict を返す。
   - 試験
     - router は mock で試験する。
@@ -157,5 +157,6 @@
 - 外部事例：社内のデータで直接測れる表示機能なので、使わない。
 
 ## 維持の仕組み
+- 守り手: 設計担当（Opus）が兆候の定義と設計書を管理し、実装担当（Sonnet）が試験を維持する
 - 守り手：設計担当（Opus）が兆候の定義を管理する。定義は backend の1モジュールに置き、試験で固定する。
 - 兆候を増やすときは、このモジュールと設計書を同時に更新する。
