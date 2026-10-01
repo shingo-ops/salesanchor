@@ -29,4 +29,4 @@
 
 ## 維持の仕組み
 - 試験2ファイルで出どころ3種を固定。evidence.name_source により本番の結果行から出どころ別の件数を集計できる。
-- 守り手: 試験2ファイル（CI で毎回実行）。見出し由来の要確認は導入1週間後に別PRで外す（PO判断）。
+- 守り手: backend/tests/test_extraction_judgement_svc.py, backend/tests/test_extraction_shadow_svc.py（CI で毎回実行）
