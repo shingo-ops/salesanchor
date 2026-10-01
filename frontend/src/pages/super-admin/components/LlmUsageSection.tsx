@@ -555,17 +555,14 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         </div>
       </Card>
 
-      {/* グラフ: 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約 */}
+      {/* 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約。カード見出しは行1（概要）のタイトルを兼ねる */}
       <Card variant="container" density="compact" className="llm-usage-charts">
         <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.chartsCardTitle")}
+          {t("analysisRules.dashboard.usage.health.title")}
         </div>
 
         {/* 行1: 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
         <div className="llm-usage-charts__row">
-          <div className="llm-usage-charts__row-title">
-            {t("analysisRules.dashboard.usage.health.title")}
-          </div>
           <p className="analysis-dashboard-section-note">
             {t("analysisRules.dashboard.usage.health.note")}
           </p>
