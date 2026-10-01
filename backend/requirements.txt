@@ -43,5 +43,7 @@ gspread>=6.0,<7.0
 # rate_limit.py / audit.py の _SKIP_PATHS で除外済み
 prometheus-client==0.25.0
 # ADR-157: 買取相場ログ（買取ホムラ HTML スクレイピング用）
+# ADR-159: 担当者アイコンの EXIF 除去・正方形切り抜き・WebP 再エンコード
+Pillow==12.3.0
 beautifulsoup4>=4.12.0
 lxml>=5.0.0
