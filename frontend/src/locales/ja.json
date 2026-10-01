@@ -3992,6 +3992,7 @@
       "groupAnalysisStatus": "解析状況",
       "groupMasterManagement": "マスタ管理",
       "accuracyManagement": "解析精度管理",
+      "accuracyManagementV7": "解析精度管理（新方式）",
       "needsReview": "要確認",
       "productMaster": "商品マスタ",
       "statusMaster": "ステータスルール",
@@ -5196,6 +5197,101 @@
       "unresolved": "価格と数量を決められない",
       "no_order_rule": "仕入元ルールに向きがない",
       "quantity_unmarked": "数量に目印がない"
+    }
+  },
+  "shadowAccuracy": {
+    "tabs": {
+      "summary": "精度サマリー",
+      "posts": "投稿照合"
+    },
+    "filter": {
+      "period": "期間",
+      "supplier": "仕入元",
+      "allSuppliers": "すべての仕入元"
+    },
+    "period": {
+      "7": "直近7日",
+      "30": "直近30日",
+      "0": "全期間"
+    },
+    "supplier": "仕入元",
+    "empty": "データがありません",
+    "metric": {
+      "blocks": "ブロック数",
+      "autoConfirmed": "自動確定",
+      "needsReviewRatio": "確認待ちの率",
+      "matched": "商品が確定",
+      "ambiguous": "商品が複数候補",
+      "unmatched": "商品が未照合",
+      "priceFixed": "価格が確定",
+      "quantityFixed": "数量が確定",
+      "soldOut": "完売",
+      "preOrder": "予約"
+    },
+    "conditions": {
+      "title": "状態の内訳",
+      "condition": "状態"
+    },
+    "signal": {
+      "title": "兆候",
+      "note": "兆候は誤りの候補です。誤りそのものではありません。件数を押すと、その兆候がある投稿を投稿照合で見られます。",
+      "count": "{{count}}件",
+      "openPosts": "{{signal}}の投稿を見る",
+      "label": {
+        "S1": "完売の見落とし",
+        "S2": "予約の見落とし",
+        "S3": "単位による単品扱い",
+        "S4": "短い記号での確定",
+        "S5": "見出しの商品名を照合していない",
+        "S6": "単位の補完"
+      },
+      "short": {
+        "S1": "完売",
+        "S2": "予約",
+        "S3": "単品扱い",
+        "S4": "短い記号",
+        "S5": "見出し未照合",
+        "S6": "単位補完"
+      }
+    },
+    "bySupplier": {
+      "title": "仕入元別"
+    },
+    "posts": {
+      "filterReview": "確認状態",
+      "reviewAll": "すべて",
+      "reviewPending": "確認待ちあり",
+      "reviewConfirmed": "すべて確定済み",
+      "filterSignal": "兆候",
+      "signalAll": "すべて",
+      "postedAt": "投稿日時",
+      "pending": "確認待ち",
+      "noItems": "該当する投稿がありません",
+      "total": "全{{count}}件",
+      "selectHint": "左の一覧から投稿を選んでください。"
+    },
+    "detail": {
+      "run": "解析方式 {{engine}} / モデル {{model}}",
+      "block": "ブロック {{index}}",
+      "needsReview": "確認待ち",
+      "showInSource": "原文で見る"
+    },
+    "stage": {
+      "title": "段",
+      "copy": "書き写し",
+      "judgement": "判定",
+      "reason": "理由と根拠",
+      "product": "商品名",
+      "price": "価格",
+      "unit": "単位",
+      "quantity": "数量",
+      "state": "状態",
+      "ship": "発送"
+    },
+    "source": {
+      "title": "原文",
+      "legendBlock": "ブロックの範囲",
+      "legendHeading": "見出しの範囲"
     }
   }
 }
