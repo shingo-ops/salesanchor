@@ -11,10 +11,10 @@
  *   - 呼び出し回数ラベルが「応答が返った回数」系の文言に変わっている
  */
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../../lib/api";
 import i18n from "../../../i18n";
-import { LlmUsageSection } from "./LlmUsageSection";
+import { formatCompactNumber, LlmUsageSection } from "./LlmUsageSection";
 
 vi.mock("../../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
@@ -211,4 +211,49 @@ it("renders the per-model trend charts (input tokens / output tokens / requests)
 it("shows the success rate rounded to 1 decimal in the note (overview section)", async () => {
   view();
   await screen.findByText(/Success rate is completed calls divided by completed \+ failed/);
+});
+
+it("shows a single summary card at the top with hero cost and 5 stats", async () => {
+  const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+  await screen.findByText("LINE Extraction");
+  const summary = container.querySelector(".llm-usage-summary");
+  expect(summary).not.toBeNull();
+  const text = summary?.textContent ?? "";
+  expect(text).toContain("Total Cost");
+  expect(text).toContain("$0.0021");
+  expect(text).toContain("Calls with response");
+  expect(text).toContain("3");
+  expect(text).toContain("Input Tokens");
+  expect(text).toContain("900");
+  expect(text).toContain("Output Tokens");
+  expect(text).toContain("300");
+  expect(text).toContain("Success Rate (LINE Extraction)");
+  // completed=3, failed=1 -> 3 / (3+1) = 75.0%
+  expect(text).toContain("75.0%");
+  expect(text).toContain("Error Count (LINE Extraction)");
+});
+
+it("shows Not reported for the summary success rate when daily_requests is empty", async () => {
+  vi.mocked(api.get).mockResolvedValue({ ...response, daily_requests: [] });
+  const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+  await screen.findByText("LINE Extraction");
+  const summary = container.querySelector(".llm-usage-summary");
+  expect(summary?.textContent).toContain("Not reported");
+});
+
+it("removes the old 4 separate metric cards (consolidated into the summary card)", async () => {
+  const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+  await screen.findByText("LINE Extraction");
+  expect(container.querySelector(".analysis-dashboard-metrics")).toBeNull();
+});
+
+describe("formatCompactNumber", () => {
+  it("abbreviates large numbers for chart y-axis ticks", () => {
+    expect(formatCompactNumber(29766307, "en")).toBe("30M");
+    expect(formatCompactNumber(388393, "en")).toBe("388K");
+  });
+
+  it("returns the raw number when it is small enough to need no abbreviation", () => {
+    expect(formatCompactNumber(3, "en")).toBe("3");
+  });
 });

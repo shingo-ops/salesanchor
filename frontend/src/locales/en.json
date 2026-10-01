@@ -4479,10 +4479,6 @@
       "usage": {
         "note": "Usage per Gemini call (ledger: llm_usage_events). Thinking tokens are recorded only when Google returns them. Failed calls with no response are not included.",
         "notReported": "Not reported",
-        "metricCost": "Total Cost",
-        "metricCalls": "Calls with response",
-        "metricInput": "Input Tokens",
-        "metricOutput": "Output Tokens",
         "byPurposeTitle": "By Purpose",
         "dailyTitle": "Daily",
         "byModelTitle": "By Model",
@@ -4519,6 +4515,14 @@
           "inputTokensChartTitle": "Input Tokens",
           "outputTokensChartTitle": "Output Tokens",
           "requestsByModelChartTitle": "Requests"
+        },
+        "summary": {
+          "costLabel": "Total Cost",
+          "callsLabel": "Calls with response",
+          "inputLabel": "Input Tokens",
+          "outputLabel": "Output Tokens",
+          "successRateLabel": "Success Rate (LINE Extraction)",
+          "errorCountLabel": "Error Count (LINE Extraction)"
         }
       },
       "costSectionTitle": "API Cost",
