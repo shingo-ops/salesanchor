@@ -160,6 +160,15 @@ def seeded(pg):  # noqa: F811
             "UPDATE public.extraction_shadow_runs SET started_at = now() - interval '100 days'"
             " WHERE extraction_job_id = %s", (job2,),
         )
+        # 一覧は投稿日時（line_posted_at）降順。挿入順に依存させないよう明示的に固定する。
+        cur.execute(
+            "UPDATE public.source_messages SET line_posted_at = now()"
+            " WHERE id = (SELECT source_message_id FROM public.extraction_jobs WHERE id = %s)", (job1,),
+        )
+        cur.execute(
+            "UPDATE public.source_messages SET line_posted_at = now() - interval '100 days'"
+            " WHERE id = (SELECT source_message_id FROM public.extraction_jobs WHERE id = %s)", (job2,),
+        )
     return {"job1": job1, "job2": job2, "supplier_id": supplier_id, "url": async_url}
 
 
