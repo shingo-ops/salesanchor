@@ -264,7 +264,6 @@
     "superAdminTcgSupplierQuality": "Analysis Quality",
     "superAdminTcgDistribution": "Distribution Targets",
     "superAdminAnalysisRules": "LINE Analysis",
-    "superAdminNeedsReview": "Needs Review",
     "account": "Account",
     "openUserMenu": "Open user menu",
     "openMenu": "Open menu",
@@ -4320,7 +4319,6 @@
     },
     "needsReview": {
       "title": "Needs Review",
-      "comingSoon": "Coming soon",
       "count": "{{count}} items"
     },
     "dashboard": {

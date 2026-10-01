@@ -1,16 +1,16 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { api } from "../../lib/api";
-import { useSuperAdmin } from "../../hooks/useSuperAdmin";
-import i18n from "../../i18n";
-import NeedsReviewListPage from "./NeedsReviewListPage";
+import { api } from "../../../lib/api";
+import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
+import i18n from "../../../i18n";
+import NeedsReviewTabsPanel from "./NeedsReviewTabsPanel";
 
-vi.mock("../../lib/api", () => ({
+vi.mock("../../../lib/api", () => ({
   api: { get: vi.fn(), post: vi.fn() },
   ApiError: class extends Error {},
 }));
-vi.mock("../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
+vi.mock("../../../hooks/useSuperAdmin", () => ({ useSuperAdmin: vi.fn() }));
 
 const productionResponse = {
   items: [],
@@ -58,7 +58,7 @@ const bottlenecksResponse = {
   by_item: [{ supplier_id: 5, supplier_name: "Supplier A", item: "product", count: 3 }],
 };
 
-const view = () => render(<MemoryRouter><NeedsReviewListPage /></MemoryRouter>);
+const view = () => render(<MemoryRouter><NeedsReviewTabsPanel /></MemoryRouter>);
 
 beforeEach(async () => {
   vi.resetAllMocks();
@@ -77,7 +77,7 @@ beforeEach(async () => {
 
 afterEach(() => cleanup());
 
-it("denies access and never fetches when not super admin", () => {
+it("never fetches when not super admin", () => {
   vi.mocked(useSuperAdmin).mockReturnValue({ loading: false, isSuperAdmin: false });
   view();
   expect(api.get).not.toHaveBeenCalled();

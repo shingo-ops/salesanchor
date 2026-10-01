@@ -264,7 +264,6 @@
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "superAdminAnalysisRules": "LINE解析",
-    "superAdminNeedsReview": "要確認一覧",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -4320,7 +4319,6 @@
     },
     "needsReview": {
       "title": "要確認",
-      "comingSoon": "準備中",
       "count": "{{count}}件"
     },
     "dashboard": {
