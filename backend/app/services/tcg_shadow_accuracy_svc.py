@@ -14,6 +14,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.shadow_accuracy_signals import (
+    LATEST_RUN_PER_JOB_SQL,
     SIGNAL_CODES,
     SIGNAL_COLUMNS,
     flagged_cte,
@@ -110,6 +111,7 @@ def posts_query(
 ) -> tuple[str, dict[str, Any]]:
     """posts が実行する SQL とパラメータ。単位は run（1投稿）。EXPLAIN 用にも使う。"""
     where_sql, params = period_supplier_where(days, supplier_id)
+    where_sql = f"{where_sql} AND {LATEST_RUN_PER_JOB_SQL}"
     having: list[str] = []
     if needs_review is True:
         having.append("needs_review_count > 0")
@@ -185,7 +187,7 @@ _RUN_SQL: Final[str] = """
     LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
     LEFT JOIN public.suppliers sup ON sup.id = sc.supplier_id
     WHERE run.extraction_job_id = :job_id
-    ORDER BY run.started_at DESC
+    ORDER BY run.started_at DESC, run.id DESC
     LIMIT 1
 """
 

@@ -128,6 +128,14 @@ SIGNAL_EXPRS: Final[dict[str, str]] = {
 }
 
 
+# 投稿（job）ごとに最新の run だけを使う（posts の 1 行 = 1 投稿。detail と同じ選び方）。
+LATEST_RUN_PER_JOB_SQL: Final[str] = (
+    "run.id = (SELECT r2.id FROM public.extraction_shadow_runs r2 "
+    "WHERE r2.extraction_job_id = run.extraction_job_id "
+    "ORDER BY r2.started_at DESC, r2.id DESC LIMIT 1)"
+)
+
+
 def period_supplier_where(days: int, supplier_id: int | None) -> tuple[str, dict[str, int]]:
     """期間（run.started_at。days=0 は全期間）と仕入元の WHERE と、そのパラメータ。"""
     clauses = ["TRUE"]

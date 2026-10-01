@@ -162,6 +162,7 @@ export function ShadowAccuracyPosts({ days, supplierId, filters, onFiltersChange
     let cancelled = false;
     setDetailLoading(true);
     setDetailErrorKey("");
+    setDetail(null);
     setSelectedBlock(null);
     api
       .get<AccuracyPostDetail>(`/tcg/shadow-accuracy/posts/${selectedJobId}`)

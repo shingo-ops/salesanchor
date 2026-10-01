@@ -202,3 +202,21 @@ it("renders in Japanese with the same keys", async () => {
   expect(screen.getByText(i18n.t("shadowAccuracy.tabs.posts"))).toBeTruthy();
   expect(i18n.t("shadowAccuracy.tabs.summary")).not.toBe("shadowAccuracy.tabs.summary");
 });
+
+it("clears the previous detail when loading the next post's detail fails", async () => {
+  const second = { ...posts.items[0], job_id: "job-2", supplier_name: "Supplier B" };
+  vi.mocked(api.get).mockImplementation((path: string) => {
+    if (path.includes("/tcg/shadow-accuracy/summary")) return Promise.resolve(summary);
+    if (path.includes("/tcg/shadow-accuracy/posts/job-1")) return Promise.resolve(detail);
+    if (path.includes("/tcg/shadow-accuracy/posts/job-2")) return Promise.reject(new Error("boom"));
+    return Promise.resolve({ ...posts, items: [posts.items[0], second], total: 2 });
+  });
+  render(<ShadowAccuracyPanel />);
+  fireEvent.click(await screen.findByText("Post comparison"));
+  const table = await screen.findByRole("table");
+  fireEvent.click(await within(table).findByText("Supplier A"));
+  await screen.findByText("Product 1 sold out");
+  fireEvent.click(within(table).getByText("Supplier B"));
+  await screen.findByRole("alert");
+  expect(screen.queryByText("Product 1 sold out")).toBeNull();
+});

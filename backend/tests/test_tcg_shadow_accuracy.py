@@ -168,3 +168,31 @@ async def test_sql_is_read_only():
         assert head.startswith("WITH")
         for word in ("INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER ", "TRUNCATE "):
             assert word not in sql.upper()
+
+
+async def test_logged_in_non_super_admin_gets_403():
+    from types import SimpleNamespace
+
+    from app.auth.dependencies import get_current_user
+    from app.main import app
+
+    app.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=2, is_super_admin=False)
+    try:
+        for path in (
+            "/api/v1/tcg/shadow-accuracy/summary",
+            "/api/v1/tcg/shadow-accuracy/posts",
+            f"/api/v1/tcg/shadow-accuracy/posts/{_JOB_ID}",
+        ):
+            assert (await _get(path)).status_code == 403, path
+    finally:
+        app.dependency_overrides.pop(get_current_user, None)
+
+
+async def test_posts_sql_keeps_only_the_latest_run_per_job():
+    from app.services.shadow_accuracy_signals import LATEST_RUN_PER_JOB_SQL
+    from app.services.tcg_shadow_accuracy_svc import _RUN_SQL, posts_query
+
+    sql, _ = posts_query(days=0, supplier_id=None, needs_review=None, signal=None, offset=0, limit=20)
+    assert LATEST_RUN_PER_JOB_SQL in sql
+    # detail は同じ並び（started_at 降順、同時刻は id 降順）で最新 run を選ぶ
+    assert "ORDER BY run.started_at DESC, run.id DESC" in _RUN_SQL

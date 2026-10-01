@@ -251,3 +251,31 @@ async def test_detail_of_unknown_job_is_none(seeded):
         seeded, lambda db: fetch_post_detail(db, "00000000-0000-0000-0000-000000000000")
     )
     assert missing is None
+
+
+async def test_posts_has_one_row_per_job_using_the_latest_run(seeded, pg):  # noqa: F811
+    from app.services.tcg_shadow_accuracy_svc import fetch_post_detail, fetch_posts
+
+    connection, _, _ = pg
+    with connection.cursor() as cur:
+        # job2 に、より新しい 2 本目の run（別 engine_version）とブロック 2 件を足す
+        cur.execute(
+            "INSERT INTO public.extraction_shadow_runs (extraction_job_id, prompt_key, engine_version,"
+            " requested_model, status, started_at)"
+            " VALUES (%s, 'k', 'v8', 'm', 'completed', now() - interval '99 days') RETURNING id",
+            (seeded["job2"],),
+        )
+        newer_run = cur.fetchone()[0]
+        for index in range(2):
+            cur.execute(
+                "INSERT INTO public.extraction_shadow_results (run_id, block_index, line_start, line_end,"
+                " match_status, needs_review) VALUES (%s, %s, 1, 1, 'unmatched', TRUE)",
+                (newer_run, index),
+            )
+    posts = await _with_db(seeded, lambda db: fetch_posts(db, days=0, supplier_id=None))
+    job_ids = [p["job_id"] for p in posts["items"]]
+    assert len(job_ids) == len(set(job_ids)) == 2 and posts["total"] == 2
+    row = next(p for p in posts["items"] if p["job_id"] == seeded["job2"])
+    detail = await _with_db(seeded, lambda db: fetch_post_detail(db, seeded["job2"]))
+    assert row["run_id"] == str(newer_run) == detail["run"]["id"]
+    assert row["blocks"] == len(detail["blocks"]) == 2
