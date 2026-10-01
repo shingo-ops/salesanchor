@@ -1,6 +1,6 @@
 # 実装カード ①：async の処理の中で、同期処理がイベントループを塞いでいる箇所を、スレッドに逃がす
 
-- 設計：`docs/handoff/server-resource-optimization/design-20261001.md` §2・§4 便①（PR #3909）
+- 設計：設計 PR #3909 の design-20261001.md（server-resource-optimization フォルダ）の §2 と §4 便①。#3909 は main にまだマージされていない（草案）。
 - 調査の根拠：Sonnet の静的調査（origin/main、2026-10-01）。すべて file:line で確認済み。
 - 目的：backend を workers=1（ADR-081）に戻す前提として、1つの要求の待ちが、ほかの全要求と SSE を止めないようにする。
 - 変更の種類：backend のコードとテストのみ。migrations、compose、Dockerfile、deploy.yml、フロントエンドは変更しない。
@@ -53,7 +53,7 @@
   - e1：`get_events`（`_get_service` を AsyncMock にし、`get_calendar_id` も差し替える。`execute` を sleep に差し替える）
   - f1：`upload_pdf`（`_get_drive_service` を差し替え、`execute` を sleep に差し替える）
   - g3：`handle_webhook_notification`。DB のモックが30行を超える場合は除外し、報告で「未テスト」と明記する。
-- 残りの b、d、e2〜e6、f2〜f4、g1〜g2、h、i：既存のテスト（`backend/tests/test_google_calendar.py`、`test_google_drive_oauth.py`、`test_tcg_distribution.py`、`test_message_image_send.py`、`test_invoices.py`、`test_po_mailer.py`、`test_po_renderer.py`、`test_paypal_invoicing.py`、`test_integrations.py`）がすべて緑であることで確認する。
+- 残りの b、d、e2〜e6、f2〜f4、g1〜g2、h、i：既存のテスト（`backend/tests/test_google_calendar.py`、`backend/tests/test_google_drive_oauth.py`、`backend/tests/test_tcg_distribution.py`、`backend/tests/test_message_image_send.py`、`backend/tests/test_invoices.py`、`backend/tests/test_po_mailer.py`、`backend/tests/test_po_renderer.py`、`backend/tests/test_paypal_invoicing.py`、`backend/tests/test_integrations.py`）がすべて緑であることで確認する。
   - 新しい非ブロッキングのテストを、モック30行以内で書けるものは追加してよい。
 
 ## 受入条件（○×）
@@ -64,6 +64,15 @@
 | backend の既存テストが全件緑 | CI の Backend Tests が success |
 | lint | CI の ruff と bandit が success |
 | 範囲外のファイルを触っていない | `git diff --name-only origin/main...HEAD` が、上の対象ファイル、新しいテスト、このカードのファイルだけ |
+
+## 外部・過去事例の参照と我々への応用
+- 公式の仕様：FastAPI は、`async def` のエンドポイントをイベントループ上で直接実行する。同期の処理は `run_in_threadpool` で逃がす（このリポジトリの既存例は `backend/app/routers/invoices.py:880` と `backend/app/routers/integrations.py`）。Python 標準の `asyncio.to_thread` も同じ目的のもの（既存例は `backend/app/routers/shipping.py:340`）。
+- 社内の過去事例：このリポジトリの shipping、integrations、invoices（の一部）で、既に同じ対処をしている。今回はその書き方を、残りの箇所に揃えるもの。
+- 外部の一般事例は使わない。この修正の効果は、新しいテスト（ループが塞がれないこと）で直接確かめる。
+
+## 維持の仕組み
+- 守り手: CI の Backend Tests（`backend/tests/test_event_loop_nonblocking.py`）。対象の5か所が再び同期呼び出しに戻ると、テストが赤になる。
+- 新しく同期の処理を足すとき：既存の書き方（`asyncio.to_thread` / `run_in_threadpool`）に合わせる。強制する lint は今回は追加しない（範囲外）。
 
 ## 戻し方
 - PR を revert する（コードだけの変更で、データには触れない）。
