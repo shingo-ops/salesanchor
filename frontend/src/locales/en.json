@@ -4545,6 +4545,10 @@
           "outputLabel": "Output Tokens",
           "successRateLabel": "Success Rate (LINE Extraction)",
           "errorCountLabel": "Error Count (LINE Extraction)"
+        },
+        "fx": {
+          "note": "Converted at 1 USD = ¥{{rate}} (as of {{fetchedAt}}. Past days are also calculated using this rate.)",
+          "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
         }
       },
       "costSectionTitle": "API Cost",

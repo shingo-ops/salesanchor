@@ -4545,6 +4545,10 @@
           "outputLabel": "出力トークン",
           "successRateLabel": "成功率（LINE抽出）",
           "errorCountLabel": "エラー件数（LINE抽出）"
+        },
+        "fx": {
+          "note": "1ドル＝{{rate}}円（{{fetchedAt}} 時点のレートで換算。過去の日も同じレートで計算しています）",
+          "fallbackNote": "為替レートを取得できないため、ドルで表示しています"
         }
       },
       "costSectionTitle": "API コスト",
