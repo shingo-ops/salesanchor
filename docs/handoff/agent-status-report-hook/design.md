@@ -1,6 +1,10 @@
 # design: サブエージェント完了報告ラベル強制フック
 
-参照: recon.md（同ディレクトリ）／PO決定は recon.md 冒頭に逐語。既存 ADR: 該当なし（recon.md 記載）。
+**対象ADR**: ADR-040（Claude Code 運用ガードレール。専用ADRは未起案＝関連ADRとして参照）  
+**recon**: docs/handoff/agent-status-report-hook/recon.md  
+**日付**: 2026-10-01
+
+PO決定は recon.md 冒頭に逐語。
 
 ## Before / After
 - Before: サブエージェントは「Waiting for CI.」のような文面で終了でき、親は止まったと気づけない。
@@ -40,7 +44,7 @@
 | SubagentHandback 経由の報告が誤ブロックされない | — | 未確認: このテストでは SubagentHandback 経路は発火しなかった（ログに PreToolUse 行なし）。実装は安全側（transcript 照合・3回で解放） |
 | TeammateIdle | — | 未確認: 発火せず。実装はログのみ・常に許可 |
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 Claude Code 公式 hooks ドキュメントの Stop/SubagentStop 品質ゲートの例（TeammateIdle の build artifact チェック、hooks.md:2680-2690）と同型。
 
 ## リスク
@@ -54,5 +58,6 @@ Claude Code 公式 hooks ドキュメントの Stop/SubagentStop 品質ゲート
 .claude/settings.json から追加した3エントリを削除（スクリプトは残しても無害）。git revert でも可。
 
 ## 維持の仕組み
+守り手: .claude/hooks/require-status-label.sh
 - 全呼び出しが hook-test.log に残るので、ブロック率・cap 解放・error を定期的に grep できる。
 - 実地テストは run-hook-test.sh を再実行するだけ（Claude Code 更新後の再確認に使う）。
