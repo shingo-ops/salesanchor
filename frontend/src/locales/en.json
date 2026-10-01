@@ -1975,12 +1975,10 @@
     "showSidebar": "Show sidebar",
     "status_active": "Active",
     "status_inactive": "Inactive",
-    "staffCodeLabel": "Staff code (auto-generated EMP-00001 if blank)",
     "surnameKana": "Surname (Kana)",
     "givenNameKana": "Given name (Kana)",
     "status_pending": "Pending",
     "fullName": "Full Name",
-    "staffCodePlaceholder": "e.g., EMP-00001",
     "subtitle": "Manage staff accounts and UI preferences."
   },
   "teams": {
