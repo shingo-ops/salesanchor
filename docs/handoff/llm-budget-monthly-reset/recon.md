@@ -73,7 +73,7 @@ async with db_factory() as session:
 
 ### 3. 未呼び出し: message_translator.py（`origin/main` 基準・修正前）
 
-`git grep -n "reset_monthly_if_needed\|check_budget(" origin/main -- backend/app` の結果、`reset_monthly_if_needed` を呼んでいるのは `inventory_parser.py` のみ。`message_translator.py` は `check_budget` のみを3箇所で呼ぶ（`origin/main` 時点の行番号）:
+`git grep -n "reset_monthly_if_needed\|check_budget(" origin/main -- backend/app` の結果、`reset_monthly_if_needed` を呼んでいるのは `backend/app/services/inventory_parser.py` のみ。`backend/app/services/message_translator.py` は `check_budget` のみを3箇所で呼ぶ（`origin/main` 時点の行番号）:
 - `backend/app/services/message_translator.py:527`（`origin/main`） — `translate_inbound()` 初回呼び出し前
 - `backend/app/services/message_translator.py:550`（`origin/main`） — `translate_inbound()` エスカレーション前
 - `backend/app/services/message_translator.py:678`（`origin/main`） — `generate_outbound_draft()` 呼び出し前
@@ -88,7 +88,7 @@ async with db_factory() as session:
 - `backend/app/tasks/translation.py:85, 219` → `ensure_inbound_translations()` → `translate_inbound()`
 - `backend/app/routers/translation.py:142` → `generate_outbound_draft()`
 
-いずれも `translate_inbound` / `generate_outbound_draft` に渡す `db` セッションを関数内部で `commit()` しており、`reset_monthly_if_needed` を同じ関数内で呼べば `inventory_parser.py` と同じ「reset → check、同一トランザクションでまとめてコミット」というパターンを再現できる。
+いずれも `translate_inbound` / `generate_outbound_draft` に渡す `db` セッションを関数内部で `commit()` しており、`reset_monthly_if_needed` を同じ関数内で呼べば `backend/app/services/inventory_parser.py` と同じ「reset → check、同一トランザクションでまとめてコミット」というパターンを再現できる。
 
 ### 4. 本番データ（read-only、2026-10-02 取得）
 
@@ -105,5 +105,5 @@ ssh -i ~/.ssh/manual-only/id_ed25519 -o BatchMode=yes ubuntu@49.212.137.46 'dock
 
 ## 判断
 
-- `reset_monthly_if_needed` は呼び出し側トランザクション内で `UPDATE` するだけで `commit()` しない設計のため、`message_translator.py` の各エントリポイント冒頭（`check_budget` 直前）に追加しても、既存の `await db.commit()`（`translate_inbound` 末尾・`generate_outbound_draft` 末尾）でまとめてコミットされる。`inventory_parser.py` と同じ「reset → check、まとめてコミット」のパターンが成立する。新規コミットの追加は不要かつ行わない。
-- ADR-072（テナントスキーマ prefix 強制）の `reset_tenant_context()` 必須ルールは write endpoint の `db.commit()` 直後が対象。本変更は `tenant_llm_budgets`（`public` スキーマ、テナント非分離の共有テーブル）への `UPDATE` のみで、`reset_tenant_context` の対象になる tenant-prefixed write ではない（`inventory_parser.py` の既存呼び出しも同様に `reset_tenant_context` を伴っていない）。ブロッカーなし。
+- `reset_monthly_if_needed` は呼び出し側トランザクション内で `UPDATE` するだけで `commit()` しない設計のため、`backend/app/services/message_translator.py` の各エントリポイント冒頭（`check_budget` 直前）に追加しても、既存の `await db.commit()`（`translate_inbound` 末尾・`generate_outbound_draft` 末尾）でまとめてコミットされる。`backend/app/services/inventory_parser.py` と同じ「reset → check、まとめてコミット」のパターンが成立する。新規コミットの追加は不要かつ行わない。
+- ADR-072（テナントスキーマ prefix 強制）の `reset_tenant_context()` 必須ルールは write endpoint の `db.commit()` 直後が対象。本変更は `tenant_llm_budgets`（`public` スキーマ、テナント非分離の共有テーブル）への `UPDATE` のみで、`reset_tenant_context` の対象になる tenant-prefixed write ではない（`backend/app/services/inventory_parser.py` の既存呼び出しも同様に `reset_tenant_context` を伴っていない）。ブロッカーなし。

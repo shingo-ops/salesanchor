@@ -4,7 +4,7 @@
 
 `public.tenant_llm_budgets.current_month_usd`（月次 LLM 利用額の累積）は `reset_monthly_if_needed()`
 （`backend/app/services/llm_budget.py:363-398`）が呼ばれたときだけ月初に 0 リセットされる。この関数の
-本番唯一の呼び出し元は `inventory_parser.py:961`（在庫解析フロー）のみで、`message_translator.py`
+本番唯一の呼び出し元は `backend/app/services/inventory_parser.py:961`（在庫解析フロー）のみで、`backend/app/services/message_translator.py`
 （翻訳フロー、ADR-110-sa-translation-subsystem）は `check_budget()` のみを呼び、`reset_monthly_if_needed()`
 を一度も呼んでいなかった（`docs/handoff/llm-budget-monthly-reset/recon.md` §3）。
 
@@ -17,7 +17,7 @@ tenant 4 / tenant 6 とも `last_reset_at = 2026-05-22` のまま 5 ヶ月間更
 ## 変更
 
 `backend/app/services/message_translator.py` の2つのエントリポイントで、既存の `check_budget()` 呼び出しの
-直前に `reset_monthly_if_needed()` を追加した。`inventory_parser.py:959-966` の「reset → check、同一トランザクションでまとめてコミット」の順序をそのまま踏襲している。
+直前に `reset_monthly_if_needed()` を追加した。`backend/app/services/inventory_parser.py:959-966` の「reset → check、同一トランザクションでまとめてコミット」の順序をそのまま踏襲している。
 
 - `backend/app/services/message_translator.py:38` — import に `reset_monthly_if_needed` を追加
 - `backend/app/services/message_translator.py:528` — `translate_inbound()` 冒頭、初回 `check_budget()`（`:529`）の直前
@@ -30,9 +30,9 @@ tenant 4 / tenant 6 とも `last_reset_at = 2026-05-22` のまま 5 ヶ月間更
 - DB スキーマ・マイグレーション変更なし
 - `translate_inbound()` のエスカレーション時の 2 回目の `check_budget()`（`:552`）には `reset_monthly_if_needed()` を追加しない —
   同一リクエスト内で直前に実行済みのため二重呼び出しは不要（`reset_monthly_if_needed` 自体は冪等だが、1リクエスト1回で十分という inventory_parser の設計と揃える）
-- `reset_monthly_if_needed()` 呼び出しを `try/except` で包むかどうか: `inventory_parser.py` は
+- `reset_monthly_if_needed()` 呼び出しを `try/except` で包むかどうか: `backend/app/services/inventory_parser.py` は
   例外を握りつぶして解析を止めない設計（`:959-963` のコメント「budget エラーで解析を止めない」）だが、
-  本変更ではラップしていない。`message_translator.py` は元々 `check_budget()` やその他の DB 呼び出しを
+  本変更ではラップしていない。`backend/app/services/message_translator.py` は元々 `check_budget()` やその他の DB 呼び出しを
   個別に `try/except` していないスタイルであり、例外発生時に処理が止まる挙動は既存の `check_budget()` /
   `record_cost()` と同じ扱いになる。挙動差分として明記する（下記リスク参照）。
 - コミット追加なし: `reset_monthly_if_needed()` 自体は `db.execute()` のみで commit しない。
@@ -55,9 +55,9 @@ tenant 4 / tenant 6 とも `last_reset_at = 2026-05-22` のまま 5 ヶ月間更
 （`TestResetMonthlyIfNeeded`、`test_previous_month_triggers_reset` 等）に存在し、`reset_monthly_if_needed()`
 本体は無変更のため新規追加不要と判断した。
 
-## 外部事例・過去事例
+## 外部・過去事例
 
-該当なし。理由: 本変更は社内の2つの類似関数（`inventory_parser.py` の既存パターン）を
+該当なし。理由: 本変更は社内の2つの類似関数（`backend/app/services/inventory_parser.py` の既存パターン）を
 もう一方のモジュールに揃えるだけの社内整合性修正であり、外部ライブラリ・外部サービスの仕様に
 依存しない。Context7 / GitHub 検索の対象となる新規ライブラリ導入・API 仕様確認は発生しない。
 
@@ -67,10 +67,10 @@ tenant 4 / tenant 6 とも `last_reset_at = 2026-05-22` のまま 5 ヶ月間更
 |---|---|
 | `reset_monthly_if_needed()` が `check_budget()` より前に呼ばれる（`translate_inbound` / `generate_outbound_draft` 両方） | `backend/tests/test_message_translator.py` の `call_order` assert（`test_cache_miss_calls_gemini_and_saves`, `test_outbound_uses_send_model`）。pytest green |
 | 既存の budget 超過・NO_BUDGET_ROW 時の例外挙動に変更がない | `test_budget_exceeded_raises_error` / `test_no_budget_row_raises_error` / `test_outbound_budget_exceeded_raises` が green のまま |
-| `llm_budget.py` 本体の reset ロジックは無変更 | `git diff origin/main -- backend/app/services/llm_budget.py` が空 |
+| `backend/app/services/llm_budget.py` 本体の reset ロジックは無変更 | `git diff origin/main -- backend/app/services/llm_budget.py` が空 |
 | 反映後に翻訳が1回呼ばれたテナントの `last_reset_at` が当月初以降・`current_month_usd` が当月分のみ | デプロイ後、該当テナントで翻訳実行 → 本番 read-only SELECT で `last_reset_at >= 当月1日UTC` かつ `current_month_usd` が今回分と整合することを確認（本タスクでは未実施・デプロイ後の確認項目として記録） |
 | ruff / pytest に新規違反がない | `ruff check backend/app/services/message_translator.py`（クリーン）。`backend/tests/test_message_translator.py` の3件の I001/F401 は `origin/main` 時点から存在する既存違反で本変更による新規発生ではないことを `/tmp` 保存の `origin/main` 版との diff で確認済み |
-| condition-vocab gate に影響しない | `scripts/check-condition-vocab.js` の `CODE_FILES` は `inventory_parser.py` / `inventory_parser_llm.py` / `ParseReviewPage.tsx` のみで `message_translator.py` を含まない（目視確認） |
+| condition-vocab gate に影響しない | `scripts/check-condition-vocab.js` の `CODE_FILES` は `backend/app/services/inventory_parser.py` / `backend/app/services/inventory_parser_llm.py` / `frontend/src/pages/super-admin/ParseReviewPage.tsx` のみで `backend/app/services/message_translator.py` を含まない（目視確認） |
 
 ## リスク
 
@@ -82,7 +82,7 @@ tenant 6 のように 5月以降蓄積していた `current_month_usd`（recon.m
 
 ## 維持の仕組み
 
-`inventory_parser.py` と `message_translator.py` の双方が `reset_monthly_if_needed()` を呼ぶようになったことで、
+`backend/app/services/inventory_parser.py` と `backend/app/services/message_translator.py` の双方が `reset_monthly_if_needed()` を呼ぶようになったことで、
 今後 LLM を呼ぶ新しいエントリポイントを追加する開発者は既存の2箇所をパターンとして参照しやすくなる。
 ただし「新しい LLM 呼び出し箇所で `reset_monthly_if_needed()` の呼び忘れ」を機械的に防ぐ CI チェックは存在しない。
 
@@ -94,7 +94,7 @@ tenant 6 のように 5月以降蓄積していた `current_month_usd`（recon.m
 
 ## ADR 参照
 
-- `docs/adr/ADR-110-sa-translation-subsystem.md` — 翻訳サブシステムの設計（`message_translator.py` の対象範囲）
+- `docs/adr/ADR-110-sa-translation-subsystem.md` — 翻訳サブシステムの設計（`backend/app/services/message_translator.py` の対象範囲）
 - `docs/adr/ADR-072-tenant-schema-prefix-enforcement.md` — `reset_tenant_context()` 必須ルール。本変更は
   `public.tenant_llm_budgets`（テナント非分離の共有テーブル）への `UPDATE` のみで対象外（recon.md §「判断」参照）
 - `docs/adr/ADR-1004-llm-usage-ledger.md` — LLM 利用量台帳。本変更は `current_month_usd` の集計元である
