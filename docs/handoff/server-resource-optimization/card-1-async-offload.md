@@ -2,6 +2,8 @@
 
 - 設計：設計 PR #3909 の design-20261001.md（server-resource-optimization フォルダ）の §2 と §4 便①。#3909 は main にまだマージされていない（草案）。
 - 調査の根拠：Sonnet の静的調査（origin/main、2026-10-01）。すべて file:line で確認済み。
+  - このカードは、recon（現在地の確認）を兼ねる：`docs/handoff/server-resource-optimization/card-1-async-offload.md`。
+- 対象の ADR：`docs/adr/ADR-081-monitoring-vps-final-operational-design.md`（ADR-081-monitoring-vps-final-operational-design。backend は workers=1 を標準とする）。
 - 目的：backend を workers=1（ADR-081）に戻す前提として、1つの要求の待ちが、ほかの全要求と SSE を止めないようにする。
 - 変更の種類：backend のコードとテストのみ。migrations、compose、Dockerfile、deploy.yml、フロントエンドは変更しない。
 
