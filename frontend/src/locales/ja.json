@@ -4507,6 +4507,18 @@
           "translation_inbound": "受信翻訳",
           "translation_inbound_escalation": "受信翻訳（再判定）",
           "translation_outbound": "送信翻訳"
+        },
+        "health": {
+          "title": "概要（LINE抽出）",
+          "note": "成功率は完了と失敗の合計に対する完了の割合です（処理中は含みません）。翻訳は失敗の記録がないため含みません。",
+          "requestsChartTitle": "リクエスト数と成功率",
+          "errorsChartTitle": "エラー数（種類別）",
+          "attemptsLabel": "リクエスト数",
+          "successRateLabel": "成功率",
+          "modelTrendTitle": "モデル別",
+          "inputTokensChartTitle": "入力トークン",
+          "outputTokensChartTitle": "出力トークン",
+          "requestsByModelChartTitle": "リクエスト数"
         }
       },
       "costSectionTitle": "API コスト",

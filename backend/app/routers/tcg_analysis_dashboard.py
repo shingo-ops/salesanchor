@@ -615,6 +615,29 @@ class LlmUsageMonthlyByPurposeItem(BaseModel):
     cost_usd: float | None
 
 
+class LlmUsageDailyRequestsItem(BaseModel):
+    date: str
+    attempts: int
+    completed: int
+    failed: int
+    success_rate: float | None
+
+
+class LlmUsageDailyErrorItem(BaseModel):
+    date: str
+    error_code: str
+    count: int
+
+
+class LlmUsageDailyByModelItem(BaseModel):
+    date: str
+    model: str
+    calls: int
+    prompt_tokens: int | None
+    output_tokens: int | None
+    cost_usd: float | None
+
+
 class LlmUsageResponse(BaseModel):
     total: LlmUsageTotal
     by_purpose: list[LlmUsageByPurposeItem]
@@ -622,6 +645,9 @@ class LlmUsageResponse(BaseModel):
     daily: list[LlmUsageDailyItem]
     daily_by_purpose: list[LlmUsageDailyByPurposeItem]
     monthly_by_purpose: list[LlmUsageMonthlyByPurposeItem]
+    daily_requests: list[LlmUsageDailyRequestsItem]
+    daily_errors: list[LlmUsageDailyErrorItem]
+    daily_by_model: list[LlmUsageDailyByModelItem]
 
 
 _LLM_USAGE_WHERE = "occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()"
@@ -753,6 +779,54 @@ async def get_llm_usage(
         ORDER BY DATE_TRUNC('month', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
     """), {"days": days})).mappings().all()
 
+    # --- daily_requests（Google AI Studio の「リクエスト数と成功率」相当） ---
+    # extraction_attempts.started_at が母集団。success_rate は完了/（完了+失敗）で、
+    # 処理中（in-flight）のフェーズは分母から除く（ドキュメントに明記）。
+    daily_requests_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COUNT(*) AS attempts,
+            COUNT(*) FILTER (WHERE phase = 'completed') AS completed,
+            COUNT(*) FILTER (WHERE phase = 'failed') AS failed
+        FROM {_TCG_SCHEMA}.extraction_attempts
+        WHERE started_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()
+        GROUP BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo')
+        ORDER BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # --- daily_errors（種類別。error_code が NULL の行は 'UNKNOWN' に丸める） ---
+    daily_errors_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            COALESCE(error_code, 'UNKNOWN') AS error_code,
+            COUNT(*) AS count
+        FROM {_TCG_SCHEMA}.extraction_attempts
+        WHERE started_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()
+          AND phase = 'failed'
+        GROUP BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo'), COALESCE(error_code, 'UNKNOWN')
+        ORDER BY DATE_TRUNC('day', started_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
+    # --- daily_by_model（モデル別の日次トークン・リクエスト数） ---
+    daily_by_model_rows = (await db.execute(text(f"""
+        SELECT
+            TO_CHAR(DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), 'YYYY-MM-DD') AS date,
+            model,
+            COUNT(*) AS calls,
+            SUM(prompt_tokens) AS prompt_tokens,
+            SUM(
+                CASE
+                    WHEN candidates_tokens IS NULL AND thoughts_tokens IS NULL THEN NULL
+                    ELSE COALESCE(candidates_tokens, 0) + COALESCE(thoughts_tokens, 0)
+                END
+            ) AS output_tokens,
+            SUM(cost_usd) AS cost_usd
+        FROM public.llm_usage_events
+        WHERE {_LLM_USAGE_WHERE}
+        GROUP BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo'), model
+        ORDER BY DATE_TRUNC('day', occurred_at AT TIME ZONE 'Asia/Tokyo') ASC
+    """), {"days": days})).mappings().all()
+
     return LlmUsageResponse(
         total=LlmUsageTotal(
             calls=int(total_row["calls"]) if total_row else 0,
@@ -818,6 +892,39 @@ async def get_llm_usage(
                 cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
             )
             for r in monthly_by_purpose_rows
+        ],
+        daily_requests=[
+            LlmUsageDailyRequestsItem(
+                date=str(r["date"]),
+                attempts=int(r["attempts"]),
+                completed=int(r["completed"]),
+                failed=int(r["failed"]),
+                success_rate=(
+                    float(r["completed"]) / float(r["completed"] + r["failed"])
+                    if (r["completed"] + r["failed"]) > 0
+                    else None
+                ),
+            )
+            for r in daily_requests_rows
+        ],
+        daily_errors=[
+            LlmUsageDailyErrorItem(
+                date=str(r["date"]),
+                error_code=str(r["error_code"]),
+                count=int(r["count"]),
+            )
+            for r in daily_errors_rows
+        ],
+        daily_by_model=[
+            LlmUsageDailyByModelItem(
+                date=str(r["date"]),
+                model=r["model"],
+                calls=int(r["calls"]),
+                prompt_tokens=r["prompt_tokens"],
+                output_tokens=r["output_tokens"],
+                cost_usd=float(r["cost_usd"]) if r["cost_usd"] is not None else None,
+            )
+            for r in daily_by_model_rows
         ],
     )
 
