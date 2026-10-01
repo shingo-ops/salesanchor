@@ -1975,12 +1975,10 @@
     "showSidebar": "サイドバーを表示",
     "status_active": "有効",
     "status_inactive": "無効",
-    "staffCodeLabel": "スタッフコード（空欄なら自動採番 EMP-00001 形式）",
     "surnameKana": "苗字ふりがな",
     "givenNameKana": "名前ふりがな",
     "status_pending": "保留",
     "fullName": "氏名",
-    "staffCodePlaceholder": "例: EMP-00001",
     "subtitle": "スタッフ情報とUI設定を管理します。"
   },
   "teams": {

@@ -70,7 +70,6 @@ const emptyPrefs: StaffUIPreferences = {
 };
 
 type CreateFormState = {
-  staff_code: string;
   surname_jp: string;
   given_name_jp: string;
   surname_kana: string;
@@ -86,7 +85,7 @@ type CreateFormState = {
 };
 
 const emptyCreateForm: CreateFormState = {
-  staff_code: "", surname_jp: "", given_name_jp: "",
+  surname_jp: "", given_name_jp: "",
   surname_kana: "", given_name_kana: "", surname_en: "", given_name_en: "",
   primary_email: "", discord_user_id: "", role_id: "", status: "active",
   firebase_uid: "", ui_preferences: { ...emptyPrefs },
@@ -168,7 +167,6 @@ export default function StaffPage() {
       firebase_uid: toNull(createForm.firebase_uid),
       ui_preferences: createForm.ui_preferences,
     };
-    if (createForm.staff_code.trim()) payload.staff_code = createForm.staff_code.trim();
     try {
       await api.post("/staff", payload);
       setShowCreate(false);
@@ -236,10 +234,6 @@ export default function StaffPage() {
         size="md"
       >
         <form onSubmit={handleCreateSubmit}>
-          <div className="form-group">
-            <label>{t("staff.staffCodeLabel")}</label>
-            <input value={createForm.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setCreateForm({ ...createForm, staff_code: e.target.value })} />
-          </div>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
             <input required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
           </div>
