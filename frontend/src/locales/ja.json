@@ -264,7 +264,6 @@
     "superAdminTcgSupplierQuality": "解析精度管理",
     "superAdminTcgDistribution": "配信先管理",
     "superAdminAnalysisRules": "LINE解析",
-    "superAdminNeedsReview": "要確認一覧",
     "account": "アカウント",
     "openUserMenu": "ユーザーメニューを開く",
     "openMenu": "メニューを開く",
@@ -4320,7 +4319,6 @@
     },
     "needsReview": {
       "title": "要確認",
-      "comingSoon": "準備中",
       "count": "{{count}}件"
     },
     "dashboard": {
@@ -4479,10 +4477,6 @@
       "usage": {
         "note": "Gemini を呼ぶたびの使用量（台帳 llm_usage_events）。考える量は Google が返したときだけ記録されます。応答が返らず失敗した呼び出しは含みません。",
         "notReported": "記録なし",
-        "metricCost": "費用合計",
-        "metricCalls": "応答が返った回数",
-        "metricInput": "入力トークン",
-        "metricOutput": "出力トークン",
         "byPurposeTitle": "使いみち別",
         "dailyTitle": "日別",
         "byModelTitle": "モデル別",
@@ -4519,6 +4513,14 @@
           "inputTokensChartTitle": "入力トークン",
           "outputTokensChartTitle": "出力トークン",
           "requestsByModelChartTitle": "リクエスト数"
+        },
+        "summary": {
+          "costLabel": "費用合計",
+          "callsLabel": "応答が返った回数",
+          "inputLabel": "入力トークン",
+          "outputLabel": "出力トークン",
+          "successRateLabel": "成功率（LINE抽出）",
+          "errorCountLabel": "エラー件数（LINE抽出）"
         }
       },
       "costSectionTitle": "API コスト",

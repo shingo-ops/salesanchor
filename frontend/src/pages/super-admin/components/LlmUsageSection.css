@@ -1,0 +1,59 @@
+/* ──────────────────────────────────────────────────────────────────────────────
+   LlmUsageSection — サマリーカード（ADR-067: 全値トークン参照）
+   Google AI Studio の使用状況ページを見せ方の参考にした集約カード。
+────────────────────────────────────────────────────────────────────────────── */
+
+.llm-usage-summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+.llm-usage-summary__hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.llm-usage-summary__hero-label {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.llm-usage-summary__hero-value {
+  font-size: var(--font-display);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-primary);
+}
+
+.llm-usage-summary__stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-4);
+}
+
+.llm-usage-summary__stat {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.llm-usage-summary__stat-label {
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.llm-usage-summary__stat-value {
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+   チャート: Legend を小さめに揃える（下部・円アイコン）
+────────────────────────────────────────────────────────────────────────────── */
+
+.llm-usage-chart .recharts-default-legend {
+  font-size: var(--font-xs);
+}
