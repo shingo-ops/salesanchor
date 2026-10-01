@@ -1,0 +1,301 @@
+"""Discord への担当者名義送信（webhook 経由・ADR-159 便B）。
+
+Bot の通常送信は表示名・アイコンを変えられないが、webhook 実行は username / avatar_url を
+メッセージごとに上書きできる。チャンネルごとに webhook を 1 本作成して保管し、返信時にそれを使う。
+
+### 方針
+
+- Bot 名義へのフォールバックは一切しない。失敗したら例外を投げて送らない（PO 決定 2026-10-01）。
+- webhook token は services/encryption.py（Fernet）で暗号化して保存する。ログ・例外文に token / 実行 URL を出さない。
+- アイコン未登録の場合は avatar_url を省略する（Discord 標準アイコンと同じ表示）。
+- webhook が消えていた（404/401）場合は保管行を消して 1 回だけ作り直し、1 回だけ再送する。
+- 429 / 5xx / ネットワークエラーは 1 回だけ再試行する（retry_after が小さい場合のみ待つ）。
+"""
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import os
+import re
+from dataclasses import dataclass
+from typing import Any
+
+import httpx
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.auth.dependencies import reset_tenant_context, tenant_table_ref
+from app.services import encryption
+
+logger = logging.getLogger(__name__)
+
+
+class _RedactWebhookTokenFilter(logging.Filter):
+    """httpx 自身の INFO ログ（"HTTP Request: POST <url>"）は実行 URL＝token を含むため伏せる。"""
+
+    _PATTERN = re.compile(r"(/webhooks/[^/\s]+/)[^/?\s\"]+")
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        message = record.getMessage()
+        if "/webhooks/" in message:
+            record.msg = self._PATTERN.sub(r"\1***", message)
+            record.args = ()
+        return True
+
+
+# httpx / httpcore のログ全体に適用する（実行 URL に token が含まれるため）
+for _name in ("httpx", "httpcore"):
+    logging.getLogger(_name).addFilter(_RedactWebhookTokenFilter())
+
+_DISCORD_API_BASE = "https://discord.com/api/v10"
+_TIMEOUT_SEC = 10.0
+_WEBHOOK_NAME = "Sales Anchor"
+_USERNAME_MAX_LEN = 80
+# Discord が username に使えないとする語（大文字小文字を区別しない）
+_FORBIDDEN_USERNAME_WORDS = ("discord", "clyde")
+# 429 の retry_after がこれを超える場合は待たずに失敗扱いにする（画面を長く止めない）
+_MAX_RETRY_AFTER_SEC = 5.0
+_RETRY_DELAY_SEC = 1.0
+_GONE_STATUSES = (401, 404)
+
+
+class DiscordWebhookError(Exception):
+    """webhook 送信系エラーの基底。"""
+
+
+class StaffNameInvalidError(DiscordWebhookError):
+    """担当者の英語名が Discord の表示名として使えない。"""
+
+
+class WebhookPermissionError(DiscordWebhookError):
+    """Bot に Manage Webhooks 権限が無く webhook を作成できない。"""
+
+
+class WebhookSendError(DiscordWebhookError):
+    """再試行後も送信できなかった。"""
+
+
+@dataclass(frozen=True)
+class OutboundFile:
+    filename: str
+    data: bytes
+    content_type: str
+
+
+@dataclass(frozen=True)
+class _Webhook:
+    webhook_id: str
+    token: str
+
+
+def validate_username(given_name_en: str) -> str:
+    """表示名（英語名の「名」）を検証して返す。1〜80 文字・discord / clyde を含まない。"""
+    name = (given_name_en or "").strip()
+    if not name or len(name) > _USERNAME_MAX_LEN:
+        raise StaffNameInvalidError("length")
+    lowered = name.lower()
+    if any(word in lowered for word in _FORBIDDEN_USERNAME_WORDS):
+        raise StaffNameInvalidError("forbidden_word")
+    return name
+
+
+def _bot_token() -> str:
+    token = os.environ.get("DISCORD_BOT_TOKEN") or ""
+    if not token:
+        logger.error("[discord_webhook] DISCORD_BOT_TOKEN が未設定")
+        raise WebhookSendError("bot_token_missing")
+    return token
+
+
+async def _load_webhook(db: AsyncSession, tenant_id: int, channel_id: str) -> _Webhook | None:
+    table = tenant_table_ref(db, tenant_id, "discord_channel_webhooks")
+    result = await db.execute(
+        text(
+            f"SELECT webhook_id, webhook_token_encrypted FROM {table} "
+            "WHERE channel_id = :channel_id AND tenant_id = :tenant_id"
+        ),
+        {"channel_id": channel_id, "tenant_id": tenant_id},
+    )
+    row = result.first()
+    if row is None:
+        return None
+    try:
+        return _Webhook(webhook_id=str(row[0]), token=encryption.decrypt(row[1]))
+    except encryption.EncryptionError:
+        # 復号できない行は使えない。消して作り直す（token は出さない）
+        logger.warning("[discord_webhook] 保管 token の復号に失敗 channel=%s", channel_id)
+        await _delete_webhook(db, tenant_id, channel_id)
+        return None
+
+
+async def _store_webhook(
+    db: AsyncSession, tenant_id: int, channel_id: str, webhook: _Webhook,
+) -> None:
+    table = tenant_table_ref(db, tenant_id, "discord_channel_webhooks")
+    await db.execute(
+        text(
+            f"INSERT INTO {table} (tenant_id, channel_id, webhook_id, webhook_token_encrypted) "
+            "VALUES (:tenant_id, :channel_id, :webhook_id, :token) "
+            "ON CONFLICT (channel_id) DO UPDATE SET "
+            "webhook_id = excluded.webhook_id, "
+            "webhook_token_encrypted = excluded.webhook_token_encrypted"
+        ),
+        {
+            "tenant_id": tenant_id,
+            "channel_id": channel_id,
+            "webhook_id": webhook.webhook_id,
+            "token": encryption.encrypt(webhook.token),
+        },
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+
+async def _delete_webhook(db: AsyncSession, tenant_id: int, channel_id: str) -> None:
+    table = tenant_table_ref(db, tenant_id, "discord_channel_webhooks")
+    await db.execute(
+        text(f"DELETE FROM {table} WHERE channel_id = :channel_id AND tenant_id = :tenant_id"),
+        {"channel_id": channel_id, "tenant_id": tenant_id},
+    )
+    await db.commit()
+    await reset_tenant_context(db, tenant_id)
+
+
+async def _retry_pause(response: httpx.Response | None) -> bool:
+    """再試行前の待機。待てない（retry_after が大きい）場合は False。"""
+    if response is not None and response.status_code == 429:
+        try:
+            retry_after = float(response.json().get("retry_after", 1.0))
+        except Exception:
+            retry_after = 1.0
+        if retry_after > _MAX_RETRY_AFTER_SEC:
+            return False
+        await asyncio.sleep(retry_after)
+        return True
+    await asyncio.sleep(_RETRY_DELAY_SEC)
+    return True
+
+
+async def _request_with_retry(
+    *, label: str, send: Any,
+) -> httpx.Response:
+    """429 / 5xx / ネットワークエラーのとき 1 回だけ再試行する。2 回目の結果をそのまま返す。
+
+    send は引数なしで httpx.Response を返す coroutine 関数。例外・URL は token を含み得るためログに出さない。
+    """
+    for attempt in (1, 2):
+        response: httpx.Response | None = None
+        try:
+            response = await send()
+        except httpx.RequestError as exc:
+            logger.warning("[discord_webhook] %s network error=%s attempt=%d", label, type(exc).__name__, attempt)
+            if attempt == 2:
+                raise WebhookSendError("network") from None
+            await _retry_pause(None)
+            continue
+        status = response.status_code
+        retryable = status == 429 or 500 <= status < 600
+        if not retryable or attempt == 2:
+            return response
+        logger.warning("[discord_webhook] %s status=%d attempt=%d", label, status, attempt)
+        if not await _retry_pause(response):
+            return response
+    raise WebhookSendError("unreachable")  # pragma: no cover
+
+
+async def _create_webhook(
+    db: AsyncSession, tenant_id: int, channel_id: str,
+) -> _Webhook:
+    """POST /channels/{id}/webhooks（avatar 指定なし）。作成して暗号化保管する。"""
+    bot_token = _bot_token()
+    url = f"{_DISCORD_API_BASE}/channels/{channel_id}/webhooks"
+    headers = {"Authorization": f"Bot {bot_token}"}
+
+    async def _send() -> httpx.Response:
+        async with httpx.AsyncClient(timeout=_TIMEOUT_SEC) as client:
+            return await client.post(url, json={"name": _WEBHOOK_NAME}, headers=headers)
+
+    response = await _request_with_retry(label=f"create channel={channel_id}", send=_send)
+    if response.status_code == 403:
+        logger.warning("[discord_webhook] webhook 作成が権限不足 channel=%s", channel_id)
+        raise WebhookPermissionError(channel_id)
+    if response.status_code not in (200, 201):
+        logger.error(
+            "[discord_webhook] webhook 作成失敗 channel=%s status=%d", channel_id, response.status_code,
+        )
+        raise WebhookSendError(f"create_status_{response.status_code}")
+    body = response.json()
+    webhook = _Webhook(webhook_id=str(body["id"]), token=str(body["token"]))
+    await _store_webhook(db, tenant_id, channel_id, webhook)
+    return webhook
+
+
+async def _execute_webhook(
+    webhook: _Webhook,
+    *,
+    content: str | None,
+    file: OutboundFile | None,
+    username: str,
+    avatar_url: str | None,
+) -> httpx.Response:
+    """POST /webhooks/{id}/{token}?wait=true。avatar_url が None なら省略する。"""
+    url = f"{_DISCORD_API_BASE}/webhooks/{webhook.webhook_id}/{webhook.token}"
+    payload: dict[str, Any] = {"username": username}
+    if avatar_url:
+        payload["avatar_url"] = avatar_url
+    if content is not None:
+        payload["content"] = content
+
+    async def _send() -> httpx.Response:
+        async with httpx.AsyncClient(timeout=_TIMEOUT_SEC) as client:
+            if file is None:
+                return await client.post(url, params={"wait": "true"}, json=payload)
+            return await client.post(
+                url,
+                params={"wait": "true"},
+                data={"payload_json": json.dumps(payload)},
+                files={"files[0]": (file.filename, file.data, file.content_type)},
+            )
+
+    return await _request_with_retry(label=f"execute webhook={webhook.webhook_id}", send=_send)
+
+
+async def send_as_staff(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    channel_id: str,
+    username: str,
+    avatar_url: str | None = None,
+    content: str | None = None,
+    file: OutboundFile | None = None,
+) -> str:
+    """担当者名義で送信し、Discord メッセージ ID を返す。
+
+    Raises:
+        StaffNameInvalidError: username が使えない
+        WebhookPermissionError: webhook 作成の権限が無い
+        WebhookSendError: 再試行後も送れなかった（Bot 名義では送らない）
+    """
+    name = validate_username(username)
+    webhook = await _load_webhook(db, tenant_id, channel_id)
+    recreated = False
+    while True:
+        if webhook is None:
+            webhook = await _create_webhook(db, tenant_id, channel_id)
+            recreated = True
+        response = await _execute_webhook(
+            webhook, content=content, file=file, username=name, avatar_url=avatar_url,
+        )
+        if response.status_code in (200, 201):
+            return str(response.json()["id"])
+        if response.status_code in _GONE_STATUSES and not recreated:
+            logger.warning("[discord_webhook] webhook 消失を検知 channel=%s → 作り直し", channel_id)
+            await _delete_webhook(db, tenant_id, channel_id)
+            webhook = None
+            continue
+        logger.error(
+            "[discord_webhook] 送信失敗 channel=%s status=%d", channel_id, response.status_code,
+        )
+        raise WebhookSendError(f"execute_status_{response.status_code}")

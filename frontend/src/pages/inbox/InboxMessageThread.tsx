@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useId } from "react";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
 import { INBOX_ACTION_ICONS, NAV_ICONS, PAGE_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 import { api } from "../../lib/api";
@@ -13,7 +14,10 @@ import { MessageReactionBadges } from "./MessageReactionBadges";
 import { useLongPressReveal } from "./useLongPressReveal";
 import { splitReactions } from "./reactionHeart";
 import { HEART_REACTION_EMOJI } from "./reactionEmojiPresets";
+import { Button } from "../../components/Button";
 import { IconToggleButton } from "../../components/IconToggleButton";
+import { usePermissions } from "../../hooks/usePermissions";
+import { DISCORD_CONFIG_PERMISSION, getDiscordSendErrorGuide } from "./discordSendError";
 import { toast } from "../../components/loading/Toast";
 
 interface Props {
@@ -77,6 +81,10 @@ export function InboxMessageThread({
   sendReaction, deleteReaction,
 }: Props) {
   const { t, i18n } = useTranslation();
+  const navigate = useNavigate();
+  const { hasPermission } = usePermissions();
+  // ADR-159: Discord 担当者名義送信の失敗は、文言＋行動ボタン（CTA）で案内する
+  const discordGuide = getDiscordSendErrorGuide(sendErrorReason, hasPermission(DISCORD_CONFIG_PERMISSION));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -669,17 +677,37 @@ export function InboxMessageThread({
       {/* 送信エリア */}
       <div className="inbox-send-area sticky-bottom-bar">
         {sendError && (
-          <div className="inbox-send-error" role="alert">
-            {sendErrorReason === "attachment_not_saved"
-              ? t("inbox.sendError.attachmentNotSaved")
-              : sendErrorReason === "window_closed"
-                ? t("inbox.sendError.windowClosed")
-                : sendErrorReason === "permission_denied"
-                ? t("inbox.sendError.permissionDenied")
-                : sendErrorReason === "rate_limited"
-                  ? t("inbox.sendError.rateLimited")
-                  : t("inbox.sendError.generic")}
-            {sendErrorCode != null && t("inbox.sendError.codeSuffix", { code: sendErrorCode })}
+          <div className={discordGuide?.cta ? "inbox-send-error inbox-send-error--with-cta" : "inbox-send-error"} role="alert">
+            <span>
+              {discordGuide
+                ? t(discordGuide.messageKey)
+                : sendErrorReason === "attachment_not_saved"
+                  ? t("inbox.sendError.attachmentNotSaved")
+                  : sendErrorReason === "window_closed"
+                    ? t("inbox.sendError.windowClosed")
+                    : sendErrorReason === "permission_denied"
+                      ? t("inbox.sendError.permissionDenied")
+                      : sendErrorReason === "rate_limited"
+                        ? t("inbox.sendError.rateLimited")
+                        : t("inbox.sendError.generic")}
+              {sendErrorCode != null && t("inbox.sendError.codeSuffix", { code: sendErrorCode })}
+            </span>
+            {discordGuide?.cta && (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                disabled={discordGuide.cta.kind === "retry" && sending}
+                onClick={() => {
+                  const cta = discordGuide.cta;
+                  if (!cta) return;
+                  if (cta.kind === "navigate") navigate(cta.to);
+                  else submitSend();
+                }}
+              >
+                {t(discordGuide.cta.labelKey)}
+              </Button>
+            )}
           </div>
         )}
         <div className="send-card">
