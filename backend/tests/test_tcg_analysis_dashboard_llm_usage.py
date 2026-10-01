@@ -94,6 +94,26 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
         "cost_usd": 0.002,
     }
 
+    daily_requests_row = {
+        "date": "2026-10-01",
+        "attempts": 5,
+        "completed": 3,
+        "failed": 1,
+    }
+    daily_errors_row = {
+        "date": "2026-10-01",
+        "error_code": "TIMEOUT",
+        "count": 1,
+    }
+    daily_by_model_row = {
+        "date": "2026-10-01",
+        "model": "gemini-3.1-flash-lite",
+        "calls": 3,
+        "prompt_tokens": 900,
+        "output_tokens": 300,
+        "cost_usd": 0.002,
+    }
+
     db = _mock_db_with_sequenced_results(
         [
             total_row,
@@ -102,6 +122,9 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
             [daily_row],
             [daily_by_purpose_row],
             [monthly_by_purpose_row],
+            [daily_requests_row],
+            [daily_errors_row],
+            [daily_by_model_row],
         ]
     )
 
@@ -138,12 +161,36 @@ async def test_llm_usage_reads_only_ledger_and_propagates_null():
     assert result.monthly_by_purpose[0].purpose == "line_extraction"
     assert result.monthly_by_purpose[0].calls == 3
 
-    # 6クエリすべてが llm_usage_events のみを参照し、extraction_attempts 等の旧列を読まない
-    assert len(db._executed_sql) == 6
-    for sql in db._executed_sql:
+    assert result.daily_requests[0].date == "2026-10-01"
+    assert result.daily_requests[0].attempts == 5
+    assert result.daily_requests[0].completed == 3
+    assert result.daily_requests[0].failed == 1
+    assert result.daily_requests[0].success_rate == pytest.approx(0.75)
+
+    assert result.daily_errors[0].date == "2026-10-01"
+    assert result.daily_errors[0].error_code == "TIMEOUT"
+    assert result.daily_errors[0].count == 1
+
+    assert result.daily_by_model[0].date == "2026-10-01"
+    assert result.daily_by_model[0].model == "gemini-3.1-flash-lite"
+    assert result.daily_by_model[0].prompt_tokens == 900
+    assert result.daily_by_model[0].output_tokens == 300
+
+    # 最初の6クエリ（既存のコスト系集計）は llm_usage_events のみを参照し、
+    # extraction_attempts 等の旧列を読まない（ADR-1004）。
+    original_sql = db._executed_sql[:6]
+    assert len(original_sql) == 6
+    for sql in original_sql:
         assert "llm_usage_events" in sql
         assert "extraction_attempts" not in sql
         assert "extraction_shadow_runs" not in sql
+
+    # 追加した daily_requests / daily_errors は extraction_attempts を参照し、
+    # daily_by_model は llm_usage_events を参照する（設計どおり）。
+    assert len(db._executed_sql) == 9
+    assert "extraction_attempts" in db._executed_sql[6]
+    assert "extraction_attempts" in db._executed_sql[7]
+    assert "llm_usage_events" in db._executed_sql[8]
 
 
 @pytest.mark.asyncio
@@ -160,7 +207,7 @@ async def test_llm_usage_all_null_when_no_rows():
         "computed_total_tokens": None,
         "total_mismatch_calls": 0,
     }
-    db = _mock_db_with_sequenced_results([empty_total, [], [], [], [], []])
+    db = _mock_db_with_sequenced_results([empty_total, [], [], [], [], [], [], [], []])
 
     result = await get_llm_usage(days=7, db=db, _admin=None)
 
@@ -174,6 +221,9 @@ async def test_llm_usage_all_null_when_no_rows():
     assert result.daily == []
     assert result.daily_by_purpose == []
     assert result.monthly_by_purpose == []
+    assert result.daily_requests == []
+    assert result.daily_errors == []
+    assert result.daily_by_model == []
 
 
 @pytest.mark.asyncio
@@ -190,13 +240,109 @@ async def test_llm_usage_mismatch_calls_counted_when_total_tokens_disagrees():
         "computed_total_tokens": 600,
         "total_mismatch_calls": 1,
     }
-    db = _mock_db_with_sequenced_results([total_row, [], [], [], [], []])
+    db = _mock_db_with_sequenced_results([total_row, [], [], [], [], [], [], [], []])
 
     result = await get_llm_usage(days=30, db=db, _admin=None)
 
     assert result.total.total_mismatch_calls == 1
     assert result.total.computed_total_tokens == 600
     assert result.total.total_tokens == 999
+
+
+@pytest.mark.asyncio
+async def test_daily_requests_success_rate_null_when_no_terminal_attempts():
+    """completed=0 かつ failed=0（全件が処理中）のとき success_rate は NULL のまま（0除算を推測しない）。"""
+    empty_total = {
+        "calls": 0,
+        "prompt_tokens": None,
+        "cached_content_tokens": None,
+        "candidates_tokens": None,
+        "thoughts_tokens": None,
+        "tool_use_prompt_tokens": None,
+        "total_tokens": None,
+        "cost_usd": None,
+        "computed_total_tokens": None,
+        "total_mismatch_calls": 0,
+    }
+    daily_requests_row = {
+        "date": "2026-10-01",
+        "attempts": 2,
+        "completed": 0,
+        "failed": 0,
+    }
+    db = _mock_db_with_sequenced_results(
+        [empty_total, [], [], [], [], [], [daily_requests_row], [], []]
+    )
+
+    result = await get_llm_usage(days=7, db=db, _admin=None)
+
+    assert result.daily_requests[0].attempts == 2
+    assert result.daily_requests[0].completed == 0
+    assert result.daily_requests[0].failed == 0
+    assert result.daily_requests[0].success_rate is None
+
+
+@pytest.mark.asyncio
+async def test_daily_errors_maps_null_error_code_to_unknown():
+    empty_total = {
+        "calls": 0,
+        "prompt_tokens": None,
+        "cached_content_tokens": None,
+        "candidates_tokens": None,
+        "thoughts_tokens": None,
+        "tool_use_prompt_tokens": None,
+        "total_tokens": None,
+        "cost_usd": None,
+        "computed_total_tokens": None,
+        "total_mismatch_calls": 0,
+    }
+    daily_errors_row = {
+        "date": "2026-10-01",
+        "error_code": "UNKNOWN",
+        "count": 1,
+    }
+    db = _mock_db_with_sequenced_results(
+        [empty_total, [], [], [], [], [], [], [daily_errors_row], []]
+    )
+
+    result = await get_llm_usage(days=7, db=db, _admin=None)
+
+    assert result.daily_errors[0].error_code == "UNKNOWN"
+    assert result.daily_errors[0].count == 1
+
+
+@pytest.mark.asyncio
+async def test_daily_by_model_output_tokens_null_when_all_null_in_group():
+    """candidates_tokens / thoughts_tokens が両方とも全行 NULL のグループは output_tokens も NULL
+    のまま（0 と推測しない。computed_total_tokens と同じパターン）。"""
+    empty_total = {
+        "calls": 0,
+        "prompt_tokens": None,
+        "cached_content_tokens": None,
+        "candidates_tokens": None,
+        "thoughts_tokens": None,
+        "tool_use_prompt_tokens": None,
+        "total_tokens": None,
+        "cost_usd": None,
+        "computed_total_tokens": None,
+        "total_mismatch_calls": 0,
+    }
+    daily_by_model_row = {
+        "date": "2026-10-01",
+        "model": "gemini-3.1-flash-lite",
+        "calls": 1,
+        "prompt_tokens": None,
+        "output_tokens": None,
+        "cost_usd": None,
+    }
+    db = _mock_db_with_sequenced_results(
+        [empty_total, [], [], [], [], [], [], [], [daily_by_model_row]]
+    )
+
+    result = await get_llm_usage(days=7, db=db, _admin=None)
+
+    assert result.daily_by_model[0].prompt_tokens is None
+    assert result.daily_by_model[0].output_tokens is None
 
 
 @pytest.mark.asyncio

@@ -4507,6 +4507,18 @@
           "translation_inbound": "Inbound Translation",
           "translation_inbound_escalation": "Inbound Translation (Escalation)",
           "translation_outbound": "Outbound Translation"
+        },
+        "health": {
+          "title": "Overview (LINE Extraction)",
+          "note": "Success rate is completed calls divided by completed + failed (in-progress calls are excluded). Translation is excluded because it has no failure records.",
+          "requestsChartTitle": "Requests & Success Rate",
+          "errorsChartTitle": "Errors by Type",
+          "attemptsLabel": "Requests",
+          "successRateLabel": "Success Rate",
+          "modelTrendTitle": "By Model",
+          "inputTokensChartTitle": "Input Tokens",
+          "outputTokensChartTitle": "Output Tokens",
+          "requestsByModelChartTitle": "Requests"
         }
       },
       "costSectionTitle": "API Cost",

@@ -66,6 +66,22 @@ const response = {
   monthly_by_purpose: [
     { month: "2026-10", purpose: "line_extraction", calls: 3, cost_usd: 0.0021 },
   ],
+  daily_requests: [
+    { date: "2026-10-01", attempts: 5, completed: 3, failed: 1, success_rate: 0.75 },
+  ],
+  daily_errors: [
+    { date: "2026-10-01", error_code: "TIMEOUT", count: 1 },
+  ],
+  daily_by_model: [
+    {
+      date: "2026-10-01",
+      model: "gemini-3.1-flash-lite",
+      calls: 3,
+      prompt_tokens: 900,
+      output_tokens: 300,
+      cost_usd: 0.0021,
+    },
+  ],
 };
 
 const view = () => render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
@@ -165,4 +181,34 @@ it("shows the empty state for the by-purpose charts when there is no data", asyn
   view();
   await screen.findByText("Daily Cost by Purpose");
   expect(screen.getAllByText("No data available").length).toBeGreaterThanOrEqual(2);
+});
+
+it("renders the requests & success rate chart and the errors-by-type chart", async () => {
+  view();
+  await screen.findByText("Overview (LINE Extraction)");
+  await screen.findByText("Requests & Success Rate");
+  await screen.findByText("Errors by Type");
+});
+
+it("shows the empty state for the errors chart when there are no errors", async () => {
+  vi.mocked(api.get).mockResolvedValue({
+    ...response,
+    daily_errors: [],
+  });
+  view();
+  await screen.findByText("Errors by Type");
+  expect(screen.getAllByText("No data available").length).toBeGreaterThan(0);
+});
+
+it("renders the per-model trend charts (input tokens / output tokens / requests)", async () => {
+  view();
+  await screen.findByText("Overview (LINE Extraction)");
+  expect(screen.getAllByText("Input Tokens").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("Output Tokens").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("gemini-3.1-flash-lite").length).toBeGreaterThan(0);
+});
+
+it("shows the success rate rounded to 1 decimal in the note (overview section)", async () => {
+  view();
+  await screen.findByText(/Success rate is completed calls divided by completed \+ failed/);
 });
