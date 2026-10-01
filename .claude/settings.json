@@ -54,6 +54,21 @@
           { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/stop-log-digest.sh\"", "timeout": 20 }
         ]
       }
+    ],
+    "SubagentStop": [
+      { "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/require-status-label.sh\"", "timeout": 10 }
+      ] }
+    ],
+    "TeammateIdle": [
+      { "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/require-status-label.sh\"", "timeout": 10 }
+      ] }
+    ],
+    "PreToolUse": [
+      { "matcher": "SubagentHandback", "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/require-status-label.sh\"", "timeout": 10 }
+      ] }
     ]
   }
 }
