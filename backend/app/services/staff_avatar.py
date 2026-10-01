@@ -78,6 +78,9 @@ def process_avatar(data: bytes) -> bytes:
     try:
         Image.MAX_IMAGE_PIXELS = AVATAR_MAX_PIXELS
         with Image.open(io.BytesIO(data)) as probe:
+            # 展開前にピクセル数を検査する（verify/load より先。Pillow の警告閾値に頼らない）
+            if probe.width * probe.height > AVATAR_MAX_PIXELS:
+                raise AvatarError(ERR_INVALID_TYPE)
             probe.verify()
         with Image.open(io.BytesIO(data)) as img:
             img.seek(0)  # アニメーション WebP/PNG は先頭フレームのみ使う

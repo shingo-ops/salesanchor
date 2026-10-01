@@ -13,6 +13,7 @@ import io
 from pathlib import Path
 
 import pytest
+from httpx import ASGITransport, AsyncClient
 from PIL import Image
 from pydantic import ValidationError
 from sqlalchemy import text
@@ -112,6 +113,14 @@ def test_process_avatar_rejects_oversize_and_garbage():
     assert fake_png.value.code == "AVATAR_INVALID_TYPE"
 
 
+def test_process_avatar_rejects_too_many_pixels_before_decoding(monkeypatch):
+    monkeypatch.setattr("app.services.staff_avatar.AVATAR_MAX_PIXELS", 100)  # 10x10 を超えると拒否
+
+    with pytest.raises(AvatarError) as too_many:
+        process_avatar(_make_image("PNG", (11, 10)))
+    assert too_many.value.code == "AVATAR_INVALID_TYPE"
+
+
 # ---------------------------------------------------------------- upload / delete
 
 @pytest.mark.asyncio
@@ -138,7 +147,8 @@ async def test_upload_then_public_get_returns_image_without_exif(client, db_sess
 
     assert pub.status_code == 200
     assert pub.headers["content-type"] == "image/webp"
-    assert pub.headers["cache-control"] == "public, max-age=86400"
+    assert pub.headers["cache-control"] == "public, max-age=3600"
+    assert pub.headers["x-content-type-options"] == "nosniff"
     assert EXIF_MARKER not in pub.content
     assert Image.open(io.BytesIO(pub.content)).size == (256, 256)
 
@@ -239,6 +249,20 @@ async def test_delete_is_idempotent_when_unset(client, db_session):
 
     assert res.status_code == 200
     assert res.json()["avatar_url"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("method", ["post", "delete"])
+async def test_upload_and_delete_require_authentication(monkeypatch, method):
+    from app.main import app
+
+    monkeypatch.setattr(app, "dependency_overrides", {})  # 認証モックを外した素のアプリで検証する
+    kwargs = {"files": {"image": ("a.png", _make_image("PNG"), "image/png")}} if method == "post" else {}
+
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as anon:
+        res = await getattr(anon, method)(API, **kwargs)
+
+    assert res.status_code in (401, 403)
 
 
 # ---------------------------------------------------------------- public route

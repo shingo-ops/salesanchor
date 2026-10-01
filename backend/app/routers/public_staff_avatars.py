@@ -14,7 +14,8 @@ from app.services.staff_avatar import avatar_path
 
 public_router = APIRouter()
 
-_CACHE_CONTROL = "public, max-age=86400"
+# 削除後もエッジに残る時間を抑えるため 1 時間
+_CACHE_CONTROL = "public, max-age=3600"
 
 
 @public_router.get("/public/staff-avatars/{token}.webp")
@@ -25,5 +26,5 @@ async def get_staff_avatar(token: str):
     return FileResponse(
         path=str(path),
         media_type="image/webp",
-        headers={"Cache-Control": _CACHE_CONTROL},
+        headers={"Cache-Control": _CACHE_CONTROL, "X-Content-Type-Options": "nosniff"},
     )

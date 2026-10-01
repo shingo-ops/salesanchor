@@ -17,6 +17,7 @@ from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile, 
 from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.concurrency import run_in_threadpool
 
 from app.auth.dependencies import (
     get_current_tenant,
@@ -411,7 +412,8 @@ async def upload_my_avatar(
     # 上限+1 バイトだけ読む（巨大ファイルをメモリに載せない）
     data = await image.read(AVATAR_MAX_BYTES + 1)
     try:
-        webp = process_avatar(data)
+        # Pillow の処理は CPU を使うため event loop を塞がないようスレッドで実行する
+        webp = await run_in_threadpool(process_avatar, data)
         token = new_token()
         save_avatar(token, webp)
     except AvatarError as e:
