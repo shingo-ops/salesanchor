@@ -15,6 +15,17 @@ from pydantic import BaseModel, Field, field_validator
 from app.schemas.base import validate_email_loose, validate_phone
 
 
+def _require_en_name(v: str | None) -> str:
+    """英語名（名・姓）は必須。空白のみ・null は拒否し、前後の空白は除去する（ADR-159）。
+
+    DB は NOT NULL にしない（既存データ保護）。入力検証でのみ必須化する。
+    """
+    stripped = (v or "").strip()
+    if not stripped:
+        raise ValueError("英語名は必須です")
+    return stripped
+
+
 class StaffStatus(str, Enum):
     active = "active"
     inactive = "inactive"
@@ -51,8 +62,8 @@ class StaffCreate(BaseModel):
     given_name_jp: str = Field(min_length=1, max_length=50)
     surname_kana: str | None = Field(default=None, max_length=100)
     given_name_kana: str | None = Field(default=None, max_length=100)
-    surname_en: str | None = Field(default=None, max_length=100)
-    given_name_en: str | None = Field(default=None, max_length=100)
+    surname_en: str = Field(min_length=1, max_length=100, description="英語名（姓）。必須（ADR-159）")
+    given_name_en: str = Field(min_length=1, max_length=100, description="英語名（名）。必須・Discord 表示名（ADR-159）")
     primary_email: str = Field(max_length=255)
     discord_user_id: str | None = Field(default=None, max_length=50)
     role_id: int
@@ -73,6 +84,11 @@ class StaffCreate(BaseModel):
         if not checked:
             raise ValueError("primary_email は必須")
         return checked
+
+    @field_validator("surname_en", "given_name_en")
+    @classmethod
+    def _check_en_name(cls, v: str) -> str:
+        return _require_en_name(v)
 
 
 class StaffUpdate(BaseModel):
@@ -101,9 +117,15 @@ class StaffUpdate(BaseModel):
     def _check_email(cls, v: str | None) -> str | None:
         return validate_email_loose(v)
 
+    @field_validator("surname_en", "given_name_en")
+    @classmethod
+    def _check_en_name(cls, v: str | None) -> str:
+        # 未指定（=触らない）はバリデータを通らない。指定された場合は空・null を拒否する
+        return _require_en_name(v)
+
 
 class StaffProfileUpdate(BaseModel):
-    """本人専用プロフィール更新スキーマ（氏名・電話番号）。権限不要。"""
+    """本人専用プロフィール更新スキーマ（氏名・電話番号）。権限不要。英語名は指定する場合は必須（空不可）。"""
     surname_jp: str | None = Field(default=None, min_length=1, max_length=50)
     given_name_jp: str | None = Field(default=None, min_length=1, max_length=50)
     surname_kana: str | None = Field(default=None, max_length=100)
@@ -116,6 +138,11 @@ class StaffProfileUpdate(BaseModel):
     @classmethod
     def _check_phone(cls, v: str | None) -> str | None:
         return validate_phone(v)
+
+    @field_validator("surname_en", "given_name_en")
+    @classmethod
+    def _check_en_name(cls, v: str | None) -> str:
+        return _require_en_name(v)
 
 
 class StaffResponse(BaseModel):
@@ -140,6 +167,10 @@ class StaffResponse(BaseModel):
         description="社員/役員フラグ。True の場合は ADR-021 Phase 5 報酬計算で全ロール 0 円扱い。",
     )
     phone: str | None = None
+    avatar_url: str | None = Field(
+        default=None,
+        description="担当者アイコンの公開 URL（絶対 URL）。未登録は null（ADR-159）。",
+    )
     emails: list[str] = Field(default_factory=list)
     ui_preferences: StaffUIPreferences | None = None
     locale: str = "ja"
