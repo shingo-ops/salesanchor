@@ -6,7 +6,6 @@
 - 出典: 実装カード（card-gemini-v8-pr1.md）と設計書の recon 事実（2026-10-01）を、worktree 上で行番号を再確認して転記した。評価・提案は書かない。
 
 ## 関連ADR（すべて実在を ls で確認）
-- docs/adr/ADR-1003-go-delegation-to-opus.md — GO の発行と委任
 - docs/adr/ADR-1004-llm-usage-ledger.md — LLM 使用量台帳 llm_usage_events（費用の記録先）
 - docs/adr/ADR-085-supplier-prompts.md — 仕入先別 Gemini プロンプト管理
 - docs/adr/ADR-100-sa-ingestion-analysis-pipeline.md — 取り込み・解析パイプライン
@@ -44,12 +43,12 @@
 - google-genai 2.20.0: GenerateContentConfig に response_json_schema と thinking_config があり、ThinkingConfig に include_thoughts と thinking_level がある。ThinkingLevel は MINIMAL / LOW / MEDIUM / HIGH。
 - 本番コンテナの版は未確認（カード「マージ後に試験を流す」1 で確認する）。
 
-## 新規作成予定のファイル（現時点で存在しない）
-- 新規作成予定：backend/app/services/gemini_raw_copy_v8.py
-- 新規作成予定：backend/app/prompts/raw_copy_v8.txt
-- 新規作成予定：backend/app/tools/prompt_ab.py
-- 新規作成予定：backend/tests/test_gemini_raw_copy_v8.py
-- 新規作成予定：backend/tests/test_prompt_ab.py
+## この PR で追加したファイル（PR #3903、すべて実在）
+- backend/app/services/gemini_raw_copy_v8.py
+- backend/app/prompts/raw_copy_v8.txt
+- backend/app/tools/prompt_ab.py
+- backend/tests/test_gemini_raw_copy_v8.py
+- backend/tests/test_prompt_ab.py
 
 ## 守り手
 - 守り手: .github/workflows/process-artifacts-gate.yml

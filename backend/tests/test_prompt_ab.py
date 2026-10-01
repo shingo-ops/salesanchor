@@ -143,6 +143,21 @@ def test_stops_on_unexpected_exception(monkeypatch, fakes):
     assert fakes.v8.call_count == 0
 
 
+def test_non_gemini_exception_text_is_sanitized_before_jsonl(monkeypatch, fakes):
+    pab.load_extraction_context.side_effect = Exception("db error url?key=SECRETVALUE123&x=1")
+    _run(fakes, monkeypatch)
+    written = (fakes.out / "T.jsonl").read_text(encoding="utf-8")
+    assert "SECRETVALUE123" not in written
+    assert "APIキー省略" in written
+
+
+def test_parse_exception_text_is_sanitized_before_jsonl(monkeypatch, fakes):
+    fakes.parse7.side_effect = ValueError("bad header key=SECRETVALUE456")
+    _run(fakes, monkeypatch, config="v7", run_ids=("r1",))
+    written = (fakes.out / "T.jsonl").read_text(encoding="utf-8")
+    assert "SECRETVALUE456" not in written
+
+
 def test_stops_when_job_not_found(monkeypatch, fakes):
     pab.load_extraction_context.return_value = None
     summary = _run(fakes, monkeypatch)

@@ -1,9 +1,9 @@
 # 設計書：Gemini 書き写し v8 と比較試験（詳細版）
 
 - recon: docs/handoff/gemini-v8/recon.md
-- 関連ADR: ADR-1003、ADR-1004、ADR-085、ADR-100
+- 関連ADR: ADR-1004、ADR-085、ADR-100
 
-状態：**設計審査済み（Opus の自己審査で REVISE、修正を反映して APPROVE。§7-2 を参照）／方針は PO と合意済み（2026-10-01）／実装は未着手**
+状態：**設計審査済み（Opus の自己審査で REVISE、修正を反映して APPROVE。§7-2 を参照）／方針は PO と合意済み（2026-10-01）／実装済み（PR #3903, Draft, GO未受領）**
 
 根拠
 - docs/handoff/line-accuracy-pages/accuracy-evidence.md
@@ -75,6 +75,7 @@
 - ship：その件の行か、その件の見出しに書かれた発送の情報だけを写す。投稿全体の注意書き（例「14時までのご注文で当日発送」）は写さない。無ければ none。
 - source_line_start / source_line_end：その件の価格の行と、その件だけに付く注記の行の範囲。商品名の見出しの行や、ほかの件の行を含めない。
 - heading_line_start / heading_line_end：商品名を写した見出しの行。無ければ null。
+- multi_note：1つの行の中に同じ種類の値が2つ以上ある場合（例：1行に2つの価格）だけ使い、その値を原文のまま「／」でつないで写す。それ以外は none。
 
 【例】
 原文:
@@ -135,7 +136,7 @@
   - 動き
     - 本番と同じ load_extraction_context で文脈を読み、設定の組ごとに Gemini を呼ぶ。
     - 結果は /tmp の JSONL ファイルにだけ書く。1行に、生の応答、usage_metadata、考えた過程の要約、パース結果、件ごとの検査結果を入れる。
-    - DB には書かない。ただし llm_usage_events には、purpose="prompt_ab" で費用を記録する（ADR-1004 の台帳に合わせる。書き込みはこの1か所だけ）。
+    - DB には書かない。ただし llm_usage_events には、purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で費用を記録する（purpose の追加は migration の CHECK 制約が要るため、source_ref で区別する）（ADR-1004 の台帳に合わせる。書き込みはこの1か所だけ）。
   - 費用の上限を超えたら止まる。失敗が1件でも出たら止まる。
 ### 6-2. 試験の順序
 - T0（設定の確認・約5回）

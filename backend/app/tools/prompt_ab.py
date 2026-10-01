@@ -26,6 +26,7 @@ from app.services.gemini_extraction_svc import (
     _GEMINI_MODEL,
     _build_supplier_context_note,
     _load_db_raw_copy_prompt,
+    _safe_error_message,
     call_gemini_raw_copy,
     format_prompt_input,
     parse_raw_copy_response,
@@ -158,7 +159,7 @@ def _parse(config: str, response_text: str, raw_text: str) -> tuple[int, list[di
         else:
             items, errors = parse_v8_response(response_text, raw_text)
     except Exception as exc:  # noqa: BLE001
-        return 0, [{"error": f"{type(exc).__name__}: {exc}"}]
+        return 0, [{"error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}]
     return len(items), errors
 
 
@@ -236,7 +237,7 @@ def run_ab(
                 session.rollback()
                 summary.failed += 1
                 summary.stop_reason = "job_failed"
-                _append_jsonl(out_path, {**row, "error": f"{type(exc).__name__}: {exc}",
+                _append_jsonl(out_path, {**row, "error": f"{type(exc).__name__}: {_safe_error_message(exc)}",
                                          "elapsed_sec": round(time.monotonic() - started, 3)})
                 logger.exception("[prompt_ab] stopped: run=%s repeat=%d", run_id, n)
                 return summary
