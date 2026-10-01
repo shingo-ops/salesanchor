@@ -208,6 +208,10 @@
 - SIG で10列になった原因 → JSON にすると形式の問題としては消える。考えた過程の要約で、何が起きたかが見えるかを T0・T1 で確かめる。
 - 今のシステムに、raw_unit が none のときデフォルト単位を付ける処理があるか → PR-3 の前に、コードで確かめる。
 
+## 外部・過去事例の参照と我々への応用
+- 外部：Gemini 公式資料（本設計の根拠に挙げた thinking.txt・structured-output.txt・g3.txt の写し）。型指定 JSON（response_json_schema）、thinking の設定、温度の既定値 1.0 の推奨は、これらに基づく。応用：§2・§4。使える組み合わせかどうかは公式資料だけでは確定しないため、試験 T0 で実機確認する（§8）。
+- 過去事例（社内）：過去ジョブに新方式を一括で流す道具 app/tools/shadow_backfill.py（費用の上限・失敗1回で止まる・台帳の費用で見張る）。応用：prompt_ab は同じ止め方を採り、結果は本番の表でなく JSONL に出す（§6-1）。
+
 ## 維持の仕組み
 - 守り手: .github/workflows/process-artifacts-gate.yml
 - 対象: PR-1 の道具（比較試験）が本番の v7 経路・旧方式 v6 の関数を変えないこと。変えていないことは、PR 本文に貼る `git diff origin/main -- backend/app/services/gemini_extraction_svc.py backend/app/services/extraction_shadow_svc.py` が空であることと、既存の試験（backend/tests/test_tcg_gemini_extraction.py、backend/tests/test_extraction_shadow_svc.py）が無変更で通ることで確かめる。
