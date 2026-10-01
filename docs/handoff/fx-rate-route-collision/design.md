@@ -55,13 +55,13 @@
 ## 技術 How・KPI
 
 - KPI: 本番デプロイ後、`GET /api/v1/fx-rates/USD` が 200 + `rate_jpy` を返すこと（0% → 100%、PO 確認）。
-- 技術選択: パスを単数形→複数形に変更するだけの最小差分（新規テーブル・新規マイグレーション不要。`invoices.py` 側は無改変でリスクを局所化）。
+- 技術選択: パスを単数形→複数形に変更するだけの最小差分（新規テーブル・新規マイグレーション不要。`backend/app/routers/invoices.py` 側は無改変でリスクを局所化）。
 
 ---
 
 ## 弊害・トレードオフ
 
-- パス変更により、デプロイのタイミングで backend が新パス・frontend が旧パスの組み合わせ（またはその逆）が一瞬発生しうる → 対策: backend と frontend は同一 PR・同一デプロイで反映されるため、デプロイ手順が「backend 先行・frontend 追従」でも旧パスは `invoices.fetch_fx_rate` に当たるだけで 404 にはならず、フロントの catch (`.catch(() => null)`) で安全にフォールバックする（`LlmUsageSection.tsx:394`）。`FxRatePage.tsx` も try/catch で 404 相当を「未取得」表示に倒す設計のまま。
+- パス変更により、デプロイのタイミングで backend が新パス・frontend が旧パスの組み合わせ（またはその逆）が一瞬発生しうる → 対策: backend と frontend は同一 PR・同一デプロイで反映されるため、デプロイ手順が「backend 先行・frontend 追従」でも旧パスは `invoices.fetch_fx_rate` に当たるだけで 404 にはならず、フロントの catch (`.catch(() => null)`) で安全にフォールバックする（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:394`）。`frontend/src/pages/super-admin/FxRatePage.tsx` も try/catch で 404 相当を「未取得」表示に倒す設計のまま。
 - 外部クライアント（本リポジトリ外）が旧パス `/api/v1/fx-rate/{currency}` の SSOT レスポンス形（`rate_jpy`）を直接叩いている場合は影響を受ける → 対策: 本調査の pre-check（`docs/handoff/fx-rate-route-collision/recon.md`）で確認した通り、リポジトリ内に該当呼び出しは無い。外部連携の有無は未確認のため、守り手が追跡する。
 
 ---
