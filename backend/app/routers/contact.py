@@ -9,6 +9,7 @@ POST /api/v1/contact
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import smtplib
@@ -88,7 +89,7 @@ Reply to: {data.email}
 async def submit_contact(data: ContactRequest):
     """LP問い合わせフォーム受付。管理者へメール転送して200を返す。"""
     try:
-        _send_notification(data)
+        await asyncio.to_thread(_send_notification, data)
     except Exception:
         logger.exception("[contact] failed to send notification email")
         # メール送信失敗でも受付成功として返す（UX優先・ログで補完）
