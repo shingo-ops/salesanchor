@@ -3,7 +3,7 @@
 状態：**設計審査済み（Opus 自己審査：APPROVE）／PO の方針は合意済み（2026-10-01）／実装は未着手**
 
 関連：現状把握は `docs/handoff/line-accuracy-pages/recon.md`、精度の根拠は `docs/handoff/line-accuracy-pages/accuracy-evidence.md`
-関連ADR：ADR-027（i18n）・ADR-067（デザイントークン）・ADR-144（UIガバナンス）・ADR-158（要確認一覧）・ADR-1003（v7 書き写しと判定の分離）
+関連ADR：ADR-027（Sales Anchor UI の i18n 対応）・ADR-067（デザイントークン強制システム）・ADR-144（UI共通部品の遵守ガバナンス）・ADR-154（TCG PARITY-02 GAS Phase 3 解析パイプラインの Python 移植。書き写し9列と needs_review の方針）
 
 審査の要点
 - 未解決だった3点（原文の表示部品、S3 の定義、部品の置き場所）は、3-5 で実物をもとに決めた。
