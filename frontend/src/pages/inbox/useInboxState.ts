@@ -643,6 +643,10 @@ export function useInboxState(): UseInboxStateReturn {
 
   // 直近の送信が下書き経由だった場合の draft_id。失敗時だけ保持し、再送で同じ紐付けを使う
   const failedDraftIdRef = useRef<number | undefined>(undefined);
+  // 失敗後に入力文を編集したら、下書き（翻訳プレビュー）との対応が崩れるため draft_id を使い回さない
+  useEffect(() => {
+    failedDraftIdRef.current = undefined;
+  }, [draft]);
 
   const submitSend = useCallback(async (opts?: { draftId?: number }) => {
     if ((trimmedDraft.length === 0 && !attachedFile && opts?.draftId == null) || !canSend || selectedLeadId === null || sending) return;
