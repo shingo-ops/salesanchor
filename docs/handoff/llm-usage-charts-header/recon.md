@@ -41,12 +41,12 @@ origin/main (`a0c3ae38872ba1e308ff758009f6b1c2bd550c34`) 時点のコード。
 - `health.title`（流用先。変更しない・削除しない）
   - `frontend/src/locales/ja.json:4508` `"title": "概要（LINE抽出）",`
   - `frontend/src/locales/en.json:4507` `"title": "Overview (LINE Extraction)",`
-- `chartsCardTitle` の参照箇所は上記 `LlmUsageSection.tsx:561` の1箇所のみ（`git grep -n "chartsCardTitle" -- frontend/src` で確認、origin/main時点でヒットは locales 2ファイル + tsx 1箇所の計3件）。
+- `chartsCardTitle` の参照箇所は上記 `frontend/src/pages/super-admin/components/LlmUsageSection.tsx:561` の1箇所のみ（`git grep -n "chartsCardTitle" -- frontend/src` で確認、origin/main時点でヒットは locales 2ファイル + tsx 1箇所の計3件）。
 
 ### 4. CSS
 - 共通クラス `.analysis-dashboard-section-title`（カードタイトルに使用、他の分析ダッシュボードカードと共用）
   - 定義: `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.css:307-312`
-  - `LlmUsageSection.tsx` 内の他3箇所（段2〜4の表カード見出し、`LlmUsageSection.tsx:904`, `918`, `932`）でも同一クラスを使用しており、PO指示の「同じ要素・スタイルでヘッダーにする」の基準を満たす既存クラス。
+  - `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` 内の他3箇所（段2〜4の表カード見出し、`frontend/src/pages/super-admin/components/LlmUsageSection.tsx:904`, `918`, `932`）でも同一クラスを使用しており、PO指示の「同じ要素・スタイルでヘッダーにする」の基準を満たす既存クラス。
 - 行見出しクラス `.llm-usage-charts__row-title`
   - 定義: `frontend/src/pages/super-admin/components/LlmUsageSection.css:72-76`
   - 行2・行3（モデル別・費用）で使用継続のため削除しない。

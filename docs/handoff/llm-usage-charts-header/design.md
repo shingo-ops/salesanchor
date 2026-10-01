@@ -56,23 +56,23 @@ CSS（`frontend/src/pages/super-admin/components/LlmUsageSection.css`）は無�
 | 基準 | 検証方法 |
 |---|---|
 | カード見出しに「グラフ」が表示されない | `check:i18n-missing-keys` で `chartsCardTitle` キー未参照を確認 ＋ `vitest` で `screen.queryByText("Charts")` が null |
-| カード見出しが「概要（LINE抽出）」（`health.title`）になる | `vitest`: `LlmUsageSection.test.tsx:186-191`（既存）が `findByText("Overview (LINE Extraction)")` で通過 |
+| カード見出しが「概要（LINE抽出）」（`health.title`）になる | `vitest`: `frontend/src/pages/super-admin/components/LlmUsageSection.test.tsx:186-191`（既存）が `findByText("Overview (LINE Extraction)")` で通過 |
 | 「概要（LINE抽出）」が二重表示されない（行1小見出しと重複しない） | `vitest`（新規）: `screen.getAllByText("Overview (LINE Extraction)").length === 1` |
 | 行2（モデル別）・行3（費用）の小見出しと上の区切り線は維持 | `vitest`: `modelTrendTitle` / `costRowTitle` の英訳文言が引き続き検出されること（既存アサーション `"Input Tokens"`, `"Output Tokens"` 等 継続通過で確認） |
 | i18n: ja/en キー対称性維持、未使用キー残存なし | `npm run check:i18n-missing-keys` PASS ＋ `git grep -n "chartsCardTitle" -- frontend/src` がヒットなし |
-| ADR-027（t()経由） | 新規ハードコード文字列なし。`health.title` を再利用するのみ。`grep` で `LlmUsageSection.tsx` 内の日本語リテラルがコメント以外に存在しないことを確認 |
+| ADR-027（t()経由） | 新規ハードコード文字列なし。`health.title` を再利用するのみ。`grep` で `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` 内の日本語リテラルがコメント以外に存在しないことを確認 |
 | ADR-067（トークンのみ） | CSS無変更。新規色・サイズ値の追加なし |
 | ADR-144（金型のみ） | `Card` コンポーネント・既存クラス `.analysis-dashboard-section-title` を流用、新規UI部品・生要素の追加なし |
 | TypeScript型エラーなし | `npx tsc --noEmit` exit 0 |
 | Lint違反なし | `npx eslint --max-warnings=0` 対象ファイルで 0件 |
 | CSSガード系（トークン・命名・ダークパリティ） | `check:css-colors` / `check:css-values` / `check:css-class-naming` / `check:dark-parity` 全てPASS（CSS無変更のため影響なしの確認目的） |
 
-## 外部事例・過去事例
+## 外部・過去事例
 該当なし。本変更は社内ダッシュボードの見出し文言整理であり、同種のUIパターン選定（公開事例の参照）を要する新規デザイン判断ではない（PO指示に基づく文言差し替えのみ、デザイン上の新規判断なし）。
 
 ## 影響範囲
-- `LlmUsageSection.tsx` を import/使用する箇所は `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` のみ（`git grep -n "LlmUsageSection" -- frontend/src` で確認、呼び出し元は1箇所・props (`days`, `t`) 変更なし）。
-- `chartsCardTitle` キーは `LlmUsageSection.tsx` 以外から参照されていない（recon.md 確認済み）ため、キー削除による他画面への影響なし。
+- `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` を import/使用する箇所は `frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx` のみ（`git grep -n "LlmUsageSection" -- frontend/src` で確認、呼び出し元は1箇所・props (`days`, `t`) 変更なし）。
+- `chartsCardTitle` キーは `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` 以外から参照されていない（recon.md 確認済み）ため、キー削除による他画面への影響なし。
 - `.llm-usage-charts__row-title` クラスは行2・行3で使用継続のためCSS側の影響なし。
 
 ## 戻し方
