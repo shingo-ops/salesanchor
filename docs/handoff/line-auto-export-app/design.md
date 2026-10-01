@@ -150,3 +150,87 @@ javac `--release 8` → dalvik-exchange で classes.dex → aapt でリソース
 - 対象グループ名のカンマ区切りは各要素をtrimして比較している（仕様上は「完全一致」とだけ指定されていたが、人力入力時のスペース混入を許容するためtrimを追加した。トリム無しの厳密一致に戻す場合は `LineNotifyListenerService#matchesTarget` を変更する）。
 - 日付境界をまたぐ遅延通知（`talk-*.txt` のファイル名日付とヘッダ日付が食い違うケース）は未検証。
 - LINEのアップデートで `android.messages`/`android.conversationTitle` の有無やキー名が変わる可能性があり、その場合は本追補の「値の決定順」を実機ログで再確認して調整が必要。
+
+## 2026-10-01 追補: 診断ログ（1024字打ち切りの原因特定用）
+
+### 目的
+
+2026-09-30の実装で、`talk-*.txt`/`raw-*.jsonl` に記録した本文（`android.messages` 最後の要素の `text`）が **1024文字ちょうどで打ち切られる例が3件**実測で確認された（原本1127字/1183字/3540字 → いずれも記録1024字）。推測で直さず、まず事実を集めるための診断ログ機構を追加した。**送信機能は追加していない。`android.permission.INTERNET` は引き続き付与していない**（`aapt dump badging` で確認。下記）。
+
+### 実測で判明した「2種類の通知」の仕様
+
+対象端末では、LINEは1件の着信メッセージに対して**2つの別々の `StatusBarNotification`** を飛ばす。`id`/`tag` が異なるため、通知リスナーからは別々の `onNotificationPosted` 呼び出しとして届く。
+
+1. **BigTextStyle側**: `id=16880000`, `tag=null`。`extras` の `android.template` が `"android.app.Notification$BigTextStyle"`。
+   - `android.title` = **送信者名**（1対1の個別送信者名、またはグループ内の発言者名）
+   - `android.subText` = **グループ名**
+   - `android.text` = 折りたたみ時の本文（短縮版のことがある）
+   - `android.bigText` = 展開時の本文
+   - `android.messages` は存在しない。
+2. **MessagingStyle側**: `id=1351171955`, `tag` に `NOTIFICATION_TAG_MESSAGE` を含む。`extras` の `android.template` が `"android.app.Notification$MessagingStyle"`。
+   - `android.title` = `"グループ名: 送信者名"` の形
+   - `android.conversationTitle` = グループ名
+   - `android.messages` = `Parcelable[]`（要素は `Bundle`。`text`/`sender`/`time` を持つ）
+   - これまでの実装はこちら側の `android.messages` 最後の要素のみから記録しており、1024字打ち切りが観測されたのもこちら側。
+
+さらに、グループの未読が溜まったときの**集約通知**（`android.summaryText` が `"NNNN件の新規通知"`、`android.text` が `"999+件の新規メッセージ"` のようなもの）も届く。`android.messages` も `android.bigText` も持たないため、個別メッセージの本文としては扱えない。
+
+この整理を踏まえ、グループ名・送信者名の決定順を変更した（`LineNotifyListenerService#resolveGroup`/`handle`）:
+- グループ名: `android.conversationTitle` → `android.subText` → `android.title` の `": "` より前
+- 送信者: `android.messages` 該当要素の `sender` → `android.title` の `": "` より後 →（templateがBigTextStyleのときは `android.title` 全体）
+
+`talk-*.txt`/`raw-*.jsonl` への書き出しは **tag に `NOTIFICATION_TAG_MESSAGE` を含む通知（MessagingStyle側）だけ**に限定した。BigTextStyle側は診断ログと、下記の「本文の最長採用」の比較材料としてのみ使い、二重記録はしない。集約通知（`messages` も `bigText` も無いもの）は診断ログにのみ記録し、`raw`/`talk` には一切書かない。
+
+### 診断JSONL（`diag-YYYYMMDD.jsonl`）
+
+`LineNotifyListenerService#appendDiagRecord` が、`jp.naver.line.android` の通知を受けたら**対象グループの絞り込みより前に**、集約通知も含めて全件を1行追記する（絞り込みをかけると比較対象が欠けるため）。フィールド:
+
+- `postTime`（記録処理時刻, ISO8601）、`key`（`sbn.getKey()`）、`id`（`sbn.getId()`）、`tag`（`sbn.getTag()`）、`template`（`android.template`）、`flags`（`notification.flags` の整数）、`when`（`notification.when`, ISO8601）
+- `len_text`/`len_bigText`/`len_title`/`len_subText`/`len_conversationTitle`/`len_summaryText`/`len_tickerText`: 各フィールドの文字数
+- `messagesCount`、`messages`: `android.messages` の各要素を `{sender, len, time}` の配列にしたもの（**全要素**。従来は最後の1件のみだった）
+- `longestField`/`longestLen`: `text`/`bigText`/`messages[i]` のうち最長のものの名前と文字数
+- `longestText`: その最長フィールドの全文（1024字打ち切りの有無を比較するために全文を入れる。本文を通知にもログにも出さない従来方針の例外として、診断目的でここだけ全文を記録する）
+- `interactive`（`PowerManager#isInteractive()`）、`keyguardLocked`（`KeyguardManager#isKeyguardLocked()`）
+- `title`/`subText`/`conversationTitle`: 全文（グループ名・送信者名の判定根拠を後から追えるようにするため）
+
+### 本文選択を「最長」に変えた理由と実装
+
+`talk-*.txt`/`raw-*.jsonl` に書く本文は、`messages[i].text` / `android.bigText` / `android.text` のうち最も長いものを採用するように変更した（`LineNotifyListenerService#pickLongest`）。理由: 1024字打ち切りが `android.messages` 側で起きている以上、同じ着信メッセージについて別経路（BigTextStyle側の `android.bigText`）に全文が残っている可能性があり、それを埋め合わせられるようにするため。
+
+実装上の注意点（design.mdに明記が無かったための判断）: BigTextStyle側とMessagingStyle側は**別の `StatusBarNotification`**（`id`/`tag` が異なる）として届くため、同一メッセージであることを直接突き合わせる共通IDが存在しない。実装では、BigTextStyle側を処理した際に `(group, sender)` をキーに `text`/`bigText` を一時キャッシュ（`LineNotifyListenerService` 内の `BIGTEXT_CACHE`、最大20件のLRU）しておき、後続のMessagingStyle側の該当メッセージ処理時に同じ `(group, sender)` で取り出して比較する。**取り出したら即座にキャッシュから消費する**（同じ相手との会話が続いた場合に、古い候補を別の新しいメッセージへ誤って流用してしまう事故を避けるため。比較材料が見つからず素通りする方が、内容が化けるより害が小さいと判断した）。BigTextStyle側がMessagingStyle側より後に届いた場合は突き合わせに失敗し、`messages[i].text` がそのまま採用される＝**この順序ズレのケースは未対応・未検証**。
+
+`raw-*.jsonl` の `source` フィールドには採用元（`messages[i]`/`bigText`/`text`）を入れる。既存フィールドは削除せず、`len_text`（比較に使った `android.text` 候補の文字数）、`len_bigText`（同 `android.bigText` 候補の文字数）、`len_messages_max`（`android.messages` 全要素中の最長文字数）を追加した。
+
+### `android.messages` の全要素記録と重複排除
+
+従来は `android.messages` の最後の1件のみを記録していたが、全要素をそれぞれ1レコードとして `raw-*.jsonl`/`talk-*.txt` に書くように変更した（`LineNotifyListenerService#handle` のループ処理）。各要素の `time` を時刻に使う。
+
+同一要素が後続の通知更新で再度現れうるため（LINEの通知は会話が続くたびに `android.messages` を更新して再送してくるのが通例）、`NotifyStore` に `(key, time, sender) → 記録済み文字数` を最大50件のリングで保持し（`NotifyStore#getRecordedLen`/`recordLen`）、同じ `(key, time, sender)` で前回より本文が短いか同じなら書かず、長ければ書く。`raw-*.jsonl` の `supersedesLen` に前回記録時の文字数（無ければ0）を入れる。
+
+実装上の判断（design.mdに永続化方法の指定が無かったため）: このリングは `SharedPreferences` へは永続化せず、`NotifyStore` 内の静的配列としてプロセス内メモリにのみ保持する。通知リスナーサービスのプロセスが再起動されればリングは空に戻り、直後の通知は `supersedesLen=0` として記録される＝まれに重複行が残り得るが、長さ比較の目的上「データが欠落する」より実害が小さいと判断した。
+
+### 削除ログ（`removed-YYYYMMDD.jsonl`）と解釈上の注意
+
+`onNotificationRemoved(StatusBarNotification sbn)` を実装し、`jp.naver.line.android` の通知が削除されたときに1行追記する（`LineNotifyListenerService#handleRemoved`）。フィールドは `postTime`、`key`、`id`、`tag`、`when`、`interactive`、`keyguardLocked`。
+
+**解釈上の注意（実装コメントにも明記済み）**: この記録は「通知が消えた」事実だけを機械的に残すものであり、**メッセージの送信取消（アンセンド）と、ユーザーが通知を既読にした場合を区別できない**。どちらの場合も通知自体は同じように削除されるため、`removed-*.jsonl` 単体では判定できない。取消かどうかの判定は、同じ時間帯の端末操作ログや利用者の記憶などの他の手がかりと合わせて、人間が後から行う。
+
+### INTERNET権限（変更なし）
+
+今回の変更でも `android.permission.INTERNET` は付与していない。`aapt dump badging out/app-debug.apk` の `uses-permission`/`uses-implied-permission` 行:
+
+```
+uses-permission: name='android.permission.WAKE_LOCK'
+uses-permission: name='android.permission.WRITE_EXTERNAL_STORAGE'
+uses-permission: name='android.permission.READ_EXTERNAL_STORAGE'
+uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason='requested WRITE_EXTERNAL_STORAGE'
+```
+
+`INTERNET` は含まれない。`READ_EXTERNAL_STORAGE` は `WRITE_EXTERNAL_STORAGE` に伴う implied permission であり新規追加ではない。
+
+### 未対応・不明点（本追補分）
+
+- BigTextStyle側とMessagingStyle側の到着順序が逆転した場合（MessagingStyle側が先に届く場合）の突き合わせは未対応。その場合は `messages[i].text` がそのまま採用される（従来どおりの1024字打ち切りが残る可能性がある）。
+- `(group, sender)` が同一の別メッセージが短時間に連続した場合、BigTextStyleキャッシュの取り違えが起きないかは実機ログでの確認が望ましい（設計上は取り出し消費で誤流用を防いでいるが、2通知が並行して複数組届く状況は未実測）。
+- 集約通知の判定条件（`messages` も `bigText` も無い）は実測1パターンのみに基づく簡易判定であり、将来LINEが集約通知に `bigText` を持たせる変更をした場合は誤判定しうる。
+- `longestText`（診断ログ）は本文の全文を記録するため、他のログと同様に `Download/sa-line-notify/` 配下にのみ保存され、送信・外部転送は一切行われない点を運用時に再確認すること。
