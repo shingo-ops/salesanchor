@@ -219,9 +219,11 @@ class JarvisDiscordClient(discord.Client):
         if not custom_id.startswith(bot_texts.TICKET_BUTTON_CUSTOM_ID):
             return
 
-        # 3 秒以内に応答しないと Discord がタイムアウトするため先に defer
+        # 3 秒以内に応答しないと Discord がタイムアウトするため先に defer。
+        # コンポーネント操作の defer() は DEFERRED_UPDATE_MESSAGE(6)＝ローディング表示なしの無言 ACK。
+        # 成功時は何も送らない（新チャンネルが現れること自体が結果）。エラー時のみ followup で ephemeral 通知。
         try:
-            await interaction.response.defer(ephemeral=True)
+            await interaction.response.defer()
         except discord.HTTPException:
             return
 
@@ -277,10 +279,6 @@ class JarvisDiscordClient(discord.Client):
             )
             return
 
-        await interaction.followup.send(
-            bot_texts.TICKET_READY_TEMPLATE.format(mention=channel.mention),
-            ephemeral=True,
-        )
         logger.info(
             "[ticket] interaction handled tenant_id=%d guild_id=%s user=%s channel=%s",
             tenant_id,
