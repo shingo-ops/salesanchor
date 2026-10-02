@@ -23,7 +23,7 @@
 |------|---------|
 | 全15カラムにCOMMENT ONが付与される | 本番適用後 `\d+ public.payment_fee_settings` でコメント確認 |
 | Swagger UIで全Fieldのdescriptionが表示される | `/docs` の PaymentFeeSettingResponse スキーマ表示を目視確認 |
-| migration-guardがCIでパスする | CI `migration-guard.yml` 緑 |
+| migration-guardがCIでパスする | CI `.github/workflows/migration-guard.yml` 緑 |
 
 ---
 
