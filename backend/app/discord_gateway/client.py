@@ -46,6 +46,7 @@ class JarvisDiscordClient(discord.Client):
     - on_resumed:                  no-op（ログのみ）
     - on_interaction:              guild_id → tenant_id 逆引き → ticket_channel_creator
     - on_raw_reaction_add/remove:  guild_id → tenant_id 逆引き → reaction_writer
+    - on_guild_channel_delete:     チケット部屋削除 → ticket-start 再表示 + lead の部屋ID消去
     """
 
     def __init__(
@@ -71,6 +72,7 @@ class JarvisDiscordClient(discord.Client):
         super().__init__(intents=intents)
         self._db_factory_override = db_factory
         self._resumed_completed: set[str] = set()
+        self._reconcile_task: asyncio.Task[None] | None = None
 
         # asyncpg 用 DB URL（postgresql+asyncpg:// → postgresql:// に正規化）
         raw_url = database_url or os.environ.get(
@@ -126,6 +128,8 @@ class JarvisDiscordClient(discord.Client):
 
     async def close(self) -> None:
         """クライアント終了時に asyncpg pool をクローズする。"""
+        if self._reconcile_task is not None and not self._reconcile_task.done():
+            self._reconcile_task.cancel()
         await self.reaction_writer.close()
         await super().close()
 
@@ -140,6 +144,61 @@ class JarvisDiscordClient(discord.Client):
             user.id if user else "?",
             len(self.guilds),
         )
+        # READY 処理を塞がないよう、起動時点検は別タスクで1回だけ走らせる
+        if self._reconcile_task is None:
+            self._reconcile_task = asyncio.create_task(self._reconcile_ticket_channels())
+
+    async def _reconcile_ticket_channels(self) -> None:
+        """Gateway 停止中に削除されたチケットチャンネルを復旧する（失敗は警告のみ）。"""
+        for guild in list(self.guilds):
+            try:
+                tenant_id = await self._resolve_tenant_id(str(guild.id))
+                if tenant_id is None:
+                    continue
+                await ticket_channel_creator.reconcile_deleted_ticket_channels(
+                    guild, tenant_id, self._db_factory(), http=self.http
+                )
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                logger.warning(
+                    "[discord-gateway] ticket reconcile failed guild_id=%s: %s",
+                    guild.id,
+                    exc,
+                    exc_info=True,
+                )
+
+    async def on_guild_channel_delete(self, channel: discord.abc.GuildChannel) -> None:
+        """チケットチャンネル削除時: ticket-start を再表示し lead の部屋番号を消す。"""
+        if not isinstance(channel, discord.TextChannel):
+            return
+        guild = channel.guild
+        tenant_id = await self._resolve_tenant_id(str(guild.id))
+        if tenant_id is None:
+            return
+        try:
+            restored = await ticket_channel_creator.restore_after_ticket_deleted(
+                guild, tenant_id, channel.id, self._db_factory(), http=self.http
+            )
+        except asyncio.CancelledError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            logger.warning(
+                "[discord-gateway] ticket delete restore failed tenant_id=%d channel=%s: %s",
+                tenant_id,
+                channel.id,
+                exc,
+                exc_info=True,
+            )
+            return
+        if restored:
+            logger.info(
+                "[discord-gateway] ticket channel deleted → restored tenant_id=%d "
+                "channel=%s leads=%d",
+                tenant_id,
+                channel.id,
+                restored,
+            )
 
     async def on_resumed(self) -> None:
         """no-op（ログのみ）."""
