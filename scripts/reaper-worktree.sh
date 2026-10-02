@@ -319,6 +319,43 @@ else
 fi
 echo ""
 
+# ── /tmp 検査（大容量ファイルの警告）─────────────────────────────────────────
+# 2026-09-05 実測: /tmp に 45GB のファイルが溜まりディスク満杯になった。
+# コマンド出力を無制限に追記したことが原因。警告のみ。削除はしない。
+# macOS では /tmp → /private/tmp のシンボリックリンクのため /private/tmp を直接走査する。
+_TMP_SCAN_DIR="/private/tmp"
+TMP_WARN_COUNT=0
+TMP_WARN_TOTAL_KB=0
+TMP_WARN_ENTRIES=()
+
+if [ -d "${_TMP_SCAN_DIR}" ]; then
+  while IFS= read -r -d '' _TFILE; do
+    _TSIZE_KB=$(du -sk "${_TFILE}" 2>/dev/null | awk '{print $1}')
+    if [ "${_TSIZE_KB:-0}" -gt 102400 ]; then
+      _TSIZE_MB=$(awk "BEGIN {printf \"%.1f\", ${_TSIZE_KB:-0}/1024}")
+      _TFILE_DISPLAY="/tmp${_TFILE#${_TMP_SCAN_DIR}}"
+      TMP_WARN_ENTRIES+=("${_TFILE_DISPLAY} (${_TSIZE_MB} MB)")
+      TMP_WARN_COUNT=$(( TMP_WARN_COUNT + 1 ))
+      TMP_WARN_TOTAL_KB=$(( TMP_WARN_TOTAL_KB + ${_TSIZE_KB:-0} ))
+    fi
+  done < <(find "${_TMP_SCAN_DIR}" -maxdepth 2 -type f -print0 2>/dev/null)
+fi
+
+echo "=== /tmp 検査 ==="
+echo "   走査: /tmp （→ ${_TMP_SCAN_DIR}、/tmp 直下 + /tmp/*/ まで）"
+echo ""
+if [ "${TMP_WARN_COUNT}" -eq 0 ]; then
+  echo "📁 TMP: 0件"
+else
+  for _TE in "${TMP_WARN_ENTRIES[@]}"; do
+    echo "   ⚠️  TMP: ${_TE}"
+  done
+  _TMP_TOTAL_MB=$(awk "BEGIN {printf \"%.1f\", ${TMP_WARN_TOTAL_KB}/1024}")
+  echo ""
+  echo "⚠️  TMP 合計: ${TMP_WARN_COUNT} 件 / ${_TMP_TOTAL_MB} MB（削除は PO 判断）"
+fi
+echo ""
+
 if [ "${#WILL_DELETE[@]}" -eq 0 ]; then
   echo "✅ 削除対象なし"
   exit 0
