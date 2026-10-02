@@ -2412,8 +2412,7 @@
       "attrMasters": "Various masters",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
-      "llmBudget": "LLM Budget",
-      "parseStats": "Accuracy Summary"
+      "llmBudget": "LLM Budget"
     },
     "attrMasters": {
       "title": "Various masters",
@@ -2847,12 +2846,6 @@
       "helpPhaseB": "Phase B (normal): stock counts are updated on approval. Spreadsheet data is used as reference data.",
       "helpPhaseC": "Phase C: full spreadsheet closure + bulk data migration. Currently disabled, separate ADR pending."
     },
-    "parseReview": {
-      "phaseAWarning": {
-        "always": "Currently in \"emergency rollback\" mode. Approvals will not update stock counts (receive history is still recorded). To return to normal operation, go to Management Center → Super Admin → Phase Switch.",
-        "afterApprove": "Approved successfully, but stock counts were not updated due to \"emergency rollback\" mode. {{count}} receive history entries were recorded."
-      }
-    },
     "inventoryOffers": {
       "subtitle": "Manage the \"currently available products / stock / unit price\" per supplier. Saved automatically when Discord parse review is approved, and editable manually here.",
       "searchPlaceholder": "Search by supplier / product / SKU",
@@ -3285,26 +3278,6 @@
     "grossProfitTotal": "Total gross profit",
     "count": "Count",
     "editFinancial": "Edit financial"
-  },
-  "supplier": {
-    "parseStats": {
-      "selectSupplier": "Select Supplier",
-      "selectPlaceholder": "-- Select a supplier --",
-      "noData": "No data yet (no parse logs for this supplier)",
-      "columns": {
-        "day": "Date",
-        "totalLines": "Total Lines",
-        "parsedCount": "Parsed",
-        "excludedCount": "Excluded",
-        "unparsedCount": "Unparsed",
-        "excludeRate": "Exclude Rate",
-        "avgConfidence": "Avg Confidence"
-      },
-      "legend": {
-        "highExclude": "Exclude rate > 30% (drift warning)",
-        "lowConfidence": "Avg confidence < 0.5 (quality warning)"
-      }
-    }
   },
   "company": {
     "stats": {

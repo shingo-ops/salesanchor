@@ -10,7 +10,6 @@
 import { useEffect, useState } from "react";
 import type { TFunction } from "i18next";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { Tabs, type TabItem } from "../../../components/Tabs";
 import { Modal } from "../../../components/Modal";
@@ -140,7 +139,6 @@ function formatPriceQtyReason(reason: string, t: TFunction): string {
 export default function NeedsReviewTabsPanel() {
   const { t, i18n } = useTranslation();
   const { isSuperAdmin, loading: authLoading } = useSuperAdmin();
-  const navigate = useNavigate();
 
   const [activeTab, setActiveTab] = useState<TabKey>("production");
 
@@ -461,9 +459,6 @@ export default function NeedsReviewTabsPanel() {
               data={data.items}
               rowKey={(item) => item.extraction_item_id}
               emptyState={t("needsReview.noItems")}
-              onRowClick={(item) =>
-                navigate(`/super-admin/inbound/${item.source_message_id}/review`)
-              }
               page={Math.floor(offset / PAGE_SIZE) + 1}
               hasNextPage={offset + (data.items?.length ?? 0) < data.total}
               onPageChange={(page) => setOffset((page - 1) * PAGE_SIZE)}

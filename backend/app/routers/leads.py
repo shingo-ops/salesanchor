@@ -1250,7 +1250,7 @@ async def translate_message_endpoint(
     キャッシュヒット時は Gemini 未呼び出しで即返却。
     予算超過時は 429 を返す。
     """
-    from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
+    from app.services.llm_errors import LLMConfigError, LLMParseError
     from app.services.message_translator import (
         BudgetExceededError,
         translate_message,

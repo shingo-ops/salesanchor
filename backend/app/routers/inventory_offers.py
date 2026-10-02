@@ -6,9 +6,9 @@ API:
   PATCH  /api/v1/super-admin/inventory-offers/{id}      update (quantity/unit_price/status/notes/expires_at)
   DELETE /api/v1/super-admin/inventory-offers/{id}      hard delete
 
-AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は F6 承認時 (`apply_inbound_items`) 経路で
-別途処理する設計のため、本ルーターでは INSERT は UNIQUE 衝突時 409 を返し、
-admin は明示的に PATCH を選ぶ。
+AC11.5 の admin 編集を満たす最小 CRUD。UPSERT は別経路で処理する設計のため
+（2026-10-02 削除済み: 旧 F6 承認フロー `apply_inbound_items`）、
+本ルーターでは INSERT は UNIQUE 衝突時 409 を返し、admin は明示的に PATCH を選ぶ。
 """
 
 from __future__ import annotations
