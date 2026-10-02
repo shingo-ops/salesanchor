@@ -100,6 +100,7 @@ from app.routers import (
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_note_master,  # 備考マスタ中央 admin
+    super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
     super_admin_product_formats,  # フォーマットマスタ中央 admin
@@ -131,6 +132,7 @@ from app.routers import (
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
     units,  # 単位マスタ テナント用
+    payment_fee_settings,  # 決済手数料設定 テナント用
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD
@@ -402,6 +404,11 @@ app.include_router(
     units.router, prefix="/api/v1", tags=["units"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 決済手数料設定 テナント用
+app.include_router(
+    payment_fee_settings.router, prefix="/api/v1", tags=["payment-fee-settings"],
+    dependencies=[Depends(get_current_tenant)],
+)
 # ステータスマスタ テナント用
 app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
@@ -540,6 +547,10 @@ app.include_router(
 # 備考マスタ中央 admin
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 決済手数料設定マスタ中央 admin
+app.include_router(
+    super_admin_payment_fee_settings.router, prefix="/api/v1", tags=["super-admin"],
 )
 # 商品カテゴリマスタ中央 admin
 app.include_router(
