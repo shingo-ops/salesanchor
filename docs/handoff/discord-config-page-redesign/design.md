@@ -4,6 +4,8 @@
 
 親: [docs/specs/management-center/ideal-state.md](../../specs/management-center/ideal-state.md) ／ 子: [recon.md](./recon.md)
 
+recon: docs/handoff/discord-config-page-redesign/recon.md
+
 対象ADR: ADR-144, ADR-067, ADR-149（関連: ADR-027, ADR-091）
 
 ## PO 原文・承認
@@ -25,14 +27,14 @@
 
 ## 変更範囲（触るファイルと触らない範囲）
 
-触る: `frontend/src/pages/admin/DiscordConfigPage.tsx`（全面書き換え）、`frontend/src/pages/admin/discord-config.css`（新規・var() のみ）、`frontend/src/pages/admin/AdminHubPage.tsx`（`useIsMobile` で nav を条件描画）、`frontend/src/pages/management-center/ManagementCenterPage.tsx`（4 項目追加）、`frontend/src/locales/ja.json`・`en.json`（discordConfig / discordTicketConfig / discordAutoSetup を短文化・不要キー削除・`discordConfig.syncStatus` は LeadsPage が使用中のため維持）、テスト 3 本（新規）。
+触る: `frontend/src/pages/admin/DiscordConfigPage.tsx`（全面書き換え）、`frontend/src/pages/admin/discord-config.css`（新規・var() のみ）、`frontend/src/pages/admin/AdminHubPage.tsx`（`useIsMobile` で nav を条件描画）、`frontend/src/pages/management-center/ManagementCenterPage.tsx`（4 項目追加）、`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（discordConfig / discordTicketConfig / discordAutoSetup を短文化・不要キー削除・`discordConfig.syncStatus` は LeadsPage が使用中のため維持）、テスト 3 本（新規）。
 触らない: backend、`admin-hub.css`、他の admin ページ、DesktopShell / MobileShell、API 仕様。
 
 ## 金型
 
 Card / Badge / TextField / Textarea / Button / ButtonLink / PageLayout / SubMenu のみ。新規コンポーネントなし。生 input・生 textarea・色直値・`ui-allow` なし。通知枠の金型は無いため Badge(warning) + ButtonLink で表現。
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 該当なし（理由: 既存デザインシステムの金型を組み合わせる内部 UI 整理で、新規概念・外部サービス導入なし）。
 
