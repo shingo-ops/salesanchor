@@ -44,18 +44,23 @@ get_or_create_ticket_channel の既存ロジック。
 | 例外がイベントループを止めない | test_client_delete_event_swallows_restore_failure |
 | 実機: PO が tenant_001 のテスト用チケット部屋を削除 → 顧客（Akane）に数秒以内に ticket-start が再表示 → ボタンで 📩｜DM 配下に新規作成 → スタッフ返信が届く → アプリの会話履歴が残っている | 受入条件（PO実施） |
 
-## 4. 外部事例
+## 4. 外部・過去事例の参照と我々への応用
 
 Discord 公式ドキュメント「Delete/Close Channel」: チャンネル削除は取り消せず、CHANNEL_DELETE が
 Gateway イベント（GUILD intent）として配信される。discord.py の `on_guild_channel_delete` はこれに対応する。
+我々への応用: そのイベントで復旧し、取りこぼし（Gateway 停止中の削除）は起動時点検で補う。
 
 ## 5. 戻し方・測り方・継続
 
 - 戻し方: 本PRを revert（DB スキーマ変更なし）。
 - 測り方: ログ `[ticket] restored after channel delete` / `[ticket] reconcile done ... stale= restored=`。
-- 継続: 上記テストが CI で回り続ける。reconcile は起動ごとに実行され、取りこぼしを自己修復する。
 
 ## 6. 弊害
 
 - 起動時点検は REST を最大200件/guild 発行（Discord rate limit 内。失敗は警告のみ）。
 - 解除に失敗した lead は次回起動まで ID が残る（顧客は ticket-start が見えないまま。再起動で解消）。
+
+## 7. 維持の仕組み
+
+- 守り手: backend CI の pytest（backend/tests/test_discord_ticket_channel_delete_restore.py）
+- reconcile は Gateway 起動ごとに実行され、取りこぼしを自己修復する。
