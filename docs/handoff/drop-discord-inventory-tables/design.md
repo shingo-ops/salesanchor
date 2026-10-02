@@ -26,9 +26,9 @@ PO 本人のGOを要する）。
 | 根拠 | 検証方法 |
 |---|---|
 | FK 制約なし | `pg_constraint` の `confrelid` を3テーブルの oid で走査 → 0件（Designer 本番検証） |
-| 依存オブジェクトは view のみ | `git grep -n "v_supplier_parse_stats" migrations/` → `20260604_130000_create_supplier_parse_stats_view.sql` のみが定義元。本PRの migration で先に `DROP VIEW` してから3テーブルを `DROP TABLE` する順序を取る |
+| 依存オブジェクトは view のみ | `git grep -n "v_supplier_parse_stats" migrations/` → `migrations/20260604_130000_create_supplier_parse_stats_view.sql` のみが定義元。本PRの migration で先に `DROP VIEW` してから3テーブルを `DROP TABLE` する順序を取る |
 | アプリケーションコードの読者はゼロ | `git grep -n "check_drift_and_notify\|inventory_drift_detector" origin/main -- backend frontend/src scripts` → 定義元ファイル自身のみ。呼び出し元なし（recon.md §2.1） |
-| `parse_logs` への書き手はゼロ | `inventory_parser.py`（唯一の書き手）は #3932 で削除済み。`git show origin/main:backend/app/services/inventory_parser.py` → `fatal: path does not exist` |
+| `parse_logs` への書き手はゼロ | inventory_parser.py（削除済み）（唯一の書き手）は #3932 で削除済み。`git show origin/main:backend/app/services/inventory_parser.py` → `fatal: path does not exist` |
 | `GET /parse-stats` エンドポイント（唯一の view 読者 API）は削除済み | PR #3932 本文・`docs/handoff/remove-discord-inventory-parse/recon.md` §2.7 に記載 |
 | 本番データは少量・直近更新なし | discord_inbound_messages 129件（最新 2026-06-25）・discord_webhook_idempotency 111件・parse_logs 0件（Designer 本番値） |
 | バックアップ取得済み | `~/salesanchor-db-backups/` 配下4ファイル（recon.md §1） |
@@ -41,7 +41,7 @@ PO 本人のGOを要する）。
 直接の前段として踏襲した以外に、外部の導入事例・OSS事例を調査する意義のある技術要素
 （単純な `DROP TABLE`/`DROP VIEW` migration）ではないため、外部調査は実施していない。
 理由: 本件はプロジェクト固有の機能廃止に伴う後片付けであり、汎用的なライブラリ・フレームワーク
-導入やアーキテクチャ決定とは性質が異なる（`development-workflow.md` の「GitHub code search /
+導入やアーキテクチャ決定とは性質が異なる（development-workflow.md（リポジトリ外: ~/.claude/rules/common/development-workflow.md） の「GitHub code search /
 ライブラリ docs / Exa」調査は、新規実装や技術選定を対象とするものであり、既存機能の
 DROP 後片付けには適用範囲外と判断）。
 
@@ -57,7 +57,7 @@ DROP 後片付けには適用範囲外と判断）。
 ### 4.2 変更しなかった: `.github/workflows/migration-test.yml`
 
 `migration-full-dryrun` ジョブが `scripts/run_all_migrations.sh` の `run_sql`/`run_py` 行を
-記載順に全件適用する（SSoT）。本PRの新migration（`20261002_170000_drop_discord_inventory_tables.sql`）
+記載順に全件適用する（SSoT）。本PRの新migration（`migrations/20261002_170000_drop_discord_inventory_tables.sql`）
 はこのファイルの最後に追記したため、既存の CREATE 系 migration（056-062, 110000/120000/130000等）
 が先に適用され、その後 DROP が適用される。`DROP ... IF EXISTS` で記述したため、
 baseline の状態に関わらず（テーブルが存在しなくても）安全に no-op する。
@@ -69,15 +69,15 @@ migrationとは無関係のため変更不要と判断した。
 
 ### 4.3 変更しなかった: `scripts/migrate_inventory_sprint1.py` / `scripts/migrate_inventory_sprint5_to_7.py`
 
-歴史的 migration バンドルランナー（`run_all_migrations.sh` 内で本PRの新migrationより前に
-実行される）。`059_create_discord_inbound_messages.sql` 等を `CREATE TABLE IF NOT EXISTS` で
+歴史的 migration バンドルランナー（`scripts/run_all_migrations.sh` 内で本PRの新migrationより前に
+実行される）。`migrations/059_create_discord_inbound_messages.sql` 等を `CREATE TABLE IF NOT EXISTS` で
 適用するのみで、これは「後で DROP される前提の歴史的事実」を変えるものではない。
 編集すると migration 履歴の整合性（再実行時の冪等性）が壊れるため、意図的に変更しない。
 
 ### 4.4 変更した: `scripts/lint_tenant_schema.py`
 
 `TENANT_TABLES`（ADR-072 tenant スキーマ allowlist）から `discord_inbound_messages` を削除。
-このリストを使う CI（`lint-tenant-schema.yml`、`--mode strict`、対象は `backend/app/routers/`）は
+このリストを使う CI（`.github/workflows/lint-tenant-schema.yml`、`--mode strict`、対象は `backend/app/routers/`）は
 テーブル名が bare 参照されているルーターコードを検出する目的であり、該当ルーターは
 #3932 で既に削除済みのため、このエントリの有無自体は現在 CI の pass/fail に影響しない
 （stale but harmless だった）。削除しても安全であることを `scripts/test_lint_tenant_schema.py` に
@@ -96,10 +96,10 @@ PO の直接指示で別途削除」とし、本PRでは残置する:
 `Reason: [Irreversible Local Destruction]` でブロックした。PO（Designer経由、2026-10-02）は
 「削除しない・編集して空にすることもしない」と明示指示（option b）。
 
-runtime への影響なし（recon.md §5 で詳述）: `inventory_drift_detector.py` は呼び出し元ゼロ・
+runtime への影響なし（recon.md §5 で詳述）: `backend/app/services/inventory_drift_detector.py` は呼び出し元ゼロ・
 fail-soft 設計のため、`v_supplier_parse_stats` DROP 後も例外を握りつぶして warning ログのみ出す。
-`schemas/parse_review.py` は import元ゼロの孤立 Pydantic 定義。
-`seed_discord_inbound_from_api_analysis.py` は CI・アプリ起動経路から呼ばれない手動専用スクリプト。
+`backend/app/schemas/parse_review.py` は import元ゼロの孤立 Pydantic 定義。
+`scripts/seed_discord_inbound_from_api_analysis.py` は CI・アプリ起動経路から呼ばれない手動専用スクリプト。
 いずれも DROP 後のアプリケーション動作に影響しない。
 
 ## 6. 維持の仕組み（適用後の検証・再発防止）
@@ -119,8 +119,8 @@ fail-soft 設計のため、`v_supplier_parse_stats` DROP 後も例外を握り�
 
 | # | 基準 | 検証方法 |
 |---|---|---|
-| AC1 | 新migrationが `run_all_migrations.sh` に登録されている | `grep -n "20261002_170000_drop_discord_inventory_tables" scripts/run_all_migrations.sh` |
-| AC2 | `migration-guard.yml` の allowlist から3テーブルが除去されている | `grep -c "discord_inbound_messages\|discord_webhook_idempotency\|parse_logs" .github/workflows/migration-guard.yml`（0件であること、ただし `parse_logs` は他コメントに残る可能性があるため個別grep） |
-| AC3 | `check-migration-registration-exists.sh` がPASSする | 実行結果（§checks参照） |
-| AC4 | 関連テストが落ちない | `test_inventory_sprint1_migrations.py` 等の実行結果 |
+| AC1 | 新migrationが `scripts/run_all_migrations.sh` に登録されている | `grep -n "20261002_170000_drop_discord_inventory_tables" scripts/run_all_migrations.sh` |
+| AC2 | `.github/workflows/migration-guard.yml` の allowlist から3テーブルが除去されている | `grep -c "discord_inbound_messages\|discord_webhook_idempotency\|parse_logs" .github/workflows/migration-guard.yml`（0件であること、ただし `parse_logs` は他コメントに残る可能性があるため個別grep） |
+| AC3 | `scripts/check-migration-registration-exists.sh` がPASSする | 実行結果（§checks参照） |
+| AC4 | 関連テストが落ちない | `backend/tests/test_inventory_sprint1_migrations.py` 等の実行結果 |
 | AC5 | PO の GO 受領まで適用しない | PR本文 `### GO記録` = 未発行 |

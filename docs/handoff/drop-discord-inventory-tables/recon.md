@@ -19,7 +19,7 @@
   - `~/salesanchor-db-backups/discord_inbound_messages_backup_20261002.csv`（129件）
   - `~/salesanchor-db-backups/discord_webhook_idempotency_backup_20261002.csv`（111件）
   - `~/salesanchor-db-backups/parse_logs_backup_20261002.csv`（0件）
-  - `~/salesanchor-db-backups/discord_inventory_tables_schema_20261002.sql`
+  - ~/salesanchor-db-backups/discord_inventory_tables_schema_20261002.sql
     （`pg_dump --schema-only`、3テーブル + ビュー）
 - PR #3932（マージ済み）は全アプリケーションコードを削除済み。
   `GET /super-admin/suppliers/{id}/parse-stats`（`v_supplier_parse_stats` の唯一の読者だった
@@ -42,12 +42,12 @@ Designer が repo 全体で再検証:
 ```
 git grep -n "check_drift_and_notify\|inventory_drift_detector" origin/main -- backend frontend/src scripts
 ```
-→ ヒットは `inventory_drift_detector.py` 自身の `def` と `__all__` のみ。**呼び出し元ゼロ**。
+→ ヒットは `backend/app/services/inventory_drift_detector.py` 自身の `def` と `__all__` のみ。**呼び出し元ゼロ**。
 
 ```
 git grep -n "parse_logs" origin/main -- backend/app
 ```
-→ `inventory_parser.py`（parse_logs の唯一の書き手）は `git show origin/main:backend/app/services/inventory_parser.py`
+→ inventory_parser.py（削除済み）（parse_logs の唯一の書き手）は `git show origin/main:backend/app/services/inventory_parser.py`
 → `fatal: path does not exist` で確認した通り、#3932 で既に削除済み。現在 `parse_logs` に書き込む
 コードは存在しない。
 
@@ -56,7 +56,7 @@ git grep -ln "v_supplier_parse_stats" origin/main -- migrations
 ```
 → `migrations/20260604_130000_create_supplier_parse_stats_view.sql` のみがビューを定義（`parse_logs` 上）。
 
-結論: `inventory_drift_detector.py` は「削除された Discord 在庫取り込み機能のデータにのみ依存する
+結論: `backend/app/services/inventory_drift_detector.py` は「削除された Discord 在庫取り込み機能のデータにのみ依存する
 到達不能コード（dead code）」であり、PO ルール「在庫取り込みだけで使っているものは削除」の
 対象。PR #3932 の `docs/handoff/remove-discord-inventory-parse/recon.md` は当時
 「Discord 機能への帰属が未証明」として KEEP 判定していたが、本PRの3事実（呼び出し元ゼロ・
@@ -73,7 +73,7 @@ parse_logs 書き手ゼロ・ビュー定義元が parse_logs のみ）で帰属
 ```
 git grep -n "schemas.parse_review\|schemas import parse_review" origin/main -- backend
 ```
-→ 0件。#3932 でルーター `backend/app/routers/parse_review.py` は削除されたが、
+→ 0件。#3932 でルーター backend/app/routers/parse_review.py（削除済み） は削除されたが、
 Pydantic スキーマ定義ファイル `backend/app/schemas/parse_review.py`（220行）が取り残されていた。
 import元ゼロを確認済み。**削除保留**（理由は2.1と同じ、下記「削除保留」節参照）。
 
@@ -98,7 +98,7 @@ git grep -ln "seed_discord_inbound_from_api_analysis" origin/main -- backend/tes
 - `scripts/migrate_inventory_sprint1.py:55`、`scripts/migrate_inventory_sprint5_to_7.py:21`:
   歴史的 migration ランナー（056-063、Sprint 5-7 の ALTER）。`CREATE TABLE IF NOT EXISTS` /
   `ADD COLUMN IF NOT EXISTS` の冪等パターンのため、このPRの DROP 後に実行されても害はない
-  （作成→（本PRの migration で）削除、の順で `run_all_migrations.sh` に登録されている）。
+  （作成→（本PRの migration で）削除、の順で `scripts/run_all_migrations.sh` に登録されている）。
   変更不要（詳細は design.md §4）。
 
 ### 2.5 allowlist（編集済み）
@@ -121,7 +121,7 @@ git grep -ln -e discord_inbound_messages -e discord_webhook_idempotency -e parse
 → `backend/tests/test_inventory_sprint1_migrations.py` のみ。
 
 全文（349行）を確認: `_apply_public_migrations()` ヘルパは migration ファイル `056`〜`062` のみを
-固定リストで単体適用し、`run_all_migrations.sh` も新設の DROP migration も呼ばない。したがって:
+固定リストで単体適用し、`scripts/run_all_migrations.sh` も新設の DROP migration も呼ばない。したがって:
 
 - `test_ac1_1_public_tables_exist`（AC1.1、discord_inbound_messages / discord_webhook_idempotency の
   存在を assert）と `test_ac1_6_discord_idempotency_structure`（AC1.6、discord_webhook_idempotency の
@@ -153,10 +153,10 @@ backend/app/schemas/parse_review.py scripts/seed_discord_inbound_from_api_analys
 
 > 削除予定だが自動安全チェック（Irreversible Local Destruction）で保留。PO の直接指示で別途削除
 
-影響評価: `inventory_drift_detector.py` は呼び出し元ゼロ（§2.1で確認済み）かつ
+影響評価: `backend/app/services/inventory_drift_detector.py` は呼び出し元ゼロ（§2.1で確認済み）かつ
 `try/except Exception` で全例外を握りつぶす fail-soft 設計のため、`v_supplier_parse_stats` を
 DROP してもランタイムは一切影響を受けない（呼ばれないので実行されず、仮に将来誰かが
-配線しても warning ログのみで落ちない）。`schemas/parse_review.py`・
-`seed_discord_inbound_from_api_analysis.py` も同様に import元・呼び出し元ゼロで、
+配線しても warning ログのみで落ちない）。`backend/app/schemas/parse_review.py`・
+`scripts/seed_discord_inbound_from_api_analysis.py` も同様に import元・呼び出し元ゼロで、
 存在してもテーブル削除後の挙動に影響しない（後者は手動実行専用スクリプトで、実行時にのみ
 テーブル不在エラーになるが、CI・アプリ起動経路からは呼ばれない）。
