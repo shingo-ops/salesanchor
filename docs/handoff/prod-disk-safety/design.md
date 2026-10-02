@@ -104,7 +104,7 @@ docker builder prune -f --keep-storage 3GB || true
 | 2 | `scripts/backup_to_s3.sh:83` の SIGPIPE 対応（awk化＋グロブ限定） | Sonnet（実装） |
 | 3 | `.github/workflows/deploy.yml` に空き容量チェック＋builder prune を追加 | Sonnet（実装） |
 | 4 | `scripts/tests/test-backup-retention.sh` を新規作成し動作確認 | Sonnet（実装） |
-| 5 | `docs/handoff/prod-disk-safety/recon.md`・`design.md` 作成 | Sonnet（実装） |
+| 5 | `docs/handoff/prod-disk-safety/recon.md`・`docs/handoff/prod-disk-safety/design.md` 作成 | Sonnet（実装） |
 | 6 | PR作成（Draft）→ PO確認 → `GO #<PR番号>` 受領後にマージ | PO |
 | 7 | デプロイ後、Finalize ログで builder prune のエラー有無を確認 | PO/実行役 |
 

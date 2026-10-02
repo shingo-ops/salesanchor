@@ -43,7 +43,7 @@
 |---|-------|---------|------|
 | 1 | `docker builder prune --keep-storage` のフラグ名・単位指定（`3GB` 等の文字列を受け付けるか） | ローカル docker 29.8.0 で `docker builder prune --help` 実施＋実際に `docker builder prune -f --keep-storage 3GB` を実行して exit 0 を確認 | ✅ 解消済み（本番 docker バージョンは別途確認要・未確認） |
 | 2 | 件数ベース保持ロジックが `set -euo pipefail` 下でも安全に動くか（0件・10件以下・15件超のケース） | `scripts/tests/test-backup-retention.sh` を作成し bash:5 コンテナで実行、3テスト全PASS | ✅ 解消済み |
-| 3 | `backup_to_s3.sh` の `LATEST_BACKUP` 選定を awk 化した場合、多数ファイルでも SIGPIPE が発生しないか | 同テストスクリプトのテスト3（50回ループ、`salesanchor_db_*` ファイル存在下）で50/50成功を確認 | ✅ 解消済み |
+| 3 | `scripts/backup_to_s3.sh:83` の `LATEST_BACKUP` 選定を awk 化した場合、多数ファイルでも SIGPIPE が発生しないか | 同テストスクリプトのテスト3（50回ループ、`salesanchor_db_*` ファイル存在下）で50/50成功を確認 | ✅ 解消済み |
 | 4 | 本番 VPS の docker バージョンが `--keep-storage` フラグをサポートしているか | 未確認（ローカル確認のみ）。本番デプロイ後の Finalize ログで `docker builder prune` 行のエラー有無を確認する必要あり | ⚠️ 未確認（デプロイ後に確認が必要・リスクは `\|\| true` で吸収し deploy を失敗させない設計にしている） |
 
 **未解決ゼロ確認**: 上記 #4 は「未確認」のまま明記。他は解消済み。
