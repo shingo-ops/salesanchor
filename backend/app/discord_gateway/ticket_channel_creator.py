@@ -27,6 +27,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import set_tenant_context
 from app.discord_gateway import bot_texts
+from app.services.discord_guild_identity import build_guild_identity
+from app.services.discord_webhook_sender import try_send_as_identity
 
 logger = logging.getLogger(__name__)
 
@@ -210,6 +212,36 @@ async def _hide_ticket_start(
         )
 
 
+async def _send_welcome(
+    channel: discord.TextChannel,
+    guild: discord.Guild,
+    welcome_template: str,
+    tenant_id: int,
+    db_factory: Any,
+) -> None:
+    """ウェルカムをサーバー名・アイコン名義（webhook）で送る。送れなければ Bot 名義で送る。"""
+    try:
+        icon_hash = guild.icon.key if guild.icon else None
+        identity = build_guild_identity(guild.id, guild.name, icon_hash)
+        async with db_factory() as session:
+            await set_tenant_context(session, tenant_id)
+            sent_id = await try_send_as_identity(
+                session,
+                tenant_id=tenant_id,
+                channel_id=str(channel.id),
+                identity=identity,
+                content=welcome_template,
+            )
+        if sent_id is not None:
+            return
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[ticket] guild-identity welcome failed, falling back to bot: %s", exc)
+    try:
+        await channel.send(welcome_template)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[ticket] failed to send welcome message: %s", exc)
+
+
 async def get_or_create_ticket_channel(
     guild: discord.Guild,
     config: dict,
@@ -320,10 +352,7 @@ async def get_or_create_ticket_channel(
     )
 
     # ウェルカムメッセージ送信
-    try:
-        await new_channel.send(welcome_template)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("[ticket] failed to send welcome message: %s", exc)
+    await _send_welcome(new_channel, guild, welcome_template, tenant_id, db_factory)
 
     # leads.discord_user_id / leads.discord_guild_channel_id 更新
     async with db_factory() as session:

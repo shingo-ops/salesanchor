@@ -39,6 +39,8 @@ from app.database import get_db
 from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.discord_guild_identity import fetch_guild_identity
+from app.services.discord_webhook_sender import try_send_as_identity
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -234,9 +236,10 @@ async def deploy_ticket_button(
     # 設定取得
     result = await db.execute(
         text("""
-            SELECT ticket_button_channel_id
-            FROM public.tenant_discord_ticket_config
-            WHERE tenant_id = :tid
+            SELECT c.ticket_button_channel_id, d.guild_id
+            FROM public.tenant_discord_ticket_config c
+            LEFT JOIN public.tenant_discord_config d ON d.tenant_id = c.tenant_id
+            WHERE c.tenant_id = :tid
         """),
         {"tid": tenant_id},
     )
@@ -245,6 +248,7 @@ async def deploy_ticket_button(
         raise HTTPException(status_code=422, detail="チケット設定が未完了です。先にボタンチャンネルIDを設定してください。")
 
     channel_id = str(row[0])
+    guild_id = str(row[1]) if row[1] else None
 
     # Bot トークン取得
     # ADR-146 B方式: 共通 Bot Token
@@ -253,27 +257,37 @@ async def deploy_ticket_button(
     if not bot_token:
         raise HTTPException(status_code=503, detail="Bot トークンが設定されていません。環境変数 DISCORD_BOT_TOKEN を確認してください。")
 
-    # Discord REST API でボタンメッセージを投稿
+    # サーバー名・アイコン名義（webhook）で投稿。送れなければ Bot 名義の通常投稿に戻す（案内を欠落させない）
     payload = bot_texts.ticket_button_payload()
+    identity = await fetch_guild_identity(guild_id, bot_token) if guild_id else None
+    message_id = await try_send_as_identity(
+        db,
+        tenant_id=tenant_id,
+        channel_id=channel_id,
+        identity=identity,
+        content=payload["content"],
+        components=payload["components"],
+    )
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        resp = await client.post(
-            f"https://discord.com/api/v10/channels/{channel_id}/messages",
-            headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json"},
-            json=payload,
-        )
+    if message_id is None:
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            resp = await client.post(
+                f"https://discord.com/api/v10/channels/{channel_id}/messages",
+                headers={"Authorization": f"Bot {bot_token}", "Content-Type": "application/json"},
+                json=payload,
+            )
 
-    if resp.status_code not in (200, 201):
-        logger.error(
-            "[discord_ticket_config] deploy-button failed tenant=%d ch=%s status=%d body=%s",
-            tenant_id, channel_id, resp.status_code, resp.text[:200],
-        )
-        raise HTTPException(
-            status_code=502,
-            detail=f"Discord API エラー ({resp.status_code}): チャンネルIDとBot権限を確認してください。",
-        )
+        if resp.status_code not in (200, 201):
+            logger.error(
+                "[discord_ticket_config] deploy-button failed tenant=%d ch=%s status=%d body=%s",
+                tenant_id, channel_id, resp.status_code, resp.text[:200],
+            )
+            raise HTTPException(
+                status_code=502,
+                detail=f"Discord API エラー ({resp.status_code}): チャンネルIDとBot権限を確認してください。",
+            )
 
-    message_id = resp.json().get("id", "")
+        message_id = resp.json().get("id", "")
     await record_audit_log(
         db=db,
         tenant_id=tenant_id,

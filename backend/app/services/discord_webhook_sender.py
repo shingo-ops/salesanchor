@@ -5,7 +5,9 @@ Bot の通常送信は表示名・アイコンを変えられないが、webhook
 
 ### 方針
 
-- Bot 名義へのフォールバックは一切しない。失敗したら例外を投げて送らない（PO 決定 2026-10-01）。
+- send_as_staff は Bot 名義へのフォールバックを一切しない。失敗したら例外を投げて送らない（PO 決定 2026-10-01）。
+- send_as_identity（サーバー名義の案内・ボタン・ウェルカム）も例外を投げるだけ。Bot 投稿へ戻す判断は呼び出し側
+  （try_send_as_identity が None を返す。サーバー側の案内は欠落させないため Bot 投稿に戻す: PO 決定 2026-10-02）。
 - webhook token は services/encryption.py（Fernet）で暗号化して保存する。ログ・例外文に token / 実行 URL を出さない。
 - アイコン未登録の場合は avatar_url を省略する（Discord 標準アイコンと同じ表示）。
 - webhook が消えていた（404/401）場合は保管行を消して 1 回だけ作り直し、1 回だけ再送する。
@@ -27,6 +29,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import reset_tenant_context, tenant_table_ref
 from app.services import encryption
+from app.services.discord_guild_identity import GuildIdentity
 
 logger = logging.getLogger(__name__)
 
@@ -277,14 +280,20 @@ async def _execute_webhook(
     file: OutboundFile | None,
     username: str,
     avatar_url: str | None,
+    components: list[dict[str, Any]] | None = None,
 ) -> httpx.Response:
-    """POST /webhooks/{id}/{token}?wait=true。avatar_url が None なら省略する。"""
+    """POST /webhooks/{id}/{token}?wait=true。avatar_url が None なら省略する。
+
+    components は application-owned webhook（Bot が作成した webhook）なら常に送れる（Discord docs: webhook.mdx）。
+    """
     url = f"{_DISCORD_API_BASE}/webhooks/{webhook.webhook_id}/{webhook.token}"
     payload: dict[str, Any] = {"username": username}
     if avatar_url:
         payload["avatar_url"] = avatar_url
     if content is not None:
         payload["content"] = content
+    if components:
+        payload["components"] = components
 
     async def _send() -> httpx.Response:
         async with httpx.AsyncClient(timeout=_TIMEOUT_SEC) as client:
@@ -298,6 +307,46 @@ async def _execute_webhook(
             )
 
     return await _request_with_retry(label=f"execute webhook={webhook.webhook_id}", send=_send)
+
+
+async def _send_via_webhook(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    channel_id: str,
+    username: str,
+    avatar_url: str | None,
+    content: str | None,
+    file: OutboundFile | None,
+    components: list[dict[str, Any]] | None,
+) -> str:
+    """webhook 取得（無ければ作成）→ 実行 → 消失時 1 回だけ作り直して再送。Discord メッセージ ID を返す。"""
+    name = validate_username(username)
+    webhook = await _load_webhook(db, tenant_id, channel_id)
+    recreated = False
+    while True:
+        if webhook is None:
+            webhook = await _create_webhook(db, tenant_id, channel_id)
+            recreated = True
+        response = await _execute_webhook(
+            webhook,
+            content=content,
+            file=file,
+            username=name,
+            avatar_url=avatar_url,
+            components=components,
+        )
+        if response.status_code in (200, 201):
+            return str(_json_object(response, "id")["id"])
+        if response.status_code in _GONE_STATUSES and not recreated:
+            logger.warning("[discord_webhook] webhook 消失を検知 channel=%s → 作り直し", channel_id)
+            await _delete_webhook(db, tenant_id, channel_id)
+            webhook = None
+            continue
+        logger.error(
+            "[discord_webhook] 送信失敗 channel=%s status=%d", channel_id, response.status_code,
+        )
+        raise WebhookSendError(f"execute_status_{response.status_code}")
 
 
 async def send_as_staff(
@@ -317,24 +366,77 @@ async def send_as_staff(
         WebhookPermissionError: webhook 作成の権限が無い
         WebhookSendError: 再試行後も送れなかった（Bot 名義では送らない）
     """
-    name = validate_username(username)
-    webhook = await _load_webhook(db, tenant_id, channel_id)
-    recreated = False
-    while True:
-        if webhook is None:
-            webhook = await _create_webhook(db, tenant_id, channel_id)
-            recreated = True
-        response = await _execute_webhook(
-            webhook, content=content, file=file, username=name, avatar_url=avatar_url,
+    return await _send_via_webhook(
+        db,
+        tenant_id=tenant_id,
+        channel_id=channel_id,
+        username=username,
+        avatar_url=avatar_url,
+        content=content,
+        file=file,
+        components=None,
+    )
+
+
+async def send_as_identity(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    channel_id: str,
+    username: str,
+    avatar_url: str | None = None,
+    content: str | None = None,
+    components: list[dict[str, Any]] | None = None,
+) -> str:
+    """任意の名前・アイコンで送信し（サーバー名義の案内用）、Discord メッセージ ID を返す。
+
+    Raises:
+        StaffNameInvalidError: username が使えない
+        WebhookPermissionError: webhook 作成の権限が無い
+        WebhookSendError: 再試行後も送れなかった
+    """
+    return await _send_via_webhook(
+        db,
+        tenant_id=tenant_id,
+        channel_id=channel_id,
+        username=username,
+        avatar_url=avatar_url,
+        content=content,
+        file=None,
+        components=components,
+    )
+
+
+async def try_send_as_identity(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    channel_id: str,
+    identity: GuildIdentity | None,
+    content: str | None = None,
+    components: list[dict[str, Any]] | None = None,
+) -> str | None:
+    """サーバー名義で送る。送れなければ None（呼び出し側が Bot 投稿に戻す）。
+
+    identity が None（サーバー情報を取得できなかった）・名前が使えない・webhook 失敗のいずれでも
+    例外は出さず warning を記録する。サーバー側の案内を欠落させないための方針。
+    """
+    if identity is None:
+        logger.warning("[discord_webhook] サーバー情報なし → Bot 名義で送信 channel=%s", channel_id)
+        return None
+    try:
+        return await send_as_identity(
+            db,
+            tenant_id=tenant_id,
+            channel_id=channel_id,
+            username=identity.name,
+            avatar_url=identity.icon_url,
+            content=content,
+            components=components,
         )
-        if response.status_code in (200, 201):
-            return str(_json_object(response, "id")["id"])
-        if response.status_code in _GONE_STATUSES and not recreated:
-            logger.warning("[discord_webhook] webhook 消失を検知 channel=%s → 作り直し", channel_id)
-            await _delete_webhook(db, tenant_id, channel_id)
-            webhook = None
-            continue
-        logger.error(
-            "[discord_webhook] 送信失敗 channel=%s status=%d", channel_id, response.status_code,
+    except DiscordWebhookError as exc:
+        logger.warning(
+            "[discord_webhook] サーバー名義送信に失敗 → Bot 名義で送信 channel=%s reason=%s",
+            channel_id, type(exc).__name__,
         )
-        raise WebhookSendError(f"execute_status_{response.status_code}")
+        return None
