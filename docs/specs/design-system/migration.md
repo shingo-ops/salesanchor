@@ -329,3 +329,6 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
 
 2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。
+
+
+2026-10-02 AV着手（設計のみ）: CodexからOpus設計/Sonnet調査実装へ引継ぎ。§Y順序3の入力本体が未着手と確認。基準55d99a97eでAST再棚卸し、native入力599（ページ側select80/textarea56/input460、ui-allow21）。9/10監査577と対応556・旧のみ21・新のみ43。AV-1はSelectControl本体拡張（children/forwardRef/indicator）のみ、利用ページ変更0。詳細design.md §AV、証跡evidence-20260910/av0-input-audit.md・av1-select-detail.md。製品未変更、実装はPO実装承認とカード後。
