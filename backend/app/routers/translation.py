@@ -29,7 +29,7 @@ from app.auth.dependencies import (
 )
 from app.database import get_db
 from app.models import User
-from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
+from app.services.llm_errors import LLMConfigError, LLMParseError
 from app.services.message_translator import (
     BudgetExceededError,
     confirm_outbound_draft,

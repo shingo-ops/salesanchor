@@ -8,8 +8,9 @@ A方式（テナント別bot）から B方式（共通bot + guild_id → tenant_
 
 DM は B方式の対象外（guild_id を持たないため逆引き不能 — ADR-146 F7/PO決定）。
 
-在庫受信コード（_process_message / _resume_missed_messages / _process_dm_message）は
-ADR-146 案ア により削除せず休眠のまま残す。在庫移行プロジェクトで後日再設計する。
+2026-10-02: 在庫受信の休眠スタブ（_process_message / _resume_missed_messages /
+_process_dm_message）は Discord 在庫取り込み機能の削除に伴い撤去した。
+経緯: docs/handoff/remove-discord-inventory-parse/design.md
 """
 from __future__ import annotations
 
@@ -42,7 +43,7 @@ class JarvisDiscordClient(discord.Client):
 
     - on_message(guild):           _resolve_tenant_id(guild_id) → ticket_channel_writer
     - on_message(DM):              スキップ（B方式対象外 — F7/PO決定）
-    - on_resumed:                  no-op（在庫補完は案ア休眠中 — ADR-146）
+    - on_resumed:                  no-op（ログのみ）
     - on_interaction:              guild_id → tenant_id 逆引き → ticket_channel_creator
     - on_raw_reaction_add/remove:  guild_id → tenant_id 逆引き → reaction_writer
     """
@@ -141,10 +142,8 @@ class JarvisDiscordClient(discord.Client):
         )
 
     async def on_resumed(self) -> None:
-        """在庫補完は ADR-146 案ア により休眠中。no-op."""
-        logger.info(
-            "[discord-gateway] RESUMED — 在庫 missed-message 補完は休眠中 (ADR-146 案ア)"
-        )
+        """no-op（ログのみ）."""
+        logger.info("[discord-gateway] RESUMED")
 
     async def on_disconnect(self) -> None:
         logger.warning("[discord-gateway] DISCONNECT")
@@ -321,20 +320,6 @@ class JarvisDiscordClient(discord.Client):
                 exc,
                 exc_info=True,
             )
-
-    # --- 案ア 休眠スタブ（在庫移行プロジェクトで再設計予定 ADR-146）----------
-
-    async def _process_dm_message(self, message: discord.Message) -> None:  # noqa: ARG002
-        """DM 受信箱記録 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _process_dm_message: 休眠中 (ADR-146 案ア)")
-
-    async def _process_message(self, message: discord.Message) -> None:  # noqa: ARG002
-        """在庫受信 inbound_writer 経路 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _process_message: 休眠中 (ADR-146 案ア)")
-
-    async def _resume_missed_messages(self) -> None:
-        """missed messages 補完 — 休眠中 (ADR-146 案ア)."""
-        logger.debug("[discord-gateway] _resume_missed_messages: 休眠中 (ADR-146 案ア)")
 
 
 _MAX_RECONNECT_ATTEMPTS = 10

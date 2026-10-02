@@ -2412,8 +2412,7 @@
       "attrMasters": "各種マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
-      "llmBudget": "LLM 予算",
-      "parseStats": "精度サマリー"
+      "llmBudget": "LLM 予算"
     },
     "attrMasters": {
       "title": "各種マスタ",
@@ -2847,12 +2846,6 @@
       "helpPhaseB": "Phase B (通常運用): 承認時に商品の在庫数を実更新。スプレッドシートのデータは参考データとして活用。",
       "helpPhaseC": "Phase C: スプレッドシート完全閉鎖 + 本格データ移行。現在は切替不可、別 ADR で時期検討中。"
     },
-    "parseReview": {
-      "phaseAWarning": {
-        "always": "現在「緊急戻し」モード中です。承認しても商品の在庫数は更新されません (受信履歴は記録されます)。通常運用に戻すには管理センター → スーパー管理者 → Phase Switch から切り替えてください。",
-        "afterApprove": "承認は完了しましたが、現在「緊急戻し」モード中のため、商品の在庫数は更新されませんでした。受信履歴には {{count}} 件記録されています。"
-      }
-    },
     "inventoryOffers": {
       "subtitle": "仕入元ごとの「現在仕入れ可能な商品・在庫数・単価」を一覧で管理します。Discord 解析レビューで承認すると自動保存、ここで手動編集も可能です。",
       "searchPlaceholder": "仕入元名 / 商品名 / 商品コードで検索",
@@ -3245,7 +3238,9 @@
       "role_staff": "Sales Anchor Staff ロール",
       "role_partner": "Partner ロール",
       "role_member": "Member ロール",
-      "category": "Sales Anchor カテゴリ",
+      "category": "DM カテゴリ（📩｜DM）",
+      "category_stock_member": "メンバー向け在庫カテゴリ（🍀｜Stock Information）",
+      "category_stock_large": "大口向け在庫カテゴリ（🍒｜Stock Information）",
       "ch_ticket": "ticket-start チャンネル",
       "ch_member": "member-announcements チャンネル",
       "ch_partner": "partner-announcements チャンネル",
@@ -3254,6 +3249,7 @@
     "statuses": {
       "created": "作成済み",
       "skipped": "既存のためスキップ",
+      "updated": "更新（名前変更・移動）",
       "posted": "投稿済み",
       "failed": "失敗"
     }
@@ -3285,26 +3281,6 @@
     "grossProfitTotal": "粗利合計",
     "count": "件数",
     "editFinancial": "売上を編集"
-  },
-  "supplier": {
-    "parseStats": {
-      "selectSupplier": "仕入元を選択",
-      "selectPlaceholder": "-- 仕入元を選択 --",
-      "noData": "データがありません（この仕入元の解析ログがまだありません）",
-      "columns": {
-        "day": "日付",
-        "totalLines": "総行数",
-        "parsedCount": "解析済み",
-        "excludedCount": "除外",
-        "unparsedCount": "未解析",
-        "excludeRate": "除外率",
-        "avgConfidence": "平均確信度"
-      },
-      "legend": {
-        "highExclude": "除外率 > 30%（ドリフト警告）",
-        "lowConfidence": "平均確信度 < 0.5（品質低下警告）"
-      }
-    }
   },
   "company": {
     "stats": {
