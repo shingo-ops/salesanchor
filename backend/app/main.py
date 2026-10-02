@@ -74,7 +74,6 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
-    parse_review,
     payment_fee_settings,  # 決済手数料設定 テナント用
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
