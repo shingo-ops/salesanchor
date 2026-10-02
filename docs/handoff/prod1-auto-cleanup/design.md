@@ -87,3 +87,13 @@ crontab の該当1行を削除するだけで即停止する。
 | images=36 不変 | snap 関数の出力を目視確認 |
 | 捨て駒 KEEP → REMOVED | RUN1/RUN2 のログ行を目視確認 |
 ```
+
+## 外部・過去事例の参照と我々への応用
+
+（2026-10-03 追記）該当事例なし。理由：今回の変更は、cron の引数を、すでに合意済みの v2 設計（`docs/specs/server-resource-optimization/design.md`）に合わせただけで、新しい技術判断を含まないため。
+
+## 維持の仕組み
+
+（2026-10-03 追記）
+- 片付けが8日以上完全成功しないと、prod2 の `monitoring/prometheus/alert_rules.yml` の F2CleanupStale が Discord に通知する（黒板方式）。
+- 守り手: `monitoring/prometheus/alert_rules.yml`（F2CleanupStale）、`scripts/f2-cleanup.sh`（write_blackboard）
