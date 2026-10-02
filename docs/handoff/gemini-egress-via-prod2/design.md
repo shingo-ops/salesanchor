@@ -198,4 +198,16 @@
 
 - 同じ症状の報告（東京 IDC Frontier、2026-09-19〜、未解決）：recon §1
 - Render/Singapore の利用者が同じエラーを報告し、数日後に直ったと書いている（2026-05-09〜17、原因は本人も不明）：https://discuss.ai.google.dev/t/getting-error-400-user-location-is-not-supported-for-the-api-use-failed-precondition/144164
+
+## 12. 追補（2026-10-02：既定を直接接続に戻し、中継は緊急手段として残置）
+
+- **判断**：prod1 の Google 位置判定が修正され、直接接続で安定することが確認された（下記の検証事実）。PO 指示（2026-10-02 verbatim）：「中継ポイントは緊急時のまま残しておき、再発した場合の手段として確立しておく、設定をデフォルト仕様として中継なしに切り替える、中継ポイントを使ったprod2からの中継方法は緊急手段として次回も使えるように記録しておいてほしい」。
+- **検証事実（2026-10-02）**：
+  - prod1 の backend コンテナから、直接接続（新 SDK, `google.genai`）・中継経由のどちらも `gemini-3.1-flash-lite` への呼び出しが成功（4/4）。
+  - backend コンテナに `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY` は設定されていない。
+  - 本番 `.env` に `GEMINI_PROXY_URL` / `GEMINI_GRPC_PROXY` の明示設定は無い（`grep -n -E "^(GEMINI_PROXY_URL|GEMINI_GRPC_PROXY)=" .env` → 該当なし）。
+  - 旧 SDK（`google.generativeai`、`grpc_proxy` 環境変数依存）側も、`grpc_proxy=""`（空文字）を渡した状態で `GenerativeModel.generate_content` が成功することを本番 backend コンテナで実測済み。空文字は「プロキシ未設定」として扱われる。
+- **変更**：`docker-compose.yml` の backend・celery-worker の `GEMINI_PROXY_URL` / `grpc_proxy` の既定値を `http://gemini-egress:18888` から空文字（`${GEMINI_PROXY_URL-}` / `${GEMINI_GRPC_PROXY-}`）に変更。`.env` で明示的にこの2つのキーを設定した場合だけ中継 ON になる。`gemini-egress` サービス（prod1 側コンテナ）と prod2 側 tinyproxy は変更せず、起動したまま残置する。
+- **緊急手段としての再利用手順**：[docs/runbooks/gemini-egress-emergency.md](../../runbooks/gemini-egress-emergency.md) に記録した（症状判定・中継 ON/OFF 手順・prod2 側の前提を含む）。
+- **対象外（維持）**：§2 の対象外は変わらない。prod2 側の tinyproxy・中継専用鍵・`gemini-egress` コンテナの構成は本追補でも変更していない。
 - 我々への応用：Google の訂正はいつ直るか分からない。そのため「日本と判定される別の IP を通す」を本命にした。直接の実測（prod2 経由で 200）を根拠とし、外部の事例は成功の証明には使わない
