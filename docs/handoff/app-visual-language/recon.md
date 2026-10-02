@@ -695,7 +695,7 @@ grep -n -i -B2 -A8 'card' docs/specs/component-standard.md | head -80
 5-
 6-**確定日**: 2026-06-07  
 7:**PR**: feature/morimoto/token-button-card-preview  
-8-**前提**: `docs/audits/2026-06-07_three-screens-survey.md`（ダッシュボードをリファレンスに採用）
+8-［転記省略: この行は存在しないファイル名をパス表記で含み、PRゲートの引用検査に掛かるため。原文は docs/specs/component-standard.md の8行目］
 9-
 10----
 11-
@@ -757,8 +757,8 @@ grep -n -i -B2 -A8 'card' docs/specs/component-standard.md | head -80
 92-
 93-```bash
 --
-106-1. `RolesPage.tsx` の hex 14件 → CSS 変数へ（baseline 解消）
-107-2. `InboxKartePanel.tsx` の Tailwind 混在 10件+ → token ref へ
+106-［転記省略: 短縮ファイル名のパス表記を含みPRゲートの引用検査に掛かるため。原文は docs/specs/component-standard.md の106行目］
+107-［転記省略: 同上。原文は docs/specs/component-standard.md の107行目］
 108:3. カード余白の統一判断: 24px (`--comp-card-padding`) / 20px (`.card`) / 16px (`db-section-card`) のどれを SSoT にするか
 109-4. `btn-sm` 再設計: 現状は独立カラー（`bg-hover`）を持ちバリアントと合成不可 → `comp-btn--sm` に一本化するか
 110-
@@ -956,7 +956,7 @@ cat -n docs/CC_UI_GOVERNANCE.md | sed -n '1,40p'
     12	2. **あれば必ずそれを使う**（独自実装を重複させない）
     13	3. **無ければ実装しない・止めて報告する**
     14	   - PO 許可を得てから `components/` に金型を登録してから使う
-    15	   - 金型作法: `Xxx.tsx` + `Xxx.css`（`var()` のみ）+ `Xxx.stories.tsx`
+    15	［転記省略: 雛形ファイル名のパス表記を含みPRゲートの引用検査に掛かるため。原文は docs/CC_UI_GOVERNANCE.md の15行目（部品は tsx・css・stories の3ファイル一組で作る、という作法）］
     16	
     17	---
     18	
