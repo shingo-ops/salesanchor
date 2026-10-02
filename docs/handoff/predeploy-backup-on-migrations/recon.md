@@ -81,7 +81,7 @@ $ grep -n -i "LATEST\|salesanchor_db_\|rollback\|restore\|PREV_SHA\|steps.change
 ...
 ```
 
-**判定（事実）**: `deploy.yml` 内の自動ロールバック（ADR-115, `.github/workflows/deploy.yml:570-646`）は `git reset --hard "${PREV_SHA}"`（`.github/workflows/deploy.yml:591`）によるコードのロールバックのみで、DBをpre-deploy backupから復元する処理は存在しない。`scripts/` 配下にもDB復元を伴う rollback スクリプトは見つからなかった（`grep -rn -i "restore\|rollback" scripts/` で `scripts/backup.sh` 自身と `deploy.yml` 以外のDB復元ロジックなし、下記参照）。
+**判定（事実）**: `.github/workflows/deploy.yml` 内の自動ロールバック（ADR-115, `.github/workflows/deploy.yml:570-646`）は `git reset --hard "${PREV_SHA}"`（`.github/workflows/deploy.yml:591`）によるコードのロールバックのみで、DBをpre-deploy backupから復元する処理は存在しない。`scripts/` 配下にもDB復元を伴う rollback スクリプトは見つからなかった（`grep -rn -i "restore\|rollback" scripts/` で `scripts/backup.sh` 自身と `.github/workflows/deploy.yml` 以外のDB復元ロジックなし、下記参照）。
 
 ```
 $ grep -rln -i "restore\|rollback" scripts/
@@ -93,7 +93,7 @@ $ grep -n -i "restore\|rollback" scripts/backup.sh
 ```
 （backup.sh内に restore/rollback の文字列ヒットなし = バックアップ取得専用スクリプトで、復元処理は同スクリプト内に存在しない）
 
-補足: `scripts/restore.sh`（`scripts/backup.sh:7` のコメントで言及）は存在するが、`.github/workflows/*.yml` のいずれからも呼び出されていない（`grep -n "restore.sh" .github/workflows/*.yml` はヒットなし）。手動実行専用で、deploy.yml の自動フローには組み込まれていない。`scripts/test_rollback_simulation.sh` は `.github/workflows/test-rollback.yml:39` から呼ばれるが、これはSA-18 Phase2のDATABASE_URLフォールバック検証用であり、DBデータのバックアップ復元とは無関係。
+補足: `scripts/restore.sh`（`scripts/backup.sh:7` のコメントで言及）は存在するが、.github/workflows/*.yml のいずれからも呼び出されていない（`grep -n "restore.sh" .github/workflows/*.yml` はヒットなし）。手動実行専用で、deploy.yml の自動フローには組み込まれていない。`scripts/test_rollback_simulation.sh` は `.github/workflows/test-rollback.yml:39` から呼ばれるが、これはSA-18 Phase2のDATABASE_URLフォールバック検証用であり、DBデータのバックアップ復元とは無関係。
 
 **結論: migrationsなしデプロイでDBをpre-deploy backupから復元する自動ロールバック経路はゼロ件。STOP条件に該当しない。**
 

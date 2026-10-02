@@ -48,7 +48,7 @@ recon.md §1-2 で確認した通り、「Pre-deploy DB backup」ステップに
 
 ### リスク
 - migrationsなしのデプロイでbackupがskipされるため、「migrationsの判定ロジック自体にバグがあり、実際はmigrationsを含むのに `migrations` output が `false` になる」場合、バックアップなしでmigrationsが適用されるリスクがある。
-  - 緩和: `migrations` フィルタは `backend/**` 全体・`scripts/**` 全体・`docker-compose.yml`・`deploy.yml` 自体も対象にしており（recon.md §1）、判定不能時は安全側（実行）に倒す既存ADR-082設計を継続利用。新規リスクの追加ではない。
+  - 緩和: `migrations` フィルタは `backend/**` 全体・`scripts/**` 全体・`docker-compose.yml`・`.github/workflows/deploy.yml` 自体も対象にしており（recon.md §1）、判定不能時は安全側（実行）に倒す既存ADR-082設計を継続利用。新規リスクの追加ではない。
 
 ### 戻し方
 - `git revert <本PRのマージコミット>` で `if` 条件とステップ分離を元に戻せば、全デプロイで毎回backupを取る旧挙動に即復帰する。
