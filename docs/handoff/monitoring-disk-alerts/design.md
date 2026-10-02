@@ -36,7 +36,7 @@ recon A-1〜A-5の事実から:
 - `group_wait: 30s`は初回通知を30秒以内に送るには十分短い。`repeat_interval: 4h`は再通知間隔であり、初回通知のタイミングには影響しない。
 - webhook secretファイルはコンテナ内に存在・非ゼロ（recon A-4）、`alertmanager_notifications_failed_total{integration="discord"}`は全reason=0（recon A-5）で、alertmanager側の配信失敗の証跡は無い。
 
-→ 上記より、`alertmanager.yml`を変更する技術的な根拠が無いため、**変更しない**。
+→ 上記より、`monitoring/alertmanager/alertmanager.yml`を変更する技術的な根拠が無いため、**変更しない**。
 
 ## PO適用手順（prod2, 49.212.160.98）
 
@@ -65,7 +65,7 @@ recon A-1〜A-5の事実から:
 
 | 基準 | 検証方法 |
 |------|---------|
-| `alert_rules.yml`の構文が正しい | `promtool check rules monitoring/prometheus/alert_rules.yml`（本PRでdocker版実行済み、SUCCESS: 15 rules found） |
+| `monitoring/prometheus/alert_rules.yml`の構文が正しい | `promtool check rules monitoring/prometheus/alert_rules.yml`（本PRでdocker版実行済み、SUCCESS: 15 rules found） |
 | `CriticalDiskUsage`が既存`HighDiskUsage`と同じmountpoint/instanceで評価される | ruleのexpr文字列を目視比較（`mountpoint="/"`で同一） |
 | PO適用後、ルールがPrometheusにロードされている | `curl -s http://localhost:9090/api/v1/rules`に`CriticalDiskUsage`が出現する |
 | PO適用後、Discordへの通知試行が実際の発火時にインクリメントする | `alertmanager_notifications_total{integration="discord"}`の値をリロード前後・発火前後で比較 |
@@ -74,13 +74,13 @@ recon A-1〜A-5の事実から:
 ## ロールバック
 
 - `monitoring/prometheus/alert_rules.yml`から`CriticalDiskUsage`ブロック（`monitoring/prometheus/alert_rules.yml:37-45`相当の追加分）を削除し、PO適用手順と同じ`curl -X POST http://localhost:9090/-/reload`でリロードするだけで即時復元可能。既存`HighDiskUsage`には触れていないため、ロールバック時に既存の監視機能に影響しない。
-- `alertmanager.yml`は変更していないため、ロールバック対象なし。
+- `monitoring/alertmanager/alertmanager.yml`は変更していないため、ロールバック対象なし。
 
 ## 外部・過去事例
 
-該当なし。本変更は既存の`alert_rules.yml`内に同一パターン（閾値・for・severity二段階）の`critical`アラートが複数存在する（`PostgresDown`, `High502Rate`, `ServiceDown`）ため、リポジトリ内の既存パターンへの追従であり、外部事例の調査を必要とする新規パターンではないと判断した。
+該当なし。本変更は既存の`monitoring/prometheus/alert_rules.yml`内に同一パターン（閾値・for・severity二段階）の`critical`アラートが複数存在する（`PostgresDown`, `High502Rate`, `ServiceDown`）ため、リポジトリ内の既存パターンへの追従であり、外部事例の調査を必要とする新規パターンではないと判断した。
 
 ## 維持の仕組み
 
 - `monitoring/scripts/validate_tokens.py`のCHECK3（アラート閾値整合性）は既存アラートの閾値をadvisoryでチェックしているが、`CriticalDiskUsage`は現時点でこのスクリプトのチェック対象リストに含まれていない（advisory警告のみでブロックしない設計のため、本PRでスクリプト自体は変更していない）。将来閾値を変更する場合は`monitoring/scripts/validate_tokens.py`のCHECK3対象リストへの追加を検討する。
-- 守り手: `/Users/tanizawashingo/salesanchor/monitoring/prometheus/alert_rules.yml`, `/Users/tanizawashingo/salesanchor/monitoring/scripts/validate_tokens.py`, `/Users/tanizawashingo/salesanchor/docs/runbooks/monitoring-vps-migration.md`
+- 守り手: `monitoring/prometheus/alert_rules.yml`（本リポジトリ内フルパス: `/Users/tanizawashingo/salesanchor/monitoring/prometheus/alert_rules.yml`）, `monitoring/scripts/validate_tokens.py`（フルパス: `/Users/tanizawashingo/salesanchor/monitoring/scripts/validate_tokens.py`）, `docs/runbooks/monitoring-vps-migration.md`（フルパス: `/Users/tanizawashingo/salesanchor/docs/runbooks/monitoring-vps-migration.md`）
