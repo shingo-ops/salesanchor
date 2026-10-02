@@ -120,11 +120,12 @@ jobs:
             ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/home/ubuntu/salesanchor/www/design-site/progress.json
 
       # ============================================
-      # デプロイ前 DB バックアップ
-      # git pull / docker compose の前に取得して万一のロールバック保険とする。
-      # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
+      # 空き容量チェック（ADR-135/136）
+      # 2026-10-02 prod1 ディスクフル事故の再発防止。
+      # DBマイグレーションの有無に関わらず、デプロイのたびに毎回実行する
+      # （Pre-deploy DB backup が migrations なしでスキップされても抜けないようにする）。
       # ============================================
-      - name: Pre-deploy DB backup
+      - name: Check free disk space
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -133,7 +134,7 @@ jobs:
           script: |
             set -e
             echo "============================================"
-            echo "Pre-deploy DB backup..."
+            echo "Check free disk space..."
             echo "============================================"
             cd /home/ubuntu/salesanchor
 
@@ -150,6 +151,27 @@ jobs:
               docker system df || true
               exit 1
             fi
+
+      # ============================================
+      # デプロイ前 DB バックアップ
+      # git pull / docker compose の前に取得して万一のロールバック保険とする。
+      # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
+      # PO承認（2026-10-03）: DBマイグレーションを含むデプロイのみ実行する
+      # （steps.changes.outputs.migrations が 'true' の場合のみ）。
+      # ============================================
+      - name: Pre-deploy DB backup
+        if: steps.changes.outputs.migrations == 'true'
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            echo "============================================"
+            echo "Pre-deploy DB backup..."
+            echo "============================================"
+            cd /home/ubuntu/salesanchor
 
             bash scripts/backup.sh
             LATEST=$(ls -t /home/ubuntu/backups/postgres/salesanchor_db_*.sql.gz 2>/dev/null | head -1)
