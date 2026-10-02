@@ -1,7 +1,6 @@
 # backend/CLAUDE.md
 
 `backend/` 配下の作業時のみ適用。プロジェクト全体ルールは `/CLAUDE.md` を参照。
-<!-- ADR-067 Phase 5B: 2026-05-26 デザイントークン width/height 強制完了 -->
 
 ---
 
@@ -55,6 +54,7 @@ destructive な変更が必要な場合は必ずしんごさん（PO）に確認
 - 既存全テナント + 新規作成テナント両方への適用経路を PR body に明記する
 - PostgreSQL実機で `information_schema.columns` により全テナントschema整合を確認（SQLite不可）
 - **migration-test 段階的拡充**: migration が操作するテーブルが `migration-test.yml` セットアップになければ最小定義を追加すること（migration 変更なし PR ではジョブ未起動のため速度影響ゼロ）
+
 ## カラムコメント・スキーマ説明の必須化
 
 - **migration**: 新テーブル作成時は全カラムに `COMMENT ON COLUMN` を付与すること。後から見直しても意味が分かる日本語説明を書く
@@ -64,9 +64,7 @@ destructive な変更が必要な場合は必ずしんごさん（PO）に確認
 ## 取引先 SSOT: companies（ADR-089 完了）
 
 `customers` テーブルは廃止済み（2026-06-01 Sprint 7 DROP）。取引先は `companies` / `company_addresses` / `company_discord` を使うこと。本番DROP手順: `scripts/migrate_089_drop_customers_tables.py`（PO確認必須）。詳細: `docs/adr/ADR-089-deprecate-customers-unify-to-companies.md`
-
 ## Meta App Review テナント（tenant_006）パスワード管理
-
 `scripts/setup_review_tenant.py` 実行後は必ずホスト側に保存すること（コンテナ `/tmp` は再起動で消える）。
 手順詳細: `backend/scripts/CLAUDE.md`。受信翻訳の標準入口は `app.services.inbound_translation.enqueue_inbound_translation()`。受信保存後の翻訳 enqueue は必ずこれを使う。品質チェック: `make lint`（ruff/bandit/mypy）/ `make check`（lint + pytest）初回: `pip install -r requirements-dev.txt`
 **ADR-072 write endpoint**: `db.commit()` 直後に `reset_tenant_context()` 必須 → 詳細: `backend/tenant/CLAUDE.md`
