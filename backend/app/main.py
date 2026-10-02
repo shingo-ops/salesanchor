@@ -74,6 +74,7 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
+    payment_fee_settings,  # 決済手数料設定 テナント用
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
@@ -98,6 +99,7 @@ from app.routers import (
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_note_master,  # 備考マスタ中央 admin
+    super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
     super_admin_product_formats,  # フォーマットマスタ中央 admin
@@ -400,6 +402,11 @@ app.include_router(
     units.router, prefix="/api/v1", tags=["units"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 決済手数料設定 テナント用
+app.include_router(
+    payment_fee_settings.router, prefix="/api/v1", tags=["payment-fee-settings"],
+    dependencies=[Depends(get_current_tenant)],
+)
 # ステータスマスタ テナント用
 app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
@@ -538,6 +545,10 @@ app.include_router(
 # 備考マスタ中央 admin
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
+)
+# 決済手数料設定マスタ中央 admin
+app.include_router(
+    super_admin_payment_fee_settings.router, prefix="/api/v1", tags=["super-admin"],
 )
 # 商品カテゴリマスタ中央 admin
 app.include_router(
