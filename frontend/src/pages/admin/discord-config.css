@@ -143,3 +143,26 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+.dc-next-text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.dc-result-status + .dc-step-error {
+  margin-bottom: var(--space-3);
+}
+
+.dc-details > .dc-actions,
+.dc-details > .comp-card {
+  margin-top: var(--space-2);
+}
+
+.dc-chevron {
+  transition: transform var(--transition-fast);
+}
+
+.dc-chevron--open {
+  transform: rotate(180deg);
+}

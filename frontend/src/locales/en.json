@@ -3195,7 +3195,8 @@
     "partial": "Partly failed",
     "failed": "Failed",
     "retryHint": "You can run it again",
-    "nextStep": "Next: move the Bot role above Partner / Member",
+    "nextStep": "Move the Bot role above Partner / Member",
+    "nextStepBadge": "Next",
     "guideLink": "See how",
     "requestFailed": "Could not run",
     "groups": {

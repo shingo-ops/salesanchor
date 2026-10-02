@@ -3195,7 +3195,8 @@
     "partial": "一部失敗しました",
     "failed": "失敗しました",
     "retryHint": "もう一度実行できます",
-    "nextStep": "次に：Botの役職をPartner / Memberより上へ移動",
+    "nextStep": "Botの役職をPartner / Memberより上へ移動",
+    "nextStepBadge": "次に",
     "guideLink": "手順を見る",
     "requestFailed": "実行できませんでした",
     "groups": {

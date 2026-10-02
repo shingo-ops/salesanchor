@@ -97,7 +97,7 @@ it("groups auto setup results by kind with a badge per step and a next-step noti
   expect(within(row("ticket-start")).getByText("Failed")).toBeTruthy();
   expect(within(row("Ticket start button")).getByText("Posted")).toBeTruthy();
   expect(screen.getByText("Missing Access")).toBeTruthy();
-  expect(screen.getByText(/move the Bot role above Partner/)).toBeTruthy();
+  expect(screen.getByText(/Move the Bot role above Partner/)).toBeTruthy();
   expect(screen.getByRole("link", { name: "See how" }).getAttribute("href")).toBe("https://example.com/guide");
 });
 

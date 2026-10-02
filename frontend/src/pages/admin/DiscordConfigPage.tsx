@@ -20,6 +20,7 @@ import { Badge } from "../../components/Badge";
 import type { BadgeVariant } from "../../components/Badge";
 import { TextField } from "../../components/TextField";
 import { Textarea } from "../../components/Textarea";
+import { NAV_ICONS } from "../../constants/icons";
 import "./discord-config.css";
 
 interface DiscordConfig {
@@ -315,7 +316,8 @@ export default function DiscordConfigPage() {
         {others.length > 0 && renderStepGroup("other", others)}
         {result.status !== "failed" && (
           <div className="dc-next">
-            <Badge variant="warning">{t("discordAutoSetup.nextStep")}</Badge>
+            <Badge variant="warning" dot>{t("discordAutoSetup.nextStepBadge")}</Badge>
+            <span className="dc-next-text">{t("discordAutoSetup.nextStep")}</span>
             <ButtonLink variant="ghost" size="sm" href={result.role_order_guide_url} target="_blank" rel="noreferrer">
               {t("discordAutoSetup.guideLink")}
             </ButtonLink>
@@ -450,9 +452,14 @@ export default function DiscordConfigPage() {
         </Card>
 
         {/* 詳細設定（通常は変更不要） */}
-        <div>
-          <Button variant="ghost" size="sm" onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}>
+        <div className="dc-details">
+          <Button variant="secondary" size="sm" onClick={() => setShowDetails((v) => !v)} aria-expanded={showDetails}>
             {t("discordTicketConfig.detailsToggle")}
+            <NAV_ICONS.chevronDown
+              size={16}
+              aria-hidden="true"
+              className={`dc-chevron${showDetails ? " dc-chevron--open" : ""}`}
+            />
           </Button>
           {showDetails && (
             <Card density="compact">
