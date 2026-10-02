@@ -24,6 +24,7 @@ Google Calendar OAuth 2.0 + Calendar API サービス。
   METADATA_FERNET_KEY              - 暗号化鍵（Meta Inbox と共通）
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -188,7 +189,7 @@ async def exchange_code(code: str, state: str) -> dict:
         state=state,
     )
     try:
-        flow.fetch_token(code=code)
+        await asyncio.to_thread(flow.fetch_token, code=code)
     except Exception as e:
         raise RuntimeError(f"Google token 交換に失敗: {e}") from e
 
@@ -260,7 +261,7 @@ async def _refresh_if_needed(
 
     creds = _build_credentials(access_token, refresh_token, token_expiry)
     try:
-        creds.refresh(Request())
+        await asyncio.to_thread(creds.refresh, Request())
     except Exception as e:
         raise RuntimeError(f"アクセストークンの更新に失敗しました: {e}") from e
 
@@ -348,7 +349,7 @@ async def get_events(db, tenant_id: int, *, time_min: str, time_max: str) -> lis
     calendar_id = await get_calendar_id(db, tenant_id)
 
     try:
-        result = (
+        result = await asyncio.to_thread(
             service.events()
             .list(
                 calendarId=calendar_id,
@@ -358,7 +359,7 @@ async def get_events(db, tenant_id: int, *, time_min: str, time_max: str) -> lis
                 orderBy="startTime",
                 maxResults=500,
             )
-            .execute()
+            .execute
         )
     except Exception as e:
         raise RuntimeError(f"イベント取得に失敗: {e}") from e
@@ -372,10 +373,10 @@ async def create_event(db, tenant_id: int, event_body: dict) -> dict:
     calendar_id = await get_calendar_id(db, tenant_id)
 
     try:
-        return (
+        return await asyncio.to_thread(
             service.events()
             .insert(calendarId=calendar_id, body=event_body)
-            .execute()
+            .execute
         )
     except Exception as e:
         raise RuntimeError(f"イベント作成に失敗: {e}") from e
@@ -387,10 +388,10 @@ async def update_event(db, tenant_id: int, event_id: str, event_body: dict) -> d
     calendar_id = await get_calendar_id(db, tenant_id)
 
     try:
-        return (
+        return await asyncio.to_thread(
             service.events()
             .patch(calendarId=calendar_id, eventId=event_id, body=event_body)
-            .execute()
+            .execute
         )
     except Exception as e:
         raise RuntimeError(f"イベント更新に失敗: {e}") from e
@@ -402,7 +403,9 @@ async def delete_event(db, tenant_id: int, event_id: str) -> None:
     calendar_id = await get_calendar_id(db, tenant_id)
 
     try:
-        service.events().delete(calendarId=calendar_id, eventId=event_id).execute()
+        await asyncio.to_thread(
+            service.events().delete(calendarId=calendar_id, eventId=event_id).execute
+        )
     except Exception as e:
         raise RuntimeError(f"イベント削除に失敗: {e}") from e
 

@@ -19,6 +19,8 @@ import os
 
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
 
+from unittest.mock import AsyncMock
+
 import httpx
 import pytest
 import pytest_asyncio
@@ -27,6 +29,13 @@ from sqlalchemy import text
 
 from app.services import discord_webhook_sender as sender
 from app.services import encryption
+from app.services.discord_guild_identity import (
+    GuildIdentity,
+    build_guild_identity,
+    fetch_guild_identity,
+    guild_icon_url,
+)
+from app.services.discord_rest import DiscordAPIError
 
 _REAL_ASYNC_CLIENT = httpx.AsyncClient
 _TOKEN = "WEBHOOK-SECRET-TOKEN-xyz"
@@ -387,6 +396,38 @@ async def test_missing_bot_token_raises_send_error(db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_missing_fernet_key_fails_before_creating_webhook(db, monkeypatch):
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    with pytest.raises(sender.WebhookSendError):
+        await _send(db)
+    assert rec.requests == []
+    assert await _rows(db) == []
+
+
+@pytest.mark.asyncio
+async def test_missing_fernet_key_is_a_discord_webhook_error_not_raw(db, monkeypatch):
+    """担当者送信側（leads.py）は DiscordWebhookError を 502 DISCORD_SEND_FAILED に写す。生の設定エラーを漏らさない。"""
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    with pytest.raises(sender.DiscordWebhookError):
+        await _send(db)
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_missing_fernet_key_returns_none_without_http(db, monkeypatch):
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name="My Shop", icon_url=None)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=identity) is None
+    assert rec.requests == []
+
+
+@pytest.mark.asyncio
 async def test_undecryptable_row_is_replaced(db, monkeypatch):
     await db.execute(text(
         "INSERT INTO discord_channel_webhooks (tenant_id, channel_id, webhook_id, webhook_token_encrypted) "
@@ -433,3 +474,123 @@ def test_malformed_log_call_from_httpx_logger_does_not_raise():
         "httpcore.http11", logging.INFO, __file__, 1, "bad %s %s", ("x",), None,
     )
     assert record.msg == "bad %s %s" and record.args == ("x",)  # 失敗時は記録を変えない
+
+
+# ---------------------------------------------------------------------------
+# サーバー名義（send_as_identity / try_send_as_identity）
+# ---------------------------------------------------------------------------
+
+_COMPONENTS = [{"type": 1, "components": [{"type": 2, "style": 1, "label": "Open", "custom_id": "ticket_open"}]}]
+
+
+@pytest.mark.asyncio
+async def test_send_as_identity_includes_components_username_and_avatar(db, monkeypatch):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [_ok("m9")]})
+    _install(monkeypatch, rec)
+
+    msg_id = await sender.send_as_identity(
+        db, tenant_id=7, channel_id=_CHANNEL, username="My Shop",
+        avatar_url="https://cdn.discordapp.com/icons/1/abc.png", content="hi", components=_COMPONENTS,
+    )
+
+    assert msg_id == "m9"
+    assert json.loads(rec.requests[1].content) == {
+        "username": "My Shop",
+        "avatar_url": "https://cdn.discordapp.com/icons/1/abc.png",
+        "content": "hi",
+        "components": _COMPONENTS,
+    }
+
+
+@pytest.mark.asyncio
+async def test_send_as_staff_payload_has_no_components(db, monkeypatch):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [_ok()]})
+    _install(monkeypatch, rec)
+    await _send(db)
+    assert "components" not in json.loads(rec.requests[1].content)
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_returns_id_on_success(db, monkeypatch):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [_ok("m1")]})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name="My Shop", icon_url=None)
+
+    result = await sender.try_send_as_identity(
+        db, tenant_id=7, channel_id=_CHANNEL, identity=identity, content="hi", components=_COMPONENTS,
+    )
+
+    assert result == "m1"
+    assert "avatar_url" not in json.loads(rec.requests[1].content)
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_none_identity_makes_no_call(db, monkeypatch):
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=None) is None
+    assert rec.requests == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("name", ["Discord Traders", "x" * 81])
+async def test_try_send_as_identity_invalid_name_returns_none(db, monkeypatch, name):
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name=name, icon_url=None)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=identity) is None
+    assert rec.requests == []
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_webhook_error_returns_none(db, monkeypatch):
+    rec = Recorder({"webhook_create": [httpx.Response(403, json={})]})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name="My Shop", icon_url=None)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=identity) is None
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_execute_failure_returns_none(db, monkeypatch, sleeps):
+    rec = Recorder({"webhook_create": [_created()], "webhook_exec": [httpx.Response(500, json={})]})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name="My Shop", icon_url=None)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=identity) is None
+
+
+@pytest.mark.parametrize(
+    "icon_hash,expected",
+    [
+        (None, None),
+        ("", None),
+        ("abc", "https://cdn.discordapp.com/icons/99/abc.png"),
+        ("a_abc", "https://cdn.discordapp.com/icons/99/a_abc.gif"),
+    ],
+)
+def test_guild_icon_url_handles_static_animated_and_missing(icon_hash, expected):
+    assert guild_icon_url(99, icon_hash) == expected
+
+
+def test_build_guild_identity_blank_name_is_none():
+    assert build_guild_identity(1, "   ", "abc") is None
+    assert build_guild_identity(1, " Shop ", None) == GuildIdentity(name="Shop", icon_url=None)
+
+
+@pytest.mark.asyncio
+async def test_fetch_guild_identity_reads_name_and_icon(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.discord_guild_identity.discord_api_request",
+        AsyncMock(return_value={"id": "5", "name": "My Shop", "icon": "a_zz"}),
+    )
+    assert await fetch_guild_identity("5", "tok") == GuildIdentity(
+        name="My Shop", icon_url="https://cdn.discordapp.com/icons/5/a_zz.gif",
+    )
+
+
+@pytest.mark.asyncio
+async def test_fetch_guild_identity_api_error_is_none(monkeypatch):
+    monkeypatch.setattr(
+        "app.services.discord_guild_identity.discord_api_request",
+        AsyncMock(side_effect=DiscordAPIError("x", 403)),
+    )
+    assert await fetch_guild_identity("5", "tok") is None

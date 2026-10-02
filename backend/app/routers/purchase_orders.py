@@ -10,6 +10,8 @@ from __future__ import annotations
 """
 
 
+import asyncio
+
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -418,7 +420,8 @@ async def send_po_email(
             "mail_from": "noreply@test.salesanchor.jp",
             "use_tls": False,
         }
-    result = send_po_email_sync(
+    result = await asyncio.to_thread(
+        send_po_email_sync,
         to_addr=to_addr,
         subject=subject,
         body_text=body,

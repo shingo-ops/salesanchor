@@ -1250,7 +1250,7 @@ async def translate_message_endpoint(
     キャッシュヒット時は Gemini 未呼び出しで即返却。
     予算超過時は 429 を返す。
     """
-    from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
+    from app.services.llm_errors import LLMConfigError, LLMParseError
     from app.services.message_translator import (
         BudgetExceededError,
         translate_message,
@@ -2468,8 +2468,8 @@ async def send_lead_image_message(
                     _ext = "." + dc_filename.rsplit(".", 1)[1][:10]
                 _rel_path = f"tenant_{tenant_id:03d}/lead_{lead_id}/{dc_msg_id}{_ext}"
                 _abs_path = Path(_att_root) / _rel_path
-                _abs_path.parent.mkdir(parents=True, exist_ok=True)
-                _abs_path.write_bytes(file_bytes)
+                await asyncio.to_thread(_abs_path.parent.mkdir, parents=True, exist_ok=True)
+                await asyncio.to_thread(_abs_path.write_bytes, file_bytes)
 
                 attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
                 await db.execute(

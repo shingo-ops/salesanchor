@@ -20,6 +20,7 @@ Google Calendar Push Notification の制約:
                  デフォルト: https://api.salesanchor.jp
 """
 
+import asyncio
 import logging
 import os
 import uuid
@@ -72,15 +73,17 @@ async def register_webhook(db: AsyncSession, tenant_id: int) -> Optional[dict]:
     webhook_address = _get_webhook_address()
 
     try:
-        response = service.events().watch(
-            calendarId="primary",
-            body={
-                "id": channel_id,
-                "type": "web_hook",
-                "address": webhook_address,
-                "expiration": str(int(datetime.now(timezone.utc).timestamp() * 1000) + _MAX_TTL_MS),
-            },
-        ).execute()
+        response = await asyncio.to_thread(
+            service.events().watch(
+                calendarId="primary",
+                body={
+                    "id": channel_id,
+                    "type": "web_hook",
+                    "address": webhook_address,
+                    "expiration": str(int(datetime.now(timezone.utc).timestamp() * 1000) + _MAX_TTL_MS),
+                },
+            ).execute
+        )
     except Exception as e:
         logger.error("Webhook チャンネル登録に失敗 (tenant=%s): %s", tenant_id, e)
         return None
@@ -138,9 +141,11 @@ async def stop_webhook(db: AsyncSession, tenant_id: int) -> None:
     channel_id, resource_id = record[0], record[1]
     try:
         service = await cal_svc._get_service(db, tenant_id)
-        service.channels().stop(
-            body={"id": channel_id, "resourceId": resource_id}
-        ).execute()
+        await asyncio.to_thread(
+            service.channels().stop(
+                body={"id": channel_id, "resourceId": resource_id}
+            ).execute
+        )
     except Exception as e:
         logger.warning("Webhook チャンネル停止に失敗 (tenant=%s): %s", tenant_id, e)
 
@@ -224,12 +229,14 @@ async def handle_webhook_notification(
 
     updated_min = (datetime.now(timezone.utc) - timedelta(minutes=30)).isoformat()
     try:
-        events_result = service.events().list(
-            calendarId="primary",
-            updatedMin=updated_min,
-            singleEvents=True,
-            showDeleted=True,
-        ).execute()
+        events_result = await asyncio.to_thread(
+            service.events().list(
+                calendarId="primary",
+                updatedMin=updated_min,
+                singleEvents=True,
+                showDeleted=True,
+            ).execute
+        )
     except Exception as e:
         logger.error("Google Calendar イベント取得失敗 (tenant=%s): %s", tenant_id, e)
         return
