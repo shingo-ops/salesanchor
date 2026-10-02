@@ -4,7 +4,7 @@
 
 親: [design.md](../../specs/design-system/visual-language/design.md)（§6 段階1） / 合格条件: [kgi.md](../../specs/design-system/visual-language/kgi.md)（K6・K7・K8）
 
-- 状態: カード作成済み。**PO実装承認待ち**（承認前は着手禁止）
+- 状態: **PO実装承認済み（2026-10-02。設計パートナーの提示「このカードのとおり段階1の実装をSonnetに委任してよいか」に、POが「ｙ」と回答）**。Sonnetへ委任済み
 - 担当: Sonnet（実装役）。設計・判断: Opus
 - PO決定（2026-10-02）: CIの画面検査（`.github/workflows/e2e.yml` の playwright ジョブは105行目 `if: false` で停止中）は止めたままにする。UIを変えるPRのたびに、担当が手元で実行して結果をPRに貼る。
 
