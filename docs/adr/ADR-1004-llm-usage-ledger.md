@@ -36,6 +36,7 @@
 - 戻し方: 本 PR を revert すれば台帳への書き込みが止まり、旧列への書き込みが復元される（台帳の表自体は残る）。台帳表の DROP は PO 本人の GO が必要。
 - 維持の仕組み: 書き込みは `llm_budget.record_usage_event`/`record_usage_event_sync` の1箇所に集約し、各経路はそれを呼ぶだけ。守り手は `backend/tests` の台帳テストと `migration-guard.yml` / migration 登録チェック（CI）。
 - 在庫解析の補完（inventory_parse_fallback）の台帳書き込み：backend/app/services/inventory_parser.py は condition vocab gate（scripts/check-condition-vocab.js、変更ファイルの全文を旧語彙で検査・例外なし）により、既存の旧語彙を含むため編集できない。本番の在庫解析の実績は discord_inbound_messages の最終行が 2026-06-25（直近7日0件、2026-09-30 読み取り）。旧語彙の整理後に別PRで結線する。purpose の値と CHECK 制約は先に用意しておく。
+- inventory_parse_fallback 経路は 2026-10-02 に機能ごと削除（purpose 値は互換のため残置）。詳細: docs/handoff/remove-discord-inventory-parse/design.md
 
 ## 受入条件（design.md §5）
 

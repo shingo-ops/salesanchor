@@ -10,7 +10,6 @@ from types import SimpleNamespace
 import pytest
 
 CASES = [
-    ("test_inventory_parser_real_samples.py", "_ensure_inventory_schema"),
     ("test_inventory_sprint1_migrations.py", "_apply_public_migrations"),
     ("test_products_tcg_type_fk.py", "_bootstrap_public_products"),
     ("test_inventory_aggregated.py", "seed_aggregated_dataset"),
@@ -51,9 +50,6 @@ def load_setup(filename, function, namespace):
     selected.decorator_list = []
     selected = RemoveLocalImports().visit(selected)
     nodes = [selected]
-    if filename == "test_inventory_parser_real_samples.py":
-        nodes += [n for n in tree.body if isinstance(n, ast.FunctionDef) and n.name == "_is_idempotent_migration_error"]
-        nodes += [n for n in tree.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "_IDEMPOTENT_PG_SQLSTATES" for t in n.targets)]
     module = ast.fix_missing_locations(ast.Module(body=nodes, type_ignores=[]))
     namespace["__file__"] = str(path)
     exec(compile(module, str(path), "exec"), namespace)
