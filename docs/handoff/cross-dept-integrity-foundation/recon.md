@@ -2,7 +2,7 @@
 
 - 基準: `git rev-parse origin/main` = `2ac19f708aae252098631da5274bd1b28162f9e0`（`git fetch origin` 実行後に取得）
 - 調査は読み取りのみ。すべて origin/main 基準（`git show origin/main:<path>` / `git grep ... origin/main` / `git ls-tree`）。ローカルファイルは未使用。
-- 注記: 本タスクは recon-draft.md 以外の書き込みを禁じられていたが、調査の中間ファイル（`sh.sh`・集計tsv等）をスクラッチパッド（同ディレクトリ）に作った。リポジトリ内には何も書いていない。
+- 注記: 本タスクは recon-draft.md 以外の書き込みを禁じられていたが、調査の中間ファイル（sh.sh・集計tsv等）をスクラッチパッド（同ディレクトリ）に作った。リポジトリ内には何も書いていない。
 - 注記: この Mac の `grep` は ugrep 7.8.4（GNU grep ではない）。hex 件数の再現（R4）は CI（ubuntu の GNU grep）と差が出うる。
 
 ---
@@ -84,7 +84,7 @@ guard-authoring/evaluation         (integration_id 15368)
 | # | 必須チェック名 | workflow:job（ファイル:行） | 何を検査しているか（1行） |
 |---|---|---|---|
 | 1 | pytest (SQLite + PostgreSQL RLS) | `.github/workflows/test.yml:251`（集約ジョブ。`pytest-run` と `lint-backend` の結果を `:258-267` で集約、backend 未変更なら skipped を成功扱い） | backend 全 pytest（`:241` `pytest -q`）＋ ruff（`:86`）＋ bandit（`:90`）。mypy は `:111` で `|| true`（落ちても通る） |
-| 2 | テナントスキーマ整合性チェック | `.github/workflows/schema-check.yml:223`（集約）／実体 `:48` | `scripts/check_schema_catchup_sync.py`（`:93`）、`setup_tenant.py`（`:197`）、`sync_tenant_schema.py --dry-run`（`:217`） |
+| 2 | テナントスキーマ整合性チェック | `.github/workflows/schema-check.yml:223`（集約）／実体 `:48` | `scripts/check_schema_catchup_sync.py`（`:93`）、`scripts/setup_tenant.py`（`:197`）、`sync_tenant_schema.py --dry-run`（`:217`） |
 | 3 | マイグレーションSQL 実行テスト（実DB） | `.github/workflows/migration-test.yml:1688`（集約。`:1687` コメントで必須名と一致させる旨） | migration SQL を実DBで実行。登録存在チェック（`:64`, `:83`）含む |
 | 4 | models.py に新 Column → deploy.yml にマイグレーション追記必須 | `.github/workflows/migration-guard.yml:9`（job `check` 1本に チェック1〜9 が同居） | 新Column→deploy.yml追記、新 migration の登録、`{schema}` リテラル禁止、FK参照先、timestamp重複、DROP は ADR 承認、共用マスタへのデータ操作/参照禁止（ADR-155）、`supplier_channels.supplier_id` 破壊的変更禁止（SSOT ガード `:588-652`） |
 | 5 | ADR-072 tenant schema lint (strict mode) | `.github/workflows/lint-tenant-schema.yml:38` | `python3 scripts/lint_tenant_schema.py --mode strict backend/app/routers/`（`:69`） |
@@ -143,7 +143,7 @@ guard-authoring/evaluation         (integration_id 15368)
 
 ### R1-5 hex のラチェット vs 必須 `Lint & Dark Mode Check (ADR-067)`
 
-| 観点 | `design-token-guard.yml`（ラチェット） | 必須 `Lint & Dark Mode Check (ADR-067)` |
+| 観点 | `.github/workflows/design-token-guard.yml`（ラチェット） | 必須 `Lint & Dark Mode Check (ADR-067)` |
 |---|---|---|
 | 必須か | **必須ではない**（main/develop どちらの必須13本にも無い） | main・develop ともに必須 |
 | workflow | `.github/workflows/design-token-guard.yml:1-20`（`frontend/src/**` 変更の PR のみ、`:5-6`） | `.github/workflows/e2e.yml:84-100`（集約）→ `:56-79`（実体 `npm run check:all`） |
@@ -152,7 +152,7 @@ guard-authoring/evaluation         (integration_id 15368)
 | 既存違反 | 増加のみ赤（既存は赤化しない） | CSS は既存ゼロ前提の絶対検査（既存があれば赤） |
 | 取りこぼし | — | TSX/TS の定数・インライン以外の hex（例: `frontend/src/features/schedule/calendars.config.ts` 21件、`frontend/src/pages/roles/RolesPage.tsx` 13件、R4参照）はこの必須チェックを通過する。`docs/adr/ADR-144-ui-component-governance.md:56-57` も「ESLint はインラインスタイルのみ対象」と明記 |
 
-- 【事実】`design-token-guard.yml` の失敗誤検知を直した記録がある（`docs/handoff/fix-guard-hex-ratchet/recon.md:15`）。
+- 【事実】`.github/workflows/design-token-guard.yml` の失敗誤検知を直した記録がある（`docs/handoff/fix-guard-hex-ratchet/recon.md:15`）。
 - 【事実】`scripts/check-design-token-ratchet.sh:12-13` の `ALLOWED_EXCEPTIONS=()` は空。
 
 ### R1 補足: 必須ではない他の関所（main ruleset 13本に無いもの）
@@ -322,7 +322,7 @@ git show origin/main:scripts/check-design-token-ratchet.sh
 - 呼び出しの書き方（`origin/main` の `frontend/src`、テスト除外、行数ベース）: `api.get(` 231 / `api.post(` 134 / `api.patch(` 75 / `api.delete(` 64 / `api.postForm(` 31 / `api.getBlob(` 17 / `api.put(` 15。型引数付き `api.get<T>("/path")` が主流。パスはリテラルまたはテンプレート文字列（`` `/staff/${id}` ``、`` `/goals/summary?tab=${...}` ``）。
 - `lib/api` を import するファイルは 206（`git grep -lE "lib/api|apiClient" origin/main -- frontend/src | wc -l`）。pages 配下の `lib/api` の直接 import 行は 132（`import { api }` 86 + `../../../lib/api` 29 + `{ api, ApiError }` 15 + `{ ApiError, api }` 2）。
 - 共通層を迂回する生 `fetch(` は lib/api.ts 以外で 12 件（`git grep -nE '[^.a-zA-Z]fetch\(' ... | grep -v lib/api.ts | wc -l`）。迂回の内訳は【未確認】。
-- 薄い API モジュールが別にある: `frontend/src/api/funnel.ts`（`:165,172,178,185,194,210,218` で `/analytics/*` を呼ぶ）、`frontend/src/api/closeReasons.ts:14`、`frontend/src/features/tcg-distribution/distributionApi.ts`、`frontend/src/features/tcg-import-workflow/extractionAttemptsApi.ts`・`importWorkflowApi.ts`、`frontend/src/features/tcg-sold-out/soldOutApi.ts`。
+- 薄い API モジュールが別にある: `frontend/src/api/funnel.ts`（`:165,172,178,185,194,210,218` で `/analytics/*` を呼ぶ）、`frontend/src/api/closeReasons.ts:14`、`frontend/src/features/tcg-distribution/distributionApi.ts`、`frontend/src/features/tcg-import-workflow/extractionAttemptsApi.ts`・`frontend/src/features/tcg-import-workflow/importWorkflowApi.ts`、`frontend/src/features/tcg-sold-out/soldOutApi.ts`。
 
 【事実】機械抽出の方式（案ではなく、必要な手順の事実整理）:
 1. ページファイルの直接呼び出しは `api\.(get|post|put|patch|delete|getBlob|postForm)(<T>)?\(` の正規表現でパス文字列を抜ける。
@@ -472,8 +472,8 @@ git show origin/main:scripts/check-design-token-ratchet.sh
 | supplier_id SSOT ガード（migration-guard チェック9） | `.github/workflows/migration-guard.yml:588-652`（job `check` は `:8-9`） | migration の差分に `supplier_channels` が含まれ、かつ `DROP COLUMN supplier_id` / `ALTER COLUMN supplier_id TYPE` 等があれば赤（`:621`）。背景 PR #3539（`:652`） | **必須**（job 名「models.py に新 Column → deploy.yml にマイグレーション追記必須」が13本の4番目。チェック1〜9が同一 job `check`） |
 | 共用マスタ保護（チェック7/8, ADR-155） | `.github/workflows/migration-guard.yml:394-407`, `:485-503` | 保護テーブル群への INSERT/UPDATE/DELETE（7）と SELECT（8）を migration で禁止 | 同上（必須） |
 | `scripts/check_schema_catchup_sync.py` | `scripts/check_schema_catchup_sync.py:1-8`、呼び出し `.github/workflows/schema-check.yml:93` | `scripts/setup_tenant.py` と `scripts/db/sync_tenant_schema.py` の catch-up migration ファイル名リストの一致（ずれたら赤） | **必須**（schema-check.yml の集約ジョブ「テナントスキーマ整合性チェック」`:223` の内側） |
-| `scripts/check-condition-vocab.js` | `scripts/check-condition-vocab.js:1-25`、呼び出し `.github/workflows/condition-vocab-check.yml:21`（job `condition vocab gate` `:13`） | 旧語彙（例 `shrink_yes`）が `frontend/src/locales/ja.json`・`en.json` に残っていないか（CODE_FILES は 2026-10-02 付で空配列、JSON のみ有効、`:9-20`） | **必須ではない**（13本に名前なし） |
-| `test-schema-dup-gate.yml` | `.github/workflows/test-schema-dup-gate.yml:13-14,:34-40`（job `test-schema-dup gate`、先頭コメント `:5` が「必須ではない」） | `backend/tests/` が本番テーブル定義を独自 CREATE TABLE で複製するのを増加検知（`scripts/check_test_schema_dup.py`）＋ `docs/specs/process-hardening/pillar3-inventory.md` の整合 | **必須ではない** |
+| `scripts/check-condition-vocab.js` | `scripts/check-condition-vocab.js:1-25`、呼び出し `.github/workflows/condition-vocab-check.yml:21`（job `condition vocab gate` `:13`） | 旧語彙（例 `shrink_yes`）が `frontend/src/locales/ja.json`・`frontend/src/locales/en.json` に残っていないか（CODE_FILES は 2026-10-02 付で空配列、JSON のみ有効、`:9-20`） | **必須ではない**（13本に名前なし） |
+| `.github/workflows/test-schema-dup-gate.yml` | `.github/workflows/test-schema-dup-gate.yml:13-14,:34-40`（job `test-schema-dup gate`、先頭コメント `:5` が「必須ではない」） | `backend/tests/` が本番テーブル定義を独自 CREATE TABLE で複製するのを増加検知（`scripts/check_test_schema_dup.py`）＋ `docs/specs/process-hardening/pillar3-inventory.md` の整合 | **必須ではない** |
 | `scripts/lint_tenant_schema.py` | `.github/workflows/lint-tenant-schema.yml:69` | `backend/app/routers/` の tenant schema 修飾（ADR-072）を strict で検査 | **必須**（13本の5番目） |
 
 - 【事実】「画面×API×テーブルの配線」自体を台帳と突合する検査は、上記の中に無い。`dangling-route gate` だけが API ルートの削除→frontend参照を検査する（`scripts/check-dangling-routes.js:5-11`）。
@@ -504,7 +504,7 @@ git ls-tree -r --name-only origin/main | grep -iE 'wiring|配線|route-?map|...'
 
 ## R3 フロントとバックの型（K3）
 
-- 【事実】FastAPI の OpenAPI は出力可能な構成: `app = FastAPI(`（`backend/app/main.py:186-193`）で `openapi_url` の指定は無い（`git grep -nE 'openapi_url' origin/main -- backend/app` が0件）。`docs_url=None if is_production else "/docs"`、`redoc_url=None if is_production else "/redoc"`（`:190-191`）は Swagger UI / ReDoc のみを本番で無効化する。FastAPI の既定では `/openapi.json` は `openapi_url` 未指定なら有効のまま（FastAPI の仕様。本調査では Context7 等で公式文書の再確認はしておらず【未確認】、実機で `/openapi.json` を叩いてもいない）。
+- 【事実】FastAPI の OpenAPI は出力可能な構成: `app = FastAPI(`（`backend/app/main.py:186-193`）で `openapi_url` の指定は無い（`git grep -nE 'openapi_url' origin/main -- backend/app` が0件）。`docs_url=None if is_production else "/docs"`、`redoc_url=None if is_production else "/redoc"`（`:190-191`）は Swagger UI / ReDoc のみを本番で無効化する。FastAPI の既定では /openapi.json は `openapi_url` 未指定なら有効のまま（FastAPI の仕様。本調査では Context7 等で公式文書の再確認はしておらず【未確認】、実機で /openapi.json を叩いてもいない）。
 - 【事実】`backend/app/main.py:187-189` の title は "Multi-tenant CRM API"、version "1.0.0"。
 - 【事実】frontend の API レスポンス型は手書き。`export interface|type` は `frontend/src` 配下の 94 ファイルに 258 宣言（`git grep -lE '^export (interface|type) ...' | wc -l` = 94、`-hE ... | wc -l` = 258、テスト・stories 除外）。トップレベルの `interface|type` 宣言は export の有無を問わず 539（同条件）。
   - 型専用ファイルの例: `frontend/src/pages/buyback-prices/buybackTypes.ts`、`frontend/src/pages/company-detail/company-detail.types.ts`、`frontend/src/pages/inbox/inbox.types.ts`、`frontend/src/pages/orders/orders.types.ts`、`frontend/src/pages/products/products.types.ts`、`frontend/src/pages/super-admin/components/shadowAccuracyTypes.ts`、`frontend/src/types/nav.ts`（`frontend/src/types/` は1ファイルのみ）。
@@ -531,8 +531,8 @@ git grep -nE 'openapi' origin/main -- .github/workflows
 
 ### R4-1 生 `<select>`（`git grep -nE '<select([ >]|$)' origin/main -- 'frontend/src/pages/*.tsx'`）
 
-- 【事実】実数は **70 件**（依頼の想定 74 とは一致しない）。`git grep -nE '<select([ >/]|$)'` でも 70。全 `frontend/src` の `<select` は 79 行（pages 70 ＋ components 9。components の9は金型 `Select.tsx:53`、`CompanyContactSelector.tsx` 2、`CommissionPanel.tsx:205`、`PurchaseDetailPanel.tsx:424`、`ShippingDetailPanel.tsx:511`、`ContentToolbar.stories.tsx:16`、`InventorySearchBar.tsx:5`（コメント）、`ItemComparison.tsx:26`）。
-- 【事実】CI 関所の数え方（`scripts/check-ui-governance.js:153-163` の `countSelect`: `/<select[\s>/]/g` から直前/同行の有効な `ui-allow` を除く、対象は `frontend/src/pages/**/*.tsx`、stories / `design-system/` / `design-preview/` を除外 `:88-90`）で origin/main を数えると **60 件**（=70 のうち 10 件が有効 ui-allow で除外）。同方式で input 216（※下記）、自作タブ 31。
+- 【事実】実数は **70 件**（依頼の想定 74 とは一致しない）。`git grep -nE '<select([ >/]|$)'` でも 70。全 `frontend/src` の `<select` は 79 行（pages 70 ＋ components 9。components の9は金型 `frontend/src/components/Select.tsx:53`、`frontend/src/components/CompanyContactSelector.tsx` 2、`frontend/src/components/CommissionPanel.tsx:205`、`frontend/src/components/PurchaseDetailPanel.tsx:424`、`frontend/src/components/ShippingDetailPanel.tsx:511`、`frontend/src/components/ContentToolbar.stories.tsx:16`、`frontend/src/components/InventorySearchBar.tsx:5`（コメント）、`frontend/src/features/tcg-analysis-review/ItemComparison.tsx:26`）。
+- 【事実】CI 関所の数え方（`scripts/check-ui-governance.js:153-163` の `countSelect`: `/<select[\s>/]/g` から直前/同行の有効な `ui-allow` を除く、対象は frontend/src/pages/**/*.tsx、stories / `design-system/` / `design-preview/` を除外 `:88-90`）で origin/main を数えると **60 件**（=70 のうち 10 件が有効 ui-allow で除外）。同方式で input 216（※下記）、自作タブ 31。
 - 全 70 件のファイル:行（ファイル別件数順）:
 
 ```
@@ -631,7 +631,7 @@ frontend/src/pages/super-admin/TcgSeriesTab.tsx:300
 検出定義:
 - 生 `<input>`: `<input` の次が空白・`>`・`/`のもの（`:182-186`）。`type` が `text` / `search` / 省略のとき検出対象（`:213-218`）。複数行・`{}` を考慮してタグ末尾を探す（`:174-208`）。直前/同行の有効な `ui-allow` は除外（`:223-231`）。
 - 自作タブ: `className="..."`（静的）または `` className={`...`} ``（テンプレート静的部）のトークンに `tab` を含み `table` を含まないもの（`:243-245`, `:257-275`）。
-- 対象は `frontend/src/pages/**/*.tsx`、除外は stories / `design-system/` / `design-preview/`（`:88-90`）。
+- 対象は frontend/src/pages/**/*.tsx、除外は stories / `design-system/` / `design-preview/`（`:88-90`）。
 
 【事実】origin/main の実測（関所の関数 `countAll` を origin/main の同スクリプトから切り出して全 187 ファイルに適用した値。ファイル数は pages 配下 .tsx 208 のうち除外対象を除いた数）:
 
@@ -781,7 +781,7 @@ git ls-tree -r --name-only origin/main -- frontend/src | grep -E '\.(css|tsx|jsx
 - R0: 関連 ADR は 027/067/072/135/136×2/144/1003/121/155。ADR-135 は process-artifacts gate を main 必須に「実施済み」と書くが、2026-10-02 の main ruleset 13本に無い（develop には有る）。OpenAPI・型生成・E2E・配線台帳に関する ADR は FEATURE-INDEX に無い。
 - R1: main 必須13本のうち配線を見るのは dangling-route gate のみ。process-artifacts gate は main 非必須・develop 必須。Playwright E2E は 2026-06-01（PR #1357）から `if: false`（理由: 約91秒/PR）。i18n 日本語直書きは CI=warn、キー欠落は CI=error。hex は必須チェックが「CSS絶対検査＋TSXインラインのみ」で、ts/tsx 定数の hex は素通り。
 - R2: ルート要素125（path付き120＝ページ114＋redirect5＋CompanyIdRedirect1）、backend include_router 113。API共通層は `frontend/src/lib/api.ts`（`/api/v1`）。画面→API→テーブルの台帳は存在せず、ページ→子→APIモジュールの間接呼び出しがあるため機械抽出は import グラフ走査が要る。
-- R3: OpenAPI は `/openapi.json` を無効化する設定が無い（実機未確認）。フロントの型は手書き（export 258宣言/94ファイル）。型生成ツール無し。
+- R3: OpenAPI は /openapi.json を無効化する設定が無い（実機未確認）。フロントの型は手書き（export 258宣言/94ファイル）。型生成ツール無し。
 - R4: 生select 70（関所方式60）、input 216、自作タブ31、hex 235（index.css除き56）、ui-allow 29のうち番号無し2件を確認。依頼の 74 は select の実数と一致せず（実数70）。
 
 DONE

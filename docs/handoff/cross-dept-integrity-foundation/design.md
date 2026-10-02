@@ -37,28 +37,28 @@
 
 ### 便B：削除（2026-10-02 PO判断）
 Playwright E2E は休眠のままにし、K1 からも外す。
-- 理由（recon R1-3、`e2e.yml:8-11`）: このE2EはAPIをmockしているため、部署間のずれを検出できない。1PRあたり約2分の増加にも見合わない。
+- 理由（recon R1-3、`.github/workflows/e2e.yml:8-11`）: このE2EはAPIをmockしているため、部署間のずれを検出できない。1PRあたり約2分の増加にも見合わない。
 - 部署間のずれは便Cで止める。
 
 ### 便C：K3　フロントとバックの型を自動で照合する
 - 変更前: フロントの型はすべて手書き（export 258件・94ファイル、recon R3）。型生成の仕組みもCIの照合も無い。
 - 変更後:
-  1. backend に `scripts/export_openapi.py` を足す。サーバーは起動せず、`app.openapi()` で `frontend/src/api/schema.json` を出力する。FastAPI の `openapi()` は、起動しなくてもスキーマの dict を返す（Context7 /websites/fastapi_tiangolo で確認済み）。
-  2. frontend の devDependency に `openapi-typescript` を足し、`frontend/src/api/schema.d.ts` を生成する（`npx openapi-typescript schema.json -o schema.d.ts`。Context7 /websites/openapi-ts_dev で確認済み）。
+  1. backend に新規スクリプト scripts/export_openapi.py（新規作成予定）を足す。サーバーは起動せず、`app.openapi()` で frontend/src/api/schema.json（新規・生成物）を出力する。FastAPI の `openapi()` は、起動しなくてもスキーマの dict を返す（Context7 /websites/fastapi_tiangolo で確認済み）。
+  2. frontend の devDependency に `openapi-typescript` を足し、frontend/src/api/schema.d.ts（新規・生成物）を生成する（`npx openapi-typescript schema.json -o schema.d.ts`。Context7 /websites/openapi-ts_dev で確認済み）。
   3. 新しい workflow を作る。schema.json を作り直して差分を見るのと、`openapi-typescript --check` の2つで、生成物が古ければ赤にする（`--check` の動作は Context7 の CLI 文書で確認済み）。
   4. 手書きの型から生成型への置き換えは、部署ごとの別便で行う。置き換えが済んだ画面は、API の形が変わると `tsc` が赤になる。
 - 新しい依存の追加になるため、新規ADRが必要（§6）。
 - 戻し方: workflow を削除し、devDependency を外す。
 - リスク: backend の Pydantic 定義が緩いと、生成型も緩くなる（例: `dict`）。これは置き換えの便の中で、1APIずつ詰める。
-- 【未確認】本番で `/openapi.json` が外部に公開されているか。`backend/app/main.py:190-191` は docs/redoc だけを本番で無効にしており、`openapi_url` は指定していない。FastAPI の既定では `/openapi.json` は有効のまま（Context7 で確認済み）。本便では変更しないが、API の一覧が外部から見えてよいかは、セキュリティの判断として別に起票する（§8）。
+- 【未確認】本番で API パス /openapi.json が外部に公開されているか。`backend/app/main.py:190-191` は docs/redoc だけを本番で無効にしており、`openapi_url` は指定していない。FastAPI の既定では /openapi.json は有効のまま（Context7 で確認済み）。本便では変更しないが、API の一覧が外部から見えてよいかは、セキュリティの判断として別に起票する（§8）。
 
 ### 便D：K2　配線台帳を自動生成し、ずれたら赤にする
 - 変更前: 画面 → API → テーブルの台帳は無い（recon R2-5）。ルートは125個（ページは114）、backend の include_router は113件。
 - 変更後:
-  1. `scripts/generate-wiring-ledger.js` を作る。ADR索引の生成（`scripts/generate-adr-index.js`）と同じ型にする。
+  1. scripts/generate-wiring-ledger.js（新規作成予定）を作る。ADR索引の生成（`scripts/generate-adr-index.js`）と同じ型にする。
      - `frontend/src/App.tsx` のルートと、ページから辿る import のグラフを読む。
      - その先にある `api.<method>(` のパスを集め、便Cの schema.json（API一覧）と照合する。
-     - 結果を `docs/specs/wiring/ledger.md` に出力する。
+     - 結果を docs/specs/wiring/ledger.md（新規・生成物）に出力する。
   2. CI に「wiring ledger is up to date」を足す（`--check`、ADR index と同じ方式）。あわせて、次の2つを赤にする。
      - 台帳に無いAPIを画面が呼んでいる（存在しないAPIへの呼び出し）。
      - schema に無いパスへの呼び出し。
@@ -72,11 +72,11 @@ Playwright E2E は休眠のままにし、K1 からも外す。
   - 生select 60件・生input 216件・自作タブ31件。
   - hex 56件（index.css を除く）。
   - 番号の無い ui-allow が2件。
-  - hexラチェット（`design-token-guard.yml`）は必須ではない。
+  - hexラチェット（`.github/workflows/design-token-guard.yml`）は必須ではない。
   - ESLint はインラインスタイルの hex しか見ない（`frontend/eslint.config.js:40-48`）。
   - 日本語の直書きは CI では warn（`frontend/eslint.config.js:31`）。
 - 変更後（この順に、1つずつ便を分ける）:
-  - E1: 番号の無い ui-allow 2件（`ConditionsPage.tsx:501`、`UnitMasterPanel.tsx:361`）に課題番号を付ける。対象の部品を金型に置き換えられるなら置き換える。
+  - E1: 番号の無い ui-allow 2件（`frontend/src/pages/conditions/ConditionsPage.tsx:501`、`frontend/src/pages/super-admin/components/UnitMasterPanel.tsx:361`）に課題番号を付ける。対象の部品を金型に置き換えられるなら置き換える。
   - E2: hexラチェットを main の必須チェックに加える。ruleset の変更なので permit-danger が要る。
   - E3: UIガバナンスの対象を `frontend/src/features/`・`frontend/src/components/` に広げる。今は対象が pages/ だけ（`scripts/check-ui-governance.js:36`）。
   - E4: 既存の違反を部署（ページ群）ごとに置き換える。金型は `Select`／`SelectControl`、`TextField`、`Tabs`（recon R4-2）。
@@ -95,7 +95,7 @@ A → C → D → E1 → E2 → E3 → E4（部署ごとに繰り返す）→ E5
 | K2: 全ページ（114）が台帳に載り、漏れが0件 | `node scripts/generate-wiring-ledger.js --check` が exit 0 で、台帳のページ数＝App.tsx のページルート数 |
 | K3: 型のずれでCIが赤になる | 検証用PRで backend のレスポンスのフィールド名を1つ変え、型照合の job が赤になることを確認したら PR を閉じる |
 | K4: 生select・生input・自作タブ・hex・不正 ui-allow が0件で、検査が必須に入っている | `scripts/check-ui-governance.js` の全数モードと hex の数え方で0件。ruleset に hexラチェットがある |
-| 各便: 基準値と反映後の値を記録した | `docs/handoff/cross-dept-integrity-foundation/track-record.md` に便ごとの before/after がある |
+| 各便: 基準値と反映後の値を記録した | docs/handoff/cross-dept-integrity-foundation/track-record.md（便Aの着手時に新規作成）に、便ごとの before/after がある |
 
 ## 6. 新規ADR案（便Cの前に起票。POの承認が必要）
 - 題名（案）: ADR-NNNN 配線台帳の自動生成とAPI型契約（OpenAPI→TypeScript）
@@ -120,7 +120,7 @@ A → C → D → E1 → E2 → E3 → E4（部署ごとに繰り返す）→ E5
 ## 8. 対象外
 - 製品機能の変更。
 - 本番データの変更。
-- 本番で `/openapi.json` が公開されている件の是非（セキュリティ判断として別に起票する）。
+- 本番で API パス /openapi.json が公開されている件の是非（セキュリティ判断として別に起票する）。
 - API → テーブルの対応付け（db-ssot テーマで扱う）。
 - 部署定義ファイルの作成（K5 で扱う）。
 
