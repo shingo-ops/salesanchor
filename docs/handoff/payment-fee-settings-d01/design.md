@@ -60,3 +60,11 @@
 - ADR-072 lint（CI）: reset_tenant_contextチェック
 - migration-guard（CI）: DROP等の危険操作チェック
 - ADR-135/136: migrations/含むPRのPO GO必須
+
+---
+
+## 維持の仕組み
+
+- CI ADR-072 lint: 新規write endpointが reset_tenant_context() を持つことを自動検証
+- CI migration-guard: DROP/ALTER等の危険操作を自動ブロック
+- NULLパターンの整合性: テナント独自設定がない場合は共用デフォルトを自動使用（アプリ側クエリで担保）

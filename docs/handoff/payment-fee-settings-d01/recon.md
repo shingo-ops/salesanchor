@@ -10,9 +10,9 @@
 
 ### 既存のNULLパターン実装例
 
-- `backend/app/routers/units.py`: テナントCRUD、権限キー `suppliers.view`
+- `backend/app/routers/units.py`: テナントCRUD、権限キー suppliers.view
 - `backend/app/routers/super_admin_units.py`: 中央admin CRUD
-- `migrations/20240901_000006_add_units.sql`: NULLパターン（`tenant_id IS NULL` = 共用デフォルト）
+- units/conditionsのmigration: NULLパターン（tenant_id IS NULL = 共用デフォルト）を採用
 
 ### 設計方針の根拠
 
