@@ -2,7 +2,7 @@
 
 > 作成: 2026-10-02 | recon: `docs/handoff/gateway-fernet-key/recon.md` | 対象ADR: ADR-159, ADR-025
 
-## 外部事例
+## 外部・過去事例の参照と我々への応用
 
 | 事例 | 応用 |
 |-----|------|
@@ -16,7 +16,7 @@
 3. `backend/app/services/discord_webhook_sender.py` `_send_via_webhook` で、名前検証の直後・webhook 取得/作成の前に `ensure_configured()`。`EncryptionConfigurationError` は `WebhookSendError("encryption_not_configured")` に写す。
    - 担当者送信: `DiscordWebhookError` → leads.py が 502 DISCORD_SEND_FAILED（500 にならない）。
    - サーバー名義: `try_send_as_identity` が None → Bot 名義フォールバック（従来どおり）。
-4. 触らない: 暗号化・復号本体、leads.py、deploy.yml、blue-green スクリプト。
+4. 触らない: 暗号化・復号本体、leads.py、.github/workflows/deploy.yml、blue-green スクリプト。
 
 ## 戻し方
 
@@ -34,4 +34,9 @@ PR を revert。gateway は従来どおり鍵なしで起動（Bot 名義フォ�
 
 ## デプロイ影響
 
-docker-compose.yml 変更により nginx も force-recreate される（`deploy.yml:370-382`、nginx.conf 未変更・許容）。gateway は再作成され Discord 再接続が 1 回走る（`deploy.yml:329-342` の既存手順）。
+docker-compose.yml 変更により nginx も force-recreate される（`.github/workflows/deploy.yml:370-382`、nginx.conf 未変更・許容）。gateway は再作成され Discord 再接続が 1 回走る（`.github/workflows/deploy.yml:329-342` の既存手順）。
+
+## 維持の仕組み
+
+- 鍵未設定時の挙動（作成前に失敗）は上記 3 テストが CI で常時守る。
+- gateway の environment 欠落の再発は、受入条件のログ grep（「METADATA_FERNET_KEY が設定されていません」0 件）で検知する。
