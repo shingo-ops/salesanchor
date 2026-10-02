@@ -409,7 +409,9 @@ async def delete_product_detail(
     FK制約:
     - product_search_keywords, product_exclude_keywords: ON DELETE CASCADE（自動削除）
     - analysis_results: product_id を NULL に設定してから削除
-    - inventory, parse_logs, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
+    - inventory, own_inventory: RESTRICT/NO ACTION（参照があれば削除不可）
+      （parse_logs は 2026-10-02 の migrations/20261002_170000_drop_discord_inventory_tables.sql
+       で DROP 済み。この docstring から削除）
     """
     # 商品の存在確認
     row = await db.execute(
