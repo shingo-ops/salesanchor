@@ -16,8 +16,11 @@ docs/ai-agents/evidence-registry.md の末尾に Entry Template 書式で2エン
 |2エントリが Entry Template の全キーを持つ|目視（id/date/agent/task/scope/evidence/confidence/tradeoff/decision/follow_up）|
 |未確認の #3885 を確認済みとして書いていない|台帳内の #3885 記述が「未確認」|
 
-## 外部事例
-該当なし（社内の証跡台帳への追記のみ。既存の同形式エントリに倣う）。
+## 外部・過去事例の参照と我々への応用
+社内の既存エントリ EV-20260929-AU-ALL-BUTTONS（docs/ai-agents/evidence-registry.md）の書式に倣い、事実と未確認を分けて記録する。外部事例は該当なし（台帳への追記のみ）。
 
 ## 戻し方
 当該PRを revert。
+
+## 維持の仕組み
+台帳の Entry Template（docs/ai-agents/evidence-registry.md:7-20）を書式の正とし、PO確認の都度追記する。
