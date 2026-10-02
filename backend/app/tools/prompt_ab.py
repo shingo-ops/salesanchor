@@ -1,7 +1,8 @@
-"""Gemini 書き写し v7/v8 の比較試験の道具（読み取り＋費用の台帳だけ）。
+"""Gemini 書き写し v7/v8/v9 の比較試験の道具（読み取り＋費用の台帳だけ）。
 
 設計: docs/handoff/gemini-v8/design.md §6
-起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8 [--thinking-level L] [--no-thoughts]
+      docs/handoff/gemini-v9/design.md §5-1（v9）
+起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9 [--thinking-level L] [--no-thoughts]
         [--no-schema] [--temperature T] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
@@ -36,6 +37,11 @@ from app.services.gemini_raw_copy_v8 import (
     call_gemini_raw_copy_v8,
     load_v8_prompt,
     parse_v8_response,
+)
+from app.services.gemini_raw_copy_v9 import (
+    V9_RESPONSE_SCHEMA,
+    load_v9_prompt,
+    parse_v9_response,
 )
 from app.services.llm_budget import record_usage_event_sync
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
@@ -162,6 +168,8 @@ def _parse(config: str, response_text: str, raw_text: str) -> tuple[int, list[di
     try:
         if config == "v7":
             items, errors = parse_raw_copy_response(response_text, raw_text)
+        elif config == "v9":
+            items, errors = parse_v9_response(response_text, raw_text)
         else:
             items, errors = parse_v8_response(response_text, raw_text)
     except Exception as exc:  # noqa: BLE001
@@ -175,13 +183,22 @@ def _append_jsonl(path: Path, row: dict) -> None:
         fh.flush()
 
 
+def _load_prompt_text(config: str) -> str | None:
+    """v8・v9 の指示書の本文。v7 は DB の指示書を既存関数が読むので None。"""
+    if config == "v8":
+        return load_v8_prompt()
+    if config == "v9":
+        return load_v9_prompt()
+    return None
+
+
 def _print_dry_run(
     summary: AbSummary, config: str, ctx, v8_prompt: str | None,
 ) -> None:
     print(f"[dry-run] target_count={summary.target_count}")
     if ctx is None:
         return
-    if config == "v8":
+    if config in ("v8", "v9"):
         prompt = build_prompt_v8(
             ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=ctx.supplier_context,
             knowledge_links=ctx.knowledge_links,
@@ -202,7 +219,7 @@ def run_ab(
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
     job_ids = fetch_job_ids(session, run_ids)
-    v8_prompt = load_v8_prompt() if config == "v8" else None
+    v8_prompt = _load_prompt_text(config)
     source_ref = f"{_SOURCE_REF_PREFIX}{test_id}"
     out_path = Path(out_dir) / f"{test_id}.jsonl"
     contexts: dict[str, object] = {}
@@ -234,10 +251,12 @@ def run_ab(
                 if config == "v7":
                     result = _call_v7(ctx)
                 else:
+                    extra = {"response_schema": V9_RESPONSE_SCHEMA} if config == "v9" else {}
                     result = call_gemini_raw_copy_v8(
                         ctx.raw_text, prompt_text=v8_prompt, supplier_context=ctx.supplier_context,
                         knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
                         include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
+                        **extra,
                     )
             except Exception as exc:  # noqa: BLE001
                 session.rollback()
@@ -283,13 +302,13 @@ def run_ab(
 # ---------------------------------------------------------------------------
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
+    p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
-    p.add_argument("--config", required=True, choices=("v7", "v8"))
-    p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8 のみ。未指定なら level を入れない")
-    p.add_argument("--no-thoughts", action="store_true", help="v8 のみ。考えた過程の要約を求めない")
-    p.add_argument("--no-schema", action="store_true", help="v8 のみ。JSON の型指定を付けない")
-    p.add_argument("--temperature", type=float, default=None, help="v8 のみ。未指定なら指定しない（既定 1.0）")
+    p.add_argument("--config", required=True, choices=("v7", "v8", "v9"))
+    p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
+    p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
+    p.add_argument("--no-schema", action="store_true", help="v8・v9 のみ。JSON の型指定を付けない")
+    p.add_argument("--temperature", type=float, default=None, help="v8・v9 のみ。未指定なら指定しない（既定 1.0）")
     p.add_argument("--repeat", type=int, required=True)
     p.add_argument("--max-cost-usd", type=Decimal, required=True, help="費用の累計の上限（USD）。超えたら止まる")
     p.add_argument("--test-id", required=True)
@@ -301,7 +320,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.config == "v7" and (
         args.thinking_level or args.no_thoughts or args.no_schema or args.temperature is not None
     ):
-        p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8 のときだけ使えます")
+        p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9 のときだけ使えます")
     if args.repeat < 1:
         p.error("--repeat は 1 以上")
     return args

@@ -171,9 +171,11 @@ def call_gemini_raw_copy_v8(
     include_thoughts: bool,
     use_schema: bool,
     temperature: float | None,
+    response_schema: dict | None = None,
 ) -> dict:
     """v8 を呼ぶ。config は None でない引数だけを入れる（temperature 未指定なら既定の 1.0）。
 
+    response_schema: v9 などが型を差し替えるときだけ渡す。None なら V8_RESPONSE_SCHEMA。
     Returns: {"response_text", "thought_summaries", "usage_raw", "usage_counts"}
     Raises: RuntimeError（API 呼び出し失敗）
     """
@@ -188,7 +190,7 @@ def call_gemini_raw_copy_v8(
         config_kwargs["temperature"] = temperature
     if use_schema:
         config_kwargs["response_mime_type"] = "application/json"
-        config_kwargs["response_json_schema"] = V8_RESPONSE_SCHEMA
+        config_kwargs["response_json_schema"] = response_schema if response_schema is not None else V8_RESPONSE_SCHEMA
     thinking_kwargs: dict[str, Any] = {"include_thoughts": include_thoughts}
     if thinking_level is not None:
         thinking_kwargs["thinking_level"] = thinking_level
@@ -280,31 +282,19 @@ def _validate_one(index: int, obj: object, max_line: int) -> tuple[dict | None, 
     return _to_item(obj), None
 
 
-def parse_v8_response(response_text: str, raw_text: str) -> tuple[list[dict], list[dict]]:
-    """JSON を読み、件ごとに設計 §5 の検査をする。
-
-    戻り値: (items, errors)。items は v7 の parse_raw_copy_response と同じキー。
-    errors: [{"index": 件の番号 or None, "error": 理由, "item": 元の件}, ...]
-    JSON として読めない・items 配列がない場合は、全体を1つのエラー（index=None）にする。
-    """
-    max_line = len(raw_text.split("\n"))
+def _load_items(response_text: str) -> tuple[list | None, list[dict]]:
+    """JSON を読み、items の配列を返す。読めなければ (None, 全体のエラー1件)。"""
     try:
         data = json.loads(response_text)
     except (json.JSONDecodeError, TypeError) as exc:
-        return [], [{"index": None, "error": f"JSON として読めない: {exc}", "item": None}]
+        return None, [{"index": None, "error": f"JSON として読めない: {exc}", "item": None}]
     if not isinstance(data, dict) or not isinstance(data.get("items"), list):
-        return [], [{"index": None, "error": "JSON に items 配列がない", "item": None}]
+        return None, [{"index": None, "error": "JSON に items 配列がない", "item": None}]
+    return data["items"], []
 
-    errors: list[dict] = []
-    candidates: list[tuple[int, dict]] = []
-    for index, obj in enumerate(data["items"]):
-        item, err = _validate_one(index, obj, max_line)
-        if err is not None:
-            errors.append(err)
-        else:
-            assert item is not None
-            candidates.append((index, item))
 
+def _accept_non_overlapping(candidates: list[tuple[int, dict]], errors: list[dict]) -> list[dict]:
+    """見出しの範囲・ほかの件の範囲と重なる件を errors に足し、残った件を返す。"""
     headings = [
         (it["heading_line_start"], it["heading_line_end"])
         for _, it in candidates if it["heading_line_start"] is not None
@@ -320,5 +310,31 @@ def parse_v8_response(response_text: str, raw_text: str) -> tuple[list[dict], li
         else:
             accepted.append(item)
             spans.append(span)
+    return accepted
+
+
+def parse_v8_response(response_text: str, raw_text: str) -> tuple[list[dict], list[dict]]:
+    """JSON を読み、件ごとに設計 §5 の検査をする。
+
+    戻り値: (items, errors)。items は v7 の parse_raw_copy_response と同じキー。
+    errors: [{"index": 件の番号 or None, "error": 理由, "item": 元の件}, ...]
+    JSON として読めない・items 配列がない場合は、全体を1つのエラー（index=None）にする。
+    """
+    max_line = len(raw_text.split("\n"))
+    objs, whole_errors = _load_items(response_text)
+    if objs is None:
+        return [], whole_errors
+
+    errors: list[dict] = []
+    candidates: list[tuple[int, dict]] = []
+    for index, obj in enumerate(objs):
+        item, err = _validate_one(index, obj, max_line)
+        if err is not None:
+            errors.append(err)
+        else:
+            assert item is not None
+            candidates.append((index, item))
+
+    accepted = _accept_non_overlapping(candidates, errors)
     errors.sort(key=lambda e: (e["index"] is None, e["index"] or 0))
     return accepted, errors
