@@ -3338,3 +3338,39 @@ follow_up: PR/最新CI、正式承認経路後にマージ/配備。au-implement
 2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
 
 2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。
+
+
+```text
+id: EV-20261001-DISCORD-REACTIONS-PO-CONFIRM
+date: 2026-10-01
+agent: Claude Code (record)
+task: Discord リアクション同期の PO 本番目視確認の記録
+scope: tenant_001 本番。PR #3869 / #3872 / #3886 / #3915。受信箱 ♡ と Discord ❤️ の双方向反映。
+evidence:
+  - type: external
+    reference: PO(Shingo) 画面スクリーンショット（セッション内提示、2026-10-01 15:27-15:28 JST）
+    summary: 受信箱で ♡ をクリック → 赤 ♥2 と Discord ❤️2。再度クリック → ♡1 と ❤️1（双方で取り消し）。顧客側の 👍/🙂 が受信箱に表示された。
+  - type: command
+    reference: 本番DB read-only 参照（2026-10-01 06:14Z）
+    summary: gateway がリアクションを記録していることを確認。
+confidence: high
+tradeoff: スクリーンショットはリポジトリ外。DB参照の生出力は本台帳に含めない。
+decision: PO 本人の人手確認として記録。新規チケットの英語ウェルカム文（#3885）は PO 未確認のため本記録に含めない（未確認）。
+follow_up: #3885 の英語文面は PO 確認待ち。
+```
+
+```text
+id: EV-20261002-STAFF-IDENTITY-PO-CONFIRM
+date: 2026-10-02
+agent: Claude Code (record)
+task: 担当者アバター・英語名・担当者名義 Discord 返信の PO 本番目視確認の記録
+scope: tenant_001 本番。PR #3908 / #3913 / #3917 / #3920。
+evidence:
+  - type: external
+    reference: PO(Shingo) 画面スクリーンショット（セッション内提示、2026-10-02 12:04 / 12:05 JST）
+    summary: #3917 反映後にスタッフ作成が成功（PO「成功」）。#3920 反映後にアカウント設定でアバター表示。受信箱から送った Discord メッセージ「画像と担当者名の反映テスト」（#ticket-akane-4708）が「Shingo」名義・アップロード済みアバターで表示された。
+confidence: high
+tradeoff: スクリーンショットはリポジトリ外。
+decision: PO 本人の人手確認として記録。
+follow_up: なし。
+```
