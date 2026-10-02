@@ -17,6 +17,7 @@ JST 定数は #3305 で追加済みの timezone(timedelta(hours=9)) を使用す
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -494,6 +495,19 @@ async def _link_message(db: AsyncSession, job_id: str, message_id: str, kind: st
     )
 
 
+def _mark_system_events(all_messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {
+            **m,
+            "is_system_event": (
+                m["is_system_event"]
+                or match_system_event(m["display_name"], m["body"]) is not None
+            ),
+        }
+        for m in all_messages
+    ]
+
+
 async def import_line_export(
     db: AsyncSession,
     filename: str,
@@ -536,7 +550,7 @@ async def import_line_export(
     """
     if source_format not in ("pc", "android"):
         raise ValueError("Unsupported LINE export format")
-    android_messages = parse_android_export(export_text) if source_format == "android" else None
+    android_messages = (await asyncio.to_thread(parse_android_export, export_text)) if source_format == "android" else None
     # Keep the legacy PC digest unchanged. Android has a separate identity so that
     # an Android file previously misread as PC (zero messages) can be retried.
     file_sha256 = sha256_text(
@@ -573,19 +587,10 @@ async def import_line_export(
     supplier_names = sorted((s["line_name"] for s in db_suppliers), key=len, reverse=True)
 
     # --- 3. パース & フィルタ ---
-    all_messages = android_messages if android_messages is not None else parse_line_export(export_text, supplier_names)
+    all_messages = android_messages if android_messages is not None else await asyncio.to_thread(parse_line_export, export_text, supplier_names)
     # PC・スマホ双方の全メッセージへ同じ文言表を当てる（二重の網）。
     # 元の dict は書き換えず、新しい list/dict を作る。
-    all_messages = [
-        {
-            **m,
-            "is_system_event": (
-                m["is_system_event"]
-                or match_system_event(m["display_name"], m["body"]) is not None
-            ),
-        }
-        for m in all_messages
-    ]
+    all_messages = await asyncio.to_thread(_mark_system_events, all_messages)
     messages = [m for m in all_messages if not m["is_system_event"]]
 
     # 窓を JST 基準で計算（旧実装は UTC 基準のため実質 33h だった: DIST-R3 是正）
