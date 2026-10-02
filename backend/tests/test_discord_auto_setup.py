@@ -121,6 +121,11 @@ def _common_patches(stack: ExitStack) -> AsyncMock:
         "app.routers.discord_auto_setup.reset_tenant_context",
         new=AsyncMock(return_value=None),
     ))
+    # サーバー名義（webhook）投稿は別テストで検証。ここでは Bot 名義の投稿経路に固定する
+    stack.enter_context(patch(
+        "app.routers.discord_auto_setup.fetch_guild_identity",
+        new=AsyncMock(return_value=None),
+    ))
     mock_api = AsyncMock()
     stack.enter_context(patch(
         "app.routers.discord_auto_setup.discord_api_request",
