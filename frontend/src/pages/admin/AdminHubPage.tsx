@@ -2,6 +2,7 @@
  * AdminHubPage — SaaS 管理者ハブ
  *
  * 各テナント管理機能をボトムタブで統合するシェルページ。
+ * ボトムタブはモバイル（≤767px）のみ表示。PC では管理センターの左サブナビから遷移する。
  * 左サブナビ（ManagementCenterPage）と同じ Outlet パターンを採用し、
  * タブナビゲーションはページ最下部に配置する。
  *
@@ -16,6 +17,7 @@
 import { NavLink, Outlet } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ADMIN_HUB_ICONS } from "../../constants/icons";
+import { useIsMobile } from "../../hooks/useIsMobile";
 import "./admin-hub.css";
 
 const TABS = [
@@ -53,6 +55,7 @@ const TABS = [
 
 export default function AdminHubPage() {
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
 
   return (
     <div className="admin-hub">
@@ -60,20 +63,22 @@ export default function AdminHubPage() {
         <Outlet />
       </div>
 
-      <nav className="admin-hub-tabs" aria-label={t("nav.admin")}>
-        {TABS.map(({ to, labelKey, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) =>
-              `admin-hub-tab${isActive ? " active" : ""}`
-            }
-          >
-            <Icon size={22} aria-hidden="true" />
-            <span className="admin-hub-tab-label">{t(labelKey)}</span>
-          </NavLink>
-        ))}
-      </nav>
+      {isMobile && (
+        <nav className="admin-hub-tabs" aria-label={t("nav.admin")}>
+          {TABS.map(({ to, labelKey, Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) =>
+                `admin-hub-tab${isActive ? " active" : ""}`
+              }
+            >
+              <Icon size={22} aria-hidden="true" />
+              <span className="admin-hub-tab-label">{t(labelKey)}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
     </div>
   );
 }

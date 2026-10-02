@@ -1,0 +1,145 @@
+/* ───────────────────────────────────────────────────────────────────────
+   Discord 連携設定ページ — カード縦積みレイアウト
+   SSoT 準拠: 全値は CSS 変数から参照。ハードコード禁止。
+   ─────────────────────────────────────────────────────────────────────── */
+
+.dc-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  max-width: calc(var(--space-12) * 14); /* 672px: 読みやすい行長 */
+}
+
+.dc-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.dc-card-title {
+  margin: 0;
+  font-size: var(--font-md);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-primary);
+}
+
+.dc-desc {
+  margin: 0 0 var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.dc-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.dc-row--end {
+  align-items: flex-end;
+}
+
+.dc-grow {
+  flex: 1;
+  min-width: 0;
+}
+
+.dc-server-id {
+  font-family: monospace;
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.dc-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.dc-hint {
+  margin: var(--space-2) 0 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+/* ── 自動セットアップ結果 ─────────────────────────────────────────── */
+.dc-result {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+}
+
+.dc-result-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.dc-group {
+  margin-bottom: var(--space-3);
+}
+
+.dc-group-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-xs);
+  font-weight: var(--font-weight-semi);
+  color: var(--text-muted);
+}
+
+.dc-step-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dc-step {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+.dc-step-error {
+  margin: 0;
+  font-size: var(--font-xs);
+  color: var(--danger);
+}
+
+.dc-next {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+/* ── 詳細設定 ─────────────────────────────────────────────────────── */
+.dc-details-fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-3);
+  margin-top: var(--space-4);
+}
+
+@media (min-width: 768px) {
+  .dc-details-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+}
