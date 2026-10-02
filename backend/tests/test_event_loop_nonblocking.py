@@ -128,3 +128,65 @@ async def test_handle_webhook_notification_does_not_block_loop():
         )
 
     assert ticks >= MIN_TICKS
+
+
+async def test_import_line_export_android_parse_does_not_block_loop():
+    from app.services.tcg_line_import_svc import import_line_export
+
+    async def _execute(stmt, params=None):
+        result = MagicMock()
+        result.fetchone.return_value = None
+        result.fetchall.return_value = []
+        return result
+
+    db = MagicMock()
+    db.execute = _execute
+    db.commit = AsyncMock()
+
+    with patch("app.services.tcg_line_import_svc.parse_android_export", _slow([])):
+        ticks = await _count_ticks_during(
+            import_line_export(
+                db=db,
+                filename="test.txt",
+                export_text="x",
+                uploaded_by=None,
+                window_hours=0,
+                source_format="android",
+            )
+        )
+
+    assert ticks >= MIN_TICKS
+
+
+async def test_get_current_user_verify_id_token_does_not_block_loop():
+    from fastapi import HTTPException
+
+    from app.auth.dependencies import get_current_user
+
+    request = MagicMock()
+    cred = MagicMock()
+    cred.credentials = "tok"
+
+    with patch("app.auth.dependencies._init_firebase"), patch(
+        "app.auth.dependencies._get_client_ip", return_value="1.2.3.4"
+    ), patch("app.auth.dependencies._SMOKE_SERVICE_TOKEN", ""), patch(
+        "app.auth.dependencies.is_token_blacklisted", AsyncMock(return_value=False)
+    ), patch(
+        "app.auth.dependencies.get_cached_jwt", AsyncMock(return_value=None)
+    ), patch(
+        "app.auth.dependencies.check_auth_rate_limit", AsyncMock(return_value=False)
+    ), patch(
+        "app.auth.dependencies.record_auth_failure", AsyncMock()
+    ), patch(
+        "app.auth.dependencies.firebase_auth.verify_id_token", _slow({})
+    ):
+
+        async def _call():
+            try:
+                await get_current_user(request, cred, MagicMock())
+            except HTTPException:
+                pass  # verify 後の処理は対象外。判定はティック数のみ。
+
+        ticks = await _count_ticks_during(_call())
+
+    assert ticks >= MIN_TICKS
