@@ -36,8 +36,7 @@ CATEGORY_STOCK_LARGE = "\U0001F352\uff5cStock Information"
 # 旧セットアップが作っていた DM カテゴリの名前（再実行時に CATEGORY_DM へ名前変更する）
 CATEGORY_DM_LEGACY = "Sales Anchor"
 
-# ボタン押下への ephemeral 応答
-TICKET_READY_TEMPLATE = "Your private channel is ready → {mention}"
+# ボタン押下へのエラー時 ephemeral 応答（成功時は無言 ACK で何も送らない）
 GUILD_ONLY = "This can only be used inside a server."
 GUILD_NOT_REGISTERED = "This server is not registered. Please contact the administrator."
 TICKET_NOT_CONFIGURED = "The ticket feature is not set up. Please contact the administrator."
