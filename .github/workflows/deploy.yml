@@ -136,6 +136,21 @@ jobs:
             echo "Pre-deploy DB backup..."
             echo "============================================"
             cd /home/ubuntu/salesanchor
+
+            # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:
+            # バックアップ書き込み前に空き容量を確認し、閾値未満ならここで止める。
+            MIN_FREE_GB=5
+            FREE_GB=$(df --output=avail -B1G / | tail -1 | tr -d '[:space:]')
+            echo "Free space on /: ${FREE_GB}GB (threshold: ${MIN_FREE_GB}GB)"
+            if [ "${FREE_GB}" -lt "${MIN_FREE_GB}" ]; then
+              echo "❌ 空き容量不足のためデプロイを中止します: ${FREE_GB}GB < ${MIN_FREE_GB}GB"
+              echo "--- backups/postgres 使用量 ---"
+              du -sh /home/ubuntu/backups/postgres 2>/dev/null || true
+              echo "--- docker system df ---"
+              docker system df || true
+              exit 1
+            fi
+
             bash scripts/backup.sh
             LATEST=$(ls -t /home/ubuntu/backups/postgres/salesanchor_db_*.sql.gz 2>/dev/null | head -1)
             if [ -z "${LATEST}" ]; then
@@ -666,6 +681,12 @@ jobs:
 
             echo "Step 8: Cleaning up old Docker images..."
             docker image prune -f
+
+            echo "Step 8b: Cleaning up Docker build cache (keep 3GB)..."
+            # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:
+            # build cache が無制限に溜まるのを防ぐ。
+            # 本番 docker 29.4.0 で --help に記載のある --max-used-space を使用、2026-10-02 確認。
+            docker builder prune -f --max-used-space 3GB || true
 
             echo "============================================"
             echo "Deployment completed successfully!"
