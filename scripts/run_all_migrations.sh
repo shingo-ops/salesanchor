@@ -869,3 +869,6 @@ run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
 
 # §D01: 決済手数料設定マスタ（public.payment_fee_settings）新設（NULLパターン・PayPal初期データ込み・冪等）
 run_sql migrations/20261002_160000_create_payment_fee_settings.sql
+
+# §D01補完: payment_fee_settings カラムコメント付与
+run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
