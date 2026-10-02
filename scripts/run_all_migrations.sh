@@ -872,3 +872,6 @@ run_sql migrations/20261002_160000_create_payment_fee_settings.sql
 
 # §D01補完: payment_fee_settings カラムコメント付与
 run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
+
+# Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
+run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
