@@ -40,7 +40,6 @@ TENANT_TABLES: frozenset[str] = frozenset(
         "companies",
         "contacts",
         "deals",
-        "discord_inbound_messages",
         "google_calendar_config",
         "goals",
         "inventory_movements",
