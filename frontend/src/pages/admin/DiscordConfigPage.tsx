@@ -35,7 +35,7 @@ interface DiscordTicketConfig {
 
 interface DiscordAutoSetupStep {
   step: string;
-  status: "created" | "skipped" | "posted" | "failed";
+  status: "created" | "skipped" | "updated" | "posted" | "failed";
   discord_id?: string | null;
   error?: string | null;
 }
@@ -234,6 +234,8 @@ export default function DiscordConfigPage() {
     role_partner: t("discordAutoSetup.steps.role_partner"),
     role_member: t("discordAutoSetup.steps.role_member"),
     category: t("discordAutoSetup.steps.category"),
+    category_stock_member: t("discordAutoSetup.steps.category_stock_member"),
+    category_stock_large: t("discordAutoSetup.steps.category_stock_large"),
     ch_ticket: t("discordAutoSetup.steps.ch_ticket"),
     ch_member: t("discordAutoSetup.steps.ch_member"),
     ch_partner: t("discordAutoSetup.steps.ch_partner"),
