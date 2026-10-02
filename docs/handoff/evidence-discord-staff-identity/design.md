@@ -1,6 +1,6 @@
 # design: PO 本番確認の証跡台帳記録
 
-対象ADR: 該当なし
+対象ADR: ADR-136（GO手順の対象外・台帳追記のみ）
 recon: docs/handoff/evidence-discord-staff-identity/recon.md
 
 ## 変更
@@ -24,3 +24,4 @@ docs/ai-agents/evidence-registry.md の末尾に Entry Template 書式で2エン
 
 ## 維持の仕組み
 台帳の Entry Template（docs/ai-agents/evidence-registry.md:7-20）を書式の正とし、PO確認の都度追記する。
+守り手: 人手で守る（PO確認の都度、実行役が追記するため）
