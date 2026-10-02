@@ -5,7 +5,7 @@
 
 - 親テーマ: [design-system](../README.md)（トークン・共通部品・SSOT）。兄弟: component-ssot（page-title / page-header-v2 / field-size）
 - 日付: 2026-10-02 / PO: しんご
-- 状態: 草案。PO原文は記録済み。KGIは未承認、設計は草案（自己審査済み）。製品の実装には着手していない。
+- 状態: PO原文は記録済み。KGIはPO承認済み（2026-10-02）。設計は草案（自己審査済み）。製品の実装には着手していない。
 - 子文書:
   - [ideal-state.md](./ideal-state.md) — PO原文（書き換え禁止）
   - [kgi.md](./kgi.md) — 合格条件の候補（基準値は実測済み、目標値は未承認）
