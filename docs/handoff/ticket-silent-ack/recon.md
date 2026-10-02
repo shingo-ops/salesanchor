@@ -23,7 +23,7 @@ Discord API docs（Context7 `/discord/discord-api-docs`、developers/interaction
 
 > Interaction tokens are valid for 15 minutes and can be used to send followup messages but you must send an initial response within 3 seconds of receiving the event.
 
-discord.py 2.4.0（インストール済み discord/interactions.py:653-713 `InteractionResponse.defer`）:
+discord.py 2.4.0（インストール済みパッケージの interactions モジュール行653-713 `InteractionResponse.defer`）:
 ```
 if parent.type is InteractionType.component or parent.type is InteractionType.modal_submit:
     defer_type = (
