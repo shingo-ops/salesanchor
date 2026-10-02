@@ -74,7 +74,6 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
-    parse_review,
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
@@ -95,7 +94,6 @@ from app.routers import (
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_db_schema,  # DB構造ビューア API
     super_admin_dex,
-    super_admin_inbound,
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
@@ -576,14 +574,6 @@ app.include_router(
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(
     super_admin_llm_budget.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 5 (F5): Discord Inbound 受信メッセージ一覧 (public.discord_inbound_messages) 中央 admin
-app.include_router(
-    super_admin_inbound.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 6 (F6): 解析結果レビュー UI + 在庫差分反映 (public.inventory_movements + products) 中央 admin
-app.include_router(
-    parse_review.router, prefix="/api/v1", tags=["super-admin"],
 )
 # テナント admin 用 inventory visibility は get_current_tenant 必須
 app.include_router(
