@@ -42,17 +42,20 @@ prod1 VPS の Docker 資源を週次で自動回収するスクリプト (`scrip
 | 実行時刻 | 日曜 04:00 JST |
 | 実行ユーザー | ubuntu |
 | ログ | `/tmp/f2-cleanup.log`（コンテナ再起動で消えるが週次で十分） |
-| 引数 | `168 both`（既定値のため省略可） |
+| 引数 | `168 all`（2026-10-03 から。それまでは `168 both`） |
 
-crontab 追加行（Phase 3 以降・PO GO後）:
+crontab の行（2026-10-03 時点の本番の実物）:
 ```cron
-0 4 * * 0  TZ=Asia/Tokyo bash /home/ubuntu/salesanchor/scripts/f2-cleanup.sh 168 both >> /tmp/f2-cleanup.log 2>&1
+0 4 * * 0  TZ=Asia/Tokyo bash /home/ubuntu/salesanchor/scripts/f2-cleanup.sh 168 all >> /tmp/f2-cleanup.log 2>&1
 ```
+
+> 2026-10-03 追記：v2（`docs/specs/server-resource-optimization/design.md` ③④）で、完了の記録（黒板 `f2_cleanup_last_success_timestamp`）は `all`（3職務すべて）が成功したときだけ書く設計になった。ところが cron は `both` のまま残り、黒板が更新されず、F2CleanupStale が 2026-09-21 から鳴り続けた（根拠：`docs/handoff/monitoring-disk-alerts/recon.md` B）。2026-10-03 に prod1 の crontab を `both` から `all` に変更した（変更前の控え：prod1 の `/home/ubuntu/crontab.bak-20261003`。差分はこの1行だけ）。戻すときは `crontab /home/ubuntu/crontab.bak-20261003`。
 
 ## ROLLBACK
 
 crontab の該当1行を削除するだけで即停止する。  
-本番DB (`astro-webapp_postgres_data`) / 本番コード / volume / image に一切触れないため、スクリプト実行済みでも本番への影響はない。
+本番DB (`astro-webapp_postgres_data`) / 本番コード / volume に一切触れないため、スクリプト実行済みでも本番への影響はない。
+（2026-10-03 追記：`all` では未使用イメージの削除も行う。稼働中コンテナのイメージと、各リポジトリの最新2世代は除外する。`scripts/f2-cleanup.sh` の `run_images`。）
 
 ## ADR 参照
 
