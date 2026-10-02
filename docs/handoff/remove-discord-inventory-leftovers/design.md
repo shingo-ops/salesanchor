@@ -6,7 +6,7 @@
 
 ## 変更
 
-- 削除: `backend/app/services/inventory_drift_detector.py`、`backend/app/schemas/parse_review.py`、`scripts/seed_discord_inbound_from_api_analysis.py`
+- 削除: backend/app/services/inventory_drift_detector.py、backend/app/schemas/parse_review.py、scripts/seed_discord_inbound_from_api_analysis.py
 - 変更しないもの: DB（表の DROP は PR #3937）、ほかのコード
 
 ## 受入条件
