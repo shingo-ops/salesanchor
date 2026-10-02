@@ -684,9 +684,9 @@ jobs:
 
             echo "Step 8b: Cleaning up Docker build cache (keep 3GB)..."
             # 2026-10-02 prod1 ディスクフル事故の再発防止（ADR-135/136）:
-            # build cache が無制限に溜まるのを防ぐ。--keep-storage 3GB は
-            # ローカル docker 29.8.0 で動作確認済み（docker builder prune --help）。
-            docker builder prune -f --keep-storage 3GB || true
+            # build cache が無制限に溜まるのを防ぐ。
+            # 本番 docker 29.4.0 で --help に記載のある --max-used-space を使用、2026-10-02 確認。
+            docker builder prune -f --max-used-space 3GB || true
 
             echo "============================================"
             echo "Deployment completed successfully!"
