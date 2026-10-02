@@ -95,8 +95,55 @@ def _attach_line_fields(index: int, obj: dict, item: dict, lines: list[str], err
     return {**item, **updates}
 
 
+def _owned_lines(item: dict) -> set[int]:
+    """件の行（範囲の行と見出しの行）。"""
+    owned = set(range(item["line_start"], item["line_end"] + 1))
+    if item["heading_line_start"] is not None:
+        owned.update(range(item["heading_line_start"], item["heading_line_end"] + 1))
+    return owned
+
+
+def _owner_error(field: str, line_no: int, own: set[int], others: set[int]) -> str | None:
+    """設計 §5 I-4。写した行が、その欄で使ってよい行でなければ理由を返す。"""
+    if line_no in own:
+        return None
+    if field == "state":
+        return f"state の行 {line_no} が自分の範囲・見出しの外"
+    if line_no in others:
+        return f"ship の行 {line_no} がほかの件の範囲・見出しの中"
+    if line_no > min(own):
+        return f"ship の行 {line_no} が自分の件より下にある"
+    return None
+
+
+def _enforce_line_owner(accepted: list[dict], objs: list, index_of: dict[int, int], errors: list[dict]) -> list[dict]:
+    """重なりの検査で残った件どうしで、写した行の持ち主を照合した写しを返す（設計 §5 I-4）。
+
+    index_of は id(件) → 元の件の番号。値を空にしたときは、件を残したまま errors に kept=True で理由を足す。
+    """
+    owned = [_owned_lines(it) for it in accepted]
+    result: list[dict] = []
+    for k, item in enumerate(accepted):
+        others = set().union(*(o for j, o in enumerate(owned) if j != k)) - owned[k]
+        index = index_of[id(item)]
+        updates: dict[str, Any] = {}
+        for field, line_field in _LINE_FIELDS:
+            line_no = item[f"raw_{line_field}"]
+            if line_no is None:
+                continue
+            reason = _owner_error(field, line_no, owned[k], others)
+            if reason is not None:
+                updates[f"raw_{field}"] = _NONE
+                updates[f"raw_{line_field}"] = None
+                errors.append(
+                    {"index": index, "error": f"値を空にした（件は残す）: {reason}", "item": objs[index], "kept": True}
+                )
+        result.append({**item, **updates})
+    return result
+
+
 def parse_v9_response(response_text: str, raw_text: str) -> tuple[list[dict], list[dict]]:
-    """v8 の検査に、設計 §5 の I-1〜I-3 を足したもの。
+    """v8 の検査に、設計 §5 の I-1〜I-4 を足したもの。
 
     戻り値は parse_v8_response と同じ (items, errors)。items のキーは v8 のキーに
     raw_state_line・raw_ship_line を足したもの。件を残して値だけ空にしたときの errors には kept=True が付く。
@@ -123,5 +170,7 @@ def parse_v9_response(response_text: str, raw_text: str) -> tuple[list[dict], li
         candidates.append((index, item))
 
     accepted = v8._accept_non_overlapping(candidates, errors)
+    index_of = {id(item): index for index, item in candidates}
+    accepted = _enforce_line_owner(accepted, objs, index_of, errors)
     errors.sort(key=lambda e: (e["index"] is None, e["index"] or 0))
     return accepted, errors

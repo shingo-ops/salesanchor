@@ -187,3 +187,69 @@ def test_v9_prompt_file_exists_has_key_terms_and_differs_from_v8():
         assert term in v9_text
     assert v9_text != v8_text
     assert v9.load_v9_prompt() == v9_text
+
+
+def _raw_with(overrides: dict[int, str]) -> str:
+    lines = [f"line{i}" for i in range(1, 11)]
+    for line_no, text in overrides.items():
+        lines[line_no - 1] = text
+    return "\n".join(lines)
+
+
+def test_state_line_inside_other_items_heading_blanks_state_and_keeps_both_items():
+    # Arrange
+    raw = _raw_with({2: "◆A", 5: "◆B(シュリなし)"})
+    item_a = _item(3, 3, 2, 2, state="シュリなし", state_line=5)
+    item_b = _item(6, 6, 5, 5)
+    # Act
+    items, errors = v9.parse_v9_response(_resp(item_a, item_b), raw)
+    # Assert
+    assert len(items) == 2
+    assert items[0]["raw_state"] == "none" and items[0]["raw_state_line"] is None
+    assert len(errors) == 1 and errors[0]["kept"] is True and "自分の範囲・見出しの外" in errors[0]["error"]
+
+
+def test_state_line_on_own_heading_is_kept():
+    # Arrange
+    raw = _raw_with({2: "◆A(シュリなし)"})
+    item_a = _item(3, 3, 2, 2, state="シュリなし", state_line=2)
+    # Act
+    items, errors = v9.parse_v9_response(_resp(item_a), raw)
+    # Assert
+    assert items[0]["raw_state"] == "シュリなし" and items[0]["raw_state_line"] == 2
+    assert [e for e in errors if e.get("kept")] == []
+
+
+def test_ship_line_inside_other_items_range_blanks_ship():
+    # Arrange
+    raw = _raw_with({2: "◆A", 7: "【大阪発送】B 5@100円"})
+    item_a = _item(3, 3, 2, 2, ship="【大阪発送】", ship_line=7)
+    item_b = _item(7, 7)
+    # Act
+    items, errors = v9.parse_v9_response(_resp(item_a, item_b), raw)
+    # Assert
+    assert len(items) == 2
+    assert items[0]["raw_ship"] == "none" and items[0]["raw_ship_line"] is None
+    assert len(errors) == 1 and errors[0]["kept"] is True and "ほかの件の範囲・見出しの中" in errors[0]["error"]
+
+
+def test_ship_line_above_item_owned_by_nobody_is_kept():
+    # Arrange
+    raw = _raw_with({1: "【大阪発送】", 2: "◆A"})
+    item_a = _item(3, 3, 2, 2, ship="【大阪発送】", ship_line=1)
+    # Act
+    items, errors = v9.parse_v9_response(_resp(item_a), raw)
+    # Assert
+    assert items[0]["raw_ship"] == "【大阪発送】" and items[0]["raw_ship_line"] == 1
+    assert [e for e in errors if e.get("kept")] == []
+
+
+def test_ship_line_below_item_owned_by_nobody_blanks_ship():
+    # Arrange
+    raw = _raw_with({2: "◆A", 9: "・17時までのご注文で当日発送"})
+    item_a = _item(3, 3, 2, 2, ship="当日発送", ship_line=9)
+    # Act
+    items, errors = v9.parse_v9_response(_resp(item_a), raw)
+    # Assert
+    assert items[0]["raw_ship"] == "none" and items[0]["raw_ship_line"] is None
+    assert len(errors) == 1 and errors[0]["kept"] is True and "自分の件より下にある" in errors[0]["error"]
