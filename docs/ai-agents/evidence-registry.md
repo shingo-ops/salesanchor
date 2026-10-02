@@ -3387,7 +3387,7 @@ evidence:
     summary: 対象TSX275・構文エラー0。native入力599（input461/select81/textarea57、金型内部各1）。ui-allow21。9/10監査577と対応556・旧のみ21・新のみ43。946e6dbc と 55d99a97e で全行一致。
   - type: command
     reference: docs/handoff/design-system-recon/evidence-20260910/av1-select-detail.json
-    summary: ページ側select80。ref0/style0/multiple0。children map41・固定32・式7。onChange e.target.value 76・カリー化4。
+    summary: ページ側select80。ref0/style5（InventoryPage.tsx:477、ParseReviewPage.tsx:575/596/617/638）/multiple0/size0/spread0。children map41・固定32・式7。onChange e.target.value 76・カリー化4。
   - type: file
     reference: frontend/src/components/Select.tsx:34-66、FormField.css:46-92
     summary: SelectControl は options モードのみ・forwardRef無し・矢印固定。設計担当が実物を直接読取。
