@@ -869,3 +869,6 @@ run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
 
 # §D01: 決済手数料設定マスタ（public.payment_fee_settings）新設（NULLパターン・PayPal初期データ込み・冪等）
 run_sql migrations/20261002_160000_create_payment_fee_settings.sql
+
+# Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
+run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
