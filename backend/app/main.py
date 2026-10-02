@@ -75,6 +75,7 @@ from app.routers import (
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
     parse_review,
+    payment_fee_settings,  # 決済手数料設定 テナント用
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
@@ -132,7 +133,6 @@ from app.routers import (
     tenant_profile,  # Sprint 8 / F8: PO PDF / メール差出人情報
     translation,  # ADR-110: 翻訳サブシステム（グロッサリ CRUD + 送信下訳）
     units,  # 単位マスタ テナント用
-    payment_fee_settings,  # 決済手数料設定 テナント用
     webhook,
 )
 from app.routers import calendar as calendar_router  # アプリ内カレンダー CRUD

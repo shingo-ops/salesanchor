@@ -29,6 +29,7 @@ RETURNS TRIGGER AS $$
 BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_set_updated_at_payment_fee_settings ON public.payment_fee_settings;
 CREATE TRIGGER trigger_set_updated_at_payment_fee_settings
     BEFORE UPDATE ON public.payment_fee_settings
     FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_payment_fee_settings();
