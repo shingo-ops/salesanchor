@@ -105,6 +105,14 @@ def _make_guild(*, category_id: int, bot_member: _FakeMember, staff_role: _FakeR
     return guild, category, created_channel
 
 
+@pytest.fixture(autouse=True)
+def _welcome_via_bot(monkeypatch):
+    """既定ではサーバー名義（webhook）送信を使えない扱いにし、Bot 名義の送信経路に固定する。"""
+    mock = AsyncMock(return_value=None)
+    monkeypatch.setattr(ticket_channel_creator, "try_send_as_identity", mock)
+    return mock
+
+
 @pytest.mark.asyncio
 async def test_ticket_channel_adds_bot_visibility_and_updates_existing_lead():
     session = AsyncMock()
@@ -255,3 +263,52 @@ async def test_ticket_channel_returns_existing_channel_without_recreate():
     assert channel is existing_channel
     guild.create_text_channel.assert_not_awaited()
     assert session.commit.await_count == 0
+
+
+def _welcome_guild():
+    guild = MagicMock()
+    guild.id = 777
+    guild.name = "My Shop"
+    guild.icon.key = "a_abc123"
+    return guild
+
+
+@pytest.mark.asyncio
+async def test_welcome_is_sent_as_guild_identity_without_bot_send(_welcome_via_bot):
+    _welcome_via_bot.return_value = "msg-1"
+    channel = _FakeTextChannel(id=55, mention_text="#t", send=AsyncMock())
+    session = AsyncMock()
+    db_factory = MagicMock(return_value=_DBContext(session))
+
+    with patch.object(ticket_channel_creator, "set_tenant_context", new=AsyncMock()):
+        await ticket_channel_creator._send_welcome(channel, _welcome_guild(), "Welcome!", 4, db_factory)
+
+    kwargs = _welcome_via_bot.await_args.kwargs
+    assert kwargs["channel_id"] == "55"
+    assert kwargs["content"] == "Welcome!"
+    assert kwargs["identity"].name == "My Shop"
+    assert kwargs["identity"].icon_url == "https://cdn.discordapp.com/icons/777/a_abc123.gif"
+    channel.send.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_welcome_falls_back_to_bot_send_when_identity_send_returns_none(_welcome_via_bot):
+    channel = _FakeTextChannel(id=55, mention_text="#t", send=AsyncMock())
+    db_factory = MagicMock(return_value=_DBContext(AsyncMock()))
+
+    with patch.object(ticket_channel_creator, "set_tenant_context", new=AsyncMock()):
+        await ticket_channel_creator._send_welcome(channel, _welcome_guild(), "Welcome!", 4, db_factory)
+
+    channel.send.assert_awaited_once_with("Welcome!")
+
+
+@pytest.mark.asyncio
+async def test_welcome_falls_back_to_bot_send_when_identity_send_raises(_welcome_via_bot):
+    _welcome_via_bot.side_effect = RuntimeError("boom")
+    channel = _FakeTextChannel(id=55, mention_text="#t", send=AsyncMock())
+    db_factory = MagicMock(return_value=_DBContext(AsyncMock()))
+
+    with patch.object(ticket_channel_creator, "set_tenant_context", new=AsyncMock()):
+        await ticket_channel_creator._send_welcome(channel, _welcome_guild(), "Welcome!", 4, db_factory)
+
+    channel.send.assert_awaited_once_with("Welcome!")

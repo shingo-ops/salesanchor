@@ -35,6 +35,7 @@ from app.services.llm_budget import (
     check_budget,
     record_cost,
     record_usage_event,
+    reset_monthly_if_needed,
     usage_counts_from,
 )
 from app.services.translation_glossary import GlossaryEntry, format_glossary_for_prompt, load_glossary
@@ -524,6 +525,7 @@ async def translate_inbound(
 
     # 3. 初回呼び出し: 安いモデル
     model = MODEL_RECEIVE
+    await reset_monthly_if_needed(db, tenant_id)
     budget_status = await check_budget(db, tenant_id)
     if budget_status in (BudgetStatus.HARD_STOP, BudgetStatus.NO_BUDGET_ROW):
         raise BudgetExceededError(budget_status)
@@ -675,6 +677,7 @@ async def generate_outbound_draft(
     """
     glossary = await load_glossary(db, tenant_id, language_pair="ja->en")
 
+    await reset_monthly_if_needed(db, tenant_id)
     budget_status = await check_budget(db, tenant_id)
     if budget_status in (BudgetStatus.HARD_STOP, BudgetStatus.NO_BUDGET_ROW):
         raise BudgetExceededError(budget_status)

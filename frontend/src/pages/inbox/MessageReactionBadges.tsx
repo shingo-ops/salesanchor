@@ -1,7 +1,7 @@
 /**
  * MessageReactionBadges — 吹き出し下端のリアクション表示（受信箱・Discord）
  *
- * - ❤️ グループがあれば IconToggleButton（is_mine で押下・件数つき）。クリックで送信/取消
+ * - ❤️ グループがあれば IconToggleButton badge（常に赤の塗りハート＋件数・is_mine は枠で区別）。クリックで送信/取消
  * - ❤️ 以外のリアクションは表示専用バッジ（受信箱からは付けられない）
  * - リアクションした人は Tooltip 金型で表示
  */
@@ -35,6 +35,7 @@ export function MessageReactionBadges({ messageId, reactions, onToggleHeart }: P
       {heart && (
         <Tooltip content={tooltipFor(heart)}>
           <IconToggleButton
+            variant="badge"
             pressed={heart.is_mine}
             iconOff={INBOX_ACTION_ICONS.heart}
             iconOn={INBOX_ACTION_ICONS.heartFilled}

@@ -94,11 +94,12 @@ services:
       # parsed_rule_only に degrade して解析行が出ない (2026-05-29 修正)。
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
       # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
-      # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
-      # backnet の gemini-egress コンテナが SSH -L で中継する（2026-09-30 改訂2）。
-      # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
-      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://gemini-egress:18888}
-      - grpc_proxy=${GEMINI_GRPC_PROXY-http://gemini-egress:18888}
+      # 既定は直接接続（2026-10-02: prod1 の Google 位置判定が修正・確認済みのため）。
+      # 中継は緊急手段として gemini-egress サービスは起動したまま残置する。
+      # 再発時は .env に GEMINI_PROXY_URL / GEMINI_GRPC_PROXY を設定して中継ONにする。
+      # 手順: docs/runbooks/gemini-egress-emergency.md
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-}
       - TCG_AUTO_ANALYZE=${TCG_AUTO_ANALYZE:-1}
       - TCG_AUTO_DISTRIBUTE=${TCG_AUTO_DISTRIBUTE:-0}
       - ADMIN_NOTIFICATION_DISCORD_WEBHOOK=${ADMIN_NOTIFICATION_DISCORD_WEBHOOK:-}
@@ -229,11 +230,12 @@ services:
       # Google Sheets SA キーファイル（backend サービスと同パターン）
       - TCG_SHEETS_SA_KEY_FILE=${TCG_SHEETS_SA_KEY_FILE:-}
       # Gemini egress via prod2（docs/handoff/gemini-egress-via-prod2/design.md §5-1 §5-2）
-      # 国判定エラー対策：Gemini 宛の通信だけ prod2 の tinyproxy を経由させる。
-      # backnet の gemini-egress コンテナが SSH -L で中継する（2026-09-30 改訂2）。
-      # .env で空文字にすれば直接接続に戻せる。Gemini 以外には効かせない。
-      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-http://gemini-egress:18888}
-      - grpc_proxy=${GEMINI_GRPC_PROXY-http://gemini-egress:18888}
+      # 既定は直接接続（2026-10-02: prod1 の Google 位置判定が修正・確認済みのため）。
+      # 中継は緊急手段として gemini-egress サービスは起動したまま残置する。
+      # 再発時は .env に GEMINI_PROXY_URL / GEMINI_GRPC_PROXY を設定して中継ONにする。
+      # 手順: docs/runbooks/gemini-egress-emergency.md
+      - GEMINI_PROXY_URL=${GEMINI_PROXY_URL-}
+      - grpc_proxy=${GEMINI_GRPC_PROXY-}
     volumes:
       - ./firebase-credentials.json:/app/firebase-credentials.json:ro
       - ${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:${TCG_SHEETS_SA_KEY_FILE:-/dev/null}:ro

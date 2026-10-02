@@ -41,7 +41,9 @@ from app.database import get_db
 from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.discord_guild_identity import fetch_guild_identity
 from app.services.discord_rest import DiscordAPIError, discord_api_request
+from app.services.discord_webhook_sender import try_send_as_identity
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -303,12 +305,18 @@ async def run_auto_setup(
                 step_name="button",
                 ticket_ch_id=ticket_ch_id,
                 bot_token=bot_token,
+                db=db,
+                tenant_id=tenant_id,
+                guild_id=guild_id,
             )
         elif ch_ticket_step.status == "skipped":
             step = await _ensure_ticket_button_step(
                 step_name="button",
                 ticket_ch_id=ticket_ch_id,
                 bot_token=bot_token,
+                db=db,
+                tenant_id=tenant_id,
+                guild_id=guild_id,
             )
         else:
             step = AutoSetupStep(
@@ -531,6 +539,9 @@ async def _ensure_ticket_button_step(
     step_name: str,
     ticket_ch_id: str | None,
     bot_token: str,
+    db: AsyncSession,
+    tenant_id: int,
+    guild_id: str,
 ) -> AutoSetupStep:
     """既存 ticket-start チャンネルにボタンが無い場合のみ投稿する（冪等）。
 
@@ -572,7 +583,12 @@ async def _ensure_ticket_button_step(
                     )
 
     return await _post_ticket_button_step(
-        step_name=step_name, ticket_ch_id=ticket_ch_id, bot_token=bot_token
+        step_name=step_name,
+        ticket_ch_id=ticket_ch_id,
+        bot_token=bot_token,
+        db=db,
+        tenant_id=tenant_id,
+        guild_id=guild_id,
     )
 
 
@@ -581,8 +597,14 @@ async def _post_ticket_button_step(
     step_name: str,
     ticket_ch_id: str | None,
     bot_token: str,
+    db: AsyncSession,
+    tenant_id: int,
+    guild_id: str,
 ) -> AutoSetupStep:
-    """ticket-start チャンネルにチケット開始ボタンを投稿する。"""
+    """ticket-start チャンネルにチケット開始ボタンを投稿する。
+
+    サーバー名・アイコン名義の webhook 投稿を優先し、送れなければ Bot 名義で投稿する（案内を欠落させない）。
+    """
     if not ticket_ch_id:
         return AutoSetupStep(
             step=step_name,
@@ -591,6 +613,17 @@ async def _post_ticket_button_step(
         )
 
     payload = bot_texts.ticket_button_payload()
+    identity = await fetch_guild_identity(guild_id, bot_token)
+    posted_id = await try_send_as_identity(
+        db,
+        tenant_id=tenant_id,
+        channel_id=ticket_ch_id,
+        identity=identity,
+        content=payload["content"],
+        components=payload["components"],
+    )
+    if posted_id is not None:
+        return AutoSetupStep(step=step_name, status="posted", discord_id=posted_id)
     try:
         created = await discord_api_request(
             method="POST",

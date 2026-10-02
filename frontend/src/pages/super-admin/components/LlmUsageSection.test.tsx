@@ -84,7 +84,25 @@ const response = {
   ],
 };
 
+const fxRate150 = {
+  currency: "USD",
+  rate_jpy: 150,
+  fetched_at: "2026-10-01T06:00:00+00:00",
+  updated_at: "2026-10-01T06:00:00+00:00",
+};
+
 const view = () => render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+
+/** /fx-rates/USD だけ fxResponse を返し、それ以外（llm-usage）は response を返す api.get モック。 */
+function mockApiWithFx(fxResponse: unknown) {
+  vi.mocked(api.get).mockImplementation((url: string) => {
+    if (url.startsWith("/fx-rates/")) {
+      if (fxResponse instanceof Error) return Promise.reject(fxResponse);
+      return Promise.resolve(fxResponse);
+    }
+    return Promise.resolve(response);
+  });
+}
 
 beforeEach(async () => {
   vi.resetAllMocks();
@@ -273,6 +291,60 @@ it("consolidates all 7 charts into a single charts card (no per-chart Card wrapp
   expect(container.querySelector(".llm-usage-summary")).not.toBeNull();
   const chartCards = container.querySelectorAll(".analysis-dashboard-chart-card");
   expect(chartCards.length).toBe(3); // byPurposeTitle / dailyTitle / byModelTitle の表カードのみ
+});
+
+describe("JPY cost conversion (ADR-148: public.app_fx_rates SSOT)", () => {
+  it("shows the hero cost converted to JPY using the fetched rate (usd * rate_jpy)", async () => {
+    mockApiWithFx(fxRate150);
+    const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+    await screen.findByText("LINE Extraction");
+    const summary = container.querySelector(".llm-usage-summary");
+    // 0.0021 USD * 150 = 0.315 -> ¥0.32 (JPY, maximumFractionDigits: 2)
+    expect(summary?.textContent).toContain("¥0.32");
+    expect(summary?.textContent).not.toContain("$0.0021");
+  });
+
+  it("shows JPY in the by-purpose, daily, and by-model cost table columns", async () => {
+    mockApiWithFx(fxRate150);
+    const { container } = render(<LlmUsageSection days={30} t={i18n.t.bind(i18n)} />);
+    await screen.findByText("LINE Extraction");
+    expect(container.textContent).not.toContain("$0.0021");
+    expect(screen.getAllByText("¥0.32").length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("shows the rate note with the converted rate and JST fetched_at", async () => {
+    mockApiWithFx(fxRate150);
+    view();
+    await screen.findByText("LINE Extraction");
+    const note = await screen.findByTestId("llm-usage-fx-note");
+    expect(note.textContent).toContain("150");
+    expect(note.textContent).toMatch(/2026/);
+  });
+
+  it("falls back to USD and shows the fallback note when the fx-rate request fails", async () => {
+    mockApiWithFx(new Error("network error"));
+    view();
+    await screen.findByText("LINE Extraction");
+    expect(screen.getAllByText(/\$0\.0021/).length).toBeGreaterThan(0);
+    const fallback = await screen.findByTestId("llm-usage-fx-fallback-note");
+    expect(fallback.textContent).toBeTruthy();
+    expect(screen.queryByTestId("llm-usage-fx-note")).toBeNull();
+  });
+
+  it("falls back to USD when the fx-rate response has no rate_jpy", async () => {
+    mockApiWithFx({ currency: "USD" });
+    view();
+    await screen.findByText("LINE Extraction");
+    expect(screen.getAllByText(/\$0\.0021/).length).toBeGreaterThan(0);
+    expect(await screen.findByTestId("llm-usage-fx-fallback-note")).toBeTruthy();
+  });
+
+  it("renders the cost charts (daily/monthly by purpose) with JPY tooltip formatting applied without throwing", async () => {
+    mockApiWithFx(fxRate150);
+    view();
+    await screen.findByText("Daily Cost by Purpose");
+    await screen.findByText("Monthly Cost by Purpose");
+  });
 });
 
 describe("formatCompactNumber", () => {

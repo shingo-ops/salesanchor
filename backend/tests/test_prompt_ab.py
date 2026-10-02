@@ -330,3 +330,38 @@ def test_ledger_totals_sum_by_source_ref_on_real_postgres(pg):
         assert totals.null_cost_rows == 0
         assert totals.cost_usd == sum(stored)
         assert pab.fetch_ledger_totals(s, "prompt_ab:NONE").rows == 0
+
+
+# --- v9 ---------------------------------------------------------------------
+
+
+def test_v9_config_passes_v9_schema_and_prompt(monkeypatch, fakes):
+    from app.services.gemini_raw_copy_v9 import V9_RESPONSE_SCHEMA
+
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",))
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V9_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == "PROMPT9"
+
+
+def test_v8_config_does_not_pass_response_schema(monkeypatch, fakes):
+    _run(fakes, monkeypatch, config="v8", run_ids=("r1",))
+    assert "response_schema" not in fakes.v8.call_args.kwargs
+
+
+def test_v9_dry_run_never_calls_gemini_nor_ledger(monkeypatch, fakes, capsys):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    summary = _run(fakes, monkeypatch, config="v9", dry_run=True)
+    assert summary.dry_run is True
+    assert fakes.v8.call_count == 0 and fakes.v7.call_count == 0
+    assert fakes.record.call_count == 0
+    assert "PROMPT9" in capsys.readouterr().out
+
+
+def test_parse_args_accepts_v9_with_thinking_level():
+    args = pab.parse_args([
+        "--runs-file", "f", "--config", "v9", "--thinking-level", "low", "--repeat", "1",
+        "--max-cost-usd", "1", "--test-id", "X", "--out-dir", "/o",
+    ])
+    assert args.config == "v9" and args.thinking_level == "LOW"

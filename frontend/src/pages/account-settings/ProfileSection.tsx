@@ -8,6 +8,7 @@ import {
   deleteMyAvatar,
   hasEnglishNames,
   patchMyProfile,
+  toSameOriginAvatarUrl,
   uploadMyAvatar,
 } from "../../lib/staffProfile";
 import type { AvatarErrorKind } from "../../lib/staffProfile";
@@ -130,7 +131,7 @@ export default function ProfileSection() {
       <div className="account-settings-field">
         <span className="account-settings-label">{t("accountSettings.avatarLabel")}</span>
         <AvatarUpload
-          imageUrl={avatarUrl}
+          imageUrl={toSameOriginAvatarUrl(avatarUrl)}
           uploading={avatarUploading}
           onSelect={uploadAvatar}
           onDelete={removeAvatar}

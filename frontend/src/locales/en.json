@@ -1334,6 +1334,14 @@
       "permissionDenied": "More than 24 hours have passed, so this message cannot be sent. Please reply directly from Instagram / Messenger.",
       "rateLimited": "Sending is temporarily limited. Please try again later.",
       "attachmentNotSaved": "The image was sent, but saving a copy failed.",
+      "discordEnNameRequired": "To reply on Discord, you need to register your English name.",
+      "discordEnNameInvalid": "Your English name contains a word that can't be used (such as \"discord\").",
+      "discordSendFailed": "The message could not be sent. Your text is still here.",
+      "discordWebhookPermissionAdmin": "The message can't be sent because the Discord setup is incomplete.",
+      "discordWebhookPermissionStaff": "The message can't be sent because the Discord setup is incomplete. Please contact an administrator.",
+      "ctaOpenAccountSettings": "Open account settings",
+      "ctaRetry": "Send again",
+      "ctaOpenDiscordConfig": "Open Discord settings",
       "generic": "Failed to send the message.",
       "codeSuffix": " (code: {{code}})"
     }
@@ -1967,12 +1975,10 @@
     "showSidebar": "Show sidebar",
     "status_active": "Active",
     "status_inactive": "Inactive",
-    "staffCodeLabel": "Staff code (auto-generated EMP-00001 if blank)",
     "surnameKana": "Surname (Kana)",
     "givenNameKana": "Given name (Kana)",
     "status_pending": "Pending",
     "fullName": "Full Name",
-    "staffCodePlaceholder": "e.g., EMP-00001",
     "subtitle": "Manage staff accounts and UI preferences."
   },
   "teams": {
@@ -4537,6 +4543,10 @@
           "outputLabel": "Output Tokens",
           "successRateLabel": "Success Rate (LINE Extraction)",
           "errorCountLabel": "Error Count (LINE Extraction)"
+        },
+        "fx": {
+          "note": "Converted at 1 USD = ¥{{rate}} (as of {{fetchedAt}}. Past days are also calculated using this rate.)",
+          "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
         }
       },
       "costSectionTitle": "API Cost",

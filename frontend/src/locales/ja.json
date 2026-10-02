@@ -1334,6 +1334,14 @@
       "permissionDenied": "24時間を過ぎたため送信できません。Instagram/Messengerから直接返信してください",
       "rateLimited": "送信が一時的に制限されています。時間をおいて再試行してください",
       "attachmentNotSaved": "画像は送信されましたが、自社への保管に失敗しました",
+      "discordEnNameRequired": "Discordで返信するには、英語の名前の登録が必要です。",
+      "discordEnNameInvalid": "英語の名前に使えない言葉（discord など）が含まれています。",
+      "discordSendFailed": "送信できませんでした。入力した文は残っています。",
+      "discordWebhookPermissionAdmin": "Discordの設定が足りないため送れません。",
+      "discordWebhookPermissionStaff": "Discordの設定が足りないため送れません。管理者に連絡してください。",
+      "ctaOpenAccountSettings": "アカウント設定を開く",
+      "ctaRetry": "もう一度送る",
+      "ctaOpenDiscordConfig": "Discord設定を開く",
       "generic": "送信できませんでした",
       "codeSuffix": "（コード: {{code}}）"
     }
@@ -1967,12 +1975,10 @@
     "showSidebar": "サイドバーを表示",
     "status_active": "有効",
     "status_inactive": "無効",
-    "staffCodeLabel": "スタッフコード（空欄なら自動採番 EMP-00001 形式）",
     "surnameKana": "苗字ふりがな",
     "givenNameKana": "名前ふりがな",
     "status_pending": "保留",
     "fullName": "氏名",
-    "staffCodePlaceholder": "例: EMP-00001",
     "subtitle": "スタッフ情報とUI設定を管理します。"
   },
   "teams": {
@@ -4537,6 +4543,10 @@
           "outputLabel": "出力トークン",
           "successRateLabel": "成功率（LINE抽出）",
           "errorCountLabel": "エラー件数（LINE抽出）"
+        },
+        "fx": {
+          "note": "1ドル＝{{rate}}円（{{fetchedAt}} 時点のレートで換算。過去の日も同じレートで計算しています）",
+          "fallbackNote": "為替レートを取得できないため、ドルで表示しています"
         }
       },
       "costSectionTitle": "API コスト",
