@@ -27,7 +27,7 @@ recon: docs/handoff/discord-config-page-redesign/recon.md
 
 ## 変更範囲（触るファイルと触らない範囲）
 
-触る: `frontend/src/pages/admin/DiscordConfigPage.tsx`（全面書き換え）、`frontend/src/pages/admin/discord-config.css`（新規・var() のみ）、`frontend/src/pages/admin/AdminHubPage.tsx`（`useIsMobile` で nav を条件描画）、`frontend/src/pages/management-center/ManagementCenterPage.tsx`（4 項目追加）、`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（discordConfig / discordTicketConfig / discordAutoSetup を短文化・不要キー削除・`discordConfig.syncStatus` は LeadsPage が使用中のため維持）、テスト 3 本（新規）。
+触る: `frontend/src/App.tsx`（管理センター配下に discord-config / discord-announce / tenant-policy / channel-masters の子ルート追加。/admin/* は維持）、`frontend/src/pages/admin/DiscordConfigPage.tsx`（全面書き換え）、`frontend/src/pages/admin/discord-config.css`（新規・var() のみ）、`frontend/src/pages/admin/AdminHubPage.tsx`（`useIsMobile` で nav を条件描画）、`frontend/src/pages/management-center/ManagementCenterPage.tsx`（4 項目追加）、`frontend/src/locales/ja.json`・`frontend/src/locales/en.json`（discordConfig / discordTicketConfig / discordAutoSetup を短文化・不要キー削除・`discordConfig.syncStatus` は LeadsPage が使用中のため維持）、テスト 3 本（新規）。
 触らない: backend、`admin-hub.css`、他の admin ページ、DesktopShell / MobileShell、API 仕様。
 
 ## 金型
