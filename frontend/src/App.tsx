@@ -395,6 +395,11 @@ function App() {
                     <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
                     <Route path="commission"          element={<CommissionSettingsPage />} />
                     <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                    {/* 管理センター左メニューを保ったまま開くため /admin/* と同じページを再掲 */}
+                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
+                    <Route path="discord-config"      element={<DiscordConfigPage />} />
+                    <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
+                    <Route path="channel-masters"     element={<ChannelMastersPage />} />
                     <Route path="channels"            element={<ChannelsPage />} />
                     <Route path="bots"                element={<BotsPage />} />
                     <Route path="suppliers"           element={<SuppliersPage />} />

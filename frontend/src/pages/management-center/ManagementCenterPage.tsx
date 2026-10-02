@@ -40,6 +40,8 @@ export default function ManagementCenterPage() {
         { to: "shifts",     labelKey: "nav.shifts",            visible: hasPermission("shifts.view") },
         { to: "commission", labelKey: "nav.commissionSettings", visible: hasPermission("orders.view") },
         { to: "reports",    labelKey: "nav.reports",           visible: true },
+        { to: "tenant-policy", labelKey: "nav.tenantPolicy",
+          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
       ],
     },
     {
@@ -66,6 +68,10 @@ export default function ManagementCenterPage() {
         { to: "integrations/dhl",          labelKey: "nav.integrationDhl",         visible: hasPermission("erp.view") },
         { to: "integrations/ups",          labelKey: "nav.integrationUps",         visible: hasPermission("erp.view") },
         { to: "integrations/paypal",       labelKey: "nav.integrationPaypal",      visible: hasPermission("erp.view") },
+        { to: "discord-config",     labelKey: "nav.discordConfig",
+          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
+        { to: "discord-announce",   labelKey: "nav.discordAnnounce",
+          visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
       ],
     },
     {
@@ -75,6 +81,7 @@ export default function ManagementCenterPage() {
         { to: "tenant-profile", labelKey: "nav.tenantProfile",
           visible: hasAny("tenant.profile.edit", "tenant.profile.view") },
         { to: "channels",       labelKey: "nav.channels",       visible: hasPermission("channels.view") },
+        { to: "channel-masters", labelKey: "nav.channelMasters", visible: hasPermission("tenant.profile.edit") },
         { to: "bots",           labelKey: "nav.bots",           visible: hasPermission("bots.view") },
         { to: "notifications",  labelKey: "nav.notifications",  visible: hasPermission("notifications.manage") },
       ],
