@@ -20,6 +20,7 @@ PO: しんご
 - [../../handoff/design-system-recon/recon.md](../../handoff/design-system-recon/recon.md) — 現状実測(recon)
 - [migration.md](migration.md) — 移行計画（既存→理想・便0〜6・部品台帳）
 - [track-record.md](track-record.md) — 便履歴と逸脱ログ
+- [visual-language/README.md](visual-language/README.md) — アプリ視覚デザイン言語（見た目の質・PC/スマホの使いやすさを扱う子テーマ。草案 2026-10-02）
 
 ## 後続予定（未作成・在るだけ詐称をしないための明記）
 - 関所実装（design.md 維持の仕組み欄参照）
