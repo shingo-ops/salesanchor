@@ -63,3 +63,8 @@ recon.md の「PO 依頼（原文）」参照（カテゴリ名3種・メンバ�
 
 - 完了後の監視: PO 受入（上表の本番行）。
 - 次フェーズ: 在庫アナウンスの大口/メンバー分離配信は別便（本便はカテゴリ構成のみ）。
+
+## 維持の仕組み
+
+- カテゴリ名の正本は `backend/app/discord_gateway/bot_texts.py`（`CATEGORY_*`）。名前を変えるとき `backend/tests/test_discord_auto_setup.py::test_category_names_are_po_specified` が落ちて気付ける（守り手: CI の pytest）。
+- 移行・冪等・無削除は `backend/tests/test_discord_auto_setup.py` の状態付きフェイク Discord テストが毎 PR で検証する。

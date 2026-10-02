@@ -28,7 +28,7 @@
 
 ## チャンネル ↔ 規模のマッピング（根拠）
 
-【事実】small_channel_id = member-announcements = 小口（Small・Member ロール）、large_channel_id = partner-announcements = 大口（Large・Partner ロール）。根拠: `discord_channel_invite.py:114-117`（Small→small_channel_id / Large→large_channel_id）と `discord_auto_setup.py:266-288`（ch_member が small、ch_partner が large として保存）。よって 🍀（メンバー向け・小口）= member-announcements、🍒（大口向け）= partner-announcements。曖昧さなし。
+【事実】small_channel_id = member-announcements = 小口（Small・Member ロール）、large_channel_id = partner-announcements = 大口（Large・Partner ロール）。根拠: `backend/app/routers/discord_channel_invite.py:114`（Small→small_channel_id / Large→large_channel_id）と `backend/app/routers/discord_auto_setup.py:266`（ch_member が small、ch_partner が large として保存）。よって 🍀（メンバー向け・小口）= member-announcements、🍒（大口向け）= partner-announcements。曖昧さなし。
 
 ## 設計制約の確認
 
