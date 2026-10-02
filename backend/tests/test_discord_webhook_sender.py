@@ -396,6 +396,38 @@ async def test_missing_bot_token_raises_send_error(db, monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_missing_fernet_key_fails_before_creating_webhook(db, monkeypatch):
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    with pytest.raises(sender.WebhookSendError):
+        await _send(db)
+    assert rec.requests == []
+    assert await _rows(db) == []
+
+
+@pytest.mark.asyncio
+async def test_missing_fernet_key_is_a_discord_webhook_error_not_raw(db, monkeypatch):
+    """担当者送信側（leads.py）は DiscordWebhookError を 502 DISCORD_SEND_FAILED に写す。生の設定エラーを漏らさない。"""
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    with pytest.raises(sender.DiscordWebhookError):
+        await _send(db)
+
+
+@pytest.mark.asyncio
+async def test_try_send_as_identity_missing_fernet_key_returns_none_without_http(db, monkeypatch):
+    monkeypatch.delenv("METADATA_FERNET_KEY")
+    encryption.reset_cache()
+    rec = Recorder({})
+    _install(monkeypatch, rec)
+    identity = GuildIdentity(name="My Shop", icon_url=None)
+    assert await sender.try_send_as_identity(db, tenant_id=7, channel_id=_CHANNEL, identity=identity) is None
+    assert rec.requests == []
+
+
+@pytest.mark.asyncio
 async def test_undecryptable_row_is_replaced(db, monkeypatch):
     await db.execute(text(
         "INSERT INTO discord_channel_webhooks (tenant_id, channel_id, webhook_id, webhook_token_encrypted) "

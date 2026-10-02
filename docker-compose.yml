@@ -322,6 +322,8 @@ services:
       # チケット作成で DB アクセスが必要（ticket_channel_creator.get_ticket_config）。
       # 未設定だと database.py のデフォルト myapp_user にフォールバックして接続失敗する。
       - DATABASE_URL=${DATABASE_URL}
+      # サーバー名義の案内（webhook 保管 token の暗号化・復号）に必要（ADR-159）。backend と同じ鍵を渡す
+      - METADATA_FERNET_KEY=${METADATA_FERNET_KEY:-}
     depends_on:
       postgres:
         condition: service_healthy
