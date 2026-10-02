@@ -1272,3 +1272,35 @@ APPROVE（設計合格）。肯定/除外を分離、API/DB契約不変、品質
 初回正式CI34798116160は3714成功/95skip/4失敗、coverage65.05%。追加のPG保存試験は失敗なし。失敗対象を直接確認した結果、PM0179は正式名ONE PIECE DAY’25の曲線apostropheを単語境界として扱い、同じ商品で根拠語だけが変わる。PM0256/PM0257は正式名のside:UNITY/side:PRIDEに対し既存検索語の全語が存在し、v9ではそれぞれ同じ商品へ特定するのが正しい。293商品fixtureの元データ/旧期待値は維持し、この3コードだけに商品名と検索語を明示したv9の期待tupleを追加する。残290件は従来の全tuple比較を維持する。
 
 追加対象6番目: backend/tests/test_tcg_product_guards.py。実純関数を読み出す既存テストの名前一覧へproduct_search_tokens/match_product_search_keywordの2関数を追加する。テストのガード期待値は変更しない。既存5ファイル以外で必要な接点がCIで判明したため設計範囲を明記して修正する。製品の照合ルール変更は0。設計自己審査APPROVE（漏れを補完）、正式CI再実行を必須とする。
+
+## 25. 完了済み旧参照ジョブの比較と採用（2026-09-14・段階設計）
+
+### 25-1 目的・承認と範囲
+PO原文「過去データへの再解析を実施して結果を確認」を目的とする。直近の安全に進める指示に基づく調査・設計継続。明細欠落/増殖0、原文/明細ID/RAW/手修正変更0、先行7商品期待一致7/7を設計上の受入条件とする。PO本人の言葉と設計側の数値化を区別する。全1504件の絶対正解は未確立。
+親は商品マスタ仕様、ADR-154。§22の不足を本節で具体化する。新しい文書体系は作らない。本セッションは設計担当を維持し、製品実装・新規agent起動へ自動で移行しない。
+
+### 25-2 実物根拠
+main5afb5af1を調査。comparison57–80はID厳密検査、99–136は一貫したreadonly取得、194以降は入力再照合と非採用比較、末尾はcomparison_complete_unverified。analyzer1180–1186は古い参照を拒否。product_master_svc524–555は解析前にrunをcommitし、analyzer1462以降も複数commitするため、そのまま原子的な採用として包めない。
+実DBのanalysis_run_snapshotsは解析結果の旧値を保存するが旧作品判断/参照snapshotの専用列なし。extraction_attemptsは入力/応答を持つが既存Recorderはpendingジョブ取得と新規明細INSERTを前提。これらを名前だけで採用履歴へ流用しない。実schemaはrefresh-schema-20260914.json参照。
+先行b9cc6b8e-6b7e-4cdc-b00a-1c7d299ebbf8は7明細、手修正0。現行v9商品関数と保存作品IDを使う非採用実験で7/7成功。これは新モデルの判断や通常解析全体の成功ではない。期待対応はrefresh-pilot-design-proof.jsonに固定。原文行範囲が重なる既存明細も別IDとして保持し、独断重複排除しない。
+
+### 25-3 A便：本番へ採用しない比較機能の契約
+変更候補はbackend/app/services/tcg_work_comparison_svc.py、backend/tests/test_tcg_work_comparison.py、backend/tests/test_tcg_work_comparison_pg.pyの3製品/試験ファイルに限定。既存compare_snapshot/old_work/通常解析ガードは保持する。
+新入口read_job_snapshot(session_factory, job_id)は新鮮なreadonly一貫読み取りで、当該doneジョブ1件、有効原文1件、全明細・解析・訂正、既存MASTER_TABLESと現reference/contextを取得する。全件を取り込んでから別ジョブを除く方式にしない。job不在/done以外/原文無効/解析欠落/重複ID/行範囲不正/保存参照破損は停止。訂正ありジョブはA便では全体停止（後で対応するため、黙って除外しない）。旧参照は保存時の完全性を確認し、現在との差は比較理由として記録する。参照を更新済みと扱わない。
+compare_stale_job_snapshotはこの新形式だけを受け、live callableを明示指定した場合のみ既存call_work_modelを1回呼ぶ。自動retry0、先行1ジョブ7件限定。保存値、v9＋保存作品判断の診断値、最新referenceで新たに判断した候補を分ける。診断値と保存値が違っても差を記録し、通常compare_snapshotの旧仕様を変更しない。
+モデル入力は既存のsource_lines/固定ITEM_ID・RAW・行番号/current reference、出力はITEM_ID/WORK_IDだけ。既存parse_decisionsのID集合/参照内WORK_ID/明示作品矛盾検査を再利用する。余分・重複・欠落ID、列増加、外部ID、不正応答は全体不採用。
+呼出前後に全入力の指紋を再取得し、原文/ジョブ/明細/解析/訂正/マスタの差があればINPUT_CHANGEDで停止。結果は常にadoptable=false、db_writes=0。生原文・生応答は非公開証拠へ、公開文書は件数/照合値のみ。モデル通信完了後に変更された候補も採用しない。本便は保存・配信APIを追加しない。
+
+### 25-4 A便の試験と合格条件
+既存test_tcg_work_comparison*.pyの人工モデル/隔離PostgreSQLを拡張する。①done旧参照の完全性を保ったまま7ID候補作成、②旧入口の旧参照拒否維持、③訂正あり/done以外/保存指紋破損はモデル0回、④欠落/重複/余分/作品外ID/列増加は不採用、⑤呼出前後の各入力変更で不採用、⑥モデル失敗は1回で停止、⑦隔離DB全表の前後完全一致、⑧新規ID/RAW変更0、⑨通常解析/旧比較の回帰維持。テストfixtureは人工値を使いCI内から実モデルは呼ばない。
+初回の実モデル比較は実装と正式CI合格後に1回だけ。7商品7/7かつ対象外の差を検収できるまではA便結果も合格としない。既存の7/7商品単体結果で代用しない。
+
+### 25-5 B便：採用設計の未解決事項と停止条件
+A便だけでは過去データは更新されない。B便は新旧作品判断・旧新参照・全解析結果・実行者・候補指紋・日時・採用/復元状態を記録し、対象全行と訂正をロックして1回だけ採用する契約が必要。完了済みjobの旧参照を直接上書きするだけの運用は禁止。
+未確定: 専用履歴表の正式DDL/権限/制約、既存解析のcommit分離方法、マスタ編集との競合ロック契約、手修正を含むジョブの扱い、解析後のunit/condition等全項目検収、途中失敗/応答不明/重複採用/復元後競合の実DB試験。extraction_attempts改修の他担当と重なる実装は行わない。これらが未確定のためB便実装カード・全件再解析は発行不可。
+代替案: 完了jobをpendingへ戻す案は明細追加と手修正接続の問題、旧指紋だけ付替えは判断根拠の偽装、解析結果product_idだけ直接更新はbasis/flags/履歴不整合につながるため不採用。全件モデル再抽出より、固定IDで作品だけ再比較するA便を先に検証する。
+
+### 25-6 Architect自己審査・維持
+同一AIの自己審査であり独立した第二者レビューではない。A便の非採用比較設計はAPPROVE（既存readonly snapshot/厳密parser/人工モデルPG試験に接続でき、採用と通常解析ガードを変更しない）。実装/PG/実モデル試験合格の意味ではない。B便および再解析全体はREVISE（25-5未解決）。本番更新・配信は未着手。
+外部事例は不要: 自社の稼働コード、DB列/制約、固定7明細を直接照合できるため。外部ライブラリの新仕様は本設計の成立根拠に使わない。
+維持担当は商品照合/作品比較の実装担当。守り手はbackend/tests/test_tcg_work_comparison.py、backend/tests/test_tcg_work_comparison_pg.pyと既存.github/workflows/test.yml。将来マスタ変更時にも旧参照拒否と非採用比較の両方を継続試験する。
