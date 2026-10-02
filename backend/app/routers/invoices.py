@@ -832,7 +832,7 @@ async def download_invoice_pdf(
         "notes": row["notes"],
     }
 
-    pdf_bytes = render_invoice_pdf(invoice_data, tenant_profile)
+    pdf_bytes = await run_in_threadpool(render_invoice_pdf, invoice_data, tenant_profile)
     filename = f"{invoice_data['invoice_code']}.pdf"
 
     return Response(

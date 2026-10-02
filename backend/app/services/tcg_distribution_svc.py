@@ -788,8 +788,11 @@ async def run_distribution(
         key_file = os.getenv("TCG_SHEETS_SA_KEY_FILE", "").strip()
         if not key_file:
             raise RuntimeError("TCG_SHEETS_SA_KEY_FILE が未設定です")
-        creds = Credentials.from_service_account_file(key_file, scopes=_SCOPES)
-        gc = _build_gspread_client()
+        loop = asyncio.get_event_loop()
+        creds = await loop.run_in_executor(
+            None, lambda: Credentials.from_service_account_file(key_file, scopes=_SCOPES)
+        )
+        gc = await loop.run_in_executor(None, _build_gspread_client)
     except Exception as exc:
         logger.error("[dist] SA クライアント生成エラー: %s", exc)
         return {

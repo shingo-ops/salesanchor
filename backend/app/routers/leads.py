@@ -2468,8 +2468,8 @@ async def send_lead_image_message(
                     _ext = "." + dc_filename.rsplit(".", 1)[1][:10]
                 _rel_path = f"tenant_{tenant_id:03d}/lead_{lead_id}/{dc_msg_id}{_ext}"
                 _abs_path = Path(_att_root) / _rel_path
-                _abs_path.parent.mkdir(parents=True, exist_ok=True)
-                _abs_path.write_bytes(file_bytes)
+                await asyncio.to_thread(_abs_path.parent.mkdir, parents=True, exist_ok=True)
+                await asyncio.to_thread(_abs_path.write_bytes, file_bytes)
 
                 attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
                 await db.execute(

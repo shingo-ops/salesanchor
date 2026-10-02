@@ -30,6 +30,7 @@ Google Drive OAuth 2.0 + Drive API サービス（ユーザー委任方式）。
   2026-06-06: 初版（API連携 Googleドライブ OAuth 保存）
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -220,7 +221,7 @@ async def exchange_code(code: str, state: str) -> dict:
 
     flow = _flow(state=state)
     try:
-        flow.fetch_token(code=code)
+        await asyncio.to_thread(flow.fetch_token, code=code)
     except Exception as e:  # noqa: BLE001
         raise RuntimeError(f"Google token 交換に失敗: {e}") from e
 
@@ -234,13 +235,15 @@ async def exchange_code(code: str, state: str) -> dict:
     if creds.expiry:
         expiry = creds.expiry.replace(tzinfo=timezone.utc) if creds.expiry.tzinfo is None else creds.expiry
 
+    account_email = await asyncio.to_thread(_fetch_account_email, creds)
+
     return {
         "tenant_id": payload["tenant_id"],
         "user_id": payload["user_id"],
         "access_token": creds.token,
         "refresh_token": creds.refresh_token,
         "expiry": expiry,
-        "account_email": _fetch_account_email(creds),
+        "account_email": account_email,
     }
 
 
@@ -293,7 +296,7 @@ async def _refresh_if_needed(
 
     creds = _build_credentials(access_token, refresh_token, token_expiry)
     try:
-        creds.refresh(Request())
+        await asyncio.to_thread(creds.refresh, Request())
     except Exception as e:  # noqa: BLE001
         # 例外文に OAuth エラー詳細が含まれ得るため、クライアント返却用メッセージには含めない
         # （詳細は from e でスタックに保持され、ルーター側 logger.exception で記録される）
@@ -383,7 +386,7 @@ async def upload_pdf(
     if folder_id:
         metadata["parents"] = [folder_id]
     media = MediaIoBaseUpload(io.BytesIO(pdf_bytes), mimetype="application/pdf", resumable=False)
-    created = (
+    created = await asyncio.to_thread(
         service.files()
         .create(
             body=metadata,
@@ -391,7 +394,7 @@ async def upload_pdf(
             fields="id,name,webViewLink",
             supportsAllDrives=True,
         )
-        .execute()
+        .execute
     )
     return {
         "id": created.get("id"),
