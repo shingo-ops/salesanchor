@@ -322,6 +322,12 @@ async def _send_via_webhook(
 ) -> str:
     """webhook 取得（無ければ作成）→ 実行 → 消失時 1 回だけ作り直して再送。Discord メッセージ ID を返す。"""
     name = validate_username(username)
+    # 鍵未設定のまま webhook を作ると「作成済みだが保管できない」孤児 webhook が残るため、作成前に確認する
+    try:
+        encryption.ensure_configured()
+    except encryption.EncryptionConfigurationError:
+        logger.error("[discord_webhook] 暗号化鍵(METADATA_FERNET_KEY)が未設定または不正 channel=%s", channel_id)
+        raise WebhookSendError("encryption_not_configured") from None
     webhook = await _load_webhook(db, tenant_id, channel_id)
     recreated = False
     while True:
