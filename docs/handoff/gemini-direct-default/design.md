@@ -1,8 +1,8 @@
 # design：Gemini 中継の既定を直接接続に戻す
 
 - 作成：2026-10-02（Sonnet 実装担当）
-- 事実の根拠：[recon.md](./recon.md)
-- 関連 ADR：ADR-080（監視VPS分離・prod2 の存在根拠）、ADR-135（リリース相乗り防止・本変更のスコープ遵守根拠）
+- 事実の根拠：docs/handoff/gemini-direct-default/recon.md（[recon.md](./recon.md)）
+- 関連 ADR：ADR-080-monitoring-vps-separation（監視VPS分離・prod2 の存在根拠）、ADR-135-release-stowaway-prevention（リリース相乗り防止・本変更のスコープ遵守根拠）
 - 既存設計：[docs/handoff/gemini-egress-via-prod2/design.md](../gemini-egress-via-prod2/design.md)（追補 §12 を本変更で追記済み）
 
 ## 1. 目的（KGI）

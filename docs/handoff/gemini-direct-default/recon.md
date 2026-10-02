@@ -27,10 +27,10 @@ $ grep -i "gemini" docs/adr/FEATURE-INDEX.md
 
 内容を確認した結果：
 
-- `ADR-080-monitoring-vps-separation.md` — 監視VPS（prod2）分離の ADR。prod2 の存在根拠だが、Gemini 中継の経路選択そのものは規定していない。
-- `ADR-075-github-secrets-only-policy.md` — `GEMINI_API_KEY` が GitHub Secrets 管理対象と記載。本変更は `GEMINI_PROXY_URL`/`GEMINI_GRPC_PROXY`（非secret・デプロイ時の secrets 再注入対象外、§2-6）のみ触るため抵触しない。
-- `ADR-014-inventory-management.md`、`ADR-085-supplier-prompts.md`、`ADR-100-sa-ingestion-analysis-pipeline.md`、`ADR-110-sa-translation-subsystem.md`、`ADR-SA-17-translation-bidirectional-glossary-two-layer.md`、`ADR-154-tcg-parity02-gas-python-migration.md` — いずれも Gemini の解析内容・モデル選定・プロンプト設計に関する ADR で、通信経路（直接 or 中継）には触れていない。
-- `ADR-1004-llm-usage-ledger.md` — Gemini 呼び出しの本番経路は4つ（抽出・試運転・在庫解析の補完・翻訳）と記載（15行目）。本変更が影響する呼び出し範囲（`_get_genai_client()` 経由の新SDK呼び出し＋`grpc_proxy` 依存の旧SDK呼び出し）と一致し、矛盾なし。
+- `docs/adr/ADR-080-monitoring-vps-separation.md` — 監視VPS（prod2）分離の ADR。prod2 の存在根拠だが、Gemini 中継の経路選択そのものは規定していない。
+- `docs/adr/ADR-075-github-secrets-only-policy.md` — `GEMINI_API_KEY` が GitHub Secrets 管理対象と記載。本変更は `GEMINI_PROXY_URL`/`GEMINI_GRPC_PROXY`（非secret・デプロイ時の secrets 再注入対象外、§2-6）のみ触るため抵触しない。
+- `docs/adr/ADR-014-inventory-management.md`、`docs/adr/ADR-085-supplier-prompts.md`、`docs/adr/ADR-100-sa-ingestion-analysis-pipeline.md`、`docs/adr/ADR-110-sa-translation-subsystem.md`、`docs/adr/ADR-SA-17-translation-bidirectional-glossary-two-layer.md`、`docs/adr/ADR-154-tcg-parity02-gas-python-migration.md` — いずれも Gemini の解析内容・モデル選定・プロンプト設計に関する ADR で、通信経路（直接 or 中継）には触れていない。
+- `docs/adr/ADR-1004-llm-usage-ledger.md` — Gemini 呼び出しの本番経路は4つ（抽出・試運転・在庫解析の補完・翻訳）と記載（15行目）。本変更が影響する呼び出し範囲（`_get_genai_client()` 経由の新SDK呼び出し＋`grpc_proxy` 依存の旧SDK呼び出し）と一致し、矛盾なし。
 - 本変更（既定を直接接続に戻し、中継を緊急手段として残置する）と矛盾する ADR は見つからなかった。`docs/adr/ADR-135-release-stowaway-prevention.md`（1リリース1テーマ）は本変更のスコープ遵守の根拠として参照する。
 
 ## 2. 現在地（事実）
