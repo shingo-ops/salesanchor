@@ -3238,7 +3238,9 @@
       "role_staff": "Sales Anchor Staff role",
       "role_partner": "Partner role",
       "role_member": "Member role",
-      "category": "Sales Anchor category",
+      "category": "DM category (📩｜DM)",
+      "category_stock_member": "Member stock category (🍀｜Stock Information)",
+      "category_stock_large": "Large-volume stock category (🍒｜Stock Information)",
       "ch_ticket": "ticket-start channel",
       "ch_member": "member-announcements channel",
       "ch_partner": "partner-announcements channel",
@@ -3247,6 +3249,7 @@
     "statuses": {
       "created": "Created",
       "skipped": "Skipped (already exists)",
+      "updated": "Updated (renamed / moved)",
       "posted": "Posted",
       "failed": "Failed"
     }

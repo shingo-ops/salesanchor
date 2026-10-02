@@ -134,6 +134,23 @@ def _common_patches(stack: ExitStack) -> AsyncMock:
     return mock_api
 
 
+_CAT_DM = "\U0001F4E9\uff5cDM"
+_CAT_MEMBER = "\U0001F340\uff5cStock Information"
+_CAT_LARGE = "\U0001F352\uff5cStock Information"
+
+
+def _migrated_channels() -> list[dict]:
+    """新構成（📩｜DM / 🍀 / 🍒）が構築済みの Discord チャンネル一覧。"""
+    return [
+        {"id": "CAT-1", "name": _CAT_DM, "type": 4},
+        {"id": "CAT-MEMBER", "name": _CAT_MEMBER, "type": 4},
+        {"id": "CAT-LARGE", "name": _CAT_LARGE, "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0, "parent_id": "CAT-MEMBER"},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0, "parent_id": "CAT-LARGE"},
+    ]
+
+
 # ---------------------------------------------------------------------------
 # テスト: happy path（全ステップ新規作成）
 # ---------------------------------------------------------------------------
@@ -154,6 +171,8 @@ async def test_happy_path_all_created() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},            # 7: POST category
+        {"id": "CAT-MEMBER", "name": "\U0001F340\uff5cStock Information", "type": 4},  # POST category_stock_member
+        {"id": "CAT-LARGE", "name": "\U0001F352\uff5cStock Information", "type": 4},   # POST category_stock_large
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},        # 8: POST ch_ticket
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},# 9: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 10: POST ch_partner
@@ -186,8 +205,8 @@ async def test_happy_path_all_created() -> None:
     assert steps["button"]["status"] == "posted"
     assert steps["button"]["discord_id"] == "MSG-1"
 
-    # Discord API が 11 回呼ばれること（GET roles + GET channels + GET users/@me + roles×3 + channels×4 + button）
-    assert mock_api.call_count == 11
+    # Discord API が 13 回呼ばれること（GET×3 + roles×3 + categories×3 + channels×3 + button）
+    assert mock_api.call_count == 13
 
     # DB commit が呼ばれること（ADR-072）
     mock_db.commit.assert_called_once()
@@ -219,12 +238,7 @@ async def test_idempotent_skips_existing() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},
         {"id": "ROLE-MEMBER", "name": "Member"},
     ]
-    existing_channels = [
-        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
-        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
-        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
-        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
-    ]
+    existing_channels = _migrated_channels()
 
     _existing_button_msg = [
         {
@@ -292,6 +306,8 @@ async def test_partial_failure_on_role() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},            # 7: POST category
+        {"id": "CAT-MEMBER", "name": "\U0001F340\uff5cStock Information", "type": 4},  # POST category_stock_member
+        {"id": "CAT-LARGE", "name": "\U0001F352\uff5cStock Information", "type": 4},   # POST category_stock_large
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},        # 8: POST ch_ticket
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},# 9: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 10: POST ch_partner
@@ -371,9 +387,9 @@ async def test_no_bot_token_returns_503() -> None:
 
 @pytest.mark.asyncio
 async def test_category_failure_blocks_channels() -> None:
-    """カテゴリ作成が失敗した場合、チャンネル作成・ボタン投稿が全て failed になること。
+    """DM カテゴリ作成が失敗した場合、ticket-start・ボタンが failed になること。
 
-    ルート直下へのチャンネル作成 POST は発生しないこと。
+    ルート直下へのチャンネル作成 POST は発生しない。在庫アナウンスは別カテゴリのため継続する。
     """
     from app.services.discord_rest import DiscordAPIError
 
@@ -387,8 +403,12 @@ async def test_category_failure_blocks_channels() -> None:
         {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},             # 4: POST role_staff
         {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
-        DiscordAPIError("Missing Permissions", status_code=403),        # 7: POST category 失敗
-        # POST チャンネルは呼ばれない
+        DiscordAPIError("Missing Permissions", status_code=403),        # 7: POST category(DM) 失敗
+        {"id": "CAT-MEMBER", "name": _CAT_MEMBER, "type": 4},           # 8: POST category_stock_member
+        {"id": "CAT-LARGE", "name": _CAT_LARGE, "type": 4},             # 9: POST category_stock_large
+        # ticket-start は DM カテゴリ無しのため POST されない
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},  # 10: POST ch_member
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 11: POST ch_partner
     ]
 
     with ExitStack() as stack:
@@ -406,15 +426,21 @@ async def test_category_failure_blocks_channels() -> None:
 
     steps = {s["step"]: s for s in body["steps"]}
     assert steps["category"]["status"] == "failed"
-    # チャンネル・ボタンは全て failed（ルート直下作成防止）
+    # ticket-start・ボタンは failed（ルート直下作成防止）
     assert steps["ch_ticket"]["status"] == "failed"
     assert "カテゴリ" in steps["ch_ticket"]["error"]
-    assert steps["ch_member"]["status"] == "failed"
-    assert steps["ch_partner"]["status"] == "failed"
     assert steps["button"]["status"] == "failed"
+    assert steps["ch_member"]["status"] == "created"
+    assert steps["ch_partner"]["status"] == "created"
 
-    # GET×2 + GET /users/@me×1 + role POST×3 + category POST×1 = 計7回のみ（チャンネルPOSTなし）
-    assert mock_api.call_count == 7
+    # GET×3 + role×3 + category×3 + ch_member/ch_partner×2 = 11（ticket-start の POST なし）
+    assert mock_api.call_count == 11
+    created_names = [
+        c.kwargs["json"]["name"]
+        for c in mock_api.call_args_list
+        if c.kwargs.get("method") == "POST" and c.kwargs["path"].endswith("/channels")
+    ]
+    assert "ticket-start" not in created_names
 
 
 # ---------------------------------------------------------------------------
@@ -429,11 +455,11 @@ async def test_category_failure_blocks_channels() -> None:
 
 @pytest.mark.asyncio
 async def test_rerun_skips_existing_category_by_name() -> None:
-    """DB未保存でも Discord 上に同名カテゴリがある場合は重複作成せず skipped になること。
+    """DB未保存でも Discord 上に旧「Sales Anchor」カテゴリがある場合は重複作成せず名前変更になること。
 
     シナリオ:
       1回目: category 作成成功 / ch_ticket 403失敗 → DB INSERT スキップ（Cause E fix）
-      2回目（Cause D修正後）: Discord GET に category が存在 → name+type で検出 → skipped
+      2回目: Discord GET に旧 category が存在 → name+type で検出 → 📩｜DM へ名前変更
     """
     mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=None)
     app = _build_app(mock_db)
@@ -450,7 +476,9 @@ async def test_rerun_skips_existing_category_by_name() -> None:
         {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},              # 4: POST role_staff
         {"id": "ROLE-PARTNER", "name": "Partner"},                       # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                         # 6: POST role_member
-        # category: 名前検索でスキップ → POST なし
+        {},                                                               # 7: PATCH category 名前変更
+        {"id": "CAT-MEMBER", "name": _CAT_MEMBER, "type": 4},            # 8: POST stock member
+        {"id": "CAT-LARGE", "name": _CAT_LARGE, "type": 4},              # 9: POST stock large
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},         # 7: POST ch_ticket
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0}, # 8: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 9: POST ch_partner
@@ -470,8 +498,8 @@ async def test_rerun_skips_existing_category_by_name() -> None:
     assert body["status"] == "completed"
 
     steps = {s["step"]: s for s in body["steps"]}
-    # カテゴリは重複作成されず skipped（discord_id は Discord から取得したもの）
-    assert steps["category"]["status"] == "skipped"
+    # 旧「Sales Anchor」は重複作成されず名前変更で引き継ぐ（discord_id は Discord から取得したもの）
+    assert steps["category"]["status"] == "updated"
     assert steps["category"]["discord_id"] == "CAT-1"
     # テキストチャンネルは新規作成（前回未作成）
     assert steps["ch_ticket"]["status"] == "created"
@@ -479,8 +507,13 @@ async def test_rerun_skips_existing_category_by_name() -> None:
     assert steps["ch_partner"]["status"] == "created"
     assert steps["button"]["status"] == "posted"
 
-    # GET×2 + GET /users/@me×1 + roles×3 + ch_ticket+ch_member+ch_partner+button×1 = 10（category POSTなし）
-    assert mock_api.call_count == 10
+    patch_call = mock_api.call_args_list[6]
+    assert patch_call.kwargs["method"] == "PATCH"
+    assert patch_call.kwargs["path"] == "/channels/CAT-1"
+    assert patch_call.kwargs["json"] == {"name": _CAT_DM}
+
+    # GET×3 + roles×3 + PATCH×1 + categories×2 + channels×3 + button×1 = 13（DM カテゴリ POSTなし）
+    assert mock_api.call_count == 13
 
     # NOT NULL カラムが揃うため DB commit が呼ばれる
     mock_db.commit.assert_called_once()
@@ -509,7 +542,9 @@ async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
         {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},               # 4: POST role_staff
         {"id": "ROLE-PARTNER", "name": "Partner"},                        # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                          # 6: POST role_member
-        # category: 名前検索 skipped
+        {},                                                               # 7: PATCH category 名前変更
+        {"id": "CAT-MEMBER", "name": _CAT_MEMBER, "type": 4},            # 8: POST stock member
+        {"id": "CAT-LARGE", "name": _CAT_LARGE, "type": 4},              # 9: POST stock large
         # ch_ticket: 名前+parent_id 検索 skipped
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},  # 7: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0}, # 8: POST ch_partner
@@ -530,7 +565,7 @@ async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
     assert body["status"] == "completed"
 
     steps = {s["step"]: s for s in body["steps"]}
-    assert steps["category"]["status"] == "skipped"
+    assert steps["category"]["status"] == "updated"
     assert steps["category"]["discord_id"] == "CAT-1"
     assert steps["ch_ticket"]["status"] == "skipped"
     assert steps["ch_ticket"]["discord_id"] == "CH-TICKET"
@@ -540,8 +575,8 @@ async def test_rerun_skips_existing_channels_by_name_and_parent() -> None:
     assert steps["button"]["status"] == "posted"
     assert steps["button"]["discord_id"] == "MSG-1"
 
-    # GET×2 + GET /users/@me×1 + roles×3 + ch_member+ch_partner + GET messages + POST button = 10
-    assert mock_api.call_count == 10
+    # GET×3 + roles×3 + PATCH + categories×2 + ch_member+ch_partner + GET messages + POST button = 13
+    assert mock_api.call_count == 13
 
     mock_db.commit.assert_called_once()
 
@@ -573,6 +608,8 @@ async def test_first_run_channel_403_returns_200_partial_not_500() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                       # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                         # 6: POST role_member
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},             # 7: POST category 成功
+        {"id": "CAT-MEMBER", "name": "\U0001F340\uff5cStock Information", "type": 4},  # POST category_stock_member
+        {"id": "CAT-LARGE", "name": "\U0001F352\uff5cStock Information", "type": 4},   # POST category_stock_large
         DiscordAPIError("Missing Permissions", status_code=403),         # 8: POST ch_ticket 失敗
         DiscordAPIError("Missing Permissions", status_code=403),         # 9: POST ch_member 失敗
         DiscordAPIError("Missing Permissions", status_code=403),         # 10: POST ch_partner 失敗
@@ -619,6 +656,8 @@ async def test_first_run_all_channels_403_returns_200_partial_not_500() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                       # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                         # 6: POST role_member
         DiscordAPIError("Missing Permissions", status_code=403),         # 7: POST category 失敗
+        DiscordAPIError("Missing Permissions", status_code=403),         # 8: POST stock member 失敗
+        DiscordAPIError("Missing Permissions", status_code=403),         # 9: POST stock large 失敗
         # チャンネル作成は全スキップ（category失敗フロー）
     ]
 
@@ -637,6 +676,8 @@ async def test_first_run_all_channels_403_returns_200_partial_not_500() -> None:
     steps = {s["step"]: s for s in body["steps"]}
     assert steps["category"]["status"] == "failed"
     assert steps["ch_ticket"]["status"] == "failed"
+    assert steps["ch_member"]["status"] == "failed"
+    assert steps["ch_partner"]["status"] == "failed"
     assert steps["button"]["status"] == "failed"
 
     # カテゴリも NOT NULL → DB commit は呼ばれない
@@ -668,6 +709,8 @@ async def test_category_includes_bot_member_overwrite() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},            # 7: POST category
+        {"id": "CAT-MEMBER", "name": "\U0001F340\uff5cStock Information", "type": 4},  # POST category_stock_member
+        {"id": "CAT-LARGE", "name": "\U0001F352\uff5cStock Information", "type": 4},   # POST category_stock_large
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},        # 8: POST ch_ticket
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},# 9: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 10: POST ch_partner
@@ -810,12 +853,7 @@ async def test_existing_channel_without_button_posts_button() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},
         {"id": "ROLE-MEMBER", "name": "Member"},
     ]
-    existing_channels = [
-        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
-        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
-        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
-        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
-    ]
+    existing_channels = _migrated_channels()
 
     discord_responses = [
         existing_roles,    # GET roles
@@ -867,12 +905,7 @@ async def test_existing_channel_with_button_skips_button() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},
         {"id": "ROLE-MEMBER", "name": "Member"},
     ]
-    existing_channels = [
-        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
-        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
-        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
-        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
-    ]
+    existing_channels = _migrated_channels()
     existing_button_messages = [
         {
             "id": "MSG-EXISTING",
@@ -929,6 +962,8 @@ async def test_button_post_403_returns_descriptive_error() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},                      # 5: POST role_partner
         {"id": "ROLE-MEMBER", "name": "Member"},                        # 6: POST role_member
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},            # 7: POST category
+        {"id": "CAT-MEMBER", "name": "\U0001F340\uff5cStock Information", "type": 4},  # POST category_stock_member
+        {"id": "CAT-LARGE", "name": "\U0001F352\uff5cStock Information", "type": 4},   # POST category_stock_large
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},        # 8: POST ch_ticket (created)
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},# 9: POST ch_member
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},# 10: POST ch_partner
@@ -977,12 +1012,7 @@ async def test_button_read_403_returns_descriptive_error() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},
         {"id": "ROLE-MEMBER", "name": "Member"},
     ]
-    existing_channels = [
-        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
-        {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
-        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
-        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
-    ]
+    existing_channels = _migrated_channels()
 
     discord_responses = [
         existing_roles,    # GET roles
@@ -1025,6 +1055,8 @@ async def test_auto_setup_posts_english_button_and_default_welcome() -> None:
         {"id": "ROLE-PARTNER", "name": "Partner"},
         {"id": "ROLE-MEMBER", "name": "Member"},
         {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CAT-MEMBER", "name": _CAT_MEMBER, "type": 4},
+        {"id": "CAT-LARGE", "name": _CAT_LARGE, "type": 4},
         {"id": "CH-TICKET", "name": "ticket-start", "type": 0},
         {"id": "CH-MEMBER", "name": "member-announcements", "type": 0},
         {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0},
@@ -1039,7 +1071,7 @@ async def test_auto_setup_posts_english_button_and_default_welcome() -> None:
             resp = await ac.post("/api/v1/admin/discord/auto-setup")
 
     assert resp.status_code == 200, resp.text
-    button_payload = mock_api.call_args_list[10].kwargs["json"]
+    button_payload = mock_api.call_args_list[12].kwargs["json"]
     assert button_payload == bot_texts.ticket_button_payload()
     assert button_payload["content"] == "Need help? Click the button below to open a private support ticket."
     assert button_payload["components"][0]["components"][0]["label"] == "Open a ticket"
@@ -1047,3 +1079,231 @@ async def test_auto_setup_posts_english_button_and_default_welcome() -> None:
 
     upsert_params = mock_db.execute.await_args_list[2].args[1]
     assert upsert_params["welcome_template"] == bot_texts.DEFAULT_WELCOME_TEMPLATE
+
+
+# ---------------------------------------------------------------------------
+# テスト: カテゴリ3分割（📩｜DM / 🍀｜Stock Information / 🍒｜Stock Information）
+# ---------------------------------------------------------------------------
+
+
+class _FakeDiscord:
+    """状態を持つ Discord REST フェイク（POST/PATCH を反映し、再実行を模擬する）。"""
+
+    def __init__(self, channels: list[dict], roles: list[dict] | None = None) -> None:
+        self.channels = channels
+        self.roles = roles if roles is not None else [
+            {"id": "ROLE-STAFF", "name": "Sales Anchor Staff"},
+            {"id": "ROLE-PARTNER", "name": "Partner"},
+            {"id": "ROLE-MEMBER", "name": "Member"},
+        ]
+        self.calls: list[tuple[str, str, dict | None]] = []
+        self._seq = 0
+
+    async def request(self, *, method, path, bot_token, json=None, expected_statuses=None):
+        self.calls.append((method, path, json))
+        if method == "GET" and path.endswith("/roles"):
+            return list(self.roles)
+        if method == "GET" and path.endswith("/channels"):
+            return [dict(c) for c in self.channels]
+        if method == "GET" and path == "/users/@me":
+            return {"id": "BOT-1"}
+        if method == "GET" and "/messages" in path:
+            return []
+        if method == "POST" and path.endswith("/messages"):
+            return {"id": "MSG-1"}
+        if method == "POST" and path.endswith("/channels"):
+            self._seq += 1
+            created = {"id": f"NEW-{self._seq}", "name": json["name"], "type": json["type"],
+                       "parent_id": json.get("parent_id")}
+            self.channels.append(created)
+            return created
+        if method == "PATCH" and path.startswith("/channels/"):
+            target = next(c for c in self.channels if c["id"] == path.split("/")[-1])
+            target.update({k: v for k, v in json.items() if k in ("name", "parent_id")})
+            return dict(target)
+        raise AssertionError(f"unexpected call {method} {path}")
+
+    def methods(self, method: str) -> list[tuple[str, dict | None]]:
+        return [(p, j) for m, p, j in self.calls if m == method]
+
+
+async def _run_setup(fake: _FakeDiscord, existing_config: dict | None) -> dict:
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config=existing_config)
+    app = _build_app(mock_db)
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = fake.request
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+    assert resp.status_code == 200, resp.text
+    return resp.json()
+
+
+def _by_name(fake: _FakeDiscord, name: str) -> list[dict]:
+    return [c for c in fake.channels if c["name"] == name]
+
+
+@pytest.mark.asyncio
+async def test_fresh_setup_creates_three_categories_with_channels_under_each() -> None:
+    """新規セットアップで3カテゴリが作られ、チャンネルが指定カテゴリ配下に作成されること。"""
+    fake = _FakeDiscord(channels=[])
+    body = await _run_setup(fake, None)
+
+    assert body["status"] == "completed"
+    dm = _by_name(fake, _CAT_DM)[0]["id"]
+    member = _by_name(fake, _CAT_MEMBER)[0]["id"]
+    large = _by_name(fake, _CAT_LARGE)[0]["id"]
+    assert _by_name(fake, "Sales Anchor") == []
+    assert _by_name(fake, "ticket-start")[0]["parent_id"] == dm
+    assert _by_name(fake, "member-announcements")[0]["parent_id"] == member
+    assert _by_name(fake, "partner-announcements")[0]["parent_id"] == large
+    assert fake.methods("PATCH") == []
+    assert fake.methods("DELETE") == []
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["discord_id"] == dm
+
+
+@pytest.mark.asyncio
+async def test_rerun_migrates_legacy_setup_rename_and_move_without_delete() -> None:
+    """旧構成（Sales Anchor 配下に3チャンネル）を再実行で 名前変更＋アナウンス移動 に作り替えること。"""
+    fake = _FakeDiscord(channels=[
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0, "parent_id": "CAT-1"},
+    ])
+    config = {
+        "ticket_category_id": "CAT-1",
+        "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF",
+        "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER",
+        "small_role_name": "Member",
+        "large_role_name": "Partner",
+    }
+    body = await _run_setup(fake, config)
+
+    assert body["status"] == "completed"
+    by_id = {c["id"]: c for c in fake.channels}
+    member = _by_name(fake, _CAT_MEMBER)[0]["id"]
+    large = _by_name(fake, _CAT_LARGE)[0]["id"]
+    # 既存カテゴリは同じ ID のまま改名（ticket_category_id 不変・ticket-start は DM 配下に残る）
+    assert by_id["CAT-1"]["name"] == _CAT_DM
+    assert by_id["CH-TICKET"]["parent_id"] == "CAT-1"
+    # member(小口)=🍀 / partner(大口)=🍒
+    assert by_id["CH-MEMBER"]["parent_id"] == member
+    assert by_id["CH-PARTNER"]["parent_id"] == large
+    # チャンネルは1つも失われない・DELETE なし・権限は同期しない
+    assert {"CH-TICKET", "CH-MEMBER", "CH-PARTNER", "CAT-1"} <= set(by_id)
+    assert fake.methods("DELETE") == []
+    moves = [j for p, j in fake.methods("PATCH") if "parent_id" in j]
+    assert len(moves) == 2
+    assert all(j["lock_permissions"] is False for j in moves)
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["category"]["status"] == "updated"
+    assert steps["ch_member"] == {"step": "ch_member", "status": "updated", "discord_id": "CH-MEMBER", "error": None}
+    assert steps["ch_partner"]["status"] == "updated"
+    assert steps["ch_ticket"]["status"] == "skipped"
+
+
+@pytest.mark.asyncio
+async def test_rerun_twice_is_idempotent_no_duplicates() -> None:
+    """移行後にもう一度実行しても、カテゴリ・チャンネルの重複や追加の PATCH が発生しないこと。"""
+    fake = _FakeDiscord(channels=[
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0, "parent_id": "CAT-1"},
+    ])
+    config = {
+        "ticket_category_id": "CAT-1",
+        "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF",
+        "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER",
+        "small_role_name": "Member",
+        "large_role_name": "Partner",
+    }
+    await _run_setup(fake, config)
+    count_after_first = len(fake.channels)
+    calls_after_first = len(fake.calls)
+
+    body = await _run_setup(fake, config)
+
+    assert len(fake.channels) == count_after_first
+    new_calls = fake.calls[calls_after_first:]
+    assert [m for m, _, _ in new_calls if m in ("PATCH", "DELETE")] == []
+    steps = {s["step"]: s for s in body["steps"]}
+    for name in ("category", "category_stock_member", "category_stock_large", "ch_member", "ch_partner"):
+        assert steps[name]["status"] == "skipped", name
+    for name in (_CAT_DM, _CAT_MEMBER, _CAT_LARGE, "ticket-start"):
+        assert len(_by_name(fake, name)) == 1
+
+
+@pytest.mark.asyncio
+async def test_rerun_without_stored_ids_finds_legacy_announcements_and_moves_them() -> None:
+    """DB に small/large が未保存でも、旧カテゴリ配下の同名チャンネルを検出して重複作成せず移動すること。"""
+    fake = _FakeDiscord(channels=[
+        {"id": "CAT-1", "name": "Sales Anchor", "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0, "parent_id": "CAT-1"},
+    ])
+    body = await _run_setup(fake, None)
+
+    assert body["status"] == "completed"
+    assert len(_by_name(fake, "member-announcements")) == 1
+    assert len(_by_name(fake, "partner-announcements")) == 1
+    assert _by_name(fake, "member-announcements")[0]["parent_id"] == _by_name(fake, _CAT_MEMBER)[0]["id"]
+    assert _by_name(fake, "partner-announcements")[0]["parent_id"] == _by_name(fake, _CAT_LARGE)[0]["id"]
+
+
+@pytest.mark.asyncio
+async def test_move_failure_is_reported_and_nothing_deleted() -> None:
+    """移動が 403 で失敗しても status=partial で報告し、チャンネルは削除されないこと。"""
+    from app.services.discord_rest import DiscordAPIError
+
+    fake = _FakeDiscord(channels=[
+        {"id": "CAT-1", "name": _CAT_DM, "type": 4},
+        {"id": "CH-TICKET", "name": "ticket-start", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-MEMBER", "name": "member-announcements", "type": 0, "parent_id": "CAT-1"},
+        {"id": "CH-PARTNER", "name": "partner-announcements", "type": 0, "parent_id": "CAT-1"},
+    ])
+    original_call = fake.request
+
+    async def failing(**kwargs):
+        if kwargs["method"] == "PATCH" and "parent_id" in (kwargs.get("json") or {}):
+            raise DiscordAPIError("Missing Permissions", status_code=403)
+        return await original_call(**kwargs)
+
+    mock_db = _make_mock_db(guild_id="GUILD-1", existing_config={
+        "ticket_category_id": "CAT-1", "ticket_button_channel_id": "CH-TICKET",
+        "staff_role_id": "ROLE-STAFF", "small_channel_id": "CH-MEMBER",
+        "large_channel_id": "CH-PARTNER", "small_role_name": "Member", "large_role_name": "Partner",
+    })
+    app = _build_app(mock_db)
+    with ExitStack() as stack:
+        mock_api = _common_patches(stack)
+        mock_api.side_effect = failing
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            resp = await ac.post("/api/v1/admin/discord/auto-setup")
+
+    body = resp.json()
+    assert body["status"] == "partial"
+    steps = {s["step"]: s for s in body["steps"]}
+    assert steps["ch_member"]["status"] == "failed"
+    assert steps["ch_member"]["discord_id"] == "CH-MEMBER"
+    assert steps["category"]["status"] == "skipped"  # 既に 📩｜DM のため改名なし
+    assert {"CH-TICKET", "CH-MEMBER", "CH-PARTNER"} <= {c["id"] for c in fake.channels}
+    assert fake.methods("DELETE") == []
+
+
+def test_category_names_are_po_specified() -> None:
+    """カテゴリ名が PO 指定の文字列（全角縦線 U+FF5C）であること。"""
+    from app.discord_gateway import bot_texts
+
+    assert bot_texts.CATEGORY_DM == "\U0001F4E9\uff5cDM"
+    assert bot_texts.CATEGORY_STOCK_MEMBER == "\U0001F340\uff5cStock Information"
+    assert bot_texts.CATEGORY_STOCK_LARGE == "\U0001F352\uff5cStock Information"

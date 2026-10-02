@@ -3238,7 +3238,9 @@
       "role_staff": "Sales Anchor Staff ロール",
       "role_partner": "Partner ロール",
       "role_member": "Member ロール",
-      "category": "Sales Anchor カテゴリ",
+      "category": "DM カテゴリ（📩｜DM）",
+      "category_stock_member": "メンバー向け在庫カテゴリ（🍀｜Stock Information）",
+      "category_stock_large": "大口向け在庫カテゴリ（🍒｜Stock Information）",
       "ch_ticket": "ticket-start チャンネル",
       "ch_member": "member-announcements チャンネル",
       "ch_partner": "partner-announcements チャンネル",
@@ -3247,6 +3249,7 @@
     "statuses": {
       "created": "作成済み",
       "skipped": "既存のためスキップ",
+      "updated": "更新（名前変更・移動）",
       "posted": "投稿済み",
       "failed": "失敗"
     }
