@@ -131,4 +131,16 @@ FULL_PROMPT="${ROLE_PROMPT}
 ${USER_PROMPT}"
 
 cd "$REPO_ROOT"
+
+# 共通実行ルール (SSOT: docs/rules/executor-behavior.md) をプロンプト先頭に注入
+SHARED_RULES_FILE="$REPO_ROOT/docs/rules/executor-behavior.md"
+if [[ -f "$SHARED_RULES_FILE" ]]; then
+  SHARED_RULES="$(cat "$SHARED_RULES_FILE")"
+  FULL_PROMPT="${SHARED_RULES}
+
+---
+
+${FULL_PROMPT}"
+fi
+
 printf '%s\n' "$FULL_PROMPT" | "$CODEX_BIN" exec --sandbox "$SANDBOX_MODE" --cd "$REPO_ROOT" -
