@@ -128,7 +128,7 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 5. `migrations/20260602_170000_add_products_master_label_columns.sql`
 6. `docs/handoff/products-column-churn/recon.md`（新規）
 7. `docs/handoff/products-column-churn/design.md`（新規・本ファイル）
-8. `.claude-pipeline/active-work.d/release-stop-products-column-churn.md`（新規・台帳）
+8. 台帳 release-stop-products-column-churn.md（本店チェックアウトの active-work.d に置く。ブランチには含めない）
 
 削除するファイル: 無し。
 
