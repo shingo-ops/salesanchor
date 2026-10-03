@@ -11,17 +11,17 @@
 
 ## 1. 目的
 
-PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true'` の場合のみ実行するよう変更したが、この `migrations` フィルタは `scripts/**`・`backend/**` 全体を含む広い判定（recon.md §1）であり、recon.md §5 の実測で2026-10-02 JSTのマージ25件中16件（64%）が該当する一方、実際に `migrations/*.sql` を変更したのは3件（12%）のみだった。backupが不要な52%のデプロイ（backend/scriptsのみの変更）でも毎回 `scripts/backup.sh` を実行しており、recon.md §2 で確認した「実際にDBへ書き込むステップはRun database migrationsのみ」という事実と条件がズレている。本PRで判定条件をDBスキーマ/データを実際に変更するパスのみに絞り込む。
+PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true'` の場合のみ実行するよう変更したが、この `migrations` フィルタは `scripts/**`・`backend/**` 全体を含む広い判定（recon.md §1）であり、recon.md §5 の実測で2026-10-02 JSTのマージ25件中16件（64%）が該当する一方、実際に 「migrations/*.sql」 を変更したのは3件（12%）のみだった。backupが不要な52%のデプロイ（backend/scriptsのみの変更）でも毎回 `scripts/backup.sh` を実行しており、recon.md §2 で確認した「実際にDBへ書き込むステップはRun database migrationsのみ」という事実と条件がズレている。本PRで判定条件をDBスキーマ/データを実際に変更するパスのみに絞り込む。
 
 **利用者に見える変化**: なし（本番アプリの挙動に影響しない、CI内部処理のみ）。
-**開発者に見える変化**: `migrations/**`・`scripts/run_all_migrations.sh`・`scripts/migrate_*.py` 以外の変更（backend/**のアプリコードのみ等）では「Pre-deploy DB backup」がskippedになる。「Run database migrations」ステップの実行条件（`migrations` フィルタ）は変更しない。
+**開発者に見える変化**: `migrations/**`・`scripts/run_all_migrations.sh`・「scripts/migrate_*.py」 以外の変更（backend/**のアプリコードのみ等）では「Pre-deploy DB backup」がskippedになる。「Run database migrations」ステップの実行条件（`migrations` フィルタ）は変更しない。
 
 ---
 
 ## 2. 対象と対象外
 
 ### 対象
-- `.github/workflows/deploy.yml:33-57`: `dorny/paths-filter` の `filters:` に新規output `db_migrations` を追加（`migrations/**`、`scripts/run_all_migrations.sh`、`scripts/migrate_*.py`）
+- `.github/workflows/deploy.yml:33-57`: `dorny/paths-filter` の `filters:` に新規output `db_migrations` を追加（`migrations/**`、`scripts/run_all_migrations.sh`、「scripts/migrate_*.py」）
 - `.github/workflows/deploy.yml:163`（旧行、PR #3953基準）: 「Pre-deploy DB backup」ステップの `if:` を `steps.changes.outputs.migrations == 'true'` → `steps.changes.outputs.db_migrations == 'true'` に変更
 
 ### 対象外（recon.md で確認済み・変更しない）
@@ -47,9 +47,9 @@ PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true
 ```
 
 根拠（recon.md §2-3）:
-- `migrations/**`: `run_sql` が直接実行する `.sql` ファイル本体。
+- `migrations/**`: `run_sql` が直接実行する 「.sql」 ファイル本体。
 - `scripts/run_all_migrations.sh`: マイグレーション実行の唯一の経路（SSoT、ファイル先頭コメントに明記）。新規マイグレーション追加は必ずこのファイルへの追記を伴う。
-- `scripts/migrate_*.py`: `run_py` が実行する個別マイグレーションスクリプト本体。既存マイグレーションの内容修正（新規登録行を追加せず既存`.py`だけを直す場合）を捕捉するため、`run_all_migrations.sh` 単独では不十分であり本パターンを追加する。
+- 「scripts/migrate_*.py」: `run_py` が実行する個別マイグレーションスクリプト本体。既存マイグレーションの内容修正（新規登録行を追加せず既存「.py」だけを直す場合）を捕捉するため、「run_all_migrations.sh」 単独では不十分であり本パターンを追加する。
 
 ### 3-2. Pre-deploy DB backupステップのif条件変更
 
@@ -67,8 +67,8 @@ PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true
 | 基準 | 検証方法 |
 |------|---------|
 | 1) `migrations/` を含まない backend/** のみの変更を含むデプロイで、Pre-deploy DB backup ステップが skipped、Check free disk space ステップは実行される | 次回 backend/** のみ変更するPRがmainにマージされた際、Actions実行ログで「Check free disk space」が実行済み・「Pre-deploy DB backup」が `skipped` と表示されることを確認 |
-| 2) `migrations/` を含むデプロイで Pre-deploy DB backup が実行される | 次回 `migrations/*.sql` を含むPRがmainにマージされた際、Actions実行ログで両ステップとも実行済み・`✅ Backup: ...` ログが出力されることを確認 |
-| 3) `scripts/migrate_*.py` のみ（migrations/*.sqlなし）を変更するデプロイでも backup が実行される | 次回該当パターンのPRがマージされた際に実測（現時点では該当PRなし・今後の観測待ち） |
+| 2) `migrations/` を含むデプロイで Pre-deploy DB backup が実行される | 次回 「migrations/*.sql」 を含むPRがmainにマージされた際、Actions実行ログで両ステップとも実行済み・`✅ Backup: ...` ログが出力されることを確認 |
+| 3) 「scripts/migrate_*.py」 のみ（migrations/*.sqlなし）を変更するデプロイでも backup が実行される | 次回該当パターンのPRがマージされた際に実測（現時点では該当PRなし・今後の観測待ち） |
 | 4) actionlint / YAML loadが通る | 本PR作成時に `actionlint .github/workflows/deploy.yml` および `python3 -c "import yaml; yaml.safe_load(open('.github/workflows/deploy.yml'))"` で確認済み（両方exit 0 / "YAML OK"） |
 | 5) 2026-10-02 JST実測の再現性 | `git diff --name-only <sha>^1 <sha>` を25件のfirst-parent mergeに対して新フィルタのパターンで突合し、3/25が一致することを確認済み（recon.md §5） |
 
@@ -81,8 +81,8 @@ PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true
 ## 5. リスクと戻し方
 
 ### リスク
-- `scripts/migrate_*.py` のglobパターンはサブディレクトリを含まない（`scripts/migrate_*.py` は `scripts/` 直下のみ一致）。recon.md §3 の実測で `run_all_migrations.sh` が参照する全 `run_py` 対象（28件）が `scripts/` 直下に平坦に配置されていることを確認済みのため、現状は問題ないが、将来 `scripts/migrations/` 等のサブディレクトリにマイグレーションスクリプトが追加された場合はこのパターンから漏れる。
-  - 緩和: 新規マイグレーション追加は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoT）ため、`scripts/run_all_migrations.sh` 自体の変更で `db_migrations` は `true` になる。純粋な新規追加では漏れない。リスクが残るのは「既存の `.py` を将来サブディレクトリに移動し、同時に内容も変更する」複合変更のみ。
+- 「scripts/migrate_*.py」 のglobパターンはサブディレクトリを含まない（「scripts/migrate_*.py」 は `scripts/` 直下のみ一致）。recon.md §3 の実測で 「run_all_migrations.sh」 が参照する全 `run_py` 対象（28件）が `scripts/` 直下に平坦に配置されていることを確認済みのため、現状は問題ないが、将来 `scripts/migrations/` 等のサブディレクトリにマイグレーションスクリプトが追加された場合はこのパターンから漏れる。
+  - 緩和: 新規マイグレーション追加は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoT）ため、`scripts/run_all_migrations.sh` 自体の変更で `db_migrations` は `true` になる。純粋な新規追加では漏れない。リスクが残るのは「既存の 「.py」 を将来サブディレクトリに移動し、同時に内容も変更する」複合変更のみ。
 - 判定ロジックのバグにより `db_migrations` が実際はtrueであるべきなのにfalseになった場合、backupなしでmigrationsが適用されるリスクがある。
   - 緩和: 「Run database migrations」ステップ自体の実行条件（`migrations` output）は本PRで変更しない。`migrations` フィルタは `backend/**`・`scripts/**` 全体を含む広い判定を維持しており（ADR-082の「判定不能時は安全側=実行」設計）、migrations実行自体がskipされるリスクは本PRで増加しない。backupの判定が厳格化されるだけで、migrations実行自体の安全側設計は変わらない。
 

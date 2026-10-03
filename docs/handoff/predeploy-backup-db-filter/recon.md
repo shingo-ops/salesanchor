@@ -46,7 +46,7 @@ Pre-deploy DB backup ステップ（`.github/workflows/deploy.yml:162-163`）:
 | # | ステップ名 | 行番号 | `if:` 条件 | 書き込み内容 | backupで保護すべきか |
 |---|-----------|--------|-----------|--------------|---------------------|
 | 1 | Bootstrap salesanchor_app role (idempotent) | `.github/workflows/deploy.yml:423-483` | `${{ success() }}`（毎回実行） | `ALTER ROLE salesanchor_app PASSWORD '...'`（`.github/workflows/deploy.yml:439-442`）。パスワードを現在のSecret値に冪等に再設定するだけで、スキーマ・データは変更しない。コメント（`.github/workflows/deploy.yml:424-427`）にも「全デプロイで実行（冪等・副作用なし）」と明記。 | **不要**。ロール名/権限を破壊しない冪等操作であり、ロールバック対象になるデータ変更が発生しない。 |
-| 2 | Run database migrations | `.github/workflows/deploy.yml:485-503` | `${{ success() && steps.changes.outputs.migrations == 'true' }}` | `bash scripts/run_all_migrations.sh` を実行（下記§3で詳述）。`migrations/*.sql` の `run_sql` 実行、`scripts/migrate_*.py` の `run_py` 実行により DDL/DML を適用。 | **必要**。スキーマ変更・データ変換が実際に起こる唯一のステップ。 |
+| 2 | Run database migrations | `.github/workflows/deploy.yml:485-503` | `${{ success() && steps.changes.outputs.migrations == 'true' }}` | `bash scripts/run_all_migrations.sh` を実行（下記§3で詳述）。「migrations/*.sql」 の `run_sql` 実行、「scripts/migrate_*.py」 の `run_py` 実行により DDL/DML を適用。 | **必要**。スキーマ変更・データ変換が実際に起こる唯一のステップ。 |
 | 3 | Verify deployment（ADR-045検証） | `.github/workflows/deploy.yml:717-794` | `${{ success() }}` | `DO $$ ... RAISE WARNING/EXCEPTION ... END $$` ブロック（`.github/workflows/deploy.yml:737-794`）。`SELECT COUNT(*)` と `information_schema` 参照のみで `INSERT`/`UPDATE`/`ALTER` は一切含まない。読み取り専用の検証。 | **不要**。書き込みなし。 |
 
 結論: 本番DBのスキーマ/データを実際に変更するのは **ステップ#2（Run database migrations）のみ**。ステップ#1は冪等なロールパスワード再設定、ステップ#3は読み取り専用検証であり、いずれもバックアップで保護すべき対象ではない。
@@ -70,12 +70,12 @@ Pre-deploy DB backup ステップ（`.github/workflows/deploy.yml:162-163`）:
 ```
 
 実行関数（`scripts/run_all_migrations.sh:49-66`）:
-- `run_py "$script"` → `docker exec ... python "${script}"`（`scripts/migrate_*.py` を実行）
-- `run_sql "$file"` → `docker exec -i ... psql ... < "${file}"`（`migrations/*.sql` を実行）
+- `run_py "$script"` → `docker exec ... python "${script}"`（「scripts/migrate_*.py」 を実行）
+- `run_sql "$file"` → `docker exec -i ... psql ... < "${file}"`（「migrations/*.sql」 を実行）
 
-実測（`grep -nE '^run_(sql|py)[[:space:]]' scripts/run_all_migrations.sh`、316件）: `run_sql` の対象は全て `migrations/*.sql`（直下、サブディレクトリなし）。`run_py` の対象は全て `scripts/migrate_*.py`（直下、サブディレクトリなし、例: `scripts/migrate_meta.py`, `scripts/migrate_adr109_status_codes.py` 等28件）。
+実測（`grep -nE '^run_(sql|py)[[:space:]]' scripts/run_all_migrations.sh`、316件）: `run_sql` の対象は全て 「migrations/*.sql」（直下、サブディレクトリなし）。`run_py` の対象は全て 「scripts/migrate_*.py」（直下、サブディレクトリなし、例: `scripts/migrate_meta.py`, `scripts/migrate_adr109_status_codes.py` 等28件）。
 
-→ **確認**: マイグレーションは `migrations/*.sql`（`run_sql`）と `scripts/migrate_*.py`（`run_py`）に登録されたものだけが適用される。両者とも `scripts/run_all_migrations.sh` 内に明示的に列挙されており、新規マイグレーション追加時は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoTコメントの通り）。
+→ **確認**: マイグレーションは 「migrations/*.sql」（`run_sql`）と 「scripts/migrate_*.py」（`run_py`）に登録されたものだけが適用される。両者とも `scripts/run_all_migrations.sh` 内に明示的に列挙されており、新規マイグレーション追加時は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoTコメントの通り）。
 
 ---
 
@@ -111,7 +111,7 @@ git log origin/main --first-parent --merges --since="2026-10-01T15:00:00Z" --unt
 
 **旧 `migrations` フィルタ**（`migrations/**` `scripts/**` `backend/**` `docker-compose.yml` `.github/workflows/deploy.yml`）: **16/25** が一致。
 
-**新 `db_migrations` フィルタ**（`migrations/**` `scripts/run_all_migrations.sh` `scripts/migrate_*.py`）: **3/25** が一致。
+**新 `db_migrations` フィルタ**（`migrations/**` `scripts/run_all_migrations.sh` 「scripts/migrate_*.py」）: **3/25** が一致。
 
 ```
 MATCH 287968fb26577fe3989a356d1bdbf7c653825fbe (#3941):
@@ -126,7 +126,7 @@ MATCH 6aa85e4209d3c702e24f58defd256ebc79d352d0 (#3930):
 TOTAL MATCHES: 3 / 25
 ```
 
-→ 新フィルタで一致した3件はいずれも実際に `migrations/*.sql` を追加しており、`scripts/run_all_migrations.sh` への追記（新規マイグレーションの登録）を伴っている。これは §3 で確認したSSoT構造と一致する。
+→ 新フィルタで一致した3件はいずれも実際に 「migrations/*.sql」 を追加しており、`scripts/run_all_migrations.sh` への追記（新規マイグレーションの登録）を伴っている。これは §3 で確認したSSoT構造と一致する。
 
 ### 訂正: PR #3953 本文の見積もり「1/8」について
 
