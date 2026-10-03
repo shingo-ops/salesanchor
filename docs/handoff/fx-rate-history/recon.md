@@ -45,11 +45,11 @@
 ## 5. migrations 登録・CI 検証の仕組み
 
 - 新規マイグレーションは `scripts/run_all_migrations.sh` 末尾に `run_sql migrations/<file>.sql` を追記して登録する（SSoT、ファイル先頭コメント `scripts/run_all_migrations.sh:14`）。
-- CI: `.github/workflows/migration-test.yml` が `migrations/**` 変更時に PostgreSQL サービスコンテナ（`postgres:16`、ユーザー `jarvis`/DB `jarvis_db`）を起動し、`run_all_migrations.sh` 相当の実行で全マイグレーションを適用 → 同じ内容をもう一度実行して冪等性を検証する（`.github/workflows/migration-test.yml` 冒頭コメント・`migration-test-run` job）。
+- CI: `.github/workflows/migration-test.yml` が `migrations/**` 変更時に PostgreSQL サービスコンテナ（`postgres:16`、ユーザー `jarvis`/DB `jarvis_db`）を起動し、`scripts/run_all_migrations.sh` 相当の実行で全マイグレーションを適用 → 同じ内容をもう一度実行して冪等性を検証する（`.github/workflows/migration-test.yml` 冒頭コメント・`migration-test-run` job）。
 - 静的なスキーマベースラインファイル（`app_fx_rates` を列挙するような固定リスト）は見つからなかった。`grep -rl "app_fx_rates"` の一致先は `migrations/20260628_170000_add_app_fx_rates.sql`、`backend/app/celery_app.py`、`backend/app/routers/fx_rate_admin.py`、`backend/app/tasks/fx_rate_updater.py`、`backend/tests/test_fx_rate_admin_router.py` のみで、CI 側に別途テーブル名を列挙する箇所はない。→ 本PRでは CI 側の追加登録は不要（新テーブルは `migrations/**` 経由で自動的に検証対象になる）。
 
 ## 6. ローカル検証の制約（事実）
 
 - ローカル Docker に `salesanchor-postgres-1`（postgres:16、DB `salesanchor`、ユーザー `myapp_user`）が稼働中だが、`migrations/**` は未適用（`public` スキーマのテーブル数 0）。
-- `docker exec -i salesanchor-postgres-1 psql ... < <file>` でマイグレーションを投入しようとしたところ、ローカルの PreToolUse フック（`agent-danger-hook.sh` の `psql-write-guard`）が `docker+psql < file` パターンを検知し **BLOCKED**（本番/ローカル問わず docker 経由の psql 書き込みを一律で止める設計）。詳細は design.md §4 参照。
+- `docker exec -i salesanchor-postgres-1 psql ... < <file>` でマイグレーションを投入しようとしたところ、ローカルの PreToolUse フック（リポジトリ外 ~/.claude/scripts/agent-danger-hook.sh の `psql-write-guard`）が `docker+psql < file` パターンを検知し **BLOCKED**（本番/ローカル問わず docker 経由の psql 書き込みを一律で止める設計）。詳細は design.md §4 参照。
 - 本PRのSQL構文・冪等性の正式な検証は `.github/workflows/migration-test.yml`（PR作成後にCIで自動実行）に委ねる。

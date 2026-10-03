@@ -71,7 +71,7 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
 ## 4. ローカル検証の制約（事実）
 
-ローカルDocker（`salesanchor-postgres-1`）に対して `docker exec -i ... psql < migrations/20260628_170000_add_app_fx_rates.sql`（前提となる既存テーブルを先に作る目的）を実行しようとしたところ、ローカルのPreToolUseフック（`~/.claude/scripts/agent-danger-hook.sh` の `psql-write-guard`）が `docker+psql < file` パターンを検知し以下を返して **BLOCKED** した（verbatim）:
+ローカルDocker（`salesanchor-postgres-1`）に対して `docker exec -i ... psql < migrations/20260628_170000_add_app_fx_rates.sql`（前提となる既存テーブルを先に作る目的）を実行しようとしたところ、ローカルのPreToolUseフック（リポジトリ外 ~/.claude/scripts/agent-danger-hook.sh の `psql-write-guard`）が `docker+psql < file` パターンを検知し以下を返して **BLOCKED** した（verbatim）:
 
 ```
 🚫 BLOCKED [psql-write-guard]: 本番DBへの直接書き込みは禁止されています。
@@ -81,7 +81,7 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
    （1回限り有効・30分で自動失効）
 ```
 
-本カードの許可範囲に `permit-danger.sh` の実行は含まれておらず、フックに止められた場合は「言い換えて回避しない・止まって報告する」運用のため、ローカルでの実行検証はここで停止した。SQL自体は `app_fx_rates`（`migrations/20260628_170000_add_app_fx_rates.sql`）の既存パターンを1行単位で忠実に複製しており、構文上の新規リスクは低いと判断するが、**未確認**の部分（ローカルでの実際のCREATE/INSERT成功・2回目実行での冪等性）は、本PR作成後に `.github/workflows/migration-test.yml`（recon.md §5、既存行と新規行の両方を実DBに2回適用して冪等性を検証する設計）で検証される。
+本カードの許可範囲に `scripts/permit-danger.sh` の実行は含まれておらず、フックに止められた場合は「言い換えて回避しない・止まって報告する」運用のため、ローカルでの実行検証はここで停止した。SQL自体は `app_fx_rates`（`migrations/20260628_170000_add_app_fx_rates.sql`）の既存パターンを1行単位で忠実に複製しており、構文上の新規リスクは低いと判断するが、**未確認**の部分（ローカルでの実際のCREATE/INSERT成功・2回目実行での冪等性）は、本PR作成後に `.github/workflows/migration-test.yml`（recon.md §5、既存行と新規行の両方を実DBに2回適用して冪等性を検証する設計）で検証される。
 
 | 基準 | 検証方法 |
 |------|---------|
@@ -113,7 +113,7 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 - ローカルでのSQL実行確認ができなかった（§4）ため、未知の構文エラーがCI初回実行で初めて判明するリスクが通常よりやや高い。緩和: `app_fx_rates` の既存マイグレーションの行をそのまま複製する形で記述しており、差分は列定義・PK・テーブル名・ポリシー名のみ。
 
 ### 戻し方
-- `git revert <本PRのマージコミット>` でマイグレーションファイル・`run_all_migrations.sh` 登録・ADR追記を元に戻せる。
+- `git revert <本PRのマージコミット>` でマイグレーションファイル・`scripts/run_all_migrations.sh` 登録・ADR追記を元に戻せる。
 - DBに対しては、本番適用後であればマイグレーションのコメントに記載したロールバックSQL（`DROP TABLE IF EXISTS public.app_fx_rate_history CASCADE;`）を別途実行する必要がある（revertだけではテーブルは消えない。コードのrevertとDBの変更は別物）。本PRの範囲ではDROPは実行しない。
 
 ---
@@ -121,7 +121,7 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 ## 7. ロールアウト
 
 - 本PRはマイグレーション追加のみで、アプリケーションコードの挙動は変わらない（ADR-135の「migrations/ を含む実装はPO GOが出るまでreleaseブランチで待機」に該当するため、mainへのマージにはPO GOが必要）。
-- マージ条件: 必須CI通過（`migration-test.yml` 含む）＋ Reviewer APPROVE ＋ PO の「GO #PR番号」。
+- マージ条件: 必須CI通過（`.github/workflows/migration-test.yml` 含む）＋ Reviewer APPROVE ＋ PO の「GO #PR番号」。
 - PR-B（書き込み/読み取り切替＋ダッシュボードのJPY換算対応）は本PRのマージ・本番デプロイ完了後に別PRとして着手する。
 
 ---
@@ -133,5 +133,5 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 - **書き込み**: `backend/app/tasks/fx_rate_updater.py`・`backend/app/routers/fx_rate_admin.py` の `refresh_fx_rate` が、`app_fx_rates` へのUPSERTに加えて（または代えて）`app_fx_rate_history` へ `INSERT ... ON CONFLICT (currency, fetched_at) DO NOTHING` で追記する。
 - **読み取り**: `GET /api/v1/fx-rates/{currency}`（`backend/app/routers/fx_rate_admin.py:44-72`）は `app_fx_rate_history` から `ORDER BY fetched_at DESC LIMIT 1` で最新行を取得する実装に切替える。レスポンス形状（`FxRateResponse`: `currency`/`rate_jpy`/`fetched_at`/`updated_at`）は維持する（`updated_at` は履行テーブルの `created_at` を転用、またはレスポンスから `updated_at` を除くかは実装時に設計）。
 - **ダッシュボードAPI**: `GET /api/v1/tcg/analysis-dashboard/llm-usage`（`backend/app/routers/tcg_analysis_dashboard.py:680`）に `cost_jpy` を各集計行（total/by_purpose/by_model/daily等）に追加する。各 `public.llm_usage_events` 行に対し、`LATERAL` で「`fetched_at <= occurred_at` を満たす最新の `app_fx_rate_history` 行」を引き、無ければ（`occurred_at` が履歴の最古行より古い場合）最古行にフォールバックする。レスポンスに `fx` ブロック（最新レート・`fetched_at`・履行開始時点・フォールバック適用件数）を追加する。
-- **フロントエンド**: `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` は `cost_jpy` と `fx` ブロックをAPIレスポンスから直接使うようにし、自前の `/fx-rates/USD` 呼び出しと `toJpy()` 変換（`LlmUsageSection.tsx:394`,`311`）を削除する。フォールバック適用件数がある場合はUIにその旨を表示する。
-- **i18n**: `frontend/src/locales/ja.json` / `en.json` に、フォールバック表示用の新規キー（例: `llmUsage.fxFallbackNotice`）を両言語同時に追加する（ADR-027）。
+- **フロントエンド**: `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` は `cost_jpy` と `fx` ブロックをAPIレスポンスから直接使うようにし、自前の `/fx-rates/USD` 呼び出しと `toJpy()` 変換（同ファイルの394行目・311行目付近）を削除する。フォールバック適用件数がある場合はUIにその旨を表示する。
+- **i18n**: `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` に、フォールバック表示用の新規キー（例: `llmUsage.fxFallbackNotice`）を両言語同時に追加する（ADR-027）。
