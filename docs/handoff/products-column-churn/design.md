@@ -48,7 +48,7 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 
 **触らない**: `migrations/20260623_020000_drop_products_category_classification.sql`（既存ガード済み・DROP 側）、`migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（列存在ガード済みで安全）、`migrations/20260629_020000_drop_products_condition_unit.sql`（DROP 側）。
 
-**残る制約（本 PR の範囲外）**: 本番 `public.products` の max attnum は既に 1600 に達している。このテーブルは**新しい列を今後一切追加できない**（この churn を止めても、過去に消費された 1541 件の dropped attnum は戻らない）。新規列が必要になった場合はテーブルの物理再構築（`CREATE TABLE ... AS SELECT` + リネーム、または `pg_repack`/`VACUUM FULL` 相当の全面的なリライト）が必要で、これは本番データに対する不可逆的な重い操作であり、PO（しんごさん）自身の判断・GO が必須。本 PR はこの再構築を一切含まない。
+**残る制約（本 PR の範囲外）**: 本番 `public.products` の max attnum は既に 1600 に達している。このテーブルは**新しい列を今後一切追加できない**（この churn を止めても、過去に消費された 1541 件の dropped attnum は戻らない）。新規列が必要になった場合は、新しい表を作ってデータを移す形の作り直しが必要になる見込み。どの方法で列番号が戻るか（VACUUM FULL や pg_repack のように表を書き直すだけの方法で戻るかを含む）は【未確認】で、作り直しを検討する時点で公式資料と検証環境で確かめる。作り直しは本番データに対する重い操作で、旧表の削除を伴うため PO（しんごさん）本人の判断と GO が必須（今後の要件であり、PO がすでに判断した事実ではない）。本 PR はこの再構築を一切含まない。
 
 ---
 
