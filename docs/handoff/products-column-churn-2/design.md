@@ -186,7 +186,7 @@ recon.md §2 の表の「tcg_uuid」行のみ変化する:
 | migrations（ガード追加） | `20260909_000000` と `20260914_140000` の tcg_uuid ADD/索引/制約を `DO` ブロックでガード |
 | migrations（無変更） | `20260915_120000`・`20260916_120000`・`20260916_130000`・`20260919_010000`・`20260920_010000`・`20260922_070000` — いずれも既存の自己ガードで対応済み、触らない |
 | docs | `docs/handoff/products-column-churn-2/recon.md`（新規）・`docs/handoff/products-column-churn-2/design.md`（新規） |
-| 台帳 | `.claude-pipeline/active-work.d/release-stop-products-column-churn-2.md`（main checkout に新規作成） |
+| 台帳 | .claude-pipeline/active-work.d/release-stop-products-column-churn-2.md（main checkout に新規作成、このブランチには含めない） |
 
 ## 触るファイル
 

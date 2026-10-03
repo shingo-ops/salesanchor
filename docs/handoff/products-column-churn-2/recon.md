@@ -48,7 +48,7 @@
 `scripts/run_all_migrations.sh` の `run_sql`/`run_py` 行を登録順（ファイル内の行番号）に全件走査し、
 `public.products`（または動的 `EXECUTE format` でそれを指すもの）に対する
 `ALTER TABLE ... ADD COLUMN` / `RENAME COLUMN` / `CREATE TABLE ... AS` を含む全ファイルを洗い出した。
-`run_py` 側（`scripts/migrate_*.py`）は `ALTER TABLE` 文を grep した結果、products を対象にするものは
+`run_py` 側（scripts/migrate_ 接頭辞の Python スクリプト群）は `ALTER TABLE` 文を grep した結果、products を対象にするものは
 0件だった。
 
 | 登録順(行) | file:line | 列 | 次回デプロイ時に live か | 次回デプロイで新 attnum を消費するか（**修正前**） | 後で DROP する file:line |
