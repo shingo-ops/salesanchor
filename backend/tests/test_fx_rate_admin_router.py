@@ -6,10 +6,15 @@
   invoices 側が常に応答し、ADR-148 SSOT 読み取りエンドポイントが到達不能だった。
   読み取りパスを /api/v1/fx-rates/{currency} に変更して衝突を解消した。
 
+背景（2026-10-03 追記・PR-B）:
+  読み取り/書き込み先を public.app_fx_rates から public.app_fx_rate_history（追記専用・
+  履歴テーブル）に切替えた。レスポンス形状（FxRateResponse）は維持し、updated_at は
+  履行テーブルの created_at を転用する。
+
 検証項目:
   1. app.routes に (method, path) の重複が無いこと（"fx-rate" を含むパス全体）
   2. GET /api/v1/fx-rates/{currency} が fx_rate_admin.get_fx_rate に解決されること
-  3. GET /api/v1/fx-rates/USD が public.app_fx_rates の値から rate_jpy を返すこと
+  3. GET /api/v1/fx-rates/USD が public.app_fx_rate_history の最新行から rate_jpy を返すこと
   4. 行が存在しない場合は 404 を返すこと
   5. invoices.py 側の GET /api/v1/fx-rate/{currency} は変更されていないこと（rate フィールド）
 
@@ -19,7 +24,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -84,16 +89,21 @@ class TestRouteCollision:
 
 class TestGetFxRate:
     @pytest.mark.asyncio
-    async def test_returns_rate_jpy_from_app_fx_rates(self):
-        """public.app_fx_rates に行がある場合、rate_jpy を含むレスポンスを返す。"""
+    async def test_returns_rate_jpy_from_app_fx_rate_history(self):
+        """public.app_fx_rate_history に行がある場合、最新行の rate_jpy を含むレスポンスを返す。
+
+        updated_at は履行テーブルの created_at（挿入時刻）を転用する。fetched_at と
+        created_at に別の値を与えて、取り違えていないことを検証する。
+        """
         from app.routers.fx_rate_admin import get_fx_rate
 
-        now = datetime(2026, 10, 1, 6, 0, 0, tzinfo=timezone.utc)
+        fetched = datetime(2026, 10, 1, 6, 0, 0, tzinfo=timezone.utc)
+        created = datetime(2026, 10, 1, 6, 0, 5, tzinfo=timezone.utc)
         row = {
             "currency": "USD",
             "rate_jpy": 150.25,
-            "fetched_at": now,
-            "updated_at": now,
+            "fetched_at": fetched,
+            "created_at": created,
         }
         mock_db = AsyncMock()
         mock_db.execute = AsyncMock(return_value=_make_mock_result(row))
@@ -103,8 +113,13 @@ class TestGetFxRate:
 
         assert result.currency == "USD"
         assert result.rate_jpy == 150.25
-        assert result.fetched_at == now.isoformat()
-        assert result.updated_at == now.isoformat()
+        assert result.fetched_at == fetched.isoformat()
+        assert result.updated_at == created.isoformat()
+
+        executed_sql = str(mock_db.execute.call_args.args[0])
+        assert "app_fx_rate_history" in executed_sql
+        assert "ORDER BY fetched_at DESC" in executed_sql
+        assert "app_fx_rates" not in executed_sql
 
     @pytest.mark.asyncio
     async def test_404_when_row_missing(self):
@@ -119,3 +134,52 @@ class TestGetFxRate:
             await get_fx_rate(currency="USD", db=mock_db, _user=mock_user)
 
         assert exc_info.value.status_code == 404
+
+
+class TestRefreshFxRate:
+    @pytest.mark.asyncio
+    async def test_refresh_appends_to_history_and_returns_latest_row(self):
+        """手動更新は app_fx_rate_history に追記し、再 SELECT した最新行を返す。"""
+        from app.routers.fx_rate_admin import refresh_fx_rate
+
+        fetched = datetime(2026, 10, 3, 9, 0, 0, tzinfo=timezone.utc)
+        created = datetime(2026, 10, 3, 9, 0, 1, tzinfo=timezone.utc)
+        row_after_insert = {
+            "currency": "USD",
+            "rate_jpy": 151.0,
+            "fetched_at": fetched,
+            "created_at": created,
+        }
+
+        mock_db = AsyncMock()
+        insert_result = MagicMock()
+        select_result = _make_mock_result(row_after_insert)
+        mock_db.execute = AsyncMock(side_effect=[insert_result, select_result])
+        mock_db.commit = AsyncMock()
+
+        with patch(
+            "app.services.fx_rate.get_fx_rate",
+            return_value={"currency": "USD", "rate": 151.0, "fetched_at": fetched},
+        ):
+            result = await refresh_fx_rate(db=mock_db)
+
+        assert result.rate_jpy == 151.0
+        assert result.updated_at == created.isoformat()
+
+        insert_sql = str(mock_db.execute.call_args_list[0].args[0])
+        assert "INSERT INTO public.app_fx_rate_history" in insert_sql
+        assert "ON CONFLICT (currency, fetched_at) DO NOTHING" in insert_sql
+        assert "app_fx_rates" not in insert_sql
+
+    @pytest.mark.asyncio
+    async def test_refresh_503_when_external_api_fails(self):
+        """外部 API が None を返した場合は 503。"""
+        from app.routers.fx_rate_admin import refresh_fx_rate
+
+        mock_db = AsyncMock()
+
+        with patch("app.services.fx_rate.get_fx_rate", return_value=None):
+            with pytest.raises(HTTPException) as exc_info:
+                await refresh_fx_rate(db=mock_db)
+
+        assert exc_info.value.status_code == 503

@@ -4517,7 +4517,8 @@
           "errorCountLabel": "エラー件数（LINE抽出）"
         },
         "fx": {
-          "note": "1ドル＝{{rate}}円（{{fetchedAt}} 時点のレートで換算。過去の日も同じレートで計算しています）",
+          "note": "1ドル＝{{rate}}円（最新レート、{{fetchedAt}} 時点）。各使用はその発生時点のレートで円換算しています",
+          "fallbackCountNote": "{{historyStart}} より前の使用（{{count}}件）は、記録されている最も古いレートで換算しています",
           "fallbackNote": "為替レートを取得できないため、ドルで表示しています"
         }
       },
