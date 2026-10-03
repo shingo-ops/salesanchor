@@ -116,7 +116,12 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
 ### 戻し方
 - `git revert <本PRのマージコミット>` でマイグレーションファイル・`scripts/run_all_migrations.sh` 登録・ADR追記を元に戻せる。
-- DBに対しては、本番適用後であればマイグレーションのコメントに記載したロールバックSQL（`DROP TABLE IF EXISTS public.app_fx_rate_history CASCADE;`）を別途実行する必要がある（revertだけではテーブルは消えない。コードのrevertとDBの変更は別物）。本PRの範囲ではDROPは実行しない。
+- DBに対しては、本番適用後であれば以下のロールバックSQLを別途実行する必要がある（revertだけではテーブルは消えない。コードのrevertとDBの変更は別物）。本PRの範囲ではDROPは実行しない。
+  ```sql
+  DROP TABLE IF EXISTS public.app_fx_rate_history CASCADE;
+  ```
+  このDROPは不可逆操作であり、**PO本人のGO番号が必須**（ADR-1003 の委任GOの例外。process-artifactsゲート（`scripts/check-process-artifacts.js:57-85` の `migrationsContainDropStatement`）が、追加されたmigration行に `DROP\s+(TABLE|COLUMN)` を検出すると自動的にPO本人のGOを要求する設計のため、このDROP文を実行するPRは必ずその判定に引っかかる）。
+  - 経緯: 当初は本ロールバックSQLをマイグレーションファイル先頭のコメント（旧 `migrations/20261003_100000_create_app_fx_rate_history.sql:15`）に直接書いていたが、process-artifactsゲートはコメント内のDROP文も区別せず検知し、本PR（テーブル新設のみ・実行されるDROP文は無い）が「PO本人のGOが必要なDROPマイグレーション」として誤判定された。ゲートの仕様（コメント/実行文を区別しない）自体は変更せず、ロールバック手順をこのdesign.mdに一本化してmigrationファイルからDROP文のテキストを除去することで対処した（migrationファイル側は本design.mdへのポインタのみを残す）。
 
 ---
 
