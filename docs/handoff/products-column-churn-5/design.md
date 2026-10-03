@@ -61,7 +61,7 @@ tcg_uuid が存在しない AND このスキーマの tcg_products が0行
 `scripts/run_all_migrations.sh` の全 `run_sql`/`run_py`（317件）を走査し、本条件（tenant_004
 テーブルのCREATE/ALTER/DROP・public.productsの列操作・tcg_uuid/tcg_productsへの参照）に
 合致するステップのみを以下に列挙する。他の全ステップは第2便〜第4便の全件スキャン
-（`docs/handoff/products-column-churn/recon.md`・`-2/recon.md`・`-3/recon.md`・`-4/recon.md`）
+（docs/handoff/products-column-churn/recon.md・docs/handoff/products-column-churn-2/recon.md・docs/handoff/products-column-churn-3/recon.md・docs/handoff/products-column-churn-4/recon.md）
 で対象外と確定済みであり、本便で新規に追加された migration は無いため、その結論は不変。
 
 | 登録行 | file:line | 内容 | 定常状態での結果 |
@@ -69,7 +69,7 @@ tcg_uuid が存在しない AND このスキーマの tcg_products が0行
 | 191 | `migrations/20260623_020000_drop_products_category_classification.sql:60` | DROP IF EXISTS category_classification | 既に無し → no-op |
 | 216 | `migrations/20260602_000000_add_products_central_columns.sql:17-20` | ADD mark/status/weight/notes | 全て既存 → IF NOT EXISTS でスキップ、新規attnum無し |
 | 230 | `migrations/20260602_170000_add_products_master_label_columns.sql:28-33` | ADD volume_weight等6列 | 全て既存 → スキップ |
-| 249/261/318 | 各 `add_products_product_kind/set_type/display_order.sql` | ADD 1列ずつ | 全て既存 → スキップ |
+| 249/261/318 | migrations/20260603_000000_add_products_product_kind.sql・migrations/20260603_040000_add_products_set_type.sql・migrations/20260605_000000_add_products_display_order.sql | ADD 1列ずつ | 全て既存 → スキップ |
 | 491 | `migrations/20260629_020000_drop_products_condition_unit.sql:5-6` | DROP IF EXISTS condition/unit | 既に無し → no-op |
 | 524 | `migrations/20260922_070000_unblock_phase2c_drop_stale_fks.sql:19-40`（Step1） | tcg_uuid列存在チェック→無ければRETURN | tcg_uuid無し → RETURN、何もしない |
 | 524 | 同ファイル:42-65（Step2） | tenant_%全体のtcg_products参照FKを無条件DROP | この時点でtcg_productsは**まだ存在しない**（530/536で初めて作られる）→ 対象0件、no-op |
