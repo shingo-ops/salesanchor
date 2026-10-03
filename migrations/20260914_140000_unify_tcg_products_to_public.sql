@@ -32,31 +32,49 @@ BEGIN;
 -- Step 1: public.products に7カラム追加
 -- ============================================================
 
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid          UUID;
+-- incident 2026-10-04 (deploy run 37133284790): tcg_uuid は 20260916_120000 で永久 DROP
+-- される列。この ALTER TABLE 自体は 20260909_000000 Step1 と同一内容で、冪等のため通常は
+-- IF NOT EXISTS で無害だが、tcg_uuid が既に完全撤去された後（Phase 2c 完了後）に再実行
+-- されると新しい attribute number を消費してしまう（同じ理由で 20260909_000000 にも
+-- 同じガードを追加済み）。tcg_uuid が既存、または tenant_*.tcg_products がまだ残っている
+-- （移行未完了）場合のみ ADD + index + 制約を実行する。
+-- 詳細: docs/handoff/products-column-churn-2/design.md
+DO $guard_tcg_uuid$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) OR EXISTS (
+        SELECT 1 FROM pg_namespace n
+        JOIN pg_class c ON c.relnamespace = n.oid AND c.relkind = 'r'
+        WHERE n.nspname LIKE 'tenant_%' AND c.relname = 'tcg_products'
+    ) THEN
+        ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
+
+        -- tcg_uuid に部分ユニークインデックス（NULL は除外）
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_products_tcg_uuid
+            ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
+
+        -- tcg_uuid に正式な UNIQUE 制約を追加（FK 参照に必要。部分インデックスだけでは不十分）
+        IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint
+            WHERE conrelid = 'public.products'::regclass
+              AND conname = 'uq_products_tcg_uuid'
+              AND contype = 'u'
+        ) THEN
+            ALTER TABLE public.products ADD CONSTRAINT uq_products_tcg_uuid UNIQUE (tcg_uuid);
+        END IF;
+    ELSE
+        RAISE NOTICE 'tcg_uuid: Phase 2c 完了済み（tcg_products 全廃・tcg_uuid 既に DROP 済み）— 再 ADD をスキップ';
+    END IF;
+END $guard_tcg_uuid$;
+
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS division_id       UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id           UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer_id   UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_category_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_class    TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active         BOOLEAN DEFAULT true;
-
--- tcg_uuid に部分ユニークインデックス（NULL は除外）
-CREATE UNIQUE INDEX IF NOT EXISTS idx_products_tcg_uuid
-    ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
-
--- tcg_uuid に正式な UNIQUE 制約を追加（FK 参照に必要。部分インデックスだけでは不十分）
-DO $uq$
-BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint
-        WHERE conrelid = 'public.products'::regclass
-          AND conname = 'uq_products_tcg_uuid'
-          AND contype = 'u'
-    ) THEN
-        ALTER TABLE public.products ADD CONSTRAINT uq_products_tcg_uuid UNIQUE (tcg_uuid);
-    END IF;
-END;
-$uq$;
 
 -- ============================================================
 -- Step 2: tcg_products → public.products データコピー

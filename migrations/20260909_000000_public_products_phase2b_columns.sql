@@ -8,17 +8,39 @@
 -- Step 1: カラム追加
 -- ============================================================
 
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid          UUID;
+-- incident 2026-10-04 (deploy run 37133284790): tcg_uuid は 20260916_120000 で永久 DROP
+-- される列。Phase 2c（tcg_products テーブル DROP）が全テナントで完了した後は tcg_uuid は
+-- 二度と必要にならないため、その状態を過ぎたら再 ADD しない（毎デプロイ ADD→DROP を
+-- 繰り返すと attribute number を消費し続け、public.products が 1600 列上限に達する）。
+-- 判定: tcg_uuid が既に存在する（まだ現役）、または tenant_*.tcg_products が
+-- どこかにまだ残っている（移行未完了＝初回実行中）場合のみ ADD + index を実行する。
+-- 詳細: docs/handoff/products-column-churn-2/design.md
+DO $guard_tcg_uuid$
+BEGIN
+    IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) OR EXISTS (
+        SELECT 1 FROM pg_namespace n
+        JOIN pg_class c ON c.relnamespace = n.oid AND c.relkind = 'r'
+        WHERE n.nspname LIKE 'tenant_%' AND c.relname = 'tcg_products'
+    ) THEN
+        ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
+
+        -- tcg_uuid に部分ユニークインデックス（ON CONFLICT で必要）
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_products_tcg_uuid
+            ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
+    ELSE
+        RAISE NOTICE 'tcg_uuid: Phase 2c 完了済み（tcg_products 全廃・tcg_uuid 既に DROP 済み）— 再 ADD をスキップ';
+    END IF;
+END $guard_tcg_uuid$;
+
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS division_id       UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS work_id           UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS manufacturer_id   UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS product_category_id UUID;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS category_class    TEXT;
 ALTER TABLE public.products ADD COLUMN IF NOT EXISTS is_active         BOOLEAN DEFAULT true;
-
--- tcg_uuid に部分ユニークインデックス（ON CONFLICT で必要）
-CREATE UNIQUE INDEX IF NOT EXISTS idx_products_tcg_uuid
-    ON public.products (tcg_uuid) WHERE tcg_uuid IS NOT NULL;
 
 -- ============================================================
 -- Step 2: tcg_products → public.products データコピー（冪等）
