@@ -44,6 +44,19 @@ jobs:
             nginx:
               - 'nginx/**'
               - 'docker-compose.yml'
+            # PO承認（2026-10-03）: Pre-deploy DB backup 専用フィルタ。
+            # 上の `migrations` は backend/** 等も含み広すぎる（2026-10-02 JST の
+            # merge では 25件中16件が該当、うち実際に migrations/ を含むのは3件のみ
+            # — docs/handoff/predeploy-backup-db-filter/recon.md）。
+            # backup は「実際に DB スキーマ/データを変更しうる」パスのみで判定する:
+            #   - migrations/**            : run_sql で直接実行される .sql
+            #   - scripts/run_all_migrations.sh : マイグレーションの唯一の実行経路（SSoT）
+            #   - scripts/migrate_*.py     : run_all_migrations.sh から run_py で呼ばれる
+            #                                個別マイグレーションスクリプト本体
+            db_migrations:
+              - 'migrations/**'
+              - 'scripts/run_all_migrations.sh'
+              - 'scripts/migrate_*.py'
 
       - name: Setup Node.js
         uses: actions/setup-node@v5
@@ -157,10 +170,12 @@ jobs:
       # git pull / docker compose の前に取得して万一のロールバック保険とする。
       # scripts/backup.sh が /home/ubuntu/backups/postgres/ に .sql.gz を生成。
       # PO承認（2026-10-03）: DBマイグレーションを含むデプロイのみ実行する
-      # （steps.changes.outputs.migrations が 'true' の場合のみ）。
+      # （steps.changes.outputs.db_migrations が 'true' の場合のみ。
+      #   `migrations` フィルタは backend/** 等も含み広すぎるため、
+      #   実際に DB を変更しうるパスだけの `db_migrations` フィルタを使う）。
       # ============================================
       - name: Pre-deploy DB backup
-        if: steps.changes.outputs.migrations == 'true'
+        if: steps.changes.outputs.db_migrations == 'true'
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ secrets.VPS_HOST }}
