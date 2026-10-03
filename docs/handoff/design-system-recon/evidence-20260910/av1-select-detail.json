@@ -1,0 +1,2898 @@
+[
+  {
+    "file": "frontend/src/components/CommissionPanel.tsx",
+    "line": 205,
+    "component": "CommissionPanel",
+    "openingTag": "<select\n                          aria-label={`${label}${t(\"commission.assignedStaff\")}`}\n                          data-testid={`commission-staff-${key}`}\n                          value={currentStaffId !== null ? String(currentStaffId) : \"\"}\n                          disabled={savingRole === key}\n                          onChange={(e) => {\n                            const v = e.target.value;\n                            handleAssign(key, v === \"\" ? null : Number(v));\n                          }}\n                        >",
+    "children": "<option value=\"\">{t(\"commission.unassigned\")}</option>{staffOptions.map((opt) => (\n                            <option key={opt.value} value={String(opt.value)}>\n                              {opt.label}\n                            </option>\n                          ))}",
+    "className": null,
+    "value": "{currentStaffId !== null ? String(currentStaffId) : \"\"}",
+    "onChange": "{(e) => {\n                            const v = e.target.value;\n                            handleAssign(key, v === \"\" ? null : Number(v));\n                          }}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": true,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{staffOptions.map((opt) => (\n                            <option key={opt.value} value={String(opt.value)}>\n                              {opt.label}\n                            </option>\n                          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 888
+  },
+  {
+    "file": "frontend/src/components/CompanyContactSelector.tsx",
+    "line": 190,
+    "component": "CompanyContactSelector",
+    "openingTag": "<select\n          required={required}\n          disabled={disabled}\n          value={value.companyId !== null ? String(value.companyId) : \"\"}\n          onChange={(e) => handleCompanyChange(e.target.value)}\n        >",
+    "children": "<option value=\"\">{t(\"companyContactSelector.selectCompany\")}</option>{companies.map((c) => (\n            <option key={c.id} value={c.id}>\n              {c.name}（{c.company_code}）\n            </option>\n          ))}",
+    "className": null,
+    "value": "{value.companyId !== null ? String(value.companyId) : \"\"}",
+    "onChange": "{(e) => handleCompanyChange(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{companies.map((c) => (\n            <option key={c.id} value={c.id}>\n              {c.name}（{c.company_code}）\n            </option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 2,
+    "labelsRaw": [
+      "（",
+      "）"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 469
+  },
+  {
+    "file": "frontend/src/components/CompanyContactSelector.tsx",
+    "line": 214,
+    "component": "CompanyContactSelector",
+    "openingTag": "<select\n          required={required}\n          disabled={\n            disabled ||\n            value.companyId === null ||\n            companyIdMissing ||\n            loadingContacts\n          }\n          value={value.contactId !== null ? String(value.contactId) : \"\"}\n          onChange={(e) => handleContactChange(e.target.value)}\n        >",
+    "children": "<option value=\"\">{contactsPlaceholder}</option>{contacts.map((c) => (\n            <option key={c.id} value={c.id}>\n              {contactDisplayName(c)}\n              {c.is_primary_contact ? t(\"companyContactSelector.primarySuffix\") : \"\"}\n            </option>\n          ))}",
+    "className": null,
+    "value": "{value.contactId !== null ? String(value.contactId) : \"\"}",
+    "onChange": "{(e) => handleContactChange(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{contacts.map((c) => (\n            <option key={c.id} value={c.id}>\n              {contactDisplayName(c)}\n              {c.is_primary_contact ? t(\"companyContactSelector.primarySuffix\") : \"\"}\n            </option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 2,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 656
+  },
+  {
+    "file": "frontend/src/components/PurchaseDetailPanel.tsx",
+    "line": 424,
+    "component": "PurchaseDetailPanel",
+    "openingTag": "<select\n              value={form.purchase_status}\n              onChange={(ev) => setField(\"purchase_status\", ev.target.value)}\n              data-testid=\"pur-input-purchase_status\"\n            >",
+    "children": "{STATUS_OPTION_KEYS.map((opt) => (\n                <option key={opt.value} value={opt.value}>\n                  {t(opt.labelKey)}\n                </option>\n              ))}",
+    "className": null,
+    "value": "{form.purchase_status}",
+    "onChange": "{(ev) => setField(\"purchase_status\", ev.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{STATUS_OPTION_KEYS.map((opt) => (\n                <option key={opt.value} value={opt.value}>\n                  {t(opt.labelKey)}\n                </option>\n              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 406
+  },
+  {
+    "file": "frontend/src/components/ShippingDetailPanel.tsx",
+    "line": 511,
+    "component": "ShippingDetailPanel",
+    "openingTag": "<select\n                  value={form.carrier}\n                  onChange={(ev) => setField(\"carrier\", ev.target.value)}\n                  data-testid=\"ship-input-carrier\"\n                >",
+    "children": "{CARRIER_OPTIONS.map((opt) => (\n                    <option key={opt.value} value={opt.value}>\n                      {t(opt.labelKey)}\n                    </option>\n                  ))}",
+    "className": null,
+    "value": "{form.carrier}",
+    "onChange": "{(ev) => setField(\"carrier\", ev.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{CARRIER_OPTIONS.map((opt) => (\n                    <option key={opt.value} value={opt.value}>\n                      {t(opt.labelKey)}\n                    </option>\n                  ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 420
+  },
+  {
+    "file": "frontend/src/features/tcg-analysis-review/ItemComparison.tsx",
+    "line": 26,
+    "component": "ManualInput",
+    "openingTag": "<select value={values[key]} disabled={!options} aria-label={t('tcgAnalysisReview.manualCorrection', { field: t(labelKey) })} onChange={(event) => onChange(key, event.target.value)}>",
+    "children": "<option value=\"\">{t('tcgAnalysisReview.noCorrection')}</option>{choices?.map((value) => <option key={value} value={value}>{value}</option>)}",
+    "className": null,
+    "value": "{values[key]}",
+    "onChange": "{(event) => onChange(key, event.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{choices?.map((value) => <option key={value} value={value}>{value}</option>)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": null,
+    "parentClassName": null,
+    "fullChars": 330
+  },
+  {
+    "file": "frontend/src/pages/account-settings/PreferencesSection.tsx",
+    "line": 38,
+    "component": "PreferencesSection",
+    "openingTag": "<select\n          id=\"language-select\"\n          value={locale}\n          onChange={(e) => changeLanguage(e.target.value)}\n          className=\"account-settings-lang-select\"\n        >",
+    "children": "<option value=\"ja\">{t(\"language.ja\")}</option><option value=\"en\">{t(\"language.en\")}</option>",
+    "className": "\"account-settings-lang-select\"",
+    "value": "{locale}",
+    "onChange": "{(e) => changeLanguage(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": "\"language-select\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"account-settings-pref-row\"",
+    "fullChars": 315
+  },
+  {
+    "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+    "line": 167,
+    "component": "TenantPolicyPage",
+    "openingTag": "<select\n              id=\"tp-agg-filter\"\n              data-testid=\"tp-agg-filter\"\n              value={form.inventory_agg_filter}\n              onChange={handleChange(\"inventory_agg_filter\")}\n              disabled={!canEdit}\n            >",
+    "children": "<option value=\"none\">\n                {t(\"tenantPolicy.inventoryAggFilterNone\")}\n              </option><option value=\"cheapest\">\n                {t(\"tenantPolicy.inventoryAggFilterCheapest\")}\n              </option><option value=\"balanced\">\n                {t(\"tenantPolicy.inventoryAggFilterBalanced\")}\n              </option>",
+    "className": null,
+    "value": "{form.inventory_agg_filter}",
+    "onChange": "{handleChange(\"inventory_agg_filter\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "other/unresolved"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": "\"tp-agg-filter\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 635
+  },
+  {
+    "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+    "line": 266,
+    "component": "TenantPolicyPage",
+    "openingTag": "<select\n              id=\"tp-incoterms\"\n              data-testid=\"tp-incoterms\"\n              value={form.duty_incoterms}\n              onChange={handleChange(\"duty_incoterms\")}\n              disabled={!canEdit}\n            >",
+    "children": "<option value=\"DAP\">DAP</option><option value=\"DDU\">DDU</option><option value=\"DDP\">DDP</option>",
+    "className": null,
+    "value": "{form.duty_incoterms}",
+    "onChange": "{handleChange(\"duty_incoterms\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "other/unresolved"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "DAP",
+      "DDU",
+      "DDP"
+    ],
+    "id": "\"tp-incoterms\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 389
+  },
+  {
+    "file": "frontend/src/pages/admin/TenantPolicyPage.tsx",
+    "line": 283,
+    "component": "TenantPolicyPage",
+    "openingTag": "<select\n              id=\"tp-issue-mode\"\n              data-testid=\"tp-issue-mode\"\n              value={form.issue_mode}\n              onChange={handleChange(\"issue_mode\")}\n              disabled={!canEdit}\n            >",
+    "children": "<option value=\"paypal_auto\">\n                {t(\"tenantPolicy.issueModePaypalAuto\")}\n              </option><option value=\"paypal_manual\">\n                {t(\"tenantPolicy.issueModePaypalManual\")}\n              </option><option value=\"pdf\">{t(\"tenantPolicy.issueModePdf\")}</option><option value=\"wise_pdf\">\n                {t(\"tenantPolicy.issueModeWisePdf\")}\n              </option>",
+    "className": null,
+    "value": "{form.issue_mode}",
+    "onChange": "{handleChange(\"issue_mode\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "other/unresolved"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 4,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": "\"tp-issue-mode\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 685
+  },
+  {
+    "file": "frontend/src/pages/admin/TenantProfilePage.tsx",
+    "line": 234,
+    "component": "TenantProfilePage",
+    "openingTag": "<select\n              id=\"tp-default-language\"\n              data-testid=\"tp-default-language\"\n              value={form.default_language}\n              onChange={handleChange(\"default_language\")}\n              disabled={!canEdit}\n            >",
+    "children": "<option value=\"ja\">{t(\"language.ja\")} (ja)</option><option value=\"en\">English (en)</option><option value=\"ko\">한국어 (ko)</option><option value=\"zh\">{t(\"language.zh\")} (zh)</option>",
+    "className": null,
+    "value": "{form.default_language}",
+    "onChange": "{handleChange(\"default_language\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "other/unresolved"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "(ja)",
+      "English (en)",
+      "한국어 (ko)",
+      "(zh)"
+    ],
+    "id": "\"tp-default-language\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 504
+  },
+  {
+    "file": "frontend/src/pages/bots/BotsPage.tsx",
+    "line": 233,
+    "component": "BotsPage",
+    "openingTag": "<select required value={createForm.purpose} onChange={(e) => setCreateForm({ ...createForm, purpose: e.target.value })}>",
+    "children": "<option value=\"invoice\">{t(\"bots.purposeInvoice\")}</option><option value=\"shipment\">{t(\"bots.purposeShipment\")}</option><option value=\"notification\">{t(\"bots.purposeNotification\")}</option><option value=\"custom\">{t(\"bots.purposeCustom\")}</option>",
+    "className": null,
+    "value": "{createForm.purpose}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, purpose: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 4,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 448
+  },
+  {
+    "file": "frontend/src/pages/bots/BotsPage.tsx",
+    "line": 241,
+    "component": "BotsPage",
+    "openingTag": "<select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>",
+    "children": "<option value=\"active\">{t(\"bots.statusActive\")}</option><option value=\"inactive\">{t(\"bots.statusInactive\")}</option><option value=\"maintenance\">{t(\"bots.statusMaintenance\")}</option>",
+    "className": null,
+    "value": "{createForm.status}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 358
+  },
+  {
+    "file": "frontend/src/pages/bots/BotsPage.tsx",
+    "line": 248,
+    "component": "BotsPage",
+    "openingTag": "<select required value={createForm.owner_staff_id} onChange={(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.pleaseSelect\")}</option>{staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}",
+    "className": null,
+    "value": "{createForm.owner_staff_id}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, owner_staff_id: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{staff.map((s) => <option key={s.id} value={s.id}>{s.surname_jp} {s.given_name_jp}</option>)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 2,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 331
+  },
+  {
+    "file": "frontend/src/pages/commission-settings/CommissionSettingsPage.tsx",
+    "line": 206,
+    "component": "CommissionSettingsPage",
+    "openingTag": "<select\n                            value={cfg.type}\n                            onChange={(e) =>\n                              updateRole(role, { type: e.target.value as RateType })\n                            }\n                            aria-label={`${ROLE_LABELS[role]} ${t(\"commissions.colCalcType\")}`}\n                            data-testid={`settings-type-${role}`}\n                          >",
+    "children": "<option value=\"rate\">{t(\"commissions.typeRate\")}</option><option value=\"fixed\">{t(\"commissions.typeFixed\")}</option>",
+    "className": null,
+    "value": "{cfg.type}",
+    "onChange": "{(e) =>\n                              updateRole(role, { type: e.target.value as RateType })\n                            }",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 612
+  },
+  {
+    "file": "frontend/src/pages/companies/CompaniesPage.tsx",
+    "line": 506,
+    "component": "CompaniesPage",
+    "openingTag": "<select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>",
+    "children": "<option value=\"active\">active</option><option value=\"inactive\">inactive</option><option value=\"archived\">archived</option><option value=\"pending_dedup_review\">pending_dedup_review</option>",
+    "className": null,
+    "value": "{createForm.status}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "active",
+      "inactive",
+      "archived",
+      "pending_dedup_review"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-row\"",
+    "fullChars": 419
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyBasicTab.tsx",
+    "line": 84,
+    "component": "CompanyBasicTab",
+    "openingTag": "<select disabled={!canEdit} value={basicForm.status}\n          onChange={(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}>",
+    "children": "<option value=\"active\">active</option><option value=\"inactive\">inactive</option><option value=\"archived\">archived</option><option value=\"pending_dedup_review\">pending_dedup_review</option>",
+    "className": null,
+    "value": "{basicForm.status}",
+    "onChange": "{(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "active",
+      "inactive",
+      "archived",
+      "pending_dedup_review"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-row\"",
+    "fullChars": 412
+  },
+  {
+    "file": "frontend/src/pages/company-detail/CompanyConvLogsTab.tsx",
+    "line": 73,
+    "component": "CompanyConvLogsTab",
+    "openingTag": "<select\n          id=\"conv-contact-filter\"\n          className=\"conv-logs-filter-select\"\n          value={selectedContactId}\n          onChange={(e) => setSelectedContactId(e.target.value)}\n          aria-label={t(\"companies.convHistory.filterByContact\")}\n        >",
+    "children": "<option value=\"\">{t(\"companies.convHistory.allContacts\")}</option>{contacts.map((c) => {\n            const name = c.display_name || `${c.surname ?? \"\"} ${c.given_name ?? \"\"}`.trim() || `#${c.id}`;\n            return (\n              <option key={c.id} value={String(c.id)}>\n                {name}\n              </option>\n            );\n          })}",
+    "className": "\"conv-logs-filter-select\"",
+    "value": "{selectedContactId}",
+    "onChange": "{(e) => setSelectedContactId(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{contacts.map((c) => {\n            const name = c.display_name || `${c.surname ?? \"\"} ${c.given_name ?? \"\"}`.trim() || `#${c.id}`;\n            return (\n              <option key={c.id} value={String(c.id)}>\n                {name}\n              </option>\n            );\n          })}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": "\"conv-contact-filter\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"conv-logs-filter-row\"",
+    "fullChars": 653
+  },
+  {
+    "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+    "line": 273,
+    "component": "ContactsPage",
+    "openingTag": "<select className=\"search-input field-h-md field-w-sm\" value={companyFilter} onChange={(e) => setCompanyFilter(e.target.value)}>",
+    "children": "<option value=\"\">{t(\"contacts.allCompanies\")}</option>{companies.map((c) => (\n                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>\n              ))}",
+    "className": "\"search-input field-h-md field-w-sm\"",
+    "value": "{companyFilter}",
+    "onChange": "{(e) => setCompanyFilter(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{companies.map((c) => (\n                <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>\n              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 2,
+    "labelsRaw": [
+      "（",
+      "）"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "<>",
+    "parentClassName": null,
+    "fullChars": 359
+  },
+  {
+    "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+    "line": 308,
+    "component": "ContactsPage",
+    "openingTag": "<select required value={createForm.company_id} onChange={(e) => setCreateForm({ ...createForm, company_id: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.pleaseSelect\")}</option>{companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}",
+    "className": null,
+    "value": "{createForm.company_id}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, company_id: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{companies.map((c) => <option key={c.id} value={c.id}>{c.name}（{c.company_code}）</option>)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 2,
+    "labelsRaw": [
+      "（",
+      "）"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-row\"",
+    "fullChars": 327
+  },
+  {
+    "file": "frontend/src/pages/contacts/ContactsPage.tsx",
+    "line": 341,
+    "component": "ContactsPage",
+    "openingTag": "<select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>",
+    "children": "<option value=\"active\">active</option><option value=\"inactive\">inactive</option><option value=\"archived\">archived</option>",
+    "className": null,
+    "value": "{createForm.status}",
+    "onChange": "{(e) => setCreateForm({ ...createForm, status: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "active",
+      "inactive",
+      "archived"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-row\"",
+    "fullChars": 306
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 412,
+    "component": "DashboardPage",
+    "openingTag": "<select\n                className=\"page-header-select\"\n                value={funnelMonth}\n                onChange={(e) => setFunnelMonth(e.target.value)}\n                aria-label={t(\"funnel.monthLabel\")}\n              >",
+    "children": "{monthOptions.map((o) => (\n                  <option key={o.value} value={o.value}>{o.label}</option>\n                ))}",
+    "className": "\"page-header-select\"",
+    "value": "{funnelMonth}",
+    "onChange": "{(e) => setFunnelMonth(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{monthOptions.map((o) => (\n                  <option key={o.value} value={o.value}>{o.label}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "<>",
+    "parentClassName": null,
+    "fullChars": 385
+  },
+  {
+    "file": "frontend/src/pages/dashboard/DashboardPage.tsx",
+    "line": 441,
+    "component": "DashboardPage",
+    "openingTag": "<select\n            className=\"page-header-select\"\n            value={period}\n            onChange={(e) => setPeriod(e.target.value as Period)}\n            aria-label={t(\"dashboard.periodLabel\")}\n          >",
+    "children": "<option value=\"1w\">{t(\"dashboard.period1w\")}</option><option value=\"1m\">{t(\"dashboard.period1m\")}</option><option value=\"3m\">{t(\"dashboard.period3m\")}</option><option value=\"6m\">{t(\"dashboard.period6m\")}</option><option value=\"12m\">{t(\"dashboard.period12m\")}</option>",
+    "className": "\"page-header-select\"",
+    "value": "{period}",
+    "onChange": "{(e) => setPeriod(e.target.value as Period)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 5,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 5,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"page-header-actions\"",
+    "fullChars": 559
+  },
+  {
+    "file": "frontend/src/pages/goal-setting/GoalSettingPage.tsx",
+    "line": 711,
+    "component": "GoalSettingPage",
+    "openingTag": "<select\n                className=\"gs-select\"\n                value={selectedTeamId ?? \"\"}\n                onChange={(e) => setSelectedTeamId(Number(e.target.value))}\n              >",
+    "children": "{teams.map((tm) => (\n                  <option key={tm.id} value={tm.id}>\n                    {tm.name}\n                  </option>\n                ))}",
+    "className": "\"gs-select\"",
+    "value": "{selectedTeamId ?? \"\"}",
+    "onChange": "{(e) => setSelectedTeamId(Number(e.target.value))}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": true,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{teams.map((tm) => (\n                  <option key={tm.id} value={tm.id}>\n                    {tm.name}\n                  </option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"gs-team-select-wrap\"",
+    "fullChars": 374
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxConversationList.tsx",
+    "line": 147,
+    "component": "InboxConversationList",
+    "openingTag": "<select\n            value={pageIdFilter}\n            onChange={(e) => onPageFilterChange(e.target.value)}\n            aria-label=\"Filter by Page\"\n            className=\"inbox-page-filter-select\"\n          >",
+    "children": "<option value=\"\">{t(\"inbox.allPages\")}</option>{availablePageIds.map((pid) => (\n              <option key={pid} value={pid}>Page: {pid}</option>\n            ))}",
+    "className": "\"inbox-page-filter-select\"",
+    "value": "{pageIdFilter}",
+    "onChange": "{(e) => onPageFilterChange(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{availablePageIds.map((pid) => (\n              <option key={pid} value={pid}>Page: {pid}</option>\n            ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [
+      "Page:"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"inbox-page-filter-wrap\"",
+    "fullChars": 412
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 447,
+    "component": "KarteTabContent",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.customer_type ?? \"\"}\n            onChange={(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option><option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.customer_type ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 405
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 514,
+    "component": "KarteTabContent",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.response_speed ?? \"\"}\n          onChange={(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option><option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option><option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.response_speed ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 474
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 527,
+    "component": "KarteTabContent",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.temperature ?? \"\"}\n          onChange={(e) => handleCardFieldChange(\"temperature\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"Hot\">{t(\"leads.temperature_hot\")}</option><option value=\"Warm\">{t(\"leads.temperature_warm\")}</option><option value=\"Cold\">{t(\"leads.temperature_cold\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.temperature ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 455
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 541,
+    "component": "KarteTabContent",
+    "openingTag": "<select className=\"right-panel-field\" value={competitorValue}\n          onChange={(e) => {\n            const v = e.target.value;\n            handleCardFieldChange(\"competitor_check\", v === \"\" ? null : v === \"true\");\n            setTimeout(handleCardFieldBlur, 0);\n          }}>",
+    "children": "<option value=\"\">—</option><option value=\"false\">{t(\"leads.competitorUnconfirmed\")}</option><option value=\"true\">{t(\"leads.competitorFound\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{competitorValue}",
+    "onChange": "{(e) => {\n            const v = e.target.value;\n            handleCardFieldChange(\"competitor_check\", v === \"\" ? null : v === \"true\");\n            setTimeout(handleCardFieldBlur, 0);\n          }}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 478
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxKartePanel.tsx",
+    "line": 557,
+    "component": "KarteTabContent",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.estimated_scale ?? \"\"}\n          onChange={(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"Small\">{t(\"leads.estimatedScale_small\")}</option><option value=\"Medium\">{t(\"leads.estimatedScale_medium\")}</option><option value=\"Large\">{t(\"leads.estimatedScale_large\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.estimated_scale ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 482
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxMessageThread.tsx",
+    "line": 409,
+    "component": "InboxMessageThread",
+    "openingTag": "<select\n          className=\"inbox-platform-select\"\n          value={recipientLanguageSetting}\n          onChange={(e) => setRecipientLanguage(e.target.value as \"auto\" | \"ja\" | \"en\")}\n          aria-label={t(\"translation.sendGuard.langToggleLabel\")}\n        >",
+    "children": "<option value=\"auto\">{t(\"translation.sendGuard.langAuto\")}</option><option value=\"ja\">{t(\"translation.sendGuard.langJa\")}</option><option value=\"en\">{t(\"translation.sendGuard.langEn\")}</option>",
+    "className": "\"inbox-platform-select\"",
+    "value": "{recipientLanguageSetting}",
+    "onChange": "{(e) => setRecipientLanguage(e.target.value as \"auto\" | \"ja\" | \"en\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "header",
+    "parentClassName": "\"inbox-center-header\"",
+    "fullChars": 503
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxPage.tsx",
+    "line": 92,
+    "component": "InboxPage",
+    "openingTag": "<select\n                className=\"inbox-platform-select\"\n                value={state.platformFilter}\n                onChange={(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}\n                aria-label={t(\"inbox.platformFilter\")}\n              >",
+    "children": "<option value=\"all\">{t(\"inbox.platformAll\")}</option><option value=\"messenger\">{t(\"inbox.platformMessenger\")}</option><option value=\"instagram\">{t(\"inbox.platformInstagram\")}</option><option value=\"discord\">{t(\"inbox.platformDiscord\")}</option>",
+    "className": "\"inbox-platform-select\"",
+    "value": "{state.platformFilter}",
+    "onChange": "{(e) => state.setPlatformFilter(e.target.value as PlatformFilter)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 4,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"inbox-full-tab-bar\"",
+    "fullChars": 601
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+    "line": 161,
+    "component": "InboxProfileModal",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.customer_type ?? \"\"}\n                  onChange={(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"信頼重視\">{t(\"leads.customerType_trust\")}</option><option value=\"価格重視\">{t(\"leads.customerType_price\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.customer_type ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"customer_type\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 435
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+    "line": 200,
+    "component": "InboxProfileModal",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.response_speed ?? \"\"}\n                  onChange={(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"24h以内\">{t(\"leads.responseSpeed_24h\")}</option><option value=\"3日以内\">{t(\"leads.responseSpeed_3days\")}</option><option value=\"3日超\">{t(\"leads.responseSpeed_over3days\")}</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.response_speed ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"response_speed\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 522
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+    "line": 215,
+    "component": "InboxProfileModal",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.temperature ?? \"\"}\n                  onChange={(e) => handleCardFieldChange(\"temperature\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"Hot\">Hot</option><option value=\"Warm\">Warm</option><option value=\"Cold\">Cold</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.temperature ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"temperature\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—",
+      "Hot",
+      "Warm",
+      "Cold"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 428
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxProfileModal.tsx",
+    "line": 226,
+    "component": "InboxProfileModal",
+    "openingTag": "<select className=\"right-panel-field\" value={cardForm.estimated_scale ?? \"\"}\n                  onChange={(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)} onBlur={handleCardFieldBlur}>",
+    "children": "<option value=\"\">—</option><option value=\"Small\">Small</option><option value=\"Medium\">Medium</option><option value=\"Large\">Large</option>",
+    "className": "\"right-panel-field\"",
+    "value": "{cardForm.estimated_scale ?? \"\"}",
+    "onChange": "{(e) => handleCardFieldChange(\"estimated_scale\", e.target.value || null)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 4,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "—",
+      "Small",
+      "Medium",
+      "Large"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"right-panel-row\"",
+    "fullChars": 446
+  },
+  {
+    "file": "frontend/src/pages/inbox/InboxSettingsModal.tsx",
+    "line": 37,
+    "component": "InboxSettingsModal",
+    "openingTag": "<select className=\"inbox-settings-select\"\n            value={inboxSettings.defaultTab}\n            onChange={(e) => updateInboxSetting(\"defaultTab\", e.target.value as StatusTabKey)}>",
+    "children": "<option value=\"all\">{t(\"inbox.settings.defaultTabAll\")}</option><option value=\"lead\">{t(\"inbox.settings.defaultTabLead\")}</option><option value=\"deal\">{t(\"inbox.settings.defaultTabDeal\")}</option><option value=\"existing\">{t(\"inbox.settings.defaultTabExisting\")}</option><option value=\"followup\">{t(\"inbox.settings.defaultTabFollowUp\")}</option><option value=\"archive\">{t(\"inbox.settings.defaultTabArchive\")}</option>",
+    "className": "\"inbox-settings-select\"",
+    "value": "{inboxSettings.defaultTab}",
+    "onChange": "{(e) => updateInboxSetting(\"defaultTab\", e.target.value as StatusTabKey)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option",
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 6,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 6,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"inbox-settings-row\"",
+    "fullChars": 696
+  },
+  {
+    "file": "frontend/src/pages/inbox/ManualRecordSection.tsx",
+    "line": 126,
+    "component": "ManualRecordSection",
+    "openingTag": "<select\n          id=\"manual-channel-select\"\n          className=\"manual-record-select\"\n          value={channelType}\n          onChange={(e) => setChannelType(e.target.value)}\n          disabled={saving}\n          aria-label={t(\"inbox.manualRecord.channelLabel\")}\n        >",
+    "children": "{manualChannels.map((ch) => (\n            <option key={ch.platform} value={ch.platform}>\n              {ch.display_name}\n            </option>\n          ))}",
+    "className": "\"manual-record-select\"",
+    "value": "{channelType}",
+    "onChange": "{(e) => setChannelType(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{manualChannels.map((ch) => (\n            <option key={ch.platform} value={ch.platform}>\n              {ch.display_name}\n            </option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": "\"manual-channel-select\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"manual-record-row\"",
+    "fullChars": 459
+  },
+  {
+    "file": "frontend/src/pages/integrations/FedexEtdSetupGuide.tsx",
+    "line": 493,
+    "component": "FedexEtdSetupGuide",
+    "openingTag": "<select\n                id=\"etd-environment\"\n                value={etdEnvironment}\n                onChange={(e) => setEtdEnvironment(e.target.value as Env)}\n              >",
+    "children": "<option value=\"sandbox\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentSandbox\")}</option><option value=\"production\">{t(\"carrierIntegration.fedexEtdGuideEnvironmentProduction\")}</option>",
+    "className": null,
+    "value": "{etdEnvironment}",
+    "onChange": "{(e) => setEtdEnvironment(e.target.value as Env)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": "\"etd-environment\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 418
+  },
+  {
+    "file": "frontend/src/pages/integrations/PaypalIntegrationPage.tsx",
+    "line": 164,
+    "component": "PaypalIntegrationPage",
+    "openingTag": "<select\n            id=\"paypal-env\"\n            value={environment}\n            onChange={(e) => setEnvironment(e.target.value)}\n          >",
+    "children": "<option value=\"sandbox\">{t(\"paypalIntegration.envSandbox\")}</option><option value=\"live\">{t(\"paypalIntegration.envLive\")}</option>",
+    "className": null,
+    "value": "{environment}",
+    "onChange": "{(e) => setEnvironment(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": "\"paypal-env\"",
+    "wrappedByLabel": false,
+    "htmlForRef": true,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 316
+  },
+  {
+    "file": "frontend/src/pages/inventory/InventoryPage.tsx",
+    "line": 477,
+    "component": "InventoryPage",
+    "openingTag": "<select\n              value={[\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\", \"all\"].includes(activeTab) ? \"\" : activeTab}\n              onChange={(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}\n              aria-label={t(\"inventory.filter.otherTypes\")}\n              style={{ fontSize: \"var(--font-xs)\", padding: \"var(--space-1) var(--space-10px)\", border: \"1px solid var(--border)\", borderRadius: \"var(--radius-sm)\", background: \"var(--bg-surface)\" }}\n            >",
+    "children": "<option value=\"\">{t(\"inventory.filter.otherTypes\")}</option>{tcgTypes\n                .filter((tt) => ![\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\"].includes(tt.code))\n                .map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}",
+    "className": null,
+    "value": "{[\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\", \"all\"].includes(activeTab) ? \"\" : activeTab}",
+    "onChange": "{(e) => { if (e.target.value) { setActiveTab(e.target.value); setPage(1); } }}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{tcgTypes\n                .filter((tt) => ![\"pokemon_booster_box\", \"one_piece\", \"dragon_ball\"].includes(tt.code))\n                .map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": null,
+    "fullChars": 855
+  },
+  {
+    "file": "frontend/src/pages/invoice-create/InvoiceCreatePage.tsx",
+    "line": 308,
+    "component": "InvoiceCreatePage",
+    "openingTag": "<select value={currency} onChange={(e) => setCurrency(e.target.value)}>",
+    "children": "<option value=\"JPY\">JPY</option><option value=\"USD\">USD</option><option value=\"EUR\">EUR</option>",
+    "className": null,
+    "value": "{currency}",
+    "onChange": "{(e) => setCurrency(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "JPY",
+      "USD",
+      "EUR"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 242
+  },
+  {
+    "file": "frontend/src/pages/orders/OrdersFilterBar.tsx",
+    "line": 40,
+    "component": "OrdersFilterBar",
+    "openingTag": "<select\n        className=\"field-h-md field-w-sm\"\n        value={sortBy}\n        onChange={(e) => setSortBy(e.target.value)}\n        aria-label={t(\"common.filter\")}\n        data-testid=\"orders-sort-by\"\n      >",
+    "children": "{SORT_OPTIONS.map((opt) => (\n          <option key={opt.value} value={opt.value}>{opt.label}</option>\n        ))}",
+    "className": "\"field-h-md field-w-sm\"",
+    "value": "{sortBy}",
+    "onChange": "{(e) => setSortBy(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{SORT_OPTIONS.map((opt) => (\n          <option key={opt.value} value={opt.value}>{opt.label}</option>\n        ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": null,
+    "fullChars": 347
+  },
+  {
+    "file": "frontend/src/pages/orders/OrdersFormModal.tsx",
+    "line": 86,
+    "component": "OrdersFormModal",
+    "openingTag": "<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>",
+    "children": "{STATUSES.map((s) => (\n              <option key={s} value={s}>{STATUS_LABELS[s]}</option>\n            ))}",
+    "className": null,
+    "value": "{form.status}",
+    "onChange": "{(e) => setForm({ ...form, status: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{STATUSES.map((s) => (\n              <option key={s} value={s}>{STATUS_LABELS[s]}</option>\n            ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 230
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 231,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.product_kind} onChange={(e) => setForm({ ...form, product_kind: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"product_kind\", form.product_kind)}",
+    "className": null,
+    "value": "{form.product_kind}",
+    "onChange": "{(e) => setForm({ ...form, product_kind: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"product_kind\", form.product_kind)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 261
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 238,
+    "component": "ProductEditPage",
+    "openingTag": "<select\n                value={form.tcg_type}\n                onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}\n                data-testid=\"product-edit-tcg-type\"\n              >",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}",
+    "className": null,
+    "value": "{form.tcg_type}",
+    "onChange": "{(e) => setForm({ ...form, tcg_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 419
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 255,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.set_type} onChange={(e) => setForm({ ...form, set_type: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"set_type\", form.set_type)}",
+    "className": null,
+    "value": "{form.set_type}",
+    "onChange": "{(e) => setForm({ ...form, set_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"set_type\", form.set_type)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 245
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 278,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.rarity} onChange={(e) => setForm({ ...form, rarity: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"rarity\", form.rarity)}",
+    "className": null,
+    "value": "{form.rarity}",
+    "onChange": "{(e) => setForm({ ...form, rarity: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"rarity\", form.rarity)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 243
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 285,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value })}>",
+    "children": "<option value=\"\">-</option>{renderAttrOptions(\"language\", form.language)}",
+    "className": null,
+    "value": "{form.language}",
+    "onChange": "{(e) => setForm({ ...form, language: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"language\", form.language)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "-"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 232
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 302,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>",
+    "children": "<option value=\"active\">{t(\"products.status_active\")}</option><option value=\"discontinued\">{t(\"products.status_discontinued\")}</option>",
+    "className": null,
+    "value": "{form.status}",
+    "onChange": "{(e) => setForm({ ...form, status: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 283
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 346,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.hs_code} onChange={(e) => setForm({ ...form, hs_code: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"hs_code\", form.hs_code)}",
+    "className": null,
+    "value": "{form.hs_code}",
+    "onChange": "{(e) => setForm({ ...form, hs_code: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"hs_code\", form.hs_code)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 247
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 353,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"item\", form.item)}",
+    "className": null,
+    "value": "{form.item}",
+    "onChange": "{(e) => setForm({ ...form, item: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"item\", form.item)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 235
+  },
+  {
+    "file": "frontend/src/pages/products/ProductEditPage.tsx",
+    "line": 360,
+    "component": "ProductEditPage",
+    "openingTag": "<select value={form.material} onChange={(e) => setForm({ ...form, material: e.target.value })}>",
+    "children": "<option value=\"\">{t(\"common.notSet\")}</option>{renderAttrOptions(\"material\", form.material)}",
+    "className": null,
+    "value": "{form.material}",
+    "onChange": "{(e) => setForm({ ...form, material: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "expression"
+    ],
+    "childCount": 2,
+    "childPattern": "mixed",
+    "nonOptionChildren": [
+      {
+        "kind": "expression",
+        "text": "{renderAttrOptions(\"material\", form.material)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 251
+  },
+  {
+    "file": "frontend/src/pages/products/ProductsPage.tsx",
+    "line": 220,
+    "component": "ProductsPage",
+    "openingTag": "<select\n                className=\"field-h-md field-w-sm\"\n                value={tcgType}\n                onChange={(e) => { setTcgType(e.target.value); setPage(1); }}\n                aria-label={t(\"products.filterByTcgType\")}\n                data-testid=\"products-tcg-type-filter\"\n              >",
+    "children": "<option value=\"\">{t(\"products.allTcgTypes\")}</option>{tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}",
+    "className": "\"field-h-md field-w-sm\"",
+    "value": "{tcgType}",
+    "onChange": "{(e) => { setTcgType(e.target.value); setPage(1); }}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{tcgTypes.map((tt) => (\n                  <option key={tt.code} value={tt.code}>{tt.name_ja}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"search-bar\"",
+    "fullChars": 529
+  },
+  {
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersFormModal.tsx",
+    "line": 156,
+    "component": "PurchaseOrdersFormModal",
+    "openingTag": "<select required value={supplierId} onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : \"\")}>",
+    "children": "<option value=\"\">{t(\"common.pleaseSelect\")}</option>{suppliers.map((s) => (\n              <option key={s.id} value={s.id}>{s.name}</option>\n            ))}",
+    "className": null,
+    "value": "{supplierId}",
+    "onChange": "{(e) => setSupplierId(e.target.value ? Number(e.target.value) : \"\")}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": true,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{suppliers.map((s) => (\n              <option key={s.id} value={s.id}>{s.name}</option>\n            ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 315
+  },
+  {
+    "file": "frontend/src/pages/purchase-orders/PurchaseOrdersPage.tsx",
+    "line": 193,
+    "component": "PurchaseOrdersPage",
+    "openingTag": "<select className=\"field-h-md field-w-sm\" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>",
+    "children": "<option value=\"\">{t(\"purchaseOrders.allStatuses\")}</option>{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}",
+    "className": "\"field-h-md field-w-sm\"",
+    "value": "{statusFilter}",
+    "onChange": "{e => setStatusFilter(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "ContentToolbar",
+    "parentClassName": null,
+    "fullChars": 303
+  },
+  {
+    "file": "frontend/src/pages/quote-create/QuoteCreatePage.tsx",
+    "line": 157,
+    "component": "QuoteCreatePage",
+    "openingTag": "<select value={currency} onChange={(e) => setCurrency(e.target.value)}>",
+    "children": "<option value=\"JPY\">JPY</option><option value=\"USD\">USD</option><option value=\"EUR\">EUR</option>",
+    "className": null,
+    "value": "{currency}",
+    "onChange": "{(e) => setCurrency(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 0,
+    "labelsRaw": [
+      "JPY",
+      "USD",
+      "EUR"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 234
+  },
+  {
+    "file": "frontend/src/pages/schedule/SchedulePageImpl.tsx",
+    "line": 288,
+    "component": "SchedulePopover",
+    "openingTag": "<select\n                className=\"schedule-input\"\n                value={draft.category}\n                onChange={(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}\n              >",
+    "children": "{CALENDARS.map((calendar) => (\n                  <option key={calendar.id} value={calendar.id}>\n                    {t(calendar.labelKey)}\n                  </option>\n                ))}",
+    "className": "\"schedule-input\"",
+    "value": "{draft.category}",
+    "onChange": "{(event) => onDraftChange({ ...draft, category: event.target.value as CalendarId })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{CALENDARS.map((calendar) => (\n                  <option key={calendar.id} value={calendar.id}>\n                    {t(calendar.labelKey)}\n                  </option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": true,
+    "htmlForRef": false,
+    "parentTag": "label",
+    "parentClassName": "\"schedule-field\"",
+    "fullChars": 442
+  },
+  {
+    "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+    "line": 170,
+    "component": "ScheduleSettingsPage",
+    "openingTag": "<select\n                          className=\"schedule-input\"\n                          value={selfOwner.shareMode}\n                          onChange={(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}\n                        >",
+    "children": "<option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option><option value=\"view\">{t(\"schedule.settingsShareView\")}</option><option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>",
+    "className": "\"schedule-input\"",
+    "value": "{selfOwner.shareMode}",
+    "onChange": "{(event) => updateOwner(selfOwner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"schedule-settings__calendar-actions\"",
+    "fullChars": 588
+  },
+  {
+    "file": "frontend/src/pages/schedule/ScheduleSettingsPage.tsx",
+    "line": 225,
+    "component": "ScheduleSettingsPage",
+    "openingTag": "<select\n                            className=\"schedule-input\"\n                            value={owner.shareMode}\n                            onChange={(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}\n                          >",
+    "children": "<option value=\"self\">{t(\"schedule.settingsShareSelf\")}</option><option value=\"view\">{t(\"schedule.settingsShareView\")}</option><option value=\"edit\">{t(\"schedule.settingsShareEdit\")}</option>",
+    "className": "\"schedule-input\"",
+    "value": "{owner.shareMode}",
+    "onChange": "{(event) => updateOwner(owner.staffId, { shareMode: event.target.value as CalendarOwner[\"shareMode\"] })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option",
+      "option"
+    ],
+    "childCount": 3,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 3,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"schedule-settings__calendar-actions\"",
+    "fullChars": 596
+  },
+  {
+    "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+    "line": 260,
+    "component": "StatusMasterPage",
+    "openingTag": "<select\n          className=\"field field-h-md\"\n          value={form.match_type}\n          onChange={e => setForm({ ...form, match_type: e.target.value })}\n          required\n        >",
+    "children": "{MATCH_TYPE_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.match_type}",
+    "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{MATCH_TYPE_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 334
+  },
+  {
+    "file": "frontend/src/pages/status-master/StatusMasterPage.tsx",
+    "line": 274,
+    "component": "StatusMasterPage",
+    "openingTag": "<select\n          className=\"field field-h-md\"\n          value={form.effect}\n          onChange={e => setForm({ ...form, effect: e.target.value })}\n          required\n        >",
+    "children": "{EFFECT_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.effect}",
+    "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{EFFECT_OPTIONS.map(opt => (\n            <option key={opt.value} value={opt.value}>{opt.label}</option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 322
+  },
+  {
+    "file": "frontend/src/pages/super-admin/DexTab.tsx",
+    "line": 194,
+    "component": "DexTab",
+    "openingTag": "<select value={kind} onChange={(e) => setKind(e.target.value as DexKind)}>",
+    "children": "<option value=\"pokemon\">{t(\"superAdmin.dex.kinds.pokemon\")}</option><option value=\"trainer\">{t(\"superAdmin.dex.kinds.trainer\")}</option>",
+    "className": null,
+    "value": "{kind}",
+    "onChange": "{(e) => setKind(e.target.value as DexKind)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "option"
+    ],
+    "childCount": 2,
+    "childPattern": "static-option",
+    "nonOptionChildren": [],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": true,
+    "htmlForRef": false,
+    "parentTag": "label",
+    "parentClassName": null,
+    "fullChars": 256
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 447,
+    "component": "KnowledgeAliasesTab",
+    "openingTag": "<select required value={ruleForm.category} onChange={(e) => setRuleForm({ ...ruleForm, category: e.target.value })}>",
+    "children": "{RULE_CATEGORIES.map((cat) => (\n                      <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>\n                    ))}",
+    "className": null,
+    "value": "{ruleForm.category}",
+    "onChange": "{(e) => setRuleForm({ ...ruleForm, category: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{RULE_CATEGORIES.map((cat) => (\n                      <option key={cat} value={cat}>{t(`superAdmin.knowledge.categories.${cat}`, { defaultValue: cat })}</option>\n                    ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 350
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 455,
+    "component": "KnowledgeAliasesTab",
+    "openingTag": "<select value={ruleForm.pattern_type} onChange={(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}>",
+    "children": "{PATTERN_TYPES.map((pt) => (\n                      <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>\n                    ))}",
+    "className": null,
+    "value": "{ruleForm.pattern_type}",
+    "onChange": "{(e) => setRuleForm({ ...ruleForm, pattern_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{PATTERN_TYPES.map((pt) => (\n                      <option key={pt} value={pt}>{t(`superAdmin.knowledge.patternTypes.${pt}`)}</option>\n                    ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 322
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 472,
+    "component": "KnowledgeAliasesTab",
+    "openingTag": "<select value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>",
+    "children": "{LANGS.map((l) => (\n                      <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>\n                    ))}",
+    "className": null,
+    "value": "{ruleForm.language}",
+    "onChange": "{(e) => setRuleForm({ ...ruleForm, language: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{LANGS.map((l) => (\n                      <option key={l} value={l}>{t(`superAdmin.knowledge.langs.${l}`, { defaultValue: l })}</option>\n                    ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 316
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 501,
+    "component": "KnowledgeAliasesTab",
+    "openingTag": "<select\n                    required\n                    value={aliasForm.supplier_id || \"\"}\n                    data-testid=\"alias-supplier-select\"\n                    onChange={(e) => setAliasForm({ ...aliasForm, supplier_id: Number(e.target.value) })}\n                  >",
+    "children": "<option value=\"\">—</option>{suppliers.map((s) => (\n                      <option key={s.id} value={s.id}>{s.name}</option>\n                    ))}",
+    "className": null,
+    "value": "{aliasForm.supplier_id || \"\"}",
+    "onChange": "{(e) => setAliasForm({ ...aliasForm, supplier_id: Number(e.target.value) })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": true,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{suppliers.map((s) => (\n                      <option key={s.id} value={s.id}>{s.name}</option>\n                    ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 490
+  },
+  {
+    "file": "frontend/src/pages/super-admin/KnowledgeAliasesTab.tsx",
+    "line": 523,
+    "component": "KnowledgeAliasesTab",
+    "openingTag": "<select\n                    value={aliasForm.product_id ?? \"\"}\n                    data-testid=\"alias-product-select\"\n                    onChange={(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}\n                  >",
+    "children": "<option value=\"\">—</option>{products.map((p) => (\n                      <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : \"\"}</option>\n                    ))}",
+    "className": null,
+    "value": "{aliasForm.product_id ?? \"\"}",
+    "onChange": "{(e) => setAliasForm({ ...aliasForm, product_id: e.target.value ? Number(e.target.value) : null })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": true,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{products.map((p) => (\n                      <option key={p.id} value={p.id}>{p.name}{p.name_en ? ` (${p.name_en})` : \"\"}</option>\n                    ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 2,
+    "labelsRaw": [
+      "—"
+    ],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 517
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 575,
+    "component": "ParseReviewPage",
+    "openingTag": "<select\n                              data-testid={`review-row-${idx}-condition`}\n                              value={row.condition}\n                              disabled={row.skipped || isFinal}\n                              onChange={(e) =>\n                                updateDraft(idx, { condition: e.target.value })\n                              }\n                              style={{ width: \"6rem\" }}\n                            >",
+    "children": "<option value=\"\">\n                                {t(\"superAdmin.inbound.review.condition.unspecified\")}\n                              </option>{CONDITION_OPTIONS.map((c) => (\n                                <option key={c} value={c}>\n                                  {t(`superAdmin.inbound.review.conditionAxisOptions.${c}`)}\n                                </option>\n                              ))}",
+    "className": null,
+    "value": "{row.condition}",
+    "onChange": "{(e) =>\n                                updateDraft(idx, { condition: e.target.value })\n                              }",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{CONDITION_OPTIONS.map((c) => (\n                                <option key={c} value={c}>\n                                  {t(`superAdmin.inbound.review.conditionAxisOptions.${c}`)}\n                                </option>\n                              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 945
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 596,
+    "component": "ParseReviewPage",
+    "openingTag": "<select\n                              data-testid={`review-row-${idx}-unit`}\n                              value={row.unit}\n                              disabled={row.skipped || isFinal}\n                              onChange={(e) =>\n                                updateDraft(idx, { unit: e.target.value })\n                              }\n                              style={{ width: \"5.5rem\" }}\n                            >",
+    "children": "<option value=\"\">\n                                {t(\"superAdmin.inbound.review.condition.unspecified\")}\n                              </option>{UNIT_OPTIONS.map((u) => (\n                                <option key={u} value={u}>\n                                  {u}\n                                </option>\n                              ))}",
+    "className": null,
+    "value": "{row.unit}",
+    "onChange": "{(e) =>\n                                updateDraft(idx, { unit: e.target.value })\n                              }",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{UNIT_OPTIONS.map((u) => (\n                                <option key={u} value={u}>\n                                  {u}\n                                </option>\n                              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 872
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 617,
+    "component": "ParseReviewPage",
+    "openingTag": "<select\n                              data-testid={`review-row-${idx}-offer-type`}\n                              value={row.offer_type}\n                              disabled={row.skipped || isFinal}\n                              onChange={(e) =>\n                                updateDraft(idx, { offer_type: e.target.value })\n                              }\n                              style={{ width: \"6rem\" }}\n                            >",
+    "children": "<option value=\"\">\n                                {t(\"superAdmin.inbound.review.condition.unspecified\")}\n                              </option>{OFFER_TYPE_OPTIONS.map((o) => (\n                                <option key={o} value={o}>\n                                  {t(`inventory.offerType.${o}`)}\n                                </option>\n                              ))}",
+    "className": null,
+    "value": "{row.offer_type}",
+    "onChange": "{(e) =>\n                                updateDraft(idx, { offer_type: e.target.value })\n                              }",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{OFFER_TYPE_OPTIONS.map((o) => (\n                                <option key={o} value={o}>\n                                  {t(`inventory.offerType.${o}`)}\n                                </option>\n                              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 922
+  },
+  {
+    "file": "frontend/src/pages/super-admin/ParseReviewPage.tsx",
+    "line": 638,
+    "component": "ParseReviewPage",
+    "openingTag": "<select\n                              data-testid={`review-row-${idx}-ship-timing`}\n                              value={row.ship_timing}\n                              disabled={row.skipped || isFinal}\n                              onChange={(e) =>\n                                updateDraft(idx, { ship_timing: e.target.value })\n                              }\n                              style={{ width: \"6rem\" }}\n                            >",
+    "children": "<option value=\"\">\n                                {t(\"superAdmin.inbound.review.condition.unspecified\")}\n                              </option>{SHIP_TIMING_OPTIONS.map((s) => (\n                                <option key={s} value={s}>\n                                  {t(`inventory.shipTiming.${s}`)}\n                                </option>\n                              ))}",
+    "className": null,
+    "value": "{row.ship_timing}",
+    "onChange": "{(e) =>\n                                updateDraft(idx, { ship_timing: e.target.value })\n                              }",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{SHIP_TIMING_OPTIONS.map((s) => (\n                                <option key={s} value={s}>\n                                  {t(`inventory.shipTiming.${s}`)}\n                                </option>\n                              ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 2,
+    "labelsExpr": 0,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "td",
+    "parentClassName": null,
+    "fullChars": 927
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "line": 190,
+    "component": "TcgSeriesTab",
+    "openingTag": "<select value={filter} onChange={(e) => setFilter(e.target.value)}>",
+    "children": "{types.map((tp) => (\n              <option key={tp.code} value={tp.code}>\n                {tp.name_ja}\n              </option>\n            ))}",
+    "className": null,
+    "value": "{filter}",
+    "onChange": "{(e) => setFilter(e.target.value)}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{types.map((tp) => (\n              <option key={tp.code} value={tp.code}>\n                {tp.name_ja}\n              </option>\n            ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": true,
+    "htmlForRef": false,
+    "parentTag": "label",
+    "parentClassName": null,
+    "fullChars": 242
+  },
+  {
+    "file": "frontend/src/pages/super-admin/TcgSeriesTab.tsx",
+    "line": 300,
+    "component": "TcgSeriesTab",
+    "openingTag": "<select\n          value={form.tcg_type}\n          onChange={(e) => setForm({ ...form, tcg_type: e.target.value })}\n        >",
+    "children": "{types.map((tp) => (\n            <option key={tp.code} value={tp.code}>\n              {tp.name_ja}\n            </option>\n          ))}",
+    "className": null,
+    "value": "{form.tcg_type}",
+    "onChange": "{(e) => setForm({ ...form, tcg_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{types.map((tp) => (\n            <option key={tp.code} value={tp.code}>\n              {tp.name_ja}\n            </option>\n          ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "form",
+    "parentClassName": null,
+    "fullChars": 287
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+    "line": 322,
+    "component": "ConditionsMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.condition_def_id}\n                onChange={e => setForm({ ...form, condition_def_id: e.target.value })}\n              >",
+    "children": "<option value=\"\">{t(`${f}.unset`)}</option>{conditionDefs.map(d => (\n                  <option key={d.id} value={String(d.id)}>{d.name}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.condition_def_id}",
+    "onChange": "{e => setForm({ ...form, condition_def_id: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{conditionDefs.map(d => (\n                  <option key={d.id} value={String(d.id)}>{d.name}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 423
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+    "line": 338,
+    "component": "ConditionsMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.unit_id}\n                onChange={e => setForm({ ...form, unit_id: e.target.value })}\n              >",
+    "children": "<option value=\"\">{t(`${f}.noUnit`)}</option>{units.map(u => (\n                  <option key={u.id} value={String(u.id)}>{u.canonical}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.unit_id}",
+    "onChange": "{e => setForm({ ...form, unit_id: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "option",
+      "map"
+    ],
+    "childCount": 2,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{units.map(u => (\n                  <option key={u.id} value={String(u.id)}>{u.canonical}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 1,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 403
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+    "line": 393,
+    "component": "ConditionsMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.match_type}\n                onChange={e => setForm({ ...form, match_type: e.target.value })}\n                required\n              >",
+    "children": "{MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.match_type}",
+    "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 388
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/ConditionsMasterPanel.tsx",
+    "line": 409,
+    "component": "ConditionsMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.effect}\n                onChange={e => setForm({ ...form, effect: e.target.value })}\n                required\n              >",
+    "children": "{EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.effect}",
+    "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 376
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+    "line": 311,
+    "component": "StatusMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.match_type}\n                onChange={e => setForm({ ...form, match_type: e.target.value })}\n                required\n              >",
+    "children": "{MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.match_type}",
+    "onChange": "{e => setForm({ ...form, match_type: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{MATCH_TYPE_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 388
+  },
+  {
+    "file": "frontend/src/pages/super-admin/components/StatusMasterPanel.tsx",
+    "line": 325,
+    "component": "StatusMasterPanel",
+    "openingTag": "<select\n                className=\"field field-h-md\"\n                value={form.effect}\n                onChange={e => setForm({ ...form, effect: e.target.value })}\n                required\n              >",
+    "children": "{EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}",
+    "className": "\"field field-h-md\"",
+    "value": "{form.effect}",
+    "onChange": "{e => setForm({ ...form, effect: e.target.value })}",
+    "onChangeResolved": null,
+    "readsPattern": [
+      "target.value"
+    ],
+    "numericConverted": false,
+    "childKinds": [
+      "map"
+    ],
+    "childCount": 1,
+    "childPattern": "map",
+    "nonOptionChildren": [
+      {
+        "kind": "map",
+        "text": "{EFFECT_OPTIONS.map(opt => (\n                  <option key={opt.value} value={opt.value}>{opt.label}</option>\n                ))}"
+      }
+    ],
+    "hasDisabledOption": false,
+    "labelsT": 0,
+    "labelsExpr": 1,
+    "labelsRaw": [],
+    "id": null,
+    "wrappedByLabel": false,
+    "htmlForRef": false,
+    "parentTag": "div",
+    "parentClassName": "\"form-group\"",
+    "fullChars": 376
+  }
+]
