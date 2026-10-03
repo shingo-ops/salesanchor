@@ -12,8 +12,17 @@ POST   /api/v1/super-admin/fx-rate/refresh — 手動即時更新（require_supe
   - public.app_fx_rates への読み書きは廃止（過去レートが UPSERT で上書きされ失われるため）。
     テーブル自体は当面残置（DROPはPO本人のGO必須、ADR-148追記）。
   - 読み取りは全ログイン済みユーザーが可（為替は秘匿でない）。
-  - 書き込み（手動更新）は require_super_admin のみ。operator コンテキストの明示セットは
-    従来から行っていない（PR-B は書き込み先テーブルの切替のみで、この挙動は変更しない）。
+  - 書き込み（手動更新）は require_super_admin のみ。2026-10-03 追記: `app_fx_rate_history`
+    は FORCE ROW LEVEL SECURITY で書き込みポリシーが `app.is_operator='true'` を要求する
+    （migrations/20261003_100000_create_app_fx_rate_history.sql）。`refresh_fx_rate` は
+    従来 operator コンテキストを明示セットしていなかった（PR-B 当初はこの欠落を変更しない
+    方針だったが、後続判断で修正）。`backend/app/auth/dependencies.py:420-451` が定義する
+    `set_operator_context`/`reset_operator_context` の使用例（同ファイルの docstring、および
+    `docs/handoff/products-rls-stage1/design.md:41`「set_operator_context → try → 既存処理
+    → finally: reset_operator_context」）と同じ形で呼ぶ。この2関数の現存する実際の呼び出し元
+    は本PR時点で `backend/tests/test_rls_translation_glossary.py` のコメントのみで、過去に
+    呼んでいた `super_admin_inbound.py`/`parse_review.py` はコミット d010d6700 で機能自体が
+    削除済み（git grep で確認）。
   - invoices.py の fetch_fx_rate（ライブ取得）は別系統のまま。このルーターは触らない。
   - 2026-10-01: 読み取りパスを /fx-rate/{currency} から /fx-rates/{currency} に変更。
     invoices.py の fetch_fx_rate が同一パス /fx-rate/{currency} を先に登録しており、
@@ -28,7 +37,12 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, require_super_admin
+from app.auth.dependencies import (
+    get_current_user,
+    require_super_admin,
+    reset_operator_context,
+    set_operator_context,
+)
 from app.database import get_db
 from app.models import User
 
@@ -98,6 +112,13 @@ async def refresh_fx_rate(
 
     外部 API 障害時は 503 を返す。(currency, fetched_at) が既存行と重複する場合は
     ON CONFLICT DO NOTHING（追記専用・上書きしない）。
+
+    2026-10-03 追記: app_fx_rate_history の書き込みポリシーは app.is_operator='true'
+    を要求する（FORCE RLS）。backend/app/auth/dependencies.py:420-451 の
+    set_operator_context/reset_operator_context を、同ファイルの docstring が示す
+    使用例（set → try → 書き込み + commit → finally: reset）と同じ形で呼ぶ。
+    接続ロールが RLS を自動バイパスする場合でもこのヘルパーは無害（no-op ではなく
+    SET 文を発行するだけ）なので、バイパスの有無に関わらず安全に呼べる。
     """
     from app.services.fx_rate import get_fx_rate as _get_fx_rate
 
@@ -111,17 +132,21 @@ async def refresh_fx_rate(
     rate_jpy = snapshot["rate"]
     fetched_at = snapshot["fetched_at"]
 
-    await db.execute(
-        text(
-            """
-            INSERT INTO public.app_fx_rate_history (currency, rate_jpy, fetched_at)
-            VALUES ('USD', :rate, :fetched)
-            ON CONFLICT (currency, fetched_at) DO NOTHING
-            """
-        ),
-        {"rate": str(rate_jpy), "fetched": fetched_at},
-    )
-    await db.commit()
+    await set_operator_context(db)
+    try:
+        await db.execute(
+            text(
+                """
+                INSERT INTO public.app_fx_rate_history (currency, rate_jpy, fetched_at)
+                VALUES ('USD', :rate, :fetched)
+                ON CONFLICT (currency, fetched_at) DO NOTHING
+                """
+            ),
+            {"rate": str(rate_jpy), "fetched": fetched_at},
+        )
+        await db.commit()
+    finally:
+        await reset_operator_context(db)
 
     logger.info(
         "[fx_rate_admin] 手動更新完了: USD/JPY = %.4f (fetched_at=%s)",

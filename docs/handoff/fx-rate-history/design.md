@@ -151,7 +151,7 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 ### 9-1. 書き込み（§8 の方針どおり実装）
 
 - `backend/app/tasks/fx_rate_updater.py`: `public.app_fx_rates` への UPSERT を削除し、`public.app_fx_rate_history` への `INSERT ... ON CONFLICT (currency, fetched_at) DO NOTHING` に置換（operator コンテキストの `SET app.is_operator = 'true'` は既存のまま維持）。
-- `backend/app/routers/fx_rate_admin.py` `refresh_fx_rate`: 同様に `app_fx_rate_history` への追記に置換。**事実**: 本関数は従来から `set_operator_context()` 等の明示的な operator コンテキスト設定を呼んでいない（grep で確認、require_super_admin dependency もセットしない）。カードの指示「各書き込み元の operator コンテキスト処理は今日のままにする」に従い、本PRではこの欠落を変更していない（既存動作の維持。operator コンテキストの是非は別途の課題）。
+- `backend/app/routers/fx_rate_admin.py` `refresh_fx_rate`: 同様に `app_fx_rate_history` への追記に置換。**事実（2026-10-03 設計判断で修正済み）**: 本関数は従来から `set_operator_context()` 等の明示的な operator コンテキスト設定を呼んでいなかった（grep で確認、require_super_admin dependency もセットしない）。`app_fx_rate_history` は FORCE RLS で書き込みポリシーが `app.is_operator='true'` を要求するため（migrations/20261003_100000_create_app_fx_rate_history.sql）、`backend/app/auth/dependencies.py:420-451` の `set_operator_context`/`reset_operator_context` を `set → try → INSERT + commit → finally: reset` の形（同ファイル docstring・`docs/handoff/products-rls-stage1/design.md:41` と同じ形）で呼ぶように修正した。接続ロールが RLS を自動バイパスする場合でもこのヘルパーは無害なため、バイパスの有無に関わらず安全。**未確認**: 本番ログでは保持期間内に手動更新（`refresh_fx_rate`）の呼び出し実績が見当たらず、修正前の状態で実際に書き込みが失敗していたか（RLSで拒否されていたか）は確認できていない。
 
 ### 9-2. 読み取り
 
