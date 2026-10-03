@@ -53,6 +53,17 @@ CREATE POLICY app_fx_rate_history_write
     WITH CHECK (current_setting('app.is_operator', true) = 'true');
 
 -- === 3. シード: 既存 app_fx_rates の現在値を履歴に取り込む（冪等） ===
+-- FORCE ROW LEVEL SECURITY が有効なため、この INSERT は app_fx_rate_history_write
+-- ポリシー（app.is_operator='true' 必須）の対象になる。本番でマイグレーション実行
+-- ロールが RLS を自動バイパスするか（BYPASSRLS 権限・テーブル所有者等）は未確認のため、
+-- それに依存せず SELECT set_config で明示的に operator コンテキストを与える。
+-- scripts/run_all_migrations.sh の run_sql() は `docker exec -i ... psql < file` で
+-- ファイル単位に新規 psql 接続（セッション）を起動するため、ここで設定する
+-- app.is_operator はこのファイル専用の1セッションに限定され、他マイグレーション・
+-- 他セッションには影響しない（false = セッションスコープ、トランザクション終了で
+-- 消えるトランザクションローカルではなく、このpsqlセッション全体で有効）。
+SELECT set_config('app.is_operator', 'true', false);
+
 INSERT INTO public.app_fx_rate_history (currency, rate_jpy, fetched_at)
 SELECT currency, rate_jpy, fetched_at
 FROM public.app_fx_rates

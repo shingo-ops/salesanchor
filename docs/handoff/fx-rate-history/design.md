@@ -83,6 +83,8 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
 本カードの許可範囲に `scripts/permit-danger.sh` の実行は含まれておらず、フックに止められた場合は「言い換えて回避しない・止まって報告する」運用のため、ローカルでの実行検証はここで停止した。SQL自体は `app_fx_rates`（`migrations/20260628_170000_add_app_fx_rates.sql`）の既存パターンを1行単位で忠実に複製しており、構文上の新規リスクは低いと判断するが、**未確認**の部分（ローカルでの実際のCREATE/INSERT成功・2回目実行での冪等性）は、本PR作成後に `.github/workflows/migration-test.yml`（recon.md §5、既存行と新規行の両方を実DBに2回適用して冪等性を検証する設計）で検証される。
 
+本番のマイグレーション実行ロールが RLS を自動バイパスするか（`BYPASSRLS` 権限・テーブル所有者特権等）は未確認のため、§3-3のシードINSERTはそれに依存せず、INSERT直前に `SELECT set_config('app.is_operator', 'true', false);` を発行して明示的に operator コンテキストを与える（`migrations/20261003_100000_create_app_fx_rate_history.sql`）。`scripts/run_all_migrations.sh:61-65` の `run_sql()` は `docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"` でファイル1本につき新規 `psql` 接続（セッション）を1つ起動するため、この設定は当該ファイルの1セッションに限定され他マイグレーションへ漏れない。既存マイグレーションで同パターンを使った例はなく（migrations/ 配下に `set_config('app.is_operator'` の前例なし）、`backend/tests/rls_bootstrap.py:278` 等のテストコードでのみ同種の設定（空文字へのリセット）が使われている。
+
 | 基準 | 検証方法 |
 |------|---------|
 | 1) SQL構文が正しい | `.github/workflows/migration-test.yml` の `migration-test-run` job が実PostgreSQLに本マイグレーションを適用（CI、PR作成後） |
