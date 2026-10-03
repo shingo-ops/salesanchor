@@ -81,7 +81,7 @@ PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true
 ## 5. リスクと戻し方
 
 ### リスク
-- 「scripts/migrate_*.py」 のglobパターンはサブディレクトリを含まない（「scripts/migrate_*.py」 は `scripts/` 直下のみ一致）。recon.md §3 の実測で 「run_all_migrations.sh」 が参照する全 `run_py` 対象（28件）が `scripts/` 直下に平坦に配置されていることを確認済みのため、現状は問題ないが、将来 `scripts/migrations/` 等のサブディレクトリにマイグレーションスクリプトが追加された場合はこのパターンから漏れる。
+- 「scripts/migrate_*.py」 のglobパターンはサブディレクトリを含まない（「scripts/migrate_*.py」 は `scripts/` 直下のみ一致）。recon.md §3 の実測で 「run_all_migrations.sh」 が参照する全 `run_py` 対象（26件）が `scripts/` 直下に平坦に配置されていることを確認済みのため、現状は問題ないが、将来 `scripts/migrations/` 等のサブディレクトリにマイグレーションスクリプトが追加された場合はこのパターンから漏れる。
   - 緩和: 新規マイグレーション追加は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoT）ため、`scripts/run_all_migrations.sh` 自体の変更で `db_migrations` は `true` になる。純粋な新規追加では漏れない。リスクが残るのは「既存の 「.py」 を将来サブディレクトリに移動し、同時に内容も変更する」複合変更のみ。
 - 判定ロジックのバグにより `db_migrations` が実際はtrueであるべきなのにfalseになった場合、backupなしでmigrationsが適用されるリスクがある。
   - 緩和: 「Run database migrations」ステップ自体の実行条件（`migrations` output）は本PRで変更しない。`migrations` フィルタは `backend/**`・`scripts/**` 全体を含む広い判定を維持しており（ADR-082の「判定不能時は安全側=実行」設計）、migrations実行自体がskipされるリスクは本PRで増加しない。backupの判定が厳格化されるだけで、migrations実行自体の安全側設計は変わらない。
@@ -101,5 +101,5 @@ PR #3953 は Pre-deploy DB backup を `steps.changes.outputs.migrations == 'true
 
 ## 7. ロールアウト
 
-- 本PRはCI（actionlint, yaml load）確認済みの上でDraftとして起票。
-- マージにはPO本人の「GO #<PR番号>」が必要（CLAUDE.md ADR-136手順）。GO未受領の間はDraft維持。
+- 本PRはCI（actionlint, yaml load）確認済みの上で起票。
+- マージには GO が必要。deploy.yml の変更は ADR-1003 の例外（docs/handoff/go-record-transcription/opus-delegation.md「例外」）に当たらないため、必須CI通過と Reviewer APPROVE を確認したうえで、委任 GO（POの委任に基づくClaude Opus発行）で進める（PO 2026-10-03「PRマージ、デプロイまで完走させてくれ」）。

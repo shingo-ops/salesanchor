@@ -73,7 +73,7 @@ Pre-deploy DB backup ステップ（`.github/workflows/deploy.yml:162-163`）:
 - `run_py "$script"` → `docker exec ... python "${script}"`（「scripts/migrate_*.py」 を実行）
 - `run_sql "$file"` → `docker exec -i ... psql ... < "${file}"`（「migrations/*.sql」 を実行）
 
-実測（`grep -nE '^run_(sql|py)[[:space:]]' scripts/run_all_migrations.sh`、316件）: `run_sql` の対象は全て 「migrations/*.sql」（直下、サブディレクトリなし）。`run_py` の対象は全て 「scripts/migrate_*.py」（直下、サブディレクトリなし、例: `scripts/migrate_meta.py`, `scripts/migrate_adr109_status_codes.py` 等28件）。
+実測（`grep -nE '^run_(sql|py)[[:space:]]' scripts/run_all_migrations.sh`、316件）: `run_sql` の対象は全て 「migrations/*.sql」（直下、サブディレクトリなし）。`run_py` の対象は全て 「scripts/migrate_*.py」（直下、サブディレクトリなし、例: `scripts/migrate_meta.py`, `scripts/migrate_adr109_status_codes.py` 等26件）。
 
 → **確認**: マイグレーションは 「migrations/*.sql」（`run_sql`）と 「scripts/migrate_*.py」（`run_py`）に登録されたものだけが適用される。両者とも `scripts/run_all_migrations.sh` 内に明示的に列挙されており、新規マイグレーション追加時は必ず `scripts/run_all_migrations.sh` への追記を伴う（SSoTコメントの通り）。
 
