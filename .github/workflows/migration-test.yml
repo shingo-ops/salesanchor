@@ -871,6 +871,18 @@ jobs:
               CONSTRAINT llm_usage_events_sdk_check
                   CHECK (sdk IN ('google-genai', 'google-generativeai'))
           );
+
+          -- public.app_fx_rates: ADR-148（migrations/20260628_170000_add_app_fx_rates.sql）で
+          --   本番作成済み。このジョブの「変更 SQL のみ」実行方式では 20260628_170000 が
+          --   再実行されないため、migrations/20261003_100000_create_app_fx_rate_history.sql の
+          --   シード INSERT（SELECT ... FROM public.app_fx_rates）の読み取り元としてここに
+          --   事前登録する（RLS/トリガーはこのベーススキーマでは不要、列定義のみで十分）。
+          CREATE TABLE IF NOT EXISTS public.app_fx_rates (
+              currency   VARCHAR(3)    PRIMARY KEY,
+              rate_jpy   NUMERIC(12,4) NOT NULL,
+              fetched_at TIMESTAMPTZ   NOT NULL,
+              updated_at TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+          );
           PUBLIC_SQL
 
       # ── Step 2: Sprint 1 を適用（Sprint 2 の前提条件）──────────────────────────
