@@ -46,7 +46,7 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 4. `migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql` — 無効化（同上。この UPDATE は列存在ガード無しで `p.unit`/`p.condition` に直接アクセスしていたため、ADD を削除した後に残すと「column does not exist」で確実に失敗する）
 5. `migrations/20260602_170000_add_products_master_label_columns.sql` — `category_classification` を ADD リストから削除
 
-**触らない**: `20260623_020000_drop_products_category_classification.sql`（既存ガード済み・DROP 側）、`20260629_010000_backfill_inventory_unit_from_products.sql`（列存在ガード済みで安全）、`20260629_020000_drop_products_condition_unit.sql`（DROP 側）。
+**触らない**: `migrations/20260623_020000_drop_products_category_classification.sql`（既存ガード済み・DROP 側）、`migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（列存在ガード済みで安全）、`migrations/20260629_020000_drop_products_condition_unit.sql`（DROP 側）。
 
 **残る制約（本 PR の範囲外）**: 本番 `public.products` の max attnum は既に 1600 に達している。このテーブルは**新しい列を今後一切追加できない**（この churn を止めても、過去に消費された 1541 件の dropped attnum は戻らない）。新規列が必要になった場合はテーブルの物理再構築（`CREATE TABLE ... AS SELECT` + リネーム、または `pg_repack`/`VACUUM FULL` 相当の全面的なリライト）が必要で、これは本番データに対する不可逆的な重い操作であり、PO（しんごさん）自身の判断・GO が必須。本 PR はこの再構築を一切含まない。
 
@@ -75,7 +75,7 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 
 ### 修正後・CI フレッシュ DB
 
-フレッシュ DB で `run_all_migrations.sh` を通しで実行する場合（本番と異なり condition/unit/category_classification は最初から存在しない）:
+フレッシュ DB で `scripts/run_all_migrations.sh` を通しで実行する場合（本番と異なり condition/unit/category_classification は最初から存在しない）:
 
 - line191: `category_classification` 存在しない → DROP IF EXISTS no-op
 - line216/219/220: condition/unit の ADD が無い（この PR で削除・no-op化） → 何も起きない
@@ -93,7 +93,7 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 `.github/workflows/migration-test.yml` には2つの関連ジョブがある:
 
 1. **`migration-test-run`**（既存データ付きスキーマ + Sprint1 python script → PR で変更された SQL/python を検出して1回目・2回目実行）。本 PR の5ファイルは全て変更対象なので `steps.detect.outputs.changed_sql`（`.github/workflows/migration-test.yml:937` の正規表現 `^migrations/[0-9][0-9][0-9].*\.sql$`）に一致し、このジョブの対象になる。ただしこのジョブは**変更された5ファイルのみ**を実行するため、`20260629_020000`（condition/unit の DROP、無変更）や `20260623_020000`（category_classification の DROP、無変更）との組み合わせ検証は行われない。
-2. **`migration-full-dryrun`**（`run_all_migrations.sh` の全 `run_sql` 行を記載順に1周目・2周目実行、組み合わせ問題を検知する目的のジョブ）。ただしこのジョブの対象ファイル正規表現は `^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062`（`.github/workflows/migration-test.yml:1660,1665,1695,1699`）であり、コメント（`:1651`）に明記の通り「初期タイムスタンプ（20260601-20260603）は Python migration 依存のため引き続き除外」。実際に確認:
+2. **`migration-full-dryrun`**（`scripts/run_all_migrations.sh` の全 `run_sql` 行を記載順に1周目・2周目実行、組み合わせ問題を検知する目的のジョブ）。ただしこのジョブの対象ファイル正規表現は `^migrations/0|^migrations/2026060[4-9]|^migrations/2026061|^migrations/2026062`（`.github/workflows/migration-test.yml:1660,1665,1695,1699`）であり、コメント（`:1651`）に明記の通り「初期タイムスタンプ（20260601-20260603）は Python migration 依存のため引き続き除外」。実際に確認:
    ```
    migrations/20260602_000000_add_products_central_columns.sql -> EXCLUDED
    migrations/20260602_010000_repoint_downstream_fk_to_public_products.sql -> EXCLUDED
@@ -136,6 +136,6 @@ PostgreSQL 16 公式ドキュメントを fetch して確認済み（未確認�
 
 ## 維持の仕組み
 
-守り手（提案のみ・未実装）:
-- `bash -n scripts/run_all_migrations.sh` は構文のみで churn を検知しない。CI の `migration-full-dryrun` ジョブの対象ファイル正規表現（`.github/workflows/migration-test.yml:1659` 他）に `2026060[1-3]` も含めるよう拡張すれば、今回のような「ADD→DROP の繰り返しで attnum が尽きる」パターンを将来も機械的に検知できる可能性がある。ただし、このジョブが元々 20260601-20260603 を除外している理由（Python migration 依存）を壊さずに対応できるかは別途検証が必要なため、ここでは提案のみに留め、実装はしない。
+守り手: 以下はアイデア提案のみで未実装（本PRのスコープ外）
+- `bash -n scripts/run_all_migrations.sh` は構文のみで churn を検知しない。CI の `migration-full-dryrun` ジョブの対象ファイル正規表現（`.github/workflows/migration-test.yml:1660` 他）に `2026060[1-3]` も含めるよう拡張すれば、今回のような「ADD→DROP の繰り返しで attnum が尽きる」パターンを将来も機械的に検知できる可能性がある。ただし、このジョブが元々 20260601-20260603 を除外している理由（Python migration 依存）を壊さずに対応できるかは別途検証が必要なため、ここでは提案のみに留め、実装はしない。
 - 本番 `public.products` の dropped attribute 数を定期監視するクエリ（`SELECT COUNT(*) FROM pg_attribute WHERE attrelid='public.products'::regclass AND attisdropped`）を監視ダッシュボードに追加するアイデも将来検討に値する（未実装・提案のみ）。

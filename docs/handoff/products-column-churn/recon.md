@@ -19,9 +19,9 @@
   - `scripts/run_all_migrations.sh:482` → `migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（`:9-21` で `information_schema.columns` による列存在ガード付きで `public.products.unit` → `public.inventory.unit` へコピー）
   - `scripts/run_all_migrations.sh:491` → `migrations/20260629_020000_drop_products_condition_unit.sql`（`:5-6` で `condition`/`unit` を永久 DROP）
 - 本番 `public.products`: **1541** dropped attributes、live 列 **59**、max attnum **1600**（デプロイ失敗時点で live `condition`=1599、`unit`=1600 — 失敗した run が再 ADD した分）。
-- デプロイ run **37130920016** は `scripts/run_all_migrations.sh:230`（`add_products_master_label_columns.sql`、`category_classification` の再 ADD）で `"tables can have at most 1600 columns"` エラーにより失敗。
+- デプロイ run **37130920016** は `scripts/run_all_migrations.sh:230`（`migrations/20260602_170000_add_products_master_label_columns.sql`、`category_classification` の再 ADD）で `"tables can have at most 1600 columns"` エラーにより失敗。
 - 他テーブルでこの現象は無い（dropped attribute 数の次点は 3 件のみ）。
-- **しんごさん確認（2026-10-03、本番 read-only）**: `public.products` は **1347 行**。失敗した run は `scripts/run_all_migrations.sh:220`（`backfill_products_unit_condition_from_inbound.sql`）まで通過して実行済みだが、その後も `count(unit)=0`、`count(condition)=0`。つまり condition/unit の ADD→backfill→（inventory へコピー）→DROP の一連は、現時点の本番データに対しては**何も書き込んでいない**（書き込むべき対象データが無い）。この backfill の本来の一時目的（在庫表「-」表示の解消）は `20260629_010000`（本番 **UPDATE 62件** 確認済み、見出しコメント記載）で既に 2026-06-29 に達成済み。
+- **しんごさん確認（2026-10-03、本番 read-only）**: `public.products` は **1347 行**。失敗した run は `scripts/run_all_migrations.sh:220`（`migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql`）まで通過して実行済みだが、その後も `count(unit)=0`、`count(condition)=0`。つまり condition/unit の ADD→backfill→（inventory へコピー）→DROP の一連は、現時点の本番データに対しては**何も書き込んでいない**（書き込むべき対象データが無い）。この backfill の本来の一時目的（在庫表「-」表示の解消）は `migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（本番 **UPDATE 62件** 確認済み、見出しコメント記載）で既に 2026-06-29 に達成済み。
 
 ## 2. PostgreSQL の仕様根拠
 
