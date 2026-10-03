@@ -36,18 +36,24 @@ BEGIN;
 -- される列。この ALTER TABLE 自体は 20260909_000000 Step1 と同一内容で、冪等のため通常は
 -- IF NOT EXISTS で無害だが、tcg_uuid が既に完全撤去された後（Phase 2c 完了後）に再実行
 -- されると新しい attribute number を消費してしまう（同じ理由で 20260909_000000 にも
--- 同じガードを追加済み）。tcg_uuid が既存、または tenant_*.tcg_products がまだ残っている
--- （移行未完了）場合のみ ADD + index + 制約を実行する。
+-- 同じガードを追加済み）。
+--
+-- マーカー訂正（2026-10-04、設計担当 Opus の指摘）: 20260909_000000 と同じ理由で、
+-- 「tenant_*.tcg_products が残っていない」をマーカーにするのは誤り。設計担当 Opus が
+-- 本番を read-only で確認した事実（未確認ではなく確認済み）として、tenant_004.tcg_products
+-- は現在も存在する（詳細は migrations/20260909_000000_public_products_phase2b_columns.sql の
+-- コメント参照）。正しいマーカーは public.products.work_id が INTEGER かどうか
+-- （migrations/20260919_010000_master_ssot_work_id_recast.sql が永久に UUID→INTEGER 変換する）。
 -- 詳細: docs/handoff/products-column-churn-2/design.md
 DO $guard_tcg_uuid$
 BEGIN
     IF EXISTS (
         SELECT 1 FROM information_schema.columns
         WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
-    ) OR EXISTS (
-        SELECT 1 FROM pg_namespace n
-        JOIN pg_class c ON c.relnamespace = n.oid AND c.relkind = 'r'
-        WHERE n.nspname LIKE 'tenant_%' AND c.relname = 'tcg_products'
+    ) OR NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products'
+          AND column_name = 'work_id' AND data_type = 'integer'
     ) THEN
         ALTER TABLE public.products ADD COLUMN IF NOT EXISTS tcg_uuid UUID;
 
@@ -65,7 +71,7 @@ BEGIN
             ALTER TABLE public.products ADD CONSTRAINT uq_products_tcg_uuid UNIQUE (tcg_uuid);
         END IF;
     ELSE
-        RAISE NOTICE 'tcg_uuid: Phase 2c 完了済み（tcg_products 全廃・tcg_uuid 既に DROP 済み）— 再 ADD をスキップ';
+        RAISE NOTICE 'tcg_uuid: work_id が INTEGER に再キャスト済み（Phase 3 完了）— tcg_uuid 再 ADD をスキップ';
     END IF;
 END $guard_tcg_uuid$;
 

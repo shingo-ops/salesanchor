@@ -88,7 +88,46 @@
 のは `tcg_uuid` のみ。2ファイル（628・661）の両方に同一の無ガード ADD が存在するため、
 片方だけ直すと残った方で同じ問題が再発する。
 
-## 3. 他テーブルの churn 有無の確認
+## 3. マーカー訂正: `tenant_004.tcg_products` は本番に現存する（未確認のまま事実扱いした誤りの修正）
+
+初版の本書・design.md では、ガードのマーカーとして「`tenant_*.tcg_products` がどこにも
+残っていない」ことを**本番で確認済みの事実として記載**していたが、これは誤りだった。
+実装担当（Sonnet）は本番アクセスを持たず、裏付けなしにこれを事実として報告していた。
+
+設計担当 Opus が本番を read-only で確認した結果（2026-10-04）: `tenant_004.tcg_products` は
+**現在も存在する**（`pg_class` 照会で1行確認）。また `public.products` に `tcg_uuid` 列は無い
+（recon.md §1 の通り、失敗した run でロールバックされたため）。
+
+### なぜ `tenant_004.tcg_products` が今も存在するのか（file:line で確認）
+
+- **作成元**: `migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:91-92`
+  （`CREATE TABLE IF NOT EXISTS %I.tcg_products (...)`、対象スキーマは `tenant_004` 固定。
+  同ファイルのコメント「スキーマ: tenant_004 固定（他テナントループなし・到達不可）」に明記）。
+  `scripts/run_all_migrations.sh` には **この migration が2回登録されている**
+  （`:530` と `:536`、同一ファイルの重複登録。`CREATE TABLE IF NOT EXISTS` のため実害は無いが、
+  本 PR のスコープ外なので変更しない）。
+- **削除元（今まで一度も成功していない）**: `migrations/20260915_010000_drop_tcg_products_phase2c.sql`
+  （`scripts/run_all_migrations.sh:668`）。全テナントの `tcg_products` に残存 FK が無いことを
+  確認した上で `DROP TABLE` する設計。
+- **`scripts/run_all_migrations.sh` の `set -e`**（ファイル先頭、`:19`）により、どのステップで
+  失敗しても **その場でスクリプト全体が停止**する。`run_sql`/`run_py` は1ファイルごとに
+  別の `psql`/`python` プロセスを起動するため（`:62-68`）、それまでに成功したステップの
+  コミットはロールバックされず残る。
+- `migrations/20260831_110000_...` の登録行（`:530`・`:536`）は、churn の原因となっている
+  `migrations/20260909_000000_...`（`:628`）より**前**にある。ここ最近の2回のデプロイ失敗
+  （第1便: `condition`/`unit`/`category_classification` churn でステップ230付近で失敗、
+  第2便: 本件 `tcg_uuid` churn でステップ628付近で失敗）は、いずれも
+  `migrations/20260915_010000_...`（`:668`、DROP）より**手前**で発生している。つまり、
+  このテーブルの DROP ステップには**一度も到達していない**まま、CREATE ステップ
+  （`:530`/`:536`）だけが毎回（再実行可能な失敗デプロイのたびに）成功してテーブルを
+  作り直している状態。
+- 本 PR の修正（`work_id` マーカー）が本番に適用され次回デプロイが churn なく進めば、
+  このデプロイで初めて `:668` に到達し、`tenant_004.tcg_products` が正しく DROP される見込み
+  （FK残存が無ければ）。これは第1便の「`condition`/`unit` の一回限りの最終 DROP」と同種の
+  "一度だけの後始末" であり、**本 PR ではこの DROP ロジック自体には触れない**
+  （設計担当 Opus の指示通り）。
+
+## 4. 他テーブルの churn 有無の確認
 
 全 migrations の `DROP COLUMN` を対象テーブル別に集計したところ、`public.products` 以外の
 テーブルで同名列を複数ファイルにわたって ADD→DROP している例は見つからなかった
@@ -97,7 +136,7 @@
 設計担当 Opus が確認した「他テーブルの dropped attribute 数の最大は3件」という事実と整合する。
 よって本件は `public.products` に限定される。
 
-## 4. 既存 ADR 検索
+## 5. 既存 ADR 検索
 
 ADR-1001（tcg_products → public.products 統合）・ADR-1002（マスタ SSOT 型統一）が関連。
 本件はこれらの ADR で導入された一時列（tcg_uuid）の後始末であり、新規 ADR は起票しない
