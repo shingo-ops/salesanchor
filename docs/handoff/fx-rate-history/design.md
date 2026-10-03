@@ -2,7 +2,7 @@
 
 **日付**: 2026-10-03
 **ブランチ**: release/fx-rate-history-table（本PRは **PR-A**。PR-B は別PRで後続）
-**Recon**: [recon.md](recon.md)
+**Recon**: [recon.md](recon.md)（docs/handoff/fx-rate-history/recon.md）
 **PO承認**: 2026-10-03 — USD/JPY レート履歴を保持し、LLM使用量ダッシュボードを各使用時点のレートで換算する
 **ADR参照**: ADR-148（為替レート SSOT、本PRで追記）、ADR-1004（LLM使用量台帳）、ADR-135／ADR-136（本番投入・危険PRのGO手順）
 
