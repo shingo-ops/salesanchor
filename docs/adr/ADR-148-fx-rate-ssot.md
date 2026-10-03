@@ -47,3 +47,25 @@
 - `docs/handoff/fx-rate-route-collision/recon.md`
 - `docs/handoff/fx-rate-route-collision/design.md`
 - ADR-1004
+
+## 追記（2026-10-03）：履歴テーブル新設（SSOT の UPSERT 方式を履歴方式へ移行）
+
+### なぜ
+
+LLM 使用量ダッシュボード（ADR-1004）では、各 LLM 呼び出し発生時点の USD/JPY レートで JPY 換算したい。しかし現行 `public.app_fx_rates` は `currency` を PRIMARY KEY に UPSERT する設計（`migrations/20260628_170000_add_app_fx_rates.sql`）のため、Celery Beat が1日2回取得するたびに前回のレートが上書きで失われる。本番には現在 USD の1行のみが残っており（`rate_jpy=157.8034`, `fetched_at=2026-10-03 09:00Z`）、これが人為的に取得できる最古のレートである。一方 `llm_usage_events`（ADR-1004）には 2026-09-27 14:12Z からの 1547 件が既に蓄積されており、現行方式のままでは過去分を当時のレートで換算できない。
+
+### 決定
+
+- `public.app_fx_rate_history` を新設する（追記専用・PRIMARY KEY `(currency, fetched_at)`）。既存 `app_fx_rates` とは独立したテーブルとして追加し、既存の読み取り/書き込み経路は本 PR（PR-A）では無改変。
+- 書き込み: Celery Beat（`backend/app/tasks/fx_rate_updater.py`）と手動更新 API（`POST /api/v1/super-admin/fx-rate/refresh`）が、取得ごとに `app_fx_rate_history` へ `INSERT ... ON CONFLICT (currency, fetched_at) DO NOTHING` で追記する（PR-B で実装）。
+- 読み取り: `GET /api/v1/fx-rates/{currency}` は `app_fx_rate_history` の最新行（`fetched_at` 最大）を返す（PR-B でレスポンス形状は維持したまま実装切替）。
+- 換算: LLM 使用量ダッシュボードは各イベントの `occurred_at` 以前で最新の `fetched_at` を持つ履歴行のレートを使う。`occurred_at` が最初の履歴行より古い場合は、取得可能な最古の行（上記の1行）を使い、UI 上はフォールバック使用であることを明示する（PR-B）。
+- 移行順序: 本 PR（PR-A）でテーブルのみ新設し、既存 `app_fx_rates` の現在値をシード INSERT で取り込む。PR-B で書き込み/読み取りを `app_fx_rate_history` に切替える。切替完了後は `app_fx_rates` は未使用となるが、**DROP は本 ADR では決定しない**。DROP を行う場合は別途 PO 自身の GO を得て実施する。
+
+### 関連
+
+- `migrations/20261003_100000_create_app_fx_rate_history.sql`
+- `docs/handoff/fx-rate-history/recon.md`
+- `docs/handoff/fx-rate-history/design.md`
+- ADR-1004（LLM 使用量台帳）
+- ADR-135 / ADR-136（本番投入・危険PRのGO手順）

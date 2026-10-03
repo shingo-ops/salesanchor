@@ -875,3 +875,6 @@ run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
 
 # Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
 run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
+
+# ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
+run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
