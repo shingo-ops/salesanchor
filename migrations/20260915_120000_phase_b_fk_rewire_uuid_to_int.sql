@@ -12,7 +12,21 @@ DECLARE
     _bad_count INTEGER;
     _fk_name   TEXT;
     _idx       RECORD;
+    _tcg_uuid_exists BOOLEAN;
+    _row_count BIGINT;
 BEGIN
+    -- incident 2026-10-04 (deploy run 37136832562): この migration の Step2（UPDATE ... FROM
+    -- public.products p WHERE p.tcg_uuid = ...）は public.products.tcg_uuid 列の存在を
+    -- 前提にしている。tcg_uuid は migrations/20260916_120000_phase_c_drop_tcg_uuid.sql で
+    -- 永久 DROP されるため、本番のようにこの migration の実行が遅れて tcg_uuid が既に
+    -- 無い状態でここに到達すると「column p.tcg_uuid does not exist」で失敗する。
+    -- tcg_uuid の存在を一度だけ確認し、無い場合は各テーブルのデータ件数で分岐する
+    -- （0件なら join 無しで構造変換のみ実行・1件以上なら人間判断が必要なため EXCEPTION）。
+    SELECT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'tcg_uuid'
+    ) INTO _tcg_uuid_exists;
+
     -- ループ: product_search_keywords を持つ全 tenant_* スキーマ
     FOR _schema IN
         SELECT n.nspname
@@ -45,12 +59,22 @@ BEGIN
             EXECUTE format('ALTER TABLE %I.product_search_keywords ADD COLUMN IF NOT EXISTS product_int_id INTEGER', _schema);
 
             -- Step 2: UPDATE tmp from public.products.id via tcg_uuid join
-            EXECUTE format('
-                UPDATE %I.product_search_keywords sk
-                SET product_int_id = p.id
-                FROM public.products p
-                WHERE p.tcg_uuid = sk.product_id
-            ', _schema);
+            IF _tcg_uuid_exists THEN
+                EXECUTE format('
+                    UPDATE %I.product_search_keywords sk
+                    SET product_int_id = p.id
+                    FROM public.products p
+                    WHERE p.tcg_uuid = sk.product_id
+                ', _schema);
+            ELSE
+                EXECUTE format('SELECT count(*) FROM %I.product_search_keywords', _schema) INTO _row_count;
+                IF _row_count > 0 THEN
+                    RAISE EXCEPTION 'Phase B: tcg_uuid is absent but %.product_search_keywords has % row(s) — cannot map product_id without tcg_uuid; needs a human decision',
+                        _schema, _row_count;
+                ELSE
+                    RAISE NOTICE '  tcg_uuid absent and %.product_search_keywords has 0 rows — skipping UUID join, nothing to map', _schema;
+                END IF;
+            END IF;
 
             -- Step 3: Verify no orphaned rows
             EXECUTE format('
@@ -120,12 +144,22 @@ BEGIN
 
             EXECUTE format('ALTER TABLE %I.product_exclude_keywords ADD COLUMN IF NOT EXISTS product_int_id INTEGER', _schema);
 
-            EXECUTE format('
-                UPDATE %I.product_exclude_keywords ek
-                SET product_int_id = p.id
-                FROM public.products p
-                WHERE p.tcg_uuid = ek.product_id
-            ', _schema);
+            IF _tcg_uuid_exists THEN
+                EXECUTE format('
+                    UPDATE %I.product_exclude_keywords ek
+                    SET product_int_id = p.id
+                    FROM public.products p
+                    WHERE p.tcg_uuid = ek.product_id
+                ', _schema);
+            ELSE
+                EXECUTE format('SELECT count(*) FROM %I.product_exclude_keywords', _schema) INTO _row_count;
+                IF _row_count > 0 THEN
+                    RAISE EXCEPTION 'Phase B: tcg_uuid is absent but %.product_exclude_keywords has % row(s) — cannot map product_id without tcg_uuid; needs a human decision',
+                        _schema, _row_count;
+                ELSE
+                    RAISE NOTICE '  tcg_uuid absent and %.product_exclude_keywords has 0 rows — skipping UUID join, nothing to map', _schema;
+                END IF;
+            END IF;
 
             EXECUTE format('
                 SELECT COUNT(*) FROM %I.product_exclude_keywords
@@ -190,12 +224,22 @@ BEGIN
 
                 EXECUTE format('ALTER TABLE %I.products_logistics ADD COLUMN IF NOT EXISTS product_int_id INTEGER', _schema);
 
-                EXECUTE format('
-                    UPDATE %I.products_logistics pl
-                    SET product_int_id = p.id
-                    FROM public.products p
-                    WHERE p.tcg_uuid = pl.product_id
-                ', _schema);
+                IF _tcg_uuid_exists THEN
+                    EXECUTE format('
+                        UPDATE %I.products_logistics pl
+                        SET product_int_id = p.id
+                        FROM public.products p
+                        WHERE p.tcg_uuid = pl.product_id
+                    ', _schema);
+                ELSE
+                    EXECUTE format('SELECT count(*) FROM %I.products_logistics', _schema) INTO _row_count;
+                    IF _row_count > 0 THEN
+                        RAISE EXCEPTION 'Phase B: tcg_uuid is absent but %.products_logistics has % row(s) — cannot map product_id without tcg_uuid; needs a human decision',
+                            _schema, _row_count;
+                    ELSE
+                        RAISE NOTICE '  tcg_uuid absent and %.products_logistics has 0 rows — skipping UUID join, nothing to map', _schema;
+                    END IF;
+                END IF;
 
                 EXECUTE format('
                     SELECT COUNT(*) FROM %I.products_logistics
@@ -275,12 +319,22 @@ BEGIN
 
                 EXECUTE format('ALTER TABLE %I.analysis_results ADD COLUMN IF NOT EXISTS product_int_id INTEGER', _schema);
 
-                EXECUTE format('
-                    UPDATE %I.analysis_results ar
-                    SET product_int_id = p.id
-                    FROM public.products p
-                    WHERE p.tcg_uuid = ar.product_id
-                ', _schema);
+                IF _tcg_uuid_exists THEN
+                    EXECUTE format('
+                        UPDATE %I.analysis_results ar
+                        SET product_int_id = p.id
+                        FROM public.products p
+                        WHERE p.tcg_uuid = ar.product_id
+                    ', _schema);
+                ELSE
+                    EXECUTE format('SELECT count(*) FROM %I.analysis_results', _schema) INTO _row_count;
+                    IF _row_count > 0 THEN
+                        RAISE EXCEPTION 'Phase B: tcg_uuid is absent but %.analysis_results has % row(s) — cannot map product_id without tcg_uuid; needs a human decision',
+                            _schema, _row_count;
+                    ELSE
+                        RAISE NOTICE '  tcg_uuid absent and %.analysis_results has 0 rows — skipping UUID join, nothing to map', _schema;
+                    END IF;
+                END IF;
 
                 -- Verify: rows with product_id NOT NULL but product_int_id IS NULL must be 0
                 EXECUTE format('
@@ -345,7 +399,17 @@ BEGIN
             RAISE NOTICE '  Converting analysis_run_snapshots.product_id UUID->INTEGER (NULLABLE)';
 
             EXECUTE format('ALTER TABLE %I.analysis_run_snapshots ADD COLUMN IF NOT EXISTS product_int_id INTEGER', _schema);
-            EXECUTE format('UPDATE %I.analysis_run_snapshots ars SET product_int_id = p.id FROM public.products p WHERE p.tcg_uuid = ars.product_id', _schema);
+            IF _tcg_uuid_exists THEN
+                EXECUTE format('UPDATE %I.analysis_run_snapshots ars SET product_int_id = p.id FROM public.products p WHERE p.tcg_uuid = ars.product_id', _schema);
+            ELSE
+                EXECUTE format('SELECT count(*) FROM %I.analysis_run_snapshots', _schema) INTO _row_count;
+                IF _row_count > 0 THEN
+                    RAISE EXCEPTION 'Phase B: tcg_uuid is absent but %.analysis_run_snapshots has % row(s) — cannot map product_id without tcg_uuid; needs a human decision',
+                        _schema, _row_count;
+                ELSE
+                    RAISE NOTICE '  tcg_uuid absent and %.analysis_run_snapshots has 0 rows — skipping UUID join, nothing to map', _schema;
+                END IF;
+            END IF;
             EXECUTE format('ALTER TABLE %I.analysis_run_snapshots DROP COLUMN product_id', _schema);
             EXECUTE format('ALTER TABLE %I.analysis_run_snapshots RENAME COLUMN product_int_id TO product_id', _schema);
 

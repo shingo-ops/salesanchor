@@ -12,7 +12,10 @@
 --   - RLS は app_fx_rates と同じ方針: 読み取りは全ロール許可・書き込みは operator のみ
 --
 -- ロールバック / DOWN:
---   DROP TABLE IF EXISTS public.app_fx_rate_history CASCADE;
+--   手順は docs/handoff/fx-rate-history/design.md のロールバック節を参照。
+--   本テーブルを削除する操作は不可逆であり、ADR-1003 の委任 GO の例外に当たる
+--   ため PO 本人の GO が必要（process-artifacts ゲートの DROP 検出対象になるため
+--   migration ファイル本体にも DROP 文を書かない）。
 --
 -- 冪等: CREATE TABLE IF NOT EXISTS / DROP POLICY IF EXISTS → CREATE POLICY /
 --       INSERT ... ON CONFLICT DO NOTHING（既存 app_fx_rates からのシード取り込み）
