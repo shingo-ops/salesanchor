@@ -11,7 +11,7 @@
 
 ## 現在地（事実。Sonnet が 2026-10-02 に確認、origin/main）
 - workers を指定しているのは `backend/Dockerfile:37` の1か所だけ。
-  - `docker-compose*.yml`、`.github/workflows`、`scripts`、`backend/app/main.py` には指定が無い。
+  - docker-compose の各ファイル、.github/workflows 配下、scripts 配下、`backend/app/main.py` には指定が無い。
   - `scripts/blue-green-cutover.sh:80-105` は、イメージの CMD をそのまま使う。
 - 本番の実物：`docker inspect` の Cmd は `["uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--workers","2"]`。
 - メモリ
