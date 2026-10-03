@@ -137,7 +137,7 @@ celery_app.conf.beat_schedule = {
         "schedule": 300.0,  # 5分
     },
     # 為替レート SSOT: USD/JPY を毎日 AM6:00 JST に取得して public.app_fx_rate_history に追記
-    # （ADR-148 2026-10-03 追記: public.app_fx_rates へのUPSERTから履行テーブルへの追記専用INSERTに切替）
+    # （ADR-148 2026-10-03 追記: public.app_fx_rates へのUPSERTから履歴テーブルへの追記専用INSERTに切替）
     # 外部 API: open.er-api.com（API キー不要）。失敗時は前回値を残して警告ログのみ。
     "update-fx-rate-morning": {
         "task": "app.tasks.fx_rate_updater.update_usd_jpy_rate",
