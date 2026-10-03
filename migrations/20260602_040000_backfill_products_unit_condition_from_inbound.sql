@@ -7,7 +7,7 @@
 -- で unit / condition の ADD を削除したため、ガード無しで残すと
 -- 「column unit/condition does not exist」でデプロイが失敗する。
 --
--- 本番事実（しんごさん確認, 2026-10-03）: この UPDATE は本番で実行済み（deploy run
+-- 本番事実（設計担当 Opus が 2026-10-03 に本番 DB を読み取り確認）: この UPDATE は本番で実行済み（deploy run
 -- 37130920016 は line 220 のこの migration を通過し、line 230 で失敗）だが、実行後も
 -- public.products の unit/condition は count=0（1347行中）であり、書き込むべき対象データが
 -- 無かった。この backfill の本来目的（在庫表の「-」表示を埋める）は 2026-06-29 の

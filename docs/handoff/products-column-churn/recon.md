@@ -6,7 +6,7 @@
 
 ---
 
-## 1. 事実（本番・origin/main、Opus/しんごさん確認済み）
+## 1. 事実（本番・origin/main、設計担当 Opus が確認済み）
 
 - `scripts/run_all_migrations.sh` は毎デプロイで登録済み migration を**全件再実行**する（冪等前提の `ADD COLUMN IF NOT EXISTS` / `DROP COLUMN IF EXISTS` パターン）。
 - 本件に関係する実行順（`scripts/run_all_migrations.sh` 内の行番号）:
@@ -21,7 +21,7 @@
 - 本番 `public.products`: **1541** dropped attributes、live 列 **59**、max attnum **1600**（デプロイ失敗時点で live `condition`=1599、`unit`=1600 — 失敗した run が再 ADD した分）。
 - デプロイ run **37130920016** は `scripts/run_all_migrations.sh:230`（`migrations/20260602_170000_add_products_master_label_columns.sql`、`category_classification` の再 ADD）で `"tables can have at most 1600 columns"` エラーにより失敗。
 - 他テーブルでこの現象は無い（dropped attribute 数の次点は 3 件のみ）。
-- **しんごさん確認（2026-10-03、本番 read-only）**: `public.products` は **1347 行**。失敗した run は `scripts/run_all_migrations.sh:220`（`migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql`）まで通過して実行済みだが、その後も `count(unit)=0`、`count(condition)=0`。つまり condition/unit の ADD→backfill→（inventory へコピー）→DROP の一連は、現時点の本番データに対しては**何も書き込んでいない**（書き込むべき対象データが無い）。この backfill の本来の一時目的（在庫表「-」表示の解消）は `migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（本番 **UPDATE 62件** 確認済み、見出しコメント記載）で既に 2026-06-29 に達成済み。
+- **設計担当 Opus が 2026-10-03 に本番 DB を読み取り確認**: `public.products` は **1347 行**。失敗した run は `scripts/run_all_migrations.sh:220`（`migrations/20260602_040000_backfill_products_unit_condition_from_inbound.sql`）まで通過して実行済みだが、その後も `count(unit)=0`、`count(condition)=0`。つまり condition/unit の ADD→backfill→（inventory へコピー）→DROP の一連は、現時点の本番データに対しては**何も書き込んでいない**（書き込むべき対象データが無い）。この backfill の本来の一時目的（在庫表「-」表示の解消）は `migrations/20260629_010000_backfill_inventory_unit_from_products.sql`（本番 **UPDATE 62件** 確認済み、見出しコメント記載）で既に 2026-06-29 に達成済み。
 
 ## 2. PostgreSQL の仕様根拠
 
