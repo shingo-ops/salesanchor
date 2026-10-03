@@ -4517,7 +4517,8 @@
           "errorCountLabel": "Error Count (LINE Extraction)"
         },
         "fx": {
-          "note": "Converted at 1 USD = ¥{{rate}} (as of {{fetchedAt}}. Past days are also calculated using this rate.)",
+          "note": "1 USD = ¥{{rate}} (latest rate, as of {{fetchedAt}}). Each use is converted at the rate in effect when it occurred.",
+          "fallbackCountNote": "Uses before {{historyStart}} ({{count}} calls) are converted using the earliest recorded rate.",
           "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
         }
       },

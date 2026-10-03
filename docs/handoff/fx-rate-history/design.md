@@ -2,7 +2,7 @@
 
 **日付**: 2026-10-03
 **ブランチ**: release/fx-rate-history-table（本PRは **PR-A**。PR-B は別PRで後続）
-**Recon**: [recon.md](recon.md)
+**Recon**: [recon.md](recon.md)（docs/handoff/fx-rate-history/recon.md）
 **PO承認**: 2026-10-03 — USD/JPY レート履歴を保持し、LLM使用量ダッシュボードを各使用時点のレートで換算する
 **ADR参照**: ADR-148（為替レート SSOT、本PRで追記）、ADR-1004（LLM使用量台帳）、ADR-135／ADR-136（本番投入・危険PRのGO手順）
 
@@ -142,3 +142,65 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 - **ダッシュボードAPI**: `GET /api/v1/tcg/analysis-dashboard/llm-usage`（`backend/app/routers/tcg_analysis_dashboard.py:680`）に `cost_jpy` を各集計行（total/by_purpose/by_model/daily等）に追加する。各 `public.llm_usage_events` 行に対し、`LATERAL` で「`fetched_at <= occurred_at` を満たす最新の `app_fx_rate_history` 行」を引き、無ければ（`occurred_at` が履歴の最古行より古い場合）最古行にフォールバックする。レスポンスに `fx` ブロック（最新レート・`fetched_at`・履行開始時点・フォールバック適用件数）を追加する。
 - **フロントエンド**: `frontend/src/pages/super-admin/components/LlmUsageSection.tsx` は `cost_jpy` と `fx` ブロックをAPIレスポンスから直接使うようにし、自前の `/fx-rates/USD` 呼び出しと `toJpy()` 変換（同ファイルの394行目・311行目付近）を削除する。フォールバック適用件数がある場合はUIにその旨を表示する。
 - **i18n**: `frontend/src/locales/ja.json` / `frontend/src/locales/en.json` に、フォールバック表示用の新規キー（例: `llmUsage.fxFallbackNotice`）を両言語同時に追加する（ADR-027）。
+
+---
+
+## 9. PR-B 実装記録（本セクションから実装・release/fx-rate-history-switch）
+
+**日付**: 2026-10-03
+**ブランチ**: release/fx-rate-history-switch（PR-A `release/fx-rate-history-table` を `git merge --no-ff` で取り込み済み）
+**担当**: Hikky-dev（実装）／設計: Opus
+
+本PRは §8 の方針どおり、migration を追加せず（PR-A が作成したテーブルのみ使用）コードのみを切替えた。
+
+### 9-1. 書き込み（§8 の方針どおり実装）
+
+- `backend/app/tasks/fx_rate_updater.py`: `public.app_fx_rates` への UPSERT を削除し、`public.app_fx_rate_history` への `INSERT ... ON CONFLICT (currency, fetched_at) DO NOTHING` に置換（operator コンテキストの `SET app.is_operator = 'true'` は既存のまま維持）。
+- `backend/app/routers/fx_rate_admin.py` `refresh_fx_rate`: 同様に `app_fx_rate_history` への追記に置換。**事実（2026-10-03 設計判断で修正済み）**: 本関数は従来から `set_operator_context()` 等の明示的な operator コンテキスト設定を呼んでいなかった（grep で確認、require_super_admin dependency もセットしない）。`app_fx_rate_history` は FORCE RLS で書き込みポリシーが `app.is_operator='true'` を要求するため（migrations/20261003_100000_create_app_fx_rate_history.sql）、`backend/app/auth/dependencies.py:420-451` の `set_operator_context`/`reset_operator_context` を `set → try → INSERT + commit → finally: reset` の形（同ファイル docstring・`docs/handoff/products-rls-stage1/design.md:41` と同じ形）で呼ぶように修正した。接続ロールが RLS を自動バイパスする場合でもこのヘルパーは無害なため、バイパスの有無に関わらず安全。**未確認**: 本番ログでは保持期間内に手動更新（`refresh_fx_rate`）の呼び出し実績が見当たらず、修正前の状態で実際に書き込みが失敗していたか（RLSで拒否されていたか）は確認できていない。
+
+### 9-2. 読み取り
+
+- `backend/app/routers/fx_rate_admin.py` `get_fx_rate`（GET `/fx-rates/{currency}`）: `SELECT ... FROM public.app_fx_rate_history WHERE currency = :cur ORDER BY fetched_at DESC LIMIT 1` に変更。レスポンス形状（`FxRateResponse`）は不変。`updated_at` は履行テーブルの `created_at`（当該行の挿入時刻）を転用する。404 挙動は維持。
+
+### 9-3. ダッシュボードAPI（`backend/app/routers/tcg_analysis_dashboard.py`）
+
+§8 で検討した「LATERAL」方式ではなく、相関サブクエリ3本（最新レート・最古レートへのフォールバック・is_fallback判定）を1つの CTE `_EVENT_FX_CTE` に集約し、7本のコスト集計クエリすべてが `WITH event_fx AS ({_EVENT_FX_CTE}) SELECT ... FROM event_fx` の形で共有する（DRY、1箇所に集約）。
+
+```sql
+SELECT
+    e.*,
+    COALESCE(
+        (
+            SELECT h.rate_jpy FROM public.app_fx_rate_history h
+            WHERE h.currency = 'USD' AND h.fetched_at <= e.occurred_at
+            ORDER BY h.fetched_at DESC LIMIT 1
+        ),
+        (
+            SELECT h2.rate_jpy FROM public.app_fx_rate_history h2
+            WHERE h2.currency = 'USD'
+            ORDER BY h2.fetched_at ASC LIMIT 1
+        )
+    ) AS fx_rate_jpy,
+    NOT EXISTS (
+        SELECT 1 FROM public.app_fx_rate_history h3
+        WHERE h3.currency = 'USD' AND h3.fetched_at <= e.occurred_at
+    ) AS fx_is_fallback
+FROM public.llm_usage_events e
+WHERE occurred_at BETWEEN NOW() - INTERVAL '1 day' * :days AND NOW()
+```
+
+各コスト集計クエリは `SUM(cost_usd * fx_rate_jpy) AS cost_jpy` を追加で SELECT する（`cost_usd` が NULL の行はそのまま NULL が伝播し、0 に丸めない）。`fallback_calls`（§8 で言及した「フォールバック適用件数」）は total クエリに `COUNT(*) FILTER (WHERE fx_is_fallback) AS fallback_calls` を追加し、他7クエリとは別に1回だけ取得する fx メタ情報（最新レート・最古レートの fetched_at）と組み合わせて `fx` ブロックを構築する。履歴テーブルに USD 行が無い場合、fx メタ情報のクエリが全列 NULL を返し、`fx` ブロックは `None` になる（`cost_jpy` も自然に全行 `None` のまま伝播する。特別分岐は不要）。
+
+db.execute() の呼び出し順は10回: `[fx_meta, total, by_purpose, by_model, daily, daily_by_purpose, monthly_by_purpose, daily_requests, daily_errors, daily_by_model]`（旧: 9回。fx_meta が新規）。
+
+### 9-4. フロントエンド（`frontend/src/pages/super-admin/components/LlmUsageSection.tsx`）
+
+- 削除: `FxRate` interface、`/fx-rates/USD` への個別 `api.get` 呼び出し、`toJpy()` 関数、`costRate`/`fxRate` state、`convertCost()`。
+- 追加: 各アイテム型（`LlmUsageTotal` 等7型）に `cost_jpy: number | null`、`LlmUsageResponse` に `fx: LlmUsageFx | null`。
+- `formatCost(row)` はレスポンスの `fx` が non-null のとき `row.cost_jpy` を、null のとき `row.cost_usd` を表示する（バックエンドが既に換算済みのため、フロントでの乗算は行わない）。
+- 注記: `fx` が non-null のとき「最新レート・取得時刻」の note を表示し、`fx.fallback_calls > 0` のときは追加で「`history_start` より前の使用は最古レートで換算」の note を表示する（新規 i18n キー `analysisRules.dashboard.usage.fx.fallbackCountNote`、ja/en 両方に追加）。`fx` が null のときは既存の `fallbackNote` を維持する。
+
+### 9-5. 対象外（本PRでは変更しない）
+
+- `public.app_fx_rates` テーブル自体（DROP は別PR・PO本人のGO必須、§2 の方針を継続）。
+- `backend/app/routers/invoices.py` の `fetch_fx_rate`（ライブ取得・別系統）。
