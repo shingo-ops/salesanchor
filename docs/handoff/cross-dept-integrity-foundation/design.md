@@ -32,8 +32,7 @@
 - 戻し方: ruleset から該当行を外す。
 - コード変更: なし。
 - 事前に確かめること（未確認の項目を潰す）:
-  - 外れた時期と理由。ruleset の履歴を `gh api repos/.../rulesets/15777895/history` で確認する。読み取りのみ。
-  - 意図して外したものなら、POに確認して止まる。
+  - 外れた時期と理由。【2026-10-04 確認】ruleset の履歴 API は 404 で取得できない。追加の記録（`docs/adr/ADR-135-release-stowaway-prevention.md:48-50`）はあるが、外した記録は docs / .github / scripts のどこにも無い。意図して外したのかどうかは不明なので、実行の前にPOに確認する。
 
 ### 便B：削除（2026-10-02 PO判断）
 Playwright E2E は休眠のままにし、K1 からも外す。
@@ -50,7 +49,9 @@ Playwright E2E は休眠のままにし、K1 からも外す。
 - 新しい依存の追加になるため、新規ADRが必要（§6）。
 - 戻し方: workflow を削除し、devDependency を外す。
 - リスク: backend の Pydantic 定義が緩いと、生成型も緩くなる（例: `dict`）。これは置き換えの便の中で、1APIずつ詰める。
-- 【未確認】本番で API パス /openapi.json が外部に公開されているか。`backend/app/main.py:190-191` は docs/redoc だけを本番で無効にしており、`openapi_url` は指定していない。FastAPI の既定では /openapi.json は有効のまま（Context7 で確認済み）。本便では変更しないが、API の一覧が外部から見えてよいかは、セキュリティの判断として別に起票する（§8）。
+- 【確認済み 2026-10-04】本番の API パス /openapi.json と /docs は、外部からのアクセスにどちらも 404 を返す（curl で確認）。スキーマは外部に公開されていない。
+- 【確認済み 2026-10-04】型の付いたエンドポイントは、612件中457件（74.7%）が上限。内訳は `response_model` 377件と戻り値注釈80件。型が無いものは155件ある。便Cで保護できる範囲はこの数で決まるため、型の無い分は、置き換えの便で `response_model` を付けて減らす（ADR-1005）。
+- 新規ADR: `docs/adr/ADR-1005-api-contract-and-wiring-ledger.md`（Proposed、PO承認待ち）
 
 ### 便D：K2　配線台帳を自動生成し、ずれたら赤にする
 - 変更前: 画面 → API → テーブルの台帳は無い（recon R2-5）。ルートは125個（ページは114）、backend の include_router は113件。
@@ -63,7 +64,7 @@ Playwright E2E は休眠のままにし、K1 からも外す。
      - 台帳に無いAPIを画面が呼んでいる（存在しないAPIへの呼び出し）。
      - schema に無いパスへの呼び出し。
   3. API → テーブルの部分は db-ssot テーマの K2（正本の所在）に渡す。本便では「画面 → API」までを機械で保証する。
-- 【未確認】ルーター関数から触るテーブルを静的に取れるかは調べていない。段階を分けるのはこのため。
+- 【一部確認 2026-10-04】テーブル参照は `tenant_table_ref(db, tenant_id, "<テーブル名>")` の文字列リテラルで書かれている（例: `backend/app/routers/leads.py:200,255,963`）。staff.py と suppliers.py は、FROM 系のすべての行でテーブル名が固定されている。機械的に抜き出せる見込みはあるが、全ルーターでは確認していない。段階を分けるのはこのためで、API → テーブルの部分は db-ssot テーマと分担を決めてから行う。
 - 前提: 便Cが先に終わっていること（API一覧の正本が schema.json になるため）。
 - 戻し方: workflow と生成物を削除する。
 
@@ -76,7 +77,7 @@ Playwright E2E は休眠のままにし、K1 からも外す。
   - ESLint はインラインスタイルの hex しか見ない（`frontend/eslint.config.js:40-48`）。
   - 日本語の直書きは CI では warn（`frontend/eslint.config.js:31`）。
 - 変更後（この順に、1つずつ便を分ける）:
-  - E1: 番号の無い ui-allow 2件（`frontend/src/pages/conditions/ConditionsPage.tsx:501`、`frontend/src/pages/super-admin/components/UnitMasterPanel.tsx:361`）に課題番号を付ける。対象の部品を金型に置き換えられるなら置き換える。
+  - E1（**完了**: PR #3943 で 2026-10-03 にマージし、本番に反映済み。2026-10-04 時点で origin/main の ui-allow 27件のうち、書式が不正なものは0件）: 番号の無い ui-allow 2件（`frontend/src/pages/conditions/ConditionsPage.tsx:501`、`frontend/src/pages/super-admin/components/UnitMasterPanel.tsx:361`）に課題番号を付ける。対象の部品を金型に置き換えられるなら置き換える。
   - E2: hexラチェットを main の必須チェックに加える。ruleset の変更なので permit-danger が要る。
   - E3: UIガバナンスの対象を `frontend/src/features/`・`frontend/src/components/` に広げる。今は対象が pages/ だけ（`scripts/check-ui-governance.js:36`）。
   - E4: 既存の違反を部署（ページ群）ごとに置き換える。金型は `Select`／`SelectControl`、`TextField`、`Tabs`（recon R4-2）。
@@ -120,7 +121,6 @@ A → C → D → E1 → E2 → E3 → E4（部署ごとに繰り返す）→ E5
 ## 8. 対象外
 - 製品機能の変更。
 - 本番データの変更。
-- 本番で API パス /openapi.json が公開されている件の是非（セキュリティ判断として別に起票する）。
 - API → テーブルの対応付け（db-ssot テーマで扱う）。
 - 部署定義ファイルの作成（K5 で扱う）。
 

@@ -3,7 +3,7 @@
 > このファイルは `scripts/generate-adr-index.js` により自動生成されます。
 > **手動編集禁止。** ADR ファイルを追加・変更後に `node scripts/generate-adr-index.js` を実行してください。
 
-最終更新: 2026-10-02 / ADR 総数: 164 件
+最終更新: 2026-10-04 / ADR 総数: 165 件
 
 ## 維持ルール（整合性を保つ・必須）
 
@@ -183,6 +183,7 @@
 | [ADR-1002](./ADR-1002-unify-product-id-and-fix-migration-compat.md) | ADR-1002: 商品IDをINTEGER一本化し、旧テーブル参照migrationを修復する | Accepted | — | — |
 | [ADR-1003](./ADR-1003-go-delegation-to-opus.md) | ADR-1003: GO 発行を Claude Opus 設計担当へ常時委譲する（例外あり） | Accepted | — | — |
 | [ADR-1004](./ADR-1004-llm-usage-ledger.md) | ADR-1004: LLM 使用量台帳（llm_usage_events）新設 | Accepted | — | — |
+| [ADR-1005](./ADR-1005-api-contract-and-wiring-ledger.md) | ADR-1005: API型契約（OpenAPI→TypeScript）と配線台帳の自動生成 | — | — | — |
 
 ## ステータス凡例
 
