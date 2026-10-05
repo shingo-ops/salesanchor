@@ -70,6 +70,6 @@
 
 ## 8. 未確認
 - 「在庫集計」タブを、SA と在庫一覧 GAS 以外（ほかの GAS・人の手作業・外部）が読んでいるか。
-- clone した本番の写しが版12そのものか、リモートの HEAD か（手順書 `gas-deploy-runbook.md:73` は 1377行と記載。写しは 1398行）。
+- clone した本番の写しが版12そのものか、リモートの HEAD か（手順書 `docs/handoff/dist-deploy-guard/gas-deploy-runbook.md:73` は 1377行と記載。写しは 1398行）。
 - products.search_keywords（221件）と検索ワード表の差の中身。
 - 本番シートのヘッダー行そのもの（DB の配信記録と Code.js から推定しているだけ）。

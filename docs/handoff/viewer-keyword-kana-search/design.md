@@ -56,7 +56,7 @@
 5. テスト
    - `backend/tests/test_tcg_result_order.py:104`：`len(r) == 12` を `13` にする。
    - `backend/tests/test_tcg_distribution.py:184`：`DIST_HEADERS` を参照しているので、そのままで通る見込み。通らなければ直す。
-   - 追加：検索ワードが2語ある商品は ` | ` でつながり、position の順に並ぶ。語の無い商品は空文字になる（PG を使うテスト。`test_tcg_distribution_pg.py` に足す）。
+   - 追加：検索ワードが2語ある商品は ` | ` でつながり、position の順に並ぶ。語の無い商品は空文字になる（PG を使うテスト。`backend/tests/test_tcg_distribution_pg.py` に足す）。
 
 ### 4-2. GAS：Code.js（本番は Code.js、テスト用は「コード.js」。中身は同じ）
 - `:10-23` の `ALLOWED_HEADERS`：末尾に `'Search Keywords'` を足して13列にする。冒頭コメントの「12 列」を「13 列」にする。
@@ -111,7 +111,7 @@
 |---|---|
 | テスト用 GAS の CSS の変更（未公開）を、本番の写しで上書きして消す | 本番とテスト用で、それぞれの写しに同じ `<script>` の変更を当てる。テスト用に本番のファイルを丸ごと反映しない |
 | 写しが版12と違う（行数の食い違い。recon §8） | 実装の直前に本番から写しを取り直し、`~/tcg-inventory-viewer-prod-1hc` との差が0行であることを確かめてから直す |
-| 古い `~/tcg-client-viewer/src` を反映して、本番の機能が消える | 使わない（`gas-deploy-runbook.md:73`）。作業フォルダは手順書どおり |
+| 古い `~/tcg-client-viewer/src` を反映して、本番の機能が消える | 使わない（`docs/handoff/dist-deploy-guard/gas-deploy-runbook.md:73`）。作業フォルダは手順書どおり |
 | 検索が重くなる | 検索用の文字列は読み込みのときに1回だけ作る。約800行×1行あたり約1,000文字で、入力のたびの計算は部分一致だけ |
 | 古いブラウザに `String.prototype.normalize` が無い | 無ければ NFKC を飛ばし、小文字化とひらがな→カタカナだけ行う（関数の中で分岐済み） |
 
@@ -120,7 +120,7 @@
 - SA：PR を revert して、再デプロイする。次の配信で列が12列に戻る。GAS が先に戻っていなくても、列が空文字になるだけで動く。
 
 ## 9. 実装と反映の手順（カードの元）
-1. SA：4-1 を実装し、backend のテストを通して PR を出す。`migrations/`・`deploy.yml`・本番 `scripts/` を含まない通常の PR。
+1. SA：4-1 を実装し、backend のテストを通して PR を出す。`migrations/`・`.github/workflows/deploy.yml`・本番 `scripts/` を含まない通常の PR。
 2. SA の反映後、配信を1回待ち、シートのヘッダーが13列であることを確かめる（K7）。
 3. 変更前の基準値を取る：テスト用 URL で K5 の10語の件数を記録し、K6 の画面写真を撮る。
 4. GAS：本番の写しとテスト用の写しのそれぞれに 4-2・4-3 を当てる。
@@ -141,8 +141,10 @@
   - 「在庫集計」タブをほかに読む仕組みの有無（recon §8）。列を末尾に足すので、ヘッダー名で引く仕組みなら影響は無い。
 
 ## 11. 維持の仕組み
+- 守り手：`backend/tests/test_tcg_distribution.py`（列数とヘッダーの形）、`backend/tests/test_tcg_distribution_pg.py`（検索ワードの連結と既存12列の不変）、`backend/tests/test_tcg_result_order.py`（13列）。CI の backend テストで毎回確かめる。
 - 検索ワードを足すと、次の配信で検索に効く。マスタの画面から検索ワードを登録すれば、お客様の検索にも当たるようになる（照合と検索が同じ正本を使う）。
 - GAS のコードの正本が `~/tcg-inventory-viewer-prod-1hc`（作業フォルダ）と `shingo-ops/tcg-client-viewer`（古い）に分かれている問題は残る。別件として記録する。
 
-## 12. 外部事例
-- 直接の数値の根拠になる事例は使わない。理由：今回の変更は、Unicode の正規化（NFKC）とひらがな・カタカナの対応（コード位置の差 0x60）という、仕様として決まっている文字変換だけで成り立つ。事例の成功率によって設計の正しさが変わる部分が無い。
+## 12. 外部・過去事例の参照と我々への応用
+- 過去事例（社内）：`docs/handoff/gas-viewer-series-tabs/design.md` で、同じ GAS の許可リストの末尾に Series 列を足した。既存の列番号をずらさずに反映できたので、今回も末尾に足す形を踏襲する。
+- 外部事例：直接の数値の根拠になる事例は使わない。理由：今回の変更は、Unicode の正規化（NFKC）とひらがな・カタカナの対応（コード位置の差 0x60）という、仕様として決まっている文字変換だけで成り立つ。事例の成功率によって設計の正しさが変わる部分が無い。
