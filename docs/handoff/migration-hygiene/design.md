@@ -49,5 +49,13 @@
 - 外部事例：一般的な migration の道具（Alembic・Flyway・Rails）は、実行済みの記録の表を持ち、未実行のものだけを1回流す。この形を段5の目標にする。
 - 過去事例：#3544 での漏れ（seed_product_marks）が、2026-10-05 の書き戻しにつながった。そのため、全体の一覧（recon.md §2）で漏れを無くしてから無効にする。
 
+## 8.5 個別の扱い（PO 決定）
+- public.inventory_aggregation_rules（migrations/20260620_010000_create_inventory_aggregation_rules.sql、4行）と GET /api/v1/inventory/aggregated（#2514）
+  - 使われ方：画面からは呼ばれていない（frontend・GAS の呼び出しは 0 件）。編集の画面・API も無い。
+  - PO の決定（2026-10-06「はい」）：表と API は消さずに残す。今は使っていない。将来のカスタムの設定（docs/specs/inventory-management/to-be.md:33-41 の、状態ごとの在庫優先の条件）の土台とする。
+  - 着手のときに、形を見直す（to-be は段階を複数持つ形で、今の表は状態ごとに1組）。
+  - 段3：毎回の上書き（ON CONFLICT DO UPDATE）は無効にする。本番の4行はそのまま残す。
+  - 段2：試験は、試験の側で4行を用意する。
+
 ## 9. 維持の仕組み
 - 守り手: 設計担当（Opus）。段ごとに本番の読み取りの確認を行い、一覧（recon.md §2）を最新に保つ。
