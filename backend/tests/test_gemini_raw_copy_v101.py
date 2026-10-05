@@ -14,7 +14,7 @@ _UNITS = {
     "BOX": ("BOX", "箱系"), "box": ("BOX", "箱系"), "ボックス": ("BOX", "箱系"),
     "カートン": ("カートン", "箱系大"), "パック": ("パック", "パック系"),
     "ﾏｽﾀｰｶｰﾄﾝ": ("MasterCarton", "箱系大"), "セット": ("セット", "セット系"), "枚": ("枚", "単品系"),
-    "case": ("Case", "箱系大"),
+    "case": ("Case", "箱系大"), "piece": ("Piece", "単品系"), "ケース": ("Case", "箱系大"),
 }
 
 
@@ -505,3 +505,36 @@ def test_dai2dan_word_in_price_line_is_kept_in_the_name():
     raw = "●プレミアムバンダイ限定コレクション\n第2弾@3,500×40"
     (r,), _ = _extract(raw, _it([1, 2], "3,500", "40"))
     assert "第2弾" in r["name"]
+
+
+def test_ship_before_price_in_price_line_without_spaces():
+    (r,), _ = _extract("ハイペアリシティ発売日前日発送600@9900", _it([1], "9900", "600"))
+    assert r["ship"] == "発売日前日発送"
+
+
+def test_ship_before_price_stops_at_quantity_word():
+    (r,), _ = _extract("✅発送日②（要相談）数量：1カートン　＠412,000", _it([1], "412,000", "1カートン"))
+    assert r["ship"] == "発送日②（要相談）"
+
+
+def test_stock_line_with_reirruka_word_is_not_a_ship_line():
+    raw = "商品A\n3,000円\n残り334 再入荷しました⚡️"
+    (r,), _ = _extract(raw, _it([1, 2, 3], "3,000円", "残り334"))
+    assert r["ship"] == "none" and r["roles"][3] == "stock"
+
+
+def test_unit_alias_word_is_kept_in_name_when_other_words_remain():
+    (r,), _ = _extract("ONE PIECE × ROUND1 プロモパック 未開封 100@4000", _it([1], "4000", "100"))
+    assert "ONE PIECE" in r["name"]
+
+
+def test_price_line_word_with_ship_word_is_not_added_to_name():
+    (r,), _ = _extract("商品A\nBOX特典 （9/18発送） 3,000円", _it([1, 2], "3,000円", "none"))
+    assert "9/18" not in r["name"] and "BOX特典" in r["name"]
+
+
+def test_heading_with_ship_bracket_keeps_other_words_and_bracket_is_removed_whole():
+    raw = "◆ヴァイスシュヴァルツ ブースター anemoi（問屋品）（発送日要相談）\n54000円/ 1ケース"
+    (r,), _ = _extract(raw, _it([1, 2], "54000円", "1ケース"))
+    assert "anemoi" in r["name"] and "発送日要相談" not in r["name"]
+    assert r["ship"] == "発送日要相談"

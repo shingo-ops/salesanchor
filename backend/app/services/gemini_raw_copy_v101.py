@@ -247,9 +247,11 @@ def _is_stock_line(text: str, ctx: V101Context) -> bool:
 
 
 def line_role(text: str, ctx: V101Context, *, is_price_line: bool) -> str:
-    """1行の役割。price → ship → condition → stock → name の順に決める。"""
+    """1行の役割。price → 在庫の言葉で始まる行（stock）→ ship → condition → stock → name の順に決める。"""
     if is_price_line:
         return ROLE_PRICE
+    if _STOCK_START_RE.match(_nfkc(text).strip().lower()):
+        return ROLE_STOCK
     if _SHIP_RE.search(_nfkc(text)):
         return ROLE_SHIP
     if _is_state_line(text, ctx):
@@ -464,13 +466,17 @@ def reassign_ambiguous(
 _DROP_WORD_START_RE = re.compile(r"^(?:\d|数量|在庫|残り|単価)")
 
 
-def _is_dropped_word(word: str, ctx: V101Context) -> bool:
-    """価格の行の残りの語のうち、名前に足さない語（数量・在庫・単位だけ・完売の言葉・状態の語）。"""
+def _is_alias_word(word: str, ctx: V101Context) -> bool:
     norm = _nfkc(word).strip().lower()
-    aliases = {_nfkc(a).lower() for a in ctx.aliases}
+    return any(norm == _nfkc(a).lower() for a in ctx.aliases)
+
+
+def _is_dropped_word(word: str, ctx: V101Context) -> bool:
+    """価格の行の残りの語のうち、必ず名前に足さない語（数量・在庫・完売の言葉・状態の語・発送の言葉を含む語）。"""
+    norm = _nfkc(word).strip().lower()
     sold_out = {_nfkc(w).lower() for w in ctx.sold_out_words}
     return bool(
-        _DROP_WORD_START_RE.match(norm) or norm in aliases or norm in sold_out or _is_state_line(word, ctx)
+        _DROP_WORD_START_RE.match(norm) or norm in sold_out or _SHIP_RE.search(norm) or _is_state_line(word, ctx)
     )
 
 
@@ -489,7 +495,10 @@ def _price_line_name(text: str, owner: dict, ctx: V101Context, *, filtered: bool
     rest = v10._strip_price_line_name(text, owner, ctx.aliases)
     if not filtered:
         return rest
-    return " ".join(w for w in _ship_words_of(rest) if not _is_dropped_word(w, ctx))
+    words = [w for w in _ship_words_of(rest) if not _is_dropped_word(w, ctx)]
+    if all(_is_alias_word(w, ctx) for w in words):  # 残りが単位の別名の語だけなら、それも除く
+        return ""
+    return " ".join(words)
 
 
 def _is_heading_position(item: dict, roles: dict[int, str], line_no: int) -> bool:
@@ -514,8 +523,8 @@ def _name_parts(
             part = _price_line_name(text, owner or item, ctx)
         elif role == ROLE_NAME:
             part = text.strip(v10._EDGE_CHARS)
-        elif role == ROLE_SHIP and len(_ship_words_of(text)) >= 2 and _is_heading_position(item, roles, n):
-            part = " ".join(w for w in _ship_words_of(text) if not v10._SHIP_WORD_RE.search(w))
+        elif role == ROLE_SHIP and _is_heading_position(item, roles, n):
+            part = _split_ship(text, is_heading=True)[1].strip(v10._EDGE_CHARS)
         else:
             part = ""
         if part.strip():
@@ -553,19 +562,52 @@ def _find_unit(item: dict, roles: dict[int, str], shared: set[int], lines: list[
     return None
 
 
-def _ship_text(line: str, item: dict, is_price_line: bool, ctx: V101Context, *, is_heading: bool) -> str | None:
+def _split_ship(line: str, *, is_heading: bool) -> tuple[str, str]:
+    """発送の行から (発送の文字, 発送として取った部分を除いた残り) を返す。括弧は括弧ごと除く。"""
     for m in v10._BRACKET_RE.finditer(line):
         if v10._SHIP_WORD_RE.search(m.group(1)):
-            if (line[:m.start()] + line[m.end():]).strip():
-                return m.group(1).strip()
+            rest = line[:m.start()] + line[m.end():]
+            if rest.strip():
+                return m.group(1).strip(), rest
             break
+    if is_heading and len(_ship_words_of(line)) >= 2:
+        for m in re.finditer(r"[^\s　]+", line):
+            if v10._SHIP_WORD_RE.search(m.group()):
+                start = m.start() + max(m.group().rfind(c) for c in "]）】)") + 1
+                if start < m.end():
+                    return line[start:m.end()], line[:start] + line[m.end():]
+                return m.group(), line[:m.start()] + line[m.end():]
+    return line.strip(), ""
+
+
+def _ship_text(line: str, item: dict, is_price_line: bool, ctx: V101Context, *, is_heading: bool) -> str | None:
     if is_price_line:
-        return _ship_text_after_price(line, item, ctx)
-    words = _ship_words_of(line)
-    if is_heading and len(words) >= 2:
-        word = next((w for w in words if v10._SHIP_WORD_RE.search(w)), line.strip())
-        return re.split(r"[\]）】)]", word)[-1] or word
-    return line.strip()
+        text, rest = _split_ship(line, is_heading=False)
+        if rest:  # 発送の言葉を含む括弧があり、括弧の外にも文字がある
+            return text
+        return _ship_text_after_price(line, item, ctx) or _ship_text_before_price(line, item)
+    return _split_ship(line, is_heading=is_heading)[0]
+
+
+_SHIP_START_RE = re.compile(r"[0-9０-９]+\s*[/／]\s*[0-9０-９]+|[0-9０-９]+\s*月|発売|前日|当日|翌日|即日|入荷|発送|出荷")
+_SHIP_END_RE = re.compile(r"数量|在庫|残り|単価|[@＠¥￥]|[0-9０-９]+\s*[@＠]")
+
+
+def _ship_text_before_price(line: str, item: dict) -> str | None:
+    """価格の行の、価格より前にある発送の文字（発送の言葉に関わる最初の位置から、数量・在庫・価格記号の手前まで）。"""
+    price = item["price"]
+    anchor = price if price in line else price.split("／")[0]
+    head = line[:line.index(anchor)] if price and price.lower() != _NONE and anchor in line else line
+    start = _SHIP_START_RE.search(head)
+    if start is None:
+        return None
+    tail = head[start.start():]
+    ends = [m.start() for m in _SHIP_END_RE.finditer(tail)]
+    if item["quantity"] != _NONE and item["quantity"] in tail:
+        ends.append(tail.index(item["quantity"]))
+    text = tail[:min(ends)] if ends else tail
+    text = text.strip(v10._EDGE_CHARS + "※")
+    return text if text and v10._SHIP_WORD_RE.search(text) else None
 
 
 def _ship_text_after_price(line: str, item: dict, ctx: V101Context) -> str | None:
