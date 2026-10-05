@@ -7,7 +7,7 @@
 **recon**: docs/handoff/migration-runner-redesign/recon.md（`docs/handoff/migration-runner-redesign/recon.md`）  
 **日付**: 2026-10-04  
 **担当**: 設計担当 Opus（Planner／Architect 兼任。同じ AI による自己審査であり、独立した第三者レビューではない）  
-**状態**: 設計案（PO 承認前）。本書の承認は、実装・マージ・本番反映の GO を兼ねない。
+**状態**: 方向性は PO 承認済み（2026-10-06「y」）。設計審査済み（Architect APPROVE、段階0のみ実装可）。各段階の実装・マージ・本番反映の GO は兼ねない。
 
 ---
 
