@@ -1,0 +1,101 @@
+BEGIN
+SET
+SET
+SET
+NOTICE:  pair 440573 -> 398: analysis_results repointed rows=10
+NOTICE:  pair 440573 -> 398: is_current flips=0 (to true 0)
+NOTICE:  pair 440573 -> 398: extraction_items repointed rows=0
+NOTICE:  pair 440573 -> 398: buyback_shop_products repointed rows=0
+NOTICE:  pair 440573 -> 398: extraction_shadow_results repointed rows=0
+NOTICE:  pair 440573 -> 398: keyword rows carried=4
+NOTICE:  pair 440573 -> 398: product 440573 retired rows=1
+NOTICE:  pair 1386 -> 440434: analysis_results repointed rows=11
+NOTICE:  pair 1386 -> 440434: is_current flips=1 (to true 0)
+NOTICE:  pair 1386 -> 440434: extraction_items repointed rows=14
+NOTICE:  pair 1386 -> 440434: buyback_shop_products repointed rows=0
+NOTICE:  pair 1386 -> 440434: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1386 -> 440434: keyword rows carried=1
+NOTICE:  pair 1386 -> 440434: product 1386 retired rows=1
+NOTICE:  pair 1385 -> 440435: analysis_results repointed rows=7
+NOTICE:  pair 1385 -> 440435: is_current flips=1 (to true 0)
+NOTICE:  pair 1385 -> 440435: extraction_items repointed rows=4
+NOTICE:  pair 1385 -> 440435: buyback_shop_products repointed rows=0
+NOTICE:  pair 1385 -> 440435: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1385 -> 440435: keyword rows carried=1
+NOTICE:  pair 1385 -> 440435: product 1385 retired rows=1
+NOTICE:  pair 1384 -> 440578: analysis_results repointed rows=8
+NOTICE:  pair 1384 -> 440578: is_current flips=2 (to true 0)
+NOTICE:  pair 1384 -> 440578: extraction_items repointed rows=8
+NOTICE:  pair 1384 -> 440578: buyback_shop_products repointed rows=0
+NOTICE:  pair 1384 -> 440578: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1384 -> 440578: keyword rows carried=1
+NOTICE:  pair 1384 -> 440578: product 1384 retired rows=1
+NOTICE:  pair 1383 -> 440579: analysis_results repointed rows=4
+NOTICE:  pair 1383 -> 440579: is_current flips=1 (to true 0)
+NOTICE:  pair 1383 -> 440579: extraction_items repointed rows=4
+NOTICE:  pair 1383 -> 440579: buyback_shop_products repointed rows=0
+NOTICE:  pair 1383 -> 440579: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1383 -> 440579: keyword rows carried=1
+NOTICE:  pair 1383 -> 440579: product 1383 retired rows=1
+NOTICE:  pair 1382 -> 440580: analysis_results repointed rows=18
+NOTICE:  pair 1382 -> 440580: is_current flips=2 (to true 0)
+NOTICE:  pair 1382 -> 440580: extraction_items repointed rows=22
+NOTICE:  pair 1382 -> 440580: buyback_shop_products repointed rows=0
+NOTICE:  pair 1382 -> 440580: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1382 -> 440580: keyword rows carried=1
+NOTICE:  pair 1382 -> 440580: product 1382 retired rows=1
+NOTICE:  pair 1381 -> 440581: analysis_results repointed rows=12
+NOTICE:  pair 1381 -> 440581: is_current flips=1 (to true 0)
+NOTICE:  pair 1381 -> 440581: extraction_items repointed rows=16
+NOTICE:  pair 1381 -> 440581: buyback_shop_products repointed rows=0
+NOTICE:  pair 1381 -> 440581: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1381 -> 440581: keyword rows carried=1
+NOTICE:  pair 1381 -> 440581: product 1381 retired rows=1
+NOTICE:  pair 1380 -> 440582: analysis_results repointed rows=4
+NOTICE:  pair 1380 -> 440582: is_current flips=1 (to true 0)
+NOTICE:  pair 1380 -> 440582: extraction_items repointed rows=4
+NOTICE:  pair 1380 -> 440582: buyback_shop_products repointed rows=0
+NOTICE:  pair 1380 -> 440582: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1380 -> 440582: keyword rows carried=1
+NOTICE:  pair 1380 -> 440582: product 1380 retired rows=1
+NOTICE:  pair 1379 -> 440583: analysis_results repointed rows=1
+NOTICE:  pair 1379 -> 440583: is_current flips=0 (to true 0)
+NOTICE:  pair 1379 -> 440583: extraction_items repointed rows=1
+NOTICE:  pair 1379 -> 440583: buyback_shop_products repointed rows=0
+NOTICE:  pair 1379 -> 440583: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1379 -> 440583: keyword rows carried=1
+NOTICE:  pair 1379 -> 440583: product 1379 retired rows=1
+NOTICE:  pair 1376 -> 440587: analysis_results repointed rows=0
+NOTICE:  pair 1376 -> 440587: is_current flips=0 (to true 0)
+NOTICE:  pair 1376 -> 440587: extraction_items repointed rows=0
+NOTICE:  pair 1376 -> 440587: buyback_shop_products repointed rows=0
+NOTICE:  pair 1376 -> 440587: extraction_shadow_results repointed rows=0
+NOTICE:  pair 1376 -> 440587: keyword rows carried=1
+NOTICE:  pair 1376 -> 440587: product 1376 retired rows=1
+DO
+NOTICE:  DONE: 10 pairs merged, 10 audit_log rows
+   id   |       product_code        |         mark          |                    name                    | is_active | analysis_results | extraction_items | buyback_shop_products | shadow_results | search_kw_rows | exclude_kw_rows 
+--------+---------------------------+-----------------------+--------------------------------------------+-----------+------------------+------------------+-----------------------+----------------+----------------+-----------------
+    398 | UA-PC02BT                 | PC02BT                | プレシャス 勝利の女神：NIKKE               | t         |               14 |                5 |                     0 |              0 |              3 |               3
+   1376 | LOR-wilds-unknown         | wilds-unknown         | WILDS UNKNOWN 未知なる彼方へ!              | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1379 | LOR-reign-of-jafar        | reign-of-jafar        | REIGN OF JAFAR ジャファーの王権            | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1380 | LOR-archazias-island      | archazias-island      | ARCHAZIAS ISLAND アーケイジアと魔法の島    | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1381 | LOR-azurite-sea           | azurite-sea           | AZURITE SEA 大いなるアズライト             | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1382 | LOR-shimmering-skies      | shimmering-skies      | SHIMMERING SKIES 星々の輝き                | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1383 | LOR-ursulas-return        | ursulas-return        | URSULA'S RETURN 逆襲のアースラ             | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1384 | LOR-into-the-inklands     | into-the-inklands     | INTO THE INKLANDS インクランド探訪         | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1385 | LOR-rise-of-the-floodborn | rise-of-the-floodborn | RISE OF THE FLOODBORN フラッドボーンの渾沌 | f         |                0 |                0 |                     0 |              0 |              1 |               0
+   1386 | LOR-the-first-chapter     | the-first-chapter     | THE FIRST CHAPTER 物語のはじまり           | f         |                0 |                0 |                     0 |              0 |              1 |               0
+ 440434 | PM0232                    | the-first-chapter     | 物語のはじまり                             | t         |               25 |               17 |                     0 |              2 |              2 |               0
+ 440435 | PM0233                    | rise-of-the-floodborn | フラッドボーンの渾沌                       | t         |               14 |                4 |                     0 |              0 |              2 |               0
+ 440573 | PM0225                    | PC02BT                | UNION ARENA 勝利の女神NIKKE【PC02BT】      | f         |                0 |                0 |                     0 |              0 |              2 |               3
+ 440578 | PM0234                    | into-the-inklands     | インクランド探訪                           | t         |               17 |                8 |                     0 |              0 |              2 |               0
+ 440579 | PM0235                    | ursulas-return        | 逆襲のアースラ                             | t         |                8 |                4 |                     0 |              4 |              2 |               0
+ 440580 | PM0236                    | shimmering-skies      | 星々の輝き                                 | t         |               33 |               23 |                     0 |              6 |              2 |               0
+ 440581 | PM0237                    | azurite-sea           | 大いなるアズライト                         | t         |               23 |               17 |                     0 |              2 |              2 |               0
+ 440582 | PM0238                    | archazias-island      | アーケイジアと魔法の島                     | t         |                8 |                4 |                     0 |              4 |              2 |               0
+ 440583 | PM0239                    | reign-of-jafar        | ジャファーの王権                           | t         |                1 |                1 |                     0 |              0 |              2 |               0
+ 440587 | PM0243                    | wilds-unknown         | 未知なる彼方へ!                            | t         |                3 |                0 |                     0 |              0 |              2 |               0
+(20 rows)
+
+ROLLBACK
