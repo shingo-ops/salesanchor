@@ -122,12 +122,79 @@ function expandSources(registrations, repoRoot) {
 // 2. コメント除去
 // ---------------------------------------------------------------------------
 
-/** SQL コメント（-- 行末まで、/* ブロック *\/）を空白に置換（行番号を保持） */
+/**
+ * SQL コメント（-- 行末まで、/* ブロック *\/）を空白に置換（行番号を保持）。
+ * 文字列リテラル（単一引用符、'' エスケープ対応）と dollar-quote
+ * （$$ ... $$ / $tag$ ... $tag$、EXECUTE format('...') や DO $$...$$ 本体を含む）の
+ * 内側はコメット解釈をスキップし、内容をそのまま残す（ALTER文の検出対象として
+ * スキャナーに見える状態を保つ）。コメントはリテラルの外側でのみ除去する。
+ */
 function stripSqlComments(text) {
-  let out = text.replace(/\/\*[\s\S]*?\*\//g, (block) =>
-    block.replace(/[^\n]/g, ' '),
-  );
-  out = out.replace(/--[^\n]*/g, (line) => ' '.repeat(line.length));
+  const n = text.length;
+  let out = '';
+  let i = 0;
+  while (i < n) {
+    const ch = text[i];
+
+    // 単一引用符の文字列リテラル（'' はエスケープされた引用符として内部に留める）
+    if (ch === "'") {
+      let j = i + 1;
+      while (j < n) {
+        if (text[j] === "'") {
+          if (text[j + 1] === "'") {
+            j += 2;
+            continue;
+          }
+          j += 1;
+          break;
+        }
+        j += 1;
+      }
+      out += text.slice(i, j);
+      i = j;
+      continue;
+    }
+
+    // dollar-quote（$$ ... $$ / $tag$ ... $tag$）。DO $$...$$ 本体や
+    // EXECUTE format($q$...$q$, ...) の文字列部分もここに含まれる。
+    if (ch === '$') {
+      const tagMatch = /^\$([A-Za-z_][A-Za-z0-9_]*)?\$/.exec(text.slice(i));
+      if (tagMatch) {
+        const openTag = tagMatch[0];
+        const closeIdx = text.indexOf(openTag, i + openTag.length);
+        if (closeIdx !== -1) {
+          out += text.slice(i, closeIdx + openTag.length);
+          i = closeIdx + openTag.length;
+          continue;
+        }
+        // 閉じタグが見つからない（未終端）。安全側に倒して残り全体をそのまま残す。
+        out += text.slice(i);
+        break;
+      }
+    }
+
+    // 行コメント（リテラル外側のみ）
+    if (ch === '-' && text[i + 1] === '-') {
+      let j = i;
+      while (j < n && text[j] !== '\n') j += 1;
+      out += ' '.repeat(j - i);
+      i = j;
+      continue;
+    }
+
+    // ブロックコメント（リテラル外側のみ）
+    if (ch === '/' && text[i + 1] === '*') {
+      let j = i + 2;
+      while (j < n && !(text[j] === '*' && text[j + 1] === '/')) j += 1;
+      const end = Math.min(j + 2, n);
+      out += text.slice(i, end).replace(/[^\n]/g, ' ');
+      i = end;
+      continue;
+    }
+
+    out += ch;
+    i += 1;
+  }
   return out;
 }
 
@@ -140,24 +207,53 @@ function stripPyComments(text) {
 // 3. ALTER TABLE 抽出
 // ---------------------------------------------------------------------------
 
-const TARGET_RE =
-  '(?:%I|\\{schema\\}|tenant_\\d+|public)\\.[A-Za-z_][A-Za-z0-9_]*|[A-Za-z_][A-Za-z0-9_]*';
+// スキーマ部分（%I / {schema} / tenant_NNN / public）は常に非引用のリテラルトークン。
+// テーブル名部分は引用識別子（"Tbl"）または非引用識別子のどちらも許容する。
+const SCHEMA_ALT = '%I|\\{schema\\}|tenant_\\d+|public';
+const IDENT_ALT = '"[^"]*"|[A-Za-z_][A-Za-z0-9_]*';
+const TARGET_RE = `(?:(?:${SCHEMA_ALT})\\.(?:${IDENT_ALT})|(?:${IDENT_ALT}))`;
 
 const ALTER_RE = new RegExp(
-  `ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(${TARGET_RE})\\s+([^;'"]*?)(?=[;'"]|\\$q\\$|$)`,
+  `ALTER\\s+TABLE\\s+(?:IF\\s+EXISTS\\s+)?(?:ONLY\\s+)?(${TARGET_RE})\\s+([^;]*?)(?=;|$)`,
   'gi',
 );
 
+/**
+ * 引用識別子（"Name"）は PostgreSQL の規則通り大小文字をそのまま保持し、
+ * 非引用識別子は小文字に正規化する。
+ * @returns {{name: string, wasQuoted: boolean}}
+ */
+function parseIdentifier(raw) {
+  if (raw.length >= 2 && raw[0] === '"' && raw[raw.length - 1] === '"') {
+    return { name: raw.slice(1, -1), wasQuoted: true };
+  }
+  return { name: raw.toLowerCase(), wasQuoted: false };
+}
+
+/** raw の中から、引用符の外側にある最初の '.' でスキーマ部とテーブル部に分割する */
+function splitSchemaTable(raw) {
+  let inQuote = false;
+  for (let i = 0; i < raw.length; i += 1) {
+    if (raw[i] === '"') inQuote = !inQuote;
+    else if (raw[i] === '.' && !inQuote) {
+      return [raw.slice(0, i), raw.slice(i + 1)];
+    }
+  }
+  return [null, raw];
+}
+
 function normalizeTable(raw) {
-  const parts = raw.split('.');
-  if (parts.length === 1) {
-    return `public.${parts[0]}`;
+  const [schemaRaw, tableRaw] = splitSchemaTable(raw);
+  const table = parseIdentifier(tableRaw);
+  const tableName = table.name;
+  if (schemaRaw === null) {
+    return `public.${tableName}`;
   }
-  const [schema, table] = parts;
-  if (schema.toLowerCase() === 'public') {
-    return `public.${table}`;
+  const schema = parseIdentifier(schemaRaw);
+  if (!schema.wasQuoted && schema.name === 'public') {
+    return `public.${tableName}`;
   }
-  return `tenant.${table}`;
+  return `tenant.${tableName}`;
 }
 
 /** 括弧の深さを見て、トップレベルのカンマでのみ分割する */
@@ -186,22 +282,56 @@ const ADD_NON_COLUMN_KEYWORDS = new Set([
   'CHECK',
   'FOREIGN',
   'EXCLUDE',
+  'COLUMN',
 ]);
-const DROP_NON_COLUMN_KEYWORDS = new Set(['CONSTRAINT', 'DEFAULT', 'NOT']);
+const DROP_NON_COLUMN_KEYWORDS = new Set(['CONSTRAINT', 'DEFAULT', 'NOT', 'COLUMN']);
+
+// 列名: 引用識別子（"Col"、大小文字保持）または非引用識別子（小文字化）
+const COLUMN_IDENT_CAPTURE = '(?:"([^"]*)"|([A-Za-z_][A-Za-z0-9_]*))';
+
+/**
+ * 正規表現マッチ結果から引用/非引用の識別子名を読み取る。
+ * quotedIdx は引用グループの番号（非引用グループは quotedIdx+1）。
+ * @returns {{name: string, wasQuoted: boolean}|null}
+ */
+function readIdentFromMatch(m, quotedIdx) {
+  const quoted = m[quotedIdx];
+  const bare = m[quotedIdx + 1];
+  if (quoted !== undefined) return { name: quoted, wasQuoted: true };
+  if (bare !== undefined) return { name: bare, wasQuoted: false };
+  return null;
+}
+
+function finalizeIdentName(ident) {
+  if (!ident) return null;
+  return ident.wasQuoted ? ident.name : ident.name.toLowerCase();
+}
 
 function matchAddColumn(clause) {
-  let m = clause.match(/^ADD\s+COLUMN\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/i);
-  if (m) return m[1];
-  m = clause.match(/^ADD\s+(?:IF\s+NOT\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/i);
-  if (m && !ADD_NON_COLUMN_KEYWORDS.has(m[1].toUpperCase())) return m[1];
+  let m = clause.match(
+    new RegExp(`^ADD\\s+COLUMN\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${COLUMN_IDENT_CAPTURE}`, 'i'),
+  );
+  if (m) return finalizeIdentName(readIdentFromMatch(m, 1));
+  m = clause.match(new RegExp(`^ADD\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${COLUMN_IDENT_CAPTURE}`, 'i'));
+  if (m) {
+    const ident = readIdentFromMatch(m, 1);
+    if (ident.wasQuoted) return finalizeIdentName(ident);
+    if (!ADD_NON_COLUMN_KEYWORDS.has(ident.name.toUpperCase())) return finalizeIdentName(ident);
+  }
   return null;
 }
 
 function matchDropColumn(clause) {
-  let m = clause.match(/^DROP\s+COLUMN\s+(?:IF\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/i);
-  if (m) return m[1];
-  m = clause.match(/^DROP\s+(?:IF\s+EXISTS\s+)?([A-Za-z_][A-Za-z0-9_]*)/i);
-  if (m && !DROP_NON_COLUMN_KEYWORDS.has(m[1].toUpperCase())) return m[1];
+  let m = clause.match(
+    new RegExp(`^DROP\\s+COLUMN\\s+(?:IF\\s+EXISTS\\s+)?${COLUMN_IDENT_CAPTURE}`, 'i'),
+  );
+  if (m) return finalizeIdentName(readIdentFromMatch(m, 1));
+  m = clause.match(new RegExp(`^DROP\\s+(?:IF\\s+EXISTS\\s+)?${COLUMN_IDENT_CAPTURE}`, 'i'));
+  if (m) {
+    const ident = readIdentFromMatch(m, 1);
+    if (ident.wasQuoted) return finalizeIdentName(ident);
+    if (!DROP_NON_COLUMN_KEYWORDS.has(ident.name.toUpperCase())) return finalizeIdentName(ident);
+  }
   return null;
 }
 
@@ -231,14 +361,17 @@ function extractColumnEvents(strippedText, originalText) {
     for (const rawClause of clauses) {
       const clause = rawClause.trim();
       if (!clause) continue;
+      // matchAddColumn/matchDropColumn は引用識別子の大小文字保持・非引用識別子の
+      // 小文字化を既に適用済みなので、ここで再度 toLowerCase() しない
+      // （引用識別子の大小文字を壊さないため）。
       const addCol = matchAddColumn(clause);
       if (addCol) {
-        events.push({ table, column: addCol.toLowerCase(), action: 'ADD', line });
+        events.push({ table, column: addCol, action: 'ADD', line });
         continue;
       }
       const dropCol = matchDropColumn(clause);
       if (dropCol) {
-        events.push({ table, column: dropCol.toLowerCase(), action: 'DROP', line });
+        events.push({ table, column: dropCol, action: 'DROP', line });
       }
     }
   }

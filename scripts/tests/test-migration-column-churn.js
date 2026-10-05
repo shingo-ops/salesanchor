@@ -273,6 +273,127 @@ test('(h) drop-then-add は警告として出力されるが exit 0 を維持す
   }
 });
 
+// (i) 引用識別子のカラム名
+test('(i) ADD COLUMN "Col" / DROP COLUMN "Col" は大小文字を保持して検出する', () => {
+  const fixture = makeFixture({
+    'scripts/run_all_migrations.sh': [
+      'run_sql migrations/001_add_quoted_col.sql',
+      'run_sql migrations/002_drop_quoted_col.sql',
+    ].join('\n'),
+    'migrations/001_add_quoted_col.sql': 'ALTER TABLE public.foo ADD COLUMN "Col" INTEGER;\n',
+    'migrations/002_drop_quoted_col.sql': 'ALTER TABLE public.foo DROP COLUMN "Col";\n',
+  });
+  try {
+    const result = run(fixture);
+    assert.notStrictEqual(result.code, 0, result.stdout);
+    assert.ok(
+      result.stdout.includes('public.foo.Col'),
+      '引用カラム名が大小文字保持で検出されていない（COLUMN キーワード誤検出の可能性）',
+    );
+    assert.ok(!result.stdout.includes('public.foo.column'), 'COLUMN キーワードを列名として誤検出している');
+  } finally {
+    cleanup(fixture.dir);
+  }
+});
+
+// (j) 引用識別子のテーブル名
+test('(j) public."Tbl" のような引用テーブル名を大小文字保持で正規化する', () => {
+  const fixture = makeFixture({
+    'scripts/run_all_migrations.sh': [
+      'run_sql migrations/001_add_quoted_table.sql',
+      'run_sql migrations/002_drop_quoted_table.sql',
+    ].join('\n'),
+    'migrations/001_add_quoted_table.sql': 'ALTER TABLE public."Tbl" ADD COLUMN bar INTEGER;\n',
+    'migrations/002_drop_quoted_table.sql': 'ALTER TABLE public."Tbl" DROP COLUMN bar;\n',
+  });
+  try {
+    const result = run(fixture);
+    assert.notStrictEqual(result.code, 0, result.stdout);
+    assert.ok(
+      result.stdout.includes('public.Tbl.bar'),
+      '引用テーブル名が大小文字保持で正規化されていない',
+    );
+  } finally {
+    cleanup(fixture.dir);
+  }
+});
+
+// (k) 単一引用符リテラル内の -- が同一行の後続の実コードを巻き込まない
+test('(k) 単一引用符リテラル内の -- の後、同一行の実際の ADD を検出する', () => {
+  const fixture = makeFixture({
+    'scripts/run_all_migrations.sh': [
+      'run_sql migrations/001_add_after_literal_dashdash.sql',
+      'run_sql migrations/002_drop_secret_col.sql',
+    ].join('\n'),
+    'migrations/001_add_after_literal_dashdash.sql':
+      "ALTER TABLE public.decoy ADD COLUMN label TEXT DEFAULT 'oops -- not a comment'; ALTER TABLE public.secret_table ADD COLUMN secret_col INTEGER;\n",
+    'migrations/002_drop_secret_col.sql':
+      'ALTER TABLE public.secret_table DROP COLUMN secret_col;\n',
+  });
+  try {
+    const result = run(fixture);
+    assert.notStrictEqual(result.code, 0, result.stdout);
+    assert.ok(
+      result.stdout.includes('public.secret_table.secret_col'),
+      'リテラル内の -- に巻き込まれて同一行後続の ADD が消えている',
+    );
+  } finally {
+    cleanup(fixture.dir);
+  }
+});
+
+// (l) EXECUTE format 文字列（dollar-quote）内の -- が同一行の後続の実コードを巻き込まない
+test('(l) EXECUTE format 文字列内の -- の後、同一行の実際の ADD を検出する', () => {
+  const fixture = makeFixture({
+    'scripts/run_all_migrations.sh': [
+      'run_sql migrations/001_add_exec_format_dashdash.sql',
+      'run_sql migrations/002_drop_trailing_col.sql',
+    ].join('\n'),
+    'migrations/001_add_exec_format_dashdash.sql': [
+      'DO $$',
+      'BEGIN',
+      "  EXECUTE format('ALTER TABLE %I.widgets ADD COLUMN gizmo TEXT -- inline note, not a real comment', 'tenant_001'); EXECUTE format('ALTER TABLE %I.after_block ADD COLUMN trailing_col INTEGER', 'tenant_001');",
+      'END $$;',
+    ].join('\n'),
+    'migrations/002_drop_trailing_col.sql':
+      'ALTER TABLE tenant_001.after_block DROP COLUMN trailing_col;\n',
+  });
+  try {
+    const result = run(fixture);
+    assert.notStrictEqual(result.code, 0, result.stdout);
+    assert.ok(
+      result.stdout.includes('tenant.after_block.trailing_col'),
+      'EXECUTE format 文字列内の -- に巻き込まれて同一行後続の EXECUTE が消えている',
+    );
+  } finally {
+    cleanup(fixture.dir);
+  }
+});
+
+// (m) 単一引用符リテラル内の /* */ が同一行の後続の実コードを巻き込まない
+test('(m) 単一引用符リテラル内の /* */ の後、同一行の実際の ADD を検出する', () => {
+  const fixture = makeFixture({
+    'scripts/run_all_migrations.sh': [
+      'run_sql migrations/001_add_after_literal_blockcomment.sql',
+      'run_sql migrations/002_drop_secret_col2.sql',
+    ].join('\n'),
+    'migrations/001_add_after_literal_blockcomment.sql':
+      "ALTER TABLE public.decoy2 ADD COLUMN label TEXT DEFAULT '/* not a real comment */ trailing'; ALTER TABLE public.secret_table2 ADD COLUMN secret_col2 INTEGER;\n",
+    'migrations/002_drop_secret_col2.sql':
+      'ALTER TABLE public.secret_table2 DROP COLUMN secret_col2;\n',
+  });
+  try {
+    const result = run(fixture);
+    assert.notStrictEqual(result.code, 0, result.stdout);
+    assert.ok(
+      result.stdout.includes('public.secret_table2.secret_col2'),
+      'リテラル内の /* */ に巻き込まれて同一行後続の ADD が消えている',
+    );
+  } finally {
+    cleanup(fixture.dir);
+  }
+});
+
 if (failed > 0) {
   console.error(`\n${passed} passed, ${failed} failed`);
   process.exit(1);

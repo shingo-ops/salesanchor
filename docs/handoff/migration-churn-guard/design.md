@@ -50,11 +50,15 @@
 
 ## 弊害・トレードオフ
 
-- 誤検出（false positive）のリスク → 対策: ADD CONSTRAINT/DROP CONSTRAINT/DROP DEFAULT/DROP NOT NULLを明示的に除外し、テストケース(d)で固定化。EXECUTE format内の解析は既存の実在パターン（%I、$q$ dollar-quote）を実データから抽出して正規表現を作成（recon.md citation参照）。
-- 誤検出（false negative）のリスク：列名を動的に組み立てるSQL（`format('...%s...', column_name_var)`のような文字列結合）は検出できない → 対策: Architect審査で「列名を変数で組み立てている例は0件」と確認済み（docs/handoff/migration-runner-redesign/design.md §2 引用）。将来そのような書き方が増えたら本チェックは無力化するため、人手のレビュー（code-review）が最後の守り手として必要。
+- 誤検出（false positive）のリスク → 対策: ADD CONSTRAINT/DROP CONSTRAINT/DROP DEFAULT/DROP NOT NULL/ADD・DROP COLUMN（キーワード自体の誤取得）を明示的に除外し、テストケース(d)で固定化。EXECUTE format内の解析は既存の実在パターン（%I、dollar-quote）を実データから抽出して正規表現を作成（recon.md citation参照）。
+- 誤検出（false negative）のリスク：列名を動的に組み立てるSQL（`format('...%s...', column_name_var)`のような文字列結合）は検出できない → 対策: Architect審査で「列名を変数で組み立てている例は0件」と確認済み（docs/handoff/migration-runner-redesign/design.md §2 引用）。将来そのような書き方が増えたら本チェックは無力化するため、人手のレビュー（code-review）が最後の守り手として必要。**現時点で0件（未変化）。**
 - allowlistの陳腐化（本当は危険な組が「ガード済み」と誤って登録される）リスク → 対策: 本PRではガードの存在をコード読解で1件ずつ確認し、reasonフィールドに具体的なガード条件を引用した（recon.md参照）。stale allowlistは自動検出（テストケース(c)）するが、「ガードが実は不十分」は機械検出できないため、allowlist追加時のPRレビューで人手確認が必要。
 - run_py経由の.sql検出の網羅性 → 対策: 文字列リテラル「.sql」の正規表現抽出のみで、f-string結合などでファイル名を動的生成するコードは追えない。現状の26本のrun_pyスクリプトは全て静的な文字列リテラルでファイル名を書いており（recon.md引用: `scripts/migrate_inventory_sprint1.py:52`, `scripts/migrate_meta.py:60`）、現時点では影響なし。
 - ③（調査のみ）: 全件ドライラン対象外の162件への対応は本PRの範囲外。範囲を広げないまま新しいmigrationが増え続けると、ドライランでカバーされる比率がさらに下がる → 対策: 別カードで「どれが拡張可能か」の判断を行う前提をrecon.mdの不明点リストに明記した。
+- （2026-10-06 Reviewer指摘で追加修正・以下は修正後も残る既知の限界）
+  - 引用識別子（`"Col"`）はカンマ `,` や括弧 `(` `)` をその中に含められる（PostgreSQLの規則上は合法）が、`splitTopLevel` は引用符を認識せずトップレベルの `,`/`(`/`)` のみで分割するため、引用識別子の内部にこれらの文字が含まれる列名・テーブル名があると誤分割する。現状のrepo内に `ADD COLUMN`/`DROP COLUMN`/`ALTER TABLE ... "..."` で引用識別子を使っている箇所は0件（`grep -nE '(ADD|DROP)\s+COLUMN[^;]*"[^"]*"' migrations/*.sql` および `grep -nE 'ALTER\s+TABLE\s+(\S*\.)?"[^"]*"' migrations/*.sql` でいずれも0件確認）だが、将来そのような命名が増えたら本チェックは誤動作する。
+  - ALTER文の句ブロックの終端を `;` のみに変更した（旧版は最初の引用符でも止めていたが、文字列リテラルの内容をそのまま残す今回の修正と相性が悪いため）。その結果、`DEFAULT 'a;b'` のように文字列値の中に `;` を含む稀なケースでは、同一ALTER内の後続のカンマ区切り句を取りこぼす可能性がある。現状のrepo内に該当例は0件（`grep -n "DEFAULT '[^']*;[^']*'" migrations/*.sql` で確認）。
+  - dollar-quote（`$$ ... $$` / `$tag$ ... $tag$`）の内側はコメット除去を行わない設計にしたため、`DO $$ ... $$` 本体に実際に書かれた日本語コメント（`--` 行）はそのまま残る。ALTER_RE は「ALTER TABLE」という文字列から始まる箇所しかマッチしないため、通常の説明コメントが誤ってALTER文として検出されることはないが、理論上コメント文中に偶然「ALTER TABLE X ADD COLUMN Y」という文字列がそのまま現れた場合は誤検出しうる（現状のrepo内のコメントを目視確認した範囲では該当例なし）。
 
 ---
 
@@ -63,6 +67,7 @@
 | ステップ | 内容 | 担当 |
 |---------|------|------|
 | 1 | `scripts/check-migration-column-churn.js` 実装・回帰テスト8ケース作成・実行 | Sonnet |
+| 7 | Reviewer指摘（引用識別子の誤検出、文字列/dollar-quote非対応のコメント除去）を修正。回帰テスト5ケース（i〜m）追加・実行 | Sonnet |
 | 2 | origin/main 上の churn/警告を検出し、1件ずつガードの有無をコード読解で確認。ガード済みの2件を allowlist 登録 | Sonnet |
 | 3 | 二重登録（536行目）削除・`scripts/check-migration-duplicate-registration.sh` 実装・回帰テスト3ケース作成・実行 | Sonnet |
 | 4 | `.github/workflows/migration-guard.yml` にチェック10を追加・actionlint/YAMLロード確認 | Sonnet |
