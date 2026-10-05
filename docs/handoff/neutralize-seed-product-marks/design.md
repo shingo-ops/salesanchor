@@ -8,7 +8,7 @@
 
 ## 2. 現在地（recon.md の要約）
 - `migrations/20260604_010000_seed_product_marks.sql:23-25` は、商品名が完全に一致する `public.products` の mark を上書きする（125組。今は110商品に当たる）。
-- `scripts/run_all_migrations.sh:264` に登録されていて、`deploy.yml:514` から毎回流し直される。
+- `scripts/run_all_migrations.sh:264` に登録されていて、`.github/workflows/deploy.yml:514` から毎回流し直される。
 - 02:38:41Z に 110商品の updated_at が同じ時刻に書き換わった。audit_log には何も無かった（アプリを通らない書き込み）。
 - 同じ種類の seed は、PR #3544（2026-09-18、13本）で無効化済み。この1本だけが漏れていた。
 
