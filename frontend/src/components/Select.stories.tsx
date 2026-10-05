@@ -91,3 +91,29 @@ export const BareSizes: Story = {
     </div>
   ),
 }
+
+export const ChildrenMode: Story = {
+  name: 'childrenモード',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <SelectControl fullWidth defaultValue="">
+        <option value="">-- Select status --</option>
+        {STATUS_OPTIONS.map((opt) => (
+          <option key={opt.value} value={opt.value} disabled={opt.disabled}>
+            {opt.label}
+          </option>
+        ))}
+      </SelectControl>
+    </div>
+  ),
+}
+
+export const NoIndicator: Story = {
+  name: '矢印なし (indicator=none)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <SelectControl options={STATUS_OPTIONS} indicator="none" fullWidth />
+      <SelectControl options={STATUS_OPTIONS} indicator="none" appearance="field" />
+    </div>
+  ),
+}
