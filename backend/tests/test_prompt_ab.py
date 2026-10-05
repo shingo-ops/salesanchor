@@ -652,3 +652,162 @@ def test_parse_args_v101_prompt_name(tmp_path):
     for config, name in (("v101", "raw_copy_v9_trial1"), ("v9", "raw_copy_v101_a"), ("v10", "raw_copy_v101_a")):
         with pytest.raises(SystemExit):
             pab.parse_args([*base, "--config", config, "--prompt-name", name])
+
+
+# ---------------------------------------------------------------------------
+# v102（設計: docs/handoff/gemini-v102/design.md §3-3・§5-3）
+# ---------------------------------------------------------------------------
+
+
+def test_v102_config_calls_with_v101_schema_and_default_prompt_c(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+
+    # Arrange / Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    kwargs = v101_fakes.v8.call_args.kwargs
+    # Assert
+    assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_c")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_c"
+
+
+def test_v102_prompt_name_b_can_be_chosen_and_c_differs_from_b():
+    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_c")
+    assert pab._load_prompt_text("v102") != pab._load_prompt_text("v101", "raw_copy_v101_b")
+    assert pab._load_prompt_text("v102", "raw_copy_v101_b") == pab._load_prompt_text("v101", "raw_copy_v101_b")
+
+
+def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["config"] == "v102" and row["item_count"] == 1 and row["errors"] == []
+    assert row["v102_items"][0]["name"] == "商品A" and row["v102_items"][0]["fixes"] == []
+    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
+    assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
+
+
+def test_v102_extracts_once_with_v102_fixes_and_reassign_on(monkeypatch, v101_fakes):
+    spy = MagicMock(return_value=([], {}))
+    monkeypatch.setattr(pab, "extract_v101_items", spy)
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    assert spy.call_count == 1
+    assert spy.call_args.kwargs["reassign"] is True and spy.call_args.kwargs["v102_fixes"] is True
+
+
+def test_v102_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v102_items"] == [] and row["v102_flags"] == {} and "ValueError" in row["v102_items_error"]
+
+
+def test_v101_row_is_unchanged_and_has_no_v102_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["prompt_name"] == "raw_copy_v101_a"
+    assert row["v101_flags"] == {"possible_missing_item": []}
+    assert "fixes" not in row["v101_items"][0]
+    assert not {"v102_items", "v102_flags"} & set(row)
+
+
+def test_v102_bad_prompt_name_stops_before_gemini(monkeypatch, v101_fakes):
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v102", prompt_name="raw_copy_v9_trial1")
+    assert v101_fakes.v8.call_count == 0 and v101_fakes.record.call_count == 0
+
+
+def test_parse_args_accepts_v102_and_its_prompt_name(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v102"]).prompt_name is None
+    assert pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v101_b"]).prompt_name == "raw_copy_v101_b"
+    with pytest.raises(SystemExit):
+        pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v9_trial1"])
+
+
+# ---------------------------------------------------------------------------
+# --omit-supplier-field（仕入元ルールの欄を外す）
+# ---------------------------------------------------------------------------
+
+_SHIP_LABEL = "発送日フォーマット"
+_OMIT_CTX = task.ExtractionContext(
+    raw_text="a\nb",
+    supplier_context={"extraction_price_format": "円", "extraction_ship_format": "SHIPRULE"},
+    knowledge_links=[], supplier_id=7,
+)
+
+
+def _omit_ctx_run(fakes, monkeypatch, **over):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_OMIT_CTX))
+    return _run(fakes, monkeypatch, run_ids=("r1",), **over)
+
+
+def _prompt_given_to_gemini(fakes):
+    kw = fakes.v8.call_args.kwargs
+    return pab.build_prompt_v8(
+        "a", prompt_text="P", supplier_context=kw["supplier_context"], knowledge_links=kw["knowledge_links"],
+    )
+
+
+def test_omit_field_removes_only_that_field_from_prompt(monkeypatch, fakes):
+    # Arrange / Act
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    # Assert
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL not in prompt and "SHIPRULE" not in prompt
+    assert "円" in prompt
+
+
+def test_without_omit_the_field_stays_in_prompt(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL in prompt and "SHIPRULE" in prompt
+
+
+def test_omit_does_not_change_original_context(monkeypatch, fakes):
+    before = dict(_OMIT_CTX.supplier_context)
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    assert _OMIT_CTX.supplier_context == before
+
+
+def test_omit_handles_none_supplier_context():
+    assert pab._supplier_context_without(None, ["extraction_ship_format"]) is None
+
+
+def test_omit_dry_run_prompt_has_no_omitted_field(monkeypatch, fakes, capsys):
+    _omit_ctx_run(fakes, monkeypatch, dry_run=True, omit_supplier_fields=["extraction_ship_format"])
+    out = capsys.readouterr().out
+    assert _SHIP_LABEL not in out and "[L0001] a" in out
+
+
+def test_omit_writes_sorted_field_list_to_jsonl(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format", "extraction_price_format"])
+    assert _lines(fakes)[0]["omitted_supplier_fields"] == ["extraction_price_format", "extraction_ship_format"]
+
+
+def test_without_omit_jsonl_has_no_omitted_field_key(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    assert "omitted_supplier_fields" not in _lines(fakes)[0]
+
+
+def test_parse_args_accepts_repeated_omit_supplier_field():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102",
+                           "--omit-supplier-field", "extraction_ship_format",
+                           "--omit-supplier-field", "extraction_price_format"])
+    assert args.omit_supplier_field == ["extraction_ship_format", "extraction_price_format"]
+
+
+def test_parse_args_omit_default_is_none():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field is None
+
+
+@pytest.mark.parametrize("bad", ["ship_format", "Extraction_x", "extraction_", "extraction_a-b", "extraction_x1", ""])
+def test_parse_args_rejects_bad_omit_supplier_field(bad):
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", bad])
+
+
+def test_parse_args_rejects_omit_supplier_field_for_v7():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v7", "--omit-supplier-field", "extraction_ship_format"])
