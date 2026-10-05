@@ -725,3 +725,38 @@ def test_v102_with_no_items_returns_empty_and_flags():
         [], "商品A", order=None, reassign=True, v102_fixes=True, **_MASTERS
     )
     assert out == [] and flags == {"possible_missing_item": [], "quantity_no_number": [], "possible_footer_line": []}
+
+
+def test_f3_keeps_bracket_heading_when_the_only_other_name_line_is_two_chars():
+    # Arrange
+    raw = "【世界最強の戦士 OP-17】\n良品\n9個 16,300円"
+    # Act
+    out, _ = _extract102(raw, _it([1, 2, 3], "16,300円", "9"))
+    # Assert
+    assert "【世界最強の戦士 OP-17】" in out[0]["name"]
+    assert all(f["rule"] != "F3" for f in out[0]["fixes"])
+
+
+def test_f3_drops_bracket_heading_when_an_own_name_line_exists():
+    # Arrange
+    raw = "【シングルカード】\nマスターボールミラー151のみ\n300枚@1,600円"
+    # Act
+    out, _ = _extract102(raw, _it([1, 2, 3], "1,600円", "300"))
+    # Assert
+    assert "【シングルカード】" not in out[0]["name"]
+    assert "マスターボールミラー151のみ" in out[0]["name"]
+
+
+def test_f5_changes_only_name_and_roles_not_quantity_unit_state_ship_status_or_price():
+    # Arrange（b1490145 の形：最後の price_line の後ろに「販売数量/300セット」。Gemini の quantity はその行）
+    raw = "商品A 通常版\n（12月入荷予定）\n10セット/¥55,000\n販売数量/300セット"
+    items = (_it([1, 2, 3, 4], "¥55,000", "販売数量/300セット"),)
+    # Act
+    out102, flags = _extract102(raw, *items)
+    out101, _ = _extract(raw, *items)
+    # Assert
+    keys = ("quantity_normalized", "unit", "ship", "condition", "status", "price_normalized", "price_reasons")
+    assert {k: out102[0][k] for k in keys} == {k: out101[0][k] for k in keys}
+    assert out102[0]["quantity_normalized"] == 10
+    assert flags["possible_footer_line"] == [4]
+    assert "販売数量" in out101[0]["name"] and "販売数量" not in out102[0]["name"]

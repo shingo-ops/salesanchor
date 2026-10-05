@@ -680,12 +680,17 @@ def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bo
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
+    name_roles: dict[int, str] | None = None,
 ) -> dict:
+    """name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
+    shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
     own_text = "\n".join(lines[n - 1] for n in _own_lines(item, shared))
-    name = _product_name(item, roles, lines, owners, ctx)
+    name = _product_name(item, shown_roles, lines, owners, ctx)
+    calc_name = name if shown_roles is roles else _product_name(item, roles, lines, owners, ctx)
     if name_prefix:
         name = f"{name_prefix} {name}"
+        calc_name = f"{name_prefix} {calc_name}"
     unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
     condition, _cond_id, basis = resolve_condition_v2(
         block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
@@ -693,10 +698,10 @@ def _extract_one(
     status, effect = resolve_status_v2(block, ctx.status_entries, raw_memo=block)
     pq = resolve_price_quantity(
         own_text, gemini_price=item["price"], gemini_quantity=item["quantity"],
-        unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=name,
+        unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
     return {
-        "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(roles),
+        "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(shown_roles),
         "raw_price": item["price"], "raw_quantity": item["quantity"],
         "name": name, "unit": unit_canonical or _NONE, "unit_kubun": kubun,
         "condition": condition or _NONE, "condition_basis": basis,
@@ -777,13 +782,11 @@ def _apply_f1(
     return new_items, fixes
 
 
-def _has_other_name_line(item: dict, roles: dict[int, str], x: int, lines: list[str], ctx: V101Context) -> bool:
-    """F3 の「ほかに名前の行がある」：x 以外で、役割が名前・価格の行でない・単位の別名だけでない・全体が【…】/━…━でない行。"""
-    return any(
-        m != x and m != item["price_line"] and roles[m] == ROLE_NAME and not _is_alias_only_line(lines[m - 1], ctx)
-        and not _WHOLE_BRACKET_RE.match(lines[m - 1].strip())
-        for m in item["lines"]
-    )
+def _has_other_name_line(
+    item: dict, roles: dict[int, str], x: int, shared: set[int], lines: list[str], ctx: V101Context,
+) -> bool:
+    """F3 の「ほかに名前の行がある」：x 以外に、F1 と同じ定義の「自分だけの名前の行」（_is_own_name_line）がある。"""
+    return any(m != x and _is_own_name_line(item, roles, m, shared, lines, ctx) for m in item["lines"])
 
 
 def _apply_f3(
@@ -795,11 +798,12 @@ def _apply_f3(
     """
     new_roles: list[dict[int, str]] = []
     fixes: dict[int, list[dict]] = {}
+    shared = _shared_line_numbers(items)
     for i, (item, role_map) in enumerate(zip(items, roles)):
         updated = dict(role_map)
         for n in item["lines"]:
             if role_map[n] == ROLE_NAME and _WHOLE_BRACKET_RE.match(lines[n - 1].strip()) and _has_other_name_line(
-                item, role_map, n, lines, ctx
+                item, role_map, n, shared, lines, ctx
             ):
                 updated[n] = ROLE_IGNORED
                 fixes.setdefault(i, []).append(_fix("F3", n, "まとめ書きの行を名前に使わない"))
@@ -874,16 +878,16 @@ def _extract_v102(
     items, f1_fixes = _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx)
     roles = assign_roles(items, lines, ctx)
     roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
-    roles, f5_fixes, footer_lines = _apply_f5(items, roles)
+    name_roles, f5_fixes, footer_lines = _apply_f5(items, roles)
     owners = {it["price_line"]: it for it in items}
     shared = _shared_line_numbers(items)
-    f2 = _f2_prefixes(items, roles, lines, owners, shared, ctx)
+    f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)
     extracted: list[dict] = []
     no_number: list[int] = []
     for i, item in enumerate(items):
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
-            v102=True, name_prefix=f2[i][0] if i in f2 else "",
+            v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i],
         )
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
