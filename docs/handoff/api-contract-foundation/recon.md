@@ -6,7 +6,7 @@
 
 ## 事実
 - フロントの API レスポンス型はすべて手書きで、型生成の道具も、CI での照合も無い（`frontend/package.json` の devDependencies に該当なし）。
-- エンドポイントは612件ある。`response_model=` が付いているのは377件、戻り値の型注釈だけのものが80件、どちらも無いものが155件（`backend/app/routers/*.py` 114ファイルを ast で集計。2026-10-04）。
+- エンドポイントは612件ある。`response_model=` が付いているのは377件、戻り値の型注釈だけのものが80件、どちらも無いものが155件（backend/app/routers/ 配下の .py 114ファイルを ast で集計。2026-10-04）。
 - サーバーを起動しない形で `from app.main import app; app.openapi()` を、DB と Redis が無い状態、`ENVIRONMENT=test`、Python 3.12.8、`backend/requirements.txt` の依存だけで実行し、成功した。paths は442件、schemas は554件だった。lifespan・Firebase の初期化・Redis への接続は、どれも動かない（lifespan は `backend/app/main.py:112-150` 付近）。
 - `scripts/` 配下は process-artifacts gate の危険パスに当たる（`scripts/check-process-artifacts.js:110-135`）。`.github/workflows/workflow-lint.yml` は PO 本人の GO が必要。
 - `frontend/eslint.config.js` には ignores の設定が無い。

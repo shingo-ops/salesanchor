@@ -2,7 +2,7 @@
 
 - 参照:
   - 現状調査: docs/handoff/api-contract-foundation/recon.md
-  - ADR: ADR-1005（`docs/adr/ADR-1005-api-contract-and-wiring-ledger.md` は PR #3942 に含まれており、まだ main に入っていない）
+  - ADR: ADR-1005（ファイル docs/adr/ADR-1005-api-contract-and-wiring-ledger.md は PR #3942 にあり、PO 承認済みだが main には未マージ）
   - 関連ADR: ADR-067、ADR-144
 - 実装カード: PR #3942 の docs/handoff/cross-dept-integrity-foundation/card-c1.md
 - 承認:
@@ -17,7 +17,7 @@
 | `frontend/package.json` | 型生成の道具が無い | devDependency に `openapi-typescript` を 7.13.0 で固定して追加。scripts に `generate:api-types` と `check:api-types` を追加。lint-staged の `eslint --max-warnings=0` に `--no-warn-ignored` を追加（生成物が ignores 対象のため、commit 時の「File ignored」警告で pre-commit が失敗するのを防ぐ） |
 | `frontend/package-lock.json` | — | `npm install -D -E` を1回実行した結果（248行追加・3行削除） |
 | `frontend/eslint.config.js` | ignores が無い | 先頭に `{ ignores: ["src/api/generated/**"] }` を1行追加 |
-| `frontend/src/api/generated/openapi.json`、`schema.d.ts` | 無い | 生成物。手で編集しない |
+| `frontend/src/api/generated/openapi.json`、`frontend/src/api/generated/schema.d.ts` | 無い | 生成物。手で編集しない |
 | `.github/workflows/api-contract-check.yml` | 無い | 新規ジョブ「API contract is up to date」。スキーマと型を作り直し、コミット済みのものと違えば赤にする |
 
 ## 触らない範囲
