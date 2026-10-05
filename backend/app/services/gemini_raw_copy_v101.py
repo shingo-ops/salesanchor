@@ -461,8 +461,24 @@ def reassign_ambiguous(
 # ---------------------------------------------------------------------------
 
 
-def _price_line_name(text: str, owner: dict, ctx: V101Context) -> str:
-    """価格の行に残る商品名。価格・数量・単位の別名・在庫の言葉・完売の言葉・状態の言葉を含む括弧を除く。"""
+_DROP_WORD_START_RE = re.compile(r"^(?:\d|数量|在庫|残り|単価)")
+
+
+def _is_dropped_word(word: str, ctx: V101Context) -> bool:
+    """価格の行の残りの語のうち、名前に足さない語（数量・在庫・単位だけ・完売の言葉・状態の語）。"""
+    norm = _nfkc(word).strip().lower()
+    aliases = {_nfkc(a).lower() for a in ctx.aliases}
+    sold_out = {_nfkc(w).lower() for w in ctx.sold_out_words}
+    return bool(
+        _DROP_WORD_START_RE.match(norm) or norm in aliases or norm in sold_out or _is_state_line(word, ctx)
+    )
+
+
+def _price_line_name(text: str, owner: dict, ctx: V101Context, *, filtered: bool = True) -> str:
+    """価格の行に残る商品名。価格・数量・単位の別名・在庫の言葉・完売の言葉・状態の言葉を含む括弧を除く。
+
+    filtered のときは、残りを空白で語に分け、数量・在庫・単位だけ・完売の言葉・状態の語を除く。
+    """
     def drop_state_bracket(m: re.Match) -> str:
         inner = _nfkc(m.group(1)).lower()
         return "" if any(w in inner for w in ctx.state_words) else m.group(0)
@@ -470,7 +486,10 @@ def _price_line_name(text: str, owner: dict, ctx: V101Context) -> str:
     text = v10._BRACKET_RE.sub(drop_state_bracket, text)
     for word in ctx.sold_out_words:
         text = text.replace(word, "")
-    return v10._strip_price_line_name(text, owner, ctx.aliases)
+    rest = v10._strip_price_line_name(text, owner, ctx.aliases)
+    if not filtered:
+        return rest
+    return " ".join(w for w in _ship_words_of(rest) if not _is_dropped_word(w, ctx))
 
 
 def _is_heading_position(item: dict, roles: dict[int, str], line_no: int) -> bool:
@@ -508,12 +527,25 @@ def _product_name(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], ctx: V101Context,
 ) -> str:
     name = " ".join(_name_parts(item, roles, lines, owners, ctx))
-    return name or lines[item["price_line"] - 1].strip()
+    if name:
+        return name
+    unfiltered = _price_line_name(lines[item["price_line"] - 1], item, ctx, filtered=False)
+    return unfiltered or lines[item["price_line"] - 1].strip()
 
 
-def _find_unit(item: dict, shared: set[int], lines: list[str], ctx: V101Context) -> str | None:
-    """価格の行を先に、次にその件だけの行を探す。共有の行は見ない。"""
-    order = [item["price_line"], *(n for n in _own_lines(item, shared) if n != item["price_line"])]
+def _is_alias_only_line(text: str, ctx: V101Context) -> bool:
+    whole = _SYMBOL_ONLY_RE.sub("", _nfkc(text).lower())
+    return bool(whole) and any(whole == _SYMBOL_ONLY_RE.sub("", _nfkc(a).lower()) for a in ctx.aliases)
+
+
+def _find_unit(item: dict, roles: dict[int, str], shared: set[int], lines: list[str], ctx: V101Context) -> str | None:
+    """price_line → 役割が在庫の行 → 行の全体が単位の別名だけの行、の順に探す。名前・状態・発送の行と共有の行は見ない。"""
+    own = [n for n in _own_lines(item, shared) if n != item["price_line"]]
+    order = [
+        item["price_line"],
+        *(n for n in own if roles[n] == ROLE_STOCK),
+        *(n for n in own if roles[n] == ROLE_NAME and _is_alias_only_line(lines[n - 1], ctx)),
+    ]
     for n in order:
         alias = find_unit_alias(lines[n - 1], ctx.aliases)
         if alias is not None:
@@ -586,7 +618,7 @@ def _extract_one(
     block = "\n".join(lines[n - 1] for n in item["lines"])
     own_text = "\n".join(lines[n - 1] for n in _own_lines(item, shared))
     name = _product_name(item, roles, lines, owners, ctx)
-    unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, shared, lines, ctx) or "", ctx.unit_alias_to_info)
+    unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
     condition, _cond_id, basis = resolve_condition_v2(
         block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
     )

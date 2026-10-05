@@ -317,7 +317,7 @@ def test_vol2_style_name_continues_in_price_line():
 def test_op14_then_carton_line_takes_previous_line_as_name():
     raw = "OP-14 11,500円/5box\nカートン 160,000円/13カートン"
     r, _ = _extract(raw, _it([1], "11,500円", "5"), _it([1, 2], "160,000円", "13"))
-    assert r[0]["name"] == "OP-14" and r[1]["name"] == "OP-14 カートン"
+    assert r[0]["name"] == "OP-14" and r[1]["name"] == "OP-14"  # 単位の別名だけの語は名前に足さない
     assert r[1]["unit"] == "カートン" and r[1]["quantity_normalized"] == 13
 
 
@@ -473,3 +473,35 @@ def test_ship_line_after_price_keeps_the_whole_line_even_with_several_words():
 def test_ship_line_in_heading_position_takes_only_the_word_with_ship_word_and_keeps_name():
     (r,), _ = _extract("・30th CELEBRATION 16日発送\n在庫300/23500円", _it([1, 2], "23500円", "在庫300"))
     assert r["ship"] == "16日発送" and "30th CELEBRATION" in r["name"]
+
+
+def test_price_line_rest_drops_condition_word_and_quantity_with_unit():
+    (r,), _ = _extract("アビスアイ\n7,000×20BOX シュリ無し", _it([1, 2], "7,000", "20"))
+    assert r["name"] == "アビスアイ"
+
+
+def test_price_line_rest_drops_quantity_word_starting_with_suuryou():
+    (r,), _ = _extract("▪️頂上の決戦 OP-02\n27,000円 数量3箱", _it([1, 2], "27,000円", "数量3箱"))
+    assert r["name"] == "▪️頂上の決戦 OP-02"
+
+
+def test_unit_is_not_taken_from_a_name_line():
+    raw = "・AR・CHR 100枚セット 被りなし\n在庫10/25000円"
+    (r,), _ = _extract(raw, _it([1, 2], "25000円", "在庫10"))
+    assert r["unit"] == "none"
+
+
+def test_unit_is_not_taken_from_a_heading_line_with_a_unit_word():
+    (r,), _ = _extract("◉ OP-12 カートン\n235000@1", _it([1, 2], "235000", "1"))
+    assert r["unit"] == "none"
+
+
+def test_unit_is_taken_from_a_stock_line():
+    (r,), _ = _extract("商品\n@3,000円\n10BOX", _it([1, 2, 3], "3,000円", "10"))
+    assert r["unit"] == "BOX"
+
+
+def test_dai2dan_word_in_price_line_is_kept_in_the_name():
+    raw = "●プレミアムバンダイ限定コレクション\n第2弾@3,500×40"
+    (r,), _ = _extract(raw, _it([1, 2], "3,500", "40"))
+    assert "第2弾" in r["name"]
