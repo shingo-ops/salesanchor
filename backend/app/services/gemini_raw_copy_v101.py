@@ -473,6 +473,13 @@ def _price_line_name(text: str, owner: dict, ctx: V101Context) -> str:
     return v10._strip_price_line_name(text, owner, ctx.aliases)
 
 
+def _is_heading_position(item: dict, roles: dict[int, str], line_no: int) -> bool:
+    """price_line より前にあり、それより前にその件の名前の行が無い（見出しの位置にある）行。"""
+    if line_no >= item["price_line"]:
+        return False
+    return not any(m < line_no and roles[m] == ROLE_NAME for m in item["lines"])
+
+
 def _ship_words_of(line: str) -> list[str]:
     return [w for w in re.split(r"[\s　]+", line.strip()) if w]
 
@@ -488,7 +495,7 @@ def _name_parts(
             part = _price_line_name(text, owner or item, ctx)
         elif role == ROLE_NAME:
             part = text.strip(v10._EDGE_CHARS)
-        elif role == ROLE_SHIP and len(_ship_words_of(text)) >= 2:
+        elif role == ROLE_SHIP and len(_ship_words_of(text)) >= 2 and _is_heading_position(item, roles, n):
             part = " ".join(w for w in _ship_words_of(text) if not v10._SHIP_WORD_RE.search(w))
         else:
             part = ""
@@ -514,7 +521,7 @@ def _find_unit(item: dict, shared: set[int], lines: list[str], ctx: V101Context)
     return None
 
 
-def _ship_text(line: str, item: dict, is_price_line: bool, ctx: V101Context) -> str | None:
+def _ship_text(line: str, item: dict, is_price_line: bool, ctx: V101Context, *, is_heading: bool) -> str | None:
     for m in v10._BRACKET_RE.finditer(line):
         if v10._SHIP_WORD_RE.search(m.group(1)):
             if (line[:m.start()] + line[m.end():]).strip():
@@ -523,7 +530,7 @@ def _ship_text(line: str, item: dict, is_price_line: bool, ctx: V101Context) -> 
     if is_price_line:
         return _ship_text_after_price(line, item, ctx)
     words = _ship_words_of(line)
-    if len(words) >= 2:
+    if is_heading and len(words) >= 2:
         word = next((w for w in words if v10._SHIP_WORD_RE.search(w)), line.strip())
         return re.split(r"[\]）】)]", word)[-1] or word
     return line.strip()
@@ -551,7 +558,9 @@ def _ship_for(item: dict, roles: dict[int, str], shared: set[int], lines: list[s
             is_price = roles[n] == ROLE_PRICE
             if not v10._SHIP_WORD_RE.search(lines[n - 1]) or not (is_price or roles[n] == ROLE_SHIP):
                 continue
-            text = _ship_text(lines[n - 1], item, is_price, ctx)
+            text = _ship_text(
+                lines[n - 1], item, is_price, ctx, is_heading=_is_heading_position(item, roles, n)
+            )
             if text:
                 texts.append(text)
         return texts

@@ -463,3 +463,13 @@ def test_output_has_the_documented_keys():
     }
     assert set(flags) == {"possible_missing_item"}
     json.dumps(r, ensure_ascii=False)  # JSONL に書ける
+
+
+def test_ship_line_after_price_keeps_the_whole_line_even_with_several_words():
+    (r,), _ = _extract("100box 23000円\n17日発送　福岡", _it([1, 2], "23000円", "100"))
+    assert r["ship"] == "17日発送　福岡"
+
+
+def test_ship_line_in_heading_position_takes_only_the_word_with_ship_word_and_keeps_name():
+    (r,), _ = _extract("・30th CELEBRATION 16日発送\n在庫300/23500円", _it([1, 2], "23500円", "在庫300"))
+    assert r["ship"] == "16日発送" and "30th CELEBRATION" in r["name"]
