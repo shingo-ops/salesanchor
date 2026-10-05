@@ -878,3 +878,6 @@ run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
 
 # ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
 run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
+
+# roles.system_key 追加（全テナント・additive・冪等。owner/admin の権限を役割名ではなく安定キーで判定するため）
+run_sql migrations/20261005_150000_add_roles_system_key.sql
