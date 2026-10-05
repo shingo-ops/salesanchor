@@ -27,19 +27,19 @@
 
 ## 触る関数の事実（file:line、origin/main）
 - backend/app/services/gemini_raw_copy_v101.py（変更する）
-  - :24 DEFAULT_V101_PROMPT_NAME、:25 V101_PROMPT_NAME_RE
-  - :38 _SHIP_RE（発送|出荷|入荷|発売|着）
-  - :249 line_role、:264 assign_roles、:316 _shared_line_numbers、:347 _neighbors、:423 reassign_ambiguous
-  - :498 _price_line_name、:550 _product_name、:560 _is_alias_only_line、:643 _ship_for
-  - :663 _quantity_not_in_text（カンマは quantity 側だけ除く。原文側は除かない）
-  - :672 _extract_one（name・quantity_not_in_text・価格数量を作る）
-  - :707 _possible_missing_lines（範囲は最初の件の最初の行〜最後の件の最後の行）
-  - :717 extract_v101_items（引数 reassign。戻り値は (件ごとの辞書, {"possible_missing_item": [...]})）
+  - backend/app/services/gemini_raw_copy_v101.py:24（DEFAULT_V101_PROMPT_NAME）、backend/app/services/gemini_raw_copy_v101.py:25（V101_PROMPT_NAME_RE）
+  - backend/app/services/gemini_raw_copy_v101.py:38（_SHIP_RE。発送|出荷|入荷|発売|着）
+  - backend/app/services/gemini_raw_copy_v101.py:249（line_role）、同:264（assign_roles）、同:316（_shared_line_numbers）、同:347（_neighbors）、同:423（reassign_ambiguous）
+  - backend/app/services/gemini_raw_copy_v101.py:498（_price_line_name）、同:550（_product_name）、同:560（_is_alias_only_line）、同:643（_ship_for）
+  - backend/app/services/gemini_raw_copy_v101.py:663（_quantity_not_in_text。カンマは quantity 側だけ除く。原文側は除かない）
+  - backend/app/services/gemini_raw_copy_v101.py:672（_extract_one。name・quantity_not_in_text・価格数量を作る）
+  - backend/app/services/gemini_raw_copy_v101.py:707（_possible_missing_lines。範囲は最初の件の最初の行〜最後の件の最後の行）
+  - backend/app/services/gemini_raw_copy_v101.py:717（extract_v101_items。引数 reassign。戻り値は (件ごとの辞書, {"possible_missing_item": [...]})）
 - backend/app/tools/prompt_ab.py（変更する）
-  - :76 _PROMPT_NAME_RES、:192 _parse、:233 _v101_row_fields、:254 resolve_prompt_path、:267 _load_prompt_text
-  - :282 _master_row_fields、:290 _print_dry_run、:318 row_prompt_name、:355 schemas、:410 --config の choices（v7|v8|v9|v10|v101）
+  - backend/app/tools/prompt_ab.py:76（_PROMPT_NAME_RES）、同:192（_parse）、同:233（_v101_row_fields）、同:254（resolve_prompt_path）、同:267（_load_prompt_text）
+  - backend/app/tools/prompt_ab.py:282（_master_row_fields）、同:290（_print_dry_run）、同:318（row_prompt_name）、同:355（schemas）、同:410（--config の choices。v7|v8|v9|v10|v101）
 - v10.1（PR #3981）の出力（--config v101）は変えない。テスト: backend/tests/test_gemini_raw_copy_v101.py、backend/tests/test_prompt_ab.py、backend/tests/test_gemini_raw_copy_v10.py。
-- 本番の経路から v101 は呼ばれない（gemini_raw_copy_v101.py の docstring :6）。
+- 本番の経路から v101 は呼ばれない（backend/app/services/gemini_raw_copy_v101.py:6 の docstring）。
 
 ## 指示書
 - backend/app/prompts/raw_copy_v101_c.txt は設計者（Opus）が書いた本文をそのまま置く（cmp で一致を確認）。既存の raw_copy_v101_a.txt・raw_copy_v101_b.txt は変えない。
