@@ -66,7 +66,7 @@
 | 本番の経路が変わらない | 差分が prompt_ab.py・prompts/raw_copy_v9_trial1.txt・テスト・docs だけ |
 | CI が緑 | gh pr checks |
 
-## 7. 外部事例
+## 7. 外部・過去事例の参照と我々への応用
 - Google の公式の説明（Context7 で確認、2026-10-05）
   - 出典：https://ai.google.dev/gemini-api/docs/prompting-strategies
   - 例（few-shot）は「正しくできた姿」を見せるもので、入れることを勧めている。
@@ -81,6 +81,6 @@
 - 戻し方：この PR を revert する。
 
 ## 維持の仕組み
-- 記録：JSONL の prompt_name で、どの指示書の試験結果かを後から確かめられる。v9 のときだけ入れる。v7・v8 の行は今のまま。
-- 守り手：test_prompt_ab.py のテスト（名前の検査・存在の検査・v9 限定・未指定時の既定）が、CI で毎回通ること。
-- 担当：試験版の指示書を本採用するときは、別の設計と PR で raw_copy_v9.txt か DB の指示書へ移す。trial1 のファイルは、そのまま本番の経路で使わない。
+- 記録: JSONL の prompt_name で、どの指示書の試験結果かを後から確かめられる。v9 のときだけ入れる。v7・v8 の行は今のまま。
+- 守り手: test_prompt_ab.py のテスト（名前の検査・存在の検査・v9 限定・未指定時の既定）が、CI で毎回通ること。
+- 担当: 試験版の指示書を本採用するときは、別の設計と PR で raw_copy_v9.txt か DB の指示書へ移す。trial1 のファイルは、そのまま本番の経路で使わない。
