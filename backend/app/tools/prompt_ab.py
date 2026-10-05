@@ -7,7 +7,7 @@
       docs/handoff/gemini-v101/design.md §3-6（v101）
       docs/handoff/gemini-v102/design.md §3-3（v102）
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME]
-        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
@@ -307,15 +307,33 @@ def _master_row_fields(config: str, response_text: str, ctx, masters: dict | Non
     return {}
 
 
+_SUPPLIER_FIELD_PATTERN = re.compile(r"^extraction_[a-z_]+$")
+
+
+def _supplier_field_name(value: str) -> str:
+    """--omit-supplier-field の値の検査（extraction_ で始まる欄名だけ認める）。"""
+    if not _SUPPLIER_FIELD_PATTERN.fullmatch(value):
+        raise argparse.ArgumentTypeError(f"仕入元ルールの欄名は extraction_ で始まる英小文字だけ: {value!r}")
+    return value
+
+
+def _supplier_context_without(supplier_context: dict | None, omit: list[str] | None) -> dict | None:
+    """指定した欄を除いた写しを返す（元の辞書は変えない）。指定なしなら元のものをそのまま返す。"""
+    if not omit or supplier_context is None:
+        return supplier_context
+    return {k: v for k, v in supplier_context.items() if k not in omit}
+
+
 def _print_dry_run(
-    summary: AbSummary, config: str, ctx, v8_prompt: str | None,
+    summary: AbSummary, config: str, ctx, v8_prompt: str | None, omit_supplier_fields: list[str] | None = None,
 ) -> None:
     print(f"[dry-run] target_count={summary.target_count}")
     if ctx is None:
         return
+    supplier_context = _supplier_context_without(ctx.supplier_context, omit_supplier_fields)
     if config in ("v8", "v9", "v10", "v101", "v102"):
         prompt = build_prompt_v8(
-            ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=ctx.supplier_context,
+            ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=supplier_context,
             knowledge_links=ctx.knowledge_links,
         )
     else:  # 表示用の組み立て（実際の呼び出しは call_gemini_raw_copy 内で同じ材料から行われる）
@@ -331,6 +349,7 @@ def run_ab(
     session: Session, *, run_ids: list[str], config: str, repeat: int, max_cost_usd: Decimal,
     test_id: str, out_dir: Path, dry_run: bool, thinking_level: str | None,
     include_thoughts: bool, use_schema: bool, temperature: float | None, prompt_name: str | None = None,
+    omit_supplier_fields: list[str] | None = None,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
     job_ids = fetch_job_ids(session, run_ids)
@@ -346,7 +365,7 @@ def run_ab(
     if dry_run:
         first = next((job_ids[r] for r in run_ids if r in job_ids), None)
         ctx = load_extraction_context(session, first) if first else None
-        _print_dry_run(summary, config, ctx, v8_prompt)
+        _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields)
         return summary
 
     masters = _load_v10_masters(session) if config in ("v10", "v101", "v102") else None  # dry-run では読まない
@@ -363,6 +382,8 @@ def run_ab(
             row = {"run_id": run_id, "job_id": job_id, "config": config, "repeat": n}
             if row_prompt_name is not None:
                 row["prompt_name"] = row_prompt_name
+            if omit_supplier_fields:
+                row["omitted_supplier_fields"] = sorted(set(omit_supplier_fields))
             try:
                 if job_id not in contexts:
                     ctx_loaded = load_extraction_context(session, job_id)
@@ -379,7 +400,8 @@ def run_ab(
                     }
                     extra = {"response_schema": schemas[config]} if config in schemas else {}
                     result = call_gemini_raw_copy_v8(
-                        ctx.raw_text, prompt_text=v8_prompt, supplier_context=ctx.supplier_context,
+                        ctx.raw_text, prompt_text=v8_prompt,
+                        supplier_context=_supplier_context_without(ctx.supplier_context, omit_supplier_fields),
                         knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
                         include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
                         **extra,
@@ -441,6 +463,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--max-cost-usd", type=Decimal, required=True, help="費用の累計の上限（USD）。超えたら止まる")
     p.add_argument("--test-id", required=True)
     p.add_argument("--out-dir", required=True, type=Path)
+    p.add_argument("--omit-supplier-field", action="append", type=_supplier_field_name, default=None,
+                   help="仕入元ルールの欄（extraction_ で始まる名前）を指示から外す。何回でも指定できる。v7 では効かない")
     p.add_argument("--dry-run", action="store_true", help="対象の件数と組み立てた指示の先頭30行だけ表示する（Gemini は呼ばない）")
     args = p.parse_args(argv)
     if args.thinking_level:
@@ -449,6 +473,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.thinking_level or args.no_thoughts or args.no_schema or args.temperature is not None
     ):
         p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9・v10・v101・v102 のときだけ使えます")
+    if args.config == "v7" and args.omit_supplier_field:
+        p.error("--omit-supplier-field は --config v8・v9・v10・v101・v102 のときだけ使えます")
     if args.prompt_name is not None:
         try:
             resolve_prompt_path(args.prompt_name, args.config)
@@ -484,6 +510,7 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run, thinking_level=args.thinking_level,
             include_thoughts=not args.no_thoughts, use_schema=not args.no_schema,
             temperature=args.temperature, prompt_name=args.prompt_name,
+            omit_supplier_fields=args.omit_supplier_field,
         )
     finally:
         session.close()

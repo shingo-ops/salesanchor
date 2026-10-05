@@ -724,3 +724,90 @@ def test_parse_args_accepts_v102_and_its_prompt_name(tmp_path):
     assert pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v101_b"]).prompt_name == "raw_copy_v101_b"
     with pytest.raises(SystemExit):
         pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v9_trial1"])
+
+
+# ---------------------------------------------------------------------------
+# --omit-supplier-field（仕入元ルールの欄を外す）
+# ---------------------------------------------------------------------------
+
+_SHIP_LABEL = "発送日フォーマット"
+_OMIT_CTX = task.ExtractionContext(
+    raw_text="a\nb",
+    supplier_context={"extraction_price_format": "円", "extraction_ship_format": "SHIPRULE"},
+    knowledge_links=[], supplier_id=7,
+)
+
+
+def _omit_ctx_run(fakes, monkeypatch, **over):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_OMIT_CTX))
+    return _run(fakes, monkeypatch, run_ids=("r1",), **over)
+
+
+def _prompt_given_to_gemini(fakes):
+    kw = fakes.v8.call_args.kwargs
+    return pab.build_prompt_v8(
+        "a", prompt_text="P", supplier_context=kw["supplier_context"], knowledge_links=kw["knowledge_links"],
+    )
+
+
+def test_omit_field_removes_only_that_field_from_prompt(monkeypatch, fakes):
+    # Arrange / Act
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    # Assert
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL not in prompt and "SHIPRULE" not in prompt
+    assert "円" in prompt
+
+
+def test_without_omit_the_field_stays_in_prompt(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL in prompt and "SHIPRULE" in prompt
+
+
+def test_omit_does_not_change_original_context(monkeypatch, fakes):
+    before = dict(_OMIT_CTX.supplier_context)
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    assert _OMIT_CTX.supplier_context == before
+
+
+def test_omit_handles_none_supplier_context():
+    assert pab._supplier_context_without(None, ["extraction_ship_format"]) is None
+
+
+def test_omit_dry_run_prompt_has_no_omitted_field(monkeypatch, fakes, capsys):
+    _omit_ctx_run(fakes, monkeypatch, dry_run=True, omit_supplier_fields=["extraction_ship_format"])
+    out = capsys.readouterr().out
+    assert _SHIP_LABEL not in out and "[L0001] a" in out
+
+
+def test_omit_writes_sorted_field_list_to_jsonl(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format", "extraction_price_format"])
+    assert _lines(fakes)[0]["omitted_supplier_fields"] == ["extraction_price_format", "extraction_ship_format"]
+
+
+def test_without_omit_jsonl_has_no_omitted_field_key(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    assert "omitted_supplier_fields" not in _lines(fakes)[0]
+
+
+def test_parse_args_accepts_repeated_omit_supplier_field():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102",
+                           "--omit-supplier-field", "extraction_ship_format",
+                           "--omit-supplier-field", "extraction_price_format"])
+    assert args.omit_supplier_field == ["extraction_ship_format", "extraction_price_format"]
+
+
+def test_parse_args_omit_default_is_none():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field is None
+
+
+@pytest.mark.parametrize("bad", ["ship_format", "Extraction_x", "extraction_", "extraction_a-b", "extraction_x1", ""])
+def test_parse_args_rejects_bad_omit_supplier_field(bad):
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", bad])
+
+
+def test_parse_args_rejects_omit_supplier_field_for_v7():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v7", "--omit-supplier-field", "extraction_ship_format"])
