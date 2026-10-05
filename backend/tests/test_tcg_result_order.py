@@ -101,7 +101,7 @@ def test_release_product_condition_price_and_all_page_boundaries(pg):
     assert [r["system"]["note"] for r in reviewed["items"]] == expected
     assert [r["note_ja"] for r in imported["items"]] == expected
     assert [r[7] for r in output] == expected
-    assert all(len(r) == 12 for r in output)
+    assert all(len(r) == 13 for r in output)
     assert all("sort_ordinal" not in r for r in imported["items"])
     assert Counter(r["extraction_item_id"] for r in reviewed["items"]) == Counter(e["eid"] for e in entries)
     assert Counter(r["id"] for r in imported["items"]) == Counter(e["eid"] for e in entries)
