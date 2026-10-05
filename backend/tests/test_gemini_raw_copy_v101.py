@@ -538,3 +538,19 @@ def test_heading_with_ship_bracket_keeps_other_words_and_bracket_is_removed_whol
     (r,), _ = _extract(raw, _it([1, 2], "54000円", "1ケース"))
     assert "anemoi" in r["name"] and "発送日要相談" not in r["name"]
     assert r["ship"] == "発送日要相談"
+
+
+def test_name_keeps_word_starting_with_digit_like_30th():
+    (r,), _ = _extract("30th CELEBRATION 24,200円/400box 発送日相談", _it([1], "24,200円", "400"))
+    assert r["name"] == "30th CELEBRATION" and r["ship"] == "発送日相談"
+
+
+def test_name_keeps_digit_only_name_that_is_not_the_quantity_or_price():
+    (r,), _ = _extract("151 51,500円/2box", _it([1], "51,500円", "2"))
+    assert r["name"] == "151"
+
+
+def test_same_ship_sentence_on_two_lines_is_listed_once():
+    raw = "商品A\n※発送日相談\n3BOX@1,000円\n※発送日相談"
+    (r,), _ = _extract(raw, _it([1, 2, 3, 4], "1,000円", "3"))
+    assert r["ship"] == "※発送日相談"

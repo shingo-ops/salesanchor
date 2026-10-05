@@ -463,7 +463,7 @@ def reassign_ambiguous(
 # ---------------------------------------------------------------------------
 
 
-_DROP_WORD_START_RE = re.compile(r"^(?:\d|数量|在庫|残り|単価)")
+_DROP_WORD_START_RE = re.compile(r"^(?:数量|在庫|残り|単価)")
 
 
 def _is_alias_word(word: str, ctx: V101Context) -> bool:
@@ -471,12 +471,27 @@ def _is_alias_word(word: str, ctx: V101Context) -> bool:
     return any(norm == _nfkc(a).lower() for a in ctx.aliases)
 
 
-def _is_dropped_word(word: str, ctx: V101Context) -> bool:
+def _digit_groups(text: str) -> set[str]:
+    return set(re.findall(r"\d+", _nfkc(text).replace(",", "")))
+
+
+def _is_quantity_word(norm: str, owner: dict, ctx: V101Context) -> bool:
+    """「数字＋単位の別名」だけの語（先頭の / は許す）、または数字だけで owner の quantity・price の数字と同じ語。"""
+    units = "|".join(re.escape(_nfkc(a).lower()) for a in ctx.aliases)
+    if units and re.fullmatch(rf"/?[\d,]+(?:{units})", norm):
+        return True
+    return bool(re.fullmatch(r"[\d,]+", norm)) and norm.replace(",", "") in (
+        _digit_groups(owner["quantity"]) | _digit_groups(owner["price"])
+    )
+
+
+def _is_dropped_word(word: str, owner: dict, ctx: V101Context) -> bool:
     """価格の行の残りの語のうち、必ず名前に足さない語（数量・在庫・完売の言葉・状態の語・発送の言葉を含む語）。"""
     norm = _nfkc(word).strip().lower()
     sold_out = {_nfkc(w).lower() for w in ctx.sold_out_words}
     return bool(
-        _DROP_WORD_START_RE.match(norm) or norm in sold_out or _SHIP_RE.search(norm) or _is_state_line(word, ctx)
+        not _SYMBOL_ONLY_RE.sub("", norm) or _DROP_WORD_START_RE.match(norm) or norm in sold_out or _SHIP_RE.search(norm)
+        or _is_quantity_word(norm, owner, ctx) or _is_state_line(word, ctx)
     )
 
 
@@ -495,7 +510,7 @@ def _price_line_name(text: str, owner: dict, ctx: V101Context, *, filtered: bool
     rest = v10._strip_price_line_name(text, owner, ctx.aliases)
     if not filtered:
         return rest
-    words = [w for w in _ship_words_of(rest) if not _is_dropped_word(w, ctx)]
+    words = [w for w in _ship_words_of(rest) if not _is_dropped_word(w, owner, ctx)]
     if all(_is_alias_word(w, ctx) for w in words):  # 残りが単位の別名の語だけなら、それも除く
         return ""
     return " ".join(words)
@@ -641,7 +656,8 @@ def _ship_for(item: dict, roles: dict[int, str], shared: set[int], lines: list[s
 
     own = collect(_own_lines(item, shared))
     found = own or collect([n for n in item["lines"] if n in shared and n != item["price_line"]])
-    return " / ".join(found) if found else _NONE
+    unique = list({_squash(t): t for t in reversed(found)}.values())[::-1]  # 同じ文は1つにする（先に出たもの）
+    return " / ".join(unique) if unique else _NONE
 
 
 def _quantity_not_in_text(quantity: str, text: str) -> bool:
