@@ -1,37 +1,20 @@
+-- ============================================================================
 -- ADR-090 PR5c フォローアップ: 既存 public.products の unit / condition を
--- 受信通知の解析結果(parse_result_json)から名前一致で backfill する。
+-- 受信通知の解析結果(parse_result_json)から名前一致で backfill する — 無効化済み
 --
--- 背景: PR5b で unit 列、PR5c で取込時の unit/condition 転記を追加したが、
---       既に登録済みの商品（取込 apply の NOT EXISTS でスキップされる）には
---       単位・状態が入らないため、在庫表で「-」表示のままになる。
---       解析結果から名前一致するぶんを後追いで埋める。
+-- incident 2026-10-03 (deploy run 37130920016): この UPDATE は public.products.unit /
+-- .condition に無条件（列存在ガード無し）でアクセスする。20260602_000000 / 20260602_030000
+-- で unit / condition の ADD を削除したため、ガード無しで残すと
+-- 「column unit/condition does not exist」でデプロイが失敗する。
 --
--- 正規化は取込 apply と同一:
---   - unit: 小文字化 + carton→case、空文字は NULL（最頻値 mode を採用）
---   - condition: 小文字化、空文字は NULL（最頻値 mode）
--- 冪等性: unit / condition が NULL の行のみ更新（COALESCE で既存値は保持）。
---         再実行しても結果は変わらない。新規環境(解析結果なし)では 0 行更新。
-
-WITH parsed AS (
-    SELECT TRIM(it->>'product_name') AS pname,
-           CASE WHEN LOWER(TRIM(it->>'unit')) = 'carton' THEN 'case'
-                ELSE NULLIF(LOWER(TRIM(it->>'unit')), '') END AS u,
-           NULLIF(LOWER(TRIM(it->>'condition')), '') AS c
-    FROM public.discord_inbound_messages m,
-         jsonb_array_elements(COALESCE(m.parse_result_json->'items', '[]'::jsonb)) it
-    WHERE COALESCE(TRIM(it->>'product_name'), '') <> ''
-),
-rep AS (
-    SELECT pname,
-           mode() WITHIN GROUP (ORDER BY u) FILTER (WHERE u IS NOT NULL) AS u,
-           mode() WITHIN GROUP (ORDER BY c) FILTER (WHERE c IS NOT NULL) AS c
-    FROM parsed
-    GROUP BY pname
-)
-UPDATE public.products p
-SET unit = COALESCE(p.unit, rep.u),
-    condition = COALESCE(p.condition, rep.c)
-FROM rep
-WHERE rep.pname = p.name
-  AND ((p.unit IS NULL AND rep.u IS NOT NULL)
-       OR (p.condition IS NULL AND rep.c IS NOT NULL));
+-- 本番事実（設計担当 Opus が 2026-10-03 に本番 DB を読み取り確認）: この UPDATE は本番で実行済み（deploy run
+-- 37130920016 は line 220 のこの migration を通過し、line 230 で失敗）だが、実行後も
+-- public.products の unit/condition は count=0（1347行中）であり、書き込むべき対象データが
+-- 無かった。この backfill の本来目的（在庫表の「-」表示を埋める）は 2026-06-29 の
+-- 20260629_010000（本番 UPDATE 62 件確認済み、public.inventory.unit 側で完了）で
+-- 既に果たされている。よって無効化しても挙動に変化はない。
+--
+-- デプロイ時は何もしない（冪等: 実行するSQL文なし）。登録は維持する（registration check 用）。
+-- 詳細: docs/handoff/products-column-churn/design.md
+-- ============================================================================
+SELECT 1; -- no-op: 1600列上限インシデントのため無効化（対象列は既に public.products から削除・本来目的は本番で達成済み）

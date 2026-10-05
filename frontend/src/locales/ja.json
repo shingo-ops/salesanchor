@@ -2412,8 +2412,7 @@
       "attrMasters": "各種マスタ",
       "dex": "ポケモン / トレーナー図鑑",
       "suppliers": "仕入元",
-      "llmBudget": "LLM 予算",
-      "parseStats": "精度サマリー"
+      "llmBudget": "LLM 予算"
     },
     "attrMasters": {
       "title": "各種マスタ",
@@ -2847,12 +2846,6 @@
       "helpPhaseB": "Phase B (通常運用): 承認時に商品の在庫数を実更新。スプレッドシートのデータは参考データとして活用。",
       "helpPhaseC": "Phase C: スプレッドシート完全閉鎖 + 本格データ移行。現在は切替不可、別 ADR で時期検討中。"
     },
-    "parseReview": {
-      "phaseAWarning": {
-        "always": "現在「緊急戻し」モード中です。承認しても商品の在庫数は更新されません (受信履歴は記録されます)。通常運用に戻すには管理センター → スーパー管理者 → Phase Switch から切り替えてください。",
-        "afterApprove": "承認は完了しましたが、現在「緊急戻し」モード中のため、商品の在庫数は更新されませんでした。受信履歴には {{count}} 件記録されています。"
-      }
-    },
     "inventoryOffers": {
       "subtitle": "仕入元ごとの「現在仕入れ可能な商品・在庫数・単価」を一覧で管理します。Discord 解析レビューで承認すると自動保存、ここで手動編集も可能です。",
       "searchPlaceholder": "仕入元名 / 商品名 / 商品コードで検索",
@@ -3173,16 +3166,18 @@
     "deleteSettings": "Discord 設定を削除"
   },
   "discordConfig": {
-    "title": "Discord 連携設定",
-    "description": "Discord サーバーの Guild ID を登録すると、リードの規模変更に応じてロールが自動更新されます。",
-    "guildIdLabel": "Guild ID",
-    "guildIdPlaceholder": "例: 1288437029213835356",
-    "guildIdHint": "Discord サーバー名を右クリック → 「サーバー ID をコピー」で取得できます。",
-    "roleMappingTitle": "ロールマッピング（固定）",
-    "loadError": "設定の読み込みに失敗しました",
-    "saveError": "設定の保存に失敗しました",
-    "invalidGuildId": "Guild ID は17〜20桁の数字で入力してください",
-    "saved": "設定を保存しました",
+    "connectionTitle": "サーバー接続",
+    "connected": "接続済み",
+    "notConnected": "未接続",
+    "serverIdLabel": "サーバーID",
+    "serverIdPlaceholder": "例: 1288437029213835356",
+    "serverIdHint": "サーバー名を右クリック →「サーバーIDをコピー」",
+    "change": "変更",
+    "connect": "接続する",
+    "loadError": "読み込めませんでした",
+    "saveError": "保存できませんでした",
+    "invalidGuildId": "17〜20桁の数字で入力してください",
+    "saved": "保存しました",
     "syncStatus": {
       "success": "同期済み",
       "failed": "同期失敗",
@@ -3190,73 +3185,70 @@
       "not_linked": "Discord未連携"
     }
   },
-  "discordTicketConfig": {
-    "title": "チケット機能設定",
-    "description": "顧客専用プライベートチャンネルを自動発行するためのチケット機能を設定します。",
-    "categoryIdLabel": "チケットカテゴリ ID",
-    "categoryIdPlaceholder": "例: 1288437029213835356",
-    "categoryIdHint": "プライベートチャンネルを作成するカテゴリの ID です。Discord でカテゴリを右クリック → 「ID をコピー」で取得できます。",
-    "buttonChannelIdLabel": "ボタン設置チャンネル ID",
-    "buttonChannelIdPlaceholder": "例: 1288437029213835357",
-    "buttonChannelIdHint": "「チケットを開く」ボタンを設置するチャンネルの ID です。",
-    "staffRoleIdLabel": "担当者ロール ID（任意）",
-    "staffRoleIdPlaceholder": "例: 1288437029213835358",
-    "staffRoleIdHint": "チケットチャンネルに自動追加するスタッフロールの ID です。未設定の場合はボットのみが参加します。",
-    "welcomeTemplateLabel": "ウェルカムメッセージ",
-    "welcomeTemplatePlaceholder": "チケットチャンネル作成時に送信するメッセージ",
-    "welcomeTemplateHint": "顧客がチケットを開いた際に送信されるメッセージです（最大500文字）。",
-    "loadError": "チケット設定の読み込みに失敗しました",
-    "saveError": "チケット設定の保存に失敗しました",
-    "saved": "チケット設定を保存しました",
-    "invalidSnowflake": "ID は17〜20桁の数字で入力してください",
-    "deployButtonTitle": "ボタンを Discord に設置する",
-    "deployButtonHint": "設定済みのチャンネルに「チケットを開く」ボタン付きメッセージを投稿します。",
-    "deployButton": "ボタンを投稿する",
-    "deploying": "投稿中...",
-    "deployDone": "ボタンメッセージを投稿しました",
-    "deployError": "投稿に失敗しました。Bot権限とチャンネルIDを確認してください。",
-    "smallChannelIdLabel": "小口顧客向けチャンネル ID（任意）",
-    "largeChannelIdLabel": "大口顧客向けチャンネル ID（任意）",
-    "scaleChannelIdPlaceholder": "例: 1288437029213835356",
-    "smallChannelIdHint": "estimated_scale が Small の顧客への専用チャンネル案内で使用されます。",
-    "largeChannelIdHint": "estimated_scale が Large の顧客への専用チャンネル案内で使用されます。",
-    "roleMappingTitle": "ロール自動付与 設定",
-    "roleMappingHint": "estimated_scale に応じて Discord ロールを自動付与します。ロール名は Discord サーバー内のロール名と完全一致させてください（存在しない場合 Bot が自動作成します）。",
-    "smallRoleNameLabel": "Small 顧客向けロール名",
-    "largeRoleNameLabel": "Large 顧客向けロール名",
-    "invalidRoleName": "ロール名は1文字以上入力してください",
-    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
-  },
   "discordAutoSetup": {
-    "title": "Discordサーバー自動セットアップ",
-    "description": "Bot招待後に必要なロール・カテゴリ・チャンネル・チケット開始ボタンを自動作成します。2回目以降も安全に再実行できます。",
+    "title": "自動セットアップ",
+    "description": "ロール・チャンネル・チケットボタンをまとめて作成します。何度実行しても安全です。",
     "runButton": "自動セットアップを実行",
-    "running": "セットアップ中...",
-    "disabledHint": "先にDiscordサーバーを接続してください。",
-    "completed": "セットアップが完了しました。",
-    "partial": "一部のセットアップに失敗しました。",
-    "failed": "セットアップに失敗しました。",
-    "retryHint": "内容を確認して、もう一度実行できます。",
-    "stepsTitle": "実行結果",
-    "roleOrderGuidePrompt": "次に、Sales Anchor Bot ロールを Partner / Member より上に移動してください。",
-    "roleOrderGuideLink": "ロール順設定ガイドを見る",
-    "requestFailed": "自動セットアップに失敗しました。",
+    "running": "実行中...",
+    "needConnect": "先にサーバーを接続してください",
+    "completed": "完了しました",
+    "partial": "一部失敗しました",
+    "failed": "失敗しました",
+    "retryHint": "もう一度実行できます",
+    "nextStep": "Botの役職をPartner / Memberより上へ移動",
+    "nextStepBadge": "次に",
+    "guideLink": "手順を見る",
+    "requestFailed": "実行できませんでした",
+    "groups": {
+      "roles": "ロール",
+      "categories": "カテゴリ",
+      "channels": "チャンネル",
+      "button": "ボタン",
+      "other": "その他"
+    },
     "steps": {
-      "role_staff": "Sales Anchor Staff ロール",
-      "role_partner": "Partner ロール",
-      "role_member": "Member ロール",
-      "category": "Sales Anchor カテゴリ",
-      "ch_ticket": "ticket-start チャンネル",
-      "ch_member": "member-announcements チャンネル",
-      "ch_partner": "partner-announcements チャンネル",
+      "role_staff": "Sales Anchor Staff",
+      "role_partner": "Partner",
+      "role_member": "Member",
+      "category": "DM",
+      "category_stock_member": "在庫（メンバー）",
+      "category_stock_large": "在庫（大口）",
+      "ch_ticket": "ticket-start",
+      "ch_member": "member-announcements",
+      "ch_partner": "partner-announcements",
       "button": "チケット開始ボタン"
     },
     "statuses": {
-      "created": "作成済み",
-      "skipped": "既存のためスキップ",
-      "posted": "投稿済み",
+      "created": "作成",
+      "skipped": "既存",
+      "updated": "更新",
+      "posted": "投稿",
       "failed": "失敗"
     }
+  },
+  "discordTicketConfig": {
+    "welcomeTitle": "チケットの案内文",
+    "welcomeHint": "お客様がチケットを開くと最初に送られます（{{count}}/{{max}}文字）",
+    "welcomePlaceholder": "例: ご連絡ありがとうございます。担当者が対応します。",
+    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
+    "saved": "保存しました",
+    "saveError": "保存できませんでした",
+    "invalidSnowflake": "IDは17〜20桁の数字で入力してください",
+    "invalidRoleName": "ロール名を入力してください",
+    "needIds": "先に自動セットアップを実行してください",
+    "deployButton": "ボタンを投稿し直す",
+    "deploying": "投稿中...",
+    "deployDone": "投稿しました",
+    "deployError": "投稿できませんでした。Botの権限とチャンネルIDを確認してください",
+    "detailsToggle": "詳細設定（通常は変更不要）",
+    "categoryIdLabel": "チケットの置き場所（カテゴリID）",
+    "buttonChannelIdLabel": "ボタンのチャンネルID",
+    "staffRoleIdLabel": "担当者ロールID",
+    "smallChannelIdLabel": "小口のお客様向けチャンネルID",
+    "largeChannelIdLabel": "大口のお客様向けチャンネルID",
+    "smallRoleNameLabel": "小口ロール名",
+    "largeRoleNameLabel": "大口ロール名",
+    "idPlaceholder": "例: 1288437029213835356"
   },
   "discordAnnounce": {
     "description": "Discordの指定チャンネルにアナウンスを投稿します。Discordを開かずにアプリから直接送信できます。",
@@ -3285,26 +3277,6 @@
     "grossProfitTotal": "粗利合計",
     "count": "件数",
     "editFinancial": "売上を編集"
-  },
-  "supplier": {
-    "parseStats": {
-      "selectSupplier": "仕入元を選択",
-      "selectPlaceholder": "-- 仕入元を選択 --",
-      "noData": "データがありません（この仕入元の解析ログがまだありません）",
-      "columns": {
-        "day": "日付",
-        "totalLines": "総行数",
-        "parsedCount": "解析済み",
-        "excludedCount": "除外",
-        "unparsedCount": "未解析",
-        "excludeRate": "除外率",
-        "avgConfidence": "平均確信度"
-      },
-      "legend": {
-        "highExclude": "除外率 > 30%（ドリフト警告）",
-        "lowConfidence": "平均確信度 < 0.5（品質低下警告）"
-      }
-    }
   },
   "company": {
     "stats": {
@@ -4545,7 +4517,8 @@
           "errorCountLabel": "エラー件数（LINE抽出）"
         },
         "fx": {
-          "note": "1ドル＝{{rate}}円（{{fetchedAt}} 時点のレートで換算。過去の日も同じレートで計算しています）",
+          "note": "1ドル＝{{rate}}円（最新レート、{{fetchedAt}} 時点）。各使用はその発生時点のレートで円換算しています",
+          "fallbackCountNote": "{{historyStart}} より前の使用（{{count}}件）は、記録されている最も古いレートで換算しています",
           "fallbackNote": "為替レートを取得できないため、ドルで表示しています"
         }
       },

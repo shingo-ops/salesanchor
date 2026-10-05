@@ -866,3 +866,15 @@ run_sql migrations/20261001_120000_add_staff_avatar_token.sql
 
 # ADR-159 便B: discord_channel_webhooks 作成（担当者名義 webhook 送信・token 暗号化・冪等）
 run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
+
+# §D01: 決済手数料設定マスタ（public.payment_fee_settings）新設（NULLパターン・PayPal初期データ込み・冪等）
+run_sql migrations/20261002_160000_create_payment_fee_settings.sql
+
+# §D01補完: payment_fee_settings カラムコメント付与
+run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
+
+# Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
+run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
+
+# ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
+run_sql migrations/20261003_100000_create_app_fx_rate_history.sql

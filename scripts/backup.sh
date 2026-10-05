@@ -36,6 +36,23 @@ chmod 600 "${BACKUP_FILE}"
 find "${BACKUP_DIR}" -name 'salesanchor_db_*.sql.gz' -mtime +${RETENTION_DAYS} -delete
 find "${BACKUP_DIR}" -name 'jarvis_db_*.sql.gz' -mtime +${RETENTION_DAYS} -delete
 
+# 件数ベースの保持（2026-10-02 prod1 ディスクフル事故の再発防止）
+# 日次cron(3:00) + デプロイ前バックアップが重なると30日保持だけでは
+# 20〜34件/日生成されてディスクを食い尽くすため、新しい10件のみ残す。
+# `ls | head` はパイプ (SIGPIPE) で set -o pipefail 下で誤判定するため、
+# process substitution + mapfile で読み込む（パイプを経由しない）。
+KEEP_COUNT=10
+mapfile -t BACKUP_FILES < <(ls -1t "${BACKUP_DIR}"/salesanchor_db_*.sql.gz 2>/dev/null || true)
+if [ "${#BACKUP_FILES[@]}" -gt "${KEEP_COUNT}" ]; then
+  REMOVED_COUNT=0
+  for ((i = KEEP_COUNT; i < ${#BACKUP_FILES[@]}; i++)); do
+    rm -f "${BACKUP_FILES[$i]}"
+    REMOVED_COUNT=$((REMOVED_COUNT + 1))
+  done
+  echo "[$(date)] Count-based retention: removed ${REMOVED_COUNT} old backup(s), kept newest ${KEEP_COUNT}" \
+    >> "${BACKUP_DIR}/backup.log"
+fi
+
 # ログに記録
 FILESIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
 echo "[$(date)] Backup completed: ${BACKUP_PREFIX}_${DATE}.sql.gz (${FILESIZE})" \

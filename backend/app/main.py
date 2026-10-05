@@ -74,7 +74,7 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
-    parse_review,
+    payment_fee_settings,  # 決済手数料設定 テナント用
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
@@ -95,11 +95,11 @@ from app.routers import (
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_db_schema,  # DB構造ビューア API
     super_admin_dex,
-    super_admin_inbound,
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_note_master,  # 備考マスタ中央 admin
+    super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
     super_admin_product_formats,  # フォーマットマスタ中央 admin
@@ -402,6 +402,11 @@ app.include_router(
     units.router, prefix="/api/v1", tags=["units"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 決済手数料設定 テナント用
+app.include_router(
+    payment_fee_settings.router, prefix="/api/v1", tags=["payment-fee-settings"],
+    dependencies=[Depends(get_current_tenant)],
+)
 # ステータスマスタ テナント用
 app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
@@ -541,6 +546,10 @@ app.include_router(
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
 )
+# 決済手数料設定マスタ中央 admin
+app.include_router(
+    super_admin_payment_fee_settings.router, prefix="/api/v1", tags=["super-admin"],
+)
 # 商品カテゴリマスタ中央 admin
 app.include_router(
     super_admin_product_categories.router, prefix="/api/v1", tags=["super-admin"],
@@ -576,14 +585,6 @@ app.include_router(
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(
     super_admin_llm_budget.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 5 (F5): Discord Inbound 受信メッセージ一覧 (public.discord_inbound_messages) 中央 admin
-app.include_router(
-    super_admin_inbound.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 6 (F6): 解析結果レビュー UI + 在庫差分反映 (public.inventory_movements + products) 中央 admin
-app.include_router(
-    parse_review.router, prefix="/api/v1", tags=["super-admin"],
 )
 # テナント admin 用 inventory visibility は get_current_tenant 必須
 app.include_router(

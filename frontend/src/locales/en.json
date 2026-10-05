@@ -2412,8 +2412,7 @@
       "attrMasters": "Various masters",
       "dex": "Pokemon / Trainer Dex",
       "suppliers": "Suppliers",
-      "llmBudget": "LLM Budget",
-      "parseStats": "Accuracy Summary"
+      "llmBudget": "LLM Budget"
     },
     "attrMasters": {
       "title": "Various masters",
@@ -2847,12 +2846,6 @@
       "helpPhaseB": "Phase B (normal): stock counts are updated on approval. Spreadsheet data is used as reference data.",
       "helpPhaseC": "Phase C: full spreadsheet closure + bulk data migration. Currently disabled, separate ADR pending."
     },
-    "parseReview": {
-      "phaseAWarning": {
-        "always": "Currently in \"emergency rollback\" mode. Approvals will not update stock counts (receive history is still recorded). To return to normal operation, go to Management Center → Super Admin → Phase Switch.",
-        "afterApprove": "Approved successfully, but stock counts were not updated due to \"emergency rollback\" mode. {{count}} receive history entries were recorded."
-      }
-    },
     "inventoryOffers": {
       "subtitle": "Manage the \"currently available products / stock / unit price\" per supplier. Saved automatically when Discord parse review is approved, and editable manually here.",
       "searchPlaceholder": "Search by supplier / product / SKU",
@@ -3173,16 +3166,18 @@
     "deleteSettings": "Delete Discord settings"
   },
   "discordConfig": {
-    "title": "Discord Integration",
-    "description": "Register your Discord server's Guild ID to automatically assign roles when a lead's scale changes.",
-    "guildIdLabel": "Guild ID",
-    "guildIdPlaceholder": "e.g. 1288437029213835356",
-    "guildIdHint": "Right-click your Discord server name → 'Copy Server ID' (Developer Mode required).",
-    "roleMappingTitle": "Role Mapping (Fixed)",
-    "loadError": "Failed to load configuration",
-    "saveError": "Failed to save configuration",
-    "invalidGuildId": "Guild ID must be a 17–20 digit number",
-    "saved": "Configuration saved",
+    "connectionTitle": "Server connection",
+    "connected": "Connected",
+    "notConnected": "Not connected",
+    "serverIdLabel": "Server ID",
+    "serverIdPlaceholder": "e.g. 1288437029213835356",
+    "serverIdHint": "Right-click the server name → \"Copy Server ID\"",
+    "change": "Change",
+    "connect": "Connect",
+    "loadError": "Could not load",
+    "saveError": "Could not save",
+    "invalidGuildId": "Enter a 17–20 digit number",
+    "saved": "Saved",
     "syncStatus": {
       "success": "Synced",
       "failed": "Sync failed",
@@ -3190,73 +3185,70 @@
       "not_linked": "Discord not linked"
     }
   },
-  "discordTicketConfig": {
-    "title": "Ticket Settings",
-    "description": "Configure the ticket feature to automatically create private channels for customers.",
-    "categoryIdLabel": "Ticket Category ID",
-    "categoryIdPlaceholder": "e.g. 1288437029213835356",
-    "categoryIdHint": "ID of the category where private channels will be created. Right-click a category in Discord → 'Copy ID'.",
-    "buttonChannelIdLabel": "Button Channel ID",
-    "buttonChannelIdPlaceholder": "e.g. 1288437029213835357",
-    "buttonChannelIdHint": "ID of the channel where the 'Open Ticket' button will be posted.",
-    "staffRoleIdLabel": "Staff Role ID (Optional)",
-    "staffRoleIdPlaceholder": "e.g. 1288437029213835358",
-    "staffRoleIdHint": "ID of the staff role to add to ticket channels automatically. Leave blank to add only the bot.",
-    "welcomeTemplateLabel": "Welcome Message",
-    "welcomeTemplatePlaceholder": "Message sent when a ticket channel is created",
-    "welcomeTemplateHint": "Message sent to the customer when they open a ticket (max 500 characters).",
-    "loadError": "Failed to load ticket configuration",
-    "saveError": "Failed to save ticket configuration",
-    "saved": "Ticket configuration saved",
-    "invalidSnowflake": "ID must be a 17–20 digit number",
-    "deployButtonTitle": "Post Button to Discord",
-    "deployButtonHint": "Posts a message with a 'Open Ticket' button to the configured channel.",
-    "deployButton": "Post Button",
-    "deploying": "Posting...",
-    "deployDone": "Button message posted successfully",
-    "deployError": "Failed to post. Check bot permissions and channel ID.",
-    "smallChannelIdLabel": "Small Customer Channel ID (optional)",
-    "largeChannelIdLabel": "Large Customer Channel ID (optional)",
-    "scaleChannelIdPlaceholder": "e.g. 1288437029213835356",
-    "smallChannelIdHint": "Used for channel invitation messages to Small-scale customers.",
-    "largeChannelIdHint": "Used for channel invitation messages to Large-scale customers.",
-    "roleMappingTitle": "Auto Role Assignment",
-    "roleMappingHint": "Automatically assigns Discord roles based on estimated_scale. The role name must exactly match a role in your Discord server (Bot will create it if it doesn't exist).",
-    "smallRoleNameLabel": "Role name for Small customers",
-    "largeRoleNameLabel": "Role name for Large customers",
-    "invalidRoleName": "Role name must not be empty",
-    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started."
-  },
   "discordAutoSetup": {
-    "title": "Discord server auto setup",
-    "description": "Automatically creates the required roles, category, channels, and ticket button after Bot invitation. Safe to run again at any time.",
+    "title": "Auto setup",
+    "description": "Creates roles, channels and the ticket button in one go. Safe to run any number of times.",
     "runButton": "Run auto setup",
-    "running": "Setting up...",
-    "disabledHint": "Please connect your Discord server first.",
-    "completed": "Setup completed successfully.",
-    "partial": "Some setup steps failed.",
-    "failed": "Setup failed.",
-    "retryHint": "Review the details and try again.",
-    "stepsTitle": "Results",
-    "roleOrderGuidePrompt": "Next, move the Sales Anchor Bot role above Partner / Member in Discord.",
-    "roleOrderGuideLink": "View role order guide",
-    "requestFailed": "Auto setup failed.",
+    "running": "Running...",
+    "needConnect": "Connect the server first",
+    "completed": "Completed",
+    "partial": "Partly failed",
+    "failed": "Failed",
+    "retryHint": "You can run it again",
+    "nextStep": "Move the Bot role above Partner / Member",
+    "nextStepBadge": "Next",
+    "guideLink": "See how",
+    "requestFailed": "Could not run",
+    "groups": {
+      "roles": "Roles",
+      "categories": "Categories",
+      "channels": "Channels",
+      "button": "Button",
+      "other": "Other"
+    },
     "steps": {
-      "role_staff": "Sales Anchor Staff role",
-      "role_partner": "Partner role",
-      "role_member": "Member role",
-      "category": "Sales Anchor category",
-      "ch_ticket": "ticket-start channel",
-      "ch_member": "member-announcements channel",
-      "ch_partner": "partner-announcements channel",
-      "button": "Ticket button"
+      "role_staff": "Sales Anchor Staff",
+      "role_partner": "Partner",
+      "role_member": "Member",
+      "category": "DM",
+      "category_stock_member": "Stock (Member)",
+      "category_stock_large": "Stock (Large)",
+      "ch_ticket": "ticket-start",
+      "ch_member": "member-announcements",
+      "ch_partner": "partner-announcements",
+      "button": "Ticket start button"
     },
     "statuses": {
       "created": "Created",
-      "skipped": "Skipped (already exists)",
+      "skipped": "Exists",
+      "updated": "Updated",
       "posted": "Posted",
       "failed": "Failed"
     }
+  },
+  "discordTicketConfig": {
+    "welcomeTitle": "Ticket welcome message",
+    "welcomeHint": "Sent first when a customer opens a ticket ({{count}}/{{max}} characters)",
+    "welcomePlaceholder": "e.g. Thanks for contacting us. A staff member will help you.",
+    "welcomeTemplateDefault": "Thanks for reaching out! I've created a private channel just for you. I'll connect you with our sales team — please reply with your name to get started.",
+    "saved": "Saved",
+    "saveError": "Could not save",
+    "invalidSnowflake": "Enter IDs as 17–20 digit numbers",
+    "invalidRoleName": "Enter a role name",
+    "needIds": "Run auto setup first",
+    "deployButton": "Re-post button",
+    "deploying": "Posting...",
+    "deployDone": "Posted",
+    "deployError": "Could not post. Check the Bot permissions and channel ID",
+    "detailsToggle": "Advanced settings (usually no change needed)",
+    "categoryIdLabel": "Where tickets go (category ID)",
+    "buttonChannelIdLabel": "Button channel ID",
+    "staffRoleIdLabel": "Staff role ID",
+    "smallChannelIdLabel": "Channel ID for small customers",
+    "largeChannelIdLabel": "Channel ID for large customers",
+    "smallRoleNameLabel": "Small role name",
+    "largeRoleNameLabel": "Large role name",
+    "idPlaceholder": "e.g. 1288437029213835356"
   },
   "discordAnnounce": {
     "description": "Post announcements to a Discord channel directly from the app — no need to open Discord.",
@@ -3285,26 +3277,6 @@
     "grossProfitTotal": "Total gross profit",
     "count": "Count",
     "editFinancial": "Edit financial"
-  },
-  "supplier": {
-    "parseStats": {
-      "selectSupplier": "Select Supplier",
-      "selectPlaceholder": "-- Select a supplier --",
-      "noData": "No data yet (no parse logs for this supplier)",
-      "columns": {
-        "day": "Date",
-        "totalLines": "Total Lines",
-        "parsedCount": "Parsed",
-        "excludedCount": "Excluded",
-        "unparsedCount": "Unparsed",
-        "excludeRate": "Exclude Rate",
-        "avgConfidence": "Avg Confidence"
-      },
-      "legend": {
-        "highExclude": "Exclude rate > 30% (drift warning)",
-        "lowConfidence": "Avg confidence < 0.5 (quality warning)"
-      }
-    }
   },
   "company": {
     "stats": {
@@ -4545,7 +4517,8 @@
           "errorCountLabel": "Error Count (LINE Extraction)"
         },
         "fx": {
-          "note": "Converted at 1 USD = ¥{{rate}} (as of {{fetchedAt}}. Past days are also calculated using this rate.)",
+          "note": "1 USD = ¥{{rate}} (latest rate, as of {{fetchedAt}}). Each use is converted at the rate in effect when it occurred.",
+          "fallbackCountNote": "Uses before {{historyStart}} ({{count}} calls) are converted using the earliest recorded rate.",
           "fallbackNote": "Unable to fetch the exchange rate, so amounts are shown in USD."
         }
       },

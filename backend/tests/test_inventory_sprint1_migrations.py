@@ -123,7 +123,16 @@ async def _apply_public_migrations(eng) -> None:
 # ---------------------------------------------------------------------------
 
 async def test_ac1_1_public_tables_exist(engine):
-    """AC1.1: migrations 056-062 適用後、public schema に期待テーブルが揃う。"""
+    """AC1.1: migrations 056-062 適用後、public schema に期待テーブルが揃う。
+
+    注記 (2026-10-02): discord_inbound_messages / discord_webhook_idempotency は
+    migrations/20261002_170000_drop_discord_inventory_tables.sql で DROP 済み
+    (Discord 在庫取り込み機能削除・PO GO 待ち applying 済み)。
+    本テストは `_apply_public_migrations` が 056-062 のみを単独適用するため、
+    その DROP migration は実行されない。よってこの assertion は migration 059/060 が
+    単体適用時にテーブルを正しく作成することの検証として現在も有効であり、
+    「現行スキーマに discord_inbound_messages 等が存在する」ことの保証ではない。
+    """
     from sqlalchemy import text
 
     await _apply_public_migrations(engine)
@@ -192,7 +201,13 @@ async def test_ac1_2_supplier_aliases_unique_constraint(engine):
 # ---------------------------------------------------------------------------
 
 async def test_ac1_6_discord_idempotency_structure(engine):
-    """AC1.6: public.discord_webhook_idempotency の主要列が meta_webhook 系と同型。"""
+    """AC1.6: public.discord_webhook_idempotency の主要列が meta_webhook 系と同型。
+
+    注記 (2026-10-02): discord_webhook_idempotency は
+    migrations/20261002_170000_drop_discord_inventory_tables.sql で DROP 済み。
+    本テストは単体適用 (056-062) の範囲でのみ検証するため影響を受けない
+    (test_ac1_1_public_tables_exist と同じ注記を参照)。
+    """
     from sqlalchemy import text
 
     await _apply_public_migrations(engine)
