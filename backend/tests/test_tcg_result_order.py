@@ -300,3 +300,52 @@ def test_larger_result_set_public_pages_and_read_only_delivery(pg):
                   "transaction_read_only": True, "statement_timeout_ms": 10000,
                   "measurement": "EXPLAIN ANALYZE after each query; warm cache; isolated CI",
                   "statistics": statistics, "plans": plans}), UserWarning, stacklevel=1)
+
+
+# ---------------------------------------------------------------------------
+# viewer-keyword-kana-search: 13th column "Search Keywords" in fetch_output_rows
+# ---------------------------------------------------------------------------
+
+def _product_with_keywords(pg, keywords):
+    """Insert a public.products row plus (keyword, position) pairs; return its id."""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.products (product_code,name,name_en,mark,release_date,is_active) "
+                       "VALUES ('PM09800','Keyword title','Test Title','TM','2026-01-02',true) RETURNING id")
+        product_id = str(cursor.fetchone()[0])
+        for keyword, position in keywords:
+            cursor.execute("INSERT INTO public.product_search_keywords(product_id,keyword,position) "
+                           "VALUES (%s,%s,%s)", (product_id, keyword, position))
+    return product_id
+
+
+def _single_output_row(pg, keywords):
+    product_id = _product_with_keywords(pg, keywords)
+    seed(pg, name="Keyword title", reasons="", product_id=product_id, condition_id=pg["normal"],
+         condition_canonical="Sealed box", condition_basis="TEST", price_normalized=1000,
+         quantity_normalized=3, note_ja=None)
+    _, _, output = fetch(pg, link_import(pg, []))
+    assert len(output) == 1
+    assert len(output[0]) == 13
+    return output[0]
+
+
+def test_search_keywords_joined_in_position_order(pg):
+    row = _single_output_row(pg, [("second", 2), ("first", 1)])
+    assert row[12] == "first | second"
+
+
+def test_search_keywords_empty_string_when_none(pg):
+    row = _single_output_row(pg, [])
+    assert row[12] == ""
+
+
+def test_existing_twelve_columns_unchanged(pg):
+    row = _single_output_row(pg, [("kw", 1)])
+    assert distribution.DIST_HEADERS[:12] == [
+        "投稿日時", "Mark", "Japanese Title", "English Title", "Condition", "Unit Price",
+        "Quantity", "Note_JA", "Status", "Release Date", "Series", "提供者",
+    ]
+    assert distribution.DIST_HEADERS[12] == "Search Keywords"
+    assert row[1:4] == ["TM", "Keyword title", "Test Title"]
+    assert row[4:7] == ["Sealed box", "1000", "3"]
+    assert row[9] == "2026-01-02"
