@@ -1,0 +1,55 @@
+name: API Contract Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    name: API contract is up to date
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          enable-cache: true
+          cache-dependency-glob: backend/requirements.txt
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: uv pip install --system -r requirements.txt
+
+      - name: Export OpenAPI schema
+        working-directory: backend
+        env:
+          ENVIRONMENT: test
+        run: python -m tools.export_openapi ../frontend/src/api/generated/openapi.json
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Generate TypeScript types
+        working-directory: frontend
+        run: npm run generate:api-types
+
+      - name: Check generated files are committed
+        run: |
+          if ! git diff --exit-code -- frontend/src/api/generated/; then
+            echo "::error::API の形と生成物がずれています。backend/tools/export_openapi.py と npm run generate:api-types を実行して、生成物をコミットしてください"
+            exit 1
+          fi
