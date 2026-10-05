@@ -365,3 +365,85 @@ def test_parse_args_accepts_v9_with_thinking_level():
         "--max-cost-usd", "1", "--test-id", "X", "--out-dir", "/o",
     ])
     assert args.config == "v9" and args.thinking_level == "LOW"
+
+
+# --- v9 --prompt-name（trial1）-----------------------------------------------
+
+
+@pytest.fixture
+def named_prompts(monkeypatch, tmp_path):
+    """prompts/ の代わりの置き場。raw_copy_v9_trial1.txt だけ置く。"""
+    d = tmp_path / "prompts"
+    d.mkdir()
+    (d / "raw_copy_v9_trial1.txt").write_text("TRIAL1", encoding="utf-8")
+    monkeypatch.setattr(pab, "_PROMPTS_DIR", d)
+    return d
+
+
+def test_v9_without_prompt_name_uses_default_prompt_and_records_default_name(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",))
+    assert fakes.v8.call_args.kwargs["prompt_text"] == "PROMPT9"
+    assert _lines(fakes)[0]["prompt_name"] == "raw_copy_v9"
+
+
+def test_v9_prompt_name_uses_named_prompt_and_records_name(monkeypatch, fakes, named_prompts):
+    from app.services.gemini_raw_copy_v9 import V9_RESPONSE_SCHEMA
+
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",), prompt_name="raw_copy_v9_trial1")
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["prompt_text"] == "TRIAL1"
+    assert kwargs["response_schema"] is V9_RESPONSE_SCHEMA
+    assert _lines(fakes)[0]["prompt_name"] == "raw_copy_v9_trial1"
+
+
+def test_v9_prompt_name_dry_run_shows_named_prompt(monkeypatch, fakes, named_prompts, capsys):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", dry_run=True, prompt_name="raw_copy_v9_trial1")
+    out = capsys.readouterr().out
+    assert "TRIAL1" in out and "PROMPT9" not in out
+    assert fakes.v8.call_count == 0
+
+
+def test_real_trial1_prompt_file_exists_and_is_loaded():
+    path = pab.resolve_prompt_path("raw_copy_v9_trial1")
+    assert path.name == "raw_copy_v9_trial1.txt"
+    assert pab._load_prompt_text("v9", "raw_copy_v9_trial1") == path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("bad", ["../x", "raw_copy_v8_x", "raw_copy_v9_A", "raw_copy_v9_", "raw_copy_v9_a/b", "raw_copy_v9_a\n"])
+def test_run_ab_stops_before_gemini_on_invalid_prompt_name(monkeypatch, fakes, named_prompts, bad):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config="v9", prompt_name=bad)
+    assert fakes.v8.call_count == 0 and fakes.record.call_count == 0
+
+
+def test_run_ab_stops_before_gemini_on_missing_prompt_file(monkeypatch, fakes, named_prompts):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config="v9", prompt_name="raw_copy_v9_nothing")
+    assert fakes.v8.call_count == 0 and fakes.record.call_count == 0
+
+
+@pytest.mark.parametrize("config", ["v7", "v8"])
+def test_run_ab_stops_when_prompt_name_is_combined_with_v7_or_v8(monkeypatch, fakes, named_prompts, config):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config=config, prompt_name="raw_copy_v9_trial1")
+    assert fakes.v8.call_count == 0 and fakes.v7.call_count == 0
+
+
+_BASE_ARGS = ["--runs-file", "f", "--repeat", "1", "--max-cost-usd", "1", "--test-id", "X", "--out-dir", "/o"]
+
+
+def test_parse_args_accepts_prompt_name_for_v9(named_prompts):
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v9", "--prompt-name", "raw_copy_v9_trial1"])
+    assert args.prompt_name == "raw_copy_v9_trial1"
+
+
+@pytest.mark.parametrize("config,name", [
+    ("v8", "raw_copy_v9_trial1"), ("v7", "raw_copy_v9_trial1"),
+    ("v9", "../x"), ("v9", "raw_copy_v8_x"), ("v9", "raw_copy_v9_A"), ("v9", "raw_copy_v9_nothing"),
+])
+def test_parse_args_rejects_bad_prompt_name(named_prompts, config, name):
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", config, "--prompt-name", name])
