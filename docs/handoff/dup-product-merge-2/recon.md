@@ -1,6 +1,6 @@
 # recon: 商品マスタの二重登録10組の統合（merge 2、2026-10-05、読み取りのみ）
 
-本番の読み取りは、すべて `BEGIN READ ONLY ... ROLLBACK` の中の SELECT。生の出力は `/tmp/CC報告ファイル/system-accuracy-v9/product-check/dupmerge2/` と `dup_merge2_prep.md`（社外秘・リポジトリ外）。ここには集計値だけを書く。
+本番の読み取りは、すべて `BEGIN READ ONLY ... ROLLBACK` の中の SELECT。生の出力は社外秘のローカル作業メモ（リポジトリ外）にある。ここには集計値だけを書く。
 
 ## 1. 対象の10組（PO 決定 2026-10-05）
 | 残す（survivor） | 退役（retired） | 公式上の同一商品の根拠 |
@@ -16,7 +16,7 @@
 | 440583 PM0239 | 1379 LOR-reign-of-jafar | .../reign-of-jafar/booster-pack/ 2026年2月21日(土) |
 | 440587 PM0243 | 1376 LOR-wilds-unknown | .../wilds-unknown/booster-pack/ 2026年5月8日(金) |
 
-公式ページには JAN も商品コードも出ていない。同一とみなした根拠は「名称と発売日の一致」。詳細は `product-check/mark_official_check.md`。
+公式ページには JAN も商品コードも出ていない。同一とみなした根拠は「名称と発売日の一致」。詳細は社外秘のローカル作業メモ（リポジトリ外）。
 
 ## 2. products の列（57列）
 2行の違いは14〜15列。同じ値の列は省略。
