@@ -2,8 +2,9 @@
 
 設計: docs/handoff/gemini-v8/design.md §6
       docs/handoff/gemini-v9/design.md §5-1（v9）
-起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9 [--thinking-level L] [--no-thoughts]
-        [--no-schema] [--temperature T] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+      docs/handoff/gemini-v9-trial1/design.md §3（--prompt-name）
+起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9 [--prompt-name raw_copy_v9_NAME]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
@@ -14,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import re
 import sys
 import time
 from dataclasses import asdict, dataclass
@@ -53,6 +55,9 @@ _LEDGER_SDK = "google-genai"
 _SOURCE_REF_PREFIX = "prompt_ab:"
 _DRY_RUN_PROMPT_LINES = 30
 _THINKING_LEVELS = ("minimal", "low", "medium", "high")
+_DEFAULT_V9_PROMPT_NAME = "raw_copy_v9"
+_PROMPT_NAME_RE = re.compile(r"^raw_copy_v9_[a-z0-9_]+$")  # パス区切りや「..」を通さない
+_PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 
 _JOB_IDS_SQL = f"""
     SELECT id::text, extraction_job_id::text
@@ -183,8 +188,22 @@ def _append_jsonl(path: Path, row: dict) -> None:
         fh.flush()
 
 
-def _load_prompt_text(config: str) -> str | None:
+def resolve_prompt_path(prompt_name: str) -> Path:
+    """--prompt-name の名前から指示書のファイルを決める。形が違う・ファイルが無いときは ValueError。"""
+    if not _PROMPT_NAME_RE.fullmatch(prompt_name):
+        raise ValueError(f"--prompt-name は {_PROMPT_NAME_RE.pattern} の形だけ使えます: {prompt_name!r}")
+    path = _PROMPTS_DIR / f"{prompt_name}.txt"
+    if not path.is_file():
+        raise ValueError(f"指示書が見つかりません: {path}")
+    return path
+
+
+def _load_prompt_text(config: str, prompt_name: str | None = None) -> str | None:
     """v8・v9 の指示書の本文。v7 は DB の指示書を既存関数が読むので None。"""
+    if prompt_name is not None:
+        if config != "v9":
+            raise ValueError("--prompt-name は --config v9 のときだけ使えます")
+        return resolve_prompt_path(prompt_name).read_text(encoding="utf-8")
     if config == "v8":
         return load_v8_prompt()
     if config == "v9":
@@ -215,11 +234,12 @@ def _print_dry_run(
 def run_ab(
     session: Session, *, run_ids: list[str], config: str, repeat: int, max_cost_usd: Decimal,
     test_id: str, out_dir: Path, dry_run: bool, thinking_level: str | None,
-    include_thoughts: bool, use_schema: bool, temperature: float | None,
+    include_thoughts: bool, use_schema: bool, temperature: float | None, prompt_name: str | None = None,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
     job_ids = fetch_job_ids(session, run_ids)
-    v8_prompt = _load_prompt_text(config)
+    v8_prompt = _load_prompt_text(config, prompt_name)  # 名前・ファイルの誤りはここで止まる（Gemini を呼ぶ前）
+    row_prompt_name = (prompt_name or _DEFAULT_V9_PROMPT_NAME) if config == "v9" else None
     source_ref = f"{_SOURCE_REF_PREFIX}{test_id}"
     out_path = Path(out_dir) / f"{test_id}.jsonl"
     contexts: dict[str, object] = {}
@@ -241,6 +261,8 @@ def run_ab(
             summary.calls += 1
             started = time.monotonic()
             row = {"run_id": run_id, "job_id": job_id, "config": config, "repeat": n}
+            if row_prompt_name is not None:
+                row["prompt_name"] = row_prompt_name
             try:
                 if job_id not in contexts:
                     ctx_loaded = load_extraction_context(session, job_id)
@@ -305,6 +327,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9"))
+    p.add_argument("--prompt-name", help="--config v9 のみ。prompts/ の raw_copy_v9_<名前>.txt を v9 の指示書の代わりに使う")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
     p.add_argument("--no-schema", action="store_true", help="v8・v9 のみ。JSON の型指定を付けない")
@@ -321,6 +344,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         args.thinking_level or args.no_thoughts or args.no_schema or args.temperature is not None
     ):
         p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9 のときだけ使えます")
+    if args.prompt_name is not None:
+        if args.config != "v9":
+            p.error("--prompt-name は --config v9 のときだけ使えます")
+        try:
+            resolve_prompt_path(args.prompt_name)
+        except ValueError as exc:
+            p.error(str(exc))
     if args.repeat < 1:
         p.error("--repeat は 1 以上")
     return args
@@ -350,7 +380,7 @@ def main(argv: list[str] | None = None) -> int:
             max_cost_usd=args.max_cost_usd, test_id=args.test_id, out_dir=args.out_dir,
             dry_run=args.dry_run, thinking_level=args.thinking_level,
             include_thoughts=not args.no_thoughts, use_schema=not args.no_schema,
-            temperature=args.temperature,
+            temperature=args.temperature, prompt_name=args.prompt_name,
         )
     finally:
         session.close()
