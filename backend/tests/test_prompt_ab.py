@@ -546,3 +546,109 @@ def test_parse_args_accepts_v10_and_rejects_prompt_name_with_v10(tmp_path):
     assert pab.parse_args([*base, "--config", "v10"]).config == "v10"
     with pytest.raises(SystemExit):
         pab.parse_args([*base, "--config", "v10", "--prompt-name", "raw_copy_v9_x"])
+
+
+# ---------------------------------------------------------------------------
+# v101（設計: docs/handoff/gemini-v101/design.md §3-6・§5-4）
+# ---------------------------------------------------------------------------
+
+_V101_RESPONSE = json.dumps({"items": [{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]}, ensure_ascii=False)
+
+
+@pytest.fixture
+def v101_fakes(monkeypatch, v10_fakes):
+    """v101 の試験用：v10 の差し替え（マスタ・原文）に、v101 の応答を返させる。"""
+    v10_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V101_RESPONSE}
+    return v10_fakes
+
+
+def test_v101_config_calls_with_v101_schema_and_default_prompt_a(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    kwargs = v101_fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V101_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_a")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_a"
+
+
+def test_v101_prompt_name_b_uses_the_b_prompt_file_and_records_name(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import load_v101_prompt
+
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_name="raw_copy_v101_b")
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_b")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_b"
+
+
+def test_v101_prompt_files_a_and_b_both_exist_and_differ():
+    a, b = pab._load_prompt_text("v101"), pab._load_prompt_text("v101", "raw_copy_v101_b")
+    assert a != b and "行番号の担当" in a and "行番号の担当" in b
+
+
+def test_v101_row_has_three_new_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["config"] == "v101" and row["item_count"] == 1 and row["errors"] == []
+    assert row["v101_items"][0]["name"] == "商品A" and row["v101_items"][0]["price_line"] == 2
+    assert row["v101_items"][0]["unit"] == "BOX" and row["v101_items"][0]["price_normalized"] == 1000
+    assert row["v101_items_norule"][0]["price_line"] == 2
+    assert row["v101_flags"] == {"possible_missing_item": []}
+    assert "v10_items" not in row
+
+
+def test_v101_items_and_norule_are_extracted_with_reassign_on_and_off(monkeypatch, v101_fakes):
+    spy = MagicMock(return_value=([], {"possible_missing_item": []}))
+    monkeypatch.setattr(pab, "extract_v101_items", spy)
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    assert [c.kwargs["reassign"] for c in spy.call_args_list] == [True, False]
+
+
+def test_v101_masters_are_loaded_once_per_run_and_not_in_dry_run(monkeypatch, v101_fakes, capsys):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1", "r2"), repeat=2)
+    m = v101_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+    _run(v101_fakes, monkeypatch, config="v101", dry_run=True)
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+    assert "行番号の担当" in capsys.readouterr().out
+
+
+def test_v101_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v101_items"] == [] and row["v101_items_norule"] == [] and "ValueError" in row["v101_items_error"]
+
+
+def test_v9_still_uses_default_name_and_rejects_v101_names(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(v101_fakes, monkeypatch, config="v9", run_ids=("r1",))
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v9"
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v9", prompt_name="raw_copy_v101_a")
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v101", prompt_name="raw_copy_v9_trial1")
+
+
+@pytest.mark.parametrize("bad", ["../x", "raw_copy_v101_A", "raw_copy_v101_", "raw_copy_v101_nothing"])
+def test_v101_bad_prompt_name_stops_before_gemini(monkeypatch, v101_fakes, bad):
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v101", prompt_name=bad)
+    assert v101_fakes.v8.call_count == 0 and v101_fakes.record.call_count == 0
+
+
+def test_v7_to_v10_rows_have_no_v101_fields(monkeypatch, v101_fakes):
+    for config in ("v8", "v9", "v10"):
+        v101_fakes.out.joinpath("T.jsonl").unlink(missing_ok=True)
+        _run(v101_fakes, monkeypatch, config=config, run_ids=("r1",))
+        assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(_lines(v101_fakes)[0])
+
+
+def test_parse_args_v101_prompt_name(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v101"]).prompt_name is None
+    assert pab.parse_args([*base, "--config", "v101", "--prompt-name", "raw_copy_v101_b"]).prompt_name == "raw_copy_v101_b"
+    for config, name in (("v101", "raw_copy_v9_trial1"), ("v9", "raw_copy_v101_a"), ("v10", "raw_copy_v101_a")):
+        with pytest.raises(SystemExit):
+            pab.parse_args([*base, "--config", config, "--prompt-name", name])
