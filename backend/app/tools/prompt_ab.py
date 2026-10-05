@@ -1,9 +1,10 @@
-"""Gemini 書き写し v7/v8/v9 の比較試験の道具（読み取り＋費用の台帳だけ）。
+"""Gemini 書き写し v7/v8/v9/v10 の比較試験の道具（読み取り＋費用の台帳だけ）。
 
 設計: docs/handoff/gemini-v8/design.md §6
       docs/handoff/gemini-v9/design.md §5-1（v9）
       docs/handoff/gemini-v9-trial1/design.md §3（--prompt-name）
-起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9 [--prompt-name raw_copy_v9_NAME]
+      docs/handoff/gemini-v10/design.md §3-5（v10）
+起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10 [--prompt-name raw_copy_v9_NAME]
         [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
@@ -25,6 +26,7 @@ from pathlib import Path
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.extraction_judgement_svc import order_from_pattern
 from app.services.gemini_extraction_svc import (
     _GEMINI_MODEL,
     _build_supplier_context_note,
@@ -45,7 +47,14 @@ from app.services.gemini_raw_copy_v9 import (
     load_v9_prompt,
     parse_v9_response,
 )
+from app.services.gemini_raw_copy_v10 import (
+    V10_RESPONSE_SCHEMA,
+    extract_v10_items,
+    load_v10_prompt,
+    parse_v10_response,
+)
 from app.services.llm_budget import record_usage_event_sync
+from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
 
 logger = logging.getLogger(__name__)
@@ -175,11 +184,34 @@ def _parse(config: str, response_text: str, raw_text: str) -> tuple[int, list[di
             items, errors = parse_raw_copy_response(response_text, raw_text)
         elif config == "v9":
             items, errors = parse_v9_response(response_text, raw_text)
+        elif config == "v10":
+            items, errors = parse_v10_response(response_text, raw_text)
         else:
             items, errors = parse_v8_response(response_text, raw_text)
     except Exception as exc:  # noqa: BLE001
         return 0, [{"error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}]
     return len(items), errors
+
+
+def _load_v10_masters(session: Session) -> dict:
+    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。"""
+    cond_entries = load_condition_entries(session)
+    status_entries = load_status_master(session)
+    (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
+    return {
+        "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
+        "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
+    }
+
+
+def _v10_row_fields(response_text: str, ctx, masters: dict) -> dict:
+    """JSONL の v10 の行に足す v10_items。取り出しに失敗しても試験は止めず、理由を残す。"""
+    try:
+        items, _errors = parse_v10_response(response_text, ctx.raw_text)
+        order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
+        return {"v10_items": extract_v10_items(items, ctx.raw_text, order=order, **masters)}
+    except Exception as exc:  # noqa: BLE001
+        return {"v10_items": [], "v10_items_error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}
 
 
 def _append_jsonl(path: Path, row: dict) -> None:
@@ -199,7 +231,7 @@ def resolve_prompt_path(prompt_name: str) -> Path:
 
 
 def _load_prompt_text(config: str, prompt_name: str | None = None) -> str | None:
-    """v8・v9 の指示書の本文。v7 は DB の指示書を既存関数が読むので None。"""
+    """v8・v9・v10 の指示書の本文。v7 は DB の指示書を既存関数が読むので None。"""
     if prompt_name is not None:
         if config != "v9":
             raise ValueError("--prompt-name は --config v9 のときだけ使えます")
@@ -208,6 +240,8 @@ def _load_prompt_text(config: str, prompt_name: str | None = None) -> str | None
         return load_v8_prompt()
     if config == "v9":
         return load_v9_prompt()
+    if config == "v10":
+        return load_v10_prompt()
     return None
 
 
@@ -217,7 +251,7 @@ def _print_dry_run(
     print(f"[dry-run] target_count={summary.target_count}")
     if ctx is None:
         return
-    if config in ("v8", "v9"):
+    if config in ("v8", "v9", "v10"):
         prompt = build_prompt_v8(
             ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=ctx.supplier_context,
             knowledge_links=ctx.knowledge_links,
@@ -250,6 +284,7 @@ def run_ab(
         _print_dry_run(summary, config, ctx, v8_prompt)
         return summary
 
+    masters = _load_v10_masters(session) if config == "v10" else None  # dry-run では読まない
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     for run_id in run_ids:
         job_id = job_ids.get(run_id)
@@ -273,7 +308,8 @@ def run_ab(
                 if config == "v7":
                     result = _call_v7(ctx)
                 else:
-                    extra = {"response_schema": V9_RESPONSE_SCHEMA} if config == "v9" else {}
+                    schemas = {"v9": V9_RESPONSE_SCHEMA, "v10": V10_RESPONSE_SCHEMA}
+                    extra = {"response_schema": schemas[config]} if config in schemas else {}
                     result = call_gemini_raw_copy_v8(
                         ctx.raw_text, prompt_text=v8_prompt, supplier_context=ctx.supplier_context,
                         knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
@@ -294,6 +330,7 @@ def run_ab(
                 **row, "response_text": result["response_text"],
                 "thought_summaries": result["thought_summaries"], "usage_raw": result["usage_raw"],
                 "item_count": item_count, "errors": errors,
+                **(_v10_row_fields(result["response_text"], ctx, masters) if masters is not None else {}),
                 "elapsed_sec": round(time.monotonic() - started, 3),
             })
             try:
@@ -324,9 +361,9 @@ def run_ab(
 # ---------------------------------------------------------------------------
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
+    p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
-    p.add_argument("--config", required=True, choices=("v7", "v8", "v9"))
+    p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10"))
     p.add_argument("--prompt-name", help="--config v9 のみ。prompts/ の raw_copy_v9_<名前>.txt を v9 の指示書の代わりに使う")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
@@ -343,7 +380,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     if args.config == "v7" and (
         args.thinking_level or args.no_thoughts or args.no_schema or args.temperature is not None
     ):
-        p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9 のときだけ使えます")
+        p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9・v10 のときだけ使えます")
     if args.prompt_name is not None:
         if args.config != "v9":
             p.error("--prompt-name は --config v9 のときだけ使えます")
