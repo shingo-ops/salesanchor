@@ -110,3 +110,36 @@ async def test_judge_returns_empty_when_no_records():
     assert result.confident is False
     # 0件時は2回目のexecuteは呼ばれない
     assert db.execute.call_count == 1
+
+
+@pytest.mark.asyncio
+async def test_judge_sql_uses_all_with_list_param_for_excluded_channels():
+    """除外チャネルは `<> ALL(:excluded_channels)` + list で渡す（asyncpg は NOT IN タプルを構文エラーにする）。"""
+    from app.services.lang_judge import judge_recipient_language
+
+    captured: list[tuple[str, dict]] = []
+    call_count = 0
+
+    async def fake_execute(query, params=None):
+        nonlocal call_count
+        call_count += 1
+        captured.append((str(query), params))
+        result_mock = MagicMock()
+        if call_count == 1:
+            result_mock.first.return_value = None
+        else:
+            total_row_mock = MagicMock()
+            total_row_mock.__getitem__ = lambda _, i: 0
+            result_mock.first.return_value = total_row_mock
+        return result_mock
+
+    db = AsyncMock()
+    db.execute.side_effect = fake_execute
+
+    await judge_recipient_language(db=db, tenant_id=6, lead_id=4)
+
+    assert len(captured) == 2
+    for sql, params in captured:
+        assert "NOT IN :excluded_channels" not in sql
+        assert "<> ALL(:excluded_channels)" in sql
+        assert isinstance(params["excluded_channels"], list)
