@@ -14,11 +14,12 @@
 | ファイル | 変更前 | 変更後 |
 |---|---|---|
 | `backend/tools/export_openapi.py` | 無い | 新規。`app.openapi()` を、キーを並べ替えた JSON（`sort_keys=True`）で書き出す |
-| `frontend/package.json` | 型生成の道具が無い | devDependency に `openapi-typescript` を 7.13.0 で固定して追加。scripts に `generate:api-types` と `check:api-types` を追加。lint-staged の `eslint --max-warnings=0` に `--no-warn-ignored` を追加（生成物が ignores 対象のため、commit 時の「File ignored」警告で pre-commit が失敗するのを防ぐ） |
+| `frontend/package.json` | 型生成の道具が無い | devDependency に `openapi-typescript` を 7.13.0 で固定して追加。scripts に generate:api-types を追加（frontend/api-contract/openapi.json から型ファイルを作る。check:api-types は作らない） |
 | `frontend/package-lock.json` | — | `npm install -D -E` を1回実行した結果（248行追加・3行削除） |
 | `frontend/eslint.config.js` | ignores が無い | 先頭に `{ ignores: ["src/api/generated/**"] }` を1行追加 |
-| `frontend/src/api/generated/openapi.json`、`frontend/src/api/generated/schema.d.ts` | 無い | 生成物。手で編集しない |
-| `.github/workflows/api-contract-check.yml` | 無い | 新規ジョブ「API contract is up to date」。スキーマと型を作り直し、コミット済みのものと違えば赤にする |
+| `frontend/api-contract/openapi.json` | 無い | 生成物。src の外に置いてコミットする。手で編集しない |
+| `.gitignore` | 型ファイルの置き場が無い | 1行追加し、frontend/src/api/generated/ を追跡の対象から外す。型ファイル schema.d.ts は生成されるだけで、コミットしない |
+| `.github/workflows/api-contract-check.yml` | 無い | 新規ジョブ「API contract is up to date」。スキーマを作り直し、コミット済みの frontend/api-contract/openapi.json と違えば赤にする。型の生成もできることを確認する |
 
 ## 触らない範囲
 - backend/app 配下の実装（`git diff --stat origin/main...HEAD -- backend/app` が空であること）
@@ -33,8 +34,8 @@
 ## 受入基準
 | 基準 | 検証方法 |
 |---|---|
-| 生成が毎回同じ結果になる | 2回目に生成したあと、`git diff --exit-code -- frontend/src/api/generated/` が 0 で終わる（実測済み。shasum が一致） |
-| ずれを検出できる | `backend/app/schemas/close_reason.py` の `sort_order` を一時的に変えて生成すると、diff が出る（実測済み。schema.d.ts の差分は `-sort_order` と `+sort_order_x`。変更は元に戻した） |
+| 生成が毎回同じ結果になる | 2回目に生成したあと、`git diff --exit-code -- frontend/api-contract/` が 0 で終わる（実測済み） |
+| ずれを検出できる | `backend/app/schemas/close_reason.py` の `sort_order` を一時的に変えて生成すると、diff が出る（実測済み。frontend/api-contract/openapi.json の差分は `-"sort_order"` と `+"sort_order_x"`。変更は元に戻した） |
 | 既存のチェックが壊れていない | `npx tsc --noEmit` がエラー0件、`npm run lint` がエラー0件・警告139件（main と同じ数）、`npm run check:all` の25タスクがすべて成功（実測済み） |
 | CI | PR で「API contract is up to date」が pass になる |
 
@@ -50,5 +51,6 @@
 - 守り手: `backend/tools/export_openapi.py`（スキーマの正本を書き出す、唯一の入口）
 
 ## リスクと戻し方
-- リスク: 生成物が大きい（openapi.json 65,055行、schema.d.ts 38,566行）。実行時の動作には影響しない。
+- リスク: openapi.json が大きい（65,055行）。実行時の動作には影響しない。
+- 方式変更: CI で hex ラチェットと deprecated 列チェックに当たったため、生成物の型ファイルはコミットせず、openapi.json だけを src の外に置く方式に変えた（2026-10-05 設計者判断）。
 - 戻し方: この PR を revert する。

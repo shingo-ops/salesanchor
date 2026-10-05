@@ -32,7 +32,7 @@ jobs:
         working-directory: backend
         env:
           ENVIRONMENT: test
-        run: python -m tools.export_openapi ../frontend/src/api/generated/openapi.json
+        run: python -m tools.export_openapi ../frontend/api-contract/openapi.json
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -47,9 +47,9 @@ jobs:
         working-directory: frontend
         run: npm run generate:api-types
 
-      - name: Check generated files are committed
+      - name: Check openapi.json is committed
         run: |
-          if ! git diff --exit-code -- frontend/src/api/generated/; then
-            echo "::error::API の形と生成物がずれています。backend/tools/export_openapi.py と npm run generate:api-types を実行して、生成物をコミットしてください"
+          if ! git diff --exit-code -- frontend/api-contract/; then
+            echo "::error::API の形と frontend/api-contract/openapi.json がずれています。cd backend && ENVIRONMENT=test python -m tools.export_openapi ../frontend/api-contract/openapi.json を実行して、openapi.json をコミットしてください"
             exit 1
           fi
