@@ -1942,3 +1942,89 @@ AU間接依存の追加発見と設計追補（実装中・削除前停止）: H
 
 
 AU品質ゲート補正: 変更対象GoalSettingPage.tsx:225の既存「おすすめ」直書き1件でstrict ESLintが失敗。放置/ルール緩和をせず、同ファイルAdvisorMetricRowで既存useTranslationを利用、goals.advisorRecommendedをja/enへ各1key追加する（ja=おすすめ {{value}}、en=Recommended {{value}}）。既存数値整形/null分岐/処理は不変、日本文言を保持し英語を翻訳する。これは全byte逆変換の例外2コード差分として機械的に許可しlocale差分を各1keyで監査する。Astra設計追補自己審査APPROVE。CARD-AU-PAGES-02正式lint成功。DB/API/配線変更0、i18n以外の警告を独断で直さない。
+
+
+### AV. 入力本体の再棚卸しと SelectControl 本体拡張（2026-10-02）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-113/067/073/122/144を継承。§Y順序3「Toggle・入力本体」の着手便。§Zの入力契約（:798-826, :895-910, :921, :936）の実装第1段。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-01）「フロントエンドのSSOTをcodex二依頼していたのでキャッチアップして続きを再開してくれ」「フロントエンドのパーツもデザイントークンとデザインシステムを遵守して、金型登録のないハードコードを禁止する」「配線とDBのSSOTは遵守してデータを分散させることは禁止」。PO回答（2026-10-02、本セッション）: Checkbox/Toggle/Radio の新規金型登録を「許可する」（§Z :807/:826/:921/:936 の仕様どおり）。番号付きGO・Opus委任の有効化は創作しない（docs/handoff/go-record-transcription/opus-delegation.md 不在＝委任は有効化待ち）。
+
+引継ぎ時点の事実: 最終完了便はAU（PR #3855 merge 85af04d5、Deploy 36522989354 success、旧ボタン221→0）。§AU後の設計節・進行中便は無し。tasks/todo.md:19 の残件は「表/報酬3/カレンダー色保留、新CI最後」。§AA以降に入力の実装節は無く、§Y順序3のToggle/入力本体は未着手。
+
+公式作業台release/frontend-input-av1-design、基準55d99a97e441b4c0604f2b8f42418d2a7bc8ffab。preflight成功。作業台確保のため2026-10-02にPO本人がreaper --execute（マージ済み2件）と release/frontend-next-form-design の worktree remove を実行（後者の未push記録26be82bafは `git cherry` で main 同等、PR #3514で反映済みと照合）。
+
+再棚卸し（AV-0）: 初回は origin/main 946e6dbcdffa7e314b119cb9cd67b400182a679a の snapshot、基準55d99a97eで再実行し全599行・select80詳細・集計が一致（両SHA間の frontend/src 差分0）。TypeScript 5.9.3 AST、対象TSX 275（stories/test 103除外）、構文エラー0。native入力599＝input461/select81/textarea57（金型内部各1を含む）。ページ側: select80、textarea56、input460（omitted150/text97/checkbox72/number65/email23/date11/tel8/radio7/file6/password6/time4/dynamic3/url2/search2/color2/range1/datetime-local1）。ui-allow付き21/無し578。9/10監査（3bdf33d55、577）との照合: 1対1対応556、旧のみ21、新のみ43（場所一覧は av0-input-audit.md。差の原因は推定しない）。全行・属性は av0-input-audit.json。
+
+select80の詳細（av1-select-detail.json、属性有無は av0-input-audit.json の has/hasStyle/attrNames）: ref0、style5（InventoryPage.tsx:477、ParseReviewPage.tsx:575/596/617/638。AV-2で配置/外観へ仕分け）、multiple/size0、spread0、option disabled0。children＝配列map41（map単独19、map＋固定option22）、固定optionのみ32、option＋式7（ProductEditPage.tsx:231/255/278/285/346/353/360 の renderAttrOptions）。onChangeは e.target.value 読取76、カリー化4（TenantPolicyPage 167/266/283、TenantProfilePage 234）、selectedOptions0、Number変換5。option表示がt()経由56、生文字を含む23（記号片を含む）。ラベル紐付け12。
+
+既存金型の実物（frontend/src/components/Select.tsx）: SelectControl(:34) は options 配列モードのみ（:59-63）、children モード無し、forwardRef無し、矢印は FormField.css:74-83 の背景SVG固定。TextField.tsx:29/Textarea.tsx:28 はラベル付きdiv包みのみで、裸Control・forwardRef無し。金型の単体テストは0件（stories のみ）。既存 SelectControl/Select 利用33ファイル、TextField 48、Textarea 5（origin/main の import 文を git grep で数えた実測）。ui-allow 8件（StatusMasterPage.tsx:259/273、ConditionsMasterPanel.tsx:321/337/392/408、StatusMasterPanel.tsx:310/324）の理由は「option map を持つ SelectControl variant が無い」であり、childrenモードで解消対象になる。
+
+競合確認: 同領域のOPEN PRは #2668（release/morimoto/select-control-bare-select、draft、最終更新2026-06-28）のみ。Select.tsx/FormField.css/Select.stories.tsx は origin/main と差分0、`git cherry` で patch 同等＝既反映。本便と金型ファイルの競合なし。#2668 を無断で変更・closeしない。
+
+#### 便の分割（1便1目的、原因切り分け優先）
+
+| 便 | 内容 | 画面の見た目 |
+|---|---|---|
+| AV-1 本体 | SelectControl に children モード・forwardRef・indicator を追加、Select.test.tsx 新設、stories 追加。利用ページ変更0 | 変化なし |
+| AV-2 利用 | ページの生select80 → SelectControl。ページCSSの装飾宣言は FormField.css へ集約（§Z :811/:824、CSSI表）、配置宣言のみ layoutClassName として残す | 変化あり（前後表を事前提示しPO確認） |
+| AV-3以降 | TextFieldControl/TextareaControl 本体 → 利用、Checkbox/Toggle/Radio 新規金型 → 利用、その他type | 便ごとに提示 |
+
+本節で実装可とするのは AV-1 本体のみ。AV-2以降は各便の設計追補・前後表・カード後に判断する。
+
+#### 変更契約（AV-1、PO発言の代筆ではない）
+
+対象ファイル（これ以外は変更しない）:
+- frontend/src/components/Select.tsx
+- frontend/src/components/FormField.css
+- frontend/src/components/Select.stories.tsx
+- frontend/src/components/Select.test.tsx（新規）
+
+1. 型: SelectControlProps を排他 union にする。
+   - optionsモード: `options: SelectOption[]`、`placeholder?: string`、`children?: never`（既存と同じ）。
+   - childrenモード: `children: ReactNode`、`options?: never`、`placeholder?: never`。
+   - 共通: size/fullWidth/appearance/indicator と `Omit<SelectHTMLAttributes, own keys>`。
+2. 出力: optionsモードは現行 :52-64 と DOM・属性順・placeholder option 生成を完全維持。childrenモードは `<select>` 1個に children をそのまま入れ、option・空値・key・順番・条件式を再生成しない。placeholder option を新設しない。
+3. ref: `forwardRef<HTMLSelectElement, SelectControlProps>` で native select を返す。オブジェクトref・関数refとも同要素へ。ImperativeHandle を使わない。displayName="SelectControl"。
+4. indicator?: "default" | "none"（既定 "default"）。none は両 appearance で矢印背景を消す独立軸（§Z :906、CSSI-0231）。class は `comp-select--no-indicator`。
+5. CSS（FormField.css、var()のみ・新規トークン0）:
+   - `.comp-select--no-indicator { background-image: none; padding-right: var(--space-3); }`（md の左余白 :52 と同値）
+   - sm 時 `padding-right: var(--space-2)`（:137 と同値）、lg 時 `var(--space-4)`（:162 と同値）。既存 :142-146/:167-171 の select 再指定より後に置き、詳細度は既存規則（ファイル冒頭 :5-13）に従う。
+   - 既存宣言・既存の %23888 矢印は本便で変更しない（後述の残件）。
+6. Select（ラベル付き）: 公開APIは変更しない（optionsモードのみ）。内部の SelectControl 呼出しは型変更後も同出力であることをテストで固定。
+7. 変更しないもの: 利用ページ全件、TextField/Textarea、i18n、API/DB/backend、CI設定、依存、トークン定義。
+
+#### 受入・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| optionsモードの出力が不変 | Select.test.tsx: 既存 props 組合せ（placeholder有無・required・size sm/md/lg・appearance field/bare・fullWidth・disabled option）の DOM を変更前実装で取得した期待値と一致 |
+| childrenモードが children を再生成しない | 固定option／map／option＋式／空値option の4型で、出力 option の value・text・順番・disabled が入力と一致 |
+| 型の排他 | `// @ts-expect-error` で options+children 同時指定、children+placeholder を拒否。frontend の型検査成功（実在する script 名はカード作成時に frontend/package.json で照合） |
+| ref が native select に届く | オブジェクトref・関数ref の双方で HTMLSelectElement、value 読取・focus() 可 |
+| イベント・値の透過 | value/defaultValue/onChange/onBlur/name/id/disabled/required/aria-* が同要素に付き、onChange で e.target.value を受ける |
+| indicator=none | class 付与と、appearance field/bare 双方で付くこと。CSS は var() のみ（check:all の CSS 検査成功） |
+| 既存利用33ファイルの無影響 | 利用ページ差分0（git diff --stat）、型検査・全体テスト・build 成功 |
+| 品質 | `npm run check:all`、build、build-storybook、全体 vitest、ESLint、ui-governance 差分検査、design-token ratchet |
+
+#### 代替と不採用理由
+
+- 本体とページ移行を同一PRにする案: 不具合時に原因（部品か画面か）を分離できないため不採用（PO原文「原因が分かるように分離」§Y :760）。
+- Select（ラベル付き）にも children を同時追加する案: 現時点の利用予定が未確定のため本便では行わない。AV-2 の前後表で必要が確定した場合に追補する。
+- 矢印SVGの %23888 をトークン化する案: 見た目変化を伴い得るため本便に混載しない（残件）。
+
+#### Architect自己審査
+
+APPROVE（AV-1本体のみ）。§Zの契約（:802-806, :906）と実物 Select.tsx/FormField.css を照合し、追加は3点（childrenモード・forwardRef・indicator）に限定。値の保存先・API・配線を変えず、新規トークン0、既存出力をテストで固定する。競合PR #2668 は既反映で衝突なし。同一AI（Opus）による自己審査であり独立第二者レビューではない。AV-2 は見た目の変化を伴うため本審査の対象外（REVISE: 前後表とPO確認待ち）。
+
+#### 維持の仕組み
+
+守り手: frontend/src/components/Select.test.tsx（本便新設）、既存 frontend-check（check:all/coverage/storybook）、ui-governance-gate（差分検査）、design-token-guard。対象: SelectControl の公開契約と出力。守っていないもの: ページ側の生select 80件（AV-2で移管、最後のCIで未移行0を強制）。切戻し: 本PRの merge commit を revert（DB・データ影響なし）。
+
+#### 残件（本便では扱わない・事実のみ）
+
+- FormField.css:80 と components.css の page-header-select 矢印に `%23888`（URLエンコードの固定色）。ADR-067 の検査（check-css-hardcoded-colors）は %23 を検出しない旨が FormField.css:73 に記載。色トークン化は別便で設計。
+- 作業台上限: 他作業で worktree が上限100付近に常駐（本便確保時 100→101）。次便の作業台確保時に再び不足し得る。
+- 証跡: evidence-20260910/ の av0-input-audit.{cjs,json,md}、av0-compare.cjs、av1-select-detail.{cjs,json,md}、av1-select-detail-md.cjs、av1-summary.json、av1-css.cjs、av1-css-rules.md、av1-css-mapping.md（後者は snapshot 946e6dbc 生成の写し、frontend/src 同一）。

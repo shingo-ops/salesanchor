@@ -3374,3 +3374,28 @@ tradeoff: スクリーンショットはリポジトリ外。
 decision: PO 本人の人手確認として記録。
 follow_up: なし。
 ```
+
+```text
+id: EV-20261002-FRONTEND-AV-INPUT-DESIGN
+date: 2026-10-02
+agent: Claude Code (Opus 設計 / Sonnet 調査)
+task: フロントエンド金型化の引継ぎ再開と入力本体（§Y順序3）の再棚卸し・AV-1設計
+scope: frontend/src の native select/textarea/input。製品コード未変更。基準 origin/main 55d99a97e441b4c0604f2b8f42418d2a7bc8ffab。
+evidence:
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av0-input-audit.cjs（TypeScript 5.9.3 AST）
+    summary: 対象TSX275・構文エラー0。native入力599（input461/select81/textarea57、金型内部各1）。ui-allow21。9/10監査577と対応556・旧のみ21・新のみ43。946e6dbc と 55d99a97e で全行一致。
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av1-select-detail.json
+    summary: ページ側select80。ref0/style5（InventoryPage.tsx:477、ParseReviewPage.tsx:575/596/617/638）/multiple0/size0/spread0。children map41・固定32・式7。onChange e.target.value 76・カリー化4。
+  - type: file
+    reference: frontend/src/components/Select.tsx:34-66、FormField.css:46-92
+    summary: SelectControl は options モードのみ・forwardRef無し・矢印固定。設計担当が実物を直接読取。
+  - type: external
+    reference: PO(Shingo) セッション内回答（2026-10-02）
+    summary: Checkbox/Toggle/Radio の新規金型登録「許可する」。作業台確保のため PO 本人が reaper --execute と worktree remove を実行。
+confidence: high
+tradeoff: av1-css-mapping.md は snapshot 946e6dbc の写し（frontend/src 同一を確認）。見た目の前後比較は AV-2 で行い本記録に含めない。
+decision: AV-1（SelectControl に children モード・forwardRef・indicator を追加、利用ページ変更0）を設計自己審査 APPROVE。同一AIの自己審査であり独立レビューではない。番号付きGO・Opus委任の有効化は創作しない。
+follow_up: PO 実装承認→実装カード→Sonnet 実装→PR→番号付きGO。AV-2 は見た目の前後表を PO 提示。
+```
