@@ -7,7 +7,7 @@
 
 ## 既存 ADR の確認
 - ADR-067（デザイントークン強制）: トークンを唯一の正本とする（docs/adr/ADR-067-design-token-enforcement.md:17）。CI の検査対象は frontend 配下（同 :81-116）
-- ADR-144（UIガバナンス）: CI ゲートの対象は `frontend/src/pages/**/*.tsx`（docs/adr/ADR-144-ui-component-governance.md:43）
+- ADR-144（UIガバナンス）: CI ゲートの対象は frontend/src/pages 配下の tsx（docs/adr/ADR-144-ui-component-governance.md:43）
 - 上の2つとも、GAS を対象にするとも対象外にするとも明記していない
   - PO 判断（2026-10-05）:「このGASのタブや色はデザインシステムに従わせる」
 
