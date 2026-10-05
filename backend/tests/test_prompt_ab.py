@@ -585,6 +585,17 @@ def test_v101_prompt_files_a_and_b_both_exist_and_differ():
     assert a != b and "行番号の担当" in a and "行番号の担当" in b
 
 
+def test_resolve_prompt_path_resolves_raw_copy_v101_d_for_v101_and_v102():
+    # Arrange
+    names_and_configs = ("v101", "v102")
+
+    # Act
+    paths = [pab.resolve_prompt_path("raw_copy_v101_d", config) for config in names_and_configs]
+
+    # Assert
+    assert all(path.name == "raw_copy_v101_d.txt" and path.is_file() for path in paths)
+
+
 def test_v101_row_has_three_new_fields(monkeypatch, v101_fakes):
     _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
     row = _lines(v101_fakes)[0]
