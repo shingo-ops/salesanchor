@@ -125,12 +125,12 @@ async def test_judge_sql_uses_all_with_list_param_for_excluded_channels():
         call_count += 1
         captured.append((str(query), params))
         result_mock = MagicMock()
+        row_mock = MagicMock()
         if call_count == 1:
-            result_mock.first.return_value = None
+            row_mock.__getitem__ = lambda _, i: "en"
         else:
-            total_row_mock = MagicMock()
-            total_row_mock.__getitem__ = lambda _, i: 0
-            result_mock.first.return_value = total_row_mock
+            row_mock.__getitem__ = lambda _, i: 3
+        result_mock.first.return_value = row_mock
         return result_mock
 
     db = AsyncMock()
