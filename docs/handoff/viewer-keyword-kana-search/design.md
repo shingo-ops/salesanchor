@@ -4,8 +4,8 @@
   - 設計：Opus が作成し、自分で審査した（同じAIによる審査で、独立した第三者のレビューではない）。判定は §10。
   - PO：方針（products に列を足さず、検索ワードを検索対象にし、ひらがな・カタカナを同一視する）は承認済み（2026-10-05「y」）。成功条件（§2）・シートに検索ワードが見えることの了承（§5）・実装は、2026-10-05 に PO が「ｙ」で承認した（設計全体を示して y/n を尋ねた質問への返答）。
   - 実装：SA 側（§4-1）を Sonnet に委任した。GAS 側（§4-2・4-3）は SA の反映後に行う。
-- 根拠：[recon.md](recon.md)
-- 関係する ADR：ADR-1001（検索ワード表を public に統一）、ADR-154（配信は needs_review=false の行に限る）、ADR-158（配信クエリの is_current）。配信の列数を定めた ADR は無い（recon §2）。
+- 根拠：[recon.md](recon.md)（`docs/handoff/viewer-keyword-kana-search/recon.md`）
+- 関係する ADR：ADR-1001-deprecate-tcg-products-unify-to-public（検索ワード表を public に統一）、ADR-154-tcg-parity02-gas-python-migration（配信は needs_review=false の行に限る）、ADR-158-product-level-supersession（配信クエリの is_current）。配信の列数を定めた ADR は無い（recon §2）。
 - 直前の設計：`docs/handoff/gas-viewer-series-tabs/design.md`（同じ GAS に Series 列を足した）。
 
 ## 1. 目的（POの言葉）
@@ -141,7 +141,7 @@
   - 「在庫集計」タブをほかに読む仕組みの有無（recon §8）。列を末尾に足すので、ヘッダー名で引く仕組みなら影響は無い。
 
 ## 11. 維持の仕組み
-- 守り手：`backend/tests/test_tcg_distribution.py`（列数とヘッダーの形）、`backend/tests/test_tcg_distribution_pg.py`（検索ワードの連結と既存12列の不変）、`backend/tests/test_tcg_result_order.py`（13列）。CI の backend テストで毎回確かめる。
+- 守り手: backend/tests/test_tcg_distribution.py（列数とヘッダーの形）、`backend/tests/test_tcg_distribution_pg.py`（検索ワードの連結と既存12列の不変）、`backend/tests/test_tcg_result_order.py`（13列）。CI の backend テストで毎回確かめる。
 - 検索ワードを足すと、次の配信で検索に効く。マスタの画面から検索ワードを登録すれば、お客様の検索にも当たるようになる（照合と検索が同じ正本を使う）。
 - GAS のコードの正本が `~/tcg-inventory-viewer-prod-1hc`（作業フォルダ）と `shingo-ops/tcg-client-viewer`（古い）に分かれている問題は残る。別件として記録する。
 
