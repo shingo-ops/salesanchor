@@ -554,3 +554,174 @@ def test_same_ship_sentence_on_two_lines_is_listed_once():
     raw = "商品A\n※発送日相談\n3BOX@1,000円\n※発送日相談"
     (r,), _ = _extract(raw, _it([1, 2, 3, 4], "1,000円", "3"))
     assert r["ship"] == "※発送日相談"
+
+
+# ---------------------------------------------------------------------------
+# v10.2 の確認と直し F1〜F6（設計: docs/handoff/gemini-v102/design.md §3-1・§5-3）
+# ---------------------------------------------------------------------------
+
+
+def _extract102(raw, *items, reassign=True):
+    parsed, errors = _parse(raw, *items)
+    assert errors == []
+    return v101.extract_v101_items(parsed, raw, order=None, reassign=reassign, v102_fixes=True, **_MASTERS)
+
+
+_CHILD_NAMES = ["キモリ", "アチャモ", "ミズゴロウ", "ナエトル", "ヒコザル", "ポッチャマ", "ツタージャ", "ポカブ", "ミジュマル"]
+
+
+def _parent_children_post(parent="■ポケモンカード カードセット 発送日要相談"):
+    lines = [parent]
+    items = []
+    for idx, child in enumerate(_CHILD_NAMES):
+        heading_no = len(lines) + 1
+        lines += [f"・カードセット {child}", "@4,500円"]
+        items.append(_it([1, heading_no, heading_no + 1], "4,500円", "3"))
+    return "\n".join(lines), items
+
+
+def test_f1_removes_parent_heading_shared_by_nine_children_so_ship_is_none_and_name_is_child():
+    # Arrange
+    raw, items = _parent_children_post()
+    # Act
+    out, _flags = _extract102(raw, *items)
+    # Assert
+    assert len(out) == 9
+    for child, one in zip(_CHILD_NAMES, out):
+        assert 1 not in one["lines"]
+        assert one["ship"] == "none"
+        assert one["name"] == f"・カードセット {child}"
+        assert [f["rule"] for f in one["fixes"]] == ["F1"] and one["fixes"][0]["line"] == 1
+
+
+def test_f1_keeps_parent_heading_when_v102_fixes_is_false():
+    raw, items = _parent_children_post()
+    out, flags = _extract(raw, *items)
+    assert all(1 in one["lines"] for one in out) and out[0]["ship"] != "none"
+    assert all("fixes" not in one for one in out) and set(flags) == {"possible_missing_item"}
+
+
+def test_f1_keeps_heading_without_ship_word_with_condition_and_carton_lines():
+    raw = "【世界最強の戦士 OP-17】\n美品\n9個 16,300円\nカートン\n1個 248,000円"
+    out, _ = _extract102(raw, _it([1, 2, 3], "16,300円", "9"), _it([1, 4, 5], "248,000円", "1"))
+    assert all(1 in one["lines"] for one in out)
+    assert [one["fixes"] for one in out] == [[], []]
+
+
+def test_f1_keeps_heading_followed_by_empty_line_and_two_prices():
+    raw = "◆30th CELEBRATION Booster BOX\n\n@28,000円\n在庫60※要相談\n\n@26,000円\n在庫200※発売日発送"
+    out, _ = _extract102(raw, _it([1, 3, 4], "28,000円", "60"), _it([1, 6, 7], "26,000円", "200"))
+    assert all(1 in one["lines"] for one in out) and all(one["fixes"] == [] for one in out)
+
+
+def test_f1_keeps_heading_without_ship_word_with_two_quantity_prices():
+    raw = "🌈UNION ARENA\nアイドルマスター\n1case＠77,000円\n陰の実力者\n10BOX＠115,000円"
+    out, _ = _extract102(raw, _it([1, 2, 3], "77,000円", "1"), _it([1, 4, 5], "115,000円", "10"))
+    assert all(1 in one["lines"] for one in out)
+
+
+def test_f1_keeps_ship_line_shared_by_two_items_without_own_name_lines():
+    raw = "商品見出し\n【9/28発送】\nA 80,000円\nB 3,000円"
+    out, _ = _extract102(raw, _it([1, 2, 3], "80,000円", "1"), _it([1, 2, 4], "3,000円", "1"))
+    assert all(2 in one["lines"] for one in out)
+    assert [one["ship"] for one in out] == ["【9/28発送】", "【9/28発送】"]
+
+
+def test_f1_keeps_ship_heading_when_only_some_items_have_own_name_line():
+    raw = "【9/28発送】\n商品A\n@80,000円\n@3,000円"
+    out, _ = _extract102(raw, _it([1, 2, 3], "80,000円", "1"), _it([1, 4], "3,000円", "1"))
+    assert all(1 in one["lines"] for one in out)
+
+
+def test_f2_prefixes_previous_price_line_name_when_name_is_only_units_and_quantity():
+    raw = "OP-14  11,500円/5box\nカートン 160,000円/13カートン"
+    out, _ = _extract102(raw, _it([1], "11,500円", "5"), _it([2], "160,000円", "13"))
+    assert "OP-14" in out[1]["name"] and out[1]["name"].startswith("OP-14")
+    assert out[0]["name"] == "OP-14"
+    assert [f["rule"] for f in out[1]["fixes"]] == ["F2"] and out[0]["fixes"] == []
+
+
+def test_f2_keeps_number_only_name_even_when_previous_line_is_a_price_line():
+    raw = "OP-14  11,500円/5box\n151 51,500円/2box"
+    out, _ = _extract102(raw, _it([1], "11,500円", "5"), _it([2], "51,500円", "2"))
+    assert out[1]["name"] == "151" and out[1]["fixes"] == []
+
+
+def test_f2_is_off_when_v102_fixes_is_false():
+    raw = "OP-14  11,500円/5box\nカートン 160,000円/13カートン"
+    out, _ = _extract(raw, _it([1], "11,500円", "5"), _it([2], "160,000円", "13"))
+    assert "OP-14" not in out[1]["name"]
+
+
+def test_f3_does_not_use_whole_bracket_line_as_name_when_another_name_line_exists():
+    raw = "【ガンダムカードゲーム未開封BOX】\n・GD05 Freedom Ascension\n12BOX@8200円"
+    out, _ = _extract102(raw, _it([1, 2, 3], "8200円", "12"))
+    assert "【" not in out[0]["name"] and "ガンダム" not in out[0]["name"]
+    assert out[0]["name"] == "・GD05 Freedom Ascension"
+    assert [(f["rule"], f["line"]) for f in out[0]["fixes"]] == [("F3", 1)]
+
+
+def test_f3_keeps_whole_bracket_line_when_it_is_the_only_name_line():
+    raw = "【世界最強の戦士 OP-17】\n9個 16,300円"
+    out, _ = _extract102(raw, _it([1, 2], "16,300円", "9"))
+    assert "世界最強の戦士" in out[0]["name"] and out[0]["fixes"] == []
+
+
+def test_f4_quantity_without_number_gives_none_normalized_and_flag():
+    raw = "ワンピース ブースター\nカートン @150,000円"
+    out, flags = _extract102(raw, _it([1, 2], "150,000円", "カートン"))
+    assert out[0]["quantity_normalized"] is None
+    assert flags["quantity_no_number"] == [2]
+    assert "F4" in [f["rule"] for f in out[0]["fixes"]]
+
+
+def test_f4_leaves_quantity_none_marker_and_numeric_quantity_alone():
+    raw = "商品A\n3BOX@1,000円"
+    out, flags = _extract102(raw, _it([1, 2], "1,000円", "3"))
+    assert out[0]["quantity_normalized"] == 3 and flags["quantity_no_number"] == []
+
+
+def test_f5_footer_line_after_last_price_line_is_not_name_and_is_flagged():
+    raw = "商品A\n3BOX@1,000円\n・買取品"
+    out, flags = _extract102(raw, _it([1, 2, 3], "1,000円", "3"))
+    assert out[0]["name"] == "商品A"
+    assert flags["possible_footer_line"] == [3]
+    assert [(f["rule"], f["line"]) for f in out[0]["fixes"]] == [("F5", 3)]
+
+
+def test_f5_possible_missing_item_does_not_pick_up_shipping_fee_line_after_last_price_line():
+    raw = "商品A\n3BOX@1,000円\n送料 500円\n・買取品"
+    out, flags = _extract102(raw, _it([1, 2, 4], "1,000円", "3"))
+    assert flags["possible_missing_item"] == []
+    _out101, flags101 = _extract(raw, _it([1, 2, 4], "1,000円", "3"))
+    assert flags101["possible_missing_item"] == [3]
+    assert out[0]["name"] == "商品A"
+
+
+def test_f6_quantity_with_comma_is_found_in_text_with_comma():
+    assert v101._quantity_not_in_text("2,000セット", "2,000セット @4,500", v102=True) is False
+
+
+def test_f6_quantity_one_is_not_in_text_of_carton_with_price_only():
+    assert v101._quantity_not_in_text("1", "カートン @150,000円", v102=True) is True
+
+
+def test_f6_without_v102_flag_keeps_the_v101_judgement():
+    assert v101._quantity_not_in_text("2,000セット", "2,000セット @4,500") is True  # v10.1 の誤検知（R6）はそのまま
+    assert v101._quantity_not_in_text("2000セット", "2,000セット @4,500") is True
+
+
+def test_v102_fixes_false_output_has_no_new_keys_and_is_unchanged_by_default():
+    raw = "商品A\n3BOX@1,000円\n・買取品"
+    parsed, _ = _parse(raw, _it([1, 2, 3], "1,000円", "3"))
+    default = v101.extract_v101_items(parsed, raw, order=None, reassign=True, **_MASTERS)
+    explicit = v101.extract_v101_items(parsed, raw, order=None, reassign=True, v102_fixes=False, **_MASTERS)
+    assert default == explicit
+    assert "fixes" not in default[0][0] and set(default[1]) == {"possible_missing_item"}
+
+
+def test_v102_with_no_items_returns_empty_and_flags():
+    out, flags = v101.extract_v101_items(
+        [], "商品A", order=None, reassign=True, v102_fixes=True, **_MASTERS
+    )
+    assert out == [] and flags == {"possible_missing_item": [], "quantity_no_number": [], "possible_footer_line": []}
