@@ -447,3 +447,102 @@ def test_parse_args_accepts_prompt_name_for_v9(named_prompts):
 def test_parse_args_rejects_bad_prompt_name(named_prompts, config, name):
     with pytest.raises(SystemExit):
         pab.parse_args([*_BASE_ARGS, "--config", config, "--prompt-name", name])
+
+
+# ---------------------------------------------------------------------------
+# v10（設計: docs/handoff/gemini-v10/design.md §3-5・§5-2）
+# ---------------------------------------------------------------------------
+
+_V10_RAW = "商品A\n3BOX@1,000円"
+_V10_CTX = task.ExtractionContext(
+    raw_text=_V10_RAW, supplier_context={"extraction_order_pattern": '["price","quantity"]'},
+    knowledge_links=[], supplier_id=7,
+)
+_V10_RESPONSE = json.dumps({"items": [{
+    "price": "1,000円", "quantity": "3", "price_line": 2, "item_lines": [2],
+    "heading_lines": [1], "shared_lines": [], "name_lines": [1],
+}]}, ensure_ascii=False)
+
+
+@pytest.fixture
+def v10_fakes(monkeypatch, fakes):
+    """v10 の試験用：マスタ読み込みを差し替え、呼ばれた回数を数える。"""
+    masters = SimpleNamespace(
+        cond=MagicMock(return_value=[]), status=MagicMock(return_value=[]),
+        lookup=MagicMock(return_value=({}, {}, {}, {}, {}, {"BOX": ("BOX", "箱系")})),
+    )
+    monkeypatch.setattr(pab, "load_condition_entries", masters.cond)
+    monkeypatch.setattr(pab, "load_status_master", masters.status)
+    monkeypatch.setattr(pab, "load_lookup_maps", masters.lookup)
+    monkeypatch.setattr(pab, "load_v10_prompt", lambda: "V10PROMPT")
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_V10_CTX))
+    fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V10_RESPONSE}
+    fakes.masters = masters
+    return fakes
+
+
+def test_v10_config_calls_with_v10_schema_and_prompt(monkeypatch, v10_fakes):
+    from app.services.gemini_raw_copy_v10 import V10_RESPONSE_SCHEMA
+
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    kwargs = v10_fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V10_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == "V10PROMPT"
+
+
+def test_v10_row_has_v10_items_with_system_extracted_values(monkeypatch, v10_fakes):
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    row = _lines(v10_fakes)[0]
+    assert row["config"] == "v10" and row["item_count"] == 1 and row["errors"] == []
+    item = row["v10_items"][0]
+    assert item["name"] == "商品A" and item["unit"] == "BOX"
+    assert item["raw_price"] == "1,000円" and item["price_normalized"] == 1000
+    assert item["price_line"] == 2 and item["item_lines"] == [2]
+
+
+def test_v10_masters_are_loaded_once_per_run_not_per_call(monkeypatch, v10_fakes):
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1", "r2"), repeat=2)
+    m = v10_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+
+
+def test_v10_dry_run_does_not_read_masters(monkeypatch, v10_fakes, capsys):
+    _run(v10_fakes, monkeypatch, config="v10", dry_run=True)
+    m = v10_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (0, 0, 0)
+    assert v10_fakes.v8.call_count == 0
+    assert "V10PROMPT" in capsys.readouterr().out
+
+
+def test_v9_and_v8_rows_have_no_v10_items_and_do_not_read_masters(monkeypatch, v10_fakes):
+    for config in ("v8", "v9"):
+        v10_fakes.out.joinpath("T.jsonl").unlink(missing_ok=True)
+        _run(v10_fakes, monkeypatch, config=config, run_ids=("r1",))
+        assert "v10_items" not in _lines(v10_fakes)[0]
+    assert v10_fakes.masters.lookup.call_count == 0
+
+
+def test_v10_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v10_fakes):
+    monkeypatch.setattr(pab, "extract_v10_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    row = _lines(v10_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v10_items"] == [] and "ValueError" in row["v10_items_error"]
+
+
+def test_v10_with_prompt_name_is_an_error(monkeypatch, v10_fakes):
+    summary_error = None
+    try:
+        _run(v10_fakes, monkeypatch, config="v10", prompt_name="raw_copy_v9_x")
+    except ValueError as exc:
+        summary_error = exc
+    assert summary_error is not None and "--config v9" in str(summary_error)
+    assert v10_fakes.v8.call_count == 0
+
+
+def test_parse_args_accepts_v10_and_rejects_prompt_name_with_v10(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v10"]).config == "v10"
+    with pytest.raises(SystemExit):
+        pab.parse_args([*base, "--config", "v10", "--prompt-name", "raw_copy_v9_x"])
