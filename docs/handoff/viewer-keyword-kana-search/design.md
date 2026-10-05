@@ -56,7 +56,7 @@
 5. テスト
    - `backend/tests/test_tcg_result_order.py:104`：`len(r) == 12` を `13` にする。
    - `backend/tests/test_tcg_distribution.py:184`：`DIST_HEADERS` を参照しているので、そのままで通る見込み。通らなければ直す。
-   - 追加：検索ワードが2語ある商品は ` | ` でつながり、position の順に並ぶ。語の無い商品は空文字になる（PG を使うテスト。`backend/tests/test_tcg_distribution_pg.py` に足す）。
+   - 追加：検索ワードが2語ある商品は ` | ` でつながり、position の順に並ぶ。語の無い商品は空文字になる（PG を使うテスト。本物の PG で fetch_output_rows が行を返す fixture を持つ `backend/tests/test_tcg_result_order.py` に足す。当初は test_tcg_distribution_pg に足したが、その fixture は仕入元まわりが本番より古く行を返せなかったため移した）。
 
 ### 4-2. GAS：Code.js（本番は Code.js、テスト用は「コード.js」。中身は同じ）
 - `:10-23` の `ALLOWED_HEADERS`：末尾に `'Search Keywords'` を足して13列にする。冒頭コメントの「12 列」を「13 列」にする。
@@ -141,7 +141,7 @@
   - 「在庫集計」タブをほかに読む仕組みの有無（recon §8）。列を末尾に足すので、ヘッダー名で引く仕組みなら影響は無い。
 
 ## 11. 維持の仕組み
-- 守り手: backend/tests/test_tcg_distribution.py（列数とヘッダーの形）、`backend/tests/test_tcg_distribution_pg.py`（検索ワードの連結と既存12列の不変）、`backend/tests/test_tcg_result_order.py`（13列）。CI の backend テストで毎回確かめる。
+- 守り手: backend/tests/test_tcg_distribution.py（列数とヘッダーの形）、backend/tests/test_tcg_result_order.py（13列・検索ワードの連結・既存12列の不変）。CI の backend テストで毎回確かめる。
 - 検索ワードを足すと、次の配信で検索に効く。マスタの画面から検索ワードを登録すれば、お客様の検索にも当たるようになる（照合と検索が同じ正本を使う）。
 - GAS のコードの正本が `~/tcg-inventory-viewer-prod-1hc`（作業フォルダ）と `shingo-ops/tcg-client-viewer`（古い）に分かれている問題は残る。別件として記録する。
 
