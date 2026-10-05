@@ -64,3 +64,9 @@ POからCI補強方針への「合意進める」を受領。全体の具体的�
 
 
 AUローカル検収完了: 全旧221→0、661自動試験成功。成果と未検証範囲は[AU実装記録](../../handoff/design-system-recon/evidence-20260910/au-implementation.md)。PR #3855本人GO後マージ・本番反映・公開配信照合済み（Deploy36522989354）。画面省略・未検証。
+
+
+2026-10-02 AV着手: §Y順序3の入力本体へ進む。基準55d99a97eで入力599件を再棚卸し（[入力棚卸し](../../handoff/design-system-recon/evidence-20260910/av0-input-audit.md)）。設計はdesign.md §AV。AV-1はSelectControl本体拡張のみで画面変化なし、製品未変更。
+
+
+2026-10-05 AV-1本番反映（PR #3931、Deploy37254291709）。AW設計: 生select76の扱いを意図資料で判定し、カルテ・ヘッダー・タブバーは金型の種類として登録、一般フォームは標準へ統一、商品編集9・報酬1は保留。設計はdesign.md §AW、証跡は[select対応表](../../handoff/design-system-recon/evidence-20260910/av2-select-mapping.md)と[変更前の実測](../../handoff/design-system-recon/evidence-20260910/aw1-baseline.md)。製品未変更。
