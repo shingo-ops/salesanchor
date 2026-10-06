@@ -822,3 +822,14 @@ def test_parse_args_rejects_bad_omit_supplier_field(bad):
 def test_parse_args_rejects_omit_supplier_field_for_v7():
     with pytest.raises(SystemExit):
         pab.parse_args([*_BASE_ARGS, "--config", "v7", "--omit-supplier-field", "extraction_ship_format"])
+
+
+def test_resolve_prompt_path_resolves_raw_copy_v101_e_for_v101_and_v102():
+    # Arrange
+    names_and_configs = ("v101", "v102")
+
+    # Act
+    paths = [pab.resolve_prompt_path("raw_copy_v101_e", config) for config in names_and_configs]
+
+    # Assert
+    assert all(path.name == "raw_copy_v101_e.txt" and path.is_file() for path in paths)
