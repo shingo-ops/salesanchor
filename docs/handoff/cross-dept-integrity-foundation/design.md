@@ -26,6 +26,15 @@
 ## 3. 便の構成（変更前 → 変更後）
 
 ### 便A：K1-a　process-artifacts gate を main の必須チェックに戻す（ADR-135 に合わせる）
+- **完了（2026-10-06 11:36 JST）**:
+  - PO 本人が GitHub の画面から ruleset 15777895 に次の2件を追加した。
+    - `process-artifacts gate`
+    - `API contract is up to date`（便C-1、PR #3971）
+  - 必須チェックは13件から15件になった。どちらも integration_id は 15368。
+  - updated_at は 2026-09-10T20:26:32 から 2026-10-06T11:36:09 に変わった。
+  - GET で取得した変更前・変更後の結果を比べ、追加した2件以外の rules・enforcement・conditions・strict 設定が変わっていないことを確認した。
+  - bypass_actors は shingo-cc の権限では GET に出てこないため、未確認。
+  - API で PUT する方法を使わなかった理由: 更新時に bypass_actors を省略した場合の挙動が公式文書で確認できず、非常時の迂回権限が消えるおそれがあったため。
 - 変更前: main の ruleset 15777895 の必須チェック13本に `process-artifacts gate` が無い（recon R1-2）。一方、`docs/adr/ADR-135-release-stowaway-prevention.md:48-51` には「登録済み」と書かれている。
 - 変更後: 必須チェックを14本にする。
 - 方法: `gh api` で ruleset を更新する。不可逆操作の一覧に入っているため、PO本人の `bash scripts/permit-danger.sh` が必要。
