@@ -22,6 +22,7 @@ from app.cache import (
     is_token_blacklisted,
     record_auth_failure,
 )
+from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, compute_permission_keys
 from app.database import get_db
 from app.models import Tenant, User
 
@@ -511,6 +512,22 @@ async def load_user_permissions(
         {"user_id": user_id},
     )
     keys = {row[0] for row in result.fetchall()}
+
+    # システムロール（owner / admin）は role_permissions の行に頼らず、権限マスタから計算した集合を
+    # 保存済みの付与に和集合で加える（新しい権限キーが行の追加なしで owner / admin に届く）
+    role_result = await db.execute(
+        text("""
+            SELECT DISTINCT r.system_key
+            FROM user_roles ur
+            JOIN roles r ON r.id = ur.role_id
+            WHERE ur.user_id = :user_id AND r.system_key IS NOT NULL
+        """),
+        {"user_id": user_id},
+    )
+    system_keys = {row[0] for row in role_result.fetchall()}
+    if system_keys & {ROLE_KEY_OWNER, ROLE_KEY_ADMIN}:
+        master = await db.execute(text("SELECT key FROM public.permissions"))
+        keys = compute_permission_keys(keys, system_keys, {row[0] for row in master.fetchall()})
 
     # admin後方互換: User.role='admin'なら全権限を持つ扱い
     # （Phase 1移行期間中、ロール未割当ユーザーを救済）
