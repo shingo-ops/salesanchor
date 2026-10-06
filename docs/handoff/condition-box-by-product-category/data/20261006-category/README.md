@@ -1,6 +1,6 @@
 # 商品マスタ分類（箱/単品）本番反映 データ変更
 
-状態: **未実行**（準備のみ。本番への書き込みはまだ行っていない）
+状態: **実行済み**（2026-10-06 dryrun 05:36Z・apply 05:37Z、出力は下記）
 
 ## 目的
 `public.products.product_category_id` を、PO 承認済みの分類案で設定する。
@@ -38,4 +38,42 @@ SQL は psql の標準入力で流す。
 `rollback.sql`: 件数ガード（1 が 220・2 が 11）後に NULL へ戻す。戻し後は NULL=231。
 
 ## 実行記録
-未実行。実行後、結果をこの PR に追記する。
+### dryrun（ROLLBACK、2026-10-06 05:36Z）
+```
+BEGIN
+DO
+UPDATE 220
+UPDATE 11
+ product_category_id | count 
+---------------------+-------
+                   1 |   220
+                   2 |    11
+(2 rows)
+
+ROLLBACK
+```
+
+### apply（COMMIT、2026-10-06 05:37Z）
+```
+BEGIN
+DO
+UPDATE 220
+UPDATE 11
+ product_category_id | count 
+---------------------+-------
+                   1 |   220
+                   2 |    11
+(2 rows)
+
+COMMIT
+```
+
+### 事後確認（読み取り、231件のid）
+```
+ product_category_id | count 
+---------------------+-------
+                   1 |   220
+                   2 |    11
+(2 rows)
+
+```
