@@ -1,71 +1,18 @@
 from __future__ import annotations
 
 import os
-import re
-from pathlib import Path
 
 import pytest
 from httpx import ASGITransport, AsyncClient
+
+from tests.rls_bootstrap import bootstrap_public_countries
+from tests.seed_data import _load_country_seed_rows
 
 ADMIN_PG_URL = (
     os.getenv("RLS_ADMIN_DATABASE_URL")
     or os.getenv("TEST_PG_URL")
 )
 APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL")
-MIGRATION_FILE = "20260621_010000_create_countries_master.sql"
-
-
-def _split_sql_preserving_do_blocks(sql: str) -> list[str]:
-    statements: list[str] = []
-    buf: list[str] = []
-    i = 0
-    in_dollar = False
-    dollar_tag = ""
-    while i < len(sql):
-        if sql[i] == "$":
-            j = i + 1
-            while j < len(sql) and (sql[j].isalnum() or sql[j] == "_"):
-                j += 1
-            if j < len(sql) and sql[j] == "$":
-                tag = sql[i : j + 1]
-                if not in_dollar:
-                    in_dollar = True
-                    dollar_tag = tag
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-                if tag == dollar_tag:
-                    in_dollar = False
-                    dollar_tag = ""
-                    buf.append(tag)
-                    i = j + 1
-                    continue
-        if sql[i] == ";" and not in_dollar:
-            statements.append("".join(buf))
-            buf = []
-        else:
-            buf.append(sql[i])
-        i += 1
-    if buf:
-        statements.append("".join(buf))
-    return statements
-
-
-def _load_country_seed_rows() -> list[tuple[str, str, str]]:
-    src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "constants" / "countries.ts").read_text("utf-8")
-    pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
-    return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
-
-
-async def _apply_migration(eng, filename: str) -> None:
-    from sqlalchemy import text
-
-    sql = (Path(__file__).resolve().parents[2] / "migrations" / filename).read_text("utf-8")
-    async with eng.begin() as conn:
-        for stmt in _split_sql_preserving_do_blocks(sql):
-            stmt = stmt.strip()
-            if stmt:
-                await conn.execute(text(stmt))
 
 
 def _mock_user():
@@ -136,7 +83,7 @@ async def test_countries_migration_creates_shared_master():
 
     engine = create_async_engine(ADMIN_PG_URL, echo=False)
     try:
-        await _apply_migration(engine, MIGRATION_FILE)
+        await bootstrap_public_countries(engine)
         async with engine.connect() as conn:
             exists = await conn.execute(
                 text(
@@ -195,7 +142,7 @@ async def test_countries_shared_read_and_rls_isolation_under_app_role():
         return 998
 
     try:
-        await _apply_migration(admin_engine, MIGRATION_FILE)
+        await bootstrap_public_countries(admin_engine)
 
         async with admin_engine.begin() as conn:
             for tenant_id in (998, 999):

@@ -115,32 +115,8 @@ def _supplier_ssot_premigration(cursor, schema: str):
     """)
 
 
-def _load_country_seed_rows() -> list[tuple[str, str, str]]:
-    """frontend/src/constants/countries.ts を SSOT として国 seed を読む。"""
-    import re
-    from pathlib import Path
-
-    src = (Path(__file__).resolve().parents[2] / "frontend" / "src" / "constants" / "countries.ts").read_text("utf-8")
-    pattern = re.compile(r'\{ name: "([^"]+)", code: "([A-Z]{2})", dial: "([^"]+)" \}')
-    return [(m.group(2), m.group(1), m.group(3)) for m in pattern.finditer(src)]
-
-
-def _load_tcg_type_seed_rows() -> list[tuple[str, str, str | None]]:
-    """type_master の seed rows を canonical code に合わせる。"""
-    return [
-        ("pokemon_booster_box", "ポケモンカード", "Pokémon Card"),
-        ("one_piece", "ワンピース", "One Piece TCG"),
-        ("dragon_ball", "ドラゴンボール", "Dragon Ball TCG"),
-        ("union_arena", "ユニオンアリーナ", "Union Arena"),
-        ("yugioh", "遊戯王", "Yu-Gi-Oh!"),
-        ("other", "その他", "Other"),
-        ("gundam", "ガンダムカードゲーム", "Gundam Card Game"),
-        ("weiss_schwarz", "ヴァイスシュヴァルツ", "Weiß Schwarz"),
-        ("digimon", "デジモンカードゲーム", "Digimon Card Game"),
-        ("hololive", "ホロライブ", "hololive Official Card Game"),
-        ("lorcana", "ディズニー ロルカナ", "Disney Lorcana"),
-        ("xross_stars", "クロススタァ", "Xross Stars"),
-    ]
+# 国・type_master の seed 供給元は tests/seed_data.py に集約（PG の試験と共用。ADR-1007 段2）
+from tests.seed_data import _load_country_seed_rows, _load_tcg_type_seed_rows  # noqa: E402
 
 # pytest-asyncio 0.25+ で event_loop fixture の上書きは deprecated。
 # asyncio_default_fixture_loop_scope = "function" の場合、session-scoped fixture は
