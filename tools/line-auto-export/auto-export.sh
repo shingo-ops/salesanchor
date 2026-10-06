@@ -23,14 +23,54 @@ T0=$(date +%s)
 # Record in the shared outbox history and notify (notify only when $3 is set).
 record() {
   python3 - "$1" "$2" "${3:-}" "$(( $(date +%s) - T0 ))" <<'PY'
+import subprocess
 import sys
 sys.path.insert(0, '/data/data/com.termux/files/home/line-import/lib')
 import client
+
 result, reason, notify, elapsed = sys.argv[1], sys.argv[2], sys.argv[3], float(sys.argv[4])
+
+
+def loud_notify(nid, title, content):
+    # 連続2回目以降の失敗通知：--alert-once を付けないので、更新ごとに鳴り直す。
+    # 鳴り方そのものは Android 8 以降は通知チャンネルが決めるため、ここでは指定しない
+    # （実測 2026-10-06: チャンネル termux-notification は importance=3・音あり・
+    #  振動は FLAG_MUTE_HAPTIC で無効。--vibrate / --priority は効かない）。
+    try:
+        r = subprocess.run(
+            [client.TERMUX_NOTIFICATION, '--id', str(nid), '-t', title, '-c', content],
+            timeout=10, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL, check=False)
+    except (FileNotFoundError, OSError, subprocess.TimeoutExpired):
+        return False
+    return r.returncode == 0
+
+
 box = client.Outbox('/data/data/com.termux/files/home/line-import/state')
+
+# 今回の記録より前の、直前の stage='auto' の結果（復旧通知の判定に使う）。
+# 見送り（skipped＝スマホ使用中）は成功でも失敗でもないので除外する。
+prev = box.db.execute(
+    "SELECT result FROM events WHERE stage='auto' AND result<>'skipped' ORDER BY id DESC LIMIT 1").fetchone()
+prev_result = prev[0] if prev else None
+
 box.record('auto', result, reason=reason or None, elapsed=elapsed, detected_by='schedule')
+
 if notify:
-    box._notify(4203, 'LINE自動書き出し：' + notify, reason)
+    # 今回を1回目として、stage='auto' の連続失敗回数を数える（見送りは除外）。
+    n = 0
+    for (r,) in box.db.execute("SELECT result FROM events WHERE stage='auto' AND result<>'skipped' ORDER BY id DESC"):
+        if r == 'failed':
+            n += 1
+        else:
+            break
+    title = 'LINE自動書き出し：' + notify if n <= 1 else 'LINE自動書き出し：{}（連続{}回）'.format(notify, n)
+    if n >= 2:
+        box.notifier = loud_notify
+    box._notify(4203, title, reason)
+elif result == 'ok' and prev_result == 'failed':
+    box._notify(4203, 'LINE自動書き出し：復旧しました', reason)
+
 box.db.close()
 PY
 }
@@ -61,9 +101,21 @@ if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
     # （2026-09-23: 40359 -> 44861 に変わり約6時間停止した）。保存済みの接続先で
     # 駄目なときはポートを探し直す（実測 約97秒）。
     say "接続先を探索"
-    found=$(bash "$DIR/adb-discover.sh")
+    err_file=$(mktemp)
+    found=$(bash "$DIR/adb-discover.sh" 2>"$err_file")
+    rc=$?
+    discover_err=$(cat "$err_file" 2>/dev/null)
+    rm -f "$err_file"
+    [ -n "$discover_err" ] && say "探索エラー出力: $discover_err"
     [ -n "$found" ] && say "接続先を更新: $found"
-    timeout 10 adb get-state 2>/dev/null | grep -q device || fail adb "ADBに接続できない（ワイヤレスデバッグ/Wi-Fiを確認）"
+    if ! timeout 10 adb get-state 2>/dev/null | grep -q device; then
+      case "$rc" in
+        2) fail adb "ワイヤレスデバッグがOFF、またはWi-Fi未接続（待ち受けが無い）。端末の 設定→開発者向けオプション→ワイヤレスデバッグ をONにしてください" ;;
+        3) candidates=$(echo "$discover_err" | sed -n 's/^candidates: //p')
+           fail adb "ペア設定が切れている疑い（候補はあるが接続できない）。ペア設定コードで再ペアリングが必要。候補ポート: ${candidates:-不明}" ;;
+        *) fail adb "ADBに接続できない（原因不明。auto-export.log を確認）" ;;
+      esac
+    fi
   fi
 fi
 timeout 10 adb devices | awk '/\tdevice$/{print $1; exit}' > "$DIR/endpoint"
