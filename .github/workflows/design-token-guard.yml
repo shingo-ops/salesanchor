@@ -18,3 +18,6 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.sha }}
         run: bash scripts/check-design-token-ratchet.sh
+
+      - name: .tsx UIスタイル色ガード（block）
+        run: node frontend/scripts/check-tsx-style-colors.js
