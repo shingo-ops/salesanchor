@@ -6,8 +6,9 @@
       docs/handoff/gemini-v10/design.md §3-5（v10）
       docs/handoff/gemini-v101/design.md §3-6（v101）
       docs/handoff/gemini-v102/design.md §3-3（v102）
+      docs/handoff/gemini-supplier-rules-file/design.md §3（--supplier-rules-file）
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME]
-        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
@@ -16,6 +17,7 @@ extraction_shadow_runs / extraction_jobs など本番の表には書かない。
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import logging
 import re
@@ -324,13 +326,62 @@ def _supplier_context_without(supplier_context: dict | None, omit: list[str] | N
     return {k: v for k, v in supplier_context.items() if k not in omit}
 
 
+def load_supplier_rules_file(path: Path) -> tuple[dict[str, dict], str]:
+    """--supplier-rules-file の読み込みと検査。(仕入元 id → 欄の辞書, ファイルの sha256)。不正なら ValueError。
+
+    形: {"<仕入元 id>": {"extraction_xxx": "値" または null, ...}, ...}
+    """
+    try:
+        raw = Path(path).read_bytes()
+        data = json.loads(raw.decode("utf-8"))
+    except (OSError, ValueError) as exc:  # JSONDecodeError・UnicodeDecodeError は ValueError の仲間
+        raise ValueError(f"--supplier-rules-file を読めません: {path}: {type(exc).__name__}") from exc
+    if not isinstance(data, dict):
+        raise ValueError("--supplier-rules-file の中身は {仕入元 id: {欄名: 値}} の JSON オブジェクトにしてください")
+    for supplier_id, fields in data.items():
+        if not isinstance(fields, dict):
+            raise ValueError(f"--supplier-rules-file: 仕入元 {supplier_id!r} の値は欄名と値のオブジェクトにしてください")
+        for name, value in fields.items():
+            if not _SUPPLIER_FIELD_PATTERN.fullmatch(name):
+                raise ValueError(f"--supplier-rules-file: 欄名は extraction_ で始まる英小文字だけ: {name!r}")
+            if value is not None and not isinstance(value, str):
+                raise ValueError(f"--supplier-rules-file: {name} の値は文字列か null だけ")
+    return data, hashlib.sha256(raw).hexdigest()
+
+
+def _supplier_context_with_rules(
+    ctx, rules: dict[str, dict] | None, rules_sha256: str | None,
+) -> tuple[dict | None, dict | None]:
+    """(差し替え後の supplier_context, JSONL に書く supplier_rules_override)。
+
+    ctx.supplier_id がファイルに無いときは (元の supplier_context, None)。元の辞書は変えない。
+    ファイルにない欄は元の値のまま。値が null の欄は外す。
+    """
+    if not rules or ctx.supplier_id is None or str(ctx.supplier_id) not in rules:
+        return ctx.supplier_context, None
+    fields = rules[str(ctx.supplier_id)]
+    merged = {**(ctx.supplier_context or {}), **fields}
+    merged = {k: v for k, v in merged.items() if not (k in fields and fields[k] is None)}
+    override = {"file_sha256": rules_sha256, "supplier_id": str(ctx.supplier_id), "fields": sorted(fields)}
+    return merged, override
+
+
+def _effective_supplier_context(
+    ctx, rules: dict[str, dict] | None, rules_sha256: str | None, omit: list[str] | None,
+) -> tuple[dict | None, dict | None]:
+    """差し替えのあとに外す（設計 §3）。"""
+    replaced, override = _supplier_context_with_rules(ctx, rules, rules_sha256)
+    return _supplier_context_without(replaced, omit), override
+
+
 def _print_dry_run(
     summary: AbSummary, config: str, ctx, v8_prompt: str | None, omit_supplier_fields: list[str] | None = None,
+    rules: dict[str, dict] | None = None, rules_sha256: str | None = None,
 ) -> None:
     print(f"[dry-run] target_count={summary.target_count}")
     if ctx is None:
         return
-    supplier_context = _supplier_context_without(ctx.supplier_context, omit_supplier_fields)
+    supplier_context, _override = _effective_supplier_context(ctx, rules, rules_sha256, omit_supplier_fields)
     if config in ("v8", "v9", "v10", "v101", "v102"):
         prompt = build_prompt_v8(
             ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=supplier_context,
@@ -349,9 +400,15 @@ def run_ab(
     session: Session, *, run_ids: list[str], config: str, repeat: int, max_cost_usd: Decimal,
     test_id: str, out_dir: Path, dry_run: bool, thinking_level: str | None,
     include_thoughts: bool, use_schema: bool, temperature: float | None, prompt_name: str | None = None,
-    omit_supplier_fields: list[str] | None = None,
+    omit_supplier_fields: list[str] | None = None, supplier_rules_file: Path | None = None,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
+    rules: dict[str, dict] | None = None
+    rules_sha256: str | None = None
+    if supplier_rules_file is not None:  # 誤りはここで止まる（Gemini を呼ぶ前）
+        if config == "v7":
+            raise ValueError("--supplier-rules-file は --config v8・v9・v10・v101・v102 のときだけ使えます")
+        rules, rules_sha256 = load_supplier_rules_file(supplier_rules_file)
     job_ids = fetch_job_ids(session, run_ids)
     v8_prompt = _load_prompt_text(config, prompt_name)  # 名前・ファイルの誤りはここで止まる（Gemini を呼ぶ前）
     row_prompt_name = {
@@ -365,7 +422,7 @@ def run_ab(
     if dry_run:
         first = next((job_ids[r] for r in run_ids if r in job_ids), None)
         ctx = load_extraction_context(session, first) if first else None
-        _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields)
+        _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields, rules, rules_sha256)
         return summary
 
     masters = _load_v10_masters(session) if config in ("v10", "v101", "v102") else None  # dry-run では読まない
@@ -391,6 +448,9 @@ def run_ab(
                         raise RuntimeError(f"job not found: {job_id}")
                     contexts[job_id] = ctx_loaded
                 ctx = contexts[job_id]
+                supplier_context, override = _effective_supplier_context(ctx, rules, rules_sha256, omit_supplier_fields)
+                if override is not None:
+                    row["supplier_rules_override"] = override
                 if config == "v7":
                     result = _call_v7(ctx)
                 else:
@@ -401,7 +461,7 @@ def run_ab(
                     extra = {"response_schema": schemas[config]} if config in schemas else {}
                     result = call_gemini_raw_copy_v8(
                         ctx.raw_text, prompt_text=v8_prompt,
-                        supplier_context=_supplier_context_without(ctx.supplier_context, omit_supplier_fields),
+                        supplier_context=supplier_context,
                         knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
                         include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
                         **extra,
@@ -465,6 +525,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p.add_argument("--out-dir", required=True, type=Path)
     p.add_argument("--omit-supplier-field", action="append", type=_supplier_field_name, default=None,
                    help="仕入元ルールの欄（extraction_ で始まる名前）を指示から外す。何回でも指定できる。v7 では効かない")
+    p.add_argument("--supplier-rules-file", type=Path, default=None,
+                   help="仕入元 id ごとに extraction_* の欄を差し替える JSON（{\"id\": {\"extraction_x\": 値 or null}}）。ファイルに無い欄は DB の値のまま、null は欄を外す。--omit-supplier-field より先に適用。v7 では効かない")
     p.add_argument("--dry-run", action="store_true", help="対象の件数と組み立てた指示の先頭30行だけ表示する（Gemini は呼ばない）")
     args = p.parse_args(argv)
     if args.thinking_level:
@@ -475,6 +537,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         p.error("--thinking-level / --no-thoughts / --no-schema / --temperature は --config v8・v9・v10・v101・v102 のときだけ使えます")
     if args.config == "v7" and args.omit_supplier_field:
         p.error("--omit-supplier-field は --config v8・v9・v10・v101・v102 のときだけ使えます")
+    if args.supplier_rules_file is not None:
+        if args.config == "v7":
+            p.error("--supplier-rules-file は --config v8・v9・v10・v101・v102 のときだけ使えます")
+        try:
+            load_supplier_rules_file(args.supplier_rules_file)
+        except ValueError as exc:
+            p.error(str(exc))
     if args.prompt_name is not None:
         try:
             resolve_prompt_path(args.prompt_name, args.config)
@@ -510,7 +579,7 @@ def main(argv: list[str] | None = None) -> int:
             dry_run=args.dry_run, thinking_level=args.thinking_level,
             include_thoughts=not args.no_thoughts, use_schema=not args.no_schema,
             temperature=args.temperature, prompt_name=args.prompt_name,
-            omit_supplier_fields=args.omit_supplier_field,
+            omit_supplier_fields=args.omit_supplier_field, supplier_rules_file=args.supplier_rules_file,
         )
     finally:
         session.close()
