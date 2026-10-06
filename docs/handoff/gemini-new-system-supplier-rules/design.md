@@ -32,7 +32,7 @@
 
 ## 3. 変更
 ### 3-1. migration（危険パス）
-- `migrations/YYYYMMDD_HHMMSS_add_supplier_new_system_rules.sql`
+- `migrations/20261006_170200_add_supplier_new_system_rules.sql`
   - `ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_layout_rules TEXT;`
   - `ALTER TABLE public.suppliers ADD COLUMN IF NOT EXISTS extraction_hard_cases TEXT;`
   - 既存の行の値は書かない（NULL のまま）。
