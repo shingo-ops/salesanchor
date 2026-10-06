@@ -11,6 +11,7 @@ from sqlalchemy import select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Session
 
+from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, compute_permission_keys
 from app.cache import (
     cache_jwt_result,
     cache_tenant,
@@ -22,7 +23,6 @@ from app.cache import (
     is_token_blacklisted,
     record_auth_failure,
 )
-from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, compute_permission_keys
 from app.database import get_db
 from app.models import Tenant, User
 
