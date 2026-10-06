@@ -1,0 +1,35 @@
+const fs=require('fs');const S=__dirname;const o=require(S+'/av2-r1.json');
+const baseProps=new Set();for(const k of ['comp-select__control','comp-field__select'])for(const r of o.moldDeclared[k])r.props.forEach(p=>baseProps.add(p));
+const longhand={padding:['padding','padding-right'],background:['background','background-image'],border:['border']};
+const L=[];const w=s=>L.push(s);
+w('# AV-2 recon2 (read-only)\n');
+w('- snapshot: origin/main `3210edeea250e269102bedd3546ebc48ddb89b77`; scripts in this dir: av2-r1.cjs (R1), av2-recon2-md.cjs; resolver = av2-project.cjs / av2-css.cjs (unchanged)');
+w('- Mold specificity: `.comp-select__control` = (0,1,0), `.comp-field__select` = (0,1,0) (FormField.css:47/74/89/208 and :47/74/85/208); mold `:focus` = (0,2,0) (FormField.css:95), `.comp-field--error .comp-field__select:focus` = (0,3,0) (FormField.css:199).\n');
+w('## R1 usage counts\n');
+w('- JSX usages resolved to components/Select.tsx (import resolves to the file; excl. stories/tests/Select.tsx itself): **'+o.usageCounts.total+'** = `<Select>` '+o.usageCounts.Select+' + `<SelectControl>` '+o.usageCounts.SelectControl+'.');
+w('- Raw grep `<(Select|SelectControl)\\b` over *.tsx excl. stories/tests gives 87 lines; the 1 extra is `components/Select.tsx:149` (the `<SelectControl>` inside `Select` itself). The brief\'s 69+22=91 does not match either number; 未確認 where 91 came from (stories/tests likely).');
+w('- Select (field wrapper): rendered DOM is `div.comp-field[+className] > label + select.comp-field__select`; `className` goes to the wrapper div (Select.tsx:120-131), not the select. So page rules match through the wrapper as an ancestor. SelectControl: className goes onto the select itself (Select.tsx:58-68); appearance default `bare` -> `.comp-select__control`.');
+w('- Resolver status: `definite` = ancestor chain resolved on every usage chain; `unconfirmed` = e.g. component with no JSX usage found (FormSection, RuleCreateDrawer: referenced outside a JSX tag). 3 `.form-group`/`.filter-bar` unconfirmed groups are listed as such below.\n');
+w('## R1 Inventory: every CSS rule in frontend/src whose last compound is bare `select` (no class/id/attr)\n');
+w('|#|file:line|selector|specificity|pseudo on select|declarations|\n|---|---|---|---|---|---|');
+o.bareRuleInventory.forEach((r,i)=>w('|'+(i+1)+'|'+r.file+':'+r.line+'|`'+r.selector+'`|('+r.spec.join(',')+')|'+(r.lastPseudo||'-')+'|'+r.decls.join('; ')+'|'));
+w('\nTotal bare-select rules (selector list split): '+o.bareRuleInventory.length+' across 3 files (components.css, company-forms.css; no other). No `@media`-gated bare-select rule (media column empty for all). No `:is/:where/:not(...select)` rule (grep). Not bare (tag+class, listed for completeness, not in the counts): `frontend/src/pages/inbox/InboxPage.css:1198 select.right-panel-field { appearance:none; -webkit-appearance:none }` (0,1,1). `DashboardPage.css:29` only mentions select in a comment. Raw `grep -rnE "(^|[ ,>+~(])select\\b" --include=*.css` = 12 hits = 10 rules + that 1 + that 1 comment.\n');
+w('## R1 Per rule: specificity vs mold, winner, and matches\n');
+for(const p of o.perRule){
+  const ov=p.decls.map(d=>d.split(':')[0]);
+  const hit=[...new Set(ov.filter(x=>baseProps.has(x)))];
+  const side=[];
+  if(ov.includes('padding'))side.push('shorthand `padding` also overrides mold padding-right (arrow room, FormField.css:74) at higher specificity');
+  if(ov.includes('background'))side.push('shorthand `background` also resets mold background-image/repeat/position (the chevron, FormField.css:74) at higher specificity');
+  w('### `'+p.rule.replace(/^frontend\/src\//,'')+'`');
+  w('- specificity '+p.spec+(p.lastPseudo?' (select'+p.lastPseudo+')':'')+' vs mold '+(p.lastPseudo===':focus'?'`:focus` (0,2,0) / `.comp-field--error ... :focus` (0,3,0)':'(0,1,0)')+': **'+p.vsMoldControl_0_1_0+'**'+(p.lastPseudo===':focus'&&p.spec[1]===3?' (also beats the error-focus (0,3,0))':''));
+  w('- declared: '+p.decls.join('; '));
+  w('- properties this rule sets that the mold also sets (rule wins): '+(hit.length?hit.join(', '):'none')+(side.length?'; '+side.join('; '):''));
+  w('- existing mold usages matched: definite **'+p.moldUsagesMatching.definite+'**, incl. unconfirmed **'+p.moldUsagesMatching.any+'**');
+  p.moldUsagesMatching.list.forEach(u=>w('  - '+u.at+' `<'+u.tag+'>` -> `'+u.class+'` '+u.status+(u.whys.length?' ('+u.whys[0].slice(0,90)+')':'')));
+  w('- raw `<select>` matched (from av2-select-mapping.json): **'+p.rawSelectsMatching.count+'**');
+  p.rawSelectsMatching.list.forEach(u=>w('  - '+u.at+' '+u.status));
+  w('');
+}
+w('Note: a rule that matches a mold usage matters only if the page CSS file is loaded on that route; resolver assumes all stylesheets loaded (components.css / company-forms.css are global imports; 未確認 per-route load order).\n');
+fs.writeFileSync(S+'/_r1.md',L.join('\n'));
