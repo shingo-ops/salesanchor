@@ -311,6 +311,9 @@ def _master_row_fields(config: str, response_text: str, ctx, masters: dict | Non
 
 _SUPPLIER_FIELD_PATTERN = re.compile(r"^extraction_[a-z_]+$")
 
+# 新しい仕組み（v8 系）だけが読む欄。supplier_context ではなく new_system_rules 側で扱う。
+_NEW_SYSTEM_FIELDS = ("extraction_layout_rules", "extraction_hard_cases")
+
 
 def _supplier_field_name(value: str) -> str:
     """--omit-supplier-field の値の検査（extraction_ で始まる欄名だけ認める）。"""
@@ -360,8 +363,12 @@ def _supplier_context_with_rules(
     if not rules or ctx.supplier_id is None or str(ctx.supplier_id) not in rules:
         return ctx.supplier_context, None
     fields = rules[str(ctx.supplier_id)]
-    merged = {**(ctx.supplier_context or {}), **fields}
-    merged = {k: v for k, v in merged.items() if not (k in fields and fields[k] is None)}
+    old_fields = {k: v for k, v in fields.items() if k not in _NEW_SYSTEM_FIELDS}
+    if old_fields:
+        merged = {**(ctx.supplier_context or {}), **old_fields}
+        merged = {k: v for k, v in merged.items() if not (k in old_fields and old_fields[k] is None)}
+    else:
+        merged = ctx.supplier_context
     override = {"file_sha256": rules_sha256, "supplier_id": str(ctx.supplier_id), "fields": sorted(fields)}
     return merged, override
 
@@ -372,6 +379,27 @@ def _effective_supplier_context(
     """差し替えのあとに外す（設計 §3）。"""
     replaced, override = _supplier_context_with_rules(ctx, rules, rules_sha256)
     return _supplier_context_without(replaced, omit), override
+
+
+def _effective_new_system_rules(
+    ctx, rules: dict[str, dict] | None, omit: list[str] | None,
+) -> dict | None:
+    """v8 系にだけ渡す new_system_rules。ファイルの値で上書き（null は外す）し、--omit-supplier-field の欄を外す。
+
+    元の辞書は変えない。空になったら None。v7 には渡さない。
+    """
+    base = dict(getattr(ctx, "new_system_rules", None) or {})
+    if rules and ctx.supplier_id is not None and str(ctx.supplier_id) in rules:
+        for name, value in rules[str(ctx.supplier_id)].items():
+            if name not in _NEW_SYSTEM_FIELDS:
+                continue
+            if value is None:
+                base.pop(name, None)
+            else:
+                base[name] = value
+    for name in omit or []:
+        base.pop(name, None)
+    return base if any(base.values()) else None
 
 
 def _print_dry_run(
@@ -386,6 +414,7 @@ def _print_dry_run(
         prompt = build_prompt_v8(
             ctx.raw_text, prompt_text=v8_prompt or "", supplier_context=supplier_context,
             knowledge_links=ctx.knowledge_links,
+            new_system_rules=_effective_new_system_rules(ctx, rules, omit_supplier_fields),
         )
     else:  # 表示用の組み立て（実際の呼び出しは call_gemini_raw_copy 内で同じ材料から行われる）
         links = [lk for lk in (ctx.knowledge_links or []) if lk.get("category") == "block_delimiter"]
@@ -462,6 +491,7 @@ def run_ab(
                     result = call_gemini_raw_copy_v8(
                         ctx.raw_text, prompt_text=v8_prompt,
                         supplier_context=supplier_context,
+                        new_system_rules=_effective_new_system_rules(ctx, rules, omit_supplier_fields),
                         knowledge_links=ctx.knowledge_links, thinking_level=thinking_level,
                         include_thoughts=include_thoughts, use_schema=use_schema, temperature=temperature,
                         **extra,

@@ -108,10 +108,27 @@ def build_supplier_note_v8(supplier_context: dict | None, knowledge_links: list[
     return note
 
 
+def build_new_system_rules_section(new_system_rules: dict | None) -> str:
+    """新しい仕組み専用の2欄（書き方の当てはめ・間違えやすい形）を見出し付きで組む。値が無い欄の見出しは出さない。"""
+    rules = new_system_rules or {}
+    parts = []
+    layout_rules = rules.get("extraction_layout_rules")
+    if layout_rules:
+        parts.append(f"# この仕入元の書き方（指示書の手順への当てはめ）\n{layout_rules}")
+    hard_cases = rules.get("extraction_hard_cases")
+    if hard_cases:
+        parts.append(f"# この仕入元で間違えやすい形\n{hard_cases}")
+    return "\n\n".join(parts)
+
+
 def build_prompt_v8(
-    raw_text: str, *, prompt_text: str, supplier_context: dict | None, knowledge_links: list[dict] | None
+    raw_text: str, *, prompt_text: str, supplier_context: dict | None, knowledge_links: list[dict] | None,
+    new_system_rules: dict | None = None,
 ) -> str:
     note = build_supplier_note_v8(supplier_context, knowledge_links)
+    new_rules_section = build_new_system_rules_section(new_system_rules)
+    if new_rules_section:
+        note = f"{note}\n\n{new_rules_section}" if note else new_rules_section
     section = f"\n{note}\n" if note else ""
     prompt_input = format_prompt_input_v8(raw_text, keep_chars_from_links(knowledge_links))
     return f"{prompt_text}{section}\n原文:\n{prompt_input}"
@@ -172,6 +189,7 @@ def call_gemini_raw_copy_v8(
     use_schema: bool,
     temperature: float | None,
     response_schema: dict | None = None,
+    new_system_rules: dict | None = None,
 ) -> dict:
     """v8 を呼ぶ。config は None でない引数だけを入れる（temperature 未指定なら既定の 1.0）。
 
@@ -182,7 +200,8 @@ def call_gemini_raw_copy_v8(
     from google.genai import types as genai_types  # type: ignore[import-untyped]
 
     full_prompt = build_prompt_v8(
-        raw_text, prompt_text=prompt_text, supplier_context=supplier_context, knowledge_links=knowledge_links
+        raw_text, prompt_text=prompt_text, supplier_context=supplier_context, knowledge_links=knowledge_links,
+        new_system_rules=new_system_rules,
     )
 
     config_kwargs: dict[str, Any] = {}
