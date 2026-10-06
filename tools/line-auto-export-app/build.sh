@@ -51,10 +51,21 @@ aapt package -f -m -J "$GEN_DIR" \
   -I "$AAPT_JAR"
 echo "OK: $GEN_DIR"
 
-echo "-- [2/8] javac --release 8 --"
-mapfile -t JAVA_SOURCES < <(find src/java "$GEN_DIR" -name '*.java')
+echo "-- [2/8] javac --release 8 (API23, メインソース) --"
+SHIM_SRC="src/java/jp/salesanchor/lineexport/GestureCallbackShim.java"
+mapfile -t JAVA_SOURCES < <(find src/java "$GEN_DIR" -name '*.java' ! -name "$(basename "$SHIM_SRC")")
 javac --release 8 -encoding UTF-8 -cp "$ANDROID_JAR" -d "$CLASSES_DIR" "${JAVA_SOURCES[@]}"
 echo "OK: javac compiled ${#JAVA_SOURCES[@]} file(s) -> $CLASSES_DIR"
+
+# GestureCallbackShimはAccessibilityService.GestureResultCallback(API24で追加)を継承する。
+# ビルド環境のandroid.jar(API23)にはそのクラスが無いため、このファイルだけ別途、
+# aaptのリソース解決に使っているsdk/android-34.jar(実クラスを含む)をclasspathに加えて
+# コンパイルし、同じclassesディレクトリへ合流させる。実機(Android16)には本物の
+# フレームワーククラスがあるため実行時はそちらで解決される。GestureCompat.java側は
+# このクラスをClass.forName経由のリフレクションでのみ参照する（直接型参照はしない）。
+echo "-- [2b/8] javac --release 8 (API34, GestureCallbackShim) --"
+javac --release 8 -encoding UTF-8 -cp "$AAPT_JAR:$CLASSES_DIR" -d "$CLASSES_DIR" "$SHIM_SRC"
+echo "OK: javac compiled GestureCallbackShim.java -> $CLASSES_DIR"
 
 echo "-- [3/8] dalvik-exchange (classes -> classes.dex) --"
 dalvik-exchange --dex --output="$DEX_FILE" "$CLASSES_DIR"

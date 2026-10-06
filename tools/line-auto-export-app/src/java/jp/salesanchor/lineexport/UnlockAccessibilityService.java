@@ -161,8 +161,13 @@ public class UnlockAccessibilityService extends AccessibilityService {
      */
     private void revealKeypadThenEnterPin() {
         Point size = getScreenSize();
-        boolean swiped = size.y > 0 && GestureCompat.swipe(this,
-                size.x * 0.5f, size.y * 0.81f, size.x * 0.5f, size.y * 0.26f, 250L);
+        boolean swiped = false;
+        if (size.y > 0) {
+            GestureCompat.DispatchReport report = GestureCompat.swipe(this,
+                    size.x * 0.5f, size.y * 0.81f, size.x * 0.5f, size.y * 0.26f, 250L, "swipe");
+            swiped = report.accepted;
+            traceAppend(report.describe());
+        }
         traceAppend(swiped ? "スワイプ" : "スワイプ失敗");
         if (!swiped) {
             failureReasons.append("数字キーを出せない ");
@@ -190,7 +195,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
 
         String digit = String.valueOf(currentPin.charAt(index));
-        boolean ok = clickDigitKey(digit);
+        boolean ok = clickDigitKey(digit, index);
         if (!ok) {
             failureReasons.append("桁").append(index + 1).append(":未検出/失敗 ");
         }
@@ -203,14 +208,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }, DIGIT_CLICK_INTERVAL_MS);
     }
 
-    private boolean clickDigitKey(String digit) {
+    private boolean clickDigitKey(String digit, int index) {
         AccessibilityNodeInfo node = findNodeByLabel(digit);
         if (node != null && clickNode(node)) {
             traceAppend("ノード");
             return true;
         }
         // フォールバック: ノードが見つからない/クリックできない場合の座標タップ（実測グリッド）。
-        boolean tapped = tapDigitByMeasuredGrid(digit);
+        boolean tapped = tapDigitByMeasuredGrid(digit, index);
         traceAppend(tapped ? "座標" : "失敗");
         return tapped;
     }
@@ -417,7 +422,10 @@ public class UnlockAccessibilityService extends AccessibilityService {
         Rect bounds = new Rect();
         node.getBoundsInScreen(bounds);
         if (!bounds.isEmpty()) {
-            return GestureCompat.tap(this, bounds.exactCenterX(), bounds.exactCenterY(), 80L);
+            GestureCompat.DispatchReport report = GestureCompat.tap(
+                    this, bounds.exactCenterX(), bounds.exactCenterY(), 80L, "node-tap");
+            traceAppend(report.describe());
+            return report.accepted;
         }
         return false;
     }
@@ -438,7 +446,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
      * ノードが見つからない場合の座標タップ。実測した比率から数字キーの中心を求める。
      * 画面サイズは実行時に取得するため、同じレイアウトであれば解像度が違っても追従する。
      */
-    private boolean tapDigitByMeasuredGrid(String digit) {
+    private boolean tapDigitByMeasuredGrid(String digit, int index) {
         Point size = getScreenSize();
         if (size.x == 0 || size.y == 0) {
             return false;
@@ -463,7 +471,10 @@ public class UnlockAccessibilityService extends AccessibilityService {
             y = size.y * KEY_ROW_Y_RATIO[d / 3];
         }
 
-        return GestureCompat.tap(this, x, y, 80L);
+        // ラベルは桁の位置のみ（例: "pin-key-1"）。PINの値は通知に出さない。
+        GestureCompat.DispatchReport report = GestureCompat.tap(this, x, y, 80L, "pin-key-" + (index + 1));
+        traceAppend(report.describe());
+        return report.accepted;
     }
 
     /** Enterボタンの位置も未確認のため、キーパッド下の中央寄りを推測でタップする。 */
@@ -474,7 +485,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
         float x = size.x * 0.5f;
         float y = size.y * 0.95f;
-        return GestureCompat.tap(this, x, y, 80L);
+        GestureCompat.DispatchReport report = GestureCompat.tap(this, x, y, 80L, "enter");
+        traceAppend(report.describe());
+        return report.accepted;
     }
 
     /**
@@ -553,6 +566,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
         Notification.Builder builder = NotificationCompat.newBuilder(context, CHANNEL_ID)
                 .setContentTitle(title)
                 .setContentText(text)
+                // ジェスチャ診断(dispatch/cb/locked/screenOn/caps)を含めると長文になるため、
+                // 展開時に全文が見えるようにする（本文の出し先・通知IDは変えない）。
+                .setStyle(new Notification.BigTextStyle().bigText(text))
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setAutoCancel(true);
         NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
