@@ -1001,3 +1001,60 @@ def test_parse_args_rejects_invalid_supplier_rules_file(tmp_path, content):
     path = _write_rules(tmp_path, content)
     with pytest.raises(SystemExit):
         pab.parse_args([*_BASE_ARGS, "--config", "v102", "--supplier-rules-file", str(path)])
+
+
+# ---------------------------------------------------------------------------
+# new_system_rules（新しい仕組み専用の2欄）
+# ---------------------------------------------------------------------------
+
+_NEW_RULES_CTX = task.ExtractionContext(
+    raw_text="a\nb", supplier_context={"extraction_price_format": "DBPRICE"}, knowledge_links=[], supplier_id=7,
+    new_system_rules={"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"},
+)
+
+
+def test_new_system_rules_are_passed_to_v8_family_and_not_to_supplier_context(monkeypatch, fakes):
+    # Arrange / Act
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, run_ids=("r1",))
+    # Assert
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
+    assert kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+
+
+def test_new_system_rules_are_not_passed_to_v7(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, config="v7", run_ids=("r1",))
+    assert "new_system_rules" not in fakes.v7.call_args.kwargs
+    assert fakes.v7.call_args.kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+
+
+def test_rules_file_overrides_new_system_rules_and_null_removes(monkeypatch, fakes, tmp_path):
+    path = _write_rules(tmp_path, {"7": {"extraction_layout_rules": "FILELAYOUT", "extraction_hard_cases": None}})
+    _rules_run(fakes, monkeypatch, path, ctx=_NEW_RULES_CTX)
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "FILELAYOUT"}
+    assert kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+    assert _lines(fakes)[0]["supplier_rules_override"]["fields"] == ["extraction_hard_cases", "extraction_layout_rules"]
+    assert _NEW_RULES_CTX.new_system_rules == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
+
+
+def test_rules_file_can_supply_new_system_rules_when_db_has_none(monkeypatch, fakes, tmp_path):
+    ctx = task.ExtractionContext("a\nb", None, [], 7)
+    path = _write_rules(tmp_path, {"7": {"extraction_hard_cases": "FILEHARD"}})
+    _rules_run(fakes, monkeypatch, path, ctx=ctx)
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_hard_cases": "FILEHARD"}
+    assert kwargs["supplier_context"] is None
+
+
+def test_omit_supplier_field_also_removes_new_system_rule(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, run_ids=("r1",), omit_supplier_fields=["extraction_layout_rules"])
+    assert fakes.v8.call_args.kwargs["new_system_rules"] == {"extraction_hard_cases": "DBHARD"}
+
+
+def test_no_new_system_rules_passes_none_to_v8(monkeypatch, fakes):
+    _run(fakes, monkeypatch, run_ids=("r1",))
+    assert fakes.v8.call_args.kwargs["new_system_rules"] is None

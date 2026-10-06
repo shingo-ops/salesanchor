@@ -5120,7 +5120,11 @@
     "ruleLinked": "Linked",
     "noRulesLinked": "Not configured",
     "shipFormat": "Ship timing format",
-    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)"
+    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)",
+    "layoutRules": "Layout rules (new pipeline only)",
+    "layoutRulesHelper": "Describe how each instruction step applies to this supplier. Not used by the current production extraction.",
+    "hardCases": "Hard cases (new pipeline only)",
+    "hardCasesHelper": "Original text and expected output for cases that were actually misread. Not used by the current production extraction."
   },
   "needsReview": {
     "title": "Needs Review",
