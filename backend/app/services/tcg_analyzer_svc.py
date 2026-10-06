@@ -890,8 +890,14 @@ def resolve_condition_v2(
         and kubun in {"条件つき", "複合", "数量専用"}
         and not any(_entry_hit(e, text_combined)[0] for e in cond_entries if e["code"] == "CN0008")
     ):
-        cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
-        return ("Sealed box", cid, b4_prefix + "R4c:商品分類既定")
+        # 箱の状態の語（難あり・開封済み等）は適用区分が「箱系」のため、同じ行を箱系として
+        # 状態判定をやり直す（product_kubun_type は渡さない＝再帰は1段で止まる）。
+        # flag_note は内側の呼び出しが自分で付けるので、ここでは付けない。
+        canonical, cid, inner_basis = resolve_condition_v2(
+            raw_state, raw_product_name, "箱系", cond_entries, cond_canonical_to_uuid,
+            raw_memo=raw_memo,
+        )
+        return (canonical, cid, "R4c:商品分類既定>" + inner_basis)
 
     cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
     return ("FLAG_SINGLE", cid, b4 + ":単位不明")
