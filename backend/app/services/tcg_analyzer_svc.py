@@ -784,6 +784,22 @@ def resolve_unit_v2(
     return (stripped, "不明", False)
 
 
+def _entry_hit(e: dict, text_combined: str) -> tuple[bool, Optional[str]]:
+    """状態マスタ1行が text_combined に当たるか（主ループと R4c のガードで共用）。"""
+    match_type = e.get("match_type", "KEYWORD")
+    if match_type in ("REGEX", "LITERAL", "DEFAULT"):
+        if match_type == "DEFAULT":
+            return True, "DEFAULT"
+        hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
+        if hit and e["exclude_kw"]:
+            hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
+        return hit, (e["search_kw"] if hit else None)
+    # KEYWORD（デフォルト）: 既存動作を維持
+    s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
+    x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
+    return match_keyword(text_combined, s_kws, x_kws)
+
+
 def resolve_condition_v2(
     raw_state: str,
     raw_product_name: str,
@@ -792,6 +808,7 @@ def resolve_condition_v2(
     cond_canonical_to_uuid: dict,
     *,
     raw_memo: str = "",
+    product_kubun_type: str = "",
 ) -> tuple[Optional[str], Optional[str], str]:
     """
     (canonical, cond_id, basis) を返す。
@@ -804,6 +821,8 @@ def resolve_condition_v2(
     R3 (priority=3): 特殊語（シュリなし / ペリなし / 未サーチ）
     R4a(priority=4): data-driven（通常品 / 未開封等）
     R4b(code):       単位既定フォールバック（kubun→Case/Sealed box/FLAG_SINGLE）
+    R4c(code):       商品分類既定（照合済み商品が箱系 × 単位が 条件つき/複合/数量専用 → Sealed box）。
+                     product_kubun_type は pid_resolved のときだけ呼び出し側が渡す（省略時は従来どおり）
     """
     empty_entry = next((entry for entry in cond_entries if entry["code"] == EMPTY_CODE), None)
     if classify_empty_box(raw_product_name, raw_state, raw_memo) == "positive" and empty_entry is not None and valid_empty_definition(empty_entry):
@@ -828,20 +847,7 @@ def resolve_condition_v2(
     for e in cond_entries:
         if not app_kubun_matches(e["app_kubun"], kubun):
             continue
-        match_type = e.get("match_type", "KEYWORD")
-        if match_type in ("REGEX", "LITERAL", "DEFAULT"):
-            if match_type == "DEFAULT":
-                hit, matched_kw = True, "DEFAULT"
-            else:
-                hit = _match_status_pattern(text_combined, e["search_kw"], match_type)
-                if hit and e["exclude_kw"]:
-                    hit = not _match_status_pattern(text_combined, e["exclude_kw"], match_type)
-                matched_kw = e["search_kw"] if hit else None
-        else:
-            # KEYWORD（デフォルト）: 既存動作を維持
-            s_kws = [k.strip() for k in e["search_kw"].split(",") if k.strip()]
-            x_kws = [k.strip() for k in e["exclude_kw"].split(",") if k.strip()]
-            hit, matched_kw = match_keyword(text_combined, s_kws, x_kws)
+        hit, matched_kw = _entry_hit(e, text_combined)
         if not hit:
             continue
         prefix = f"{flag_note}," if flag_note else ""
@@ -875,6 +881,17 @@ def resolve_condition_v2(
                 return (entry["canonical"], entry["cond_id"], f"R3:MEMO:{keyword}")
         cid = _find_cond_id(cond_entries, "CN0010") or cond_canonical_to_uuid.get("Searched pack")
         return ("Searched pack", cid, b4_prefix + "R5:パック既定")
+
+    # --- R4c: 商品分類既定 — 単位では箱か決まらないが、照合された商品が箱系 ---
+    # CN0008（FLAG_SINGLE）の語は適用区分が 枚系,単位不明 で主ループに当たらないため、
+    # 適用区分を見ずに同じ照合（_entry_hit）で検査し、当たれば R4c を返さない。
+    if (
+        product_kubun_type in {"箱系", "箱系大"}
+        and kubun in {"条件つき", "複合", "数量専用"}
+        and not any(_entry_hit(e, text_combined)[0] for e in cond_entries if e["code"] == "CN0008")
+    ):
+        cid = _find_cond_id(cond_entries, "CN0003") or cond_canonical_to_uuid.get("Sealed box")
+        return ("Sealed box", cid, b4_prefix + "R4c:商品分類既定")
 
     cid = _find_cond_id(cond_entries, "CN0008") or cond_canonical_to_uuid.get("FLAG_SINGLE")
     return ("FLAG_SINGLE", cid, b4 + ":単位不明")
@@ -1509,6 +1526,7 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
         condition_canonical, condition_uuid, condition_basis_str = resolve_condition_v2(
             norm_condition, norm_product_name, kubun, [e for e in cond_entries if e["code"] != EMPTY_CODE], cond_canonical_to_uuid,
             raw_memo=condition_memo,
+            product_kubun_type=(product_code_to_kubun_type.get(matched_code, "") if pid_resolved and matched_code else ""),
         )
 
         empty_class = classify_empty_box(raw_product_name, raw_state, raw_memo)
