@@ -5,11 +5,15 @@ import android.accessibilityservice.AccessibilityServiceInfo;
 import android.app.KeyguardManager;
 import android.content.Context;
 import android.graphics.Path;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.PowerManager;
 import android.util.Log;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Reflection shim for AccessibilityService#dispatchGesture, used as a coordinate-tap
@@ -35,13 +39,27 @@ import java.lang.reflect.Method;
  * callbackにGestureCallbackShim（GestureOutcome経由で結果を受け取る）を渡している。
  * GestureCallbackShimはAPI34でコンパイルされた別クラス（build.sh参照）で、ここでは
  * Class.forName経由のリフレクションでのみ生成する。
+ *
+ * コールバックはメインスレッド以外（sa-gesture-cb）に配送し、dispatch()自体は待たない
+ * （2026-10-06 指摘: dispatchGesture の第3引数にnullを渡すとメインスレッドにcallbackが
+ * 配送されるため、同じメインスレッドでawaitするとデッドロック同然になり必ずno-callback
+ * 扱いになる。かつ1回最大2秒のブロックがPIN4桁で最大8秒となり、ロック画面消灯
+ * （activityTimeoutWM=5000、2026-09-19実測）と衝突して既存の手順タイミングを変えてしまう）。
+ * 各dispatch()はlabelとGestureOutcomeをpendingDispatchesに積むだけで即復帰し、通知を
+ * 組み立てる直前に一度だけ drainCallbackSummary() が全体で最大300msだけ待ち合わせて
+ * まとめて回収する。
  */
 final class GestureCompat {
 
     private static final String TAG = "SALineExport";
 
-    /** onCompleted/onCancelledのどちらも来ない場合の最大待ち時間。 */
-    private static final long CALLBACK_TIMEOUT_MS = 2000L;
+    /** drainCallbackSummary() 1回あたりの最大待ち合わせ（複数ジェスチャの合計）。 */
+    private static final long DRAIN_BUDGET_MS = 300L;
+
+    private static final Object PENDING_LOCK = new Object();
+    private static final List<PendingDispatch> pendingDispatches = new ArrayList<PendingDispatch>();
+
+    private static volatile Handler callbackHandler;
 
     private GestureCompat() {
     }
@@ -60,9 +78,19 @@ final class GestureCompat {
             this.deviceState = deviceState;
         }
 
-        /** 通知本文に追記する短い診断文字列。 */
+        /** 通知本文に追記する短い診断文字列。cb=はdrainCallbackSummary()までは常にpending。 */
         String describe() {
             return "[" + label + "]dispatch=" + accepted + ",cb=" + callbackResult + "," + deviceState;
+        }
+    }
+
+    private static final class PendingDispatch {
+        final String label;
+        final GestureOutcome outcome;
+
+        PendingDispatch(String label, GestureOutcome outcome) {
+            this.label = label;
+            this.outcome = outcome;
         }
     }
 
@@ -87,7 +115,9 @@ final class GestureCompat {
 
     private static DispatchReport dispatch(AccessibilityService service, Path path, long durationMs, String label) {
         boolean accepted = false;
-        String callbackResult;
+        // 送出時点ではcallbackの結果はわからない。待たずに"pending"を返す
+        // （最終的な結果はdrainCallbackSummary()でまとめて回収する）。
+        String callbackResult = "pending";
         GestureOutcome outcome = new GestureOutcome();
         try {
             Class<?> strokeClass = Class.forName("android.accessibilityservice.GestureDescription$StrokeDescription");
@@ -108,16 +138,15 @@ final class GestureCompat {
 
             Object callback = newShimOrNull(outcome);
 
-            Object acceptedObj = dispatchGesture.invoke(service, gesture, callback, null);
+            // 第3引数にメインスレッド以外のHandlerを渡す。nullだとcallbackがメインスレッドに
+            // 配送されるため、呼び出し元(AccessibilityServiceのメインスレッド)でブロックできない。
+            Object acceptedObj = dispatchGesture.invoke(service, gesture, callback, getCallbackHandler());
             accepted = Boolean.TRUE.equals(acceptedObj);
 
-            if (!accepted) {
-                // OSが受理しなかった場合、callbackは呼ばれない。
-                callbackResult = GestureOutcome.NO_CALLBACK;
-            } else if (callback == null) {
+            if (callback == null) {
                 callbackResult = "shim-unavailable";
             } else {
-                callbackResult = outcome.awaitResult(CALLBACK_TIMEOUT_MS);
+                registerPending(label, outcome);
             }
         } catch (ReflectiveOperationException | RuntimeException e) {
             Log.w(TAG, "dispatchGesture fallback unavailable/failed: " + e);
@@ -125,6 +154,64 @@ final class GestureCompat {
         }
 
         return new DispatchReport(label, accepted, callbackResult, describeDeviceState(service));
+    }
+
+    private static void registerPending(String label, GestureOutcome outcome) {
+        synchronized (PENDING_LOCK) {
+            pendingDispatches.add(new PendingDispatch(label, outcome));
+        }
+    }
+
+    /**
+     * 通知を組み立てる直前に1回だけ呼ぶ。今まで積まれたジェスチャのGestureResultCallback結果を
+     * まとめて回収し、リストを空にする。待ち合わせは全体で最大DRAIN_BUDGET_MS（個々のジェスチャ
+     * ごとには待たない）。まだ届いていないものは"pending"のまま返す。
+     * 戻り値の例: "cb[swipe=completed,pin-key-1=cancelled,pin-key-2=pending]"
+     */
+    static String drainCallbackSummary() {
+        List<PendingDispatch> snapshot;
+        synchronized (PENDING_LOCK) {
+            snapshot = new ArrayList<PendingDispatch>(pendingDispatches);
+            pendingDispatches.clear();
+        }
+
+        long deadline = System.currentTimeMillis() + DRAIN_BUDGET_MS;
+        StringBuilder sb = new StringBuilder("cb[");
+        for (int i = 0; i < snapshot.size(); i++) {
+            PendingDispatch entry = snapshot.get(i);
+            String result = entry.outcome.peekResult();
+            if (result == null) {
+                long remaining = deadline - System.currentTimeMillis();
+                if (remaining > 0) {
+                    result = entry.outcome.awaitResult(remaining);
+                }
+            }
+            if (result == null) {
+                result = "pending";
+            }
+            if (i > 0) {
+                sb.append(',');
+            }
+            sb.append(entry.label).append('=').append(result);
+        }
+        sb.append(']');
+        return sb.toString();
+    }
+
+    /** onCompleted/onCancelledを呼ぶためのメインスレッド以外のHandler（遅延生成、以後再利用）。 */
+    private static Handler getCallbackHandler() {
+        Handler handler = callbackHandler;
+        if (handler != null) {
+            return handler;
+        }
+        synchronized (GestureCompat.class) {
+            if (callbackHandler == null) {
+                HandlerThread thread = new HandlerThread("sa-gesture-cb");
+                thread.start();
+                callbackHandler = new Handler(thread.getLooper());
+            }
+            return callbackHandler;
+        }
     }
 
     /** GestureCallbackShim（API34でコンパイル）をリフレクションで生成。失敗したらnull。 */

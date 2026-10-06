@@ -262,6 +262,10 @@ public class UnlockAccessibilityService extends AccessibilityService {
         KeyguardManager keyguardManager = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         boolean locked = keyguardManager != null && keyguardManager.isKeyguardLocked();
 
+        // 通知を組み立てる直前の1箇所だけで、各ジェスチャのGestureResultCallback結果を
+        // まとめて回収する（最大300ms待ち合わせ。各dispatch()自体では待たない）。
+        traceAppend(GestureCompat.drainCallbackSummary());
+
         releaseWakeLock();
         currentPin = null;
         running.set(false);
