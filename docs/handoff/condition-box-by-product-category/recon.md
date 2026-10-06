@@ -18,7 +18,7 @@
 - 状態判定のルールは ADR ではなく、handoff の設計で管理されている。
   - `docs/handoff/tcg-cond-r5-fix/design.md`（R5 パック既定の追加）
   - `docs/handoff/condition-fallback-count/design.md:19,27`（`R4:単位既定:単位不明` を「完全お手上げ」として数える）
-  - `docs/handoff/line-accuracy-pages/recon.md:62-65`、`accuracy-evidence.md:28`（単位「個」で FLAG_SINGLE の 354件のうち、抜き取り10件がすべて誤り）
+  - `docs/handoff/line-accuracy-pages/recon.md:62-65`、`docs/handoff/line-accuracy-pages/accuracy-evidence.md:28`（単位「個」で FLAG_SINGLE の 354件のうち、抜き取り10件がすべて誤り）
   - `docs/handoff/tcg-product-master-growth/recon.md:683,742`（ポケモンセンターの PSA シングルが BOX の商品に誤って当たった 15行。どれも単位は「枚」）
 
 ## 3. 状態判定のコード
