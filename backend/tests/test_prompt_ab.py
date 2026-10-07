@@ -77,7 +77,7 @@ def _raise(exc):
 
 
 def _run(fakes, monkeypatch, *, costs=None, run_ids=("r1", "r2", "r3"), config="v8", repeat=1,
-         max_cost="1.0", dry_run=False, null_rows=0, missing=False, v8_error=None, **over):
+         max_cost="1.0", dry_run=False, null_rows=0, missing=False, v8_error=None, session=None, **over):
     m_calls["n"] = 0
     orig = fakes.v8.side_effect if v8_error is None else _raise(v8_error)
     orig7 = fakes.v7.side_effect
@@ -101,7 +101,7 @@ def _run(fakes, monkeypatch, *, costs=None, run_ids=("r1", "r2", "r3"), config="
         include_thoughts=True, use_schema=True, temperature=None,
     )
     kw.update(over)
-    return pab.run_ab(MagicMock(), **kw)
+    return pab.run_ab(session if session is not None else MagicMock(), **kw)
 
 
 def _lines(fakes):
@@ -1109,3 +1109,96 @@ def test_omit_supplier_field_also_removes_new_system_rule(monkeypatch, fakes):
 def test_no_new_system_rules_passes_none_to_v8(monkeypatch, fakes):
     _run(fakes, monkeypatch, run_ids=("r1",))
     assert fakes.v8.call_args.kwargs["new_system_rules"] is None
+
+
+# ---------------------------------------------------------------------------
+# --prompt-key（指示書を DB から読む。設計: docs/handoff/prompt-ab-db-source/design.md §3）
+# ---------------------------------------------------------------------------
+
+_DB_KEY = "raw_copy_v101_zz"
+_DB_BODY = "PROMPT_FROM_DB"
+
+
+def _db_session(body):
+    """execute(...).first() が (本文,) を返す偽の session。body が None なら行なし（SQL が行を返さない）。"""
+    session = MagicMock()
+    session.execute.return_value.first.return_value = None if body is None else (body,)
+    return session
+
+
+def test_load_prompt_from_db_returns_the_row_text_as_is():
+    # Arrange
+    session = _db_session(_DB_BODY)
+    # Act
+    result = pab._load_prompt_text("v101", prompt_key=_DB_KEY, session=session)
+    # Assert
+    assert result == _DB_BODY
+    assert session.execute.call_args.args[1] == {"key": _DB_KEY}
+
+
+@pytest.mark.parametrize("body", [None, "", "  \n\t "], ids=["no_row_or_inactive", "empty", "blank"])
+def test_prompt_key_stops_before_gemini_when_row_missing_or_empty(monkeypatch, v101_fakes, body):
+    # Arrange
+    session = _db_session(body)
+    # Act
+    with pytest.raises(ValueError, match=_DB_KEY) as exc_info:
+        _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_key=_DB_KEY, session=session)
+    # Assert
+    assert v101_fakes.v8.call_count == 0
+    assert _DB_BODY not in str(exc_info.value)
+
+
+@pytest.mark.parametrize("bad", ["raw_copy_extraction", "base_extraction", "work_id_extraction", "../x", "raw_copy_v101_A"])
+def test_parse_args_rejects_prompt_key_with_bad_shape(bad):
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--prompt-key", bad])
+
+
+def test_parse_args_rejects_prompt_key_with_prompt_name():
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--prompt-key", _DB_KEY, "--prompt-name", "raw_copy_v101_a"])
+
+
+@pytest.mark.parametrize("config", ["v9", "v7"])
+def test_parse_args_rejects_prompt_key_for_other_configs(config):
+    # Act / Assert
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", config, "--prompt-key", _DB_KEY])
+
+
+def test_parse_args_accepts_prompt_key_for_v101_and_v102():
+    # Act
+    args = [pab.parse_args([*_BASE_ARGS, "--config", c, "--prompt-key", _DB_KEY]) for c in ("v101", "v102")]
+    # Assert
+    assert [a.prompt_key for a in args] == [_DB_KEY, _DB_KEY]
+
+
+def test_prompt_key_row_records_source_sha256_and_key(monkeypatch, v101_fakes):
+    # Arrange
+    expected_sha = hashlib.sha256(_DB_BODY.encode("utf-8")).hexdigest()
+    # Act
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_key=_DB_KEY, session=_db_session(_DB_BODY))
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_source"], row["prompt_sha256"], row["prompt_name"]) == ("db", expected_sha, _DB_KEY)
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == _DB_BODY
+
+
+def test_file_prompt_row_records_source_file_and_sha256(monkeypatch, v101_fakes):
+    # Act
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    # Assert
+    row = _lines(v101_fakes)[0]
+    prompt_text = v101_fakes.v8.call_args.kwargs["prompt_text"]
+    assert row["prompt_source"] == "file"
+    assert row["prompt_sha256"] == hashlib.sha256(prompt_text.encode("utf-8")).hexdigest()
+
+
+def test_v7_row_has_no_prompt_source_or_sha256(monkeypatch, fakes):
+    # Act
+    _run(fakes, monkeypatch, config="v7", run_ids=("r1",))
+    # Assert
+    row = _lines(fakes)[0]
+    assert (row["prompt_source"], row["prompt_sha256"]) == (None, None)
