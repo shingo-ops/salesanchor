@@ -45,11 +45,28 @@ public class UnlockAccessibilityService extends AccessibilityService {
     // ロック画面は画面消灯までが約5秒（端末の「画面消灯時間」を60秒にしても
     // activityTimeoutWM=5000 が効く。2026-09-18 実機ログで確認）。PIN入力が
     // その窓に確実に収まるよう、待ち時間を詰めてある。
-    private static final long POST_WAKE_DELAY_MS = 600L;
+    // 2026-10-06/07 実機計測: 起床+64msのスワイプはBouncerが25秒出ず消失、
+    // 起床+1546ms/+3057msのスワイプはいずれも成功（以後9秒以上表示継続）。
+    // mWakefulness=Awake は早期に立つが受け付け可能になるのはもっと後なので、
+    // 状態判定ではなく実時間での待ちを延ばす。
+    private static final long POST_WAKE_DELAY_MS = 1500L;
     private static final long DIGIT_CLICK_INTERVAL_MS = 200L;
-    private static final long KEYPAD_REVEAL_DELAY_MS = 700L;
     private static final long RESULT_CHECK_DELAY_MS = 1500L;
     private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 10000L;
+
+    // キーパッド（Bouncer）出現確認のポーリング間隔と、1回のスワイプあたりの
+    // 確認期限。2026-10-06/07実機計測では出現まで最大約600ms程度だったが、
+    // 余裕を持って1500msまで待つ。
+    private static final long KEYPAD_CHECK_INTERVAL_MS = 150L;
+    private static final long KEYPAD_CHECK_TIMEOUT_MS = 1500L;
+    // スワイプは最大3回まで。空振りのタップでPINを誤入力し続けて端末がロック
+    // アウトされる事態を避けるため、キーパッドが出ない場合は数字入力に進まず
+    // ここで中止する。
+    private static final int KEYPAD_MAX_SWIPE_ATTEMPTS = 3;
+    // キーパッド出現確認用の固定ラベル。PINの桁を使うと値が挙動に漏れるため、
+    // PINとは無関係な数字ラベルで判定する（既存のfindNodeByLabelを再利用）。
+    private static final String[] KEYPAD_PROBE_LABELS = {"1", "3", "7"};
+    private static final int KEYPAD_PROBE_MIN_MATCHES = 2;
 
     private static final String[] ENTER_LABELS = {
             "Enter", "enter", "OK", "ok", "確認", "完了", "done", "Done", "→"
@@ -67,6 +84,13 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private PowerManager.WakeLock wakeLock;
     private String currentPin;
     private StringBuilder failureReasons;
+
+    // 診断用: 何回目のスワイプでキーパッドが出たか（0=未出現）と、起床から
+    // 出現確認までの経過ms（-1=未確認）。PINの値・桁数は含まない。
+    private long wakeStartedAt;
+    private int swipeAttempt;
+    private int keypadConfirmedAttempt;
+    private long keypadConfirmedElapsedMs = -1L;
 
     /** 外部（RunReceiver）からの実行トリガー。サービス未接続なら失敗通知を出す。 */
     static void requestRun(Context context) {
@@ -146,7 +170,12 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
         currentPin = pin;
 
+        swipeAttempt = 0;
+        keypadConfirmedAttempt = 0;
+        keypadConfirmedElapsedMs = -1L;
+
         acquireWakeLock();
+        wakeStartedAt = System.currentTimeMillis();
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
@@ -158,8 +187,18 @@ public class UnlockAccessibilityService extends AccessibilityService {
     /**
      * 画面をつけただけではロック画面（時計）が出るだけで、数字キーは現れない。
      * 上スワイプで数字キー（Bouncer）を出してからPINを打つ（2026-09-18 実機で確認）。
+     *
+     * 2026-10-06/07実機計測で、早すぎるタイミングのスワイプはBouncerが出ないまま
+     * 失われる（遅延して効くわけではない）ことが分かったため、固定時間待って
+     * 無条件に数字入力へ進むのではなく、キーパッドの出現を実際に確認してから
+     * 数字入力に進む。確認できなければスワイプをやり直す（最大3回）。
      */
     private void revealKeypadThenEnterPin() {
+        attemptSwipeAndConfirmKeypad();
+    }
+
+    private void attemptSwipeAndConfirmKeypad() {
+        swipeAttempt++;
         Point size = getScreenSize();
         boolean swiped = false;
         if (size.y > 0) {
@@ -172,12 +211,67 @@ public class UnlockAccessibilityService extends AccessibilityService {
         if (!swiped) {
             failureReasons.append("数字キーを出せない ");
         }
+
+        final long deadlineAt = System.currentTimeMillis() + KEYPAD_CHECK_TIMEOUT_MS;
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                clickDigit(0);
+                pollKeypadVisibility(deadlineAt);
             }
-        }, KEYPAD_REVEAL_DELAY_MS);
+        }, KEYPAD_CHECK_INTERVAL_MS);
+    }
+
+    /**
+     * キーパッド出現確認のポーリング。150ms間隔・1回のスワイプにつき期限1500ms。
+     * 出現が確認できたらそこで初めて数字入力に進む。期限内に出なければ
+     * スワイプをやり直し（最大3回）、3回とも出なければ数字入力・Enterを一切
+     * 行わずに中止する（空振りタップでPINを誤入力し続け、端末がロックアウト
+     * されるのを避けるため）。
+     */
+    private void pollKeypadVisibility(final long deadlineAt) {
+        if (currentPin == null) {
+            return; // 途中で中断された
+        }
+        if (isKeypadVisible()) {
+            keypadConfirmedAttempt = swipeAttempt;
+            keypadConfirmedElapsedMs = System.currentTimeMillis() - wakeStartedAt;
+            traceAppend("キーパッド確認");
+            clickDigit(0);
+            return;
+        }
+        if (System.currentTimeMillis() >= deadlineAt) {
+            if (swipeAttempt < KEYPAD_MAX_SWIPE_ATTEMPTS) {
+                attemptSwipeAndConfirmKeypad();
+            } else {
+                failureReasons.append("キーパッド未出現 ");
+                checkResult();
+            }
+            return;
+        }
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                pollKeypadVisibility(deadlineAt);
+            }
+        }, KEYPAD_CHECK_INTERVAL_MS);
+    }
+
+    /**
+     * キーパッド（数字キー）が出ているかの判定。暗証番号の桁は使わず、PINとは
+     * 無関係な固定ラベル（KEYPAD_PROBE_LABELS）を既存のfindNodeByLabelで探し、
+     * 2つ以上見つかれば出ていると判定する。
+     */
+    private boolean isKeypadVisible() {
+        int found = 0;
+        for (String label : KEYPAD_PROBE_LABELS) {
+            if (findNodeByLabel(label) != null) {
+                found++;
+                if (found >= KEYPAD_PROBE_MIN_MATCHES) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private void clickDigit(final int index) {
@@ -272,8 +366,12 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
         long elapsed = System.currentTimeMillis() - flowStartedAt;
         Point screen = getScreenSize();
+        String keypadDiag = keypadConfirmedAttempt > 0
+                ? "スワイプ" + keypadConfirmedAttempt + "回目で出現/起床→確認" + keypadConfirmedElapsedMs + "ms"
+                : "スワイプ" + swipeAttempt + "回とも未出現";
         String detail = (trace == null ? "" : trace.toString().trim())
-                + " / " + elapsed + "ms / 画面" + screen.x + "x" + screen.y;
+                + " / " + elapsed + "ms / 画面" + screen.x + "x" + screen.y
+                + " / " + keypadDiag;
         if (!locked) {
             postNotification(this, "ロック解除: 成功", detail);
         } else {
