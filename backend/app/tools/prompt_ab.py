@@ -66,6 +66,7 @@ from app.services.gemini_raw_copy_v101 import (
     extract_v101_items,
     parse_v101_response,
 )
+from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
@@ -215,15 +216,22 @@ def _parse(config: str, response_text: str, raw_text: str, masters: dict | None 
     return len(items), errors
 
 
-def _load_v10_masters(session: Session) -> dict:
-    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。"""
+def _load_v10_masters(session: Session, *, product_first: bool = False) -> dict:
+    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。
+
+    product_first（試作版 v102）のときだけ、商品・商品の分類・状態ごとの単位・単位にしない言い回しも読む。
+    これらが空なら ValueError で止める。v10・v101 には足さない（**masters で展開されるため）。
+    """
     cond_entries = load_condition_entries(session)
     status_entries = load_status_master(session)
     (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
-    return {
+    masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
     }
+    if product_first:
+        return {**masters, "product_first": load_product_first_masters(session)}
+    return masters
 
 
 def _v10_row_fields(response_text: str, ctx, masters: dict) -> dict:
@@ -499,7 +507,9 @@ def run_ab(
         _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields, rules, rules_sha256)
         return summary
 
-    masters = _load_v10_masters(session) if config in ("v10", "v101", "v102") else None  # dry-run では読まない
+    masters = (  # dry-run では読まない
+        _load_v10_masters(session, product_first=(config == "v102")) if config in ("v10", "v101", "v102") else None
+    )
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     for run_id in run_ids:
         job_id = job_ids.get(run_id)
