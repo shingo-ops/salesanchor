@@ -390,7 +390,7 @@ pushgateway 2026-09-20T04:13:51.145037503Z
   - 5回とも同じログ行の並びで、build 後に `Image astro-webapp-gemini-egress Built`、Step 3c で frontend / celery-worker が `Creating`（rm 済み）、gemini-egress だけ `Recreate`。
   - 少なくとも 23:20Z の run ではイメージ ID は変わっていない（上の「h 節」）。
 - 【事実】compose の定義上、gemini-egress に `depends_on` は無く、environment も無い（`W/docker-compose.yml:357-392`）。docker-compose.exporters.yml にも定義無し。
-- 【事実】`git log` で `monitoring/prod1/gemini-egress` と docker-compose.yml の最終変更は 2026-10-06 11:36 JST（022ca3579）、その前は 2026-10-02。5回の run のうち後ろ4回は、この変更より前か同日の run が混ざっており、「定義が変わったから Recreate」では説明しきれない（run 37545822874 の sha 57090e457 は定義変更の後）。
+- 【事実】`git log` で `monitoring/prod1/gemini-egress` と docker-compose.yml の最終変更は 2026-10-06 11:36 JST（022ca3579）、その前は 2026-10-02。5回の run（いずれも 2026-10-06T06:14Z 以降）はすべてこの最終変更（2026-10-06 02:36Z）より後。したがって、定義の変更がその5回の Recreate を直接説明するかどうかは、この git log だけでは判断できない（未確認）。
 - 【未確認】Recreate と判定された理由そのもの。「何が違うと判定されたか」は、デプロイ中にしか出ない状態（ビルド直後の再タグ、`.env` の書き換え直後、rm -f された他コンテナの有無）に依存しており、定常状態の dry-run では再現しなかった。設計の次の一手: デプロイの Step 3c の直前で `docker compose up -d --no-deps --dry-run gemini-egress` を実行しログに残す（読み取りのみ）。
 - 設計上の含意（【事実】からの整理）: KGI は celery-worker を対象としており gemini-egress は KGI 外。ただし「差分があるものだけ作り直す」設計のあとも gemini-egress が毎回 Recreate されるなら、原因が compose の hash 判定の外にあることになるので、実測が必要。
 
