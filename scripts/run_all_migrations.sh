@@ -878,3 +878,6 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
 # 新しい仕組み専用の仕入元ルール2列（extraction_layout_rules / extraction_hard_cases）。本番v7は読まない
 run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql
+
+# roles.system_key 追加（全テナント・additive・冪等。owner/admin の権限を役割名ではなく安定キーで判定するため）
+run_sql migrations/20261005_150000_add_roles_system_key.sql
