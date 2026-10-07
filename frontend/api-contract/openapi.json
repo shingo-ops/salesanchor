@@ -33323,6 +33323,138 @@
         "title": "UnitCreate",
         "type": "object"
       },
+      "UnitIgnorePhraseCreate": {
+        "properties": {
+          "is_active": {
+            "default": true,
+            "description": "有効フラグ。false の言い回しは解析で使わない",
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由。省略可",
+            "title": "Note"
+          },
+          "phrase": {
+            "description": "単位にしない言い回し（例: ONE PIECE）。重複不可",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Phrase",
+            "type": "string"
+          }
+        },
+        "required": [
+          "phrase"
+        ],
+        "title": "UnitIgnorePhraseCreate",
+        "type": "object"
+      },
+      "UnitIgnorePhraseResponse": {
+        "properties": {
+          "created_at": {
+            "description": "作成日時",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "description": "主キー",
+            "title": "Id",
+            "type": "integer"
+          },
+          "is_active": {
+            "description": "有効フラグ",
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由",
+            "title": "Note"
+          },
+          "phrase": {
+            "description": "単位にしない言い回し",
+            "title": "Phrase",
+            "type": "string"
+          },
+          "updated_at": {
+            "description": "最終更新日時",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "phrase",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "UnitIgnorePhraseResponse",
+        "type": "object"
+      },
+      "UnitIgnorePhraseUpdate": {
+        "properties": {
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "有効フラグ。指定時のみ更新",
+            "title": "Is Active"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "登録理由。指定時のみ更新",
+            "title": "Note"
+          },
+          "phrase": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "単位にしない言い回し。指定時のみ更新",
+            "title": "Phrase"
+          }
+        },
+        "title": "UnitIgnorePhraseUpdate",
+        "type": "object"
+      },
       "UnitResponse": {
         "properties": {
           "canonical": {
@@ -58837,6 +58969,176 @@
         "summary": "Delete Tenant Physical",
         "tags": [
           "super-admin"
+        ]
+      }
+    },
+    "/api/v1/super-admin/unit-ignore-phrases": {
+      "get": {
+        "operationId": "list_unit_ignore_phrases_api_v1_super_admin_unit_ignore_phrases_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                  },
+                  "title": "Response List Unit Ignore Phrases Api V1 Super Admin Unit Ignore Phrases Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "List Unit Ignore Phrases",
+        "tags": [
+          "super-admin-units"
+        ]
+      },
+      "post": {
+        "operationId": "create_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIgnorePhraseCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
+        ]
+      }
+    },
+    "/api/v1/super-admin/unit-ignore-phrases/{phrase_id}": {
+      "delete": {
+        "description": "物理削除。無効化は PATCH is_active=false を使う。",
+        "operationId": "delete_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases__phrase_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "title": "Phrase Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delete Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
+        ]
+      },
+      "patch": {
+        "operationId": "update_unit_ignore_phrase_api_v1_super_admin_unit_ignore_phrases__phrase_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "phrase_id",
+            "required": true,
+            "schema": {
+              "title": "Phrase Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitIgnorePhraseUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitIgnorePhraseResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Update Unit Ignore Phrase",
+        "tags": [
+          "super-admin-units"
         ]
       }
     },

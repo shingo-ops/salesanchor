@@ -1854,6 +1854,17 @@
     "confirmDelete": "Delete selected units?",
     "total": "Units: {{count}}"
   },
+  "unitIgnorePhrases": {
+    "title": "Phrases Not Treated as Units",
+    "description": "Register phrases that contain a unit alias but are not a unit (e.g. a title name).",
+    "phrase": "Phrase",
+    "note": "Reason",
+    "isActive": "Active",
+    "empty": "No phrases registered",
+    "createTitle": "Add Phrase",
+    "editTitle": "Edit Phrase",
+    "confirmDelete": "Delete the selected phrases?"
+  },
   "statusMaster": {
     "title": "Status Rules",
     "statusId": "Status ID",
