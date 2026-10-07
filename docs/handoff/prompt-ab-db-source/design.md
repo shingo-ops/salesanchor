@@ -3,7 +3,11 @@
 この文書は何か：これから作る Gemini の指示書を、公開のリポジトリに置かずに試験できるようにする設計。
 親（仕様書）：[../../specs/line-analysis-tuning/README.md](../../specs/line-analysis-tuning/README.md)
 現状の事実：[recon.md](./recon.md)
-関係する ADR：[ADR-014](../../adr/ADR-014-inventory-management.md)（解析のロジック・プロンプトを外から見えなくする方針、`:29`）
+現状の事実（フルパス）：docs/handoff/prompt-ab-db-source/recon.md
+関係する ADR：
+- [ADR-014](../../adr/ADR-014-inventory-management.md)（解析のロジック・プロンプトを外から見えなくする方針、`:29`）。本設計の根拠。
+- [ADR-085](../../adr/ADR-085-supplier-prompts.md)（仕入先別プロンプトの別の表 `supplier_prompts`）。本設計では使わない。システム全体の指示書は `extraction_prompt_config` に置く既存の形に合わせる。
+- [ADR-1004](../../adr/ADR-1004-llm-usage-ledger.md)（費用の台帳）。prompt_ab が書く唯一の表で、本設計では変えない。
 
 ## 1. 目的（KGI）
 - PO の決定（2026-10-07）：「公開のままで進めても良い、ただし基盤となるロジックはあまり公開してほしくはないので見えないようにしたい」。続けて、本設計の方向（新しい指示書は DB にだけ置き、リポジトリには名前・指紋・数字だけ）に「y」。
