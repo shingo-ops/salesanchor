@@ -30,9 +30,14 @@ Gemini を呼ばずに、prompt_ab の JSONL の response_text から、今の�
 |既存の prompt_ab は変わらない|tests/test_prompt_ab.py が全部通る・prompt_ab.py に差分なし|
 |触るのは tools/ とテストのみ|git diff --name-only origin/main...HEAD|
 
-## 5. 外部事例
+## 5. 外部・過去事例の参照と我々への応用
 特定のライブラリや外部事例の採用はない（既存関数の再利用のみ）。保存済みの出力から後処理だけを再計算する「リプレイ」方式は、LLM の評価で費用を抑える一般的なやり方。
 
 ## 6. 戻し方・測り方
 - 戻し方：新規 2 ファイル（と docs）を消すだけ。他のコードに依存されない。
 - 測り方：pytest の最終行 failed 0。
+
+## 7. 維持の仕組み
+- テスト（tests/test_prompt_ab_recompute.py）が CI で毎回走り、Gemini 非呼び出し・台帳非書き込み・prompt_ab の _v102_row_fields との一致を守る。
+- prompt_ab の _v102_row_fields・_load_v10_masters の署名を変えると、このテストが落ちて気づける。
+- 使い終わった道具は、不要になった時点で新規2ファイルを消せば戻せる（他から参照されない）。
