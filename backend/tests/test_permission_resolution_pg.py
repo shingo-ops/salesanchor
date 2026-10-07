@@ -41,8 +41,9 @@ _NEW_KEY = "zz.new_key.test"
 _OWN_KEYS = (
     ("goals.view", "goals", "view", "目標を閲覧する", "目標管理"),
     ("goals.edit", "goals", "edit", "目標を作成・編集する", "目標管理"),
-    (_NEW_KEY, "zz", "new_key", "test key", "test"),
 )
+# テナント作成の後に入れる鍵（作成時の ALL / ALL_EXCEPT_SYSTEM_MANAGE の付与が role_permissions に行を作らないようにする）
+_NEW_KEY_ROW = (_NEW_KEY, "zz", "new_key", "test key", "test")
 _USERS = {"owner": 9801, "admin": 9802, "cs": 9803, "admin_plus": 9804, "owner_cs": 9805}
 
 
@@ -124,7 +125,18 @@ async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_ten
             # 6) 試験用テナントを作る（create_tenant_schema が tenant_settings に phase 'B' の行を入れる）
             await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
 
+            # 7) 新しい権限キーは、テナントができた後に入れる（作成時の付与の対象にならず、role_permissions の行が無い）
             async with admin_engine.begin() as conn:
+                key, resource, action, description, category = _NEW_KEY_ROW
+                inserted = await conn.execute(
+                    text(
+                        "INSERT INTO public.permissions (key, resource, action, description, category) "
+                        "VALUES (:k, :r, :a, :d, :c) ON CONFLICT (key) DO NOTHING RETURNING key"
+                    ),
+                    {"k": key, "r": resource, "a": action, "d": description, "c": category},
+                )
+                if inserted.first() is not None:
+                    inserted_keys.append(key)
                 all_keys = {r[0] for r in (await conn.execute(text("SELECT key FROM public.permissions"))).all()}
             assert SYSTEM_MANAGE_KEY in all_keys and _NEW_KEY in all_keys
 
