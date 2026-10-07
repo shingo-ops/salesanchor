@@ -6,7 +6,6 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Point;
-import android.graphics.Rect;
 import android.os.Handler;
 import android.os.PowerManager;
 import android.util.Log;
@@ -470,68 +469,22 @@ public class UnlockAccessibilityService extends AccessibilityService {
     }
 
     // ---- Accessibility node search / click -------------------------------------------
+    //
+    // 実装はNodeOpsへ移した（段階2 design.md追補 2026-10-08。LineExportFlowからも同じ
+    // 探索ロジックを使うための共通化）。ここでは呼び出し先をNodeOpsに差し替えるだけの
+    // 薄いラッパーとし、各呼び出し箇所・タイミング・判定順・traceAppendの記録内容は
+    // 一切変えていない（純粋な移動）。
 
     private AccessibilityNodeInfo findNodeByLabel(String label) {
-        try {
-            List<AccessibilityWindowInfo> windows = getWindows();
-            if (windows != null) {
-                for (AccessibilityWindowInfo window : windows) {
-                    AccessibilityNodeInfo root = window.getRoot();
-                    AccessibilityNodeInfo match = searchNode(root, label);
-                    if (match != null) {
-                        return match;
-                    }
-                }
-            }
-        } catch (RuntimeException e) {
-            Log.w(TAG, "getWindows() failed: " + e);
-        }
-        return searchNode(getRootInActiveWindow(), label);
-    }
-
-    private AccessibilityNodeInfo searchNode(AccessibilityNodeInfo node, String label) {
-        if (node == null) {
-            return null;
-        }
-        if (matchesLabel(node, label)) {
-            return node;
-        }
-        int count = node.getChildCount();
-        for (int i = 0; i < count; i++) {
-            AccessibilityNodeInfo child = node.getChild(i);
-            AccessibilityNodeInfo match = searchNode(child, label);
-            if (match != null) {
-                return match;
-            }
-        }
-        return null;
-    }
-
-    private boolean matchesLabel(AccessibilityNodeInfo node, String label) {
-        CharSequence text = node.getText();
-        CharSequence desc = node.getContentDescription();
-        return (text != null && label.contentEquals(text))
-                || (desc != null && label.contentEquals(desc));
+        return NodeOps.findNodeByLabel(this, label);
     }
 
     private boolean clickNode(AccessibilityNodeInfo node) {
-        AccessibilityNodeInfo target = node;
-        while (target != null && !target.isClickable()) {
-            target = target.getParent();
+        NodeOps.ClickResult result = NodeOps.clickNode(this, node);
+        if (result.traceMessage != null) {
+            traceAppend(result.traceMessage);
         }
-        if (target != null) {
-            return target.performAction(AccessibilityNodeInfo.ACTION_CLICK);
-        }
-        // クリック可能な祖先が無い場合は、そのノード自身の座標へgestureタップ。
-        Rect bounds = new Rect();
-        node.getBoundsInScreen(bounds);
-        if (!bounds.isEmpty()) {
-            GestureCompat.DispatchReport report = GestureCompat.tap(
-                    this, bounds.exactCenterX(), bounds.exactCenterY(), 80L, "node-tap");
-            traceAppend(report.describe());
-            return report.accepted;
-        }
-        return false;
+        return result.accepted;
     }
 
     // ---- Coordinate-tap fallback (measured on the target device) -----------------------
