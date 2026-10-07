@@ -3,6 +3,12 @@
 ゲートは CI が実際に設定する RLS_ADMIN_DATABASE_URL（test_rls_bootstrap_ordering.py と同じ形）。
 conftest.py の自動モック bypass_permissions は、この試験だけ同名のフィクスチャで上書きして無効にする。
 実関数は import 時に束縛しておく（自動モックは module 属性を差し替えるため）。
+
+準備の順序（検証する）: 共有 public 表 → 実際の 070 と 20260604_050000（public.tenant_settings の構造）→ 試験用の権限キー →
+その後で試験用テナントを作る。070 には「全テナントに phase 'A' の行を入れる」値の書き込み（070:75-77）があるので、
+試験用テナントの行が public.tenants に入る前に流し、tenant_settings に試験用テナントの行が無いことを
+create_tenant_schema の前に確かめる（順序を仮定せず、検証する）。070 の phase.switch の INSERT は ON CONFLICT DO NOTHING。
+試験が入れた行（権限キー・テナント・tenant_settings）だけを、後始末で消す。使い捨ての CI 用 DB への操作。
 """
 from __future__ import annotations
 
@@ -18,7 +24,10 @@ from app.auth.dependencies import load_user_permissions as real_load_user_permis
 from app.auth.system_roles import ROLE_KEY_ADMIN, ROLE_KEY_OWNER, SYSTEM_MANAGE_KEY
 from tests.rls_bootstrap import (
     _apply_migration_on_conn,
+    _bootstrap_public_shared,
+    _ensure_public_users,
     bootstrap_tenant_schema,
+    public_bootstrap_lock,
     tenant_rls_session,
     tenant_schema_lock,
 )
@@ -28,6 +37,12 @@ ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
 _TENANT_ID = 998
 _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 _NEW_KEY = "zz.new_key.test"
+# この試験が検証する権限キー。bootstrap の DB に無ければ、試験の準備で自分で入れる（試験のデータは試験が持つ）
+_OWN_KEYS = (
+    ("goals.view", "goals", "view", "目標を閲覧する", "目標管理"),
+    ("goals.edit", "goals", "edit", "目標を作成・編集する", "目標管理"),
+    (_NEW_KEY, "zz", "new_key", "test key", "test"),
+)
 _USERS = {"owner": 9801, "admin": 9802, "cs": 9803, "admin_plus": 9804, "owner_cs": 9805}
 
 
@@ -35,6 +50,17 @@ _USERS = {"owner": 9801, "admin": 9802, "cs": 9803, "admin_plus": 9804, "owner_c
 def bypass_permissions():
     """conftest.py の同名フィクスチャを上書きし、この試験では実関数を使う。"""
     yield
+
+
+async def _remove_test_tenant_rows(conn) -> None:
+    """この試験のテナント（id 998）が入れた行だけを消す。他のテナントの行には触れない。"""
+    await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
+    exists = await conn.scalar(text("SELECT to_regclass('public.tenant_settings')"))
+    if exists is not None:
+        await conn.execute(text("DELETE FROM public.tenant_settings WHERE tenant_id = :t"), {"t": _TENANT_ID})
+    exists = await conn.scalar(text("SELECT to_regclass('public.tenants')"))
+    if exists is not None:
+        await conn.execute(text("DELETE FROM public.tenants WHERE id = :t"), {"t": _TENANT_ID})
 
 
 async def _role_id(session, name: str) -> int:
@@ -64,23 +90,41 @@ async def _call(session, user_id: int) -> set[str]:
 async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_tenant_state():
     admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
     session_factory = sessionmaker(admin_engine, class_=AsyncSession, expire_on_commit=False)
+    inserted_keys: list[str] = []
     try:
         async with tenant_schema_lock(admin_engine, _TENANT_ID):
-            # 共有 public 表を作ってから、実際の 070（public.tenant_settings。本番 DDL をテストにコピーしない）を流し、
-            # 作り直したテナントで create_tenant_schema が tenant_settings 行を seed する状態にする
-            await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
+            # 1) 前回の残りがあれば消す（この試験のテナントの行だけ）
             async with admin_engine.begin() as conn:
-                await _apply_migration_on_conn(conn, "070_add_spreadsheet_phase.sql")
+                await _remove_test_tenant_rows(conn)
+            # 2) 共有 public 表（public.tenants / public.permissions）を用意する。試験用テナントの行はまだ入れない
+            async with public_bootstrap_lock(admin_engine):
+                async with admin_engine.begin() as conn:
+                    await _bootstrap_public_shared(conn)
+                    await _ensure_public_users(conn)
+                    # 3) 実際の 070 と 20260604_050000（public.tenant_settings の構造。本番 DDL をテストにコピーしない）
+                    await _apply_migration_on_conn(conn, "070_add_spreadsheet_phase.sql")
+                    await _apply_migration_on_conn(conn, "20260604_050000_add_tenant_policy_columns.sql")
+                    # 4) 試験が使う権限キー（作成時の付与は、権限マスタにあるキーだけが対象）
+                    for key, resource, action, description, category in _OWN_KEYS:
+                        inserted = await conn.execute(
+                            text(
+                                "INSERT INTO public.permissions (key, resource, action, description, category) "
+                                "VALUES (:k, :r, :a, :d, :c) ON CONFLICT (key) DO NOTHING RETURNING key"
+                            ),
+                            {"k": key, "r": resource, "a": action, "d": description, "c": category},
+                        )
+                        if inserted.first() is not None:
+                            inserted_keys.append(key)
+            # 5) 順序の検証: 070 の「全テナントに phase 'A' を入れる」書き込みが、試験用テナントに触れていない
+            async with admin_engine.connect() as conn:
+                leftover = await conn.execute(
+                    text("SELECT count(*) FROM public.tenant_settings WHERE tenant_id = :t"), {"t": _TENANT_ID}
+                )
+                assert leftover.scalar_one() == 0
+            # 6) 試験用テナントを作る（create_tenant_schema が tenant_settings に phase 'B' の行を入れる）
             await bootstrap_tenant_schema(admin_engine, _TENANT_ID)
 
             async with admin_engine.begin() as conn:
-                await conn.execute(
-                    text(
-                        "INSERT INTO public.permissions (key, resource, action, description, category) "
-                        "VALUES (:k, 'zz', 'new_key', 'test key', 'test') ON CONFLICT (key) DO NOTHING"
-                    ),
-                    {"k": _NEW_KEY},
-                )
                 all_keys = {r[0] for r in (await conn.execute(text("SELECT key FROM public.permissions"))).all()}
             assert SYSTEM_MANAGE_KEY in all_keys and _NEW_KEY in all_keys
 
@@ -180,7 +224,7 @@ async def test_real_load_user_permissions_computes_owner_and_admin_and_fresh_ten
                 assert phase.scalar_one() == "B"
     finally:
         async with admin_engine.begin() as conn:
-            await conn.execute(text(f"DROP SCHEMA IF EXISTS {_SCHEMA} CASCADE"))
-            await conn.execute(text("DELETE FROM public.tenant_settings WHERE tenant_id = :t"), {"t": _TENANT_ID})
-            await conn.execute(text("DELETE FROM public.permissions WHERE key = :k"), {"k": _NEW_KEY})
+            await _remove_test_tenant_rows(conn)
+            for key in inserted_keys:  # この試験が入れたキーだけを消す（元からあるキーは消さない）
+                await conn.execute(text("DELETE FROM public.permissions WHERE key = :k"), {"k": key})
         await admin_engine.dispose()
