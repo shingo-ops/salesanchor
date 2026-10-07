@@ -30,3 +30,6 @@ super_admin が単位ルール画面で「単位にしない言い回し」を�
 - 値はコードに直書きせず画面から登録する（ADR-155）。
 - 表の追加は scripts/run_all_migrations.sh への登録と migration-guard で担保。
 - API の権限（403）は backend/tests/test_super_admin_unit_ignore_phrases.py、画面は Vitest で CI が常時検査する。
+
+## 触るファイル
+触るファイル: backend/app/main.py, backend/app/routers/super_admin_unit_ignore_phrases.py, backend/app/schemas/central_masters.py, backend/tests/test_super_admin_unit_ignore_phrases.py, docs/handoff/unit-ignore-phrases/design.md, docs/handoff/unit-ignore-phrases/recon.md, frontend/api-contract/openapi.json, frontend/src/locales/en.json, frontend/src/locales/ja.json, frontend/src/pages/super-admin/AnalysisRulesPage.tsx, frontend/src/pages/super-admin/components/UnitIgnorePhrasesPanel.test.tsx, frontend/src/pages/super-admin/components/UnitIgnorePhrasesPanel.tsx, migrations/20261008_100000_create_line_unit_ignore_phrases.sql, scripts/run_all_migrations.sh

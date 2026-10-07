@@ -165,6 +165,7 @@ export function UnitIgnorePhrasesPanel() {
               onChange={e => setForm({ ...form, note: e.target.value })}
             />
             <label style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}>
+              {/* ui-allow: チェックボックスの金型が未登録のため（手本 UnitMasterPanel.tsx:332 と同じ書き方） (#4032) */}
               <input
                 type="checkbox"
                 checked={form.is_active}
