@@ -8,7 +8,7 @@
       docs/handoff/gemini-v102/design.md §3-3（v102）
       docs/handoff/gemini-supplier-rules-file/design.md §3（--supplier-rules-file）
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME]
-        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
@@ -314,6 +314,12 @@ _SUPPLIER_FIELD_PATTERN = re.compile(r"^extraction_[a-z_]+$")
 # 新しい仕組み（v8 系）だけが読む欄。supplier_context ではなく new_system_rules 側で扱う。
 _NEW_SYSTEM_FIELDS = ("extraction_layout_rules", "extraction_hard_cases")
 
+# v102 で既定で外す、元からある仕入元ルールの欄（PO 2026-10-07：新2欄だけを読む形で採用確定）
+LEGACY_SUPPLIER_FIELDS = (
+    "extraction_price_format", "extraction_qty_format", "extraction_notes", "extraction_state_format",
+    "extraction_order_pattern", "extraction_example_text", "extraction_ship_format",
+)
+
 
 def _supplier_field_name(value: str) -> str:
     """--omit-supplier-field の値の検査（extraction_ で始まる欄名だけ認める）。"""
@@ -544,7 +550,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
-    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 raw_copy_v101_c）を指示書にする")
+    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 raw_copy_v101_e）を指示書にする")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
     p.add_argument("--no-schema", action="store_true", help="v8・v9 のみ。JSON の型指定を付けない")
@@ -557,6 +563,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="仕入元ルールの欄（extraction_ で始まる名前）を指示から外す。何回でも指定できる。v7 では効かない")
     p.add_argument("--supplier-rules-file", type=Path, default=None,
                    help="仕入元 id ごとに extraction_* の欄を差し替える JSON（{\"id\": {\"extraction_x\": 値 or null}}）。ファイルに無い欄は DB の値のまま、null は欄を外す。--omit-supplier-field より先に適用。v7 では効かない")
+    p.add_argument("--keep-legacy-supplier-fields", action="store_true",
+                   help="--config v102 のみ。既定で外す元からある7欄（LEGACY_SUPPLIER_FIELDS）を外さずに渡す（比較試験用）")
     p.add_argument("--dry-run", action="store_true", help="対象の件数と組み立てた指示の先頭30行だけ表示する（Gemini は呼ばない）")
     args = p.parse_args(argv)
     if args.thinking_level:
@@ -581,6 +589,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             p.error(str(exc))
     if args.repeat < 1:
         p.error("--repeat は 1 以上")
+    if args.keep_legacy_supplier_fields and args.config != "v102":
+        p.error("--keep-legacy-supplier-fields は --config v102 のときだけ使えます")
+    if args.config == "v102" and not args.keep_legacy_supplier_fields:
+        args.omit_supplier_field = sorted(set(args.omit_supplier_field or []) | set(LEGACY_SUPPLIER_FIELDS))
     return args
 
 
