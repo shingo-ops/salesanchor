@@ -30,6 +30,9 @@
 | 指示書 e | #3999 | 役割と目的＋番号付きの手順＋手順ごとの例（採用） | [gemini-prompt-e](../../handoff/gemini-prompt-e/) |
 | 道具：仕入元ルールの差し替え | #4007 | `--supplier-rules-file` | [gemini-supplier-rules-file](../../handoff/gemini-supplier-rules-file/) |
 | 新しい仕組み専用の2欄 | #4013 | `extraction_layout_rules`・`extraction_hard_cases` を追加（本番 v6/v7 には渡さない） | [gemini-new-system-supplier-rules](../../handoff/gemini-new-system-supplier-rules/) |
+| 道具：指示書を DB から読む | （この PR） | --prompt-key。新しい指示書は public.extraction_prompt_config にだけ置く | [prompt-ab-db-source](../../handoff/prompt-ab-db-source/) |
+
+- 2026-10-07 以降の新しい指示書は、リポジトリに本文を置かない。この記録には key と本文の sha256 と成績の数字だけを書く（PO 2026-10-07「基盤となるロジックはあまり公開してほしくはない」）。
 
 ## 4. 判断の決まり（PO の判断。仕入元の名前は伏せる）
 | 日付 | 決まり | 指示書への反映 |
