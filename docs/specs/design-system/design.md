@@ -2115,3 +2115,35 @@ AW-1: APPROVE（実装可）。根拠はADR/トークン注記/CSS注記の実�
 - Playwright 1.60.0 は chromium rev1223 を要求し手元は rev1217 のみ（既定起動不可、executablePath 指定で起動可を確認）。
 - 既存金型利用数は R1 実測で 86（Select 66・SelectControl 20）。§AV 時点の「91」と差5、原因未確認。
 - 商品編集9の枠の濃さ、報酬1の表 overflow、生 option 文字23の翻訳化は別便。
+
+
+#### AW-1 結果と AW-2a 追補（2026-10-07）
+
+AW-1: PR #3996 merge 57090e4576e8cdcd7c66cdcb17958c188ac28e86（2026-10-06T23:18:24Z、必須15/15成功）、Deploy 37545822874 success（headSha 57090e45、23:20:55Z）。本番 CSS index-DTCDnOLp.css に comp-select--karte/header/tabbar が各2行。app 200、/api/health 200。外観同等性は evidence-20260910/aw1-equivalence.md（computed 42項目×36条件 差分0、DPR2 ピクセル比較18件 差分0、disabled は対象13件で未使用のため判定外）。GO #3996 は PO 本人の発言、本文反映とマージは PO 本人の端末操作。運用上の事実: merge-safe は BEHIND で停止し自動追従しないため、main が数時間で20件超進む日は、担当が最新化と push、PO が checks 待ち＋merge-safe を1行で実行する分担でマージした（停止3回）。
+
+AW-2 は原因切り分けのため2便に分ける。AW-2a＝見た目を変えない13件、AW-2b＝標準へ統一する一般フォーム（見た目が変わる、前後表を別途 PO 提示）。
+
+AW-2a 対象（origin/main 57090e45、evidence: 本便で保存する aw2a-recon.md）:
+
+| 種類 | 場所 | 移管後 |
+|---|---|---|
+| karte | pages/inbox/InboxKartePanel.tsx 447/514/527/541/557、InboxProfileModal.tsx 161/200/215/226 | `SelectControl variant="karte" fullWidth`、children モードで既存 option をそのまま |
+| header | pages/dashboard/DashboardPage.tsx 412/441 | `SelectControl variant="header"`（412 の monthOptions.map もそのまま） |
+| tabbar | pages/inbox/InboxPage.tsx 92、InboxMessageThread.tsx 409 | `SelectControl variant="tabbar" className="inbox-platform-select"`（配置 margin-left:auto / flex-shrink:0 のみ残す） |
+
+変更契約:
+- 置換は開始/終了タグ名と className の変更、import 追加だけ。value/onChange/onBlur/aria-label/children は逐語保持。13件の祖先経由規則は0件（av2-select-mapping）。
+- CSS: components.css の `.page-header-select` 3規則は利用0になるため削除。InboxPage.css の `.inbox-platform-select` は配置2宣言だけ残し外観宣言と `:focus` 規則を削除。`select.right-panel-field` 1規則と直前の見本コメントを削除（`.right-panel-field` 本体は input/textarea 等約30箇所が使うため保持）。
+- tests-e2e/scene1-dashboard.spec.ts:367 の locator `.page-header-select` を `.comp-select--header` に変更（e2e は e2e.yml:104 で停止中だが意図を保つ）。frontend/scripts/check-page-header-actions.js は CSS の他ファイル再定義のみ検査し未配線のため影響なし。
+- 本便で新規トークン・色/px 直書き0、Select 本体と FormField.css は変更しない。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 13件の非外観属性・children が不変 | 変更前後の JSX を AST で比較し、タグ名・className・import 以外の差分0を機械照合（スクリプトを evidence に保存） |
+| 見た目が不変 | AW-1 の同等性（差分0）＋祖先規則0件。CI の Karte Visual Gate（.inbox-right-panel のスクリーンショット比較）が合格 |
+| 使われなくなった CSS だけを削除 | 削除前に3クラスの全利用箇所を grep で列挙し、残る利用が想定どおり（page-header-select 0、inbox-platform-select は2 select のみ、right-panel-field の select 0） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook |
+
+Architect 自己審査（AW-2a）: APPROVE。外観は AW-1 の実測で同等、配置は残し、未使用規則のみ削除。同一AI の自己審査であり独立第二者レビューではない。AW-2b は REVISE のまま。
