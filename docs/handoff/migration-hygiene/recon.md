@@ -1,6 +1,6 @@
 # recon: マイグレーションの衛生（毎デプロイの再実行と値を書く migration の後始末）、役割の安定した識別子（2026-10-05、読み取りのみ）
 
-基準: origin/main 41d65666f。本番の読み取りは単文の SELECT のみで、何も書いていない。生の出力・集計は「社外秘のローカル作業メモ（リポジトリ外）」にあり、ここには件数・file:line・引用だけを書く。パスは本文にそのまま書く（バッククォートで囲まない）。PR #3965 の元の資料は、同じフォルダの runner-design-from-3965.md と runner-recon-from-3965.md にそのまま置いた。
+基準: origin/main 41d65666f。本番の読み取りは単文の SELECT のみで、何も書いていない。生の出力・集計は「社外秘のローカル作業メモ（リポジトリ外）」にあり、ここには件数・file:line・引用だけを書く。パスは本文にそのまま書く（バッククォートで囲まない）。注（2026-10-07）: PR #3965 は、この記録の後にマージされた（2026-10-05T23:04Z）。ADR-1005 は main にあり（Accepted（方向性）2026-10-06）、元の資料は main の docs/handoff/migration-runner-redesign/ の design.md と recon.md にある。以下の「runner-design-from-3965.md」「runner-recon-from-3965.md」への言及と「#3965（draft）」は、基準 41d65666f 時点の記録で、写しのファイルは SSOT のため削除した（行番号は main の同名ファイルと 2 行ずれる）。
 
 ## 0. 要点（事実のみ）
 - scripts/run_all_migrations.sh は登録された全手順（run_sql 291 行・run_py 26 行）を、デプロイのたびに最初から実行する。実行済みの記録は無い（runner-recon-from-3965.md:53）。.github/workflows/deploy.yml の「Run database migrations」ステップ（:500-514）は、新しい backend が切り替わった後に走る。
