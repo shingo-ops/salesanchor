@@ -475,6 +475,8 @@ def v10_fakes(monkeypatch, fakes):
     monkeypatch.setattr(pab, "load_condition_entries", masters.cond)
     monkeypatch.setattr(pab, "load_status_master", masters.status)
     monkeypatch.setattr(pab, "load_lookup_maps", masters.lookup)
+    # v102 の商品先行のマスタは None に差し替える（None なら v10.2 の流れのまま。商品先行の試験は別ファイル）
+    monkeypatch.setattr(pab, "load_product_first_masters", lambda session: None)
     monkeypatch.setattr(pab, "load_v10_prompt", lambda: "V10PROMPT")
     monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_V10_CTX))
     fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V10_RESPONSE}

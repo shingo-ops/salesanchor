@@ -38,7 +38,7 @@ class RecomputeSummary:
 
 def _load_masters(session: Session) -> dict:
     """prompt_ab と同じ読み込み。読めない・空のときは黙って続けず止める。"""
-    masters = pab._load_v10_masters(session)
+    masters = pab._load_v10_masters(session, product_first=True)
     empty = [name for name in _REQUIRED_MASTERS if not masters.get(name)]
     if empty:
         raise ValueError(f"マスタが空です: {', '.join(empty)}")

@@ -18,6 +18,7 @@ from typing import Any
 from app.services import gemini_raw_copy_v8 as v8
 from app.services import gemini_raw_copy_v10 as v10
 from app.services.extraction_judgement_svc import resolve_price_quantity
+from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, resolve_product_first
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
 
@@ -185,6 +186,7 @@ class V101Context:
     aliases: list[str]
     state_words: list[str]
     sold_out_words: list[str]
+    product_first: ProductFirstMasters | None = None  # 試作版 v102 の商品先行の流れ。None なら v10.1・v10.2 のまま
 
 
 def _state_words(cond_entries: list[dict]) -> list[str]:
@@ -211,13 +213,13 @@ def _sold_out_words(status_entries: list[dict]) -> list[str]:
 
 def build_context(
     *, cond_entries: list[dict], cond_canonical_to_uuid: dict, unit_alias_to_info: dict,
-    status_entries: list[dict], order: str | None,
+    status_entries: list[dict], order: str | None, product_first: ProductFirstMasters | None = None,
 ) -> V101Context:
     return V101Context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
         unit_alias_to_info=unit_alias_to_info, status_entries=status_entries, order=order,
         aliases=v10._unit_aliases(unit_alias_to_info), state_words=_state_words(cond_entries),
-        sold_out_words=_sold_out_words(status_entries),
+        sold_out_words=_sold_out_words(status_entries), product_first=product_first,
     )
 
 
@@ -677,6 +679,20 @@ def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bo
     )
 
 
+def _product_first_fields(
+    item: dict, roles: dict[int, str], lines: list[str], block: str, name: str, ctx: V101Context,
+) -> dict | None:
+    """試作版 v102：商品を先に決める流れの結果。マスタが渡されていないとき（v10.2 までの呼び出し）は None。"""
+    if ctx.product_first is None:
+        return None
+    return resolve_product_first(
+        item=item, roles=roles, lines=lines, block=block, name=name, aliases=ctx.aliases,
+        unit_alias_to_info=ctx.unit_alias_to_info, cond_entries=ctx.cond_entries,
+        cond_canonical_to_uuid=ctx.cond_canonical_to_uuid, masters=ctx.product_first,
+        find_price_alias=lambda text: find_unit_alias(text, ctx.aliases),
+    )
+
+
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
@@ -691,16 +707,28 @@ def _extract_one(
     if name_prefix:
         name = f"{name_prefix} {name}"
         calc_name = f"{name_prefix} {calc_name}"
-    unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
-    condition, _cond_id, basis = resolve_condition_v2(
-        block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
-    )
+    product_first = _product_first_fields(item, roles, lines, block, calc_name, ctx) if v102 else None
+    if product_first is not None:
+        unit_canonical, kubun, condition, basis = (
+            product_first["unit"], product_first["unit_kubun"], product_first["condition"], product_first["condition_basis"]
+        )
+        review = [*review, *({"line": item["price_line"], **r} for r in product_first["review_extra"])]
+    else:
+        unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
+        condition, _cond_id, basis = resolve_condition_v2(
+            block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
+        )
     status, effect = resolve_status_v2(block, ctx.status_entries, raw_memo=block)
     pq = resolve_price_quantity(
         own_text, gemini_price=item["price"], gemini_quantity=item["quantity"],
         unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
+    extra = (
+        {k: product_first[k] for k in ("product_id", "product_category", "match_status", "match_candidates", "unit_basis")}
+        if product_first is not None else {}
+    )
     return {
+        **extra,
         "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(shown_roles),
         "raw_price": item["price"], "raw_quantity": item["quantity"],
         "name": name, "unit": unit_canonical or _NONE, "unit_kubun": kubun,
@@ -905,7 +933,7 @@ def _extract_v102(
 def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
-    v102_fixes: bool = False,
+    v102_fixes: bool = False, product_first: ProductFirstMasters | None = None,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -913,10 +941,13 @@ def extract_v101_items(
     戻り値は (件ごとの辞書, flags)。flags は possible_missing_item（行番号の一覧）。
     v102_fixes が True のときだけ、設計 v10.2 の F1〜F6 を当てる（件に fixes、flags に quantity_no_number・possible_footer_line）。
     False のときの出力は v10.1 のまま変えない。
+    product_first（試作版 v102）は v102_fixes が True のときだけ使う。渡すと、商品を先に決めて単位・状態を出す流れになり、
+    件に product_id・product_category・match_status・match_candidates・unit_basis が付く。None なら v10.2 のまま。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
         unit_alias_to_info=unit_alias_to_info, status_entries=status_entries, order=order,
+        product_first=product_first if v102_fixes else None,
     )
     lines = raw_text.split("\n")
     adjusted, reassigned, review = reassign_ambiguous(items, lines, ctx) if reassign else (items, {}, {})
