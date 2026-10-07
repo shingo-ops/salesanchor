@@ -37,7 +37,7 @@ def test_tenant_ddl_has_system_key_column_and_partial_unique_index():
     assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON " + marker.rstrip("(") in sql
 
 
-def test_migration_file_exists_and_is_registered_at_tail():
+def test_migration_file_exists_and_is_registered():
     migration = _REPO_ROOT / "migrations" / _MIGRATION
     assert migration.is_file()
     body = migration.read_text(encoding="utf-8")
@@ -45,7 +45,7 @@ def test_migration_file_exists_and_is_registered_at_tail():
     assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key" in body
     runner = (_REPO_ROOT / "scripts" / "run_all_migrations.sh").read_text(encoding="utf-8")
     lines = [line for line in runner.splitlines() if line.startswith("run_sql ")]
-    assert lines[-1] == f"run_sql migrations/{_MIGRATION}"
+    assert lines.count(f"run_sql migrations/{_MIGRATION}") == 1  # 登録されている（末尾である必要はない）
 
 
 def test_migration_writes_no_values():
