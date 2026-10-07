@@ -32,6 +32,8 @@
 ## 4. 事実：他の参照
 - .github/workflows/schema-check.yml:171,173 が 018 と 024 を流す（|| true）。無効化後も構造（018 の列・索引）は残り、024 は NOTICE だけになる。scripts/migrate_phase1_redesign.py:52 が 018 のファイル名を一覧に持つ（過去の移行スクリプト。deploy では呼ばれない【未確認: 呼び出し元は調べていない】）。
 - 試験: この 7 本のファイルを読む試験は無い（git grep: schema-check.yml と上記スクリプトのみ）。#4012 の PG 試験は、goals の権限キーを自分で入れるので、075 の INSERT が無くても動く。
+- scripts/migrate_phase1_redesign.py（018 を一覧に持つ。scripts/migrate_phase1_redesign.py:50-53 の PUBLIC_MIGRATIONS）の呼び出し元【事実】: 自動の呼び出しは無い。.github・scripts・backend・frontend の git grep に参照が無く、scripts/run_all_migrations.sh に run_py の行も無く、新テナントの作成（backend/app/services/tenant.py）も使わない。参照は、自身の docstring（scripts/migrate_phase1_redesign.py:22。VPS で手で流す）、migrations/015〜017・019〜022 の :8 のコメント、docs/handoff/agent-complete-design/recon.md:430 の一覧だけ。ヘッダは一度きり・再実行禁止（scripts/migrate_phase1_redesign.py:55-59）。
+- 同スクリプトが 018 の行に頼る点【事実】: 一覧の tenant 側にある migrations/021_seed_roles_and_role_permissions.sql が、public.permissions を CROSS JOIN して menu.* を role_permissions に入れる（021:64-87）。021:27 は「018 で menu.* 19件が seed 済」と書く。018 の INSERT を外した後にこのスクリプトを新しい DB で流すと、021 の menu.* の付与は 0 行になる（エラーは出ない）。menu.* がすでにある本番では結果は変わらない。deploy・CI・テナント作成からは流れないので、この PR の経路は減らない。021 自体の無効化は、この PR の範囲外（28 本の一覧の外）。
 
 ## 5. 未確認・実施していないこと
 - 手元で SQL を流しての確認はしていない（書き込みを防ぐフックが手元の DB 実行も止める）。CI の Migration SQL Test と、マイグレーション全件ドライランに任せる。
