@@ -42,3 +42,7 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 
 ## 触るファイル
 触るファイル: backend/app/services/gemini_raw_copy_v101.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/tools/prompt_ab.py, backend/app/tools/prompt_ab_recompute.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, backend/tests/test_prompt_ab.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（商品が決まらない件の理由）
+- 件の review に、unmatched は product_not_in_master、ambiguous は product_multiple（候補の id）、matched で boundary_dropped があれば product_boundary（消えた候補の id）を足す。試運転（extraction_shadow_svc.py）の要確認と同じ判定。状態・単位・商品の値は変えない。
+- 触るファイル: backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_product_first.py

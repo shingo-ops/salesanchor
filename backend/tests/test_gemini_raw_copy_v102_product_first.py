@@ -190,6 +190,43 @@ def test_multiple_candidates_ignores_single_rule_and_rows_without_kubun():
     assert all(r["kind"] != pf.REVIEW_MULTIPLE_CANDIDATES for r in row["review"])
 
 
+# --- 商品が決まらないときの要確認の理由 ---------------------------------------------------------
+
+
+def _kinds(row):
+    return [r["kind"] for r in row["review"]]
+
+
+def test_unmatched_product_adds_product_not_in_master_review():
+    row = _one("ほにゃらら 100@1400", _it([1], "1400", "100"))
+    assert {"line": 1, "kind": pf.REVIEW_PRODUCT_NOT_IN_MASTER} in row["review"]
+
+
+def test_ambiguous_product_adds_product_multiple_review_with_candidate_ids():
+    row = _one("サンプル拡張 OP-14\n3@1,500円", _it([1, 2], "1,500円", "3"))
+    assert row["match_status"] == "ambiguous" and row["match_candidates"] == [1, 2]
+    assert {"line": 2, "kind": pf.REVIEW_PRODUCT_MULTIPLE, "candidates": [1, 2]} in row["review"]
+
+
+def test_matched_with_boundary_dropped_adds_product_boundary_review():
+    products = (
+        ProductEntry(id=1, product_code=None, mark=None, work_id=1, search_keywords=("サンプル拡張",), exclude_keywords=()),
+        ProductEntry(id=9, product_code=None, mark=None, work_id=1, search_keywords=("ab",), exclude_keywords=()),
+    )
+    masters = ProductFirstMasters(
+        product_entries=products, product_kubun={"1": "箱系", "9": "箱系"}, condition_unit=_CONDITION_UNIT, ignore_phrases=(),
+    )
+    row = _one("サンプル拡張 xabx\n3@1,500円", _it([1, 2], "1,500円", "3"), product_first=masters)
+    assert row["match_status"] == "matched" and row["product_id"] == 1
+    assert {"line": 2, "kind": pf.REVIEW_PRODUCT_BOUNDARY, "candidates": [9]} in row["review"]
+
+
+def test_matched_without_boundary_dropped_has_no_product_review():
+    row = _one("サンプル拡張\n3@1,500円", _it([1, 2], "1,500円", "3"))
+    assert row["match_status"] == "matched"
+    assert not {pf.REVIEW_PRODUCT_NOT_IN_MASTER, pf.REVIEW_PRODUCT_MULTIPLE, pf.REVIEW_PRODUCT_BOUNDARY} & set(_kinds(row))
+
+
 # --- 完売・記録 -------------------------------------------------------------------------------
 
 
