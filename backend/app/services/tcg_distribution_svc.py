@@ -43,7 +43,7 @@ TCG_SCHEMA = "public"
 # 安全装置 #5: 書き込み行数上限
 DIST_ROW_LIMIT = 5000
 
-# 出力ヘッダー（確定・12列）
+# 出力ヘッダー（確定・13列）
 DIST_HEADERS = [
     "投稿日時",
     "Mark",
@@ -57,6 +57,7 @@ DIST_HEADERS = [
     "Release Date",
     "Series",
     "提供者",
+    "Search Keywords",
 ]
 
 _SCOPES = [
@@ -192,7 +193,7 @@ async def fetch_output_rows(
     max_age_hours: int | None = None,
 ) -> list[list[str]]:
     """
-    配信対象行を12列で取得する。
+    配信対象行を13列で取得する。
     フィルター:
       pid_resolved AND unit_resolved AND NOT LIKE 'FLAG_%'
       AND price_normalized IS NOT NULL  ← 価格未解決行を除外
@@ -234,7 +235,12 @@ async def fetch_output_rows(
             COALESCE(ar.status, '')                                 AS status,
             COALESCE(p.release_date::text, '')                      AS release_date,
             COALESCE(ser.name_ja, '')                               AS series,
-            COALESCE(ps.name, '')                                   AS provider
+            COALESCE(ps.name, '')                                   AS provider,
+            COALESCE((
+                SELECT string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)
+                FROM public.product_search_keywords psk
+                WHERE psk.product_id = p.id
+            ), '')                                                  AS search_keywords
         FROM {TCG_SCHEMA}.analysis_results ar
         JOIN {TCG_SCHEMA}.extraction_items ei
             ON ei.id = ar.extraction_item_id
@@ -278,6 +284,7 @@ async def fetch_output_rows(
             row["release_date"],
             row["series"],
             row["provider"],
+            row["search_keywords"],
         ]
         for row in rows
     ]

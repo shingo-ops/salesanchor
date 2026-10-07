@@ -61,6 +61,8 @@ CREATE TABLE IF NOT EXISTS public.suppliers (
     extraction_state_format  TEXT,
     extraction_example_text  TEXT,
     extraction_ship_format   TEXT,
+    extraction_layout_rules  TEXT,
+    extraction_hard_cases    TEXT,
     created_at               TIMESTAMPTZ NOT NULL DEFAULT NOW(),
     updated_at               TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

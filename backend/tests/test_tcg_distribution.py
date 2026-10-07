@@ -262,6 +262,18 @@ def test_fetch_output_rows_flag_filter_exclude():
     assert "AND cr.canonical != 'FLAG_SINGLE'" not in src
 
 
+def test_fetch_output_rows_has_search_keywords_as_13th_column():
+    """DIST_HEADERS は13列で末尾が Search Keywords、SELECT は position 順の string_agg を返す"""
+    import inspect
+    from app.services.tcg_distribution_svc import DIST_HEADERS, fetch_output_rows
+
+    assert len(DIST_HEADERS) == 13
+    assert DIST_HEADERS[-1] == "Search Keywords"
+    src = inspect.getsource(fetch_output_rows)
+    assert "string_agg(psk.keyword, ' | ' ORDER BY psk.position, psk.id)" in src
+    assert 'row["search_keywords"]' in src
+
+
 # ---------------------------------------------------------------------------
 # C. ルーター エンドポイント
 # ---------------------------------------------------------------------------

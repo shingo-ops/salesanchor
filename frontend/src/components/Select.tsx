@@ -14,6 +14,7 @@ import "./FormField.css";
 
 export type SelectSize = "sm" | "md" | "lg";
 export type SelectIndicator = "default" | "none";
+export type SelectVariant = "standard" | "karte" | "header" | "tabbar";
 
 export interface SelectOption {
   value: string;
@@ -48,7 +49,16 @@ interface SelectControlChildrenModeProps
   placeholder?: never;
 }
 
-export type SelectControlProps = SelectControlOptionsModeProps | SelectControlChildrenModeProps;
+/** 用途別の種類は bare 専用。appearance="field" は standard 以外を受けない（design.md §AW） */
+type SelectControlVariantProps =
+  | { appearance?: "bare"; variant?: SelectVariant }
+  | { appearance: "field"; variant?: "standard" };
+
+export type SelectControlProps = (
+  | SelectControlOptionsModeProps
+  | SelectControlChildrenModeProps
+) &
+  SelectControlVariantProps;
 
 export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
   function SelectControl(props, ref) {
@@ -60,6 +70,7 @@ export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
       placeholder,
       appearance = "bare",
       indicator = "default",
+      variant = "standard",
       className,
       ...rest
     } = props;
@@ -69,6 +80,7 @@ export const SelectControl = forwardRef<HTMLSelectElement, SelectControlProps>(
       appearance !== "field" && size !== "md" ? `comp-select__control--${size}` : "",
       appearance !== "field" && fullWidth ? "comp-select__control--full" : "",
       indicator === "none" ? "comp-select--no-indicator" : "",
+      variant !== "standard" ? `comp-select--${variant}` : "",
       className ?? "",
     ]
       .filter(Boolean)

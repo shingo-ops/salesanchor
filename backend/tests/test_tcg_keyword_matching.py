@@ -992,6 +992,130 @@ class TestResolveConditionV2:
         # flagNote は付かない（isBoxOrCase=False）
         assert "単品語あり" not in basis
 
+    # --- R4c: 商品分類既定（箱系の商品 × 単位で箱か決まらない区分）---
+
+    @pytest.mark.parametrize("product_kubun", ["箱系", "箱系大"])
+    @pytest.mark.parametrize("unit_kubun", ["条件つき", "複合", "数量専用"])
+    def test_r4c_box_product_ambiguous_unit_returns_sealed_box(self, product_kubun, unit_kubun):
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "", unit_kubun, _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type=product_kubun,
+        )
+        assert canonical == "Sealed box"
+        assert cond_id == "uuid-cn0003"
+        assert basis == "R4c:商品分類既定>R4:単位既定"
+
+    @pytest.mark.parametrize("unit_kubun", ["単品系", "冊子系", "不明", ""])
+    def test_r4c_not_applied_to_single_booklet_unknown_empty_unit(self, unit_kubun):
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "", unit_kubun, _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4c" not in basis
+
+    @pytest.mark.parametrize("product_kubun", ["シングル系", ""])
+    def test_r4c_not_applied_to_single_or_empty_product_category(self, product_kubun):
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "", "条件つき", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type=product_kubun,
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4c" not in basis
+
+    def test_r4c_keyword_flag_single_wins_over_box_category(self):
+        # 状態に PSA（CN0008 の語）がある行は R1 が先に FLAG_SINGLE を返す
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "PSA10", "", "単品系", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4c" not in basis
+
+    def test_r4c_keyword_flag_single_wins_with_ambiguous_unit(self):
+        # 条件つき × 箱系でも、状態に PSA などシングルの語があれば FLAG_SINGLE のまま
+        with_cat = resolve_condition_v2(
+            "PSA10", "", "条件つき", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert with_cat[0] == "FLAG_SINGLE"
+        assert "R4c" not in with_cat[2]
+
+    @pytest.mark.parametrize("unit_kubun", ["条件つき", "複合", "数量専用", "単品系", "不明"])
+    def test_r4c_omitted_argument_keeps_previous_behavior(self, unit_kubun):
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "", unit_kubun, _COND_ENTRIES, _COND_UUID_MAP
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4c" not in basis
+
+    def test_r4c_damaged_state_is_reevaluated_as_box(self):
+        # 箱の状態の語は適用区分が「箱系」なので、箱系として判定し直した結果を返す
+        canonical, cond_id, basis = resolve_condition_v2(
+            "難あり", "", "条件つき", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "Damaged sealed box"
+        assert cond_id == "uuid-cn0004"
+        assert basis.startswith("R4c:商品分類既定>")
+
+    def test_r4c_shrink_state_returns_sealed_box_via_r4a(self):
+        # fixture の CN0003 は priority=4（R4a）で、データ駆動の語がフォールバックより先に当たる
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "シュリ付き", "", "条件つき", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "Sealed box"
+        assert basis == "R4c:商品分類既定>R4:シュリ付"  # 照合された語は search_kw の先頭側の「シュリ付」
+
+    def test_r4c_damaged_state_with_case_category_is_reevaluated_as_box_unit(self):
+        # 箱系大の商品でも、やり直しは単位の区分「箱系」で行う（Case ではなく箱の状態）
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "難あり", "", "複合", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系大",
+        )
+        assert canonical == "Damaged sealed box"
+        assert basis.startswith("R4c:商品分類既定>")
+
+    def test_r4c_no_word_returns_sealed_box_via_unit_default(self):
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "", "数量専用", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "Sealed box"
+        assert basis == "R4c:商品分類既定>R4:単位既定"
+
+    def test_r4c_bulk_single_name_with_mai_stays_flag_single(self):
+        # 商品名に 枚 を含むまとめ売り × 箱系 × 複合 → CN0008 の語に当たるので FLAG_SINGLE
+        canonical, cond_id, basis = resolve_condition_v2(
+            "", "AR 100枚セット", "複合", _COND_ENTRIES, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert cond_id == "uuid-cn0008"
+        assert "R4c" not in basis
+
+    def test_r4c_cn0008_exclude_kw_hit_allows_sealed_box(self):
+        # CN0008 の exclude_kw に当たる行は「語に当たらない」扱い → R4c で Sealed box
+        entries = [
+            {**e, "exclude_kw": "セット"} if e["code"] == "CN0008" else e
+            for e in _COND_ENTRIES
+        ]
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "AR 100枚セット", "複合", entries, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "Sealed box"
+        # やり直し側（箱系）が「枚」の単品語を flag_note として付ける（内側の呼び出しが付与）
+        assert basis.startswith("R4c:商品分類既定>") and basis.endswith("R4:単位既定")
+        # exclude_kw に当たらない行は従来どおり FLAG_SINGLE
+        canonical, _cond_id, basis = resolve_condition_v2(
+            "", "AR 100枚", "複合", entries, _COND_UUID_MAP,
+            product_kubun_type="箱系",
+        )
+        assert canonical == "FLAG_SINGLE"
+        assert "R4c" not in basis
+
     # --- R5: パック既定 (GAS: applyPackConditionDefault, AnalysisV2PackCondition.gs) ---
     # kubun=パック系(UN0003) かつ R4b で FLAG_SINGLE になる行は R5 で Searched pack に変換。
     # GAS 実測: basisDist R5=60件, Searched pack=61件 (残1件はキーワード直接マッチ)。
