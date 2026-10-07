@@ -2,7 +2,7 @@
 
 - 基準: origin/main 57090e457（worktree `/Users/tanizawashingo/worktrees/salesanchor/release-deploy-selective-recreate`）
 - 調査日: 2026-10-07。本番は読み取りのみ（`docker ps` / `docker inspect` / `docker compose config --hash`）。製品コード・deploy.yml・本番は未変更。
-- 引用パスは worktree 基準のフルパス（以下 `W` = `/Users/tanizawashingo/worktrees/salesanchor/release-deploy-selective-recreate`）。
+- 引用パスは、リポジトリの根からのフルパス（worktree は /Users/tanizawashingo/worktrees/salesanchor/release-deploy-selective-recreate）。
 
 ## KGI（PO 承認済み 2026-10-07）
 1. 画面だけ変えたデプロイ後、celery-worker の StartedAt が変わらない。
@@ -10,25 +10,25 @@
 3. デプロイ後、各サービスのコンテナがちょうど1つずつ。重複も別プロジェクト名の残り物もない。
 
 ## a. 既存 ADR の検索結果
-検索: `W/docs/adr/FEATURE-INDEX.md` と `git grep -i`（deploy / rm -f / recreate / blue-green / orphan / ADR-092 / astro-webapp）。
+検索: `docs/adr/FEATURE-INDEX.md` と `git grep -i`（deploy / rm -f / recreate / blue-green / orphan / ADR-092 / astro-webapp）。
 
 関係するもの:
 | ADR | ファイル | 関係 |
 |---|---|---|
-| ADR-092 | `W/docs/adr/ADR-092-deploy-concurrency-control.md:43-57` | 本変更の対象そのもの（pre-cleanup = rm -f の根拠）。要点は e 節 |
-| ADR-137 | `W/docs/adr/ADR-137-nginx-config-deploy-reliability.md`（FEATURE-INDEX `W/docs/adr/FEATURE-INDEX.md:50`） | nginx のみ条件付き force-recreate。今回の対象外（維持） |
-| ADR-082 | `W/docs/adr/ADR-082-deploy-skip-migrations-on-frontend-only.md` | 画面のみデプロイで migration を skip。KGI 1 の「画面だけ変えたデプロイ」の判定と同じ paths-filter（`W/.github/workflows/deploy.yml:33-46`） |
-| ADR-115 | `W/docs/adr/ADR-115-deploy-safety.md` | deploy 安全性。ロールバックの節に関係（内容の精読は未実施） |
-| ADR-135 / ADR-136 | `W/docs/adr/FEATURE-INDEX.md:37`、CLAUDE.md | deploy.yml は危険パス。PO の「GO #PR番号」が必要 |
-| ADR-130 | `W/docs/adr/ADR-130-nginx-reload-policy.md` | nginx reload。blue-green と bootstrap 後の reload |
-| 参考 | `W/docs/adr/FEATURE-INDEX.md:59` | ADD 系 migration は blue-green cutover 前に実行される、という既知リスク |
+| ADR-092 | `docs/adr/ADR-092-deploy-concurrency-control.md:43-57` | 本変更の対象そのもの（pre-cleanup = rm -f の根拠）。要点は e 節 |
+| ADR-137 | `docs/adr/ADR-137-nginx-config-deploy-reliability.md`（FEATURE-INDEX `docs/adr/FEATURE-INDEX.md:50`） | nginx のみ条件付き force-recreate。今回の対象外（維持） |
+| ADR-082 | `docs/adr/ADR-082-deploy-skip-migrations-on-frontend-only.md` | 画面のみデプロイで migration を skip。KGI 1 の「画面だけ変えたデプロイ」の判定と同じ paths-filter（`.github/workflows/deploy.yml:33-46`） |
+| ADR-115 | `docs/adr/ADR-115-deploy-safety.md` | deploy 安全性。ロールバックの節に関係（内容の精読は未実施） |
+| ADR-135 / ADR-136 | `docs/adr/FEATURE-INDEX.md:37`、CLAUDE.md | deploy.yml は危険パス。PO の「GO #PR番号」が必要 |
+| ADR-130 | `docs/adr/ADR-130-nginx-reload-policy.md` | nginx reload。blue-green と bootstrap 後の reload |
+| 参考 | `docs/adr/FEATURE-INDEX.md:59` | ADD 系 migration は blue-green cutover 前に実行される、という既知リスク |
 
-関連 handoff: `W/docs/handoff/blue-green-cutover-error-handling/`、`W/docs/handoff/extraction-job-recovery/design.md`（celery-worker warm shutdown §B-3）、`W/docs/handoff/gemini-egress-via-prod2/`。
+関連 handoff: `docs/handoff/blue-green-cutover-error-handling/`、`docs/handoff/extraction-job-recovery/design.md`（celery-worker warm shutdown §B-3）、`docs/handoff/gemini-egress-via-prod2/`。
 「rm -f を毎回やめて差分だけにする」を扱う ADR は、検索の範囲では**見つからなかった**（ADR-092 の中で「別Issueで最適化」と PR #1402 のレビューに書かれているのみ。e 節）。
 
 ## b. deploy.yml の処理（origin/main、全文引用）
 
-### 並行実行の制御 `W/.github/workflows/deploy.yml:8-16`
+### 並行実行の制御 `.github/workflows/deploy.yml:8-16`
 ```
 # 連続リリースで deploy.yml が並行実行されると、Docker コンテナ名衝突
 # （Conflict. The container name "/astro-webapp-backend-1" is already in use）で
@@ -41,7 +41,7 @@ concurrency:
   cancel-in-progress: false
 ```
 
-### 変更検出 `W/.github/workflows/deploy.yml:33-46`
+### 変更検出 `.github/workflows/deploy.yml:33-46`
 ```
       - name: Detect backend / migration changes
         uses: dorny/paths-filter@v4
@@ -59,14 +59,14 @@ concurrency:
               - 'docker-compose.yml'
 ```
 
-### .env への COMPOSE_FILE 追記 `W/.github/workflows/deploy.yml:282,315`
+### .env への COMPOSE_FILE 追記 `.github/workflows/deploy.yml:282,315`
 ```
               -e '/^COMPOSE_FILE=/d' \
 ...
             COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml
 ```
 
-### build `W/.github/workflows/deploy.yml:348-370`
+### build `.github/workflows/deploy.yml:348-370`
 ```
             echo "Step 3: Rebuilding and restarting containers..."
             # build と up を分離してダウンタイムを最小化する。
@@ -93,7 +93,7 @@ concurrency:
             fi
 ```
 
-### blue-green の呼び出しと、非 backend の rm -f + up `W/.github/workflows/deploy.yml:371-396`
+### blue-green の呼び出しと、非 backend の rm -f + up `.github/workflows/deploy.yml:371-396`
 ```
             # blue-green: backend を無停止で切替（scripts/blue-green-cutover.sh）
             #   旧コンテナを先に削除しないことで、Python 初期化 (~22s) 中の 502 を排除する。
@@ -122,9 +122,9 @@ concurrency:
             echo "Step 3d: Ensuring monitoring collectors are up..."
             docker compose up -d --no-deps node-exporter promtail
 ```
-（`W/.github/workflows/deploy.yml:371-396` を逐語で引用。）
+（`.github/workflows/deploy.yml:371-396` を逐語で引用。）
 
-### 条件付き force-recreate（nginx）`W/.github/workflows/deploy.yml:419-434`
+### 条件付き force-recreate（nginx）`.github/workflows/deploy.yml:419-434`
 ```
       - name: Recreate nginx (apply config/volume changes)
         if: ${{ success() && steps.changes.outputs.nginx == 'true' }}
@@ -133,7 +133,7 @@ concurrency:
 ```
 （`:430` が本体。`:406-418` のコメントは ADR-137 の inode ズレ対策の説明。）
 
-### 条件付き force-recreate（SA-18、DATABASE_URL 変更時のみ）`W/.github/workflows/deploy.yml:476-486`
+### 条件付き force-recreate（SA-18、DATABASE_URL 変更時のみ）`.github/workflows/deploy.yml:476-486`
 ```
               if [ "${_url_changed}" = "true" ]; then
                 # DATABASE_URL が変更 → backend/celery/discord を再起動する。
@@ -149,7 +149,7 @@ concurrency:
 ```
 （`:483` が force-recreate。`SA18_PHASE2_ENABLED=1` が .env にあるときだけ入る分岐 `:463`。）
 
-### ロールバックの節 `W/.github/workflows/deploy.yml:642-672`
+### ロールバックの節 `.github/workflows/deploy.yml:642-672`
 ```
                 # 旧コードでビルド（最大3回リトライ）
                 _rb_build=false
@@ -171,7 +171,7 @@ concurrency:
 ```
 （`:655-658`。ロールバックは backend も rm -f する別経路。blue-green を使わない。）
 
-### prune `W/.github/workflows/deploy.yml:719-726`
+### prune `.github/workflows/deploy.yml:719-726`
 ```
             echo "Step 8: Cleaning up old Docker images..."
             docker image prune -f
@@ -182,7 +182,7 @@ concurrency:
 ```
 
 ## c. scripts/blue-green-cutover.sh が backend にすること
-- `W/scripts/blue-green-cutover.sh:26` プロジェクト名を `COMPOSE_PROJECT="astro-webapp"` と**直書き**。
+- `scripts/blue-green-cutover.sh:26` プロジェクト名を `COMPOSE_PROJECT="astro-webapp"` と**直書き**。
 - `:58-65` 残留 green（`astro-webapp-backend-green`）があれば `docker rm -f`。
 - `:70` イメージは `astro-webapp-backend`（直前の `docker compose build` の産物）。
 - `:80-105` **`docker run -d --name astro-webapp-backend-green`** で起動（compose 経由ではない）。`--label com.docker.compose.project/service/container-number/project.working_dir/project.config_files/oneoff` を手で付与。`com.docker.compose.config-hash` と `com.docker.compose.image` は**付けていない**。
@@ -192,23 +192,23 @@ concurrency:
 - `:161` green を `astro-webapp-backend-1` に `docker rename`。
 - 結果: 本番の backend コンテナは compose が作ったものではなく、手作りラベルのコンテナ（i 節で実測）。
 
-## d. docker-compose.yml の各 app サービス（`W/docker-compose.yml`）
+## d. docker-compose.yml の各 app サービス（`docker-compose.yml`）
 | 項目 | 結果（根拠） |
 |---|---|
-| トップレベル `name:` | **無し**（`grep -n '^name:' W/docker-compose.yml` が 0 件） |
+| トップレベル `name:` | **無し**（`grep -n '^name:' docker-compose.yml` が 0 件） |
 | `container_name` | **どのサービスにも指定無し**（grep 0 件）。名前は Compose が `<project>-<service>-1` で付ける |
 | `labels:` | **指定無し**（grep 0 件） |
 | `COMPOSE_PROJECT_NAME` | リポジトリ（docs/adr 除く）に記載無し。**本番 `.env` に `COMPOSE_PROJECT_NAME=astro-webapp` が 1 行ある**（i 節の実測。値は project 名で秘密ではない） |
-| `COMPOSE_FILE` | deploy が毎回 `.env` に `COMPOSE_FILE=docker-compose.yml:docker-compose.exporters.yml` を書き込む（`W/.github/workflows/deploy.yml:282,315`）。本番 `.env` にも同値を確認 |
-| サービス行 | nginx `:5` / certbot `:42` / backend `:63` / frontend `:162` / celery-worker `:198` / celery-beat `:272` / discord-gateway `:309` / gemini-egress `:357` / redis `:395` / postgres `:425` / gha-exporter `:463`（`W/docker-compose.yml`）。node-exporter / promtail は `W/docker-compose.exporters.yml:4,85` |
-| celery-worker の停止猶予 | `W/docker-compose.yml:252-253` `stop_signal: SIGTERM` / `stop_grace_period: 60s` |
-| gemini-egress | `W/docker-compose.yml:357-392`。`build: ./monitoring/prod1/gemini-egress`、`restart: unless-stopped`、volume は ssh 鍵、environment 無し、depends_on 無し |
+| `COMPOSE_FILE` | deploy が毎回 `.env` に COMPOSE_FILE という環境変数（値は docker-compose.yml と docker-compose.exporters.yml をコロンでつないだもの） を書き込む（`.github/workflows/deploy.yml:282,315`）。本番 `.env` にも同値を確認 |
+| サービス行 | nginx `:5` / certbot `:42` / backend `:63` / frontend `:162` / celery-worker `:198` / celery-beat `:272` / discord-gateway `:309` / gemini-egress `:357` / redis `:395` / postgres `:425` / gha-exporter `:463`（`docker-compose.yml`）。node-exporter / promtail は `docker-compose.exporters.yml:4,85` |
+| celery-worker の停止猶予 | `docker-compose.yml:252-253` `stop_signal: SIGTERM` / `stop_grace_period: 60s` |
+| gemini-egress | `docker-compose.yml:357-392`。`build: ./monitoring/prod1/gemini-egress`、`restart: unless-stopped`、volume は ssh 鍵、environment 無し、depends_on 無し |
 
 project 名の出どころ: 本番 `/home/ubuntu/salesanchor/.env` の `COMPOSE_PROJECT_NAME=astro-webapp`（作業ディレクトリ名 `salesanchor` ではない）。この行が .env に入った経緯（誰がいつ入れたか）は**未確認**。deploy.yml が `.env` を sed で再構成する箇所（`:282` 付近）に COMPOSE_PROJECT_NAME の行は無い＝デプロイでは触られず、手で置かれたまま残っている形。
 
 ## e. ADR-092 の要点と PR #1402
 
-### ADR-092（`W/docs/adr/ADR-092-deploy-concurrency-control.md`）
+### ADR-092（`docs/adr/ADR-092-deploy-concurrency-control.md`）
 - `:14-25` 背景: deploy.yml に concurrency が無く、連続マージで並行実行 → `Conflict. The container name "/astro-webapp-backend-1" is already in use`（+ `Error while Stopping`）→ backend が Created のまま → nginx 502。2026-06-02 10:53〜11:04 JST、#1390 / #1395 / #1396。
 - `:29-41` 決定1: `concurrency: group deploy-production / cancel-in-progress: false`。
 - `:43-49` 決定2（今回の対象）: 「`docker compose up` の前に、graceful stop に失敗した / ハッシュ付きプロジェクト名の残留コンテナ（前回デプロイの失敗残骸）を `docker rm -f` で明示的に削除する。`docker compose up --remove-orphans` ではプロジェクト名が異なる残留コンテナを削除できないため直接対処する。postgres / redis / nginx / certbot は filter 名が一致しないため削除対象外。」
@@ -242,10 +242,10 @@ project 名の出どころ: 本番 `/home/ubuntu/salesanchor/.env` の `COMPOSE_
 ## g. docker compose の公式の動作
 Context7（`/docker/docs`、`/docker/compose`）と docs.docker.com で確認。
 
-- **up の既定**: https://docs.docker.com/reference/cli/docker/compose/up/ ／ Context7 `/docker/docs` の `compose_up.md`: 「If there are existing containers for a service, and the service's configuration or image was changed after the container's creation, `docker compose up` picks up the changes by stopping and recreating the containers (preserving mounted volumes). To prevent Compose from picking up changes, use the `--no-recreate` flag.」「`--force-recreate`: Recreate containers even if their configuration and image haven't changed」
-- **--remove-orphans**: 同ページ: 「Remove containers for services not defined in the Compose file」。Context7 `envvars.md` の COMPOSE_REMOVE_ORPHANS: 「Orphaned containers are those that were created by a previous configuration but are no longer defined in the current compose.yaml file.」
+- **up の既定**: https://docs.docker.com/reference/cli/docker/compose/up/ ／ Context7 `/docker/docs` の compose up のリファレンスのページ: 「If there are existing containers for a service, and the service's configuration or image was changed after the container's creation, `docker compose up` picks up the changes by stopping and recreating the containers (preserving mounted volumes). To prevent Compose from picking up changes, use the `--no-recreate` flag.」「`--force-recreate`: Recreate containers even if their configuration and image haven't changed」
+- **--remove-orphans**: 同ページ: 「Remove containers for services not defined in the Compose file」。Context7 の Compose 環境変数のページ の COMPOSE_REMOVE_ORPHANS: 「Orphaned containers are those that were created by a previous configuration but are no longer defined in the current compose.yaml file.」
   - 「同じ project 名のものだけが対象か」は、取得した公式文面には**明記されていない**（未確認）。ADR-092 `:47` は「プロジェクト名が異なる残留コンテナを削除できない」と書くが、これは ADR の主張であり、本調査では公式文面で裏取りできていない。Compose はコンテナの `com.docker.compose.project` ラベルで project を絞る（下記ラベルの定義から読めるが、孤児判定コードの精読はしていない）。
-- **ラベル**（Context7 `/docker/docs` `services.md`、`/docker/compose` `pkg/api/labels.go`・`loader.go`）:
+- **ラベル**（Context7 `/docker/docs` の services のページ、`/docker/compose` `pkg/api/labels.go`・`loader.go`）:
   - `com.docker.compose.project`: 「set on all resources created by Compose to the user project name」
   - `com.docker.compose.service`: 「set on service containers with service name as defined in the Compose file」
   - `com.docker.compose.config-hash`: `pkg/compose/create.go` で、計算したハッシュをラベルとして付け、「later compared against this same label in the reconciler to detect divergence」（ネットワーク/ボリュームの例として記載。コンテナも同じ label 定数 `ConfigHashLabel = "com.docker.compose.config-hash"`）。
@@ -255,12 +255,12 @@ Context7（`/docker/docs`、`/docker/compose`）と docs.docker.com で確認。
 
 ## h. gemini-egress が rm 対象でないのに毎回 Recreate になる理由
 事実:
-- rm 対象は frontend / celery-beat / discord-gateway / celery-worker のみ（`W/.github/workflows/deploy.yml:390-393`）。gemini-egress は含まれない。
+- rm 対象は frontend / celery-beat / discord-gateway / celery-worker のみ（`.github/workflows/deploy.yml:390-393`）。gemini-egress は含まれない。
 - デプロイログ（run 37545822874、2026-10-06T23:18Z、sha 57090e457）: `Container astro-webapp-gemini-egress-1 Recreate` → `Recreated` → `Started`（2026-10-06T23:20:33Z）。同時刻に他4つは `Creating`（rm 済みのため）。
 - 直前の run 37463123321（2026-10-06T12:25Z）でも `Container astro-webapp-gemini-egress-1 Recreate / Recreated / Started`（12:29:51Z）。2回連続で Recreate。
 - イメージ: build ログでは `[gemini-egress 2/2] RUN apk add ... CACHED`、`naming to docker.io/library/astro-webapp-gemini-egress:latest done`。本番の現イメージ ID `sha256:fa2738441f09...` = 稼働コンテナのイメージ ID（同一）。イメージ作成時刻は 2026-10-06T14:24:32+09:00（= 05:24Z）で、23:18Z のデプロイより前。つまり**イメージ ID は今回のデプロイで変わっていない**。
 - `docker compose config --hash gemini-egress`（本番で実行、読み取りのみ）= `d3e1fa33...4a99` = 稼働中コンテナの `config-hash` ラベル。つまり**今の定義と今のコンテナは一致**している。
-- `docker-compose.exporters.yml` には gemini-egress の定義は無い（サービスは node-exporter / postgres-exporter / nginx-exporter / redis-exporter / promtail、`W/docker-compose.exporters.yml:4,30,48,66,85`）。
+- `docker-compose.exporters.yml` には gemini-egress の定義は無い（サービスは node-exporter / postgres-exporter / nginx-exporter / redis-exporter / promtail、`docker-compose.exporters.yml:4,30,48,66,85`）。
 
 未確認: **Recreate が起きた理由そのもの**。Compose のログは理由（設定差分 / イメージ差分 / 依存先の再作成など）を出さない。デプロイ中の `.env` 書き換え（`:282-316`）後の hash がデプロイ時点で違っていたのか、`docker compose build` の再タグが影響するのか、どちらも本調査では切り分けていない。切り分け方（設計フェーズでの提案）: デプロイ直前に `docker compose config --hash gemini-egress` とラベルを比較し、`up` に `--dry-run` を付けて差分を出す。ただし、現時点の hash が一致している事実から、「いつも差分がある」わけではなく、**デプロイ手順の中のどこかで差が生まれている**。KGI の達成確認では gemini-egress の StartedAt も観測対象に入れるのが妥当。
 
@@ -283,14 +283,14 @@ astro-webapp-promtail-1|astro-webapp|promtail|Up 2 weeks
 pushgateway|||Up 2 weeks
 ```
 追加の読み取り（`docker inspect`）:
-- backend（blue-green の `docker run` 産）: ラベルは `project.config_files=/home/ubuntu/salesanchor/docker-compose.yml`（**exporters 無し**）、`working_dir`、`version=5.1.1`（←これは `docker run` で付けたラベルに無い値のため、実際に誰が付けたかは未確認。cutover 後に何かが付与した可能性）。**`config-hash` ラベルと `com.docker.compose.image` ラベルが無い**。作成 2026-10-06T23:20:11Z。
-- celery-worker / frontend / gemini-egress（compose 産）: `config-hash` あり、`project.config_files=.../docker-compose.yml,.../docker-compose.exporters.yml`、`version=5.1.1`。作成 2026-10-06T23:20:33Z（デプロイの Step 3c と一致）。
+- backend（blue-green の `docker run` 産）: ラベルは project.config_files ラベルの値は本番の docker-compose.yml のパス（/home/ubuntu/salesanchor/docker-compose.yml）（**exporters 無し**）、`working_dir`、`version=5.1.1`（←これは `docker run` で付けたラベルに無い値のため、実際に誰が付けたかは未確認。cutover 後に何かが付与した可能性）。**`config-hash` ラベルと `com.docker.compose.image` ラベルが無い**。作成 2026-10-06T23:20:11Z。
+- celery-worker / frontend / gemini-egress（compose 産）: `config-hash` あり、project.config_files ラベルの値は docker-compose.yml と docker-compose.exporters.yml の2つ、`version=5.1.1`。作成 2026-10-06T23:20:33Z（デプロイの Step 3c と一致）。
 - `pushgateway` は compose ラベル無し（compose 管理外）。今回の「各サービスちょうど1つ」の対象外だが、KGI 3 の判定式では除外が必要。
 - 重複・別 project 名の残り物: 現時点で**無し**（上の一覧に `astro-webapp` 以外の project 名は無し、同一サービスの重複も無し）。
 
 【含意（事実の並べ替え。実証はしていない）】
 - backend は compose 管理下に見えるが config-hash が無いので、`docker compose up` の対象に backend を入れた場合の挙動は**未確認**（hash 不一致として recreate される可能性は設計で検証が必要）。現行どおり backend は blue-green に任せ、compose の up からは外す、という選択肢が設計の論点になる。
-- KGI 2（backend 変更後に celery-worker が作り直される）は、backend と celery-worker が同じ `build: ./backend`（`W/docker-compose.yml:199`）を使う＝同じ build 出力でイメージが変わる、という点に依存する。イメージ ID が変われば up の既定で recreate される（g 節の公式動作）。
+- KGI 2（backend 変更後に celery-worker が作り直される）は、backend と celery-worker が同じ `build: ./backend`（`docker-compose.yml:199`）を使う＝同じ build 出力でイメージが変わる、という点に依存する。イメージ ID が変われば up の既定で recreate される（g 節の公式動作）。
 
 ## j. 外部事例
 - Docker 公式（推奨）: https://docs.docker.com/compose/how-tos/production/ （取得 2026-10-07。ページに更新日の表示は確認できず、日付は未確認）。「rebuilds the image for `web` and then stops, destroys, and recreates just the `web` service」「`--no-deps` ... prevents Compose from also recreating any services that `web` depends on」。→ 変更したサービスだけを再作成する運用が公式推奨。
@@ -299,10 +299,10 @@ pushgateway|||Up 2 weeks
 - 名前のある企業・プロジェクトで、「毎デプロイの全コンテナ rm -f を、差分のみの recreate に変えた」ことを数値付きで公開している記録: **無し**（今回の検索範囲では見つからなかった）。数値は創作しない。
 
 ## 【事実】一覧
-1. origin/main（57090e457）の deploy.yml は、毎回 frontend / celery-beat / discord-gateway / celery-worker を `docker rm -f`（celery-worker は先に `stop -t 60`）してから up している（`W/.github/workflows/deploy.yml:389-394`）。
-2. backend は blue-green で `docker run` 起動し、`astro-webapp-backend-1` へ rename（`W/scripts/blue-green-cutover.sh:80-161`）。config-hash ラベルは付けない。
-3. ロールバックは backend 含む 5 サービスを rm -f し、`up -d --remove-orphans`（`W/.github/workflows/deploy.yml:655-658`）。
-4. docker-compose.yml に `name:` / `container_name` / `labels:` は無い。project 名は本番 `.env` の `COMPOSE_PROJECT_NAME=astro-webapp`。COMPOSE_FILE は deploy が `.env` に `docker-compose.yml:docker-compose.exporters.yml` として書く。
+1. origin/main（57090e457）の deploy.yml は、毎回 frontend / celery-beat / discord-gateway / celery-worker を `docker rm -f`（celery-worker は先に `stop -t 60`）してから up している（`.github/workflows/deploy.yml:389-394`）。
+2. backend は blue-green で `docker run` 起動し、`astro-webapp-backend-1` へ rename（`scripts/blue-green-cutover.sh:80-161`）。config-hash ラベルは付けない。
+3. ロールバックは backend 含む 5 サービスを rm -f し、`up -d --remove-orphans`（`.github/workflows/deploy.yml:655-658`）。
+4. docker-compose.yml に `name:` / `container_name` / `labels:` は無い。project 名は本番 `.env` の `COMPOSE_PROJECT_NAME=astro-webapp`。COMPOSE_FILE は deploy が `.env` に docker-compose.yml と docker-compose.exporters.yml をコロンでつないだ値 として書く。
 5. ADR-092 と PR #1402 は、名前衝突 502 と discord-gateway 重複起動 storm の再発防止として全 app 系の rm -f を入れた。PR #1402 のレビューが「孤児/重複のみに絞る最適化は別 Issue」と明記している。
 6. 公式: up は設定/イメージが変わったコンテナだけ recreate、`--force-recreate` で強制、`--remove-orphans` は定義に無いサービスのコンテナを削除。
 7. 本番の現在: 各サービス 1 つずつ、project は全て `astro-webapp`、重複・別 project の残りなし。compose 外は `pushgateway` のみ。
@@ -327,9 +327,9 @@ pushgateway|||Up 2 weeks
 ## 1. `--dry-run` の仕様（原文）
 出典（Context7 `/docker/compose` が返した公式ドキュメントのソース）:
 - https://github.com/docker/compose/blob/main/docs/reference/compose.md 「Use `--dry-run` flag to test a command without changing your application stack state. Dry Run mode shows you all the steps Compose applies when executing a command」「Dry Run mode works with almost all commands. You cannot use Dry Run mode with a command that doesn't change the state of a Compose stack such as `ps`, `ls`, `logs`」
-- Context7 `/docker/docs` の v5 リファレンス（`_vendor/github.com/docker/compose/v5/docs/reference/compose.md`）: グローバルオプション表に `--dry-run | bool | Execute command in dry run mode`。`compose_up` の各サブコマンド表にも同じ文言。
+- Context7 `/docker/docs` の v5 リファレンス（Docker 公式ドキュメントの compose v5 リファレンスの compose のページ）: グローバルオプション表に `--dry-run | bool | Execute command in dry run mode`。`compose_up` の各サブコマンド表にも同じ文言。
 - https://docs.docker.com/reference/cli/docker/compose/alpha/dry-run/ 「EXPERIMENTAL - Dry run command allow you to test a command without applying changes」（alpha 版の説明。同ページは experimental 機能の変更・削除の可能性に言及）
-- 「状態を変えない」は上の `compose.md` の原文で確認できた。
+- 「状態を変えない」は上の Docker 公式の compose のページの原文で確認できた。
 - 「どの版から使えるか」: 取得した原文には導入版の記載が**無かった**（未確認）。ただし v5 のリファレンスにグローバルオプションとして載っており、本番は下記のとおり v5.1.1。
 - 実装メモ（参考）: `pkg/dryrun/dryrunclient.go` の DryRunClient が書き込み系 API を呼ばずに偽装し、読み取り系（例 ExecInspect）だけ実クライアントへ委譲する（Context7 の同ファイル抜粋）。
 
@@ -389,7 +389,7 @@ pushgateway 2026-09-20T04:13:51.145037503Z
   - run 37545822874（2026-10-06T23:20:33Z）、37463123321（12:29:51Z）、37424904808（06:39:51Z）、37424763856（06:38:21Z）、37422395981（06:14:01Z）。
   - 5回とも同じログ行の並びで、build 後に `Image astro-webapp-gemini-egress Built`、Step 3c で frontend / celery-worker が `Creating`（rm 済み）、gemini-egress だけ `Recreate`。
   - 少なくとも 23:20Z の run ではイメージ ID は変わっていない（上の「h 節」）。
-- 【事実】compose の定義上、gemini-egress に `depends_on` は無く、environment も無い（`W/docker-compose.yml:357-392`）。docker-compose.exporters.yml にも定義無し。
+- 【事実】compose の定義上、gemini-egress に `depends_on` は無く、environment も無い（`docker-compose.yml:357-392`）。docker-compose.exporters.yml にも定義無し。
 - 【事実】`git log` で `monitoring/prod1/gemini-egress` と docker-compose.yml の最終変更は 2026-10-06 11:36 JST（022ca3579）、その前は 2026-10-02。5回の run（いずれも 2026-10-06T06:14Z 以降）はすべてこの最終変更（2026-10-06 02:36Z）より後。したがって、定義の変更がその5回の Recreate を直接説明するかどうかは、この git log だけでは判断できない（未確認）。
 - 【未確認】Recreate と判定された理由そのもの。「何が違うと判定されたか」は、デプロイ中にしか出ない状態（ビルド直後の再タグ、`.env` の書き換え直後、rm -f された他コンテナの有無）に依存しており、定常状態の dry-run では再現しなかった。設計の次の一手: デプロイの Step 3c の直前で `docker compose up -d --no-deps --dry-run gemini-egress` を実行しログに残す（読み取りのみ）。
 - 設計上の含意（【事実】からの整理）: KGI は celery-worker を対象としており gemini-egress は KGI 外。ただし「差分があるものだけ作り直す」設計のあとも gemini-egress が毎回 Recreate されるなら、原因が compose の hash 判定の外にあることになるので、実測が必要。

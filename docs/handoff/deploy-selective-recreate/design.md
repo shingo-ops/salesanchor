@@ -129,7 +129,7 @@ bash scripts/deploy/app-services-plan.sh --verify   # K3 の判定。違反が�
 | 段階1：デプロイの動きが変わらない | 段階1の反映後のデプロイで、今と同じ5サービスが作り直されていること（ログの Creating）、デプロイが成功すること |
 | 段階1：判定が出る | デプロイのログに、5サービスぶんの判定の行が出ていること |
 | 段階1：判定が正しい | 画面だけのデプロイ1回と、backend を変えたデプロイ1回で、判定と dry-run が一致していること。食い違えば段階2に進まない |
-| 判定スクリプトの単体テスト | `scripts/tests/test_app_services_plan.py`（新規。Python 標準の unittest）から、bash で判定スクリプトを呼ぶ。PATH の先頭に偽物の `docker` を置き、5つの分岐（hash の差・イメージの差・コンテナが無い・残り物・値が取れない）が期待どおりになることを確かめる。Python から subprocess で bash を呼ぶ形は既存の例（`scripts/tests/test-pr-lifecycle.py:381`）に合わせる。CI では新しい workflow `.github/workflows/deploy-script-test.yml` で流す。発火は `scripts/deploy/**` と、このテストが変わったときだけ。既存の `scripts/tests/test_check_test_schema_dup.py` を `test-schema-dup-gate.yml:35` で流している形と同じ。必須チェックにはしない |
+| 判定スクリプトの単体テスト | `scripts/tests/test_app_services_plan.py`（新規。Python 標準の unittest）から、bash で判定スクリプトを呼ぶ。PATH の先頭に偽物の `docker` を置き、5つの分岐（hash の差・イメージの差・コンテナが無い・残り物・値が取れない）が期待どおりになることを確かめる。Python から subprocess で bash を呼ぶ形は既存の例（`scripts/tests/test-pr-lifecycle.py:381`）に合わせる。CI では新しい workflow `.github/workflows/deploy-script-test.yml` で流す。発火は `scripts/deploy/**` と、このテストが変わったときだけ。既存の `scripts/tests/test_check_test_schema_dup.py` を `.github/workflows/test-schema-dup-gate.yml:35` で流している形と同じ。必須チェックにはしない |
 | K1 | 段階2の反映後、最初の画面だけのデプロイで、celery-worker の StartedAt が前後で同じ |
 | K2 | 段階2の反映後、最初の backend 変更のデプロイで、celery-worker の StartedAt がデプロイの開始より後 |
 | K3 | 毎回のデプロイで `--verify` が合格する。加えて、段階2の反映後の最初の2回は、本番で compose ラベルを読み取って数え直す |
@@ -143,9 +143,7 @@ bash scripts/deploy/app-services-plan.sh --verify   # K3 の判定。違反が�
 - 我々への応用：公式の既定の動きに任せる。そのうえで、6月の障害を防いだ「残り物・重複を消す」と「discord-gateway は先に消す」は残す。
 
 ## 10. 維持の仕組み
-- 守り手：
-  - 判定スクリプトのテスト（CI で毎回）。
-  - デプロイごとの `--verify`（K3 を毎回調べる）。
+- 守り手: 判定スクリプトのテスト（CI で毎回）と、デプロイごとの `--verify`（K3 を毎回調べる）。
 - 記録：判定の行がデプロイのログに残る。あとから「なぜ作り直した／残したか」を追える。
 - 担当：deploy.yml の変更は、PO の「GO #PR番号」を受けてから行う（ADR-136）。
 
