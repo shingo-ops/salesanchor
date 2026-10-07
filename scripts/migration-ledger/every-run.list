@@ -2,18 +2,19 @@
 # チェックサムが変わっても止めない（CI の書き換え検査 scripts/check-migration-immutability.sh も許可する）。
 # 1 行 1 ファイル（リポジトリ直下からのパス）。# で始まる行はコメント。
 #
-# 現在の一覧: 空（0 件）。
+# 現在の一覧: 空（0 件）。1 件ずつ実物を読んだ結果は docs/handoff/migration-ledger/every-run-review.md
+# （run_py 26 本、テナントごとのビュー 3 本。「毎回の再適用が必要」とコードで証明できたものは 0 件）。
 # 理由: ADR-1007 に照らして、実物を読んで「毎回の実行に意味がある」と確かめられたものが 0 件だったため。
 #   確認した（毎回実行は不要）:
 #     migrations/014_create_current_tenant_id_function.sql … public の関数 1 つの定義。1 回で足りる。
 #     migrations/20260604_130000_create_supplier_parse_stats_view.sql … public のビュー 1 つの定義。1 回で足りる。
 #     migrations/20260605_030000_create_salesanchor_app_role.sql … ALTER DEFAULT PRIVILEGES（:21-24）が、あとから作る表にも付ける。
 #     migrations/20260605_040000_grant_salesanchor_app_tenant_schemas.sql … 新テナントの作成が同じ権限付与を持つ（backend/app/services/tenant.py:1676-1687）。
-#   未確認（載せない。段階1・段階2の前に 1 件ずつ確認する）:
-#     - ADR-1005 の recon の「毎回実行に意味がある 22 件」の一覧（分類表が手元に無い）。
-#     - テナントごとのビュー: migrations/20260604_100000_create_company_stats_view.sql、
-#       20260611_130000_fix_v_company_stats_deleted_at.sql、20260612_120000_fix_company_stats_ssot.sql
-#       （v_company_stats は tenant.py のひな形に無い。新テナントには、段階1でひな形に取り込むまで届かない）。
-#     - run_py の Python 26 本（値を書く 4 本: scripts/migrate_073_lead_status.py、
-#       migrate_20260621_020000_backfill_lead_country.py、migrate_adr109_status_codes.py、
-#       migrate_adr119_lead_channels_backfill.py を含む）。
+#     テナントごとのビュー 3 本（migrations/20260604_100000_create_company_stats_view.sql、
+#       20260611_130000_fix_v_company_stats_deleted_at.sql、20260612_120000_fix_company_stats_ssot.sql）
+#       … 定義は持続する（最後の 1 本が残る）。v_company_stats が tenant.py のひな形に無いのは段階1の話。
+#     run_py の 26 本のうち、構造だけの 12 本 … 構造は 1 回で持続する（every-run-review.md §1）。
+#   未確認（載せない）:
+#     - ADR-1005 の recon の「毎回実行に意味がある 22 件」の一覧（名前の一覧が repo に無い。件数だけ）。
+#     - run_py の値を書く 14 本（旧い値や NULL を書き戻す側が今も残るかを、書き込み側のコードで確かめる
+#       まで、毎回の再適用が必要かは証明できない。every-run-review.md §1、§4）。
