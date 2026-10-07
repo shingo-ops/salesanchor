@@ -34,7 +34,7 @@ SQL_SPECS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "055_add_granted_scopes.sql": (("UPDATE",), ("ADD COLUMN IF NOT EXISTS granted_scopes",)),
     "056_add_suppliers_type_and_promote_public.sql": (
         ("INSERT", "ON CONFLICT"),
-        ("CREATE TABLE IF NOT EXISTS public.suppliers", "set_updated_at_suppliers"),
+        ("set_updated_at_suppliers", "supplier_type"),
     ),
     "063_tenant_rbac_extensions.sql": (("INSERT", "ON CONFLICT"), ("ADD COLUMN",)),
     "064_add_users_is_super_admin.sql": (
@@ -44,7 +44,7 @@ SQL_SPECS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
     "065_seed_central_admin_permissions.sql": (("INSERT", "ON CONFLICT"), ()),
     "066_add_tenant_llm_budgets_notification_dedupe.sql": (("INSERT", "ON CONFLICT"), ("ADD COLUMN",)),
     "067_add_inbound_review_version_and_permissions.sql": (("INSERT", "ON CONFLICT"), ("ADD COLUMN",)),
-    "069_create_tenant_profile.sql": (("INSERT", "ON CONFLICT"), ("CREATE TABLE IF NOT EXISTS",)),
+    "069_create_tenant_profile.sql": (("INSERT", "ON CONFLICT"), ("tenant_profile", "default_language")),
     "070_add_spreadsheet_phase.sql": (("INSERT", "ON CONFLICT"), ("CREATE TRIGGER", "ADD COLUMN spreadsheet_phase")),
 }
 
