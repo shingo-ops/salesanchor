@@ -38,6 +38,7 @@ Gemini を呼ばずに、prompt_ab の JSONL の response_text から、今の�
 - 測り方：pytest の最終行 failed 0。
 
 ## 7. 維持の仕組み
+- 守り手: .github/workflows/test.yml
 - テスト（tests/test_prompt_ab_recompute.py）が CI で毎回走り、Gemini 非呼び出し・台帳非書き込み・prompt_ab の _v102_row_fields との一致を守る。
 - prompt_ab の _v102_row_fields・_load_v10_masters の署名を変えると、このテストが落ちて気づける。
 - 使い終わった道具は、不要になった時点で新規2ファイルを消せば戻せる（他から参照されない）。

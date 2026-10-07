@@ -13,6 +13,13 @@
 - 前の版: docs/handoff/gemini-v102/design.md（v102 の後処理 F1〜F6）。
 
 ## 事実
+- file:line 一覧（origin/main 5bc79ef97 時点）
+  - backend/app/tools/prompt_ab.py:160 fetch_job_ids
+  - backend/app/tools/prompt_ab.py:217 _load_v10_masters
+  - backend/app/tools/prompt_ab.py:253 _v102_row_fields
+  - backend/app/tools/prompt_ab.py:266 _append_jsonl
+  - backend/app/tools/prompt_ab.py:523 record_usage_event_sync（run_ab の中。Gemini 呼び出しの後）
+  - backend/app/tasks/tcg_extraction.py:312 load_extraction_context
 - backend/app/tools/prompt_ab.py は 633 行（wc -l）。CLAUDE.md の目安は 800 行まで。
 - v102 の後処理の呼び出しは backend/app/tools/prompt_ab.py の _v102_row_fields（parse_v101_response → extract_v101_items(reassign=True, v102_fixes=True)）。失敗しても止めず v102_items_error を残す。
 - マスタの読み込みは backend/app/tools/prompt_ab.py の _load_v10_masters（1回の実行で1回）。
