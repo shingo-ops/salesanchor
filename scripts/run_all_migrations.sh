@@ -532,9 +532,6 @@ run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 # TCG MIG-04: conditions に R1〜R4 解決列追加 + seed（additive-only・冪等）
 run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
 
-# MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
-run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
-
 # TCG MIG-04 E3a/E5: analysis_results に unit_inferred/unit_basis/unit_confidence/unit_infer_reason 追加（additive-only・冪等）
 run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
 
