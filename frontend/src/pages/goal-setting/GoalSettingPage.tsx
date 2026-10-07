@@ -15,6 +15,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import "./GoalSettingPage.css";
 import { Button } from "../../components/Button";
@@ -708,7 +709,8 @@ export default function GoalSettingPage() {
             {/* チーム選択 */}
             <div className="gs-team-select-wrap">
               <label className="gs-label">{t("goals.selectTeam")}</label>
-              <select
+              <SelectControl
+                size="sm"
                 className="gs-select"
                 value={selectedTeamId ?? ""}
                 onChange={(e) => setSelectedTeamId(Number(e.target.value))}
@@ -718,7 +720,7 @@ export default function GoalSettingPage() {
                     {tm.name}
                   </option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
 
             {canEditTeam ? (

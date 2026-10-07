@@ -23,6 +23,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api, ApiError } from "../lib/api";
 import { Modal } from "./Modal";
+import { SelectControl } from "./Select";
 import { Button } from "./Button";
 
 export interface PurchaseDetailDto {
@@ -421,7 +422,8 @@ export default function PurchaseDetailPanel({
           {/* セクション: ステータス */}
           <div className="form-group">
             <label>{t("common.status")}</label>
-            <select
+            <SelectControl
+              fullWidth
               value={form.purchase_status}
               onChange={(ev) => setField("purchase_status", ev.target.value)}
               data-testid="pur-input-purchase_status"
@@ -431,7 +433,7 @@ export default function PurchaseDetailPanel({
                   {t(opt.labelKey)}
                 </option>
               ))}
-            </select>
+            </SelectControl>
           </div>
 
           {/* メモ */}
