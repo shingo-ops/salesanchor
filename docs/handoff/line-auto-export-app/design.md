@@ -271,3 +271,86 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 - `(group, sender)` が同一の別メッセージが短時間に連続した場合、BigTextStyleキャッシュの取り違えが起きないかは実機ログでの確認が望ましい（設計上は取り出し消費で誤流用を防いでいるが、2通知が並行して複数組届く状況は未実測）。
 - 集約通知の判定条件（`messages` も `bigText` も無い）は実測1パターンのみに基づく簡易判定であり、将来LINEが集約通知に `bigText` を持たせる変更をした場合は誤判定しうる。
 - `longestText`（診断ログ）は本文の全文を記録するため、他のログと同様に `Download/sa-line-notify/` 配下にのみ保存され、送信・外部転送は一切行われない点を運用時に再確認すること。
+
+## 追補 2026-10-08 段階2の設計（LINE操作をアプリへ移す）
+
+### 判断の根拠（recon 2026-10-07〜08、推測なし）
+
+1. **ADB版はLINEの要素をすべてノードのテキストで特定している**。`/root/line-auto-export/flow.sh:52,54,57,60,64` の `tap_by`/`find_scroll` に渡す正規表現は
+   `text="WeGo売ります・BOX`（ホームのショートカット、前方一致）／`content-desc="Menu ボタン"`／`text="設定"`／`text="トーク履歴を送信"`／`text="Termux"`。
+   座標は `tap_by()` が `uiautomator dump` の `bounds` からその場で計算している（`flow.sh:19,23`）＝固定座標ではない。
+   `uiautomator dump` が読むのは **AccessibilityService が読むのと同じノードツリー**であり、この経路は本番で 2026-10-07 に44回成功している。
+   → **LINEの各画面のノードは取得できると実証済み**。アプリ側は `ACTION_CLICK`（クリック可能な祖先へ委譲）で同じ操作ができ、座標計算が不要になるぶん ADB版より堅い。
+2. **例外が1つある**: Termuxの保存ダイアログの `EDIT` ボタンは **uiautomator に露出しない**（`/root/line-auto-export/auto-export.sh:13` のコメント、2026-09-17 スクリーンショットで確認）。
+   ADB版も固定座標 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）でタップしている。
+   → アプリ側も**この1点だけは座標ジェスチャ**にする（比率 x=0.8074, y=0.5287）。ADB版と同じ脆さであり、悪化はしない。
+3. 送信（salesanchorへのPOST）は Termux内の `client.py` が担い、宛先は固定HTTPS（`client.py:22`）。Wi-Fi/モバイルを区別するコードは1行も無い。
+   → **アプリにINTERNET権限は追加しない**（誤送信の構造的防止を維持）。段階2でもアプリは「LINEのUIを操作してTermuxへ渡す」までを担う。
+
+### 実装範囲（段階2のみ。スケジューラ・使用中スキップ・再ロックは段階3）
+
+| 手順 | 操作 | 判定（到達確認） | 失敗時の段階名 |
+|---|---|---|---|
+| 1 | ホームへ（`performGlobalAction(GLOBAL_ACTION_HOME)`） | 1.5秒待つ（ADB版 flow.sh:51 と同値） | - |
+| 2 | ショートカットをクリック（テキスト**前方一致** `WeGo売ります・BOX`） | ノードが見つかること | `shortcut` |
+| 3 | トーク画面の到達 | 期待グループ名のノードが見つかること | `open_chat` |
+| 3b | **誤爆防止**: 開いたトークが期待グループか検証 | 期待グループ名（既定 `WeGo売ります掲示板グループ`、`NotifyStore` の対象グループ名設定を流用）のノードが在ること。無ければ**ここで中止し、Menu以降へ進まない** | `group_mismatch` |
+| 4 | Menuボタン（`content-desc` 完全一致 `Menu ボタン`） | - | `menu_button` |
+| 5 | メニュー到達 | `設定` のノードが見つかること | `open_menu` |
+| 6 | `設定` をクリック（見つからなければスクロールして再探索、最大4回） | - | `settings_item` |
+| 7 | 設定画面の到達 | `トーク履歴を送信` のノードが見つかること | `open_settings` |
+| 8 | `トーク履歴を送信` をクリック（同じくスクロール再探索） | - | `export_item` |
+| 9 | 共有シートの到達 | `Termux` のノードが見つかること | `share_sheet` |
+| 10 | `Termux` をクリック | - | `termux_target` |
+| 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を最大5秒待つ。検出できなくても2秒後にタップし、診断に `editクラス未検出` を残す（ADB版 auto-export.sh:155-157 の `sleep 1` → タップと同じ扱い） | `edit_button` |
+| 12 | 後片付け | BACKを最大3回（LINEの画面から抜ける。flow.sh:75-78 と同値） | - |
+
+段階名は **ADB版 flow.sh と同じ語**（`shortcut`/`open_chat`/`menu_button`/`open_menu`/`settings_item`/`open_settings`/`export_item`/`share_sheet`）に揃える。
+理由: 既存の `auto-export.log` の失敗履歴（例 2026-10-07 07:03 の `open_settings`）と直接比較できるようにするため。`group_mismatch`・`termux_target`・`edit_button` は段階2で新設。
+
+### 画面遷移の判定方法（重要な設計判断）
+
+ADB版は `dumpsys window | grep mCurrentFocus`（flow.sh:7）でActivity名を見ているが、**アプリは dumpsys を実行できない**。代替として:
+
+- **判定は「次の画面にある既知のノードが見つかること」で行う**（上表の「判定」列）。ノード取得が実証済みの手段であり、これだけで遷移を待てる。
+- `onAccessibilityEvent` の `TYPE_WINDOW_STATE_CHANGED` から得られる `event.getClassName()` は **記録（診断）と、手順11のTermuxダイアログ待ちにのみ**使う。この経路は本端末で未検証のため、判定の本筋には置かない。
+- **プライバシー**: 記録するのはクラス名とパッケージ名のみ。LINEのメッセージ本文・ノードのテキストは一切記録しない。記録はフロー実行中のみ行い、終了時に破棄する。
+
+### 待ち時間（ADB版と同値に揃える）
+
+- ノード待ちのポーリングは300ms間隔・期限10秒（ADB版 `wait_focus` の 20×0.5秒＝10秒と同じ予算。flow.sh:37-45）
+- スクロール再探索は最大4回（flow.sh:26-36 の `find_scroll`）。スクロールは `ACTION_SCROLL_FORWARD` を先に試し、できなければ `GestureCompat.swipe` で比率 (0.5,0.7265)→(0.5,0.4701)・800ms（flow.sh:31 の `input swipe 540 1700 540 1100 800` と同値）
+- クリック後の安定待ちは1秒（flow.sh:29,63 と同値）
+- **実装形式**: `Handler#postDelayed` の連鎖のみ。AccessibilityServiceのコールバックはメインスレッドで動くため、`Thread.sleep` でのブロックは禁止（既存のロック解除フローと同じ作法）
+
+### 起動口（既存の RUN は変えない）
+
+| アクション | 動作 |
+|---|---|
+| `jp.salesanchor.lineexport.RUN` | **従来どおりロック解除のみ**（2026-10-07 に実機10/10で確認済みの経路。回帰比較用に温存する） |
+| `jp.salesanchor.lineexport.EXPORT` | LINE操作のみ（解除済み前提。段階2の単体検証用） |
+| `jp.salesanchor.lineexport.RUN_ALL` | ロック解除 → 成功したらLINE操作（本番の形） |
+
+Termux(proot)内からADBなしで撃てることは 2026-10-07 に実測済み:
+`CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk /system/bin/app_process -Xnoimage-dex2oat / com.termux.termuxam.Am broadcast --user 0 -a <action>`
+（`--user 0` を省くと `SecurityException: … asks to run as user -2 … requires INTERACT_ACROSS_USERS` で失敗する）。**アプリが受信したかは未確認**（検証にはADB復旧後の `dumpsys notification` が必要）。
+
+### 検証方法（段階2の合否）
+
+| # | 基準 | 検証方法 |
+|---|---|---|
+| 2-1 | APKがビルドできる | `tools/line-auto-export-app/build.sh` が成功し、`aapt dump badging` に `INTERNET` が**無い**ことを確認 |
+| 2-2 | 既存のロック解除が変わらない | `RUN` の経路のコード差分が「ノード検索ヘルパーの移動のみ」であること（タイミング定数・ラベル・判定順を変えない）＋実機で `RUN` 3回成功 |
+| 2-3 | LINE操作が通る | 解除済み状態で `EXPORT` を5回。共有シートまで到達し、Termuxの保存画面に遷移し、`outbox.sqlite3` の `events` に送信結果が入る |
+| 2-4 | 失敗段階が分かる | ショートカット名を誤った値に変えて `EXPORT` → 通知に `shortcut` が出る |
+| 2-5 | 誤爆防止が効く | 期待グループ名を別の文字列に変えて `EXPORT` → `group_mismatch` で中止し、Menu以降へ進まない |
+| 2-6 | 通し運転 | `RUN_ALL` を画面消灯＋ロック状態から5回。解除→書き出し→取り込みまで通る |
+
+2-3以降は**実機とADB（インストール・通知の読み取り）が必要**。2026-10-08 03時点でADBは接続不能（ペア設定の再実施待ち）のため、本追補の実装ではビルド（2-1）と差分レビュー（2-2）までを行い、実機検証は復旧後に行う。
+
+### 弊害・未確認（段階2分）
+
+- Termuxの `EDIT` だけは座標タップのままで、端末の画面サイズ・Termuxの更新で位置が変わると失敗する（ADB版と同じ弱点）。
+- トーク画面に期待グループ名のノードが実際に見えるかは未検証。見えない場合は `group_mismatch` で毎回中止するため、最初の実機検証で必ず確認する（見えない場合はタイトル以外の手がかりへ設計変更が必要）。
+- `TYPE_WINDOW_STATE_CHANGED` のクラス名が取れるかは未検証。取れなくても手順11以外は判定に影響しない。
+- LINEのUI（ラベル文字列）が変わると失敗する。ADB版と同じ弱点であり、ラベルは定数として1箇所にまとめる。

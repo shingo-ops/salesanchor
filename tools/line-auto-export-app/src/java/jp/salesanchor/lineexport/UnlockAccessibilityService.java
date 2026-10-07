@@ -35,7 +35,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class UnlockAccessibilityService extends AccessibilityService {
 
     private static final String TAG = "SALineExport";
-    private static final String CHANNEL_ID = "sa_line_export_unlock";
+    // LineExportFlow（段階2）も同じ通知チャンネルに乗せる。通知ID(NOTIFICATION_ID_EXPORT)は
+    // そちらで別に持つため、このチャンネルIDだけパッケージ内に公開する。
+    static final String CHANNEL_ID = "sa_line_export_unlock";
     private static final int NOTIFICATION_ID = 1001;
     private static final int NOTIFICATION_ID_DIAG = 1002;
     private static final String WAKE_LOCK_TAG = "SALineExport:unlock";
@@ -81,10 +83,22 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
     private final Handler handler = new Handler();
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean exportRunning = new AtomicBoolean(false);
+
+    // RUN_ALL（ロック解除→LINE操作）かどうか。RUNの挙動は変えず、checkResult()で
+    // 解除成功と判定した場合のみこのフラグを見てLineExportFlowへ続ける。
+    private volatile boolean runAllRequested;
 
     private PowerManager.WakeLock wakeLock;
     private String currentPin;
     private StringBuilder failureReasons;
+
+    // onAccessibilityEvent の TYPE_WINDOW_STATE_CHANGED から得たクラス名・パッケージ名。
+    // LineExportFlow実行中のみ記録し、終了時に空へ戻す（design.md追補 2026-10-08:
+    // 「記録は診断と手順11のTermuxダイアログ待ちにのみ使う。テキスト系の内容は読まない」）。
+    private volatile boolean recordingWindowEvents;
+    private volatile String lastWindowClassName = "";
+    private volatile String lastWindowPackageName = "";
 
     // 診断用: 何回目のスワイプでキーパッドが出たか（0=未出現）と、起床から
     // 出現確認までの経過ms（-1=未確認）。PINの値・桁数は含まない。
@@ -100,7 +114,34 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
-        instance.startUnlockFlow();
+        instance.startUnlockFlow(false);
+    }
+
+    /**
+     * 外部（RunReceiver）からの、LINE操作のみの実行トリガー（段階2の単体検証用。
+     * design.md追補 2026-10-08の起動口表）。解除済み前提で、ロック解除は一切行わない。
+     */
+    static void requestExport(Context context) {
+        UnlockAccessibilityService instance = sInstance;
+        if (instance == null) {
+            postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
+            return;
+        }
+        instance.startExportFlow();
+    }
+
+    /**
+     * 外部（RunReceiver）からの、ロック解除→LINE操作（本番の形）の実行トリガー。
+     * ロック解除の成否はcheckResult()で判定し、成功した場合のみLINE操作へ続ける。
+     * RUN単体（requestRun/startUnlockFlow(false)）の挙動はこの経路では一切通らない。
+     */
+    static void requestRunAll(Context context) {
+        UnlockAccessibilityService instance = sInstance;
+        if (instance == null) {
+            postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
+            return;
+        }
+        instance.startUnlockFlow(true);
     }
 
     /**
@@ -136,7 +177,51 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
     @Override
     public void onAccessibilityEvent(AccessibilityEvent event) {
-        // 段階1ではイベント駆動の処理はしない。実行はrequestRun経由のみ。
+        // 段階1（ロック解除）はイベント駆動の処理をしない。実行はrequestRun経由のみ。
+        // 段階2（LINE操作）実行中のみ、画面遷移の診断用にクラス名・パッケージ名を記録する
+        // （design.md追補 2026-10-08: テキスト系のイベント内容は読まない。判定の本筋には
+        // 置かず、記録と手順11のTermuxダイアログ待ちにのみ使う）。
+        if (!recordingWindowEvents || event == null
+                || event.getEventType() != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
+            return;
+        }
+        CharSequence className = event.getClassName();
+        CharSequence packageName = event.getPackageName();
+        lastWindowClassName = className == null ? "" : className.toString();
+        lastWindowPackageName = packageName == null ? "" : packageName.toString();
+    }
+
+    /** LineExportFlow開始時に呼ぶ。記録バッファをクリアしてから記録を始める。 */
+    void startWindowRecording() {
+        lastWindowClassName = "";
+        lastWindowPackageName = "";
+        recordingWindowEvents = true;
+    }
+
+    /** LineExportFlow終了時に呼ぶ。記録を止め、内容もクリアする（design.mdの要求どおり）。 */
+    void stopWindowRecording() {
+        recordingWindowEvents = false;
+        lastWindowClassName = "";
+        lastWindowPackageName = "";
+    }
+
+    /** 直近に記録したウィンドウのクラス名。記録していない/未取得なら空文字。 */
+    String getLastWindowClassName() {
+        return lastWindowClassName;
+    }
+
+    /** LINE操作のみを実行する（段階2単体検証用）。多重起動は無視する。 */
+    private void startExportFlow() {
+        if (!exportRunning.compareAndSet(false, true)) {
+            Log.i(TAG, "export flow already running, ignoring duplicate trigger");
+            return;
+        }
+        new LineExportFlow(this, new LineExportFlow.Listener() {
+            @Override
+            public void onFinished() {
+                exportRunning.set(false);
+            }
+        }).start();
     }
 
     @Override
@@ -144,12 +229,13 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // no-op
     }
 
-    private void startUnlockFlow() {
+    private void startUnlockFlow(boolean runAll) {
         if (!running.compareAndSet(false, true)) {
             Log.i(TAG, "unlock flow already running, ignoring duplicate trigger");
             return;
         }
 
+        runAllRequested = runAll;
         failureReasons = new StringBuilder();
         trace = new StringBuilder();
         flowStartedAt = System.currentTimeMillis();
@@ -375,12 +461,18 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 + " / " + keypadDiag;
         if (!locked) {
             postNotification(this, "ロック解除: 成功", detail);
+            // RUN_ALL（本番の形）のときだけ、解除成功を確認したところでLINE操作へ続ける。
+            // RUN単体ではrunAllRequestedがfalseのままなのでここは通らない（挙動不変）。
+            if (runAllRequested) {
+                startExportFlow();
+            }
         } else {
             String reason = failureReasons.length() > 0
                     ? failureReasons.toString().trim()
                     : "PIN入力後もロック中";
             postFailureNotification(this, reason + " / " + detail);
         }
+        runAllRequested = false;
     }
 
     // ---- Window diagnostics (experimental, read-only) -----------------------------------

@@ -20,6 +20,15 @@ public class RunReceiver extends BroadcastReceiver {
      */
     public static final String ACTION_DIAG_WINDOWS = "jp.salesanchor.lineexport.DIAG_WINDOWS";
 
+    /**
+     * 段階2単体検証用の起動口。LINE操作のみを行う（解除済み前提。ロック解除は行わない）。
+     * design.md追補 2026-10-08の起動口表。
+     */
+    public static final String ACTION_EXPORT = "jp.salesanchor.lineexport.EXPORT";
+
+    /** 本番の形の起動口。ロック解除→成功したらLINE操作へ続ける。 */
+    public static final String ACTION_RUN_ALL = "jp.salesanchor.lineexport.RUN_ALL";
+
     @Override
     public void onReceive(Context context, Intent intent) {
         if (intent == null) {
@@ -30,6 +39,10 @@ public class RunReceiver extends BroadcastReceiver {
             UnlockAccessibilityService.requestRun(context.getApplicationContext());
         } else if (ACTION_DIAG_WINDOWS.equals(action)) {
             UnlockAccessibilityService.requestDiagWindows(context.getApplicationContext());
+        } else if (ACTION_EXPORT.equals(action)) {
+            UnlockAccessibilityService.requestExport(context.getApplicationContext());
+        } else if (ACTION_RUN_ALL.equals(action)) {
+            UnlockAccessibilityService.requestRunAll(context.getApplicationContext());
         }
     }
 }
