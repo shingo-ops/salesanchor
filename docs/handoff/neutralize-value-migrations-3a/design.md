@@ -1,43 +1,69 @@
-# 設計：値を書く migration の無効化 PR-3a（ADR-1007 段3）【雛形・設計担当（Opus）が記入】
+# 設計：値を書く migration の無効化 PR-3a（ADR-1007 段3、2026-10-07）
 
-この文書は何か（1行）: 毎デプロイで値を書き戻していた migration のうち、先に無効化できる 18 本を、構造だけ残して値の書き込みを止める変更の設計。
+状態：設計案作成済み／Opus 自己審査 APPROVE（§6）／PO 承認済み（ADR-1007 の進め方「進めて良い」2026-10-05、在庫の集計の決まりは残す「はい」2026-10-06）。migrations を変える危険な PR なので、マージには PO の「GO #番号」が要る（ADR-136）。
 
-親: ADR-1007（PR #3985）。事実: docs/handoff/neutralize-value-migrations-3a/recon.md（実装の担当が記入済み）
-状態: 実装済み（Draft PR）。この雛形のうち「（設計担当が記入）」の欄は設計担当が埋める。
+**マージの順番（必須）**：#4015（試験が自分で seed を用意する）の後。
 
-## 1. 目的
-（設計担当が記入）
-参考の事実: 2026-10-05 02:38Z に、seed_product_marks が MEGAドリームex の mark を M3 に戻した。同じ種類の再実行が、上書き型 8 本・補充型 20 本で毎デプロイ届いている。
+親：ADR-1007（PR #3985）。事実：docs/handoff/neutralize-value-migrations-3a/recon.md。
+
+## 1. 目的（PO に見える変化）
+- 画面の見た目は変わらない。本番の今の値も変わらない。
+- デプロイのたびに値を書き戻していた migration のうち、先に止められる 18本の値の書き込みを止める。これにより、画面や手順で直した値が、デプロイで戻らなくなる。
+  - 国のマスタ（電話の国番号など）
+  - 在庫の集計の決まり
+  - type_master
+  - チャンネルのマスタ
+  - 取引の終了の理由
+  - リンクのテンプレート
+  - 知識の決まり
+  - 商品の種類の空欄の補充 など
+- 実例：2026-10-05 02:38Z に、seed_product_marks が MEGAドリームex の mark を M3 に戻した（その1本は #3978 で扱う）。
 
 ## 2. 現在地
-docs/handoff/neutralize-value-migrations-3a/recon.md の §1・§2 を参照。ADR-155（migration で値を操作しない）に、既存の migration を寄せる変更である。
+- recon.md の §1・§2 を参照。
+- 上書き型の8本は、どれも本番の今の値と同じである（違う行は 0）。
+- この PR の 18本は、テナントの作成と権限には頼られていない。それらに頼られている7本は PR-3b（#4017）で扱う。
+- ADR-155（migration で値を操作しない）に、既存の migration を寄せる変更である。
 
-## 3. 変更（実装の担当が事実として記入）
-- migrations/ の 18 本: 値を書く文だけを外し、DDL と存在確認は残した（recon.md §2 に、ファイル・行番号・外した文・残した構造を列挙）。
-- backend/tests/test_value_migrations_neutralized.py（新規）: 静的な試験（18 本に値を書く文が無い）と、PG の試験（値を戻さない・消した行を再挿入しない）。
-- 土台: 段2（PR #4015）を merge。#4015 より先にマージしない。後続: PR-3b（080・023・075・025・018・024・20260604_180000。#4012 のデプロイ後）。
+## 3. 変更
+- migrations/ の 18本
+  - 値を書く文だけを外す。
+  - DDL と、存在の確認と、20260611_100000 のセレクタの行は、1文字も変えずに残す（recon.md §2 に、ファイル・行番号・外した文・残した構造を列挙）。
+  - 印は #3544 の形にならい、`-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07)` とする。
+- backend/tests/test_value_migrations_neutralized.py（新規）
+  - 静的な試験：18本に値を書く文が無い。
+  - PG の試験：値を戻さない。消した行を再挿入しない。
+- 土台は段2（#4015）。試験が migration のデータに頼らない状態にしてから止める。
 
 ## 4. 代替案と選んだ理由
-（設計担当が記入）
+- ファイルの本文を全部 NOTICE にする（#3544 の形そのまま）：構造と値が混ざったファイル（085・20260611_100000・20260916_130000 など）では、表や列や NOT NULL も消えてしまう。そのため、値の文だけを外した。
+- 登録から外す：実行の記録との対応がずれる。また、構造の部分も流れなくなる。
+- 在庫の集計の決まり（20260620_010000）を消す：PO の判断で、表と API は残す（2026-10-06）。毎回の上書きだけを止める。
 
 ## 5. リスクと対処
-（設計担当が記入）
-参考の事実: migrations/ を触る危険な PR（ADR-136）。マージには PO の「GO #番号」が要る。本番のデータは変わらない（外した文は、今の本番の値と同じ値を書いていた。value の比較は recon の元の記録による。上書き型 8 本は差 0）。
+| リスク | 対処 |
+|---|---|
+| 構造の行を誤って消す | 差分の削除行に、CREATE・ALTER・ADD COLUMN・COMMENT ON・SET NOT NULL・SET DEFAULT を含む行が 0件であることを確かめた（recon.md） |
+| 新しい環境（試験・開発）で、マスタの行が空になる | 試験は #4015 で、試験の側の seed を使う。開発の環境での初期データの入れ方は、段5（1回だけ流す）で別に扱う |
+| ローカルで SQL として流していない 9本がある | 静的な試験で、値を書く文が無いことを確かめた。SQL としての実行は CI の Migration SQL Test で確かめる |
+| 本番の値が変わる | 外した文は、本番の今の値と同じ値を書いていた（上書き型は差 0）。デプロイの後に、countries と inventory_aggregation_rules の max(updated_at) が動かないことを、読み取りで確かめる |
 
 ## 6. 受入条件と検証方法
 | 基準 | 検証方法 |
 |---|---|
-| 無効化した 18 本に、値を書く文（INSERT・UPDATE … SET・DELETE FROM・ON CONFLICT）が残っていない | backend/tests/test_value_migrations_neutralized.py の静的な試験 |
-| migration を流しても、国・集計ルールの値が元に戻らない | 同ファイルの PG 試験（CI の RLS_ADMIN_DATABASE_URL で動く） |
-| 085・086 が、消した種別を再挿入しない。表は残る | 同ファイルの PG 試験 |
-| 20260611_100000 のセレクタ行が変わっていない | 同ファイルの静的な試験、backend/tests/test_rls_bootstrap_ordering.py |
-| 変更した migration が、CI で 2 回流れて通る | CI の Migration SQL Test と全件ドライラン（結果は未確認） |
-| デプロイ後に、本番の updated_at が一斉に動かない | デプロイ後に、本番で max(updated_at)（countries、inventory_aggregation_rules）を読み取りで前後比較（未実施） |
+| 無効化した 18本に、値を書く文（INSERT・UPDATE … SET・DELETE FROM・ON CONFLICT）が残っていない | backend/tests/test_value_migrations_neutralized.py の静的な試験 |
+| migration を流しても、国と集計の決まりの値が元に戻らない | 同ファイルの PG の試験（CI の RLS_ADMIN_DATABASE_URL で動く） |
+| 085・086 が、消した種別を再挿入しない。表は残る | 同ファイルの PG の試験 |
+| 20260611_100000 のセレクタの行が変わっていない | 同ファイルの静的な試験と、backend/tests/test_rls_bootstrap_ordering.py |
+| 変更した migration が、CI で2回流れて通る | CI の Migration SQL Test と、全体の試し流し |
+| デプロイの後に、本番の updated_at が一斉に動かない | デプロイの後に、本番で max(updated_at)（countries、inventory_aggregation_rules）を読み取りで前後比較する |
 
 ## 7. 外部・過去事例の参照と我々への応用
-（設計担当が記入）
-参考の事実: 前例は PR #3544（2026-09-18。データだけの 13 本を無効化）。構造と値が混ざったファイルの前例は無い。
+- 外部事例：一般的な migration の運用では、流し終えたものは書き換えず、値は migration で持たない。ここは既存の記録が無いため、例外として書き換えで止める（ADR-1007 の段5 の前に済ませる）。特定の数値には依存しないため、外部の事例は挙げない。
+- 過去事例
+  - PR #3544（2026-09-18）は、データだけの 13本を無効化した。そのとき seed_product_marks が漏れ、2026-10-05 の書き戻しにつながった。
+  - 今回は全体の一覧（docs/handoff/migration-hygiene/recon.md §2）で対象を数え、漏れを防いだ。構造と値が混ざったファイルの前例は無いので、構造の行が残ることを試験で確かめる。
 
 ## 維持の仕組み
-- 守り手: backend/tests/test_value_migrations_neutralized.py（無効化した 18 本に値を書く文が戻らないことを検出）と .github/workflows/migration-guard.yml（新しい migration による値の書き込みを検出。既存ファイルの書き換えは段4 で対象に広げる）。設計担当（Opus）が、PR-3b と段4 で確かめる。
-- 対象: 値を書く文が、無効化した migration に戻ること。
+- 守り手: backend/tests/test_value_migrations_neutralized.py（無効化した 18本に値を書く文が戻らないことを検出）と .github/workflows/migration-guard.yml（新しい migration による値の書き込みを検出。既存のファイルの書き換えは段4 で対象に広げる）。設計担当（Opus）が、PR-3b と段4 で確かめる。
+- 対象：値を書く文が、無効化した migration に戻ること。
