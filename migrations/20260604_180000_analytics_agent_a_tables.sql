@@ -200,13 +200,4 @@ BEGIN
     END LOOP;
 END $$;
 
--- パーミッションキー追加（社内ロールのみアクセス：ADR-107 守るべき原則）
-INSERT INTO public.permissions (key, resource, action, description, category)
-VALUES
-    ('analytics.customer_priority.view',
-     'analytics', 'customer_priority_view',
-     '顧客優先度スコアの閲覧（社内専用・顧客非公開）', '分析'),
-    ('analytics.customer_priority.override',
-     'analytics', 'customer_priority_override',
-     '顧客優先度スコアの人手上書き（tenant_admin/tenant_staff のみ）', '分析')
-ON CONFLICT (key) DO NOTHING;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): analytics.customer_priority.* 2 キーの INSERT（と、その前の説明コメント）を外した（本番には既にある）。表・RLS の構造は残す。

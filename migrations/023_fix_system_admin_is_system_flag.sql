@@ -21,34 +21,11 @@
 --   2026-04-23: 初版作成（Phase 1 再設計 軽微課題）
 --   2026-04-23: 非テンプレート化（reviewer PR #99 Major 1 対応）
 
-DO $$
-DECLARE
-    schema_rec RECORD;
-    updated_count INTEGER;
-    total_updated INTEGER := 0;
-BEGIN
-    FOR schema_rec IN
-        SELECT nspname FROM pg_namespace
-        WHERE nspname ~ '^tenant_\d+$'
-        ORDER BY nspname
-    LOOP
-        -- roles テーブルが存在するスキーマのみ対象
-        IF EXISTS (
-            SELECT 1 FROM pg_tables
-            WHERE schemaname = schema_rec.nspname AND tablename = 'roles'
-        ) THEN
-            EXECUTE format(
-                'UPDATE %I.roles SET is_system = TRUE, updated_at = NOW() '
-                'WHERE name IN (''オーナー'', ''システム管理者'') AND is_system = FALSE',
-                schema_rec.nspname
-            );
-            GET DIAGNOSTICS updated_count = ROW_COUNT;
-            IF updated_count > 0 THEN
-                RAISE NOTICE 'migration 023: %: % 行を is_system=TRUE に更新',
-                    schema_rec.nspname, updated_count;
-            END IF;
-            total_updated := total_updated + updated_count;
-        END IF;
-    END LOOP;
-    RAISE NOTICE 'migration 023: 全テナント合計 % 行を更新', total_updated;
-END $$;
+--
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+-- 商品マスタ・権限などの値はアプリ画面/CSVで管理する。migrationは構造変更のみ。
+-- is_system の一括更新（全テナントの UPDATE）を外した。新テナントは作成コードが is_system=True で作る。
+-- 元の内容は git history で参照可能。
+--
+
+DO $$ BEGIN RAISE NOTICE 'migration 023 neutralized (ADR-1007 / ADR-155): is_system flag is written by tenant creation'; END $$;
