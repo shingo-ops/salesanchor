@@ -5120,7 +5120,11 @@
     "ruleLinked": "リンク済み",
     "noRulesLinked": "未設定",
     "shipFormat": "発送日の書き方",
-    "shipFormatHelper": "予約商品の発送日の記載パターン（例：発売◯日前発送）"
+    "shipFormatHelper": "予約商品の発送日の記載パターン（例：発売◯日前発送）",
+    "layoutRules": "書き方の当てはめ（新しい仕組み専用）",
+    "layoutRulesHelper": "指示書の手順番号を指して、この仕入元での判断を書きます。本番の解析には使われません。",
+    "hardCases": "間違えやすい形（新しい仕組み専用）",
+    "hardCasesHelper": "実際に誤りが出た形の原文例と出力例を書きます。本番の解析には使われません。"
   },
   "needsReview": {
     "title": "要確認一覧",

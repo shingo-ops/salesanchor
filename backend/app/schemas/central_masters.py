@@ -400,6 +400,8 @@ class SupplierExtractionRulesResponse(BaseModel):
     extraction_state_format: Optional[str] = None
     extraction_example_text: Optional[str] = None
     extraction_ship_format: Optional[str] = None
+    extraction_layout_rules: Optional[str] = None  # 新しい仕組み専用（本番 v7 は読まない）
+    extraction_hard_cases: Optional[str] = None  # 新しい仕組み専用（本番 v7 は読まない）
     latest_raw_text: Optional[str] = None  # source_messages.raw_text の最新1件
 
     model_config = ConfigDict(from_attributes=True)
@@ -414,6 +416,8 @@ class SupplierExtractionRulesUpdate(BaseModel):
     extraction_state_format: Optional[str] = Field(default=None, max_length=5000)
     extraction_example_text: Optional[str] = Field(default=None, max_length=50000)
     extraction_ship_format: Optional[str] = Field(default=None, max_length=5000)
+    extraction_layout_rules: Optional[str] = Field(default=None, max_length=50000)
+    extraction_hard_cases: Optional[str] = Field(default=None, max_length=50000)
 
 
 class SupplierExtractionOverviewItem(BaseModel):
