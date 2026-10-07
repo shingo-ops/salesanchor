@@ -23,7 +23,7 @@ from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 DEFAULT_V101_PROMPT_NAME = "raw_copy_v101_a"
-DEFAULT_V102_PROMPT_NAME = "raw_copy_v101_c"  # v10.2 の既定（案B＋例）
+DEFAULT_V102_PROMPT_NAME = "raw_copy_v101_e"  # v10.2 の既定（PO 採用確定 2026-10-07）
 V101_PROMPT_NAME_RE = re.compile(r"^raw_copy_v101_[a-z0-9_]+$")  # パス区切りや「..」を通さない
 
 _NONE = "none"

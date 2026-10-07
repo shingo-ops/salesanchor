@@ -16,6 +16,7 @@ import { splitReactions } from "./reactionHeart";
 import { HEART_REACTION_EMOJI } from "./reactionEmojiPresets";
 import { Button } from "../../components/Button";
 import { IconToggleButton } from "../../components/IconToggleButton";
+import { SelectControl } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
 import { DISCORD_CONFIG_PERMISSION, getDiscordSendErrorGuide } from "./discordSendError";
 import { toast } from "../../components/loading/Toast";
@@ -405,8 +406,8 @@ export function InboxMessageThread({
           )}
         </h3>
         {/* ADR-143: 送信ガード Phase A — 言語プルダウン */}
-        {/* ui-allow: ADR-143 Phase A send-guard lang toggle, back-merged from main (#2624) */}
-        <select
+        <SelectControl
+          variant="tabbar"
           className="inbox-platform-select"
           value={recipientLanguageSetting}
           onChange={(e) => setRecipientLanguage(e.target.value as "auto" | "ja" | "en")}
@@ -415,7 +416,7 @@ export function InboxMessageThread({
           <option value="auto">{t("translation.sendGuard.langAuto")}</option>
           <option value="ja">{t("translation.sendGuard.langJa")}</option>
           <option value="en">{t("translation.sendGuard.langEn")}</option>
-        </select>
+        </SelectControl>
         <div className="inbox-thread-actions">
           <button type="button" className="inbox-thread-action-btn"
             onClick={handleMarkUnread}
