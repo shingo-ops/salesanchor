@@ -604,7 +604,8 @@ async def delete_routing(routing_id: int, db: AsyncSession = Depends(get_db)):
 _EXTRACTION_RULE_COLS = (
     "extraction_price_format, extraction_qty_format, extraction_order_pattern, "
     "extraction_default_unit, extraction_notes, extraction_state_format, "
-    "extraction_example_text, extraction_ship_format"
+    "extraction_example_text, extraction_ship_format, "
+    "extraction_layout_rules, extraction_hard_cases"
 )
 
 _EXTRACTION_RULE_UPDATABLE = {
@@ -616,6 +617,8 @@ _EXTRACTION_RULE_UPDATABLE = {
     "extraction_state_format",
     "extraction_example_text",
     "extraction_ship_format",
+    "extraction_layout_rules",
+    "extraction_hard_cases",
 }
 
 
@@ -723,6 +726,8 @@ async def get_supplier_extraction_rules(
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
         extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
         latest_raw_text=raw_row["raw_text"] if raw_row else None,
     )
 
@@ -774,6 +779,8 @@ async def update_supplier_extraction_rules(
         extraction_state_format=row["extraction_state_format"],
         extraction_example_text=row["extraction_example_text"],
         extraction_ship_format=row["extraction_ship_format"],
+        extraction_layout_rules=row["extraction_layout_rules"],
+        extraction_hard_cases=row["extraction_hard_cases"],
         latest_raw_text=None,  # PATCH 応答では原文は含まない
     )
 

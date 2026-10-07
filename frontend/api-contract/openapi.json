@@ -30190,6 +30190,28 @@
             ],
             "title": "Extraction Example Text"
           },
+          "extraction_hard_cases": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Hard Cases"
+          },
+          "extraction_layout_rules": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Layout Rules"
+          },
           "extraction_notes": {
             "anyOf": [
               {
@@ -30303,6 +30325,30 @@
               }
             ],
             "title": "Extraction Example Text"
+          },
+          "extraction_hard_cases": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Hard Cases"
+          },
+          "extraction_layout_rules": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Extraction Layout Rules"
           },
           "extraction_notes": {
             "anyOf": [
