@@ -110,8 +110,8 @@ from app.routers import (
     super_admin_suppliers,
     super_admin_tcg,
     super_admin_tenants,
-    super_admin_units,  # 単位マスタ中央 admin
     super_admin_unit_ignore_phrases,  # 単位にしない言い回し中央 admin
+    super_admin_units,  # 単位マスタ中央 admin
     super_admin_weight_classes,  # 重量クラスマスタ中央 admin
     suppliers,
     tcg_analysis_dashboard,  # ANALYSIS-DASHBOARD: 解析パイプライン サマリー API
