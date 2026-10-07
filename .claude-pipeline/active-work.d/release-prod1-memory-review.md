@@ -9,7 +9,7 @@ updated: 2026-10-01
 
 | ブランチ名 | 担当機能エリア | 開始日時 | 状態 | PR# | main | 備考 |
 |-----------|--------------|---------|------|-----|------|------|
-| release/prod1-memory-review | prod1 のメモリとディスクの運用の見直し（設計・調査のみ・docs-only） | 2026-10-01 15:04 | 設計案作成済み・PO承認待ち（docs-only Draft PR） | | | 担当: Opus（設計）＋Sonnet（調査） |
+| release/prod1-memory-review | prod1 のメモリとディスクの運用の見直し（設計・調査のみ・docs-only） | 2026-10-01 15:04 | DONE | 3909 | | 担当: Opus（設計）＋Sonnet（調査） |
 
 ## 概要
 prod1 のメモリとディスクの運用を見直すための設計・調査。docs-only。
