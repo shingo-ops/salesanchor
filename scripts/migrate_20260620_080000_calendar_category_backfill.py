@@ -125,56 +125,10 @@ async def backfill_schema(conn, schema: str) -> dict[str, int]:
 
 
 async def main() -> None:
-    url = os.getenv("DATABASE_URL")
-    if not url:
-        logger.error("DATABASE_URL not set")
-        sys.exit(1)
-    if url.startswith("postgresql://"):
-        url = "postgresql+asyncpg://" + url[len("postgresql://"):]
-    engine = create_async_engine(url, echo=False)
-
-    try:
-        logger.info("=== Migration 080 (calendar category backfill) 開始 ===")
-
-        async with engine.connect() as conn:
-            r = await conn.execute(
-                text("SELECT id, tenant_code FROM public.tenants WHERE is_active = true ORDER BY id")
-            )
-            tenants = [(row.id, row.tenant_code) for row in r]
-        logger.info("対象テナント: %d", len(tenants))
-
-        total_all: dict[str, int] = {"personal": 0, "billing": 0, "shipping": 0, "purchase": 0, "skipped": 0}
-        for tid, tc in tenants:
-            schema = f"tenant_{tid:03d}"
-            if not re.fullmatch(r"tenant_\d{3}", schema):
-                logger.error("Unexpected schema name: %s — skipping", schema)
-                continue
-            try:
-                async with engine.begin() as conn:
-                    counts = await backfill_schema(conn, schema)
-
-                total = sum(counts.values())
-                non_zero = {k: v for k, v in counts.items() if v > 0}
-                logger.info(
-                    "✓ %s (tenant_code=%s): %d rows inspected — %s",
-                    schema,
-                    tc,
-                    total,
-                    ", ".join(f"{k}={v}" for k, v in non_zero.items()) or "none",
-                )
-                for k, v in counts.items():
-                    total_all[k] = total_all.get(k, 0) + v
-            except Exception as exc:
-                logger.error("✗ %s 失敗: %s", schema, exc)
-                raise
-
-        logger.info(
-            "=== 全テナント合計: %s ===",
-            ", ".join(f"{k}={v}" for k, v in total_all.items()),
-        )
-        logger.info("=== Migration 080 完了 ===")
-    finally:
-        await engine.dispose()
+    # NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07):
+    # 値の書き込みを外した。run_py が呼ぶ入口を、何もしない形にした。
+    # 元の内容は git history で参照可能。
+    print("ADR-1007 neutralized: migrate_20260620_080000_calendar_category_backfill.py no longer writes values")
 
 
 if __name__ == "__main__":
