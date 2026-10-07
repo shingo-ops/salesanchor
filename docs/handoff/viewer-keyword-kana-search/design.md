@@ -3,7 +3,7 @@
 - 状態（2026-10-05）
   - 設計：Opus が作成し、自分で審査した（同じAIによる審査で、独立した第三者のレビューではない）。判定は §10。
   - PO：方針（products に列を足さず、検索ワードを検索対象にし、ひらがな・カタカナを同一視する）は承認済み（2026-10-05「y」）。成功条件（§2）・シートに検索ワードが見えることの了承（§5）・実装は、2026-10-05 に PO が「ｙ」で承認した（設計全体を示して y/n を尋ねた質問への返答）。
-  - 実装：SA 側（§4-1）を Sonnet に委任した。GAS 側（§4-2・4-3）は SA の反映後に行う。
+  - 実装・反映（2026-10-05）：SA は PR #3983（merge 10550ab42、deploy run 37278803712 success、反映後の配信 07:43Z に3配信先とも ok・811行）。GAS はテスト用を版18、本番を版13に redeploy（デプロイ ID は既存のまま）。受け入れ条件 K1〜K6 はテスト用・本番とも合格（ヘッドレス Playwright で前後計測、PC 1280／スマホ 390）。テスト用の版18には、別作業のテスト用変更（fitTableZoom・ブレークポイント）も同梱された。戻し方は §8（本番は版12、テスト用は版14）。
 - 根拠：[recon.md](recon.md)（`docs/handoff/viewer-keyword-kana-search/recon.md`）
 - 関係する ADR：ADR-1001-deprecate-tcg-products-unify-to-public（検索ワード表を public に統一）、ADR-154-tcg-parity02-gas-python-migration（配信は needs_review=false の行に限る）、ADR-158-product-level-supersession（配信クエリの is_current）。配信の列数を定めた ADR は無い（recon §2）。
 - 直前の設計：`docs/handoff/gas-viewer-series-tabs/design.md`（同じ GAS に Series 列を足した）。

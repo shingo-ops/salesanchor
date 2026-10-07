@@ -2028,3 +2028,90 @@ APPROVE（AV-1本体のみ）。§Zの契約（:802-806, :906）と実物 Select
 - FormField.css:80 と components.css の page-header-select 矢印に `%23888`（URLエンコードの固定色）。ADR-067 の検査（check-css-hardcoded-colors）は %23 を検出しない旨が FormField.css:73 に記載。色トークン化は別便で設計。
 - 作業台上限: 他作業で worktree が上限100付近に常駐（本便確保時 100→101）。次便の作業台確保時に再び不足し得る。
 - 証跡: evidence-20260910/ の av0-input-audit.{cjs,json,md}、av0-compare.cjs、av1-select-detail.{cjs,json,md}、av1-select-detail-md.cjs、av1-summary.json、av1-css.cjs、av1-css-rules.md、av1-css-mapping.md（後者は snapshot 946e6dbc 生成の写し、frontend/src 同一）。
+
+
+### AW. ページの生 select の移管方針と SelectControl の用途別種類（2026-10-05）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV（AV-1 本体拡張、PR #3931 本番反映済）の続き。
+
+#### AV-1 の結果（記録）
+
+PR #3931 は 2026-10-05T02:09:48Z に merge 4a54206dd125d1add4d526814b63d53edd39accc（必須13/13成功）、Deploy 37254291709 success（headSha 4a54206dd、02:12:17Z）。本番の公開 asset は index-DwU5mfH_.js→index-BVLZdWZ6.js、index-Dvi2zDph.css→index-DQ5Tuc_9.css に変化し、両方に comp-select--no-indicator が1件ずつ含まれる。app 200、api /api/health 200。GO記録は PR #3931 本文（GO原文「GO #3931」、PO本人がpermit-dangerチケットを発行し、本文反映と merge-safe を本人が実行）。実装記録は evidence-20260910/av1-implementation.md。画面目視は未実施。
+
+#### Planner: 目的・根拠・範囲
+
+PO回答（2026-10-05、本セッション）: 当初の「全件を標準に統一」案に対し「統一しないほうが良いか？特別な見た目に意図があるのであれば金型を追加したほうが良いとお考えるがどうか？」。設計担当が意図の有無を資料で照合し、次の方針案を提示、PO は「この方針で進める」を選択: ①カルテ・ヘッダー・タブバーの3種類を金型に登録して今の見た目を保つ ②一般フォームは標準に統一 ③商品編集9か所は「枠が薄い」問題があるため保留して別に確認。番号付きGOは各PRで別途受領する。
+
+基準 origin/main 3210edeea250e269102bedd3546ebc48ddb89b77（公式作業台 release/frontend-select-av2-design の HEAD 3f4dbbdf95d406b97062ea2da74d25c4eadecdf6 と frontend/src 差分0）。証跡スクリプトは scratchpad の絶対パス定数を含む生成時のままで、再実行時は ROOT/NM の調整が要る。AST再計測でページ側の生 select は76（§AVの80から ParseReviewPage.tsx の4件がファイル削除 d010d6700 で消滅、追加0）。全76の適用CSSを静的解析（postcss、祖先はJSX木で解決）。証跡 evidence-20260910/av2-select-mapping.{json,md}、av2-recon2.{json,md}。
+
+意図の照合（判断の根拠）:
+
+| まとまり | 件数 | 意図の資料 | 判断 |
+|---|---:|---|---|
+| 受信箱カルテ `.right-panel-field`（InboxKartePanel 5、InboxProfileModal 4） | 9 | ADR-108:7・ADR-110:7 が karte_reference.html を見た目の正本と規定。tokens.css:311「見本 karte_reference.html 準拠・4pxグリッド非準拠例外」。InboxPage.css:1205「見本: select はネイティブ▼なしのプレーン箱」 | 種類 karte を登録 |
+| ダッシュボード上部 `.page-header-select`（DashboardPage 2） | 2 | components.css:584「ヘッダーアクションエリア内のドロップダウン共通スタイル (SSoT: ここのみ定義)」、:589「btn-ghost / icon-btn と高さを統一 (36px)」、tokens.css:95 radius-pill「入力欄の角丸（意味的例外トークン）」 | 種類 header を登録 |
+| 受信箱タブ横 `.inbox-platform-select`（InboxPage 1、InboxMessageThread 1） | 2 | InboxPage.css:68「タブバー右端」、height は tokens.css:271 --height-tab-item「受信箱タブボタン高さ」。文字の小ささ・色の意図資料はなし | 種類 tabbar を登録（高さ整合の意図に基づく） |
+| 一般フォーム・その他（.form-group / .form-row / .filter-bar / .schedule-input / .gs-select / .account-settings-lang-select / .inbox-page-filter-select / .inbox-settings-select / InventoryPage inline / 装飾なし） | 55 | docs/adr・docs/specs・docs/handoff に見た目の意図記載なし（av2-recon2.md R4）。角丸 sm/md・枠 border/border-strong が不統一 | 標準に統一 |
+| 商品編集 `.product-edit-form .form-group select`（ProductEditPage 9） | 9 | company-forms.css:258「入力枠が薄くて見えない問題の解消（--border → --border-strong）」 | 保留（標準枠の濃さを全体で判断する別便） |
+| 報酬 CommissionPanel.tsx:205 | 1 | §AJ :1252-1270 の 390px 横 overflow 保留（表統一便） | 保留（表統一便） |
+
+#### 便の分割
+
+| 便 | 内容 | 画面 |
+|---|---|---|
+| AW-1 部品 | SelectControl に `variant?: "standard" \| "karte" \| "header" \| "tabbar"` を追加し、各種類の外観を FormField.css に定義。ページ変更0 | 変化なし |
+| AW-2 利用 | 66件（76−商品編集9−報酬1）を SelectControl へ移管。ページの外観宣言は削除し、配置宣言（layoutClassName 許可 property のみ）を同じ要素の配置classに残す。裸 select のページ規則10件のうち9件を削除し、商品編集の外観は `.product-edit-form .form-group select` 1規則へ集約（値は現行のまま） | カルテ/ヘッダー/タブバーは不変、一般は標準化 |
+
+#### AW-1 変更契約（PO発言の代筆ではない）
+
+対象: frontend/src/components/Select.tsx、FormField.css、Select.stories.tsx、Select.test.tsx、新規の外観同等性検証スクリプト（evidence-20260910 配下、製品外）。
+
+1. variant は options/children 両モード共通の任意 prop。既定 standard は現行出力と完全一致（class 追加なし）。karte/header/tabbar は select に `comp-select--{variant}` を付ける。appearance="field"（ラベル付き Select）での利用は本便では対象外（型で bare 時のみ許可）。
+2. 各種類の外観は FormField.css のみに置き、値は既存トークンのみ（新規トークン0、色・px直書き0）。宣言は現行ページCSSの値を写す:
+   - karte: InboxPage.css:1196-1207 の select 適用分（背景 --karte-field-bg、枠 0.5px solid --karte-field-bd、角丸 --radius-md、余白 --karte-field-py/px、文字 --font-sm、矢印なし、focus は枠 --accent のみ）。
+   - header: components.css:585-607（高さ --size-icon-btn、余白 space-1/5/1/3、角丸 --radius-pill、矢印あり、hover 背景 --bg-hover・枠 --border-strong、focus は現行どおり）。
+   - tabbar: InboxPage.css:69-86 の外観分（高さ --height-tab-item、余白 0 space-2、角丸 --radius-sm、文字 --font-xs・色 --text-secondary、ネイティブ矢印、focus 枠 --accent・文字 --text-primary）。margin-left/flex-shrink は配置なので利用側に残す。
+   - 金型の既定宣言（line-height、min-height のモバイル規則、focus の影、disabled）と現行値が異なる項目は、各種類の規則で現行値に合わせる。どの項目が異なるかは実測で決め、推測で書かない。
+3. 外観同等性の検証（受入の中心）: Playwright（chromium、手元キャッシュの実行ファイルを executablePath 指定。新規ダウンロード・依存追加なし）で、現行のページclassを付けた select と新 variant の select を同じページに置き、getComputedStyle を比較する。条件: 通常/focus/hover/disabled × 幅1280/390 × light/force-dark。比較項目: padding 4辺、border 各辺の幅・色・style、border-radius 4角、font-size/family/weight、line-height、color、background-color/image/position/repeat、height/min-height、box-shadow、outline、appearance、cursor、transition。差分0を合格とし、差分が出た項目は値の対で報告して設計者が判定する。
+   - 変更前の実測基準（evidence-20260910/aw1-baseline.{cjs,json,md}、Chromium 147.0.7727.15、80条件で hover/focus の状態一致を確認）: light/1280/通常で karte=padding 7/9・角丸6px・13.6px・高さ32・矢印なし、header=padding 4/20/4/12・角丸20px・13.6px・高さ36・矢印あり、tabbar=padding 0/8・角丸4px・12px・高さ36・ネイティブ矢印。金型 md=高さ40、sm=高さ30。390px では金型だけ min-height 44px。hover で変化するのは header のみ、disabled で変化するのは金型のみ。
+   - 実測で判明した既存の癖（現行どおり再現するか PO 確認事項）: header の font-family が Arial（select が body の書体を継承していないため）、karte は暗い表示でも背景・枠が明るい色のまま。
+4. 試験: variant ごとの class 付与、standard で class 非付与、options/children 両モードで同じ、ref・属性透過の既存試験を維持。
+5. Story: 3種類の見本を追加（新しい寸法直書きなし）。
+
+#### AW-2 変更契約（概要、詳細はAW-1後に追補）
+
+- 移管先: カルテ9→variant="karte" fullWidth、ヘッダー2→variant="header"、タブバー2→variant="tabbar"＋配置class（margin-left:auto/flex-shrink:0）、一般55→standard（文字 --font-base の群は md、--font-sm/--font-xs の群は sm）。
+- children モードで options/条件分岐/key/value/onChange を再生成しない（§AV契約）。Number 変換・カリー化 handler は元の式のまま。
+- ui-allow（10件）は、移管で不要になるものだけ除去。
+- 一般フォームの見た目の変化（角丸、矢印が端末標準→共通、右余白、枠の濃さ）と、ページ規則削除で標準に戻る既存金型利用（確定7・未確認9: CompanyAddressModal、NoteMaster、ProductFormats/Lines、TypeMaster、FormSection、RuleCreateDrawer 等、av2-recon2.md R1）を前後表で PR に明記する。
+- 生 option 文字（23件）の翻訳化は本便の対象外（別便）。
+
+#### 受入・検証
+
+| 基準 | 検証方法 |
+|---|---|
+| 3種類が現行と同じ見た目 | AW-1 の computed style 比較で全条件差分0（差分は値の対で報告し設計者判定） |
+| standard は既存出力不変 | 既存 Select.test.tsx 92 試験＋innerHTML 一致試験が成功 |
+| 新規トークン・直書き 0 | check:all、check:new-tokens、design-token ratchet、ui-governance、diff の目視 |
+| 移管で操作・値が変わらない | AW-2 で各 select の onChange/value/options を原文一致で照合、全体試験（maxWorkers=1） |
+| 保留10件が不変 | 商品編集9・報酬1の DOM/CSS 差分0 |
+
+#### 代替と不採用理由
+
+- 全件を標準に統一: ADR-108/110 の見本正本に反し、ヘッダー整列の SSoT 記載にも反するため不採用（PO も意図尊重を指示）。
+- 特殊な見た目をページCSSに残したまま class だけ部品にする: 外観の手編集元が2か所になり SSOT に反するため不採用。
+- 商品編集を標準へ統一: 「枠が薄くて見えない」問題の再発リスクがあるため保留。
+
+#### Architect自己審査
+
+AW-1: APPROVE（実装可）。根拠はADR/トークン注記/CSS注記の実物照合。外観の同等性は推測でなく computed style 比較で判定する設計で、ページ変更0。AW-2: REVISE（AW-1 の実測結果と、移管ごとの前後表の確定後に再審査）。同一AI（Opus）の自己審査であり独立第二者レビューではない。
+
+#### 維持の仕組み
+
+守り手: Select.test.tsx、外観同等性検証スクリプト（evidence に保存、AW-2・最後のCIで再利用）、既存 frontend-check・ui-governance・design-token-guard。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の生 select（AW-2で移管、最後のCIで未移行0を強制）。切戻し: 各PRの merge commit を revert（DB影響なし）。
+
+#### 残件（事実のみ）
+
+- Playwright 1.60.0 は chromium rev1223 を要求し手元は rev1217 のみ（既定起動不可、executablePath 指定で起動可を確認）。
+- 既存金型利用数は R1 実測で 86（Select 66・SelectControl 20）。§AV 時点の「91」と差5、原因未確認。
+- 商品編集9の枠の濃さ、報酬1の表 overflow、生 option 文字23の翻訳化は別便。

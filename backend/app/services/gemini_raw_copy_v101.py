@@ -1,6 +1,7 @@
 """Gemini 書き写し v10.1（比較試験用）。Gemini は商品ごとの行番号と価格・数量の文字だけを出す（ラベル無し）。
 
 設計: docs/handoff/gemini-v101/design.md §3
+      docs/handoff/gemini-v102/design.md §3-1（v10.2: extract_v101_items の v102_fixes。F1〜F6）
 行の役割（価格・名前・状態・発送）はシステムが原文とマスタで決める。v8〜v10 のファイルは変えない。
 マスタ照合は既存の resolve_* をそのまま呼び、同じ処理を写さない。
 このモジュールは比較試験の道具（app/tools/prompt_ab.py）専用で、本番の経路からは呼ばれない。
@@ -22,6 +23,7 @@ from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
 
 _PROMPTS_DIR = Path(__file__).resolve().parent.parent / "prompts"
 DEFAULT_V101_PROMPT_NAME = "raw_copy_v101_a"
+DEFAULT_V102_PROMPT_NAME = "raw_copy_v101_c"  # v10.2 の既定（案B＋例）
 V101_PROMPT_NAME_RE = re.compile(r"^raw_copy_v101_[a-z0-9_]+$")  # パス区切りや「..」を通さない
 
 _NONE = "none"
@@ -35,6 +37,7 @@ _BAD_CONDITIONS = frozenset({
 _GOOD_CONDITIONS = frozenset({"Sealed box", "Case", "Unsearched pack"})
 
 ROLE_PRICE, ROLE_SHIP, ROLE_CONDITION, ROLE_STOCK, ROLE_NAME = "price", "ship", "condition", "stock", "name"
+ROLE_IGNORED = "ignored"  # v10.2 の F3・F5 が名前にも発送にも使わないと決めた行
 _SHIP_RE = re.compile(r"発送|出荷|入荷|発売|着")
 _STOCK_START_RE = re.compile(r"^(?:残り|在庫|数量|単価)")
 _SYMBOL_ONLY_RE = re.compile(r"[\W_]+")
@@ -660,10 +663,15 @@ def _ship_for(item: dict, roles: dict[int, str], shared: set[int], lines: list[s
     return " / ".join(unique) if unique else _NONE
 
 
-def _quantity_not_in_text(quantity: str, text: str) -> bool:
-    """quantity の数字が、原文に独立した数として無いとき True（数字が無い quantity は False）。"""
+def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bool:
+    """quantity の数字が、原文に独立した数として無いとき True（数字が無い quantity は False）。
+
+    v102（設計 v10.2 F6）のときは、原文の数字の間のカンマも除いて比べる（「2,000」と「2000」は同じ数）。
+    """
     groups = re.findall(rf"[{_DIGITS}]+", _nfkc(quantity).replace(",", "")) if quantity != _NONE else []
     norm = _nfkc(text)
+    if v102:
+        norm = re.sub(rf"(?<=[{_DIGITS}]),(?=[{_DIGITS}])", "", norm)
     return any(
         not re.search(rf"(?<![{_DIGITS}.])(?<![{_DIGITS}],){g}(?![{_DIGITS}])(?!,[{_DIGITS}])", norm) for g in groups
     )
@@ -671,11 +679,18 @@ def _quantity_not_in_text(quantity: str, text: str) -> bool:
 
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
-    ctx: V101Context, *, reassigned: list[dict], review: list[dict],
+    ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
+    name_roles: dict[int, str] | None = None,
 ) -> dict:
+    """name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
+    shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
     own_text = "\n".join(lines[n - 1] for n in _own_lines(item, shared))
-    name = _product_name(item, roles, lines, owners, ctx)
+    name = _product_name(item, shown_roles, lines, owners, ctx)
+    calc_name = name if shown_roles is roles else _product_name(item, roles, lines, owners, ctx)
+    if name_prefix:
+        name = f"{name_prefix} {name}"
+        calc_name = f"{name_prefix} {calc_name}"
     unit_canonical, kubun, _resolved = resolve_unit_v2(_find_unit(item, roles, shared, lines, ctx) or "", ctx.unit_alias_to_info)
     condition, _cond_id, basis = resolve_condition_v2(
         block, "", kubun, ctx.cond_entries, ctx.cond_canonical_to_uuid, raw_memo=block
@@ -683,16 +698,16 @@ def _extract_one(
     status, effect = resolve_status_v2(block, ctx.status_entries, raw_memo=block)
     pq = resolve_price_quantity(
         own_text, gemini_price=item["price"], gemini_quantity=item["quantity"],
-        unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=name,
+        unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
     return {
-        "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(roles),
+        "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(shown_roles),
         "raw_price": item["price"], "raw_quantity": item["quantity"],
         "name": name, "unit": unit_canonical or _NONE, "unit_kubun": kubun,
         "condition": condition or _NONE, "condition_basis": basis,
         "status": status, "status_effect": effect, "ship": _ship_for(item, roles, shared, lines, ctx),
         "price_normalized": pq.price, "quantity_normalized": pq.quantity, "price_reasons": list(pq.reasons),
-        "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block),
+        "quantity_not_in_text": _quantity_not_in_text(item["quantity"], block, v102=v102),
         "reassigned": reassigned, "review": review,
     }
 
@@ -704,24 +719,200 @@ def _is_price_shaped(text: str) -> bool:
     return bool(_BARE_NUMBER_RE.fullmatch(norm)) and not _YEAR_RE.fullmatch(norm)
 
 
-def _possible_missing_lines(items: list[dict], lines: list[str]) -> list[int]:
-    """最初の件の最初の行から最後の件の最後の行までの間にある、price_line でない価格の形の行。"""
+def _possible_missing_lines(items: list[dict], lines: list[str], *, until_last_price_line: bool = False) -> list[int]:
+    """最初の件の最初の行から最後の件の最後の行までの間にある、price_line でない価格の形の行。
+
+    until_last_price_line（v10.2 F5）のときは、終わりを最後の price_line にする（末尾の連絡の行を含めない）。
+    """
     if not items:
         return []
     first = min(n for it in items for n in it["lines"])
-    last = max(n for it in items for n in it["lines"])
+    last = max(it["price_line"] for it in items) if until_last_price_line else max(n for it in items for n in it["lines"])
     price_set = {it["price_line"] for it in items}
     return [n for n in range(first, last + 1) if n not in price_set and _is_price_shaped(lines[n - 1])]
+
+
+# ---------------------------------------------------------------------------
+# v10.2 の確認と直し（設計 docs/handoff/gemini-v102/design.md §3-1。v102_fixes のときだけ）
+# ---------------------------------------------------------------------------
+
+_F1_SHIP_RE = re.compile(r"発送|出荷|入荷|発売")
+_F1_MIN_NAME_LEN = 3
+_WHOLE_BRACKET_RE = re.compile(r"^(?:【[^】]*】|━.*━)$")
+_STOCK_WORD_START_RE = re.compile(r"^(?:数量|在庫|残り|単価|残[\d,])")
+_WORD_SPLIT_RE = re.compile(r"[\s　/／]+")
+
+
+def _fix(rule: str, line: int, detail: str) -> dict:
+    return {"rule": rule, "line": line, "detail": detail}
+
+
+def _is_own_name_line(item: dict, roles: dict[int, str], n: int, shared: set[int], lines: list[str], ctx: V101Context) -> bool:
+    """F1 の「自分だけの名前の行」：共有でなく、空でなく、役割が名前で、記号を除いて3文字以上、単位の別名だけでなく、発送の言葉が無い。"""
+    text = lines[n - 1]
+    return bool(
+        n not in shared and text.strip() and roles[n] == ROLE_NAME
+        and len(_SYMBOL_ONLY_RE.sub("", _nfkc(text))) >= _F1_MIN_NAME_LEN
+        and not _is_alias_only_line(text, ctx) and not _F1_SHIP_RE.search(_nfkc(text))
+    )
+
+
+def _apply_f1(
+    items: list[dict], roles: list[dict[int, str]], lines: list[str], ctx: V101Context,
+) -> tuple[list[dict], dict[int, list[dict]]]:
+    """F1 親の見出しを外す。発送の言葉のある共有の行 X を、全部の件に自分だけの名前の行（X の後ろ・価格の行の前）があるとき外す。"""
+    shared = _shared_line_numbers(items)
+    price_set = {it["price_line"] for it in items}
+    removed: dict[int, list[int]] = {}
+    for x in sorted(shared - price_set):
+        if not _F1_SHIP_RE.search(_nfkc(lines[x - 1])):
+            continue
+        holders = [i for i, it in enumerate(items) if x in it["lines"]]
+        if all(
+            any(x < m < items[i]["price_line"] and _is_own_name_line(items[i], roles[i], m, shared, lines, ctx)
+                for m in items[i]["lines"])
+            for i in holders
+        ):
+            removed[x] = holders
+    new_items = [{**it, "lines": [n for n in it["lines"] if n not in removed]} for it in items]
+    fixes: dict[int, list[dict]] = {}
+    for x, holders in removed.items():
+        for i in holders:
+            fixes.setdefault(i, []).append(_fix("F1", x, "親の見出しを件の lines から外した"))
+    return new_items, fixes
+
+
+def _has_other_name_line(
+    item: dict, roles: dict[int, str], x: int, shared: set[int], lines: list[str], ctx: V101Context,
+) -> bool:
+    """F3 の「ほかに名前の行がある」：x 以外に、F1 と同じ定義の「自分だけの名前の行」（_is_own_name_line）がある。"""
+    return any(m != x and _is_own_name_line(item, roles, m, shared, lines, ctx) for m in item["lines"])
+
+
+def _apply_f3(
+    items: list[dict], roles: list[dict[int, str]], lines: list[str], ctx: V101Context,
+) -> tuple[list[dict[int, str]], dict[int, list[dict]]]:
+    """F3 まとめ書きの行（全体が【…】か━…━の、役割が名前の行）は、ほかに名前の行があれば名前に使わない。
+
+    役割が発送の行（例：【9/28発送】）は対象にしない（共有の発送の行を残すため）。
+    """
+    new_roles: list[dict[int, str]] = []
+    fixes: dict[int, list[dict]] = {}
+    shared = _shared_line_numbers(items)
+    for i, (item, role_map) in enumerate(zip(items, roles)):
+        updated = dict(role_map)
+        for n in item["lines"]:
+            if role_map[n] == ROLE_NAME and _WHOLE_BRACKET_RE.match(lines[n - 1].strip()) and _has_other_name_line(
+                item, role_map, n, shared, lines, ctx
+            ):
+                updated[n] = ROLE_IGNORED
+                fixes.setdefault(i, []).append(_fix("F3", n, "まとめ書きの行を名前に使わない"))
+        new_roles.append(updated)
+    return new_roles, fixes
+
+
+def _apply_f5(
+    items: list[dict], roles: list[dict[int, str]],
+) -> tuple[list[dict[int, str]], dict[int, list[dict]], list[int]]:
+    """F5 最後の price_line より後ろの行で、役割が名前のものは名前に使わない。戻り値の最後は possible_footer_line。"""
+    last_price_line = max(it["price_line"] for it in items)
+    new_roles: list[dict[int, str]] = []
+    fixes: dict[int, list[dict]] = {}
+    footer: set[int] = set()
+    for i, (item, role_map) in enumerate(zip(items, roles)):
+        updated = dict(role_map)
+        for n in item["lines"]:
+            if n > last_price_line and role_map[n] == ROLE_NAME:
+                updated[n] = ROLE_IGNORED
+                footer.add(n)
+                fixes.setdefault(i, []).append(_fix("F5", n, "最後の price_line より後ろの行を名前に使わない"))
+        new_roles.append(updated)
+    return new_roles, fixes, sorted(footer)
+
+
+def _is_empty_name(name: str, ctx: V101Context) -> bool:
+    """記号・単位の別名だけの語・「数字＋単位」の語・在庫の言葉を除くと空になる名前。"""
+    units = "|".join(re.escape(_nfkc(a).lower()) for a in ctx.aliases)
+    for word in _WORD_SPLIT_RE.split(name):
+        norm = _nfkc(word).strip().lower()
+        if not _SYMBOL_ONLY_RE.sub("", norm) or _STOCK_WORD_START_RE.match(norm) or _is_alias_word(norm, ctx):
+            continue
+        if units and re.fullmatch(rf"[\d,]+(?:{units})", norm):
+            continue
+        return False
+    return True
+
+
+def _f2_prefixes(
+    items: list[dict], roles: list[dict[int, str]], lines: list[str], owners: dict[int, dict], shared: set[int],
+    ctx: V101Context,
+) -> dict[int, tuple[str, dict]]:
+    """F2 名前の無い件（名前が空になる）の price_line のすぐ前の行が、名前の行を持たないほかの件の price_line なら、その件の名前を前に付ける。"""
+    prev, _nxt = _neighbors(lines)
+    by_price_line = {it["price_line"]: i for i, it in enumerate(items)}
+    found: dict[int, tuple[str, dict]] = {}
+    for i, item in enumerate(items):
+        before = prev.get(item["price_line"])
+        j = by_price_line.get(before) if before is not None else None
+        if j is None or not _is_empty_name(_product_name(item, roles[i], lines, owners, ctx), ctx):
+            continue
+        other = items[j]
+        if any(roles[j][n] == ROLE_NAME for n in other["lines"] if n != other["price_line"]):
+            continue
+        prefix = _price_line_name(lines[before - 1], other, ctx)
+        if prefix:
+            found[i] = (prefix, _fix("F2", item["price_line"], f"名前の前に行 {before} の名前「{prefix}」を付けた"))
+    return found
+
+
+def _has_no_digit(quantity: str) -> bool:
+    return quantity.strip().lower() != _NONE and not re.search(rf"[{_DIGITS}]", _nfkc(quantity))
+
+
+def _extract_v102(
+    items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
+) -> tuple[list[dict], dict]:
+    """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。"""
+    if not items:
+        return [], {"possible_missing_item": [], "quantity_no_number": [], "possible_footer_line": []}
+    items, f1_fixes = _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx)
+    roles = assign_roles(items, lines, ctx)
+    roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
+    name_roles, f5_fixes, footer_lines = _apply_f5(items, roles)
+    owners = {it["price_line"]: it for it in items}
+    shared = _shared_line_numbers(items)
+    f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)
+    extracted: list[dict] = []
+    no_number: list[int] = []
+    for i, item in enumerate(items):
+        one = _extract_one(
+            item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
+            v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i],
+        )
+        fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
+        if _has_no_digit(item["quantity"]):
+            one = {**one, "quantity_normalized": None}
+            no_number.append(item["price_line"])
+            fixes.append(_fix("F4", item["price_line"], "数量に数字が無いので quantity_normalized を None にした"))
+        extracted.append({**one, "fixes": [*fixes, *f5_fixes.get(i, [])]})
+    flags = {
+        "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
+        "quantity_no_number": no_number, "possible_footer_line": footer_lines,
+    }
+    return extracted, flags
 
 
 def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
+    v102_fixes: bool = False,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
     純粋関数。マスタは引数で受ける（読み込みは呼び出し側で1回だけ）。reassign で迷う行の付け直しを切り替える。
     戻り値は (件ごとの辞書, flags)。flags は possible_missing_item（行番号の一覧）。
+    v102_fixes が True のときだけ、設計 v10.2 の F1〜F6 を当てる（件に fixes、flags に quantity_no_number・possible_footer_line）。
+    False のときの出力は v10.1 のまま変えない。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
@@ -729,6 +920,8 @@ def extract_v101_items(
     )
     lines = raw_text.split("\n")
     adjusted, reassigned, review = reassign_ambiguous(items, lines, ctx) if reassign else (items, {}, {})
+    if v102_fixes:
+        return _extract_v102(adjusted, lines, ctx, reassigned, review)
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}
     shared = _shared_line_numbers(adjusted)
