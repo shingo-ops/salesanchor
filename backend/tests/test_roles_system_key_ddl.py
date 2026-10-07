@@ -25,14 +25,16 @@ _SCHEMA = f"tenant_{_TENANT_ID:03d}"
 
 
 def test_tenant_ddl_has_system_key_column_and_partial_unique_index():
+    """実際の DDL（_TENANT_TABLES_SQL）を読む。DDL の文面は複製せず、roles の定義ブロックを区切りで取り出す。"""
     sql = tenant_service._TENANT_TABLES_SQL
-    roles_start = sql.index("CREATE TABLE IF NOT EXISTS {schema}.roles")
-    roles_block = sql[roles_start : sql.index(");", roles_start)]
+    marker = "{schema}.roles ("
+    assert sql.count(marker) == 2  # roles の定義と、部分一意索引の ON {schema}.roles (system_key)
+    definition = sql.split(marker)[1]  # 最初の出現 = roles の列定義
+    roles_block = definition[: definition.index(");")]
     assert "system_key TEXT" in roles_block
-    assert (
-        "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON {schema}.roles (system_key) "
-        "WHERE system_key IS NOT NULL"
-    ) in sql
+    index_part = sql.split(marker)[2]  # 2 番目の出現 = 部分一意索引
+    assert index_part.startswith("system_key) WHERE system_key IS NOT NULL;")
+    assert "CREATE UNIQUE INDEX IF NOT EXISTS uq_roles_system_key ON " + marker.rstrip("(") in sql
 
 
 def test_migration_file_exists_and_is_registered_at_tail():
