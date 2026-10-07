@@ -52,7 +52,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private static final long POST_WAKE_DELAY_MS = 1500L;
     private static final long DIGIT_CLICK_INTERVAL_MS = 200L;
     private static final long RESULT_CHECK_DELAY_MS = 1500L;
-    private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 10000L;
+    // スワイプのやり直しが最大3回入るため、最悪ケースは解除成功まで約9.5秒かかる。
+    // 10秒だとこの安全タイムアウトと競合するので余裕を持たせる（2026-10-07）。
+    private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 15000L;
 
     // キーパッド（Bouncer）出現確認のポーリング間隔と、1回のスワイプあたりの
     // 確認期限。2026-10-06/07実機計測では出現まで最大約600ms程度だったが、
