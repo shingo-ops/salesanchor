@@ -47,8 +47,8 @@
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "generate:icon-sizes": "node scripts/generate-icon-sizes.js",
-    "predev": "npm run generate:icon-sizes",
-    "prebuild": "npm run generate:icon-sizes"
+    "predev": "npm run generate:icon-sizes && npm run generate:api-types",
+    "prebuild": "npm run generate:icon-sizes && npm run generate:api-types"
   },
   "lint-staged": {
     "src/**/*.{ts,tsx}": [
