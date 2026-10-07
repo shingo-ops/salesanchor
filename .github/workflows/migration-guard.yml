@@ -654,3 +654,44 @@ jobs:
           exit 1
 
           echo "✅ チェック8 通過: 共用マスタテーブルへのデータ参照なし"
+
+      # ──────────────────────────────────────────────────────────────────────
+      # チェック10（新規）: migration カラム churn 検出（ADR-1005 Stage 0 ①②）
+      #
+      # 背景: scripts/run_all_migrations.sh は全件を毎デプロイ再実行する前提の
+      #       SSoT。同一 (table, column) に対し ADD → 後で DROP する migration が
+      #       登録順に並ぶと、ガードが無ければ毎デプロイ attribute number を
+      #       消費し続け、1600列上限（2026-10-03 tcg_uuid インシデント）に至る。
+      #       scripts/check-migration-column-churn.js が登録順を走査して検出し、
+      #       scripts/migration-column-churn-allowlist.json に無い churn は失敗
+      #       させる。同じ ADR のもう一つの項目として、run_sql/run_py の二重登録
+      #       （#3965 調査で判明: 20260831_110000_create_tcg_analysis_tables_t004.sql
+      #       が2回登録されていた）も検出する。
+      # 詳細: docs/adr/ADR-1005-migration-run-once-ledger.md
+      #       docs/handoff/migration-churn-guard/design.md
+      # ──────────────────────────────────────────────────────────────────────
+      - name: 関連パス変更を検出（migration カラム churn チェック用）
+        id: detect_churn_paths
+        run: |
+          BASE=${{ github.event.pull_request.base.sha }}
+          HEAD=${{ github.event.pull_request.head.sha }}
+
+          CHANGED=$(git diff "$BASE" "$HEAD" --name-only \
+            | grep -E '^(migrations/|scripts/run_all_migrations\.sh$|scripts/migrate_.*\.py$|scripts/check-migration-column-churn\.js$|scripts/check-migration-duplicate-registration\.sh$|scripts/migration-column-churn-allowlist\.json$)' || true)
+
+          if [ -n "$CHANGED" ]; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "🔍 関連パス変更を検出:"
+            echo "$CHANGED"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "✅ 関連パス変更なし — チェック10 スキップ"
+          fi
+
+      - name: migration カラム churn 検出（ADD→DROP の attnum 消費チェック）
+        if: steps.detect_churn_paths.outputs.relevant == 'true'
+        run: node scripts/check-migration-column-churn.js
+
+      - name: migration 二重登録検出
+        if: steps.detect_churn_paths.outputs.relevant == 'true'
+        run: bash scripts/check-migration-duplicate-registration.sh
