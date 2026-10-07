@@ -22,5 +22,11 @@ super_admin が単位ルール画面で「単位にしない言い回し」を�
 |画面の追加・編集・無効化・削除|Vitest UnitIgnorePhrasesPanel.test.tsx|
 |ガバナンス|UI governance gate・Lint・i18n チェック|
 
-## 外部事例
-該当なし（社内の単位マスタ CRUD と同形の追加。手本は recon.md に記載）。
+## 外部・過去事例の参照と我々への応用
+- 過去事例: 社内の単位マスタ CRUD（super_admin_units.py / UnitMasterPanel.tsx）。同じ形で作るため、運用・権限・画面操作が既存と揃う。
+- 応用: 追加先の表だけ新設し、判定側への結線は後続便で行う（本便は構造と登録画面のみ）。
+
+## 維持の仕組み
+- 値はコードに直書きせず画面から登録する（ADR-155）。
+- 表の追加は scripts/run_all_migrations.sh への登録と migration-guard で担保。
+- API の権限（403）は backend/tests/test_super_admin_unit_ignore_phrases.py、画面は Vitest で CI が常時検査する。
