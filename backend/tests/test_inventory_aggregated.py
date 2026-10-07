@@ -225,9 +225,12 @@ async def seed_aggregated_dataset():
         )
 
     # ── migration: inventory_aggregation_rules + 列追加 (冪等) ────────────
+    # 集計ルールの構造は migration、4 行は試験側の seed（ADR-1007 段2）
+    from tests.rls_bootstrap import bootstrap_inventory_aggregation_rules
+
+    await bootstrap_inventory_aggregation_rules(eng)
     migrations_root = Path(__file__).resolve().parents[2] / "migrations"
     for mig_file in [
-        "20260620_010000_create_inventory_aggregation_rules.sql",
         # _load_inventory_offers が参照する列 (main で追加)
         "084_add_unit_to_inventory.sql",                       # i.unit
         "20260622_020000_add_inventory_raw_condition.sql",     # i.raw_condition
