@@ -19,7 +19,7 @@
 - ADR-155：値の操作を migration で行わない、という決まりを、既存の migration と全マスタに広げて守る。
 - ADR-1002：毎回の再実行が設計であることは、背景に書かれていた。この ADR で改める。
 - ADR-136：各段の PR のマージは、PO の GO による。
-- PR #3965 の ADR-1005 案：内容を引き継ぐ（runner-design-from-3965.md・runner-recon-from-3965.md）。番号は 1007 に付け直す。
+- ADR-1005（PR #3965。2026-10-05 に main へマージ済み、Accepted（方向性）2026-10-06）：記録して1回だけ流す仕組みは ADR-1005 に従う。本 ADR は、それを補完し、その前に済ませるべきことと順番を決める。#3965 の文書は main の docs/handoff/migration-runner-redesign/ にあるので、写しは置かない。
 
 ## 4. 変更（この PR）
 - 追加：docs/adr/ADR-1007-migration-structure-only-run-once.md
@@ -27,8 +27,7 @@
 - 追加：docs/handoff/migration-hygiene/
   - recon.md
   - design.md
-  - runner-design-from-3965.md
-  - runner-recon-from-3965.md
+  - （#3965 の写し runner-*-from-3965.md は、main の docs/handoff/migration-runner-redesign/ にあるため置かない）
 
 ## 5. 代替案と選んだ理由
 - #3965 の段階2（記録して1回だけ流す）を先に入れる案：実行済みのファイルの書き換えが止まり、値を書く migration を無効にできなくなる。また、テナントの作成と試験が壊れる。
