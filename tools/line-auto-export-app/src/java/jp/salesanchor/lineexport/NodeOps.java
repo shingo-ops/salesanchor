@@ -54,6 +54,34 @@ final class NodeOps {
         return searchNode(service.getRootInActiveWindow(), label);
     }
 
+    /**
+     * アクティブウィンドウのパッケージ名。LineExportFlowの手順3（トーク画面=LINEの到達判定）が、
+     * ショートカットのタップが空振りしてランチャーに留まった場合（open_chat）と、LINEは開いたが
+     * 別グループだった場合（group_mismatch）を区別するために使う。findNodeByLabelと同じ作法で、
+     * getWindows()の各rootを先に見てから getRootInActiveWindow() にフォールバックする。
+     */
+    static String activePackageName(AccessibilityService service) {
+        try {
+            List<AccessibilityWindowInfo> windows = service.getWindows();
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    AccessibilityNodeInfo root = window.getRoot();
+                    if (root != null) {
+                        CharSequence pkg = root.getPackageName();
+                        if (pkg != null) {
+                            return pkg.toString();
+                        }
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "getWindows() failed: " + e);
+        }
+        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        CharSequence pkg = root != null ? root.getPackageName() : null;
+        return pkg == null ? null : pkg.toString();
+    }
+
     static AccessibilityNodeInfo searchNode(AccessibilityNodeInfo node, String label) {
         if (node == null) {
             return null;

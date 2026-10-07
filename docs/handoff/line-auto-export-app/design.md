@@ -293,7 +293,7 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 |---|---|---|---|
 | 1 | ホームへ（`performGlobalAction(GLOBAL_ACTION_HOME)`） | 1.5秒待つ（ADB版 flow.sh:51 と同値） | - |
 | 2 | ショートカットをクリック（テキスト**前方一致** `WeGo売ります・BOX`） | ノードが見つかること | `shortcut` |
-| 3 | トーク画面の到達 | 期待グループ名のノードが見つかること | `open_chat` |
+| 3 | トーク画面（LINE）の到達 | **アクティブウィンドウのパッケージ名が `jp.naver.line.android` になること**（`getRootInActiveWindow().getPackageName()`。ノード経路のみで到達を判定できる＝ショートカットのタップが空振りした場合と、別グループが開いた場合を区別するため） | `open_chat` |
 | 3b | **誤爆防止**: 開いたトークが期待グループか検証 | 期待グループ名（既定 `WeGo売ります掲示板グループ`、`NotifyStore` の対象グループ名設定を流用）のノードが在ること。無ければ**ここで中止し、Menu以降へ進まない** | `group_mismatch` |
 | 4 | Menuボタン（`content-desc` 完全一致 `Menu ボタン`） | - | `menu_button` |
 | 5 | メニュー到達 | `設定` のノードが見つかること | `open_menu` |
@@ -302,8 +302,8 @@ uses-implied-permission: name='android.permission.READ_EXTERNAL_STORAGE' reason=
 | 8 | `トーク履歴を送信` をクリック（同じくスクロール再探索） | - | `export_item` |
 | 9 | 共有シートの到達 | `Termux` のノードが見つかること | `share_sheet` |
 | 10 | `Termux` をクリック | - | `termux_target` |
-| 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を最大5秒待つ。検出できなくても2秒後にタップし、診断に `editクラス未検出` を残す（ADB版 auto-export.sh:155-157 の `sleep 1` → タップと同じ扱い） | `edit_button` |
-| 12 | 後片付け | BACKを最大3回（LINEの画面から抜ける。flow.sh:75-78 と同値） | - |
+| 11 | `EDIT` を**座標タップ**（比率 0.8074, 0.5287） | ダイアログはノードに露出しないため、ウィンドウのクラス名 `TermuxFileReceiverActivity` を **最大5秒**ポーリング（ADB版 auto-export.sh:154 の `seq 1 10`×`sleep 0.5`＝5秒と同値）→ 検出したら**1秒待って**タップ（同:156 の `sleep 1` と同値）。5秒で検出できなくても**タップは行い**、診断に `editクラス未検出` を残す（ADB版はここで失敗扱いにするが、このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めないことを失敗とみなさない） | `edit_button` |
+| 12 | 後片付けは**何もしない** | ADB版の BACK×3（flow.sh:75-78）は**本番では実行されない**: `auto-export.sh:143` は `flow.sh 1 keep` と呼び、`flow.sh:73` の `keep` 分岐で後片付けの手前で `exit 0` する。本番は EDIT タップ後、`outbox.sqlite3` の送信結果を最大240秒待ってから HOME+SLEEP する（auto-export.sh:159-170）。**EDITタップ直後にBACKを撃つと保存ダイアログを取り消す恐れがある**ため、段階2では画面をそのまま残す。HOME・再ロックは段階3の範囲 | - |
 
 段階名は **ADB版 flow.sh と同じ語**（`shortcut`/`open_chat`/`menu_button`/`open_menu`/`settings_item`/`open_settings`/`export_item`/`share_sheet`）に揃える。
 理由: 既存の `auto-export.log` の失敗履歴（例 2026-10-07 07:03 の `open_settings`）と直接比較できるようにするため。`group_mismatch`・`termux_target`・`edit_button` は段階2で新設。

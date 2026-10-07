@@ -35,10 +35,16 @@ final class LineExportFlow {
     private static final String TERMUX_LABEL = "Termux";
     /** auto-export.sh:154 `focus | grep -q TermuxFileReceiverActivity`。 */
     private static final String TERMUX_EDIT_CLASS_NAME = "TermuxFileReceiverActivity";
+    /**
+     * LINEのパッケージ名。LineNotifyListenerService.java:53 の `PACKAGE_LINE` と同じ値
+     * （同サービスが対象にしているLINEの会話通知のパッケージ）。手順3の到達判定に使う。
+     */
+    private static final String LINE_PACKAGE_NAME = "jp.naver.line.android";
 
     // ---- 段階名。ADB版 flow.sh の step= と同じ語にする（auto-export.logの失敗履歴と比較できるように） ----
 
     private static final String STAGE_SHORTCUT = "shortcut";
+    private static final String STAGE_OPEN_CHAT = "open_chat";
     private static final String STAGE_GROUP_MISMATCH = "group_mismatch";
     private static final String STAGE_MENU_BUTTON = "menu_button";
     private static final String STAGE_OPEN_MENU = "open_menu";
@@ -65,18 +71,15 @@ final class LineExportFlow {
     private static final float SCROLL_SWIPE_TO_Y_RATIO = 0.4701f;
     private static final long SCROLL_SWIPE_DURATION_MS = 800L;
     /**
-     * 手順11（EDIT）: Termuxの保存画面のクラス名を待つ上限。design.mdの文言は
-     * 「最大5秒待つ。検出できなくても2秒後にタップ」と2つの数字を書いているが、
-     * 2秒の方が常に先に満ちるため実効のタイムアウトは2秒になる（5秒は実際には
-     * 使われない上限として書かれているだけ、と解釈した。判断に迷った点として報告する）。
+     * 手順11（EDIT）: Termuxの保存画面のクラス名を待つ上限。auto-export.sh:154の
+     * `seq 1 10`×`sleep 0.5`＝5秒と同値（design.md追補の修正後の値）。
      */
-    private static final long EDIT_CLASS_WAIT_TIMEOUT_MS = 2000L;
+    private static final long EDIT_CLASS_WAIT_TIMEOUT_MS = 5000L;
+    /** auto-export.sh:156 `sleep 1`と同値。クラス名検出後、タップするまでの落ち着き待ち。 */
+    private static final long EDIT_TAP_SETTLE_DELAY_MS = 1000L;
     /** auto-export.sh:157 `EDIT_X=872, EDIT_Y=1237`（画面1080x2340）を比率に換算した値。 */
     private static final float EDIT_TAP_X_RATIO = 0.8074f;
     private static final float EDIT_TAP_Y_RATIO = 0.5287f;
-    /** flow.sh:75-78 の後片付け（BACKで抜ける）と同値。 */
-    private static final int BACK_MAX_PRESSES = 3;
-    private static final long BACK_INTERVAL_MS = 700L;
 
     private static final int NOTIFICATION_ID_EXPORT = 1003;
 
@@ -133,17 +136,32 @@ final class LineExportFlow {
             finish(false, STAGE_SHORTCUT);
             return;
         }
-        step3WaitExpectedGroup();
+        step3WaitLineOpen();
     }
 
-    // ---- 手順3+3b（統合）: トーク画面到達の判定を、誤爆防止（期待グループ名確認）と
-    // 同じノード待ちで行う。design.mdの判定列はどちらも「期待グループ名のノードが
-    // 見つかること」で同一のため、ここでは1回の待ちにまとめ、失敗時は常に
-    // group_mismatch（KGI 2-5の検証方法と整合）として報告する。open_chatという
-    // 段階名は、この設計（判定方法がノード存在のみで、画面遷移失敗と誤グループを
-    // 区別する手段が無い）では区別できず使っていない。判断に迷った点として報告する。 ----
+    // ---- 手順3: トーク画面（LINE）の到達判定 ------------------------------------------------
+    //
+    // アクティブウィンドウのパッケージ名がLINE_PACKAGE_NAMEになるまで300ms間隔・期限10秒で
+    // ポーリングする（design.md修正後）。期限切れ＝ショートカットのタップが空振りして
+    // ランチャーのままだったとみなし、open_chatとして中止する。
 
-    private void step3WaitExpectedGroup() {
+    private void step3WaitLineOpen() {
+        waitForPackage(LINE_PACKAGE_NAME, STAGE_OPEN_CHAT, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
+                new PackageWaitCallback() {
+                    @Override
+                    public void onFound() {
+                        step3bWaitExpectedGroup();
+                    }
+                });
+    }
+
+    // ---- 手順3b: 誤爆防止（期待グループ名確認） ---------------------------------------------
+    //
+    // LINEは開いたことを手順3で確認済みのうえで、期待グループ名のノードを300ms間隔・
+    // 期限10秒で待つ。期限切れ＝LINEは開いたが別のトークだったとみなし、group_mismatch
+    // として中止する（Menu以降へは進まない）。
+
+    private void step3bWaitExpectedGroup() {
         waitForNode(expectedGroup, STAGE_GROUP_MISMATCH, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
                 new NodeWaitCallback() {
                     @Override
@@ -272,10 +290,19 @@ final class LineExportFlow {
         String className = service.getLastWindowClassName();
         boolean detected = className != null && className.contains(TERMUX_EDIT_CLASS_NAME);
         if (detected) {
-            tapEditButton(true);
+            // auto-export.sh:156 の `sleep 1` と同値。検出してからタップまでの落ち着き待ち。
+            handler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    tapEditButton(true);
+                }
+            }, EDIT_TAP_SETTLE_DELAY_MS);
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
+            // 5秒で検出できなくてもタップは行う（ADB版auto-export.sh:155はここで失敗扱いだが、
+            // このダイアログはそもそもノードに露出しないため、アプリ側はクラス名が読めない
+            // ことを失敗とみなさない。診断にeditクラス未検出を残すだけ）。
             tapEditButton(false);
             return;
         }
@@ -296,28 +323,40 @@ final class LineExportFlow {
             finish(false, STAGE_EDIT_BUTTON);
             return;
         }
-        handler.postDelayed(new Runnable() {
-            @Override
-            public void run() {
-                step12Cleanup(0);
-            }
-        }, SCROLL_SETTLE_DELAY_MS);
+        // 手順12（後片付け）は何もしない。ADB版のBACK×3（flow.sh:75-78）は本番では実行されて
+        // いない: auto-export.sh:143が`flow.sh 1 keep`と呼び、flow.sh:73の`keep`分岐が
+        // 後片付けの手前でexit 0する。本番はEDITタップ後、outbox.sqlite3の送信結果を最大240秒
+        // 待ってからHOME+SLEEPする（auto-export.sh:159-170）。EDITタップ直後にBACKを撃つと
+        // Termuxの保存ダイアログを取り消し、取り込みが行われない恐れがあるため、段階2では
+        // 画面をそのまま残して終了する。HOME・再ロックは段階3の範囲。
+        finish(true, null);
     }
 
-    // ---- 手順12: 後片付け（BACKで抜ける。flow.sh:75-78と同値） --------------------------------
+    // ---- 共通: アクティブウィンドウのパッケージ名待ち（300ms間隔・期限10秒） ---------------------
 
-    private void step12Cleanup(final int count) {
-        if (count >= BACK_MAX_PRESSES) {
-            finish(true, null);
+    private interface PackageWaitCallback {
+        void onFound();
+    }
+
+    private void waitForPackage(final String packageName, final String stage, final long deadlineAt,
+            final PackageWaitCallback callback) {
+        String current = NodeOps.activePackageName(service);
+        if (packageName.equals(current)) {
+            recordStep(stage);
+            callback.onFound();
             return;
         }
-        service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK);
+        if (System.currentTimeMillis() >= deadlineAt) {
+            recordStep(stage);
+            finish(false, stage);
+            return;
+        }
         handler.postDelayed(new Runnable() {
             @Override
             public void run() {
-                step12Cleanup(count + 1);
+                waitForPackage(packageName, stage, deadlineAt, callback);
             }
-        }, BACK_INTERVAL_MS);
+        }, NODE_WAIT_POLL_MS);
     }
 
     // ---- 共通: ノード待ち（300ms間隔・期限10秒） ----------------------------------------------
