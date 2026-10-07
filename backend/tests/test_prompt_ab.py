@@ -671,7 +671,7 @@ def test_parse_args_v101_prompt_name(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_v102_config_calls_with_v101_schema_and_default_prompt_c(monkeypatch, v101_fakes):
+def test_v102_config_calls_with_v101_schema_and_default_prompt_e(monkeypatch, v101_fakes):
     from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
 
     # Arrange / Act
@@ -679,12 +679,12 @@ def test_v102_config_calls_with_v101_schema_and_default_prompt_c(monkeypatch, v1
     kwargs = v101_fakes.v8.call_args.kwargs
     # Assert
     assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
-    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_c")
-    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_c"
+    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_e")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_e"
 
 
-def test_v102_prompt_name_b_can_be_chosen_and_c_differs_from_b():
-    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_c")
+def test_v102_prompt_name_b_can_be_chosen_and_default_e_differs_from_b():
+    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_e")
     assert pab._load_prompt_text("v102") != pab._load_prompt_text("v101", "raw_copy_v101_b")
     assert pab._load_prompt_text("v102", "raw_copy_v101_b") == pab._load_prompt_text("v101", "raw_copy_v101_b")
 
@@ -804,14 +804,65 @@ def test_without_omit_jsonl_has_no_omitted_field_key(monkeypatch, fakes):
 
 
 def test_parse_args_accepts_repeated_omit_supplier_field():
-    args = pab.parse_args([*_BASE_ARGS, "--config", "v102",
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v101",
                            "--omit-supplier-field", "extraction_ship_format",
                            "--omit-supplier-field", "extraction_price_format"])
     assert args.omit_supplier_field == ["extraction_ship_format", "extraction_price_format"]
 
 
-def test_parse_args_omit_default_is_none():
-    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field is None
+def test_parse_args_v102_omits_legacy_supplier_fields_by_default():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+
+
+def test_parse_args_v102_explicit_omit_is_unioned_with_legacy_fields():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", "extraction_layout_rules"])
+    assert args.omit_supplier_field == sorted({*pab.LEGACY_SUPPLIER_FIELDS, "extraction_layout_rules"})
+    assert len(args.omit_supplier_field) == 8
+
+
+def test_parse_args_v102_keep_legacy_supplier_fields_omits_nothing():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--keep-legacy-supplier-fields"])
+    assert args.omit_supplier_field is None
+
+
+def test_parse_args_v101_default_omits_nothing():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v101"]).omit_supplier_field is None
+
+
+def test_parse_args_rejects_keep_legacy_supplier_fields_for_v101():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--keep-legacy-supplier-fields"])
+
+
+_LEGACY_CTX = task.ExtractionContext(
+    raw_text="a\nb", supplier_context={name: f"V_{name}" for name in pab.LEGACY_SUPPLIER_FIELDS},
+    knowledge_links=[], supplier_id=7,
+    new_system_rules={"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"},
+)
+
+
+def test_v102_default_run_uses_prompt_e_and_records_seven_omitted_fields(monkeypatch, v101_fakes):
+    # Arrange
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert row["prompt_name"] == "raw_copy_v101_e"
+    assert row["omitted_supplier_fields"] == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+    assert len(row["omitted_supplier_fields"]) == 7
+
+
+def test_v102_default_omit_removes_legacy_fields_but_keeps_new_system_rules(monkeypatch, v101_fakes):
+    # Arrange
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_LEGACY_CTX))
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    # Assert
+    kwargs = v101_fakes.v8.call_args.kwargs
+    assert not set(pab.LEGACY_SUPPLIER_FIELDS) & set(kwargs["supplier_context"] or {})
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
 
 
 @pytest.mark.parametrize("bad", ["ship_format", "Extraction_x", "extraction_", "extraction_a-b", "extraction_x1", ""])
