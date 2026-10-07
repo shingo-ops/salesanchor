@@ -8,6 +8,7 @@ from tests.seed_data import (
     _load_tcg_type_seed_rows,
     aggregation_rules_seed_sql,
     country_seed_sql,
+    tcg_product_categories_seed_sql,
     type_master_seed_sql,
 )
 
@@ -67,3 +68,13 @@ def test_aggregation_default_values_match_spec_ver41():
         ("Damaged sealed box", 100, 10),
         ("No shrink box", 100, 5),
     ]
+
+
+def test_tcg_product_categories_seed_sql_has_box_and_single():
+    # 20260902_110000 が入れる 2 行（PC_BOX・PC_SINGLE）と同じ値。code に一意索引があるので ON CONFLICT (code)
+    sql = tcg_product_categories_seed_sql()
+
+    assert "('PC_BOX', 'Box', '箱系', TRUE)" in sql
+    assert "('PC_SINGLE', 'Single', 'シングル系', TRUE)" in sql
+    assert sql.startswith("INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active) VALUES")
+    assert sql.rstrip().endswith("ON CONFLICT (code) DO NOTHING")

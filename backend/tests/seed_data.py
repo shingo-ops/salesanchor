@@ -6,6 +6,7 @@ migration が値を書かなくなっても試験が壊れないように、デ�
 - 国: frontend/src/constants/countries.ts
 - type_master: 下の _load_tcg_type_seed_rows（SQLite の試験 DB と PG の試験で共用）
 - 集計ルール: app.services.inventory_aggregation.DEFAULT_AGGREGATION_RULES（アプリのコード）
+- 商品区分（PC_BOX・PC_SINGLE）: 下の _TCG_PRODUCT_CATEGORY_ROWS（20260902_110000 が入れる値と同じ）
 
 SQL はすべて ON CONFLICT で冪等。実行は conn.exec_driver_sql（SQLAlchemy の :name 解析を避ける）。
 """
@@ -83,4 +84,24 @@ def aggregation_rules_seed_sql() -> str:
         "INSERT INTO public.inventory_aggregation_rules (condition, price_tolerance, stock_tolerance) VALUES\n"
         + values
         + "\nON CONFLICT (condition) DO NOTHING"
+    )
+
+
+# 20260902_110000_tcg_classification_masters.sql が入れる 2 行（code, display_name, kubun_type）
+_TCG_PRODUCT_CATEGORY_ROWS: list[tuple[str, str, str]] = [
+    ("PC_BOX", "Box", "箱系"),
+    ("PC_SINGLE", "Single", "シングル系"),
+]
+
+
+def tcg_product_categories_seed_sql() -> str:
+    """public.tcg_product_categories へ PC_BOX・PC_SINGLE を入れる SQL（code に一意索引がある）。"""
+    values = ",\n".join(
+        f"({_lit(code)}, {_lit(display_name)}, {_lit(kubun_type)}, TRUE)"
+        for code, display_name, kubun_type in _TCG_PRODUCT_CATEGORY_ROWS
+    )
+    return (
+        "INSERT INTO public.tcg_product_categories (code, display_name, kubun_type, is_active) VALUES\n"
+        + values
+        + "\nON CONFLICT (code) DO NOTHING"
     )
