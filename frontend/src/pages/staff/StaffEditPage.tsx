@@ -14,6 +14,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { Select } from "../../components/Select";
 import { api } from "../../lib/api";
+import { hasEnglishNames } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 
 interface StaffUIPreferences {
@@ -122,6 +123,10 @@ export default function StaffEditPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError("");
+    if (!hasEnglishNames(form)) {
+      setError(t("staff.englishNameRequired"));
+      return;
+    }
     try {
       await api.patch(`/staff/${id}`, {
         surname_jp: form.surname_jp,
@@ -164,11 +169,11 @@ export default function StaffEditPage() {
           <div className="form-group"><label>{t("staff.givenNameKana")}</label>
             <input value={form.given_name_kana} onChange={(e) => setForm({ ...form, given_name_kana: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.surnameEn")}</label>
-            <input value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
+          <div className="form-group"><label>{t("staff.surnameEn")} *</label>
+            <input required aria-required="true" value={form.surname_en} onChange={(e) => setForm({ ...form, surname_en: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.givenNameEn")}</label>
-            <input value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
+          <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
+            <input required aria-required="true" value={form.given_name_en} onChange={(e) => setForm({ ...form, given_name_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
             <input required type="email" value={form.primary_email} onChange={(e) => setForm({ ...form, primary_email: e.target.value })} />

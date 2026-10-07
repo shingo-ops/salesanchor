@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 from decimal import ROUND_HALF_UP, Decimal
 from types import SimpleNamespace
@@ -330,3 +331,781 @@ def test_ledger_totals_sum_by_source_ref_on_real_postgres(pg):
         assert totals.null_cost_rows == 0
         assert totals.cost_usd == sum(stored)
         assert pab.fetch_ledger_totals(s, "prompt_ab:NONE").rows == 0
+
+
+# --- v9 ---------------------------------------------------------------------
+
+
+def test_v9_config_passes_v9_schema_and_prompt(monkeypatch, fakes):
+    from app.services.gemini_raw_copy_v9 import V9_RESPONSE_SCHEMA
+
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",))
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V9_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == "PROMPT9"
+
+
+def test_v8_config_does_not_pass_response_schema(monkeypatch, fakes):
+    _run(fakes, monkeypatch, config="v8", run_ids=("r1",))
+    assert "response_schema" not in fakes.v8.call_args.kwargs
+
+
+def test_v9_dry_run_never_calls_gemini_nor_ledger(monkeypatch, fakes, capsys):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    summary = _run(fakes, monkeypatch, config="v9", dry_run=True)
+    assert summary.dry_run is True
+    assert fakes.v8.call_count == 0 and fakes.v7.call_count == 0
+    assert fakes.record.call_count == 0
+    assert "PROMPT9" in capsys.readouterr().out
+
+
+def test_parse_args_accepts_v9_with_thinking_level():
+    args = pab.parse_args([
+        "--runs-file", "f", "--config", "v9", "--thinking-level", "low", "--repeat", "1",
+        "--max-cost-usd", "1", "--test-id", "X", "--out-dir", "/o",
+    ])
+    assert args.config == "v9" and args.thinking_level == "LOW"
+
+
+# --- v9 --prompt-name（trial1）-----------------------------------------------
+
+
+@pytest.fixture
+def named_prompts(monkeypatch, tmp_path):
+    """prompts/ の代わりの置き場。raw_copy_v9_trial1.txt だけ置く。"""
+    d = tmp_path / "prompts"
+    d.mkdir()
+    (d / "raw_copy_v9_trial1.txt").write_text("TRIAL1", encoding="utf-8")
+    monkeypatch.setattr(pab, "_PROMPTS_DIR", d)
+    return d
+
+
+def test_v9_without_prompt_name_uses_default_prompt_and_records_default_name(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",))
+    assert fakes.v8.call_args.kwargs["prompt_text"] == "PROMPT9"
+    assert _lines(fakes)[0]["prompt_name"] == "raw_copy_v9"
+
+
+def test_v9_prompt_name_uses_named_prompt_and_records_name(monkeypatch, fakes, named_prompts):
+    from app.services.gemini_raw_copy_v9 import V9_RESPONSE_SCHEMA
+
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", run_ids=("r1",), prompt_name="raw_copy_v9_trial1")
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["prompt_text"] == "TRIAL1"
+    assert kwargs["response_schema"] is V9_RESPONSE_SCHEMA
+    assert _lines(fakes)[0]["prompt_name"] == "raw_copy_v9_trial1"
+
+
+def test_v9_prompt_name_dry_run_shows_named_prompt(monkeypatch, fakes, named_prompts, capsys):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(fakes, monkeypatch, config="v9", dry_run=True, prompt_name="raw_copy_v9_trial1")
+    out = capsys.readouterr().out
+    assert "TRIAL1" in out and "PROMPT9" not in out
+    assert fakes.v8.call_count == 0
+
+
+def test_real_trial1_prompt_file_exists_and_is_loaded():
+    path = pab.resolve_prompt_path("raw_copy_v9_trial1")
+    assert path.name == "raw_copy_v9_trial1.txt"
+    assert pab._load_prompt_text("v9", "raw_copy_v9_trial1") == path.read_text(encoding="utf-8")
+
+
+@pytest.mark.parametrize("bad", ["../x", "raw_copy_v8_x", "raw_copy_v9_A", "raw_copy_v9_", "raw_copy_v9_a/b", "raw_copy_v9_a\n"])
+def test_run_ab_stops_before_gemini_on_invalid_prompt_name(monkeypatch, fakes, named_prompts, bad):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config="v9", prompt_name=bad)
+    assert fakes.v8.call_count == 0 and fakes.record.call_count == 0
+
+
+def test_run_ab_stops_before_gemini_on_missing_prompt_file(monkeypatch, fakes, named_prompts):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config="v9", prompt_name="raw_copy_v9_nothing")
+    assert fakes.v8.call_count == 0 and fakes.record.call_count == 0
+
+
+@pytest.mark.parametrize("config", ["v7", "v8"])
+def test_run_ab_stops_when_prompt_name_is_combined_with_v7_or_v8(monkeypatch, fakes, named_prompts, config):
+    with pytest.raises(ValueError):
+        _run(fakes, monkeypatch, config=config, prompt_name="raw_copy_v9_trial1")
+    assert fakes.v8.call_count == 0 and fakes.v7.call_count == 0
+
+
+_BASE_ARGS = ["--runs-file", "f", "--repeat", "1", "--max-cost-usd", "1", "--test-id", "X", "--out-dir", "/o"]
+
+
+def test_parse_args_accepts_prompt_name_for_v9(named_prompts):
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v9", "--prompt-name", "raw_copy_v9_trial1"])
+    assert args.prompt_name == "raw_copy_v9_trial1"
+
+
+@pytest.mark.parametrize("config,name", [
+    ("v8", "raw_copy_v9_trial1"), ("v7", "raw_copy_v9_trial1"),
+    ("v9", "../x"), ("v9", "raw_copy_v8_x"), ("v9", "raw_copy_v9_A"), ("v9", "raw_copy_v9_nothing"),
+])
+def test_parse_args_rejects_bad_prompt_name(named_prompts, config, name):
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", config, "--prompt-name", name])
+
+
+# ---------------------------------------------------------------------------
+# v10（設計: docs/handoff/gemini-v10/design.md §3-5・§5-2）
+# ---------------------------------------------------------------------------
+
+_V10_RAW = "商品A\n3BOX@1,000円"
+_V10_CTX = task.ExtractionContext(
+    raw_text=_V10_RAW, supplier_context={"extraction_order_pattern": '["price","quantity"]'},
+    knowledge_links=[], supplier_id=7,
+)
+_V10_RESPONSE = json.dumps({"items": [{
+    "price": "1,000円", "quantity": "3", "price_line": 2, "item_lines": [2],
+    "heading_lines": [1], "shared_lines": [], "name_lines": [1],
+}]}, ensure_ascii=False)
+
+
+@pytest.fixture
+def v10_fakes(monkeypatch, fakes):
+    """v10 の試験用：マスタ読み込みを差し替え、呼ばれた回数を数える。"""
+    masters = SimpleNamespace(
+        cond=MagicMock(return_value=[]), status=MagicMock(return_value=[]),
+        lookup=MagicMock(return_value=({}, {}, {}, {}, {}, {"BOX": ("BOX", "箱系")})),
+    )
+    monkeypatch.setattr(pab, "load_condition_entries", masters.cond)
+    monkeypatch.setattr(pab, "load_status_master", masters.status)
+    monkeypatch.setattr(pab, "load_lookup_maps", masters.lookup)
+    monkeypatch.setattr(pab, "load_v10_prompt", lambda: "V10PROMPT")
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_V10_CTX))
+    fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V10_RESPONSE}
+    fakes.masters = masters
+    return fakes
+
+
+def test_v10_config_calls_with_v10_schema_and_prompt(monkeypatch, v10_fakes):
+    from app.services.gemini_raw_copy_v10 import V10_RESPONSE_SCHEMA
+
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    kwargs = v10_fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V10_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == "V10PROMPT"
+
+
+def test_v10_row_has_v10_items_with_system_extracted_values(monkeypatch, v10_fakes):
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    row = _lines(v10_fakes)[0]
+    assert row["config"] == "v10" and row["item_count"] == 1 and row["errors"] == []
+    item = row["v10_items"][0]
+    assert item["name"] == "商品A" and item["unit"] == "BOX"
+    assert item["raw_price"] == "1,000円" and item["price_normalized"] == 1000
+    assert item["price_line"] == 2 and item["item_lines"] == [2]
+
+
+def test_v10_masters_are_loaded_once_per_run_not_per_call(monkeypatch, v10_fakes):
+    _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1", "r2"), repeat=2)
+    m = v10_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+
+
+def test_v10_dry_run_does_not_read_masters(monkeypatch, v10_fakes, capsys):
+    _run(v10_fakes, monkeypatch, config="v10", dry_run=True)
+    m = v10_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (0, 0, 0)
+    assert v10_fakes.v8.call_count == 0
+    assert "V10PROMPT" in capsys.readouterr().out
+
+
+def test_v9_and_v8_rows_have_no_v10_items_and_do_not_read_masters(monkeypatch, v10_fakes):
+    for config in ("v8", "v9"):
+        v10_fakes.out.joinpath("T.jsonl").unlink(missing_ok=True)
+        _run(v10_fakes, monkeypatch, config=config, run_ids=("r1",))
+        assert "v10_items" not in _lines(v10_fakes)[0]
+    assert v10_fakes.masters.lookup.call_count == 0
+
+
+def test_v10_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v10_fakes):
+    monkeypatch.setattr(pab, "extract_v10_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v10_fakes, monkeypatch, config="v10", run_ids=("r1",))
+    row = _lines(v10_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v10_items"] == [] and "ValueError" in row["v10_items_error"]
+
+
+def test_v10_with_prompt_name_is_an_error(monkeypatch, v10_fakes):
+    summary_error = None
+    try:
+        _run(v10_fakes, monkeypatch, config="v10", prompt_name="raw_copy_v9_x")
+    except ValueError as exc:
+        summary_error = exc
+    assert summary_error is not None and "--config v9" in str(summary_error)
+    assert v10_fakes.v8.call_count == 0
+
+
+def test_parse_args_accepts_v10_and_rejects_prompt_name_with_v10(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v10"]).config == "v10"
+    with pytest.raises(SystemExit):
+        pab.parse_args([*base, "--config", "v10", "--prompt-name", "raw_copy_v9_x"])
+
+
+# ---------------------------------------------------------------------------
+# v101（設計: docs/handoff/gemini-v101/design.md §3-6・§5-4）
+# ---------------------------------------------------------------------------
+
+_V101_RESPONSE = json.dumps({"items": [{"lines": [1, 2], "price": "1,000円", "quantity": "3"}]}, ensure_ascii=False)
+
+
+@pytest.fixture
+def v101_fakes(monkeypatch, v10_fakes):
+    """v101 の試験用：v10 の差し替え（マスタ・原文）に、v101 の応答を返させる。"""
+    v10_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": _V101_RESPONSE}
+    return v10_fakes
+
+
+def test_v101_config_calls_with_v101_schema_and_default_prompt_a(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    kwargs = v101_fakes.v8.call_args.kwargs
+    assert kwargs["response_schema"] is V101_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_a")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_a"
+
+
+def test_v101_prompt_name_b_uses_the_b_prompt_file_and_records_name(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import load_v101_prompt
+
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",), prompt_name="raw_copy_v101_b")
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_b")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_b"
+
+
+def test_v101_prompt_files_a_and_b_both_exist_and_differ():
+    a, b = pab._load_prompt_text("v101"), pab._load_prompt_text("v101", "raw_copy_v101_b")
+    assert a != b and "行番号の担当" in a and "行番号の担当" in b
+
+
+def test_resolve_prompt_path_resolves_raw_copy_v101_d_for_v101_and_v102():
+    # Arrange
+    names_and_configs = ("v101", "v102")
+
+    # Act
+    paths = [pab.resolve_prompt_path("raw_copy_v101_d", config) for config in names_and_configs]
+
+    # Assert
+    assert all(path.name == "raw_copy_v101_d.txt" and path.is_file() for path in paths)
+
+
+def test_v101_row_has_three_new_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["config"] == "v101" and row["item_count"] == 1 and row["errors"] == []
+    assert row["v101_items"][0]["name"] == "商品A" and row["v101_items"][0]["price_line"] == 2
+    assert row["v101_items"][0]["unit"] == "BOX" and row["v101_items"][0]["price_normalized"] == 1000
+    assert row["v101_items_norule"][0]["price_line"] == 2
+    assert row["v101_flags"] == {"possible_missing_item": []}
+    assert "v10_items" not in row
+
+
+def test_v101_items_and_norule_are_extracted_with_reassign_on_and_off(monkeypatch, v101_fakes):
+    spy = MagicMock(return_value=([], {"possible_missing_item": []}))
+    monkeypatch.setattr(pab, "extract_v101_items", spy)
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    assert [c.kwargs["reassign"] for c in spy.call_args_list] == [True, False]
+
+
+def test_v101_masters_are_loaded_once_per_run_and_not_in_dry_run(monkeypatch, v101_fakes, capsys):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1", "r2"), repeat=2)
+    m = v101_fakes.masters
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+    _run(v101_fakes, monkeypatch, config="v101", dry_run=True)
+    assert (m.cond.call_count, m.status.call_count, m.lookup.call_count) == (1, 1, 1)
+    assert "行番号の担当" in capsys.readouterr().out
+
+
+def test_v101_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v101_items"] == [] and row["v101_items_norule"] == [] and "ValueError" in row["v101_items_error"]
+
+
+def test_v9_still_uses_default_name_and_rejects_v101_names(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "load_v9_prompt", lambda: "PROMPT9")
+    _run(v101_fakes, monkeypatch, config="v9", run_ids=("r1",))
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v9"
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v9", prompt_name="raw_copy_v101_a")
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v101", prompt_name="raw_copy_v9_trial1")
+
+
+@pytest.mark.parametrize("bad", ["../x", "raw_copy_v101_A", "raw_copy_v101_", "raw_copy_v101_nothing"])
+def test_v101_bad_prompt_name_stops_before_gemini(monkeypatch, v101_fakes, bad):
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v101", prompt_name=bad)
+    assert v101_fakes.v8.call_count == 0 and v101_fakes.record.call_count == 0
+
+
+def test_v7_to_v10_rows_have_no_v101_fields(monkeypatch, v101_fakes):
+    for config in ("v8", "v9", "v10"):
+        v101_fakes.out.joinpath("T.jsonl").unlink(missing_ok=True)
+        _run(v101_fakes, monkeypatch, config=config, run_ids=("r1",))
+        assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(_lines(v101_fakes)[0])
+
+
+def test_parse_args_v101_prompt_name(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v101"]).prompt_name is None
+    assert pab.parse_args([*base, "--config", "v101", "--prompt-name", "raw_copy_v101_b"]).prompt_name == "raw_copy_v101_b"
+    for config, name in (("v101", "raw_copy_v9_trial1"), ("v9", "raw_copy_v101_a"), ("v10", "raw_copy_v101_a")):
+        with pytest.raises(SystemExit):
+            pab.parse_args([*base, "--config", config, "--prompt-name", name])
+
+
+# ---------------------------------------------------------------------------
+# v102（設計: docs/handoff/gemini-v102/design.md §3-3・§5-3）
+# ---------------------------------------------------------------------------
+
+
+def test_v102_config_calls_with_v101_schema_and_default_prompt_e(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+
+    # Arrange / Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    kwargs = v101_fakes.v8.call_args.kwargs
+    # Assert
+    assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
+    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_e")
+    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_e"
+
+
+def test_v102_prompt_name_b_can_be_chosen_and_default_e_differs_from_b():
+    assert pab._load_prompt_text("v102") == pab._load_prompt_text("v101", "raw_copy_v101_e")
+    assert pab._load_prompt_text("v102") != pab._load_prompt_text("v101", "raw_copy_v101_b")
+    assert pab._load_prompt_text("v102", "raw_copy_v101_b") == pab._load_prompt_text("v101", "raw_copy_v101_b")
+
+
+def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["config"] == "v102" and row["item_count"] == 1 and row["errors"] == []
+    assert row["v102_items"][0]["name"] == "商品A" and row["v102_items"][0]["fixes"] == []
+    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
+    assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
+
+
+def test_v102_extracts_once_with_v102_fixes_and_reassign_on(monkeypatch, v101_fakes):
+    spy = MagicMock(return_value=([], {}))
+    monkeypatch.setattr(pab, "extract_v101_items", spy)
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    assert spy.call_count == 1
+    assert spy.call_args.kwargs["reassign"] is True and spy.call_args.kwargs["v102_fixes"] is True
+
+
+def test_v102_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_fakes):
+    monkeypatch.setattr(pab, "extract_v101_items", MagicMock(side_effect=ValueError("boom")))
+    summary = _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert summary.stop_reason is None
+    assert row["v102_items"] == [] and row["v102_flags"] == {} and "ValueError" in row["v102_items_error"]
+
+
+def test_v101_row_is_unchanged_and_has_no_v102_fields(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    assert row["prompt_name"] == "raw_copy_v101_a"
+    assert row["v101_flags"] == {"possible_missing_item": []}
+    assert "fixes" not in row["v101_items"][0]
+    assert not {"v102_items", "v102_flags"} & set(row)
+
+
+def test_v102_bad_prompt_name_stops_before_gemini(monkeypatch, v101_fakes):
+    with pytest.raises(ValueError):
+        _run(v101_fakes, monkeypatch, config="v102", prompt_name="raw_copy_v9_trial1")
+    assert v101_fakes.v8.call_count == 0 and v101_fakes.record.call_count == 0
+
+
+def test_parse_args_accepts_v102_and_its_prompt_name(tmp_path):
+    base = ["--runs-file", str(tmp_path / "r"), "--repeat", "1", "--max-cost-usd", "1", "--test-id", "T",
+            "--out-dir", str(tmp_path)]
+    assert pab.parse_args([*base, "--config", "v102"]).prompt_name is None
+    assert pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v101_b"]).prompt_name == "raw_copy_v101_b"
+    with pytest.raises(SystemExit):
+        pab.parse_args([*base, "--config", "v102", "--prompt-name", "raw_copy_v9_trial1"])
+
+
+# ---------------------------------------------------------------------------
+# --omit-supplier-field（仕入元ルールの欄を外す）
+# ---------------------------------------------------------------------------
+
+_SHIP_LABEL = "発送日フォーマット"
+_OMIT_CTX = task.ExtractionContext(
+    raw_text="a\nb",
+    supplier_context={"extraction_price_format": "円", "extraction_ship_format": "SHIPRULE"},
+    knowledge_links=[], supplier_id=7,
+)
+
+
+def _omit_ctx_run(fakes, monkeypatch, **over):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_OMIT_CTX))
+    return _run(fakes, monkeypatch, run_ids=("r1",), **over)
+
+
+def _prompt_given_to_gemini(fakes):
+    kw = fakes.v8.call_args.kwargs
+    return pab.build_prompt_v8(
+        "a", prompt_text="P", supplier_context=kw["supplier_context"], knowledge_links=kw["knowledge_links"],
+    )
+
+
+def test_omit_field_removes_only_that_field_from_prompt(monkeypatch, fakes):
+    # Arrange / Act
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    # Assert
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL not in prompt and "SHIPRULE" not in prompt
+    assert "円" in prompt
+
+
+def test_without_omit_the_field_stays_in_prompt(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    prompt = _prompt_given_to_gemini(fakes)
+    assert _SHIP_LABEL in prompt and "SHIPRULE" in prompt
+
+
+def test_omit_does_not_change_original_context(monkeypatch, fakes):
+    before = dict(_OMIT_CTX.supplier_context)
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format"])
+    assert _OMIT_CTX.supplier_context == before
+
+
+def test_omit_handles_none_supplier_context():
+    assert pab._supplier_context_without(None, ["extraction_ship_format"]) is None
+
+
+def test_omit_dry_run_prompt_has_no_omitted_field(monkeypatch, fakes, capsys):
+    _omit_ctx_run(fakes, monkeypatch, dry_run=True, omit_supplier_fields=["extraction_ship_format"])
+    out = capsys.readouterr().out
+    assert _SHIP_LABEL not in out and "[L0001] a" in out
+
+
+def test_omit_writes_sorted_field_list_to_jsonl(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch, omit_supplier_fields=["extraction_ship_format", "extraction_price_format"])
+    assert _lines(fakes)[0]["omitted_supplier_fields"] == ["extraction_price_format", "extraction_ship_format"]
+
+
+def test_without_omit_jsonl_has_no_omitted_field_key(monkeypatch, fakes):
+    _omit_ctx_run(fakes, monkeypatch)
+    assert "omitted_supplier_fields" not in _lines(fakes)[0]
+
+
+def test_parse_args_accepts_repeated_omit_supplier_field():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v101",
+                           "--omit-supplier-field", "extraction_ship_format",
+                           "--omit-supplier-field", "extraction_price_format"])
+    assert args.omit_supplier_field == ["extraction_ship_format", "extraction_price_format"]
+
+
+def test_parse_args_v102_omits_legacy_supplier_fields_by_default():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).omit_supplier_field == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+
+
+def test_parse_args_v102_explicit_omit_is_unioned_with_legacy_fields():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", "extraction_layout_rules"])
+    assert args.omit_supplier_field == sorted({*pab.LEGACY_SUPPLIER_FIELDS, "extraction_layout_rules"})
+    assert len(args.omit_supplier_field) == 8
+
+
+def test_parse_args_v102_keep_legacy_supplier_fields_omits_nothing():
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--keep-legacy-supplier-fields"])
+    assert args.omit_supplier_field is None
+
+
+def test_parse_args_v101_default_omits_nothing():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v101"]).omit_supplier_field is None
+
+
+def test_parse_args_rejects_keep_legacy_supplier_fields_for_v101():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v101", "--keep-legacy-supplier-fields"])
+
+
+_LEGACY_CTX = task.ExtractionContext(
+    raw_text="a\nb", supplier_context={name: f"V_{name}" for name in pab.LEGACY_SUPPLIER_FIELDS},
+    knowledge_links=[], supplier_id=7,
+    new_system_rules={"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"},
+)
+
+
+def test_v102_default_run_uses_prompt_e_and_records_seven_omitted_fields(monkeypatch, v101_fakes):
+    # Arrange
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert row["prompt_name"] == "raw_copy_v101_e"
+    assert row["omitted_supplier_fields"] == sorted(pab.LEGACY_SUPPLIER_FIELDS)
+    assert len(row["omitted_supplier_fields"]) == 7
+
+
+def test_v102_default_omit_removes_legacy_fields_but_keeps_new_system_rules(monkeypatch, v101_fakes):
+    # Arrange
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_LEGACY_CTX))
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    # Assert
+    kwargs = v101_fakes.v8.call_args.kwargs
+    assert not set(pab.LEGACY_SUPPLIER_FIELDS) & set(kwargs["supplier_context"] or {})
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
+
+
+@pytest.mark.parametrize("bad", ["ship_format", "Extraction_x", "extraction_", "extraction_a-b", "extraction_x1", ""])
+def test_parse_args_rejects_bad_omit_supplier_field(bad):
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v102", "--omit-supplier-field", bad])
+
+
+def test_parse_args_rejects_omit_supplier_field_for_v7():
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v7", "--omit-supplier-field", "extraction_ship_format"])
+
+
+def test_resolve_prompt_path_resolves_raw_copy_v101_e_for_v101_and_v102():
+    # Arrange
+    names_and_configs = ("v101", "v102")
+
+    # Act
+    paths = [pab.resolve_prompt_path("raw_copy_v101_e", config) for config in names_and_configs]
+
+    # Assert
+    assert all(path.name == "raw_copy_v101_e.txt" and path.is_file() for path in paths)
+
+
+# ---------------------------------------------------------------------------
+# --supplier-rules-file（仕入元ルールの欄を差し替える）
+# ---------------------------------------------------------------------------
+
+_RULES_CTX = task.ExtractionContext(
+    raw_text="a\nb",
+    supplier_context={"extraction_price_format": "DBPRICE", "extraction_notes": "DBNOTES",
+                      "extraction_ship_format": "SHIPRULE"},
+    knowledge_links=[], supplier_id=7,
+)
+
+
+def _write_rules(tmp_path, data, name="rules.json"):
+    path = tmp_path / name
+    path.write_text(data if isinstance(data, str) else json.dumps(data, ensure_ascii=False), encoding="utf-8")
+    return path
+
+
+def _rules_run(fakes, monkeypatch, rules_path, ctx=_RULES_CTX, **over):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=ctx))
+    return _run(fakes, monkeypatch, run_ids=("r1",), supplier_rules_file=rules_path, **over)
+
+
+def test_rules_file_overrides_listed_field_and_keeps_unlisted_and_drops_null(monkeypatch, fakes, tmp_path):
+    # Arrange
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE", "extraction_ship_format": None}})
+    # Act
+    _rules_run(fakes, monkeypatch, path)
+    # Assert
+    sent = fakes.v8.call_args.kwargs["supplier_context"]
+    assert sent == {"extraction_price_format": "NEWPRICE", "extraction_notes": "DBNOTES"}
+
+
+def test_rules_file_does_not_change_original_context(monkeypatch, fakes, tmp_path):
+    # Arrange
+    before = dict(_RULES_CTX.supplier_context)
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE", "extraction_ship_format": None}})
+    # Act
+    _rules_run(fakes, monkeypatch, path)
+    # Assert
+    assert _RULES_CTX.supplier_context == before
+
+
+def test_rules_file_without_matching_supplier_id_behaves_as_before(monkeypatch, fakes, tmp_path):
+    # Arrange
+    path = _write_rules(tmp_path, {"999": {"extraction_price_format": "NEWPRICE"}})
+    # Act
+    _rules_run(fakes, monkeypatch, path)
+    # Assert
+    assert fakes.v8.call_args.kwargs["supplier_context"] == _RULES_CTX.supplier_context
+    assert "supplier_rules_override" not in _lines(fakes)[0]
+
+
+def test_rules_file_applies_to_supplier_without_db_rules(monkeypatch, fakes, tmp_path):
+    # Arrange
+    ctx = task.ExtractionContext("a\nb", None, [], 7)
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE"}})
+    # Act
+    _rules_run(fakes, monkeypatch, path, ctx=ctx)
+    # Assert
+    assert fakes.v8.call_args.kwargs["supplier_context"] == {"extraction_price_format": "NEWPRICE"}
+
+
+def test_rules_file_with_no_supplier_id_in_context_behaves_as_before(monkeypatch, fakes, tmp_path):
+    # Arrange
+    ctx = task.ExtractionContext("a\nb", {"extraction_price_format": "DBPRICE"}, [], None)
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE"}})
+    # Act
+    _rules_run(fakes, monkeypatch, path, ctx=ctx)
+    # Assert
+    assert fakes.v8.call_args.kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+
+
+def test_rules_file_writes_override_record_to_jsonl(monkeypatch, fakes, tmp_path):
+    # Arrange
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE", "extraction_ship_format": None}})
+    # Act
+    _rules_run(fakes, monkeypatch, path)
+    # Assert
+    record = _lines(fakes)[0]["supplier_rules_override"]
+    assert record == {
+        "file_sha256": hashlib.sha256(path.read_bytes()).hexdigest(), "supplier_id": "7",
+        "fields": ["extraction_price_format", "extraction_ship_format"],
+    }
+
+
+def test_without_rules_file_jsonl_has_no_override_key_and_context_is_unchanged(monkeypatch, fakes):
+    # Arrange / Act
+    _rules_run(fakes, monkeypatch, None)
+    # Assert
+    assert "supplier_rules_override" not in _lines(fakes)[0]
+    assert fakes.v8.call_args.kwargs["supplier_context"] == _RULES_CTX.supplier_context
+
+
+def test_rules_file_is_applied_before_omit(monkeypatch, fakes, tmp_path):
+    # Arrange
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE", "extraction_ship_format": "NEWSHIP"}})
+    # Act
+    _rules_run(fakes, monkeypatch, path, omit_supplier_fields=["extraction_ship_format"])
+    # Assert
+    assert fakes.v8.call_args.kwargs["supplier_context"] == {
+        "extraction_price_format": "NEWPRICE", "extraction_notes": "DBNOTES",
+    }
+
+
+def test_rules_file_dry_run_prompt_uses_overridden_rules(monkeypatch, fakes, tmp_path, capsys):
+    # Arrange
+    path = _write_rules(tmp_path, {"7": {"extraction_price_format": "NEWPRICE", "extraction_ship_format": None}})
+    # Act
+    _rules_run(fakes, monkeypatch, path, dry_run=True)
+    # Assert
+    out = capsys.readouterr().out
+    assert "NEWPRICE" in out and "DBPRICE" not in out and "SHIPRULE" not in out
+    fakes.v8.assert_not_called()
+
+
+@pytest.mark.parametrize("content", [
+    "not json", "[]", '{"7": []}', '{"7": {"ship_format": "x"}}', '{"7": {"extraction_Bad": "x"}}',
+    '{"7": {"extraction_notes": 1}}',
+])
+def test_run_ab_stops_before_gemini_on_invalid_rules_file(monkeypatch, fakes, tmp_path, content):
+    # Arrange
+    path = _write_rules(tmp_path, content)
+    # Act / Assert
+    with pytest.raises(ValueError):
+        _rules_run(fakes, monkeypatch, path)
+    fakes.v8.assert_not_called()
+
+
+def test_run_ab_stops_before_gemini_on_missing_rules_file(monkeypatch, fakes, tmp_path):
+    with pytest.raises(ValueError):
+        _rules_run(fakes, monkeypatch, tmp_path / "nothing.json")
+    fakes.v8.assert_not_called()
+
+
+def test_run_ab_rejects_rules_file_with_v7(monkeypatch, fakes, tmp_path):
+    # Arrange
+    path = _write_rules(tmp_path, {"7": {"extraction_notes": "x"}})
+    # Act / Assert
+    with pytest.raises(ValueError):
+        _rules_run(fakes, monkeypatch, path, config="v7")
+    fakes.v7.assert_not_called()
+
+
+def test_parse_args_accepts_supplier_rules_file(tmp_path):
+    path = _write_rules(tmp_path, {"7": {"extraction_notes": "x"}})
+    args = pab.parse_args([*_BASE_ARGS, "--config", "v102", "--supplier-rules-file", str(path)])
+    assert args.supplier_rules_file == path
+
+
+def test_parse_args_supplier_rules_file_default_is_none():
+    assert pab.parse_args([*_BASE_ARGS, "--config", "v102"]).supplier_rules_file is None
+
+
+def test_parse_args_rejects_supplier_rules_file_for_v7(tmp_path):
+    path = _write_rules(tmp_path, {"7": {"extraction_notes": "x"}})
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v7", "--supplier-rules-file", str(path)])
+
+
+@pytest.mark.parametrize("content", ["not json", '{"7": {"bad": "x"}}'])
+def test_parse_args_rejects_invalid_supplier_rules_file(tmp_path, content):
+    path = _write_rules(tmp_path, content)
+    with pytest.raises(SystemExit):
+        pab.parse_args([*_BASE_ARGS, "--config", "v102", "--supplier-rules-file", str(path)])
+
+
+# ---------------------------------------------------------------------------
+# new_system_rules（新しい仕組み専用の2欄）
+# ---------------------------------------------------------------------------
+
+_NEW_RULES_CTX = task.ExtractionContext(
+    raw_text="a\nb", supplier_context={"extraction_price_format": "DBPRICE"}, knowledge_links=[], supplier_id=7,
+    new_system_rules={"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"},
+)
+
+
+def test_new_system_rules_are_passed_to_v8_family_and_not_to_supplier_context(monkeypatch, fakes):
+    # Arrange / Act
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, run_ids=("r1",))
+    # Assert
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
+    assert kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+
+
+def test_new_system_rules_are_not_passed_to_v7(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, config="v7", run_ids=("r1",))
+    assert "new_system_rules" not in fakes.v7.call_args.kwargs
+    assert fakes.v7.call_args.kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+
+
+def test_rules_file_overrides_new_system_rules_and_null_removes(monkeypatch, fakes, tmp_path):
+    path = _write_rules(tmp_path, {"7": {"extraction_layout_rules": "FILELAYOUT", "extraction_hard_cases": None}})
+    _rules_run(fakes, monkeypatch, path, ctx=_NEW_RULES_CTX)
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_layout_rules": "FILELAYOUT"}
+    assert kwargs["supplier_context"] == {"extraction_price_format": "DBPRICE"}
+    assert _lines(fakes)[0]["supplier_rules_override"]["fields"] == ["extraction_hard_cases", "extraction_layout_rules"]
+    assert _NEW_RULES_CTX.new_system_rules == {"extraction_layout_rules": "DBLAYOUT", "extraction_hard_cases": "DBHARD"}
+
+
+def test_rules_file_can_supply_new_system_rules_when_db_has_none(monkeypatch, fakes, tmp_path):
+    ctx = task.ExtractionContext("a\nb", None, [], 7)
+    path = _write_rules(tmp_path, {"7": {"extraction_hard_cases": "FILEHARD"}})
+    _rules_run(fakes, monkeypatch, path, ctx=ctx)
+    kwargs = fakes.v8.call_args.kwargs
+    assert kwargs["new_system_rules"] == {"extraction_hard_cases": "FILEHARD"}
+    assert kwargs["supplier_context"] is None
+
+
+def test_omit_supplier_field_also_removes_new_system_rule(monkeypatch, fakes):
+    monkeypatch.setattr(pab, "load_extraction_context", MagicMock(return_value=_NEW_RULES_CTX))
+    _run(fakes, monkeypatch, run_ids=("r1",), omit_supplier_fields=["extraction_layout_rules"])
+    assert fakes.v8.call_args.kwargs["new_system_rules"] == {"extraction_hard_cases": "DBHARD"}
+
+
+def test_no_new_system_rules_passes_none_to_v8(monkeypatch, fakes):
+    _run(fakes, monkeypatch, run_ids=("r1",))
+    assert fakes.v8.call_args.kwargs["new_system_rules"] is None

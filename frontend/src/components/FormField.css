@@ -174,6 +174,85 @@
   width: 100%;
 }
 
+/* indicator=none: 矢印を描かない（design.md §AV / §Z CSSI-0231） */
+.comp-select--no-indicator {
+  background-image: none;
+  padding-right: var(--space-3);
+}
+
+.comp-field--sm .comp-select--no-indicator,
+.comp-select__control--sm.comp-select--no-indicator {
+  padding-right: var(--space-2);
+}
+
+.comp-field--lg .comp-select--no-indicator,
+.comp-select__control--lg.comp-select--no-indicator {
+  padding-right: var(--space-4);
+}
+
+/* 用途別の種類（design.md §AW）。現行ページの見た目を写す */
+/* karte: InboxPage.css right-panel-field（枠幅は金型の 1px。出典は 0.5px だが DPR1/DPR2 の Chromium 描画は同一（aw1-equivalence）） */
+.comp-select__control.comp-select--karte {
+  min-height: 0;
+  padding: var(--karte-field-py) var(--karte-field-px);
+  border-color: var(--karte-field-bd);
+  border-radius: var(--radius-md);
+  background-color: var(--karte-field-bg);
+  background-image: none;
+  background-position: initial;
+  background-repeat: initial;
+  font-size: var(--font-sm);
+  line-height: normal;
+  cursor: default;
+  transition: border-color var(--transition-micro);
+}
+
+.comp-select__control.comp-select--karte:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+/* header: components.css page-header-select */
+.comp-select__control.comp-select--header {
+  min-height: 0;
+  height: var(--size-icon-btn);
+  padding: var(--space-1) var(--space-5) var(--space-1) var(--space-3);
+  border-radius: var(--radius-pill);
+  font-family: revert;
+  font-size: var(--font-sm);
+  line-height: normal;
+  white-space: nowrap;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.comp-select__control.comp-select--header:hover {
+  background-color: var(--bg-hover);
+  border-color: var(--border-strong);
+}
+
+/* tabbar: InboxPage.css inbox-platform-select */
+.comp-select__control.comp-select--tabbar {
+  min-height: 0;
+  height: var(--height-tab-item);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background-image: none;
+  background-position: initial;
+  background-repeat: initial;
+  font-size: var(--font-xs);
+  line-height: normal;
+  appearance: auto;
+  -webkit-appearance: auto;
+  transition: initial;
+}
+
+.comp-select__control.comp-select--tabbar:focus {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  box-shadow: none;
+}
+
 .comp-field--lg .comp-field__label {
   font-size: var(--font-base);
 }

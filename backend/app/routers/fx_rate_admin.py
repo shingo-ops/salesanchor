@@ -1,14 +1,32 @@
 """
 為替レート SSOT API ルーター。
 
-GET    /api/v1/fx-rate/{currency}         — 現在レート取得（ログイン認証のみ）
+GET    /api/v1/fx-rates/{currency}        — 現在レート取得（ログイン認証のみ）
 POST   /api/v1/super-admin/fx-rate/refresh — 手動即時更新（require_super_admin）
 
-設計:
-  - public.app_fx_rates を SSOT とする。Celery Beat が1日2回 UPSERT する。
+設計（ADR-148 2026-10-03 追記・PR-B）:
+  - public.app_fx_rate_history を SSOT とする（追記専用）。Celery Beat が1日2回追記する。
+  - 読み取りは `ORDER BY fetched_at DESC LIMIT 1` で最新行を返す。レスポンス形状
+    （FxRateResponse: currency/rate_jpy/fetched_at/updated_at）は維持し、`updated_at`
+    は履行テーブルの `created_at`（当行がテーブルに挿入された時刻）を転用する。
+  - public.app_fx_rates への読み書きは廃止（過去レートが UPSERT で上書きされ失われるため）。
+    テーブル自体は当面残置（DROPはPO本人のGO必須、ADR-148追記）。
   - 読み取りは全ログイン済みユーザーが可（為替は秘匿でない）。
-  - 書き込み（手動更新）は require_super_admin のみ。
+  - 書き込み（手動更新）は require_super_admin のみ。2026-10-03 追記: `app_fx_rate_history`
+    は FORCE ROW LEVEL SECURITY で書き込みポリシーが `app.is_operator='true'` を要求する
+    （migrations/20261003_100000_create_app_fx_rate_history.sql）。`refresh_fx_rate` は
+    従来 operator コンテキストを明示セットしていなかった（PR-B 当初はこの欠落を変更しない
+    方針だったが、後続判断で修正）。`backend/app/auth/dependencies.py:420-451` が定義する
+    `set_operator_context`/`reset_operator_context` の使用例（同ファイルの docstring、および
+    `docs/handoff/products-rls-stage1/design.md:41`「set_operator_context → try → 既存処理
+    → finally: reset_operator_context」）と同じ形で呼ぶ。この2関数の現存する実際の呼び出し元
+    は本PR時点で `backend/tests/test_rls_translation_glossary.py` のコメントのみで、過去に
+    呼んでいた `super_admin_inbound.py`/`parse_review.py` はコミット d010d6700 で機能自体が
+    削除済み（git grep で確認）。
   - invoices.py の fetch_fx_rate（ライブ取得）は別系統のまま。このルーターは触らない。
+  - 2026-10-01: 読み取りパスを /fx-rate/{currency} から /fx-rates/{currency} に変更。
+    invoices.py の fetch_fx_rate が同一パス /fx-rate/{currency} を先に登録しており、
+    このルーターの読み取りエンドポイントが到達不能になっていたため（ADR-148 追記参照）。
 """
 from __future__ import annotations
 
@@ -19,7 +37,12 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.auth.dependencies import get_current_user, require_super_admin
+from app.auth.dependencies import (
+    get_current_user,
+    require_super_admin,
+    reset_operator_context,
+    set_operator_context,
+)
 from app.database import get_db
 from app.models import User
 
@@ -36,7 +59,7 @@ class FxRateResponse(BaseModel):
 
 
 @router.get(
-    "/fx-rate/{currency}",
+    "/fx-rates/{currency}",
     response_model=FxRateResponse,
     tags=["fx-rate"],
 )
@@ -45,15 +68,18 @@ async def get_fx_rate(
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ):
-    """public.app_fx_rates から指定通貨の現在レートを返す。
+    """public.app_fx_rate_history から指定通貨の最新レートを返す。
 
-    行が存在しない場合は 404 を返す。
+    (currency, fetched_at) で追記される履歴テーブルから、最新の1行を
+    `ORDER BY fetched_at DESC LIMIT 1` で取得する。行が存在しない場合は 404 を返す
+    （app_fx_rates 時代と同じ 404 挙動）。
     """
     result = await db.execute(
         text(
-            "SELECT currency, rate_jpy, fetched_at, updated_at "
-            "FROM public.app_fx_rates "
-            "WHERE currency = :cur"
+            "SELECT currency, rate_jpy, fetched_at, created_at "
+            "FROM public.app_fx_rate_history "
+            "WHERE currency = :cur "
+            "ORDER BY fetched_at DESC LIMIT 1"
         ),
         {"cur": currency.upper()},
     )
@@ -67,7 +93,9 @@ async def get_fx_rate(
         currency=row["currency"],
         rate_jpy=float(row["rate_jpy"]),
         fetched_at=row["fetched_at"].isoformat(),
-        updated_at=row["updated_at"].isoformat(),
+        # created_at（当行が履歴テーブルに挿入された時刻）を updated_at として転用する。
+        # レスポンス形状は app_fx_rates 時代と同一に保つ（フロントの型を変えないため）。
+        updated_at=row["created_at"].isoformat(),
     )
 
 
@@ -80,9 +108,17 @@ async def get_fx_rate(
 async def refresh_fx_rate(
     db: AsyncSession = Depends(get_db),
 ):
-    """USD/JPY レートを即時取得して public.app_fx_rates に UPSERT する（手動更新）。
+    """USD/JPY レートを即時取得して public.app_fx_rate_history に追記する（手動更新）。
 
-    外部 API 障害時は 503 を返す。
+    外部 API 障害時は 503 を返す。(currency, fetched_at) が既存行と重複する場合は
+    ON CONFLICT DO NOTHING（追記専用・上書きしない）。
+
+    2026-10-03 追記: app_fx_rate_history の書き込みポリシーは app.is_operator='true'
+    を要求する（FORCE RLS）。backend/app/auth/dependencies.py:420-451 の
+    set_operator_context/reset_operator_context を、同ファイルの docstring が示す
+    使用例（set → try → 書き込み + commit → finally: reset）と同じ形で呼ぶ。
+    接続ロールが RLS を自動バイパスする場合でもこのヘルパーは無害（no-op ではなく
+    SET 文を発行するだけ）なので、バイパスの有無に関わらず安全に呼べる。
     """
     from app.services.fx_rate import get_fx_rate as _get_fx_rate
 
@@ -96,19 +132,21 @@ async def refresh_fx_rate(
     rate_jpy = snapshot["rate"]
     fetched_at = snapshot["fetched_at"]
 
-    await db.execute(
-        text(
-            """
-            INSERT INTO public.app_fx_rates (currency, rate_jpy, fetched_at)
-            VALUES ('USD', :rate, :fetched)
-            ON CONFLICT (currency) DO UPDATE
-                SET rate_jpy   = EXCLUDED.rate_jpy,
-                    fetched_at = EXCLUDED.fetched_at
-            """
-        ),
-        {"rate": str(rate_jpy), "fetched": fetched_at},
-    )
-    await db.commit()
+    await set_operator_context(db)
+    try:
+        await db.execute(
+            text(
+                """
+                INSERT INTO public.app_fx_rate_history (currency, rate_jpy, fetched_at)
+                VALUES ('USD', :rate, :fetched)
+                ON CONFLICT (currency, fetched_at) DO NOTHING
+                """
+            ),
+            {"rate": str(rate_jpy), "fetched": fetched_at},
+        )
+        await db.commit()
+    finally:
+        await reset_operator_context(db)
 
     logger.info(
         "[fx_rate_admin] 手動更新完了: USD/JPY = %.4f (fetched_at=%s)",
@@ -118,17 +156,18 @@ async def refresh_fx_rate(
 
     result = await db.execute(
         text(
-            "SELECT currency, rate_jpy, fetched_at, updated_at "
-            "FROM public.app_fx_rates WHERE currency = 'USD'"
+            "SELECT currency, rate_jpy, fetched_at, created_at "
+            "FROM public.app_fx_rate_history WHERE currency = 'USD' "
+            "ORDER BY fetched_at DESC LIMIT 1"
         )
     )
     row = result.mappings().first()
     if row is None:
-        raise HTTPException(status_code=500, detail="UPSERT 後の行取得に失敗しました")
+        raise HTTPException(status_code=500, detail="追記後の行取得に失敗しました")
 
     return FxRateResponse(
         currency=row["currency"],
         rate_jpy=float(row["rate_jpy"]),
         fetched_at=row["fetched_at"].isoformat(),
-        updated_at=row["updated_at"].isoformat(),
+        updated_at=row["created_at"].isoformat(),
     )

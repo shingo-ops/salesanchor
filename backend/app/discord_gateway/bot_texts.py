@@ -28,8 +28,15 @@ TICKET_BUTTON_LABEL = "Open a ticket"
 TICKET_BUTTON_CUSTOM_ID = "ticket_open"
 TICKET_BUTTON_EMOJI = "🎫"
 
-# ボタン押下への ephemeral 応答
-TICKET_READY_TEMPLATE = "Your private channel is ready → {mention}"
+# 自動セットアップが作る Discord カテゴリ名（PO 指定 2026-10-02・全角縦線 U+FF5C）
+# DM: チケット開始チャンネル＋新規チケット / Stock: 小口（メンバー）・大口向け在庫アナウンス
+CATEGORY_DM = "\U0001F4E9\uff5cDM"
+CATEGORY_STOCK_MEMBER = "\U0001F340\uff5cStock Information"
+CATEGORY_STOCK_LARGE = "\U0001F352\uff5cStock Information"
+# 旧セットアップが作っていた DM カテゴリの名前（再実行時に CATEGORY_DM へ名前変更する）
+CATEGORY_DM_LEGACY = "Sales Anchor"
+
+# ボタン押下へのエラー時 ephemeral 応答（成功時は無言 ACK で何も送らない）
 GUILD_ONLY = "This can only be used inside a server."
 GUILD_NOT_REGISTERED = "This server is not registered. Please contact the administrator."
 TICKET_NOT_CONFIGURED = "The ticket feature is not set up. Please contact the administrator."

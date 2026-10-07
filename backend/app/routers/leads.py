@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Optional
@@ -1249,7 +1250,7 @@ async def translate_message_endpoint(
     キャッシュヒット時は Gemini 未呼び出しで即返却。
     予算超過時は 429 を返す。
     """
-    from app.services.inventory_parser_llm import LLMConfigError, LLMParseError
+    from app.services.llm_errors import LLMConfigError, LLMParseError
     from app.services.message_translator import (
         BudgetExceededError,
         translate_message,
@@ -2064,6 +2065,109 @@ async def _record_send_audit_safely(
 
 
 # ---------------------------------------------------------------------------
+# Discord 担当者名義送信ヘルパ（ADR-159 便B）
+# ---------------------------------------------------------------------------
+
+# フロントが reason を見て文言と行動ボタン（CTA）に変換する安定コード
+DISCORD_ERR_EN_NAME_REQUIRED = "STAFF_EN_NAME_REQUIRED"
+DISCORD_ERR_EN_NAME_INVALID = "STAFF_EN_NAME_INVALID"
+DISCORD_ERR_WEBHOOK_PERMISSION = "DISCORD_WEBHOOK_PERMISSION"
+DISCORD_ERR_SEND_FAILED = "DISCORD_SEND_FAILED"
+
+
+@dataclass(frozen=True)
+class _StaffIdentity:
+    staff_id: int
+    username: str
+    avatar_url: Optional[str]
+
+
+def _discord_send_http_error(http_status: int, code: str, message: str) -> HTTPException:
+    """code は reason と code の両方に入れる（既存の送信エラーは reason、ADR-159 は code）。"""
+    return HTTPException(
+        status_code=http_status,
+        detail={"message": message, "reason": code, "code": code},
+    )
+
+
+async def _resolve_staff_identity(
+    db: AsyncSession, tenant_id: int, email: Optional[str],
+) -> _StaffIdentity:
+    """送信前に担当者（英語名の「名」・アイコン）を解決する。使えなければ送らず 422。"""
+    from app.services.discord_webhook_sender import StaffNameInvalidError, validate_username
+    from app.services.staff_avatar import build_avatar_url
+
+    staff_t = tenant_table_ref(db, tenant_id, "staff")
+    row = None
+    if email:
+        result = await db.execute(
+            text(
+                f"SELECT id, given_name_en, avatar_token FROM {staff_t} "
+                "WHERE primary_email = :email ORDER BY id ASC LIMIT 1"
+            ),
+            {"email": email},
+        )
+        row = result.first()
+    if row is None or not (row[1] or "").strip():
+        raise _discord_send_http_error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, DISCORD_ERR_EN_NAME_REQUIRED,
+            "Discord で返信するには英語の名前の登録が必要です",
+        )
+    try:
+        username = validate_username(row[1])
+    except StaffNameInvalidError:
+        raise _discord_send_http_error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, DISCORD_ERR_EN_NAME_INVALID,
+            "英語の名前に使えない言葉が含まれています",
+        ) from None
+    return _StaffIdentity(
+        staff_id=int(row[0]), username=username, avatar_url=build_avatar_url(row[2]),
+    )
+
+
+async def _send_discord_as_staff(
+    db: AsyncSession,
+    *,
+    tenant_id: int,
+    lead_id: int,
+    channel_id: str,
+    identity: _StaffIdentity,
+    content: Optional[str] = None,
+    file=None,
+) -> str:
+    """webhook で担当者名義送信して Discord メッセージ ID を返す。Bot 名義へのフォールバックはしない。"""
+    from app.services.discord_webhook_sender import (
+        DiscordWebhookError,
+        StaffNameInvalidError,
+        WebhookPermissionError,
+        send_as_staff,
+    )
+
+    try:
+        return await send_as_staff(
+            db, tenant_id=tenant_id, channel_id=channel_id,
+            username=identity.username, avatar_url=identity.avatar_url,
+            content=content, file=file,
+        )
+    except StaffNameInvalidError:
+        raise _discord_send_http_error(
+            status.HTTP_422_UNPROCESSABLE_ENTITY, DISCORD_ERR_EN_NAME_INVALID,
+            "英語の名前に使えない言葉が含まれています",
+        ) from None
+    except WebhookPermissionError:
+        raise _discord_send_http_error(
+            status.HTTP_409_CONFLICT, DISCORD_ERR_WEBHOOK_PERMISSION,
+            "Discord の設定（Bot の Manage Webhooks 権限）が足りないため送れません",
+        ) from None
+    except DiscordWebhookError as exc:
+        logger.warning("Discord 担当者名義送信失敗 lead=%s: %s", lead_id, type(exc).__name__)
+        raise _discord_send_http_error(
+            status.HTTP_502_BAD_GATEWAY, DISCORD_ERR_SEND_FAILED,
+            "Discord への送信に失敗しました",
+        ) from None
+
+
+# ---------------------------------------------------------------------------
 # Discord DM 送信ヘルパ
 # ---------------------------------------------------------------------------
 
@@ -2081,16 +2185,12 @@ async def _send_discord_message(
 
     messaging_window 制約なし（Discord は 24h 制限を持たない）。
     discord_guild_channel_id が未設定（顧客がチケットを開く前）の場合は 409。
-    Bot Token が未設定の場合も 409。
-    Discord API エラーは 502。
+    英語名未登録・不正は 422、webhook 権限不足は 409、送信失敗は 502（Bot 名義では送らない）。
 
     DM 経路は廃止方針のため discord_dm_channel_id は参照しない。
     """
-    from app.services.discord_sender import DiscordSendError, send_discord_dm
-
     leads_t = tenant_table_ref(db, tenant_id, "leads")
     meta_messages_t = tenant_table_ref(db, tenant_id, "meta_messages")
-    staff_t = tenant_table_ref(db, tenant_id, "staff")
 
     # 送信先はチケット専用チャンネル（discord_guild_channel_id）のみ。
     # Discord API は /channels/{id}/messages で送信できる。
@@ -2114,34 +2214,13 @@ async def _send_discord_message(
     discord_user_id = ch_row[0]
     dm_channel_id = str(ch_row[1])
 
-    # Discord Bot API で送信
-    try:
-        discord_msg_id = await send_discord_dm(
-            tenant_id=tenant_id,
-            dm_channel_id=dm_channel_id,
-            text=text_body,
-        )
-    except DiscordSendError as e:
-        logger.warning("Discord DM 送信失敗 lead=%s: %s", lead_id, e)
-        raise HTTPException(
-            status_code=status.HTTP_502_BAD_GATEWAY,
-            detail=f"Discord 送信エラー: {e}",
-        )
-
-    # sent_by_staff_id 解決
-    sent_by_staff_id: Optional[int] = None
-    if current_user.email:
-        try:
-            sr = await db.execute(
-                text(f"SELECT id FROM {staff_t} WHERE primary_email = :email "
-                     "ORDER BY id ASC LIMIT 1"),
-                {"email": current_user.email},
-            )
-            row = sr.first()
-            if row:
-                sent_by_staff_id = int(row[0])
-        except Exception:
-            sent_by_staff_id = None
+    # 担当者名義で送信する（ADR-159）。staff は送信前に解決し、未登録・不正なら送らない。
+    identity = await _resolve_staff_identity(db, tenant_id, current_user.email)
+    discord_msg_id = await _send_discord_as_staff(
+        db, tenant_id=tenant_id, lead_id=lead_id, channel_id=dm_channel_id,
+        identity=identity, content=text_body,
+    )
+    sent_by_staff_id = identity.staff_id
 
     # meta_messages に outbound 行 INSERT
     insert_result = await db.execute(
@@ -2282,10 +2361,9 @@ async def send_lead_image_message(
     if platform == "discord":
         import os as _os
 
-        from app.services.discord_rest import DiscordAPIError, discord_api_request_with_file
+        from app.services.discord_webhook_sender import OutboundFile
 
-        bot_token = _os.environ.get("DISCORD_BOT_TOKEN") or None
-        if not bot_token:
+        if not _os.environ.get("DISCORD_BOT_TOKEN"):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Discord Bot Token が設定されていません",
@@ -2308,36 +2386,14 @@ async def send_lead_image_message(
 
         dc_filename = image.filename or f"image.{content_type.split('/')[-1]}"
 
-        try:
-            dc_msg = await discord_api_request_with_file(
-                channel_id=channel_id,
-                bot_token=bot_token,
-                file_bytes=file_bytes,
-                filename=dc_filename,
-                content_type=content_type,
-            )
-        except DiscordAPIError as exc:
-            logger.warning("Discord image send failed lead=%s: %s", lead_id, exc)
-            raise HTTPException(
-                status_code=status.HTTP_502_BAD_GATEWAY,
-                detail="Discord への画像送信に失敗しました",
-            )
-
-        dc_msg_id = dc_msg.get("id")
-
-        # sent_by_staff_id 解決
-        dc_sent_by_staff_id: Optional[int] = None
-        if current_user.email:
-            try:
-                sr = await db.execute(
-                    text(f"SELECT id FROM {staff_t} WHERE primary_email = :email ORDER BY id ASC LIMIT 1"),
-                    {"email": current_user.email},
-                )
-                row = sr.first()
-                if row:
-                    dc_sent_by_staff_id = int(row[0])
-            except Exception:
-                dc_sent_by_staff_id = None
+        # 担当者名義で送信する（ADR-159）。staff は送信前に解決し、未登録・不正なら送らない。
+        identity = await _resolve_staff_identity(db, tenant_id, current_user.email)
+        dc_msg_id = await _send_discord_as_staff(
+            db, tenant_id=tenant_id, lead_id=lead_id, channel_id=channel_id,
+            identity=identity,
+            file=OutboundFile(filename=dc_filename, data=file_bytes, content_type=content_type),
+        )
+        dc_sent_by_staff_id: Optional[int] = identity.staff_id
 
         dc_insert_params = {
             "tenant_id": tenant_id,
@@ -2412,8 +2468,8 @@ async def send_lead_image_message(
                     _ext = "." + dc_filename.rsplit(".", 1)[1][:10]
                 _rel_path = f"tenant_{tenant_id:03d}/lead_{lead_id}/{dc_msg_id}{_ext}"
                 _abs_path = Path(_att_root) / _rel_path
-                _abs_path.parent.mkdir(parents=True, exist_ok=True)
-                _abs_path.write_bytes(file_bytes)
+                await asyncio.to_thread(_abs_path.parent.mkdir, parents=True, exist_ok=True)
+                await asyncio.to_thread(_abs_path.write_bytes, file_bytes)
 
                 attachments_t = tenant_table_ref(db, tenant_id, "lead_attachments")
                 await db.execute(

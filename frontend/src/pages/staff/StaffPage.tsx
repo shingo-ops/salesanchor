@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next";
 import { Modal } from "../../components/Modal";
 import { Drawer } from "../../components/Drawer";
 import { api } from "../../lib/api";
+import { hasEnglishNames } from "../../lib/staffProfile";
 import ConfirmModal from "../../components/ConfirmModal";
 import { Select } from "../../components/Select";
 import { usePermissions } from "../../hooks/usePermissions";
@@ -69,7 +70,6 @@ const emptyPrefs: StaffUIPreferences = {
 };
 
 type CreateFormState = {
-  staff_code: string;
   surname_jp: string;
   given_name_jp: string;
   surname_kana: string;
@@ -85,7 +85,7 @@ type CreateFormState = {
 };
 
 const emptyCreateForm: CreateFormState = {
-  staff_code: "", surname_jp: "", given_name_jp: "",
+  surname_jp: "", given_name_jp: "",
   surname_kana: "", given_name_kana: "", surname_en: "", given_name_en: "",
   primary_email: "", discord_user_id: "", role_id: "", status: "active",
   firebase_uid: "", ui_preferences: { ...emptyPrefs },
@@ -148,6 +148,10 @@ export default function StaffPage() {
     e.preventDefault();
     setError("");
     if (submitting) return;
+    if (!hasEnglishNames(createForm)) {
+      setError(t("staff.englishNameRequired"));
+      return;
+    }
     setSubmitting(true);
     const payload: Record<string, unknown> = {
       surname_jp: createForm.surname_jp,
@@ -163,7 +167,6 @@ export default function StaffPage() {
       firebase_uid: toNull(createForm.firebase_uid),
       ui_preferences: createForm.ui_preferences,
     };
-    if (createForm.staff_code.trim()) payload.staff_code = createForm.staff_code.trim();
     try {
       await api.post("/staff", payload);
       setShowCreate(false);
@@ -231,10 +234,6 @@ export default function StaffPage() {
         size="md"
       >
         <form onSubmit={handleCreateSubmit}>
-          <div className="form-group">
-            <label>{t("staff.staffCodeLabel")}</label>
-            <input value={createForm.staff_code} placeholder={t("staff.staffCodePlaceholder")} onChange={(e) => setCreateForm({ ...createForm, staff_code: e.target.value })} />
-          </div>
           <div className="form-group"><label>{t("staff.surnameJp")} *</label>
             <input required value={createForm.surname_jp} onChange={(e) => setCreateForm({ ...createForm, surname_jp: e.target.value })} />
           </div>
@@ -247,11 +246,11 @@ export default function StaffPage() {
           <div className="form-group"><label>{t("staff.givenNameKana")}</label>
             <input value={createForm.given_name_kana} onChange={(e) => setCreateForm({ ...createForm, given_name_kana: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.surnameEn")}</label>
-            <input value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
+          <div className="form-group"><label>{t("staff.surnameEn")} *</label>
+            <input required aria-required="true" value={createForm.surname_en} onChange={(e) => setCreateForm({ ...createForm, surname_en: e.target.value })} />
           </div>
-          <div className="form-group"><label>{t("staff.givenNameEn")}</label>
-            <input value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
+          <div className="form-group"><label>{t("staff.givenNameEn")} *</label>
+            <input required aria-required="true" value={createForm.given_name_en} onChange={(e) => setCreateForm({ ...createForm, given_name_en: e.target.value })} />
           </div>
           <div className="form-group"><label>{t("staff.primaryEmail")} *</label>
             <input required type="email" value={createForm.primary_email} onChange={(e) => setCreateForm({ ...createForm, primary_email: e.target.value })} />

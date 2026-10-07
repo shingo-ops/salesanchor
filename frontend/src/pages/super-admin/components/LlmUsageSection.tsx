@@ -41,6 +41,7 @@ interface LlmUsageTotal {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
   computed_total_tokens: number | null;
   total_mismatch_calls: number;
 }
@@ -55,6 +56,7 @@ interface LlmUsageByPurposeItem {
   tool_use_prompt_tokens: number | null;
   total_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
   computed_total_tokens: number | null;
   total_mismatch_calls: number;
 }
@@ -63,12 +65,14 @@ interface LlmUsageByModelItem {
   model: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
 }
 
 interface LlmUsageDailyItem {
   date: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
   prompt_tokens: number | null;
   candidates_tokens: number | null;
   thoughts_tokens: number | null;
@@ -78,6 +82,7 @@ interface LlmUsageDailyByPurposeItem {
   date: string;
   purpose: string;
   cost_usd: number | null;
+  cost_jpy: number | null;
   calls: number;
 }
 
@@ -86,6 +91,7 @@ interface LlmUsageMonthlyByPurposeItem {
   purpose: string;
   calls: number;
   cost_usd: number | null;
+  cost_jpy: number | null;
 }
 
 interface LlmUsageDailyRequestsItem {
@@ -109,6 +115,19 @@ interface LlmUsageDailyByModelItem {
   prompt_tokens: number | null;
   output_tokens: number | null;
   cost_usd: number | null;
+  cost_jpy: number | null;
+}
+
+/**
+ * ADR-148 2026-10-03 追記（PR-B）: cost_jpy 換算の出典情報。
+ * public.app_fx_rate_history に USD 行が1件も無い場合は null（cost_jpy も全行 null）。
+ */
+interface LlmUsageFx {
+  currency: string;
+  latest_rate_jpy: number;
+  latest_fetched_at: string;
+  history_start: string;
+  fallback_calls: number;
 }
 
 interface LlmUsageResponse {
@@ -121,6 +140,7 @@ interface LlmUsageResponse {
   daily_requests: LlmUsageDailyRequestsItem[];
   daily_errors: LlmUsageDailyErrorItem[];
   daily_by_model: LlmUsageDailyByModelItem[];
+  fx: LlmUsageFx | null;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -272,6 +292,40 @@ function makeCurrencyFormatter(language: string): (value: number | null, t: (key
   return (value, t) => (value == null ? t("analysisRules.dashboard.usage.notReported") : formatter.format(value));
 }
 
+/** 円表示用フォーマッタ（ADR-148: USD→JPY 換算後の値を整形する）。 */
+function makeJpyFormatter(language: string): (value: number | null, t: (key: string) => string) => string {
+  const formatter = new Intl.NumberFormat(language, {
+    style: "currency",
+    currency: "JPY",
+    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+  });
+  return (value, t) => (value == null ? t("analysisRules.dashboard.usage.notReported") : formatter.format(value));
+}
+
+/** コストチャート Y 軸の桁短縮表示（単位付き。例: ¥500, ¥1.2K / $1.2K）。 */
+function makeCompactCurrencyFormatter(language: string, currency: "JPY" | "USD"): (value: number) => string {
+  const formatter = new Intl.NumberFormat(language, {
+    style: "currency",
+    currency,
+    notation: "compact",
+    maximumFractionDigits: 1,
+  });
+  return (value) => formatter.format(value);
+}
+
+/** fetched_at（UTC ISO文字列）を JST 表示に整形する（他ページと同じ Asia/Tokyo 固定の既存パターンを踏襲）。 */
+function formatFetchedAtJst(isoString: string, language: string): string {
+  return new Date(isoString).toLocaleString(language, {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 function purposeLabel(purpose: string, t: (key: string) => string): string {
   if (!KNOWN_PURPOSES.includes(purpose)) return purpose;
   return t(`analysisRules.dashboard.usage.purpose.${purpose}`);
@@ -334,6 +388,9 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
   useEffect(() => {
     setLoading(true);
     setError(null);
+    // ADR-148 2026-10-03 追記（PR-B）: cost_jpy はバックエンドが各イベント発生時点の
+    // app_fx_rate_history レートで換算済み（fx ブロックに出典情報を含む）。フロント側の
+    // 別個の /fx-rates/USD 取得・USD→JPY 変換（旧 toJpy）は廃止した。
     api
       .get<LlmUsageResponse>(`/tcg/analysis-dashboard/llm-usage?days=${days}`)
       .then((res) => {
@@ -360,6 +417,23 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
 
   const formatCurrency = makeCurrencyFormatter(i18n.language);
   const compactTick = (value: number) => formatCompactNumber(value, i18n.language);
+
+  // ADR-148 2026-10-03 追記（PR-B）: fx が non-null のときは cost_jpy（バックエンドが
+  // 各使用時点のレートで換算済み）を表示する。fx が null（履歴テーブルに USD 行が無い）
+  // 場合のみ USD（cost_usd）にフォールバックする。
+  const hasFx = data.fx != null;
+  const formatJpy = makeJpyFormatter(i18n.language);
+  /** 行（cost_usd/cost_jpy を持つ）を表示用文字列にする唯一のヘルパー。全コスト表示箇所から呼ぶ。 */
+  const formatCost = (row: { cost_usd: number | null; cost_jpy: number | null }): string =>
+    hasFx ? formatJpy(row.cost_jpy, t) : formatCurrency(row.cost_usd, t);
+  /** 既に抽出済みの値（チャート用に事前抽出したデータ）を表示用文字列にする。 */
+  const formatConvertedCost = (value: number): string =>
+    hasFx ? formatJpy(value, t) : formatCurrency(value, t);
+  const costTick = makeCompactCurrencyFormatter(i18n.language, hasFx ? "JPY" : "USD");
+  /** チャートに渡す前の値抽出。fx 有無に応じて cost_jpy / cost_usd のどちらかを選ぶだけ
+   * （バックエンドが既に換算済みのため、フロントでの乗算は行わない）。 */
+  const chartCostValue = (row: { cost_usd: number | null; cost_jpy: number | null }): number | null =>
+    hasFx ? row.cost_jpy : row.cost_usd;
 
   const byPurposeColumns: DataTableColumn<LlmUsageByPurposeItem>[] = [
     {
@@ -413,7 +487,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
@@ -451,7 +525,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
@@ -470,14 +544,17 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
       key: "cost_usd",
       header: t("analysisRules.dashboard.usage.colCost"),
       width: "120px",
-      renderCell: (row) => formatCurrency(row.cost_usd, t),
+      renderCell: (row) => formatCost(row),
     },
   ];
 
   const purposeOrder = data.by_purpose.map((row) => row.purpose);
-  const dailyByPurposeData = pivotByPurpose(data.daily_by_purpose, (row) => row.date);
-  const monthlyByPurposeData = pivotByPurpose(data.monthly_by_purpose, (row) => row.month);
-  const formatChartCurrency = (value: number) => formatCurrency(value, t);
+  // チャートに渡す前に USD→JPY 換算を済ませる（pivotByPurpose は通貨を意識しない汎用関数のまま維持）。
+  const dailyByPurposeConverted = data.daily_by_purpose.map((row) => ({ ...row, cost_usd: chartCostValue(row) }));
+  const monthlyByPurposeConverted = data.monthly_by_purpose.map((row) => ({ ...row, cost_usd: chartCostValue(row) }));
+  const dailyByPurposeData = pivotByPurpose(dailyByPurposeConverted, (row) => row.date);
+  const monthlyByPurposeData = pivotByPurpose(monthlyByPurposeConverted, (row) => row.month);
+  const formatChartCurrency = (value: number) => formatConvertedCost(value);
 
   const errorCodeOrder = uniqueInOrder(data.daily_errors.map((row) => row.error_code));
   const dailyErrorsData = pivotErrorsByDate(data.daily_errors);
@@ -508,7 +585,7 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
             {t("analysisRules.dashboard.usage.summary.costLabel")}
           </span>
           <span className="llm-usage-summary__hero-value">
-            {formatCurrency(data.total.cost_usd, t)}
+            {formatCost(data.total)}
           </span>
         </div>
         <div className="llm-usage-summary__stats">
@@ -555,331 +632,373 @@ export function LlmUsageSection({ days, t }: LlmUsageSectionProps) {
         </div>
       </Card>
 
-      {/* 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
-      <div className="analysis-dashboard-section-title">
-        {t("analysisRules.dashboard.usage.health.title")}
-      </div>
-      <p className="analysis-dashboard-section-note">
-        {t("analysisRules.dashboard.usage.health.note")}
-      </p>
-      <div className="analysis-dashboard-grid">
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.usage.health.requestsChartTitle")}
-          </div>
-          {dailyRequestsData.length === 0 ? (
-            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-          ) : (
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                <ComposedChart data={dailyRequestsData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="date"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    yAxisId="attempts"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    allowDecimals={false}
-                    tickFormatter={compactTick}
-                  />
-                  <YAxis
-                    yAxisId="successRate"
-                    orientation="right"
-                    domain={[0, 100]}
-                    tickFormatter={(value: number) => `${value}%`}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <Tooltip
-                    formatter={(value, name) =>
-                      name === t("analysisRules.dashboard.usage.health.successRateLabel")
-                        ? [formatSuccessRatePercent(Number(value) / 100), name]
-                        : [Number(value).toLocaleString(), name]
-                    }
-                  />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  <Bar
-                    yAxisId="attempts"
-                    dataKey="attempts"
-                    name={t("analysisRules.dashboard.usage.health.attemptsLabel")}
-                    fill="var(--chart-series-1)"
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                  <Line
-                    yAxisId="successRate"
-                    type="monotone"
-                    dataKey={(row: LlmUsageDailyRequestsItem) =>
-                      row.success_rate == null ? null : row.success_rate * 100
-                    }
-                    name={t("analysisRules.dashboard.usage.health.successRateLabel")}
-                    stroke="var(--color-success)"
-                    strokeWidth={LINE_STROKE_WIDTH}
-                    connectNulls={false}
-                    dot={renderLastPointDot(dailyRequestsData.length, "var(--color-success)")}
-                    activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                  />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
+      {/* ADR-148 2026-10-03 追記（PR-B）: 円換算の出典を明示。cost_jpy は各使用時点の
+          app_fx_rate_history レートで換算済み（現在レートの一律適用ではない）。 */}
+      {data.fx != null ? (
+        <>
+          <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-note">
+            {t("analysisRules.dashboard.usage.fx.note", {
+              rate: data.fx.latest_rate_jpy.toLocaleString(i18n.language, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 4,
+              }),
+              fetchedAt: formatFetchedAtJst(data.fx.latest_fetched_at, i18n.language),
+            })}
+          </p>
+          {data.fx.fallback_calls > 0 && (
+            <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-fallback-count-note">
+              {t("analysisRules.dashboard.usage.fx.fallbackCountNote", {
+                historyStart: formatFetchedAtJst(data.fx.history_start, i18n.language),
+                count: data.fx.fallback_calls,
+              })}
+            </p>
           )}
-        </Card>
-
-        <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-          <div className="analysis-dashboard-section-title">
-            {t("analysisRules.dashboard.usage.health.errorsChartTitle")}
-          </div>
-          {dailyErrorsData.length === 0 ? (
-            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-          ) : (
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-                <BarChart data={dailyErrorsData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {errorCodeOrder.map((errorCode, index) => (
-                    <Bar
-                      key={errorCode}
-                      dataKey={errorCode}
-                      name={errorCode}
-                      stackId="errors"
-                      fill={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
-                      radius={BAR_RADIUS}
-                      barSize={BAR_SIZE}
-                    />
-                  ))}
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
-        </Card>
-      </div>
-
-      {/* モデル別（トークン・リクエスト数の日次推移） */}
-      <div className="analysis-dashboard-section-title">
-        {t("analysisRules.dashboard.usage.health.modelTrendTitle")}
-      </div>
-      {modelOrder.length === 0 ? (
-        <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+        </>
       ) : (
-        <div className="analysis-dashboard-grid">
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.inputTokensChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={inputTokensByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(inputTokensByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.outputTokensChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={outputTokensByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(outputTokensByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-
-          <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-            <div className="analysis-dashboard-section-title">
-              {t("analysisRules.dashboard.usage.health.requestsByModelChartTitle")}
-            </div>
-            <div className="analysis-dashboard-chart llm-usage-chart">
-              <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
-                <LineChart data={requestsByModelData}>
-                  <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                  <XAxis
-                    dataKey="key"
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  />
-                  <YAxis
-                    allowDecimals={false}
-                    tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                    tickFormatter={compactTick}
-                  />
-                  <Tooltip />
-                  <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
-                  {modelOrder.map((model, index) => {
-                    const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
-                    return (
-                      <Line
-                        key={model}
-                        type="monotone"
-                        dataKey={model}
-                        name={model}
-                        stroke={color}
-                        strokeWidth={LINE_STROKE_WIDTH}
-                        connectNulls={false}
-                        dot={renderLastPointDot(requestsByModelData.length, color)}
-                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
-                      />
-                    );
-                  })}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </Card>
-        </div>
+        <p className="analysis-dashboard-section-note" data-testid="llm-usage-fx-fallback-note">
+          {t("analysisRules.dashboard.usage.fx.fallbackNote")}
+        </p>
       )}
 
-      {/* 日次の費用（使いみち別・積み上げ棒） */}
-      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
+      {/* 概要（LINE抽出）/ モデル別 / 費用 を1枚のカードに集約。カード見出しは行1（概要）のタイトルを兼ねる */}
+      <Card variant="container" density="compact" className="llm-usage-charts">
         <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.dailyByPurposeChartTitle")}
+          {t("analysisRules.dashboard.usage.health.title")}
         </div>
-        {dailyByPurposeData.length === 0 ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-        ) : (
-          <div className="analysis-dashboard-chart llm-usage-chart">
-            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-              <BarChart data={dailyByPurposeData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                <XAxis
-                  dataKey="key"
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                />
-                <YAxis
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  tickFormatter={compactTick}
-                />
-                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={LEGEND_ICON_SIZE}
-                  formatter={(purpose) => purposeLabel(String(purpose), t)}
-                />
-                {purposeOrder.map((purpose) => (
-                  <Bar
-                    key={purpose}
-                    dataKey={purpose}
-                    name={purpose}
-                    stackId="cost"
-                    fill={purposeColor(purpose, purposeOrder)}
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-      </Card>
 
-      {/* 月次の費用（使いみち別・積み上げ棒） */}
-      <Card variant="container" density="compact" className="analysis-dashboard-chart-card">
-        <div className="analysis-dashboard-section-title">
-          {t("analysisRules.dashboard.usage.monthlyByPurposeChartTitle")}
-        </div>
-        {monthlyByPurposeData.length === 0 ? (
-          <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
-        ) : (
-          <div className="analysis-dashboard-chart llm-usage-chart">
-            <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-              <BarChart data={monthlyByPurposeData}>
-                <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
-                <XAxis
-                  dataKey="key"
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                />
-                <YAxis
-                  tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
-                  tickFormatter={compactTick}
-                />
-                <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
-                <Legend
-                  verticalAlign="bottom"
-                  iconType="circle"
-                  iconSize={LEGEND_ICON_SIZE}
-                  formatter={(purpose) => purposeLabel(String(purpose), t)}
-                />
-                {purposeOrder.map((purpose) => (
-                  <Bar
-                    key={purpose}
-                    dataKey={purpose}
-                    name={purpose}
-                    stackId="cost"
-                    fill={purposeColor(purpose, purposeOrder)}
-                    radius={BAR_RADIUS}
-                    barSize={BAR_SIZE}
-                  />
-                ))}
-              </BarChart>
-            </ResponsiveContainer>
+        {/* 行1: 概要（LINE抽出）: Google AI Studio の使用状況ページを参考にした見せ方 */}
+        <div className="llm-usage-charts__row">
+          <p className="analysis-dashboard-section-note">
+            {t("analysisRules.dashboard.usage.health.note")}
+          </p>
+          <div className="llm-usage-charts__grid">
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.health.requestsChartTitle")}
+              </div>
+              {dailyRequestsData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <ComposedChart data={dailyRequestsData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="date"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        yAxisId="attempts"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        allowDecimals={false}
+                        tickFormatter={compactTick}
+                      />
+                      <YAxis
+                        yAxisId="successRate"
+                        orientation="right"
+                        domain={[0, 100]}
+                        tickFormatter={(value: number) => `${value}%`}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <Tooltip
+                        formatter={(value, name) =>
+                          name === t("analysisRules.dashboard.usage.health.successRateLabel")
+                            ? [formatSuccessRatePercent(Number(value) / 100), name]
+                            : [Number(value).toLocaleString(), name]
+                        }
+                      />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      <Bar
+                        yAxisId="attempts"
+                        dataKey="attempts"
+                        name={t("analysisRules.dashboard.usage.health.attemptsLabel")}
+                        fill="var(--chart-series-1)"
+                        radius={BAR_RADIUS}
+                        barSize={BAR_SIZE}
+                      />
+                      <Line
+                        yAxisId="successRate"
+                        type="monotone"
+                        dataKey={(row: LlmUsageDailyRequestsItem) =>
+                          row.success_rate == null ? null : row.success_rate * 100
+                        }
+                        name={t("analysisRules.dashboard.usage.health.successRateLabel")}
+                        stroke="var(--color-success)"
+                        strokeWidth={LINE_STROKE_WIDTH}
+                        connectNulls={false}
+                        dot={renderLastPointDot(dailyRequestsData.length, "var(--color-success)")}
+                        activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.health.errorsChartTitle")}
+              </div>
+              {dailyErrorsData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={dailyErrorsData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {errorCodeOrder.map((errorCode, index) => (
+                        <Bar
+                          key={errorCode}
+                          dataKey={errorCode}
+                          name={errorCode}
+                          stackId="errors"
+                          fill={PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length]}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
+
+        {/* 行2: モデル別（トークン・リクエスト数の日次推移） */}
+        <div className="llm-usage-charts__row">
+          <div className="llm-usage-charts__row-title">
+            {t("analysisRules.dashboard.usage.health.modelTrendTitle")}
+          </div>
+          {modelOrder.length === 0 ? (
+            <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+          ) : (
+            <div className="llm-usage-charts__grid">
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.inputTokensChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={inputTokensByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(inputTokensByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.outputTokensChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={outputTokensByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(outputTokensByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+
+              <div className="llm-usage-charts__item">
+                <div className="llm-usage-charts__item-title">
+                  {t("analysisRules.dashboard.usage.health.requestsByModelChartTitle")}
+                </div>
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={MODEL_CHART_HEIGHT}>
+                    <LineChart data={requestsByModelData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        allowDecimals={false}
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={compactTick}
+                      />
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" iconSize={LEGEND_ICON_SIZE} />
+                      {modelOrder.map((model, index) => {
+                        const color = PURPOSE_CHART_COLOR_VARS[index % PURPOSE_CHART_COLOR_VARS.length];
+                        return (
+                          <Line
+                            key={model}
+                            type="monotone"
+                            dataKey={model}
+                            name={model}
+                            stroke={color}
+                            strokeWidth={LINE_STROKE_WIDTH}
+                            connectNulls={false}
+                            dot={renderLastPointDot(requestsByModelData.length, color)}
+                            activeDot={{ r: ACTIVE_DOT_RADIUS }}
+                          />
+                        );
+                      })}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 行3: 費用（使いみち別・積み上げ棒） */}
+        <div className="llm-usage-charts__row">
+          <div className="llm-usage-charts__row-title">
+            {t("analysisRules.dashboard.usage.costRowTitle")}
+          </div>
+          <div className="llm-usage-charts__grid">
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.dailyByPurposeChartTitle")}
+              </div>
+              {dailyByPurposeData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={dailyByPurposeData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={costTick}
+                      />
+                      <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                      <Legend
+                        verticalAlign="bottom"
+                        iconType="circle"
+                        iconSize={LEGEND_ICON_SIZE}
+                        formatter={(purpose) => purposeLabel(String(purpose), t)}
+                      />
+                      {purposeOrder.map((purpose) => (
+                        <Bar
+                          key={purpose}
+                          dataKey={purpose}
+                          name={purpose}
+                          stackId="cost"
+                          fill={purposeColor(purpose, purposeOrder)}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="llm-usage-charts__item">
+              <div className="llm-usage-charts__item-title">
+                {t("analysisRules.dashboard.usage.monthlyByPurposeChartTitle")}
+              </div>
+              {monthlyByPurposeData.length === 0 ? (
+                <p className="analysis-dashboard-empty">{t("analysisRules.dashboard.noData")}</p>
+              ) : (
+                <div className="analysis-dashboard-chart llm-usage-chart">
+                  <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+                    <BarChart data={monthlyByPurposeData}>
+                      <CartesianGrid vertical={false} strokeDasharray="3 3" stroke={GRID_STROKE_VAR} />
+                      <XAxis
+                        dataKey="key"
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                      />
+                      <YAxis
+                        tick={{ fontSize: AXIS_TICK_FONT_SIZE, fill: AXIS_TICK_FILL_VAR }}
+                        tickFormatter={costTick}
+                      />
+                      <Tooltip formatter={(value) => formatChartCurrency(Number(value))} />
+                      <Legend
+                        verticalAlign="bottom"
+                        iconType="circle"
+                        iconSize={LEGEND_ICON_SIZE}
+                        formatter={(purpose) => purposeLabel(String(purpose), t)}
+                      />
+                      {purposeOrder.map((purpose) => (
+                        <Bar
+                          key={purpose}
+                          dataKey={purpose}
+                          name={purpose}
+                          stackId="cost"
+                          fill={purposeColor(purpose, purposeOrder)}
+                          radius={BAR_RADIUS}
+                          barSize={BAR_SIZE}
+                        />
+                      ))}
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
       </Card>
 
       {/* 段2: 使いみち別 */}

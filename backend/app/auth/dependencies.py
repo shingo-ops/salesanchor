@@ -1,3 +1,4 @@
+import asyncio
 import os
 import secrets
 
@@ -139,7 +140,7 @@ async def get_current_user(
 
     # ④ キャッシュミス: Firebase検証
     try:
-        decoded = firebase_auth.verify_id_token(token)
+        decoded = await asyncio.to_thread(firebase_auth.verify_id_token, token)
     except Exception:
         await record_auth_failure(client_ip)
         raise HTTPException(

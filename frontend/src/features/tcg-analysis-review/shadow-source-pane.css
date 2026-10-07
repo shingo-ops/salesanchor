@@ -1,0 +1,66 @@
+/* 解析精度管理（新方式）: 原文ペイン。色はデザイントークンのみ。 */
+
+.shadow-source-pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}
+
+.shadow-source-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.shadow-source-legend-item::before {
+  content: "";
+  display: inline-block;
+  width: var(--space-3);
+  height: var(--space-3);
+  margin-right: var(--space-1);
+  vertical-align: middle;
+  border: 1px solid var(--border);
+}
+
+.shadow-source-legend-item--block::before { background: var(--accent-bg-subtle); }
+.shadow-source-legend-item--heading::before { background: var(--warning-bg-subtle); }
+
+.shadow-source-lines {
+  --shadow-source-max-h: 320px; /* component-local token: 原文の表示高さ（それ以上はスクロール） */
+  max-height: var(--shadow-source-max-h);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-2) 0;
+}
+
+.shadow-source-line {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr);
+  gap: var(--space-2);
+  padding: 0 var(--space-3);
+  font-size: var(--font-sm);
+}
+
+.shadow-source-line-no {
+  text-align: right;
+  color: var(--text-muted);
+  user-select: none;
+}
+
+.shadow-source-line-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--text-primary);
+}
+
+.shadow-source-line--heading { background: var(--warning-bg-subtle); }
+
+/* ブロックが見出しと重なる行は、ブロックの色を優先する */
+.shadow-source-line--block { background: var(--accent-bg-subtle); }

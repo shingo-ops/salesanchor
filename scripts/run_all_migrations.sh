@@ -532,9 +532,6 @@ run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
 # TCG MIG-04: conditions に R1〜R4 解決列追加 + seed（additive-only・冪等）
 run_sql migrations/20260901_090000_add_condition_resolution_columns.sql
 
-# MIG-04: TCG仕入れ解析パイプライン用 18テーブル（tenant_004 専用スキーマ）
-run_sql migrations/20260831_110000_create_tcg_analysis_tables_t004.sql
-
 # TCG MIG-04 E3a/E5: analysis_results に unit_inferred/unit_basis/unit_confidence/unit_infer_reason 追加（additive-only・冪等）
 run_sql migrations/20260901_120000_add_unit_inference_columns_t004.sql
 
@@ -860,3 +857,24 @@ run_sql migrations/20260930_150000_create_llm_usage_events.sql
 
 # ADR-1004 A2: LLM 使用量台帳（llm_usage_events）過去分バックフィル（SSOT化、A1マージ後に適用）
 run_sql migrations/20260930_160000_backfill_llm_usage_events.sql
+
+# ADR-159 便A: staff.avatar_token 追加（担当者アイコンの公開 URL token・additive・冪等）
+run_sql migrations/20261001_120000_add_staff_avatar_token.sql
+
+# ADR-159 便B: discord_channel_webhooks 作成（担当者名義 webhook 送信・token 暗号化・冪等）
+run_sql migrations/20261001_150000_create_discord_channel_webhooks.sql
+
+# §D01: 決済手数料設定マスタ（public.payment_fee_settings）新設（NULLパターン・PayPal初期データ込み・冪等）
+run_sql migrations/20261002_160000_create_payment_fee_settings.sql
+
+# §D01補完: payment_fee_settings カラムコメント付与
+run_sql migrations/20261002_180000_comment_payment_fee_settings_columns.sql
+
+# Discord 在庫取り込み機能（削除済み・PO GO 待ち）の残置テーブル3件 + ビュー削除（冪等・不可逆）
+run_sql migrations/20261002_170000_drop_discord_inventory_tables.sql
+
+# ADR-148 追補 PR-A: public.app_fx_rate_history 新設（為替レート履歴・追記専用・表のみ。書込/読取切替はPR-Bで実施）
+run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
+
+# 新しい仕組み専用の仕入元ルール2列（extraction_layout_rules / extraction_hard_cases）。本番v7は読まない
+run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql

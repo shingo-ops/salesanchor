@@ -51,7 +51,7 @@ from app.routers import (
     discord_ticket_config,  # ADR-091 KPI3: チケット機能設定 admin API
     duplicates,
     erp,
-    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rate/{currency} / POST /super-admin/fx-rate/refresh)
+    fx_rate_admin,  # 為替レート SSOT API (GET /fx-rates/{currency} / POST /super-admin/fx-rate/refresh)
     goals,  # ダッシュボード強化: 目標管理
     google_calendar,  # Google Calendar OAuth 連携
     health,
@@ -74,10 +74,11 @@ from app.routers import (
     order_shipping_details,  # ADR-021 Phase 3 / Sprint 3: 発送情報 MVP
     orders,
     own_inventory,  # ADR SA-04/05: A在庫テナント私有化
-    parse_review,
+    payment_fee_settings,  # 決済手数料設定 テナント用
     product_categories,  # 商品カテゴリマスタ テナント用
     product_masters,  # 各種マスタ (public.product_attribute_masters) 中央 admin
     products,
+    public_staff_avatars,  # ADR-159: 担当者アイコン公開配信（認証不要）
     purchase_orders,
     quotes,
     registration_tokens,  # ADR-SA-03: 顧客登録トークン基盤
@@ -94,11 +95,11 @@ from app.routers import (
     super_admin_conditions,  # 状態マスタ CRUD（中央 admin）
     super_admin_db_schema,  # DB構造ビューア API
     super_admin_dex,
-    super_admin_inbound,
     super_admin_knowledge,
     super_admin_link_templates,  # SA-05: リンクテンプレート SSOT admin CRUD
     super_admin_llm_budget,
     super_admin_note_master,  # 備考マスタ中央 admin
+    super_admin_payment_fee_settings,  # 決済手数料設定マスタ中央 admin
     super_admin_phase_switch,
     super_admin_product_categories,  # 商品カテゴリマスタ中央 admin
     super_admin_product_formats,  # フォーマットマスタ中央 admin
@@ -120,6 +121,7 @@ from app.routers import (
     tcg_parallel_report,  # MIG-04 Phase 4: 並行運用比較レポート
     tcg_product_import,  # IMPORT-01: 商品マスタ CSV 取り込み API
     tcg_product_master,  # PARITY-03 Phase 3: 商品マスタ登録 API
+    tcg_shadow_accuracy,  # 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API
     tcg_shadow_review,  # design.md PR-D: 試運転（Shadow run）の確認画面用 API
     tcg_supplier_quality,  # PARITY-03 第2段階: 仕入元品質サマリー API
     teams,
@@ -234,6 +236,8 @@ app.include_router(contact.router, prefix="/api/v1", tags=["contact"])
 app.include_router(
     registration_tokens.public_router, prefix="/api/v1", tags=["registration"],
 )
+# ADR-159: 担当者アイコン画像の公開配信（認証不要 - Discord が avatar_url として取得。推測不能 token）
+app.include_router(public_staff_avatars.public_router, prefix="/api", tags=["public"])
 
 # --- 認証必須なルーター（デフォルトで認証が強制される） ---
 # dependencies=[Depends(get_current_tenant)] により、
@@ -398,6 +402,11 @@ app.include_router(
     units.router, prefix="/api/v1", tags=["units"],
     dependencies=[Depends(get_current_tenant)],
 )
+# 決済手数料設定 テナント用
+app.include_router(
+    payment_fee_settings.router, prefix="/api/v1", tags=["payment-fee-settings"],
+    dependencies=[Depends(get_current_tenant)],
+)
 # ステータスマスタ テナント用
 app.include_router(
     status_master.router, prefix="/api/v1", tags=["status-master"],
@@ -537,6 +546,10 @@ app.include_router(
 app.include_router(
     super_admin_note_master.router, prefix="/api/v1", tags=["super-admin"],
 )
+# 決済手数料設定マスタ中央 admin
+app.include_router(
+    super_admin_payment_fee_settings.router, prefix="/api/v1", tags=["super-admin"],
+)
 # 商品カテゴリマスタ中央 admin
 app.include_router(
     super_admin_product_categories.router, prefix="/api/v1", tags=["super-admin"],
@@ -572,14 +585,6 @@ app.include_router(
 # Sprint 4 (F4): LLM 予算管理 (public.tenant_llm_budgets) 中央 admin
 app.include_router(
     super_admin_llm_budget.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 5 (F5): Discord Inbound 受信メッセージ一覧 (public.discord_inbound_messages) 中央 admin
-app.include_router(
-    super_admin_inbound.router, prefix="/api/v1", tags=["super-admin"],
-)
-# Sprint 6 (F6): 解析結果レビュー UI + 在庫差分反映 (public.inventory_movements + products) 中央 admin
-app.include_router(
-    parse_review.router, prefix="/api/v1", tags=["super-admin"],
 )
 # テナント admin 用 inventory visibility は get_current_tenant 必須
 app.include_router(
@@ -627,7 +632,7 @@ app.include_router(
     super_admin_tenants.router, prefix="/api/v1", tags=["super-admin"],
 )
 
-# 為替レート SSOT: GET /api/v1/fx-rate/{currency} + POST /api/v1/super-admin/fx-rate/refresh
+# 為替レート SSOT: GET /api/v1/fx-rates/{currency} + POST /api/v1/super-admin/fx-rate/refresh
 app.include_router(
     fx_rate_admin.router, prefix="/api/v1", tags=["fx-rate"],
 )
@@ -682,6 +687,11 @@ app.include_router(
 # design.md PR-D: 試運転（Shadow run）の確認画面用 API（require_super_admin 限定）
 app.include_router(
     tcg_shadow_review.router, prefix="/api/v1", tags=["super-admin"],
+)
+
+# 解析精度管理（新方式）: 試運転の精度サマリー・投稿照合 API（読み取りのみ・require_super_admin 限定）
+app.include_router(
+    tcg_shadow_accuracy.router, prefix="/api/v1", tags=["super-admin"],
 )
 
 # PARITY-03 第2段階: 仕入元品質サマリー API（require_super_admin 限定）

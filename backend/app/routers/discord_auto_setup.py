@@ -15,6 +15,13 @@ API:
   - カテゴリ/チャンネル: 保存済みIDが Discord に存在すればスキップ・削除済みなら再作成
   - 2回目以降も安全に実行可能
 
+カテゴリ構成（bot_texts.CATEGORY_*）:
+  - 📩｜DM                : ticket-start（新規チケットチャンネルもここに作られる）
+  - 🍀｜Stock Information : member-announcements（小口 = small_channel_id）
+  - 🍒｜Stock Information : partner-announcements（大口 = large_channel_id）
+  旧セットアップの「Sales Anchor」カテゴリは「📩｜DM」へ名前変更し、アナウンス2チャンネルを
+  新カテゴリへ移動する（チャンネル・メッセージは削除しない。移動と名前変更のみ）。
+
 MVP対象外:
   - Staff ロール自動付与（手動でDiscord設定、role-order-guide.md 参照）
   - voice チャンネル
@@ -41,7 +48,9 @@ from app.database import get_db
 from app.discord_gateway import bot_texts
 from app.models import User
 from app.services.audit import record_audit_log
+from app.services.discord_guild_identity import fetch_guild_identity
 from app.services.discord_rest import DiscordAPIError, discord_api_request
+from app.services.discord_webhook_sender import try_send_as_identity
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -60,7 +69,7 @@ _ROLE_ORDER_GUIDE_URL = (
 
 class AutoSetupStep(BaseModel):
     step: str
-    status: str  # "created" | "skipped" | "posted" | "failed"
+    status: str  # "created" | "skipped" | "updated" | "posted" | "failed"
     discord_id: str | None = None
     error: str | None = None
 
@@ -200,7 +209,7 @@ async def run_auto_setup(
     steps.append(step)
     member_role_id: str | None = step.discord_id
 
-    # Step 2a: "Sales Anchor" カテゴリ（@everyone view禁止・Bot自身はview可）
+    # Step 2: カテゴリ3つ（@everyone view禁止・Bot自身はview可）
     # NOTE: カテゴリに @everyone deny VIEW_CHANNEL を設定すると、Bot 自身も
     # そのカテゴリ内で VIEW_CHANNEL を失い、チャンネル作成時の permission_overwrites
     # 設定で 403 Missing Permissions (50013) が発生する（Cause F）。
@@ -220,11 +229,10 @@ async def run_auto_setup(
             "allow": str(_VIEW_CHANNEL | _SEND_MESSAGES | _READ_MESSAGE_HISTORY | _MANAGE_CHANNELS),
             "deny": "0",
         })
-    step = await _get_or_create_channel_step(
+
+    # Step 2a: DM カテゴリ（旧「Sales Anchor」カテゴリは名前変更で引き継ぐ）
+    step = await _ensure_dm_category_step(
         step_name="category",
-        channel_name="Sales Anchor",
-        channel_type=4,  # GUILD_CATEGORY
-        parent_id=None,
         existing_id=existing_category_id,
         existing_channels=existing_channels,
         guild_id=guild_id,
@@ -235,15 +243,40 @@ async def run_auto_setup(
     if step.discord_id:
         category_id = step.discord_id
 
+    # Step 2b/2c: 在庫アナウンス用カテゴリ（メンバー向け 🍀 / 大口向け 🍒・名前で冪等）
+    step = await _get_or_create_channel_step(
+        step_name="category_stock_member",
+        channel_name=bot_texts.CATEGORY_STOCK_MEMBER,
+        channel_type=4,
+        parent_id=None,
+        existing_id=None,
+        existing_channels=existing_channels,
+        guild_id=guild_id,
+        bot_token=bot_token,
+        permission_overwrites=_category_overwrites,
+    )
+    steps.append(step)
+    member_category_id: str | None = step.discord_id
+
+    step = await _get_or_create_channel_step(
+        step_name="category_stock_large",
+        channel_name=bot_texts.CATEGORY_STOCK_LARGE,
+        channel_type=4,
+        parent_id=None,
+        existing_id=None,
+        existing_channels=existing_channels,
+        guild_id=guild_id,
+        bot_token=bot_token,
+        permission_overwrites=_category_overwrites,
+    )
+    steps.append(step)
+    large_category_id: str | None = step.discord_id
+
     # カテゴリが存在しない場合は配下チャンネルを作成しない（ルート直下防止）
-    if not category_id:
-        _no_category_msg = "カテゴリ作成に失敗したためチャンネルを作成できません"
-        steps.append(AutoSetupStep(step="ch_ticket", status="failed", error=_no_category_msg))
-        steps.append(AutoSetupStep(step="ch_member", status="failed", error=_no_category_msg))
-        steps.append(AutoSetupStep(step="ch_partner", status="failed", error=_no_category_msg))
-        steps.append(AutoSetupStep(step="button", status="failed", error=_no_category_msg))
-    else:
-        # Step 3a: "ticket-start" チャンネル（@everyone view可・Staff送信可）
+    _no_category_msg = "カテゴリ作成に失敗したためチャンネルを作成できません"
+
+    # Step 3a: "ticket-start" チャンネル（@everyone view可・Staff送信可）→ DM カテゴリ配下
+    if category_id:
         ch_ticket_step = await _get_or_create_channel_step(
             step_name="ch_ticket",
             channel_name="ticket-start",
@@ -255,17 +288,23 @@ async def run_auto_setup(
             bot_token=bot_token,
             permission_overwrites=_ticket_ch_overwrites(guild_id, staff_role_id, bot_user_id),
         )
-        steps.append(ch_ticket_step)
         if ch_ticket_step.discord_id:
             ticket_ch_id = ch_ticket_step.discord_id
+    else:
+        ch_ticket_step = AutoSetupStep(step="ch_ticket", status="failed", error=_no_category_msg)
+    steps.append(ch_ticket_step)
 
-        # Step 3b: "member-announcements" チャンネル（Member/Partner view可・Staff送信可）
+    # Step 3b: "member-announcements" チャンネル（Member/Partner view可・Staff送信可）→ 🍀 配下
+    # 旧セットアップでは DM カテゴリ（旧 Sales Anchor）配下にあるため、DB未保存でも
+    # そこを探して重複作成を防ぎ、見つかれば 🍀 へ移動する。
+    if member_category_id:
         step = await _get_or_create_channel_step(
             step_name="ch_member",
             channel_name="member-announcements",
             channel_type=0,
-            parent_id=category_id,
-            existing_id=existing_small_ch_id,
+            parent_id=member_category_id,
+            existing_id=existing_small_ch_id
+            or _find_channel(existing_channels, "member-announcements", 0, category_id),
             existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
@@ -273,17 +312,27 @@ async def run_auto_setup(
                 guild_id, member_role_id, partner_role_id, staff_role_id
             ),
         )
-        steps.append(step)
+        step = await _ensure_channel_parent_step(
+            step=step,
+            parent_id=member_category_id,
+            existing_channels=existing_channels,
+            bot_token=bot_token,
+        )
         if step.discord_id:
             small_ch_id = step.discord_id
+    else:
+        step = AutoSetupStep(step="ch_member", status="failed", error=_no_category_msg)
+    steps.append(step)
 
-        # Step 3c: "partner-announcements" チャンネル（Partner view可・Staff送信可）
+    # Step 3c: "partner-announcements" チャンネル（Partner view可・Staff送信可）→ 🍒 配下
+    if large_category_id:
         step = await _get_or_create_channel_step(
             step_name="ch_partner",
             channel_name="partner-announcements",
             channel_type=0,
-            parent_id=category_id,
-            existing_id=existing_large_ch_id,
+            parent_id=large_category_id,
+            existing_id=existing_large_ch_id
+            or _find_channel(existing_channels, "partner-announcements", 0, category_id),
             existing_channels=existing_channels,
             guild_id=guild_id,
             bot_token=bot_token,
@@ -291,31 +340,45 @@ async def run_auto_setup(
                 guild_id, partner_role_id, staff_role_id
             ),
         )
-        steps.append(step)
+        step = await _ensure_channel_parent_step(
+            step=step,
+            parent_id=large_category_id,
+            existing_channels=existing_channels,
+            bot_token=bot_token,
+        )
         if step.discord_id:
             large_ch_id = step.discord_id
+    else:
+        step = AutoSetupStep(step="ch_partner", status="failed", error=_no_category_msg)
+    steps.append(step)
 
-        # Step 4a: チケットボタン投稿（冪等）
-        # created: 新規チャンネルのためボタン未存在確実 → 直接投稿
-        # skipped: 既存チャンネルのためボタン存在確認してから投稿（重複防止）
-        if ch_ticket_step.status == "created":
-            step = await _post_ticket_button_step(
-                step_name="button",
-                ticket_ch_id=ticket_ch_id,
-                bot_token=bot_token,
-            )
-        elif ch_ticket_step.status == "skipped":
-            step = await _ensure_ticket_button_step(
-                step_name="button",
-                ticket_ch_id=ticket_ch_id,
-                bot_token=bot_token,
-            )
-        else:
-            step = AutoSetupStep(
-                step="button", status="failed",
-                error="ticket-start チャンネルの作成に失敗したためボタン投稿をスキップしました。",
-            )
-        steps.append(step)
+    # Step 4a: チケットボタン投稿（冪等）
+    # created: 新規チャンネルのためボタン未存在確実 → 直接投稿
+    # skipped: 既存チャンネルのためボタン存在確認してから投稿（重複防止）
+    if ch_ticket_step.status == "created":
+        step = await _post_ticket_button_step(
+            step_name="button",
+            ticket_ch_id=ticket_ch_id,
+            bot_token=bot_token,
+            db=db,
+            tenant_id=tenant_id,
+            guild_id=guild_id,
+        )
+    elif ch_ticket_step.status == "skipped":
+        step = await _ensure_ticket_button_step(
+            step_name="button",
+            ticket_ch_id=ticket_ch_id,
+            bot_token=bot_token,
+            db=db,
+            tenant_id=tenant_id,
+            guild_id=guild_id,
+        )
+    else:
+        step = AutoSetupStep(
+            step="button", status="failed",
+            error="ticket-start チャンネルの作成に失敗したためボタン投稿をスキップしました。",
+        )
+    steps.append(step)
 
     # ---- DB 保存（COALESCE で失敗ステップの既存値を保持）----
     # 初回実行（cfg=None）かつ NOT NULL カラム（ticket_category_id / ticket_button_channel_id）が
@@ -526,11 +589,111 @@ async def _get_or_create_channel_step(
         return AutoSetupStep(step=step_name, status="failed", error=str(exc))
 
 
+async def _ensure_dm_category_step(
+    *,
+    step_name: str,
+    existing_id: str | None,
+    existing_channels: list[dict[str, Any]],
+    guild_id: str,
+    bot_token: str,
+    permission_overwrites: list[dict[str, Any]],
+) -> AutoSetupStep:
+    """DM カテゴリ（📩｜DM）を冪等に用意する。旧セットアップの「Sales Anchor」は名前変更で引き継ぐ。
+
+    1. 保存済みID → 名前 CATEGORY_DM → 旧名 CATEGORY_DM_LEGACY の順に既存カテゴリを探す。
+    2. 見つかったカテゴリが旧名なら CATEGORY_DM へ名前変更のみ行う（配下チャンネルは触らない）。
+    3. どれも無ければ新規作成する。
+    """
+    by_id = {str(ch["id"]): ch for ch in existing_channels}
+    target = by_id.get(existing_id) if existing_id else None
+    if target is None:
+        for name in (bot_texts.CATEGORY_DM, bot_texts.CATEGORY_DM_LEGACY):
+            found_id = _find_channel(existing_channels, name, 4)
+            if found_id:
+                target = by_id[found_id]
+                break
+
+    if target is None:
+        return await _get_or_create_channel_step(
+            step_name=step_name,
+            channel_name=bot_texts.CATEGORY_DM,
+            channel_type=4,
+            parent_id=None,
+            existing_id=None,
+            existing_channels=existing_channels,
+            guild_id=guild_id,
+            bot_token=bot_token,
+            permission_overwrites=permission_overwrites,
+        )
+
+    category_id = str(target["id"])
+    if target.get("name") != bot_texts.CATEGORY_DM_LEGACY:
+        return AutoSetupStep(step=step_name, status="skipped", discord_id=category_id)
+
+    try:
+        await discord_api_request(
+            method="PATCH",
+            path=f"/channels/{category_id}",
+            bot_token=bot_token,
+            json={"name": bot_texts.CATEGORY_DM},
+            expected_statuses=(200,),
+        )
+    except DiscordAPIError as exc:
+        logger.warning(
+            "[discord_auto_setup] category rename failed id=%s: %s", category_id, exc,
+        )
+        return AutoSetupStep(
+            step=step_name, status="failed", discord_id=category_id, error=str(exc)
+        )
+    return AutoSetupStep(step=step_name, status="updated", discord_id=category_id)
+
+
+async def _ensure_channel_parent_step(
+    *,
+    step: AutoSetupStep,
+    parent_id: str,
+    existing_channels: list[dict[str, Any]],
+    bot_token: str,
+) -> AutoSetupStep:
+    """既存チャンネル（skipped）が指定カテゴリ配下に無ければ移動する。移動のみで削除はしない。
+
+    lock_permissions=False でチャンネル個別の permission_overwrites を保持する。
+    """
+    if step.status != "skipped" or not step.discord_id:
+        return step
+    current = next(
+        (ch for ch in existing_channels if str(ch["id"]) == step.discord_id), None
+    )
+    if current is None or str(current.get("parent_id")) == parent_id:
+        return step
+
+    try:
+        await discord_api_request(
+            method="PATCH",
+            path=f"/channels/{step.discord_id}",
+            bot_token=bot_token,
+            json={"parent_id": parent_id, "lock_permissions": False},
+            expected_statuses=(200,),
+        )
+    except DiscordAPIError as exc:
+        logger.warning(
+            "[discord_auto_setup] channel move failed id=%s parent=%s: %s",
+            step.discord_id, parent_id, exc,
+        )
+        return AutoSetupStep(
+            step=step.step, status="failed", discord_id=step.discord_id, error=str(exc)
+        )
+    return AutoSetupStep(step=step.step, status="updated", discord_id=step.discord_id)
+
+
 async def _ensure_ticket_button_step(
     *,
     step_name: str,
     ticket_ch_id: str | None,
     bot_token: str,
+    db: AsyncSession,
+    tenant_id: int,
+    guild_id: str,
 ) -> AutoSetupStep:
     """既存 ticket-start チャンネルにボタンが無い場合のみ投稿する（冪等）。
 
@@ -572,7 +735,12 @@ async def _ensure_ticket_button_step(
                     )
 
     return await _post_ticket_button_step(
-        step_name=step_name, ticket_ch_id=ticket_ch_id, bot_token=bot_token
+        step_name=step_name,
+        ticket_ch_id=ticket_ch_id,
+        bot_token=bot_token,
+        db=db,
+        tenant_id=tenant_id,
+        guild_id=guild_id,
     )
 
 
@@ -581,8 +749,14 @@ async def _post_ticket_button_step(
     step_name: str,
     ticket_ch_id: str | None,
     bot_token: str,
+    db: AsyncSession,
+    tenant_id: int,
+    guild_id: str,
 ) -> AutoSetupStep:
-    """ticket-start チャンネルにチケット開始ボタンを投稿する。"""
+    """ticket-start チャンネルにチケット開始ボタンを投稿する。
+
+    サーバー名・アイコン名義の webhook 投稿を優先し、送れなければ Bot 名義で投稿する（案内を欠落させない）。
+    """
     if not ticket_ch_id:
         return AutoSetupStep(
             step=step_name,
@@ -591,6 +765,17 @@ async def _post_ticket_button_step(
         )
 
     payload = bot_texts.ticket_button_payload()
+    identity = await fetch_guild_identity(guild_id, bot_token)
+    posted_id = await try_send_as_identity(
+        db,
+        tenant_id=tenant_id,
+        channel_id=ticket_ch_id,
+        identity=identity,
+        content=payload["content"],
+        components=payload["components"],
+    )
+    if posted_id is not None:
+        return AutoSetupStep(step=step_name, status="posted", discord_id=posted_id)
     try:
         created = await discord_api_request(
             method="POST",

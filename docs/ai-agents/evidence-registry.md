@@ -3338,3 +3338,89 @@ follow_up: PR/最新CI、正式承認経路後にマージ/配備。au-implement
 2026-09-29 PR #3855提出済み（https://github.com/shingo-ops/salesanchor/pull/3855）。実装HEAD91fdf21be5bbf28277377eb535f5ac675af40b02。公式create-safe/.pr-number/占有台帳照合済み。process-artifacts gateは番号付きGO未受領のみで失敗（run36521962033/job109256570175、au-process-gate.txt）。包括的実施許可からPO原文を創作しない。残る技術CI確認後、GO #3855受領・最新HEAD/CI/バックアップ照合を経て正式経路でマージ/配備。現在未マージ・未配備。
 
 2026-09-29 AU完了: PR3855本人GO後マージ、Deploy36522989354成功、本番HEAD/公開index・JS hash/HTTP/DB接続をroot直接照合。旧221→0、Button494/ButtonLink8。根拠docs/handoff/design-system-recon/evidence-20260910/au-implementation.mdとau-production-verification.json。画面は省略・未検証。
+
+
+```text
+id: EV-20261001-DISCORD-REACTIONS-PO-CONFIRM
+date: 2026-10-01
+agent: Claude Code (record)
+task: Discord リアクション同期の PO 本番目視確認の記録
+scope: tenant_001 本番。PR #3869 / #3872 / #3886 / #3915。受信箱 ♡ と Discord ❤️ の双方向反映。
+evidence:
+  - type: external
+    reference: PO(Shingo) 画面スクリーンショット（セッション内提示、2026-10-01 15:27-15:28 JST）
+    summary: 受信箱で ♡ をクリック → 赤 ♥2 と Discord ❤️2。再度クリック → ♡1 と ❤️1（双方で取り消し）。顧客側の 👍/🙂 が受信箱に表示された。
+  - type: command
+    reference: 本番DB read-only 参照（2026-10-01 06:14Z）
+    summary: gateway がリアクションを記録していることを確認。
+confidence: high
+tradeoff: スクリーンショットはリポジトリ外。DB参照の生出力は本台帳に含めない。
+decision: PO 本人の人手確認として記録。新規チケットの英語ウェルカム文（#3885）は PO 未確認のため本記録に含めない（未確認）。
+follow_up: #3885 の英語文面は PO 確認待ち。
+```
+
+```text
+id: EV-20261002-STAFF-IDENTITY-PO-CONFIRM
+date: 2026-10-02
+agent: Claude Code (record)
+task: 担当者アバター・英語名・担当者名義 Discord 返信の PO 本番目視確認の記録
+scope: tenant_001 本番。PR #3908 / #3913 / #3917 / #3920。
+evidence:
+  - type: external
+    reference: PO(Shingo) 画面スクリーンショット（セッション内提示、2026-10-02 12:04 / 12:05 JST）
+    summary: #3917 反映後にスタッフ作成が成功（PO「成功」）。#3920 反映後にアカウント設定でアバター表示。受信箱から送った Discord メッセージ「画像と担当者名の反映テスト」（#ticket-akane-4708）が「Shingo」名義・アップロード済みアバターで表示された。
+confidence: high
+tradeoff: スクリーンショットはリポジトリ外。
+decision: PO 本人の人手確認として記録。
+follow_up: なし。
+```
+
+```text
+id: EV-20261002-FRONTEND-AV-INPUT-DESIGN
+date: 2026-10-02
+agent: Claude Code (Opus 設計 / Sonnet 調査)
+task: フロントエンド金型化の引継ぎ再開と入力本体（§Y順序3）の再棚卸し・AV-1設計
+scope: frontend/src の native select/textarea/input。製品コード未変更。基準 origin/main 55d99a97e441b4c0604f2b8f42418d2a7bc8ffab。
+evidence:
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av0-input-audit.cjs（TypeScript 5.9.3 AST）
+    summary: 対象TSX275・構文エラー0。native入力599（input461/select81/textarea57、金型内部各1）。ui-allow21。9/10監査577と対応556・旧のみ21・新のみ43。946e6dbc と 55d99a97e で全行一致。
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av1-select-detail.json
+    summary: ページ側select80。ref0/style5（InventoryPage.tsx:477、ParseReviewPage.tsx:575/596/617/638）/multiple0/size0/spread0。children map41・固定32・式7。onChange e.target.value 76・カリー化4。
+  - type: file
+    reference: frontend/src/components/Select.tsx:34-66、FormField.css:46-92
+    summary: SelectControl は options モードのみ・forwardRef無し・矢印固定。設計担当が実物を直接読取。
+  - type: external
+    reference: PO(Shingo) セッション内回答（2026-10-02）
+    summary: Checkbox/Toggle/Radio の新規金型登録「許可する」。作業台確保のため PO 本人が reaper --execute と worktree remove を実行。
+confidence: high
+tradeoff: av1-css-mapping.md は snapshot 946e6dbc の写し（frontend/src 同一を確認）。見た目の前後比較は AV-2 で行い本記録に含めない。
+decision: AV-1（SelectControl に children モード・forwardRef・indicator を追加、利用ページ変更0）を設計自己審査 APPROVE。同一AIの自己審査であり独立レビューではない。番号付きGO・Opus委任の有効化は創作しない。
+follow_up: PO 実装承認→実装カード→Sonnet 実装→PR→番号付きGO。AV-2 は見た目の前後表を PO 提示。
+```
+
+```text
+id: EV-20261005-FRONTEND-AV1-DEPLOY-AW-DESIGN
+date: 2026-10-05
+agent: Claude Code (Opus 設計 / Sonnet 調査・実装)
+task: AV-1（SelectControl本体拡張）の本番反映記録と、生select76の移管方針AWの設計
+scope: frontend/src の SelectControl と生 select。AW は製品未変更。基準 origin/main 3210edeea（作業台HEAD 3f4dbbdf9 と frontend/src 同一）。
+evidence:
+  - type: command
+    reference: PR #3931 / merge 4a54206dd125d1add4d526814b63d53edd39accc / Deploy 37254291709
+    summary: 必須13/13成功で merge（2026-10-05T02:09:48Z）、deploy success。本番 asset が index-BVLZdWZ6.js / index-DQ5Tuc_9.css に変化し comp-select--no-indicator を各1件含む。app 200、/api/health 200。
+  - type: external
+    reference: PO(Shingo) セッション内発言「GO #3931」と、本人による permit-danger チケット発行・PR本文反映・gh-pr-merge-safe.sh 実行（2026-10-04〜05）
+    summary: 実装担当（Sonnet）は伝聞GOを根拠にできず permits も読めないため、GO記録の反映とマージは PO 本人の端末操作で実施。
+  - type: command
+    reference: docs/handoff/design-system-recon/evidence-20260910/av2-select-mapping.md / av2-recon2.md / aw1-baseline.md
+    summary: 生select76（ParseReviewPage 4件はファイル削除で消滅）。裸 select のページ規則10件は全て金型より詳細度が高く、既存金型利用の確定7・未確認9を上書き中。変更前の computed style を Chromium 147 で80条件実測。
+  - type: external
+    reference: PO(Shingo) セッション内回答（2026-10-05）
+    summary: 「特別な見た目に意図があるのであれば金型を追加したほうが良い」との問いに対し、意図資料（ADR-108/110、tokens.css注記、CSS注記）に基づく方針案を提示し、PO が「この方針で進める」を選択。
+confidence: high
+tradeoff: 外観の同等性は静的解析と単体ページでの実測であり、実画面・実ログインでの目視ではない。証跡スクリプトは scratchpad の絶対パスを含む。
+decision: カルテ9・ヘッダー2・タブバー2は SelectControl の種類として登録し現行外観を保持、一般55は標準へ統一、商品編集9と報酬1は保留。AW-1 は同一AI自己審査 APPROVE、AW-2 は REVISE。
+follow_up: AW-1 の PO 実装承認とカード。header の Arial 書体・karte の暗い表示未対応を現行どおり写すかを PO に確認。
+```

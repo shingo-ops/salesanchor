@@ -1,6 +1,15 @@
--- ADR-090 PR5b: 在庫表(public.products)に取引単位(unit)列を追加
--- 単位は商品マスタ属性として保持し、在庫表に「単位」列として表示する。
--- 値の充足は Discord 取込(PR5c)で行う。本 migration は additive かつ冪等。
--- 想定値: piece / pack / box / case / set（public.inventory.unit と同系統。CHECK は付けず柔軟に保持）
-
-ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit VARCHAR(20);
+-- ============================================================================
+-- ADR-090 PR5b: 在庫表(public.products)に取引単位(unit)列を追加 — 無効化済み
+--
+-- 元の内容: ALTER TABLE public.products ADD COLUMN IF NOT EXISTS unit VARCHAR(20);
+--
+-- incident 2026-10-03 (deploy run 37130920016): unit は 20260629_020000 で永久 DROP
+-- される列。毎デプロイで ADD→DROP が繰り返され、DROP 済みの列も attribute number を
+-- 消費し続けるため public.products が 1600 列上限に達し、デプロイが失敗していた。
+-- 本来の一時目的（在庫表への unit 表示）は 2026-06-29 の 20260629_010000
+-- (本番 UPDATE 62 件確認済み) で既に果たされている。
+--
+-- デプロイ時は何もしない（冪等: 実行するSQL文なし）。登録は維持する（registration check 用）。
+-- 詳細: docs/handoff/products-column-churn/design.md
+-- ============================================================================
+SELECT 1; -- no-op: 1600列上限インシデントのため無効化（本来の目的は本番で達成済み）

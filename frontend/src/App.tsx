@@ -85,7 +85,6 @@ import DiscordAnnouncePage from "./pages/admin/DiscordAnnouncePage";
 import AdminHubPage from "./pages/admin/AdminHubPage";
 // SA-02 Stage 3: チャネルマスタ管理
 import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
-import ParseReviewPage from "./pages/super-admin/ParseReviewPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TcgProductMasterPage from "./pages/super-admin/TcgProductMasterPage";
@@ -297,11 +296,6 @@ function App() {
                     }
                   />
 
-                  {/* spec.md v1.1 F6 (Sprint 6): 解析結果レビュー画面（is_super_admin 限定、Page 内で 403 ガード） */}
-                  <Route
-                    path="/super-admin/inbound/:id/review"
-                    element={<ParseReviewPage />}
-                  />
                   <Route path="/super-admin/tcg-sold-out" element={<TcgSoldOutPage />} />
                   <Route path="/super-admin/tcg-product-master" element={<TcgProductMasterPage />} />
                   <Route path="/super-admin/tcg-product-master/import" element={<TcgProductImportPage />} />
@@ -401,6 +395,11 @@ function App() {
                     <Route path="inventory-visibility" element={<InventoryVisibilityPage />} />
                     <Route path="commission"          element={<CommissionSettingsPage />} />
                     <Route path="tenant-profile"      element={<TenantProfilePage />} />
+                    {/* 管理センター左メニューを保ったまま開くため /admin/* と同じページを再掲 */}
+                    <Route path="tenant-policy"       element={<TenantPolicyPage />} />
+                    <Route path="discord-config"      element={<DiscordConfigPage />} />
+                    <Route path="discord-announce"    element={<DiscordAnnouncePage />} />
+                    <Route path="channel-masters"     element={<ChannelMastersPage />} />
                     <Route path="channels"            element={<ChannelsPage />} />
                     <Route path="bots"                element={<BotsPage />} />
                     <Route path="suppliers"           element={<SuppliersPage />} />

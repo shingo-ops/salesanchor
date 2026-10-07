@@ -80,7 +80,19 @@ RETENTION_DAYS=90  # S3上の保持日数（monthly-archives/ は対象外）
 echo "=== S3バックアップ転送開始: $(date) ==="
 
 # 1. 最新のバックアップファイルを特定
-LATEST_BACKUP=$(ls -t "$LOCAL_BACKUP_DIR"/*.gz 2>/dev/null | head -1)
+# 注: 2026-10-02 事故以降、ローカルに salesanchor_db_*.sql.gz が多数(100+)
+# 残っていると `ls | head -1` が SIGPIPE (head が最初の1行だけ読んで
+# パイプを閉じる) を受けて ls が非0終了し、set -o pipefail 下で ERR trap に
+# 飛んで S3 転送が丸ごとスキップされるバグがあった
+# （ローカル再現: 10件で0/50失敗、156件で48/50失敗）。
+# awk は標準入力を最後まで読み切るため ls が SIGPIPE を受けない。
+# また対象を salesanchor_db_*.sql.gz に限定し、tenant_* 等の無関係ファイルを除外する。
+LS_ERR_LOG=$(mktemp)
+LATEST_BACKUP=$(ls -1t "$LOCAL_BACKUP_DIR"/salesanchor_db_*.sql.gz 2>"${LS_ERR_LOG}" | awk 'NR==1')
+if [ -s "${LS_ERR_LOG}" ]; then
+  echo "WARN: ls でエラー: $(cat "${LS_ERR_LOG}")"
+fi
+rm -f "${LS_ERR_LOG}"
 
 if [ -z "$LATEST_BACKUP" ]; then
   echo "ERROR: バックアップファイルが見つかりません: ${LOCAL_BACKUP_DIR}"
