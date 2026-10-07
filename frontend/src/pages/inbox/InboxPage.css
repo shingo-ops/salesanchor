@@ -69,20 +69,6 @@
 .inbox-platform-select {
   margin-left: auto;
   flex-shrink: 0;
-  height: var(--height-tab-item);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-secondary);
-  font-size: var(--font-xs);
-  font-family: inherit;
-  cursor: pointer;
-}
-.inbox-platform-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  color: var(--text-primary);
 }
 
 /* 3カラムコンテンツエリア */
@@ -1202,8 +1188,6 @@
   transition: border-color var(--transition-micro);
 }
 .right-panel-field::placeholder { color: var(--text-muted); }
-/* 見本: select はネイティブ▼なしのプレーン箱 */
-select.right-panel-field { appearance: none; -webkit-appearance: none; }
 .right-panel-field:focus { outline: none; border-color: var(--accent); }
 textarea.right-panel-field { resize: none; min-height: var(--inbox-textarea-min-h); } /* 見本: リサイズハンドル非表示 */
 .right-panel-name-field {
