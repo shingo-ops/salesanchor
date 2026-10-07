@@ -7,7 +7,8 @@
 #   唯一のルール（SSoT）にする。
 #
 # 使い方（deploy.yml から呼ばれる）:
-#   bash scripts/run_all_migrations.sh
+#   bash scripts/run_all_migrations.sh           # ledger に無い手順だけを実行（ADR-1005 段階2）
+#   bash scripts/run_all_migrations.sh --full    # 全件やり直し（記録を無視。緊急時の戻し方）
 #
 # 注意:
 #   - set -e により途中でエラーが出た時点で即座に停止する
@@ -18,6 +19,12 @@
 # 参考: docs/adr/ADR-082, docs/adr/ADR-045
 
 set -e
+
+# --full: 全件やり直しモード（ledger の記録を無視して全件を実行し、記録を更新する。戻し方）
+for arg in "$@"; do
+  if [ "${arg}" = "--full" ]; then MIGRATION_FULL_RERUN=1; fi
+done
+export MIGRATION_FULL_RERUN="${MIGRATION_FULL_RERUN:-0}"
 
 REPO_DIR="${REPO_DIR:-/home/ubuntu/salesanchor}"
 BACKEND="astro-webapp-backend-1"
@@ -46,24 +53,12 @@ STEP=0
 
 TOTAL=$(grep -cE '^run_(sql|py)[[:space:]]' "$0" 2>/dev/null || echo 0)
 
-run_py() {
-  local script="$1"
-  shift
-  STEP=$((STEP + 1))
-  echo ">>> [${STEP}/${TOTAL}] python ${script} $*"
-  # SA-18 Phase2: Python マイグレーションは DDL を含むため ADMIN_DATABASE_URL で実行。
-  # ADMIN_DATABASE_URL 未設定時は DATABASE_URL にフォールバック（後方互換）。
-  docker exec \
-    -e DATABASE_URL="${ADMIN_DATABASE_URL:-$DATABASE_URL}" \
-    "$@" -w /app "${BACKEND}" python "${script}"
-}
-
-run_sql() {
-  local file="$1"
-  STEP=$((STEP + 1))
-  echo ">>> [${STEP}/${TOTAL}] psql < ${file}"
-  docker exec -i "${POSTGRES}" ${PSQL} < "${REPO_DIR}/${file}"
-}
+# 実行済み記録（ledger。ADR-1005 段階2）: run_sql / run_py はこのライブラリで定義する。
+#   通常: ledger に無い手順だけを登録順に実行し、成功したものだけ記録する。
+#         記録済みファイルの内容が変わっていたら、何も実行せずに失敗する。
+#   --full（または MIGRATION_FULL_RERUN=1）: 記録を無視して全件を実行し、記録を更新する（戻し方）。
+# shellcheck disable=SC1091
+source scripts/lib/migration_ledger.sh
 
 preflight_registered_files() {
   echo ">>> [0] Verifying registered migration files exist..."
@@ -74,6 +69,8 @@ preflight_registered_files() {
 }
 
 preflight_registered_files
+
+ledger_init "$0"
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # マイグレーション一覧（順序厳守・冪等必須）
@@ -881,3 +878,6 @@ run_sql migrations/20261003_100000_create_app_fx_rate_history.sql
 
 # 新しい仕組み専用の仕入元ルール2列（extraction_layout_rules / extraction_hard_cases）。本番v7は読まない
 run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql
+
+# ADR-1005 段階2: 実行済み記録の表 ops.migration_ledger（専用スキーマ。構造だけ。ledger_init が先に実行するが、登録も必要）
+run_sql migrations/20261007_100000_create_migration_ledger.sql

@@ -1,0 +1,34 @@
+# baseline（scripts/migration-ledger/record-baseline.sh）の前提: ADR-1007 段3 で無効化した migration の一覧。
+# --commit のとき、ここに載せた全ファイルに「NEUTRALIZED (ADR-」の印があることを確かめる。
+# 印が無いファイルがあれば、baseline を記録しない（段3 のデプロイ前に baseline を取ると、
+# 段3 の書き換えが、すべてチェックサム不一致になるため）。1 行 1 ファイル。# はコメント。
+#
+# PR #3978（seed_product_marks）
+migrations/20260604_010000_seed_product_marks.sql
+# PR #4018（段3a。18 本）
+migrations/20260620_010000_create_inventory_aggregation_rules.sql
+migrations/20260621_010000_create_countries_master.sql
+migrations/085_create_tcg_type_master.sql
+migrations/086_seed_additional_tcg_types.sql
+migrations/20260611_100000_create_channel_masters.sql
+migrations/20260611_010000_fix_owner_role_color.sql
+migrations/20260616_000000_fix_tcg_type_dedup.sql
+migrations/20260928_100000_delete_skip_condition_rules.sql
+migrations/20260924_040000_seed_knowledge_extraction_vocab.sql
+migrations/20260923_030000_promote_remaining_tcg_tables.sql
+migrations/20260927_120000_add_max_age_hours_setting.sql
+migrations/20260602_020000_add_products_tcg_type.sql
+migrations/20260603_000000_add_products_product_kind.sql
+migrations/20260604_020000_backfill_products_shipping_defaults.sql
+migrations/20260605_000000_add_products_display_order.sql
+migrations/20260916_130000_work_id_not_null.sql
+migrations/20260604_090000_create_link_templates.sql
+migrations/20260613_020000_funnel_close_reasons.sql
+# PR #4017（段3b。7 本）
+migrations/080_phase_b_migration.sql
+migrations/023_fix_system_admin_is_system_flag.sql
+migrations/075_create_goals.sql
+migrations/025_resync_owner_admin_all_permissions.sql
+migrations/018_extend_permissions_with_menu_grain.sql
+migrations/024_add_staff_bots_permissions.sql
+migrations/20260604_180000_analytics_agent_a_tables.sql

@@ -1,0 +1,45 @@
+name: Migration Ledger Check
+
+# ADR-1005 段階2（実行済み記録）の CI。
+#   1. ledger 付きランナーの論理の試験（DB なし・docker なし。偽の psql／偽の docker）
+#   2. 実行済み（登録済み）の migration の書き換えを止める（base に既にある登録ファイルが head で変わったら失敗）
+# 必須チェックではない（non-mandatory）。安定確認後に Ruleset へ加えるかは、別途 PO の GO で判断する。
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'scripts/run_all_migrations.sh'
+      - 'scripts/lib/migration_ledger.sh'
+      - 'scripts/migration-ledger/**'
+      - 'scripts/check-migration-immutability.sh'
+      - 'scripts/tests/test-migration-ledger.sh'
+      - 'migrations/**'
+      - '.github/workflows/migration-ledger-check.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ledger-harness:
+    name: migration ledger harness
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run ledger harness
+        run: bash scripts/tests/test-migration-ledger.sh
+
+  immutability:
+    name: registered migrations are immutable
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Check registered migrations are not rewritten
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: bash scripts/check-migration-immutability.sh
