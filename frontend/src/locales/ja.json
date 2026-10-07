@@ -1854,6 +1854,17 @@
     "confirmDelete": "選択した単位を削除しますか？",
     "total": "単位数：{{count}}件"
   },
+  "unitIgnorePhrases": {
+    "title": "単位にしない言い回し",
+    "description": "単位の別名を含むが単位ではない言い回し（例: 作品名）を登録します。",
+    "phrase": "言い回し",
+    "note": "登録理由",
+    "isActive": "有効",
+    "empty": "登録された言い回しはありません",
+    "createTitle": "言い回しを追加",
+    "editTitle": "言い回しを編集",
+    "confirmDelete": "選択した言い回しを削除しますか？"
+  },
   "statusMaster": {
     "title": "ステータスルール",
     "statusId": "ステータスID",
