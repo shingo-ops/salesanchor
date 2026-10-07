@@ -1,7 +1,10 @@
 """super-admin 単位にしない言い回し（line_unit_ignore_phrases）API のテスト。
 
 - 権限なし 403: DB 不要（require_super_admin が先に拒否する）。ローカルでも実行される。
-- 追加・重複(409)・無効化・一覧順: 実 PostgreSQL 必須（TEST_PG_URL 未設定なら skip）。
+- 追加・重複(409)・無効化・一覧順: 実 PostgreSQL 必須。
+  CI（test.yml）は RLS_ADMIN_DATABASE_URL（jarvis: DDL 用）と RLS_TEST_DATABASE_URL
+  （salesanchor_app: DML のみ）を渡す。TEST_PG_URL は CI では未設定のため、
+  手本 test_countries_master.py と同じ環境変数を読む。どれも無ければ skip。
 """
 from __future__ import annotations
 
@@ -9,13 +12,22 @@ import os
 import uuid
 
 import pytest
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 
-TEST_PG_URL = os.getenv("TEST_PG_URL")
+from tests.rls_bootstrap import _apply_migration
+
+ADMIN_PG_URL = os.getenv("RLS_ADMIN_DATABASE_URL") or os.getenv("TEST_PG_URL")
+APP_PG_URL = os.getenv("RLS_TEST_DATABASE_URL") or os.getenv("TEST_PG_URL")
+MIGRATION_FILE = "20261008_100000_create_line_unit_ignore_phrases.sql"
 BASE = "/api/v1/super-admin/unit-ignore-phrases"
 
 requires_pg = pytest.mark.skipif(
-    not TEST_PG_URL,
-    reason="実 PostgreSQL 環境が必要 (TEST_PG_URL 未設定)。",
+    not ADMIN_PG_URL or not APP_PG_URL,
+    reason=(
+        "実 PostgreSQL 環境が必要 "
+        "(RLS_ADMIN_DATABASE_URL / RLS_TEST_DATABASE_URL / TEST_PG_URL 未設定)。"
+    ),
 )
 
 
@@ -63,41 +75,33 @@ async def test_non_super_admin_gets_403(method, path, body):
 
 @pytest.fixture
 async def pg_client():
-    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
-
-    engine = create_async_engine(TEST_PG_URL, echo=False)
-    async with engine.connect() as conn:
-        from sqlalchemy import text
-
-        exists = (await conn.execute(text(
-            "SELECT 1 FROM information_schema.tables "
-            "WHERE table_schema='public' AND table_name='line_unit_ignore_phrases'"
-        ))).scalar_one_or_none()
-    if not exists:
-        await engine.dispose()
-        pytest.skip("public.line_unit_ignore_phrases 未作成 (migration 未適用)")
-    session_local = async_sessionmaker(engine, expire_on_commit=False)
+    """管理者接続で migration を適用し、API はアプリ接続（salesanchor_app）で呼ぶ。"""
+    if not ADMIN_PG_URL or not APP_PG_URL:
+        pytest.skip("実 PostgreSQL 環境が必要")
+    admin_engine = create_async_engine(ADMIN_PG_URL, echo=False)
+    app_engine = create_async_engine(APP_PG_URL, echo=False)
+    session_local = async_sessionmaker(app_engine, expire_on_commit=False)
 
     async def override_get_db():
         async with session_local() as session:
             yield session
 
-    client, app = _make_client(is_super_admin=True, get_db_override=override_get_db)
     created: list[int] = []
+    client, app = _make_client(is_super_admin=True, get_db_override=override_get_db)
     try:
+        await _apply_migration(admin_engine, MIGRATION_FILE)
         async with client as c:
             yield c, created
     finally:
         app.dependency_overrides.clear()
-        from sqlalchemy import text
-
-        async with engine.begin() as conn:
+        async with admin_engine.begin() as conn:
             for pid in created:
                 await conn.execute(
                     text("DELETE FROM public.line_unit_ignore_phrases WHERE id = :id"),
                     {"id": pid},
                 )
-        await engine.dispose()
+        await app_engine.dispose()
+        await admin_engine.dispose()
 
 
 @requires_pg
