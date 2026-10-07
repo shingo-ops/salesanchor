@@ -319,3 +319,83 @@ pushgateway|||Up 2 weeks
 7. ADR-115 の本文との整合（本調査では本文を精読していない）。
 8. 外部事例: Docker 公式 production ページの公開日・更新日、docker-rollout の日付、および「rm -f から差分 recreate へ移行した企業事例」（無し）。
 9. frontend のみのデプロイで celery-worker の config-hash / イメージ ID が変わらないことの実測（KGI 1 の前提。build 出力が決定的か、`.env` の再書き込みで hash が変わらないか）。
+
+---
+
+# 追記（2026-10-07）: 未確認 3・6・9 の前提確認（`up --dry-run`）
+
+## 1. `--dry-run` の仕様（原文）
+出典（Context7 `/docker/compose` が返した公式ドキュメントのソース）:
+- https://github.com/docker/compose/blob/main/docs/reference/compose.md 「Use `--dry-run` flag to test a command without changing your application stack state. Dry Run mode shows you all the steps Compose applies when executing a command」「Dry Run mode works with almost all commands. You cannot use Dry Run mode with a command that doesn't change the state of a Compose stack such as `ps`, `ls`, `logs`」
+- Context7 `/docker/docs` の v5 リファレンス（`_vendor/github.com/docker/compose/v5/docs/reference/compose.md`）: グローバルオプション表に `--dry-run | bool | Execute command in dry run mode`。`compose_up` の各サブコマンド表にも同じ文言。
+- https://docs.docker.com/reference/cli/docker/compose/alpha/dry-run/ 「EXPERIMENTAL - Dry run command allow you to test a command without applying changes」（alpha 版の説明。同ページは experimental 機能の変更・削除の可能性に言及）
+- 「状態を変えない」は上の `compose.md` の原文で確認できた。
+- 「どの版から使えるか」: 取得した原文には導入版の記載が**無かった**（未確認）。ただし v5 のリファレンスにグローバルオプションとして載っており、本番は下記のとおり v5.1.1。
+- 実装メモ（参考）: `pkg/dryrun/dryrunclient.go` の DryRunClient が書き込み系 API を呼ばずに偽装し、読み取り系（例 ExecInspect）だけ実クライアントへ委譲する（Context7 の同ファイル抜粋）。
+
+## 2. 本番の compose の版
+`docker compose version` → `Docker Compose version v5.1.1`（実行前後とも同じ）。
+
+## 3. 本番での実行（1回のみ）
+実行コマンド（本番 `/home/ubuntu/salesanchor`、これ1回だけ）:
+`docker compose up -d --no-deps --dry-run frontend celery-worker celery-beat discord-gateway gemini-egress`
+
+生出力（`exit=0`）:
+```
+time="2026-10-07T09:52:51+09:00" level=warning msg="/home/ubuntu/salesanchor/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+time="2026-10-07T09:52:51+09:00" level=warning msg="/home/ubuntu/salesanchor/docker-compose.exporters.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container astro-webapp-celery-worker-1 Running 
+ Container astro-webapp-frontend-1 Running 
+ Container astro-webapp-gemini-egress-1 Running 
+ Container astro-webapp-celery-beat-1 Running 
+ Container astro-webapp-discord-gateway-1 Running 
+exit=0
+```
+
+### 実行前後（同一であること）
+`docker ps --format '{{.Names}} {{.Status}}'` は前後で同じ（「Up N hours」の表記も同じ。2 hours のまま）。各コンテナの StartedAt は前後で完全一致（`diff` が差分無し）。前の値（後も同じ）:
+```
+astro-webapp-backend-1 2026-10-06T23:20:11.242098692Z
+astro-webapp-celery-beat-1 2026-10-06T23:20:33.845311034Z
+astro-webapp-celery-worker-1 2026-10-06T23:20:33.84904107Z
+astro-webapp-certbot-1 2026-09-21T15:32:52.908902755Z
+astro-webapp-discord-gateway-1 2026-10-06T23:20:33.84326612Z
+astro-webapp-frontend-1 2026-10-06T23:20:33.847334162Z
+astro-webapp-gemini-egress-1 2026-10-06T23:20:33.849756544Z
+astro-webapp-gha-exporter-1 2026-09-27T07:59:57.639696902Z
+astro-webapp-nginx-1 2026-10-06T05:22:13.662330963Z
+astro-webapp-node-exporter-1 2026-09-21T15:32:52.90825844Z
+astro-webapp-postgres-1 2026-10-02T11:09:32.442802655Z
+astro-webapp-promtail-1 2026-09-21T15:32:52.902560065Z
+astro-webapp-redis-1 2026-09-21T15:32:52.851501883Z
+pushgateway 2026-09-20T04:13:51.145037503Z
+```
+
+## 4. サービスごとの判定
+| サービス | dry-run の判定 |
+|---|---|
+| celery-worker | Running（作り直し不要） |
+| frontend | Running |
+| celery-beat | Running |
+| discord-gateway | Running |
+| gemini-egress | Running |
+
+- 【事実】定常状態（直前のデプロイ完了後、何も変えていない状態）では、compose の既定の up は5サービスとも作り直さない。これで未確認 9 のうち「差分が無いときに celery-worker が作り直されない」ことは、dry-run の範囲で確かめられた。
+- 【未確認のまま】「画面だけ変えたデプロイ」で frontend 以外の hash が変わらないこと。実デプロイ（またはデプロイ手順を再現した dry-run）でないと確認できない。
+
+### gemini-egress が「Recreate」になる件の追加調査（読み取りのみ）
+- 【事実】今の dry-run では Running。現在の `docker compose config --hash gemini-egress` = ラベル `config-hash` = `d3e1fa33c962d3e7b525db748cdc0ee826e9c6da63ad41a7fbc593bb34864a99`（一致）。コンテナのイメージ ID = 現在の `astro-webapp-gemini-egress` のイメージ ID = `sha256:fa2738441f09319e107700cf0d06ed149c1749ebacc9f89b693ca81c236c0cd8`（一致）。
+- 【事実】過去のデプロイログでは、直近5回すべて gemini-egress は Recreate:
+  - run 37545822874（2026-10-06T23:20:33Z）、37463123321（12:29:51Z）、37424904808（06:39:51Z）、37424763856（06:38:21Z）、37422395981（06:14:01Z）。
+  - 5回とも同じログ行の並びで、build 後に `Image astro-webapp-gemini-egress Built`、Step 3c で frontend / celery-worker が `Creating`（rm 済み）、gemini-egress だけ `Recreate`。
+  - 少なくとも 23:20Z の run ではイメージ ID は変わっていない（上の「h 節」）。
+- 【事実】compose の定義上、gemini-egress に `depends_on` は無く、environment も無い（`W/docker-compose.yml:357-392`）。docker-compose.exporters.yml にも定義無し。
+- 【事実】`git log` で `monitoring/prod1/gemini-egress` と docker-compose.yml の最終変更は 2026-10-06 11:36 JST（022ca3579）、その前は 2026-10-02。5回の run のうち後ろ4回は、この変更より前か同日の run が混ざっており、「定義が変わったから Recreate」では説明しきれない（run 37545822874 の sha 57090e457 は定義変更の後）。
+- 【未確認】Recreate と判定された理由そのもの。「何が違うと判定されたか」は、デプロイ中にしか出ない状態（ビルド直後の再タグ、`.env` の書き換え直後、rm -f された他コンテナの有無）に依存しており、定常状態の dry-run では再現しなかった。設計の次の一手: デプロイの Step 3c の直前で `docker compose up -d --no-deps --dry-run gemini-egress` を実行しログに残す（読み取りのみ）。
+- 設計上の含意（【事実】からの整理）: KGI は celery-worker を対象としており gemini-egress は KGI 外。ただし「差分があるものだけ作り直す」設計のあとも gemini-egress が毎回 Recreate されるなら、原因が compose の hash 判定の外にあることになるので、実測が必要。
+
+## 更新後の【未確認】一覧（追記分）
+- 3（gemini-egress の Recreate 原因）: 定常状態では再現せず。原因は未確認のまま。確認手順は上記。
+- 6（discord-gateway の二重起動）: 本追記では実測していない。dry-run は作り直しの有無しか示さず、stop→create の順序は示さない。未確認のまま。
+- 9（画面のみのデプロイで celery-worker が不変）: 定常状態では Running を確認。画面のみの差分が入った状態での判定は未確認。
+- `--dry-run` の導入版: 未確認（本番の v5.1.1 では動作した）。
