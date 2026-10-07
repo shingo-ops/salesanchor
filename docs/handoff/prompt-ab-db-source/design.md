@@ -35,8 +35,8 @@
 - `--prompt-key` のときは、本文の sha256 を1行だけログに出す（本文は出さない）。`--dry-run` は今までどおり、組み立てた指示の先頭30行を画面に出す（手元の画面だけで、どこにも保存しない）。
 
 ### 3-4. 指示書を DB に入れる手順（コードではない。手元・社外秘）
-- 本文は `~/CC報告ファイル-keep/prompts/<key>.txt` に置き、sha256 を固定する。
-- 書き込みは、2026-10-07 の17社のルールと同じ形（`~/CC報告ファイル-keep/stage5-20261007/write/run_write.sh`）。段階は precheck・dryrun・commit・verify・rollback。PO が `!` で実行する。
+- 本文は手元の社外秘フォルダ（CC報告ファイル-keep の prompts フォルダ）に key ごとのファイルで置き、sha256 を固定する。
+- 書き込みは、2026-10-07 の17社のルールの書き込み（手元の社外秘フォルダの stage5 の run_write.sh）と同じ形。段階は precheck・dryrun・commit・verify・rollback。PO が `!` で実行する。
   - precheck：その key がまだ無いことを確かめる（有れば止まる）。
   - commit：`INSERT ... ON CONFLICT (prompt_key) DO NOTHING` のあと、行数が1でなければ巻き戻す。
   - verify：DB の本文の sha256 が手元のファイルと一致する。本番の3つの行（`raw_copy_extraction`・`base_extraction`・`work_id_extraction`）の本文の md5 が precheck と同じ。
@@ -45,7 +45,7 @@
 
 ## 4. 触らない
 - 本番の解析（v6・v7）と、その読み込み（`backend/app/services/gemini_extraction_svc.py`）。
-- 表の定義（migration は作らない）。管理画面と API。`deploy.yml`。
+- 表の定義（migration は作らない）。管理画面と API。`.github/workflows/deploy.yml`。
 - 既存の `backend/app/prompts/*.txt`（9ファイル）と `--prompt-name`。
 - 既に公開されている過去の指示書・設計書の扱い（別の判断。§7）。
 
