@@ -128,8 +128,63 @@ class MatchResult:
     boundary_dropped: tuple[int, ...] = ()
 
 
-def _value_hits(raw: str, nb: str, folded: str | None) -> bool:
-    """raw を正規化したものが nb に含まれるか。folded を渡すと、短い値・数字だけの値は境界も条件にする。"""
+# 品番らしい値の厳格な照合（strict_codes=True）で、値の文字の間・前後に許す区切り文字。
+# 半角・全角空白、ハイフン類、中黒、下線、ピリオド、アポストロフィ類。改行は含めない。
+_CODE_SEPARATOR_CHARS = (
+    " \u3000-\u2010\u2011\u2013\u2014\u2015\u30fc\u2212\u30fb_.'\u2019\u2018\u00b4\u0301`"
+)
+_CODE_SEPARATOR_RE = "[" + "".join(re.escape(ch) for ch in _CODE_SEPARATOR_CHARS) + "]*"
+# 区切り文字のうち normalize_for_match で消えずに nb に残るもの（ー と結合アクセント U+0301）。事前絞り込みで除く。
+_NB_SEPARATORS_REMOVED = {ord("ー"): None, 0x0301: None}
+_ALNUM_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789")
+_LETTER_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz")
+_CODE_PATTERN_CACHE_SIZE = 16384
+
+
+def _is_code_char(ch: str) -> bool:
+    """品番らしい値に含めてよい文字：英数字、区切り文字、記号（P*/S*。normalize_for_match が取り除く文字）。"""
+    return ch in _ALNUM_CHARS or ch in _CODE_SEPARATOR_CHARS or unicodedata.category(ch)[0] in ("P", "S")
+
+
+@lru_cache(maxsize=_CODE_PATTERN_CACHE_SIZE)
+def _strict_code_pattern(raw: str) -> tuple[str, re.Pattern[str]] | None:
+    """品番らしい値なら（英数字だけ並べた文字列, 区切りを許す正規表現）を返す。品番らしくなければ None。
+
+    品番らしい値：fold_for_match 後の文字が英字・数字・区切り文字・記号(P*/S*)だけで、英字を1つ以上含み、
+    英数字が3文字以上（2文字以下・数字だけの値は既存の規則のまま）。値の中の記号はパターンに入れない。
+    """
+    folded = fold_for_match(raw)
+    if not all(_is_code_char(ch) for ch in folded):
+        return None
+    alnum = "".join(ch for ch in folded if ch in _ALNUM_CHARS)
+    if len(alnum) <= _SHORT_VALUE_MAX_LEN or alnum.isdigit() or not any(ch in _LETTER_CHARS for ch in alnum):
+        return None
+    pattern = re.compile(
+        r"(?<![a-z0-9])" + _CODE_SEPARATOR_RE.join(re.escape(ch) for ch in alnum) + r"(?![a-z0-9])"
+    )
+    return alnum, pattern
+
+
+def _strict_code_hits(raw: str, nb: str, folded: str) -> bool | None:
+    """品番らしい値が、原文の書き方のまま前後が区切られて当たるか。品番らしくない値は None（既存の規則で判定する）。"""
+    compiled = _strict_code_pattern(raw)
+    if compiled is None:
+        return None
+    alnum, pattern = compiled
+    if alnum not in nb and alnum not in nb.translate(_NB_SEPARATORS_REMOVED):
+        return False
+    return pattern.search(folded) is not None
+
+
+def _value_hits(raw: str, nb: str, folded: str | None, strict_codes: bool = False) -> bool:
+    """raw を正規化したものが nb に含まれるか。folded を渡すと、短い値・数字だけの値は境界も条件にする。
+
+    strict_codes=True（folded も必要）のときは、品番らしい値は原文の書き方のまま前後が区切られているときだけ当たりとする。
+    """
+    if strict_codes and folded is not None:
+        strict_result = _strict_code_hits(raw, nb, folded)
+        if strict_result is not None:
+            return strict_result
     normalized = _normalize_value(raw)
     if not normalized or normalized not in nb:
         return False
@@ -138,18 +193,22 @@ def _value_hits(raw: str, nb: str, folded: str | None) -> bool:
     return True
 
 
-def _code_candidate_basis(product: ProductEntry, nb: str, folded: str | None = None) -> str | None:
+def _code_candidate_basis(
+    product: ProductEntry, nb: str, folded: str | None = None, strict_codes: bool = False
+) -> str | None:
     """product_code または mark を正規化したもの（空でないもの）が nb に含まれれば 'RAWCODE'。
 
     folded（fold_for_match 済みの照合文字列）を渡すと、短い値・数字だけの値は語の境界も条件にする。
     """
     for raw in (product.product_code, product.mark):
-        if raw and _value_hits(raw, nb, folded):
+        if raw and _value_hits(raw, nb, folded, strict_codes):
             return "RAWCODE"
     return None
 
 
-def _keyword_matches(product: ProductEntry, nb: str, folded: str | None = None) -> tuple[str, ...]:
+def _keyword_matches(
+    product: ProductEntry, nb: str, folded: str | None = None, strict_codes: bool = False
+) -> tuple[str, ...]:
     """search_keywords のうち、全トークンが nb に含まれるものを返す（当たった keyword 全部）。
 
     folded を渡すと、短い・数字だけのトークンは語の境界も条件にする。
@@ -158,7 +217,7 @@ def _keyword_matches(product: ProductEntry, nb: str, folded: str | None = None) 
     for keyword in product.search_keywords:
         words = [word for word in keyword.split(" ") if word]
         # 正規化すると空になるトークン（記号だけ等）は従来どおり「含まれる」扱い
-        if words and all(not _normalize_value(word) or _value_hits(word, nb, folded) for word in words):
+        if words and all(not _normalize_value(word) or _value_hits(word, nb, folded, strict_codes) for word in words):
             matched.append(keyword)
     return tuple(matched)
 
@@ -180,7 +239,8 @@ def _is_candidate(product: ProductEntry, nb: str, folded: str | None) -> bool:
     return not _excluded_keywords(product, nb)
 
 
-def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
+def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes: bool = False) -> MatchResult:
+    """strict_codes=True（試作版 v102 だけが使う）：品番・記号・検索ワードの品番らしい値は、原文の書き方のまま前後が区切られているときだけ当たり。"""
     nb = normalize_for_match(block)
     folded = fold_for_match(block)
 
@@ -191,8 +251,8 @@ def match_product(block: str, products: Sequence[ProductEntry]) -> MatchResult:
     boundary_dropped: list[int] = []
 
     for product in products:
-        basis = _code_candidate_basis(product, nb, folded)
-        keywords = _keyword_matches(product, nb, folded)
+        basis = _code_candidate_basis(product, nb, folded, strict_codes)
+        keywords = _keyword_matches(product, nb, folded, strict_codes)
         if basis is None and not keywords:
             # 境界の条件が無ければ候補になっていた商品を控える
             if _is_candidate(product, nb, None):

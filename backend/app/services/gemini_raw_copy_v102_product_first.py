@@ -321,7 +321,7 @@ def resolve_product_first(
     それ以外のときは無視する。
     """
     match_text, _source = product_match_text(block, "", name)
-    match = match_product(match_text, masters.product_entries)
+    match = match_product(match_text, masters.product_entries, strict_codes=True)
     if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))

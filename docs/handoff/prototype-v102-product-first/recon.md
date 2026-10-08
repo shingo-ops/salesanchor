@@ -27,3 +27,9 @@
 - 曖昧な件は backend/app/services/gemini_raw_copy_v102_product_first.py の resolve_product_first（L312-337）で match_product が ambiguous を返し、_product_reviews（L270-278）が product_multiple を付けるだけで、前後の商品は見ていない（origin/main 87c018f8）。
 - 1投稿の items が揃う所は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 のループ後（L925-926）。ProductEntry（backend/app/services/extraction_judgement_svc.py L108-115）に work_id がある。
 - 試算（手元・社外秘の原文は載せない）：対象 r1 152件・r2 153件、PO 規則で決定 r1 51件（a46・b5・c0）・r2 53件（a46・b7・c0）。
+
+## 追記（品番らしい値の厳格な照合・2026-10-08）
+- 現状（origin/main 8f27d5449）：backend/app/services/extraction_judgement_svc.py の normalize_for_match（L31-44）が空白・改行・記号を消すため、_value_hits（L131-138）は「EX10」が「ex 100@…」に、「RB01」が「PRB-01」に、「ARD」が「CARD」に当たる。_needs_boundary（L57-59）が境界を求めるのは2文字以下・数字だけの値だけ。呼び出し元：backend/app/services/gemini_raw_copy_v102_product_first.py の resolve_product_first（match_product）、backend/app/services/extraction_shadow_svc.py L269（試運転）、backend/app/services/tcg_shadow_review_svc.py L282。
+- 既存 ADR 検索：着手前に docs/adr/ を照合の機能キーワードで検索（ADR-155 ほか。照合の規則を変える ADR は無し）。
+- 試算：docs 外の手元の strict-sim/v2。誤りと判定した310候補はすべて外れ、候補が複数→1つ 226件（r1）、減るだけ 48件、1つに決まっていた件の悪化 0。
+- 実装中に分かったこと：対象の判定を「英数字・区切り文字だけ」にすると `SM5+` のように記号を含む値が既存の規則に落ち、試算と 64 件ずれた。設計者判断で「英数字・区切り文字・記号（P*/S*）だけで英字を含む」に広げた（記号はパターンに入れず、前後の境界で見る）。
