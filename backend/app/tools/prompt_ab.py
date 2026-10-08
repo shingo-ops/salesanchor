@@ -260,16 +260,27 @@ def _v101_row_fields(response_text: str, ctx, masters: dict) -> dict:
 
 
 def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
-    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。"""
+    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+
+    落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
+    """
     try:
-        items, _errors = parse_v101_response(response_text, ctx.raw_text, status_entries=masters["status_entries"])
+        items, errors = parse_v101_response(
+            response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
+        )
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         extracted, flags = extract_v101_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, **masters
+            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters
         )
+        if not items and errors:
+            flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         return {"v102_items": extracted, "v102_flags": flags}
     except Exception as exc:  # noqa: BLE001
-        return {"v102_items": [], "v102_flags": {}, "v102_items_error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}
+        message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
+        return {
+            "v102_items": [], "v102_items_error": message,
+            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}]},
+        }
 
 
 def _append_jsonl(path: Path, row: dict) -> None:

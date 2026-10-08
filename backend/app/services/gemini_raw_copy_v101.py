@@ -19,8 +19,13 @@ from typing import Any
 from app.services import gemini_raw_copy_v8 as v8
 from app.services import gemini_raw_copy_v10 as v10
 from app.services.extraction_judgement_svc import resolve_price_quantity
-from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED_CONTEXT, decide_by_context
+from app.services.gemini_raw_copy_v102_context_work import (
+    MATCH_STATUS_MATCHED,
+    MATCH_STATUS_MATCHED_CONTEXT,
+    decide_by_context,
+)
 from app.services.gemini_raw_copy_v102_product_first import (
+    PRODUCT_KUBUN_UNKNOWN,
     REVIEW_PRODUCT_MULTIPLE,
     ProductFirstMasters,
     resolve_product_first,
@@ -115,11 +120,15 @@ def _first_line_containing(numbers: list[int], lines: list[str], needle: str) ->
     return next((n for n in numbers if squashed in _squash(lines[n - 1])), None)
 
 
-def _priced_line(numbers: list[int], lines: list[str], price: str) -> int | None:
-    """price の文字を含む最初の行。「／」でつないだときは、つないだ形が無ければ最初の価格で探す。"""
+def _priced_line(numbers: list[int], lines: list[str], price: str, *, half_width_slash: bool = False) -> int | None:
+    """price の文字を含む最初の行。「／」でつないだときは、つないだ形が無ければ最初の価格で探す。
+
+    half_width_slash（試作版 v102 の keep_rejected のとき）は、半角「/」でつないだときも同じに探す。
+    """
     found = _first_line_containing(numbers, lines, price)
-    if found is None and "／" in price:
-        found = _first_line_containing(numbers, lines, price.split("／")[0])
+    separators = "／/" if half_width_slash else "／"
+    if found is None and any(sep in price for sep in separators):
+        found = _first_line_containing(numbers, lines, re.split(f"[{separators}]", price)[0])
     return found
 
 
@@ -137,19 +146,42 @@ def _is_sold_out(text: str, status_entries: list[dict] | None) -> bool:
     return bool(status_entries) and resolve_status_v2(text, status_entries)[1] == "excluded"
 
 
-def _price_line(obj: dict, numbers: list[int], lines: list[str], status_entries: list[dict] | None) -> int | None:
+def _price_line(
+    obj: dict, numbers: list[int], lines: list[str], status_entries: list[dict] | None, *, half_width_slash: bool = False,
+) -> int | None:
     if obj["price"].strip().lower() != _NONE:
-        return _priced_line(numbers, lines, obj["price"])
+        return _priced_line(numbers, lines, obj["price"], half_width_slash=half_width_slash)
     return _unpriced_line(numbers, lines, obj["quantity"].strip(), status_entries)
 
 
+REJECTED_SHAPE, REJECTED_PRICE, REJECTED_DUPLICATE = "item_shape_invalid", "price_not_in_lines", "duplicate_price_line"
+
+
+def _rejected_entry(kind: str, index: int, obj: object, error: str, max_line: int, price_line: int | None = None) -> dict:
+    """落とした件の記録（keep_rejected のとき）。lines は範囲内の整数だけ・重複なし・昇順。"""
+    raw_lines = obj.get("lines") if isinstance(obj, dict) else None
+    numbers = (
+        sorted({n for n in raw_lines if v8._is_int(n) and 1 <= n <= max_line}) if isinstance(raw_lines, list) else []
+    )
+    price = obj.get("price") if isinstance(obj, dict) else None
+    quantity = obj.get("quantity") if isinstance(obj, dict) else None
+    return {
+        "rejected": kind, "gemini_index": index, "lines": numbers,
+        "price": price if isinstance(price, str) else None, "quantity": quantity if isinstance(quantity, str) else None,
+        "price_line": price_line, "error": error,
+    }
+
+
 def parse_v101_response(
-    response_text: str, raw_text: str, *, status_entries: list[dict] | None = None,
+    response_text: str, raw_text: str, *, status_entries: list[dict] | None = None, keep_rejected: bool = False,
 ) -> tuple[list[dict], list[dict]]:
     """JSON を読み、件ごとに設計 §3-3 の検査をする。戻り値は (items, errors)。
 
     items のキーは lines（重複なし・昇順）, price, quantity, price_line。
     status_entries は価格が none の件の price_line（売り切れの言葉の行）を決めるのに使う（無ければ使わない）。
+    keep_rejected（試作版 v102）が True のときだけ、落とす件（形の違反・価格の行なし・価格の行が重複）を捨てずに、
+    rejected・gemini_index などを付けて items の後ろに足し、半角「/」でつないだ価格も最初の価格で探す。
+    False のときの出力は変えない。
     """
     lines = raw_text.split("\n")
     objs, whole_errors = v8._load_items(response_text)
@@ -157,24 +189,29 @@ def parse_v101_response(
         return [], whole_errors
 
     items: list[dict] = []
+    rejected: list[dict] = []
     errors: list[dict] = []
     seen_price_lines: set[int] = set()
     for index, obj in enumerate(objs):
         reason = _shape_error(obj, len(lines))
         if reason is not None:
             errors.append({"index": index, "error": reason, "item": obj})
+            rejected.append(_rejected_entry(REJECTED_SHAPE, index, obj, reason, len(lines)))
             continue
         numbers = sorted(set(obj["lines"]))
-        price_line = _price_line(obj, numbers, lines, status_entries)
+        price_line = _price_line(obj, numbers, lines, status_entries, half_width_slash=keep_rejected)
         if price_line is None:
             errors.append({"index": index, "error": "価格の行が見つからない", "item": obj})
+            rejected.append(_rejected_entry(REJECTED_PRICE, index, obj, "価格の行が見つからない", len(lines)))
             continue
         if price_line in seen_price_lines:
-            errors.append({"index": index, "error": f"price_line {price_line} がほかの件と同じ", "item": obj})
+            message = f"price_line {price_line} がほかの件と同じ"
+            errors.append({"index": index, "error": message, "item": obj})
+            rejected.append(_rejected_entry(REJECTED_DUPLICATE, index, obj, message, len(lines), price_line))
             continue
         seen_price_lines.add(price_line)
         items.append({"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line})
-    return items, errors
+    return ([*items, *rejected] if keep_rejected else items), errors
 
 
 # ---------------------------------------------------------------------------
@@ -932,12 +969,68 @@ def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None]
     return result
 
 
+_REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
+_REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
+_POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
+_NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
+
+
+def _rejected_row(rejected: dict, ctx: V101Context) -> dict:
+    """落とした件を、通常の件と同じ欄名を持つ件にする（値は none・None・空。要確認の理由だけ持つ）。"""
+    kind = rejected["rejected"]
+    first_line = rejected["price_line"] or (rejected["lines"][0] if rejected["lines"] else None)
+    detail: dict = {"error": rejected["error"]} if kind == REJECTED_SHAPE else {}
+    if kind == REJECTED_PRICE:
+        detail = {"field": "price", "copied": rejected["price"]}
+    extra = (
+        {"product_id": None, "product_category": _NONE, "match_status": _NONE, "match_candidates": [], "unit_basis": _NONE}
+        if ctx.product_first is not None else {}
+    )
+    return {
+        **extra,
+        "price_line": rejected["price_line"], "lines": list(rejected["lines"]), "roles": {},
+        "raw_price": rejected["price"], "raw_quantity": rejected["quantity"],
+        **dict.fromkeys(_NORMAL_ROW_NONE_FIELDS, _NONE),
+        "price_normalized": None, "quantity_normalized": None, "price_reasons": [], "quantity_not_in_text": None,
+        "reassigned": [], "review": [{"line": first_line, "kind": kind, **detail}], "fixes": [],
+        "rejected": kind, "gemini_index": rejected["gemini_index"],
+    }
+
+
+def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[dict]:
+    """通常の件に足す要確認の理由（印の行を持つ件・単位なし・分類「不明」）。"""
+    owned = {*row["lines"], row["price_line"]}
+    reasons = [{"line": n, "kind": _REVIEW_QUANTITY_NO_NUMBER} for n in no_number if n in owned]
+    reasons += [{"line": n, "kind": _REVIEW_FOOTER} for n in footer if n in owned]
+    if row["unit"] == _NONE:
+        reasons.append({"line": row["price_line"], "kind": _REVIEW_UNIT_UNKNOWN})
+    if row.get("match_status") == MATCH_STATUS_MATCHED and row.get("product_category") == PRODUCT_KUBUN_UNKNOWN:
+        reasons.append({"line": row["price_line"], "kind": _REVIEW_CATEGORY_UNKNOWN})
+    return reasons
+
+
+def _post_review_reasons(*, item_count: int, flags: dict, owned_lines: set[int]) -> list[dict]:
+    """投稿ごとの要確認の理由：件が0・件の抜けの疑いの行・どの件にも属さない末尾の行。"""
+    reasons: list[dict] = [] if item_count else [{"kind": _POST_NO_ITEMS}]
+    reasons += [{"kind": _POST_MISSING_ITEM, "line": n} for n in flags["possible_missing_item"]]
+    reasons += [{"kind": _REVIEW_FOOTER, "line": n} for n in flags["possible_footer_line"] if n not in owned_lines]
+    return reasons
+
+
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
+    *, rejected: list[dict] | None = None, review_reasons: bool = False,
 ) -> tuple[list[dict], dict]:
-    """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。"""
+    """extract_v101_items の v102_fixes 版。F1（lines）→ 役割の付け直し → F3 → F5 → F2（名前）→ 取り出し（F6）→ F4 の順に当てる。
+
+    rejected（落とした件）は通常の処理に入れず、結果の最後に足す。review_reasons のときだけ、要確認の理由を足す。
+    """
+    rejected_rows = [_rejected_row(r, ctx) for r in rejected or []]
     if not items:
-        return [], {"possible_missing_item": [], "quantity_no_number": [], "possible_footer_line": []}
+        empty: dict = {"possible_missing_item": [], "quantity_no_number": [], "possible_footer_line": []}
+        if review_reasons:
+            empty["post_review"] = _post_review_reasons(item_count=len(rejected_rows), flags=empty, owned_lines=set())
+        return rejected_rows, empty
     items, f1_fixes = _apply_f1(items, assign_roles(items, lines, ctx), lines, ctx)
     roles = assign_roles(items, lines, ctx)
     roles, f3_fixes = _apply_f3(items, roles, lines, ctx)
@@ -966,13 +1059,18 @@ def _extract_v102(
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
     }
-    return extracted, flags
+    if review_reasons:
+        extracted = [{**row, "review": [*row["review"], *_item_reasons(row, no_number, footer_lines)]} for row in extracted]
+        owned = {n for row in [*extracted, *rejected_rows] for n in row["lines"]}
+        flags = {**flags, "post_review": _post_review_reasons(
+            item_count=len(extracted) + len(rejected_rows), flags=flags, owned_lines=owned)}
+    return [*extracted, *rejected_rows], flags
 
 
 def extract_v101_items(
     items: list[dict], raw_text: str, *, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     unit_alias_to_info: dict, status_entries: list[dict], order: str | None, reassign: bool,
-    v102_fixes: bool = False, product_first: ProductFirstMasters | None = None,
+    v102_fixes: bool = False, product_first: ProductFirstMasters | None = None, review_reasons: bool = False,
 ) -> tuple[list[dict], dict]:
     """parse_v101_response が返した件ごとに、役割・商品名・単位・状態・ステータス・発送・価格数量を原文から取る。
 
@@ -982,6 +1080,8 @@ def extract_v101_items(
     False のときの出力は v10.1 のまま変えない。
     product_first（試作版 v102）は v102_fixes が True のときだけ使う。渡すと、商品を先に決めて単位・状態を出す流れになり、
     件に product_id・product_category・match_status・match_candidates・unit_basis が付く。None なら v10.2 のまま。
+    review_reasons（v102_fixes のときだけ）：件の review に印・単位なし・分類「不明」の理由を足し、flags に post_review を足す。
+    items に parse_v101_response(keep_rejected=True) の落とした件（rejected 付き）が入っていれば、結果の最後に足す。
     """
     ctx = build_context(
         cond_entries=cond_entries, cond_canonical_to_uuid=cond_canonical_to_uuid,
@@ -989,9 +1089,11 @@ def extract_v101_items(
         product_first=product_first if v102_fixes else None,
     )
     lines = raw_text.split("\n")
-    adjusted, reassigned, review = reassign_ambiguous(items, lines, ctx) if reassign else (items, {}, {})
+    rejected = [it for it in items if "rejected" in it] if v102_fixes else []
+    kept = [it for it in items if "rejected" not in it] if v102_fixes else items
+    adjusted, reassigned, review = reassign_ambiguous(kept, lines, ctx) if reassign else (kept, {}, {})
     if v102_fixes:
-        return _extract_v102(adjusted, lines, ctx, reassigned, review)
+        return _extract_v102(adjusted, lines, ctx, reassigned, review, rejected=rejected, review_reasons=review_reasons)
     roles = assign_roles(adjusted, lines, ctx)
     owners = {it["price_line"]: it for it in adjusted}
     shared = _shared_line_numbers(adjusted)
