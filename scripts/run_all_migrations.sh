@@ -260,8 +260,7 @@ run_sql migrations/20260603_030000_seed_dragonball_products.sql
 # ADR-093: 商品マスタ セット種別(set_type)
 run_sql migrations/20260603_040000_add_products_set_type.sql
 
-# ADR-093: 商品マスタ 型番(mark) をシート B列で更新（日本語タイトル一致・125件）
-run_sql migrations/20260604_010000_seed_product_marks.sql
+# 廃止（PO 2026-10-09）: 20260604_010000_seed_product_marks.sql は毎デプロイで商品マスタの mark を上書きし、画面で直した値を戻したためファイルごと削除。値の正はマスタ（画面・CSV）。ADR-155
 
 # ADR-093: 全商品の発送ラベル既定値を一括設定（品目=Playing card / HSコード=9504400000 / 素材=Paper）
 run_sql migrations/20260604_020000_backfill_products_shipping_defaults.sql
