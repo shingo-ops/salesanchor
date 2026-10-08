@@ -6,6 +6,7 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Handler;
+import android.os.PowerManager;
 import android.util.Log;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -121,6 +122,29 @@ final class LineExportFlow {
      */
     private static final long LOCK_DELAY_AFTER_EDIT_MS = 2000L;
 
+    /**
+     * ウェイクロックのタグ。UnlockAccessibilityServiceの"SALineExport:unlock"と区別する。
+     */
+    private static final String WAKE_LOCK_TAG = "SALineExport:export";
+
+    /**
+     * なぜLineExportFlow自身がウェイクロックを持つ必要があるか（2026-10-08実機、
+     * design.md追補「実機で動いたが挙動が診断できない」の調査結果、PO承認済み）:
+     * UnlockAccessibilityService#checkResult()はLINE操作が始まる前にロック解除フロー用の
+     * ウェイクロックを無条件にreleaseWakeLock()しており、LineExportFlowはそれまで
+     * 自前のウェイクロックを一切持っていなかった。ADB版（flow.sh）の`input`コマンドは
+     * 画面の消灯タイマーをリセットする効果を持つが、アクセシビリティ経由の操作
+     * （performAction(ACTION_CLICK)、特にGestureCompatのdispatchGestureベースのタップ・
+     * スワイプ）にはその効果が無く、操作中に画面が暗転しうる。暗転するとノード検索が
+     * 失敗し続け、何かの契機（端末側の挙動）で再び点くまで数十秒単位で足止めされる
+     * （実機でsettings_item 48秒・edit_button 56秒を観測。設計値どおりならどちらも
+     * 5〜6秒で収まるはずで、説明がつかない差分だった）。ADB版でこの症状が一度も
+     * 出ていないのは、まさに`input`コマンドが画面を保っていたため。
+     * このウェイクロックで画面が消灯しないようにし、ADB版の`input`が代わりに
+     * 果たしていた役割をアプリ側でも持たせる。
+     */
+    private static final long WAKE_LOCK_SAFETY_TIMEOUT_MS = 120000L;
+
     private static final int NOTIFICATION_ID_EXPORT = 1003;
 
     /** 完了時にUnlockAccessibilityServiceへ戻すためのコールバック（exportRunningフラグの解除用）。 */
@@ -133,6 +157,8 @@ final class LineExportFlow {
     private final String triggerLabel;
     private final Listener listener;
     private final Handler handler = new Handler();
+
+    private PowerManager.WakeLock wakeLock;
 
     private long flowStartedAt;
     private long stepStartedAt;
@@ -169,6 +195,10 @@ final class LineExportFlow {
         // よりも前に書く（design.md追補「実機で動いたが挙動が診断できない」対策）。
         runId = RunLogger.newRunId();
         RunLogger.logStart(service, runId, "export", triggerLabel);
+
+        // アクセシビリティ操作は画面の消灯タイマーをリセットしないため、フロー中は画面を
+        // 保つ（WAKE_LOCK_TAGの定数コメント参照）。解放はfinish()で、施錠まで終えてから行う。
+        acquireWakeLock();
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
         service.startWindowRecording();
@@ -569,6 +599,9 @@ final class LineExportFlow {
         final String bodyBeforeLock = body;
 
         if (!lockOnFinish) {
+            // 施錠を行わない経路（EXPORT単体検証）。ここが画面保持の最終地点になるため
+            // ここで解放する。
+            releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
             logExportEnd(success, failedStage, elapsed, null);
             if (listener != null) {
@@ -595,6 +628,9 @@ final class LineExportFlow {
             @Override
             public void run() {
                 boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+                // 施錠まで終えてから解放する（施錠の直前で解放すると、画面が落ちてから
+                // GLOBAL_ACTION_LOCK_SCREENを呼ぶことになり、扱いが不安定になりうるため）。
+                releaseWakeLock();
                 String finalBody = bodyBeforeLock + " / " + gestureSummary + " / 施錠:" + locked;
                 postResultNotification(service, title, finalBody);
                 logExportEnd(success, failedStage, elapsed, Boolean.valueOf(locked));
@@ -644,6 +680,39 @@ final class LineExportFlow {
             wm.getDefaultDisplay().getRealSize(size);
         }
         return size;
+    }
+
+    // ---- Screen wake ---------------------------------------------------------------------
+    //
+    // WAKE_LOCK_TAGの定数コメントに理由を書いたとおり、アクセシビリティ経由の操作は画面の
+    // 消灯タイマーをリセットしないため、フロー自身でウェイクロックを持つ
+    // （UnlockAccessibilityService#acquireWakeLock/releaseWakeLockと同じ作法。フラグも同じ:
+    // SCREEN_BRIGHT_WAKE_LOCK|ACQUIRE_CAUSES_WAKEUP|ON_AFTER_RELEASE）。
+
+    @SuppressWarnings("deprecation")
+    private void acquireWakeLock() {
+        PowerManager pm = (PowerManager) service.getSystemService(Context.POWER_SERVICE);
+        if (pm == null) {
+            return;
+        }
+        if (wakeLock == null) {
+            wakeLock = pm.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK
+                            | PowerManager.ACQUIRE_CAUSES_WAKEUP
+                            | PowerManager.ON_AFTER_RELEASE,
+                    WAKE_LOCK_TAG);
+        }
+        if (!wakeLock.isHeld()) {
+            // 安全タイムアウト2分（design.md追補参照: 設計値どおりなら全体15〜20秒、
+            // 実機の最悪実測でも113秒だったため2分あれば足り、暴走時も必ず解放される）。
+            wakeLock.acquire(WAKE_LOCK_SAFETY_TIMEOUT_MS);
+        }
+    }
+
+    private void releaseWakeLock() {
+        if (wakeLock != null && wakeLock.isHeld()) {
+            wakeLock.release();
+        }
     }
 
     /**
