@@ -185,6 +185,16 @@ public class LineNotifyListenerService extends NotificationListenerService {
             return;
         }
 
+        // 段階3: 対象グループの通知を引き金にする（design.md追補 2026-10-08「段階3の方式変更」）。
+        // conversationTitleが空（＝LINEの「メッセージ内容を表示」がOFFで中身が隠れている）の
+        // 場合は、どのグループか判別できないため引き金にしない（保険タイマーに任せる）。
+        // resolveGroupはconversationTitleが空でもsubText/titleStrへフォールバックするため、
+        // ここでconversationTitle自体を明示的に確認する（フォールバック結果が偶然一致しても
+        // 引き金にはしない。判別できないものを引き金にすると他グループの投稿で無駄に起動する）。
+        if (!isEmpty(conversationTitle)) {
+            RunScheduler.onQualifyingNotification(this);
+        }
+
         if (!hasMessages) {
             // BigTextStyle側（id=16880000,tag=null）。診断JSONLと、MessagingStyle側で使う
             // 長さ比較の材料としてのみ使う。raw/talkへの二重記録を避けるためここでは書かない。

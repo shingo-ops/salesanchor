@@ -123,6 +123,7 @@ final class LineExportFlow {
 
     private final UnlockAccessibilityService service;
     private final boolean lockOnFinish;
+    private final String triggerLabel;
     private final Listener listener;
     private final Handler handler = new Handler();
 
@@ -137,10 +138,14 @@ final class LineExportFlow {
      * （すでに解除して使っている状態での検証用）では施錠しない。成功・失敗どちらの
      * 終了でも、trueなら最後に画面を施錠する（旧ADB方式のKEYCODE_HOME→KEYCODE_SLEEPに
      * 相当。解除したまま放置するのを避けるため、失敗で中止したときも施錠する）。
+     * triggerLabelは結果通知の本文に「引き金:」として残す診断用（design.md追補
+     * 2026-10-08「段階3の方式変更」）。
      */
-    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, Listener listener) {
+    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, String triggerLabel,
+            Listener listener) {
         this.service = service;
         this.lockOnFinish = lockOnFinish;
+        this.triggerLabel = triggerLabel == null ? "" : triggerLabel;
         this.listener = listener;
     }
 
@@ -531,6 +536,9 @@ final class LineExportFlow {
             // 到達判定に戻せる。
             body += " / 最近のクラス名: " + recentClasses;
         }
+        // 診断用: 何が引き金だったか（通知／保険タイマー／再試行／手動等）。design.md追補
+        // 2026-10-08「段階3の方式変更」。
+        body += " / 引き金:" + triggerLabel;
         final String bodyBeforeLock = body;
 
         if (!lockOnFinish) {

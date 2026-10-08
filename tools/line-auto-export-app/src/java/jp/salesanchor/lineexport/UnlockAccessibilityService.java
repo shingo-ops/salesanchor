@@ -90,6 +90,11 @@ public class UnlockAccessibilityService extends AccessibilityService {
     // 解除成功と判定した場合のみこのフラグを見てLineExportFlowへ続ける。
     private volatile boolean runAllRequested;
 
+    // 今回の実行の引き金（診断用。結果通知の本文に「引き金:」として残す。design.md追補
+    // 2026-10-08「段階3の方式変更」）。startUnlockFlowからcheckResult()経由でLineExportFlow
+    // まで引き継ぐ。
+    private volatile String currentTriggerLabel = "";
+
     private PowerManager.WakeLock wakeLock;
     private String currentPin;
     private StringBuilder failureReasons;
@@ -123,7 +128,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
-        instance.startUnlockFlow(false);
+        instance.startUnlockFlow(false, "RUN(手動)");
     }
 
     /**
@@ -137,21 +142,31 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
-        instance.startExportFlow(false);
+        instance.startExportFlow(false, "EXPORT(手動)");
     }
 
     /**
-     * 外部（RunReceiver）からの、ロック解除→LINE操作（本番の形）の実行トリガー。
-     * ロック解除の成否はcheckResult()で判定し、成功した場合のみLINE操作へ続ける。
-     * RUN単体（requestRun/startUnlockFlow(false)）の挙動はこの経路では一切通らない。
+     * 外部（RunReceiver、Termuxの15分ジョブ等）からの、ロック解除→LINE操作（本番の形）の
+     * 実行トリガー。段階3のRunScheduler（通知／保険タイマー／再試行）はこちらではなく
+     * {@link #requestRunAll(Context, String)}を使う（引き金のラベルを結果通知に残すため）。
      */
     static void requestRunAll(Context context) {
+        requestRunAll(context, "RUN_ALL(外部)");
+    }
+
+    /**
+     * ロック解除→LINE操作（本番の形）の実行トリガー。triggerLabelは結果通知の本文に
+     * 「何が引き金だったか」として残す（design.md追補 2026-10-08「段階3の方式変更」）。
+     * ロック解除の成否はcheckResult()で判定し、成功した場合のみLINE操作へ続ける。
+     * RUN単体（requestRun/startUnlockFlow(false, ...)）の挙動はこの経路では一切通らない。
+     */
+    static void requestRunAll(Context context, String triggerLabel) {
         UnlockAccessibilityService instance = sInstance;
         if (instance == null) {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
-        instance.startUnlockFlow(true);
+        instance.startUnlockFlow(true, triggerLabel);
     }
 
     /**
@@ -274,13 +289,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
     /**
      * LINE操作を実行する。多重起動は無視する。lockOnFinishはRUN_ALLのときだけtrueにする
      * （requestExportからはfalse固定、checkResult()のRUN_ALL続行からはtrue固定で渡す）。
+     * triggerLabelはLineExportFlowの結果通知に「引き金:」として残す。
      */
-    private void startExportFlow(final boolean lockOnFinish) {
+    private void startExportFlow(final boolean lockOnFinish, String triggerLabel) {
         if (!exportRunning.compareAndSet(false, true)) {
             Log.i(TAG, "export flow already running, ignoring duplicate trigger");
             return;
         }
-        new LineExportFlow(this, lockOnFinish, new LineExportFlow.Listener() {
+        new LineExportFlow(this, lockOnFinish, triggerLabel, new LineExportFlow.Listener() {
             @Override
             public void onFinished() {
                 exportRunning.set(false);
@@ -293,13 +309,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
         // no-op
     }
 
-    private void startUnlockFlow(boolean runAll) {
+    private void startUnlockFlow(boolean runAll, String triggerLabel) {
         if (!running.compareAndSet(false, true)) {
             Log.i(TAG, "unlock flow already running, ignoring duplicate trigger");
             return;
         }
 
         runAllRequested = runAll;
+        currentTriggerLabel = triggerLabel == null ? "" : triggerLabel;
         failureReasons = new StringBuilder();
         trace = new StringBuilder();
         flowStartedAt = System.currentTimeMillis();
@@ -309,17 +326,24 @@ public class UnlockAccessibilityService extends AccessibilityService {
         KeyguardManager km = (KeyguardManager) getSystemService(Context.KEYGUARD_SERVICE);
         if (km == null || !km.isKeyguardLocked()) {
             running.set(false);
-            postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中）");
+            postNotification(this, "ロック解除: 見送り", "ロックされていない（使用中） / 引き金:" + currentTriggerLabel);
+            // 段階3: 使用中で見送ったときは5分後に再試行を予約する（design.md追補
+            // 「段階3の方式変更」。RunScheduler側でON/OFFトグルを見るのでここでは無条件に呼ぶ）。
+            RunScheduler.scheduleRetryAfterSkip(this);
             return;
         }
 
         String pin = PinStore.loadPin(this);
         if (pin == null || pin.length() == 0) {
             running.set(false);
-            postFailureNotification(this, "PIN未設定");
+            postFailureNotification(this, "PIN未設定 / 引き金:" + currentTriggerLabel);
             return;
         }
         currentPin = pin;
+
+        // 段階3の床（最短間隔）判定に使う「前回の実行開始」。見送りはここに到達しないため
+        // 対象外（画面を起こさないため床の対象にする必要が無い。design.md追補参照）。
+        SchedulerStore.setLastRunStartedAt(this, flowStartedAt);
 
         swipeAttempt = 0;
         keypadConfirmedAttempt = 0;
@@ -522,15 +546,16 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 : "スワイプ" + swipeAttempt + "回とも未出現";
         String detail = (trace == null ? "" : trace.toString().trim())
                 + " / " + elapsed + "ms / 画面" + screen.x + "x" + screen.y
-                + " / " + keypadDiag;
+                + " / " + keypadDiag + " / 引き金:" + currentTriggerLabel;
         if (!locked) {
             postNotification(this, "ロック解除: 成功", detail);
             // RUN_ALL（本番の形）のときだけ、解除成功を確認したところでLINE操作へ続ける。
             // RUN単体ではrunAllRequestedがfalseのままなのでここは通らない（挙動不変）。
             // lockOnFinish=trueを渡し、LINE操作の終わりに施錠させる（旧ADB方式の
-            // KEYCODE_HOME→KEYCODE_SLEEPに相当）。
+            // KEYCODE_HOME→KEYCODE_SLEEPに相当）。triggerLabelはLineExportFlowの結果通知へ
+            // そのまま引き継ぐ。
             if (runAllRequested) {
-                startExportFlow(true);
+                startExportFlow(true, currentTriggerLabel);
             }
         } else {
             String reason = failureReasons.length() > 0
