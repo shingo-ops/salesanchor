@@ -145,7 +145,8 @@
   padding-right: var(--space-5);
 }
 
-.comp-field--sm .comp-field__textarea {
+.comp-field--sm .comp-field__textarea,
+.comp-field__textarea--sm {
   padding: var(--space-1) var(--space-2);
   font-size: var(--font-sm);
 }
@@ -158,7 +159,8 @@
 .comp-field--lg .comp-field__input,
 .comp-field--lg .comp-field__select,
 .comp-select__control--lg,
-.comp-field--lg .comp-field__textarea {
+.comp-field--lg .comp-field__textarea,
+.comp-field__textarea--lg {
   padding: var(--space-3) var(--space-4);
   font-size: var(--font-md);
   min-height: var(--comp-input-height-mobile);
