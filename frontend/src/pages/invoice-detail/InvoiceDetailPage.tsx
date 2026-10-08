@@ -16,6 +16,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextField } from "../../components/TextField";
 
 interface InvoiceItem {
   id: number;
@@ -111,6 +112,7 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [voidReason, setVoidReason] = useState("");
   const [showVoidForm, setShowVoidForm] = useState(false);
+  const [paymentDate, setPaymentDate] = useState<string>("");
 
   const load = async () => {
     try {
@@ -196,7 +198,15 @@ export default function InvoiceDetailPage() {
                 <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("issue")}>{t("invoices.issueAction")}</Button>
               )}
               {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && (
-                <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("pay")}>{t("invoices.payAction")}</Button>
+                <div className="flex items-center gap-sm">
+                  <TextField
+                    type="date"
+                    label={t("invoices.paidAt")}
+                    value={paymentDate}
+                    onChange={(e) => setPaymentDate(e.target.value)}
+                  />
+                  <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("pay", paymentDate ? { paid_at: new Date(paymentDate).toISOString() } : {})}>{t("invoices.payAction")}</Button>
+                </div>
               )}
               {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
                 <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</Button>

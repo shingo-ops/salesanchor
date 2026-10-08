@@ -698,6 +698,7 @@ def get_invoice_status(env: str, client_id: str, client_secret: str, paypal_invo
     token = _get_token(env, client_id, client_secret)
     if not token:
         return {"ok": False, "status": None, "paid": False, "fee": None,
+                "payment_date": None,
                 "status_code": 401, "message": "PayPal 認証に失敗しました"}
     try:
         resp = httpx.get(
@@ -708,9 +709,11 @@ def get_invoice_status(env: str, client_id: str, client_secret: str, paypal_invo
     except httpx.HTTPError as e:
         logger.warning("[paypal] invoice status 通信エラー: %s", e)
         return {"ok": False, "status": None, "paid": False, "fee": None,
+                "payment_date": None,
                 "status_code": None, "message": "通信エラー"}
     if resp.status_code != 200:
         return {"ok": False, "status": None, "paid": False, "fee": None,
+                "payment_date": None,
                 "status_code": resp.status_code,
                 "message": f"PayPal 請求書取得に失敗（HTTP {resp.status_code}）"}
     try:
@@ -719,10 +722,14 @@ def get_invoice_status(env: str, client_id: str, client_secret: str, paypal_invo
         data = {}
     st = data.get("status")
     fee = None
+    payment_date = None
     try:
-        fee = (data.get("payments", {}).get("transactions", [{}])[0]
-               .get("paypal_fee", {}).get("value"))
+        txn = data.get("payments", {}).get("transactions", [{}])[0]
+        fee = txn.get("paypal_fee", {}).get("value")
+        payment_date = txn.get("payment_date")
     except (KeyError, IndexError, TypeError):
         fee = None
+        payment_date = None
     return {"ok": True, "status": st, "paid": st == "PAID", "fee": fee,
+            "payment_date": payment_date,
             "status_code": 200, "message": "OK"}

@@ -591,9 +591,11 @@ async def set_order_paid(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
 
     if data.paid:
-        set_clause = "paid_at = NOW()"
+        set_clause = "paid_at = COALESCE(:paid_at, NOW())"
+        params: dict = {"id": order_id, "paid_at": data.paid_at}
     else:
         set_clause = "paid_at = NULL"
+        params = {"id": order_id, "paid_at": None}
 
     result = await db.execute(
         text(f"""
@@ -601,7 +603,7 @@ async def set_order_paid(
             WHERE id = :id
             RETURNING {_SELECT_COLS}
         """),
-        {"id": order_id},
+        params,
     )
     row = result.mappings().first()
 
