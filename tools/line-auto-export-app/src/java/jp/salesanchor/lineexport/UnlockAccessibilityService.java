@@ -16,6 +16,7 @@ import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -99,6 +100,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
     private volatile boolean recordingWindowEvents;
     private volatile String lastWindowClassName = "";
     private volatile String lastWindowPackageName = "";
+
+    // 失敗通知の診断用（2026-10-08実機2回目の追補）: 直近に記録したウィンドウの「単純名」
+    // （パッケージ部分を落としたクラス名。例: ChatMenuActivity）を最大3件、連続重複を除いて
+    // 保持する。lastWindowClassName（手順11のEDITクラス検出に使う、フル値・単発）とは別に
+    // 持つ。パッケージ名・ノードのテキスト・メッセージ本文は一切含まない。
+    private static final int WINDOW_CLASS_HISTORY_MAX = 3;
+    private final Object windowClassHistoryLock = new Object();
+    private final ArrayList<String> windowClassHistory = new ArrayList<String>();
 
     // 診断用: 何回目のスワイプでキーパッドが出たか（0=未出現）と、起床から
     // 出現確認までの経過ms（-1=未確認）。PINの値・桁数は含まない。
@@ -189,12 +198,37 @@ public class UnlockAccessibilityService extends AccessibilityService {
         CharSequence packageName = event.getPackageName();
         lastWindowClassName = className == null ? "" : className.toString();
         lastWindowPackageName = packageName == null ? "" : packageName.toString();
+
+        String simpleName = simpleClassName(lastWindowClassName);
+        if (simpleName.length() > 0) {
+            synchronized (windowClassHistoryLock) {
+                int size = windowClassHistory.size();
+                if (size == 0 || !simpleName.equals(windowClassHistory.get(size - 1))) {
+                    windowClassHistory.add(simpleName);
+                    if (windowClassHistory.size() > WINDOW_CLASS_HISTORY_MAX) {
+                        windowClassHistory.remove(0);
+                    }
+                }
+            }
+        }
+    }
+
+    /** パッケージ部分を落とした単純名。例: "jp.naver.line.android...ChatHistoryActivity" -> "ChatHistoryActivity"。 */
+    private static String simpleClassName(String className) {
+        if (className == null || className.length() == 0) {
+            return "";
+        }
+        int dot = className.lastIndexOf('.');
+        return dot >= 0 ? className.substring(dot + 1) : className;
     }
 
     /** LineExportFlow開始時に呼ぶ。記録バッファをクリアしてから記録を始める。 */
     void startWindowRecording() {
         lastWindowClassName = "";
         lastWindowPackageName = "";
+        synchronized (windowClassHistoryLock) {
+            windowClassHistory.clear();
+        }
         recordingWindowEvents = true;
     }
 
@@ -203,11 +237,34 @@ public class UnlockAccessibilityService extends AccessibilityService {
         recordingWindowEvents = false;
         lastWindowClassName = "";
         lastWindowPackageName = "";
+        synchronized (windowClassHistoryLock) {
+            windowClassHistory.clear();
+        }
     }
 
-    /** 直近に記録したウィンドウのクラス名。記録していない/未取得なら空文字。 */
+    /** 直近に記録したウィンドウのクラス名（フル値）。記録していない/未取得なら空文字。
+     * 手順11のTermuxダイアログ検出専用（.contains(TERMUX_EDIT_CLASS_NAME)で使われる）。 */
     String getLastWindowClassName() {
         return lastWindowClassName;
+    }
+
+    /**
+     * 失敗通知の診断用。記録済みウィンドウの単純クラス名を最新3件まで、カンマ区切りで返す
+     * （例: "ChatHistoryActivity,ChatMenuActivity"）。クラス名のみでパッケージ名・ノードの
+     * テキスト・メッセージ本文は一切含まない。stopWindowRecording()を呼ぶ前に読むこと
+     * （呼んだ後は履歴がクリアされて空文字になる）。
+     */
+    String recentWindowClassNames() {
+        synchronized (windowClassHistoryLock) {
+            StringBuilder sb = new StringBuilder();
+            for (String name : windowClassHistory) {
+                if (sb.length() > 0) {
+                    sb.append(',');
+                }
+                sb.append(name);
+            }
+            return sb.toString();
+        }
     }
 
     /** LINE操作のみを実行する（段階2単体検証用）。多重起動は無視する。 */

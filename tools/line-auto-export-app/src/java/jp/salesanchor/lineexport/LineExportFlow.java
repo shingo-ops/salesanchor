@@ -47,6 +47,14 @@ final class LineExportFlow {
     private static final String STAGE_OPEN_CHAT = "open_chat";
     private static final String STAGE_GROUP_MISMATCH = "group_mismatch";
     private static final String STAGE_MENU_BUTTON = "menu_button";
+    /**
+     * open_menu/open_settingsは、アプリ経路では到達不能（2026-10-08実機2回目の設計ミス修正。
+     * design.md追補参照）: 到達判定（ノード待ち）をスクロール探索と別手順に分けていたため、
+     * 画面外（ノードツリーに載らない）にある項目では判定だけが先に10秒でタイムアウトして
+     * いた。到達判定は廃止し、スクロール探索（settings_item/export_item）に統合したため、
+     * この2段階名は実際には発生しない。ADB版flow.shのstep=語と揃える方針の記録として、
+     * 定数自体は残す。
+     */
     private static final String STAGE_OPEN_MENU = "open_menu";
     private static final String STAGE_SETTINGS_ITEM = "settings_item";
     private static final String STAGE_OPEN_SETTINGS = "open_settings";
@@ -191,28 +199,35 @@ final class LineExportFlow {
             finish(false, STAGE_MENU_BUTTON);
             return;
         }
-        step5WaitMenu();
+        // 手順5（open_menuの到達判定を別手順として持つ形）は廃止した（design.md追補
+        // 2026-10-08「実機2回目」参照）。メニューは縦に長く、「設定」が初期表示より
+        // 下にあることがある。アクセシビリティのノードツリーには画面外の項目が
+        // 載らないため、判定（ノード待ち）とスクロール探索を別手順に分けると、
+        // スクロールする前に判定だけが10秒でタイムアウトする（判定と探索の
+        // 二重化という設計ミスだった）。1秒の落ち着き待ちのあと、即時探索＋
+        // スクロール再探索（最大4回）をscrollFindAndClickにまとめて行わせる。
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                step6ClickSettings();
+            }
+        }, SCROLL_SETTLE_DELAY_MS);
     }
 
-    // ---- 手順5: メニュー到達判定 ------------------------------------------------------------
-
-    private void step5WaitMenu() {
-        waitForNode(SETTINGS_LABEL, STAGE_OPEN_MENU, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
-                new NodeWaitCallback() {
-                    @Override
-                    public void onFound(AccessibilityNodeInfo node) {
-                        step6ClickSettings();
-                    }
-                });
-    }
-
-    // ---- 手順6: 「設定」をクリック（スクロール再探索、最大4回） -----------------------------
+    // ---- 手順6: 「設定」をクリック（即時探索＋スクロール再探索、最大4回） ---------------------
 
     private void step6ClickSettings() {
         scrollFindAndClick(SETTINGS_LABEL, 0, STAGE_SETTINGS_ITEM, new StepCallback() {
             @Override
             public void onSuccess() {
-                step7WaitSettings();
+                // 手順7（open_settingsの到達判定）も同じ理由で廃止（上記参照）。
+                // 1秒の落ち着き待ちのあと、スクロール探索してクリックへ進む。
+                handler.postDelayed(new Runnable() {
+                    @Override
+                    public void run() {
+                        step8ClickExportItem();
+                    }
+                }, SCROLL_SETTLE_DELAY_MS);
             }
 
             @Override
@@ -222,19 +237,7 @@ final class LineExportFlow {
         });
     }
 
-    // ---- 手順7: 設定画面到達判定 ------------------------------------------------------------
-
-    private void step7WaitSettings() {
-        waitForNode(EXPORT_ITEM_LABEL, STAGE_OPEN_SETTINGS, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
-                new NodeWaitCallback() {
-                    @Override
-                    public void onFound(AccessibilityNodeInfo node) {
-                        step8ClickExportItem();
-                    }
-                });
-    }
-
-    // ---- 手順8: 「トーク履歴を送信」をクリック（スクロール再探索、最大4回） -------------------
+    // ---- 手順8: 「トーク履歴を送信」をクリック（即時探索＋スクロール再探索、最大4回） -----------
 
     private void step8ClickExportItem() {
         scrollFindAndClick(EXPORT_ITEM_LABEL, 0, STAGE_EXPORT_ITEM, new StepCallback() {
@@ -481,11 +484,20 @@ final class LineExportFlow {
     }
 
     private void finish(boolean success, String failedStage) {
+        // stopWindowRecording()は履歴をクリアするため、読むのはその前に行う（診断用。
+        // クラス名のみでパッケージ名・ノードのテキスト・メッセージ本文は含まない）。
+        String recentClasses = success ? "" : service.recentWindowClassNames();
         service.stopWindowRecording();
         long elapsed = System.currentTimeMillis() - flowStartedAt;
         String title = success ? "書き出し: 成功" : "書き出し: 失敗";
         String stagePart = success ? "" : ("段階: " + failedStage + " / ");
         String body = stagePart + elapsed + "ms / " + stepTimings.toString().trim();
+        if (!success && recentClasses.length() > 0) {
+            // 2026-10-08実機2回目の追補: TYPE_WINDOW_STATE_CHANGEDのクラス名がこの端末で
+            // 実際に取れるかの実測も兼ねる。取れることが分かれば、将来ADB版と同じ粒度の
+            // 到達判定に戻せる。
+            body += " / 最近のクラス名: " + recentClasses;
+        }
         postResultNotification(service, title, body);
         if (listener != null) {
             listener.onFinished();
