@@ -10,8 +10,8 @@
 - 判定（○×）：`--config v102` で `--prompt-name` も `--prompt-key` も付けないとき、DB の key `raw_copy_v101_f_c` の本文が指示書になり、結果の行に `prompt_name="raw_copy_v101_f_c"`・`prompt_source="db"` が残る。
 
 ## 2. 変更（`backend/app/tools/prompt_ab.py` と試験だけ）
-- 定数 `DEFAULT_V102_PROMPT_KEY = "raw_copy_v101_f_c"` を足す（`:305` の近く）。
-- `run_ab`（`:502` の前）：`config == "v102"` で `prompt_name` も `prompt_key` も None のとき、`prompt_key = DEFAULT_V102_PROMPT_KEY` として、以降は `--prompt-key` を付けたときと同じ道（DB から読む・行が無ければ Gemini を呼ぶ前に止まる・`prompt_source="db"`・sha256 のログ）を通る。
+- 定数 `V102_PROMPT = "raw_copy_v101_f_c"` を足す（`:305` の近く）。
+- `run_ab`（`:502` の前）：`config == "v102"` で `prompt_name` も `prompt_key` も None のとき、`prompt_key = V102_PROMPT` として、以降は `--prompt-key` を付けたときと同じ道（DB から読む・行が無ければ Gemini を呼ぶ前に止まる・`prompt_source="db"`・sha256 のログ）を通る。
 - `--prompt-name` の help（`:615`）の「v102 は既定 raw_copy_v101_e」を「v102 は既定 DB の key raw_copy_v101_f_c」に直す。
 - `backend/app/services/gemini_raw_copy_v101.py:38` の `DEFAULT_V102_PROMPT_NAME` は残す（`--prompt-name raw_copy_v101_e` で前の版を明示して使えるようにするため、e のファイルも残す）。`_load_prompt_text` の既定の分岐（`:342-343`）は `run_ab` の外から呼ばれたときのために変えない。
 

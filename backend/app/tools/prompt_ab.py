@@ -304,7 +304,7 @@ def resolve_prompt_path(prompt_name: str, config: str = "v9") -> Path:
 
 
 _PROMPT_KEY_CONFIGS = ("v101", "v102")
-DEFAULT_V102_PROMPT_KEY = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定（DB の key）
+V102_PROMPT = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定の指示書（DB の prompt_key）
 _PROMPT_KEY_SQL = """
     SELECT prompt_text FROM public.extraction_prompt_config
     WHERE prompt_key = :key AND is_active = TRUE
@@ -502,7 +502,7 @@ def run_ab(
     if prompt_key is not None and (config not in _PROMPT_KEY_CONFIGS or prompt_name is not None):
         raise ValueError("--prompt-key は --config v101・v102 のときだけ、--prompt-name なしで使えます")
     if config == "v102" and prompt_name is None and prompt_key is None:
-        prompt_key = DEFAULT_V102_PROMPT_KEY
+        prompt_key = V102_PROMPT
     v8_prompt = _load_prompt_text(config, prompt_name, prompt_key, session)  # 名前・ファイル・行の誤りはここで止まる（Gemini を呼ぶ前）
     prompt_source = "db" if prompt_key is not None else (None if config == "v7" else "file")
     prompt_sha256 = hashlib.sha256(v8_prompt.encode("utf-8")).hexdigest() if v8_prompt is not None else None

@@ -685,7 +685,7 @@ def test_v102_config_calls_with_v101_schema_and_default_prompt_f_c_from_db(monke
     kwargs = v101_fakes.v8.call_args.kwargs
     # Assert
     assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
-    assert pab.DEFAULT_V102_PROMPT_KEY == "raw_copy_v101_f_c"
+    assert pab.V102_PROMPT == "raw_copy_v101_f_c"
     assert session.execute.call_args.args[1] == {"key": "raw_copy_v101_f_c"}
     assert kwargs["prompt_text"] == "F_C_FROM_DB"
     row = _lines(v101_fakes)[0]
