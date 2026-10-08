@@ -696,7 +696,7 @@ def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_
     row = _lines(v101_fakes)[0]
     assert row["config"] == "v102" and row["item_count"] == 1 and row["errors"] == []
     assert row["v102_items"][0]["name"] == "商品A" and row["v102_items"][0]["fixes"] == []
-    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line"}
+    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line", "post_review"}
     assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
 
 
@@ -713,7 +713,47 @@ def test_v102_extraction_failure_is_recorded_in_row_not_fatal(monkeypatch, v101_
     summary = _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
     row = _lines(v101_fakes)[0]
     assert summary.stop_reason is None
-    assert row["v102_items"] == [] and row["v102_flags"] == {} and "ValueError" in row["v102_items_error"]
+    assert row["v102_items"] == [] and "ValueError" in row["v102_items_error"]
+    assert row["v102_flags"]["post_review"][0]["kind"] == "extract_exception"
+    assert "ValueError" in row["v102_flags"]["post_review"][0]["error"]
+
+
+def test_v102_row_keeps_dropped_items_and_result_count_equals_gemini_count(monkeypatch, v101_fakes):
+    # Arrange
+    response = json.dumps({"items": [
+        {"lines": [1, 2], "price": "1,000円", "quantity": "3"},
+        {"lines": [1, 2], "price": "9,999円", "quantity": "3"},
+    ]}, ensure_ascii=False)
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": response}
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    # Assert
+    assert len(row["v102_items"]) == 2 and row["v102_items"][1]["rejected"] == "price_not_in_lines"
+    assert row["v102_items"][1]["review"][0]["kind"] == "price_not_in_lines"
+
+
+def test_v102_unreadable_response_is_recorded_in_post_review(monkeypatch, v101_fakes):
+    # Arrange
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": "not json"}
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    row = _lines(v101_fakes)[0]
+    # Assert
+    assert row["v102_items"] == []
+    assert [r["kind"] for r in row["v102_flags"]["post_review"]] == ["response_unreadable"]
+    assert row["v102_flags"]["post_review"][0]["error"]
+
+
+def test_v102_zero_gemini_items_gives_no_items_in_post_review(monkeypatch, v101_fakes):
+    v101_fakes.v8.side_effect = lambda *a, **k: {**_v8_result(), "response_text": '{"items": []}'}
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    assert _lines(v101_fakes)[0]["v102_flags"]["post_review"] == [{"kind": "no_items"}]
+
+
+def test_v101_row_flags_do_not_get_post_review(monkeypatch, v101_fakes):
+    _run(v101_fakes, monkeypatch, config="v101", run_ids=("r1",))
+    assert "post_review" not in _lines(v101_fakes)[0]["v101_flags"]
 
 
 def test_v101_row_is_unchanged_and_has_no_v102_fields(monkeypatch, v101_fakes):
