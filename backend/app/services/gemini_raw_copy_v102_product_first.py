@@ -12,6 +12,7 @@ import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
+from dataclasses import replace as dataclass_replace
 from typing import Any
 
 from sqlalchemy import text
@@ -312,11 +313,18 @@ def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[di
 def resolve_product_first(
     *, item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], block: str, name: str,
     aliases: Sequence[str], unit_alias_to_info: dict, cond_entries: list[dict], cond_canonical_to_uuid: dict,
-    masters: ProductFirstMasters, find_price_alias: Callable[[str], str | None],
+    masters: ProductFirstMasters, find_price_alias: Callable[[str], str | None], chosen_product_id: int | None = None,
 ) -> dict:
-    """1件の商品・単位・状態を、商品を先に決める流れで出す。"""
+    """1件の商品・単位・状態を、商品を先に決める流れで出す。
+
+    chosen_product_id：商品が ambiguous で、その候補に含まれるときだけ、その商品に決めた扱いにする（前後の商品の作品で決めた結果）。
+    それ以外のときは無視する。
+    """
     match_text, _source = product_match_text(block, "", name)
     match = match_product(match_text, masters.product_entries)
+    if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
+        work_of = {p.id: p.work_id for p in masters.product_entries}
+        match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
     product_id, product_kubun = _match_summary(match, masters)
     alias, unit_basis = find_unit_product_first(
         item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias, unit_alias_to_info

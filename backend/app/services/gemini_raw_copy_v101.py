@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import unicodedata
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -18,7 +19,12 @@ from typing import Any
 from app.services import gemini_raw_copy_v8 as v8
 from app.services import gemini_raw_copy_v10 as v10
 from app.services.extraction_judgement_svc import resolve_price_quantity
-from app.services.gemini_raw_copy_v102_product_first import ProductFirstMasters, resolve_product_first
+from app.services.gemini_raw_copy_v102_context_work import MATCH_STATUS_MATCHED_CONTEXT, decide_by_context
+from app.services.gemini_raw_copy_v102_product_first import (
+    REVIEW_PRODUCT_MULTIPLE,
+    ProductFirstMasters,
+    resolve_product_first,
+)
 from app.services.tcg_analyzer_svc import resolve_condition_v2, resolve_status_v2, resolve_unit_v2
 from app.services.tcg_empty_box_rules import EMPTY_CANONICAL, EMPTY_CODE
 
@@ -681,6 +687,7 @@ def _quantity_not_in_text(quantity: str, text: str, *, v102: bool = False) -> bo
 
 def _product_first_fields(
     item: dict, roles: dict[int, str], lines: list[str], block: str, name: str, ctx: V101Context,
+    chosen_product_id: int | None = None,
 ) -> dict | None:
     """試作版 v102：商品を先に決める流れの結果。マスタが渡されていないとき（v10.2 までの呼び出し）は None。"""
     if ctx.product_first is None:
@@ -689,16 +696,17 @@ def _product_first_fields(
         item=item, roles=roles, lines=lines, block=block, name=name, aliases=ctx.aliases,
         unit_alias_to_info=ctx.unit_alias_to_info, cond_entries=ctx.cond_entries,
         cond_canonical_to_uuid=ctx.cond_canonical_to_uuid, masters=ctx.product_first,
-        find_price_alias=lambda text: find_unit_alias(text, ctx.aliases),
+        find_price_alias=lambda text: find_unit_alias(text, ctx.aliases), chosen_product_id=chosen_product_id,
     )
 
 
 def _extract_one(
     item: dict, roles: dict[int, str], lines: list[str], owners: dict[int, dict], shared: set[int],
     ctx: V101Context, *, reassigned: list[dict], review: list[dict], v102: bool = False, name_prefix: str = "",
-    name_roles: dict[int, str] | None = None,
+    name_roles: dict[int, str] | None = None, chosen_product_id: int | None = None,
 ) -> dict:
-    """name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
+    """chosen_product_id（試作版 v102）：前後の商品の作品で決めた商品。ambiguous の候補にあるときだけ使う。
+    name_roles（v10.2 F5）：名前の取り出しだけに使う役割。None なら roles と同じ。数量・単位・状態・発送・ステータス・価格（価格数量の判定に渡す名前を含む）は roles を使う。"""
     shown_roles = name_roles if name_roles is not None else roles
     block = "\n".join(lines[n - 1] for n in item["lines"])
     own_text = "\n".join(lines[n - 1] for n in _own_lines(item, shared))
@@ -707,7 +715,9 @@ def _extract_one(
     if name_prefix:
         name = f"{name_prefix} {name}"
         calc_name = f"{name_prefix} {calc_name}"
-    product_first = _product_first_fields(item, roles, lines, block, calc_name, ctx) if v102 else None
+    product_first = (
+        _product_first_fields(item, roles, lines, block, calc_name, ctx, chosen_product_id) if v102 else None
+    )
     if product_first is not None:
         unit_canonical, kubun, condition, basis = (
             product_first["unit"], product_first["unit_kubun"], product_first["condition"], product_first["condition_basis"]
@@ -897,6 +907,31 @@ def _has_no_digit(quantity: str) -> bool:
     return quantity.strip().lower() != _NONE and not re.search(rf"[{_DIGITS}]", _nfkc(quantity))
 
 
+def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None], dict], product_entries) -> list[dict]:
+    """試作版 v102 の2回目：ambiguous を前後の商品の作品で決める。決めた件は決めた商品で作り直し、決まらない件は要確認に理由を足す。"""
+    result = list(extracted)
+    for i, decision in decide_by_context(extracted, product_entries).items():
+        if not decision.is_decided:
+            result[i] = {
+                **extracted[i],
+                "review": [
+                    {**r, "context_reason": decision.reason} if r["kind"] == REVIEW_PRODUCT_MULTIPLE else r
+                    for r in extracted[i]["review"]
+                ],
+            }
+            continue
+        result[i] = {
+            **build(i, decision.product_id),
+            "match_status": MATCH_STATUS_MATCHED_CONTEXT,
+            "product_context": {
+                "rule": decision.rule,
+                "clues": [{"line": c.line, "product_id": c.product_id, "work_id": c.work_id} for c in decision.clues],
+                "dropped": list(decision.dropped),
+            },
+        }
+    return result
+
+
 def _extract_v102(
     items: list[dict], lines: list[str], ctx: V101Context, reassigned: dict[int, list[dict]], review: dict[int, list[dict]],
 ) -> tuple[list[dict], dict]:
@@ -910,19 +945,23 @@ def _extract_v102(
     owners = {it["price_line"]: it for it in items}
     shared = _shared_line_numbers(items)
     f2 = _f2_prefixes(items, name_roles, lines, owners, shared, ctx)
-    extracted: list[dict] = []
-    no_number: list[int] = []
-    for i, item in enumerate(items):
+
+    def build(i: int, chosen_product_id: int | None = None) -> dict:
+        item = items[i]
         one = _extract_one(
             item, roles[i], lines, owners, shared, ctx, reassigned=reassigned.get(i, []), review=review.get(i, []),
-            v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i],
+            v102=True, name_prefix=f2[i][0] if i in f2 else "", name_roles=name_roles[i], chosen_product_id=chosen_product_id,
         )
         fixes = [*f1_fixes.get(i, []), *([f2[i][1]] if i in f2 else []), *f3_fixes.get(i, [])]
         if _has_no_digit(item["quantity"]):
             one = {**one, "quantity_normalized": None}
-            no_number.append(item["price_line"])
             fixes.append(_fix("F4", item["price_line"], "数量に数字が無いので quantity_normalized を None にした"))
-        extracted.append({**one, "fixes": [*fixes, *f5_fixes.get(i, [])]})
+        return {**one, "fixes": [*fixes, *f5_fixes.get(i, [])]}
+
+    extracted = [build(i) for i in range(len(items))]
+    no_number = [it["price_line"] for it in items if _has_no_digit(it["quantity"])]
+    if ctx.product_first is not None:
+        extracted = _apply_context_work(extracted, build, ctx.product_first.product_entries)
     flags = {
         "possible_missing_item": _possible_missing_lines(items, lines, until_last_price_line=True),
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
