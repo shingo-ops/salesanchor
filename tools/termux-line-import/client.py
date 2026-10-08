@@ -340,6 +340,12 @@ class Outbox:
         作る（android_parser.py:3-4、本文のバイト完全復元は保証されないため）。切り出し
         開始位置は基準時刻-OVERLAP（60分）以降の最初のメッセージで、その行から原本末尾
         までに、その日の日付行（パーサが要求するため。android_parser.py:31）を前置する。
+
+        基準がこのファイルのどのメッセージよりも新しい場合（共有は任意のトークを受け
+        付けるため、利用者が別のトーク・古い書き出しを手で共有すると実在する経路）、
+        基準時刻-60分以降のメッセージが1件も無く切り出し開始位置を特定できない。この
+        場合と、日付行が見つからない想定外のケースは、どちらも原本をそのまま送ることで
+        安全側に倒す（取りこぼすより一度多く送る方が安全。弊害・トレードオフと同じ方針）。
         """
         watermark = self._get_meta('sent_watermark')
         text = raw.decode('utf-8-sig')
@@ -355,14 +361,25 @@ class Outbox:
                    or stored_tail_count is None or tail_count > int(stored_tail_count))
         if not has_new:
             return None, None, None, watermark
+        new_watermark = messages[-1]['timestamp']
+        new_tail_count = sum(1 for message in messages if message['timestamp'] == new_watermark)
         cutoff = (datetime.strptime(watermark, '%Y-%m-%d %H:%M:%S') - OVERLAP).strftime('%Y-%m-%d %H:%M:%S')
-        start_message = next(message for message in messages if message['timestamp'] >= cutoff)
+        start_message = next((message for message in messages if message['timestamp'] >= cutoff), None)
+        if start_message is None:
+            # 基準がこのファイルのどのメッセージよりも新しい（例: 共有はどのトークでも
+            # 受け付けるため、利用者が別のトーク・古い書き出しを手で共有した場合に実在
+            # する経路）。切り出す範囲が無いので、原本の最初のメッセージから送る＝実質
+            # ファイル全体を送る。取りこぼすより一度多く送る方が安全（既存の安全側方針）。
+            start_message = messages[0]
         lines = text.lstrip('﻿').splitlines()
         start_line = start_message['line']
-        date_line = next(line for line in reversed(lines[:start_line - 1]) if DATE.fullmatch(line))
+        date_line = next((line for line in reversed(lines[:start_line - 1]) if DATE.fullmatch(line)), None)
+        if date_line is None:
+            # 日付行が見つからない（通常は起こらない想定外ケースへの保険）。切り出しに
+            # 失敗したら原本をそのまま送る方が、メッセージを取りこぼすより安全。
+            return raw, new_watermark, new_tail_count, watermark
         payload = '\n'.join([date_line] + lines[start_line - 1:]).encode('utf-8')
-        new_tail_count = sum(1 for message in messages if message['timestamp'] == messages[-1]['timestamp'])
-        return payload, messages[-1]['timestamp'], new_tail_count, watermark
+        return payload, new_watermark, new_tail_count, watermark
 
     def send(self, transport=None, force=False, detected_by='share'):
         # Deployment must be confirmed explicitly; do not post to the old PC API.

@@ -235,6 +235,29 @@ class OutboxTests(unittest.TestCase):
         bodies = [message['body'] for message in parse_android_export(captured['payload'].decode('utf-8'))]
         self.assertIn('孤立新規', bodies)
 
+    def test_watermark_newer_than_any_message_does_not_crash(self):
+        """コードレビューで判明: 基準がファイル内のどのメッセージよりも新しい場合
+        （共有は任意のトークを受け付けるため、利用者が別のトーク・古い書き出しを手で
+        共有すると実在する経路）、基準-60分以降のメッセージが1件も無くStopIterationで
+        落ちていた。原本をそのまま送る安全側の挙動に倒し、例外にならず送信されることを
+        確認する。"""
+        self.outbox.send(lambda *_: self.result())  # baseline watermark=2026-09-12 12:01:00
+
+        other_source = self.root / 'other.txt'
+        other_source.write_bytes('2026/1/1(木)\n10:00\t別の人\t別トークの内容\n'.encode())
+        self.outbox.enqueue(other_source)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)  # 以前はここでStopIterationが発生していた
+        self.assertEqual(self.counts(result), {'accepted': 2})
+        parsed = parse_android_export(captured['payload'].decode('utf-8'))
+        self.assertEqual([message['body'] for message in parsed], ['別トークの内容'])
+
     def test_kgi3_overlap_resends_same_minute_messages_once_new_arrives(self):
         """KGI3: 基準時刻と同一分(12:01)に複数メッセージがある状態で基準を確定させ、
         別の分(12:05)に新規が来たときだけ送信する。切り出しは基準時刻-60分からなので、
