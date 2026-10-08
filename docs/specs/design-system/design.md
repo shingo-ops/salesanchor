@@ -2179,3 +2179,62 @@ CSS:
 | 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
 
 Architect 自己審査（AW-2b）: APPROVE（PO 方針どおり標準へ統一、保留10件は実測で不変を確認する設計、配線・データ不変）。同一AI の自己審査であり独立第二者レビューではない。
+
+
+#### AW-2b 結果（2026-10-09）
+
+PR #4033 merge de8ca6275a5906ae0cdb7c46521f23b747ea6d50（2026-10-08T22:31:24Z、必須15/15成功）、Deploy 37854006957 success（headSha de8ca627、22:31:26Z〜22:34:04Z）。本番 CSS index-BI9wWxUm.css（HTML が参照する唯一の CSS）で `comp-select__control.field-w-sm/md/lg` 各1、`form-group select` 2（いずれも `.product-edit-form .form-group select` と同 `:focus`、汎用規則0）、`inbox-page-filter-select` 0、`inbox-settings-select` 0、`comp-select--header` 2。app 200、`https://api.salesanchor.jp/api/health` 200（`/health` と `/` は 404 で、監視の固定URLは backend/app/main.py:220-221 の `/api/health`）。GO 原文は PO 本人の「GO #4033」、本文反映とマージは PO 本人の端末操作。マージ待ちで merge-safe が BEHIND/UNKNOWN により計12回停止し、担当の最新化 push 2回の後に成立した。同 Deploy の「Post-deploy smoke tests (SA-19)」は skipped で、理由は未調査（本便の変更との関係も未確認）。残る保留: 商品編集9・報酬1・カレンダー色・生 option 文字23の翻訳化・`.filter-bar select`。
+
+
+### AX. TextareaControl 本体（2026-10-09）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV の便分割（:1973「AV-3以降 TextFieldControl/TextareaControl 本体 → 利用」）のうち textarea の本体便。§Z 入力契約（:802-806, :818, :821, :895, :897）の textarea 部分の第1段。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-09、本セッション）「次を進める」「フロントエンドのパーツもデザイントークンとデザインシステムを遵守して、金型登録のないハードコードを禁止する」「確立したなら進める」。番号付きGO・Opus委任の有効化は創作しない（docs/handoff/go-record-transcription/opus-delegation.md 不在＝委任は有効化待ち）。
+
+現在地（origin/main 0f5d7e53774ec0ccffc68a5372288afe0c265a9a、TypeScript 5.9.3 AST、対象TSX 275、構文エラー0。証跡は本便で保存する evidence-20260910/ax0-textarea-inventory.{cjs,json,md}、ax0-textarea-css.md。inventory.cjs は生成時のまま typescript を手元の絶対パスで require しており、再実行時はその1行の調整が要る）:
+- 生 `<textarea>` 54＝金型内部1（Textarea.tsx:63）＋ページ側53（ui-allow 2: ConditionsPage.tsx:340/350）。既存 `<Textarea>` 利用13。
+- §AV の textarea56/57 との差3はすべて照合済み: ParseReviewPage.tsx の2件はファイル削除（d010d6700）、DiscordConfigPage.tsx の1件は `<Textarea>` へ移管済（e95f856b2）。他は行ずれのみ。
+- 属性: value/onChange 53、rows 21、placeholder 16、className 18、onBlur 8、disabled 7、id 6、style 6、maxLength 5、aria-label 4、data-testid 4、onKeyDown 2、ref 1（InboxMessageThread.tsx:736）、required 1。
+- 外観の出所: textarea を含む選択子または自 class の規則34（components.css:19/31/39 の `.form-group textarea` 系が約27件、company-forms.css の `.form-row textarea` 系、InboxPage.css の `.inbox-textarea`/`.right-panel-field`/`.outbound-translation-edit`、schedule.css、WeeklyAdvisorSection.css、supplier-detail-view.css）。CSS 定義の無い class（DiscordAnnouncePage の `input w-full resize-y`、ManualRecordSection の `manual-record-textarea`）と規則の当たらない3件がある（いずれも祖先照合は近似）。
+- 既存金型 Textarea（Textarea.tsx:28-74）はラベル付き div 包みだけで、裸の部品と ref 転送が無い。単体テスト0（stories のみ）。このため ref を使う送信欄や、div を増やせない右パネル等へ移管できない。
+- ガード: scripts/check-ui-governance.js は textarea を検出しない（select/input/tab のみ）。frontend/eslint.config.js:107/209 は minHeight 数値の禁止のみ。
+- 競合: active-work.d に textarea/AV-2 の進行中0。
+
+本便の範囲（見た目の変化0・利用ページ変更0）:
+1. Textarea.tsx に `TextareaControl` を追加: `forwardRef<HTMLTextAreaElement, TextareaControlProps>`、`TextareaControlProps = { size?: TextareaSize } & Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size">`。`<textarea>` を1つだけ返し div/label を増やさない。class は `comp-field__textarea`、size が md 以外なら `comp-field__textarea--${size}`、最後に className（移行中の互換口。§Z :910 の layoutClassName 統一は全移管後）。ref・native 属性・イベント・value/defaultValue は同じ要素へそのまま渡し、未指定を補わない。id は個別に受けて className より前に出力する（既存 Textarea の出力属性順 `id`→`class` を保つため。実装時に固定試験が属性順の差で失敗したことによる設計者判断、2026-10-09）。
+2. 既存 `Textarea` の `<textarea id={fieldId} className="comp-field__textarea" {...rest} />`（:63）を `<TextareaControl id={fieldId} {...rest} />` に置換（size は渡さない＝出力 class は `comp-field__textarea` のまま）。既存13利用の DOM は不変。
+3. FormField.css: :148 の選択子リストに `.comp-field__textarea--sm` を、:158-161 の lg リストに `.comp-field__textarea--lg` を追加（宣言・値は既存のまま。新規トークン0）。どちらも基本規則（:47-68）より後ろにあり、同じ specificity (0,1,0) で後勝ち。
+4. Textarea.test.tsx を新設し、Textarea.stories.tsx に TextareaControl の見本（通常・sm/md/lg・disabled）を追加。
+
+変更しないもの: 利用ページ全件、ページ CSS、トークン定義、i18n、API/DB/backend、CI 設定、依存、Select/TextField。appearance（embedded）・resize・invalid は次便（AX-2）で前後表とともに設計する（送信欄 CSSI-0209、右パネル CSSI-0233）。
+
+#### 受入
+
+| 基準 | 検証方法 |
+|---|---|
+| 既存 Textarea の出力が不変 | 実装前の現行コードで Textarea（label・required・helperText・error・size sm/lg・fullWidth・className・id）の outerHTML を固定する試験を先に書いて通し、置換後も同じ試験が通る |
+| 裸の部品が1要素だけ返す | TextareaControl の container 直下が textarea 1つ、class が `comp-field__textarea`（md）/`--sm`/`--lg`、className が末尾 |
+| ref 転送 | オブジェクト ref と関数 ref の両方が HTMLTextAreaElement 本体を受け取る |
+| 属性・イベントの透過と未補完 | value/onChange/onKeyDown/onBlur/rows/maxLength/disabled/placeholder/aria-label/data-testid/id/required が同要素に届く。未指定の rows/value/placeholder は属性として現れない。Enter の keydown は既定動作を妨げない |
+| 寸法が既存金型と一致 | Chromium 実測で TextareaControl sm/md/lg と ラベル付き Textarea sm/md/lg の textarea の computed style（padding・font-size・min-height・border・radius・resize・line-height）が一致（スクリプトと結果を evidence に保存） |
+| 新規トークン・直書き 0 | check:all、ui-governance、design-token-guard、差分の目視 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook（端末の空きが不足する場合は CI の Storybook build check で確認と明記） |
+
+#### 代替案
+
+- ラベル付き Textarea に ref と裸モードを足す: 1つの部品に div 有無の2出力が混ざり、§Z :802 の「裸の部品を公開し、既存ラベル付き部品はその本体を使用」と食い違うため不採用。
+- 本体と利用ページを同じPRで変える: 見た目の変化と部品の不具合を切り分けられないため不採用（§Z :796、§AV の便分割）。
+- appearance/resize を今入れる: 利用側の実測前に値を決めることになるため次便へ。
+
+外部事例: 新技術の採用ではなく既存金型（SelectControl の forwardRef、Select.tsx:63）と同じ型の追加のため不要。React 18.3.1（frontend/package.json:83）の forwardRef は導入済みの SelectControl で実利用中。
+
+#### Architect 自己審査（AX-1）
+
+APPROVE（実装可）。§Z 契約・実物 Textarea.tsx/FormField.css・SelectControl の先例と照合し、追加は裸の本体・ref・寸法 class の3点に限定。既存13利用の DOM 不変を試験で固定し、値の保存先・配線・API は不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。AX-2（利用ページ53件）は見た目が変わるため本審査の対象外（REVISE: 前後表と PO 確認待ち）。
+
+#### 維持の仕組み
+
+守り手: Textarea.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check（check:all/coverage/storybook）、design-token-guard。守っていないもの: ページ側の生 textarea 53（AX-2で移管、最後のCIで未移行0を強制。現行 ui-governance は textarea を検出しない）。切戻し: 本PRの merge commit を revert（DB・データ影響なし）。
