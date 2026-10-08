@@ -101,14 +101,26 @@ focus() { q dumpsys window | grep -m1 mCurrentFocus | sed -E 's/.* ([^ ]+)\}.*/\
 # 一度も届かなかった（09:23・09:28の2回とも無反応）。--user 0 を省くと別ユーザー扱いになり届かない。
 # テスト時は LINE_AUTO_EXPORT_BROADCAST_CMD で差し替え可能（例: echo に置き換えて、実機を使わずに
 # ポーリング以降の処理だけを検証する。design-app-trigger.md には無い追加）。
+#
+# 標準出力（"Broadcasting: Intent ..." 等、成功時も毎回出る）は捨てて say() の行に混ざらないようにする
+# （2026-10-08 実機ログで確認: 成功時でもこの出力が auto-export.log に流れ込んで読みにくかった）。
+# 標準エラーは残す（撃てなかった原因を残すため）。終了コードが0以外、または標準エラーに出力があれば、
+# 合図そのものを撃てなかった（または例外が出た）とみなして fail する。
 broadcast_run_all() {
+  bc_err_file=$(mktemp)
   if [ -n "${LINE_AUTO_EXPORT_BROADCAST_CMD:-}" ]; then
-    eval "$LINE_AUTO_EXPORT_BROADCAST_CMD"
+    eval "$LINE_AUTO_EXPORT_BROADCAST_CMD" >/dev/null 2>"$bc_err_file"
   else
     CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk \
     /system/bin/app_process -Xnoimage-dex2oat / com.termux.termuxam.Am \
       broadcast --user 0 -n jp.salesanchor.lineexport/.RunReceiver \
-      -a jp.salesanchor.lineexport.RUN_ALL
+      -a jp.salesanchor.lineexport.RUN_ALL >/dev/null 2>"$bc_err_file"
+  fi
+  bc_rc=$?
+  bc_err=$(cat "$bc_err_file" 2>/dev/null)
+  rm -f "$bc_err_file"
+  if [ "$bc_rc" -ne 0 ] || [ -n "$bc_err" ]; then
+    fail app "アプリへの合図を送れない（rc=$bc_rc${bc_err:+: $bc_err}）"
   fi
 }
 
