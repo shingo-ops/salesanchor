@@ -41,7 +41,7 @@ def parse_android_export(text):
             else:
                 sender, body, system = '', fields[0], True
             current = dict(timestamp=f'{day} {hour:02d}:{minute:02d}:00',
-                           display_name=sender, body=body, is_system_event=system)
+                           display_name=sender, body=body, is_system_event=system, line=number)
             messages.append(current)
         elif current is not None:
             current['body'] += '\n' + line
