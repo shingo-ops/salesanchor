@@ -1,3 +1,4 @@
+from datetime import date, timedelta
 import fcntl
 import json
 from pathlib import Path
@@ -187,6 +188,124 @@ class OutboxTests(unittest.TestCase):
         (self.outbox.base / 'config.json').write_text(json.dumps({'enabled': True, 'endpoint': 'https://example.org'}))
         with self.assertRaises(ValueError):
             self.outbox.send(lambda *_: self.result())
+
+    # -- incremental send (KGI1/3/4/5) -----------------------------------------------
+
+    def test_kgi1_resend_without_new_messages_is_skipped(self):
+        """KGI1: 新規メッセージが無ければ一切送信しない。
+        実機では『保存日時』ヘッダがエクスポートごとに変わるため、新規メッセージが
+        0件でもdigestは毎回変わる（recon事実1がこの機能自体の理由）。それを再現する
+        ため、本文は変えずヘッダだけ変えた2つ目のファイルをenqueueする。"""
+        self.outbox.send(lambda *_: self.result())
+        second_source = self.root / 'second.txt'
+        second_source.write_bytes(SAMPLE.replace('保存日時: test', '保存日時: test2').encode())
+        self.outbox.enqueue(second_source)
+
+        def fail_if_called(raw, token):
+            self.fail('新規メッセージが無いのに送信された')
+
+        result = self.outbox.send(fail_if_called)
+        self.assertEqual(self.counts(result), {'accepted': 1, 'skipped': 1})
+        started = self.outbox.db.execute(
+            "SELECT COUNT(*) FROM events WHERE stage='send' AND result='started'").fetchone()[0]
+        self.assertEqual(started, 1)
+        reason = self.outbox.db.execute(
+            "SELECT reason FROM events WHERE stage='send' AND result='skipped'").fetchone()[0]
+        self.assertIn('2026-09-12 12:01:00', reason)
+
+    def test_kgi3_overlap_resends_same_minute_messages_once_new_arrives(self):
+        """KGI3: 基準時刻と同一分(12:01)に複数メッセージがある状態で基準を確定させ、
+        別の分(12:05)に新規が来たときだけ送信する。切り出しは基準時刻-60分からなので、
+        同一分の『後続』（基準そのものになった2件目だけでなく1件目も）が取りこぼされず
+        ペイロードに含まれることを確認する（60分の重なりを入れた理由そのもの）。"""
+        based = (SAMPLE + '12:01\tさらに別の人\t同一分2件目\n').encode()
+        first = self.root / 'first.txt'
+        first.write_bytes(based)
+        self.outbox.enqueue(first)
+        self.outbox.send(lambda *_: self.result())
+        # setUp()が先にenqueueしたSAMPLEのジョブ（未送信）がここでsupersededになる。
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1, 'superseded': 1})
+
+        second = self.root / 'second.txt'
+        second.write_bytes(based + '12:05\t別の人\t新着\n'.encode())
+        self.outbox.enqueue(second)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2, 'superseded': 1})
+        parsed = parse_android_export(captured['payload'].decode('utf-8'))
+        bodies = [message['body'] for message in parsed]
+        self.assertIn('末尾', bodies)
+        self.assertIn('同一分2件目', bodies)
+        self.assertIn('新着', bodies)
+
+    def test_kgi4_failed_send_is_recovered_with_later_new_messages(self):
+        """KGI4: 失敗した回は基準を進めないため、次回は失敗分も含めて取り戻す。"""
+        self.outbox.send(lambda *_: self.result())
+        appended1 = self.source.read_bytes() + '12:05\t別の人\t追加1\n'.encode()
+        second = self.root / 'second.txt'
+        second.write_bytes(appended1)
+        self.outbox.enqueue(second)
+        self.outbox.send(lambda *_: (0, ''))
+        self.assertEqual(self.counts(self.outbox.status()), {'accepted': 1, 'retry': 1})
+
+        appended2 = appended1 + '12:10\t別の人\t追加2\n'.encode()
+        third = self.root / 'third.txt'
+        third.write_bytes(appended2)
+        self.outbox.enqueue(third)  # 失敗した'second'(retry)をsupersede
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2, 'superseded': 1})
+        bodies = [message['body'] for message in parse_android_export(captured['payload'].decode('utf-8'))]
+        self.assertIn('追加1', bodies)
+        self.assertIn('追加2', bodies)
+
+    def test_kgi5_large_export_enqueues_and_sends_small_payload(self):
+        """KGI5: 10MiB上限を64MiBに上げたことで、12MiBの書き出しファイルでも
+        enqueueが成功し、かつ切り出し後の送信ペイロードは20KB以下であること。"""
+        self.outbox.send(lambda *_: self.result())  # baseline watermark: 2026-09-12 12:01:00
+        lines = []
+        padding_body = 'x' * 1600
+        for day_offset in range(150):
+            d = date(2026, 1, 1) + timedelta(days=day_offset)
+            lines.append(f'{d.year}/{d.month}/{d.day}(月)')
+            for minute in range(60):
+                lines.append(f'10:{minute:02d}\t送信者\t{padding_body}')
+        lines.append('2026/9/12(土)')
+        lines.append('12:01\t別の人\t末尾')  # SAMPLEの最後のメッセージと同一（基準と一致させる）
+        for i in range(1, 9):
+            lines.append(f'12:{1 + i:02d}\t別の人\t新着{i}')
+        big_bytes = ('\n'.join(lines) + '\n').encode('utf-8')
+        self.assertGreater(len(big_bytes), 12 * 1024 * 1024)
+
+        big_source = self.root / 'big.txt'
+        big_source.write_bytes(big_bytes)
+        enqueue_result = self.outbox.enqueue(big_source)
+        self.assertEqual(enqueue_result['bytes'], len(big_bytes))
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        send_result = self.outbox.send(transport)
+        self.assertEqual(self.counts(send_result), {'accepted': 2})
+        payload = captured['payload']
+        self.assertLessEqual(len(payload), 20 * 1024)
+        parsed = parse_android_export(payload.decode('utf-8'))
+        self.assertTrue(any(message['body'].startswith('新着') for message in parsed))
 
     # -- notifications and history -------------------------------------------------
 

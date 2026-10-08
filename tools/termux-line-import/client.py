@@ -16,11 +16,19 @@ import urllib.error
 import urllib.request
 import uuid
 
-from android_parser import parse_android_export
+from android_parser import DATE, parse_android_export
 from device_session import AuthError, Session
 
 ENDPOINT = 'https://api.salesanchor.jp/api/v1/tcg/line-devices/import'
-MAX_BYTES = 10 * 1024 * 1024
+# send() は原本全体ではなく基準時刻-60分以降だけを切り出して送るため、送信ペイロードは
+# 20KB以下になる（docs/handoff/line-import-incremental-send/design.md「60分を採用」）。
+# この定数はもはやサーバー負荷の上限ではなく、端末側で壊れた/暴走した書き出しファイルを
+# 読み込まないための歯止めだけが役目。1件平均1,590B（recon事実5）なら64MiBは約4万件＝数年分。
+MAX_BYTES = 64 * 1024 * 1024
+# 基準より前にどこまで重なりを持たせて送り直すか。1分（記録の時刻精度・同一分最大4件）が
+# 必須の下限だが、60分でも5.0KB（実測）と同じ桁のため、想定外の挿し込みに対する保険として
+# 60分を採用する（design.md「重なりを60分にする根拠」）。
+OVERLAP = timedelta(hours=1)
 
 TERMUX_NOTIFICATION = '/data/data/com.termux/files/usr/bin/termux-notification'
 TERMUX_JOB_SCHEDULER = '/data/data/com.termux/files/usr/bin/termux-job-scheduler'
@@ -71,6 +79,10 @@ class Outbox:
             id INTEGER PRIMARY KEY, at REAL NOT NULL, digest TEXT, stage TEXT NOT NULL,
             result TEXT NOT NULL, reason TEXT, http_code INTEGER, elapsed_seconds REAL,
             detected_by TEXT)''')
+        # 受理された送信に含まれていた最後のメッセージのtimestampを「基準」として持つ
+        # （キーは 'sent_watermark'）。jobs/eventsのスキーマは変えない。
+        self.db.execute('''CREATE TABLE IF NOT EXISTS meta (
+            key TEXT PRIMARY KEY, value TEXT)''')
         existing = {row[1] for row in self.db.execute('PRAGMA table_info(jobs)')}
         for column in ('received_at', 'last_attempt_at', 'finished_at'):
             if column not in existing:
@@ -120,6 +132,18 @@ class Outbox:
                     continue
                 self.db.execute('DELETE FROM jobs WHERE digest=?', (digest,))
 
+    # -- meta (sent_watermark) ------------------------------------------------
+
+    def _get_meta(self, key):
+        row = self.db.execute('SELECT value FROM meta WHERE key=?', (key,)).fetchone()
+        return row[0] if row else None
+
+    def _set_meta(self, key, value):
+        with self.db:
+            self.db.execute(
+                'INSERT INTO meta (key,value) VALUES (?,?) '
+                'ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key, value))
+
     # -- config --------------------------------------------------------------
 
     def _load_config(self):
@@ -149,7 +173,7 @@ class Outbox:
             raise
         try:
             if len(raw) > MAX_BYTES:
-                raise ValueError('ファイルは10MiB以下にしてください')
+                raise ValueError('ファイルは64MiB以下にしてください')
             try:
                 text = raw.decode('utf-8-sig')
             except UnicodeDecodeError:
@@ -286,6 +310,41 @@ class Outbox:
 
     # -- sending ----------------------------------------------------------------
 
+    def _build_payload(self, raw):
+        """送るバイト列を決める。戻り値は (payload_or_None, new_watermark_or_None, basis)。
+
+        基準（sent_watermark）が無ければ原本をそのまま返す（現状と同じ挙動。
+        design.md「送るものの決め方」3）。基準があり、新規メッセージが1件も無ければ
+        payloadはNoneになる（呼び出し側はジョブをskippedにして送らない）。
+
+        新規の有無は『基準と同じtimestampを持つ、ファイル内で一番後ろのメッセージより
+        さらに後に何かあるか』で判定する（timestampの単純な不等号ではない）。これは、
+        同一分に複数メッセージが入る実測（recon事実5: 最大4件/分）があり、新規メッセージの
+        timestampが基準と文字列として同じになり得るため。基準送信は常にファイル末尾まで
+        含んでいたので、基準と同じtimestampの最後尾の次から先が常に『まだ送っていない』。
+
+        1件以上あれば、送信ペイロードは辞書から再直列化せず原本テキストの行スライスで
+        作る（android_parser.py:3-4、本文のバイト完全復元は保証されないため）。切り出し
+        開始位置は基準時刻-OVERLAP（60分）以降の最初のメッセージで、その行から原本末尾
+        までに、その日の日付行（パーサが要求するため。android_parser.py:31）を前置する。
+        """
+        watermark = self._get_meta('sent_watermark')
+        text = raw.decode('utf-8-sig')
+        messages = parse_android_export(text)
+        if watermark is None:
+            return raw, messages[-1]['timestamp'], None
+        matches = [i for i, message in enumerate(messages) if message['timestamp'] == watermark]
+        last_sent_index = max(matches) if matches else -1
+        if last_sent_index >= len(messages) - 1:
+            return None, None, watermark
+        cutoff = (datetime.strptime(watermark, '%Y-%m-%d %H:%M:%S') - OVERLAP).strftime('%Y-%m-%d %H:%M:%S')
+        start_message = next(message for message in messages if message['timestamp'] >= cutoff)
+        lines = text.lstrip('﻿').splitlines()
+        start_line = start_message['line']
+        date_line = next(line for line in reversed(lines[:start_line - 1]) if DATE.fullmatch(line))
+        payload = '\n'.join([date_line] + lines[start_line - 1:]).encode('utf-8')
+        return payload, messages[-1]['timestamp'], watermark
+
     def send(self, transport=None, force=False, detected_by='share'):
         # Deployment must be confirmed explicitly; do not post to the old PC API.
         config = self._load_config()
@@ -300,6 +359,18 @@ class Outbox:
             raw = (self.base / 'originals' / (digest + '.txt')).read_bytes()
             if hashlib.sha256(raw).hexdigest() != digest:
                 raise ValueError('原本の整合性エラー。送信を停止しました')
+            payload, new_watermark, basis = self._build_payload(raw)
+            if payload is None:
+                # 基準より後に新規が無い: サーバーには何も送らない（KGI1）。jobsのstateを
+                # 'skipped'にしてfinished_atを入れる（再送クエリ:297に残すと毎回この判定を
+                # 繰り返すだけになり、supersede_and_cleanupの対象判定も濁るため）。
+                now = self.clock()
+                with self.db:
+                    self.db.execute(
+                        "UPDATE jobs SET state='skipped', finished_at=? WHERE digest=?", (now, digest))
+                self.record('send', 'skipped', digest=digest,
+                            reason=f'新規なし（基準: {basis}）', detected_by=detected_by)
+                continue
             start = self.clock()
             # Crash after POST leaves 'retry': identical raw file is resent; the server
             # must serialize and deduplicate by its Android-specific content key.
@@ -308,7 +379,7 @@ class Outbox:
                     "UPDATE jobs SET state='retry', attempts=?, retry_at=?, last_attempt_at=? WHERE digest=?",
                     (attempts + 1, start + 60, start, digest))
             self.record('send', 'started', digest=digest, detected_by=detected_by)
-            code, response = transport(raw, token)
+            code, response = transport(payload, token)
             elapsed = self.clock() - start
             state, error, job_id = 'retry', '通信結果を確認できません', None
             data = None
@@ -333,6 +404,12 @@ class Outbox:
             if detail and state not in ('accepted', 'pending_review'):
                 error = f'{error}（サーバー: {detail}）'
             event_reason = '通信できません（圏外・タイムアウト等）' if code == 0 else error
+            if state in ('accepted', 'pending_review'):
+                # 受理されたときだけ基準を進める（失敗時は進めない→次回が取り戻す。KGI4）。
+                # メッセージ本文は記録せず、バイト数とtimestampの基準のみ残す（KGI2計測用）。
+                self._set_meta('sent_watermark', new_watermark)
+                event_reason = '送信 {}バイト（基準 {} / 全体 {}バイト）'.format(
+                    len(payload), basis if basis is not None else 'なし', len(raw))
             # Only expected response fields; never persist an arbitrary HTML/error body.
             safe = {key: data.get(key) for key in ('status', 'review_status', 'message_count',
                     'provider_count', 'unresolved_count', 'skipped_message_count', 'import_job_id')
