@@ -69,15 +69,16 @@ def _it(lines, price, quantity="1"):
     return {"lines": list(lines), "price": price, "quantity": quantity}
 
 
-def _extract(raw, *items, phrases=(), product_first="default"):
+def _extract(raw, *items, phrases=(), product_first="default", units=None):
     """v102 の経路で取り出す。product_first="default" は作り例のマスタ、None は渡さない（v10.2 のまま）。"""
     parsed, errors = v101.parse_v101_response(
         json.dumps({"items": list(items)}, ensure_ascii=False), raw, status_entries=_STATUS
     )
     assert errors == []
     masters = _pf(phrases) if product_first == "default" else product_first
+    given = {**_MASTERS, "unit_alias_to_info": units} if units is not None else _MASTERS
     extracted, _flags = v101.extract_v101_items(
-        parsed, raw, order=None, reassign=True, v102_fixes=True, product_first=masters, **_MASTERS
+        parsed, raw, order=None, reassign=True, v102_fixes=True, product_first=masters, **given
     )
     return extracted
 
@@ -129,6 +130,64 @@ def test_carton_on_price_line_is_case_and_case():
 def test_unit_after_digit_still_uses_position_rule_on_price_line():
     row = _one("サンプルカード 100piece/10,000円", _it([1], "10,000円", "100"))
     assert row["unit"] == "Piece" and row["unit_basis"]["match"] == "position"
+
+
+# --- 条件つきの単位は、ほかの行に決まった単位があればそちらを採る ----------------------------------------
+
+
+def test_conditional_unit_on_price_line_yields_to_carton_on_another_line():
+    row = _one("サンプル拡張\n1個 248,000円\nカートン", _it([1, 2, 3], "248,000円", "1"))
+    assert (row["condition"], row["unit"]) == ("Case", "Case")
+    basis = row["unit_basis"]
+    assert basis["alias"] == "カートン" and basis["line"] == 3
+    assert basis["overridden_alias"] == "個" and basis["override_reason"] == pf.REASON_COUNTER_OVERRIDDEN
+
+
+def test_conditional_unit_alone_keeps_the_box_from_condition():
+    row = _one("サンプル拡張\n1個 9,000円", _it([1, 2], "9,000円", "1"))
+    assert (row["condition"], row["unit"]) == ("Sealed box", "Box")
+    assert "override_reason" not in row["unit_basis"] and row["unit_basis"]["from_condition"] == "Sealed box"
+
+
+def test_conditional_unit_is_kept_when_no_other_line_has_a_decided_unit():
+    row = _one("サンプルカード\n3個@500円\nほにゃらら", _it([1, 2], "500円", "3"))
+    assert row["unit"] == "個" and "override_reason" not in row["unit_basis"]
+
+
+# --- 区切りは、文字の種類が変わる所でもよい -------------------------------------------------------
+
+_PACK_UNITS = {**_UNITS, "パック": ("Pack", "パック系")}
+_BARA = {**_PACK_UNITS, "バラパック": ("Pack", "パック系")}
+
+
+def test_alias_next_to_other_script_is_taken():
+    row = _one("バラパック買取品 3@1,000", _it([1], "1,000", "3"), units=_BARA)
+    assert row["unit"] == "Pack" and row["unit_basis"]["alias"] == "バラパック"
+
+
+def test_alias_missing_from_master_leaves_unit_none():
+    row = _one("バラパック買取品 3@1,000", _it([1], "1,000", "3"), units=_UNITS)
+    assert row["unit"] == "none"
+
+
+def test_alias_inside_same_script_run_is_not_taken():
+    row = _one("バラパック買取品 3@1,000", _it([1], "1,000", "3"), units=_PACK_UNITS)
+    assert row["unit"] == "none"
+
+
+@pytest.mark.parametrize("line, alias, expected", [
+    ("バラパック買取品", "バラパック", True),
+    ("プレミアムトレーナーボックス", "ボックス", False),
+    ("ONE PIECE", "piece", True),
+    ("onepiece", "piece", False),
+    ("abcBOX", "box", False),
+    ("ほにゃ個", "個", True),
+    ("ほにゃらら個", "ほにゃ", False),
+    ("カートン2", "カートン", True),
+    ("2カートン", "カートン", True),
+])
+def test_boundary_candidates_by_script(line, alias, expected):
+    assert bool(pf.boundary_candidates(line, [alias])) is expected
 
 
 # --- 単位にしない言い回し・検索ワードの範囲 ---------------------------------------------------
@@ -188,6 +247,43 @@ def test_box_condition_with_pack_word_stays_box_and_adds_multiple_candidates_rev
 def test_multiple_candidates_ignores_single_rule_and_rows_without_kubun():
     row = _one("サンプル拡張 SR\n3@1,500円", _it([1, 2], "1,500円", "3"))
     assert all(r["kind"] != pf.REVIEW_MULTIPLE_CANDIDATES for r in row["review"])
+
+
+# --- 商品が決まらないときの要確認の理由 ---------------------------------------------------------
+
+
+def _kinds(row):
+    return [r["kind"] for r in row["review"]]
+
+
+def test_unmatched_product_adds_product_not_in_master_review():
+    row = _one("ほにゃらら 100@1400", _it([1], "1400", "100"))
+    assert {"line": 1, "kind": pf.REVIEW_PRODUCT_NOT_IN_MASTER} in row["review"]
+
+
+def test_ambiguous_product_adds_product_multiple_review_with_candidate_ids():
+    row = _one("サンプル拡張 OP-14\n3@1,500円", _it([1, 2], "1,500円", "3"))
+    assert row["match_status"] == "ambiguous" and row["match_candidates"] == [1, 2]
+    assert {"line": 2, "kind": pf.REVIEW_PRODUCT_MULTIPLE, "candidates": [1, 2]} in row["review"]
+
+
+def test_matched_with_boundary_dropped_adds_product_boundary_review():
+    products = (
+        ProductEntry(id=1, product_code=None, mark=None, work_id=1, search_keywords=("サンプル拡張",), exclude_keywords=()),
+        ProductEntry(id=9, product_code=None, mark=None, work_id=1, search_keywords=("ab",), exclude_keywords=()),
+    )
+    masters = ProductFirstMasters(
+        product_entries=products, product_kubun={"1": "箱系", "9": "箱系"}, condition_unit=_CONDITION_UNIT, ignore_phrases=(),
+    )
+    row = _one("サンプル拡張 xabx\n3@1,500円", _it([1, 2], "1,500円", "3"), product_first=masters)
+    assert row["match_status"] == "matched" and row["product_id"] == 1
+    assert {"line": 2, "kind": pf.REVIEW_PRODUCT_BOUNDARY, "candidates": [9]} in row["review"]
+
+
+def test_matched_without_boundary_dropped_has_no_product_review():
+    row = _one("サンプル拡張\n3@1,500円", _it([1, 2], "1,500円", "3"))
+    assert row["match_status"] == "matched"
+    assert not {pf.REVIEW_PRODUCT_NOT_IN_MASTER, pf.REVIEW_PRODUCT_MULTIPLE, pf.REVIEW_PRODUCT_BOUNDARY} & set(_kinds(row))
 
 
 # --- 完売・記録 -------------------------------------------------------------------------------

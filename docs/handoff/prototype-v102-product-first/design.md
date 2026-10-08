@@ -42,3 +42,35 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 
 ## 触るファイル
 触るファイル: backend/app/services/gemini_raw_copy_v101.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/tools/prompt_ab.py, backend/app/tools/prompt_ab_recompute.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, backend/tests/test_prompt_ab.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（商品が決まらない件の理由）
+- 件の review に、unmatched は product_not_in_master、ambiguous は product_multiple（候補の id）、matched で boundary_dropped があれば product_boundary（消えた候補の id）を足す。試運転（extraction_shadow_svc.py）の要確認と同じ判定。状態・単位・商品の値は変えない。
+- 触るファイル: backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_product_first.py
+
+## 追記（作品をまたぐ曖昧な商品を前後の商品の作品で決める）
+- PO 決定（2026-10-08）：(a) 前後の商品が同じ作品なら決める。(b) 片側だけ・(c) 前後2件ずつの多数決は、落とす候補の作品がその投稿に無いときだけ決める。それ以外は要確認。
+- 手がかりは1回目に matched の件だけ（この処理で決めた件は手がかりにしない）。決めた件は match_status=matched_context・product_context（rule・手がかり・落とした候補）を持ち、決めた商品の分類で単位・状態を作り直す。決まらない件は product_multiple に context_reason を足す。product_first なし・v101 の出力は不変。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算（手元 sim2.py）と同じ決定|保存済み応答と本番マスタ相当で作り直し、決定・理由が試算と全件一致（r1 51/51・101/101、r2 53/53・100/100、不一致0）|
+|対象外の件は変わらない|main と本便のコードで同じ作り直しをして対象外の全欄の差分0件（r1 2,268件・r2 2,266件）|
+|既存の出力を壊さない|pytest（新規19件＋既存の v101/v102/prompt_ab 系）|
+
+- 触るファイル: backend/app/services/gemini_raw_copy_v102_context_work.py, backend/app/services/gemini_raw_copy_v101.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_context_work.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（品番らしい値は原文の書き方のまま前後が区切られているときだけ当たり）
+- 規則：match_product に strict_codes（既定 False）を足し、試作版 resolve_product_first だけ True で呼ぶ。True のとき、product_code・mark・検索ワードの各語のうち「fold 後の文字が英数字・区切り文字・記号(P*/S*)だけで、英字を含み、英数字が3文字以上」の値は、値の英数字を順に並べて文字の間に区切り文字（空白・ハイフン類・中黒・下線・ピリオド・アポストロフィ類。改行は除く）を0個以上許す正規表現に当たり、かつ前後が [a-z0-9] でないときだけ当たり。値の中の記号はパターンに入れない。かな・漢字を含む値、数字だけの値、2文字以下の値は今のまま。False のときは1文字も変えない。v6・試運転・tcg_shadow_review は変えない。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算と同じ結果|保存済み応答＋本番マスタ相当で、after3 の全件（r1 3,350・r2 3,352）の match_product の候補の変化が strict-sim/v2 の status_changes.tsv と全件一致（Re:ゼロ Vol.4 の候補外しは起きないのが正しい）。結果 6,702/6,702 一致|
+|本番・試運転の照合は不変|strict なしの match_product の出力が main と全件同じ（after3 の 6,702件で cmp 一致）＋テスト|
+|前後の商品で決める処理と合わせて矛盾なし|response_text から作り直し、matched_context の件数と一覧を main と比較（件数のみ PR に記載）|
+|境界で外れた候補は要確認に回る（意図した動き）|作り直しで product_boundary の要確認の増減を main と比較（r1 489→723、r2 492→726。一覧は手元の compare_boundary.txt）|
+
+- strict で外れた候補は boundary_dropped に入り、商品の境目の要確認（product_boundary）が付く。「境界のせいで外れたもの」を要確認に回す安全側の動きで、意図どおり。
+
+- 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
