@@ -143,4 +143,4 @@ PO 決定（2026-10-09）：ポケモンは型番だけで投稿されないた�
 
 - 外部事例：該当なし（使わない）。理由：判断の根拠は自社の実測（保存済み応答の再計算：誤り1件解消・正判定の喪失0）と PO の業務知識（ポケモンは型番だけで投稿されない）で足り、出典と数値のそろった外部事例は確認していないため、設計の根拠に使わない。
 - 維持の仕組み：対象の追加・解除は type_master.match_by_code の値の変更だけ（コード変更なし）。変換は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_name_only.py。
-- 触るファイル: migrations/20261009_100000_type_master_match_by_code.sql, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+- 触るファイル: migrations/20261009_100000_type_master_match_by_code.sql, scripts/run_all_migrations.sh, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
