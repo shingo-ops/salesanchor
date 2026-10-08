@@ -101,7 +101,9 @@ def _run(fakes, monkeypatch, *, costs=None, run_ids=("r1", "r2", "r3"), config="
         include_thoughts=True, use_schema=True, temperature=None,
     )
     kw.update(over)
-    return pab.run_ab(session if session is not None else MagicMock(), **kw)
+    if session is None:  # v102 の既定は DB の key raw_copy_v101_f_c を読むので、行がある偽 session を渡す
+        session = _db_session("DEFAULT_F_C_FROM_DB") if config == "v102" else MagicMock()
+    return pab.run_ab(session, **kw)
 
 
 def _lines(fakes):
@@ -673,16 +675,43 @@ def test_parse_args_v101_prompt_name(tmp_path):
 # ---------------------------------------------------------------------------
 
 
-def test_v102_config_calls_with_v101_schema_and_default_prompt_e(monkeypatch, v101_fakes):
-    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA, load_v101_prompt
+def test_v102_config_calls_with_v101_schema_and_default_prompt_f_c_from_db(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA
 
-    # Arrange / Act
-    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",))
+    # Arrange
+    session = _db_session("F_C_FROM_DB")
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), session=session)
     kwargs = v101_fakes.v8.call_args.kwargs
     # Assert
     assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
-    assert kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_e")
-    assert _lines(v101_fakes)[0]["prompt_name"] == "raw_copy_v101_e"
+    assert pab.V102_PROMPT == "raw_copy_v101_f_c"
+    assert session.execute.call_args.args[1] == {"key": "raw_copy_v101_f_c"}
+    assert kwargs["prompt_text"] == "F_C_FROM_DB"
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_name"], row["prompt_source"]) == ("raw_copy_v101_f_c", "db")
+
+
+def test_v102_default_stops_before_gemini_when_f_c_row_missing(monkeypatch, v101_fakes):
+    # Act
+    with pytest.raises(ValueError, match="raw_copy_v101_f_c"):
+        _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), session=_db_session(None))
+    # Assert
+    assert v101_fakes.v8.call_count == 0
+
+
+def test_v102_prompt_name_e_uses_file_not_db(monkeypatch, v101_fakes):
+    from app.services.gemini_raw_copy_v101 import load_v101_prompt
+
+    # Arrange
+    session = _db_session("SHOULD_NOT_BE_USED")
+    # Act
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), prompt_name="raw_copy_v101_e", session=session)
+    # Assert
+    row = _lines(v101_fakes)[0]
+    assert (row["prompt_name"], row["prompt_source"]) == ("raw_copy_v101_e", "file")
+    assert v101_fakes.v8.call_args.kwargs["prompt_text"] == load_v101_prompt("raw_copy_v101_e")
+    assert session.execute.call_count == 0
 
 
 def test_v102_prompt_name_b_can_be_chosen_and_default_e_differs_from_b():
@@ -883,14 +912,15 @@ _LEGACY_CTX = task.ExtractionContext(
 )
 
 
-def test_v102_default_run_uses_prompt_e_and_records_seven_omitted_fields(monkeypatch, v101_fakes):
+def test_v102_default_run_uses_prompt_f_c_and_records_seven_omitted_fields(monkeypatch, v101_fakes):
     # Arrange
     args = pab.parse_args([*_BASE_ARGS, "--config", "v102"])
     # Act
-    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field)
+    _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), omit_supplier_fields=args.omit_supplier_field,
+         session=_db_session("F_C_FROM_DB"))
     # Assert
     row = _lines(v101_fakes)[0]
-    assert row["prompt_name"] == "raw_copy_v101_e"
+    assert row["prompt_name"] == "raw_copy_v101_f_c"
     assert row["omitted_supplier_fields"] == sorted(pab.LEGACY_SUPPLIER_FIELDS)
     assert len(row["omitted_supplier_fields"]) == 7
 
