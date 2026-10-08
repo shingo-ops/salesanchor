@@ -774,6 +774,8 @@ def _extract_one(
         {k: product_first[k] for k in ("product_id", "product_category", "match_status", "match_candidates", "unit_basis")}
         if product_first is not None else {}
     )
+    if product_first is not None and product_first["score_decision"] is not None:
+        extra = {**extra, "product_score": product_first["score_decision"].as_dict()}
     return {
         **extra,
         "price_line": item["price_line"], "lines": list(item["lines"]), "roles": dict(shown_roles),

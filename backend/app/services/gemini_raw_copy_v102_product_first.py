@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.services.extraction_judgement_svc import MatchResult, ProductEntry, match_product, product_match_text
 from app.services.extraction_shadow_svc import load_product_entries
+from app.services.gemini_raw_copy_v102_score_select import ScoreDecision, decide_by_score
 from app.services.tcg_analyzer_svc import (
     _entry_hit,
     app_kubun_matches,
@@ -268,12 +269,16 @@ def _match_summary(match: MatchResult, masters: ProductFirstMasters) -> tuple[in
     return match.product_id, masters.product_kubun.get(str(match.product_id)) or PRODUCT_KUBUN_UNKNOWN
 
 
-def _product_reviews(match: MatchResult) -> list[dict]:
+def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> list[dict]:
     """商品が決まらない・境界で決まったときの要確認の理由の一覧（状態・単位・商品の値は変えない）。"""
     if match.status == "unmatched":
         return [{"kind": REVIEW_PRODUCT_NOT_IN_MASTER}]
     if match.status == "ambiguous":
-        return [{"kind": REVIEW_PRODUCT_MULTIPLE, "candidates": list(match.candidates)}]
+        suggestion = (
+            {"suggested_product_id": score.product_id, "suggest_rule": score.rule, "suggest_dropped": list(score.dropped)}
+            if score is not None else {}
+        )
+        return [{"kind": REVIEW_PRODUCT_MULTIPLE, "candidates": list(match.candidates), **suggestion}]
     if match.boundary_dropped:
         return [{"kind": REVIEW_PRODUCT_BOUNDARY, "candidates": list(match.boundary_dropped)}]
     return []
@@ -325,6 +330,7 @@ def resolve_product_first(
     if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
+    score = decide_by_score(match, masters.product_entries)
     product_id, product_kubun = _match_summary(match, masters)
     alias, unit_basis = find_unit_product_first(
         item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias, unit_alias_to_info
@@ -341,5 +347,6 @@ def resolve_product_first(
         "match_candidates": list(match.candidates),
         "unit": unit or NONE_VALUE, "unit_kubun": unit_kubun, "unit_basis": unit_basis,
         "condition": condition or NONE_VALUE, "condition_basis": basis,
-        "review_extra": [*_product_reviews(match), *reviews],
+        "review_extra": [*_product_reviews(match, score), *reviews],
+        "score_decision": score,
     }
