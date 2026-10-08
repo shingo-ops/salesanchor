@@ -38,3 +38,9 @@
 - 現状（origin/main 5da0d5964）：ambiguous は backend/app/services/gemini_raw_copy_v102_product_first.py の _product_reviews が product_multiple（候補 id のみ）を付けるだけ。前後の商品で決める処理は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 内 _apply_context_work。MatchResult は backend/app/services/extraction_judgement_svc.py L118-128 で、当たった品番・記号の情報を持たない。
 - 既存 ADR 検索：docs/adr/ を照合・商品特定のキーワードで検索（ADR-155 ほか。この規則を変える ADR は無し）。
 - 試算：手元 score-sim/v2（S1+S4）。after7 で r1 148・r2 147 件が決まり、原文で全件確認して誤り0。前後の商品で決めた件と両方決まる27件は全件一致。
+
+## 追記（商品の境目を要確認の理由から外す・2026-10-08）
+- 現状（origin/main 0066232b6）：backend/app/services/gemini_raw_copy_v102_product_first.py の _product_reviews が、matched で match.boundary_dropped があると product_boundary の要確認を付ける。戻り dict（resolve_product_first）に boundary_dropped の控えは無い。v101 は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 内 extra で、戻り dict から product_id・product_category・match_status・match_candidates・unit_basis だけを出力の行に移す。
+- 既存 ADR 検索：docs/adr/ を照合・商品特定・境界のキーワードで検索（ADR-155 ほか）。この規則を変える ADR は無し。
+- 集計（原文は書かない）：手元 boundary-1st/boundary.md。r1 733件・r2 736件。境界で落ちた候補 延べ約2,300 を原文で確かめ、落ちるべきでなかった候補 0。
+- 試運転 backend/app/services/extraction_shadow_svc.py:303 の product_boundary は別系統。本便では変えない。
