@@ -771,7 +771,10 @@ def _extract_one(
         unit_aliases=set(ctx.unit_alias_to_info), order=ctx.order, gemini_product_name=calc_name,
     )
     extra = (
-        {k: product_first[k] for k in ("product_id", "product_category", "match_status", "match_candidates", "unit_basis")}
+        {
+            k: product_first[k]
+            for k in ("product_id", "product_category", "match_status", "match_candidates", "match_boundary_dropped", "unit_basis")
+        }
         if product_first is not None else {}
     )
     if product_first is not None and product_first["score_decision"] is not None:
@@ -985,7 +988,8 @@ def _rejected_row(rejected: dict, ctx: V101Context) -> dict:
     if kind == REJECTED_PRICE:
         detail = {"field": "price", "copied": rejected["price"]}
     extra = (
-        {"product_id": None, "product_category": _NONE, "match_status": _NONE, "match_candidates": [], "unit_basis": _NONE}
+        {"product_id": None, "product_category": _NONE, "match_status": _NONE, "match_candidates": [],
+         "match_boundary_dropped": [], "unit_basis": _NONE}
         if ctx.product_first is not None else {}
     )
     return {

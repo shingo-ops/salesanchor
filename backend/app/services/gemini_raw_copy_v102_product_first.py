@@ -59,7 +59,6 @@ REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（試運転 extraction_shadow_svc.py の要確認と同じ判定・同じ意味）
 REVIEW_PRODUCT_NOT_IN_MASTER = "product_not_in_master"  # マスタに該当なし（unmatched）
 REVIEW_PRODUCT_MULTIPLE = "product_multiple"  # 候補が2件以上（ambiguous）
-REVIEW_PRODUCT_BOUNDARY = "product_boundary"  # 境界の条件で他の候補が消えて1つに決まった（matched）
 BASIS_UNIT_UNKNOWN = "R4:単位既定:単位不明"  # resolve_condition_v2 の basis の一部（tcg_analyzer_svc.py の R4b）
 REASON_KEYWORD_RANGE = "product_keyword_range"
 REASON_IGNORE_PHRASE = "ignore_phrase"
@@ -270,7 +269,10 @@ def _match_summary(match: MatchResult, masters: ProductFirstMasters) -> tuple[in
 
 
 def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> list[dict]:
-    """商品が決まらない・境界で決まったときの要確認の理由の一覧（状態・単位・商品の値は変えない）。"""
+    """商品が決まらないときの要確認の理由の一覧（状態・単位・商品の値は変えない）。
+
+    境界で他の候補が消えて決まったとき（boundary_dropped）は要確認にしない。控えは match_boundary_dropped に残る。
+    """
     if match.status == "unmatched":
         return [{"kind": REVIEW_PRODUCT_NOT_IN_MASTER}]
     if match.status == "ambiguous":
@@ -279,8 +281,6 @@ def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> 
             if score is not None else {}
         )
         return [{"kind": REVIEW_PRODUCT_MULTIPLE, "candidates": list(match.candidates), **suggestion}]
-    if match.boundary_dropped:
-        return [{"kind": REVIEW_PRODUCT_BOUNDARY, "candidates": list(match.boundary_dropped)}]
     return []
 
 
@@ -345,6 +345,7 @@ def resolve_product_first(
     return {
         "product_id": product_id, "product_category": product_kubun, "match_status": match.status,
         "match_candidates": list(match.candidates),
+        "match_boundary_dropped": list(match.boundary_dropped),
         "unit": unit or NONE_VALUE, "unit_kubun": unit_kubun, "unit_basis": unit_basis,
         "condition": condition or NONE_VALUE, "condition_basis": basis,
         "review_extra": [*_product_reviews(match, score), *reviews],

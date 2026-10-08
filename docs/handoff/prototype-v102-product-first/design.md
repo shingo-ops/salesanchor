@@ -92,6 +92,24 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 - 守り手：backend/tests/test_gemini_raw_copy_v102_score_select.py（S1・S4・決めない・前後の商品で決めた件は不変・product_first なしの出力不変）。
 - 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_score_select.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/services/gemini_raw_copy_v101.py, backend/tests/test_gemini_raw_copy_v102_score_select.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
 
+## 追記（商品の境目を要確認の理由から外す・2026-10-08）
+PO 決定（2026-10-08「3つともy」）：商品の境目（product_boundary）で件を要確認に回さず、配信の対象にする。落ちた候補の一覧は透明性のため残す。
+
+- _product_reviews から boundary_dropped の分岐と定数 REVIEW_PRODUCT_BOUNDARY を外す（ほかの参照なし）。
+- resolve_product_first の戻り dict に match_boundary_dropped（落ちた候補の id の一覧・要確認ではない控え）を足す。
+- v101 の extra に match_boundary_dropped を足し、出力の行に同名の欄で残す。落とした件（_rejected_row）は空の一覧。
+- 試運転 extraction_shadow_svc.py・MatchResult・v6・単位・状態・context_work・score_select の判定・DB・マスタ・フロントは触らない。
+
+|基準|検証方法|
+|---|---|
+|要確認から消える|本番 recompute（after9 入力 r1/r2）で review の kind=product_boundary が 0 件|
+|ほかは不変|product_id・match_status・unit・condition・ほかの review の kind の件数がデプロイ前と同じ|
+|控えが残る|match_boundary_dropped が空でない行の数が、デプロイ前の product_boundary の件数と同じ|
+
+- 外部事例：検知した「疑わしい」印のうち、人手で全件検証して誤検知 0 だったルールを、人の確認キューから外して記録だけ残す運用（アラート疲れを避けるため根拠が固まった警告を降格し、監査用ログとして保持する）。
+- 守り手：backend/tests/test_gemini_raw_copy_v102_product_first.py（test_matched_with_boundary_dropped_keeps_record_without_product_boundary_review・test_matched_without_boundary_dropped_has_no_product_review）。
+- 触るファイル: backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/services/gemini_raw_copy_v101.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
 ## 追記（除外ワードにも前後が区切られているときだけ当たりを当てる）
 - PO 決定（2026-10-08「3つともy」）。規則：match_product の strict_codes=True（試作版 v102 だけ）のとき、除外ワードの各値に _strict_code_hits を当て、None でなければその結果で判定。None（2文字以下・数字だけ・日本語を含む等）は今どおり正規化した部分一致。strict_codes=False（v6・試運転）は1文字も変えない。_is_candidate の呼び出しは変えない。
 - 基準と検証方法：
