@@ -11,6 +11,7 @@
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME] [--prompt-key raw_copy_v101_NAME]
         [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
+（--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_c）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
 extraction_shadow_runs / extraction_jobs など本番の表には書かない。
@@ -66,6 +67,7 @@ from app.services.gemini_raw_copy_v101 import (
     extract_v101_items,
     parse_v101_response,
 )
+from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
@@ -215,15 +217,22 @@ def _parse(config: str, response_text: str, raw_text: str, masters: dict | None 
     return len(items), errors
 
 
-def _load_v10_masters(session: Session) -> dict:
-    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。"""
+def _load_v10_masters(session: Session, *, product_first: bool = False) -> dict:
+    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。
+
+    product_first（試作版 v102）のときだけ、商品・商品の分類・状態ごとの単位・単位にしない言い回しも読む。
+    これらが空なら ValueError で止める。v10・v101 には足さない（**masters で展開されるため）。
+    """
     cond_entries = load_condition_entries(session)
     status_entries = load_status_master(session)
     (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
-    return {
+    masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
     }
+    if product_first:
+        return {**masters, "product_first": load_product_first_masters(session)}
+    return masters
 
 
 def _v10_row_fields(response_text: str, ctx, masters: dict) -> dict:
@@ -252,16 +261,27 @@ def _v101_row_fields(response_text: str, ctx, masters: dict) -> dict:
 
 
 def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
-    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。"""
+    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+
+    落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
+    """
     try:
-        items, _errors = parse_v101_response(response_text, ctx.raw_text, status_entries=masters["status_entries"])
+        items, errors = parse_v101_response(
+            response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
+        )
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         extracted, flags = extract_v101_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, **masters
+            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters
         )
+        if not items and errors:
+            flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         return {"v102_items": extracted, "v102_flags": flags}
     except Exception as exc:  # noqa: BLE001
-        return {"v102_items": [], "v102_flags": {}, "v102_items_error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}
+        message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
+        return {
+            "v102_items": [], "v102_items_error": message,
+            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}]},
+        }
 
 
 def _append_jsonl(path: Path, row: dict) -> None:
@@ -284,6 +304,7 @@ def resolve_prompt_path(prompt_name: str, config: str = "v9") -> Path:
 
 
 _PROMPT_KEY_CONFIGS = ("v101", "v102")
+V102_PROMPT = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定の指示書（DB の prompt_key）
 _PROMPT_KEY_SQL = """
     SELECT prompt_text FROM public.extraction_prompt_config
     WHERE prompt_key = :key AND is_active = TRUE
@@ -480,6 +501,8 @@ def run_ab(
     job_ids = fetch_job_ids(session, run_ids)
     if prompt_key is not None and (config not in _PROMPT_KEY_CONFIGS or prompt_name is not None):
         raise ValueError("--prompt-key は --config v101・v102 のときだけ、--prompt-name なしで使えます")
+    if config == "v102" and prompt_name is None and prompt_key is None:
+        prompt_key = V102_PROMPT
     v8_prompt = _load_prompt_text(config, prompt_name, prompt_key, session)  # 名前・ファイル・行の誤りはここで止まる（Gemini を呼ぶ前）
     prompt_source = "db" if prompt_key is not None else (None if config == "v7" else "file")
     prompt_sha256 = hashlib.sha256(v8_prompt.encode("utf-8")).hexdigest() if v8_prompt is not None else None
@@ -499,7 +522,9 @@ def run_ab(
         _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields, rules, rules_sha256)
         return summary
 
-    masters = _load_v10_masters(session) if config in ("v10", "v101", "v102") else None  # dry-run では読まない
+    masters = (  # dry-run では読まない
+        _load_v10_masters(session, product_first=(config == "v102")) if config in ("v10", "v101", "v102") else None
+    )
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     for run_id in run_ids:
         job_id = job_ids.get(run_id)
@@ -591,7 +616,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
-    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 raw_copy_v101_e）を指示書にする")
+    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_c）を指示書にする")
     p.add_argument("--prompt-key", help="--config v101・v102 のみ。public.extraction_prompt_config の prompt_key（raw_copy_v101_<名前>、is_active）の本文を指示書にする。--prompt-name とは同時に使えない")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")

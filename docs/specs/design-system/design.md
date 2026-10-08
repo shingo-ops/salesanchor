@@ -2147,3 +2147,35 @@ AW-2a 対象（origin/main 57090e45、evidence: 本便で保存する aw2a-recon
 | 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook |
 
 Architect 自己審査（AW-2a）: APPROVE。外観は AW-1 の実測で同等、配置は残し、未使用規則のみ削除。同一AI の自己審査であり独立第二者レビューではない。AW-2b は REVISE のまま。
+
+
+#### AW-2a 結果と AW-2b 追補（2026-10-08）
+
+AW-2a: PR #4016 merge 5bc79ef9710133af21bef437423ab0d02ecfda60（2026-10-07T13:16:48Z、必須15/15成功、Karte Visual Gate 合格）、Deploy 37627254081 success。本番 CSS index-C71hvLDM.css で page-header-select 0・select.right-panel-field 0・comp-select--karte 2、残る `.inbox-platform-select{flex-shrink:0;margin-left:auto}`。app/api 200。GO 原文は PO 本人の「GO #4016GO #4016」。マージは main の strict 必須チェック（strict_required_status_checks_policy=true、必須15）と merge-safe の CLEAN 要件により、main が短時間に連続で進む時間帯（2026-10-07 05:26〜05:37Z に6件、各マージ後に台帳自動DONE化PRが1件続く）は BEHIND で繰り返し停止した。運用の改善（待ち行列等）は別テーマとして PO 判断待ち。
+
+AW-2b 対象: origin/main c0936057e の生 select 63 から保留10（ProductEditPage 9、CommissionPanel 1）を除く53。証跡 evidence-20260910/aw2b-plan.{json,md}、aw2b-css-verbatim.md。サイズは文字の大きさの既存トークンで md 45・sm 8、幅いっぱい（fullWidth）38。
+
+移管規則（PO 方針「一般フォームは標準に統一」による。見た目は標準の金型になる）:
+- 全件 `SelectControl`（children モード、option・式・value・onChange・aria・disabled・required は逐語保持）。size は aw2b-plan の値、width:100% が効いていたものは fullWidth。
+- className は配置だけの class（field-w-sm、gs-select、account-settings-lang-select）を残し、外観・寸法の class（field、field-h-md、search-input、schedule-input、inbox-page-filter-select、inbox-settings-select、conv-logs-filter-select、manual-record-select）は外す。ただし e2e/単体試験が参照している class は残す（実装時に grep で確認）。
+- InventoryPage の inline style（装飾のみ）は削除。移管した select に付く ui-allow 9行は削除。
+
+CSS:
+- components.css の `.form-group select` と `.form-group select:focus` を選択子リストから外す（input/textarea の規則は不変）。
+- company-forms.css の `.form-grid > .form-row select`、`.modal-content(-wide) .form-row select` と各 `:focus` を選択子リストから外す。
+- 保留中の商品編集9件の見た目を保つため、company-forms.css の商品編集専用規則から select を独立させ、これまで `.form-group select` から受けていた宣言を同じ値で写す。focus 時も現行の計算値（後段の商品編集規則が枠色を上書きしている）と一致させる。一致は Chromium 実測で確認する。
+- `.gs-select` は `flex: 1` のみ、`.account-settings-lang-select` は `min-width` のみ残し、`:focus` は削除。`.inbox-page-filter-select` と `.inbox-settings-select` は削除。`.schedule-input`（input 6件が使用）、`.field-*`、`.filter-bar select`（生 select の利用0、既存金型の未確認利用あり）は本便で変更しない。
+
+変わる見た目（PR に前後表を載せる）: 一般フォームの選択欄は、右余白が広がり（矢印の場所）、角丸が金型の値になり、矢印が共通の形になる。商品マスタ等の既存金型8件も、これまで上書きで消えていた矢印が表示されるようになる。小さい文字（font-xs）だった受信箱のページ絞り込みと在庫の「その他」は font-sm になる。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 53件の非外観属性・children が不変 | AST 照合（タグ名・className・size/fullWidth・style・ui-allow 以外の差分0） |
+| 保留10件の見た目が不変 | Chromium 実測で商品編集 select（通常・focus）と CommissionPanel の computed style を変更前後で比較し差分0 |
+| 変わる見た目を事前に提示 | 代表グループごとに変更前後の computed style（px）を実測し PR に表で記載 |
+| 新規トークン・直書き 0 | check:all、check:new-tokens、design-token ratchet、ui-governance、目視 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AW-2b）: APPROVE（PO 方針どおり標準へ統一、保留10件は実測で不変を確認する設計、配線・データ不変）。同一AI の自己審査であり独立第二者レビューではない。

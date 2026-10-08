@@ -13,6 +13,7 @@ import { HeaderButton } from "../../../components/HeaderButton";
 import { DataTable, type DataTableColumn } from "../../../components/DataTable";
 import { EmptyState } from "../../../components/EmptyState";
 import { TextField } from "../../../components/TextField";
+import { SelectControl } from "../../../components/Select";
 import { Drawer } from "../../../components/Drawer";
 import ConfirmModal from "../../../components/ConfirmModal";
 import { STATUS_ICONS } from "../../../constants/icons";
@@ -307,9 +308,8 @@ export function StatusMasterPanel() {
             </div>
             <div className="form-group">
               <label className="field-label">{t(`${f}.matchType`)} *</label>
-              {/* ui-allow: enum select for status match_type; no SelectControl variant with option map (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.match_type}
                 onChange={e => setForm({ ...form, match_type: e.target.value })}
                 required
@@ -317,13 +317,12 @@ export function StatusMasterPanel() {
                 {MATCH_TYPE_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <label className="field-label">{t(`${f}.effect`)} *</label>
-              {/* ui-allow: enum select for status effect; no SelectControl variant with option map (#3594) */}
-              <select
-                className="field field-h-md"
+              <SelectControl
+                fullWidth
                 value={form.effect}
                 onChange={e => setForm({ ...form, effect: e.target.value })}
                 required
@@ -331,7 +330,7 @@ export function StatusMasterPanel() {
                 {EFFECT_OPTIONS.map(opt => (
                   <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </select>
+              </SelectControl>
             </div>
             <div className="form-group">
               <TextField

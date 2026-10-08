@@ -150,20 +150,7 @@
 
 /* Language select */
 .account-settings-lang-select {
-  padding: var(--space-1) var(--space-3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--font-sm);
-  cursor: pointer;
   min-width: var(--size-lang-select-min);
-}
-
-.account-settings-lang-select:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring-shadow);
 }
 
 .account-settings-success {
