@@ -100,6 +100,20 @@ final class LineExportFlow {
      */
     private static final int GLOBAL_ACTION_LOCK_SCREEN = 8;
 
+    /**
+     * 施錠(performGlobalAction)前に待つ時間。2026-10-08実機（0.3.0-stage2）で発生した
+     * 不具合の対策: GestureCompat.tapのdispatchGestureは非同期で、戻り値trueは「OSが
+     * 受理した」だけで「指の動きの再生が終わった」ではない（タップ自体は80ms）。EDITタップ
+     * 直後に施錠すると、再生が終わる前に画面がロックされてジェスチャが取り消され、Termuxの
+     * 保存ダイアログのEDITが押されずに残ったまま施錠される（実機で確認、送信が止まった）。
+     * 80msのタップ再生に加え、Termuxの保存ダイアログがタップを処理して次の画面へ進む余裕を
+     * 見て2秒。失敗で中止した経路（ジェスチャを出していない場合もある）と区別すると実装が
+     * 複雑になるため、安全側に倒してlockOnFinishの全経路で一律この時間だけ待ってから施錠する
+     * （成功例の合図からreceived okまでの所要は40秒前後であり、2秒の追加は全体への影響が
+     * 無視できる）。
+     */
+    private static final long LOCK_DELAY_AFTER_EDIT_MS = 2000L;
+
     private static final int NOTIFICATION_ID_EXPORT = 1003;
 
     /** 完了時にUnlockAccessibilityServiceへ戻すためのコールバック（exportRunningフラグの解除用）。 */
@@ -508,7 +522,7 @@ final class LineExportFlow {
         String recentClasses = success ? "" : service.recentWindowClassNames();
         service.stopWindowRecording();
         long elapsed = System.currentTimeMillis() - flowStartedAt;
-        String title = success ? "書き出し: 成功" : "書き出し: 失敗";
+        final String title = success ? "書き出し: 成功" : "書き出し: 失敗";
         String stagePart = success ? "" : ("段階: " + failedStage + " / ");
         String body = stagePart + elapsed + "ms / " + stepTimings.toString().trim();
         if (!success && recentClasses.length() > 0) {
@@ -517,18 +531,41 @@ final class LineExportFlow {
             // 到達判定に戻せる。
             body += " / 最近のクラス名: " + recentClasses;
         }
-        if (lockOnFinish) {
-            // RUN_ALLのときだけ施錠する（EXPORT単体は検証用で解除状態を保つ）。送信結果は
-            // 待たない（Termux側は画面と無関係に送信を続けるため）。成功時はEDITタップ完了
-            // 直後にここへ到達し、失敗で中止した場合も（解除したまま放置するのを避けるため）
-            // 同じくここで施錠する。施錠の成否はflow全体の成否(success)には影響させない。
-            boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
-            body += " / 施錠:" + locked;
+        final String bodyBeforeLock = body;
+
+        if (!lockOnFinish) {
+            postResultNotification(service, title, bodyBeforeLock);
+            if (listener != null) {
+                listener.onFinished();
+            }
+            return;
         }
-        postResultNotification(service, title, body);
-        if (listener != null) {
-            listener.onFinished();
-        }
+
+        // RUN_ALLのときだけ施錠する（EXPORT単体は検証用で解除状態を保つ）。送信結果は
+        // 待たない（Termux側は画面と無関係に送信を続けるため）。施錠の成否はflow全体の
+        // 成否(success)には影響させない。
+        //
+        // 2026-10-08実機（0.3.0-stage2）で発生した不具合: GestureCompat.tapの
+        // dispatchGestureは非同期で、戻り値trueは「OSが受理した」だけで「指の動きの
+        // 再生が終わった」ではない。EDITタップ直後に施錠していたため、再生が終わる前に
+        // 画面がロックされてジェスチャが取り消され、Termuxの保存ダイアログのEDITが
+        // 押されずに残ったまま施錠されてしまい、送信が止まった。
+        // まずGestureCompat.drainCallbackSummary()でOS側のジェスチャ完了/取消を確認し
+        // （既存の仕組み、最大300ms待ち合わせ）、そのうえでLOCK_DELAY_AFTER_EDIT_MS
+        // （最低2秒）待ってから施錠する。失敗で中止した経路（ジェスチャを出していない
+        // 場合もある）と区別すると実装が複雑になるため、安全側に倒して一律この手順を通す。
+        final String gestureSummary = GestureCompat.drainCallbackSummary();
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+                String finalBody = bodyBeforeLock + " / " + gestureSummary + " / 施錠:" + locked;
+                postResultNotification(service, title, finalBody);
+                if (listener != null) {
+                    listener.onFinished();
+                }
+            }
+        }, LOCK_DELAY_AFTER_EDIT_MS);
     }
 
     /** 対象グループ名設定（カンマ区切り）の先頭要素。空ならNotifyStoreの既定値を使う。 */
