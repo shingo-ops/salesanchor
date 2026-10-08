@@ -59,3 +59,15 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 |既存の出力を壊さない|pytest（新規19件＋既存の v101/v102/prompt_ab 系）|
 
 - 触るファイル: backend/app/services/gemini_raw_copy_v102_context_work.py, backend/app/services/gemini_raw_copy_v101.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_context_work.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（品番らしい値は原文の書き方のまま前後が区切られているときだけ当たり）
+- 規則：match_product に strict_codes（既定 False）を足し、試作版 resolve_product_first だけ True で呼ぶ。True のとき、product_code・mark・検索ワードの各語のうち「fold 後の文字が英数字・区切り文字・記号(P*/S*)だけで、英字を含み、英数字が3文字以上」の値は、値の英数字を順に並べて文字の間に区切り文字（空白・ハイフン類・中黒・下線・ピリオド・アポストロフィ類。改行は除く）を0個以上許す正規表現に当たり、かつ前後が [a-z0-9] でないときだけ当たり。値の中の記号はパターンに入れない。かな・漢字を含む値、数字だけの値、2文字以下の値は今のまま。False のときは1文字も変えない。v6・試運転・tcg_shadow_review は変えない。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算と同じ結果|保存済み応答＋本番マスタ相当で、after3 の全件（r1 3,350・r2 3,352）の match_product の候補の変化が strict-sim/v2 の status_changes.tsv と全件一致（Re:ゼロ Vol.4 の候補外しは起きないのが正しい）。結果 6,702/6,702 一致|
+|本番・試運転の照合は不変|strict なしの match_product の出力が main と全件同じ（after3 の 6,702件で cmp 一致）＋テスト|
+|前後の商品で決める処理と合わせて矛盾なし|response_text から作り直し、matched_context の件数と一覧を main と比較（件数のみ PR に記載）|
+
+- 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

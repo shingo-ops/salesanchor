@@ -626,3 +626,84 @@ class TestMatchProductShortBoundary:
         short = _product(id_=1, mark="M", exclude_keywords=("MEGA",))
         result = match_product("MEGA", [short])
         assert result.boundary_dropped == ()
+
+
+class TestMatchProductStrictCodes:
+    """strict_codes=True：品番らしい値は、原文の書き方のまま前後が区切られているときだけ当たり。"""
+
+    @staticmethod
+    def _hits(text, products, **kwargs):
+        return match_product(text, products, **kwargs).candidates
+
+    def test_ex10_does_not_hit_inside_100_price(self):
+        ex10 = _product(id_=1, mark="EX10")
+        assert self._hits("バイオレットex 100@10700", [ex10], strict_codes=True) == ()
+        assert self._hits("バイオレットex 100@10700", [ex10]) == (1,)
+
+    def test_ex12_does_not_hit_across_line_break(self):
+        ex12 = _product(id_=1, mark="EX12")
+        text = "◆バイオレットex\n12BOX@11,300円"
+        assert self._hits(text, [ex12], strict_codes=True) == ()
+        assert self._hits(text, [ex12]) == (1,)
+
+    def test_sv7_does_not_hit_sv7a_but_sv7a_does(self):
+        sv7 = _product(id_=1, product_code="SV7")
+        sv7a = _product(id_=2, product_code="SV7a")
+        text = "◉ 楽園ドラゴーナ [SV7a]"
+        assert self._hits(text, [sv7, sv7a], strict_codes=True) == (2,)
+        assert self._hits(text, [sv7, sv7a]) == (1, 2)
+
+    def test_ard_does_not_hit_inside_card(self):
+        ard = _product(id_=1, mark="ARD")
+        text = "ONE PIECE CARD THE BEST"
+        assert self._hits(text, [ard], strict_codes=True) == ()
+        assert self._hits(text, [ard]) == (1,)
+
+    def test_rb01_does_not_hit_prb01_but_prb01_forms_do(self):
+        rb01 = _product(id_=1, product_code="RB01")
+        prb_dash = _product(id_=2, product_code="PRB-01")
+        prb = _product(id_=3, product_code="PRB01")
+        result = self._hits("◆PRB-01", [rb01, prb_dash, prb], strict_codes=True)
+        assert result == (2, 3)
+
+    def test_hyphen_and_no_hyphen_both_hit_either_form(self):
+        dash = _product(id_=1, product_code="EB-01")
+        plain = _product(id_=2, product_code="EB01")
+        for text in ("◆EB-01", "EB01 メモリアル"):
+            assert self._hits(text, [dash, plain], strict_codes=True) == (1, 2)
+
+    def test_apostrophe_variants_hit(self):
+        day = _product(id_=1, search_keywords=("DAY'25",))
+        assert self._hits("DAY’25", [day], strict_codes=True) == (1,)
+
+    def test_keyword_with_kana_keeps_existing_rule(self):
+        title = _product(id_=1, search_keywords=("「Re:ゼロから始める異世界生活」Vol.4",))
+        text = "Re:ゼロから始める異世界生活 Vol.4"
+        assert self._hits(text, [title], strict_codes=True) == (1,)
+        assert self._hits(text, [title]) == (1,)
+
+    def test_short_and_digit_only_values_keep_existing_rule(self):
+        short = _product(id_=1, mark="EX")
+        digits = _product(id_=2, mark="2025")
+        text = "EX 12025x"
+        assert self._hits(text, [short, digits], strict_codes=True) == self._hits(text, [short, digits])
+
+    def test_symbol_in_value_is_not_in_pattern_and_boundary_is_checked(self):
+        sm5 = _product(id_=1, mark="SM5+")
+        assert self._hits("SM5S", [sm5], strict_codes=True) == ()
+        assert self._hits("SM5S", [sm5]) == (1,)
+
+    def test_symbol_value_hits_when_written_with_plus(self):
+        sm5 = _product(id_=1, mark="SM5+")
+        assert self._hits("SM5+", [sm5], strict_codes=True) == (1,)
+        assert self._hits("SM5＋", [sm5], strict_codes=True) == (1,)
+
+    def test_default_output_is_identical_without_strict_codes(self):
+        products = [
+            _product(id_=1, mark="EX10"),
+            _product(id_=2, product_code="RB01", search_keywords=("ワンピース BOX",)),
+            _product(id_=3, mark="M"),
+        ]
+        text = "バイオレットex 100@10700 PRB-01 ワンピース BOX M"
+        assert match_product(text, products) == match_product(text, products, strict_codes=False)
+        assert match_product(text, products).candidates == (1, 2, 3)
