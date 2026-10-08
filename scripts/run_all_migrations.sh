@@ -881,3 +881,6 @@ run_sql migrations/20261006_170200_add_supplier_new_system_rules.sql
 
 # 試作版 v102: 単位にしない言い回しマスタ line_unit_ignore_phrases 新設（構造のみ・値は画面から登録・冪等）
 run_sql migrations/20261008_100000_create_line_unit_ignore_phrases.sql
+
+# 試作版 v102: 中分類マスタ type_master に match_by_code（型番で決めるかの印）を追加（構造のみ・値は運用で付ける・冪等）
+run_sql migrations/20261009_100000_type_master_match_by_code.sql

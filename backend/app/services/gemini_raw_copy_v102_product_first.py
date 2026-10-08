@@ -18,7 +18,13 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.extraction_judgement_svc import MatchResult, ProductEntry, match_product, product_match_text
+from app.services.extraction_judgement_svc import (
+    MatchResult,
+    ProductEntry,
+    match_product,
+    normalize_for_match,
+    product_match_text,
+)
 from app.services.extraction_shadow_svc import load_product_entries
 from app.services.gemini_raw_copy_v102_score_select import ScoreDecision, decide_by_score
 from app.services.tcg_analyzer_svc import (
@@ -91,9 +97,37 @@ _IGNORE_PHRASES_SQL = """
 """
 
 
+_NAME_ONLY_WORKS_SQL = "SELECT id FROM public.type_master WHERE match_by_code = FALSE"
+
+
+def apply_name_only_works(entries: Sequence[ProductEntry], name_only_work_ids: frozenset[int]) -> tuple[ProductEntry, ...]:
+    """型番で決めない中分類（印 match_by_code = FALSE）の商品から、品番・マーク・それと同じ検索ワードを外す（純粋関数）。
+
+    同じ検索ワード：normalize_for_match した語全体が、有効な全商品（全作品）の品番またはマークの正規化値と一致する検索ワード。
+    印のない中分類の商品・除外ワードは変えない。印の中分類が無ければ entries と同じ内容を返す。
+    """
+    if not name_only_work_ids:
+        return tuple(entries)
+    code_values = {
+        normalize_for_match(raw) for e in entries for raw in (e.product_code, e.mark) if raw
+    }
+    code_values.discard("")
+    return tuple(
+        dataclass_replace(
+            e, product_code=None, mark=None,
+            search_keywords=tuple(k for k in e.search_keywords if normalize_for_match(k) not in code_values),
+        ) if e.work_id in name_only_work_ids else e
+        for e in entries
+    )
+
+
 def load_product_first_masters(session: Session) -> ProductFirstMasters:
-    """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。"""
-    entries = tuple(load_product_entries(session))
+    """商品・商品の分類・状態ごとの単位・単位にしない言い回しを読む（読み取りのみ）。商品・分類・状態の単位が空なら止める。
+
+    商品は、型番で決めない中分類（type_master.match_by_code = FALSE）の分だけ、品番・マーク・型番と同じ検索ワードを外す。
+    """
+    name_only = frozenset(int(r[0]) for r in session.execute(text(_NAME_ONLY_WORKS_SQL)).fetchall())
+    entries = apply_name_only_works(load_product_entries(session), name_only)
     kubun_map = dict(load_product_kubun_type_map(session))
     cond_unit = {str(r[0]): str(r[1]) for r in session.execute(text(_CONDITION_UNIT_SQL)).fetchall()}
     phrases = tuple(str(r[0]) for r in session.execute(text(_IGNORE_PHRASES_SQL)).fetchall() if r[0])
