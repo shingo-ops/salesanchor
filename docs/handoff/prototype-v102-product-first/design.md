@@ -141,6 +141,6 @@ PO 決定（2026-10-09）：ポケモンは型番だけで投稿されないた�
 |v6・試運転・レビュー画面は不変|共有関数を触っていない（git diff）＋既存テスト全通過|
 |マスタのデータは不変|migration に UPDATE・INSERT・DELETE が無い（目視と grep）|
 
-- 外部事例：検索の同義語・識別子の扱いをカテゴリごとの設定で切り替える運用（EC サイト検索で型番検索をカテゴリ属性のフラグで有効・無効にする構成。対象の付け替えは設定の変更だけで済み、コードは変えない）。
+- 外部事例：該当なし（使わない）。理由：判断の根拠は自社の実測（保存済み応答の再計算：誤り1件解消・正判定の喪失0）と PO の業務知識（ポケモンは型番だけで投稿されない）で足り、出典と数値のそろった外部事例は確認していないため、設計の根拠に使わない。
 - 維持の仕組み：対象の追加・解除は type_master.match_by_code の値の変更だけ（コード変更なし）。変換は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_name_only.py。
 - 触るファイル: migrations/20261009_100000_type_master_match_by_code.sql, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
