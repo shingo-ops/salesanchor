@@ -676,6 +676,10 @@ class TestMatchProductStrictCodes:
         day = _product(id_=1, search_keywords=("DAY'25",))
         assert self._hits("DAY’25", [day], strict_codes=True) == (1,)
 
+    def test_acute_accent_separator_hits(self):
+        day = _product(id_=1, search_keywords=("DAY´25",))
+        assert self._hits("DAY´25", [day], strict_codes=True) == (1,)
+
     def test_keyword_with_kana_keeps_existing_rule(self):
         title = _product(id_=1, search_keywords=("「Re:ゼロから始める異世界生活」Vol.4",))
         text = "Re:ゼロから始める異世界生活 Vol.4"

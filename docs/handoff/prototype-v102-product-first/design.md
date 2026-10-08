@@ -69,5 +69,8 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 |試算と同じ結果|保存済み応答＋本番マスタ相当で、after3 の全件（r1 3,350・r2 3,352）の match_product の候補の変化が strict-sim/v2 の status_changes.tsv と全件一致（Re:ゼロ Vol.4 の候補外しは起きないのが正しい）。結果 6,702/6,702 一致|
 |本番・試運転の照合は不変|strict なしの match_product の出力が main と全件同じ（after3 の 6,702件で cmp 一致）＋テスト|
 |前後の商品で決める処理と合わせて矛盾なし|response_text から作り直し、matched_context の件数と一覧を main と比較（件数のみ PR に記載）|
+|境界で外れた候補は要確認に回る（意図した動き）|作り直しで product_boundary の要確認の増減を main と比較（r1 489→723、r2 492→726。一覧は手元の compare_boundary.txt）|
+
+- strict で外れた候補は boundary_dropped に入り、商品の境目の要確認（product_boundary）が付く。「境界のせいで外れたもの」を要確認に回す安全側の動きで、意図どおり。
 
 - 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

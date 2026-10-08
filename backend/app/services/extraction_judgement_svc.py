@@ -134,6 +134,8 @@ _CODE_SEPARATOR_CHARS = (
     " \u3000-\u2010\u2011\u2013\u2014\u2015\u30fc\u2212\u30fb_.'\u2019\u2018\u00b4\u0301`"
 )
 _CODE_SEPARATOR_RE = "[" + "".join(re.escape(ch) for ch in _CODE_SEPARATOR_CHARS) + "]*"
+# 区切り文字のうち normalize_for_match で消えずに nb に残るもの（ー と結合アクセント U+0301）。事前絞り込みで除く。
+_NB_SEPARATORS_REMOVED = {ord("ー"): None, 0x0301: None}
 _ALNUM_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789")
 _LETTER_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz")
 _CODE_PATTERN_CACHE_SIZE = 16384
@@ -169,7 +171,7 @@ def _strict_code_hits(raw: str, nb: str, folded: str) -> bool | None:
     if compiled is None:
         return None
     alnum, pattern = compiled
-    if alnum not in nb and not ("ー" in nb and alnum in nb.replace("ー", "")):
+    if alnum not in nb and alnum not in nb.translate(_NB_SEPARATORS_REMOVED):
         return False
     return pattern.search(folded) is not None
 
