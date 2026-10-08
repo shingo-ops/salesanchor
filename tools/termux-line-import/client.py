@@ -311,17 +311,30 @@ class Outbox:
     # -- sending ----------------------------------------------------------------
 
     def _build_payload(self, raw):
-        """送るバイト列を決める。戻り値は (payload_or_None, new_watermark_or_None, basis)。
+        """送るバイト列を決める。戻り値は
+        (payload_or_None, new_watermark_or_None, new_tail_count_or_None, basis)。
 
         基準（sent_watermark）が無ければ原本をそのまま返す（現状と同じ挙動。
         design.md「送るものの決め方」3）。基準があり、新規メッセージが1件も無ければ
         payloadはNoneになる（呼び出し側はジョブをskippedにして送らない）。
 
-        新規の有無は『基準と同じtimestampを持つ、ファイル内で一番後ろのメッセージより
-        さらに後に何かあるか』で判定する（timestampの単純な不等号ではない）。これは、
-        同一分に複数メッセージが入る実測（recon事実5: 最大4件/分）があり、新規メッセージの
-        timestampが基準と文字列として同じになり得るため。基準送信は常にファイル末尾まで
-        含んでいたので、基準と同じtimestampの最後尾の次から先が常に『まだ送っていない』。
+        新規の有無は次の『いずれか』で判定する（design.md追補 2026-10-08）:
+        1. 基準と同じtimestampを持つ、ファイル内で一番後ろのメッセージより
+           さらに後に何かある（従来の判定。基準送信は常にファイル末尾まで
+           含んでいたので、これより後は必ず『まだ送っていない』）。
+        2. 基準と同じtimestamp（同一分）のメッセージの件数が、前回送信時に
+           記録した件数（sent_watermark_tail_count）より増えている。
+        1だけでは『基準と同じ分に新規が1件増え、その後により新しい時刻の
+        メッセージが続かない』場合を検知できない（recon事実5: 同一分最大4件、
+        17%が同一分）。その新規はtimestampが基準と文字列として同じになるため、
+        次に別の時刻のメッセージが届くまで送信が遅れてしまう（60分の重なりで
+        いずれ失われずに送られるが、鮮度を求める今回の目的に反する）。2はこの
+        穴を閉じる。
+
+        sent_watermark_tail_countが無い（本改修前のDBから移行した直後）場合は
+        安全側に倒し、新規ありとして扱う。一度だけ必要以上に送るだけで済み、
+        取りこぼす方が重大なため（design.md「弊害・トレードオフ」の安全側方針
+        と一致）。
 
         1件以上あれば、送信ペイロードは辞書から再直列化せず原本テキストの行スライスで
         作る（android_parser.py:3-4、本文のバイト完全復元は保証されないため）。切り出し
@@ -332,18 +345,24 @@ class Outbox:
         text = raw.decode('utf-8-sig')
         messages = parse_android_export(text)
         if watermark is None:
-            return raw, messages[-1]['timestamp'], None
+            tail_count = sum(1 for message in messages if message['timestamp'] == messages[-1]['timestamp'])
+            return raw, messages[-1]['timestamp'], tail_count, None
         matches = [i for i, message in enumerate(messages) if message['timestamp'] == watermark]
         last_sent_index = max(matches) if matches else -1
-        if last_sent_index >= len(messages) - 1:
-            return None, None, watermark
+        tail_count = len(matches)
+        stored_tail_count = self._get_meta('sent_watermark_tail_count')
+        has_new = (last_sent_index < len(messages) - 1
+                   or stored_tail_count is None or tail_count > int(stored_tail_count))
+        if not has_new:
+            return None, None, None, watermark
         cutoff = (datetime.strptime(watermark, '%Y-%m-%d %H:%M:%S') - OVERLAP).strftime('%Y-%m-%d %H:%M:%S')
         start_message = next(message for message in messages if message['timestamp'] >= cutoff)
         lines = text.lstrip('﻿').splitlines()
         start_line = start_message['line']
         date_line = next(line for line in reversed(lines[:start_line - 1]) if DATE.fullmatch(line))
         payload = '\n'.join([date_line] + lines[start_line - 1:]).encode('utf-8')
-        return payload, messages[-1]['timestamp'], watermark
+        new_tail_count = sum(1 for message in messages if message['timestamp'] == messages[-1]['timestamp'])
+        return payload, messages[-1]['timestamp'], new_tail_count, watermark
 
     def send(self, transport=None, force=False, detected_by='share'):
         # Deployment must be confirmed explicitly; do not post to the old PC API.
@@ -359,7 +378,7 @@ class Outbox:
             raw = (self.base / 'originals' / (digest + '.txt')).read_bytes()
             if hashlib.sha256(raw).hexdigest() != digest:
                 raise ValueError('原本の整合性エラー。送信を停止しました')
-            payload, new_watermark, basis = self._build_payload(raw)
+            payload, new_watermark, new_tail_count, basis = self._build_payload(raw)
             if payload is None:
                 # 基準より後に新規が無い: サーバーには何も送らない（KGI1）。jobsのstateを
                 # 'skipped'にしてfinished_atを入れる（再送クエリ:297に残すと毎回この判定を
@@ -406,8 +425,11 @@ class Outbox:
             event_reason = '通信できません（圏外・タイムアウト等）' if code == 0 else error
             if state in ('accepted', 'pending_review'):
                 # 受理されたときだけ基準を進める（失敗時は進めない→次回が取り戻す。KGI4）。
+                # tail_countも併せて進める。これが無いと『同一分に孤立した新規』が
+                # 翌朝まで送信を遅らされ得る穴が残る（design.md追補 2026-10-08）。
                 # メッセージ本文は記録せず、バイト数とtimestampの基準のみ残す（KGI2計測用）。
                 self._set_meta('sent_watermark', new_watermark)
+                self._set_meta('sent_watermark_tail_count', str(new_tail_count))
                 event_reason = '送信 {}バイト（基準 {} / 全体 {}バイト）'.format(
                     len(payload), basis if basis is not None else 'なし', len(raw))
             # Only expected response fields; never persist an arbitrary HTML/error body.

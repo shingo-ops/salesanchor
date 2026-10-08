@@ -213,6 +213,28 @@ class OutboxTests(unittest.TestCase):
             "SELECT reason FROM events WHERE stage='send' AND result='skipped'").fetchone()[0]
         self.assertIn('2026-09-12 12:01:00', reason)
 
+    def test_isolated_same_minute_message_is_not_skipped(self):
+        """design.md追補 2026-10-08: 基準と同一分に新規が1件増え、その後により新しい
+        時刻のメッセージが続かない場合でも、送信を見送ってはいけない（鮮度のため、翌朝
+        まで遅れるのは不可）。sent_watermark_tail_countで同一分の件数増加を検知する。"""
+        self.outbox.send(lambda *_: self.result())  # baseline: watermark=12:01、tail_count=1
+        appended = self.source.read_bytes() + '12:01\tさらに別の人\t孤立新規\n'.encode()
+        second = self.root / 'second.txt'
+        second.write_bytes(appended)
+        self.outbox.enqueue(second)
+
+        captured = {}
+
+        def transport(raw, token):
+            captured['payload'] = raw
+            return self.result()
+
+        result = self.outbox.send(transport)
+        self.assertEqual(self.counts(result), {'accepted': 2})
+        self.assertIn('payload', captured, '同一分の孤立した新規なのに送信がskipされた')
+        bodies = [message['body'] for message in parse_android_export(captured['payload'].decode('utf-8'))]
+        self.assertIn('孤立新規', bodies)
+
     def test_kgi3_overlap_resends_same_minute_messages_once_new_arrives(self):
         """KGI3: 基準時刻と同一分(12:01)に複数メッセージがある状態で基準を確定させ、
         別の分(12:05)に新規が来たときだけ送信する。切り出しは基準時刻-60分からなので、
