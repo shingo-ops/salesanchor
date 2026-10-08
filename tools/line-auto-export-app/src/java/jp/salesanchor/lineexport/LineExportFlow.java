@@ -160,9 +160,14 @@ final class LineExportFlow {
     // LINEは開いたことを手順3で確認済みのうえで、期待グループ名のノードを300ms間隔・
     // 期限10秒で待つ。期限切れ＝LINEは開いたが別のトークだったとみなし、group_mismatch
     // として中止する（Menu以降へは進まない）。
+    //
+    // NodeOps.findGroupNameNode（完全一致ではなく正規化＋双方向部分一致）を使う。実機の
+    // トーク画面タイトルは「WeGo売リ... (480)」のように省略され末尾に人数が付くため
+    // （2026-10-08実機1回目の不具合2）、他の手順（設定/トーク履歴を送信など）が使う
+    // findNodeByLabel（完全一致、ロック解除側も使っているため変更不可）とは別の探索にする。
 
     private void step3bWaitExpectedGroup() {
-        waitForNode(expectedGroup, STAGE_GROUP_MISMATCH, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
+        waitForGroupNode(expectedGroup, STAGE_GROUP_MISMATCH, System.currentTimeMillis() + NODE_WAIT_TIMEOUT_MS,
                 new NodeWaitCallback() {
                     @Override
                     public void onFound(AccessibilityNodeInfo node) {
@@ -332,7 +337,7 @@ final class LineExportFlow {
         finish(true, null);
     }
 
-    // ---- 共通: アクティブウィンドウのパッケージ名待ち（300ms間隔・期限10秒） ---------------------
+    // ---- 共通: 期待パッケージのウィンドウが現れるのを待つ（300ms間隔・期限10秒） -------------------
 
     private interface PackageWaitCallback {
         void onFound();
@@ -340,14 +345,16 @@ final class LineExportFlow {
 
     private void waitForPackage(final String packageName, final String stage, final long deadlineAt,
             final PackageWaitCallback callback) {
-        String current = NodeOps.activePackageName(service);
-        if (packageName.equals(current)) {
+        if (NodeOps.hasWindowWithPackage(service, packageName)) {
             recordStep(stage);
             callback.onFound();
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
-            recordStep(stage);
+            // open_chat失敗時の診断: 実際に見えていたパッケージ名のみ（重複除去・最大3件）。
+            // ノードのテキストやメッセージ本文は含めない（2026-10-08実機1回目の不具合3）。
+            String seenPackages = NodeOps.distinctWindowPackageNames(service);
+            recordStep(stage, "見えていたパッケージ: " + seenPackages);
             finish(false, stage);
             return;
         }
@@ -382,6 +389,29 @@ final class LineExportFlow {
             @Override
             public void run() {
                 waitForNode(label, stage, deadlineAt, callback);
+            }
+        }, NODE_WAIT_POLL_MS);
+    }
+
+    // ---- 共通: グループ名ノード待ち（正規化＋双方向部分一致、300ms間隔・期限10秒） ----------------
+
+    private void waitForGroupNode(final String expectedGroup, final String stage, final long deadlineAt,
+            final NodeWaitCallback callback) {
+        AccessibilityNodeInfo node = NodeOps.findGroupNameNode(service, expectedGroup);
+        if (node != null) {
+            recordStep(stage);
+            callback.onFound(node);
+            return;
+        }
+        if (System.currentTimeMillis() >= deadlineAt) {
+            recordStep(stage);
+            finish(false, stage);
+            return;
+        }
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                waitForGroupNode(expectedGroup, stage, deadlineAt, callback);
             }
         }, NODE_WAIT_POLL_MS);
     }

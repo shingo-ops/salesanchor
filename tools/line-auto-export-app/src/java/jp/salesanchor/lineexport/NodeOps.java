@@ -6,6 +6,7 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import java.util.LinkedHashSet;
 import java.util.List;
 
 /**
@@ -54,23 +55,30 @@ final class NodeOps {
         return searchNode(service.getRootInActiveWindow(), label);
     }
 
+    /** joinDistinctPackageNames等と同じ上限（UnlockAccessibilityService#DIAG_MAX_PACKAGES_PER_DISPLAYと同値）。 */
+    private static final int MAX_DISTINCT_PACKAGES = 3;
+
     /**
-     * アクティブウィンドウのパッケージ名。LineExportFlowの手順3（トーク画面=LINEの到達判定）が、
-     * ショートカットのタップが空振りしてランチャーに留まった場合（open_chat）と、LINEは開いたが
-     * 別グループだった場合（group_mismatch）を区別するために使う。findNodeByLabelと同じ作法で、
-     * getWindows()の各rootを先に見てから getRootInActiveWindow() にフォールバックする。
+     * 期待パッケージのウィンドウが1つでもあるか。LineExportFlowの手順3（トーク画面=LINEの
+     * 到達判定）が、ショートカットのタップが空振りしてランチャーに留まった場合（open_chat）と、
+     * LINEは開いたが別グループだった場合（group_mismatch）を区別するために使う。
+     *
+     * 2026-10-08実機1回目の不具合1（design.md追補参照）: 以前はgetWindows()の「先頭」の
+     * ウィンドウのrootのパッケージ名だけを見ていたため、ステータスバー等(com.android.systemui)
+     * を拾って誤判定し、画面上はLINEが開いているのにopen_chatでタイムアウトした。
+     * 「先頭だけ見る」のをやめ、全ウィンドウのいずれかが期待パッケージかを判定する形にする
+     * （見つからなければgetRootInActiveWindow()のパッケージ名でもフォールバック判定）。
+     * 後段（findGroupNameNode）でグループ名を照合するため、ここを緩めても誤爆防止は損なわれない。
      */
-    static String activePackageName(AccessibilityService service) {
+    static boolean hasWindowWithPackage(AccessibilityService service, String packageName) {
         try {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
                     AccessibilityNodeInfo root = window.getRoot();
-                    if (root != null) {
-                        CharSequence pkg = root.getPackageName();
-                        if (pkg != null) {
-                            return pkg.toString();
-                        }
+                    CharSequence pkg = root != null ? root.getPackageName() : null;
+                    if (pkg != null && packageName.contentEquals(pkg)) {
+                        return true;
                     }
                 }
             }
@@ -79,7 +87,49 @@ final class NodeOps {
         }
         AccessibilityNodeInfo root = service.getRootInActiveWindow();
         CharSequence pkg = root != null ? root.getPackageName() : null;
-        return pkg == null ? null : pkg.toString();
+        return pkg != null && packageName.contentEquals(pkg);
+    }
+
+    /**
+     * 実際に見えていたウィンドウのパッケージ名（重複除去・最大3件、カンマ区切り）。
+     * open_chat失敗時の診断用。UnlockAccessibilityService#joinDistinctPackageNamesと同じ
+     * ロジック（重複除去＋上限3件）をgetWindows()横断で行う。パッケージ名のみを返し、
+     * ノードのテキストやメッセージ本文は一切含まない。
+     */
+    static String distinctWindowPackageNames(AccessibilityService service) {
+        LinkedHashSet<String> pkgs = new LinkedHashSet<String>();
+        try {
+            List<AccessibilityWindowInfo> windows = service.getWindows();
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    if (pkgs.size() >= MAX_DISTINCT_PACKAGES) {
+                        break;
+                    }
+                    AccessibilityNodeInfo root = window.getRoot();
+                    CharSequence pkg = root != null ? root.getPackageName() : null;
+                    if (pkg != null) {
+                        pkgs.add(pkg.toString());
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "getWindows() failed: " + e);
+        }
+        if (pkgs.isEmpty()) {
+            AccessibilityNodeInfo root = service.getRootInActiveWindow();
+            CharSequence pkg = root != null ? root.getPackageName() : null;
+            if (pkg != null) {
+                pkgs.add(pkg.toString());
+            }
+        }
+        StringBuilder sb = new StringBuilder();
+        for (String pkg : pkgs) {
+            if (sb.length() > 0) {
+                sb.append(',');
+            }
+            sb.append(pkg);
+        }
+        return sb.toString();
     }
 
     static AccessibilityNodeInfo searchNode(AccessibilityNodeInfo node, String label) {
@@ -223,6 +273,90 @@ final class NodeOps {
             }
         }
         return null;
+    }
+
+    /** グループ名の比較に使う文字列として短すぎる場合は一致とみなさない（誤爆防止）。 */
+    private static final int MIN_GROUP_LABEL_LENGTH = 6;
+
+    /**
+     * 期待グループ名のノードを探す（LineExportFlowの手順3bの誤爆防止用）。既存の完全一致探索
+     * （findNodeByLabel/searchNode/matchesLabel、ロック解除側が使っている）は変えず、グループ
+     * 名照合専用にこのメソッドを別途用意する。
+     *
+     * 2026-10-08実機1回目の不具合2（design.md追補参照）: 実機のトーク画面タイトルは
+     * 「WeGo売リ... (480)」のように途中で省略され末尾に人数が付くため、完全一致では
+     * 期待値「WeGo売ります掲示板グループ」と一致しない。正規化（末尾の(数字)・省略記号
+     * （…/...）・前後の空白を落とす）してから双方向の部分一致で判定する。
+     * 比較に使う文字列（正規化後のノード側・期待値側のどちらも）が6文字未満なら一致と
+     * みなさない（短い文字列どうしの部分一致は誤爆防止が骨抜きになるため）。
+     */
+    static AccessibilityNodeInfo findGroupNameNode(AccessibilityService service, String expectedGroup) {
+        String normalizedExpected = normalizeGroupLabel(expectedGroup);
+        try {
+            List<AccessibilityWindowInfo> windows = service.getWindows();
+            if (windows != null) {
+                for (AccessibilityWindowInfo window : windows) {
+                    AccessibilityNodeInfo match = searchGroupLabel(window.getRoot(), normalizedExpected);
+                    if (match != null) {
+                        return match;
+                    }
+                }
+            }
+        } catch (RuntimeException e) {
+            Log.w(TAG, "getWindows() failed: " + e);
+        }
+        return searchGroupLabel(service.getRootInActiveWindow(), normalizedExpected);
+    }
+
+    private static AccessibilityNodeInfo searchGroupLabel(AccessibilityNodeInfo node, String normalizedExpected) {
+        if (node == null) {
+            return null;
+        }
+        if (matchesGroupLabel(node, normalizedExpected)) {
+            return node;
+        }
+        int count = node.getChildCount();
+        for (int i = 0; i < count; i++) {
+            AccessibilityNodeInfo match = searchGroupLabel(node.getChild(i), normalizedExpected);
+            if (match != null) {
+                return match;
+            }
+        }
+        return null;
+    }
+
+    private static boolean matchesGroupLabel(AccessibilityNodeInfo node, String normalizedExpected) {
+        return matchesGroupText(node.getText(), normalizedExpected)
+                || matchesGroupText(node.getContentDescription(), normalizedExpected);
+    }
+
+    private static boolean matchesGroupText(CharSequence raw, String normalizedExpected) {
+        if (raw == null || normalizedExpected.length() < MIN_GROUP_LABEL_LENGTH) {
+            return false;
+        }
+        String normalizedNode = normalizeGroupLabel(raw.toString());
+        if (normalizedNode.length() < MIN_GROUP_LABEL_LENGTH) {
+            return false;
+        }
+        return normalizedNode.contains(normalizedExpected) || normalizedExpected.contains(normalizedNode);
+    }
+
+    /**
+     * グループ名の末尾の `(数字)`・省略記号（`…`/`...`）・前後の空白を落として正規化する。
+     * 例: "WeGo売リ... (480)" -> "WeGo売リ"。
+     */
+    static String normalizeGroupLabel(String raw) {
+        if (raw == null) {
+            return "";
+        }
+        String s = raw.trim();
+        s = s.replaceAll("\\s*\\(\\d+\\)\\s*$", "");
+        s = s.trim();
+        while (s.endsWith("...") || s.endsWith("…")) {
+            s = s.endsWith("...") ? s.substring(0, s.length() - 3) : s.substring(0, s.length() - 1);
+            s = s.trim();
+        }
+        return s;
     }
 
     /**

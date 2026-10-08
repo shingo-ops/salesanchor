@@ -696,10 +696,24 @@ public class UnlockAccessibilityService extends AccessibilityService {
      * （postNotificationのように「理由: 」を前置しない）。PIN等の秘密は含まれない。
      * 通常のロック解除結果通知（NOTIFICATION_ID）とは別IDにして、双方を取りこぼさない。
      */
+    /**
+     * 稼働中のAPKのversionName。ADBが使えない状況では、通知だけが「どの版が入っているか」を
+     * 外から確認できる唯一の窓になる（2026-10-08: 新旧APKのversionNameが同じだったため
+     * 入れ替わったかを誰も判定できなかった。その反省でタイトルに版を出す）。
+     */
+    static String versionLabel(Context context) {
+        try {
+            return context.getPackageManager()
+                    .getPackageInfo(context.getPackageName(), 0).versionName;
+        } catch (Exception e) {
+            return "?";
+        }
+    }
+
     private static void postDiagNotification(Context context, String body) {
         NotificationCompat.ensureChannel(context, CHANNEL_ID, "SA LINE Export");
         Notification.Builder builder = NotificationCompat.newBuilder(context, CHANNEL_ID)
-                .setContentTitle("画面診断")
+                .setContentTitle("画面診断 v" + versionLabel(context))
                 .setContentText(body)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
                 .setAutoCancel(true);
