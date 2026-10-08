@@ -129,6 +129,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
     /**
      * 外部（RunReceiver）からの、LINE操作のみの実行トリガー（段階2の単体検証用。
      * design.md追補 2026-10-08の起動口表）。解除済み前提で、ロック解除は一切行わない。
+     * 検証中に毎回施錠されると邪魔になるため、終了時の施錠はしない（lockOnFinish=false）。
      */
     static void requestExport(Context context) {
         UnlockAccessibilityService instance = sInstance;
@@ -136,7 +137,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
-        instance.startExportFlow();
+        instance.startExportFlow(false);
     }
 
     /**
@@ -267,13 +268,16 @@ public class UnlockAccessibilityService extends AccessibilityService {
         }
     }
 
-    /** LINE操作のみを実行する（段階2単体検証用）。多重起動は無視する。 */
-    private void startExportFlow() {
+    /**
+     * LINE操作を実行する。多重起動は無視する。lockOnFinishはRUN_ALLのときだけtrueにする
+     * （requestExportからはfalse固定、checkResult()のRUN_ALL続行からはtrue固定で渡す）。
+     */
+    private void startExportFlow(final boolean lockOnFinish) {
         if (!exportRunning.compareAndSet(false, true)) {
             Log.i(TAG, "export flow already running, ignoring duplicate trigger");
             return;
         }
-        new LineExportFlow(this, new LineExportFlow.Listener() {
+        new LineExportFlow(this, lockOnFinish, new LineExportFlow.Listener() {
             @Override
             public void onFinished() {
                 exportRunning.set(false);
@@ -520,8 +524,10 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postNotification(this, "ロック解除: 成功", detail);
             // RUN_ALL（本番の形）のときだけ、解除成功を確認したところでLINE操作へ続ける。
             // RUN単体ではrunAllRequestedがfalseのままなのでここは通らない（挙動不変）。
+            // lockOnFinish=trueを渡し、LINE操作の終わりに施錠させる（旧ADB方式の
+            // KEYCODE_HOME→KEYCODE_SLEEPに相当）。
             if (runAllRequested) {
-                startExportFlow();
+                startExportFlow(true);
             }
         } else {
             String reason = failureReasons.length() > 0

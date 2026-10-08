@@ -89,6 +89,17 @@ final class LineExportFlow {
     private static final float EDIT_TAP_X_RATIO = 0.8074f;
     private static final float EDIT_TAP_Y_RATIO = 0.5287f;
 
+    /**
+     * AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN の値。API28で追加された定数で、
+     * ビルド環境のandroid.jarはAPI23のためコンパイル時に参照できない（実機はAndroid16
+     * のため実行時には存在する）。GestureCompatのようなリフレクションは不要: 定数の
+     * 「値」が無いだけで、呼び出すメソッド本体のperformGlobalAction(int)自体はAPI16から
+     * 存在するため、定数値だけを直書きする（design.md 段階3「アプリ側: 実行後の
+     * 再ロック」の先取り。根拠は別worktree docs/handoff/line-auto-export-runtime/
+     * design-app-trigger.mdだがこのworktreeからは見えないため、依頼文の指示を正本とする）。
+     */
+    private static final int GLOBAL_ACTION_LOCK_SCREEN = 8;
+
     private static final int NOTIFICATION_ID_EXPORT = 1003;
 
     /** 完了時にUnlockAccessibilityServiceへ戻すためのコールバック（exportRunningフラグの解除用）。 */
@@ -97,6 +108,7 @@ final class LineExportFlow {
     }
 
     private final UnlockAccessibilityService service;
+    private final boolean lockOnFinish;
     private final Listener listener;
     private final Handler handler = new Handler();
 
@@ -106,8 +118,15 @@ final class LineExportFlow {
     private String expectedGroup;
     private AccessibilityNodeInfo termuxNode;
 
-    LineExportFlow(UnlockAccessibilityService service, Listener listener) {
+    /**
+     * lockOnFinishはRUN_ALL（ロック解除→LINE操作）のときだけtrueにする。EXPORT単体
+     * （すでに解除して使っている状態での検証用）では施錠しない。成功・失敗どちらの
+     * 終了でも、trueなら最後に画面を施錠する（旧ADB方式のKEYCODE_HOME→KEYCODE_SLEEPに
+     * 相当。解除したまま放置するのを避けるため、失敗で中止したときも施錠する）。
+     */
+    LineExportFlow(UnlockAccessibilityService service, boolean lockOnFinish, Listener listener) {
         this.service = service;
+        this.lockOnFinish = lockOnFinish;
         this.listener = listener;
     }
 
@@ -497,6 +516,14 @@ final class LineExportFlow {
             // 実際に取れるかの実測も兼ねる。取れることが分かれば、将来ADB版と同じ粒度の
             // 到達判定に戻せる。
             body += " / 最近のクラス名: " + recentClasses;
+        }
+        if (lockOnFinish) {
+            // RUN_ALLのときだけ施錠する（EXPORT単体は検証用で解除状態を保つ）。送信結果は
+            // 待たない（Termux側は画面と無関係に送信を続けるため）。成功時はEDITタップ完了
+            // 直後にここへ到達し、失敗で中止した場合も（解除したまま放置するのを避けるため）
+            // 同じくここで施錠する。施錠の成否はflow全体の成否(success)には影響させない。
+            boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
+            body += " / 施錠:" + locked;
         }
         postResultNotification(service, title, body);
         if (listener != null) {
