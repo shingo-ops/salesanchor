@@ -1,9 +1,23 @@
-# LINEトーク履歴の自動書き出し（ADB方式・稼働中）
+# LINEトーク履歴の自動書き出し（既定: アプリ合図方式／切り戻し: ADB方式）
 
-スマホが**自分自身をADBで操作**して、LINEのトーク履歴を定期的に書き出し、Termux経由で
-salesanchor へ送るための一式。端末上にしか無かったものをここに登録した（2026-09-19）。
+スマホが**自分自身へ合図を送る**（既定の `MODE=app`）か、**自分自身をADBで操作**する（`MODE=adb`）かで
+LINEのトーク履歴を定期的に書き出し、Termux経由で salesanchor へ送るための一式。
+端末上にしか無かったものをここに登録した（2026-09-19）。ADBのワイヤレスデバッグが鍵失効で再発停止するため、
+2026-10-08 に既定を `MODE=app` へ切り替えた（詳細: `docs/handoff/line-auto-export-runtime/design-app-trigger.md`）。
 
-## 何が動いているか
+## 何が動いているか（MODE=app・既定）
+
+```
+Androidのジョブスケジューラ（約15分ごと）
+  └─ Termux: ~/bin/line-auto-export            … termux/line-auto-export
+       └─ proot（Ubuntu）: auto-export.sh       … アプリへブロードキャストで合図 → events を待ち受け
+            └─ 自作アプリ（jp.salesanchor.lineexport, RunReceiver）
+                 … 解除・LINE書き出し・Termux共有・送信・再ロックまでアプリ側で行う
+```
+
+ADBは使わない。`flow.sh` と `adb-discover.sh` は `MODE=adb`（切り戻し）専用で、app モードでは呼ばれない。
+
+## 何が動いているか（MODE=adb・切り戻し用）
 
 ```
 Androidのジョブスケジューラ（約15分ごと）
@@ -13,8 +27,44 @@ Androidのジョブスケジューラ（約15分ごと）
             └─ adb-discover.sh                  … ADBの接続先が変わったときに探し直す
 ```
 
-このセッションやPCは不要で、端末だけで完結する。結果は既存の outbox（`~/line-import/state/outbox.sqlite3`）
-の events に `stage='auto'` で記録され、失敗時は通知（id 4203）が出る。
+どちらのモードでも、このセッションやPCは不要で端末だけで完結する。結果は既存の outbox
+（`~/line-import/state/outbox.sqlite3`）の events に `stage='auto'` で記録され、失敗時は通知（id 4203）が出る。
+
+## モード切替
+
+- `auto-export.sh` 先頭の `MODE=${LINE_AUTO_EXPORT_MODE:-app}`。既定は **app**。
+- ADB方式へ切り戻すときは、`termux/line-auto-export` の起動コマンドに環境変数を渡す
+  （または `~/bin/line-auto-export` 先頭に `export LINE_AUTO_EXPORT_MODE=adb` を追記する）:
+  ```
+  LINE_AUTO_EXPORT_MODE=adb /data/data/com.termux/files/usr/bin/proot-distro login ubuntu -- \
+    bash /root/line-auto-export/auto-export.sh
+  ```
+- `MODE=adb` のときは本章「MODE=adb・切り戻し用」の従来フロー（ADB探索・解除・`flow.sh`・EDITタップ・
+  再ロック）がそのまま動く。アプリ方式の実績が浅いため、コードは削除せず残している。
+- `MODE=app` のとき、PINファイル（`unlock-pin`）の権限チェックは行わない（PINはアプリ側が持つため）。
+- `MODE=app` のとき `fail()` は `adb shell` を撃たない（ADBが無い環境で無駄なエラーを出さないため）。
+
+## アプリへの合図（MODE=app）
+
+```
+CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk \
+/system/bin/app_process -Xnoimage-dex2oat / com.termux.termuxam.Am \
+  broadcast --user 0 -n jp.salesanchor.lineexport/.RunReceiver \
+  -a jp.salesanchor.lineexport.RUN_ALL
+```
+
+- `--user 0` と `-n`（宛先名指し）は両方必須。2026-10-08 実測で、`-n` の無い暗黙ブロードキャストは
+  一度も届かなかった（09:23・09:28の2回とも無反応）。
+- 合図を送った後、最大180秒・3秒間隔で outbox の `events` を見る。`stage='send'` の終端結果
+  （`accepted`/`pending_review` は `ok`、それ以外は `failed`）が増えていればそれを `stage='auto'` の結果として採る。
+- 180秒待っても `send` 行が増えなければ `skipped` として記録する（理由:
+  「アプリが実行しなかった（スマホ使用中か、アプリ側の失敗。アプリの通知を確認）」）。
+  スマホ使用中の見送りとアプリ側の失敗をスクリプトからは区別できないため、`failed` にはしない
+  （`failed` にすると使用中の見送りでも失敗通知が鳴り続けてしまう）。
+- 再ロックはスクリプトでは行わない。アプリ側が `RUN_ALL` の最後に施錠する。
+- 実機を使わずに合図送信以降の処理だけを検証したい場合、環境変数 `LINE_AUTO_EXPORT_BROADCAST_CMD` に
+  差し替えコマンド（例: `echo` や events へのダミー書き込み）を設定すると、実際のブロードキャストの代わりに
+  それが実行される（リポジトリの設計書には無い、テスト用の追加口）。
 
 ## 配置（端末側）
 
@@ -40,7 +90,7 @@ termux-job-scheduler --job-id 4203 --period-ms 900000 \
   圏外や電池残量が少ないときに止まってしまう。
 - 登録した瞬間に1回実行され、そこが周期の起点になる。
 
-## ADB接続先の自動復旧（adb-discover.sh）
+## ADB接続先の自動復旧（adb-discover.sh・MODE=adb専用）
 
 Wi-Fi が切れて復帰すると、Android はワイヤレスデバッグを**新しいポート**で起動し直す。
 保存済みの接続先では復帰できず、2026-09-23 は 40359 → 44861 に変わって約6時間止まった。
@@ -58,7 +108,7 @@ termux-job-scheduler は時刻を指定できず、1回あたり約0.6分ずつ�
 待機プロセスがジョブ終了後に Android に停止され、22回中21回が完走しなかったため 2026-09-23 に廃止した。
 15分ごとに動いていれば1回の失敗は次の回で埋まるため、時刻の揃えに実用上の意味は無いと判断した。
 
-## 実測（2026-09-19、15分周期へ変更後 約11時間・48回）
+## 実測（MODE=adb・2026-09-19、15分周期へ変更後 約11時間・48回）
 
 | 項目 | 実測 |
 | --- | --- |
@@ -74,11 +124,12 @@ termux-job-scheduler は時刻を指定できず、1回あたり約0.6分ずつ�
 1時間周期だった頃は、接続断が続くと長時間の空白になった（2026-09-18 01:33〜07:33 の7回連続失敗）。
 15分周期では単発の失敗が次の回で埋まる。
 
-## 既知の弱点
+## 既知の弱点（MODE=adb）
 
 - **ワイヤレスデバッグの接続が切れると全滅する**。2026-09-18 は深夜に切れ、01:33〜07:33 の7回が
-  `ADBに接続できない` で失敗した（朝に復帰）。`auto-export.sh` は `endpoint` ファイルに最後の接続先を
-  保存し、毎回再接続を試みる。
+  `ADBに接続できない` で失敗した（朝に復帰）。さらに2026-10-07 17:36からは**鍵の失効**で接続不能になり、
+  再ペアリングには人の操作が必要（再発する型）。これが `MODE=app` へ切り替えた理由（上記参照）。
+  `auto-export.sh` は `endpoint` ファイルに最後の接続先を保存し、毎回再接続を試みるが、鍵失効自体は直せない。
 - スマホ使用中（画面オン＋ロック解除）は見送る。前面の操作を奪わないための判断。
 - LINEやOSの更新でUIの配置が変わると `flow.sh` の調整が要る。
 - Termuxの「EDIT」ボタンだけは座標直打ち（`EDIT_X/EDIT_Y`）。この画面は uiautomator に出ないため。
@@ -87,5 +138,5 @@ termux-job-scheduler は時刻を指定できず、1回あたり約0.6分ずつ�
   ログ: `Termux:PermissionUtils: com.termux does not have Display over other apps (SYSTEM_ALERT_WINDOW) permission`）。
   送信結果の待ちを4分に延ばして誤判定を減らしているが、根本対策は端末設定での権限付与。
 
-ADBに依存しない代替（自作アプリ方式）は `tools/line-auto-export-app/` で検証中。2026-09-19 時点では
-ロック画面へのタップが届かず未達（`docs/handoff/line-auto-export-app/evidence-20260919-unlock.md`）。
+ADBに依存しない代替（自作アプリ方式、`release/line-auto-export-app`）は2026-10-08に実機で書き出し〜送信を
+通し、`auto-export.sh` の既定を `MODE=app` に切り替えた。本章の内容は `MODE=adb`（切り戻し時）にのみ適用される。

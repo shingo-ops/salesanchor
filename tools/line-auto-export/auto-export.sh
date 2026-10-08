@@ -1,16 +1,22 @@
 #!/bin/bash
-# Hourly LINE talk-history export (runs inside the Ubuntu proot, started by Termux job scheduler).
-# wake + PIN unlock -> LINE export -> Termux EDIT -> wait for client.py send result -> lock.
+# 15-minute LINE talk-history export job (runs inside the Ubuntu proot, started by Termux job scheduler).
+# MODE=app（既定）: スマホ上の自作アプリ（jp.salesanchor.lineexport）へブロードキャストで合図を送り、
+#   アプリ側の実行結果を outbox の events から読む。ADB不要（ADBのワイヤレスデバッグは鍵失効で
+#   再発停止するため、2026-10-08 にこちらへ切り替えた。詳細: docs/handoff/line-auto-export-runtime/
+#   design-app-trigger.md）。
+# MODE=adb（切り戻し用・LINE_AUTO_EXPORT_MODE=adb で起動）: 従来方式。
+#   wake + PIN unlock -> LINE export -> Termux EDIT -> wait for client.py send result -> lock。
 # Results go to the existing outbox events table (stage='auto'); the PIN is never printed.
 set -u
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+MODE=${LINE_AUTO_EXPORT_MODE:-app}
 DIR=/root/line-auto-export
 TH=/data/data/com.termux/files/home
-PIN_FILE=$TH/line-import/state/unlock-pin
+PIN_FILE=$TH/line-import/state/unlock-pin   # MODE=adb のみ使用。appモードはPINをアプリ側が持つ。
 STATE=$TH/line-import/state
 DB=$STATE/outbox.sqlite3
 LOG=$DIR/auto-export.log
-EDIT_X=872; EDIT_Y=1237   # Termux "EDIT" button; dialog is not exposed to uiautomator (verified by screenshot 2026-09-17)
+EDIT_X=872; EDIT_Y=1237   # Termux "EDIT" button; dialog is not exposed to uiautomator (verified by screenshot 2026-09-17). MODE=adb only.
 
 exec 9>"$DIR/lock"
 flock -n 9 || exit 0
@@ -77,19 +83,84 @@ PY
 fail() {  # fail <step> <reason>
   say "FAIL $1: $2"
   record failed "$1: $2" "失敗"
-  adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
-  adb shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1
+  if [ "$MODE" = adb ]; then
+    adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1
+    adb shell input keyevent KEYCODE_SLEEP >/dev/null 2>&1
+  fi
   exit 1
 }
 # grep -q / grep -m1 は先に終了してパイプを閉じるため、tr が「Broken pipe」を
-# 標準エラーに出す（動作に影響はないがログが汚れる）。tr の標準エラーは捨てる。
+# 標準エラーに出す（動作に影響はないがログが汚れる）。tr の標準エラーは捨てる。MODE=adb only.
 q() { timeout 20 adb shell "$@" 2>/dev/null | tr -d '\r' 2>/dev/null; }
 locked() { q dumpsys window policy | grep -q 'showing=true'; }
 awake() { q dumpsys power | grep -q 'mWakefulness=Awake'; }
 focus() { q dumpsys window | grep -m1 mCurrentFocus | sed -E 's/.* ([^ ]+)\}.*/\1/'; }
 
+# アプリへ「全部やれ」の合図をブロードキャストで送る（MODE=app専用、ADB不要）。
+# --user 0 と -n（宛先名指し）は両方必須。2026-10-08 実測で、-n の無い暗黙ブロードキャストは
+# 一度も届かなかった（09:23・09:28の2回とも無反応）。--user 0 を省くと別ユーザー扱いになり届かない。
+# テスト時は LINE_AUTO_EXPORT_BROADCAST_CMD で差し替え可能（例: echo に置き換えて、実機を使わずに
+# ポーリング以降の処理だけを検証する。design-app-trigger.md には無い追加）。
+broadcast_run_all() {
+  if [ -n "${LINE_AUTO_EXPORT_BROADCAST_CMD:-}" ]; then
+    eval "$LINE_AUTO_EXPORT_BROADCAST_CMD"
+  else
+    CLASSPATH=/data/data/com.termux/files/usr/libexec/termux-am/am.apk \
+    /system/bin/app_process -Xnoimage-dex2oat / com.termux.termuxam.Am \
+      broadcast --user 0 -n jp.salesanchor.lineexport/.RunReceiver \
+      -a jp.salesanchor.lineexport.RUN_ALL
+  fi
+}
+
 say "start"
-[ "$(stat -c %a "$PIN_FILE" 2>/dev/null)" = 600 ] || fail setup "暗証番号ファイルがない、または権限が600ではない"
+if [ "$MODE" = adb ]; then
+  [ "$(stat -c %a "$PIN_FILE" 2>/dev/null)" = 600 ] || fail setup "暗証番号ファイルがない、または権限が600ではない"
+fi
+
+if [ "$MODE" != adb ]; then
+  # MODE=app: アプリへ合図を送って、送信結果が events に記録されるのを待つだけ。
+  # 再ロックはスクリプトでは行わない（ADBが無いため不可。アプリ側がRUN_ALLの最後に施錠する。
+  # design-app-trigger.md 「アプリ側: 実行後の再ロック」参照）。
+  before=$(python3 -c "import sqlite3;print(sqlite3.connect('$DB').execute('select coalesce(max(id),0) from events').fetchone()[0])")
+
+  broadcast_run_all
+  say "signal sent"
+
+  send_result=""
+  send_reason=""
+  for i in $(seq 1 60); do  # 3秒 x 60回 = 最大180秒
+    out=$(python3 -c "
+import sqlite3
+r = sqlite3.connect('$DB').execute(
+    \"select result, coalesce(reason,'') from events where id>? and stage='send' and result<>'started' order by id desc limit 1\",
+    ($before,)).fetchone()
+print('' if r is None else r[0] + '\t' + r[1])")
+    if [ -n "$out" ]; then
+      IFS=$'\t' read -r send_result send_reason <<< "$out"
+      break
+    fi
+    sleep 3
+  done
+
+  if [ -z "$send_result" ]; then
+    # スマホ使用中の見送りと、アプリ側の失敗を、スクリプトからは区別できない
+    # （結果はアプリの通知にしか出ず、proot からは /sdcard が見えないため読めない）。
+    # failed にすると見送りでも失敗通知が鳴り続けるため、skipped として記録する
+    # （design-app-trigger.md 「なぜ結果が来なければ failed ではなく skipped なのか」参照）。
+    say "skip: no app response within 180s"
+    record skipped "アプリが実行しなかった（スマホ使用中か、アプリ側の失敗。アプリの通知を確認）"
+    exit 0
+  fi
+
+  case "$send_result" in
+    accepted|pending_review)
+      say "done: $send_result"
+      record ok "送信結果: $send_result" ;;
+    *)
+      fail send "送信結果: $send_result（${send_reason:-理由不明}）" ;;
+  esac
+  exit 0
+fi
 
 # ADB connection (wireless debugging). Reconnect to the last known endpoint if needed.
 timeout 10 adb start-server >/dev/null 2>&1
