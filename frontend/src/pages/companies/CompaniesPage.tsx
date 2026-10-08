@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { Drawer } from "../../components/Drawer";
 import ConfirmModal from "../../components/ConfirmModal";
 import { PageLayout } from "../../components/PageLayout";
@@ -503,12 +504,12 @@ export default function CompaniesPage() {
                   </div>
                   <div className="form-row">
                     <label>{t("common.status")}</label>
-                    <select value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
+                    <SelectControl fullWidth value={createForm.status} onChange={(e) => setCreateForm({ ...createForm, status: e.target.value })}>
                       <option value="active">active</option>
                       <option value="inactive">inactive</option>
                       <option value="archived">archived</option>
                       <option value="pending_dedup_review">pending_dedup_review</option>
-                    </select>
+                    </SelectControl>
                   </div>
                   <div className="form-row">
                     <label>{t("common.notes")}</label>

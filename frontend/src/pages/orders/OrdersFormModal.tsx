@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next";
 import CompanyContactSelector from "../../components/CompanyContactSelector";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import type { CompanyMini } from "./orders.types";
 import { STATUSES } from "./orders.types";
 
@@ -83,11 +84,11 @@ export function OrdersFormModal({
         </div>
         <div className="form-group">
           <label>{t("common.status")}</label>
-          <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
+          <SelectControl fullWidth value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}>
             {STATUSES.map((s) => (
               <option key={s} value={s}>{STATUS_LABELS[s]}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
         <div className="form-group">
           <label>{t("common.notes")}</label>

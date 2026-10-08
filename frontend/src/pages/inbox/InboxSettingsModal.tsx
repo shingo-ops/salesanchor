@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { StatusTabKey } from "./inbox.types";
 import { Modal } from "../../components/Modal";
+import { SelectControl } from "../../components/Select";
 
 interface InboxSettings {
   showRightPanel: boolean;
@@ -34,7 +35,7 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
 
         <div className="inbox-settings-row">
           <span className="inbox-settings-label">{t("inbox.settings.defaultTab")}</span>
-          <select className="inbox-settings-select"
+          <SelectControl size="sm"
             value={inboxSettings.defaultTab}
             onChange={(e) => updateInboxSetting("defaultTab", e.target.value as StatusTabKey)}>
             <option value="all">{t("inbox.settings.defaultTabAll")}</option>
@@ -43,7 +44,7 @@ export function InboxSettingsModal({ inboxSettings, updateInboxSetting, onClose 
             <option value="existing">{t("inbox.settings.defaultTabExisting")}</option>
             <option value="followup">{t("inbox.settings.defaultTabFollowUp")}</option>
             <option value="archive">{t("inbox.settings.defaultTabArchive")}</option>
-          </select>
+          </SelectControl>
         </div>
 
         <div className="inbox-settings-row">
