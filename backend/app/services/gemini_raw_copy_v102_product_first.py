@@ -61,6 +61,9 @@ REVIEW_PRODUCT_BOUNDARY = "product_boundary"  # 境界の条件で他の候補�
 BASIS_UNIT_UNKNOWN = "R4:単位既定:単位不明"  # resolve_condition_v2 の basis の一部（tcg_analyzer_svc.py の R4b）
 REASON_KEYWORD_RANGE = "product_keyword_range"
 REASON_IGNORE_PHRASE = "ignore_phrase"
+REASON_COUNTER_OVERRIDDEN = "counter_overridden"  # 最初の「条件つき」の別名より、ほかの行の決まった単位を採った
+# 区切りの判定で使う文字の種類。unicodedata の文字名の先頭の語で分ける（長音「ー」の名前は KATAKANA-HIRAGANA で始まるのでカタカナ）
+SCRIPT_NAME_PREFIXES = ("LATIN", "HIRAGANA", "KATAKANA", "CJK")
 
 _SYMBOL_ONLY_RE = re.compile(r"[\W_]+")
 _LINE_ORDER_ROLES = ("stock", "name")  # 価格の行のあと、この順に見る（その他の行は最後）
@@ -122,10 +125,26 @@ def _is_letter(ch: str) -> bool:
     return unicodedata.category(ch).startswith("L")  # 英字・かな・カナ・漢字・長音。数字・記号・空白は含まない
 
 
+def _script(ch: str) -> str | None:
+    """文字の種類（SCRIPT_NAME_PREFIXES のどれか）。数字・記号・空白・上記以外の文字は None。"""
+    if not _is_letter(ch):
+        return None
+    name = unicodedata.name(ch, "")
+    return next((prefix for prefix in SCRIPT_NAME_PREFIXES if name.startswith(prefix)), None)
+
+
+def _edge_blocks(neighbor: str, edge: str) -> bool:
+    """別名の端の文字（edge）の隣（neighbor）が、同じ種類の文字（または種類を決められない文字）なら True＝採らない。"""
+    if not neighbor or not _is_letter(neighbor):
+        return False
+    neighbor_script, edge_script = _script(neighbor), _script(edge)
+    return neighbor_script is None or edge_script is None or neighbor_script == edge_script
+
+
 def _boundary_ok(norm: str, start: int, end: int) -> bool:
     before = norm[start - 1] if start > 0 else ""
     after = norm[end] if end < len(norm) else ""
-    return not (before and _is_letter(before)) and not (after and _is_letter(after))
+    return not _edge_blocks(before, norm[start]) and not _edge_blocks(after, norm[end - 1])
 
 
 def boundary_candidates(line: str, aliases: Sequence[str]) -> list[tuple[int, int, str, str]]:
@@ -180,35 +199,59 @@ def line_search_order(item: Mapping[str, Any], roles: Mapping[int, str]) -> list
     return list(dict.fromkeys(order))
 
 
+def _find_in_line(
+    n: int, item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], aliases: Sequence[str],
+    patterns: tuple[list[re.Pattern[str]], list[re.Pattern[str]]], find_price_alias: Callable[[str], str | None],
+    excluded: list[dict],
+) -> tuple[str, dict] | None:
+    """1行から単位の別名を探す。見つかれば (別名, unit_basis)。除外した別名は excluded に足す。"""
+    keyword_patterns, phrase_patterns = patterns
+    line = lines[n - 1]
+    role = roles.get(n, "")
+    if n == item["price_line"]:
+        alias = find_price_alias(line)
+        if alias is not None:
+            return alias, {"line": n, "role": role, "match": "position", "alias": alias, "excluded": excluded}
+    for start, end, alias, norm in boundary_candidates(line, aliases):
+        reason = None
+        if _inside(_ranges(norm, keyword_patterns), start, end):
+            reason = REASON_KEYWORD_RANGE
+        elif _inside(_ranges(norm, phrase_patterns), start, end):
+            reason = REASON_IGNORE_PHRASE
+        if reason:
+            excluded.append({"line": n, "role": role, "alias": alias, "reason": reason})
+            continue
+        return alias, {"line": n, "role": role, "match": "boundary", "alias": alias, "excluded": excluded}
+    return None
+
+
 def find_unit_product_first(
     item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], aliases: Sequence[str],
     match: MatchResult, phrases: Sequence[str], find_price_alias: Callable[[str], str | None],
+    unit_alias_to_info: Mapping[str, Any],
 ) -> tuple[str | None, dict]:
     """単位の別名を探す。戻り値は (別名, unit_basis)。最初に見つかったものを採る。
 
     価格の行は今の位置の条件（find_price_alias）を先に使い、見つからなければ区切りの照合。ほかの行は区切りの照合。
     区切りの照合で当たった別名は、照合で当たった商品の検索ワードの語の中、または単位にしない言い回しの中なら採らない。
+    最初に見つかった別名の単位区分が「条件つき」のときだけ、残りの行も探し続け、「条件つき」以外の単位が
+    見つかればそちらを採る（見つからなければ最初の「条件つき」を採る）。
     """
-    keyword_patterns = _keyword_patterns(match)
-    phrase_patterns = _phrase_patterns(phrases)
+    patterns = (_keyword_patterns(match), _phrase_patterns(phrases))
     excluded: list[dict] = []
+    first: tuple[str, dict] | None = None
     for n in line_search_order(item, roles):
-        line = lines[n - 1]
-        role = roles.get(n, "")
-        if n == item["price_line"]:
-            alias = find_price_alias(line)
-            if alias is not None:
-                return alias, {"line": n, "role": role, "match": "position", "alias": alias, "excluded": excluded}
-        for start, end, alias, norm in boundary_candidates(line, aliases):
-            reason = None
-            if _inside(_ranges(norm, keyword_patterns), start, end):
-                reason = REASON_KEYWORD_RANGE
-            elif _inside(_ranges(norm, phrase_patterns), start, end):
-                reason = REASON_IGNORE_PHRASE
-            if reason:
-                excluded.append({"line": n, "role": role, "alias": alias, "reason": reason})
-                continue
-            return alias, {"line": n, "role": role, "match": "boundary", "alias": alias, "excluded": excluded}
+        found = _find_in_line(n, item, roles, lines, aliases, patterns, find_price_alias, excluded)
+        if found is None:
+            continue
+        if first is None:
+            if resolve_unit_v2(found[0], unit_alias_to_info)[1] != UNIT_KUBUN_REPLACEABLE_FOR_BOX:
+                return found
+            first = found
+        elif resolve_unit_v2(found[0], unit_alias_to_info)[1] != UNIT_KUBUN_REPLACEABLE_FOR_BOX:
+            return found[0], {**found[1], "overridden_alias": first[0], "override_reason": REASON_COUNTER_OVERRIDDEN}
+    if first is not None:
+        return first
     return None, {"line": None, "role": "", "match": "", "alias": None, "excluded": excluded}
 
 
@@ -276,7 +319,7 @@ def resolve_product_first(
     match = match_product(match_text, masters.product_entries)
     product_id, product_kubun = _match_summary(match, masters)
     alias, unit_basis = find_unit_product_first(
-        item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias
+        item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias, unit_alias_to_info
     )
     unit, unit_kubun, _resolved = resolve_unit_v2(alias or "", unit_alias_to_info)
     condition, basis, reviews = _resolve_condition(block, product_kubun, unit_kubun, cond_entries, cond_canonical_to_uuid)
