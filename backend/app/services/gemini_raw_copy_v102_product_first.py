@@ -20,6 +20,7 @@ from sqlalchemy.orm import Session
 
 from app.services.extraction_judgement_svc import MatchResult, ProductEntry, match_product, product_match_text
 from app.services.extraction_shadow_svc import load_product_entries
+from app.services.gemini_raw_copy_v102_score_select import ScoreDecision, decide_by_score
 from app.services.tcg_analyzer_svc import (
     _entry_hit,
     app_kubun_matches,
@@ -58,7 +59,6 @@ REVIEW_MULTIPLE_CANDIDATES = "condition_multiple_candidates"
 # 商品が決まらないときの要確認の理由（試運転 extraction_shadow_svc.py の要確認と同じ判定・同じ意味）
 REVIEW_PRODUCT_NOT_IN_MASTER = "product_not_in_master"  # マスタに該当なし（unmatched）
 REVIEW_PRODUCT_MULTIPLE = "product_multiple"  # 候補が2件以上（ambiguous）
-REVIEW_PRODUCT_BOUNDARY = "product_boundary"  # 境界の条件で他の候補が消えて1つに決まった（matched）
 BASIS_UNIT_UNKNOWN = "R4:単位既定:単位不明"  # resolve_condition_v2 の basis の一部（tcg_analyzer_svc.py の R4b）
 REASON_KEYWORD_RANGE = "product_keyword_range"
 REASON_IGNORE_PHRASE = "ignore_phrase"
@@ -268,14 +268,19 @@ def _match_summary(match: MatchResult, masters: ProductFirstMasters) -> tuple[in
     return match.product_id, masters.product_kubun.get(str(match.product_id)) or PRODUCT_KUBUN_UNKNOWN
 
 
-def _product_reviews(match: MatchResult) -> list[dict]:
-    """商品が決まらない・境界で決まったときの要確認の理由の一覧（状態・単位・商品の値は変えない）。"""
+def _product_reviews(match: MatchResult, score: ScoreDecision | None = None) -> list[dict]:
+    """商品が決まらないときの要確認の理由の一覧（状態・単位・商品の値は変えない）。
+
+    境界で他の候補が消えて決まったとき（boundary_dropped）は要確認にしない。控えは match_boundary_dropped に残る。
+    """
     if match.status == "unmatched":
         return [{"kind": REVIEW_PRODUCT_NOT_IN_MASTER}]
     if match.status == "ambiguous":
-        return [{"kind": REVIEW_PRODUCT_MULTIPLE, "candidates": list(match.candidates)}]
-    if match.boundary_dropped:
-        return [{"kind": REVIEW_PRODUCT_BOUNDARY, "candidates": list(match.boundary_dropped)}]
+        suggestion = (
+            {"suggested_product_id": score.product_id, "suggest_rule": score.rule, "suggest_dropped": list(score.dropped)}
+            if score is not None else {}
+        )
+        return [{"kind": REVIEW_PRODUCT_MULTIPLE, "candidates": list(match.candidates), **suggestion}]
     return []
 
 
@@ -325,6 +330,7 @@ def resolve_product_first(
     if match.status == "ambiguous" and chosen_product_id is not None and chosen_product_id in match.candidates:
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
+    score = decide_by_score(match, masters.product_entries)
     product_id, product_kubun = _match_summary(match, masters)
     alias, unit_basis = find_unit_product_first(
         item, roles, lines, aliases, match, masters.ignore_phrases, find_price_alias, unit_alias_to_info
@@ -339,7 +345,9 @@ def resolve_product_first(
     return {
         "product_id": product_id, "product_category": product_kubun, "match_status": match.status,
         "match_candidates": list(match.candidates),
+        "match_boundary_dropped": list(match.boundary_dropped),
         "unit": unit or NONE_VALUE, "unit_kubun": unit_kubun, "unit_basis": unit_basis,
         "condition": condition or NONE_VALUE, "condition_basis": basis,
-        "review_extra": [*_product_reviews(match), *reviews],
+        "review_extra": [*_product_reviews(match, score), *reviews],
+        "score_decision": score,
     }
