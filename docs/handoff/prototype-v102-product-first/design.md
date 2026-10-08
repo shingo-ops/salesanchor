@@ -123,3 +123,24 @@ PO 決定（2026-10-08「3つともy」）：商品の境目（product_boundary�
 - 外部事例：除外ワードは語の境界で見る（単語単位の否定フィルタ。全文検索の stop word・NG ワード判定は部分文字列でなく token 単位が一般的）。品番と同じ規則に揃える。
 - 守り手：backend/tests/test_extraction_judgement_svc.py の TestExcludeKeywordsStrictCodes（strict・SAR・anniversary、strict・SAR 区切りあり、2文字は部分一致、PSA10、strict なしは不変）。
 - 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（型番で決めない中分類を中分類マスタの印で持つ）
+PO 決定（2026-10-09）：ポケモンは型番だけで投稿されないため、試作版 v102 の照合で型番を使わない。方式は「中分類マスタに印の項目を1つ足し、ポケモンにだけ印を付ける」。
+
+- migrations/20261009_100000_type_master_match_by_code.sql：public.type_master に match_by_code BOOLEAN NOT NULL DEFAULT TRUE を足す（構造のみ。値の UPDATE は書かない）。印の値（ポケモン＝type_master.id 1 を FALSE）はデプロイ後に運用の手順（DRY-RUN→COMMIT）で付ける。
+- load_product_first_masters が `SELECT id FROM public.type_master WHERE match_by_code = FALSE` で印の付いた中分類 id を読み、新しい純粋関数 apply_name_only_works で商品リストを変換する。
+- apply_name_only_works：有効な全商品の product_code・mark を normalize_for_match した値の集合を作り、work_id が印の中分類の商品だけ、product_code=None・mark=None・検索ワードのうち「normalize_for_match した語全体がその集合に入る語」を除く。除外ワード・ほかの商品は変えない。印の中分類が無ければ同じ内容を返す。
+- 触らない：extraction_judgement_svc.py（match_product ほか）・extraction_shadow_svc.py の load_product_entries・tcg_analyzer_svc.py（v6）・tcg_shadow_review_svc.py・フロント（印の編集画面は今回作らない）・マスタのデータ。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|列がある|デプロイ後に information_schema.columns で public.type_master.match_by_code が存在（BOOLEAN・NOT NULL・既定 TRUE）|
+|印が TRUE（全件の既定）なら不変|印を付ける前に本番 recompute（after14 入力）の差分が 0 件。テスト：印なしで変換前後の entries が同じ|
+|印が FALSE の商品は型番を使わない|テスト：product_code・mark が None、型番と同じ検索ワードだけ消え、名前の検索ワードは残る。別作品の品番と同じ語も消える。変換後の match_product(strict_codes=True) で型番だけのテキストは決まらず、名前を含むテキストは決まる|
+|v6・試運転・レビュー画面は不変|共有関数を触っていない（git diff）＋既存テスト全通過|
+|マスタのデータは不変|migration に UPDATE・INSERT・DELETE が無い（目視と grep）|
+
+- 外部事例：検索の同義語・識別子の扱いをカテゴリごとの設定で切り替える運用（EC サイト検索で型番検索をカテゴリ属性のフラグで有効・無効にする構成。対象の付け替えは設定の変更だけで済み、コードは変えない）。
+- 維持の仕組み：対象の追加・解除は type_master.match_by_code の値の変更だけ（コード変更なし）。変換は純粋関数なのでテストで固定。守り手：backend/tests/test_gemini_raw_copy_v102_name_only.py。
+- 触るファイル: migrations/20261009_100000_type_master_match_by_code.sql, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_name_only.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

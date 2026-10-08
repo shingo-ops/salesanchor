@@ -49,3 +49,11 @@
 - 現状（origin/main 0066232b6）：backend/app/services/extraction_judgement_svc.py の _excluded_keywords（L228-235）は除外ワードを正規化して部分一致で見る。除外「SAR」が「anniversary」の中で当たり、3rd アニバーサリーセットが除外される。呼び出し元：同ファイル match_product L273、_is_candidate L242（boundary_dropped の控え用、本便では変えない）。
 - 既存 ADR 検索：docs/adr/ を照合・除外ワードのキーワードで検索（ADR-155 ほか。この規則を変える ADR は無し）。
 - 試算（手元 excl-strict、社外秘のため件数のみ）：after8 の全 7,395 品目で判定が変わる件 0、品番らしい除外ワードが当たっていた延べ 118 回はすべて当たりのまま。
+
+## 追記（型番で決めない中分類を中分類マスタの印で持つ・2026-10-09）
+- 現状（origin/main d745432ca）：backend/app/services/gemini_raw_copy_v102_product_first.py の load_product_first_masters（L124 以降）が load_product_entries の結果をそのまま ProductFirstMasters.product_entries にする。backend/app/services/extraction_judgement_svc.py の _code_candidate_basis（L199）が product_code・mark を、_keyword_matches（L212）が検索ワードを当たりに使う。ProductEntry（同ファイル L108-115）の work_id は public.type_master.id（backend/app/routers/buyback_prices.py:416 の JOIN p.work_id = tm.id）。
+- load_product_first_masters の呼び出し元（git grep）：backend/app/tools/prompt_ab.py:234 の _load_v10_masters（product_first=True のときだけ）。その呼び出し元は本番実行 backend/app/tools/prompt_ab.py:526 と再計算ツール backend/app/tools/prompt_ab_recompute.py:41 の両方。別の読み込み経路は無い。
+- 後段の使用：gemini_raw_copy_v101.py・gemini_raw_copy_v102_product_first.py・gemini_raw_copy_v102_score_select.py・prompt_ab.py・prompt_ab_recompute.py に ProductEntry.product_code・mark・search_keywords の直接参照は無い（git grep）。点数づけは MatchResult の code_hits・matched_keywords だけを読むため、None にしても記録の形は変わらない（当たりが減る分だけ変わる）。
+- 共有関数 load_product_entries（backend/app/services/extraction_shadow_svc.py:86）・match_product・_code_candidate_basis・_keyword_matches・_excluded_keywords は触らない（v6・試運転 v101・レビュー画面は不変）。
+- 既存 ADR 検索：docs/adr/FEATURE-INDEX.md は照合・型番・商品特定で該当なし。git grep -i docs/adr/ で ADR-155（マスタ値は表から読む・値の INSERT を migration に書かない）と ADR-156（分類ツリーとマスタ分離）。この規則を変える ADR は無し。ADR は新設しない（試作版の照合規則の追加）。
+- 試算（手元・社外秘の原文は載せない）：1回の記録あたり 誤り1件解消、ambiguous から matched に変わる 41件、正判定の喪失 0。
