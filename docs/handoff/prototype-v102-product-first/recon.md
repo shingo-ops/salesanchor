@@ -38,3 +38,8 @@
 - 現状（origin/main 5da0d5964）：ambiguous は backend/app/services/gemini_raw_copy_v102_product_first.py の _product_reviews が product_multiple（候補 id のみ）を付けるだけ。前後の商品で決める処理は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 内 _apply_context_work。MatchResult は backend/app/services/extraction_judgement_svc.py L118-128 で、当たった品番・記号の情報を持たない。
 - 既存 ADR 検索：docs/adr/ を照合・商品特定のキーワードで検索（ADR-155 ほか。この規則を変える ADR は無し）。
 - 試算：手元 score-sim/v2（S1+S4）。after7 で r1 148・r2 147 件が決まり、原文で全件確認して誤り0。前後の商品で決めた件と両方決まる27件は全件一致。
+
+## 追記（除外ワードにも前後が区切られているときだけ当たりを当てる・2026-10-08）
+- 現状（origin/main 0066232b6）：backend/app/services/extraction_judgement_svc.py の _excluded_keywords（L228-235）は除外ワードを正規化して部分一致で見る。除外「SAR」が「anniversary」の中で当たり、3rd アニバーサリーセットが除外される。呼び出し元：同ファイル match_product L273、_is_candidate L242（boundary_dropped の控え用、本便では変えない）。
+- 既存 ADR 検索：docs/adr/ を照合・除外ワードのキーワードで検索（ADR-155 ほか。この規則を変える ADR は無し）。
+- 試算（手元 excl-strict、社外秘のため件数のみ）：after8 の全 7,395 品目で判定が変わる件 0、品番らしい除外ワードが当たっていた延べ 118 回はすべて当たりのまま。
