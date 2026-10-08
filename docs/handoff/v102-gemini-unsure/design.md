@@ -42,7 +42,7 @@ recon.md §1〜§4。スキーマに欄が無く（`backend/app/services/gemini_
 - `backend/app/tools/prompt_ab_recompute.py` は変えない（`_v102_row_fields` 経由で自動的に付く。recon §3）。
 
 ### 3-3 触らない
-- v101 の経路（config `v101`）、本番 v6・v7、`prompt_ab_recompute.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、migration、`.github/workflows/`、画面、`V102_PROMPT` と DB の指示書。
+- v101 の経路（config `v101`）、本番 v6・v7、`backend/app/tools/prompt_ab_recompute.py`、`backend/app/services/gemini_raw_copy_v102_product_first.py`、migration、`.github/workflows/`、画面、`V102_PROMPT` と DB の指示書。
 
 ## 4. 試験と受入条件
 | 基準 | 検証方法 |
