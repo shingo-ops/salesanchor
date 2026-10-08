@@ -11,6 +11,7 @@
 起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME] [--prompt-key raw_copy_v101_NAME]
         [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
+（--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_c）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
 extraction_shadow_runs / extraction_jobs など本番の表には書かない。
@@ -303,6 +304,7 @@ def resolve_prompt_path(prompt_name: str, config: str = "v9") -> Path:
 
 
 _PROMPT_KEY_CONFIGS = ("v101", "v102")
+DEFAULT_V102_PROMPT_KEY = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定（DB の key）
 _PROMPT_KEY_SQL = """
     SELECT prompt_text FROM public.extraction_prompt_config
     WHERE prompt_key = :key AND is_active = TRUE
@@ -499,6 +501,8 @@ def run_ab(
     job_ids = fetch_job_ids(session, run_ids)
     if prompt_key is not None and (config not in _PROMPT_KEY_CONFIGS or prompt_name is not None):
         raise ValueError("--prompt-key は --config v101・v102 のときだけ、--prompt-name なしで使えます")
+    if config == "v102" and prompt_name is None and prompt_key is None:
+        prompt_key = DEFAULT_V102_PROMPT_KEY
     v8_prompt = _load_prompt_text(config, prompt_name, prompt_key, session)  # 名前・ファイル・行の誤りはここで止まる（Gemini を呼ぶ前）
     prompt_source = "db" if prompt_key is not None else (None if config == "v7" else "file")
     prompt_sha256 = hashlib.sha256(v8_prompt.encode("utf-8")).hexdigest() if v8_prompt is not None else None
@@ -612,7 +616,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
-    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 raw_copy_v101_e）を指示書にする")
+    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_c）を指示書にする")
     p.add_argument("--prompt-key", help="--config v101・v102 のみ。public.extraction_prompt_config の prompt_key（raw_copy_v101_<名前>、is_active）の本文を指示書にする。--prompt-name とは同時に使えない")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
