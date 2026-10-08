@@ -74,3 +74,20 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 - strict で外れた候補は boundary_dropped に入り、商品の境目の要確認（product_boundary）が付く。「境界のせいで外れたもの」を要確認に回す安全側の動きで、意図どおり。
 
 - 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（候補が複数残った件に「より詳しく当たった候補」を提案する）
+- PO 決定（2026-10-08）：「要確認にも残すのではなく要確認に回し人が整備して次回から解析できるようにする、要確認に回したものを配信しない」。選べた候補も商品は決めない（match_status は ambiguous・product_id は None・単位・状態は今のまま）。要確認 product_multiple に suggested_product_id・suggest_rule（S1 か S4）・suggest_dropped を添える。新しい kind・matched_score という状態は作らない。
+- 規則（試算 score-sim/v2 の S1・S4 と同じ）：対象は照合が ambiguous の件（前後の商品で決める処理のあと、なお ambiguous の件）。候補ごとに M（品番か記号が当たった＝1）・K（当たった検索ワードがある＝1）。S1＝M+K の最高点がちょうど1つならその候補。S1 で決まらなければ S4：候補ごとの「当たった語の集合」（当たった検索ワードと当たった品番・記号を正規化したもの）で、候補 A の全語が候補 B のどれかの語の部分文字列なら B は A を包む。ほかの全候補を包み自分は誰にも包まれない候補がちょうど1つならその候補。それ以外は提案しない。
+- 根拠は新しい欄 product_score（rule・scores＝候補 id ごとの M・K・words）。提案が付いた件だけに付く。
+- MatchResult に既定値つきで code_hits（品番・記号が当たった候補 id）と code_hit_values（当たった値。S4 の語の集合に要る）を足す。既存の欄・判定は変えない（v6・試運転の出力は不変）。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算と同じ提案|保存済み応答＋本番マスタ相当（build8.py の変更込み）で作り直し、suggested_product_id の (投稿, 価格行, 商品) が score-sim/v2 の S1+S4（matched_context を除く）と全件一致（r1 121/121・r2 120/120）|
+|対象外は不変|main と本便で、product_score と suggested_* 以外の全欄の差分0（r1 3,697件・r2 3,697件）|
+|v6・試運転の照合は不変|strict なし・ありの match_product の既存欄が main と全件同じ（cmp 一致）＋テスト|
+
+- 外部事例：曖昧な候補から根拠の強い候補を提案し、確定は人に回す運用（人が確認する前提の自動提案・human-in-the-loop）。今回は PO 決定の S1・S4 に限定し、決まらない件は提案しない。
+- 守り手：backend/tests/test_gemini_raw_copy_v102_score_select.py（S1・S4・決めない・前後の商品で決めた件は不変・product_first なしの出力不変）。
+- 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/app/services/gemini_raw_copy_v102_score_select.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/services/gemini_raw_copy_v101.py, backend/tests/test_gemini_raw_copy_v102_score_select.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

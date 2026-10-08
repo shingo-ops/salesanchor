@@ -33,3 +33,8 @@
 - 既存 ADR 検索：着手前に docs/adr/ を照合の機能キーワードで検索（ADR-155 ほか。照合の規則を変える ADR は無し）。
 - 試算：docs 外の手元の strict-sim/v2。誤りと判定した310候補はすべて外れ、候補が複数→1つ 226件（r1）、減るだけ 48件、1つに決まっていた件の悪化 0。
 - 実装中に分かったこと：対象の判定を「英数字・区切り文字だけ」にすると `SM5+` のように記号を含む値が既存の規則に落ち、試算と 64 件ずれた。設計者判断で「英数字・区切り文字・記号（P*/S*）だけで英字を含む」に広げた（記号はパターンに入れず、前後の境界で見る）。
+
+## 追記（候補が複数残った件の提案・2026-10-08）
+- 現状（origin/main 5da0d5964）：ambiguous は backend/app/services/gemini_raw_copy_v102_product_first.py の _product_reviews が product_multiple（候補 id のみ）を付けるだけ。前後の商品で決める処理は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 内 _apply_context_work。MatchResult は backend/app/services/extraction_judgement_svc.py L118-128 で、当たった品番・記号の情報を持たない。
+- 既存 ADR 検索：docs/adr/ を照合・商品特定のキーワードで検索（ADR-155 ほか。この規則を変える ADR は無し）。
+- 試算：手元 score-sim/v2（S1+S4）。after7 で r1 148・r2 147 件が決まり、原文で全件確認して誤り0。前後の商品で決めた件と両方決まる27件は全件一致。

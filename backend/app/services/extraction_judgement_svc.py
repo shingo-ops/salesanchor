@@ -8,7 +8,7 @@ import json
 import re
 import unicodedata
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from functools import lru_cache
 from typing import Literal
 
@@ -126,6 +126,9 @@ class MatchResult:
     basis: str
     reason: str
     boundary_dropped: tuple[int, ...] = ()
+    # 品番・記号（product_code・mark）が当たった商品の id と、当たった値（試作版 v102 の点数づけが読む）
+    code_hits: tuple[int, ...] = ()
+    code_hit_values: Mapping[int, tuple[str, ...]] = field(default_factory=dict)
 
 
 # 品番らしい値の厳格な照合（strict_codes=True）で、値の文字の間・前後に許す区切り文字。
@@ -249,6 +252,7 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
     excluded_by: dict[int, tuple[str, ...]] = {}
     candidates: list[int] = []
     boundary_dropped: list[int] = []
+    code_hit_values: dict[int, tuple[str, ...]] = {}
 
     for product in products:
         basis = _code_candidate_basis(product, nb, folded, strict_codes)
@@ -260,6 +264,9 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
             continue
         if basis is not None:
             code_basis[product.id] = basis
+            code_hit_values[product.id] = tuple(
+                raw for raw in (product.product_code, product.mark) if raw and _value_hits(raw, nb, folded, strict_codes)
+            )
         if keywords:
             matched_keywords[product.id] = keywords
 
@@ -282,6 +289,8 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
             basis="",
             reason="一致する検索ワード・品番がない",
             boundary_dropped=dropped,
+            code_hits=tuple(code_hit_values),
+            code_hit_values=code_hit_values,
         )
 
     if len(candidates) >= 2:
@@ -295,6 +304,8 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
             basis="",
             reason=f"候補{len(candidates)}件：{'/'.join(str(c) for c in candidates)}",
             boundary_dropped=dropped,
+            code_hits=tuple(code_hit_values),
+            code_hit_values=code_hit_values,
         )
 
     product_id = candidates[0]
@@ -314,6 +325,8 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
         basis=basis,
         reason="",
         boundary_dropped=dropped,
+        code_hits=tuple(code_hit_values),
+        code_hit_values=code_hit_values,
     )
 
 
