@@ -109,3 +109,17 @@ PO 決定（2026-10-08「3つともy」）：商品の境目（product_boundary�
 - 外部事例：検知した「疑わしい」印のうち、人手で全件検証して誤検知 0 だったルールを、人の確認キューから外して記録だけ残す運用（アラート疲れを避けるため根拠が固まった警告を降格し、監査用ログとして保持する）。
 - 守り手：backend/tests/test_gemini_raw_copy_v102_product_first.py（test_matched_with_boundary_dropped_keeps_record_without_product_boundary_review・test_matched_without_boundary_dropped_has_no_product_review）。
 - 触るファイル: backend/app/services/gemini_raw_copy_v102_product_first.py, backend/app/services/gemini_raw_copy_v101.py, backend/tests/test_gemini_raw_copy_v102_product_first.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md
+
+## 追記（除外ワードにも前後が区切られているときだけ当たりを当てる）
+- PO 決定（2026-10-08「3つともy」）。規則：match_product の strict_codes=True（試作版 v102 だけ）のとき、除外ワードの各値に _strict_code_hits を当て、None でなければその結果で判定。None（2文字以下・数字だけ・日本語を含む等）は今どおり正規化した部分一致。strict_codes=False（v6・試運転）は1文字も変えない。_is_candidate の呼び出しは変えない。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算と同じ|本番 recompute（after9 入力 r1/r2）で、デプロイ前後の v102 の判定差分が 0 件（product_id・match_status・candidates）|
+|v6・試運転不変|strict なしの match_product の既存テストと出力が main と同じ|
+|3rd が当たる|テスト（strict・除外 SAR・原文 3rd ANNIVERSARY SET が matched）が通る|
+
+- 外部事例：除外ワードは語の境界で見る（単語単位の否定フィルタ。全文検索の stop word・NG ワード判定は部分文字列でなく token 単位が一般的）。品番と同じ規則に揃える。
+- 守り手：backend/tests/test_extraction_judgement_svc.py の TestExcludeKeywordsStrictCodes（strict・SAR・anniversary、strict・SAR 区切りあり、2文字は部分一致、PSA10、strict なしは不変）。
+- 触るファイル: backend/app/services/extraction_judgement_svc.py, backend/tests/test_extraction_judgement_svc.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

@@ -225,10 +225,21 @@ def _keyword_matches(
     return tuple(matched)
 
 
-def _excluded_keywords(product: ProductEntry, nb: str) -> tuple[str, ...]:
-    """exclude_keywords のうち、正規化したものが nb に含まれるものを返す。"""
+def _excluded_keywords(
+    product: ProductEntry, nb: str, folded: str | None = None, strict_codes: bool = False
+) -> tuple[str, ...]:
+    """exclude_keywords のうち、正規化したものが nb に含まれるものを返す。
+
+    strict_codes=True（folded も必要）のときは、品番らしい除外ワードは前後が区切られているときだけ当たりとする。
+    """
     excluded: list[str] = []
     for keyword in product.exclude_keywords:
+        if strict_codes and folded is not None:
+            strict_result = _strict_code_hits(keyword, nb, folded)
+            if strict_result is not None:
+                if strict_result:
+                    excluded.append(keyword)
+                continue
         normalized = _normalize_value(keyword)
         if normalized and normalized in nb:
             excluded.append(keyword)
@@ -270,7 +281,7 @@ def match_product(block: str, products: Sequence[ProductEntry], *, strict_codes:
         if keywords:
             matched_keywords[product.id] = keywords
 
-        excluded = _excluded_keywords(product, nb)
+        excluded = _excluded_keywords(product, nb, folded, strict_codes)
         if excluded:
             excluded_by[product.id] = excluded
             continue

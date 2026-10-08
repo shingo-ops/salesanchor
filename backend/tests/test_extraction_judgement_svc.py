@@ -711,3 +711,38 @@ class TestMatchProductStrictCodes:
         text = "バイオレットex 100@10700 PRB-01 ワンピース BOX M"
         assert match_product(text, products) == match_product(text, products, strict_codes=False)
         assert match_product(text, products).candidates == (1, 2, 3)
+
+
+class TestExcludeKeywordsStrictCodes:
+    """strict_codes=True：品番らしい除外ワードも、前後が区切られているときだけ当たり。"""
+
+    def test_strict_sar_does_not_exclude_inside_anniversary(self):
+        product = _product(id_=1, search_keywords=("3rd anniversary",), exclude_keywords=("SAR",))
+        result = match_product("3rd ANNIVERSARY SET", [product], strict_codes=True)
+        assert result.status == "matched"
+        assert result.product_id == 1
+        assert result.excluded_by == {}
+
+    def test_strict_sar_excludes_when_delimited(self):
+        product = _product(id_=1, search_keywords=("ピカチュウ",), exclude_keywords=("SAR",))
+        result = match_product("ピカチュウ SAR", [product], strict_codes=True)
+        assert result.status == "unmatched"
+        assert result.excluded_by == {1: ("SAR",)}
+
+    def test_strict_two_char_exclude_keeps_substring(self):
+        product = _product(id_=1, search_keywords=("ピカチュウ",), exclude_keywords=("SR",))
+        result = match_product("ピカチュウ SRR", [product], strict_codes=True)
+        assert result.status == "unmatched"
+        assert result.excluded_by == {1: ("SR",)}
+
+    def test_strict_psa10_excludes_when_delimited(self):
+        product = _product(id_=1, search_keywords=("ピカチュウ",), exclude_keywords=("PSA10",))
+        result = match_product("ピカチュウ PSA10 鑑定品", [product], strict_codes=True)
+        assert result.status == "unmatched"
+        assert result.excluded_by == {1: ("PSA10",)}
+
+    def test_non_strict_sar_still_excludes_inside_anniversary(self):
+        product = _product(id_=1, search_keywords=("3rd anniversary",), exclude_keywords=("SAR",))
+        result = match_product("3rd ANNIVERSARY SET", [product])
+        assert result.status == "unmatched"
+        assert result.excluded_by == {1: ("SAR",)}
