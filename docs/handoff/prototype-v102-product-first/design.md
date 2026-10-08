@@ -46,3 +46,16 @@ prompt_ab の v102（recompute を含む）で、1件ごとに商品・商品の
 ## 追記（商品が決まらない件の理由）
 - 件の review に、unmatched は product_not_in_master、ambiguous は product_multiple（候補の id）、matched で boundary_dropped があれば product_boundary（消えた候補の id）を足す。試運転（extraction_shadow_svc.py）の要確認と同じ判定。状態・単位・商品の値は変えない。
 - 触るファイル: backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_product_first.py
+
+## 追記（作品をまたぐ曖昧な商品を前後の商品の作品で決める）
+- PO 決定（2026-10-08）：(a) 前後の商品が同じ作品なら決める。(b) 片側だけ・(c) 前後2件ずつの多数決は、落とす候補の作品がその投稿に無いときだけ決める。それ以外は要確認。
+- 手がかりは1回目に matched の件だけ（この処理で決めた件は手がかりにしない）。決めた件は match_status=matched_context・product_context（rule・手がかり・落とした候補）を持ち、決めた商品の分類で単位・状態を作り直す。決まらない件は product_multiple に context_reason を足す。product_first なし・v101 の出力は不変。
+- 基準と検証方法：
+
+|基準|検証方法|
+|---|---|
+|試算（手元 sim2.py）と同じ決定|保存済み応答と本番マスタ相当で作り直し、決定・理由が試算と全件一致（r1 51/51・101/101、r2 53/53・100/100、不一致0）|
+|対象外の件は変わらない|main と本便のコードで同じ作り直しをして対象外の全欄の差分0件（r1 2,268件・r2 2,266件）|
+|既存の出力を壊さない|pytest（新規19件＋既存の v101/v102/prompt_ab 系）|
+
+- 触るファイル: backend/app/services/gemini_raw_copy_v102_context_work.py, backend/app/services/gemini_raw_copy_v101.py, backend/app/services/gemini_raw_copy_v102_product_first.py, backend/tests/test_gemini_raw_copy_v102_context_work.py, docs/handoff/prototype-v102-product-first/design.md, docs/handoff/prototype-v102-product-first/recon.md

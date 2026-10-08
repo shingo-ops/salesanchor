@@ -22,3 +22,8 @@
 - 試算コード（手元）: sim4.py（単位の探し方・区切りの照合・検索ワードの範囲での除外・状態・状態から単位）、sim6.py（言い回しの表での除外）。
 - PO 検査: 40/40 が期待どおり。意図しない変化: 0 件。
 - 本便の実装は試算の挙動を基準にした。
+
+## 追記（作品をまたぐ曖昧な商品・2026-10-08）
+- 曖昧な件は backend/app/services/gemini_raw_copy_v102_product_first.py の resolve_product_first（L312-337）で match_product が ambiguous を返し、_product_reviews（L270-278）が product_multiple を付けるだけで、前後の商品は見ていない（origin/main 87c018f8）。
+- 1投稿の items が揃う所は backend/app/services/gemini_raw_copy_v101.py の _extract_v102 のループ後（L925-926）。ProductEntry（backend/app/services/extraction_judgement_svc.py L108-115）に work_id がある。
+- 試算（手元・社外秘の原文は載せない）：対象 r1 152件・r2 153件、PO 規則で決定 r1 51件（a46・b5・c0）・r2 53件（a46・b7・c0）。
