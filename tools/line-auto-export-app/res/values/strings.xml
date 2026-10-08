@@ -24,4 +24,12 @@
     <string name="notify_target_groups_save_button">対象グループを保存</string>
     <string name="notify_target_groups_saved">対象グループを保存しました</string>
     <string name="notify_request_storage_permission_button">記録用ストレージ権限を許可</string>
+
+    <!-- 段階3: アプリ内タイマー（RunScheduler）関連 -->
+    <string name="scheduler_section_title">アプリ内タイマー（自動実行）</string>
+    <string name="scheduler_status_on_exact">タイマー: ON（正確なアラーム）</string>
+    <string name="scheduler_status_on_inexact">タイマー: ON（不正確なアラームにフォールバック中）</string>
+    <string name="scheduler_status_off">タイマー: OFF</string>
+    <string name="scheduler_toggle_turn_on">ONにする</string>
+    <string name="scheduler_toggle_turn_off">OFFにする</string>
 </resources>

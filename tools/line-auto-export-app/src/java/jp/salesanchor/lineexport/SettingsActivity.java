@@ -35,6 +35,9 @@ public class SettingsActivity extends Activity {
     private TextView notifyStoragePathText;
     private EditText notifyTargetGroupsInput;
 
+    private TextView schedulerStatusText;
+    private Button schedulerToggleButton;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -82,6 +85,15 @@ public class SettingsActivity extends Activity {
             @Override
             public void onClick(View v) {
                 saveTargetGroups();
+            }
+        });
+
+        schedulerStatusText = (TextView) findViewById(R.id.scheduler_status_text);
+        schedulerToggleButton = (Button) findViewById(R.id.scheduler_toggle_button);
+        schedulerToggleButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                toggleScheduler();
             }
         });
 
@@ -168,5 +180,34 @@ public class SettingsActivity extends Activity {
         inputSection.setVisibility(saved ? View.GONE : View.VISIBLE);
 
         refreshNotifyStatus();
+        refreshSchedulerStatus();
+    }
+
+    /**
+     * 段階3: アプリ内タイマーのON/OFFトグル。暴走時に利用者が自分で止められる手段
+     * （design.md参照）。ONにするとRunSchedulerが次回アラームを張り、OFFにすると解除する。
+     */
+    private void toggleScheduler() {
+        if (SchedulerStore.isEnabled(this)) {
+            RunScheduler.disable(this);
+        } else {
+            RunScheduler.enable(this);
+        }
+        refreshSchedulerStatus();
+    }
+
+    private void refreshSchedulerStatus() {
+        boolean enabled = SchedulerStore.isEnabled(this);
+        if (enabled) {
+            boolean exact = SchedulerStore.wasLastScheduleExact(this);
+            schedulerStatusText.setText(exact
+                    ? R.string.scheduler_status_on_exact
+                    : R.string.scheduler_status_on_inexact);
+        } else {
+            schedulerStatusText.setText(R.string.scheduler_status_off);
+        }
+        schedulerToggleButton.setText(enabled
+                ? R.string.scheduler_toggle_turn_off
+                : R.string.scheduler_toggle_turn_on);
     }
 }

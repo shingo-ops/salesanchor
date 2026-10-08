@@ -174,6 +174,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
         sInstance = this;
         NotificationCompat.ensureChannel(this, CHANNEL_ID, "SA LINE Export");
         Log.i(TAG, "UnlockAccessibilityService connected");
+        // 段階3: BOOT_COMPLETEDに加え、ここでも張り直す（アプリ更新・プロセス再生成を
+        // 安全に拾うための二重化。design.md参照）。ONのときだけ実際に張る。
+        RunScheduler.rescheduleIfEnabled(this);
     }
 
     @Override
