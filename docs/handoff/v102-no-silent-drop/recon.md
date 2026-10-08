@@ -20,11 +20,11 @@
 | D4 | `:155-157` | JSON が読めない・items が無い | `errors` だけ（全件） |
 | D5 | `backend/app/tools/prompt_ab.py:271-272` | 取り出しの例外 | `v102_items_error` |
 - `backend/app/tools/prompt_ab.py:265` は `parse_v101_response` の `errors` を `_errors` として捨てる。`v102_items`・`v102_flags` には載らない。
-- `prompt_ab_recompute.py` の出力には `errors` 欄が無い（`:78` が `_v102_row_fields` の結果だけを書く）。
+- `backend/app/tools/prompt_ab_recompute.py` の出力には `errors` 欄が無い（`:78` が `_v102_row_fields` の結果だけを書く）。
 - D2 の不具合：`_priced_line`（`:117-122`）は全角「／」だけで分割する。半角「/」でつないだ2つの価格は行を見つけられず、件が落ちる（同じ処理の再現で確認：全角は見つかり、半角は None）。
 
 ## 3. 印を作るが要確認に入らない所
-- `v102_flags` の `possible_missing_item`（`:760-770`・`:966`）、`quantity_no_number`（`:962`・`:967`）、`possible_footer_line`（`:944`・`:967`）。書くのは `prompt_ab.py:270` と `prompt_ab_recompute.py` だけで、読む処理は無い。
+- `v102_flags` の `possible_missing_item`（`:760-770`・`:966`）、`quantity_no_number`（`:962`・`:967`）、`possible_footer_line`（`:944`・`:967`）。書くのは `backend/app/tools/prompt_ab.py:270` と `backend/app/tools/prompt_ab_recompute.py` だけで、読む処理は無い。
 - 件が0の投稿では印も出ない（`:939-940`）。
 - 単位が決まらないと `unit='none'`（`:744`）。単位の要確認の種類はコードに無い。
 - 商品が照合できても分類が無いと `product_category='不明'`（`backend/app/services/gemini_raw_copy_v102_product_first.py:266-268`）。要確認なし。
@@ -41,8 +41,8 @@
 - 消えた2件：1件は Gemini の写し違い（価格の数字が行に無い）、1件は D2 の半角「/」の不具合。
 
 ## 5. 衝突の確認
-- 開いた PR #4038 が `gemini_raw_copy_v102_product_first.py` を触っている。本件はこのファイルを変えない。
-- `gemini_raw_copy_v101.py`・`prompt_ab.py`・`prompt_ab_recompute.py`・その試験を触る開いた PR は、取得した50件の中に無い（PR 作成前に全件で再確認する）。
+- 開いた PR #4038 が `backend/app/services/gemini_raw_copy_v102_product_first.py` を触っている。本件はこのファイルを変えない。
+- `backend/app/services/gemini_raw_copy_v101.py`・`backend/app/tools/prompt_ab.py`・`backend/app/tools/prompt_ab_recompute.py`・その試験を触る開いた PR は、取得した50件の中に無い（PR 作成前に全件で再確認する）。
 
 ## 6. 既存の要確認の正本（本番。設計の向き先）
 - `analysis_results.needs_review`・`review_reasons`（`migrations/20260831_110000_create_tcg_analysis_tables_t004.sql:314-316`）。配信は `needs_review` が偽の件だけ（`backend/app/services/tcg_distribution_svc.py:262`・`:334`）。

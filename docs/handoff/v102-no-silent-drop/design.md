@@ -16,7 +16,7 @@
 ## 2. 現在地
 recon.md §2〜§4。消える箇所 D1〜D5、保存されない印3種、理由の無い単位 none・分類「不明」。
 
-## 3. 変更（`gemini_raw_copy_v101.py`・`prompt_ab.py` とその試験だけ。v102 の経路だけで動かし、v10.1 以前の出力は変えない）
+## 3. 変更（`backend/app/services/gemini_raw_copy_v101.py`・`backend/app/tools/prompt_ab.py` とその試験だけ。v102 の経路だけで動かし、v10.1 以前の出力は変えない）
 ### 3-1 要確認の理由の形（件ごと：`review` の要素。既存の `{"line": n, "kind": ...}` と同じ形）
 | kind | いつ | 足す欄 |
 |---|---|---|
@@ -49,7 +49,7 @@ recon.md §2〜§4。消える箇所 D1〜D5、保存されない印3種、理�
 
 ### 3-5 触らない
 - `backend/app/services/gemini_raw_copy_v102_product_first.py`（開いた PR #4038 が触っているため）。分類の判定は v101 側で `product_category` と `match_status` を読むだけ。
-- 本番の解析（v6・v7）、`analysis_results`、migration、`deploy.yml`、画面。
+- 本番の解析（v6・v7）、`analysis_results`、migration、`.github/workflows/deploy.yml`、画面。
 - 既存の試験の期待値（v10.1 以前の経路）。
 
 ## 4. 試験と受入条件
