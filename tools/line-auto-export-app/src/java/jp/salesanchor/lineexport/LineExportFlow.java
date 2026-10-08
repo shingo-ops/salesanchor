@@ -6,8 +6,13 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Handler;
+import android.util.Log;
 import android.view.WindowManager;
 import android.view.accessibility.AccessibilityNodeInfo;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 /**
  * 段階2の実行主体。LINE操作（ホーム→ショートカット→Menu→設定→トーク履歴を送信→Termux→EDIT）を
@@ -20,6 +25,8 @@ import android.view.accessibility.AccessibilityNodeInfo;
  * 期待グループ名と実際のノードの一致/不一致だけを扱う（値そのものは出さない）。
  */
 final class LineExportFlow {
+
+    private static final String TAG = "SALineExport";
 
     // ---- ラベル定数。ADB版 /root/line-auto-export/flow.sh の該当行と同一にする -------------
 
@@ -130,8 +137,10 @@ final class LineExportFlow {
     private long flowStartedAt;
     private long stepStartedAt;
     private StringBuilder stepTimings;
+    private JSONArray stepTimingsJson;
     private String expectedGroup;
     private AccessibilityNodeInfo termuxNode;
+    private String runId;
 
     /**
      * lockOnFinishはRUN_ALL（ロック解除→LINE操作）のときだけtrueにする。EXPORT単体
@@ -153,7 +162,13 @@ final class LineExportFlow {
         flowStartedAt = System.currentTimeMillis();
         stepStartedAt = flowStartedAt;
         stepTimings = new StringBuilder();
+        stepTimingsJson = new JSONArray();
         expectedGroup = firstTargetGroup(NotifyStore.getTargetGroups(service));
+
+        // 実行ログの開始行。終了まで到達しなかった実行もこの行だけは残るよう、他のどの処理
+        // よりも前に書く（design.md追補「実機で動いたが挙動が診断できない」対策）。
+        runId = RunLogger.newRunId();
+        RunLogger.logStart(service, runId, "export", triggerLabel);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
         service.startWindowRecording();
@@ -519,6 +534,18 @@ final class LineExportFlow {
             stepTimings.append('(').append(extra).append(')');
         }
         stepTimings.append(' ');
+
+        // 実行ログ用の構造化版（design.md追補「実機で動いたが挙動が診断できない」対策）。
+        // 通知本文の平文stepTimingsと内容は同じ（stage名とms）。extraはここには入れない
+        // （ノードのテキストやメッセージ本文は無いが、診断ログの対象を絞るため）。
+        try {
+            JSONObject entry = new JSONObject();
+            entry.put("stage", stepName);
+            entry.put("ms", ms);
+            stepTimingsJson.put(entry);
+        } catch (JSONException e) {
+            Log.w(TAG, "step timing json build failed: " + e);
+        }
     }
 
     private void finish(boolean success, String failedStage) {
@@ -543,6 +570,7 @@ final class LineExportFlow {
 
         if (!lockOnFinish) {
             postResultNotification(service, title, bodyBeforeLock);
+            logExportEnd(success, failedStage, elapsed, null);
             if (listener != null) {
                 listener.onFinished();
             }
@@ -569,11 +597,28 @@ final class LineExportFlow {
                 boolean locked = service.performGlobalAction(GLOBAL_ACTION_LOCK_SCREEN);
                 String finalBody = bodyBeforeLock + " / " + gestureSummary + " / 施錠:" + locked;
                 postResultNotification(service, title, finalBody);
+                logExportEnd(success, failedStage, elapsed, Boolean.valueOf(locked));
                 if (listener != null) {
                     listener.onFinished();
                 }
             }
         }, LOCK_DELAY_AFTER_EDIT_MS);
+    }
+
+    /**
+     * LINE操作フローの終了行を書く。nextTrigger/nextAtMsはこのチェーンでRunSchedulerが
+     * 新たに張ったアラームをSchedulerStoreのpending-nextから読む（ロック解除フロー側の
+     * logUnlockEndと同じ値を指す。チェーンの先頭で1回だけ決まる情報のため）。
+     */
+    private void logExportEnd(boolean success, String failedStage, long elapsedMs, Boolean locked) {
+        String nextTrigger = SchedulerStore.getPendingNextTrigger(service);
+        Long nextAtMs = null;
+        if (nextTrigger != null) {
+            nextAtMs = Long.valueOf(SchedulerStore.getPendingNextAtMs(service) - System.currentTimeMillis());
+        }
+        String result = success ? "success" : "failure";
+        RunLogger.logEnd(service, runId, "export", triggerLabel, result, failedStage, elapsedMs,
+                stepTimingsJson, locked, nextTrigger, nextAtMs);
     }
 
     /** 対象グループ名設定（カンマ区切り）の先頭要素。空ならNotifyStoreの既定値を使う。 */

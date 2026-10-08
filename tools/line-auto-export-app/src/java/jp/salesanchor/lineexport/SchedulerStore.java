@@ -14,6 +14,8 @@ final class SchedulerStore {
     private static final String KEY_ENABLED = "enabled";
     private static final String KEY_LAST_SCHEDULE_EXACT = "last_schedule_exact";
     private static final String KEY_LAST_RUN_STARTED_AT = "last_run_started_at";
+    private static final String KEY_PENDING_NEXT_TRIGGER = "pending_next_trigger";
+    private static final String KEY_PENDING_NEXT_AT_MS = "pending_next_at_ms";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -53,6 +55,40 @@ final class SchedulerStore {
 
     static void setLastRunStartedAt(Context context, long whenMs) {
         prefs(context).edit().putLong(KEY_LAST_RUN_STARTED_AT, whenMs).apply();
+    }
+
+    /**
+     * 実行ログ診断用（design.md追補 2026-10-08「実機で動いたが挙動が診断できない」）:
+     * 今回の実行チェーンの中でRunSchedulerが新たに張ったアラームの種別と発火時刻
+     * （絶対epoch ms）。チェーンの入口（RunScheduler#onAlarmFired、または
+     * UnlockAccessibilityServiceの各request*入口）で{@link #clearPendingNextTrigger}を
+     * 呼んでから、各スケジューリング箇所がここに書き込む。保険タイマーが再アームされた後に
+     * 見送りで再試行が張られた場合は再試行の情報で上書きされる（「次に発火するのはどちらか」
+     * という意味では再試行の方が早いため、診断上はこれで十分という判断）。
+     * 既定null（このチェーンでは何も新しく張らなかった）。
+     */
+    static void clearPendingNextTrigger(Context context) {
+        prefs(context).edit()
+                .remove(KEY_PENDING_NEXT_TRIGGER)
+                .remove(KEY_PENDING_NEXT_AT_MS)
+                .apply();
+    }
+
+    static void setPendingNextTrigger(Context context, String triggerType, long atMs) {
+        prefs(context).edit()
+                .putString(KEY_PENDING_NEXT_TRIGGER, triggerType)
+                .putLong(KEY_PENDING_NEXT_AT_MS, atMs)
+                .apply();
+    }
+
+    /** nullなら今回のチェーンで新たに張ったアラームは無い。 */
+    static String getPendingNextTrigger(Context context) {
+        return prefs(context).getString(KEY_PENDING_NEXT_TRIGGER, null);
+    }
+
+    /** 絶対epoch ms。getPendingNextTrigger()がnullでないときだけ意味を持つ。 */
+    static long getPendingNextAtMs(Context context) {
+        return prefs(context).getLong(KEY_PENDING_NEXT_AT_MS, 0L);
     }
 
     private static SharedPreferences prefs(Context context) {

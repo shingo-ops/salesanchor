@@ -15,6 +15,8 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.view.accessibility.AccessibilityWindowInfo;
 
+import org.json.JSONArray;
+
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -95,6 +97,11 @@ public class UnlockAccessibilityService extends AccessibilityService {
     // まで引き継ぐ。
     private volatile String currentTriggerLabel = "";
 
+    // 実行ログ（design.md追補 2026-10-08「実機で動いたが挙動が診断できない」対策）。
+    // ロック解除フロー自身のrunId。LINE操作フロー(LineExportFlow)は別のrunIdを自分で持つ
+    // （RunLogger.javaのクラスコメント参照: 2つを1本の実行として無理にまとめない判断）。
+    private volatile String currentRunId = "";
+
     private PowerManager.WakeLock wakeLock;
     private String currentPin;
     private StringBuilder failureReasons;
@@ -128,6 +135,9 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
+        // 実行ログ診断用。RunSchedulerを経由しない入口なので、ここで前回チェーンの残りを消す
+        // （onAlarmFiredと同じ理由）。
+        SchedulerStore.clearPendingNextTrigger(context);
         instance.startUnlockFlow(false, "RUN(手動)");
     }
 
@@ -142,6 +152,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
             postFailureNotification(context, "ユーザー補助サービスが未接続（無効化されている可能性）");
             return;
         }
+        SchedulerStore.clearPendingNextTrigger(context);
         instance.startExportFlow(false, "EXPORT(手動)");
     }
 
@@ -151,6 +162,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
      * {@link #requestRunAll(Context, String)}を使う（引き金のラベルを結果通知に残すため）。
      */
     static void requestRunAll(Context context) {
+        SchedulerStore.clearPendingNextTrigger(context);
         requestRunAll(context, "RUN_ALL(外部)");
     }
 
@@ -317,9 +329,14 @@ public class UnlockAccessibilityService extends AccessibilityService {
 
         runAllRequested = runAll;
         currentTriggerLabel = triggerLabel == null ? "" : triggerLabel;
+        currentRunId = RunLogger.newRunId();
         failureReasons = new StringBuilder();
         trace = new StringBuilder();
         flowStartedAt = System.currentTimeMillis();
+
+        // 実行ログの開始行。終了まで到達しなかった実行（プロセスが落ちた等）もこの行だけは
+        // 残るよう、他のチェックより前に書く（design.md追補参照）。
+        RunLogger.logStart(this, currentRunId, "unlock", currentTriggerLabel);
 
         // ロックされていないときに数字を打つと、前面のアプリを誤タップする（ADB版の
         // 「使用中は見送り」と同じ判定）。
@@ -330,6 +347,8 @@ public class UnlockAccessibilityService extends AccessibilityService {
             // 段階3: 使用中で見送ったときは5分後に再試行を予約する（design.md追補
             // 「段階3の方式変更」。RunScheduler側でON/OFFトグルを見るのでここでは無条件に呼ぶ）。
             RunScheduler.scheduleRetryAfterSkip(this);
+            logUnlockEnd("skipped", "ロックされていない（使用中）",
+                    System.currentTimeMillis() - flowStartedAt, null);
             return;
         }
 
@@ -337,6 +356,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
         if (pin == null || pin.length() == 0) {
             running.set(false);
             postFailureNotification(this, "PIN未設定 / 引き金:" + currentTriggerLabel);
+            logUnlockEnd("failure", "PIN未設定", System.currentTimeMillis() - flowStartedAt, null);
             return;
         }
         currentPin = pin;
@@ -549,6 +569,7 @@ public class UnlockAccessibilityService extends AccessibilityService {
                 + " / " + keypadDiag + " / 引き金:" + currentTriggerLabel;
         if (!locked) {
             postNotification(this, "ロック解除: 成功", detail);
+            logUnlockEnd("success", null, elapsed, null);
             // RUN_ALL（本番の形）のときだけ、解除成功を確認したところでLINE操作へ続ける。
             // RUN単体ではrunAllRequestedがfalseのままなのでここは通らない（挙動不変）。
             // lockOnFinish=trueを渡し、LINE操作の終わりに施錠させる（旧ADB方式の
@@ -562,8 +583,24 @@ public class UnlockAccessibilityService extends AccessibilityService {
                     ? failureReasons.toString().trim()
                     : "PIN入力後もロック中";
             postFailureNotification(this, reason + " / " + detail);
+            logUnlockEnd("failure", reason, elapsed, null);
         }
         runAllRequested = false;
+    }
+
+    /**
+     * ロック解除フローの終了行を書く。nextTrigger/nextAtMsはこのチェーンでRunSchedulerが
+     * 新たに張ったアラーム（SchedulerStoreのpending-next、見送り時のscheduleRetryAfterSkip
+     * 等）を読む。RunLogger自体は本体を壊さないため、ここでは失敗を気にせず呼ぶだけでよい。
+     */
+    private void logUnlockEnd(String result, String stage, long elapsedMs, JSONArray stepTimings) {
+        String nextTrigger = SchedulerStore.getPendingNextTrigger(this);
+        Long nextAtMs = null;
+        if (nextTrigger != null) {
+            nextAtMs = Long.valueOf(SchedulerStore.getPendingNextAtMs(this) - System.currentTimeMillis());
+        }
+        RunLogger.logEnd(this, currentRunId, "unlock", currentTriggerLabel, result, stage, elapsedMs,
+                stepTimings, null, nextTrigger, nextAtMs);
     }
 
     // ---- Window diagnostics (experimental, read-only) -----------------------------------

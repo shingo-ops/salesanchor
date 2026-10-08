@@ -118,7 +118,13 @@ final class RunScheduler {
         if (!SchedulerStore.isEnabled(context)) {
             return;
         }
-        scheduleAt(context, REQUEST_CODE_RETRY, System.currentTimeMillis() + RETRY_INTERVAL_MS, TRIGGER_RETRY);
+        long nextAt = System.currentTimeMillis() + RETRY_INTERVAL_MS;
+        scheduleAt(context, REQUEST_CODE_RETRY, nextAt, TRIGGER_RETRY);
+        // 実行ログ診断用。見送りで再試行を張ったことを今回の実行チェーンに残す
+        // （保険タイマー発火が見送りになった場合は、直前にonAlarmFiredが設定した
+        // insurance向けのpending-nextをここで再試行向けに上書きする。どちらが先に発火するか
+        // という意味では再試行(5分)の方が早いため、診断上はこれで十分という判断）。
+        SchedulerStore.setPendingNextTrigger(context, TRIGGER_RETRY, nextAt);
     }
 
     // ---- アラーム発火の処理（AlarmReceiverから呼ぶ） ----------------------------------------
@@ -139,10 +145,16 @@ final class RunScheduler {
             return;
         }
 
+        // 実行ログ診断用。このチェーンで新たに張るアラームをここから書き込み直すので、
+        // 前回のチェーンの残り（古いnextTrigger）が今回のログに混ざらないよう先に消す。
+        SchedulerStore.clearPendingNextTrigger(context);
+
         long now = System.currentTimeMillis();
 
         if (TRIGGER_INSURANCE.equals(triggerType)) {
-            scheduleAt(context, REQUEST_CODE_INSURANCE, now + INSURANCE_INTERVAL_MS, TRIGGER_INSURANCE);
+            long nextAt = now + INSURANCE_INTERVAL_MS;
+            scheduleAt(context, REQUEST_CODE_INSURANCE, nextAt, TRIGGER_INSURANCE);
+            SchedulerStore.setPendingNextTrigger(context, TRIGGER_INSURANCE, nextAt);
         } else {
             long lastRunStartedAt = SchedulerStore.getLastRunStartedAt(context);
             if (lastRunStartedAt > 0 && now - lastRunStartedAt < FLOOR_INTERVAL_MS) {

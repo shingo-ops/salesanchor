@@ -261,7 +261,7 @@ public class LineNotifyListenerService extends NotificationListenerService {
             return;
         }
 
-        File dir = resolveStorageDir();
+        File dir = resolveStorageDir(this);
         if (dir == null) {
             Log.w(TAG, "no writable storage dir for removed record");
             return;
@@ -433,7 +433,7 @@ public class LineNotifyListenerService extends NotificationListenerService {
     private void record(StatusBarNotification sbn, String group, String sender, String body,
             String titleRaw, int messagesCount, String source, long whenMs,
             int lenText, int lenBigText, int messagesMaxLen, int supersedesLen) {
-        File dir = resolveStorageDir();
+        File dir = resolveStorageDir(this);
         if (dir == null) {
             Log.w(TAG, "no writable storage dir for capture (textLen=" + body.length() + ")");
             return;
@@ -535,7 +535,7 @@ public class LineNotifyListenerService extends NotificationListenerService {
             String titleStr, CharSequence subText, CharSequence summaryText, CharSequence conversationTitle,
             CharSequence bigText, CharSequence plainText, Parcelable[] messagesArr, int messagesCount,
             boolean interactive, boolean keyguardLocked) throws IOException {
-        File dir = resolveStorageDir();
+        File dir = resolveStorageDir(this);
         if (dir == null) {
             Log.w(TAG, "no writable storage dir for diag record");
             return;
@@ -644,13 +644,15 @@ public class LineNotifyListenerService extends NotificationListenerService {
     /**
      * 記録先ディレクトリを決める。まず外部ストレージのDownload配下を試し、
      * 作成/書き込みできなければアプリ私有領域にフォールバックする。
+     * パッケージ内の他クラス（RunLogger、実行ログ用）からも同じ仕組みを再利用するため
+     * static・Context引数の形にしている（挙動は変えていない）。
      */
-    private File resolveStorageDir() {
+    static File resolveStorageDir(Context context) {
         File primary = new File(Environment.getExternalStorageDirectory(), "Download/sa-line-notify");
         if (ensureWritableDir(primary)) {
             return primary;
         }
-        File fallback = new File(getFilesDir(), "sa-line-notify");
+        File fallback = new File(context.getFilesDir(), "sa-line-notify");
         if (ensureWritableDir(fallback)) {
             return fallback;
         }
