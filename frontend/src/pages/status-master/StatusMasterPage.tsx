@@ -17,6 +17,7 @@ import { DataTable, type DataTableColumn } from "../../components/DataTable";
 import { TextField } from "../../components/TextField";
 import { HeaderButton } from "../../components/HeaderButton";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { STATUS_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
 
@@ -256,9 +257,8 @@ export default function StatusMasterPage() {
       </div>
       <div className="form-group">
         <label className="field-label">{t(`${f}.matchType`)} *</label>
-        {/* ui-allow: enum select for status match_type; no SelectControl variant with option map (#3594) */}
-        <select
-          className="field field-h-md"
+        <SelectControl
+          fullWidth
           value={form.match_type}
           onChange={e => setForm({ ...form, match_type: e.target.value })}
           required
@@ -266,13 +266,12 @@ export default function StatusMasterPage() {
           {MATCH_TYPE_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </SelectControl>
       </div>
       <div className="form-group">
         <label className="field-label">{t(`${f}.effect`)} *</label>
-        {/* ui-allow: enum select for status effect; no SelectControl variant with option map (#3594) */}
-        <select
-          className="field field-h-md"
+        <SelectControl
+          fullWidth
           value={form.effect}
           onChange={e => setForm({ ...form, effect: e.target.value })}
           required
@@ -280,7 +279,7 @@ export default function StatusMasterPage() {
           {EFFECT_OPTIONS.map(opt => (
             <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </select>
+        </SelectControl>
       </div>
       <div className="form-group">
         <TextField
