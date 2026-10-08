@@ -60,7 +60,7 @@ recon.md §2〜§4。消える箇所 D1〜D5、保存されない印3種、理�
 | 3つの印の行が、件の `review` か `post_review` に必ず載る | 単体試験 |
 | `unit` none の件に `unit_unknown`、照合済みで分類「不明」の件に `category_unknown` | 単体試験 |
 | 半角「/」の2つの価格で価格の行が見つかる（v102）。v10.1 では今までどおり | 単体試験 |
-| `keep_rejected=False` の出力が変更前と同じ | 既存の試験がすべて通る（CI）、`test_v102_fixes_false_output_has_no_new_keys_and_is_unchanged_by_default` |
+| `keep_rejected=False` の出力が変更前と同じ | 既存の試験がすべて通る（CI）、`test_keep_rejected_false_output_is_unchanged`・`test_without_review_reasons_the_v102_output_has_no_new_keys`（backend/tests/test_gemini_raw_copy_v101.py） |
 | 通常の件の値が変わらない（理由の追加だけ） | 手元の4回分の Gemini の答えで、変更前後の結果を比べる（デプロイ後、`prompt_ab_recompute` で。Gemini は呼ばない） |
 | 消える件 0 | 同じ比べで、全投稿の件数＝Gemini の件数 |
 
