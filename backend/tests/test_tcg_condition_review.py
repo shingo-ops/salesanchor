@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import Session
 
 from app.services import item_corrections_svc as corrections
+from app.services.review_reason_codes_svc import split_reason_codes
 from app.services import tcg_analyzer_svc as analyzer
 from app.services import tcg_analysis_review_svc as review
 from app.services import tcg_condition_review_svc as condition
@@ -462,15 +463,20 @@ def test_quantity_and_price_binding_matches_storage_precision(pg):
     assert after['valid_ack'] is True and after['needs_review'] is False
     assert after['ack_binding_hash']==binding
 
-
 def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
-    """理由ごとの配列: 表にある／無い／空／重複・空白のある理由で期待どおり（便A）。"""
+    """理由ごとの配列は API 自身の review_reasons から作られ、表の出どころが付く（便A）。
+
+    seed() は condition_canonical='Empty box' で入れるため、API の導出（tcg_condition_review_svc.py）が
+    empty_box を足す。期待は固定の配列ではなく API 自身の文字列との一致で書く。
+    """
+    table = {"gemini_unsure": ("gemini", "extraction"),
+             "empty_box": ("system", "analysis")}
     with pg["connection"].cursor() as cursor:
         cursor.execute("INSERT INTO public.review_reason_codes(code,source,fix_stage) VALUES "
-                       "('pid_unresolved','system','analysis'),('gemini_unsure','gemini','extraction')")
-    known = seed(pg, name="Known", reasons="pid_unresolved, gemini_unsure ,pid_unresolved,,")
+                       "('gemini_unsure','gemini','extraction'),('empty_box','system','analysis')")
+    known = seed(pg, name="Known", reasons="gemini_unsure, gemini_unsure ,,")
     unknown = seed(pg, name="Unknown", reasons="not_registered_code")
-    empty = seed(pg, name="Empty", reasons="", needs_review=False)
+    empty = seed(pg, name="Empty", reasons="", needs_review=False, condition_canonical="Sealed box")
 
     async def run():
         engine = create_async_engine(pg["url"])
@@ -480,10 +486,16 @@ def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
         finally:
             await engine.dispose()
 
-    by_id = {item["extraction_item_id"]: item["review_reason_details"] for item in asyncio.run(run())["items"]}
-    assert by_id[known["eid"]] == [
-        {"code": "pid_unresolved", "source": "system", "fix_stage": "analysis"},
-        {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction"},
-    ]
-    assert by_id[unknown["eid"]] == [{"code": "not_registered_code", "source": None, "fix_stage": None}]
-    assert by_id[empty["eid"]] == []
+    items = {item["extraction_item_id"]: item for item in asyncio.run(run())["items"]}
+    for seeded in (known, unknown, empty):
+        item = items[seeded["eid"]]
+        codes = [d["code"] for d in item["review_reason_details"]]
+        assert codes == split_reason_codes(item["condition_review"]["review_reasons"])
+        for d in item["review_reason_details"]:
+            expected = table.get(d["code"], (None, None))
+            assert (d["source"], d["fix_stage"]) == expected
+    by_code = {d["code"]: d for d in items[known["eid"]]["review_reason_details"]}
+    assert by_code["gemini_unsure"] == {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction"}
+    assert [d["code"] for d in items[known["eid"]]["review_reason_details"]].count("gemini_unsure") == 1
+    assert {"code": "not_registered_code", "source": None, "fix_stage": None} in items[unknown["eid"]]["review_reason_details"]
+    assert items[empty["eid"]]["review_reason_details"] == []
