@@ -78,4 +78,4 @@
 ## 維持の仕組み
 
 - 日付→paid_at の変換と SQL 断片は payment_dates.py に一元化。新しい入金経路は paid_at_from_date と PAID_AT_SQL を使うこと
-- 守り手: test_payment_dates.py（規則）と test_invoices.py（経路）
+- 守り手: backend/tests/test_payment_dates.py（規則）と backend/tests/test_invoices.py（経路）
