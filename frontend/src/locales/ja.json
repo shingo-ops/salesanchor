@@ -2425,34 +2425,6 @@
       "suppliers": "仕入元",
       "llmBudget": "LLM 予算"
     },
-    "attrMasters": {
-      "title": "各種マスタ",
-      "desc": "商品マスタの選択肢（プルダウン候補）を追加・編集・削除します。",
-      "empty": "登録されていません",
-      "addBtn": "追加",
-      "searchPlaceholder": "名称で検索",
-      "reorderHint": "行をドラッグして並び替えできます。",
-      "activeOn": "有効",
-      "activeOff": "無効",
-      "col": {
-        "labelJa": "表示名",
-        "labelEn": "英語表示",
-        "code": "コード（任意）",
-        "sortOrder": "並び順",
-        "active": "状態"
-      },
-      "attr": {
-        "productKind": "商品種類",
-        "setType": "セット種別",
-        "tcgSeries": "TCGシリーズ",
-        "rarity": "レアリティ",
-        "language": "言語",
-        "unit": "単位",
-        "hsCode": "HSコード",
-        "item": "品目",
-        "material": "素材"
-      }
-    },
     "knowledge": {
       "title": "正規化ルール + 仕入元個別ルール",
       "rulesSection": "正規化ルール",
@@ -2508,30 +2480,6 @@
       "csvErrors": "CSV エラー",
       "previewWouldInsert": "挿入予定件数",
       "invalidCsv": "CSV フォーマットが不正です"
-    },
-    "tcg": {
-      "title": "TCG シリーズマスタ",
-      "newSeries": "シリーズ新規作成",
-      "fields": {
-        "tcgType": "TCG 種別",
-        "seriesCode": "シリーズコード",
-        "nameJa": "名称（日本語）",
-        "nameEn": "名称（英語）",
-        "releaseDate": "発売日",
-        "category": "カテゴリ"
-      },
-      "types": {
-        "pokemon": "ポケモンカード",
-        "one_piece": "ワンピース",
-        "dragon_ball": "ドラゴンボール",
-        "union_arena": "ユニオンアリーナ",
-        "yugioh": "遊戯王"
-      },
-      "typeManager": {
-        "title": "種別の管理",
-        "code": "種別コード",
-        "addBtn": "種別を追加"
-      }
     },
     "supplierQuality": {
       "columns": {
@@ -2608,30 +2556,6 @@
       "retryConfirmErrors": "表示中のエラージョブを再実行しますか？（最大50件）",
       "retrySuccess": "再実行キュー追加: {{enqueued}}件 / スキップ: {{skipped}}件",
       "retryError": "再実行に失敗しました（Celery 未接続の可能性があります）"
-    },
-    "dex": {
-      "title": "ポケモン / トレーナー図鑑",
-      "kinds": {
-        "pokemon": "ポケモン",
-        "trainer": "トレーナー"
-      },
-      "newEntry": "図鑑エントリ新規作成",
-      "fields": {
-        "dexNumber": "図鑑番号",
-        "nameJa": "名称（日本語）",
-        "nameEn": "名称（英語）",
-        "generation": "世代",
-        "region": "地方",
-        "era": "時代"
-      },
-      "import": {
-        "previewBtn": "PokeAPIから取込",
-        "applyBtn": "{{count}} 件を一括取込",
-        "upToDate": "最新です（新規なし）",
-        "diffSummary": "新規 {{count}} 件（PokeAPI {{source}} 件 / DB {{db}} 件）",
-        "applied": "{{count}} 件を取り込みました",
-        "truncated": "新規が多いため先頭 {{max}} 件のみ表示・取込します"
-      }
     },
     "suppliersAdmin": {
       "title": "仕入元マスタ（中央 admin）",
@@ -2722,23 +2646,6 @@
       "refreshError": "レートの取得に失敗しました。しばらく待ってから再試行してください。",
       "currency": "通貨",
       "rateJpy": "1 外貨 = N 円"
-    },
-    "llmBudget": {
-      "title": "LLM 月次予算（Gemini 2.5 Flash）",
-      "subtitle": "テナント別の LLM フォールバック使用量と上限を管理します。",
-      "noRows": "予算行がまだ登録されていません。",
-      "savedNotice": "保存しました。",
-      "editTitle": "テナント {{tenant_id}} の予算を編集",
-      "fields": {
-        "tenantId": "テナント ID",
-        "tenantName": "テナント名",
-        "monthlyBudget": "月次予算 (USD)",
-        "currentMonth": "今月の使用量",
-        "utilization": "消化率",
-        "hardStop": "上限到達時に停止",
-        "notifyAdmin": "Admin に通知",
-        "lastResetAt": "前回リセット"
-      }
     },
     "inbound": {
       "title": "Discord 受信メッセージ",

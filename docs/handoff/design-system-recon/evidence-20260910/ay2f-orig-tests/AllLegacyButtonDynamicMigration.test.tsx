@@ -7,6 +7,7 @@ import InventoryPage from '../pages/inventory/InventoryPage';
 import InvoiceCreatePage from '../pages/invoice-create/InvoiceCreatePage';
 import ProductsPage from '../pages/products/ProductsPage';
 import QuotesPage from '../pages/quotes/QuotesPage';
+import ProductMastersTab from '../pages/super-admin/ProductMastersTab';
 import en from '../locales/en.json';
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() }));
@@ -24,7 +25,7 @@ beforeEach(async () => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
-describe('five real-page dynamic Button migrations', () => {
+describe('six real-page dynamic Button migrations', () => {
   it.each([false, true])('Inventory uses enabled=%s independently from expanded state', async (enabled) => {
     api.get.mockImplementation(async (url: string) => {
       if (url === '/me/permissions') return { permissions };
@@ -52,5 +53,9 @@ describe('five real-page dynamic Button migrations', () => {
   it('Quotes all-status condition changes on the real filter', async () => {
     api.get.mockImplementation(async (url: string) => { if (url === '/quotes') return []; throw new Error(`Unexpected GET ${url}`); });
     render(wrap(<QuotesPage />)); const all = await screen.findByTestId('quotes-filter-all'); expectVariant(all, 'primary'); fireEvent.click(screen.getByTestId('quotes-filter-draft')); expectVariant(all, 'secondary'); expect(screen.getByTestId('quotes-filter-draft').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('ProductMasters condition follows the selected real tab', async () => {
+    api.get.mockResolvedValue([]); render(wrap(<ProductMastersTab />)); const first = screen.getByTestId('attr-master-tab-product_kind'); const rarity = screen.getByTestId('attr-master-tab-rarity'); expectVariant(first, 'primary'); expectVariant(rarity, 'secondary'); fireEvent.click(rarity); await waitFor(() => expect(rarity.getAttribute('aria-selected')).toBe('true')); expectVariant(rarity, 'primary'); expectVariant(first, 'secondary');
   });
 });
