@@ -30,7 +30,13 @@ from sqlalchemy.orm import Session
 
 from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
-from app.services.line_analysis_v102_svc import ENGINE_V102, get_engine, run_v102_analysis, run_v102_extraction
+from app.services.line_analysis_v102_svc import (
+    ENGINE_V102,
+    get_engine,
+    is_v102_prompt_version,
+    run_v102_analysis,
+    run_v102_extraction,
+)
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
 from app.services.tcg_work_reference import (
@@ -660,6 +666,125 @@ def _enqueue_auto_distribute() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 人が直した後のやり直し → 配信の予約（v102 の投稿だけ。設計 docs/handoff/v102-prod-switch/design.md §13-4）
+# ---------------------------------------------------------------------------
+
+DISTRIBUTION_SCHEDULE_KEY = "tcg:distribution:scheduled"  # この間に直した分は、予約済みの1回の配信にまとめる
+# 配信が止まってキーが消えなかったときの保険。通常は配信の開始時に消す
+DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS = 600
+DISTRIBUTION_DELAY_SECONDS = 60
+REDIS_TIMEOUT_SECONDS = 2
+_DEFAULT_REDIS_URL = "redis://redis:6379/0"
+
+
+def _get_redis_client():
+    import redis  # noqa: PLC0415
+
+    return redis.from_url(
+        os.environ.get("REDIS_URL", _DEFAULT_REDIS_URL), decode_responses=True,
+        socket_timeout=REDIS_TIMEOUT_SECONDS, socket_connect_timeout=REDIS_TIMEOUT_SECONDS,
+    )
+
+
+def _release_distribution_schedule(client=None) -> None:
+    """予約のキーを消す。Redis が使えなくても止めない（TTL で消える）。"""
+    try:
+        (client or _get_redis_client()).delete(DISTRIBUTION_SCHEDULE_KEY)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] distribution schedule key release failed: %s", exc)
+
+
+def schedule_distribution() -> bool:
+    """TCG_AUTO_DISTRIBUTE=1 のとき、60秒後に自動配信を1回だけ積む。予約済み（Redis のキーが取れない）なら積まない。
+
+    Redis が使えないときは警告だけ出して積まない（_enqueue_auto_distribute と同じ扱い）。積んだら True。
+    """
+    if os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() != "1":
+        return False
+    try:
+        client = _get_redis_client()
+        if not client.set(DISTRIBUTION_SCHEDULE_KEY, "1", nx=True, ex=DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS):
+            logger.info("[tcg_extraction] 配信は予約済みのため積みません")
+            return False
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] distribution schedule skipped: %s", exc)
+        return False
+    try:
+        if scheduled_distribution_task is None:
+            raise RuntimeError("配信タスクが未登録です")
+        scheduled_distribution_task.apply_async(countdown=DISTRIBUTION_DELAY_SECONDS)
+    except Exception as exc:  # noqa: BLE001
+        _release_distribution_schedule(client)  # 積めなかったのにキーだけ残ると、次の直しも積まれなくなる
+        logger.warning("[tcg_extraction] distribution schedule enqueue failed: %s", exc)
+        return False
+    return True
+
+
+def reanalyze_v102_job(extraction_job_id: str) -> dict:
+    """v102 の投稿のシステム段をやり直し（Gemini は呼ばない）、配信を予約する。v6 の投稿・投稿なしは何もしない。"""
+    session = _get_sync_session()
+    try:
+        row = session.execute(
+            text(f"SELECT prompt_version FROM {TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+        ).first()
+        if row is None or not is_v102_prompt_version(row[0]):
+            logger.info("[tcg_extraction] v102 以外の投稿のためやり直しません: ej=%s", extraction_job_id)
+            return {"extraction_job_id": extraction_job_id, "status": "skipped", "analysis_stats": None, "scheduled": False}
+        stats = run_v102_analysis(session, extraction_job_id)
+        session.commit()
+    finally:
+        session.close()
+    return {
+        "extraction_job_id": extraction_job_id, "status": "reanalyzed", "analysis_stats": stats,
+        "scheduled": schedule_distribution(),
+    }
+
+
+def enqueue_v102_reanalyze(extraction_job_id: str) -> None:
+    """人の判断を保存した後に呼ぶ。やり直しのタスクを積む。Redis が使えなくても保存は成功させる（警告のみ）。"""
+    try:
+        if v102_reanalyze_after_correction_task is not None:
+            v102_reanalyze_after_correction_task.delay(extraction_job_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] v102 reanalyze enqueue skipped: %s", exc)
+
+
+def _run_auto_distribution() -> dict:
+    """run_distribution を1回、ワンショットのエンジンで実行する（自動配信と予約配信で共通）。"""
+    import asyncio  # noqa: PLC0415
+
+    from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
+
+    from app.database import DATABASE_URL  # noqa: PLC0415
+    from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
+
+    async def _run() -> dict:
+        # asyncio.run() は新規イベントループを作成するため、
+        # モジュールレベルの AsyncSessionLocal（エンジンが旧ループに紐付き）を
+        # そのまま使うと RuntimeError: attached to a different loop が発生する。
+        # 回避策: ワンショット用エンジン＋セッションをここで生成し、finally で確実に破棄する。
+        _connect_args: dict = {
+            "prepared_statement_cache_size": 0,
+            "server_settings": {"application_name": "salesanchor_celery_distribute"},
+        }
+        _engine = create_async_engine(
+            DATABASE_URL,
+            pool_pre_ping=True,
+            pool_size=2,
+            max_overflow=0,
+            connect_args=_connect_args,
+        )
+        _Session = async_sessionmaker(_engine, expire_on_commit=False)
+        try:
+            async with _Session() as db:
+                return await run_distribution(db)
+        finally:
+            await _engine.dispose()
+
+    return asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
 # Celery タスク定義 (Redis 未起動時は登録のみ)
 # ---------------------------------------------------------------------------
 
@@ -689,6 +814,24 @@ try:
             raise self.retry(exc=exc) from exc
 
     @celery_app.task(
+        name="tcg.v102_reanalyze_after_correction",
+        bind=True,
+        max_retries=2,
+        default_retry_delay=30,
+        time_limit=330,
+        soft_time_limit=300,
+    )
+    def v102_reanalyze_after_correction_task(self, extraction_job_id: str) -> dict:
+        """
+        Celery タスク: 人が直した v102 の投稿のシステム段をやり直し、is_current を付け直し、配信を予約する。
+        """
+        try:
+            return reanalyze_v102_job(extraction_job_id)
+        except Exception as exc:
+            logger.exception("[tcg_extraction] v102 reanalyze failed for ej=%s: %s", extraction_job_id, exc)
+            raise self.retry(exc=exc) from exc
+
+    @celery_app.task(
         name="tcg.auto_distribute_after_analysis",
         bind=True,
         max_retries=1,
@@ -704,42 +847,35 @@ try:
         スキップ扱いとなり、次の extraction 完了時に再トリガーされる。
         Redis 起動時のみ .delay() で非同期実行可能。
         """
-        import asyncio  # noqa: PLC0415
-
-        from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine  # noqa: PLC0415
-
-        from app.database import DATABASE_URL  # noqa: PLC0415
-        from app.services.tcg_distribution_svc import run_distribution  # noqa: PLC0415
-
-        async def _run() -> dict:
-            # asyncio.run() は新規イベントループを作成するため、
-            # モジュールレベルの AsyncSessionLocal（エンジンが旧ループに紐付き）を
-            # そのまま使うと RuntimeError: attached to a different loop が発生する。
-            # 回避策: ワンショット用エンジン＋セッションをここで生成し、finally で確実に破棄する。
-            _connect_args: dict = {
-                "prepared_statement_cache_size": 0,
-                "server_settings": {"application_name": "salesanchor_celery_distribute"},
-            }
-            _engine = create_async_engine(
-                DATABASE_URL,
-                pool_pre_ping=True,
-                pool_size=2,
-                max_overflow=0,
-                connect_args=_connect_args,
-            )
-            _Session = async_sessionmaker(_engine, expire_on_commit=False)
-            try:
-                async with _Session() as db:
-                    return await run_distribution(db)
-            finally:
-                await _engine.dispose()
-
         try:
-            result = asyncio.run(_run())
+            result = _run_auto_distribution()
             logger.info("[tcg_extraction] auto_distribute result: %s", result)
             return result
         except Exception as exc:
             logger.exception("[tcg_extraction] auto_distribute failed: %s", exc)
+            raise self.retry(exc=exc) from exc
+
+    @celery_app.task(
+        name="tcg.scheduled_distribution",
+        bind=True,
+        max_retries=1,
+        default_retry_delay=60,
+        time_limit=600,
+        soft_time_limit=540,
+    )
+    def scheduled_distribution_task(self) -> dict:
+        """
+        Celery タスク: 人が直した後に予約された配信（schedule_distribution が積む）。
+
+        開始の直前に予約のキーを消す。これ以降の直しは新しい予約になり、この配信が読み始めた後の直しも取りこぼさない。
+        """
+        _release_distribution_schedule()
+        try:
+            result = _run_auto_distribution()
+            logger.info("[tcg_extraction] scheduled_distribution result: %s", result)
+            return result
+        except Exception as exc:
+            logger.exception("[tcg_extraction] scheduled_distribution failed: %s", exc)
             raise self.retry(exc=exc) from exc
 
 except Exception as _celery_init_err:  # noqa: BLE001
@@ -749,10 +885,16 @@ except Exception as _celery_init_err:  # noqa: BLE001
     )
     extract_source_message_task = None  # type: ignore[assignment]
     auto_distribute_after_analysis_task = None  # type: ignore[assignment]
+    v102_reanalyze_after_correction_task = None  # type: ignore[assignment]
+    scheduled_distribution_task = None  # type: ignore[assignment]
 
 
 __all__ = [
     "extract_and_analyze_source_message",
     "extract_source_message_task",
     "auto_distribute_after_analysis_task",
+    "v102_reanalyze_after_correction_task",
+    "scheduled_distribution_task",
+    "enqueue_v102_reanalyze",
+    "schedule_distribution",
 ]
