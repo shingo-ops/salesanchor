@@ -32,7 +32,9 @@ Gemini が写した数量の数字が、その件の行の原文に無いとき�
 PR を revert（データ変更なし）。
 
 ## 7. 維持の仕組み
-単体テストが CI（backend tests）で毎回走る。
+- 単体テストが CI（backend tests）で毎回走る。
+- 守り手: backend/tests/test_gemini_raw_copy_v101.py の quantity_not_in_text のテスト4件と backend/tests/test_line_analysis_v102_svc.py の review_reasons のテスト（CI の backend tests が必須チェック）。
 
-## 8. 外部事例
-自社の正解表・保存応答での実測で判断する。外部事例は直接の根拠にならないため使わない。
+## 8. 外部・過去事例の参照と我々への応用
+- 外部事例：該当なし。自社の正解表・保存応答での実測で判断する（外部事例は直接の根拠にならないため使わない）。
+- 過去事例（自社）：#4039 で「試作版で落とした件・印を要確認の理由に」した。同じ形（review の kind を足す→review_reasons に流れる）を数量にも当てる。
