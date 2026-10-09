@@ -16,6 +16,7 @@ import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import ConfirmModal from "../../components/ConfirmModal";
+import { TextFieldControl } from "../../components/TextField";
 
 interface KnowledgeRule {
   id: number;
@@ -461,13 +462,13 @@ export default function KnowledgeAliasesTab() {
                   <small style={{ color: "var(--text-muted)", fontSize: "var(--font-xs)" }}>{t("superAdmin.knowledge.patternTypeHelp")}</small>
                 </div>
                 <div className="form-group"><label>{t(`${f}.pattern`)} *</label>
-                  <input required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.pattern} onChange={(e) => setRuleForm({ ...ruleForm, pattern: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.normalizedTo`)} *</label>
-                  <input required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
+                  <TextFieldControl required value={ruleForm.normalized_to} onChange={(e) => setRuleForm({ ...ruleForm, normalized_to: e.target.value })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.priority`)}</label>
-                  <input type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
+                  <TextFieldControl type="number" min="0" value={ruleForm.priority} onChange={(e) => setRuleForm({ ...ruleForm, priority: Number(e.target.value) || 0 })} />
                 </div>
                 <div className="form-group"><label>{t(`${f}.language`)}</label>
                   <SelectControl fullWidth value={ruleForm.language} onChange={(e) => setRuleForm({ ...ruleForm, language: e.target.value })}>
@@ -513,7 +514,7 @@ export default function KnowledgeAliasesTab() {
                   </SelectControl>
                 </div>
                 <div className="form-group"><label>{t(`${f}.aliasText`)} *</label>
-                  <input
+                  <TextFieldControl
                     required
                     value={aliasForm.alias_text}
                     data-testid="alias-text-input"

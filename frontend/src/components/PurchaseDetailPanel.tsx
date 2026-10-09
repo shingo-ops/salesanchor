@@ -26,6 +26,7 @@ import { Modal } from "./Modal";
 import { SelectControl } from "./Select";
 import { Button } from "./Button";
 import { TextareaControl } from "./Textarea";
+import { TextFieldControl } from "./TextField";
 
 export interface PurchaseDetailDto {
   id: number;
@@ -325,7 +326,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.staffTx.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -335,7 +336,7 @@ export default function PurchaseDetailPanel({
               ))}
               <div className="form-group">
                 <label>{t("purchase.purchaseDate")}</label>
-                <input
+                <TextFieldControl
                   type="date"
                   value={form.purchase_date}
                   onChange={(ev) => setField("purchase_date", ev.target.value)}
@@ -358,7 +359,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.supplier.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type={f.key === "supplier_url" ? "url" : "text"}
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}
@@ -382,7 +383,7 @@ export default function PurchaseDetailPanel({
               {NUMBER_FIELDS.amounts.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="number"
                     min="0"
                     step={f.step}
@@ -409,7 +410,7 @@ export default function PurchaseDetailPanel({
               {TEXT_FIELDS.shipping.map((f) => (
                 <div className="form-group" key={f.key}>
                   <label>{t(f.labelKey)}</label>
-                  <input
+                  <TextFieldControl
                     type="text"
                     value={form[f.key]}
                     onChange={(ev) => setField(f.key, ev.target.value)}

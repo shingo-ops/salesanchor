@@ -17,6 +17,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextFieldControl } from "../../components/TextField";
 
 interface PaypalStatus {
   configured: boolean;
@@ -141,7 +142,7 @@ export default function PaypalIntegrationPage() {
         </p>
         <div className="form-group">
           <label htmlFor="paypal-id">{t("paypalIntegration.labelClientId")}</label>
-          <input
+          <TextFieldControl
             id="paypal-id"
             type="text"
             value={clientId}
@@ -151,7 +152,7 @@ export default function PaypalIntegrationPage() {
         </div>
         <div className="form-group">
           <label htmlFor="paypal-secret">{t("paypalIntegration.labelClientSecret")}</label>
-          <input
+          <TextFieldControl
             id="paypal-secret"
             type="password"
             value={clientSecret}

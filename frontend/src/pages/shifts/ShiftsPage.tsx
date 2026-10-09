@@ -9,6 +9,7 @@ import { Select } from "../../components/Select";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Shift { id: number; user_id: number; shift_date: string; start_time: string; end_time: string; shift_type: string; notes: string | null; created_at: string; }
 
@@ -60,10 +61,10 @@ export default function ShiftsPage() {
         size="md"
       >
         <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>{t("shifts.userId")} *</label><input type="number" min="1" required value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })} /></div>
-          <div className="form-group"><label>{t("common.date")} *</label><input type="date" required value={form.shift_date} onChange={e => setForm({ ...form, shift_date: e.target.value })} /></div>
-          <div className="form-group"><label>{t("shifts.startTime")} *</label><input type="time" required value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /></div>
-          <div className="form-group"><label>{t("shifts.endTime")} *</label><input type="time" required value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /></div>
+          <div className="form-group"><label>{t("shifts.userId")} *</label><TextFieldControl type="number" min="1" required value={form.user_id} onChange={e => setForm({ ...form, user_id: e.target.value })} /></div>
+          <div className="form-group"><label>{t("common.date")} *</label><TextFieldControl type="date" required value={form.shift_date} onChange={e => setForm({ ...form, shift_date: e.target.value })} /></div>
+          <div className="form-group"><label>{t("shifts.startTime")} *</label><TextFieldControl type="time" required value={form.start_time} onChange={e => setForm({ ...form, start_time: e.target.value })} /></div>
+          <div className="form-group"><label>{t("shifts.endTime")} *</label><TextFieldControl type="time" required value={form.end_time} onChange={e => setForm({ ...form, end_time: e.target.value })} /></div>
           <Select
             label={t("shifts.shiftType")}
             value={form.shift_type}

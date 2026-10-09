@@ -29,6 +29,7 @@ import {
   buildInitialItems,
   weightForUnit,
 } from "./quoteDraft";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function QuoteCreatePage() {
   const { t } = useTranslation();
@@ -162,7 +163,7 @@ export default function QuoteCreatePage() {
             </SelectControl>
           </div>
           <div className="form-group"><label>{t("common.notes")}</label>
-            <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+            <TextFieldControl value={notes} onChange={(e) => setNotes(e.target.value)} />
           </div>
         </div>
 
@@ -265,12 +266,12 @@ export default function QuoteCreatePage() {
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("quotes.shippingFee")}</label>
             <div style={{ display: "flex", gap: "var(--space-2)", alignItems: "center" }}>
-              <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
+              <TextFieldControl type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} data-testid="shipping-fee-input" />
               <Button type="button" variant="secondary" size="sm" onClick={() => setShowFedExModal(true)} data-testid="fedex-estimate-btn">{t("quotes.fedexEstimate")}</Button>
             </div>
           </div>
           <div className="form-group"><label>{t("quotes.tax")}</label>
-            <input type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
+            <TextFieldControl type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
           </div>
           <div className="form-group"><label>{t("quotes.total")}</label>
             <div style={{ padding: "var(--space-2) var(--space-3)", fontWeight: "var(--font-weight-bold)", fontSize: "var(--font-lg)" }}>{total.toLocaleString()} {currency}</div>
