@@ -20,7 +20,7 @@ from pathlib import Path
 from sqlalchemy.orm import Session
 
 from app.services.gemini_extraction_svc import _safe_error_message
-from app.services.line_analysis_v102_svc import load_followup_reference, masters_with_followup
+from app.services.line_analysis_v102_svc import load_followup_reference, load_soldout_ref_posts, masters_with_followup
 from app.tasks.tcg_extraction import _get_sync_session
 from app.tools import prompt_ab as pab
 
@@ -78,7 +78,8 @@ def _recompute_row(session: Session, row: dict, masters: dict, contexts: dict[st
     copied = {k: row[k] for k in _COPIED_FIELDS if k in row}
     job_id = pab.fetch_job_ids(session, [row["run_id"]])[row["run_id"]]
     followup = load_followup_reference(session, job_id)  # 本番（run_v102_analysis）と同じ関数
-    return {**copied, **pab._v102_row_fields(row["response_text"], ctx, masters_with_followup(masters, followup))}
+    soldout_posts = load_soldout_ref_posts(session, job_id)  # 本番（run_v102_analysis）と同じ関数
+    return {**copied, **pab._v102_row_fields(row["response_text"], ctx, masters_with_followup(masters, followup, soldout_posts))}
 
 
 def recompute(session: Session, *, from_jsonl: Path, out_dir: Path) -> RecomputeSummary:
