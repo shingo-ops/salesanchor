@@ -26,6 +26,7 @@ import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { CompanyFormFields, type CompanyFormState } from "./CompanyFormFields";
 import { ButtonLink } from "../../components/ButtonLink";
+import { TextareaControl } from "../../components/Textarea";
 
 const PHONE_RE = /^(\+?\d{10,15}|0\d{9,10})$/;
 const validatePhoneClient = (raw: string): string | null => {
@@ -496,7 +497,7 @@ export default function CompaniesPage() {
                   </div>
                   <div className="form-row">
                     <label>{t("companies.shippingNote")}</label>
-                    <textarea value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
+                    <TextareaControl value={createForm.shipping_note} onChange={(e) => setCreateForm({ ...createForm, shipping_note: e.target.value })} />
                   </div>
                   <div className="form-row">
                     <label>{t("companies.salesChannelsLabel")}</label>
@@ -513,7 +514,7 @@ export default function CompaniesPage() {
                   </div>
                   <div className="form-row">
                     <label>{t("common.notes")}</label>
-                    <textarea value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
+                    <TextareaControl value={createForm.notes} onChange={(e) => setCreateForm({ ...createForm, notes: e.target.value })} />
                   </div>
                 </>
               )}

@@ -10,6 +10,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 interface ChannelMaster {
   platform: string;
@@ -156,8 +157,7 @@ export function ManualRecordSection({ leadId, currentPlatform }: Props) {
       </div>
 
       {/* 内容入力 */}
-      <textarea
-        className="manual-record-textarea"
+      <TextareaControl
         value={contentText}
         onChange={(e) => setContentText(e.target.value)}
         onKeyDown={handleKeyDown}

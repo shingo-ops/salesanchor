@@ -26,6 +26,7 @@ import { auth } from "../lib/firebase";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { SelectControl } from "./Select";
+import { TextareaControl } from "./Textarea";
 
 export interface ShippingDetailDto {
   id: number;
@@ -548,7 +549,7 @@ export default function ShippingDetailPanel({
           {/* メモ */}
           <div className="form-group">
             <label>{t("shipping.shipMemo")}</label>
-            <textarea
+            <TextareaControl
               value={form.ship_memo}
               onChange={(ev) => setField("ship_memo", ev.target.value)}
               data-testid="ship-input-ship_memo"
