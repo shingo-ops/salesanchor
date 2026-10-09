@@ -65,12 +65,12 @@ id UUID PK / extraction_job_id UUID NOT NULL FK ON DELETE CASCADE / line_start, 
 ### 1-4. 配信（backend/app/services/tcg_distribution_svc.py）
 - fetch_output_rows（:189）の条件（:260-270）: pid_resolved / is_current / cr.needs_review IS FALSE / exclusion IS DISTINCT FROM 'excluded' / unit_resolved / price_normalized IS NOT NULL / line_posted_at IS NOT NULL / FLAG_ 除外 / max_age_hours。
 - 止め弁: analysis_runs 未完了（:696-715）、extraction_jobs に pending/running/extracted（:728-755）があれば中止。
-- run_distribution の呼出は routers/tcg_distribution.py:169,181、line_import_admin.py:163、tcg_extraction.py:699、自動 :566-569 の4系統のみ。
+- run_distribution の呼出は backend/app/routers/tcg_distribution.py:169,181、line_import_admin.py:163、tcg_extraction.py:699、自動 :566-569 の4系統のみ。
 
 ### 1-5. 人の訂正（「直したら配信し直す」）
-- product_id 訂正: routers/item_corrections.py:81 → item_corrections_svc.py:59-73（product_id / pid_basis='MANUAL' / pid_resolved=TRUE を UPDATE。needs_review・review_reasons・is_current は更新しない）。
+- product_id 訂正: backend/app/routers/item_corrections.py:81 → item_corrections_svc.py:59-73（product_id / pid_basis='MANUAL' / pid_resolved=TRUE を UPDATE。needs_review・review_reasons・is_current は更新しない）。
 - 状態の訂正: tcg_condition_review_svc.py:283-292（condition を UPDATE し needs_review/review_reasons を再計算）。
-- 再解析: routers/tcg_product_master.py:362 → tcg_product_master_svc.py:803 → analyze_extraction_job。
+- 再解析: backend/app/routers/tcg_product_master.py:362 → tcg_product_master_svc.py:803 → analyze_extraction_job。
 - **事実: どの訂正経路からも配信は呼ばれない。D3 の「直したらその場でその件を配信し直す仕組み」は現状存在しない。**
 
 ### 1-6. 要確認画面
