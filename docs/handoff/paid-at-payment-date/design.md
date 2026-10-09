@@ -19,11 +19,11 @@
 
 - 日付 d → datetime(d.year, d.month, d.day, 12, 0, tzinfo=UTC)
 - SQL: PAID_AT_SQL = "LEAST(COALESCE(:paid_at, NOW()), NOW())"
-- 全経路（paypal_return / webhook / paypal-confirm / 手動 pay）で同じ関数・同じ SQL 断片を使う
+- 全経路（paypal_return / webhook / paypal-confirm / 手動 pay）で同じ SQL 断片を使う。日付の変換は手動 pay が paid_at_from_date、PayPal 3経路が paypal_paid_at（下記）
 
 ## PayPal 経路の追加規則（paypal_paid_at）
 
-PayPal の payment_date は「どの国の日付か」が仕様に書かれておらず、時差が最大±1日不明。支払い直後に呼ばれる経路（戻りURL・webhook・paypal-confirm）では現在時刻のほうが正確。そのため paypal_paid_at(d, now) は、paid_at_from_date(d) が now-36時間（PAYPAL_DATE_RECENT_WINDOW）より後なら None（SQL で NOW()）を返し、古い日付のときだけ PayPal の日付（UTC正午）を使う。手動入金（pay_invoice）は利用者が選んだ日付を優先するため paid_at_from_date のまま。pay_invoice の orders 連動 UPDATE も請求書と同じ PAID_AT_SQL に揃えた（未来日を丸めても値がずれない）。実装: /Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:35
+PayPal の payment_date は「どの国の日付か」が仕様に書かれておらず、時差が最大±1日不明。支払い直後に呼ばれる経路（戻りURL・webhook・paypal-confirm）では現在時刻のほうが正確。そのため paypal_paid_at(d, now) は、paid_at_from_date(d) が now-36時間（PAYPAL_DATE_RECENT_WINDOW）より後なら None（SQL で NOW()）を返し、古い日付のときだけ PayPal の日付（UTC正午）を使う。手動入金（pay_invoice）は利用者が選んだ日付を優先するため paid_at_from_date のまま。pay_invoice の orders 連動 UPDATE も請求書と同じ PAID_AT_SQL に揃えた（未来日を丸めても値がずれない）。実装: backend/app/services/payment_dates.py:35
 
 ## 旧実装の不具合
 
