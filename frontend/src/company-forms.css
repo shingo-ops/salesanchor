@@ -240,6 +240,22 @@
 }
 /* stylelint-enable no-descending-specificity */
 
+/* 商品編集の input は標準金型へ移管せず（AY-2b で保留）、旧 .form-group input の宣言を写して見た目を保つ */
+.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]) {
+  width: 100%;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-base);
+  color: var(--text-primary);
+  background: var(--bg-surface);
+  box-sizing: border-box;
+}
+
+.product-edit-form .form-group input:not([type="checkbox"]):not([type="radio"]):focus {
+  outline: none;
+  box-shadow: var(--focus-ring-shadow);
+}
+
 /* 商品編集の textarea は標準金型へ移管せず（AX-2b で保留）、従来の見た目を独立規則で保つ。
    旧 .form-group textarea の宣言を同値で写し、枠だけ --border-strong。focus の枠色も --border-strong
    （現行は上の border ショートハンドが .form-group textarea:focus の border-color を上書きしているため） */

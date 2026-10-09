@@ -242,21 +242,7 @@
   margin: 0 0 var(--space-2);
 }
 
-/* Meta 風ログインフォーム — 入力欄（.login-card スコープ限定） */
-.login-card .form-group input {
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: var(--space-3) var(--space-4);
-  font-size: var(--font-md);
-}
-
-.login-card .form-group input:focus {
-  outline: none;
-  border-color: var(--accent);
-  box-shadow: var(--focus-ring-shadow);
-}
+/* Meta 風ログインフォーム — 入力欄は FormField.css の comp-input--login（design.md §AY-2b） */
 
 /* パスワード再設定リンク（パスワード入力欄の下） */
 .login-forgot-link {

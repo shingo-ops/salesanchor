@@ -24,6 +24,7 @@ import {
   buildInitialItems,
   weightForUnit,
 } from "../quote-create/quoteDraft";
+import { TextFieldControl } from "../../components/TextField";
 
 interface QuoteSummary {
   id: number;
@@ -314,7 +315,7 @@ export default function InvoiceCreatePage() {
             </div>
             <div className="form-group">
               <label>{t("common.notes")}</label>
-              <input value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <TextFieldControl value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
           </div>
 
@@ -416,11 +417,11 @@ export default function InvoiceCreatePage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
             <div className="form-group">
               <label>{t("quotes.shippingFee")}</label>
-              <input type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
+              <TextFieldControl type="number" min="0" step="1" value={shippingFee} onChange={(e) => setShippingFee(e.target.value)} />
             </div>
             <div className="form-group">
               <label>{t("quotes.tax")}</label>
-              <input type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
+              <TextFieldControl type="number" min="0" step="1" value={taxAmount} onChange={(e) => setTaxAmount(e.target.value)} />
             </div>
             <div className="form-group">
               <label>{t("quotes.total")}</label>

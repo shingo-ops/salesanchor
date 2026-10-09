@@ -7,6 +7,7 @@ import { ContentToolbar } from "../../components/ContentToolbar";
 import { Modal } from "../../components/Modal";
 import { Button } from "../../components/Button";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface Pair { id: number; coach_user_id: number; mentee_user_id: number; is_active: boolean; started_at: string; ended_at: string | null; notes: string | null; }
 interface Feedback { id: number; pair_id: number; feedback_type: string; reason: string | null; created_by: number; created_at: string; }
@@ -62,8 +63,8 @@ export default function BuddyPage() {
         size="md"
       >
         <form onSubmit={handleSubmit}>
-          <div className="form-group"><label>{t("buddy.coachUserId")} *</label><input type="number" min="1" required value={form.coach_user_id} onChange={e => setForm({ ...form, coach_user_id: e.target.value })} /></div>
-          <div className="form-group"><label>{t("buddy.menteeUserId")} *</label><input type="number" min="1" required value={form.mentee_user_id} onChange={e => setForm({ ...form, mentee_user_id: e.target.value })} /></div>
+          <div className="form-group"><label>{t("buddy.coachUserId")} *</label><TextFieldControl type="number" min="1" required value={form.coach_user_id} onChange={e => setForm({ ...form, coach_user_id: e.target.value })} /></div>
+          <div className="form-group"><label>{t("buddy.menteeUserId")} *</label><TextFieldControl type="number" min="1" required value={form.mentee_user_id} onChange={e => setForm({ ...form, mentee_user_id: e.target.value })} /></div>
           <div className="form-group"><label>{t("common.notes")}</label><TextareaControl value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} /></div>
           <div className="form-actions">
             <Button type="button" variant="secondary" size="md" onClick={() => setShowForm(false)}>{t("common.cancel")}</Button>

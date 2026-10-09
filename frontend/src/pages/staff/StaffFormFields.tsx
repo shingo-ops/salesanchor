@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 export interface StaffFormState {
   surname_jp: string;
@@ -40,7 +41,7 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
     <>
       <div className="form-group">
         <label>{t("staff.surnameJp")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.surname_jp}
           onChange={(e) => onChange("surname_jp", e.target.value)}
@@ -48,7 +49,7 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
       </div>
       <div className="form-group">
         <label>{t("staff.givenNameJp")} *</label>
-        <input
+        <TextFieldControl
           required
           value={form.given_name_jp}
           onChange={(e) => onChange("given_name_jp", e.target.value)}
@@ -56,7 +57,7 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
       </div>
       <div className="form-group">
         <label>{t("staff.primaryEmail")} *</label>
-        <input
+        <TextFieldControl
           required
           type="email"
           value={form.primary_email}
@@ -79,7 +80,7 @@ export function StaffFormFields({ form, onChange, roles }: Props) {
       />
       <div className="form-group">
         <label>Discord ID</label>
-        <input
+        <TextFieldControl
           value={form.discord_user_id}
           onChange={(e) => onChange("discord_user_id", e.target.value)}
         />

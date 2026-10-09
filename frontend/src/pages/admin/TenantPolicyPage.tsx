@@ -19,6 +19,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
+import { TextFieldControl } from "../../components/TextField";
 
 interface TenantPolicy {
   inventory_agg_filter: "none" | "cheapest" | "balanced";
@@ -189,7 +190,7 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-price-threshold">
               {t("tenantPolicy.aggPriceThresholdJpy")}
             </label>
-            <input
+            <TextFieldControl
               id="tp-price-threshold"
               data-testid="tp-price-threshold"
               type="number"
@@ -204,7 +205,7 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-qty-threshold">
               {t("tenantPolicy.aggQtyThreshold")}
             </label>
-            <input
+            <TextFieldControl
               id="tp-qty-threshold"
               data-testid="tp-qty-threshold"
               type="number"
@@ -219,7 +220,7 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-validity-days">
               {t("tenantPolicy.quoteValidityDays")}
             </label>
-            <input
+            <TextFieldControl
               id="tp-validity-days"
               data-testid="tp-validity-days"
               type="number"
@@ -235,7 +236,7 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-currency">
               {t("tenantPolicy.defaultCurrency")}
             </label>
-            <input
+            <TextFieldControl
               id="tp-currency"
               data-testid="tp-currency"
               type="text"
@@ -250,7 +251,7 @@ export default function TenantPolicyPage() {
             <label htmlFor="tp-doc-language">
               {t("tenantPolicy.documentLanguage")}
             </label>
-            <input
+            <TextFieldControl
               id="tp-doc-language"
               data-testid="tp-doc-language"
               type="text"

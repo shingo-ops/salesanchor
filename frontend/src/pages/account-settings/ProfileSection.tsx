@@ -15,6 +15,7 @@ import type { AvatarErrorKind } from "../../lib/staffProfile";
 import { useUiPrefs } from "../../contexts/UiPrefsContext";
 import { ACCOUNT_ICONS } from "../../constants/icons";
 import { ICON } from "../../constants/iconSizes";
+import { TextFieldControl } from "../../components/TextField";
 
 interface StaffMe {
   surname_jp: string;
@@ -160,39 +161,39 @@ export default function ProfileSection() {
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="phone">{t("accountSettings.phoneLabel")}</label>
-          <input id="phone" type="tel" value={form.phone} onChange={set("phone")} />
+          <TextFieldControl id="phone" type="tel" value={form.phone} onChange={set("phone")} />
         </div>
 
         <div className="account-settings-row">
           <div className="form-group">
             <label htmlFor="surname_jp">{t("accountSettings.surnameJp")}</label>
-            <input id="surname_jp" value={form.surname_jp} onChange={set("surname_jp")} />
+            <TextFieldControl id="surname_jp" value={form.surname_jp} onChange={set("surname_jp")} />
           </div>
           <div className="form-group">
             <label htmlFor="given_name_jp">{t("accountSettings.givenNameJp")}</label>
-            <input id="given_name_jp" value={form.given_name_jp} onChange={set("given_name_jp")} />
+            <TextFieldControl id="given_name_jp" value={form.given_name_jp} onChange={set("given_name_jp")} />
           </div>
         </div>
 
         <div className="account-settings-row">
           <div className="form-group">
             <label htmlFor="surname_kana">{t("staff.surnameKana")}</label>
-            <input id="surname_kana" value={form.surname_kana} onChange={set("surname_kana")} />
+            <TextFieldControl id="surname_kana" value={form.surname_kana} onChange={set("surname_kana")} />
           </div>
           <div className="form-group">
             <label htmlFor="given_name_kana">{t("staff.givenNameKana")}</label>
-            <input id="given_name_kana" value={form.given_name_kana} onChange={set("given_name_kana")} />
+            <TextFieldControl id="given_name_kana" value={form.given_name_kana} onChange={set("given_name_kana")} />
           </div>
         </div>
 
         <div className="account-settings-row">
           <div className="form-group">
             <label htmlFor="surname_en">{t("accountSettings.surnameEn")} *</label>
-            <input id="surname_en" aria-required="true" value={form.surname_en ?? ""} onChange={set("surname_en")} />
+            <TextFieldControl id="surname_en" aria-required="true" value={form.surname_en ?? ""} onChange={set("surname_en")} />
           </div>
           <div className="form-group">
             <label htmlFor="given_name_en">{t("accountSettings.givenNameEn")} *</label>
-            <input id="given_name_en" aria-required="true" value={form.given_name_en ?? ""} onChange={set("given_name_en")} />
+            <TextFieldControl id="given_name_en" aria-required="true" value={form.given_name_en ?? ""} onChange={set("given_name_en")} />
           </div>
         </div>
 

@@ -241,3 +241,21 @@ describe('TextFieldControl variants (design.md §AY-2a)', () => {
     expect(prevented).toBe(false);
   });
 });
+
+describe('TextFieldControl variant "login" (design.md §AY-2b)', () => {
+  it('adds the login class before className', () => {
+    const { container } = render(<TextFieldControl variant="login" className="x-layout" />);
+    expect(container.querySelector('input')?.className).toBe('comp-field__input comp-input--login x-layout');
+  });
+
+  it('does not forward variant to the DOM as an attribute', () => {
+    const { container } = render(<TextFieldControl variant="login" id="v" type="email" />);
+    expect(container.innerHTML).toBe('<input id="v" class="comp-field__input comp-input--login" type="email">');
+  });
+
+  it('size cannot be combined with variant="login" (type error)', () => {
+    // @ts-expect-error size is not accepted together with variant="login"
+    const element = <TextFieldControl variant="login" size="lg" />;
+    expect(element).toBeTruthy();
+  });
+});
