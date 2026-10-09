@@ -77,6 +77,8 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "20260917_020000_supplier_ssot_migration.sql").read_text())
             # Step 4/5: create pipeline tables in public schema
             cursor.execute((MIGRATIONS / "20260921_110000_pipeline_tables_public.sql").read_text())
+            # 便A: 要確認の理由コード表（構造のみ。行は試験側で入れる）
+            cursor.execute((MIGRATIONS / "20261009_200000_create_review_reason_codes.sql").read_text())
             # ADR-158 / PR #3747: is_current column added to analysis_results for supersession logic.
             cursor.execute(f"ALTER TABLE {SCHEMA}.analysis_results ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT TRUE")
             # ADR-158 Phase 2: raw_product_code column on extraction_items (Gemini v6).
@@ -459,3 +461,29 @@ def test_quantity_and_price_binding_matches_storage_precision(pg):
     after=context(pg,item)
     assert after['valid_ack'] is True and after['needs_review'] is False
     assert after['ack_binding_hash']==binding
+
+
+def test_review_reason_details_use_code_table_and_keep_unknown_codes(pg):
+    """理由ごとの配列: 表にある／無い／空／重複・空白のある理由で期待どおり（便A）。"""
+    with pg["connection"].cursor() as cursor:
+        cursor.execute("INSERT INTO public.review_reason_codes(code,source,fix_stage) VALUES "
+                       "('pid_unresolved','system','analysis'),('gemini_unsure','gemini','extraction')")
+    known = seed(pg, name="Known", reasons="pid_unresolved, gemini_unsure ,pid_unresolved,,")
+    unknown = seed(pg, name="Unknown", reasons="not_registered_code")
+    empty = seed(pg, name="Empty", reasons="", needs_review=False)
+
+    async def run():
+        engine = create_async_engine(pg["url"])
+        try:
+            async with AsyncSession(engine) as db:
+                return await review.fetch_analysis_results(db, limit=500)
+        finally:
+            await engine.dispose()
+
+    by_id = {item["extraction_item_id"]: item["review_reason_details"] for item in asyncio.run(run())["items"]}
+    assert by_id[known["eid"]] == [
+        {"code": "pid_unresolved", "source": "system", "fix_stage": "analysis"},
+        {"code": "gemini_unsure", "source": "gemini", "fix_stage": "extraction"},
+    ]
+    assert by_id[unknown["eid"]] == [{"code": "not_registered_code", "source": None, "fix_stage": None}]
+    assert by_id[empty["eid"]] == []
