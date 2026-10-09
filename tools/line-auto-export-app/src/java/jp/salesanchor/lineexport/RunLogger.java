@@ -129,6 +129,56 @@ final class RunLogger {
         append(context, json);
     }
 
+    /**
+     * メインスレッドの遅延検知時に{@link MainThreadStallWatchdog}から呼ぶ（design.md追補
+     * 「原因究明のための診断追加」。動作は変えない診断専用）。
+     *
+     * @param label 遅れている待ちの名前（例: "editSettle"）。実行ログで区別できる名前にする。
+     * @param requestedMs その待ちに指定されていたHandler#postDelayedの遅延ms
+     * @param delayMs 期待発火時刻からの遅れms（記録時点）
+     * @param attempt 同じ待ちについて何回目の記録か（1〜3）
+     * @param mainThreadState メインスレッドのThread.State（BLOCKED/WAITING/TIMED_WAITING/
+     *     RUNNABLE等）の名前
+     * @param stack メインスレッドのスタックトレース（上位のみ使う）
+     * @param maxFrames stackのうち先頭何フレームまで記録するか
+     */
+    static void logStall(Context context, String runId, String flow, String trigger, String label,
+            long requestedMs, long delayMs, int attempt, String mainThreadState,
+            StackTraceElement[] stack, int maxFrames) {
+        JSONObject json = new JSONObject();
+        try {
+            json.put("at", formatIso8601(System.currentTimeMillis()));
+            json.put("runId", runId);
+            json.put("flow", flow);
+            json.put("phase", "stall");
+            json.put("trigger", trigger == null ? "" : trigger);
+            json.put("label", label);
+            json.put("requestedMs", requestedMs);
+            json.put("delayMs", delayMs);
+            json.put("attempt", attempt);
+            json.put("mainThreadState", mainThreadState == null ? "" : mainThreadState);
+
+            // クラス名・メソッド名・行番号のみ（メッセージ本文・グループ名・PINは一切含まない）。
+            JSONArray frames = new JSONArray();
+            if (stack != null) {
+                int count = Math.min(maxFrames, stack.length);
+                for (int i = 0; i < count; i++) {
+                    StackTraceElement el = stack[i];
+                    JSONObject frame = new JSONObject();
+                    frame.put("class", el.getClassName());
+                    frame.put("method", el.getMethodName());
+                    frame.put("line", el.getLineNumber());
+                    frames.put(frame);
+                }
+            }
+            json.put("stack", frames);
+        } catch (JSONException e) {
+            Log.w(TAG, "run log stall build failed: " + e);
+            return;
+        }
+        append(context, json);
+    }
+
     private static void append(Context context, JSONObject json) {
         try {
             File dir = LineNotifyListenerService.resolveStorageDir(context);

@@ -172,6 +172,7 @@ final class LineExportFlow {
     private String expectedGroup;
     private AccessibilityNodeInfo termuxNode;
     private String runId;
+    private MainThreadStallWatchdog stallWatchdog;
 
     // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
     // 挙動には一切使わない。診断ログにのみ出す。
@@ -223,6 +224,12 @@ final class LineExportFlow {
         runId = RunLogger.newRunId();
         RunLogger.logStart(service, runId, "export", triggerLabel);
 
+        // メインスレッドの遅延を別スレッドから見張る診断（design.md追補「原因究明のための
+        // 診断追加」。動作は変えない）。フロー内のすべてのhandler.postDelayed待ちをschedule()
+        // 経由で登録する。finish()で必ずstop()する（リーク防止）。
+        stallWatchdog = new MainThreadStallWatchdog(service, runId, "export", triggerLabel);
+        stallWatchdog.start();
+
         // アクセシビリティ操作は画面の消灯タイマーをリセットしないため、フロー中は画面を
         // 保つ（WAKE_LOCK_TAGの定数コメント参照）。解放はfinish()で、施錠まで終えてから行う。
         acquireWakeLock();
@@ -231,12 +238,32 @@ final class LineExportFlow {
         service.startWindowRecording();
 
         service.performGlobalAction(AccessibilityService.GLOBAL_ACTION_HOME);
-        handler.postDelayed(new Runnable() {
+        schedule("homeSettle", HOME_SETTLE_DELAY_MS, new Runnable() {
             @Override
             public void run() {
                 step2ClickShortcut();
             }
-        }, HOME_SETTLE_DELAY_MS);
+        });
+    }
+
+    /**
+     * handler.postDelayedのラッパー。遅延・ラベルをMainThreadStallWatchdogへ登録し、
+     * 発火時に解除する（design.md追補「原因究明のための診断追加」）。postDelayed自体の
+     * 遅延値・実行されるrunnableの内容は一切変えない。診断専用で挙動には影響しない。
+     */
+    private void schedule(final String label, final long delayMs, final Runnable runnable) {
+        if (stallWatchdog != null) {
+            stallWatchdog.registerWait(label, delayMs);
+        }
+        handler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (stallWatchdog != null) {
+                    stallWatchdog.unregisterWait(label);
+                }
+                runnable.run();
+            }
+        }, delayMs);
     }
 
     // ---- 手順2: ショートカットをクリック --------------------------------------------------
@@ -316,12 +343,12 @@ final class LineExportFlow {
         // スクロールする前に判定だけが10秒でタイムアウトする（判定と探索の
         // 二重化という設計ミスだった）。1秒の落ち着き待ちのあと、即時探索＋
         // スクロール再探索（最大4回）をscrollFindAndClickにまとめて行わせる。
-        handler.postDelayed(new Runnable() {
+        schedule("settle:" + STAGE_SETTINGS_ITEM, SCROLL_SETTLE_DELAY_MS, new Runnable() {
             @Override
             public void run() {
                 step6ClickSettings();
             }
-        }, SCROLL_SETTLE_DELAY_MS);
+        });
     }
 
     // ---- 手順6: 「設定」をクリック（即時探索＋スクロール再探索、最大4回） ---------------------
@@ -332,12 +359,12 @@ final class LineExportFlow {
             public void onSuccess() {
                 // 手順7（open_settingsの到達判定）も同じ理由で廃止（上記参照）。
                 // 1秒の落ち着き待ちのあと、スクロール探索してクリックへ進む。
-                handler.postDelayed(new Runnable() {
+                schedule("settle:" + STAGE_EXPORT_ITEM, SCROLL_SETTLE_DELAY_MS, new Runnable() {
                     @Override
                     public void run() {
                         step8ClickExportItem();
                     }
-                }, SCROLL_SETTLE_DELAY_MS);
+                });
             }
 
             @Override
@@ -415,13 +442,13 @@ final class LineExportFlow {
             editClassWaitMs = System.currentTimeMillis() - editClassWaitStartedAt;
             final long settleStartedAt = System.currentTimeMillis();
             // auto-export.sh:156 の `sleep 1` と同値。検出してからタップまでの落ち着き待ち。
-            handler.postDelayed(new Runnable() {
+            schedule("editSettle", EDIT_TAP_SETTLE_DELAY_MS, new Runnable() {
                 @Override
                 public void run() {
                     editSettleMs = System.currentTimeMillis() - settleStartedAt;
                     tapEditButton(true);
                 }
-            }, EDIT_TAP_SETTLE_DELAY_MS);
+            });
             return;
         }
         if (System.currentTimeMillis() >= deadlineAt) {
@@ -434,12 +461,12 @@ final class LineExportFlow {
             tapEditButton(false);
             return;
         }
-        handler.postDelayed(new Runnable() {
+        schedule("classPoll", NODE_WAIT_POLL_MS, new Runnable() {
             @Override
             public void run() {
                 pollEditClass(deadlineAt);
             }
-        }, NODE_WAIT_POLL_MS);
+        });
     }
 
     private void tapEditButton(boolean classDetected) {
@@ -484,12 +511,12 @@ final class LineExportFlow {
             finish(false, stage);
             return;
         }
-        handler.postDelayed(new Runnable() {
+        schedule("nodeWait:" + stage, NODE_WAIT_POLL_MS, new Runnable() {
             @Override
             public void run() {
                 waitForPackage(packageName, stage, deadlineAt, callback);
             }
-        }, NODE_WAIT_POLL_MS);
+        });
     }
 
     // ---- 共通: ノード待ち（300ms間隔・期限10秒） ----------------------------------------------
@@ -511,12 +538,12 @@ final class LineExportFlow {
             finish(false, stage);
             return;
         }
-        handler.postDelayed(new Runnable() {
+        schedule("nodeWait:" + stage, NODE_WAIT_POLL_MS, new Runnable() {
             @Override
             public void run() {
                 waitForNode(label, stage, deadlineAt, callback);
             }
-        }, NODE_WAIT_POLL_MS);
+        });
     }
 
     // ---- 共通: グループ名ノード待ち（正規化＋双方向部分一致、300ms間隔・期限10秒） ----------------
@@ -534,12 +561,12 @@ final class LineExportFlow {
             finish(false, stage);
             return;
         }
-        handler.postDelayed(new Runnable() {
+        schedule("nodeWait:" + stage, NODE_WAIT_POLL_MS, new Runnable() {
             @Override
             public void run() {
                 waitForGroupNode(expectedGroup, stage, deadlineAt, callback);
             }
-        }, NODE_WAIT_POLL_MS);
+        });
     }
 
     // ---- 共通: 見つからなければスクロールして再探索（最大4回） ----------------------------------
@@ -609,12 +636,12 @@ final class LineExportFlow {
         }
         stats.scrolls++;
         stats.scrollMode = scrollOnce();
-        handler.postDelayed(new Runnable() {
+        schedule("scrollSettle:" + stage, SCROLL_SETTLE_DELAY_MS, new Runnable() {
             @Override
             public void run() {
                 scrollFindAndClick(label, attempt + 1, stage, callback, stats);
             }
-        }, SCROLL_SETTLE_DELAY_MS);
+        });
     }
 
     /**
@@ -739,6 +766,10 @@ final class LineExportFlow {
             releaseWakeLock();
             postResultNotification(service, title, bodyBeforeLock);
             logExportEnd(success, failedStage, elapsed, elapsedUptime, null, wakeHeldAtEnd, wakeHeldMs);
+            // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
+            if (stallWatchdog != null) {
+                stallWatchdog.stop();
+            }
             if (listener != null) {
                 listener.onFinished();
             }
@@ -760,7 +791,7 @@ final class LineExportFlow {
         // 場合もある）と区別すると実装が複雑になるため、安全側に倒して一律この手順を通す。
         final String gestureSummary = GestureCompat.drainCallbackSummary();
         final long lockDelayStartedAt = System.currentTimeMillis();
-        handler.postDelayed(new Runnable() {
+        schedule("lockDelay", LOCK_DELAY_AFTER_EDIT_MS, new Runnable() {
             @Override
             public void run() {
                 // 施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS）の実測（design.md追補参照）。
@@ -775,11 +806,15 @@ final class LineExportFlow {
                 postResultNotification(service, title, finalBody);
                 logExportEnd(success, failedStage, elapsed, elapsedUptime, Boolean.valueOf(locked),
                         wakeHeldAtEnd, wakeHeldMs);
+                // フローが終わったので見張りスレッドを止める（design.md追補参照。リーク防止）。
+                if (stallWatchdog != null) {
+                    stallWatchdog.stop();
+                }
                 if (listener != null) {
                     listener.onFinished();
                 }
             }
-        }, LOCK_DELAY_AFTER_EDIT_MS);
+        });
     }
 
     /**
