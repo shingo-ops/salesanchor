@@ -86,6 +86,8 @@ _PAIRS_OF_ITEMS_SQL = """
     WHERE ar.extraction_item_id = ANY(CAST(:ids AS uuid[]))
       AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL AND ar.condition_id IS NOT NULL
 """
+# FK(ON DELETE CASCADE)の有無に依存しないよう、件の DELETE の前に解析結果を明示的に消す
+_DELETE_RESULTS_SQL = "DELETE FROM {schema}.analysis_results WHERE extraction_item_id = ANY(CAST(:ids AS uuid[]))"
 _LOCK_SQL = "SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"
 _UPDATE_ITEM_SQL = """
     UPDATE {schema}.extraction_items
@@ -305,6 +307,7 @@ async def _delete_missing(
     if not removed:
         return []
     pair_rows = (await db.execute(text(_PAIRS_OF_ITEMS_SQL.format(schema=TCG_SCHEMA)), {"ids": [r.id for r in removed]})).fetchall()
+    await db.execute(text(_DELETE_RESULTS_SQL.format(schema=TCG_SCHEMA)), {"ids": [r.id for r in removed]})
     for row in removed:
         await _add_correction(
             db, item_id=row.id, source_message_id=job.source_message_id, field=decisions.FIELD_V102_ITEM_DELETED,
