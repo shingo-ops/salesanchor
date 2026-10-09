@@ -1,0 +1,35 @@
+BEGIN
+SET
+SET
+SET
+NOTICE:  id=58 products UPDATE rows=1: mark SV9 -> SV9, name バトルパートナーズ -> バトルパートナーズ
+NOTICE:  id=58 exclude_keywords deleted rows=2
+NOTICE:  id=58 exclude_keywords inserted rows=1
+NOTICE:  id=60 products UPDATE rows=1: mark SV9 -> SVN, name バトルパートナーズ -> バトルパートナーズ デッキビルドBOX
+NOTICE:  id=60 search_keywords deleted rows=1
+NOTICE:  id=60 search_keywords inserted rows=2
+NOTICE:  id=74 products UPDATE rows=1: mark SV7 -> SV7, name ステラミラクル -> ステラミラクル
+NOTICE:  id=74 exclude_keywords deleted rows=2
+NOTICE:  id=74 exclude_keywords inserted rows=1
+NOTICE:  id=75 products UPDATE rows=1: mark SV7 -> SVK, name ステラミラクル -> ステラミラクル デッキビルドBOX
+NOTICE:  id=75 search_keywords deleted rows=1
+NOTICE:  id=75 search_keywords inserted rows=2
+NOTICE:  id=103 products UPDATE rows=1: mark SV3 -> SV3, name 黒炎の支配者 -> 黒炎の支配者
+NOTICE:  id=103 exclude_keywords deleted rows=2
+NOTICE:  id=103 exclude_keywords inserted rows=1
+NOTICE:  id=105 products UPDATE rows=1: mark SV3 -> SVF, name 黒炎の支配者 -> 黒炎の支配者 デッキビルドBOX
+NOTICE:  id=105 search_keywords deleted rows=1
+DO
+NOTICE:  id=105 search_keywords inserted rows=3
+NOTICE:  DONE: 6 products changed, 6 audit_log rows
+ id  | product_code | mark |                name                | is_active |                            search_keywords                             | exclude_keywords 
+-----+--------------+------+------------------------------------+-----------+------------------------------------------------------------------------+------------------
+  58 | SV9          | SV9  | バトルパートナーズ                 | t         | 0:バトルパートナーズ                                                   | 1:デッキビルド
+  60 | SVN          | SVN  | バトルパートナーズ デッキビルドBOX | t         | 1:バトルパートナーズ デッキビルド | 2:SV9 デッキビルド                 | 
+  74 | SV7          | SV7  | ステラミラクル                     | t         | 0:ステラミラクル                                                       | 1:デッキビルド
+  75 | SVK          | SVK  | ステラミラクル デッキビルドBOX     | t         | 1:ステラミラクル デッキビルド | 2:SV7 デッキビルド                     | 
+ 103 | SV3          | SV3  | 黒炎の支配者                       | t         | 0:黒炎 | 1:黒炎の支配者                                                | 1:デッキビルド
+ 105 | SVF          | SVF  | 黒炎の支配者 デッキビルドBOX       | t         | 1:黒炎の支配者 デッキビルド | 2:黒炎 デッキビルド | 3:SV3 デッキビルド | 
+(6 rows)
+
+COMMIT
