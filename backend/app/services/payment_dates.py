@@ -10,7 +10,7 @@ PayPal Invoicing v2 の payments.transactions[].payment_date は schema `date_no
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -19,12 +19,28 @@ PAID_AT_SQL = "LEAST(COALESCE(:paid_at, NOW()), NOW())"
 
 _NOON_HOUR = 12
 
+# PayPal の payment_date は「どの国の日付か」が仕様に書かれておらず、時差が最大±1日不明。
+# 支払い直後に呼ばれる経路（戻りURL・webhook）では現在時刻のほうが正確なので、
+# この期間内の日付は採用せず NOW() に任せる（古い日付のときだけ PayPal の日付を使う）。
+PAYPAL_DATE_RECENT_WINDOW = timedelta(hours=36)
+
 
 def paid_at_from_date(d: date | None) -> datetime | None:
     """日付 → UTC 正午の datetime。None は None（SQL 側で NOW() になる）。"""
     if d is None:
         return None
     return datetime(d.year, d.month, d.day, _NOON_HOUR, 0, tzinfo=timezone.utc)
+
+
+def paypal_paid_at(d: date | None, now: datetime | None = None) -> datetime | None:
+    """PayPal 経路用の paid_at。最近の支払い（now-36h より後）や None は None（SQL で NOW()）。"""
+    if d is None:
+        return None
+    current = now if now is not None else datetime.now(timezone.utc)
+    candidate = paid_at_from_date(d)
+    if candidate is not None and candidate > current - PAYPAL_DATE_RECENT_WINDOW:
+        return None
+    return candidate
 
 
 def parse_paypal_payment_date(value: object) -> date | None:

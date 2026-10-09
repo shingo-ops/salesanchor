@@ -454,6 +454,34 @@ class TestInvoicesStatusTransitions:
         assert row["status"] == "sourcing"
         assert str(row["paid_at"]).startswith("2026-03-15")
 
+    async def test_confirm_paypal_recent_date_uses_db_now(self, client, db_session, monkeypatch):
+        """paypal-confirm: payment_date が今日（最近）なら paid_at はテスト DB の NOW() 値になる"""
+        from datetime import datetime, timezone
+
+        from sqlalchemy import text
+
+        from app.routers import invoices as inv_router
+        company_id, contact_id = await _create_company_contact(client, "PayPal直後会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        await db_session.execute(text("UPDATE invoices SET paypal_order_id='INV2-Y' WHERE id=:i"), {"i": invoice_id})
+        await db_session.commit()
+
+        async def _creds(db, tid):
+            return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+        monkeypatch.setattr(inv_router, "_require_paypal_creds", _creds)
+        today = datetime.now(timezone.utc).date()
+        monkeypatch.setattr(
+            inv_router.paypal_payments, "get_invoice_status",
+            lambda *a, **k: {"ok": True, "paid": True, "fee": "1.00",
+                             "payment_date": today, "status_code": 200, "message": "OK"},
+        )
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-confirm")
+        assert res.status_code == 200, res.text
+        assert res.json()["paid_at"].startswith("2026-04-07")
+
     async def test_pay_draft_returns_400(self, client):
         """draft 状態からの入金登録は 400"""
         company_id, contact_id = await _create_company_contact(client, "入金失敗会社")

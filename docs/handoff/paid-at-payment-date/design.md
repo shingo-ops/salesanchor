@@ -21,6 +21,10 @@
 - SQL: PAID_AT_SQL = "LEAST(COALESCE(:paid_at, NOW()), NOW())"
 - 全経路（paypal_return / webhook / paypal-confirm / 手動 pay）で同じ関数・同じ SQL 断片を使う
 
+## PayPal 経路の追加規則（paypal_paid_at）
+
+PayPal の payment_date は「どの国の日付か」が仕様に書かれておらず、時差が最大±1日不明。支払い直後に呼ばれる経路（戻りURL・webhook・paypal-confirm）では現在時刻のほうが正確。そのため paypal_paid_at(d, now) は、paid_at_from_date(d) が now-36時間（PAYPAL_DATE_RECENT_WINDOW）より後なら None（SQL で NOW()）を返し、古い日付のときだけ PayPal の日付（UTC正午）を使う。手動入金（pay_invoice）は利用者が選んだ日付を優先するため paid_at_from_date のまま。pay_invoice の orders 連動 UPDATE も請求書と同じ PAID_AT_SQL に揃えた（未来日を丸めても値がずれない）。実装: /Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:35
+
 ## 旧実装の不具合
 
 旧初版は PayPal の payment_date（str）を :paid_at にそのまま渡していた。asyncpg は timestamptz に str を渡せず TypeError になるため、PayPal 入金の記録が失敗する。本修正で datetime に変換して渡す。
@@ -43,6 +47,8 @@
 | 未来日（今日+3日）は 422 | backend/tests/test_invoices.py::test_pay_future_date_returns_422 |
 | 受注が仕入れ中になり paid_at が請求書と同じ | backend/tests/test_invoices.py::test_pay_moves_linked_order_to_sourcing_with_same_paid_at |
 | paypal-confirm で invoices/orders 両方の paid_at が payment_date の日付 | backend/tests/test_invoices.py::test_confirm_paypal_uses_payment_date_for_invoice_and_order |
+| paypal_paid_at: None は None／now=2026-10-09T03:00Z で d=10-09 と 10-08 は None、10-07 は 10-07T12:00Z、09-01 は 09-01T12:00Z | backend/tests/test_payment_dates.py::test_paypal_paid_at_* |
+| paypal-confirm で今日の日付を返すと paid_at はテストDBの NOW() 値 | backend/tests/test_invoices.py::test_confirm_paypal_recent_date_uses_db_now |
 | 画面: 入金日 input は未来日不可・送信は paid_date | frontend の lint・tsc（InvoiceDetailPage に専用テストなし）。目視は PO 確認 |
 
 テスト上の注意: SQLite の NOW() は固定 2026-04-07 のため、日付指定テストは 2026-03-15 を使用。SQLite に LEAST が無いため tests/conftest.py に LEAST を登録した。

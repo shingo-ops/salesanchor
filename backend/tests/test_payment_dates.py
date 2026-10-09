@@ -3,14 +3,16 @@
 対応 AC: docs/handoff/paid-at-payment-date/design.md #1〜#2。
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
 from app.services.payment_dates import (
     PAID_AT_SQL,
+    PAYPAL_DATE_RECENT_WINDOW,
     paid_at_from_date,
     parse_paypal_payment_date,
+    paypal_paid_at,
 )
 
 
@@ -38,3 +40,34 @@ def test_parse_paypal_payment_date_valid():
 )
 def test_parse_paypal_payment_date_invalid_returns_none(value):
     assert parse_paypal_payment_date(value) is None
+
+
+_NOW = datetime(2026, 10, 9, 3, 0, tzinfo=timezone.utc)
+
+
+def test_recent_window_is_36_hours():
+    assert PAYPAL_DATE_RECENT_WINDOW == timedelta(hours=36)
+
+
+def test_paypal_paid_at_none_returns_none():
+    assert paypal_paid_at(None, now=_NOW) is None
+
+
+@pytest.mark.parametrize("d", [date(2026, 10, 9), date(2026, 10, 8)])
+def test_paypal_paid_at_recent_returns_none(d):
+    assert paypal_paid_at(d, now=_NOW) is None
+
+
+@pytest.mark.parametrize(
+    "d, expected",
+    [
+        (date(2026, 10, 7), datetime(2026, 10, 7, 12, 0, tzinfo=timezone.utc)),
+        (date(2026, 9, 1), datetime(2026, 9, 1, 12, 0, tzinfo=timezone.utc)),
+    ],
+)
+def test_paypal_paid_at_old_returns_utc_noon(d, expected):
+    assert paypal_paid_at(d, now=_NOW) == expected
+
+
+def test_paypal_paid_at_default_now_treats_today_as_recent():
+    assert paypal_paid_at(datetime.now(timezone.utc).date()) is None

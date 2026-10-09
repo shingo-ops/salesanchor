@@ -25,20 +25,23 @@
 
 | 引用先 | 確認内容 |
 |-------|---------|
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:19` | PAID_AT_SQL 定数 |
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:25` | paid_at_from_date（date→UTC正午） |
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:30` | parse_paypal_payment_date |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:18` | PAID_AT_SQL 定数 |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:28` | paid_at_from_date（date→UTC正午） |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:25` | PAYPAL_DATE_RECENT_WINDOW（36時間・時差が最大±1日不明のため） |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:35` | paypal_paid_at（最近の支払いは None で NOW()） |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/payment_dates.py:46` | parse_paypal_payment_date |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/services/paypal_payments.py:730` | get_invoice_status が payment_date を date で返す |
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:810` | paypal_return: paid_at_from_date(result.get("payment_date")) |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:810` | paypal_return: paypal_paid_at(result.get("payment_date")) |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:812` | invoices UPDATE に PAID_AT_SQL |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:819` | orders UPDATE に PAID_AT_SQL |
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:959` | webhook(_handle_invoice_paid): paid_at_from_date |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:959` | webhook(_handle_invoice_paid): paypal_paid_at |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:961` | webhook invoices UPDATE |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/integrations.py:968` | webhook orders UPDATE |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:56` | PayInvoiceRequest（paid_date: date または None） |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:532` | 未来日（UTC 明日より後）は 422 |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:545` | pay_invoice の orders 連動 UPDATE も PAID_AT_SQL |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:536` | pay_invoice: invoices UPDATE に PAID_AT_SQL |
-| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:775` | confirm_paypal_payment: paid_at_from_date |
+| `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:775` | confirm_paypal_payment: paypal_paid_at |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/invoices.py:791` | confirm_paypal_payment: orders UPDATE |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/backend/app/routers/orders.py:595` | set_order_paid は origin/main と同じ（paid_at = NOW()）。ADR-072 の reset_tenant_context のみ追加 |
 | `/Users/tanizawashingo/worktrees/salesanchor/release-paid-at-payment-date/frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:106` | localTodayString（ローカル今日） |

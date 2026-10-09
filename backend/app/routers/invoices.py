@@ -47,7 +47,7 @@ from app.services import paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_rate import get_fx_rate
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
-from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date
+from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -542,7 +542,7 @@ async def pay_invoice(
 
     # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移（awaiting_payment のみ）
     await db.execute(
-        text("UPDATE orders SET status='sourcing', paid_at=COALESCE(:paid_at, NOW()), updated_at=NOW() "
+        text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
              "WHERE invoice_id=:iid AND status='awaiting_payment'"),
         {"iid": invoice_id, "paid_at": paid_at_value},
     )
@@ -772,7 +772,7 @@ async def confirm_paypal_payment(
         )
 
     # status ガードを UPDATE にも入れる（既に paid/voided への二重適用を atomic に防ぐ TOCTOU 防御）
-    paid_at_value = paid_at_from_date(result.get("payment_date"))
+    paid_at_value = paypal_paid_at(result.get("payment_date"))
     upd = await db.execute(
         text(f"""
             UPDATE invoices
