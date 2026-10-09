@@ -17,6 +17,7 @@ final class SchedulerStore {
     private static final String KEY_PENDING_NEXT_TRIGGER = "pending_next_trigger";
     private static final String KEY_PENDING_NEXT_AT_MS = "pending_next_at_ms";
     private static final String KEY_LAST_IMPORT_AT = "last_import_at";
+    private static final String KEY_LAST_COMPLEMENT_ATTEMPT_AT = "last_complement_attempt_at";
 
     /** 既定はOFF（design.md: インストール直後に勝手に動き出さないこと）。 */
     private static final boolean DEFAULT_ENABLED = false;
@@ -103,6 +104,25 @@ final class SchedulerStore {
 
     static void setLastImportAt(Context context, long whenMs) {
         prefs(context).edit().putLong(KEY_LAST_IMPORT_AT, whenMs).apply();
+    }
+
+    /**
+     * 補完が発火して実行を試みた時刻（epoch ms）。design.md追補「取り込みの時間規則」の
+     * 欠陥修正（PO確認 2026-10-09）: 補完の再予約はlastImportAtだけを起点にすると、
+     * 発火直後は起点がまだ動いていないため「計算結果が過去」になり1分後フォールバックに
+     * 落ちる。その回の実行が失敗・見送りで終わるとlastImportAtは更新されないため、
+     * 1分ごとに補完が発火し続けてしまう（本物の欠陥、実機で報告・修正）。
+     * 補完の発火時に必ずこの値を更新することで、次回の計算が「起点とこの試行時刻の
+     * 遅い方」を基準にするようになり、失敗・見送りが続いても次回は正しく30分/60分後になる
+     * （1分後フォールバックは、計算結果が実際に過去になる場合だけに限定される）。
+     * 既定0（未試行）。
+     */
+    static long getLastComplementAttemptAt(Context context) {
+        return prefs(context).getLong(KEY_LAST_COMPLEMENT_ATTEMPT_AT, 0L);
+    }
+
+    static void setLastComplementAttemptAt(Context context, long whenMs) {
+        prefs(context).edit().putLong(KEY_LAST_COMPLEMENT_ATTEMPT_AT, whenMs).apply();
     }
 
     private static SharedPreferences prefs(Context context) {

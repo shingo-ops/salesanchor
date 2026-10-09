@@ -156,11 +156,17 @@ final class RunScheduler {
     /**
      * {@link AlarmReceiver}が受けた発火の処理。
      * 補完は次回をここで即座に張り直す（design.md: 「次回を張るのは、実行を始める前」）。
-     * この時点では起点（最後の取り込み）はまだ動いていないため、計算結果は通常
-     * 「すでに過去」になり、規則5（タイトループ防止）の1分後フォールバックが適用される。
-     * 今回の発火が成功すれば{@link #recordSuccessfulImport}が起点を更新し、正しい間隔
-     * （30分/60分）で改めて張り直す。補完自身はこの仕組みで自己再アームするため、床の
-     * 対象外（同じrequestCodeに床判定分の予約を重ねると補完自身の張り直しが乱れるため）。
+     * 張り直す前に、今回の発火自体を試行時刻として{@link SchedulerStore#setLastComplementAttemptAt}
+     * へ記録する（design.md追補「取り込みの時間規則」の欠陥修正、PO確認 2026-10-09）:
+     * これを記録せずに起点（最後の取り込み）だけを基準にすると、発火直後は起点がまだ
+     * 動いていないため計算結果が「すでに過去」になり、その回の実行が失敗・見送りで終わると
+     * 起点も動かないままなので、1分後フォールバック→失敗→1分後フォールバック…と1分ごとに
+     * 発火し続ける不具合になる（実機で確認）。試行時刻を記録しておけば、{@link
+     * #computeNextComplementAt}が「起点とこの試行時刻の遅い方」を基準に計算するため、
+     * 失敗・見送りが続いても次回は正しく30分/60分後になる。今回の発火が成功すれば
+     * {@link #recordSuccessfulImport}が起点（lastImportAt）を更新し、そちらが新しくなる
+     * ためさらに前に進む。補完自身はこの仕組みで自己再アームするため、床の対象外（同じ
+     * requestCodeに床判定分の予約を重ねると補完自身の張り直しが乱れるため）。
      * 通知/再試行は前回の実行開始から3分未満なら、3分経過時点へ同じ予約を延ばして今回は
      * 実行しない。
      * 実行に進む場合、通知引き金は自分の予約をここでcancelする（次のバーストのために
@@ -179,6 +185,8 @@ final class RunScheduler {
         long now = System.currentTimeMillis();
 
         if (TRIGGER_COMPLEMENT.equals(triggerType)) {
+            // 必ず試行時刻を記録してから次回を計算する（上記javadocの欠陥修正の要）。
+            SchedulerStore.setLastComplementAttemptAt(context, now);
             long nextAt = computeNextComplementAt(context);
             scheduleAt(context, REQUEST_CODE_COMPLEMENT, nextAt, TRIGGER_COMPLEMENT);
             SchedulerStore.setPendingNextTrigger(context, TRIGGER_COMPLEMENT, nextAt);
@@ -236,14 +244,28 @@ final class RunScheduler {
     }
 
     /**
-     * 補完の次回発火時刻を計算する。起点（{@link SchedulerStore#getLastImportAt}、無ければ
-     * "今"）の時刻帯で間隔を決める（PO決定・案A: 発火時刻ではなく起点の時刻で決める。
-     * 例: 起点が23:50（コア内）→+30分→0:20に発火、発火時刻がコア外でも60分にしない。
-     * 計算を1回で済ませ挙動を読みやすくするため）。結果がすでに過去なら、タイトループを
-     * 避けるため1分後に倒す（規則5）。
+     * 補完の次回発火時刻を計算する。基準時刻は「{@link SchedulerStore#getLastImportAt}
+     * （最後に取り込みが成功した時刻）」と「{@link SchedulerStore#getLastComplementAttemptAt}
+     * （補完が最後に発火を試みた時刻）」の遅い方（どちらも無ければ"今"）。この遅い方を
+     * 基準時刻の時刻帯で間隔を決める（PO決定・案A: 発火時刻ではなく基準時刻で決める。
+     * 例: 基準時刻が23:50（コア内）→+30分→0:20に発火、発火時刻がコア外でも60分にしない。
+     * 計算を1回で済ませ挙動を読みやすくするため）。
+     *
+     * 「遅い方」を使う理由（design.md追補「取り込みの時間規則」の欠陥修正、PO確認
+     * 2026-10-09）: lastImportAtだけを基準にすると、補完が発火した直後はまだlastImportAtが
+     * 動いていないため計算結果が常に過去になり、その発火が失敗・見送りで終わると
+     * lastImportAtも動かないため、1分後フォールバック→失敗→1分後フォールバック…と
+     * 1分ごとに発火し続けてしまう（実機で確認した本物の欠陥）。lastComplementAttemptAtを
+     * 合わせて基準にすることで、失敗・見送りが続いても次回は正しく30分/60分後になる。
+     *
+     * 1分後フォールバック（規則5、タイトループ防止）は、この「遅い方」を使ってもなお
+     * 結果が過去になる場合（基準時刻が古すぎる・端末時計が進んだ等）だけに限定される。
+     * 通常経路では使われない。
      */
     private static long computeNextComplementAt(Context context) {
-        long anchor = SchedulerStore.getLastImportAt(context);
+        long lastImportAt = SchedulerStore.getLastImportAt(context);
+        long lastAttemptAt = SchedulerStore.getLastComplementAttemptAt(context);
+        long anchor = Math.max(lastImportAt, lastAttemptAt);
         if (anchor <= 0) {
             anchor = System.currentTimeMillis();
         }
