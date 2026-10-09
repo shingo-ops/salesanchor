@@ -593,6 +593,14 @@
             "title": "Review Issues",
             "type": "array"
           },
+          "review_reason_details": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ReviewReasonDetail"
+            },
+            "title": "Review Reason Details",
+            "type": "array"
+          },
           "source_message_id": {
             "title": "Source Message Id",
             "type": "string"
@@ -27054,6 +27062,51 @@
           "gross_margin"
         ],
         "title": "RevenueSummaryResponse",
+        "type": "object"
+      },
+      "ReviewReasonDetail": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "fix_stage": {
+            "anyOf": [
+              {
+                "enum": [
+                  "extraction",
+                  "analysis"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fix Stage"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "gemini",
+                  "system"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "code",
+          "source",
+          "fix_stage"
+        ],
+        "title": "ReviewReasonDetail",
         "type": "object"
       },
       "ReviewReasonItem": {

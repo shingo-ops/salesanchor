@@ -19,6 +19,7 @@ import { Button } from "../../../components/Button";
 import { Card } from "../../../components/Card";
 import { useSuperAdmin } from "../../../hooks/useSuperAdmin";
 import { api, ApiError } from "../../../lib/api";
+import { reviewReasonLabel, reviewSourceLabel, type ReviewReasonDetail } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 
 const PAGE_SIZE = 20;
 
@@ -31,6 +32,7 @@ interface NeedsReviewItem {
   raw_text: string;
   gemini: Record<string, string>;
   system: Record<string, string>;
+  review_reason_details?: ReviewReasonDetail[];
   review_issues: string[];
   condition_review: {
     condition_id: string | null;
@@ -335,11 +337,17 @@ export default function NeedsReviewTabsPanel() {
       renderCell: (item) => item.provider,
     },
     {
+      key: "review_source",
+      header: t("needsReview.source"),
+      renderCell: (item) => reviewSourceLabel(t, item.review_reason_details) ?? "—",
+    },
+    {
       key: "review_reasons",
       header: t("needsReview.reviewReasons"),
       renderCell: (item) => {
-        if (item.condition_review?.review_reasons) {
-          return item.condition_review.review_reasons;
+        const details = item.review_reason_details ?? [];
+        if (details.length > 0) {
+          return details.map((detail) => reviewReasonLabel(t, detail.code)).join(t("reviewReason.separator"));
         }
         const issues = item.review_issues ?? [];
         return issues

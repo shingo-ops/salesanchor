@@ -886,3 +886,9 @@ run_sql migrations/20261009_100000_type_master_match_by_code.sql
 
 # 試作版 v102: 中分類マスタ type_master に code_only_match（型番だけでも決めてよいかの印）を追加（構造のみ・値は運用で付ける・冪等）
 run_sql migrations/20261009_150000_type_master_code_only_match.sql
+
+# 便B: v102 本番エンジン用の列（extraction_items に source_lines・gemini_index、extraction_jobs に gemini_unsure・review_reasons）。構造のみ・冪等（ADR-1007）
+run_sql migrations/20261009_180000_v102_engine_columns.sql
+
+# 便A: 要確認の理由コード表 review_reason_codes 新設（構造のみ・初期行は data/review_reason_codes/ の1回だけのデータ変更・冪等・ADR-1007）
+run_sql migrations/20261009_200000_create_review_reason_codes.sql

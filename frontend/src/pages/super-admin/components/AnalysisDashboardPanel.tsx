@@ -43,6 +43,7 @@ import { DashboardIcons } from "../../../constants/icons";
 import type { Icon } from "../../../constants/icons";
 import type { AnalysisRulesSidebarKey } from "./AnalysisRulesSidebar";
 import type { SupplierQualitySummary } from "../../../features/tcg-analysis-review/supplierQuality";
+import { reviewReasonLabel } from "../../../features/tcg-analysis-review/reviewReasonLabel";
 import { LlmUsageSection } from "./LlmUsageSection";
 import "./AnalysisDashboardPanel.css";
 
@@ -1638,7 +1639,7 @@ function AnalysisTabContent({ data, trend, supplierData, supplierLoading, qualit
             <ul className="analysis-dashboard-reason-list">
               {data.review_reasons.map((item) => (
                 <li key={item.reason} className="analysis-dashboard-reason-item">
-                  <span>{item.reason}</span>
+                  <span>{reviewReasonLabel(t, item.reason)}</span>
                   <span className="analysis-dashboard-reason-count">
                     {item.count.toLocaleString()}
                     {t("analysisRules.dashboard.items")}

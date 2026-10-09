@@ -3811,11 +3811,6 @@
       "filtered": "フィルタ除外",
       "unknown": "未記録"
     },
-    "reviewReason": {
-      "pid_unresolved": "商品を特定できない",
-      "multi_candidate": "商品候補が複数",
-      "note_unmatched": "メモの変換先が見つからない"
-    },
     "viewMessages": "取り込んだ投稿を確認",
     "viewItems": "抽出結果をすべて見る",
     "viewResults": "解析結果{{total}}明細をすべて見る",
@@ -3847,17 +3842,44 @@
     "changed": "内容が変わりました。再取得した内容を確認してから、もう一度確認してください。",
     "reloadFailed": "内容が変わり、再取得にも失敗しました。再読込してから確認してください。",
     "saveFailed": "状態を保存できませんでした。もう一度お試しください。",
-    "loadFailed": "状態の選択肢を取得できませんでした。",
-    "otherReason": "他にも確認が必要な項目があります。",
-    "separator": "／",
-    "reasons": {
-      "empty_box": "空箱であることの確認が必要です。",
-      "empty_box_ambiguous": "空箱の説明が曖昧です。実際の状態を選択してください。",
-      "empty_box_master_unavailable": "空箱の状態定義を利用できません。",
-      "note_unmatched": "備考の確認が残っています。",
-      "pid_unresolved": "商品を特定できていません。",
-      "multi_candidate": "商品候補が複数あります。"
-    }
+    "loadFailed": "状態の選択肢を取得できませんでした。"
+  },
+  "reviewReason": {
+    "pid_unresolved": "商品を特定できない",
+    "multi_candidate": "商品候補が複数ある",
+    "note_unmatched": "備考の変換先が見つからない",
+    "empty_box": "空箱かどうかの確認が必要",
+    "empty_box_ambiguous": "空箱の説明があいまい",
+    "empty_box_master_unavailable": "空箱の状態定義が使えない",
+    "unit_unresolved": "単位を特定できない",
+    "price_unresolved": "価格を読み取れない",
+    "excluded": "除外の対象",
+    "item_shape_invalid": "Gemini の出力の形が正しくない",
+    "price_not_in_lines": "価格が原文の行に無い",
+    "duplicate_price_line": "同じ価格の行が重なっている",
+    "ship": "発送の行かどうか確認が必要",
+    "condition": "状態の行かどうか確認が必要",
+    "quantity_no_number": "数量に数字が無い",
+    "possible_footer_line": "末尾の定型文かもしれない",
+    "unit_unknown": "単位が分からない",
+    "category_unknown": "商品の種類が分からない",
+    "heading_ship_with_own_ship": "見出しと件の両方に発送の記載がある",
+    "no_items": "商品が1件も取れていない",
+    "possible_missing_item": "取りこぼしの可能性がある",
+    "product_not_in_master": "商品マスタに無い",
+    "product_multiple": "商品候補が複数ある（新方式）",
+    "condition_multiple_candidates": "状態の候補が複数ある",
+    "condition_unknown": "状態が分からない",
+    "gemini_unsure": "Gemini が自信なしと申告",
+    "gemini_unsure_invalid": "Gemini の申告の形が正しくない",
+    "response_unreadable": "Gemini の応答を読めない",
+    "extract_exception": "解析の途中でエラーが起きた",
+    "unknown": "登録されていない理由（{{code}}）",
+    "source": {
+      "gemini": "Gemini",
+      "system": "システム"
+    },
+    "separator": "、"
   },
   "codeCollision": {
     "title": "型番が既存の商品と重なっています",
@@ -3867,7 +3889,14 @@
     "fields": { "product_code": "品番", "mark": "マーク" },
     "addToThis": "この商品の除外ワードに足すとよい語：{{words}}",
     "addToOther": "相手の商品の除外ワードに足すとよい語：{{words}}",
-    "registered": "除外ワードは登録済みです"
+    "registered": "除外ワードは登録済みです",
+    "addToThisButton": "この商品に追加",
+    "addToOtherButton": "相手に追加",
+    "confirmTitle": "除外ワードの追加",
+    "confirmMessage": "{{product}} の除外ワードに「{{word}}」を追加します",
+    "confirmAction": "追加する",
+    "result": { "added": "追加しました", "exists": "登録済み", "staged": "入力欄に追加しました（保存で登録されます）" },
+    "addError": "追加に失敗しました。もう一度お試しください"
   },
   "productDetail": {
     "title": "商品詳細・編集",
@@ -5151,6 +5180,7 @@
     "title": "要確認一覧",
     "productName": "商品名",
     "supplier": "仕入元",
+    "source": "出どころ",
     "reviewReasons": "確認理由",
     "createdAt": "日時",
     "noItems": "要確認の商品はありません",

@@ -1214,6 +1214,17 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
     Returns:
         {total, pid_resolved, unit_resolved, needs_review}
     """
+    # v102 の投稿（prompt_version が `v102:` 始まり）は v6 の判定を通さず、v102 のシステム段へ渡す。
+    # 再解析 API など全部の呼び出し元が、投稿の記録で振り分けられる（設定ではなく記録で決める＝途中で設定を変えても混ざらない）。
+    # lazy import: line_analysis_v102_svc → tcg_analyzer_svc の循環インポートを回避
+    from app.services.line_analysis_v102_svc import is_v102_prompt_version, run_v102_analysis  # noqa: PLC0415
+
+    prompt_version = session.execute(
+        text(f"SELECT prompt_version FROM {TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+    ).scalar()
+    if is_v102_prompt_version(prompt_version):
+        return run_v102_analysis(session, extraction_job_id)
+
     # ルックアップマップをロード
     (
         product_code_to_uuid,
