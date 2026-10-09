@@ -14,6 +14,8 @@
   - system_key がある
 
 ## 2. 現在地（recon.md の要約）
+recon: docs/handoff/owner-admin-computed-permissions/recon.md
+
 - 権限の確かめは load_user_permissions の1か所で行い、ユーザーの役割の付与の和集合を使う（backend/app/auth/dependencies.py:486-546）。画面のメニューも /me/permissions を通じて同じ結果を使う。
 - 所有者と管理者の付与は、毎回流れる migration 025 が後から配っている。
 - テナントの作成（backend/app/services/tenant.py）は、次の状態で作っていて、migration 080・023・075 が次のデプロイで直している。
@@ -80,5 +82,6 @@
 - 過去事例：権限の和集合で判定する今の作り（Discord 方式、dependencies.py:495）を変えずに、所有者・管理者の分だけを計算で足した。
 
 ## 9. 維持の仕組み
-- 守り手: 設計担当（Opus）。権限を足したときに、所有者と管理者に届くことを、CI の PG の試験で毎回確かめる。
+- 守り手: backend/tests/test_permission_resolution_pg.py
+- 対象: 権限を足したときに、所有者と管理者に届くこと（CI の PG の試験で毎回確かめる。設計担当 Opus が見張る）
 - 除く権限の名前は、system_roles.py の定数の1か所に限る。
