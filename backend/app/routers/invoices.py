@@ -16,11 +16,13 @@ import json
 import logging
 import os
 import uuid
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, status
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import Response
+from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,9 +47,15 @@ from app.services import paypal_payments
 from app.services.audit import record_audit_log
 from app.services.fx_rate import get_fx_rate
 from app.services.invoice_renderer import render_invoice_pdf, render_quote_pdf
+from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date, paypal_paid_at
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+class PayInvoiceRequest(BaseModel):
+    """入金登録 POST ボディ（paid_date は省略可・日付のみ）。"""
+    paid_date: date | None = None
 
 
 async def _get_tenant_schema(tenant_id: int) -> str:
@@ -513,19 +521,31 @@ async def issue_invoice(
 )
 async def pay_invoice(
     invoice_id: int,
+    body: PayInvoiceRequest | None = Body(default=None),
     db: AsyncSession = Depends(get_db),
     tenant_id: int = Depends(get_current_tenant),
     current_user: User = Depends(get_current_user),
 ):
-    """入金を登録する（issued/overdue → paid）"""
+    """入金を登録する（issued/overdue → paid）。body.paid_date（日付のみ）を渡すとその日の入金として登録できる。"""
+    paid_date = body.paid_date if body else None
+    # 未来日は不可（時差で「今日」が UTC の明日になる地域を許容するため UTC の明日までは通す）
+    if paid_date is not None and paid_date > (datetime.now(timezone.utc) + timedelta(days=1)).date():
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="入金日に未来の日付は指定できません")
+    paid_at_value = paid_at_from_date(paid_date)
     result = await db.execute(
-        text(f"UPDATE invoices SET status = 'paid', paid_at = NOW(), updated_at = NOW() WHERE id = :id AND status IN ('issued', 'overdue') RETURNING {_INVOICE_COLUMNS}"),
-        {"id": invoice_id},
+        text(f"UPDATE invoices SET status = 'paid', paid_at = {PAID_AT_SQL}, updated_at = NOW() WHERE id = :id AND status IN ('issued', 'overdue') RETURNING {_INVOICE_COLUMNS}"),
+        {"id": invoice_id, "paid_at": paid_at_value},
     )
     row = result.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="issued/overdue状態の請求書のみ入金登録できます")
 
+    # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移（awaiting_payment のみ）
+    await db.execute(
+        text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
+             "WHERE invoice_id=:iid AND status='awaiting_payment'"),
+        {"iid": invoice_id, "paid_at": paid_at_value},
+    )
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="pay", table_name="invoices", record_id=invoice_id,
                            new_data={"status": "paid"})
@@ -752,24 +772,25 @@ async def confirm_paypal_payment(
         )
 
     # status ガードを UPDATE にも入れる（既に paid/voided への二重適用を atomic に防ぐ TOCTOU 防御）
+    paid_at_value = paypal_paid_at(result.get("payment_date"))
     upd = await db.execute(
         text(f"""
             UPDATE invoices
-            SET status = 'paid', paid_at = NOW(), payment_fee = :fee,
+            SET status = 'paid', paid_at = {PAID_AT_SQL}, payment_fee = :fee,
                 payment_method = 'paypal', updated_at = NOW()
             WHERE id = :id AND status IN ('issued', 'overdue')
             RETURNING {_INVOICE_COLUMNS}
         """),
-        {"id": invoice_id, "fee": result.get("fee")},
+        {"id": invoice_id, "fee": result.get("fee"), "paid_at": paid_at_value},
     )
     row = upd.mappings().first()
     if not row:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="発行済み（issued/overdue）の請求書のみ入金確認できます")
     # ADR-104: 入金確認で紐づく受注を「支払い待ち→仕入れ中」へ自動遷移（awaiting_payment のみ）
     await db.execute(
-        text("UPDATE orders SET status = 'sourcing', paid_at = NOW(), updated_at = NOW() "
+        text(f"UPDATE orders SET status = 'sourcing', paid_at = {PAID_AT_SQL}, updated_at = NOW() "
              "WHERE invoice_id = :iid AND status = 'awaiting_payment'"),
-        {"iid": invoice_id},
+        {"iid": invoice_id, "paid_at": paid_at_value},
     )
     await record_audit_log(db=db, tenant_id=tenant_id, user_id=current_user.id,
                            action="paypal_confirm", table_name="invoices", record_id=invoice_id,
