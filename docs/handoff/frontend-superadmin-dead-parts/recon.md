@@ -22,25 +22,25 @@
 | /super-admin/masters/note-master/import | NoteMasterImportPage | 357-358 | あり(:131) |
 | /super-admin/masters/product-categories/import | ProductCategoriesImportPage | 361-362 | あり(:137) |
 計17本。/super-admin 配下の <Navigate>(リダイレクト) は App.tsx に 0 件 (Navigate は App.tsx:129,183-197,366,390 のみ、いずれも /super-admin 無関係)。
-ページ名の参考: ja.json nav.* に superAdminTcgProductMaster=商品マスタ/FxRate=為替レート管理/TcgParallelReport=並行運用比較レポート/TcgLineImport=インポート/TcgSoldOut=完売ルール/TcgSupplierQuality=解析精度管理/TcgDistribution=配信先管理/AnalysisRules=LINE解析/SupplierMaster=仕入元マスタ/SupplierExtractionRules=抽出ルール設定 (locales/ja.json:259-266,286-287)
+ページ名の参考: ja.json nav.* に superAdminTcgProductMaster=商品マスタ/FxRate=為替レート管理/TcgParallelReport=並行運用比較レポート/TcgLineImport=インポート/TcgSoldOut=完売ルール/TcgSupplierQuality=解析精度管理/TcgDistribution=配信先管理/AnalysisRules=LINE解析/SupplierMaster=仕入元マスタ/SupplierExtractionRules=抽出ルール設定 (frontend/src/locales/ja.json:259-266,286-287)
 
 ## 2. メニュー(サイドバー/ナビ)
 ### 2a. デスクトップ左サイドバー "SaaS管理者" ブロック
-定義: components/DesktopShell.tsx:192-196 (saasAdminItems)、描画 :372-388。表示条件: isSuperAdmin (useSuperAdmin, :110/:192/:373) のみ。親グループ: 区切り線(sidebar-divider)後の独立ブロック(アコーディオン無し)。feature flag: 無し。
+定義: frontend/src/components/DesktopShell.tsx:192-196 (saasAdminItems)、描画 :372-388。表示条件: isSuperAdmin (useSuperAdmin, :110/:192/:373) のみ。親グループ: 区切り線(sidebar-divider)後の独立ブロック(アコーディオン無し)。feature flag: 無し。
 | 表示名(i18nキー / ja) | リンク先 | 行 |
 |---|---|---|
 | nav.superAdminAnalysisRules / LINE解析 | /super-admin/analysis-rules | DesktopShell.tsx:193 |
 | nav.buybackPrices / 買取相場 | /buyback-prices (super-admin 外のルート、App.tsx:208) | :194 |
 | nav.superAdminFxRate / 為替レート管理 | /super-admin/fx-rate | :195 |
 ### 2b. モバイル MoreSheet
-定義: components/MobileShell.tsx:162-183  表示条件: isSuperAdmin。
+定義: frontend/src/components/MobileShell.tsx:162-183  表示条件: isSuperAdmin。
 | 表示名 | リンク先 | 行 |
 |---|---|---|
 | LINE解析 | /super-admin/analysis-rules | :164-169 |
 | 買取相場 | /buyback-prices | :170-175 |
 | 抽出ルール設定 (nav.superAdminSupplierExtractionRules) | /super-admin/supplier-extraction-rules | :176-181 |
 (デスクトップ側に「抽出ルール設定」は無い。DesktopShell.tsx:190 コメント「解析管理ページ内サブナビに統合済み」。モバイルはメニュー項目として残存 = 差異)
-### 2c. ページタイトル用マップ: config/routeTitles.ts:14-16 に /super-admin/{tcg-sold-out, analysis-rules, supplier-extraction-rules} のみ登録(メニュー定義ではない)
+### 2c. ページタイトル用マップ: frontend/src/config/routeTitles.ts:14-16 に /super-admin/{tcg-sold-out, analysis-rules, supplier-extraction-rules} のみ登録(メニュー定義ではない)
 
 ## 3. ページ内ナビ
 ### 3a. LINE解析ページ(/super-admin/analysis-rules) 左サブナビ (hub-shell)
@@ -78,10 +78,10 @@
 ### 3b. ページ内タブ (Tabs 部品)
 | 場所 | タブ(key / ja) | 定義 |
 |---|---|---|
-| ダッシュボード | import インポート / extraction 抽出 / analysis 解析 / distribution 配信 / usage 使用量 | components/AnalysisDashboardPanel.tsx:470-474 (Tabs :501) |
-| 要確認 | production 本番の確認待ち / shadow 試運転の確認待ち / bottlenecks 詰まり | components/NeedsReviewTabsPanel.tsx:447-450 (:458) |
-| 解析精度管理（新方式） | summary 精度サマリー / posts 投稿照合 | components/ShadowAccuracyPanel.tsx:82-84 (:107) |
-| ステータスルール | sold-out 完売ルール / date 日付ルール / default デフォルト / test テスト | components/RuleManagementPanel.tsx:106-109 (:153) |
+| ダッシュボード | import インポート / extraction 抽出 / analysis 解析 / distribution 配信 / usage 使用量 | frontend/src/pages/super-admin/components/AnalysisDashboardPanel.tsx:470-474 (Tabs :501) |
+| 要確認 | production 本番の確認待ち / shadow 試運転の確認待ち / bottlenecks 詰まり | frontend/src/pages/super-admin/components/NeedsReviewTabsPanel.tsx:447-450 (:458) |
+| 解析精度管理（新方式） | summary 精度サマリー / posts 投稿照合 | frontend/src/pages/super-admin/components/ShadowAccuracyPanel.tsx:82-84 (:107) |
+| ステータスルール | sold-out 完売ルール / date 日付ルール / default デフォルト / test テスト | frontend/src/pages/super-admin/components/RuleManagementPanel.tsx:106-109 (:153) |
 | 商品マスタ(単独ページ /tcg-product-master) | 「すべて」+作品ごと(動的) | TcgProductMasterPage.tsx:85 |
 
 ## 4. 突き合わせ
@@ -99,7 +99,7 @@
 - /super-admin/masters/*/import 6本 : 各マスタパネルの import ボタンから到達(UnitMasterPanel.tsx:226, ConditionsMasterPanel.tsx:274, NoteMasterPanel.tsx:207, ProductCategoriesMasterPanel.tsx:174, RuleManagementPanel.tsx:194(status-master), SupplierMasterPanel.tsx:253)
 - /super-admin/fx-rate, /super-admin/analysis-rules : サイドバーから直接
 (c) pages/super-admin 配下で App.tsx ルートからもメニュー/サブナビ/タブからも import されていないもの:
-- DexTab.tsx : 参照は試験のみ (components/AdminMasterSaveButtonMigration.test.tsx:7, PurchaseAdminEditorButtonMigration.test.tsx:9)
+- DexTab.tsx : 参照は試験のみ (frontend/src/components/AdminMasterSaveButtonMigration.test.tsx:7, PurchaseAdminEditorButtonMigration.test.tsx:9)
 - LLMBudgetTab.tsx : 試験のみ (PurchaseAdminEditorButtonMigration.test.tsx:10)
 - ProductMastersTab.tsx : 試験のみ (AllLegacyButtonDynamicMigration.test.tsx:10)
 - TcgSeriesTab.tsx : 試験のみ (AdminMasterSaveButtonMigration.test.tsx:8, PurchaseAdminEditorButtonMigration.test.tsx:11)
