@@ -109,3 +109,8 @@ recon 事実7（毎回変わる `保存日時` 行）により、digest によ�
   2. `timestamp == watermark` のメッセージ件数が **`sent_watermark_tail_count` より多い**（同一分に増えた＝新規）
 - 切り出し開始位置（watermark − 60分）と、受理時の watermark 更新規則は**変更しない**。更新時に `sent_watermark_tail_count` も併せて書く。
 - 実測の裏付け: 同一分に複数あるメッセージは17%、最大4件/分（recon 事実5）。件数比較で判定できる粒度である。
+
+
+## recon
+
+調査の記録は `docs/handoff/line-import-incremental-send/recon.md`（file:line 引用つき）。本設計はそこで確認した事実（書き出しファイルの2行目 `保存日時` が毎回変わるため既存のdigest重複判定が実運用で発動していなかったこと／同一分に複数投稿があること）を前提にしている。
