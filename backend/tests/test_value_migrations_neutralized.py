@@ -62,6 +62,25 @@ def test_neutralized_migration_has_no_value_writes(filename):
         assert pattern.search(body) is None, f"{filename}: 値を書く文が残っている ({pattern.pattern})"
 
 
+# 第2便（3d）で無効化した 3 本。印の日付が 2026-10-09 のため、上の 18 本とは別リストにしている。
+# 判定は上の _strip_sql_comments と _VALUE_WRITE_PATTERNS を共用する。
+NEUTRALIZED_FILES_3D = [
+    "20260909_000000_public_products_phase2b_columns.sql",
+    "20260902_110100_tcg_products_classification_ids.sql",
+    "20260905_020000_tcg_fix_product_names_t004.sql",
+]
+
+
+@pytest.mark.parametrize("filename", NEUTRALIZED_FILES_3D)
+def test_neutralized_3d_migration_has_no_value_writes(filename):
+    sql = (MIGRATIONS_DIR / filename).read_text("utf-8")
+
+    assert "NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-09)" in sql
+    body = _strip_sql_comments(sql)
+    for pattern in _VALUE_WRITE_PATTERNS:
+        assert pattern.search(body) is None, f"{filename}: 値を書く文が残っている ({pattern.pattern})"
+
+
 def test_channel_masters_selector_line_is_kept_byte_identical():
     # rls_bootstrap.py の正本のセレクタ（ちょうど 1 回）。変えると bootstrap_tenant_schema が落ちる
     sql = (MIGRATIONS_DIR / "20260611_100000_create_channel_masters.sql").read_text("utf-8")
