@@ -5,6 +5,7 @@
 #   ① 未コミット・未push がゼロ（絶対保護・最優先）
 #   ② active-work.md が DONE、または gh で PR がマージ済み（main）
 #   ③ IN_PROGRESS / REVIEW かつ未マージなら削除しない
+#   ④ 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら削除しない
 #
 # .worktree-id なし（旧 worktree）: git branch --show-current でブランチ名を取得して処理
 #
@@ -52,6 +53,7 @@ WILL_DELETE=()
 SKIP_IN_PROGRESS=()
 SKIP_UNSAVED=()
 SKIP_NOT_MERGED=()
+SKIP_IN_USE=()
 
 # ── worktree リスト収集 ──────────────────────────────────────────────────────
 # REAPER_WORKTREES_DIR 指定あり（テスト用オーバーライド）: 単一ディレクトリ走査
@@ -128,6 +130,9 @@ fi
 echo "   対象 worktree 数: ${#WT_PATHS[@]} 件"
 echo ""
 
+# ── 使用中の検出用: 全プロセスの作業ディレクトリ（cwd）一覧を1回だけ取得 ──
+_CWD_LIST="$(lsof -a -d cwd -Fn 2>/dev/null | sed -n 's/^n//p')"
+
 # ── worktree 走査 ──────────────────────────────────────────────────────────
 for _IDX in "${!WT_PATHS[@]}"; do
   WORKTREE_PATH="${WT_PATHS[${_IDX}]}"
@@ -139,6 +144,14 @@ for _IDX in "${!WT_PATHS[@]}"; do
   if [ -n "${ROW}" ]; then
     ACTIVE_STATUS="$(echo "${ROW}" | awk -F'|' '{gsub(/^ +| +$/, "", $5); print $5}')"
     [ -z "${ACTIVE_STATUS}" ] && ACTIVE_STATUS="ERROR"
+  fi
+
+  # ── チェック 1.5: 使用中（そのフォルダか配下を cwd にしているプロセスがある）なら保護 ──
+  # マージ直後の即時回収（R2）で、まだ作業中のセッションのフォルダを消さないため。
+  _WT_NORM="${WORKTREE_PATH%/}"
+  if printf '%s\n' "${_CWD_LIST}" | awk -v p="${_WT_NORM}" '$0==p || index($0, p"/")==1 {f=1} END {exit !f}'; then
+    SKIP_IN_USE+=("${BRANCH}")
+    continue
   fi
 
   # ── チェック 2: 未保存の作業がないか（最優先保護） ──────────────────────
@@ -245,6 +258,12 @@ done
 # ── サマリ表示 ────────────────────────────────────────────────────────────
 echo "=== reaper 結果 ==="
 echo ""
+
+if [ "${#SKIP_IN_USE[@]}" -gt 0 ]; then
+  echo "🧑‍💻 使用中（削除しない）: ${#SKIP_IN_USE[@]} 件"
+  for B in "${SKIP_IN_USE[@]}"; do echo "   - ${B}"; done
+  echo ""
+fi
 
 if [ "${#SKIP_IN_PROGRESS[@]}" -gt 0 ]; then
   echo "🔒 IN_PROGRESS/REVIEW 未マージ（削除しない）: ${#SKIP_IN_PROGRESS[@]} 件"
