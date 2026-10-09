@@ -3867,7 +3867,14 @@
     "fields": { "product_code": "product code", "mark": "mark" },
     "addToThis": "Words to add to this product's exclude keywords: {{words}}",
     "addToOther": "Words to add to the other product's exclude keywords: {{words}}",
-    "registered": "Exclude keywords are already registered"
+    "registered": "Exclude keywords are already registered",
+    "addToThisButton": "Add to this product",
+    "addToOtherButton": "Add to that product",
+    "confirmTitle": "Add exclude keyword",
+    "confirmMessage": "Add \"{{word}}\" to the exclude keywords of {{product}}",
+    "confirmAction": "Add",
+    "result": { "added": "Added", "exists": "Already registered", "staged": "Added to the field (saved when you save)" },
+    "addError": "Could not add the keyword. Please try again"
   },
   "productDetail": {
     "title": "Product details and editing",
