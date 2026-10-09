@@ -34,12 +34,22 @@ TERMUX_NOTIFICATION = '/data/data/com.termux/files/usr/bin/termux-notification'
 TERMUX_JOB_SCHEDULER = '/data/data/com.termux/files/usr/bin/termux-job-scheduler'
 NOTIFY_PROGRESS = 4201
 NOTIFY_STALL = 4202
+# 4203/4204 は tools/line-auto-export/auto-export.sh（Termuxの別プロセス、job 4203）が使う通知IDなので
+# ここでは使わない。
+NOTIFY_NO_IMPORT = 4205
 JOB_ID = 4201
 
 ORIGINAL_RE = re.compile(r'^[0-9a-f]{64}\.txt$')
 RECEIVED_RE = re.compile(r'^received-[A-Za-z0-9]{10}$')
 JST = timezone(timedelta(hours=9))
 NINETY_DAYS = 90 * 86400
+# 取り込みが起きたか（stage='received' result='ok'、ファイル受信のたびに記録される）が3時間以上無ければ
+# 通知する。PO決定2026-10-09で、取り込みはアプリ自身が自律的に行う（通知検知＋コアタイム7:00-0:00は
+# 30分・コアタイム外は60分のタイマー補完）運用に変わり、Termuxの15分ジョブ（job 4203、auto-export.sh）は
+# 平常時は止める。4203があった頃はそちら側で「3時間以上成功していません」を見張っていたが、4203を止める
+# とその見張りも消えるため、データの正（outbox.sqlite3）がある此処（job 4201の定期点検）へ移した。
+# 3時間はコアタイム30分・コアタイム外60分という運用上の間隔に対して十分な余裕を持たせた値。
+NO_IMPORT_SECONDS = 3 * 3600
 
 # Actions whose failures are recorded under a specific stage by main()'s generic
 # handler; anything not listed falls back to 'unknown'. 'enqueue' is intentionally
@@ -498,6 +508,7 @@ class Outbox:
                 self.record('check', 'failed', reason=reason, detected_by='check')
                 self._notify(NOTIFY_PROGRESS, 'LINE取込：失敗', f'{reason}（原本は保持）')
         self._check_stall()
+        self._check_no_import()
         self.record('check', 'ok', detected_by='check')
 
     def _check_stall(self):
@@ -529,6 +540,27 @@ class Outbox:
             self._notify(NOTIFY_STALL, 'LINE取込：詰まり', content, digest=digest)
             self.record('check', 'stalled', digest=digest, reason=reason,
                         elapsed=now - received_at, detected_by='check')
+
+    def _check_no_import(self):
+        # stage='received' result='ok' はファイルが届くたびに記録される（enqueue()参照）ため、
+        # 「取り込みが起きたか」の正しい指標になる。_check_stall() はキューに残ったジョブが対象で
+        # 役割が違うため変更しない（アプリが一切動かず新しいジョブが作られない場合はそちらでは拾えない）。
+        row = self.db.execute(
+            "SELECT at FROM events WHERE stage='received' AND result='ok' "
+            "ORDER BY id DESC LIMIT 1").fetchone()
+        if row is None:
+            # 一度も取り込みが無い（新規導入直後など）。基準となる時刻が無いため通知しない。
+            return
+        last_at = row[0]
+        elapsed = self.clock() - last_at
+        if elapsed < NO_IMPORT_SECONDS:
+            return
+        hours, minutes = divmod(int(elapsed) // 60, 60)
+        last_label = datetime.fromtimestamp(last_at, JST).strftime('%H:%M')
+        reason = f'最後の取り込み {last_label} から{hours}時間{minutes}分'
+        content = f'{reason}。アプリの自動実行がONか、通知が届いているか確認してください'
+        self._notify(NOTIFY_NO_IMPORT, 'LINE取込：3時間以上取り込みがありません', content)
+        self.record('check', 'no_import', reason=reason, detected_by='check')
 
 
 def safe_detail(data):

@@ -10,7 +10,7 @@ from unittest import mock
 
 from android_parser import AndroidExportError, parse_android_export
 import client as client_module
-from client import ENDPOINT, NOTIFY_PROGRESS, NOTIFY_STALL, Outbox
+from client import ENDPOINT, NO_IMPORT_SECONDS, NOTIFY_NO_IMPORT, NOTIFY_PROGRESS, NOTIFY_STALL, Outbox
 
 SAMPLE = '[LINE] test\r\n保存日時: test\r\n\r\n2026/9/12(土)\r\n12:00\t姓 名\t商品A\r\n\r\n商品B\t注記\r\n12:01\t別の人\t末尾\r\n'
 
@@ -500,6 +500,43 @@ class OutboxTests(unittest.TestCase):
         self.assertIn('分', content)
         self.assertIn('再送3回', content)
         self.assertIn('通信できません', content)
+
+    # -- periodic check: no-import detection ------------------------------------------
+
+    def test_check_no_import_notification_after_threshold(self):
+        # setUp()のenqueue()が記録したreceived/okを「最後の取り込み」として使う。
+        # checkが自前のsend()で未送信ジョブに触れて実ネットワークへ出ないよう、先に片付けておく。
+        self.outbox.send(lambda *_: self.result())
+        self.clock.advance(NO_IMPORT_SECONDS + 1)
+        self.outbox.check()
+        no_import_calls = [call for call in self.notifier.calls if call[0] == NOTIFY_NO_IMPORT]
+        self.assertEqual(len(no_import_calls), 1)
+        _, title, content = no_import_calls[0]
+        self.assertIn('3時間以上取り込みがありません', title)
+        self.assertIn('時間', content)
+        self.assertIn('確認してください', content)
+        recorded = self.outbox.db.execute(
+            "SELECT 1 FROM events WHERE stage='check' AND result='no_import'").fetchall()
+        self.assertTrue(recorded)
+
+    def test_check_no_import_no_notification_before_threshold(self):
+        self.outbox.send(lambda *_: self.result())
+        self.clock.advance(3600)  # 1時間。閾値（3時間）未満
+        self.outbox.check()
+        self.assertFalse(any(call[0] == NOTIFY_NO_IMPORT for call in self.notifier.calls))
+
+    def test_check_no_import_no_notification_without_prior_received(self):
+        # 一度も取り込みが無い新規環境を模す。setUp()のenqueue()を経由しない、まっさらなOutbox。
+        # config.json/device.jsonを置かないため、check()は自前のsend()を試みない（ネットワーク不要）。
+        clock = FakeClock()
+        notifier = FakeNotifier()
+        outbox = Outbox(self.root / 'fresh-state', clock=clock, notifier=notifier)
+        try:
+            clock.advance(NO_IMPORT_SECONDS + 1)
+            outbox.check()
+            self.assertFalse(any(call[0] == NOTIFY_NO_IMPORT for call in notifier.calls))
+        finally:
+            outbox.db.close()
 
     def test_check_resends_due_retry_job_as_check(self):
         self.outbox.send(lambda *_: (0, ''))
