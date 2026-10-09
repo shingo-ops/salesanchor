@@ -9,12 +9,14 @@
 
 from __future__ import annotations
 
+import copy
+import json
 import re
 import unicodedata
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeGuard
 
 from app.services import gemini_raw_copy_v8 as v8
 from app.services import gemini_raw_copy_v10 as v10
@@ -73,6 +75,16 @@ V101_RESPONSE_SCHEMA: dict[str, Any] = {
     },
     "required": ["items"],
 }
+
+# 試作版 v102：上下どちらの件か決まらない行を Gemini が unsure に書けるスキーマ（unsure は必須にしない）。
+# V101_RESPONSE_SCHEMA は変えず、コピーに足す。
+_UNSURE_ELEMENT = {
+    "type": "object",
+    "properties": {"line": {"type": "integer"}, "candidates": {"type": "array", "items": {"type": "integer"}}},
+    "required": ["line", "candidates"],
+}
+V102_RESPONSE_SCHEMA: dict[str, Any] = copy.deepcopy(V101_RESPONSE_SCHEMA)
+V102_RESPONSE_SCHEMA["properties"]["unsure"] = {"type": "array", "items": copy.deepcopy(_UNSURE_ELEMENT)}
 
 
 def _nfkc(text: str) -> str:
@@ -212,6 +224,64 @@ def parse_v101_response(
         seen_price_lines.add(price_line)
         items.append({"lines": numbers, "price": obj["price"], "quantity": obj["quantity"], "price_line": price_line})
     return ([*items, *rejected] if keep_rejected else items), errors
+
+
+UNSURE_OK, UNSURE_INVALID = "gemini_unsure", "gemini_unsure_invalid"
+_MIN_UNSURE_CANDIDATES = 2
+
+
+def _invalid_unsure(error: str, line: int | None = None, candidates: list[int] | None = None) -> dict:
+    """正しくない unsure の記録。原文の文字は載せず、整数で取れた line・candidates だけを載せる。"""
+    record: dict = {"kind": UNSURE_INVALID, "error": error}
+    if line is not None:
+        record["line"] = line
+    if candidates is not None:
+        record["candidates"] = candidates
+    return record
+
+
+def _is_plain_int(value: object) -> TypeGuard[int]:
+    return v8._is_int(value)
+
+
+def _check_unsure_element(element: object, line_count: int, price_lines: set[int]) -> dict:
+    if not isinstance(element, dict):
+        return _invalid_unsure("not_object")
+    line, raw_candidates = element.get("line"), element.get("candidates")
+    if not _is_plain_int(line):
+        return _invalid_unsure("line_not_int")
+    if not 1 <= line <= line_count:
+        return _invalid_unsure("line_out_of_range", line)
+    if not isinstance(raw_candidates, list):
+        return _invalid_unsure("candidates_not_list", line)
+    ints = sorted({c for c in raw_candidates if _is_plain_int(c)})
+    if any(not _is_plain_int(c) for c in raw_candidates):
+        return _invalid_unsure("candidate_not_int", line, ints)
+    if any(c not in price_lines for c in ints):
+        return _invalid_unsure("candidate_not_price_line", line, ints)
+    if len(ints) < _MIN_UNSURE_CANDIDATES:
+        return _invalid_unsure("candidates_too_few", line, ints)
+    return {"kind": UNSURE_OK, "line": line, "candidates": ints}
+
+
+def parse_v102_unsure(response_text: str, line_count: int, price_lines: set[int]) -> list[dict]:
+    """試作版 v102：応答の最上位の unsure を、捨てずに記録の形にして返す。
+
+    正しい要素は {"kind": "gemini_unsure", "line", "candidates"}（candidates は重複なし・昇順）。
+    正しくない要素は {"kind": "gemini_unsure_invalid", "error": コード, ...}（原文の文字は載せない）。
+    unsure が無い・空・応答が読めないときは []（読めない応答は post_review の response_unreadable が別に知らせる）。
+    price_lines はその投稿の件の price_line の集合、line_count は原文の行数。
+    """
+    try:
+        data = json.loads(response_text)
+    except (json.JSONDecodeError, TypeError):
+        return []
+    if not isinstance(data, dict) or data.get("unsure") is None:
+        return []
+    unsure = data["unsure"]
+    if not isinstance(unsure, list):
+        return [_invalid_unsure("unsure_not_list")]
+    return [_check_unsure_element(element, line_count, set(price_lines)) for element in unsure]
 
 
 # ---------------------------------------------------------------------------

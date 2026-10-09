@@ -676,7 +676,7 @@ def test_parse_args_v101_prompt_name(tmp_path):
 
 
 def test_v102_config_calls_with_v101_schema_and_default_prompt_f_c_from_db(monkeypatch, v101_fakes):
-    from app.services.gemini_raw_copy_v101 import V101_RESPONSE_SCHEMA
+    from app.services.gemini_raw_copy_v101 import V102_RESPONSE_SCHEMA
 
     # Arrange
     session = _db_session("F_C_FROM_DB")
@@ -684,7 +684,7 @@ def test_v102_config_calls_with_v101_schema_and_default_prompt_f_c_from_db(monke
     _run(v101_fakes, monkeypatch, config="v102", run_ids=("r1",), session=session)
     kwargs = v101_fakes.v8.call_args.kwargs
     # Assert
-    assert kwargs["response_schema"] == V101_RESPONSE_SCHEMA
+    assert kwargs["response_schema"] == V102_RESPONSE_SCHEMA
     assert pab.V102_PROMPT == "raw_copy_v101_f_c"
     assert session.execute.call_args.args[1] == {"key": "raw_copy_v101_f_c"}
     assert kwargs["prompt_text"] == "F_C_FROM_DB"
@@ -725,7 +725,9 @@ def test_v102_row_has_v102_items_and_flags_but_no_v101_fields(monkeypatch, v101_
     row = _lines(v101_fakes)[0]
     assert row["config"] == "v102" and row["item_count"] == 1 and row["errors"] == []
     assert row["v102_items"][0]["name"] == "商品A" and row["v102_items"][0]["fixes"] == []
-    assert set(row["v102_flags"]) == {"possible_missing_item", "quantity_no_number", "possible_footer_line", "post_review"}
+    assert set(row["v102_flags"]) == {
+        "possible_missing_item", "quantity_no_number", "possible_footer_line", "post_review", "gemini_review",
+    }
     assert not {"v101_items", "v101_items_norule", "v101_flags"} & set(row)
 
 
