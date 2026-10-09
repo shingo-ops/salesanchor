@@ -68,18 +68,8 @@ BEGIN
             $q$, schema_rec.nspname);
         END IF;
 
-        -- デフォルトチャネルシード（ON CONFLICT DO NOTHING で冪等）
-        EXECUTE format($q$
-            INSERT INTO %I.channel_masters (tenant_id, platform, display_name, connection_type)
-            VALUES
-                ($1, 'messenger',  'Messenger', 'auto'),
-                ($1, 'instagram',  'Instagram', 'auto'),
-                ($1, 'discord',    'Discord',   'auto'),
-                ($1, 'phone',      '電話',       'manual'),
-                ($1, 'in_person',  '対面',       'manual'),
-                ($1, 'whatsapp',   'WhatsApp',  'manual')
-            ON CONFLICT (platform) DO NOTHING
-        $q$, schema_rec.nspname) USING tenant_id_val;
+-- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): デフォルトチャネル 6 行の seed を外した。
+-- 新規テナントは backend/app/services/tenant.py の seed_default_channel_masters で作る。
 
         applied_count := applied_count + 1;
         RAISE NOTICE 'migration 20260611_100000: %.channel_masters を作成', schema_rec.nspname;

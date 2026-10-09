@@ -45,15 +45,8 @@ BEGIN
         CREATE INDEX IF NOT EXISTS idx_%s_sort ON public.%I (sort_order, id)',
         _target, _target);
 
-    EXECUTE format('
-        INSERT INTO public.%I (code, name_ja, name_en, sort_order) VALUES
-            (''pokemon_booster_box'', ''ポケモンカード'',   ''Pokémon Card'',    10),
-            (''one_piece'',           ''ワンピース'',       ''One Piece TCG'',   20),
-            (''dragon_ball'',         ''ドラゴンボール'',   ''Dragon Ball TCG'', 30),
-            (''union_arena'',         ''ユニオンアリーナ'', ''Union Arena'',     40),
-            (''yugioh'',              ''遊戯王'',           ''Yu-Gi-Oh!'',       50),
-            (''other'',               ''その他'',           ''Other'',           900)
-        ON CONFLICT (code) DO NOTHING', _target);
+    -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 種別 6 行の seed を外した。type_master は画面（ADR-156）で管理する。
+    RAISE NOTICE 'ADR-1007 neutralized: type master seed removed (085)';
 
     EXECUTE format('
         CREATE OR REPLACE FUNCTION public.set_updated_at_%s()
