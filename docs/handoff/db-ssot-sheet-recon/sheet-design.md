@@ -90,7 +90,7 @@ PO回答原文:
 | C33 | 仕入原価と回収 | 元送料1,000円を次回割引で回収しても、次回商品原価10,000円、実支払9,000円、元送料最終自社負担0円。 | [合意根拠](design-status.md#2026-09-15-次回仕入原価と送料立替回収を分ける合意) |
 | C34 | 仕入元対応完了 | 必要な商品対応完了と合意済み次回残額の確定記録で対応完了可。未使用残は管理継続。 | [合意根拠](design-status.md#2026-09-15-次回割引残額確定後の不具合対応完了の合意) |
 | C35 | 手数料の見込みと実費 | 対応を確認できた費用だけ見込みから実費へ切替。見込み・変更根拠を保持。 | [合意根拠](design-status.md#2026-09-15-見込み手数料から実費へ切り替える方式への合意) |
-| C36 | 出金見込み回数 | Wiseの銀行出金見込みは1回分の一定額×想定回数。200万円2回、300万円3回。固定額は未決。 | [合意根拠](design-status.md#2026-09-15-銀行出金の見込み費用を回数比例の固定額にする指定) |
+| C36 | 出金見込み回数 | Wiseの銀行出金見込みは1回分の一定額×想定回数。200万円2回、300万円3回。固定額は未決。**2026-09-30補足**: Wise公式料金は「月25,000円まで無料、超過分は100円+1.75%」であり固定額ではない。見込み計算方式の再設計が必要（§F01参照）。 | [合意根拠](design-status.md#2026-09-15-銀行出金の見込み費用を回数比例の固定額にする指定) |
 | C37 | PayPal境界 | 合意済み設計条件は正の対象額5万円未満250円、5万円以上0円。受取/換金費用とは別。 | [合意根拠](design-status.md#2026-09-15-paypal出金手数料の5万円境界への合意) |
 | C38 | 手数料手動修正 | 人がフロントから手数料金額を後日修正できる構造。 | [合意根拠](design-status.md#2026-09-15-手数料を画面から手動修正できる構造の指定) |
 | C39 | 分割入金と見込み | 同一注文の対象入金合計で見込み回数を計算。Wise同通貨50万円2回で合計100万円は見込み1回。 | [合意根拠](design-status.md#2026-09-15-分割入金の合計で見込み出金回数を計算する合意) |
@@ -2152,23 +2152,337 @@ POは離席中の判断を委任していない。以下は**未回答の質問�
 
 ### PO質問にしない調査・設計残件
 
-| ID | 担当が先に行うこと | 現在の限界 |
-|---|---|---|
-| F01 | Wise/PayPalの実適用料金と明細・設定値照合 | Wise219円は未確定。説明用の数字を採用しない |
-| F02 | APIの実入金項目/成立状態/日付精度/通知識別の一次資料照合 | Context7利用可否確認と公式資料照合が必要。即時反映を保証していない |
-| F03 | 既存期日/通貨/手数料マスタと権限キー、金型登録/適合の照合 | 物理名・設定値・個別権限付与を想像しない |
-| F04 | 数量/残額の一体更新、同時処理、訂正履歴、外部結果不明の整合設計 | 12例の算術では保証できない。実装時の検証項目を保つ |
-| F05 | 全134タブの列・税番号の用途・書類の税務要件の照合 | 元データ再取得と用途確認が未完。税務適合は未認定。必要な事業確認は根拠をそろえて追加する |
-| F06 | 既存の利益/報酬/締め後訂正/外貨集計仕様を追跡 | 元売上減額と実返金の二重控除を排除。確定報酬への影響は既存ルールを先に調査し新たなPO判断と即断しない |
-| F07 | 正式仕様/ADR改訂・全要件の受入対応・設計自己審査・正式カード検査 | 今回は未承認の詳細草案。K9/ADR-101差分と全体REVISEを維持 |
-| F08 | 文書の正式保存前のブランチ/共有台帳/見本環境の整合 | HEADは比較origin/mainより673コミット後方、登録欠落は未解決。迂回操作/自動reaper/無断代替ツールなし |
+| ID | 担当が先に行うこと | 現在の限界 | 2026-09-30調査結果 |
+|---|---|---|---|
+| F01 | Wise/PayPalの実適用料金と明細・設定値照合 | Wise219円は未確定。説明用の数字を採用しない | **調査済み**。下記§F01詳細参照。PO判断待ち2件 |
+| F02 | APIの実入金項目/成立状態/日付精度/通知識別の一次資料照合 | Context7利用可否確認と公式資料照合が必要。即時反映を保証していない | **調査済み**。下記§F02詳細参照。paid_at=NOW()問題を特定 |
+| F03 | 既存期日/通貨/手数料マスタと権限キー、金型登録/適合の照合 | 物理名・設定値・個別権限付与を想像しない | **調査済み**。下記§F03詳細参照。C43未実装・ADR-144違反を特定 |
+| F04 | 数量/残額の一体更新、同時処理、訂正履歴、外部結果不明の整合設計 | 12例の算術では保証できない。実装時の検証項目を保つ | 未着手 |
+| F05 | 全134タブの列・税番号の用途・書類の税務要件の照合 | 元データ再取得と用途確認が未完。税務適合は未認定。必要な事業確認は根拠をそろえて追加する | **調査済み**。下記§F05詳細参照。134タブ対42テーブルのギャップ特定 |
+| F06 | 既存の利益/報酬/締め後訂正/外貨集計仕様を追跡 | 元売上減額と実返金の二重控除を排除。確定報酬への影響は既存ルールを先に調査し新たなPO判断と即断しない | 未着手 |
+| F07 | 正式仕様/ADR改訂・全要件の受入対応・設計自己審査・正式カード検査 | 今回は未承認の詳細草案。K9/ADR-101差分と全体REVISEを維持 | 未着手（F01〜F06完了後に実施） |
+| F08 | 文書の正式保存前のブランチ/共有台帳/見本環境の整合 | HEADは比較origin/mainより673コミット後方、登録欠落は未解決。迂回操作/自動reaper/無断代替ツールなし | **一部解消**。worktreeをorigin/main起点で再作成済み。673コミット後方問題は解消 |
 
 明示的に後で相談する2件: **為替提供元の選定（C42）**、**APIが即時反映できない場合の例外（C59）**。この16項目に重ねて数えず、依存する設計を完成扱いにしない。
+
+---
+
+### §F01 Wise/PayPal実適用料金の調査結果（2026-09-30）
+
+#### Wise公式料金（wise.com/jp、2026-09-18取得）
+
+| 項目 | 公式の値 | 出典 |
+|---|---|---|
+| JPY出金手数料 | 月25,000円まで無料。超過分は100円 + 超過額の1.75% | wise.com/jp/pricing/ |
+| 送金上限（残高から） | 1回100万円 | wise.com/jp/send-money/ |
+| 送金上限（銀行/カードから） | 1億5,000万円 | wise.com/jp/send-money/ |
+| 為替手数料 | 通貨ペアで異なる（0.27%〜） | wise.com/jp/pricing/ |
+
+**「219円」は現在の公式料金体系に確認できない。** 過去記事（2022年）に「銀行引出208円」の記載があるが、現行料金とは異なる。
+
+#### PayPal公式料金（paypal.com/jp、2026-09-18取得）
+
+| 項目 | 公式の値 | C要件との一致 |
+|---|---|---|
+| 出金手数料（5万円以上） | 0円 | C37と一致 |
+| 出金手数料（5万円未満） | 250円 | C37と一致 |
+| 即時引き出し | 2%（下限500円、上限2,000円） | **設計文書に未記載** |
+| 商用受取手数料 | 3.6% + 40円 | **設計文書に未記載** |
+| 為替手数料 | 基本レート + 3〜4% | 備考 |
+
+#### F01のPO判断待ち（2件）
+
+1. **Wiseの出金手数料**: C36の「固定額は未決」を「月25,000円まで無料、超過分は100円+1.75%」に更新するか？（POは「公式を採用する」と回答済みだが、改めてエビデンスを確立するよう指示）
+2. **PayPalの受取手数料（3.6%+40円）と即時引き出し（2%）**: 設計文書に追記するか？
+
+---
+
+### §F02 API入金項目の調査結果（2026-09-30）
+
+#### 観測事実（コード照合）
+
+| 箇所 | 現行の実装 | C要件との乖離 |
+|---|---|---|
+| `backend/app/routers/invoices.py:522` | 手動入金確認: `paid_at = NOW()` | C57/C58: 実際の入金日時を使うべき |
+| `backend/app/routers/invoices.py:758` | PayPal確認ボタン: `paid_at = NOW()` | 同上 |
+| `backend/app/routers/integrations.py:958` | PayPal Webhook: `paid_at = NOW()` | PayPalの`payment_date`を使っていない |
+| `backend/app/services/paypal_payments.py` | `get_invoice_status()`: fee取得可能 | **PayPal実受取額を費用記録に自動反映していない** |
+| `backend/app/routers/order_financials.py` | paypal_fee/wise_fee: 全て手入力 | Wise APIは完全未実装（手動入力のみ） |
+
+#### 特定されたギャップ
+
+1. **paid_at = NOW()問題**: 3箇所全てでサーバー時刻を使用。PayPalのWebhookペイロードに含まれる`payment_date`を無視している。入金日と処理日が異なる場合（休日・時差）に記録が不正確になる
+2. **PayPal実受取額の未取得**: `backend/app/services/paypal_payments.py`はfee情報を取得できる構造だが、`order_financials`への自動転記はない
+3. **Wise API完全未実装**: `backend/`にWise API連携コードなし。ADR-095に「Wise API本格調査を後日」と記載
+
+---
+
+### §F03 既存マスタ・権限キー・金型の調査結果（2026-09-30）
+
+#### C43（支払期日自動設定）の実装状況
+
+**【事実】C43は未実装。**
+
+- `invoices`テーブルに`due_date DATE`カラムは存在する（`backend/app/services/tenant.py:870`）
+- `InvoiceCreate.due_date: date | None = None`で任意手動入力（`backend/app/schemas/invoice.py:49`）
+- `tenant_settings`に`payment_due_days`相当のカラムは**存在しない**
+- `quote_validity_days`（見積有効期限）は存在するが、支払期日の自動計算機能はない
+
+#### order_financialsテーブル構成
+
+14個のNUMERIC(14,2)カラム、全て手入力（`migrations/047_create_order_financials.sql`）:
+`revenue_amount`, `purchase_cost`, `purchase_shipping`, `paypal_fee`, `wise_fee`, `exchange_fee`, `outsource_fee`, `packing_fee`, `ad_cost`, `return_fee`, `refund_amount`, `custom_fee_1`〜`3`, `tax_refund`
+
+計算列: `cost_total`, `gross_profit`, `gross_profit_rate`, `operating_profit_with_tax_refund`（`backend/app/schemas/order_financial.py:44-56`）
+
+#### 為替レートテーブル
+
+`app_fx_rates`テーブル（全テナント共通、`migrations/20260628_170000_add_app_fx_rates.sql`）:
+- `currency` VARCHAR(3), `rate_jpy` NUMERIC(12,4), `fetched_at` TIMESTAMPTZ
+- 現在USDのみ。Celery Beatが1日2回外部API（open.er-api.com）からUPSERT
+- `invoices`テーブルに`exchange_rate_jpy`/`exchange_rate_usd`を個別保持（`backend/app/services/tenant.py:860-861`）
+- `order_financials`には為替レートカラムなし（JPY換算済み前提）
+
+#### 権限キー（約80キー）
+
+`backend/app/routers/order_financials.py`: GET系=`orders.view`、PATCH系=`orders.update`
+フロントエンド全体で約80の権限キー（`archive.manage`〜`tenant.profile.view`）
+
+#### ADR-144（UIガバナンス）違反
+
+**【事実】** `frontend/src/components/OrderFinancialPanel.tsx`が生`<input type="number">`と生`<textarea>`を使用（`Modal`/`Button`のみ金型使用）。`ui-allow`コメントなし。ADR-144違反。
+
+---
+
+### §F05 134タブのDB対応状況（2026-09-30）
+
+#### 概要
+
+- シートタブ総数: **134タブ**（`docs/handoff/db-ssot-sheet-recon/inventory.md`記載）
+- DBテーブル数（テナントスキーマ）: **42テーブル**（`backend/app/services/tenant.py`定義）
+- backup/copy/旧タブ: 約53タブ（業務データではない）
+- 業務稼働タブ: 約81タブ
+
+#### DBテーブルが存在する主要タブ（照合済み）
+
+| DBテーブル | 対応シートタブ | 根拠 |
+|---|---|---|
+| `companies` | 顧客マスタ(#44) | tenant.py:190 |
+| `contacts` | 顧客マスタ内の人 | tenant.py:227 |
+| `leads` | リード管理(#1) | tenant.py:346 |
+| `orders` / `order_items` | オーダー管理(#33)/(#35) | tenant.py:452/899 |
+| `quotes` / `quote_items` | 見積もり管理(#41)/(#43) | tenant.py:781/830 |
+| `invoices` / `invoice_items` | 請求書作成(#85) | tenant.py:847/883 |
+| `products` | 自社商品マスタ(#22) | tenant.py:716 |
+| `own_inventory` | 共用在庫(#95) | tenant.py:1145 |
+| `suppliers` / `purchase_orders` | 仕入れ(#39) | tenant.py:951/981 |
+| `staff` / `roles` | 担当者マスタ(#55)/権限管理(#84) | tenant.py:586/485 |
+| `shipping_zones` / `shipping_rates` | 地帯マスタ(#13)/送料表マスタ(#14) | tenant.py:755-779 |
+
+#### DBテーブルが存在しない主要ギャップ
+
+1. **顧客税務番号（#2番号種別マスタ、#3顧客税務番号）**: シートは「顧客ID×番号種別ID×番号値」の3列構造。DBは`company_addresses.tax_id` VARCHAR(100)の単一フィールドのみ。複数種別（VAT/インボイス登録番号/BN等）の管理テーブル未作成
+2. **送料系マスタ（#12配送会社マスタ、#15-18サイズ・重量・荷姿マスタ）**: シートに専用タブあり。`shipping_zones`/`shipping_rates`への統合状況は未確認
+3. **集計・帳票タブ（#82 SCM出力同期・#83集計同期）**: GAS数式集計シート。DB側は`backend/app/routers/order_financials.py`のPython計算で対応
+4. **適格請求書登録番号（インボイス制度）**: `invoices`テーブルに登録番号フィールドなし
+
+#### 税関連フィールド一覧（10箇所）
+
+| フィールド | テーブル | ファイル:行番号 |
+|---|---|---|
+| `tax_id` | `company_addresses` | `backend/app/services/tenant.py:267` |
+| `tax_amount` | `quotes` | `backend/app/services/tenant.py:792` |
+| `tax_amount` | `invoices` | `backend/app/services/tenant.py:858` |
+| `tax_refund` | `order_financials` | `migrations/047_create_order_financials.sql` |
+| `tax_number` | `order_shipping_details` | `migrations/048_create_order_shipping_details.sql` |
+| `tax_id` | `order_shipping_details` | `migrations/048` |
+
+---
+
+### §D01 決済手数料設定テーブル設計（2026-10-02）
+
+#### 設計方針
+
+- **publicスキーマ＋NULLパターン**（既存の`public.units`/`tcg_note_master`と同一方式）
+- `tenant_id IS NULL` = 運営者が管理する共用デフォルト（PayPal公式料金等）
+- `tenant_id = X` = テナントが独自に追加・上書きする設定（特別契約料率等）
+- サービス追加時は行を追加するだけ（テーブル変更不要）
+- 料金改定時は`effective_to`で旧行を終了し新行を追加（履歴保持）
+- DB SSOTを遵守: コードに金額をハードコードしない（C要件、ADR-095準拠）
+
+#### 根拠（全て実物確認済み）
+
+| 根拠 | 内容 | 確認元 |
+|---|---|---|
+| NULLパターン | `public.units`: `tenant_id INTEGER REFERENCES public.tenants(id)` NULL許容 | `migrations/20260920_030000_units_add_tenant_id.sql:11` |
+| 参照クエリ | `WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)` | `backend/app/routers/units.py:225` |
+| 書き込み制限 | `WHERE id = :id AND tenant_id = :tenant_id` | `backend/app/routers/units.py:170` |
+| super_admin CRUD | `require_super_admin`認証、CSV import/export | `backend/app/routers/super_admin_note_master.py` |
+| RLS | publicの共用マスタはRLS**なし**（テナントスキーマのみ） | grep結果ゼロ件 |
+| updated_atトリガー | `set_updated_at_{table}()` + `BEFORE UPDATE FOR EACH ROW` | `migrations/20260921_060000:27-39` |
+| PK型 | `INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY` | `public.units`の定義 |
+| FK型 | `INTEGER REFERENCES public.tenants(id)` | `migrations/20260920_030000:11` |
+| migration命名 | `YYYYMMDD_HHMMSS_description.sql` | 最新ファイル群 |
+
+#### テーブル定義
+
+```sql
+-- migration: YYYYMMDD_HHMMSS_create_payment_fee_settings.sql
+
+CREATE TABLE IF NOT EXISTS public.payment_fee_settings (
+    id              INTEGER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY,
+    tenant_id       INTEGER REFERENCES public.tenants(id),
+    -- NULL = 共用デフォルト（運営者管理）
+    -- 数値 = テナント独自設定
+
+    service         VARCHAR(30)    NOT NULL,  -- 'paypal', 'wise', 将来追加
+    fee_type        VARCHAR(50)    NOT NULL,  -- 下記の手数料種別
+    rate_pct        NUMERIC(8,4)   NOT NULL DEFAULT 0,  -- 料率（%）
+    fixed_amount    NUMERIC(14,2)  NOT NULL DEFAULT 0,  -- 固定額（JPY）
+    threshold       NUMERIC(14,2),            -- 適用境界額（NULLなら無条件）
+    threshold_rule  VARCHAR(10),              -- 'below' / 'above'
+    currency        VARCHAR(3)     NOT NULL DEFAULT 'JPY',
+    effective_from  DATE           NOT NULL,  -- 適用開始日
+    effective_to    DATE,                     -- NULL = 現行有効
+    source_url      TEXT,                     -- 公式出典URL
+    note            TEXT,                     -- 備考
+
+    created_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ    NOT NULL DEFAULT NOW(),
+
+    CONSTRAINT uq_fee_setting
+        UNIQUE (tenant_id, service, fee_type, currency, effective_from)
+);
+
+-- updated_atトリガー（既存パターン準拠）
+CREATE OR REPLACE FUNCTION public.set_updated_at_payment_fee_settings()
+RETURNS TRIGGER AS $$
+BEGIN NEW.updated_at = NOW(); RETURN NEW; END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_updated_at_payment_fee_settings
+    BEFORE UPDATE ON public.payment_fee_settings
+    FOR EACH ROW EXECUTE FUNCTION public.set_updated_at_payment_fee_settings();
+
+COMMENT ON TABLE public.payment_fee_settings
+    IS '決済サービスの手数料設定マスタ（共用デフォルト＋テナント独自追加）';
+```
+
+#### 初期データ（PayPal公式料金 — エビデンス確立済み）
+
+出典: [paypal.com/jp/business/paypal-business-fees](https://www.paypal.com/jp/business/paypal-business-fees)（2026年1月22日最終更新、ビジネス/プレミアアカウント対象）
+
+```sql
+-- PayPal確定料金（共用デフォルト: tenant_id = NULL）
+INSERT INTO public.payment_fee_settings
+    (tenant_id, service, fee_type, rate_pct, fixed_amount, threshold, threshold_rule, currency, effective_from, source_url, note)
+VALUES
+    (NULL, 'paypal', 'receiving_domestic',      3.6000, 40.00,  NULL,  NULL,    'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '国内商用受取手数料'),
+    (NULL, 'paypal', 'receiving_international',  4.1000, 40.00,  NULL,  NULL,    'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '海外受取手数料（国内3.6%+海外加算0.5%）'),
+    (NULL, 'paypal', 'withdrawal',               0,      0,     50000, 'above', 'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '出金手数料（5万円以上: 無料）'),
+    (NULL, 'paypal', 'withdrawal',               0,    250.00,  50000, 'below', 'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '出金手数料（5万円未満: 250円）'),
+    (NULL, 'paypal', 'instant_withdrawal',        2.0000, 0,     NULL,  NULL,    'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '即時引き出し2%（下限500円、上限2,000円）'),
+    (NULL, 'paypal', 'fx_receiving',              4.0000, 0,     NULL,  NULL,    'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '為替手数料（受取時: 基本レート+4%）'),
+    (NULL, 'paypal', 'fx_other',                  3.0000, 0,     NULL,  NULL,    'JPY', '2026-01-22', 'https://www.paypal.com/jp/business/paypal-business-fees', '為替手数料（その他: 基本レート+3%）');
+```
+
+#### fee_type一覧（拡張可能）
+
+| fee_type | 意味 | PayPal | Wise |
+|---|---|---|---|
+| `receiving_domestic` | 国内受取手数料 | 3.60%+40円 | 未確認 |
+| `receiving_international` | 海外受取手数料 | 4.10%+40円 | SWIFT: 611 JPY |
+| `withdrawal` | 銀行出金手数料 | 境界5万円 | 固定+変動（未確定） |
+| `instant_withdrawal` | 即時引き出し | 2% | N/A |
+| `fx_receiving` | 為替（受取時） | +4.00% | 0.27%〜 |
+| `fx_other` | 為替（その他） | +3.00% | — |
+
+新サービス追加時: `service`列に新値を追加するだけ（ENUMではなくVARCHARのため、DDL変更不要）
+
+#### 参照ロジック（テナント優先フォールバック）
+
+```python
+# 読み取り: テナント行があればそちらを優先、なければ共用行
+SELECT * FROM public.payment_fee_settings
+WHERE (tenant_id = :tenant_id OR tenant_id IS NULL)
+  AND service = :service
+  AND currency = :currency
+  AND effective_from <= CURRENT_DATE
+  AND (effective_to IS NULL OR effective_to >= CURRENT_DATE)
+ORDER BY tenant_id NULLS LAST, effective_from DESC
+LIMIT 1;
+-- tenant_id NULLS LAST: テナント行が先、共用行が後
+```
+
+#### API設計（既存パターン準拠）
+
+| 担当 | エンドポイント | 認証 | 操作 |
+|---|---|---|---|
+| 運営者（super_admin） | `GET/POST/PATCH/DELETE /api/v1/super-admin/payment-fee-settings` | `require_super_admin` | 共用行（`tenant_id IS NULL`）のCRUD |
+| テナント管理者 | `GET /api/v1/payment-fee-settings` | テナント認証 | 共用＋自テナント行を返す |
+| テナント管理者 | `POST/PATCH/DELETE /api/v1/payment-fee-settings` | テナント認証 | 自テナント行のみ操作 |
+
+#### フロントエンド設計方針
+
+- 入力フォーム: `<TextField type="number">` / `<Select>` / `<Textarea>` 金型を使用（ADR-144準拠）
+- デザイントークン: `var(--space-*)`, `var(--bg-subtle)`, `var(--radius-md)` 等を使用
+- 生`<input>` / 生`<select>` / 色直値 / px直値は禁止
+- i18n: 全ラベルは`t("payment_fee_settings.*")`経由（ADR-027準拠）
+
+#### 設計審査（Architect同一AI自己審査）
+
+| 検査項目 | 結果 |
+|---|---|
+| 既存パターンとの整合 | ✅ `public.units`のNULLパターンと同一構造 |
+| ADR-095（SSOT） | ✅ 手数料設定の正本は1テーブル |
+| ADR-144（UIガバナンス） | ✅ 金型使用を明記 |
+| ADR-027（i18n） | ✅ t()経由を明記 |
+| C35（見込み→実費） | ⚠ order_financialsとの連携は別設計（本テーブルは設定マスタのみ） |
+| C38（手動修正） | ✅ テナント管理者がフロントから設定変更可能 |
+| DB SSOT | ✅ コードにハードコードしない |
+| 拡張性 | ✅ service/fee_typeはVARCHAR（DDL変更不要で追加可能） |
+| エビデンス | ✅ PayPal: 公式ページ確認済み / Wise: 振込手数料の具体額は未確定 |
+
+**判定: APPROVE（PayPal部分）** — PayPalの初期データはエビデンス確立済みで実装可能。Wiseの行追加はエビデンス確定後。
+
+---
 
 ### 今回の到達点と止まる範囲
 
 - 設計担当作業として、前節の数量8/金額10項目群・接続図・確認票12件と、質問票16件を作成。
 - 2026-09-17、PO（しんごさん）が全16項目に回答（13件完全解消）。2026-09-18、残り3件（Q11配分方法・Q14管理単位・Q16通知期間）も確定。**16件全て解消**。
 - Q03回答によりC44を改訂（継続使用廃止→再発行/破棄の2択）。Q07回答によりC30を改訂（混合原因の負担ルール確定）。Q15回答により仕入側の異通貨設計を対象外に確定。
-- 全体設計はREVISE。7作業の出口条件と全体完成率は未達/算定不能のまま。今回の数字は成果物の項目数であって完成率ではない。
-- 製品コード/DB/CI/運用スクリプト/本番は未変更。コミット/push/PR/実装カードは未実施。
+- 2026-09-30、技術調査F01/F02/F03/F05を実施。Wise公式料金確認（219円は公式にない）、paid_at=NOW()問題特定、C43未実装確認、134タブ対42テーブルのギャップ特定、ADR-144違反特定。F04/F06は未着手。
+- 2026-10-02、§D01 決済手数料設定テーブルの正式設計を作成。publicスキーマ＋NULLパターン（既存`units`と同一方式）。PayPal初期データはエビデンス確立済み。Architect自己審査APPROVE（PayPal部分）。
+- 全体設計はREVISE。F01 Wise振込手数料の確定、F04/F06未着手、F07（ADR改訂）/F08（台帳整合）は前段完了後。
+- 製品コード/DB/CI/運用スクリプト/本番は未変更。実装カードは未発行（PO承認待ち）。
+
+#### 進捗率（2026-10-02時点）
+
+```
+業務ルール決定  ████████████████████ 95%（C01-C62合意済み、C42/C59後日相談）
+技術照合        ████████░░░░░░░░░░░ 40%（F01-F03/F05調査済み、F04/F06未着手）
+設計承認        ██░░░░░░░░░░░░░░░░░ 10%（§D01 PayPal部分APPROVE）
+全体            █████████░░░░░░░░░░ 約48%
+```
+
+---
+
+## 外部・過去事例の参照と我々への応用
+
+本設計はPO固有の業務条件と既存コード・ADR・合意記録を直接根拠とする。外部事例（他社SaaS・OSSパターン等）は今回の照合作業の根拠として使用していない。
+
+- Wise公式料金ページ（wise.com/gb/pricing/）: F01調査にて公式料金体系を確認。219 JPY固定という前提が公式スケジュールにないことを確認済み
+- PayPal Invoice API: `backend/app/services/paypal_payments.py`の既存実装が`payment_date`を取得できる構造であることをコード照合で確認
+- paid_at = NOW() パターン: 自システム内の実装パターンとして照合。実入金日時との乖離はPO判断が必要
+
+我々への応用: 外部事例は補足確認のみで、設計判断はPO合意・ADR・コード実物に基づく。
+
+## 維持の仕組み
+
+守り手: 設計担当（Claude Code / Hikky-dev）+ PO（しんごさん）
+
+- F-番号調査はrecon.mdと本書§Fセクションで追跡管理する
+- 技術照合の新発見はADR改訂（F07）後に正式カード化する
+- 本書の進捗率は調査完了のたびに更新する（現在45%）
+- 製品コード・DB・本番への変更は別ブランチ・別PRで管理する（本書はdocs-only）
