@@ -1,0 +1,169 @@
+
+> salesanchor-frontend@1.0.0 lint
+> eslint src
+
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/components/DataTable.stories.tsx
+  69:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+  71:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+  96:5  warning  Unused eslint-disable directive (no problems were reported from 'react-hooks/rules-of-hooks')
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/components/FedExRateModal.test.tsx
+  151:19  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/components/PriorityScoreBadge.test.tsx
+  15:28   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  16:33   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  17:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  17:30   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  18:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  18:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  19:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  19:30   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  20:38   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  21:35   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  22:35   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:54   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:82   warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  22:105  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  30:9    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  45:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  47:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  50:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  52:29   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  55:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  56:61   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  57:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  61:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  63:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  67:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  68:61   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  69:36   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+  73:6    warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）     local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/features/tcg-analysis-review/ProductMasterDrawer.tsx
+   71:21  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  175:96  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  180:17  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  181:12  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  182:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  189:11  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  191:12  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  195:33  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  196:33  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  197:33  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  198:33  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  199:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  203:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  207:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  211:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  215:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  219:42  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  225:17  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  226:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  227:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  228:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  229:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  230:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  230:37  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  231:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  231:51  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  232:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  232:49  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  247:18  warning  Unused eslint-disable directive (no problems were reported from 'local/no-japanese-literal')
+  247:87  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  252:46  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  259:40  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  259:49  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  266:38  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  266:47  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  309:23  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  312:23  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  324:17  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  325:12  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  326:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  333:11  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  334:10  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  334:49  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  334:64  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  336:38  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  341:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  347:24  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  347:33  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  351:33  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  361:40  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  367:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  368:16  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  373:41  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  373:50  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  387:11  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  388:10  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  389:10  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  389:50  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  390:10  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  391:14  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                local/no-japanese-literal
+  526:48  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  528:36  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+  529:62  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                 local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/features/tcg-analysis-review/SourceRawPane.tsx
+  15:50   warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                            local/no-japanese-literal
+  28:132  warning  React Hook useEffect has a missing dependency: 'jump'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  30:108  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:126  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:142  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:306  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:466  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                            local/no-japanese-literal
+  30:505  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:608  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:686  warning  i18n: JSX直書き日本語禁止。{t("key")} を使ってください（ADR-027）                                                           local/no-japanese-literal
+  30:784  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）                                                            local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/i18n.ts
+  43:7  warning  Unused eslint-disable directive (no problems were reported from 'no-console')
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/mocks/funnelFixtures.ts
+   33:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   42:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   51:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   60:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   69:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   78:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+   87:17  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  135:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  136:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  137:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  138:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  143:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  144:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  149:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  150:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  158:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  159:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  160:14  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  165:22  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  166:13  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  183:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  223:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  241:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  281:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  299:25  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  339:18  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/pages/buyback-prices/BuybackProductHistoryDrawer.tsx
+  174:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/pages/dashboard/FollowUpsPage.tsx
+  112:78  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+  201:73  warning  i18n: 文字列リテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/pages/dashboard/FunnelLeadsPage.tsx
+  25:53  warning  i18n: テンプレートリテラル日本語禁止。t("key") を使ってください（ADR-027）  local/no-japanese-literal
+
+/Users/tanizawashingo/worktrees/salesanchor/release-frontend-superadmin-parallel-report/frontend/src/pages/oauth-callback/OAuthCallbackPage.tsx
+  130:6  warning  React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+✖ 138 problems (0 errors, 138 warnings)
+  0 errors and 5 warnings potentially fixable with the `--fix` option.
+
+lint=0

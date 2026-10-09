@@ -88,7 +88,6 @@ import ChannelMastersPage from "./pages/admin/ChannelMastersPage";
 import ManagementCenterPage from "./pages/management-center/ManagementCenterPage";
 import FxRatePage from "./pages/super-admin/FxRatePage";
 import TcgProductImportPage from "./pages/super-admin/TcgProductImportPage";
-import TcgParallelReportPage from "./pages/super-admin/TcgParallelReportPage";  // MIG-04 Phase 4
 import TcgDistributionPage from "./pages/super-admin/TcgDistributionPage";  // CC_TASK_DISTUI-01
 import TcgSoldOutPage from "./pages/super-admin/TcgSoldOutPage";
 import TcgLineImportPage from "./pages/super-admin/TcgLineImportPage";  // MIG-04 Stage 1
@@ -302,11 +301,6 @@ function App() {
                   <Route
                     path="/super-admin/fx-rate"
                     element={<FxRatePage />}
-                  />
-                  {/* MIG-04 Phase 4: 並行運用比較レポート (is_super_admin 限定) */}
-                  <Route
-                    path="/super-admin/tcg-parallel-report"
-                    element={<TcgParallelReportPage />}
                   />
                   {/* CC_TASK_DISTUI-01: 配信先管理 (is_super_admin 限定) */}
                   <Route
