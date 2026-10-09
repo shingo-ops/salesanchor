@@ -10,7 +10,11 @@ Gemini が写した数量の数字が、その件の行の原文に無いとき�
 - backend/app/services/gemini_raw_copy_v101.py：件の要確認の理由を作る所（quantity_no_number を作る所と同じ関数・同じ条件）で、件の欄 `quantity_not_in_text` が True のとき理由 `{"kind": "quantity_not_in_text", "field": "quantity", "copied": <数量の写し>}` を足す（既存の review 要素の形に合わせる）。
 - 判定は既存の `_quantity_not_in_text`（:781-792）をそのまま使う。新しい判定は作らない。
 - line_analysis_v102_svc.py は変えない（review の kind は既に review_reasons に流れる：:507-518）。
-- 触らない: 価格の判定、v6 の経路、migration、画面、配信。
+- 理由コード表（#4076 便A、docs/handoff/v102-prod-switch/data/review_reason_codes/README.md「新しい理由コードを足すとき」）の決まりに従い、次の3つをそろえる（2026-10-09 #4076 マージ後に追加）:
+  1. backend/tests/test_review_reason_codes_consistency.py の `_code_side_constants()` に `v101._REVIEW_QUANTITY_NOT_IN_TEXT` を足す。
+  2. frontend/src/locales/ja.json・en.json の `reviewReason` に `quantity_not_in_text`（ja「数量の写しが原文に無い」／en「Copied quantity not found in the source lines」）。
+  3. 表の1行 `('quantity_not_in_text', 'system', 'extraction')`（検出はシステム、直す段は抽出＝price_not_in_lines と同じ区分）を、別ファイル seed_20261009b_quantity_not_in_text.sql と、その実行用 SQL（qty_precheck/qty_dryrun/qty_commit/qty_verify/qty_rollback）で足す。初期29行（seed_20261009.sql）の後にだけ実行する（初期29行の precheck は ROWS|0 を求めるため、先に入れない）。
+- 触らない: 価格の判定、v6 の経路、migration、画面の部品、配信、初期29行のファイル。
 
 ## 3. 代替案
 - 価格の部分一致を数の境目つきにする：行探しの結果が変わり得るため、別の便で測ってから（本件に混ぜない。変更は一度に1つ）。
