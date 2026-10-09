@@ -27,6 +27,7 @@ from app.services import tcg_distribution_svc as distribution
 from app.services.tcg_empty_box_rules import classification_sql, classify_empty_box
 from tests.test_tcg_empty_box_rules import CASES
 from tests.conftest import _PUBLIC_SUPPLIERS_DDL, _supplier_ssot_premigration
+from tests.seed_data import type_master_seed_sql
 from tests.test_tcg_work_matching_integration import _PUBLIC_PRODUCTS_DDL, _rewire_keyword_fks, provision
 
 MIGRATIONS = Path(__file__).resolve().parents[2] / "migrations"
@@ -61,6 +62,8 @@ def pg(monkeypatch):
             cursor.execute((MIGRATIONS / "086_seed_additional_tcg_types.sql").read_text())
             cursor.execute((MIGRATIONS / "20260921_060000_create_product_kinds.sql").read_text())
             cursor.execute((MIGRATIONS / "20260921_070000_rename_tcg_type_master_to_type_master.sql").read_text())
+            # type_master の行は migration ではなく試験側で入れる（ADR-1007 段2）
+            cursor.execute(type_master_seed_sql())
             cursor.execute(_PUBLIC_SUPPLIERS_DDL)
             cursor.execute(_rewire_keyword_fks(SCHEMA))
             # Master SSOT Phase 3: public schema tables for 9 master tables
