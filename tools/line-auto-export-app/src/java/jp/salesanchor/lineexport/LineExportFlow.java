@@ -174,6 +174,16 @@ final class LineExportFlow {
     private String runId;
     private MainThreadStallWatchdog stallWatchdog;
 
+    /**
+     * design.md追補「実行中の表示」(2026-10-09, PO決定・案1): 自動操作中であることを画面上部の
+     * 帯（バナー）で示す補助表示。show/removeの成否(overlayShown/overlayRemoved)は実行ログに
+     * 記録するが、失敗してもフロー自体の成否・制御フローには一切影響させない
+     * （NodeOps側の窓除外と合わせてdesign.md追補参照）。
+     */
+    private final RunStatusOverlay overlay = new RunStatusOverlay();
+    private boolean overlayShown;
+    private boolean overlayRemoved;
+
     // 計測専用フィールド（design.md追補 2026-10-08「遅い回の原因確定のための計測追加」）。
     // 挙動には一切使わない。診断ログにのみ出す。
 
@@ -233,6 +243,10 @@ final class LineExportFlow {
         // アクセシビリティ操作は画面の消灯タイマーをリセットしないため、フロー中は画面を
         // 保つ（WAKE_LOCK_TAGの定数コメント参照）。解放はfinish()で、施錠まで終えてから行う。
         acquireWakeLock();
+
+        // 自動取り込み中バナーを表示する（design.md追補「実行中の表示」参照）。表示に失敗しても
+        // フローは継続する（補助表示のみ）。
+        overlayShown = overlay.show(service);
 
         // フロー実行中のみウィンドウ遷移のクラス名・パッケージ名を記録する（終了時にクリア）。
         service.startWindowRecording();
@@ -734,6 +748,13 @@ final class LineExportFlow {
     }
 
     private void finish(boolean success, String failedStage) {
+        // 自動取り込み中バナーを消す。施錠前の待ち（LOCK_DELAY_AFTER_EDIT_MS・
+        // drainCallbackSummary、このあとのlockOnFinish分岐）には一切触れない。自動操作
+        // 自体が終わった時点（finish()が呼ばれた時点）で消す、という解釈であり、画面施錠
+        // （lockOnFinish==trueの場合は数秒後）より先に消えることがある（design.md追補
+        // 「実行中の表示」参照）。
+        overlayRemoved = overlay.remove(service);
+
         // stopWindowRecording()は履歴をクリアするため、読むのはその前に行う（診断用。
         // クラス名のみでパッケージ名・ノードのテキスト・メッセージ本文は含まない）。
         String recentClasses = success ? "" : service.recentWindowClassNames();
@@ -844,6 +865,8 @@ final class LineExportFlow {
         JSONObject extraFields = new JSONObject();
         try {
             extraFields.put("wakeAcquired", wakeAcquired);
+            extraFields.put("overlayShown", overlayShown);
+            extraFields.put("overlayRemoved", overlayRemoved);
             extraFields.put("wakeHeldAtEnd", wakeHeldAtEnd);
             if (wakeHeldMs >= 0) {
                 extraFields.put("wakeHeldMs", wakeHeldMs);

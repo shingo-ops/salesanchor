@@ -23,6 +23,31 @@ final class NodeOps {
     private NodeOps() {
     }
 
+    // ---- 自分自身（アプリ）のウィンドウを探索から除外する ------------------------------------
+    //
+    // design.md追補「実行中の表示」(2026-10-09, PO決定・案1): 実行中バナー(RunStatusOverlay、
+    // TYPE_ACCESSIBILITY_OVERLAY)がgetWindows()に新しいウィンドウとして現れるため、既存の
+    // 探索（LINEや他アプリのノードを探すためのもの）が自分自身のウィンドウを拾わないように
+    // 全探索メソッドで除外する。
+
+    private static boolean isOwnPackageRoot(AccessibilityService service, AccessibilityNodeInfo root) {
+        if (root == null) {
+            return false;
+        }
+        CharSequence pkg = root.getPackageName();
+        return pkg != null && service.getPackageName().contentEquals(pkg);
+    }
+
+    private static boolean isOwnWindow(AccessibilityService service, AccessibilityWindowInfo window) {
+        return window != null && isOwnPackageRoot(service, window.getRoot());
+    }
+
+    /** getRootInActiveWindow()が自分自身のウィンドウだった場合はnullに差し替える（フォールバック用）。 */
+    private static AccessibilityNodeInfo activeWindowRootExcludingSelf(AccessibilityService service) {
+        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        return isOwnPackageRoot(service, root) ? null : root;
+    }
+
     /** clickNodeの結果。traceMessageはbounds中心へのgestureタップにフォールバックした場合のみ
      * 非null（元のUnlockAccessibilityService#clickNodeがtraceAppendしていた内容と同じ）。
      * 呼び出し側でtraceAppend等に渡して既存の記録内容を保つ。 */
@@ -42,6 +67,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo root = window.getRoot();
                     AccessibilityNodeInfo match = searchNode(root, label);
                     if (match != null) {
@@ -52,7 +80,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        return searchNode(service.getRootInActiveWindow(), label);
+        return searchNode(activeWindowRootExcludingSelf(service), label);
     }
 
     /** joinDistinctPackageNames等と同じ上限（UnlockAccessibilityService#DIAG_MAX_PACKAGES_PER_DISPLAYと同値）。 */
@@ -75,6 +103,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo root = window.getRoot();
                     CharSequence pkg = root != null ? root.getPackageName() : null;
                     if (pkg != null && packageName.contentEquals(pkg)) {
@@ -85,7 +116,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        AccessibilityNodeInfo root = service.getRootInActiveWindow();
+        AccessibilityNodeInfo root = activeWindowRootExcludingSelf(service);
         CharSequence pkg = root != null ? root.getPackageName() : null;
         return pkg != null && packageName.contentEquals(pkg);
     }
@@ -105,6 +136,9 @@ final class NodeOps {
                     if (pkgs.size() >= MAX_DISTINCT_PACKAGES) {
                         break;
                     }
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo root = window.getRoot();
                     CharSequence pkg = root != null ? root.getPackageName() : null;
                     if (pkg != null) {
@@ -116,7 +150,7 @@ final class NodeOps {
             Log.w(TAG, "getWindows() failed: " + e);
         }
         if (pkgs.isEmpty()) {
-            AccessibilityNodeInfo root = service.getRootInActiveWindow();
+            AccessibilityNodeInfo root = activeWindowRootExcludingSelf(service);
             CharSequence pkg = root != null ? root.getPackageName() : null;
             if (pkg != null) {
                 pkgs.add(pkg.toString());
@@ -168,6 +202,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo match = searchNodeByTextPrefix(window.getRoot(), prefix);
                     if (match != null) {
                         return match;
@@ -177,7 +214,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        return searchNodeByTextPrefix(service.getRootInActiveWindow(), prefix);
+        return searchNodeByTextPrefix(activeWindowRootExcludingSelf(service), prefix);
     }
 
     private static AccessibilityNodeInfo searchNodeByTextPrefix(AccessibilityNodeInfo node, String prefix) {
@@ -207,6 +244,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo match = searchNodeByDescExact(window.getRoot(), desc);
                     if (match != null) {
                         return match;
@@ -216,7 +256,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        return searchNodeByDescExact(service.getRootInActiveWindow(), desc);
+        return searchNodeByDescExact(activeWindowRootExcludingSelf(service), desc);
     }
 
     private static AccessibilityNodeInfo searchNodeByDescExact(AccessibilityNodeInfo node, String desc) {
@@ -246,6 +286,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo match = searchScrollable(window.getRoot());
                     if (match != null) {
                         return match;
@@ -255,7 +298,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        return searchScrollable(service.getRootInActiveWindow());
+        return searchScrollable(activeWindowRootExcludingSelf(service));
     }
 
     private static AccessibilityNodeInfo searchScrollable(AccessibilityNodeInfo node) {
@@ -296,6 +339,9 @@ final class NodeOps {
             List<AccessibilityWindowInfo> windows = service.getWindows();
             if (windows != null) {
                 for (AccessibilityWindowInfo window : windows) {
+                    if (isOwnWindow(service, window)) {
+                        continue;
+                    }
                     AccessibilityNodeInfo match = searchGroupLabel(window.getRoot(), normalizedExpected);
                     if (match != null) {
                         return match;
@@ -305,7 +351,7 @@ final class NodeOps {
         } catch (RuntimeException e) {
             Log.w(TAG, "getWindows() failed: " + e);
         }
-        return searchGroupLabel(service.getRootInActiveWindow(), normalizedExpected);
+        return searchGroupLabel(activeWindowRootExcludingSelf(service), normalizedExpected);
     }
 
     private static AccessibilityNodeInfo searchGroupLabel(AccessibilityNodeInfo node, String normalizedExpected) {
