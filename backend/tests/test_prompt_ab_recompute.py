@@ -68,6 +68,8 @@ def fakes(monkeypatch, tmp_path):
     monkeypatch.setattr(pab, "fetch_job_ids", lambda s, ids: {i: f"job-{i}" for i in ids})
     m.followup = MagicMock(return_value=None)  # 直前の投稿なし。本番と同じ関数を呼ぶことは test_recompute_passes_followup_reference で見る
     monkeypatch.setattr(rec, "load_followup_reference", m.followup)
+    m.soldout = MagicMock(return_value=())  # 過去48時間の投稿なし。本番と同じ関数を呼ぶことは test_recompute_passes_soldout_ref_posts で見る
+    monkeypatch.setattr(rec, "load_soldout_ref_posts", m.soldout)
     return m
 
 
@@ -338,3 +340,22 @@ def test_recompute_passes_followup_reference_from_the_same_function_as_productio
         pab._v102_row_fields = original
     assert seen["ref"] == ("ref-1", "前の投稿")
     assert fakes.followup.call_args.args[1] == "job-r1"
+
+
+def test_recompute_passes_soldout_ref_posts_from_the_same_function_as_production(fakes):
+    posts = ("post-1",)
+    fakes.soldout.return_value = posts
+    seen = {}
+    real = pab._v102_row_fields
+
+    def spy(response_text, ctx, masters):
+        seen["posts"] = masters.get("soldout_posts")
+        return real(response_text, ctx, masters)
+
+    pab._v102_row_fields, original = spy, pab._v102_row_fields
+    try:
+        _run(fakes, [_row()])
+    finally:
+        pab._v102_row_fields = original
+    assert seen["posts"] == posts
+    assert fakes.soldout.call_args.args[1] == "job-r1"
