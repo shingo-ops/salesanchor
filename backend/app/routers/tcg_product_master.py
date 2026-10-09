@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_super_admin
 from app.database import get_db
+from app.schemas.tcg_product_code_collision import ProductCreateResult
 from app.services.tcg_product_master_svc import (
     add_exclude_keyword,
     add_search_keyword,
@@ -209,6 +210,8 @@ async def check_product_duplicates(
 @router.post(
     "/tcg/products",
     summary="商品マスタ新規登録（PARITY-03 Phase 3 B-3）",
+    response_model=ProductCreateResult,
+    response_model_exclude_unset=True,
 )
 async def create_product_master(
     body: CreateProductRequest,
