@@ -252,3 +252,85 @@ recon: /tmp の調査結果を本節に転記（基準 origin/main 656817ddd）�
 - コード側で名前の付いた理由コードの定数（v101 の REJECTED_*・ROLE_SHIP/ROLE_CONDITION・:1047-1050 の定数・UNSURE_*、product_first の :67-71、line_analysis_v102_svc の :66-67、tcg_empty_box_rules の定数）がすべて初期行にある。
 - 初期行の各コードの文字列が backend/app のどこかに現れる（使われない行を残さない）。
 - 新しい理由コードを足すときは「コード＋ja/en＋この SQL の型で1行の追加データ変更」が揃わないと CI が通らない。
+
+## 13. 便C・便D の詳細（2026-10-09 PO「便C・便D を進める」）
+
+recon（基準 origin/main f0d710185、file:line は本節に転記）。本番の読み取り（2026-10-09）: extraction_jobs 2,396件のうち v102 は0件、自動解析・自動配信はオン（celery-worker の TCG_AUTO_ANALYZE=1・TCG_AUTO_DISTRIBUTE=1）、エンジン v6、1日の解析投稿数は直近14日で58〜97件。
+
+### 13-1. PO の規則（2026-10-09 原文）
+「要確認を直して回す際も投稿日時が古ければ解析して記録だけ残す、投稿日時が最新の商品であれば配信リストに加える」
+- 事実: 「最新」は is_current で決まる。単位は同じ仕入元（supplier_channel_id）の (product_id, condition_id) で、`ORDER BY sm.received_at DESC, ar.computed_at DESC` の1位だけ TRUE（backend/app/services/tcg_analyzer_svc.py:1802-1819）。received_at は LINE の投稿時刻（backend/app/services/tcg_line_import_svc.py:303,312-313、取り込み時刻は created_at）。配信は is_current=TRUE かつ cr.needs_review IS FALSE 等（backend/app/services/tcg_distribution_svc.py:260-267）。
+- よって規則は「直す→解析し直す→is_current を付け直す→配信」で満たせる。古い投稿の件は解析・記録はされるが is_current=FALSE なので配信に出ない。
+
+### 13-2. 今の不足（事実）
+| # | 不足 | 根拠 |
+|---|---|---|
+| G1 | v102 のシステム段は人の判断（item_corrections）を読まないため、再実行で手で決めた商品が戻る | backend/app/services/line_analysis_v102_svc.py に item_corrections の参照0件、UPSERT は product_id 等を上書き（:546-565） |
+| G2 | 商品を手で決めても v102 の理由（product_not_in_master・product_multiple）が残り、配信されない | backend/app/services/item_corrections_svc.py:59-73 は product_id 等3列のみ更新、cr.needs_review は review_reasons から計算（backend/app/services/tcg_condition_review_svc.py:139-168） |
+| G3 | 「このままで良い」を記録して理由を解く仕組みが無い（review_ack はコードに0件） | grep |
+| G4 | 直した後に配信を起動する経路が無い。配信は全置換で、同時起動の排他・間引きが無い | backend/app/services/tcg_distribution_svc.py:515-518、排他の文字列0件 |
+| G5 | 商品を A→B に直すと、A の組の is_current が付け直されない（_merge_supplier_products はこの投稿の今の組だけ見る） | backend/app/services/tcg_analyzer_svc.py:1794-1801 |
+| G6 | Gemini の書き写しを画面で直す API・画面が無い。Gemini 段を取り直すと件の id が全部変わり、人の判断の記録が宛先を失う | backend/app/services/line_analysis_v102_svc.py:394-407、backend/app/services/tcg_extraction_record_svc.py:171 |
+
+### 13-3. SSOT（人の判断の置き場所は1か所）
+- 人の判断はすべて public.item_corrections（既存。FK なし・field_name は自由文字列、migrations/20260921_110000_pipeline_tables_public.sql:320-334）に追記で残す。analysis_results は「判断を反映した結果」で、正本ではない。
+- v102 のシステム段は、件ごとに item_corrections の**有効な**最新の判断を読み、結果に反映する（G1〜G3）。
+- 使う field_name:
+  | field_name | 意味 | human_value |
+  |---|---|---|
+  | product_id（既存） | 商品の決定 | 商品 id（文字列） |
+  | condition_review（既存） | 状態の決定 | 既存の JSON（decision・condition_id 等） |
+  | review_ack（新） | 「このままで良い」 | JSON `{"v":1,"codes":[理由コード…]}` |
+  | v102_lines / v102_price / v102_quantity（新） | Gemini の書き写しの直し | 直した後の値（lines は JSON 配列） |
+  | v102_item_added / v102_item_deleted（新） | 件の追加・削除 | 追加後／削除前の件の JSON |
+- 判断が**有効**の条件: その判断の corrected_at が、同じ件の最後の書き写しの直し（v102_lines/price/quantity/item_added の corrected_at の最大）より後であること。書き写しを直したら、それより前の商品・状態・確認済みの判断は無効（件の中身が変わったので見直す）。Gemini 段を取り直した件は id が新しくなるので、古い判断は自然に無効。
+
+### 13-4. 便D（人の判断を残す・理由を解く・配信）
+1. v102 のシステム段（run_v102_analysis）に「判断の読み込み」を足す:
+   - 商品: 有効な最新の product_id の判断があれば、その件の商品をその id に固定してから状態・単位を決める（試作版は商品→箱→状態→単位の順に決めるため、後から上書きでは状態・単位がずれる）。固定は試作版の商品決定（backend/app/services/gemini_raw_copy_v102_product_first.py:470-506 resolve_product_first）に「固定の商品 id」を渡す口を1つ足して行う。固定時は status='matched' と同じ扱いで、pid_basis='MANUAL'。固定が無い件の結果は今と1文字も変わらない（K8 を保つ）。
+   - 状態: 有効な最新の condition_review（decision が confirm/correct、選んだ状態が is_active）があれば、その condition_id を使い、理由 condition_unknown・condition_multiple_candidates を外す。condition_basis='MANUAL_CONDITION_REVIEW'。
+   - 確認済み: 有効な最新の review_ack の codes にある理由は外す。
+2. is_current の付け直し（G5）: 解析の前の組（product_id, condition_id）と後の組の和集合で付け直す。_merge_supplier_products に「追加で付け直す組」を受ける任意の引数を足す（無指定なら今と同じ）。
+3. 起動: v102 の件に判断を保存した API（POST /tcg/items/{id}/corrections、状態の確認の保存、便C の保存、確認済みの保存）は、保存後に Celery タスク「その投稿のシステム段をやり直す→is_current を付け直す→配信を予約」を積む。
+4. 配信の間引き（G4）: 配信の予約は Redis のキー（SET NX、有効60秒）で1回にまとめ、60秒後に1回だけ run_distribution を起動する（その間の直しはまとめて反映される）。TCG_AUTO_DISTRIBUTE=1 のときだけ。既存の止め装置（未完了の解析・抽出があれば中止）はそのまま。
+5. 「確認済み」の API: POST /tcg/items/{id}/review-ack（super_admin、body: source_message_id・codes）。codes は review_reason_codes にあるコードに限る。
+6. 対象: v102 の件だけ（prompt_version が `v102:`）。v6 の件の扱いは変えない（本番は今 v102 が0件なので、本番の挙動は便E まで変わらない）。
+
+### 13-5. 便C（Gemini の書き写しを画面で直す）
+1. API（super_admin）:
+   - GET /tcg/v102/posts?status=needs_review: 投稿単位の理由（extraction_jobs.review_reasons）か、fix_stage='extraction' の理由を持つ件がある v102 の投稿の一覧（仕入元・投稿時刻・理由・件数）。
+   - GET /tcg/v102/posts/{job_id}: 原文の行（番号つき）と件（id・gemini_index・source_lines・raw_price・raw_quantity・件の理由）。
+   - PUT /tcg/v102/posts/{job_id}/items: 直した後の件の全体（既存の件は id 付き、新しい件は id なし）。サーバーで検査（行番号は 1〜原文の行数の整数・重複なし、価格・数量は文字列で長さ上限、件は1件以上）。変わった件だけその場で更新（id を変えない＝人の判断の宛先を保つ）、追加・削除も行い、すべて item_corrections に記録（13-3）。gemini_index は最小の行番号順に振り直す（件の並びを原文の順に保つ）。保存後は 13-4 の 3 と同じタスクを積む。
+2. 画面: 要確認ページに「投稿」タブを追加（Tabs 金型）。一覧は DataTable、行を押すと Modal（xl）で原文（ShadowSourcePane、選んだ件の行範囲を色付け）と件の表（DataTable、セルに TextField 金型：行番号「3,5,7」・価格・数量、削除・追加・保存は Button 金型）。新しい部品・色・生要素・ui-allow を作らない。文言は ja/en。
+3. 本番タブの行を押したとき、その件の訂正（既存の ItemComparison・ConditionReviewPanel・ProductMasterDrawer）と「確認済み」ボタンを Drawer 金型で開く（便D の画面）。
+
+### 13-6. 分割（1つずつ: マージ→デプロイ→確認→次）
+| PR | 内容 | migration | 本番の挙動 |
+|---|---|---|---|
+| D1 | 13-4 の 1〜6（backend） | なし | 変化なし（v102 の投稿0件） |
+| C1 | 13-5 の 1（backend API） | なし | 変化なし |
+| CD2 | 13-5 の 2・3（frontend） | なし | 投稿タブ（v102 の投稿0件の間は空）、本番タブの行から訂正 Drawer |
+
+### 13-7. 受け入れ基準
+| # | 基準 | 検証方法 |
+|---|---|---|
+| D-K1 | 商品を手で決めた v102 の件は、システム段を何度やり直しても同じ商品・pid_basis='MANUAL' のまま、product_not_in_master・product_multiple が付かない | pytest（PostgreSQL） |
+| D-K2 | 判断が無い件の結果は判断の読み込みを足す前と同じ（K8） | pytest：保存済み応答で前後一致 |
+| D-K3 | 確認済みにした理由はやり直しでも付かない。書き写しを直した後は確認済みが無効になり、理由が戻る | pytest |
+| D-K4 | 直した件が同じ仕入元×商品×状態で最新の投稿なら is_current=TRUE で配信の出力に入り、古い投稿なら FALSE で入らない | pytest（fetch_output_rows） |
+| D-K5 | 商品を A→B に直すと、A の組で次に新しい投稿の件が is_current=TRUE に戻る | pytest |
+| D-K6 | 60秒の間に5回直しても run_distribution の起動は1回 | pytest（Redis をモック） |
+| C-K1 | 書き写しの保存で、変わっていない件の id が変わらず、変わった件・追加・削除がすべて item_corrections に残る | pytest |
+| C-K2 | 不正な行番号（0・行数超え・重複・整数でない）は 422 で何も書かない | pytest |
+| CD-K1 | 投稿タブ・訂正 Drawer が金型だけで作られ、文言が ja/en にある | vitest＋i18n 検査＋UI ガバナンス検査 |
+
+### 13-8. リスクと対処
+| リスク | 対処 |
+|---|---|
+| 試作版ファイル（product_first）は別セッションも直す | D1 の PR 本文に追加した引数を明記。固定なしでは結果不変（D-K2） |
+| 配信の起動が増える | 13-4 の 4 で60秒に1回へ間引く |
+| 書き写しの直しで古い判断が無効になり、要確認が戻る | 仕様（件の中身が変わったら見直す）。画面で理由が見える |
+| v6 の件は直しても配信が自動で走らない | 対象外（便E 後は新しい投稿は v102）。必要なら別便 |
+
+### 13-9. 外部・過去事例
+外部事例は使わない（社内の既存の仕組み ADR-158 の is_current と item_corrections の延長）。過去事例: v6 は「product_id の判断があれば再解析を飛ばす」方式（backend/app/services/tcg_analyzer_svc.py:1381-1394）で、判断が同値の確認でも再計算が止まる。本設計は飛ばさずに判断を反映して再計算する。

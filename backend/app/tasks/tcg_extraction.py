@@ -30,7 +30,13 @@ from sqlalchemy.orm import Session
 
 from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
-from app.services.line_analysis_v102_svc import ENGINE_V102, get_engine, run_v102_analysis, run_v102_extraction
+from app.services.line_analysis_v102_svc import (
+    ENGINE_V102,
+    get_engine,
+    is_v102_prompt_version,
+    run_v102_analysis,
+    run_v102_extraction,
+)
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
 from app.services.tcg_work_reference import (
@@ -660,6 +666,73 @@ def _enqueue_auto_distribute() -> None:
 
 
 # ---------------------------------------------------------------------------
+# 人が直した後のやり直し → 配信の予約（v102 の投稿だけ。設計 docs/handoff/v102-prod-switch/design.md §13-4）
+# ---------------------------------------------------------------------------
+
+DISTRIBUTION_SCHEDULE_KEY = "tcg:distribution:scheduled"  # この間に直した分は、予約済みの1回の配信にまとめる
+DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS = 90
+DISTRIBUTION_DELAY_SECONDS = 60
+_DEFAULT_REDIS_URL = "redis://redis:6379/0"
+
+
+def _get_redis_client():
+    import redis  # noqa: PLC0415
+
+    return redis.from_url(os.environ.get("REDIS_URL", _DEFAULT_REDIS_URL), decode_responses=True)
+
+
+def schedule_distribution() -> bool:
+    """TCG_AUTO_DISTRIBUTE=1 のとき、60秒後に自動配信を1回だけ積む。予約済み（Redis のキーが取れない）なら積まない。
+
+    Redis が使えないときは警告だけ出して積まない（_enqueue_auto_distribute と同じ扱い）。積んだら True。
+    """
+    if os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() != "1":
+        return False
+    try:
+        client = _get_redis_client()
+        if not client.set(DISTRIBUTION_SCHEDULE_KEY, "1", nx=True, ex=DISTRIBUTION_SCHEDULE_KEY_TTL_SECONDS):
+            logger.info("[tcg_extraction] 配信は予約済みのため積みません")
+            return False
+        if auto_distribute_after_analysis_task is None:
+            logger.warning("[tcg_extraction] 配信タスクが未登録のため予約できません")
+            return False
+        auto_distribute_after_analysis_task.apply_async(countdown=DISTRIBUTION_DELAY_SECONDS)
+        return True
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] distribution schedule skipped: %s", exc)
+        return False
+
+
+def reanalyze_v102_job(extraction_job_id: str) -> dict:
+    """v102 の投稿のシステム段をやり直し（Gemini は呼ばない）、配信を予約する。v6 の投稿・投稿なしは何もしない。"""
+    session = _get_sync_session()
+    try:
+        row = session.execute(
+            text(f"SELECT prompt_version FROM {TCG_SCHEMA}.extraction_jobs WHERE id = :ej"), {"ej": extraction_job_id}
+        ).first()
+        if row is None or not is_v102_prompt_version(row[0]):
+            logger.info("[tcg_extraction] v102 以外の投稿のためやり直しません: ej=%s", extraction_job_id)
+            return {"extraction_job_id": extraction_job_id, "status": "skipped", "analysis_stats": None, "scheduled": False}
+        stats = run_v102_analysis(session, extraction_job_id)
+        session.commit()
+    finally:
+        session.close()
+    return {
+        "extraction_job_id": extraction_job_id, "status": "reanalyzed", "analysis_stats": stats,
+        "scheduled": schedule_distribution(),
+    }
+
+
+def enqueue_v102_reanalyze(extraction_job_id: str) -> None:
+    """人の判断を保存した後に呼ぶ。やり直しのタスクを積む。Redis が使えなくても保存は成功させる（警告のみ）。"""
+    try:
+        if v102_reanalyze_after_correction_task is not None:
+            v102_reanalyze_after_correction_task.delay(extraction_job_id)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[tcg_extraction] v102 reanalyze enqueue skipped: %s", exc)
+
+
+# ---------------------------------------------------------------------------
 # Celery タスク定義 (Redis 未起動時は登録のみ)
 # ---------------------------------------------------------------------------
 
@@ -686,6 +759,24 @@ try:
             logger.exception(
                 "[tcg_extraction] task failed for sm=%s: %s", source_message_id, exc
             )
+            raise self.retry(exc=exc) from exc
+
+    @celery_app.task(
+        name="tcg.v102_reanalyze_after_correction",
+        bind=True,
+        max_retries=2,
+        default_retry_delay=30,
+        time_limit=330,
+        soft_time_limit=300,
+    )
+    def v102_reanalyze_after_correction_task(self, extraction_job_id: str) -> dict:
+        """
+        Celery タスク: 人が直した v102 の投稿のシステム段をやり直し、is_current を付け直し、配信を予約する。
+        """
+        try:
+            return reanalyze_v102_job(extraction_job_id)
+        except Exception as exc:
+            logger.exception("[tcg_extraction] v102 reanalyze failed for ej=%s: %s", extraction_job_id, exc)
             raise self.retry(exc=exc) from exc
 
     @celery_app.task(
@@ -749,10 +840,14 @@ except Exception as _celery_init_err:  # noqa: BLE001
     )
     extract_source_message_task = None  # type: ignore[assignment]
     auto_distribute_after_analysis_task = None  # type: ignore[assignment]
+    v102_reanalyze_after_correction_task = None  # type: ignore[assignment]
 
 
 __all__ = [
     "extract_and_analyze_source_message",
     "extract_source_message_task",
     "auto_distribute_after_analysis_task",
+    "v102_reanalyze_after_correction_task",
+    "enqueue_v102_reanalyze",
+    "schedule_distribution",
 ]
