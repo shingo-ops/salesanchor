@@ -1046,6 +1046,7 @@ def _apply_context_work(extracted: list[dict], build: Callable[[int, int | None]
 
 _REVIEW_QUANTITY_NO_NUMBER, _REVIEW_FOOTER = "quantity_no_number", "possible_footer_line"
 _REVIEW_UNIT_UNKNOWN, _REVIEW_CATEGORY_UNKNOWN = "unit_unknown", "category_unknown"
+_REVIEW_HEADING_SHIP = "heading_ship_with_own_ship"
 _POST_NO_ITEMS, _POST_MISSING_ITEM = "no_items", "possible_missing_item"
 _NORMAL_ROW_NONE_FIELDS = ("name", "unit", "unit_kubun", "condition", "condition_basis", "status", "status_effect", "ship")
 
@@ -1082,6 +1083,32 @@ def _item_reasons(row: dict, no_number: list[int], footer: list[int]) -> list[di
         reasons.append({"line": row["price_line"], "kind": _REVIEW_UNIT_UNKNOWN})
     if row.get("match_status") == MATCH_STATUS_MATCHED and row.get("product_category") == PRODUCT_KUBUN_UNKNOWN:
         reasons.append({"line": row["price_line"], "kind": _REVIEW_CATEGORY_UNKNOWN})
+    return reasons
+
+
+def _heading_ship_reasons(rows: list[dict]) -> list[list[dict]]:
+    """見出しの直下の発送の行を、自分の発送の行を持つ2件目以降の件にも入れた件の要確認の理由（rows と同じ順の、件ごとのリスト）。
+
+    lines の最小の行番号が同じ件を同じ見出しとみなす。まとまりの中で price_line が最小の件 F 以外の各件 B で、
+    H（F の価格行より前の発送の行）と O（F と B の価格行の間にある B だけの発送の行）が両方あれば、H の行ごとに理由を足す。
+    rows は書き換えない。落とした件（rejected）は見ない。原文の文字は載せない。
+    """
+    reasons: list[list[dict]] = [[] for _ in rows]
+    groups: dict[int, list[int]] = {}
+    for i, row in enumerate(rows):
+        if not row.get("rejected") and row["lines"] and row["price_line"] is not None:
+            groups.setdefault(min(row["lines"]), []).append(i)
+    for members in (m for m in groups.values() if len(m) >= 2):
+        first = min(members, key=lambda i: rows[i]["price_line"])
+        first_price = rows[first]["price_line"]
+        for b in (m for m in members if m != first):
+            row = rows[b]
+            ships = [n for n in row["lines"] if row["roles"].get(n) == ROLE_SHIP]
+            others = {n for m in members if m != b for n in rows[m]["lines"]}
+            heading = sorted(n for n in ships if n < first_price)
+            own = sorted(n for n in ships if first_price < n < row["price_line"] and n not in others)
+            if heading and own:
+                reasons[b] = [{"line": n, "kind": _REVIEW_HEADING_SHIP, "own_lines": list(own)} for n in heading]
     return reasons
 
 
@@ -1136,7 +1163,11 @@ def _extract_v102(
         "quantity_no_number": no_number, "possible_footer_line": footer_lines,
     }
     if review_reasons:
-        extracted = [{**row, "review": [*row["review"], *_item_reasons(row, no_number, footer_lines)]} for row in extracted]
+        heading_ship = _heading_ship_reasons(extracted)
+        extracted = [
+            {**row, "review": [*row["review"], *_item_reasons(row, no_number, footer_lines), *heading_ship[i]]}
+            for i, row in enumerate(extracted)
+        ]
         owned = {n for row in [*extracted, *rejected_rows] for n in row["lines"]}
         flags = {**flags, "post_review": _post_review_reasons(
             item_count=len(extracted) + len(rejected_rows), flags=flags, owned_lines=owned)}
