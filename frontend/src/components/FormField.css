@@ -334,6 +334,76 @@
   font-family: monospace;
 }
 
+/* 用途別の種類 input（design.md §AY-2a）。現行ページの見た目を写す。size は受けない */
+/* karte: InboxPage.css right-panel-field（見本 .fbox。枠幅は金型の 1px。出典は 0.5px だが Chromium の描画は同一（ay2a-equivalence）） */
+.comp-field__input.comp-input--karte {
+  min-height: auto;
+  padding: var(--karte-field-py) var(--karte-field-px);
+  border-color: var(--karte-field-bd);
+  border-radius: var(--radius-md);
+  background-color: var(--karte-field-bg);
+  font-size: var(--font-sm);
+  line-height: normal;
+  transition: border-color var(--transition-micro);
+}
+
+.comp-field__input.comp-input--karte:focus {
+  border-color: var(--accent);
+  box-shadow: none;
+}
+
+.comp-field__input.comp-input--karte::placeholder {
+  color: var(--text-muted);
+}
+
+/* search: components.css search-input-field + InboxPage.css inbox-search-input の padding（検索アイコン分の左余白を含む。width:100% は配置としてページに残す） */
+.comp-field__input.comp-input--search {
+  min-height: auto;
+  padding: calc(var(--space-2) + 1.5px) var(--space-3) calc(var(--space-2) + 1.5px) calc(var(--space-3) + 16px + var(--space-2));
+  border-color: var(--border-strong);
+  border-radius: var(--radius-md);
+  background-color: var(--bg-subtle);
+  font-family: revert;
+  line-height: normal;
+}
+
+.comp-field__input.comp-input--search:focus {
+  border-color: var(--accent);
+  box-shadow: var(--search-focus-glow);
+}
+
+.comp-field__input.comp-input--search::placeholder {
+  color: var(--text-secondary);
+}
+
+/* schedule: schedule.css schedule-input */
+.comp-field__input.comp-input--schedule {
+  min-height: var(--comp-input-height-sm);
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font-family: revert;
+  font-size: var(--font-sm);
+  line-height: normal;
+  transition: initial;
+}
+
+/* composer: WeeklyAdvisorSection.css db-weekly-composer-input（旧規則の border は --border-subtle が未定義のため無効化され枠なしで描画されていた。その見た目を写す） */
+.comp-field__input.comp-input--composer {
+  min-height: auto;
+  border: none;
+  border-radius: var(--radius-md);
+  background-color: var(--bg-primary);
+  font: inherit;
+  resize: vertical;
+  transition: initial;
+}
+
+.comp-field__input.comp-input--composer:focus {
+  box-shadow: none;
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
 .comp-field--lg .comp-field__label {
   font-size: var(--font-base);
 }

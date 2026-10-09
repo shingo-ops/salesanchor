@@ -2382,3 +2382,51 @@ PO原文（2026-10-09、本セッション）「次を進める」（一行入�
 Architect 自己審査（AY-1）: APPROVE（§AX AX-1 と同型、既存220利用の DOM 不変を試験で固定、配線・データ不変、新規トークン0）。AY-2 以降は見た目が変わるため対象外（REVISE: 実測と前後表、PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型の踏襲のため不要。
 
 維持の仕組み: 守り手は TextField.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check・design-token-guard・ui-governance。守っていないもの: ページ側の生 input 448（AY-2 以降で移管）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+
+#### AY-1 結果と AY-2 追補（2026-10-09）
+
+AY-1: PR #4063 merge 08f59418c772fab0bed6137e818d5e87de5c91f2（2026-10-09T03:41:02Z、必須15/15成功）、Deploy 37880393776 success（headSha 08f59418、03:41:05Z〜03:43:34Z）。本番 CSS index-D3AhIMnh.css に `.comp-field__input--sm` 1・`--lg` 1。app 200、/api/health 200。GO 原文は PO 本人の「GO #4063」。
+
+AY-2 の方針（PO 回答 2026-10-09「y」。設計者の提示案: 一般フォームは標準の見た目、見た目に意図がある欄（カルテ・検索バー・送信欄など）は現在の見た目を金型の種類として登録して保持、商品編集は保留）。
+
+現在地（origin/main 08f59418c、証跡は本便で保存する evidence-20260910/ay2-inventory.json、ay2-applied-css.json、ay2-groups.{md,json}、ay2-baseline.{cjs,json,md}、ay2-intent.{md,json}、ay2-test-refs.md、ay2-handlers.md、ay2-eslint.md、ay2-hold.txt）: ページ側の生 text 系 input 360。実際に当たる CSS 規則の集合（静的解決、祖先未確定の規則は別掲）で 47 グループ。主なもの: G01 `.form-group input` 136、G02 規則なし（ブラウザ既定）61（登録画面 41 は CSS 定義の無い class `input`）、G03/G05 `.form-row input` 48、G04/G38/G39 カルテ `.right-panel-field` 24、G06 商品編集 14、G07 商品マスタドロワー 7、G08 `.schedule-input` 6、G11 ログイン `.login-card .form-group input` 3、G15 `.db-weekly-composer-input` 2、G32 受信箱検索 `.search-input-field` 1、他は inline style 主体の 1〜6 件の組。
+
+分け方（原因切り分けのため複数便。各便で前後表または差分0の実測と PO の GO）:
+
+| 便 | 内容 | 見た目 |
+|---|---|---|
+| AY-2a | 種類 karte・search・schedule・composer を TextFieldControl に登録し、該当 33 件（G04 22・G38 1・G39 1・G32 1・G08 6・G15 2）を移管 | 変化0（実測で差分0を判定） |
+| AY-2b 以降 | 一般（G01・G03・G05 のフォーム、G02 等のブラウザ既定、inline style の組）を領域ごとに標準へ。ログイン（G11）は `.form-group input` の撤去と同じ便で種類として登録（祖先規則 `.login-card .form-group input` (0,2,1) が種類 (0,2,0) より強く、撤去前は移管の効果が無いため） | 変化あり（前後表） |
+| 保留 | 商品編集 ProductEditPage.tsx 14（G06）。pre-commit の eslint 既存警告で止まる ProductMasterDrawer.tsx 7（警告63）と SourceRawPane.tsx 1（警告11）は同ファイルの i18n・警告解消と同時 | 不変 |
+
+報酬（CommissionPanel.tsx）の保留は select 1件（§AW、表の overflow）だけで、同ファイルに生 input は無い（ay2-hold.txt）。一行入力では報酬関連の保留を設けない。
+
+AY-2a の根拠（ay2-intent.md）:
+- karte: 専用トークン --karte-field-*（tokens.css:314-324）、CSS コメント「見本 .fbox」、見本 docs/adr/karte_reference.html。select・textarea の karte 種類（§AW・§AX）と同じ見本。G38 は日付の空表示を隠す `karte-field-empty`（InboxPage.css の `input[type="date"].karte-field-empty:not(:focus)::-webkit-datetime-edit`）を条件付きで持つ。G39 は `sales-form-other-input` を併せ持つ。
+- search: components.css:62 のコメント「Search Input Field (Single Source of Truth) … すべてのページでこのクラスを使う」、専用トークン --search-focus-glow、PR #661。
+- schedule・composer: PO 提示案の「予定の入力欄」「ダッシュボードの入力欄」（§AX の textarea 種類と同じ画面）。
+
+AY-2a 変更契約:
+1. TextField.tsx: `TextFieldVariant = "standard" | "karte" | "search" | "schedule" | "composer"`。TextFieldControl に `variant?`（既定 standard）。standard 以外は size を受けない型（§AX と同形）。class 順は `comp-field__input`、size 修飾、`comp-input--${variant}`、className。ラベル付き TextField は種類を受けず出力不変。
+2. FormField.css: 種類ごとに `.comp-field__input.comp-input--<種類>`（0,2,0）と `:focus`/`::placeholder`/`:disabled`（必要なもの）を追加。宣言は旧ページ規則を写し、金型の基本規則が与える宣言は変更前の実測値に戻す打ち消しを置く（既存トークンと CSS キーワードのみ）。モバイル幅のタッチ領域規則（@media (max-width: 767px) の `.comp-field__input` min-height）は (0,1,0) のため種類 (0,2,0) が min-height を持てば種類が勝つ。旧ページの入力はこの規則の対象外だったため、種類は変更前の実測の min-height を明示する（幅375でも差分0を実測で判定）。
+3. ページ: 33 件を `<TextFieldControl variant=...>` に置換（開始タグと自己終了、className、import のみ。type/value/onChange/onBlur/onKeyDown/ref/placeholder/disabled/min/max/step 等は逐語保持）。className: 種類の外観 class（right-panel-field、search-input-field、schedule-input、db-weekly-composer-input）は外す。配置・状態・試験参照の class（inbox-search-input の配置宣言、karte-field-empty、sales-form-other-input 等）は、規則の宣言が配置/状態か外観かを実物で分類し、外観宣言は種類へ移し、配置/状態の宣言だけ残す（分類表を evidence に保存）。試験・コードが参照する class は残す（grep で確認）。
+4. ページ CSS: 移管後に利用0となる規則だけ削除。`.right-panel-field` は a1・button1 が使うため本体を保持（input 専用の宣言が無いことを確認）。`.search-input-field` は他の利用（TextField の className・他要素）を grep し、利用0なら削除、残る利用があれば保持。`.schedule-input` と `.db-weekly-composer-input` は利用0になれば削除。
+5. 変更しないもの: 残る 327 件（保留 22 を含む）、components.css の `.form-group input` 系、company-forms.css、トークン定義、i18n、API/DB/backend、CI、依存。
+
+AY-2a 受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 33 件の見た目が不変 | ay2-baseline と同じ方式で、33 件の実 DOM 相当（祖先 class・type・属性込み）の computed style を変更前と変更後で比較し、幅1280・375 × 通常・focus・disabled（属性があるもの）で差分0。項目に transition・placeholder 色・cursor・opacity・height・min-height を含める。G38 は空値の日付表示（::-webkit-datetime-edit の color/visibility 等）も比較 |
+| 細枠・見本の描画 | karte 1 件と search 1 件の DPR2 スクリーンショットを変更前後で比較し差分0 |
+| 非外観属性が不変 | AST 照合（タグ名・className・variant・import 以外の差分0） |
+| 既存 TextField の出力不変 | TextField.test.tsx の固定試験 11 件が期待値を変えずに成功 |
+| 種類の契約 | 試験: 各種類の class、standard 以外で size が型エラー、ref・onKeyDown が種類でも透過 |
+| 削除は利用0の規則だけ | 削除前に各 class の全利用を grep で列挙 |
+| pre-commit を通る | 変更する .tsx の eslint 警告0を事前に確認（ay2-eslint.md で対象ファイルは警告0） |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI の Karte Visual Gate |
+
+Architect 自己審査（AY-2a）: APPROVE（PO 提示案と証跡のある4種類、外観は実測で差分0を判定、配置・試験参照 class は保持、配線・データ不変）。AY-2b 以降は REVISE（各便の前後表と PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型（§AW・§AX の種類）の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx、ay2a 外観一致・AST 照合スクリプト（evidence）、CI の Karte Visual Gate・frontend-check・design-token-guard・ui-governance。外観の正本は FormField.css の種類別規則のみ。守っていないもの: 未移管の 327 件（保留 22 を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
