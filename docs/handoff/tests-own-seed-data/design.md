@@ -2,7 +2,7 @@
 
 状態：設計案作成済み／Opus 自己審査 APPROVE（§6）／PO 承認済み（ADR-1007 の進め方「進めて良い」2026-10-05）／実装済み（Draft PR）。この PR は試験と試験の準備だけを変え、migrations/ と本番には触らない。
 
-親：ADR-1007（PR #3985、未マージ）。事実：docs/handoff/tests-own-seed-data/recon.md。
+親：ADR-1007（PR #3985、main にマージ済み dee9b0705）。事実：docs/handoff/tests-own-seed-data/recon.md。
 
 ## 1. 目的
 - 試験が使うマスタのデータ（国・type_master・在庫の集計の決まり・商品区分）を、migration ではなく試験の側の1か所（backend/tests/seed_data.py）から用意する。
