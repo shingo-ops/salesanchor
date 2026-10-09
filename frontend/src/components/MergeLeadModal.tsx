@@ -22,6 +22,7 @@ import { getStatusPresentation } from "../utils/statusPresentation";
 import { Modal } from "./Modal";
 import { Button } from "./Button";
 import { TextareaControl } from "./Textarea";
+import { TextFieldControl } from "./TextField";
 
 interface LeadOption {
   id: number;
@@ -143,7 +144,7 @@ export default function MergeLeadModal({ open, source, onMerged, onCancel }: Pro
           <>
             <div className="form-row">
               <label>{t("mergeLead.selectMaster")}</label>
-              <input
+              <TextFieldControl
                 type="text"
                 placeholder={t("mergeLead.searchPlaceholder")}
                 value={search}
