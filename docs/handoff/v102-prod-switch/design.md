@@ -1,6 +1,6 @@
 # design: 本番の LINE解析を試作版 v102 へ切り替える
 
-- 作成: 2026-10-09 Claude Opus（設計担当・ccopusgo）。recon: [recon.md](./recon.md)（基準 origin/main fb036a2）。
+- 作成: 2026-10-09 Claude Opus（設計担当・ccopusgo）。recon: [docs/handoff/v102-prod-switch/recon.md](./recon.md)（基準 origin/main fb036a2）。関係 ADR: ADR-154（LINE解析・配信）、ADR-158、ADR-1004、ADR-1007、ADR-027、ADR-144。基準の列はすべて ○× で判定する。
 - 状態: 設計案（Opus 自己審査は §11。独立した第二者レビューではない）。
 - 社外秘: 指示書本文・仕入元原文は書かない。
 
@@ -17,7 +17,7 @@
 
 ## 2. 受入条件（KGI）
 
-| # | 基準（○×で判定） | 検証方法 |
+| # | 基準 | 検証方法 |
 |---|---|---|
 | K1 | 切替後に取り込んだ投稿の analysis_results.engine_version がすべて v102 の定数 | 本番 SELECT（engine_version 別件数、切替時刻以降） |
 | K2 | v6 に戻した後に取り込んだ投稿の engine_version がすべて v6 の定数 | 同上 |

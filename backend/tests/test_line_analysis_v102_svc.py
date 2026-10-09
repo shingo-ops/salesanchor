@@ -99,8 +99,8 @@ def test_pipeline_gives_the_same_result_as_prompt_ab_row_fields():
 # ---------------------------------------------------------------------------
 
 
-def _row(index: int | None):
-    return SimpleNamespace(id=f"id{index}", gemini_index=index)
+def _row(index: int | None, source_lines: list[int] | None = None):
+    return SimpleNamespace(id=f"id{index}", gemini_index=index, source_lines=source_lines)
 
 
 def test_map_to_rows_pairs_accepted_in_order_and_rejected_by_gemini_index():
@@ -119,6 +119,42 @@ def test_map_to_rows_pairs_accepted_in_order_and_rejected_by_gemini_index():
 def test_map_to_rows_raises_when_counts_do_not_match(items):
     with pytest.raises(svc._MappingError):
         svc._map_to_rows(items, [_row(0), _row(1)])
+
+
+def test_map_to_rows_raises_when_items_are_swapped():
+    items = [{"name": "a", "price_line": 2, "lines": [1, 2]}, {"name": "b", "price_line": 4, "lines": [3, 4]}]
+    rows = [_row(0, [3, 4]), _row(1, [1, 2])]
+    with pytest.raises(svc._MappingError, match="gemini_index=0"):
+        svc._map_to_rows(items, rows)
+
+
+def test_map_to_rows_passes_when_f1_removed_a_heading_line_from_lines():
+    items = [{"name": "a", "price_line": 3, "lines": [2, 3]}, {"name": "b", "price_line": 5, "lines": [4, 5]}]
+    rows = [_row(0, [1, 2, 3]), _row(1, [1, 4, 5])]
+    assert [row.gemini_index for _, row in svc._map_to_rows(items, rows)] == [0, 1]
+
+
+def test_map_to_rows_passes_when_reassign_moved_an_ambiguous_line_to_another_item():
+    items = [{"name": "a", "price_line": 2, "lines": [1, 2, 3]}, {"name": "b", "price_line": 5, "lines": [4, 5]}]
+    rows = [_row(0, [1, 2]), _row(1, [3, 4, 5])]
+    assert [row.gemini_index for _, row in svc._map_to_rows(items, rows)] == [0, 1]
+
+
+def test_map_to_rows_without_price_line_needs_an_overlap():
+    rows = [_row(0, [1, 2])]
+    assert svc._map_to_rows([{"name": "a", "lines": [2, 3]}], rows)[0][1].gemini_index == 0
+    with pytest.raises(svc._MappingError, match="gemini_index=0"):
+        svc._map_to_rows([{"name": "a", "lines": [5, 6]}], rows)
+
+
+def test_map_to_rows_checks_rejected_pairs_and_skips_empty_lines():
+    rows = [_row(0, [1, 2]), _row(1, [3])]
+    ok = [{"name": "a", "price_line": 3, "lines": [3]}, {"rejected": "x", "gemini_index": 0, "lines": [1]}]
+    assert len(svc._map_to_rows(ok, rows)) == 2
+    bad = [{"name": "a", "price_line": 3, "lines": [3]}, {"rejected": "x", "gemini_index": 0, "lines": [9]}]
+    with pytest.raises(svc._MappingError, match="gemini_index=0"):
+        svc._map_to_rows(bad, rows)
+    assert len(svc._map_to_rows([{"name": "a", "lines": []}, {"name": "b", "price_line": 3}], [_row(0, []), _row(1, [3])])) == 2
 
 
 # ---------------------------------------------------------------------------
