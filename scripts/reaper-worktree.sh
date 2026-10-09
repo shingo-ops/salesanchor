@@ -17,6 +17,8 @@
 #                               未指定（本番）: git worktree list --porcelain で全登録 worktree を対象にする
 #   REAPER_ACTIVE_WORK_FILE   — active-work.md のパス（既定: <repo>/.claude-pipeline/active-work.md）
 #   REAPER_REPO_NAME          — gh コマンドに使うリポジトリ名（既定: shingo-ops/salesanchor）
+#   REAPER_LOCK_WAIT_SEC      — ロック取得できないときの待ち秒数（既定 0 = 待たずに skip）
+#   REAPER_LOCK_DIR           — ロックの場所（テスト用。既定 /tmp/reaper-worktree.lock.d）
 #
 # 使用方法:
 #   bash scripts/reaper-worktree.sh            # dry-run（削除予定の一覧のみ）
@@ -27,13 +29,23 @@ if [ "${1:-}" = "--execute" ]; then
   EXECUTE=1
 fi
 
-# ── 多重起動ガード（全経路共通: cron / LaunchAgent / 手動）─────────────────
+# ── 多重起動ガード（全経路共通: cron / LaunchAgent / 手動 / GitHub Actions）──────
 # mkdir はアトミック操作のため macOS/Linux 両対応の排他ロックとして機能する
-_REAPER_LOCK="/tmp/reaper-worktree.lock.d"
-if ! mkdir "${_REAPER_LOCK}" 2>/dev/null; then
-  echo "[reaper] another instance is running; skip."
-  exit 0
-fi
+# REAPER_LOCK_WAIT_SEC: 取得できないときに待つ秒数（既定 0 = 待たずに skip。
+#   new-worktree.sh からの呼び出しは待たせない。GitHub Actions は 300 を指定する）
+# REAPER_LOCK_DIR: テスト用にロックの場所を差し替える（既定は本番のロック）
+_REAPER_LOCK="${REAPER_LOCK_DIR:-/tmp/reaper-worktree.lock.d}"
+_LOCK_WAIT="${REAPER_LOCK_WAIT_SEC:-0}"
+_WAITED=0
+until mkdir "${_REAPER_LOCK}" 2>/dev/null; do
+  if [ "${_WAITED}" -ge "${_LOCK_WAIT}" ]; then
+    echo "[reaper] another instance is running; skip."
+    exit 0
+  fi
+  sleep 10
+  _WAITED=$(( _WAITED + 10 ))
+done
+[ "${_WAITED}" -gt 0 ] && echo "[reaper] waited ${_WAITED}s for lock"
 # shellcheck disable=SC2064
 trap "rmdir '${_REAPER_LOCK}' 2>/dev/null || true" EXIT INT TERM
 
