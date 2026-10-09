@@ -2925,3 +2925,88 @@ GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定�
 - 転送の対応表を frontend/src/pages/super-admin/legacyPageRedirects.ts の `LEGACY_SUPER_ADMIN_REDIRECTS`（3組）に1か所へまとめた。App.tsx は、この配列を map した Route（`<Route key={r.from} path={r.from} element={<Navigate to={r.to} replace />} />`）に置き換えた（3行の Navigate Route を1行の map にし、位置は tcg-product-master の位置）。legacyPageRedirects.test.tsx は同じ配列を import し、(a) 配列が期待する3組と完全一致すること（期待値は直書き）、(b) 各 from を MemoryRouter（配列の map と、残すルート tcg-product-master/import を含む）で開くと to の pathname と search に移ることを確かめる。tcg-product-master/import との一致は、React Router がパスの具体性で順位を決めるため並び順に依存せず、(b) と実画面（取り込み画面の表示）で確認した。取り込み画面2つの戻り先 URL は配列と共有していない（対象外）。
 - AnalysisRulesPage.test.tsx に肯定の対照を1本追加した。isSuperAdmin:true で ?section=product-master を描画すると「Export update CSV」ボタンが出て、superAdminOnly の文言は出ない（api.get のモック値は ProductMasterPanel.test.tsx と同じ形。実際に動かして通ることを確認してから expect にした）。
 - 再計測: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（77 files・953 tests 成功）、build 0。開発モード build と preview で、古い3つの URL の転送・戻る の先を再記録した（ay2g-realscreen.json。結果は前回と同じ）。
+
+
+#### AY-2g 本番反映（2026-10-10 記録）
+
+AY-2g の PR #4101 は、merge 58dd91233660e172e299416c0f3cfa478cb5a8e4（2026-10-09T23:05:10Z）で main に入った。
+- マージ前の状態: HEAD 9d49b10b6（main を取り込んだ後）で、全46件中 pass 38・skipping 8・fail 0。
+- Deploy 38002629531 は success（headSha 58dd91233、23:05:13Z〜23:07:42Z）。
+- 本番 JS の確認: nav キー3つ（superAdminTcgProductMaster・superAdminSupplierMaster・superAdminTcgSupplierQuality）は0件。`section=accuracy-management` は1件、`section=product-master` は3件。
+- 本番の応答: 旧 URL 3つ、app、/api/health はすべて 200。
+- GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer の判定は APPROVE（MEDIUM 1・LOW 1 は対応済み）。
+
+#### AY-2h 比較レポート画面（tcg-parallel-report）の削除（2026-10-10）
+
+mode: handoff。PO の決定（2026-10-10、本セッション）は次のとおり。
+- 設計者の問い: 「直近30日で一度も開かれていない『比較レポート』（tcg-parallel-report）を削除してよいですか。y：ページを削除し、古い URL は LINE解析のダッシュボードへ移します」
+- PO の回答: 「y」
+
+GO は ADR-1003 の委任に基づき、Claude Opus が発行する。POのGO原文は創作しない。
+
+現在地（実装時に実物で確定させる。調査は /tmp/CC報告ファイル/super-admin-menu/ にある）:
+- ページ: frontend/src/pages/super-admin/TcgParallelReportPage.tsx
+  - Route は App.tsx の `/super-admin/tcg-parallel-report`。
+  - 画面の役割: 冒頭のコメントは「並行運用比較レポート MIG-04 Phase 4」。比較対象は compat-v1 と name-first-v1。読み取り専用で、書き込みは無い。
+  - 呼び出す API は GET /tcg/parallel-report（backend: tcg_parallel_report.py:66）。
+- 本番の利用状況（直近30日、Loki）: ページを直接開いた回数は0、API の呼び出しも0。画面の中にこのページへのリンクは無い。
+- 転送の対応表 frontend/src/pages/super-admin/legacyPageRedirects.ts（AY-2g）は、App.tsx と試験が共有している。
+
+AY-2h 変更契約:
+1. TcgParallelReportPage.tsx を削除する。あわせて、このページだけが使っていたものを削除する（連鎖をたどって、ページ以外からの参照が0件のもの）。
+   - 対象: 子部品、CSS、api 関数、型、試験。
+   - 判定: git grep で、試験以外の参照が0件であることを確かめてから消す。参照が残るものは消さない。
+2. App.tsx から import と Route を削除する。古い URL は、legacyPageRedirects.ts の配列に `{ from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" }` を1件追加して転送する。
+   - section を付けない理由: ダッシュボードは初期表示の画面だから（AnalysisRulesPage.tsx の `|| "dashboard"`）。
+   - legacyPageRedirects.test.tsx の期待値（直書き）に、上の1件を追加する。
+3. i18n: このページだけが使うキーを ja と en から削除する。
+   - 判定: 完全キーとテンプレート接頭辞の両方で、参照0件を確かめたキーだけを消す。
+   - 制約: ja と en は同じキー集合を保つ。
+4. 変更しないもの:
+   - backend。GET /tcg/parallel-report は画面から呼ばれなくなる。消すかどうかは別途判断する。
+   - tcg-sold-out（PO の判断待ち）
+   - そのほかの画面・メニュー・CSS・トークン・CI・依存
+5. design.md に、本節と実装結果を追記する。
+
+前後表:
+
+| 対象 | 変更前 | 変更後 |
+|---|---|---|
+| /super-admin/tcg-parallel-report を開く | 比較レポート | LINE解析のダッシュボードへ自動で移る |
+| メニュー・LINE解析の中 | — | 変化0（もともと、このページへの導線は無い） |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 転送 | legacyPageRedirects.test.tsx で、4件の配列が期待値と完全に一致する。開いたとき、移った先が /super-admin/analysis-rules になる |
+| 参照0 | git grep で、ページ名・消した部品名・消したキーの参照が0件（frontend/src、tests-e2e） |
+| 実画面 | 開発モードで build し、偽ログインと API モックを使って古い URL を開く。移った先の URL と、ダッシュボードが選ばれていることを記録する（JSON） |
+| 品質 | generate を実行したあと、tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook がすべて成功。CI の必須チェックもすべて成功 |
+| 本番 | Deploy が成功。旧 URL・app・/api/health が 200 |
+
+Architect 自己審査（AY-2h）: APPROVE。同一AI（Opus）による自己審査であり、独立した第二者のレビューではない。外部事例は不要（AY-2g と同じ型）。
+- 根拠: PO の明示決定であること。直近30日の利用0（ページ・API とも）。転送は既存の対応表を1か所だけ増やす。配線・データ・backend は不変。
+
+維持の仕組み:
+- 守り手: tsc、legacyPageRedirects.test.tsx、check-i18n-missing-keys、frontend-check。
+- 守っていないもの: backend の GET /tcg/parallel-report（画面から呼ばれなくなる）。
+- 切戻し: 本 PR の merge commit を revert する（DB への影響なし）。
+
+
+#### AY-2h 実装結果
+
+実装: 変更契約1〜5のとおり。TcgParallelReportPage.tsx を git rm した。App.tsx から import と Route を削除した。legacyPageRedirects.ts の配列に `{ from: "/super-admin/tcg-parallel-report", to: "/super-admin/analysis-rules" }` を1件追加し（App.tsx はこの配列を map して Route にしているため、App.tsx の転送コードは変更なし）、legacyPageRedirects.test.tsx の期待値（直書き）に同じ1件を足した（題名は「four expected pairs」に変更）。i18n は ja.json・en.json から nav.superAdminTcgParallelReport（各1行）と tcgParallelReport ブロック（各20行）を削除した。
+
+連鎖の調査（実物）:
+- TcgParallelReportPage.tsx の import は、icons（TABLE_ICONS）・useSuperAdmin・PageLayout・api の4つ。いずれも他の画面が使う共用部品で、ページ専用の子部品・CSS・api 関数・型・試験は0件。型（EngineStats・CompatEngineStats・SupplierRow・ReportSummary・ParallelReportResponse）はページ内に定義されており、ページと一緒に消えた。
+- 参照元: frontend/src では App.tsx、ja.json・en.json（nav キーと tcgParallelReport ブロック）、ページ自身のみ。tests-e2e・試験・docs/ai-agents・.github・scripts からの参照は0件。backend の参照は backend/app/main.py:122・:724、backend/app/routers/tcg_parallel_report.py、backend/app/services/tcg_parallel_report_svc.py（変更しない）。
+- docs 配下の過去文書（docs/specs/design-system/design.md・migration.md、docs/handoff/ 配下）には名前が残る（書き換えない）。
+
+計測（evidence-20260910/ay2h-*）:
+- 参照0（ay2h-ref-zero.txt）: frontend/src・tests-e2e で、ページ名・nav キー・i18n ブロック名の参照は、転送の対応表と、その期待値（legacyPageRedirects.ts:7・legacyPageRedirects.test.tsx:20）の URL 文字列のみ。
+- 転送の試験（ay2h-test-legacy.txt）: legacyPageRedirects.test.tsx 5本成功。
+- 実画面（ay2h-realscreen.json、ay2h-redirect-parallel-report-1280.png。NODE_ENV=development の build と vite preview、偽ログインと API モック、Chromium、幅1280）: /super-admin/tcg-parallel-report を開くと /super-admin/analysis-rules に移り、サイドバー「ダッシュボード」が選択された。GET /tcg/parallel-report は呼ばれなかった。ダッシュボードの API（/tcg/analysis-dashboard/*）はモックで 500 を返したので、パネルには「データの取得に失敗しました」と出ている（転送先と選択項目の確認が目的）。
+- 品質（ay2h-chk-*.txt）: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（80 files・987 tests 成功）、build 0、build-storybook 0。frontend/coverage は worktree 外へ移動した。
+
+限界: 本番反映後の確認（Deploy・旧 URL・app・/api/health が 200）は merge 後。backend の GET /tcg/parallel-report は画面から呼ばれなくなる（消すかは別途判断）。
