@@ -70,8 +70,8 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 
 起動タイミング：
 - (a) 新規作成時に先に1回（`new-worktree.sh` の上限判定の前。これはその Mac 上でローカル完結）
-- (b) 各 Mac で定期実行：`schedule:` + `runs-on:[self-hosted, macOS, <各Macのラベル>]` のワークフロー（既存に同方式の実績あり）。多重起動は排他ロックで防ぐ（`scripts/reaper-worktree.sh:37-50`、`/tmp/reaper-worktree.lock.d`）。GitHub Actions は最大300秒待つ（`reaper-schedule.yml:40`）、`new-worktree.sh` からは待たずに skip（`new-worktree.sh:66`）。（2026-10-10 改訂）
-- (c) main へのマージ直後に即時実行：`reaper-schedule.yml:16-18` の `pull_request: closed`（base=main・merged のみ、`:26`）。GITHUB_TOKEN によるマージでは起動しないため (b) の定期実行は残す。Actions 上ではスクリプトは checkout 側、作業ディレクトリは本体リポジトリにする（`:38`、#4053）。gh のマージ判定には `GH_TOKEN` が必要（#4071、未設定だと判定が常に0件になり回収されなかった）。（2026-10-10 改訂）
+- (b) 各 Mac で定期実行：`schedule:` + `runs-on:[self-hosted, macOS, <各Macのラベル>]` のワークフロー（既存に同方式の実績あり）。多重起動は排他ロックで防ぐ（`scripts/reaper-worktree.sh:37-50`、`/tmp/reaper-worktree.lock.d`）。GitHub Actions は最大300秒待つ（`reaper-schedule.yml:50`）、`new-worktree.sh` からは待たずに skip（`new-worktree.sh:67`）。（2026-10-10 改訂）
+- (c) main へのマージ直後に即時実行：`reaper-schedule.yml:17-19` の `pull_request: closed`（base=main・merged のみ、`:27`）。GITHUB_TOKEN によるマージでは起動しないため (b) の定期実行は残す。Actions 上ではスクリプトは checkout 側、作業ディレクトリは本体リポジトリにする（`:47`、#4053）。gh のマージ判定には `GH_TOKEN` が必要（#4071、未設定だと判定が常に0件になり回収されなかった）。（2026-10-10 改訂）
 - **依存（recon で判明）**：(b) の「offline でも復帰時に追いつく（self-heal）」は、ランナーが自動起動して初めて成立する。現状ランナーは手動起動（`runner-start`）で、launchd 自動起動は ADR-029 の TODO のまま未実装。→ **launchd 自動起動の実装を本ADRの依存前提とし、Generator スコープに含める**（plist 実装）。
 
 ### 5. 安全条件（非交渉）
@@ -133,7 +133,7 @@ develop マージ時に、対象ブランチの行を自動で DONE に書き換
 
 マージ判定の切り分け（③・採用）：
 - `merged` かつ base=main → 回収対象（2026-10-10 改訂）
-- `closed`（未マージ）→ 消さない（安全側）
+- `closed`（未マージ）→ 消さない（安全側）※2026-10-10 注：現行実装は base=main の closed（未マージ）PR を削除対象にしている（`scripts/reaper-worktree.sh:239-252`。未保存・使用中は先に保護）。ADR と実装のどちらに合わせるかは未決（PO 判断事項）
 - PR が一度も無いブランチ → 消さない（確証なし）
 - IN_PROGRESS かつ未マージ → 絶対に消さない
 - 未コミット・未push あり → 絶対に消さない

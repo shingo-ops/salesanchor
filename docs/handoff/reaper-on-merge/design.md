@@ -1,6 +1,6 @@
 # 設計：マージされた worktree の即時回収（reaper の配線修正）
 
-- 状態：R1 #4053・R3/R4 #4055・R2 #4059・R6 #4064 はマージ済み。R7 #4071（GH_TOKEN）は審査中。R5 は ADR-114 改訂 PR で対応（PO 承認待ち）
+- 状態：R1 #4053・R3/R4 #4055・R2 #4059・R6 #4064・R7 #4071（GH_TOKEN）はマージ済み。R5 は ADR-114 改訂 PR で対応（PO 承認待ち）
 - 置き場所（予定）：`docs/handoff/reaper-on-merge/design.md`。recon を兼ねる。
 - 対象の ADR：`docs/adr/ADR-114-worktree-auto-cleanup.md`（ADR-114-worktree-auto-cleanup）
 - PO の要望（2026-10-08〜09）：「main に入った時点で自動で削除される仕組みにしたい」「頻度を上げて、常に不要なものを消したい」。設計に進むことに「y」。
