@@ -67,9 +67,15 @@ from app.services.gemini_raw_copy_v101 import (
     V102_RESPONSE_SCHEMA,
     extract_v101_items,
     parse_v101_response,
-    parse_v102_unsure,
 )
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
+from app.services.line_analysis_v102_svc import (  # v102 の本番部品（移した関数は同じ名前でここから読む）
+    LEGACY_SUPPLIER_FIELDS,
+    V102_PROMPT_KEY,
+    check_prompt_key_shape,
+    load_prompt_from_db,
+    run_v102_pipeline,
+)
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
@@ -262,52 +268,12 @@ def _v101_row_fields(response_text: str, ctx, masters: dict) -> dict:
         }
 
 
-def _gemini_review(response_text: str, raw_text: str, extracted: list[dict]) -> list[dict]:
-    """Gemini が unsure に書いた行（要確認）。システムの要確認（review・post_review）とは別に残す。"""
-    price_lines = {it["price_line"] for it in extracted if isinstance(it.get("price_line"), int)}
-    return parse_v102_unsure(response_text, len(raw_text.split("\n")), price_lines)
-
-
-def _with_gemini_review(extracted: list[dict], unsure: list[dict]) -> list[dict]:
-    """各件に gemini_review を付ける（既定 []）。price_line が unsure の candidates に入る件に gemini_unsure を足す。元の件は書き換えない。"""
-    return [
-        {
-            **item,
-            "gemini_review": [
-                {"kind": u["kind"], "line": u["line"]}
-                for u in unsure if u["kind"] == "gemini_unsure" and item.get("price_line") in u["candidates"]
-            ],
-        }
-        for item in extracted
-    ]
-
-
 def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
-    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+    """JSONL の v102 の行に足す v102_items・v102_flags。本体は本番と共通の run_v102_pipeline（services/line_analysis_v102_svc.py）。
 
-    落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
+    試験で pab.extract_v101_items を差し替えられるよう、ここの extract_v101_items を渡す。
     """
-    try:
-        items, errors = parse_v101_response(
-            response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
-        )
-        order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
-        extracted, flags = extract_v101_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters
-        )
-        if not items and errors:
-            flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
-        unsure = _gemini_review(response_text, ctx.raw_text, extracted)
-        return {
-            "v102_items": _with_gemini_review(extracted, unsure),
-            "v102_flags": {**flags, "gemini_review": unsure},
-        }
-    except Exception as exc:  # noqa: BLE001
-        message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
-        return {
-            "v102_items": [], "v102_items_error": message,
-            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}], "gemini_review": []},
-        }
+    return run_v102_pipeline(response_text, ctx, masters, extract_items=extract_v101_items)
 
 
 def _append_jsonl(path: Path, row: dict) -> None:
@@ -330,29 +296,8 @@ def resolve_prompt_path(prompt_name: str, config: str = "v9") -> Path:
 
 
 _PROMPT_KEY_CONFIGS = ("v101", "v102")
-V102_PROMPT = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定の指示書（DB の prompt_key）
-_PROMPT_KEY_SQL = """
-    SELECT prompt_text FROM public.extraction_prompt_config
-    WHERE prompt_key = :key AND is_active = TRUE
-"""
-
-
-def _check_prompt_key_shape(prompt_key: str) -> None:
-    """--prompt-key の形の検査（本番の解析が使う名前・パス区切りを通さない）。DB には触れない。"""
-    if not V101_PROMPT_NAME_RE.fullmatch(prompt_key):
-        raise ValueError(f"--prompt-key は {V101_PROMPT_NAME_RE.pattern} の形だけ使えます: {prompt_key!r}")
-
-
-def load_prompt_from_db(session: Session, prompt_key: str) -> str:
-    """public.extraction_prompt_config の is_active な行の本文。形が違う・行が無い・本文が空なら ValueError。"""
-    _check_prompt_key_shape(prompt_key)
-    row = session.execute(text(_PROMPT_KEY_SQL), {"key": prompt_key}).first()
-    if row is None:
-        raise ValueError(f"指示書の行が見つからない（無いか is_active でない）: {prompt_key}")
-    body = row[0]
-    if not isinstance(body, str) or not body.strip():
-        raise ValueError(f"指示書の本文が空です: {prompt_key}")
-    return body
+V102_PROMPT = V102_PROMPT_KEY  # v102 で --prompt-name も --prompt-key もないときの既定の指示書（DB の prompt_key）
+_check_prompt_key_shape = check_prompt_key_shape  # --prompt-key の形の検査（DB には触れない）
 
 
 def _load_prompt_text(
@@ -392,13 +337,6 @@ _SUPPLIER_FIELD_PATTERN = re.compile(r"^extraction_[a-z_]+$")
 
 # 新しい仕組み（v8 系）だけが読む欄。supplier_context ではなく new_system_rules 側で扱う。
 _NEW_SYSTEM_FIELDS = ("extraction_layout_rules", "extraction_hard_cases")
-
-# v102 で既定で外す、元からある仕入元ルールの欄（PO 2026-10-07：新2欄だけを読む形で採用確定）
-LEGACY_SUPPLIER_FIELDS = (
-    "extraction_price_format", "extraction_qty_format", "extraction_notes", "extraction_state_format",
-    "extraction_order_pattern", "extraction_example_text", "extraction_ship_format",
-)
-
 
 def _supplier_field_name(value: str) -> str:
     """--omit-supplier-field の値の検査（extraction_ で始まる欄名だけ認める）。"""

@@ -30,6 +30,7 @@ from sqlalchemy.orm import Session
 
 from app.services.extraction_shadow_svc import has_required_supplier_rule, run_shadow_for_job
 from app.services.gemini_extraction_svc import extract_message
+from app.services.line_analysis_v102_svc import ENGINE_V102, get_engine, run_v102_analysis, run_v102_extraction
 from app.services.tcg_analyzer_svc import analyze_extraction_job, resolve_work_evidence
 from app.services.tcg_extraction_record_svc import AttemptRecorder, RecordError, schema_ready
 from app.services.tcg_work_reference import (
@@ -429,7 +430,40 @@ def _run_extraction(session: Session, source_message_id: str) -> dict:
             "analysis_stats": None, "error_message": message}
 
 
+def _run_v102_extraction(session, extraction_job_id, recorder) -> dict:
+    """LINE_ANALYSIS_ENGINE=v102 の抽出。Gemini 段（run_v102_extraction）→ TCG_AUTO_ANALYZE=1 ならシステム段 → 自動配信。
+
+    status（done/empty）・試行の記録・自動配信・停滞回収は v6 と同じ流れに乗せる。Gemini の失敗は例外のまま送出し、
+    呼び出し元（_run_extraction）が recorder.fail で status='error' にする。v7 試運転（EXTRACTION_SHADOW_ENABLED）は v6 のときだけ動かす。
+    """
+    extracted = run_v102_extraction(session, extraction_job_id, recorder=recorder)
+    analysis_stats = None
+    if extracted["status"] in ("done", "empty"):  # 件 0 でも走らせ、投稿の理由 no_items を残す（黙って消える件は最悪）
+        if os.environ.get("TCG_AUTO_ANALYZE", "").strip() == "1":
+            logger.info("[tcg_extraction] starting v102 analysis for ej=%s", extraction_job_id)
+            try:
+                analysis_stats = run_v102_analysis(session, extraction_job_id)
+            except Exception:
+                session.rollback()
+                logger.error("extraction_attempt=%s code=ANALYSIS_FAILED", recorder.id)
+                analysis_stats = {"status": "error", "error_code": "ANALYSIS_FAILED"}
+            auto_distribute = os.environ.get("TCG_AUTO_DISTRIBUTE", "").strip() == "1"
+            if auto_distribute and analysis_stats.get("status") != "error":
+                _enqueue_auto_distribute()
+        else:
+            logger.info("[tcg_extraction] 解析はスキップ（フラグ未設定）: ej=%s", extraction_job_id)
+    return {
+        "extraction_job_id": extraction_job_id,
+        "status": extracted["status"],
+        "items_count": extracted["items_count"],
+        "analysis_stats": analysis_stats,
+        "error_message": None,
+    }
+
+
 def _run_recorded_extraction(session, extraction_job_id, raw_text, reference, recorder, *, supplier_context=None, knowledge_links=None, supplier_id=None):
+    if get_engine() == ENGINE_V102:
+        return _run_v102_extraction(session, extraction_job_id, recorder)
     result = extract_message(raw_text, work_reference=reference, recorder=recorder, supplier_context=supplier_context, knowledge_links=knowledge_links)
     if result["status"] == "error":
         raise RecordError(result.get("error_code", "INVALID_RESPONSE"))
