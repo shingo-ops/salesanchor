@@ -178,6 +178,54 @@ def _with_gemini_review(extracted: list[dict], unsure: list[dict]) -> list[dict]
     ]
 
 
+SOURCE_SYSTEM = "system"
+SOURCE_GEMINI = "gemini"
+
+
+def _with_source(element: dict, default: str = SOURCE_SYSTEM) -> dict:
+    """要確認の要素に出どころ（source）を付ける。すでにあれば変えない。元の要素は書き換えない。"""
+    return element if "source" in element else {**element, "source": default}
+
+
+def _gemini_review_element(unsure_element: dict) -> dict:
+    return {
+        "line": unsure_element["line"], "kind": "gemini_unsure",
+        "candidates": list(unsure_element["candidates"]), "source": SOURCE_GEMINI,
+    }
+
+
+def _invalid_unsure_post_review(unsure_element: dict) -> dict:
+    """形が壊れた unsure（gemini_unsure_invalid）を post_review の要素に写す。見つけたのはシステム。原文の文字は載せない。"""
+    out = {"kind": "gemini_unsure_invalid", "error": unsure_element.get("error")}
+    for key in ("line", "candidates"):
+        if key in unsure_element:
+            out[key] = unsure_element[key]
+    return {**out, "source": SOURCE_SYSTEM}
+
+
+def _item_with_sources(item: dict, unsure: list[dict]) -> dict:
+    """件の review の各要素に source を付け、price_line が候補に入る gemini_unsure を末尾に足す。件の gemini_review 欄はそのまま。"""
+    added = [
+        _gemini_review_element(u)
+        for u in unsure if u.get("kind") == "gemini_unsure" and item.get("price_line") in u["candidates"]
+    ]
+    review = item.get("review")
+    if review is None and not added:
+        return item
+    return {**item, "review": [*(_with_source(r) for r in (review or [])), *added]}
+
+
+def _with_review_sources(fields: dict, unsure: list[dict]) -> dict:
+    """要確認の出どころ（system／gemini）を v102_items の review と v102_flags の post_review に付ける。元の dict は書き換えない。"""
+    flags = fields["v102_flags"]
+    post_review = [
+        *(_with_source(r) for r in flags.get("post_review", [])),
+        *(_invalid_unsure_post_review(u) for u in unsure if u.get("kind") == "gemini_unsure_invalid"),
+    ]
+    new_flags = {**flags, "post_review": post_review} if post_review or "post_review" in flags else flags
+    return {**fields, "v102_items": [_item_with_sources(it, unsure) for it in fields["v102_items"]], "v102_flags": new_flags}
+
+
 def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
 ) -> dict:
@@ -197,15 +245,21 @@ def run_v102_pipeline(
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         unsure = _gemini_review(response_text, ctx.raw_text, extracted)
-        return {
-            "v102_items": _with_gemini_review(extracted, unsure),
-            "v102_flags": {**flags, "gemini_review": unsure},
-        }
+        return _with_review_sources(
+            {
+                "v102_items": _with_gemini_review(extracted, unsure),
+                "v102_flags": {**flags, "gemini_review": unsure},
+            },
+            unsure,
+        )
     except Exception as exc:  # noqa: BLE001
         message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
         return {
             "v102_items": [], "v102_items_error": message,
-            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}], "gemini_review": []},
+            "v102_flags": {
+                "post_review": [{"kind": "extract_exception", "error": message, "source": SOURCE_SYSTEM}],
+                "gemini_review": [],
+            },
         }
 
 

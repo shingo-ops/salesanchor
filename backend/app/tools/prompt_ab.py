@@ -71,7 +71,12 @@ from app.services.gemini_raw_copy_v101 import (
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.line_analysis_v102_svc import (  # v102 の本番部品（移した関数は同じ名前でここから読む）
     LEGACY_SUPPLIER_FIELDS,
+    SOURCE_GEMINI,  # noqa: F401  再公開（試験が prompt_ab 経由で参照）
+    SOURCE_SYSTEM,  # noqa: F401
     V102_PROMPT_KEY,
+    _gemini_review,  # noqa: F401
+    _with_gemini_review,  # noqa: F401
+    _with_review_sources,  # noqa: F401
     check_prompt_key_shape,
     load_prompt_from_db,
     run_v102_pipeline,
