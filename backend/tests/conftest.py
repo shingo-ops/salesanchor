@@ -727,6 +727,7 @@ async def setup_test_db(test_engine):
                 priority INTEGER NOT NULL DEFAULT 0,
                 is_system BOOLEAN DEFAULT FALSE,
                 description VARCHAR(500),
+                system_key TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(tenant_id, name)
