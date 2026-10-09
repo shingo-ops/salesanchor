@@ -27083,6 +27083,47 @@
         "title": "RevenueSummaryResponse",
         "type": "object"
       },
+      "ReviewAckRequest": {
+        "properties": {
+          "codes": {
+            "items": {
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Codes",
+            "type": "array"
+          },
+          "source_message_id": {
+            "format": "uuid",
+            "title": "Source Message Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_message_id",
+          "codes"
+        ],
+        "title": "ReviewAckRequest",
+        "type": "object"
+      },
+      "ReviewAckResponse": {
+        "properties": {
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "saved": {
+            "title": "Saved",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ok",
+          "saved"
+        ],
+        "title": "ReviewAckResponse",
+        "type": "object"
+      },
       "ReviewReasonDetail": {
         "properties": {
           "code": {
@@ -61967,6 +62008,63 @@
           }
         ],
         "summary": "解析レビュー手動修正保存（PARITY-03 Phase 3 Stage 3）",
+        "tags": [
+          "super-admin"
+        ]
+      }
+    },
+    "/api/v1/tcg/items/{extraction_item_id}/review-ack": {
+      "post": {
+        "operationId": "save_item_review_ack_api_v1_tcg_items__extraction_item_id__review_ack_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extraction_item_id",
+            "required": true,
+            "schema": {
+              "title": "Extraction Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewAckRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewAckResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "v102 の要確認を「このままで良い」として記録する",
         "tags": [
           "super-admin"
         ]

@@ -35,7 +35,7 @@ _MASTER = ProductFirstMasters(product_entries=_PRODUCTS, product_kubun=_KUBUN, c
 REF_ID = "ref-message-1"
 
 
-def _extract(raw: str, ref_text: str | None, plural_words: tuple[str, ...] = ()):
+def _extract(raw: str, ref_text: str | None, plural_words: tuple[str, ...] = (), fixed_products: dict[int, int] | None = None):
     lines = raw.split("\n")
     items = [{"lines": [i + 1], "price": "1,500円", "quantity": "3"} for i, ln in enumerate(lines) if ln.strip()]
     parsed, errors = v101.parse_v101_response(json.dumps({"items": items}, ensure_ascii=False), raw, status_entries=_STATUS)
@@ -43,7 +43,7 @@ def _extract(raw: str, ref_text: str | None, plural_words: tuple[str, ...] = ())
     ref = None if ref_text is None else (REF_ID, ref_text)
     rows, _flags = v101.extract_v101_items(
         parsed, raw, order=None, reassign=True, v102_fixes=True,
-        product_first=dataclasses.replace(_MASTER, followup_plural_words=plural_words), followup_ref=ref, **_MASTERS
+        product_first=dataclasses.replace(_MASTER, followup_plural_words=plural_words), followup_ref=ref, fixed_products=fixed_products, **_MASTERS
     )
     return rows
 
@@ -97,6 +97,19 @@ def test_already_matched_row_is_untouched():
     row = _extract(raw, REF_POST)[0]
     assert (row["match_status"], row["product_id"]) == ("matched", 62) and "product_followup" not in row
     assert row == _extract(raw, None)[0]
+
+
+def test_human_decided_row_is_not_overwritten_by_followup():
+    # 人が 63 に決めた件（位置 0）。直前の投稿からは 62 が決まる件だが、人の判断（63）が残る
+    raw = "ABC-123 追加 3@1,500円"
+    assert _extract(raw, REF_POST)[0]["match_status"] == "matched_followup"
+    row = _extract(raw, REF_POST, fixed_products={0: 63})[0]
+    assert (row["match_status"], row["product_id"]) == ("matched", 63) and "product_followup" not in row
+
+
+def test_human_decision_with_unknown_product_still_blocks_followup():
+    row = _extract("ABC-123 追加 3@1,500円", REF_POST, fixed_products={0: 99999})[0]  # 一覧に無い商品＝固定されない。それでも自動では決め直さない
+    assert row["match_status"] == "unmatched" and "product_followup" not in row
 
 
 def test_unit_only_word_is_not_a_clue():

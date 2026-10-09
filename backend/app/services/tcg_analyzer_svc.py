@@ -24,6 +24,7 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from collections.abc import Iterable
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -1741,7 +1742,8 @@ def analyze_extraction_job(session: Session, extraction_job_id: str) -> dict:
 
 
 def _merge_supplier_products(
-    session: Session, extraction_job_id: str, schema: str
+    session: Session, extraction_job_id: str, schema: str,
+    extra_pairs: Iterable[tuple[int, int]] = (),
 ) -> int:
     """ADR-158: 同一仕入元の analysis_results を商品×コンディション単位で整理。
 
@@ -1750,6 +1752,9 @@ def _merge_supplier_products(
     各ペアごとに最新メッセージの結果だけを is_current=TRUE に設定する。
     古いメッセージの結果は is_current=FALSE になり配信から除外されるが、
     データ自体は履歴として保持される。
+
+    extra_pairs: 付け直す組に足す (product_id, condition_id)。やり直しで商品や状態が変わった件の
+    「前の組」を渡す（前の組で次に新しい投稿の件を最新に戻すため）。無指定なら今まで通り。
 
     Returns:
         is_current の値が変更された analysis_results の件数
@@ -1783,7 +1788,8 @@ def _merge_supplier_products(
         {"job_id": extraction_job_id},
     ).all()
 
-    if not new_pairs:
+    extra = sorted({(int(product_id), int(condition_id)) for product_id, condition_id in extra_pairs})
+    if not new_pairs and not extra:
         return 0
 
     # 3. 同一 supplier_channel_id の全メッセージを対象に、各 (product_id, condition_id) ペアごとに
@@ -1798,6 +1804,9 @@ def _merge_supplier_products(
                 WHERE ei.extraction_job_id = :job_id
                   AND ar.pid_resolved = TRUE
                   AND ar.product_id IS NOT NULL
+                UNION
+                SELECT x.product_id, x.condition_id
+                FROM unnest(CAST(:extra_pids AS integer[]), CAST(:extra_cids AS integer[])) AS x(product_id, condition_id)
             ),
             ranked AS (
                 SELECT ar.id,
@@ -1828,6 +1837,8 @@ def _merge_supplier_products(
         {
             "channel_id": supplier_channel_id,
             "job_id": extraction_job_id,
+            "extra_pids": [pair[0] for pair in extra],
+            "extra_cids": [pair[1] for pair in extra],
         },
     )
 

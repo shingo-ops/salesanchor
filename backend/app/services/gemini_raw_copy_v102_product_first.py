@@ -8,6 +8,7 @@
 
 from __future__ import annotations
 
+import logging
 import re
 import unicodedata
 from collections.abc import Callable, Mapping, Sequence
@@ -38,6 +39,8 @@ from app.services.tcg_analyzer_svc import (
     resolve_condition_v2,
     resolve_unit_v2,
 )
+
+logger = logging.getLogger(__name__)
 
 # --- 区分の値（マスタの値。比較に使うので、ここ1か所にまとめる） -------------------------------
 # public.tcg_product_categories.kubun_type（商品の分類）の値
@@ -481,20 +484,41 @@ def _other_kubun_hits(block: str, supplied_kubun: str, cond_entries: Sequence[di
     ]
 
 
+def _fixed_match(match: MatchResult, fixed_product_id: int | None, masters: ProductFirstMasters) -> MatchResult | None:
+    """人が決めた商品で matched にした照合結果。指定なし・商品が有効な商品の一覧に無いときは None（固定しない）。"""
+    if fixed_product_id is None:
+        return None
+    work_of = {p.id: p.work_id for p in masters.product_entries}
+    if fixed_product_id not in work_of:
+        logger.warning("[product_first] 固定の商品 id=%s が有効な商品の一覧に無いため固定しません", fixed_product_id)
+        return None
+    return dataclass_replace(
+        match, status="matched", product_id=fixed_product_id, work_id=work_of[fixed_product_id],
+        candidates=(fixed_product_id,), boundary_dropped=(),
+    )
+
+
 def resolve_product_first(
     *, item: Mapping[str, Any], roles: Mapping[int, str], lines: Sequence[str], block: str, name: str,
     aliases: Sequence[str], unit_alias_to_info: dict, cond_entries: list[dict], cond_canonical_to_uuid: dict,
     masters: ProductFirstMasters, find_price_alias: Callable[[str], str | None], chosen_product_id: int | None = None,
+    fixed_product_id: int | None = None,
 ) -> dict:
     """1件の商品・単位・状態を、商品を先に決める流れで出す。
 
     chosen_product_id：商品が ambiguous で、その候補に含まれるときだけ、その商品に決めた扱いにする（前後の商品の作品で決めた結果）。
     それ以外のときは無視する。
+    fixed_product_id：人が決めた商品。指定時は照合の結果に関わらずその商品で matched にする（chosen_product_id より優先）。
+    商品が有効な商品の一覧に無ければ固定しない。None のときの結果は変わらない。
     """
     match_text, _source = product_match_text(block, "", name)
     match = match_text_g2(match_text, masters)
-    decidable = match.status == "unmatched" or chosen_product_id in match.candidates  # unmatched は直前の投稿で決めた商品（matched_followup）
-    if match.status in ("ambiguous", "unmatched") and chosen_product_id is not None and decidable:
+    fixed_match = _fixed_match(match, fixed_product_id, masters)
+    if fixed_match is not None:
+        match = fixed_match
+    elif match.status in ("ambiguous", "unmatched") and chosen_product_id is not None and (
+        match.status == "unmatched" or chosen_product_id in match.candidates  # unmatched は直前の投稿で決めた商品（matched_followup）
+    ):
         work_of = {p.id: p.work_id for p in masters.product_entries}
         match = dataclass_replace(match, status="matched", product_id=chosen_product_id, work_id=work_of.get(chosen_product_id))
     score = decide_by_score(match, masters.product_entries)

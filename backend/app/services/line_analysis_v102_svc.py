@@ -39,6 +39,7 @@ from app.services.gemini_raw_copy_v102_followup import MATCH_STATUS_MATCHED_FOLL
 from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_extraction_record_svc import RecordError
+from app.services.v102_human_decisions_svc import Decisions, load_v102_decisions
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,13 @@ _PROMPT_HASH_LENGTH = 12
 REASON_RESPONSE_UNREADABLE = "response_unreadable"
 REASON_EXTRACT_EXCEPTION = "extract_exception"
 REASON_SEPARATOR = ","
+# 人の判断で外す理由（condition_review で状態を決めたとき）
+REASON_CONDITION_UNKNOWN = "condition_unknown"
+REASON_CONDITION_MULTIPLE = "condition_multiple_candidates"
+CONDITION_REVIEW_REASONS = (REASON_CONDITION_UNKNOWN, REASON_CONDITION_MULTIPLE)
+# 人の判断で決めた印（analysis_results の pid_basis / condition_basis）
+PID_BASIS_MANUAL = "MANUAL"
+CONDITION_BASIS_MANUAL = "MANUAL_CONDITION_REVIEW"
 
 # analysis_results の列の幅・精度（migrations/20260921_110000_pipeline_tables_public.sql）
 _PID_BASIS_MAX = 100
@@ -229,19 +237,22 @@ def _with_review_sources(fields: dict, unsure: list[dict]) -> dict:
 
 def run_v102_pipeline(
     response_text: str, ctx, masters: dict, *, extract_items: Callable[..., tuple[list[dict], dict]] = extract_v101_items,
+    fixed_products: dict[int, int] | None = None,
 ) -> dict:
     """v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
 
     落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
     ctx は raw_text と supplier_context を持つもの。extract_items は試験の道具（prompt_ab）からの差し替え用（既定は本番と同じ extract_v101_items）。
+    fixed_products：人が決めた商品（受理した件の位置 → 商品 id）。空・None のときは extract_items に渡さない（結果は今と同じ）。
     """
     try:
         items, errors = parse_v101_response(
             response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
         )
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
+        fixed = {"fixed_products": fixed_products} if fixed_products else {}
         extracted, flags = extract_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters
+            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters, **fixed
         )
         if not items and errors:
             flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
@@ -589,17 +600,59 @@ def _job_review_reasons(flags: dict) -> str | None:
     return _join_unique([*_kinds(flags.get("post_review") or []), *_kinds(flags.get("gemini_review") or [])])
 
 
-def _write_results(session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict) -> dict:
+def _split_reasons(reasons: str | None) -> list[str]:
+    return [r for r in (reasons or "").split(REASON_SEPARATOR) if r]
+
+
+def _load_condition_canonicals(session: Session, condition_ids: list[int]) -> dict[int, str]:
+    if not condition_ids:
+        return {}
+    rows = session.execute(
+        text("SELECT id, canonical FROM public.conditions WHERE id = ANY(:ids)"), {"ids": sorted(set(condition_ids))}
+    ).fetchall()
+    return {int(r[0]): str(r[1]) for r in rows}
+
+
+def _apply_decisions(values: dict, item: dict, decision: Decisions | None, canonicals: dict[int, str]) -> dict:
+    """人の判断を analysis_results の列に反映する（元の values は変えない）。
+
+    商品を固定した件（結果の商品が判断と同じ）は pid_basis='MANUAL'。状態の判断がある件は condition を差し替え、
+    理由 condition_unknown・condition_multiple_candidates を外す。確認済み（ack）の理由も外す。外した後に理由が空なら要確認を外す。
+    """
+    if decision is None or decision.is_empty:
+        return values
+    out = dict(values)
+    drop: set[str] = set(decision.ack_codes)
+    if decision.product_id is not None and values["pid_resolved"] and values["product_id"] == decision.product_id:
+        out["pid_basis"] = PID_BASIS_MANUAL
+    condition_name = canonicals.get(decision.condition_id) if decision.condition_id is not None else None
+    if condition_name is not None:
+        out.update(condition_id=decision.condition_id, condition_canonical=condition_name, condition_basis=CONDITION_BASIS_MANUAL)
+        drop.update(CONDITION_REVIEW_REASONS)
+    remaining = [r for r in _split_reasons(values["review_reasons"]) if r not in drop]
+    out["review_reasons"] = REASON_SEPARATOR.join(remaining) if remaining else None
+    out["needs_review"] = bool(remaining)
+    return out
+
+
+def _write_results(
+    session: Session, extraction_job_id: str, pipeline: dict, rows: list, masters: dict, unit_ids: dict,
+    decisions: dict[str, Decisions] | None = None,
+) -> dict:
+    decisions = decisions or {}
     v102_items = pipeline["v102_items"]
     if pipeline.get("v102_items_error") is not None:
         raise _MappingError(pipeline["v102_items_error"])
     pairs = _map_to_rows(v102_items, rows)
     matched_ids = [it["product_id"] for it, _ in pairs if it.get("product_id") is not None]
     work_ids = _load_product_work_ids(session, sorted(set(matched_ids)))
+    canonicals = _load_condition_canonicals(session, [d.condition_id for d in decisions.values() if d.condition_id is not None])
     now = datetime.now(timezone.utc)
     stats = {"total": len(rows), "pid_resolved": 0, "unit_resolved": 0, "needs_review": 0}
     for item, row in pairs:
-        values = _analysis_values(item, masters, unit_ids, work_ids)
+        values = _apply_decisions(
+            _analysis_values(item, masters, unit_ids, work_ids), item, decisions.get(str(row.id)), canonicals
+        )
         session.execute(
             text(_UPSERT_SQL.format(schema=analyzer.TCG_SCHEMA)),
             {**values, "id": str(uuid.uuid4()), "extraction_item_id": str(row.id), "engine_version": V102_ENGINE_VERSION,
@@ -610,6 +663,39 @@ def _write_results(session: Session, extraction_job_id: str, pipeline: dict, row
         stats["needs_review"] += int(values["needs_review"])
     _set_job_review_reasons(session, extraction_job_id, _job_review_reasons(pipeline["v102_flags"]))
     return stats
+
+
+def _fixed_products(response_text: str, ctx, masters: dict, rows: list, decisions: dict[str, Decisions]) -> dict[int, int]:
+    """人が決めた商品を、試作版の部品に渡す形（受理した件の位置 → 商品 id）にする。判断が無ければ空。
+
+    位置は、落とした件（rejected）を除いた件を gemini_index の昇順に並べた順（_map_to_rows の対応と同じ）。
+    """
+    if not any(d.product_id is not None for d in decisions.values()):
+        return {}
+    items, _errors = parse_v101_response(
+        response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
+    )
+    rejected = {it["gemini_index"] for it in items if "rejected" in it}
+    accepted = [r for r in rows if r.gemini_index not in rejected]
+    return {
+        position: decisions[str(row.id)].product_id
+        for position, row in enumerate(accepted)
+        if str(row.id) in decisions and decisions[str(row.id)].product_id is not None
+    }
+
+
+def _load_resolved_pairs(session: Session, extraction_job_id: str) -> list[tuple[int, int]]:
+    """この投稿の今の (product_id, condition_id) の組。書き直す前に読み、is_current の付け直しに渡す。"""
+    rows = session.execute(
+        text(f"""
+            SELECT DISTINCT ar.product_id, ar.condition_id
+            FROM {analyzer.TCG_SCHEMA}.analysis_results ar
+            JOIN {analyzer.TCG_SCHEMA}.extraction_items ei ON ei.id = ar.extraction_item_id
+            WHERE ei.extraction_job_id = :ej AND ar.pid_resolved = TRUE AND ar.product_id IS NOT NULL
+        """),
+        {"ej": extraction_job_id},
+    ).fetchall()
+    return [(int(r[0]), int(r[1])) for r in rows]
 
 
 FOLLOWUP_MAX_GAP_SECONDS = 3600  # 直前の投稿との時刻の差の上限（design §2-1）
@@ -667,6 +753,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
     from app.tasks.tcg_extraction import load_extraction_context  # noqa: PLC0415  循環 import を避ける
 
     schema = analyzer.TCG_SCHEMA
+    # 同じ投稿のやり直しが並行して走ると、判断の読み込みと書き込みが交差する。取引の最初に投稿ごとの鍵を取り、順番に走らせる
+    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"v102_analysis:{extraction_job_id}"})
     ctx = load_extraction_context(session, extraction_job_id)
     if ctx is None:
         raise ValueError(f"extraction_job が見つかりません: {extraction_job_id}")
@@ -687,11 +775,13 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
     try:
         if any(r.gemini_index is None for r in rows):
             raise _MappingError("gemini_index が無い件があります（v6 の件）")
-        pipeline = run_v102_pipeline(
-            _response_from_rows(rows, job.gemini_unsure), ctx,
-            masters_with_followup(masters, load_followup_reference(session, extraction_job_id)),
-        )
-        stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids)
+        response_text = _response_from_rows(rows, job.gemini_unsure)
+        decisions = load_v102_decisions(session, [str(r.id) for r in rows])
+        fixed_products = _fixed_products(response_text, ctx, masters, rows, decisions)
+        previous_pairs = _load_resolved_pairs(session, extraction_job_id)
+        followup_masters = masters_with_followup(masters, load_followup_reference(session, extraction_job_id))
+        pipeline = run_v102_pipeline(response_text, ctx, followup_masters, fixed_products=fixed_products)
+        stats = _write_results(session, extraction_job_id, pipeline, rows, masters, unit_ids, decisions)
         session.commit()
     except Exception:  # noqa: BLE001
         session.rollback()
@@ -699,6 +789,6 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
         _set_job_review_reasons(session, extraction_job_id, REASON_EXTRACT_EXCEPTION)
         session.commit()
         return empty_stats
-    analyzer._merge_supplier_products(session, extraction_job_id, schema)  # ADR-158（is_current）
+    analyzer._merge_supplier_products(session, extraction_job_id, schema, extra_pairs=previous_pairs)  # ADR-158（is_current）
     logger.info("[line_analysis] v102 job=%s stats=%s", extraction_job_id, stats)
     return stats
