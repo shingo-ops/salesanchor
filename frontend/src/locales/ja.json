@@ -3860,6 +3860,7 @@
     "ship": "発送の行かどうか確認が必要",
     "condition": "状態の行かどうか確認が必要",
     "quantity_no_number": "数量に数字が無い",
+    "quantity_not_in_text": "数量の写しが原文に無い",
     "possible_footer_line": "末尾の定型文かもしれない",
     "unit_unknown": "単位が分からない",
     "category_unknown": "商品の種類が分からない",

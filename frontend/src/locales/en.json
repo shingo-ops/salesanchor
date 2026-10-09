@@ -3860,6 +3860,7 @@
     "ship": "Check whether this is a shipping line",
     "condition": "Check whether this is a condition line",
     "quantity_no_number": "Quantity has no number",
+    "quantity_not_in_text": "Copied quantity not found in the source lines",
     "possible_footer_line": "May be a footer line",
     "unit_unknown": "Unit unknown",
     "category_unknown": "Category unknown",

@@ -162,6 +162,11 @@ def test_review_reasons_join_item_and_gemini_kinds_without_duplicates():
     assert values["review_reasons"] == "unit_unknown,condition_unknown,gemini_unsure" and values["needs_review"] is True
 
 
+def test_quantity_not_in_text_kind_goes_to_review_reasons_and_needs_review():
+    values = _values({"unit": "BOX", "review": [{"line": 2, "kind": "quantity_not_in_text", "field": "quantity", "copied": "30"}]})
+    assert values["review_reasons"] == "quantity_not_in_text" and values["needs_review"] is True
+
+
 def test_oversized_numbers_become_null():
     values = _values({"unit": "BOX", "price_normalized": 10**13, "quantity_normalized": 2})
     assert (values["price_normalized"], values["quantity_normalized"]) == (None, 2)
