@@ -237,7 +237,9 @@ def _context_select_sql() -> str:
                    s.extraction_state_format,
                    s.extraction_example_text,
                    s.extraction_ship_format,
-                   sc.supplier_id
+                   sc.supplier_id,
+                   s.extraction_layout_rules,
+                   s.extraction_hard_cases
             FROM {TCG_SCHEMA}.extraction_jobs ej
             JOIN {TCG_SCHEMA}.source_messages sm ON sm.id = ej.source_message_id
             LEFT JOIN public.supplier_channels sc ON sc.id = sm.supplier_channel_id
@@ -252,6 +254,8 @@ class ExtractionContext(NamedTuple):
     supplier_context: dict | None
     knowledge_links: list[dict] | None
     supplier_id: int | None
+    # 新しい仕組み（v8 系）だけが読む仕入元ルール。本番 v7 の supplier_context には入れない。
+    new_system_rules: dict | None = None
 
 
 def _build_extraction_context(session: Session, row) -> ExtractionContext:
@@ -273,6 +277,15 @@ def _build_extraction_context(session: Session, row) -> ExtractionContext:
     if any(v for v in extraction_rules.values()):
         supplier_context = extraction_rules
 
+    # 新しい仕組み専用の2列。supplier_context を作る判定には含めない（本番 v7 に渡る dict を変えない）。
+    new_system_rules: dict | None = None
+    new_rules = {
+        "extraction_layout_rules": row[11],
+        "extraction_hard_cases": row[12],
+    }
+    if any(v for v in new_rules.values()):
+        new_system_rules = new_rules
+
     # Knowledge リンクを取得（supplier_id がある場合のみ）
     knowledge_links: list[dict] | None = None
     supplier_id = row[10]
@@ -293,7 +306,7 @@ def _build_extraction_context(session: Session, row) -> ExtractionContext:
                 {"category": r[0], "pattern": r[1], "normalized_to": r[2]}
                 for r in kl_rows
             ]
-    return ExtractionContext(raw_text, supplier_context, knowledge_links, supplier_id)
+    return ExtractionContext(raw_text, supplier_context, knowledge_links, supplier_id, new_system_rules)
 
 
 def load_extraction_context(session: Session, extraction_job_id: str) -> ExtractionContext | None:

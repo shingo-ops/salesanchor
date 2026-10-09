@@ -7,6 +7,7 @@
 
 import { useTranslation } from "react-i18next";
 import { Select } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 
 export interface CompanyFormState {
   name: string;
@@ -61,7 +62,7 @@ export function CompanyFormFields({ form, onChange }: Props) {
       </div>
       <div className="form-group">
         <label>{t("common.notes")}</label>
-        <textarea
+        <TextareaControl
           value={form.notes}
           onChange={(e) => onChange("notes", e.target.value)}
         />

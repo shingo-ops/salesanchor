@@ -3,6 +3,8 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 import { DashboardIcons } from "../../constants/icons";
 import { getWeeklyAdvisorDefensive, type WeeklyAdvisorAction } from "../../api/funnel";
 import type { LeadDetail } from "../inbox/inbox.types";
@@ -378,9 +380,9 @@ export function WeeklyAdvisorSection() {
                       <label className="db-weekly-composer-label" htmlFor={`weekly-action-${action.company_id}`}>
                         {t("leads.nextAction")}
                       </label>
-                      <textarea
+                      <TextareaControl
                         id={`weekly-action-${action.company_id}`}
-                        className="db-weekly-composer-input"
+                        variant="composer"
                         rows={3}
                         value={composer.draftAction}
                         onChange={(e) => updateComposer(action.company_id, { draftAction: e.target.value })}
@@ -391,9 +393,9 @@ export function WeeklyAdvisorSection() {
                       <label className="db-weekly-composer-label" htmlFor={`weekly-date-${action.company_id}`}>
                         {t("leads.nextActionDate")}
                       </label>
-                      <input
+                      <TextFieldControl
                         id={`weekly-date-${action.company_id}`}
-                        className="db-weekly-composer-input"
+                        variant="composer"
                         type="date"
                         value={composer.draftDate}
                         onChange={(e) => updateComposer(action.company_id, { draftDate: e.target.value })}

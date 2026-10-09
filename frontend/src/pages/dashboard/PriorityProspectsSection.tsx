@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 import { DashboardIcons } from "../../constants/icons";
 import {
   getPriorityProspects,
@@ -407,9 +409,9 @@ export function PriorityProspectsSection() {
                       <label className="db-weekly-composer-label" htmlFor={`priority-action-${item.lead_id}`}>
                         {t("leads.nextAction")}
                       </label>
-                      <textarea
+                      <TextareaControl
                         id={`priority-action-${item.lead_id}`}
-                        className="db-weekly-composer-input"
+                        variant="composer"
                         rows={3}
                         value={composer.draftAction}
                         onChange={(e) => updateComposer(item.lead_id, { draftAction: e.target.value })}
@@ -420,9 +422,9 @@ export function PriorityProspectsSection() {
                       <label className="db-weekly-composer-label" htmlFor={`priority-date-${item.lead_id}`}>
                         {t("leads.nextActionDate")}
                       </label>
-                      <input
+                      <TextFieldControl
                         id={`priority-date-${item.lead_id}`}
-                        className="db-weekly-composer-input"
+                        variant="composer"
                         type="date"
                         value={composer.draftDate}
                         onChange={(e) => updateComposer(item.lead_id, { draftDate: e.target.value })}

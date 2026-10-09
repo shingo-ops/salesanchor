@@ -115,33 +115,8 @@ BEGIN
             schema_rec.schema_name
         );
 
-        -- ── 6. デフォルト理由を投入 ──────────────────────────────────────────
-        -- 成約理由
-        EXECUTE format($sql$
-            INSERT INTO %I.close_reasons (type, label, sort_order) VALUES
-                ('won', '在庫・品揃え',  1),
-                ('won', '価格',          2),
-                ('won', '安心感',        3),
-                ('won', 'スピード',      4),
-                ('won', '取引条件',      5),
-                ('won', '人・関係',      6),
-                ('won', 'その他',       99)
-            ON CONFLICT (type, label) DO NOTHING
-        $sql$, schema_rec.schema_name);
-
-        -- 失注理由
-        EXECUTE format($sql$
-            INSERT INTO %I.close_reasons (type, label, sort_order) VALUES
-                ('lost', '価格が合わなかった',             1),
-                ('lost', '在庫・品揃えで応えられなかった', 2),
-                ('lost', '不安を解消できなかった',         3),
-                ('lost', '対応が遅れた',                   4),
-                ('lost', '取引条件が合わなかった',         5),
-                ('lost', '連絡が途絶えた',                 6),
-                ('lost', 'お客様側の事情',                 7),
-                ('lost', 'その他',                        99)
-            ON CONFLICT (type, label) DO NOTHING
-        $sql$, schema_rec.schema_name);
+        -- NEUTRALIZED (ADR-1007 / ADR-155, 2026-10-07): 成約・失注の既定理由 15 行の seed を外した。
+        -- close_reasons は画面で管理する（新テナントはこの migration の対象にならない。deals 表が無いため）。
 
     END LOOP;
     RAISE NOTICE 'Migration 102: complete';

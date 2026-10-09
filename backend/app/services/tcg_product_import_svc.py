@@ -31,6 +31,8 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
@@ -215,22 +217,6 @@ async def load_lookup_maps(db: AsyncSession) -> dict[str, dict[str, str]]:
     return maps
 
 
-async def load_existing_marks(db: AsyncSession) -> dict[str, str]:
-    """
-    既に登録されている型番と商品コードの対応を引く。件数の上限を設けない。
-
-    design 5-4 の7番（同じ型番が既に在る行を警告する）で使う。既存の
-    重複チェックは候補取得を打ち切るため、その穴をここで埋める。
-    """
-    result = await db.execute(
-        text(
-            "SELECT mark, id::text FROM public.products "
-            "WHERE mark IS NOT NULL AND mark <> '' AND is_active = TRUE"
-        )
-    )
-    return {str(r[0]).strip(): str(r[1]) for r in result.fetchall()}
-
-
 # ---------------------------------------------------------------------------
 # 検査（DB を引かない分）
 # ---------------------------------------------------------------------------
@@ -255,12 +241,11 @@ def check_codes(row: dict[str, str], lookups: dict[str, dict[str, str]]) -> list
 def validate_row_static(
     row: dict[str, str],
     lookups: dict[str, dict[str, str]],
-    existing_marks: dict[str, str],
     seen: dict[tuple[str, str], str],
 ) -> dict[str, Any]:
     """
-    DB を引かずに判る検査。design 5-4 の 1 2 3 5 7 8 9 11 を見る。
-    6番と10番は DB を引くため別の関数で行う。
+    DB を引かずに判る検査。design 5-4 の 1 2 3 5 8 9 11 を見る。
+    6番と10番、および型番の重なり（7番）は DB を引くため別の関数で行う。
 
     seen は同一ファイル内の重複を見るための持ち回り。呼ぶ側が空の辞書を
     用意し、行の順に渡す。
@@ -286,8 +271,6 @@ def validate_row_static(
 
     if not mark:
         warnings.append("MARK_EMPTY")
-    elif mark in existing_marks:
-        warnings.append("MARK_ALREADY_USED_BY_" + existing_marks[mark])
 
     keywords = split_keywords(row.get("search_keywords", ""))
     if not keywords:
@@ -394,13 +377,24 @@ async def preview(db: AsyncSession, raw: bytes, filename: str) -> dict[str, Any]
         }
 
     lookups = await load_lookup_maps(db)
-    existing_marks = await load_existing_marks(db)
     keyword_owners = await load_keyword_owners(db)
     seen: dict[tuple[str, str], str] = {}
     results: list[dict[str, Any]] = []
 
     for row in rows:
-        checked = validate_row_static(row, lookups, existing_marks, seen)
+        checked = validate_row_static(row, lookups, seen)
+        collisions = await find_code_collisions(
+            db,
+            product_code="",
+            mark=row.get("mark", ""),
+            name=row.get("japanese_title", ""),
+            search_keywords=split_keywords(row.get("search_keywords", "")),
+            exclude_keywords=split_keywords(row.get("exclude_keywords", "")),
+        )
+        checked["code_collisions"] = collisions
+        checked["warnings"].extend(
+            "MARK_ALREADY_USED_BY_" + c["product_id"] for c in collisions
+        )
         if not checked["blocking"]:
             payload = build_payload(row, lookups)
             checked["warnings"].extend(

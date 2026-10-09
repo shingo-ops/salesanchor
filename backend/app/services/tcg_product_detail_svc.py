@@ -10,6 +10,8 @@ from uuid import uuid4
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.tcg_product_code_collision_svc import find_code_collisions
+
 # Step 4/5: TCG テーブルは public スキーマに移行済み
 TCG_SCHEMA = "public"
 
@@ -198,6 +200,16 @@ async def update_product_detail(
             "VALUES ('products',CAST(:pid AS uuid),'UPDATE',:actor,:old,:new)"
         ), {"pid": str(_audit_pid), "actor": actor[:100], "old": _json(before), "new": _json(after)})
         response = await _response(db, after)
+        saved = response["product"]
+        response["code_collisions"] = await find_code_collisions(
+            db,
+            product_code=saved.get("code"),
+            mark=saved.get("mark"),
+            name=saved.get("japanese_title") or "",
+            search_keywords=saved.get("search_keywords") or [],
+            exclude_keywords=saved.get("exclude_keywords") or [],
+            exclude_product_id=saved["id"],
+        )
         await db.commit()
         return response
     except BaseException:

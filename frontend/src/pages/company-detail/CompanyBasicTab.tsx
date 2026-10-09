@@ -6,7 +6,9 @@
 import { FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import type { BasicFormState, Company } from "./company-detail.types";
+import { TextareaControl } from "../../components/Textarea";
 
 interface Props {
   basicForm: BasicFormState;
@@ -77,20 +79,20 @@ export function CompanyBasicTab({
           onChange={(e) => { setBasicForm({ ...basicForm, fedex_account: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("companies.shippingNote")}</label>
-        <textarea disabled={!canEdit} value={basicForm.shipping_note}
+        <TextareaControl disabled={!canEdit} value={basicForm.shipping_note}
           onChange={(e) => { setBasicForm({ ...basicForm, shipping_note: e.target.value }); setBasicDirty(true); }} />
       </div>
       <div className="form-row"><label>{t("common.status")}</label>
-        <select disabled={!canEdit} value={basicForm.status}
+        <SelectControl fullWidth disabled={!canEdit} value={basicForm.status}
           onChange={(e) => { setBasicForm({ ...basicForm, status: e.target.value }); setBasicDirty(true); }}>
           <option value="active">active</option>
           <option value="inactive">inactive</option>
           <option value="archived">archived</option>
           <option value="pending_dedup_review">pending_dedup_review</option>
-        </select>
+        </SelectControl>
       </div>
       <div className="form-row"><label>{t("common.notes")}</label>
-        <textarea disabled={!canEdit} value={basicForm.notes}
+        <TextareaControl disabled={!canEdit} value={basicForm.notes}
           onChange={(e) => { setBasicForm({ ...basicForm, notes: e.target.value }); setBasicDirty(true); }} />
       </div>
       {canEdit && (

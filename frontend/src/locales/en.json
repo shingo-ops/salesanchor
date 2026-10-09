@@ -65,7 +65,7 @@
       "duplicateFile": "This file has already been imported.",
       "columnCount": "Row {{value}} does not have 10 columns.",
       "duplicateRow": "Duplicates row {{value}} in this file.",
-      "markUsed": "The same mark is already used by product {{value}}.",
+      "markUsed": "The product code overlaps {{value}}. Adding exclude keywords is recommended.",
       "shortKeyword": "This search keyword is very short: {{value}}",
       "keywordShared": "This search keyword also matches another product: {{value}}",
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
@@ -1853,6 +1853,17 @@
     "deleteAlias": "Delete Alias",
     "confirmDelete": "Delete selected units?",
     "total": "Units: {{count}}"
+  },
+  "unitIgnorePhrases": {
+    "title": "Phrases Not Treated as Units",
+    "description": "Register phrases that contain a unit alias but are not a unit (e.g. a title name).",
+    "phrase": "Phrase",
+    "note": "Reason",
+    "isActive": "Active",
+    "empty": "No phrases registered",
+    "createTitle": "Add Phrase",
+    "editTitle": "Edit Phrase",
+    "confirmDelete": "Delete the selected phrases?"
   },
   "statusMaster": {
     "title": "Status Rules",
@@ -3848,6 +3859,16 @@
       "multi_candidate": "More than one product matched."
     }
   },
+  "codeCollision": {
+    "title": "The product code overlaps existing products",
+    "hint": "Adding exclude keywords is recommended so the products can be told apart.",
+    "itemWithWork": "{{name}} ({{work}})",
+    "matched": "Overlapping {{field}}: {{value}}",
+    "fields": { "product_code": "product code", "mark": "mark" },
+    "addToThis": "Words to add to this product's exclude keywords: {{words}}",
+    "addToOther": "Words to add to the other product's exclude keywords: {{words}}",
+    "registered": "Exclude keywords are already registered"
+  },
   "productDetail": {
     "title": "Product details and editing",
     "code": "Product code",
@@ -5120,7 +5141,11 @@
     "ruleLinked": "Linked",
     "noRulesLinked": "Not configured",
     "shipFormat": "Ship timing format",
-    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)"
+    "shipFormatHelper": "How ship timing is written for pre-order items (e.g. N days before release)",
+    "layoutRules": "Layout rules (new pipeline only)",
+    "layoutRulesHelper": "Describe how each instruction step applies to this supplier. Not used by the current production extraction.",
+    "hardCases": "Hard cases (new pipeline only)",
+    "hardCasesHelper": "Original text and expected output for cases that were actually misread. Not used by the current production extraction."
   },
   "needsReview": {
     "title": "Needs Review",
