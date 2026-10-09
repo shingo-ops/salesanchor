@@ -28,6 +28,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../lib/api";
+import { SelectControl } from "./Select";
 
 interface CompanyMini {
   id: number;
@@ -187,7 +188,8 @@ export default function CompanyContactSelector({
     <>
       <div className="form-group">
         {showLabels && <label>{t("common.company")}{required ? " *" : ""}</label>}
-        <select
+        <SelectControl
+          fullWidth
           required={required}
           disabled={disabled}
           value={value.companyId !== null ? String(value.companyId) : ""}
@@ -199,7 +201,7 @@ export default function CompanyContactSelector({
               {c.name}（{c.company_code}）
             </option>
           ))}
-        </select>
+        </SelectControl>
         {companyIdMissing && (
           <div
             className="error-message"
@@ -211,7 +213,8 @@ export default function CompanyContactSelector({
       </div>
       <div className="form-group">
         {showLabels && <label>{t("companyContactSelector.contact")}{required ? " *" : ""}</label>}
-        <select
+        <SelectControl
+          fullWidth
           required={required}
           disabled={
             disabled ||
@@ -229,7 +232,7 @@ export default function CompanyContactSelector({
               {c.is_primary_contact ? t("companyContactSelector.primarySuffix") : ""}
             </option>
           ))}
-        </select>
+        </SelectControl>
         {error && (
           <div className="error-message" style={{ marginTop: "var(--space-1)", fontSize: "var(--font-sm)" }}>
             {error}

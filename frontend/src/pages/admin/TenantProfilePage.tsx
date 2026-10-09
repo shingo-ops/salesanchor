@@ -19,6 +19,7 @@ import { api } from "../../lib/api";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 
 interface TenantProfile {
   id: number;
@@ -231,7 +232,8 @@ export default function TenantProfilePage() {
 
           <div className="form-group">
             <label htmlFor="tp-default-language">{t("tenantProfile.defaultLanguage")}</label>
-            <select
+            <SelectControl
+              fullWidth
               id="tp-default-language"
               data-testid="tp-default-language"
               value={form.default_language}
@@ -242,7 +244,7 @@ export default function TenantProfilePage() {
               <option value="en">English (en)</option>
               <option value="ko">한국어 (ko)</option>
               <option value="zh">{t("language.zh")} (zh)</option>
-            </select>
+            </SelectControl>
           </div>
 
           {canEdit && (

@@ -12,6 +12,7 @@ import { FormEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import InventoryPicker, { PickedProduct } from "../../components/InventoryPicker";
 import { Modal } from "../../components/Modal";
 
@@ -153,12 +154,12 @@ export default function PurchaseOrdersFormModal({ open, onClose, onCreated, init
       <form id="po-form" onSubmit={handleSubmit}>
         <div className="form-group">
           <label>{t("purchaseOrders.supplier")} *</label>
-          <select required value={supplierId} onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : "")}>
+          <SelectControl fullWidth required value={supplierId} onChange={(e) => setSupplierId(e.target.value ? Number(e.target.value) : "")}>
             <option value="">{t("common.pleaseSelect")}</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
-          </select>
+          </SelectControl>
         </div>
 
         <div className="form-group">
