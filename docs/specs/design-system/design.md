@@ -2342,3 +2342,43 @@ Architect 自己審査（AX-2b）: APPROVE（PO 方針どおり標準へ統一�
 維持の仕組み: 守り手は Textarea.test.tsx、ax2b-visual・ax2b-ast-check（evidence）、CI の frontend-check・Karte Visual Gate・design-token-guard。守っていないもの: 保留の商品編集1（生 textarea）と、ui-governance が textarea を検出しない点（最後の CI 便で強制）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
 
 実装時の変更（2026-10-09、設計者判断）: commit 時の pre-commit（frontend/package.json:53-58 の lint-staged `eslint --max-warnings=0`、frontend/.husky/pre-commit:43）が ProductMasterDrawer.tsx の既存警告63件（`local/no-japanese-literal` 62・不要な eslint-disable 1。origin/main の同ファイルでも同数、他32ファイルは0）で停止した。62件は i18n の手作業（t() 化と ja/en キー追加）で本便の目的外のため、G4 商品マスタドロワー2件（ProductMasterDrawer.tsx:217/221）を本便から外して保留に加え、supplier-detail-view.css も変更しない（同2件は現行の見た目のまま）。本便の移管は38件、保留は商品編集1＋商品マスタドロワー2の計3件。商品マスタドロワーは同ファイルの i18n 化と同時に移管する（別便）。検査の素通り（--no-verify）・閾値の変更はしない。
+
+AX-2b 結果: PR #4058 merge 4330a64f73521e2734af5b685dbb6b337317f53d（2026-10-09T01:49:08Z、必須15/15成功）、Deploy 37871601811 success（headSha 4330a64f、01:49:11Z〜01:51:34Z）。本番 CSS index-Cm1Iv8nm.css で `comp-textarea--code` 1、`form-group textarea` 2（`.product-edit-form` の本体と `:focus` のみ）、`form-row textarea` 0、`outbound-translation-edit` 0、`pmd-field textarea` 2（保留のため残存）。app 200、/api/health 200。GO 原文は PO 本人の「GO #4058」（前後表の提示後）。マージは PO 端末の1行（`gh pr update-branch` → 手元 fast-forward → checks 待ち → merge-safe、最大5周）の1周目で成立。画面の目視は未実施。未決: ダッシュボード入力欄（composer）は旧規則の `--border-subtle` が未定義のため枠なしのまま写している（枠を付けるかは別判断）。
+
+
+### AY. TextFieldControl 本体（2026-10-09）
+
+mode: handoff。親: docs/specs/design-system/README.md。recon: docs/handoff/design-system-recon/recon.md。ADR-067/073/108/110/113/144を継承。§AV の便分割（:1973「AV-3以降 TextFieldControl/TextareaControl 本体 → 利用」）のうち一行入力の本体便。§AX（TextareaControl）と同じ型。
+
+#### Planner: 目的・根拠・範囲
+
+PO原文（2026-10-09、本セッション）「次を進める」（一行入力の部品化の提示に対して）。番号付きGO・Opus委任の有効化は創作しない（opus-delegation.md 不在）。
+
+現在地（origin/main f0f7ef8c7d89c97d42950e0ab111644b316dd99d、TypeScript 5.9.3 AST、TSX 275、構文エラー0。証跡は本便で保存する evidence-20260910/ay0-input-inventory.{cjs,json,md}、ay0-input-refs.md、ay0-input-css-top.md、ay0-diff-av0.md）:
+- 生 `<input>` 449＝金型内部1（TextField.tsx:64）＋ページ側448。type 別: 省略150・text87・search2・email23・number63・tel8・url2・password6・date11・time4・datetime-local1（以上の text 系360）、checkbox72・radio7・file6・color2・range1・dynamic3。§AV（55d99a97e）の input460 との差 −12 は ay0-diff-av0.md で全件照合済み: 旧のみ13（DiscordConfigPage.tsx の text 8 が e95f856b2 で TextField へ移管、ParseReviewPage.tsx の checkbox1・number2・text2 がファイル削除 d010d6700）、新のみ1（UnitIgnorePhrasesPanel.tsx:169 の checkbox、49c628361 で追加・ui-allow #4032）。
+- text 系360の属性: ref 2（InventoryPicker.tsx:218、InventorySearchBar.tsx:273。getBoundingClientRect と contains に使用）、onKeyDown 7、autoFocus 0、spread 0、style 43、className 96。
+- 既存金型 TextField（TextField.tsx:29-75）はラベル付き div 包みだけで、裸の部品と ref 転送が無い。利用220件、ref を渡す利用0。単体テスト0（stories のみ）。
+- ガード: scripts/check-ui-governance.js は pages 配下の生 input のうち type 省略/text/search の増加だけを検出（:183/:213-218/:332-342）。
+
+本便の範囲（見た目の変化0・利用ページ変更0。§AX AX-1 と同じ型）:
+1. TextField.tsx に `TextFieldControl` を追加: `forwardRef<HTMLInputElement, TextFieldControlProps>`、`TextFieldControlProps = Omit<InputHTMLAttributes<HTMLInputElement>, "size"> & { size?: TextFieldSize }`。`<input>` を1つだけ返す。class は `comp-field__input`、size が md 以外なら `comp-field__input--${size}`、最後に className。id は個別に受けて className より前に出力（既存 TextField の属性順 id→class を保つ。§AX と同じ）。ref・type・native 属性・イベント・value/defaultValue は同じ要素へそのまま渡し、未指定を補わない（type の既定値も付けない）。native の数値 size は受けない（§Z :806 の nativeSize は利用0のため本便では追加しない）。
+2. 既存 `TextField` の `<input id={fieldId} className="comp-field__input" {...rest} />`（:64）を `<TextFieldControl id={fieldId} {...rest} />` に置換（size は渡さない＝出力不変）。既存220利用の DOM は不変。
+3. FormField.css: sm の選択子リスト（:134-140）に `.comp-field__input--sm` を、lg のリスト（:158-165）に `.comp-field__input--lg` を追加（宣言・値は既存のまま。新規トークン0）。基本規則（:47-62）より後ろで同じ specificity (0,1,0) のため後勝ち。
+4. TextField.test.tsx を新設（既存出力の固定試験＋本体契約）、TextField.stories.tsx に本体の見本を追加。
+
+変更しないもの: 利用ページ全件、ページ CSS、トークン定義、i18n、API/DB/backend、CI、依存、Select/Textarea。種類（variant）・textStyle・invalid・leadingInset・emptyDatePlaceholder は利用側の実測後の便（AY-2 以降、type・用途ごとに分割）で設計する。
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 既存 TextField の出力が不変 | 実装前の現行コードで TextField（label・required・helperText・error・size sm/lg・fullWidth・className・type 各種・value/onChange 等）の innerHTML を固定する試験を先に書いて通し、置換後も期待値を変えずに通る |
+| 裸の部品が1要素だけ返す | container 直下が input 1つ、class が md/sm/lg で期待どおり、className が末尾 |
+| ref 転送 | オブジェクト ref と関数 ref が HTMLInputElement 本体を受け取り、getBoundingClientRect が呼べる |
+| 属性・イベントの透過と未補完 | type/value/onChange/onKeyDown/onBlur/placeholder/maxLength/min/max/step/disabled/readOnly/required/aria-label/data-testid/id/autoComplete が同要素に届く。未指定の type/placeholder/id は属性として現れない |
+| 寸法が既存金型と一致 | Chromium 実測で TextFieldControl sm/md/lg と ラベル付き TextField sm/md/lg の input の computed style が通常・focus・disabled で一致（幅1280・375）。例外は実測で原因を確認した2点のみ: ①幅375の sm は、モバイルのタッチ領域規則（FormField.css の @media (max-width: 767px) `.comp-field__input` min-height: var(--comp-input-height-mobile)、WCAG 2.5.5）が (0,1,0) の `.comp-field__input--sm` より後ろにあるため裸の本体は 44px になる。本番の SelectControl も同じ構造（`.comp-select__control--sm` (0,1,0) と同 @media の `.comp-select__control`）で裸の sm は 44px のため、裸の部品どうしの挙動をそろえ、詳細度は上げない（設計者判断 2026-10-09）。ラベル付き TextField の sm は `.comp-field--sm .comp-field__input` (0,2,0) がモバイル規則に勝つ既存挙動のまま。②幅1280の md の min-height の計算値 auto/0px は、ラベル付きの input が flex 子であることによる表示上の差で height は一致 |
+| 品質 | tsc、eslint、check:all、test:coverage（maxWorkers=1）、build、build-storybook |
+
+Architect 自己審査（AY-1）: APPROVE（§AX AX-1 と同型、既存220利用の DOM 不変を試験で固定、配線・データ不変、新規トークン0）。AY-2 以降は見た目が変わるため対象外（REVISE: 実測と前後表、PO 確認待ち）。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の型の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx（本便新設）、外観一致スクリプト（evidence）、既存 frontend-check・design-token-guard・ui-governance。守っていないもの: ページ側の生 input 448（AY-2 以降で移管）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
