@@ -2618,3 +2618,69 @@ AST 照合（ay2d-ast-check.md）: 45/45 PASS（タグ名・className="input" �
 品質: tsc 0、lint 0（警告139・errors 0・pages/register の警告0）、check:all 0、test:coverage --maxWorkers=1 0（74 files・963 tests 成功）、build 0、build-storybook 0。e2e register-form-ux.spec.ts は label/fieldset/`input[type=email]` で探し class・style 非依存。
 
 限界: dark テーマ未測定。登録画面は 375 幅でページ余白が 0（既存。before も同じ x=0）で、入力欄が左右いっぱいに広がる。モック応答での採取であり実トークンでの送信は未確認。切戻し: 本PRの merge commit を revert。
+
+#### AY-2d 本番反映（2026-10-09 記録）
+
+AY-2d: PR #4087 merge 1245dbac66d581a9344f648fa081e999aee66c9b（2026-10-09T12:48:32Z、必須15/15成功）、Deploy 37932481186 success（headSha 1245dbac6、12:48:35Z〜12:51:09Z）。本番の JS（index と遅延読み込みの全チャンク）で `className:"input"` 0 件。/register 200、app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003）。Reviewer APPROVE（LOW 2）。PO 決定（2026-10-09）: スマホ幅の見た目（登録画面の幅375で左右余白0 等）は、別途スマホ版（レスポンシブ）を作るときに対応する。金型移管の便では扱わず既知として記録するだけにする。
+
+#### AY-2e 規則なしの一行入力（画面に出るもの）の標準化（2026-10-09）
+
+mode: handoff。§AY 追補「G02 等のブラウザ既定 → 標準」の第2便。PO 方針（一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」。GO は ADR-1003 の委任に基づく Claude Opus 発行。
+
+現在地（origin/main 12fd0a35d、証跡は evidence-20260910/ay2e-*。調査 /tmp/CC報告ファイル/ssot-ay2e/）:
+- ページ側の生 text 系 90（保留22）。規則なし・inline style なしの組（G01）の残り20件。
+- うち13件は製品の画面から開けない（事実）: DexTab.tsx・TcgSeriesTab.tsx・LLMBudgetTab.tsx・ProductMastersTab.tsx（→ MasterListEditor.tsx）は試験以外から import されておらず、`/super-admin/masters` の Route も App.tsx に無い（App.tsx:341-361 は `/super-admin/masters/*/import` のみ）。ItemComparison.tsx:29 は `!readOnly` のときだけ描画され、唯一の呼び出し SupplierDetailView.tsx:116 は readOnly={true}。これらは本便の対象外（扱いは PO 判断事項として別に記録）。
+- 画面に出る6件（5ファイル）。全件 CSS 規則0（className の `input`・`w-full`・`qty-input`・`manual-record-datetime`・`channel-masters-add-form` 等はどれも CSS 定義0）。現状はブラウザ既定（約149×19px・余白0・枠 2px のくぼみ）。eslint 警告0。
+  | # | file:line | type | 置き場所（事実） |
+  |---|---|---|---|
+  | 1 | pages/admin/DiscordAnnouncePage.tsx:81 | text | 単独の行。className="input w-full"（CSS 0） |
+  | 2 | pages/inbox/ManualRecordSection.tsx:148 | datetime-local | label と並ぶ行。同じ欄の他の行は金型（TextareaControl 等）でラベルの下に入力 |
+  | 3, 4 | pages/admin/ChannelMastersPage.tsx:115, :123 | text | 見出し h3 の下で、入力2つと「追加」ボタンが内容幅で横に並ぶ |
+  | 5 | pages/commission-settings/CommissionSettingsPage.tsx:220 | number | 表のセル内の常時入力欄（data-testid=settings-value-${role}、E2E 依存） |
+  | 6 | pages/inventory/OwnInventoryPage.tsx:232 | number | 確認モーダル内で「数量」の文字と同じ行。className=qty-input（CSS 0） |
+
+設計判断（設計者、2026-10-09）: 金型移管は「入力欄の見た目」をそろえる作業で、画面の並び（横並び・表のセル）は変えない。標準の金型は横幅100%のため、現在内容幅で横に並んでいる欄（#3〜#6）には配置の指定 `style={{ width: "auto" }}`（CSS キーワード。外観ではなく配置）を付けて並びを保つ。単独の行（#1）とラベルの下に入れる形がそろっている欄（#2）は標準の横幅100%にする。
+
+AY-2e 変更契約:
+1. 6件の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換。#3〜#6 に `style={{ width: "auto" }}` を付ける（既存の style があれば無い。事実: 6件とも style 0）。className は CSS 定義0のもの（`input w-full`、`manual-record-datetime`、`qty-input`）を外す（試験・コードの参照0を grep で確認してから。参照があれば残す）。type・id・value・onChange・placeholder・aria-label・disabled・min・step・data-testid は逐語保持。import 追加。
+2. CSS・トークン・金型本体の変更なし。
+3. 変更しないもの: 到達不可の13件（DexTab・TcgSeriesTab・LLMBudgetTab・MasterListEditor・ItemComparison）、他の生 input、保留、i18n、API/DB/backend、CI、依存、e2e。
+4. design.md: 本節と実装結果を追記。
+
+前後表（予定。実画面で確定）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| #1 #2 | 素の入力欄 → 標準（薄い灰の枠・余白 8/12px・角 6px・アプリ書体・高さ約40px・横幅いっぱい）。#2 は入力欄がラベルの下の行になる（同じ欄の他の行と同じ形） |
+| #3〜#6 | 素の入力欄 → 標準の見た目（枠・余白・角・書体・高さ約40px）。横の並び・表の列は保つ（幅は内容幅のまま） |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 実画面で並びが保たれる | 開発モードの build（`vite build --mode development`。偽ログインは DEV のみ有効: firebase-auth.ts:25・firebase.ts:23）→ preview、tests-e2e/utils/auth.ts の偽ログインと page.route の API モックで5画面を開き、幅1280 で変更前後の全画面スクリーンショット（DPR2）。#3/#4 は入力2つとボタンが1行、#5 は表の列幅が大きく変わらず行の崩れ0、#6 はモーダルを開いて「数量」と入力が1行。はみ出し0・要素の重なり0を計測。画像は設計者が目視。表示できない画面はその事実と止まった出力を記録し、同じ祖先構造の再現 fixture（実 CSS）で代替した旨を明記 |
+| 外観が前後表どおり | 6件の computed style を前後で採取し、表の項目以外に想定外の差が無い |
+| 非外観属性が不変 | AST 照合で6件のタグ名・className 削除・style 追加・import 以外の差分0 |
+| 置換漏れ0 | 再計測でページ側の生 text 系 90→84 |
+| 試験 | 既存単体試験全件成功。order-commission.spec.ts:396,402 の data-testid が保持されていること |
+| 品質 | generate 後の tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、app 200・/api/health 200、本番 JS で className "input w-full"・"qty-input"・"manual-record-datetime" 0 |
+
+幅375 は PO 決定によりスマホ版で扱うため判定対象外（撮影は記録として残してよい）。
+
+Architect 自己審査（AY-2e）: APPROVE（条件: 実画面の並び保持を実装後に確認）。根拠: 対象6件を file:line・置き場所つきで確定、CSS 規則0・試験の class 依存0、到達不可13件を事実で除外、並びを保つ配置指定は CSS キーワードのみ、配線・データ・トークン不変。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の踏襲のため不要。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2e のスクリーンショット・AST 照合（evidence）。守っていないもの: 残る生 text 系 84（保留22・到達不可13を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+#### AY-2e 実装結果
+
+実装: 画面に出る規則なし一行入力6件（DiscordAnnouncePage 1・ManualRecordSection 1・ChannelMastersPage 2・CommissionSettingsPage 1・OwnInventoryPage 1）を `<TextFieldControl`（standard・size 指定なし）へ置換。#3〜#6（ChannelMasters 2・Commission 1・OwnInventory 1）に `style={{ width: "auto" }}` を付与。className は `input w-full`・`manual-record-datetime`・`qty-input` を削除（frontend/src・tests-e2e の参照は各自の定義行のみ、試験・CSS 参照0を grep で確認: evidence-20260910/ay2e-class-refs.txt）。CSS・トークン・金型本体の変更なし。
+
+実画面（evidence-20260910/ay2e-after-check.md、ay2e-screens/）: 開発モード build（偽ログインは DEV のみ）→ vite preview、Chromium headless shell 1217、幅1280（判定）・375（記録のみ）、DPR2。API は page.route で ay2e-mocks.json を before/after 同一応答で返却。判定（幅1280）: #3/#4 入力2つの top が同じ（213.13）でボタンと中心差 0.69px の1行、#5 は td の幅・表の列幅の変化0（194.8/292.19/292.19/194.83）、#6 は「数量」文字と入力が1行（y 中心 469.98/470.79）、#1 は入力幅 1178＝親 1178、#2 は入力幅 361＝親 361 でラベルの下の行。全5画面で scrollWidth＝clientWidth（1280）、操作要素の重なり0、入力と文字の重なり0。computed style の差は padding・border・角・font-size・font-family・line-height・color・height・width の14項目のみ（前後表の範囲内）。
+
+AST 照合（ay2e-ast-check.md）: 6/6 PASS（タグ名・className 削除・style 追加・import 以外の差分0）。再計測（ay2e-inv-after.json）: ページ側の生 text 系 90 → 84。
+
+品質: tsc 0、lint 0、check:all 0、test:coverage --maxWorkers=1 0（74 files・963 tests 成功）、build 0、build-storybook 0。
+
+限界: 画面再現はモック応答での採取（受信箱の手動記録欄は channel-masters モックで manual チャネルとして表示）。dark テーマ未測定。幅375 は PO 決定により判定対象外（記録のみ）。1280 の全画面スクリーンショットのうち 500KB 超の6枚（discord-announce・channel-masters・commission の before/after）は repo に入れず /tmp のみ。到達不可13件（DexTab・TcgSeriesTab・LLMBudgetTab・MasterListEditor・ItemComparison）は対象外。切戻し: 本PRの merge commit を revert。
