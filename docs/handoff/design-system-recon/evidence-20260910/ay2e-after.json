@@ -1,0 +1,3283 @@
+{
+ "label": "after",
+ "screens": [
+  {
+   "screen": "discord-announce",
+   "w": 1280,
+   "url": "/admin/discord-announce",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-discord-announce-1280.png",
+   "scrollWidth": 1280,
+   "clientWidth": 1280,
+   "count": 1,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: 1288437029213835356",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "",
+     "rect": {
+      "x": 78,
+      "y": 121.19,
+      "w": 1178,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "1178px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "space-y-2",
+     "parentRect": {
+      "x": 78,
+      "y": 95.59,
+      "w": 1178,
+      "h": 90.8
+     },
+     "siblings": [
+      {
+       "tag": "label",
+       "cls": "block text-sm font-medium text-token-tex",
+       "text": "投稿先チャンネル ID",
+       "x": 78,
+       "y": 98.59,
+       "w": 137.67,
+       "h": 18
+      },
+      {
+       "tag": "p",
+       "cls": "text-xs text-token-text-secondary",
+       "text": "投稿したいDiscordチャンネルを右クリック ",
+       "x": 78,
+       "y": 160.8,
+       "w": 1178,
+       "h": 25.59
+      }
+     ],
+     "parentText": [
+      {
+       "t": "投稿先チャンネル ID",
+       "x": 78,
+       "y": 98.59,
+       "w": 137.67,
+       "h": 18
+      },
+      {
+       "t": "投稿したいDiscordチャンネルを右クリック ",
+       "x": 78,
+       "y": 163.8,
+       "w": 536.92,
+       "h": 18
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": null,
+   "tableRect": null,
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:閉じる",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:"
+   ]
+  },
+  {
+   "screen": "manual-record",
+   "w": 1280,
+   "url": "/lead-chat",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me",
+    "GET /api/v1/channel-masters",
+    "GET /leads/5001/messages",
+    "POST /leads/5001/messages/mark-read",
+    "GET /leads/5001",
+    "GET /leads/5001/recipient-language"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-manual-record-1280.png",
+   "scrollWidth": 1280,
+   "clientWidth": 1280,
+   "count": 7,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "検索",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--search inbox-search-input",
+     "style": "",
+     "rect": {
+      "x": 76,
+      "y": 140.03,
+      "w": 341.8,
+      "h": 37
+     },
+     "cs": {
+      "padding-top": "9.5px",
+      "padding-right": "12px",
+      "padding-bottom": "9.5px",
+      "padding-left": "36px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(203, 213, 224)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(247, 250, 252)",
+      "height": "37px",
+      "width": "341.797px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "inbox-search-wrap",
+     "parentRect": {
+      "x": 76,
+      "y": 140.03,
+      "w": 341.8,
+      "h": 37
+     },
+     "siblings": [
+      {
+       "tag": "svg",
+       "cls": "[object SVGAnimatedString]",
+       "text": "",
+       "x": 88,
+       "y": 151.53,
+       "w": 14,
+       "h": 14
+      }
+     ],
+     "parentText": [],
+     "row": null
+    },
+    {
+     "type": "file",
+     "id": ":r1:",
+     "ph": "",
+     "aria": "画像を添付",
+     "testid": null,
+     "cls": "sr-only",
+     "style": "",
+     "rect": {
+      "x": 589,
+      "y": 602.92,
+      "w": 1,
+      "h": 1
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "0px",
+      "border-top-style": "none",
+      "border-top-color": "rgb(26, 32, 44)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "height": "1px",
+      "width": "1px",
+      "margin-left": "-1px",
+      "margin-top": "-1px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "send-input-wrap",
+     "parentRect": {
+      "x": 576,
+      "y": 575.27,
+      "w": 227,
+      "h": 56.31
+     },
+     "siblings": [
+      {
+       "tag": "textarea",
+       "cls": "comp-field__textarea comp-textarea--embe",
+       "text": "",
+       "x": 590,
+       "y": 583.27,
+       "w": 167,
+       "h": 40.31
+      },
+      {
+       "tag": "button",
+       "cls": "send-attach-btn",
+       "text": "",
+       "x": 761,
+       "y": 589.42,
+       "w": 28,
+       "h": 28
+      }
+     ],
+     "parentText": [],
+     "row": null
+    },
+    {
+     "type": "datetime-local",
+     "id": "manual-occurred-at",
+     "ph": "",
+     "aria": "日時",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "",
+     "rect": {
+      "x": 509,
+      "y": 741.38,
+      "w": 361,
+      "h": 41.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "41.6094px",
+      "width": "361px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "manual-record-row",
+     "parentRect": {
+      "x": 509,
+      "y": 715.78,
+      "w": 361,
+      "h": 67.2
+     },
+     "siblings": [
+      {
+       "tag": "label",
+       "cls": "manual-record-label",
+       "text": "日時",
+       "x": 509,
+       "y": 718.78,
+       "w": 32,
+       "h": 18
+      }
+     ],
+     "parentText": [
+      {
+       "t": "日時",
+       "x": 509,
+       "y": 718.78,
+       "w": 32,
+       "h": 18
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "date",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte karte-field-empty",
+     "style": "",
+     "rect": {
+      "x": 897,
+      "y": 410.59,
+      "w": 371,
+      "h": 33.59
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "33.5938px",
+      "width": "371px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 897,
+      "y": 379.41,
+      "w": 371,
+      "h": 75.78
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "次回アクション日",
+       "x": 897,
+       "y": 389.41,
+       "w": 371,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "次回アクション日",
+       "x": 897,
+       "y": 391.41,
+       "w": 97.2,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 897,
+      "y": 955.09,
+      "w": 371,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "371px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 897,
+      "y": 923.91,
+      "w": 371,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "月間見込み金額（円）",
+       "x": 897,
+       "y": 933.91,
+       "w": 371,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "月間見込み金額（円）",
+       "x": 897,
+       "y": 935.91,
+       "w": 122.41,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 897,
+      "y": 1028.28,
+      "w": 371,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "371px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 897,
+      "y": 997.09,
+      "w": 371,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "1件単価",
+       "x": 897,
+       "y": 1007.09,
+       "w": 371,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "1件単価",
+       "x": 897,
+       "y": 1009.09,
+       "w": 43.64,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 897,
+      "y": 1101.47,
+      "w": 371,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "371px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 897,
+      "y": 1070.28,
+      "w": 371,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "月間頻度",
+       "x": 897,
+       "y": 1080.28,
+       "w": 371,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "月間頻度",
+       "x": 897,
+       "y": 1082.28,
+       "w": 48.97,
+       "h": 14
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": null,
+   "tableRect": null,
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:閉じる",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:"
+   ]
+  },
+  {
+   "screen": "channel-masters",
+   "w": 1280,
+   "url": "/admin/channel-masters",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /api/v1/channel-masters",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-channel-masters-1280.png",
+   "scrollWidth": 1280,
+   "clientWidth": 1280,
+   "count": 2,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: whatsapp_personal",
+     "aria": "プラットフォームID",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 78,
+      "y": 213.13,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "channel-masters-add-form",
+     "parentRect": {
+      "x": 78,
+      "y": 183.19,
+      "w": 1178,
+      "h": 69.55
+     },
+     "siblings": [
+      {
+       "tag": "h3",
+       "cls": "",
+       "text": "チャネルを追加",
+       "x": 78,
+       "y": 183.19,
+       "w": 1178,
+       "h": 29.94
+      },
+      {
+       "tag": "input",
+       "cls": "comp-field__input",
+       "text": "",
+       "x": 270,
+       "y": 213.13,
+       "w": 192,
+       "h": 39.61
+      },
+      {
+       "tag": "button",
+       "cls": "",
+       "text": "追加",
+       "x": 462,
+       "y": 221.13,
+       "w": 30.67,
+       "h": 25
+      }
+     ],
+     "parentText": [
+      {
+       "t": "チャネルを追加",
+       "x": 78,
+       "y": 186.19,
+       "w": 120.94,
+       "h": 22
+      },
+      {
+       "t": "追加",
+       "x": 464,
+       "y": 226.13,
+       "w": 26.67,
+       "h": 15
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: WhatsApp（個人）",
+     "aria": "表示名",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 270,
+      "y": 213.13,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "channel-masters-add-form",
+     "parentRect": {
+      "x": 78,
+      "y": 183.19,
+      "w": 1178,
+      "h": 69.55
+     },
+     "siblings": [
+      {
+       "tag": "h3",
+       "cls": "",
+       "text": "チャネルを追加",
+       "x": 78,
+       "y": 183.19,
+       "w": 1178,
+       "h": 29.94
+      },
+      {
+       "tag": "input",
+       "cls": "comp-field__input",
+       "text": "",
+       "x": 78,
+       "y": 213.13,
+       "w": 192,
+       "h": 39.61
+      },
+      {
+       "tag": "button",
+       "cls": "",
+       "text": "追加",
+       "x": 462,
+       "y": 221.13,
+       "w": 30.67,
+       "h": 25
+      }
+     ],
+     "parentText": [
+      {
+       "t": "チャネルを追加",
+       "x": 78,
+       "y": 186.19,
+       "w": 120.94,
+       "h": 22
+      },
+      {
+       "t": "追加",
+       "x": 464,
+       "y": 226.13,
+       "w": 26.67,
+       "h": 15
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "プラットフォームID",
+     "x": 80,
+     "y": 72,
+     "w": 141.63,
+     "h": 25.59
+    },
+    {
+     "t": "表示名",
+     "x": 223.63,
+     "y": 72,
+     "w": 134.52,
+     "h": 25.59
+    },
+    {
+     "t": "種別",
+     "x": 360.14,
+     "y": 72,
+     "w": 59.11,
+     "h": 25.59
+    },
+    {
+     "t": "操作",
+     "x": 421.25,
+     "y": 72,
+     "w": 30.67,
+     "h": 25.59
+    }
+   ],
+   "tableRect": {
+    "x": 78,
+    "y": 70,
+    "w": 375.92,
+    "h": 113.19
+   },
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:閉じる",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:"
+   ]
+  },
+  {
+   "screen": "commission",
+   "w": 1280,
+   "url": "/management-center/commission",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /tenant-commission-settings",
+    "GET /commissions/monthly",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-commission-1280.png",
+   "scrollWidth": 1280,
+   "clientWidth": 1280,
+   "count": 7,
+   "items": [
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "営業 値",
+     "testid": "settings-value-sales",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 782.98,
+      "y": 238.84,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 766.98,
+      "y": 225.84,
+      "w": 292.19,
+      "h": 65.11
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 280,
+       "y": 225.84,
+       "w": 194.8,
+       "h": 65.11
+      },
+      {
+       "tag": "td",
+       "x": 474.8,
+       "y": 225.84,
+       "w": 292.19,
+       "h": 65.11
+      },
+      {
+       "tag": "td",
+       "x": 766.98,
+       "y": 225.84,
+       "w": 292.19,
+       "h": 65.11
+      },
+      {
+       "tag": "td",
+       "x": 1059.17,
+       "y": 225.84,
+       "w": 194.83,
+       "h": 65.11
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "受注 値",
+     "testid": "settings-value-order",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 782.98,
+      "y": 303.45,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 766.98,
+      "y": 290.95,
+      "w": 292.19,
+      "h": 64.61
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 280,
+       "y": 290.95,
+       "w": 194.8,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 474.8,
+       "y": 290.95,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 766.98,
+       "y": 290.95,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 1059.17,
+       "y": 290.95,
+       "w": 194.83,
+       "h": 64.61
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "発送 値",
+     "testid": "settings-value-ship",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 782.98,
+      "y": 368.06,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 766.98,
+      "y": 355.56,
+      "w": 292.19,
+      "h": 64.61
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 280,
+       "y": 355.56,
+       "w": 194.8,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 474.8,
+       "y": 355.56,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 766.98,
+       "y": 355.56,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 1059.17,
+       "y": 355.56,
+       "w": 194.83,
+       "h": 64.61
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "仕入 値",
+     "testid": "settings-value-purchase",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 782.98,
+      "y": 432.67,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 766.98,
+      "y": 420.17,
+      "w": 292.19,
+      "h": 64.61
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 280,
+       "y": 420.17,
+       "w": 194.8,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 474.8,
+       "y": 420.17,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 766.98,
+       "y": 420.17,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 1059.17,
+       "y": 420.17,
+       "w": 194.83,
+       "h": 64.61
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "トラブル 値",
+     "testid": "settings-value-trouble",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 782.98,
+      "y": 497.28,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 766.98,
+      "y": 484.78,
+      "w": 292.19,
+      "h": 64.61
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 280,
+       "y": 484.78,
+       "w": 194.8,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 474.8,
+       "y": 484.78,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 766.98,
+       "y": 484.78,
+       "w": 292.19,
+       "h": 64.61
+      },
+      {
+       "tag": "td",
+       "x": 1059.17,
+       "y": 484.78,
+       "w": 194.83,
+       "h": 64.61
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": "monthly-year",
+     "cls": "",
+     "style": "width: var(--input-width-year); margin-left: var(--space-2);",
+     "rect": {
+      "x": 307.22,
+      "y": 687.23,
+      "w": 90,
+      "h": 19
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "2px",
+      "border-top-style": "inset",
+      "border-top-color": "rgb(118, 118, 118)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "19px",
+      "width": "90px",
+      "margin-left": "8px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 280,
+      "y": 683.23,
+      "w": 117.22,
+      "h": 25.59
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "年",
+       "x": 280,
+       "y": 686.23,
+       "w": 14.78,
+       "h": 18
+      },
+      {
+       "t": ":",
+       "x": 294.78,
+       "y": 686.23,
+       "w": 4.44,
+       "h": 18
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": "monthly-month",
+     "cls": "",
+     "style": "width: var(--input-width-month); margin-left: var(--space-2);",
+     "rect": {
+      "x": 432.44,
+      "y": 687.23,
+      "w": 60,
+      "h": 19
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "2px",
+      "border-top-style": "inset",
+      "border-top-color": "rgb(118, 118, 118)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "19px",
+      "width": "60px",
+      "margin-left": "8px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 405.22,
+      "y": 683.23,
+      "w": 87.22,
+      "h": 25.59
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "月",
+       "x": 405.22,
+       "y": 686.23,
+       "w": 14.78,
+       "h": 18
+      },
+      {
+       "t": ":",
+       "x": 420,
+       "y": 686.23,
+       "w": 4.44,
+       "h": 18
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "ロール",
+     "x": 280,
+     "y": 181.66,
+     "w": 194.8,
+     "h": 44.19
+    },
+    {
+     "t": "計算タイプ",
+     "x": 474.8,
+     "y": 181.66,
+     "w": 292.19,
+     "h": 44.19
+    },
+    {
+     "t": "値",
+     "x": 766.98,
+     "y": 181.66,
+     "w": 292.19,
+     "h": 44.19
+    },
+    {
+     "t": "",
+     "x": 1059.17,
+     "y": 181.66,
+     "w": 194.83,
+     "h": 44.19
+    }
+   ],
+   "tableRect": {
+    "x": 280,
+    "y": 181.66,
+    "w": 974,
+    "h": 368.23
+   },
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:閉じる",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:"
+   ]
+  },
+  {
+   "screen": "own-inventory",
+   "w": 1280,
+   "url": "/own-inventory",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /own-inventory",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-own-inventory-1280.png",
+   "scrollWidth": 1280,
+   "clientWidth": 1280,
+   "count": 1,
+   "items": [
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "数量",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 483.56,
+      "y": 450.98,
+      "w": 192,
+      "h": 39.61
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "39.6094px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 454,
+      "y": 460.98,
+      "w": 221.56,
+      "h": 18
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "数量",
+       "x": 454,
+       "y": 460.98,
+       "w": 29.56,
+       "h": 18
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "商品ID",
+     "x": 79,
+     "y": 79.03,
+     "w": 153.52,
+     "h": 44
+    },
+    {
+     "t": "状態",
+     "x": 232.52,
+     "y": 79.03,
+     "w": 82.78,
+     "h": 44
+    },
+    {
+     "t": "物理在庫",
+     "x": 315.3,
+     "y": 79.03,
+     "w": 116.63,
+     "h": 44
+    },
+    {
+     "t": "引当済み",
+     "x": 431.92,
+     "y": 79.03,
+     "w": 116.63,
+     "h": 44
+    },
+    {
+     "t": "利用可能",
+     "x": 548.55,
+     "y": 79.03,
+     "w": 116.63,
+     "h": 44
+    },
+    {
+     "t": "単価",
+     "x": 665.17,
+     "y": 79.03,
+     "w": 101.66,
+     "h": 44
+    },
+    {
+     "t": "ステータス",
+     "x": 766.83,
+     "y": 79.03,
+     "w": 150.64,
+     "h": 44
+    },
+    {
+     "t": "操作",
+     "x": 917.47,
+     "y": 79.03,
+     "w": 337.53,
+     "h": 44
+    }
+   ],
+   "tableRect": {
+    "x": 79,
+    "y": 79.03,
+    "w": 1176,
+    "h": 132
+   },
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:閉じる",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:"
+   ]
+  },
+  {
+   "screen": "discord-announce",
+   "w": 375,
+   "url": "/admin/discord-announce",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-discord-announce-375.png",
+   "scrollWidth": 375,
+   "clientWidth": 375,
+   "count": 1,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: 1288437029213835356",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "",
+     "rect": {
+      "x": 24,
+      "y": 228.38,
+      "w": 327,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "327px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "space-y-2",
+     "parentRect": {
+      "x": 24,
+      "y": 202.78,
+      "w": 327,
+      "h": 120.78
+     },
+     "siblings": [
+      {
+       "tag": "label",
+       "cls": "block text-sm font-medium text-token-tex",
+       "text": "投稿先チャンネル ID",
+       "x": 24,
+       "y": 205.78,
+       "w": 137.67,
+       "h": 18
+      },
+      {
+       "tag": "p",
+       "cls": "text-xs text-token-text-secondary",
+       "text": "投稿したいDiscordチャンネルを右クリック ",
+       "x": 24,
+       "y": 272.38,
+       "w": 327,
+       "h": 51.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "投稿先チャンネル ID",
+       "x": 24,
+       "y": 205.78,
+       "w": 137.67,
+       "h": 18
+      },
+      {
+       "t": "投稿したいDiscordチャンネルを右クリック ",
+       "x": 24,
+       "y": 275.38,
+       "w": 310.61,
+       "h": 43.59
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": null,
+   "tableRect": null,
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": []
+  },
+  {
+   "screen": "manual-record",
+   "w": 375,
+   "url": "/lead-chat",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me",
+    "GET /api/v1/channel-masters",
+    "GET /leads/5001/messages",
+    "POST /leads/5001/messages/mark-read",
+    "GET /leads/5001",
+    "GET /leads/5001/recipient-language"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-manual-record-375.png",
+   "scrollWidth": 375,
+   "clientWidth": 375,
+   "count": 7,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "検索",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--search inbox-search-input",
+     "style": "",
+     "rect": {
+      "x": 20,
+      "y": 242.03,
+      "w": 266.8,
+      "h": 37
+     },
+     "cs": {
+      "padding-top": "9.5px",
+      "padding-right": "12px",
+      "padding-bottom": "9.5px",
+      "padding-left": "36px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(203, 213, 224)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(247, 250, 252)",
+      "height": "37px",
+      "width": "266.797px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "inbox-search-wrap",
+     "parentRect": {
+      "x": 20,
+      "y": 242.03,
+      "w": 266.8,
+      "h": 37
+     },
+     "siblings": [
+      {
+       "tag": "svg",
+       "cls": "[object SVGAnimatedString]",
+       "text": "",
+       "x": 32,
+       "y": 253.53,
+       "w": 14,
+       "h": 14
+      }
+     ],
+     "parentText": [],
+     "row": null
+    },
+    {
+     "type": "file",
+     "id": ":r1:",
+     "ph": "",
+     "aria": "画像を添付",
+     "testid": null,
+     "cls": "sr-only",
+     "style": "",
+     "rect": {
+      "x": 92,
+      "y": 657.75,
+      "w": 1,
+      "h": 1
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "0px",
+      "border-top-style": "none",
+      "border-top-color": "rgb(26, 32, 44)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgba(0, 0, 0, 0)",
+      "height": "1px",
+      "width": "1px",
+      "margin-left": "-1px",
+      "margin-top": "-1px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "send-input-wrap",
+     "parentRect": {
+      "x": 79,
+      "y": 630.09,
+      "w": 233,
+      "h": 56.31
+     },
+     "siblings": [
+      {
+       "tag": "textarea",
+       "cls": "comp-field__textarea comp-textarea--embe",
+       "text": "",
+       "x": 93,
+       "y": 638.09,
+       "w": 173,
+       "h": 40.31
+      },
+      {
+       "tag": "button",
+       "cls": "send-attach-btn",
+       "text": "",
+       "x": 270,
+       "y": 644.25,
+       "w": 28,
+       "h": 28
+      }
+     ],
+     "parentText": [],
+     "row": null
+    },
+    {
+     "type": "datetime-local",
+     "id": "manual-occurred-at",
+     "ph": "",
+     "aria": "日時",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "",
+     "rect": {
+      "x": 12,
+      "y": 800.59,
+      "w": 363,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "363px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "manual-record-row",
+     "parentRect": {
+      "x": 12,
+      "y": 775,
+      "w": 363,
+      "h": 69.59
+     },
+     "siblings": [
+      {
+       "tag": "label",
+       "cls": "manual-record-label",
+       "text": "日時",
+       "x": 12,
+       "y": 778,
+       "w": 32,
+       "h": 18
+      }
+     ],
+     "parentText": [
+      {
+       "t": "日時",
+       "x": 12,
+       "y": 778,
+       "w": 32,
+       "h": 18
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "date",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte karte-field-empty",
+     "style": "",
+     "rect": {
+      "x": 12,
+      "y": 1278.56,
+      "w": 351,
+      "h": 33.59
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "33.5938px",
+      "width": "351px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 12,
+      "y": 1247.38,
+      "w": 351,
+      "h": 75.78
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "次回アクション日",
+       "x": 12,
+       "y": 1257.38,
+       "w": 351,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "次回アクション日",
+       "x": 12,
+       "y": 1259.38,
+       "w": 97.2,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 12,
+      "y": 1823.06,
+      "w": 351,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "351px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 12,
+      "y": 1791.88,
+      "w": 351,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "月間見込み金額（円）",
+       "x": 12,
+       "y": 1801.88,
+       "w": 351,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "月間見込み金額（円）",
+       "x": 12,
+       "y": 1803.88,
+       "w": 122.41,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 12,
+      "y": 1896.25,
+      "w": 351,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "351px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 12,
+      "y": 1865.06,
+      "w": 351,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "1件単価",
+       "x": 12,
+       "y": 1875.06,
+       "w": 351,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "1件単価",
+       "x": 12,
+       "y": 1877.06,
+       "w": 43.64,
+       "h": 14
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "未入力",
+     "aria": null,
+     "testid": null,
+     "cls": "comp-field__input comp-input--karte",
+     "style": "",
+     "rect": {
+      "x": 12,
+      "y": 1969.44,
+      "w": 351,
+      "h": 31
+     },
+     "cs": {
+      "padding-top": "7px",
+      "padding-right": "9px",
+      "padding-bottom": "7px",
+      "padding-left": "9px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(221, 224, 228)",
+      "border-top-left-radius": "6px",
+      "font-size": "13.6px",
+      "font-family": "\"SF Pro Text\", \"Segoe UI\", Roboto, Helvetica, Arial, sans-serif",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(250, 251, 252)",
+      "height": "31px",
+      "width": "351px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "right-panel-row",
+     "parentRect": {
+      "x": 12,
+      "y": 1938.25,
+      "w": 351,
+      "h": 73.19
+     },
+     "siblings": [
+      {
+       "tag": "span",
+       "cls": "right-panel-label",
+       "text": "月間頻度",
+       "x": 12,
+       "y": 1948.25,
+       "w": 351,
+       "h": 19.19
+      }
+     ],
+     "parentText": [
+      {
+       "t": "月間頻度",
+       "x": 12,
+       "y": 1950.25,
+       "w": 48.97,
+       "h": 14
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": null,
+   "tableRect": null,
+   "overlaps": [
+    [
+     "TEXTAREA:会話内容を入力...",
+     "BUTTON:閉じる"
+    ],
+    [
+     "TEXTAREA:会話内容を入力...",
+     "BUTTON:メニュー"
+    ],
+    [
+     "TEXTAREA:未入力",
+     "BUTTON:ダークモード"
+    ],
+    [
+     "INPUT:",
+     "BUTTON:英語"
+    ],
+    [
+     "INPUT:",
+     "BUTTON:サインアウト"
+    ]
+   ],
+   "textOverlaps": [],
+   "outRight": [
+    "BUTTON:",
+    "BUTTON:",
+    "BUTTON:",
+    "SELECT:プラットフォーム"
+   ]
+  },
+  {
+   "screen": "channel-masters",
+   "w": 375,
+   "url": "/admin/channel-masters",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /api/v1/channel-masters",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-channel-masters-375.png",
+   "scrollWidth": 375,
+   "clientWidth": 375,
+   "count": 2,
+   "items": [
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: whatsapp_personal",
+     "aria": "プラットフォームID",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 24,
+      "y": 365.5,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "channel-masters-add-form",
+     "parentRect": {
+      "x": 24,
+      "y": 335.56,
+      "w": 327,
+      "h": 117.94
+     },
+     "siblings": [
+      {
+       "tag": "h3",
+       "cls": "",
+       "text": "チャネルを追加",
+       "x": 24,
+       "y": 335.56,
+       "w": 327,
+       "h": 29.94
+      },
+      {
+       "tag": "input",
+       "cls": "comp-field__input",
+       "text": "",
+       "x": 24,
+       "y": 409.5,
+       "w": 192,
+       "h": 44
+      },
+      {
+       "tag": "button",
+       "cls": "",
+       "text": "追加",
+       "x": 216,
+       "y": 419.69,
+       "w": 30.67,
+       "h": 25
+      }
+     ],
+     "parentText": [
+      {
+       "t": "チャネルを追加",
+       "x": 24,
+       "y": 338.56,
+       "w": 120.94,
+       "h": 22
+      },
+      {
+       "t": "追加",
+       "x": 218,
+       "y": 424.69,
+       "w": 26.67,
+       "h": 15
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "text",
+     "id": "",
+     "ph": "例: WhatsApp（個人）",
+     "aria": "表示名",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 24,
+      "y": 409.5,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "div",
+     "parentCls": "channel-masters-add-form",
+     "parentRect": {
+      "x": 24,
+      "y": 335.56,
+      "w": 327,
+      "h": 117.94
+     },
+     "siblings": [
+      {
+       "tag": "h3",
+       "cls": "",
+       "text": "チャネルを追加",
+       "x": 24,
+       "y": 335.56,
+       "w": 327,
+       "h": 29.94
+      },
+      {
+       "tag": "input",
+       "cls": "comp-field__input",
+       "text": "",
+       "x": 24,
+       "y": 365.5,
+       "w": 192,
+       "h": 44
+      },
+      {
+       "tag": "button",
+       "cls": "",
+       "text": "追加",
+       "x": 216,
+       "y": 419.69,
+       "w": 30.67,
+       "h": 25
+      }
+     ],
+     "parentText": [
+      {
+       "t": "チャネルを追加",
+       "x": 24,
+       "y": 338.56,
+       "w": 120.94,
+       "h": 22
+      },
+      {
+       "t": "追加",
+       "x": 218,
+       "y": 424.69,
+       "w": 26.67,
+       "h": 15
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "プラットフォームID",
+     "x": 26,
+     "y": 128,
+     "w": 141.63,
+     "h": 51.19
+    },
+    {
+     "t": "表示名",
+     "x": 169.63,
+     "y": 128,
+     "w": 110.81,
+     "h": 51.19
+    },
+    {
+     "t": "種別",
+     "x": 282.44,
+     "y": 128,
+     "w": 39.7,
+     "h": 51.19
+    },
+    {
+     "t": "操作",
+     "x": 324.14,
+     "y": 128,
+     "w": 24.86,
+     "h": 51.19
+    }
+   ],
+   "tableRect": {
+    "x": 24,
+    "y": 126,
+    "w": 327,
+    "h": 209.56
+   },
+   "overlaps": [],
+   "textOverlaps": [],
+   "outRight": []
+  },
+  {
+   "screen": "commission",
+   "w": 375,
+   "url": "/management-center/commission",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /tenant-commission-settings",
+    "GET /commissions/monthly",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-commission-375.png",
+   "scrollWidth": 375,
+   "clientWidth": 375,
+   "count": 7,
+   "items": [
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "営業 値",
+     "testid": "settings-value-sales",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 223.3,
+      "y": 534.27,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 207.3,
+      "y": 520.22,
+      "w": 224,
+      "h": 71.59
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 26,
+       "y": 520.22,
+       "w": 45.3,
+       "h": 71.59
+      },
+      {
+       "tag": "td",
+       "x": 71.3,
+       "y": 520.22,
+       "w": 136,
+       "h": 71.59
+      },
+      {
+       "tag": "td",
+       "x": 207.3,
+       "y": 520.22,
+       "w": 224,
+       "h": 71.59
+      },
+      {
+       "tag": "td",
+       "x": 431.3,
+       "y": 520.22,
+       "w": 72.39,
+       "h": 71.59
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "受注 値",
+     "testid": "settings-value-order",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 223.3,
+      "y": 605.36,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 207.3,
+      "y": 591.81,
+      "w": 224,
+      "h": 71.09
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 26,
+       "y": 591.81,
+       "w": 45.3,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 71.3,
+       "y": 591.81,
+       "w": 136,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 207.3,
+       "y": 591.81,
+       "w": 224,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 431.3,
+       "y": 591.81,
+       "w": 72.39,
+       "h": 71.09
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "発送 値",
+     "testid": "settings-value-ship",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 223.3,
+      "y": 676.45,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 207.3,
+      "y": 662.91,
+      "w": 224,
+      "h": 71.09
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 26,
+       "y": 662.91,
+       "w": 45.3,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 71.3,
+       "y": 662.91,
+       "w": 136,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 207.3,
+       "y": 662.91,
+       "w": 224,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 431.3,
+       "y": 662.91,
+       "w": 72.39,
+       "h": 71.09
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "仕入 値",
+     "testid": "settings-value-purchase",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 223.3,
+      "y": 747.55,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 207.3,
+      "y": 734,
+      "w": 224,
+      "h": 71.09
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 26,
+       "y": 734,
+       "w": 45.3,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 71.3,
+       "y": 734,
+       "w": 136,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 207.3,
+       "y": 734,
+       "w": 224,
+       "h": 71.09
+      },
+      {
+       "tag": "td",
+       "x": 431.3,
+       "y": 734,
+       "w": 72.39,
+       "h": 71.09
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "トラブル 値",
+     "testid": "settings-value-trouble",
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 223.3,
+      "y": 841.69,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "td",
+     "parentCls": "",
+     "parentRect": {
+      "x": 207.3,
+      "y": 805.09,
+      "w": 224,
+      "h": 117.19
+     },
+     "siblings": [],
+     "parentText": [],
+     "row": [
+      {
+       "tag": "td",
+       "x": 26,
+       "y": 805.09,
+       "w": 45.3,
+       "h": 117.19
+      },
+      {
+       "tag": "td",
+       "x": 71.3,
+       "y": 805.09,
+       "w": 136,
+       "h": 117.19
+      },
+      {
+       "tag": "td",
+       "x": 207.3,
+       "y": 805.09,
+       "w": 224,
+       "h": 117.19
+      },
+      {
+       "tag": "td",
+       "x": 431.3,
+       "y": 805.09,
+       "w": 72.39,
+       "h": 117.19
+      }
+     ]
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": "monthly-year",
+     "cls": "",
+     "style": "width: var(--input-width-year); margin-left: var(--space-2);",
+     "rect": {
+      "x": 53.22,
+      "y": 1068.13,
+      "w": 90,
+      "h": 19
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "2px",
+      "border-top-style": "inset",
+      "border-top-color": "rgb(118, 118, 118)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "19px",
+      "width": "90px",
+      "margin-left": "8px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 26,
+      "y": 1064.13,
+      "w": 117.22,
+      "h": 25.59
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "年",
+       "x": 26,
+       "y": 1067.13,
+       "w": 14.78,
+       "h": 18
+      },
+      {
+       "t": ":",
+       "x": 40.78,
+       "y": 1067.13,
+       "w": 4.44,
+       "h": 18
+      }
+     ],
+     "row": null
+    },
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": null,
+     "testid": "monthly-month",
+     "cls": "",
+     "style": "width: var(--input-width-month); margin-left: var(--space-2);",
+     "rect": {
+      "x": 178.44,
+      "y": 1068.13,
+      "w": 60,
+      "h": 19
+     },
+     "cs": {
+      "padding-top": "0px",
+      "padding-right": "0px",
+      "padding-bottom": "0px",
+      "padding-left": "0px",
+      "border-top-width": "2px",
+      "border-top-style": "inset",
+      "border-top-color": "rgb(118, 118, 118)",
+      "border-top-left-radius": "0px",
+      "font-size": "13.3333px",
+      "font-family": "Arial",
+      "font-weight": "400",
+      "line-height": "normal",
+      "color": "rgb(0, 0, 0)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "19px",
+      "width": "60px",
+      "margin-left": "8px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 151.22,
+      "y": 1064.13,
+      "w": 87.22,
+      "h": 25.59
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "月",
+       "x": 151.22,
+       "y": 1067.13,
+       "w": 14.78,
+       "h": 18
+      },
+      {
+       "t": ":",
+       "x": 166,
+       "y": 1067.13,
+       "w": 4.44,
+       "h": 18
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "ロール",
+     "x": 26,
+     "y": 437.66,
+     "w": 45.3,
+     "h": 82.56
+    },
+    {
+     "t": "計算タイプ",
+     "x": 71.3,
+     "y": 437.66,
+     "w": 136,
+     "h": 82.56
+    },
+    {
+     "t": "値",
+     "x": 207.3,
+     "y": 437.66,
+     "w": 224,
+     "h": 82.56
+    },
+    {
+     "t": "",
+     "x": 431.3,
+     "y": 437.66,
+     "w": 72.39,
+     "h": 82.56
+    }
+   ],
+   "tableRect": {
+    "x": 26,
+    "y": 437.66,
+    "w": 477.69,
+    "h": 485.13
+   },
+   "overlaps": [
+    [
+     "SELECT:トラブル 計算タイプ",
+     "BUTTON:メニュー"
+    ],
+    [
+     "INPUT:トラブル 値",
+     "BUTTON:メニュー"
+    ]
+   ],
+   "textOverlaps": [],
+   "outRight": [
+    "INPUT:営業 値",
+    "INPUT:受注 値",
+    "INPUT:発送 値",
+    "INPUT:仕入 値",
+    "INPUT:トラブル 値"
+   ]
+  },
+  {
+   "screen": "own-inventory",
+   "w": 375,
+   "url": "/own-inventory",
+   "ok": true,
+   "logs": [],
+   "requests": [
+    "GET /conversations/stream",
+    "GET /own-inventory",
+    "GET /me/permissions",
+    "GET /conversations",
+    "GET /staff/me"
+   ],
+   "shot": "/tmp/CC報告ファイル/ssot-ay2e/impl/shots/after-own-inventory-375.png",
+   "scrollWidth": 375,
+   "clientWidth": 375,
+   "count": 1,
+   "items": [
+    {
+     "type": "number",
+     "id": "",
+     "ph": "",
+     "aria": "数量",
+     "testid": null,
+     "cls": "comp-field__input",
+     "style": "width: auto;",
+     "rect": {
+      "x": 53.56,
+      "y": 772,
+      "w": 192,
+      "h": 44
+     },
+     "cs": {
+      "padding-top": "8px",
+      "padding-right": "12px",
+      "padding-bottom": "8px",
+      "padding-left": "12px",
+      "border-top-width": "1px",
+      "border-top-style": "solid",
+      "border-top-color": "rgb(226, 232, 240)",
+      "border-top-left-radius": "6px",
+      "font-size": "14.4px",
+      "font-family": "-apple-system, \"system-ui\", \"Segoe UI\", Roboto, Oxygen, Ubuntu, Cantarell, \"Fira Sans\", \"Droid Sans\", \"Helvetica Neue\", sans-serif",
+      "font-weight": "400",
+      "line-height": "21.6px",
+      "color": "rgb(26, 32, 44)",
+      "background-color": "rgb(255, 255, 255)",
+      "height": "44px",
+      "width": "192px",
+      "margin-left": "0px",
+      "margin-top": "0px",
+      "flex-grow": "0",
+      "outline-style": "none",
+      "box-sizing": "border-box",
+      "display": "inline-block",
+      "vertical-align": "baseline"
+     },
+     "parentTag": "label",
+     "parentCls": "",
+     "parentRect": {
+      "x": 24,
+      "y": 784.19,
+      "w": 221.56,
+      "h": 18
+     },
+     "siblings": [],
+     "parentText": [
+      {
+       "t": "数量",
+       "x": 24,
+       "y": 784.19,
+       "w": 29.56,
+       "h": 18
+      }
+     ],
+     "row": null
+    }
+   ],
+   "ths": [
+    {
+     "t": "商品ID",
+     "x": -274,
+     "y": 154.06,
+     "w": 73.88,
+     "h": 44
+    },
+    {
+     "t": "状態",
+     "x": -200.13,
+     "y": 154.06,
+     "w": 54.17,
+     "h": 44
+    },
+    {
+     "t": "物理在庫",
+     "x": -145.95,
+     "y": 154.06,
+     "w": 76.33,
+     "h": 44
+    },
+    {
+     "t": "引当済み",
+     "x": -69.63,
+     "y": 154.06,
+     "w": 76.33,
+     "h": 44
+    },
+    {
+     "t": "利用可能",
+     "x": 6.7,
+     "y": 154.06,
+     "w": 76.33,
+     "h": 44
+    },
+    {
+     "t": "単価",
+     "x": 83.03,
+     "y": 154.06,
+     "w": 66.53,
+     "h": 44
+    },
+    {
+     "t": "ステータス",
+     "x": 149.56,
+     "y": 154.06,
+     "w": 98.58,
+     "h": 44
+    },
+    {
+     "t": "操作",
+     "x": 248.14,
+     "y": 154.06,
+     "w": 102.33,
+     "h": 44
+    }
+   ],
+   "tableRect": {
+    "x": -274,
+    "y": 154.06,
+    "w": 624.47,
+    "h": 309.5
+   },
+   "overlaps": [
+    [
+     "BUTTON:メニュー",
+     "BUTTON:キャンセル"
+    ],
+    [
+     "BUTTON:メニュー",
+     "BUTTON:引当"
+    ]
+   ],
+   "textOverlaps": [],
+   "outRight": []
+  }
+ ]
+}

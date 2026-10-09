@@ -13,6 +13,7 @@ import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 export default function DiscordAnnouncePage() {
   const { t } = useTranslation();
@@ -78,13 +79,12 @@ export default function DiscordAnnouncePage() {
           <label className="block text-sm font-medium text-token-text-primary">
             {t("discordAnnounce.channelIdLabel")}
           </label>
-          <input
+          <TextFieldControl
             type="text"
             value={channelId}
             onChange={(e) => setChannelId(e.target.value)}
             disabled={!canEdit}
             placeholder={t("discordAnnounce.channelIdPlaceholder")}
-            className="input w-full"
           />
           <p className="text-xs text-token-text-secondary">
             {t("discordAnnounce.channelIdHint")}
