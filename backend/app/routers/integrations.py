@@ -45,6 +45,7 @@ from app.services import carrier_credentials as carriers
 from app.services import google_drive_oauth as drive_svc
 from app.services import paypal_payments
 from app.services.audit import record_audit_log
+from app.services.payment_dates import PAID_AT_SQL, paid_at_from_date
 from app.services.test_pdf import render_test_pdf
 
 logger = logging.getLogger(__name__)
@@ -806,16 +807,16 @@ async def paypal_return(
         if not result.get("captured"):
             return _paypal_html("お支払いを確認できませんでした", "Payment could not be confirmed", status_code=409)
 
-        paid_at_value = result.get("payment_date") if result.get("payment_date") else None
+        paid_at_value = paid_at_from_date(result.get("payment_date"))
         await db.execute(
-            text("UPDATE invoices SET status='paid', paid_at=COALESCE(:paid_at, NOW()), payment_fee=:fee, "
+            text(f"UPDATE invoices SET status='paid', paid_at={PAID_AT_SQL}, payment_fee=:fee, "
                  "payment_method='paypal', updated_at=NOW() "
                  "WHERE id=:id AND status IN ('issued','overdue')"),
             {"id": invoice_id, "fee": result.get("fee"), "paid_at": paid_at_value},
         )
         # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移（awaiting_payment のみ）
         await db.execute(
-            text("UPDATE orders SET status='sourcing', paid_at=COALESCE(:paid_at, NOW()), updated_at=NOW() "
+            text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
                  "WHERE invoice_id=:iid AND status='awaiting_payment'"),
             {"iid": invoice_id, "paid_at": paid_at_value},
         )
@@ -955,16 +956,16 @@ async def _handle_invoice_paid(request: Request, db: AsyncSession, event: dict) 
             creds["environment"], creds["client_id"], creds["client_secret"], pp_invoice_id,
         )
         if result.get("paid"):
-            paid_at_value = result.get("payment_date") if result.get("payment_date") else None
+            paid_at_value = paid_at_from_date(result.get("payment_date"))
             await db.execute(
-                text("UPDATE invoices SET status='paid', paid_at=COALESCE(:paid_at, NOW()), payment_fee=:fee, "
+                text(f"UPDATE invoices SET status='paid', paid_at={PAID_AT_SQL}, payment_fee=:fee, "
                      "payment_method='paypal', updated_at=NOW() "
                      "WHERE id=:id AND status IN ('issued','overdue')"),
                 {"id": invoice_id, "fee": result.get("fee"), "paid_at": paid_at_value},
             )
             # ADR-104: 紐づく受注を 支払い待ち→仕入れ中 へ自動遷移
             await db.execute(
-                text("UPDATE orders SET status='sourcing', paid_at=COALESCE(:paid_at, NOW()), updated_at=NOW() "
+                text(f"UPDATE orders SET status='sourcing', paid_at={PAID_AT_SQL}, updated_at=NOW() "
                      "WHERE invoice_id=:iid AND status='awaiting_payment'"),
                 {"iid": invoice_id, "paid_at": paid_at_value},
             )

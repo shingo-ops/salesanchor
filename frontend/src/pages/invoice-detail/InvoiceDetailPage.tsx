@@ -16,7 +16,7 @@ import { PageLayout } from "../../components/PageLayout";
 import { ContentToolbar } from "../../components/ContentToolbar";
 import { Button } from "../../components/Button";
 import { ButtonLink } from "../../components/ButtonLink";
-import { TextField } from "../../components/TextField";
+import { TextFieldControl } from "../../components/TextField";
 
 interface InvoiceItem {
   id: number;
@@ -100,6 +100,14 @@ interface PaypalDispute {
   currency: string | null;
   created_at: string | null;
   updated_at: string | null;
+}
+
+/** ブラウザのローカル今日を "YYYY-MM-DD" で返す（入金日 input の max 用）。 */
+function localTodayString(): string {
+  const d = new Date();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${mm}-${dd}`;
 }
 
 export default function InvoiceDetailPage() {
@@ -198,15 +206,16 @@ export default function InvoiceDetailPage() {
                 <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("issue")}>{t("invoices.issueAction")}</Button>
               )}
               {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && (
-                <div className="flex items-center gap-sm">
-                  <TextField
+                <>
+                  <TextFieldControl
                     type="date"
-                    label={t("invoices.paidAt")}
+                    aria-label={t("invoices.paidAt")}
                     value={paymentDate}
+                    max={localTodayString()}
                     onChange={(e) => setPaymentDate(e.target.value)}
                   />
-                  <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("pay", paymentDate ? { paid_at: new Date(paymentDate).toISOString() } : {})}>{t("invoices.payAction")}</Button>
-                </div>
+                  <Button variant="primary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("pay", paymentDate ? { paid_date: paymentDate } : {})}>{t("invoices.payAction")}</Button>
+                </>
               )}
               {(invoice.status === "issued" || invoice.status === "overdue") && hasPermission("invoices.update") && !invoice.paypal_approval_url && (
                 <Button variant="secondary" size="sm" layoutClassName="field-h-md" onClick={() => doAction("paypal-link")}>{t("invoices.paypal.issueLink")}</Button>

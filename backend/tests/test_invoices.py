@@ -363,6 +363,97 @@ class TestInvoicesStatusTransitions:
         assert data["status"] == "paid"
         assert data["paid_at"] is not None
 
+    async def test_pay_with_paid_date_sets_that_date(self, client):
+        """paid_date を渡すと paid_at の UTC 日付がその日になる（SQLite の NOW() は 2026-04-07 固定のためそれ以前の日付を使う）"""
+        company_id, contact_id = await _create_company_contact(client, "入金日指定会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/pay", json={"paid_date": "2026-03-15"})
+        assert res.status_code == 200, res.text
+        assert res.json()["paid_at"].startswith("2026-03-15")
+
+    async def test_pay_without_body_uses_now(self, client):
+        """body なしでも paid_at が入る"""
+        company_id, contact_id = await _create_company_contact(client, "入金日なし会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/pay")
+        assert res.status_code == 200
+        assert res.json()["paid_at"] is not None
+
+    async def test_pay_future_date_returns_422(self, client):
+        """今日+3日は 422"""
+        from datetime import datetime, timedelta, timezone
+        company_id, contact_id = await _create_company_contact(client, "未来入金会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        future = (datetime.now(timezone.utc) + timedelta(days=3)).date().isoformat()
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/pay", json={"paid_date": future})
+        assert res.status_code == 422
+
+    async def test_pay_moves_linked_order_to_sourcing_with_same_paid_at(self, client, db_session):
+        """紐づく awaiting_payment の受注が sourcing になり、paid_at が請求書と同じ（ADR-104）"""
+        from sqlalchemy import text
+        company_id, contact_id = await _create_company_contact(client, "受注連動会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        await db_session.execute(text(
+            "INSERT INTO orders (tenant_id, company_id, contact_id, invoice_id, order_number, status) "
+            "VALUES (999, :c, :ct, :i, 'ORD-PAID-1', 'awaiting_payment')"
+        ), {"c": company_id, "ct": contact_id, "i": invoice_id})
+        await db_session.commit()
+
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/pay", json={"paid_date": "2026-03-15"})
+        assert res.status_code == 200, res.text
+
+        row = (await db_session.execute(text(
+            "SELECT status, paid_at FROM orders WHERE invoice_id = :i"), {"i": invoice_id})).mappings().first()
+        assert row["status"] == "sourcing"
+        assert str(row["paid_at"]).startswith("2026-03-15")
+        assert str(res.json()["paid_at"]).startswith("2026-03-15")
+
+    async def test_confirm_paypal_uses_payment_date_for_invoice_and_order(self, client, db_session, monkeypatch):
+        """paypal-confirm: get_invoice_status の payment_date が invoices/orders 両方の paid_at になる"""
+        from datetime import date
+
+        from sqlalchemy import text
+
+        from app.routers import invoices as inv_router
+        company_id, contact_id = await _create_company_contact(client, "PayPal確認会社")
+        created = await _create_invoice(client, company_id, contact_id)
+        invoice_id = created["id"]
+        await client.post(f"/api/v1/invoices/{invoice_id}/issue")
+        await db_session.execute(text("UPDATE invoices SET paypal_order_id='INV2-X' WHERE id=:i"), {"i": invoice_id})
+        await db_session.execute(text(
+            "INSERT INTO orders (tenant_id, company_id, contact_id, invoice_id, order_number, status) "
+            "VALUES (999, :c, :ct, :i, 'ORD-PP-1', 'awaiting_payment')"
+        ), {"c": company_id, "ct": contact_id, "i": invoice_id})
+        await db_session.commit()
+
+        async def _creds(db, tid):
+            return {"client_id": "x", "client_secret": "y", "environment": "sandbox"}
+
+        monkeypatch.setattr(inv_router, "_require_paypal_creds", _creds)
+        monkeypatch.setattr(
+            inv_router.paypal_payments, "get_invoice_status",
+            lambda *a, **k: {"ok": True, "paid": True, "fee": "1.00",
+                             "payment_date": date(2026, 3, 15), "status_code": 200, "message": "OK"},
+        )
+        res = await client.post(f"/api/v1/invoices/{invoice_id}/paypal-confirm")
+        assert res.status_code == 200, res.text
+        assert res.json()["paid_at"].startswith("2026-03-15")
+        row = (await db_session.execute(text(
+            "SELECT status, paid_at FROM orders WHERE invoice_id = :i"), {"i": invoice_id})).mappings().first()
+        assert row["status"] == "sourcing"
+        assert str(row["paid_at"]).startswith("2026-03-15")
+
     async def test_pay_draft_returns_400(self, client):
         """draft 状態からの入金登録は 400"""
         company_id, contact_id = await _create_company_contact(client, "入金失敗会社")

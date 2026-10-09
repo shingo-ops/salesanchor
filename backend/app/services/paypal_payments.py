@@ -26,6 +26,7 @@ import httpx
 from sqlalchemy import text
 
 from app.services import encryption
+from app.services.payment_dates import parse_paypal_payment_date
 
 logger = logging.getLogger(__name__)
 
@@ -726,7 +727,7 @@ def get_invoice_status(env: str, client_id: str, client_secret: str, paypal_invo
     try:
         txn = data.get("payments", {}).get("transactions", [{}])[0]
         fee = txn.get("paypal_fee", {}).get("value")
-        payment_date = txn.get("payment_date")
+        payment_date = parse_paypal_payment_date(txn.get("payment_date"))
     except (KeyError, IndexError, TypeError):
         fee = None
         payment_date = None

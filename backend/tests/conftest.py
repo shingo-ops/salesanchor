@@ -136,6 +136,11 @@ async def test_engine():
         import sqlite3
         from decimal import Decimal
         dbapi_conn.create_function("NOW", 0, lambda: "2026-04-07 00:00:00+00:00")
+        # PostgreSQL の LEAST（NULL 以外の最小値）。paid_at の未来日クランプ用
+        dbapi_conn.create_function(
+            "LEAST", -1,
+            lambda *a: min((x for x in a if x is not None), default=None),
+        )
         dbapi_conn.create_function("LPAD", 3, lambda s, n, pad: str(s).rjust(int(n), pad))
         sqlite3.register_adapter(Decimal, lambda d: float(d))
         # SQLite は FK 制約がデフォルト OFF。ON DELETE CASCADE と 409 テストのために ON にする

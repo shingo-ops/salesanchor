@@ -168,11 +168,9 @@ class OrderPaidStatusUpdate(BaseModel):
     """`PATCH /orders/{id}/paid` 用の最小ボディ。
 
     paid（true=支払済 / false=未払いに戻す）を受け取り、orders.paid_at を
-    NOW() / NULL に切り替える。paid_at を指定すると任意の日時で登録できる。
-    将来は発注書送付フローと連動予定（現状は手動フラグ）。
+    NOW() / NULL に切り替える。将来は発注書送付フローと連動予定（現状は手動フラグ）。
     """
     paid: bool = Field(default=True, description="true=支払済にする / false=未払いに戻す")
-    paid_at: datetime | None = Field(default=None, description="入金日時（省略時は現在時刻）")
 
 
 class OrderGroupCountsResponse(BaseModel):

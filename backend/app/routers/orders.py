@@ -30,6 +30,7 @@ from app.auth.dependencies import (
     get_current_tenant,
     get_current_user,
     require_permission,
+    reset_tenant_context,
     tenant_table_ref,
 )
 from app.cache import invalidate_dashboard_cache
@@ -591,11 +592,9 @@ async def set_order_paid(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="注文が見つかりません")
 
     if data.paid:
-        set_clause = "paid_at = COALESCE(:paid_at, NOW())"
-        params: dict = {"id": order_id, "paid_at": data.paid_at}
+        set_clause = "paid_at = NOW()"
     else:
         set_clause = "paid_at = NULL"
-        params = {"id": order_id, "paid_at": None}
 
     result = await db.execute(
         text(f"""
@@ -603,7 +602,7 @@ async def set_order_paid(
             WHERE id = :id
             RETURNING {_SELECT_COLS}
         """),
-        params,
+        {"id": order_id},
     )
     row = result.mappings().first()
 
@@ -613,6 +612,7 @@ async def set_order_paid(
         old_data=dict(old_row), new_data={"paid": data.paid},
     )
     await db.commit()
+    await reset_tenant_context(db, tenant_id)  # ADR-072
     await invalidate_dashboard_cache(tenant_id)
 
     return OrderResponse(**row)
