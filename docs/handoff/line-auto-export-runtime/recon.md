@@ -53,3 +53,10 @@ CIから検証できない）。取り込み側の回帰は既存の `tools/term
 - `tools/line-auto-export/README.md:50` — 切替と切り戻しの手順（ADBへ戻す場合は再ペアリングが必要なことを含む）。
 
 設計は [design-app-trigger.md](design-app-trigger.md)（このrecon.mdを参照している）。
+
+### 受信後の既存処理（この設計が前提にしている実装）
+
+- `tools/termux-line-import/client.py:196` — 同じ内容を再共有したときに `stage='send' result='duplicate'` を記録する。書き出しが同じ内容を繰り返しても二重取り込みにならない根拠。
+- `tools/termux-line-import/client.py:23` — 1回に送るファイルの上限（`MAX_BYTES`）。
+- `tools/termux-line-import/android_parser.py:3-4` — 「本文のバイト完全復元は保証しない」旨の明記。書き出した原本をそのまま渡す根拠。
+- `docs/handoff/line-android-import/design.md:1` — 受信後の送信・通知・履歴の設計。本件はその手前の「書き出しの起動方法」だけを変える。

@@ -127,3 +127,22 @@ app モードではスクリプトが失敗を判定できない（結果が来�
 ## recon
 
 調査の記録は `docs/handoff/line-auto-export-runtime/recon.md`（実測値と file:line 引用）。本設計はそこで確認した制約（`termux-job-scheduler --period-ms` の下限は900000ms＝15分／時刻指定はできない／登録した瞬間が周期の起点）を前提にしている。
+
+## 対象ADR
+
+本件は端末側の運用スクリプトだけを変更し、backend・DB・API・解析ロジックは変更しない。取り込みパイプライン全体の対象ADRは、同じパイプラインの他ブランチ（`release/line-auto-export-app`・`release/line-import-incremental-send`）と同じ **ADR-072**（テナントスキーマ接頭辞の強制）と **ADR-154**（TCG parity: GAS→Python移行）を引き継ぐ。本変更がこの2つのADRの内容を変えることはない。
+
+## 外部・過去事例の参照と我々への応用
+
+- **Androidの定期ジョブの下限は15分**（`termux-job-scheduler --period-ms` のヘルプに「since Android N, the minimum period is 900,000ms」と明記。実測でも10分指定は `interval=+15m0s0ms` に切り上げられた。`docs/handoff/line-auto-export-runtime/recon.md` 「ジョブスケジューラの制約（実測）」）。
+  → 周期ジョブを短くして鮮度を上げる手は使えない。鮮度はアプリ側の自律実行（投稿の通知で起動＋タイマー補完）で取るしかない、という本設計の前提になっている。
+- **過去事例（自分たちの実測）2026-09-18**: 1時間周期の運用で深夜にワイヤレスデバッグの接続が切れ、01:33〜07:33 の7回が `ADBに接続できない` で連続失敗した。
+  → 単一経路（ADB）に依存すると長時間の空白が出る。アプリ経路を主、ADB経路を緊急手段として残す構成にした。
+- **過去事例 2026-10-07 17:36**: ADBのペア設定が失効して本番が停止した（復旧には利用者がペア設定コードを読み上げる作業が必要で、実測1〜2分）。
+  → 平常時はADBを使わない構成へ切り替える判断の直接の根拠。
+
+## 維持の仕組み
+
+- **途切れの検知**: `tools/termux-line-import/client.py` の定期点検（job 4201・常時登録）が「最後の取り込みから3時間」で通知する（通知id 4205、PR #4061）。job 4203 を止めても見張りは消えない。
+- **1回ごとの記録**: 結果は既存の outbox の events に残る（`stage='send'` の受理／新規なし／失敗が後から読める）。
+- **切り戻し**: `tools/line-auto-export/auto-export.sh:12` の `MODE=adb` で従来のADB方式へ戻せる。手順は `tools/line-auto-export/README.md:50`（ADBへ戻す場合は再ペアリングが必要）。
