@@ -15,6 +15,7 @@ import i18n from "../../i18n";
 import { COUNTRIES } from "../../constants/countries";
 import { CountryCombobox } from "./CountryCombobox";
 import { Button } from "../../components/Button";
+import { TextFieldControl } from "../../components/TextField";
 
 interface TokenInfo {
   valid: boolean;
@@ -303,9 +304,8 @@ export default function RegisterPage() {
               <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
                 {t("registration.billingNameHint")}
               </p>
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingDisplayName}
                 onChange={(e) => setBillingDisplayName(e.target.value)}
                 required
@@ -334,9 +334,8 @@ export default function RegisterPage() {
                   id="billing-dial"
                 />
               </div>
-              <input
+              <TextFieldControl
                 type="tel"
-                className="input"
                 style={{ flex: 1 }}
                 value={billingAddress.telephone_number}
                 onChange={(e) => updateBilling("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
@@ -348,9 +347,8 @@ export default function RegisterPage() {
             {/* 3. Email Address */}
             <label>
               {t("registration.emailAddress")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="email"
-                className="input"
                 value={billingAddress.email}
                 onChange={(e) => updateBilling("email", e.target.value)}
                 required
@@ -363,9 +361,8 @@ export default function RegisterPage() {
               <p style={{ fontSize: "var(--font-size-xs)", color: "var(--text-secondary)", margin: "0 0 var(--spacing-1)" }}>
                 {t("registration.paymentRecipientNameHint")}
               </p>
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={paymentRecipientName}
                 onChange={(e) => setPaymentRecipientName(e.target.value)}
               />
@@ -374,9 +371,8 @@ export default function RegisterPage() {
             {/* 5. Tax ID (optional) */}
             <label>
               {t("registration.taxIdFull")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.tax_id}
                 onChange={(e) => updateBilling("tax_id", e.target.value)}
               />
@@ -385,9 +381,8 @@ export default function RegisterPage() {
             {/* 6. Address Line 1 */}
             <label>
               {t("registration.addressLine1")} {requiredMark}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.address_line_1}
                 onChange={(e) => updateBilling("address_line_1", e.target.value)}
                 required
@@ -397,9 +392,8 @@ export default function RegisterPage() {
             {/* 7. Address Line 2 */}
             <label>
               {t("registration.addressLine2Hint")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.address_line_2}
                 onChange={(e) => updateBilling("address_line_2", e.target.value)}
               />
@@ -408,9 +402,8 @@ export default function RegisterPage() {
             {/* 8. City */}
             <label>
               {t("registration.city")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.city}
                 onChange={(e) => updateBilling("city", e.target.value)}
               />
@@ -419,9 +412,8 @@ export default function RegisterPage() {
             {/* 9. State */}
             <label>
               {t("registration.state")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.state}
                 onChange={(e) => updateBilling("state", e.target.value)}
               />
@@ -430,9 +422,8 @@ export default function RegisterPage() {
             {/* 10. ZIP */}
             <label>
               {t("registration.zip")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={billingAddress.zip}
                 onChange={(e) => updateBilling("zip", e.target.value)}
               />
@@ -508,27 +499,24 @@ export default function RegisterPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: "var(--spacing-3)" }}>
             <label>
               {t("registration.contactName")}
-              <input
+              <TextFieldControl
                 type="text"
-                className="input"
                 value={contactName}
                 onChange={(e) => setContactName(e.target.value)}
               />
             </label>
             <label>
               {t("registration.contactEmail")}
-              <input
+              <TextFieldControl
                 type="email"
-                className="input"
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
               />
             </label>
             <label>
               {t("registration.contactTelephone")}
-              <input
+              <TextFieldControl
                 type="tel"
-                className="input"
                 value={contactTelephone}
                 onChange={(e) => setContactTelephone(e.target.value)}
               />
@@ -564,9 +552,8 @@ function ShippingAddressFields({
       {/* 1. Recipient Name */}
       <label>
         {t("registration.recipientName")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.name}
           onChange={(e) => onChange("name", e.target.value)}
           required
@@ -593,9 +580,8 @@ function ShippingAddressFields({
             id="shipping-dial"
           />
         </div>
-        <input
+        <TextFieldControl
           type="tel"
-          className="input"
           style={{ flex: 1 }}
           value={address.telephone_number}
           onChange={(e) => onChange("telephone_number", e.target.value.replace(/[^\d]/g, ""))}
@@ -606,9 +592,8 @@ function ShippingAddressFields({
       {/* 3. Email Address (optional for shipping) */}
       <label>
         {t("registration.shippingEmail")}
-        <input
+        <TextFieldControl
           type="email"
-          className="input"
           value={address.email}
           onChange={(e) => onChange("email", e.target.value)}
         />
@@ -617,9 +602,8 @@ function ShippingAddressFields({
       {/* 4. Tax ID (optional) */}
       <label>
         {t("registration.taxIdFull")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.tax_id}
           onChange={(e) => onChange("tax_id", e.target.value)}
         />
@@ -628,9 +612,8 @@ function ShippingAddressFields({
       {/* 5. Address Line 1 */}
       <label>
         {t("registration.addressLine1")} <span style={{ color: "var(--color-red-500)", fontWeight: "var(--font-weight-bold)" }}>*</span>
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.address_line_1}
           onChange={(e) => onChange("address_line_1", e.target.value)}
           required
@@ -640,9 +623,8 @@ function ShippingAddressFields({
       {/* 6. Address Line 2 */}
       <label>
         {t("registration.addressLine2")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.address_line_2}
           onChange={(e) => onChange("address_line_2", e.target.value)}
         />
@@ -651,9 +633,8 @@ function ShippingAddressFields({
       {/* 7. Address Line 3 (shipping only, ADR-126) */}
       <label>
         {t("registration.addressLine3")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.address_line_3}
           onChange={(e) => onChange("address_line_3", e.target.value)}
         />
@@ -662,9 +643,8 @@ function ShippingAddressFields({
       {/* 8. City */}
       <label>
         {t("registration.city")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.city}
           onChange={(e) => onChange("city", e.target.value)}
         />
@@ -673,9 +653,8 @@ function ShippingAddressFields({
       {/* 9. State */}
       <label>
         {t("registration.state")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.state}
           onChange={(e) => onChange("state", e.target.value)}
         />
@@ -684,9 +663,8 @@ function ShippingAddressFields({
       {/* 10. ZIP */}
       <label>
         {t("registration.zip")}
-        <input
+        <TextFieldControl
           type="text"
-          className="input"
           value={address.zip}
           onChange={(e) => onChange("zip", e.target.value)}
         />
