@@ -197,3 +197,47 @@ describe('TextFieldControl', () => {
     expect(el.hasAttribute('id')).toBe(false);
   });
 });
+
+describe('TextFieldControl variants (design.md §AY-2a)', () => {
+  const VARIANTS = ['karte', 'search', 'schedule', 'composer'] as const;
+
+  it.each(VARIANTS)('variant "%s" adds its class before className', (variant) => {
+    const { container } = render(<TextFieldControl variant={variant} className="x-layout" />);
+    expect(container.querySelector('input')?.className).toBe(`comp-field__input comp-input--${variant} x-layout`);
+  });
+
+  it('variant "standard" or omitted adds no variant class', () => {
+    const { container, rerender } = render(<TextFieldControl variant="standard" size="sm" />);
+    const cls = () => container.querySelector('input')?.className;
+    expect(cls()).toBe('comp-field__input comp-field__input--sm');
+    rerender(<TextFieldControl />);
+    expect(cls()).toBe('comp-field__input');
+  });
+
+  it('does not forward variant to the DOM as an attribute', () => {
+    const { container } = render(<TextFieldControl variant="karte" id="v" />);
+    expect(container.innerHTML).toBe('<input id="v" class="comp-field__input comp-input--karte">');
+  });
+
+  it('size cannot be combined with a non-standard variant (type error)', () => {
+    // @ts-expect-error size is not accepted together with variant="karte"
+    const element = <TextFieldControl variant="karte" size="sm" />;
+    expect(element).toBeTruthy();
+  });
+
+  it.each(VARIANTS)('variant "%s" passes ref and onKeyDown through (Enter default not prevented)', async (variant) => {
+    const ref = createRef<HTMLInputElement>();
+    let prevented: boolean | null = null;
+    const onKeyDown = vi.fn((e: React.KeyboardEvent) => {
+      prevented = e.defaultPrevented;
+    });
+    const { container } = render(<TextFieldControl variant={variant} ref={ref} onKeyDown={onKeyDown} />);
+    const el = container.querySelector('input') as HTMLInputElement;
+    expect(ref.current).toBe(el);
+    const user = userEvent.setup();
+    await user.click(el);
+    await user.keyboard('{Enter}');
+    expect(onKeyDown).toHaveBeenCalled();
+    expect(prevented).toBe(false);
+  });
+});
