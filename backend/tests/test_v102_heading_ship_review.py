@@ -91,3 +91,10 @@ def test_review_reasons_false_output_has_no_new_kind():
     out, flags = _run(_RAW, _it([1, 2, 3], "1,000円", "3"), _it([1, 2, 4, 5, 6], "2,000円", "2"), review_reasons=False)
     assert all(_KIND not in _kinds(row) for row in out) and "post_review" not in flags
     assert [row["review"] for row in out] == [[], []]
+
+
+def test_does_not_mark_when_only_the_heading_line_itself_has_the_ship_role():
+    raw = "◆サンプルBOX 発売日発送\n3BOX@1,000円\n発送:1月\n2BOX@2,000円"
+    out, _ = _run(raw, _it([1, 2], "1,000円", "3"), _it([1, 3, 4], "2,000円", "2"))
+    assert out[1]["roles"][1] == "ship"
+    assert _heading(out[0]) == [] and _heading(out[1]) == []

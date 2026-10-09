@@ -1098,14 +1098,14 @@ def _heading_ship_reasons(rows: list[dict]) -> list[list[dict]]:
     for i, row in enumerate(rows):
         if not row.get("rejected") and row["lines"] and row["price_line"] is not None:
             groups.setdefault(min(row["lines"]), []).append(i)
-    for members in (m for m in groups.values() if len(m) >= 2):
+    for h, members in ((h, m) for h, m in groups.items() if len(m) >= 2):
         first = min(members, key=lambda i: rows[i]["price_line"])
         first_price = rows[first]["price_line"]
         for b in (m for m in members if m != first):
             row = rows[b]
             ships = [n for n in row["lines"] if row["roles"].get(n) == ROLE_SHIP]
             others = {n for m in members if m != b for n in rows[m]["lines"]}
-            heading = sorted(n for n in ships if n < first_price)
+            heading = sorted(n for n in ships if h < n < first_price)
             own = sorted(n for n in ships if first_price < n < row["price_line"] and n not in others)
             if heading and own:
                 reasons[b] = [{"line": n, "kind": _REVIEW_HEADING_SHIP, "own_lines": list(own)} for n in heading]
