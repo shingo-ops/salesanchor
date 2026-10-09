@@ -43,3 +43,13 @@
 
 シェルスクリプトのため `bash -n` で文法確認済み。ユニットテストは持たない（端末のGUI状態に依存し、
 CIから検証できない）。取り込み側の回帰は既存の `tools/termux-line-import/test_android_import.py`。
+
+## 参照（file:line）
+
+実装の所在。いずれもこのブランチの実ファイルで、行番号は 2026-10-09 時点のもの。
+
+- `tools/line-auto-export/auto-export.sh:12` — `MODE=${LINE_AUTO_EXPORT_MODE:-app}`。既定はアプリへの合図。`MODE=adb` で従来のADB方式へ切り戻せる。
+- `tools/line-auto-export/auto-export.sh:22` — `flock -n` による多重起動防止。周期実行が重なっても二重に走らない。
+- `tools/line-auto-export/README.md:50` — 切替と切り戻しの手順（ADBへ戻す場合は再ペアリングが必要なことを含む）。
+
+設計は [design-app-trigger.md](design-app-trigger.md)（このrecon.mdを参照している）。
