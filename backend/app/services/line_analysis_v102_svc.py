@@ -453,6 +453,25 @@ def _response_from_rows(rows: list, gemini_unsure: object) -> str:
     return json.dumps(body, ensure_ascii=False)
 
 
+def _lines_agree(item: dict, row: object) -> bool:
+    """件の行番号が、対応する行の source_lines（Gemini 応答の lines）と合うか。
+
+    F1・付け直しは件の lines を書き換える（価格の行は動かさない）ので、lines の全一致ではなく次で見る。
+    price_line がある件は「price_line が source_lines に入る」、無い件は「lines と source_lines に共通の行がある」。
+    どちらかの行番号が空なら照合しない。
+    """
+    source = getattr(row, "source_lines", None)
+    if not source:
+        return True
+    price_line = item.get("price_line")
+    if isinstance(price_line, int) and not isinstance(price_line, bool):
+        return price_line in source
+    lines = item.get("lines")
+    if not isinstance(lines, list) or not lines:
+        return True
+    return bool(set(lines) & set(source))
+
+
 def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]]:
     """v102 の件を extraction_items の行に対応付ける（gemini_index 順の rows を受ける）。
 
@@ -468,7 +487,11 @@ def _map_to_rows(v102_items: list[dict], rows: list) -> list[tuple[dict, object]
     rest = [r for r in rows if r.gemini_index not in set(rejected_indexes)]
     if len(rest) != len(accepted):
         raise _MappingError(f"受理した件の数が合いません: v102={len(accepted)} extraction_items={len(rest)}")
-    return [*zip(rejected, (by_index[i] for i in rejected_indexes), strict=True), *zip(accepted, rest, strict=True)]
+    pairs = [*zip(rejected, (by_index[i] for i in rejected_indexes), strict=True), *zip(accepted, rest, strict=True)]
+    for item, row in pairs:
+        if not _lines_agree(item, row):
+            raise _MappingError(f"行番号が合いません: gemini_index={row.gemini_index}")
+    return pairs
 
 
 def _bounded_number(value: object) -> object:
