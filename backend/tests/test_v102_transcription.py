@@ -240,3 +240,14 @@ def test_apply_invalid_rolls_back_without_writing():
     with pytest.raises(svc.InvalidTranscription):
         asyncio.run(svc.apply_transcription_edit(db, _job(), [_input([9])], "admin@example.com"))
     assert len(db.calls) == 2 and db.rollbacks == 1 and db.commits == 0
+
+
+@pytest.mark.parametrize("blank", ["", "  ", "\t\n"], ids=["empty", "spaces", "tab_newline"])
+def test_blank_price_and_quantity_are_treated_as_none_so_a_stored_none_is_unchanged(blank):
+    item_id = str(uuid4())
+    row = SimpleNamespace(id=item_id, gemini_index=0, source_lines=[1, 2], raw_price=None, raw_quantity=None, review_reasons=None)
+    db = RecordingDb([row])
+    blank_input = svc.ItemInput(id=item_id, source_lines=[1, 2], raw_price=blank, raw_quantity=blank)
+    result = asyncio.run(svc.apply_transcription_edit(db, _job(), [blank_input], "admin@example.com"))
+    assert result == svc.EditResult(False, [item_id])
+    assert db.commits == 0 and len(db.calls) == 2  # 鍵と読み出しだけ。item_corrections への書き込みなし
