@@ -95,7 +95,7 @@
 
 | 項目 | 変更前 | 変更後 |
 |------|-------|-------|
-| 部品集 | 残る警告の枠が無い | `frontend/src/components/Callout.tsx`・`Callout.css`・`Callout.stories.tsx`（variant warning/info、role は alert/status、閉じるボタン無し、色・余白は既存トークンのみ） |
+| 部品集 | 残る警告の枠が無い | `frontend/src/components/Callout.tsx`・`frontend/src/components/Callout.css`・`frontend/src/components/Callout.stories.tsx`（variant warning/info、role は alert/status、閉じるボタン無し、色・余白は既存トークンのみ） |
 | 商品詳細ドロワー（新規） | 保存後に必ず閉じる | 応答の code_collisions が1件以上なら閉じず、Callout（warning）で相手商品・推奨語を表示。0件なら今どおり閉じる。重なり表示中は二重登録を防ぐため保存ボタンを無効のままにする |
 | 商品詳細ドロワー（編集） | 保存後に何も出さない | 応答の code_collisions があれば Callout を表示 |
 | CSV 取り込み preview | 「商品{{value}}でも同じ型番が使われています。」 | 「型番が {{value}} と重なっています。除外ワードの追加をおすすめします」＋行の下に Callout（相手の商品名・作品・推奨語） |
@@ -119,7 +119,7 @@
 
 ### 技術 How・KPI
 
-- 表示は共通部品 `CodeCollisionNotice.tsx`（features/tcg-product-import）1つに集約し、ドロワーと CSV preview の両方から使う。Callout は汎用部品として components/ に置く
+- 表示は共通部品 `frontend/src/features/tcg-product-import/CodeCollisionNotice.tsx`1つに集約し、ドロワーと CSV preview の両方から使う。Callout は汎用部品として components/ に置く
 - KPI: 上記7基準が全て通ること
 
 ### 弊害・トレードオフ

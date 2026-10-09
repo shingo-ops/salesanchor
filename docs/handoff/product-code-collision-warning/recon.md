@@ -65,7 +65,7 @@
 | `frontend/src/components/` | Alert / Banner / Callout 相当のファイルが無い（Badge.tsx・Card.tsx・Modal.tsx 等のみ） |
 | `frontend/src/components/Badge.tsx:1` | 既存の金型の作法（comp-* クラス・variant・CSS は var() のみ）。同じ作法で Callout を作る |
 | `frontend/src/components/loading/index.ts` | components/ の下位フォルダは loading・master-list-editor の2つのみ。他の部品は components/ 直下に平置き |
-| `frontend/scripts/check-stories-count.js:21` | check:stories は components/ 直下の `.tsx` だけを走査する（下位フォルダは対象外） |
+| `frontend/scripts/check-stories-count.js:21` | check:stories は components/ 直下の tsx ファイルだけを走査する（下位フォルダは対象外） |
 | `frontend/src/tokens.css:560` | `--color-warning-bg` / `--color-warning-border`（ダークは `tokens.css:605`）。警告の枠の色に使う |
 | `frontend/src/index.css:109` | `--info-bg` / `--info-text`（ダークは `index.css:302`）。案内の枠の色に使う |
 | `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:150-175` | 新規 saveCreate。保存後に onClose する |
@@ -78,6 +78,6 @@
 
 | # | 不明点 | 解消方法 | 状態 |
 |---|-------|---------|------|
-| 4 | 部品の置き場所（カードは `components/feedback/`） | 既存は平置きが主で、check:stories は直下のみ走査（上表）。下位フォルダに置くと stories の検査が効かない | 解消済み（`components/Callout.tsx` に平置き） |
+| 4 | 部品の置き場所（カードは `components/feedback/`） | 既存は平置きが主で、check:stories は直下のみ走査（上表）。下位フォルダに置くと stories の検査が効かない | 解消済み（`frontend/src/components/Callout.tsx` に平置き） |
 
 **未解決ゼロ確認**: 全て解消済み
