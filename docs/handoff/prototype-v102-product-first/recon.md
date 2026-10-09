@@ -57,3 +57,10 @@
 - 共有関数 load_product_entries（backend/app/services/extraction_shadow_svc.py:86）・match_product・_code_candidate_basis・_keyword_matches・_excluded_keywords は触らない（v6・試運転 v101・レビュー画面は不変）。
 - 既存 ADR 検索：docs/adr/FEATURE-INDEX.md は照合・型番・商品特定で該当なし。git grep -i docs/adr/ で ADR-155（マスタ値は表から読む・値の INSERT を migration に書かない）と ADR-156（分類ツリーとマスタ分離）。この規則を変える ADR は無し。ADR は新設しない（試作版の照合規則の追加）。
 - 試算（手元・社外秘の原文は載せない）：1回の記録あたり 誤り1件解消、ambiguous から matched に変わる 41件、正判定の喪失 0。
+
+## 追記（商品照合を形G2 に変える・2026-10-09）
+- 現状（origin/main 7db93b2b8）：backend/app/services/gemini_raw_copy_v102_product_first.py の resolve_product_first が match_product(match_text, masters.product_entries, strict_codes=True) を直接呼ぶ。v102 で match_product を直接呼ぶのはここ1か所だけ（git grep -n match_product -- backend/app：gemini_raw_copy_v102_product_first.py の1か所のほか、extraction_shadow_svc.py:269 の試運転と tcg_shadow_review_svc.py:282 のレビュー画面は別系統）。
+- 当たり方の関数（backend/app/services/extraction_judgement_svc.py）：_code_candidate_basis（品番・マーク）・_keyword_matches（検索ワード）・_excluded_keywords（除外ワード）・_value_hits（strict_codes の区切り）。match_product 本体の候補の作り方は「品番・マークまたは検索ワードのどちらかに当たり、除外ワードに当たらない」の1段で、名前と型番を分けない。
+- 中分類の印の現状：public.type_master.match_by_code（migrations/20261009_100000_type_master_match_by_code.sql）だけ。ProductEntry.work_id は type_master.id。load_product_first_masters の呼び出し元は backend/app/tools/prompt_ab.py の比較試験の道具だけで、本番の経路からは呼ばれない。
+- 既存 ADR 検索：docs/adr/FEATURE-INDEX.md は照合・型番・商品特定で該当なし。git grep -i docs/adr/ で ADR-155（マスタ値は表から読む・値の INSERT を migration に書かない）と ADR-156。この規則を変える ADR は無し。ADR は新設しない（試作版の照合規則の変更）。
+- 試算（手元・社外秘のため件数のみ）：1回あたり 決まる件 3,260→3,332、正判定の崩れ 0、別商品 0。
