@@ -1,43 +1,50 @@
-# recon: paid-at-payment-date
+# recon — paid-at-payment-date
 
-## 調査日
-2026-10-09
+**仕事名**: paid-at-payment-date  
+**日付**: 2026-10-09  
+**対象ADR**: ADR-072, ADR-027, ADR-144  
+**担当**: Sonnet
 
-## 対象ADR
-- ADR-072: write endpoint の db.commit() 直後に reset_tenant_context() 必須
-- ADR-027: UI文字列は t("key") 経由
-- ADR-144: UIコンポーネントは金型使用
+---
 
-## 調査ファイル
+## file:line 引用表
 
-### backend/app/services/paypal_payments.py
-- `get_invoice_status` 関数（行 719-735）
-- 現状: `payment_date = None` の初期化のみ、`txn.get("payment_date")` で抽出されていない
-- 変更: txn から `payment_date` を抽出して返す
+| 引用先 `path:line` | 確認内容 |
+|-------------------|---------|
+| `backend/app/services/paypal_payments.py:719` | get_invoice_status: st/fee/payment_date 変数初期化 |
+| `backend/app/services/paypal_payments.py:727` | txn から fee/payment_date を抽出して返す |
+| `backend/app/routers/integrations.py:809` | paypal_return: paid_at_value = result.get("payment_date") |
+| `backend/app/routers/integrations.py:811` | COALESCE(:paid_at, NOW()) パターン適用済み |
+| `backend/app/routers/integrations.py:958` | webhook: paid_at_value = result.get("payment_date") |
+| `backend/app/routers/integrations.py:960` | COALESCE(:paid_at, NOW()) パターン適用済み |
+| `backend/app/routers/invoices.py:55` | PayInvoiceRequest モデル定義（paid_at: datetime | None） |
+| `backend/app/routers/invoices.py:521` | pay_invoice: body: PayInvoiceRequest | None = Body(default=None) |
+| `backend/app/routers/invoices.py:529` | paid_at_value = body.paid_at if body and body.paid_at else None |
+| `backend/app/routers/invoices.py:531` | COALESCE(:paid_at, NOW()) パターン適用済み |
+| `backend/app/routers/invoices.py:770` | confirm_paypal_payment: paid_at_value = result.get("payment_date") |
+| `backend/app/routers/invoices.py:774` | COALESCE(:paid_at, NOW()) パターン適用済み |
+| `backend/app/routers/orders.py:594` | set_order_paid: paid_at = COALESCE(:paid_at, NOW()) |
+| `backend/app/schemas/order.py:167` | OrderPaidStatusUpdate: paid_at: datetime | None フィールド |
+| `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:115` | paymentDate state: useState<string>("") |
+| `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:202` | TextField type=date（ADR-144金型）で日付入力 |
+| `frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx:208` | doAction("pay", { paid_at: new Date(paymentDate).toISOString() }) |
+| `frontend/src/locales/ja.json:1655` | "paidAt": "入金日" 収録済み |
+| `frontend/src/locales/en.json:1655` | "paidAt": "Payment Date" 収録済み |
 
-### backend/app/routers/integrations.py
-- `paypal_return` 関数（行 801-830）: `paid_at = NOW()` ハードコード
-- `_handle_invoice_paid` webhook（行 953-978）: `paid_at = NOW()` ハードコード
-- 変更: COALESCE(:paid_at, NOW()) + payment_date バインド
+---
 
-### backend/app/routers/invoices.py
-- `PayInvoiceRequest` クラス（行 55-57）: モデル定義あり
-- `pay_invoice` 関数（行 521-550）: ボディ受け取り・COALESCE 実装済み
-- `confirm_paypal_payment` 関数（行 769-789）: COALESCE 実装済み
+## 不明点リスト
 
-### backend/app/routers/orders.py
-- `set_order_paid` 関数（行 569-618）: `OrderPaidStatusUpdate.paid_at` 使用・COALESCE 実装済み
+| # | 不明点 | 解消方法 | 状態 |
+|---|-------|---------|------|
+| 1 | PayPal API の payment_date フォーマットが PostgreSQL TIMESTAMPTZ に直接バインドできるか | `backend/app/services/paypal_payments.py:727` で txn.get("payment_date") を取得。SQLAlchemy が文字列をキャストする | ✅ 解消済み |
 
-### backend/app/schemas/order.py
-- `OrderPaidStatusUpdate`（行 167-175）: `paid_at: datetime | None` フィールドあり
+**未解決ゼロ確認**: 全て解消済み
 
-### frontend/src/pages/invoice-detail/InvoiceDetailPage.tsx
-- `paymentDate` state（行 115）: `useState<string>("")` 追加済み
-- TextField type=date（行 202-207）: ADR-144 金型使用済み
-- doAction call（行 208）: `{ paid_at: new Date(paymentDate).toISOString() }` 送信済み
+---
 
-### frontend/src/locales/ja.json
-- `"paidAt": "入金日"` 行 1655 に存在
+## 補足
 
-### frontend/src/locales/en.json
-- `"paidAt": "Payment Date"` 行 1655 に存在
+- 全 PayPal 経路（paypal_return / webhook / confirm_paypal_payment）で COALESCE パターンに統一した
+- 手動入金（pay_invoice）も同パターンで optional paid_at を受け付ける
+- orders テーブルの paid_at も同じ値で連動更新（ADR-104 受注自動遷移）
