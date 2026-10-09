@@ -107,3 +107,15 @@ export const ControlDisabled: Story = {
   name: 'TextFieldControl disabled',
   render: () => <TextFieldControl defaultValue="Read only value" disabled aria-label="Disabled" />,
 }
+
+export const ControlVariants: Story = {
+  name: 'TextFieldControl variants (karte / search / schedule / composer)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}>
+      <TextFieldControl variant="karte" placeholder="Karte field" aria-label="Karte field" />
+      <TextFieldControl variant="search" placeholder="Search field" aria-label="Search field" />
+      <TextFieldControl variant="schedule" placeholder="Schedule field" aria-label="Schedule field" />
+      <TextFieldControl variant="composer" type="date" aria-label="Composer field" />
+    </div>
+  ),
+}

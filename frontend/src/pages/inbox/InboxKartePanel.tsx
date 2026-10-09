@@ -10,6 +10,7 @@ import { SalesFormMultiSelect } from "./SalesFormMultiSelect";
 import { Button } from "../../components/Button";
 import { SelectControl } from "../../components/Select";
 import { TextareaControl } from "../../components/Textarea";
+import { TextFieldControl } from "../../components/TextField";
 
 interface CardForm {
   nickname?: string | null;
@@ -369,21 +370,21 @@ function KarteTabContent({
         ) : leadDetail.discord_guild_channel_id ? (
           <div className="right-panel-row">
             <span className="right-panel-label">{t("leads.discordTicketChannel")}</span>
-            <input className="right-panel-field" type="text"
+            <TextFieldControl variant="karte" type="text"
               value={leadDetail.discord_guild_channel_id} readOnly tabIndex={-1} />
           </div>
         ) : null}
 
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.email")}</span>
-          <input className="right-panel-field" type="email"
+          <TextFieldControl variant="karte" type="email"
             value={cardForm.email ?? ""}
             onChange={(e) => handleCardFieldChange("email", e.target.value)}
             onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.phone")}</span>
-          <input className="right-panel-field" type="tel"
+          <TextFieldControl variant="karte" type="tel"
             value={cardForm.phone ?? ""}
             onChange={(e) => handleCardFieldChange("phone", e.target.value)}
             onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
@@ -401,7 +402,7 @@ function KarteTabContent({
         {leadDetail.discord_user_id && (
           <div className="right-panel-row">
             <span className="right-panel-label">{t("leads.discordUserId")}</span>
-            <input className="right-panel-field" type="text" value={leadDetail.discord_user_id}
+            <TextFieldControl variant="karte" type="text" value={leadDetail.discord_user_id}
               readOnly tabIndex={-1} />
           </div>
         )}
@@ -434,13 +435,13 @@ function KarteTabContent({
         <div className="right-panel-group-heading" data-testid="karte-section-basic-heading">{t("inbox.sectionBasic")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.nickname")}</span>
-          <input className="right-panel-field" type="text" value={cardForm.nickname ?? ""}
+          <TextFieldControl variant="karte" type="text" value={cardForm.nickname ?? ""}
             onChange={(e) => handleCardFieldChange("nickname", e.target.value)} onBlur={handleCardFieldBlur}
             placeholder={t("inbox.emptyField")} />
         </div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.country")}</span>
-          <input className="right-panel-field" type="text" value={cardForm.country ?? ""}
+          <TextFieldControl variant="karte" type="text" value={cardForm.country ?? ""}
             onChange={(e) => handleCardFieldChange("country", e.target.value)} onBlur={handleCardFieldBlur}
             placeholder={t("inbox.emptyField")} />
         </div>
@@ -458,7 +459,7 @@ function KarteTabContent({
         <div className="right-panel-group-heading" data-testid="karte-section-deal-profile-heading">{t("inbox.sectionDealProfile")}</div>
         <div className="right-panel-row">
           <span className="right-panel-label">{t("leads.targetTitles")}</span>
-          <input className="right-panel-field" type="text" value={cardForm.target_titles ?? ""}
+          <TextFieldControl variant="karte" type="text" value={cardForm.target_titles ?? ""}
             onChange={(e) => handleCardFieldChange("target_titles", e.target.value)}
             onBlur={handleCardFieldBlur} placeholder={t("leads.targetTitlesPlaceholder")} />
         </div>
@@ -506,8 +507,9 @@ function KarteTabContent({
         onBlur={handleCardFieldBlur} placeholder={t("inbox.emptyField")} />
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.nextActionDate")}</span>
-        <input
-          className={`right-panel-field${!cardForm.next_action_date ? " karte-field-empty" : ""}`}
+        <TextFieldControl
+          variant="karte"
+          className={!cardForm.next_action_date ? "karte-field-empty" : undefined}
           type="date" value={cardForm.next_action_date ?? ""}
           onChange={(e) => handleCardFieldChange("next_action_date", e.target.value || null)} onBlur={handleCardFieldBlur} />
       </div>
@@ -566,19 +568,19 @@ function KarteTabContent({
       </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.monthlyForecast")}</span>
-        <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_forecast ?? ""}
+        <TextFieldControl variant="karte" type="number" min="0" value={cardForm.monthly_forecast ?? ""}
           onChange={(e) => handleCardFieldChange("monthly_forecast", e.target.value || null)} onBlur={handleCardFieldBlur}
           placeholder={t("inbox.emptyField")} />
       </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.perOrderAmount")}</span>
-        <input className="right-panel-field" type="number" min="0" value={cardForm.per_order_amount ?? ""}
+        <TextFieldControl variant="karte" type="number" min="0" value={cardForm.per_order_amount ?? ""}
           onChange={(e) => handleCardFieldChange("per_order_amount", e.target.value || null)} onBlur={handleCardFieldBlur}
           placeholder={t("inbox.emptyField")} />
       </div>
       <div className="right-panel-row">
         <span className="right-panel-label">{t("leads.monthlyFrequency")}</span>
-        <input className="right-panel-field" type="number" min="0" value={cardForm.monthly_frequency ?? ""}
+        <TextFieldControl variant="karte" type="number" min="0" value={cardForm.monthly_frequency ?? ""}
           onChange={(e) => handleCardFieldChange("monthly_frequency", e.target.value || null)} onBlur={handleCardFieldBlur}
           placeholder={t("inbox.emptyField")} />
       </div>
