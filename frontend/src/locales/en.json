@@ -65,7 +65,7 @@
       "duplicateFile": "This file has already been imported.",
       "columnCount": "Row {{value}} does not have 10 columns.",
       "duplicateRow": "Duplicates row {{value}} in this file.",
-      "markUsed": "The same mark is already used by product {{value}}.",
+      "markUsed": "The product code overlaps {{value}}. Adding exclude keywords is recommended.",
       "shortKeyword": "This search keyword is very short: {{value}}",
       "keywordShared": "This search keyword also matches another product: {{value}}",
       "duplicateCandidate": "A possible duplicate product exists: {{value}}",
@@ -3858,6 +3858,16 @@
       "pid_unresolved": "The product is not identified.",
       "multi_candidate": "More than one product matched."
     }
+  },
+  "codeCollision": {
+    "title": "The product code overlaps existing products",
+    "hint": "Adding exclude keywords is recommended so the products can be told apart.",
+    "itemWithWork": "{{name}} ({{work}})",
+    "matched": "Overlapping {{field}}: {{value}}",
+    "fields": { "product_code": "product code", "mark": "mark" },
+    "addToThis": "Words to add to this product's exclude keywords: {{words}}",
+    "addToOther": "Words to add to the other product's exclude keywords: {{words}}",
+    "registered": "Exclude keywords are already registered"
   },
   "productDetail": {
     "title": "Product details and editing",

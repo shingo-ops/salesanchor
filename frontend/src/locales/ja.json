@@ -65,7 +65,7 @@
       "duplicateFile": "このファイルは取り込み済みです。",
       "columnCount": "{{value}}行目の列数が10列ではありません。",
       "duplicateRow": "同じファイルの{{value}}行目と重複しています。",
-      "markUsed": "商品{{value}}でも同じ型番が使われています。",
+      "markUsed": "型番が {{value}} と重なっています。除外ワードの追加をおすすめします",
       "shortKeyword": "検索キーワードが短すぎます：{{value}}",
       "keywordShared": "別の商品にも一致する検索キーワードです：{{value}}",
       "duplicateCandidate": "重複候補の商品があります：{{value}}",
@@ -3858,6 +3858,16 @@
       "pid_unresolved": "商品を特定できていません。",
       "multi_candidate": "商品候補が複数あります。"
     }
+  },
+  "codeCollision": {
+    "title": "型番が既存の商品と重なっています",
+    "hint": "別の商品として見分けられるよう、除外ワードの追加をおすすめします。",
+    "itemWithWork": "{{name}}（{{work}}）",
+    "matched": "重なった{{field}}：{{value}}",
+    "fields": { "product_code": "品番", "mark": "マーク" },
+    "addToThis": "この商品の除外ワードに足すとよい語：{{words}}",
+    "addToOther": "相手の商品の除外ワードに足すとよい語：{{words}}",
+    "registered": "除外ワードは登録済みです"
   },
   "productDetail": {
     "title": "商品詳細・編集",

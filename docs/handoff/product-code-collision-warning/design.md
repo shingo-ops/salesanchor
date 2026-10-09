@@ -79,3 +79,63 @@
 
 - 完了後の監視: 2/2 の画面で警告が表示されること
 - 次フェーズへの引き継ぎ: 2/2（画面と部品集への登録、i18n 文言）
+
+---
+
+## 画面（2/2）
+
+**recon**: docs/handoff/product-code-collision-warning/recon.md「画面（2/2）」
+**対象ADR**: ADR-155・ADR-144・ADR-027・ADR-067
+
+### 外部・過去事例の参照と我々への応用
+
+- 該当なし：自社マスタの警告表示で、根拠は PO の指示（「どの商品と重複するかも表示すると親切」「画面に残る警告の枠を部品集に登録する」）。出典と数値のそろった外部事例は確認していない。
+
+### 変更前 → 変更後
+
+| 項目 | 変更前 | 変更後 |
+|------|-------|-------|
+| 部品集 | 残る警告の枠が無い | `frontend/src/components/Callout.tsx`・`frontend/src/components/Callout.css`・`frontend/src/components/Callout.stories.tsx`（variant warning/info、role は alert/status、閉じるボタン無し、色・余白は既存トークンのみ） |
+| 商品詳細ドロワー（新規） | 保存後に必ず閉じる | 応答の code_collisions が1件以上なら閉じず、Callout（warning）で相手商品・推奨語を表示。0件なら今どおり閉じる。重なり表示中は二重登録を防ぐため保存ボタンを無効のままにする |
+| 商品詳細ドロワー（編集） | 保存後に何も出さない | 応答の code_collisions があれば Callout を表示 |
+| CSV 取り込み preview | 「商品{{value}}でも同じ型番が使われています。」 | 「型番が {{value}} と重なっています。除外ワードの追加をおすすめします」＋行の下に Callout（相手の商品名・作品・推奨語） |
+| i18n | - | `codeCollision.*` を ja.json・en.json に同一キーで追加。`productCsv.messages.markUsed` の文言変更 |
+
+### 触らない範囲
+
+- バックエンド・ProductMasterDrawer（解析レビュー）・保存を止める動き・語の自動登録（案内だけ）
+
+### 受け入れ基準
+
+| 基準 | 検証方法 |
+|------|---------|
+| Callout が variant ごとに warning=role alert・info=role status で出る。閉じるボタンが無い | `frontend/src/components/Callout.test.tsx` |
+| 新規作成の応答に code_collisions があるとき、ドロワーが閉じず警告に相手商品名・作品・重なった値・推奨語が出る | `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.test.tsx` |
+| 推奨語が両方空のとき「除外ワードは登録済みです」が出る | 同上 |
+| code_collisions が空または欄が無いとき、今までどおり閉じる | 同上 |
+| CSV preview の行に新文言と Callout が出る | `frontend/src/features/tcg-product-import/TcgProductImportPanel.test.tsx` |
+| ja.json・en.json が同一キー・日本語直書きが無い・デザイントークン規約を満たす | `cd frontend && npm run check:all` |
+| 型検査・build が通る | `cd frontend && npm run build` |
+
+### 技術 How・KPI
+
+- 表示は共通部品 `frontend/src/features/tcg-product-import/CodeCollisionNotice.tsx`1つに集約し、ドロワーと CSV preview の両方から使う。Callout は汎用部品として components/ に置く
+- KPI: 上記7基準が全て通ること
+
+### 弊害・トレードオフ
+
+- CSV preview の「{{value}}」は API の警告コード末尾の相手商品IDのまま（カード指定の文言）。相手の名前は行の下の Callout で表示する
+- 新規作成で重なりが出たあと、同じドロワーのまま続けて登録はできない（二重登録防止）。閉じて開き直す
+
+### 維持の仕組み
+
+- 守り手: Callout.test.tsx・TcgProductDetailDrawer.test.tsx・TcgProductImportPanel.test.tsx
+- 守り手: `npm run check:stories`（Callout.stories.tsx の存在）・`check:i18n-missing-keys`・`check:css-colors`
+
+### 戻し方
+
+- この PR を revert する（バックエンドの応答は変わらず、画面が警告を出さない元の状態に戻る）
+
+### 継続
+
+- 完了後の監視: 本番で型番が重なる商品を保存したとき警告の枠が出ること（PO 確認）
