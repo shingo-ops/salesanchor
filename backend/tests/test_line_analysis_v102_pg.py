@@ -195,7 +195,7 @@ def test_k3_items_with_review_reasons_are_not_in_the_distribution_output(pg, v10
         cur.execute(one_sql, (product_id, "condition_unknown"))
 
     async def fetch():
-        engine = create_async_engine(str(pg[2]))
+        engine = create_async_engine(pg[2])  # URL 型のまま渡す（str() はパスワードを *** に伏せる）
         try:
             async with AsyncSession(engine) as db:
                 return await distribution.fetch_output_rows(db, include_flag_single=True)
