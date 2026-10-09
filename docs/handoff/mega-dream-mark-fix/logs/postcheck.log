@@ -1,0 +1,26 @@
+-- queries (read-only, run after apply on 2026-10-05 ~00:34Z via: docker compose exec -T postgres psql -X -c '<SQL>'; products counts are over is_active = TRUE rows)
+BEGIN READ ONLY; SELECT id, product_code, mark, name, updated_at FROM public.products WHERE id IN (440559, 12) ORDER BY id; SELECT count(*) FILTER (WHERE mark = $q$M3$q$ OR product_code = $q$M3$q$) AS m3_mark_or_code, count(*) FILTER (WHERE mark = $q$M2a$q$ OR product_code = $q$M2a$q$) AS m2a_mark_or_code, count(*) FILTER (WHERE mark = $q$M3$q$) AS m3_mark, count(*) FILTER (WHERE product_code = $q$M3$q$) AS m3_code, count(*) FILTER (WHERE mark = $q$M2a$q$) AS m2a_mark, count(*) FILTER (WHERE product_code = $q$M2a$q$) AS m2a_code FROM public.products WHERE is_active = TRUE; SELECT count(*) AS n FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-05)$q$; SELECT id, changed_at FROM public.audit_log WHERE changed_by = $q$claude-opus (PO承認 2026-10-05)$q$ ORDER BY id; ROLLBACK;
+-- output (verbatim)
+BEGIN
+   id   | product_code | mark |      name      |          updated_at
+--------+--------------+------+----------------+-------------------------------
+     12 | M3           | M3   | ムニキスゼロ   | 2026-10-02 11:34:44.457428+00
+ 440559 | PM0198       | M2a  | MEGAドリームex | 2026-10-05 00:33:42.916535+00
+(2 rows)
+
+ m3_mark_or_code | m2a_mark_or_code | m3_mark | m3_code | m2a_mark | m2a_code
+-----------------+------------------+---------+---------+----------+----------
+               1 |                1 |       1 |       1 |        1 |        0
+(1 row)
+
+ n
+---
+ 1
+(1 row)
+
+ id |          changed_at
+----+-------------------------------
+ 27 | 2026-10-05 00:33:42.916535+00
+(1 row)
+
+ROLLBACK
