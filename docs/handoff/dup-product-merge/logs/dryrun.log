@@ -1,0 +1,32 @@
+BEGIN
+SET
+SET
+SET
+NOTICE:  pair 440561 -> 226: analysis_results repointed rows=82
+NOTICE:  pair 440561 -> 226: is_current flips=8 (to true 0)
+NOTICE:  pair 440561 -> 226: extraction_items repointed rows=1
+NOTICE:  pair 440561 -> 226: buyback_shop_products repointed rows=0
+NOTICE:  pair 440561 -> 226: product 440561 retired rows=1
+NOTICE:  pair 440572 -> 625: analysis_results repointed rows=53
+NOTICE:  pair 440572 -> 625: is_current flips=6 (to true 0)
+NOTICE:  pair 440572 -> 625: extraction_items repointed rows=6
+NOTICE:  pair 440572 -> 625: buyback_shop_products repointed rows=1
+NOTICE:  pair 440572 -> 625: product 440572 retired rows=1
+NOTICE:  pair 440571 -> 626: analysis_results repointed rows=32
+NOTICE:  pair 440571 -> 626: is_current flips=4 (to true 0)
+NOTICE:  pair 440571 -> 626: extraction_items repointed rows=10
+NOTICE:  pair 440571 -> 626: buyback_shop_products repointed rows=0
+NOTICE:  pair 440571 -> 626: product 440571 retired rows=1
+DO
+NOTICE:  DONE: 3 pairs merged, 3 audit_log rows
+   id   | product_code | mark |                 name                 | is_active | analysis_results | extraction_items | buyback_shop_products | search_kw_rows 
+--------+--------------+------+--------------------------------------+-----------+------------------+------------------+-----------------------+----------------
+    226 | DB-FB09      | FB09 | DUAL EVOLUTION                       | t         |              128 |               90 |                     0 |              3
+    625 | YGO-LOCR     | LOCR | LIMIT OVER COLLECTION - THE RIVALS - | t         |              114 |               67 |                     1 |              2
+    626 | YGO-LOCH     | LOCH | LIMIT OVER COLLECTION - THE HEROES - | t         |               58 |               33 |                     0 |              2
+ 440561 | PM0226       | FB09 | FB-09                                | f         |                0 |                0 |                     0 |              3
+ 440571 | PM0223       | LOCH | LIMIT OVER COLLECTION THE HEROES     | f         |                0 |                0 |                     0 |              2
+ 440572 | PM0224       | LOCR | LIMIT OVER COLLECTION THE RIVALS     | f         |                0 |                0 |                     0 |              2
+(6 rows)
+
+ROLLBACK
