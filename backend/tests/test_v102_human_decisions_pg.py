@@ -253,3 +253,41 @@ def test_save_review_ack_writes_one_row_and_the_loader_reads_it(pg, pf):
     assert REASON_NOT_IN_MASTER in rows[0][2]  # system_value は保存時点の review_reasons
     run_analysis(pg, job_id)
     assert REASON_NOT_IN_MASTER not in reasons_of(pg, job_id)
+
+
+# --- D-K1 の複数件版（落とした件を含む4件の真ん中の件だけを固定する） ---------------------------------------
+
+RAW_MULTI = "\n".join(
+    f"ゼッタイ存在しない商品{name}\n{qty}BOX@{price}円" for name, qty, price in (("AA", 3, "1,000"), ("BB", 2, "2,000"), ("CC", 1, "3,000"), ("DD", 4, "4,000"))
+)
+RESPONSE_MULTI = json.dumps({"items": [
+    {"lines": [1, 2], "price": "7,777円", "quantity": "3"},  # 価格が原文に無い → 落とされる(gemini_index 0)
+    {"lines": [3, 4], "price": "2,000円", "quantity": "2"},
+    {"lines": [5, 6], "price": "3,000円", "quantity": "1"},
+    {"lines": [7, 8], "price": "4,000円", "quantity": "4"},
+]}, ensure_ascii=False)
+
+
+def test_k1_multi_fixing_the_middle_item_affects_only_that_item(pg, pf):
+    pf.response = RESPONSE_MULTI
+    source_id, job_id = str(uuid4()), str(uuid4())
+    with pg[0].cursor() as cur:
+        cur.execute(
+            f"""INSERT INTO {SCHEMA}.source_messages (id,supplier_channel_id,raw_text,raw_sha256,is_active,received_at,line_posted_at)
+                SELECT %s,id,%s,%s,true,now(),now() FROM {SCHEMA}.supplier_channels LIMIT 1""",
+            (source_id, RAW_MULTI, uuid4().hex),
+        )
+        cur.execute(f"INSERT INTO {SCHEMA}.extraction_jobs(id,source_message_id,status) VALUES (%s,%s,'pending')", (job_id, source_id))
+    run_extraction(pg, job_id)
+    run_analysis(pg, job_id)
+    items = {r[0]: r[1] for r in one(pg, f"SELECT gemini_index, id::text FROM {SCHEMA}.extraction_items WHERE extraction_job_id=%s", (job_id,))}
+    correct(pg, items[2], source_id, "product_id", str(pf.p_a), at=10)
+    for _ in range(2):
+        run_analysis(pg, job_id)
+        rows = {r[0]: r for r in analysis_rows(pg, job_id)}  # (gemini_index, product_id, pid_resolved, ...)
+        assert (rows[2][1], rows[2][2]) == (pf.p_a, True)
+        for other in (0, 1, 3):
+            assert (rows[other][1], rows[other][2]) == (None, False)
+    pid_basis = dict(one(pg, f"""SELECT ei.gemini_index, ar.pid_basis FROM {SCHEMA}.analysis_results ar
+        JOIN {SCHEMA}.extraction_items ei ON ei.id=ar.extraction_item_id WHERE ei.extraction_job_id=%s""", (job_id,)))
+    assert pid_basis[2] == "MANUAL" and all(pid_basis[i] != "MANUAL" for i in (0, 1, 3))

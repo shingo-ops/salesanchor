@@ -13,6 +13,7 @@ import logging
 from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from datetime import datetime
+from typing import NamedTuple
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -49,7 +50,7 @@ _CORRECTIONS_SQL = """
 """
 _ACTIVE_CONDITIONS_SQL = "SELECT id FROM public.conditions WHERE id = ANY(:ids) AND is_active IS TRUE"
 _JOB_OF_ITEM_SQL = """
-    SELECT ej.id::text AS job_id, ej.prompt_version
+    SELECT ej.id::text AS job_id, ej.prompt_version, ej.source_message_id::text AS source_message_id
     FROM {schema}.extraction_items ei
     JOIN {schema}.extraction_jobs ej ON ej.id = ei.extraction_job_id
     WHERE ei.id = CAST(:eid AS uuid)
@@ -59,6 +60,7 @@ _INSERT_ACK_SQL = """
         (extraction_item_id, source_message_id, field_name, system_value, human_value, corrected_by)
     VALUES (CAST(:eid AS uuid), CAST(:smid AS uuid), :field, :sv, :hv, :cb)
 """
+_ACTIVE_PRODUCTS_SQL = "SELECT id FROM public.products WHERE id = ANY(:ids) AND is_active IS TRUE"
 _CURRENT_REASONS_SQL = "SELECT review_reasons FROM {schema}.analysis_results WHERE extraction_item_id = CAST(:eid AS uuid)"
 
 
@@ -183,14 +185,20 @@ def _active_condition_ids(session: Session, condition_ids: set[int]) -> set[int]
 # ---------------------------------------------------------------------------
 
 
-async def find_job_of_item(db: AsyncSession, extraction_item_id: str) -> tuple[str, str | None] | None:
-    """(extraction_job_id, prompt_version)。件が無い・id の形が違うときは None。"""
+class JobOfItem(NamedTuple):
+    job_id: str
+    prompt_version: str | None
+    source_message_id: str
+
+
+async def find_job_of_item(db: AsyncSession, extraction_item_id: str) -> JobOfItem | None:
+    """件の投稿(extraction_job_id・prompt_version・source_message_id)。件が無い・id の形が違うときは None。"""
     try:
         row = (await db.execute(text(_JOB_OF_ITEM_SQL.format(schema=TCG_SCHEMA)), {"eid": extraction_item_id})).first()
     except Exception:  # noqa: BLE001  uuid の形でない id は「無い」と同じ扱い
         await db.rollback()
         return None
-    return None if row is None else (row.job_id, row.prompt_version)
+    return None if row is None else JobOfItem(row.job_id, row.prompt_version, row.source_message_id)
 
 
 async def v102_job_id_of_item(db: AsyncSession, extraction_item_id: str) -> str | None:
@@ -198,9 +206,22 @@ async def v102_job_id_of_item(db: AsyncSession, extraction_item_id: str) -> str 
     from app.services.line_analysis_v102_svc import is_v102_prompt_version  # noqa: PLC0415  循環 import を避ける
 
     found = await find_job_of_item(db, extraction_item_id)
-    if found is None or not is_v102_prompt_version(found[1]):
+    if found is None or not is_v102_prompt_version(found.prompt_version):
         return None
-    return found[0]
+    return found.job_id
+
+
+async def invalid_product_values(db: AsyncSession, values: Iterable[str]) -> list[str]:
+    """商品の判断の値のうち、整数でない・public.products に is_active=TRUE で無いもの(順番を保つ)。"""
+    parsed: dict[str, int | None] = {}
+    for value in dict.fromkeys(values):
+        try:
+            parsed[value] = int(str(value).strip())
+        except ValueError:
+            parsed[value] = None
+    ids = sorted({n for n in parsed.values() if n is not None})
+    active = {int(r[0]) for r in (await db.execute(text(_ACTIVE_PRODUCTS_SQL), {"ids": ids})).fetchall()} if ids else set()
+    return [value for value, number in parsed.items() if number is None or number not in active]
 
 
 # ---------------------------------------------------------------------------
@@ -227,7 +248,7 @@ async def save_review_ack(
             "sv": (current.review_reasons or "") if current is not None else "", "hv": human_value, "cb": corrected_by,
         },
     )
-    await db.commit()
+    await db.commit()  # public スキーマのみでテナント文脈を使わないため reset_tenant_context は不要(save_corrections と同じ)
     return 1
 
 

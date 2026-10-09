@@ -704,6 +704,8 @@ def run_v102_analysis(session: Session, extraction_job_id: str) -> dict:
     from app.tasks.tcg_extraction import load_extraction_context  # noqa: PLC0415  循環 import を避ける
 
     schema = analyzer.TCG_SCHEMA
+    # 同じ投稿のやり直しが並行して走ると、判断の読み込みと書き込みが交差する。取引の最初に投稿ごとの鍵を取り、順番に走らせる
+    session.execute(text("SELECT pg_advisory_xact_lock(hashtextextended(:key, 0))"), {"key": f"v102_analysis:{extraction_job_id}"})
     ctx = load_extraction_context(session, extraction_job_id)
     if ctx is None:
         raise ValueError(f"extraction_job が見つかりません: {extraction_job_id}")

@@ -27,7 +27,9 @@ from app.services.line_analysis_v102_svc import is_v102_prompt_version
 from app.services.review_reason_codes_svc import load_review_reason_codes
 from app.services.tcg_condition_review_svc import save_condition_review
 from app.services.v102_human_decisions_svc import (
+    FIELD_PRODUCT_ID,
     find_job_of_item,
+    invalid_product_values,
     normalize_ack_codes,
     save_review_ack,
     unknown_codes,
@@ -137,7 +139,6 @@ async def save_item_corrections(
         try:
             UUID(extraction_item_id)
         except ValueError as exc:
-            from fastapi import HTTPException
             raise HTTPException(404, "Condition review item not found") from exc
         result = await save_condition_review(
             db, extraction_item_id=extraction_item_id, source_message_id=body.source_message_id,
@@ -151,6 +152,11 @@ async def save_item_corrections(
         for f in body.fields
         if f.human_value.strip()
     ]
+    v102_job_id = await v102_job_id_of_item(db, extraction_item_id)
+    if v102_job_id is not None:  # v102 の件だけ、無効な商品の判断は何も書かずに 422（v6 の件の挙動は変えない）
+        bad = await invalid_product_values(db, [f["human_value"] for f in non_empty if f["field_name"] == FIELD_PRODUCT_ID])
+        if bad:
+            raise HTTPException(422, f"Product is not an active product: {', '.join(bad)}")
     result = await save_corrections(
         db,
         extraction_item_id=extraction_item_id,
@@ -158,8 +164,8 @@ async def save_item_corrections(
         fields=non_empty,
         corrected_by=current_user.email,
     )
-    if result["saved"] > 0:
-        await _enqueue_reanalyze_if_v102(db, extraction_item_id)
+    if result["saved"] > 0 and v102_job_id is not None:
+        enqueue_v102_reanalyze(v102_job_id)
     return SaveCorrectionsResponse(ok=True, saved=result["saved"])
 
 
@@ -185,12 +191,13 @@ async def save_item_review_ack(
     found = await find_job_of_item(db, extraction_item_id)
     if found is None:
         raise HTTPException(404, "Item not found")
-    job_id, prompt_version = found
-    if not is_v102_prompt_version(prompt_version):
+    if not is_v102_prompt_version(found.prompt_version):
         raise HTTPException(409, "review-ack is only for v102 items")
+    if str(body.source_message_id) != found.source_message_id:
+        raise HTTPException(422, "source_message_id does not match the item's post")
     saved = await save_review_ack(
         db, extraction_item_id=extraction_item_id, source_message_id=str(body.source_message_id),
         codes=body.codes, corrected_by=current_user.email,
     )
-    enqueue_v102_reanalyze(job_id)
+    enqueue_v102_reanalyze(found.job_id)
     return ReviewAckResponse(ok=True, saved=saved)
