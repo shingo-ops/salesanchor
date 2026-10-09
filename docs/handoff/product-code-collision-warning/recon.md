@@ -45,3 +45,39 @@
 | 3 | 実データで型番が公式でも重なる組がある | カード記載の事実（ST01〜ST24・EB01 など。除外ワードで見分けている）。件数は社外秘のため書かない | 解消済み（カード記載） |
 
 **未解決ゼロ確認**: 全て解消済み
+
+---
+
+## 画面（2/2）
+
+**実測の基準**: worktree の起点 e51dceba7（origin/main）。行番号は変更前の値
+
+### 既存 ADR の検索結果（画面分）
+
+- ADR-144（`docs/adr/ADR-144-ui-component-governance.md`）: UI 部品の金型。`docs/CC_UI_GOVERNANCE.md:11-14` に「金型が無ければ PO 許可を得て `components/` に登録（Xxx.tsx + Xxx.css + Xxx.stories.tsx）」とある。PO 許可は取得済み（「登録する」2026-10-09）
+- ADR-027（`docs/adr/ADR-027-ui-internationalization.md`）: UI 文字列は t() 経由。ja.json・en.json 同一キー
+- ADR-067（`docs/adr/ADR-067-design-token-enforcement.md`）: 色・余白は CSS 変数のみ
+
+### file:line 引用表（画面分）
+
+| 引用先 `path:line` | 確認内容 |
+|-------------------|---------|
+| `frontend/src/components/` | Alert / Banner / Callout 相当のファイルが無い（Badge.tsx・Card.tsx・Modal.tsx 等のみ） |
+| `frontend/src/components/Badge.tsx:1` | 既存の金型の作法（comp-* クラス・variant・CSS は var() のみ）。同じ作法で Callout を作る |
+| `frontend/src/components/loading/index.ts` | components/ の下位フォルダは loading・master-list-editor の2つのみ。他の部品は components/ 直下に平置き |
+| `frontend/scripts/check-stories-count.js:21` | check:stories は components/ 直下の `.tsx` だけを走査する（下位フォルダは対象外） |
+| `frontend/src/tokens.css:560` | `--color-warning-bg` / `--color-warning-border`（ダークは `tokens.css:605`）。警告の枠の色に使う |
+| `frontend/src/index.css:109` | `--info-bg` / `--info-text`（ダークは `index.css:302`）。案内の枠の色に使う |
+| `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:150-175` | 新規 saveCreate。保存後に onClose する |
+| `frontend/src/features/tcg-product-import/TcgProductDetailDrawer.tsx:127-149` | 編集 saveEdit。応答で detail を差し替える |
+| `frontend/src/features/tcg-product-import/TcgProductImportPreview.tsx:19` | 行の messages 列。warnings を importMessages.ts で文言化 |
+| `frontend/src/features/tcg-product-import/importMessages.ts:19` | `MARK_ALREADY_USED_BY_` → `productCsv.messages.markUsed` |
+| `backend/app/schemas/tcg_product_code_collision.py:13-34` | CodeCollision の形（画面はこの形を読む） |
+
+### 不明点リスト（画面分）
+
+| # | 不明点 | 解消方法 | 状態 |
+|---|-------|---------|------|
+| 4 | 部品の置き場所（カードは `components/feedback/`） | 既存は平置きが主で、check:stories は直下のみ走査（上表）。下位フォルダに置くと stories の検査が効かない | 解消済み（`components/Callout.tsx` に平置き） |
+
+**未解決ゼロ確認**: 全て解消済み
