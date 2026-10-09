@@ -2559,3 +2559,62 @@ Architect 自己審査（AY-2c）: APPROVE。根拠: 対象49件・副作用の�
 - `npm run build-storybook`: 終了 0
 
 限界: dark テーマ未測定、fixture は祖先連鎖の近似。切戻し: 本PRの merge commit を revert。
+
+#### AY-2c 本番反映（2026-10-09 記録）
+
+AY-2c: PR #4081 merge afa02b990cb9b371a5cadc1ab4ba881c88e6bf3a（2026-10-09T11:51:01Z、必須15/15成功）、Deploy 37926270574 success（headSha afa02b990、11:51:04Z〜11:53:39Z）。本番 CSS index-BJW2PBHr.css に `form-row input:not(` 0 件、`.form-row input:focus` 3（残置した focus 規則）。app 200、/api/health 200。GO: POの委任に基づくClaude Opus発行（ADR-1003、PR本文の GO記録）。Reviewer APPROVE（LOW 2: 残置 focus 規則が error 状態の金型の focus 枠色を accent にする＝該当利用0件、コメント文言）。
+
+#### AY-2d 登録画面の一行入力の標準化（2026-10-09）
+
+mode: handoff。§AY 追補の便分割「AY-2b 以降」のうち「G02 等のブラウザ既定 → 標準」の第1便（領域: 登録画面）。PO 方針回答（2026-10-09「y」: 一般フォームは標準の見た目）の範囲内。PO 原文（2026-10-09、本セッション）「次を進める」。GO は ADR-1003 の委任に基づく Claude Opus 発行。POのGO原文は創作しない。
+
+現在地（origin/main 70f607abf、frontend は f0d710185 と差分0。証跡は本便で evidence-20260910/ に保存する ay2d-*）:
+- ページ側の生 text 系 input 135（ay0-input-inventory.cjs）。当たる規則の集合で32グループ（ay2d-groups.md、全件 ay2d-rows.tsv）。保留22（ProductEditPage 14・ProductMasterDrawer 7・SourceRawPane 1）を除く113のうち、規則なし104・規則あり9。領域別は登録画面45、super-admin 17、請求書作成7、見積作成7、在庫6、他（ay2d-areas.md）。
+- 登録画面 45 件（frontend/src/pages/register/ の RegisterPage.tsx・RegisterAddressPage.tsx・RegisterChangeBillingPage.tsx・CountryCombobox.tsx）: 全件 className="input"。`.input` を含む CSS 規則は全 CSS で0件、pages/register に CSS ファイル・CSS import は0（ay2d-register-css-grep.txt）。見た目の出所は `*` リセット（index.css:419: margin 0・padding 0・box-sizing border-box）とブラウザ既定だけ。tel 4件だけ inline style `{ flex: 1 }`（配置。電話の国番号と並ぶ行）。disabled・ref・onKeyDown・ui-allow は0。eslint 警告0。
+- 実測（ay2d-visual.md、fixture）: 現状はブラウザ既定の素の入力（padding 0、枠 2px inset、角 0、Arial 13.33px、高さ約19px、幅は内容なり約149px、focus はブラウザの outline）。標準にすると padding 8px 12px、枠 1px solid var(--border)、角 6px、アプリ書体 14.4px、高さ約40px（幅375で44px）、幅は親の100%、focus は accent 枠＋リング。
+- 試験: class `input` を参照する試験0。tests-e2e/register-form-ux.spec.ts は label 内の input と `input[type=email|tel]` で探す（class・style 非依存）。
+
+選択: 領域ごとに分ける方針（§AY 追補）に従い、件数が最大で、規則・直書き inline が無く、見た目が明らかに未整備（ブラウザ既定）の登録画面を本便とする。super-admin・請求書・見積・在庫などの inline style 混在の組（直書き px を含む G08・G19〜G24・G29〜G32 等）は、配置と外観の仕分けが要るため次便以降。
+
+AY-2d 変更契約:
+1. ページ: 登録画面の45件（ay2d-register-targets.tsv）の `<input` を `<TextFieldControl`（standard・size 指定なし）に置換（自己終了の形を保つ）。`className="input"` は外す（CSS 定義0・参照0）。tel 4件の `style={{ flex: 1 }}` は配置のため残す。type・id・name・value・onChange・required・placeholder・autoComplete・pattern・maxLength 等は逐語保持。import に `TextFieldControl` を追加（pages/register/CountryCombobox.tsx は相対パスに注意）。
+2. CSS・トークン・金型本体の変更なし。
+3. design.md: 本節（AY-2c 本番反映を含む）と実装結果を追記。
+4. 変更しないもの: 登録画面の select・textarea・checkbox など input 以外と非 text の input、他領域の生 input（90件、保留22を含む）、FormField.css・tokens.css・TextField.tsx、i18n、API/DB/backend、CI、依存、e2e。
+
+前後表（実測。ay2d-visual.md と実画面スクリーンショット）:
+
+| 対象 | 変わる項目 |
+|---|---|
+| 登録画面 45 件 | 素の入力欄（枠 2px のくぼみ・余白なし・角なし・小さい文字・高さ約19px・内容幅）→ 標準の入力欄（枠 1px の薄い灰・余白 8px/12px・角 6px・アプリ書体 14.4px・高さ約40px（幅375で44px）・横幅いっぱい・focus は濃い青の枠とリング） |
+| その他 | 変化0 |
+
+受入:
+
+| 基準 | 検証方法 |
+|---|---|
+| 実画面で崩れが無い | 変更前後のアプリ（vite build→preview、ログイン不要の登録画面3種）を Chromium で幅1280・375 の全画面スクリーンショット（DPR2）。入力欄が横にはみ出さない（document.scrollWidth ≦ clientWidth）、要素の重なり0（入力欄の bounding box どうし・ラベルとの重なりを計測）、tel 行は国番号と電話欄が1行に並ぶ。画像は PR に添付し、設計者が目視確認 |
+| 外観が前後表どおり | 実画面で45件の computed style を変更前後で採取し、前後表の項目以外（色 text-primary・背景 bg-surface 等）に想定外の差が無い |
+| 非外観属性が不変 | AST 照合で45件のタグ名・className 削除・import 以外の差分0 |
+| 置換漏れ0 | 再計測で pages/register の生 text 系 0、ページ側の生 text 系 135→90 |
+| 試験 | register-form-ux.spec.ts のセレクタが移管後 DOM に一致（構造確認）。frontend 単体試験全件成功 |
+| 品質 | generate:icon-sizes・generate:api-types の後 tsc、lint、check:all、test:coverage（maxWorkers=1）、build、build-storybook、CI 必須全成功 |
+| 本番 | Deploy 成功、本番の登録画面（/register）が 200、app 200・/api/health 200 |
+
+Architect 自己審査（AY-2d）: APPROVE（条件: 実画面の崩れ0を実装後に確認）。根拠: 対象45件を file:line で確定、CSS 規則0・試験の class 依存0、変化は PO 方針（一般フォームは標準）の範囲、配置の inline（flex:1）は保持、配線・データ・トークン不変、新規トークン0。同一AI（Opus）の自己審査であり独立第二者レビューではない。外部事例: 既存金型の踏襲のため不要。dark テーマは未測定。
+
+維持の仕組み: 守り手は TextField.test.tsx、ui-governance、design-token-guard、frontend-check、ay2d 実測・AST 照合・スクリーンショット（evidence）。外観の正本は FormField.css。守っていないもの: 残る生 text 系 90（保留22を含む）。切戻し: 本PRの merge commit を revert（DB 影響なし）。
+
+次便: AY-2e super-admin 等の規則なし・inline の組（配置と外観の仕分け、直書き px の除去）。
+
+#### AY-2d 実装結果
+
+実装: 登録画面の生 text 系 input 45 件（RegisterPage 23・RegisterAddressPage 11・RegisterChangeBillingPage 10・CountryCombobox 1）を `<TextFieldControl`（standard）へ置換し `className="input"` を削除。tel 4 件の `style={{ flex: 1 }}` は保持。import 4 行追加。CSS・トークン・金型本体・i18n の変更なし。置換は AST スクリプト（evidence-20260910/ay2d-apply.cjs）。
+
+実画面（evidence-20260910/ay2d-after-check.md、ay2d-screens/）: 登録画面3種 × 幅1280/375（DPR2、Chromium headless shell 1217、vite build→preview）。API は page.route で `/api/v1/public/register` を同一 JSON でモック、Firebase 初期化は VITE_FIREBASE_* ダミー値でビルド（before/after 同一）。/register は「別の配送先を登録」選択で全入力を表示。結果: document.scrollWidth = clientWidth（全6件）、入力欄どうしの重なり before 1〜2 → after 0（before の重なりは国番号欄 149px が親 140px を超えて tel 欄に 9px かかっていたもの）、ラベル文字との重なり 0、横はみ出し 0、tel 行は国番号欄と同一行。computed style の差は border（2px inset 灰 → 1px solid var(--border)）・角 6px・padding 8/12・font-size 13.33→14.4px・アプリ書体・line-height・color（黒 → text-primary）・height（約19 → 39.6、幅375で44）・width（内容幅149 → 100%、tel は flex:1 のまま・国番号欄は 140px）のみ。
+
+AST 照合（ay2d-ast-check.md）: 45/45 PASS（タグ名・className="input" 削除・import 追加以外の差分0）。再計測（ay2d-inv-after.json）: ページ側の生 text 系 135 → 90、pages/register は 0。
+
+品質: tsc 0、lint 0（警告139・errors 0・pages/register の警告0）、check:all 0、test:coverage --maxWorkers=1 0（74 files・963 tests 成功）、build 0、build-storybook 0。e2e register-form-ux.spec.ts は label/fieldset/`input[type=email]` で探し class・style 非依存。
+
+限界: dark テーマ未測定。登録画面は 375 幅でページ余白が 0（既存。before も同じ x=0）で、入力欄が左右いっぱいに広がる。モック応答での採取であり実トークンでの送信は未確認。切戻し: 本PRの merge commit を revert。
