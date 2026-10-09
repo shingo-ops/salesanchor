@@ -337,3 +337,4 @@ AP実装検収: POの明示委任後6件移管・新規67回帰を実装。root�
 2026-10-05 AV-1完了: PR #3931 merge 4a54206dd（必須13/13成功）、Deploy37254291709 success、本番 asset index-BVLZdWZ6.js/index-DQ5Tuc_9.css に comp-select--no-indicator 各1件、app/api 200。GO #3931 は PO 本人のチケット発行・本文反映・merge-safe 実行。根拠evidence-20260910/av1-implementation.md。画面目視未実施。
 
 2026-10-05 AW設計: ページ側生select76（ParseReviewPage4件はファイル削除で消滅）の適用CSSを静的解析し、意図資料を照合。POの方針選択により、カルテ9・ヘッダー2・タブバー2は金型の種類（variant）として登録し現行外観を保持、一般55は標準へ統一、商品編集9と報酬1は保留。変更前の computed style を Chromium147 で80条件実測（aw1-baseline）。詳細design.md §AW、証跡av2-select-mapping.md・av2-recon2.md・aw1-baseline.md。製品未変更。
+2026-10-09 AW-2b 本番反映（PR #4033 merge de8ca6275、Deploy 37854006957）。AX 着手: TextareaControl 本体（裸・forwardRef・寸法 class）を追加、利用ページ変更0・見た目の変化0。生 textarea はページ側53（origin/main 0f5d7e537、ui-allow 2）、移管は AX-2（前後表と PO 確認後）。詳細 design.md §AX、証跡 evidence-20260910/ax0-textarea-inventory.md・ax1-visual.md。

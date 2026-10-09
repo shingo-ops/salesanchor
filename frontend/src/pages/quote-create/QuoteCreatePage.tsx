@@ -21,6 +21,7 @@ import CompanyContactSelector from "../../components/CompanyContactSelector";
 import InventorySearchBar, { InventorySearchCandidate } from "../../components/InventorySearchBar";
 import { FedExRateModal } from "../../components/FedExRateModal";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import {
   type LineItem,
   type QuoteHandoffState,
@@ -154,11 +155,11 @@ export default function QuoteCreatePage() {
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "var(--space-4)", marginBottom: "var(--space-6)" }}>
           <div className="form-group"><label>{t("common.currency")}</label>
-            <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+            <SelectControl fullWidth value={currency} onChange={(e) => setCurrency(e.target.value)}>
               <option value="JPY">JPY</option>
               <option value="USD">USD</option>
               <option value="EUR">EUR</option>
-            </select>
+            </SelectControl>
           </div>
           <div className="form-group"><label>{t("common.notes")}</label>
             <input value={notes} onChange={(e) => setNotes(e.target.value)} />

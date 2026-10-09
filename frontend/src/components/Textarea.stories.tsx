@@ -4,7 +4,7 @@
  * 標準テキストエリアの全バリアント・状態確認。
  */
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Textarea } from './Textarea'
+import { Textarea, TextareaControl } from './Textarea'
 
 const meta: Meta<typeof Textarea> = {
   title: 'Components/Textarea',
@@ -72,5 +72,32 @@ export const Sizes: Story = {
       <Textarea label="Medium (default)" placeholder="md textarea" size="md" />
       <Textarea label="Large" placeholder="lg textarea" size="lg" />
     </div>
+  ),
+}
+
+export const ControlDefault: Story = {
+  name: 'TextareaControl 通常（裸の本体）',
+  render: () => <TextareaControl placeholder="Enter notes..." aria-label="Notes" />,
+}
+
+export const ControlSizes: Story = {
+  name: 'TextareaControl サイズ比較 (sm / md / lg)',
+  render: () => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+      <TextareaControl size="sm" placeholder="sm textarea" aria-label="Small" />
+      <TextareaControl size="md" placeholder="md textarea" aria-label="Medium" />
+      <TextareaControl size="lg" placeholder="lg textarea" aria-label="Large" />
+    </div>
+  ),
+}
+
+export const ControlDisabled: Story = {
+  name: 'TextareaControl 無効状態',
+  render: () => (
+    <TextareaControl
+      defaultValue="This template is locked and cannot be edited."
+      disabled
+      aria-label="Template body"
+    />
   ),
 }

@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { auth } from "../../lib/firebase";
 import { usePermissions } from "../../hooks/usePermissions";
 import { PageLayout } from "../../components/PageLayout";
@@ -190,10 +191,10 @@ export default function PurchaseOrdersPage() {
       />
       <ContentToolbar
         left={
-          <select className="field-h-md field-w-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <SelectControl className="field-w-sm" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
             <option value="">{t("purchaseOrders.allStatuses")}</option>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-          </select>
+          </SelectControl>
         }
         right={hasPermission("purchase_orders.create") ? (
           <Button variant="primary" size="md" data-testid="po-new-btn" onClick={() => { setPoInitial(null); setShowNewModal(true); }}>

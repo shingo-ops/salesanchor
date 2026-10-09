@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
 import { Button } from "../../components/Button";
+import { SelectControl } from "../../components/Select";
 import { ButtonLink } from "../../components/ButtonLink";
 
 interface PaypalStatus {
@@ -161,14 +162,15 @@ export default function PaypalIntegrationPage() {
         </div>
         <div className="form-group">
           <label htmlFor="paypal-env">{t("paypalIntegration.envLabel")}</label>
-          <select
+          <SelectControl
+            fullWidth
             id="paypal-env"
             value={environment}
             onChange={(e) => setEnvironment(e.target.value)}
           >
             <option value="sandbox">{t("paypalIntegration.envSandbox")}</option>
             <option value="live">{t("paypalIntegration.envLive")}</option>
-          </select>
+          </SelectControl>
         </div>
         <div className="form-actions">
           {status?.configured && (

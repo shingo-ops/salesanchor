@@ -7,9 +7,11 @@
       docs/handoff/gemini-v101/design.md §3-6（v101）
       docs/handoff/gemini-v102/design.md §3-3（v102）
       docs/handoff/gemini-supplier-rules-file/design.md §3（--supplier-rules-file）
-起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME]
-        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
+      docs/handoff/prompt-ab-db-source/design.md §3（--prompt-key）
+起動: python -m app.tools.prompt_ab --runs-file F --config v7|v8|v9|v10|v101|v102 [--prompt-name raw_copy_v9_NAME|raw_copy_v101_NAME] [--prompt-key raw_copy_v101_NAME]
+        [--thinking-level L] [--no-thoughts] [--no-schema] [--temperature T] [--omit-supplier-field extraction_XXX ...] [--supplier-rules-file F] [--keep-legacy-supplier-fields] --repeat N --max-cost-usd X --test-id ID --out-dir /tmp/prompt_ab/ID [--dry-run]
 
+（--config v102 で --prompt-name・--prompt-key なしのときの既定の指示書は DB の key raw_copy_v101_f_c）
 結果は out-dir の JSONL にだけ書く（1回につき1行）。DB に書くのは llm_usage_events（費用の台帳）だけで、
 purpose="line_extraction_shadow"・source_ref="prompt_ab:<test_id>" で区別する。
 extraction_shadow_runs / extraction_jobs など本番の表には書かない。
@@ -65,6 +67,7 @@ from app.services.gemini_raw_copy_v101 import (
     extract_v101_items,
     parse_v101_response,
 )
+from app.services.gemini_raw_copy_v102_product_first import load_product_first_masters
 from app.services.llm_budget import record_usage_event_sync
 from app.services.tcg_analyzer_svc import load_condition_entries, load_lookup_maps, load_status_master
 from app.tasks.tcg_extraction import TCG_SCHEMA, _get_sync_session, load_extraction_context
@@ -214,15 +217,22 @@ def _parse(config: str, response_text: str, raw_text: str, masters: dict | None 
     return len(items), errors
 
 
-def _load_v10_masters(session: Session) -> dict:
-    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。"""
+def _load_v10_masters(session: Session, *, product_first: bool = False) -> dict:
+    """v10 の取り出しに使うマスタを読む（読み取りのみ。1回の実行で1回だけ呼ぶ）。
+
+    product_first（試作版 v102）のときだけ、商品・商品の分類・状態ごとの単位・単位にしない言い回しも読む。
+    これらが空なら ValueError で止める。v10・v101 には足さない（**masters で展開されるため）。
+    """
     cond_entries = load_condition_entries(session)
     status_entries = load_status_master(session)
     (_pc, _ua, _uc, _ca, cond_canonical_to_uuid, unit_alias_to_info) = load_lookup_maps(session)
-    return {
+    masters = {
         "cond_entries": cond_entries, "cond_canonical_to_uuid": cond_canonical_to_uuid,
         "unit_alias_to_info": unit_alias_to_info, "status_entries": status_entries,
     }
+    if product_first:
+        return {**masters, "product_first": load_product_first_masters(session)}
+    return masters
 
 
 def _v10_row_fields(response_text: str, ctx, masters: dict) -> dict:
@@ -251,16 +261,27 @@ def _v101_row_fields(response_text: str, ctx, masters: dict) -> dict:
 
 
 def _v102_row_fields(response_text: str, ctx, masters: dict) -> dict:
-    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。"""
+    """JSONL の v102 の行に足す v102_items（F1〜F6 あり・付け直しあり）・v102_flags。v101 の欄は書かない。失敗しても止めない。
+
+    落とした件は捨てずに v102_items の最後に残し、読めない応答・例外は v102_flags["post_review"] に残す（設計 docs/handoff/v102-no-silent-drop/design.md）。
+    """
     try:
-        items, _errors = parse_v101_response(response_text, ctx.raw_text, status_entries=masters["status_entries"])
+        items, errors = parse_v101_response(
+            response_text, ctx.raw_text, status_entries=masters["status_entries"], keep_rejected=True
+        )
         order = order_from_pattern((ctx.supplier_context or {}).get("extraction_order_pattern"))
         extracted, flags = extract_v101_items(
-            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, **masters
+            items, ctx.raw_text, order=order, reassign=True, v102_fixes=True, review_reasons=True, **masters
         )
+        if not items and errors:
+            flags = {**flags, "post_review": [{"kind": "response_unreadable", "error": errors[0]["error"]}]}
         return {"v102_items": extracted, "v102_flags": flags}
     except Exception as exc:  # noqa: BLE001
-        return {"v102_items": [], "v102_flags": {}, "v102_items_error": f"{type(exc).__name__}: {_safe_error_message(exc)}"}
+        message = f"{type(exc).__name__}: {_safe_error_message(exc)}"
+        return {
+            "v102_items": [], "v102_items_error": message,
+            "v102_flags": {"post_review": [{"kind": "extract_exception", "error": message}]},
+        }
 
 
 def _append_jsonl(path: Path, row: dict) -> None:
@@ -282,8 +303,40 @@ def resolve_prompt_path(prompt_name: str, config: str = "v9") -> Path:
     return path
 
 
-def _load_prompt_text(config: str, prompt_name: str | None = None) -> str | None:
+_PROMPT_KEY_CONFIGS = ("v101", "v102")
+V102_PROMPT = "raw_copy_v101_f_c"  # v102 で --prompt-name も --prompt-key もないときの既定の指示書（DB の prompt_key）
+_PROMPT_KEY_SQL = """
+    SELECT prompt_text FROM public.extraction_prompt_config
+    WHERE prompt_key = :key AND is_active = TRUE
+"""
+
+
+def _check_prompt_key_shape(prompt_key: str) -> None:
+    """--prompt-key の形の検査（本番の解析が使う名前・パス区切りを通さない）。DB には触れない。"""
+    if not V101_PROMPT_NAME_RE.fullmatch(prompt_key):
+        raise ValueError(f"--prompt-key は {V101_PROMPT_NAME_RE.pattern} の形だけ使えます: {prompt_key!r}")
+
+
+def load_prompt_from_db(session: Session, prompt_key: str) -> str:
+    """public.extraction_prompt_config の is_active な行の本文。形が違う・行が無い・本文が空なら ValueError。"""
+    _check_prompt_key_shape(prompt_key)
+    row = session.execute(text(_PROMPT_KEY_SQL), {"key": prompt_key}).first()
+    if row is None:
+        raise ValueError(f"指示書の行が見つからない（無いか is_active でない）: {prompt_key}")
+    body = row[0]
+    if not isinstance(body, str) or not body.strip():
+        raise ValueError(f"指示書の本文が空です: {prompt_key}")
+    return body
+
+
+def _load_prompt_text(
+    config: str, prompt_name: str | None = None, prompt_key: str | None = None, session: Session | None = None,
+) -> str | None:
     """v8・v9・v10・v101・v102 の指示書の本文。v7 は DB の指示書を既存関数が読むので None。"""
+    if prompt_key is not None:
+        if session is None:
+            raise ValueError("--prompt-key には DB の session が要ります")
+        return load_prompt_from_db(session, prompt_key)
     if prompt_name is not None:
         return resolve_prompt_path(prompt_name, config).read_text(encoding="utf-8")
     if config == "v101":
@@ -313,6 +366,12 @@ _SUPPLIER_FIELD_PATTERN = re.compile(r"^extraction_[a-z_]+$")
 
 # 新しい仕組み（v8 系）だけが読む欄。supplier_context ではなく new_system_rules 側で扱う。
 _NEW_SYSTEM_FIELDS = ("extraction_layout_rules", "extraction_hard_cases")
+
+# v102 で既定で外す、元からある仕入元ルールの欄（PO 2026-10-07：新2欄だけを読む形で採用確定）
+LEGACY_SUPPLIER_FIELDS = (
+    "extraction_price_format", "extraction_qty_format", "extraction_notes", "extraction_state_format",
+    "extraction_order_pattern", "extraction_example_text", "extraction_ship_format",
+)
 
 
 def _supplier_field_name(value: str) -> str:
@@ -430,6 +489,7 @@ def run_ab(
     test_id: str, out_dir: Path, dry_run: bool, thinking_level: str | None,
     include_thoughts: bool, use_schema: bool, temperature: float | None, prompt_name: str | None = None,
     omit_supplier_fields: list[str] | None = None, supplier_rules_file: Path | None = None,
+    prompt_key: str | None = None,
 ) -> AbSummary:
     summary = AbSummary(target_count=len(run_ids), dry_run=dry_run)
     rules: dict[str, dict] | None = None
@@ -439,8 +499,16 @@ def run_ab(
             raise ValueError("--supplier-rules-file は --config v8・v9・v10・v101・v102 のときだけ使えます")
         rules, rules_sha256 = load_supplier_rules_file(supplier_rules_file)
     job_ids = fetch_job_ids(session, run_ids)
-    v8_prompt = _load_prompt_text(config, prompt_name)  # 名前・ファイルの誤りはここで止まる（Gemini を呼ぶ前）
-    row_prompt_name = {
+    if prompt_key is not None and (config not in _PROMPT_KEY_CONFIGS or prompt_name is not None):
+        raise ValueError("--prompt-key は --config v101・v102 のときだけ、--prompt-name なしで使えます")
+    if config == "v102" and prompt_name is None and prompt_key is None:
+        prompt_key = V102_PROMPT
+    v8_prompt = _load_prompt_text(config, prompt_name, prompt_key, session)  # 名前・ファイル・行の誤りはここで止まる（Gemini を呼ぶ前）
+    prompt_source = "db" if prompt_key is not None else (None if config == "v7" else "file")
+    prompt_sha256 = hashlib.sha256(v8_prompt.encode("utf-8")).hexdigest() if v8_prompt is not None else None
+    if prompt_key is not None:
+        logger.info("[prompt_ab] prompt_key=%s sha256=%s", prompt_key, prompt_sha256)
+    row_prompt_name = prompt_key or {
         "v9": prompt_name or _DEFAULT_V9_PROMPT_NAME, "v101": prompt_name or DEFAULT_V101_PROMPT_NAME,
         "v102": prompt_name or DEFAULT_V102_PROMPT_NAME,
     }.get(config)
@@ -454,7 +522,9 @@ def run_ab(
         _print_dry_run(summary, config, ctx, v8_prompt, omit_supplier_fields, rules, rules_sha256)
         return summary
 
-    masters = _load_v10_masters(session) if config in ("v10", "v101", "v102") else None  # dry-run では読まない
+    masters = (  # dry-run では読まない
+        _load_v10_masters(session, product_first=(config == "v102")) if config in ("v10", "v101", "v102") else None
+    )
     Path(out_dir).mkdir(parents=True, exist_ok=True)
     for run_id in run_ids:
         job_id = job_ids.get(run_id)
@@ -468,6 +538,8 @@ def run_ab(
             row = {"run_id": run_id, "job_id": job_id, "config": config, "repeat": n}
             if row_prompt_name is not None:
                 row["prompt_name"] = row_prompt_name
+            row["prompt_source"] = prompt_source
+            row["prompt_sha256"] = prompt_sha256
             if omit_supplier_fields:
                 row["omitted_supplier_fields"] = sorted(set(omit_supplier_fields))
             try:
@@ -544,7 +616,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Gemini 書き写し v7/v8/v9/v10/v101/v102 の比較試験（結果は JSONL、DB は費用の台帳だけ）")
     p.add_argument("--runs-file", required=True, type=Path, help="対象の extraction_shadow_runs.id を1行1件で書いたファイル")
     p.add_argument("--config", required=True, choices=("v7", "v8", "v9", "v10", "v101", "v102"))
-    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 raw_copy_v101_c）を指示書にする")
+    p.add_argument("--prompt-name", help="--config v9・v101・v102 のみ。prompts/ の raw_copy_v9_<名前>.txt（v9）／raw_copy_v101_<名前>.txt（v101 は既定 raw_copy_v101_a、v102 は既定 DB の key raw_copy_v101_f_c）を指示書にする")
+    p.add_argument("--prompt-key", help="--config v101・v102 のみ。public.extraction_prompt_config の prompt_key（raw_copy_v101_<名前>、is_active）の本文を指示書にする。--prompt-name とは同時に使えない")
     p.add_argument("--thinking-level", type=str.lower, choices=_THINKING_LEVELS, help="v8・v9 のみ。未指定なら level を入れない")
     p.add_argument("--no-thoughts", action="store_true", help="v8・v9 のみ。考えた過程の要約を求めない")
     p.add_argument("--no-schema", action="store_true", help="v8・v9 のみ。JSON の型指定を付けない")
@@ -557,6 +630,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
                    help="仕入元ルールの欄（extraction_ で始まる名前）を指示から外す。何回でも指定できる。v7 では効かない")
     p.add_argument("--supplier-rules-file", type=Path, default=None,
                    help="仕入元 id ごとに extraction_* の欄を差し替える JSON（{\"id\": {\"extraction_x\": 値 or null}}）。ファイルに無い欄は DB の値のまま、null は欄を外す。--omit-supplier-field より先に適用。v7 では効かない")
+    p.add_argument("--keep-legacy-supplier-fields", action="store_true",
+                   help="--config v102 のみ。既定で外す元からある7欄（LEGACY_SUPPLIER_FIELDS）を外さずに渡す（比較試験用）")
     p.add_argument("--dry-run", action="store_true", help="対象の件数と組み立てた指示の先頭30行だけ表示する（Gemini は呼ばない）")
     args = p.parse_args(argv)
     if args.thinking_level:
@@ -574,6 +649,15 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             load_supplier_rules_file(args.supplier_rules_file)
         except ValueError as exc:
             p.error(str(exc))
+    if args.prompt_key is not None:
+        if args.config not in _PROMPT_KEY_CONFIGS:
+            p.error("--prompt-key は --config v101・v102 のときだけ使えます")
+        if args.prompt_name is not None:
+            p.error("--prompt-key と --prompt-name は同時に使えません")
+        try:
+            _check_prompt_key_shape(args.prompt_key)
+        except ValueError as exc:
+            p.error(str(exc))
     if args.prompt_name is not None:
         try:
             resolve_prompt_path(args.prompt_name, args.config)
@@ -581,6 +665,10 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
             p.error(str(exc))
     if args.repeat < 1:
         p.error("--repeat は 1 以上")
+    if args.keep_legacy_supplier_fields and args.config != "v102":
+        p.error("--keep-legacy-supplier-fields は --config v102 のときだけ使えます")
+    if args.config == "v102" and not args.keep_legacy_supplier_fields:
+        args.omit_supplier_field = sorted(set(args.omit_supplier_field or []) | set(LEGACY_SUPPLIER_FIELDS))
     return args
 
 
@@ -610,6 +698,7 @@ def main(argv: list[str] | None = None) -> int:
             include_thoughts=not args.no_thoughts, use_schema=not args.no_schema,
             temperature=args.temperature, prompt_name=args.prompt_name,
             omit_supplier_fields=args.omit_supplier_field, supplier_rules_file=args.supplier_rules_file,
+            prompt_key=args.prompt_key,
         )
     finally:
         session.close()

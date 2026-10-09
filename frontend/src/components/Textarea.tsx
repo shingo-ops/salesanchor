@@ -6,9 +6,11 @@
  *
  * TypeScript の型で規格外 size をコンパイルエラーにする。
  * 実画面への展開は Task 2E で行う。
+ *
+ * TextareaControl: ラベル・包み div を持たない裸の本体（forwardRef、design.md §AX）。
  */
 
-import { useId } from "react";
+import { forwardRef, useId } from "react";
 import type { TextareaHTMLAttributes } from "react";
 import "./FormField.css";
 
@@ -24,6 +26,26 @@ interface TextareaOwnProps {
 
 export type TextareaProps = TextareaOwnProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, keyof TextareaOwnProps>;
+
+export interface TextareaControlProps
+  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> {
+  size?: TextareaSize;
+}
+
+export const TextareaControl = forwardRef<HTMLTextAreaElement, TextareaControlProps>(
+  function TextareaControl({ size = "md", className, id, ...rest }, ref) {
+    const controlClass = [
+      "comp-field__textarea",
+      size !== "md" ? `comp-field__textarea--${size}` : "",
+      className ?? "",
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    return <textarea ref={ref} id={id} className={controlClass} {...rest} />;
+  },
+);
+TextareaControl.displayName = "TextareaControl";
 
 export function Textarea({
   label,
@@ -60,7 +82,7 @@ export function Textarea({
           )}
         </label>
       )}
-      <textarea id={fieldId} className="comp-field__textarea" {...rest} />
+      <TextareaControl id={fieldId} {...rest} />
       {(error != null || helperText != null) && (
         <p
           className={`comp-field__hint${error != null ? " comp-field__hint--error" : ""}`}
