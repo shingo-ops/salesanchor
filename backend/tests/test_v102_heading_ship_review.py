@@ -98,3 +98,33 @@ def test_does_not_mark_when_only_the_heading_line_itself_has_the_ship_role():
     out, _ = _run(raw, _it([1, 2], "1,000円", "3"), _it([1, 3, 4], "2,000円", "2"))
     assert out[1]["roles"][1] == "ship"
     assert _heading(out[0]) == [] and _heading(out[1]) == []
+
+
+_RAW3 = "【サンプル商品】\n発送:12月\n3BOX@1,000円\n発送:1月\n2BOX@2,000円\n1BOX@3,000円"
+
+
+def _row(lines, price_line, ship_lines):
+    roles = {n: "ship" if n in ship_lines else "name" for n in lines}
+    roles[price_line] = "price"
+    return {"lines": list(lines), "price_line": price_line, "roles": roles, "review": []}
+
+
+def test_ship_line_also_in_third_item_is_not_counted_as_own_line_of_second_item():
+    # 1 見出し / 2 発送A / 3 価格1 / 4 発送B（件2と件3の両方の lines）/ 5 価格2 / 6 価格3
+    # （_run 経由では F1 が件3から行4を外すため、行を直接組んで関数だけを試す）
+    rows = [_row([1, 2, 3], 3, {2}), _row([1, 2, 4, 5], 5, {2, 4}), _row([1, 4, 6], 6, {4})]
+    assert v101._heading_ship_reasons(rows) == [[], [], []]
+
+
+def test_ship_line_only_in_second_item_is_counted_as_own_line_with_three_items():
+    out, _ = _run(_RAW3, _it([1, 2, 3], "1,000円", "3"), _it([1, 2, 4, 5], "2,000円", "2"), _it([1, 6], "3,000円", "1"))
+    assert _heading(out[1]) == [{"line": 2, "kind": _KIND, "own_lines": [4]}]
+    assert _heading(out[0]) == [] and _heading(out[2]) == []
+
+
+def test_rejected_rows_are_neither_grouped_nor_counted_as_other_items_lines():
+    out, _ = _run(_RAW, _it([1, 2, 3], "1,000円", "3"), _it([1, 2, 4, 5, 6], "2,000円", "2"))
+    rejected = {"rejected": "price_not_in_lines", "lines": [1, 4, 5], "price_line": None, "roles": {}, "review": []}
+    with_rejected = v101._heading_ship_reasons([*out, rejected])
+    assert with_rejected[:2] == v101._heading_ship_reasons(out)
+    assert with_rejected[2] == [] and with_rejected[1][0]["own_lines"] == [4, 5]

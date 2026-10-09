@@ -41,6 +41,9 @@ recon.md §1〜§3。
 | (e) 発送の文字が価格の行（役目 price）にあれば付かない | 同上 `test_does_not_mark_when_the_ship_text_is_on_the_price_line` |
 | (f) 既存の review が残り新要素は末尾、元の dict を書き換えない | 同上 `test_keeps_existing_review_items_first_appends_new_one_last_and_does_not_mutate_input` |
 | (g) review_reasons=False の出力が変わらない | 同上 `test_review_reasons_false_output_has_no_new_kind`、既存 `test_without_review_reasons_the_v102_output_has_no_new_keys` |
+| (h) 見出しの行自体の役目が ship で、見出しと価格1のあいだに発送の行が無ければ付かない | 同上 `backend/tests/test_v102_heading_ship_review.py::test_does_not_mark_when_only_the_heading_line_itself_has_the_ship_role` |
+| (i) 件が3つで、件2の発送の行が件3の lines にも入っていれば O に数えず付かない。件2だけの発送の行なら付く | 同上 `test_ship_line_also_in_third_item_is_not_counted_as_own_line_of_second_item`・`test_ship_line_only_in_second_item_is_counted_as_own_line_with_three_items` |
+| (ii) 落とした件（rejected）は、まとまりにも他の件の lines（O の除外）にも入らない | 同上 `test_rejected_rows_are_neither_grouped_nor_counted_as_other_items_lines` |
 | 既存の試験がすべて通る・CI 必須が緑 | CI |
 | 本番反映後に保存済み JSONL を recompute：f_c の s6-r1-merged.jsonl・s6-r2-merged.jsonl（~/CC報告ファイル-keep/stage-s6-20261008/）で新 kind が0件 | Opus が確認 |
 | f_g の fg1-g-20261009.jsonl（~/CC報告ファイル-keep/stage-fg1-20261009/）で新 kind がちょうど1件（3b685d67 の回5、price_line 23、line 13、own_lines [19,21]）、ほかの欄は不変 | Opus が確認 |
