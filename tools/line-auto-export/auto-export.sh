@@ -159,38 +159,13 @@ print('' if r is None else r[0] + '\t' + r[1])")
     # （結果はアプリの通知にしか出ず、proot からは /sdcard が見えないため読めない）。
     # failed にすると見送りでも失敗通知が鳴り続けるため、skipped として記録する
     # （design-app-trigger.md 「なぜ結果が来なければ failed ではなく skipped なのか」参照）。
+    #
+    # 「3時間以上成功していません」の見張りは、以前はここ（appモードのskipped時）に実装していたが、
+    # PO決定2026-10-09でTermuxの15分ジョブ（job 4203、このスクリプト自体）を平常時は止めることになった
+    # ため、ここに置くと見張りも一緒に消えてしまう。データの正（outbox.sqlite3）がある
+    # tools/termux-line-import/client.py の定期点検（job 4201、_check_no_import）へ移した。
     say "skip: no app response within 180s"
     record skipped "アプリが実行しなかった（スマホ使用中か、アプリ側の失敗。アプリの通知を確認）"
-
-    # client.py の詰まり通知（stall, id 4202）は queued/retry/auth_required のジョブが残っている
-    # ときしか鳴らない。appモードでアプリが一切動かなくなると新しいジョブが作られず、何も鳴らない
-    # まま静かに止まる（design-app-trigger.md 追補2026-10-08「修正2」。当初「詰まり通知が拾う」と
-    # 書いたのは設計の誤りだった）。ここで最後の stage='auto' result='ok' からの経過を独自に見張る。
-    # 3時間の根拠: 実測86件/日（平均17分に1件）。送信量の絞り込み導入後は「新規なし」も ok として
-    # 記録されるため、正常に動いていれば3時間以内に必ず ok が入る。日中にスマホを3時間使い続けた
-    # 場合だけ誤検知し得るので、通知文は断定しない。
-    python3 - <<'PY_STALL'
-import sys
-from datetime import datetime
-sys.path.insert(0, '/data/data/com.termux/files/home/line-import/lib')
-import client
-
-box = client.Outbox('/data/data/com.termux/files/home/line-import/state')
-row = box.db.execute(
-    "SELECT at FROM events WHERE stage='auto' AND result='ok' ORDER BY id DESC LIMIT 1").fetchone()
-if row is not None:
-    last_at = row[0]
-    elapsed = box.clock() - last_at
-    if elapsed >= 3 * 3600:
-        h, m = divmod(int(elapsed) // 60, 60)
-        last_hhmm = datetime.fromtimestamp(last_at, client.JST).strftime('%H:%M')
-        content = (f'最後の成功 {last_hhmm} から{h}時間{m}分。'
-                   'スマホを使い続けた場合もこの通知が出ます')
-        # box.notifier は既定の client.termux_notify のまま使う（--alert-once 付き・静かな通知）。
-        # 初回だけ鳴り、以後は無音で更新されるため、appモードがskippedを積むたびに鳴り続けない。
-        box._notify(4204, 'LINE自動書き出し：3時間以上成功していません', content)
-box.db.close()
-PY_STALL
     exit 0
   fi
 
