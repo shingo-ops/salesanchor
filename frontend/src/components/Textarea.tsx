@@ -27,16 +27,21 @@ interface TextareaOwnProps {
 export type TextareaProps = TextareaOwnProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, keyof TextareaOwnProps>;
 
-export interface TextareaControlProps
-  extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> {
-  size?: TextareaSize;
-}
+/** 用途別の種類（design.md §AX-2）。standard 以外は現行ページの見た目を写した固定の見た目で、size は受けない。 */
+export type TextareaVariant = "standard" | "karte" | "embedded" | "composer" | "schedule";
+
+export type TextareaControlProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, "size"> &
+  (
+    | { variant?: "standard"; size?: TextareaSize }
+    | { variant: Exclude<TextareaVariant, "standard">; size?: never }
+  );
 
 export const TextareaControl = forwardRef<HTMLTextAreaElement, TextareaControlProps>(
-  function TextareaControl({ size = "md", className, id, ...rest }, ref) {
+  function TextareaControl({ size = "md", variant = "standard", className, id, ...rest }, ref) {
     const controlClass = [
       "comp-field__textarea",
       size !== "md" ? `comp-field__textarea--${size}` : "",
+      variant !== "standard" ? `comp-textarea--${variant}` : "",
       className ?? "",
     ]
       .filter(Boolean)

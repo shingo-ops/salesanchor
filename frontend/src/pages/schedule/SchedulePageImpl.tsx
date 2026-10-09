@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { Button } from "../../components/Button";
 import { PageLayout } from "../../components/PageLayout";
 import { SelectControl } from "../../components/Select";
+import { TextareaControl } from "../../components/Textarea";
 import { SCHEDULE_POPOVER_ICONS, NAV_ICONS } from "../../constants/icons";
 import { CALENDARS, CALENDAR_MAP, type CalendarId, cssVar } from "../../features/schedule/calendars.config";
 import { api } from "../../lib/api";
@@ -375,8 +376,8 @@ function SchedulePopover({
 
             <label className="schedule-field">
               <span className="schedule-field__label">{t("schedule.eventDescription")}</span>
-              <textarea
-                className="schedule-textarea"
+              <TextareaControl
+                variant="schedule"
                 rows={4}
                 value={draft.description}
                 onChange={(event) => onDraftChange({ ...draft, description: event.target.value })}

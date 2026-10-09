@@ -178,3 +178,46 @@ describe('TextareaControl', () => {
     expect(container.querySelector('textarea')?.getAttribute('id')).toBe('abc');
   });
 });
+
+describe('TextareaControl variants', () => {
+  it.each(['karte', 'embedded', 'composer', 'schedule'] as const)(
+    'variant %s outputs its class before className',
+    (variant) => {
+      const { container } = render(<TextareaControl variant={variant} className="x" />);
+      expect(container.querySelector('textarea')?.className).toBe(
+        `comp-field__textarea comp-textarea--${variant} x`,
+      );
+    },
+  );
+
+  it('variant standard outputs the same class as no variant', () => {
+    const { container } = render(<TextareaControl variant="standard" size="sm" />);
+    expect(container.querySelector('textarea')?.className).toBe(
+      'comp-field__textarea comp-field__textarea--sm',
+    );
+  });
+
+  it('rejects size together with a non-standard variant at type level', () => {
+    // @ts-expect-error variant="karte" cannot be combined with size="sm"
+    const el = <TextareaControl variant="karte" size="sm" />;
+    expect(el).toBeTruthy();
+  });
+
+  it('embedded variant forwards ref and leaves Enter default unprevented', async () => {
+    const ref = createRef<HTMLTextAreaElement>();
+    let prevented: boolean | null = null;
+    const onKeyDown = vi.fn((e: React.KeyboardEvent) => {
+      prevented = e.defaultPrevented;
+    });
+    const { container } = render(
+      <TextareaControl variant="embedded" ref={ref} onKeyDown={onKeyDown} />,
+    );
+    const el = container.querySelector('textarea') as HTMLTextAreaElement;
+    expect(ref.current).toBe(el);
+    const user = userEvent.setup();
+    await user.click(el);
+    await user.keyboard('{Enter}');
+    expect(onKeyDown).toHaveBeenCalled();
+    expect(prevented).toBe(false);
+  });
+});
