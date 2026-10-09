@@ -29,6 +29,7 @@ import { TypeMasterPanel } from "./components/TypeMasterPanel";
 import { SupplierMasterPanel } from "./components/SupplierMasterPanel";
 import { ConditionsMasterPanel } from "./components/ConditionsMasterPanel";
 import { UnitMasterPanel } from "./components/UnitMasterPanel";
+import { UnitIgnorePhrasesPanel } from "./components/UnitIgnorePhrasesPanel";
 import { NoteMasterPanel } from "./components/NoteMasterPanel";
 import { ProductLinesMasterPanel } from "./components/ProductLinesMasterPanel";
 import { ProductFormatsMasterPanel } from "./components/ProductFormatsMasterPanel";
@@ -169,7 +170,12 @@ export default function AnalysisRulesPage() {
               {activeSection === "type-master" && <TypeMasterPanel />}
               {activeSection === "supplier-master" && <SupplierMasterPanel />}
               {activeSection === "conditions-master" && <ConditionsMasterPanel />}
-              {activeSection === "unit-master" && <UnitMasterPanel />}
+              {activeSection === "unit-master" && (
+                <>
+                  <UnitMasterPanel />
+                  <UnitIgnorePhrasesPanel />
+                </>
+              )}
               {activeSection === "note-master" && <NoteMasterPanel />}
               {activeSection === "product-lines-master" && <ProductLinesMasterPanel />}
               {activeSection === "product-formats-master" && <ProductFormatsMasterPanel />}

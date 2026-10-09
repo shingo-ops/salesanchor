@@ -2,9 +2,9 @@
 
 この文書は何か（1行）: 試験と CI が「値を書く migration」のデータに頼っている箇所と、直したあとの試験結果を、行番号つきの事実だけで記録したもの。
 
-親: ADR-1007（PR #3985。migration は構造の変更だけ・1回だけ流す）。設計: docs/handoff/tests-own-seed-data/design.md
+親: ADR-1007（PR #3985、main にマージ済み dee9b0705。migration は構造の変更だけ・1回だけ流す）。設計: docs/handoff/tests-own-seed-data/design.md
 実測時の origin/main: 9a2b06ecd（2026-10-06）。以下の「変更前」の行番号はこの SHA のもの。
-既存 ADR の検索: 機能キーワード（migration seed、countries、type_master、inventory_aggregation）で docs/adr/ と docs/adr/FEATURE-INDEX.md を引いた結果、直接の ADR は ADR-155（migration で値を操作しない）と ADR-1007（PR #3985、未マージ）。
+既存 ADR の検索: 機能キーワード（migration seed、countries、type_master、inventory_aggregation）で docs/adr/ と docs/adr/FEATURE-INDEX.md を引いた結果、直接の ADR は ADR-155（migration で値を操作しない）と ADR-1007（PR #3985、main にマージ済み dee9b0705）。
 
 ## 1. CI で動く PG 試験と動かない PG 試験
 

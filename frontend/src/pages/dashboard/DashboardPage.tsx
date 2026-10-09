@@ -32,6 +32,7 @@ import {
 } from "recharts";
 import { api } from "../../lib/api";
 import { PageLayout } from "../../components/PageLayout";
+import { SelectControl } from "../../components/Select";
 import { DashboardIcons } from "../../constants/icons";
 import { FunnelSection } from "./FunnelSection";
 import { PriorityProspectsSection } from "./PriorityProspectsSection";
@@ -409,8 +410,8 @@ export default function DashboardPage() {
           {/* ファネルセクション用: 月セレクタ + ビュー切替（FUNNEL_MODE が off のとき非表示） */}
           {FUNNEL_MODE !== "off" && (
             <>
-              <select
-                className="page-header-select"
+              <SelectControl
+                variant="header"
                 value={funnelMonth}
                 onChange={(e) => setFunnelMonth(e.target.value)}
                 aria-label={t("funnel.monthLabel")}
@@ -418,7 +419,7 @@ export default function DashboardPage() {
                 {monthOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
-              </select>
+              </SelectControl>
               <div className="db-tabs">
                 <button
                   type="button"
@@ -438,8 +439,8 @@ export default function DashboardPage() {
             </>
           )}
           {/* 既存期間セレクタ（下部エリア用） */}
-          <select
-            className="page-header-select"
+          <SelectControl
+            variant="header"
             value={period}
             onChange={(e) => setPeriod(e.target.value as Period)}
             aria-label={t("dashboard.periodLabel")}
@@ -449,7 +450,7 @@ export default function DashboardPage() {
             <option value="3m">{t("dashboard.period3m")}</option>
             <option value="6m">{t("dashboard.period6m")}</option>
             <option value="12m">{t("dashboard.period12m")}</option>
-          </select>
+          </SelectControl>
         </div>
       }
     >

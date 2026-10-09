@@ -23,22 +23,21 @@ jobs:
           fetch-depth: 0
 
       - name: Run reaper（マージ済み worktree を自動削除）
-        # self-hosted runner の actions/checkout は _work 配下に別 checkout を作る。
-        # そのまま実行すると reaper は _work 側の .git を基点に見てしまい、
-        # 本店(/Users/tanizawashingo/worktrees/salesanchor) の実 worktree を走査できず
-        # 「対象0件」になる。2026-07-20 実測のズレを塞ぐため、本店の worktree 親を明示注入する。
-        env:
-          REAPER_WORKTREES_DIR: /Users/tanizawashingo/worktrees/salesanchor
+        # self-hosted runner の checkout（_work）を git の基点にすると、MAIN_REPO_ROOT が _work を指し、
+        # 本体の worktree を削除できない（2026-10-09 確認。docs/handoff/reaper-on-merge/design.md §1）。
+        # そのため、スクリプトは最新の checkout のものを使い、cwd は本体リポジトリにする。
+        working-directory: /Users/tanizawashingo/salesanchor
         run: |
-          if [ ! -f scripts/reaper-worktree.sh ]; then
-            echo "reaper-worktree.sh が見つかりません（PR-A 未マージ）"
+          if [ ! -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
+            echo "reaper-worktree.sh が見つかりません"
             exit 0
           fi
-          bash scripts/reaper-worktree.sh --execute
+          bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" --execute
 
       - name: 未保存あり保護件数をサマリ表示
         if: always()
+        working-directory: /Users/tanizawashingo/salesanchor
         run: |
-          if [ -f scripts/reaper-worktree.sh ]; then
-            bash scripts/reaper-worktree.sh 2>&1 | grep -E "^(⚠️|✅)" || true
+          if [ -f "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" ]; then
+            bash "$GITHUB_WORKSPACE/scripts/reaper-worktree.sh" 2>&1 | grep -E "^(⚠️|✅)" || true
           fi

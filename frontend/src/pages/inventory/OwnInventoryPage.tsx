@@ -7,28 +7,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { api } from "../../lib/api";
+import type { components } from "../../api/generated/schema";
 import { PageLayout } from "../../components/PageLayout";
 import ConfirmModal from "../../components/ConfirmModal";
 import { DataTable } from "../../components/DataTable";
 import type { DataTableColumn } from "../../components/DataTable";
 import { Button } from "../../components/Button";
 
-interface OwnInventoryRow {
-  id: number;
-  tenant_id: number;
-  product_id: number;
-  physical_qty: number;
-  reserved_qty: number;
-  available_qty: number | null;
-  unit_price: number | null;
-  condition: string | null;
-  status: string;
-  note_ja: string | null;
-  note_en: string | null;
-  antique_ledger_id: number | null;
-  created_at: string;
-  updated_at: string;
-}
+type OwnInventoryRow = components["schemas"]["OwnInventoryResponse"];
 
 type ActionKind = "reserve" | "release" | "ship";
 
